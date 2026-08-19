@@ -1,3 +1,34 @@
-import { useLocation, useNavigate } from 'react-router-dom'
+import { useNavigate } from 'react-router-dom'
 import { signIn } from '../auth/auth'
-export default function Login() { const navigate = useNavigate(); const location = useLocation(); function handleSubmit(event) { event.preventDefault(); signIn(); navigate(location.state?.from?.pathname || '/dashboard', { replace: true }) }; return <main className="login-page"><form className="login-card" onSubmit={handleSubmit}><h1>Welcome back</h1><p>Sign in to manage your BTech portal.</p><label>Email<input type="email" required placeholder="you@example.com" /></label><label>Password<input type="password" required placeholder="Enter your password" /></label><button type="submit">Sign in</button></form></main> }
+import { ROLES } from '../auth/roles'
+
+export default function Login() {
+  const navigate = useNavigate()
+
+  const handleLogin = (role) => {
+    signIn(role)
+    navigate('/dashboard')
+  }
+
+  return (
+    <div className="login-page">
+      <h1>BTech Management System</h1>
+
+      <h2>Login</h2>
+
+      <div className="login-buttons">
+        <button onClick={() => handleLogin(ROLES.ADMIN)}>
+          Login as Admin
+        </button>
+
+        <button onClick={() => handleLogin(ROLES.FACULTY)}>
+          Login as Faculty
+        </button>
+
+        <button onClick={() => handleLogin(ROLES.STUDENT)}>
+          Login as Student
+        </button>
+      </div>
+    </div>
+  )
+}

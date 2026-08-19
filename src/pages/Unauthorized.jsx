@@ -1,2 +1,17 @@
 import { Link } from 'react-router-dom'
-export default function Unauthorized() { return <main className="message-page"><h1>Unauthorized</h1><p>You do not have permission to view this page.</p><Link to="/dashboard">Return to dashboard</Link></main> }
+
+export default function Unauthorized() {
+  return (
+    <div>
+      <h1>403 - Unauthorized</h1>
+
+      <p>
+        You do not have permission to access this page.
+      </p>
+
+      <Link to="/dashboard">
+        Go to Dashboard
+      </Link>
+    </div>
+  )
+}

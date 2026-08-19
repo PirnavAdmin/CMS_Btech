@@ -1,3 +1,58 @@
 import { NavLink } from 'react-router-dom'
-const links = [['Dashboard', '/dashboard'], ['Users', '/users'], ['Attendance', '/attendance'], ['My Subjects', '/my-subjects']]
-export default function Sidebar() { return <aside className="sidebar"><h2>BTech MS</h2><nav>{links.map(([label, to]) => <NavLink key={to} to={to}>{label}</NavLink>)}</nav></aside> }
+import { getUserRole } from '../auth/auth'
+import { ROLES } from '../auth/roles'
+
+const links = [
+  {
+    label: 'Dashboard',
+    to: '/dashboard',
+    roles: [
+      ROLES.ADMIN,
+      ROLES.FACULTY,
+      ROLES.STUDENT,
+    ],
+  },
+  {
+    label: 'Users',
+    to: '/users',
+    roles: [ROLES.ADMIN],
+  },
+  {
+    label: 'Attendance',
+    to: '/attendance',
+    roles: [
+      ROLES.ADMIN,
+      ROLES.FACULTY,
+    ],
+  },
+  {
+    label: 'My Subjects',
+    to: '/my-subjects',
+    roles: [
+      ROLES.FACULTY,
+      ROLES.STUDENT,
+    ],
+  },
+]
+
+export default function Sidebar() {
+  const userRole = getUserRole()
+
+  const visibleLinks = links.filter((link) =>
+    link.roles.includes(userRole)
+  )
+
+  return (
+    <aside className="sidebar">
+      <h2>BTech MS</h2>
+
+      <nav>
+        {visibleLinks.map(({ label, to }) => (
+          <NavLink key={to} to={to}>
+            {label}
+          </NavLink>
+        ))}
+      </nav>
+    </aside>
+  )
+}
