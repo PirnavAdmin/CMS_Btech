@@ -7,7 +7,7 @@ export function isAuthenticated() {
 
 export function signIn(role) {
   localStorage.setItem(AUTH_STORAGE_KEY, 'true')
-  localStorage.setItem(ROLE_STORAGE_KEY, role)
+  localStorage.setItem(ROLE_STORAGE_KEY, role.toLowerCase())
 }
 
 export function signOut() {
