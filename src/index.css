@@ -46,6 +46,41 @@ html, body, #root { min-height: 100%; }
   .admin-login { height: auto; min-height: 100dvh; overflow: visible; }
 }
 
+/* Dashboard pages may grow beyond the viewport; keep login's fixed desktop layout unchanged. */
+@media (min-width: 901px) {
+  html:has(.dashboard-layout),
+  body:has(.dashboard-layout),
+  #root:has(.dashboard-layout) {
+    height: auto;
+    min-height: 100%;
+    overflow-x: hidden;
+    overflow-y: auto;
+  }
+
+  .dashboard-layout { min-height: 100dvh; }
+}
+
+/* Keep dashboard navigation visible while the module content scrolls. */
+@media (min-width: 641px) {
+  .dashboard-layout { align-items: start; }
+
+  .sidebar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    align-self: start;
+    box-sizing: border-box;
+    width: 250px;
+    height: 100dvh;
+    overflow-y: auto;
+  }
+
+  .dashboard-layout > main {
+    grid-column: 2;
+    min-width: 0;
+  }
+}
+
 .field-error, .form-error { margin: -15px 0 -4px; color: #b42318; font-size: .88rem; font-weight: 600; }
 .form-error { margin: -4px 0 0; padding: 12px 14px; border: 1px solid #fecdca; border-radius: 9px; background: #fffbfa; }
 .login-form input[aria-invalid="true"] { border-color: #d92d20; box-shadow: 0 0 0 3px #d92d201a; }
