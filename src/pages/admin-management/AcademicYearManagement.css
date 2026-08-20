@@ -40,6 +40,7 @@
   border-radius:8px;
   color:#1e40af;
   font-size:.8rem
+}.ay .local{display:none
 }.hero{display:grid;
   grid-template-columns:1.5fr .9fr;
   gap:24px;
