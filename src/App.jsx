@@ -8,6 +8,7 @@ import Login from './pages/Login'
 import MySubjects from './pages/MySubjects'
 import Unauthorized from './pages/Unauthorized'
 import Users from './pages/Users'
+<<<<<<< HEAD
 import CourseList from './pages/courseManagement/CourseList'
 import CourseFormPage from './pages/courseManagement/CourseFormPage'
 import CourseDetails from './pages/courseManagement/CourseDetails'
@@ -15,6 +16,12 @@ import BranchList from './pages/courseManagement/BranchList'
 import BranchFormPage from './pages/courseManagement/BranchFormPage'
 import BranchDetails from './pages/courseManagement/BranchDetails'
 import CourseStructure from './pages/courseManagement/CourseStructure'
+=======
+import CollegeInstitutionManagement from './pages/admin-management/CollegeInstitutionManagement'
+import AcademicYearManagement from './pages/admin-management/AcademicYearManagement'
+import DepartmentManagement from './pages/admin-management/DepartmentManagement'
+import CourseBranchManagement from './pages/admin-management/CourseBranchManagement'
+>>>>>>> 7f6aed3b7084791e2134b0f75aecad2265627675
 
 export default function App() {
   return (
@@ -45,7 +52,11 @@ export default function App() {
           />
         }
       >
-        <Route path="/users" element={<Users />} />
+      <Route path="/users" element={<Users />} />
+      <Route path="/college-institution-management" element={<CollegeInstitutionManagement />} />
+      <Route path="/academic-year-management" element={<AcademicYearManagement />} />
+      <Route path="/department-management" element={<DepartmentManagement />} />
+      <Route path="/course-branch-management" element={<CourseBranchManagement />} />
       </Route>
 
       {/* Course & Branch Management - Admin Only */}
