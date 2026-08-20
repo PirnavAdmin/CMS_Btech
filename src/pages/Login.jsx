@@ -24,6 +24,16 @@ export default function Login() {
   const [otpError, setOtpError] = useState('')
   const [demoOtpHint, setDemoOtpHint] = useState('')
   const [timer, setTimer] = useState(0)
+  const [logoutMessage, setLogoutMessage] = useState('')
+
+  useEffect(() => {
+    const message = sessionStorage.getItem('btech-logout-message')
+    if (!message) return
+    setLogoutMessage(message)
+    sessionStorage.removeItem('btech-logout-message')
+    const timeout = setTimeout(() => setLogoutMessage(''), 3000)
+    return () => clearTimeout(timeout)
+  }, [])
 
   useEffect(() => {
     let interval = null
@@ -163,6 +173,7 @@ export default function Login() {
               <h2 id="login-title">Welcome back</h2>
               <p>Sign in to continue to the Admin Dashboard.</p>
             </header>
+            {logoutMessage && <div className="logout-success" role="status"><span>{logoutMessage}</span><button type="button" onClick={() => setLogoutMessage('')} aria-label="Dismiss signed out message">×</button></div>}
             <label htmlFor="identifier">
               <span>Email / Mobile / Employee ID</span>
               <input

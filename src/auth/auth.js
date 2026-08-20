@@ -13,6 +13,10 @@ export function signIn(role) {
 export function signOut() {
   localStorage.removeItem(AUTH_STORAGE_KEY)
   localStorage.removeItem(ROLE_STORAGE_KEY)
+  ;['btech-access-token', 'btech-refresh-token', 'btech-jwt', 'btech-session', 'accessToken', 'refreshToken', 'jwt', 'token'].forEach((key) => {
+    localStorage.removeItem(key)
+    sessionStorage.removeItem(key)
+  })
 }
 
 export function getUserRole() {
