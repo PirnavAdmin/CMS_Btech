@@ -33,11 +33,6 @@ const links = [
     roles: [ROLES.ADMIN],
   },
   {
-    label: 'Courses & Branches',
-    to: '/course-branch-management',
-    roles: [ROLES.ADMIN],
-  },
-  {
     label: 'Attendance',
     to: '/attendance',
     roles: [
