@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { signIn } from '../auth/auth'
 import { AuthRequestError, login, sendOtp, verifyOtp } from '../auth/authApi'
 import { validateLogin } from '../auth/loginValidation'
@@ -224,6 +224,7 @@ export default function Login() {
             <button className="sign-in-button" type="submit" disabled={isSubmitting} aria-busy={isSubmitting}>
               {isSubmitting ? 'Signing in...' : 'Sign In'}
             </button>
+            <p className="account-link">Don&apos;t have an account? <Link to="/register">Request access</Link></p>
             <p className="access-note">For authorized college administration use only.</p>
           </form>
         )}
