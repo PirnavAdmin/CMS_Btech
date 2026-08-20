@@ -5,6 +5,7 @@ import { ROLES } from './auth/roles'
 import Attendance from './pages/Attendance'
 import Dashboard from './pages/Dashboard'
 import Login from './pages/Login'
+import Register from './pages/Register'
 import MySubjects from './pages/MySubjects'
 import Unauthorized from './pages/Unauthorized'
 import Users from './pages/Users'
@@ -24,6 +25,7 @@ export default function App() {
     <Routes>
       {/* Public */}
       <Route path="/login" element={<Login />} />
+      <Route path="/register" element={<Register />} />
 
       {/* Dashboard - All Roles */}
       <Route
