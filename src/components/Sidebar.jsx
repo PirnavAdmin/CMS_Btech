@@ -18,6 +18,26 @@ const links = [
     roles: [ROLES.ADMIN],
   },
   {
+    label: 'College / Institution',
+    to: '/college-institution-management',
+    roles: [ROLES.ADMIN],
+  },
+  {
+    label: 'Academic Years',
+    to: '/academic-year-management',
+    roles: [ROLES.ADMIN],
+  },
+  {
+    label: 'Departments',
+    to: '/department-management',
+    roles: [ROLES.ADMIN],
+  },
+  {
+    label: 'Courses & Branches',
+    to: '/course-branch-management',
+    roles: [ROLES.ADMIN],
+  },
+  {
     label: 'Attendance',
     to: '/attendance',
     roles: [

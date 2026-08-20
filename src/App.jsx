@@ -8,6 +8,10 @@ import Login from './pages/Login'
 import MySubjects from './pages/MySubjects'
 import Unauthorized from './pages/Unauthorized'
 import Users from './pages/Users'
+import CollegeInstitutionManagement from './pages/admin-management/CollegeInstitutionManagement'
+import AcademicYearManagement from './pages/admin-management/AcademicYearManagement'
+import DepartmentManagement from './pages/admin-management/DepartmentManagement'
+import CourseBranchManagement from './pages/admin-management/CourseBranchManagement'
 
 export default function App() {
   return (
@@ -38,7 +42,11 @@ export default function App() {
           />
         }
       >
-        <Route path="/users" element={<Users />} />
+      <Route path="/users" element={<Users />} />
+      <Route path="/college-institution-management" element={<CollegeInstitutionManagement />} />
+      <Route path="/academic-year-management" element={<AcademicYearManagement />} />
+      <Route path="/department-management" element={<DepartmentManagement />} />
+      <Route path="/course-branch-management" element={<CourseBranchManagement />} />
       </Route>
 
       {/* Attendance - Admin + Faculty */}

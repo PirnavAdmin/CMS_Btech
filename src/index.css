@@ -10,10 +10,10 @@
 .login-card { display: grid; gap: 16px; width: min(100%, 400px); padding: 32px; background: white; border-radius: 16px; box-shadow: 0 12px 36px #1720331a; }
 .login-card h1, .login-card p { margin: 0; } .login-card label { display: grid; gap: 6px; font-weight: 600; }
 .login-card input { padding: 10px 12px; border: 1px solid #d7dce5; border-radius: 8px; }
-.login-card button, .dashboard-header button { border: 0; border-radius: 7px; padding: 7px 11px; background: #2356d8; color: white; font-size: .88rem; }
-.dashboard-layout { min-height: 100vh; display: grid; grid-template-columns: 230px 1fr; } .sidebar { padding: 24px 16px; background: #172033; color: white; }
- .sidebar h2 { margin-top: 0; font-size: 1.25rem; } .sidebar nav { display: grid; gap: 6px; } .sidebar a { padding: 10px; border-radius: 6px; color: #c9d3e7; text-decoration: none; }
-.sidebar a.active, .sidebar a:hover { background: #2a3855; color: white; } .dashboard-header { display: flex; justify-content: space-between; align-items: center; padding: 18px 28px; background: white; border-bottom: 1px solid #e3e7ee; font-weight: 700; }
+.login-card button, .dashboard-header button { border: 0; border-radius: 7px; padding: 7px 11px; background: #1970b3; color: white; font-size: .88rem; }
+.dashboard-layout { min-height: 100vh; display: grid; grid-template-columns: 250px 1fr; background: #f4f9fc; } .sidebar { padding: 24px 16px; background: linear-gradient(160deg, #093a67 0%, #126394 100%); color: white; }
+ .sidebar h2 { margin-top: 0; font-size: 1.25rem; } .sidebar nav { display: grid; gap: 6px; } .sidebar a { padding: 10px; border-radius: 6px; color: #d5edfb; text-decoration: none; }
+.sidebar a.active, .sidebar a:hover { background: rgba(255,255,255,.16); color: white; } .dashboard-header { display: flex; justify-content: space-between; align-items: center; padding: 18px 28px; background: white; border-bottom: 1px solid #c7d7e7; color: #062e59; font-weight: 700; }
 .page-content { padding: 32px; }
 @media (max-width: 850px) { .admin-login { grid-template-columns: 1fr; }.login-intro, .login-intro__content { min-height: 425px; }.login-intro__content { padding: 42px 32px 32px; }.intro-copy { margin: 55px 0 0; }.intro-copy h1 { font-size: clamp(2.8rem, 9vw, 4.3rem); }.intro-copy > p:last-child, .copyright { display: none; }.login-panel { padding: 55px 26px; }.login-form header { margin-bottom: 12px; } }
 @media (max-width: 640px) { .dashboard-layout { grid-template-columns: 1fr; } .sidebar { padding: 16px; } .sidebar nav { grid-template-columns: repeat(2, 1fr); } }
