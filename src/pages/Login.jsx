@@ -5,12 +5,6 @@ import { AuthRequestError, login, sendOtp, verifyOtp } from '../auth/authApi'
 import { validateLogin } from '../auth/loginValidation'
 import { ROLES } from '../auth/roles'
 
-const demoRoles = [
-  { value: ROLES.ADMIN, label: 'Admin' },
-  { value: ROLES.FACULTY, label: 'Faculty' },
-  { value: ROLES.STUDENT, label: 'Student' },
-]
-
 export default function Login() {
   const navigate = useNavigate()
   const [showPassword, setShowPassword] = useState(false)
@@ -30,7 +24,6 @@ export default function Login() {
   const [demoOtpHint, setDemoOtpHint] = useState('')
   const [timer, setTimer] = useState(0)
 
-  // Timer for Resend OTP countdown
   useEffect(() => {
     let interval = null
     if (timer > 0) {
@@ -39,27 +32,24 @@ export default function Login() {
     return () => clearInterval(interval)
   }, [timer])
 
-  // Helper validation for Email or 10-digit Mobile Number
   const validateContact = (input) => {
     const value = input.trim()
     if (!value) {
       return 'Please enter your email or mobile number.'
     }
-    // Check if input contains digits only (Mobile Number)
     if (/^\d+$/.test(value)) {
       if (value.length !== 10) {
         return 'Mobile number must be exactly 10 digits.'
       }
-      return '' // Valid mobile
+      return ''
     }
 
-    // Check valid Email format
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
     if (!emailRegex.test(value)) {
       return 'Please enter a valid email address or 10-digit mobile number.'
     }
 
-    return '' // Valid email
+    return ''
   }
 
   const updateValue = ({ target: { name, value } }) => {
@@ -78,7 +68,6 @@ export default function Login() {
     setSubmitError('')
   }
 
-  // Handle Standard Sign In
   const handleSubmit = async (event) => {
     event.preventDefault()
     if (isSubmitting) return
@@ -100,7 +89,6 @@ export default function Login() {
     }
   }
 
-  // Step 1: Send Verification Code to Email or Mobile
   const handleSendCode = async (e) => {
     e.preventDefault()
     setOtpError('')
@@ -118,7 +106,7 @@ export default function Login() {
         setDemoOtpHint(`(Demo OTP: ${result.demoOtp})`)
       }
       setViewMode('verify_otp')
-      setTimer(60) // 60 seconds cooldown timer
+      setTimer(60)
     } catch (error) {
       setOtpError(error instanceof AuthRequestError ? error.message : 'Failed to send verification code. Please try again.')
     } finally {
@@ -126,7 +114,6 @@ export default function Login() {
     }
   }
 
-  // Step 2: Verify OTP
   const handleVerifyOtp = async (e) => {
     e.preventDefault()
     setOtpError('')
@@ -169,29 +156,12 @@ export default function Login() {
       </section>
 
       <section className="login-panel" aria-labelledby="login-title">
-        {/* LOGIN FORM */}
         {viewMode === 'login' && (
           <form className="login-form" onSubmit={handleSubmit} noValidate>
             <header>
               <h2 id="login-title">Welcome back</h2>
               <p>Sign in to continue to the Admin Dashboard.</p>
             </header>
-            <fieldset className="role-picker">
-              <legend>Access role</legend>
-              <div>
-                {demoRoles.map((role) => (
-                  <button
-                    key={role.value}
-                    type="button"
-                    className={selectedRole === role.value ? 'active' : ''}
-                    onClick={() => setSelectedRole(role.value)}
-                    aria-pressed={selectedRole === role.value}
-                  >
-                    {role.label}
-                  </button>
-                ))}
-              </div>
-            </fieldset>
             <label htmlFor="identifier">
               <span>Email / Mobile / Employee ID</span>
               <input
@@ -257,7 +227,6 @@ export default function Login() {
           </form>
         )}
 
-        {/* FORGOT PASSWORD - REQUEST OTP */}
         {viewMode === 'request_otp' && (
           <form className="login-form" onSubmit={handleSendCode} noValidate>
             <header>
@@ -296,7 +265,6 @@ export default function Login() {
           </form>
         )}
 
-        {/* ENTER & VERIFY OTP */}
         {viewMode === 'verify_otp' && (
           <form className="login-form" onSubmit={handleVerifyOtp} noValidate>
             <header>
@@ -346,7 +314,6 @@ export default function Login() {
           </form>
         )}
 
-        {/* VERIFIED SUCCESSFUL */}
         {viewMode === 'success' && (
           <div className="login-form" style={{ textAlign: 'center' }}>
             <header>
