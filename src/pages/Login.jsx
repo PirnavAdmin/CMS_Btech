@@ -4,6 +4,7 @@ import { signIn } from '../auth/auth'
 import { AuthRequestError, login, sendOtp, verifyOtp } from '../auth/authApi'
 import { validateLogin } from '../auth/loginValidation'
 import { ROLES } from '../auth/roles'
+import ForgotPassword from './ForgotPassword'
 
 const demoRoles = [
   { value: ROLES.ADMIN, label: 'Admin' },
@@ -242,7 +243,7 @@ export default function Login() {
               <button
                 type="button"
                 className="forgot-password-link"
-                onClick={() => setViewMode('request_otp')}
+                onClick={() => setViewMode('forgot-password')}
                 style={{ background: 'none', border: 'none', color: 'inherit', font: 'inherit', cursor: 'pointer', padding: 0, textDecoration: 'underline' }}
               >
                 Forgot Password?
@@ -256,6 +257,8 @@ export default function Login() {
             <p className="access-note">For authorized college administration use only.</p>
           </form>
         )}
+
+        {viewMode === 'forgot-password' && <ForgotPassword onBack={resetOtpFlow} />}
 
         {/* FORGOT PASSWORD - REQUEST OTP */}
         {viewMode === 'request_otp' && (
