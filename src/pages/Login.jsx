@@ -14,7 +14,7 @@ export default function Login() {
   const [errors, setErrors] = useState({ identifier: '', password: '' })
   const [submitError, setSubmitError] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
-  const [selectedRole, setSelectedRole] = useState(ROLES.ADMIN)
+  const selectedRole = ROLES.ADMIN
 
   // OTP Flow States: 'login' | 'request_otp' | 'verify_otp' | 'success'
   const [viewMode, setViewMode] = useState('login')
@@ -228,12 +228,9 @@ export default function Login() {
           </form>
         )}
 
-<<<<<<< HEAD
         {viewMode === 'forgot-password' && <ForgotPassword onBack={resetOtpFlow} />}
 
         {/* FORGOT PASSWORD - REQUEST OTP */}
-=======
->>>>>>> upstream/main
         {viewMode === 'request_otp' && (
           <form className="login-form" onSubmit={handleSendCode} noValidate>
             <header>
