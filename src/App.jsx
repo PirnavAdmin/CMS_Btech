@@ -40,11 +40,7 @@ export default function App() {
         <Route path="/dashboard" element={<Dashboard />} />
       </Route>
 
-<<<<<<< HEAD
       {/* Administration - Admin Only */}
-=======
-      {/* Admin Management - Admin Only */}
->>>>>>> 3ca0a3e710f8e4ff2117885595e9ba3f1e62fe48
       <Route
         element={
           <ProtectedRoute
@@ -52,15 +48,9 @@ export default function App() {
           />
         }
       >
-<<<<<<< HEAD
-      <Route path="/college-institution-management" element={<CollegeInstitutionManagement />} />
-      <Route path="/academic-year-management" element={<AcademicYearManagement />} />
-      <Route path="/department-management" element={<DepartmentManagement />} />
-=======
         <Route path="/college-institution-management" element={<CollegeInstitutionManagement />} />
         <Route path="/academic-year-management" element={<AcademicYearManagement />} />
         <Route path="/department-management" element={<DepartmentManagement />} />
->>>>>>> 3ca0a3e710f8e4ff2117885595e9ba3f1e62fe48
       </Route>
 
       {/* Course & Branch Management - Admin Only */}
