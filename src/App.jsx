@@ -2,13 +2,11 @@ import { Navigate, Route, Routes } from 'react-router-dom'
 import ProtectedRoute from './components/ProtectedRoute'
 import { ROLES } from './auth/roles'
 
-import Attendance from './pages/Attendance'
 import Dashboard from './pages/Dashboard'
 import Login from './pages/Login'
 import Register from './pages/Register'
 import MySubjects from './pages/MySubjects'
 import Unauthorized from './pages/Unauthorized'
-import Users from './pages/Users'
 import CourseList from './pages/courseManagement/CourseList'
 import CourseFormPage from './pages/courseManagement/CourseFormPage'
 import CourseDetails from './pages/courseManagement/CourseDetails'
@@ -42,7 +40,7 @@ export default function App() {
         <Route path="/dashboard" element={<Dashboard />} />
       </Route>
 
-      {/* Users - Admin Only */}
+      {/* Admin Management - Admin Only */}
       <Route
         element={
           <ProtectedRoute
@@ -50,10 +48,9 @@ export default function App() {
           />
         }
       >
-      <Route path="/users" element={<Users />} />
-      <Route path="/college-institution-management" element={<CollegeInstitutionManagement />} />
-      <Route path="/academic-year-management" element={<AcademicYearManagement />} />
-      <Route path="/department-management" element={<DepartmentManagement />} />
+        <Route path="/college-institution-management" element={<CollegeInstitutionManagement />} />
+        <Route path="/academic-year-management" element={<AcademicYearManagement />} />
+        <Route path="/department-management" element={<DepartmentManagement />} />
       </Route>
 
       {/* Course & Branch Management - Admin Only */}
@@ -67,20 +64,6 @@ export default function App() {
         <Route path="/branches/:id" element={<BranchDetails />} />
         <Route path="/branches/:id/edit" element={<BranchFormPage />} />
         <Route path="/courses/:courseId/branches/:branchId/structure" element={<CourseStructure />} />
-      </Route>
-
-      {/* Attendance - Admin + Faculty */}
-      <Route
-        element={
-          <ProtectedRoute
-            allowedRoles={[
-              ROLES.ADMIN,
-              ROLES.FACULTY,
-            ]}
-          />
-        }
-      >
-        <Route path="/attendance" element={<Attendance />} />
       </Route>
 
       {/* My Subjects - Faculty + Student */}
