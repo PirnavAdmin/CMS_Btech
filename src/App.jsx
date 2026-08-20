@@ -4,6 +4,7 @@ import { ROLES } from './auth/roles'
 
 import Dashboard from './pages/Dashboard'
 import Login from './pages/Login'
+import Register from './pages/Register'
 import MySubjects from './pages/MySubjects'
 import Unauthorized from './pages/Unauthorized'
 import CourseList from './pages/courseManagement/CourseList'
@@ -22,6 +23,7 @@ export default function App() {
     <Routes>
       {/* Public */}
       <Route path="/login" element={<Login />} />
+      <Route path="/register" element={<Register />} />
 
       {/* Dashboard - All Roles */}
       <Route
@@ -38,7 +40,11 @@ export default function App() {
         <Route path="/dashboard" element={<Dashboard />} />
       </Route>
 
+<<<<<<< HEAD
       {/* Administration - Admin Only */}
+=======
+      {/* Admin Management - Admin Only */}
+>>>>>>> 3ca0a3e710f8e4ff2117885595e9ba3f1e62fe48
       <Route
         element={
           <ProtectedRoute
@@ -46,9 +52,15 @@ export default function App() {
           />
         }
       >
+<<<<<<< HEAD
       <Route path="/college-institution-management" element={<CollegeInstitutionManagement />} />
       <Route path="/academic-year-management" element={<AcademicYearManagement />} />
       <Route path="/department-management" element={<DepartmentManagement />} />
+=======
+        <Route path="/college-institution-management" element={<CollegeInstitutionManagement />} />
+        <Route path="/academic-year-management" element={<AcademicYearManagement />} />
+        <Route path="/department-management" element={<DepartmentManagement />} />
+>>>>>>> 3ca0a3e710f8e4ff2117885595e9ba3f1e62fe48
       </Route>
 
       {/* Course & Branch Management - Admin Only */}

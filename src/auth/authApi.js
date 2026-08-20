@@ -8,6 +8,7 @@ export class AuthRequestError extends Error {
 }
 
 const authEndpoint = import.meta.env.VITE_AUTH_API_URL
+const registrationEndpoint = import.meta.env.VITE_REGISTRATION_API_URL
 const otpEndpoint = import.meta.env.VITE_OTP_API_URL || authEndpoint
 
 // Set VITE_AUTH_API_URL when the backend login endpoint becomes available.
@@ -93,5 +94,35 @@ export async function verifyOtp({ contact, otp }) {
   } catch (error) {
     if (error instanceof AuthRequestError) throw error
     throw new AuthRequestError('Unable to verify OTP right now. Please try again.')
+  }
+}
+
+// Set VITE_REGISTRATION_API_URL when the pending-registration endpoint is available.
+export async function register({ fullName, email, mobile, password }) {
+  if (!registrationEndpoint) {
+    return { success: true, message: 'Registration request submitted successfully', status: 'PENDING' }
+  }
+
+  let response
+  try {
+    response = await fetch(registrationEndpoint, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ fullName, email, mobile, password }),
+    })
+  } catch {
+    throw new AuthRequestError('Unable to submit your request right now. Please try again.')
+  }
+
+  if (!response.ok) {
+    throw new AuthRequestError('Unable to submit your request. Please review your details and try again.')
+  }
+
+  try {
+    const result = await response.json()
+    if (!result?.success) throw new Error('Malformed registration response')
+    return result
+  } catch {
+    throw new AuthRequestError('Unable to submit your request right now. Please try again.')
   }
 }
