@@ -1,4 +1,5 @@
-import { NavLink } from 'react-router-dom'
+import { useState } from 'react'
+import { NavLink, useLocation } from 'react-router-dom'
 import { getUserRole } from '../auth/auth'
 import { ROLES } from '../auth/roles'
 
@@ -11,11 +12,6 @@ const links = [
       ROLES.FACULTY,
       ROLES.STUDENT,
     ],
-  },
-  {
-    label: 'Users',
-    to: '/users',
-    roles: [ROLES.ADMIN],
   },
   {
     label: 'College / Institution',
@@ -33,14 +29,6 @@ const links = [
     roles: [ROLES.ADMIN],
   },
   {
-    label: 'Attendance',
-    to: '/attendance',
-    roles: [
-      ROLES.ADMIN,
-      ROLES.FACULTY,
-    ],
-  },
-  {
     label: 'My Subjects',
     to: '/my-subjects',
     roles: [
@@ -52,6 +40,9 @@ const links = [
 
 export default function Sidebar() {
   const userRole = getUserRole()
+  const { pathname } = useLocation()
+  const isCoursePage = pathname.startsWith('/courses') || pathname.startsWith('/branches')
+  const [courseMenuOpen, setCourseMenuOpen] = useState(false)
 
   const visibleLinks = links.filter((link) =>
     link.roles.includes(userRole)
@@ -63,12 +54,16 @@ export default function Sidebar() {
 
       <nav>
         {visibleLinks.map(({ label, to }) => (
-          <NavLink key={to} to={to}>
+          <NavLink key={to} to={to} onClick={() => setCourseMenuOpen(false)}>
             {label}
           </NavLink>
         ))}
         {userRole === ROLES.ADMIN && (
-          <details className="sidebar-group" open>
+          <details
+            className="sidebar-group"
+            open={isCoursePage || courseMenuOpen}
+            onToggle={(event) => setCourseMenuOpen(event.currentTarget.open)}
+          >
             <summary>Course Management</summary>
             <div>
               <NavLink to="/courses">Courses</NavLink>
