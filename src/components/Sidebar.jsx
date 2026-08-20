@@ -52,6 +52,15 @@ export default function Sidebar() {
             {label}
           </NavLink>
         ))}
+        {userRole === ROLES.ADMIN && (
+          <details className="sidebar-group" open>
+            <summary>Course Management</summary>
+            <div>
+              <NavLink to="/courses">Courses</NavLink>
+              <NavLink to="/branches">Branches</NavLink>
+            </div>
+          </details>
+        )}
       </nav>
     </aside>
   )

@@ -8,6 +8,13 @@ import Login from './pages/Login'
 import MySubjects from './pages/MySubjects'
 import Unauthorized from './pages/Unauthorized'
 import Users from './pages/Users'
+import CourseList from './pages/courseManagement/CourseList'
+import CourseFormPage from './pages/courseManagement/CourseFormPage'
+import CourseDetails from './pages/courseManagement/CourseDetails'
+import BranchList from './pages/courseManagement/BranchList'
+import BranchFormPage from './pages/courseManagement/BranchFormPage'
+import BranchDetails from './pages/courseManagement/BranchDetails'
+import CourseStructure from './pages/courseManagement/CourseStructure'
 
 export default function App() {
   return (
@@ -39,6 +46,19 @@ export default function App() {
         }
       >
         <Route path="/users" element={<Users />} />
+      </Route>
+
+      {/* Course & Branch Management - Admin Only */}
+      <Route element={<ProtectedRoute allowedRoles={[ROLES.ADMIN]} />}>
+        <Route path="/courses" element={<CourseList />} />
+        <Route path="/courses/add" element={<CourseFormPage />} />
+        <Route path="/courses/:id" element={<CourseDetails />} />
+        <Route path="/courses/:id/edit" element={<CourseFormPage />} />
+        <Route path="/branches" element={<BranchList />} />
+        <Route path="/branches/add" element={<BranchFormPage />} />
+        <Route path="/branches/:id" element={<BranchDetails />} />
+        <Route path="/branches/:id/edit" element={<BranchFormPage />} />
+        <Route path="/courses/:courseId/branches/:branchId/structure" element={<CourseStructure />} />
       </Route>
 
       {/* Attendance - Admin + Faculty */}
