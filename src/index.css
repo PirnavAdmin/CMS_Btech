@@ -291,6 +291,17 @@ button.btn-primary:hover,
   background-color: var(--brand-blue-hover);
 }
 
+/* Keep the fixed desktop sidebar and the main/header offset flush. */
+@media (min-width: 641px) {
+  .sidebar {
+    width: 250px;
+  }
+
+  .dashboard-layout > main {
+    margin-left: 250px;
+  }
+}
+
 /* Keep every registration field visually consistent. */
 .register-form input[type="email"],
 .register-form input[type="tel"] {
