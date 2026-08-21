@@ -324,10 +324,6 @@ button.btn-primary:hover,
   .sidebar {
     width: 250px;
   }
-
-  .dashboard-layout > main {
-    margin-left: 250px;
-  }
 }
 
 /* Keep every registration field visually consistent. */
