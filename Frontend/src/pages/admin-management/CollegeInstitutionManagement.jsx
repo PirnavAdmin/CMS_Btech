@@ -584,9 +584,6 @@ export default function CollegeInstitutionManagement() {
               <button type="button" className="cm-secondary-btn" onClick={backToList}>
                 &larr; Back to Colleges List
               </button>
-              <button type="button" className="cm-primary-btn cm-btn-with-icon" onClick={() => openEdit(activeCollege)}>
-                <EditIcon /> Edit Profile
-              </button>
             </div>
 
             <div className="cm-profile-card">
