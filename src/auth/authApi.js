@@ -97,6 +97,36 @@ export async function verifyOtp({ contact, otp }) {
   }
 }
 
+/**
+ * Reset password after OTP verification
+ */
+export async function resetPassword({ contact, otp, password }) {
+  if (!otpEndpoint) {
+    // Demo Mode: Accept any valid-looking request
+    if (password.length < 8) {
+      throw new AuthRequestError('Password must contain at least 8 characters.')
+    }
+    return { success: true, message: 'Password has been reset successfully.' }
+  }
+
+  try {
+    const response = await fetch(`${otpEndpoint}/reset-password`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ contact, otp, password }),
+    })
+
+    const data = await response.json()
+    if (!response.ok) {
+      throw new AuthRequestError(data.message || 'Unable to reset your password. Please try again.')
+    }
+    return data
+  } catch (error) {
+    if (error instanceof AuthRequestError) throw error
+    throw new AuthRequestError('Network error. Unable to reset your password right now.')
+  }
+}
+
 // Set VITE_REGISTRATION_API_URL when the pending-registration endpoint is available.
 export async function register({ fullName, email, mobile, password }) {
   if (!registrationEndpoint) {

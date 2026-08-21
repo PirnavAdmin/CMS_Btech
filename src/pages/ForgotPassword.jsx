@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { AuthRequestError, sendOtp, verifyOtp } from '../auth/authApi'
+import { AuthRequestError, sendOtp, verifyOtp, resetPassword } from '../auth/authApi'
 
 const isValidContact = (value, method) => method === 'email'
   ? /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)
@@ -63,12 +63,34 @@ export default function ForgotPassword({ onBack }) {
     }
   }
 
-  const changePassword = (event) => {
+  const changePassword = async (event) => {
     event.preventDefault()
-    if (passwords.password.length < 8) return setError('Password must contain at least 8 characters.')
-    if (passwords.password !== passwords.confirmPassword) return setError('Passwords do not match.')
+    const newPassword = passwords.password.trim()
+    const confirmed = passwords.confirmPassword.trim()
+
+    if (!newPassword || !confirmed) {
+      setError('Please fill in both password fields.')
+      return
+    }
+    if (newPassword.length < 8) {
+      setError('Password must contain at least 8 characters.')
+      return
+    }
+    if (newPassword !== confirmed) {
+      setError('Passwords do not match.')
+      return
+    }
+
+    setLoading(true)
     setError('')
-    setStep('success')
+    try {
+      await resetPassword({ contact: contact.trim(), otp, password: newPassword })
+      setStep('success')
+    } catch (resetError) {
+      setError(resetError instanceof AuthRequestError ? resetError.message : 'Unable to reset your password right now. Please try again.')
+    } finally {
+      setLoading(false)
+    }
   }
 
   const updateOtp = (index, value) => {
@@ -86,7 +108,7 @@ export default function ForgotPassword({ onBack }) {
       <label className="recovery-password" htmlFor="new-password"><span>New password</span><input id="new-password" type="password" autoComplete="new-password" value={passwords.password} onChange={(event) => { setPasswords((current) => ({ ...current, password: event.target.value })); setError('') }} /></label>
       <label className="recovery-password" htmlFor="confirm-password"><span>Confirm new password</span><input id="confirm-password" type="password" autoComplete="new-password" value={passwords.confirmPassword} onChange={(event) => { setPasswords((current) => ({ ...current, confirmPassword: event.target.value })); setError('') }} /></label>
       {error && <p className="form-error" role="alert">{error}</p>}
-      <button className="sign-in-button" type="submit">Change Password</button>
+      <button className="sign-in-button" type="submit" disabled={loading}>{loading ? 'Updating...' : 'Change Password'}</button>
       <button type="button" className="text-button back-to-login" onClick={onBack}>Cancel</button>
     </form>
   )
