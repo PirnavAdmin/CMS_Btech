@@ -93,6 +93,7 @@
 .ac-actions button { flex: 0 0 auto; width: auto; min-height: 36px; padding: 7px 13px; white-space: nowrap; font-size: .82rem; }
 .ac-next-actions { justify-content: flex-end; border-color: transparent; background: transparent; box-shadow: none; }
 .ac-next-actions .ac-primary { min-width: 150px; }
+.ac-lookup-status { margin: -2px 0 0; color: #39715a; font-size: .78rem; font-weight: 650; }
 
 @media (max-width: 760px) {
   .add-college { min-height: 0; }
