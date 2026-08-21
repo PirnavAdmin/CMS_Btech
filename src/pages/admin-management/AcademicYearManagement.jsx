@@ -66,7 +66,7 @@ s.setDate(s.getDate()+1);
 let e=new Date(s);
 e.setFullYear(e.getFullYear()+1);
 e.setDate(e.getDate()-1);
-let item={id:Date.now().toString(),name:`${s.getFullYear()} - ${e.getFullYear()}`,startDate:s.toISOString().slice(0,10),endDate:e.toISOString().slice(0,10),status:'UPCOMING',autoActivate:false};
+let item={id:crypto.randomUUID(),name:`${s.getFullYear()} - ${e.getFullYear()}`,startDate:s.toISOString().slice(0,10),endDate:e.toISOString().slice(0,10),status:'UPCOMING',autoActivate:false};
 if(years.some(x=>x.name===item.name))setNotice(`${item.name} already exists, so no duplicate was created.`);
 else{setYears(x=>[...x,item]);
 addActivity('Next Academic Year Generated',item.name);

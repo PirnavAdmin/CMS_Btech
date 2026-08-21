@@ -17,6 +17,8 @@ import CourseStructure from './pages/courseManagement/CourseStructure'
 import CollegeInstitutionManagement from './pages/admin-management/CollegeInstitutionManagement'
 import AcademicYearManagement from './pages/admin-management/AcademicYearManagement'
 import DepartmentManagement from './pages/admin-management/DepartmentManagement'
+import MyProfile from './pages/profile/MyProfile'
+import Settings from './pages/profile/Settings'
 
 export default function App() {
   return (
@@ -38,9 +40,11 @@ export default function App() {
         }
       >
         <Route path="/dashboard" element={<Dashboard />} />
+        <Route path="/my-profile" element={<MyProfile />} />
+        <Route path="/settings" element={<Settings />} />
       </Route>
 
-      {/* Admin Management - Admin Only */}
+      {/* Administration - Admin Only */}
       <Route
         element={
           <ProtectedRoute
