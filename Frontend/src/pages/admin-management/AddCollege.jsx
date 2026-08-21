@@ -5,6 +5,20 @@ import './AddCollege.css'
 
 const TYPES = ['Engineering College', 'University', 'Autonomous College', 'Affiliated College', 'Deemed University', 'Other']
 const ACCREDITATION_STATUSES = ['Accredited', 'Not Accredited', 'Under Review', 'Expired']
+const FORM_TABS = [
+  { id: 'college', label: 'College Information' },
+  { id: 'address', label: 'Address' },
+  { id: 'contact', label: 'Contact Information' },
+  { id: 'administration', label: 'Administration' },
+  { id: 'accreditation', label: 'Accreditation Details' },
+]
+const TAB_FIELDS = {
+  college: ['collegeName', 'collegeCode', 'collegeType', 'universityName'],
+  address: ['addressLine1', 'addressLine2', 'city', 'state', 'pincode', 'country'],
+  contact: ['contactNumber', 'alternateContactNumber', 'email', 'website'],
+  administration: ['principalName', 'principalEmail', 'principalContact'],
+  accreditation: ['accreditationBody', 'accreditationStatus', 'accreditationGrade', 'accreditationNumber', 'validFrom', 'validUntil'],
+}
 const initialValues = {
   collegeName: '', collegeCode: '', collegeType: '', universityName: '', logo: '', logoName: '',
   addressLine1: '', addressLine2: '', city: '', state: '', pincode: '', country: 'India',
@@ -69,6 +83,7 @@ export default function AddCollege() {
   const [dialog, setDialog] = useState(null)
   const [notice, setNotice] = useState('')
   const [submitting, setSubmitting] = useState(false)
+  const [activeTab, setActiveTab] = useState('college')
   const errors = validate(values)
   const isValid = Object.keys(errors).length === 0 && !logoError
 
@@ -103,6 +118,18 @@ export default function AddCollege() {
   const reset = () => { setValues(initialValues); setTouched({}); setLogoError(''); setDirty(false); setDialog(null); setNotice('Form reset successfully.') }
   const requestLeave = () => dirty ? setDialog('leave') : navigate('/college-institution-management')
   const saveDraft = () => { setNotice('Draft kept for this session. It has not been sent to a server.'); setDirty(false) }
+  const saveAndNext = () => {
+    const fields = TAB_FIELDS[activeTab]
+    setTouched((current) => fields.reduce((next, field) => ({ ...next, [field]: true }), { ...current }))
+    if (fields.some((field) => errors[field])) {
+      setNotice('Please correct the highlighted fields before continuing.')
+      return
+    }
+    const currentIndex = FORM_TABS.findIndex((tab) => tab.id === activeTab)
+    setActiveTab(FORM_TABS[currentIndex + 1].id)
+    setNotice('')
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }
 
   const submit = async () => {
     touchAll()
@@ -127,10 +154,13 @@ export default function AddCollege() {
   const section = (title, subtitle, content) => <section className="ac-section"><header><h2>{title}</h2><p>{subtitle}</p></header><div className="ac-grid">{content}</div></section>
 
   return <DashboardLayout><main className="add-college">
-    <header className="ac-page-header"><div><button className="ac-back" type="button" onClick={requestLeave}>← College list</button><p className="ac-eyebrow">College Setup</p><h1>Add College</h1><p>Create and configure a new institution in the college management system.</p></div></header>
-    <nav className="ac-progress" aria-label="Form sections"><span>Basic Information</span><i>→</i><span>Address</span><i>→</i><span>Contact</span><i>→</i><span>Accreditation</span></nav>
+    <header className="ac-page-header"><div><h1>Add College</h1><p>Create and configure a new institution in the college management system.</p></div><button className="ac-back" type="button" onClick={requestLeave}>College list →</button></header>
+    <nav className="ac-tabs" aria-label="College form sections" role="tablist">
+      {FORM_TABS.map((tab, index) => <button key={tab.id} type="button" role="tab" aria-selected={activeTab === tab.id} className={activeTab === tab.id ? 'active' : ''} onClick={() => setActiveTab(tab.id)}><span>{index + 1}</span>{tab.label}</button>)}
+    </nav>
     {notice && <div className="ac-notice" role="status">{notice}</div>}
     <form onSubmit={(event) => { event.preventDefault(); submit() }} noValidate>
+      {activeTab === 'college' && <>
       {section('College Information', 'Core identity and affiliation details.', <>
         <Field label="College Name" name="collegeName" values={values} errors={errors} touched={touched} onChange={update} required maxLength={120} placeholder="e.g. Crescent Institute of Technology" />
         <Field label="College Code" name="collegeCode" values={values} errors={errors} touched={touched} onChange={update} required maxLength={12} placeholder="e.g. CIT2026" />
@@ -142,6 +172,8 @@ export default function AddCollege() {
           {logoError && <small className="ac-error" role="alert">{logoError}</small>}
         </div>
       </>)}
+      </>}
+      {activeTab === 'address' && <>
       {section('Address', 'Official postal address of the institution.', <>
         <Field label="Address Line 1" name="addressLine1" values={values} errors={errors} touched={touched} onChange={update} required maxLength={150} placeholder="Building, street, locality" />
         <Field label="Address Line 2" name="addressLine2" values={values} errors={errors} touched={touched} onChange={update} maxLength={150} placeholder="Landmark or area (optional)" />
@@ -150,18 +182,19 @@ export default function AddCollege() {
         <Field label="Pincode" name="pincode" values={values} errors={errors} touched={touched} onChange={update} required maxLength={6} inputMode="numeric" />
         <Field label="Country" name="country" values={values} errors={errors} touched={touched} onChange={update} required readOnly />
       </>)}
-      {section('Contact Information', 'Public institutional contact channels.', <>
+      </>}
+      {activeTab === 'contact' && section('Contact Information', 'Public institutional contact channels.', <>
         <Field label="Official Contact Number" name="contactNumber" values={values} errors={errors} touched={touched} onChange={update} required maxLength={10} inputMode="tel" placeholder="10-digit mobile number" />
         <Field label="Alternate Contact Number" name="alternateContactNumber" values={values} errors={errors} touched={touched} onChange={update} maxLength={10} inputMode="tel" />
         <Field label="Official Email" name="email" type="email" values={values} errors={errors} touched={touched} onChange={update} required maxLength={120} placeholder="office@college.edu" />
         <Field label="Website" name="website" type="url" values={values} errors={errors} touched={touched} onChange={update} maxLength={160} placeholder="https://college.edu" />
       </>)}
-      {section('Administration', 'Principal or institutional head details.', <>
+      {activeTab === 'administration' && section('Administration', 'Principal or institutional head details.', <>
         <Field label="Principal Name" name="principalName" values={values} errors={errors} touched={touched} onChange={update} maxLength={100} />
         <Field label="Principal Email" name="principalEmail" type="email" values={values} errors={errors} touched={touched} onChange={update} maxLength={120} />
         <Field label="Principal Contact Number" name="principalContact" values={values} errors={errors} touched={touched} onChange={update} maxLength={10} inputMode="tel" />
       </>)}
-      {section('Accreditation Details', 'Current accreditation standing and validity.', <>
+      {activeTab === 'accreditation' && section('Accreditation Details', 'Current accreditation standing and validity.', <>
         <label className="ac-field" htmlFor="ac-accreditationStatus"><span>Accreditation Status</span><select id="ac-accreditationStatus" name="accreditationStatus" value={values.accreditationStatus} onChange={update}>{ACCREDITATION_STATUSES.map((status) => <option key={status}>{status}</option>)}</select></label>
         <Field label="Accreditation Body" name="accreditationBody" values={values} errors={errors} touched={touched} onChange={update} maxLength={80} placeholder="e.g. NAAC, NBA" />
         <Field label="Accreditation Grade" name="accreditationGrade" values={values} errors={errors} touched={touched} onChange={update} maxLength={20} placeholder="e.g. A+" />
@@ -170,7 +203,11 @@ export default function AddCollege() {
         <Field label="Valid Until" name="validUntil" type="date" values={values} errors={errors} touched={touched} onChange={update} />
         {values.accreditationStatus === 'Accredited' && <p className="ac-hint ac-span-2">Complete the accreditation body, grade, number, and validity dates for a comprehensive record.</p>}
       </>)}
-      <footer className="ac-actions"><button type="button" className="ac-secondary" onClick={() => setDialog('reset')}>Reset Form</button><button type="button" className="ac-secondary" onClick={saveDraft}>Save as Draft</button><button type="button" className="ac-secondary" onClick={openPreview}>Preview College</button><button type="submit" className="ac-primary" disabled={!isValid || submitting}>{submitting ? 'Creating College...' : 'Create College'}</button></footer>
+      {activeTab !== 'accreditation' ? (
+        <footer className="ac-actions ac-next-actions"><button type="button" className="ac-primary" onClick={saveAndNext}>Save &amp; Next →</button></footer>
+      ) : (
+        <footer className="ac-actions"><button type="button" className="ac-secondary" onClick={() => setDialog('reset')}>Reset Form</button><button type="button" className="ac-secondary" onClick={saveDraft}>Save as Draft</button><button type="button" className="ac-secondary" onClick={openPreview}>Preview College</button><button type="submit" className="ac-primary" disabled={!isValid || submitting}>{submitting ? 'Creating College...' : 'Create College'}</button></footer>
+      )}
     </form>
 
     {dialog === 'reset' && <Dialog title="Reset College Form?" actions={<><button className="ac-secondary" onClick={() => setDialog(null)}>Cancel</button><button className="ac-danger-btn" onClick={reset}>Reset</button></>}><p>All entered information will be cleared.</p></Dialog>}
