@@ -68,8 +68,3 @@
 .cm-table td {
   color: #1a1a1a;
 }
-.cm-details-grid dd {
-  overflow-wrap: break-word;
-  word-break: break-word;
-  max-width: 100%;
-}

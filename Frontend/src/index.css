@@ -322,7 +322,17 @@ button.btn-primary:hover,
 
 @media (min-width: 641px) {
   .sidebar {
+    position: fixed;
+    top: 0;
+    left: 0;
     width: 250px;
+    height: 100dvh;
+    overflow-y: auto;
+    z-index: 10;
+  }
+
+  .dashboard-layout > main {
+    margin-left: 250px;
   }
 }
 
@@ -371,11 +381,4 @@ button.btn-primary:hover,
 
 .back-to-login {
   margin-top: 4px;
-}
-.college-detail-item p,
-.college-detail-item a,
-.detail-value {
-  overflow-wrap: break-word;
-  word-break: break-word;
-  max-width: 100%;
 }
