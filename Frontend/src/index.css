@@ -51,6 +51,14 @@ html, body, #root { min-height: 100%; }
 .logout-success { position: fixed; top: 24px; right: 24px; z-index: 200; display: flex; align-items: center; justify-content: space-between; gap: 14px; width: min(330px, calc(100vw - 32px)); margin: 0; padding: 13px 12px 13px 16px; border: 1px solid #9fe2c2; border-radius: 10px; color: #087443; background: #effbf4; box-shadow: 0 14px 34px rgba(9,58,103,.18); font-size: .9rem; font-weight: 700; animation: signed-out-toast .2s ease-out; }.logout-success button { display: grid; width: 26px; height: 26px; place-items: center; border: 0; border-radius: 6px; padding: 0; color: #087443; background: transparent; font-size: 1.3rem; line-height: 1; }.logout-success button:hover { background: #d8f5e5; }.logout-success button:focus-visible { outline: 3px solid #75b9e7; outline-offset: 2px; }
 @keyframes signed-out-toast { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
 @media (max-width: 640px) { .logout-success { top: 16px; right: 16px; } }
+
+.sidebar-brand { display: flex; align-items: center; gap: 11px; margin: 0 14px 22px; padding: 10px 9px 14px; border-bottom: 1px solid rgba(255,255,255,.16); }
+.sidebar-brand__mark { display: grid; flex: 0 0 42px; width: 42px; height: 42px; place-items: center; border: 1px solid rgba(255,255,255,.28); border-radius: 11px; color: #fff; background: linear-gradient(145deg, rgba(255,255,255,.2), rgba(255,255,255,.07)); box-shadow: inset 0 1px 0 rgba(255,255,255,.22), 0 8px 18px rgba(3,31,57,.2); }
+.sidebar-brand__mark svg { width: 25px; height: 25px; overflow: visible; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.sidebar-brand__mark svg path:first-child { fill: rgba(255,255,255,.14); }
+.sidebar-brand__copy { display: grid; min-width: 0; gap: 2px; }
+.sidebar-brand__copy strong { color: #fff; font-size: 1.05rem; line-height: 1.1; letter-spacing: .01em; white-space: nowrap; }
+.sidebar-brand__copy small { color: var(--brand-text-muted); font-size: .61rem; font-weight: 700; letter-spacing: .055em; text-transform: uppercase; white-space: nowrap; }
 .form-error { margin: -4px 0 0; padding: 12px 14px; border: 1px solid #fecdca; border-radius: 9px; background: #fffbfa; }
 .login-form input[aria-invalid="true"] { border-color: #d92d20; box-shadow: 0 0 0 3px #d92d201a; }
 .sign-in-button:disabled { cursor: wait; opacity: .72; }
