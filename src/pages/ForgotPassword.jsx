@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { AuthRequestError, sendOtp, verifyOtp, resetPassword } from '../auth/authApi'
+import './ForgotPassword.css'
 
 const isValidContact = (value, method) => method === 'email'
   ? /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)
@@ -116,10 +117,10 @@ export default function ForgotPassword({ onBack }) {
   if (step === 'otp') return (
     <form className="login-form" onSubmit={validateOtp} noValidate>
       <header><h2>OTP verification</h2><p>Enter the 6-digit code sent to <strong>{contact.trim()}</strong>.</p>{demoOtp && <p className="demo-otp">Demo OTP: {demoOtp}</p>}</header>
-      <fieldset className="otp-fieldset"><legend>Verification code</legend><div className="otp-boxes" onPaste={(event) => { const pasted = event.clipboardData.getData('text').replace(/\D/g, '').slice(0, 6); if (pasted) { event.preventDefault(); setOtp(pasted); otpRefs.current[Math.min(pasted.length, 6) - 1]?.focus() } }}>{Array.from({ length: 6 }, (_, index) => <input key={index} ref={(element) => { otpRefs.current[index] = element }} type="text" inputMode="numeric" autoComplete={index === 0 ? 'one-time-code' : 'off'} maxLength={1} value={otp[index] || ''} onChange={(event) => updateOtp(index, event.target.value)} onKeyDown={(event) => { if (event.key === 'Backspace' && !otp[index] && index > 0) otpRefs.current[index - 1]?.focus() }} aria-label={`OTP digit ${index + 1}`} aria-invalid={Boolean(error)} />)}</div></fieldset>
+      <fieldset className="otp-fieldset compact-otp-fieldset"><legend>Verification code</legend><div className="otp-boxes compact-otp-boxes" onPaste={(event) => { const pasted = event.clipboardData.getData('text').replace(/\D/g, '').slice(0, 6); if (pasted) { event.preventDefault(); setOtp(pasted); otpRefs.current[Math.min(pasted.length, 6) - 1]?.focus() } }}>{Array.from({ length: 6 }, (_, index) => <input key={index} ref={(element) => { otpRefs.current[index] = element }} type="text" inputMode="numeric" autoComplete={index === 0 ? 'one-time-code' : 'off'} maxLength={1} value={otp[index] || ''} onChange={(event) => updateOtp(index, event.target.value)} onKeyDown={(event) => { if (event.key === 'Backspace' && !otp[index] && index > 0) otpRefs.current[index - 1]?.focus() }} aria-label={`OTP digit ${index + 1}`} aria-invalid={Boolean(error)} />)}</div></fieldset>
       {error && <p className="form-error" role="alert">{error}</p>}
       <button className="sign-in-button" type="submit" disabled={loading}>{loading ? 'Verifying...' : 'Verify OTP'}</button>
-      <div className="recovery-actions"><button type="button" className="text-button" disabled={timer > 0 || loading} onClick={requestOtp}>{timer ? `Resend OTP in ${timer}s` : 'Resend OTP'}</button><button type="button" className="text-button" onClick={() => { setStep('contact'); setOtp(''); setError('') }}>Change contact</button><button type="button" className="text-button" onClick={onBack}>Cancel</button></div>
+      <div className="recovery-actions clean-recovery-actions">{timer > 0 ? <span className="resend-countdown">Resend OTP in {timer}s</span> : <button type="button" className="text-button resend-button" disabled={loading} onClick={requestOtp}>Resend OTP</button>}<button type="button" className="text-button" onClick={() => { setStep('contact'); setOtp(''); setError('') }}>Change contact</button><button type="button" className="text-button" onClick={onBack}>Cancel</button></div>
     </form>
   )
 
@@ -127,7 +128,7 @@ export default function ForgotPassword({ onBack }) {
   return (
     <form className="login-form" onSubmit={requestOtp} noValidate>
       <header><h2>Forgot your password?</h2><p>Choose where you would like to receive your verification code.</p></header>
-      <div className="recovery-tabs" role="tablist" aria-label="Verification method"><button type="button" role="tab" aria-selected={method === 'email'} className={method === 'email' ? 'active' : ''} onClick={() => switchMethod('email')}>Email</button><button type="button" role="tab" aria-selected={method === 'mobile'} className={method === 'mobile' ? 'active' : ''} onClick={() => switchMethod('mobile')}>Mobile</button></div>
+      <div className="recovery-tabs verification-method-tabs" role="tablist" aria-label="Verification method"><button type="button" role="tab" aria-selected={method === 'email'} className={method === 'email' ? 'active' : ''} onClick={() => switchMethod('email')}>Email</button><button type="button" role="tab" aria-selected={method === 'mobile'} className={method === 'mobile' ? 'active' : ''} onClick={() => switchMethod('mobile')}>Mobile</button></div>
       <label htmlFor="recovery-contact"><span>{method === 'email' ? 'Email ID' : 'Mobile number'}</span><input id="recovery-contact" type="text" inputMode={method === 'email' ? 'email' : 'numeric'} autoComplete={method === 'email' ? 'email' : 'tel'} maxLength={method === 'mobile' ? 10 : undefined} placeholder={method === 'email' ? 'Enter email ID' : 'Enter mobile number'} value={contact} onChange={(event) => { setContact(method === 'mobile' ? event.target.value.replace(/\D/g, '') : event.target.value); setError('') }} aria-invalid={Boolean(error)} /></label>
       {error && <p className="form-error" role="alert">{error}</p>}
       <button className="sign-in-button" type="submit" disabled={loading}>{loading ? 'Sending...' : 'Send Verification Code'}</button>
