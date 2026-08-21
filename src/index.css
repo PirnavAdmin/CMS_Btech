@@ -372,3 +372,10 @@ button.btn-primary:hover,
 .back-to-login {
   margin-top: 4px;
 }
+.college-detail-item p,
+.college-detail-item a,
+.detail-value {
+  overflow-wrap: break-word;
+  word-break: break-word;
+  max-width: 100%;
+}
