@@ -15,6 +15,7 @@ import BranchFormPage from './pages/courseManagement/BranchFormPage'
 import BranchDetails from './pages/courseManagement/BranchDetails'
 import CourseStructure from './pages/courseManagement/CourseStructure'
 import CollegeInstitutionManagement from './pages/admin-management/CollegeInstitutionManagement'
+import AddCollege from './pages/admin-management/AddCollege'
 import AcademicYearManagement from './pages/admin-management/AcademicYearManagement'
 import DepartmentManagement from './pages/admin-management/DepartmentManagement'
 import MyProfile from './pages/profile/MyProfile'
@@ -53,6 +54,7 @@ export default function App() {
         }
       >
         <Route path="/college-institution-management" element={<CollegeInstitutionManagement />} />
+        <Route path="/college-institution-management/add" element={<AddCollege />} />
         <Route path="/academic-year-management" element={<AcademicYearManagement />} />
         <Route path="/department-management" element={<DepartmentManagement />} />
       </Route>

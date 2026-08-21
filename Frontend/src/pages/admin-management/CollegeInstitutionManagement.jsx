@@ -4,6 +4,99 @@ import './CollegeInstitutionManagement.css'
 
 const COLLEGE_TYPES = ['Engineering', 'Arts & Science', 'Medical', 'Management', 'Polytechnic', 'Other']
 
+const STATIC_COLLEGES = [
+  {
+    id: 1001,
+    name: 'Government Engineering College, Thrissur',
+    code: 'GECT',
+    type: 'Engineering',
+    university: 'APJ Abdul Kalam Technological University',
+    address: 'Ramavarmapuram Engineering College Road',
+    city: 'Thrissur',
+    state: 'Kerala',
+    pincode: '680009',
+    contact: '4872334144',
+    email: 'principal@gectcr.ac.in',
+    website: 'https://gectcr.ac.in',
+    logo: '',
+    principal: 'Dr. Meera Nair',
+    accreditation: 'NAAC accredited; NBA-accredited engineering programs',
+    status: 'active',
+  },
+  {
+    id: 1002,
+    name: 'National Institute of Technology Calicut',
+    code: 'NITC',
+    type: 'Engineering',
+    university: 'National Institute of Technology Calicut',
+    address: 'NIT Campus, Kattangal',
+    city: 'Kozhikode',
+    state: 'Kerala',
+    pincode: '673601',
+    contact: '4952286100',
+    email: 'registrar@nitc.ac.in',
+    website: 'https://nitc.ac.in',
+    logo: '',
+    principal: 'Dr. Anil Kumar',
+    accreditation: 'Institute of National Importance',
+    status: 'active',
+  },
+  {
+    id: 1003,
+    name: 'St. Joseph College of Engineering',
+    code: 'SJCE',
+    type: 'Engineering',
+    university: 'Anna University',
+    address: 'Old Mahabalipuram Road, Semmancheri',
+    city: 'Chennai',
+    state: 'Tamil Nadu',
+    pincode: '600119',
+    contact: '4424531000',
+    email: 'office@sjce.edu.in',
+    website: 'https://www.sjce.edu.in',
+    logo: '',
+    principal: 'Dr. Priya Raman',
+    accreditation: 'NAAC A+; NBA-accredited programs',
+    status: 'active',
+  },
+  {
+    id: 1004,
+    name: 'Bharath College of Arts and Science',
+    code: 'BCAS',
+    type: 'Arts & Science',
+    university: 'University of Madras',
+    address: 'Velachery Main Road',
+    city: 'Chennai',
+    state: 'Tamil Nadu',
+    pincode: '600042',
+    contact: '4422445566',
+    email: 'info@bcas.edu.in',
+    website: 'https://www.bcas.edu.in',
+    logo: '',
+    principal: 'Dr. Lakshmi Narayanan',
+    accreditation: 'NAAC A accredited',
+    status: 'inactive',
+  },
+  {
+    id: 1005,
+    name: 'Malabar Institute of Management',
+    code: 'MIMK',
+    type: 'Management',
+    university: 'University of Calicut',
+    address: 'University Road, Thenhipalam',
+    city: 'Malappuram',
+    state: 'Kerala',
+    pincode: '673635',
+    contact: '4942407227',
+    email: 'admissions@mimk.edu.in',
+    website: 'https://www.mimk.edu.in',
+    logo: '',
+    principal: 'Dr. Faisal Rahman',
+    accreditation: 'AICTE approved',
+    status: 'active',
+  },
+]
+
 const emptyCollege = {
   id: null,
   name: '',
@@ -56,9 +149,10 @@ export default function CollegeInstitutionManagement() {
   const [colleges, setColleges] = useState(() => {
     try {
       const saved = localStorage.getItem('btechms_colleges')
-      return saved ? JSON.parse(saved) : []
+      const parsed = saved ? JSON.parse(saved) : []
+      return Array.isArray(parsed) && parsed.length > 0 ? parsed : STATIC_COLLEGES
     } catch {
-      return []
+      return STATIC_COLLEGES
     }
   })
 
@@ -104,9 +198,7 @@ export default function CollegeInstitutionManagement() {
   }
 
   const openAdd = () => {
-    setFormValues(emptyCollege)
-    setErrors({})
-    setViewMode('add')
+    window.location.assign('/college-institution-management/add')
   }
 
   const openEdit = (college) => {
@@ -160,7 +252,7 @@ export default function CollegeInstitutionManagement() {
   return (
     <DashboardLayout>
       <div className="college-management">
-        {viewMode === 'list' && (
+        {['list', 'edit', 'details'].includes(viewMode) && (
           <>
             <header className="cm-header">
               <div>
@@ -245,8 +337,12 @@ export default function CollegeInstitutionManagement() {
           </>
         )}
 
+        {viewMode === 'edit' && (
+          <button type="button" className="cm-modal-backdrop" aria-label="Close edit dialog" onClick={backToList} />
+        )}
+
         {(viewMode === 'add' || viewMode === 'edit') && (
-          <form className="cm-form" onSubmit={handleSave} noValidate>
+          <form className={`cm-form ${viewMode === 'edit' ? 'cm-modal-card' : ''}`} onSubmit={handleSave} noValidate>
             <header className="cm-header">
               <div>
                 <h1>{viewMode === 'edit' ? 'Edit College' : 'Add College'}</h1>
@@ -352,7 +448,9 @@ export default function CollegeInstitutionManagement() {
         )}
 
         {viewMode === 'details' && activeCollege && (
-          <div className="cm-college-details">
+          <>
+          <button type="button" className="cm-modal-backdrop" aria-label="Close college details" onClick={backToList} />
+          <div className="cm-college-details cm-modal-card">
             <header className="cm-header">
               <div>
                 <h1>{activeCollege.name}</h1>
@@ -376,14 +474,13 @@ export default function CollegeInstitutionManagement() {
                 <div><dt>Email</dt><dd>{activeCollege.email}</dd></div>
                 <div><dt>Website</dt><dd>{activeCollege.website || '—'}</dd></div>
                 <div><dt>Principal Name</dt><dd>{activeCollege.principal}</dd></div>
+                <div><dt>Status</dt><dd>{activeCollege.status === 'active' ? 'Active' : 'Inactive'}</dd></div>
                 <div className="cm-span-2"><dt>Accreditation Details</dt><dd>{activeCollege.accreditation || '—'}</dd></div>
               </dl>
             </div>
 
-            <div className="cm-form-actions">
-              <button type="button" className="cm-primary-btn" onClick={() => openEdit(activeCollege)}>Edit College</button>
-            </div>
           </div>
+          </>
         )}
 
         {viewMode === 'settings' && (
