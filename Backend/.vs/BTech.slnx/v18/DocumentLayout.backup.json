@@ -1,0 +1,364 @@
+{
+  "Version": 1,
+  "WorkspaceRootPath": "C:\\Users\\ADMIN\\Desktop\\C#\\BTech\\",
+  "Documents": [
+    {
+      "AbsoluteMoniker": "D:0:0:{5299C7D8-039D-4967-A876-C723CB797D65}|BTech.csproj|c:\\users\\admin\\desktop\\c#\\btech\\services\\authservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{5299C7D8-039D-4967-A876-C723CB797D65}|BTech.csproj|solutionrelative:services\\authservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{5299C7D8-039D-4967-A876-C723CB797D65}|BTech.csproj|c:\\users\\admin\\desktop\\c#\\btech\\program.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{5299C7D8-039D-4967-A876-C723CB797D65}|BTech.csproj|solutionrelative:program.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{5299C7D8-039D-4967-A876-C723CB797D65}|BTech.csproj|c:\\users\\admin\\desktop\\c#\\btech\\appsettings.json||{90A6B3A7-C1A3-4009-A288-E2FF89E96FA0}",
+      "RelativeMoniker": "D:0:0:{5299C7D8-039D-4967-A876-C723CB797D65}|BTech.csproj|solutionrelative:appsettings.json||{90A6B3A7-C1A3-4009-A288-E2FF89E96FA0}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{5299C7D8-039D-4967-A876-C723CB797D65}|BTech.csproj|c:\\users\\admin\\desktop\\c#\\btech\\controllers\\authcontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{5299C7D8-039D-4967-A876-C723CB797D65}|BTech.csproj|solutionrelative:controllers\\authcontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{5299C7D8-039D-4967-A876-C723CB797D65}|BTech.csproj|c:\\users\\admin\\desktop\\c#\\btech\\services\\interfaces\\iauthservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{5299C7D8-039D-4967-A876-C723CB797D65}|BTech.csproj|solutionrelative:services\\interfaces\\iauthservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{5299C7D8-039D-4967-A876-C723CB797D65}|BTech.csproj|c:\\users\\admin\\desktop\\c#\\btech\\services\\jwtservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{5299C7D8-039D-4967-A876-C723CB797D65}|BTech.csproj|solutionrelative:services\\jwtservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{5299C7D8-039D-4967-A876-C723CB797D65}|BTech.csproj|c:\\users\\admin\\desktop\\c#\\btech\\services\\interfaces\\ijwtservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{5299C7D8-039D-4967-A876-C723CB797D65}|BTech.csproj|solutionrelative:services\\interfaces\\ijwtservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{5299C7D8-039D-4967-A876-C723CB797D65}|BTech.csproj|c:\\users\\admin\\desktop\\c#\\btech\\repositories\\loginauditrepository.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{5299C7D8-039D-4967-A876-C723CB797D65}|BTech.csproj|solutionrelative:repositories\\loginauditrepository.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{5299C7D8-039D-4967-A876-C723CB797D65}|BTech.csproj|c:\\users\\admin\\desktop\\c#\\btech\\repositories\\interfaces\\iloginauditrepository.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{5299C7D8-039D-4967-A876-C723CB797D65}|BTech.csproj|solutionrelative:repositories\\interfaces\\iloginauditrepository.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{5299C7D8-039D-4967-A876-C723CB797D65}|BTech.csproj|c:\\users\\admin\\desktop\\c#\\btech\\repositories\\userrolerepository.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{5299C7D8-039D-4967-A876-C723CB797D65}|BTech.csproj|solutionrelative:repositories\\userrolerepository.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{5299C7D8-039D-4967-A876-C723CB797D65}|BTech.csproj|c:\\users\\admin\\desktop\\c#\\btech\\repositories\\interfaces\\iuserrolerepository.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{5299C7D8-039D-4967-A876-C723CB797D65}|BTech.csproj|solutionrelative:repositories\\interfaces\\iuserrolerepository.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{5299C7D8-039D-4967-A876-C723CB797D65}|BTech.csproj|c:\\users\\admin\\desktop\\c#\\btech\\repositories\\userrepository.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{5299C7D8-039D-4967-A876-C723CB797D65}|BTech.csproj|solutionrelative:repositories\\userrepository.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{5299C7D8-039D-4967-A876-C723CB797D65}|BTech.csproj|c:\\users\\admin\\desktop\\c#\\btech\\repositories\\interfaces\\iuserrepository.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{5299C7D8-039D-4967-A876-C723CB797D65}|BTech.csproj|solutionrelative:repositories\\interfaces\\iuserrepository.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{5299C7D8-039D-4967-A876-C723CB797D65}|BTech.csproj|c:\\users\\admin\\desktop\\c#\\btech\\dtos\\loginresponsedto.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{5299C7D8-039D-4967-A876-C723CB797D65}|BTech.csproj|solutionrelative:dtos\\loginresponsedto.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{5299C7D8-039D-4967-A876-C723CB797D65}|BTech.csproj|c:\\users\\admin\\desktop\\c#\\btech\\dtos\\loginrequestdto.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{5299C7D8-039D-4967-A876-C723CB797D65}|BTech.csproj|solutionrelative:dtos\\loginrequestdto.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{5299C7D8-039D-4967-A876-C723CB797D65}|BTech.csproj|c:\\users\\admin\\desktop\\c#\\btech\\data\\applicationdbcontext.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{5299C7D8-039D-4967-A876-C723CB797D65}|BTech.csproj|solutionrelative:data\\applicationdbcontext.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{5299C7D8-039D-4967-A876-C723CB797D65}|BTech.csproj|c:\\users\\admin\\desktop\\c#\\btech\\models\\loginaudit.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{5299C7D8-039D-4967-A876-C723CB797D65}|BTech.csproj|solutionrelative:models\\loginaudit.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{5299C7D8-039D-4967-A876-C723CB797D65}|BTech.csproj|c:\\users\\admin\\desktop\\c#\\btech\\models\\userrole.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{5299C7D8-039D-4967-A876-C723CB797D65}|BTech.csproj|solutionrelative:models\\userrole.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{5299C7D8-039D-4967-A876-C723CB797D65}|BTech.csproj|c:\\users\\admin\\desktop\\c#\\btech\\models\\role.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{5299C7D8-039D-4967-A876-C723CB797D65}|BTech.csproj|solutionrelative:models\\role.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{5299C7D8-039D-4967-A876-C723CB797D65}|BTech.csproj|c:\\users\\admin\\desktop\\c#\\btech\\models\\user.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{5299C7D8-039D-4967-A876-C723CB797D65}|BTech.csproj|solutionrelative:models\\user.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    }
+  ],
+  "DocumentGroupContainers": [
+    {
+      "Orientation": 0,
+      "VerticalTabListWidth": 256,
+      "DocumentGroups": [
+        {
+          "DockedWidth": 200,
+          "SelectedChildIndex": 4,
+          "Children": [
+            {
+              "$type": "Bookmark",
+              "Name": "ST:0:0:{aa2115a1-9712-457b-9047-dbb71ca2cdd2}"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 1,
+              "Title": "Program.cs",
+              "DocumentMoniker": "C:\\Users\\ADMIN\\Desktop\\C#\\BTech\\Program.cs",
+              "RelativeDocumentMoniker": "Program.cs",
+              "ToolTip": "C:\\Users\\ADMIN\\Desktop\\C#\\BTech\\Program.cs",
+              "RelativeToolTip": "Program.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAkAAAA/AAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-08-19T11:39:05.32Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 2,
+              "Title": "appsettings.json",
+              "DocumentMoniker": "C:\\Users\\ADMIN\\Desktop\\C#\\BTech\\appsettings.json",
+              "RelativeDocumentMoniker": "appsettings.json",
+              "ToolTip": "C:\\Users\\ADMIN\\Desktop\\C#\\BTech\\appsettings.json",
+              "RelativeToolTip": "appsettings.json",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAIAAABcAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.001642|",
+              "WhenOpened": "2026-08-19T11:32:53.258Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 5,
+              "Title": "JwtService.cs",
+              "DocumentMoniker": "C:\\Users\\ADMIN\\Desktop\\C#\\BTech\\Services\\JwtService.cs",
+              "RelativeDocumentMoniker": "Services\\JwtService.cs",
+              "ToolTip": "C:\\Users\\ADMIN\\Desktop\\C#\\BTech\\Services\\JwtService.cs",
+              "RelativeToolTip": "Services\\JwtService.cs",
+              "ViewState": "AgIAAD4AAAAAAAAAAAAwwFkAAAABAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-08-19T11:24:41.515Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 0,
+              "Title": "AuthService.cs",
+              "DocumentMoniker": "C:\\Users\\ADMIN\\Desktop\\C#\\BTech\\Services\\AuthService.cs",
+              "RelativeDocumentMoniker": "Services\\AuthService.cs",
+              "ToolTip": "C:\\Users\\ADMIN\\Desktop\\C#\\BTech\\Services\\AuthService.cs",
+              "RelativeToolTip": "Services\\AuthService.cs",
+              "ViewState": "AgIAAEoAAAAAAAAAAAAswEoAAAARAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-08-19T11:24:35.211Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 6,
+              "Title": "IJwtService.cs",
+              "DocumentMoniker": "C:\\Users\\ADMIN\\Desktop\\C#\\BTech\\Services\\Interfaces\\IJwtService.cs",
+              "RelativeDocumentMoniker": "Services\\Interfaces\\IJwtService.cs",
+              "ToolTip": "C:\\Users\\ADMIN\\Desktop\\C#\\BTech\\Services\\Interfaces\\IJwtService.cs",
+              "RelativeToolTip": "Services\\Interfaces\\IJwtService.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAgAAAABAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-08-19T11:23:58.203Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 4,
+              "Title": "IAuthService.cs",
+              "DocumentMoniker": "C:\\Users\\ADMIN\\Desktop\\C#\\BTech\\Services\\Interfaces\\IAuthService.cs",
+              "RelativeDocumentMoniker": "Services\\Interfaces\\IAuthService.cs",
+              "ToolTip": "C:\\Users\\ADMIN\\Desktop\\C#\\BTech\\Services\\Interfaces\\IAuthService.cs",
+              "RelativeToolTip": "Services\\Interfaces\\IAuthService.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAwAAAABAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-08-19T11:23:49.669Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 9,
+              "Title": "UserRoleRepository.cs",
+              "DocumentMoniker": "C:\\Users\\ADMIN\\Desktop\\C#\\BTech\\Repositories\\UserRoleRepository.cs",
+              "RelativeDocumentMoniker": "Repositories\\UserRoleRepository.cs",
+              "ToolTip": "C:\\Users\\ADMIN\\Desktop\\C#\\BTech\\Repositories\\UserRoleRepository.cs",
+              "RelativeToolTip": "Repositories\\UserRoleRepository.cs",
+              "ViewState": "AgIAAAQAAAAAAAAAAAAwwB8AAAABAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-08-19T11:22:09.487Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 7,
+              "Title": "LoginAuditRepository.cs",
+              "DocumentMoniker": "C:\\Users\\ADMIN\\Desktop\\C#\\BTech\\Repositories\\LoginAuditRepository.cs",
+              "RelativeDocumentMoniker": "Repositories\\LoginAuditRepository.cs",
+              "ToolTip": "C:\\Users\\ADMIN\\Desktop\\C#\\BTech\\Repositories\\LoginAuditRepository.cs",
+              "RelativeToolTip": "Repositories\\LoginAuditRepository.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAABYAAAABAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-08-19T11:22:03.578Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 11,
+              "Title": "UserRepository.cs",
+              "DocumentMoniker": "C:\\Users\\ADMIN\\Desktop\\C#\\BTech\\Repositories\\UserRepository.cs",
+              "RelativeDocumentMoniker": "Repositories\\UserRepository.cs",
+              "ToolTip": "C:\\Users\\ADMIN\\Desktop\\C#\\BTech\\Repositories\\UserRepository.cs",
+              "RelativeToolTip": "Repositories\\UserRepository.cs",
+              "ViewState": "AgIAABIAAAAAAAAAAAAwwC0AAAABAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-08-19T11:21:55.449Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 10,
+              "Title": "IUserRoleRepository.cs",
+              "DocumentMoniker": "C:\\Users\\ADMIN\\Desktop\\C#\\BTech\\Repositories\\Interfaces\\IUserRoleRepository.cs",
+              "RelativeDocumentMoniker": "Repositories\\Interfaces\\IUserRoleRepository.cs",
+              "ToolTip": "C:\\Users\\ADMIN\\Desktop\\C#\\BTech\\Repositories\\Interfaces\\IUserRoleRepository.cs",
+              "RelativeToolTip": "Repositories\\Interfaces\\IUserRoleRepository.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAYAAAABAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-08-19T11:21:04.233Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 8,
+              "Title": "ILoginAuditRepository.cs",
+              "DocumentMoniker": "C:\\Users\\ADMIN\\Desktop\\C#\\BTech\\Repositories\\Interfaces\\ILoginAuditRepository.cs",
+              "RelativeDocumentMoniker": "Repositories\\Interfaces\\ILoginAuditRepository.cs",
+              "ToolTip": "C:\\Users\\ADMIN\\Desktop\\C#\\BTech\\Repositories\\Interfaces\\ILoginAuditRepository.cs",
+              "RelativeToolTip": "Repositories\\Interfaces\\ILoginAuditRepository.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAgAAAABAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-08-19T11:20:56.956Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 12,
+              "Title": "IUserRepository.cs",
+              "DocumentMoniker": "C:\\Users\\ADMIN\\Desktop\\C#\\BTech\\Repositories\\Interfaces\\IUserRepository.cs",
+              "RelativeDocumentMoniker": "Repositories\\Interfaces\\IUserRepository.cs",
+              "ToolTip": "C:\\Users\\ADMIN\\Desktop\\C#\\BTech\\Repositories\\Interfaces\\IUserRepository.cs",
+              "RelativeToolTip": "Repositories\\Interfaces\\IUserRepository.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAoAAAABAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-08-19T11:20:39.607Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 13,
+              "Title": "LoginResponseDto.cs",
+              "DocumentMoniker": "C:\\Users\\ADMIN\\Desktop\\C#\\BTech\\DTOs\\LoginResponseDto.cs",
+              "RelativeDocumentMoniker": "DTOs\\LoginResponseDto.cs",
+              "ToolTip": "C:\\Users\\ADMIN\\Desktop\\C#\\BTech\\DTOs\\LoginResponseDto.cs",
+              "RelativeToolTip": "DTOs\\LoginResponseDto.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAABIAAAABAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-08-19T11:18:56.872Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 14,
+              "Title": "LoginRequestDto.cs",
+              "DocumentMoniker": "C:\\Users\\ADMIN\\Desktop\\C#\\BTech\\DTOs\\LoginRequestDto.cs",
+              "RelativeDocumentMoniker": "DTOs\\LoginRequestDto.cs",
+              "ToolTip": "C:\\Users\\ADMIN\\Desktop\\C#\\BTech\\DTOs\\LoginRequestDto.cs",
+              "RelativeToolTip": "DTOs\\LoginRequestDto.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAwAAAABAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-08-19T11:18:51.513Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 18,
+              "Title": "Role.cs",
+              "DocumentMoniker": "C:\\Users\\ADMIN\\Desktop\\C#\\BTech\\Models\\Role.cs",
+              "RelativeDocumentMoniker": "Models\\Role.cs",
+              "ToolTip": "C:\\Users\\ADMIN\\Desktop\\C#\\BTech\\Models\\Role.cs",
+              "RelativeToolTip": "Models\\Role.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAABoAAAABAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-08-19T11:17:28.892Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 17,
+              "Title": "UserRole.cs",
+              "DocumentMoniker": "C:\\Users\\ADMIN\\Desktop\\C#\\BTech\\Models\\UserRole.cs",
+              "RelativeDocumentMoniker": "Models\\UserRole.cs",
+              "ToolTip": "C:\\Users\\ADMIN\\Desktop\\C#\\BTech\\Models\\UserRole.cs",
+              "RelativeToolTip": "Models\\UserRole.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAABgAAAABAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-08-19T11:17:19.443Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 16,
+              "Title": "LoginAudit.cs",
+              "DocumentMoniker": "C:\\Users\\ADMIN\\Desktop\\C#\\BTech\\Models\\LoginAudit.cs",
+              "RelativeDocumentMoniker": "Models\\LoginAudit.cs",
+              "ToolTip": "C:\\Users\\ADMIN\\Desktop\\C#\\BTech\\Models\\LoginAudit.cs",
+              "RelativeToolTip": "Models\\LoginAudit.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAABoAAAABAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-08-19T11:17:13.982Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 19,
+              "Title": "User.cs",
+              "DocumentMoniker": "C:\\Users\\ADMIN\\Desktop\\C#\\BTech\\Models\\User.cs",
+              "RelativeDocumentMoniker": "Models\\User.cs",
+              "ToolTip": "C:\\Users\\ADMIN\\Desktop\\C#\\BTech\\Models\\User.cs",
+              "RelativeToolTip": "Models\\User.cs",
+              "ViewState": "AgIAAAUAAAAAAAAAAAAwwCAAAAABAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-08-19T11:17:07.146Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 15,
+              "Title": "ApplicationDbContext.cs",
+              "DocumentMoniker": "C:\\Users\\ADMIN\\Desktop\\C#\\BTech\\Data\\ApplicationDbContext.cs",
+              "RelativeDocumentMoniker": "Data\\ApplicationDbContext.cs",
+              "ToolTip": "C:\\Users\\ADMIN\\Desktop\\C#\\BTech\\Data\\ApplicationDbContext.cs",
+              "RelativeToolTip": "Data\\ApplicationDbContext.cs",
+              "ViewState": "AgIAALoAAAAAAAAAAAAwwNUAAAABAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-08-19T11:16:11.376Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 3,
+              "Title": "AuthController.cs",
+              "DocumentMoniker": "C:\\Users\\ADMIN\\Desktop\\C#\\BTech\\Controllers\\AuthController.cs",
+              "RelativeDocumentMoniker": "Controllers\\AuthController.cs",
+              "ToolTip": "C:\\Users\\ADMIN\\Desktop\\C#\\BTech\\Controllers\\AuthController.cs",
+              "RelativeToolTip": "Controllers\\AuthController.cs",
+              "ViewState": "AgIAAC0AAAAAAAAAAAAwwEgAAAABAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-08-19T11:15:32.466Z",
+              "EditorCaption": ""
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

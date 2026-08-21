@@ -1,0 +1,470 @@
+{
+  "Version": 1,
+  "WorkspaceRootPath": "C:\\Users\\Admin\\Downloads\\BTech---zip\\BTech\\",
+  "Documents": [
+    {
+      "AbsoluteMoniker": "D:0:0:{104165C5-2196-AB02-A480-632B89817CD0}|BTech.csproj|c:\\users\\admin\\downloads\\btech---zip\\btech\\program.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{104165C5-2196-AB02-A480-632B89817CD0}|BTech.csproj|solutionrelative:program.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{104165C5-2196-AB02-A480-632B89817CD0}|BTech.csproj|c:\\users\\admin\\downloads\\btech---zip\\btech\\services\\implementations\\profileservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{104165C5-2196-AB02-A480-632B89817CD0}|BTech.csproj|solutionrelative:services\\implementations\\profileservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{104165C5-2196-AB02-A480-632B89817CD0}|BTech.csproj|c:\\users\\admin\\downloads\\btech---zip\\btech\\repositories\\userrepository.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{104165C5-2196-AB02-A480-632B89817CD0}|BTech.csproj|solutionrelative:repositories\\userrepository.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{104165C5-2196-AB02-A480-632B89817CD0}|BTech.csproj|c:\\users\\admin\\downloads\\btech---zip\\btech\\repositories\\interfaces\\iuserrepository.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{104165C5-2196-AB02-A480-632B89817CD0}|BTech.csproj|solutionrelative:repositories\\interfaces\\iuserrepository.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{104165C5-2196-AB02-A480-632B89817CD0}|BTech.csproj|c:\\users\\admin\\downloads\\btech---zip\\btech\\services\\authservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{104165C5-2196-AB02-A480-632B89817CD0}|BTech.csproj|solutionrelative:services\\authservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{104165C5-2196-AB02-A480-632B89817CD0}|BTech.csproj|c:\\users\\admin\\downloads\\btech---zip\\btech\\controllers\\authcontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{104165C5-2196-AB02-A480-632B89817CD0}|BTech.csproj|solutionrelative:controllers\\authcontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{104165C5-2196-AB02-A480-632B89817CD0}|BTech.csproj|c:\\users\\admin\\downloads\\btech---zip\\btech\\controllers\\v1\\profile\\profilecontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{104165C5-2196-AB02-A480-632B89817CD0}|BTech.csproj|solutionrelative:controllers\\v1\\profile\\profilecontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{104165C5-2196-AB02-A480-632B89817CD0}|BTech.csproj|c:\\users\\admin\\downloads\\btech---zip\\btech\\data\\applicationdbcontext.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{104165C5-2196-AB02-A480-632B89817CD0}|BTech.csproj|solutionrelative:data\\applicationdbcontext.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{104165C5-2196-AB02-A480-632B89817CD0}|BTech.csproj|c:\\users\\admin\\downloads\\btech---zip\\btech\\repositories\\implementations\\refreshtokenrepository.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{104165C5-2196-AB02-A480-632B89817CD0}|BTech.csproj|solutionrelative:repositories\\implementations\\refreshtokenrepository.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{104165C5-2196-AB02-A480-632B89817CD0}|BTech.csproj|c:\\users\\admin\\downloads\\btech---zip\\btech\\services\\jwtservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{104165C5-2196-AB02-A480-632B89817CD0}|BTech.csproj|solutionrelative:services\\jwtservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{104165C5-2196-AB02-A480-632B89817CD0}|BTech.csproj|c:\\users\\admin\\downloads\\btech---zip\\btech\\dtos\\updateprofilerequestdto.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{104165C5-2196-AB02-A480-632B89817CD0}|BTech.csproj|solutionrelative:dtos\\updateprofilerequestdto.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{104165C5-2196-AB02-A480-632B89817CD0}|BTech.csproj|c:\\users\\admin\\downloads\\btech---zip\\btech\\appsettings.development.json||{90A6B3A7-C1A3-4009-A288-E2FF89E96FA0}",
+      "RelativeMoniker": "D:0:0:{104165C5-2196-AB02-A480-632B89817CD0}|BTech.csproj|solutionrelative:appsettings.development.json||{90A6B3A7-C1A3-4009-A288-E2FF89E96FA0}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{104165C5-2196-AB02-A480-632B89817CD0}|BTech.csproj|c:\\users\\admin\\downloads\\btech---zip\\btech\\appsettings.json||{90A6B3A7-C1A3-4009-A288-E2FF89E96FA0}",
+      "RelativeMoniker": "D:0:0:{104165C5-2196-AB02-A480-632B89817CD0}|BTech.csproj|solutionrelative:appsettings.json||{90A6B3A7-C1A3-4009-A288-E2FF89E96FA0}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{104165C5-2196-AB02-A480-632B89817CD0}|BTech.csproj|c:\\users\\admin\\downloads\\btech---zip\\btech\\services\\interfaces\\iprofileservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{104165C5-2196-AB02-A480-632B89817CD0}|BTech.csproj|solutionrelative:services\\interfaces\\iprofileservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{104165C5-2196-AB02-A480-632B89817CD0}|BTech.csproj|c:\\users\\admin\\downloads\\btech---zip\\btech\\dtos\\profileresponsedto.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{104165C5-2196-AB02-A480-632B89817CD0}|BTech.csproj|solutionrelative:dtos\\profileresponsedto.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{104165C5-2196-AB02-A480-632B89817CD0}|BTech.csproj|c:\\users\\admin\\downloads\\btech---zip\\btech\\services\\interfaces\\iauthservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{104165C5-2196-AB02-A480-632B89817CD0}|BTech.csproj|solutionrelative:services\\interfaces\\iauthservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{104165C5-2196-AB02-A480-632B89817CD0}|BTech.csproj|c:\\users\\admin\\downloads\\btech---zip\\btech\\repositories\\userrolerepository.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{104165C5-2196-AB02-A480-632B89817CD0}|BTech.csproj|solutionrelative:repositories\\userrolerepository.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{104165C5-2196-AB02-A480-632B89817CD0}|BTech.csproj|c:\\users\\admin\\downloads\\btech---zip\\btech\\services\\interfaces\\ijwtservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{104165C5-2196-AB02-A480-632B89817CD0}|BTech.csproj|solutionrelative:services\\interfaces\\ijwtservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{104165C5-2196-AB02-A480-632B89817CD0}|BTech.csproj|c:\\users\\admin\\downloads\\btech---zip\\btech\\repositories\\interfaces\\irefreshtokenrepository.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{104165C5-2196-AB02-A480-632B89817CD0}|BTech.csproj|solutionrelative:repositories\\interfaces\\irefreshtokenrepository.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{104165C5-2196-AB02-A480-632B89817CD0}|BTech.csproj|c:\\users\\admin\\downloads\\btech---zip\\btech\\dtos\\loginresponsedto.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{104165C5-2196-AB02-A480-632B89817CD0}|BTech.csproj|solutionrelative:dtos\\loginresponsedto.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{104165C5-2196-AB02-A480-632B89817CD0}|BTech.csproj|c:\\users\\admin\\downloads\\btech---zip\\btech\\dtos\\refreshtokenresponsedto.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{104165C5-2196-AB02-A480-632B89817CD0}|BTech.csproj|solutionrelative:dtos\\refreshtokenresponsedto.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{104165C5-2196-AB02-A480-632B89817CD0}|BTech.csproj|c:\\users\\admin\\downloads\\btech---zip\\btech\\dtos\\refreshtokenrequestdto.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{104165C5-2196-AB02-A480-632B89817CD0}|BTech.csproj|solutionrelative:dtos\\refreshtokenrequestdto.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{104165C5-2196-AB02-A480-632B89817CD0}|BTech.csproj|c:\\users\\admin\\downloads\\btech---zip\\btech\\models\\refreshtoken.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{104165C5-2196-AB02-A480-632B89817CD0}|BTech.csproj|solutionrelative:models\\refreshtoken.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{104165C5-2196-AB02-A480-632B89817CD0}|BTech.csproj|c:\\users\\admin\\downloads\\btech---zip\\btech\\dtos\\loginrequestdto.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{104165C5-2196-AB02-A480-632B89817CD0}|BTech.csproj|solutionrelative:dtos\\loginrequestdto.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{104165C5-2196-AB02-A480-632B89817CD0}|BTech.csproj|c:\\users\\admin\\downloads\\btech---zip\\btech\\models\\loginaudit.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{104165C5-2196-AB02-A480-632B89817CD0}|BTech.csproj|solutionrelative:models\\loginaudit.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{104165C5-2196-AB02-A480-632B89817CD0}|BTech.csproj|c:\\users\\admin\\downloads\\btech---zip\\btech\\models\\role.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{104165C5-2196-AB02-A480-632B89817CD0}|BTech.csproj|solutionrelative:models\\role.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{104165C5-2196-AB02-A480-632B89817CD0}|BTech.csproj|c:\\users\\admin\\downloads\\btech---zip\\btech\\models\\user.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{104165C5-2196-AB02-A480-632B89817CD0}|BTech.csproj|solutionrelative:models\\user.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{104165C5-2196-AB02-A480-632B89817CD0}|BTech.csproj|c:\\users\\admin\\downloads\\btech---zip\\btech\\models\\userrole.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{104165C5-2196-AB02-A480-632B89817CD0}|BTech.csproj|solutionrelative:models\\userrole.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    }
+  ],
+  "DocumentGroupContainers": [
+    {
+      "Orientation": 0,
+      "VerticalTabListWidth": 256,
+      "DocumentGroups": [
+        {
+          "DockedWidth": 200,
+          "SelectedChildIndex": 5,
+          "Children": [
+            {
+              "$type": "Document",
+              "DocumentIndex": 6,
+              "Title": "ProfileController.cs",
+              "DocumentMoniker": "C:\\Users\\Admin\\Downloads\\BTech---zip\\BTech\\Controllers\\V1\\Profile\\ProfileController.cs",
+              "RelativeDocumentMoniker": "Controllers\\V1\\Profile\\ProfileController.cs",
+              "ToolTip": "C:\\Users\\Admin\\Downloads\\BTech---zip\\BTech\\Controllers\\V1\\Profile\\ProfileController.cs",
+              "RelativeToolTip": "Controllers\\V1\\Profile\\ProfileController.cs",
+              "ViewState": "AgIAAC0AAAAAAAAAAAAYwEMAAAATAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-08-20T10:08:10.254Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 5,
+              "Title": "AuthController.cs",
+              "DocumentMoniker": "C:\\Users\\Admin\\Downloads\\BTech---zip\\BTech\\Controllers\\AuthController.cs",
+              "RelativeDocumentMoniker": "Controllers\\AuthController.cs",
+              "ToolTip": "C:\\Users\\Admin\\Downloads\\BTech---zip\\BTech\\Controllers\\AuthController.cs",
+              "RelativeToolTip": "Controllers\\AuthController.cs",
+              "ViewState": "AgIAAGgAAAAAAAAAAAAgwA0AAAAJAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-08-20T06:42:00.465Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 1,
+              "Title": "ProfileService.cs",
+              "DocumentMoniker": "C:\\Users\\Admin\\Downloads\\BTech---zip\\BTech\\Services\\Implementations\\ProfileService.cs",
+              "RelativeDocumentMoniker": "Services\\Implementations\\ProfileService.cs",
+              "ToolTip": "C:\\Users\\Admin\\Downloads\\BTech---zip\\BTech\\Services\\Implementations\\ProfileService.cs",
+              "RelativeToolTip": "Services\\Implementations\\ProfileService.cs",
+              "ViewState": "AgIAACUAAAAAAAAAAAAQwLoAAAAJAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-08-20T10:05:55.839Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 4,
+              "Title": "AuthService.cs",
+              "DocumentMoniker": "C:\\Users\\Admin\\Downloads\\BTech---zip\\BTech\\Services\\AuthService.cs",
+              "RelativeDocumentMoniker": "Services\\AuthService.cs",
+              "ToolTip": "C:\\Users\\Admin\\Downloads\\BTech---zip\\BTech\\Services\\AuthService.cs",
+              "RelativeToolTip": "Services\\AuthService.cs",
+              "ViewState": "AgIAAG8AAAAAAAAAAAAYwKoAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-08-20T03:36:47.524Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 3,
+              "Title": "IUserRepository.cs",
+              "DocumentMoniker": "C:\\Users\\Admin\\Downloads\\BTech---zip\\BTech\\Repositories\\Interfaces\\IUserRepository.cs",
+              "RelativeDocumentMoniker": "Repositories\\Interfaces\\IUserRepository.cs",
+              "ToolTip": "C:\\Users\\Admin\\Downloads\\BTech---zip\\BTech\\Repositories\\Interfaces\\IUserRepository.cs",
+              "RelativeToolTip": "Repositories\\Interfaces\\IUserRepository.cs",
+              "ViewState": "AgIAAAwAAAAAAAAAAAAowBQAAAAdAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-08-20T06:40:59.987Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 0,
+              "Title": "Program.cs",
+              "DocumentMoniker": "C:\\Users\\Admin\\Downloads\\BTech---zip\\BTech\\Program.cs",
+              "RelativeDocumentMoniker": "Program.cs",
+              "ToolTip": "C:\\Users\\Admin\\Downloads\\BTech---zip\\BTech\\Program.cs*",
+              "RelativeToolTip": "Program.cs*",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAwAAAAqAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-08-19T14:02:06.305Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 2,
+              "Title": "UserRepository.cs",
+              "DocumentMoniker": "C:\\Users\\Admin\\Downloads\\BTech---zip\\BTech\\Repositories\\UserRepository.cs",
+              "RelativeDocumentMoniker": "Repositories\\UserRepository.cs",
+              "ToolTip": "C:\\Users\\Admin\\Downloads\\BTech---zip\\BTech\\Repositories\\UserRepository.cs",
+              "RelativeToolTip": "Repositories\\UserRepository.cs",
+              "ViewState": "AgIAAFQAAAAAAAAAAAAYwGkAAAAJAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-08-20T03:35:35.008Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 7,
+              "Title": "ApplicationDbContext.cs",
+              "DocumentMoniker": "C:\\Users\\Admin\\Downloads\\BTech---zip\\BTech\\Data\\ApplicationDbContext.cs",
+              "RelativeDocumentMoniker": "Data\\ApplicationDbContext.cs",
+              "ToolTip": "C:\\Users\\Admin\\Downloads\\BTech---zip\\BTech\\Data\\ApplicationDbContext.cs",
+              "RelativeToolTip": "Data\\ApplicationDbContext.cs",
+              "ViewState": "AgIAAHwAAAAAAAAAAAAiwDYBAAAPAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-08-19T13:42:08Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 8,
+              "Title": "RefreshTokenRepository.cs",
+              "DocumentMoniker": "C:\\Users\\Admin\\Downloads\\BTech---zip\\BTech\\Repositories\\Implementations\\RefreshTokenRepository.cs",
+              "RelativeDocumentMoniker": "Repositories\\Implementations\\RefreshTokenRepository.cs",
+              "ToolTip": "C:\\Users\\Admin\\Downloads\\BTech---zip\\BTech\\Repositories\\Implementations\\RefreshTokenRepository.cs",
+              "RelativeToolTip": "Repositories\\Implementations\\RefreshTokenRepository.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAC8AAAABAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-08-20T06:33:13.25Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 9,
+              "Title": "JwtService.cs",
+              "DocumentMoniker": "C:\\Users\\Admin\\Downloads\\BTech---zip\\BTech\\Services\\JwtService.cs",
+              "RelativeDocumentMoniker": "Services\\JwtService.cs",
+              "ToolTip": "C:\\Users\\Admin\\Downloads\\BTech---zip\\BTech\\Services\\JwtService.cs",
+              "RelativeToolTip": "Services\\JwtService.cs",
+              "ViewState": "AgIAAIMAAAAAAAAAAAAuwIcAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-08-20T03:39:33.319Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 12,
+              "Title": "appsettings.json",
+              "DocumentMoniker": "C:\\Users\\Admin\\Downloads\\BTech---zip\\BTech\\appsettings.json",
+              "RelativeDocumentMoniker": "appsettings.json",
+              "ToolTip": "C:\\Users\\Admin\\Downloads\\BTech---zip\\BTech\\appsettings.json",
+              "RelativeToolTip": "appsettings.json",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAwAAAAEAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.001642|",
+              "WhenOpened": "2026-08-19T12:36:43.352Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 10,
+              "Title": "UpdateProfileRequestDto.cs",
+              "DocumentMoniker": "C:\\Users\\Admin\\Downloads\\BTech---zip\\BTech\\DTOs\\UpdateProfileRequestDto.cs",
+              "RelativeDocumentMoniker": "DTOs\\UpdateProfileRequestDto.cs",
+              "ToolTip": "C:\\Users\\Admin\\Downloads\\BTech---zip\\BTech\\DTOs\\UpdateProfileRequestDto.cs",
+              "RelativeToolTip": "DTOs\\UpdateProfileRequestDto.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAABEAAAABAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-08-20T10:02:28.952Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 11,
+              "Title": "appsettings.Development.json",
+              "DocumentMoniker": "C:\\Users\\Admin\\Downloads\\BTech---zip\\BTech\\appsettings.Development.json",
+              "RelativeDocumentMoniker": "appsettings.Development.json",
+              "ToolTip": "C:\\Users\\Admin\\Downloads\\BTech---zip\\BTech\\appsettings.Development.json",
+              "RelativeToolTip": "appsettings.Development.json",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAgAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.001642|",
+              "WhenOpened": "2026-08-20T10:57:13.356Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 13,
+              "Title": "IProfileService.cs",
+              "DocumentMoniker": "C:\\Users\\Admin\\Downloads\\BTech---zip\\BTech\\Services\\Interfaces\\IProfileService.cs",
+              "RelativeDocumentMoniker": "Services\\Interfaces\\IProfileService.cs",
+              "ToolTip": "C:\\Users\\Admin\\Downloads\\BTech---zip\\BTech\\Services\\Interfaces\\IProfileService.cs",
+              "RelativeToolTip": "Services\\Interfaces\\IProfileService.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAABAAAAABAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-08-20T10:04:44.6Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 14,
+              "Title": "ProfileResponseDto.cs",
+              "DocumentMoniker": "C:\\Users\\Admin\\Downloads\\BTech---zip\\BTech\\DTOs\\ProfileResponseDto.cs",
+              "RelativeDocumentMoniker": "DTOs\\ProfileResponseDto.cs",
+              "ToolTip": "C:\\Users\\Admin\\Downloads\\BTech---zip\\BTech\\DTOs\\ProfileResponseDto.cs",
+              "RelativeToolTip": "DTOs\\ProfileResponseDto.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAABUAAAABAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-08-20T10:01:29.707Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 15,
+              "Title": "IAuthService.cs",
+              "DocumentMoniker": "C:\\Users\\Admin\\Downloads\\BTech---zip\\BTech\\Services\\Interfaces\\IAuthService.cs",
+              "RelativeDocumentMoniker": "Services\\Interfaces\\IAuthService.cs",
+              "ToolTip": "C:\\Users\\Admin\\Downloads\\BTech---zip\\BTech\\Services\\Interfaces\\IAuthService.cs",
+              "RelativeToolTip": "Services\\Interfaces\\IAuthService.cs",
+              "ViewState": "AgIAABIAAAAAAAAAAAAuwBUAAAABAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-08-20T06:36:50.096Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 16,
+              "Title": "UserRoleRepository.cs",
+              "DocumentMoniker": "C:\\Users\\Admin\\Downloads\\BTech---zip\\BTech\\Repositories\\UserRoleRepository.cs",
+              "RelativeDocumentMoniker": "Repositories\\UserRoleRepository.cs",
+              "ToolTip": "C:\\Users\\Admin\\Downloads\\BTech---zip\\BTech\\Repositories\\UserRoleRepository.cs",
+              "RelativeToolTip": "Repositories\\UserRoleRepository.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAABQAAAAxAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-08-20T03:35:54.853Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 17,
+              "Title": "IJwtService.cs",
+              "DocumentMoniker": "C:\\Users\\Admin\\Downloads\\BTech---zip\\BTech\\Services\\Interfaces\\IJwtService.cs",
+              "RelativeDocumentMoniker": "Services\\Interfaces\\IJwtService.cs",
+              "ToolTip": "C:\\Users\\Admin\\Downloads\\BTech---zip\\BTech\\Services\\Interfaces\\IJwtService.cs",
+              "RelativeToolTip": "Services\\Interfaces\\IJwtService.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAABMAAAABAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-08-20T06:33:44.048Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 18,
+              "Title": "IRefreshTokenRepository.cs",
+              "DocumentMoniker": "C:\\Users\\Admin\\Downloads\\BTech---zip\\BTech\\Repositories\\Interfaces\\IRefreshTokenRepository.cs",
+              "RelativeDocumentMoniker": "Repositories\\Interfaces\\IRefreshTokenRepository.cs",
+              "ToolTip": "C:\\Users\\Admin\\Downloads\\BTech---zip\\BTech\\Repositories\\Interfaces\\IRefreshTokenRepository.cs",
+              "RelativeToolTip": "Repositories\\Interfaces\\IRefreshTokenRepository.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAA8AAAABAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-08-20T06:31:55.143Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 19,
+              "Title": "LoginResponseDto.cs",
+              "DocumentMoniker": "C:\\Users\\Admin\\Downloads\\BTech---zip\\BTech\\DTOs\\LoginResponseDto.cs",
+              "RelativeDocumentMoniker": "DTOs\\LoginResponseDto.cs",
+              "ToolTip": "C:\\Users\\Admin\\Downloads\\BTech---zip\\BTech\\DTOs\\LoginResponseDto.cs",
+              "RelativeToolTip": "DTOs\\LoginResponseDto.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAABgAAAABAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-08-20T06:30:53.439Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 20,
+              "Title": "RefreshTokenResponseDto.cs",
+              "DocumentMoniker": "C:\\Users\\Admin\\Downloads\\BTech---zip\\BTech\\DTOs\\RefreshTokenResponseDto.cs",
+              "RelativeDocumentMoniker": "DTOs\\RefreshTokenResponseDto.cs",
+              "ToolTip": "C:\\Users\\Admin\\Downloads\\BTech---zip\\BTech\\DTOs\\RefreshTokenResponseDto.cs",
+              "RelativeToolTip": "DTOs\\RefreshTokenResponseDto.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAwAAAABAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-08-20T06:29:58.199Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 21,
+              "Title": "RefreshTokenRequestDto.cs",
+              "DocumentMoniker": "C:\\Users\\Admin\\Downloads\\BTech---zip\\BTech\\DTOs\\RefreshTokenRequestDto.cs",
+              "RelativeDocumentMoniker": "DTOs\\RefreshTokenRequestDto.cs",
+              "ToolTip": "C:\\Users\\Admin\\Downloads\\BTech---zip\\BTech\\DTOs\\RefreshTokenRequestDto.cs",
+              "RelativeToolTip": "DTOs\\RefreshTokenRequestDto.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAkAAAABAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-08-20T06:29:17.862Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 22,
+              "Title": "RefreshToken.cs",
+              "DocumentMoniker": "C:\\Users\\Admin\\Downloads\\BTech---zip\\BTech\\Models\\RefreshToken.cs",
+              "RelativeDocumentMoniker": "Models\\RefreshToken.cs",
+              "ToolTip": "C:\\Users\\Admin\\Downloads\\BTech---zip\\BTech\\Models\\RefreshToken.cs",
+              "RelativeToolTip": "Models\\RefreshToken.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-08-20T06:26:14.548Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 26,
+              "Title": "User.cs",
+              "DocumentMoniker": "C:\\Users\\Admin\\Downloads\\BTech---zip\\BTech\\Models\\User.cs",
+              "RelativeDocumentMoniker": "Models\\User.cs",
+              "ToolTip": "C:\\Users\\Admin\\Downloads\\BTech---zip\\BTech\\Models\\User.cs",
+              "RelativeToolTip": "Models\\User.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAQAAAAbAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-08-20T03:30:59.739Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 23,
+              "Title": "LoginRequestDto.cs",
+              "DocumentMoniker": "C:\\Users\\Admin\\Downloads\\BTech---zip\\BTech\\DTOs\\LoginRequestDto.cs",
+              "RelativeDocumentMoniker": "DTOs\\LoginRequestDto.cs",
+              "ToolTip": "C:\\Users\\Admin\\Downloads\\BTech---zip\\BTech\\DTOs\\LoginRequestDto.cs",
+              "RelativeToolTip": "DTOs\\LoginRequestDto.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAUAAAAFAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-08-20T03:41:51.362Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 27,
+              "Title": "UserRole.cs",
+              "DocumentMoniker": "C:\\Users\\Admin\\Downloads\\BTech---zip\\BTech\\Models\\UserRole.cs",
+              "RelativeDocumentMoniker": "Models\\UserRole.cs",
+              "ToolTip": "C:\\Users\\Admin\\Downloads\\BTech---zip\\BTech\\Models\\UserRole.cs",
+              "RelativeToolTip": "Models\\UserRole.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAQAAAAfAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-08-20T03:30:36.155Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 25,
+              "Title": "Role.cs",
+              "DocumentMoniker": "C:\\Users\\Admin\\Downloads\\BTech---zip\\BTech\\Models\\Role.cs",
+              "RelativeDocumentMoniker": "Models\\Role.cs",
+              "ToolTip": "C:\\Users\\Admin\\Downloads\\BTech---zip\\BTech\\Models\\Role.cs",
+              "RelativeToolTip": "Models\\Role.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAQAAAAbAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-08-20T03:29:49.471Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 24,
+              "Title": "LoginAudit.cs",
+              "DocumentMoniker": "C:\\Users\\Admin\\Downloads\\BTech---zip\\BTech\\Models\\LoginAudit.cs",
+              "RelativeDocumentMoniker": "Models\\LoginAudit.cs",
+              "ToolTip": "C:\\Users\\Admin\\Downloads\\BTech---zip\\BTech\\Models\\LoginAudit.cs",
+              "RelativeToolTip": "Models\\LoginAudit.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAQAAAAiAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-08-20T03:29:13.077Z"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
