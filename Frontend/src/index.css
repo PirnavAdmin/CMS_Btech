@@ -53,12 +53,26 @@ html, body, #root { min-height: 100%; }
 @media (max-width: 640px) { .logout-success { top: 16px; right: 16px; } }
 
 .sidebar-brand { display: flex; align-items: center; gap: 11px; margin: 0 14px 22px; padding: 10px 9px 14px; border-bottom: 1px solid rgba(255,255,255,.16); }
-.sidebar-brand__mark { display: grid; flex: 0 0 42px; width: 42px; height: 42px; place-items: center; border: 1px solid rgba(255,255,255,.28); border-radius: 11px; color: #fff; background: linear-gradient(145deg, rgba(255,255,255,.2), rgba(255,255,255,.07)); box-shadow: inset 0 1px 0 rgba(255,255,255,.22), 0 8px 18px rgba(3,31,57,.2); }
+.sidebar-brand__mark { display: grid; flex: 0 0 42px; width: 42px; height: 42px; place-items: center; border: 1px solid rgba(255, 211, 112, .52); border-radius: 11px; color: #ffd370; background: linear-gradient(145deg, rgba(255, 211, 112, .2), rgba(255, 191, 71, .07)); box-shadow: inset 0 1px 0 rgba(255, 235, 181, .18), 0 8px 18px rgba(3,31,57,.24); }
 .sidebar-brand__mark svg { width: 25px; height: 25px; overflow: visible; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
-.sidebar-brand__mark svg path:first-child { fill: rgba(255,255,255,.14); }
+.sidebar-brand__mark svg path:first-child { fill: rgba(255, 211, 112, .18); }
 .sidebar-brand__copy { display: grid; min-width: 0; gap: 2px; }
 .sidebar-brand__copy strong { color: #fff; font-size: 1.05rem; line-height: 1.1; letter-spacing: .01em; white-space: nowrap; }
 .sidebar-brand__copy small { color: var(--brand-text-muted); font-size: .61rem; font-weight: 700; letter-spacing: .055em; text-transform: uppercase; white-space: nowrap; }
+
+.dashboard-header .account-menu summary { min-width: 164px; gap: 10px; padding: 7px 11px 7px 8px; border: 1px solid #c8d8e6; border-radius: 11px; background: #fff; box-shadow: 0 3px 12px rgba(9,58,103,.08); transition: border-color .16s ease, box-shadow .16s ease, background-color .16s ease; }
+.dashboard-header .account-menu summary:hover, .dashboard-header .account-menu[open] summary { border-color: #7ca9c9; background: #f7fbfe; box-shadow: 0 6px 18px rgba(9,58,103,.14); transform: none; filter: none; }
+.dashboard-header .account-avatar { display: grid; flex: 0 0 40px; width: 40px; height: 40px; place-items: center; border: 1px solid #17679e; border-radius: 10px; color: #ffd370; background: linear-gradient(145deg, #155f95, #0b4777); box-shadow: inset 0 1px 0 rgba(255,255,255,.16), 0 4px 10px rgba(9,58,103,.2); }
+.dashboard-header .account-avatar svg { width: 23px; height: 23px; fill: none; stroke: #ffd370; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.dashboard-header .account-menu summary > span:nth-child(2) { flex: 1; gap: 1px; }
+.dashboard-header .account-menu summary strong { color: #0c3f6b; font-size: .88rem; letter-spacing: .01em; }
+.dashboard-header .account-menu summary small { color: #6d8398; font-size: .67rem; font-weight: 650; letter-spacing: .035em; }
+.dashboard-header .account-menu__chevron { width: 7px; height: 7px; margin-left: 2px; border-right: 1.7px solid #386c91; border-bottom: 1.7px solid #386c91; transform: rotate(45deg) translateY(-2px); transition: transform .16s ease; }
+.dashboard-header .account-menu[open] .account-menu__chevron { transform: rotate(225deg) translate(-1px, -1px); }
+.dashboard-header .account-menu__panel { top: calc(100% + 9px); width: 200px; padding: 7px; border-color: #cfdeea; border-radius: 11px; box-shadow: 0 16px 36px rgba(9,58,103,.18); }
+.dashboard-header .account-menu__panel button { display: flex; align-items: center; gap: 10px; }
+.dashboard-header .account-menu__panel button svg { flex: 0 0 18px; width: 18px; height: 18px; fill: none; stroke: #35729f; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+.dashboard-header .account-menu__panel .account-menu__signout svg { stroke: #b42318; }
 .form-error { margin: -4px 0 0; padding: 12px 14px; border: 1px solid #fecdca; border-radius: 9px; background: #fffbfa; }
 .login-form input[aria-invalid="true"] { border-color: #d92d20; box-shadow: 0 0 0 3px #d92d201a; }
 .sign-in-button:disabled { cursor: wait; opacity: .72; }

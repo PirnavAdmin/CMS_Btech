@@ -53,9 +53,10 @@ export default function Sidebar() {
       <div className="sidebar-brand" aria-label="CMS BTech">
         <span className="sidebar-brand__mark" aria-hidden="true">
           <svg viewBox="0 0 32 32" role="img">
-            <path d="M3 11.5 16 5l13 6.5L16 18 3 11.5Z" />
-            <path d="M8 15.2V21c0 2.4 3.6 4.5 8 4.5s8-2.1 8-4.5v-5.8L16 19l-8-3.8Z" />
-            <path d="M28.7 12v8" />
+            <path d="M4 12 16 5l12 7H4Z" />
+            <path d="M7 14v10M12 14v10M20 14v10M25 14v10" />
+            <path d="M4 25h24M2.5 28h27" />
+            <path d="M15 9h2" />
           </svg>
         </span>
         <span className="sidebar-brand__copy">

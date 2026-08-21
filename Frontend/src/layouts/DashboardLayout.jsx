@@ -230,7 +230,10 @@ export default function DashboardLayout({ children }) {
           >
             <summary aria-label="Open account menu">
               <span className="account-avatar">
-                {roleLabel.charAt(0)}
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                  <circle cx="12" cy="8" r="3.5" />
+                  <path d="M5.5 20c.6-4.1 2.8-6.2 6.5-6.2s5.9 2.1 6.5 6.2" />
+                </svg>
               </span>
 
               <span>
@@ -249,6 +252,10 @@ export default function DashboardLayout({ children }) {
                 type="button"
                 onClick={() => navigate('/my-profile')}
               >
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                  <circle cx="12" cy="8" r="3.5" />
+                  <path d="M5.5 20c.7-4.1 2.9-6.2 6.5-6.2s5.8 2.1 6.5 6.2" />
+                </svg>
                 My Profile
               </button>
 
@@ -263,6 +270,10 @@ export default function DashboardLayout({ children }) {
                   setOpen(true)
                 }}
               >
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                  <rect x="5" y="10" width="14" height="10" rx="2" />
+                  <path d="M8 10V7a4 4 0 0 1 8 0v3M12 14v2.5" />
+                </svg>
                 Change Password
               </button>
 
@@ -271,6 +282,10 @@ export default function DashboardLayout({ children }) {
                 className="account-menu__signout"
                 onClick={requestSignOut}
               >
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M10 5H5.5A1.5 1.5 0 0 0 4 6.5v11A1.5 1.5 0 0 0 5.5 19H10" />
+                  <path d="M14 8l4 4-4 4M8 12h10" />
+                </svg>
                 Sign Out
               </button>
             </div>
