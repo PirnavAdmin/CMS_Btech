@@ -116,6 +116,54 @@ const emptyCollege = {
   status: 'active',
 }
 
+// Action & Section SVG Icons
+function EyeIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+      <circle cx="12" cy="12" r="3" />
+    </svg>
+  )
+}
+
+function EditIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+      <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+    </svg>
+  )
+}
+
+function TrashIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <polyline points="3 6 5 6 21 6" />
+      <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+      <line x1="10" y1="11" x2="10" y2="17" />
+      <line x1="14" y1="11" x2="14" y2="17" />
+    </svg>
+  )
+}
+
+function AcademicIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M22 10v6M2 10l10-5 10 5-10 5z" />
+      <path d="M6 12v5c3 3 9 3 12 0v-5" />
+    </svg>
+  )
+}
+
+function ContactIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
+      <circle cx="12" cy="10" r="3" />
+    </svg>
+  )
+}
+
 function validateCollege(values) {
   const errors = {}
   if (!values.name.trim()) errors.name = 'College name is required.'
@@ -170,6 +218,10 @@ export default function CollegeInstitutionManagement() {
     defaultCollegeType: COLLEGE_TYPES[0],
   })
 
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1)
+  const itemsPerPage = 5
+
   const activeCollege = colleges.find((c) => c.id === activeId) || null
 
   const filteredColleges = colleges.filter((c) => {
@@ -181,6 +233,18 @@ export default function CollegeInstitutionManagement() {
       c.city.toLowerCase().includes(term)
     )
   })
+
+  // Calculate pagination details
+  const totalPages = Math.max(1, Math.ceil(filteredColleges.length / itemsPerPage))
+  const safeCurrentPage = Math.min(currentPage, totalPages)
+  const startIndex = (safeCurrentPage - 1) * itemsPerPage
+  const endIndex = Math.min(startIndex + itemsPerPage, filteredColleges.length)
+  const displayedColleges = filteredColleges.slice(startIndex, endIndex)
+
+  const handleSearchChange = (e) => {
+    setSearchTerm(e.target.value)
+    setCurrentPage(1)
+  }
 
   const updateField = ({ target: { name, value } }) => {
     setFormValues((current) => ({ ...current, [name]: value }))
@@ -198,7 +262,10 @@ export default function CollegeInstitutionManagement() {
   }
 
   const openAdd = () => {
-    window.location.assign('/college-institution-management/add')
+    setFormValues(emptyCollege)
+    setErrors({})
+    setActiveId(null)
+    setViewMode('add')
   }
 
   const openEdit = (college) => {
@@ -226,10 +293,8 @@ export default function CollegeInstitutionManagement() {
     if (Object.keys(nextErrors).length > 0) return
 
     if (viewMode === 'edit' && activeId) {
-      // TODO: replace with API call, e.g. await updateCollege(activeId, formValues)
       setColleges((current) => current.map((c) => (c.id === activeId ? { ...formValues, id: activeId } : c)))
     } else {
-      // TODO: replace with API call, e.g. await createCollege(formValues)
       const newCollege = { ...formValues, id: Date.now() }
       setColleges((current) => [...current, newCollege])
     }
@@ -239,7 +304,6 @@ export default function CollegeInstitutionManagement() {
   const handleDelete = (college) => {
     const confirmed = window.confirm(`Delete "${college.name}"? This cannot be undone.`)
     if (!confirmed) return
-    // TODO: replace with API call, e.g. await deleteCollege(college.id)
     setColleges((current) => current.filter((c) => c.id !== college.id))
   }
 
@@ -252,7 +316,8 @@ export default function CollegeInstitutionManagement() {
   return (
     <DashboardLayout>
       <div className="college-management">
-        {['list', 'edit', 'details'].includes(viewMode) && (
+        {/* LIST VIEW */}
+        {viewMode === 'list' && (
           <>
             <header className="cm-header">
               <div>
@@ -270,7 +335,7 @@ export default function CollegeInstitutionManagement() {
                 className="cm-search"
                 placeholder="Search by name, code or city..."
                 value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
+                onChange={handleSearchChange}
               />
               <button type="button" className="cm-secondary-btn" onClick={() => setViewMode('settings')}>
                 College Settings
@@ -279,210 +344,354 @@ export default function CollegeInstitutionManagement() {
 
             {filteredColleges.length === 0 ? (
               <div className="cm-empty">
-                <p>No colleges added yet.</p>
+                <p>No colleges found.</p>
                 <button type="button" className="cm-primary-btn" onClick={openAdd}>
                   + Add your first college
                 </button>
               </div>
             ) : (
-              <div className="cm-table-wrap">
-                <table className="cm-table">
-                  <thead>
-                    <tr>
-                      <th>Logo</th>
-                      <th>College Name</th>
-                      <th>Code</th>
-                      <th>Type</th>
-                      <th>City</th>
-                      <th>Contact</th>
-                      <th>Status</th>
-                      <th>Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {filteredColleges.map((college) => (
-                      <tr key={college.id}>
-                        <td>
-                          {college.logo ? (
-                            <img src={college.logo} alt={college.name} className="cm-logo-thumb" />
-                          ) : (
-                            <span className="cm-logo-placeholder">{college.name.charAt(0).toUpperCase()}</span>
-                          )}
-                        </td>
-                        <td>{college.name}</td>
-                        <td>{college.code}</td>
-                        <td>{college.type}</td>
-                        <td>{college.city}</td>
-                        <td>{college.contact}</td>
-                        <td>
-                          <button
-                            type="button"
-                            className={`cm-status-badge ${college.status}`}
-                            onClick={() => toggleStatus(college)}
-                          >
-                            {college.status === 'active' ? 'Active' : 'Inactive'}
-                          </button>
-                        </td>
-                        <td className="cm-actions">
-                          <button type="button" onClick={() => openDetails(college)}>View</button>
-                          <button type="button" onClick={() => openEdit(college)}>Edit</button>
-                          <button type="button" className="cm-danger" onClick={() => handleDelete(college)}>Delete</button>
-                        </td>
+              <>
+                <div className="cm-table-wrap">
+                  <table className="cm-table">
+                    <thead>
+                      <tr>
+                        <th>Logo</th>
+                        <th>College Name</th>
+                        <th>Code</th>
+                        <th>Type</th>
+                        <th>City</th>
+                        <th>Contact</th>
+                        <th>Status</th>
+                        <th className="cm-actions-header">Actions</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+                    </thead>
+                    <tbody>
+                      {displayedColleges.map((college) => (
+                        <tr key={college.id}>
+                          <td>
+                            {college.logo ? (
+                              <img src={college.logo} alt={college.name} className="cm-logo-thumb" />
+                            ) : (
+                              <span className="cm-logo-placeholder">{college.name.charAt(0).toUpperCase()}</span>
+                            )}
+                          </td>
+                          <td>{college.name}</td>
+                          <td>{college.code}</td>
+                          <td>{college.type}</td>
+                          <td>{college.city}</td>
+                          <td>{college.contact}</td>
+                          <td>
+                            <button
+                              type="button"
+                              className={`cm-status-badge ${college.status}`}
+                              onClick={() => toggleStatus(college)}
+                            >
+                              {college.status === 'active' ? 'Active' : 'Inactive'}
+                            </button>
+                          </td>
+                          <td className="cm-actions-cell">
+                            <div className="cm-actions">
+                              <button
+                                type="button"
+                                className="cm-action-icon-btn"
+                                title="View Details"
+                                aria-label="View Details"
+                                onClick={() => openDetails(college)}
+                              >
+                                <EyeIcon />
+                              </button>
+                              <button
+                                type="button"
+                                className="cm-action-icon-btn"
+                                title="Edit College"
+                                aria-label="Edit College"
+                                onClick={() => openEdit(college)}
+                              >
+                                <EditIcon />
+                              </button>
+                              <button
+                                type="button"
+                                className="cm-action-icon-btn cm-danger"
+                                title="Delete College"
+                                aria-label="Delete College"
+                                onClick={() => handleDelete(college)}
+                              >
+                                <TrashIcon />
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+
+                {/* Table Pagination Controls */}
+                <div className="cm-pagination">
+                  <div className="cm-pagination-info">
+                    Showing <span>{startIndex + 1}</span> to <span>{endIndex}</span> of <span>{filteredColleges.length}</span> colleges
+                  </div>
+                  <div className="cm-pagination-controls">
+                    <button
+                      type="button"
+                      className="cm-page-btn"
+                      onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
+                      disabled={safeCurrentPage === 1}
+                    >
+                      Previous
+                    </button>
+                    <div className="cm-page-numbers">
+                      {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+                        <button
+                          key={page}
+                          type="button"
+                          className={`cm-page-num ${page === safeCurrentPage ? 'active' : ''}`}
+                          onClick={() => setCurrentPage(page)}
+                        >
+                          {page}
+                        </button>
+                      ))}
+                    </div>
+                    <button
+                      type="button"
+                      className="cm-page-btn"
+                      onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
+                      disabled={safeCurrentPage === totalPages}
+                    >
+                      Next
+                    </button>
+                  </div>
+                </div>
+              </>
             )}
           </>
         )}
 
-        {viewMode === 'edit' && (
-          <button type="button" className="cm-modal-backdrop" aria-label="Close edit dialog" onClick={backToList} />
-        )}
-
+        {/* ADD / EDIT FORM MODAL */}
         {(viewMode === 'add' || viewMode === 'edit') && (
-          <form className={`cm-form ${viewMode === 'edit' ? 'cm-modal-card' : ''}`} onSubmit={handleSave} noValidate>
-            <header className="cm-header">
-              <div>
-                <h1>{viewMode === 'edit' ? 'Edit College' : 'Add College'}</h1>
-                <p>Fill in the college's details below.</p>
-              </div>
-              <button type="button" className="cm-secondary-btn" onClick={backToList}>
-                &larr; Back to list
-              </button>
-            </header>
-
-            <div className="cm-form-grid">
-              <label>
-                <span>College Name *</span>
-                <input type="text" name="name" value={formValues.name} onChange={updateField} placeholder="e.g. ABC College of Engineering" />
-                {errors.name && <p className="cm-field-error">{errors.name}</p>}
-              </label>
-
-              <label>
-                <span>College Code *</span>
-                <input type="text" name="code" value={formValues.code} onChange={updateField} placeholder="e.g. ABCE001" />
-                {errors.code && <p className="cm-field-error">{errors.code}</p>}
-              </label>
-
-              <label>
-                <span>College Type *</span>
-                <select name="type" value={formValues.type} onChange={updateField}>
-                  {COLLEGE_TYPES.map((type) => (
-                    <option key={type} value={type}>{type}</option>
-                  ))}
-                </select>
-              </label>
-
-              <label>
-                <span>University Name *</span>
-                <input type="text" name="university" value={formValues.university} onChange={updateField} placeholder="Affiliated university" />
-                {errors.university && <p className="cm-field-error">{errors.university}</p>}
-              </label>
-
-              <label className="cm-span-2">
-                <span>Address *</span>
-                <textarea name="address" value={formValues.address} onChange={updateField} rows={2} placeholder="Street, area, landmark" />
-              </label>
-
-              <label>
-                <span>City *</span>
-                <input type="text" name="city" value={formValues.city} onChange={updateField} />
-                {errors.city && <p className="cm-field-error">{errors.city}</p>}
-              </label>
-
-              <label>
-                <span>State *</span>
-                <input type="text" name="state" value={formValues.state} onChange={updateField} />
-                {errors.state && <p className="cm-field-error">{errors.state}</p>}
-              </label>
-
-              <label>
-                <span>Pincode *</span>
-                <input type="text" name="pincode" value={formValues.pincode} onChange={updateField} maxLength={6} placeholder="6-digit pincode" />
-                {errors.pincode && <p className="cm-field-error">{errors.pincode}</p>}
-              </label>
-
-              <label>
-                <span>Contact Number *</span>
-                <input type="text" name="contact" value={formValues.contact} onChange={updateField} maxLength={10} placeholder="10-digit mobile number" />
-                {errors.contact && <p className="cm-field-error">{errors.contact}</p>}
-              </label>
-
-              <label>
-                <span>Email *</span>
-                <input type="text" name="email" value={formValues.email} onChange={updateField} placeholder="college@example.edu" />
-                {errors.email && <p className="cm-field-error">{errors.email}</p>}
-              </label>
-
-              <label>
-                <span>Website</span>
-                <input type="text" name="website" value={formValues.website} onChange={updateField} placeholder="https://college.edu" />
-                {errors.website && <p className="cm-field-error">{errors.website}</p>}
-              </label>
-
-              <label>
-                <span>Principal Name *</span>
-                <input type="text" name="principal" value={formValues.principal} onChange={updateField} />
-                {errors.principal && <p className="cm-field-error">{errors.principal}</p>}
-              </label>
-
-              <label className="cm-span-2">
-                <span>Accreditation Details</span>
-                <textarea name="accreditation" value={formValues.accreditation} onChange={updateField} rows={2} placeholder="e.g. NAAC A+, NBA accredited programs" />
-              </label>
-
-              <label className="cm-span-2">
-                <span>College Logo</span>
-                <input type="file" accept="image/*" onChange={handleLogoUpload} />
-                {formValues.logo && <img src={formValues.logo} alt="Logo preview" className="cm-logo-preview" />}
-              </label>
-            </div>
-
-            <div className="cm-form-actions">
-              <button type="button" className="cm-secondary-btn" onClick={backToList}>Cancel</button>
-              <button type="submit" className="cm-primary-btn">{viewMode === 'edit' ? 'Save Changes' : 'Add College'}</button>
-            </div>
-          </form>
-        )}
-
-        {viewMode === 'details' && activeCollege && (
           <>
-          <button type="button" className="cm-modal-backdrop" aria-label="Close college details" onClick={backToList} />
-          <div className="cm-college-details cm-modal-card">
-            <header className="cm-header">
-              <div>
-                <h1>{activeCollege.name}</h1>
-                <p>College Code: {activeCollege.code}</p>
+            <button type="button" className="cm-modal-backdrop" aria-label="Close form dialog" onClick={backToList} />
+            <form className="cm-form cm-modal-card" onSubmit={handleSave} noValidate>
+              <header className="cm-header">
+                <div>
+                  <h1>{viewMode === 'edit' ? 'Edit College' : 'Add College'}</h1>
+                  <p>Fill in the college's details below.</p>
+                </div>
+                <button type="button" className="cm-secondary-btn" onClick={backToList}>
+                  &larr; Back to list
+                </button>
+              </header>
+
+              <div className="cm-form-grid">
+                <label>
+                  <span>College Name *</span>
+                  <input type="text" name="name" value={formValues.name} onChange={updateField} placeholder="e.g. ABC College of Engineering" />
+                  {errors.name && <p className="cm-field-error">{errors.name}</p>}
+                </label>
+
+                <label>
+                  <span>College Code *</span>
+                  <input type="text" name="code" value={formValues.code} onChange={updateField} placeholder="e.g. ABCE001" />
+                  {errors.code && <p className="cm-field-error">{errors.code}</p>}
+                </label>
+
+                <label>
+                  <span>College Type *</span>
+                  <select name="type" value={formValues.type} onChange={updateField}>
+                    {COLLEGE_TYPES.map((type) => (
+                      <option key={type} value={type}>{type}</option>
+                    ))}
+                  </select>
+                </label>
+
+                <label>
+                  <span>University Name *</span>
+                  <input type="text" name="university" value={formValues.university} onChange={updateField} placeholder="Affiliated university" />
+                  {errors.university && <p className="cm-field-error">{errors.university}</p>}
+                </label>
+
+                <label className="cm-span-2">
+                  <span>Address *</span>
+                  <textarea name="address" value={formValues.address} onChange={updateField} rows={2} placeholder="Street, area, landmark" />
+                </label>
+
+                <label>
+                  <span>City *</span>
+                  <input type="text" name="city" value={formValues.city} onChange={updateField} />
+                  {errors.city && <p className="cm-field-error">{errors.city}</p>}
+                </label>
+
+                <label>
+                  <span>State *</span>
+                  <input type="text" name="state" value={formValues.state} onChange={updateField} />
+                  {errors.state && <p className="cm-field-error">{errors.state}</p>}
+                </label>
+
+                <label>
+                  <span>Pincode *</span>
+                  <input type="text" name="pincode" value={formValues.pincode} onChange={updateField} maxLength={6} placeholder="6-digit pincode" />
+                  {errors.pincode && <p className="cm-field-error">{errors.pincode}</p>}
+                </label>
+
+                <label>
+                  <span>Contact Number *</span>
+                  <input type="text" name="contact" value={formValues.contact} onChange={updateField} maxLength={10} placeholder="10-digit mobile number" />
+                  {errors.contact && <p className="cm-field-error">{errors.contact}</p>}
+                </label>
+
+                <label>
+                  <span>Email *</span>
+                  <input type="text" name="email" value={formValues.email} onChange={updateField} placeholder="college@example.edu" />
+                  {errors.email && <p className="cm-field-error">{errors.email}</p>}
+                </label>
+
+                <label>
+                  <span>Website</span>
+                  <input type="text" name="website" value={formValues.website} onChange={updateField} placeholder="https://college.edu" />
+                  {errors.website && <p className="cm-field-error">{errors.website}</p>}
+                </label>
+
+                <label>
+                  <span>Principal Name *</span>
+                  <input type="text" name="principal" value={formValues.principal} onChange={updateField} />
+                  {errors.principal && <p className="cm-field-error">{errors.principal}</p>}
+                </label>
+
+                <label className="cm-span-2">
+                  <span>Accreditation Details</span>
+                  <textarea name="accreditation" value={formValues.accreditation} onChange={updateField} rows={2} placeholder="e.g. NAAC A+, NBA accredited programs" />
+                </label>
+
+                <label className="cm-span-2">
+                  <span>College Logo</span>
+                  <input type="file" accept="image/*" onChange={handleLogoUpload} />
+                  {formValues.logo && <img src={formValues.logo} alt="Logo preview" className="cm-logo-preview" />}
+                </label>
               </div>
-              <button type="button" className="cm-secondary-btn" onClick={backToList}>
-                &larr; Back to list
-              </button>
-            </header>
 
-            <div className="cm-details-card">
-              {activeCollege.logo && <img src={activeCollege.logo} alt={activeCollege.name} className="cm-logo-preview" />}
-              <dl className="cm-details-grid">
-                <div><dt>College Type</dt><dd>{activeCollege.type}</dd></div>
-                <div><dt>University Name</dt><dd>{activeCollege.university}</dd></div>
-                <div><dt>Address</dt><dd>{activeCollege.address || '—'}</dd></div>
-                <div><dt>City</dt><dd>{activeCollege.city}</dd></div>
-                <div><dt>State</dt><dd>{activeCollege.state}</dd></div>
-                <div><dt>Pincode</dt><dd>{activeCollege.pincode}</dd></div>
-                <div><dt>Contact Number</dt><dd>{activeCollege.contact}</dd></div>
-                <div><dt>Email</dt><dd>{activeCollege.email}</dd></div>
-                <div><dt>Website</dt><dd>{activeCollege.website || '—'}</dd></div>
-                <div><dt>Principal Name</dt><dd>{activeCollege.principal}</dd></div>
-                <div><dt>Status</dt><dd>{activeCollege.status === 'active' ? 'Active' : 'Inactive'}</dd></div>
-                <div className="cm-span-2"><dt>Accreditation Details</dt><dd>{activeCollege.accreditation || '—'}</dd></div>
-              </dl>
-            </div>
-
-          </div>
+              <div className="cm-form-actions">
+                <button type="button" className="cm-secondary-btn" onClick={backToList}>Cancel</button>
+                <button type="submit" className="cm-primary-btn">{viewMode === 'edit' ? 'Save Changes' : 'Add College'}</button>
+              </div>
+            </form>
           </>
         )}
 
+        {/* FULL COLLEGE DETAILS / PROFILE SCREEN */}
+        {viewMode === 'details' && activeCollege && (
+          <div className="cm-profile-view">
+            <div className="cm-profile-top-bar">
+              <button type="button" className="cm-secondary-btn" onClick={backToList}>
+                &larr; Back to Colleges List
+              </button>
+              <button type="button" className="cm-primary-btn cm-btn-with-icon" onClick={() => openEdit(activeCollege)}>
+                <EditIcon /> Edit Profile
+              </button>
+            </div>
+
+            <div className="cm-profile-card">
+              {/* Header Profile Banner */}
+              <div className="cm-profile-banner">
+                <div className="cm-profile-avatar-wrap">
+                  {activeCollege.logo ? (
+                    <img src={activeCollege.logo} alt={activeCollege.name} className="cm-profile-logo" />
+                  ) : (
+                    <div className="cm-profile-placeholder">
+                      {activeCollege.name.charAt(0).toUpperCase()}
+                    </div>
+                  )}
+                </div>
+                <div className="cm-profile-header-info">
+                  <div className="cm-profile-badges">
+                    <span className="cm-badge cm-badge-code">Code: {activeCollege.code}</span>
+                    <span className="cm-badge cm-badge-type">{activeCollege.type}</span>
+                    <span className={`cm-status-badge ${activeCollege.status}`}>
+                      {activeCollege.status === 'active' ? 'Active' : 'Inactive'}
+                    </span>
+                  </div>
+                  <h1 className="cm-profile-title">{activeCollege.name}</h1>
+                  <p className="cm-profile-subtitle">Affiliated with <strong>{activeCollege.university}</strong></p>
+                </div>
+              </div>
+
+              {/* Profile Grid Cards */}
+              <div className="cm-profile-grid">
+                {/* Academic & Administration Card */}
+                <div className="cm-info-card">
+                  <div className="cm-info-card-header">
+                    <AcademicIcon />
+                    <h2>Academic & Administration</h2>
+                  </div>
+                  <div className="cm-info-rows">
+                    <div className="cm-info-row">
+                      <span className="cm-info-label">Principal Name</span>
+                      <span className="cm-info-val">{activeCollege.principal || '—'}</span>
+                    </div>
+                    <div className="cm-info-row">
+                      <span className="cm-info-label">Affiliated University</span>
+                      <span className="cm-info-val">{activeCollege.university}</span>
+                    </div>
+                    <div className="cm-info-row">
+                      <span className="cm-info-label">Institution Type</span>
+                      <span className="cm-info-val">{activeCollege.type}</span>
+                    </div>
+                    <div className="cm-info-row">
+                      <span className="cm-info-label">Accreditation Details</span>
+                      <span className="cm-info-val">{activeCollege.accreditation || 'Not specified'}</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Contact & Location Card */}
+                <div className="cm-info-card">
+                  <div className="cm-info-card-header">
+                    <ContactIcon />
+                    <h2>Contact & Location Details</h2>
+                  </div>
+                  <div className="cm-info-rows">
+                    <div className="cm-info-row">
+                      <span className="cm-info-label">Email Address</span>
+                      <span className="cm-info-val">
+                        <a href={`mailto:${activeCollege.email}`} className="cm-link">
+                          {activeCollege.email}
+                        </a>
+                      </span>
+                    </div>
+                    <div className="cm-info-row">
+                      <span className="cm-info-label">Contact Number</span>
+                      <span className="cm-info-val">
+                        <a href={`tel:${activeCollege.contact}`} className="cm-link">
+                          {activeCollege.contact}
+                        </a>
+                      </span>
+                    </div>
+                    <div className="cm-info-row">
+                      <span className="cm-info-label">Official Website</span>
+                      <span className="cm-info-val">
+                        {activeCollege.website ? (
+                          <a href={activeCollege.website} target="_blank" rel="noreferrer" className="cm-link">
+                            {activeCollege.website} &rarr;
+                          </a>
+                        ) : (
+                          '—'
+                        )}
+                      </span>
+                    </div>
+                    <div className="cm-info-row">
+                      <span className="cm-info-label">Campus Address</span>
+                      <span className="cm-info-val">
+                        {activeCollege.address ? `${activeCollege.address}, ` : ''}
+                        {activeCollege.city}, {activeCollege.state} - {activeCollege.pincode}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* SETTINGS VIEW */}
         {viewMode === 'settings' && (
           <div className="cm-settings">
             <header className="cm-header">
@@ -522,7 +731,6 @@ export default function CollegeInstitutionManagement() {
             </div>
 
             <div className="cm-form-actions">
-              {/* TODO: wire up to a saveSettings() API call */}
               <button type="button" className="cm-primary-btn" onClick={backToList}>Save Settings</button>
             </div>
           </div>
