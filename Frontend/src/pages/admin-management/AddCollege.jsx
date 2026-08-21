@@ -84,6 +84,7 @@ export default function AddCollege() {
   const [notice, setNotice] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [activeTab, setActiveTab] = useState('college')
+  const [highestUnlockedTab, setHighestUnlockedTab] = useState(0)
   const errors = validate(values)
   const isValid = Object.keys(errors).length === 0 && !logoError
 
@@ -115,7 +116,7 @@ export default function AddCollege() {
 
   const touchAll = () => setTouched(Object.keys(initialValues).reduce((all, key) => ({ ...all, [key]: true }), {}))
   const openPreview = () => { touchAll(); if (isValid) setDialog('preview') }
-  const reset = () => { setValues(initialValues); setTouched({}); setLogoError(''); setDirty(false); setDialog(null); setNotice('Form reset successfully.') }
+  const reset = () => { setValues(initialValues); setTouched({}); setLogoError(''); setDirty(false); setActiveTab('college'); setHighestUnlockedTab(0); setDialog(null); setNotice('Form reset successfully.') }
   const requestLeave = () => dirty ? setDialog('leave') : navigate('/college-institution-management')
   const saveDraft = () => { setNotice('Draft kept for this session. It has not been sent to a server.'); setDirty(false) }
   const saveAndNext = () => {
@@ -126,7 +127,9 @@ export default function AddCollege() {
       return
     }
     const currentIndex = FORM_TABS.findIndex((tab) => tab.id === activeTab)
-    setActiveTab(FORM_TABS[currentIndex + 1].id)
+    const nextIndex = currentIndex + 1
+    setHighestUnlockedTab((current) => Math.max(current, nextIndex))
+    setActiveTab(FORM_TABS[nextIndex].id)
     setNotice('')
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }
@@ -156,7 +159,7 @@ export default function AddCollege() {
   return <DashboardLayout><main className="add-college">
     <header className="ac-page-header"><div><h1>Add College</h1><p>Create and configure a new institution in the college management system.</p></div><button className="ac-back" type="button" onClick={requestLeave}>College list →</button></header>
     <nav className="ac-tabs" aria-label="College form sections" role="tablist">
-      {FORM_TABS.map((tab, index) => <button key={tab.id} type="button" role="tab" aria-selected={activeTab === tab.id} className={activeTab === tab.id ? 'active' : ''} onClick={() => setActiveTab(tab.id)}><span>{index + 1}</span>{tab.label}</button>)}
+      {FORM_TABS.map((tab, index) => <button key={tab.id} type="button" role="tab" aria-selected={activeTab === tab.id} className={activeTab === tab.id ? 'active' : ''} disabled={index > highestUnlockedTab} onClick={() => setActiveTab(tab.id)}><span>{index + 1}</span>{tab.label}</button>)}
     </nav>
     {notice && <div className="ac-notice" role="status">{notice}</div>}
     <form onSubmit={(event) => { event.preventDefault(); submit() }} noValidate>
