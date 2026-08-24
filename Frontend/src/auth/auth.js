@@ -1,13 +1,20 @@
 const AUTH_STORAGE_KEY = 'btech-authenticated'
 const ROLE_STORAGE_KEY = 'btech-user-role'
 
+function normalizeStoredRole(role) {
+  const normalizedRole = String(role || '').trim().toLowerCase().replace(/[\s-]+/g, '_')
+
+  if (['admin', 'college_admin', 'super_admin'].includes(normalizedRole)) return 'admin'
+  return normalizedRole
+}
+
 export function isAuthenticated() {
   return localStorage.getItem(AUTH_STORAGE_KEY) === 'true'
 }
 
 export function signIn(role, accessToken, refreshToken) {
   localStorage.setItem(AUTH_STORAGE_KEY, 'true')
-  localStorage.setItem(ROLE_STORAGE_KEY, role.toLowerCase())
+  localStorage.setItem(ROLE_STORAGE_KEY, normalizeStoredRole(role))
   localStorage.setItem('btech-access-token', accessToken)
   localStorage.setItem('btech-refresh-token', refreshToken)
 }
@@ -22,7 +29,14 @@ export function signOut() {
 }
 
 export function getUserRole() {
-  return localStorage.getItem(ROLE_STORAGE_KEY)
+  const storedRole = localStorage.getItem(ROLE_STORAGE_KEY)
+  const normalizedRole = normalizeStoredRole(storedRole)
+
+  if (storedRole && storedRole !== normalizedRole) {
+    localStorage.setItem(ROLE_STORAGE_KEY, normalizedRole)
+  }
+
+  return normalizedRole || null
 }
 
 export function hasRole(allowedRoles = []) {

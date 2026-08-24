@@ -14,10 +14,32 @@ export class AuthRequestError extends Error {
   }
 }
 
+function normalizeFrontendRole(roles) {
+  const roleList = Array.isArray(roles) ? roles : [roles]
+  const normalizedRoles = roleList
+    .map((role) => {
+      if (role && typeof role === 'object') {
+        return role.roleName ?? role.name ?? role.code ?? ''
+      }
+      return role ?? ''
+    })
+    .map((role) => String(role).trim().toUpperCase().replace(/[\s-]+/g, '_'))
+    .filter(Boolean)
+
+  if (normalizedRoles.some((role) => ['ADMIN', 'COLLEGE_ADMIN', 'SUPER_ADMIN'].includes(role))) {
+    return 'admin'
+  }
+  if (normalizedRoles.includes('FACULTY')) return 'faculty'
+  if (normalizedRoles.includes('STUDENT')) return 'student'
+
+  return normalizedRoles[0]?.toLowerCase() || ''
+}
+
 export const API_ENDPOINTS = Object.freeze({
   auth: Object.freeze({
     login: endpoint('/api/v1/auth/login'),
     refresh: endpoint('/api/v1/auth/refresh'),
+    forgotPassword: endpoint('/api/v1/auth/forgot-password'),
   }),
   profile: Object.freeze({
     get: endpoint('/api/v1/profile'),
@@ -87,7 +109,7 @@ const request = async (url, options = {}, retried = false) => {
     }
   }
   const body = await readBody(response)
-  if (!response.ok) {
+  if (!response.ok || body?.success === false) {
     const fallback = {
       400: 'Please check the submitted profile information.',
       401: 'Your session has expired. Please sign in again.',
@@ -113,17 +135,18 @@ export async function login({ identifier, password }) {
     throw new AuthRequestError('Unable to connect to the server.')
   }
   const body = await readBody(response)
-  if (!response.ok) throw new AuthRequestError(body?.message || (response.status === 401 ? 'Invalid credentials.' : 'Unable to sign in.'), response.status)
+  if (!response.ok || body?.success === false) {
+    throw new AuthRequestError(body?.message || (response.status === 401 ? 'Invalid credentials.' : 'Unable to sign in.'), response.status || 401)
+  }
   const data = body?.data
   if (!data?.accessToken || !data?.refreshToken) throw new AuthRequestError('The server returned an invalid login response.')
-  const backendRole = data.roles?.[0] || ''
   return {
     accessToken: data.accessToken,
     refreshToken: data.refreshToken,
     user: {
       id: data.userId,
       name: data.fullName,
-      role: backendRole === 'COLLEGE_ADMIN' ? 'admin' : backendRole.toLowerCase(),
+      role: normalizeFrontendRole(data.roles ?? data.role),
     },
   }
 }
@@ -151,11 +174,12 @@ export const profileApi = {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        fullName: profile.fullName,
-        email: profile.email,
-        mobile: profile.mobile,
+        fullName: String(profile.fullName || '').trim(),
+        email: String(profile.email || '').trim(),
+        mobile: String(profile.mobile || '').trim(),
       }),
     })
+    if (!response?.data) throw new Error(response?.message || 'The server did not confirm the profile update.')
     return normalizeProfile(response?.data)
   },
 }

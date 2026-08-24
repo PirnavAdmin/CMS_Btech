@@ -7,8 +7,11 @@ export default defineConfig({
   server: {
     proxy: {
       '/api': {
-        target: 'http://localhost:5084',
+        target: 'https://clarity-math-delouse.ngrok-free.dev',
         changeOrigin: true,
+        headers: {
+          'ngrok-skip-browser-warning': 'true',
+        },
       },
     },
   },

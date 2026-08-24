@@ -26,6 +26,7 @@ export default function MyProfile() {
   const [saving, setSaving] = useState(false)
   const [errors, setErrors] = useState(emptyErrors)
   const [feedback, setFeedback] = useState(null)
+  const [showSuccessPopup, setShowSuccessPopup] = useState(false)
   const [pincodeStatus, setPincodeStatus] = useState('')
   const [activeSection, setActiveSection] = useState('personal')
   const [completedSections, setCompletedSections] = useState([])
@@ -34,6 +35,7 @@ export default function MyProfile() {
   const loadProfile = async () => {
     setLoading(true)
     setFeedback(null)
+    setShowSuccessPopup(false)
     try {
       const data = await profileApi.getProfile()
       setProfile(data)
@@ -109,6 +111,7 @@ export default function MyProfile() {
     setDraft(profile)
     setErrors(emptyErrors)
     setFeedback(null)
+    setShowSuccessPopup(false)
     setActiveSection('personal')
     setCompletedSections([])
     setMaxUnlockedStep(0)
@@ -119,6 +122,7 @@ export default function MyProfile() {
     setDraft(profile)
     setErrors(emptyErrors)
     setFeedback(null)
+    setShowSuccessPopup(false)
     setEditing(true)
     setActiveSection('personal')
     setCompletedSections([])
@@ -147,7 +151,7 @@ export default function MyProfile() {
   }
 
   const saveProfile = async (event) => {
-    event.preventDefault()
+    event?.preventDefault()
     if (saving) return
     const nextErrors = validate()
     setErrors(nextErrors)
@@ -165,6 +169,7 @@ export default function MyProfile() {
     }
     setSaving(true)
     setFeedback(null)
+    setShowSuccessPopup(false)
     try {
       const saved = await profileApi.updateProfile(draft)
       const completeProfile = {
@@ -178,11 +183,12 @@ export default function MyProfile() {
       }
       setProfile(completeProfile)
       setDraft(completeProfile)
-      setEditing(true)
+      setEditing(false)
       setActiveSection('address')
       setCompletedSections(['personal', 'institutional', 'address'])
       setMaxUnlockedStep(2)
-      setFeedback({ type: 'success', message: 'Your profile has been updated successfully.' })
+      setFeedback(null)
+      setShowSuccessPopup(true)
     } catch (error) {
       setFeedback({ type: 'error', message: error.message || 'Unable to update your profile.' })
     } finally {
@@ -209,7 +215,7 @@ export default function MyProfile() {
     <section className="profile-content-card">
       <div className="profile-section-heading"><div className="profile-section-icon"><Icon name="user" /></div><div><h2>Personal information</h2><p>{editing ? 'Update the editable fields below, then save your changes.' : 'Your primary account and contact details.'}</p></div></div>
 
-      <form onSubmit={saveProfile} noValidate>
+      <form onSubmit={(event) => event.preventDefault()} noValidate>
         <nav className="profile-tabs" role="tablist" aria-label="Profile sections">
           <button type="button" role="tab" aria-selected={activeSection === 'personal'} aria-controls="profile-personal-panel" className={`${activeSection === 'personal' ? 'active' : ''} ${completedSections.includes('personal') ? 'completed' : ''}`} onClick={() => setActiveSection('personal')}><i className="profile-tab-number">{completedSections.includes('personal') ? '✓' : '1'}</i><Icon name="user" /><span><b>Personal Information</b><small>Account and contact</small></span></button>
           <button type="button" role="tab" aria-selected={activeSection === 'institutional'} aria-controls="profile-institutional-panel" className={`${activeSection === 'institutional' ? 'active' : ''} ${completedSections.includes('institutional') ? 'completed' : ''}`} disabled={editing && maxUnlockedStep < 1} onClick={() => setActiveSection('institutional')}><i className="profile-tab-number">{completedSections.includes('institutional') ? '✓' : '2'}</i><Icon name="building" /><span><b>Institutional Details</b><small>Academic information</small></span></button>
@@ -235,8 +241,9 @@ export default function MyProfile() {
           <label className="profile-field"><span>State <b>*</b></span><div className="profile-input"><input name="state" value={draft.state || ''} onChange={update} disabled={!editing} aria-invalid={Boolean(errors.state)} /></div>{errors.state && <small>{errors.state}</small>}</label>
           <label className="profile-field wide"><span>About me</span><div className="profile-input textarea"><textarea name="bio" value={draft.bio || ''} onChange={update} disabled={!editing} maxLength="300" /></div><em>{(draft.bio || '').length}/300 characters</em></label>
         </div></div>}
-        {editing && <footer className="profile-actions"><div className="profile-progress"><span>Step {sectionOrder.indexOf(activeSection) + 1} of {sectionOrder.length}</span><i><b style={{ width: `${((sectionOrder.indexOf(activeSection) + 1) / sectionOrder.length) * 100}%` }} /></i></div><div className="profile-action-buttons"><button type="button" className="profile-button ghost" onClick={cancelEditing} disabled={saving}>Cancel</button>{activeSection !== 'personal' && <button type="button" className="profile-button secondary" onClick={() => moveToSection(-1)} disabled={saving}>Back</button>}{activeSection !== 'address' ? <button type="button" className="profile-button" onClick={saveAndNext}>Save & Next <span aria-hidden="true">→</span></button> : <button type="submit" className="profile-button" disabled={saving}>{saving ? <><span className="profile-button-spinner" /> Submitting...</> : <><Icon name="check" /> Submit Profile</>}</button>}</div></footer>}
+        {editing && <footer className="profile-actions"><div className="profile-progress"><span>Step {sectionOrder.indexOf(activeSection) + 1} of {sectionOrder.length}</span><i><b style={{ width: `${((sectionOrder.indexOf(activeSection) + 1) / sectionOrder.length) * 100}%` }} /></i></div><div className="profile-action-buttons"><button type="button" className="profile-button ghost" onClick={cancelEditing} disabled={saving}>Cancel</button>{activeSection !== 'personal' && <button type="button" className="profile-button secondary" onClick={() => moveToSection(-1)} disabled={saving}>Back</button>}{activeSection !== 'address' ? <button type="button" className="profile-button" onClick={saveAndNext}>Save & Next <span aria-hidden="true">→</span></button> : <button type="button" className="profile-button" onClick={saveProfile} disabled={saving}>{saving ? <><span className="profile-button-spinner" /> Submitting...</> : <><Icon name="check" /> Submit Profile</>}</button>}</div></footer>}
       </form>
     </section>
+    {showSuccessPopup && <div className="profile-modal" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) setShowSuccessPopup(false) }}><section className="profile-success-card" role="dialog" aria-modal="true" aria-labelledby="profile-success-title"><button type="button" className="profile-modal-close" aria-label="Close success message" onClick={() => setShowSuccessPopup(false)}>×</button><div className="profile-success-icon"><Icon name="check" /></div><span className="profile-success-label">Profile updated</span><h2 id="profile-success-title">Changes saved successfully</h2><p>Your profile information is now up to date.</p><button type="button" className="profile-button profile-success-action" onClick={() => setShowSuccessPopup(false)}>Continue</button></section></div>}
   </main></DashboardLayout>
 }
