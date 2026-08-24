@@ -26,6 +26,12 @@
 
 /* Keep the desktop portal precisely within the viewport, without browser overflow. */
 html, body, #root { min-height: 100%; }
+
+/* Icon-only password visibility control. */
+.password-input input { padding-right: 56px; }
+.password-toggle { display: grid; width: 36px; height: 36px; place-items: center; right: 10px; border-radius: 7px; padding: 0; }
+.password-toggle:hover { background: #edf5fb; }
+.password-toggle svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
 @media (min-width: 901px) {
   .admin-login { height: 100dvh; min-height: 0; overflow: hidden; }
   .login-intro, .login-intro__content { min-height: 0; height: 100%; }
