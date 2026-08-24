@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react'
+import { FiCheckCircle, FiEdit3, FiEye, FiLayers, FiPlus, FiSearch, FiSliders, FiUserPlus } from 'react-icons/fi'
 import DashboardLayout from '../../layouts/DashboardLayout'
 import './DepartmentManagement.css'
 
@@ -50,6 +51,7 @@ export default function DepartmentManagement() {
 
   const totalPages = Math.ceil(visible.length / itemsPerPage) || 1
   const currentPageClamped = Math.min(Math.max(currentPage, 1), totalPages)
+  const activeCount = items.filter((item) => item.status === 'Active').length
 
   const paginatedItems = useMemo(() => {
     const start = (currentPageClamped - 1) * itemsPerPage
@@ -126,7 +128,11 @@ export default function DepartmentManagement() {
           <div>
             <p className="management-page__eyebrow">Administration</p>
             <h1>Department Management</h1>
-            <p>This module manages all college departments.</p>
+            <p>Organize departments, programme offerings and department leadership.</p>
+          </div>
+          <div className="department-heading-stat" aria-label={`${activeCount} active departments`}>
+            <span><FiCheckCircle /></span>
+            <div><strong>{activeCount}</strong><small>Active departments</small></div>
           </div>
         </div>
 
@@ -134,8 +140,8 @@ export default function DepartmentManagement() {
           <section className="management-card department-list">
             <div className="department-list__top">
               <div>
-                <h2>Department List</h2>
-                <p>{visible.length} departments shown</p>
+                <div className="department-section-title"><span><FiLayers /></span><h2>Department Directory</h2></div>
+                <p>{visible.length} of {items.length} departments shown</p>
               </div>
               <div className="department-list__right">
                 <button
@@ -146,28 +152,36 @@ export default function DepartmentManagement() {
                     setScreen('form')
                   }}
                 >
-                  + Add Department
+                  <FiPlus /> Add Department
                 </button>
                 <div className="department-controls">
-                  <input
-                    value={query}
-                    onChange={(event) => {
-                      setQuery(event.target.value)
-                      setCurrentPage(1)
-                    }}
-                    placeholder="Search name, code or HOD"
-                  />
-                  <select
-                    value={type}
-                    onChange={(event) => {
-                      setType(event.target.value)
-                      setCurrentPage(1)
-                    }}
-                  >
-                    <option>All</option>
-                    <option>B.Tech</option>
-                    <option>Degree</option>
-                  </select>
+                  <div className="department-search">
+                    <FiSearch aria-hidden="true" />
+                    <input
+                      value={query}
+                      onChange={(event) => {
+                        setQuery(event.target.value)
+                        setCurrentPage(1)
+                      }}
+                      placeholder="Search departments"
+                      aria-label="Search departments"
+                    />
+                  </div>
+                  <div className="department-filter">
+                    <FiSliders aria-hidden="true" />
+                    <select
+                      value={type}
+                      onChange={(event) => {
+                        setType(event.target.value)
+                        setCurrentPage(1)
+                      }}
+                      aria-label="Filter by programme"
+                    >
+                      <option>All</option>
+                      <option>B.Tech</option>
+                      <option>Degree</option>
+                    </select>
+                  </div>
                 </div>
               </div>
             </div>
@@ -191,7 +205,7 @@ export default function DepartmentManagement() {
                         <strong>{item.name}</strong>
                         <span>{item.description}</span>
                       </td>
-                      <td>{item.code}</td>
+                      <td><code>{item.code}</code></td>
                       <td>{item.type}</td>
                       <td>{item.hod}</td>
                       <td>
@@ -203,9 +217,9 @@ export default function DepartmentManagement() {
                         </button>
                       </td>
                       <td className="row-actions">
-                        <button onClick={() => details(item)}>View</button>
-                        <button onClick={() => edit(item)}>Edit</button>
-                        <button onClick={() => openAssignHod(item)}>Assign HOD</button>
+                        <button title={`View ${item.name}`} aria-label={`View ${item.name}`} onClick={() => details(item)}><FiEye /></button>
+                        <button title={`Edit ${item.name}`} aria-label={`Edit ${item.name}`} onClick={() => edit(item)}><FiEdit3 /></button>
+                        <button className="assign-hod" title={`Assign HOD for ${item.name}`} onClick={() => openAssignHod(item)}><FiUserPlus /> <span>HOD</span></button>
                       </td>
                     </tr>
                   ))}
