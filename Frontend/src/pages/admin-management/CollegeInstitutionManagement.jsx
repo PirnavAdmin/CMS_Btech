@@ -437,9 +437,6 @@ export default function CollegeInstitutionManagement() {
 
                 {/* Table Pagination Controls */}
                 <div className="cm-pagination">
-                  <div className="cm-pagination-info">
-                    Showing <span>{startIndex + 1}</span> to <span>{endIndex}</span> of <span>{filteredColleges.length}</span> colleges
-                  </div>
                   <div className="cm-pagination-controls">
                     <button
                       type="button"

@@ -25,16 +25,14 @@ export default function Login() {
   const [otpError, setOtpError] = useState('')
   const [demoOtpHint, setDemoOtpHint] = useState('')
   const [timer, setTimer] = useState(0)
-  const [logoutMessage, setLogoutMessage] = useState('')
+  const [logoutMessage, setLogoutMessage] = useState(() => sessionStorage.getItem('btech-logout-message') || '')
 
   useEffect(() => {
-    const message = sessionStorage.getItem('btech-logout-message')
-    if (!message) return
-    setLogoutMessage(message)
+    if (!logoutMessage) return undefined
     sessionStorage.removeItem('btech-logout-message')
     const timeout = setTimeout(() => setLogoutMessage(''), 3000)
     return () => clearTimeout(timeout)
-  }, [])
+  }, [logoutMessage])
 
   useEffect(() => {
     let interval = null

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { getUserRole, signOut } from '../auth/auth'
 import Sidebar from '../components/Sidebar'
@@ -101,7 +101,7 @@ export default function DashboardLayout({ children }) {
     return next
   }
 
-  const closeModal = () => {
+  const closeModal = useCallback(() => {
     if (submitting) return
 
     setOpen(false)
@@ -113,7 +113,7 @@ export default function DashboardLayout({ children }) {
     setTimeout(() => {
       triggerRef.current?.focus()
     }, 0)
-  }
+  }, [submitting])
 
   useEffect(() => {
     if (!open && !showLogoutConfirmation) return undefined
@@ -132,7 +132,7 @@ export default function DashboardLayout({ children }) {
     return () => {
       window.removeEventListener('keydown', handleKeyDown)
     }
-  }, [open, showLogoutConfirmation, submitting])
+  }, [open, showLogoutConfirmation, submitting, closeModal])
 
   const update = (event) => {
     const next = {

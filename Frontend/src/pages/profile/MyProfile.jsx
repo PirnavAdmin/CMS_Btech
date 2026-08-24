@@ -63,6 +63,8 @@ export default function MyProfile() {
     }
   }
 
+  // Profile loading is intentionally performed once when this screen mounts.
+  // oxlint-disable-next-line react/set-state-in-effect
   useEffect(() => { loadProfile() }, [])
 
   const validate = (value = draft) => {

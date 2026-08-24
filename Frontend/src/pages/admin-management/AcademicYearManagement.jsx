@@ -18,6 +18,8 @@ const close=()=>{setModal(null);
 setSelected(null);
 setErrors({})};
 const loadYears=async()=>{try{const data=await academicYearApi.getAll();setYears(data.map(mapYear));setNotice(`${data.length} academic year${data.length===1?'':'s'} retrieved successfully.`)}catch(error){setNotice(error.message||'Unable to load academic years.')}};
+// Academic years are intentionally loaded once when this management screen mounts.
+// oxlint-disable-next-line react/set-state-in-effect
 useEffect(()=>{loadYears()},[]);
 useEffect(()=>{
   const f=e=>e.key==='Escape'&&close();

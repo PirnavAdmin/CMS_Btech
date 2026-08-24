@@ -99,6 +99,8 @@ export default function AddCollege() {
   useEffect(() => {
     if (values.pincode.length !== 6) return undefined
     const controller = new AbortController()
+    // This status mirrors the external PIN lookup lifecycle.
+    // oxlint-disable-next-line react/set-state-in-effect
     setPincodeStatus('Looking up location...')
     fetch(`https://api.postalpincode.in/pincode/${values.pincode}`, { signal: controller.signal })
       .then((response) => { if (!response.ok) throw new Error('Lookup failed'); return response.json() })

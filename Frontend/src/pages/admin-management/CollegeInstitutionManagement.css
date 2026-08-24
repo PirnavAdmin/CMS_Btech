@@ -5,7 +5,7 @@
 
 .cm-header {
   display: flex;
-  justify-content: space-between;
+  justify-content: flex-end;
   align-items: flex-start;
   gap: 16px;
   margin-bottom: 24px;
@@ -269,7 +269,7 @@
 /* Pagination Bar */
 .cm-pagination {
   display: flex;
-  justify-content: space-between;
+  justify-content: flex-end;
   align-items: center;
   padding: 14px 18px;
   background: #fff;
@@ -693,8 +693,8 @@
     padding: 20px;
   }
   .cm-pagination {
-    flex-direction: column;
-    gap: 12px;
+    flex-direction: row;
+    justify-content: flex-end;
     align-items: center;
   }
 }
