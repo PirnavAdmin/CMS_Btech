@@ -296,3 +296,15 @@
 }@media(prefers-reduced-motion:reduce){*{transition:none!important
 }
 }
+
+/* CMS-BTech themed cycle register */
+.ay .panel.wide{overflow:hidden;padding:0;border-color:#d8e5f0;border-radius:14px;box-shadow:0 8px 28px rgba(9,58,103,.08)}
+.ay .panel.wide>.eyebrow{margin:0;padding:20px 22px 4px;color:#1970b3}.ay .panel.wide>h2{padding:0 22px 15px;color:#073b69;font-size:1.25rem}
+.ay .panel.wide .tools{margin:0;padding:14px 22px;border-block:1px solid #e0e9f1;background:#f6f9fc}
+.ay .tools input{width:min(100%,300px);height:42px;box-sizing:border-box;padding:0 14px;border-color:#bfd1e1;border-radius:9px;background:#fff;color:#123962;font-size:.84rem}.ay .tools input::placeholder{color:#7890a6}
+.ay .filters{gap:6px;padding:4px;border:1px solid #d8e5f0;border-radius:10px;background:#fff}.ay .filters button{min-height:32px;padding:6px 11px;border-radius:7px;color:#526d86;font-size:.75rem;font-weight:700}.ay .filters button:hover{background:#edf5fb;color:#0a609f}.ay .filters .selected{background:#1970b3;color:#fff;box-shadow:0 3px 8px rgba(25,112,179,.2)}
+.ay .table{padding:0 22px 18px;background:#fff}.ay thead{background:#eef5fb}.ay th{padding:12px 10px;color:#315777;font-size:.68rem;letter-spacing:.035em}.ay th:first-child{border-radius:8px 0 0 8px}.ay th:last-child{border-radius:0 8px 8px 0}.ay td{height:52px;padding:10px;border-color:#e2eaf1;color:#36536d}.ay tbody tr{transition:background-color .15s ease}.ay tbody tr:hover{background:#f7fbfe}.ay td:first-child b{color:#123f68}
+.ay .badge{padding:5px 9px;border:1px solid transparent;letter-spacing:.02em}.ay .badge.ACTIVE{border-color:#b8ebcc}.ay .badge.UPCOMING{border-color:#b9def3}.ay .badge.ARCHIVED{border-color:#dce2e8}
+.ay .ay-actions{flex-wrap:nowrap;gap:6px}.ay .ay-actions button{min-height:31px;padding:5px 10px;border:1px solid #c8d8e6;border-radius:7px;background:#fff;color:#174d78;font-size:.72rem}.ay .ay-actions button:hover{border-color:#78acd1;background:#edf6fd}.ay .ay-actions .primary{border-color:#1970b3;background:#1970b3;color:#fff}.ay .ay-actions .primary:hover{background:#0d609e}
+.ay .ay-actions button{display:inline-flex;align-items:center;justify-content:center;gap:5px}.ay .ay-actions button svg{width:14px;height:14px;flex:0 0 auto}
+@media(max-width:700px){.ay .panel.wide>.eyebrow,.ay .panel.wide>h2,.ay .panel.wide .tools,.ay .table{padding-inline:14px}.ay .tools input{width:100%}.ay .filters{width:100%;overflow-x:auto;flex-wrap:nowrap}.ay .filters button{flex:1 0 auto}.ay tbody tr{padding:10px;border:1px solid #e0e9f1;border-radius:9px;margin-top:10px}.ay .ay-actions{flex-wrap:wrap}}

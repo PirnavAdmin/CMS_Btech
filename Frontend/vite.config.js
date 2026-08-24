@@ -14,7 +14,7 @@ export default defineConfig({
         },
       },
       '/api': {
-        target: 'https://clarity-math-delouse.ngrok-free.dev',
+        target: 'https://abreast-curling-tutor.ngrok-free.dev',
         changeOrigin: true,
         headers: {
           'ngrok-skip-browser-warning': 'true',
