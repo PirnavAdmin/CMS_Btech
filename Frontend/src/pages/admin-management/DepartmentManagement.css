@@ -31,6 +31,12 @@
   .row-actions .assign-hod { padding-inline: 8px !important; }
 }
 
+/* Align the directory header and table actions with the College / Institution table theme. */
+.department-table-wrap th { background: var(--brand-navy, #0f172a); color: #fff; }
+.department-table-wrap .row-actions button { border-color: #c7d7e7 !important; background: #fff !important; color: var(--brand-navy, #0f172a) !important; }
+.department-table-wrap .row-actions button:hover { border-color: var(--brand-blue, #1e5a96) !important; background: #f3f7fb !important; color: var(--brand-blue, #1e5a96) !important; }
+.department-table-wrap .row-actions .assign-hod { color: var(--brand-navy, #0f172a) !important; }
+
 /* Align the directory with the dashboard content and reduce doubled side gutters. */
 .department-management{width:100%;max-width:none;box-sizing:border-box;padding:0}
 .department-management .management-page__heading{margin-bottom:22px}

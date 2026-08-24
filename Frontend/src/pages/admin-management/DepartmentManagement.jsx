@@ -354,20 +354,6 @@ export default function DepartmentManagement() {
                 <p>{selected.description || 'No description added.'}</p>
               </div>
             </div>
-            <div className="detail-actions">
-              <button
-                onClick={() => {
-                  setForm({ hod: selected.hod === 'Not assigned' ? '' : selected.hod })
-                  setError('')
-                  setScreen('hod')
-                }}
-              >
-                Assign HOD
-              </button>
-              <button className="secondary-button" onClick={() => edit(selected)}>
-                Edit Department
-              </button>
-            </div>
           </section>
         )}
 
@@ -376,12 +362,12 @@ export default function DepartmentManagement() {
             <Header
               title="Assign HOD"
               subtitle={`Assign a Head of Department for ${selected.name}.`}
-              back={() => setScreen('details')}
+              back={() => setScreen('list')}
             />
             <form onSubmit={assignHod}>
               {field('hod', 'Head of Department', { autoFocus: true, placeholder: 'Enter HOD name' })}
               {error && <p className="department-error">{error}</p>}
-              <Actions cancel={() => setScreen('details')} submit="Assign HOD" />
+              <Actions cancel={() => setScreen('list')} submit="Assign HOD" />
             </form>
           </section>
         )}
