@@ -590,3 +590,8 @@ button.btn-primary:hover,
 .back-to-login {
   margin-top: 4px;
 }
+
+/* Hide Course Management's native and custom disclosure indicators. */
+.sidebar .sidebar-group summary::marker { content: ''; display: none; }
+.sidebar .sidebar-group summary::-webkit-details-marker { display: none; }
+.sidebar .sidebar-group summary::before { content: none; display: none; }

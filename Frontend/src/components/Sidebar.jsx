@@ -29,13 +29,13 @@ const links = [
     roles: [ROLES.ADMIN],
   },
   {
-    label: 'Semester Management',
-    to: '/semester-management',
+    label: 'Section Management',
+    to: '/section-management',
     roles: [ROLES.ADMIN],
   },
   {
-    label: 'Section Management',
-    to: '/section-management',
+    label: 'Semester Management',
+    to: '/semester-management',
     roles: [ROLES.ADMIN],
   },
   {
@@ -76,24 +76,25 @@ export default function Sidebar() {
       </div>
 
       <nav>
-        {visibleLinks.map(({ label, to }) => (
+        {visibleLinks.flatMap(({ label, to }) => [
           <NavLink key={to} to={to} onClick={() => setCourseMenuOpen(false)}>
             {label}
-          </NavLink>
-        ))}
-        {userRole === ROLES.ADMIN && (
-          <details
-            className="sidebar-group"
-            open={isCoursePage || courseMenuOpen}
-            onToggle={(event) => setCourseMenuOpen(event.currentTarget.open)}
-          >
-            <summary>Course Management</summary>
-            <div>
-              <NavLink to="/courses">Courses</NavLink>
-              <NavLink to="/branches">Branches</NavLink>
-            </div>
-          </details>
-        )}
+          </NavLink>,
+          to === '/department-management' && userRole === ROLES.ADMIN ? (
+            <details
+              key="course-management"
+              className="sidebar-group"
+              open={isCoursePage || courseMenuOpen}
+              onToggle={(event) => setCourseMenuOpen(event.currentTarget.open)}
+            >
+              <summary>Course Management</summary>
+              <div>
+                <NavLink to="/courses">Courses</NavLink>
+                <NavLink to="/branches">Branches</NavLink>
+              </div>
+            </details>
+          ) : null,
+        ])}
       </nav>
     </aside>
   )
