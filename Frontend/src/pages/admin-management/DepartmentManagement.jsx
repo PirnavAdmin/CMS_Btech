@@ -1,6 +1,8 @@
 import { useMemo, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { ArrowLeft, CheckCircle as FiCheckCircle, Eye as FiEye, Layers as FiLayers, ListFilter as FiSliders, Pencil as FiEdit3, Plus as FiPlus, Save, Search as FiSearch, UserPlus as FiUserPlus, X } from 'lucide-react'
 import DashboardLayout from '../../layouts/DashboardLayout'
+import { getBranches } from '../courseManagement/Course'
 import './DepartmentManagement.css'
 
 const seed = [
@@ -68,6 +70,7 @@ export default function DepartmentManagement() {
   const totalPages = Math.ceil(visible.length / itemsPerPage) || 1
   const currentPageClamped = Math.min(Math.max(currentPage, 1), totalPages)
   const activeCount = items.filter((item) => item.status === 'Active').length
+  const relatedBranches = getBranches().filter((branch) => String(branch.departmentId) === String(selected?.id))
 
   const paginatedItems = useMemo(() => {
     const start = (currentPageClamped - 1) * itemsPerPage
@@ -368,6 +371,10 @@ export default function DepartmentManagement() {
                 <span>Description</span>
                 <p>{selected.description || 'No description added.'}</p>
               </div>
+            </div>
+            <div className="department-branches">
+              <div><span>Associated B.Tech Branches</span><strong>{relatedBranches.length}</strong></div>
+              {relatedBranches.length ? <div className="department-branch-list">{relatedBranches.map((branch) => <Link to={`/branches/${branch.id}`} key={branch.id}><strong>{branch.code}</strong><span>{branch.name}</span></Link>)}</div> : <p>No branches are assigned to this department.</p>}
             </div>
           </section>
         )}

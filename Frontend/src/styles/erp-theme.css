@@ -133,3 +133,8 @@ html,body,#root{max-width:100%;overflow-x:hidden}
 :root[data-theme="dark"] .page-content :is(.cm-modal-card,.semester-form-panel,.semester-details-panel,.semester-confirm,.section-form-panel,.section-details-panel,.section-confirm,.ac-dialog,.profile-preview-card,.profile-success-card,.profile-error-card){border-color:var(--border)!important;background:var(--surface-raised)!important;color:var(--text-primary)!important}
 :root[data-theme="dark"] .page-content :is(.cm-modal-card header,.semester-form-panel header,.semester-form-panel footer,.semester-details-panel header,.semester-details-panel footer,.section-form-panel header,.section-form-panel footer,.section-details-panel header,.section-details-panel footer,.ac-dialog header,.profile-preview-card header,.profile-preview-card footer){border-color:var(--border)!important;background:var(--surface)!important}
 @media(max-width:760px){.page-content :is(.college-management,.add-college,.department-management,.ay,.cm-page,.semester-management,.section-management,.profile-page,.settings-page)>header h1,.page-content :is(.management-page__heading,.cm-header,.semester-page-header,.section-page-header,.profile-heading) h1{font-size:24px!important}}
+
+/* Shared shell guards: keep module width calculations and overlays predictable after route changes. */
+.dashboard-layout>main{box-sizing:border-box}
+.dashboard-header .account-menu__panel{z-index:60;max-width:calc(100vw - 28px)}
+@media(max-width:540px){.dashboard-header .account-menu__panel{right:0;width:min(200px,calc(100vw - 28px))}}

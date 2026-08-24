@@ -498,7 +498,7 @@ export default function CollegeInstitutionManagement() {
                               <span className="cm-logo-placeholder">{college.name.charAt(0).toUpperCase()}</span>
                             )}
                           </td>
-                          <td>{college.name}</td>
+                          <td><span className="cm-college-name">{college.name}</span></td>
                           <td>{college.code}</td>
                           <td>{college.type}</td>
                           <td>{college.city}</td>
