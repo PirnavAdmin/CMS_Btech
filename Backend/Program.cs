@@ -9,10 +9,10 @@ using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using System.Text;
 
-Console.WriteLine(
-    BCrypt.Net.BCrypt.HashPassword("Admin@123")
-);
 var builder = WebApplication.CreateBuilder(args);
+
+builder.Logging.ClearProviders();
+builder.Logging.AddConsole();
 
 // ----------------------------------------------------
 // Controllers
@@ -33,6 +33,16 @@ if (string.IsNullOrWhiteSpace(connectionString))
 {
     throw new InvalidOperationException(
         "DefaultConnection is missing.");
+}
+
+if (builder.Environment.IsDevelopment())
+{
+    var localConnection = new MySqlConnector.MySqlConnectionStringBuilder(connectionString)
+    {
+        SslMode = MySqlConnector.MySqlSslMode.None,
+        AllowPublicKeyRetrieval = true
+    };
+    connectionString = localConnection.ConnectionString;
 }
 
 builder.Services.AddDbContext<ApplicationDbContext>(
@@ -206,7 +216,10 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
-app.UseHttpsRedirection();
+if (!app.Environment.IsDevelopment())
+{
+    app.UseHttpsRedirection();
+}
 
 app.UseAuthentication();
 
