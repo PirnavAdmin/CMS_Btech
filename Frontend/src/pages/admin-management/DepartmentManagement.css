@@ -30,3 +30,13 @@
   .row-actions button, .secondary-button { padding: 7px !important; }
   .row-actions .assign-hod { padding-inline: 8px !important; }
 }
+
+/* Align the directory with the dashboard content and reduce doubled side gutters. */
+.department-management{width:100%;max-width:none;box-sizing:border-box;padding:0}
+.department-management .management-page__heading{margin-bottom:22px}
+.department-management .management-card{border-radius:15px}
+@media (min-width:761px){
+  .department-table-wrap th,.department-table-wrap td{padding-inline:16px}
+  .department-pagination{padding-inline:18px}
+}
+@media(max-width:760px){.department-management{padding:0}}

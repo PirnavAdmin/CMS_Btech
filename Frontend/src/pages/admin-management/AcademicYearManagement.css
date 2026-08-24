@@ -308,3 +308,10 @@
 .ay .ay-actions{flex-wrap:nowrap;gap:6px}.ay .ay-actions button{min-height:31px;padding:5px 10px;border:1px solid #c8d8e6;border-radius:7px;background:#fff;color:#174d78;font-size:.72rem}.ay .ay-actions button:hover{border-color:#78acd1;background:#edf6fd}.ay .ay-actions .primary{border-color:#1970b3;background:#1970b3;color:#fff}.ay .ay-actions .primary:hover{background:#0d609e}
 .ay .ay-actions button{display:inline-flex;align-items:center;justify-content:center;gap:5px}.ay .ay-actions button svg{width:14px;height:14px;flex:0 0 auto}
 @media(max-width:700px){.ay .panel.wide>.eyebrow,.ay .panel.wide>h2,.ay .panel.wide .tools,.ay .table{padding-inline:14px}.ay .tools input{width:100%}.ay .filters{width:100%;overflow-x:auto;flex-wrap:nowrap}.ay .filters button{flex:1 0 auto}.ay tbody tr{padding:10px;border:1px solid #e0e9f1;border-radius:9px;margin-top:10px}.ay .ay-actions{flex-wrap:wrap}}
+
+/* Keep the module aligned with the dashboard while avoiding doubled page gutters. */
+.ay{width:100%;max-width:none;box-sizing:border-box;padding:0}
+.ay .hero{padding:24px clamp(20px,2vw,30px)}
+.ay .kpis{gap:16px;margin:18px 0}
+.ay .panel.wide{border-radius:15px}
+@media(max-width:700px){.ay{padding:0}.ay .hero{padding:20px}.ay .kpis{gap:10px}}
