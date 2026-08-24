@@ -46,3 +46,13 @@
   .department-pagination{padding-inline:18px}
 }
 @media(max-width:760px){.department-management{padding:0}}
+
+/* Department-only action popups */
+.department-modal-backdrop{position:fixed;inset:0;z-index:1000;display:grid;place-items:center;padding:20px;background:rgba(6,46,89,.46);backdrop-filter:blur(4px)}
+.department-modal-backdrop .management-card{width:min(100%,680px);max-height:calc(100dvh - 40px);overflow-y:auto;box-sizing:border-box;box-shadow:0 24px 70px rgba(6,46,89,.28)}
+.department-modal-backdrop .department-details{width:min(100%,620px)}
+.department-modal-backdrop .hod-card,.department-modal-backdrop .department-confirm-card{width:min(100%,500px)}
+.department-popup-close{display:grid;place-items:center;width:34px;height:34px;border:0;border-radius:8px;background:transparent;color:#5e7897;font-size:1.7rem;line-height:1;cursor:pointer;transition:background .15s ease,color .15s ease}.department-popup-close:hover{background:#f0f5fa;color:#062e59}
+.department-confirm-card form{margin:2px 24px 24px}.department-confirm-card form>p{margin:0;color:#5e7897;line-height:1.55}.department-confirm-card form>p strong{color:#062e59}.danger-button{border:0!important;border-radius:8px!important;padding:10px 14px!important;background:#b42318!important;color:#fff!important;font:700 .88rem inherit!important;cursor:pointer}.danger-button:hover{background:#912018!important}
+.department-table-wrap .row-actions .delete-department{border-color:#fecdca!important;color:#b42318!important}.department-table-wrap .row-actions .delete-department:hover{border-color:#f04438!important;background:#fff5f5!important;color:#b42318!important}
+@media(max-width:760px){.department-modal-backdrop{padding:14px}.department-modal-backdrop .management-card{max-height:calc(100dvh - 28px)}}

@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { FiCheckCircle, FiEdit3, FiEye, FiLayers, FiPlus, FiSearch, FiSliders, FiUserPlus } from 'react-icons/fi'
+import { FiCheckCircle, FiEdit3, FiEye, FiLayers, FiPlus, FiSearch, FiSliders, FiTrash2, FiUserPlus } from 'react-icons/fi'
 import DashboardLayout from '../../layouts/DashboardLayout'
 import './DepartmentManagement.css'
 
@@ -77,6 +77,11 @@ export default function DepartmentManagement() {
     setScreen('hod')
   }
 
+  const openDelete = (item) => {
+    setSelected(item)
+    setScreen('delete')
+  }
+
   const toggleStatus = (item) => {
     const changed = { ...item, status: item.status === 'Active' ? 'Inactive' : 'Active' }
     setItems((all) => all.map((entry) => (entry.id === item.id ? changed : entry)))
@@ -110,6 +115,13 @@ export default function DepartmentManagement() {
     setScreen('list')
   }
 
+  const deleteDepartment = (event) => {
+    event.preventDefault()
+    setItems((all) => all.filter((item) => item.id !== selected.id))
+    setSelected(null)
+    setScreen('list')
+  }
+
   const field = (name, label, extra = {}) => (
     <label>
       {label}
@@ -136,8 +148,7 @@ export default function DepartmentManagement() {
           </div>
         </div>
 
-        {screen === 'list' && (
-          <section className="management-card department-list">
+        <section className="management-card department-list">
             <div className="department-list__top">
               <div>
                 <div className="department-section-title"><span><FiLayers /></span><h2>Department Directory</h2></div>
@@ -220,6 +231,7 @@ export default function DepartmentManagement() {
                         <button title={`View ${item.name}`} aria-label={`View ${item.name}`} onClick={() => details(item)}><FiEye /></button>
                         <button title={`Edit ${item.name}`} aria-label={`Edit ${item.name}`} onClick={() => edit(item)}><FiEdit3 /></button>
                         <button className="assign-hod" title={`Assign HOD for ${item.name}`} onClick={() => openAssignHod(item)}><FiUserPlus /> <span>HOD</span></button>
+                        <button className="delete-department" title={`Delete ${item.name}`} aria-label={`Delete ${item.name}`} onClick={() => openDelete(item)}><FiTrash2 /></button>
                       </td>
                     </tr>
                   ))}
@@ -262,11 +274,11 @@ export default function DepartmentManagement() {
                 </div>
               </div>
             )}
-          </section>
-        )}
+        </section>
 
         {screen === 'form' && (
-          <section className="management-card department-form-card">
+          <Popup close={() => setScreen('list')}>
+            <section className="management-card department-form-card">
             <Header
               title={form.id ? 'Edit Department' : 'Add Department'}
               subtitle="Enter the department information below."
@@ -317,11 +329,13 @@ export default function DepartmentManagement() {
               {error && <p className="department-error">{error}</p>}
               <Actions cancel={() => setScreen('list')} submit={form.id ? 'Save Changes' : 'Create Department'} />
             </form>
-          </section>
+            </section>
+          </Popup>
         )}
 
         {screen === 'details' && selected && (
-          <section className="management-card department-details">
+          <Popup close={() => setScreen('list')}>
+            <section className="management-card department-details">
             <Header
               title={selected.name}
               subtitle={`${selected.code} · ${selected.type}`}
@@ -354,11 +368,13 @@ export default function DepartmentManagement() {
                 <p>{selected.description || 'No description added.'}</p>
               </div>
             </div>
-          </section>
+            </section>
+          </Popup>
         )}
 
         {screen === 'hod' && selected && (
-          <section className="management-card hod-card">
+          <Popup close={() => setScreen('list')}>
+            <section className="management-card hod-card">
             <Header
               title="Assign HOD"
               subtitle={`Assign a Head of Department for ${selected.name}.`}
@@ -369,7 +385,23 @@ export default function DepartmentManagement() {
               {error && <p className="department-error">{error}</p>}
               <Actions cancel={() => setScreen('list')} submit="Assign HOD" />
             </form>
-          </section>
+            </section>
+          </Popup>
+        )}
+
+        {screen === 'delete' && selected && (
+          <Popup close={() => setScreen('list')}>
+            <section className="management-card department-confirm-card">
+              <Header title="Delete Department" subtitle="This action cannot be undone." back={() => setScreen('list')} />
+              <form onSubmit={deleteDepartment}>
+                <p>Are you sure you want to delete <strong>{selected.name}</strong>?</p>
+                <div className="form-actions">
+                  <button type="button" className="secondary-button" onClick={() => setScreen('list')}>Cancel</button>
+                  <button type="submit" className="danger-button">Delete Department</button>
+                </div>
+              </form>
+            </section>
+          </Popup>
         )}
       </div>
     </DashboardLayout>
@@ -383,8 +415,8 @@ function Header({ title, subtitle, back }) {
         <h2>{title}</h2>
         <p>{subtitle}</p>
       </div>
-      <button className="secondary-button" onClick={back}>
-        Back to List
+      <button className="department-popup-close" type="button" onClick={back} aria-label="Close popup" title="Close">
+        ×
       </button>
     </div>
   )
@@ -399,4 +431,8 @@ function Actions({ cancel, submit }) {
       <button type="submit">{submit}</button>
     </div>
   )
+}
+
+function Popup({ children, close }) {
+  return <div className="department-modal-backdrop" onMouseDown={(event) => event.target === event.currentTarget && close()}>{children}</div>
 }
