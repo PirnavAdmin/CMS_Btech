@@ -1,32 +1,39 @@
-import axios from "axios";
+const baseUrl = (import.meta.env.VITE_API_BASE_URL || "").replace(/\/+$/, "");
 
-const API = axios.create({
-  baseURL: `${import.meta.env.VITE_API_BASE_URL.replace(/\/+$/, "")}/api/v1`,
-  headers: {
-    "ngrok-skip-browser-warning": "true",
-  },
-});
-
-const SETTINGS_API = axios.create({
-  baseURL: `${import.meta.env.VITE_API_BASE_URL.replace(/\/+$/, "")}/api`,
-  headers: {
-    "ngrok-skip-browser-warning": "true",
-  },
-});
-
-// Add JWT token to requests
-const addAuthToken = (config) => {
-  const token = localStorage.getItem("btech-access-token");
-
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
-  }
-
-  return config;
+const createClient = (prefix) => {
+  const request = async (path, options = {}) => {
+    const token = localStorage.getItem("btech-access-token");
+    const response = await fetch(`${baseUrl}${prefix}${path}`, {
+      ...options,
+      headers: {
+        "Content-Type": "application/json",
+        "ngrok-skip-browser-warning": "true",
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        ...options.headers,
+      },
+    });
+    const contentType = response.headers.get("content-type") || "";
+    const data = contentType.includes("application/json") ? await response.json() : await response.text();
+    if (!response.ok) {
+      const error = new Error(data?.message || data?.title || `Request failed with status ${response.status}`);
+      error.response = { data, status: response.status };
+      throw error;
+    }
+    return { data, status: response.status, headers: response.headers };
+  };
+  return {
+    get: (path, config = {}) => {
+      const query = config.params ? `?${new URLSearchParams(config.params)}` : "";
+      return request(`${path}${query}`);
+    },
+    post: (path, data) => request(path, { method: "POST", body: JSON.stringify(data) }),
+    put: (path, data) => request(path, { method: "PUT", body: JSON.stringify(data) }),
+    patch: (path, data) => request(path, { method: "PATCH", body: JSON.stringify(data) }),
+  };
 };
 
-API.interceptors.request.use(addAuthToken);
-SETTINGS_API.interceptors.request.use(addAuthToken);
+const API = createClient("/api/v1");
+const SETTINGS_API = createClient("/api");
 
 
 // -------------------------

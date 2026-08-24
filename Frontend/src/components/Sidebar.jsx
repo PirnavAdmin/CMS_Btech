@@ -29,6 +29,16 @@ const links = [
     roles: [ROLES.ADMIN],
   },
   {
+    label: 'Semester Management',
+    to: '/semester-management',
+    roles: [ROLES.ADMIN],
+  },
+  {
+    label: 'Section Management',
+    to: '/section-management',
+    roles: [ROLES.ADMIN],
+  },
+  {
     label: 'My Subjects',
     to: '/my-subjects',
     roles: [
