@@ -14,14 +14,14 @@ const FORM_TABS = [
 ]
 const TAB_FIELDS = {
   college: ['collegeName', 'collegeCode', 'collegeType', 'universityName'],
-  address: ['addressLine1', 'addressLine2', 'city', 'state', 'pincode', 'country'],
+  address: ['addressLine1', 'addressLine2', 'area', 'district', 'city', 'state', 'pincode', 'country'],
   contact: ['contactNumber', 'alternateContactNumber', 'email', 'website'],
   administration: ['principalName', 'principalEmail', 'principalContact'],
   accreditation: ['accreditationBody', 'accreditationStatus', 'accreditationGrade', 'accreditationNumber', 'validFrom', 'validUntil'],
 }
 const initialValues = {
   collegeName: '', collegeCode: '', collegeType: '', universityName: '', logo: '', logoName: '',
-  addressLine1: '', addressLine2: '', city: '', state: '', pincode: '', country: 'India',
+  addressLine1: '', addressLine2: '', area: '', district: '', city: '', state: '', pincode: '', country: 'India',
   contactNumber: '', alternateContactNumber: '', email: '', website: '',
   principalName: '', principalEmail: '', principalContact: '',
   accreditationBody: '', accreditationStatus: 'Not Accredited', accreditationGrade: '',
@@ -84,6 +84,9 @@ export default function AddCollege() {
   const [notice, setNotice] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [activeTab, setActiveTab] = useState('college')
+  const [highestUnlockedTab, setHighestUnlockedTab] = useState(0)
+  const [postOffices, setPostOffices] = useState([])
+  const [pincodeStatus, setPincodeStatus] = useState('')
   const errors = validate(values)
   const isValid = Object.keys(errors).length === 0 && !logoError
 
@@ -93,11 +96,32 @@ export default function AddCollege() {
     return () => window.removeEventListener('beforeunload', warn)
   }, [dirty])
 
+  useEffect(() => {
+    if (values.pincode.length !== 6) return undefined
+    const controller = new AbortController()
+    setPincodeStatus('Looking up location...')
+    fetch(`https://api.postalpincode.in/pincode/${values.pincode}`, { signal: controller.signal })
+      .then((response) => { if (!response.ok) throw new Error('Lookup failed'); return response.json() })
+      .then(([result]) => {
+        const offices = result?.Status === 'Success' && Array.isArray(result.PostOffice) ? result.PostOffice : []
+        if (!offices.length) throw new Error('Not found')
+        const first = offices[0]
+        setPostOffices(offices)
+        setValues((current) => ({ ...current, area: first.Name || '', district: first.District || '', city: first.Block || first.District || '', state: first.State || '', country: first.Country || 'India' }))
+        setPincodeStatus('Location found. Select the area if required; all fields remain editable.')
+      })
+      .catch((error) => {
+        if (error.name !== 'AbortError') { setPostOffices([]); setPincodeStatus('Location not found. Enter the address manually.') }
+      })
+    return () => controller.abort()
+  }, [values.pincode])
+
   const update = ({ target: { name, value } }) => {
     let next = value
     if (name === 'collegeCode') next = value.toUpperCase().replace(/[^A-Z0-9]/g, '')
     if (['pincode', 'contactNumber', 'alternateContactNumber', 'principalContact'].includes(name)) next = value.replace(/\D/g, '')
-    setValues((current) => ({ ...current, [name]: next }))
+    setValues((current) => name === 'pincode' ? { ...current, pincode: next, area: '', district: '', city: '', state: '' } : { ...current, [name]: next })
+    if (name === 'pincode') { setPostOffices([]); setPincodeStatus('') }
     setTouched((current) => ({ ...current, [name]: true }))
     setDirty(true); setNotice('')
   }
@@ -115,7 +139,7 @@ export default function AddCollege() {
 
   const touchAll = () => setTouched(Object.keys(initialValues).reduce((all, key) => ({ ...all, [key]: true }), {}))
   const openPreview = () => { touchAll(); if (isValid) setDialog('preview') }
-  const reset = () => { setValues(initialValues); setTouched({}); setLogoError(''); setDirty(false); setDialog(null); setNotice('Form reset successfully.') }
+  const reset = () => { setValues(initialValues); setTouched({}); setLogoError(''); setDirty(false); setActiveTab('college'); setHighestUnlockedTab(0); setDialog(null); setNotice('Form reset successfully.') }
   const requestLeave = () => dirty ? setDialog('leave') : navigate('/college-institution-management')
   const saveDraft = () => { setNotice('Draft kept for this session. It has not been sent to a server.'); setDirty(false) }
   const saveAndNext = () => {
@@ -126,7 +150,9 @@ export default function AddCollege() {
       return
     }
     const currentIndex = FORM_TABS.findIndex((tab) => tab.id === activeTab)
-    setActiveTab(FORM_TABS[currentIndex + 1].id)
+    const nextIndex = currentIndex + 1
+    setHighestUnlockedTab((current) => Math.max(current, nextIndex))
+    setActiveTab(FORM_TABS[nextIndex].id)
     setNotice('')
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }
@@ -156,7 +182,7 @@ export default function AddCollege() {
   return <DashboardLayout><main className="add-college">
     <header className="ac-page-header"><div><h1>Add College</h1><p>Create and configure a new institution in the college management system.</p></div><button className="ac-back" type="button" onClick={requestLeave}>College list →</button></header>
     <nav className="ac-tabs" aria-label="College form sections" role="tablist">
-      {FORM_TABS.map((tab, index) => <button key={tab.id} type="button" role="tab" aria-selected={activeTab === tab.id} className={activeTab === tab.id ? 'active' : ''} onClick={() => setActiveTab(tab.id)}><span>{index + 1}</span>{tab.label}</button>)}
+      {FORM_TABS.map((tab, index) => <button key={tab.id} type="button" role="tab" aria-selected={activeTab === tab.id} aria-disabled={index > highestUnlockedTab} disabled={index > highestUnlockedTab} className={activeTab === tab.id ? 'active' : ''} onClick={() => setActiveTab(tab.id)}><span>{index + 1}</span>{tab.label}</button>)}
     </nav>
     {notice && <div className="ac-notice" role="status">{notice}</div>}
     <form onSubmit={(event) => { event.preventDefault(); submit() }} noValidate>
@@ -181,6 +207,9 @@ export default function AddCollege() {
         <Field label="State" name="state" values={values} errors={errors} touched={touched} onChange={update} required maxLength={60} />
         <Field label="Pincode" name="pincode" values={values} errors={errors} touched={touched} onChange={update} required maxLength={6} inputMode="numeric" />
         <Field label="Country" name="country" values={values} errors={errors} touched={touched} onChange={update} required readOnly />
+        <label className="ac-field" htmlFor="ac-area"><span>Area / Post Office</span><select id="ac-area" name="area" value={values.area} onChange={update} disabled={!postOffices.length}><option value="">{postOffices.length ? 'Select area' : 'Enter pincode first'}</option>{postOffices.map((office) => <option key={`${office.Name}-${office.BranchType}`} value={office.Name}>{office.Name}</option>)}</select></label>
+        <Field label="District" name="district" values={values} errors={errors} touched={touched} onChange={update} maxLength={60} />
+        {pincodeStatus && <p className="ac-lookup-status ac-span-2" role="status">{pincodeStatus}</p>}
       </>)}
       </>}
       {activeTab === 'contact' && section('Contact Information', 'Public institutional contact channels.', <>

@@ -10,6 +10,8 @@
 .ac-tabs button { display: flex; align-items: center; justify-content: center; gap: 8px; min-height: 46px; padding: 9px 12px; border: 1px solid transparent; border-radius: 8px; background: transparent; color: #5b748c; font-weight: 750; cursor: pointer; white-space: nowrap; }
 .ac-tabs button span { display: grid; place-items: center; width: 23px; height: 23px; border-radius: 50%; background: #dce7f1; color: #47637d; font-size: .72rem; }
 .ac-tabs button:hover { background: #eaf1f7; color: var(--brand-navy); }
+.ac-tabs button:disabled { opacity: .48; cursor: not-allowed; background: transparent; color: #7890a6; }
+.ac-tabs button:disabled:hover { background: transparent; color: #7890a6; }
 .ac-tabs button:focus-visible { outline: 3px solid rgba(30, 90, 150, .22); outline-offset: 1px; }
 .ac-tabs button.active { border-color: #c8d9e9; background: #fff; color: var(--brand-blue); box-shadow: 0 3px 10px rgba(15, 43, 72, .08); }
 .ac-tabs button.active span { background: var(--brand-blue); color: #fff; }
@@ -36,6 +38,7 @@
 .ac-logo-preview div { display: grid; gap: 10px; }
 .ac-logo-preview button { width: fit-content; padding: 0; border: 0; background: transparent; color: #b42318; font-weight: 700; cursor: pointer; }
 .ac-hint { margin: 0; color: #637d96; font-size: .82rem; }
+.ac-lookup-status { margin: -2px 0 0; color: #39715a; font-size: .78rem; font-weight: 650; }
 .ac-actions { position: sticky; bottom: 0; z-index: 5; display: flex; justify-content: flex-end; gap: 10px; padding: 16px; border: 1px solid #dce5ed; border-radius: 12px; background: rgba(255,255,255,.96); box-shadow: 0 -8px 28px rgba(15,43,72,.08); backdrop-filter: blur(8px); }
 .ac-primary, .ac-secondary, .ac-danger-btn { min-height: 40px; padding: 9px 16px; border-radius: 8px; font-weight: 750; cursor: pointer; }
 .ac-primary { border: 1px solid var(--brand-blue); background: var(--brand-blue); color: #fff; }
