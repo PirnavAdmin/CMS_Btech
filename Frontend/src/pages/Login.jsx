@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { signIn } from '../auth/auth'
-import { AuthRequestError, login, sendOtp, verifyOtp } from '../auth/authApi'
+import { sendOtp, verifyOtp } from '../auth/authApi'
+import { AuthRequestError, login } from '../api/apiEndpoints'
 import { validateLogin } from '../auth/loginValidation'
 import { ROLES } from '../auth/roles'
 import ForgotPassword from './ForgotPassword'
@@ -91,7 +92,7 @@ export default function Login() {
     setSubmitError('')
     try {
       const session = await login({ identifier: values.identifier.trim(), password: values.password }, selectedRole)
-      signIn(session.user.role)
+      signIn(session.user.role, session.accessToken, session.refreshToken)
       navigate('/dashboard')
     } catch (error) {
       setSubmitError(error instanceof AuthRequestError ? error.message : 'Unable to sign in right now. Please try again.')
