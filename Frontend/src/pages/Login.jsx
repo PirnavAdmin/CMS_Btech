@@ -32,9 +32,13 @@ export default function Login() {
     if (!message) return
     setLogoutMessage(message)
     sessionStorage.removeItem('btech-logout-message')
-    const timeout = setTimeout(() => setLogoutMessage(''), 3000)
-    return () => clearTimeout(timeout)
   }, [])
+
+  useEffect(() => {
+    if (!logoutMessage) return
+    const timeout = setTimeout(() => setLogoutMessage(''), 2000)
+    return () => clearTimeout(timeout)
+  }, [logoutMessage])
 
   useEffect(() => {
     let interval = null
