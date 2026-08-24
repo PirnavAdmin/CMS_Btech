@@ -1,0 +1,2 @@
+/* Branch screens share the course-management design system from Course.css. */
+.cm-page .cm-table td:last-child{min-width:190px}
