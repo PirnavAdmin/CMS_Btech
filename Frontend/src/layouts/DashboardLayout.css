@@ -1,1 +1,534 @@
-.password-modal-backdrop{position:fixed;inset:0;z-index:100;display:grid;place-items:center;padding:16px;background:rgba(6,46,89,.42);backdrop-filter:blur(4px);animation:password-fade .18s ease}.password-modal{position:relative;width:min(100%,650px);box-sizing:border-box;padding:22px 30px;border-radius:16px;background:#fff;box-shadow:0 24px 70px rgba(6,46,89,.3);animation:password-pop .2s ease}.password-modal h2{margin:0;color:#062e59;font-size:1.45rem}.password-modal__eyebrow,.password-modal__success p{margin:0 0 5px;color:#1970b3;text-transform:uppercase;font-size:.72rem;font-weight:800;letter-spacing:.1em}.password-modal__subtitle{margin:6px 0 12px;color:#5e7897;font-size:.9rem}.password-modal__close{position:absolute;right:14px;top:12px;border:0;background:transparent;color:#5e7897;font-size:1.55rem;line-height:1;cursor:pointer}.password-modal__field{display:grid;gap:5px;margin-top:11px;color:#123962;font-size:.82rem;font-weight:800}.password-modal__field>div{position:relative}.password-modal__field input{box-sizing:border-box;width:100%;height:40px;padding:0 58px 0 11px;border:1px solid #c7d7e7;border-radius:8px;color:#123962;font:inherit}.password-modal__field input:focus{border-color:#1471b3;outline:0;box-shadow:0 0 0 3px rgba(25,118,184,.13)}.password-modal__field [aria-invalid=true]{border-color:#d92d20}.password-modal__field button{position:absolute;top:50%;right:8px;transform:translateY(-50%);border:0;background:transparent;color:#0968b0;font-size:.8rem;font-weight:800;cursor:pointer}.password-modal__field small{color:#b42318;font-size:.72rem}.password-modal__strength{margin:11px 0;padding:10px 12px;border-radius:9px;background:#f4f9fc}.password-modal__strength>div{display:flex;justify-content:space-between;font-size:.78rem}.password-modal__strength strong{color:#0968b0}.password-modal__strength i{display:block;height:6px;margin:7px 0;border-radius:99px;background:#d0ddea;transition:width .18s ease}.password-modal__strength .level-0{width:0}.password-modal__strength .level-1,.password-modal__strength .level-2{width:40%;background:#d92d20}.password-modal__strength .level-3{width:60%;background:#d97706}.password-modal__strength .level-4{width:80%;background:#1970b3}.password-modal__strength .level-5{width:100%;background:#16803c}.password-modal__strength ul{display:grid;grid-template-columns:1fr 1fr;gap:5px 14px;margin:0;padding:0;list-style:none;color:#667085;font-size:.72rem}.password-modal__strength li.met{color:#16803c}.password-modal__strength li b{display:inline-block;width:13px}.password-modal footer{display:flex;justify-content:flex-end;gap:9px;margin-top:14px}.password-modal footer button,.password-modal__primary{min-height:38px;padding:0 14px;border:1px solid #c7d7e7;border-radius:8px;background:#fff;color:#0968b0;font:700 .82rem inherit;cursor:pointer}.password-modal__primary{border-color:#1970b3!important;background:#1970b3!important;color:#fff!important}.password-modal__primary:disabled,.password-modal__close:disabled{cursor:wait;opacity:.7}.password-modal__success{text-align:center;padding:12px 10px 4px}.password-modal__success>span{display:grid;place-items:center;width:50px;height:50px;margin:0 auto 10px;border-radius:50%;color:#fff;background:#16803c;font-size:1.5rem;font-weight:800}.password-modal__success>div{margin:7px 0 16px;color:#5e7897}.password-modal__success .password-modal__primary{width:100%}@keyframes password-fade{from{opacity:0}to{opacity:1}}@keyframes password-pop{from{opacity:0;transform:scale(.96)}to{opacity:1;transform:scale(1)}}@media(max-width:560px){.password-modal{max-height:calc(100dvh - 28px);overflow:auto;padding:20px 18px}.password-modal__strength ul{grid-template-columns:1fr}.password-modal footer{flex-direction:column-reverse}.password-modal footer button{width:100%}}@media(prefers-reduced-motion:reduce){.password-modal-backdrop,.password-modal,.password-modal__strength i{animation:none;transition:none}}
+/* ==========================================================================
+   Account Menu Dropdown & Header
+   ========================================================================== */
+
+.account-menu {
+  position: relative;
+  display: inline-block;
+}
+
+.account-menu summary {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 12px;
+  border-radius: 8px;
+  cursor: pointer;
+  list-style: none;
+  user-select: none;
+  transition: background 0.15s ease;
+}
+
+.account-menu summary::-webkit-details-marker {
+  display: none;
+}
+
+.account-menu summary:hover {
+  background: rgba(6, 46, 89, 0.05);
+}
+
+.account-avatar {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: #e8f3fc;
+  color: #1970b3;
+}
+
+.account-avatar svg {
+  width: 20px;
+  height: 20px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+}
+
+.account-menu summary span {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.2;
+}
+
+.account-menu summary strong {
+  color: #062e59;
+  font-size: 0.88rem;
+
+}
+
+.account-menu summary small {
+  color: #5e7897;
+  font-size: 0.72rem;
+}
+
+.account-menu__chevron {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-right: 2px solid #5e7897;
+  border-bottom: 2px solid #5e7897;
+  transform: rotate(45deg);
+  margin-left: 4px;
+  transition: transform 0.15s ease;
+}
+
+.account-menu[open] .account-menu__chevron {
+  transform: rotate(-135deg);
+}
+
+.account-menu__panel {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 8px);
+  z-index: 50;
+  width: 210px;
+  padding: 6px;
+  border-radius: 12px;
+  background: #ffffff;
+  box-shadow: 0 10px 30px rgba(6, 46, 89, 0.15);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.account-menu__panel button {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 10px 12px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: #123962;
+  font: 600 0.85rem inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.account-menu__panel button:hover {
+  background: #f4f9fc;
+}
+
+.account-menu__panel button svg {
+  width: 18px;
+  height: 18px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.account-menu__signout {
+  color: #d92d20 !important;
+}
+
+.account-menu__signout:hover {
+  background: #fef2f2 !important;
+}
+
+/* ==========================================================================
+   Modals Backdrop & Container Sizing / Spacing
+   ========================================================================== */
+
+/* Shared Backdrop */
+.logout-confirmation-backdrop,
+.password-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: grid;
+  place-items: center;
+  padding: 16px;
+  background: rgba(6, 46, 89, 0.42);
+  backdrop-filter: blur(4px);
+  animation: password-fade 0.18s ease;
+}
+
+/* --------------------------------------------------------------------------
+   Logout Confirmation Modal
+   -------------------------------------------------------------------------- */
+.logout-confirmation {
+  position: relative;
+  width: min(100%, 520px);
+  box-sizing: border-box;
+  padding: 32px;
+  border-radius: 20px;
+  background: #ffffff;
+  box-shadow: 0 24px 70px rgba(6, 46, 89, 0.28);
+  animation: password-pop 0.2s ease;
+}
+
+.logout-confirmation__icon {
+  display: grid;
+  place-items: center;
+  width: 48px;
+  height: 48px;
+  margin-bottom: 20px;
+  border-radius: 12px;
+  background: #e8f3fc;
+  color: #1970b3;
+}
+
+.logout-confirmation__icon svg {
+  width: 24px;
+  height: 24px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.logout-confirmation__eyebrow {
+  margin: 0 0 6px;
+  color: #1970b3;
+  text-transform: uppercase;
+  font-size: 0.75rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+}
+
+.logout-confirmation h2 {
+  margin: 0 0 8px;
+  color: #062e59;
+  font-size: 1.55rem;
+  font-weight: 700;
+  line-height: 1.25;
+}
+
+.logout-confirmation p:not(.logout-confirmation__eyebrow) {
+  margin: 0 0 28px;
+  color: #5e7897;
+  font-size: 0.95rem;
+  line-height: 1.45;
+}
+
+.logout-confirmation__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+}
+
+.logout-confirmation__cancel,
+.logout-confirmation__confirm {
+  height: 42px;
+  padding: 0 20px;
+  border-radius: 10px;
+  font: 700 0.88rem inherit;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.logout-confirmation__cancel {
+  border: 1px solid #c7d7e7;
+  background: #ffffff;
+  color: #0968b0;
+}
+
+.logout-confirmation__cancel:hover {
+  background: #f4f9fc;
+  border-color: #b0c9e1;
+}
+
+.logout-confirmation__confirm {
+  border: 1px solid #1970b3;
+  background: #1970b3;
+  color: #ffffff;
+}
+
+.logout-confirmation__confirm:hover {
+  background: #135d96;
+  border-color: #135d96;
+}
+
+/* --------------------------------------------------------------------------
+   Change Password Modal
+   -------------------------------------------------------------------------- */
+.password-modal {
+  position: relative;
+  width: min(100%, 540px);
+  box-sizing: border-box;
+  padding: 28px 32px;
+  border-radius: 20px;
+  background: #ffffff;
+  box-shadow: 0 24px 70px rgba(6, 46, 89, 0.3);
+  animation: password-pop 0.2s ease;
+}
+
+.password-modal h2 {
+  margin: 0;
+  color: #062e59;
+  font-size: 1.45rem;
+  font-weight: 700;
+}
+
+.password-modal__eyebrow,
+.password-modal__success p {
+  margin: 0 0 5px;
+  color: #1970b3;
+  text-transform: uppercase;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+}
+
+.password-modal__subtitle {
+  margin: 6px 0 16px;
+  color: #5e7897;
+  font-size: 0.9rem;
+}
+
+.password-modal__close {
+  position: absolute;
+  right: 18px;
+  top: 18px;
+  width: 32px;
+  height: 32px;
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: #5e7897;
+  font-size: 1.55rem;
+  line-height: 1;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.password-modal__close:hover {
+  background: #f0f5fa;
+}
+
+.password-modal__field {
+  display: grid;
+  gap: 6px;
+  margin-top: 14px;
+  color: #123962;
+  font-size: 0.82rem;
+  font-weight: 800;
+}
+
+.password-modal__field > div {
+  position: relative;
+}
+
+.password-modal__field input {
+  box-sizing: border-box;
+  width: 100%;
+  height: 42px;
+  padding: 0 58px 0 14px;
+  border: 1px solid #c7d7e7;
+  border-radius: 10px;
+  color: #123962;
+  font: inherit;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.password-modal__field input:focus {
+  border-color: #1471b3;
+  outline: 0;
+  box-shadow: 0 0 0 3px rgba(25, 118, 184, 0.13);
+}
+
+.password-modal__field [aria-invalid="true"] {
+  border-color: #d92d20;
+}
+
+.password-modal__field button {
+  position: absolute;
+  top: 50%;
+  right: 10px;
+  transform: translateY(-50%);
+  border: 0;
+  background: transparent;
+  color: #0968b0;
+  font-size: 0.8rem;
+  font-weight: 800;
+  cursor: pointer;
+  padding: 4px 6px;
+}
+
+.password-modal__field small {
+  color: #b42318;
+  font-size: 0.75rem;
+}
+
+.password-modal__strength {
+  margin: 14px 0;
+  padding: 12px 14px;
+  border-radius: 10px;
+  background: #f4f9fc;
+}
+
+.password-modal__strength > div {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.78rem;
+}
+
+.password-modal__strength strong {
+  color: #0968b0;
+}
+
+.password-modal__strength i {
+  display: block;
+  height: 6px;
+  margin: 8px 0;
+  border-radius: 99px;
+  background: #d0ddea;
+  transition: width 0.18s ease;
+}
+
+.password-modal__strength .level-0 { width: 0; }
+.password-modal__strength .level-1,
+.password-modal__strength .level-2 { width: 40%; background: #d92d20; }
+.password-modal__strength .level-3 { width: 60%; background: #d97706; }
+.password-modal__strength .level-4 { width: 80%; background: #1970b3; }
+.password-modal__strength .level-5 { width: 100%; background: #16803c; }
+
+.password-modal__strength ul {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px 14px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  color: #667085;
+  font-size: 0.74rem;
+}
+
+.password-modal__strength li.met {
+  color: #16803c;
+}
+
+.password-modal__strength li b {
+  display: inline-block;
+  width: 14px;
+}
+
+.password-modal footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 20px;
+}
+
+.password-modal footer button,
+.password-modal__primary {
+  min-height: 42px;
+  padding: 0 18px;
+  border: 1px solid #c7d7e7;
+  border-radius: 10px;
+  background: #ffffff;
+  color: #0968b0;
+  font: 700 0.85rem inherit;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.password-modal footer button:hover:not(:disabled) {
+  background: #f4f9fc;
+}
+
+.password-modal__primary {
+  border-color: #1970b3 !important;
+  background: #1970b3 !important;
+  color: #ffffff !important;
+}
+
+.password-modal__primary:hover:not(:disabled) {
+  background: #135d96 !important;
+  border-color: #135d96 !important;
+}
+
+.password-modal__primary:disabled,
+.password-modal__close:disabled {
+  cursor: wait;
+  opacity: 0.65;
+}
+
+.password-modal__success {
+  text-align: center;
+  padding: 16px 10px 8px;
+}
+
+.password-modal__success > span {
+  display: grid;
+  place-items: center;
+  width: 52px;
+  height: 52px;
+  margin: 0 auto 14px;
+  border-radius: 50%;
+  color: #ffffff;
+  background: #16803c;
+  font-size: 1.5rem;
+  font-weight: 800;
+}
+
+.password-modal__success > div {
+  margin: 8px 0 20px;
+  color: #5e7897;
+}
+
+.password-modal__success .password-modal__primary {
+  width: 100%;
+}
+
+/* Animations */
+@keyframes password-fade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes password-pop {
+  from {
+    opacity: 0;
+    transform: scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* Responsive Sizing */
+@media (max-width: 560px) {
+  .logout-confirmation,
+  .password-modal {
+    max-height: calc(100dvh - 28px);
+    overflow: auto;
+    padding: 24px 20px;
+    border-radius: 16px;
+  }
+
+  .password-modal__strength ul {
+    grid-template-columns: 1fr;
+  }
+
+  .logout-confirmation__actions,
+  .password-modal footer {
+    flex-direction: column-reverse;
+  }
+
+  .logout-confirmation__cancel,
+  .logout-confirmation__confirm,
+  .password-modal footer button {
+    width: 100%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .logout-confirmation-backdrop,
+  .password-modal-backdrop,
+  .logout-confirmation,
+  .password-modal,
+  .password-modal__strength i {
+    animation: none;
+    transition: none;
+  }
+}

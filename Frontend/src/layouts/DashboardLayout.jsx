@@ -23,14 +23,13 @@ export default function DashboardLayout({ children }) {
   const navigate = useNavigate()
 
   const userRole = getUserRole() || 'user'
-  const roleLabel =
-    userRole.charAt(0).toUpperCase() + userRole.slice(1)
+  const roleLabel = userRole.charAt(0).toUpperCase() + userRole.slice(1)
 
-  // Logout confirmation
+  // Logout confirmation state
   const [showLogoutConfirmation, setShowLogoutConfirmation] = useState(false)
   const accountMenuRef = useRef(null)
 
-  // Change password
+  // Change password state
   const [open, setOpen] = useState(false)
   const [values, setValues] = useState(empty)
   const [errors, setErrors] = useState({})
@@ -60,9 +59,8 @@ export default function DashboardLayout({ children }) {
           : 'Strong'
 
   // -------------------------
-  // Logout
+  // Logout Actions
   // -------------------------
-
   const requestSignOut = () => {
     accountMenuRef.current?.removeAttribute('open')
     setShowLogoutConfirmation(true)
@@ -70,17 +68,13 @@ export default function DashboardLayout({ children }) {
 
   const handleSignOut = () => {
     signOut()
-    sessionStorage.setItem(
-      'btech-logout-message',
-      'Successfully signed out.'
-    )
+    sessionStorage.setItem('btech-logout-message', 'Successfully signed out.')
     navigate('/login', { replace: true })
   }
 
   // -------------------------
-  // Change Password
+  // Change Password Actions
   // -------------------------
-
   const validate = (data = values) => {
     const next = {}
 
@@ -92,13 +86,10 @@ export default function DashboardLayout({ children }) {
 
     if (!data.newPassword) {
       next.newPassword = 'New password is required.'
-    } else if (
-      !requirements(data.newPassword).every((item) => item[1])
-    ) {
+    } else if (!requirements(data.newPassword).every((item) => item[1])) {
       next.newPassword = 'Use all password requirements.'
     } else if (data.newPassword === data.currentPassword) {
-      next.newPassword =
-        'New password must be different from your current password.'
+      next.newPassword = 'New password must be different from current password.'
     }
 
     if (!data.confirmPassword) {
@@ -125,22 +116,23 @@ export default function DashboardLayout({ children }) {
   }
 
   useEffect(() => {
-    if (!open) return undefined
+    if (!open && !showLogoutConfirmation) return undefined
 
-    closeRef.current?.focus()
+    if (open) closeRef.current?.focus()
 
-    const escape = (event) => {
+    const handleKeyDown = (event) => {
       if (event.key === 'Escape') {
-        closeModal()
+        if (open) closeModal()
+        if (showLogoutConfirmation) setShowLogoutConfirmation(false)
       }
     }
 
-    window.addEventListener('keydown', escape)
+    window.addEventListener('keydown', handleKeyDown)
 
     return () => {
-      window.removeEventListener('keydown', escape)
+      window.removeEventListener('keydown', handleKeyDown)
     }
-  }, [open, submitting])
+  }, [open, showLogoutConfirmation, submitting])
 
   const update = (event) => {
     const next = {
@@ -162,8 +154,7 @@ export default function DashboardLayout({ children }) {
 
     setSubmitting(true)
 
-    // Temporary static implementation.
-    // Replace this with the backend Change Password API later.
+    // Simulating API call
     await new Promise((resolve) => setTimeout(resolve, 650))
 
     setMockPassword(values.newPassword)
@@ -184,14 +175,10 @@ export default function DashboardLayout({ children }) {
           onChange={update}
           placeholder={placeholder}
           autoComplete={
-            name === 'currentPassword'
-              ? 'current-password'
-              : 'new-password'
+            name === 'currentPassword' ? 'current-password' : 'new-password'
           }
           aria-invalid={Boolean(errors[name])}
-          aria-describedby={
-            errors[name] ? `${name}-error` : undefined
-          }
+          aria-describedby={errors[name] ? `${name}-error` : undefined}
         />
 
         <button
@@ -224,10 +211,7 @@ export default function DashboardLayout({ children }) {
         <header className="dashboard-header">
           <span>BTech Management System</span>
 
-          <details
-            className="account-menu"
-            ref={accountMenuRef}
-          >
+          <details className="account-menu" ref={accountMenuRef}>
             <summary aria-label="Open account menu">
               <span className="account-avatar">
                 <svg viewBox="0 0 24 24" aria-hidden="true">
@@ -241,17 +225,11 @@ export default function DashboardLayout({ children }) {
                 <small>Account</small>
               </span>
 
-              <i
-                className="account-menu__chevron"
-                aria-hidden="true"
-              />
+              <i className="account-menu__chevron" aria-hidden="true" />
             </summary>
 
             <div className="account-menu__panel">
-              <button
-                type="button"
-                onClick={() => navigate('/my-profile')}
-              >
+              <button type="button" onClick={() => navigate('/my-profile')}>
                 <svg viewBox="0 0 24 24" aria-hidden="true">
                   <circle cx="12" cy="8" r="3.5" />
                   <path d="M5.5 20c.7-4.1 2.9-6.2 6.5-6.2s5.8 2.1 6.5 6.2" />
@@ -266,7 +244,6 @@ export default function DashboardLayout({ children }) {
                   event.currentTarget
                     .closest('details')
                     ?.removeAttribute('open')
-
                   setOpen(true)
                 }}
               >
@@ -292,50 +269,56 @@ export default function DashboardLayout({ children }) {
           </details>
         </header>
 
-        <section className="page-content">
-          {children}
-        </section>
+        <section className="page-content">{children}</section>
 
-        {/* Logout Confirmation */}
+        {/* Logout Confirmation Modal */}
         {showLogoutConfirmation && (
           <div
-            className="logout-confirmation"
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="logout-confirmation-title"
+            className="logout-confirmation-backdrop"
+            onMouseDown={(event) => {
+              if (event.target === event.currentTarget) {
+                setShowLogoutConfirmation(false)
+              }
+            }}
           >
-            <p className="logout-confirmation__eyebrow">
-              Sign out
-            </p>
+            <section
+              className="logout-confirmation"
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="logout-confirmation-title"
+              aria-describedby="logout-confirmation-description"
+            >
+              <div className="logout-confirmation__icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24">
+                  <path d="M10 5H5.5A1.5 1.5 0 0 0 4 6.5v11A1.5 1.5 0 0 0 5.5 19H10" />
+                  <path d="M14 8l4 4-4 4M8 12h10" />
+                </svg>
+              </div>
 
-            <h2 id="logout-confirmation-title">
-              Ready to leave?
-            </h2>
+              <p className="logout-confirmation__eyebrow">Account access</p>
+              <h2 id="logout-confirmation-title">Sign out of your account?</h2>
+              <p id="logout-confirmation-description">
+                You’ll need to sign in again to access your dashboard.
+              </p>
 
-            <p>
-              Your session will be cleared securely and you will
-              need to sign in again.
-            </p>
+              <div className="logout-confirmation__actions">
+                <button
+                  type="button"
+                  className="logout-confirmation__cancel"
+                  onClick={() => setShowLogoutConfirmation(false)}
+                >
+                  Stay signed in
+                </button>
 
-            <div className="logout-confirmation__actions">
-              <button
-                type="button"
-                className="logout-confirmation__cancel"
-                onClick={() =>
-                  setShowLogoutConfirmation(false)
-                }
-              >
-                Cancel
-              </button>
-
-              <button
-                type="button"
-                className="logout-confirmation__confirm"
-                onClick={handleSignOut}
-              >
-                Sign Out
-              </button>
-            </div>
+                <button
+                  type="button"
+                  className="logout-confirmation__confirm"
+                  onClick={handleSignOut}
+                >
+                  Sign out
+                </button>
+              </div>
+            </section>
           </div>
         )}
 
@@ -368,15 +351,9 @@ export default function DashboardLayout({ children }) {
               {success ? (
                 <div className="password-modal__success">
                   <span aria-hidden="true">✓</span>
-
                   <p>Security Settings</p>
-
                   <h2>Password Updated</h2>
-
-                  <div>
-                    Your password has been changed successfully.
-                  </div>
-
+                  <div>Your password has been changed successfully.</div>
                   <button
                     className="password-modal__primary"
                     onClick={closeModal}
@@ -386,17 +363,10 @@ export default function DashboardLayout({ children }) {
                 </div>
               ) : (
                 <>
-                  <p className="password-modal__eyebrow">
-                    Security Settings
-                  </p>
-
-                  <h2 id="password-modal-title">
-                    Change Password
-                  </h2>
-
+                  <p className="password-modal__eyebrow">Security Settings</p>
+                  <h2 id="password-modal-title">Change Password</h2>
                   <p className="password-modal__subtitle">
-                    Keep your account secure by creating a strong
-                    new password.
+                    Keep your account secure by creating a strong new password.
                   </p>
 
                   <form onSubmit={submit} noValidate>
@@ -417,19 +387,11 @@ export default function DashboardLayout({ children }) {
                         <span>Password Strength</span>
                         <strong>{strength}</strong>
                       </div>
-
                       <i className={`level-${met}`} />
-
                       <ul>
                         {rules.map((item) => (
-                          <li
-                            className={item[1] ? 'met' : ''}
-                            key={item[0]}
-                          >
-                            <b>
-                              {item[1] ? '✓' : '○'}
-                            </b>{' '}
-                            {item[0]}
+                          <li className={item[1] ? 'met' : ''} key={item[0]}>
+                            <b>{item[1] ? '✓' : '○'}</b> {item[0]}
                           </li>
                         ))}
                       </ul>
@@ -451,11 +413,9 @@ export default function DashboardLayout({ children }) {
                       </button>
 
                       <button
+                        type="submit"
                         className="password-modal__primary"
-                        disabled={
-                          submitting ||
-                          Object.keys(validate()).length > 0
-                        }
+                        disabled={submitting || Object.keys(validate()).length > 0}
                       >
                         {submitting
                           ? 'Updating Password...'
