@@ -1,0 +1,135 @@
+:root {
+  color-scheme: light;
+  --app-bg:#f4f7fa;--surface:#fff;--surface-soft:#f7fafc;--surface-raised:#fff;
+  --text-primary:#132a3e;--text-secondary:#425e75;--text-muted:#6d8294;
+  --border:#dbe4eb;--border-strong:#bdccd8;--brand:#176fae;--brand-hover:#125b90;--brand-soft:#eaf4fb;
+  --success:#16805b;--warning:#ad6b0a;--danger:#c43d3d;--info:#176fae;
+  --shadow-sm:0 2px 8px rgba(15,42,66,.06);--shadow-md:0 12px 30px rgba(15,42,66,.09);
+  --radius-sm:7px;--radius-md:11px;--radius-lg:16px;
+}
+html,body,#root{max-width:100%;overflow-x:hidden}
+:root[data-theme="dark"] {
+  color-scheme:dark;--app-bg:#0b1120;--surface:#151f2f;--surface-soft:#101827;--surface-raised:#1b2638;
+  --text-primary:#edf4fa;--text-secondary:#c1cfda;--text-muted:#91a5b7;--border:#29394d;--border-strong:#3b5068;
+  --brand:#61afe3;--brand-hover:#83c6ee;--brand-soft:#183650;--success:#54c99a;--warning:#e8b45e;--danger:#ef7777;--info:#67b7ea;
+  --shadow-sm:0 2px 8px rgba(0,0,0,.2);--shadow-md:0 16px 34px rgba(0,0,0,.28);
+  --erp-bg:var(--app-bg);--erp-surface:var(--surface);--erp-text:var(--text-primary);--erp-muted:var(--text-muted);
+  --erp-border:var(--border);--erp-navy:var(--text-primary);--erp-blue:var(--brand);--erp-blue-soft:var(--brand-soft);
+}
+.dashboard-layout{display:block;width:100%;max-width:100vw;overflow-x:hidden;background:var(--app-bg)}
+.dashboard-layout>main{width:calc(100% - 248px);max-width:calc(100vw - 248px);min-width:0;margin-left:248px;padding-top:64px;overflow-x:hidden;background:var(--app-bg)}
+.page-content{background:var(--app-bg)}
+.page-content{width:100%;max-width:100%;min-width:0;box-sizing:border-box;padding:24px clamp(18px,2.2vw,32px) 32px;overflow-x:hidden}
+.dashboard-header{position:fixed;inset:0 0 auto 248px;z-index:40;height:64px;min-height:64px;box-sizing:border-box;padding:9px clamp(16px,2vw,28px);border-color:var(--border);background:color-mix(in srgb,var(--surface) 96%,transparent);color:var(--text-primary);box-shadow:0 2px 10px rgba(15,42,66,.06);backdrop-filter:blur(12px)}
+.dashboard-header__context,.dashboard-header__actions{display:flex;align-items:center;gap:12px}.dashboard-header__context>div{display:grid;gap:2px}.dashboard-header__context small{color:var(--text-muted);font-size:.7rem;font-weight:700}.dashboard-header__context strong{color:var(--text-primary);font-size:.95rem}
+.dashboard-header__page-icon{display:grid;width:34px;height:34px;flex:0 0 34px;place-items:center;border:1px solid var(--border);border-radius:8px;color:var(--brand);background:var(--brand-soft)}.dashboard-header__page-icon svg{width:17px;height:17px}
+.mobile-menu-button,.theme-toggle,.sidebar-close{display:grid;width:40px;height:40px;padding:0!important;place-items:center;border:1px solid var(--border)!important;border-radius:var(--radius-sm)!important;background:var(--surface)!important;color:var(--text-secondary)!important;box-shadow:none!important}.mobile-menu-button{display:none}.theme-toggle:hover{border-color:var(--brand)!important;color:var(--brand)!important;background:var(--brand-soft)!important}.theme-toggle svg,.mobile-menu-button svg{width:18px;height:18px}
+.sidebar{position:fixed;inset:0 auto 0 0;z-index:50;width:248px;height:100dvh;min-height:0;overflow-y:auto;box-sizing:border-box;padding:16px 12px;background:#0d3658;box-shadow:inset -1px 0 rgba(255,255,255,.08)}
+.sidebar-brand{margin:0 2px 18px;padding:4px 4px 16px}.sidebar-brand__mark{flex-basis:38px;width:38px;height:38px;border-radius:9px}.sidebar-brand__copy strong{font-size:.8rem;line-height:1.25}.sidebar-brand__copy small{font-size:.58rem}.sidebar-close{display:none;margin-left:auto;border-color:rgba(255,255,255,.2)!important;background:transparent!important;color:#fff!important}
+.sidebar nav{gap:2px}.sidebar-section-label{margin:15px 10px 5px;color:#8fb4d0;font-size:.61rem;font-weight:800;letter-spacing:.14em;text-transform:uppercase}
+.sidebar nav>a,.sidebar-group summary{display:flex;align-items:center;gap:10px;min-height:40px;box-sizing:border-box;margin:1px 0;padding:8px 10px;border:0;border-left:0;border-radius:8px;color:#c5d9e8;font-size:.83rem;font-weight:650}.sidebar nav>a svg,.sidebar-group summary>svg:first-child{flex:0 0 17px;width:17px;height:17px}.sidebar nav>a:hover,.sidebar nav>a.active,.sidebar-group summary:hover{background:rgba(255,255,255,.1);color:#fff}.sidebar nav>a.active{box-shadow:inset 3px 0 #69b9e8}.sidebar .sidebar-group summary::before{display:none;content:none}.sidebar-group__chevron{width:14px;height:14px;margin-left:auto;transition:transform .2s ease}.sidebar-group[open] .sidebar-group__chevron{transform:rotate(180deg)}.sidebar .sidebar-group div{gap:1px;margin:2px 0 4px 18px;padding-left:14px;border-left:1px solid rgba(255,255,255,.15)}.sidebar .sidebar-group div a{padding:7px 10px;border:0;border-radius:7px;font-size:.78rem}.sidebar-scrim{display:none}
+
+/* Imported last: normalize common module surfaces without changing their workflows. */
+.page-content :is(.management-card,.cm-panel,.semester-directory-card,.section-directory-card,.ay .panel,.settings-card,.profile-card){border-color:var(--border);background:var(--surface);box-shadow:var(--shadow-sm)}
+.page-content :is(h1,h2,h3),.page-content :is(.cm-header h1,.semester-page-header h1,.section-page-header h1){color:var(--text-primary)}
+.page-content :is(p,small),.page-content :is(.cm-header p,.semester-page-header>div>p:last-child,.section-page-header>div>p:last-child){color:var(--text-muted)}
+.page-content :is(input,select,textarea){border-color:var(--border);background:var(--surface);color:var(--text-primary)}
+.page-content :is(input,select,textarea):focus{border-color:var(--brand);outline:0;box-shadow:0 0 0 3px color-mix(in srgb,var(--brand) 18%,transparent)}
+.page-content :is(button,a):focus-visible{outline:3px solid color-mix(in srgb,var(--brand) 30%,transparent);outline-offset:2px}
+
+:root[data-theme="dark"] .account-menu summary{border-color:var(--border)!important;background:var(--surface)!important}:root[data-theme="dark"] .account-menu summary strong,:root[data-theme="dark"] .account-menu__panel button{color:var(--text-primary)}:root[data-theme="dark"] .account-menu summary small{color:var(--text-muted)}
+:root[data-theme="dark"] :is(.account-menu__panel,.logout-confirmation,.password-modal){border:1px solid var(--border);background:var(--surface-raised);color:var(--text-primary)}:root[data-theme="dark"] .account-menu__panel button:hover,:root[data-theme="dark"] .password-modal__strength{background:var(--surface-soft)}
+:root[data-theme="dark"] :is(.logout-confirmation h2,.password-modal h2,.password-modal__field){color:var(--text-primary)}:root[data-theme="dark"] .logout-confirmation p:not(.logout-confirmation__eyebrow),:root[data-theme="dark"] .password-modal__subtitle{color:var(--text-muted)}:root[data-theme="dark"] .password-modal input{border-color:var(--border);background:var(--surface-soft);color:var(--text-primary)}
+:root[data-theme="dark"] .page-content table :is(th,td){border-color:var(--border)}:root[data-theme="dark"] .page-content table td{background:var(--surface);color:var(--text-secondary)}:root[data-theme="dark"] .page-content table tbody tr:hover td{background:var(--surface-raised)}
+
+/* Complete authenticated-module dark coverage. Semantic badges and primary actions retain their colors. */
+:root[data-theme="dark"] .page-content :is(.college-management,.add-college,.department-management,.ay,.cm-page,.semester-management,.section-management,.profile-page,.settings-page){color:var(--text-primary)}
+:root[data-theme="dark"] .page-content :is(.college-management,.add-college,.department-management,.ay,.cm-page,.semester-management,.section-management,.profile-page,.settings-page) :is([class*="card"],[class*="panel"],[class*="toolbar"],[class*="filters"],[class*="filter-bar"],[class*="directory-heading"],[class*="pagination"],[class*="section-heading"],[class*="subsection"],[class*="actions"]){border-color:var(--border);background-color:var(--surface)}
+:root[data-theme="dark"] .page-content :is(.college-management,.add-college,.department-management,.ay,.cm-page,.semester-management,.section-management,.profile-page,.settings-page) :is(h1,h2,h3,strong,label,legend,dt){color:var(--text-primary)}
+:root[data-theme="dark"] .page-content :is(.college-management,.add-college,.department-management,.ay,.cm-page,.semester-management,.section-management,.profile-page,.settings-page) :is(p,small,span,dd,em){border-color:var(--border)}
+:root[data-theme="dark"] .page-content :is(.cm-secondary-btn,.cm-button.secondary,.secondary-button,.ac-secondary,.profile-button.secondary,.pagination-btn,.cm-page-btn,.cm-page-num,.semester-row-actions button,.semester-pagination button,.section-actions button,.section-pagination button){border-color:var(--border)!important;background:var(--surface-raised)!important;color:var(--brand)!important}
+:root[data-theme="dark"] .page-content :is(.cm-table th,.department-table-wrap th,.semester-table th,.section-table th){background:#102f49;color:#eef6fc}
+:root[data-theme="dark"] .page-content :is(.semester-stat-card,.section-stat-card,.department-heading-stat,.ay .kpis article,.profile-content-card,.settings-card,.ac-section){border-color:var(--border);background:var(--surface);box-shadow:var(--shadow-sm)}
+:root[data-theme="dark"] .page-content :is(.semester-search,.semester-filters select,.section-search,.section-filter-bar select,.department-search,.department-filter,.profile-input,.settings-field input,.ac-field input,.ac-field select){border-color:var(--border);background:var(--surface-raised);color:var(--text-primary)}
+:root[data-theme="dark"] .page-content :is(.semester-form-panel,.semester-details-panel,.semester-confirm,.section-form-panel,.section-details-panel,.section-confirm,.cm-modal-card,.ac-dialog,.profile-preview-card,.profile-success-card,.profile-error-card){border-color:var(--border);background:var(--surface-raised);color:var(--text-primary)}
+:root[data-theme="dark"] .page-content :is(.semester-form-panel header,.semester-form-panel footer,.semester-details-panel header,.semester-details-panel footer,.section-form-panel header,.section-form-panel footer,.section-details-panel header,.section-details-panel footer,.cm-modal-card .cm-header,.profile-preview-card>header,.profile-preview-card>footer,.ac-actions){border-color:var(--border);background:var(--surface)}
+:root[data-theme="dark"] .page-content :is(.profile-tabs,.profile-panel,.profile-actions,.profile-subsection,.profile-section-heading,.strength,.ac-tabs,.ac-progress,.ac-upload){border-color:var(--border);background:var(--surface-soft)}
+:root[data-theme="dark"] .page-content :is(.profile-tabs button.active,.profile-tabs button:hover){background:var(--surface-raised);color:var(--text-primary)}
+:root[data-theme="dark"] .page-content option{background:#151f2f;color:#edf4fa}
+
+/* Every routed module owns the full main-column width; tables scroll inside their own wrapper. */
+.page-content>:is(.college-management,.add-college,.department-management,.ay,.cm-page,.semester-management,.section-management,.profile-page){width:100%;min-width:0;max-width:none;box-sizing:border-box;margin-inline:0}
+.page-content :is(.cm-table-wrap,.department-table-wrap,.semester-table-wrapper,.section-table-wrapper,.ay .table){width:100%;max-width:100%;min-width:0;overflow-x:auto;overscroll-behavior-inline:contain}
+
+
+@media(max-width:900px){.dashboard-layout>main{width:100%;max-width:100vw;margin-left:0;padding-top:60px}.dashboard-header{inset-inline:0;height:60px;min-height:60px}.sidebar{transform:translateX(-105%);transition:transform .22s ease;box-shadow:12px 0 32px rgba(0,0,0,.28)}.sidebar.is-open{transform:translateX(0)}.sidebar-close,.mobile-menu-button{display:grid}.sidebar-scrim{position:fixed;inset:0;z-index:45;width:100%;height:100%;border:0;background:rgba(3,12,22,.55);opacity:0;pointer-events:none;transition:opacity .2s}.sidebar-scrim.is-visible{display:block;opacity:1;pointer-events:auto}.dashboard-header__context small{display:none}}
+@media(max-width:540px){.page-content{padding:18px 14px 28px}.dashboard-header{padding-inline:12px}.dashboard-header__context strong{max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.account-menu summary>span:nth-child(2),.account-menu__chevron{display:none!important}.dashboard-header .account-menu summary{min-width:0!important;padding:4px!important}}
+@media(prefers-reduced-motion:reduce){.sidebar,.sidebar-scrim{transition:none}}
+.semester-directory-heading p,.section-directory-heading p{display:none}
+.ay .kpis small{display:none}.settings-page>.settings-card:not(.security):not(.password-card){display:none}
+
+/* Final compact ERP normalization across existing module markup. */
+.page-content>:is(.college-management,.add-college,.department-management,.ay,.cm-page,.semester-management,.section-management,.profile-page,.settings-page){font-size:14px}
+.page-content :is(.cm-header,.management-page__heading,.semester-page-header,.section-page-header,.ac-page-header,.profile-heading,.settings-page>header){min-height:auto;margin-bottom:20px;align-items:flex-start}
+.page-content :is(.cm-header h1,.management-page__heading h1,.semester-page-header h1,.section-page-header h1,.ay>header h1,.ac-page-header h1,.profile-heading h1,.settings-page>header h1){margin:0;color:var(--text-primary);font-size:clamp(1.55rem,2.3vw,1.9rem);line-height:1.2;letter-spacing:-.025em}
+.page-content :is(.cm-header p,.management-page__heading>div>p:last-child,.semester-page-header>div>p:last-child,.section-page-header>div>p:last-child,.ac-page-header p,.profile-heading p,.settings-page>header span){max-width:680px;margin-top:6px;color:var(--text-muted);font-size:.86rem;line-height:1.5}
+.page-content :is(.management-card,.cm-panel,.semester-directory-card,.section-table-card,.ay .panel,.ac-section,.profile-content-card,.settings-card){border-radius:var(--radius-md);box-shadow:var(--shadow-sm)}
+.page-content :is(input:not([type="checkbox"]):not([type="radio"]),select){min-height:40px;height:40px;box-sizing:border-box;border-radius:var(--radius-sm);font-size:.82rem}
+.page-content textarea{box-sizing:border-box;min-height:80px;border-radius:var(--radius-sm);font-size:.82rem;line-height:1.45;resize:vertical}
+.page-content label{line-height:1.35}.page-content label>span:first-child,.page-content fieldset label{font-weight:700}
+.page-content :is(.primary-button,.cm-primary-btn,.cm-button,.semester-primary,.section-primary,.ac-primary,.settings-button,.profile-button){min-height:38px;border-radius:var(--radius-sm);font-size:.8rem;font-weight:750}
+.page-content :is(.department-table-wrap,.cm-table-wrap,.semester-table-wrapper,.section-table-wrap){border-color:var(--border);border-radius:var(--radius-md) var(--radius-md) 0 0}
+.page-content :is(.department-table-wrap,.cm-table-wrap,.semester-table-wrapper,.section-table-wrap) table{font-size:.8rem}
+.page-content :is(.department-table-wrap,.cm-table-wrap,.semester-table-wrapper,.section-table-wrap) th{height:42px;box-sizing:border-box;padding-block:10px;font-size:.67rem;letter-spacing:.055em}
+.page-content :is(.department-table-wrap,.cm-table-wrap,.semester-table-wrapper,.section-table-wrap) td{height:52px;box-sizing:border-box;padding-block:10px}
+.page-content :is(.department-pagination,.cm-pagination,.semester-pagination,.section-pagination){min-height:48px;box-sizing:border-box;border-color:var(--border);background:var(--surface-soft)}
+.page-content :is(.row-actions,.cm-actions,.cm-row-actions,.semester-row-actions,.section-actions) button{transition:border-color .18s ease,background-color .18s ease,color .18s ease}
+@media(max-width:760px){.page-content :is(.cm-header,.management-page__heading,.semester-page-header,.section-page-header,.ac-page-header,.profile-heading){gap:14px}.page-content :is(.cm-header>button,.management-page__heading>button,.semester-page-header>button,.section-page-header>button){width:100%}}
+
+/* Typography contract — loaded after every routed module stylesheet. */
+.page-content{font-size:14px;line-height:1.5}
+.page-content :is(h1,h2,h3,p){font-family:inherit}
+.page-content :is(.college-management,.add-college,.department-management,.ay,.cm-page,.semester-management,.section-management,.profile-page,.settings-page)>header h1,
+.page-content :is(.management-page__heading,.cm-header,.semester-page-header,.section-page-header,.profile-heading) h1{font-size:28px!important;line-height:1.2!important;letter-spacing:-.025em!important}
+.page-content :is(.management-card,.cm-panel,.semester-directory-card,.section-table-card,.ay .panel,.profile-content-card,.settings-card) h2{font-size:16px;line-height:1.3}
+.page-content :is(.management-card,.cm-panel,.semester-directory-card,.section-table-card,.ay .panel,.profile-content-card,.settings-card) h3{font-size:14px;line-height:1.35}
+.page-content :is(input,select,textarea,button){font-family:inherit}
+.page-content :is(input,select,textarea){font-size:13px!important}
+.page-content table{font-size:13px!important}.page-content table th{font-size:11px!important}.page-content table td{font-size:13px!important}
+.page-content :is(label,.cm-field,.semester-field,.section-field,.profile-field,.settings-field,.ac-field){font-size:12px!important}
+.page-content :is(.cm-button,.primary-button,.semester-primary,.section-primary,.ac-primary,.profile-button,.settings-button){font-size:12px!important}
+
+/* Dark palette contract — override legacy per-page light variables and hardcoded surfaces. */
+:root[data-theme="dark"] .semester-management{--sem-navy:#102f49;--sem-blue:#61afe3;--sem-text:#edf4fa;--sem-muted:#91a5b7;--sem-line:#29394d}
+:root[data-theme="dark"] .section-management{--sm-navy:#edf4fa;--sm-blue:#61afe3;--sm-text:#edf4fa;--sm-muted:#91a5b7;--sm-line:#29394d;--sm-soft:#183650}
+:root[data-theme="dark"] .profile-page{--navy:#edf4fa;--blue:#61afe3;--ink:#edf4fa;--muted:#91a5b7;--line:#29394d}
+:root[data-theme="dark"] .page-content :is(.college-management,.add-college,.department-management,.ay,.cm-page,.semester-management,.section-management,.profile-page,.settings-page){color:var(--text-primary)!important}
+:root[data-theme="dark"] .page-content :is(.cm-panel,.management-card,.semester-stat-card,.semester-directory-card,.section-stat-card,.section-table-card,.ay .kpis article,.ay .panel,.ac-section,.profile-content-card,.settings-card,.department-heading-stat){border-color:var(--border)!important;background:var(--surface)!important;color:var(--text-primary)!important;box-shadow:var(--shadow-sm)!important}
+:root[data-theme="dark"] .page-content :is(.cm-filters,.semester-filters,.section-filter-bar,.department-controls--toolbar,.ay .tools,.profile-section-heading,.profile-tabs,.profile-actions,.profile-subsection,.ac-tabs,.ac-actions){border-color:var(--border)!important;background:var(--surface-soft)!important}
+:root[data-theme="dark"] .page-content :is(h1,h2,h3,strong,label,legend,.cm-field,.semester-field,.section-field,.profile-field,.settings-field){color:var(--text-primary)!important}
+:root[data-theme="dark"] .page-content :is(p,small,em,dd,.cm-detail span,.profile-tabs small){color:var(--text-muted)}
+:root[data-theme="dark"] .page-content :is(input:not([type="checkbox"]):not([type="radio"]),select,textarea,.profile-input,.semester-search,.section-search,.department-search,.department-filter){border-color:var(--border-strong)!important;background:var(--surface-raised)!important;color:var(--text-primary)!important}
+:root[data-theme="dark"] .page-content :is(input,textarea)::placeholder{color:#7f94a7}
+:root[data-theme="dark"] .page-content table td{border-color:var(--border)!important;background:var(--surface)!important;color:var(--text-secondary)!important}
+:root[data-theme="dark"] .page-content table tbody tr:hover td{background:var(--surface-raised)!important}
+:root[data-theme="dark"] .page-content :is(.cm-table th,.department-table-wrap th,.semester-table th,.section-table th,.ay th){border-color:#28445c!important;background:#102f49!important;color:#eef6fc!important}
+
+/* Unified search controls across all management modules. */
+.page-content :is(.department-search,.semester-search,.section-search){height:40px!important;min-height:40px!important;box-sizing:border-box;border:1px solid var(--border-strong)!important;border-radius:8px!important;color:var(--text-muted)!important;background:var(--surface)!important;box-shadow:0 1px 2px rgba(15,42,66,.03);transition:border-color .18s ease,box-shadow .18s ease,background-color .18s ease}
+.page-content :is(.department-search,.semester-search,.section-search)>svg{width:17px;height:17px;flex:0 0 17px;color:var(--text-muted)}
+.page-content :is(.department-search,.semester-search,.section-search)>input{height:38px!important;min-width:0!important;padding:0 10px 0 2px!important;border:0!important;outline:0!important;color:var(--text-primary)!important;background:transparent!important;box-shadow:none!important;font-size:13px!important;font-weight:500!important}
+.page-content :is(.department-search,.semester-search,.section-search):focus-within{border-color:var(--brand)!important;background:var(--surface-raised)!important;box-shadow:0 0 0 3px color-mix(in srgb,var(--brand) 14%,transparent)!important}
+.page-content :is(.cm-filters .cm-field:first-child input,.cm-search,.ay .tools>input){height:40px!important;box-sizing:border-box!important;padding:0 12px 0 38px!important;border:1px solid var(--border-strong)!important;border-radius:8px!important;color:var(--text-primary)!important;background-color:var(--surface)!important;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='18' height='18' viewBox='0 0 24 24' fill='none' stroke='%236d8294' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='11' cy='11' r='8'/%3E%3Cpath d='m21 21-4.35-4.35'/%3E%3C/svg%3E")!important;background-repeat:no-repeat!important;background-position:12px center!important;box-shadow:0 1px 2px rgba(15,42,66,.03)!important;font-size:13px!important;font-weight:500!important;outline:0!important;transition:border-color .18s ease,box-shadow .18s ease,background-color .18s ease}
+.page-content :is(.cm-filters .cm-field:first-child input,.cm-search,.ay .tools>input):focus{border-color:var(--brand)!important;background-color:var(--surface-raised)!important;box-shadow:0 0 0 3px color-mix(in srgb,var(--brand) 14%,transparent)!important}
+.page-content :is(.department-search,.semester-search,.section-search,.cm-filters .cm-field:first-child,.ay .tools) input::placeholder,.page-content .cm-search::placeholder{color:var(--text-muted)!important;opacity:.86}
+:root[data-theme="dark"] .page-content :is(.department-search,.semester-search,.section-search,.cm-filters .cm-field:first-child input,.cm-search,.ay .tools>input){border-color:var(--border-strong)!important;background-color:var(--surface-raised)!important;color:var(--text-primary)!important;box-shadow:none!important}
+:root[data-theme="dark"] .page-content :is(.department-search,.semester-search,.section-search,.cm-filters .cm-field:first-child input,.cm-search,.ay .tools>input):focus-within,:root[data-theme="dark"] .page-content :is(.cm-filters .cm-field:first-child input,.cm-search,.ay .tools>input):focus{border-color:var(--brand)!important;box-shadow:0 0 0 3px color-mix(in srgb,var(--brand) 22%,transparent)!important}
+@media(max-width:760px){.page-content :is(.department-search,.semester-search,.section-search,.cm-search,.ay .tools>input){width:100%!important;max-width:none!important}}
+
+/* Consistent Lucide icon sizing inside module actions. */
+.page-content :is(button,a[class*="button"],a[class*="btn"])>svg{width:16px;height:16px;flex:0 0 16px;stroke-width:2}
+.page-content :is(.cm-action-icon-btn,.row-actions button,.semester-row-actions button,.section-actions button)>svg{width:17px;height:17px}
+.page-content :is(.cm-primary-btn,.cm-secondary-btn,.primary-button,.semester-primary,.section-primary,.cm-button){display:inline-flex;align-items:center;justify-content:center;gap:7px}
+:root[data-theme="dark"] .page-content :is(.cm-modal-card,.semester-form-panel,.semester-details-panel,.semester-confirm,.section-form-panel,.section-details-panel,.section-confirm,.ac-dialog,.profile-preview-card,.profile-success-card,.profile-error-card){border-color:var(--border)!important;background:var(--surface-raised)!important;color:var(--text-primary)!important}
+:root[data-theme="dark"] .page-content :is(.cm-modal-card header,.semester-form-panel header,.semester-form-panel footer,.semester-details-panel header,.semester-details-panel footer,.section-form-panel header,.section-form-panel footer,.section-details-panel header,.section-details-panel footer,.ac-dialog header,.profile-preview-card header,.profile-preview-card footer){border-color:var(--border)!important;background:var(--surface)!important}
+@media(max-width:760px){.page-content :is(.college-management,.add-college,.department-management,.ay,.cm-page,.semester-management,.section-management,.profile-page,.settings-page)>header h1,.page-content :is(.management-page__heading,.cm-header,.semester-page-header,.section-page-header,.profile-heading) h1{font-size:24px!important}}

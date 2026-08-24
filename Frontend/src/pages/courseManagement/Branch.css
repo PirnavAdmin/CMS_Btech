@@ -1,2 +1,20 @@
-/* Branch screens share the course-management design system from Course.css. */
-.cm-page .cm-table td:last-child{min-width:190px}
+/* Branch Management uses the shared Course Management design system. */
+.branch-filters{grid-template-columns:minmax(260px,1.5fr) repeat(3,minmax(135px,.6fr));}
+.branch-table{min-width:0;table-layout:fixed;}
+.branch-table th,.branch-table td{padding:11px 10px;}
+.branch-table th:nth-child(1),.branch-table td:nth-child(1){width:4%;}
+.branch-table th:nth-child(2),.branch-table td:nth-child(2){width:10%;}
+.branch-table th:nth-child(3),.branch-table td:nth-child(3){width:20%;}
+.branch-table th:nth-child(4),.branch-table td:nth-child(4){width:9%;}
+.branch-table th:nth-child(5),.branch-table td:nth-child(5){width:16%;}
+.branch-table th:nth-child(6),.branch-table td:nth-child(6){width:8%;}
+.branch-table th:nth-child(7),.branch-table td:nth-child(7){width:6%;}
+.branch-table th:nth-child(8),.branch-table td:nth-child(8){width:8%;}
+.branch-table th:nth-child(9),.branch-table td:nth-child(9){width:20%;}
+.branch-table td:nth-child(3),.branch-table td:nth-child(4),.branch-table td:nth-child(5){white-space:normal;line-height:1.35;}
+.branch-table td:last-child .cm-row-actions{flex-wrap:nowrap;gap:5px;}
+.branch-table td:last-child .cm-button{padding:0 7px;font-size:.66rem;}
+.branch-table .cm-status{padding:5px 7px;}
+.cm-related-title{display:flex;align-items:center;justify-content:space-between;gap:16px}.cm-related-title h2{margin:3px 0 0}.cm-related-grid{display:grid;margin-top:16px;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}.cm-related-card{display:grid;padding:14px;border:1px solid var(--border);border-radius:8px;color:var(--text-primary);background:var(--surface-soft);text-decoration:none}.cm-related-card:hover{border-color:var(--brand);background:var(--brand-soft)}.cm-related-card span{margin-top:4px;color:var(--text-secondary);font-size:12px}.cm-related-card small{margin-top:9px;color:var(--text-muted)}.cm-form-section+.cm-form-section{margin-top:22px;padding-top:20px;border-top:1px solid var(--border)}.cm-form-section>.cm-eyebrow{display:block;margin-bottom:12px}
+@media(max-width:1000px){.branch-filters{grid-template-columns:1.4fr repeat(2,minmax(140px,.7fr));}.branch-filters .cm-field:last-child{grid-column:1/-1;max-width:calc(50% - 6px);}}
+@media(max-width:760px){.cm-related-grid{grid-template-columns:1fr}.cm-related-title{align-items:flex-start;flex-direction:column}.branch-filters{grid-template-columns:1fr}.branch-filters .cm-field:last-child{grid-column:auto;max-width:none}}

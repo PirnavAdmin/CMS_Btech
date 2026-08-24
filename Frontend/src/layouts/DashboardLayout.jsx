@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useLocation, useNavigate } from 'react-router-dom'
+import { FiBookOpen, FiCalendar, FiGitBranch, FiGrid, FiHome, FiLayers, FiMenu, FiMoon, FiSettings, FiSun, FiUser, FiUsers } from 'react-icons/fi'
 import { getUserRole, signOut } from '../auth/auth'
 import Sidebar from '../components/Sidebar'
 import './DashboardLayout.css'
@@ -21,6 +22,9 @@ const requirements = (password) => [
 
 export default function DashboardLayout({ children }) {
   const navigate = useNavigate()
+  const { pathname } = useLocation()
+  const [sidebarOpen, setSidebarOpen] = useState(false)
+  const [theme, setTheme] = useState(() => localStorage.getItem('pirnav-theme') || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'))
 
   const userRole = getUserRole() || 'user'
   const roleLabel = userRole.charAt(0).toUpperCase() + userRole.slice(1)
@@ -40,6 +44,29 @@ export default function DashboardLayout({ children }) {
 
   const triggerRef = useRef(null)
   const closeRef = useRef(null)
+
+  useEffect(() => {
+    document.documentElement.dataset.theme = theme
+    localStorage.setItem('pirnav-theme', theme)
+  }, [theme])
+
+  const pageContext = ({
+    '/dashboard': 'Dashboard', '/my-profile': 'My Profile', '/settings': 'Settings',
+    '/college-institution-management': 'College / Institution', '/academic-year-management': 'Academic Years',
+    '/department-management': 'Departments', '/semester-management': 'Semesters', '/section-management': 'Sections',
+  })[pathname] || (pathname.startsWith('/courses') ? 'Course Management' : pathname.startsWith('/branches') ? 'Branch Management' : 'Digital Campus')
+  const ContextIcon = ({
+    Dashboard: FiHome,
+    'My Profile': FiUser,
+    Settings: FiSettings,
+    'College / Institution': FiHome,
+    'Academic Years': FiCalendar,
+    Departments: FiGrid,
+    Semesters: FiLayers,
+    Sections: FiUsers,
+    'Course Management': FiBookOpen,
+    'Branch Management': FiGitBranch,
+  })[pageContext] || FiGrid
 
   const rules = useMemo(
     () => requirements(values.newPassword),
@@ -205,11 +232,14 @@ export default function DashboardLayout({ children }) {
 
   return (
     <div className="dashboard-layout">
-      <Sidebar />
+      <Sidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
 
       <main>
         <header className="dashboard-header">
-          <span>BTech Management System</span>
+          <div className="dashboard-header__context"><button className="mobile-menu-button" onClick={() => setSidebarOpen(true)} aria-label="Open navigation"><FiMenu /></button><span className="dashboard-header__page-icon" aria-hidden="true"><ContextIcon /></span><div><small>Academic Management</small><strong>{pageContext}</strong></div></div>
+
+          <div className="dashboard-header__actions">
+          <button className="theme-toggle" onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')} aria-label={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`} title={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}>{theme === 'dark' ? <FiSun /> : <FiMoon />}</button>
 
           <details className="account-menu" ref={accountMenuRef}>
             <summary aria-label="Open account menu">
@@ -267,6 +297,7 @@ export default function DashboardLayout({ children }) {
               </button>
             </div>
           </details>
+          </div>
         </header>
 
         <section className="page-content">{children}</section>

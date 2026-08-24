@@ -1,7 +1,7 @@
 import{useEffect,useMemo,useState}from'react';
 import DashboardLayout from'../../layouts/DashboardLayout';
 import{academicYearApi}from'../../api/apiEndpoints';
-import{FiCheckCircle,FiEdit2,FiEye,FiXCircle}from'react-icons/fi';
+import{CheckCircle as FiCheckCircle,Eye as FiEye,Pencil as FiEdit2,XCircle as FiXCircle}from'lucide-react';
 import'./AcademicYearManagement.css';
 
 const DAY=864e5,states=['UPCOMING','ACTIVE','ARCHIVED'],blank={name:'',startDate:'',endDate:'',autoActivate:false};

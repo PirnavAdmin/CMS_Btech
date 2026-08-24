@@ -3,6 +3,7 @@ import ProtectedRoute from './components/ProtectedRoute'
 import { ROLES } from './auth/roles'
 
 import Dashboard from './pages/Dashboard'
+import LandingPage from './pages/LandingPage'
 import Login from './pages/Login'
 import Register from './pages/Register'
 import MySubjects from './pages/MySubjects'
@@ -17,11 +18,13 @@ import SemesterManagement from './pages/semester-management/SemesterManagement'
 import SectionManagement from './pages/section-management/SectionManagement'
 import MyProfile from './pages/profile/MyProfile'
 import Settings from './pages/profile/Settings'
+import './styles/erp-theme.css'
 
 export default function App() {
   return (
     <Routes>
       {/* Public */}
+      <Route path="/" element={<LandingPage />} />
       <Route path="/login" element={<Login />} />
       <Route path="/register" element={<Register />} />
 
@@ -58,7 +61,7 @@ export default function App() {
         <Route path="/section-management" element={<SectionManagement />} />
       </Route>
 
-      {/* Course & Branch Management - Admin Only */}
+      {/* Course Management - Admin Only */}
       <Route element={<ProtectedRoute allowedRoles={[ROLES.ADMIN]} />}>
         <Route path="/courses" element={<Course />} />
         <Route path="/courses/add" element={<Course mode="form" />} />
@@ -94,7 +97,7 @@ export default function App() {
       {/* Unknown route */}
       <Route
         path="*"
-        element={<Navigate to="/dashboard" replace />}
+        element={<Navigate to="/" replace />}
       />
     </Routes>
   )

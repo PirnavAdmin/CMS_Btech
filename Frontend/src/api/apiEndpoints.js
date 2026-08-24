@@ -4,6 +4,8 @@ export const API_BASE_URL = import.meta.env.DEV
   ? ''
   : normalizeBaseUrl(import.meta.env.VITE_API_BASE_URL)
 
+const hasConfiguredApiBaseUrl = Boolean(API_BASE_URL)
+
 const endpoint = (path) => `${API_BASE_URL}${path}`
 
 export class AuthRequestError extends Error {
@@ -132,6 +134,15 @@ const request = async (url, options = {}, retried = false) => {
 }
 
 export async function login({ identifier, password }) {
+  // Temporary local access while no backend base URL is configured.
+  if (!hasConfiguredApiBaseUrl) {
+    return {
+      accessToken: '',
+      refreshToken: '',
+      user: { id: 'DEMO_ADMIN', name: identifier || 'Demo Admin', role: 'admin' },
+    }
+  }
+
   let response
   try {
     response = await fetch(API_ENDPOINTS.auth.login, {

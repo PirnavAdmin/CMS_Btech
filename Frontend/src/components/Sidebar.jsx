@@ -1,100 +1,41 @@
-import { useState } from 'react'
-import { NavLink, useLocation } from 'react-router-dom'
+import { NavLink } from 'react-router-dom'
+import { FiBookOpen, FiCalendar, FiGitBranch, FiGrid, FiHome, FiLayers, FiUsers, FiX } from 'react-icons/fi'
 import { getUserRole } from '../auth/auth'
 import { ROLES } from '../auth/roles'
 
-const links = [
-  {
-    label: 'Dashboard',
-    to: '/dashboard',
-    roles: [
-      ROLES.ADMIN,
-      ROLES.FACULTY,
-      ROLES.STUDENT,
-    ],
-  },
-  {
-    label: 'College / Institution',
-    to: '/college-institution-management',
-    roles: [ROLES.ADMIN],
-  },
-  {
-    label: 'Academic Years',
-    to: '/academic-year-management',
-    roles: [ROLES.ADMIN],
-  },
-  {
-    label: 'Departments',
-    to: '/department-management',
-    roles: [ROLES.ADMIN],
-  },
-  {
-    label: 'Semester Management',
-    to: '/semester-management',
-    roles: [ROLES.ADMIN],
-  },
-  {
-    label: 'Section Management',
-    to: '/section-management',
-    roles: [ROLES.ADMIN],
-  },
-  {
-    label: 'My Subjects',
-    to: '/my-subjects',
-    roles: [
-      ROLES.FACULTY,
-      ROLES.STUDENT,
-    ],
-  },
+const academicLinks = [
+  { label: 'College / Institution', to: '/college-institution-management', icon: FiHome },
+  { label: 'Academic Years', to: '/academic-year-management', icon: FiCalendar },
+  { label: 'Departments', to: '/department-management', icon: FiGrid },
+  { label: 'Courses', to: '/courses', icon: FiBookOpen },
+  { label: 'Branches', to: '/branches', icon: FiGitBranch },
+  { label: 'Sections', to: '/section-management', icon: FiUsers },
+  { label: 'Semesters', to: '/semester-management', icon: FiLayers },
 ]
 
-export default function Sidebar() {
+function Item({ to, icon: Icon, children, onNavigate }) {
+  return <NavLink to={to} onClick={onNavigate}><Icon aria-hidden="true" /><span>{children}</span></NavLink>
+}
+
+export default function Sidebar({ open = false, onClose = () => {} }) {
   const userRole = getUserRole()
-  const { pathname } = useLocation()
-  const isCoursePage = pathname.startsWith('/courses') || pathname.startsWith('/branches')
-  const [courseMenuOpen, setCourseMenuOpen] = useState(false)
-
-  const visibleLinks = links.filter((link) =>
-    link.roles.includes(userRole)
-  )
-
-  return (
-    <aside className="sidebar">
-      <div className="sidebar-brand" aria-label="CMS BTech">
-        <span className="sidebar-brand__mark" aria-hidden="true">
-          <svg viewBox="0 0 32 32" role="img">
-            <path d="M4 12 16 5l12 7H4Z" />
-            <path d="M7 14v10M12 14v10M20 14v10M25 14v10" />
-            <path d="M4 25h24M2.5 28h27" />
-            <path d="M15 9h2" />
-          </svg>
-        </span>
-        <span className="sidebar-brand__copy">
-          <strong>CMS–BTech</strong>
-          <small>College Management</small>
-        </span>
+  return <>
+    <button className={`sidebar-scrim ${open ? 'is-visible' : ''}`} onClick={onClose} aria-label="Close navigation" tabIndex={open ? 0 : -1} />
+    <aside className={`sidebar ${open ? 'is-open' : ''}`} aria-label="Primary navigation">
+      <div className="sidebar-brand">
+        <span className="sidebar-brand__mark" aria-hidden="true"><svg viewBox="0 0 32 32"><path d="M4 12 16 5l12 7H4Z"/><path d="M7 14v10M12 14v10M20 14v10M25 14v10"/><path d="M4 25h24M2.5 28h27"/></svg></span>
+        <span className="sidebar-brand__copy"><strong>Pirnav Engineering College</strong><small>Digital Campus</small></span>
+        <button className="sidebar-close" onClick={onClose} aria-label="Close navigation"><FiX /></button>
       </div>
-
       <nav>
-        {visibleLinks.map(({ label, to }) => (
-          <NavLink key={to} to={to} onClick={() => setCourseMenuOpen(false)}>
-            {label}
-          </NavLink>
-        ))}
-        {userRole === ROLES.ADMIN && (
-          <details
-            className="sidebar-group"
-            open={isCoursePage || courseMenuOpen}
-            onToggle={(event) => setCourseMenuOpen(event.currentTarget.open)}
-          >
-            <summary>Course Management</summary>
-            <div>
-              <NavLink to="/courses">Courses</NavLink>
-              <NavLink to="/branches">Branches</NavLink>
-            </div>
-          </details>
-        )}
+        <p className="sidebar-section-label">Overview</p>
+        <Item to="/dashboard" icon={FiHome} onNavigate={onClose}>Dashboard</Item>
+        {userRole === ROLES.ADMIN && <>
+          <p className="sidebar-section-label">Academics</p>
+          {academicLinks.map(link => <Item {...link} key={link.to} onNavigate={onClose}>{link.label}</Item>)}
+        </>}
+        {[ROLES.FACULTY, ROLES.STUDENT].includes(userRole) && <><p className="sidebar-section-label">Academics</p><Item to="/my-subjects" icon={FiBookOpen} onNavigate={onClose}>My Subjects</Item></>}
       </nav>
     </aside>
-  )
+  </>
 }

@@ -47,12 +47,12 @@ export default function Register() {
 
   return (
     <main className="admin-login register-page">
-      <section className="login-intro" aria-label="B.Tech College Management System">
+      <section className="login-intro" aria-label="Pirnav Engineering College Management System">
         <div className="login-intro__pattern" aria-hidden="true" />
         <div className="login-intro__content">
-          <header className="brand"><span className="brand__mark">B</span><span className="brand__name"><strong>B.Tech College</strong><small>Management System</small></span></header>
+          <header className="brand"><span className="brand__mark">P</span><span className="brand__name"><strong>Pirnav Engineering College</strong><small>College Management System</small></span></header>
           <div className="intro-copy"><p className="eyebrow">Access request</p><h1>Built for better campus operations.</h1><p>Manage your institution with clarity, confidence, and a connected view of what matters.</p></div>
-          <p className="copyright">&copy; {new Date().getFullYear()} B.Tech College Management System</p>
+          <p className="copyright">&copy; {new Date().getFullYear()} Pirnav Engineering College</p>
         </div>
       </section>
       <section className="login-panel" aria-labelledby="register-title">
@@ -64,7 +64,7 @@ export default function Register() {
           </div>
         ) : (
           <form className="login-form register-form" onSubmit={handleSubmit} noValidate>
-            <header><h2 id="register-title">Create your account</h2><p>Request access to the B.Tech College Management System.</p></header>
+            <header><h2 id="register-title">Create your account</h2><p>Request access to Pirnav Engineering College.</p></header>
             <label htmlFor="fullName"><span>Full Name</span><input id="fullName" name="fullName" type="text" value={values.fullName} onChange={updateValue} placeholder="Enter your full name" autoComplete="name" aria-invalid={Boolean(errors.fullName)} aria-describedby={errors.fullName ? 'fullName-error' : undefined} /></label>
             {errors.fullName && <p id="fullName-error" className="field-error" role="alert">{errors.fullName}</p>}
             <label htmlFor="email"><span>Email</span><input id="email" name="email" type="email" value={values.email} onChange={updateValue} placeholder="Enter your email address" autoComplete="email" aria-invalid={Boolean(errors.email)} aria-describedby={errors.email ? 'email-error' : undefined} /></label>

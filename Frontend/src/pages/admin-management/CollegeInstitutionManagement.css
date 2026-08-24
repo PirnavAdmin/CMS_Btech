@@ -1,3 +1,4 @@
+@scope (.college-management) {
 .college-management {
   padding: 0;
   color: var(--brand-navy, #0f172a);
@@ -695,4 +696,5 @@
     gap: 12px;
     align-items: center;
   }
+}
 }
