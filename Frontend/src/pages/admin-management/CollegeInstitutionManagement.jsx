@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react'
-import { useNavigate } from 'react-router-dom'
 import DashboardLayout from '../../layouts/DashboardLayout'
 import './CollegeInstitutionManagement.css'
 
@@ -117,7 +116,7 @@ const emptyCollege = {
   status: 'active',
 }
 
-// Action & Section SVG Icons
+// Action & Section Icons
 function EyeIcon() {
   return (
     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -165,6 +164,16 @@ function ContactIcon() {
   )
 }
 
+function ExternalLinkIcon() {
+  return (
+    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginLeft: 4 }}>
+      <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
+      <polyline points="15 3 21 3 21 9" />
+      <line x1="10" y1="14" x2="21" y2="3" />
+    </svg>
+  )
+}
+
 function validateCollege(values) {
   const errors = {}
   if (!values.name.trim()) errors.name = 'College name is required.'
@@ -195,7 +204,6 @@ function validateCollege(values) {
 }
 
 export default function CollegeInstitutionManagement() {
-  const navigate = useNavigate()
   const [colleges, setColleges] = useState(() => {
     try {
       const saved = localStorage.getItem('btechms_colleges')
@@ -264,7 +272,10 @@ export default function CollegeInstitutionManagement() {
   }
 
   const openAdd = () => {
-    navigate('/college-institution-management/add')
+    setFormValues(emptyCollege)
+    setErrors({})
+    setActiveId(null)
+    setViewMode('add')
   }
 
   const openEdit = (college) => {
@@ -466,14 +477,14 @@ export default function CollegeInstitutionManagement() {
           </>
         )}
 
-        {/* EDIT FORM MODAL */}
-        {viewMode === 'edit' && (
+        {/* ADD / EDIT FORM MODAL */}
+        {(viewMode === 'add' || viewMode === 'edit') && (
           <>
             <button type="button" className="cm-modal-backdrop" aria-label="Close form dialog" onClick={backToList} />
             <form className="cm-form cm-modal-card" onSubmit={handleSave} noValidate>
               <header className="cm-header">
                 <div>
-                  <h1>Edit College</h1>
+                  <h1>{viewMode === 'edit' ? 'Edit College' : 'Add College'}</h1>
                   <p>Fill in the college's details below.</p>
                 </div>
                 <button type="button" className="cm-secondary-btn" onClick={backToList}>
@@ -610,7 +621,7 @@ export default function CollegeInstitutionManagement() {
                 </div>
               </div>
 
-              {/* Profile Grid Cards */}
+              {/* Profile Information Cards Grid */}
               <div className="cm-profile-grid">
                 {/* Academic & Administration Card */}
                 <div className="cm-info-card">
@@ -638,7 +649,7 @@ export default function CollegeInstitutionManagement() {
                   </div>
                 </div>
 
-                {/* Contact & Location Card */}
+                {/* Contact & Location Details Card */}
                 <div className="cm-info-card">
                   <div className="cm-info-card-header">
                     <ContactIcon />
@@ -666,7 +677,8 @@ export default function CollegeInstitutionManagement() {
                       <span className="cm-info-val">
                         {activeCollege.website ? (
                           <a href={activeCollege.website} target="_blank" rel="noreferrer" className="cm-link">
-                            {activeCollege.website} &rarr;
+                            {activeCollege.website}
+                            <ExternalLinkIcon />
                           </a>
                         ) : (
                           '—'

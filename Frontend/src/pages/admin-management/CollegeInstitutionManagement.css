@@ -40,12 +40,6 @@
   background: var(--brand-blue-hover, #164677);
 }
 
-.cm-btn-with-icon {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-}
-
 .cm-secondary-btn {
   border: 1px solid #c7d7e7;
   border-radius: 8px;
@@ -97,7 +91,7 @@
   color: #5e7897;
 }
 
-/* Modal Backdrops & Cards (For Add/Edit) */
+/* Modal Backdrops & Cards (For Add/Edit Forms) */
 .cm-modal-backdrop {
   position: fixed;
   inset: 0;
@@ -351,7 +345,7 @@
 }
 
 /* ==========================================================================
-   COLLEGE PROFILE DETAILS SCREEN STYLES
+   COLLEGE PROFILE DETAILS SCREEN STYLES (CMS BRAND THEME)
    ========================================================================== */
 .cm-profile-view {
   display: flex;
@@ -361,24 +355,25 @@
 
 .cm-profile-top-bar {
   display: flex;
-  justify-content: space-between;
+  justify-content: flex-start;
   align-items: center;
 }
 
 .cm-profile-card {
-  border: 1px solid #e3e7ee;
+  border: 1px solid #e2e8f0;
   border-radius: 16px;
   background: #fff;
   overflow: hidden;
   box-shadow: 0 4px 16px rgba(15, 23, 42, 0.04);
 }
 
+/* Header Banner matching dark blue CMS sidebar palette */
 .cm-profile-banner {
   display: flex;
   align-items: center;
   gap: 20px;
-  padding: 28px 30px;
-  background: linear-gradient(135deg, #0f172a 0%, #1e3a5f 100%);
+  padding: 26px 30px;
+  background: linear-gradient(135deg, #0d3761 0%, #174d82 100%);
   color: #fff;
 }
 
@@ -389,10 +384,11 @@
 .cm-profile-logo {
   width: 72px;
   height: 72px;
-  border-radius: 12px;
+  border-radius: 14px;
   object-fit: cover;
-  border: 2px solid rgba(255, 255, 255, 0.8);
+  border: 2px solid rgba(255, 255, 255, 0.85);
   background: #fff;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 }
 
 .cm-profile-placeholder {
@@ -400,12 +396,13 @@
   place-items: center;
   width: 72px;
   height: 72px;
-  border-radius: 12px;
+  border-radius: 14px;
   background: var(--brand-blue, #1e5a96);
   color: #fff;
   font-size: 2rem;
   font-weight: 800;
   border: 2px solid rgba(255, 255, 255, 0.3);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 }
 
 .cm-profile-header-info {
@@ -422,9 +419,9 @@
 }
 
 .cm-badge {
-  padding: 3px 10px;
+  padding: 4px 10px;
   border-radius: 6px;
-  font-size: 0.76rem;
+  font-size: 0.78rem;
   font-weight: 700;
   letter-spacing: 0.03em;
 }
@@ -432,31 +429,33 @@
 .cm-badge-code {
   background: rgba(255, 255, 255, 0.18);
   color: #fff;
+  border: 1px solid rgba(255, 255, 255, 0.2);
 }
 
 .cm-badge-type {
-  background: #e0f2fe;
-  color: #0369a1;
+  background: #ffffff;
+  color: #0d3761;
 }
 
 .cm-profile-title {
   margin: 2px 0 0;
-  font-size: 1.5rem;
+  font-size: 1.55rem;
   font-weight: 700;
   color: #fff;
+  line-height: 1.25;
 }
 
 .cm-profile-subtitle {
   margin: 0;
-  font-size: 0.9rem;
-  color: #94a3b8;
-}
-
-.cm-profile-subtitle strong {
+  font-size: 0.92rem;
   color: #cbd5e1;
 }
 
-/* Profile Grid & Cards */
+.cm-profile-subtitle strong {
+  color: #ffffff;
+}
+
+/* Profile Grid & Section Cards */
 .cm-profile-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -467,7 +466,7 @@
 .cm-info-card {
   border: 1px solid #e2e8f0;
   border-radius: 12px;
-  padding: 20px;
+  padding: 22px;
   background: #f8fafc;
 }
 
@@ -475,7 +474,7 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  margin-bottom: 16px;
+  margin-bottom: 18px;
   padding-bottom: 12px;
   border-bottom: 1px solid #e2e8f0;
   color: var(--brand-blue, #1e5a96);
@@ -491,33 +490,36 @@
 .cm-info-rows {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 14px;
 }
 
 .cm-info-row {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 3px;
 }
 
 .cm-info-label {
   font-size: 0.75rem;
   font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.05em;
   color: #64748b;
 }
 
 .cm-info-val {
-  font-size: 0.94rem;
-  font-weight: 500;
-  color: #0f172a;
-  line-height: 1.4;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: #1e293b;
+  line-height: 1.45;
 }
 
 .cm-link {
+  display: inline-flex;
+  align-items: center;
   color: var(--brand-blue, #1e5a96);
   text-decoration: none;
+  font-weight: 600;
   word-break: break-all;
 }
 
