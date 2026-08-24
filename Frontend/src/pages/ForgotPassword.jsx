@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { AuthRequestError, sendOtp, verifyOtp, resetPassword } from '../auth/authApi'
+import { AuthRequestError, generateOtp, resendOtp, verifyOtp, resetPassword } from '../auth/authApi'
 import './ForgotPassword.css'
 
 const isValidContact = (value, method) => method === 'email'
@@ -38,8 +38,8 @@ export default function ForgotPassword({ onBack }) {
     setLoading(true)
     setError('')
     try {
-      const result = await sendOtp({ contact: cleanContact })
-      setDemoOtp(result.demoOtp || '')
+      await (step === 'otp' ? resendOtp : generateOtp)({ contact: cleanContact })
+      setDemoOtp('')
       setStep('otp')
       setTimer(60)
     } catch (requestError) {

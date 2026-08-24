@@ -10,6 +10,56 @@ export class AuthRequestError extends Error {
 const authEndpoint = import.meta.env.VITE_AUTH_API_URL
 const registrationEndpoint = import.meta.env.VITE_REGISTRATION_API_URL
 const otpEndpoint = import.meta.env.VITE_OTP_API_URL || authEndpoint
+const otpApiBaseUrl = (import.meta.env.VITE_OTP_API_URL || import.meta.env.VITE_API_BASE_URL || '').replace(/\/+$/, '')
+const otpAuthToken = import.meta.env.VITE_OTP_AUTH_TOKEN
+
+const readResponseBody = async (response) => {
+  try {
+    return await response.json()
+  } catch {
+    return {}
+  }
+}
+
+const otpPayload = ({ contact, otp, purpose = 'LOGIN' }) => {
+  const value = contact.trim()
+  const isMobile = /^\d+$/.test(value)
+
+  return {
+    email: isMobile ? '' : value,
+    mobile: isMobile ? value : '',
+    ...(otp ? { otpCode: otp } : {}),
+    purpose,
+  }
+}
+
+const otpRequest = async (path, payload) => {
+  if (!otpApiBaseUrl) {
+    throw new AuthRequestError('OTP service is not configured.')
+  }
+
+  const accessToken = otpAuthToken || localStorage.getItem('btech-access-token')
+  let response
+  try {
+    response = await fetch(`${otpApiBaseUrl}${path}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
+      },
+      body: JSON.stringify(payload),
+    })
+  } catch {
+    throw new AuthRequestError('Network error. Unable to contact the OTP service right now.')
+  }
+
+  const data = await readResponseBody(response)
+  if (!response.ok || data?.success === false) {
+    throw new AuthRequestError(data?.message || 'The OTP request could not be completed.')
+  }
+
+  return data
+}
 
 // Set VITE_AUTH_API_URL when the backend login endpoint becomes available.
 export async function login({ identifier, password }, fallbackRole = ROLES.ADMIN) {
@@ -36,65 +86,25 @@ export async function login({ identifier, password }, fallbackRole = ROLES.ADMIN
 }
 
 /**
- * Send OTP to registered Email or Mobile number
+ * Generate an OTP for an email address or mobile number.
  */
-export async function sendOtp({ contact }) {
-  if (!otpEndpoint) {
-    // Demo Mode: Generate mock 6-digit OTP
-    const mockOtp = Math.floor(100000 + Math.random() * 900000).toString()
-    return { 
-      success: true, 
-      message: `Verification code sent to ${contact}`, 
-      demoOtp: mockOtp 
-    }
-  }
-
-  try {
-    const response = await fetch(`${otpEndpoint}/send-otp`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ contact })
-    })
-
-    const data = await response.json()
-    if (!response.ok) {
-      throw new AuthRequestError(data.message || 'Failed to send verification code. Please check your details.')
-    }
-    return data
-  } catch (error) {
-    if (error instanceof AuthRequestError) throw error
-    throw new AuthRequestError('Network error. Unable to send verification code right now.')
-  }
+export async function generateOtp({ contact, purpose = 'LOGIN' }) {
+  return otpRequest('/api/otp/generate', otpPayload({ contact, purpose }))
 }
+
+/** Resend a new OTP to the same email address or mobile number. */
+export async function resendOtp({ contact, purpose = 'LOGIN' }) {
+  return otpRequest('/api/otp/resend', otpPayload({ contact, purpose }))
+}
+
+// Retained for existing callers while the UI transitions to generateOtp.
+export const sendOtp = generateOtp
 
 /**
  * Verify entered OTP code
  */
-export async function verifyOtp({ contact, otp }) {
-  if (!otpEndpoint) {
-    // Demo Mode: Accept any 6-digit number
-    if (/^\d{6}$/.test(otp)) {
-      return { success: true, message: 'Verified successfully' }
-    }
-    throw new AuthRequestError('Invalid OTP code. Please enter a valid 6-digit code.')
-  }
-
-  try {
-    const response = await fetch(`${otpEndpoint}/verify-otp`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ contact, otp })
-    })
-
-    const data = await response.json()
-    if (!response.ok) {
-      throw new AuthRequestError(data.message || 'Invalid or expired OTP code.')
-    }
-    return data
-  } catch (error) {
-    if (error instanceof AuthRequestError) throw error
-    throw new AuthRequestError('Unable to verify OTP right now. Please try again.')
-  }
+export async function verifyOtp({ contact, otp, purpose = 'LOGIN' }) {
+  return otpRequest('/api/otp/verify', otpPayload({ contact, otp, purpose }))
 }
 
 /**
