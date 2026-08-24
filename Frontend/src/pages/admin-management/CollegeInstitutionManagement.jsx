@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import DashboardLayout from '../../layouts/DashboardLayout'
+import { createCollegeSettings, getCollegeSettings, updateCollegeSettings } from '../../auth/collegeApi'
 import './CollegeInstitutionManagement.css'
 
 const COLLEGE_TYPES = ['Engineering', 'Arts & Science', 'Medical', 'Management', 'Polytechnic', 'Other']
@@ -117,6 +118,26 @@ const emptyCollege = {
   status: 'active',
 }
 
+// Matches CollegeSettingRequestDto from the Swagger doc
+const emptySettingsForm = {
+  collegeName: '',
+  collegeCode: '',
+  collegeEmail: '',
+  phoneNumber: '',
+  website: '',
+  addressLine1: '',
+  addressLine2: '',
+  city: '',
+  state: '',
+  pincode: '',
+  academicYear: '',
+  semester: '',
+  institutionType: COLLEGE_TYPES[0],
+  dateFormat: 'dd-MM-yyyy',
+  timeZone: 'Asia/Kolkata',
+  status: 1,
+}
+
 // Action & Section Icons
 function EyeIcon() {
   return (
@@ -204,6 +225,48 @@ function validateCollege(values) {
   return errors
 }
 
+function validateSettings(values) {
+  const errors = {}
+  if (!values.collegeName.trim()) errors.collegeName = 'College name is required.'
+  if (!values.collegeCode.trim()) errors.collegeCode = 'College code is required.'
+  if (!values.collegeEmail.trim()) {
+    errors.collegeEmail = 'College email is required.'
+  } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(values.collegeEmail.trim())) {
+    errors.collegeEmail = 'Enter a valid email address.'
+  }
+  return errors
+}
+
+const getResponseList = (responseData) => {
+  const data = responseData?.data ?? responseData
+  if (Array.isArray(data)) return data
+  if (data && typeof data === 'object') return [data]
+  return []
+}
+
+const getApiErrorMessage = (error, fallback) => (
+  error?.response?.data?.message || error?.response?.data?.error || error?.message || fallback
+)
+
+const mapRecordToForm = (record) => ({
+  collegeName: record.collegeName ?? '',
+  collegeCode: record.collegeCode ?? '',
+  collegeEmail: record.collegeEmail ?? '',
+  phoneNumber: record.phoneNumber ?? '',
+  website: record.website ?? '',
+  addressLine1: record.addressLine1 ?? '',
+  addressLine2: record.addressLine2 ?? '',
+  city: record.city ?? '',
+  state: record.state ?? '',
+  pincode: record.pincode ?? '',
+  academicYear: record.academicYear ?? '',
+  semester: record.semester ?? '',
+  institutionType: record.institutionType || COLLEGE_TYPES[0],
+  dateFormat: record.dateFormat ?? 'dd-MM-yyyy',
+  timeZone: record.timeZone ?? 'Asia/Kolkata',
+  status: record.status ?? 1,
+})
+
 export default function CollegeInstitutionManagement() {
   const navigate = useNavigate()
   const [colleges, setColleges] = useState(() => {
@@ -220,15 +283,22 @@ export default function CollegeInstitutionManagement() {
     localStorage.setItem('btechms_colleges', JSON.stringify(colleges))
   }, [colleges])
 
-  const [viewMode, setViewMode] = useState('list') // list | add | edit | details | settings
+  const [viewMode, setViewMode] = useState('list') // list | edit | details | settings | settings-form
   const [activeId, setActiveId] = useState(null)
   const [formValues, setFormValues] = useState(emptyCollege)
   const [errors, setErrors] = useState({})
   const [searchTerm, setSearchTerm] = useState('')
-  const [settings, setSettings] = useState({
-    allowMultipleColleges: false,
-    defaultCollegeType: COLLEGE_TYPES[0],
-  })
+
+  // College Settings state — real list from the backend
+  const [settingsList, setSettingsList] = useState([])
+  const [isSettingsLoading, setIsSettingsLoading] = useState(false)
+  const [settingsListError, setSettingsListError] = useState('')
+
+  const [settingsForm, setSettingsForm] = useState(emptySettingsForm)
+  const [settingsErrors, setSettingsErrors] = useState({})
+  const [activeSettingsId, setActiveSettingsId] = useState(null)
+  const [isSettingsSaving, setIsSettingsSaving] = useState(false)
+  const [settingsSubmitError, setSettingsSubmitError] = useState('')
 
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1)
@@ -322,6 +392,79 @@ export default function CollegeInstitutionManagement() {
     )
   }
 
+  // ── College Settings: list ──
+  const fetchSettingsList = async () => {
+    setIsSettingsLoading(true)
+    setSettingsListError('')
+    try {
+      const response = await getCollegeSettings()
+      setSettingsList(getResponseList(response.data))
+    } catch (error) {
+      setSettingsListError(getApiErrorMessage(error, 'Unable to load college settings. Please try again.'))
+    } finally {
+      setIsSettingsLoading(false)
+    }
+  }
+
+  const openCollegeSettings = () => {
+    setViewMode('settings')
+    fetchSettingsList()
+  }
+
+  const backToSettingsList = () => {
+    setViewMode('settings')
+    setActiveSettingsId(null)
+    setSettingsErrors({})
+    setSettingsSubmitError('')
+  }
+
+  const openAddSettings = () => {
+    setSettingsForm(emptySettingsForm)
+    setActiveSettingsId(null)
+    setSettingsErrors({})
+    setSettingsSubmitError('')
+    setViewMode('settings-form')
+  }
+
+  const openEditSettings = (record) => {
+    setSettingsForm(mapRecordToForm(record))
+    setActiveSettingsId(record.id ?? null)
+    setSettingsErrors({})
+    setSettingsSubmitError('')
+    setViewMode('settings-form')
+  }
+
+  const updateSettingsField = ({ target: { name, value } }) => {
+    setSettingsForm((current) => ({
+      ...current,
+      [name]: name === 'status' ? Number(value) : value,
+    }))
+    setSettingsErrors((current) => ({ ...current, [name]: '' }))
+  }
+
+  const handleSaveSettings = async (e) => {
+    e.preventDefault()
+    const nextErrors = validateSettings(settingsForm)
+    setSettingsErrors(nextErrors)
+    if (Object.keys(nextErrors).length > 0) return
+
+    setIsSettingsSaving(true)
+    setSettingsSubmitError('')
+    try {
+      if (activeSettingsId) {
+        await updateCollegeSettings(activeSettingsId, settingsForm)
+      } else {
+        await createCollegeSettings(settingsForm)
+      }
+      await fetchSettingsList()
+      setViewMode('settings')
+    } catch (error) {
+      setSettingsSubmitError(getApiErrorMessage(error, 'Unable to save college settings. Please try again.'))
+    } finally {
+      setIsSettingsSaving(false)
+    }
+  }
+
   return (
     <DashboardLayout>
       <div className="college-management">
@@ -346,7 +489,7 @@ export default function CollegeInstitutionManagement() {
                 value={searchTerm}
                 onChange={handleSearchChange}
               />
-              <button type="button" className="cm-secondary-btn" onClick={() => setViewMode('settings')}>
+              <button type="button" className="cm-secondary-btn" onClick={openCollegeSettings}>
                 College Settings
               </button>
             </div>
@@ -476,7 +619,7 @@ export default function CollegeInstitutionManagement() {
           </>
         )}
 
-        {/* EDIT FORM MODAL */}
+        {/* EDIT COLLEGE FORM MODAL */}
         {viewMode === 'edit' && (
           <>
             <button type="button" className="cm-modal-backdrop" aria-label="Close form dialog" onClick={backToList} />
@@ -698,49 +841,214 @@ export default function CollegeInstitutionManagement() {
           </div>
         )}
 
-        {/* SETTINGS VIEW */}
+        {/* COLLEGE SETTINGS — LIST VIEW, backed by /api/college-settings */}
         {viewMode === 'settings' && (
           <div className="cm-settings">
             <header className="cm-header">
               <div>
                 <h1>College Settings</h1>
-                <p>General settings for how colleges are managed.</p>
+                <p>Manage academic and institutional settings for every college.</p>
               </div>
-              <button type="button" className="cm-secondary-btn" onClick={backToList}>
-                &larr; Back to list
-              </button>
+              <div style={{ display: 'flex', gap: '8px' }}>
+                <button type="button" className="cm-primary-btn" onClick={openAddSettings}>
+                  + Add Settings
+                </button>
+                <button type="button" className="cm-secondary-btn" onClick={backToList}>
+                  &larr; Back to list
+                </button>
+              </div>
             </header>
 
-            <div className="cm-settings-card">
-              <label className="cm-toggle-row">
-                <div>
-                  <strong>Support multiple colleges</strong>
-                  <p>Allow this Super Admin account to manage more than one college/institution.</p>
-                </div>
-                <input
-                  type="checkbox"
-                  checked={settings.allowMultipleColleges}
-                  onChange={(e) => setSettings((current) => ({ ...current, allowMultipleColleges: e.target.checked }))}
-                />
-              </label>
+            {isSettingsLoading && <p>Loading college settings...</p>}
 
-              <label className="cm-select-row">
-                <span>Default College Type</span>
-                <select
-                  value={settings.defaultCollegeType}
-                  onChange={(e) => setSettings((current) => ({ ...current, defaultCollegeType: e.target.value }))}
-                >
-                  {COLLEGE_TYPES.map((type) => (
-                    <option key={type} value={type}>{type}</option>
-                  ))}
-                </select>
-              </label>
-            </div>
+            {!isSettingsLoading && settingsListError && (
+              <div className="cm-empty">
+                <p className="cm-field-error">{settingsListError}</p>
+                <button type="button" className="cm-secondary-btn" onClick={fetchSettingsList}>
+                  Retry
+                </button>
+              </div>
+            )}
 
-            <div className="cm-form-actions">
-              <button type="button" className="cm-primary-btn" onClick={backToList}>Save Settings</button>
-            </div>
+            {!isSettingsLoading && !settingsListError && settingsList.length === 0 && (
+              <div className="cm-empty">
+                <p>No college settings found.</p>
+                <button type="button" className="cm-primary-btn" onClick={openAddSettings}>
+                  + Add your first settings record
+                </button>
+              </div>
+            )}
+
+            {!isSettingsLoading && !settingsListError && settingsList.length > 0 && (
+              <div className="cm-table-wrap">
+                <table className="cm-table">
+                  <thead>
+                    <tr>
+                      <th>College Name</th>
+                      <th>Code</th>
+                      <th>Email</th>
+                      <th>City / State</th>
+                      <th>Academic Year</th>
+                      <th>Semester</th>
+                      <th>Type</th>
+                      <th>Status</th>
+                      <th className="cm-actions-header">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {settingsList.map((item) => (
+                      <tr key={item.id}>
+                        <td>{item.collegeName}</td>
+                        <td>{item.collegeCode}</td>
+                        <td>{item.collegeEmail}</td>
+                        <td>{item.city}, {item.state}</td>
+                        <td>{item.academicYear}</td>
+                        <td>{item.semester}</td>
+                        <td>{item.institutionType}</td>
+                        <td>
+                          <span className={`cm-status-badge ${item.status === 1 ? 'active' : 'inactive'}`}>
+                            {item.status === 1 ? 'Active' : 'Inactive'}
+                          </span>
+                        </td>
+                        <td className="cm-actions-cell">
+                          <div className="cm-actions">
+                            <button
+                              type="button"
+                              className="cm-action-icon-btn"
+                              title="Edit Settings"
+                              aria-label="Edit Settings"
+                              onClick={() => openEditSettings(item)}
+                            >
+                              <EditIcon />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </div>
+        )}
+
+        {/* COLLEGE SETTINGS — ADD / EDIT FORM MODAL */}
+        {viewMode === 'settings-form' && (
+          <>
+            <button type="button" className="cm-modal-backdrop" aria-label="Close form dialog" onClick={backToSettingsList} />
+            <form className="cm-form cm-modal-card" onSubmit={handleSaveSettings} noValidate>
+              <header className="cm-header">
+                <div>
+                  <h1>{activeSettingsId ? 'Edit College Settings' : 'Add College Settings'}</h1>
+                  <p>Fill in the settings details below.</p>
+                </div>
+                <button type="button" className="cm-secondary-btn" onClick={backToSettingsList}>
+                  &larr; Back to list
+                </button>
+              </header>
+
+              <div className="cm-form-grid">
+                <label>
+                  <span>College Name *</span>
+                  <input type="text" name="collegeName" value={settingsForm.collegeName} onChange={updateSettingsField} />
+                  {settingsErrors.collegeName && <p className="cm-field-error">{settingsErrors.collegeName}</p>}
+                </label>
+
+                <label>
+                  <span>College Code *</span>
+                  <input type="text" name="collegeCode" value={settingsForm.collegeCode} onChange={updateSettingsField} />
+                  {settingsErrors.collegeCode && <p className="cm-field-error">{settingsErrors.collegeCode}</p>}
+                </label>
+
+                <label>
+                  <span>College Email *</span>
+                  <input type="text" name="collegeEmail" value={settingsForm.collegeEmail} onChange={updateSettingsField} />
+                  {settingsErrors.collegeEmail && <p className="cm-field-error">{settingsErrors.collegeEmail}</p>}
+                </label>
+
+                <label>
+                  <span>Phone Number</span>
+                  <input type="text" name="phoneNumber" value={settingsForm.phoneNumber} onChange={updateSettingsField} />
+                </label>
+
+                <label>
+                  <span>Website</span>
+                  <input type="text" name="website" value={settingsForm.website} onChange={updateSettingsField} placeholder="https://college.edu" />
+                </label>
+
+                <label>
+                  <span>Institution Type</span>
+                  <select name="institutionType" value={settingsForm.institutionType} onChange={updateSettingsField}>
+                    {COLLEGE_TYPES.map((type) => (
+                      <option key={type} value={type}>{type}</option>
+                    ))}
+                  </select>
+                </label>
+
+                <label className="cm-span-2">
+                  <span>Address Line 1</span>
+                  <input type="text" name="addressLine1" value={settingsForm.addressLine1} onChange={updateSettingsField} />
+                </label>
+
+                <label className="cm-span-2">
+                  <span>Address Line 2</span>
+                  <input type="text" name="addressLine2" value={settingsForm.addressLine2} onChange={updateSettingsField} />
+                </label>
+
+                <label>
+                  <span>City</span>
+                  <input type="text" name="city" value={settingsForm.city} onChange={updateSettingsField} />
+                </label>
+
+                <label>
+                  <span>State</span>
+                  <input type="text" name="state" value={settingsForm.state} onChange={updateSettingsField} />
+                </label>
+
+                <label>
+                  <span>Pincode</span>
+                  <input type="text" name="pincode" value={settingsForm.pincode} onChange={updateSettingsField} />
+                </label>
+
+                <label>
+                  <span>Academic Year</span>
+                  <input type="text" name="academicYear" value={settingsForm.academicYear} onChange={updateSettingsField} placeholder="e.g. 2026-27" />
+                </label>
+
+                <label>
+                  <span>Semester</span>
+                  <input type="text" name="semester" value={settingsForm.semester} onChange={updateSettingsField} placeholder="e.g. Semester 2" />
+                </label>
+
+                <label>
+                  <span>Date Format</span>
+                  <input type="text" name="dateFormat" value={settingsForm.dateFormat} onChange={updateSettingsField} placeholder="e.g. dd-MM-yyyy" />
+                </label>
+
+                <label>
+                  <span>Time Zone</span>
+                  <input type="text" name="timeZone" value={settingsForm.timeZone} onChange={updateSettingsField} placeholder="e.g. Asia/Kolkata" />
+                </label>
+
+                <label>
+                  <span>Status</span>
+                  <select name="status" value={settingsForm.status} onChange={updateSettingsField}>
+                    <option value={1}>Active</option>
+                    <option value={0}>Inactive</option>
+                  </select>
+                </label>
+              </div>
+
+              {settingsSubmitError && <p className="cm-field-error" role="alert">{settingsSubmitError}</p>}
+
+              <div className="cm-form-actions">
+                <button type="button" className="cm-secondary-btn" onClick={backToSettingsList}>Cancel</button>
+                <button type="submit" className="cm-primary-btn" disabled={isSettingsSaving}>
+                  {isSettingsSaving ? 'Saving...' : 'Save Settings'}
+                </button>
+              </div>
+            </form>
+          </>
         )}
       </div>
     </DashboardLayout>
