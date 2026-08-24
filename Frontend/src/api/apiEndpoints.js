@@ -45,6 +45,14 @@ export const API_ENDPOINTS = Object.freeze({
     get: endpoint('/api/v1/profile'),
     update: endpoint('/api/v1/profile'),
   }),
+  academicYears: Object.freeze({
+    create: endpoint('/api/v1/academic-years'),
+    list: endpoint('/api/v1/academic-years'),
+    detail: (id) => endpoint(`/api/v1/academic-years/${id}`),
+    update: (id) => endpoint(`/api/v1/academic-years/${id}`),
+    activate: (id) => endpoint(`/api/v1/academic-years/${id}/activate`),
+    deactivate: (id) => endpoint(`/api/v1/academic-years/${id}/deactivate`),
+  }),
   authorizationTest: Object.freeze({
     authenticated: endpoint('/api/v1/authorization-test/authenticated'),
     admin: endpoint('/api/v1/authorization-test/admin'),
@@ -183,6 +191,47 @@ export const profileApi = {
     })
     if (!response?.data) throw new Error(response?.message || 'The server did not confirm the profile update.')
     return normalizeProfile(response?.data)
+  },
+}
+
+const academicYearPayload = (year) => ({
+  academicYearName: String(year.name || year.academicYearName || '').trim(),
+  startDate: year.startDate,
+  endDate: year.endDate,
+})
+
+export const academicYearApi = {
+  getAll: async () => {
+    const response = await request(API_ENDPOINTS.academicYears.list)
+    return Array.isArray(response?.data) ? response.data : []
+  },
+  getById: async (id) => {
+    const response = await request(API_ENDPOINTS.academicYears.detail(id))
+    return response?.data
+  },
+  create: async (year) => {
+    const response = await request(API_ENDPOINTS.academicYears.create, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(academicYearPayload(year)),
+    })
+    return response?.data
+  },
+  update: async (id, year) => {
+    const response = await request(API_ENDPOINTS.academicYears.update(id), {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(academicYearPayload(year)),
+    })
+    return response?.data
+  },
+  activate: async (id) => {
+    const response = await request(API_ENDPOINTS.academicYears.activate(id), { method: 'PATCH' })
+    return response?.data
+  },
+  deactivate: async (id) => {
+    const response = await request(API_ENDPOINTS.academicYears.deactivate(id), { method: 'PATCH' })
+    return response?.data
   },
 }
 

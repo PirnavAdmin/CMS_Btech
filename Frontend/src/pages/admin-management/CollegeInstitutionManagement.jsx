@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
 import DashboardLayout from '../../layouts/DashboardLayout'
 import './CollegeInstitutionManagement.css'
 
@@ -204,6 +205,7 @@ function validateCollege(values) {
 }
 
 export default function CollegeInstitutionManagement() {
+  const navigate = useNavigate()
   const [colleges, setColleges] = useState(() => {
     try {
       const saved = localStorage.getItem('btechms_colleges')
@@ -272,10 +274,7 @@ export default function CollegeInstitutionManagement() {
   }
 
   const openAdd = () => {
-    setFormValues(emptyCollege)
-    setErrors({})
-    setActiveId(null)
-    setViewMode('add')
+    navigate('/college-institution-management/add')
   }
 
   const openEdit = (college) => {
@@ -477,14 +476,14 @@ export default function CollegeInstitutionManagement() {
           </>
         )}
 
-        {/* ADD / EDIT FORM MODAL */}
-        {(viewMode === 'add' || viewMode === 'edit') && (
+        {/* EDIT FORM MODAL */}
+        {viewMode === 'edit' && (
           <>
             <button type="button" className="cm-modal-backdrop" aria-label="Close form dialog" onClick={backToList} />
             <form className="cm-form cm-modal-card" onSubmit={handleSave} noValidate>
               <header className="cm-header">
                 <div>
-                  <h1>{viewMode === 'edit' ? 'Edit College' : 'Add College'}</h1>
+                  <h1>Edit College</h1>
                   <p>Fill in the college's details below.</p>
                 </div>
                 <button type="button" className="cm-secondary-btn" onClick={backToList}>
