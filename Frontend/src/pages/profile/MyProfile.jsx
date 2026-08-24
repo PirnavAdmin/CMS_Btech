@@ -18,6 +18,21 @@ const iconPaths = {
 }
 const Icon = ({ name }) => <svg className="profile-icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">{iconPaths[name]}</svg>
 
+const formatLastLogin = (value) => {
+  if (!value) return 'Not available'
+  const rawValue = String(value).trim()
+  const utcValue = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/.test(rawValue) && !/(Z|[+-]\d{2}:?\d{2})$/i.test(rawValue)
+    ? `${rawValue}Z`
+    : rawValue
+  const date = new Date(utcValue)
+  if (Number.isNaN(date.getTime())) return 'Not available'
+  return new Intl.DateTimeFormat('en-IN', {
+    dateStyle: 'medium',
+    timeStyle: 'short',
+    timeZone: 'Asia/Kolkata',
+  }).format(date)
+}
+
 export default function MyProfile() {
   const [profile, setProfile] = useState(null)
   const [draft, setDraft] = useState(null)
@@ -179,6 +194,7 @@ export default function MyProfile() {
         mobile: saved.mobile || draft.mobile,
         role: saved.role || draft.role,
         identifier: saved.identifier || draft.identifier,
+        lastLoginAt: saved.lastLoginAt || draft.lastLoginAt,
         updatedAt: saved.updatedAt || draft.updatedAt,
       }
       setProfile(completeProfile)
@@ -197,10 +213,10 @@ export default function MyProfile() {
   }
 
   if (loading) return <DashboardLayout><div className="profile-state"><span className="profile-spinner" /><h2>Loading your profile</h2><p>Please wait while we retrieve your information.</p></div></DashboardLayout>
-  if (!profile || !draft) return <DashboardLayout><div className="profile-state error"><Icon name="alert" /><h2>Profile unavailable</h2><p>{feedback?.message || 'Unable to load your profile.'}</p><button className="profile-button" onClick={loadProfile}><Icon name="refresh" /> Try Again</button></div></DashboardLayout>
+  if (!profile || !draft) return <DashboardLayout><div className="profile-state error"><section className="profile-error-card" role="alert"><div className="profile-warning-icon"><Icon name="alert" /></div><span className="profile-error-label">Connection warning</span><h2>Profile unavailable</h2><p>{feedback?.message || 'Unable to load your profile.'}</p><small>Check that the backend service is running, then retry the request.</small><button type="button" className="profile-button profile-retry-button" onClick={loadProfile} disabled={loading}><Icon name="refresh" /> Try Again</button></section></div></DashboardLayout>
 
   const initials = String(profile.fullName || '').split(/\s+/).filter(Boolean).slice(0, 2).map((word) => word[0]).join('').toUpperCase() || 'U'
-  const lastLogin = profile.updatedAt ? new Date(profile.updatedAt).toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' }) : 'Not available'
+  const lastLogin = formatLastLogin(profile.lastLoginAt)
 
   return <DashboardLayout><main className="profile-page">
     <header className="profile-heading"><div><span className="profile-eyebrow">Account settings</span><h1>My Profile</h1><p>Review your account identity and keep your contact information current.</p></div>{!editing && <button className="profile-button" onClick={beginEditing}><Icon name="edit" /> Edit Profile</button>}</header>

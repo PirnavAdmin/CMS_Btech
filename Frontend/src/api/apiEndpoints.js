@@ -153,13 +153,15 @@ export async function login({ identifier, password }) {
 
 const normalizeProfile = (source) => {
   const data = source && typeof source === 'object' ? source : {}
+  const lastLoginAt = data.lastLoginAt ?? data.last_login_at ?? data.LastLoginAt ?? ''
   return {
     id: data.userId ?? '', identifier: data.employeeUserId ?? '', fullName: data.fullName ?? '',
     email: data.email ?? '', mobile: data.mobile ?? '', role: Array.isArray(data.roles) ? data.roles.join(', ') : '',
     dateOfBirth: data.dateOfBirth ?? '', gender: data.gender ?? '', department: data.department ?? '',
     designation: data.designation ?? '', address: data.address ?? '', postalCode: data.postalCode ?? '',
     city: data.city ?? '', district: data.district ?? '', state: data.state ?? '', bio: data.bio ?? '',
-    updatedAt: data.lastLoginAt ?? data.updatedAt ?? '',
+    lastLoginAt,
+    updatedAt: data.updatedAt ?? '',
   }
 }
 
