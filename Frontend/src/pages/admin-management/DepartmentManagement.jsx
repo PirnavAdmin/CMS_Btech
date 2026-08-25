@@ -5,7 +5,7 @@ import DashboardLayout from '../../layouts/DashboardLayout'
 import { getBranches } from '../courseManagement/Course'
 import './DepartmentManagement.css'
 
-const seed = [
+export const departmentSeed = [
   ['Computer Science & Engineering', 'CSE', 'Dr. Anjali Sharma', 'B.Tech'],
   ['CSE AI & ML', 'CSE-AIML', 'Dr. Rohan Verma', 'B.Tech'],
   ['CSE Data Science', 'CSE-DS', 'Not assigned', 'B.Tech'],
@@ -33,9 +33,9 @@ const STORAGE_KEY = 'btech-departments'
 const loadDepartments = () => {
   try {
     const stored = JSON.parse(localStorage.getItem(STORAGE_KEY) || 'null')
-    return Array.isArray(stored) && stored.length ? stored : seed
+    return Array.isArray(stored) && stored.length ? stored : departmentSeed
   } catch {
-    return seed
+    return departmentSeed
   }
 }
 
@@ -145,9 +145,7 @@ export default function DepartmentManagement() {
       <div className="management-page department-management">
         <div className="management-page__heading">
           <div>
-            <p className="management-page__eyebrow">Administration</p>
             <h1>Department Management</h1>
-            <p>Organize departments, programme offerings and department leadership.</p>
           </div>
           <div className="department-heading-stat" aria-label={`${activeCount} active departments`}>
             <span><FiCheckCircle /></span>
