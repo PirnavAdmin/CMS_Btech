@@ -70,6 +70,7 @@ html,body,#root{max-width:100%;overflow-x:hidden}
 @media(max-width:540px){.page-content{padding:18px 14px 28px}.dashboard-header{padding-inline:12px}.dashboard-header__context strong{max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.account-menu summary>span:nth-child(2),.account-menu__chevron{display:none!important}.dashboard-header .account-menu summary{min-width:0!important;padding:4px!important}}
 .global-search{margin-left:16px;margin-right:auto}
 @media(max-width:760px){.global-search{margin:0}}
+:root[data-theme="dark"] .global-search{border-color:var(--border-strong);color:var(--text-muted);background:var(--surface-raised);box-shadow:none}:root[data-theme="dark"] .global-search input{color:var(--text-primary);background:transparent}:root[data-theme="dark"] .global-search input::placeholder{color:var(--text-muted)}:root[data-theme="dark"] .global-search-results{border-color:var(--border);background:var(--surface);box-shadow:var(--shadow-md)}:root[data-theme="dark"] .global-search-results a{color:var(--text-secondary)}:root[data-theme="dark"] .global-search-results a:hover{color:var(--text-primary);background:var(--brand-soft)}
 @media(prefers-reduced-motion:reduce){.sidebar,.sidebar-scrim{transition:none}}
 .semester-directory-heading p,.section-directory-heading p{display:none}
 .ay .kpis small{display:none}.settings-page>.settings-card:not(.security):not(.password-card){display:none}
