@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { FiArrowLeft, FiEye, FiGitBranch, FiShare2, FiEdit2, FiSave, FiTrash2 } from 'react-icons/fi'
 import DashboardLayout from '../../layouts/DashboardLayout'
+import { departmentSeed } from '../admin-management/DepartmentManagement'
 import './Course.css'
 
 const COURSE_KEY = 'btech-courses'
@@ -9,21 +10,12 @@ const DEPARTMENT_KEY = 'btech-departments'
 const BRANCH_KEY = 'btech-branches'
 const STRUCTURE_KEY = 'btech-course-structures'
 export const academicYears = ['2025-26', '2026-27', '2027-28']
-const fallbackDepartments = [
-  { id: 1, code: 'CSE', name: 'Computer Science & Engineering', status: 'Active' },
-  { id: 2, code: 'CSE-AIML', name: 'CSE AI & ML', status: 'Active' },
-  { id: 3, code: 'CSE-DS', name: 'CSE Data Science', status: 'Active' },
-  { id: 4, code: 'ECE', name: 'Electronics & Communication Engineering', status: 'Active' },
-  { id: 5, code: 'EEE', name: 'Electrical & Electronics Engineering', status: 'Inactive' },
-  { id: 6, code: 'MECH', name: 'Mechanical Engineering', status: 'Active' },
-  { id: 7, code: 'CIVIL', name: 'Civil Engineering', status: 'Active' },
-]
 const seedCourses = [{ id: 'course-cse', code: 'BTECH', name: 'Bachelor of Technology', shortName: 'B.Tech', type: 'Undergraduate', departmentId: 1, department: 'Computer Science & Engineering', durationValue: 4, durationUnit: 'Years', semesters: 8, academicSystem: 'Semester', qualification: 'Bachelor of Technology', description: 'Undergraduate engineering degree programme.', eligibility: '10+2 with Physics, Chemistry and Mathematics', status: 'Active', createdAt: '2026-01-10', updatedAt: '2026-01-10' }]
 const seedBranches = [{ id: 'branch-cse', departmentId: 1, courseId: 'course-cse', code: 'CSE', name: 'Computer Science & Engineering', shortName: 'CSE', durationValue: 4, durationUnit: 'Years', semesters: 8, intake: 60, description: 'Computing and software engineering.', status: 'Active' }]
 const blank = { code: '', name: '', shortName: '', type: 'Undergraduate', departmentId: '', department: '', durationValue: 4, durationUnit: 'Years', semesters: 8, academicSystem: 'Semester', qualification: '', description: '', eligibility: '', status: 'Active' }
 
 const read = (key, fallback) => { try { const value = JSON.parse(localStorage.getItem(key) || 'null'); return Array.isArray(value) ? value : fallback } catch { return fallback } }
-export const getDepartments = () => read(DEPARTMENT_KEY, fallbackDepartments)
+export const getDepartments = () => read(DEPARTMENT_KEY, departmentSeed)
 export const getCourses = () => read(COURSE_KEY, seedCourses)
 export const getBranches = () => read(BRANCH_KEY, seedBranches)
 export const getStructures = () => { try { return JSON.parse(localStorage.getItem(STRUCTURE_KEY) || '{}') } catch { return {} } }
@@ -83,5 +75,5 @@ function ModernCourseList() {
 
 export default function Course({ mode = 'list' }) { return mode === 'form' ? <CourseForm /> : mode === 'details' ? <CourseDetails /> : <ModernCourseList /> }
 const Page = ({ children }) => <DashboardLayout><div className="cm-page">{children}</div></DashboardLayout>
-const Header = ({ title, text, children }) => <header className="cm-header"><div><span className="cm-eyebrow">Academic Configuration</span><h1>{title}</h1><p>{text}</p></div><div className="cm-row-actions">{children}</div></header>
+const Header = ({ title, children }) => <header className="cm-header"><div><h1>{title}</h1></div><div className="cm-row-actions">{children}</div></header>
 const Field = ({ label, error, wide, children }) => <label className={`cm-field ${wide ? 'wide' : ''}`}>{label}{children}{error && <span className="cm-error">{error}</span>}</label>

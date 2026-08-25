@@ -8,7 +8,7 @@ import './Branch.css'
 
 const blank = { departmentId: '', courseId: '', code: '', name: '', shortName: '', durationValue: 4, durationUnit: 'Years', semesters: 8, intake: 60, description: '', status: 'Active' }
 const Page = ({ children }) => <DashboardLayout><div className="cm-page">{children}</div></DashboardLayout>
-const Header = ({ title, text, children }) => <header className="cm-header"><div><span className="cm-eyebrow">Academic Management</span><h1>{title}</h1><p>{text}</p></div><div className="cm-row-actions">{children}</div></header>
+const Header = ({ title, children }) => <header className="cm-header"><div><h1>{title}</h1></div><div className="cm-row-actions">{children}</div></header>
 const Field = ({ label, error, wide, children }) => <label className={`cm-field ${wide ? 'wide' : ''}`}>{label}{children}{error && <span className="cm-error">{error}</span>}</label>
 const ActionIcon = ({ label }) => { const Icon = label.includes('View') ? FiEye : label.includes('Edit') ? FiEdit2 : label.includes('Structure') ? FiShare2 : label.includes('Back') || label === 'Cancel' ? FiArrowLeft : label.includes('Branch') ? FiGitBranch : FiSave; return <Icon aria-hidden="true" /> }
 const Button = ({ to, children, ...props }) => to ? <Link className="cm-button secondary" to={to}><ActionIcon label={String(children)} />{children}</Link> : <button type="button" className="cm-button" {...props}><ActionIcon label={String(children)} />{children}</button>

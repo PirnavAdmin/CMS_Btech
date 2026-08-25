@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { useLocation, useNavigate } from 'react-router-dom'
-import { FiBookOpen, FiCalendar, FiGitBranch, FiGrid, FiHome, FiLayers, FiLock, FiLogOut, FiMenu, FiMoon, FiSettings, FiSun, FiUser, FiUsers } from 'react-icons/fi'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
+import { FiLock, FiLogOut, FiMenu, FiMoon, FiSearch, FiSun, FiUser } from 'react-icons/fi'
 import { getUserRole, signOut } from '../auth/auth'
 import Sidebar from '../components/Sidebar'
 import './DashboardLayout.css'
@@ -24,10 +24,17 @@ export default function DashboardLayout({ children }) {
   const navigate = useNavigate()
   const { pathname } = useLocation()
   const [sidebarOpen, setSidebarOpen] = useState(false)
+  const [globalQuery, setGlobalQuery] = useState('')
   const [theme, setTheme] = useState(() => localStorage.getItem('pirnav-theme') || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'))
 
   const userRole = getUserRole() || 'user'
   const roleLabel = userRole.charAt(0).toUpperCase() + userRole.slice(1)
+  const pageName = ({
+    '/dashboard': 'Dashboard', '/my-profile': 'My Profile', '/settings': 'Settings',
+    '/college-institution-management': 'College / Institution', '/academic-year-management': 'Academic Years',
+    '/department-management': 'Departments', '/semester-management': 'Semesters', '/section-management': 'Sections',
+  })[pathname] || (pathname.startsWith('/courses') ? 'Courses / Programmes' : pathname.startsWith('/branches') ? 'Branches' : 'Digital Campus')
+  const breadcrumbSection = ['My Profile', 'Settings'].includes(pageName) ? 'Account' : pageName === 'Dashboard' ? 'Digital Campus' : 'Academic Configuration'
 
   // Logout confirmation state
   const [showLogoutConfirmation, setShowLogoutConfirmation] = useState(false)
@@ -50,24 +57,8 @@ export default function DashboardLayout({ children }) {
     localStorage.setItem('pirnav-theme', theme)
   }, [theme])
 
-  const pageContext = ({
-    '/dashboard': 'Dashboard', '/my-profile': 'My Profile', '/settings': 'Settings',
-    '/college-institution-management': 'College / Institution', '/academic-year-management': 'Academic Years',
-    '/department-management': 'Departments', '/semester-management': 'Semesters', '/section-management': 'Sections',
-  })[pathname] || (pathname.startsWith('/courses') ? 'Course Management' : pathname.startsWith('/branches') ? 'Branch Management' : 'Digital Campus')
-  const ContextIcon = ({
-    Dashboard: FiHome,
-    'My Profile': FiUser,
-    Settings: FiSettings,
-    'College / Institution': FiHome,
-    'Academic Years': FiCalendar,
-    Departments: FiGrid,
-    Semesters: FiLayers,
-    Sections: FiUsers,
-    'Course Management': FiBookOpen,
-    'Branch Management': FiGitBranch,
-  })[pageContext] || FiGrid
-
+  const globalLinks = [['Dashboard', '/dashboard'], ['College / Institution', '/college-institution-management'], ['Academic Years', '/academic-year-management'], ['Departments', '/department-management'], ['Courses', '/courses'], ['Branches', '/branches'], ['Sections', '/section-management'], ['Semesters', '/semester-management'], ['My Profile', '/my-profile'], ['Settings', '/settings']]
+  const globalResults = globalQuery.trim() ? globalLinks.filter(([label]) => label.toLowerCase().includes(globalQuery.trim().toLowerCase())) : []
   const rules = useMemo(
     () => requirements(values.newPassword),
     [values.newPassword]
@@ -236,7 +227,9 @@ export default function DashboardLayout({ children }) {
 
       <main>
         <header className="dashboard-header">
-          <div className="dashboard-header__context"><button className="mobile-menu-button" onClick={() => setSidebarOpen(true)} aria-label="Open navigation"><FiMenu /></button><span className="dashboard-header__page-icon" aria-hidden="true"><ContextIcon /></span><div><small>Academic Management</small><strong>{pageContext}</strong></div></div>
+          <div className="dashboard-header__context"><button className="mobile-menu-button" onClick={() => setSidebarOpen(true)} aria-label="Open navigation"><FiMenu /></button></div>
+
+          <div className="global-search"><FiSearch aria-hidden="true" /><input aria-label="Search modules" value={globalQuery} onChange={(event) => setGlobalQuery(event.target.value)} placeholder="Search modules..." />{globalResults.length > 0 && <div className="global-search-results">{globalResults.map(([label, to]) => <Link to={to} key={to} onClick={() => setGlobalQuery('')}>{label}</Link>)}</div>}</div>
 
           <div className="dashboard-header__actions">
           <button className="theme-toggle" onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')} aria-label={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`} title={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}>{theme === 'dark' ? <FiSun /> : <FiMoon />}</button>
@@ -288,7 +281,7 @@ export default function DashboardLayout({ children }) {
           </div>
         </header>
 
-        <section className="page-content">{children}</section>
+        <section className="page-content"><nav className="app-breadcrumb" aria-label="Breadcrumb"><span>{breadcrumbSection}</span><span aria-hidden="true">/</span><strong>{pageName}</strong></nav>{children}</section>
 
         {/* Logout Confirmation Modal */}
         {showLogoutConfirmation && (

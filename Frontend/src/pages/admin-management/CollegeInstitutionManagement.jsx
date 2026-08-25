@@ -445,7 +445,6 @@ export default function CollegeInstitutionManagement() {
             <header className="cm-header">
               <div>
                 <h1>College / Institution Management</h1>
-                <p>Manage complete information for every college under your institution.</p>
               </div>
               <button type="button" className="cm-primary-btn" onClick={openAdd}>
                 <Plus aria-hidden="true" /> Add College
