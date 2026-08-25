@@ -1,11 +1,11 @@
 import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { FiArrowLeft as ArrowLeft, FiCheckCircle, FiEye, FiLayers, FiSliders, FiEdit3, FiPlus, FiSave as Save, FiSearch, FiUserPlus, FiX as X } from 'react-icons/fi'
+import { FiCheckCircle, FiEye, FiLayers, FiSliders, FiEdit3, FiPlus, FiSave as Save, FiSearch, FiUserPlus, FiX as X } from 'react-icons/fi'
 import DashboardLayout from '../../layouts/DashboardLayout'
 import { getBranches } from '../courseManagement/Course'
 import './DepartmentManagement.css'
 
-const seed = [
+export const departmentSeed = [
   ['Computer Science & Engineering', 'CSE', 'Dr. Anjali Sharma', 'B.Tech'],
   ['CSE AI & ML', 'CSE-AIML', 'Dr. Rohan Verma', 'B.Tech'],
   ['CSE Data Science', 'CSE-DS', 'Not assigned', 'B.Tech'],
@@ -33,9 +33,9 @@ const STORAGE_KEY = 'btech-departments'
 const loadDepartments = () => {
   try {
     const stored = JSON.parse(localStorage.getItem(STORAGE_KEY) || 'null')
-    return Array.isArray(stored) && stored.length ? stored : seed
+    return Array.isArray(stored) && stored.length ? stored : departmentSeed
   } catch {
-    return seed
+    return departmentSeed
   }
 }
 
@@ -145,9 +145,7 @@ export default function DepartmentManagement() {
       <div className="management-page department-management">
         <div className="management-page__heading">
           <div>
-            <p className="management-page__eyebrow">Administration</p>
             <h1>Department Management</h1>
-            <p>Organize departments, programme offerings and department leadership.</p>
           </div>
           <div className="department-heading-stat" aria-label={`${activeCount} active departments`}>
             <span><FiCheckCircle /></span>
@@ -155,8 +153,7 @@ export default function DepartmentManagement() {
           </div>
         </div>
 
-        {screen === 'list' && (
-          <section className="management-card department-list">
+        <section className="management-card department-list">
             <div className="department-list__top">
               <div>
                 <div className="department-section-title"><span><FiLayers /></span><h2>Department Directory</h2></div>
@@ -280,11 +277,11 @@ export default function DepartmentManagement() {
                 </div>
               </div>
             )}
-          </section>
-        )}
+        </section>
 
         {screen === 'form' && (
-          <section className="management-card department-form-card">
+          <Popup close={() => setScreen('list')}>
+            <section className="management-card department-form-card">
             <Header
               title={form.id ? 'Edit Department' : 'Add Department'}
               subtitle="Enter the department information below."
@@ -335,11 +332,13 @@ export default function DepartmentManagement() {
               {error && <p className="department-error">{error}</p>}
               <Actions cancel={() => setScreen('list')} submit={form.id ? 'Save Changes' : 'Create Department'} />
             </form>
-          </section>
+            </section>
+          </Popup>
         )}
 
         {screen === 'details' && selected && (
-          <section className="management-card department-details">
+          <Popup close={() => setScreen('list')}>
+            <section className="management-card department-details">
             <Header
               title={selected.name}
               subtitle={`${selected.code} · ${selected.type}`}
@@ -376,11 +375,13 @@ export default function DepartmentManagement() {
               <div><span>Associated B.Tech Branches</span><strong>{relatedBranches.length}</strong></div>
               {relatedBranches.length ? <div className="department-branch-list">{relatedBranches.map((branch) => <Link to={`/branches/${branch.id}`} key={branch.id}><strong>{branch.code}</strong><span>{branch.name}</span></Link>)}</div> : <p>No branches are assigned to this department.</p>}
             </div>
-          </section>
+            </section>
+          </Popup>
         )}
 
         {screen === 'hod' && selected && (
-          <section className="management-card hod-card">
+          <Popup close={() => setScreen('list')}>
+            <section className="management-card hod-card">
             <Header
               title="Assign HOD"
               subtitle={`Assign a Head of Department for ${selected.name}.`}
@@ -391,7 +392,8 @@ export default function DepartmentManagement() {
               {error && <p className="department-error">{error}</p>}
               <Actions cancel={() => setScreen('list')} submit="Assign HOD" />
             </form>
-          </section>
+            </section>
+          </Popup>
         )}
       </div>
     </DashboardLayout>
@@ -405,8 +407,8 @@ function Header({ title, subtitle, back }) {
         <h2>{title}</h2>
         <p>{subtitle}</p>
       </div>
-      <button className="secondary-button" onClick={back}>
-        <ArrowLeft aria-hidden="true" /> Back to List
+      <button className="department-popup-close" type="button" onClick={back} aria-label="Close popup" title="Close">
+        <X aria-hidden="true" />
       </button>
     </div>
   )
@@ -421,4 +423,8 @@ function Actions({ cancel, submit }) {
       <button type="submit"><Save aria-hidden="true" /> {submit}</button>
     </div>
   )
+}
+
+function Popup({ children, close }) {
+  return <div className="department-modal-backdrop" onMouseDown={(event) => event.target === event.currentTarget && close()}>{children}</div>
 }
