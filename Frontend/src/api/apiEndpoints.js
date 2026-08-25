@@ -55,6 +55,11 @@ export const API_ENDPOINTS = Object.freeze({
     activate: (id) => endpoint(`/api/v1/academic-years/${id}/activate`),
     deactivate: (id) => endpoint(`/api/v1/academic-years/${id}/deactivate`),
   }),
+  sectionAssignments: Object.freeze({
+    list: endpoint('/api/v1/section-assignments'),
+    assign: (sectionId) => endpoint(`/api/v1/sections/${sectionId}/students`),
+    remove: (sectionId, assignmentId) => endpoint(`/api/v1/sections/${sectionId}/students/${assignmentId}`),
+  }),
   authorizationTest: Object.freeze({
     authenticated: endpoint('/api/v1/authorization-test/authenticated'),
     admin: endpoint('/api/v1/authorization-test/admin'),
@@ -242,6 +247,24 @@ export const academicYearApi = {
   deactivate: async (id) => {
     const response = await request(API_ENDPOINTS.academicYears.deactivate(id), { method: 'PATCH' })
     return response?.data
+  },
+}
+
+export const sectionAssignmentApi = {
+  list: async () => {
+    const response = await request(API_ENDPOINTS.sectionAssignments.list)
+    return Array.isArray(response?.data) ? response.data : []
+  },
+  assign: async (sectionId, assignment) => {
+    const response = await request(API_ENDPOINTS.sectionAssignments.assign(sectionId), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ studentId: assignment.studentId, studentName: assignment.studentName }),
+    })
+    return response?.data
+  },
+  remove: async (sectionId, assignmentId) => {
+    await request(API_ENDPOINTS.sectionAssignments.remove(sectionId, assignmentId), { method: 'DELETE' })
   },
 }
 
