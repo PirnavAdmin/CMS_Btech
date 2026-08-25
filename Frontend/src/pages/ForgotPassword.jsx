@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { AuthRequestError, generateOtp, resendOtp, verifyOtp, resetPassword } from '../auth/authApi'
+import { FiArrowLeft } from 'react-icons/fi'
 import './ForgotPassword.css'
 
 const isValidContact = (value, method) => method === 'email'
@@ -116,7 +117,7 @@ export default function ForgotPassword({ onBack }) {
 
   if (step === 'otp') return (
     <form className="login-form" onSubmit={validateOtp} noValidate>
-      <header><h2>OTP verification</h2><p>Enter the 6-digit code sent to <strong>{contact.trim()}</strong>.</p>{demoOtp && <p className="demo-otp">Demo OTP: {demoOtp}</p>}</header>
+      <header><h2>Verification code</h2><p>Enter the 6-digit code for <strong>{contact.trim()}</strong>.</p>{demoOtp && <p className="demo-otp">Verification code: {demoOtp}</p>}</header>
       <fieldset className="otp-fieldset compact-otp-fieldset"><legend>Verification code</legend><div className="otp-boxes compact-otp-boxes" onPaste={(event) => { const pasted = event.clipboardData.getData('text').replace(/\D/g, '').slice(0, 6); if (pasted) { event.preventDefault(); setOtp(pasted); otpRefs.current[Math.min(pasted.length, 6) - 1]?.focus() } }}>{Array.from({ length: 6 }, (_, index) => <input key={index} ref={(element) => { otpRefs.current[index] = element }} type="text" inputMode="numeric" autoComplete={index === 0 ? 'one-time-code' : 'off'} maxLength={1} value={otp[index] || ''} onChange={(event) => updateOtp(index, event.target.value)} onKeyDown={(event) => { if (event.key === 'Backspace' && !otp[index] && index > 0) otpRefs.current[index - 1]?.focus() }} aria-label={`OTP digit ${index + 1}`} aria-invalid={Boolean(error)} />)}</div></fieldset>
       {error && <p className="form-error" role="alert">{error}</p>}
       <button className="sign-in-button" type="submit" disabled={loading}>{loading ? 'Verifying...' : 'Verify OTP'}</button>
@@ -132,7 +133,7 @@ export default function ForgotPassword({ onBack }) {
       <label htmlFor="recovery-contact"><span>{method === 'email' ? 'Email ID' : 'Mobile number'}</span><input id="recovery-contact" type="text" inputMode={method === 'email' ? 'email' : 'numeric'} autoComplete={method === 'email' ? 'email' : 'tel'} maxLength={method === 'mobile' ? 10 : undefined} placeholder={method === 'email' ? 'Enter email ID' : 'Enter mobile number'} value={contact} onChange={(event) => { setContact(method === 'mobile' ? event.target.value.replace(/\D/g, '') : event.target.value); setError('') }} aria-invalid={Boolean(error)} /></label>
       {error && <p className="form-error" role="alert">{error}</p>}
       <button className="sign-in-button" type="submit" disabled={loading}>{loading ? 'Sending...' : 'Send Verification Code'}</button>
-      <button type="button" className="text-button back-to-login" onClick={onBack}>← Back to Sign In</button>
+      <button type="button" className="text-button back-to-login" onClick={onBack}><FiArrowLeft aria-hidden="true" /> Back to Sign In</button>
     </form>
   )
 }

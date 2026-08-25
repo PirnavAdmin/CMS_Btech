@@ -1,3 +1,4 @@
+@scope (.college-management) {
 .college-management {
   padding: 0;
   color: var(--brand-navy, #0f172a);
@@ -138,6 +139,8 @@
 
 .cm-table {
   width: 100%;
+  min-width: 860px;
+  table-layout: fixed;
   border-collapse: collapse;
   font-size: 0.9rem;
 }
@@ -152,6 +155,29 @@
 
 .cm-table td {
   color: #1a1a1a;
+}
+
+.cm-table th:nth-child(1),
+.cm-table td:nth-child(1) { width: 76px; }
+.cm-table th:nth-child(2),
+.cm-table td:nth-child(2) { width: 230px; }
+.cm-table th:nth-child(3),
+.cm-table td:nth-child(3) { width: 92px; }
+.cm-table th:nth-child(4),
+.cm-table td:nth-child(4) { width: 140px; }
+.cm-table td:nth-child(2),
+.cm-table td:nth-child(5),
+.cm-table td:nth-child(6) {
+  overflow-wrap: anywhere;
+  white-space: normal;
+  line-height: 1.35;
+}
+.cm-college-name {
+  display: block;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .cm-table th {
@@ -695,4 +721,5 @@
     gap: 12px;
     align-items: center;
   }
+}
 }

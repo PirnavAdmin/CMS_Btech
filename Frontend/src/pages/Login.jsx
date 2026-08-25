@@ -6,6 +6,9 @@ import { AuthRequestError, login } from '../api/apiEndpoints'
 import { validateLogin } from '../auth/loginValidation'
 import { ROLES } from '../auth/roles'
 import ForgotPassword from './ForgotPassword'
+import { FiArrowLeft, FiBell, FiBookOpen, FiCalendar, FiFileText, FiX } from 'react-icons/fi'
+import campusHero from '../assets/college-campus-hero.png'
+import './Login.css'
 
 export default function Login() {
   const navigate = useNavigate()
@@ -16,6 +19,7 @@ export default function Login() {
   const [submitError, setSubmitError] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
   const selectedRole = ROLES.ADMIN
+  const greeting = new Date().getHours() < 12 ? 'Good morning' : new Date().getHours() < 18 ? 'Good afternoon' : 'Good evening'
 
   // OTP Flow States: 'login' | 'request_otp' | 'verify_otp' | 'success'
   const [viewMode, setViewMode] = useState('login')
@@ -119,7 +123,7 @@ export default function Login() {
     try {
       const result = await sendOtp({ contact: otpContact.trim() })
       if (result.demoOtp) {
-        setDemoOtpHint(`(Demo OTP: ${result.demoOtp})`)
+        setDemoOtpHint(`Verification code: ${result.demoOtp}`)
       }
       setViewMode('verify_otp')
       setTimer(60)
@@ -151,43 +155,55 @@ export default function Login() {
   }
 
   return (
-    <main className="admin-login">
-      <section className="login-intro" aria-label="B.Tech College Management System">
+    <main className="admin-login pirnav-login">
+      <section className="login-intro pirnav-login__campus" aria-label="Pirnav Engineering College digital campus">
+        <img className="pirnav-login__campus-image" src={campusHero} alt="Pirnav Engineering College campus" />
+        <div className="pirnav-login__campus-shade" />
         <div className="login-intro__pattern" aria-hidden="true" />
         <div className="login-intro__content">
           <header className="brand">
-            <span className="brand__mark">B</span>
+            <span className="brand__mark"><FiBookOpen /></span>
             <span className="brand__name">
-              <strong>B.Tech College</strong>
-              <small>Management System</small>
+              <strong>Pirnav Engineering College</strong>
+              <small>Digital Campus Management Portal</small>
             </span>
           </header>
           <div className="intro-copy">
-            <p className="eyebrow">Admin Portal</p>
-            <h1>Built for better campus operations.</h1>
-            <p>Manage your institution with clarity, confidence, and a connected view of what matters.</p>
+            <p className="eyebrow">Connected Academic Experience</p>
+            <h1>Welcome to Pirnav Engineering College</h1>
+            <p>A connected digital campus for academics, communication, examinations and college services.</p>
+            <div className="pirnav-campus-cards">
+              <article><FiCalendar /><span><small>Academic Calendar</small><strong>Semester I · 2026–27 Active</strong></span></article>
+              <article><FiBell /><span><small>Campus Announcements</small><strong>Academic updates available</strong></span></article>
+              <article><FiFileText /><span><small>Examinations</small><strong>Schedules and services online</strong></span></article>
+            </div>
           </div>
-          <p className="copyright">&copy; {new Date().getFullYear()} B.Tech College Management System</p>
+          <p className="copyright">Pirnav Engineering College <span>•</span> College Management System</p>
         </div>
       </section>
 
       <section className="login-panel" aria-labelledby="login-title">
+        <Link className="login-home-link" to="/" aria-label="Return to home">
+          <FiArrowLeft aria-hidden="true" /> Home
+        </Link>
         {viewMode === 'login' && (
           <form className="login-form" onSubmit={handleSubmit} noValidate>
+            <div className="pirnav-form-brand"><span><FiBookOpen /></span><div><strong>Pirnav Engineering College</strong><small>Digital Campus Management Portal</small></div></div>
             <header>
+              <p className="pirnav-greeting">{greeting}</p>
               <h2 id="login-title">Welcome back</h2>
-              <p>Sign in to continue to the Admin Dashboard.</p>
+              <p>Sign in with your college credentials to continue to the digital campus.</p>
             </header>
-            {logoutMessage && <div className="logout-success" role="status"><span>{logoutMessage}</span><button type="button" onClick={() => setLogoutMessage('')} aria-label="Dismiss signed out message">×</button></div>}
+            {logoutMessage && <div className="logout-success" role="status"><span>{logoutMessage}</span><button type="button" onClick={() => setLogoutMessage('')} aria-label="Dismiss signed out message"><FiX aria-hidden="true" /></button></div>}
             <label htmlFor="identifier">
-              <span>Email / Mobile / Employee ID</span>
+              <span>College Email / Mobile / ID</span>
               <input
                 id="identifier"
                 type="text"
                 name="identifier"
                 value={values.identifier}
                 onChange={updateValue}
-                placeholder="Enter email, mobile number or employee ID"
+                placeholder="Enter college email, mobile number or ID"
                 autoComplete="username"
                 aria-invalid={Boolean(errors.identifier)}
                 aria-describedby={errors.identifier ? 'identifier-error' : undefined}
@@ -251,10 +267,11 @@ export default function Login() {
 
             {submitError && <p className="form-error" role="alert">{submitError}</p>}
             <button className="sign-in-button" type="submit" disabled={isSubmitting} aria-busy={isSubmitting}>
-              {isSubmitting ? 'Signing in...' : 'Sign In'}
+              {isSubmitting ? 'Signing in...' : 'Login to Digital Campus'}
             </button>
             <p className="account-link">Don&apos;t have an account? <Link to="/register">Request access</Link></p>
-            <p className="access-note">For authorized college administration use only.</p>
+            <div className="pirnav-highlights"><span>Autonomous Institution</span><span>AICTE Approved</span><span>Modern Laboratories</span></div>
+            <p className="access-note">© {new Date().getFullYear()} Pirnav Engineering College. All rights reserved.</p>
           </form>
         )}
 

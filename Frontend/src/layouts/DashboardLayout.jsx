@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
+import { FiLock, FiLogOut, FiMenu, FiMoon, FiSearch, FiSun, FiUser } from 'react-icons/fi'
 import { getUserRole, signOut } from '../auth/auth'
 import Sidebar from '../components/Sidebar'
 import './DashboardLayout.css'
@@ -21,9 +22,19 @@ const requirements = (password) => [
 
 export default function DashboardLayout({ children }) {
   const navigate = useNavigate()
+  const { pathname } = useLocation()
+  const [sidebarOpen, setSidebarOpen] = useState(false)
+  const [globalQuery, setGlobalQuery] = useState('')
+  const [theme, setTheme] = useState(() => localStorage.getItem('pirnav-theme') || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'))
 
   const userRole = getUserRole() || 'user'
   const roleLabel = userRole.charAt(0).toUpperCase() + userRole.slice(1)
+  const pageName = ({
+    '/dashboard': 'Dashboard', '/my-profile': 'My Profile', '/settings': 'Settings',
+    '/college-institution-management': 'College / Institution', '/academic-year-management': 'Academic Years',
+    '/department-management': 'Departments', '/semester-management': 'Semesters', '/section-management': 'Sections',
+  })[pathname] || (pathname.startsWith('/courses') ? 'Courses / Programmes' : pathname.startsWith('/branches') ? 'Branches' : 'Digital Campus')
+  const breadcrumbSection = ['My Profile', 'Settings'].includes(pageName) ? 'Account' : pageName === 'Dashboard' ? 'Digital Campus' : 'Academic Configuration'
 
   // Logout confirmation state
   const [showLogoutConfirmation, setShowLogoutConfirmation] = useState(false)
@@ -41,6 +52,13 @@ export default function DashboardLayout({ children }) {
   const triggerRef = useRef(null)
   const closeRef = useRef(null)
 
+  useEffect(() => {
+    document.documentElement.dataset.theme = theme
+    localStorage.setItem('pirnav-theme', theme)
+  }, [theme])
+
+  const globalLinks = [['Dashboard', '/dashboard'], ['College / Institution', '/college-institution-management'], ['Academic Years', '/academic-year-management'], ['Departments', '/department-management'], ['Courses', '/courses'], ['Branches', '/branches'], ['Sections', '/section-management'], ['Semesters', '/semester-management'], ['My Profile', '/my-profile'], ['Settings', '/settings']]
+  const globalResults = globalQuery.trim() ? globalLinks.filter(([label]) => label.toLowerCase().includes(globalQuery.trim().toLowerCase())) : []
   const rules = useMemo(
     () => requirements(values.newPassword),
     [values.newPassword]
@@ -205,19 +223,21 @@ export default function DashboardLayout({ children }) {
 
   return (
     <div className="dashboard-layout">
-      <Sidebar />
+      <Sidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
 
       <main>
         <header className="dashboard-header">
-          <span>BTech Management System</span>
+          <div className="dashboard-header__context"><button className="mobile-menu-button" onClick={() => setSidebarOpen(true)} aria-label="Open navigation"><FiMenu /></button></div>
+
+          <div className="global-search"><FiSearch aria-hidden="true" /><input aria-label="Search modules" value={globalQuery} onChange={(event) => setGlobalQuery(event.target.value)} placeholder="Search modules..." />{globalResults.length > 0 && <div className="global-search-results">{globalResults.map(([label, to]) => <Link to={to} key={to} onClick={() => setGlobalQuery('')}>{label}</Link>)}</div>}</div>
+
+          <div className="dashboard-header__actions">
+          <button className="theme-toggle" onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')} aria-label={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`} title={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}>{theme === 'dark' ? <FiSun /> : <FiMoon />}</button>
 
           <details className="account-menu" ref={accountMenuRef}>
             <summary aria-label="Open account menu">
               <span className="account-avatar">
-                <svg viewBox="0 0 24 24" aria-hidden="true">
-                  <circle cx="12" cy="8" r="3.5" />
-                  <path d="M5.5 20c.6-4.1 2.8-6.2 6.5-6.2s5.9 2.1 6.5 6.2" />
-                </svg>
+                <FiUser aria-hidden="true" />
               </span>
 
               <span>
@@ -230,10 +250,7 @@ export default function DashboardLayout({ children }) {
 
             <div className="account-menu__panel">
               <button type="button" onClick={() => navigate('/my-profile')}>
-                <svg viewBox="0 0 24 24" aria-hidden="true">
-                  <circle cx="12" cy="8" r="3.5" />
-                  <path d="M5.5 20c.7-4.1 2.9-6.2 6.5-6.2s5.8 2.1 6.5 6.2" />
-                </svg>
+                <FiUser aria-hidden="true" />
                 My Profile
               </button>
 
@@ -247,10 +264,7 @@ export default function DashboardLayout({ children }) {
                   setOpen(true)
                 }}
               >
-                <svg viewBox="0 0 24 24" aria-hidden="true">
-                  <rect x="5" y="10" width="14" height="10" rx="2" />
-                  <path d="M8 10V7a4 4 0 0 1 8 0v3M12 14v2.5" />
-                </svg>
+                <FiLock aria-hidden="true" />
                 Change Password
               </button>
 
@@ -259,17 +273,15 @@ export default function DashboardLayout({ children }) {
                 className="account-menu__signout"
                 onClick={requestSignOut}
               >
-                <svg viewBox="0 0 24 24" aria-hidden="true">
-                  <path d="M10 5H5.5A1.5 1.5 0 0 0 4 6.5v11A1.5 1.5 0 0 0 5.5 19H10" />
-                  <path d="M14 8l4 4-4 4M8 12h10" />
-                </svg>
+                <FiLogOut aria-hidden="true" />
                 Sign Out
               </button>
             </div>
           </details>
+          </div>
         </header>
 
-        <section className="page-content">{children}</section>
+        <section className="page-content"><nav className="app-breadcrumb" aria-label="Breadcrumb"><span>{breadcrumbSection}</span><span aria-hidden="true">/</span><strong>{pageName}</strong></nav>{children}</section>
 
         {/* Logout Confirmation Modal */}
         {showLogoutConfirmation && (
@@ -289,10 +301,7 @@ export default function DashboardLayout({ children }) {
               aria-describedby="logout-confirmation-description"
             >
               <div className="logout-confirmation__icon" aria-hidden="true">
-                <svg viewBox="0 0 24 24">
-                  <path d="M10 5H5.5A1.5 1.5 0 0 0 4 6.5v11A1.5 1.5 0 0 0 5.5 19H10" />
-                  <path d="M14 8l4 4-4 4M8 12h10" />
-                </svg>
+                <FiLogOut aria-hidden="true" />
               </div>
 
               <p className="logout-confirmation__eyebrow">Account access</p>

@@ -1,9 +1,11 @@
 import { useMemo, useState } from 'react'
-import { FiCheckCircle, FiEdit3, FiEye, FiLayers, FiPlus, FiSearch, FiSliders, FiUserPlus } from 'react-icons/fi'
+import { Link } from 'react-router-dom'
+import { FiCheckCircle, FiEye, FiLayers, FiSliders, FiEdit3, FiPlus, FiSave as Save, FiSearch, FiUserPlus, FiX as X } from 'react-icons/fi'
 import DashboardLayout from '../../layouts/DashboardLayout'
+import { getBranches } from '../courseManagement/Course'
 import './DepartmentManagement.css'
 
-const seed = [
+export const departmentSeed = [
   ['Computer Science & Engineering', 'CSE', 'Dr. Anjali Sharma', 'B.Tech'],
   ['CSE AI & ML', 'CSE-AIML', 'Dr. Rohan Verma', 'B.Tech'],
   ['CSE Data Science', 'CSE-DS', 'Not assigned', 'B.Tech'],
@@ -27,9 +29,18 @@ const seed = [
 }))
 
 const empty = { name: '', code: '', hod: '', description: '', type: 'B.Tech', status: 'Active' }
+const STORAGE_KEY = 'btech-departments'
+const loadDepartments = () => {
+  try {
+    const stored = JSON.parse(localStorage.getItem(STORAGE_KEY) || 'null')
+    return Array.isArray(stored) && stored.length ? stored : departmentSeed
+  } catch {
+    return departmentSeed
+  }
+}
 
 export default function DepartmentManagement() {
-  const [items, setItems] = useState(seed)
+  const [items, setItems] = useState(loadDepartments)
   const [screen, setScreen] = useState('list')
   const [selected, setSelected] = useState(null)
   const [form, setForm] = useState(empty)
@@ -38,6 +49,13 @@ export default function DepartmentManagement() {
   const [error, setError] = useState('')
   const [currentPage, setCurrentPage] = useState(1)
   const itemsPerPage = 5
+  const persist = (updater) => {
+    setItems((current) => {
+      const next = typeof updater === 'function' ? updater(current) : updater
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(next))
+      return next
+    })
+  }
 
   const visible = useMemo(
     () =>
@@ -52,6 +70,7 @@ export default function DepartmentManagement() {
   const totalPages = Math.ceil(visible.length / itemsPerPage) || 1
   const currentPageClamped = Math.min(Math.max(currentPage, 1), totalPages)
   const activeCount = items.filter((item) => item.status === 'Active').length
+  const relatedBranches = getBranches().filter((branch) => String(branch.departmentId) === String(selected?.id))
 
   const paginatedItems = useMemo(() => {
     const start = (currentPageClamped - 1) * itemsPerPage
@@ -79,7 +98,7 @@ export default function DepartmentManagement() {
 
   const toggleStatus = (item) => {
     const changed = { ...item, status: item.status === 'Active' ? 'Inactive' : 'Active' }
-    setItems((all) => all.map((entry) => (entry.id === item.id ? changed : entry)))
+    persist((all) => all.map((entry) => (entry.id === item.id ? changed : entry)))
     if (selected?.id === item.id) setSelected(changed)
   }
 
@@ -97,7 +116,7 @@ export default function DepartmentManagement() {
       hod: form.hod.trim() || 'Not assigned',
       description: form.description.trim(),
     }
-    setItems((all) => (form.id ? all.map((item) => (item.id === form.id ? next : item)) : [...all, { ...next, id: Date.now() }]))
+    persist((all) => (form.id ? all.map((item) => (item.id === form.id ? next : item)) : [...all, { ...next, id: Date.now() }]))
     setScreen('list')
   }
 
@@ -105,7 +124,7 @@ export default function DepartmentManagement() {
     event.preventDefault()
     if (!form.hod.trim()) return setError('Enter the Head of Department name.')
     const next = { ...selected, hod: form.hod.trim() }
-    setItems((all) => all.map((item) => (item.id === next.id ? next : item)))
+    persist((all) => all.map((item) => (item.id === next.id ? next : item)))
     setSelected(next)
     setScreen('list')
   }
@@ -126,9 +145,7 @@ export default function DepartmentManagement() {
       <div className="management-page department-management">
         <div className="management-page__heading">
           <div>
-            <p className="management-page__eyebrow">Administration</p>
             <h1>Department Management</h1>
-            <p>Organize departments, programme offerings and department leadership.</p>
           </div>
           <div className="department-heading-stat" aria-label={`${activeCount} active departments`}>
             <span><FiCheckCircle /></span>
@@ -136,25 +153,23 @@ export default function DepartmentManagement() {
           </div>
         </div>
 
-        {screen === 'list' && (
-          <section className="management-card department-list">
+        <section className="management-card department-list">
             <div className="department-list__top">
               <div>
                 <div className="department-section-title"><span><FiLayers /></span><h2>Department Directory</h2></div>
-                <p>{visible.length} of {items.length} departments shown</p>
               </div>
-              <div className="department-list__right">
-                <button
-                  className="primary-button"
-                  onClick={() => {
-                    setForm(empty)
-                    setError('')
-                    setScreen('form')
-                  }}
-                >
-                  <FiPlus /> Add Department
-                </button>
-                <div className="department-controls">
+              <button
+                className="primary-button"
+                onClick={() => {
+                  setForm(empty)
+                  setError('')
+                  setScreen('form')
+                }}
+              >
+                <FiPlus /> Add Department
+              </button>
+            </div>
+            <div className="department-controls department-controls--toolbar">
                   <div className="department-search">
                     <FiSearch aria-hidden="true" />
                     <input
@@ -182,8 +197,6 @@ export default function DepartmentManagement() {
                       <option>Degree</option>
                     </select>
                   </div>
-                </div>
-              </div>
             </div>
 
             <div className="department-table-wrap">
@@ -216,10 +229,12 @@ export default function DepartmentManagement() {
                           {item.status}
                         </button>
                       </td>
-                      <td className="row-actions">
-                        <button title={`View ${item.name}`} aria-label={`View ${item.name}`} onClick={() => details(item)}><FiEye /></button>
-                        <button title={`Edit ${item.name}`} aria-label={`Edit ${item.name}`} onClick={() => edit(item)}><FiEdit3 /></button>
-                        <button className="assign-hod" title={`Assign HOD for ${item.name}`} onClick={() => openAssignHod(item)}><FiUserPlus /> <span>HOD</span></button>
+                      <td className="department-actions-cell">
+                        <div className="row-actions">
+                          <button title={`View ${item.name}`} aria-label={`View ${item.name}`} onClick={() => details(item)}><FiEye /></button>
+                          <button title={`Edit ${item.name}`} aria-label={`Edit ${item.name}`} onClick={() => edit(item)}><FiEdit3 /></button>
+                          <button className="assign-hod" title={`Assign HOD for ${item.name}`} onClick={() => openAssignHod(item)}><FiUserPlus /> <span>HOD</span></button>
+                        </div>
                       </td>
                     </tr>
                   ))}
@@ -262,11 +277,11 @@ export default function DepartmentManagement() {
                 </div>
               </div>
             )}
-          </section>
-        )}
+        </section>
 
         {screen === 'form' && (
-          <section className="management-card department-form-card">
+          <Popup close={() => setScreen('list')}>
+            <section className="management-card department-form-card">
             <Header
               title={form.id ? 'Edit Department' : 'Add Department'}
               subtitle="Enter the department information below."
@@ -274,8 +289,8 @@ export default function DepartmentManagement() {
             />
             <form onSubmit={save}>
               <div className="department-form-grid">
-                {field('name', 'Department Name', { placeholder: 'e.g. Computer Science & Engineering' })}
-                {field('code', 'Department Code', { placeholder: 'e.g. CSE' })}
+                {field('name', 'Department Name *', { placeholder: 'e.g. Computer Science & Engineering', required: true })}
+                {field('code', 'Department Code *', { placeholder: 'e.g. CSE', required: true })}
                 <label>
                   Programme
                   <select
@@ -317,11 +332,13 @@ export default function DepartmentManagement() {
               {error && <p className="department-error">{error}</p>}
               <Actions cancel={() => setScreen('list')} submit={form.id ? 'Save Changes' : 'Create Department'} />
             </form>
-          </section>
+            </section>
+          </Popup>
         )}
 
         {screen === 'details' && selected && (
-          <section className="management-card department-details">
+          <Popup close={() => setScreen('list')}>
+            <section className="management-card department-details">
             <Header
               title={selected.name}
               subtitle={`${selected.code} · ${selected.type}`}
@@ -354,11 +371,17 @@ export default function DepartmentManagement() {
                 <p>{selected.description || 'No description added.'}</p>
               </div>
             </div>
-          </section>
+            <div className="department-branches">
+              <div><span>Associated B.Tech Branches</span><strong>{relatedBranches.length}</strong></div>
+              {relatedBranches.length ? <div className="department-branch-list">{relatedBranches.map((branch) => <Link to={`/branches/${branch.id}`} key={branch.id}><strong>{branch.code}</strong><span>{branch.name}</span></Link>)}</div> : <p>No branches are assigned to this department.</p>}
+            </div>
+            </section>
+          </Popup>
         )}
 
         {screen === 'hod' && selected && (
-          <section className="management-card hod-card">
+          <Popup close={() => setScreen('list')}>
+            <section className="management-card hod-card">
             <Header
               title="Assign HOD"
               subtitle={`Assign a Head of Department for ${selected.name}.`}
@@ -369,7 +392,8 @@ export default function DepartmentManagement() {
               {error && <p className="department-error">{error}</p>}
               <Actions cancel={() => setScreen('list')} submit="Assign HOD" />
             </form>
-          </section>
+            </section>
+          </Popup>
         )}
       </div>
     </DashboardLayout>
@@ -383,8 +407,8 @@ function Header({ title, subtitle, back }) {
         <h2>{title}</h2>
         <p>{subtitle}</p>
       </div>
-      <button className="secondary-button" onClick={back}>
-        Back to List
+      <button className="department-popup-close" type="button" onClick={back} aria-label="Close popup" title="Close">
+        <X aria-hidden="true" />
       </button>
     </div>
   )
@@ -394,9 +418,13 @@ function Actions({ cancel, submit }) {
   return (
     <div className="form-actions">
       <button type="button" className="secondary-button" onClick={cancel}>
-        Cancel
+        <X aria-hidden="true" /> Cancel
       </button>
-      <button type="submit">{submit}</button>
+      <button type="submit"><Save aria-hidden="true" /> {submit}</button>
     </div>
   )
+}
+
+function Popup({ children, close }) {
+  return <div className="department-modal-backdrop" onMouseDown={(event) => event.target === event.currentTarget && close()}>{children}</div>
 }
