@@ -1,103 +1,19 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import DashboardLayout from '../../layouts/DashboardLayout'
-import { createCollegeSettings, getCollegeSettings, updateCollegeSettings } from '../../auth/collegeApi'
+import {
+  createCollegeSettings,
+  getCollegeById,
+  getCollegeSettings,
+  getColleges,
+  searchColleges,
+  updateCollege,
+  updateCollegeSettings,
+  updateCollegeStatus,
+} from '../../auth/collegeApi'
 import './CollegeInstitutionManagement.css'
 
 const COLLEGE_TYPES = ['Engineering', 'Arts & Science', 'Medical', 'Management', 'Polytechnic', 'Other']
-
-const STATIC_COLLEGES = [
-  {
-    id: 1001,
-    name: 'Government Engineering College, Thrissur',
-    code: 'GECT',
-    type: 'Engineering',
-    university: 'APJ Abdul Kalam Technological University',
-    address: 'Ramavarmapuram Engineering College Road',
-    city: 'Thrissur',
-    state: 'Kerala',
-    pincode: '680009',
-    contact: '4872334144',
-    email: 'principal@gectcr.ac.in',
-    website: 'https://gectcr.ac.in',
-    logo: '',
-    principal: 'Dr. Meera Nair',
-    accreditation: 'NAAC accredited; NBA-accredited engineering programs',
-    status: 'active',
-  },
-  {
-    id: 1002,
-    name: 'National Institute of Technology Calicut',
-    code: 'NITC',
-    type: 'Engineering',
-    university: 'National Institute of Technology Calicut',
-    address: 'NIT Campus, Kattangal',
-    city: 'Kozhikode',
-    state: 'Kerala',
-    pincode: '673601',
-    contact: '4952286100',
-    email: 'registrar@nitc.ac.in',
-    website: 'https://nitc.ac.in',
-    logo: '',
-    principal: 'Dr. Anil Kumar',
-    accreditation: 'Institute of National Importance',
-    status: 'active',
-  },
-  {
-    id: 1003,
-    name: 'St. Joseph College of Engineering',
-    code: 'SJCE',
-    type: 'Engineering',
-    university: 'Anna University',
-    address: 'Old Mahabalipuram Road, Semmancheri',
-    city: 'Chennai',
-    state: 'Tamil Nadu',
-    pincode: '600119',
-    contact: '4424531000',
-    email: 'office@sjce.edu.in',
-    website: 'https://www.sjce.edu.in',
-    logo: '',
-    principal: 'Dr. Priya Raman',
-    accreditation: 'NAAC A+; NBA-accredited programs',
-    status: 'active',
-  },
-  {
-    id: 1004,
-    name: 'Bharath College of Arts and Science',
-    code: 'BCAS',
-    type: 'Arts & Science',
-    university: 'University of Madras',
-    address: 'Velachery Main Road',
-    city: 'Chennai',
-    state: 'Tamil Nadu',
-    pincode: '600042',
-    contact: '4422445566',
-    email: 'info@bcas.edu.in',
-    website: 'https://www.bcas.edu.in',
-    logo: '',
-    principal: 'Dr. Lakshmi Narayanan',
-    accreditation: 'NAAC A accredited',
-    status: 'inactive',
-  },
-  {
-    id: 1005,
-    name: 'Malabar Institute of Management',
-    code: 'MIMK',
-    type: 'Management',
-    university: 'University of Calicut',
-    address: 'University Road, Thenhipalam',
-    city: 'Malappuram',
-    state: 'Kerala',
-    pincode: '673635',
-    contact: '4942407227',
-    email: 'admissions@mimk.edu.in',
-    website: 'https://www.mimk.edu.in',
-    logo: '',
-    principal: 'Dr. Faisal Rahman',
-    accreditation: 'AICTE approved',
-    status: 'active',
-  },
-]
 
 const emptyCollege = {
   id: null,
@@ -244,9 +160,54 @@ const getResponseList = (responseData) => {
   return []
 }
 
-const getApiErrorMessage = (error, fallback) => (
-  error?.response?.data?.message || error?.response?.data?.error || error?.message || fallback
-)
+const getApiErrorMessage = (error, fallback) => {
+  if (error?.response?.status === 401) return 'Your session has expired. Please sign in again.'
+  if (error?.response?.status === 403) return "You don't have permission to manage colleges."
+  return error?.response?.data?.message || error?.response?.data?.error || error?.message || fallback
+}
+
+const getCollegeRecords = (responseData) => {
+  const data = responseData?.data ?? responseData
+  if (Array.isArray(data)) return data
+  if (Array.isArray(data?.items)) return data.items
+  return data && typeof data === 'object' ? [data] : []
+}
+
+const mapCollege = (record) => ({
+  id: record.id ?? record.collegeId,
+  name: record.name ?? record.collegeName ?? '',
+  code: record.code ?? record.collegeCode ?? '',
+  type: record.type ?? record.collegeType ?? record.institutionType ?? COLLEGE_TYPES[0],
+  university: record.university ?? record.universityName ?? '',
+  address: record.address ?? record.addressLine1 ?? '',
+  city: record.city ?? '',
+  state: record.state ?? '',
+  pincode: String(record.pincode ?? ''),
+  contact: String(record.contact ?? record.contactNumber ?? record.phoneNumber ?? ''),
+  email: record.email ?? record.collegeEmail ?? '',
+  website: record.website ?? '',
+  logo: record.logo ?? record.logoUrl ?? '',
+  principal: record.principal ?? record.principalName ?? '',
+  accreditation: record.accreditation ?? record.accreditationDetails ?? '',
+  status: String(record.status ?? (record.isActive === false ? 'inactive' : 'active')).toLowerCase() === 'active' || record.isActive === true || Number(record.status) === 1 ? 'active' : 'inactive',
+})
+
+const collegePayload = (college) => ({
+  name: college.name.trim(),
+  code: college.code.trim(),
+  type: college.type,
+  university: college.university.trim(),
+  address: college.address.trim(),
+  city: college.city.trim(),
+  state: college.state.trim(),
+  pincode: college.pincode.trim(),
+  contact: college.contact.trim(),
+  email: college.email.trim(),
+  website: college.website.trim(),
+  logo: college.logo || '',
+  principal: college.principal.trim(),
+  accreditation: college.accreditation.trim(),
+})
 
 const mapRecordToForm = (record) => ({
   collegeName: record.collegeName ?? '',
@@ -269,19 +230,11 @@ const mapRecordToForm = (record) => ({
 
 export default function CollegeInstitutionManagement() {
   const navigate = useNavigate()
-  const [colleges, setColleges] = useState(() => {
-    try {
-      const saved = localStorage.getItem('btechms_colleges')
-      const parsed = saved ? JSON.parse(saved) : []
-      return Array.isArray(parsed) && parsed.length > 0 ? parsed : STATIC_COLLEGES
-    } catch {
-      return STATIC_COLLEGES
-    }
-  })
-
-  useEffect(() => {
-    localStorage.setItem('btechms_colleges', JSON.stringify(colleges))
-  }, [colleges])
+  const [colleges, setColleges] = useState([])
+  const [isCollegesLoading, setIsCollegesLoading] = useState(true)
+  const [collegeError, setCollegeError] = useState('')
+  const [isCollegeSaving, setIsCollegeSaving] = useState(false)
+  const [isCollegeDetailsLoading, setIsCollegeDetailsLoading] = useState(false)
 
   const [viewMode, setViewMode] = useState('list') // list | edit | details | settings | settings-form
   const [activeId, setActiveId] = useState(null)
@@ -306,15 +259,7 @@ export default function CollegeInstitutionManagement() {
 
   const activeCollege = colleges.find((c) => c.id === activeId) || null
 
-  const filteredColleges = colleges.filter((c) => {
-    const term = searchTerm.trim().toLowerCase()
-    if (!term) return true
-    return (
-      c.name.toLowerCase().includes(term) ||
-      c.code.toLowerCase().includes(term) ||
-      c.city.toLowerCase().includes(term)
-    )
-  })
+  const filteredColleges = colleges
 
   // Calculate pagination details
   const totalPages = Math.max(1, Math.ceil(filteredColleges.length / itemsPerPage))
@@ -322,6 +267,25 @@ export default function CollegeInstitutionManagement() {
   const startIndex = (safeCurrentPage - 1) * itemsPerPage
   const endIndex = Math.min(startIndex + itemsPerPage, filteredColleges.length)
   const displayedColleges = filteredColleges.slice(startIndex, endIndex)
+
+  const loadColleges = async (term = '') => {
+    setIsCollegesLoading(true)
+    setCollegeError('')
+    try {
+      const response = term.trim() ? await searchColleges(term.trim()) : await getColleges()
+      setColleges(getCollegeRecords(response.data).map(mapCollege))
+    } catch (error) {
+      setColleges([])
+      setCollegeError(getApiErrorMessage(error, 'Unable to load colleges. Please try again.'))
+    } finally {
+      setIsCollegesLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => loadColleges(searchTerm), searchTerm.trim() ? 300 : 0)
+    return () => window.clearTimeout(timer)
+  }, [searchTerm])
 
   const handleSearchChange = (e) => {
     setSearchTerm(e.target.value)
@@ -347,16 +311,39 @@ export default function CollegeInstitutionManagement() {
     navigate('/college-institution-management/add')
   }
 
-  const openEdit = (college) => {
-    setFormValues(college)
-    setErrors({})
-    setActiveId(college.id)
+  const openEdit = async (college) => {
+    setIsCollegeDetailsLoading(true)
+    setCollegeError('')
     setViewMode('edit')
+    setActiveId(college.id)
+    try {
+      const response = await getCollegeById(college.id)
+      const detail = mapCollege((response.data?.data ?? response.data) || college)
+      setFormValues(detail)
+      setColleges((current) => current.map((item) => (item.id === detail.id ? detail : item)))
+    } catch (error) {
+      setFormValues(college)
+      setCollegeError(getApiErrorMessage(error, 'Unable to load college details. Please try again.'))
+    } finally {
+      setIsCollegeDetailsLoading(false)
+    }
+    setErrors({})
   }
 
-  const openDetails = (college) => {
+  const openDetails = async (college) => {
+    setIsCollegeDetailsLoading(true)
+    setCollegeError('')
     setActiveId(college.id)
     setViewMode('details')
+    try {
+      const response = await getCollegeById(college.id)
+      const detail = mapCollege((response.data?.data ?? response.data) || college)
+      setColleges((current) => current.map((item) => (item.id === detail.id ? detail : item)))
+    } catch (error) {
+      setCollegeError(getApiErrorMessage(error, 'Unable to load college details. Please try again.'))
+    } finally {
+      setIsCollegeDetailsLoading(false)
+    }
   }
 
   const backToList = () => {
@@ -365,31 +352,43 @@ export default function CollegeInstitutionManagement() {
     setErrors({})
   }
 
-  const handleSave = (e) => {
+  const handleSave = async (e) => {
     e.preventDefault()
     const nextErrors = validateCollege(formValues)
     setErrors(nextErrors)
     if (Object.keys(nextErrors).length > 0) return
 
-    if (viewMode === 'edit' && activeId) {
-      setColleges((current) => current.map((c) => (c.id === activeId ? { ...formValues, id: activeId } : c)))
-    } else {
-      const newCollege = { ...formValues, id: Date.now() }
-      setColleges((current) => [...current, newCollege])
+    if (!activeId || isCollegeSaving) return
+
+    setIsCollegeSaving(true)
+    setCollegeError('')
+    try {
+      const response = await updateCollege(activeId, collegePayload(formValues))
+      const updated = mapCollege((response.data?.data ?? response.data) || { ...formValues, id: activeId })
+      setColleges((current) => current.map((college) => (college.id === activeId ? updated : college)))
+      backToList()
+      await loadColleges(searchTerm)
+    } catch (error) {
+      setCollegeError(getApiErrorMessage(error, 'Unable to update this college. Please try again.'))
+    } finally {
+      setIsCollegeSaving(false)
     }
-    backToList()
   }
 
   const handleDelete = (college) => {
-    const confirmed = window.confirm(`Delete "${college.name}"? This cannot be undone.`)
-    if (!confirmed) return
-    setColleges((current) => current.filter((c) => c.id !== college.id))
+    setCollegeError(`Deletion is unavailable because no DELETE endpoint was provided for "${college.name}".`)
   }
 
-  const toggleStatus = (college) => {
-    setColleges((current) =>
-      current.map((c) => (c.id === college.id ? { ...c, status: c.status === 'active' ? 'inactive' : 'active' } : c))
-    )
+  const toggleStatus = async (college) => {
+    const nextStatus = college.status === 'active' ? 'inactive' : 'active'
+    setCollegeError('')
+    try {
+      const response = await updateCollegeStatus(college.id, nextStatus)
+      const updated = mapCollege((response.data?.data ?? response.data) || { ...college, status: nextStatus })
+      setColleges((current) => current.map((item) => (item.id === college.id ? updated : item)))
+    } catch (error) {
+      setCollegeError(getApiErrorMessage(error, 'Unable to update college status. Please try again.'))
+    }
   }
 
   // ── College Settings: list ──
@@ -494,7 +493,18 @@ export default function CollegeInstitutionManagement() {
               </button>
             </div>
 
-            {filteredColleges.length === 0 ? (
+            {isCollegesLoading ? (
+              <div className="cm-empty">
+                <p>Loading colleges...</p>
+              </div>
+            ) : collegeError ? (
+              <div className="cm-empty">
+                <p className="cm-field-error" role="alert">{collegeError}</p>
+                <button type="button" className="cm-secondary-btn" onClick={() => loadColleges(searchTerm)}>
+                  Retry
+                </button>
+              </div>
+            ) : filteredColleges.length === 0 ? (
               <div className="cm-empty">
                 <p>No colleges found.</p>
                 <button type="button" className="cm-primary-btn" onClick={openAdd}>
@@ -634,6 +644,9 @@ export default function CollegeInstitutionManagement() {
                 </button>
               </header>
 
+              {isCollegeDetailsLoading && <p>Loading college details...</p>}
+              {collegeError && <p className="cm-field-error" role="alert">{collegeError}</p>}
+
               <div className="cm-form-grid">
                 <label>
                   <span>College Name *</span>
@@ -723,7 +736,9 @@ export default function CollegeInstitutionManagement() {
 
               <div className="cm-form-actions">
                 <button type="button" className="cm-secondary-btn" onClick={backToList}>Cancel</button>
-                <button type="submit" className="cm-primary-btn">{viewMode === 'edit' ? 'Save Changes' : 'Add College'}</button>
+                <button type="submit" className="cm-primary-btn" disabled={isCollegeDetailsLoading || isCollegeSaving}>
+                  {isCollegeSaving ? 'Saving Changes...' : 'Save Changes'}
+                </button>
               </div>
             </form>
           </>
@@ -737,6 +752,9 @@ export default function CollegeInstitutionManagement() {
                 &larr; Back to Colleges List
               </button>
             </div>
+
+            {isCollegeDetailsLoading && <p>Loading college details...</p>}
+            {collegeError && <p className="cm-field-error" role="alert">{collegeError}</p>}
 
             <div className="cm-profile-card">
               {/* Header Profile Banner */}

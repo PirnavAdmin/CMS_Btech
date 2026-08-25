@@ -58,7 +58,7 @@ export const updateCollege = (id, collegeData) => {
 };
 
 export const updateCollegeStatus = (id, status) => {
-  return API.patch(`/colleges/${id}/status`, status);
+  return API.patch(`/colleges/${id}/status`, { status });
 };
 
 

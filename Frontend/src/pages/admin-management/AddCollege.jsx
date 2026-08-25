@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import DashboardLayout from '../../layouts/DashboardLayout'
+import { createCollege } from '../../auth/collegeApi'
 import './AddCollege.css'
 
 const TYPES = ['Engineering College', 'University', 'Autonomous College', 'Affiliated College', 'Deemed University', 'Other']
@@ -162,18 +163,16 @@ export default function AddCollege() {
     if (!isValid || submitting) { setDialog(null); return }
     setSubmitting(true)
     try {
-      await new Promise((resolve) => setTimeout(resolve, 650))
-      const current = JSON.parse(localStorage.getItem('btechms_colleges') || '[]')
       const college = {
-        id: Date.now(), name: values.collegeName.trim(), code: values.collegeCode, type: values.collegeType,
+        name: values.collegeName.trim(), code: values.collegeCode, type: values.collegeType,
         university: values.universityName.trim(), address: [values.addressLine1, values.addressLine2].filter(Boolean).join(', '),
         city: values.city.trim(), state: values.state.trim(), pincode: values.pincode, contact: values.contactNumber,
         email: values.email.trim(), website: values.website.trim(), logo: values.logo, principal: values.principalName.trim(),
-        accreditation: [values.accreditationBody, values.accreditationGrade, values.accreditationNumber].filter(Boolean).join(' · '), status: 'active',
+        accreditation: [values.accreditationBody, values.accreditationGrade, values.accreditationNumber].filter(Boolean).join(' · '),
       }
-      localStorage.setItem('btechms_colleges', JSON.stringify([...current, college]))
+      await createCollege(college)
       setDirty(false); setDialog('success')
-    } catch { setNotice('Unexpected error. The college could not be created.'); setDialog(null) }
+    } catch (error) { setNotice(error?.response?.data?.message || error?.response?.data?.error || error?.message || 'Unexpected error. The college could not be created.'); setDialog(null) }
     finally { setSubmitting(false) }
   }
 
@@ -242,6 +241,6 @@ export default function AddCollege() {
     {dialog === 'reset' && <Dialog title="Reset College Form?" actions={<><button className="ac-secondary" onClick={() => setDialog(null)}>Cancel</button><button className="ac-danger-btn" onClick={reset}>Reset</button></>}><p>All entered information will be cleared.</p></Dialog>}
     {dialog === 'leave' && <Dialog title="Unsaved Changes" actions={<><button className="ac-secondary" onClick={() => setDialog(null)}>Stay</button><button className="ac-danger-btn" onClick={() => navigate('/college-institution-management')}>Leave</button></>}><p>You have unsaved college information. Leave without saving?</p></Dialog>}
     {dialog === 'preview' && <Dialog title="Preview College" actions={<><button className="ac-secondary" onClick={() => setDialog(null)}>Back to Edit</button><button className="ac-primary" onClick={submit} disabled={submitting}>{submitting ? 'Creating College...' : 'Submit'}</button></>}><div className="ac-preview">{values.logo && <img src={values.logo} alt="College logo" />}<h3>{values.collegeName}</h3><p><b>Code:</b> {values.collegeCode} · {values.collegeType}</p><hr/><h4>College Information</h4><p>{values.universityName}</p><h4>Address</h4><p>{[values.addressLine1, values.addressLine2, values.city, values.state, values.pincode, values.country].filter(Boolean).join(', ')}</p><h4>Contact</h4><p>{values.contactNumber} · {values.email}<br/>{values.website || 'No website provided'}</p><h4>Administration</h4><p>{values.principalName || 'Not provided'} {values.principalEmail && `· ${values.principalEmail}`}</p><h4>Accreditation</h4><p>{values.accreditationStatus}{values.accreditationBody && ` · ${values.accreditationBody}`}</p></div></Dialog>}
-    {dialog === 'success' && <Dialog title="College Created Successfully" actions={<button className="ac-primary" onClick={() => navigate('/college-institution-management')}>Return to College List</button>}><p><b>College Name:</b><br/>{values.collegeName}</p><p><b>College Code:</b><br/>{values.collegeCode}</p><p className="ac-hint">Saved using frontend/static behavior. No backend database was contacted.</p></Dialog>}
+    {dialog === 'success' && <Dialog title="College Created Successfully" actions={<button className="ac-primary" onClick={() => navigate('/college-institution-management')}>Return to College List</button>}><p><b>College Name:</b><br/>{values.collegeName}</p><p><b>College Code:</b><br/>{values.collegeCode}</p></Dialog>}
   </main></DashboardLayout>
 }
