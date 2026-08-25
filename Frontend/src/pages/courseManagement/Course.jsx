@@ -21,7 +21,7 @@ export const saveBranch=value=>{const rows=getBranches(),now=new Date().toISOStr
 export const saveStructures=value=>localStorage.setItem(STRUCTURE_KEY,JSON.stringify(value))
 const codeFor=name=>{const known={'computer science and engineering':'CSE','electronics and communication engineering':'ECE','electrical and electronics engineering':'EEE','mechanical engineering':'ME','civil engineering':'CE','artificial intelligence and data science':'AI-DS'},clean=name.trim().toLowerCase();return known[clean]||name.split(/\s+/).filter(x=>x&&!['and','&','of','the'].includes(x.toLowerCase())).map(x=>x[0]).join('').slice(0,10).toUpperCase()}
 const Page=({children})=><DashboardLayout><main className="cm-page course-management">{children}</main></DashboardLayout>
-const Header=({title,text,children})=><header className="cm-header"><div><span className="cm-eyebrow">Academic Management</span><h1>{title}</h1><p>{text}</p></div><div className="cm-row-actions">{children}</div></header>
+const Header=({title,text,children})=><header className="cm-header"><div><h1>{title}</h1><p>{text}</p></div><div className="cm-row-actions">{children}</div></header>
 const Field=({label,error,wide,children})=>label==='Description'?null:<label className={`cm-field ${wide?'wide':''}`}><span>{label}</span>{children}{error&&<small className="cm-error" role="alert">{error}</small>}</label>
 const Badge=({value})=><span className={`course-badge ${String(value).toLowerCase()}`}><i/>{value}</span>
 
