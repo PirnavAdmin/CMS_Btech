@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { FiCheckCircle, FiEye, FiLayers, FiSliders, FiEdit3, FiPlus, FiSave as Save, FiSearch, FiUserPlus, FiX as X } from 'react-icons/fi'
+import { FiCheckCircle, FiEye, FiLayers, FiEdit3, FiPlus, FiSave as Save, FiSearch, FiUserPlus, FiX as X } from 'react-icons/fi'
 import DashboardLayout from '../../layouts/DashboardLayout'
 import { getBranches } from '../courseManagement/Course'
 import './DepartmentManagement.css'
@@ -45,7 +45,6 @@ export default function DepartmentManagement() {
   const [selected, setSelected] = useState(null)
   const [form, setForm] = useState(empty)
   const [query, setQuery] = useState('')
-  const [type, setType] = useState('All')
   const [error, setError] = useState('')
   const [currentPage, setCurrentPage] = useState(1)
   const itemsPerPage = 5
@@ -61,15 +60,15 @@ export default function DepartmentManagement() {
     () =>
       items.filter(
         (item) =>
-          `${item.name} ${item.code} ${item.hod}`.toLowerCase().includes(query.toLowerCase()) &&
-          (type === 'All' || item.type === type)
+          item.type === 'B.Tech' &&
+          `${item.name} ${item.code} ${item.hod}`.toLowerCase().includes(query.toLowerCase())
       ),
-    [items, query, type]
+    [items, query]
   )
 
   const totalPages = Math.ceil(visible.length / itemsPerPage) || 1
   const currentPageClamped = Math.min(Math.max(currentPage, 1), totalPages)
-  const activeCount = items.filter((item) => item.status === 'Active').length
+  const activeCount = items.filter((item) => item.type === 'B.Tech' && item.status === 'Active').length
   const relatedBranches = getBranches().filter((branch) => String(branch.departmentId) === String(selected?.id))
 
   const paginatedItems = useMemo(() => {
@@ -182,21 +181,6 @@ export default function DepartmentManagement() {
                       placeholder="Search departments"
                       aria-label="Search departments"
                     />
-                  </div>
-                  <div className="department-filter">
-                    <FiSliders aria-hidden="true" />
-                    <select
-                      value={type}
-                      onChange={(event) => {
-                        setType(event.target.value)
-                        setCurrentPage(1)
-                      }}
-                      aria-label="Filter by programme"
-                    >
-                      <option>All</option>
-                      <option>B.Tech</option>
-                      <option>Degree</option>
-                    </select>
                   </div>
             </div>
 
