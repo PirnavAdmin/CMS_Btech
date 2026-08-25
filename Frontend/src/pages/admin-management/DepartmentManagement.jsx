@@ -143,6 +143,7 @@ export default function DepartmentManagement() {
   return (
     <DashboardLayout>
       <div className="management-page department-management">
+        {screen === 'list' && <>
         <div className="management-page__heading">
           <div>
             <h1>Department Management</h1>
@@ -278,6 +279,7 @@ export default function DepartmentManagement() {
               </div>
             )}
         </section>
+        </>}
 
         {screen === 'form' && (
           <Popup close={() => setScreen('list')}>
@@ -337,46 +339,33 @@ export default function DepartmentManagement() {
         )}
 
         {screen === 'details' && selected && (
-          <Popup close={() => setScreen('list')}>
-            <section className="management-card department-details">
+          <section className="department-profile-view">
+            <div className="department-profile-topbar"><button className="secondary-button" onClick={() => setScreen('list')}>← Back to Departments List</button></div>
+            <article className="department-profile-card department-details department-details--professional">
             <Header
               title={selected.name}
               subtitle={`${selected.code} · ${selected.type}`}
               back={() => setScreen('list')}
+              showClose={false}
             />
-            <div className="detail-grid">
-              <div>
-                <span>Department Code</span>
-                <strong>{selected.code}</strong>
-              </div>
-              <div>
-                <span>Status</span>
-                <button
-                  className={`status-pill ${selected.status.toLowerCase()}`}
-                  onClick={() => toggleStatus(selected)}
-                >
-                  {selected.status}
-                </button>
-              </div>
-              <div>
-                <span>Head of Department</span>
-                <strong>{selected.hod}</strong>
-              </div>
-              <div>
-                <span>Programme</span>
-                <strong>{selected.type}</strong>
-              </div>
-              <div className="detail-description">
-                <span>Description</span>
-                <p>{selected.description || 'No description added.'}</p>
-              </div>
+            <div className="department-details__identity">
+              <div className="department-details__monogram">{selected.code.slice(0, 3)}</div>
+              <div><span>Academic Department</span><strong>{selected.name}</strong><small>{selected.code} · {selected.type}</small></div>
+              <button className={`status-pill ${selected.status.toLowerCase()}`} onClick={() => toggleStatus(selected)} title="Change department status">● {selected.status}</button>
+            </div>
+            <div className="detail-grid department-details__grid">
+              <div><span>Department Code</span><strong>{selected.code}</strong></div>
+              <div><span>Programme</span><strong>{selected.type}</strong></div>
+              <div><span>Head of Department</span><strong>{selected.hod === 'Not assigned' ? 'Not assigned' : selected.hod}</strong></div>
+              <div><span>Department Status</span><strong className={`department-detail-status ${selected.status.toLowerCase()}`}>{selected.status}</strong></div>
+              <div className="detail-description"><span>About this department</span><p>{selected.description || 'No description has been added for this department.'}</p></div>
             </div>
             <div className="department-branches">
-              <div><span>Associated B.Tech Branches</span><strong>{relatedBranches.length}</strong></div>
-              {relatedBranches.length ? <div className="department-branch-list">{relatedBranches.map((branch) => <Link to={`/branches/${branch.id}`} key={branch.id}><strong>{branch.code}</strong><span>{branch.name}</span></Link>)}</div> : <p>No branches are assigned to this department.</p>}
+              <div><div><span>Associated B.Tech Branches</span><small>Programmes mapped to this department</small></div><strong>{relatedBranches.length}</strong></div>
+              {relatedBranches.length ? <div className="department-branch-list">{relatedBranches.map((branch) => <Link to={`/branches/${branch.id}`} key={branch.id}><strong>{branch.code}</strong><span>{branch.name}</span><small>View branch details →</small></Link>)}</div> : <p>No branches are assigned to this department yet.</p>}
             </div>
-            </section>
-          </Popup>
+            </article>
+          </section>
         )}
 
         {screen === 'hod' && selected && (
@@ -400,16 +389,14 @@ export default function DepartmentManagement() {
   )
 }
 
-function Header({ title, subtitle, back }) {
+function Header({ title, subtitle, back, showClose = true }) {
   return (
     <div className="screen-title">
       <div>
         <h2>{title}</h2>
         <p>{subtitle}</p>
       </div>
-      <button className="department-popup-close" type="button" onClick={back} aria-label="Close popup" title="Close">
-        <X aria-hidden="true" />
-      </button>
+      {showClose && <button className="department-popup-close" type="button" onClick={back} aria-label="Close popup" title="Close"><X aria-hidden="true" /></button>}
     </div>
   )
 }
