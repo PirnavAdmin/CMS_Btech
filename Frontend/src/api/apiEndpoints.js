@@ -55,6 +55,20 @@ export const API_ENDPOINTS = Object.freeze({
     activate: (id) => endpoint(`/api/v1/academic-years/${id}/activate`),
     deactivate: (id) => endpoint(`/api/v1/academic-years/${id}/deactivate`),
   }),
+  branches: Object.freeze({
+    create: endpoint('/api/v1/branches'),
+    list: endpoint('/api/v1/branches'),
+    byCourse: (courseId) => endpoint(`/api/v1/branches/course/${courseId}`),
+    detail: (id) => endpoint(`/api/v1/branches/${id}`),
+    update: (id) => endpoint(`/api/v1/branches/${id}`),
+  }),
+  courseStructures: Object.freeze({
+    create: endpoint('/api/v1/course-structures'),
+    list: endpoint('/api/v1/course-structures'),
+    byCourse: (courseId) => endpoint(`/api/v1/course-structures/course/${courseId}`),
+    detail: (id) => endpoint(`/api/v1/course-structures/${id}`),
+    update: (id) => endpoint(`/api/v1/course-structures/${id}`),
+  }),
   sectionAssignments: Object.freeze({
     list: endpoint('/api/v1/section-assignments'),
     assign: (sectionId) => endpoint(`/api/v1/sections/${sectionId}/students`),
@@ -248,6 +262,68 @@ export const academicYearApi = {
     const response = await request(API_ENDPOINTS.academicYears.deactivate(id), { method: 'PATCH' })
     return response?.data
   },
+}
+
+const branchPayload = (branch) => ({
+  courseId: Number(branch.courseId),
+  branchCode: String(branch.code || branch.branchCode || '').trim().toUpperCase(),
+  branchName: String(branch.name || branch.branchName || '').trim(),
+  shortName: String(branch.shortName || '').trim() || null,
+  specialization: branch.specialization || null,
+  departmentId: Number(branch.departmentId),
+  branchType: branch.branchType || 'Core',
+  duration: Number(branch.duration || branch.durationValue || 4),
+  totalSemesters: Number(branch.totalSemesters || branch.semesters || 8),
+  intakeCapacity: Number(branch.intakeCapacity ?? branch.intake),
+  startingAcademicYearId: branch.startingAcademicYearId || null,
+  description: String(branch.description || '').trim() || null,
+  status: branch.status === 'Inactive' || Number(branch.status) === 0 ? 0 : 1,
+})
+
+export const branchApi = {
+  getAll: async () => {
+    const response = await request(API_ENDPOINTS.branches.list)
+    return Array.isArray(response?.data) ? response.data : []
+  },
+  getByCourse: async (courseId) => {
+    const response = await request(API_ENDPOINTS.branches.byCourse(courseId))
+    return Array.isArray(response?.data) ? response.data : []
+  },
+  getById: async (id) => {
+    const response = await request(API_ENDPOINTS.branches.detail(id))
+    return response?.data
+  },
+  create: async (branch) => {
+    const response = await request(API_ENDPOINTS.branches.create, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(branchPayload(branch)) })
+    return response?.data
+  },
+  update: async (id, branch) => {
+    const response = await request(API_ENDPOINTS.branches.update(id), { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(branchPayload(branch)) })
+    return response?.data
+  },
+}
+
+const courseStructurePayload = (structure) => ({
+  courseId: Number(structure.courseId),
+  branchId: Number(structure.branchId),
+  yearNumber: Number(structure.yearNumber),
+  semesterNumber: Number(structure.semesterNumber),
+  semesterName: String(structure.semesterName || `Semester ${structure.semesterNumber}`).trim(),
+  ...(structure.status !== undefined ? { status: Number(structure.status) === 0 || structure.status === 'Inactive' ? 0 : 1 } : {}),
+})
+
+export const courseStructureApi = {
+  getAll: async () => {
+    const response = await request(API_ENDPOINTS.courseStructures.list)
+    return Array.isArray(response?.data) ? response.data : []
+  },
+  getByCourse: async (courseId) => {
+    const response = await request(API_ENDPOINTS.courseStructures.byCourse(courseId))
+    return Array.isArray(response?.data) ? response.data : []
+  },
+  getById: async (id) => (await request(API_ENDPOINTS.courseStructures.detail(id)))?.data,
+  create: async (structure) => (await request(API_ENDPOINTS.courseStructures.create, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(courseStructurePayload(structure)) }))?.data,
+  update: async (id, structure) => (await request(API_ENDPOINTS.courseStructures.update(id), { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(courseStructurePayload(structure)) }))?.data,
 }
 
 export const sectionAssignmentApi = {
