@@ -6,7 +6,7 @@ import { AuthRequestError, login } from '../api/apiEndpoints'
 import { validateLogin } from '../auth/loginValidation'
 import { ROLES } from '../auth/roles'
 import ForgotPassword from './ForgotPassword'
-import { FiBell, FiBookOpen, FiCalendar, FiFileText, FiHelpCircle, FiLock, FiX } from 'react-icons/fi'
+import { FiArrowLeft, FiBell, FiBookOpen, FiCalendar, FiFileText, FiX } from 'react-icons/fi'
 import campusHero from '../assets/college-campus-hero.png'
 import './Login.css'
 
@@ -184,7 +184,7 @@ export default function Login() {
 
       <section className="login-panel" aria-labelledby="login-title">
         <Link className="login-home-link" to="/" aria-label="Return to home">
-          <span aria-hidden="true">←</span> Home
+          <FiArrowLeft aria-hidden="true" /> Home
         </Link>
         {viewMode === 'login' && (
           <form className="login-form" onSubmit={handleSubmit} noValidate>
@@ -270,8 +270,6 @@ export default function Login() {
               {isSubmitting ? 'Signing in...' : 'Login to Digital Campus'}
             </button>
             <p className="account-link">Don&apos;t have an account? <Link to="/register">Request access</Link></p>
-            <div className="pirnav-security"><FiLock /><span><strong>Protected Login</strong><small>Your information is secured through authenticated access.</small></span></div>
-            <div className="pirnav-help"><FiHelpCircle /><span><strong>Need help?</strong><small>Contact college support Monday–Saturday, 9:00 AM–5:00 PM.</small></span></div>
             <div className="pirnav-highlights"><span>Autonomous Institution</span><span>AICTE Approved</span><span>Modern Laboratories</span></div>
             <p className="access-note">© {new Date().getFullYear()} Pirnav Engineering College. All rights reserved.</p>
           </form>
