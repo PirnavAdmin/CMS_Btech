@@ -180,7 +180,7 @@ const normalizeProfile = (source) => {
   const lastLoginAt = data.lastLoginAt ?? data.last_login_at ?? data.LastLoginAt ?? ''
   return {
     id: data.userId ?? '', identifier: data.employeeUserId ?? '', fullName: data.fullName ?? '',
-    email: data.email ?? '', mobile: data.mobile ?? '', role: Array.isArray(data.roles) ? data.roles.join(', ') : '',
+    email: data.email ?? '', mobile: data.mobile ?? '', role: Array.isArray(data.roles) ? data.roles.join(', ') : String(data.role ?? ''),
     dateOfBirth: data.dateOfBirth ?? '', gender: data.gender ?? '', department: data.department ?? '',
     designation: data.designation ?? '', address: data.address ?? '', postalCode: data.postalCode ?? '',
     city: data.city ?? '', district: data.district ?? '', state: data.state ?? '', bio: data.bio ?? '',
@@ -205,8 +205,7 @@ export const profileApi = {
         mobile: String(profile.mobile || '').trim(),
       }),
     })
-    if (!response?.data) throw new Error(response?.message || 'The server did not confirm the profile update.')
-    return normalizeProfile(response?.data)
+    return normalizeProfile(response?.data || {})
   },
 }
 

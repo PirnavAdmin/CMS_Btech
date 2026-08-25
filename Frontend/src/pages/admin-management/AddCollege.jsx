@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import DashboardLayout from '../../layouts/DashboardLayout'
+import { createCollege } from '../../auth/collegeApi'
 import './AddCollege.css'
 
 const TYPES = ['Engineering College', 'University', 'Autonomous College', 'Affiliated College', 'Deemed University', 'Other']
@@ -162,18 +163,16 @@ export default function AddCollege() {
     if (!isValid || submitting) { setDialog(null); return }
     setSubmitting(true)
     try {
-      await new Promise((resolve) => setTimeout(resolve, 650))
-      const current = JSON.parse(localStorage.getItem('btechms_colleges') || '[]')
       const college = {
-        id: Date.now(), name: values.collegeName.trim(), code: values.collegeCode, type: values.collegeType,
+        name: values.collegeName.trim(), code: values.collegeCode, type: values.collegeType,
         university: values.universityName.trim(), address: [values.addressLine1, values.addressLine2].filter(Boolean).join(', '),
         city: values.city.trim(), state: values.state.trim(), pincode: values.pincode, contact: values.contactNumber,
         email: values.email.trim(), website: values.website.trim(), logo: values.logo, principal: values.principalName.trim(),
-        accreditation: [values.accreditationBody, values.accreditationGrade, values.accreditationNumber].filter(Boolean).join(' · '), status: 'active',
+        accreditation: [values.accreditationBody, values.accreditationGrade, values.accreditationNumber].filter(Boolean).join(' · '),
       }
-      localStorage.setItem('btechms_colleges', JSON.stringify([...current, college]))
+      await createCollege(college)
       setDirty(false); setDialog('success')
-    } catch { setNotice('Unexpected error. The college could not be created.'); setDialog(null) }
+    } catch (error) { setNotice(error?.response?.data?.message || error?.response?.data?.error || error?.message || 'Unexpected error. The college could not be created.'); setDialog(null) }
     finally { setSubmitting(false) }
   }
 
