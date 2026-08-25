@@ -149,3 +149,20 @@ html,body,#root{max-width:100%;overflow-x:hidden}
 .dashboard-layout>main{box-sizing:border-box}
 .dashboard-header .account-menu__panel{z-index:60;max-width:calc(100vw - 28px)}
 @media(max-width:540px){.dashboard-header .account-menu__panel{right:0;width:min(200px,calc(100vw - 28px))}}
+
+:root[data-theme="dark"] .page-content .section-assignment-panel{border-color:var(--border)!important;color:var(--text-primary)!important;background:var(--surface-raised)!important;box-shadow:var(--shadow-md)}
+:root[data-theme="dark"] .page-content .section-assignment-panel>header,:root[data-theme="dark"] .page-content .section-assignment-form,:root[data-theme="dark"] .page-content .section-assignment-panel>footer{border-color:var(--border)!important;background:var(--surface)!important}
+:root[data-theme="dark"] .page-content .section-assignment-panel header p,:root[data-theme="dark"] .page-content .section-assignment-panel h2,:root[data-theme="dark"] .page-content .section-assignment-form h3,:root[data-theme="dark"] .page-content .section-assigned-list h3,:root[data-theme="dark"] .page-content .section-capacity strong{color:var(--text-primary)!important}
+:root[data-theme="dark"] .page-content .section-assignment-panel header span,:root[data-theme="dark"] .page-content .section-capacity span,:root[data-theme="dark"] .page-content .section-assigned-list p{color:var(--text-muted)!important}
+:root[data-theme="dark"] .page-content .section-capacity,:root[data-theme="dark"] .page-content .section-assigned-list li{border-color:var(--border)!important}
+:root[data-theme="dark"] .page-content .section-capacity i{background:var(--surface-soft)!important}
+:root[data-theme="dark"] .page-content .section-assignment-form label{color:var(--text-primary)!important}
+:root[data-theme="dark"] .page-content .section-assignment-form input,:root[data-theme="dark"] .page-content .section-assigned-list li{border-color:var(--border-strong)!important;background:var(--surface-soft)!important;color:var(--text-primary)!important}
+:root[data-theme="dark"] .page-content .section-assignment-form input::placeholder{color:var(--text-muted)!important}
+:root[data-theme="dark"] .page-content .section-assignment-panel header>button,:root[data-theme="dark"] .page-content .section-assigned-list button{border-color:var(--border)!important;background:var(--surface-raised)!important;color:var(--brand)!important}
+:root[data-theme="dark"] .page-content .section-assignment-chooser button,:root[data-theme="dark"] .page-content .section-assignment-form-head button{border-color:var(--border)!important;background:var(--surface-soft)!important;color:var(--text-primary)!important}
+:root[data-theme="dark"] .page-content .section-assignment-chooser button:hover{border-color:var(--brand)!important;background:var(--surface-raised)!important}
+:root[data-theme="dark"] .page-content .section-assignment-chooser strong{color:var(--text-primary)!important}
+:root[data-theme="dark"] .page-content .section-assignment-chooser small{color:var(--text-muted)!important}
+:root[data-theme="dark"] .page-content .section-assignment-panel>footer button{border:0!important;background:var(--brand)!important;color:#07131e!important}
+:root[data-theme="dark"] .page-content .section-assignment-panel>footer button:hover{background:var(--brand-hover)!important}
