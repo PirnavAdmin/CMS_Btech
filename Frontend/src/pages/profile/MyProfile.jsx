@@ -189,13 +189,7 @@ export default function MyProfile() {
       const saved = await profileApi.updateProfile(draft)
       const completeProfile = {
         ...draft,
-        fullName: saved.fullName || draft.fullName,
-        email: saved.email || draft.email,
-        mobile: saved.mobile || draft.mobile,
-        role: saved.role || draft.role,
-        identifier: saved.identifier || draft.identifier,
-        lastLoginAt: saved.lastLoginAt || draft.lastLoginAt,
-        updatedAt: saved.updatedAt || draft.updatedAt,
+        ...Object.fromEntries(Object.entries(saved).filter(([, value]) => value !== null && value !== undefined && value !== '')),
       }
       setProfile(completeProfile)
       setDraft(completeProfile)
@@ -238,9 +232,9 @@ export default function MyProfile() {
           <button type="button" role="tab" aria-selected={activeSection === 'address'} aria-controls="profile-address-panel" className={`${activeSection === 'address' ? 'active' : ''} ${completedSections.includes('address') ? 'completed' : ''}`} disabled={editing && maxUnlockedStep < 2} onClick={() => setActiveSection('address')}><i className="profile-tab-number">{completedSections.includes('address') ? '✓' : '3'}</i><Icon name="location" /><span><b>Address & Bio</b><small>Location and profile</small></span></button>
         </nav>
         {activeSection === 'personal' && <div id="profile-personal-panel" className="profile-panel" role="tabpanel"><div className="profile-panel-title"><h3>Personal details</h3><p>Manage your name and primary contact information.</p></div><div className="profile-fields">
-          <label className="profile-field"><span>Full name <b>*</b></span><div className="profile-input"><Icon name="user" /><input name="fullName" value={draft.fullName} onChange={update} disabled={!editing} aria-invalid={Boolean(errors.fullName)} /></div>{errors.fullName && <small>{errors.fullName}</small>}</label>
-          <label className="profile-field"><span>Email address <b>*</b></span><div className="profile-input"><Icon name="mail" /><input name="email" type="email" value={draft.email} onChange={update} disabled={!editing} aria-invalid={Boolean(errors.email)} /></div>{errors.email && <small>{errors.email}</small>}</label>
-          <label className="profile-field"><span>Mobile number <b>*</b></span><div className="profile-input"><Icon name="phone" /><input name="mobile" inputMode="numeric" value={draft.mobile} onChange={update} disabled={!editing} aria-invalid={Boolean(errors.mobile)} /></div>{errors.mobile && <small>{errors.mobile}</small>}</label>
+          <label className="profile-field"><span>Full name <b>*</b></span><div className="profile-input"><Icon name="user" /><input name="fullName" value={draft.fullName} onChange={update} disabled={!editing} placeholder="Enter your full name" aria-invalid={Boolean(errors.fullName)} /></div>{errors.fullName && <small>{errors.fullName}</small>}</label>
+          <label className="profile-field"><span>Email address <b>*</b></span><div className="profile-input"><Icon name="mail" /><input name="email" type="email" value={draft.email} onChange={update} disabled={!editing} placeholder="name@college.edu" aria-invalid={Boolean(errors.email)} /></div>{errors.email && <small>{errors.email}</small>}</label>
+          <label className="profile-field"><span>Mobile number <b>*</b></span><div className="profile-input"><Icon name="phone" /><input name="mobile" inputMode="numeric" value={draft.mobile} onChange={update} disabled={!editing} placeholder="10-digit mobile number" aria-invalid={Boolean(errors.mobile)} /></div>{errors.mobile && <small>{errors.mobile}</small>}</label>
           <label className="profile-field"><span>Assigned role</span><div className="profile-input readonly"><Icon name="shield" /><input value={draft.role || 'User'} disabled /></div><em>Roles are managed by your administrator.</em></label>
         </div></div>}
         {activeSection === 'institutional' && <div id="profile-institutional-panel" className="profile-panel" role="tabpanel"><div className="profile-panel-title"><h3>Institutional details</h3><p>Your academic and institutional information.</p></div><div className="profile-fields">
