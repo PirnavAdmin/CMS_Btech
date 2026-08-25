@@ -6,7 +6,7 @@ import { AuthRequestError, login } from '../api/apiEndpoints'
 import { validateLogin } from '../auth/loginValidation'
 import { ROLES } from '../auth/roles'
 import ForgotPassword from './ForgotPassword'
-import { FiBell, FiBookOpen, FiCalendar, FiFileText, FiHelpCircle, FiLock } from 'react-icons/fi'
+import { FiBell, FiBookOpen, FiCalendar, FiFileText, FiHelpCircle, FiLock, FiX } from 'react-icons/fi'
 import campusHero from '../assets/college-campus-hero.png'
 import './Login.css'
 
@@ -194,7 +194,7 @@ export default function Login() {
               <h2 id="login-title">Welcome back</h2>
               <p>Sign in with your college credentials to continue to the digital campus.</p>
             </header>
-            {logoutMessage && <div className="logout-success" role="status"><span>{logoutMessage}</span><button type="button" onClick={() => setLogoutMessage('')} aria-label="Dismiss signed out message">×</button></div>}
+            {logoutMessage && <div className="logout-success" role="status"><span>{logoutMessage}</span><button type="button" onClick={() => setLogoutMessage('')} aria-label="Dismiss signed out message"><FiX aria-hidden="true" /></button></div>}
             <label htmlFor="identifier">
               <span>College Email / Mobile / ID</span>
               <input

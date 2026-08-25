@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { AuthRequestError, generateOtp, resendOtp, verifyOtp, resetPassword } from '../auth/authApi'
+import { FiArrowLeft } from 'react-icons/fi'
 import './ForgotPassword.css'
 
 const isValidContact = (value, method) => method === 'email'
@@ -132,7 +133,7 @@ export default function ForgotPassword({ onBack }) {
       <label htmlFor="recovery-contact"><span>{method === 'email' ? 'Email ID' : 'Mobile number'}</span><input id="recovery-contact" type="text" inputMode={method === 'email' ? 'email' : 'numeric'} autoComplete={method === 'email' ? 'email' : 'tel'} maxLength={method === 'mobile' ? 10 : undefined} placeholder={method === 'email' ? 'Enter email ID' : 'Enter mobile number'} value={contact} onChange={(event) => { setContact(method === 'mobile' ? event.target.value.replace(/\D/g, '') : event.target.value); setError('') }} aria-invalid={Boolean(error)} /></label>
       {error && <p className="form-error" role="alert">{error}</p>}
       <button className="sign-in-button" type="submit" disabled={loading}>{loading ? 'Sending...' : 'Send Verification Code'}</button>
-      <button type="button" className="text-button back-to-login" onClick={onBack}>← Back to Sign In</button>
+      <button type="button" className="text-button back-to-login" onClick={onBack}><FiArrowLeft aria-hidden="true" /> Back to Sign In</button>
     </form>
   )
 }

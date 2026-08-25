@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { ArrowLeft, CheckCircle as FiCheckCircle, Eye as FiEye, Layers as FiLayers, ListFilter as FiSliders, Pencil as FiEdit3, Plus as FiPlus, Save, Search as FiSearch, UserPlus as FiUserPlus, X } from 'lucide-react'
+import { FiArrowLeft as ArrowLeft, FiCheckCircle, FiEye, FiLayers, FiSliders, FiEdit3, FiPlus, FiSave as Save, FiSearch, FiUserPlus, FiX as X } from 'react-icons/fi'
 import DashboardLayout from '../../layouts/DashboardLayout'
 import { getBranches } from '../courseManagement/Course'
 import './DepartmentManagement.css'

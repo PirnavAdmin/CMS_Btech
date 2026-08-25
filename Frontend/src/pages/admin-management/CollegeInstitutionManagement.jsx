@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Eye as EyeIcon, Pencil as EditIcon, Plus, Settings, Trash2 as TrashIcon } from 'lucide-react'
+import { FiEye as EyeIcon, FiEdit2 as EditIcon, FiPlus as Plus, FiSettings as Settings, FiTrash2 as TrashIcon } from 'react-icons/fi'
 import DashboardLayout from '../../layouts/DashboardLayout'
 import { createCollegeSettings, getCollegeSettings, updateCollegeSettings } from '../../auth/collegeApi'
 import './CollegeInstitutionManagement.css'

@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
-import { FiBookOpen, FiCalendar, FiGitBranch, FiGrid, FiHome, FiLayers, FiMenu, FiMoon, FiSettings, FiSun, FiUser, FiUsers } from 'react-icons/fi'
+import { FiBookOpen, FiCalendar, FiGitBranch, FiGrid, FiHome, FiLayers, FiLock, FiLogOut, FiMenu, FiMoon, FiSettings, FiSun, FiUser, FiUsers } from 'react-icons/fi'
 import { getUserRole, signOut } from '../auth/auth'
 import Sidebar from '../components/Sidebar'
 import './DashboardLayout.css'
@@ -244,10 +244,7 @@ export default function DashboardLayout({ children }) {
           <details className="account-menu" ref={accountMenuRef}>
             <summary aria-label="Open account menu">
               <span className="account-avatar">
-                <svg viewBox="0 0 24 24" aria-hidden="true">
-                  <circle cx="12" cy="8" r="3.5" />
-                  <path d="M5.5 20c.6-4.1 2.8-6.2 6.5-6.2s5.9 2.1 6.5 6.2" />
-                </svg>
+                <FiUser aria-hidden="true" />
               </span>
 
               <span>
@@ -260,10 +257,7 @@ export default function DashboardLayout({ children }) {
 
             <div className="account-menu__panel">
               <button type="button" onClick={() => navigate('/my-profile')}>
-                <svg viewBox="0 0 24 24" aria-hidden="true">
-                  <circle cx="12" cy="8" r="3.5" />
-                  <path d="M5.5 20c.7-4.1 2.9-6.2 6.5-6.2s5.8 2.1 6.5 6.2" />
-                </svg>
+                <FiUser aria-hidden="true" />
                 My Profile
               </button>
 
@@ -277,10 +271,7 @@ export default function DashboardLayout({ children }) {
                   setOpen(true)
                 }}
               >
-                <svg viewBox="0 0 24 24" aria-hidden="true">
-                  <rect x="5" y="10" width="14" height="10" rx="2" />
-                  <path d="M8 10V7a4 4 0 0 1 8 0v3M12 14v2.5" />
-                </svg>
+                <FiLock aria-hidden="true" />
                 Change Password
               </button>
 
@@ -289,10 +280,7 @@ export default function DashboardLayout({ children }) {
                 className="account-menu__signout"
                 onClick={requestSignOut}
               >
-                <svg viewBox="0 0 24 24" aria-hidden="true">
-                  <path d="M10 5H5.5A1.5 1.5 0 0 0 4 6.5v11A1.5 1.5 0 0 0 5.5 19H10" />
-                  <path d="M14 8l4 4-4 4M8 12h10" />
-                </svg>
+                <FiLogOut aria-hidden="true" />
                 Sign Out
               </button>
             </div>
@@ -320,10 +308,7 @@ export default function DashboardLayout({ children }) {
               aria-describedby="logout-confirmation-description"
             >
               <div className="logout-confirmation__icon" aria-hidden="true">
-                <svg viewBox="0 0 24 24">
-                  <path d="M10 5H5.5A1.5 1.5 0 0 0 4 6.5v11A1.5 1.5 0 0 0 5.5 19H10" />
-                  <path d="M14 8l4 4-4 4M8 12h10" />
-                </svg>
+                <FiLogOut aria-hidden="true" />
               </div>
 
               <p className="logout-confirmation__eyebrow">Account access</p>

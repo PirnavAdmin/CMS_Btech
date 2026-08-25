@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
-import { ArrowLeft, Eye, GitBranch, Network, Pencil, Save, Trash2 } from 'lucide-react'
+import { FiArrowLeft, FiEye, FiGitBranch, FiShare2, FiEdit2, FiSave, FiTrash2 } from 'react-icons/fi'
 import DashboardLayout from '../../layouts/DashboardLayout'
 import './Course.css'
 
@@ -30,7 +30,7 @@ export const getStructures = () => { try { return JSON.parse(localStorage.getIte
 export const saveCourse = (value) => { const rows = getCourses(); const now = new Date().toISOString().slice(0, 10); const row = { ...value, id: value.id || crypto.randomUUID(), createdAt: value.createdAt || now, updatedAt: now }; localStorage.setItem(COURSE_KEY, JSON.stringify(value.id ? rows.map((item) => item.id === value.id ? row : item) : [...rows, row])); return row }
 export const saveBranch = (value) => { const rows = getBranches(); const now = new Date().toISOString().slice(0, 10); const row = { ...value, id: value.id || crypto.randomUUID(), createdAt: value.createdAt || now, updatedAt: now }; localStorage.setItem(BRANCH_KEY, JSON.stringify(value.id ? rows.map((item) => item.id === value.id ? row : item) : [...rows, row])); return row }
 export const saveStructures = (value) => { localStorage.setItem(STRUCTURE_KEY, JSON.stringify(value)); return value }
-const ActionIcon = ({ label }) => { const Icon = label.includes('View') ? Eye : label.includes('Edit') ? Pencil : label.includes('Branch') ? GitBranch : label.includes('Structure') ? Network : label.includes('Back') || label === 'Cancel' ? ArrowLeft : label.includes('Remove') ? Trash2 : Save; return <Icon aria-hidden="true" /> }
+const ActionIcon = ({ label }) => { const Icon = label.includes('View') ? FiEye : label.includes('Edit') ? FiEdit2 : label.includes('Branch') ? FiGitBranch : label.includes('Structure') ? FiShare2 : label.includes('Back') || label === 'Cancel' ? FiArrowLeft : label.includes('Remove') ? FiTrash2 : FiSave; return <Icon aria-hidden="true" /> }
 const Button = ({ to, children, ...props }) => to ? <Link className="cm-button secondary" to={to}><ActionIcon label={String(children)} />{children}</Link> : <button type="button" className="cm-button" {...props}><ActionIcon label={String(children)} />{children}</button>
 
 function CourseList() {
