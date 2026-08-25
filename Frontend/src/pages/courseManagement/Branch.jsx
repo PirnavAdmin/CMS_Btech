@@ -11,7 +11,7 @@ const intake = (branch) => Number(branch.intakeCapacity ?? branch.intake ?? 0)
 const branchType = (branch) => branch.branchType || (branch.specialization ? 'Specialization' : 'Core')
 const suggestedCode = (name) => { const known = { 'computer science and engineering': 'CSE', 'artificial intelligence and machine learning': 'AIML', 'electronics and communication engineering': 'ECE', 'electrical and electronics engineering': 'EEE', 'mechanical engineering': 'ME', 'civil engineering': 'CE', 'data science': 'DS' }; return known[name.trim().toLowerCase()] || name.split(/\s+/).filter((word) => word && !['and', '&', 'of', 'the'].includes(word.toLowerCase())).map((word) => word[0]).join('').slice(0, 8).toUpperCase() }
 const Page = ({ children }) => <DashboardLayout><main className="cm-page branch-management">{children}</main></DashboardLayout>
-const Header = ({ title, text, children }) => <header className="cm-header"><div><span className="cm-eyebrow">Academic Management</span><h1>{title}</h1><p>{text}</p></div><div className="cm-row-actions">{children}</div></header>
+const Header = ({ title, text, children }) => <header className="cm-header"><div><h1>{title}</h1><p>{text}</p></div><div className="cm-row-actions">{children}</div></header>
 const Field = ({ label, error, wide, children }) => label === 'Description' ? null : <label className={`cm-field ${wide ? 'wide' : ''}`}><span>{label}</span>{children}{error && <small className="cm-error" role="alert">{error}</small>}</label>
 const Badge = ({ value, type = 'status' }) => <span className={`branch-badge ${type} ${String(value).toLowerCase()}`}>{type === 'status' && <i />}{value}</span>
 

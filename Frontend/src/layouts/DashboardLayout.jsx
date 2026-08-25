@@ -33,7 +33,7 @@ export default function DashboardLayout({ children }) {
     '/dashboard': 'Dashboard', '/my-profile': 'My Profile', '/settings': 'Settings',
     '/college-institution-management': 'College / Institution', '/academic-year-management': 'Academic Years',
     '/department-management': 'Departments', '/semester-management': 'Semesters', '/section-management': 'Sections',
-  })[pathname] || (pathname.startsWith('/courses') ? 'Courses / Programmes' : pathname.startsWith('/branches') ? 'Branches' : 'Digital Campus')
+  })[pathname] || (pathname.startsWith('/courses') ? 'Courses' : pathname.startsWith('/branches') ? 'Branches' : 'Digital Campus')
   const breadcrumbSection = ['My Profile', 'Settings'].includes(pageName) ? 'Account' : pageName === 'Dashboard' ? 'Digital Campus' : 'Academic Configuration'
 
   // Logout confirmation state
@@ -229,7 +229,7 @@ export default function DashboardLayout({ children }) {
         <header className="dashboard-header">
           <div className="dashboard-header__context"><button className="mobile-menu-button" onClick={() => setSidebarOpen(true)} aria-label="Open navigation"><FiMenu /></button></div>
 
-          <div className="global-search"><FiSearch aria-hidden="true" /><input aria-label="Search modules" value={globalQuery} onChange={(event) => setGlobalQuery(event.target.value)} placeholder="Search modules..." />{globalResults.length > 0 && <div className="global-search-results">{globalResults.map(([label, to]) => <Link to={to} key={to} onClick={() => setGlobalQuery('')}>{label}</Link>)}</div>}</div>
+          <div className="global-search"><FiSearch aria-hidden="true" /><input aria-label="Search modules" value={globalQuery} onChange={(event) => setGlobalQuery(event.target.value)} placeholder="Search" />{globalResults.length > 0 && <div className="global-search-results">{globalResults.map(([label, to]) => <Link to={to} key={to} onClick={() => setGlobalQuery('')}>{label}</Link>)}</div>}</div>
 
           <div className="dashboard-header__actions">
           <button className="theme-toggle" onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')} aria-label={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`} title={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}>{theme === 'dark' ? <FiSun /> : <FiMoon />}</button>
