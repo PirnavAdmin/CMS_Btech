@@ -16,11 +16,12 @@ const Badge=({value,kind='status'})=><span className={`branch-badge ${kind} ${St
 const Notice=({children})=>children?<p className="branch-api-error" role="alert"><FiAlertCircle/>{children}</p>:null
 const Field=({label,error,wide,children})=><label className={`cm-field ${wide?'wide':''}`}><span>{label}</span>{children}{error&&<small className="cm-error">{error}</small>}</label>
 const codeFor=name=>name.split(/\s+/).filter(Boolean).filter(w=>!['and','&','of','the'].includes(w.toLowerCase())).map(w=>w[0]).join('').slice(0,8).toUpperCase()
+const isProfileLookupError=error=>/profile\s+not\s+found/i.test(String(error?.message||error||''))
 
 function List(){
  const [params]=useSearchParams(),departments=getDepartments(),courses=getCourses().filter(isBtech),[branches,setBranches]=useState(()=>getBranches().map(normalize)),[loading,setLoading]=useState(true),[error,setError]=useState('')
  const [filters,setFilters]=useState({query:'',departmentId:'',courseId:params.get('course')||'',branchType:'',status:''})
- const load=async(courseId='')=>{setLoading(true);try{setBranches((courseId?await branchApi.getByCourse(courseId):await branchApi.getAll()).map(normalize));setError('')}catch(e){setError(e.message||'Unable to load branches.')}finally{setLoading(false)}}
+ const load=async(courseId='')=>{setLoading(true);try{setBranches((courseId?await branchApi.getByCourse(courseId):await branchApi.getAll()).map(normalize));setError('')}catch(e){if(!isProfileLookupError(e))setError(e.message||'Unable to load branches.')}finally{setLoading(false)}}
  useEffect(()=>{load(filters.courseId)},[filters.courseId])
  const dep=id=>departments.find(x=>String(x.id)===String(id))?.name||branches.find(x=>String(x.departmentId)===String(id))?.departmentName||'Not available',course=id=>courses.find(x=>String(x.id)===String(id))?.shortName||branches.find(x=>String(x.courseId)===String(id))?.courseName||'Not available'
  const rows=useMemo(()=>branches.filter(b=>`${b.name} ${b.code} ${b.departmentName||dep(b.departmentId)} ${b.courseName||course(b.courseId)}`.toLowerCase().includes(filters.query.toLowerCase())&&(!filters.departmentId||String(b.departmentId)===filters.departmentId)&&(!filters.courseId||String(b.courseId)===filters.courseId)&&(!filters.branchType||type(b)===filters.branchType)&&(!filters.status||b.status===filters.status)),[branches,filters])
