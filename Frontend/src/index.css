@@ -62,6 +62,9 @@ body::-webkit-scrollbar,
 
 a:hover { color: #095e9f; text-decoration-thickness: 2px; text-underline-offset: 3px; }
 
+/* Preserve contrast when the shared hover treatment reaches primary actions. */
+:where(.cm-button:not(.secondary),.cm-primary-btn,.primary-button,.section-primary,.semester-primary,.ac-primary,.profile-button:not(.secondary),.settings-button,.sign-in-button):hover{color:#fff!important}
+
 :where(input:not([type="checkbox"]):not([type="radio"]):not([type="file"]), select, textarea):not(:disabled):hover {
   border-color: #78acd1;
   box-shadow: 0 2px 8px rgba(25, 112, 179, .08);

@@ -247,10 +247,6 @@ export default function DepartmentManagement() {
               <p className="department-no-results">No departments match your search.</p>
             ) : (
               <div className="department-pagination">
-                <div className="pagination-info">
-                  Showing {Math.min((currentPageClamped - 1) * itemsPerPage + 1, visible.length)} to{' '}
-                  {Math.min(currentPageClamped * itemsPerPage, visible.length)} of {visible.length} departments
-                </div>
                 <div className="pagination-controls">
                   <button
                     className="pagination-btn"

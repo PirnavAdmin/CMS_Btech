@@ -1,3 +1,4 @@
+.college-management .cm-pagination{justify-content:flex-end}
 @scope (.college-management) {
 .college-management {
   padding: 0;
