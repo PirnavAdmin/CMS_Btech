@@ -84,6 +84,12 @@ export const API_ENDPOINTS = Object.freeze({
     status: (id) => endpoint(`/api/v1/sections/${id}/status`),
     validateCapacity: endpoint('/api/v1/sections/validate-capacity'),
     summary: endpoint('/api/v1/sections/summary'),
+    classTeacher: (id) => endpoint(`/api/v1/sections/${id}/class-teacher`),
+    classTeacherCandidates: (id) => endpoint(`/api/v1/sections/${id}/class-teacher-candidates`),
+    capacity: (id) => endpoint(`/api/v1/sections/${id}/capacity`),
+    students: (id) => endpoint(`/api/v1/sections/${id}/students`),
+    assignStudents: (id) => endpoint(`/api/v1/sections/${id}/students/assign`),
+    student: (sectionId, studentId) => endpoint(`/api/v1/sections/${sectionId}/students/${studentId}`),
   }),
   authorizationTest: Object.freeze({
     authenticated: endpoint('/api/v1/authorization-test/authenticated'),
@@ -343,17 +349,19 @@ export const sectionAssignmentApi = {
     const response = await request(API_ENDPOINTS.sectionAssignments.list)
     return Array.isArray(response?.data) ? response.data : []
   },
-  assign: async (sectionId, assignment) => {
-    const response = await request(API_ENDPOINTS.sectionAssignments.assign(sectionId), {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ studentId: assignment.studentId, studentName: assignment.studentName }),
-    })
-    return response?.data
-  },
+  assign: async (sectionId, assignment) => request(API_ENDPOINTS.sections.assignStudents(sectionId), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ studentIds: [Number(assignment.studentId)] }) }),
   remove: async (sectionId, assignmentId) => {
-    await request(API_ENDPOINTS.sectionAssignments.remove(sectionId, assignmentId), { method: 'DELETE' })
+    await request(API_ENDPOINTS.sections.student(sectionId, assignmentId), { method: 'DELETE' })
   },
+  listBySection: async (sectionId) => (await request(API_ENDPOINTS.sections.students(sectionId)))?.data || [],
+}
+
+export const sectionAllocationApi = {
+  getTeacher: async (sectionId) => (await request(API_ENDPOINTS.sections.classTeacher(sectionId)))?.data,
+  getTeacherCandidates: async (sectionId) => (await request(API_ENDPOINTS.sections.classTeacherCandidates(sectionId)))?.data || [],
+  assignTeacher: async (sectionId, employeeProfileId) => (await request(API_ENDPOINTS.sections.classTeacher(sectionId), { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ employeeProfileId: Number(employeeProfileId) }) }))?.data,
+  removeTeacher: async (sectionId) => request(API_ENDPOINTS.sections.classTeacher(sectionId), { method: 'DELETE' }),
+  getCapacity: async (sectionId) => (await request(API_ENDPOINTS.sections.capacity(sectionId)))?.data,
 }
 
 const sectionPayload = (section) => ({
