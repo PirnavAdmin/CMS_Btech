@@ -1,6 +1,10 @@
-const baseUrl = (import.meta.env.VITE_API_BASE_URL || "").replace(/\/+$/, "");
+const cleanUrl = (url) => (url || "").replace(/\/+$/, "");
 
-const createClient = (prefix) => {
+const collegesBaseUrl = cleanUrl(import.meta.env.VITE_API_BASE_URL_COLLEGES);
+const academicBaseUrl = cleanUrl(import.meta.env.VITE_API_BASE_URL_ACADEMIC);
+const settingsBaseUrl = cleanUrl(import.meta.env.VITE_API_BASE_URL_SETTINGS);
+
+const createClient = (baseUrl, prefix) => {
   const request = async (path, options = {}) => {
     const token = localStorage.getItem("btech-access-token");
     const response = await fetch(`${baseUrl}${prefix}${path}`, {
@@ -32,8 +36,9 @@ const createClient = (prefix) => {
   };
 };
 
-const API = createClient("/api/v1");
-const SETTINGS_API = createClient("/api");
+const API = createClient(collegesBaseUrl, "/api/v1");
+const ACADEMIC_API = createClient(academicBaseUrl, "/api/v1");
+const SETTINGS_API = createClient(settingsBaseUrl, "/api");
 
 
 // -------------------------
@@ -66,6 +71,90 @@ export const updateCollege = (id, collegeData) => {
 
 export const updateCollegeStatus = (id, status) => {
   return API.patch(`/colleges/${id}/status`, { status });
+};
+
+// -------------------------
+// DEPARTMENT APIs
+// -------------------------
+
+export const getDepartments = () => {
+  return ACADEMIC_API.get("/departments");
+};
+
+export const getDepartmentById = (id) => {
+  return ACADEMIC_API.get(`/departments/${id}`);
+};
+
+export const createDepartment = (departmentData) => {
+  return ACADEMIC_API.post("/departments", departmentData);
+};
+
+export const updateDepartment = (id, departmentData) => {
+  return ACADEMIC_API.put(`/departments/${id}`, departmentData);
+};
+
+export const updateDepartmentStatus = (id, status) => {
+  return ACADEMIC_API.patch(`/departments/${id}/status`, { status });
+};
+
+// -------------------------
+// COURSE / SEMESTER MAPPING APIs
+// -------------------------
+
+export const getCourseSemesterMappings = () => {
+  return ACADEMIC_API.get("/course-semester-mappings");
+};
+
+export const getCourseSemesterMappingById = (id) => {
+  return ACADEMIC_API.get(`/course-semester-mappings/${id}`);
+};
+
+export const createCourseSemesterMapping = (mappingData) => {
+  return ACADEMIC_API.post("/course-semester-mappings", mappingData);
+};
+
+export const updateCourseSemesterMapping = (id, mappingData) => {
+  return ACADEMIC_API.put(`/course-semester-mappings/${id}`, mappingData);
+};
+
+export const updateCourseSemesterMappingStatus = (id, status) => {
+  return ACADEMIC_API.patch(`/course-semester-mappings/${id}/status`, { status });
+};
+
+// -------------------------
+// ACADEMIC YEAR APIs
+// -------------------------
+
+export const getAcademicYearsDashboard = () => {
+  return ACADEMIC_API.get("/academic-years/dashboard");
+};
+
+export const getAcademicYears = () => {
+  return ACADEMIC_API.get("/academic-years");
+};
+
+export const getAcademicYearById = (id) => {
+  return ACADEMIC_API.get(`/academic-years/${id}`);
+};
+
+export const createAcademicYear = (academicYearData) => {
+  return ACADEMIC_API.post("/academic-years", academicYearData);
+};
+
+export const generateNextAcademicYear = (generateData) => {
+  return ACADEMIC_API.post("/academic-years/generate-next-year", generateData);
+};
+
+export const updateAcademicYear = (id, academicYearData) => {
+  return ACADEMIC_API.put(`/academic-years/${id}`, academicYearData);
+};
+
+export const activateAcademicYear = (id) => {
+  return ACADEMIC_API.patch(`/academic-years/${id}/activate`);
+};
+
+export const deactivateAcademicYear = (id) => {
+  return ACADEMIC_API.patch(`/academic-years/${id}/deactivate`);
 };
 
 

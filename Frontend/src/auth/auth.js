@@ -2,7 +2,8 @@ const AUTH_STORAGE_KEY = 'btech-authenticated'
 const ROLE_STORAGE_KEY = 'btech-user-role'
 
 function normalizeStoredRole(role) {
-  const normalizedRole = String(role || '').trim().toLowerCase().replace(/[\s-]+/g, '_')
+  const rawRole = Array.isArray(role) ? role[0] : role
+  const normalizedRole = String(rawRole || '').trim().toLowerCase().replace(/[\s-]+/g, '_')
 
   if (['admin', 'college_admin', 'super_admin'].includes(normalizedRole)) return 'admin'
   return normalizedRole

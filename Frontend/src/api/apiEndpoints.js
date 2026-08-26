@@ -4,7 +4,8 @@ export const API_BASE_URL = import.meta.env.DEV
   ? ''
   : normalizeBaseUrl(import.meta.env.VITE_API_BASE_URL)
 
-const hasConfiguredApiBaseUrl = Boolean(API_BASE_URL)
+const AUTH_LOGIN_URL = normalizeBaseUrl(import.meta.env.VITE_AUTH_API_URL)
+const hasConfiguredAuthLoginUrl = Boolean(AUTH_LOGIN_URL)
 
 const endpoint = (path) => `${API_BASE_URL}${path}`
 
@@ -16,30 +17,9 @@ export class AuthRequestError extends Error {
   }
 }
 
-function normalizeFrontendRole(roles) {
-  const roleList = Array.isArray(roles) ? roles : [roles]
-  const normalizedRoles = roleList
-    .map((role) => {
-      if (role && typeof role === 'object') {
-        return role.roleName ?? role.name ?? role.code ?? ''
-      }
-      return role ?? ''
-    })
-    .map((role) => String(role).trim().toUpperCase().replace(/[\s-]+/g, '_'))
-    .filter(Boolean)
-
-  if (normalizedRoles.some((role) => ['ADMIN', 'COLLEGE_ADMIN', 'SUPER_ADMIN'].includes(role))) {
-    return 'admin'
-  }
-  if (normalizedRoles.includes('FACULTY')) return 'faculty'
-  if (normalizedRoles.includes('STUDENT')) return 'student'
-
-  return normalizedRoles[0]?.toLowerCase() || ''
-}
-
 export const API_ENDPOINTS = Object.freeze({
   auth: Object.freeze({
-    login: endpoint('/api/v1/auth/login'),
+    login: AUTH_LOGIN_URL || endpoint('/api/v1/auth/login'),
     refresh: endpoint('/api/v1/auth/refresh'),
     forgotPassword: endpoint('/api/v1/auth/forgot-password'),
   }),
@@ -139,8 +119,8 @@ const request = async (url, options = {}, retried = false) => {
 }
 
 export async function login({ identifier, password }) {
-  // Temporary local access while no backend base URL is configured.
-  if (!hasConfiguredApiBaseUrl) {
+  // Temporary local access while no backend login endpoint is configured.
+  if (!hasConfiguredAuthLoginUrl) {
     return {
       accessToken: '',
       refreshToken: '',
@@ -152,7 +132,10 @@ export async function login({ identifier, password }) {
   try {
     response = await fetch(API_ENDPOINTS.auth.login, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        'ngrok-skip-browser-warning': 'true',
+      },
       body: JSON.stringify({ loginId: identifier, password }),
     })
   } catch {
@@ -164,15 +147,7 @@ export async function login({ identifier, password }) {
   }
   const data = body?.data
   if (!data?.accessToken || !data?.refreshToken) throw new AuthRequestError('The server returned an invalid login response.')
-  return {
-    accessToken: data.accessToken,
-    refreshToken: data.refreshToken,
-    user: {
-      id: data.userId,
-      name: data.fullName,
-      role: normalizeFrontendRole(data.roles ?? data.role),
-    },
-  }
+  return data
 }
 
 const normalizeProfile = (source) => {

@@ -4,7 +4,6 @@ import { signIn } from '../auth/auth'
 import { sendOtp, verifyOtp } from '../auth/authApi'
 import { AuthRequestError, login } from '../api/apiEndpoints'
 import { validateLogin } from '../auth/loginValidation'
-import { ROLES } from '../auth/roles'
 import ForgotPassword from './ForgotPassword'
 import { FiArrowLeft, FiBell, FiBookOpen, FiCalendar, FiFileText, FiX } from 'react-icons/fi'
 import campusHero from '../assets/college-campus-hero.png'
@@ -18,7 +17,6 @@ export default function Login() {
   const [errors, setErrors] = useState({ identifier: '', password: '' })
   const [submitError, setSubmitError] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
-  const selectedRole = ROLES.ADMIN
   const greeting = new Date().getHours() < 12 ? 'Good morning' : new Date().getHours() < 18 ? 'Good afternoon' : 'Good evening'
 
   // OTP Flow States: 'login' | 'request_otp' | 'verify_otp' | 'success'
@@ -99,8 +97,8 @@ export default function Login() {
     setIsSubmitting(true)
     setSubmitError('')
     try {
-      const session = await login({ identifier: values.identifier.trim(), password: values.password }, selectedRole)
-      signIn(session.user.role, session.accessToken, session.refreshToken)
+      const session = await login({ identifier: values.identifier.trim(), password: values.password })
+      signIn(session.roles, session.accessToken, session.refreshToken)
       navigate('/dashboard')
     } catch (error) {
       setSubmitError(error instanceof AuthRequestError ? error.message : 'Unable to sign in right now. Please try again.')
