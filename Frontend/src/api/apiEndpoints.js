@@ -35,10 +35,41 @@ export const API_ENDPOINTS = Object.freeze({
     activate: (id) => endpoint(`/api/v1/academic-years/${id}/activate`),
     deactivate: (id) => endpoint(`/api/v1/academic-years/${id}/deactivate`),
   }),
+  branches: Object.freeze({
+    create: endpoint('/api/v1/branches'),
+    list: endpoint('/api/v1/branches'),
+    byCourse: (courseId) => endpoint(`/api/v1/branches/course/${courseId}`),
+    detail: (id) => endpoint(`/api/v1/branches/${id}`),
+    update: (id) => endpoint(`/api/v1/branches/${id}`),
+  }),
+  courseStructures: Object.freeze({
+    create: endpoint('/api/v1/course-structures'),
+    list: endpoint('/api/v1/course-structures'),
+    byCourse: (courseId) => endpoint(`/api/v1/course-structures/course/${courseId}`),
+    detail: (id) => endpoint(`/api/v1/course-structures/${id}`),
+    update: (id) => endpoint(`/api/v1/course-structures/${id}`),
+  }),
   sectionAssignments: Object.freeze({
     list: endpoint('/api/v1/section-assignments'),
     assign: (sectionId) => endpoint(`/api/v1/sections/${sectionId}/students`),
     remove: (sectionId, assignmentId) => endpoint(`/api/v1/sections/${sectionId}/students/${assignmentId}`),
+  }),
+  sections: Object.freeze({
+    create: endpoint('/api/v1/sections'),
+    list: endpoint('/api/v1/sections'),
+    detail: (id) => endpoint(`/api/v1/sections/${id}`),
+    update: (id) => endpoint(`/api/v1/sections/${id}`),
+    remove: (id) => endpoint(`/api/v1/sections/${id}`),
+    search: endpoint('/api/v1/sections/search'),
+    status: (id) => endpoint(`/api/v1/sections/${id}/status`),
+    validateCapacity: endpoint('/api/v1/sections/validate-capacity'),
+    summary: endpoint('/api/v1/sections/summary'),
+    classTeacher: (id) => endpoint(`/api/v1/sections/${id}/class-teacher`),
+    classTeacherCandidates: (id) => endpoint(`/api/v1/sections/${id}/class-teacher-candidates`),
+    capacity: (id) => endpoint(`/api/v1/sections/${id}/capacity`),
+    students: (id) => endpoint(`/api/v1/sections/${id}/students`),
+    assignStudents: (id) => endpoint(`/api/v1/sections/${id}/students/assign`),
+    student: (sectionId, studentId) => endpoint(`/api/v1/sections/${sectionId}/students/${studentId}`),
   }),
   authorizationTest: Object.freeze({
     authenticated: endpoint('/api/v1/authorization-test/authenticated'),
@@ -98,8 +129,9 @@ const request = async (url, options = {}, retried = false) => {
       await refreshAccessToken()
       return request(url, options, true)
     } catch (error) {
-      clearInvalidSession()
-      if (window.location.pathname !== '/login') window.location.assign('/login')
+      // Keep the current UI session intact when an individual page request
+      // cannot refresh its API token. Protected navigation should not behave
+      // like an explicit sign-out; the requesting page can show the API error.
       throw error
     }
   }
@@ -225,22 +257,112 @@ export const academicYearApi = {
   },
 }
 
+const branchPayload = (branch) => ({
+  courseId: Number(branch.courseId),
+  branchCode: String(branch.code || branch.branchCode || '').trim().toUpperCase(),
+  branchName: String(branch.name || branch.branchName || '').trim(),
+  shortName: String(branch.shortName || '').trim() || null,
+  specialization: branch.specialization || null,
+  departmentId: Number(branch.departmentId),
+  branchType: branch.branchType || 'Core',
+  duration: Number(branch.duration || branch.durationValue || 4),
+  totalSemesters: Number(branch.totalSemesters || branch.semesters || 8),
+  intakeCapacity: Number(branch.intakeCapacity ?? branch.intake),
+  startingAcademicYearId: branch.startingAcademicYearId || null,
+  description: String(branch.description || '').trim() || null,
+  status: branch.status === 'Inactive' || Number(branch.status) === 0 ? 0 : 1,
+})
+
+export const branchApi = {
+  getAll: async () => {
+    const response = await request(API_ENDPOINTS.branches.list)
+    return Array.isArray(response?.data) ? response.data : []
+  },
+  getByCourse: async (courseId) => {
+    const response = await request(API_ENDPOINTS.branches.byCourse(courseId))
+    return Array.isArray(response?.data) ? response.data : []
+  },
+  getById: async (id) => {
+    const response = await request(API_ENDPOINTS.branches.detail(id))
+    return response?.data
+  },
+  create: async (branch) => {
+    const response = await request(API_ENDPOINTS.branches.create, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(branchPayload(branch)) })
+    return response?.data
+  },
+  update: async (id, branch) => {
+    const response = await request(API_ENDPOINTS.branches.update(id), { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(branchPayload(branch)) })
+    return response?.data
+  },
+}
+
+const courseStructurePayload = (structure) => ({
+  courseId: Number(structure.courseId),
+  branchId: Number(structure.branchId),
+  yearNumber: Number(structure.yearNumber),
+  semesterNumber: Number(structure.semesterNumber),
+  semesterName: String(structure.semesterName || `Semester ${structure.semesterNumber}`).trim(),
+  ...(structure.status !== undefined ? { status: Number(structure.status) === 0 || structure.status === 'Inactive' ? 0 : 1 } : {}),
+})
+
+export const courseStructureApi = {
+  getAll: async () => {
+    const response = await request(API_ENDPOINTS.courseStructures.list)
+    return Array.isArray(response?.data) ? response.data : []
+  },
+  getByCourse: async (courseId) => {
+    const response = await request(API_ENDPOINTS.courseStructures.byCourse(courseId))
+    return Array.isArray(response?.data) ? response.data : []
+  },
+  getById: async (id) => (await request(API_ENDPOINTS.courseStructures.detail(id)))?.data,
+  create: async (structure) => (await request(API_ENDPOINTS.courseStructures.create, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(courseStructurePayload(structure)) }))?.data,
+  update: async (id, structure) => (await request(API_ENDPOINTS.courseStructures.update(id), { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(courseStructurePayload(structure)) }))?.data,
+}
+
 export const sectionAssignmentApi = {
   list: async () => {
     const response = await request(API_ENDPOINTS.sectionAssignments.list)
     return Array.isArray(response?.data) ? response.data : []
   },
-  assign: async (sectionId, assignment) => {
-    const response = await request(API_ENDPOINTS.sectionAssignments.assign(sectionId), {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ studentId: assignment.studentId, studentName: assignment.studentName }),
-    })
-    return response?.data
-  },
+  assign: async (sectionId, assignment) => request(API_ENDPOINTS.sections.assignStudents(sectionId), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ studentIds: [Number(assignment.studentId)] }) }),
   remove: async (sectionId, assignmentId) => {
-    await request(API_ENDPOINTS.sectionAssignments.remove(sectionId, assignmentId), { method: 'DELETE' })
+    await request(API_ENDPOINTS.sections.student(sectionId, assignmentId), { method: 'DELETE' })
   },
+  listBySection: async (sectionId) => (await request(API_ENDPOINTS.sections.students(sectionId)))?.data || [],
+}
+
+export const sectionAllocationApi = {
+  getTeacher: async (sectionId) => (await request(API_ENDPOINTS.sections.classTeacher(sectionId)))?.data,
+  getTeacherCandidates: async (sectionId) => (await request(API_ENDPOINTS.sections.classTeacherCandidates(sectionId)))?.data || [],
+  assignTeacher: async (sectionId, employeeProfileId) => (await request(API_ENDPOINTS.sections.classTeacher(sectionId), { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ employeeProfileId: Number(employeeProfileId) }) }))?.data,
+  removeTeacher: async (sectionId) => request(API_ENDPOINTS.sections.classTeacher(sectionId), { method: 'DELETE' }),
+  getCapacity: async (sectionId) => (await request(API_ENDPOINTS.sections.capacity(sectionId)))?.data,
+}
+
+const sectionPayload = (section) => ({
+  sectionCode: String(section.code || section.sectionCode || '').trim().toUpperCase(),
+  sectionName: String(section.name || section.sectionName || '').trim(),
+  capacity: Number(section.capacity),
+  facultyAdvisorEmployeeProfileId: section.facultyAdvisorEmployeeProfileId || null,
+  room: String(section.room || '').trim() || null,
+  shift: section.shift || 'Morning',
+  sectionType: section.type || section.sectionType || 'Regular',
+})
+
+export const sectionApi = {
+  getAll: async () => (await request(API_ENDPOINTS.sections.list))?.data || [],
+  getById: async (id) => (await request(API_ENDPOINTS.sections.detail(id)))?.data,
+  create: async (section) => {
+    const response = await request(API_ENDPOINTS.sections.create, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...sectionPayload(section), collegeId: Number(section.collegeId || 1), academicYearId: Number(section.academicYearId || 0), departmentId: Number(section.departmentId || 0), courseId: Number(section.courseId || 0), branchId: Number(section.branchId || 0), semesterId: Number(section.semesterId || 0) }) })
+    const id = response?.data?.sectionId ?? response?.sectionId
+    return id ? sectionApi.getById(id) : response?.data
+  },
+  update: async (id, section) => { await request(API_ENDPOINTS.sections.update(id), { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(sectionPayload(section)) }); return sectionApi.getById(id) },
+  remove: async (id) => request(API_ENDPOINTS.sections.remove(id), { method: 'DELETE' }),
+  updateStatus: async (id, status) => request(API_ENDPOINTS.sections.status(id), { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status: status === 'Active' }) }),
+  search: async (params) => { const query = new URLSearchParams(Object.entries(params).filter(([, value]) => value !== '' && value != null)); return (await request(`${API_ENDPOINTS.sections.search}?${query}`))?.data || [] },
+  summary: async () => (await request(API_ENDPOINTS.sections.summary))?.data,
+  validateCapacity: async (sectionId, capacity) => (await request(`${API_ENDPOINTS.sections.validateCapacity}?sectionId=${sectionId}&capacity=${capacity}`))?.data,
 }
 
 export async function lookupIndianPincode(pincode) {

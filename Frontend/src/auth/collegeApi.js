@@ -177,3 +177,7 @@ export const updateCollegeSettings = (id, settingsData) => {
 export const getCollegeSettingsById = (id) => {
   return SETTINGS_API.get(`/college-settings/${id}`);
 };
+
+export const getCollegeSettingsByCollegeId = (collegeId) => {
+  return SETTINGS_API.get(`/college-settings/college/${collegeId}`);
+};
