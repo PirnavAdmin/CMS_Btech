@@ -1,0 +1,15 @@
+[33mcommit 80ce4563470d094fdbaacfb8908e462b00b11f6d[m
+Author: tharunkumar-A <ambalatharunkumar@gmail.com>
+Date:   Wed Aug 26 13:34:21 2026 +0530
+
+    done the integrations of  course,department,semsester
+
+ Frontend/.env                                      |   6 [32m+[m[31m-[m
+ Frontend/src/api/apiEndpoints.js                   |  45 [32m+[m[31m--[m
+ Frontend/src/auth/auth.js                          |   3 [32m+[m[31m-[m
+ Frontend/src/auth/collegeApi.js                    |  99 [32m++++[m[31m-[m
+ Frontend/src/pages/Login.jsx                       |   6 [32m+[m[31m-[m
+ .../admin-management/DepartmentManagement.jsx      | 443 [32m+++[m[31m------------------[m
+ Frontend/src/pages/courseManagement/Course.jsx     | 131 [32m++++[m[31m--[m
+ .../semester-management/SemesterManagement.jsx     |  83 [32m+++[m[31m-[m
+ 8 files changed, 343 insertions(+), 473 deletions(-)

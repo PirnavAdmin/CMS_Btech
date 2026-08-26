@@ -1,9 +1,11 @@
+import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { FiArrowRight, FiBookOpen, FiCalendar, FiGitBranch, FiGrid, FiHome, FiLayers, FiSettings, FiUser, FiUsers } from 'react-icons/fi'
 import { getUserRole } from '../auth/auth'
 import { ROLES } from '../auth/roles'
 import DashboardLayout from '../layouts/DashboardLayout'
-import { getBranches, getCourses, getDepartments } from './courseManagement/Course'
+import { getBranches } from './courseManagement/Course'
+import { getDepartments, getCourses } from '../auth/collegeApi'
 import './Dashboard.css'
 
 const adminLinks = [
@@ -16,14 +18,23 @@ const adminLinks = [
   { to: '/section-management', label: 'Sections', icon: FiUsers },
 ]
 
+const listFrom = (response) => { const data = response?.data ?? response; return Array.isArray(data) ? data : Array.isArray(data?.items) ? data.items : Array.isArray(data?.data) ? data.data : [] }
+
 export default function Dashboard() {
   const role = getUserRole()
   const links = role === ROLES.ADMIN ? adminLinks : [{ to: '/my-subjects', label: 'My subjects', icon: FiBookOpen }]
-  const departments = role === ROLES.ADMIN ? getDepartments() : []
-  const courses = role === ROLES.ADMIN ? getCourses() : []
+  const [departments, setDepartments] = useState([])
+  const [courses, setCourses] = useState([])
   const branches = role === ROLES.ADMIN ? getBranches() : []
+
+  useEffect(() => {
+    if (role !== ROLES.ADMIN) return
+    getDepartments().then((response) => setDepartments(listFrom(response.data))).catch(() => setDepartments([]))
+    getCourses().then((response) => setCourses(listFrom(response.data))).catch(() => setCourses([]))
+  }, [role])
+
   const activeBranches = branches.filter((branch) => branch.status === 'Active').length
-  const activeCourses = courses.filter((course) => course.status === 'Active').length
+  const activeCourses = courses.filter((course) => (course.status === 'Active' || Number(course.status) === 1)).length
   const roleName = role ? `${role.charAt(0).toUpperCase()}${role.slice(1)}` : 'User'
 
   return <DashboardLayout><div className="erp-page dashboard-home">

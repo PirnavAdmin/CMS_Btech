@@ -1,5 +1,6 @@
 const cleanUrl = (url) => (url || "").replace(/\/+$/, "");
 
+<<<<<<< HEAD
 const getErrorMessage = (data, status) => {
   if (typeof data === "string" && data.trim()) return data.trim();
   if (data && typeof data === "object") {
@@ -24,8 +25,11 @@ const getErrorMessage = (data, status) => {
 const collegesBaseUrl = cleanUrl(import.meta.env.VITE_API_BASE_URL_COLLEGES);
 const academicBaseUrl = cleanUrl(import.meta.env.VITE_API_BASE_URL_ACADEMIC);
 const settingsBaseUrl = cleanUrl(import.meta.env.VITE_API_BASE_URL_SETTINGS);
+=======
+const baseUrl = cleanUrl(import.meta.env.VITE_API_BASE_URL);
+>>>>>>> 1ade990a2d727a42efbd8c046563f1b4c0fefc00
 
-const createClient = (baseUrl, prefix) => {
+const createClient = (prefix) => {
   const request = async (path, options = {}) => {
     const token = localStorage.getItem("btech-access-token");
     const response = await fetch(`${baseUrl}${prefix}${path}`, {
@@ -57,9 +61,9 @@ const createClient = (baseUrl, prefix) => {
   };
 };
 
-const API = createClient(collegesBaseUrl, "/api/v1");
-const ACADEMIC_API = createClient(academicBaseUrl, "/api/v1");
-const SETTINGS_API = createClient(settingsBaseUrl, "/api");
+const API = createClient("/api/v1");
+const ACADEMIC_API = createClient("/api/v1");
+const SETTINGS_API = createClient("/api");
 
 
 // -------------------------
@@ -116,6 +120,30 @@ export const updateDepartment = (id, departmentData) => {
 
 export const updateDepartmentStatus = (id, status) => {
   return ACADEMIC_API.patch(`/departments/${id}/status`, { status });
+};
+
+// -------------------------
+// COURSE APIs
+// -------------------------
+
+export const getCourses = () => {
+  return ACADEMIC_API.get("/courses");
+};
+
+export const getCourseById = (id) => {
+  return ACADEMIC_API.get(`/courses/${id}`);
+};
+
+export const createCourse = (courseData) => {
+  return ACADEMIC_API.post("/courses", courseData);
+};
+
+export const updateCourse = (id, courseData) => {
+  return ACADEMIC_API.put(`/courses/${id}`, courseData);
+};
+
+export const updateCourseStatus = (id, status) => {
+  return ACADEMIC_API.patch(`/courses/${id}/status`, { status });
 };
 
 // -------------------------
