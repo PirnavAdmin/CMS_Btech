@@ -317,6 +317,13 @@ export const branchApi = {
   },
 }
 
+export const departmentApi = {
+  getAll: async () => {
+    const response = await request(endpoint('/api/v1/departments'))
+    return Array.isArray(response?.data) ? response.data : []
+  },
+}
+
 export const courseApi = {
   getAll: async () => {
     const response = await request(API_ENDPOINTS.courses.list)

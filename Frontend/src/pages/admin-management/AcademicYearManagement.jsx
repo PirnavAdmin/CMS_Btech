@@ -69,7 +69,7 @@ let item={name:`${s.getFullYear()} - ${e.getFullYear()}`,startDate:s.toISOString
 if(years.some(x=>x.name===item.name))setNotice(`${item.name} already exists, so no duplicate was created.`);
 else{setSaving(true);try{await academicYearApi.create(item);addActivity('Next Academic Year Generated',item.name);setNotice(`${item.name} was generated successfully.`);await loadYears()}catch(error){setNotice(error.message||'Unable to generate the next academic year.')}finally{setSaving(false)}}close()}
 const openView=async x=>{setSelected(x);setModal('view');try{const data=await academicYearApi.getById(x.id);if(data)setSelected(mapYear(data))}catch(error){setNotice(error.message||'Unable to load academic year details.')}};
-const action=x=><div className="ay-actions"><button onClick={()=>openView(x)}><FiEye/> View</button><button onClick={()=>edit(x)}><FiEdit2/> Edit</button>{x.status==='UPCOMING'&&<button className="primary" onClick={()=>{setSelected(x);
+const action=x=><div className="ay-actions"><button onClick={()=>openView(x)}><FiEye/> View</button><button onClick={()=>edit(x)} disabled={x.status==='ARCHIVED'}><FiEdit2/> Edit</button>{x.status==='ARCHIVED'&&<button className="archived-action" disabled>Archived</button>}{x.status==='UPCOMING'&&<button className="primary" onClick={()=>{setSelected(x);
 setModal('activate')}}><FiCheckCircle/> Activate</button>}{x.status==='ACTIVE'&&<button className="primary" onClick={()=>{setSelected(x);
 setModal('deactivate')}}><FiXCircle/> Deactivate</button>}</div>;
 

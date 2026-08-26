@@ -2,8 +2,8 @@ import { useEffect, useMemo, useState } from 'react'
 import { Link, useParams, useNavigate } from 'react-router-dom'
 import { FiArrowLeft, FiCheckCircle, FiEdit2, FiEye, FiFilter, FiPlus, FiSearch } from 'react-icons/fi'
 import DashboardLayout from '../../layouts/DashboardLayout'
-import { courseStructureApi } from '../../api/apiEndpoints'
-import { getDepartments as fetchDepartments, getCourses as apiGetCourses, getCourseById, createCourse, updateCourse, updateCourseStatus } from '../../auth/collegeApi'
+import { courseApi, courseStructureApi, departmentApi } from '../../api/apiEndpoints'
+import { getCourseById, createCourse, updateCourse, updateCourseStatus } from '../../auth/collegeApi'
 import './Course.css'
 
 const BRANCH_KEY = 'btech-branches'
@@ -91,9 +91,9 @@ function CourseList() {
   const load = async () => {
     setIsLoading(true); setError('')
     try {
-      const [courseRes, deptRes] = await Promise.all([apiGetCourses(), fetchDepartments()])
-      setCourses(listFrom(courseRes.data).map(mapCourse))
-      setDepartments(listFrom(deptRes.data).map(mapDepartmentOption))
+      const [courseRows, departmentRows] = await Promise.all([courseApi.getAll(), departmentApi.getAll()])
+      setCourses(courseRows.map(mapCourse))
+      setDepartments(departmentRows.map(mapDepartmentOption))
     } catch (requestError) {
       setCourses([])
       setError(apiError(requestError, 'Unable to load courses. Please try again.'))
@@ -166,8 +166,8 @@ function CourseForm() {
   const load = async () => {
     setIsLoading(true); setError('')
     try {
-      const deptRes = await fetchDepartments()
-      setDepartments(listFrom(deptRes.data).map(mapDepartmentOption))
+      const departmentRows = await departmentApi.getAll()
+      setDepartments(departmentRows.map(mapDepartmentOption))
       if (id) {
         const courseRes = await getCourseById(id)
         const detail = mapCourse(recordFrom(courseRes))
@@ -248,9 +248,9 @@ function CourseDetails() {
   const load = async () => {
     setIsLoading(true); setError('')
     try {
-      const [courseRes, deptRes] = await Promise.all([getCourseById(id), fetchDepartments()])
-      setCourse(mapCourse(recordFrom(courseRes)))
-      setDepartments(listFrom(deptRes.data).map(mapDepartmentOption))
+      const [course, departmentRows] = await Promise.all([courseApi.getById(id), departmentApi.getAll()])
+      setCourse(mapCourse(course))
+      setDepartments(departmentRows.map(mapDepartmentOption))
     } catch (requestError) {
       setCourse(null)
       setError(apiError(requestError, 'Unable to load course details. Please try again.'))

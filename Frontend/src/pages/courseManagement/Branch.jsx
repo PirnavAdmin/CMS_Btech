@@ -2,9 +2,8 @@ import { cloneElement, useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { FiAlertCircle, FiArrowLeft, FiEdit2, FiEye, FiFilter, FiGitBranch, FiPlus, FiSearch } from 'react-icons/fi'
 import DashboardLayout from '../../layouts/DashboardLayout'
-import { branchApi } from '../../api/apiEndpoints'
+import { branchApi, courseApi, departmentApi } from '../../api/apiEndpoints'
 import { getBranches, saveBranch } from './Course'
-import { getCourses, getDepartments } from '../../auth/collegeApi'
 import './Branch.css'
 
 const blank={departmentId:'',courseId:'',name:'',code:'',shortName:'',branchType:'Core',intakeCapacity:'',description:'',status:'Active'}
@@ -25,7 +24,7 @@ const codeFor=name=>name.split(/\s+/).filter(Boolean).filter(w=>!['and','&','of'
 function List(){
  const [params]=useSearchParams(),[departments,setDepartments]=useState([]),[courses,setCourses]=useState([]),[branches,setBranches]=useState(()=>getBranches().map(normalize)),[loading,setLoading]=useState(true),[error,setError]=useState('')
  const [filters,setFilters]=useState({query:'',departmentId:'',courseId:params.get('course')||'',branchType:'',status:''})
- const load=async(courseId='')=>{setLoading(true);try{const [branchRows,departmentResponse,courseResponse]=await Promise.all([courseId?branchApi.getByCourse(courseId):branchApi.getAll(),getDepartments(),getCourses()]);setBranches(branchRows.map(normalize));setDepartments(listFrom(departmentResponse.data).map(mapDepartment));setCourses(listFrom(courseResponse.data).map(mapCourse).filter(isBtech));setError('')}catch(e){setError(e.message||'Unable to load branch data.')}finally{setLoading(false)}}
+ const load=async(courseId='')=>{setLoading(true);try{const [branchRows,departmentRows,courseRows]=await Promise.all([courseId?branchApi.getByCourse(courseId):branchApi.getAll(),departmentApi.getAll(),courseApi.getAll()]);setBranches(branchRows.map(normalize));setDepartments(departmentRows.map(mapDepartment));setCourses(courseRows.map(mapCourse).filter(isBtech));setError('')}catch(e){setError(e.message||'Unable to load branch data.')}finally{setLoading(false)}}
  useEffect(()=>{load(filters.courseId)},[filters.courseId])
  const dep=id=>departments.find(x=>String(x.id)===String(id))?.name||branches.find(x=>String(x.departmentId)===String(id))?.departmentName||'Not available',course=id=>courses.find(x=>String(x.id)===String(id))?.shortName||branches.find(x=>String(x.courseId)===String(id))?.courseName||'Not available'
  const rows=useMemo(()=>branches.filter(b=>`${b.name} ${b.code} ${b.departmentName||dep(b.departmentId)} ${b.courseName||course(b.courseId)}`.toLowerCase().includes(filters.query.toLowerCase())&&(!filters.departmentId||String(b.departmentId)===filters.departmentId)&&(!filters.courseId||String(b.courseId)===filters.courseId)&&(!filters.branchType||type(b)===filters.branchType)&&(!filters.status||b.status===filters.status)),[branches,filters])
@@ -40,7 +39,7 @@ const validate=(v,rows,id,courses)=>{const e={},code=v.code.trim().toUpperCase()
 function Form(){
  const {id}=useParams(),[params]=useSearchParams(),navigate=useNavigate(),[departments,setDepartments]=useState([]),[courses,setCourses]=useState([]),[branches,setBranches]=useState([]),[value,setValue]=useState(blank),[errors,setErrors]=useState({}),[step,setStep]=useState(0),[saving,setSaving]=useState(false),[error,setError]=useState(''),[edited,setEdited]=useState(Boolean(id))
  const selectedCourseId=params.get('course')
- useEffect(()=>{let alive=true;Promise.all([getDepartments(),getCourses()]).then(([departmentResponse,courseResponse])=>{if(!alive)return;setDepartments(listFrom(departmentResponse.data).map(mapDepartment));setCourses(listFrom(courseResponse.data).map(mapCourse).filter(isBtech));setError('')}).catch(e=>alive&&setError(e.message||'Unable to load courses and departments.'));return()=>{alive=false}},[])
+ useEffect(()=>{let alive=true;Promise.all([departmentApi.getAll(),courseApi.getAll()]).then(([departmentRows,courseRows])=>{if(!alive)return;setDepartments(departmentRows.map(mapDepartment));setCourses(courseRows.map(mapCourse).filter(isBtech));setError('')}).catch(e=>alive&&setError(e.message||'Unable to load courses and departments.'));return()=>{alive=false}},[])
  useEffect(()=>{let alive=true;Promise.all([branchApi.getAll(),id?branchApi.getById(id):Promise.resolve(null)]).then(([all,current])=>{if(!alive)return;setBranches(all.map(normalize));const selected=courses.find(c=>String(c.id)===selectedCourseId);setValue({...blank,...(current?normalize(current):{}),courseId:current?.courseId||selected?.id||'',departmentId:current?.departmentId||selected?.departmentId||'',intakeCapacity:current?.intakeCapacity??''})}).catch(e=>alive&&setError(e.message||'Unable to load branch data.'));return()=>{alive=false}},[id,courses,selectedCourseId])
  const update=(key,next)=>{setValue(v=>{const n={...v,[key]:next};if(key==='departmentId')n.courseId='';if(key==='courseId')n.departmentId=courses.find(c=>String(c.id)===String(next))?.departmentId||n.departmentId;if(key==='name'&&!edited)n.code=codeFor(next);if(key==='code'){n.code=next.toUpperCase().replace(/\s/g,'');setEdited(true)}return n});setErrors(e=>({...e,[key]:''}))}
  const submit=async()=>{const e=validate(value,branches,id,courses);setErrors(e);if(Object.keys(e).length)return;setSaving(true);setError('');try{const result=normalize(id?await branchApi.update(id,value):await branchApi.create(value));saveBranch(result);navigate(`/branches/${result.id}`)}catch(err){setError(err.message||'Unable to save branch.')}finally{setSaving(false)}}

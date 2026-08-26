@@ -27,7 +27,7 @@ const settingsBaseUrl = cleanUrl(import.meta.env.VITE_API_BASE_URL_SETTINGS);
 
 const createClient = (baseUrl, prefix) => {
   const request = async (path, options = {}) => {
-    const token = localStorage.getItem("btech-access-token");
+    const token = localStorage.getItem("btech-access-token") || sessionStorage.getItem("btech-access-token");
     const response = await fetch(`${baseUrl}${prefix}${path}`, {
       ...options,
       headers: {
@@ -57,9 +57,9 @@ const createClient = (baseUrl, prefix) => {
   };
 };
 
-const API = createClient("/api/v1");
-const ACADEMIC_API = createClient("/api/v1");
-const SETTINGS_API = createClient("/api");
+const API = createClient(collegesBaseUrl, "/api/v1");
+const ACADEMIC_API = createClient(academicBaseUrl, "/api/v1");
+const SETTINGS_API = createClient(settingsBaseUrl, "/api");
 
 
 // -------------------------
