@@ -74,6 +74,17 @@ export const API_ENDPOINTS = Object.freeze({
     assign: (sectionId) => endpoint(`/api/v1/sections/${sectionId}/students`),
     remove: (sectionId, assignmentId) => endpoint(`/api/v1/sections/${sectionId}/students/${assignmentId}`),
   }),
+  sections: Object.freeze({
+    create: endpoint('/api/v1/sections'),
+    list: endpoint('/api/v1/sections'),
+    detail: (id) => endpoint(`/api/v1/sections/${id}`),
+    update: (id) => endpoint(`/api/v1/sections/${id}`),
+    remove: (id) => endpoint(`/api/v1/sections/${id}`),
+    search: endpoint('/api/v1/sections/search'),
+    status: (id) => endpoint(`/api/v1/sections/${id}/status`),
+    validateCapacity: endpoint('/api/v1/sections/validate-capacity'),
+    summary: endpoint('/api/v1/sections/summary'),
+  }),
   authorizationTest: Object.freeze({
     authenticated: endpoint('/api/v1/authorization-test/authenticated'),
     admin: endpoint('/api/v1/authorization-test/admin'),
@@ -132,8 +143,9 @@ const request = async (url, options = {}, retried = false) => {
       await refreshAccessToken()
       return request(url, options, true)
     } catch (error) {
-      clearInvalidSession()
-      if (window.location.pathname !== '/login') window.location.assign('/login')
+      // Keep the current UI session intact when an individual page request
+      // cannot refresh its API token. Protected navigation should not behave
+      // like an explicit sign-out; the requesting page can show the API error.
       throw error
     }
   }
@@ -342,6 +354,32 @@ export const sectionAssignmentApi = {
   remove: async (sectionId, assignmentId) => {
     await request(API_ENDPOINTS.sectionAssignments.remove(sectionId, assignmentId), { method: 'DELETE' })
   },
+}
+
+const sectionPayload = (section) => ({
+  sectionCode: String(section.code || section.sectionCode || '').trim().toUpperCase(),
+  sectionName: String(section.name || section.sectionName || '').trim(),
+  capacity: Number(section.capacity),
+  facultyAdvisorEmployeeProfileId: section.facultyAdvisorEmployeeProfileId || null,
+  room: String(section.room || '').trim() || null,
+  shift: section.shift || 'Morning',
+  sectionType: section.type || section.sectionType || 'Regular',
+})
+
+export const sectionApi = {
+  getAll: async () => (await request(API_ENDPOINTS.sections.list))?.data || [],
+  getById: async (id) => (await request(API_ENDPOINTS.sections.detail(id)))?.data,
+  create: async (section) => {
+    const response = await request(API_ENDPOINTS.sections.create, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...sectionPayload(section), collegeId: Number(section.collegeId || 1), academicYearId: Number(section.academicYearId || 0), departmentId: Number(section.departmentId || 0), courseId: Number(section.courseId || 0), branchId: Number(section.branchId || 0), semesterId: Number(section.semesterId || 0) }) })
+    const id = response?.data?.sectionId ?? response?.sectionId
+    return id ? sectionApi.getById(id) : response?.data
+  },
+  update: async (id, section) => { await request(API_ENDPOINTS.sections.update(id), { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(sectionPayload(section)) }); return sectionApi.getById(id) },
+  remove: async (id) => request(API_ENDPOINTS.sections.remove(id), { method: 'DELETE' }),
+  updateStatus: async (id, status) => request(API_ENDPOINTS.sections.status(id), { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status: status === 'Active' }) }),
+  search: async (params) => { const query = new URLSearchParams(Object.entries(params).filter(([, value]) => value !== '' && value != null)); return (await request(`${API_ENDPOINTS.sections.search}?${query}`))?.data || [] },
+  summary: async () => (await request(API_ENDPOINTS.sections.summary))?.data,
+  validateCapacity: async (sectionId, capacity) => (await request(`${API_ENDPOINTS.sections.validateCapacity}?sectionId=${sectionId}&capacity=${capacity}`))?.data,
 }
 
 export async function lookupIndianPincode(pincode) {

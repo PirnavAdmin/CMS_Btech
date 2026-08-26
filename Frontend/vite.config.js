@@ -7,14 +7,14 @@ export default defineConfig({
   server: {
     proxy: {
       '/api/v1/academic-years': {
-        target: 'https://abreast-curling-tutor.ngrok-free.dev',
+        target: 'https://clarity-math-delouse.ngrok-free.dev',
         changeOrigin: true,
         headers: {
           'ngrok-skip-browser-warning': 'true',
         },
       },
       '/api': {
-        target: 'https://abreast-curling-tutor.ngrok-free.dev',
+        target: 'https://clarity-math-delouse.ngrok-free.dev',
         changeOrigin: true,
         headers: {
           'ngrok-skip-browser-warning': 'true',
