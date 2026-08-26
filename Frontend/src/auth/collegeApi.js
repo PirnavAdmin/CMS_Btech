@@ -1,6 +1,5 @@
 const cleanUrl = (url) => (url || "").replace(/\/+$/, "");
 
-<<<<<<< HEAD
 const getErrorMessage = (data, status) => {
   if (typeof data === "string" && data.trim()) return data.trim();
   if (data && typeof data === "object") {
@@ -25,11 +24,8 @@ const getErrorMessage = (data, status) => {
 const collegesBaseUrl = cleanUrl(import.meta.env.VITE_API_BASE_URL_COLLEGES);
 const academicBaseUrl = cleanUrl(import.meta.env.VITE_API_BASE_URL_ACADEMIC);
 const settingsBaseUrl = cleanUrl(import.meta.env.VITE_API_BASE_URL_SETTINGS);
-=======
-const baseUrl = cleanUrl(import.meta.env.VITE_API_BASE_URL);
->>>>>>> 1ade990a2d727a42efbd8c046563f1b4c0fefc00
 
-const createClient = (prefix) => {
+const createClient = (baseUrl, prefix) => {
   const request = async (path, options = {}) => {
     const token = localStorage.getItem("btech-access-token");
     const response = await fetch(`${baseUrl}${prefix}${path}`, {
