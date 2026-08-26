@@ -1,4 +1,4 @@
-const baseUrl = (import.meta.env.VITE_API_BASE_URL || "").replace(/\/+$/, "");
+const baseUrl = (import.meta.env.DEV ? "" : (import.meta.env.VITE_API_BASE_URL || "")).replace(/\/+$/, "");
 
 const createClient = (prefix) => {
   const request = async (path, options = {}) => {
@@ -87,4 +87,8 @@ export const updateCollegeSettings = (id, settingsData) => {
 
 export const getCollegeSettingsById = (id) => {
   return SETTINGS_API.get(`/college-settings/${id}`);
+};
+
+export const getCollegeSettingsByCollegeId = (collegeId) => {
+  return SETTINGS_API.get(`/college-settings/college/${collegeId}`);
 };

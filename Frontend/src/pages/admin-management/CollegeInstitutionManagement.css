@@ -724,3 +724,35 @@
   }
 }
 }
+
+/* Keep the settings directory readable across its nine data columns. */
+.college-management .cm-settings .cm-table {
+  min-width: 1180px;
+  table-layout: auto;
+}
+
+.college-management .cm-settings .cm-table th,
+.college-management .cm-settings .cm-table td {
+  min-width: 110px;
+  vertical-align: middle;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  line-height: 1.35;
+}
+
+.college-management .cm-settings .cm-table th:first-child,
+.college-management .cm-settings .cm-table td:first-child {
+  min-width: 220px;
+}
+
+.college-management .cm-settings .cm-table th:nth-child(3),
+.college-management .cm-settings .cm-table td:nth-child(3) {
+  min-width: 190px;
+}
+
+.college-management .cm-settings .cm-table th:last-child,
+.college-management .cm-settings .cm-table td:last-child {
+  min-width: 90px;
+  width: 90px;
+  white-space: nowrap;
+}
