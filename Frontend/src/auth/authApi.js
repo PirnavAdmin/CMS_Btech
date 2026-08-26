@@ -13,6 +13,25 @@ const otpEndpoint = import.meta.env.VITE_OTP_API_URL || authEndpoint
 const otpApiBaseUrl = (import.meta.env.VITE_OTP_API_URL || import.meta.env.VITE_API_BASE_URL || '').replace(/\/+$/, '')
 const otpAuthToken = import.meta.env.VITE_OTP_AUTH_TOKEN
 
+const combineUrl = (base, path) => {
+  const cleanBase = String(base || '').replace(/\/+$/, '')
+  const cleanPath = String(path || '').replace(/^\/+/, '')
+
+  if (!cleanBase) return `/${cleanPath}`
+  return `${cleanBase}/${cleanPath}`
+}
+
+const resolveOtpUrl = (path) => {
+  const normalizedPath = String(path || '').replace(/^\/+/, '')
+
+  // Prevent accidental `/api/api/...` URLs when VITE_OTP_API_URL already ends with `/api`.
+  if (otpApiBaseUrl.endsWith('/api') && normalizedPath.startsWith('api/')) {
+    return combineUrl(otpApiBaseUrl, normalizedPath.slice(4))
+  }
+
+  return combineUrl(otpApiBaseUrl, normalizedPath)
+}
+
 const readResponseBody = async (response) => {
   try {
     return await response.json()
@@ -41,7 +60,7 @@ const otpRequest = async (path, payload) => {
   const accessToken = otpAuthToken || localStorage.getItem('btech-access-token')
   let response
   try {
-    response = await fetch(`${otpApiBaseUrl}${path}`, {
+    response = await fetch(resolveOtpUrl(path), {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -55,16 +74,18 @@ const otpRequest = async (path, payload) => {
 
   const data = await readResponseBody(response)
   if (!response.ok || data?.success === false) {
-    throw new AuthRequestError(data?.message || 'The OTP request could not be completed.')
+    const fallback = response.status === 404
+      ? 'OTP endpoint is unavailable. Please contact support.'
+      : 'The OTP request could not be completed.'
+    throw new AuthRequestError(data?.message || fallback)
   }
 
   return data
 }
 
-// Set VITE_AUTH_API_URL when the backend login endpoint becomes available.
 export async function login({ identifier, password }, fallbackRole = ROLES.ADMIN) {
   if (!authEndpoint) {
-    return { user: { id: 'DEMO_USER', name: 'Demo User', role: fallbackRole } }
+    throw new AuthRequestError('Authentication service is not configured. Set the login endpoint in the environment config.')
   }
 
   let response
@@ -112,11 +133,7 @@ export async function verifyOtp({ contact, otp, purpose = 'LOGIN' }) {
  */
 export async function resetPassword({ contact, otp, password }) {
   if (!otpEndpoint) {
-    // Demo Mode: Accept any valid-looking request
-    if (password.length < 8) {
-      throw new AuthRequestError('Password must contain at least 8 characters.')
-    }
-    return { success: true, message: 'Password has been reset successfully.' }
+    throw new AuthRequestError('Password reset service is not configured. Contact the backend team to enable it.')
   }
 
   try {
@@ -140,7 +157,7 @@ export async function resetPassword({ contact, otp, password }) {
 // Set VITE_REGISTRATION_API_URL when the pending-registration endpoint is available.
 export async function register({ fullName, email, mobile, password }) {
   if (!registrationEndpoint) {
-    return { success: true, message: 'Registration request submitted successfully', status: 'PENDING' }
+    throw new AuthRequestError('Registration service is not configured. Set the registration endpoint in the environment config.')
   }
 
   let response

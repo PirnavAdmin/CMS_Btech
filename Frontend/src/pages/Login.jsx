@@ -12,7 +12,7 @@ import './Login.css'
 export default function Login() {
   const navigate = useNavigate()
   const [showPassword, setShowPassword] = useState(false)
-  const [rememberMe, setRememberMe] = useState(false)
+  const [rememberMe, setRememberMe] = useState(() => localStorage.getItem('btech-remember-me') === 'true')
   const [values, setValues] = useState({ identifier: '', password: '' })
   const [errors, setErrors] = useState({ identifier: '', password: '' })
   const [submitError, setSubmitError] = useState('')
@@ -98,7 +98,8 @@ export default function Login() {
     setSubmitError('')
     try {
       const session = await login({ identifier: values.identifier.trim(), password: values.password })
-      signIn(session.roles, session.accessToken, session.refreshToken)
+      localStorage.setItem('btech-remember-me', String(rememberMe))
+      signIn(session.roles, session.accessToken, session.refreshToken, rememberMe)
       navigate('/dashboard')
     } catch (error) {
       setSubmitError(error instanceof AuthRequestError ? error.message : 'Unable to sign in right now. Please try again.')

@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import DashboardLayout from '../../layouts/DashboardLayout'
 import './Settings.css'
 
@@ -7,6 +7,7 @@ const rules=p=>[['At least 8 characters',p.length>=8],['Uppercase letter',/[A-Z]
 
 export default function Settings(){
  const[open,setOpen]=useState(false),[values,setValues]=useState(blank),[visible,setVisible]=useState({}),[errors,setErrors]=useState({}),[submitting,setSubmitting]=useState(false),[notice,setNotice]=useState(''),[noticeType,setNoticeType]=useState(''),[currentUser,setCurrentUser]=useState({password:'Admin@123'})
+ useEffect(()=>{if(noticeType!=='success')return;const timer=setTimeout(()=>setNotice(''),2000);return()=>clearTimeout(timer)},[noticeType])
  const requirements=useMemo(()=>rules(values.newPassword),[values.newPassword]);const met=requirements.filter(x=>x[1]).length;const strength=!values.newPassword?'Not set':['Weak','Fair','Good','Strong'][Math.max(0,met-2)]||'Strong'
  const validate=(data=values)=>{const e={},nextRules=rules(data.newPassword),nextMet=nextRules.filter(x=>x[1]).length;if(!data.currentPassword)e.currentPassword='Current password is required.';else if(data.currentPassword!==currentUser.password)e.currentPassword='Current password is incorrect.';if(!data.newPassword)e.newPassword='New password is required.';else if(nextMet<5)e.newPassword='Use all password requirements below.';else if(data.newPassword===data.currentPassword)e.newPassword='New password must be different from your current password.';if(!data.confirmPassword)e.confirmPassword='Confirm your new password.';else if(data.confirmPassword!==data.newPassword)e.confirmPassword='Passwords do not match.';return e}
  const update=e=>{const next={...values,[e.target.name]:e.target.value};setValues(next);setErrors(validate(next));setNotice('');setNoticeType('')}

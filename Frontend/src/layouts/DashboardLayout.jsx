@@ -47,7 +47,6 @@ export default function DashboardLayout({ children }) {
   const [visible, setVisible] = useState({})
   const [submitting, setSubmitting] = useState(false)
   const [success, setSuccess] = useState(false)
-  const [mockPassword, setMockPassword] = useState('Admin@123')
 
   const triggerRef = useRef(null)
   const closeRef = useRef(null)
@@ -86,8 +85,7 @@ export default function DashboardLayout({ children }) {
 
   const handleSignOut = () => {
     signOut()
-    sessionStorage.setItem('btech-logout-message', 'Successfully signed out.')
-    navigate('/login', { replace: true })
+    navigate('/', { replace: true })
   }
 
   // -------------------------
@@ -98,8 +96,6 @@ export default function DashboardLayout({ children }) {
 
     if (!data.currentPassword) {
       next.currentPassword = 'Current password is required.'
-    } else if (data.currentPassword !== mockPassword) {
-      next.currentPassword = 'Current password is incorrect.'
     }
 
     if (!data.newPassword) {
@@ -172,12 +168,11 @@ export default function DashboardLayout({ children }) {
 
     setSubmitting(true)
 
-    // Simulating API call
-    await new Promise((resolve) => setTimeout(resolve, 650))
-
-    setMockPassword(values.newPassword)
+    setErrors({
+      currentPassword: 'Password change is not available because the backend endpoint is not configured for this tenant.',
+    })
     setSubmitting(false)
-    setSuccess(true)
+    setSuccess(false)
   }
 
   const field = (name, label, placeholder) => (

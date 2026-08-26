@@ -42,6 +42,10 @@ export const API_ENDPOINTS = Object.freeze({
     detail: (id) => endpoint(`/api/v1/branches/${id}`),
     update: (id) => endpoint(`/api/v1/branches/${id}`),
   }),
+  courses: Object.freeze({
+    list: endpoint('/api/v1/courses'),
+    detail: (id) => endpoint(`/api/v1/courses/${id}`),
+  }),
   courseStructures: Object.freeze({
     create: endpoint('/api/v1/course-structures'),
     list: endpoint('/api/v1/course-structures'),
@@ -92,7 +96,7 @@ const validationMessage = (body) => {
 }
 
 const refreshAccessToken = async () => {
-  const refreshToken = localStorage.getItem('btech-refresh-token')
+  const refreshToken = localStorage.getItem('btech-refresh-token') || sessionStorage.getItem('btech-refresh-token')
   if (!refreshToken) throw new AuthRequestError('Your session has expired. Please sign in again.', 401)
   const response = await fetch(API_ENDPOINTS.auth.refresh, {
     method: 'POST',
@@ -101,8 +105,9 @@ const refreshAccessToken = async () => {
   })
   const body = await readBody(response)
   if (!response.ok || !body?.data?.accessToken) throw new AuthRequestError(body?.message || 'Your session has expired. Please sign in again.', response.status)
-  localStorage.setItem('btech-access-token', body.data.accessToken)
-  localStorage.setItem('btech-refresh-token', body.data.refreshToken || refreshToken)
+  const storage = localStorage.getItem('btech-authenticated') === 'true' ? localStorage : sessionStorage
+  storage.setItem('btech-access-token', body.data.accessToken)
+  storage.setItem('btech-refresh-token', body.data.refreshToken || refreshToken)
   return body.data.accessToken
 }
 
@@ -114,7 +119,7 @@ const clearInvalidSession = () => {
 }
 
 const request = async (url, options = {}, retried = false) => {
-  const token = localStorage.getItem('btech-access-token') || localStorage.getItem('accessToken') || localStorage.getItem('token')
+  const token = localStorage.getItem('btech-access-token') || sessionStorage.getItem('btech-access-token') || localStorage.getItem('accessToken') || sessionStorage.getItem('accessToken') || localStorage.getItem('token') || sessionStorage.getItem('token')
   let response
   try {
     response = await fetch(url, {
@@ -150,14 +155,20 @@ const request = async (url, options = {}, retried = false) => {
   return body
 }
 
+const normalizeFrontendRole = (roleValue) => {
+  const rawRole = Array.isArray(roleValue) ? roleValue[0] : roleValue
+  const normalized = String(rawRole || '').trim().toLowerCase().replace(/[\s-]+/g, '_')
+
+  if (['admin', 'college_admin', 'super_admin'].includes(normalized)) {
+    return 'admin'
+  }
+
+  return normalized || 'student'
+}
+
 export async function login({ identifier, password }) {
-  // Temporary local access while no backend login endpoint is configured.
   if (!hasConfiguredAuthLoginUrl) {
-    return {
-      accessToken: '',
-      refreshToken: '',
-      user: { id: 'DEMO_ADMIN', name: identifier || 'Demo Admin', role: 'admin' },
-    }
+    throw new AuthRequestError('Authentication service is not configured. Set VITE_AUTH_API_URL or VITE_API_BASE_URL before signing in.')
   }
 
   let response
@@ -179,7 +190,17 @@ export async function login({ identifier, password }) {
   }
   const data = body?.data
   if (!data?.accessToken || !data?.refreshToken) throw new AuthRequestError('The server returned an invalid login response.')
-  return data
+
+  const roleValue = data.roles ?? data.role
+  return {
+    ...data,
+    roles: Array.isArray(roleValue) ? roleValue : roleValue ? [roleValue] : [],
+    user: {
+      id: data.userId,
+      name: data.fullName,
+      role: normalizeFrontendRole(roleValue),
+    },
+  }
 }
 
 const normalizeProfile = (source) => {
@@ -296,9 +317,18 @@ export const branchApi = {
   },
 }
 
+export const courseApi = {
+  getAll: async () => {
+    const response = await request(API_ENDPOINTS.courses.list)
+    return Array.isArray(response?.data) ? response.data : []
+  },
+  getById: async (id) => (await request(API_ENDPOINTS.courses.detail(id)))?.data,
+}
+
 const courseStructurePayload = (structure) => ({
   courseId: Number(structure.courseId),
   branchId: Number(structure.branchId),
+  ...(structure.academicYearId ? { academicYearId: Number(structure.academicYearId) } : {}),
   yearNumber: Number(structure.yearNumber),
   semesterNumber: Number(structure.semesterNumber),
   semesterName: String(structure.semesterName || `Semester ${structure.semesterNumber}`).trim(),

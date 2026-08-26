@@ -7,3 +7,36 @@
 /* Mobile branch cards avoid a horizontally scrolling data table. */
 .branch-mobile-list{display:none}
 @media(max-width:680px){.branch-table-scroll{display:none}.branch-mobile-list{display:grid;gap:10px;padding:10px}.branch-mobile-list article{padding:14px;border:1px solid var(--border);border-radius:8px}.branch-mobile-list article>div:first-child{display:flex;gap:6px}.branch-mobile-list h3{margin:12px 0 3px;font-size:.93rem}.branch-mobile-list p{margin:8px 0;color:var(--text-muted);font-size:.72rem}.branch-mobile-list dl{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:12px 0}.branch-mobile-list dt{font-size:.65rem;color:var(--text-muted)}.branch-mobile-list dd{margin:3px 0;font-size:.72rem;font-weight:700}.branch-card-actions{display:flex;gap:7px}.branch-card-actions a,.branch-card-actions button{border:1px solid var(--border);border-radius:5px;padding:6px 8px;background:var(--surface);color:var(--brand);font-size:.7rem;font-weight:700;text-decoration:none}}
+
+/* Dark-mode consistency patch: branch table and filters */
+:root[data-theme="dark"] .branch-management .branch-table th {
+  color: #eef6fc;
+  background: #102f49;
+  border-color: var(--border);
+}
+
+:root[data-theme="dark"] .branch-management .branch-table td {
+  color: var(--text-secondary);
+  border-color: var(--border);
+  background: var(--surface);
+}
+
+:root[data-theme="dark"] .branch-management .branch-table td strong,
+:root[data-theme="dark"] .branch-management .branch-table td b {
+  color: var(--text-primary);
+}
+
+:root[data-theme="dark"] .branch-management .branch-filter-toolbar select,
+:root[data-theme="dark"] .branch-management .branch-search,
+:root[data-theme="dark"] .branch-management .branch-search input,
+:root[data-theme="dark"] .branch-management .branch-directory,
+:root[data-theme="dark"] .branch-management .branch-results,
+:root[data-theme="dark"] .branch-management .branch-mobile-list article {
+  color: var(--text-primary);
+  border-color: var(--border);
+  background: var(--surface-raised);
+}
+
+:root[data-theme="dark"] .branch-management .branch-search {
+  color: var(--text-muted);
+}

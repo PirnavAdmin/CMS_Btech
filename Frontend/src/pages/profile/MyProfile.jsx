@@ -213,7 +213,7 @@ export default function MyProfile() {
   const lastLogin = formatLastLogin(profile.lastLoginAt)
 
   return <DashboardLayout><main className="profile-page">
-    <header className="profile-heading"><div><span className="profile-eyebrow">Account settings</span><h1>My Profile</h1><p>Review your account identity and keep your contact information current.</p></div>{!editing && <button className="profile-button" onClick={beginEditing}><Icon name="edit" /> Edit Profile</button>}</header>
+    <header className="profile-heading"><div><h1>My Profile</h1><p>Review your account identity and keep your contact information current.</p></div>{!editing && <button className="profile-button" onClick={beginEditing}><Icon name="edit" /> Edit Profile</button>}</header>
 
     {feedback && <div className={`profile-feedback ${feedback.type}`} role={feedback.type === 'error' ? 'alert' : 'status'}><Icon name={feedback.type === 'success' ? 'check' : 'alert'} /><span>{feedback.message}</span></div>}
 

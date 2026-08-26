@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import DashboardLayout from '../../layouts/DashboardLayout'
-import { createCollege } from '../../auth/collegeApi'
+import { createCollege, getColleges } from '../../auth/collegeApi'
 import './AddCollege.css'
 
 const TYPES = ['Engineering College', 'University', 'Autonomous College', 'Affiliated College', 'Deemed University', 'Other']
@@ -78,6 +78,7 @@ export default function AddCollege() {
   const navigate = useNavigate()
   const fileRef = useRef(null)
   const [values, setValues] = useState(initialValues)
+  const [existingCollegeCodes, setExistingCollegeCodes] = useState([])
   const [touched, setTouched] = useState({})
   const [logoError, setLogoError] = useState('')
   const [dirty, setDirty] = useState(false)
@@ -89,7 +90,18 @@ export default function AddCollege() {
   const [postOffices, setPostOffices] = useState([])
   const [pincodeStatus, setPincodeStatus] = useState('')
   const errors = validate(values)
-  const isValid = Object.keys(errors).length === 0 && !logoError
+  const duplicateCode = values.collegeCode && existingCollegeCodes.includes(values.collegeCode.trim().toUpperCase())
+  const isValid = Object.keys(errors).length === 0 && !logoError && !duplicateCode
+
+  useEffect(() => {
+    getColleges()
+      .then((response) => {
+        const records = response?.data?.data ?? response?.data ?? response
+        const colleges = Array.isArray(records) ? records : Array.isArray(records?.items) ? records.items : []
+        setExistingCollegeCodes(colleges.map((college) => String(college.code ?? college.collegeCode ?? '').trim().toUpperCase()).filter(Boolean))
+      })
+      .catch(() => setExistingCollegeCodes([]))
+  }, [])
 
   useEffect(() => {
     const warn = (event) => { if (dirty) event.preventDefault() }
@@ -146,6 +158,10 @@ export default function AddCollege() {
   const saveAndNext = () => {
     const fields = TAB_FIELDS[activeTab]
     setTouched((current) => fields.reduce((next, field) => ({ ...next, [field]: true }), { ...current }))
+    if (activeTab === 'college' && duplicateCode) {
+      setNotice('This college code already exists. Enter a unique code before continuing.')
+      return
+    }
     if (fields.some((field) => errors[field])) {
       setNotice('Please correct the highlighted fields before continuing.')
       return
@@ -167,8 +183,9 @@ export default function AddCollege() {
         name: values.collegeName.trim(), code: values.collegeCode, type: values.collegeType,
         university: values.universityName.trim(), address: [values.addressLine1, values.addressLine2].filter(Boolean).join(', '),
         city: values.city.trim(), state: values.state.trim(), pincode: values.pincode, contact: values.contactNumber,
-        email: values.email.trim(), website: values.website.trim(), logo: values.logo, principal: values.principalName.trim(),
+        email: values.email.trim(), logo: values.logo, principal: values.principalName.trim(),
         accreditation: [values.accreditationBody, values.accreditationGrade, values.accreditationNumber].filter(Boolean).join(' · '),
+        ...(values.website.trim() ? { website: values.website.trim() } : {}),
       }
       await createCollege(college)
       setDirty(false); setDialog('success')
@@ -188,7 +205,7 @@ export default function AddCollege() {
       {activeTab === 'college' && <>
       {section('College Information', 'Core identity and affiliation details.', <>
         <Field label="College Name" name="collegeName" values={values} errors={errors} touched={touched} onChange={update} required maxLength={120} placeholder="e.g. Crescent Institute of Technology" />
-        <Field label="College Code" name="collegeCode" values={values} errors={errors} touched={touched} onChange={update} required maxLength={12} placeholder="e.g. CIT2026" />
+        <Field label="College Code" name="collegeCode" values={values} errors={{ ...errors, ...(duplicateCode ? { collegeCode: 'This college code already exists.' } : {}) }} touched={touched} onChange={update} required maxLength={12} placeholder="e.g. CIT2026" />
         <label className="ac-field" htmlFor="ac-collegeType"><span>College Type <b>*</b></span><select id="ac-collegeType" name="collegeType" value={values.collegeType} onChange={update} aria-invalid={Boolean(touched.collegeType && errors.collegeType)}><option value="">Select type</option>{TYPES.map((type) => <option key={type}>{type}</option>)}</select>{touched.collegeType && errors.collegeType && <small className="ac-error" role="alert">{errors.collegeType}</small>}</label>
         <Field label="University Name" name="universityName" values={values} errors={errors} touched={touched} onChange={update} required maxLength={120} placeholder="Affiliated university" />
         <div className="ac-upload ac-span-2" onDragOver={(e) => e.preventDefault()} onDrop={(e) => { e.preventDefault(); selectLogo(e.dataTransfer.files[0]) }}>

@@ -1,5 +1,26 @@
 const cleanUrl = (url) => (url || "").replace(/\/+$/, "");
 
+const getErrorMessage = (data, status) => {
+  if (typeof data === "string" && data.trim()) return data.trim();
+  if (data && typeof data === "object") {
+    if (data.errors && typeof data.errors === "object") {
+      const validationMessages = Object.entries(data.errors)
+        .flatMap(([field, messages]) => (Array.isArray(messages) ? messages : [messages]).filter(Boolean).map((message) => `${field}: ${message}`));
+      if (validationMessages.length) return validationMessages.join(" ");
+    }
+    const directMessage = data.message || data.detail;
+    if (directMessage) return directMessage;
+    if (data.title && data.title !== "One or more validation errors occurred.") return data.title;
+  }
+  return {
+    400: "The college details were rejected by the server. Check the required fields and college code.",
+    401: "Your session has expired. Please sign in again.",
+    403: "You do not have permission to manage colleges.",
+    404: "The college API endpoint was not found. Check that the college service is available.",
+    409: "A college with these details already exists.",
+  }[status] || `The college request failed with HTTP ${status}.`;
+};
+
 const collegesBaseUrl = cleanUrl(import.meta.env.VITE_API_BASE_URL_COLLEGES);
 const academicBaseUrl = cleanUrl(import.meta.env.VITE_API_BASE_URL_ACADEMIC);
 const settingsBaseUrl = cleanUrl(import.meta.env.VITE_API_BASE_URL_SETTINGS);
@@ -19,7 +40,7 @@ const createClient = (baseUrl, prefix) => {
     const contentType = response.headers.get("content-type") || "";
     const data = contentType.includes("application/json") ? await response.json() : await response.text();
     if (!response.ok) {
-      const error = new Error(data?.message || data?.title || `Request failed with status ${response.status}`);
+      const error = new Error(getErrorMessage(data, response.status));
       error.response = { data, status: response.status };
       throw error;
     }

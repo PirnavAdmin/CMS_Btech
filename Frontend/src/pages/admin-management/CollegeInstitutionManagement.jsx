@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { FiEye as EyeIcon, FiEdit2 as EditIcon, FiPlus as Plus, FiSettings as Settings, FiTrash2 as TrashIcon } from 'react-icons/fi'
+import { FiEye as EyeIcon, FiEdit2 as EditIcon, FiPlus as Plus, FiSettings as Settings } from 'react-icons/fi'
 import DashboardLayout from '../../layouts/DashboardLayout'
 import {
   createCollegeSettings,
@@ -228,6 +228,10 @@ export default function CollegeInstitutionManagement() {
   const [currentPage, setCurrentPage] = useState(1)
   const itemsPerPage = 5
 
+  // Logos that failed to load (broken/invalid URLs) fall back to the initial-letter avatar
+  const [brokenLogoIds, setBrokenLogoIds] = useState(() => new Set())
+  const markLogoBroken = (id) => setBrokenLogoIds((current) => new Set(current).add(id))
+
   const activeCollege = colleges.find((c) => c.id === activeId) || null
 
   const filteredColleges = colleges
@@ -344,10 +348,6 @@ export default function CollegeInstitutionManagement() {
     } finally {
       setIsCollegeSaving(false)
     }
-  }
-
-  const handleDelete = (college) => {
-    setCollegeError(`Deletion is unavailable because no DELETE endpoint was provided for "${college.name}".`)
   }
 
   const toggleStatus = async (college) => {
@@ -501,8 +501,13 @@ export default function CollegeInstitutionManagement() {
                       {displayedColleges.map((college) => (
                         <tr key={college.id}>
                           <td>
-                            {college.logo ? (
-                              <img src={college.logo} alt={college.name} className="cm-logo-thumb" />
+                            {college.logo && !brokenLogoIds.has(college.id) ? (
+                              <img
+                                src={college.logo}
+                                alt={college.name}
+                                className="cm-logo-thumb"
+                                onError={() => markLogoBroken(college.id)}
+                              />
                             ) : (
                               <span className="cm-logo-placeholder">{college.name.charAt(0).toUpperCase()}</span>
                             )}
@@ -540,15 +545,6 @@ export default function CollegeInstitutionManagement() {
                                 onClick={() => openEdit(college)}
                               >
                                 <EditIcon />
-                              </button>
-                              <button
-                                type="button"
-                                className="cm-action-icon-btn cm-danger"
-                                title="Delete College"
-                                aria-label="Delete College"
-                                onClick={() => handleDelete(college)}
-                              >
-                                <TrashIcon />
                               </button>
                             </div>
                           </td>
@@ -729,8 +725,13 @@ export default function CollegeInstitutionManagement() {
               {/* Header Profile Banner */}
               <div className="cm-profile-banner">
                 <div className="cm-profile-avatar-wrap">
-                  {activeCollege.logo ? (
-                    <img src={activeCollege.logo} alt={activeCollege.name} className="cm-profile-logo" />
+                  {activeCollege.logo && !brokenLogoIds.has(activeCollege.id) ? (
+                    <img
+                      src={activeCollege.logo}
+                      alt={activeCollege.name}
+                      className="cm-profile-logo"
+                      onError={() => markLogoBroken(activeCollege.id)}
+                    />
                   ) : (
                     <div className="cm-profile-placeholder">
                       {activeCollege.name.charAt(0).toUpperCase()}
