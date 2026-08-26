@@ -11,7 +11,7 @@ const isBtech=c=>c.type==='Undergraduate'&&/b\.?tech|bachelor\s+of\s+technology/
 const normalize=b=>({...b,id:b.branchId??b.id,name:b.branchName??b.name??'',code:b.branchCode??b.code??'',status:Number(b.status)===0||b.status==='Inactive'?'Inactive':'Active',duration:b.duration??4,totalSemesters:b.totalSemesters??b.semesters??8})
 const intake=b=>Number(b.intakeCapacity??b.intake??0), type=b=>b.branchType||(b.specialization?'Specialization':'Core')
 const Page=({children})=><DashboardLayout><main className="cm-page branch-management">{children}</main></DashboardLayout>
-const Header=({title,text,children})=><header className="cm-header"><div><span className="cm-eyebrow">Academic Management</span><h1>{title}</h1><p>{text}</p></div><div className="cm-row-actions">{children}</div></header>
+const Header=({title,text,children})=><header className="cm-header"><div><h1>{title}</h1><p>{text}</p></div><div className="cm-row-actions">{children}</div></header>
 const Badge=({value,kind='status'})=><span className={`branch-badge ${kind} ${String(value).toLowerCase()}`}>{kind==='status'&&<i/>}{value}</span>
 const Notice=({children})=>children?<p className="branch-api-error" role="alert"><FiAlertCircle/>{children}</p>:null
 const Field=({label,error,wide,children})=><label className={`cm-field ${wide?'wide':''}`}><span>{label}</span>{children}{error&&<small className="cm-error">{error}</small>}</label>
