@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { FiEye as EyeIcon, FiEdit2 as EditIcon, FiPlus as Plus, FiSettings as Settings } from 'react-icons/fi'
+import { FiEye as EyeIcon, FiEdit2 as EditIcon, FiPlus as Plus, FiToggleLeft, FiToggleRight } from 'react-icons/fi'
 import DashboardLayout from '../../layouts/DashboardLayout'
 import TablePagination, { PAGE_SIZE } from '../../components/TablePagination'
 import StatusConfirmDialog from '../../components/StatusConfirmDialog'
@@ -409,10 +409,6 @@ export default function CollegeInstitutionManagement({ initialView = 'list' }) {
     if (initialView === 'settings') fetchSettingsList()
   }, [initialView])
 
-  const openCollegeSettings = () => {
-    navigate('/college-settings')
-  }
-
   const backToSettingsList = () => {
     setViewMode('settings')
     setActiveSettingsId(null)
@@ -490,9 +486,6 @@ export default function CollegeInstitutionManagement({ initialView = 'list' }) {
                 value={searchTerm}
                 onChange={handleSearchChange}
               />
-              <button type="button" className="cm-secondary-btn" onClick={openCollegeSettings}>
-                <Settings aria-hidden="true" /> College Settings
-              </button>
             </div>
 
             {isCollegesLoading ? (
@@ -550,13 +543,9 @@ export default function CollegeInstitutionManagement({ initialView = 'list' }) {
                           <td>{college.city}</td>
                           <td>{college.contact}</td>
                           <td>
-                            <button
-                              type="button"
-                              className={`cm-status-badge ${college.status}`}
-                              onClick={() => toggleStatus(college)}
-                            >
+                            <span className={`cm-status-badge ${college.status}`}>
                               {college.status === 'active' ? 'Active' : 'Inactive'}
-                            </button>
+                            </span>
                           </td>
                           <td className="cm-actions-cell">
                             <div className="cm-actions">
@@ -577,6 +566,15 @@ export default function CollegeInstitutionManagement({ initialView = 'list' }) {
                                 onClick={() => openEdit(college)}
                               >
                                 <EditIcon />
+                              </button>
+                              <button
+                                type="button"
+                                className={`cm-action-icon-btn cm-status-action ${college.status === 'active' ? 'cm-danger' : 'cm-success'}`}
+                                title={college.status === 'active' ? 'Mark Inactive' : 'Mark Active'}
+                                aria-label={college.status === 'active' ? 'Mark Inactive' : 'Mark Active'}
+                                onClick={() => toggleStatus(college)}
+                              >
+                                {college.status === 'active' ? <FiToggleRight /> : <FiToggleLeft />}
                               </button>
                             </div>
                           </td>

@@ -244,7 +244,7 @@
   padding: 3px 9px;
   font-size: 0.78rem;
   font-weight: 700;
-  cursor: pointer;
+  cursor: default;
 }
 
 .cm-status-badge.active {
@@ -307,6 +307,17 @@
   background: #fff5f5;
   border-color: #f04438;
   color: #b42318;
+}
+
+.cm-action-icon-btn.cm-success {
+  border-color: #bbf7d0;
+  color: #15803d;
+}
+
+.cm-action-icon-btn.cm-success:hover {
+  background: #f0fdf4;
+  border-color: #22c55e;
+  color: #15803d;
 }
 
 /* Pagination Bar */

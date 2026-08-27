@@ -238,7 +238,8 @@
 }
 
 /* Preview-first profile layout. */
-.profile-page .profile-name { color: #fff !important; }
+.profile-page .profile-name,
+.profile-page .profile-email { color: #fff !important; }
 .profile-preview-section { overflow: hidden; border: 1px solid var(--pf-border, #d5e1ea); border-radius: 14px; background: var(--pf-surface, #fff); box-shadow: 0 9px 28px rgba(8,52,89,.07); }
 .profile-page { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
 .profile-page > .profile-heading, .profile-page > .profile-feedback, .profile-page > .profile-overview, .profile-page > .profile-modal { grid-column: 1 / -1; }

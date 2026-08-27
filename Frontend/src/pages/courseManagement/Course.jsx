@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useParams, useNavigate } from 'react-router-dom'
-import { FiArrowLeft, FiCheckCircle, FiEdit2, FiEye, FiFilter, FiPlus, FiSearch } from 'react-icons/fi'
+import { FiArrowLeft, FiCheckCircle, FiEdit2, FiEye, FiFilter, FiPlus, FiSearch, FiToggleLeft, FiToggleRight } from 'react-icons/fi'
 import DashboardLayout from '../../layouts/DashboardLayout'
 import TablePagination, { PAGE_SIZE } from '../../components/TablePagination'
+import StatusConfirmDialog from '../../components/StatusConfirmDialog'
 import { branchApi, courseApi, courseStructureApi, departmentApi } from '../../api/apiEndpoints'
 import { getCourseById, createCourse, updateCourse, updateCourseStatus } from '../../auth/collegeApi'
 import { normalize } from './Branch'
@@ -95,6 +96,8 @@ function CourseList() {
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState('')
   const [currentPage, setCurrentPage] = useState(1)
+  const [pendingStatus, setPendingStatus] = useState(null)
+  const [isStatusSaving, setIsStatusSaving] = useState(false)
   const itemsPerPage = 5
 
   const load = async () => {
@@ -121,6 +124,23 @@ function CourseList() {
   const stats = { total: courses.length, active: courses.filter(c => (c.status || 'Active') === 'Active').length, branches: branches.length, departments: departments.length }
   const hasFilters = Boolean(query || statusFilter)
   const clearFilters = () => { setQuery(''); setStatusFilter(''); setCurrentPage(1) }
+  const toggleStatus = (course) => setPendingStatus({ course, nextStatus: (course.status || 'Active') === 'Active' ? 'Inactive' : 'Active' })
+  const confirmStatusChange = async () => {
+    if (!pendingStatus || isStatusSaving) return
+    const { course, nextStatus } = pendingStatus
+    setIsStatusSaving(true); setError('')
+    try {
+      const response = await updateCourseStatus(course.id, nextStatus === 'Active' ? 1 : 0)
+      const result = recordFrom(response)
+      const updated = result?.id || result?.courseId ? mapCourse(result) : { ...course, status: nextStatus }
+      setCourses(current => current.map(item => item.id === course.id ? updated : item))
+      setPendingStatus(null)
+    } catch (requestError) {
+      setError(apiError(requestError, 'Unable to update course status. Please try again.'))
+    } finally {
+      setIsStatusSaving(false)
+    }
+  }
 
   return <Page>
     <Header title="Course / Programme Management" text="Manage B.Tech courses, branches and structures."><Link className="cm-button" to="/courses/add"><FiPlus /> Add Course</Link></Header>
@@ -151,6 +171,7 @@ function CourseList() {
                         <div className="course-actions">
                           <Link aria-label={`View ${c.name}`} to={`/courses/${c.id}`}><FiEye /></Link>
                           <Link aria-label={`Edit ${c.name}`} to={`/courses/${c.id}/edit`}><FiEdit2 /></Link>
+                          <button className={`course-status-action ${(c.status || 'Active') === 'Active' ? 'danger' : 'success'}`} title={(c.status || 'Active') === 'Active' ? `Mark ${c.name} inactive` : `Mark ${c.name} active`} aria-label={(c.status || 'Active') === 'Active' ? `Mark ${c.name} inactive` : `Mark ${c.name} active`} onClick={() => toggleStatus(c)}>{(c.status || 'Active') === 'Active' ? <FiToggleRight /> : <FiToggleLeft />}</button>
                         </div>
                       </td>
                     </tr>
@@ -168,6 +189,7 @@ function CourseList() {
           <div className="course-empty"><strong>No courses match your filters.</strong><button className="cm-button" onClick={clearFilters}>Clear Filters</button></div>
         )}
     </section>
+    {pendingStatus && <StatusConfirmDialog entity="Course" name={`${pendingStatus.course.name} (${pendingStatus.course.code})`} nextStatus={pendingStatus.nextStatus} onCancel={() => setPendingStatus(null)} onConfirm={confirmStatusChange} busy={isStatusSaving} />}
   </Page>
 }
 
