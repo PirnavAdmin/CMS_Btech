@@ -36,6 +36,8 @@ export default function Register() {
         email: values.email.trim(),
         mobile: values.mobile.trim(),
         password: values.password,
+        confirmPassword: values.confirmPassword,
+        agreeToTerms: values.terms,
       })
       setIsComplete(true)
     } catch (error) {

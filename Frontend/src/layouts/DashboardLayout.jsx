@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { FiLock, FiLogOut, FiMenu, FiMoon, FiSearch, FiSun, FiUser } from 'react-icons/fi'
 import { getUserRole, signOut } from '../auth/auth'
+import { changePassword } from '../api/apiEndpoints'
 import Sidebar from '../components/Sidebar'
 import './DashboardLayout.css'
 import './AccountMenu.css'
@@ -31,10 +32,12 @@ export default function DashboardLayout({ children }) {
   const roleLabel = userRole.charAt(0).toUpperCase() + userRole.slice(1)
   const pageName = ({
     '/dashboard': 'Dashboard', '/my-profile': 'My Profile', '/settings': 'Settings',
-    '/college-institution-management': 'College / Institution', '/academic-year-management': 'Academic Years',
+    '/college-institution-management': 'College', '/academic-year-management': 'Academic Years',
     '/department-management': 'Departments', '/semester-management': 'Semesters', '/section-management': 'Sections',
-  })[pathname] || (pathname.startsWith('/courses') ? 'Courses' : pathname.startsWith('/branches') ? 'Branches' : 'Digital Campus')
-  const breadcrumbSection = ['My Profile', 'Settings'].includes(pageName) ? 'Account' : pageName === 'Dashboard' ? 'Digital Campus' : 'Academic Configuration'
+    '/student-management/admissions': 'Student Admissions',
+    '/student-management/profiles': 'Student Profiles', '/student-management/promotions': 'Student Promotions',
+  })[pathname] || (pathname.startsWith('/student-management/admissions') ? 'Student Admissions' : pathname.startsWith('/courses') ? 'Courses' : pathname.startsWith('/branches') ? 'Branches' : 'Digital Campus')
+  const breadcrumbSection = ['My Profile', 'Settings'].includes(pageName) ? 'Account' : pageName === 'Dashboard' ? 'Digital Campus' : pageName.startsWith('Student ') ? 'Student Management' : 'Academic Configuration'
 
   // Logout confirmation state
   const [showLogoutConfirmation, setShowLogoutConfirmation] = useState(false)
@@ -56,7 +59,7 @@ export default function DashboardLayout({ children }) {
     localStorage.setItem('pirnav-theme', theme)
   }, [theme])
 
-  const globalLinks = [['Dashboard', '/dashboard'], ['College / Institution', '/college-institution-management'], ['Academic Years', '/academic-year-management'], ['Departments', '/department-management'], ['Courses', '/courses'], ['Branches', '/branches'], ['Sections', '/section-management'], ['Semesters', '/semester-management'], ['My Profile', '/my-profile'], ['Settings', '/settings']]
+  const globalLinks = [['Dashboard', '/dashboard'], ['Student Admissions', '/student-management/admissions'], ['Student Profiles', '/student-management/profiles'], ['Student Promotions', '/student-management/promotions'], ['College', '/college-institution-management'], ['Academic Years', '/academic-year-management'], ['Departments', '/department-management'], ['Courses', '/courses'], ['Branches', '/branches'], ['Sections', '/section-management'], ['Semesters', '/semester-management'], ['My Profile', '/my-profile'], ['Settings', '/settings']]
   const globalResults = globalQuery.trim() ? globalLinks.filter(([label]) => label.toLowerCase().includes(globalQuery.trim().toLowerCase())) : []
   const rules = useMemo(
     () => requirements(values.newPassword),
@@ -167,12 +170,21 @@ export default function DashboardLayout({ children }) {
     if (Object.keys(next).length) return
 
     setSubmitting(true)
-
-    setErrors({
-      currentPassword: 'Password change is not available because the backend endpoint is not configured for this tenant.',
-    })
-    setSubmitting(false)
-    setSuccess(false)
+    setErrors({})
+    try {
+      await changePassword({
+        currentPassword: values.currentPassword,
+        newPassword: values.newPassword,
+        confirmNewPassword: values.confirmPassword,
+      })
+      setValues(empty)
+      setSuccess(true)
+    } catch (error) {
+      setErrors({ currentPassword: error.message || 'Unable to change password. Please try again.' })
+      setSuccess(false)
+    } finally {
+      setSubmitting(false)
+    }
   }
 
   const field = (name, label, placeholder) => (

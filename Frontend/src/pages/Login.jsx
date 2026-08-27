@@ -13,7 +13,7 @@ export default function Login() {
   const navigate = useNavigate()
   const [showPassword, setShowPassword] = useState(false)
   const [rememberMe, setRememberMe] = useState(() => localStorage.getItem('btech-remember-me') === 'true')
-  const [values, setValues] = useState({ identifier: '', password: '' })
+  const [values, setValues] = useState(() => ({ identifier: localStorage.getItem('btech-remember-me') === 'true' ? localStorage.getItem('btech-remembered-identifier') || '' : '', password: '' }))
   const [errors, setErrors] = useState({ identifier: '', password: '' })
   const [submitError, setSubmitError] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -97,8 +97,10 @@ export default function Login() {
     setIsSubmitting(true)
     setSubmitError('')
     try {
-      const session = await login({ identifier: values.identifier.trim(), password: values.password })
+      const session = await login({ identifier: values.identifier.trim(), password: values.password, rememberMe })
       localStorage.setItem('btech-remember-me', String(rememberMe))
+      if (rememberMe) localStorage.setItem('btech-remembered-identifier', values.identifier.trim())
+      else localStorage.removeItem('btech-remembered-identifier')
       signIn(session.roles, session.accessToken, session.refreshToken, rememberMe)
       navigate('/dashboard')
     } catch (error) {
@@ -251,7 +253,7 @@ export default function Login() {
 
             <div className="login-options">
               <label className="remember-me">
-                <input type="checkbox" checked={rememberMe} onChange={(event) => setRememberMe(event.target.checked)} />
+                <input type="checkbox" checked={rememberMe} onChange={(event) => { const checked = event.target.checked; setRememberMe(checked); localStorage.setItem('btech-remember-me', String(checked)); if (!checked) localStorage.removeItem('btech-remembered-identifier') }} />
                 <span>Remember me</span>
               </label>
               <button

@@ -4,12 +4,13 @@ import { FiArrowRight, FiBookOpen, FiCalendar, FiGitBranch, FiGrid, FiHome, FiLa
 import { getUserRole } from '../auth/auth'
 import { ROLES } from '../auth/roles'
 import DashboardLayout from '../layouts/DashboardLayout'
-import { getBranches } from './courseManagement/Course'
+import { branchApi } from '../api/apiEndpoints'
+import { normalize as normalizeBranch } from './courseManagement/Branch'
 import { getDepartments, getCourses } from '../auth/collegeApi'
 import './Dashboard.css'
 
 const adminLinks = [
-  { to: '/college-institution-management', label: 'College / institution', icon: FiHome },
+  { to: '/college-institution-management', label: 'College', icon: FiHome },
   { to: '/academic-year-management', label: 'Academic years', icon: FiCalendar },
   { to: '/department-management', label: 'Departments', icon: FiGrid },
   { to: '/semester-management', label: 'Semesters', icon: FiLayers },
@@ -25,12 +26,13 @@ export default function Dashboard() {
   const links = role === ROLES.ADMIN ? adminLinks : [{ to: '/my-subjects', label: 'My subjects', icon: FiBookOpen }]
   const [departments, setDepartments] = useState([])
   const [courses, setCourses] = useState([])
-  const branches = role === ROLES.ADMIN ? getBranches() : []
+  const [branches, setBranches] = useState([])
 
   useEffect(() => {
     if (role !== ROLES.ADMIN) return
     getDepartments().then((response) => setDepartments(listFrom(response.data))).catch(() => setDepartments([]))
     getCourses().then((response) => setCourses(listFrom(response.data))).catch(() => setCourses([]))
+    branchApi.getAll().then((rows) => setBranches(rows.map(normalizeBranch))).catch(() => setBranches([]))
   }, [role])
 
   const activeBranches = branches.filter((branch) => branch.status === 'Active').length

@@ -39,7 +39,7 @@ export default function ForgotPassword({ onBack }) {
     setLoading(true)
     setError('')
     try {
-      await (step === 'otp' ? resendOtp : generateOtp)({ contact: cleanContact })
+      await (step === 'otp' ? resendOtp : generateOtp)({ contact: cleanContact, purpose: 'PASSWORD_RESET' })
       setDemoOtp('')
       setStep('otp')
       setTimer(60)
@@ -56,7 +56,7 @@ export default function ForgotPassword({ onBack }) {
     setLoading(true)
     setError('')
     try {
-      await verifyOtp({ contact: contact.trim(), otp })
+      await verifyOtp({ contact: contact.trim(), otp, purpose: 'PASSWORD_RESET' })
       setStep('change-password')
     } catch (verificationError) {
       setError(verificationError instanceof AuthRequestError ? verificationError.message : 'Unable to verify the OTP.')
@@ -87,7 +87,10 @@ export default function ForgotPassword({ onBack }) {
     setError('')
     try {
       await resetPassword({ contact: contact.trim(), otp, password: newPassword })
-      setStep('success')
+      sessionStorage.setItem('btech-logout-message', 'Password changed successfully. Please sign in with your new password.')
+      onBack()
+      window.history.replaceState(null, '', '/login')
+      window.setTimeout(() => window.location.reload(), 0)
     } catch (resetError) {
       setError(resetError instanceof AuthRequestError ? resetError.message : 'Unable to reset your password right now. Please try again.')
     } finally {

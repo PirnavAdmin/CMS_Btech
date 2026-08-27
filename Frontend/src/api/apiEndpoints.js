@@ -5,7 +5,9 @@ export const API_BASE_URL = import.meta.env.DEV
   : normalizeBaseUrl(import.meta.env.VITE_API_BASE_URL)
 
 const AUTH_LOGIN_URL = normalizeBaseUrl(import.meta.env.VITE_AUTH_API_URL)
-const hasConfiguredAuthLoginUrl = Boolean(AUTH_LOGIN_URL)
+// Development uses Vite's configured /api proxy, so an explicit absolute
+// login URL is only mandatory for a production build.
+const hasConfiguredAuthLoginUrl = import.meta.env.DEV || Boolean(AUTH_LOGIN_URL || API_BASE_URL)
 
 const endpoint = (path) => `${API_BASE_URL}${path}`
 
@@ -21,6 +23,7 @@ export const API_ENDPOINTS = Object.freeze({
   auth: Object.freeze({
     login: AUTH_LOGIN_URL || endpoint('/api/v1/auth/login'),
     refresh: endpoint('/api/v1/auth/refresh'),
+    changePassword: endpoint('/api/v1/auth/change-password'),
     forgotPassword: endpoint('/api/v1/auth/forgot-password'),
   }),
   profile: Object.freeze({
@@ -127,7 +130,7 @@ const request = async (url, options = {}, retried = false) => {
       headers: { ...options.headers, ...(token ? { Authorization: `Bearer ${token}` } : {}) },
     })
   } catch {
-    throw new Error('Unable to connect to the server.')
+    throw new Error('We’re having trouble connecting right now. Please try again shortly.')
   }
   if (response.status === 401 && !retried) {
     try {
@@ -142,13 +145,14 @@ const request = async (url, options = {}, retried = false) => {
   }
   const body = await readBody(response)
   if (!response.ok || body?.success === false) {
+    if (response.status >= 500) throw new Error('Something went wrong while completing your request. Please try again.')
     const fallback = {
       400: 'Please check the submitted profile information.',
       401: 'Your session has expired. Please sign in again.',
       403: "You don't have permission to update this profile.",
       404: 'Profile not found.',
       409: 'The email or mobile number is already in use.',
-      500: 'The server could not complete the profile request.',
+      500: 'Something went wrong while completing your request. Please try again.',
     }[response.status] || 'The request could not be completed.'
     throw new Error(validationMessage(body) || fallback)
   }
@@ -166,9 +170,9 @@ const normalizeFrontendRole = (roleValue) => {
   return normalized || 'student'
 }
 
-export async function login({ identifier, password }) {
+export async function login({ identifier, password, rememberMe = false }) {
   if (!hasConfiguredAuthLoginUrl) {
-    throw new AuthRequestError('Authentication service is not configured. Set VITE_AUTH_API_URL or VITE_API_BASE_URL before signing in.')
+    throw new AuthRequestError('Sign in is temporarily unavailable. Please try again later.')
   }
 
   let response
@@ -179,17 +183,22 @@ export async function login({ identifier, password }) {
         'Content-Type': 'application/json',
         'ngrok-skip-browser-warning': 'true',
       },
-      body: JSON.stringify({ loginId: identifier, password }),
+      body: JSON.stringify({ loginId: identifier, password, rememberMe: Boolean(rememberMe) }),
     })
   } catch {
-    throw new AuthRequestError('Unable to connect to the server.')
+    throw new AuthRequestError('We’re having trouble signing you in right now. Please try again shortly.')
   }
   const body = await readBody(response)
   if (!response.ok || body?.success === false) {
-    throw new AuthRequestError(body?.message || (response.status === 401 ? 'Invalid credentials.' : 'Unable to sign in.'), response.status || 401)
+    const message = response.status === 401
+      ? 'The email, mobile number, or password is incorrect.'
+      : response.status === 429
+        ? 'Too many sign-in attempts. Please wait a moment and try again.'
+        : 'We couldn’t sign you in right now. Please try again.'
+    throw new AuthRequestError(message, response.status || 400)
   }
   const data = body?.data
-  if (!data?.accessToken || !data?.refreshToken) throw new AuthRequestError('The server returned an invalid login response.')
+  if (!data?.accessToken || !data?.refreshToken) throw new AuthRequestError('We couldn’t complete sign in. Please try again.')
 
   const roleValue = data.roles ?? data.role
   return {
@@ -203,15 +212,23 @@ export async function login({ identifier, password }) {
   }
 }
 
+export async function changePassword({ currentPassword, newPassword, confirmNewPassword }) {
+  return request(API_ENDPOINTS.auth.changePassword, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ currentPassword, newPassword, confirmNewPassword }),
+  })
+}
+
 const normalizeProfile = (source) => {
   const data = source && typeof source === 'object' ? source : {}
-  const lastLoginAt = data.lastLoginAt ?? data.last_login_at ?? data.LastLoginAt ?? ''
+  const lastLoginAt = data.lastLoginAt ?? data.last_login_at ?? data.LastLoginAt ?? data.lastLogin ?? data.last_login ?? ''
   return {
     id: data.userId ?? '', identifier: data.employeeUserId ?? '', fullName: data.fullName ?? '',
     email: data.email ?? '', mobile: data.mobile ?? '', role: Array.isArray(data.roles) ? data.roles.join(', ') : String(data.role ?? ''),
-    dateOfBirth: data.dateOfBirth ?? '', gender: data.gender ?? '', department: data.department ?? '',
+    dateOfBirth: data.dateOfBirth ?? '', gender: data.gender ?? '', department: data.department ?? data.departmentName ?? '', departmentId: data.departmentId ?? '',
     designation: data.designation ?? '', address: data.address ?? '', postalCode: data.postalCode ?? '',
-    city: data.city ?? '', district: data.district ?? '', state: data.state ?? '', bio: data.bio ?? '',
+    pincode: data.pincode ?? data.postalCode ?? '', city: data.city ?? '', district: data.district ?? '', state: data.state ?? '', bio: data.bio ?? data.aboutMe ?? '',
     lastLoginAt,
     updatedAt: data.updatedAt ?? '',
   }
@@ -220,7 +237,7 @@ const normalizeProfile = (source) => {
 export const profileApi = {
   getProfile: async () => {
     const response = await request(API_ENDPOINTS.profile.get)
-    if (!response?.data) throw new Error(response?.message || 'Profile data was not returned by the server.')
+    if (!response?.data) throw new Error('We couldn’t load your profile right now. Please try again.')
     return normalizeProfile(response.data)
   },
   updateProfile: async (profile) => {
@@ -231,6 +248,17 @@ export const profileApi = {
         fullName: String(profile.fullName || '').trim(),
         email: String(profile.email || '').trim(),
         mobile: String(profile.mobile || '').trim(),
+        dateOfBirth: profile.dateOfBirth || null,
+        gender: profile.gender || null,
+        departmentId: profile.departmentId ? Number(profile.departmentId) : null,
+        department: String(profile.department || '').trim() || null,
+        designation: String(profile.designation || '').trim() || null,
+        address: String(profile.address || '').trim() || null,
+        pincode: String(profile.pincode || profile.postalCode || '').trim() || null,
+        city: String(profile.city || '').trim() || null,
+        district: String(profile.district || '').trim() || null,
+        state: String(profile.state || '').trim() || null,
+        aboutMe: String(profile.bio || profile.aboutMe || '').trim() || null,
       }),
     })
     return normalizeProfile(response?.data || {})
@@ -335,7 +363,7 @@ export const courseApi = {
 const courseStructurePayload = (structure) => ({
   courseId: Number(structure.courseId),
   branchId: Number(structure.branchId),
-  ...(structure.academicYearId ? { academicYearId: Number(structure.academicYearId) } : {}),
+  academicYearId: Number(structure.academicYearId),
   yearNumber: Number(structure.yearNumber),
   semesterNumber: Number(structure.semesterNumber),
   semesterName: String(structure.semesterName || `Semester ${structure.semesterNumber}`).trim(),

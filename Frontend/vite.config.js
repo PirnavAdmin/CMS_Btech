@@ -6,6 +6,14 @@ export default defineConfig({
   plugins: [react()],
   server: {
     proxy: {
+      '/api/v1/access-requests': {
+        target: 'https://abreast-curling-tutor.ngrok-free.dev',
+        changeOrigin: true,
+        secure: true,
+        headers: {
+          'ngrok-skip-browser-warning': 'true',
+        },
+      },
       '/api/college-settings': {
         target: 'https://abreast-curling-tutor.ngrok-free.dev',
         changeOrigin: true,

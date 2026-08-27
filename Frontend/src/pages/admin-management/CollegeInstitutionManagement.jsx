@@ -2,11 +2,15 @@ import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { FiEye as EyeIcon, FiEdit2 as EditIcon, FiPlus as Plus, FiSettings as Settings } from 'react-icons/fi'
 import DashboardLayout from '../../layouts/DashboardLayout'
+import TablePagination, { PAGE_SIZE } from '../../components/TablePagination'
+import StatusConfirmDialog from '../../components/StatusConfirmDialog'
 import {
   createCollegeSettings,
   getCollegeById,
   getCollegeSettings,
   getColleges,
+  readCollegeExtendedDetails,
+  unwrapCollegeRecord,
   searchColleges,
   updateCollege,
   updateCollegeSettings,
@@ -73,16 +77,6 @@ function ContactIcon() {
   )
 }
 
-function ExternalLinkIcon() {
-  return (
-    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginLeft: 4 }}>
-      <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
-      <polyline points="15 3 21 3 21 9" />
-      <line x1="10" y1="14" x2="21" y2="3" />
-    </svg>
-  )
-}
-
 function validateCollege(values) {
   const errors = {}
   if (!values.name.trim()) errors.name = 'College name is required.'
@@ -127,6 +121,8 @@ function validateSettings(values) {
 const getResponseList = (responseData) => {
   const data = responseData?.data ?? responseData
   if (Array.isArray(data)) return data
+  if (Array.isArray(data?.items)) return data.items
+  if (Array.isArray(data?.records)) return data.records
   if (data && typeof data === 'object') return [data]
   return []
 }
@@ -141,27 +137,58 @@ const getCollegeRecords = (responseData) => {
   const data = responseData?.data ?? responseData
   if (Array.isArray(data)) return data
   if (Array.isArray(data?.items)) return data.items
+  if (Array.isArray(data?.colleges)) return data.colleges
+  if (Array.isArray(data?.records)) return data.records
+  if (Array.isArray(data?.result)) return data.result
+  if (Array.isArray(data?.data)) return data.data
   return data && typeof data === 'object' ? [data] : []
 }
 
-const mapCollege = (record) => ({
+const hasValue = (value) => value !== null && value !== undefined && String(value).trim() !== ''
+const displayValue = (value) => hasValue(value) ? value : 'Not provided'
+const resolveLogo = (value) => {
+  if (!hasValue(value) || String(value).startsWith('data:') || /^https?:\/\//i.test(value)) return value
+  return `${String(import.meta.env.VITE_API_BASE_URL_COLLEGES || '').replace(/\/+$/, '')}/${String(value).replace(/^\/+/, '')}`
+}
+const mapCollege = (record) => {
+  const address = record.addressDetails ?? record.addressInfo ?? {}
+  const contact = record.contactDetails ?? record.contactInfo ?? {}
+  const administration = record.administration ?? record.principalDetails ?? {}
+  const accreditation = record.accreditationDetails && typeof record.accreditationDetails === 'object' ? record.accreditationDetails : {}
+  const extended = readCollegeExtendedDetails(record)
+  return ({
   id: record.id ?? record.collegeId,
   name: record.name ?? record.collegeName ?? '',
   code: record.code ?? record.collegeCode ?? '',
   type: record.type ?? record.collegeType ?? record.institutionType ?? COLLEGE_TYPES[0],
   university: record.university ?? record.universityName ?? '',
   address: record.address ?? record.addressLine1 ?? '',
-  city: record.city ?? '',
-  state: record.state ?? '',
-  pincode: String(record.pincode ?? ''),
-  contact: String(record.contact ?? record.contactNumber ?? record.phoneNumber ?? ''),
-  email: record.email ?? record.collegeEmail ?? '',
-  website: record.website ?? '',
-  logo: record.logo ?? record.logoUrl ?? '',
-  principal: record.principal ?? record.principalName ?? '',
-  accreditation: record.accreditation ?? record.accreditationDetails ?? '',
+  addressLine1: record.addressLine1 ?? address.addressLine1 ?? record.address ?? '',
+  addressLine2: record.addressLine2 ?? address.addressLine2 ?? '',
+  area: record.area ?? address.area ?? extended.area ?? '',
+  district: record.district ?? address.district ?? extended.district ?? '',
+  country: record.country ?? address.country ?? '',
+  city: record.city ?? address.city ?? '',
+  state: record.state ?? address.state ?? '',
+  pincode: String(record.pincode ?? address.pincode ?? ''),
+  contact: String(record.contact ?? record.contactNumber ?? record.phoneNumber ?? record.mobile ?? record.phone ?? contact.contactNumber ?? contact.phoneNumber ?? contact.mobile ?? contact.phone ?? ''),
+  alternateContact: String(record.alternateContact ?? record.alternateContactNumber ?? record.alternatePhoneNumber ?? contact.alternateContactNumber ?? extended.alternateContactNumber ?? ''),
+  email: record.email ?? record.collegeEmail ?? contact.email ?? '',
+  website: record.website ?? contact.website ?? '',
+  logo: resolveLogo(record.logo ?? record.logoUrl ?? record.collegeLogo ?? record.collegeLogoUrl ?? record.logoPath ?? ''),
+  principal: record.principal ?? record.principalName ?? administration.principalName ?? '',
+  principalEmail: record.principalEmail ?? administration.principalEmail ?? extended.principalEmail ?? '',
+  principalContact: record.principalContact ?? record.principalPhone ?? administration.principalContact ?? extended.principalContact ?? '',
+  accreditation: extended.accreditationSummary ?? '',
+  accreditationStatus: record.accreditationStatus ?? accreditation.status ?? extended.accreditationStatus ?? '',
+  accreditationBody: record.accreditationBody ?? accreditation.body ?? accreditation.accreditationBody ?? extended.accreditationBody ?? '',
+  accreditationGrade: record.accreditationGrade ?? accreditation.grade ?? extended.accreditationGrade ?? '',
+  accreditationNumber: record.accreditationNumber ?? accreditation.number ?? extended.accreditationNumber ?? '',
+  validFrom: record.validFrom ?? record.accreditationValidFrom ?? accreditation.validFrom ?? extended.validFrom ?? '',
+  validUntil: record.validUntil ?? record.accreditationValidUntil ?? accreditation.validUntil ?? extended.validUntil ?? '',
   status: String(record.status ?? (record.isActive === false ? 'inactive' : 'active')).toLowerCase() === 'active' || record.isActive === true || Number(record.status) === 1 ? 'active' : 'inactive',
-})
+  })
+}
 
 const collegePayload = (college) => ({
   name: college.name.trim(),
@@ -199,7 +226,7 @@ const mapRecordToForm = (record) => ({
   status: record.status ?? 1,
 })
 
-export default function CollegeInstitutionManagement() {
+export default function CollegeInstitutionManagement({ initialView = 'list' }) {
   const navigate = useNavigate()
   const [colleges, setColleges] = useState([])
   const [isCollegesLoading, setIsCollegesLoading] = useState(true)
@@ -207,7 +234,7 @@ export default function CollegeInstitutionManagement() {
   const [isCollegeSaving, setIsCollegeSaving] = useState(false)
   const [isCollegeDetailsLoading, setIsCollegeDetailsLoading] = useState(false)
 
-  const [viewMode, setViewMode] = useState('list') // list | edit | details | settings | settings-form
+  const [viewMode, setViewMode] = useState(initialView) // list | edit | details | settings | settings-form
   const [activeId, setActiveId] = useState(null)
   const [formValues, setFormValues] = useState(emptyCollege)
   const [errors, setErrors] = useState({})
@@ -223,10 +250,13 @@ export default function CollegeInstitutionManagement() {
   const [activeSettingsId, setActiveSettingsId] = useState(null)
   const [isSettingsSaving, setIsSettingsSaving] = useState(false)
   const [settingsSubmitError, setSettingsSubmitError] = useState('')
+  const [settingsPage, setSettingsPage] = useState(1)
+  const [pendingStatus, setPendingStatus] = useState(null)
+  const [isStatusSaving, setIsStatusSaving] = useState(false)
 
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1)
-  const itemsPerPage = 5
+  const [itemsPerPage, setItemsPerPage] = useState(5)
 
   // Logos that failed to load (broken/invalid URLs) fall back to the initial-letter avatar
   const [brokenLogoIds, setBrokenLogoIds] = useState(() => new Set())
@@ -242,6 +272,9 @@ export default function CollegeInstitutionManagement() {
   const startIndex = (safeCurrentPage - 1) * itemsPerPage
   const endIndex = Math.min(startIndex + itemsPerPage, filteredColleges.length)
   const displayedColleges = filteredColleges.slice(startIndex, endIndex)
+  const settingsTotalPages = Math.max(1, Math.ceil(settingsList.length / PAGE_SIZE))
+  const currentSettingsPage = Math.min(settingsPage, settingsTotalPages)
+  const displayedSettings = settingsList.slice((currentSettingsPage - 1) * PAGE_SIZE, currentSettingsPage * PAGE_SIZE)
 
   const loadColleges = async (term = '') => {
     setIsCollegesLoading(true)
@@ -287,22 +320,7 @@ export default function CollegeInstitutionManagement() {
   }
 
   const openEdit = async (college) => {
-    setIsCollegeDetailsLoading(true)
-    setCollegeError('')
-    setViewMode('edit')
-    setActiveId(college.id)
-    try {
-      const response = await getCollegeById(college.id)
-      const detail = mapCollege((response.data?.data ?? response.data) || college)
-      setFormValues(detail)
-      setColleges((current) => current.map((item) => (item.id === detail.id ? detail : item)))
-    } catch (error) {
-      setFormValues(college)
-      setCollegeError(getApiErrorMessage(error, 'Unable to load college details. Please try again.'))
-    } finally {
-      setIsCollegeDetailsLoading(false)
-    }
-    setErrors({})
+    navigate(`/college-institution-management/add?edit=${encodeURIComponent(college.id)}`)
   }
 
   const openDetails = async (college) => {
@@ -310,9 +328,11 @@ export default function CollegeInstitutionManagement() {
     setCollegeError('')
     setActiveId(college.id)
     setViewMode('details')
+    window.scrollTo({ top: 0, left: 0, behavior: 'auto' })
     try {
       const response = await getCollegeById(college.id)
-      const detail = mapCollege((response.data?.data ?? response.data) || college)
+      const detailRecord = unwrapCollegeRecord(response)
+      const detail = mapCollege(Object.keys(detailRecord).length ? detailRecord : college)
       setColleges((current) => current.map((item) => (item.id === detail.id ? detail : item)))
     } catch (error) {
       setCollegeError(getApiErrorMessage(error, 'Unable to load college details. Please try again.'))
@@ -322,6 +342,10 @@ export default function CollegeInstitutionManagement() {
   }
 
   const backToList = () => {
+    if (initialView === 'settings') {
+      navigate('/college-institution-management')
+      return
+    }
     setViewMode('list')
     setActiveId(null)
     setErrors({})
@@ -350,16 +374,20 @@ export default function CollegeInstitutionManagement() {
     }
   }
 
-  const toggleStatus = async (college) => {
-    const nextStatus = college.status === 'active' ? 'inactive' : 'active'
+  const toggleStatus = (college) => setPendingStatus({ college, nextStatus: college.status === 'active' ? 'inactive' : 'active' })
+  const confirmStatusChange = async () => {
+    if (!pendingStatus || isStatusSaving) return
+    const { college, nextStatus } = pendingStatus
+    setIsStatusSaving(true)
     setCollegeError('')
     try {
-      const response = await updateCollegeStatus(college.id, nextStatus)
+      const response = await updateCollegeStatus(college.id, nextStatus === 'active' ? 1 : 0)
       const updated = mapCollege((response.data?.data ?? response.data) || { ...college, status: nextStatus })
       setColleges((current) => current.map((item) => (item.id === college.id ? updated : item)))
+      setPendingStatus(null)
     } catch (error) {
       setCollegeError(getApiErrorMessage(error, 'Unable to update college status. Please try again.'))
-    }
+    } finally { setIsStatusSaving(false) }
   }
 
   // ── College Settings: list ──
@@ -369,6 +397,7 @@ export default function CollegeInstitutionManagement() {
     try {
       const response = await getCollegeSettings()
       setSettingsList(getResponseList(response.data))
+      setSettingsPage(1)
     } catch (error) {
       setSettingsListError(getApiErrorMessage(error, 'Unable to load college settings. Please try again.'))
     } finally {
@@ -376,9 +405,12 @@ export default function CollegeInstitutionManagement() {
     }
   }
 
+  useEffect(() => {
+    if (initialView === 'settings') fetchSettingsList()
+  }, [initialView])
+
   const openCollegeSettings = () => {
-    setViewMode('settings')
-    fetchSettingsList()
+    navigate('/college-settings')
   }
 
   const backToSettingsList = () => {
@@ -443,7 +475,7 @@ export default function CollegeInstitutionManagement() {
           <>
             <header className="cm-header">
               <div>
-                <h1>College / Institution Management</h1>
+                <h1>College Management</h1>
               </div>
               <button type="button" className="cm-primary-btn" onClick={openAdd}>
                 <Plus aria-hidden="true" /> Add College
@@ -487,14 +519,14 @@ export default function CollegeInstitutionManagement() {
                   <table className="cm-table">
                     <thead>
                       <tr>
-                        <th>Logo</th>
-                        <th>College Name</th>
-                        <th>Code</th>
-                        <th>Type</th>
-                        <th>City</th>
-                        <th>Contact</th>
-                        <th>Status</th>
-                        <th className="cm-actions-header">Actions</th>
+                        <th><span className="cm-table-heading" style={{ display: 'flex', justifyContent: 'center' }}>Logo</span></th>
+                        <th><span className="cm-table-heading" style={{ display: 'flex', justifyContent: 'center' }}>College Name</span></th>
+                        <th><span className="cm-table-heading" style={{ display: 'flex', justifyContent: 'center' }}>Code</span></th>
+                        <th><span className="cm-table-heading" style={{ display: 'flex', justifyContent: 'center' }}>Type</span></th>
+                        <th><span className="cm-table-heading" style={{ display: 'flex', justifyContent: 'center' }}>City</span></th>
+                        <th><span className="cm-table-heading" style={{ display: 'flex', justifyContent: 'center' }}>Contact</span></th>
+                        <th><span className="cm-table-heading" style={{ display: 'flex', justifyContent: 'center' }}>Status</span></th>
+                        <th className="cm-actions-header"><span className="cm-table-heading" style={{ display: 'flex', justifyContent: 'center' }}>Actions</span></th>
                       </tr>
                     </thead>
                     <tbody>
@@ -557,6 +589,14 @@ export default function CollegeInstitutionManagement() {
                 {/* Table Pagination Controls */}
                 <div className="cm-pagination">
                   <div className="cm-pagination-info">
+                    <label htmlFor="college-page-size">Show
+                      <select id="college-page-size" value={itemsPerPage} onChange={(event) => { setItemsPerPage(Number(event.target.value)); setCurrentPage(1) }}>
+                        <option value="5">5</option>
+                        <option value="10">10</option>
+                        <option value="100">100</option>
+                      </select>
+                      entries
+                    </label>
                   </div>
                   <div className="cm-pagination-controls">
                     <button
@@ -567,18 +607,7 @@ export default function CollegeInstitutionManagement() {
                     >
                       Previous
                     </button>
-                    <div className="cm-page-numbers">
-                      {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
-                        <button
-                          key={page}
-                          type="button"
-                          className={`cm-page-num ${page === safeCurrentPage ? 'active' : ''}`}
-                          onClick={() => setCurrentPage(page)}
-                        >
-                          {page}
-                        </button>
-                      ))}
-                    </div>
+                    <span className="cm-page-indicator">Page {safeCurrentPage} of {totalPages}</span>
                     <button
                       type="button"
                       className="cm-page-btn"
@@ -746,82 +775,66 @@ export default function CollegeInstitutionManagement() {
                       {activeCollege.status === 'active' ? 'Active' : 'Inactive'}
                     </span>
                   </div>
-                  <h1 className="cm-profile-title">{activeCollege.name}</h1>
-                  <p className="cm-profile-subtitle">Affiliated with <strong>{activeCollege.university}</strong></p>
+                  <h1 className="cm-profile-title"><span style={{ color: '#fff' }}>{activeCollege.name}</span></h1>
+                  <p className="cm-profile-subtitle"><span style={{ color: '#fff' }}>Affiliated with </span><strong style={{ color: '#fff' }}>{activeCollege.university}</strong></p>
                 </div>
               </div>
 
               {/* Profile Information Cards Grid */}
               <div className="cm-profile-grid">
-                {/* Academic & Administration Card */}
                 <div className="cm-info-card">
-                  <div className="cm-info-card-header">
-                    <AcademicIcon />
-                    <h2>Academic & Administration</h2>
-                  </div>
+                  <div className="cm-info-card-header"><AcademicIcon /><h2>Basic College Information</h2></div>
                   <div className="cm-info-rows">
-                    <div className="cm-info-row">
-                      <span className="cm-info-label">Principal Name</span>
-                      <span className="cm-info-val">{activeCollege.principal || '—'}</span>
-                    </div>
-                    <div className="cm-info-row">
-                      <span className="cm-info-label">Affiliated University</span>
-                      <span className="cm-info-val">{activeCollege.university}</span>
-                    </div>
-                    <div className="cm-info-row">
-                      <span className="cm-info-label">Institution Type</span>
-                      <span className="cm-info-val">{activeCollege.type}</span>
-                    </div>
-                    <div className="cm-info-row">
-                      <span className="cm-info-label">Accreditation Details</span>
-                      <span className="cm-info-val">{activeCollege.accreditation || 'Not specified'}</span>
-                    </div>
+                    <div className="cm-info-row"><span className="cm-info-label">College Name</span><span className="cm-info-val">{displayValue(activeCollege.name)}</span></div>
+                    <div className="cm-info-row"><span className="cm-info-label">College Code</span><span className="cm-info-val">{displayValue(activeCollege.code)}</span></div>
+                    <div className="cm-info-row"><span className="cm-info-label">College Type</span><span className="cm-info-val">{displayValue(activeCollege.type)}</span></div>
+                    <div className="cm-info-row"><span className="cm-info-label">University Name</span><span className="cm-info-val">{displayValue(activeCollege.university)}</span></div>
+                    <div className="cm-info-row"><span className="cm-info-label">Status</span><span className="cm-info-val">{activeCollege.status === 'active' ? 'Active' : 'Inactive'}</span></div>
                   </div>
                 </div>
 
-                {/* Contact & Location Details Card */}
                 <div className="cm-info-card">
-                  <div className="cm-info-card-header">
-                    <ContactIcon />
-                    <h2>Contact & Location Details</h2>
-                  </div>
+                  <div className="cm-info-card-header"><ContactIcon /><h2>Address Details</h2></div>
                   <div className="cm-info-rows">
-                    <div className="cm-info-row">
-                      <span className="cm-info-label">Email Address</span>
-                      <span className="cm-info-val">
-                        <a href={`mailto:${activeCollege.email}`} className="cm-link">
-                          {activeCollege.email}
-                        </a>
-                      </span>
-                    </div>
-                    <div className="cm-info-row">
-                      <span className="cm-info-label">Contact Number</span>
-                      <span className="cm-info-val">
-                        <a href={`tel:${activeCollege.contact}`} className="cm-link">
-                          {activeCollege.contact}
-                        </a>
-                      </span>
-                    </div>
-                    <div className="cm-info-row">
-                      <span className="cm-info-label">Official Website</span>
-                      <span className="cm-info-val">
-                        {activeCollege.website ? (
-                          <a href={activeCollege.website} target="_blank" rel="noreferrer" className="cm-link">
-                            {activeCollege.website}
-                            <ExternalLinkIcon />
-                          </a>
-                        ) : (
-                          '—'
-                        )}
-                      </span>
-                    </div>
-                    <div className="cm-info-row">
-                      <span className="cm-info-label">Campus Address</span>
-                      <span className="cm-info-val">
-                        {activeCollege.address ? `${activeCollege.address}, ` : ''}
-                        {activeCollege.city}, {activeCollege.state} - {activeCollege.pincode}
-                      </span>
-                    </div>
+                    <div className="cm-info-row"><span className="cm-info-label">Address Line 1</span><span className="cm-info-val">{displayValue(activeCollege.addressLine1)}</span></div>
+                    <div className="cm-info-row"><span className="cm-info-label">Address Line 2</span><span className="cm-info-val">{displayValue(activeCollege.addressLine2)}</span></div>
+                    <div className="cm-info-row"><span className="cm-info-label">Area</span><span className="cm-info-val">{displayValue(activeCollege.area)}</span></div>
+                    <div className="cm-info-row"><span className="cm-info-label">District</span><span className="cm-info-val">{displayValue(activeCollege.district)}</span></div>
+                    <div className="cm-info-row"><span className="cm-info-label">City</span><span className="cm-info-val">{displayValue(activeCollege.city)}</span></div>
+                    <div className="cm-info-row"><span className="cm-info-label">State</span><span className="cm-info-val">{displayValue(activeCollege.state)}</span></div>
+                    <div className="cm-info-row"><span className="cm-info-label">Pincode</span><span className="cm-info-val">{displayValue(activeCollege.pincode)}</span></div>
+                    <div className="cm-info-row"><span className="cm-info-label">Country</span><span className="cm-info-val">{displayValue(activeCollege.country)}</span></div>
+                  </div>
+                </div>
+
+                <div className="cm-info-card">
+                  <div className="cm-info-card-header"><ContactIcon /><h2>Contact Details</h2></div>
+                  <div className="cm-info-rows">
+                    <div className="cm-info-row"><span className="cm-info-label">Contact Number</span><span className="cm-info-val">{displayValue(activeCollege.contact)}</span></div>
+                    <div className="cm-info-row"><span className="cm-info-label">Alternate Contact Number</span><span className="cm-info-val">{displayValue(activeCollege.alternateContact)}</span></div>
+                    <div className="cm-info-row"><span className="cm-info-label">Email</span><span className="cm-info-val">{displayValue(activeCollege.email)}</span></div>
+                    <div className="cm-info-row"><span className="cm-info-label">Website</span><span className="cm-info-val">{displayValue(activeCollege.website)}</span></div>
+                  </div>
+                </div>
+
+                <div className="cm-info-card">
+                  <div className="cm-info-card-header"><AcademicIcon /><h2>Administration</h2></div>
+                  <div className="cm-info-rows">
+                    <div className="cm-info-row"><span className="cm-info-label">Principal Name</span><span className="cm-info-val">{displayValue(activeCollege.principal)}</span></div>
+                    <div className="cm-info-row"><span className="cm-info-label">Principal Email</span><span className="cm-info-val">{displayValue(activeCollege.principalEmail)}</span></div>
+                    <div className="cm-info-row"><span className="cm-info-label">Principal Contact</span><span className="cm-info-val">{displayValue(activeCollege.principalContact)}</span></div>
+                  </div>
+                </div>
+
+                <div className="cm-info-card">
+                  <div className="cm-info-card-header"><AcademicIcon /><h2>Accreditation Details</h2></div>
+                  <div className="cm-info-rows">
+                    <div className="cm-info-row"><span className="cm-info-label">Accreditation Status</span><span className="cm-info-val">{displayValue(activeCollege.accreditationStatus)}</span></div>
+                    <div className="cm-info-row"><span className="cm-info-label">Accreditation Body</span><span className="cm-info-val">{displayValue(activeCollege.accreditationBody)}</span></div>
+                    <div className="cm-info-row"><span className="cm-info-label">Accreditation Grade</span><span className="cm-info-val">{displayValue(activeCollege.accreditationGrade)}</span></div>
+                    <div className="cm-info-row"><span className="cm-info-label">Accreditation Number</span><span className="cm-info-val">{displayValue(activeCollege.accreditationNumber)}</span></div>
+                    <div className="cm-info-row"><span className="cm-info-label">Valid From</span><span className="cm-info-val">{displayValue(activeCollege.validFrom)}</span></div>
+                    <div className="cm-info-row"><span className="cm-info-label">Valid Until</span><span className="cm-info-val">{displayValue(activeCollege.validUntil)}</span></div>
                   </div>
                 </div>
               </div>
@@ -835,7 +848,7 @@ export default function CollegeInstitutionManagement() {
             <header className="cm-header">
               <div>
                 <h1>College Settings</h1>
-                <p>Manage academic and institutional settings for every college.</p>
+                <p>Manage academic and college settings for every college.</p>
               </div>
               <div style={{ display: 'flex', gap: '8px' }}>
                 <button type="button" className="cm-primary-btn" onClick={openAddSettings}>
@@ -884,7 +897,7 @@ export default function CollegeInstitutionManagement() {
                     </tr>
                   </thead>
                   <tbody>
-                    {settingsList.map((item) => (
+                    {displayedSettings.map((item) => (
                       <tr key={item.id}>
                         <td>{item.collegeName}</td>
                         <td>{item.collegeCode}</td>
@@ -915,6 +928,7 @@ export default function CollegeInstitutionManagement() {
                     ))}
                   </tbody>
                 </table>
+                <TablePagination page={currentSettingsPage} totalPages={settingsTotalPages} onPageChange={setSettingsPage} />
               </div>
             )}
           </div>
@@ -965,7 +979,7 @@ export default function CollegeInstitutionManagement() {
                 </label>
 
                 <label>
-                  <span>Institution Type</span>
+                  <span>College Type</span>
                   <select name="institutionType" value={settingsForm.institutionType} onChange={updateSettingsField}>
                     {COLLEGE_TYPES.map((type) => (
                       <option key={type} value={type}>{type}</option>
@@ -1039,6 +1053,7 @@ export default function CollegeInstitutionManagement() {
           </>
         )}
       </div>
+      {pendingStatus && <StatusConfirmDialog entity="College" name={`${pendingStatus.college.name} (${pendingStatus.college.code})`} nextStatus={pendingStatus.nextStatus} onCancel={() => setPendingStatus(null)} onConfirm={confirmStatusChange} busy={isStatusSaving} />}
     </DashboardLayout>
   )
 }

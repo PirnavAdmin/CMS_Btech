@@ -8,9 +8,10 @@ export class AuthRequestError extends Error {
 }
 
 const authEndpoint = import.meta.env.VITE_AUTH_API_URL
-const registrationEndpoint = import.meta.env.VITE_REGISTRATION_API_URL
-const otpEndpoint = import.meta.env.VITE_OTP_API_URL || authEndpoint
+const registrationBaseUrl = String(import.meta.env.VITE_API_BASE_URL || '').replace(/\/+$/, '')
+const registrationEndpoint = import.meta.env.VITE_REGISTRATION_API_URL || (registrationBaseUrl ? `${registrationBaseUrl}/api/v1/access-requests` : import.meta.env.DEV ? '/api/v1/access-requests' : '')
 const otpApiBaseUrl = (import.meta.env.VITE_OTP_API_URL || import.meta.env.VITE_API_BASE_URL || '').replace(/\/+$/, '')
+const hasOtpRoute = import.meta.env.DEV || Boolean(otpApiBaseUrl)
 const otpAuthToken = import.meta.env.VITE_OTP_AUTH_TOKEN
 
 const combineUrl = (base, path) => {
@@ -53,8 +54,8 @@ const otpPayload = ({ contact, otp, purpose = 'LOGIN' }) => {
 }
 
 const otpRequest = async (path, payload) => {
-  if (!otpApiBaseUrl) {
-    throw new AuthRequestError('OTP service is not configured.')
+  if (!hasOtpRoute) {
+    throw new AuthRequestError('Verification is temporarily unavailable. Please try again later.')
   }
 
   const accessToken = otpAuthToken || localStorage.getItem('btech-access-token')
@@ -69,15 +70,17 @@ const otpRequest = async (path, payload) => {
       body: JSON.stringify(payload),
     })
   } catch {
-    throw new AuthRequestError('Network error. Unable to contact the OTP service right now.')
+    throw new AuthRequestError('We couldn’t send the verification code. Please try again shortly.')
   }
 
   const data = await readResponseBody(response)
   if (!response.ok || data?.success === false) {
-    const fallback = response.status === 404
-      ? 'OTP endpoint is unavailable. Please contact support.'
+    const fallback = response.status >= 500
+      ? 'Verification is temporarily unavailable. Please try again later.'
+      : response.status === 404
+      ? 'Verification is temporarily unavailable. Please try again later.'
       : 'The OTP request could not be completed.'
-    throw new AuthRequestError(data?.message || fallback)
+    throw new AuthRequestError(response.status >= 500 ? fallback : data?.message || fallback)
   }
 
   return data
@@ -85,7 +88,7 @@ const otpRequest = async (path, payload) => {
 
 export async function login({ identifier, password }, fallbackRole = ROLES.ADMIN) {
   if (!authEndpoint) {
-    throw new AuthRequestError('Authentication service is not configured. Set the login endpoint in the environment config.')
+    throw new AuthRequestError('Sign in is temporarily unavailable. Please try again later.')
   }
 
   let response
@@ -132,54 +135,72 @@ export async function verifyOtp({ contact, otp, purpose = 'LOGIN' }) {
  * Reset password after OTP verification
  */
 export async function resetPassword({ contact, otp, password }) {
-  if (!otpEndpoint) {
-    throw new AuthRequestError('Password reset service is not configured. Contact the backend team to enable it.')
+  if (!hasOtpRoute) {
+    throw new AuthRequestError('Password reset is temporarily unavailable. Please try again later.')
   }
 
   try {
-    const response = await fetch(`${otpEndpoint}/reset-password`, {
+    const response = await fetch(resolveOtpUrl('/api/otp/reset-password'), {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ contact, otp, password }),
+      headers: {
+        'Content-Type': 'application/json',
+        Accept: 'application/json',
+        'ngrok-skip-browser-warning': 'true',
+      },
+      body: JSON.stringify({
+        contact: contact.trim(),
+        otp,
+        password,
+      }),
     })
 
-    const data = await response.json()
-    if (!response.ok) {
-      throw new AuthRequestError(data.message || 'Unable to reset your password. Please try again.')
+    const data = await readResponseBody(response)
+    if (!response.ok || data?.success === false) {
+      const validationMessage = data?.errors && typeof data.errors === 'object'
+        ? Object.values(data.errors).flat().find((message) => typeof message === 'string')
+        : ''
+      throw new AuthRequestError(validationMessage || data?.message || data?.detail || 'Unable to reset your password. Please try again.')
     }
     return data
   } catch (error) {
     if (error instanceof AuthRequestError) throw error
-    throw new AuthRequestError('Network error. Unable to reset your password right now.')
+    throw new AuthRequestError('We couldn’t reset your password right now. Please try again shortly.')
   }
 }
 
 // Set VITE_REGISTRATION_API_URL when the pending-registration endpoint is available.
-export async function register({ fullName, email, mobile, password }) {
+export async function register({ fullName, email, mobile, password, confirmPassword, agreeToTerms }) {
   if (!registrationEndpoint) {
-    throw new AuthRequestError('Registration service is not configured. Set the registration endpoint in the environment config.')
+    throw new AuthRequestError('Registration is temporarily unavailable. Please try again later.')
   }
 
   let response
   try {
     response = await fetch(registrationEndpoint, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ fullName, email, mobile, password }),
+      headers: {
+        'Content-Type': 'application/json',
+        Accept: 'application/json',
+        'ngrok-skip-browser-warning': 'true',
+      },
+      body: JSON.stringify({ fullName, email, mobile, password, confirmPassword, agreeToTerms: Boolean(agreeToTerms) }),
     })
   } catch {
     throw new AuthRequestError('Unable to submit your request right now. Please try again.')
   }
 
-  if (!response.ok) {
-    throw new AuthRequestError('Unable to submit your request. Please review your details and try again.')
+  const result = await readResponseBody(response)
+  if (!response.ok || result?.success === false) {
+    const validationMessage = result?.errors && typeof result.errors === 'object'
+      ? Object.values(result.errors).flat().find((message) => typeof message === 'string')
+      : ''
+    const fallback = response.status === 409
+      ? 'An access request already exists for this email or mobile number.'
+      : response.status >= 500
+        ? 'Registration is temporarily unavailable. Please try again later.'
+        : 'Unable to submit your request. Please review your details and try again.'
+    throw new AuthRequestError(validationMessage || result?.message || result?.detail || fallback)
   }
 
-  try {
-    const result = await response.json()
-    if (!result?.success) throw new Error('Malformed registration response')
-    return result
-  } catch {
-    throw new AuthRequestError('Unable to submit your request right now. Please try again.')
-  }
+  return result
 }

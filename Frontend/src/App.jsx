@@ -18,6 +18,9 @@ import SemesterManagement from './pages/semester-management/SemesterManagement'
 import SectionManagement from './pages/section-management/SectionManagement'
 import MyProfile from './pages/profile/MyProfile'
 import Settings from './pages/profile/Settings'
+import StudentAdmission from './pages/student-management/StudentAdmission/StudentAdmission'
+import StudentProfile from './pages/student-management/StudentProfile/StudentProfile'
+import StudentPromotion from './pages/student-management/StudentPromotion/StudentPromotion'
 import './styles/erp-theme.css'
 
 export default function App() {
@@ -55,6 +58,7 @@ export default function App() {
       >
         <Route path="/college-institution-management" element={<CollegeInstitutionManagement />} />
         <Route path="/college-institution-management/add" element={<AddCollege />} />
+        <Route path="/college-settings" element={<CollegeInstitutionManagement initialView="settings" />} />
         <Route path="/academic-year-management" element={<AcademicYearManagement />} />
         <Route path="/department-management" element={<DepartmentManagement />} />
         <Route path="/semester-management" element={<SemesterManagement />} />
@@ -72,6 +76,18 @@ export default function App() {
         <Route path="/branches/:id" element={<Branch mode="details" />} />
         <Route path="/branches/:id/edit" element={<Branch mode="form" />} />
         <Route path="/courses/:courseId/branches/:branchId/structure" element={<CourseStructure />} />
+      </Route>
+
+      {/* Student Admissions - Admin Only */}
+      <Route element={<ProtectedRoute allowedRoles={[ROLES.ADMIN]} />}>
+        <Route path="/student-management/admissions" element={<StudentAdmission />} />
+        <Route path="/student-management/admissions/new" element={<StudentAdmission />} />
+        <Route path="/student-management/admissions/:id" element={<StudentAdmission />} />
+        <Route path="/student-management/admissions/:id/edit" element={<StudentAdmission />} />
+        <Route path="/student-management/admissions/:id/documents" element={<StudentAdmission />} />
+        <Route path="/student-management/admissions/:id/approval" element={<StudentAdmission />} />
+        <Route path="/student-management/profiles" element={<StudentProfile />} />
+        <Route path="/student-management/promotions" element={<StudentPromotion />} />
       </Route>
 
       {/* My Subjects - Faculty + Student */}

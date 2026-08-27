@@ -1,259 +1,119 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
+import { FiEdit2, FiMail, FiMapPin, FiPhone, FiShield, FiUser, FiX } from 'react-icons/fi'
 import DashboardLayout from '../../layouts/DashboardLayout'
 import { lookupIndianPincode, profileApi } from '../../api/apiEndpoints'
+import { getDepartments } from '../../auth/collegeApi'
 import './MyProfile.css'
 
-const emptyErrors = { fullName: '', email: '', mobile: '', dateOfBirth: '', gender: '', department: '', address: '', postalCode: '', city: '', district: '', state: '' }
-const iconPaths = {
-  alert: <><circle cx="12" cy="12" r="9"/><path d="M12 7.5v5.5M12 16.5h.01"/></>,
-  check: <><path d="M20 6 9 17l-5-5"/></>,
-  edit: <><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L8 18l-4 1 1-4Z"/></>,
-  mail: <><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></>,
-  phone: <><path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.4 19.4 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1 1 .4 2 .7 2.8a2 2 0 0 1-.5 2.1L8.1 9.8a16 16 0 0 0 6 6l1.2-1.2a2 2 0 0 1 2.1-.5c.9.3 1.8.6 2.8.7a2 2 0 0 1 1.8 2.1Z"/></>,
-  refresh: <><path d="M20 11a8 8 0 1 0-2.3 5.7"/><path d="M20 4v7h-7"/></>,
-  shield: <><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z"/><path d="m9 12 2 2 4-4"/></>,
-  user: <><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></>,
-  building: <><path d="M3 21h18M6 21V8l6-5 6 5v13M9 21v-6h6v6M9 10h.01M15 10h.01"/></>,
-  location: <><path d="M20 10c0 5-8 12-8 12S4 15 4 10a8 8 0 1 1 16 0Z"/><circle cx="12" cy="10" r="2.5"/></>,
-}
-const Icon = ({ name }) => <svg className="profile-icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">{iconPaths[name]}</svg>
-
+const emptyForm = { fullName: '', email: '', mobile: '', dateOfBirth: '', gender: '', departmentId: '', designation: '', address: '', pincode: '', city: '', district: '', state: '', bio: '' }
+const emptyErrors = {}
+const display = (value) => value === null || value === undefined || String(value).trim() === '' ? '—' : value
 const formatLastLogin = (value) => {
-  if (!value) return 'Not available'
-  const rawValue = String(value).trim()
-  const utcValue = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/.test(rawValue) && !/(Z|[+-]\d{2}:?\d{2})$/i.test(rawValue)
-    ? `${rawValue}Z`
-    : rawValue
-  const date = new Date(utcValue)
-  if (Number.isNaN(date.getTime())) return 'Not available'
-  return new Intl.DateTimeFormat('en-IN', {
-    dateStyle: 'medium',
-    timeStyle: 'short',
-    timeZone: 'Asia/Kolkata',
-  }).format(date)
+  if (!value) return '—'
+  const raw = String(value).trim()
+  const date = new Date(/(Z|[+-]\d{2}:?\d{2})$/i.test(raw) ? raw : `${raw}Z`)
+  return Number.isNaN(date.getTime()) ? '—' : new Intl.DateTimeFormat('en-IN', { dateStyle: 'medium', timeStyle: 'short', timeZone: 'Asia/Kolkata' }).format(date)
 }
+const formatDateOnly = (value) => {
+  if (!value) return '—'
+  const date = new Date(value)
+  return Number.isNaN(date.getTime()) ? display(value).split('T')[0] : new Intl.DateTimeFormat('en-IN', { day: '2-digit', month: 'short', year: 'numeric', timeZone: 'Asia/Kolkata' }).format(date)
+}
+const initials = (name) => String(name || '').split(/\s+/).filter(Boolean).slice(0, 2).map((part) => part[0]).join('').toUpperCase() || 'U'
+const validate = (form) => {
+  const errors = {}
+  const name = form.fullName.trim()
+  const email = form.email.trim()
+  if (!name) errors.fullName = 'Full name is required.'
+  else if (!/^[A-Za-z][A-Za-z .'-]{2,79}$/.test(name)) errors.fullName = 'Enter a valid full name.'
+  if (!email) errors.email = 'Email address is required.'
+  else if (!/^\S+@\S+\.\S+$/.test(email)) errors.email = 'Enter a valid email address.'
+  if (!/^[6-9]\d{9}$/.test(form.mobile)) errors.mobile = 'Enter a valid 10-digit Indian mobile number.'
+  if (form.dateOfBirth && new Date(form.dateOfBirth) >= new Date()) errors.dateOfBirth = 'Date of birth must be in the past.'
+  if (form.pincode && !/^\d{6}$/.test(form.pincode)) errors.pincode = 'Enter a valid 6-digit PIN code.'
+  return errors
+}
+
+function DetailSection({ icon: Icon, title, children, className = '' }) { return <div className={`profile-preview-group ${className}`}><header><span><Icon /></span><div><h2>{title}</h2><p>Saved information from your account</p></div></header><div className="profile-detail-grid">{children}</div></div> }
+function Detail({ label, value, wide = false }) { return <div className={wide ? 'profile-detail wide' : 'profile-detail'}><span>{label}</span><strong>{display(value)}</strong></div> }
 
 export default function MyProfile() {
   const [profile, setProfile] = useState(null)
-  const [draft, setDraft] = useState(null)
-  const [editing, setEditing] = useState(true)
+  const [departments, setDepartments] = useState([])
   const [loading, setLoading] = useState(true)
-  const [saving, setSaving] = useState(false)
-  const [errors, setErrors] = useState(emptyErrors)
   const [feedback, setFeedback] = useState(null)
-  const [showSuccessPopup, setShowSuccessPopup] = useState(false)
+  const [editOpen, setEditOpen] = useState(false)
+  const [editForm, setEditForm] = useState(emptyForm)
+  const [errors, setErrors] = useState(emptyErrors)
+  const [saving, setSaving] = useState(false)
   const [pincodeStatus, setPincodeStatus] = useState('')
-  const [activeSection, setActiveSection] = useState('personal')
-  const [completedSections, setCompletedSections] = useState([])
-  const [maxUnlockedStep, setMaxUnlockedStep] = useState(0)
+  const closeButtonRef = useRef(null)
 
   const loadProfile = async () => {
-    setLoading(true)
-    setFeedback(null)
-    setShowSuccessPopup(false)
-    try {
-      const data = await profileApi.getProfile()
-      setProfile(data)
-      setDraft(data)
-      setEditing(true)
-    } catch (error) {
-      setFeedback({ type: 'error', message: error.message || 'Unable to load your profile.' })
-    } finally {
-      setLoading(false)
-    }
+    setLoading(true); setFeedback(null)
+    try { setProfile(await profileApi.getProfile()) }
+    catch (error) { setProfile(null); setFeedback({ type: 'error', message: error.message || 'Unable to load profile information.' }) }
+    finally { setLoading(false) }
   }
-
   useEffect(() => { loadProfile() }, [])
+  useEffect(() => { getDepartments().then((response) => { const data = response?.data?.data ?? response?.data; setDepartments(Array.isArray(data) ? data : []) }).catch(() => setDepartments([])) }, [])
+  useEffect(() => {
+    if (feedback?.type !== 'success') return undefined
+    const timer = setTimeout(() => setFeedback(null), 2000)
+    return () => clearTimeout(timer)
+  }, [feedback])
 
-  const validate = (value = draft) => {
-    const next = { ...emptyErrors }
-    const safeValue = value || {}
-    const fullName = String(safeValue.fullName || '').trim()
-    const email = String(safeValue.email || '').trim()
-    const mobile = String(safeValue.mobile || '').trim()
-    if (!fullName) next.fullName = 'Full name is required.'
-    else if (!/^[A-Za-z][A-Za-z .'-]{2,79}$/.test(fullName)) next.fullName = 'Enter a valid full name.'
-    if (!email) next.email = 'Email address is required.'
-    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) next.email = 'Enter a valid email address.'
-    if (!mobile) next.mobile = 'Mobile number is required.'
-    else if (!/^[6-9]\d{9}$/.test(mobile)) next.mobile = 'Enter a valid 10-digit Indian mobile number.'
-    if (!value.dateOfBirth) next.dateOfBirth = 'Date of birth is required.'
-    else if (new Date(value.dateOfBirth) >= new Date()) next.dateOfBirth = 'Date of birth must be in the past.'
-    if (!value.gender) next.gender = 'Gender is required.'
-    if (!String(safeValue.department || '').trim()) next.department = 'Department is required.'
-    if (!String(safeValue.address || '').trim()) next.address = 'Address is required.'
-    if (!/^\d{6}$/.test(String(safeValue.postalCode || ''))) next.postalCode = 'Enter a valid 6-digit PIN code.'
-    if (!String(safeValue.city || '').trim()) next.city = 'City is required.'
-    if (!String(safeValue.district || '').trim()) next.district = 'District is required.'
-    if (!String(safeValue.state || '').trim()) next.state = 'State is required.'
-    return next
+  const openEdit = () => { setEditForm({ fullName: profile.fullName || '', email: profile.email || '', mobile: profile.mobile || '', dateOfBirth: profile.dateOfBirth ? String(profile.dateOfBirth).slice(0, 10) : '', gender: profile.gender || '', department: profile.department || '', departmentId: profile.departmentId || '', designation: profile.designation || '', address: profile.address || '', pincode: profile.pincode || profile.postalCode || '', city: profile.city || '', district: profile.district || '', state: profile.state || '', bio: profile.bio || '' }); setErrors({}); setPincodeStatus(''); setFeedback(null); setEditOpen(true) }
+  const closeEdit = () => { if (!saving) { setEditOpen(false); setErrors({}); setPincodeStatus(''); setEditForm(emptyForm) } }
+  useEffect(() => {
+    if (!editOpen) return undefined
+    closeButtonRef.current?.focus()
+    const onKeyDown = (event) => { if (event.key === 'Escape') closeEdit() }
+    document.body.style.overflow = 'hidden'
+    document.querySelectorAll('.profile-edit-dialog input[name="fullName"], .profile-edit-dialog input[name="designation"]').forEach((input) => { input.readOnly = true; input.setAttribute('aria-readonly', 'true') })
+    window.addEventListener('keydown', onKeyDown)
+    return () => { document.body.style.overflow = ''; window.removeEventListener('keydown', onKeyDown) }
+  }, [editOpen, saving])
+  const update = async (event) => { const name = event.target.name; const value = ['mobile', 'pincode'].includes(name) ? event.target.value.replace(/\D/g, '').slice(0, name === 'pincode' ? 6 : 10) : event.target.value; const next = { ...editForm, [name]: value }; setEditForm(next); setErrors(validate(next)); setFeedback(null); if (name === 'pincode') { setPincodeStatus(''); if (/^\d{6}$/.test(value)) { setPincodeStatus('Finding location...'); try { const location = await lookupIndianPincode(value); setEditForm((current) => ({ ...current, ...location })); setPincodeStatus('City, district and state filled automatically.') } catch (error) { setPincodeStatus(error.message || 'PIN lookup failed. Enter the location manually.') } } } }
+  const save = async (event) => {
+    event.preventDefault(); const nextErrors = validate(editForm); setErrors(nextErrors); if (Object.keys(nextErrors).length || saving) return
+    setSaving(true); setFeedback(null)
+    const departmentMatch = departments.find((item) => String(item.departmentName ?? item.name ?? '').trim().toLowerCase() === editForm.department.trim().toLowerCase() || String(item.departmentCode ?? item.code ?? '').trim().toLowerCase() === editForm.department.trim().toLowerCase())
+    try { await profileApi.updateProfile({ ...editForm, departmentId: editForm.departmentId || departmentMatch?.departmentId || departmentMatch?.id || null }); await loadProfile(); setEditOpen(false); setFeedback({ type: 'success', message: 'Profile updated successfully.' }); window.setTimeout(() => setFeedback(null), 2000) }
+    catch (error) { setFeedback({ type: 'error', message: error.message || 'Unable to update profile. Please try again.' }) }
+    finally { setSaving(false) }
   }
 
-  const sectionErrors = (section, value = draft) => {
-    const allErrors = validate(value)
-    const fields = {
-      personal: ['fullName', 'email', 'mobile'],
-      institutional: ['dateOfBirth', 'gender', 'department'],
-      address: ['address', 'postalCode', 'city', 'district', 'state'],
-    }[section] || []
-    return Object.fromEntries(fields.filter((field) => allErrors[field]).map((field) => [field, allErrors[field]]))
-  }
-
-  const lookupPincode = async (pincode) => {
-    setPincodeStatus('Finding location...')
-    try {
-      const location = await lookupIndianPincode(pincode)
-      setDraft((current) => ({ ...current, ...location }))
-      setPincodeStatus('City, district and state filled automatically.')
-    } catch (error) {
-      setPincodeStatus(error.message)
-    }
-  }
-
-  const update = ({ target: { name, value } }) => {
-    const cleanValue = name === 'mobile' ? value.replace(/\D/g, '').slice(0, 10) : name === 'postalCode' ? value.replace(/\D/g, '').slice(0, 6) : value
-    const next = { ...draft, [name]: cleanValue }
-    setDraft(next)
-    if (errors[name]) setErrors((current) => ({ ...current, [name]: validate(next)[name] || '' }))
-    setFeedback(null)
-    if (name === 'postalCode') {
-      setPincodeStatus('')
-      if (/^\d{6}$/.test(cleanValue)) lookupPincode(cleanValue)
-    }
-  }
-
-  const beginEditing = () => {
-    setDraft(profile)
-    setErrors(emptyErrors)
-    setFeedback(null)
-    setShowSuccessPopup(false)
-    setActiveSection('personal')
-    setCompletedSections([])
-    setMaxUnlockedStep(0)
-    setEditing(true)
-  }
-
-  const cancelEditing = () => {
-    setDraft(profile)
-    setErrors(emptyErrors)
-    setFeedback(null)
-    setShowSuccessPopup(false)
-    setEditing(true)
-    setActiveSection('personal')
-    setCompletedSections([])
-    setMaxUnlockedStep(0)
-  }
-
-  const sectionOrder = ['personal', 'institutional', 'address']
-  const moveToSection = (direction) => {
-    const currentIndex = sectionOrder.indexOf(activeSection)
-    const nextIndex = currentIndex + direction
-    if (nextIndex >= 0 && nextIndex < sectionOrder.length) setActiveSection(sectionOrder[nextIndex])
-  }
-
-  const saveAndNext = () => {
-    const nextErrors = sectionErrors(activeSection)
-    setErrors((current) => ({ ...current, ...emptyErrors, ...nextErrors }))
-    if (Object.keys(nextErrors).length) return
-    setCompletedSections((current) => current.includes(activeSection) ? current : [...current, activeSection])
-    const nextSection = {
-      personal: 'institutional',
-      institutional: 'address',
-    }[activeSection]
-    const nextStep = sectionOrder.indexOf(nextSection)
-    setMaxUnlockedStep((current) => Math.max(current, nextStep))
-    if (nextSection) setActiveSection(nextSection)
-  }
-
-  const saveProfile = async (event) => {
-    event?.preventDefault()
-    if (saving) return
-    const nextErrors = validate()
-    setErrors(nextErrors)
-    if (Object.values(nextErrors).some(Boolean)) {
-      const invalidSection = [
-        ['personal', ['fullName', 'email', 'mobile']],
-        ['institutional', ['dateOfBirth', 'gender', 'department']],
-        ['address', ['address', 'postalCode', 'city', 'district', 'state']],
-      ].find(([, fields]) => fields.some((field) => nextErrors[field]))?.[0]
-      if (invalidSection) {
-        setActiveSection(invalidSection)
-      }
-      setFeedback({ type: 'error', message: 'Please complete the required fields before submitting your profile.' })
-      return
-    }
-    setSaving(true)
-    setFeedback(null)
-    setShowSuccessPopup(false)
-    try {
-      const saved = await profileApi.updateProfile(draft)
-      const completeProfile = {
-        ...draft,
-        ...Object.fromEntries(Object.entries(saved).filter(([, value]) => value !== null && value !== undefined && value !== '')),
-      }
-      setProfile(completeProfile)
-      setDraft(completeProfile)
-      setEditing(false)
-      setActiveSection('address')
-      setCompletedSections(['personal', 'institutional', 'address'])
-      setMaxUnlockedStep(2)
-      setFeedback(null)
-      setShowSuccessPopup(true)
-    } catch (error) {
-      setFeedback({ type: 'error', message: error.message || 'Unable to update your profile.' })
-    } finally {
-      setSaving(false)
-    }
-  }
-
-  if (loading) return <DashboardLayout><div className="profile-state"><span className="profile-spinner" /><h2>Loading your profile</h2><p>Please wait while we retrieve your information.</p></div></DashboardLayout>
-  if (!profile || !draft) return <DashboardLayout><div className="profile-state error"><section className="profile-error-card" role="alert"><div className="profile-warning-icon"><Icon name="alert" /></div><span className="profile-error-label">Connection warning</span><h2>Profile unavailable</h2><p>{feedback?.message || 'Unable to load your profile.'}</p><small>Check that the backend service is running, then retry the request.</small><button type="button" className="profile-button profile-retry-button" onClick={loadProfile} disabled={loading}><Icon name="refresh" /> Try Again</button></section></div></DashboardLayout>
-
-  const initials = String(profile.fullName || '').split(/\s+/).filter(Boolean).slice(0, 2).map((word) => word[0]).join('').toUpperCase() || 'U'
-  const lastLogin = formatLastLogin(profile.lastLoginAt)
+  if (loading) return <DashboardLayout><main className="profile-page"><div className="profile-state"><span className="profile-spinner" /><h2>Loading your profile</h2><p>Please wait while we retrieve your information.</p></div></main></DashboardLayout>
+  if (!profile) return <DashboardLayout><main className="profile-page"><div className="profile-state error"><section className="profile-error-card" role="alert"><h2>Profile unavailable</h2><p>{feedback?.message || 'Unable to load profile information.'}</p><button type="button" className="profile-button" onClick={loadProfile}>Try Again</button></section></div></main></DashboardLayout>
 
   return <DashboardLayout><main className="profile-page">
-    <header className="profile-heading"><div><h1>My Profile</h1><p>Review your account identity and keep your contact information current.</p></div>{!editing && <button className="profile-button" onClick={beginEditing}><Icon name="edit" /> Edit Profile</button>}</header>
-
-    {feedback && <div className={`profile-feedback ${feedback.type}`} role={feedback.type === 'error' ? 'alert' : 'status'}><Icon name={feedback.type === 'success' ? 'check' : 'alert'} /><span>{feedback.message}</span></div>}
-
-    <section className="profile-overview">
-      <div className="profile-identity"><div className="profile-avatar" aria-hidden="true">{initials}</div><div><h2>{profile.fullName}</h2><p>{profile.email}</p><span className="profile-role"><Icon name="shield" /> {profile.role || 'User'}</span></div></div>
-      <dl className="profile-facts"><div><dt>Employee ID</dt><dd>{profile.identifier || 'Not assigned'}</dd></div><div><dt>Last login</dt><dd>{lastLogin}</dd></div><div><dt>Account status</dt><dd><span className="profile-status"><i /> Active</span></dd></div></dl>
+    <header className="profile-heading"><div><p className="profile-eyebrow">Account</p><h1>My Profile</h1><p>Review your saved identity and account information.</p></div><button type="button" className="profile-button" onClick={openEdit}><FiEdit2 /> Edit Profile</button></header>
+    {feedback && <div className={`profile-feedback ${feedback.type}`} role={feedback.type === 'error' ? 'alert' : 'status'}>{feedback.message}</div>}
+    <section className="profile-overview"><div className="profile-identity"><div className="profile-avatar" aria-hidden="true">{initials(profile.fullName)}</div><div><h2 className="profile-name">{display(profile.fullName)}</h2><p>{display(profile.email)}</p><span className="profile-role"><FiShield /> {display(profile.role)}</span></div></div><dl className="profile-facts"><div><dt>Employee ID</dt><dd>{display(profile.identifier)}</dd></div><div><dt>Last Login</dt><dd>{formatLastLogin(profile.lastLoginAt)}</dd></div><div><dt>Account Status</dt><dd className="profile-status"><i /> Active</dd></div></dl></section>
+    <section className="profile-preview-section profile-details-card">
+      <DetailSection icon={FiUser} title="Personal Information">
+        <Detail label="Full Name" value={profile.fullName} />
+        <Detail label="Email Address" value={profile.email} />
+        <Detail label="Mobile Number" value={profile.mobile} />
+        <Detail label="Gender" value={profile.gender} />
+        <Detail label="Date of Birth" value={formatDateOnly(profile.dateOfBirth)} />
+      </DetailSection>
+      <DetailSection icon={FiShield} title="Institutional Details">
+        <Detail label="Employee ID" value={profile.identifier} />
+        <Detail label="Assigned Role" value={profile.role} />
+        <Detail label="Department" value={profile.department} />
+        <Detail label="Designation / Programme" value={profile.designation} />
+      </DetailSection>
+      <DetailSection icon={FiMapPin} title="Address & Bio">
+        <Detail label="Address" value={profile.address} wide />
+        <Detail label="City / Block" value={profile.city} />
+        <Detail label="District" value={profile.district} />
+        <Detail label="State" value={profile.state} />
+            <Detail label="PIN Code" value={profile.pincode || profile.postalCode} />
+        <Detail label="About Me" value={profile.bio} wide />
+      </DetailSection>
     </section>
-
-    <section className="profile-content-card">
-      <div className="profile-section-heading"><div className="profile-section-icon"><Icon name="user" /></div><div><h2>Personal information</h2><p>{editing ? 'Update the editable fields below, then save your changes.' : 'Your primary account and contact details.'}</p></div></div>
-
-      <form onSubmit={(event) => event.preventDefault()} noValidate>
-        <nav className="profile-tabs" role="tablist" aria-label="Profile sections">
-          <button type="button" role="tab" aria-selected={activeSection === 'personal'} aria-controls="profile-personal-panel" className={`${activeSection === 'personal' ? 'active' : ''} ${completedSections.includes('personal') ? 'completed' : ''}`} onClick={() => setActiveSection('personal')}><i className="profile-tab-number">{completedSections.includes('personal') ? '✓' : '1'}</i><Icon name="user" /><span><b>Personal Information</b><small>Account and contact</small></span></button>
-          <button type="button" role="tab" aria-selected={activeSection === 'institutional'} aria-controls="profile-institutional-panel" className={`${activeSection === 'institutional' ? 'active' : ''} ${completedSections.includes('institutional') ? 'completed' : ''}`} disabled={editing && maxUnlockedStep < 1} onClick={() => setActiveSection('institutional')}><i className="profile-tab-number">{completedSections.includes('institutional') ? '✓' : '2'}</i><Icon name="building" /><span><b>Institutional Details</b><small>Academic information</small></span></button>
-          <button type="button" role="tab" aria-selected={activeSection === 'address'} aria-controls="profile-address-panel" className={`${activeSection === 'address' ? 'active' : ''} ${completedSections.includes('address') ? 'completed' : ''}`} disabled={editing && maxUnlockedStep < 2} onClick={() => setActiveSection('address')}><i className="profile-tab-number">{completedSections.includes('address') ? '✓' : '3'}</i><Icon name="location" /><span><b>Address & Bio</b><small>Location and profile</small></span></button>
-        </nav>
-        {activeSection === 'personal' && <div id="profile-personal-panel" className="profile-panel" role="tabpanel"><div className="profile-panel-title"><h3>Personal details</h3><p>Manage your name and primary contact information.</p></div><div className="profile-fields">
-          <label className="profile-field"><span>Full name <b>*</b></span><div className="profile-input"><Icon name="user" /><input name="fullName" value={draft.fullName} onChange={update} disabled={!editing} placeholder="Enter your full name" aria-invalid={Boolean(errors.fullName)} /></div>{errors.fullName && <small>{errors.fullName}</small>}</label>
-          <label className="profile-field"><span>Email address <b>*</b></span><div className="profile-input"><Icon name="mail" /><input name="email" type="email" value={draft.email} onChange={update} disabled={!editing} placeholder="name@college.edu" aria-invalid={Boolean(errors.email)} /></div>{errors.email && <small>{errors.email}</small>}</label>
-          <label className="profile-field"><span>Mobile number <b>*</b></span><div className="profile-input"><Icon name="phone" /><input name="mobile" inputMode="numeric" value={draft.mobile} onChange={update} disabled={!editing} placeholder="10-digit mobile number" aria-invalid={Boolean(errors.mobile)} /></div>{errors.mobile && <small>{errors.mobile}</small>}</label>
-          <label className="profile-field"><span>Assigned role</span><div className="profile-input readonly"><Icon name="shield" /><input value={draft.role || 'User'} disabled /></div><em>Roles are managed by your administrator.</em></label>
-        </div></div>}
-        {activeSection === 'institutional' && <div id="profile-institutional-panel" className="profile-panel" role="tabpanel"><div className="profile-panel-title"><h3>Institutional details</h3><p>Your academic and institutional information.</p></div><div className="profile-fields">
-          <label className="profile-field"><span>Date of birth <b>*</b></span><div className="profile-input"><input name="dateOfBirth" type="date" value={draft.dateOfBirth || ''} onChange={update} disabled={!editing} aria-invalid={Boolean(errors.dateOfBirth)} /></div>{errors.dateOfBirth && <small>{errors.dateOfBirth}</small>}</label>
-          <label className="profile-field"><span>Gender <b>*</b></span><div className="profile-input"><select name="gender" value={draft.gender || ''} onChange={update} disabled={!editing} aria-invalid={Boolean(errors.gender)}><option value="">Select gender</option><option>Female</option><option>Male</option><option>Non-binary</option><option>Prefer not to say</option></select></div>{errors.gender && <small>{errors.gender}</small>}</label>
-          <label className="profile-field"><span>Department <b>*</b></span><div className="profile-input"><input name="department" value={draft.department || ''} onChange={update} disabled={!editing} aria-invalid={Boolean(errors.department)} /></div>{errors.department && <small>{errors.department}</small>}</label>
-          <label className="profile-field"><span>Designation / Programme</span><div className="profile-input"><input name="designation" value={draft.designation || ''} onChange={update} disabled={!editing} /></div></label>
-        </div></div>}
-        {activeSection === 'address' && <div id="profile-address-panel" className="profile-panel" role="tabpanel"><div className="profile-panel-title"><h3>Address and profile</h3><p>Enter the PIN code to automatically find the city, district and state.</p></div><div className="profile-fields">
-          <label className="profile-field wide"><span>Address <b>*</b></span><div className="profile-input textarea"><textarea name="address" value={draft.address || ''} onChange={update} disabled={!editing} maxLength="250" aria-invalid={Boolean(errors.address)} /></div>{errors.address && <small>{errors.address}</small>}</label>
-          <label className="profile-field"><span>PIN code <b>*</b></span><div className="profile-input"><input name="postalCode" inputMode="numeric" value={draft.postalCode || ''} onChange={update} disabled={!editing} maxLength="6" aria-invalid={Boolean(errors.postalCode)} /></div>{pincodeStatus && <small className="profile-lookup">{pincodeStatus}</small>}{errors.postalCode && <small>{errors.postalCode}</small>}</label>
-          <label className="profile-field"><span>City / Block <b>*</b></span><div className="profile-input"><input name="city" value={draft.city || ''} onChange={update} disabled={!editing} aria-invalid={Boolean(errors.city)} /></div>{errors.city && <small>{errors.city}</small>}</label>
-          <label className="profile-field"><span>District <b>*</b></span><div className="profile-input"><input name="district" value={draft.district || ''} onChange={update} disabled={!editing} aria-invalid={Boolean(errors.district)} /></div>{errors.district && <small>{errors.district}</small>}</label>
-          <label className="profile-field"><span>State <b>*</b></span><div className="profile-input"><input name="state" value={draft.state || ''} onChange={update} disabled={!editing} aria-invalid={Boolean(errors.state)} /></div>{errors.state && <small>{errors.state}</small>}</label>
-          <label className="profile-field wide"><span>About me</span><div className="profile-input textarea"><textarea name="bio" value={draft.bio || ''} onChange={update} disabled={!editing} maxLength="300" /></div><em>{(draft.bio || '').length}/300 characters</em></label>
-        </div></div>}
-        {editing && <footer className="profile-actions"><div className="profile-progress"><span>Step {sectionOrder.indexOf(activeSection) + 1} of {sectionOrder.length}</span><i><b style={{ width: `${((sectionOrder.indexOf(activeSection) + 1) / sectionOrder.length) * 100}%` }} /></i></div><div className="profile-action-buttons"><button type="button" className="profile-button ghost" onClick={cancelEditing} disabled={saving}>Cancel</button>{activeSection !== 'personal' && <button type="button" className="profile-button secondary" onClick={() => moveToSection(-1)} disabled={saving}>Back</button>}{activeSection !== 'address' ? <button type="button" className="profile-button" onClick={saveAndNext}>Save & Next <span aria-hidden="true">→</span></button> : <button type="button" className="profile-button" onClick={saveProfile} disabled={saving}>{saving ? <><span className="profile-button-spinner" /> Submitting...</> : <><Icon name="check" /> Submit Profile</>}</button>}</div></footer>}
-      </form>
-    </section>
-    {showSuccessPopup && <div className="profile-modal" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) setShowSuccessPopup(false) }}><section className="profile-success-card" role="dialog" aria-modal="true" aria-labelledby="profile-success-title"><button type="button" className="profile-modal-close" aria-label="Close success message" onClick={() => setShowSuccessPopup(false)}>×</button><div className="profile-success-icon"><Icon name="check" /></div><span className="profile-success-label">Profile updated</span><h2 id="profile-success-title">Changes saved successfully</h2><p>Your profile information is now up to date.</p><button type="button" className="profile-button profile-success-action" onClick={() => setShowSuccessPopup(false)}>Continue</button></section></div>}
+    {editOpen && <div className="profile-modal" onMouseDown={(event) => event.target === event.currentTarget && closeEdit()}><section className="profile-edit-dialog" role="dialog" aria-modal="true" aria-labelledby="profile-edit-title"><header><div><p className="profile-eyebrow">Account</p><h2 id="profile-edit-title">Edit Profile</h2><span>Update your personal, institutional, contact, and address information.</span></div><button ref={closeButtonRef} type="button" className="profile-modal-close" onClick={closeEdit} aria-label="Close edit profile dialog"><FiX /></button></header><form onSubmit={save} noValidate><fieldset><legend>Personal Information</legend><div className="profile-edit-grid"><label>Full Name<input name="fullName" value={editForm.fullName} onChange={update} aria-invalid={Boolean(errors.fullName)} />{errors.fullName && <small role="alert">{errors.fullName}</small>}</label><label>Email Address<input name="email" type="email" value={editForm.email} onChange={update} aria-invalid={Boolean(errors.email)} />{errors.email && <small role="alert">{errors.email}</small>}</label><label>Mobile Number<input name="mobile" inputMode="numeric" value={editForm.mobile} onChange={update} aria-invalid={Boolean(errors.mobile)} />{errors.mobile && <small role="alert">{errors.mobile}</small>}</label><label>Gender<select name="gender" value={editForm.gender} onChange={update}><option value="">Select gender</option><option>Female</option><option>Male</option><option>Non-binary</option><option>Prefer not to say</option></select></label><label>Date of Birth<input name="dateOfBirth" type="date" value={editForm.dateOfBirth} onChange={update} aria-invalid={Boolean(errors.dateOfBirth)} />{errors.dateOfBirth && <small role="alert">{errors.dateOfBirth}</small>}</label></div></fieldset><fieldset><legend>Institutional Details</legend><div className="profile-edit-grid"><label>Department<input name="department" value={editForm.department} onChange={update} placeholder="Enter department manually" /></label><label>Designation<input name="designation" value={editForm.designation} onChange={update} placeholder="Enter designation" /></label></div></fieldset><fieldset><legend>Address &amp; Bio</legend><div className="profile-edit-grid"><label className="profile-edit-wide">Address<textarea name="address" value={editForm.address} onChange={update} placeholder="Enter address" /></label><label>PIN Code<input name="pincode" inputMode="numeric" value={editForm.pincode} onChange={update} aria-invalid={Boolean(errors.pincode)} placeholder="Enter 6-digit PIN code" />{errors.pincode && <small role="alert">{errors.pincode}</small>}</label><label>City / Block<input name="city" value={editForm.city} onChange={update} placeholder="Enter city or block" /></label><label>District<input name="district" value={editForm.district} onChange={update} placeholder="Enter district" /></label><label>State<input name="state" value={editForm.state} onChange={update} placeholder="Enter state" /></label><label className="profile-edit-wide">About Me<textarea name="bio" value={editForm.bio} onChange={update} placeholder="Tell us about yourself" /></label></div></fieldset><div className="profile-readonly-note"><FiShield /> Employee ID, role, status, last login, and other system-managed details cannot be edited.</div>{feedback?.type === 'error' && <p className="profile-form-error" role="alert">{feedback.message}</p>}<footer><button type="button" className="profile-button secondary" onClick={closeEdit} disabled={saving}>Cancel</button><button type="submit" className="profile-button" disabled={saving}>{saving ? 'Saving...' : 'Save Changes'}</button></footer></form></section></div>}
   </main></DashboardLayout>
 }

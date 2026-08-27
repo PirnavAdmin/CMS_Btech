@@ -19,3 +19,52 @@
 
 /* Complete dark-theme contrast for text that has an explicit light-theme color. */
 @media(prefers-color-scheme:dark){.lp-hero h1,.lp-journey h2,.lp-campus h2,.lp-services h2,.lp-preview h2,.lp-dash-title strong,.lp-digital-campus .lp-metrics strong,.lp-schedule span,.lp-campus-list strong{color:#edf7fd}.lp-hero h1 span{color:#63b8ea}.lp-lead,.lp-heading>p,.lp-campus>div:last-child>p:not(.lp-eyebrow),.lp-services header>p:last-child,.lp-preview>header>p:last-child,.lp-campus-list small{color:#a9bdcb}.lp-eyebrow{color:#72c5ef}.lp-eyebrow.light{color:#9bd9f5}.lp-overview,.lp-workflow,.lp-about{color:#edf7fd}.lp-overview span,.lp-workflow header>p:last-child,.lp-about>div>p:not(.lp-eyebrow){color:#c4d9e6}.lp-dashboard>header,.lp-dashboard>header b,.lp-dashboard>header small{color:#c7dbe8}.lp-dash-title small,.lp-digital-campus .lp-metrics small,.lp-schedule small,.lp-activity small{color:#9fb5c4}.lp-activity strong,.lp-charts.campus article>b,.lp-charts.campus article:nth-child(2)>strong{color:#e8f3f9}.lp-nav summary{color:#d8e8f3;border-color:#29465d;background:#102d43}}
+
+/* Public hero: campus photography is a blended watermark, never an app mockup. */
+.lp-page .lp-hero{
+  isolation:isolate;display:flex;width:100%;min-height:630px;margin:0;
+  padding:clamp(76px,9vw,116px) max(24px,calc((100vw - 1200px)/2));
+  align-items:center;overflow:hidden;color:#fff;background:#071f36;
+}
+.lp-page .lp-hero::before{
+  position:absolute;inset:0;z-index:-2;width:auto;height:auto;border-radius:0;
+  content:"";opacity:1;background-image:
+    linear-gradient(90deg,#071f36 0%,#071f36 34%,rgba(7,31,54,.93) 48%,rgba(7,31,54,.55) 70%,rgba(7,31,54,.28) 100%),
+    linear-gradient(0deg,rgba(7,31,54,.58),rgba(7,31,54,.08)),
+    url('../assets/college-campus-hero.png');
+  background-repeat:no-repeat;background-size:cover;background-position:right center;
+}
+.lp-page .lp-hero::after{
+  position:absolute;inset:auto 0 0;z-index:-1;height:32%;content:"";
+  background:linear-gradient(0deg,#071f36,transparent);pointer-events:none;
+}
+.lp-hero-content{width:min(54%,650px)}
+.lp-page .lp-hero .lp-eyebrow{color:#83d0f3}
+.lp-page .lp-hero h1{color:#f4f9fc;text-shadow:0 2px 24px rgba(0,0,0,.22)}
+.lp-page .lp-hero h1 span{color:#69bce8}
+.lp-page .lp-hero .lp-lead{margin-bottom:0;color:#c6d9e6;text-shadow:0 1px 14px rgba(0,0,0,.24)}
+.lp-page .lp-hero .lp-trust{margin-top:30px;color:#c3d9e6}
+.lp-page .lp-hero .lp-trust svg{color:#6fd6a8}
+
+@media(max-width:900px){
+  .lp-page .lp-hero{min-height:570px;padding-block:72px}
+  .lp-page .lp-hero::before{background-image:
+    linear-gradient(90deg,#071f36 0%,rgba(7,31,54,.96) 45%,rgba(7,31,54,.62) 78%,rgba(7,31,54,.42) 100%),
+    linear-gradient(0deg,rgba(7,31,54,.64),rgba(7,31,54,.16)),
+    url('../assets/college-campus-hero.png')}
+  .lp-hero-content{width:min(64%,620px)}
+}
+@media(max-width:700px){
+  .lp-page .lp-hero{width:100%;min-height:540px;padding:68px 24px}
+  .lp-page .lp-hero::before{opacity:.78;background-image:
+    linear-gradient(90deg,rgba(7,31,54,.97),rgba(7,31,54,.82)),
+    linear-gradient(0deg,rgba(7,31,54,.82),rgba(7,31,54,.4)),
+    url('../assets/college-campus-hero.png');background-position:62% center}
+  .lp-hero-content{width:100%;max-width:620px}
+  .lp-page .lp-hero .lp-trust{align-items:flex-start;flex-direction:row}
+}
+@media(max-width:430px){
+  .lp-page .lp-hero{min-height:500px;padding:58px 16px}
+  .lp-page .lp-hero::before{opacity:.68;background-position:65% center}
+  .lp-page .lp-hero .lp-trust{gap:8px 12px}
+}

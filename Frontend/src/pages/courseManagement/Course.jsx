@@ -2,29 +2,35 @@ import { useEffect, useMemo, useState } from 'react'
 import { Link, useParams, useNavigate } from 'react-router-dom'
 import { FiArrowLeft, FiCheckCircle, FiEdit2, FiEye, FiFilter, FiPlus, FiSearch } from 'react-icons/fi'
 import DashboardLayout from '../../layouts/DashboardLayout'
-import { courseApi, courseStructureApi, departmentApi } from '../../api/apiEndpoints'
+import TablePagination, { PAGE_SIZE } from '../../components/TablePagination'
+import { branchApi, courseApi, courseStructureApi, departmentApi } from '../../api/apiEndpoints'
 import { getCourseById, createCourse, updateCourse, updateCourseStatus } from '../../auth/collegeApi'
+import { normalize } from './Branch'
 import './Course.css'
 
-const BRANCH_KEY = 'btech-branches'
-const STRUCTURE_KEY = 'btech-course-structures'
 export const academicYears = ['2025-26', '2026-27', '2027-28']
-const seedBranches = [{ id: 'branch-cse', departmentId: 1, courseId: 'course-cse', code: 'CSE', name: 'Computer Science & Engineering', shortName: 'CSE', durationValue: 4, durationUnit: 'Years', semesters: 8, intake: 60, status: 'Active' }]
 const blank = { name: '', code: '', description: '', departmentId: '', collegeId: '', eligibility: '', status: 'Active' }
-const read = (key, fallback) => { try { const value = JSON.parse(localStorage.getItem(key) || 'null'); return Array.isArray(value) ? value : fallback } catch { return fallback } }
-export const getBranches = () => read(BRANCH_KEY, seedBranches)
-export const getStructures = () => { try { return JSON.parse(localStorage.getItem(STRUCTURE_KEY) || '{}') } catch { return {} } }
-export const saveBranch = value => { const rows = getBranches(), now = new Date().toISOString().slice(0, 10), row = { ...value, id: value.id || crypto.randomUUID(), createdAt: value.createdAt || now, updatedAt: now }; localStorage.setItem(BRANCH_KEY, JSON.stringify(value.id ? rows.map(item => item.id === value.id ? row : item) : [...rows, row])); return row }
-export const saveStructures = value => localStorage.setItem(STRUCTURE_KEY, JSON.stringify(value))
 
 const apiError = (error, fallback) => error?.response?.status === 401 ? 'Your session has expired. Please sign in again.' : error?.response?.status === 403 ? "You don't have permission to manage courses." : error?.response?.data?.message || error?.response?.data?.error || error?.message || fallback
 const listFrom = (response) => { const data = response?.data ?? response; return Array.isArray(data) ? data : Array.isArray(data?.items) ? data.items : Array.isArray(data?.data) ? data.data : data && typeof data === 'object' ? [data] : [] }
-const recordFrom = (response) => response?.data?.data ?? response?.data ?? response
+const recordFrom = (response) => {
+  let current = response
+  for (let depth = 0; depth < 5 && current && typeof current === 'object'; depth += 1) {
+    if (current.course && typeof current.course === 'object') return current.course
+    if (current.courseDetails && typeof current.courseDetails === 'object') return current.courseDetails
+    if (current.item && typeof current.item === 'object') return current.item
+    if (current.result && typeof current.result === 'object') return current.result
+    if (current.record && typeof current.record === 'object') return current.record
+    if (current.data && typeof current.data === 'object') { current = current.data; continue }
+    break
+  }
+  return current && typeof current === 'object' ? current : {}
+}
 
 const mapDepartmentOption = (record) => {
   const status = record.status ?? record.departmentStatus ?? (record.isActive === false ? 0 : 1)
   const active = status === true || Number(status) === 1 || String(status).toLowerCase() === 'active'
-  return { id: record.id ?? record.departmentId, name: record.departmentName ?? record.name ?? '', code: record.departmentCode ?? record.code ?? '', status: active ? 'Active' : 'Inactive' }
+  return { id: record.id ?? record.departmentId, name: record.departmentName ?? record.name ?? '', code: record.departmentCode ?? record.code ?? '', collegeId: record.collegeId ?? '', status: active ? 'Active' : 'Inactive' }
 }
 
 const mapCourse = (record) => {
@@ -39,10 +45,11 @@ const mapCourse = (record) => {
     departmentId: record.departmentId ?? '',
     department: record.departmentName ?? record.department ?? '',
     collegeId: record.collegeId ?? '',
-    durationValue: record.durationYears ?? record.durationValue ?? 4,
-    durationUnit: 'Years',
-    semesters: record.totalSemesters ?? record.semesters ?? 8,
-    academicSystem: 'Semester',
+    college: record.collegeName ?? record.college ?? '',
+    durationValue: record.durationYears ?? record.durationValue ?? record.duration ?? 4,
+    durationUnit: record.durationUnit ?? 'Years',
+    semesters: record.totalSemesters ?? record.semesters ?? record.semesterCount ?? 8,
+    academicSystem: record.academicSystem ?? record.academicPattern ?? 'Semester',
     eligibility: record.eligibility ?? '',
     description: record.description ?? '',
     status: active ? 'Active' : 'Inactive',
@@ -76,24 +83,27 @@ const codeFor = name => { const known = { 'computer science and engineering': 'C
 
 const Page = ({ children }) => <DashboardLayout><main className="cm-page course-management">{children}</main></DashboardLayout>
 const Header = ({ title, text, children }) => <header className="cm-header"><div><h1>{title}</h1><p>{text}</p></div><div className="cm-row-actions">{children}</div></header>
-const Field = ({ label, error, wide, children }) => <label className={`cm-field ${wide ? 'wide' : ''}`}><span>{label}</span>{children}{error && <small className="cm-error" role="alert">{error}</small>}</label>
+const Field = ({ label, error, wide, children }) => <label className={`cm-field ${wide ? 'wide' : ''}`}><span>{label.endsWith(' *') ? <>{label.slice(0, -2)} <b className="required-mark">*</b></> : label}</span>{children}{error && <small className="cm-error" role="alert">{error}</small>}</label>
 const Badge = ({ value }) => <span className={`course-badge ${String(value).toLowerCase()}`}><i />{value}</span>
 
 function CourseList() {
   const [courses, setCourses] = useState([])
   const [departments, setDepartments] = useState([])
-  const branches = getBranches()
+  const [branches, setBranches] = useState([])
   const [query, setQuery] = useState('')
   const [statusFilter, setStatusFilter] = useState('')
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState('')
+  const [currentPage, setCurrentPage] = useState(1)
+  const itemsPerPage = 5
 
   const load = async () => {
     setIsLoading(true); setError('')
     try {
-      const [courseRows, departmentRows] = await Promise.all([courseApi.getAll(), departmentApi.getAll()])
+      const [courseRows, departmentRows, branchRows] = await Promise.all([courseApi.getAll(), departmentApi.getAll(), branchApi.getAll()])
       setCourses(courseRows.map(mapCourse))
       setDepartments(departmentRows.map(mapDepartmentOption))
+      setBranches(branchRows)
     } catch (requestError) {
       setCourses([])
       setError(apiError(requestError, 'Unable to load courses. Please try again.'))
@@ -103,17 +113,21 @@ function CourseList() {
   }
   useEffect(() => { load() }, [])
 
-  const rows = useMemo(() => courses.filter(c => `${c.name} ${c.code} ${c.department || ''}`.toLowerCase().includes(query.trim().toLowerCase()) && (!statusFilter || (c.status || 'Active') === statusFilter)), [courses, query, statusFilter])
+  const departmentName = (c) => departments.find(d => String(d.id) === String(c.departmentId))?.name || c.department || ''
+  const rows = useMemo(() => courses.filter(c => `${c.name} ${c.code} ${departmentName(c)}`.toLowerCase().includes(query.trim().toLowerCase()) && (!statusFilter || (c.status || 'Active') === statusFilter)), [courses, departments, query, statusFilter])
+  const totalPages = Math.ceil(rows.length / itemsPerPage) || 1
+  const currentPageClamped = Math.min(Math.max(currentPage, 1), totalPages)
+  const pageRows = useMemo(() => rows.slice((currentPageClamped - 1) * itemsPerPage, currentPageClamped * itemsPerPage), [rows, currentPageClamped])
   const stats = { total: courses.length, active: courses.filter(c => (c.status || 'Active') === 'Active').length, branches: branches.length, departments: departments.length }
   const hasFilters = Boolean(query || statusFilter)
-  const clearFilters = () => { setQuery(''); setStatusFilter('') }
+  const clearFilters = () => { setQuery(''); setStatusFilter(''); setCurrentPage(1) }
 
   return <Page>
     <Header title="Course / Programme Management" text="Manage B.Tech courses, branches and structures."><Link className="cm-button" to="/courses/add"><FiPlus /> Add Course</Link></Header>
     <section className="course-summary">{[['Total Courses', stats.total], ['Active Courses', stats.active], ['Associated Branches', stats.branches], ['Departments', stats.departments]].map(([label, value]) => <article key={label}><span>{label}</span><strong>{value}</strong></article>)}</section>
     <section className="cm-panel course-toolbar">
-      <label className="course-search"><FiSearch /><input aria-label="Search courses" value={query} onChange={e => setQuery(e.target.value)} placeholder="Search course name, code or department" /></label>
-      <select aria-label="Status" value={statusFilter} onChange={e => setStatusFilter(e.target.value)}><option value="">All Status</option><option>Active</option><option>Inactive</option></select>
+      <label className="course-search"><FiSearch /><input aria-label="Search courses" value={query} onChange={e => { setQuery(e.target.value); setCurrentPage(1) }} placeholder="Search course name, code or department" /></label>
+      <select aria-label="Status" value={statusFilter} onChange={e => { setStatusFilter(e.target.value); setCurrentPage(1) }}><option value="">All Status</option><option>Active</option><option>Inactive</option></select>
       {hasFilters && <button className="course-clear" onClick={clearFilters}><FiFilter /> Clear Filters</button>}
     </section>
     <section className="cm-panel course-directory">
@@ -127,10 +141,10 @@ function CourseList() {
               <table className="course-advanced-table">
                 <thead><tr>{['Course', 'Department', 'Duration', 'Status', 'Actions'].map(label => <th key={label}>{label}</th>)}</tr></thead>
                 <tbody>
-                  {rows.map(c => (
+                  {pageRows.map(c => (
                     <tr key={c.id}>
                       <td><strong>{c.name}</strong><small>{c.code}</small></td>
-                      <td>{c.department || 'Not available'}</td>
+                      <td>{departmentName(c) || 'Not available'}</td>
                       <td>{c.durationValue || 4} {c.durationUnit || 'Years'}</td>
                       <td><Badge value={c.status || 'Active'} /></td>
                       <td>
@@ -143,6 +157,11 @@ function CourseList() {
                   ))}
                 </tbody>
               </table>
+            </div>
+            <div className="course-pagination">
+              <button className="pagination-btn" onClick={() => setCurrentPage(value => Math.max(value - 1, 1))} disabled={currentPageClamped === 1}>Previous</button>
+              <span className="pagination-status">Page {currentPageClamped} of {totalPages}</span>
+              <button className="pagination-btn" onClick={() => setCurrentPage(value => Math.min(value + 1, totalPages))} disabled={currentPageClamped === totalPages}>Next</button>
             </div>
           </>
         ) : (
@@ -183,7 +202,7 @@ function CourseForm() {
   useEffect(() => { load() }, [id])
 
   const live = validateBasic(value)
-  const update = (key, next) => { setValue(v => { const n = { ...v, [key]: next }; if (key === 'name' && !codeEdited) n.code = codeFor(next); if (key === 'code') { n.code = next.toUpperCase().replace(/\s/g, ''); setCodeEdited(true) } return n }); setErrors(e => ({ ...e, [key]: '' })) }
+  const update = (key, next) => { setValue(v => { const n = { ...v, [key]: next }; if (key === 'name' && !codeEdited) n.code = codeFor(next); if (key === 'code') { n.code = next.toUpperCase().replace(/\s/g, ''); setCodeEdited(true) } if (key === 'departmentId') n.collegeId = departments.find(x => String(x.id) === String(next))?.collegeId ?? ''; return n }); setErrors(e => ({ ...e, [key]: '' })) }
 
   const submit = async () => {
     const e = validateBasic(value); setErrors(e)
@@ -218,7 +237,6 @@ function CourseForm() {
         </div></section>
         <section><h2>Academic Mapping</h2><div className="cm-form-grid">
           <Field label="Department *" error={errors.departmentId || (value.departmentId ? live.departmentId : '')}><select value={value.departmentId} onChange={e => update('departmentId', e.target.value)}><option value="">Select B.Tech department</option>{departments.filter(x => x.status !== 'Inactive' || String(x.id) === String(value.departmentId)).map(x => <option value={x.id} key={x.id}>{x.code ? `${x.code} — ` : ''}{x.name}</option>)}</select></Field>
-          <Field label="College ID"><input type="number" min="0" value={value.collegeId} onChange={e => update('collegeId', e.target.value)} placeholder="Optional" /></Field>
           <Field label="Eligibility"><input value={value.eligibility || ''} onChange={e => update('eligibility', e.target.value)} placeholder="e.g. 10+2 with PCM" /></Field>
         </div></section>
         <section><h2>Academic Structure</h2><div className="cm-form-grid">
@@ -227,11 +245,13 @@ function CourseForm() {
           <Field label="Total Semesters"><input value="8" readOnly /></Field>
           <Field label="Status"><select value={value.status} onChange={e => update('status', e.target.value)}><option>Active</option><option>Inactive</option></select></Field>
         </div></section>
-        <footer><span></span><button className="cm-button" disabled={isSaving || Object.keys(live).length > 0} onClick={submit}>{isSaving ? 'Saving...' : id ? 'Save Changes' : 'Create Course'}</button></footer>
+        <footer><span></span><button className="cm-button" disabled={isSaving} onClick={submit}>{isSaving ? 'Saving...' : id ? 'Save Changes' : 'Create Course'}</button></footer>
       </section>
       <aside className="course-preview"><span>Live Preview</span><div>
         <Badge value={value.status || 'Active'} /><h2>{value.name || 'Course Name'}</h2><strong>{value.code || 'CODE'}</strong><p>B.Tech Undergraduate</p><hr />
         <b>{departments.find(x => String(x.id) === String(value.departmentId))?.name || 'B.Tech Department'}</b><p>4 Years · 8 Semesters</p>
+        {value.eligibility && <p className="course-preview-note"><strong>Eligibility:</strong> {value.eligibility}</p>}
+        {value.description && <p className="course-preview-note"><strong>Description:</strong> {value.description}</p>}
       </div></aside>
     </div>
   </Page>
@@ -241,16 +261,17 @@ function CourseDetails() {
   const { id } = useParams()
   const [course, setCourse] = useState(null)
   const [departments, setDepartments] = useState([])
+  const [branches, setBranches] = useState([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState('')
-  const branches = getBranches().filter(x => String(x.courseId) === String(id))
 
   const load = async () => {
     setIsLoading(true); setError('')
     try {
-      const [course, departmentRows] = await Promise.all([courseApi.getById(id), departmentApi.getAll()])
-      setCourse(mapCourse(course))
+      const [course, departmentRows, branchRows] = await Promise.all([courseApi.getById(id), departmentApi.getAll(), branchApi.getByCourse(id)])
+      setCourse(mapCourse(recordFrom(course)))
       setDepartments(departmentRows.map(mapDepartmentOption))
+      setBranches(branchRows.map(normalize))
     } catch (requestError) {
       setCourse(null)
       setError(apiError(requestError, 'Unable to load course details. Please try again.'))
@@ -268,7 +289,23 @@ function CourseDetails() {
 
   return <Page><Header title="B.Tech Course Details" text="Course configuration and associated B.Tech branches."><Link className="cm-button secondary" to="/courses"><FiArrowLeft /> Back</Link><Link className="cm-button" to={`/courses/${id}/edit`}><FiEdit2 /> Edit Course</Link></Header>
     <section className="course-detail-hero"><div><span className="cm-eyebrow">B.Tech Course</span><h2>{course.name}</h2><Badge value={course.status || 'Active'} /></div><strong>{course.code}</strong></section>
-    <section className="cm-panel course-detail-grid">{[['Program', 'B.Tech Undergraduate'], ['Department', department?.name || 'Not available'], ['Duration', '4 Years'], ['Academic Pattern', 'Semester'], ['Total Semesters', '8'], ['Status', course.status || 'Active']].map(x => <div className="cm-detail" key={x[0]}><span>{x[0]}</span><strong>{x[1]}</strong></div>)}</section>
+    <section className="cm-panel course-detail-grid">{[
+      ['Course ID', course.id],
+      ['Course Name', course.name],
+      ['Course Code', course.code],
+      ['Short Name', course.shortName],
+      ['Course Type', course.type],
+      ['College ID', course.collegeId],
+      ['College', course.college],
+      ['Department ID', course.departmentId],
+      ['Department', department?.name || course.department],
+      ['Duration', `${course.durationValue || 4} ${course.durationUnit || 'Years'}`],
+      ['Academic Pattern', course.academicSystem],
+      ['Total Semesters', course.semesters],
+      ['Eligibility', course.eligibility],
+      ['Description', course.description],
+      ['Status', course.status],
+    ].map(([label, value]) => <div className="cm-detail" key={label}><span>{label}</span><strong>{value === null || value === undefined || String(value).trim() === '' ? 'Not provided' : String(value)}</strong></div>)}</section>
     <section className="course-summary course-detail-stats">{stats.map(x => <article key={x[0]}><span>{x[0]}</span><strong>{x[1]}</strong></article>)}</section>
     <section className="cm-panel course-branches"><div><h2>Associated Branches</h2><Link className="cm-button secondary" to={`/branches?course=${id}`}>View All</Link></div>{branches.length ? <div className="course-branch-grid">{branches.map(b => <Link to={`/branches/${b.id}`} key={b.id}><strong>{b.name}</strong><span>{b.code} · {branchType(b)}</span><small>Intake: {Number(b.intakeCapacity ?? b.intake ?? 0)} · {b.status || 'Active'}</small></Link>)}</div> : <p>No branches are configured for this course.</p>}</section>
     <section className="cm-panel"><h2>Description</h2><p>{course.description || 'No description added.'}</p></section>
@@ -280,14 +317,15 @@ const branchType = b => b.branchType || (b.specialization ? 'Specialization' : '
 export function CourseStructure() {
   const { courseId, branchId } = useParams()
   const [course, setCourse] = useState(null)
-  const branch = getBranches().find(x => String(x.id) === String(branchId))
-  const [rows, setRows] = useState([]), [semester, setSemester] = useState(1), [form, setForm] = useState({ yearNumber: 1, semesterNumber: 1, semesterName: 'Semester 1' }), [editing, setEditing] = useState(null), [loading, setLoading] = useState(true), [error, setError] = useState(''), [saving, setSaving] = useState(false)
+  const [branch, setBranch] = useState(null)
+  const [rows, setRows] = useState([]), [semester, setSemester] = useState(1), [form, setForm] = useState({ yearNumber: 1, semesterNumber: 1, semesterName: 'Semester 1' }), [editing, setEditing] = useState(null), [loading, setLoading] = useState(true), [error, setError] = useState(''), [saving, setSaving] = useState(false), [page, setPage] = useState(1)
 
   const load = async () => {
     setLoading(true)
     try {
-      const [courseRes, structureData] = await Promise.all([getCourseById(courseId), courseStructureApi.getByCourse(courseId)])
+      const [courseRes, structureData, branchRecord] = await Promise.all([getCourseById(courseId), courseStructureApi.getByCourse(courseId), branchApi.getById(branchId)])
       setCourse(mapCourse(recordFrom(courseRes)))
+      setBranch(branchRecord ? normalize(branchRecord) : null)
       setRows(structureData.filter(x => String(x.branchId) === String(branchId)))
       setError('')
     } catch (e) { setError(e.message || 'Unable to load course structures.') } finally { setLoading(false) }
@@ -297,7 +335,7 @@ export function CourseStructure() {
   if (loading) return <Page><div className="cm-empty">Loading...</div></Page>
   if (!course || !branch) return <Page><div className="cm-empty">Academic structure not found.</div></Page>
 
-  const visible = rows.filter(x => Number(x.semesterNumber) === semester), changeSemester = (value) => { setSemester(value); setEditing(null); setForm({ yearNumber: Math.ceil(value / 2), semesterNumber: value, semesterName: `Semester ${value}` }) }
+  const visible = rows.filter(x => Number(x.semesterNumber) === semester), totalPages = Math.max(1, Math.ceil(visible.length / PAGE_SIZE)), currentPage = Math.min(page, totalPages), pageRows = visible.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE), changeSemester = (value) => { setSemester(value); setPage(1); setEditing(null); setForm({ yearNumber: Math.ceil(value / 2), semesterNumber: value, semesterName: `Semester ${value}` }) }
   const submit = async () => { if (!form.semesterName.trim()) return; setSaving(true); try { const payload = { ...form, courseId: Number(courseId), branchId: Number(branchId), semesterNumber: Number(form.semesterNumber), yearNumber: Number(form.yearNumber) }; const result = editing ? await courseStructureApi.update(editing, payload) : await courseStructureApi.create(payload); setRows(current => editing ? current.map(x => x.structureId === editing ? result : x) : [...current, result]); setEditing(null); setError('') } catch (e) { setError(e.message || 'Unable to save course structure.') } finally { setSaving(false) } }
   const edit = (row) => { setEditing(row.structureId); setForm({ yearNumber: row.yearNumber, semesterNumber: row.semesterNumber, semesterName: row.semesterName || `Semester ${row.semesterNumber}` }); setSemester(Number(row.semesterNumber)) }
 
@@ -311,7 +349,7 @@ export function CourseStructure() {
       <button className="cm-button" disabled={saving} onClick={submit}>{saving ? 'Saving…' : editing ? 'Update Structure' : 'Add Structure'}</button>
       {editing && <button className="cm-button secondary" onClick={() => setEditing(null)}>Cancel</button>}
     </section>
-    <section className="cm-panel cm-table-wrap"><table className="cm-table"><thead><tr><th>Year</th><th>Semester</th><th>Name</th><th>Status</th><th>Action</th></tr></thead><tbody>{visible.map(x => <tr key={x.structureId}><td>{x.yearNumber}</td><td>{x.semesterNumber}</td><td>{x.semesterName}</td><td>{Number(x.status) === 0 ? 'Inactive' : 'Active'}</td><td><button className="cm-button" onClick={() => edit(x)}><FiEdit2 /> Edit</button></td></tr>)}</tbody></table>{loading ? <div className="cm-empty">Loading structures…</div> : !visible.length && <div className="cm-empty">No structure configured for Semester {semester}.</div>}</section>
+    <section className="cm-panel cm-table-wrap"><table className="cm-table"><thead><tr><th>Year</th><th>Semester</th><th>Name</th><th>Status</th><th>Action</th></tr></thead><tbody>{pageRows.map(x => <tr key={x.structureId}><td>{x.yearNumber}</td><td>{x.semesterNumber}</td><td>{x.semesterName}</td><td>{Number(x.status) === 0 ? 'Inactive' : 'Active'}</td><td><button className="cm-button" onClick={() => edit(x)}><FiEdit2 /> Edit</button></td></tr>)}</tbody></table>{loading ? <div className="cm-empty">Loading structures…</div> : !visible.length ? <div className="cm-empty">No structure configured for Semester {semester}.</div> : <TablePagination page={currentPage} totalPages={totalPages} onPageChange={setPage} />}</section>
   </Page>
 }
 

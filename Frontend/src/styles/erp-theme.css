@@ -72,6 +72,19 @@ html,body,#root{max-width:100%;overflow-x:hidden}
 @media(max-width:760px){.global-search{margin:0}}
 :root[data-theme="dark"] .global-search{border-color:var(--border-strong);color:var(--text-muted);background:var(--surface-raised);box-shadow:none}:root[data-theme="dark"] .global-search input{color:var(--text-primary);background:transparent}:root[data-theme="dark"] .global-search input::placeholder{color:var(--text-muted)}:root[data-theme="dark"] .global-search-results{border-color:var(--border);background:var(--surface);box-shadow:var(--shadow-md)}:root[data-theme="dark"] .global-search-results a{color:var(--text-secondary)}:root[data-theme="dark"] .global-search-results a:hover{color:var(--text-primary);background:var(--brand-soft)}
 @media(prefers-reduced-motion:reduce){.sidebar,.sidebar-scrim{transition:none}}
+
+/* Unified data-table and pagination presentation across every management page. */
+.page-content :is(.cm-table,.course-advanced-table,.branch-table,.department-table-wrap table,.semester-table,.section-table,.ay .table table,.sa-table-wrap table){width:100%;border-collapse:collapse;background:var(--surface)}
+.page-content :is(.cm-table,.course-advanced-table,.branch-table,.department-table-wrap table,.semester-table,.section-table,.ay .table table,.sa-table-wrap table) thead th{height:42px;padding:10px 12px!important;border-color:#244f70!important;color:#f4f9fc!important;background:#123f63!important;font-size:.68rem!important;font-weight:800!important;letter-spacing:.055em;text-align:left;text-transform:uppercase}
+.page-content :is(.cm-table,.course-advanced-table,.branch-table,.department-table-wrap table,.semester-table,.section-table,.ay .table table,.sa-table-wrap table) tbody td{padding:11px 12px;border-bottom:1px solid var(--border);color:var(--text-secondary);background:var(--surface);font-size:.78rem}
+.page-content :is(.cm-table,.course-advanced-table,.branch-table,.department-table-wrap table,.semester-table,.section-table,.ay .table table,.sa-table-wrap table) tbody tr:hover td{background:var(--surface-soft)}
+.page-content :is(.table-pagination,.course-pagination,.department-pagination,.cm-pagination,.semester-pagination,.section-pagination){display:flex!important;min-height:52px;box-sizing:border-box;align-items:center!important;justify-content:flex-end!important;gap:10px!important;padding:10px 16px!important;border-top:1px solid var(--border)!important;background:var(--surface-soft)!important}
+.page-content :is(.course-pagination,.department-pagination,.cm-pagination) :is(.pagination-controls,.cm-pagination-controls){display:flex;align-items:center;justify-content:flex-end;gap:10px}
+.page-content :is(.pagination-btn,.cm-page-btn,.semester-pagination button,.section-pagination button){min-width:84px!important;height:34px!important;padding:0 13px!important;border:1px solid var(--brand)!important;border-radius:7px!important;color:var(--brand)!important;background:var(--surface)!important;font-size:.78rem!important;font-weight:750!important}
+.page-content :is(.pagination-btn,.cm-page-btn,.semester-pagination button,.section-pagination button):hover:not(:disabled){color:#fff!important;background:var(--brand)!important}
+.page-content :is(.pagination-btn,.cm-page-btn,.semester-pagination button,.section-pagination button):disabled{cursor:not-allowed!important;opacity:.42!important}
+.page-content :is(.pagination-status,.cm-page-indicator,.semester-pagination>p,.section-pagination>p){min-width:100px;margin:0!important;color:var(--text-secondary)!important;font-size:.78rem!important;font-weight:750!important;text-align:center}
+.page-content :is(.semester-pagination,.section-pagination)>p{display:block!important;order:2}.page-content :is(.semester-pagination,.section-pagination)>div{display:contents!important}.page-content :is(.semester-pagination,.section-pagination)>div>button:first-child{order:1}.page-content :is(.semester-pagination,.section-pagination)>div>button:last-child{order:3}.page-content :is(.semester-pagination,.section-pagination)>div>button:not(:first-child):not(:last-child){display:none!important}
 .semester-directory-heading p,.section-directory-heading p{display:none}
 .ay .kpis small{display:none}.settings-page>.settings-card:not(.security):not(.password-card){display:none}
 
@@ -179,6 +192,118 @@ html,body,#root{max-width:100%;overflow-x:hidden}
 :root[data-theme="dark"] :is(.global-search,.page-content .department-search,.page-content .semester-search,.page-content .section-search,.page-content .course-search,.page-content .branch-search)>input{all:unset!important;display:block!important;box-sizing:border-box!important;width:100%!important;min-width:0!important;height:100%!important;color:var(--text-primary)!important;font:500 13px inherit!important;line-height:1!important;caret-color:var(--brand)!important}
 :root[data-theme="dark"] :is(.global-search,.page-content .department-search,.page-content .semester-search,.page-content .section-search,.page-content .course-search,.page-content .branch-search)>input::placeholder{color:var(--text-muted)!important;opacity:1!important}
 :root[data-theme="dark"] :is(.global-search,.page-content .department-search,.page-content .semester-search,.page-content .section-search,.page-content .course-search,.page-content .branch-search)>input:focus{outline:0!important;box-shadow:none!important}
+
+/* Shared ERP data-table contract.
+   Module styles may own column widths and responsive layout, while every
+   table keeps the same surface, header, row, action and pagination language. */
+.page-content :is(
+  .cm-table-wrap,.department-table-wrap,.semester-table-wrapper,
+  .section-table-wrap,.course-table-scroll,.branch-table-scroll,
+  .sa-table-wrap,.ay .table
+){
+  width:100%;max-width:100%;min-width:0;box-sizing:border-box;
+  overflow-x:auto;border-color:var(--border)!important;
+  background:var(--surface)!important;
+  overscroll-behavior-inline:contain;
+}
+
+.page-content table{
+  width:100%;border-collapse:collapse!important;border-spacing:0;
+  color:var(--text-secondary);background:var(--surface);
+  font-size:13px!important;
+}
+
+.page-content table thead th{
+  height:42px!important;box-sizing:border-box;padding:10px 12px!important;
+  border-color:#285472!important;border-bottom:1px solid #285472!important;
+  color:#eef6fc!important;background:#123f63!important;
+  font-size:11px!important;font-weight:800!important;line-height:1.25!important;
+  letter-spacing:.055em!important;text-align:left!important;text-transform:uppercase!important;
+  vertical-align:middle!important;white-space:nowrap;
+}
+
+.page-content table tbody td{
+  min-height:52px;box-sizing:border-box;padding:10px 12px!important;
+  border-color:var(--border)!important;border-bottom:1px solid var(--border)!important;
+  color:var(--text-secondary)!important;background:var(--surface)!important;
+  font-size:13px!important;line-height:1.4!important;text-align:left;
+  vertical-align:middle!important;
+}
+
+.page-content table tbody tr:last-child td{border-bottom:0!important}
+.page-content table tbody tr{transition:background-color .16s ease}
+.page-content table tbody tr:hover td{background:var(--surface-soft)!important}
+.page-content table tbody tr:focus-within td{background:var(--brand-soft)!important}
+.page-content table td strong{color:var(--text-primary)}
+.page-content table td small{color:var(--text-muted)}
+.page-content table td:empty::after{content:"—";color:var(--text-muted)}
+
+/* Directory/card headings immediately above data tools. */
+.page-content :is(
+  .cm-panel,.management-card,.semester-directory-card,.section-table-card,
+  .course-directory,.branch-directory,.sa-directory,.ay .panel
+){border-color:var(--border)!important;background:var(--surface)!important}
+
+.page-content :is(
+  .cm-toolbar,.department-controls--toolbar,.semester-filters,.section-filter-bar,
+  .course-toolbar,.branch-filter-toolbar,.sa-toolbar,.sa-filter-grid,.ay .tools
+){
+  border-color:var(--border)!important;background:var(--surface-soft)!important;
+}
+
+.page-content :is(
+  .cm-pagination,.department-pagination,.semester-pagination,
+  .section-pagination,.sa-pagination
+){
+  min-height:50px;box-sizing:border-box;border-color:var(--border)!important;
+  background:var(--surface-soft)!important;color:var(--text-muted)!important;
+  font-size:11px!important;
+}
+
+.page-content :is(
+  .cm-pagination,.department-pagination,.semester-pagination,
+  .section-pagination,.sa-pagination
+) button{
+  min-width:32px;height:32px;box-sizing:border-box;border:1px solid var(--border)!important;
+  border-radius:6px!important;color:var(--brand)!important;
+  background:var(--surface)!important;font-size:11px!important;font-weight:750!important;
+}
+
+.page-content :is(
+  .cm-pagination,.department-pagination,.semester-pagination,
+  .section-pagination,.sa-pagination
+) button.active{
+  border-color:var(--brand)!important;color:#fff!important;background:var(--brand)!important;
+}
+
+.page-content :is(
+  .row-actions,.cm-actions,.cm-row-actions,.semester-row-actions,
+  .section-actions,.course-actions,.branch-actions,.sa-icon-actions,.sa-row-actions
+) :is(button,a){
+  border-color:var(--border)!important;border-radius:6px!important;
+  color:var(--brand)!important;background:var(--surface)!important;
+}
+
+.page-content :is(
+  .row-actions,.cm-actions,.cm-row-actions,.semester-row-actions,
+  .section-actions,.course-actions,.branch-actions,.sa-icon-actions,.sa-row-actions
+) :is(button,a):hover{
+  border-color:var(--brand)!important;background:var(--brand-soft)!important;
+}
+
+:root[data-theme="dark"] .page-content table thead th{
+  border-color:#28445c!important;background:#102f49!important;color:#eef6fc!important;
+}
+:root[data-theme="dark"] .page-content table tbody td{
+  border-color:var(--border)!important;background:var(--surface)!important;color:var(--text-secondary)!important;
+}
+:root[data-theme="dark"] .page-content table tbody tr:hover td{background:var(--surface-raised)!important}
+:root[data-theme="dark"] .page-content table tbody tr:focus-within td{background:var(--brand-soft)!important}
+
+@media(max-width:760px){
+  .page-content table thead th{height:40px!important;padding:9px 10px!important}
+  .page-content table tbody td{padding:9px 10px!important}
+}
 
 .page-content :is(.course-toolbar,.branch-filter-toolbar) :is(.course-search,.branch-search){flex:0 1 320px!important;width:min(100%,320px)!important;min-width:240px!important;height:40px!important;min-height:40px!important;box-sizing:border-box!important;padding:0 11px!important;align-items:center!important;gap:8px!important;border:1px solid var(--border-strong)!important;border-radius:8px!important;background:var(--surface)!important;color:var(--text-muted)!important;box-shadow:none!important}
 .page-content :is(.course-toolbar,.branch-filter-toolbar) :is(.course-search,.branch-search)>svg{width:17px!important;height:17px!important;flex:0 0 17px!important;color:var(--text-muted)!important}
