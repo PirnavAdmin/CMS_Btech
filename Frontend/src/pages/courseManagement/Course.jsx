@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useParams, useNavigate } from 'react-router-dom'
-import { FiArrowLeft, FiCheckCircle, FiEdit2, FiEye, FiFilter, FiPlus, FiSearch, FiToggleLeft, FiToggleRight } from 'react-icons/fi'
+import { FiArrowLeft, FiBookOpen, FiCheckCircle, FiEdit2, FiEye, FiFilter, FiGitBranch, FiGrid, FiPlus, FiSearch, FiToggleLeft, FiToggleRight, FiUsers } from 'react-icons/fi'
 import DashboardLayout from '../../layouts/DashboardLayout'
 import TablePagination, { PAGE_SIZE } from '../../components/TablePagination'
 import StatusConfirmDialog from '../../components/StatusConfirmDialog'
@@ -144,7 +144,7 @@ function CourseList() {
 
   return <Page>
     <Header title="Course Management" text="Manage B.Tech courses, branches and structures."><Link className="cm-button" to="/courses/add"><FiPlus /> Add Course</Link></Header>
-    <section className="course-summary">{[['Total Courses', stats.total], ['Active Courses', stats.active], ['Associated Branches', stats.branches], ['Departments', stats.departments]].map(([label, value]) => <article key={label}><span>{label}</span><strong>{value}</strong></article>)}</section>
+    <section className="course-summary">{[['Total Courses', stats.total, FiBookOpen], ['Active Courses', stats.active, FiCheckCircle], ['Associated Branches', stats.branches, FiGitBranch], ['Departments', stats.departments, FiGrid]].map(([label, value, Icon]) => <article key={label}><span className="cm-kpi-icon"><Icon aria-hidden="true" /></span><div><span>{label}</span><strong>{value}</strong></div></article>)}</section>
     <section className="cm-panel course-toolbar">
       <label className="course-search"><FiSearch /><input aria-label="Search courses" value={query} onChange={e => { setQuery(e.target.value); setCurrentPage(1) }} placeholder="Search course name, code or department" /></label>
       <select aria-label="Status" value={statusFilter} onChange={e => { setStatusFilter(e.target.value); setCurrentPage(1) }}><option value="">All Status</option><option>Active</option><option>Inactive</option></select>

@@ -1,6 +1,6 @@
 import { cloneElement, useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
-import { FiAlertCircle, FiArrowLeft, FiEdit2, FiEye, FiFilter, FiGitBranch, FiPlus, FiSearch, FiToggleLeft, FiToggleRight } from 'react-icons/fi'
+import { FiAlertCircle, FiArrowLeft, FiCheckCircle, FiEdit2, FiEye, FiFilter, FiGitBranch, FiLayers, FiPlus, FiSearch, FiToggleLeft, FiToggleRight, FiUsers } from 'react-icons/fi'
 import DashboardLayout from '../../layouts/DashboardLayout'
 import TablePagination, { PAGE_SIZE } from '../../components/TablePagination'
 import { branchApi, courseApi, departmentApi } from '../../api/apiEndpoints'
@@ -36,7 +36,7 @@ function List(){
  const rows=useMemo(()=>branches.filter(b=>`${b.name} ${b.code} ${b.departmentName||dep(b.departmentId)} ${b.courseName||course(b.courseId)}`.toLowerCase().includes(filters.query.toLowerCase())&&(!filters.departmentId||String(b.departmentId)===filters.departmentId)&&(!filters.courseId||String(b.courseId)===filters.courseId)&&(!filters.branchType||type(b)===filters.branchType)&&(!filters.status||b.status===filters.status)),[branches,filters])
  const totalPages=Math.max(1,Math.ceil(rows.length/PAGE_SIZE)),currentPage=Math.min(page,totalPages),pageRows=rows.slice((currentPage-1)*PAGE_SIZE,currentPage*PAGE_SIZE)
  useEffect(()=>setPage(1),[filters])
- const stats=[['Total Branches',branches.length],['Active Branches',branches.filter(x=>x.status==='Active').length],['Inactive Branches',branches.filter(x=>x.status==='Inactive').length],['Core Branches',branches.filter(x=>type(x)==='Core').length],['Specializations',branches.filter(x=>type(x)==='Specialization').length],['Total Approved Intake',branches.reduce((n,x)=>n+intake(x),0).toLocaleString('en-IN')]]
+ const stats=[['Total Branches',branches.length,FiGitBranch],['Active Branches',branches.filter(x=>x.status==='Active').length,FiCheckCircle],['Inactive Branches',branches.filter(x=>x.status==='Inactive').length,FiToggleLeft],['Core Branches',branches.filter(x=>type(x)==='Core').length,FiLayers],['Specializations',branches.filter(x=>type(x)==='Specialization').length,FiFilter],['Total Approved Intake',branches.reduce((n,x)=>n+intake(x),0).toLocaleString('en-IN'),FiUsers]]
  const set=(key,value)=>setFilters(current=>key==='departmentId'?{...current,departmentId:value,courseId:''}:{...current,[key]:value})
  const toggle=b=>{const status=b.status==='Active'?'Inactive':'Active',action=status==='Inactive'?'Deactivate':'Activate';setError({kind:'confirm',action,code:b.code,cancel:()=>setError(''),confirm:async()=>{setError('');try{const saved=normalize(await branchApi.update(b.id,{...b,status}));setBranches(rows=>rows.map(x=>x.id===b.id?saved:x));setError(`Branch ${status==='Inactive'?'deactivated':'activated'} successfully.`)}catch(e){setError(e.message||'Unable to update branch status.')}}})}
  const has=Object.values(filters).some(Boolean),courseOptions=courses.filter(c=>!filters.departmentId||String(c.departmentId)===filters.departmentId)
