@@ -271,7 +271,6 @@ export default function Login() {
               {isSubmitting ? 'Signing in...' : 'Login to Digital Campus'}
             </button>
             <p className="account-link">Don&apos;t have an account? <Link to="/register">Request access</Link></p>
-            <div className="pirnav-highlights"><span>Autonomous Institution</span><span>AICTE Approved</span><span>Modern Laboratories</span></div>
             <p className="access-note">© {new Date().getFullYear()} Pirnav Engineering College. All rights reserved.</p>
           </form>
         )}
