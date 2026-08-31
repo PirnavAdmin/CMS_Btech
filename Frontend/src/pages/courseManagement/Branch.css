@@ -52,3 +52,6 @@
 /* Branch statistics use the academic-structure purple accent. */
 .branch-summary .cm-kpi-icon{color:#7c3aed;background:#f3e8ff}
 .branch-summary article:nth-child(2) .cm-kpi-icon{color:#15803d;background:#e9f8ef}.branch-summary article:nth-child(3) .cm-kpi-icon{color:#b42318;background:#fee4e2}.branch-summary article:nth-child(4) .cm-kpi-icon{color:#1970b3;background:#e8f3fc}.branch-summary article:nth-child(5) .cm-kpi-icon{color:#a15c00;background:#fff3d6}.branch-summary article:nth-child(6) .cm-kpi-icon{color:#c2410c;background:#fff1e8}
+
+/* Semantic row-action colors keep the compact controls easy to scan. */
+.branch-actions a:first-child{color:#1970b3;background:#e8f3fc;border-color:#c5dfef}.branch-actions a:nth-child(2){color:#7c3aed;background:#f3e8ff;border-color:#dfccff}.branch-actions .branch-status-action.danger{color:#b42318;background:#fee4e2;border-color:#fecdca}.branch-actions .branch-status-action.success{color:#15803d;background:#e9f8ef;border-color:#bbf7d0}
