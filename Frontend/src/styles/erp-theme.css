@@ -119,6 +119,8 @@ html,body,#root{max-width:100%;overflow-x:hidden}
 .page-content table{font-size:13px!important}.page-content table th{font-size:11px!important}.page-content table td{font-size:13px!important}
 .page-content :is(label,.cm-field,.semester-field,.section-field,.profile-field,.settings-field,.ac-field){font-size:12px!important}
 .page-content :is(.cm-button,.primary-button,.semester-primary,.section-primary,.ac-primary,.profile-button,.settings-button){font-size:12px!important}
+.page-content .cm-header .cm-button:not(.secondary){border-color:var(--brand,#1970b3)!important;background:var(--brand,#1970b3)!important;color:#fff!important}
+.page-content .cm-header .cm-button:not(.secondary):hover{border-color:var(--brand-hover,#0f5e98)!important;background:var(--brand-hover,#0f5e98)!important;color:#fff!important}
 
 /* Dark palette contract — override legacy per-page light variables and hardcoded surfaces. */
 :root[data-theme="dark"] .semester-management{--sem-navy:#102f49;--sem-blue:#61afe3;--sem-text:#edf4fa;--sem-muted:#91a5b7;--sem-line:#29394d}
