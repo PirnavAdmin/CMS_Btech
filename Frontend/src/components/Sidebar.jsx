@@ -10,8 +10,8 @@ const academicLinks = [
   { label: 'Departments', to: '/department-management', icon: FiGrid },
   { label: 'Courses', to: '/courses', icon: FiBookOpen },
   { label: 'Branches', to: '/branches', icon: FiGitBranch },
-  { label: 'Sections', to: '/section-management', icon: FiUsers },
   { label: 'Semesters', to: '/semester-management', icon: FiLayers },
+  { label: 'Sections', to: '/section-management', icon: FiUsers },
 ]
 
 function Item({ to, icon: Icon, children, onNavigate }) {
