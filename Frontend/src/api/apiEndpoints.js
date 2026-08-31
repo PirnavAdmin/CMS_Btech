@@ -274,7 +274,7 @@ const academicYearPayload = (year) => ({
 export const academicYearApi = {
   getAll: async () => {
     const response = await request(API_ENDPOINTS.academicYears.list)
-    return Array.isArray(response?.data) ? response.data : []
+    return Array.isArray(response?.data) ? response.data : Array.isArray(response?.data?.data) ? response.data.data : []
   },
   getById: async (id) => {
     const response = await request(API_ENDPOINTS.academicYears.detail(id))
@@ -325,7 +325,7 @@ const branchPayload = (branch) => ({
 export const branchApi = {
   getAll: async () => {
     const response = await request(API_ENDPOINTS.branches.list)
-    return Array.isArray(response?.data) ? response.data : []
+    return Array.isArray(response?.data) ? response.data : Array.isArray(response?.data?.data) ? response.data.data : []
   },
   getByCourse: async (courseId) => {
     const response = await request(API_ENDPOINTS.branches.byCourse(courseId))

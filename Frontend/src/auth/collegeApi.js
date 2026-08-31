@@ -74,6 +74,7 @@ const API = createClient(collegesBaseUrl, "/api/v1");
 const COLLEGE_LOGO_API = createClient(collegesBaseUrl, "/api/College");
 const ACADEMIC_API = createClient(academicBaseUrl, "/api/v1");
 const SETTINGS_API = createClient(settingsBaseUrl, "/api");
+const SEMESTER_API = createClient(academicBaseUrl, "/api");
 
 const COLLEGE_EXTENDED_PREFIX = "CMS_EXTENDED_V1:";
 
@@ -290,6 +291,14 @@ export const updateDepartmentStatus = (id, status) => {
 };
 
 export const deleteDepartment = (id) => ACADEMIC_API.delete(`/departments/${id}`);
+
+// Semester management APIs (/api/semester)
+export const getSemesters = () => SEMESTER_API.get('/semester');
+export const searchSemesters = (params = {}) => SEMESTER_API.get('/semester/search', { params });
+export const getSemesterById = (id) => SEMESTER_API.get(`/semester/${id}`);
+export const getSemesterSummary = () => SEMESTER_API.get('/semester/summary');
+export const createSemester = (data) => SEMESTER_API.post('/semester', data);
+export const updateSemester = (id, data) => SEMESTER_API.put(`/semester/${id}`, data);
 
 // -------------------------
 // COURSE APIs
