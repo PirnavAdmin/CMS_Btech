@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { FiEye as EyeIcon, FiEdit2 as EditIcon, FiPlus as Plus, FiToggleLeft, FiToggleRight } from 'react-icons/fi'
 import DashboardLayout from '../../layouts/DashboardLayout'
@@ -6,15 +6,21 @@ import TablePagination, { PAGE_SIZE } from '../../components/TablePagination'
 import StatusConfirmDialog from '../../components/StatusConfirmDialog'
 import {
   createCollegeSettings,
+  fetchCollegeLogo,
   getCollegeById,
+  getCollegeLogoUrl,
   getCollegeSettings,
   getColleges,
+  isValidWebsite,
+  normalizeWebsite,
   readCollegeExtendedDetails,
   unwrapCollegeRecord,
   searchColleges,
   updateCollege,
   updateCollegeSettings,
   updateCollegeStatus,
+  uploadCollegeLogo,
+  WEBSITE_VALIDATION_MESSAGE,
 } from '../../auth/collegeApi'
 import './CollegeInstitutionManagement.css'
 
@@ -99,8 +105,8 @@ function validateCollege(values) {
   } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(values.email.trim())) {
     errors.email = 'Enter a valid email address.'
   }
-  if (values.website.trim() && !/^https?:\/\/.+\..+/.test(values.website.trim())) {
-    errors.website = 'Enter a valid website URL (e.g. https://example.edu).'
+  if (values.website.trim() && !isValidWebsite(normalizeWebsite(values.website))) {
+    errors.website = WEBSITE_VALIDATION_MESSAGE
   }
   if (!values.principal.trim()) errors.principal = "Principal's name is required."
   return errors
@@ -146,10 +152,6 @@ const getCollegeRecords = (responseData) => {
 
 const hasValue = (value) => value !== null && value !== undefined && String(value).trim() !== ''
 const displayValue = (value) => hasValue(value) ? value : 'Not provided'
-const resolveLogo = (value) => {
-  if (!hasValue(value) || String(value).startsWith('data:') || /^https?:\/\//i.test(value)) return value
-  return `${String(import.meta.env.VITE_API_BASE_URL_COLLEGES || '').replace(/\/+$/, '')}/${String(value).replace(/^\/+/, '')}`
-}
 const mapCollege = (record) => {
   const address = record.addressDetails ?? record.addressInfo ?? {}
   const contact = record.contactDetails ?? record.contactInfo ?? {}
@@ -174,8 +176,8 @@ const mapCollege = (record) => {
   contact: String(record.contact ?? record.contactNumber ?? record.phoneNumber ?? record.mobile ?? record.phone ?? contact.contactNumber ?? contact.phoneNumber ?? contact.mobile ?? contact.phone ?? ''),
   alternateContact: String(record.alternateContact ?? record.alternateContactNumber ?? record.alternatePhoneNumber ?? contact.alternateContactNumber ?? extended.alternateContactNumber ?? ''),
   email: record.email ?? record.collegeEmail ?? contact.email ?? '',
-  website: record.website ?? contact.website ?? '',
-  logo: resolveLogo(record.logo ?? record.logoUrl ?? record.collegeLogo ?? record.collegeLogoUrl ?? record.logoPath ?? ''),
+  website: record.website ?? record.Website ?? contact.website ?? contact.Website ?? '',
+  logo: getCollegeLogoUrl(record.id ?? record.collegeId, record.logo ?? record.logoUrl ?? record.collegeLogo ?? record.collegeLogoUrl ?? record.logoPath ?? ''),
   principal: record.principal ?? record.principalName ?? administration.principalName ?? '',
   principalEmail: record.principalEmail ?? administration.principalEmail ?? extended.principalEmail ?? '',
   principalContact: record.principalContact ?? record.principalPhone ?? administration.principalContact ?? extended.principalContact ?? '',
@@ -190,7 +192,39 @@ const mapCollege = (record) => {
   })
 }
 
-const collegePayload = (college) => ({
+function CollegeLogoImage({ src, alt, className, onError }) {
+  const [objectUrl, setObjectUrl] = useState('')
+  const onErrorRef = useRef(onError)
+  const isProtectedLogo = String(src ?? '').includes('/api/College/logo/')
+
+  useEffect(() => { onErrorRef.current = onError }, [onError])
+
+  useEffect(() => {
+    if (!isProtectedLogo) {
+      setObjectUrl('')
+      return undefined
+    }
+
+    let active = true
+    let nextObjectUrl = ''
+    fetchCollegeLogo(src)
+      .then((image) => {
+        nextObjectUrl = URL.createObjectURL(image)
+        if (active) setObjectUrl(nextObjectUrl)
+      })
+      .catch(() => { if (active) onErrorRef.current() })
+
+    return () => {
+      active = false
+      if (nextObjectUrl) URL.revokeObjectURL(nextObjectUrl)
+    }
+  }, [src, isProtectedLogo])
+
+  if (isProtectedLogo && !objectUrl) return null
+  return <img src={isProtectedLogo ? objectUrl : src} alt={alt} className={className} onError={onError} />
+}
+
+const collegePayload = (college, hasNewLogo = false) => ({
   name: college.name.trim(),
   code: college.code.trim(),
   type: college.type,
@@ -201,8 +235,8 @@ const collegePayload = (college) => ({
   pincode: college.pincode.trim(),
   contact: college.contact.trim(),
   email: college.email.trim(),
-  website: college.website.trim(),
-  logo: college.logo || '',
+  ...(normalizeWebsite(college.website) ? { Website: normalizeWebsite(college.website) } : {}),
+  logo: hasNewLogo ? '' : college.logo || '',
   principal: college.principal.trim(),
   accreditation: college.accreditation.trim(),
 })
@@ -212,7 +246,7 @@ const mapRecordToForm = (record) => ({
   collegeCode: record.collegeCode ?? '',
   collegeEmail: record.collegeEmail ?? '',
   phoneNumber: record.phoneNumber ?? '',
-  website: record.website ?? '',
+  website: record.website ?? record.Website ?? '',
   addressLine1: record.addressLine1 ?? '',
   addressLine2: record.addressLine2 ?? '',
   city: record.city ?? '',
@@ -237,6 +271,7 @@ export default function CollegeInstitutionManagement({ initialView = 'list' }) {
   const [viewMode, setViewMode] = useState(initialView) // list | edit | details | settings | settings-form
   const [activeId, setActiveId] = useState(null)
   const [formValues, setFormValues] = useState(emptyCollege)
+  const [editLogoFile, setEditLogoFile] = useState(null)
   const [errors, setErrors] = useState({})
   const [searchTerm, setSearchTerm] = useState('')
 
@@ -305,9 +340,14 @@ export default function CollegeInstitutionManagement({ initialView = 'list' }) {
     setErrors((current) => ({ ...current, [name]: '' }))
   }
 
+  const normalizeEditWebsite = () => {
+    setFormValues((current) => ({ ...current, website: normalizeWebsite(current.website) }))
+  }
+
   const handleLogoUpload = (e) => {
     const file = e.target.files?.[0]
     if (!file) return
+    setEditLogoFile(file)
     const reader = new FileReader()
     reader.onload = () => {
       setFormValues((current) => ({ ...current, logo: reader.result }))
@@ -362,7 +402,8 @@ export default function CollegeInstitutionManagement({ initialView = 'list' }) {
     setIsCollegeSaving(true)
     setCollegeError('')
     try {
-      const response = await updateCollege(activeId, collegePayload(formValues))
+      const response = await updateCollege(activeId, collegePayload(formValues, Boolean(editLogoFile)))
+      if (editLogoFile) await uploadCollegeLogo(activeId, editLogoFile)
       const updated = mapCollege((response.data?.data ?? response.data) || { ...formValues, id: activeId })
       setColleges((current) => current.map((college) => (college.id === activeId ? updated : college)))
       backToList()
@@ -527,7 +568,7 @@ export default function CollegeInstitutionManagement({ initialView = 'list' }) {
                         <tr key={college.id}>
                           <td>
                             {college.logo && !brokenLogoIds.has(college.id) ? (
-                              <img
+                              <CollegeLogoImage
                                 src={college.logo}
                                 alt={college.name}
                                 className="cm-logo-thumb"
@@ -704,7 +745,7 @@ export default function CollegeInstitutionManagement({ initialView = 'list' }) {
 
                 <label>
                   <span>Website</span>
-                  <input type="text" name="website" value={formValues.website} onChange={updateField} placeholder="https://college.edu" />
+                  <input type="text" name="website" value={formValues.website} onChange={updateField} onBlur={normalizeEditWebsite} placeholder="https://college.edu" />
                   {errors.website && <p className="cm-field-error">{errors.website}</p>}
                 </label>
 
@@ -753,7 +794,7 @@ export default function CollegeInstitutionManagement({ initialView = 'list' }) {
               <div className="cm-profile-banner">
                 <div className="cm-profile-avatar-wrap">
                   {activeCollege.logo && !brokenLogoIds.has(activeCollege.id) ? (
-                    <img
+                    <CollegeLogoImage
                       src={activeCollege.logo}
                       alt={activeCollege.name}
                       className="cm-profile-logo"
