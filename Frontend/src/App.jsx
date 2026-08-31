@@ -58,7 +58,6 @@ export default function App() {
       >
         <Route path="/college-institution-management" element={<CollegeInstitutionManagement />} />
         <Route path="/college-institution-management/add" element={<AddCollege />} />
-        <Route path="/college-settings" element={<CollegeInstitutionManagement initialView="settings" />} />
         <Route path="/academic-year-management" element={<AcademicYearManagement />} />
         <Route path="/department-management" element={<DepartmentManagement />} />
         <Route path="/semester-management" element={<SemesterManagement />} />
