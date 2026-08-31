@@ -7,8 +7,8 @@ import { ROLES } from '../auth/roles'
 const academicLinks = [
   { label: 'College', to: '/college-institution-management', icon: FiHome },
   { label: 'Academic Years', to: '/academic-year-management', icon: FiCalendar },
-  { label: 'Departments', to: '/department-management', icon: FiGrid },
   { label: 'Courses', to: '/courses', icon: FiBookOpen },
+  { label: 'Departments', to: '/department-management', icon: FiGrid },
   { label: 'Branches', to: '/branches', icon: FiGitBranch },
   { label: 'Semesters', to: '/semester-management', icon: FiLayers },
   { label: 'Sections', to: '/section-management', icon: FiUsers },
