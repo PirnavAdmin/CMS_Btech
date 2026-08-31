@@ -48,3 +48,7 @@
 .branch-confirm h2{margin:0;color:var(--text-primary);font-size:1.2rem}.branch-confirm p{margin:9px 0 22px;color:var(--text-secondary);font-size:.84rem;line-height:1.55}.branch-confirm p strong{color:var(--text-primary)}
 .branch-confirm footer{display:flex;justify-content:center;gap:9px}.branch-confirm footer .cm-button{min-width:125px}.branch-confirm .cm-button.danger{border-color:var(--danger);background:var(--danger)}
 @media(max-width:480px){.branch-confirm{padding:22px 18px}.branch-confirm footer{flex-direction:column-reverse}.branch-confirm footer .cm-button{width:100%}}
+
+/* Branch statistics use the academic-structure purple accent. */
+.branch-summary .cm-kpi-icon{color:#7c3aed;background:#f3e8ff}
+.branch-summary article:nth-child(2) .cm-kpi-icon{color:#15803d;background:#e9f8ef}.branch-summary article:nth-child(3) .cm-kpi-icon{color:#b42318;background:#fee4e2}.branch-summary article:nth-child(4) .cm-kpi-icon{color:#1970b3;background:#e8f3fc}.branch-summary article:nth-child(5) .cm-kpi-icon{color:#a15c00;background:#fff3d6}.branch-summary article:nth-child(6) .cm-kpi-icon{color:#c2410c;background:#fff1e8}
