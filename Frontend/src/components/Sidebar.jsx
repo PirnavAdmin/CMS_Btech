@@ -5,17 +5,17 @@ import { getUserRole } from '../auth/auth'
 import { ROLES } from '../auth/roles'
 
 const academicLinks = [
-  { label: 'College', to: '/college-institution-management', icon: FiHome },
-  { label: 'Academic Years', to: '/academic-year-management', icon: FiCalendar },
-  { label: 'Courses', to: '/courses', icon: FiBookOpen },
-  { label: 'Departments', to: '/department-management', icon: FiGrid },
-  { label: 'Branches', to: '/branches', icon: FiGitBranch },
-  { label: 'Semesters', to: '/semester-management', icon: FiLayers },
-  { label: 'Sections', to: '/section-management', icon: FiUsers },
+  { label: 'College', to: '/college-institution-management', icon: FiHome, tone: 'gold' },
+  { label: 'Academic Years', to: '/academic-year-management', icon: FiCalendar, tone: 'green' },
+  { label: 'Courses', to: '/courses', icon: FiBookOpen, tone: 'blue' },
+  { label: 'Departments', to: '/department-management', icon: FiGrid, tone: 'cyan' },
+  { label: 'Branches', to: '/branches', icon: FiGitBranch, tone: 'purple' },
+  { label: 'Semesters', to: '/semester-management', icon: FiLayers, tone: 'orange' },
+  { label: 'Sections', to: '/section-management', icon: FiUsers, tone: 'pink' },
 ]
 
-function Item({ to, icon: Icon, children, onNavigate }) {
-  return <NavLink to={to} onClick={onNavigate}><Icon aria-hidden="true" /><span>{children}</span></NavLink>
+function Item({ to, icon: Icon, children, onNavigate, tone = 'blue' }) {
+  return <NavLink to={to} onClick={onNavigate} className={`sidebar-link sidebar-link--${tone}`}><Icon aria-hidden="true" /><span>{children}</span></NavLink>
 }
 
 export default function Sidebar({ open = false, onClose = () => {} }) {
@@ -42,16 +42,16 @@ export default function Sidebar({ open = false, onClose = () => {} }) {
       </div>
       <nav ref={navigationRef} onScroll={rememberScrollPosition} className="sidebar-navigation">
         <p className="sidebar-section-label">Overview</p>
-        <Item to="/dashboard" icon={FiHome} onNavigate={onClose}>Dashboard</Item>
+        <Item to="/dashboard" icon={FiHome} tone="blue" onNavigate={onClose}>Dashboard</Item>
         {userRole === ROLES.ADMIN && <>
           <p className="sidebar-section-label">Academics</p>
           {academicLinks.map(link => <Item {...link} key={link.to} onNavigate={onClose}>{link.label}</Item>)}
           <p className="sidebar-section-label">Student Management</p>
-          <Item to="/student-management/admissions" icon={FiUserPlus} onNavigate={onClose}>Student Admissions</Item>
-          <Item to="/student-management/profiles" icon={FiUser} onNavigate={onClose}>Student Profiles</Item>
-          <Item to="/student-management/promotions" icon={FiTrendingUp} onNavigate={onClose}>Student Promotions</Item>
+          <Item to="/student-management/admissions" icon={FiUserPlus} tone="orange" onNavigate={onClose}>Student Admissions</Item>
+          <Item to="/student-management/profiles" icon={FiUser} tone="cyan" onNavigate={onClose}>Student Profiles</Item>
+          <Item to="/student-management/promotions" icon={FiTrendingUp} tone="green" onNavigate={onClose}>Student Promotions</Item>
         </>}
-        {[ROLES.FACULTY, ROLES.STUDENT].includes(userRole) && <><p className="sidebar-section-label">Academics</p><Item to="/my-subjects" icon={FiBookOpen} onNavigate={onClose}>My Subjects</Item></>}
+        {[ROLES.FACULTY, ROLES.STUDENT].includes(userRole) && <><p className="sidebar-section-label">Academics</p><Item to="/my-subjects" icon={FiBookOpen} tone="blue" onNavigate={onClose}>My Subjects</Item></>}
       </nav>
     </aside>
   </>
