@@ -294,6 +294,13 @@ html,body,#root{max-width:100%;overflow-x:hidden}
   border-color:var(--brand)!important;background:var(--brand-soft)!important;
 }
 
+/* Preserve semantic colors for the Branch directory row actions. */
+.page-content .branch-actions a:first-child{color:#1970b3!important;background:#e8f3fc!important;border-color:#c5dfef!important}.page-content .branch-actions a:nth-child(2){color:#7c3aed!important;background:#f3e8ff!important;border-color:#dfccff!important}.page-content .branch-actions .branch-status-action.danger{color:#b42318!important;background:#fee4e2!important;border-color:#fecdca!important}.page-content .branch-actions .branch-status-action.success{color:#15803d!important;background:#e9f8ef!important;border-color:#bbf7d0!important}
+.page-content .cm-actions .cm-view-action{color:#1970b3!important;background:#e8f3fc!important;border-color:#c5dfef!important}.page-content .cm-actions .cm-edit-action{color:#7c3aed!important;background:#f3e8ff!important;border-color:#dfccff!important}.page-content .cm-actions .cm-status-action.cm-danger{color:#b42318!important;background:#fee4e2!important;border-color:#fecdca!important}.page-content .cm-actions .cm-status-action.cm-success{color:#15803d!important;background:#e9f8ef!important;border-color:#bbf7d0!important}
+
+/* Shared management-directory action colors: view, edit, assign, deactivate, activate. */
+.page-content :is(.course-actions,.semester-row-actions,.section-actions,.row-actions)>:first-child{color:#1970b3!important;background:#e8f3fc!important;border-color:#c5dfef!important}.page-content :is(.course-actions,.semester-row-actions,.section-actions,.row-actions)>:nth-child(2){color:#7c3aed!important;background:#f3e8ff!important;border-color:#dfccff!important}.page-content :is(.section-actions,.row-actions)>:nth-child(3):not(.status-action):not(.section-status-action){color:#a15c00!important;background:#fff3d6!important;border-color:#fedf89!important}.page-content :is(.course-actions,.section-actions,.row-actions) :is(.course-status-action,.section-status-action,.status-action).danger{color:#b42318!important;background:#fee4e2!important;border-color:#fecdca!important}.page-content :is(.course-actions,.section-actions,.row-actions) :is(.course-status-action,.section-status-action,.status-action).success{color:#15803d!important;background:#e9f8ef!important;border-color:#bbf7d0!important}
+
 :root[data-theme="dark"] .page-content table thead th{
   border-color:#28445c!important;background:#102f49!important;color:#eef6fc!important;
 }
