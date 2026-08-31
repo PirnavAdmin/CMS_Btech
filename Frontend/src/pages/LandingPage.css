@@ -68,3 +68,75 @@
   .lp-page .lp-hero::before{opacity:.68;background-position:65% center}
   .lp-page .lp-hero .lp-trust{gap:8px 12px}
 }
+
+/* Explicit theme state for public pages (the OS preference is only the fallback). */
+.lp-actions .public-theme-toggle{flex:0 0 40px}
+:root[data-theme="dark"] .lp-page{--navy:#edf4fa;--blue:#61afe3;--ink:#edf4fa;--muted:#91a5b7;--line:#29394d;color:var(--ink);background:var(--app-bg)}
+:root[data-theme="dark"] .lp-nav{border-color:var(--border);background:color-mix(in srgb,var(--surface) 94%,transparent)}
+:root[data-theme="dark"] .lp-brand,:root[data-theme="dark"] .lp-links a,:root[data-theme="dark"] .lp-actions>a:first-child,:root[data-theme="dark"] .lp-heading h2,:root[data-theme="dark"] .lp-hierarchy h2,:root[data-theme="dark"] .lp-architecture h2,:root[data-theme="dark"] .lp-benefits h2,:root[data-theme="dark"] .lp-footer strong{color:var(--text-primary)}
+:root[data-theme="dark"] .lp-nav details>div,:root[data-theme="dark"] .lp-button.secondary,:root[data-theme="dark"] .lp-dashboard,:root[data-theme="dark"] .lp-dashboard>header,:root[data-theme="dark"] .lp-metrics article,:root[data-theme="dark"] .lp-charts article,:root[data-theme="dark"] .lp-activity,:root[data-theme="dark"] .lp-float,:root[data-theme="dark"] .lp-modules article,:root[data-theme="dark"] .lp-tree,:root[data-theme="dark"] .lp-tree .root,:root[data-theme="dark"] .lp-tree .programme,:root[data-theme="dark"] .branches span,:root[data-theme="dark"] .semesters span,:root[data-theme="dark"] .sections span,:root[data-theme="dark"] .lp-roles article,:root[data-theme="dark"] .lp-architecture article,:root[data-theme="dark"] .lp-architecture article span,:root[data-theme="dark"] .lp-programmes article,:root[data-theme="dark"] .lp-journey article,:root[data-theme="dark"] .lp-services>div span{border-color:var(--border);color:var(--text-secondary);background:var(--surface)}
+:root[data-theme="dark"] .lp-page .lp-hero{background:#071f36}
+:root[data-theme="dark"] .lp-page .lp-hero h1,:root[data-theme="dark"] .lp-page .lp-journey h2,:root[data-theme="dark"] .lp-page .lp-campus h2,:root[data-theme="dark"] .lp-page .lp-services h2,:root[data-theme="dark"] .lp-page .lp-benefits h2,:root[data-theme="dark"] .lp-page .lp-preview h2,:root[data-theme="dark"] .lp-dash-title strong,:root[data-theme="dark"] .lp-modules h3,:root[data-theme="dark"] .lp-roles h3,:root[data-theme="dark"] .lp-programmes span,:root[data-theme="dark"] .lp-journey article span{color:#edf7fd}
+:root[data-theme="dark"] .lp-page :is(.lp-lead,.lp-heading>p,.lp-hierarchy>div>p:last-child,.lp-campus>div:last-child>p:not(.lp-eyebrow),.lp-services header>p:last-child,.lp-benefits article p,.lp-campus-list small){color:#a9bdcb}
+:root[data-theme="dark"] .lp-overview,:root[data-theme="dark"] .lp-workflow,:root[data-theme="dark"] .lp-about{background:#071f31}
+:root[data-theme="dark"] .lp-roles,:root[data-theme="dark"] .lp-preview,:root[data-theme="dark"] .lp-journey{background:#0e2a3e}
+:root[data-theme="dark"] .lp-footer{border-color:var(--border)}:root[data-theme="dark"] .lp-footer a{color:var(--text-muted)}
+:root[data-theme="light"] .lp-page{color:var(--ink);background:#fff}
+:root[data-theme="light"] .lp-nav{border-color:rgba(205,221,232,.86);background:rgba(255,255,255,.92)}
+:root[data-theme="light"] .lp-nav .lp-brand,:root[data-theme="light"] .lp-nav .lp-brand strong,:root[data-theme="light"] .lp-nav .lp-links a,:root[data-theme="light"] .lp-nav .lp-actions>a:first-child{color:#082f52!important}
+:root[data-theme="light"] .lp-nav .lp-brand small{color:#71869a!important}
+:root[data-theme="light"] .lp-nav summary{color:#082f52;border-color:#dbe7ef;background:#fff}
+:root[data-theme="light"] .lp-page .lp-heading h2,:root[data-theme="light"] .lp-page .lp-hierarchy h2,:root[data-theme="light"] .lp-page .lp-architecture h2,:root[data-theme="light"] .lp-page .lp-benefits h2,:root[data-theme="light"] .lp-page .lp-campus h2,:root[data-theme="light"] .lp-page .lp-services h2{color:#082f52!important}
+:root[data-theme="light"] .lp-nav details>div,:root[data-theme="light"] .lp-dashboard,:root[data-theme="light"] .lp-dashboard>header,:root[data-theme="light"] .lp-metrics article,:root[data-theme="light"] .lp-charts article,:root[data-theme="light"] .lp-activity,:root[data-theme="light"] .lp-float,:root[data-theme="light"] .lp-modules article,:root[data-theme="light"] .lp-tree,:root[data-theme="light"] .lp-tree .root,:root[data-theme="light"] .lp-tree .programme,:root[data-theme="light"] .branches span,:root[data-theme="light"] .semesters span,:root[data-theme="light"] .sections span,:root[data-theme="light"] .lp-roles article,:root[data-theme="light"] .lp-architecture article,:root[data-theme="light"] .lp-architecture article span,:root[data-theme="light"] .lp-programmes article,:root[data-theme="light"] .lp-journey article,:root[data-theme="light"] .lp-services>div span{border-color:#dbe7ef;color:var(--ink);background:#fff}
+:root[data-theme="light"] .lp-roles,:root[data-theme="light"] .lp-preview,:root[data-theme="light"] .lp-journey{background:#f3f8fb}
+:root[data-theme="light"] .lp-brand,:root[data-theme="light"] .lp-links a,:root[data-theme="light"] .lp-actions>a:first-child,:root[data-theme="light"] .lp-heading h2,:root[data-theme="light"] .lp-hierarchy h2,:root[data-theme="light"] .lp-architecture h2,:root[data-theme="light"] .lp-benefits h2,:root[data-theme="light"] .lp-footer strong{color:#082f52}
+:root[data-theme="light"] .lp-page :is(.lp-journey h2,.lp-campus h2,.lp-services h2,.lp-preview h2,.lp-dash-title strong,.lp-modules h3,.lp-roles h3,.lp-programmes span,.lp-journey article span){color:#082f52}
+:root[data-theme="light"] .lp-page .lp-hero h1{color:#f4f9fc}:root[data-theme="light"] .lp-page .lp-hero h1 span{color:#69bce8}
+:root[data-theme="light"] .lp-page :is(.lp-lead,.lp-heading>p,.lp-hierarchy>div>p:last-child,.lp-campus>div:last-child>p:not(.lp-eyebrow),.lp-services header>p:last-child,.lp-benefits article p,.lp-campus-list small){color:#607b94}
+:root[data-theme="light"] .lp-links a:hover,:root[data-theme="light"] .lp-actions>a:first-child:hover{color:#1970b3}
+:root[data-theme="light"] .lp-nav summary{color:#425e75;border-color:#dbe7ef;background:#fff}
+:root[data-theme="light"] .lp-nav details a{color:#0b3557}
+:root[data-theme="dark"] .lp-links a:hover,:root[data-theme="dark"] .lp-actions>a:first-child:hover{color:#83c6ee}
+:root[data-theme="dark"] .lp-page :is(.lp-heading h2,.lp-hierarchy h2,.lp-architecture h2,.lp-benefits h2,.lp-campus h2,.lp-services h2,.lp-preview h2,.lp-journey h2){color:#edf4fa}
+:root[data-theme="dark"] .lp-page :is(.lp-modules article,.lp-roles article,.lp-programmes article,.lp-journey article,.lp-services>div span):hover{border-color:#61afe3;background:#1b2638;box-shadow:0 14px 30px rgba(0,0,0,.24)}
+:root[data-theme="light"] .lp-page :is(.lp-modules article,.lp-roles article,.lp-programmes article,.lp-journey article,.lp-services>div span):hover{border-color:#8ab9d8;background:#f3f9fd;box-shadow:0 14px 30px rgba(8,47,82,.1)}
+:root[data-theme="light"] .lp-page a:not(.lp-button):hover{color:#095e9f}
+:root[data-theme="dark"] .lp-page a:not(.lp-button):hover{color:#83c6ee}
+
+/* Keep every landing-page surface readable when light mode is selected, even on a dark OS. */
+:root[data-theme="light"] .lp-page .lp-eyebrow{color:#1970b3}
+:root[data-theme="light"] .lp-page .lp-eyebrow.light{color:#8dd4f5}
+:root[data-theme="light"] .lp-page .lp-trust{color:#617b91}
+:root[data-theme="light"] .lp-page .lp-dashboard>header{color:#496b84;background:#fff;border-color:#dce8ef}
+:root[data-theme="light"] .lp-page .lp-dashboard>header span,:root[data-theme="light"] .lp-page .lp-dash-title strong,:root[data-theme="light"] .lp-page .lp-metrics strong,:root[data-theme="light"] .lp-page .lp-activity strong{color:#082f52}
+:root[data-theme="light"] .lp-page .lp-dash-title small,:root[data-theme="light"] .lp-page .lp-metrics small,:root[data-theme="light"] .lp-page .lp-activity small,:root[data-theme="light"] .lp-page .lp-float small{color:#7890a4}
+:root[data-theme="light"] .lp-page .lp-metrics article,:root[data-theme="light"] .lp-page .lp-charts article,:root[data-theme="light"] .lp-page .lp-activity,:root[data-theme="light"] .lp-page .lp-float{background:#fff;border-color:#dce8f0;color:#082f52}
+:root[data-theme="light"] .lp-page .lp-float strong{color:#082f52}
+:root[data-theme="light"] .lp-page .lp-tree,:root[data-theme="light"] .lp-page .lp-architecture article{background:#f8fbfd;border-color:#dbe7ef}
+:root[data-theme="light"] .lp-page .lp-tree .root,:root[data-theme="light"] .lp-page .lp-tree .programme,:root[data-theme="light"] .lp-page .branches span,:root[data-theme="light"] .lp-page .semesters span,:root[data-theme="light"] .lp-page .sections span{background:#fff;border-color:#cbdde8;color:#082f52}
+:root[data-theme="light"] .lp-page .lp-roles{color:#082f52}
+:root[data-theme="light"] .lp-page .lp-roles header>span{color:#175d90;background:#dceef9}
+:root[data-theme="light"] .lp-page .lp-programmes b{background:#e5f2fa;color:#1970b3}
+:root[data-theme="light"] .lp-page .lp-journey article b,:root[data-theme="light"] .lp-page .lp-benefits article>b,:root[data-theme="light"] .lp-page .lp-modules article>b{color:#86b4d2}
+:root[data-theme="light"] .lp-page .lp-services>div b{color:#83b2d1}
+:root[data-theme="light"] .lp-page .lp-campus-list article{border-color:#dbe7ef}
+:root[data-theme="light"] .lp-page .lp-footer{color:#71869a;background:#fff}
+:root[data-theme="light"] .lp-page .lp-footer a{color:#71869a}
+:root[data-theme="light"] .lp-page .lp-footer strong{color:#082f52}
+:root[data-theme="light"] .lp-page .lp-nav details>div{background:#fff;border-color:#dbe7ef}
+:root[data-theme="light"] .lp-page .lp-nav details a:hover{color:#095e9f;background:#f2f8fd}
+:root[data-theme="light"] .lp-page .lp-workflow{color:#082f52;background:#f3f8fb}
+:root[data-theme="light"] .lp-page .lp-workflow h2{color:#082f52}
+:root[data-theme="light"] .lp-page .lp-workflow header>p:last-child{color:#607b94}
+:root[data-theme="light"] .lp-page .lp-flow>div{border-color:#cbdde8;background:#fff}
+:root[data-theme="light"] .lp-page .lp-flow strong{color:#082f52}
+:root[data-theme="light"] .lp-page .lp-flow svg{color:#fff;background:#1970b3}
+:root[data-theme="light"] .lp-page .lp-about{color:#082f52;background:#fff}
+:root[data-theme="light"] .lp-page .lp-about h2{color:#082f52}
+:root[data-theme="light"] .lp-page .lp-about>div>p:not(.lp-eyebrow){color:#607b94}
+:root[data-theme="light"] .lp-page .lp-about .lp-eyebrow.light{color:#1970b3}
+:root[data-theme="light"] .lp-page .lp-about span{color:#082f52;border-color:#cbdde8;background:#f8fbfd}
+:root[data-theme="light"] .lp-page .lp-about span:hover{border-color:#69bce8;background:#eaf6fc;color:#095e9f}
+:root[data-theme="light"] .lp-page .lp-flow>div:hover{border-color:#69bce8;background:#eaf6fc;box-shadow:0 10px 24px rgba(25,112,179,.12)}
+:root[data-theme="light"] .lp-page .lp-links a:hover,:root[data-theme="light"] .lp-page .lp-actions>a:first-child:hover{background:#eaf6fc;border-radius:6px;color:#095e9f;box-shadow:0 0 0 5px #eaf6fc}
+:root[data-theme="dark"] .lp-page .lp-links a:hover,:root[data-theme="dark"] .lp-page .lp-actions>a:first-child:hover{background:#183650;border-radius:6px;box-shadow:0 0 0 5px #183650}

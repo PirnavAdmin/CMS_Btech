@@ -5,6 +5,7 @@ import { sendOtp, verifyOtp } from '../auth/authApi'
 import { AuthRequestError, login } from '../api/apiEndpoints'
 import { validateLogin } from '../auth/loginValidation'
 import ForgotPassword from './ForgotPassword'
+import ThemeToggle from '../components/ThemeToggle'
 import { FiArrowLeft, FiBell, FiBookOpen, FiCalendar, FiFileText, FiX } from 'react-icons/fi'
 import campusHero from '../assets/college-campus-hero.png'
 import './Login.css'
@@ -184,9 +185,10 @@ export default function Login() {
       </section>
 
       <section className="login-panel" aria-labelledby="login-title">
-        <Link className="login-home-link" to="/" aria-label="Return to home">
-          <FiArrowLeft aria-hidden="true" /> Home
-        </Link>
+        <div className="login-public-actions">
+          <ThemeToggle />
+          <Link className="login-home-link" to="/" aria-label="Return to home"><FiArrowLeft aria-hidden="true" /> Home</Link>
+        </div>
         {viewMode === 'login' && (
           <form className="login-form" onSubmit={handleSubmit} noValidate>
             <div className="pirnav-form-brand"><span><FiBookOpen /></span><div><strong>Pirnav Engineering College</strong><small>Digital Campus Management Portal</small></div></div>
