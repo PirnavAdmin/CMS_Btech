@@ -143,7 +143,7 @@ function CourseList() {
   }
 
   return <Page>
-    <Header title="Course / Programme Management" text="Manage B.Tech courses, branches and structures."><Link className="cm-button" to="/courses/add"><FiPlus /> Add Course</Link></Header>
+    <Header title="Course Management" text="Manage B.Tech courses, branches and structures."><Link className="cm-button" to="/courses/add"><FiPlus /> Add Course</Link></Header>
     <section className="course-summary">{[['Total Courses', stats.total], ['Active Courses', stats.active], ['Associated Branches', stats.branches], ['Departments', stats.departments]].map(([label, value]) => <article key={label}><span>{label}</span><strong>{value}</strong></article>)}</section>
     <section className="cm-panel course-toolbar">
       <label className="course-search"><FiSearch /><input aria-label="Search courses" value={query} onChange={e => { setQuery(e.target.value); setCurrentPage(1) }} placeholder="Search course name, code or department" /></label>
@@ -255,7 +255,6 @@ function CourseForm() {
         <section><h2>Course Identity</h2><div className="cm-form-grid">
           <Field label="Course Name *" error={errors.name || (value.name ? live.name : '')}><input autoFocus value={value.name} onChange={e => update('name', e.target.value)} placeholder="B.Tech Computer Science and Engineering" /></Field>
           <Field label="Course Code *" error={errors.code || (value.code ? live.code : '')}><input value={value.code} onChange={e => update('code', e.target.value)} placeholder="CSE" /></Field>
-          <Field label="Description" wide><textarea value={value.description || ''} onChange={e => update('description', e.target.value)} placeholder="Briefly describe this B.Tech course." /></Field>
         </div></section>
         <section><h2>Academic Mapping</h2><div className="cm-form-grid">
           <Field label="Department *" error={errors.departmentId || (value.departmentId ? live.departmentId : '')}><select value={value.departmentId} onChange={e => update('departmentId', e.target.value)}><option value="">Select B.Tech department</option>{departments.filter(x => x.status !== 'Inactive' || String(x.id) === String(value.departmentId)).map(x => <option value={x.id} key={x.id}>{x.code ? `${x.code} — ` : ''}{x.name}</option>)}</select></Field>
@@ -273,7 +272,6 @@ function CourseForm() {
         <Badge value={value.status || 'Active'} /><h2>{value.name || 'Course Name'}</h2><strong>{value.code || 'CODE'}</strong><p>B.Tech Undergraduate</p><hr />
         <b>{departments.find(x => String(x.id) === String(value.departmentId))?.name || 'B.Tech Department'}</b><p>4 Years · 8 Semesters</p>
         {value.eligibility && <p className="course-preview-note"><strong>Eligibility:</strong> {value.eligibility}</p>}
-        {value.description && <p className="course-preview-note"><strong>Description:</strong> {value.description}</p>}
       </div></aside>
     </div>
   </Page>
