@@ -315,3 +315,15 @@ html,body,#root{max-width:100%;overflow-x:hidden}
 :root[data-theme="dark"] .page-content :is(.course-toolbar,.branch-filter-toolbar) :is(.course-search,.branch-search)>svg{color:var(--brand)!important}
 :root[data-theme="dark"] .page-content :is(.course-toolbar,.branch-filter-toolbar) :is(.course-search,.branch-search):focus-within{border-color:var(--brand)!important;background:var(--surface)!important;box-shadow:0 0 0 3px color-mix(in srgb,var(--brand) 22%,transparent)!important}
 @media(max-width:760px){.page-content :is(.course-toolbar,.branch-filter-toolbar) :is(.course-search,.branch-search){width:100%!important;min-width:0!important;flex:1 1 100%!important}}
+/* Desktop sidebar collapse control. */
+.sidebar-collapse{display:grid;width:30px;height:30px;margin-left:auto;padding:0;place-items:center;border:1px solid rgba(255,255,255,.22);border-radius:7px;color:#c5d9e8;background:transparent;cursor:pointer}
+.sidebar-collapse:hover{border-color:#69b9e8;color:#fff;background:rgba(255,255,255,.12)}
+.sidebar-collapse svg{width:16px;height:16px}
+.sidebar.is-collapsed{width:72px;padding-inline:10px}
+.sidebar.is-collapsed .sidebar-brand{display:grid;justify-items:center;margin-inline:0;padding-inline:0}
+.sidebar.is-collapsed .sidebar-brand__copy,.sidebar.is-collapsed .sidebar-section-label,.sidebar.is-collapsed nav>a span,.sidebar.is-collapsed .sidebar-group summary span{display:none}
+.sidebar.is-collapsed nav>a,.sidebar.is-collapsed .sidebar-group summary{justify-content:center;padding-inline:0}
+.sidebar.is-collapsed .sidebar-collapse{margin:8px 0 0}
+.dashboard-layout.sidebar-collapsed>main{width:calc(100% - 72px);max-width:calc(100vw - 72px);margin-left:72px}
+.dashboard-layout.sidebar-collapsed .dashboard-header{left:72px}
+@media(max-width:900px){.sidebar.is-collapsed{width:248px;padding-inline:12px}.sidebar.is-collapsed .sidebar-brand{display:flex;justify-items:initial;margin-inline:2px;padding-inline:4px}.sidebar.is-collapsed .sidebar-brand__copy,.sidebar.is-collapsed .sidebar-section-label,.sidebar.is-collapsed nav>a span{display:initial}.sidebar.is-collapsed nav>a{justify-content:initial;padding-inline:10px}.sidebar.is-collapsed .sidebar-collapse{display:none}.dashboard-layout.sidebar-collapsed>main{width:100%;max-width:100vw;margin-left:0}.dashboard-layout.sidebar-collapsed .dashboard-header{inset-inline:0}}

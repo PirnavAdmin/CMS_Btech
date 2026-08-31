@@ -66,6 +66,7 @@ const createClient = (baseUrl, prefix) => {
     postForm: (path, data) => request(path, { method: "POST", body: data }),
     put: (path, data) => request(path, { method: "PUT", body: JSON.stringify(data) }),
     patch: (path, data) => request(path, { method: "PATCH", body: JSON.stringify(data) }),
+    delete: (path) => request(path, { method: "DELETE" }),
   };
 };
 
@@ -269,6 +270,9 @@ export const getDepartments = () => {
   return ACADEMIC_API.get("/departments");
 };
 
+export const searchDepartments = (search) => ACADEMIC_API.get("/departments/search", { params: { search } });
+export const getDepartmentsPaginated = (page = 1, pageSize = 5) => ACADEMIC_API.get("/departments/paginated", { params: { page, pageSize } });
+
 export const getDepartmentById = (id) => {
   return ACADEMIC_API.get(`/departments/${id}`);
 };
@@ -284,6 +288,8 @@ export const updateDepartment = (id, departmentData) => {
 export const updateDepartmentStatus = (id, status) => {
   return ACADEMIC_API.patch(`/departments/${id}/status`, { status });
 };
+
+export const deleteDepartment = (id) => ACADEMIC_API.delete(`/departments/${id}`);
 
 // -------------------------
 // COURSE APIs
