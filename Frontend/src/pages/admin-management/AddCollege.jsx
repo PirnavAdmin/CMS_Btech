@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import DashboardLayout from '../../layouts/DashboardLayout'
-import { createCollege, getCollegeById, getColleges, readCollegeExtendedDetails, unwrapCollegeRecord, updateCollege } from '../../auth/collegeApi'
+import { createCollege, getCollegeById, getCollegeLogoUrl, getColleges, isValidWebsite, normalizeWebsite, readCollegeExtendedDetails, unwrapCollegeRecord, updateCollege, uploadCollegeLogo, WEBSITE_VALIDATION_MESSAGE } from '../../auth/collegeApi'
 import './AddCollege.css'
 
 const hasValue = (value) => value !== null && value !== undefined && String(value).trim() !== ''
@@ -37,6 +37,19 @@ const phonePattern = /^[6-9]\d{9}$/
 const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 const codePattern = /^[A-Z0-9]{2,12}$/
 
+const getApiErrorMessage = (error) => {
+  const data = error?.response?.data
+  const apiMessage = typeof data === 'string'
+    ? data
+    : data?.message || data?.error || data?.title || data?.detail
+  if (apiMessage) return apiMessage
+
+  const technicalMessage = /<!doctype|<html|ngrok|err_ngrok|failed to fetch|networkerror|https?:\/\//i.test(String(error?.message || ''))
+  return technicalMessage || error?.response?.status >= 500
+    ? 'College service is temporarily unavailable. Please try again later.'
+    : error?.message || 'The college could not be saved. Please try again.'
+}
+
 function validate(values) {
   const errors = {}
   const name = values.collegeName.trim()
@@ -56,7 +69,8 @@ function validate(values) {
   if (values.alternateContactNumber && !phonePattern.test(values.alternateContactNumber)) errors.alternateContactNumber = 'Enter a valid 10-digit Indian mobile number.'
   if (!values.email.trim()) errors.email = 'Official email is required.'
   else if (!emailPattern.test(values.email.trim())) errors.email = 'Enter a valid email address.'
-  if (values.website && !/^https?:\/\/[^\s]+\.[^\s]+$/i.test(values.website)) errors.website = 'Enter a full URL beginning with http:// or https://.'
+  const website = normalizeWebsite(values.website)
+  if (values.website.trim() && !isValidWebsite(website)) errors.website = WEBSITE_VALIDATION_MESSAGE
   if (values.principalEmail && !emailPattern.test(values.principalEmail)) errors.principalEmail = 'Enter a valid email address.'
   if (values.principalContact && !phonePattern.test(values.principalContact)) errors.principalContact = 'Enter a valid 10-digit Indian mobile number.'
   if (values.validFrom && values.validUntil && values.validUntil <= values.validFrom) errors.validUntil = 'Valid until must be after valid from.'
@@ -85,6 +99,9 @@ export default function AddCollege() {
   const editId = searchParams.get('edit')
   const fileRef = useRef(null)
   const [values, setValues] = useState(initialValues)
+  const [logoFile, setLogoFile] = useState(null)
+  const [removeExistingLogo, setRemoveExistingLogo] = useState(false)
+  const [pendingLogoCollegeId, setPendingLogoCollegeId] = useState(null)
   const [existingCollegeCodes, setExistingCollegeCodes] = useState([])
   const [touched, setTouched] = useState({})
   const [logoError, setLogoError] = useState('')
@@ -114,6 +131,9 @@ export default function AddCollege() {
     setSaved(false)
     setDialog(null)
     setLoadingCollege(Boolean(editId))
+    setLogoFile(null)
+    setRemoveExistingLogo(false)
+    setPendingLogoCollegeId(null)
     if (!editId) { setValues(initialValues); return undefined }
     let active = true
     getCollegeById(editId).then((response) => {
@@ -127,7 +147,7 @@ export default function AddCollege() {
       const addressParts = String(record.address ?? '').split(',').map((part) => part.trim())
       const rawType = record.type ?? record.collegeType ?? record.institutionType ?? ''
       const isKnownType = TYPES.includes(rawType)
-      setValues({ ...initialValues, collegeName: record.name ?? record.collegeName ?? '', collegeCode: record.code ?? record.collegeCode ?? '', collegeType: rawType && !isKnownType ? 'Other' : rawType, collegeTypeOther: rawType && !isKnownType ? rawType : '', universityName: record.university ?? record.universityName ?? '', addressLine1: record.addressLine1 ?? addressRecord.addressLine1 ?? addressParts[0] ?? '', addressLine2: record.addressLine2 ?? addressRecord.addressLine2 ?? addressParts.slice(1).join(', '), area: record.area ?? addressRecord.area ?? extended.area ?? '', district: record.district ?? addressRecord.district ?? extended.district ?? '', city: record.city ?? addressRecord.city ?? '', state: record.state ?? addressRecord.state ?? '', pincode: String(record.pincode ?? addressRecord.pincode ?? ''), country: record.country ?? addressRecord.country ?? 'India', contactNumber: String(record.contact ?? record.contactNumber ?? record.phoneNumber ?? record.mobile ?? record.phone ?? contactRecord.contactNumber ?? contactRecord.phoneNumber ?? contactRecord.mobile ?? contactRecord.phone ?? ''), alternateContactNumber: String(record.alternateContact ?? record.alternateContactNumber ?? record.alternatePhoneNumber ?? contactRecord.alternateContactNumber ?? extended.alternateContactNumber ?? ''), email: record.email ?? record.collegeEmail ?? contactRecord.email ?? '', website: record.website ?? contactRecord.website ?? '', principalName: record.principal ?? record.principalName ?? principalRecord.principalName ?? '', principalEmail: record.principalEmail ?? principalRecord.principalEmail ?? extended.principalEmail ?? '', principalContact: String(record.principalContact ?? record.principalPhone ?? principalRecord.principalContact ?? extended.principalContact ?? ''), accreditationBody: record.accreditationBody ?? accreditationRecord.body ?? accreditationRecord.accreditationBody ?? extended.accreditationBody ?? '', accreditationStatus: record.accreditationStatus ?? accreditationRecord.status ?? extended.accreditationStatus ?? 'Not Accredited', accreditationGrade: record.accreditationGrade ?? accreditationRecord.grade ?? extended.accreditationGrade ?? '', accreditationNumber: record.accreditationNumber ?? accreditationRecord.number ?? extended.accreditationNumber ?? '', validFrom: dateInputValue(record.validFrom ?? record.accreditationValidFrom ?? accreditationRecord.validFrom ?? extended.validFrom), validUntil: dateInputValue(record.validUntil ?? record.accreditationValidUntil ?? accreditationRecord.validUntil ?? extended.validUntil), logo: record.logo ?? record.logoUrl ?? record.collegeLogo ?? record.collegeLogoUrl ?? record.logoPath ?? '', logoName: record.logoName ?? extended.logoName ?? '' })
+      setValues({ ...initialValues, collegeName: record.name ?? record.collegeName ?? '', collegeCode: record.code ?? record.collegeCode ?? '', collegeType: rawType && !isKnownType ? 'Other' : rawType, collegeTypeOther: rawType && !isKnownType ? rawType : '', universityName: record.university ?? record.universityName ?? '', addressLine1: record.addressLine1 ?? addressRecord.addressLine1 ?? addressParts[0] ?? '', addressLine2: record.addressLine2 ?? addressRecord.addressLine2 ?? addressParts.slice(1).join(', '), area: record.area ?? addressRecord.area ?? extended.area ?? '', district: record.district ?? addressRecord.district ?? extended.district ?? '', city: record.city ?? addressRecord.city ?? '', state: record.state ?? addressRecord.state ?? '', pincode: String(record.pincode ?? addressRecord.pincode ?? ''), country: record.country ?? addressRecord.country ?? 'India', contactNumber: String(record.contact ?? record.contactNumber ?? record.phoneNumber ?? record.mobile ?? record.phone ?? contactRecord.contactNumber ?? contactRecord.phoneNumber ?? contactRecord.mobile ?? contactRecord.phone ?? ''), alternateContactNumber: String(record.alternateContact ?? record.alternateContactNumber ?? record.alternatePhoneNumber ?? contactRecord.alternateContactNumber ?? extended.alternateContactNumber ?? ''), email: record.email ?? record.collegeEmail ?? contactRecord.email ?? '', website: record.website ?? record.Website ?? contactRecord.website ?? contactRecord.Website ?? '', principalName: record.principal ?? record.principalName ?? principalRecord.principalName ?? '', principalEmail: record.principalEmail ?? principalRecord.principalEmail ?? extended.principalEmail ?? '', principalContact: String(record.principalContact ?? record.principalPhone ?? principalRecord.principalContact ?? extended.principalContact ?? ''), accreditationBody: record.accreditationBody ?? accreditationRecord.body ?? accreditationRecord.accreditationBody ?? extended.accreditationBody ?? '', accreditationStatus: record.accreditationStatus ?? accreditationRecord.status ?? extended.accreditationStatus ?? 'Not Accredited', accreditationGrade: record.accreditationGrade ?? accreditationRecord.grade ?? extended.accreditationGrade ?? '', accreditationNumber: record.accreditationNumber ?? accreditationRecord.number ?? extended.accreditationNumber ?? '', validFrom: dateInputValue(record.validFrom ?? record.accreditationValidFrom ?? accreditationRecord.validFrom ?? extended.validFrom), validUntil: dateInputValue(record.validUntil ?? record.accreditationValidUntil ?? accreditationRecord.validUntil ?? extended.validUntil), logo: record.logo ?? record.logoUrl ?? record.collegeLogo ?? record.collegeLogoUrl ?? record.logoPath ?? '', logoName: record.logoName ?? extended.logoName ?? '' })
     }).catch((error) => { if (active) setNotice(error.message || 'Unable to load college details.') }).finally(() => { if (active) setLoadingCollege(false) })
     return () => { active = false }
   }, [editId])
@@ -179,19 +199,28 @@ export default function AddCollege() {
     setDirty(true); setNotice(''); setSaved(false)
   }
 
+  const normalizeWebsiteField = () => {
+    setValues((current) => {
+      const website = normalizeWebsite(current.website)
+      return website === current.website ? current : { ...current, website }
+    })
+  }
+
   const selectLogo = (file) => {
     setLogoError('')
     if (!file) return
     if (!['image/png', 'image/jpeg', 'image/webp'].includes(file.type)) return setLogoError('Choose a PNG, JPG, JPEG, or WEBP image.')
     if (file.size > 5 * 1024 * 1024) return setLogoError('Logo must be 5 MB or smaller.')
+    setLogoFile(file)
+    setRemoveExistingLogo(false)
     const reader = new FileReader()
     reader.onload = () => { setValues((current) => ({ ...current, logo: reader.result, logoName: file.name })); setDirty(true) }
-    reader.onerror = () => setLogoError('The image could not be read. Please try another file.')
+    reader.onerror = () => { setLogoFile(null); setLogoError('The image could not be read. Please try another file.') }
     reader.readAsDataURL(file)
   }
 
   const touchAll = () => setTouched(Object.keys(initialValues).reduce((all, key) => ({ ...all, [key]: true }), {}))
-  const reset = () => { setValues(initialValues); setTouched({}); setLogoError(''); setDirty(false); setActiveTab('college'); setHighestUnlockedTab(0); setDialog(null); setNotice('Form reset successfully.') }
+  const reset = () => { setValues(initialValues); setLogoFile(null); setRemoveExistingLogo(false); setPendingLogoCollegeId(null); setTouched({}); setLogoError(''); setDirty(false); setActiveTab('college'); setHighestUnlockedTab(0); setDialog(null); setNotice('Form reset successfully.') }
   const requestLeave = () => dirty ? setDialog('leave') : navigate('/college-institution-management')
   const showTab = (tabId) => {
     setActiveTab(tabId)
@@ -220,36 +249,60 @@ export default function AddCollege() {
     touchAll()
     if (!isValid || submitting) { setDialog(null); return }
     setSubmitting(true)
+    let collegeId = editId || pendingLogoCollegeId
     try {
+      const website = normalizeWebsite(values.website)
       const college = {
         name: values.collegeName.trim(), code: values.collegeCode, type: values.collegeType === 'Other' ? values.collegeTypeOther.trim() : values.collegeType,
         university: values.universityName.trim(), address: [values.addressLine1, values.addressLine2].filter(Boolean).join(', '),
         addressLine1: values.addressLine1.trim(), addressLine2: values.addressLine2.trim(),
         area: values.area.trim(), district: values.district.trim(), country: values.country.trim(),
         city: values.city.trim(), state: values.state.trim(), pincode: values.pincode, contact: values.contactNumber,
-        email: values.email.trim(), logo: values.logo, logoName: values.logoName, principal: values.principalName.trim(),
+        email: values.email.trim(), logo: logoFile ? '' : values.logo, clearLogo: Boolean(editId && removeExistingLogo && !logoFile), logoName: values.logoName, principal: values.principalName.trim(),
         accreditation: [values.accreditationBody, values.accreditationGrade, values.accreditationNumber].filter(Boolean).join(' · '),
         accreditationStatus: values.accreditationStatus, accreditationBody: values.accreditationBody.trim(),
         accreditationGrade: values.accreditationGrade.trim(), accreditationNumber: values.accreditationNumber.trim(),
-        ...(values.website.trim() ? { website: values.website.trim() } : {}),
+        ...(website ? { Website: website } : {}),
         ...(values.alternateContactNumber ? { alternateContactNumber: values.alternateContactNumber } : {}),
         ...(values.principalEmail.trim() ? { principalEmail: values.principalEmail.trim() } : {}),
         ...(values.principalContact ? { principalContact: values.principalContact } : {}),
         ...(values.validFrom ? { validFrom: values.validFrom } : {}),
         ...(values.validUntil ? { validUntil: values.validUntil } : {}),
       }
-      if (editId) await updateCollege(editId, college)
-      else await createCollege(college)
-      setDirty(false); setDialog(null); setSaved(true); setNotice(editId ? 'College updated successfully.' : 'College added successfully.')
+      if (!collegeId) {
+        const response = await createCollege(college)
+        const created = unwrapCollegeRecord(response)
+        collegeId = created.id ?? created.collegeId ?? response?.data?.id ?? response?.data?.collegeId
+        if (!collegeId) throw new Error('College was created, but its identifier was not returned for logo upload.')
+        setPendingLogoCollegeId(collegeId)
+      } else if (editId) {
+        await updateCollege(editId, college)
+      }
+      if (logoFile) await uploadCollegeLogo(collegeId, logoFile)
+
+      // The list route fetches from the backend when it mounts, so navigating
+      // after the success message ensures the new row uses server data and the
+      // list's established ordering and pagination rules.
+      setDirty(false)
+      setDialog(null)
+      setSaved(true)
+      setNotice(editId ? 'College updated successfully.' : 'College added successfully!')
+      setPendingLogoCollegeId(null)
+      if (!editId) {
+        setValues(initialValues)
+        setLogoFile(null)
+        setRemoveExistingLogo(false)
+        setTouched({})
+        setLogoError('')
+        if (fileRef.current) fileRef.current.value = ''
+      }
       window.clearTimeout(redirectTimer.current)
-      redirectTimer.current = window.setTimeout(() => navigate('/college-institution-management'), 1200)
+      redirectTimer.current = window.setTimeout(() => navigate('/college-institution-management'), 1000)
     } catch (error) {
-      const status = error?.response?.status
-      const technicalMessage = /<!doctype|<html|ngrok|err_ngrok|failed to fetch|networkerror|https?:\/\//i.test(String(error?.message || ''))
-      const message = status === 404 || status >= 500 || technicalMessage
-        ? 'College service is temporarily unavailable. Please try again later.'
-        : error?.message || 'The college could not be saved. Please try again.'
-      setNotice(message)
+      const partialSave = !editId && collegeId
+      setNotice(partialSave
+        ? `College was created, but the logo upload failed: ${getApiErrorMessage(error)} Submit again to retry the logo upload.`
+        : getApiErrorMessage(error))
       setDialog(null)
     }
     finally { setSubmitting(false) }
@@ -262,7 +315,7 @@ export default function AddCollege() {
     <nav className="ac-tabs" aria-label="College form sections" role="tablist">
       {FORM_TABS.map((tab, index) => <button key={tab.id} type="button" role="tab" aria-selected={activeTab === tab.id} aria-disabled={index > highestUnlockedTab} disabled={index > highestUnlockedTab} className={activeTab === tab.id ? 'active' : ''} onClick={() => showTab(tab.id)}><span>{index + 1}</span>{tab.label}</button>)}
     </nav>
-    {loadingCollege && <div className="ac-notice" role="status">Loading college details...</div>}{notice && <div className="ac-notice" role="status">{notice}</div>}
+    {loadingCollege && <div className="ac-notice" role="status">Loading college details...</div>}{notice && <div className={`ac-notice${notice === 'College added successfully!' ? ' ac-notice-success' : ''}`} role="status">{notice}</div>}
     <form onSubmit={(event) => event.preventDefault()} noValidate>
       {activeTab === 'college' && <>
       {section('College Information', 'Core identity and affiliation details.', <>
@@ -273,7 +326,7 @@ export default function AddCollege() {
         <Field label="University Name" name="universityName" values={values} errors={errors} touched={touched} onChange={update} required maxLength={120} placeholder="Affiliated university" />
         <div className="ac-upload ac-span-2" onDragOver={(e) => e.preventDefault()} onDrop={(e) => { e.preventDefault(); selectLogo(e.dataTransfer.files[0]) }}>
           <input ref={fileRef} type="file" accept=".png,.jpg,.jpeg,.webp" onChange={(e) => selectLogo(e.target.files?.[0])} hidden />
-          {values.logo ? <div className="ac-logo-preview"><img src={values.logo} alt="College logo preview" /><div><strong>{values.logoName}</strong><button type="button" onClick={() => { setValues((v) => ({ ...v, logo: '', logoName: '' })); if (fileRef.current) fileRef.current.value = ''; setDirty(true) }}>Remove image</button></div></div> : <button type="button" className="ac-upload-button" onClick={() => fileRef.current?.click()}><strong>Upload college logo</strong><span>Click or drag and drop PNG, JPG, JPEG, or WEBP · Max 5 MB</span></button>}
+          {values.logo || (editId && !removeExistingLogo) ? <div className="ac-logo-preview"><img src={logoFile ? values.logo : getCollegeLogoUrl(editId, values.logo)} alt="College logo preview" /><div><strong>{values.logoName || (logoFile ? logoFile.name : 'Current college logo')}</strong><button type="button" onClick={() => { setLogoFile(null); setRemoveExistingLogo(Boolean(editId)); setValues((v) => ({ ...v, logo: '', logoName: '' })); if (fileRef.current) fileRef.current.value = ''; setDirty(true) }}>Remove image</button></div></div> : <button type="button" className="ac-upload-button" onClick={() => fileRef.current?.click()}><strong>Upload college logo</strong><span>Click or drag and drop PNG, JPG, JPEG, or WEBP · Max 5 MB</span></button>}
           {logoError && <small className="ac-error" role="alert">{logoError}</small>}
         </div>
       </>)}
@@ -295,7 +348,7 @@ export default function AddCollege() {
         <Field label="Official Contact Number" name="contactNumber" values={values} errors={errors} touched={touched} onChange={update} required maxLength={10} inputMode="tel" placeholder="10-digit mobile number" />
         <Field label="Alternate Contact Number" name="alternateContactNumber" values={values} errors={errors} touched={touched} onChange={update} maxLength={10} inputMode="tel" />
         <Field label="Official Email" name="email" type="email" values={values} errors={errors} touched={touched} onChange={update} required maxLength={120} placeholder="office@college.edu" />
-        <Field label="Website" name="website" type="url" values={values} errors={errors} touched={touched} onChange={update} maxLength={160} placeholder="https://college.edu" />
+        <Field label="Website" name="website" type="url" values={values} errors={errors} touched={touched} onChange={update} onBlur={normalizeWebsiteField} maxLength={160} placeholder="https://college.edu" />
       </>)}
       {activeTab === 'administration' && section('Administration', 'Principal or institutional head details.', <>
         <Field label="Principal Name" name="principalName" values={values} errors={errors} touched={touched} onChange={update} maxLength={100} />

@@ -39,7 +39,7 @@ const createClient = (baseUrl, prefix) => {
       response = await fetch(`${baseUrl}${prefix}${path}`, {
         ...options,
         headers: {
-          "Content-Type": "application/json",
+          ...(options.body instanceof FormData ? {} : { "Content-Type": "application/json" }),
           "ngrok-skip-browser-warning": "true",
           ...(token ? { Authorization: `Bearer ${token}` } : {}),
           ...options.headers,
@@ -63,16 +63,36 @@ const createClient = (baseUrl, prefix) => {
       return request(`${path}${query}`);
     },
     post: (path, data) => request(path, { method: "POST", body: JSON.stringify(data) }),
+    postForm: (path, data) => request(path, { method: "POST", body: data }),
     put: (path, data) => request(path, { method: "PUT", body: JSON.stringify(data) }),
     patch: (path, data) => request(path, { method: "PATCH", body: JSON.stringify(data) }),
   };
 };
 
 const API = createClient(collegesBaseUrl, "/api/v1");
+const COLLEGE_LOGO_API = createClient(collegesBaseUrl, "/api/College");
 const ACADEMIC_API = createClient(academicBaseUrl, "/api/v1");
 const SETTINGS_API = createClient(settingsBaseUrl, "/api");
 
 const COLLEGE_EXTENDED_PREFIX = "CMS_EXTENDED_V1:";
+
+export const WEBSITE_VALIDATION_MESSAGE = "Please enter a valid website URL, e.g. https://example.com";
+
+export const normalizeWebsite = (value) => {
+  const website = String(value ?? "").trim();
+  if (!website || /^(https?|ftp):\/\//i.test(website)) return website;
+  return `https://${website}`;
+};
+
+export const isValidWebsite = (value) => {
+  if (!value || /[\\\s]/.test(value)) return false;
+  try {
+    const url = new URL(value);
+    return ["http:", "https:", "ftp:"].includes(url.protocol) && url.hostname.includes(".");
+  } catch {
+    return false;
+  }
+};
 
 export const readCollegeExtendedDetails = (record = {}) => {
   const raw = typeof record.accreditation === "string"
@@ -120,6 +140,37 @@ export const searchColleges = (searchTerm) => {
   });
 };
 
+export const uploadCollegeLogo = (collegeId, logoFile) => {
+  const formData = new FormData();
+  formData.append("CollegeId", String(collegeId));
+  formData.append("Logo", logoFile);
+  return COLLEGE_LOGO_API.postForm("/logo", formData);
+};
+
+export const getCollegeLogoUrl = (collegeId, logoValue) => {
+  const logo = String(logoValue ?? "").trim();
+  if (logo) {
+    if (logo.startsWith("data:") || /^https?:\/\//i.test(logo)) return logo;
+    return `${collegesBaseUrl}/${logo.replace(/^\/+/, "")}`;
+  }
+  return collegeId ? `${collegesBaseUrl}/api/College/logo/${encodeURIComponent(collegeId)}` : "";
+};
+
+// The logo endpoint is protected by the same bearer token as the College API.
+// An <img> tag cannot attach that header, so fetch the image first and let the
+// caller render its blob URL.
+export const fetchCollegeLogo = async (logoUrl) => {
+  const token = localStorage.getItem("btech-access-token") || sessionStorage.getItem("btech-access-token");
+  const response = await fetch(logoUrl, {
+    headers: {
+      "ngrok-skip-browser-warning": "true",
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+  });
+  if (!response.ok) throw new Error("Unable to load college logo.");
+  return response.blob();
+};
+
 // The college service has used both the short field names (name/contact/principal)
 // and the descriptive DTO names (collegeName/contactNumber/principalName).  Send
 // both forms so none of the wizard fields are silently ignored by either API
@@ -134,6 +185,7 @@ export const buildCollegePayload = (college = {}) => {
   const alternateContactNumber = value("alternateContactNumber", college.alternateContact);
   const principalName = value("principalName", college.principal);
   const logo = college.logo ?? college.logoUrl ?? "";
+  const website = normalizeWebsite(college.website ?? college.Website);
   const accreditationSummary = value("accreditation", college.accreditationDetails);
   // The deployed college DTO does not yet expose these wizard fields. Store
   // them in its supported accreditation column so add/edit/view remain lossless.
@@ -174,8 +226,10 @@ export const buildCollegePayload = (college = {}) => {
     alternateContactNumber,
     email: value("email", college.collegeEmail),
     collegeEmail: value("email", college.collegeEmail),
-    website: value("website"),
-    logo,
+    // Website is optional. Omit it when empty so the backend URL validator
+    // receives either a valid fully-qualified URL or no Website value at all.
+    ...(website ? { Website: website } : {}),
+    ...(college.clearLogo ? { logo: null, logoPath: null } : { logo }),
     logoName: value("logoName"),
     principal: principalName,
     principalName,
