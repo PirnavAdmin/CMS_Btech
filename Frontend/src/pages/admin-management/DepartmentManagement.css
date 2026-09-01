@@ -57,3 +57,8 @@
 .hod-card .form-actions>button[type=submit] svg{display:none}
 .hod-card .form-actions>button[type=submit]::after{content:'Assign HOD';font-size:.84rem}
 @media(max-width:760px){.hod-card .screen-title,.hod-card form{padding-inline:20px}.hod-card .form-actions{flex-direction:row}.hod-card .form-actions>*{width:auto;flex:1}}
+ .department-actions-cell button[title^="Delete"]{display:none!important}
+.department-details__grid>div:nth-child(2)>span{font-size:0}
+.department-details__grid>div:nth-child(2)>span::after{content:'COLLEGE';font-size:.66rem}
+.department-details__grid>div:nth-child(2)>span{font-size:0}
+.department-details__grid>div:nth-child(2)>span::after{content:'College';font-size:.66rem}

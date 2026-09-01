@@ -5,7 +5,7 @@ import DashboardLayout from '../../layouts/DashboardLayout'
 import TablePagination, { PAGE_SIZE } from '../../components/TablePagination'
 import StatusConfirmDialog from '../../components/StatusConfirmDialog'
 import { branchApi, courseApi, courseStructureApi, departmentApi } from '../../api/apiEndpoints'
-import { getCourseById, createCourse, updateCourse, updateCourseStatus } from '../../auth/collegeApi'
+import { getCourseById, createCourse, updateCourse, updateCourseStatus, getSemesters, getCourseSemesterMappings, createCourseSemesterMapping, updateCourseSemesterMapping, updateCourseSemesterMappingStatus } from '../../auth/collegeApi'
 import { normalize } from './Branch'
 import './Course.css'
 
@@ -338,15 +338,19 @@ export function CourseStructure() {
   const { courseId, branchId } = useParams()
   const [course, setCourse] = useState(null)
   const [branch, setBranch] = useState(null)
-  const [rows, setRows] = useState([]), [semester, setSemester] = useState(1), [form, setForm] = useState({ yearNumber: 1, semesterNumber: 1, semesterName: 'Semester 1' }), [editing, setEditing] = useState(null), [loading, setLoading] = useState(true), [error, setError] = useState(''), [saving, setSaving] = useState(false), [page, setPage] = useState(1)
+  const [rows, setRows] = useState([]), [semesterOptions, setSemesterOptions] = useState([]), [semester, setSemester] = useState(1), [form, setForm] = useState({ semesterId: '', yearNumber: 1, semesterNumber: 1, semesterName: 'Semester 1' }), [editing, setEditing] = useState(null), [loading, setLoading] = useState(true), [error, setError] = useState(''), [saving, setSaving] = useState(false), [page, setPage] = useState(1)
 
   const load = async () => {
     setLoading(true)
     try {
-      const [courseRes, structureData, branchRecord] = await Promise.all([getCourseById(courseId), courseStructureApi.getByCourse(courseId), branchApi.getById(branchId)])
+      const [courseRes, semesterRes, mappingRes, branchRecord] = await Promise.all([getCourseById(courseId), getSemesters(), getCourseSemesterMappings(), branchApi.getById(branchId)])
       setCourse(mapCourse(recordFrom(courseRes)))
       setBranch(branchRecord ? normalize(branchRecord) : null)
-      setRows(structureData.filter(x => String(x.branchId) === String(branchId)))
+      const semesters = listFrom(semesterRes?.data).filter(x => !x.branchId || String(x.branchId) === String(branchId))
+      const mappings = listFrom(mappingRes?.data).filter(x => String(x.courseId) === String(courseId))
+      const byId = new Map(semesters.map(x => [String(x.semesterId), x]))
+      setSemesterOptions(semesters)
+      setRows(mappings.map(x => { const s = byId.get(String(x.semesterId)) || {}; return { ...x, structureId: x.courseSemesterMappingId, semesterNumber: Number(s.semesterNumber || 1), semesterName: s.semesterName || `Semester ${s.semesterNumber || 1}`, yearNumber: Math.ceil(Number(s.semesterNumber || 1) / 2) } }))
       setError('')
     } catch (e) { setError(e.message || 'Unable to load course structures.') } finally { setLoading(false) }
   }
@@ -355,17 +359,18 @@ export function CourseStructure() {
   if (loading) return <Page><div className="cm-empty">Loading...</div></Page>
   if (!course || !branch) return <Page><div className="cm-empty">Academic structure not found.</div></Page>
 
-  const visible = rows.filter(x => Number(x.semesterNumber) === semester), totalPages = Math.max(1, Math.ceil(visible.length / PAGE_SIZE)), currentPage = Math.min(page, totalPages), pageRows = visible.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE), changeSemester = (value) => { setSemester(value); setPage(1); setEditing(null); setForm({ yearNumber: Math.ceil(value / 2), semesterNumber: value, semesterName: `Semester ${value}` }) }
-  const submit = async () => { if (!form.semesterName.trim()) return; setSaving(true); try { const payload = { ...form, courseId: Number(courseId), branchId: Number(branchId), semesterNumber: Number(form.semesterNumber), yearNumber: Number(form.yearNumber) }; const result = editing ? await courseStructureApi.update(editing, payload) : await courseStructureApi.create(payload); setRows(current => editing ? current.map(x => x.structureId === editing ? result : x) : [...current, result]); setEditing(null); setError('') } catch (e) { setError(e.message || 'Unable to save course structure.') } finally { setSaving(false) } }
-  const edit = (row) => { setEditing(row.structureId); setForm({ yearNumber: row.yearNumber, semesterNumber: row.semesterNumber, semesterName: row.semesterName || `Semester ${row.semesterNumber}` }); setSemester(Number(row.semesterNumber)) }
+  const visible = rows.filter(x => Number(x.semesterNumber) === semester), totalPages = Math.max(1, Math.ceil(visible.length / PAGE_SIZE)), currentPage = Math.min(page, totalPages), pageRows = visible.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE), changeSemester = (value) => { const option = semesterOptions.find(x => Number(x.semesterNumber) === value); setSemester(value); setPage(1); setEditing(null); setForm({ semesterId: option?.semesterId || '', yearNumber: Math.ceil(value / 2), semesterNumber: value, semesterName: option?.semesterName || `Semester ${value}` }) }
+  const submit = async () => { if (!form.semesterId) { setError('Select a semester to map.'); return } setSaving(true); try { const payload = { courseId: Number(courseId), semesterId: Number(form.semesterId), ...(editing ? { updatedBy: 1 } : { createdBy: 1 }) }; const result = editing ? await updateCourseSemesterMapping(editing, payload) : await createCourseSemesterMapping(payload); const mapped = result?.data?.data || result?.data || result; const option = semesterOptions.find(x => String(x.semesterId) === String(form.semesterId)) || {}; const row = { ...mapped, structureId: mapped.courseSemesterMappingId || editing, semesterNumber: Number(option.semesterNumber || form.semesterNumber), semesterName: option.semesterName || form.semesterName, yearNumber: Math.ceil(Number(option.semesterNumber || form.semesterNumber) / 2) }; setRows(current => editing ? current.map(x => x.structureId === editing ? row : x) : [...current, row]); setEditing(null); setError('') } catch (e) { setError(e.message || 'Unable to save semester mapping.') } finally { setSaving(false) } }
+  const edit = (row) => { setEditing(row.structureId); setForm({ semesterId: row.semesterId, yearNumber: row.yearNumber, semesterNumber: row.semesterNumber, semesterName: row.semesterName || `Semester ${row.semesterNumber}` }); setSemester(Number(row.semesterNumber)) }
+  const toggleStatus = async (row) => { try { await updateCourseSemesterMappingStatus(row.structureId, Number(row.status) === 0 ? 1 : 0); setRows(current => current.map(x => x.structureId === row.structureId ? { ...x, status: Number(x.status) === 0 ? 1 : 0 } : x)) } catch (e) { setError(e.message || 'Unable to update mapping status.') } }
 
   return <Page><Header title="Course Structure" text={`${course.name} / ${branch.name}`}><Link className="cm-button secondary" to={`/branches/${branchId}`}><FiArrowLeft /> Back to Branch</Link></Header>
     {error && <p className="cm-error" role="alert">{error}</p>}
     <div className="cm-semesters">{Array.from({ length: 8 }, (_, i) => i + 1).map(x => <button className={`cm-semester ${semester === x ? 'active' : ''}`} onClick={() => changeSemester(x)} key={x}>Semester {x}</button>)}</div>
     <section className="cm-panel cm-form-grid">
       <Field label="Year"><input type="number" min="1" max="4" value={form.yearNumber} onChange={e => setForm({ ...form, yearNumber: e.target.value })} /></Field>
-      <Field label="Semester"><input type="number" min="1" max="8" value={form.semesterNumber} onChange={e => setForm({ ...form, semesterNumber: e.target.value })} /></Field>
-      <Field label="Semester Name"><input value={form.semesterName} onChange={e => setForm({ ...form, semesterName: e.target.value })} /></Field>
+      <Field label="Semester"><select value={form.semesterId} onChange={e => { const option = semesterOptions.find(x => String(x.semesterId) === e.target.value); const number = Number(option?.semesterNumber || form.semesterNumber); setForm({ ...form, semesterId: e.target.value, semesterNumber: number, semesterName: option?.semesterName || form.semesterName, yearNumber: Math.ceil(number / 2) }); setSemester(number) }}><option value="">Select semester</option>{semesterOptions.map(x => <option key={x.semesterId} value={x.semesterId}>{x.semesterName || `Semester ${x.semesterNumber}`}</option>)}</select></Field>
+      <Field label="Semester Name"><input value={form.semesterName} readOnly /></Field>
       <button className="cm-button" disabled={saving} onClick={submit}>{saving ? 'Saving…' : editing ? 'Update Structure' : 'Add Structure'}</button>
       {editing && <button className="cm-button secondary" onClick={() => setEditing(null)}>Cancel</button>}
     </section>
