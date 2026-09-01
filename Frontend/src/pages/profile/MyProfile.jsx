@@ -103,7 +103,7 @@ export default function MyProfile() {
         <Detail label="Employee ID" value={profile.identifier} />
         <Detail label="Assigned Role" value={profile.role} />
         <Detail label="Department" value={profile.department} />
-        <Detail label="Designation / Programme" value={profile.designation} />
+        <Detail label="Designation / Course" value={profile.designation} />
       </DetailSection>
       <DetailSection icon={FiMapPin} title="Address & Bio">
         <Detail label="Address" value={profile.address} wide />

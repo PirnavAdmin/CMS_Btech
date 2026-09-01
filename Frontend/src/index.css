@@ -395,6 +395,25 @@ button.btn-primary:hover,
   transition: background-color 5000s ease-in-out 0s;
 }
 
+/* Keep remembered/autofilled login credentials readable in light and dark
+   browser themes. Chromium otherwise applies a very light autofill color. */
+.login-form input:-webkit-autofill,
+.login-form input:-webkit-autofill:hover,
+.login-form input:-webkit-autofill:focus,
+.login-form input:-webkit-autofill:active {
+  -webkit-box-shadow: 0 0 0 1000px #fff inset;
+  -webkit-text-fill-color: #123962;
+  caret-color: #123962;
+  transition: background-color 5000s ease-in-out 0s;
+}
+
+.login-form input[type="text"],
+.login-form input[type="password"],
+.login-form .password-input input {
+  color: #123962;
+  background-color: #fff;
+}
+
 /* ============================
    OTP INPUT BOXES
    ============================ */

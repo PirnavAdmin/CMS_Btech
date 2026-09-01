@@ -89,7 +89,8 @@ export default function DashboardLayout({ children }) {
 
   const handleSignOut = () => {
     signOut()
-    navigate('/', { replace: true })
+    sessionStorage.setItem('btech-logout-message', 'You have been signed out successfully.')
+    navigate('/login', { replace: true })
   }
 
   // -------------------------

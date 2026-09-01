@@ -48,8 +48,49 @@
 :root[data-theme="light"] .pirnav-form-brand{border-color:#e4edf3}
 :root[data-theme="light"] .pirnav-form-brand strong,:root[data-theme="light"] .pirnav-login .login-form h2,:root[data-theme="light"] .pirnav-login .login-form>label{color:var(--pl-navy)}
 :root[data-theme="light"] .pirnav-login .login-form input[type=text],:root[data-theme="light"] .pirnav-login .password-input input{color:var(--pl-text);border-color:#c7d9e6;background:#fff}
+
+/* Login field hints must remain dark enough to read, including in Chromium. */
+.pirnav-login .login-form input::placeholder,
+:root[data-theme="light"] .pirnav-login .login-form input::placeholder {
+  color: #123962 !important;
+  opacity: 1 !important;
+  -webkit-text-fill-color: #123962;
+}
 :root[data-theme="light"] .pirnav-login .login-home-link{color:#0968b0;border-color:#c7d7e7;background:#fff}
 :root[data-theme="light"] .pirnav-login .login-home-link:hover{border-color:#1970b3;color:#095e9f;background:#f2f8fd}
 :root[data-theme="dark"] .pirnav-login .login-home-link:hover{border-color:var(--brand);color:var(--brand);background:var(--brand-soft)}
 @media(max-width:780px){.login-public-actions{top:15px;right:20px}}
 .pirnav-login .pirnav-highlights{width:100%;justify-content:center;align-items:center;text-align:center}
+
+/* High-contrast light login card. Keep this block last so operating-system
+   dark-mode and Edge/Chromium autofill styles cannot wash out the text. */
+:root[data-theme="light"] .pirnav-login .pirnav-form-brand small,
+:root[data-theme="light"] .pirnav-login .login-form header > p:last-child,
+:root[data-theme="light"] .pirnav-login .remember-me,
+:root[data-theme="light"] .pirnav-login .forgot-password-link,
+:root[data-theme="light"] .pirnav-login .account-link {
+  color: #345778 !important;
+}
+
+:root[data-theme="light"] .pirnav-login .login-form input[type="text"],
+:root[data-theme="light"] .pirnav-login .password-input input {
+  color: #123962 !important;
+  -webkit-text-fill-color: #123962 !important;
+  caret-color: #123962 !important;
+  background-color: #fff !important;
+}
+
+:root[data-theme="light"] .pirnav-login .login-form input::placeholder {
+  color: #123962 !important;
+  -webkit-text-fill-color: #123962 !important;
+  opacity: 1 !important;
+}
+
+:root[data-theme="light"] .pirnav-login .login-form input:-webkit-autofill,
+:root[data-theme="light"] .pirnav-login .login-form input:-webkit-autofill:hover,
+:root[data-theme="light"] .pirnav-login .login-form input:-webkit-autofill:focus,
+:root[data-theme="light"] .pirnav-login .login-form input:-webkit-autofill:active {
+  -webkit-box-shadow: 0 0 0 1000px #fff inset !important;
+  -webkit-text-fill-color: #123962 !important;
+  caret-color: #123962 !important;
+}
