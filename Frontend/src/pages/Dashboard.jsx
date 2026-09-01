@@ -12,9 +12,9 @@ import './Dashboard.css'
 const adminLinks = [
   { to: '/college-institution-management', label: 'College', icon: FiHome },
   { to: '/academic-year-management', label: 'Academic years', icon: FiCalendar },
+  { to: '/courses', label: 'Courses', icon: FiBookOpen },
   { to: '/department-management', label: 'Departments', icon: FiGrid },
   { to: '/semester-management', label: 'Semesters', icon: FiLayers },
-  { to: '/courses', label: 'Courses', icon: FiBookOpen },
   { to: '/branches', label: 'Branches', icon: FiGitBranch },
   { to: '/section-management', label: 'Sections', icon: FiUsers },
 ]

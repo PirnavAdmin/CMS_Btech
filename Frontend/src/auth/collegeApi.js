@@ -66,6 +66,7 @@ const createClient = (baseUrl, prefix) => {
     postForm: (path, data) => request(path, { method: "POST", body: data }),
     put: (path, data) => request(path, { method: "PUT", body: JSON.stringify(data) }),
     patch: (path, data) => request(path, { method: "PATCH", body: JSON.stringify(data) }),
+    delete: (path) => request(path, { method: "DELETE" }),
   };
 };
 
@@ -73,6 +74,7 @@ const API = createClient(collegesBaseUrl, "/api/v1");
 const COLLEGE_LOGO_API = createClient(collegesBaseUrl, "/api/College");
 const ACADEMIC_API = createClient(academicBaseUrl, "/api/v1");
 const SETTINGS_API = createClient(settingsBaseUrl, "/api");
+const SEMESTER_API = createClient(academicBaseUrl, "/api");
 
 const COLLEGE_EXTENDED_PREFIX = "CMS_EXTENDED_V1:";
 
@@ -269,6 +271,9 @@ export const getDepartments = () => {
   return ACADEMIC_API.get("/departments");
 };
 
+export const searchDepartments = (search) => ACADEMIC_API.get("/departments/search", { params: { search } });
+export const getDepartmentsPaginated = (page = 1, pageSize = 5) => ACADEMIC_API.get("/departments/paginated", { params: { page, pageSize } });
+
 export const getDepartmentById = (id) => {
   return ACADEMIC_API.get(`/departments/${id}`);
 };
@@ -284,6 +289,16 @@ export const updateDepartment = (id, departmentData) => {
 export const updateDepartmentStatus = (id, status) => {
   return ACADEMIC_API.patch(`/departments/${id}/status`, { status });
 };
+
+export const deleteDepartment = (id) => ACADEMIC_API.delete(`/departments/${id}`);
+
+// Semester management APIs (/api/semester)
+export const getSemesters = () => SEMESTER_API.get('/semester');
+export const searchSemesters = (params = {}) => SEMESTER_API.get('/semester/search', { params });
+export const getSemesterById = (id) => SEMESTER_API.get(`/semester/${id}`);
+export const getSemesterSummary = () => SEMESTER_API.get('/semester/summary');
+export const createSemester = (data) => SEMESTER_API.post('/semester', data);
+export const updateSemester = (id, data) => SEMESTER_API.put(`/semester/${id}`, data);
 
 // -------------------------
 // COURSE APIs

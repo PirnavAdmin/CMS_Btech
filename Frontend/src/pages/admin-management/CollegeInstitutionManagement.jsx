@@ -592,7 +592,7 @@ export default function CollegeInstitutionManagement({ initialView = 'list' }) {
                             <div className="cm-actions">
                               <button
                                 type="button"
-                                className="cm-action-icon-btn"
+                                className="cm-action-icon-btn cm-view-action"
                                 title="View Details"
                                 aria-label="View Details"
                                 onClick={() => openDetails(college)}
@@ -601,7 +601,7 @@ export default function CollegeInstitutionManagement({ initialView = 'list' }) {
                               </button>
                               <button
                                 type="button"
-                                className="cm-action-icon-btn"
+                                className="cm-action-icon-btn cm-edit-action"
                                 title="Edit College"
                                 aria-label="Edit College"
                                 onClick={() => openEdit(college)}

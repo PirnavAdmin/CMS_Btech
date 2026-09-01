@@ -93,3 +93,7 @@
 .section-back-button{display:inline-flex;min-width:92px;align-items:center;justify-content:center;border:1px solid #b9cee0!important;color:#0968b0!important;background:#fff!important;box-shadow:0 2px 6px rgba(6,46,89,.06)}
 .section-back-button:hover{border-color:#1970b3!important;background:#f2f8fd!important}
 .section-pagination{justify-content:center!important}.section-pagination>p{order:2;margin:0}.section-pagination>div{display:contents}.section-pagination>div>button:first-child{order:1}.section-pagination>div>button:last-child{order:3}.section-pagination>div>button:not(:first-child):not(:last-child){display:none}
+
+/* Section statistics use the people/capacity orange accent. */
+.section-stat-card .cm-kpi-icon{color:#c2410c;background:#fff1e8}
+.section-stat-card:nth-child(2) .cm-kpi-icon{color:#15803d;background:#e9f8ef}.section-stat-card:nth-child(3) .cm-kpi-icon{color:#1970b3;background:#e8f3fc}.section-stat-card:nth-child(4) .cm-kpi-icon{color:#7c3aed;background:#f3e8ff}
