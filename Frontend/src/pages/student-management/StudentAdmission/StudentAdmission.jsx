@@ -56,6 +56,7 @@ const empty = () => ({
   activity: [{ label: 'Application created', date: new Date().toISOString() }],
 })
 
+<<<<<<< HEAD
 const merge = row => {
   const base = empty()
   return {
@@ -80,6 +81,81 @@ const display = value => text(value) || '—'
 const money = value => new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(Number(value || 0))
 const dateTime = value => value ? new Date(value).toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' }) : '—'
 const quota = student => student.academic.quota === 'Other' ? student.academic.quotaOther : student.academic.quota
+=======
+function List(){
+  const nav=useNavigate()
+  const [rows,setRows]=useState(load)
+  const [query,setQuery]=useState('')
+  const [filtersOpen,setFiltersOpen]=useState(false)
+  const [status,setStatus]=useState('')
+  const [academicYear,setAcademicYear]=useState('')
+  const [course,setCourse]=useState('')
+  const [preset,setPreset]=useState('') // '' | 'pending' | 'approved' | 'rejected' — driven by the stat cards
+
+  const matchesStatus=x=>{
+    if(preset==='pending')return['SUBMITTED','UNDER_REVIEW'].includes(x.status)
+    if(preset==='approved')return['APPROVED','ADMITTED'].includes(x.status)
+    if(preset==='rejected')return x.status==='REJECTED'
+    return !status||x.status===status
+  }
+
+  const shown=useMemo(()=>rows.filter(x=>
+    (!query||[name(x),x.application.number,x.application.admissionNumber,x.contact.mobile,x.contact.email].join(' ').toLowerCase().includes(query.toLowerCase()))
+    &&matchesStatus(x)
+    &&(!academicYear||x.academic.academicYear===academicYear)
+    &&(!course||x.academic.course===course)
+  ),[rows,query,status,preset,academicYear,course])
+
+  const stats=[
+    ['Total Applications',rows.length,''],
+    ['Pending Verification',rows.filter(x=>['SUBMITTED','UNDER_REVIEW'].includes(x.status)).length,'pending'],
+    ['Approved Admissions',rows.filter(x=>['APPROVED','ADMITTED'].includes(x.status)).length,'approved'],
+    ['Rejected Applications',rows.filter(x=>x.status==='REJECTED').length,'rejected'],
+  ]
+
+  const togglePreset=key=>{setStatus('');setPreset(current=>current===key?'':key)}
+  const changeStatus=value=>{setPreset('');setStatus(value)}
+  const activeFilterCount=[preset||status,academicYear,course].filter(Boolean).length
+  const clearFilters=()=>{setStatus('');setPreset('');setAcademicYear('');setCourse('')}
+
+  return <>
+    <header className="sa-page-header"><div><span>Student Management</span><h1>Student Admissions</h1><p>Manage applications, verification and student admissions</p></div><Button primary onClick={()=>nav('/student-management/admissions/new')}><FiPlus/> New Admission</Button></header>
+
+    <section className="sa-stats">
+      {stats.map(([label,value,key])=>
+        <article
+          key={label}
+          className={key&&preset===key?'sa-stat-active':''}
+          onClick={key?()=>togglePreset(key):undefined}
+          role={key?'button':undefined}
+          tabIndex={key?0:undefined}
+          aria-pressed={key?preset===key:undefined}
+          onKeyDown={key?e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();togglePreset(key)}}:undefined}
+        ><span>{label}</span><strong>{value}</strong></article>
+      )}
+    </section>
+
+    <section className="sa-directory">
+      <header><div><h2>Admission Directory</h2><span>{shown.length} records</span></div><Button onClick={()=>setRows(load())}><FiRefreshCw/> Refresh</Button></header>
+
+      <div className="sa-toolbar">
+<label className="sa-search"><FiSearch/><input value={query} onChange={e=>setQuery(e.target.value)} placeholder="Search name, application, admission, mobile or email..." autoComplete="off"/></label>        <Button onClick={()=>setFiltersOpen(!filtersOpen)}><FiFilter/> Filters{activeFilterCount>0?` (${activeFilterCount})`:''}</Button>
+        {(activeFilterCount>0||query)&&<Button onClick={()=>{clearFilters();setQuery('')}}><FiX/> Clear</Button>}
+      </div>
+
+      {filtersOpen&&<div className="sa-filter-grid">
+        <label><span>Admission Status</span><select value={status} onChange={e=>changeStatus(e.target.value)}><option value="">All</option>{Object.entries(STATUS).map(([value,label])=><option value={value} key={value}>{label}</option>)}</select></label>
+        <label><span>Academic Year</span><select value={academicYear} onChange={e=>setAcademicYear(e.target.value)}><option value="">All</option>{YEARS.map(year=><option key={year}>{year}</option>)}</select></label>
+        <label><span>Course</span><select value={course} onChange={e=>setCourse(e.target.value)}><option value="">All</option>{Object.keys(ACADEMICS).map(courseName=><option key={courseName}>{courseName}</option>)}</select></label>
+      </div>}
+
+      <div className="sa-table-wrap"><table><thead><tr><th>Application No.</th><th>Admission No.</th><th>Student</th><th>Course / Branch</th><th>Semester</th><th>Academic Year</th><th>Status</th><th>Actions</th></tr></thead><tbody>{shown.map(x=><tr key={x.id}><td><strong>{x.application.number}</strong></td><td>{x.application.admissionNumber||'Not assigned'}</td><td><strong>{name(x)}</strong><small>{x.contact.email||x.contact.mobile||'Contact pending'}</small></td><td><strong>{x.academic.course||'Not selected'}</strong><small>{x.academic.branch||'Branch pending'}</small></td><td>{x.academic.semester||'—'}</td><td>{x.academic.academicYear||'—'}</td><td><Badge value={x.status}/></td><td><div className="sa-icon-actions"><button title="View" onClick={()=>nav(`/student-management/admissions/${x.id}`)}><FiEye/></button><button title="Edit" onClick={()=>nav(`/student-management/admissions/${x.id}/edit`)}><FiEdit2/></button>{['VERIFIED','UNDER_REVIEW'].includes(x.status)&&<button title="Approval" onClick={()=>nav(`/student-management/admissions/${x.id}/approval`)}><FiShield/></button>}</div></td></tr>)}</tbody></table></div>
+
+      {!shown.length&&<div className="sa-empty"><FiFileText/><h3>{rows.length?'No admissions match your search.':'No student admissions found.'}</h3><p>Create a new admission to get started.</p></div>}
+    </section>
+  </>
+}
+>>>>>>> 0bae379117723c992ac0e5b12eca131a36347dd0
 
 const validAadhaar = value => {
   const digits = text(value).replace(/\D/g, '')

@@ -18,7 +18,7 @@ const Page=({children})=><DashboardLayout><main className="cm-page branch-manage
 const Header=({title,text,children})=><header className="cm-header"><div><h1>{title.replace(/^B\.Tech\s+/, '')}</h1><p>{text}</p></div><div className="cm-row-actions">{children}</div></header>
 const Badge=({value,kind='status'})=><span className={`branch-badge ${kind} ${String(value).toLowerCase()}`}>{kind==='status'&&<i/>}{value}</span>
 const Notice=({children})=>{
- if(!children)return null
+ if(!children)return null 
  if(children?.kind==='confirm')return <div className="branch-confirm-backdrop" role="presentation" onMouseDown={event=>event.target===event.currentTarget&&children.cancel()}><section className="branch-confirm" role="alertdialog" aria-modal="true" aria-labelledby="branch-confirm-title" aria-describedby="branch-confirm-message"><div className="branch-confirm-icon"><FiAlertCircle/></div><h2 id="branch-confirm-title">{children.action} Branch?</h2><p id="branch-confirm-message">Are you sure you want to {children.action.toLowerCase()} <strong>{children.code}</strong>?</p><footer><button type="button" className="cm-button secondary" onClick={children.cancel}>Cancel</button><button type="button" className={`cm-button ${children.action==='Deactivate'?'danger':''}`} onClick={children.confirm}>{children.action} Branch</button></footer></section></div>
  const success=String(children).startsWith('Branch ')
  return <p className={success?'branch-api-success':'branch-api-error'} role={success?'status':'alert'}><FiAlertCircle/>{children}</p>
