@@ -56,7 +56,7 @@ const empty = () => ({
   activity: [{ label: 'Application created', date: new Date().toISOString() }],
 })
 
-<<<<<<< HEAD
+
 const merge = row => {
   const base = empty()
   return {
@@ -81,7 +81,7 @@ const display = value => text(value) || '—'
 const money = value => new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(Number(value || 0))
 const dateTime = value => value ? new Date(value).toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' }) : '—'
 const quota = student => student.academic.quota === 'Other' ? student.academic.quotaOther : student.academic.quota
-=======
+
 function List(){
   const nav=useNavigate()
   const [rows,setRows]=useState(load)
@@ -155,7 +155,7 @@ function List(){
     </section>
   </>
 }
->>>>>>> 0bae379117723c992ac0e5b12eca131a36347dd0
+
 
 const validAadhaar = value => {
   const digits = text(value).replace(/\D/g, '')

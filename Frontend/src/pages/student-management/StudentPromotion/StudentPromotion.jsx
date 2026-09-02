@@ -118,6 +118,8 @@ function PromotionListView({ refreshKey, onReview }) {
   const [department, setDepartment] = useState("all");
   const [academicYear, setAcademicYear] = useState("all");
   const [status, setStatus] = useState("all");
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(5);
 
   useEffect(() => {
     let cancelled = false;
@@ -144,6 +146,41 @@ function PromotionListView({ refreshKey, onReview }) {
     });
   }, [batches, search, department, academicYear, status]);
 
+  /* Reset to page 1 whenever the result set changes shape (filters, search,
+     page size) so the user never lands on an empty out-of-range page. */
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [search, department, academicYear, status, pageSize]);
+
+  const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
+
+  useEffect(() => {
+    if (currentPage > totalPages) setCurrentPage(totalPages);
+  }, [currentPage, totalPages]);
+
+  const paginated = useMemo(() => {
+    const start = (currentPage - 1) * pageSize;
+    return filtered.slice(start, start + pageSize);
+  }, [filtered, currentPage, pageSize]);
+
+  const rangeStart = filtered.length === 0 ? 0 : (currentPage - 1) * pageSize + 1;
+  const rangeEnd = Math.min(currentPage * pageSize, filtered.length);
+
+  const pageNumbers = useMemo(() => {
+    const pages = [];
+    const windowSize = 1;
+    for (let p = 1; p <= totalPages; p++) {
+      const isEdge = p === 1 || p === totalPages;
+      const isNearCurrent = Math.abs(p - currentPage) <= windowSize;
+      if (isEdge || isNearCurrent) {
+        pages.push(p);
+      } else if (pages[pages.length - 1] !== "…") {
+        pages.push("…");
+      }
+    }
+    return pages;
+  }, [totalPages, currentPage]);
+
   const summary = useMemo(() => ({
     totalSections: batches.length,
     pending: batches.filter((b) => b.status === "pending").length,
@@ -152,32 +189,63 @@ function PromotionListView({ refreshKey, onReview }) {
     totalEligible: batches.reduce((sum, b) => sum + b.eligible, 0),
   }), [batches]);
 
+  /* Clicking a summary card applies the matching status filter and
+     scrolls the table into view. The "Sections tracked" and
+     "Eligible students" cards clear the status filter back to "all". */
+  const handleCardClick = (statusValue) => {
+    setStatus(statusValue);
+    const table = document.getElementById("sp-table-section");
+    if (table) {
+      table.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+  };
+
   return (
     <>
       <section className="sp-summary">
-        <div className="sp-summary-card">
+        <button
+          type="button"
+          className={`sp-summary-card ${status === "all" ? "sp-summary-card-active" : ""}`}
+          onClick={() => handleCardClick("all")}
+        >
           <span className="sp-summary-value">{summary.totalSections}</span>
           <span className="sp-summary-label">Sections tracked</span>
-        </div>
-        <div className="sp-summary-card sp-summary-pending">
+        </button>
+        <button
+          type="button"
+          className={`sp-summary-card sp-summary-pending ${status === "pending" ? "sp-summary-card-active" : ""}`}
+          onClick={() => handleCardClick("pending")}
+        >
           <span className="sp-summary-value">{summary.pending}</span>
           <span className="sp-summary-label">Pending review</span>
-        </div>
-        <div className="sp-summary-card sp-summary-review">
+        </button>
+        <button
+          type="button"
+          className={`sp-summary-card sp-summary-review ${status === "in_review" ? "sp-summary-card-active" : ""}`}
+          onClick={() => handleCardClick("in_review")}
+        >
           <span className="sp-summary-value">{summary.inReview}</span>
           <span className="sp-summary-label">In review</span>
-        </div>
-        <div className="sp-summary-card sp-summary-promoted">
+        </button>
+        <button
+          type="button"
+          className={`sp-summary-card sp-summary-promoted ${status === "promoted" ? "sp-summary-card-active" : ""}`}
+          onClick={() => handleCardClick("promoted")}
+        >
           <span className="sp-summary-value">{summary.promoted}</span>
           <span className="sp-summary-label">Promoted</span>
-        </div>
-        <div className="sp-summary-card">
+        </button>
+        <button
+          type="button"
+          className={`sp-summary-card ${status === "all" ? "sp-summary-card-active" : ""}`}
+          onClick={() => handleCardClick("all")}
+        >
           <span className="sp-summary-value">{summary.totalEligible}</span>
           <span className="sp-summary-label">Eligible students</span>
-        </div>
+        </button>
       </section>
 
-      <section className="sp-panel">
+      <section className="sp-panel" id="sp-table-section">
         <div className="sp-toolbar">
           <div className="sp-search">
             <input type="text" placeholder="Search by branch or section" value={search} onChange={(e) => setSearch(e.target.value)} />
@@ -198,41 +266,95 @@ function PromotionListView({ refreshKey, onReview }) {
         ) : filtered.length === 0 ? (
           <div className="sp-empty">No sections match these filters. Try clearing search or filters.</div>
         ) : (
-          <div className="sp-table-wrap">
-            <table className="sp-table">
-              <thead>
-                <tr>
-                  <th>Branch / Section</th><th>Department</th><th>Academic Year</th>
-                  <th>Promotion</th><th>Total</th><th>Eligible</th><th>Not Eligible</th>
-                  <th>Status</th><th></th>
-                </tr>
-              </thead>
-              <tbody>
-                {filtered.map((b) => (
-                  <tr key={b.id}>
-                    <td>
-                      <div className="sp-branch-cell">
-                        <span className="sp-branch-name">{b.branch}</span>
-                        <span className="sp-section-name">Section {b.section}</span>
-                      </div>
-                    </td>
-                    <td>{b.department}</td>
-                    <td>{b.academicYear}</td>
-                    <td><span className="sp-sem-flow">{b.currentSemester} <span className="sp-arrow">→</span> {b.nextSemester}</span></td>
-                    <td>{b.totalStudents}</td>
-                    <td className="sp-eligible">{b.eligible}</td>
-                    <td className={b.notEligible > 0 ? "sp-not-eligible" : ""}>{b.notEligible}</td>
-                    <td><span className={`sp-status sp-status-${b.status}`}>{STATUS_LABELS[b.status]}</span></td>
-                    <td className="sp-actions-cell">
-                      <button type="button" className="sp-action-btn" disabled={b.status === "promoted"} onClick={() => onReview(b.id)}>
-                        {b.status === "promoted" ? "Completed" : "Review & Promote"}
-                      </button>
-                    </td>
+          <>
+            <div className="sp-table-wrap">
+              <table className="sp-table">
+                <thead>
+                  <tr>
+                    <th>Branch / Section</th><th>Department</th><th>Academic Year</th>
+                    <th>Promotion</th><th>Total</th><th>Eligible</th><th>Not Eligible</th>
+                    <th>Status</th><th></th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+                <tbody>
+                  {paginated.map((b) => (
+                    <tr key={b.id}>
+                      <td>
+                        <div className="sp-branch-cell">
+                          <span className="sp-branch-name">{b.branch}</span>
+                          <span className="sp-section-name">Section {b.section}</span>
+                        </div>
+                      </td>
+                      <td>{b.department}</td>
+                      <td>{b.academicYear}</td>
+                      <td><span className="sp-sem-flow">{b.currentSemester} <span className="sp-arrow">→</span> {b.nextSemester}</span></td>
+                      <td>{b.totalStudents}</td>
+                      <td className="sp-eligible">{b.eligible}</td>
+                      <td className={b.notEligible > 0 ? "sp-not-eligible" : ""}>{b.notEligible}</td>
+                      <td><span className={`sp-status sp-status-${b.status}`}>{STATUS_LABELS[b.status]}</span></td>
+                      <td className="sp-actions-cell">
+                        <button type="button" className="sp-action-btn" disabled={b.status === "promoted"} onClick={() => onReview(b.id)}>
+                          {b.status === "promoted" ? "Completed" : "Review & Promote"}
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            <div className="sp-pagination">
+              <div className="sp-pagination-info">
+                Showing <strong>{rangeStart}–{rangeEnd}</strong> of <strong>{filtered.length}</strong> sections
+              </div>
+
+              <div className="sp-pagination-controls">
+                <button
+                  type="button"
+                  className="sp-page-btn"
+                  disabled={currentPage === 1}
+                  onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                >
+                  Prev
+                </button>
+
+                {pageNumbers.map((p, idx) =>
+                  p === "…" ? (
+                    <span key={`ellipsis-${idx}`} className="sp-page-ellipsis">…</span>
+                  ) : (
+                    <button
+                      type="button"
+                      key={p}
+                      className={`sp-page-btn ${p === currentPage ? "sp-page-btn-active" : ""}`}
+                      onClick={() => setCurrentPage(p)}
+                    >
+                      {p}
+                    </button>
+                  )
+                )}
+
+                <button
+                  type="button"
+                  className="sp-page-btn"
+                  disabled={currentPage === totalPages}
+                  onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                >
+                  Next
+                </button>
+              </div>
+
+              <select
+                className="sp-page-size"
+                value={pageSize}
+                onChange={(e) => setPageSize(Number(e.target.value))}
+              >
+                <option value={5}>5 / page</option>
+                <option value={10}>10 / page</option>
+                <option value={25}>25 / page</option>
+                <option value={50}>50 / page</option>
+              </select>
+            </div>
+          </>
         )}
       </section>
     </>

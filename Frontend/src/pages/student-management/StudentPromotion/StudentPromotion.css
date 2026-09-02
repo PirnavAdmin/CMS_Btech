@@ -131,6 +131,31 @@
   gap: 5px;
   box-shadow: 0 1px 2px rgba(16, 24, 40, 0.04);
   border-top: 3px solid #d0d5dd;
+  /* Make the card behave like a real button while keeping its look */
+  cursor: pointer;
+  text-align: left;
+  width: 100%;
+  font: inherit;
+  transition: box-shadow 0.15s ease, transform 0.1s ease, border-color 0.15s ease;
+}
+
+.sp-summary-card:hover {
+  box-shadow: 0 4px 10px rgba(16, 24, 40, 0.08);
+  transform: translateY(-1px);
+}
+
+.sp-summary-card:active {
+  transform: translateY(0);
+}
+
+.sp-summary-card:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(47, 111, 237, 0.25);
+}
+
+.sp-summary-card-active {
+  border-color: #2f6fed;
+  box-shadow: 0 0 0 1px #2f6fed, 0 4px 10px rgba(16, 24, 40, 0.08);
 }
 
 .sp-summary-value {
@@ -174,6 +199,7 @@
   border-radius: 12px;
   box-shadow: 0 1px 2px rgba(16, 24, 40, 0.04);
   overflow: hidden;
+  scroll-margin-top: 20px;
 }
 
 .sp-toolbar {
@@ -455,6 +481,94 @@
   text-align: center;
   color: #98a2b3;
   font-size: 14px;
+}
+
+/* Pagination */
+.sp-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  padding: 14px 20px;
+  border-top: 1px solid #eaecf0;
+  background: #fcfcfd;
+}
+
+.sp-pagination-info {
+  font-size: 12.5px;
+  color: #667085;
+  white-space: nowrap;
+}
+
+.sp-pagination-info strong {
+  color: #344054;
+  font-weight: 600;
+}
+
+.sp-pagination-controls {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+
+.sp-page-btn {
+  min-width: 32px;
+  height: 32px;
+  padding: 0 8px;
+  border: 1px solid #d0d5dd;
+  background: #ffffff;
+  color: #344054;
+  font-size: 12.5px;
+  font-weight: 600;
+  border-radius: 7px;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+
+.sp-page-btn:hover:not(:disabled):not(.sp-page-btn-active) {
+  background: #f9fafb;
+  border-color: #98a2b3;
+}
+
+.sp-page-btn:disabled {
+  color: #d0d5dd;
+  cursor: default;
+}
+
+.sp-page-btn-active {
+  background: #2f6fed;
+  border-color: #2f6fed;
+  color: #ffffff;
+}
+
+.sp-page-ellipsis {
+  padding: 0 4px;
+  color: #98a2b3;
+  font-size: 12.5px;
+}
+
+.sp-page-size {
+  padding: 7px 10px;
+  border: 1px solid #d0d5dd;
+  border-radius: 7px;
+  font-size: 12.5px;
+  color: #344054;
+  background: #ffffff;
+}
+
+.sp-page-size:focus {
+  outline: none;
+  border-color: #2f6fed;
+  box-shadow: 0 0 0 3px rgba(47, 111, 237, 0.12);
+}
+
+@media (max-width: 700px) {
+  .sp-pagination {
+    flex-direction: column;
+    align-items: flex-start;
+  }
 }
 
 @media (max-width: 900px) {

@@ -1,4 +1,4 @@
-<<<<<<< HEAD
+
 .student-admission{width:100%;min-width:0;color:var(--text-primary);font-size:13px}.student-admission *{box-sizing:border-box}.student-admission button{font:inherit}.sa-breadcrumb{display:flex;align-items:center;gap:5px;margin:14px 0 8px;color:var(--text-muted);font-size:10px;font-weight:700}.sa-breadcrumb svg{width:12px}.sa-breadcrumb strong{color:var(--text-primary)}
 .sa-page-header{display:flex;align-items:flex-start;justify-content:space-between;gap:18px;margin:0 0 16px}.sa-page-header h1,.sa-review-header h1{margin:2px 0 4px;font-size:27px;line-height:1.2;letter-spacing:-.025em}.sa-page-header p,.sa-review-header p{margin:0;color:var(--text-muted);font-size:12px}.sa-page-header>div:last-child{display:flex;align-items:center;gap:8px}.sa-page-header p strong{color:var(--text-primary)}
 .sa-primary,.sa-secondary,.sa-danger,.sa-back{display:inline-flex;min-height:36px;align-items:center;justify-content:center;gap:7px;padding:0 12px;border:1px solid transparent;border-radius:7px;font-size:11px;font-weight:750;white-space:nowrap;transition:border-color .16s,background .16s,color .16s,box-shadow .16s}.sa-primary{color:#fff;background:var(--brand)}.sa-primary:hover:not(:disabled){background:var(--brand-hover);box-shadow:0 4px 12px color-mix(in srgb,var(--brand) 22%,transparent)}.sa-secondary,.sa-back{border-color:var(--border);color:var(--brand);background:var(--surface)}.sa-secondary:hover:not(:disabled){border-color:var(--brand);background:var(--brand-soft)}.sa-danger{color:#fff;background:var(--danger)}.student-admission button:disabled{cursor:not-allowed;opacity:.5}.student-admission button:focus-visible,.student-admission input:focus-visible,.student-admission select:focus-visible,.student-admission textarea:focus-visible{outline:3px solid color-mix(in srgb,var(--brand) 26%,transparent);outline-offset:2px}
@@ -46,7 +46,7 @@
 .student-admission .sa-form-grid:has(>.sa-photo-upload){grid-template-columns:minmax(210px,.8fr) repeat(3,minmax(0,1fr));gap:8px 10px}.student-admission .sa-photo-upload{grid-row:span 3!important;min-height:0;align-self:stretch;align-items:flex-start}.student-admission .sa-form-grid:has(>.sa-photo-upload) .sa-field{gap:3px}
 @media(max-width:520px){.sa-photo-upload{grid-column:1/-1}}
 @media(max-width:700px){.student-admission .sa-form-grid:has(>.sa-photo-upload){grid-template-columns:repeat(2,minmax(0,1fr))}.student-admission .sa-photo-upload{grid-column:1/-1;grid-row:auto!important}}@media(max-width:480px){.student-admission .sa-form-grid:has(>.sa-photo-upload){grid-template-columns:1fr}}
-=======
+
 .student-admission {
   padding: 20px 32px 48px;
   display: flex;
@@ -925,4 +925,4 @@
     flex-wrap: wrap;
   }
 }
->>>>>>> 0bae379117723c992ac0e5b12eca131a36347dd0
+
