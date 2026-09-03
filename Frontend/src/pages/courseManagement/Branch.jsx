@@ -16,14 +16,14 @@ export const normalize=input=>{const b=branchRecordFrom(input);return({...b,id:b
 export const intake=b=>Number(b.intakeCapacity??b.intake??0), type=b=>b.branchType||(b.specialization?'Specialization':'Core')
 const Page=({children})=><DashboardLayout><main className="cm-page branch-management">{children}</main></DashboardLayout>
 const Header=({title,text,children})=><header className="cm-header"><div><h1>{title.replace(/^B\.Tech\s+/, '')}</h1><p>{text}</p></div><div className="cm-row-actions">{children}</div></header>
-const Badge=({value,kind='status'})=><span className={`branch-badge ${kind} ${String(value).toLowerCase()}`}>{kind==='status'&&<i/>}{value}</span>
+const Badge=({value,kind='status'})=><span className={`branch-badge ${kind} ${String(value).toLowerCase()}`}>{kind==='status'&&<i/>}{kind==='status'&&value==='Inactive'?'Deactive':value}</span>
 const Notice=({children})=>{
  if(!children)return null 
  if(children?.kind==='confirm')return <div className="branch-confirm-backdrop" role="presentation" onMouseDown={event=>event.target===event.currentTarget&&children.cancel()}><section className="branch-confirm" role="alertdialog" aria-modal="true" aria-labelledby="branch-confirm-title" aria-describedby="branch-confirm-message"><div className="branch-confirm-icon"><FiAlertCircle/></div><h2 id="branch-confirm-title">{children.action} Branch?</h2><p id="branch-confirm-message">Are you sure you want to {children.action.toLowerCase()} <strong>{children.code}</strong>?</p><footer><button type="button" className="cm-button secondary" onClick={children.cancel}>Cancel</button><button type="button" className={`cm-button ${children.action==='Deactivate'?'danger':''}`} onClick={children.confirm}>{children.action} Branch</button></footer></section></div>
  const success=String(children).startsWith('Branch ')
  return <p className={success?'branch-api-success':'branch-api-error'} role={success?'status':'alert'}><FiAlertCircle/>{children}</p>
 }
-const fieldPlaceholders={'Branch Name *':'Enter branch name','Branch Code *':'Enter branch code, e.g. CSE','Short Name':'Enter short name','Approved Intake *':'Enter intake capacity'}
+const fieldPlaceholders={'Branch Name *':'Enter branch name','Branch Code *':'Enter branch code, e.g. CSE','Short Name':'Enter short name','Approved Intake *':'Enter approved enrollment capacity'}
 const Field=({label,error,wide,children})=><label className={`cm-field ${wide?'wide':''}`}><span>{label}</span>{cloneElement(children,{placeholder:children.props.placeholder||fieldPlaceholders[label]})}{error&&<small className="cm-error">{error}</small>}</label>
 const codeFor=name=>name.split(/\s+/).filter(Boolean).filter(w=>!['and','&','of','the'].includes(w.toLowerCase())).map(w=>w[0]).join('').slice(0,8).toUpperCase()
 

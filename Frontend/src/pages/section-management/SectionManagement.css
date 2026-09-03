@@ -97,3 +97,8 @@
 /* Section statistics use the people/capacity orange accent. */
 .section-stat-card .cm-kpi-icon{color:#c2410c;background:#fff1e8}
 .section-stat-card:nth-child(2) .cm-kpi-icon{color:#15803d;background:#e9f8ef}.section-stat-card:nth-child(3) .cm-kpi-icon{color:#1970b3;background:#e8f3fc}.section-stat-card:nth-child(4) .cm-kpi-icon{color:#7c3aed;background:#f3e8ff}
+
+/* Use formal terminology for sections still awaiting an advisor allocation. */
+.section-stat-card:nth-child(4) div>span{font-size:0}.section-stat-card:nth-child(4) div>span::after{content:'Sections Requiring Faculty Advisors';font-size:.72rem}
+.section-status.inactive{font-size:0}.section-status.inactive::after{content:'Deactive';font-size:.68rem}
+.section-table td:first-child>small{display:none}

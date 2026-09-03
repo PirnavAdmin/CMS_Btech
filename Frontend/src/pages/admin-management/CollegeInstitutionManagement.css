@@ -82,6 +82,7 @@
   border-color: var(--brand-blue, #1e5a96);
   box-shadow: 0 0 0 3px rgba(30, 90, 150, 0.13);
 }
+.cm-toolbar select{min-width:170px;height:42px;padding:0 36px 0 12px;border:1px solid var(--border-strong,#cbd8e3);border-radius:8px;color:var(--text-primary);background:var(--surface);font:inherit}.college-management .cm-toolbar{justify-content:flex-start}.college-management .cm-toolbar .cm-search{flex:1 1 420px;max-width:510px}.college-management .cm-toolbar select{flex:0 0 190px}
 
 .cm-empty {
   display: grid;
