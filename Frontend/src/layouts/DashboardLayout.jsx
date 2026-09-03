@@ -290,7 +290,7 @@ export default function DashboardLayout({ children }) {
           </div>
         </header>
 
-        <section className="page-content">{breadcrumbSection !== 'Academic Configuration' && <nav className="app-breadcrumb" aria-label="Breadcrumb"><span>{breadcrumbSection}</span><span aria-hidden="true">/</span><strong>{pageName}</strong></nav>}{children}</section>
+        <section className="page-content">{breadcrumbSection !== 'Academic Configuration' && !['Student Promotions', 'Student Profiles'].includes(pageName) && <nav className="app-breadcrumb" aria-label="Breadcrumb"><span>{breadcrumbSection}</span><span aria-hidden="true">/</span><strong>{pageName}</strong></nav>}{children}</section>
 
         {/* Logout Confirmation Modal */}
         {showLogoutConfirmation && (
