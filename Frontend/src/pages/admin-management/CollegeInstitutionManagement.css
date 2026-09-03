@@ -908,3 +908,9 @@
   color: #7a4b00;
   background: #fff0c7;
 }
+
+/* Keep list filters grouped immediately beside the search field. */
+.college-management .cm-toolbar{display:flex!important;justify-content:flex-start!important;gap:12px!important}
+.college-management .cm-toolbar .cm-search{width:420px!important;max-width:420px!important;flex:0 1 420px!important}
+.college-management .cm-toolbar select{width:190px!important;min-width:190px!important;flex:0 0 190px!important}
+@media(max-width:760px){.college-management .cm-toolbar{flex-direction:column!important}.college-management .cm-toolbar .cm-search,.college-management .cm-toolbar select{width:100%!important;max-width:none!important;flex:auto!important}}

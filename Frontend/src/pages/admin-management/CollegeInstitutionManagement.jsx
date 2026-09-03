@@ -534,11 +534,11 @@ export default function CollegeInstitutionManagement({ initialView = 'list' }) {
                 onChange={handleSearchChange}
               />
               <select aria-label="Filter colleges by type" value={typeFilter} onChange={(event) => { setTypeFilter(event.target.value); setCurrentPage(1) }}>
-                <option value="">All Types</option>
+                <option value="">Select Type</option>
                 {availableCollegeTypes.map((type) => <option key={type} value={type}>{type}</option>)}
               </select>
               <select aria-label="Filter colleges by status" value={statusFilter} onChange={(event) => { setStatusFilter(event.target.value); setCurrentPage(1) }}>
-                <option value="">All Statuses</option><option value="active">Active</option><option value="inactive">Deactive</option>
+                <option value="">Select Status</option><option value="active">Active</option><option value="inactive">Deactive</option>
               </select>
             </div>
 
