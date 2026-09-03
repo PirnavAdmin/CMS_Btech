@@ -27,8 +27,6 @@
 .student-admission .sa-search{min-width:0;max-width:520px}
 .student-admission .sa-search input{min-width:0;text-overflow:ellipsis;white-space:nowrap;overflow:hidden}
 .student-admission .sa-filter-actions{display:flex;align-items:center;gap:8px;margin-left:auto}
-.student-admission .sa-table-wrap th:first-child{font-size:0!important}
-.student-admission .sa-table-wrap th:first-child:after{content:'Registration Number';font-size:10px}
 .student-admission .sa-documents{margin:14px;overflow:hidden}
 .student-admission .sa-document-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;padding:14px}
 .student-admission .sa-document-grid article{display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:10px;min-height:80px;padding:11px;border:1px solid var(--border);border-radius:8px;background:var(--surface)}
