@@ -21,6 +21,11 @@ import Settings from './pages/profile/Settings'
 import StudentAdmission from './pages/student-management/StudentAdmission/StudentAdmission'
 import StudentProfile from './pages/student-management/StudentProfile/StudentProfile'
 import StudentPromotion from './pages/student-management/StudentPromotion/StudentPromotion'
+import Fees from './pages/fees/FeeStructure'
+import Attendance from './pages/attendance/Attendance'
+import Marks from './pages/marks/Marks'
+import Results from './pages/results/Results'
+import Faculty from './pages/faculty/Faculty'
 import './styles/erp-theme.css'
 
 export default function App() {
@@ -46,6 +51,16 @@ export default function App() {
         <Route path="/dashboard" element={<Dashboard />} />
         <Route path="/my-profile" element={<MyProfile />} />
         <Route path="/settings" element={<Settings />} />
+      </Route>
+
+      <Route element={<ProtectedRoute allowedRoles={[ROLES.ADMIN, ROLES.FACULTY]} />}>
+        <Route path="/faculty/*" element={<Faculty/>}/>
+        <Route path="/attendance/*" element={<Attendance/>}/>
+        <Route path="/marks/*" element={<Marks/>}/>
+        <Route path="/results/*" element={<Results/>}/>
+      </Route>
+      <Route element={<ProtectedRoute allowedRoles={[ROLES.ADMIN]} />}>
+        <Route path="/fees/*" element={<Fees/>}/>
       </Route>
 
       {/* Administration - Admin Only */}
