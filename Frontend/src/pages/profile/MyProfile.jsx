@@ -3,6 +3,8 @@ import { FiEdit2, FiMail, FiMapPin, FiPhone, FiShield, FiUser, FiX } from 'react
 import DashboardLayout from '../../layouts/DashboardLayout'
 import { lookupIndianPincode, profileApi } from '../../api/apiEndpoints'
 import { getDepartments } from '../../auth/collegeApi'
+import { getUserRole } from '../../auth/auth'
+import { ROLES } from '../../auth/roles'
 import './MyProfile.css'
 
 const emptyForm = { fullName: '', email: '', mobile: '', dateOfBirth: '', gender: '', departmentId: '', designation: '', address: '', pincode: '', city: '', district: '', state: '', bio: '' }
@@ -20,6 +22,7 @@ const formatDateOnly = (value) => {
   return Number.isNaN(date.getTime()) ? display(value).split('T')[0] : new Intl.DateTimeFormat('en-IN', { day: '2-digit', month: 'short', year: 'numeric', timeZone: 'Asia/Kolkata' }).format(date)
 }
 const initials = (name) => String(name || '').split(/\s+/).filter(Boolean).slice(0, 2).map((part) => part[0]).join('').toUpperCase() || 'U'
+const displayRole = (role) => ['super_admin', 'college_admin', 'admin'].includes(String(role || '').trim().toLowerCase().replace(/[\s-]+/g, '_')) ? 'Admin' : display(role)
 const validate = (form) => {
   const errors = {}
   const name = form.fullName.trim()
@@ -38,6 +41,7 @@ function DetailSection({ icon: Icon, title, children, className = '' }) { return
 function Detail({ label, value, wide = false }) { return <div className={wide ? 'profile-detail wide' : 'profile-detail'}><span>{label}</span><strong>{display(value)}</strong></div> }
 
 export default function MyProfile() {
+  const isStudent = getUserRole() === ROLES.STUDENT
   const [profile, setProfile] = useState(null)
   const [departments, setDepartments] = useState([])
   const [loading, setLoading] = useState(true)
@@ -56,7 +60,7 @@ export default function MyProfile() {
     finally { setLoading(false) }
   }
   useEffect(() => { loadProfile() }, [])
-  useEffect(() => { getDepartments().then((response) => { const data = response?.data?.data ?? response?.data; setDepartments(Array.isArray(data) ? data : []) }).catch(() => setDepartments([])) }, [])
+  useEffect(() => { if (isStudent) return; getDepartments().then((response) => { const data = response?.data?.data ?? response?.data; setDepartments(Array.isArray(data) ? data : []) }).catch(() => setDepartments([])) }, [isStudent])
   useEffect(() => {
     if (feedback?.type !== 'success') return undefined
     const timer = setTimeout(() => setFeedback(null), 2000)
@@ -88,9 +92,9 @@ export default function MyProfile() {
   if (!profile) return <DashboardLayout><main className="profile-page"><div className="profile-state error"><section className="profile-error-card" role="alert"><h2>Profile unavailable</h2><p>{feedback?.message || 'Unable to load profile information.'}</p><button type="button" className="profile-button" onClick={loadProfile}>Try Again</button></section></div></main></DashboardLayout>
 
   return <DashboardLayout><main className="profile-page">
-    <header className="profile-heading"><div><p className="profile-eyebrow">Account</p><h1>My Profile</h1><p>Review your saved identity and account information.</p></div><button type="button" className="profile-button" onClick={openEdit}><FiEdit2 /> Edit Profile</button></header>
+    <header className="profile-heading"><div><p className="profile-eyebrow">{isStudent ? 'Student dashboard' : 'Account'}</p><h1>My Profile</h1><p>{isStudent ? 'View your personal details and current academic information.' : 'Review your saved identity and account information.'}</p></div><button type="button" className="profile-button" onClick={openEdit}><FiEdit2 /> Edit Profile</button></header>
     {feedback && <div className={`profile-feedback ${feedback.type}`} role={feedback.type === 'error' ? 'alert' : 'status'}>{feedback.message}</div>}
-    <section className="profile-overview"><div className="profile-identity"><div className="profile-avatar" aria-hidden="true">{initials(profile.fullName)}</div><div><h2 className="profile-name">{display(profile.fullName)}</h2><p className="profile-email">{display(profile.email)}</p><span className="profile-role"><FiShield /> {display(profile.role)}</span></div></div><dl className="profile-facts"><div><dt>Employee ID</dt><dd>{display(profile.identifier)}</dd></div><div><dt>Last Login</dt><dd>{formatLastLogin(profile.lastLoginAt)}</dd></div><div><dt>Account Status</dt><dd className="profile-status"><i /> Active</dd></div></dl></section>
+    <section className="profile-overview"><div className="profile-identity"><div className="profile-avatar" aria-hidden="true">{initials(profile.fullName)}</div><div><h2 className="profile-name">{display(profile.fullName)}</h2><p className="profile-email">{display(profile.email)}</p><span className="profile-role"><FiShield /> {isStudent ? 'Student' : displayRole(profile.role)}</span></div></div><dl className="profile-facts"><div><dt>{isStudent ? 'Admission Number' : 'Employee ID'}</dt><dd>{display(isStudent ? profile.admissionNumber || profile.identifier : profile.identifier)}</dd></div><div><dt>{isStudent ? 'Course / Branch' : 'Last Login'}</dt><dd>{display(isStudent ? [profile.course, profile.branch].filter(Boolean).join(' · ') : formatLastLogin(profile.lastLoginAt))}</dd></div><div><dt>Account Status</dt><dd className="profile-status"><i /> {display(profile.status)}</dd></div></dl></section>
     <section className="profile-preview-section profile-details-card">
       <DetailSection icon={FiUser} title="Personal Information">
         <Detail label="Full Name" value={profile.fullName} />
@@ -99,11 +103,8 @@ export default function MyProfile() {
         <Detail label="Gender" value={profile.gender} />
         <Detail label="Date of Birth" value={formatDateOnly(profile.dateOfBirth)} />
       </DetailSection>
-      <DetailSection icon={FiShield} title="Institutional Details">
-        <Detail label="Employee ID" value={profile.identifier} />
-        <Detail label="Assigned Role" value={profile.role} />
-        <Detail label="Department" value={profile.department} />
-        <Detail label="Designation / Course" value={profile.designation} />
+      <DetailSection icon={FiShield} title={isStudent ? 'Academic Information' : 'Institutional Details'}>
+        {isStudent ? <><Detail label="Admission Number" value={profile.admissionNumber || profile.identifier} /><Detail label="Registration Number" value={profile.registrationNumber} /><Detail label="Roll Number" value={profile.rollNumber} /><Detail label="Department" value={profile.department} /><Detail label="Course" value={profile.course || profile.designation} /><Detail label="Branch" value={profile.branch} /><Detail label="Academic Year" value={profile.academicYear || profile.batch} /><Detail label="Semester / Section" value={[profile.semester, profile.section && `Section ${profile.section}`].filter(Boolean).join(' · ')} /></> : <><Detail label="Employee ID" value={profile.identifier} /><Detail label="Assigned Role" value={displayRole(profile.role)} /><Detail label="Department" value={profile.department} /><Detail label="Designation / Course" value={profile.designation} /></>}
       </DetailSection>
       <DetailSection icon={FiMapPin} title="Address & Bio">
         <Detail label="Address" value={profile.address} wide />

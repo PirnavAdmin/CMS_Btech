@@ -87,8 +87,9 @@ function Field({ label, name, values, errors, touched, onChange, required, maxLe
   </label>
 }
 
-function Dialog({ title, children, actions, labelledBy = 'ac-dialog-title' }) {
+function Dialog({ title, children, actions, onClose, labelledBy = 'ac-dialog-title' }) {
   return <div className="ac-dialog-layer" role="presentation"><div className="ac-dialog" role="dialog" aria-modal="true" aria-labelledby={labelledBy}>
+    <button type="button" className="ac-dialog-close" onClick={onClose} aria-label="Close dialog">×</button>
     <h2 id={labelledBy}>{title}</h2>{children}<div className="ac-dialog-actions">{actions}</div>
   </div></div>
 }
@@ -373,7 +374,7 @@ export default function AddCollege() {
       )}
     </form>
 
-    {dialog === 'reset' && <Dialog title="Reset College Form?" actions={<><button className="ac-secondary" onClick={() => setDialog(null)}>Cancel</button><button className="ac-danger-btn" onClick={reset}>Reset</button></>}><p>All entered information will be cleared.</p></Dialog>}
-    {dialog === 'leave' && <Dialog title="Unsaved Changes" actions={<><button className="ac-secondary" onClick={() => setDialog(null)}>Stay</button><button className="ac-danger-btn" onClick={() => navigate('/college-institution-management')}>Leave</button></>}><p>You have unsaved college information. Leave without saving?</p></Dialog>}
+    {dialog === 'reset' && <Dialog title="Reset College Form?" onClose={() => setDialog(null)} actions={<><button className="ac-secondary" onClick={() => setDialog(null)}>Cancel</button><button className="ac-danger-btn" onClick={reset}>Reset</button></>}><p>All entered information will be cleared.</p></Dialog>}
+    {dialog === 'leave' && <Dialog title="Unsaved Changes" onClose={() => setDialog(null)} actions={<><button className="ac-secondary" onClick={() => setDialog(null)}>Stay</button><button className="ac-danger-btn" onClick={() => navigate('/college-institution-management')}>Leave</button></>}><p>You have unsaved college information. Leave without saving?</p></Dialog>}
   </main></DashboardLayout>
 }
