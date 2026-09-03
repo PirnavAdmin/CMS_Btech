@@ -180,3 +180,17 @@ button.btn-primary:hover,
 .header-actions button.primary:hover {
   background-color: var(--brand-blue-hover);
 }
+
+/* Student Promotion aligns with the compact Student Profile header. */
+.p-header > div > span {
+  display: none;
+}
+
+.p-header {
+  margin-top: 0;
+  margin-bottom: 14px;
+}
+
+.p-header h1 {
+  margin-top: 0;
+}
