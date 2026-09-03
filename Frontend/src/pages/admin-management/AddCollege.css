@@ -67,7 +67,7 @@
 .ac-final-preview dl > div:nth-last-child(-n + 2) { border-bottom: 0; }
 .ac-final-preview dt { color: #728aa0; font-size: .68rem; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; }
 .ac-final-preview dd { margin: 4px 0 0; overflow-wrap: anywhere; color: #173b5c; font-size: .86rem; font-weight: 650; }
-.ac-final-preview dd.ac-not-provided { color: #8798a8; font-style: italic; font-weight: 500; }
+.ac-final-preview dd.ac-not-provided { color: #8798a8; font-style: normal; font-weight: 650; }
 :root[data-theme="dark"] .ac-final-preview { border-color: var(--border); background: var(--surface-raised); }
 :root[data-theme="dark"] .ac-final-preview > h2, :root[data-theme="dark"] .ac-final-preview dd { color: var(--text-primary); }
 :root[data-theme="dark"] .ac-final-preview dl > div { border-color: var(--border); }
