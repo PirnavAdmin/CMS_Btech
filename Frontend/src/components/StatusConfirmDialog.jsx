@@ -5,6 +5,7 @@ export default function StatusConfirmDialog({ entity, name, nextStatus, onCancel
   const action = activate ? 'Activate' : 'Deactivate'
   return <div className="status-confirm-backdrop" onMouseDown={event => event.target === event.currentTarget && !busy && onCancel()}>
     <section className="status-confirm-dialog" role="alertdialog" aria-modal="true" aria-labelledby="status-confirm-title" aria-describedby="status-confirm-description">
+      <button type="button" className="status-confirm-close" aria-label="Close dialog" onClick={onCancel} disabled={busy}>×</button>
       <i aria-hidden="true">!</i>
       <h2 id="status-confirm-title">{action} {entity}?</h2>
       <p id="status-confirm-description">Are you sure you want to {action.toLowerCase()} <strong>{name}</strong>?</p>

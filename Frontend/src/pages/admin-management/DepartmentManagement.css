@@ -62,3 +62,14 @@
 .department-details__grid>div:nth-child(2)>span::after{content:'COLLEGE';font-size:.66rem}
 .department-details__grid>div:nth-child(2)>span{font-size:0}
 .department-details__grid>div:nth-child(2)>span::after{content:'College';font-size:.66rem}
+
+/* Align directory controls and expose both fields required to assign an HOD. */
+.department-table-wrap th:nth-child(5),.department-table-wrap td:nth-child(5),.department-table-wrap th:last-child,.department-table-wrap td:last-child{text-align:center}
+.department-table-wrap td:nth-child(5) .status-pill{display:flex!important;width:max-content;margin-inline:auto;justify-content:center}
+.department-actions-cell .row-actions{justify-content:center}
+.hod-card form>label:first-child{display:grid}
+.hod-card form>label:nth-child(2)>span{font-size:.85rem}
+.hod-card form>label:nth-child(2)>span::after{content:none}
+.hod-card form>label input,.hod-card form>label:nth-child(2) input{height:48px;padding:0 14px;border-radius:10px;font-size:.95rem}
+
+.status-pill.inactive,.department-detail-status.inactive{font-size:0}.status-pill.inactive::after,.department-detail-status.inactive::after{content:'Deactive';font-size:10px}

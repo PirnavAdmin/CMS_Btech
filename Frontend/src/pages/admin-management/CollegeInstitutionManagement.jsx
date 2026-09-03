@@ -274,6 +274,8 @@ export default function CollegeInstitutionManagement({ initialView = 'list' }) {
   const [editLogoFile, setEditLogoFile] = useState(null)
   const [errors, setErrors] = useState({})
   const [searchTerm, setSearchTerm] = useState('')
+  const [typeFilter, setTypeFilter] = useState('')
+  const [statusFilter, setStatusFilter] = useState('')
 
   // College Settings state — real list from the backend
   const [settingsList, setSettingsList] = useState([])
@@ -299,7 +301,11 @@ export default function CollegeInstitutionManagement({ initialView = 'list' }) {
 
   const activeCollege = colleges.find((c) => c.id === activeId) || null
 
-  const filteredColleges = colleges
+  const filteredColleges = colleges.filter((college) =>
+    (!typeFilter || college.type === typeFilter) &&
+    (!statusFilter || college.status === statusFilter)
+  )
+  const availableCollegeTypes = [...new Set(colleges.map((college) => college.type).filter(Boolean))]
 
   // Calculate pagination details
   const totalPages = Math.max(1, Math.ceil(filteredColleges.length / itemsPerPage))
@@ -527,6 +533,13 @@ export default function CollegeInstitutionManagement({ initialView = 'list' }) {
                 value={searchTerm}
                 onChange={handleSearchChange}
               />
+              <select aria-label="Filter colleges by type" value={typeFilter} onChange={(event) => { setTypeFilter(event.target.value); setCurrentPage(1) }}>
+                <option value="">Select Type</option>
+                {availableCollegeTypes.map((type) => <option key={type} value={type}>{type}</option>)}
+              </select>
+              <select aria-label="Filter colleges by status" value={statusFilter} onChange={(event) => { setStatusFilter(event.target.value); setCurrentPage(1) }}>
+                <option value="">Select Status</option><option value="active">Active</option><option value="inactive">Deactive</option>
+              </select>
             </div>
 
             {isCollegesLoading ? (
@@ -585,7 +598,7 @@ export default function CollegeInstitutionManagement({ initialView = 'list' }) {
                           <td>{college.contact}</td>
                           <td>
                             <span className={`cm-status-badge ${college.status}`}>
-                              {college.status === 'active' ? 'Active' : 'Inactive'}
+                              {college.status === 'active' ? 'Active' : 'Deactive'}
                             </span>
                           </td>
                           <td className="cm-actions-cell">
@@ -611,8 +624,8 @@ export default function CollegeInstitutionManagement({ initialView = 'list' }) {
                               <button
                                 type="button"
                                 className={`cm-action-icon-btn cm-status-action ${college.status === 'active' ? 'cm-danger' : 'cm-success'}`}
-                                title={college.status === 'active' ? 'Mark Inactive' : 'Mark Active'}
-                                aria-label={college.status === 'active' ? 'Mark Inactive' : 'Mark Active'}
+                                title={college.status === 'active' ? 'Deactivate college' : 'Activate college'}
+                                aria-label={college.status === 'active' ? 'Deactivate college' : 'Activate college'}
                                 onClick={() => toggleStatus(college)}
                               >
                                 {college.status === 'active' ? <FiToggleRight /> : <FiToggleLeft />}
@@ -811,7 +824,7 @@ export default function CollegeInstitutionManagement({ initialView = 'list' }) {
                     <span className="cm-badge cm-badge-code">Code: {activeCollege.code}</span>
                     <span className="cm-badge cm-badge-type">{activeCollege.type}</span>
                     <span className={`cm-status-badge ${activeCollege.status}`}>
-                      {activeCollege.status === 'active' ? 'Active' : 'Inactive'}
+                      {activeCollege.status === 'active' ? 'Active' : 'Deactive'}
                     </span>
                   </div>
                   <h1 className="cm-profile-title"><span style={{ color: '#fff' }}>{activeCollege.name}</span></h1>
@@ -828,7 +841,7 @@ export default function CollegeInstitutionManagement({ initialView = 'list' }) {
                     <div className="cm-info-row"><span className="cm-info-label">College Code</span><span className="cm-info-val">{displayValue(activeCollege.code)}</span></div>
                     <div className="cm-info-row"><span className="cm-info-label">College Type</span><span className="cm-info-val">{displayValue(activeCollege.type)}</span></div>
                     <div className="cm-info-row"><span className="cm-info-label">University Name</span><span className="cm-info-val">{displayValue(activeCollege.university)}</span></div>
-                    <div className="cm-info-row"><span className="cm-info-label">Status</span><span className="cm-info-val">{activeCollege.status === 'active' ? 'Active' : 'Inactive'}</span></div>
+                    <div className="cm-info-row"><span className="cm-info-label">Status</span><span className="cm-info-val">{activeCollege.status === 'active' ? 'Active' : 'Deactive'}</span></div>
                   </div>
                 </div>
 
@@ -947,7 +960,7 @@ export default function CollegeInstitutionManagement({ initialView = 'list' }) {
                         <td>{item.institutionType}</td>
                         <td>
                           <span className={`cm-status-badge ${item.status === 1 ? 'active' : 'inactive'}`}>
-                            {item.status === 1 ? 'Active' : 'Inactive'}
+                            {item.status === 1 ? 'Active' : 'Deactive'}
                           </span>
                         </td>
                         <td className="cm-actions-cell">
@@ -1075,7 +1088,7 @@ export default function CollegeInstitutionManagement({ initialView = 'list' }) {
                   <span>Status</span>
                   <select name="status" value={settingsForm.status} onChange={updateSettingsField}>
                     <option value={1}>Active</option>
-                    <option value={0}>Inactive</option>
+                    <option value={0}>Deactive</option>
                   </select>
                 </label>
               </div>

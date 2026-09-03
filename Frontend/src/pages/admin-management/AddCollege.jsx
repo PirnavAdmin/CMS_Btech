@@ -87,8 +87,9 @@ function Field({ label, name, values, errors, touched, onChange, required, maxLe
   </label>
 }
 
-function Dialog({ title, children, actions, labelledBy = 'ac-dialog-title' }) {
+function Dialog({ title, children, actions, onClose, labelledBy = 'ac-dialog-title' }) {
   return <div className="ac-dialog-layer" role="presentation"><div className="ac-dialog" role="dialog" aria-modal="true" aria-labelledby={labelledBy}>
+    <button type="button" className="ac-dialog-close" onClick={onClose} aria-label="Close dialog">×</button>
     <h2 id={labelledBy}>{title}</h2>{children}<div className="ac-dialog-actions">{actions}</div>
   </div></div>
 }
@@ -357,12 +358,11 @@ export default function AddCollege() {
       </>)}
       {activeTab === 'accreditation' && section('Accreditation Details', 'Current accreditation standing and validity.', <>
         <label className="ac-field" htmlFor="ac-accreditationStatus"><span>Accreditation Status</span><select id="ac-accreditationStatus" name="accreditationStatus" value={values.accreditationStatus} onChange={update}>{ACCREDITATION_STATUSES.map((status) => <option key={status}>{status}</option>)}</select></label>
-        <Field label="Accreditation Body" name="accreditationBody" values={values} errors={errors} touched={touched} onChange={update} maxLength={80} placeholder="e.g. NAAC, NBA" />
         <Field label="Accreditation Grade" name="accreditationGrade" values={values} errors={errors} touched={touched} onChange={update} maxLength={20} placeholder="e.g. A+" />
         <Field label="Accreditation Number" name="accreditationNumber" values={values} errors={errors} touched={touched} onChange={update} maxLength={50} />
         <Field label="Valid From" name="validFrom" type="date" values={values} errors={errors} touched={touched} onChange={update} />
         <Field label="Valid Until" name="validUntil" type="date" values={values} errors={errors} touched={touched} onChange={update} />
-        {values.accreditationStatus === 'Accredited' && <p className="ac-hint ac-span-2">Complete the accreditation body, grade, number, and validity dates for a comprehensive record.</p>}
+        {values.accreditationStatus === 'Accredited' && <p className="ac-hint ac-span-2">Complete the accreditation grade, number, and validity dates for a comprehensive record.</p>}
       </>)}
       {activeTab === 'preview' && <section className="ac-preview ac-final-preview"><h2>Preview &amp; Submit</h2><p>Review all college fields before submitting.</p>{values.logo && <img src={values.logo} alt="College logo preview" />}<dl>{Object.entries({ 'College Name': values.collegeName, 'College Code': values.collegeCode, 'College Type': values.collegeType === 'Other' ? values.collegeTypeOther : values.collegeType, 'University Name': values.universityName, 'Logo File Name': values.logoName, 'Address Line 1': values.addressLine1, 'Address Line 2': values.addressLine2, Area: values.area, District: values.district, City: values.city, State: values.state, Country: values.country, Pincode: values.pincode, 'Contact Number': values.contactNumber, 'Alternate Contact Number': values.alternateContactNumber, 'Official Email': values.email, Website: values.website, 'Principal Name': values.principalName, 'Principal Email': values.principalEmail, 'Principal Contact Number': values.principalContact, 'Accreditation Status': values.accreditationStatus, 'Accreditation Body': values.accreditationBody, 'Accreditation Grade': values.accreditationGrade, 'Accreditation Number': values.accreditationNumber, 'Valid From': values.validFrom, 'Valid Until': values.validUntil }).map(([label, value]) => <div key={label}><dt>{label}</dt><dd className={!hasValue(value) ? 'ac-not-provided' : ''}>{hasValue(value) ? value : 'Not provided'}</dd></div>)}</dl></section>}
       {activeTab !== 'accreditation' && activeTab !== 'preview' ? (
@@ -374,7 +374,7 @@ export default function AddCollege() {
       )}
     </form>
 
-    {dialog === 'reset' && <Dialog title="Reset College Form?" actions={<><button className="ac-secondary" onClick={() => setDialog(null)}>Cancel</button><button className="ac-danger-btn" onClick={reset}>Reset</button></>}><p>All entered information will be cleared.</p></Dialog>}
-    {dialog === 'leave' && <Dialog title="Unsaved Changes" actions={<><button className="ac-secondary" onClick={() => setDialog(null)}>Stay</button><button className="ac-danger-btn" onClick={() => navigate('/college-institution-management')}>Leave</button></>}><p>You have unsaved college information. Leave without saving?</p></Dialog>}
+    {dialog === 'reset' && <Dialog title="Reset College Form?" onClose={() => setDialog(null)} actions={<><button className="ac-secondary" onClick={() => setDialog(null)}>Cancel</button><button className="ac-danger-btn" onClick={reset}>Reset</button></>}><p>All entered information will be cleared.</p></Dialog>}
+    {dialog === 'leave' && <Dialog title="Unsaved Changes" onClose={() => setDialog(null)} actions={<><button className="ac-secondary" onClick={() => setDialog(null)}>Stay</button><button className="ac-danger-btn" onClick={() => navigate('/college-institution-management')}>Leave</button></>}><p>You have unsaved college information. Leave without saving?</p></Dialog>}
   </main></DashboardLayout>
 }

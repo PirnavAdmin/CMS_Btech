@@ -222,15 +222,21 @@ export async function changePassword({ currentPassword, newPassword, confirmNewP
 
 const normalizeProfile = (source) => {
   const data = source && typeof source === 'object' ? source : {}
+  const academic = data.academic && typeof data.academic === 'object' ? data.academic : {}
+  const application = data.application && typeof data.application === 'object' ? data.application : {}
   const lastLoginAt = data.lastLoginAt ?? data.last_login_at ?? data.LastLoginAt ?? data.lastLogin ?? data.last_login ?? ''
   return {
-    id: data.userId ?? '', identifier: data.employeeUserId ?? '', fullName: data.fullName ?? '',
+    id: data.userId ?? data.studentId ?? '', identifier: data.employeeUserId ?? data.studentCode ?? data.studentId ?? '', fullName: data.fullName ?? data.studentName ?? '',
     email: data.email ?? '', mobile: data.mobile ?? '', role: Array.isArray(data.roles) ? data.roles.join(', ') : String(data.role ?? ''),
     dateOfBirth: data.dateOfBirth ?? '', gender: data.gender ?? '', department: data.department ?? data.departmentName ?? '', departmentId: data.departmentId ?? '',
     designation: data.designation ?? '', address: data.address ?? '', postalCode: data.postalCode ?? '',
     pincode: data.pincode ?? data.postalCode ?? '', city: data.city ?? '', district: data.district ?? '', state: data.state ?? '', bio: data.bio ?? data.aboutMe ?? '',
     lastLoginAt,
     updatedAt: data.updatedAt ?? '',
+    status: data.status ?? data.accountStatus ?? 'Active',
+    registrationNumber: data.registrationNumber ?? application.registrationNumber ?? application.number ?? '', admissionNumber: data.admissionNumber ?? application.admissionNumber ?? '',
+    rollNumber: data.rollNumber ?? academic.rollNumber ?? '', course: data.course ?? data.courseName ?? academic.course ?? '', branch: data.branch ?? data.branchName ?? academic.branch ?? '',
+    academicYear: data.academicYear ?? data.academicYearName ?? academic.academicYear ?? '', semester: data.semester ?? data.semesterName ?? academic.semester ?? '', section: data.section ?? data.sectionName ?? academic.section ?? '', batch: data.batch ?? academic.batch ?? '',
   }
 }
 
