@@ -125,6 +125,7 @@ export default function DepartmentManagement() {
   }
   const saveHod = async (event) => {
     event.preventDefault()
+    if (!String(form.hodName || '').trim()) return setError('Enter the HOD name.')
     if (!String(form.hodUserId || '').trim()) return setError('Enter the HOD user ID.')
     if (!Number.isInteger(Number(form.hodUserId)) || Number(form.hodUserId) <= 0) return setError('HOD user ID must be a valid positive number.')
     setIsHodSaving(true); setError('')

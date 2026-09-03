@@ -274,6 +274,8 @@ export default function CollegeInstitutionManagement({ initialView = 'list' }) {
   const [editLogoFile, setEditLogoFile] = useState(null)
   const [errors, setErrors] = useState({})
   const [searchTerm, setSearchTerm] = useState('')
+  const [typeFilter, setTypeFilter] = useState('')
+  const [statusFilter, setStatusFilter] = useState('')
 
   // College Settings state — real list from the backend
   const [settingsList, setSettingsList] = useState([])
@@ -299,7 +301,11 @@ export default function CollegeInstitutionManagement({ initialView = 'list' }) {
 
   const activeCollege = colleges.find((c) => c.id === activeId) || null
 
-  const filteredColleges = colleges
+  const filteredColleges = colleges.filter((college) =>
+    (!typeFilter || college.type === typeFilter) &&
+    (!statusFilter || college.status === statusFilter)
+  )
+  const availableCollegeTypes = [...new Set(colleges.map((college) => college.type).filter(Boolean))]
 
   // Calculate pagination details
   const totalPages = Math.max(1, Math.ceil(filteredColleges.length / itemsPerPage))
@@ -527,6 +533,13 @@ export default function CollegeInstitutionManagement({ initialView = 'list' }) {
                 value={searchTerm}
                 onChange={handleSearchChange}
               />
+              <select aria-label="Filter colleges by type" value={typeFilter} onChange={(event) => { setTypeFilter(event.target.value); setCurrentPage(1) }}>
+                <option value="">All Types</option>
+                {availableCollegeTypes.map((type) => <option key={type} value={type}>{type}</option>)}
+              </select>
+              <select aria-label="Filter colleges by status" value={statusFilter} onChange={(event) => { setStatusFilter(event.target.value); setCurrentPage(1) }}>
+                <option value="">All Statuses</option><option value="active">Active</option><option value="inactive">Deactive</option>
+              </select>
             </div>
 
             {isCollegesLoading ? (
@@ -585,7 +598,7 @@ export default function CollegeInstitutionManagement({ initialView = 'list' }) {
                           <td>{college.contact}</td>
                           <td>
                             <span className={`cm-status-badge ${college.status}`}>
-                              {college.status === 'active' ? 'Active' : 'Inactive'}
+                              {college.status === 'active' ? 'Active' : 'Deactive'}
                             </span>
                           </td>
                           <td className="cm-actions-cell">
@@ -611,8 +624,8 @@ export default function CollegeInstitutionManagement({ initialView = 'list' }) {
                               <button
                                 type="button"
                                 className={`cm-action-icon-btn cm-status-action ${college.status === 'active' ? 'cm-danger' : 'cm-success'}`}
-                                title={college.status === 'active' ? 'Mark Inactive' : 'Mark Active'}
-                                aria-label={college.status === 'active' ? 'Mark Inactive' : 'Mark Active'}
+                                title={college.status === 'active' ? 'Deactivate college' : 'Activate college'}
+                                aria-label={college.status === 'active' ? 'Deactivate college' : 'Activate college'}
                                 onClick={() => toggleStatus(college)}
                               >
                                 {college.status === 'active' ? <FiToggleRight /> : <FiToggleLeft />}
