@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { FiLock, FiLogOut, FiMenu, FiMoon, FiSearch, FiSun, FiUser } from 'react-icons/fi'
 import { getUserRole, signOut } from '../auth/auth'
-import { changePassword } from '../api/apiEndpoints'
+import { changePassword, profileApi } from '../api/apiEndpoints'
 import Sidebar from '../components/Sidebar'
 import './DashboardLayout.css'
 import './AccountMenu.css'
@@ -27,6 +27,7 @@ export default function DashboardLayout({ children }) {
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [sidebarCollapsed, setSidebarCollapsed] = useState(() => localStorage.getItem('pirnav-sidebar-collapsed') === 'true')
   const [globalQuery, setGlobalQuery] = useState('')
+  const [accountIdentifier, setAccountIdentifier] = useState('')
   const [theme, setTheme] = useState(() => localStorage.getItem('pirnav-theme') || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'))
 
   const userRole = getUserRole() || 'user'
@@ -59,6 +60,14 @@ export default function DashboardLayout({ children }) {
     document.documentElement.dataset.theme = theme
     localStorage.setItem('pirnav-theme', theme)
   }, [theme])
+
+  useEffect(() => {
+    let active = true
+    profileApi.getProfile()
+      .then((profile) => { if (active) setAccountIdentifier(profile.identifier || profile.admissionNumber || '') })
+      .catch(() => { if (active) setAccountIdentifier('') })
+    return () => { active = false }
+  }, [])
 
   const globalLinks = [['Dashboard', '/dashboard'], ['Student Admissions', '/student-management/admissions'], ['Student Profiles', '/student-management/profiles'], ['Student Promotions', '/student-management/promotions'], ['College', '/college-institution-management'], ['Academic Years', '/academic-year-management'], ['Courses', '/courses'], ['Departments', '/department-management'], ['Branches', '/branches'], ['Semesters', '/semester-management'], ['Sections', '/section-management'], ['My Profile', '/my-profile'], ['Settings', '/settings']]
   const globalResults = globalQuery.trim() ? globalLinks.filter(([label]) => label.toLowerCase().includes(globalQuery.trim().toLowerCase())) : []
@@ -251,7 +260,7 @@ export default function DashboardLayout({ children }) {
 
               <span>
                 <strong>{roleLabel}</strong>
-                <small>Account</small>
+                <small>{accountIdentifier || 'Employee ID'}</small>
               </span>
 
               <i className="account-menu__chevron" aria-hidden="true" />

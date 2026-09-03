@@ -10,7 +10,7 @@ import { normalize } from './Branch'
 import './Course.css'
 
 export const academicYears = ['2025-26', '2026-27', '2027-28']
-const blank = { name: '', code: '', description: '', departmentId: '', collegeId: '', eligibility: '', status: 'Active' }
+const blank = { name: '', code: '', description: '', departmentId: '', collegeId: '', eligibility: '', status: '' }
 
 const apiError = (error, fallback) => error?.response?.status === 401 ? 'Your session has expired. Please sign in again.' : error?.response?.status === 403 ? "You don't have permission to manage courses." : error?.response?.data?.message || error?.response?.data?.error || error?.message || fallback
 const listFrom = (response) => { const data = response?.data ?? response; return Array.isArray(data) ? data : Array.isArray(data?.items) ? data.items : Array.isArray(data?.data) ? data.data : data && typeof data === 'object' ? [data] : [] }
@@ -77,6 +77,7 @@ const validateBasic = (v) => {
   if (!code) e.code = 'Course code is required.'
   else if (!/^[A-Z0-9]+(?:-[A-Z0-9]+)*$/.test(code)) e.code = 'Use uppercase letters, numbers and single hyphens only.'
   if (!v.departmentId) e.departmentId = 'Department is required.'
+  if (!v.status) e.status = 'Status is required.'
   return e
 }
 
@@ -85,7 +86,7 @@ const codeFor = name => { const known = { 'computer science and engineering': 'C
 const Page = ({ children }) => <DashboardLayout><main className="cm-page course-management">{children}</main></DashboardLayout>
 const Header = ({ title, text, children }) => <header className="cm-header"><div><h1>{title}</h1><p>{text}</p></div><div className="cm-row-actions">{children}</div></header>
 const Field = ({ label, error, wide, children }) => <label className={`cm-field ${wide ? 'wide' : ''}`}><span>{label.endsWith(' *') ? <>{label.slice(0, -2)} <b className="required-mark">*</b></> : label}</span>{children}{error && <small className="cm-error" role="alert">{error}</small>}</label>
-const Badge = ({ value }) => <span className={`course-badge ${String(value).toLowerCase()}`}><i />{value}</span>
+const Badge = ({ value }) => <span className={`course-badge ${String(value).toLowerCase()}`}><i />{value === 'Inactive' ? 'Deactive' : value}</span>
 
 function CourseList() {
   const [courses, setCourses] = useState([])
@@ -147,7 +148,7 @@ function CourseList() {
     <section className="course-summary">{[['Total Courses', stats.total, FiBookOpen], ['Active Courses', stats.active, FiCheckCircle], ['Associated Branches', stats.branches, FiGitBranch], ['Departments', stats.departments, FiGrid]].map(([label, value, Icon]) => <article key={label}><span className="cm-kpi-icon"><Icon aria-hidden="true" /></span><div><span>{label}</span><strong>{value}</strong></div></article>)}</section>
     <section className="cm-panel course-toolbar">
       <label className="course-search"><FiSearch /><input aria-label="Search courses" value={query} onChange={e => { setQuery(e.target.value); setCurrentPage(1) }} placeholder="Search course name, code or department" /></label>
-      <select aria-label="Status" value={statusFilter} onChange={e => { setStatusFilter(e.target.value); setCurrentPage(1) }}><option value="">All Status</option><option>Active</option><option>Inactive</option></select>
+      <select aria-label="Status" value={statusFilter} onChange={e => { setStatusFilter(e.target.value); setCurrentPage(1) }}><option value="">Select Status</option><option value="Active">Active</option><option value="Inactive">Deactive</option></select>
       {hasFilters && <button className="course-clear" onClick={clearFilters}><FiFilter /> Clear Filters</button>}
     </section>
     <section className="cm-panel course-directory">
@@ -212,7 +213,7 @@ function CourseForm() {
       if (id) {
         const courseRes = await getCourseById(id)
         const detail = mapCourse(recordFrom(courseRes))
-        setValue({ ...blank, ...detail })
+        setValue({ ...blank, ...detail, status: '' })
         setCodeEdited(true)
       }
     } catch (requestError) {
@@ -264,12 +265,12 @@ function CourseForm() {
           <Field label="Duration"><input value="4 Years" readOnly /></Field>
           <Field label="Academic Pattern"><input value="Semester" readOnly /></Field>
           <Field label="Total Semesters"><input value="8" readOnly /></Field>
-          <Field label="Status"><select value={value.status} onChange={e => update('status', e.target.value)}><option>Active</option><option>Inactive</option></select></Field>
+          <Field label="Status *" error={errors.status}><select required value={value.status} onChange={e => update('status', e.target.value)}><option value="" disabled>Select Status</option><option value="Active">Active</option><option value="Inactive">Deactive</option></select></Field>
         </div></section>
         <footer><span></span><button className="cm-button" disabled={isSaving} onClick={submit}>{isSaving ? 'Saving...' : id ? 'Save Changes' : 'Create Course'}</button></footer>
       </section>
       <aside className="course-preview"><span>Live Preview</span><div>
-        <Badge value={value.status || 'Active'} /><h2>{value.name || 'Course Name'}</h2><strong>{value.code || 'CODE'}</strong><p>B.Tech Undergraduate</p><hr />
+        {value.status ? <Badge value={value.status} /> : <span className="course-badge">Select Status</span>}<h2>{value.name || 'Course Name'}</h2><strong>{value.code || 'CODE'}</strong><p>B.Tech Undergraduate</p><hr />
         <b>{departments.find(x => String(x.id) === String(value.departmentId))?.name || 'B.Tech Department'}</b><p>4 Years · 8 Semesters</p>
         {value.eligibility && <p className="course-preview-note"><strong>Eligibility:</strong> {value.eligibility}</p>}
       </div></aside>
@@ -374,7 +375,7 @@ export function CourseStructure() {
       <button className="cm-button" disabled={saving} onClick={submit}>{saving ? 'Saving…' : editing ? 'Update Structure' : 'Add Structure'}</button>
       {editing && <button className="cm-button secondary" onClick={() => setEditing(null)}>Cancel</button>}
     </section>
-    <section className="cm-panel cm-table-wrap"><table className="cm-table"><thead><tr><th>Year</th><th>Semester</th><th>Name</th><th>Status</th><th>Action</th></tr></thead><tbody>{pageRows.map(x => <tr key={x.structureId}><td>{x.yearNumber}</td><td>{x.semesterNumber}</td><td>{x.semesterName}</td><td>{Number(x.status) === 0 ? 'Inactive' : 'Active'}</td><td><button className="cm-button" onClick={() => edit(x)}><FiEdit2 /> Edit</button></td></tr>)}</tbody></table>{loading ? <div className="cm-empty">Loading structures…</div> : !visible.length ? <div className="cm-empty">No structure configured for Semester {semester}.</div> : <TablePagination page={currentPage} totalPages={totalPages} onPageChange={setPage} />}</section>
+    <section className="cm-panel cm-table-wrap"><table className="cm-table"><thead><tr><th>Year</th><th>Semester</th><th>Name</th><th>Status</th><th>Action</th></tr></thead><tbody>{pageRows.map(x => <tr key={x.structureId}><td>{x.yearNumber}</td><td>{x.semesterNumber}</td><td>{x.semesterName}</td><td>{Number(x.status) === 0 ? 'Deactive' : 'Active'}</td><td><button className="cm-button" onClick={() => edit(x)}><FiEdit2 /> Edit</button></td></tr>)}</tbody></table>{loading ? <div className="cm-empty">Loading structures…</div> : !visible.length ? <div className="cm-empty">No structure configured for Semester {semester}.</div> : <TablePagination page={currentPage} totalPages={totalPages} onPageChange={setPage} />}</section>
   </Page>
 }
 

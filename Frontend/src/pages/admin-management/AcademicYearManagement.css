@@ -19,3 +19,16 @@
 .ay .ay-actions{align-items:center;justify-content:center}
 .ay .ay-actions button{width:34px;min-width:34px;padding:0;justify-content:center}
 .ay .ay-actions svg{width:16px;height:16px}
+
+/* Match the centered, evenly spaced directory layout used by the College list. */
+.ay .table table{width:100%;min-width:980px;table-layout:fixed}
+.ay .table :is(th,td){box-sizing:border-box;text-align:center!important;vertical-align:middle;white-space:nowrap}
+.ay .table th:nth-child(1),.ay .table td:nth-child(1){width:14%}
+.ay .table th:nth-child(2),.ay .table td:nth-child(2){width:13%}
+.ay .table th:nth-child(3),.ay .table td:nth-child(3){width:13%}
+.ay .table th:nth-child(4),.ay .table td:nth-child(4){width:11%}
+.ay .table th:nth-child(5),.ay .table td:nth-child(5){width:10%}
+.ay .table th:nth-child(6),.ay .table td:nth-child(6){width:17%}
+.ay .table th:nth-child(7),.ay .table td:nth-child(7){width:22%}
+.ay .table .badge{justify-content:center;margin-inline:auto}
+.ay .table .ay-actions{width:100%;justify-content:center}

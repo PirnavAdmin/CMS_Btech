@@ -341,3 +341,6 @@ html,body,#root{max-width:100%;overflow-x:hidden}
 .college-management .cm-table :is(th,td),.ay table :is(th,td),.course-management :is(.course-advanced-table,.cm-table) :is(th,td),.branch-management .branch-table :is(th,td),.department-management .department-table-wrap :is(th,td),.semester-management .semester-table :is(th,td),.section-management .section-table :is(th,td){text-align:center}
 .course-management :is(.course-actions,.cm-row-actions),.branch-management .branch-actions,.department-management .row-actions,.semester-management .semester-row-actions,.section-management .section-actions{justify-content:center}
 .section-management .section-breadcrumb,.semester-management .semester-breadcrumb{display:none}
+
+/* Component styles load after the theme, so enforce directory alignment consistently. */
+.college-management .cm-table :is(th,td),.ay table :is(th,td),.course-management :is(.course-advanced-table,.cm-table) :is(th,td),.branch-management .branch-table :is(th,td),.department-management .department-table-wrap :is(th,td),.semester-management .semester-table :is(th,td),.section-management .section-table :is(th,td){text-align:center!important;vertical-align:middle!important}

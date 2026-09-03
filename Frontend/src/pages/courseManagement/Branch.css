@@ -55,6 +55,3 @@
 
 /* Semantic row-action colors keep the compact controls easy to scan. */
 .branch-actions a:first-child{color:#1970b3;background:#e8f3fc;border-color:#c5dfef}.branch-actions a:nth-child(2){color:#7c3aed;background:#f3e8ff;border-color:#dfccff}.branch-actions .branch-status-action.danger{color:#b42318;background:#fee4e2;border-color:#fecdca}.branch-actions .branch-status-action.success{color:#15803d;background:#e9f8ef;border-color:#bbf7d0}
-
-/* Professional capacity terminology in the branch directory. */
-.branch-table th:nth-child(7){font-size:0}.branch-table th:nth-child(7)::after{content:'Enrollment Capacity';font-size:.67rem}
