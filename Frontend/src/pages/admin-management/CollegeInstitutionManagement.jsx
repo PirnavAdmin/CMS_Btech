@@ -824,7 +824,7 @@ export default function CollegeInstitutionManagement({ initialView = 'list' }) {
                     <span className="cm-badge cm-badge-code">Code: {activeCollege.code}</span>
                     <span className="cm-badge cm-badge-type">{activeCollege.type}</span>
                     <span className={`cm-status-badge ${activeCollege.status}`}>
-                      {activeCollege.status === 'active' ? 'Active' : 'Inactive'}
+                      {activeCollege.status === 'active' ? 'Active' : 'Deactive'}
                     </span>
                   </div>
                   <h1 className="cm-profile-title"><span style={{ color: '#fff' }}>{activeCollege.name}</span></h1>
@@ -841,7 +841,7 @@ export default function CollegeInstitutionManagement({ initialView = 'list' }) {
                     <div className="cm-info-row"><span className="cm-info-label">College Code</span><span className="cm-info-val">{displayValue(activeCollege.code)}</span></div>
                     <div className="cm-info-row"><span className="cm-info-label">College Type</span><span className="cm-info-val">{displayValue(activeCollege.type)}</span></div>
                     <div className="cm-info-row"><span className="cm-info-label">University Name</span><span className="cm-info-val">{displayValue(activeCollege.university)}</span></div>
-                    <div className="cm-info-row"><span className="cm-info-label">Status</span><span className="cm-info-val">{activeCollege.status === 'active' ? 'Active' : 'Inactive'}</span></div>
+                    <div className="cm-info-row"><span className="cm-info-label">Status</span><span className="cm-info-val">{activeCollege.status === 'active' ? 'Active' : 'Deactive'}</span></div>
                   </div>
                 </div>
 
@@ -960,7 +960,7 @@ export default function CollegeInstitutionManagement({ initialView = 'list' }) {
                         <td>{item.institutionType}</td>
                         <td>
                           <span className={`cm-status-badge ${item.status === 1 ? 'active' : 'inactive'}`}>
-                            {item.status === 1 ? 'Active' : 'Inactive'}
+                            {item.status === 1 ? 'Active' : 'Deactive'}
                           </span>
                         </td>
                         <td className="cm-actions-cell">
@@ -1088,7 +1088,7 @@ export default function CollegeInstitutionManagement({ initialView = 'list' }) {
                   <span>Status</span>
                   <select name="status" value={settingsForm.status} onChange={updateSettingsField}>
                     <option value={1}>Active</option>
-                    <option value={0}>Inactive</option>
+                    <option value={0}>Deactive</option>
                   </select>
                 </label>
               </div>
