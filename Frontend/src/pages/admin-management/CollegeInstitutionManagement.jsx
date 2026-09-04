@@ -452,6 +452,7 @@ export default function CollegeInstitutionManagement({ initialView = 'list' }) {
     } finally { setIsStatusSaving(false) }
   }
 
+
   // ── College Settings: list ──
   const fetchSettingsList = async () => {
     setIsSettingsLoading(true)

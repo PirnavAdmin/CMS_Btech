@@ -94,3 +94,13 @@
   -webkit-text-fill-color: #123962 !important;
   caret-color: #123962 !important;
 }
+
+/* Comfortable sign-in card sizing and clearer greeting hierarchy. */
+.pirnav-login .login-form{width:min(100%,520px);gap:18px;padding:36px 38px 31px;border-radius:18px}
+.pirnav-login .pirnav-greeting{margin:0 0 8px!important;color:var(--pl-navy)!important;font-size:1.65rem!important;font-weight:750;letter-spacing:-.025em;text-transform:none}
+.pirnav-login .login-form>label{gap:7px;font-size:.84rem}
+.pirnav-login .login-form input[type=text],.pirnav-login .password-input input{height:48px;border-radius:9px;font-size:.9rem}
+.pirnav-login .sign-in-button{height:48px;border-radius:9px;font-size:.9rem}
+:root[data-theme="dark"] .pirnav-login .pirnav-greeting{color:var(--text-primary)!important}
+@media(min-width:781px) and (max-height:820px){.pirnav-login .login-form{gap:12px;padding:24px 30px 21px}.pirnav-login .login-form input[type=text],.pirnav-login .password-input input{height:43px}.pirnav-login .sign-in-button{height:43px}}
+@media(max-width:480px){.pirnav-login .login-form{padding:27px 22px 24px}.pirnav-login .pirnav-greeting{font-size:1.4rem!important}}

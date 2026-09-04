@@ -9,7 +9,7 @@ import { getCourseById, createCourse, updateCourse, updateCourseStatus, getSemes
 import { normalize } from './Branch'
 import './Course.css'
 
-const blank = { name: '', code: '', description: '', departmentId: '', collegeId: '', eligibility: '', status: '' }
+const blank = { name: 'B.Tech', code: 'BTECH', description: '', departmentId: '', branchId: '', collegeId: '', eligibility: '', status: '' }
 
 const apiError = (error, fallback) => error?.response?.status === 401 ? 'Your session has expired. Please sign in again.' : error?.response?.status === 403 ? "You don't have permission to manage courses." : error?.response?.data?.message || error?.response?.data?.error || error?.message || fallback
 const listFrom = (response) => { const data = response?.data ?? response; return Array.isArray(data) ? data : Array.isArray(data?.items) ? data.items : Array.isArray(data?.data) ? data.data : data && typeof data === 'object' ? [data] : [] }
@@ -43,6 +43,7 @@ const mapCourse = (record) => {
     shortName: record.courseShortName ?? record.shortName ?? '',
     type: record.courseType ?? record.type ?? 'Undergraduate',
     departmentId: record.departmentId ?? '',
+    branchId: record.branchId ?? record.branch?.branchId ?? record.branch?.id ?? '',
     department: record.departmentName ?? record.department ?? '',
     collegeId: record.collegeId ?? '',
     college: record.collegeName ?? record.college ?? '',
@@ -59,6 +60,7 @@ const mapCourse = (record) => {
 const payloadFor = (value) => ({
   collegeId: value.collegeId === '' ? 0 : Number(value.collegeId),
   departmentId: value.departmentId === '' ? 0 : Number(value.departmentId),
+  branchId: value.branchId === '' ? 0 : Number(value.branchId),
   courseCode: value.code.trim().toUpperCase(),
   courseName: value.name.trim(),
   courseShortName: value.code.trim().toUpperCase(),
@@ -76,6 +78,7 @@ const validateBasic = (v) => {
   if (!code) e.code = 'Course code is required.'
   else if (!/^[A-Z0-9]+(?:-[A-Z0-9]+)*$/.test(code)) e.code = 'Use uppercase letters, numbers and single hyphens only.'
   if (!v.departmentId) e.departmentId = 'Department is required.'
+  if (!v.branchId) e.branchId = 'Branch is required.'
   if (!v.status) e.status = 'Status is required.'
   return e
 }
@@ -196,6 +199,7 @@ function CourseList() {
 function CourseForm() {
   const { id } = useParams(), navigate = useNavigate()
   const [departments, setDepartments] = useState([])
+  const [branches, setBranches] = useState([])
   const [value, setValue] = useState(blank)
   const [errors, setErrors] = useState({})
   const [codeEdited, setCodeEdited] = useState(false)
@@ -207,12 +211,13 @@ function CourseForm() {
   const load = async () => {
     setIsLoading(true); setError('')
     try {
-      const departmentRows = await departmentApi.getAll()
+      const [departmentRows, branchRows] = await Promise.all([departmentApi.getAll(), branchApi.getAll()])
       setDepartments(departmentRows.map(mapDepartmentOption))
+      setBranches(branchRows.map(normalize))
       if (id) {
         const courseRes = await getCourseById(id)
         const detail = mapCourse(recordFrom(courseRes))
-        setValue({ ...blank, ...detail, status: '' })
+        setValue({ ...blank, ...detail, name: 'B.Tech', code: 'BTECH', status: '' })
         setCodeEdited(true)
       }
     } catch (requestError) {
@@ -224,7 +229,7 @@ function CourseForm() {
   useEffect(() => { load() }, [id])
 
   const live = validateBasic(value)
-  const update = (key, next) => { setValue(v => { const n = { ...v, [key]: next }; if (key === 'name' && !codeEdited) n.code = codeFor(next); if (key === 'code') { n.code = next.toUpperCase().replace(/\s/g, ''); setCodeEdited(true) } if (key === 'departmentId') n.collegeId = departments.find(x => String(x.id) === String(next))?.collegeId ?? ''; return n }); setErrors(e => ({ ...e, [key]: '' })) }
+  const update = (key, next) => { setValue(v => { const n = { ...v, [key]: next }; if (key === 'name' && !codeEdited) n.code = codeFor(next); if (key === 'code') { n.code = next.toUpperCase().replace(/\s/g, ''); setCodeEdited(true) } if (key === 'departmentId') { n.collegeId = departments.find(x => String(x.id) === String(next))?.collegeId ?? ''; n.branchId = '' } return n }); setErrors(e => ({ ...e, [key]: '', ...(key === 'departmentId' ? { branchId: '' } : {}) })) }
 
   const submit = async () => {
     const e = validateBasic(value); setErrors(e)
@@ -247,17 +252,18 @@ function CourseForm() {
 
   if (isLoading) return <Page><div className="cm-empty">Loading course...</div></Page>
 
-  return <Page><Header title={id ? 'Edit B.Tech Course' : 'Add B.Tech Course'} text="Create a focused B.Tech undergraduate course."><Link className="cm-button secondary" to={id ? `/courses/${id}` : '/courses'}><FiArrowLeft /> Cancel</Link></Header>
+  return <Page><Header title={id ? 'Edit B.Tech Course' : 'Add B.Tech Course'} text="Create a focused B.Tech undergraduate course."><Link className="cm-button secondary" to="/courses"><FiArrowLeft /> Cancel</Link></Header>
     {saved && <div className="course-toast"><FiCheckCircle /> Course saved successfully.</div>}
     {error && <p className="cm-error" role="alert">{error}</p>}
     <div className="course-form-layout">
       <section className="cm-panel course-form">
         <section><h2>Course Identity</h2><div className="cm-form-grid">
-          <Field label="Course Name *" error={errors.name || (value.name ? live.name : '')}><input autoFocus value={value.name} onChange={e => update('name', e.target.value)} placeholder="B.Tech Computer Science and Engineering" /></Field>
-          <Field label="Course Code *" error={errors.code || (value.code ? live.code : '')}><input value={value.code} onChange={e => update('code', e.target.value)} placeholder="CSE" /></Field>
+          <Field label="Course Name *" error={errors.name || (value.name ? live.name : '')}><input value="B.Tech" readOnly /></Field>
+          <Field label="Course Code *" error={errors.code || (value.code ? live.code : '')}><input value="BTECH" readOnly /></Field>
         </div></section>
         <section><h2>Academic Mapping</h2><div className="cm-form-grid">
           <Field label="Department *" error={errors.departmentId || (value.departmentId ? live.departmentId : '')}><select value={value.departmentId} onChange={e => update('departmentId', e.target.value)}><option value="">Select B.Tech department</option>{departments.filter(x => x.status !== 'Inactive' || String(x.id) === String(value.departmentId)).map(x => <option value={x.id} key={x.id}>{x.code ? `${x.code} — ` : ''}{x.name}</option>)}</select></Field>
+          <Field label="Branch / Specialization *" error={errors.branchId}><select value={value.branchId} disabled={!value.departmentId} onChange={e => update('branchId', e.target.value)}><option value="">{value.departmentId ? 'Select core branch or specialization' : 'Select department first'}</option>{branches.filter(branch => String(branch.departmentId) === String(value.departmentId)).map(branch => <option key={branch.id} value={branch.id}>{branch.code ? `${branch.code} - ` : ''}{branch.name} ({branchType(branch)})</option>)}</select></Field>
           <Field label="Eligibility"><input value={value.eligibility || ''} onChange={e => update('eligibility', e.target.value)} placeholder="e.g. 10+2 with PCM" /></Field>
         </div></section>
         <section><h2>Academic Structure</h2><div className="cm-form-grid">
