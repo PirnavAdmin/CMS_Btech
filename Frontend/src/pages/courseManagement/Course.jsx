@@ -320,12 +320,10 @@ function CourseDetails() {
       ['Academic Pattern', course.academicSystem],
       ['Total Semesters', course.semesters],
       ['Eligibility', course.eligibility],
-      ['Description', course.description],
       ['Status', course.status],
     ].map(([label, value]) => <div className="cm-detail" key={label}><span>{label}</span><strong>{value === null || value === undefined || String(value).trim() === '' ? 'Not provided' : String(value)}</strong></div>)}</section>
     <section className="course-summary course-detail-stats">{stats.map(x => <article key={x[0]}><span>{x[0]}</span><strong>{x[1]}</strong></article>)}</section>
     <section className="cm-panel course-branches"><div><h2>Associated Branches</h2><Link className="cm-button secondary" to={`/branches?course=${id}`}>View All</Link></div>{branches.length ? <div className="course-branch-grid">{branches.map(b => <Link to={`/branches/${b.id}`} key={b.id}><strong>{b.name}</strong><span>{b.code} · {branchType(b)}</span><small>Intake: {Number(b.intakeCapacity ?? b.intake ?? 0)} · {b.status || 'Active'}</small></Link>)}</div> : <p>No branches are configured for this course.</p>}</section>
-    <section className="cm-panel"><h2>Description</h2><p>{course.description || 'No description added.'}</p></section>
   </Page>
 }
 

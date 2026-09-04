@@ -94,3 +94,142 @@
   -webkit-text-fill-color: #123962 !important;
   caret-color: #123962 !important;
 }
+
+/* Layout-only refinement: preserves the existing Login color system. */
+@media (min-width: 1051px) {
+  .pirnav-login {
+    grid-template-columns: minmax(0, 56%) minmax(420px, 44%);
+  }
+
+  .pirnav-login .login-intro__content {
+    padding: clamp(34px, 5vh, 58px) clamp(42px, 5vw, 74px) 30px;
+  }
+
+  .pirnav-login .intro-copy {
+    max-width: 640px;
+  }
+
+  .pirnav-login .intro-copy h1 {
+    max-width: 590px;
+    font-size: clamp(2.75rem, 3.55vw, 3.25rem);
+    line-height: 1.08;
+    letter-spacing: -.045em;
+  }
+
+  .pirnav-login .login-panel {
+    padding: 70px 42px 30px;
+  }
+}
+
+.pirnav-login .intro-copy .eyebrow {
+  margin-bottom: 14px;
+}
+
+.pirnav-login .intro-copy > p:last-of-type {
+  margin-top: 18px;
+  line-height: 1.55;
+}
+
+.pirnav-campus-cards {
+  margin-top: 26px;
+  gap: 10px;
+}
+
+.pirnav-campus-cards article {
+  min-height: 68px;
+  padding: 11px 12px;
+}
+
+.pirnav-campus-cards strong {
+  margin-top: 3px;
+  line-height: 1.3;
+}
+
+.pirnav-login .login-form {
+  width: min(100%, 470px);
+  gap: 16px;
+  padding: 34px 36px 28px;
+}
+
+.pirnav-form-brand {
+  padding-bottom: 15px;
+}
+
+.pirnav-login .login-form header {
+  margin: 2px 0 7px;
+}
+
+.pirnav-login .login-form h2 {
+  font-size: 1.9rem;
+  line-height: 1.15;
+}
+
+.pirnav-login .login-form header > p:last-child {
+  margin-top: 7px;
+}
+
+.pirnav-login .login-form > label {
+  gap: 7px;
+}
+
+.pirnav-login .login-form input[type=text],
+.pirnav-login .password-input input,
+.pirnav-login .sign-in-button {
+  height: 48px;
+}
+
+.pirnav-login .password-toggle {
+  width: 38px;
+  height: 38px;
+}
+
+.pirnav-login .login-options {
+  margin: 2px 0 4px;
+  align-items: center;
+}
+
+.pirnav-login .sign-in-button {
+  margin-top: 0;
+  font-size: .92rem;
+}
+
+.pirnav-login .account-link {
+  margin-top: 2px;
+}
+
+@media (max-width: 1050px) and (min-width: 781px) {
+  .pirnav-login .login-form { width: min(100%, 460px); padding: 30px; }
+  .pirnav-login .intro-copy h1 { font-size: clamp(2.45rem, 4.2vw, 3.2rem); }
+}
+
+@media (max-width: 780px) {
+  .pirnav-login .login-panel { padding-top: 62px; }
+  .pirnav-login .login-form { gap: 15px; padding: 28px 24px; }
+}
+
+/* The main sign-in card keeps its greeting and supporting copy without a duplicate title. */
+.pirnav-login .login-form:has(.pirnav-form-brand) > header h2 {
+  display: none;
+}
+
+/* Campus branding is already presented in the hero, so omit the duplicate card block. */
+.pirnav-login .pirnav-form-brand {
+  display: none;
+}
+
+.pirnav-login .pirnav-greeting {
+  font-size: .9rem !important;
+  letter-spacing: .065em;
+}
+
+.pirnav-login .pirnav-greeting-icon {
+  display: inline-block;
+  margin-left: 2px;
+  font-size: 1.25em;
+  line-height: 1;
+  vertical-align: -0.08em;
+}
+
+.pirnav-login .pirnav-greeting-initial {
+  font-size: inherit;
+}

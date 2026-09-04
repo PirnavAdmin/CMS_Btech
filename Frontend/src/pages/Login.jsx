@@ -19,6 +19,8 @@ export default function Login() {
   const [submitError, setSubmitError] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
   const greeting = new Date().getHours() < 12 ? 'Good morning' : new Date().getHours() < 18 ? 'Good afternoon' : 'Good evening'
+  const greetingParts = greeting.split(' ')
+  const greetingIcon = new Date().getHours() < 12 ? '☀️' : new Date().getHours() < 18 ? '🌤️' : '🌙'
 
   // OTP Flow States: 'login' | 'request_otp' | 'verify_otp' | 'success'
   const [viewMode, setViewMode] = useState('login')
@@ -193,9 +195,9 @@ export default function Login() {
           <form className="login-form" onSubmit={handleSubmit} noValidate>
             <div className="pirnav-form-brand"><span><FiBookOpen /></span><div><strong>Pirnav Engineering College</strong><small>Digital Campus Management Portal</small></div></div>
             <header>
-              <p className="pirnav-greeting">{greeting}</p>
+              <p className="pirnav-greeting"><span className="pirnav-greeting-initial">{greetingParts[0][0]}</span>{greetingParts[0].slice(1)} <span className="pirnav-greeting-initial">{greetingParts[1][0]}</span>{greetingParts[1].slice(1)} <span className="pirnav-greeting-icon">{greetingIcon}</span></p>
               <h2 id="login-title">Welcome back</h2>
-              <p>Sign in with your college credentials to continue to the digital campus.</p>
+              <p>Securely access your academic dashboard and campus services.</p>
             </header>
             {logoutMessage && <div className="logout-success" role="status"><span>{logoutMessage}</span><button type="button" onClick={() => setLogoutMessage('')} aria-label="Dismiss signed out message"><FiX aria-hidden="true" /></button></div>}
             <label htmlFor="identifier">
