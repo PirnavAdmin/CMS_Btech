@@ -39,9 +39,18 @@ const codePattern = /^[A-Z0-9]{2,12}$/
 
 const getApiErrorMessage = (error) => {
   const data = error?.response?.data
-  const apiMessage = typeof data === 'string'
-    ? data
-    : data?.message || data?.error || data?.title || data?.detail
+  let parsedData = data
+  if (typeof data === 'string') {
+    try { parsedData = JSON.parse(data) } catch { parsedData = null }
+  }
+  const rawError = `${typeof data === 'string' ? data : ''} ${error?.message || ''}`
+  const validationFields = parsedData && typeof parsedData === 'object' ? Object.keys(parsedData.errors || {}) : []
+  if (/PrincipalEmail/i.test(rawError)) return 'Please enter a valid principal email address.'
+  if (validationFields.some((field) => field.toLowerCase() === 'principalemail')) return 'Please enter a valid principal email address.'
+  if (validationFields.length) return 'Please check the entered college details and try again.'
+  const apiMessage = parsedData && typeof parsedData === 'object'
+    ? parsedData.message || parsedData.error || (parsedData.title === 'One or more validation errors occurred.' ? '' : parsedData.title) || parsedData.detail
+    : typeof data === 'string' && !/^\s*[{[]/.test(data) ? data : ''
   if (apiMessage) return apiMessage
 
   const technicalMessage = /<!doctype|<html|ngrok|err_ngrok|failed to fetch|networkerror|https?:\/\//i.test(String(error?.message || ''))

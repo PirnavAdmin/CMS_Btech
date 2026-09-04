@@ -136,7 +136,19 @@ const getResponseList = (responseData) => {
 const getApiErrorMessage = (error, fallback) => {
   if (error?.response?.status === 401) return 'Your session has expired. Please sign in again.'
   if (error?.response?.status === 403) return "You don't have permission to manage colleges."
-  return error?.response?.data?.message || error?.response?.data?.error || error?.message || fallback
+  const responseData = error?.response?.data
+  let parsedData = responseData
+  if (typeof responseData === 'string') {
+    try { parsedData = JSON.parse(responseData) } catch { parsedData = null }
+  }
+  const rawError = `${typeof responseData === 'string' ? responseData : ''} ${error?.message || ''}`
+  const validationFields = Object.keys(parsedData?.errors || {})
+  if (/PrincipalEmail/i.test(rawError)) return 'Please enter a valid principal email address.'
+  if (validationFields.some((field) => field.toLowerCase() === 'principalemail')) return 'Please enter a valid principal email address.'
+  if (validationFields.length) return 'Please check the entered college details and try again.'
+  const responseMessage = parsedData?.message || parsedData?.error || (parsedData?.title === 'One or more validation errors occurred.' ? '' : parsedData?.title)
+  const errorMessage = /^\s*[{[]/.test(String(error?.message || '')) ? '' : error?.message
+  return responseMessage || errorMessage || fallback
 }
 
 const getCollegeRecords = (responseData) => {
@@ -409,7 +421,10 @@ export default function CollegeInstitutionManagement({ initialView = 'list' }) {
     setCollegeError('')
     try {
       const response = await updateCollege(activeId, collegePayload(formValues, Boolean(editLogoFile)))
-      if (editLogoFile) await uploadCollegeLogo(activeId, editLogoFile)
+      if (editLogoFile) {
+        await uploadCollegeLogo(activeId, editLogoFile)
+        setBrokenLogoIds((current) => { const next = new Set(current); next.delete(activeId); return next })
+      }
       const updated = mapCollege((response.data?.data ?? response.data) || { ...formValues, id: activeId })
       setColleges((current) => current.map((college) => (college.id === activeId ? updated : college)))
       backToList()

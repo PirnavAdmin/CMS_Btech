@@ -616,8 +616,18 @@
 .cm-info-val {
   font-size: 0.95rem;
   font-weight: 600;
-  color: #1e293b;
+  color: #102f49;
   line-height: 1.45;
+}
+
+/* Keep profile labels and values clearly readable on the light details view. */
+:root:not([data-theme="dark"]) .college-management .cm-info-label {
+  color: #40566f;
+}
+
+:root:not([data-theme="dark"]) .college-management .cm-info-val {
+  color: #102f49;
+  font-weight: 700;
 }
 
 .cm-link {

@@ -1,17 +1,30 @@
 const cleanUrl = (url) => (url || "").replace(/\/+$/, "");
 
+const friendlyValidationMessage = (errors) => {
+  if (!errors || typeof errors !== "object") return "";
+  const fields = Object.keys(errors);
+  if (fields.some((field) => field.toLowerCase() === "principalemail")) return "Please enter a valid principal email address.";
+  if (fields.some((field) => ["email", "collegeemail"].includes(field.toLowerCase()))) return "Please enter a valid official email address.";
+  if (fields.some((field) => /contact|phone|mobile/i.test(field))) return "Please enter a valid contact number.";
+  return fields.length ? "Please check the entered college details and try again." : "";
+};
+
 const getErrorMessage = (data, status) => {
   if (status >= 500) return "Something went wrong while completing your request. Please try again.";
   if (typeof data === "string") {
     const message = data.trim();
+    try {
+      const parsed = JSON.parse(message);
+      const validationMessage = friendlyValidationMessage(parsed?.errors);
+      if (validationMessage) return validationMessage;
+    } catch { /* The response is plain text, so continue with normal handling. */ }
     const isTechnicalPage = /<!doctype|<html|<head|<body|<script|ngrok|err_ngrok|data-payload|https?:\/\//i.test(message);
     if (message && !isTechnicalPage && message.length <= 500) return message;
   }
   if (data && typeof data === "object") {
     if (data.errors && typeof data.errors === "object") {
-      const validationMessages = Object.entries(data.errors)
-        .flatMap(([field, messages]) => (Array.isArray(messages) ? messages : [messages]).filter(Boolean).map((message) => `${field}: ${message}`));
-      if (validationMessages.length) return validationMessages.join(" ");
+      const validationMessage = friendlyValidationMessage(data.errors);
+      if (validationMessage) return validationMessage;
     }
     const directMessage = data.message || data.detail;
     if (directMessage && !/<!doctype|<html|ngrok|err_ngrok|https?:\/\//i.test(String(directMessage))) return directMessage;
@@ -152,8 +165,12 @@ export const uploadCollegeLogo = (collegeId, logoFile) => {
 export const getCollegeLogoUrl = (collegeId, logoValue) => {
   const logo = String(logoValue ?? "").trim();
   if (logo) {
-    if (logo.startsWith("data:") || /^https?:\/\//i.test(logo)) return logo;
-    return `${collegesBaseUrl}/${logo.replace(/^\/+/, "")}`;
+    if (logo.startsWith("data:") || logo.startsWith("blob:") || /^https?:\/\//i.test(logo)) return logo;
+    // Some College API versions return a server file name/path. That path is
+    // not publicly readable; use the authenticated logo endpoint instead.
+    if (/^[A-Za-z0-9+/=\s]+$/.test(logo) && logo.replace(/\s/g, "").length > 100) {
+      return `data:image/png;base64,${logo.replace(/\s/g, "")}`;
+    }
   }
   return collegeId ? `${collegesBaseUrl}/api/College/logo/${encodeURIComponent(collegeId)}` : "";
 };
@@ -164,13 +181,16 @@ export const getCollegeLogoUrl = (collegeId, logoValue) => {
 export const fetchCollegeLogo = async (logoUrl) => {
   const token = localStorage.getItem("btech-access-token") || sessionStorage.getItem("btech-access-token");
   const response = await fetch(logoUrl, {
+    cache: "no-store",
     headers: {
       "ngrok-skip-browser-warning": "true",
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
     },
   });
   if (!response.ok) throw new Error("Unable to load college logo.");
-  return response.blob();
+  const image = await response.blob();
+  if (image.type && !image.type.startsWith("image/") && image.type !== "application/octet-stream") throw new Error("The college logo response is not an image.");
+  return image;
 };
 
 // The college service has used both the short field names (name/contact/principal)
@@ -186,26 +206,16 @@ export const buildCollegePayload = (college = {}) => {
   const contactNumber = value("contactNumber", college.contact);
   const alternateContactNumber = value("alternateContactNumber", college.alternateContact);
   const principalName = value("principalName", college.principal);
+  const principalEmail = value("principalEmail");
+  const principalContact = value("principalContact");
   const logo = college.logo ?? college.logoUrl ?? "";
   const website = normalizeWebsite(college.website ?? college.Website);
   const accreditationSummary = value("accreditation", college.accreditationDetails);
-  // The deployed college DTO does not yet expose these wizard fields. Store
-  // them in its supported accreditation column so add/edit/view remain lossless.
-  const accreditation = `${COLLEGE_EXTENDED_PREFIX}${JSON.stringify({
-    accreditationSummary,
-    area: value("area"),
-    district: value("district"),
-    alternateContactNumber,
-    principalEmail: value("principalEmail"),
-    principalContact: value("principalContact"),
-    accreditationStatus: value("accreditationStatus"),
-    accreditationBody: value("accreditationBody"),
-    accreditationGrade: value("accreditationGrade"),
-    accreditationNumber: value("accreditationNumber"),
-    validFrom: value("validFrom"),
-    validUntil: value("validUntil"),
-    logoName: value("logoName"),
-  })}`;
+  // Keep the database accreditation column within its intended scope. Older
+  // code packed every optional wizard field into this string as JSON, which
+  // can exceed the backend column limit and surface as a database 500 error.
+  // Supported optional fields are sent independently below.
+  const accreditation = accreditationSummary.slice(0, 200);
 
   return {
     name, collegeName: name,
@@ -235,9 +245,10 @@ export const buildCollegePayload = (college = {}) => {
     logoName: value("logoName"),
     principal: principalName,
     principalName,
-    principalEmail: value("principalEmail"),
-    principalContact: value("principalContact"),
-    principalPhone: value("principalContact"),
+    // Optional validated fields must be omitted when blank. Sending an empty
+    // string causes some ASP.NET DTO versions to run EmailAddress validation.
+    ...(principalEmail ? { principalEmail, PrincipalEmail: principalEmail } : {}),
+    ...(principalContact ? { principalContact, principalPhone: principalContact } : {}),
     accreditation,
     accreditationDetails: accreditation,
     accreditationStatus: value("accreditationStatus"),

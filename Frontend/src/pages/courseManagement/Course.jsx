@@ -9,7 +9,6 @@ import { getCourseById, createCourse, updateCourse, updateCourseStatus, getSemes
 import { normalize } from './Branch'
 import './Course.css'
 
-export const academicYears = ['2025-26', '2026-27', '2027-28']
 const blank = { name: '', code: '', description: '', departmentId: '', collegeId: '', eligibility: '', status: '' }
 
 const apiError = (error, fallback) => error?.response?.status === 401 ? 'Your session has expired. Please sign in again.' : error?.response?.status === 403 ? "You don't have permission to manage courses." : error?.response?.data?.message || error?.response?.data?.error || error?.message || fallback
