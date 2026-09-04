@@ -81,6 +81,30 @@ export const API_ENDPOINTS = Object.freeze({
     assignStudents: (id) => endpoint(`/api/v1/sections/${id}/students/assign`),
     student: (sectionId, studentId) => endpoint(`/api/v1/sections/${sectionId}/students/${studentId}`),
   }),
+  studentAdmissions: Object.freeze({
+    list: endpoint('/api/v1/student-admissions'), create: endpoint('/api/v1/student-admissions'),
+    detail: (id) => endpoint(`/api/v1/student-admissions/${id}`), update: (id) => endpoint(`/api/v1/student-admissions/${id}`),
+    academicDetails: (id) => endpoint(`/api/v1/student-admissions/${id}/academic-details`),
+    previousEducation: (id) => endpoint(`/api/v1/student-admissions/${id}/previous-education`),
+    status: (id) => endpoint(`/api/v1/student-admissions/${id}/status`), submit: (id) => endpoint(`/api/v1/student-admissions/${id}/submit`),
+    feeSummary: (id) => endpoint(`/api/v1/student-admissions/${id}/fee-summary`), feeStructure: (id) => endpoint(`/api/v1/student-admissions/${id}/fee-structure`),
+  }),
+  studentAcademicInformation: Object.freeze({ detail: (id) => endpoint(`/api/v1/student-academic-information/${id}`), update: (id) => endpoint(`/api/v1/student-academic-information/${id}`) }),
+  students: Object.freeze({
+    list: endpoint('/api/v1/students'), create: endpoint('/api/v1/students'), search: endpoint('/api/v1/students/search'),
+    detail: (id) => endpoint(`/api/v1/students/${id}`), update: (id) => endpoint(`/api/v1/students/${id}`), status: (id) => endpoint(`/api/v1/students/${id}/status`),
+    parent: (id) => endpoint(`/api/student-parents/${id}`), documents: (id) => endpoint(`/api/v1/students/${id}/documents`),
+    document: (studentId, documentId) => endpoint(`/api/v1/students/${studentId}/documents/${documentId}`),
+    downloadDocument: (studentId, documentId) => endpoint(`/api/v1/students/${studentId}/documents/${documentId}/download`),
+    personalInformation: (id) => endpoint(`/api/v1/students/${id}/profile/personal-information`), examResults: (id) => endpoint(`/api/v1/students/${id}/profile/exam-results`),
+  }),
+  studentProfiles: Object.freeze({ list: endpoint('/api/v1/student-profiles'), preview: (id) => endpoint(`/api/v1/student-profiles/${id}/preview`), update: (id) => endpoint(`/api/v1/student-profiles/${id}`), myProfile: endpoint('/api/StudentProfile/my-profile') }),
+  promotions: Object.freeze({
+    dashboard: endpoint('/api/v1/promotions/dashboard'), directory: endpoint('/api/v1/promotions/directory'), history: endpoint('/api/v1/promotions/history'),
+    eligibleStudents: endpoint('/api/v1/promotions/eligible-students'), eligibility: (id) => endpoint(`/api/v1/promotions/student-eligibility/${id}`), eligibilityStatus: (id) => endpoint(`/api/v1/promotions/eligibility-status/${id}`),
+    promote: endpoint('/api/v1/promotions/promote'), promoteBulk: endpoint('/api/v1/promotions/promote-bulk'), promotedStudents: endpoint('/api/v1/promotions/promoted-students'),
+    studentHistory: (id) => endpoint(`/api/v1/promotions/student/${id}/history`), historyByStudent: (id) => endpoint(`/api/v1/promotions/history/${id}`),
+  }),
   authorizationTest: Object.freeze({
     authenticated: endpoint('/api/v1/authorization-test/authenticated'),
     admin: endpoint('/api/v1/authorization-test/admin'),
@@ -121,7 +145,16 @@ const refreshAccessToken = async () => {
   return body.data.accessToken
 }
 
-const request = async (url, options = {}, retried = false) => {
+const pendingGetRequests = new Map()
+const request = async (url, options = {}, retried = false, bypassDedupe = false) => {
+  const method = String(options.method || 'GET').toUpperCase()
+  if (method === 'GET' && !bypassDedupe) {
+    const key = `${method}:${url}`
+    if (pendingGetRequests.has(key)) return pendingGetRequests.get(key)
+    const pending = request(url, options, retried, true).finally(() => pendingGetRequests.delete(key))
+    pendingGetRequests.set(key, pending)
+    return pending
+  }
   const token = localStorage.getItem('btech-access-token') || sessionStorage.getItem('btech-access-token') || localStorage.getItem('accessToken') || sessionStorage.getItem('accessToken') || localStorage.getItem('token') || sessionStorage.getItem('token')
   let response
   try {
@@ -134,11 +167,11 @@ const request = async (url, options = {}, retried = false) => {
   }
   if (response.status === 401 && !retried) {
     await refreshAccessToken()
-    return request(url, options, true)
+    return request(url, options, true, true)
   }
   const body = await readBody(response)
   if (!response.ok || body?.success === false) {
-    console.error('API request failed', { url, method: options.method || 'GET', status: response.status, response: body, requestBody: options.body })
+    console.error('API request failed', { url, method: options.method || 'GET', status: response.status })
     if (response.status >= 500) throw new Error('Something went wrong while completing your request. Please try again.')
     const fallback = {
       400: 'Please check the submitted information.',
@@ -152,6 +185,27 @@ const request = async (url, options = {}, retried = false) => {
     throw new Error(validationMessage(body) || fallback)
   }
   return body
+}
+
+const requiredId = (value, label) => {
+  if (value === undefined || value === null || String(value).trim() === '') throw new Error(`${label} is required.`)
+  return encodeURIComponent(String(value).trim())
+}
+const withQuery = (url, params = {}) => {
+  const query = new URLSearchParams(Object.entries(params || {}).filter(([, value]) => value !== '' && value !== undefined && value !== null))
+  return query.size ? `${url}?${query}` : url
+}
+const dataResponse = (response) => response?.data?.data ?? response?.data ?? response ?? null
+const listData = (response) => Array.isArray(dataResponse(response)) ? dataResponse(response) : []
+
+const blobRequest = async (url, options = {}, retried = false) => {
+  const token = localStorage.getItem('btech-access-token') || sessionStorage.getItem('btech-access-token') || localStorage.getItem('accessToken') || sessionStorage.getItem('accessToken') || localStorage.getItem('token') || sessionStorage.getItem('token')
+  let response
+  try { response = await fetch(url, { ...options, headers: { 'ngrok-skip-browser-warning': 'true', ...options.headers, ...(token ? { Authorization: `Bearer ${token}` } : {}) } }) }
+  catch { throw new Error('We’re having trouble connecting right now. Please try again shortly.') }
+  if (response.status === 401 && !retried) { await refreshAccessToken(); return blobRequest(url, options, true) }
+  if (!response.ok) { const body = await readBody(response); throw new Error(validationMessage(body) || 'The document request could not be completed.') }
+  return { blob: await response.blob(), contentDisposition: response.headers.get('content-disposition') || '', contentType: response.headers.get('content-type') || '' }
 }
 
 const normalizeFrontendRole = (roleValue) => {
@@ -224,8 +278,8 @@ const normalizeProfile = (source) => {
     id: data.userId ?? data.studentId ?? '', identifier: data.employeeUserId ?? data.studentCode ?? data.studentId ?? '', fullName: data.fullName ?? data.studentName ?? '',
     email: data.email ?? '', mobile: data.mobile ?? '', role: Array.isArray(data.roles) ? data.roles.join(', ') : String(data.role ?? ''),
     dateOfBirth: data.dateOfBirth ?? '', gender: data.gender ?? '', department: data.department ?? data.departmentName ?? '', departmentId: data.departmentId ?? '',
-    designation: data.designation ?? '', address: data.address ?? '', postalCode: data.postalCode ?? '',
-    pincode: data.pincode ?? data.postalCode ?? '', city: data.city ?? '', district: data.district ?? '', state: data.state ?? '', bio: data.bio ?? data.aboutMe ?? '',
+    designation: data.designation ?? '', address: data.address ?? data.currentAddress ?? '', permanentAddress: data.permanentAddress ?? '', postalCode: data.postalCode ?? '',
+    pincode: data.pincode ?? data.postalCode ?? '', city: data.city ?? '', district: data.district ?? '', state: data.state ?? '', permanentPincode: data.permanentPincode ?? '', permanentCity: data.permanentCity ?? '', permanentDistrict: data.permanentDistrict ?? '', permanentState: data.permanentState ?? '', bio: data.bio ?? data.aboutMe ?? '',
     lastLoginAt,
     updatedAt: data.updatedAt ?? '',
     status: data.status ?? data.accountStatus ?? 'Active',
@@ -255,6 +309,11 @@ export const profileApi = {
         department: String(profile.department || '').trim() || null,
         designation: String(profile.designation || '').trim() || null,
         address: String(profile.address || '').trim() || null,
+        permanentAddress: String(profile.permanentAddress || '').trim() || null,
+        permanentPincode: String(profile.permanentPincode || '').trim() || null,
+        permanentCity: String(profile.permanentCity || '').trim() || null,
+        permanentDistrict: String(profile.permanentDistrict || '').trim() || null,
+        permanentState: String(profile.permanentState || '').trim() || null,
         pincode: String(profile.pincode || profile.postalCode || '').trim() || null,
         city: String(profile.city || '').trim() || null,
         district: String(profile.district || '').trim() || null,
@@ -447,6 +506,108 @@ export const sectionApi = {
   search: async (params) => { const query = new URLSearchParams(Object.entries(params).filter(([, value]) => value !== '' && value != null)); return listResponse(await request(`${API_ENDPOINTS.sections.search}?${query}`)) },
   summary: async () => { const response = await request(API_ENDPOINTS.sections.summary); return response?.data?.data ?? response?.data ?? null },
   validateCapacity: async (sectionId, capacity) => (await request(`${API_ENDPOINTS.sections.validateCapacity}?sectionId=${sectionId}&capacity=${capacity}`))?.data,
+}
+
+const compact = (object) => Object.fromEntries(Object.entries(object).filter(([, value]) => value !== undefined))
+const normalizeRecord = (source) => dataResponse(source) || {}
+export const normalizeAdmission = (source) => normalizeRecord(source)
+export const normalizeStudent = (source) => normalizeRecord(source)
+export const normalizeStudentProfile = (source) => normalizeRecord(source)
+export const normalizeAcademicDetails = (source) => normalizeRecord(source)
+export const normalizePreviousEducation = (source) => normalizeRecord(source)
+export const normalizeParent = (source) => normalizeRecord(source)
+export const normalizeDocument = (source) => normalizeRecord(source)
+export const normalizePromotion = (source) => normalizeRecord(source)
+
+const studentAdmissionPayload = (form) => compact({
+  registrationNumber: form.registrationNumber ?? form.application?.registrationNumber ?? form.application?.number,
+  registrationDate: form.registrationDate ?? form.application?.date,
+  firstName: form.firstName ?? form.personal?.firstName, middleName: form.middleName ?? form.personal?.middleName,
+  lastName: form.lastName ?? form.personal?.lastName, gender: form.gender ?? form.personal?.gender,
+  dateOfBirth: form.dateOfBirth ?? form.personal?.dob, bloodGroup: form.bloodGroup ?? form.personal?.bloodGroup,
+  nationality: form.nationality ?? form.personal?.nationality, aadhaarNumber: form.aadhaarNumber ?? form.personal?.aadhaar,
+  mobile: form.mobile ?? form.contact?.mobile, alternateMobile: form.alternateMobile ?? form.contact?.alternateMobile,
+  email: form.email ?? form.contact?.email, alternateEmail: form.alternateEmail ?? form.contact?.alternateEmail,
+  currentAddress: form.currentAddress ?? form.contact?.currentAddress, permanentAddress: form.permanentAddress ?? form.contact?.permanentAddress,
+  admissionType: form.admissionType ?? form.academic?.admissionType, quota: form.quota ?? form.academic?.quota,
+})
+const academicDetailsPayload = (form) => compact({
+  collegeId: form.collegeId ?? form.academic?.collegeId, academicYearId: form.academicYearId ?? form.academic?.academicYearId,
+  departmentId: form.departmentId ?? form.academic?.departmentId, courseId: form.courseId ?? form.academic?.courseId,
+  branchId: form.branchId ?? form.academic?.branchId, semesterId: form.semesterId ?? form.academic?.semesterId,
+  sectionId: form.sectionId ?? form.academic?.sectionId, admissionType: form.admissionType ?? form.academic?.admissionType,
+  quota: form.quota ?? form.academic?.quota, entryType: form.entryType ?? form.academic?.entryType,
+  regulation: form.regulation ?? form.academic?.regulation, batch: form.batch ?? form.admission?.batch,
+})
+const previousEducationPayload = (form) => compact({
+  tenth: form.tenth ?? form.previousEducation?.tenth, qualifyingEducation: form.qualifyingEducation ?? form.intermediate ?? form.previousEducation?.intermediate,
+})
+const parentPayload = (form) => compact({
+  fatherName: form.fatherName ?? form.father?.name ?? form.parents?.father?.name, motherName: form.motherName ?? form.mother?.name ?? form.parents?.mother?.name,
+  guardianName: form.guardianName ?? form.guardian?.name ?? form.parents?.guardian?.name, guardianRelationship: form.guardianRelationship ?? form.guardian?.relationship ?? form.parents?.guardian?.relationship,
+  parentMobile: form.parentMobile ?? form.father?.mobile ?? form.parents?.father?.mobile, emergencyMobile: form.emergencyMobile ?? form.parents?.emergencyMobile,
+  email: form.email ?? form.father?.email ?? form.parents?.father?.email, fatherOccupation: form.fatherOccupation ?? form.father?.occupation ?? form.parents?.father?.occupation,
+  motherOccupation: form.motherOccupation ?? form.mother?.occupation ?? form.parents?.mother?.occupation, address: form.address ?? form.parents?.address,
+})
+
+export const studentAdmissionApi = {
+  getAll: async (params) => listData(await request(withQuery(API_ENDPOINTS.studentAdmissions.list, params))),
+  getById: async (id) => normalizeAdmission(await request(API_ENDPOINTS.studentAdmissions.detail(requiredId(id, 'Admission ID')))),
+  create: async (form) => normalizeAdmission(await request(API_ENDPOINTS.studentAdmissions.create, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(studentAdmissionPayload(form)) })),
+  update: async (id, form) => normalizeAdmission(await request(API_ENDPOINTS.studentAdmissions.update(requiredId(id, 'Admission ID')), { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(studentAdmissionPayload(form)) })),
+  submit: async (id) => normalizeAdmission(await request(API_ENDPOINTS.studentAdmissions.submit(requiredId(id, 'Admission ID')), { method: 'POST' })),
+}
+export const studentAcademicDetailsApi = {
+  get: async (id) => normalizeAcademicDetails(await request(API_ENDPOINTS.studentAdmissions.academicDetails(requiredId(id, 'Admission ID')))),
+  update: async (id, form) => normalizeAcademicDetails(await request(API_ENDPOINTS.studentAdmissions.academicDetails(requiredId(id, 'Admission ID')), { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(academicDetailsPayload(form)) })),
+}
+export const studentAcademicInformationApi = {
+  getById: async (id) => normalizeAcademicDetails(await request(API_ENDPOINTS.studentAcademicInformation.detail(requiredId(id, 'Academic ID')))),
+  update: async (id, payload) => normalizeAcademicDetails(await request(API_ENDPOINTS.studentAcademicInformation.update(requiredId(id, 'Academic ID')), { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) })),
+}
+export const studentAdmissionStatusApi = {
+  get: async (id) => normalizeRecord(await request(API_ENDPOINTS.studentAdmissions.status(requiredId(id, 'Admission ID')))),
+  update: async (id, payload) => normalizeRecord(await request(API_ENDPOINTS.studentAdmissions.status(requiredId(id, 'Admission ID')), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) })),
+}
+export const studentPreviousEducationApi = {
+  get: async (id) => normalizePreviousEducation(await request(API_ENDPOINTS.studentAdmissions.previousEducation(requiredId(id, 'Admission ID')))),
+  update: async (id, form) => normalizePreviousEducation(await request(API_ENDPOINTS.studentAdmissions.previousEducation(requiredId(id, 'Admission ID')), { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(previousEducationPayload(form)) })),
+}
+export const studentFeeApi = {
+  getSummary: async (id) => normalizeRecord(await request(API_ENDPOINTS.studentAdmissions.feeSummary(requiredId(id, 'Admission ID')))),
+  updateStructure: async (id, payload) => normalizeRecord(await request(API_ENDPOINTS.studentAdmissions.feeStructure(requiredId(id, 'Admission ID')), { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) })),
+}
+export const studentApi = {
+  getAll: async (params) => listData(await request(withQuery(API_ENDPOINTS.students.list, params))), search: async (params) => listData(await request(withQuery(API_ENDPOINTS.students.search, params))),
+  getById: async (id) => normalizeStudent(await request(API_ENDPOINTS.students.detail(requiredId(id, 'Student ID')))),
+  create: async (payload) => normalizeStudent(await request(API_ENDPOINTS.students.create, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) })),
+  update: async (id, payload) => normalizeStudent(await request(API_ENDPOINTS.students.update(requiredId(id, 'Student ID')), { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) })),
+  updateStatus: async (id, status) => normalizeStudent(await request(API_ENDPOINTS.students.status(requiredId(id, 'Student ID')), { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(typeof status === 'object' ? status : { status }) })),
+}
+export const studentParentApi = { get: async (id) => normalizeParent(await request(API_ENDPOINTS.students.parent(requiredId(id, 'Student ID')))), update: async (id, form) => normalizeParent(await request(API_ENDPOINTS.students.parent(requiredId(id, 'Student ID')), { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(parentPayload(form)) })) }
+export const studentDocumentApi = {
+  getAll: async (id) => listData(await request(API_ENDPOINTS.students.documents(requiredId(id, 'Student ID')))),
+  upload: async (id, file, metadata = {}) => { if (!(file instanceof File)) throw new Error('Choose a document to upload.'); const form = new FormData(); form.append('file', file); Object.entries(metadata).filter(([, value]) => value !== undefined && value !== null && value !== '').forEach(([key, value]) => form.append(key, String(value))); return normalizeDocument(await request(API_ENDPOINTS.students.documents(requiredId(id, 'Student ID')), { method: 'POST', body: form })) },
+  get: async (studentId, documentId) => blobRequest(API_ENDPOINTS.students.document(requiredId(studentId, 'Student ID'), requiredId(documentId, 'Document ID'))),
+  remove: async (studentId, documentId) => request(API_ENDPOINTS.students.document(requiredId(studentId, 'Student ID'), requiredId(documentId, 'Document ID')), { method: 'DELETE' }),
+  download: async (studentId, documentId) => blobRequest(API_ENDPOINTS.students.downloadDocument(requiredId(studentId, 'Student ID'), requiredId(documentId, 'Document ID'))),
+}
+export const studentProfileApi = {
+  getPersonalInformation: async (id) => normalizeStudentProfile(await request(API_ENDPOINTS.students.personalInformation(requiredId(id, 'Student ID')))),
+  updatePersonalInformation: async (id, payload) => normalizeStudentProfile(await request(API_ENDPOINTS.students.personalInformation(requiredId(id, 'Student ID')), { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) })),
+  getExamResults: async (id) => listData(await request(API_ENDPOINTS.students.examResults(requiredId(id, 'Student ID')))), getMyProfile: async () => normalizeStudentProfile(await request(API_ENDPOINTS.studentProfiles.myProfile)),
+}
+export const studentProfilesApi = {
+  getAll: async (params) => listData(await request(withQuery(API_ENDPOINTS.studentProfiles.list, params))), preview: async (id) => normalizeStudentProfile(await request(API_ENDPOINTS.studentProfiles.preview(requiredId(id, 'Student ID')))),
+  update: async (id, payload) => normalizeStudentProfile(await request(API_ENDPOINTS.studentProfiles.update(requiredId(id, 'Student ID')), { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) })),
+}
+export const studentPromotionApi = {
+  getDashboard: async () => normalizePromotion(await request(API_ENDPOINTS.promotions.dashboard)), getDirectory: async (params) => listData(await request(withQuery(API_ENDPOINTS.promotions.directory, params))), getHistory: async (params) => listData(await request(withQuery(API_ENDPOINTS.promotions.history, params))),
+  getEligibleStudents: async (params) => listData(await request(withQuery(API_ENDPOINTS.promotions.eligibleStudents, params))), getEligibility: async (id) => normalizePromotion(await request(API_ENDPOINTS.promotions.eligibility(requiredId(id, 'Student ID')))),
+  updateEligibilityStatus: async (id, payload) => normalizePromotion(await request(API_ENDPOINTS.promotions.eligibilityStatus(requiredId(id, 'Student ID')), { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) })),
+  promote: async (payload) => normalizePromotion(await request(API_ENDPOINTS.promotions.promote, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) })),
+  promoteBulk: async (payload) => normalizePromotion(await request(API_ENDPOINTS.promotions.promoteBulk, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) })),
+  getPromotedStudents: async () => listData(await request(API_ENDPOINTS.promotions.promotedStudents)), getStudentHistory: async (id) => listData(await request(API_ENDPOINTS.promotions.studentHistory(requiredId(id, 'Student ID')))), getHistoryByStudent: async (id) => listData(await request(API_ENDPOINTS.promotions.historyByStudent(requiredId(id, 'Student ID')))),
 }
 
 export async function lookupIndianPincode(pincode) {
