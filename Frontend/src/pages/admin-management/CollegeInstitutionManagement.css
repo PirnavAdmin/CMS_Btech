@@ -564,8 +564,8 @@
 /* Profile Grid & Section Cards */
 .cm-profile-grid {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 24px;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 16px;
   padding: 24px 30px;
 }
 
@@ -594,16 +594,25 @@
 }
 
 .cm-info-rows {
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0;
+  overflow: hidden;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
 }
 
 .cm-info-row {
-  display: flex;
-  flex-direction: column;
-  gap: 3px;
+  display: grid;
+  min-height: 72px;
+  padding: 12px 14px;
+  align-content: center;
+  gap: 4px;
+  border-right: 1px solid #e2e8f0;
+  border-bottom: 1px solid #e2e8f0;
 }
+
+.cm-info-row:nth-child(3n) { border-right: 0; }
 
 .cm-info-label {
   font-size: 0.75rem;
@@ -793,6 +802,9 @@
     grid-template-columns: 1fr;
     padding: 20px;
   }
+  .cm-info-rows { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .cm-info-row:nth-child(3n) { border-right: 1px solid #e2e8f0; }
+  .cm-info-row:nth-child(2n) { border-right: 0; }
   .cm-form-grid {
     grid-template-columns: 1fr;
   }
@@ -925,3 +937,9 @@
 .college-management .cm-toolbar .cm-search{width:420px!important;max-width:420px!important;flex:0 1 420px!important}
 .college-management .cm-toolbar select{width:190px!important;min-width:190px!important;flex:0 0 190px!important}
 @media(max-width:760px){.college-management .cm-toolbar{flex-direction:column!important}.college-management .cm-toolbar .cm-search,.college-management .cm-toolbar select{width:100%!important;max-width:none!important;flex:auto!important}}
+@media (max-width: 520px) {
+  .cm-info-rows { grid-template-columns: 1fr; }
+  .cm-info-row,
+  .cm-info-row:nth-child(2n),
+  .cm-info-row:nth-child(3n) { border-right: 0; }
+}

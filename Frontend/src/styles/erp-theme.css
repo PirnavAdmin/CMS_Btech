@@ -342,6 +342,44 @@ html,body,#root{max-width:100%;overflow-x:hidden}
 .course-management :is(.course-actions,.cm-row-actions),.branch-management .branch-actions,.department-management .row-actions,.semester-management .semester-row-actions,.section-management .section-actions{justify-content:center}
 .section-management .section-breadcrumb,.semester-management .semester-breadcrumb{display:none}
 
+/* Modern Academic application-wide contract. Kept last so every routed module
+   shares one visual language without changing its data flow or interactions. */
+:root{
+  --primary:var(--brand);--primary-hover:var(--brand-hover);--primary-soft:var(--brand-soft);
+  --navy:#0d3658;--background:var(--app-bg);--card:var(--surface);
+  --control-height:40px;--button-height:38px;--page-gap:20px;--card-padding:18px;
+  --focus-ring:0 0 0 3px color-mix(in srgb,var(--brand) 16%,transparent);
+}
+.app-breadcrumb a{color:var(--text-muted);text-decoration:none}.app-breadcrumb a:hover{color:var(--brand)}.app-breadcrumb span:not([aria-hidden]){color:var(--text-muted)}.app-breadcrumb strong{color:var(--text-primary)}
+.sidebar nav>a.active{background:#1970b3;color:#fff;box-shadow:0 5px 14px rgba(2,27,49,.2)}.sidebar nav>a:hover:not(.active),.sidebar-group summary:hover{background:rgba(255,255,255,.09)}
+.page-content>:is(.erp-page,.dashboard-page,.college-module,.fs-page,.student-promotion,.student-admission,.student-profile,.profile-page,.settings-page,.college-management,.add-college,.department-management,.ay,.cm-page,.semester-management,.section-management){width:100%;max-width:none;min-width:0;box-sizing:border-box}
+.page-content :is(.erp-page-heading,.dashboard-welcome,.module-heading,.fs-header,.p-header,.sp-heading,.profile-heading,.settings-page>header,.management-page__heading,.cm-header,.semester-page-header,.section-page-header,.ay>header){margin-bottom:var(--page-gap)}
+.page-content :is(.erp-page-heading,.module-heading,.fs-header,.p-header,.sp-heading,.profile-heading,.management-page__heading,.cm-header,.semester-page-header,.section-page-header,.ay>header) h1{margin:2px 0 5px;color:var(--text-primary);font-size:clamp(1.65rem,2.4vw,2rem);font-weight:800;line-height:1.18;letter-spacing:-.025em}
+.page-content :is(.erp-page-heading,.module-heading,.fs-header,.p-header,.sp-heading,.profile-heading,.management-page__heading,.cm-header,.semester-page-header,.section-page-header,.ay>header) p{margin:0;color:var(--text-muted);font-size:.84rem;line-height:1.5}
+.page-content :is(.erp-panel,.module-panel,.fs-card,.p-panel,.sp-directory,.sp-panel,.profile-content-card,.settings-card,.management-card,.cm-panel,.semester-directory-card,.section-table-card,.ay .panel){border:1px solid var(--border);border-radius:var(--radius-md);background:var(--surface);box-shadow:var(--shadow-sm)}
+.page-content :is(button,.cm-button,.primary-button,.secondary-button,.module-primary-action,.p-primary,.p-secondary,.settings-button){min-height:var(--button-height);box-sizing:border-box;border-radius:var(--radius-sm);font-family:inherit;font-weight:750;transition:border-color .16s ease,background-color .16s ease,color .16s ease,box-shadow .16s ease}
+.page-content :is(.cm-button,.primary-button,.module-primary-action,.p-primary,.settings-button,.semester-primary,.section-primary){border-color:var(--brand);color:#fff;background:var(--brand)}
+.page-content :is(.cm-button,.primary-button,.module-primary-action,.p-primary,.settings-button,.semester-primary,.section-primary):hover:not(:disabled){border-color:var(--brand-hover);color:#fff;background:var(--brand-hover)}
+.page-content :is(.secondary-button,.p-secondary,.profile-button.secondary,.cm-secondary-btn){border:1px solid var(--border);color:var(--text-primary);background:var(--surface)}
+.page-content :is(.secondary-button,.p-secondary,.profile-button.secondary,.cm-secondary-btn):hover:not(:disabled){border-color:var(--brand);color:var(--brand);background:var(--brand-soft)}
+.page-content button:disabled{cursor:not-allowed;opacity:.48}
+.page-content :is(input:not([type=checkbox]):not([type=radio]),select,textarea){box-sizing:border-box;min-height:var(--control-height);border:1px solid var(--border-strong);border-radius:var(--radius-sm);color:var(--text-primary);background:var(--surface);font:500 13px/1.35 inherit}
+.page-content :is(input:not([type=checkbox]):not([type=radio]),select){padding:0 11px}.page-content textarea{padding:10px 11px;resize:vertical}
+.page-content :is(input,select,textarea):focus-visible{border-color:var(--brand)!important;outline:0!important;box-shadow:var(--focus-ring)!important}
+.page-content label{color:var(--text-secondary)}.page-content label>span,.page-content fieldset>legend{font-weight:700}
+.page-content :is(.module-table,.fs-table,.p-table,.sp-table-wrap,.course-table-scroll,.branch-table-scroll,.semester-table-wrapper,.section-table-wrap,.department-table-wrap,.cm-table-wrap,.ay .table){max-width:100%;overflow-x:auto;overscroll-behavior-inline:contain}
+.page-content :is(.module-table,.fs-table,.p-table,.sp-table-wrap) table{width:100%;min-width:720px;border-collapse:collapse;background:var(--surface)}
+.page-content :is(.module-table,.fs-table,.p-table,.sp-table-wrap) th{height:42px;padding:10px 12px;border-bottom:1px solid var(--border);color:var(--text-secondary);background:var(--surface-soft);font-size:11px;font-weight:800;letter-spacing:.045em;text-align:left;text-transform:uppercase;white-space:nowrap}
+.page-content :is(.module-table,.fs-table,.p-table,.sp-table-wrap) td{padding:11px 12px;border-bottom:1px solid var(--border);color:var(--text-secondary);background:var(--surface);font-size:13px;vertical-align:middle}.page-content :is(.module-table,.fs-table,.p-table,.sp-table-wrap) tr:hover td{background:var(--surface-soft)}
+.page-content :is([class*="badge"],[class*="status"]){font-weight:750}
+.page-content :is(.module-dialog,.fs-editor,.fs-dialog,.p-confirm,.p-review,.profile-edit-dialog,.semester-form-panel,.semester-details-panel,.section-form-panel,.section-details-panel,.cm-modal-card,.ac-dialog){border:1px solid var(--border);border-radius:var(--radius-lg);color:var(--text-primary);background:var(--surface-raised);box-shadow:var(--shadow-md)}
+.page-content :is(.module-overlay,.fs-overlay,.p-overlay,.profile-modal,.semester-overlay,.section-overlay,.cm-modal-overlay){background:rgba(3,18,31,.58)}
+.page-content :is(.sa-toast,.semester-toast,.section-toast,.branch-toast,.p-notice,[class*="toast"]){border:1px solid color-mix(in srgb,var(--success) 32%,var(--border));border-radius:8px;background:var(--surface-raised);box-shadow:var(--shadow-md)}
+.page-content :is(.erp-empty-state,.module-empty,.fs-empty,.p-empty,.sp-empty,.course-empty,.branch-empty,.semester-empty-state,.section-empty,.department-no-results,.cm-empty){min-height:180px;box-sizing:border-box;padding:28px;color:var(--text-muted);text-align:center}
+@media(max-width:900px){.page-content{--page-gap:16px;--card-padding:15px}.page-content :is(.dashboard-kpis,.module-stats,.p-stats,.semester-stats,.section-stats,.branch-summary,.course-summary){grid-template-columns:repeat(2,minmax(0,1fr))}.page-content :is(.module-form,.fs-grid,.profile-edit-grid,.semester-form-grid,.section-form-grid){grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:620px){.page-content :is(.dashboard-kpis,.module-stats,.p-stats,.semester-stats,.section-stats,.branch-summary,.course-summary){grid-template-columns:1fr}.page-content :is(.module-form,.fs-grid,.profile-edit-grid,.semester-form-grid,.section-form-grid){grid-template-columns:1fr}.page-content :is(.erp-page-heading,.module-heading,.fs-header,.p-header,.sp-heading,.profile-heading,.management-page__heading,.cm-header,.semester-page-header,.section-page-header,.ay>header){align-items:stretch;flex-direction:column}.page-content :is(.erp-page-heading,.module-heading,.fs-header,.p-header,.sp-heading,.profile-heading,.management-page__heading,.cm-header,.semester-page-header,.section-page-header,.ay>header)>button{width:100%}}
+@media(prefers-reduced-motion:reduce){.page-content *{scroll-behavior:auto!important;transition-duration:.01ms!important;animation-duration:.01ms!important;animation-iteration-count:1!important}}
+
 /* Component styles load after the theme, so enforce directory alignment consistently. */
 .college-management .cm-table :is(th,td),.ay table :is(th,td),.course-management :is(.course-advanced-table,.cm-table) :is(th,td),.branch-management .branch-table :is(th,td),.department-management .department-table-wrap :is(th,td),.semester-management .semester-table :is(th,td),.section-management .section-table :is(th,td){text-align:center!important;vertical-align:middle!important}
 

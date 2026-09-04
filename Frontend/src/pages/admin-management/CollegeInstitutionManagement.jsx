@@ -543,7 +543,7 @@ export default function CollegeInstitutionManagement({ initialView = 'list' }) {
               </button>
             </header>
 
-            <FilterPanel active={Boolean(searchTerm || typeFilter || statusFilter)}><div className="cm-toolbar">
+            <FilterPanel active={Boolean(searchTerm || typeFilter || statusFilter)} onClear={() => { setSearchTerm(''); setTypeFilter(''); setStatusFilter(''); setCurrentPage(1); loadColleges('') }}><div className="cm-toolbar">
               <input
                 type="text"
                 className="cm-search"
