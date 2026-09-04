@@ -49,6 +49,9 @@ export const API_ENDPOINTS = Object.freeze({
     list: endpoint('/api/v1/courses'),
     detail: (id) => endpoint(`/api/v1/courses/${id}`),
   }),
+  departments: Object.freeze({
+    list: endpoint('/api/v1/departments'),
+  }),
   courseStructures: Object.freeze({
     create: endpoint('/api/v1/course-structures'),
     list: endpoint('/api/v1/course-structures'),
@@ -91,11 +94,15 @@ const readBody = async (response) => {
   try { return await response.json() } catch { return null }
 }
 
+const listResponse = (response) => Array.isArray(response?.data) ? response.data : Array.isArray(response?.data?.data) ? response.data.data : []
+
 const validationMessage = (body) => {
-  if (body?.message || body?.title) return body.message || body.title
-  const errors = body?.errors
-  if (!errors || typeof errors !== 'object') return ''
-  return Object.values(errors).flat().find((message) => typeof message === 'string') || ''
+  const errors = body?.errors || body?.data?.errors
+  if (errors && typeof errors === 'object') {
+    const messages = Object.entries(errors).flatMap(([field, value]) => (Array.isArray(value) ? value : [value]).filter((message) => typeof message === 'string').map((message) => field === '$' ? message : `${field}: ${message}`))
+    if (messages.length) return messages.join(' ')
+  }
+  return body?.message || body?.detail || body?.title || body?.data?.message || body?.data?.detail || body?.data?.title || ''
 }
 
 const refreshAccessToken = async () => {
@@ -103,7 +110,7 @@ const refreshAccessToken = async () => {
   if (!refreshToken) throw new AuthRequestError('Your session has expired. Please sign in again.', 401)
   const response = await fetch(API_ENDPOINTS.auth.refresh, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', 'ngrok-skip-browser-warning': 'true' },
     body: JSON.stringify({ refreshToken }),
   })
   const body = await readBody(response)
@@ -114,44 +121,32 @@ const refreshAccessToken = async () => {
   return body.data.accessToken
 }
 
-const clearInvalidSession = () => {
-  localStorage.removeItem('btech-authenticated')
-  localStorage.removeItem('btech-user-role')
-  localStorage.removeItem('btech-access-token')
-  localStorage.removeItem('btech-refresh-token')
-}
-
 const request = async (url, options = {}, retried = false) => {
   const token = localStorage.getItem('btech-access-token') || sessionStorage.getItem('btech-access-token') || localStorage.getItem('accessToken') || sessionStorage.getItem('accessToken') || localStorage.getItem('token') || sessionStorage.getItem('token')
   let response
   try {
     response = await fetch(url, {
       ...options,
-      headers: { ...options.headers, ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+      headers: { 'ngrok-skip-browser-warning': 'true', ...options.headers, ...(token ? { Authorization: `Bearer ${token}` } : {}) },
     })
   } catch {
     throw new Error('We’re having trouble connecting right now. Please try again shortly.')
   }
   if (response.status === 401 && !retried) {
-    try {
-      await refreshAccessToken()
-      return request(url, options, true)
-    } catch (error) {
-      // Keep the current UI session intact when an individual page request
-      // cannot refresh its API token. Protected navigation should not behave
-      // like an explicit sign-out; the requesting page can show the API error.
-      throw error
-    }
+    await refreshAccessToken()
+    return request(url, options, true)
   }
   const body = await readBody(response)
   if (!response.ok || body?.success === false) {
+    console.error('API request failed', { url, method: options.method || 'GET', status: response.status, response: body, requestBody: options.body })
     if (response.status >= 500) throw new Error('Something went wrong while completing your request. Please try again.')
     const fallback = {
-      400: 'Please check the submitted profile information.',
+      400: 'Please check the submitted information.',
       401: 'Your session has expired. Please sign in again.',
       403: "You don't have permission to update this profile.",
       404: 'Profile not found.',
       409: 'The email or mobile number is already in use.',
+      422: 'Some submitted values are invalid.',
       500: 'Something went wrong while completing your request. Please try again.',
     }[response.status] || 'The request could not be completed.'
     throw new Error(validationMessage(body) || fallback)
@@ -280,7 +275,7 @@ const academicYearPayload = (year) => ({
 export const academicYearApi = {
   getAll: async () => {
     const response = await request(API_ENDPOINTS.academicYears.list)
-    return Array.isArray(response?.data) ? response.data : Array.isArray(response?.data?.data) ? response.data.data : []
+    return listResponse(response)
   },
   getById: async (id) => {
     const response = await request(API_ENDPOINTS.academicYears.detail(id))
@@ -331,7 +326,7 @@ const branchPayload = (branch) => ({
 export const branchApi = {
   getAll: async () => {
     const response = await request(API_ENDPOINTS.branches.list)
-    return Array.isArray(response?.data) ? response.data : Array.isArray(response?.data?.data) ? response.data.data : []
+    return listResponse(response)
   },
   getByCourse: async (courseId) => {
     const response = await request(API_ENDPOINTS.branches.byCourse(courseId))
@@ -353,15 +348,15 @@ export const branchApi = {
 
 export const departmentApi = {
   getAll: async () => {
-    const response = await request(endpoint('/api/v1/departments'))
-    return Array.isArray(response?.data) ? response.data : []
+    const response = await request(API_ENDPOINTS.departments.list)
+    return listResponse(response)
   },
 }
 
 export const courseApi = {
   getAll: async () => {
     const response = await request(API_ENDPOINTS.courses.list)
-    return Array.isArray(response?.data) ? response.data : []
+    return listResponse(response)
   },
   getById: async (id) => (await request(API_ENDPOINTS.courses.detail(id)))?.data,
 }
@@ -379,11 +374,11 @@ const courseStructurePayload = (structure) => ({
 export const courseStructureApi = {
   getAll: async () => {
     const response = await request(API_ENDPOINTS.courseStructures.list)
-    return Array.isArray(response?.data) ? response.data : []
+    return listResponse(response)
   },
   getByCourse: async (courseId) => {
     const response = await request(API_ENDPOINTS.courseStructures.byCourse(courseId))
-    return Array.isArray(response?.data) ? response.data : []
+    return listResponse(response)
   },
   getById: async (id) => (await request(API_ENDPOINTS.courseStructures.detail(id)))?.data,
   create: async (structure) => (await request(API_ENDPOINTS.courseStructures.create, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(courseStructurePayload(structure)) }))?.data,
@@ -393,18 +388,18 @@ export const courseStructureApi = {
 export const sectionAssignmentApi = {
   list: async () => {
     const response = await request(API_ENDPOINTS.sectionAssignments.list)
-    return Array.isArray(response?.data) ? response.data : []
+    return listResponse(response)
   },
   assign: async (sectionId, assignment) => request(API_ENDPOINTS.sections.assignStudents(sectionId), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ studentIds: [Number(assignment.studentId)] }) }),
   remove: async (sectionId, assignmentId) => {
     await request(API_ENDPOINTS.sections.student(sectionId, assignmentId), { method: 'DELETE' })
   },
-  listBySection: async (sectionId) => (await request(API_ENDPOINTS.sections.students(sectionId)))?.data || [],
+  listBySection: async (sectionId) => listResponse(await request(API_ENDPOINTS.sections.students(sectionId))),
 }
 
 export const sectionAllocationApi = {
   getTeacher: async (sectionId) => (await request(API_ENDPOINTS.sections.classTeacher(sectionId)))?.data,
-  getTeacherCandidates: async (sectionId) => (await request(API_ENDPOINTS.sections.classTeacherCandidates(sectionId)))?.data || [],
+  getTeacherCandidates: async (sectionId) => listResponse(await request(API_ENDPOINTS.sections.classTeacherCandidates(sectionId))),
   assignTeacher: async (sectionId, employeeProfileId) => (await request(API_ENDPOINTS.sections.classTeacher(sectionId), { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ employeeProfileId: Number(employeeProfileId) }) }))?.data,
   removeTeacher: async (sectionId) => request(API_ENDPOINTS.sections.classTeacher(sectionId), { method: 'DELETE' }),
   getCapacity: async (sectionId) => (await request(API_ENDPOINTS.sections.capacity(sectionId)))?.data,
@@ -420,19 +415,37 @@ const sectionPayload = (section) => ({
   sectionType: section.type || section.sectionType || 'Regular',
 })
 
+const sectionUpdatePayload = (section) => ({
+  sectionCode: String(section.code || section.sectionCode || '').trim().toUpperCase(),
+  sectionName: String(section.name || section.sectionName || '').trim(),
+  capacity: Number(section.capacity),
+  facultyAdvisorEmployeeProfileId: section.facultyAdvisorEmployeeProfileId ? Number(section.facultyAdvisorEmployeeProfileId) : null,
+  room: String(section.room || '').trim() || null,
+  shift: section.shift || 'Morning',
+  sectionType: section.type || section.sectionType || 'Regular',
+})
+
 export const sectionApi = {
-  getAll: async () => (await request(API_ENDPOINTS.sections.list))?.data || [],
+  getAll: async () => listResponse(await request(API_ENDPOINTS.sections.list)),
   getById: async (id) => (await request(API_ENDPOINTS.sections.detail(id)))?.data,
   create: async (section) => {
-    const response = await request(API_ENDPOINTS.sections.create, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...sectionPayload(section), collegeId: Number(section.collegeId || 1), academicYearId: Number(section.academicYearId || 0), departmentId: Number(section.departmentId || 0), courseId: Number(section.courseId || 0), branchId: Number(section.branchId || 0), semesterId: Number(section.semesterId || 0) }) })
+    let academicYearId = Number(section.academicYearId || 0)
+    if (!academicYearId && section.academicYear) {
+      const yearRows = listResponse(await request(API_ENDPOINTS.academicYears.list))
+      const selectedYear = yearRows.find((year) => String(year.academicYearName ?? year.name ?? '').trim().toLowerCase() === String(section.academicYear).trim().toLowerCase())
+      academicYearId = Number(selectedYear?.academicYearId ?? selectedYear?.id ?? 0)
+    }
+    const ids = { collegeId: Number(section.collegeId), academicYearId, departmentId: Number(section.departmentId), courseId: Number(section.courseId), branchId: Number(section.branchId), semesterId: Number(section.semesterId) }
+    if (Object.values(ids).some((value) => !Number.isInteger(value) || value <= 0)) throw new Error('Select a valid college, academic year, department, course, branch, and semester.')
+    const response = await request(API_ENDPOINTS.sections.create, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...sectionPayload(section), ...ids }) })
     const id = response?.data?.sectionId ?? response?.sectionId
-    return id ? sectionApi.getById(id) : response?.data
+    return { ...section, ...(response?.data || {}), id: id || response?.data?.id || section.id }
   },
-  update: async (id, section) => { await request(API_ENDPOINTS.sections.update(id), { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(sectionPayload(section)) }); return sectionApi.getById(id) },
+  update: async (id, section) => { const response = await request(API_ENDPOINTS.sections.update(id), { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(sectionUpdatePayload(section)) }); return { ...section, ...(response?.data || {}), id } },
   remove: async (id) => request(API_ENDPOINTS.sections.remove(id), { method: 'DELETE' }),
   updateStatus: async (id, status) => request(API_ENDPOINTS.sections.status(id), { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status: status === 'Active' }) }),
-  search: async (params) => { const query = new URLSearchParams(Object.entries(params).filter(([, value]) => value !== '' && value != null)); return (await request(`${API_ENDPOINTS.sections.search}?${query}`))?.data || [] },
-  summary: async () => (await request(API_ENDPOINTS.sections.summary))?.data,
+  search: async (params) => { const query = new URLSearchParams(Object.entries(params).filter(([, value]) => value !== '' && value != null)); return listResponse(await request(`${API_ENDPOINTS.sections.search}?${query}`)) },
+  summary: async () => { const response = await request(API_ENDPOINTS.sections.summary); return response?.data?.data ?? response?.data ?? null },
   validateCapacity: async (sectionId, capacity) => (await request(`${API_ENDPOINTS.sections.validateCapacity}?sectionId=${sectionId}&capacity=${capacity}`))?.data,
 }
 

@@ -534,6 +534,7 @@ export default function CollegeInstitutionManagement({ initialView = 'list' }) {
             <header className="cm-header">
               <div>
                 <h1>College Management</h1>
+                <p>Manage colleges, institutional details, and academic configurations.</p>
               </div>
               <button type="button" className="cm-primary-btn" onClick={openAdd}>
                 <Plus aria-hidden="true" /> Add College
