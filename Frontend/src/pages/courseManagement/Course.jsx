@@ -310,14 +310,11 @@ function CourseDetails() {
   return <Page><Header title="B.Tech Course Details" text="Course configuration and associated B.Tech branches."><Link className="cm-button secondary" to="/courses"><FiArrowLeft /> Back</Link><Link className="cm-button" to={`/courses/${id}/edit`}><FiEdit2 /> Edit Course</Link></Header>
     <section className="course-detail-hero"><div><span className="cm-eyebrow">B.Tech Course</span><h2>{course.name}</h2><Badge value={course.status || 'Active'} /></div><strong>{course.code}</strong></section>
     <section className="cm-panel course-detail-grid">{[
-      ['Course ID', course.id],
       ['Course Name', course.name],
       ['Course Code', course.code],
       ['Short Name', course.shortName],
       ['Course Type', course.type],
-      ['College ID', course.collegeId],
       ['College', course.college],
-      ['Department ID', course.departmentId],
       ['Department', department?.name || course.department],
       ['Duration', `${course.durationValue || 4} ${course.durationUnit || 'Years'}`],
       ['Academic Pattern', course.academicSystem],
