@@ -5,6 +5,7 @@ import FilterPanel from '../../components/FilterPanel'
 import { academicYearApi, branchApi, courseApi } from '../../api/apiEndpoints'
 import { createSemester, getSemesterById, getSemesterSummary, getSemesters, searchSemesters, updateSemester } from '../../auth/collegeApi'
 import './SemesterManagement.css'
+import '../../styles/directory-search.css'
 
 const blank = { id: null, courseId: '', branchId: '', academicYearId: '', coursePeriod: '', yearNumber: 1, semesterNumber: 1, semesterName: 'Semester 1', startDate: '', endDate: '', status: 'Active' }
 const list = (value) => Array.isArray(value) ? value : []

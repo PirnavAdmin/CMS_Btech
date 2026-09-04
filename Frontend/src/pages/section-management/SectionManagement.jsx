@@ -5,6 +5,7 @@ import FilterPanel from '../../components/FilterPanel'
 import { academicYearApi, branchApi, courseApi, departmentApi, sectionAllocationApi, sectionApi, sectionAssignmentApi } from '../../api/apiEndpoints'
 import { searchSemesters } from '../../auth/collegeApi'
 import './SectionManagement.css'
+import '../../styles/directory-search.css'
 
 const SIZE = 5
 const empty = { name: '', code: '', course: '', courseId: '', departmentId: '', branch: '', branchId: '', semester: '', semesterId: '', academicYear: '', academicYearId: '', collegeId: '', capacity: 60, advisor: '', room: '', shift: 'Morning', type: '', status: '' }
@@ -52,7 +53,17 @@ export default function SectionManagement() {
   const semesters = uniq((formOpen ? formSemesterRows.map(item => item.name) : [...structureRows.map(item => item.name), ...sections.map(item => item.semester)])).sort((a, b) => a.localeCompare(b, undefined, { numeric: true }))
   const years = uniq(formOpen ? formYearRows.map(item => item.name) : [...yearRows.map(item => item.name), ...structureRows.map(item => item.academicYear), ...sections.map(item => item.academicYear)])
   const count = sectionId => assignments.filter(item => item.sectionId === sectionId).length
-  const summary = useMemo(() => ({ total: backendSummary?.totalSections ?? backendSummary?.total ?? sections.length, active: backendSummary?.activeSections ?? backendSummary?.active ?? sections.filter(item => item.status === 'Active').length, capacity: backendSummary?.totalCapacity ?? backendSummary?.capacity ?? sections.reduce((sum, item) => sum + Number(item.capacity || 0), 0), unassigned: backendSummary?.unassignedAdvisors ?? sections.filter(item => !item.advisor?.trim()).length }), [backendSummary, sections])
+  const summary = useMemo(() => ({ total: backendSummary?.totalSections ?? backendSummary?.total ?? sections.length, active: backendSummary?.activeSections ?? backendSummary?.active ?? sections.filter(item => item.status === 'Active').length, capacity: backendSummary?.totalCapacity ?? backendSummary?.capacity ?? sections.reduce((sum, item) => sum + Number(item.capacity || 0), 0), currentStudents: backendSummary?.currentStudents ?? backendSummary?.totalStudents ?? sections.reduce((sum, item) => sum + Math.max(Number(item.currentStrength || 0), count(item.id)), 0), unassigned: backendSummary?.unassignedAdvisors ?? sections.filter(item => !item.advisor?.trim()).length }), [backendSummary, sections, assignments])
+  useEffect(() => {
+    const stats = document.querySelector('.section-management .section-stats')
+    if (!stats) return undefined
+    const card = document.createElement('article')
+    card.className = 'section-stat-card section-current-students-card'
+    card.innerHTML = '<span class="cm-kpi-icon" aria-hidden="true">&#128100;</span><div><span>Current Students</span><strong></strong></div>'
+    card.querySelector('strong').textContent = summary.currentStudents.toLocaleString('en-IN')
+    stats.append(card)
+    return () => card.remove()
+  }, [summary.currentStudents])
   const filtered = useMemo(() => sections.filter(item => `${item.name} ${item.code} ${item.course} ${item.branch} ${item.semester} ${item.academicYear} ${item.advisor}`.toLowerCase().includes(filters.query.toLowerCase().trim()) && (!filters.course || item.course === filters.course) && (!filters.branch || item.branch === filters.branch) && (!filters.semester || item.semester === filters.semester) && (!filters.status || item.status === filters.status) && (!filters.academicYear || item.academicYear === filters.academicYear)), [sections, filters])
   const sorted = useMemo(() => [...filtered].sort((a, b) => { const left = sort.key === 'capacity' ? Number(a[sort.key]) : String(a[sort.key] || '').toLowerCase(), right = sort.key === 'capacity' ? Number(b[sort.key]) : String(b[sort.key] || '').toLowerCase(); return (left > right ? 1 : left < right ? -1 : 0) * (sort.direction === 'asc' ? 1 : -1) }), [filtered, sort]), pages = Math.max(1, Math.ceil(sorted.length / SIZE)), currentPage = Math.min(page, pages), visible = sorted.slice((currentPage - 1) * SIZE, currentPage * SIZE)
   const persistSections = next => setSections(next), persistAssignments = next => setAssignments(next)

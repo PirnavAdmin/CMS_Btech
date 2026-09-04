@@ -8,6 +8,7 @@ import { branchApi } from '../../api/apiEndpoints'
 import { normalize as normalizeBranch } from '../courseManagement/Branch'
 import { createDepartment, getColleges, getDepartmentById, getDepartmentsPaginated, searchDepartments, updateDepartment, updateDepartmentStatus } from '../../auth/collegeApi'
 import './DepartmentManagement.css'
+import '../../styles/directory-search.css'
 
 const empty = { id: null, name: '', code: '', collegeId: '', hodUserId: '', hodName: '', description: '', status: '' }
 const HOD_NAMES_KEY = 'btech-department-hod-names'
