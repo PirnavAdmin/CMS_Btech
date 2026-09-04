@@ -1,3 +1,5 @@
+import { getAccessToken, getAuthStorage, getRefreshToken, signOut } from '../auth/auth'
+
 const normalizeBaseUrl = (value = '') => value.trim().replace(/\/+$/, '')
 
 export const API_BASE_URL = import.meta.env.DEV
@@ -138,20 +140,44 @@ const validationMessage = (body) => {
   return body?.message || body?.detail || body?.title || body?.data?.message || body?.data?.detail || body?.data?.title || ''
 }
 
+let refreshRequestInFlight = null
+
 const refreshAccessToken = async () => {
-  const refreshToken = localStorage.getItem('btech-refresh-token') || sessionStorage.getItem('btech-refresh-token')
-  if (!refreshToken) throw new AuthRequestError('Your session has expired. Please sign in again.', 401)
-  const response = await fetch(API_ENDPOINTS.auth.refresh, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'ngrok-skip-browser-warning': 'true' },
-    body: JSON.stringify({ refreshToken }),
-  })
-  const body = await readBody(response)
-  if (!response.ok || !body?.data?.accessToken) throw new AuthRequestError(body?.message || 'Your session has expired. Please sign in again.', response.status)
-  const storage = localStorage.getItem('btech-authenticated') === 'true' ? localStorage : sessionStorage
-  storage.setItem('btech-access-token', body.data.accessToken)
-  storage.setItem('btech-refresh-token', body.data.refreshToken || refreshToken)
-  return body.data.accessToken
+  if (refreshRequestInFlight) return refreshRequestInFlight
+
+  const refreshToken = getRefreshToken()
+  if (!refreshToken) {
+    signOut()
+    if (typeof window !== 'undefined') window.location.replace('/login')
+    throw new AuthRequestError('Your session has expired. Please sign in again.', 401)
+  }
+
+  refreshRequestInFlight = (async () => {
+    const response = await fetch(API_ENDPOINTS.auth.refresh, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'ngrok-skip-browser-warning': 'true' },
+      body: JSON.stringify({ refreshToken }),
+    })
+
+    const body = await readBody(response)
+    if (!response.ok || !body?.data?.accessToken) {
+      signOut()
+      if (typeof window !== 'undefined') window.location.replace('/login')
+      throw new AuthRequestError(body?.message || 'Your session has expired. Please sign in again.', response.status || 401)
+    }
+
+    const storage = getAuthStorage()
+    storage.setItem('btech-access-token', body.data.accessToken)
+    if (body.data.refreshToken) storage.setItem('btech-refresh-token', body.data.refreshToken)
+
+    return body.data.accessToken
+  })()
+
+  try {
+    return await refreshRequestInFlight
+  } finally {
+    refreshRequestInFlight = null
+  }
 }
 
 const pendingGetRequests = new Map()
@@ -164,7 +190,7 @@ const request = async (url, options = {}, retried = false, bypassDedupe = false)
     pendingGetRequests.set(key, pending)
     return pending
   }
-  const token = localStorage.getItem('btech-access-token') || sessionStorage.getItem('btech-access-token') || localStorage.getItem('accessToken') || sessionStorage.getItem('accessToken') || localStorage.getItem('token') || sessionStorage.getItem('token')
+  const token = getAccessToken()
   let response
   try {
     response = await fetch(url, {
@@ -174,7 +200,7 @@ const request = async (url, options = {}, retried = false, bypassDedupe = false)
   } catch {
     throw new Error('We’re having trouble connecting right now. Please try again shortly.')
   }
-  if (response.status === 401 && !retried) {
+  if (response.status === 401 && !retried && url !== API_ENDPOINTS.auth.refresh) {
     await refreshAccessToken()
     return request(url, options, true, true)
   }
@@ -205,14 +231,14 @@ const withQuery = (url, params = {}) => {
   return query.size ? `${url}?${query}` : url
 }
 const dataResponse = (response) => response?.data?.data ?? response?.data ?? response ?? null
-const listData = (response) => Array.isArray(dataResponse(response)) ? dataResponse(response) : []
+const listData = (response) => listResponse(response)
 
 const blobRequest = async (url, options = {}, retried = false) => {
-  const token = localStorage.getItem('btech-access-token') || sessionStorage.getItem('btech-access-token') || localStorage.getItem('accessToken') || sessionStorage.getItem('accessToken') || localStorage.getItem('token') || sessionStorage.getItem('token')
+  const token = getAccessToken()
   let response
   try { response = await fetch(url, { ...options, headers: { 'ngrok-skip-browser-warning': 'true', ...options.headers, ...(token ? { Authorization: `Bearer ${token}` } : {}) } }) }
   catch { throw new Error('We’re having trouble connecting right now. Please try again shortly.') }
-  if (response.status === 401 && !retried) { await refreshAccessToken(); return blobRequest(url, options, true) }
+  if (response.status === 401 && !retried && url !== API_ENDPOINTS.auth.refresh) { await refreshAccessToken(); return blobRequest(url, options, true) }
   if (!response.ok) { const body = await readBody(response); throw new Error(validationMessage(body) || 'The document request could not be completed.') }
   return { blob: await response.blob(), contentDisposition: response.headers.get('content-disposition') || '', contentType: response.headers.get('content-type') || '' }
 }
@@ -584,6 +610,7 @@ export const studentPreviousEducationApi = {
 }
 export const studentFeeApi = {
   getSummary: async (id) => normalizeRecord(await request(API_ENDPOINTS.studentAdmissions.feeSummary(requiredId(id, 'Admission ID')))),
+  getStructure: async (id) => normalizeRecord(await request(API_ENDPOINTS.studentAdmissions.feeStructure(requiredId(id, 'Admission ID')))),
   updateStructure: async (id, payload) => normalizeRecord(await request(API_ENDPOINTS.studentAdmissions.feeStructure(requiredId(id, 'Admission ID')), { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) })),
 }
 export const studentApi = {
@@ -622,7 +649,8 @@ export const studentPromotionApi = {
 export async function lookupIndianPincode(pincode) {
   let response
   try {
-    response = await fetch(`https://api.postalpincode.in/pincode/${encodeURIComponent(pincode)}`)
+    const base = import.meta.env.DEV ? '/postal-lookup' : 'https://api.postalpincode.in'
+    response = await fetch(`${base}/pincode/${encodeURIComponent(pincode)}`)
   } catch {
     throw new Error('PIN-code lookup is unavailable. Enter the address manually.')
   }
@@ -631,7 +659,7 @@ export async function lookupIndianPincode(pincode) {
   const offices = result?.PostOffice
   if (result?.Status !== 'Success' || !offices?.length) throw new Error('No Indian postal location was found for this PIN code.')
   const primary = offices[0]
-  return { city: primary.Block || primary.Name || '', district: primary.District || '', state: primary.State || '' }
+  return { town: primary.Name || '', city: primary.Block || primary.District || primary.Name || '', district: primary.District || '', state: primary.State || '' }
 }
 
 export default API_ENDPOINTS

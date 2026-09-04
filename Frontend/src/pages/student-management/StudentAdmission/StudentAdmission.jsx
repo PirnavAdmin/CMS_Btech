@@ -7,7 +7,7 @@ import {
 } from 'react-icons/fi'
 import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import DashboardLayout from '../../../layouts/DashboardLayout'
-import { studentAdmissionApi, studentAcademicDetailsApi, studentAdmissionStatusApi, studentFeeApi, studentPreviousEducationApi } from '../../../api/apiEndpoints'
+import { lookupIndianPincode, studentAdmissionApi, studentAcademicDetailsApi, studentAdmissionStatusApi, studentDocumentApi, studentFeeApi, studentParentApi, studentPreviousEducationApi } from '../../../api/apiEndpoints'
 import { componentTotals, matchesStructure, readStructures } from '../../fees/feeStructureService'
 import './StudentAdmission.css'
 import './AdmissionFixes.css'
@@ -74,7 +74,23 @@ const merge = row => {
     fees: { ...base.fees, ...row.fees }, documents: { ...base.documents, ...row.documents, otherCertificates: Array.isArray(row.documents?.otherCertificates) ? row.documents.otherCertificates : [] }, activity: Array.isArray(row.activity) ? row.activity : base.activity,
   }
 }
-const admissionFromApi = row => merge({ ...row, id: row.admissionId ?? row.id, application: { ...(row.application || {}), registrationNumber: row.registrationNumber ?? row.application?.registrationNumber, admissionNumber: row.admissionNumber ?? row.application?.admissionNumber }, personal: row.personal ?? row.personalInformation ?? row, contact: row.contact ?? row.contactInformation, academic: row.academic ?? row.academicDetails, previousEducation: row.previousEducation, admission: row.admission, fees: row.fees ?? row.feeSummary, documents: row.documents })
+const admissionFromApi = row => merge({ ...row, id: row.admissionId ?? row.id, status: String(row.status ?? 'DRAFT').trim().replaceAll(' ', '_').toUpperCase(), application: { ...(row.application || {}), registrationNumber: row.registrationNumber ?? row.application?.registrationNumber, admissionNumber: row.admissionNumber ?? row.application?.admissionNumber }, personal: row.personal ?? row.personalInformation ?? row, contact: row.contact ?? row.contactInformation, academic: row.academic ?? row.academicDetails, previousEducation: row.previousEducation, admission: row.admission, fees: row.fees ?? row.feeSummary, documents: row.documents })
+const documentsFromApi = rows => {
+  const mapped = { ...Object.fromEntries(DOCUMENTS.map(([key]) => [key, null])), otherCertificates: [] }
+  for (const row of Array.isArray(rows) ? rows : []) {
+    const type = String(row.documentType ?? row.type ?? '').replace(/[^a-z0-9]/gi, '').toLowerCase()
+    const key = DOCUMENTS.find(([candidate, label]) => [candidate, label].some(value => String(value).replace(/[^a-z0-9]/gi, '').toLowerCase() === type))?.[0]
+    const document = { ...row, id: row.documentId ?? row.id, name: row.fileName ?? row.name ?? row.originalFileName, uploadedAt: row.uploadedAt ?? row.createdAt, uploaded: true }
+    if (key) mapped[key] = document
+    else mapped.otherCertificates.push(document)
+  }
+  return mapped
+}
+const idsFromApi = (row = {}, fallbackAdmissionId = null) => ({
+  admissionId: row.admissionId ?? row.studentAdmissionId ?? row.admission?.admissionId ?? row.id ?? fallbackAdmissionId,
+  studentId: row.studentId ?? row.student?.studentId ?? row.student?.id ?? row.studentDetails?.studentId ?? row.personalInformation?.studentId ?? null,
+  academicId: row.academicId ?? row.academicInformationId ?? row.academicInformation?.academicId ?? row.academicDetails?.academicId ?? null,
+})
 const read = (object, path) => path.split('.').reduce((value, key) => value?.[key], object)
 const setPath = (object, path, value) => { const clone = structuredClone(object); const keys = path.split('.'); let cursor = clone; keys.slice(0, -1).forEach(key => { cursor = cursor[key] }); cursor[keys.at(-1)] = value; return clone }
 const text = value => String(value ?? '').trim()
@@ -101,7 +117,35 @@ const applicableLocalStructure = data => {
     && (item.feePeriod === 'Per Semester' ? feeScopeValue(item.semesterName) === feeScopeValue(data.academic.semester) : feeScopeValue(item.yearOfStudy) === feeScopeValue(data.academic.yearOfStudy))
     && (!item.effectiveFrom || item.effectiveFrom <= today) && (!item.effectiveTo || item.effectiveTo >= today))
 }
-const hasFeeSummary = summary => Boolean(summary && (summary.feeStructureId || summary.structureId || summary.components?.length || summary.feeComponents?.length || [summary.totalFee,summary.netPayable,summary.totalPayable].some(value => value !== undefined && value !== null && value !== '')))
+const normalizeFeeSummary = response => {
+  if (!response || typeof response !== 'object') return {}
+  const nested = response.feeSummary ?? response.summary ?? response.feeDetails ?? response.feeStructure ?? {}
+  const summary = { ...(typeof nested === 'object' ? nested : {}), ...response }
+  const components = summary.components ?? summary.feeComponents ?? summary.feeBreakdown ?? summary.breakdown ?? summary.feeItems ?? summary.items ?? []
+  return {
+    ...summary,
+    feeStructureId: summary.feeStructureId ?? summary.structureId ?? summary.feeStructure?.feeStructureId ?? summary.feeStructure?.id,
+    structureId: summary.structureId ?? summary.feeStructureId ?? summary.feeStructure?.id,
+    components: Array.isArray(components) ? components : [],
+    tuitionFee: summary.tuitionFee ?? summary.tuitionAmount ?? summary.academicFee,
+    admissionFee: summary.admissionFee ?? summary.admissionAmount ?? summary.registrationFee,
+    hostelFee: summary.hostelFee ?? summary.hostelAmount,
+    transportFee: summary.transportFee ?? summary.transportAmount,
+    scholarshipAmount: summary.scholarshipAmount ?? summary.discountAmount ?? summary.concessionAmount,
+    totalFee: summary.totalFee ?? summary.totalAmount ?? summary.grandTotal ?? summary.netPayable ?? summary.totalPayable ?? summary.netAmount ?? summary.payableAmount,
+  }
+}
+const hasFeeSummary = response => {
+  const summary = normalizeFeeSummary(response)
+  const componentAmount = summary.components.reduce((total, item) => total + Number(item.amount ?? item.feeAmount ?? item.value ?? 0), 0)
+  const summaryAmount = [summary.tuitionFee, summary.admissionFee, summary.totalFee].reduce((total, value) => total + Number(value || 0), 0)
+  return componentAmount > 0 || summaryAmount > 0
+}
+const mergeFeeResponses = (summaryResponse, structureResponse) => {
+  const summary = normalizeFeeSummary(summaryResponse)
+  const structure = normalizeFeeSummary(structureResponse)
+  return normalizeFeeSummary({ ...structure, ...summary, components: summary.components.length ? summary.components : structure.components, feeComponents: summary.feeComponents?.length ? summary.feeComponents : structure.feeComponents })
+}
 const localFeeSummary = data => {
   const structure = applicableLocalStructure(data)
   if (!structure) return null
@@ -219,8 +263,8 @@ function PhotoUpload({ data, update, notify }) {
   return <div className="sa-photo-upload"><div className="sa-photo-preview">{data.personal.photo ? <img src={data.personal.photo} alt="Student live preview" /> : initials || <FiUser />}</div><div><strong>Student Photo</strong><span>JPG, PNG or WebP · Maximum 1 MB</span><label className="sa-photo-button"><FiCamera />{data.personal.photo ? 'Change Photo' : 'Upload Photo'}<input type="file" accept="image/jpeg,image/png,image/webp" onChange={upload} /></label>{data.personal.photo && <button type="button" className="sa-photo-remove" onClick={() => update('personal.photo', '')}><FiTrash2 /> Remove</button>}</div></div>
 }
 function DocumentsUpload({ data, update, errors, notify }) {
-  const upload = (key, event) => { const file = event.target.files?.[0]; event.target.value = ''; if (!file) return; if (!['application/pdf','image/jpeg','image/png'].includes(file.type)) return notify('Only PDF, JPG and PNG documents are allowed.', 'error'); if (file.size > 500 * 1024) return notify('Each document must be 500 KB or smaller.', 'error'); const reader = new FileReader(); reader.onload = () => update(`documents.${key}`, { name: file.name, type: file.type, size: file.size, data: reader.result, uploadedAt: new Date().toISOString() }); reader.onerror = () => notify('Unable to read the selected document.', 'error'); reader.readAsDataURL(file) }
-  const uploadOthers = async event => { const files = [...(event.target.files || [])]; event.target.value = ''; const valid = files.filter(file => { if (!['application/pdf','image/jpeg','image/png'].includes(file.type)) { notify(`${file.name}: only PDF, JPG and PNG files are allowed.`, 'error'); return false } if (file.size > 500 * 1024) { notify(`${file.name}: file must be 500 KB or smaller.`, 'error'); return false } return true }); const uploaded = await Promise.all(valid.map(file => new Promise((resolve,reject) => { const reader = new FileReader(); reader.onload = () => resolve({ id: crypto.randomUUID(), name: file.name, type: file.type, size: file.size, data: reader.result, uploadedAt: new Date().toISOString() }); reader.onerror = reject; reader.readAsDataURL(file) }))).catch(() => { notify('Unable to read one or more certificates.', 'error'); return [] }); if (uploaded.length) update('documents.otherCertificates', [...(data.documents.otherCertificates || []), ...uploaded]) }
+  const upload = (key, event) => { const file = event.target.files?.[0]; event.target.value = ''; if (!file) return; if (!['application/pdf','image/jpeg','image/png'].includes(file.type)) return notify('Only PDF, JPG and PNG documents are allowed.', 'error'); if (file.size > 500 * 1024) return notify('Each document must be 500 KB or smaller.', 'error'); update(`documents.${key}`, { name: file.name, type: file.type, size: file.size, file, uploadedAt: new Date().toISOString() }) }
+  const uploadOthers = event => { const files = [...(event.target.files || [])]; event.target.value = ''; const valid = files.filter(file => { if (!['application/pdf','image/jpeg','image/png'].includes(file.type)) { notify(`${file.name}: only PDF, JPG and PNG files are allowed.`, 'error'); return false } if (file.size > 500 * 1024) { notify(`${file.name}: file must be 500 KB or smaller.`, 'error'); return false } return true }); if (valid.length) update('documents.otherCertificates', [...(data.documents.otherCertificates || []), ...valid.map(file => ({ id: crypto.randomUUID(), name: file.name, type: file.type, size: file.size, file, uploadedAt: new Date().toISOString() }))]) }
   const others = data.documents.otherCertificates || []
   return <section className="sa-documents"><header><div><h2>Supporting Documents</h2><p>Upload clear, readable documents. PDF, JPG or PNG · Maximum 500 KB each.</p></div><span>{DOCUMENTS.filter(([key]) => data.documents?.[key]).length}/{DOCUMENTS.length} uploaded</span></header><div className="sa-document-grid">{DOCUMENTS.map(([key,label,required]) => { const document = data.documents?.[key], mandatory = required || data.admission.scholarship === 'Yes'; return <article className={`${document ? 'uploaded' : ''} ${errors[`documents.${key}`] ? 'invalid' : ''}`} key={key}><div className="sa-document-icon">{document ? <FiCheckCircle /> : <FiFileText />}</div><div className="sa-document-copy"><strong>{label}{mandatory && <b> *</b>}</strong>{document ? <><span title={document.name}>{document.name}</span><small>{Math.ceil(document.size / 1024)} KB · Uploaded</small></> : <span>{mandatory ? 'Required document' : 'Optional document'}</span>}{errors[`documents.${key}`] && <small className="error">{errors[`documents.${key}`]}</small>}</div><div className="sa-document-actions">{document?.data && <a href={document.data} target="_blank" rel="noreferrer">Preview</a>}<label><FiUploadCloud /> {document ? 'Replace' : 'Upload'}<input type="file" accept="application/pdf,image/jpeg,image/png" onChange={event => upload(key,event)} /></label>{document && <button type="button" onClick={() => update(`documents.${key}`, null)} aria-label={`Remove ${label}`}><FiTrash2 /></button>}</div></article>})}</div><section className="sa-other-certificates"><header><div><h3>Other Certificates</h3><p>Optional — upload any additional certificates relevant to admission.</p></div><label><FiUploadCloud /> Add Certificates<input type="file" multiple accept="application/pdf,image/jpeg,image/png" onChange={uploadOthers} /></label></header>{others.length ? <div>{others.map(document => <article key={document.id}><FiFileText /><span><strong title={document.name}>{document.name}</strong><small>{Math.ceil(document.size / 1024)} KB</small></span><a href={document.data} target="_blank" rel="noreferrer">Preview</a><button type="button" onClick={() => update('documents.otherCertificates', others.filter(item => item.id !== document.id))} aria-label={`Remove ${document.name}`}><FiTrash2 /></button></article>)}</div> : <p className="sa-other-empty">No additional certificates uploaded.</p>}</section></section>
 }
@@ -261,12 +305,12 @@ function AadhaarVerification({ data, update, error, notify }) { const verified=i
 
 function AdmissionForm() {
   const { id } = useParams(); const navigate = useNavigate(); const [data, setData] = useState(empty); const [recordIds, setRecordIds] = useState({ admissionId: id || null, studentId: null, academicId: null })
-  const [step, setStep] = useState(0); const [errors, setErrors] = useState({}); const [declared, setDeclared] = useState(false); const [toast, setToast] = useState(null); const [pinStatus, setPinStatus] = useState({}); const [confirmSubmit, setConfirmSubmit] = useState(false); const [submitting, setSubmitting] = useState(false); const [feeState, setFeeState] = useState({ loading: false, loaded: false, error: '' })
+  const [step, setStep] = useState(0); const [errors, setErrors] = useState({}); const [declared, setDeclared] = useState(false); const [toast, setToast] = useState(null); const [pinStatus, setPinStatus] = useState({}); const [confirmSubmit, setConfirmSubmit] = useState(false); const [submitting, setSubmitting] = useState(false); const [savingStep, setSavingStep] = useState(false); const [feeState, setFeeState] = useState({ loading: false, loaded: false, error: '' })
   const toastTimer = useRef(null)
   const dataRef = useRef(data)
   useEffect(() => { dataRef.current = data }, [data])
   const notify = (message, tone = 'success') => { window.clearTimeout(toastTimer.current); setToast({ message, tone }); toastTimer.current = window.setTimeout(() => setToast(null), 2600) }
-  useEffect(() => { if (step !== 6 || !recordIds.admissionId) return; let active = true; setFeeState({ loading: true, loaded: false, error: '' }); studentFeeApi.getSummary(recordIds.admissionId).then(summary => { if (!active) return; if (!hasFeeSummary(summary)) throw new Error('The fee-summary API returned no applicable structure.'); setData(current => ({ ...current, fees: { ...current.fees, ...summary, structureId: summary.feeStructureId ?? summary.structureId ?? current.fees.structureId, tuitionFee: summary.tuitionFee ?? summary.academicFee ?? current.fees.tuitionFee, admissionFee: summary.admissionFee ?? current.fees.admissionFee, hostelFee: summary.hostelFee ?? current.fees.hostelFee, transportFee: summary.transportFee ?? current.fees.transportFee, scholarshipAmount: summary.scholarshipAmount ?? summary.discountAmount ?? current.fees.scholarshipAmount, totalFee: summary.totalFee ?? summary.netPayable ?? summary.totalPayable ?? current.fees.totalFee, source: 'backend' } })); setFeeState({ loading: false, loaded: true, error: '' }) }).catch(error => { if (!active) return; const fallback = localFeeSummary(dataRef.current); if (fallback) { setData(current => ({ ...current, fees: { ...current.fees, ...fallback } })); setFeeState({ loading: false, loaded: true, error: '' }); return } setFeeState({ loading: false, loaded: false, error: `${error.message || 'Unable to load fee details.'} Check that an Active fee structure matches the academic year, course, branch, semester, admission type, quota, and student category.` }) }); return () => { active = false } }, [step, recordIds.admissionId])
+  useEffect(() => { if (step !== 6 || !recordIds.admissionId) return; let active = true; setFeeState({ loading: true, loaded: false, error: '' }); Promise.allSettled([studentFeeApi.getSummary(recordIds.admissionId), studentFeeApi.getStructure(recordIds.admissionId)]).then(results => { if (!active) return; const [summaryResult, structureResult] = results; const summaryResponse = summaryResult.status === 'fulfilled' ? summaryResult.value : null; const structureResponse = structureResult.status === 'fulfilled' ? structureResult.value : null; if (!summaryResponse && !structureResponse) throw summaryResult.reason || structureResult.reason || new Error('Unable to load fee details.'); const summary = mergeFeeResponses(summaryResponse, structureResponse); if (!hasFeeSummary(summary)) throw new Error('The backend returned an empty fee summary (all amounts are zero).'); setData(current => ({ ...current, fees: { ...current.fees, ...summary, structureId: summary.feeStructureId ?? summary.structureId ?? current.fees.structureId, tuitionFee: summary.tuitionFee ?? current.fees.tuitionFee, admissionFee: summary.admissionFee ?? current.fees.admissionFee, hostelFee: summary.hostelFee ?? current.fees.hostelFee, transportFee: summary.transportFee ?? current.fees.transportFee, scholarshipAmount: summary.scholarshipAmount ?? current.fees.scholarshipAmount, totalFee: summary.totalFee ?? current.fees.totalFee, source: 'backend' } })); setFeeState({ loading: false, loaded: true, error: '' }) }).catch(error => { if (!active) return; setFeeState({ loading: false, loaded: false, error: `${error.message || 'Unable to load fee details.'} Assign an Active fee structure for this academic year, course, branch, semester, admission type, quota, and student category.` }) }); return () => { active = false } }, [step, recordIds.admissionId])
   useEffect(() => () => window.clearTimeout(toastTimer.current), [])
   useEffect(() => { queueMicrotask(()=>setData(current => { const allowed=QUOTAS_BY_ADMISSION[current.academic.admissionType]||[]; if(!current.academic.quota||allowed.includes(current.academic.quota))return current; return {...current,academic:{...current.academic,quota:'',quotaOther:''},fees:{...current.fees,structureId:''}} })) }, [data.academic.admissionType])
   useEffect(() => { queueMicrotask(()=>setData(current => { const allowed=STREAMS_BY_QUALIFICATION[current.previousEducation.intermediate.qualification]||[]; if(!current.previousEducation.intermediate.stream||allowed.includes(current.previousEducation.intermediate.stream))return current; return {...current,previousEducation:{...current.previousEducation,intermediate:{...current.previousEducation.intermediate,stream:''}}} })) }, [data.previousEducation.intermediate.qualification])
@@ -274,13 +318,43 @@ function AdmissionForm() {
   useEffect(() => { const n=Number(String(data.academic.semester).match(/\d+/)?.[0]||0), year=n?`${Math.ceil(n/2)}${['th','st','nd','rd'][Math.ceil(n/2)]||'th'} Year`:''; if(data.academic.yearOfStudy!==year)queueMicrotask(()=>setData(current=>({...current,academic:{...current.academic,yearOfStudy:year}}))) }, [data.academic.semester,data.academic.yearOfStudy])
   useEffect(() => { queueMicrotask(()=>setErrors(current => Object.keys(current).length ? validate(data) : current)) }, [data])
   useEffect(() => { queueMicrotask(()=>setData(current => { let next=current; for(const key of ['tenth','intermediate']){const item=current.previousEducation[key],max=item.scoreType==='CGPA'?10:100;if(text(item.score)&&Number(item.score)>max)next=setPath(next,`previousEducation.${key}.score`,'')}return next })) }, [data.previousEducation.tenth.scoreType,data.previousEducation.intermediate.scoreType])
-  useEffect(() => { if (!id) return; let active = true; studentAdmissionApi.getById(id).then(row => { if (active) { setData(admissionFromApi(row)); setRecordIds({ admissionId: row.admissionId ?? row.id ?? id, studentId: row.studentId ?? null, academicId: row.academicId ?? null }) } }).catch(error => notify(error.message || 'Unable to load this admission.', 'error')); return () => { active = false } }, [id])
+  useEffect(() => { if (!id) return; let active = true; studentAdmissionApi.getById(id).then(async row => {
+    const loadedIds = idsFromApi(row, id), admissionId = loadedIds.admissionId, studentId = loadedIds.studentId
+    const sections = await Promise.allSettled([studentAcademicDetailsApi.get(admissionId), studentPreviousEducationApi.get(admissionId), studentId ? studentParentApi.get(studentId) : Promise.resolve(null), studentId ? studentDocumentApi.getAll(studentId) : Promise.resolve([]), studentFeeApi.getSummary(admissionId), studentFeeApi.getStructure(admissionId)])
+    if (!active) return
+    const feeSummary = mergeFeeResponses(sections[4].status === 'fulfilled' ? sections[4].value : row.feeSummary, sections[5].status === 'fulfilled' ? sections[5].value : null)
+    setData(admissionFromApi({ ...row, academicDetails: sections[0].status === 'fulfilled' ? sections[0].value : row.academicDetails, previousEducation: sections[1].status === 'fulfilled' ? sections[1].value : row.previousEducation, parents: sections[2].status === 'fulfilled' ? sections[2].value : row.parents, documents: sections[3].status === 'fulfilled' ? documentsFromApi(sections[3].value) : row.documents, feeSummary: hasFeeSummary(feeSummary) ? feeSummary : row.feeSummary }))
+    setRecordIds(loadedIds)
+  }).catch(error => notify(error.message || 'Unable to load this admission.', 'error')); return () => { active = false } }, [id])
   const update = (path, value) => { setData(current => { let next = setPath(current, path, value); if (path === 'contact.sameAddress' && value) next.contact.permanentAddress = { ...next.contact.currentAddress }; if (path.startsWith('contact.currentAddress.') && next.contact.sameAddress) next.contact.permanentAddress = { ...next.contact.currentAddress }; if (path === 'academic.course') Object.assign(next.academic, { department: '', branch: '' }); if (path === 'academic.department') next.academic.branch = ''; if (path === 'academic.quota' && value !== 'Other') next.academic.quotaOther = ''; if (path === 'parents.guardian.relationship' && value !== 'Other') next.parents.guardian.relationshipOther = ''; if (path === 'admission.scholarship' && value === 'No') { next.admission.scholarshipType = ''; next.fees.scholarshipAmount = '' } if (path === 'admission.hostel' && value === 'No') { next.admission.hostelPreference = ''; next.fees.hostelFee = '' } if (path === 'admission.transport' && value === 'No') { next.admission.transportRoute = ''; next.fees.transportFee = '' } const total = ['tuitionFee','admissionFee','hostelFee','transportFee'].reduce((sum,key) => sum + Number(next.fees[key] || 0), 0) - Number(next.fees.scholarshipAmount || 0); next.fees.totalFee = String(Math.max(0,total)); return next }); setErrors(current => ({ ...current, [path]: '' })) }
   const currentPincode = data.contact.currentAddress.pincode, permanentPincode = data.contact.permanentAddress.pincode, sameAddress = data.contact.sameAddress
   useEffect(() => {
     const targets = [['contact.currentAddress','current',currentPincode], ...(!sameAddress ? [['contact.permanentAddress','permanent',permanentPincode]] : [])]
-    const controllers = targets.map(([prefix,key,pin]) => { if (!/^\d{6}$/.test(pin)) return null; const controller = new AbortController(); queueMicrotask(() => setPinStatus(current => ({ ...current, [key]: 'Fetching location...' }))); fetch(`https://api.postalpincode.in/pincode/${pin}`, { signal: controller.signal }).then(response => response.json()).then(([result]) => { const office = result?.PostOffice?.[0]; if (!office) throw new Error('Not found'); setData(current => { let next = setPath(current, `${prefix}.town`, office.Name || ''); next = setPath(next, `${prefix}.city`, office.Block || office.District || ''); next = setPath(next, `${prefix}.district`, office.District || ''); next = setPath(next, `${prefix}.state`, office.State || ''); next = setPath(next, `${prefix}.country`, office.Country || 'India'); if (prefix.endsWith('currentAddress') && next.contact.sameAddress) next.contact.permanentAddress = { ...next.contact.currentAddress }; return next }); setPinStatus(current => ({ ...current, [key]: 'Address details filled' })) }).catch(error => { if (error.name !== 'AbortError') setPinStatus(current => ({ ...current, [key]: 'PIN code not found — enter manually' })) }); return controller })
-    return () => controllers.forEach(controller => controller?.abort())
+    let active = true
+    const timer = window.setTimeout(async () => {
+      await Promise.all(targets.map(async ([prefix, key, pin]) => {
+        if (!/^\d{6}$/.test(pin)) { setPinStatus(current => ({ ...current, [key]: '' })); return }
+        setPinStatus(current => ({ ...current, [key]: 'Fetching location...' }))
+        try {
+          const location = await lookupIndianPincode(pin)
+          if (!active) return
+          setData(current => {
+            if (read(current, `${prefix}.pincode`) !== pin) return current
+            let next = setPath(current, `${prefix}.town`, location.town || location.city || '')
+            next = setPath(next, `${prefix}.city`, location.city || '')
+            next = setPath(next, `${prefix}.district`, location.district || '')
+            next = setPath(next, `${prefix}.state`, location.state || '')
+            next = setPath(next, `${prefix}.country`, 'India')
+            if (prefix === 'contact.currentAddress' && next.contact.sameAddress) next.contact.permanentAddress = { ...next.contact.currentAddress }
+            return next
+          })
+          setPinStatus(current => ({ ...current, [key]: 'Address details filled' }))
+        } catch (error) {
+          if (active) setPinStatus(current => ({ ...current, [key]: error.message || 'PIN code not found — enter manually' }))
+        }
+      }))
+    }, 350)
+    return () => { active = false; window.clearTimeout(timer) }
   }, [currentPincode, permanentPincode, sameAddress])
   const allErrors = validate(data), course = ACADEMICS[data.academic.course] || {}
   const field = (path,label,options,type,readOnly,placeholder,disabled) => <Field {...{ data,path,label,options,type,readOnly,placeholder,disabled,update }} error={errors[path]} />
@@ -296,7 +370,52 @@ function AdmissionForm() {
     <div key="review" className="sa-preview"><PreviewHeader data={data} /><FullReview data={data} edit={setStep} /></div>,
   ]
   const focusFirst = () => window.setTimeout(() => document.querySelector('.student-admission .sa-field.invalid :is(input,select)')?.focus({ preventScroll: false }), 0)
-  const nextStep = async () => { const prefixes = [['personal.'],['contact.'],['parents.'],['academic.'],['previousEducation.'],['application.','admission.'],['fees.'],['documents.'],[]][step]; const relevant = Object.fromEntries(Object.entries(allErrors).filter(([path]) => prefixes.some(prefix => path.startsWith(prefix)))); setErrors(relevant); if (step === 6 && (!feeState.loaded || feeState.error)) { notify('Backend fee details must load successfully before continuing.', 'error'); return } if (Object.keys(relevant).length) { notify('Correct the highlighted fields before continuing.', 'error'); focusFirst(); return } try { let result; if (!recordIds.admissionId) { result = await studentAdmissionApi.create(data); setRecordIds({ admissionId: result.admissionId ?? result.id, studentId: result.studentId ?? result.student?.studentId ?? null, academicId: result.academicId ?? null }) } else if (step <= 2) result = await studentAdmissionApi.update(recordIds.admissionId, data); else if (step === 3) result = await studentAcademicDetailsApi.update(recordIds.admissionId, data); else if (step === 4) result = await studentPreviousEducationApi.update(recordIds.admissionId, data); if (result?.studentId) setRecordIds(current => ({ ...current, studentId: result.studentId })); setStep(current => current + 1); window.scrollTo({ top: 0, behavior: 'smooth' }) } catch (error) { notify(error.message || 'Unable to save this step.', 'error') } }
+  const nextStep = async () => {
+    if (savingStep) return
+    const prefixes = [['personal.'],['contact.'],['parents.'],['academic.'],['previousEducation.'],['application.','admission.'],['fees.'],['documents.'],[]][step]
+    const relevant = Object.fromEntries(Object.entries(allErrors).filter(([path]) => prefixes.some(prefix => path.startsWith(prefix))))
+    setErrors(relevant)
+    if (step === 6 && (!feeState.loaded || feeState.error)) { notify('Backend fee details must load successfully before continuing.', 'error'); return }
+    if (Object.keys(relevant).length) { notify('Correct the highlighted fields before continuing.', 'error'); focusFirst(); return }
+    setSavingStep(true)
+    try {
+      let result, ids = recordIds
+      if (!ids.admissionId) {
+        result = await studentAdmissionApi.create(data)
+        ids = idsFromApi(result)
+        if (!ids.admissionId) throw new Error('The admission was created but no admission ID was returned.')
+        setRecordIds(ids)
+        navigate(`/student-management/admissions/${ids.admissionId}/edit`, { replace: true })
+      } else if ([0, 1, 5].includes(step)) result = await studentAdmissionApi.update(ids.admissionId, data)
+      else if (step === 2) {
+        result = ids.studentId
+          ? await studentParentApi.update(ids.studentId, data)
+          : await studentAdmissionApi.update(ids.admissionId, data)
+      } else if (step === 3) result = await studentAcademicDetailsApi.update(ids.admissionId, data)
+      else if (step === 4) result = await studentPreviousEducationApi.update(ids.admissionId, data)
+      else if (step === 6) {
+        const feeStructureId = data.fees.feeStructureId ?? data.fees.structureId
+        if (!feeStructureId) throw new Error('Select an applicable fee structure.')
+        result = await studentFeeApi.updateStructure(ids.admissionId, { feeStructureId, paymentPlan: data.fees.paymentPlan || undefined })
+        const [summary, structure] = await Promise.all([studentFeeApi.getSummary(ids.admissionId), studentFeeApi.getStructure(ids.admissionId)])
+        const mergedSummary = mergeFeeResponses(summary, structure)
+        setData(current => ({ ...current, fees: { ...current.fees, ...mergedSummary } }))
+      } else if (step === 7) {
+        if (!ids.studentId) throw new Error('Student ID is required before documents can be uploaded.')
+        const pending = [...DOCUMENTS.map(([key, label]) => ({ key, label, document: data.documents[key] })), ...(data.documents.otherCertificates || []).map(document => ({ key: 'otherCertificate', label: 'Other Certificate', document }))].filter(item => item.document?.file)
+        for (const item of pending) await studentDocumentApi.upload(ids.studentId, item.document.file, { documentType: item.key, documentName: item.label })
+        const uploadedRows = await studentDocumentApi.getAll(ids.studentId)
+        setData(current => ({ ...current, documents: documentsFromApi(uploadedRows) }))
+      }
+      if (result) {
+        const returnedIds = idsFromApi(result, ids.admissionId)
+        setRecordIds(current => ({ admissionId: returnedIds.admissionId ?? current.admissionId, studentId: returnedIds.studentId ?? current.studentId, academicId: returnedIds.academicId ?? current.academicId }))
+      }
+      setStep(current => current + 1)
+      window.scrollTo({ top: 0, behavior: 'smooth' })
+    } catch (error) { notify(error.message || 'Unable to save this step.', 'error') }
+    finally { setSavingStep(false) }
+  }
   const requestSubmit = () => { setErrors(allErrors); if (Object.keys(allErrors).length) { notify('Complete all required fields before submission.', 'error'); focusFirst(); return } if (!declared) { notify('Confirm the declaration before submitting.', 'error'); return } setConfirmSubmit(true) }
   const submit = async () => { if (submitting || !recordIds.admissionId) return; setSubmitting(true); try { await studentAdmissionApi.submit(recordIds.admissionId); const latest = await studentAdmissionStatusApi.get(recordIds.admissionId); setData(current => ({ ...current, status: latest.status ?? 'SUBMITTED' })); setConfirmSubmit(false); notify('Admission application submitted successfully'); window.setTimeout(() => navigate('/student-management/admissions'), 700) } catch (error) { notify(error.message || 'Unable to submit this admission.', 'error'); setSubmitting(false) } }
   return <><Breadcrumb tail={id ? 'Edit Admission' : 'New Admission'} /><header className="sa-page-header sa-wizard-header"><div><h1>{id ? 'Edit Student Admission' : 'New Student Admission'}</h1><p>Registration Number <strong>{data.application.number}</strong></p></div><div><Badge value={data.status} /><Button onClick={() => navigate('/student-management/admissions')}>Cancel</Button></div></header><Toast message={toast?.message} tone={toast?.tone} onClose={() => setToast(null)} /><WizardStepper step={step} setStep={setStep} /><form className="sa-wizard-card" onSubmit={event => event.preventDefault()}><header className="sa-step-heading"><div><small>Step {step + 1} of {STEPS.length}</small><h2>{STEPS[step]}</h2></div><span>{Math.round(((step + 1) / STEPS.length) * 100)}% complete</span></header>{screens[step]}{step === STEPS.length - 1 && <label className="sa-declaration"><input type="checkbox" checked={declared} onChange={event => setDeclared(event.target.checked)} /><span><strong>Registration Declaration</strong>I confirm that the information entered above is correct.</span></label>}<footer className="sa-wizard-actions"><Button disabled={!step || submitting} onClick={() => setStep(current => current - 1)}><FiArrowLeft /> Previous</Button><span />{step < STEPS.length - 1 ? <Button primary onClick={nextStep}>Save & Continue <FiArrowRight /></Button> : <Button primary disabled={!declared || submitting} onClick={requestSubmit}>{submitting ? 'Submitting...' : 'Submit Application'}</Button>}</footer></form>{confirmSubmit && <ConfirmDialog icon={FiCheckCircle} title="Confirm Registration Submission" confirmLabel="Confirm & Submit" onCancel={() => setConfirmSubmit(false)} onConfirm={submit}><p>Please verify the student details below. Once submitted, the registration will be sent to the admissions team for review.</p><dl><div><dt>Student</dt><dd>{studentName(data)}</dd></div><div><dt>Registration Number</dt><dd>{data.application.number}</dd></div></dl></ConfirmDialog>}</>
@@ -324,7 +443,6 @@ function AdmissionDetails({ approval = false }) {
     const admissionId = row.admissionId ?? row.id ?? id
     const optional = await Promise.allSettled([studentAcademicDetailsApi.get(admissionId), studentPreviousEducationApi.get(admissionId), studentFeeApi.getSummary(admissionId), studentAdmissionStatusApi.get(admissionId)])
     const hydrated = admissionFromApi({ ...row, academicDetails: optional[0].status === 'fulfilled' ? optional[0].value : row.academicDetails, previousEducation: optional[1].status === 'fulfilled' ? optional[1].value : row.previousEducation, feeSummary: optional[2].status === 'fulfilled' && hasFeeSummary(optional[2].value) ? optional[2].value : row.feeSummary, status: optional[3].status === 'fulfilled' ? optional[3].value?.status ?? row.status : row.status })
-    if (!hasFeeSummary(hydrated.fees)) { const fallback=localFeeSummary(hydrated); if(fallback)hydrated.fees={...hydrated.fees,...fallback} }
     if (active) setData(hydrated)
   }).catch(error => setToast({ message: error.message || 'Unable to load admission.', tone: 'error' })).finally(() => { if (active) setLoadingDetail(false) }); return () => { active = false } }, [id])
   if (loadingDetail) return <section className="sa-empty"><FiClock /><h2>Loading admission...</h2></section>
