@@ -118,7 +118,16 @@ const readBody = async (response) => {
   try { return await response.json() } catch { return null }
 }
 
-const listResponse = (response) => Array.isArray(response?.data) ? response.data : Array.isArray(response?.data?.data) ? response.data.data : []
+const listResponse = (response) => {
+  let current = response
+  for (let depth = 0; depth < 5 && current && typeof current === 'object'; depth += 1) {
+    if (Array.isArray(current)) return current
+    const list = current.items ?? current.content ?? current.results ?? current.records
+    if (Array.isArray(list)) return list
+    current = current.data
+  }
+  return []
+}
 
 const validationMessage = (body) => {
   const errors = body?.errors || body?.data?.errors

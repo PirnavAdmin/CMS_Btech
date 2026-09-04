@@ -102,7 +102,7 @@ export default function Login() {
       localStorage.setItem('btech-remember-me', String(rememberMe))
       if (rememberMe) localStorage.setItem('btech-remembered-identifier', values.identifier.trim())
       else localStorage.removeItem('btech-remembered-identifier')
-      signIn(session.roles, session.accessToken, session.refreshToken, rememberMe)
+      signIn(session.roles, session.accessToken, session.refreshToken, rememberMe, session.user)
       navigate('/dashboard')
     } catch (error) {
       setSubmitError(error instanceof AuthRequestError ? error.message : 'Unable to sign in right now. Please try again.')

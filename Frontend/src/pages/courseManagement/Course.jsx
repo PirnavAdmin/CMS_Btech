@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { Link, useParams, useNavigate } from 'react-router-dom'
 import { FiArrowLeft, FiBookOpen, FiCheckCircle, FiEdit2, FiEye, FiFilter, FiGitBranch, FiGrid, FiPlus, FiSearch, FiToggleLeft, FiToggleRight, FiUsers } from 'react-icons/fi'
 import DashboardLayout from '../../layouts/DashboardLayout'
+import FilterPanel from '../../components/FilterPanel'
 import TablePagination, { PAGE_SIZE } from '../../components/TablePagination'
 import StatusConfirmDialog from '../../components/StatusConfirmDialog'
 import { branchApi, courseApi, courseStructureApi, departmentApi } from '../../api/apiEndpoints'
@@ -34,26 +35,26 @@ const mapDepartmentOption = (record) => {
 }
 
 const mapCourse = (record) => {
-  const status = record.status ?? record.courseStatus ?? (record.isActive === false ? 0 : 1)
+  const status = record.status ?? record.courseStatus ?? (record.isActive === true ? 1 : record.isActive === false ? 0 : '')
   const active = status === true || Number(status) === 1 || String(status).toLowerCase() === 'active'
   return {
     id: record.id ?? record.courseId,
     name: record.courseName ?? record.name ?? '',
     code: record.courseCode ?? record.code ?? '',
     shortName: record.courseShortName ?? record.shortName ?? '',
-    type: record.courseType ?? record.type ?? 'Undergraduate',
+    type: record.courseType ?? record.type ?? '',
     departmentId: record.departmentId ?? '',
     branchId: record.branchId ?? record.branch?.branchId ?? record.branch?.id ?? '',
     department: record.departmentName ?? record.department ?? '',
     collegeId: record.collegeId ?? '',
     college: record.collegeName ?? record.college ?? '',
-    durationValue: record.durationYears ?? record.durationValue ?? record.duration ?? 4,
-    durationUnit: record.durationUnit ?? 'Years',
-    semesters: record.totalSemesters ?? record.semesters ?? record.semesterCount ?? 8,
-    academicSystem: record.academicSystem ?? record.academicPattern ?? 'Semester',
+    durationValue: record.durationYears ?? record.durationValue ?? record.duration ?? '',
+    durationUnit: record.durationUnit ?? '',
+    semesters: record.totalSemesters ?? record.semesters ?? record.semesterCount ?? '',
+    academicSystem: record.academicSystem ?? record.academicPattern ?? '',
     eligibility: record.eligibility ?? '',
     description: record.description ?? '',
-    status: active ? 'Active' : 'Inactive',
+    status: status === '' ? '' : active ? 'Active' : 'Inactive',
   }
 }
 
@@ -107,7 +108,7 @@ function CourseList() {
     setIsLoading(true); setError('')
     try {
       const [courseRows, departmentRows, branchRows] = await Promise.all([courseApi.getAll(), departmentApi.getAll(), branchApi.getAll()])
-      setCourses(courseRows.map(mapCourse))
+      setCourses(courseRows.map(mapCourse).filter(course => course.id && course.name))
       setDepartments(departmentRows.map(mapDepartmentOption))
       setBranches(branchRows)
     } catch (requestError) {
@@ -120,11 +121,11 @@ function CourseList() {
   useEffect(() => { load() }, [])
 
   const departmentName = (c) => departments.find(d => String(d.id) === String(c.departmentId))?.name || c.department || ''
-  const rows = useMemo(() => courses.filter(c => `${c.name} ${c.code} ${departmentName(c)}`.toLowerCase().includes(query.trim().toLowerCase()) && (!statusFilter || (c.status || 'Active') === statusFilter)), [courses, departments, query, statusFilter])
+  const rows = useMemo(() => courses.filter(c => `${c.name} ${c.code} ${departmentName(c)}`.toLowerCase().includes(query.trim().toLowerCase()) && (!statusFilter || c.status === statusFilter)), [courses, departments, query, statusFilter])
   const totalPages = Math.ceil(rows.length / itemsPerPage) || 1
   const currentPageClamped = Math.min(Math.max(currentPage, 1), totalPages)
   const pageRows = useMemo(() => rows.slice((currentPageClamped - 1) * itemsPerPage, currentPageClamped * itemsPerPage), [rows, currentPageClamped])
-  const stats = { total: courses.length, active: courses.filter(c => (c.status || 'Active') === 'Active').length, branches: branches.length, departments: departments.length }
+  const stats = { total: courses.length, active: courses.filter(c => c.status === 'Active').length, branches: branches.length, departments: departments.length }
   const hasFilters = Boolean(query || statusFilter)
   const clearFilters = () => { setQuery(''); setStatusFilter(''); setCurrentPage(1) }
   const toggleStatus = (course) => setPendingStatus({ course, nextStatus: (course.status || 'Active') === 'Active' ? 'Inactive' : 'Active' })
@@ -148,11 +149,11 @@ function CourseList() {
   return <Page>
     <Header title="Course Management" text="Manage B.Tech courses, branches and structures."><Link className="cm-button" to="/courses/add"><FiPlus /> Add Course</Link></Header>
     <section className="course-summary">{[['Total Courses', stats.total, FiBookOpen], ['Active Courses', stats.active, FiCheckCircle], ['Associated Branches', stats.branches, FiGitBranch], ['Departments', stats.departments, FiGrid]].map(([label, value, Icon]) => <article key={label}><span className="cm-kpi-icon"><Icon aria-hidden="true" /></span><div><span>{label}</span><strong>{value}</strong></div></article>)}</section>
-    <section className="cm-panel course-toolbar">
+    <FilterPanel active={hasFilters}><section className="cm-panel course-toolbar">
       <label className="course-search"><FiSearch /><input aria-label="Search courses" value={query} onChange={e => { setQuery(e.target.value); setCurrentPage(1) }} placeholder="Search course name, code or department" /></label>
       <select aria-label="Status" value={statusFilter} onChange={e => { setStatusFilter(e.target.value); setCurrentPage(1) }}><option value="">Select Status</option><option value="Active">Active</option><option value="Inactive">Deactive</option></select>
       {hasFilters && <button className="course-clear" onClick={clearFilters}><FiFilter /> Clear Filters</button>}
-    </section>
+    </section></FilterPanel>
     <section className="cm-panel course-directory">
       {isLoading ? <div className="course-empty"><strong>Loading courses...</strong></div>
         : error ? <div className="course-empty"><strong>{error}</strong><button className="cm-button" onClick={load}>Retry</button></div>
@@ -168,8 +169,8 @@ function CourseList() {
                     <tr key={c.id}>
                       <td><strong>{c.name}</strong><small>{c.code}</small></td>
                       <td>{departmentName(c) || 'Not available'}</td>
-                      <td>{c.durationValue || 4} {c.durationUnit || 'Years'}</td>
-                      <td><Badge value={c.status || 'Active'} /></td>
+                      <td>{c.durationValue ? `${c.durationValue} ${c.durationUnit}`.trim() : 'Not available'}</td>
+                      <td>{c.status ? <Badge value={c.status} /> : 'Not available'}</td>
                       <td>
                         <div className="course-actions">
                           <Link aria-label={`View ${c.name}`} to={`/courses/${c.id}`}><FiEye /></Link>

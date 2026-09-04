@@ -27,7 +27,10 @@ export default function DashboardLayout({ children }) {
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [sidebarCollapsed, setSidebarCollapsed] = useState(() => localStorage.getItem('pirnav-sidebar-collapsed') === 'true')
   const [globalQuery, setGlobalQuery] = useState('')
-  const [accountIdentifier, setAccountIdentifier] = useState('')
+  const [account, setAccount] = useState(() => ({
+    name: localStorage.getItem('btech-user-name') || sessionStorage.getItem('btech-user-name') || '',
+    identifier: localStorage.getItem('btech-user-id') || sessionStorage.getItem('btech-user-id') || '',
+  }))
   const [theme, setTheme] = useState(() => localStorage.getItem('pirnav-theme') || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'))
 
   const userRole = getUserRole() || 'user'
@@ -64,8 +67,8 @@ export default function DashboardLayout({ children }) {
   useEffect(() => {
     let active = true
     profileApi.getProfile()
-      .then((profile) => { if (active) setAccountIdentifier(profile.identifier || profile.admissionNumber || '') })
-      .catch(() => { if (active) setAccountIdentifier('') })
+      .then((profile) => { if (active) setAccount({ name: profile.fullName || '', identifier: profile.identifier || profile.admissionNumber || '' }) })
+      .catch(() => {})
     return () => { active = false }
   }, [])
 
@@ -259,8 +262,8 @@ export default function DashboardLayout({ children }) {
               </span>
 
               <span>
-                <strong>{roleLabel}</strong>
-                <small>{accountIdentifier || 'Employee ID'}</small>
+                <strong>{account.name || roleLabel}</strong>
+                <small>{account.identifier || roleLabel}</small>
               </span>
 
               <i className="account-menu__chevron" aria-hidden="true" />

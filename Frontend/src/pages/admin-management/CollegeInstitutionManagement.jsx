@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { FiEye as EyeIcon, FiEdit2 as EditIcon, FiPlus as Plus, FiToggleLeft, FiToggleRight } from 'react-icons/fi'
 import DashboardLayout from '../../layouts/DashboardLayout'
+import FilterPanel from '../../components/FilterPanel'
 import TablePagination, { PAGE_SIZE } from '../../components/TablePagination'
 import StatusConfirmDialog from '../../components/StatusConfirmDialog'
 import {
@@ -542,7 +543,7 @@ export default function CollegeInstitutionManagement({ initialView = 'list' }) {
               </button>
             </header>
 
-            <div className="cm-toolbar">
+            <FilterPanel active={Boolean(searchTerm || typeFilter || statusFilter)}><div className="cm-toolbar">
               <input
                 type="text"
                 className="cm-search"
@@ -557,7 +558,7 @@ export default function CollegeInstitutionManagement({ initialView = 'list' }) {
               <select aria-label="Filter colleges by status" value={statusFilter} onChange={(event) => { setStatusFilter(event.target.value); setCurrentPage(1) }}>
                 <option value="">Select Status</option><option value="active">Active</option><option value="inactive">Deactive</option>
               </select>
-            </div>
+            </div></FilterPanel>
 
             {isCollegesLoading ? (
               <div className="cm-empty">
