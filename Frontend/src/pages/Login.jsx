@@ -19,6 +19,8 @@ export default function Login() {
   const [submitError, setSubmitError] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
   const greeting = new Date().getHours() < 12 ? 'Good morning' : new Date().getHours() < 18 ? 'Good afternoon' : 'Good evening'
+  const greetingParts = greeting.split(' ')
+  const greetingIcon = new Date().getHours() < 12 ? '☀️' : new Date().getHours() < 18 ? '🌤️' : '🌙'
 
   // OTP Flow States: 'login' | 'request_otp' | 'verify_otp' | 'success'
   const [viewMode, setViewMode] = useState('login')
@@ -184,27 +186,29 @@ export default function Login() {
         </div>
       </section>
 
-      <section className="login-panel" aria-label="College account login">
+      <section className="login-panel" aria-labelledby="login-title">
         <div className="login-public-actions">
           <ThemeToggle />
           <Link className="login-home-link" to="/" aria-label="Return to home"><FiArrowLeft aria-hidden="true" /> Home</Link>
         </div>
         {viewMode === 'login' && (
           <form className="login-form" onSubmit={handleSubmit} noValidate>
+            <div className="pirnav-form-brand"><span><FiBookOpen /></span><div><strong>Pirnav Engineering College</strong><small>Digital Campus Management Portal</small></div></div>
             <header>
-              <h2 className="pirnav-greeting">{greeting}</h2>
-              <p>Access your Digital Campus using your registered credentials.</p>
+              <p className="pirnav-greeting"><span className="pirnav-greeting-initial">{greetingParts[0][0]}</span>{greetingParts[0].slice(1)} <span className="pirnav-greeting-initial">{greetingParts[1][0]}</span>{greetingParts[1].slice(1)} <span className="pirnav-greeting-icon">{greetingIcon}</span></p>
+              <h2 id="login-title">Welcome back</h2>
+              <p>Securely access your academic dashboard and campus services.</p>
             </header>
             {logoutMessage && <div className="logout-success" role="status"><span>{logoutMessage}</span><button type="button" onClick={() => setLogoutMessage('')} aria-label="Dismiss signed out message"><FiX aria-hidden="true" /></button></div>}
             <label htmlFor="identifier">
-              <span>Email, Mobile Number or User ID</span>
+              <span>College Email / Mobile / ID</span>
               <input
                 id="identifier"
                 type="text"
                 name="identifier"
                 value={values.identifier}
                 onChange={updateValue}
-                placeholder="Enter your registered email, mobile number or user ID"
+                placeholder="Enter college email, mobile number or ID"
                 autoComplete="username"
                 aria-invalid={Boolean(errors.identifier)}
                 aria-describedby={errors.identifier ? 'identifier-error' : undefined}
@@ -268,7 +272,7 @@ export default function Login() {
 
             {submitError && <p className="form-error" role="alert">{submitError}</p>}
             <button className="sign-in-button" type="submit" disabled={isSubmitting} aria-busy={isSubmitting}>
-              {isSubmitting ? 'Signing in...' : 'Sign In'}
+              {isSubmitting ? 'Signing in...' : 'Login to Digital Campus'}
             </button>
             <p className="account-link">Don&apos;t have an account? <Link to="/register">Request access</Link></p>
             <p className="access-note">© {new Date().getFullYear()} Pirnav Engineering College. All rights reserved.</p>
