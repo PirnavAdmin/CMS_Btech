@@ -9,6 +9,40 @@ function normalizeStoredRole(role) {
   return normalizedRole
 }
 
+export function getAuthStorage() {
+  if (localStorage.getItem(AUTH_STORAGE_KEY) === 'true') return localStorage
+  if (sessionStorage.getItem(AUTH_STORAGE_KEY) === 'true') return sessionStorage
+  return localStorage.getItem('btech-remember-me') === 'true' ? localStorage : sessionStorage
+}
+
+export function getAccessToken() {
+  return localStorage.getItem('btech-access-token')
+    || sessionStorage.getItem('btech-access-token')
+    || localStorage.getItem('accessToken')
+    || sessionStorage.getItem('accessToken')
+    || localStorage.getItem('token')
+    || sessionStorage.getItem('token')
+    || ''
+}
+
+export function getRefreshToken() {
+  return localStorage.getItem('btech-refresh-token')
+    || sessionStorage.getItem('btech-refresh-token')
+    || localStorage.getItem('refreshToken')
+    || sessionStorage.getItem('refreshToken')
+    || ''
+}
+
+export function setAccessToken(token, rememberMe = false) {
+  const storage = rememberMe ? localStorage : sessionStorage
+  if (token) storage.setItem('btech-access-token', token)
+}
+
+export function setRefreshToken(token, rememberMe = false) {
+  const storage = rememberMe ? localStorage : sessionStorage
+  if (token) storage.setItem('btech-refresh-token', token)
+}
+
 export function isAuthenticated() {
   return localStorage.getItem(AUTH_STORAGE_KEY) === 'true' || sessionStorage.getItem(AUTH_STORAGE_KEY) === 'true'
 }
