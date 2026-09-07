@@ -89,6 +89,11 @@ html,body,#root{max-width:100%;overflow-x:hidden}
 .semester-directory-heading p,.section-directory-heading p{display:none}
 .ay .kpis small{display:none}.settings-page>.settings-card:not(.security):not(.password-card){display:none}
 
+/* Final global error-message color override. */
+.page-content :where([role="alert"], .field-error, .form-error, .cm-error, .cm-field-error, .ac-error, .department-error, .profile-form-error, .sp-form-error, .section-assignment-error, .sa-decision-error, .error-message) {
+  color: var(--danger) !important;
+}
+
 /* Final compact ERP normalization across existing module markup. */
 .page-content>:is(.college-management,.add-college,.department-management,.ay,.cm-page,.semester-management,.section-management,.profile-page,.settings-page){font-size:14px}
 .page-content :is(.cm-header,.management-page__heading,.semester-page-header,.section-page-header,.ac-page-header,.profile-heading,.settings-page>header){min-height:auto;margin-bottom:20px;align-items:flex-start}

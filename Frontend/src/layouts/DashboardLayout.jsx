@@ -39,7 +39,6 @@ export default function DashboardLayout({ children }) {
     '/dashboard': 'Dashboard', '/my-profile': 'My Profile', '/settings': 'Settings',
     '/college-institution-management': 'College', '/academic-year-management': 'Academic Years',
     '/department-management': 'Departments', '/semester-management': 'Semesters', '/section-management': 'Sections',
-    '/access-requests': 'Access Requests',
     '/student-management/admissions': 'Student Admissions',
     '/student-management/profiles': 'Student Profiles', '/student-management/promotions': 'Student Promotions',
   })[pathname] || (pathname.startsWith('/student-management/admissions') ? 'Student Admissions' : pathname.startsWith('/courses') ? 'Courses' : pathname.startsWith('/branches') ? 'Branches' : 'Digital Campus')
@@ -73,7 +72,7 @@ export default function DashboardLayout({ children }) {
     return () => { active = false }
   }, [])
 
-  const globalLinks = [['Dashboard', '/dashboard'], ['Access Requests', '/access-requests'], ['Student Admissions', '/student-management/admissions'], ['Student Profiles', '/student-management/profiles'], ['Student Promotions', '/student-management/promotions'], ['College', '/college-institution-management'], ['Academic Years', '/academic-year-management'], ['Courses', '/courses'], ['Departments', '/department-management'], ['Branches', '/branches'], ['Semesters', '/semester-management'], ['Sections', '/section-management'], ['My Profile', '/my-profile'], ['Settings', '/settings']]
+  const globalLinks = [['Dashboard', '/dashboard'], ['Student Admissions', '/student-management/admissions'], ['Student Profiles', '/student-management/profiles'], ['Student Promotions', '/student-management/promotions'], ['College', '/college-institution-management'], ['Academic Years', '/academic-year-management'], ['Courses', '/courses'], ['Departments', '/department-management'], ['Branches', '/branches'], ['Semesters', '/semester-management'], ['Sections', '/section-management'], ['My Profile', '/my-profile'], ['Settings', '/settings']]
   const globalResults = globalQuery.trim() ? globalLinks.filter(([label]) => label.toLowerCase().includes(globalQuery.trim().toLowerCase())) : []
   const rules = useMemo(
     () => requirements(values.newPassword),
@@ -159,7 +158,6 @@ export default function DashboardLayout({ children }) {
       }
     }
 
-    window.addEventListener('keydown', handleKeyDown)
 
     return () => {
       window.removeEventListener('keydown', handleKeyDown)
@@ -463,3 +461,4 @@ export default function DashboardLayout({ children }) {
     </div>
   )
 }
+

@@ -214,16 +214,35 @@ const accessRequestAdminCall = async (path, method = 'GET') => {
 
   let response
   try {
-    response = await fetch(accessRequestUrl(path), {
-      method,
-      headers: { Accept: 'application/json', Authorization: `Bearer ${token}`, 'ngrok-skip-browser-warning': 'true' },
+    const requestOptions = (requestMethod) => ({
+      method: requestMethod,
+      headers: {
+        Accept: 'application/json',
+        ...(requestMethod !== 'GET' ? { 'Content-Type': 'application/json; charset=utf-8' } : {}),
+        Authorization: `Bearer ${token}`,
+        'ngrok-skip-browser-warning': 'true',
+      },
+      ...(requestMethod !== 'GET' ? { body: JSON.stringify({}) } : {}),
     })
+    response = await fetch(accessRequestUrl(path), requestOptions(method))
+    if ((response.status === 405 || response.status === 415) && method === 'POST') {
+      response = await fetch(accessRequestUrl(path), requestOptions('PUT'))
+      if (response.status === 405 || response.status === 415) {
+        response = await fetch(accessRequestUrl(path), requestOptions('PATCH'))
+      }
+    }
   } catch {
     throw new AuthRequestError('Unable to connect to the access-request service.')
   }
 
   const result = await readResponseBody(response)
-  if (!response.ok || result?.success === false) throw new AuthRequestError(result?.message || 'Unable to complete the access-request action.')
+  if (!response.ok || result?.success === false) {
+    const message = result?.message || `Unable to complete the access-request action (${response.status}).`
+    if (/invalid or inactive college/i.test(message)) {
+      throw new AuthRequestError('This request is not linked to an active college. Activate the college and assign it to the access request before approving.')
+    }
+    throw new AuthRequestError(message)
+  }
   return result.data ?? result
 }
 
