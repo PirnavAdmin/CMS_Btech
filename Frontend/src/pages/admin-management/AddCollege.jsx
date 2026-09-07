@@ -344,7 +344,7 @@ export default function AddCollege() {
       {activeTab === 'address' && <>
       {section('Address', 'Official postal address of the college.', <>
         <Field label="Address Line 1" name="addressLine1" values={values} errors={errors} touched={touched} onChange={update} required maxLength={150} placeholder="Building, street, locality" />
-        <Field label="Address Line 2" name="addressLine2" values={values} errors={errors} touched={touched} onChange={update} maxLength={150} placeholder="Landmark or area (optional)" />
+        <Field label="Land Mark" name="addressLine2" values={values} errors={errors} touched={touched} onChange={update} maxLength={150} placeholder="Landmark or area (optional)" />
         <Field label="City" name="city" values={values} errors={errors} touched={touched} onChange={update} required maxLength={60} />
         <Field label="State" name="state" values={values} errors={errors} touched={touched} onChange={update} required maxLength={60} />
         <Field label="Pincode" name="pincode" values={values} errors={errors} touched={touched} onChange={update} required maxLength={6} inputMode="numeric" />
