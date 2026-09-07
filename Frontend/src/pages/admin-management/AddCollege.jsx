@@ -32,6 +32,9 @@ const initialValues = {
   accreditationBody: '', accreditationStatus: 'Not Accredited', accreditationGrade: '',
   accreditationNumber: '', validFrom: '', validUntil: '',
 }
+const requiredDraftFields = ['collegeName', 'collegeCode', 'collegeType', 'universityName', 'addressLine1', 'city', 'state', 'pincode', 'contactNumber', 'email', 'principalName']
+const draftKey = (editId) => `pirnav-college-draft-${editId || 'new'}`
+const draftProgress = (values) => Math.round(requiredDraftFields.filter((field) => String(values[field] || '').trim()).length / requiredDraftFields.length * 100)
 
 const phonePattern = /^[6-9]\d{9}$/
 const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
@@ -78,10 +81,13 @@ function validate(values) {
   if (values.alternateContactNumber && !phonePattern.test(values.alternateContactNumber)) errors.alternateContactNumber = 'Enter a valid 10-digit Indian mobile number.'
   if (!values.email.trim()) errors.email = 'Official email is required.'
   else if (!emailPattern.test(values.email.trim())) errors.email = 'Enter a valid email address.'
+  if (!values.principalName.trim()) errors.principalName = 'Principal name is required.'
   const website = normalizeWebsite(values.website)
   if (values.website.trim() && !isValidWebsite(website)) errors.website = WEBSITE_VALIDATION_MESSAGE
-  if (values.principalEmail && !emailPattern.test(values.principalEmail)) errors.principalEmail = 'Enter a valid email address.'
-  if (values.principalContact && !phonePattern.test(values.principalContact)) errors.principalContact = 'Enter a valid 10-digit Indian mobile number.'
+  if (!values.principalEmail.trim()) errors.principalEmail = 'Principal email is required.'
+  else if (!emailPattern.test(values.principalEmail.trim())) errors.principalEmail = 'Enter a valid email address.'
+  if (!values.principalContact) errors.principalContact = 'Principal contact number is required.'
+  else if (!phonePattern.test(values.principalContact)) errors.principalContact = 'Enter a valid 10-digit Indian mobile number.'
   if (values.validFrom && values.validUntil && values.validUntil <= values.validFrom) errors.validUntil = 'Valid until must be after valid from.'
   return errors
 }
@@ -132,6 +138,7 @@ export default function AddCollege() {
   const errors = validate(values)
   const duplicateCode = values.collegeCode && existingCollegeCodes.includes(values.collegeCode.trim().toUpperCase()) && !editId
   const isValid = Object.keys(errors).length === 0 && !logoError && !duplicateCode
+  const progress = draftProgress(values)
 
   useEffect(() => {
     // Reset wizard state whenever the edited college changes so a previous save/preview doesn't carry over.
@@ -147,7 +154,14 @@ export default function AddCollege() {
     setLogoFile(null)
     setRemoveExistingLogo(false)
     setPendingLogoCollegeId(null)
-    if (!editId) { setValues(initialValues); return undefined }
+    if (!editId) {
+      try {
+        const draft = JSON.parse(localStorage.getItem(draftKey(editId)) || 'null')
+        setValues(draft?.values ? { ...initialValues, ...draft.values } : initialValues)
+        if (draft?.activeTab) setActiveTab(draft.activeTab)
+      } catch { setValues(initialValues) }
+      return undefined
+    }
     let active = true
     getCollegeById(editId).then((response) => {
       if (!active) return
@@ -160,10 +174,16 @@ export default function AddCollege() {
       const addressParts = String(record.address ?? '').split(',').map((part) => part.trim())
       const rawType = record.type ?? record.collegeType ?? record.institutionType ?? ''
       const isKnownType = TYPES.includes(rawType)
-      setValues({ ...initialValues, collegeName: record.name ?? record.collegeName ?? '', collegeCode: record.code ?? record.collegeCode ?? '', collegeType: rawType && !isKnownType ? 'Other' : rawType, collegeTypeOther: rawType && !isKnownType ? rawType : '', universityName: record.university ?? record.universityName ?? '', addressLine1: record.addressLine1 ?? addressRecord.addressLine1 ?? addressParts[0] ?? '', addressLine2: record.addressLine2 ?? addressRecord.addressLine2 ?? addressParts.slice(1).join(', '), area: record.area ?? addressRecord.area ?? extended.area ?? '', district: record.district ?? addressRecord.district ?? extended.district ?? '', city: record.city ?? addressRecord.city ?? '', state: record.state ?? addressRecord.state ?? '', pincode: String(record.pincode ?? addressRecord.pincode ?? ''), country: record.country ?? addressRecord.country ?? 'India', contactNumber: String(record.contact ?? record.contactNumber ?? record.phoneNumber ?? record.mobile ?? record.phone ?? contactRecord.contactNumber ?? contactRecord.phoneNumber ?? contactRecord.mobile ?? contactRecord.phone ?? ''), alternateContactNumber: String(record.alternateContact ?? record.alternateContactNumber ?? record.alternatePhoneNumber ?? contactRecord.alternateContactNumber ?? extended.alternateContactNumber ?? ''), email: record.email ?? record.collegeEmail ?? contactRecord.email ?? '', website: record.website ?? record.Website ?? contactRecord.website ?? contactRecord.Website ?? '', principalName: record.principal ?? record.principalName ?? principalRecord.principalName ?? '', principalEmail: record.principalEmail ?? principalRecord.principalEmail ?? extended.principalEmail ?? '', principalContact: String(record.principalContact ?? record.principalPhone ?? principalRecord.principalContact ?? extended.principalContact ?? ''), accreditationBody: record.accreditationBody ?? accreditationRecord.body ?? accreditationRecord.accreditationBody ?? extended.accreditationBody ?? '', accreditationStatus: record.accreditationStatus ?? accreditationRecord.status ?? extended.accreditationStatus ?? 'Not Accredited', accreditationGrade: record.accreditationGrade ?? accreditationRecord.grade ?? extended.accreditationGrade ?? '', accreditationNumber: record.accreditationNumber ?? accreditationRecord.number ?? extended.accreditationNumber ?? '', validFrom: dateInputValue(record.validFrom ?? record.accreditationValidFrom ?? accreditationRecord.validFrom ?? extended.validFrom), validUntil: dateInputValue(record.validUntil ?? record.accreditationValidUntil ?? accreditationRecord.validUntil ?? extended.validUntil), logo: record.logo ?? record.logoUrl ?? record.collegeLogo ?? record.collegeLogoUrl ?? record.logoPath ?? '', logoName: record.logoName ?? extended.logoName ?? '' })
+      const loadedValues = { ...initialValues, collegeName: record.name ?? record.collegeName ?? '', collegeCode: record.code ?? record.collegeCode ?? '', collegeType: rawType && !isKnownType ? 'Other' : rawType, collegeTypeOther: rawType && !isKnownType ? rawType : '', universityName: record.university ?? record.universityName ?? '', addressLine1: record.addressLine1 ?? addressRecord.addressLine1 ?? addressParts[0] ?? '', addressLine2: record.addressLine2 ?? addressRecord.addressLine2 ?? addressParts.slice(1).join(', '), area: record.area ?? addressRecord.area ?? extended.area ?? '', district: record.district ?? addressRecord.district ?? extended.district ?? '', city: record.city ?? addressRecord.city ?? '', state: record.state ?? addressRecord.state ?? '', pincode: String(record.pincode ?? addressRecord.pincode ?? ''), country: record.country ?? addressRecord.country ?? 'India', contactNumber: String(record.contact ?? record.contactNumber ?? record.phoneNumber ?? record.mobile ?? record.phone ?? contactRecord.contactNumber ?? contactRecord.phoneNumber ?? contactRecord.mobile ?? contactRecord.phone ?? ''), alternateContactNumber: String(record.alternateContact ?? record.alternateContactNumber ?? record.alternatePhoneNumber ?? contactRecord.alternateContactNumber ?? extended.alternateContactNumber ?? ''), email: record.email ?? record.collegeEmail ?? contactRecord.email ?? '', website: record.website ?? record.Website ?? contactRecord.website ?? contactRecord.Website ?? '', principalName: record.principal ?? record.principalName ?? principalRecord.principalName ?? '', principalEmail: record.principalEmail ?? principalRecord.principalEmail ?? extended.principalEmail ?? '', principalContact: String(record.principalContact ?? record.principalPhone ?? principalRecord.principalContact ?? extended.principalContact ?? ''), accreditationBody: record.accreditationBody ?? accreditationRecord.body ?? accreditationRecord.accreditationBody ?? extended.accreditationBody ?? '', accreditationStatus: record.accreditationStatus ?? accreditationRecord.status ?? 'Not Accredited', accreditationGrade: record.accreditationGrade ?? accreditationRecord.grade ?? extended.accreditationGrade ?? '', accreditationNumber: record.accreditationNumber ?? accreditationRecord.number ?? extended.accreditationNumber ?? '', validFrom: dateInputValue(record.validFrom ?? record.accreditationValidFrom ?? accreditationRecord.validFrom ?? extended.validFrom), validUntil: dateInputValue(record.validUntil ?? record.accreditationValidUntil ?? accreditationRecord.validUntil ?? extended.validUntil), logo: record.logo ?? record.logoUrl ?? record.collegeLogo ?? record.collegeLogoUrl ?? record.logoPath ?? '', logoName: record.logoName ?? extended.logoName ?? '' }
+      try { setValues({ ...loadedValues, ...(JSON.parse(localStorage.getItem(draftKey(editId)) || 'null')?.values || {}) }) } catch { setValues(loadedValues) }
     }).catch((error) => { if (active) setNotice(error.message || 'Unable to load college details.') }).finally(() => { if (active) setLoadingCollege(false) })
     return () => { active = false }
   }, [editId])
+
+  useEffect(() => {
+    if (!dirty) return
+    localStorage.setItem(draftKey(editId), JSON.stringify({ values, activeTab, progress: draftProgress(values), savedAt: new Date().toISOString() }))
+  }, [values, activeTab, dirty, editId])
 
   useEffect(() => {
     getColleges()
@@ -234,7 +254,8 @@ export default function AddCollege() {
 
   const touchAll = () => setTouched(Object.keys(initialValues).reduce((all, key) => ({ ...all, [key]: true }), {}))
   const reset = () => { setValues(initialValues); setLogoFile(null); setRemoveExistingLogo(false); setPendingLogoCollegeId(null); setTouched({}); setLogoError(''); setDirty(false); setActiveTab('college'); setHighestUnlockedTab(0); setDialog(null); setNotice('Form reset successfully.') }
-  const requestLeave = () => dirty ? setDialog('leave') : navigate('/college-institution-management')
+  const saveDraft = () => { localStorage.setItem(draftKey(editId), JSON.stringify({ values, activeTab, progress: draftProgress(values), savedAt: new Date().toISOString() })) }
+  const requestLeave = () => { if (dirty) { saveDraft(); setNotice(`Draft saved · ${progress}% complete.`); setDialog('leave'); return } navigate('/college-institution-management') }
   const showTab = (tabId) => {
     setActiveTab(tabId)
     window.scrollTo({ top: 0, left: 0, behavior: 'auto' })
@@ -297,6 +318,7 @@ export default function AddCollege() {
       // after the success message ensures the new row uses server data and the
       // list's established ordering and pagination rules.
       setDirty(false)
+      localStorage.removeItem(draftKey(editId))
       setDialog(null)
       setSaved(true)
       setNotice(editId ? 'College updated successfully.' : 'College added successfully!')
@@ -324,7 +346,7 @@ export default function AddCollege() {
   const section = (title, subtitle, content) => <section className="ac-section"><header><h2>{title}</h2><p>{subtitle}</p></header><div className="ac-grid">{content}</div></section>
 
   return <DashboardLayout><main className="add-college">
-    <header className="ac-page-header"><div><h1>{editId ? 'Edit College' : 'Add College'}</h1><p>{editId ? 'Update the college information below.' : 'Create and configure a new college in the college management system.'}</p></div><button className="ac-back" type="button" onClick={requestLeave}>College list →</button></header>
+    <header className="ac-page-header"><div><h1>{editId ? 'Edit College' : 'Add College'}</h1><p>{editId ? 'Update the college information below.' : 'Create and configure a new college in the college management system.'}</p><span className="ac-draft-progress">Draft progress: <b>{progress}%</b></span></div><button className="ac-back" type="button" onClick={requestLeave}>College list →</button></header>
     <nav className="ac-tabs" aria-label="College form sections" role="tablist">
       {FORM_TABS.map((tab, index) => <button key={tab.id} type="button" role="tab" aria-selected={activeTab === tab.id} aria-disabled={index > highestUnlockedTab} disabled={index > highestUnlockedTab} className={activeTab === tab.id ? 'active' : ''} onClick={() => showTab(tab.id)}><span>{index + 1}</span>{tab.label}</button>)}
     </nav>
@@ -364,9 +386,9 @@ export default function AddCollege() {
         <Field label="Website" name="website" type="url" values={values} errors={errors} touched={touched} onChange={update} onBlur={normalizeWebsiteField} maxLength={160} placeholder="https://college.edu" />
       </>)}
       {activeTab === 'administration' && section('Administration', 'Principal or institutional head details.', <>
-        <Field label="Principal Name" name="principalName" values={values} errors={errors} touched={touched} onChange={update} maxLength={100} />
-        <Field label="Principal Email" name="principalEmail" type="email" values={values} errors={errors} touched={touched} onChange={update} maxLength={120} />
-        <Field label="Principal Contact Number" name="principalContact" values={values} errors={errors} touched={touched} onChange={update} maxLength={10} inputMode="tel" />
+        <Field label="Principal Name" name="principalName" values={values} errors={errors} touched={touched} onChange={update} required maxLength={100} />
+        <Field label="Principal Email" name="principalEmail" type="email" values={values} errors={errors} touched={touched} onChange={update} required maxLength={120} />
+        <Field label="Principal Contact Number" name="principalContact" values={values} errors={errors} touched={touched} onChange={update} required maxLength={10} inputMode="tel" />
       </>)}
       {activeTab === 'accreditation' && section('Accreditation Details', 'Current accreditation standing and validity.', <>
         <label className="ac-field" htmlFor="ac-accreditationStatus"><span>Accreditation Status</span><select id="ac-accreditationStatus" name="accreditationStatus" value={values.accreditationStatus} onChange={update}>{ACCREDITATION_STATUSES.map((status) => <option key={status}>{status}</option>)}</select></label>

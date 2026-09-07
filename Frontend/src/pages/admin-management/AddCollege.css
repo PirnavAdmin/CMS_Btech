@@ -34,6 +34,8 @@
 .ac-counter { position: absolute; top: 69px; right: 8px; color: #869bad; font-size: .68rem; font-weight: 500; }
 .ac-upload { min-height: 140px; padding: 18px; border: 1.5px dashed #aabdd0; border-radius: 11px; background: #f8fbfe; }
 .ac-upload-button { display: grid; place-items: center; gap: 7px; width: 100%; min-height: 100px; border: 0; background: transparent; color: var(--brand-blue); cursor: pointer; }
+.ac-upload-button:hover,
+.ac-upload-button:active { transform: none; box-shadow: none; background: transparent; }
 .ac-upload-button span { color: #6d849b; font-size: .8rem; font-weight: 500; }
 .ac-logo-preview { display: flex; align-items: center; gap: 18px; }
 .ac-logo-preview img { width: 96px; height: 96px; object-fit: contain; border: 1px solid #dbe5ee; border-radius: 12px; background: #fff; }
@@ -89,6 +91,8 @@
 .ac-page-header { align-items: center; gap: 20px; margin-bottom: 10px; }
 .ac-page-header h1 { margin: 0 0 4px; font-size: 1.5rem; line-height: 1.2; }
 .ac-page-header > div > p:last-child { font-size: .88rem; }
+.ac-draft-progress { display: inline-flex; margin-top: 7px; padding: 4px 8px; border: 1px solid #cfe0ee; border-radius: 999px; color: #52728c; background: #f4f9fc; font-size: .72rem; font-weight: 700; }
+.ac-draft-progress b { margin-left: 4px; color: var(--brand-blue); }
 .ac-back { flex: 0 0 auto; margin: 0; padding: 8px 13px; border: 1px solid #c7d7e7; border-radius: 8px; background: #fff; }
 .ac-back:hover { background: #f3f7fb; }
 .ac-tabs { gap: 4px; margin-bottom: 10px; padding: 4px; border-radius: 10px; }
