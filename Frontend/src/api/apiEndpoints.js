@@ -1029,7 +1029,15 @@ export const studentProfilesApi = {
     }
 
     const studentObj = payload.student || payload
-    const saved = saveLocalStudentProfile(id, { ...res, ...studentObj })
+    const saved = saveLocalStudentProfile(id, {
+      ...res,
+      ...studentObj,
+      personal: {
+        ...(res?.personal || {}),
+        ...(studentObj?.personal || {}),
+        ...(studentObj?.personal?.photo ? { photo: studentObj.personal.photo } : {}),
+      },
+    })
     return normalizeStudentProfile(saved)
   },
 }

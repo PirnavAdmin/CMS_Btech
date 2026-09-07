@@ -25,3 +25,4 @@
 .semester-pagination{justify-content:center!important}.semester-pagination>p{display:block!important;order:2}.semester-pagination>div{display:contents}.semester-pagination>div>button:first-child{order:1}.semester-pagination>div>button:last-child{order:3}.semester-pagination>div>button:not(:first-child):not(:last-child){display:none}
 .semester-field:has(input[name="semesterName"]){display:none}
 .semester-field:has(input[name="yearNumber"]){display:none}
+.semester-table tbody tr.semester-branch-start td{border-top:0!important}

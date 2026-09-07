@@ -1,3 +1,4 @@
+import { getAccessToken } from './auth'
 import { ROLES } from './roles'
 
 export class AuthRequestError extends Error {
@@ -204,3 +205,29 @@ export async function register({ fullName, email, mobile, password, confirmPassw
 
   return result
 }
+
+const accessRequestUrl = (path = '') => `${registrationEndpoint.replace(/\/+$/, '')}${path}`
+
+const accessRequestAdminCall = async (path, method = 'GET') => {
+  const token = getAccessToken()
+  if (!token) throw new AuthRequestError('Please sign in to manage access requests.')
+
+  let response
+  try {
+    response = await fetch(accessRequestUrl(path), {
+      method,
+      headers: { Accept: 'application/json', Authorization: `Bearer ${token}`, 'ngrok-skip-browser-warning': 'true' },
+    })
+  } catch {
+    throw new AuthRequestError('Unable to connect to the access-request service.')
+  }
+
+  const result = await readResponseBody(response)
+  if (!response.ok || result?.success === false) throw new AuthRequestError(result?.message || 'Unable to complete the access-request action.')
+  return result.data ?? result
+}
+
+export const getAccessRequestStatus = (requestId) => accessRequestAdminCall(`/${encodeURIComponent(requestId)}/status`)
+export const getPendingAccessRequests = () => accessRequestAdminCall('/pending')
+export const approveAccessRequest = (requestId) => accessRequestAdminCall(`/${encodeURIComponent(requestId)}/approve`, 'POST')
+export const rejectAccessRequest = (requestId) => accessRequestAdminCall(`/${encodeURIComponent(requestId)}/reject`, 'POST')
