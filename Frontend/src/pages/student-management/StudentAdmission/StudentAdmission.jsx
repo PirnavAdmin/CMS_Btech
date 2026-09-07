@@ -1,12 +1,18 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import {
   FiAlertCircle, FiArrowLeft, FiArrowRight, FiBookOpen, FiCamera, FiCheck, FiCheckCircle,
+<<<<<<< HEAD
   FiChevronRight, FiClock, FiEdit2, FiEye, FiFileText, FiFilter, FiGrid,
+=======
+  FiChevronRight, FiClock, FiEdit2, FiFileText, FiGrid,
+>>>>>>> 47231a9d88f74f4b0480d7cfcb89f2c7ddf94b55
   FiHome, FiInbox, FiPhone, FiPlus, FiSearch, FiShield,
   FiTrash2, FiUploadCloud, FiUser, FiUsers, FiX,
 } from 'react-icons/fi'
 import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import DashboardLayout from '../../../layouts/DashboardLayout'
+import FilterPanel from '../../../components/FilterPanel'
+import TablePagination, { PAGE_SIZE } from '../../../components/TablePagination'
 import { academicYearApi, branchApi, courseApi, departmentApi, lookupIndianPincode, studentAdmissionApi, studentAcademicDetailsApi, studentAdmissionStatusApi, studentDocumentApi, studentFeeApi, studentParentApi, studentPreviousEducationApi } from '../../../api/apiEndpoints'
 import { getSemesters } from '../../../auth/collegeApi'
 import { componentTotals, matchesStructure, readStructures } from '../../fees/feeStructureService'
@@ -454,11 +460,19 @@ function Field({ data, path, label, update, options, type = 'text', readOnly = f
 function AddressFields({ data, prefix, update, errors }) { return [['line1','Address Line 1'],['line2','Address Line 2'],['town','Village / Town'],['city','City'],['district','District'],['state','State'],['country','Country'],['pincode','PIN Code']].map(([key,label]) => <Field key={key} data={data} path={`${prefix}.${key}`} label={label} update={update} error={errors[`${prefix}.${key}`]} />) }
 function Breadcrumb({ tail }) { return <div className="sa-breadcrumb"><span>Student Management</span><FiChevronRight /><span>Admissions</span>{tail && <><FiChevronRight /><strong>{tail}</strong></>}</div> }
 
+<<<<<<< HEAD
 function AdmissionFilters({ rows, query, setQuery, filters, setFilters, open, setOpen }) {
   const options = key => [...new Set(rows.map(item => key === 'status' ? item.status : key === 'feeStatus' ? (item.fees?.paymentStatus || 'Pending') : key === 'quota' ? quota(item) : item.academic?.[key]).filter(Boolean))].sort()
   const active = Object.entries(filters).filter(([,value]) => value)
   const clear = () => setFilters(Object.fromEntries(FILTERS.map(([key]) => [key, ''])))
   return <><div className="sa-toolbar"><label className="sa-search"><FiSearch /><input value={query} onChange={event => setQuery(event.target.value)} title="Search name, registration, admission, mobile or email" placeholder="Search name, registration, admission, mobile or email" /></label><div className="sa-filter-actions"><Button onClick={() => setOpen(!open)}><FiFilter /> Filters {active.length > 0 && <b>{active.length}</b>}</Button>{active.length > 0 && <button className="sa-clear" onClick={clear}>Clear filters</button>}</div></div>{open && <div className="sa-filter-grid">{FILTERS.map(([key,label]) => <label key={key}><span>{label}</span><select value={filters[key]} onChange={event => setFilters(current => ({ ...current, [key]: event.target.value }))}><option value="">All {label}</option>{options(key).map(value => <option value={value} key={value}>{key === 'status' ? (STATUS[value] || value) : value}</option>)}</select></label>)}</div>}{active.length > 0 && <div className="sa-filter-chips">{active.map(([key,value]) => <button key={key} onClick={() => setFilters(current => ({ ...current, [key]: '' }))}>{FILTERS.find(item => item[0] === key)?.[1]}: {key === 'status' ? (STATUS[value] || value) : value} <FiX /></button>)}</div>}</>
+=======
+function AdmissionFilters({ rows, query, setQuery, filters, setFilters }) {
+  const options = key => [...new Set(rows.map(item => key === 'status' ? item.status : key === 'feeStatus' ? item.fees.paymentStatus : key === 'quota' ? quota(item) : item.academic[key]).filter(Boolean))].sort()
+  const active = Object.entries(filters).filter(([,value]) => value)
+  const clear = () => { setQuery(''); setFilters(Object.fromEntries(FILTERS.map(([key]) => [key, '']))) }
+  return <FilterPanel active={Boolean(query || active.length)} onClear={clear} className="sa-filter-panel"><div className="sa-toolbar"><label className="sa-search"><FiSearch /><input value={query} onChange={event => setQuery(event.target.value)} title="Search name, registration, admission, mobile or email" placeholder="Search name, registration, admission, mobile or email" /></label></div><div className="sa-filter-grid">{FILTERS.map(([key,label]) => <label key={key}><span>{label}</span><select value={filters[key]} onChange={event => setFilters(current => ({ ...current, [key]: event.target.value }))}><option value="">All {label}</option>{options(key).map(value => <option value={value} key={value}>{key === 'status' ? STATUS[value] : value}</option>)}</select></label>)}</div>{active.length > 0 && <div className="sa-filter-chips">{active.map(([key,value]) => <button key={key} onClick={() => setFilters(current => ({ ...current, [key]: '' }))}>{FILTERS.find(item => item[0] === key)?.[1]}: {key === 'status' ? STATUS[value] : value} <FiX /></button>)}</div>}</FilterPanel>
+>>>>>>> 47231a9d88f74f4b0480d7cfcb89f2c7ddf94b55
 }
 function EmptyState({ hasRows, filtered, onCreate, onClear }) {
   return <div className="sa-empty"><span><FiInbox /></span><h3>{hasRows && filtered ? 'No applications match the selected filters.' : 'No admission applications found'}</h3><p>{hasRows && filtered ? 'Adjust or clear the active filters to view applications.' : 'Create a new admission application to begin student enrollment.'}</p>{hasRows && filtered ? <Button onClick={onClear}>Clear Filters</Button> : <Button primary onClick={onCreate}><FiPlus /> New Admission</Button>}</div>
@@ -469,7 +483,7 @@ function AdmissionList() {
   const [rows, setRows] = useState([])
   const [, setLoadError] = useState('')
   const [query, setQuery] = useState('')
-  const [filtersOpen, setFiltersOpen] = useState(false)
+  const [page, setPage] = useState(1)
   const initialFilters = Object.fromEntries(FILTERS.map(([key]) => [key, '']))
   const [filters, setFilters] = useState(initialFilters)
   useEffect(() => { let active = true; studentAdmissionApi.getAll().then(items => { if (active) setRows(items.map(admissionFromApi)) }).catch(error => { if (active) setLoadError(error.message || 'Unable to load admissions.') }); return () => { active = false } }, [])
@@ -479,6 +493,7 @@ function AdmissionList() {
     const values = { status: normStat, academicYear: item?.academic?.academicYear, course: item?.academic?.course, department: item?.academic?.department, branch: item?.academic?.branch, semester: item?.academic?.semester, admissionType: item?.academic?.admissionType, quota: quota(item), feeStatus: item?.fees?.paymentStatus || 'Pending' }
     return needle.includes(query.trim().toLowerCase()) && Object.entries(filters).every(([key,value]) => !value || values[key] === value)
   }), [rows, query, filters])
+<<<<<<< HEAD
   const clear = () => { setQuery(''); setFilters(initialFilters) }
   return (
     <>
@@ -577,6 +592,14 @@ function AdmissionList() {
       </section>
     </>
   )
+=======
+  useEffect(() => { setPage(1) }, [query, filters])
+  const totalPages = Math.max(1, Math.ceil(shown.length / PAGE_SIZE))
+  const currentPage = Math.min(page, totalPages)
+  const pageRows = shown.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE)
+  const clear = () => { setQuery(''); setFilters(initialFilters); setPage(1) }
+  return <><Breadcrumb /><header className="sa-page-header"><div><h1>Student Admissions</h1><p>Manage student registrations, verification, approval and enrollment</p></div><div><Button primary onClick={() => navigate('/student-management/admissions/new')}><FiPlus /> New Admission</Button></div></header><section className="sa-directory"><header><div><h2>Admission Directory</h2><span>{shown.length} of {rows.length} registrations</span></div></header><AdmissionFilters {...{ rows, query, setQuery, filters, setFilters }} /><div className="sa-table-wrap"><table><thead><tr><th>Registration Number</th><th>Student</th><th>Academic Placement</th><th>Admission Type</th><th>Academic Year</th><th>Fee Status</th><th>Application Status</th><th>Updated</th><th>Actions</th></tr></thead><tbody>{pageRows.map(item => <tr key={item.id}><td><strong>{item.application.number}</strong><small>{item.application.admissionNumber || 'Admission pending'}</small></td><td><div className="sa-student"><i>{item.personal.photo ? <img src={item.personal.photo} alt={studentName(item)} /> : studentName(item).split(' ').map(part => part[0]).slice(0,2).join('')}</i><span><strong>{studentName(item)}</strong><small>{item.contact.email || item.contact.mobile || 'Contact pending'}</small></span></div></td><td><strong>{display(item.academic.course)}</strong><small>{display(item.academic.branch)} · {display(item.academic.semester)}</small></td><td>{display(item.academic.admissionType)}</td><td>{display(item.academic.academicYear)}</td><td><span className={`sa-fee-status fee-${item.fees.paymentStatus.toLowerCase().replaceAll(' ','-')}`}>{item.fees.paymentStatus}</span></td><td><Badge value={item.status} /></td><td><span className="sa-updated">{dateTime(item.updatedAt || item.createdAt)}</span></td><td><div className="sa-icon-actions">{['DRAFT','CORRECTION_REQUIRED'].includes(item.status) && <button title="Edit Application" aria-label="Edit application" onClick={() => navigate(`/student-management/admissions/${item.id}/edit`)}><FiEdit2 /></button>}{['SUBMITTED','UNDER_REVIEW','VERIFIED'].includes(item.status) && <button title={item.status === 'SUBMITTED' ? 'Start Review' : item.status === 'VERIFIED' ? 'Approve or Reject' : 'Continue Review'} aria-label="Review application" onClick={() => navigate(`/student-management/admissions/${item.id}/approval`)}><FiShield /></button>}</div></td></tr>)}</tbody></table></div>{shown.length > 0 && <TablePagination page={currentPage} totalPages={totalPages} onPageChange={setPage} />}{shown.length === 0 && <EmptyState hasRows={rows.length > 0} filtered={Boolean(query || Object.values(filters).some(Boolean))} onCreate={() => navigate('/student-management/admissions/new')} onClear={clear} />}</section></>
+>>>>>>> 47231a9d88f74f4b0480d7cfcb89f2c7ddf94b55
 }
 
 function PhotoUpload({ data, update, notify }) {
