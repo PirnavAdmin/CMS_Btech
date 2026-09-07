@@ -41,6 +41,13 @@ export default defineConfig({
           'ngrok-skip-browser-warning': 'true',
         },
       },
+      '/uploads': {
+        target: 'https://abreast-curling-tutor.ngrok-free.dev',
+        changeOrigin: true,
+        headers: {
+          'ngrok-skip-browser-warning': 'true',
+        },
+      },
     },
   },
 })

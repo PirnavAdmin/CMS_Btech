@@ -323,6 +323,70 @@ html,body,#root{max-width:100%;overflow-x:hidden}
 :root[data-theme="dark"] .page-content :is(.course-toolbar,.branch-filter-toolbar) :is(.course-search,.branch-search)>svg{color:var(--brand)!important}
 :root[data-theme="dark"] .page-content :is(.course-toolbar,.branch-filter-toolbar) :is(.course-search,.branch-search):focus-within{border-color:var(--brand)!important;background:var(--surface)!important;box-shadow:0 0 0 3px color-mix(in srgb,var(--brand) 22%,transparent)!important}
 @media(max-width:760px){.page-content :is(.course-toolbar,.branch-filter-toolbar) :is(.course-search,.branch-search){width:100%!important;min-width:0!important;flex:1 1 100%!important}}
+
+/* Student directories use the same stable search control as the academic screens. */
+.page-content :is(.student-admission .sa-search,.student-profile .sp-toolbar label){
+  display:flex!important;
+  flex:0 1 520px!important;
+  width:min(100%,520px)!important;
+  min-width:240px!important;
+  height:40px!important;
+  min-height:40px!important;
+  box-sizing:border-box!important;
+  align-items:center!important;
+  gap:8px!important;
+  padding:0 11px!important;
+  border:1px solid var(--border-strong)!important;
+  border-radius:8px!important;
+  color:var(--text-muted)!important;
+  background:var(--surface)!important;
+  box-shadow:none!important;
+}
+.page-content :is(.student-admission .sa-search,.student-profile .sp-toolbar label)>svg{
+  width:17px!important;
+  height:17px!important;
+  flex:0 0 17px!important;
+  color:var(--text-muted)!important;
+}
+.page-content :is(.student-admission .sa-search,.student-profile .sp-toolbar label)>input{
+  all:unset!important;
+  display:block!important;
+  width:100%!important;
+  min-width:0!important;
+  height:100%!important;
+  box-sizing:border-box!important;
+  color:var(--text-primary)!important;
+  font:500 13px inherit!important;
+  line-height:1!important;
+  caret-color:var(--brand)!important;
+}
+.page-content :is(.student-admission .sa-search,.student-profile .sp-toolbar label)>input::placeholder{
+  color:var(--text-muted)!important;
+  opacity:1!important;
+}
+.page-content :is(.student-admission .sa-search,.student-profile .sp-toolbar label):focus-within{
+  border-color:var(--brand)!important;
+  background:var(--surface-raised)!important;
+  box-shadow:0 0 0 3px color-mix(in srgb,var(--brand) 14%,transparent)!important;
+}
+.page-content .student-profile .sp-toolbar>svg{display:none!important}
+:root[data-theme="dark"] .page-content :is(.student-admission .sa-search,.student-profile .sp-toolbar label){
+  border-color:var(--border-strong)!important;
+  background:var(--surface-raised)!important;
+}
+:root[data-theme="dark"] .page-content :is(.student-admission .sa-search,.student-profile .sp-toolbar label)>svg{color:var(--brand)!important}
+:root[data-theme="dark"] .page-content :is(.student-admission .sa-search,.student-profile .sp-toolbar label):focus-within{
+  border-color:var(--brand)!important;
+  background:var(--surface)!important;
+  box-shadow:0 0 0 3px color-mix(in srgb,var(--brand) 22%,transparent)!important;
+}
+@media(max-width:760px){
+  .page-content :is(.student-admission .sa-search,.student-profile .sp-toolbar label){
+    width:100%!important;
+    min-width:0!important;
+    flex:1 1 100%!important;
+  }
+}
 /* Desktop sidebar collapse control. */
 .sidebar-collapse{display:grid;width:30px;height:30px;margin-left:auto;padding:0;place-items:center;border:1px solid rgba(255,255,255,.22);border-radius:7px;color:#c5d9e8;background:transparent;cursor:pointer}
 .sidebar-collapse:hover{border-color:#69b9e8;color:#fff;background:rgba(255,255,255,.12)}
