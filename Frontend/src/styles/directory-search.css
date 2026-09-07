@@ -1,0 +1,114 @@
+.section-search,
+.department-search,
+.semester-search {
+  box-sizing: border-box;
+  min-height: 42px;
+  border-radius: 9px;
+  box-shadow: 0 1px 2px rgba(6, 46, 89, 0.04);
+}
+
+.section-search input,
+.department-search input,
+.semester-search input {
+  box-sizing: border-box;
+  min-height: 40px;
+  font-size: 0.84rem;
+}
+
+.section-search input::placeholder,
+.department-search input::placeholder,
+.semester-search input::placeholder {
+  color: #8aa0b5;
+}
+
+.section-search:focus-within,
+.department-search:focus-within,
+.semester-search:focus-within {
+  border-color: #1970b3;
+  box-shadow: 0 0 0 3px rgba(25, 112, 179, 0.14), 0 2px 6px rgba(6, 46, 89, 0.06);
+}
+
+.section-search {
+  width: 100%;
+  min-width: 260px;
+  padding: 0 12px;
+}
+
+.department-search {
+  width: min(100%, 520px);
+  min-width: 260px;
+  padding-left: 12px;
+}
+
+.semester-search {
+  width: 100%;
+  min-width: 260px;
+  padding: 0 12px;
+}
+
+@media (max-width: 760px) {
+  .section-search,
+  .department-search,
+  .semester-search {
+    width: 100%;
+    min-width: 0;
+  }
+}
+
+body .page-content .section-search,
+body .page-content .department-search,
+body .page-content .semester-search {
+  height: 42px !important;
+  min-height: 42px !important;
+  box-sizing: border-box !important;
+  border: 1px solid #9bbbd3 !important;
+  outline: none !important;
+  box-shadow: 0 1px 2px rgba(6, 46, 89, 0.04) !important;
+}
+
+body .page-content .section-search:focus-within,
+body .page-content .department-search:focus-within,
+body .page-content .semester-search:focus-within {
+  border-color: #1970b3 !important;
+  box-shadow: 0 0 0 3px rgba(25, 112, 179, 0.18), 0 2px 6px rgba(6, 46, 89, 0.06) !important;
+}
+
+body .page-content .section-search > input,
+body .page-content .department-search > input,
+body .page-content .semester-search > input {
+  width: 100% !important;
+  height: 40px !important;
+  min-height: 40px !important;
+  box-sizing: border-box !important;
+  border: 0 !important;
+  outline: 0 !important;
+  box-shadow: none !important;
+  background: transparent !important;
+}
+
+.section-management .section-stats {
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+}
+
+.section-current-students-card .cm-kpi-icon {
+  color: #1970b3;
+  background: #e8f3fc;
+}
+
+@media (max-width: 1180px) {
+  .section-management .section-stats {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 760px) {
+  .section-management .section-stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 480px) {
+  .section-management .section-stats {
+    grid-template-columns: 1fr;
+  }
+}

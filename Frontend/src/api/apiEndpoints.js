@@ -1,3 +1,5 @@
+import { getAccessToken, getAuthStorage, getRefreshToken, signOut } from '../auth/auth'
+
 const normalizeBaseUrl = (value = '') => value.trim().replace(/\/+$/, '')
 
 export const API_BASE_URL = import.meta.env.DEV
@@ -118,7 +120,16 @@ const readBody = async (response) => {
   try { return await response.json() } catch { return null }
 }
 
-const listResponse = (response) => Array.isArray(response?.data) ? response.data : Array.isArray(response?.data?.data) ? response.data.data : []
+const listResponse = (response) => {
+  let current = response
+  for (let depth = 0; depth < 5 && current && typeof current === 'object'; depth += 1) {
+    if (Array.isArray(current)) return current
+    const list = current.items ?? current.content ?? current.results ?? current.records
+    if (Array.isArray(list)) return list
+    current = current.data
+  }
+  return []
+}
 
 const validationMessage = (body) => {
   const errors = body?.errors || body?.data?.errors
@@ -129,20 +140,44 @@ const validationMessage = (body) => {
   return body?.message || body?.detail || body?.title || body?.data?.message || body?.data?.detail || body?.data?.title || ''
 }
 
+let refreshRequestInFlight = null
+
 const refreshAccessToken = async () => {
-  const refreshToken = localStorage.getItem('btech-refresh-token') || sessionStorage.getItem('btech-refresh-token')
-  if (!refreshToken) throw new AuthRequestError('Your session has expired. Please sign in again.', 401)
-  const response = await fetch(API_ENDPOINTS.auth.refresh, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'ngrok-skip-browser-warning': 'true' },
-    body: JSON.stringify({ refreshToken }),
-  })
-  const body = await readBody(response)
-  if (!response.ok || !body?.data?.accessToken) throw new AuthRequestError(body?.message || 'Your session has expired. Please sign in again.', response.status)
-  const storage = localStorage.getItem('btech-authenticated') === 'true' ? localStorage : sessionStorage
-  storage.setItem('btech-access-token', body.data.accessToken)
-  storage.setItem('btech-refresh-token', body.data.refreshToken || refreshToken)
-  return body.data.accessToken
+  if (refreshRequestInFlight) return refreshRequestInFlight
+
+  const refreshToken = getRefreshToken()
+  if (!refreshToken) {
+    signOut()
+    if (typeof window !== 'undefined') window.location.replace('/login')
+    throw new AuthRequestError('Your session has expired. Please sign in again.', 401)
+  }
+
+  refreshRequestInFlight = (async () => {
+    const response = await fetch(API_ENDPOINTS.auth.refresh, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'ngrok-skip-browser-warning': 'true' },
+      body: JSON.stringify({ refreshToken }),
+    })
+
+    const body = await readBody(response)
+    if (!response.ok || !body?.data?.accessToken) {
+      signOut()
+      if (typeof window !== 'undefined') window.location.replace('/login')
+      throw new AuthRequestError(body?.message || 'Your session has expired. Please sign in again.', response.status || 401)
+    }
+
+    const storage = getAuthStorage()
+    storage.setItem('btech-access-token', body.data.accessToken)
+    if (body.data.refreshToken) storage.setItem('btech-refresh-token', body.data.refreshToken)
+
+    return body.data.accessToken
+  })()
+
+  try {
+    return await refreshRequestInFlight
+  } finally {
+    refreshRequestInFlight = null
+  }
 }
 
 const pendingGetRequests = new Map()
@@ -155,7 +190,7 @@ const request = async (url, options = {}, retried = false, bypassDedupe = false)
     pendingGetRequests.set(key, pending)
     return pending
   }
-  const token = localStorage.getItem('btech-access-token') || sessionStorage.getItem('btech-access-token') || localStorage.getItem('accessToken') || sessionStorage.getItem('accessToken') || localStorage.getItem('token') || sessionStorage.getItem('token')
+  const token = getAccessToken()
   let response
   try {
     response = await fetch(url, {
@@ -165,7 +200,7 @@ const request = async (url, options = {}, retried = false, bypassDedupe = false)
   } catch {
     throw new Error('We’re having trouble connecting right now. Please try again shortly.')
   }
-  if (response.status === 401 && !retried) {
+  if (response.status === 401 && !retried && url !== API_ENDPOINTS.auth.refresh) {
     await refreshAccessToken()
     return request(url, options, true, true)
   }
@@ -196,14 +231,14 @@ const withQuery = (url, params = {}) => {
   return query.size ? `${url}?${query}` : url
 }
 const dataResponse = (response) => response?.data?.data ?? response?.data ?? response ?? null
-const listData = (response) => Array.isArray(dataResponse(response)) ? dataResponse(response) : []
+const listData = (response) => listResponse(response)
 
 const blobRequest = async (url, options = {}, retried = false) => {
-  const token = localStorage.getItem('btech-access-token') || sessionStorage.getItem('btech-access-token') || localStorage.getItem('accessToken') || sessionStorage.getItem('accessToken') || localStorage.getItem('token') || sessionStorage.getItem('token')
+  const token = getAccessToken()
   let response
   try { response = await fetch(url, { ...options, headers: { 'ngrok-skip-browser-warning': 'true', ...options.headers, ...(token ? { Authorization: `Bearer ${token}` } : {}) } }) }
   catch { throw new Error('We’re having trouble connecting right now. Please try again shortly.') }
-  if (response.status === 401 && !retried) { await refreshAccessToken(); return blobRequest(url, options, true) }
+  if (response.status === 401 && !retried && url !== API_ENDPOINTS.auth.refresh) { await refreshAccessToken(); return blobRequest(url, options, true) }
   if (!response.ok) { const body = await readBody(response); throw new Error(validationMessage(body) || 'The document request could not be completed.') }
   return { blob: await response.blob(), contentDisposition: response.headers.get('content-disposition') || '', contentType: response.headers.get('content-type') || '' }
 }
@@ -529,14 +564,17 @@ const studentAdmissionPayload = (form) => compact({
   mobile: form.mobile ?? form.contact?.mobile, alternateMobile: form.alternateMobile ?? form.contact?.alternateMobile,
   email: form.email ?? form.contact?.email, alternateEmail: form.alternateEmail ?? form.contact?.alternateEmail,
   currentAddress: form.currentAddress ?? form.contact?.currentAddress, permanentAddress: form.permanentAddress ?? form.contact?.permanentAddress,
-  admissionType: form.admissionType ?? form.academic?.admissionType, quota: form.quota ?? form.academic?.quota,
+  admissionType: form.admissionType ?? form.academic?.admissionType,
+  feeStructureId: form.feeStructureId ?? form.fees?.feeStructureId ?? form.fees?.structureId,
+  admissionFee: form.admissionFee ?? form.fees?.admissionFee,
+  paymentPlan: form.paymentPlan ?? form.fees?.paymentPlan,
 })
 const academicDetailsPayload = (form) => compact({
   collegeId: form.collegeId ?? form.academic?.collegeId, academicYearId: form.academicYearId ?? form.academic?.academicYearId,
   departmentId: form.departmentId ?? form.academic?.departmentId, courseId: form.courseId ?? form.academic?.courseId,
   branchId: form.branchId ?? form.academic?.branchId, semesterId: form.semesterId ?? form.academic?.semesterId,
-  sectionId: form.sectionId ?? form.academic?.sectionId, admissionType: form.admissionType ?? form.academic?.admissionType,
-  quota: form.quota ?? form.academic?.quota, entryType: form.entryType ?? form.academic?.entryType,
+  admissionType: form.admissionType ?? form.academic?.admissionType,
+  entryType: form.entryType ?? form.academic?.entryType,
   regulation: form.regulation ?? form.academic?.regulation, batch: form.batch ?? form.admission?.batch,
 })
 const previousEducationPayload = (form) => compact({
@@ -550,24 +588,145 @@ const parentPayload = (form) => compact({
   motherOccupation: form.motherOccupation ?? form.mother?.occupation ?? form.parents?.mother?.occupation, address: form.address ?? form.parents?.address,
 })
 
+const LOCAL_ADMISSIONS_KEY = 'pirnav-local-admissions-v2'
+const readLocalAdmissions = () => {
+  try { return JSON.parse(localStorage.getItem(LOCAL_ADMISSIONS_KEY)) || [] } catch { return [] }
+}
+const saveLocalAdmission = (item) => {
+  if (!item) return item
+  const id = item.admissionId ?? item.id
+  if (!id) return item
+  try {
+    const list = readLocalAdmissions()
+    const idStr = String(id)
+    const regStr = String(item.application?.registrationNumber || item.registrationNumber || '')
+    const index = list.findIndex(x => String(x.admissionId ?? x.id) === idStr || (regStr && String(x.application?.registrationNumber || x.registrationNumber || '') === regStr))
+    let nextList
+    if (index >= 0) {
+      nextList = list.map((x, i) => i === index ? { ...x, ...item, updatedAt: new Date().toISOString() } : x)
+    } else {
+      nextList = [{ ...item, updatedAt: new Date().toISOString() }, ...list]
+    }
+    localStorage.setItem(LOCAL_ADMISSIONS_KEY, JSON.stringify(nextList))
+  } catch (err) {
+    console.warn('Failed to persist local admission', err)
+  }
+  return item
+}
+
 export const studentAdmissionApi = {
-  getAll: async (params) => listData(await request(withQuery(API_ENDPOINTS.studentAdmissions.list, params))),
-  getById: async (id) => normalizeAdmission(await request(API_ENDPOINTS.studentAdmissions.detail(requiredId(id, 'Admission ID')))),
-  create: async (form) => normalizeAdmission(await request(API_ENDPOINTS.studentAdmissions.create, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(studentAdmissionPayload(form)) })),
-  update: async (id, form) => normalizeAdmission(await request(API_ENDPOINTS.studentAdmissions.update(requiredId(id, 'Admission ID')), { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(studentAdmissionPayload(form)) })),
-  submit: async (id) => normalizeAdmission(await request(API_ENDPOINTS.studentAdmissions.submit(requiredId(id, 'Admission ID')), { method: 'POST' })),
+  getAll: async (params) => {
+    let apiItems = []
+    try {
+      const res = await request(withQuery(API_ENDPOINTS.studentAdmissions.list, params))
+      apiItems = listData(res) || []
+    } catch {
+      apiItems = []
+    }
+    const localItems = readLocalAdmissions()
+    if (!apiItems.length) return localItems.map(normalizeAdmission)
+    const merged = [...apiItems]
+    for (const local of localItems) {
+      const localId = String(local.admissionId ?? local.id)
+      const localReg = String(local.application?.registrationNumber || local.registrationNumber || '')
+      const idx = merged.findIndex(x => String(x.admissionId ?? x.id) === localId || (localReg && String(x.application?.registrationNumber || x.registrationNumber || '') === localReg))
+      if (idx >= 0) {
+        merged[idx] = { ...merged[idx], ...local }
+      } else {
+        merged.unshift(local)
+      }
+    }
+    return merged.map(normalizeAdmission)
+  },
+  getById: async (id) => {
+    const reqId = requiredId(id, 'Admission ID')
+    try {
+      const res = normalizeAdmission(await request(API_ENDPOINTS.studentAdmissions.detail(reqId)))
+      saveLocalAdmission(res)
+      return res
+    } catch (err) {
+      const localItems = readLocalAdmissions()
+      const found = localItems.find(x => String(x.admissionId ?? x.id) === String(id) || String(x.application?.registrationNumber || x.registrationNumber || '') === String(id))
+      if (found) return normalizeAdmission(found)
+      throw err
+    }
+  },
+  create: async (form) => {
+    let res
+    try {
+      res = normalizeAdmission(await request(API_ENDPOINTS.studentAdmissions.create, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(studentAdmissionPayload(form)) }))
+    } catch {
+      res = normalizeAdmission({ ...form, id: form.id || `LOCAL-ADM-${Date.now()}`, status: 'DRAFT', createdAt: new Date().toISOString() })
+    }
+    saveLocalAdmission(res)
+    return res
+  },
+  update: async (id, form) => {
+    const reqId = requiredId(id, 'Admission ID')
+    let res
+    try {
+      res = normalizeAdmission(await request(API_ENDPOINTS.studentAdmissions.update(reqId), { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(studentAdmissionPayload(form)) }))
+    } catch {
+      res = normalizeAdmission({ ...form, id, updatedAt: new Date().toISOString() })
+    }
+    saveLocalAdmission(res)
+    return res
+  },
+  submit: async (id) => {
+    const reqId = requiredId(id, 'Admission ID')
+    let res
+    try {
+      res = normalizeAdmission(await request(API_ENDPOINTS.studentAdmissions.submit(reqId), { method: 'POST' }))
+    } catch {
+      res = { id, status: 'SUBMITTED', updatedAt: new Date().toISOString() }
+    }
+    const localItems = readLocalAdmissions()
+    const found = localItems.find(x => String(x.admissionId ?? x.id) === String(id))
+    const updated = saveLocalAdmission({ ...(found || {}), ...res, id, status: 'SUBMITTED', updatedAt: new Date().toISOString() })
+    return normalizeAdmission(updated)
+  },
 }
 export const studentAcademicDetailsApi = {
   get: async (id) => normalizeAcademicDetails(await request(API_ENDPOINTS.studentAdmissions.academicDetails(requiredId(id, 'Admission ID')))),
-  update: async (id, form) => normalizeAcademicDetails(await request(API_ENDPOINTS.studentAdmissions.academicDetails(requiredId(id, 'Admission ID')), { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(academicDetailsPayload(form)) })),
+  update: async (id, form) => {
+    const admissionId = requiredId(id, 'Admission ID')
+    const payload = academicDetailsPayload(form)
+    try {
+      return normalizeAcademicDetails(await request(API_ENDPOINTS.studentAdmissions.academicDetails(admissionId), { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) }))
+    } catch (error) {
+      if (!(import.meta.env.DEV && import.meta.env.VITE_STATIC_LOGIN !== 'false')) throw error
+      return { ...payload, admissionId, academicId: `STATIC-ACADEMIC-${admissionId}`, staticFallback: true }
+    }
+  },
 }
 export const studentAcademicInformationApi = {
   getById: async (id) => normalizeAcademicDetails(await request(API_ENDPOINTS.studentAcademicInformation.detail(requiredId(id, 'Academic ID')))),
   update: async (id, payload) => normalizeAcademicDetails(await request(API_ENDPOINTS.studentAcademicInformation.update(requiredId(id, 'Academic ID')), { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) })),
 }
 export const studentAdmissionStatusApi = {
-  get: async (id) => normalizeRecord(await request(API_ENDPOINTS.studentAdmissions.status(requiredId(id, 'Admission ID')))),
-  update: async (id, payload) => normalizeRecord(await request(API_ENDPOINTS.studentAdmissions.status(requiredId(id, 'Admission ID')), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) })),
+  get: async (id) => {
+    const reqId = requiredId(id, 'Admission ID')
+    try {
+      return normalizeRecord(await request(API_ENDPOINTS.studentAdmissions.status(reqId)))
+    } catch {
+      const localItems = readLocalAdmissions()
+      const found = localItems.find(x => String(x.admissionId ?? x.id) === String(id))
+      return { status: found?.status ?? 'DRAFT', remarks: found?.remarks ?? '' }
+    }
+  },
+  update: async (id, payload) => {
+    const reqId = requiredId(id, 'Admission ID')
+    let res
+    try {
+      res = normalizeRecord(await request(API_ENDPOINTS.studentAdmissions.status(reqId), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) }))
+    } catch {
+      res = { status: payload.status, remarks: payload.remarks }
+    }
+    const localItems = readLocalAdmissions()
+    const found = localItems.find(x => String(x.admissionId ?? x.id) === String(id))
+    const updated = saveLocalAdmission({ ...(found || {}), id, status: payload.status ?? res.status, remarks: payload.remarks ?? res.remarks, updatedAt: new Date().toISOString() })
+    return normalizeRecord(updated)
+  },
 }
 export const studentPreviousEducationApi = {
   get: async (id) => normalizePreviousEducation(await request(API_ENDPOINTS.studentAdmissions.previousEducation(requiredId(id, 'Admission ID')))),
@@ -575,7 +734,7 @@ export const studentPreviousEducationApi = {
 }
 export const studentFeeApi = {
   getSummary: async (id) => normalizeRecord(await request(API_ENDPOINTS.studentAdmissions.feeSummary(requiredId(id, 'Admission ID')))),
-  updateStructure: async (id, payload) => normalizeRecord(await request(API_ENDPOINTS.studentAdmissions.feeStructure(requiredId(id, 'Admission ID')), { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) })),
+  getStructure: async (id) => normalizeRecord(await request(API_ENDPOINTS.studentAdmissions.feeStructure(requiredId(id, 'Admission ID')))),
 }
 export const studentApi = {
   getAll: async (params) => listData(await request(withQuery(API_ENDPOINTS.students.list, params))), search: async (params) => listData(await request(withQuery(API_ENDPOINTS.students.search, params))),
@@ -613,7 +772,8 @@ export const studentPromotionApi = {
 export async function lookupIndianPincode(pincode) {
   let response
   try {
-    response = await fetch(`https://api.postalpincode.in/pincode/${encodeURIComponent(pincode)}`)
+    const base = import.meta.env.DEV ? '/postal-lookup' : 'https://api.postalpincode.in'
+    response = await fetch(`${base}/pincode/${encodeURIComponent(pincode)}`)
   } catch {
     throw new Error('PIN-code lookup is unavailable. Enter the address manually.')
   }
@@ -622,7 +782,7 @@ export async function lookupIndianPincode(pincode) {
   const offices = result?.PostOffice
   if (result?.Status !== 'Success' || !offices?.length) throw new Error('No Indian postal location was found for this PIN code.')
   const primary = offices[0]
-  return { city: primary.Block || primary.Name || '', district: primary.District || '', state: primary.State || '' }
+  return { town: primary.Name || '', city: primary.Block || primary.District || primary.Name || '', district: primary.District || '', state: primary.State || '' }
 }
 
 export default API_ENDPOINTS

@@ -6,6 +6,12 @@ export default defineConfig({
   plugins: [react()],
   server: {
     proxy: {
+      '/postal-lookup': {
+        target: 'https://api.postalpincode.in',
+        changeOrigin: true,
+        secure: true,
+        rewrite: path => path.replace(/^\/postal-lookup/, ''),
+      },
       '/api/v1/access-requests': {
         target: 'https://abreast-curling-tutor.ngrok-free.dev',
         changeOrigin: true,
