@@ -52,6 +52,7 @@ const splitFullName=fullName=>{
   return { firstName:parts[0]||'', middleName:parts.length>2?parts.slice(1,-1).join(' '):'', lastName:parts.length>1?parts.at(-1):'' }
 }
 const dateOnly=value=>value?String(value).slice(0,10):''
+const tenDigitMobile=value=>{const digits=String(value??'').replace(/\D/g,'');return digits.length>10?digits.slice(-10):digits}
 const PROFILE_DOCUMENTS=[['aadhaarCard','Aadhaar card'],['tenthMemo','10th / SSC marks memo'],['qualifyingMemo','Intermediate / Diploma marks memo'],['transferCertificate','Transfer certificate'],['casteCertificate','Caste certificate'],['incomeCertificate','Income certificate']]
 const documentsFromApi=rows=>{
   const mapped={...Object.fromEntries(PROFILE_DOCUMENTS.map(([key])=>[key,null])),otherCertificates:[]}
@@ -64,7 +65,8 @@ const documentsFromApi=rows=>{
   return mapped
 }
 const apiAssetUrl=value=>{
-  if(!value||/^(?:https?:|data:|blob:)/i.test(value))return value||''
+  if(!value||['string','null','undefined'].includes(String(value).trim().toLowerCase()))return ''
+  if(/^(?:https?:|data:|blob:)/i.test(value))return value
   const base=String(import.meta.env.VITE_API_BASE_URL||'').replace(/\/+$/,'')
   return import.meta.env.DEV?value:`${base}/${String(value).replace(/^\/+/, '')}`
 }
@@ -80,8 +82,8 @@ const profileFromApi=x=>{
   const hasPerm=Boolean(formatAddress(permanentAddress))
   const sameAddressExplicit=contactRaw.sameAddress
   const sameAddress=sameAddressExplicit!==undefined&&sameAddressExplicit!==null?Boolean(sameAddressExplicit):(!hasPerm&&Boolean(formatAddress(currentAddress)))
-  const contact={ mobile:x.mobile??personalRaw.mobile??contactRaw.mobile??'', alternateMobile:x.alternateMobile??contactRaw.alternateMobile??'', email:x.email??personalRaw.email??contactRaw.email??'', alternateEmail:x.alternateEmail??contactRaw.alternateEmail??'', sameAddress, currentAddress, permanentAddress:(!hasPerm&&sameAddress)?{...currentAddress}:permanentAddress }
-  const parents={ father:{ name:parentRaw.fatherName??x.parents?.father?.name??'', mobile:parentRaw.fatherMobile??parentRaw.parentMobile??x.parents?.father?.mobile??'', email:parentRaw.fatherEmail??parentRaw.parentEmail??x.parents?.father?.email??'', occupation:parentRaw.fatherOccupation??x.parents?.father?.occupation??'', qualification:x.parents?.father?.qualification??'', income:x.parents?.father?.income??'' }, mother:{ name:parentRaw.motherName??x.parents?.mother?.name??'', mobile:parentRaw.motherMobile??x.parents?.mother?.mobile??'', email:parentRaw.motherEmail??x.parents?.mother?.email??'', occupation:parentRaw.motherOccupation??x.parents?.mother?.occupation??'' }, guardian:{ name:parentRaw.guardianName??x.parents?.guardian?.name??'', relationship:parentRaw.guardianRelationship??x.parents?.guardian?.relationship??'', relationshipOther:x.parents?.guardian?.relationshipOther??'', mobile:parentRaw.guardianMobile??x.parents?.guardian?.mobile??'' }, primaryContact:x.parents?.primaryContact??'Father', emergencyMobile:x.parents?.emergencyMobile??'' }
+  const contact={ mobile:tenDigitMobile(x.mobile??personalRaw.mobile??contactRaw.mobile), alternateMobile:tenDigitMobile(x.alternateMobile??contactRaw.alternateMobile), email:x.email??personalRaw.email??contactRaw.email??'', alternateEmail:x.alternateEmail??contactRaw.alternateEmail??'', sameAddress, currentAddress, permanentAddress:(!hasPerm&&sameAddress)?{...currentAddress}:permanentAddress }
+  const parents={ father:{ name:parentRaw.fatherName??x.parents?.father?.name??'', mobile:tenDigitMobile(parentRaw.fatherMobile??parentRaw.parentMobile??x.parents?.father?.mobile), email:parentRaw.fatherEmail??parentRaw.parentEmail??x.parents?.father?.email??'', occupation:parentRaw.fatherOccupation??x.parents?.father?.occupation??'', qualification:x.parents?.father?.qualification??'', income:x.parents?.father?.income??'' }, mother:{ name:parentRaw.motherName??x.parents?.mother?.name??'', mobile:tenDigitMobile(parentRaw.motherMobile??x.parents?.mother?.mobile), email:parentRaw.motherEmail??x.parents?.mother?.email??'', occupation:parentRaw.motherOccupation??x.parents?.mother?.occupation??'' }, guardian:{ name:parentRaw.guardianName??x.parents?.guardian?.name??'', relationship:parentRaw.guardianRelationship??x.parents?.guardian?.relationship??'', relationshipOther:x.parents?.guardian?.relationshipOther??'', mobile:tenDigitMobile(parentRaw.guardianMobile??x.parents?.guardian?.mobile) }, primaryContact:x.parents?.primaryContact??'Father', emergencyMobile:tenDigitMobile(x.parents?.emergencyMobile) }
   const academic={ academicYear:x.academicYear??'', admissionType:'', course:x.course??'', department:x.department??'', branch:x.branch??'', semester:x.semester??'', section:x.section??'', regulation:'', quota:'', quotaOther:'', entryType:'', ...x.academic, ...x.academicInformation }
   const application={ registrationNumber:x.registrationNumber??summary.registrationNumber??x.academicInformation?.registrationNumber??'', admissionNumber:x.admissionNumber??summary.admissionNumber??'', number:'', date:'', admissionDate:'', ...x.application }
   const previousEducation={ tenth:{ board:'', institution:'', rollNumber:'', passingYear:'', score:'' }, intermediate:{ qualification:'', board:'', institution:'', passingYear:'', stream:'', score:'' }, ...x.previousEducation }

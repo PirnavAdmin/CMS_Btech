@@ -28,6 +28,14 @@
   margin-top: 14px;
 }
 
+.sp-pincode-status { margin: 9px 0 0; color: var(--danger); font-size: 10px; font-weight: 700; }
+.sp-pincode-status.success { color: var(--success); }
+.sp-edit-progress { position: sticky; top: 148px; z-index: 3; height: 3px; background: var(--surface-soft); }
+.sp-edit-progress span { display: block; height: 100%; background: var(--brand); transition: width .2s ease; }
+.sp-edit-tabs button.complete { color: var(--success); border-color: color-mix(in srgb, var(--success) 30%, var(--border)); }
+.sp-edit-tabs button.complete i { color: var(--surface); background: var(--success); }
+.sp-edit-action-spacer { flex: 1; }
+
 .sp-document-upload {
   display: flex;
   min-width: 0;
