@@ -196,8 +196,8 @@ function CourseList() {
                       <td>{c.status ? <Badge value={c.status} /> : 'Not available'}</td>
                       <td>
                         <div className="course-actions">
-                          <Link aria-label={`View ${c.name}`} to={`/courses/${c.id}`}><FiEye /></Link>
-                          <Link aria-label={`Edit ${c.name}`} to={`/courses/${c.id}/edit`}><FiEdit2 /></Link>
+                          <Link aria-label={`View ${c.name}`} to={`/courses/${c.id}`}><FiEye className="module-action-icon module-action-icon--view" /></Link>
+                          <Link aria-label={`Edit ${c.name}`} to={`/courses/${c.id}/edit`}><FiEdit2 className="module-action-icon module-action-icon--edit" /></Link>
                           <button className={`course-status-action ${(c.status || 'Active') === 'Active' ? 'danger' : 'success'}`} title={(c.status || 'Active') === 'Active' ? `Mark ${c.name} inactive` : `Mark ${c.name} active`} aria-label={(c.status || 'Active') === 'Active' ? `Mark ${c.name} inactive` : `Mark ${c.name} active`} onClick={() => toggleStatus(c)}>{(c.status || 'Active') === 'Active' ? <FiToggleRight /> : <FiToggleLeft />}</button>
                         </div>
                       </td>
@@ -347,7 +347,7 @@ function CourseDetails() {
   const department = departments.find(x => String(x.id) === String(course.departmentId))
   const stats = [['Total Branches', branches.length], ['Active Branches', branches.filter(x => (x.status || 'Active') === 'Active').length], ['Inactive Branches', branches.filter(x => x.status === 'Inactive').length], ['Total Approved Intake', branches.reduce((n, x) => n + Number(x.intakeCapacity ?? x.intake ?? 0), 0)]]
 
-  return <Page><Header title="B.Tech Course Details" text="Course configuration and associated B.Tech branches."><Link className="cm-button secondary" to="/courses"><FiArrowLeft /> Back</Link><Link className="cm-button" to={`/courses/${id}/edit`}><FiEdit2 /> Edit Course</Link></Header>
+  return <Page><Header title="B.Tech Course Details" text="Course configuration and associated B.Tech branches."><Link className="cm-button secondary" to="/courses"><FiArrowLeft /> Back</Link><Link className="cm-button" to={`/courses/${id}/edit`}><FiEdit2 className="module-action-icon module-action-icon--edit" /> Edit Course</Link></Header>
     <section className="course-detail-hero"><div><span className="cm-eyebrow">B.Tech Course</span><h2>{course.name}</h2><Badge value={course.status || 'Active'} /></div><strong>{course.code}</strong></section>
     <section className="cm-panel course-detail-grid">{[
       ['Course Name', course.name],
@@ -409,7 +409,7 @@ export function CourseStructure() {
       <button className="cm-button" disabled={saving} onClick={submit}>{saving ? 'Saving…' : editing ? 'Update Structure' : 'Add Structure'}</button>
       {editing && <button className="cm-button secondary" onClick={() => setEditing(null)}>Cancel</button>}
     </section>
-    <section className="cm-panel cm-table-wrap"><table className="cm-table"><thead><tr><th>Year</th><th>Semester</th><th>Name</th><th>Status</th><th>Action</th></tr></thead><tbody>{pageRows.map(x => <tr key={x.structureId}><td>{x.yearNumber}</td><td>{x.semesterNumber}</td><td>{x.semesterName}</td><td>{Number(x.status) === 0 ? 'Deactive' : 'Active'}</td><td><button className="cm-button" onClick={() => edit(x)}><FiEdit2 /> Edit</button></td></tr>)}</tbody></table>{loading ? <div className="cm-empty">Loading structures…</div> : !visible.length ? <div className="cm-empty">No structure configured for Semester {semester}.</div> : <TablePagination page={currentPage} totalPages={totalPages} onPageChange={setPage} />}</section>
+    <section className="cm-panel cm-table-wrap"><table className="cm-table"><thead><tr><th>Year</th><th>Semester</th><th>Name</th><th>Status</th><th>Action</th></tr></thead><tbody>{pageRows.map(x => <tr key={x.structureId}><td>{x.yearNumber}</td><td>{x.semesterNumber}</td><td>{x.semesterName}</td><td>{Number(x.status) === 0 ? 'Deactive' : 'Active'}</td><td><button className="cm-button" onClick={() => edit(x)}><FiEdit2 className="module-action-icon module-action-icon--edit" /> Edit</button></td></tr>)}</tbody></table>{loading ? <div className="cm-empty">Loading structures…</div> : !visible.length ? <div className="cm-empty">No structure configured for Semester {semester}.</div> : <TablePagination page={currentPage} totalPages={totalPages} onPageChange={setPage} />}</section>
   </Page>
 }
 
