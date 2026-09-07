@@ -72,12 +72,14 @@ const payloadFor = (value) => ({
   description: value.description || '',
 })
 
-const validateBasic = (v) => {
+const validateBasic = (v, courses = [], editingId = null) => {
   const e = {}, code = v.code.trim().toUpperCase(), name = v.name.trim()
   if (!name) e.name = 'Course name is required.'
   else if (name.length < 3 || name.length > 120) e.name = 'Use a course name between 3 and 120 characters.'
   if (!code) e.code = 'Course code is required.'
-  else if (!/^[A-Z0-9]+(?:-[A-Z0-9]+)*$/.test(code)) e.code = 'Use uppercase letters, numbers and single hyphens only.'
+  else if (code.length < 2 || code.length > 20) e.code = 'Course code must be 2?20 characters.'
+  else if (!/^[A-Z][A-Z0-9]*(?:-[A-Z0-9]+)*$/.test(code)) e.code = 'Start with a letter. Use letters, numbers and single hyphens only.'
+  else if (courses.some(course => String(course.id) !== String(editingId) && String(course.code || '').trim().toUpperCase() === code)) e.code = 'This course code already exists. Enter a unique code.'
   if (!v.departmentId) e.departmentId = 'Department is required.'
   if (!v.branchId) e.branchId = 'Branch is required.'
   if (!v.status) e.status = 'Status is required.'
@@ -198,6 +200,7 @@ function CourseList() {
 }
 
 function CourseForm() {
+  const [existingCourses, setExistingCourses] = useState([])
   const { id } = useParams(), navigate = useNavigate()
   const [departments, setDepartments] = useState([])
   const [branches, setBranches] = useState([])
@@ -212,13 +215,14 @@ function CourseForm() {
   const load = async () => {
     setIsLoading(true); setError('')
     try {
-      const [departmentRows, branchRows] = await Promise.all([departmentApi.getAll(), branchApi.getAll()])
+      const [departmentRows, branchRows, courseRows] = await Promise.all([departmentApi.getAll(), branchApi.getAll(), courseApi.getAll()])
+      setExistingCourses(courseRows.map(mapCourse))
       setDepartments(departmentRows.map(mapDepartmentOption))
       setBranches(branchRows.map(normalize))
       if (id) {
         const courseRes = await getCourseById(id)
         const detail = mapCourse(recordFrom(courseRes))
-        setValue({ ...blank, ...detail, name: 'B.Tech', code: 'BTECH', status: '' })
+        setValue({ ...blank, ...detail, name: 'B.Tech', status: '' })
         setCodeEdited(true)
       }
     } catch (requestError) {
@@ -229,23 +233,31 @@ function CourseForm() {
   }
   useEffect(() => { load() }, [id])
 
-  const live = validateBasic(value)
-  const update = (key, next) => { setValue(v => { const n = { ...v, [key]: next }; if (key === 'name' && !codeEdited) n.code = codeFor(next); if (key === 'code') { n.code = next.toUpperCase().replace(/\s/g, ''); setCodeEdited(true) } if (key === 'departmentId') { n.collegeId = departments.find(x => String(x.id) === String(next))?.collegeId ?? ''; n.branchId = '' } return n }); setErrors(e => ({ ...e, [key]: '', ...(key === 'departmentId' ? { branchId: '' } : {}) })) }
+  const live = validateBasic(value, existingCourses, id)
+  const update = (key, next) => { setValue(v => { const n = { ...v, [key]: next }; if (key === 'name' && !codeEdited) n.code = codeFor(next); if (key === 'code') { n.code = next.toUpperCase(); setCodeEdited(true) } if (key === 'departmentId') { n.collegeId = departments.find(x => String(x.id) === String(next))?.collegeId ?? ''; n.branchId = '' } return n }); setErrors(e => ({ ...e, [key]: '', ...(key === 'departmentId' ? { branchId: '' } : {}) })) }
 
   const submit = async () => {
-    const e = validateBasic(value); setErrors(e)
+    if (isSaving || saved) return
+    const e = validateBasic(value, existingCourses, id); setErrors(e)
     if (Object.keys(e).length) return
     setIsSaving(true); setError('')
     try {
+      const latestCourses = (await courseApi.getAll()).map(mapCourse)
+      setExistingCourses(latestCourses)
+      const latestErrors = validateBasic(value, latestCourses, id)
+      if (Object.keys(latestErrors).length) { setErrors(latestErrors); return }
       const payload = payloadFor(value)
       const response = id ? await updateCourse(id, payload) : await createCourse(payload)
       const result = recordFrom(response)
       const courseId = result?.id ?? result?.courseId ?? id
       if (value.status === 'Inactive' && courseId) await updateCourseStatus(courseId, 0)
       setSaved(true)
-      setTimeout(() => navigate(`/courses/${courseId}`), 500)
+      setTimeout(() => navigate('/courses'), 500)
     } catch (requestError) {
-      setError(apiError(requestError, `Unable to ${id ? 'update' : 'create'} this course. Please try again.`))
+      const message = apiError(requestError, `Unable to ${id ? 'update' : 'create'} this course. Please try again.`)
+      if (/code/i.test(message) && /already exists|duplicate|already in use/i.test(message)) {
+        setErrors(current => ({ ...current, code: 'This course code already exists. Enter a unique code.' }))
+      } else setError(message)
     } finally {
       setIsSaving(false)
     }
@@ -260,7 +272,7 @@ function CourseForm() {
       <section className="cm-panel course-form">
         <section><h2>Course Identity</h2><div className="cm-form-grid">
           <Field label="Course Name *" error={errors.name || (value.name ? live.name : '')}><input value="B.Tech" readOnly /></Field>
-          <Field label="Course Code *" error={errors.code || (value.code ? live.code : '')}><input value="BTECH" readOnly /></Field>
+          <Field label="Course Code *" error={errors.code || (value.code ? live.code : '')}><input value={value.code} required minLength={2} maxLength={20} aria-invalid={Boolean(errors.code || live.code)} onChange={e => update('code', e.target.value)} onBlur={() => setErrors(current => ({ ...current, code: live.code || '' }))} placeholder="e.g. BTECH-02 (2?20 characters)" /></Field>
         </div></section>
         <section><h2>Academic Mapping</h2><div className="cm-form-grid">
           <Field label="Department *" error={errors.departmentId || (value.departmentId ? live.departmentId : '')}><select value={value.departmentId} onChange={e => update('departmentId', e.target.value)}><option value="">Select B.Tech department</option>{departments.filter(x => x.status !== 'Inactive' || String(x.id) === String(value.departmentId)).map(x => <option value={x.id} key={x.id}>{x.code ? `${x.code} — ` : ''}{x.name}</option>)}</select></Field>
