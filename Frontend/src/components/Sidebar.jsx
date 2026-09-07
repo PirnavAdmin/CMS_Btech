@@ -48,6 +48,7 @@ export default function Sidebar({ open = false, onClose = () => {}, collapsed = 
           <p className="sidebar-section-label">Academics</p>
           {academicLinks.map(link => <Item {...link} key={link.to} onNavigate={onClose}>{link.label}</Item>)}
           <p className="sidebar-section-label">Student Management</p>
+          <Item to="/access-requests" icon={FiUserPlus} tone="purple" onNavigate={onClose}>Access Requests</Item>
           <Item to="/student-management/admissions" icon={FiUserPlus} tone="orange" onNavigate={onClose}>Student Admissions</Item>
           <Item to="/student-management/profiles" icon={FiUser} tone="cyan" onNavigate={onClose}>Student Profiles</Item>
           <Item to="/student-management/promotions" icon={FiTrendingUp} tone="green" onNavigate={onClose}>Student Promotions</Item>

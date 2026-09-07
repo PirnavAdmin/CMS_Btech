@@ -14,6 +14,7 @@ import CollegeInstitutionManagement from './pages/admin-management/CollegeInstit
 import AddCollege from './pages/admin-management/AddCollege'
 import AcademicYearManagement from './pages/admin-management/AcademicYearManagement'
 import DepartmentManagement from './pages/admin-management/DepartmentManagement'
+import AccessRequests from './pages/admin-management/AccessRequests'
 import SemesterManagement from './pages/semester-management/SemesterManagement'
 import SectionManagement from './pages/section-management/SectionManagement'
 import MyProfile from './pages/profile/MyProfile'
@@ -75,6 +76,7 @@ export default function App() {
         <Route path="/college-institution-management/add" element={<AddCollege />} />
         <Route path="/academic-year-management" element={<AcademicYearManagement />} />
         <Route path="/department-management" element={<DepartmentManagement />} />
+        <Route path="/access-requests" element={<AccessRequests />} />
         <Route path="/semester-management" element={<SemesterManagement />} />
         <Route path="/section-management" element={<SectionManagement />} />
       </Route>
