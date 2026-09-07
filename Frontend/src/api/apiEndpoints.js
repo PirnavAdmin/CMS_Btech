@@ -465,8 +465,8 @@ export const departmentApi = {
 }
 
 export const courseApi = {
-  getAll: async () => {
-    const response = await request(API_ENDPOINTS.courses.list)
+  getAll: async (params) => {
+    const response = await request(withQuery(API_ENDPOINTS.courses.list, params))
     return listResponse(response)
   },
   getById: async (id) => (await request(API_ENDPOINTS.courses.detail(id)))?.data,
@@ -1034,10 +1034,10 @@ export const studentProfilesApi = {
 export const studentPromotionApi = {
   getDashboard: async () => normalizePromotion(await request(API_ENDPOINTS.promotions.dashboard)), getDirectory: async (params) => listData(await request(withQuery(API_ENDPOINTS.promotions.directory, params))), getHistory: async (params) => listData(await request(withQuery(API_ENDPOINTS.promotions.history, params))),
   getEligibleStudents: async (params) => listData(await request(withQuery(API_ENDPOINTS.promotions.eligibleStudents, params))), getEligibility: async (id) => normalizePromotion(await request(API_ENDPOINTS.promotions.eligibility(requiredId(id, 'Student ID')))),
-  updateEligibilityStatus: async (id, payload) => normalizePromotion(await request(API_ENDPOINTS.promotions.eligibilityStatus(requiredId(id, 'Student ID')), { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) })),
+  updateEligibilityStatus: async (id, eligibilityStatus) => normalizePromotion(await request(withQuery(API_ENDPOINTS.promotions.eligibilityStatus(requiredId(id, 'Student ID')), { eligibilityStatus }), { method: 'PUT' })),
   promote: async (payload) => normalizePromotion(await request(API_ENDPOINTS.promotions.promote, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) })),
   promoteBulk: async (payload) => normalizePromotion(await request(API_ENDPOINTS.promotions.promoteBulk, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) })),
-  getPromotedStudents: async () => listData(await request(API_ENDPOINTS.promotions.promotedStudents)), getStudentHistory: async (id) => listData(await request(API_ENDPOINTS.promotions.studentHistory(requiredId(id, 'Student ID')))), getHistoryByStudent: async (id) => listData(await request(API_ENDPOINTS.promotions.historyByStudent(requiredId(id, 'Student ID')))),
+  getPromotedStudents: async (params) => listData(await request(withQuery(API_ENDPOINTS.promotions.promotedStudents, params))), getStudentHistory: async (id) => listData(await request(API_ENDPOINTS.promotions.studentHistory(requiredId(id, 'Student ID')))), getHistoryByStudent: async (id) => listData(await request(API_ENDPOINTS.promotions.historyByStudent(requiredId(id, 'Student ID')))),
 }
 
 export async function lookupIndianPincode(pincode) {
