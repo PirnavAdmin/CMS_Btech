@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { FiEye as EyeIcon, FiEdit2 as EditIcon, FiPlus as Plus, FiToggleLeft, FiToggleRight } from 'react-icons/fi'
+import { FiEye as EyeIcon, FiEdit2 as EditIcon, FiPlus as Plus, FiToggleLeft, FiToggleRight, FiX } from 'react-icons/fi'
 import DashboardLayout from '../../layouts/DashboardLayout'
 import FilterPanel from '../../components/FilterPanel'
 import TablePagination, { PAGE_SIZE } from '../../components/TablePagination'
@@ -26,6 +26,10 @@ import {
 import './CollegeInstitutionManagement.css'
 
 const COLLEGE_TYPES = ['Engineering', 'Arts & Science', 'Medical', 'Management', 'Polytechnic', 'Other']
+const NEW_COLLEGE_DRAFT_KEY = 'pirnav-college-draft-new'
+const readNewCollegeDraft = () => {
+  try { return JSON.parse(localStorage.getItem(NEW_COLLEGE_DRAFT_KEY) || 'null') } catch { return null }
+}
 
 const emptyCollege = {
   id: null,
@@ -289,6 +293,7 @@ export default function CollegeInstitutionManagement({ initialView = 'list' }) {
   const [searchTerm, setSearchTerm] = useState('')
   const [typeFilter, setTypeFilter] = useState('')
   const [statusFilter, setStatusFilter] = useState('')
+  const [collegeDraft, setCollegeDraft] = useState(readNewCollegeDraft)
 
   // College Settings state — real list from the backend
   const [settingsList, setSettingsList] = useState([])
@@ -348,6 +353,13 @@ export default function CollegeInstitutionManagement({ initialView = 'list' }) {
     const timer = window.setTimeout(() => loadColleges(searchTerm), searchTerm.trim() ? 300 : 0)
     return () => window.clearTimeout(timer)
   }, [searchTerm])
+
+  useEffect(() => {
+    const refreshDraft = () => setCollegeDraft(readNewCollegeDraft())
+    window.addEventListener('storage', refreshDraft)
+    const timer = window.setInterval(refreshDraft, 1000)
+    return () => { window.removeEventListener('storage', refreshDraft); window.clearInterval(timer) }
+  }, [])
 
   const handleSearchChange = (e) => {
     setSearchTerm(e.target.value)
@@ -571,7 +583,7 @@ export default function CollegeInstitutionManagement({ initialView = 'list' }) {
                   Retry
                 </button>
               </div>
-            ) : filteredColleges.length === 0 ? (
+            ) : filteredColleges.length === 0 && !collegeDraft?.values ? (
               <div className="cm-empty">
                 <p>No colleges found.</p>
                 <button type="button" className="cm-primary-btn" onClick={openAdd}>
@@ -595,6 +607,16 @@ export default function CollegeInstitutionManagement({ initialView = 'list' }) {
                       </tr>
                     </thead>
                     <tbody>
+                      {collegeDraft?.values && <tr className="cm-draft-row">
+                        <td><span className="cm-draft-row__mark">D</span></td>
+                        <td><span className="cm-college-name">{collegeDraft.values.collegeName || 'New college draft'}</span><small className="cm-draft-row__label">Draft saved</small></td>
+                        <td>{collegeDraft.values.collegeCode || '—'}</td>
+                        <td>Draft</td>
+                        <td>{collegeDraft.values.city || '—'}</td>
+                        <td>{collegeDraft.values.contactNumber || '—'}</td>
+                        <td><span className="cm-status-badge draft">{collegeDraft.progress || 0}% complete</span></td>
+                        <td className="cm-actions-cell"><div className="cm-actions"><button type="button" className="cm-action-icon-btn cm-edit-action" title="Resume draft" aria-label="Resume draft" onClick={() => navigate('/college-institution-management/add')}><EditIcon /></button><button type="button" className="cm-action-icon-btn cm-danger cm-discard-action" title="Discard draft" aria-label="Discard draft" onClick={() => { localStorage.removeItem(NEW_COLLEGE_DRAFT_KEY); setCollegeDraft(null) }}><FiX aria-hidden="true" /></button></div></td>
+                      </tr>}
                       {displayedColleges.map((college) => (
                         <tr key={college.id}>
                           <td>
@@ -690,6 +712,7 @@ export default function CollegeInstitutionManagement({ initialView = 'list' }) {
                 </div>
               </>
             )}
+
           </>
         )}
 

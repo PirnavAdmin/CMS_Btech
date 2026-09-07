@@ -55,7 +55,7 @@ export default function SemesterManagement() {
   const changeFilter = (name, value) => { setFilters((current) => ({ ...current, [name]: value, ...(name === 'courseId' ? { branchId: '' } : {}) })); setPage(1) }
   const clearFilters = () => { setQuery(''); setFilters({ courseId: '', branchId: '', academicYearId: '', status: '' }); setPage(1) }
   const hasFilters = Boolean(query || Object.values(filters).some(Boolean))
-  const pageSize = 8, pageCount = Math.max(1, Math.ceil(filtered.length / pageSize)), currentPage = Math.min(page, pageCount), visible = filtered.slice((currentPage - 1) * pageSize, currentPage * pageSize)
+  const pageSize = 5, pageCount = Math.max(1, Math.ceil(filtered.length / pageSize)), currentPage = Math.min(page, pageCount), visible = filtered.slice((currentPage - 1) * pageSize, currentPage * pageSize)
   const close = () => { if (!saving) { setOpen(false); setForm(blank); setError('') } }
   const update = ({ target: { name, value } }) => setForm((current) => ({
     ...current,

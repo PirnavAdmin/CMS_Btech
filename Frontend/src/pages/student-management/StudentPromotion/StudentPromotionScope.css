@@ -21,6 +21,8 @@
   text-transform: uppercase;
 }
 
+.p-scope .p-required { color: #c9322a; }
+
 .p-scope select {
   box-sizing: border-box;
   width: 100%;
@@ -67,10 +69,13 @@
 }
 
 .p-history-table th:first-child,
-.p-history-table td:first-child {
-  width: 26%;
-  text-align: left;
-}
+.p-history-table td:first-child { width: 26%; }
+
+.p-history-table th,
+.p-history-table td { text-align: center !important; vertical-align: middle !important; }
+
+.student-promotion.p-module .p-history-table thead th,
+.student-promotion.p-module .p-history-table tbody td { text-align: center !important; vertical-align: middle !important; }
 
 .p-history-table th:not(:first-child),
 .p-history-table td:not(:first-child) {

@@ -43,7 +43,7 @@ const validate = (form) => {
 
 function DetailSection({ icon: Icon, title, children, className = '' }) { return <div className={`profile-preview-group ${className}`}><header><span><Icon /></span><div><h2>{title}</h2><p>Saved information from your account</p></div></header><div className="profile-detail-grid">{children}</div></div> }
 function Detail({ label, value, wide = false }) { const email=label === 'Email Address'; return <div className={`${wide ? 'profile-detail wide' : 'profile-detail'}${email ? ' profile-detail-email' : ''}`}><span>{label}</span><strong title={email ? display(value) : undefined}>{display(value)}</strong></div> }
-function AddressCard({ title, address, city, district, state, pincode }) { return <article className="profile-address-card"><header><FiMapPin/><h3>{title}</h3></header><p>{display(address)}</p><dl><div><dt>City / Block</dt><dd>{display(city)}</dd></div><div><dt>District</dt><dd>{display(district)}</dd></div><div><dt>State</dt><dd>{display(state)}</dd></div><div><dt>PIN Code</dt><dd>{display(pincode)}</dd></div></dl></article> }
+function AddressCard({ title, houseNumber, address, city, district, state, pincode }) { return <article className="profile-address-card"><header><FiMapPin/><h3>{title}</h3></header><dl className="profile-address-primary"><div><dt>House No</dt><dd>{display(houseNumber)}</dd></div><div><dt>Address</dt><dd>{display(address)}</dd></div></dl><dl><div><dt>City / Block</dt><dd>{display(city)}</dd></div><div><dt>District</dt><dd>{display(district)}</dd></div><div><dt>State</dt><dd>{display(state)}</dd></div><div><dt>PIN Code</dt><dd>{display(pincode)}</dd></div></dl></article> }
 
 export default function MyProfile() {
   const isStudent = getUserRole() === ROLES.STUDENT
@@ -112,8 +112,8 @@ export default function MyProfile() {
         {isStudent ? <><Detail label="Admission Number" value={profile.admissionNumber || profile.identifier} /><Detail label="Registration Number" value={profile.registrationNumber} /><Detail label="Roll Number" value={profile.rollNumber} /><Detail label="Department" value={profile.department} /><Detail label="Course" value={profile.course || profile.designation} /><Detail label="Branch" value={profile.branch} /><Detail label="Academic Year" value={profile.academicYear || profile.batch} /><Detail label="Semester / Section" value={[profile.semester, profile.section && `Section ${profile.section}`].filter(Boolean).join(' · ')} /></> : <><Detail label="Employee ID" value={profile.identifier} /><Detail label="Assigned Role" value={profile.role} /><Detail label="Department" value={profile.department} /><Detail label="Designation / Course" value={profile.designation} /></>}
       </DetailSection>
       <DetailSection icon={FiMapPin} title="Address & Bio">
-        <AddressCard title="Current Address" address={profile.address} city={profile.city} district={profile.district} state={profile.state} pincode={profile.pincode || profile.postalCode}/>
-        <AddressCard title="Permanent Address" address={profile.permanentAddress} city={profile.permanentCity} district={profile.permanentDistrict} state={profile.permanentState} pincode={profile.permanentPincode}/>
+        <AddressCard title="Current Address" houseNumber={profile.houseNumber} address={profile.address} city={profile.city} district={profile.district} state={profile.state} pincode={profile.pincode || profile.postalCode}/>
+        <AddressCard title="Permanent Address" houseNumber={profile.permanentHouseNumber} address={profile.permanentAddress} city={profile.permanentCity} district={profile.permanentDistrict} state={profile.permanentState} pincode={profile.permanentPincode}/>
         <Detail label="About Me" value={profile.bio} wide />
       </DetailSection>
     </section>

@@ -25,6 +25,28 @@
   font-size: 0.95rem;
 }
 
+.cm-college-draft {
+  display: grid;
+  grid-template-columns: minmax(180px, 1fr) minmax(180px, 260px) auto;
+  align-items: center;
+  gap: 18px;
+  width: min(100%, 760px);
+  margin: 12px 0 0 auto;
+  padding: 14px 16px;
+  border: 1px solid #b9d8f5;
+  border-radius: 10px;
+  background: #f2f8fd;
+}
+.cm-college-draft > div:first-child { display: grid; gap: 3px; }
+.cm-college-draft__eyebrow { color: #1970b3; font-size: .68rem; font-weight: 850; letter-spacing: .1em; text-transform: uppercase; }
+.cm-college-draft strong { color: #123f63; font-size: .92rem; }
+.cm-college-draft small { color: #668198; font-size: .75rem; }
+.cm-college-draft__progress { display: grid; gap: 6px; color: #52728c; font-size: .72rem; font-weight: 750; }
+.cm-college-draft__progress > span { display: block; height: 6px; overflow: hidden; border-radius: 99px; background: #1970b3; }
+.cm-college-draft__actions { display: flex; gap: 8px; }
+.cm-college-draft__actions button { min-height: 34px; padding: 7px 11px; font-size: .76rem; }
+@media (max-width: 760px) { .cm-college-draft { grid-template-columns: 1fr; gap: 10px; } .cm-college-draft__actions { justify-content: flex-start; } }
+
 /* Buttons */
 .cm-primary-btn {
   border: 0;
@@ -257,6 +279,11 @@
   background: #fee2e2;
   color: #b91c1c;
 }
+.cm-status-badge.draft { background: #e8f3fc; color: #176fae; }
+.cm-draft-row { background: #f7fbfe; }
+.cm-draft-row td { border-bottom-color: #cfe2f0; }
+.cm-draft-row__mark { display: grid; width: 36px; height: 36px; place-items: center; border: 1px dashed #1970b3; border-radius: 8px; color: #1970b3; background: #e8f3fc; font-size: .78rem; font-weight: 850; }
+.cm-draft-row__label { display: block; margin-top: 3px; color: #1970b3; font-size: .68rem; font-weight: 750; }
 
 /* Actions Column: Square icon-only buttons side-by-side */
 .cm-actions-header,
@@ -936,6 +963,42 @@
 .college-management .cm-toolbar{display:flex!important;justify-content:flex-start!important;gap:12px!important}
 .college-management .cm-toolbar .cm-search{width:420px!important;max-width:420px!important;flex:0 1 420px!important}
 .college-management .cm-toolbar select{width:190px!important;min-width:190px!important;flex:0 0 190px!important}
+.college-management .filter-disclosure,
+.college-management .filter-disclosure__bar,
+.college-management .filter-disclosure__content { background: #fff; }
+.college-management .filter-disclosure .cm-toolbar {
+  background: transparent !important;
+}
+.college-management .cm-actions .cm-action-icon-btn.cm-discard-action {
+  color: #b42318 !important;
+  background: #fff5f5 !important;
+  border-color: #fecdca !important;
+}
+.college-management .cm-actions .cm-action-icon-btn.cm-discard-action:hover {
+  color: #912018 !important;
+  background: #fee4e2 !important;
+  border-color: #f04438 !important;
+}
+.college-management .cm-actions .cm-discard-action:focus-visible {
+  outline: 2px solid #f04438;
+  outline-offset: 2px;
+}
+:root[data-theme="dark"] .college-management .cm-actions .cm-discard-action {
+  color: #ff8f87 !important;
+  background: #3a1d25 !important;
+  border-color: #7f3030 !important;
+}
+:root[data-theme="dark"] .college-management .cm-actions .cm-discard-action:hover {
+  color: #ffb4ad !important;
+  background: #51232b !important;
+  border-color: #f04438 !important;
+}
+:root[data-theme="light"] .college-management .cm-toolbar select,
+:root[data-theme="light"] .college-management .cm-toolbar select option { color: #173b5c; background: #fff; }
+:root[data-theme="light"] .college-management .cm-action-icon-btn.cm-danger { border-color: #fecdca; color: #b42318; background: #fff5f5; }
+:root[data-theme="light"] .college-management .cm-action-icon-btn.cm-danger:hover { border-color: #f04438; color: #b42318; background: #fee4e2; }
+:root[data-theme="dark"] .college-management .cm-action-icon-btn.cm-danger { border-color: #7f3030; color: #ff8f87; background: #3a1d25; }
+:root[data-theme="dark"] .college-management .cm-action-icon-btn.cm-danger:hover { border-color: #f04438; color: #ffb4ad; background: #51232b; }
 @media(max-width:760px){.college-management .cm-toolbar{flex-direction:column!important}.college-management .cm-toolbar .cm-search,.college-management .cm-toolbar select{width:100%!important;max-width:none!important;flex:auto!important}}
 @media (max-width: 520px) {
   .cm-info-rows { grid-template-columns: 1fr; }

@@ -335,6 +335,11 @@
   box-shadow: 0 0 0 3px rgba(25, 118, 184, 0.13);
 }
 
+.password-modal__field input::-ms-reveal,
+.password-modal__field input::-ms-clear {
+  display: none;
+}
+
 .password-modal__field [aria-invalid="true"] {
   border-color: #d92d20;
 }
@@ -351,6 +356,13 @@
   font-weight: 800;
   cursor: pointer;
   padding: 4px 6px;
+}
+
+.password-modal__field button:hover,
+.password-modal__field button:active {
+  transform: translateY(-50%);
+  background: transparent;
+  box-shadow: none;
 }
 
 .password-modal__field small {
