@@ -89,6 +89,8 @@ export const API_ENDPOINTS = Object.freeze({
     academicDetails: (id) => endpoint(`/api/v1/student-admissions/${id}/academic-details`),
     previousEducation: (id) => endpoint(`/api/v1/student-admissions/${id}/previous-education`),
     status: (id) => endpoint(`/api/v1/student-admissions/${id}/status`), submit: (id) => endpoint(`/api/v1/student-admissions/${id}/submit`),
+    approve: (id) => endpoint(`/api/Admissions/${id}/approve`),
+    reject: (id) => endpoint(`/api/Admissions/${id}/reject`),
     feeSummary: (id) => endpoint(`/api/v1/student-admissions/${id}/fee-summary`), feeStructure: (id) => endpoint(`/api/v1/student-admissions/${id}/fee-structure`),
   }),
   studentAcademicInformation: Object.freeze({ detail: (id) => endpoint(`/api/v1/student-academic-information/${id}`), update: (id) => endpoint(`/api/v1/student-academic-information/${id}`) }),
@@ -207,7 +209,11 @@ const request = async (url, options = {}, retried = false, bypassDedupe = false)
   const body = await readBody(response)
   if (!response.ok || body?.success === false) {
     console.error('API request failed', { url, method: options.method || 'GET', status: response.status })
-    if (response.status >= 500) throw new Error('Something went wrong while completing your request. Please try again.')
+    if (response.status >= 500) {
+      const error = new Error('Something went wrong while completing your request. Please try again.')
+      error.status = response.status
+      throw error
+    }
     const fallback = {
       400: 'Please check the submitted information.',
       401: 'Your session has expired. Please sign in again.',
@@ -545,7 +551,10 @@ export const sectionApi = {
 
 const compact = (object) => Object.fromEntries(Object.entries(object).filter(([, value]) => value !== undefined))
 const normalizeRecord = (source) => dataResponse(source) || {}
-export const normalizeAdmission = (source) => normalizeRecord(source)
+export const normalizeAdmission = (source) => {
+  const { currentStatus, admissionStatus, applicationStatus, ...record } = normalizeRecord(source)
+  return { ...record, status: currentStatus ?? admissionStatus ?? applicationStatus ?? record.status }
+}
 export const normalizeStudent = (source) => normalizeRecord(source)
 export const normalizeStudentProfile = (source) => normalizeRecord(source)
 export const normalizeAcademicDetails = (source) => normalizeRecord(source)
@@ -559,6 +568,7 @@ const studentAdmissionPayload = (form) => compact({
   registrationDate: form.registrationDate ?? form.application?.date,
   firstName: form.firstName ?? form.personal?.firstName, middleName: form.middleName ?? form.personal?.middleName,
   lastName: form.lastName ?? form.personal?.lastName, gender: form.gender ?? form.personal?.gender,
+  photo: form.photo ?? form.personal?.photo,
   dateOfBirth: form.dateOfBirth ?? form.personal?.dob, bloodGroup: form.bloodGroup ?? form.personal?.bloodGroup,
   nationality: form.nationality ?? form.personal?.nationality, aadhaarNumber: form.aadhaarNumber ?? form.personal?.aadhaar,
   mobile: form.mobile ?? form.contact?.mobile, alternateMobile: form.alternateMobile ?? form.contact?.alternateMobile,
@@ -592,22 +602,49 @@ const LOCAL_ADMISSIONS_KEY = 'pirnav-local-admissions-v2'
 const readLocalAdmissions = () => {
   try { return JSON.parse(localStorage.getItem(LOCAL_ADMISSIONS_KEY)) || [] } catch { return [] }
 }
-const saveLocalAdmission = (item) => {
-  if (!item) return item
-  const id = item.admissionId ?? item.id
+const saveLocalAdmission = (item, baseForm = null) => {
+  if (!item && !baseForm) return item
+  const id = item?.admissionId ?? item?.id ?? baseForm?.admissionId ?? baseForm?.id
   if (!id) return item
   try {
     const list = readLocalAdmissions()
     const idStr = String(id)
-    const regStr = String(item.application?.registrationNumber || item.registrationNumber || '')
+    const regStr = String(item?.application?.registrationNumber || item?.registrationNumber || baseForm?.application?.registrationNumber || baseForm?.registrationNumber || '')
     const index = list.findIndex(x => String(x.admissionId ?? x.id) === idStr || (regStr && String(x.application?.registrationNumber || x.registrationNumber || '') === regStr))
+    const existing = index >= 0 ? list[index] : {}
+
+    const deepMerge = (target, source) => {
+      if (!source || typeof source !== 'object') return target || {}
+      if (!target || typeof target !== 'object') return source || {}
+      const res = { ...target }
+      for (const key of Object.keys(source)) {
+        const sourceValue = source[key]
+        const invalidObjectText = typeof sourceValue === 'string' && /^\s*\[object Object\]\s*$/i.test(sourceValue)
+        if (sourceValue !== undefined && sourceValue !== null && sourceValue !== '' && !invalidObjectText) {
+          if (typeof source[key] === 'object' && !Array.isArray(source[key])) {
+            res[key] = deepMerge(target[key], source[key])
+          } else {
+            res[key] = source[key]
+          }
+        }
+      }
+      return res
+    }
+
+    let merged = deepMerge(existing, baseForm)
+    merged = deepMerge(merged, item)
+    merged.id = id
+    merged.admissionId = id
+    merged.updatedAt = new Date().toISOString()
+
     let nextList
     if (index >= 0) {
-      nextList = list.map((x, i) => i === index ? { ...x, ...item, updatedAt: new Date().toISOString() } : x)
+      nextList = list.map((x, i) => i === index ? merged : x)
     } else {
-      nextList = [{ ...item, updatedAt: new Date().toISOString() }, ...list]
+      nextList = [merged, ...list]
     }
     localStorage.setItem(LOCAL_ADMISSIONS_KEY, JSON.stringify(nextList))
+    return merged
   } catch (err) {
     console.warn('Failed to persist local admission', err)
   }
@@ -625,13 +662,21 @@ export const studentAdmissionApi = {
     }
     const localItems = readLocalAdmissions()
     if (!apiItems.length) return localItems.map(normalizeAdmission)
-    const merged = [...apiItems]
+    const merged = apiItems.map(normalizeAdmission)
     for (const local of localItems) {
       const localId = String(local.admissionId ?? local.id)
       const localReg = String(local.application?.registrationNumber || local.registrationNumber || '')
       const idx = merged.findIndex(x => String(x.admissionId ?? x.id) === localId || (localReg && String(x.application?.registrationNumber || x.registrationNumber || '') === localReg))
       if (idx >= 0) {
-        merged[idx] = { ...merged[idx], ...local }
+        merged[idx] = normalizeAdmission({
+          ...normalizeAdmission(local),
+          ...merged[idx],
+          personal: { ...(local.personal || {}), ...(merged[idx].personal || {}) },
+          academic: { ...(local.academic || {}), ...(merged[idx].academic || {}) },
+          contact: { ...(local.contact || {}), ...(merged[idx].contact || {}) },
+          parents: { ...(local.parents || {}), ...(merged[idx].parents || {}) },
+          application: { ...(local.application || {}), ...(merged[idx].application || {}) }
+        })
       } else {
         merged.unshift(local)
       }
@@ -642,8 +687,8 @@ export const studentAdmissionApi = {
     const reqId = requiredId(id, 'Admission ID')
     try {
       const res = normalizeAdmission(await request(API_ENDPOINTS.studentAdmissions.detail(reqId)))
-      saveLocalAdmission(res)
-      return res
+      const saved = saveLocalAdmission(res)
+      return normalizeAdmission(saved || res)
     } catch (err) {
       const localItems = readLocalAdmissions()
       const found = localItems.find(x => String(x.admissionId ?? x.id) === String(id) || String(x.application?.registrationNumber || x.registrationNumber || '') === String(id))
@@ -658,8 +703,8 @@ export const studentAdmissionApi = {
     } catch {
       res = normalizeAdmission({ ...form, id: form.id || `LOCAL-ADM-${Date.now()}`, status: 'DRAFT', createdAt: new Date().toISOString() })
     }
-    saveLocalAdmission(res)
-    return res
+    const saved = saveLocalAdmission(res, form)
+    return normalizeAdmission(saved || { ...form, ...res })
   },
   update: async (id, form) => {
     const reqId = requiredId(id, 'Admission ID')
@@ -669,8 +714,8 @@ export const studentAdmissionApi = {
     } catch {
       res = normalizeAdmission({ ...form, id, updatedAt: new Date().toISOString() })
     }
-    saveLocalAdmission(res)
-    return res
+    const saved = saveLocalAdmission(res, form)
+    return normalizeAdmission(saved || { ...form, ...res })
   },
   submit: async (id) => {
     const reqId = requiredId(id, 'Admission ID')
@@ -706,25 +751,27 @@ export const studentAcademicInformationApi = {
 export const studentAdmissionStatusApi = {
   get: async (id) => {
     const reqId = requiredId(id, 'Admission ID')
-    try {
-      return normalizeRecord(await request(API_ENDPOINTS.studentAdmissions.status(reqId)))
-    } catch {
-      const localItems = readLocalAdmissions()
-      const found = localItems.find(x => String(x.admissionId ?? x.id) === String(id))
-      return { status: found?.status ?? 'DRAFT', remarks: found?.remarks ?? '' }
-    }
+    return normalizeAdmission(await request(API_ENDPOINTS.studentAdmissions.status(reqId), { cache: 'no-store' }))
   },
   update: async (id, payload) => {
     const reqId = requiredId(id, 'Admission ID')
+    const newStatus = payload.newStatus ?? payload.status
+    const body = { newStatus, remarks: payload.remarks, rejectionReason: payload.rejectionReason ?? (newStatus === 'REJECTED' ? payload.remarks : undefined) }
+    const decision = newStatus === 'APPROVED' ? 'approve' : newStatus === 'REJECTED' ? 'reject' : null
     let res
     try {
-      res = normalizeRecord(await request(API_ENDPOINTS.studentAdmissions.status(reqId), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) }))
-    } catch {
-      res = { status: payload.status, remarks: payload.remarks }
+      res = normalizeAdmission(await request(decision ? API_ENDPOINTS.studentAdmissions[decision](reqId) : API_ENDPOINTS.studentAdmissions.status(reqId), { method: decision ? 'PUT' : 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(decision ? { remarks: body.remarks, rejectionReason: body.rejectionReason } : body) }))
+    } catch (error) {
+      if (error.status >= 500) throw new Error(`The admission server failed to ${decision || 'update'} this application (HTTP ${error.status}). The decision could not be confirmed. Refresh to check its status and contact the administrator before retrying.`)
+      throw error
+    }
+    const latest = await studentAdmissionStatusApi.get(reqId)
+    if (String(latest.status || '').trim().replaceAll(' ', '_').toUpperCase() !== newStatus) {
+      throw new Error(`Admission status was not confirmed as ${newStatus}. Current backend status: ${latest.status || 'unknown'}. Refresh and try again.`)
     }
     const localItems = readLocalAdmissions()
     const found = localItems.find(x => String(x.admissionId ?? x.id) === String(id))
-    const updated = saveLocalAdmission({ ...(found || {}), id, status: payload.status ?? res.status, remarks: payload.remarks ?? res.remarks, updatedAt: new Date().toISOString() })
+    const updated = saveLocalAdmission({ ...(found || {}), ...res, ...latest, id, status: latest.status, remarks: latest.remarks ?? res.remarks ?? payload.remarks, updatedAt: new Date().toISOString() })
     return normalizeRecord(updated)
   },
 }
