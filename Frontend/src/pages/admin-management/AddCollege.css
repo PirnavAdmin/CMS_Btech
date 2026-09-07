@@ -41,6 +41,7 @@
 .ac-logo-preview img { width: 96px; height: 96px; object-fit: contain; border: 1px solid #dbe5ee; border-radius: 12px; background: #fff; }
 .ac-logo-preview div { display: grid; gap: 10px; }
 .ac-logo-preview button { width: fit-content; padding: 0; border: 0; background: transparent; color: #b42318; font-weight: 700; cursor: pointer; }
+.ac-logo-preview button:hover { padding: 5px 8px; border-radius: 6px; color: #9f1d16; background: #fee4e2; box-shadow: none; transform: none; }
 .ac-hint { margin: 0; color: #637d96; font-size: .82rem; }
 .ac-lookup-status { margin: -2px 0 0; color: #39715a; font-size: .78rem; font-weight: 650; }
 .ac-actions { position: sticky; bottom: 0; z-index: 5; display: flex; justify-content: flex-end; gap: 10px; padding: 16px; border: 1px solid #dce5ed; border-radius: 12px; background: rgba(255,255,255,.96); box-shadow: 0 -8px 28px rgba(15,43,72,.08); backdrop-filter: blur(8px); }
