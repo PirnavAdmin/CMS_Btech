@@ -88,9 +88,11 @@ export const API_ENDPOINTS = Object.freeze({
     detail: (id) => endpoint(`/api/v1/student-admissions/${id}`), update: (id) => endpoint(`/api/v1/student-admissions/${id}`),
     academicDetails: (id) => endpoint(`/api/v1/student-admissions/${id}/academic-details`),
     previousEducation: (id) => endpoint(`/api/v1/student-admissions/${id}/previous-education`),
-    status: (id) => endpoint(`/api/v1/student-admissions/${id}/status`), submit: (id) => endpoint(`/api/v1/student-admissions/${id}/submit`),
+    status: (id) => endpoint(`/api/admissions/${id}/status`), submit: (id) => endpoint(`/api/v1/student-admissions/${id}/submit`),
     approve: (id) => endpoint(`/api/Admissions/${id}/approve`),
     reject: (id) => endpoint(`/api/Admissions/${id}/reject`),
+    history: (id) => endpoint(`/api/Admissions/${id}/history`),
+    statusHistory: (id) => endpoint(`/api/admissions/${id}/status-history`),
     feeSummary: (id) => endpoint(`/api/v1/student-admissions/${id}/fee-summary`), feeStructure: (id) => endpoint(`/api/v1/student-admissions/${id}/fee-structure`),
   }),
   studentAcademicInformation: Object.freeze({ detail: (id) => endpoint(`/api/v1/student-academic-information/${id}`), update: (id) => endpoint(`/api/v1/student-academic-information/${id}`) }),
@@ -212,6 +214,7 @@ const request = async (url, options = {}, retried = false, bypassDedupe = false)
     if (response.status >= 500) {
       const error = new Error('Something went wrong while completing your request. Please try again.')
       error.status = response.status
+      error.correlationId = typeof body?.correlationId === 'string' ? body.correlationId : undefined
       throw error
     }
     const fallback = {
@@ -749,6 +752,8 @@ export const studentAcademicInformationApi = {
   update: async (id, payload) => normalizeAcademicDetails(await request(API_ENDPOINTS.studentAcademicInformation.update(requiredId(id, 'Academic ID')), { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) })),
 }
 export const studentAdmissionStatusApi = {
+  history: async (id) => listData(await request(API_ENDPOINTS.studentAdmissions.history(requiredId(id, 'Admission ID')), { cache: 'no-store' })),
+  statusHistory: async (id) => listData(await request(API_ENDPOINTS.studentAdmissions.statusHistory(requiredId(id, 'Admission ID')), { cache: 'no-store' })),
   get: async (id) => {
     const reqId = requiredId(id, 'Admission ID')
     return normalizeAdmission(await request(API_ENDPOINTS.studentAdmissions.status(reqId), { cache: 'no-store' }))
@@ -760,12 +765,20 @@ export const studentAdmissionStatusApi = {
     const decision = newStatus === 'APPROVED' ? 'approve' : newStatus === 'REJECTED' ? 'reject' : null
     let res
     try {
-      res = normalizeAdmission(await request(decision ? API_ENDPOINTS.studentAdmissions[decision](reqId) : API_ENDPOINTS.studentAdmissions.status(reqId), { method: decision ? 'PUT' : 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(decision ? { remarks: body.remarks, rejectionReason: body.rejectionReason } : body) }))
+      res = normalizeAdmission(await request(decision ? API_ENDPOINTS.studentAdmissions[decision](reqId) : API_ENDPOINTS.studentAdmissions.status(reqId), { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(decision ? { remarks: body.remarks, rejectionReason: body.rejectionReason } : { newStatus, actionType: payload.actionType, remarks: payload.remarks, reason: payload.reason ?? payload.rejectionReason, changedBy: payload.changedBy }) }))
     } catch (error) {
-      if (error.status >= 500) throw new Error(`The admission server failed to ${decision || 'update'} this application (HTTP ${error.status}). The decision could not be confirmed. Refresh to check its status and contact the administrator before retrying.`)
+      if (error.status >= 500) {
+        error.message = `The admission server failed to ${decision || 'update'} this application (HTTP ${error.status}). The decision could not be confirmed.${error.correlationId ? ` Reference: ${error.correlationId}.` : ''} Refresh to check its status and contact the administrator before retrying.`
+      }
       throw error
     }
-    const latest = await studentAdmissionStatusApi.get(reqId)
+    let latest
+    try {
+      latest = await studentAdmissionStatusApi.get(reqId)
+    } catch (error) {
+      error.message = `The server accepted the admission decision, but the updated status could not be loaded. Refresh to verify before retrying. ${error.message}`
+      throw error
+    }
     if (String(latest.status || '').trim().replaceAll(' ', '_').toUpperCase() !== newStatus) {
       throw new Error(`Admission status was not confirmed as ${newStatus}. Current backend status: ${latest.status || 'unknown'}. Refresh and try again.`)
     }

@@ -104,7 +104,25 @@ function Notice({message,close}){return <div className="sp-toast" role="status">
 
 export default function StudentProfile(){
  const canEdit=hasRole([ROLES.ADMIN]);const [students,setStudents]=useState([]),[loading,setLoading]=useState(true),[error,setError]=useState(''),[notice,setNotice]=useState(''),[query,setQuery]=useState(''),[filters,setFilters]=useState({department:'',course:'',branch:'',academicYear:'',semester:'',section:'',status:''}),[page,setPage]=useState(1),[selectedId,setSelectedId]=useState(()=>new URLSearchParams(window.location.search).get('studentId')),[tab,setTab]=useState('overview'),[editing,setEditing]=useState(null)
- const load=async()=>{setLoading(true);setError('');try{setStudents((await studentProfilesApi.getAll()).map(profileFromApi))}catch(loadError){setStudents([]);setError(loadError.message||'Student profiles could not be loaded.')}finally{setLoading(false)}}
+ const load=async()=>{
+  setLoading(true);setError('')
+  const requestedId=new URLSearchParams(window.location.search).get('studentId')
+  try{
+   const [directory,profile]=await Promise.allSettled([
+    studentProfilesApi.getAll(),
+    requestedId?Promise.all([studentProfilesApi.preview(requestedId),studentDocumentApi.getAll(requestedId).catch(()=>[])]):Promise.resolve(null)
+   ])
+   let rows=directory.status==='fulfilled'?directory.value.map(profileFromApi):[]
+   if(profile.status==='fulfilled'&&profile.value){
+    const [preview,documents]=profile.value
+    const latest=profileFromApi({...preview,studentId:requestedId,documents:documentsFromApi(documents)})
+    rows=[latest,...rows.filter(row=>String(row.id)!==String(requestedId))]
+   }else if(profile.status==='rejected')setNotice(profile.reason?.message||'Unable to load the approved student profile.')
+   setStudents(rows)
+   if(directory.status==='rejected'&&!rows.length)setError(directory.reason?.message||'Student profiles could not be loaded.')
+  }catch(loadError){setError(loadError.message||'Student profiles could not be loaded.')}
+  finally{setLoading(false)}
+ }
  useEffect(()=>{load()},[])
  useEffect(()=>{if(!notice)return;const t=setTimeout(()=>setNotice(''),2800);return()=>clearTimeout(t)},[notice])
  const options=key=>[...new Set(students.map(x=>key==='status'?status(x.status):x.academic?.[key]).filter(Boolean))].sort()
