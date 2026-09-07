@@ -114,7 +114,10 @@ export default function AddCollege() {
   const [searchParams] = useSearchParams()
   const editId = searchParams.get('edit')
   const fileRef = useRef(null)
-  const [values, setValues] = useState(initialValues)
+  const [storedValues, setValues] = useState(initialValues)
+  const values = storedValues.collegeType === 'Deemed University'
+    ? { ...storedValues, universityName: storedValues.collegeName }
+    : storedValues
   const [logoFile, setLogoFile] = useState(null)
   const [removeExistingLogo, setRemoveExistingLogo] = useState(false)
   const [pendingLogoCollegeId, setPendingLogoCollegeId] = useState(null)
@@ -355,7 +358,7 @@ export default function AddCollege() {
         <Field label="College Code" name="collegeCode" values={values} errors={{ ...errors, ...(duplicateCode ? { collegeCode: 'This college code already exists.' } : {}) }} touched={touched} onChange={update} required maxLength={12} placeholder="e.g. CIT2026" />
         <label className="ac-field" htmlFor="ac-collegeType"><span>College Type <b>*</b></span><select id="ac-collegeType" name="collegeType" value={values.collegeType} onChange={update} aria-invalid={Boolean(touched.collegeType && errors.collegeType)}><option value="">Select type</option>{TYPES.map((type) => <option key={type}>{type}</option>)}</select>{touched.collegeType && errors.collegeType && <small className="ac-error" role="alert">{errors.collegeType}</small>}</label>
         {values.collegeType === 'Other' && <Field label="Specify College Type" name="collegeTypeOther" values={values} errors={errors} touched={touched} onChange={update} required maxLength={60} placeholder="e.g. Community College" />}
-        <Field label="University Name" name="universityName" values={values} errors={errors} touched={touched} onChange={update} required maxLength={120} placeholder="Affiliated university" />
+        <Field label="University Name" name="universityName" values={values} errors={errors} touched={touched} onChange={update} required maxLength={120} placeholder="Affiliated university" readOnly={values.collegeType === 'Deemed University'} />
         <div className="ac-upload ac-span-2" onDragOver={(e) => e.preventDefault()} onDrop={(e) => { e.preventDefault(); selectLogo(e.dataTransfer.files[0]) }}>
           <input ref={fileRef} type="file" accept=".png,.jpg,.jpeg,.webp" onChange={(e) => selectLogo(e.target.files?.[0])} hidden />
           {values.logo || (editId && !removeExistingLogo) ? <div className="ac-logo-preview"><img src={logoFile ? values.logo : getCollegeLogoUrl(editId, values.logo)} alt="College logo preview" /><div><strong>{values.logoName || (logoFile ? logoFile.name : 'Current college logo')}</strong><button type="button" onClick={() => { setLogoFile(null); setRemoveExistingLogo(Boolean(editId)); setValues((v) => ({ ...v, logo: '', logoName: '' })); if (fileRef.current) fileRef.current.value = ''; setDirty(true) }}>Remove image</button></div></div> : <button type="button" className="ac-upload-button" onClick={() => fileRef.current?.click()}><strong>Upload college logo</strong><span>Click or drag and drop PNG, JPG, JPEG, or WEBP · Max 5 MB</span></button>}

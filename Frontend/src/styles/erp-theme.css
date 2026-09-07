@@ -294,6 +294,17 @@ html,body,#root{max-width:100%;overflow-x:hidden}
   border-color:var(--brand)!important;background:var(--brand-soft)!important;
 }
 
+/* Shared icon palette follows the College directory across all modules. */
+.page-content .module-action-icon--view{color:#1970b3!important}
+.page-content .module-action-icon--edit{color:#7c3aed!important}
+.page-content .module-action-icon--danger{color:#b42318!important}
+.page-content :is(button,a):has(>.module-action-icon--view){color:#1970b3!important;background:#e8f3fc!important;border-color:#c5dfef!important}
+.page-content :is(button,a):has(>.module-action-icon--edit){color:#7c3aed!important;background:#f3e8ff!important;border-color:#dfccff!important}
+.page-content :is(button,a):has(>.module-action-icon--danger){color:#b42318!important;background:#fee4e2!important;border-color:#fecdca!important}
+.page-content .ay .ay-actions :is(.primary,.current-action){color:#15803d!important;background:#e9f8ef!important;border-color:#bbf7d0!important}
+.page-content .ay .ay-actions :is(.danger,.archived-action){color:#b42318!important;background:#fee4e2!important;border-color:#fecdca!important}
+.page-content .sa-icon-actions button[aria-label="Review application"]{color:#15803d!important;background:#e9f8ef!important;border-color:#bbf7d0!important}
+
 /* Preserve semantic colors for the Branch directory row actions. */
 .page-content .branch-actions a:first-child{color:#1970b3!important;background:#e8f3fc!important;border-color:#c5dfef!important}.page-content .branch-actions a:nth-child(2){color:#7c3aed!important;background:#f3e8ff!important;border-color:#dfccff!important}.page-content .branch-actions .branch-status-action.danger{color:#b42318!important;background:#fee4e2!important;border-color:#fecdca!important}.page-content .branch-actions .branch-status-action.success{color:#15803d!important;background:#e9f8ef!important;border-color:#bbf7d0!important}
 .page-content .cm-actions .cm-view-action{color:#1970b3!important;background:#e8f3fc!important;border-color:#c5dfef!important}.page-content .cm-actions .cm-edit-action{color:#7c3aed!important;background:#f3e8ff!important;border-color:#dfccff!important}.page-content .cm-actions .cm-status-action.cm-danger{color:#b42318!important;background:#fee4e2!important;border-color:#fecdca!important}.page-content .cm-actions .cm-status-action.cm-success{color:#15803d!important;background:#e9f8ef!important;border-color:#bbf7d0!important}
@@ -448,4 +459,13 @@ html,body,#root{max-width:100%;overflow-x:hidden}
 .college-management .cm-table :is(th,td),.ay table :is(th,td),.course-management :is(.course-advanced-table,.cm-table) :is(th,td),.branch-management .branch-table :is(th,td),.department-management .department-table-wrap :is(th,td),.semester-management .semester-table :is(th,td),.section-management .section-table :is(th,td){text-align:center!important;vertical-align:middle!important}
 
 /* Project-wide required-field indicator. */
+/* Keep filter content on one surface across all management modules. */
+:root .page-content .filter-disclosure .filter-disclosure__content>*{
+  background:transparent!important;
+  box-shadow:none!important;
+}
+:root .page-content .filter-disclosure .filter-disclosure__search>*{
+  background:transparent!important;
+  box-shadow:none!important;
+}
 :where(.page-content,.dashboard-layout) :is(.required-mark,.section-required,label>span>b,label>b,legend>b){color:#d92d20!important;font-weight:800!important}
