@@ -54,7 +54,7 @@ export default function LandingPage(){return <main className="lp-page"><nav clas
     </div>
   </div>
   <div className="lp-footer-bottom">
-    <p className="lp-footer-copyright">&copy; {APP_RELEASE_YEAR} Pirnav Engineering College &amp; Pirnav. All Rights Reserved.</p>
+    <p className="lp-footer-copyright">&copy; {APP_RELEASE_YEAR} Pirnav Software Solutions. All Rights Reserved.</p>
     <p className="lp-footer-legal">
       This software and its associated design, source code, architecture, and intellectual property are proprietary to Pirnav. Unauthorized reproduction, distribution, or modification is prohibited.
     </p>

@@ -650,7 +650,7 @@ export default function CollegeInstitutionManagement({ initialView = 'list' }) {
                                 aria-label="View Details"
                                 onClick={() => openDetails(college)}
                               >
-                                <EyeIcon />
+                                <EyeIcon className="module-action-icon module-action-icon--view" />
                               </button>
                               <button
                                 type="button"
@@ -659,7 +659,7 @@ export default function CollegeInstitutionManagement({ initialView = 'list' }) {
                                 aria-label="Edit College"
                                 onClick={() => openEdit(college)}
                               >
-                                <EditIcon />
+                                <EditIcon className="module-action-icon module-action-icon--edit" />
                               </button>
                               <button
                                 type="button"
@@ -1013,7 +1013,7 @@ export default function CollegeInstitutionManagement({ initialView = 'list' }) {
                               aria-label="Edit Settings"
                               onClick={() => openEditSettings(item)}
                             >
-                              <EditIcon />
+                              <EditIcon className="module-action-icon module-action-icon--edit" />
                             </button>
                           </div>
                         </td>

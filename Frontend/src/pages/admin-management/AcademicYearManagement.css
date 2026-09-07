@@ -19,6 +19,17 @@
 .ay .ay-actions{align-items:center;justify-content:center}
 .ay .ay-actions button{width:34px;min-width:34px;padding:0;justify-content:center}
 .ay .ay-actions svg{width:16px;height:16px}
+.ay .ay-actions button{--action-color:#2563eb}
+.ay .ay-actions button[aria-label]{color:var(--action-color);border-color:color-mix(in srgb,var(--action-color) 30%,var(--border));background:color-mix(in srgb,var(--action-color) 10%,var(--surface))}
+.ay .ay-actions button[aria-label="Edit academic year"]{--action-color:#b45309}
+.ay .ay-actions button.primary,.ay .ay-actions button.current-action{--action-color:#15803d}
+.ay .ay-actions button.danger,.ay .ay-actions button.archived-action{--action-color:#dc2626}
+.ay .ay-actions button:hover:not(:disabled){color:var(--action-color);border-color:var(--action-color);background:color-mix(in srgb,var(--action-color) 18%,var(--surface))}
+.ay .ay-actions button:focus-visible{outline:2px solid var(--action-color);outline-offset:2px}
+:root[data-theme="dark"] .ay .ay-actions button{--action-color:#60a5fa}
+:root[data-theme="dark"] .ay .ay-actions button[aria-label="Edit academic year"]{--action-color:#fbbf24}
+:root[data-theme="dark"] .ay .ay-actions button.primary,:root[data-theme="dark"] .ay .ay-actions button.current-action{--action-color:#4ade80}
+:root[data-theme="dark"] .ay .ay-actions button.danger,:root[data-theme="dark"] .ay .ay-actions button.archived-action{--action-color:#f87171}
 
 /* Match the centered, evenly spaced directory layout used by the College list. */
 .ay .table table{width:100%;min-width:980px;table-layout:fixed}
