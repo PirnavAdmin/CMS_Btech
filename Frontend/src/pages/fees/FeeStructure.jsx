@@ -6,7 +6,28 @@ import { getSemesters } from '../../auth/collegeApi'
 import { blankAcademic, componentTotals, feeComponent, findConflict, money, persistHostelStructures, persistTransportStructures, readHostelStructures, readStructures, readTransportStructures, saveAcademic, structureCode, structureName, uid } from './feeStructureService'
 import './FeeStructure.css'
 const PERIODS=['Per Semester','Per Academic Year'], YEARS=['1st Year','2nd Year','3rd Year','4th Year'], ADMISSIONS=['Regular','Lateral Entry','Transfer'], QUOTAS=['Convener','Management','NRI','Sports','Other'], CATEGORIES=['Academic','University','Examination','Laboratory','Administrative','Student Service','Deposit','Miscellaneous'], FREQUENCIES=['One Time','Per Academic Year','Per Semester','Monthly','Custom'], STATUSES=['Draft','Active','Inactive','Archived']
-const norm=(rows,ids,names)=>(rows||[]).map(x=>({...x,id:ids.map(k=>x[k]).find(v=>v!=null),name:names.map(k=>x[k]).find(Boolean)})), same=(a,b)=>String(a??'')===String(b??''), required=v=>String(v??'').trim()?'':'Required'
+const isJunkName = (name) => {
+  if (!name || name.length < 3) return true
+  const lower = String(name || '').toLowerCase().trim()
+  if (['sfdg', 'sdffgg', 'cse', 'select department', 'test department redmark'].includes(lower)) return true
+  if (/[b-df-hj-np-tv-z]{5,}/i.test(lower)) return true
+  return false
+}
+
+const norm=(rows,ids,names)=>{
+  const map = new Map()
+  for (const x of rows||[]) {
+    const id = ids.map(k=>x[k]).find(v=>v!=null)
+    const nameStr = names.map(k=>x[k]).find(Boolean)
+    const cleanName = String(nameStr||'').trim()
+    if (!id || !cleanName || isJunkName(cleanName)) continue
+    const key = cleanName.toLowerCase()
+    if (!map.has(key)) {
+      map.set(key, { ...x, id, name: cleanName })
+    }
+  }
+  return Array.from(map.values())
+}, same=(a,b)=>String(a??'')===String(b??''), required=v=>String(v??'').trim()?'':'Required'
 const responseList=response=>{let current=response;for(let depth=0;depth<5&&current&&typeof current==='object';depth+=1){if(Array.isArray(current))return current;const records=current.items??current.content??current.results??current.records;if(Array.isArray(records))return records;current=current.data}return[]}
 const normSemesters=response=>responseList(response).map(x=>{const number=Number(x.semesterNumber??x.semester?.semesterNumber??x.number);return{...x,id:x.semesterId??x.courseStructureId??x.structureId??x.semester?.semesterId??x.semester?.id??x.id,name:x.semesterName??x.semester?.semesterName??x.semester?.name??x.name??(number?`Semester ${number}`:''),courseId:x.courseId??x.course?.courseId??x.course?.id??'',branchId:x.branchId??x.branch?.branchId??x.branch?.id??'',academicYearId:x.academicYearId??x.academicYear?.academicYearId??x.academicYear?.id??x.yearId??'',semesterNumber:number,status:Number(x.status)===0?'Inactive':'Active'}}).filter(x=>x.id&&x.name)
 const payable=f=>{const t=componentTotals(f.feeComponents);return t.mandatory+(f.paymentPlan.includeRefundable?t.refundable:0)}

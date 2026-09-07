@@ -28,10 +28,31 @@ const recordFrom = (response) => {
   return current && typeof current === 'object' ? current : {}
 }
 
+const isJunkDepartment = (name) => {
+  if (!name || name.length < 3) return true
+  const lower = String(name || '').toLowerCase().trim()
+  if (['sfdg', 'sdffgg', 'cse', 'select department', 'test department redmark'].includes(lower)) return true
+  if (/[b-df-hj-np-tv-z]{5,}/i.test(lower)) return true
+  return false
+}
+
 const mapDepartmentOption = (record) => {
   const status = record.status ?? record.departmentStatus ?? (record.isActive === false ? 0 : 1)
   const active = status === true || Number(status) === 1 || String(status).toLowerCase() === 'active'
-  return { id: record.id ?? record.departmentId, name: record.departmentName ?? record.name ?? '', code: record.departmentCode ?? record.code ?? '', collegeId: record.collegeId ?? '', status: active ? 'Active' : 'Inactive' }
+  const name = String(record.departmentName ?? record.name ?? '').trim()
+  return { id: record.id ?? record.departmentId, name, code: record.departmentCode ?? record.code ?? '', collegeId: record.collegeId ?? '', status: active ? 'Active' : 'Inactive' }
+}
+
+const dedupeDepartmentOptions = (rows) => {
+  const map = new Map()
+  for (const raw of rows) {
+    const item = mapDepartmentOption(raw)
+    const name = item.name
+    if (!item.id || !name || isJunkDepartment(name)) continue
+    const key = name.toLowerCase()
+    if (!map.has(key)) map.set(key, { ...item, name })
+  }
+  return Array.from(map.values())
 }
 
 const mapCourse = (record) => {
@@ -111,7 +132,7 @@ function CourseList() {
     try {
       const [courseRows, departmentRows, branchRows] = await Promise.all([courseApi.getAll(), departmentApi.getAll(), branchApi.getAll()])
       setCourses(courseRows.map(mapCourse).filter(course => course.id && course.name))
-      setDepartments(departmentRows.map(mapDepartmentOption))
+      setDepartments(dedupeDepartmentOptions(departmentRows))
       setBranches(branchRows)
     } catch (requestError) {
       setCourses([])
@@ -217,7 +238,7 @@ function CourseForm() {
     try {
       const [departmentRows, branchRows, courseRows] = await Promise.all([departmentApi.getAll(), branchApi.getAll(), courseApi.getAll()])
       setExistingCourses(courseRows.map(mapCourse))
-      setDepartments(departmentRows.map(mapDepartmentOption))
+      setDepartments(dedupeDepartmentOptions(departmentRows))
       setBranches(branchRows.map(normalize))
       if (id) {
         const courseRes = await getCourseById(id)
@@ -309,7 +330,7 @@ function CourseDetails() {
     try {
       const [course, departmentRows, branchRows] = await Promise.all([courseApi.getById(id), departmentApi.getAll(), branchApi.getByCourse(id)])
       setCourse(mapCourse(recordFrom(course)))
-      setDepartments(departmentRows.map(mapDepartmentOption))
+      setDepartments(dedupeDepartmentOptions(departmentRows))
       setBranches(branchRows.map(normalize))
     } catch (requestError) {
       setCourse(null)

@@ -1,5 +1,13 @@
 import { getAccessToken, getAuthStorage, getRefreshToken, signOut } from '../auth/auth'
 
+if (typeof window !== 'undefined' && window.localStorage) {
+  try {
+    ['pirnav-local-admissions-v2', 'pirnav-local-student-profiles-v2', 'pirnav-department-hod-names-v1'].forEach(key => {
+      localStorage.removeItem(key)
+    })
+  } catch { /* ignore */ }
+}
+
 const normalizeBaseUrl = (value = '') => value.trim().replace(/\/+$/, '')
 
 export const API_BASE_URL = import.meta.env.DEV
@@ -457,8 +465,8 @@ export const departmentApi = {
 }
 
 export const courseApi = {
-  getAll: async () => {
-    const response = await request(API_ENDPOINTS.courses.list)
+  getAll: async (params) => {
+    const response = await request(withQuery(API_ENDPOINTS.courses.list, params))
     return listResponse(response)
   },
   getById: async (id) => (await request(API_ENDPOINTS.courses.detail(id)))?.data,
@@ -657,41 +665,26 @@ const saveLocalAdmission = (item, baseForm = null) => {
 export const studentAdmissionApi = {
   getAll: async (params) => {
     let apiItems = []
+    let apiSuccess = false
     try {
       const res = await request(withQuery(API_ENDPOINTS.studentAdmissions.list, params))
       apiItems = listData(res) || []
+      apiSuccess = true
     } catch {
       apiItems = []
     }
-    const localItems = readLocalAdmissions()
-    if (!apiItems.length) return localItems.map(normalizeAdmission)
-    const merged = apiItems.map(normalizeAdmission)
-    for (const local of localItems) {
-      const localId = String(local.admissionId ?? local.id)
-      const localReg = String(local.application?.registrationNumber || local.registrationNumber || '')
-      const idx = merged.findIndex(x => String(x.admissionId ?? x.id) === localId || (localReg && String(x.application?.registrationNumber || x.registrationNumber || '') === localReg))
-      if (idx >= 0) {
-        merged[idx] = normalizeAdmission({
-          ...normalizeAdmission(local),
-          ...merged[idx],
-          personal: { ...(local.personal || {}), ...(merged[idx].personal || {}) },
-          academic: { ...(local.academic || {}), ...(merged[idx].academic || {}) },
-          contact: { ...(local.contact || {}), ...(merged[idx].contact || {}) },
-          parents: { ...(local.parents || {}), ...(merged[idx].parents || {}) },
-          application: { ...(local.application || {}), ...(merged[idx].application || {}) }
-        })
-      } else {
-        merged.unshift(local)
-      }
+    if (apiSuccess) {
+      return apiItems.map(normalizeAdmission)
     }
-    return merged.map(normalizeAdmission)
+    const localItems = readLocalAdmissions()
+    return localItems.map(normalizeAdmission)
   },
   getById: async (id) => {
     const reqId = requiredId(id, 'Admission ID')
     try {
       const res = normalizeAdmission(await request(API_ENDPOINTS.studentAdmissions.detail(reqId)))
-      const saved = saveLocalAdmission(res)
-      return normalizeAdmission(saved || res)
+      saveLocalAdmission(res)
+      return normalizeAdmission(res)
     } catch (err) {
       const localItems = readLocalAdmissions()
       const found = localItems.find(x => String(x.admissionId ?? x.id) === String(id) || String(x.application?.registrationNumber || x.registrationNumber || '') === String(id))
@@ -739,12 +732,7 @@ export const studentAcademicDetailsApi = {
   update: async (id, form) => {
     const admissionId = requiredId(id, 'Admission ID')
     const payload = academicDetailsPayload(form)
-    try {
-      return normalizeAcademicDetails(await request(API_ENDPOINTS.studentAdmissions.academicDetails(admissionId), { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) }))
-    } catch (error) {
-      if (!(import.meta.env.DEV && import.meta.env.VITE_STATIC_LOGIN !== 'false')) throw error
-      return { ...payload, admissionId, academicId: `STATIC-ACADEMIC-${admissionId}`, staticFallback: true }
-    }
+    return normalizeAcademicDetails(await request(API_ENDPOINTS.studentAdmissions.academicDetails(admissionId), { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) }))
   },
 }
 export const studentAcademicInformationApi = {
@@ -816,17 +804,240 @@ export const studentProfileApi = {
   updatePersonalInformation: async (id, payload) => normalizeStudentProfile(await request(API_ENDPOINTS.students.personalInformation(requiredId(id, 'Student ID')), { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) })),
   getExamResults: async (id) => listData(await request(API_ENDPOINTS.students.examResults(requiredId(id, 'Student ID')))), getMyProfile: async () => normalizeStudentProfile(await request(API_ENDPOINTS.studentProfiles.myProfile)),
 }
+
+const LOCAL_PROFILES_KEY = 'pirnav-local-student-profiles-v2'
+const readLocalStudentProfiles = () => {
+  try { return JSON.parse(localStorage.getItem(LOCAL_PROFILES_KEY)) || [] } catch { return [] }
+}
+const saveLocalStudentProfile = (id, item) => {
+  if (!id || !item) return item
+  try {
+    const list = readLocalStudentProfiles()
+    const idStr = String(id)
+    const index = list.findIndex(x => String(x.studentId ?? x.id ?? x.admissionId) === idStr)
+    const existing = index >= 0 ? list[index] : {}
+
+    const deepMerge = (target, source) => {
+      if (!source || typeof source !== 'object') return target || {}
+      if (!target || typeof target !== 'object') return source || {}
+      const res = { ...target }
+      for (const key of Object.keys(source)) {
+        if (source[key] !== undefined && source[key] !== null && source[key] !== '') {
+          if (typeof source[key] === 'object' && !Array.isArray(source[key])) {
+            res[key] = deepMerge(target[key], source[key])
+          } else {
+            res[key] = source[key]
+          }
+        }
+      }
+      return res
+    }
+
+    const merged = deepMerge(existing, item)
+    merged.id = idStr
+    merged.studentId = idStr
+    merged.updatedAt = new Date().toISOString()
+
+    let nextList
+    if (index >= 0) {
+      nextList = list.map((x, i) => i === index ? merged : x)
+    } else {
+      nextList = [merged, ...list]
+    }
+    localStorage.setItem(LOCAL_PROFILES_KEY, JSON.stringify(nextList))
+    return merged
+  } catch (err) {
+    console.warn('Failed to persist local student profile', err)
+  }
+  return item
+}
+
+function admissionToProfile(admission) {
+  if (!admission) return null
+  const studentId = String(admission.studentId || admission.admissionId || admission.id)
+  const p = admission.personal || admission.personalInformation || {}
+  const c = admission.contact || admission.contactInformation || {}
+  const parents = admission.parents || admission.parentDetails || {}
+  const academic = admission.academic || admission.academicDetails || {}
+  const app = admission.application || {}
+  return {
+    ...admission,
+    id: studentId,
+    studentId: studentId,
+    admissionId: String(admission.admissionId || admission.id),
+    status: 'APPROVED',
+    personal: {
+      firstName: p.firstName || '',
+      middleName: p.middleName || '',
+      lastName: p.lastName || '',
+      fullName: p.fullName || [p.firstName, p.middleName, p.lastName].filter(Boolean).join(' ') || admission.studentName || '',
+      gender: p.gender || '',
+      dob: p.dob || p.dateOfBirth || '',
+      bloodGroup: p.bloodGroup || '',
+      nationality: p.nationality || 'Indian',
+      aadhaar: p.aadhaar || p.aadhaarNumber || '',
+      photo: p.photo || ''
+    },
+    contact: {
+      mobile: c.mobile || admission.mobile || '',
+      alternateMobile: c.alternateMobile || '',
+      email: c.email || admission.email || '',
+      alternateEmail: c.alternateEmail || '',
+      sameAddress: c.sameAddress ?? true,
+      currentAddress: c.currentAddress || {},
+      permanentAddress: c.permanentAddress || {}
+    },
+    parents: {
+      father: parents.father || {},
+      mother: parents.mother || {},
+      guardian: parents.guardian || {},
+      primaryContact: parents.primaryContact || 'Father',
+      emergencyMobile: parents.emergencyMobile || ''
+    },
+    academic: {
+      academicYear: academic.academicYear || '',
+      admissionType: academic.admissionType || '',
+      course: academic.course || '',
+      department: academic.department || '',
+      branch: academic.branch || '',
+      semester: academic.semester || '',
+      section: academic.section || '',
+      regulation: academic.regulation || 'R26',
+      quota: academic.quota || '',
+      entryType: academic.entryType || 'Regular',
+      studentCategory: academic.studentCategory || ''
+    },
+    application: {
+      registrationNumber: app.registrationNumber || app.number || admission.registrationNumber || '',
+      admissionNumber: app.admissionNumber || admission.admissionNumber || `ADM-${studentId.slice(-4)}`,
+      date: app.date || admission.registrationDate || new Date().toISOString().slice(0, 10),
+      admissionDate: app.admissionDate || admission.admissionDate || new Date().toISOString().slice(0, 10)
+    },
+    previousEducation: admission.previousEducation || {},
+    admission: admission.admission || {},
+    fees: admission.fees || admission.feeSummary || {},
+    documents: admission.documents || {}
+  }
+}
+
 export const studentProfilesApi = {
-  getAll: async (params) => listData(await request(withQuery(API_ENDPOINTS.studentProfiles.list, params))), preview: async (id) => normalizeStudentProfile(await request(API_ENDPOINTS.studentProfiles.preview(requiredId(id, 'Student ID')))),
-  update: async (id, payload) => normalizeStudentProfile(await request(API_ENDPOINTS.studentProfiles.update(requiredId(id, 'Student ID')), { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) })),
+  getAll: async (params) => {
+    let apiItems = []
+    let apiSuccess = false
+    try {
+      const res = await request(withQuery(API_ENDPOINTS.studentProfiles.list, params))
+      apiItems = listData(res) || []
+      apiSuccess = true
+    } catch {
+      apiItems = []
+    }
+
+    if (apiSuccess) {
+      return apiItems.map(normalizeStudentProfile)
+    }
+
+    const localAdmissions = readLocalAdmissions()
+    const approvedAdmissions = localAdmissions.filter(x => {
+      const st = String(x.status || '').toUpperCase()
+      return st === 'APPROVED' || st === 'ENROLLED'
+    }).map(admissionToProfile).filter(Boolean)
+
+    const localProfiles = readLocalStudentProfiles()
+
+    const map = new Map()
+
+    for (const item of apiItems) {
+      const norm = normalizeStudentProfile(item)
+      const id = String(norm.studentId || norm.id || norm.admissionId)
+      if (id) map.set(id, norm)
+    }
+
+    for (const item of approvedAdmissions) {
+      const id = String(item.studentId || item.id || item.admissionId)
+      if (!map.has(id)) {
+        map.set(id, item)
+      } else {
+        const existing = map.get(id)
+        map.set(id, {
+          ...existing,
+          ...item,
+          personal: { ...(item.personal || {}), ...(existing.personal || {}) },
+          academic: { ...(item.academic || {}), ...(existing.academic || {}) },
+          contact: { ...(item.contact || {}), ...(existing.contact || {}) },
+          parents: { ...(item.parents || {}), ...(existing.parents || {}) }
+        })
+      }
+    }
+
+    for (const localProf of localProfiles) {
+      if (!localProf) continue
+      const id = String(localProf.studentId || localProf.id || localProf.admissionId)
+      if (map.has(id)) {
+        const existing = map.get(id)
+        map.set(id, {
+          ...existing,
+          ...localProf,
+          personal: { ...(existing.personal || {}), ...(localProf.personal || {}) },
+          contact: { ...(existing.contact || {}), ...(localProf.contact || {}) },
+          parents: { ...(existing.parents || {}), ...(localProf.parents || {}) }
+        })
+      } else {
+        map.set(id, localProf)
+      }
+    }
+
+    return Array.from(map.values()).map(normalizeStudentProfile)
+  },
+
+  preview: async (id) => {
+    const reqId = requiredId(id, 'Student ID')
+    try {
+      const res = normalizeStudentProfile(await request(API_ENDPOINTS.studentProfiles.preview(reqId)))
+      if (res) return res
+    } catch {
+      /* fallback to local if backend fails */
+    }
+
+    const localProfiles = readLocalStudentProfiles()
+    const localProf = localProfiles.find(x => String(x.studentId || x.id) === String(id) || String(x.admissionId) === String(id))
+
+    const localAdmissions = readLocalAdmissions()
+    const approvedAdm = localAdmissions.find(x => String(x.studentId || x.id || x.admissionId) === String(id) && ['APPROVED', 'ENROLLED'].includes(String(x.status || '').toUpperCase()))
+    const admProf = approvedAdm ? admissionToProfile(approvedAdm) : null
+
+    const combined = {
+      ...(admProf || {}),
+      ...(localProf || {})
+    }
+
+    if (Object.keys(combined).length > 0) {
+      return normalizeStudentProfile(combined)
+    }
+
+    throw new Error('Student profile not found.')
+  },
+
+  update: async (id, payload) => {
+    const reqId = requiredId(id, 'Student ID')
+    let res = null
+    try {
+      res = normalizeStudentProfile(await request(API_ENDPOINTS.studentProfiles.update(reqId), { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) }))
+    } catch {
+      res = null
+    }
+
+    const studentObj = payload.student || payload
+    const saved = saveLocalStudentProfile(id, { ...res, ...studentObj })
+    return normalizeStudentProfile(saved)
+  },
 }
 export const studentPromotionApi = {
   getDashboard: async () => normalizePromotion(await request(API_ENDPOINTS.promotions.dashboard)), getDirectory: async (params) => listData(await request(withQuery(API_ENDPOINTS.promotions.directory, params))), getHistory: async (params) => listData(await request(withQuery(API_ENDPOINTS.promotions.history, params))),
   getEligibleStudents: async (params) => listData(await request(withQuery(API_ENDPOINTS.promotions.eligibleStudents, params))), getEligibility: async (id) => normalizePromotion(await request(API_ENDPOINTS.promotions.eligibility(requiredId(id, 'Student ID')))),
-  updateEligibilityStatus: async (id, payload) => normalizePromotion(await request(API_ENDPOINTS.promotions.eligibilityStatus(requiredId(id, 'Student ID')), { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) })),
+  updateEligibilityStatus: async (id, eligibilityStatus) => normalizePromotion(await request(withQuery(API_ENDPOINTS.promotions.eligibilityStatus(requiredId(id, 'Student ID')), { eligibilityStatus }), { method: 'PUT' })),
   promote: async (payload) => normalizePromotion(await request(API_ENDPOINTS.promotions.promote, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) })),
   promoteBulk: async (payload) => normalizePromotion(await request(API_ENDPOINTS.promotions.promoteBulk, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) })),
-  getPromotedStudents: async () => listData(await request(API_ENDPOINTS.promotions.promotedStudents)), getStudentHistory: async (id) => listData(await request(API_ENDPOINTS.promotions.studentHistory(requiredId(id, 'Student ID')))), getHistoryByStudent: async (id) => listData(await request(API_ENDPOINTS.promotions.historyByStudent(requiredId(id, 'Student ID')))),
+  getPromotedStudents: async (params) => listData(await request(withQuery(API_ENDPOINTS.promotions.promotedStudents, params))), getStudentHistory: async (id) => listData(await request(API_ENDPOINTS.promotions.studentHistory(requiredId(id, 'Student ID')))), getHistoryByStudent: async (id) => listData(await request(API_ENDPOINTS.promotions.historyByStudent(requiredId(id, 'Student ID')))),
 }
 
 export async function lookupIndianPincode(pincode) {
