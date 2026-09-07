@@ -2,6 +2,8 @@ import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { AuthRequestError, register } from '../auth/authApi'
 import { validateRegistration } from '../auth/registrationValidation'
+import { FiBell, FiBookOpen, FiCalendar, FiEye, FiEyeOff, FiFileText } from 'react-icons/fi'
+import campusHero from '../assets/college-campus-hero.png'
 
 const initialValues = { fullName: '', email: '', mobile: '', password: '', confirmPassword: '', terms: false }
 
@@ -49,12 +51,14 @@ export default function Register() {
 
   return (
     <main className="admin-login register-page">
-      <section className="login-intro" aria-label="Pirnav Engineering College Management System">
+      <section className="login-intro register-brand-panel" aria-label="Pirnav Engineering College digital campus">
+        <img className="register-brand-panel__image" src={campusHero} alt="Pirnav Engineering College campus" />
+        <div className="register-brand-panel__shade" />
         <div className="login-intro__pattern" aria-hidden="true" />
         <div className="login-intro__content">
-          <header className="brand"><span className="brand__mark">P</span><span className="brand__name"><strong>Pirnav Engineering College</strong><small>College Management System</small></span></header>
-          <div className="intro-copy"><p className="eyebrow">Access request</p><h1>Built for better campus operations.</h1><p>Manage your institution with clarity, confidence, and a connected view of what matters.</p></div>
-          <p className="copyright">&copy; {new Date().getFullYear()} Pirnav Engineering College</p>
+          <header className="brand"><span className="brand__mark"><FiBookOpen /></span><span className="brand__name"><strong>Pirnav Engineering College</strong><small>Digital Campus Management Portal</small></span></header>
+          <div className="intro-copy"><p className="eyebrow">Connected Academic Experience</p><h1>Welcome to Pirnav Engineering College</h1><p>A connected digital campus for academics, communication, examinations and college services.</p><div className="pirnav-campus-cards"><article><FiCalendar /><span><small>Academic Calendar</small><strong>Semester I · 2026–27 Active</strong></span></article><article><FiBell /><span><small>Campus Announcements</small><strong>Academic updates available</strong></span></article><article><FiFileText /><span><small>Examinations</small><strong>Schedules and services online</strong></span></article></div></div>
+          <p className="copyright">Pirnav Engineering College <span>•</span> College Management System</p>
         </div>
       </section>
       <section className="login-panel" aria-labelledby="register-title">
@@ -73,9 +77,9 @@ export default function Register() {
             {errors.email && <p id="email-error" className="field-error" role="alert">{errors.email}</p>}
             <label htmlFor="mobile"><span>Mobile Number</span><input id="mobile" name="mobile" type="tel" value={values.mobile} onChange={updateValue} placeholder="Enter your mobile number" autoComplete="tel" inputMode="numeric" maxLength="10" aria-invalid={Boolean(errors.mobile)} aria-describedby={errors.mobile ? 'mobile-error' : undefined} /></label>
             {errors.mobile && <p id="mobile-error" className="field-error" role="alert">{errors.mobile}</p>}
-            <label htmlFor="register-password"><span>Password</span><span className="password-input"><input id="register-password" name="password" type={showPassword ? 'text' : 'password'} value={values.password} onChange={updateValue} placeholder="Create a password" autoComplete="new-password" aria-invalid={Boolean(errors.password)} aria-describedby={errors.password ? 'password-error' : undefined} /><button className="password-toggle" type="button" onClick={() => setShowPassword((visible) => !visible)} aria-label={showPassword ? 'Hide password' : 'Show password'}>{showPassword ? 'Hide' : 'Show'}</button></span></label>
+            <label htmlFor="register-password"><span>Password</span><span className="password-input"><input id="register-password" name="password" type={showPassword ? 'text' : 'password'} value={values.password} onChange={updateValue} placeholder="Create a password" autoComplete="new-password" aria-invalid={Boolean(errors.password)} aria-describedby={errors.password ? 'password-error' : undefined} /><button className="password-toggle" type="button" onClick={() => setShowPassword((visible) => !visible)} aria-label={showPassword ? 'Hide password' : 'Show password'} title={showPassword ? 'Hide password' : 'Show password'}>{showPassword ? <FiEyeOff aria-hidden="true" /> : <FiEye aria-hidden="true" />}</button></span></label>
             {errors.password && <p id="password-error" className="field-error" role="alert">{errors.password}</p>}
-            <label htmlFor="confirmPassword"><span>Confirm Password</span><span className="password-input"><input id="confirmPassword" name="confirmPassword" type={showConfirmPassword ? 'text' : 'password'} value={values.confirmPassword} onChange={updateValue} placeholder="Confirm your password" autoComplete="new-password" aria-invalid={Boolean(errors.confirmPassword)} aria-describedby={errors.confirmPassword ? 'confirmPassword-error' : undefined} /><button className="password-toggle" type="button" onClick={() => setShowConfirmPassword((visible) => !visible)} aria-label={showConfirmPassword ? 'Hide password' : 'Show password'}>{showConfirmPassword ? 'Hide' : 'Show'}</button></span></label>
+            <label htmlFor="confirmPassword"><span>Confirm Password</span><span className="password-input"><input id="confirmPassword" name="confirmPassword" type={showConfirmPassword ? 'text' : 'password'} value={values.confirmPassword} onChange={updateValue} placeholder="Confirm your password" autoComplete="new-password" aria-invalid={Boolean(errors.confirmPassword)} aria-describedby={errors.confirmPassword ? 'confirmPassword-error' : undefined} /><button className="password-toggle" type="button" onClick={() => setShowConfirmPassword((visible) => !visible)} aria-label={showConfirmPassword ? 'Hide password' : 'Show password'} title={showConfirmPassword ? 'Hide password' : 'Show password'}>{showConfirmPassword ? <FiEyeOff aria-hidden="true" /> : <FiEye aria-hidden="true" />}</button></span></label>
             {errors.confirmPassword && <p id="confirmPassword-error" className="field-error" role="alert">{errors.confirmPassword}</p>}
             <label className="terms-option"><input name="terms" type="checkbox" checked={values.terms} onChange={updateValue} aria-invalid={Boolean(errors.terms)} aria-describedby={errors.terms ? 'terms-error' : undefined} /><span>I agree to the Terms &amp; Conditions</span></label>
             {errors.terms && <p id="terms-error" className="field-error" role="alert">{errors.terms}</p>}

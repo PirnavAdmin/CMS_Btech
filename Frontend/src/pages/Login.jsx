@@ -165,23 +165,8 @@ export default function Login() {
         <div className="pirnav-login__campus-shade" />
         <div className="login-intro__pattern" aria-hidden="true" />
         <div className="login-intro__content">
-          <header className="brand">
-            <span className="brand__mark"><FiBookOpen /></span>
-            <span className="brand__name">
-              <strong>Pirnav Engineering College</strong>
-              <small>Digital Campus Management Portal</small>
-            </span>
-          </header>
-          <div className="intro-copy">
-            <p className="eyebrow">Connected Academic Experience</p>
-            <h1>Welcome to Pirnav Engineering College</h1>
-            <p>A connected digital campus for academics, communication, examinations and college services.</p>
-            <div className="pirnav-campus-cards">
-              <article><FiCalendar /><span><small>Academic Calendar</small><strong>Semester I · 2026–27 Active</strong></span></article>
-              <article><FiBell /><span><small>Campus Announcements</small><strong>Academic updates available</strong></span></article>
-              <article><FiFileText /><span><small>Examinations</small><strong>Schedules and services online</strong></span></article>
-            </div>
-          </div>
+          <header className="brand"><span className="brand__mark"><FiBookOpen /></span><span className="brand__name"><strong>Pirnav Engineering College</strong><small>Digital Campus Management Portal</small></span></header>
+          <div className="intro-copy"><p className="eyebrow">Connected Academic Experience</p><h1>Welcome to Pirnav Engineering College</h1><p>A connected digital campus for academics, communication, examinations and college services.</p><div className="pirnav-campus-cards"><article><FiCalendar /><span><small>Academic Calendar</small><strong>Semester I · 2026–27 Active</strong></span></article><article><FiBell /><span><small>Campus Announcements</small><strong>Academic updates available</strong></span></article><article><FiFileText /><span><small>Examinations</small><strong>Schedules and services online</strong></span></article></div></div>
           <p className="copyright">Pirnav Engineering College <span>•</span> College Management System</p>
         </div>
       </section>

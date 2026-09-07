@@ -1,5 +1,9 @@
-import{Link}from'react-router-dom';import{FiArrowRight,FiAward,FiBell,FiBookOpen,FiCalendar,FiCheck,FiCheckCircle,FiFileText,FiGrid,FiHome,FiMenu,FiShield,FiTrendingUp}from'react-icons/fi';import campusHero from'../assets/college-campus-hero.png';import'./LandingPage.css';
+import{Link}from'react-router-dom';import{FiArrowRight,FiAward,FiBell,FiBookOpen,FiCalendar,FiCheck,FiCheckCircle,FiExternalLink,FiFileText,FiGrid,FiHome,FiMenu,FiShield,FiTrendingUp}from'react-icons/fi';import campusHero from'../assets/college-campus-hero.png';import'./LandingPage.css';
 import ThemeToggle from '../components/ThemeToggle';
+
+const APP_VERSION = 'v1.0.0'
+const APP_RELEASE_YEAR = '2026'
+
 const experiences=[[FiBookOpen,'Academics','Departments, courses, semesters, subjects and schedules organized through a consistent academic structure.'],[FiCheckCircle,'Learning & Attendance','Everyday classes and attendance connected to the correct semester, subject and section.'],[FiFileText,'Examinations & Results','Examination schedules, academic progress and results available through one dependable environment.'],[FiGrid,'Campus Services','Certificates, fees, communication and essential services brought together digitally.'],[FiBell,'Announcements & Events','Academic notices, events, examinations and important campus updates in one place.'],[FiShield,'Records & Documents','Reliable academic and institutional records maintained through structured workflows.']],journey=['Admission','Department','Course','Semester','Classes','Attendance','Examinations','Results','Certificates','Graduation'],programmes=[['CSE','Computer Science & Engineering'],['ECE','Electronics & Communication'],['EEE','Electrical & Electronics'],['ME','Mechanical Engineering'],['CE','Civil Engineering'],['AI & DS','Artificial Intelligence & Data Science']],services=['Academic Information','Attendance','Examinations','Results','Fee Services','Certificates','Schedules','Announcements','Communication','Reports'],benefits=[['Connected Academics','Academic structures, schedules and activities remain linked across departments, courses and semesters.'],['One Source of Information','Reduce disconnected records and duplication through consistent institutional data.'],['Secure Digital Access','Authenticated access provides the information and services available to each account.'],['Real-Time Information','Academic updates, schedules and essential campus information stay easier to access.'],['Designed for Engineering Colleges','Built around departments, B.Tech courses, semesters and sections.'],['Ready to Grow','A modular platform prepared for additional college services and workflows.']];
 function Brand(){return <Link className="lp-brand" to="/"><i><FiBookOpen/></i><span><strong>Pirnav Engineering College</strong><small>Digital Campus</small></span></Link>}
 export default function LandingPage(){return <main className="lp-page"><nav className="lp-nav"><div><Brand/><div className="lp-links"><a href="#home">Home</a><a href="#about">About</a><a href="#academics">Academics</a><a href="#campus">Campus</a><a href="#platform">Platform</a><a href="#services">Services</a></div><div className="lp-actions"><a href="#campus">Explore Campus</a><ThemeToggle/><Link className="lp-button small" to="/login">Login <FiArrowRight/></Link></div><details><summary aria-label="Open navigation"><FiMenu/></summary><div><a href="#academics">Academics</a><a href="#campus">Campus</a><a href="#platform">Platform</a><a href="#services">Services</a><a href="#about">About</a></div></details></div></nav>
@@ -7,11 +11,52 @@ export default function LandingPage(){return <main className="lp-page"><nav clas
 <section className="lp-overview">{[['01','Academics'],['02','Campus Experience'],['03','Digital Services'],['04','Records & Information']].map(x=><div key={x[0]}><strong>{x[0]}</strong><span>{x[1]}</span></div>)}</section>
 <section className="lp-section" id="academics"><header className="lp-heading"><div><p className="lp-eyebrow">A connected digital campus</p><h2>Everything that keeps college life moving, connected through one platform.</h2></div><p>From academic schedules and courses to examinations, campus communication and essential services, Pirnav Engineering College brings the college experience together in one dependable digital environment.</p></header><div className="lp-modules academic-experience">{experiences.map(([Icon,title,text],i)=><article key={title}><b>0{i+1}</b><i><Icon/></i><h3>{title}</h3><p>{text}</p></article>)}</div></section>
 <section className="lp-workflow academic-structure" id="platform"><header><p className="lp-eyebrow light">Academic structure</p><h2>Built around a real engineering college.</h2><p>One connected foundation keeps every academic activity in the correct institutional context.</p></header><div className="lp-flow">{['College','Departments','Courses','Semesters','Subjects','Sections','Academic Activities'].map((x,i,a)=><div key={x}><b>{String(i+1).padStart(2,'0')}</b><strong>{x}</strong>{i<a.length-1&&<FiArrowRight/>}</div>)}</div></section>
-<section className="lp-section lp-hierarchy"><div><p className="lp-eyebrow">Engineering disciplines</p><h2>Connected through one academic foundation.</h2><p>Department and course structures support semesters, subjects, sections and academic activities.</p></div><div className="lp-programmes">{programmes.map(([code,name])=><article key={code}><b>{code}</b><span>{name}</span></article>)}</div></section>
+<section className="lp-section lp-hierarchy"><div><p className="lp-eyebrow">Top demanded disciplines</p><h2>Most Demanded &amp; Trending Courses in Our College</h2><p>Engineering courses with high industry demand, modern curriculum, and active career opportunities.</p></div><div className="lp-programmes">{programmes.map(([code,name])=><article key={code}><b>{code}</b><span>{name}</span></article>)}</div></section>
 <section className="lp-journey"><header><p className="lp-eyebrow">The complete academic journey</p><h2>Built around every academic milestone.</h2></header><div>{journey.map((x,i)=><article key={x}><b>{String(i+1).padStart(2,'0')}</b><span>{x}</span>{i<journey.length-1&&<FiArrowRight/>}</article>)}</div></section>
 <section className="lp-campus" id="campus"><div className="lp-campus-photo"><img src={campusHero} alt="Students walking through a modern engineering college campus"/><span><FiHome/> A modern environment for learning and innovation</span></div><div><p className="lp-eyebrow">Stay connected with campus</p><h2>College life, information and activities in one place.</h2><p>Access the academic calendar, important announcements, events, examination updates and institutional notices through a connected digital campus.</p><div className="lp-campus-list">{[[FiCalendar,'Academic Calendar','Semester schedules, examinations, holidays and important dates.'],[FiBell,'Campus Updates','Important announcements and institutional information.'],[FiAward,'Events & Activities','Academic events, college activities and opportunities.']].map(([Icon,title,text])=><article key={title}><Icon/><span><strong>{title}</strong><small>{text}</small></span></article>)}</div></div></section>
-<section className="lp-section lp-services" id="services"><header><p className="lp-eyebrow">Digital college services</p><h2>College services. One digital destination.</h2><p>Essential academic information and campus services remain connected, organized and easier to reach.</p></header><div>{services.map((x,i)=><span key={x}><b>{String(i+1).padStart(2,'0')}</b>{x}</span>)}</div></section>
+<section className="lp-section lp-services" id="services"><header><p className="lp-eyebrow">Digital college services</p><h2>College services. One digital destination.</h2><p>Essential academic information and campus services remain connected, organized and easier to reach.</p></header><div className="lp-services-grid">{services.map((x,i,a)=>(<article key={x}><b>{String(i+1).padStart(2,'0')}</b><span>{x}</span>{i<a.length-1?<FiArrowRight/>:null}</article>))}</div></section>
 <section className="lp-section lp-benefits"><header><p className="lp-eyebrow">Why Pirnav Engineering College</p><h2>Connected, secure, reliable and ready to grow.</h2></header><div>{benefits.map((x,i)=><article key={x[0]}><b>{String(i+1).padStart(2,'0')}</b><h3>{x[0]}</h3><p>{x[1]}</p></article>)}</div></section>
 <section className="lp-about universal-about" id="about"><div><p className="lp-eyebrow light">One secure sign-in</p><h2>Your college experience, automatically personalized.</h2></div><div><p>Sign in using your college credentials and Pirnav Engineering College will automatically provide the services and information available to your account.</p><span><FiShield/> Secure authentication</span><span><FiTrendingUp/> Connected experience</span></div></section>
 <section className="lp-cta"><div><p className="lp-eyebrow light">Your campus, connected</p><h2>Enter your digital college experience.</h2><p>Academic information, campus services and institutional updates—connected through Pirnav Engineering College.</p></div></section>
-<footer className="lp-footer"><div><Brand/><p>A connected digital foundation for modern B.Tech college life.</p></div><div><strong>Explore</strong><a href="#academics">Academics</a><a href="#campus">Campus</a><a href="#services">Services</a></div><div><strong>Pirnav Engineering College</strong><a href="#about">About</a><a href="#platform">Platform</a></div><p>© {new Date().getFullYear()} Pirnav Engineering College.<br/>College Management System.</p></footer></main>}
+<footer className="lp-footer">
+  <div className="lp-footer-top">
+    <div className="lp-footer-brand">
+      <Brand />
+      <p className="lp-footer-tagline">Pirnav Engineering College — Digital Campus &amp; Academic Management System</p>
+      <div className="lp-footer-badge">Developed &amp; Engineered by <strong>Pirnav</strong></div>
+    </div>
+    <div className="lp-footer-info">
+      <strong>Product Information</strong>
+      <ul className="lp-footer-meta">
+        <li><span>Product:</span> <b>College Management System</b></li>
+        <li><span>Version:</span> <b>{APP_VERSION}</b></li>
+        <li><span>Developed by:</span> <b>Pirnav</b></li>
+        <li><span>Release:</span> <b>{APP_RELEASE_YEAR}</b></li>
+      </ul>
+    </div>
+    <div className="lp-footer-website">
+      <strong>Official Website &amp; Links</strong>
+      <div className="lp-footer-official-site">
+        <span>Official Website: </span>
+        <a href="https://pirnav.com/" target="_blank" rel="noopener noreferrer" className="lp-pirnav-link">
+          Pirnav <FiExternalLink className="lp-ext-icon" />
+        </a>
+      </div>
+      <nav className="lp-footer-nav" aria-label="Footer navigation">
+        <span className="lp-footer-nav-item">Contact</span>
+        <span className="lp-footer-nav-divider">|</span>
+        <span className="lp-footer-nav-item">Support</span>
+        <span className="lp-footer-nav-divider">|</span>
+        <span className="lp-footer-nav-item">Privacy</span>
+        <span className="lp-footer-nav-divider">|</span>
+        <span className="lp-footer-nav-item">Terms</span>
+      </nav>
+    </div>
+  </div>
+  <div className="lp-footer-bottom">
+    <p className="lp-footer-copyright">&copy; {APP_RELEASE_YEAR} Pirnav Engineering College &amp; Pirnav. All Rights Reserved.</p>
+    <p className="lp-footer-legal">
+      This software and its associated design, source code, architecture, and intellectual property are proprietary to Pirnav. Unauthorized reproduction, distribution, or modification is prohibited.
+    </p>
+  </div>
+</footer></main>}

@@ -272,9 +272,113 @@
 .profile-edit-dialog legend { margin-bottom: 14px; color: var(--pf-text, #173b5c); font-size: .78rem; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; }
 .profile-edit-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 15px 18px; }
 .profile-edit-grid label { display: grid; gap: 6px; color: var(--pf-text, #294b69); font-size: .78rem; font-weight: 750; }
+.profile-required { color: #c9322a; font-weight: 850; }
 .profile-edit-grid input, .profile-edit-grid select, .profile-edit-grid textarea { width: 100%; box-sizing: border-box; padding: 0 11px; border: 1px solid var(--pf-border-strong, #c3d3df); border-radius: 7px; outline: 0; color: var(--pf-text, #173b5c); background: var(--pf-surface-muted, #f2f6fa); font: inherit; }
 .profile-edit-grid input, .profile-edit-grid select { height: 42px; }
 .profile-edit-grid textarea { min-height: 78px; padding-top: 10px; resize: vertical; }
+.profile-edit-grid textarea[name="address"],
+.profile-edit-grid textarea[name="permanentAddress"] { height: 42px; min-height: 42px; padding-top: 11px; resize: none; overflow: hidden; white-space: nowrap; }
+.profile-edit-grid label.profile-edit-wide:has(textarea[name="address"]),
+.profile-edit-grid label.profile-edit-wide:has(textarea[name="permanentAddress"]) { grid-column: auto; }
+.profile-edit-grid label:has(input[name="permanentHouseNumber"]) > span::after { content: " *"; color: #c9322a; font-weight: 850; }
+.profile-edit-grid label:has(textarea[name="permanentAddress"])::before,
+.profile-edit-grid label:has(input[name="permanentPincode"])::before,
+.profile-edit-grid label:has(input[name="permanentCity"])::before,
+.profile-edit-grid label:has(input[name="permanentDistrict"])::before,
+.profile-edit-grid label:has(input[name="permanentState"])::before { color: var(--pf-text, #294b69); font-size: .78rem; font-weight: 750; }
+.profile-edit-grid label:has(textarea[name="permanentAddress"])::before { content: "Address"; }
+.profile-edit-grid label:has(input[name="permanentPincode"])::before { content: "PIN Code"; }
+.profile-edit-grid label:has(input[name="permanentCity"])::before { content: "City / Block"; }
+.profile-edit-grid label:has(input[name="permanentDistrict"])::before { content: "District"; }
+.profile-edit-grid label:has(input[name="permanentState"])::before { content: "State"; }
+.profile-edit-grid label:has(textarea[name="permanentAddress"])::before { content: "Address *"; }
+.profile-edit-grid label:has(input[name="permanentPincode"])::before { content: "PIN Code *"; }
+.profile-edit-grid label:has(input[name="permanentCity"])::before { content: "City / Block *"; }
+.profile-edit-grid label:has(input[name="permanentDistrict"])::before { content: "District *"; }
+.profile-edit-grid label:has(input[name="permanentState"])::before { content: "State *"; }
+.profile-edit-grid label:has(textarea[name="permanentAddress"]),
+.profile-edit-grid label:has(input[name="permanentPincode"]),
+.profile-edit-grid label:has(input[name="permanentCity"]),
+.profile-edit-grid label:has(input[name="permanentDistrict"]),
+.profile-edit-grid label:has(input[name="permanentState"]) { font-size: 0; }
+.profile-edit-grid label:has(textarea[name="permanentAddress"])::before { content: "Address"; }
+.profile-edit-grid label:has(input[name="permanentPincode"])::before { content: "PIN Code"; }
+.profile-edit-grid label:has(input[name="permanentCity"])::before { content: "City / Block"; }
+.profile-edit-grid label:has(input[name="permanentDistrict"])::before { content: "District"; }
+.profile-edit-grid label:has(input[name="permanentState"])::before { content: "State"; }
+.profile-edit-grid label:has(textarea[name="permanentAddress"])::after,
+.profile-edit-grid label:has(input[name="permanentPincode"])::after,
+.profile-edit-grid label:has(input[name="permanentCity"])::after,
+.profile-edit-grid label:has(input[name="permanentDistrict"])::after,
+.profile-edit-grid label:has(input[name="permanentState"])::after { content: "*"; margin-left: 3px; color: #c9322a; font-size: .78rem; font-weight: 850; }
+.profile-edit-grid label:has(textarea[name="permanentAddress"]) input,
+.profile-edit-grid label:has(textarea[name="permanentAddress"]) textarea,
+.profile-edit-grid label:has(input[name="permanentPincode"]) input,
+.profile-edit-grid label:has(input[name="permanentCity"]) input,
+.profile-edit-grid label:has(input[name="permanentDistrict"]) input,
+.profile-edit-grid label:has(input[name="permanentState"]) input { font-size: .78rem; }
+
+/* Keep address labels single and avoid duplicate pseudo-label text. */
+.profile-edit-grid label:has(textarea[name="address"]),
+.profile-edit-grid label:has(input[name="pincode"]),
+.profile-edit-grid label:has(input[name="city"]),
+.profile-edit-grid label:has(input[name="district"]),
+.profile-edit-grid label:has(input[name="state"]),
+.profile-edit-grid label:has(textarea[name="permanentAddress"]),
+.profile-edit-grid label:has(input[name="permanentPincode"]),
+.profile-edit-grid label:has(input[name="permanentCity"]),
+.profile-edit-grid label:has(input[name="permanentDistrict"]),
+.profile-edit-grid label:has(input[name="permanentState"]) { display: block; color: transparent !important; font-size: 0; }
+.profile-edit-grid label:has(textarea[name="address"])::before { content: "Address"; }
+.profile-edit-grid label:has(input[name="pincode"])::before { content: "PIN Code"; }
+.profile-edit-grid label:has(input[name="city"])::before { content: "City / Block"; }
+.profile-edit-grid label:has(input[name="district"])::before { content: "District"; }
+.profile-edit-grid label:has(input[name="state"])::before { content: "State"; }
+.profile-edit-grid label:has(textarea[name="permanentAddress"])::before { content: "Address"; }
+.profile-edit-grid label:has(input[name="permanentPincode"])::before { content: "PIN Code"; }
+.profile-edit-grid label:has(input[name="permanentCity"])::before { content: "City / Block"; }
+.profile-edit-grid label:has(input[name="permanentDistrict"])::before { content: "District"; }
+.profile-edit-grid label:has(input[name="permanentState"])::before { content: "State"; }
+.profile-edit-grid label:has(textarea[name="address"])::before,
+.profile-edit-grid label:has(input[name="pincode"])::before,
+.profile-edit-grid label:has(input[name="city"])::before,
+.profile-edit-grid label:has(input[name="district"])::before,
+.profile-edit-grid label:has(input[name="state"])::before,
+.profile-edit-grid label:has(textarea[name="permanentAddress"])::before,
+.profile-edit-grid label:has(input[name="permanentPincode"])::before,
+.profile-edit-grid label:has(input[name="permanentCity"])::before,
+.profile-edit-grid label:has(input[name="permanentDistrict"])::before,
+.profile-edit-grid label:has(input[name="permanentState"])::before { display: inline-block; color: var(--pf-text, #294b69); font-size: .78rem; font-weight: 750; }
+.profile-edit-grid label:has(textarea[name="address"])::after,
+.profile-edit-grid label:has(input[name="pincode"])::after,
+.profile-edit-grid label:has(input[name="city"])::after,
+.profile-edit-grid label:has(input[name="district"])::after,
+.profile-edit-grid label:has(input[name="state"])::after,
+.profile-edit-grid label:has(textarea[name="permanentAddress"])::after,
+.profile-edit-grid label:has(input[name="permanentPincode"])::after,
+.profile-edit-grid label:has(input[name="permanentCity"])::after,
+.profile-edit-grid label:has(input[name="permanentDistrict"])::after,
+.profile-edit-grid label:has(input[name="permanentState"])::after { display: inline-block; margin-left: 3px; color: #c9322a; font-size: .78rem; font-weight: 850; }
+.profile-edit-grid label:has(textarea[name="address"])::after,
+.profile-edit-grid label:has(input[name="pincode"])::after,
+.profile-edit-grid label:has(input[name="city"])::after,
+.profile-edit-grid label:has(input[name="district"])::after,
+.profile-edit-grid label:has(input[name="state"])::after,
+.profile-edit-grid label:has(textarea[name="permanentAddress"])::after,
+.profile-edit-grid label:has(input[name="permanentPincode"])::after,
+.profile-edit-grid label:has(input[name="permanentCity"])::after,
+.profile-edit-grid label:has(input[name="permanentDistrict"])::after,
+.profile-edit-grid label:has(input[name="permanentState"])::after { content: "*"; }
+.profile-edit-grid label:has(textarea[name="address"]) > textarea,
+.profile-edit-grid label:has(input[name="pincode"]) > input,
+.profile-edit-grid label:has(input[name="city"]) > input,
+.profile-edit-grid label:has(input[name="district"]) > input,
+.profile-edit-grid label:has(input[name="state"]) > input,
+.profile-edit-grid label:has(textarea[name="permanentAddress"]) > textarea,
+.profile-edit-grid label:has(input[name="permanentPincode"]) > input,
+.profile-edit-grid label:has(input[name="permanentCity"]) > input,
+.profile-edit-grid label:has(input[name="permanentDistrict"]) > input,
+.profile-edit-grid label:has(input[name="permanentState"]) > input { display: block; margin-top: 6px; color: var(--pf-text, #173b5c); font-size: .78rem; }
 .profile-edit-grid input:focus, .profile-edit-grid select:focus, .profile-edit-grid textarea:focus { border-color: var(--blue); box-shadow: 0 0 0 3px rgba(13,96,153,.12); }
 .profile-edit-wide { grid-column: 1 / -1; }
 .profile-address-heading{margin-top:3px;padding:7px 0 2px;border-bottom:1px solid var(--pf-border,#d5e1ea);color:var(--navy);font-size:.76rem;font-weight:850;letter-spacing:.06em;text-transform:uppercase}.profile-pin-status{color:var(--blue)!important;font-weight:650!important}
