@@ -5,6 +5,7 @@ import FilterPanel from '../../../components/FilterPanel'
 import { hasRole } from '../../../auth/auth'
 import { ROLES } from '../../../auth/roles'
 import { studentProfilesApi } from '../../../api/apiEndpoints'
+import StudentProfileEdit from './StudentProfileEdit'
 import './StudentProfile.css'
 import './StudentProfileDocuments.css'
 
@@ -16,9 +17,47 @@ const initials=x=>name(x).split(/\s+/).filter(Boolean).slice(0,2).map(p=>p[0]).j
 const status=x=>({ADMITTED:'Active',APPROVED:'Approved',VERIFIED:'Verified'}[x]||String(x||'Not available').replaceAll('_',' '))
 const clone=x=>structuredClone(x)
 const blankAddress=()=>({ line1:'', line2:'', town:'', city:'', district:'', state:'', country:'India', pincode:''})
+const normalizeAddressObj=addr=>{
+  if(!addr)return blankAddress()
+  if(typeof addr==='string'){
+    const trimmed=addr.trim()
+    return { line1:trimmed, line2:'', town:'', city:'', district:'', state:'', country:'India', pincode:'' }
+  }
+  if(typeof addr==='object'&&addr!==null){
+    const line1=addr.line1??addr.address??addr.street??addr.addressLine1??''
+    const line2=addr.line2??addr.addressLine2??''
+    const town=addr.town??addr.village??''
+    const city=addr.city??''
+    const district=addr.district??''
+    const state=addr.state??''
+    const country=addr.country??'India'
+    const pincode=addr.pincode??addr.postalCode??addr.zip??''
+    return { line1:String(line1), line2:String(line2), town:String(town), city:String(city), district:String(district), state:String(state), country:String(country), pincode:String(pincode) }
+  }
+  return blankAddress()
+}
+const formatAddress=item=>{
+  if(!item)return ''
+  if(typeof item==='string')return item.trim()
+  if(typeof item==='object'&&item!==null){
+    const parts=[item.line1,item.line2,item.town,item.city,item.district,item.state,item.country&&item.country!=='India'?item.country:'',item.pincode].map(v=>String(v||'').trim()).filter(Boolean)
+    if(parts.length>0)return parts.join(', ')
+    if(item.address)return String(item.address).trim()
+    if(item.fullAddress)return String(item.fullAddress).trim()
+  }
+  return String(item||'').trim()
+}
 const profileFromApi=x=>{
   const personal={ firstName:'', middleName:'', lastName:'', gender:'', dob:'', bloodGroup:'', nationality:'Indian', aadhaar:'', photo:'', ...x.personal, ...x.personalInformation, firstName:x.firstName ?? x.personal?.firstName ?? x.personalInformation?.firstName ?? '', middleName:x.middleName ?? x.personal?.middleName ?? x.personalInformation?.middleName ?? '', lastName:x.lastName ?? x.personal?.lastName ?? x.personalInformation?.lastName ?? '', gender:x.gender ?? x.personal?.gender ?? x.personalInformation?.gender ?? '', dob:x.dateOfBirth ?? x.personal?.dob ?? x.personalInformation?.dob ?? '', aadhaar:x.aadhaarNumber ?? x.personal?.aadhaar ?? x.personalInformation?.aadhaar ?? '' }
-  const contact={ mobile:'', alternateMobile:'', email:'', alternateEmail:'', sameAddress:true, currentAddress:blankAddress(), permanentAddress:blankAddress(), ...x.contact, ...x.contactInformation, currentAddress:{ ...blankAddress(), ...(x.contact?.currentAddress ?? x.contactInformation?.currentAddress ?? {}) }, permanentAddress:{ ...blankAddress(), ...(x.contact?.permanentAddress ?? x.contactInformation?.permanentAddress ?? {}) } }
+  const contactRaw=x.contact ?? x.contactInformation ?? {}
+  const currRaw=contactRaw.currentAddress ?? x.currentAddress ?? x.contactInformation?.currentAddress ?? x.address
+  const permRaw=contactRaw.permanentAddress ?? x.permanentAddress ?? x.contactInformation?.permanentAddress
+  const currentAddress=normalizeAddressObj(currRaw)
+  const permanentAddress=normalizeAddressObj(permRaw)
+  const hasPerm=Boolean(formatAddress(permanentAddress))
+  const sameAddressExplicit=contactRaw.sameAddress
+  const sameAddress=sameAddressExplicit!==undefined&&sameAddressExplicit!==null?Boolean(sameAddressExplicit):(!hasPerm&&Boolean(formatAddress(currentAddress)))
+  const contact={ mobile:x.mobile??contactRaw.mobile??'', alternateMobile:x.alternateMobile??contactRaw.alternateMobile??'', email:x.email??contactRaw.email??'', alternateEmail:x.alternateEmail??contactRaw.alternateEmail??'', sameAddress, currentAddress, permanentAddress:(!hasPerm&&sameAddress)?{...currentAddress}:permanentAddress }
   const parents={ father:{ name:'', mobile:'', email:'', occupation:'', qualification:'', income:'' }, mother:{ name:'', mobile:'', occupation:'' }, guardian:{ name:'', relationship:'', relationshipOther:'', mobile:'' }, primaryContact:'Father', emergencyMobile:'', ...x.parents, ...x.parentDetails, father:{ ...x.parents?.father ?? x.parentDetails?.father ?? {}, name:x.parents?.father?.name ?? x.parentDetails?.father?.name ?? '' }, mother:{ ...x.parents?.mother ?? x.parentDetails?.mother ?? {}, name:x.parents?.mother?.name ?? x.parentDetails?.mother?.name ?? '' }, guardian:{ ...x.parents?.guardian ?? x.parentDetails?.guardian ?? {}, name:x.parents?.guardian?.name ?? x.parentDetails?.guardian?.name ?? '' } }
   const academic={ academicYear:'', admissionType:'', course:'', department:'', branch:'', semester:'', section:'', regulation:'', quota:'', quotaOther:'', entryType:'', ...x.academic, ...x.academicInformation }
   const application={ registrationNumber:'', admissionNumber:'', number:'', date:'', admissionDate:'', ...x.application }
@@ -51,18 +90,18 @@ export default function StudentProfile(){
  const openProfile=async id=>{setSelectedId(id);setTab('overview');const url=new URL(window.location.href);url.searchParams.set('studentId',id);window.history.pushState({},'',url);try{const latest=profileFromApi(await studentProfilesApi.preview(id));setStudents(current=>[latest,...current.filter(x=>String(x.id)!==String(id))])}catch(previewError){setNotice(previewError.message||'Unable to load the latest profile.')}}
  const closeProfile=()=>{setSelectedId(null);const url=new URL(window.location.href);url.searchParams.delete('studentId');window.history.pushState({},'',url)}
  const beginEdit=student=>{if(!canEdit){setNotice('You do not have permission to edit student profiles.');return}setEditing(clone(student))}
- const saveStudent=async student=>{await studentProfilesApi.update(student.id,{personalInformation:student.personal,contactInformation:student.contact,parentDetails:student.parents});const next=profileFromApi(await studentProfilesApi.preview(student.id));setStudents(current=>current.map(x=>String(x.id)===String(next.id)?next:x));setEditing(null);setNotice('Student updated successfully.')}
+ const saveStudent=async student=>{await studentProfilesApi.update(student.id,{personalInformation:student.personal,contactInformation:student.contact,parentDetails:student.parents,academicInformation:student.academic,previousEducation:student.previousEducation,admissionDetails:student.admission});const next=profileFromApi(await studentProfilesApi.preview(student.id));setStudents(current=>current.map(x=>String(x.id)===String(next.id)?next:x));setEditing(null);setNotice('Student updated successfully.')}
  const body=selected?<Profile student={selected} tab={tab} setTab={setTab} back={closeProfile} edit={()=>beginEdit(selected)} canEdit={canEdit}/>:<><header className="sp-heading"><div><span>Student management</span><h1>Student Profiles</h1><p>Find, preview and manage profiles created from student admissions.</p></div><button className="sp-button secondary" onClick={load}><FiRefreshCw/> Refresh</button></header>{error?<State error={error} onRetry={load}/>:<><section className="sp-directory"><header><div><h2>Student profile directory</h2><p>{filtered.length} {filtered.length===1?'student':'students'} found</p></div></header><FilterPanel active={Boolean(query || Object.values(filters).some(Boolean))} onClear={()=>{setQuery('');setFilters({department:'',course:'',branch:'',academicYear:'',semester:'',section:'',status:''});setPage(1)}}><div className="sp-toolbar"><label><FiSearch/><input value={query} onChange={e=>setQuery(e.target.value)} placeholder="Search name, registration, admission, mobile or email"/></label><FiFilter/></div><div className="sp-filters">{[['department','Department'],['course','Course'],['branch','Branch'],['academicYear','Academic year'],['semester','Semester'],['section','Section'],['status','Status']].map(([key,label])=><label key={key}><span>{label}</span><select value={filters[key]} onChange={e=>updateFilter(key,e.target.value)}><option value="">All</option>{options(key).filter(o=>key!=='course'||!filters.department||students.some(x=>x.academic?.department===filters.department&&x.academic?.course===o)).filter(o=>key!=='branch'||!filters.course||students.some(x=>x.academic?.course===filters.course&&x.academic?.branch===o)).map(o=><option key={o}>{o}</option>)}</select></label>)}</div></FilterPanel><div className="sp-table-wrap"><table className="sp-directory-table"><thead><tr><th>Student</th><th>Academic details</th><th>Contact</th><th>Status</th><th/></tr></thead><tbody>{shown.map(student=>{const a=student.academic||{},app=student.application||{},photo=student.personal?.photo;return <tr key={student.id} onClick={()=>openProfile(student.id)}><td><div className="sp-student"><i>{photo?<img src={photo} alt={name(student)}/>:initials(student)}</i><div><strong>{name(student)||'Unnamed student'}</strong><small>Admission No: {value(app.admissionNumber)}</small></div></div></td><td><strong>{value(a.course)} · {value(a.branch)}</strong><small>{value(a.department)} · {value(a.academicYear)}</small><small>{value(a.semester)} {a.section&&`· Section ${a.section}`}</small></td><td><strong>{value(student.contact?.mobile)}</strong><small>{value(student.contact?.email)}</small></td><td><span className="sp-badge active"><i/>{status(student.status)}</span></td><td><button className="sp-table-button" onClick={e=>{e.stopPropagation();openProfile(student.id)}}><FiEye/> View Profile</button></td></tr>})}</tbody></table></div>{!shown.length&&<Empty title="No students match your search or filters."><button className="sp-text-button" onClick={()=>{setQuery('');setFilters({department:'',course:'',branch:'',academicYear:'',semester:'',section:'',status:''})}}>Clear filters</button></Empty>}<footer className="sp-pagination"><span>Showing {filtered.length?(page-1)*PAGE_SIZE+1:0}-{Math.min(page*PAGE_SIZE,filtered.length)} of {filtered.length}</span><div><button disabled={page===1} onClick={()=>setPage(page-1)}><FiChevronLeft/></button><b>{page} / {pages}</b><button disabled={page===pages} onClick={()=>setPage(page+1)}><FiChevronRight/></button></div></footer></section>{!students.length&&<State/>}</>}</>
- if(loading)return <DashboardLayout><Skeleton/></DashboardLayout>;return <DashboardLayout><main className="student-profile">{notice&&<Notice message={notice} close={()=>setNotice('')}/>} {body}{editing&&<EditStudent student={editing} onCancel={()=>setEditing(null)} onSave={saveStudent}/>}</main></DashboardLayout>
+ if(loading)return <DashboardLayout><Skeleton/></DashboardLayout>;return <DashboardLayout><main className="student-profile">{notice&&<Notice message={notice} close={()=>setNotice('')}/>} {body}{editing&&<StudentProfileEdit student={editing} onCancel={()=>setEditing(null)} onSave={saveStudent}/>}</main></DashboardLayout>
 }
 function Profile({student,tab,setTab,back,edit,canEdit}){
  const a=student.academic||{},app=student.application||{},p=student.personal||{},c=student.contact||{},parents=student.parents||{},previous=student.previousEducation||{},admission=student.admission||{},fees=student.fees||{},documents=student.documents||{}
- const address=item=>[item?.line1,item?.line2,item?.town,item?.city,item?.district,item?.state,item?.country,item?.pincode].filter(Boolean).join(', ')
+ const address=item=>formatAddress(item)
  const money=amount=>new Intl.NumberFormat('en-IN',{style:'currency',currency:'INR',maximumFractionDigits:0}).format(Number(amount||0))
  const relationship=parents.guardian?.relationship==='Other'?parents.guardian?.relationshipOther:parents.guardian?.relationship
  const panels={
   overview:[['Registration number',app.registrationNumber||app.number],['Admission number',app.admissionNumber],['Admission date',app.admissionDate],['Student name',name(student)],['Course',a.course],['Department',a.department],['Branch',a.branch],['Academic year',a.academicYear],['Semester',a.semester],['Section',a.section],['Status',status(student.status)]],
-  personal:[['First name',p.firstName],['Middle name',p.middleName],['Last name',p.lastName],['Gender',p.gender],['Date of birth',p.dob],['Blood group',p.bloodGroup],['Nationality',p.nationality],['Aadhaar number',p.aadhaar],['Student mobile',c.mobile],['Alternate mobile',c.alternateMobile],['Student email',c.email],['Alternate email',c.alternateEmail],['Current address',address(c.currentAddress)],['Permanent address',address(c.sameAddress?c.currentAddress:c.permanentAddress)]],
+  personal:[['First name',p.firstName],['Middle name',p.middleName],['Last name',p.lastName],['Gender',p.gender],['Date of birth',p.dob],['Blood group',p.bloodGroup],['Nationality',p.nationality],['Aadhaar number',p.aadhaar],['Student mobile',c.mobile],['Alternate mobile',c.alternateMobile],['Student email',c.email],['Alternate email',c.alternateEmail],['Current address',formatAddress(c.currentAddress)],['Permanent address',formatAddress(c.permanentAddress)||(c.sameAddress?formatAddress(c.currentAddress):'')||'Not provided']],
   parent:[['Father name',parents.father?.name],['Father mobile',parents.father?.mobile],['Father email',parents.father?.email],['Father occupation',parents.father?.occupation],['Father qualification',parents.father?.qualification],['Father annual income',parents.father?.income],['Mother name',parents.mother?.name],['Mother mobile',parents.mother?.mobile],['Guardian name',parents.guardian?.name],['Guardian relationship',relationship],['Guardian mobile',parents.guardian?.mobile],['Primary contact',parents.primaryContact],['Emergency contact',parents.emergencyMobile]],
   academic:[['Academic year',a.academicYear],['Admission type',a.admissionType],['Course',a.course],['Department',a.department],['Branch',a.branch],['Semester',a.semester],['Section',a.section],['Regulation',a.regulation],['Quota',a.quota==='Other'?a.quotaOther:a.quota],['Entry type',a.entryType]],
   education:[['10th board',previous.tenth?.board],['10th institution',previous.tenth?.institution],['10th roll number',previous.tenth?.rollNumber],['10th passing year',previous.tenth?.passingYear],['10th score',previous.tenth?.score],['Qualification',previous.intermediate?.qualification],['Board / University',previous.intermediate?.board],['Intermediate / Diploma institution',previous.intermediate?.institution],['Passing year',previous.intermediate?.passingYear],['Stream',previous.intermediate?.stream],['Score',previous.intermediate?.score]],

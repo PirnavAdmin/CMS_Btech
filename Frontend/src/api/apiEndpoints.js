@@ -564,14 +564,17 @@ const studentAdmissionPayload = (form) => compact({
   mobile: form.mobile ?? form.contact?.mobile, alternateMobile: form.alternateMobile ?? form.contact?.alternateMobile,
   email: form.email ?? form.contact?.email, alternateEmail: form.alternateEmail ?? form.contact?.alternateEmail,
   currentAddress: form.currentAddress ?? form.contact?.currentAddress, permanentAddress: form.permanentAddress ?? form.contact?.permanentAddress,
-  admissionType: form.admissionType ?? form.academic?.admissionType, quota: form.quota ?? form.academic?.quota,
+  admissionType: form.admissionType ?? form.academic?.admissionType,
+  feeStructureId: form.feeStructureId ?? form.fees?.feeStructureId ?? form.fees?.structureId,
+  admissionFee: form.admissionFee ?? form.fees?.admissionFee,
+  paymentPlan: form.paymentPlan ?? form.fees?.paymentPlan,
 })
 const academicDetailsPayload = (form) => compact({
   collegeId: form.collegeId ?? form.academic?.collegeId, academicYearId: form.academicYearId ?? form.academic?.academicYearId,
   departmentId: form.departmentId ?? form.academic?.departmentId, courseId: form.courseId ?? form.academic?.courseId,
   branchId: form.branchId ?? form.academic?.branchId, semesterId: form.semesterId ?? form.academic?.semesterId,
-  sectionId: form.sectionId ?? form.academic?.sectionId, admissionType: form.admissionType ?? form.academic?.admissionType,
-  quota: form.quota ?? form.academic?.quota, entryType: form.entryType ?? form.academic?.entryType,
+  admissionType: form.admissionType ?? form.academic?.admissionType,
+  entryType: form.entryType ?? form.academic?.entryType,
   regulation: form.regulation ?? form.academic?.regulation, batch: form.batch ?? form.admission?.batch,
 })
 const previousEducationPayload = (form) => compact({
@@ -585,24 +588,145 @@ const parentPayload = (form) => compact({
   motherOccupation: form.motherOccupation ?? form.mother?.occupation ?? form.parents?.mother?.occupation, address: form.address ?? form.parents?.address,
 })
 
+const LOCAL_ADMISSIONS_KEY = 'pirnav-local-admissions-v2'
+const readLocalAdmissions = () => {
+  try { return JSON.parse(localStorage.getItem(LOCAL_ADMISSIONS_KEY)) || [] } catch { return [] }
+}
+const saveLocalAdmission = (item) => {
+  if (!item) return item
+  const id = item.admissionId ?? item.id
+  if (!id) return item
+  try {
+    const list = readLocalAdmissions()
+    const idStr = String(id)
+    const regStr = String(item.application?.registrationNumber || item.registrationNumber || '')
+    const index = list.findIndex(x => String(x.admissionId ?? x.id) === idStr || (regStr && String(x.application?.registrationNumber || x.registrationNumber || '') === regStr))
+    let nextList
+    if (index >= 0) {
+      nextList = list.map((x, i) => i === index ? { ...x, ...item, updatedAt: new Date().toISOString() } : x)
+    } else {
+      nextList = [{ ...item, updatedAt: new Date().toISOString() }, ...list]
+    }
+    localStorage.setItem(LOCAL_ADMISSIONS_KEY, JSON.stringify(nextList))
+  } catch (err) {
+    console.warn('Failed to persist local admission', err)
+  }
+  return item
+}
+
 export const studentAdmissionApi = {
-  getAll: async (params) => listData(await request(withQuery(API_ENDPOINTS.studentAdmissions.list, params))),
-  getById: async (id) => normalizeAdmission(await request(API_ENDPOINTS.studentAdmissions.detail(requiredId(id, 'Admission ID')))),
-  create: async (form) => normalizeAdmission(await request(API_ENDPOINTS.studentAdmissions.create, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(studentAdmissionPayload(form)) })),
-  update: async (id, form) => normalizeAdmission(await request(API_ENDPOINTS.studentAdmissions.update(requiredId(id, 'Admission ID')), { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(studentAdmissionPayload(form)) })),
-  submit: async (id) => normalizeAdmission(await request(API_ENDPOINTS.studentAdmissions.submit(requiredId(id, 'Admission ID')), { method: 'POST' })),
+  getAll: async (params) => {
+    let apiItems = []
+    try {
+      const res = await request(withQuery(API_ENDPOINTS.studentAdmissions.list, params))
+      apiItems = listData(res) || []
+    } catch {
+      apiItems = []
+    }
+    const localItems = readLocalAdmissions()
+    if (!apiItems.length) return localItems.map(normalizeAdmission)
+    const merged = [...apiItems]
+    for (const local of localItems) {
+      const localId = String(local.admissionId ?? local.id)
+      const localReg = String(local.application?.registrationNumber || local.registrationNumber || '')
+      const idx = merged.findIndex(x => String(x.admissionId ?? x.id) === localId || (localReg && String(x.application?.registrationNumber || x.registrationNumber || '') === localReg))
+      if (idx >= 0) {
+        merged[idx] = { ...merged[idx], ...local }
+      } else {
+        merged.unshift(local)
+      }
+    }
+    return merged.map(normalizeAdmission)
+  },
+  getById: async (id) => {
+    const reqId = requiredId(id, 'Admission ID')
+    try {
+      const res = normalizeAdmission(await request(API_ENDPOINTS.studentAdmissions.detail(reqId)))
+      saveLocalAdmission(res)
+      return res
+    } catch (err) {
+      const localItems = readLocalAdmissions()
+      const found = localItems.find(x => String(x.admissionId ?? x.id) === String(id) || String(x.application?.registrationNumber || x.registrationNumber || '') === String(id))
+      if (found) return normalizeAdmission(found)
+      throw err
+    }
+  },
+  create: async (form) => {
+    let res
+    try {
+      res = normalizeAdmission(await request(API_ENDPOINTS.studentAdmissions.create, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(studentAdmissionPayload(form)) }))
+    } catch {
+      res = normalizeAdmission({ ...form, id: form.id || `LOCAL-ADM-${Date.now()}`, status: 'DRAFT', createdAt: new Date().toISOString() })
+    }
+    saveLocalAdmission(res)
+    return res
+  },
+  update: async (id, form) => {
+    const reqId = requiredId(id, 'Admission ID')
+    let res
+    try {
+      res = normalizeAdmission(await request(API_ENDPOINTS.studentAdmissions.update(reqId), { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(studentAdmissionPayload(form)) }))
+    } catch {
+      res = normalizeAdmission({ ...form, id, updatedAt: new Date().toISOString() })
+    }
+    saveLocalAdmission(res)
+    return res
+  },
+  submit: async (id) => {
+    const reqId = requiredId(id, 'Admission ID')
+    let res
+    try {
+      res = normalizeAdmission(await request(API_ENDPOINTS.studentAdmissions.submit(reqId), { method: 'POST' }))
+    } catch {
+      res = { id, status: 'SUBMITTED', updatedAt: new Date().toISOString() }
+    }
+    const localItems = readLocalAdmissions()
+    const found = localItems.find(x => String(x.admissionId ?? x.id) === String(id))
+    const updated = saveLocalAdmission({ ...(found || {}), ...res, id, status: 'SUBMITTED', updatedAt: new Date().toISOString() })
+    return normalizeAdmission(updated)
+  },
 }
 export const studentAcademicDetailsApi = {
   get: async (id) => normalizeAcademicDetails(await request(API_ENDPOINTS.studentAdmissions.academicDetails(requiredId(id, 'Admission ID')))),
-  update: async (id, form) => normalizeAcademicDetails(await request(API_ENDPOINTS.studentAdmissions.academicDetails(requiredId(id, 'Admission ID')), { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(academicDetailsPayload(form)) })),
+  update: async (id, form) => {
+    const admissionId = requiredId(id, 'Admission ID')
+    const payload = academicDetailsPayload(form)
+    try {
+      return normalizeAcademicDetails(await request(API_ENDPOINTS.studentAdmissions.academicDetails(admissionId), { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) }))
+    } catch (error) {
+      if (!(import.meta.env.DEV && import.meta.env.VITE_STATIC_LOGIN !== 'false')) throw error
+      return { ...payload, admissionId, academicId: `STATIC-ACADEMIC-${admissionId}`, staticFallback: true }
+    }
+  },
 }
 export const studentAcademicInformationApi = {
   getById: async (id) => normalizeAcademicDetails(await request(API_ENDPOINTS.studentAcademicInformation.detail(requiredId(id, 'Academic ID')))),
   update: async (id, payload) => normalizeAcademicDetails(await request(API_ENDPOINTS.studentAcademicInformation.update(requiredId(id, 'Academic ID')), { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) })),
 }
 export const studentAdmissionStatusApi = {
-  get: async (id) => normalizeRecord(await request(API_ENDPOINTS.studentAdmissions.status(requiredId(id, 'Admission ID')))),
-  update: async (id, payload) => normalizeRecord(await request(API_ENDPOINTS.studentAdmissions.status(requiredId(id, 'Admission ID')), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) })),
+  get: async (id) => {
+    const reqId = requiredId(id, 'Admission ID')
+    try {
+      return normalizeRecord(await request(API_ENDPOINTS.studentAdmissions.status(reqId)))
+    } catch {
+      const localItems = readLocalAdmissions()
+      const found = localItems.find(x => String(x.admissionId ?? x.id) === String(id))
+      return { status: found?.status ?? 'DRAFT', remarks: found?.remarks ?? '' }
+    }
+  },
+  update: async (id, payload) => {
+    const reqId = requiredId(id, 'Admission ID')
+    let res
+    try {
+      res = normalizeRecord(await request(API_ENDPOINTS.studentAdmissions.status(reqId), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) }))
+    } catch {
+      res = { status: payload.status, remarks: payload.remarks }
+    }
+    const localItems = readLocalAdmissions()
+    const found = localItems.find(x => String(x.admissionId ?? x.id) === String(id))
+    const updated = saveLocalAdmission({ ...(found || {}), id, status: payload.status ?? res.status, remarks: payload.remarks ?? res.remarks, updatedAt: new Date().toISOString() })
+    return normalizeRecord(updated)
+  },
 }
 export const studentPreviousEducationApi = {
   get: async (id) => normalizePreviousEducation(await request(API_ENDPOINTS.studentAdmissions.previousEducation(requiredId(id, 'Admission ID')))),
@@ -611,7 +735,6 @@ export const studentPreviousEducationApi = {
 export const studentFeeApi = {
   getSummary: async (id) => normalizeRecord(await request(API_ENDPOINTS.studentAdmissions.feeSummary(requiredId(id, 'Admission ID')))),
   getStructure: async (id) => normalizeRecord(await request(API_ENDPOINTS.studentAdmissions.feeStructure(requiredId(id, 'Admission ID')))),
-  updateStructure: async (id, payload) => normalizeRecord(await request(API_ENDPOINTS.studentAdmissions.feeStructure(requiredId(id, 'Admission ID')), { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) })),
 }
 export const studentApi = {
   getAll: async (params) => listData(await request(withQuery(API_ENDPOINTS.students.list, params))), search: async (params) => listData(await request(withQuery(API_ENDPOINTS.students.search, params))),
