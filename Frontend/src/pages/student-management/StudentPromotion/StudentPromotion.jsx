@@ -5,6 +5,7 @@ import { hasRole } from '../../../auth/auth'
 import { ROLES } from '../../../auth/roles'
 import { studentPromotionApi } from '../../../api/apiEndpoints'
 import './StudentPromotion.css'
+import './StudentPromotionSearch.css'
 
 const Badge=({tone='neutral',children})=><span className={`p-badge ${tone}`}>{children}</span>, idOf=x=>x.studentId??x.id, nameOf=x=>x.studentName??x.fullName??x.name??'Unnamed student', statusOf=x=>String(x.eligibilityStatus??x.status??'pending').toLowerCase(), toneOf=x=>statusOf(x)==='eligible'?'success':statusOf(x)==='ineligible'?'danger':'warning'
 function Confirm({rows,busy,onCancel,onConfirm}){return <div className="p-overlay"><section className="p-confirm"><FiTrendingUp/><h2>Confirm Student Promotion</h2><p>{rows.length} eligible student{rows.length===1?'':'s'} selected.</p><footer><button className="p-secondary" onClick={onCancel} disabled={busy}>Cancel</button><button className="p-primary" onClick={onConfirm} disabled={busy}>{busy?'Promoting...':'Confirm Promotion'}</button></footer></section></div>}

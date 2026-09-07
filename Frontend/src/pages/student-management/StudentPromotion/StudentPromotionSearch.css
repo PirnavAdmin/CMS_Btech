@@ -1,0 +1,23 @@
+.p-filters label {
+  flex: 0 1 548px;
+  max-width: 548px;
+}
+
+.p-filters label svg {
+  left: 12px;
+  top: 50%;
+  z-index: 1;
+  transform: translateY(-50%);
+  pointer-events: none;
+}
+
+.p-filters label input {
+  padding-left: 35px !important;
+}
+
+@media (max-width: 760px) {
+  .p-filters label {
+    flex: 1 1 100%;
+    max-width: none;
+  }
+}
