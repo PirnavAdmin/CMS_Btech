@@ -104,3 +104,9 @@
 .section-stat-card:nth-child(4) div>span{font-size:0}.section-stat-card:nth-child(4) div>span::after{content:'Sections Requiring Faculty Advisors';font-size:.72rem}
 .section-status.inactive{font-size:0}.section-status.inactive::after{content:'Deactive';font-size:.68rem}
 .section-table td:first-child>small{display:none}
+.section-table td>strong.section-academic-mapping{display:flex;align-items:center;justify-content:center;gap:5px;max-width:260px;margin-inline:auto}
+.section-academic-mapping>span{min-width:0;max-width:125px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.section-academic-mapping>b{flex-shrink:0}
+.section-academic-mapping{cursor:help}
+.section-academic-mapping:focus-visible{outline:2px solid #1970b3;outline-offset:4px;border-radius:4px}
+.section-mapping-tooltip{position:fixed;z-index:10000;transform:translateY(-100%);box-sizing:border-box;padding:10px 12px;border-radius:8px;background:#123b5a;color:#fff;font-size:14px;font-weight:500;line-height:1.5;white-space:normal;overflow-wrap:anywhere;box-shadow:0 4px 14px #0003;pointer-events:none}
