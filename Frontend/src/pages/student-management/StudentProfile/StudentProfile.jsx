@@ -322,6 +322,9 @@ const profileFromApi = (x) => {
       email: parentRaw.motherEmail ?? x.parents?.mother?.email ?? "",
       occupation:
         parentRaw.motherOccupation ?? x.parents?.mother?.occupation ?? "",
+      qualification:
+        parentRaw.motherQualification ?? x.parents?.mother?.qualification ?? "",
+      income: parentRaw.motherIncome ?? x.parents?.mother?.income ?? "",
     },
     guardian: {
       name: parentRaw.guardianName ?? x.parents?.guardian?.name ?? "",
@@ -333,9 +336,13 @@ const profileFromApi = (x) => {
       mobile: tenDigitMobile(
         parentRaw.guardianMobile ?? x.parents?.guardian?.mobile,
       ),
+      email: parentRaw.guardianEmail ?? x.parents?.guardian?.email ?? "",
+      occupation:
+        parentRaw.guardianOccupation ?? x.parents?.guardian?.occupation ?? "",
+      qualification:
+        parentRaw.guardianQualification ?? x.parents?.guardian?.qualification ?? "",
+      income: parentRaw.guardianIncome ?? x.parents?.guardian?.income ?? "",
     },
-    primaryContact: x.parents?.primaryContact ?? "Father",
-    emergencyMobile: tenDigitMobile(x.parents?.emergencyMobile),
   };
   const academic = {
     academicYear: x.academicYear ?? "",
@@ -360,7 +367,7 @@ const profileFromApi = (x) => {
       "",
     admissionNumber: x.admissionNumber ?? summary.admissionNumber ?? "",
     number: "",
-    date: "",
+    date: dateOnly(x.registrationDate ?? summary.registrationDate ?? x.application?.date) || new Date().toISOString().slice(0, 10),
     admissionDate: "",
     ...x.application,
   };
@@ -383,7 +390,8 @@ const profileFromApi = (x) => {
     ...x.previousEducation,
   };
   const admission = {
-    college: "",
+    collegeId: x.collegeId ?? x.admission?.collegeId ?? "",
+    college: x.college ?? x.collegeName ?? "",
     batch: "",
     scholarship: "",
     scholarshipType: "",
@@ -414,6 +422,7 @@ const profileFromApi = (x) => {
     incomeCertificate: null,
     otherCertificates: [],
     ...x.documents,
+    ...Object.fromEntries(Object.entries(x.documentStatuses || {}).map(([key, status]) => [key, { status }])),
   };
   return {
     ...x,
@@ -754,7 +763,8 @@ export default function StudentProfile() {
     const p = student.personal || {},
       c = student.contact || {},
       father = student.parents?.father || {},
-      mother = student.parents?.mother || {};
+      mother = student.parents?.mother || {},
+      guardian = student.parents?.guardian || {};
     await studentProfilesApi.update(student.id, {
       fullName: name(student),
       gender: p.gender,
@@ -773,20 +783,29 @@ export default function StudentProfile() {
       motherMobile: mother.mobile,
       motherEmail: mother.email,
       motherOccupation: mother.occupation,
+      motherQualification: mother.qualification,
+      motherIncome: mother.income,
+      guardianName: guardian.name,
+      guardianRelationship: guardian.relationship,
+      guardianRelationshipOther: guardian.relationshipOther,
+      guardianMobile: guardian.mobile,
+      guardianEmail: guardian.email,
+      guardianOccupation: guardian.occupation,
+      guardianQualification: guardian.qualification,
+      guardianIncome: guardian.income,
+      registrationDate: student.application?.date,
+      collegeId: student.admission?.collegeId,
+      college: student.admission?.college,
+      admissionType: student.academic?.admissionType,
+      quota: student.academic?.quota,
+      quotaOther: student.academic?.quotaOther,
+      courseCode: student.academic?.courseCode,
+      branchCode: student.academic?.branchCode,
+      documentStatuses: Object.fromEntries(Object.entries(student.documents || {}).filter(([, item]) => item && !Array.isArray(item)).map(([key, item]) => [key, typeof item === "object" ? item.status ?? "" : item])),
       changeReason:
         "Student profile updated from the College Management System.",
       student,
     });
-    const uploads = Object.entries(student.documentUploads || {}).filter(
-      ([, file]) => file instanceof File,
-    );
-    for (const [documentType, file] of uploads)
-      await studentDocumentApi.upload(student.id, file, {
-        documentType,
-        documentName:
-          PROFILE_DOCUMENTS.find(([key]) => key === documentType)?.[1] ||
-          file.name,
-      });
     const [preview, documentRows] = await Promise.all([
       studentProfilesApi.preview(student.id),
       studentDocumentApi.getAll(student.id).catch(() => []),

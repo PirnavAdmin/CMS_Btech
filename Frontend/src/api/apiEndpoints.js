@@ -588,15 +588,22 @@ const studentAdmissionPayload = (form) => compact({
   email: form.email ?? form.contact?.email, alternateEmail: form.alternateEmail ?? form.contact?.alternateEmail,
   currentAddress: form.currentAddress ?? form.contact?.currentAddress, permanentAddress: form.permanentAddress ?? form.contact?.permanentAddress,
   admissionType: form.admissionType ?? form.academic?.admissionType,
+  collegeId: form.collegeId ?? form.admission?.collegeId,
+  college: form.college ?? form.admission?.college,
   feeStructureId: form.feeStructureId ?? form.fees?.feeStructureId ?? form.fees?.structureId,
   admissionFee: form.admissionFee ?? form.fees?.admissionFee,
   paymentPlan: form.paymentPlan ?? form.fees?.paymentPlan,
+  documentStatuses: form.documentStatuses ?? Object.fromEntries(Object.entries(form.documents || {}).filter(([, value]) => value && !Array.isArray(value)).map(([key, value]) => [key, typeof value === 'object' ? value.status ?? '' : value])),
 })
 const academicDetailsPayload = (form) => compact({
   collegeId: form.collegeId ?? form.academic?.collegeId, academicYearId: form.academicYearId ?? form.academic?.academicYearId,
   departmentId: form.departmentId ?? form.academic?.departmentId, courseId: form.courseId ?? form.academic?.courseId,
   branchId: form.branchId ?? form.academic?.branchId, semesterId: form.semesterId ?? form.academic?.semesterId,
   admissionType: form.admissionType ?? form.academic?.admissionType,
+  quota: form.quota ?? form.academic?.quota,
+  quotaOther: form.quotaOther ?? form.academic?.quotaOther,
+  courseCode: form.courseCode ?? form.academic?.courseCode,
+  branchCode: form.branchCode ?? form.academic?.branchCode,
   entryType: form.entryType ?? form.academic?.entryType,
   regulation: form.regulation ?? form.academic?.regulation, batch: form.batch ?? form.admission?.batch,
 })
@@ -606,9 +613,13 @@ const previousEducationPayload = (form) => compact({
 const parentPayload = (form) => compact({
   fatherName: form.fatherName ?? form.father?.name ?? form.parents?.father?.name, motherName: form.motherName ?? form.mother?.name ?? form.parents?.mother?.name,
   guardianName: form.guardianName ?? form.guardian?.name ?? form.parents?.guardian?.name, guardianRelationship: form.guardianRelationship ?? form.guardian?.relationship ?? form.parents?.guardian?.relationship,
-  parentMobile: form.parentMobile ?? form.father?.mobile ?? form.parents?.father?.mobile, emergencyMobile: form.emergencyMobile ?? form.parents?.emergencyMobile,
+  parentMobile: form.parentMobile ?? form.father?.mobile ?? form.parents?.father?.mobile,
   email: form.email ?? form.father?.email ?? form.parents?.father?.email, fatherOccupation: form.fatherOccupation ?? form.father?.occupation ?? form.parents?.father?.occupation,
-  motherOccupation: form.motherOccupation ?? form.mother?.occupation ?? form.parents?.mother?.occupation, address: form.address ?? form.parents?.address,
+  fatherQualification: form.fatherQualification ?? form.father?.qualification ?? form.parents?.father?.qualification, fatherIncome: form.fatherIncome ?? form.father?.income ?? form.parents?.father?.income,
+  motherMobile: form.motherMobile ?? form.mother?.mobile ?? form.parents?.mother?.mobile, motherEmail: form.motherEmail ?? form.mother?.email ?? form.parents?.mother?.email,
+  motherOccupation: form.motherOccupation ?? form.mother?.occupation ?? form.parents?.mother?.occupation, motherQualification: form.motherQualification ?? form.mother?.qualification ?? form.parents?.mother?.qualification, motherIncome: form.motherIncome ?? form.mother?.income ?? form.parents?.mother?.income,
+  guardianMobile: form.guardianMobile ?? form.guardian?.mobile ?? form.parents?.guardian?.mobile, guardianEmail: form.guardianEmail ?? form.guardian?.email ?? form.parents?.guardian?.email,
+  guardianOccupation: form.guardianOccupation ?? form.guardian?.occupation ?? form.parents?.guardian?.occupation, guardianQualification: form.guardianQualification ?? form.guardian?.qualification ?? form.parents?.guardian?.qualification, guardianIncome: form.guardianIncome ?? form.guardian?.income ?? form.parents?.guardian?.income, address: form.address ?? form.parents?.address,
 })
 
 const LOCAL_ADMISSIONS_KEY = 'pirnav-local-admissions-v2'

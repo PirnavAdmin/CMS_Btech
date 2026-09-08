@@ -7,6 +7,7 @@ import {
   FiX,
 } from "react-icons/fi";
 import { lookupIndianPincode } from "../../../api/apiEndpoints";
+import { getColleges } from "../../../auth/collegeApi";
 
 const clone = (value) => structuredClone(value);
 const setPath = (source, path, value) => {
@@ -36,6 +37,15 @@ const validYear = (value) =>
   /^\d{4}$/.test(clean(value)) &&
   Number(value) >= 1950 &&
   Number(value) <= new Date().getFullYear() + 1;
+const initialEditForm = (student) => {
+  const form = clone(student);
+  form.application ??= {};
+  form.previousEducation ??= {};
+  form.previousEducation.intermediate ??= {};
+  form.application.date ??= new Date().toISOString().slice(0, 10);
+  form.previousEducation.intermediate.stream = "MPC";
+  return form;
+};
 
 export default function StudentProfileEdit({ student, onCancel, onSave }) {
   const tabs = [
@@ -48,15 +58,30 @@ export default function StudentProfileEdit({ student, onCancel, onSave }) {
     ["fees", "Fees"],
     ["documents", "Documents"],
   ];
-  const [form, setForm] = useState(() => clone(student)),
+  const [form, setForm] = useState(() => initialEditForm(student)),
     [errors, setErrors] = useState({}),
     [saving, setSaving] = useState(false),
     [photoName, setPhotoName] = useState(""),
     [discard, setDiscard] = useState(false),
     [tab, setTab] = useState("personal"),
     [pinStatus, setPinStatus] = useState({ current: "", permanent: "" }),
+    [colleges, setColleges] = useState([]),
     original = useMemo(() => JSON.stringify(student), [student]),
     dirty = JSON.stringify(form) !== original;
+  useEffect(() => {
+    let active = true;
+    getColleges()
+      .then((response) => {
+        let value = response;
+        for (let depth = 0; depth < 5 && value && typeof value === "object"; depth += 1) {
+          if (Array.isArray(value)) break;
+          value = value.items ?? value.content ?? value.records ?? value.data;
+        }
+        if (active) setColleges(Array.isArray(value) ? value : []);
+      })
+      .catch(() => { if (active) setColleges([]); });
+    return () => { active = false; };
+  }, []);
   const stepIndex = Math.max(
       0,
       tabs.findIndex(([id]) => id === tab),
@@ -126,10 +151,16 @@ export default function StudentProfileEdit({ student, onCancel, onSave }) {
     if (clean(c.alternateMobile) && !validMobile(c.alternateMobile))
       next["contact.alternateMobile"] =
         "Enter a valid alternate mobile number.";
+    if (clean(c.alternateMobile) && clean(c.alternateMobile) === clean(c.mobile))
+      next["contact.alternateMobile"] =
+        "Alternate mobile number must be different from the student mobile number.";
     if (clean(c.email) && !validEmail(c.email))
       next["contact.email"] = "Enter a valid email address.";
     if (clean(c.alternateEmail) && !validEmail(c.alternateEmail))
       next["contact.alternateEmail"] = "Enter a valid alternate email address.";
+    if (clean(c.alternateEmail) && clean(c.alternateEmail).toLowerCase() === clean(c.email).toLowerCase())
+      next["contact.alternateEmail"] =
+        "Alternate email must be different from the student email.";
     for (const prefix of ["currentAddress", "permanentAddress"]) {
       const address = c[prefix] || {};
       if (clean(address.pincode) && !/^\d{6}$/.test(clean(address.pincode)))
@@ -159,19 +190,19 @@ export default function StudentProfileEdit({ student, onCancel, onSave }) {
       next["parents.mother.mobile"] = "Enter a valid mother mobile number.";
     if (clean(mother.email) && !validEmail(mother.email))
       next["parents.mother.email"] = "Enter a valid mother email address.";
+    if (clean(mother.income) && (Number(mother.income) < 0 || !Number.isFinite(Number(mother.income))))
+      next["parents.mother.income"] = "Annual income cannot be negative.";
     if (clean(guardian.name) && !validName(guardian.name))
       next["parents.guardian.name"] = "Enter a valid guardian name.";
     if (clean(guardian.mobile) && !validMobile(guardian.mobile))
       next["parents.guardian.mobile"] = "Enter a valid guardian mobile number.";
+    if (clean(guardian.email) && !validEmail(guardian.email))
+      next["parents.guardian.email"] = "Enter a valid guardian email address.";
+    if (clean(guardian.income) && (Number(guardian.income) < 0 || !Number.isFinite(Number(guardian.income))))
+      next["parents.guardian.income"] = "Annual income cannot be negative.";
     if (guardian.relationship === "Other" && !clean(guardian.relationshipOther))
       next["parents.guardian.relationshipOther"] =
         "Specify the guardian relationship.";
-    if (
-      clean(form.parents?.emergencyMobile) &&
-      !validMobile(form.parents.emergencyMobile)
-    )
-      next["parents.emergencyMobile"] =
-        "Enter a valid emergency mobile number.";
     for (const [prefix, row] of [
       ["tenth", tenth],
       ["intermediate", inter],
@@ -187,9 +218,10 @@ export default function StudentProfileEdit({ student, onCancel, onSave }) {
             `${row.scoreType || "Percentage"} must be between 0 and ${maximum}.`;
       }
     }
-    if (admission.scholarship === "Yes" && !clean(admission.scholarshipType))
-      next["admission.scholarshipType"] =
-        "Select or enter the scholarship type.";
+    if (form.academic?.admissionType === "Lateral Entry" && !clean(form.academic?.quota))
+      next["academic.quota"] = "Select the admission quota for lateral entry.";
+    if (form.academic?.quota === "Other" && !clean(form.academic?.quotaOther))
+      next["academic.quotaOther"] = "Specify the admission quota.";
     if (admission.hostel === "Yes" && !clean(admission.hostelPreference))
       next["admission.hostelPreference"] = "Select a hostel preference.";
     if (admission.transport === "Yes" && !clean(admission.transportRoute))
@@ -314,7 +346,7 @@ export default function StudentProfileEdit({ student, onCancel, onSave }) {
     fields(
       [
         ["line1", "Address line 1"],
-        ["line2", "Address line 2"],
+        ["line2", "Landmark (Optional)"],
         ["town", "Village / Town"],
         ["city", "City"],
         ["district", "District"],
@@ -607,6 +639,12 @@ export default function StudentProfileEdit({ student, onCancel, onSave }) {
                 ["parents.mother.mobile", "Mother mobile"],
                 ["parents.mother.email", "Mother email", { type: "email" }],
                 ["parents.mother.occupation", "Mother occupation"],
+                ["parents.mother.qualification", "Mother qualification"],
+                [
+                  "parents.mother.income",
+                  "Mother annual income",
+                  { type: "number" },
+                ],
                 ["parents.guardian.name", "Guardian name"],
                 [
                   "parents.guardian.relationship",
@@ -627,12 +665,14 @@ export default function StudentProfileEdit({ student, onCancel, onSave }) {
                 ],
                 ["parents.guardian.relationshipOther", "Specify relationship"],
                 ["parents.guardian.mobile", "Guardian mobile"],
+                ["parents.guardian.email", "Guardian email", { type: "email" }],
+                ["parents.guardian.occupation", "Guardian occupation"],
+                ["parents.guardian.qualification", "Guardian qualification"],
                 [
-                  "parents.primaryContact",
-                  "Primary contact",
-                  { options: ["Father", "Mother", "Guardian"] },
+                  "parents.guardian.income",
+                  "Guardian annual income",
+                  { type: "number" },
                 ],
-                ["parents.emergencyMobile", "Emergency contact"],
               ])}
             </fieldset>
           )}
@@ -647,13 +687,15 @@ export default function StudentProfileEdit({ student, onCancel, onSave }) {
                   ["academic.academicYear", "Academic year"],
                   ["academic.admissionType", "Admission type"],
                   ["academic.course", "Course"],
+                  ["academic.courseCode", "Course code"],
                   ["academic.department", "Department"],
                   ["academic.branch", "Branch"],
+                  ["academic.branchCode", "Branch code"],
                   ["academic.semester", "Semester"],
                   ["academic.studentCategory", "Student category"],
                   ["academic.section", "Section"],
                   ["academic.regulation", "Regulation"],
-                  ["academic.quota", "Quota"],
+                  ...(form.academic?.admissionType === "Lateral Entry" ? [["academic.quota", "Admission quota"], ["academic.quotaOther", "Specify admission quota"]] : []),
                   ["academic.entryType", "Entry type"],
                 ].map(([path, label]) => [path, label, { readOnly: true }]),
               )}
@@ -666,16 +708,10 @@ export default function StudentProfileEdit({ student, onCancel, onSave }) {
                 {fields([
                   ["previousEducation.tenth.board", "Board"],
                   ["previousEducation.tenth.institution", "School name"],
-                  ["previousEducation.tenth.rollNumber", "Roll number"],
                   ["previousEducation.tenth.passingYear", "Year of passing"],
                   [
-                    "previousEducation.tenth.scoreType",
-                    "Score type",
-                    { options: ["Percentage", "CGPA"] },
-                  ],
-                  [
                     "previousEducation.tenth.score",
-                    "Score",
+                    "Percentage (0–100)",
                     { type: "number" },
                   ],
                 ])}
@@ -683,13 +719,6 @@ export default function StudentProfileEdit({ student, onCancel, onSave }) {
               <fieldset>
                 <legend>Intermediate / Diploma</legend>
                 {fields([
-                  [
-                    "previousEducation.intermediate.qualification",
-                    "Qualification",
-                    {
-                      options: ["Intermediate / 12th", "Diploma", "Equivalent"],
-                    },
-                  ],
                   [
                     "previousEducation.intermediate.board",
                     "Board / University",
@@ -704,16 +733,12 @@ export default function StudentProfileEdit({ student, onCancel, onSave }) {
                   ],
                   [
                     "previousEducation.intermediate.stream",
-                    "Stream / Specialization",
-                  ],
-                  [
-                    "previousEducation.intermediate.scoreType",
-                    "Score type",
-                    { options: ["Percentage", "CGPA"] },
+                    "Stream (MPC)",
+                    { readOnly: true },
                   ],
                   [
                     "previousEducation.intermediate.score",
-                    "Score",
+                    "Percentage (0–100)",
                     { type: "number" },
                   ],
                 ])}
@@ -730,6 +755,11 @@ export default function StudentProfileEdit({ student, onCancel, onSave }) {
                   { readOnly: true },
                 ],
                 [
+                  "application.date",
+                  "Registration date",
+                  { type: "date", readOnly: true },
+                ],
+                [
                   "application.admissionNumber",
                   "Admission number",
                   { readOnly: true },
@@ -739,14 +769,7 @@ export default function StudentProfileEdit({ student, onCancel, onSave }) {
                   "Admission date",
                   { type: "date", readOnly: true },
                 ],
-                ["admission.college", "College", { readOnly: true }],
                 ["admission.batch", "Batch", { readOnly: true }],
-                [
-                  "admission.scholarship",
-                  "Scholarship required",
-                  { options: ["No", "Yes"] },
-                ],
-                ["admission.scholarshipType", "Scholarship type"],
                 [
                   "admission.hostel",
                   "Hostel required",
@@ -765,6 +788,26 @@ export default function StudentProfileEdit({ student, onCancel, onSave }) {
                 ],
                 ["admission.transportRoute", "Transport route"],
               ])}
+              <div className="sp-edit-grid">
+                <label className="sp-edit-field">
+                  <span>College</span>
+                  <select
+                    value={form.admission?.collegeId || ""}
+                    onChange={(event) => {
+                      const college = colleges.find((item) => String(item.collegeId ?? item.id) === event.target.value);
+                      update("admission.collegeId", event.target.value);
+                      update("admission.college", college?.collegeName ?? college?.name ?? college?.institutionName ?? "");
+                    }}
+                  >
+                    <option value="">Select College</option>
+                    {colleges.map((college) => {
+                      const id = college.collegeId ?? college.id;
+                      const label = college.collegeName ?? college.name ?? college.institutionName;
+                      return id && label ? <option key={id} value={id}>{label}</option> : null;
+                    })}
+                  </select>
+                </label>
+              </div>
             </fieldset>
           )}
           {tab === "fees" && (
@@ -811,6 +854,23 @@ export default function StudentProfileEdit({ student, onCancel, onSave }) {
             </fieldset>
           )}
           {tab === "documents" && (
+            <fieldset>
+              <legend>Document Status</legend>
+              <p className="sp-edit-note">Mark the current status for each document. Uploading documents is not required.</p>
+              <div className="sp-document-upload-grid">
+                {documentFields.map(([key, label]) => {
+                  const current = form.documents?.[key];
+                  const documentStatus = current?.status || (current ? "Submitted" : "");
+                  return <article key={key} className={`sp-document-upload ${documentStatus === "Submitted" ? "has-file" : ""}`}>
+                    <div className="sp-document-upload-icon">{documentStatus === "Submitted" ? <FiCheckCircle /> : <FiFileText />}</div>
+                    <div className="sp-document-upload-copy"><strong>{label}</strong><span>{documentStatus || "Status not selected"}</span></div>
+                    <div className="sp-document-upload-actions"><select value={documentStatus} onChange={(event) => update(`documents.${key}`, event.target.value ? { status: event.target.value } : null)}><option value="">Select status</option><option>Submitted</option><option>Pending</option><option>Not Submitted</option></select></div>
+                  </article>;
+                })}
+              </div>
+            </fieldset>
+          )}
+          {tab === "legacy-documents" && (
             <fieldset>
               <legend>Student Documents</legend>
               <p className="sp-edit-note">
