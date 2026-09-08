@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   FiAlertCircle,
   FiArrowLeft,
@@ -57,6 +57,24 @@ const initials = (x) =>
 const status = (x) =>
   ({ ADMITTED: "Active", APPROVED: "Approved", VERIFIED: "Verified" })[x] ||
   String(x || "Not available").replaceAll("_", " ");
+
+// Abbreviations used to keep the directory table's Academic details column compact.
+const BRANCH_ABBR = {
+  "computer science and engineering": "CSE",
+  "electronics and communication engineering": "ECE",
+  "electrical and electronics engineering": "EEE",
+  "mechanical engineering": "ME",
+  "civil engineering": "CE",
+  "information technology": "IT",
+  "artificial intelligence and machine learning": "AI & ML",
+  "artificial intelligence and data science": "AI & DS",
+  "bachelor of technology": "B.Tech",
+};
+const shortLabel = (x) => {
+  const key = String(x || "").trim().toLowerCase();
+  return BRANCH_ABBR[key] || x;
+};
+
 const clone = (x) => structuredClone(x);
 const blankAddress = () => ({
   line1: "",
@@ -572,6 +590,7 @@ export default function StudentProfile() {
     ),
     [tab, setTab] = useState("overview"),
     [editing, setEditing] = useState(null);
+  const tableRef = useRef(null);
   const load = async () => {
     setLoading(true);
     setError("");
@@ -666,6 +685,19 @@ export default function StudentProfile() {
     shown = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE),
     selected = students.find((x) => String(x.id) === String(selectedId));
   useEffect(() => setPage(1), [query, filters]);
+  // Narrow the "Academic details" column so Contact sits closer to it.
+  // Uses setProperty(..., "important") because the CSS file locks these
+  // widths with !important, which a plain inline style can't override.
+  useEffect(() => {
+    const table = tableRef.current;
+    if (!table) return;
+    const widths = ["24%", "26%", "22%", "10%", "8%"]; // Student, Academic, Contact, Status, Actions
+    table.querySelectorAll("th, td").forEach((cell, i) => {
+      const colIndex = i % widths.length;
+      if (widths[colIndex])
+        cell.style.setProperty("width", widths[colIndex], "important");
+    });
+  }, [shown]);
   const updateFilter = (key, next) =>
     setFilters((current) => {
       const updated = { ...current, [key]: next };
@@ -881,7 +913,7 @@ export default function StudentProfile() {
               </div>
             </FilterPanel>
             <div className="sp-table-wrap">
-              <table className="sp-directory-table">
+              <table className="sp-directory-table" ref={tableRef}>
                 <thead>
                   <tr>
                     <th>Student</th>
@@ -921,16 +953,20 @@ export default function StudentProfile() {
                           </div>
                         </td>
                         <td>
-                          <strong>
-                            {value(a.course)} · {value(a.branch)}
-                          </strong>
-                          <small>
-                            {value(a.department)} · {value(a.academicYear)}
-                          </small>
-                          <small>
-                            {value(a.semester)}{" "}
-                            {a.section && `· Section ${a.section}`}
-                          </small>
+                          <div style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
+                            <strong style={{ margin: 0, lineHeight: 1.3 }}>
+                              {value(shortLabel(a.course))} ·{" "}
+                              {value(shortLabel(a.branch))}
+                            </strong>
+                            <small style={{ margin: 0, lineHeight: 1.3 }}>
+                              {value(shortLabel(a.department))} ·{" "}
+                              {value(a.academicYear)}
+                            </small>
+                            <small style={{ margin: 0, lineHeight: 1.3 }}>
+                              {value(a.semester)}{" "}
+                              {a.section && `· Section ${a.section}`}
+                            </small>
+                          </div>
                         </td>
                         <td>
                           <strong>{value(student.contact?.mobile)}</strong>
