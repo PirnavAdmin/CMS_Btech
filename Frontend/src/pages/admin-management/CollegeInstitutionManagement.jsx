@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { FiEye as EyeIcon, FiEdit2 as EditIcon, FiPlus as Plus, FiToggleLeft, FiToggleRight, FiX } from 'react-icons/fi'
+import { FiAlertCircle, FiCheckCircle, FiEye as EyeIcon, FiEdit2 as EditIcon, FiHome, FiPlus as Plus, FiToggleLeft, FiToggleRight, FiX } from 'react-icons/fi'
 import DashboardLayout from '../../layouts/DashboardLayout'
 import FilterPanel from '../../components/FilterPanel'
 import TablePagination, { PAGE_SIZE } from '../../components/TablePagination'
@@ -169,6 +169,59 @@ const getCollegeRecords = (responseData) => {
 
 const hasValue = (value) => value !== null && value !== undefined && String(value).trim() !== ''
 const displayValue = (value) => hasValue(value) ? value : 'Not provided'
+
+const toFiniteNumber = (value) => {
+  const parsed = Number(value)
+  return Number.isFinite(parsed) && parsed >= 0 ? parsed : null
+}
+
+const extractSummaryValue = (source, keys) => {
+  if (!source || typeof source !== 'object') return null
+  const seen = new Set()
+  const queue = [source]
+
+  while (queue.length) {
+    const current = queue.shift()
+    if (!current || typeof current !== 'object') continue
+    const identity = typeof current === 'object' ? JSON.stringify(current) : String(current)
+    if (seen.has(identity)) continue
+    seen.add(identity)
+
+    for (const key of keys) {
+      if (Object.prototype.hasOwnProperty.call(current, key)) {
+        const value = toFiniteNumber(current[key])
+        if (value !== null) return value
+      }
+    }
+
+    Object.values(current).forEach((entry) => {
+      if (entry && typeof entry === 'object') queue.push(entry)
+    })
+  }
+
+  return null
+}
+
+const deriveCollegeSummary = (source, records = []) => {
+  const normalizedSource = source?.data ?? source ?? {}
+  const defaultCounts = {
+    total: records.length,
+    active: records.filter((college) => college.status === 'active').length,
+    inactive: records.filter((college) => college.status === 'inactive').length,
+  }
+
+  const total = extractSummaryValue(normalizedSource, ['totalElements', 'total', 'count', 'totalCount', 'totalRecords']) ?? defaultCounts.total
+  const active = extractSummaryValue(normalizedSource, ['activeCount', 'activeTotal', 'active', 'totalActive', 'activeElements']) ?? defaultCounts.active
+  const inactive = extractSummaryValue(normalizedSource, ['inactiveCount', 'inactiveTotal', 'inactive', 'totalInactive', 'inactiveElements']) ?? Math.max(total - active, 0)
+
+  return {
+    total,
+    active,
+    inactive,
+    hasGlobalMeta: extractSummaryValue(normalizedSource, ['totalElements', 'total', 'count', 'totalCount', 'totalRecords']) !== null || extractSummaryValue(normalizedSource, ['activeCount', 'activeTotal', 'active', 'totalActive', 'activeElements']) !== null || extractSummaryValue(normalizedSource, ['inactiveCount', 'inactiveTotal', 'inactive', 'totalInactive', 'inactiveElements']) !== null,
+  }
+}
+
 const mapCollege = (record) => {
   const address = record.addressDetails ?? record.addressInfo ?? {}
   const contact = record.contactDetails ?? record.contactInfo ?? {}
@@ -311,6 +364,7 @@ export default function CollegeInstitutionManagement({ initialView = 'list' }) {
   const [statusNotice, setStatusNotice] = useState('')
   const [pendingStatus, setPendingStatus] = useState(null)
   const [isStatusSaving, setIsStatusSaving] = useState(false)
+  const [collegeSummary, setCollegeSummary] = useState({ total: null, active: null, inactive: null, loading: true, error: '' })
 
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1)
@@ -321,6 +375,25 @@ export default function CollegeInstitutionManagement({ initialView = 'list' }) {
   const markLogoBroken = (id) => setBrokenLogoIds((current) => new Set(current).add(id))
 
   const activeCollege = colleges.find((c) => c.id === activeId) || null
+
+  const refreshCollegeSummary = async () => {
+    try {
+      const response = await getColleges()
+      const records = getCollegeRecords(response?.data ?? response).map(mapCollege)
+      const summary = deriveCollegeSummary(response?.data ?? response, records)
+      setCollegeSummary({
+        total: summary.total,
+        active: summary.active,
+        inactive: summary.inactive,
+        loading: false,
+        error: '',
+      })
+      return records
+    } catch (error) {
+      setCollegeSummary({ total: null, active: null, inactive: null, loading: false, error: getApiErrorMessage(error, 'Unable to load college summary.') })
+      return []
+    }
+  }
 
   const filteredColleges = colleges.filter((college) =>
     (!typeFilter || college.type === typeFilter) &&
@@ -343,10 +416,25 @@ export default function CollegeInstitutionManagement({ initialView = 'list' }) {
     setCollegeError('')
     try {
       const response = term.trim() ? await searchColleges(term.trim()) : await getColleges()
-      setColleges(getCollegeRecords(response.data).map(mapCollege))
+      const records = getCollegeRecords(response?.data ?? response).map(mapCollege)
+      setColleges(records)
+
+      if (!term.trim()) {
+        const summary = deriveCollegeSummary(response?.data ?? response, records)
+        setCollegeSummary({
+          total: summary.total,
+          active: summary.active,
+          inactive: summary.inactive,
+          loading: false,
+          error: '',
+        })
+      }
     } catch (error) {
       setColleges([])
       setCollegeError(getApiErrorMessage(error, 'Unable to load colleges. Please try again.'))
+      if (!searchTerm.trim()) {
+        setCollegeSummary({ total: null, active: null, inactive: null, loading: false, error: getApiErrorMessage(error, 'Unable to load college summary.') })
+      }
     } finally {
       setIsCollegesLoading(false)
     }
@@ -444,7 +532,7 @@ export default function CollegeInstitutionManagement({ initialView = 'list' }) {
       const updated = mapCollege((response.data?.data ?? response.data) || { ...formValues, id: activeId })
       setColleges((current) => current.map((college) => (college.id === activeId ? updated : college)))
       backToList()
-      await loadColleges(searchTerm)
+      await Promise.all([loadColleges(searchTerm), refreshCollegeSummary()])
     } catch (error) {
       setCollegeError(getApiErrorMessage(error, 'Unable to update this college. Please try again.'))
     } finally {
@@ -469,7 +557,7 @@ export default function CollegeInstitutionManagement({ initialView = 'list' }) {
       if (response.data?.success === false) throw new Error('College status could not be updated. Please try again.')
       setPendingStatus(null)
       setStatusNotice(nextStatus === 'active' ? 'College activated successfully.' : 'College deactivated successfully.')
-      await loadColleges(searchTerm)
+      await Promise.all([loadColleges(searchTerm), refreshCollegeSummary()])
     } catch (error) {
       setStatusError(getApiErrorMessage(error, 'Unable to update college status. Please try again.'))
     } finally {
@@ -551,6 +639,12 @@ export default function CollegeInstitutionManagement({ initialView = 'list' }) {
     }
   }
 
+  const summaryCards = [
+    { label: 'Total Colleges', value: collegeSummary.total, icon: FiHome, tone: 'default' },
+    { label: 'Active Colleges', value: collegeSummary.active, icon: FiCheckCircle, tone: 'active' },
+    { label: 'Inactive Colleges', value: collegeSummary.inactive, icon: FiAlertCircle, tone: 'inactive' },
+  ]
+
   return (
     <DashboardLayout>
       <div className="college-management">
@@ -567,6 +661,25 @@ export default function CollegeInstitutionManagement({ initialView = 'list' }) {
               </button>
             </header>
 
+            <section className="cm-summary" aria-label="College status summary">
+              {summaryCards.map(({ label, value, icon: Icon, tone }) => {
+                const isLoading = collegeSummary.loading || value === null
+                return (
+                  <article key={label} className={`cm-summary-card cm-summary-card--${tone} ${isLoading ? 'is-loading' : ''}`}>
+                    <span className="cm-summary-icon"><Icon aria-hidden="true" /></span>
+                    <div>
+                      <small>{label}</small>
+                      <strong>{isLoading ? '—' : Number(value).toLocaleString('en-IN')}</strong>
+                    </div>
+                  </article>
+                )
+              })}
+            </section>
+
+            {collegeSummary.error && (
+              <p className="cm-summary-error" role="alert">{collegeSummary.error}</p>
+            )}
+
             <FilterPanel active={Boolean(searchTerm || typeFilter || statusFilter)} onClear={() => { setSearchTerm(''); setTypeFilter(''); setStatusFilter(''); setCurrentPage(1); loadColleges('') }}><div className="cm-toolbar">
               <input
                 type="text"
@@ -580,7 +693,7 @@ export default function CollegeInstitutionManagement({ initialView = 'list' }) {
                 {availableCollegeTypes.map((type) => <option key={type} value={type}>{type}</option>)}
               </select>
               <select aria-label="Filter colleges by status" value={statusFilter} onChange={(event) => { setStatusFilter(event.target.value); setCurrentPage(1) }}>
-                <option value="">Select Status</option><option value="active">Active</option><option value="inactive">Deactive</option>
+                <option value="">All</option><option value="active">Active</option><option value="inactive">Inactive</option>
               </select>
             </div></FilterPanel>
 

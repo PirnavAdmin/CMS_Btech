@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import DashboardLayout from '../../layouts/DashboardLayout'
+import SearchableSelect from '../../components/SearchableSelect'
 import { createCollege, getCollegeById, getCollegeLogoUrl, getColleges, isValidWebsite, normalizeWebsite, readCollegeExtendedDetails, unwrapCollegeRecord, updateCollege, uploadCollegeLogo, WEBSITE_VALIDATION_MESSAGE } from '../../auth/collegeApi'
 import './AddCollege.css'
 
@@ -374,7 +375,7 @@ export default function AddCollege() {
         <Field label="State" name="state" values={values} errors={errors} touched={touched} onChange={update} required maxLength={60} />
         <Field label="Pincode" name="pincode" values={values} errors={errors} touched={touched} onChange={update} required maxLength={6} inputMode="numeric" />
         <Field label="Country" name="country" values={values} errors={errors} touched={touched} onChange={update} readOnly />
-        <label className="ac-field" htmlFor="ac-area"><span>Area / Post Office</span><select id="ac-area" name="area" value={values.area} onChange={update} disabled={!postOffices.length}><option value="">{postOffices.length ? 'Select area' : 'Enter pincode first'}</option>{postOffices.map((office) => <option key={`${office.Name}-${office.BranchType}`} value={office.Name}>{office.Name}</option>)}</select></label>
+        <label className="ac-field" htmlFor="ac-area"><span>Area / Post Office</span><SearchableSelect label="Area / Post Office" value={values.area} options={postOffices.map((office) => ({ id: office.Name, name: office.Name, code: office.BranchType || '' }))} onChange={(value) => update({ target: { name: 'area', value } })} placeholder={postOffices.length ? 'Select area' : 'Enter pincode first'} searchPlaceholder="Search area..." noOptionsMessage="No area found." disabled={!postOffices.length} /></label>
         <Field label="District" name="district" values={values} errors={errors} touched={touched} onChange={update} maxLength={60} />
         {pincodeStatus && <p className="ac-lookup-status ac-span-2" role="status">{pincodeStatus}</p>}
       </>)}

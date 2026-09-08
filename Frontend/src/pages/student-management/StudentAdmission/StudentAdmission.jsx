@@ -10,6 +10,7 @@ import DashboardLayout from '../../../layouts/DashboardLayout'
 import FilterPanel from '../../../components/FilterPanel'
 import TablePagination, { PAGE_SIZE } from '../../../components/TablePagination'
 import { academicYearApi, branchApi, courseApi, departmentApi, lookupIndianPincode, studentAdmissionApi, studentAcademicDetailsApi, studentAdmissionStatusApi, studentDocumentApi, studentFeeApi, studentParentApi, studentPreviousEducationApi } from '../../../api/apiEndpoints'
+import { getOperationalAcademicYearOptions, resolveAcademicYearId } from '../../../utils/academicYearUtils'
 import { getSemesters } from '../../../auth/collegeApi'
 import { componentTotals, matchesStructure, readStructures } from '../../fees/feeStructureService'
 import './StudentAdmission.css'
@@ -657,7 +658,7 @@ function AdmissionForm() {
   const dataRef = useRef(data)
   useEffect(() => { dataRef.current = data }, [data])
   const notify = (message, tone = 'success') => { window.clearTimeout(toastTimer.current); setToast({ message, tone }); toastTimer.current = window.setTimeout(() => setToast(null), 2600) }
-  useEffect(()=>{let active=true;Promise.all([academicYearApi.getAll(),departmentApi.getAll(),courseApi.getAll(),branchApi.getAll(),getSemesters()]).then(([years,departments,courses,branches,semesterResponse])=>{if(!active)return;const list=response=>{let value=response;for(let depth=0;depth<5&&value&&typeof value==='object';depth+=1){if(Array.isArray(value))return value;const rows=value.items??value.content??value.results??value.records;if(Array.isArray(rows))return rows;value=value.data}return[]};setMasters({years,departments,courses,branches,semesters:list(semesterResponse)})}).catch(error=>notify(error.message||'Unable to load academic selections.','error'));return()=>{active=false}},[])
+  useEffect(()=>{let active=true;Promise.all([academicYearApi.getAll(),departmentApi.getAll(),courseApi.getAll(),branchApi.getAll(),getSemesters()]).then(([years,departments,courses,branches,semesterResponse])=>{if(!active)return;const list=response=>{let value=response;for(let depth=0;depth<5&&value&&typeof value==='object';depth+=1){if(Array.isArray(value))return value;const rows=value.items??value.content??value.results??value.records;if(Array.isArray(rows))return rows;value=value.data}return[]};const operationalYears = getOperationalAcademicYearOptions(years);setMasters({years: operationalYears, departments, courses, branches, semesters: list(semesterResponse)})}).catch(error=>notify(error.message||'Unable to load academic selections.','error'));return()=>{active=false}},[])
   useEffect(() => { if (step !== 6 || !recordIds.admissionId) return; let active = true; setFeeState({ loading: true, loaded: false, error: '' }); Promise.allSettled([studentFeeApi.getSummary(recordIds.admissionId), studentFeeApi.getStructure(recordIds.admissionId)]).then(results => { if (!active) return; const [summaryResult, structureResult] = results, summaryResponse = summaryResult.status === 'fulfilled' ? summaryResult.value : null, structureResponse = structureResult.status === 'fulfilled' ? structureResult.value : null, summary = resolveFeeSummary(dataRef.current, summaryResponse, structureResponse); if (!summary) throw new Error('No matching Active fee structure was found.'); setData(current => ({ ...current, fees: { ...current.fees, ...summary, structureId: summary.feeStructureId ?? summary.structureId ?? current.fees.structureId, tuitionFee: summary.tuitionFee ?? current.fees.tuitionFee, admissionFee: summary.admissionFee ?? current.fees.admissionFee, hostelFee: summary.hostelFee ?? current.fees.hostelFee, transportFee: summary.transportFee ?? current.fees.transportFee, scholarshipAmount: summary.scholarshipAmount ?? current.fees.scholarshipAmount, totalFee: summary.totalFee ?? current.fees.totalFee } })); setFeeState({ loading: false, loaded: true, error: '' }) }).catch(error => { if (!active) return; setFeeState({ loading: false, loaded: false, error: `${error.message || 'Unable to load fee details.'} Match academic year, course, department, branch, semester/year, admission type, quota, student category and effective dates.` }) }); return () => { active = false } }, [step, recordIds.admissionId])
   useEffect(() => () => window.clearTimeout(toastTimer.current), [])
   useEffect(() => { queueMicrotask(()=>setData(current => { const allowed=STREAMS_BY_QUALIFICATION[current.previousEducation.intermediate.qualification]||[]; if(!current.previousEducation.intermediate.stream||allowed.includes(current.previousEducation.intermediate.stream))return current; return {...current,previousEducation:{...current.previousEducation,intermediate:{...current.previousEducation.intermediate,stream:''}}} })) }, [data.previousEducation.intermediate.qualification])
@@ -703,6 +704,17 @@ function AdmissionForm() {
     }, 350)
     return () => { active = false; window.clearTimeout(timer) }
   }, [currentPincode, permanentPincode, sameAddress])
+  useEffect(() => {
+    if (!masters.years.length) return
+    const resolvedAcademicYearId = resolveAcademicYearId(masters.years, data.academic.academicYearId)
+    if (!data.academic.academicYearId || String(data.academic.academicYearId) !== String(resolvedAcademicYearId)) {
+      setData(current => ({
+        ...current,
+        academic: { ...current.academic, academicYearId: resolvedAcademicYearId, academicYear: masters.years.find(item => String(item.academicYearId ?? item.id) === String(resolvedAcademicYearId))?.academicYearName ?? masters.years.find(item => String(item.academicYearId ?? item.id) === String(resolvedAcademicYearId))?.name ?? current.academic.academicYear }
+      }))
+    }
+  }, [masters.years, data.academic.academicYearId])
+
   const allErrors = validate(data)
   const field = (path,label,options,type,readOnly,placeholder,disabled) => <Field {...{ data,path,label,options,type,readOnly,placeholder,disabled,update }} error={errors[path]} />
   const academicOption=(item,idKeys,nameKeys)=>({id:idKeys.map(key=>read(item,key)).find(value=>value!=null&&value!==''),name:nameKeys.map(key=>read(item,key)).find(Boolean)||''})
