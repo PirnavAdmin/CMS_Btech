@@ -75,7 +75,7 @@ function validate(values) {
   if (!values.addressLine1.trim()) errors.addressLine1 = 'Address line 1 is required.'
   if (!values.city.trim()) errors.city = 'City is required.'
   if (!values.state.trim()) errors.state = 'State is required.'
-  if (!/^\d{6}$/.test(values.pincode)) errors.pincode = 'Enter exactly 6 digits.'
+  if (!/^[1-9]\d{5}$/.test(values.pincode.trim())) errors.pincode = 'Enter a valid 6-digit Indian pincode (cannot start with 0).'
   if (!values.contactNumber) errors.contactNumber = 'Official contact number is required.'
   else if (!phonePattern.test(values.contactNumber)) errors.contactNumber = 'Enter a valid 10-digit Indian mobile number.'
   if (values.alternateContactNumber && !phonePattern.test(values.alternateContactNumber)) errors.alternateContactNumber = 'Enter a valid 10-digit Indian mobile number.'
@@ -96,7 +96,7 @@ function Field({ label, name, values, errors, touched, onChange, required, maxLe
   const error = touched[name] && errors[name]
   return <label className="ac-field" htmlFor={`ac-${name}`}>
     <span>{label}{required && <b aria-hidden="true"> *</b>}</span>
-    <input id={`ac-${name}`} name={name} value={values[name]} onChange={onChange} maxLength={maxLength} aria-invalid={Boolean(error)} aria-describedby={error ? `ac-${name}-error` : undefined} {...props} />
+    <input id={`ac-${name}`} name={name} value={values[name]} onChange={onChange} required={required} maxLength={maxLength} aria-invalid={Boolean(error)} aria-describedby={error ? `ac-${name}-error` : undefined} {...props} />
     {maxLength && <small className="ac-counter">{values[name].length}/{maxLength}</small>}
     {error && <small id={`ac-${name}-error`} className="ac-error" role="alert">{error}</small>}
   </label>
@@ -213,7 +213,7 @@ export default function AddCollege() {
         if (!offices.length) throw new Error('Not found')
         const first = offices[0]
         setPostOffices(offices)
-        setValues((current) => ({ ...current, area: first.Name || '', district: first.District || '', city: first.Block || first.District || '', state: first.State || '', country: first.Country || 'India' }))
+        setValues((current) => ({ ...current, area: current.area || first.Name || '', district: current.district || first.District || '', city: current.city || first.Block || first.District || '', state: current.state || first.State || '', country: current.country || first.Country || 'India' }))
         setPincodeStatus('Location found. Select the area if required; all fields remain editable.')
       })
       .catch((error) => {
@@ -288,10 +288,10 @@ export default function AddCollege() {
       const website = normalizeWebsite(values.website)
       const college = {
         name: values.collegeName.trim(), code: values.collegeCode, type: values.collegeType === 'Other' ? values.collegeTypeOther.trim() : values.collegeType,
-        university: values.universityName.trim(), address: [values.addressLine1, values.addressLine2].filter(Boolean).join(', '),
+        university: values.universityName.trim(), address: [values.addressLine1, values.addressLine2].map(part => part.trim()).filter(Boolean).join(', '),
         addressLine1: values.addressLine1.trim(), addressLine2: values.addressLine2.trim(),
         area: values.area.trim(), district: values.district.trim(), country: values.country.trim(),
-        city: values.city.trim(), state: values.state.trim(), pincode: values.pincode, contact: values.contactNumber,
+        city: values.city.trim(), state: values.state.trim(), pincode: values.pincode.trim(), contact: values.contactNumber,
         email: values.email.trim(), logo: logoFile ? '' : values.logo, clearLogo: Boolean(editId && removeExistingLogo && !logoFile), logoName: values.logoName, principal: values.principalName.trim(),
         accreditation: [values.accreditationBody, values.accreditationGrade, values.accreditationNumber].filter(Boolean).join(' · '),
         accreditationStatus: values.accreditationStatus, accreditationBody: values.accreditationBody.trim(),
@@ -373,7 +373,7 @@ export default function AddCollege() {
         <Field label="City" name="city" values={values} errors={errors} touched={touched} onChange={update} required maxLength={60} />
         <Field label="State" name="state" values={values} errors={errors} touched={touched} onChange={update} required maxLength={60} />
         <Field label="Pincode" name="pincode" values={values} errors={errors} touched={touched} onChange={update} required maxLength={6} inputMode="numeric" />
-        <Field label="Country" name="country" values={values} errors={errors} touched={touched} onChange={update} required readOnly />
+        <Field label="Country" name="country" values={values} errors={errors} touched={touched} onChange={update} readOnly />
         <label className="ac-field" htmlFor="ac-area"><span>Area / Post Office</span><select id="ac-area" name="area" value={values.area} onChange={update} disabled={!postOffices.length}><option value="">{postOffices.length ? 'Select area' : 'Enter pincode first'}</option>{postOffices.map((office) => <option key={`${office.Name}-${office.BranchType}`} value={office.Name}>{office.Name}</option>)}</select></label>
         <Field label="District" name="district" values={values} errors={errors} touched={touched} onChange={update} maxLength={60} />
         {pincodeStatus && <p className="ac-lookup-status ac-span-2" role="status">{pincodeStatus}</p>}

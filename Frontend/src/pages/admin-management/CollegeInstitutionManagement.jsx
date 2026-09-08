@@ -306,6 +306,9 @@ export default function CollegeInstitutionManagement({ initialView = 'list' }) {
   const [isSettingsSaving, setIsSettingsSaving] = useState(false)
   const [settingsSubmitError, setSettingsSubmitError] = useState('')
   const [settingsPage, setSettingsPage] = useState(1)
+  const statusLock = useRef(false)
+  const [statusError, setStatusError] = useState('')
+  const [statusNotice, setStatusNotice] = useState('')
   const [pendingStatus, setPendingStatus] = useState(null)
   const [isStatusSaving, setIsStatusSaving] = useState(false)
 
@@ -449,22 +452,31 @@ export default function CollegeInstitutionManagement({ initialView = 'list' }) {
     }
   }
 
-  const toggleStatus = (college) => setPendingStatus({ college, nextStatus: college.status === 'active' ? 'inactive' : 'active' })
+  const toggleStatus = (college) => {
+    if (statusLock.current) return
+    setStatusError('')
+    setStatusNotice('')
+    setPendingStatus({ college, nextStatus: college.status === 'active' ? 'inactive' : 'active' })
+  }
   const confirmStatusChange = async () => {
-    if (!pendingStatus || isStatusSaving) return
+    if (!pendingStatus || statusLock.current) return
+    statusLock.current = true
     const { college, nextStatus } = pendingStatus
     setIsStatusSaving(true)
-    setCollegeError('')
+    setStatusError('')
     try {
       const response = await updateCollegeStatus(college.id, nextStatus === 'active' ? 1 : 0)
-      const updated = mapCollege((response.data?.data ?? response.data) || { ...college, status: nextStatus })
-      setColleges((current) => current.map((item) => (item.id === college.id ? updated : item)))
+      if (response.data?.success === false) throw new Error('College status could not be updated. Please try again.')
       setPendingStatus(null)
+      setStatusNotice(nextStatus === 'active' ? 'College activated successfully.' : 'College deactivated successfully.')
+      await loadColleges(searchTerm)
     } catch (error) {
-      setCollegeError(getApiErrorMessage(error, 'Unable to update college status. Please try again.'))
-    } finally { setIsStatusSaving(false) }
+      setStatusError(getApiErrorMessage(error, 'Unable to update college status. Please try again.'))
+    } finally {
+      statusLock.current = false
+      setIsStatusSaving(false)
+    }
   }
-
 
   // ── College Settings: list ──
   const fetchSettingsList = async () => {
@@ -638,7 +650,7 @@ export default function CollegeInstitutionManagement({ initialView = 'list' }) {
                           <td>{college.contact}</td>
                           <td>
                             <span className={`cm-status-badge ${college.status}`}>
-                              {college.status === 'active' ? 'Active' : 'Deactive'}
+                              {college.status === 'active' ? 'Active' : 'Inactive'}
                             </span>
                           </td>
                           <td className="cm-actions-cell">
@@ -865,7 +877,7 @@ export default function CollegeInstitutionManagement({ initialView = 'list' }) {
                     <span className="cm-badge cm-badge-code">Code: {activeCollege.code}</span>
                     <span className="cm-badge cm-badge-type">{activeCollege.type}</span>
                     <span className={`cm-status-badge ${activeCollege.status}`}>
-                      {activeCollege.status === 'active' ? 'Active' : 'Deactive'}
+                      {activeCollege.status === 'active' ? 'Active' : 'Inactive'}
                     </span>
                   </div>
                   <h1 className="cm-profile-title"><span style={{ color: '#fff' }}>{activeCollege.name}</span></h1>
@@ -882,7 +894,7 @@ export default function CollegeInstitutionManagement({ initialView = 'list' }) {
                     <div className="cm-info-row"><span className="cm-info-label">College Code</span><span className="cm-info-val">{displayValue(activeCollege.code)}</span></div>
                     <div className="cm-info-row"><span className="cm-info-label">College Type</span><span className="cm-info-val">{displayValue(activeCollege.type)}</span></div>
                     <div className="cm-info-row"><span className="cm-info-label">University Name</span><span className="cm-info-val">{displayValue(activeCollege.university)}</span></div>
-                    <div className="cm-info-row"><span className="cm-info-label">Status</span><span className="cm-info-val">{activeCollege.status === 'active' ? 'Active' : 'Deactive'}</span></div>
+                    <div className="cm-info-row"><span className="cm-info-label">College Status</span><span className="cm-info-val">{activeCollege.status === 'active' ? 'Active' : 'Inactive'}</span></div>
                   </div>
                 </div>
 
@@ -1001,7 +1013,7 @@ export default function CollegeInstitutionManagement({ initialView = 'list' }) {
                         <td>{item.institutionType}</td>
                         <td>
                           <span className={`cm-status-badge ${item.status === 1 ? 'active' : 'inactive'}`}>
-                            {item.status === 1 ? 'Active' : 'Deactive'}
+                            {item.status === 1 ? 'Active' : 'Inactive'}
                           </span>
                         </td>
                         <td className="cm-actions-cell">
@@ -1146,7 +1158,17 @@ export default function CollegeInstitutionManagement({ initialView = 'list' }) {
           </>
         )}
       </div>
-      {pendingStatus && <StatusConfirmDialog entity="College" name={`${pendingStatus.college.name} (${pendingStatus.college.code})`} nextStatus={pendingStatus.nextStatus} onCancel={() => setPendingStatus(null)} onConfirm={confirmStatusChange} busy={isStatusSaving} />}
+      {statusNotice && <div className="cm-college-status-notice" role="status">{statusNotice}<button type="button" aria-label="Dismiss status message" onClick={() => setStatusNotice('')}><FiX /></button></div>}
+      {pendingStatus && <StatusConfirmDialog entity="College" name={`${pendingStatus.college.name} (${pendingStatus.college.code})`} nextStatus={pendingStatus.nextStatus} onCancel={() => setPendingStatus(null)} onConfirm={confirmStatusChange} busy={isStatusSaving} error={statusError}
+        confirmLabel={pendingStatus.nextStatus === 'active' ? 'Activate College' : 'Deactivate College'}
+        details={[
+          ['College', pendingStatus.college.name],
+          ['Current Status', pendingStatus.college.status === 'active' ? 'Active' : 'Inactive'],
+          ...(pendingStatus.nextStatus === 'inactive' ? [['Associated Students', 'Count unavailable from the current college API'], ['Impact', 'Existing students and records associated with this college may remain available after deactivation.']] : []),
+        ]}
+        description={pendingStatus.nextStatus === 'active'
+          ? 'This college will become active again for operations permitted for active colleges.'
+          : 'This action requests a college status change. The current API does not confirm how deactivation affects access to existing records or new admissions.'} />}
     </DashboardLayout>
   )
 }

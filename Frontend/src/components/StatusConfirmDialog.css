@@ -4,3 +4,9 @@
 .status-confirm-dialog footer{display:flex;justify-content:center;gap:9px}.status-confirm-dialog footer button{min-width:125px;min-height:40px;padding:0 15px;border:1px solid var(--border-strong);border-radius:8px;color:var(--text-secondary);background:var(--surface);font:inherit;font-size:.82rem;font-weight:750}.status-confirm-dialog footer button.confirm-active{border-color:var(--brand);color:#fff;background:var(--brand)}.status-confirm-dialog footer button.confirm-inactive{border-color:var(--danger);color:#fff;background:var(--danger)}.status-confirm-dialog footer button:disabled{cursor:not-allowed;opacity:.55}
 @media(max-width:480px){.status-confirm-dialog{padding:22px 18px}.status-confirm-dialog footer{flex-direction:column-reverse}.status-confirm-dialog footer button{width:100%}}
 .status-confirm-dialog{position:relative}.status-confirm-close{position:absolute;top:12px;right:12px;min-width:32px!important;width:32px;height:32px;padding:0!important;border:1px solid var(--border-strong)!important;border-radius:7px!important;color:var(--text-muted)!important;background:var(--surface)!important;font-size:20px!important;line-height:1!important}
+
+.status-confirm-dialog{max-height:calc(100dvh - 36px);overflow-y:auto}
+.status-confirm-details{margin:16px 0;text-align:left;display:grid;gap:12px}
+.status-confirm-details>div{padding-bottom:10px;border-bottom:1px solid var(--border)}
+.status-confirm-details dt{font-size:.75rem;color:var(--text-muted)}
+.status-confirm-details dd{margin:4px 0 0;font-size:.84rem;line-height:1.5;overflow-wrap:anywhere;color:var(--text-primary)}

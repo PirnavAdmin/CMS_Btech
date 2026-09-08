@@ -501,7 +501,7 @@ const validate = (x) => {
 };
 function State({ error, onRetry }) {
   return (
-    <section className="sp-state">
+    <section className="sp-state" data-message-tone={error ? 'error' : undefined} role={error ? 'alert' : undefined}>
       <FiAlertCircle />
       <h2>
         {error ? "Unable to load students." : "No student admissions found."}

@@ -1,6 +1,6 @@
 import './StatusConfirmDialog.css'
 
-export default function StatusConfirmDialog({ entity, name, nextStatus, onCancel, onConfirm, busy = false }) {
+export default function StatusConfirmDialog({ entity, name, nextStatus, onCancel, onConfirm, busy = false, description = '', error = '', details = [], confirmLabel = '' }) {
   const activate = String(nextStatus).toLowerCase() === 'active'
   const action = activate ? 'Activate' : 'Deactivate'
   return <div className="status-confirm-backdrop" onMouseDown={event => event.target === event.currentTarget && !busy && onCancel()}>
@@ -9,9 +9,12 @@ export default function StatusConfirmDialog({ entity, name, nextStatus, onCancel
       <i aria-hidden="true">!</i>
       <h2 id="status-confirm-title">{action} {entity}?</h2>
       <p id="status-confirm-description">Are you sure you want to {action.toLowerCase()} <strong>{name}</strong>?</p>
+      {details.length > 0 && <dl className="status-confirm-details">{details.map(([label, value]) => <div key={label}><dt>{label}</dt><dd>{value}</dd></div>)}</dl>}
+      {description && <p>{description}</p>}
+      {error && <p role="alert">{error}</p>}
       <footer>
         <button type="button" onClick={onCancel} disabled={busy}>Cancel</button>
-        <button type="button" className={activate ? 'confirm-active' : 'confirm-inactive'} onClick={onConfirm} disabled={busy}>{busy ? 'Updating...' : action}</button>
+        <button type="button" className={activate ? 'confirm-active' : 'confirm-inactive'} onClick={onConfirm} disabled={busy}>{busy ? 'Updating...' : confirmLabel || action}</button>
       </footer>
     </section>
   </div>

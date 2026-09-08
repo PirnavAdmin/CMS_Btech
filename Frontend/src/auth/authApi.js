@@ -200,7 +200,10 @@ export async function register({ fullName, email, mobile, password, confirmPassw
       : response.status >= 500
         ? 'Registration is temporarily unavailable. Please try again later.'
         : 'Unable to submit your request. Please review your details and try again.'
-    throw new AuthRequestError(validationMessage || result?.message || result?.detail || fallback)
+    const message = validationMessage || result?.message
+    const safeMessage = typeof message === 'string' && message.length <= 300 && !/stack\s*trace|exception|\bat\s+\S+\(/i.test(message)
+      ? message : fallback
+    throw new AuthRequestError(response.status >= 500 ? fallback : safeMessage)
   }
 
   return result

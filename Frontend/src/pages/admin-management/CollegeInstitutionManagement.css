@@ -1006,3 +1006,6 @@
   .cm-info-row:nth-child(2n),
   .cm-info-row:nth-child(3n) { border-right: 0; }
 }
+
+.cm-college-status-notice{position:fixed;right:20px;bottom:20px;z-index:1250;display:flex;align-items:center;gap:14px;max-width:calc(100vw - 40px);padding:14px 18px;border:1px solid var(--border);border-radius:var(--radius-md);background:var(--surface);color:var(--text-primary);box-shadow:var(--shadow-md)}
+.cm-college-status-notice button{display:grid;place-items:center;border:0;background:transparent;color:inherit;padding:6px}

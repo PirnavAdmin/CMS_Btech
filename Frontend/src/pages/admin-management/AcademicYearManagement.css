@@ -43,3 +43,38 @@
 .ay .table th:nth-child(7),.ay .table td:nth-child(7){width:22%}
 .ay .table .badge{justify-content:center;margin-inline:auto}
 .ay .table .ay-actions{width:100%;justify-content:center}
+
+/* Compact active-year summary, retaining dates and progress. */
+.ay .hero{padding:12px 16px;gap:10px 20px;box-shadow:var(--shadow-sm)}
+.ay .hero h2{font-size:21px;line-height:1.25}
+.ay .hero p{font-size:12px;line-height:1.5}
+.ay .hero .eyebrow{font-size:10px;margin-bottom:2px}
+.ay .hero .badge{margin-top:5px}
+.ay .hero .metrics{gap:16px}
+.ay .hero .metrics b{font-size:18px}
+.ay .hero .bar{height:4px}
+@media(max-width:600px){.ay .hero{grid-template-columns:minmax(0,1fr);padding:12px}.ay .hero .metrics{justify-content:flex-start}.ay .hero .metrics p{padding-left:10px}}
+
+/* Compact active-year summary only; the empty-state hero keeps its existing layout. */
+.ay .hero:has(.metrics) {
+	grid-template-columns: minmax(0, 1fr) auto;
+	grid-template-rows: 1fr auto;
+	min-height: 0;
+	padding: 16px 20px 12px;
+	align-items: center;
+	gap: 8px 28px;
+}
+.ay .hero:has(.metrics) > div:first-child { min-width: 0; }
+.ay .hero:has(.metrics) h2 { margin-top: 1px; font-size: clamp(1.35rem, 2.2vw, 1.8rem); line-height: 1.15; }
+.ay .hero:has(.metrics) > div:first-child > p:not(.eyebrow) { margin-top: 3px; white-space: nowrap; }
+.ay .hero:has(.metrics) .badge { margin-top: 6px; padding: 4px 7px; font-size: 9px; }
+.ay .hero:has(.metrics) .metrics { display: flex; min-width: 235px; justify-content: flex-end; gap: 22px; }
+.ay .hero:has(.metrics) .metrics p { min-width: 92px; padding-left: 14px; }
+.ay .hero:has(.metrics) .metrics b { margin-bottom: 1px; font-size: 20px; line-height: 1.1; }
+.ay .hero:has(.metrics) .bar { grid-column: 1 / -1; height: 5px; }
+@media (max-width: 700px) {
+	.ay .hero:has(.metrics) { grid-template-columns: 1fr; grid-template-rows: auto auto auto; padding: 14px 16px 11px; gap: 9px; }
+	.ay .hero:has(.metrics) > div:first-child > p:not(.eyebrow) { white-space: normal; }
+	.ay .hero:has(.metrics) .metrics { min-width: 0; justify-content: flex-start; }
+	.ay .hero:has(.metrics) .bar { grid-column: 1; }
+}

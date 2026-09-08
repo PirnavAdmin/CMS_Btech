@@ -1,16 +1,16 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useParams, useNavigate } from 'react-router-dom'
 import { FiArrowLeft, FiBookOpen, FiCheckCircle, FiEdit2, FiEye, FiFilter, FiGitBranch, FiGrid, FiPlus, FiSearch, FiToggleLeft, FiToggleRight, FiUsers } from 'react-icons/fi'
 import DashboardLayout from '../../layouts/DashboardLayout'
 import FilterPanel from '../../components/FilterPanel'
 import TablePagination, { PAGE_SIZE } from '../../components/TablePagination'
 import StatusConfirmDialog from '../../components/StatusConfirmDialog'
-import { branchApi, courseApi, courseStructureApi, departmentApi } from '../../api/apiEndpoints'
+import { branchApi, courseApi, courseStructureApi, departmentApi, studentAdmissionApi } from '../../api/apiEndpoints'
 import { getCourseById, createCourse, updateCourse, updateCourseStatus, getSemesters, getCourseSemesterMappings, createCourseSemesterMapping, updateCourseSemesterMapping, updateCourseSemesterMappingStatus } from '../../auth/collegeApi'
 import { normalize } from './Branch'
 import './Course.css'
 
-const blank = { name: 'B.Tech', code: 'BTECH', description: '', departmentId: '', branchId: '', collegeId: '', eligibility: '', status: '' }
+const blank = { name: 'B.Tech', code: 'BTECH', shortName: '', type: 'Undergraduate', durationValue: '', semesters: '', description: '', departmentId: '', departmentCode: '', branchId: '', branchCode: '', collegeId: '', status: '' }
 
 const apiError = (error, fallback) => error?.response?.status === 401 ? 'Your session has expired. Please sign in again.' : error?.response?.status === 403 ? "You don't have permission to manage courses." : error?.response?.data?.message || error?.response?.data?.error || error?.message || fallback
 const listFrom = (response) => { const data = response?.data ?? response; return Array.isArray(data) ? data : Array.isArray(data?.items) ? data.items : Array.isArray(data?.data) ? data.data : data && typeof data === 'object' ? [data] : [] }
@@ -28,19 +28,11 @@ const recordFrom = (response) => {
   return current && typeof current === 'object' ? current : {}
 }
 
-const isJunkDepartment = (name) => {
-  if (!name || name.length < 3) return true
-  const lower = String(name || '').toLowerCase().trim()
-  if (['sfdg', 'sdffgg', 'cse', 'select department', 'test department redmark'].includes(lower)) return true
-  if (/[b-df-hj-np-tv-z]{5,}/i.test(lower)) return true
-  return false
-}
-
 const mapDepartmentOption = (record) => {
   const status = record.status ?? record.departmentStatus ?? (record.isActive === false ? 0 : 1)
   const active = status === true || Number(status) === 1 || String(status).toLowerCase() === 'active'
   const name = String(record.departmentName ?? record.name ?? '').trim()
-  return { id: record.id ?? record.departmentId, name, code: record.departmentCode ?? record.code ?? '', collegeId: record.collegeId ?? '', status: active ? 'Active' : 'Inactive' }
+  return { id: record.id ?? record.departmentId, name, code: record.departmentCode ?? record.deptCode ?? record.code ?? '', collegeId: record.collegeId ?? '', status: active ? 'Active' : 'Inactive' }
 }
 
 const dedupeDepartmentOptions = (rows) => {
@@ -48,8 +40,8 @@ const dedupeDepartmentOptions = (rows) => {
   for (const raw of rows) {
     const item = mapDepartmentOption(raw)
     const name = item.name
-    if (!item.id || !name || isJunkDepartment(name)) continue
-    const key = name.toLowerCase()
+    if (item.id == null || !name) continue
+    const key = String(item.id)
     if (!map.has(key)) map.set(key, { ...item, name })
   }
   return Array.from(map.values())
@@ -65,13 +57,18 @@ const mapCourse = (record) => {
     shortName: record.courseShortName ?? record.shortName ?? '',
     type: record.courseType ?? record.type ?? '',
     departmentId: record.departmentId ?? '',
+    departmentCode: record.departmentCode ?? record.department?.departmentCode ?? record.department?.code ?? '',
     branchId: record.branchId ?? record.branch?.branchId ?? record.branch?.id ?? '',
-    department: record.departmentName ?? record.department ?? '',
+    branchCode: record.branchCode ?? record.branch?.branchCode ?? record.branch?.code ?? '',
+    branch: record.branchName ?? record.branch?.branchName ?? record.branch?.name ?? record.branch?.shortName ?? '',
+    department: record.departmentName ?? record.department?.departmentName ?? record.department?.name ?? (typeof record.department === 'string' ? record.department : ''),
     collegeId: record.collegeId ?? '',
-    college: record.collegeName ?? record.college ?? '',
+    college: record.collegeName ?? record.college?.name ?? (typeof record.college === 'string' ? record.college : ''),
     durationValue: record.durationYears ?? record.durationValue ?? record.duration ?? '',
     durationUnit: record.durationUnit ?? '',
-    semesters: record.totalSemesters ?? record.semesters ?? record.semesterCount ?? '',
+    semesters: [3, 4].includes(Number(record.durationYears ?? record.durationValue ?? record.duration))
+      ? Number(record.durationYears ?? record.durationValue ?? record.duration) * 2
+      : record.totalSemesters ?? record.semesters ?? record.semesterCount ?? '',
     academicSystem: record.academicSystem ?? record.academicPattern ?? '',
     eligibility: record.eligibility ?? '',
     description: record.description ?? '',
@@ -85,11 +82,10 @@ const payloadFor = (value) => ({
   branchId: value.branchId === '' ? 0 : Number(value.branchId),
   courseCode: value.code.trim().toUpperCase(),
   courseName: value.name.trim(),
-  courseShortName: value.code.trim().toUpperCase(),
-  courseType: 'Undergraduate',
-  durationYears: 4,
-  totalSemesters: 8,
-  eligibility: value.eligibility || '',
+  courseShortName: value.shortName.trim(),
+  courseType: value.type,
+  durationYears: Number(value.durationValue),
+  totalSemesters: Number(value.semesters),
   description: value.description || '',
 })
 
@@ -101,6 +97,8 @@ const validateBasic = (v, courses = [], editingId = null) => {
   else if (code.length < 2 || code.length > 20) e.code = 'Course code must be 2?20 characters.'
   else if (!/^[A-Z][A-Z0-9]*(?:-[A-Z0-9]+)*$/.test(code)) e.code = 'Start with a letter. Use letters, numbers and single hyphens only.'
   else if (courses.some(course => String(course.id) !== String(editingId) && String(course.code || '').trim().toUpperCase() === code)) e.code = 'This course code already exists. Enter a unique code.'
+  if (!v.durationValue) e.durationValue = 'Duration is required.'
+  if (String(v.durationValue) && Number(v.durationValue) !== 3 && Number(v.durationValue) !== 4) e.durationValue = 'Select a supported duration.'
   if (!v.departmentId) e.departmentId = 'Department is required.'
   if (!v.branchId) e.branchId = 'Branch is required.'
   if (!v.status) e.status = 'Status is required.'
@@ -112,7 +110,7 @@ const codeFor = name => { const known = { 'computer science and engineering': 'C
 const Page = ({ children }) => <DashboardLayout><main className="cm-page course-management">{children}</main></DashboardLayout>
 const Header = ({ title, text, children }) => <header className="cm-header"><div><h1>{title}</h1><p>{text}</p></div><div className="cm-row-actions">{children}</div></header>
 const Field = ({ label, error, wide, children }) => <label className={`cm-field ${wide ? 'wide' : ''}`}><span>{label.endsWith(' *') ? <>{label.slice(0, -2)} <b className="required-mark">*</b></> : label}</span>{children}{error && <small className="cm-error" role="alert">{error}</small>}</label>
-const Badge = ({ value }) => <span className={`course-badge ${String(value).toLowerCase()}`}><i />{value === 'Inactive' ? 'Deactive' : value}</span>
+const Badge = ({ value }) => <span className={`course-badge ${String(value).toLowerCase()}`}><i />{value}</span>
 
 function CourseList() {
   const [courses, setCourses] = useState([])
@@ -123,7 +121,12 @@ function CourseList() {
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState('')
   const [currentPage, setCurrentPage] = useState(1)
+  const statusLock = useRef(false)
+  const [statusNotice, setStatusNotice] = useState('')
+  const [statusError, setStatusError] = useState('')
   const [pendingStatus, setPendingStatus] = useState(null)
+  const [impactChecking, setImpactChecking] = useState(false)
+  const [courseImpact, setCourseImpact] = useState(null)
   const [isStatusSaving, setIsStatusSaving] = useState(false)
   const itemsPerPage = 5
 
@@ -151,30 +154,45 @@ function CourseList() {
   const stats = { total: courses.length, active: courses.filter(c => c.status === 'Active').length, branches: branches.length, departments: departments.length }
   const hasFilters = Boolean(query || statusFilter)
   const clearFilters = () => { setQuery(''); setStatusFilter(''); setCurrentPage(1) }
-  const toggleStatus = (course) => setPendingStatus({ course, nextStatus: (course.status || 'Active') === 'Active' ? 'Inactive' : 'Active' })
+  const studentCourseId = student => student.courseId ?? student.course?.id ?? student.academic?.courseId ?? student.academicInformation?.courseId ?? null
+  const checkCourseImpact = async course => {
+    const students = await studentAdmissionApi.getAll({ courseId: course.id })
+    const canMatch = students.every(student => studentCourseId(student) !== null && studentCourseId(student) !== undefined && studentCourseId(student) !== '')
+    return canMatch ? { state: 'known', count: students.filter(student => String(studentCourseId(student)) === String(course.id)).length } : { state: 'unknown' }
+  }
+  const toggleStatus = async course => {
+    setStatusError(''); setStatusNotice('')
+    if (course.status !== 'Active') { setPendingStatus({ course, nextStatus: 'Active' }); return }
+    setImpactChecking(true); setCourseImpact(null); setStatusNotice('Checking course dependencies...')
+    try { setCourseImpact(await checkCourseImpact(course)) } catch { setCourseImpact({ state: 'unknown' }) }
+    finally { setImpactChecking(false); setStatusNotice(''); setPendingStatus({ course, nextStatus: 'Inactive' }) }
+  }
   const confirmStatusChange = async () => {
-    if (!pendingStatus || isStatusSaving) return
+    if (!pendingStatus || statusLock.current) return
+    statusLock.current = true
     const { course, nextStatus } = pendingStatus
-    setIsStatusSaving(true); setError('')
+    setIsStatusSaving(true); setStatusError('')
     try {
       const response = await updateCourseStatus(course.id, nextStatus === 'Active' ? 1 : 0)
-      const result = recordFrom(response)
-      const updated = result?.id || result?.courseId ? mapCourse(result) : { ...course, status: nextStatus }
-      setCourses(current => current.map(item => item.id === course.id ? updated : item))
+      if (response?.data?.success === false) throw new Error('Course status could not be updated.')
+      setStatusNotice(nextStatus === 'Active' ? 'Course activated successfully.' : 'Course deactivated successfully.')
+      await load()
       setPendingStatus(null)
     } catch (requestError) {
-      setError(apiError(requestError, 'Unable to update course status. Please try again.'))
+      setStatusError(apiError(requestError, 'Unable to update course status. Please try again.'))
     } finally {
+      statusLock.current = false
       setIsStatusSaving(false)
     }
   }
 
   return <Page>
     <Header title="Course Management" text="Manage B.Tech courses, branches and structures."><Link className="cm-button" to="/courses/add"><FiPlus /> Add Course</Link></Header>
+    {statusNotice && <div className="course-toast" role="status">{statusNotice}</div>}
     <section className="course-summary">{[['Total Courses', stats.total, FiBookOpen], ['Active Courses', stats.active, FiCheckCircle], ['Associated Branches', stats.branches, FiGitBranch], ['Departments', stats.departments, FiGrid]].map(([label, value, Icon]) => <article key={label}><span className="cm-kpi-icon"><Icon aria-hidden="true" /></span><div><span>{label}</span><strong>{value}</strong></div></article>)}</section>
     <FilterPanel active={hasFilters} onClear={clearFilters}><section className="cm-panel course-toolbar">
       <label className="course-search"><FiSearch /><input aria-label="Search courses" value={query} onChange={e => { setQuery(e.target.value); setCurrentPage(1) }} placeholder="Search course name, code or department" /></label>
-      <select aria-label="Status" value={statusFilter} onChange={e => { setStatusFilter(e.target.value); setCurrentPage(1) }}><option value="">Select Status</option><option value="Active">Active</option><option value="Inactive">Deactive</option></select>
+      <select aria-label="Status" value={statusFilter} onChange={e => { setStatusFilter(e.target.value); setCurrentPage(1) }}><option value="">Select Status</option><option value="Active">Active</option><option value="Inactive">Inactive</option></select>
       {hasFilters && <button className="course-clear" onClick={clearFilters}><FiFilter /> Clear Filters</button>}
     </section></FilterPanel>
     <section className="cm-panel course-directory">
@@ -190,7 +208,7 @@ function CourseList() {
                 <tbody>
                   {pageRows.map(c => (
                     <tr key={c.id}>
-                      <td><strong>{c.name}</strong><small>{c.code}</small></td>
+                      <td><strong>{c.name}</strong><small>{c.code}{c.shortName ? ` ? ${c.shortName}` : ''}</small></td>
                       <td>{departmentName(c) || 'Not available'}</td>
                       <td>{c.durationValue ? `${c.durationValue} ${c.durationUnit}`.trim() : 'Not available'}</td>
                       <td>{c.status ? <Badge value={c.status} /> : 'Not available'}</td>
@@ -216,11 +234,13 @@ function CourseList() {
           <div className="course-empty"><strong>No courses match your filters.</strong><button className="cm-button" onClick={clearFilters}>Clear Filters</button></div>
         )}
     </section>
-    {pendingStatus && <StatusConfirmDialog entity="Course" name={`${pendingStatus.course.name} (${pendingStatus.course.code})`} nextStatus={pendingStatus.nextStatus} onCancel={() => setPendingStatus(null)} onConfirm={confirmStatusChange} busy={isStatusSaving} />}
+    {pendingStatus && <StatusConfirmDialog entity="Course" name={`${pendingStatus.course.name} (${pendingStatus.course.code})`} nextStatus={pendingStatus.nextStatus} onCancel={() => { if (!isStatusSaving) { setPendingStatus(null); setCourseImpact(null) } }} onConfirm={confirmStatusChange} busy={isStatusSaving || impactChecking} error={statusError} details={pendingStatus.nextStatus === 'Inactive' && courseImpact?.state === 'known' ? [['Associated Students', `${courseImpact.count} Students`]] : []} description={pendingStatus.nextStatus === 'Active' ? 'This course will be marked active.' : courseImpact?.state === 'known' && courseImpact.count === 0 ? 'No students are currently associated with this course. This course will be marked inactive for operations that exclude inactive courses.' : courseImpact?.state === 'known' ? `This course currently has ${courseImpact.count} associated students. Existing student records will not be deleted by this action.` : 'The associated student count could not be determined from the available data. Existing student or academic records may remain available according to current system rules.'} confirmLabel={pendingStatus.nextStatus === 'Inactive' ? 'Deactivate Course' : 'Activate Course'} />}
   </Page>
 }
 
 function CourseForm() {
+  const saveLock = useRef(false)
+  const [persistedId, setPersistedId] = useState(null)
   const [existingCourses, setExistingCourses] = useState([])
   const { id } = useParams(), navigate = useNavigate()
   const [departments, setDepartments] = useState([])
@@ -237,13 +257,17 @@ function CourseForm() {
     setIsLoading(true); setError('')
     try {
       const [departmentRows, branchRows, courseRows] = await Promise.all([departmentApi.getAll(), branchApi.getAll(), courseApi.getAll()])
+      const normalizedDepartments = dedupeDepartmentOptions(departmentRows)
+      const normalizedBranches = branchRows.map(normalize)
       setExistingCourses(courseRows.map(mapCourse))
-      setDepartments(dedupeDepartmentOptions(departmentRows))
-      setBranches(branchRows.map(normalize))
+      setDepartments(normalizedDepartments)
+      setBranches(normalizedBranches)
       if (id) {
         const courseRes = await getCourseById(id)
         const detail = mapCourse(recordFrom(courseRes))
-        setValue({ ...blank, ...detail, name: 'B.Tech', status: '' })
+        const department = normalizedDepartments.find(item => String(item.id) === String(detail.departmentId))
+        const branch = normalizedBranches.find(item => String(item.id) === String(detail.branchId))
+        setValue({ ...blank, ...detail, departmentCode: detail.departmentCode || department?.code || '', branchCode: detail.branchCode || branch?.code || '' })
         setCodeEdited(true)
       }
     } catch (requestError) {
@@ -254,24 +278,30 @@ function CourseForm() {
   }
   useEffect(() => { load() }, [id])
 
-  const live = validateBasic(value, existingCourses, id)
-  const update = (key, next) => { setValue(v => { const n = { ...v, [key]: next }; if (key === 'name' && !codeEdited) n.code = codeFor(next); if (key === 'code') { n.code = next.toUpperCase(); setCodeEdited(true) } if (key === 'departmentId') { n.collegeId = departments.find(x => String(x.id) === String(next))?.collegeId ?? ''; n.branchId = '' } return n }); setErrors(e => ({ ...e, [key]: '', ...(key === 'departmentId' ? { branchId: '' } : {}) })) }
+  const live = validateBasic(value, existingCourses, persistedId ?? id)
+  const update = (key, next) => { setValue(v => { const n = { ...v, [key]: next }; if (key === 'durationValue') n.semesters = next ? Number(next) * 2 : ''; if (key === 'name' && !codeEdited) n.code = codeFor(next); if (key === 'code') { n.code = next.toUpperCase(); setCodeEdited(true) } if (key === 'departmentId') { const department = departments.find(x => String(x.id) === String(next)); n.collegeId = department?.collegeId ?? ''; n.departmentCode = department?.code || ''; n.branchId = ''; n.branchCode = '' } if (key === 'branchId') n.branchCode = branches.find(x => String(x.id) === String(next))?.code || ''; return n }); setErrors(e => ({ ...e, [key]: '', ...(key === 'departmentId' ? { branchId: '' } : {}) })) }
 
   const submit = async () => {
-    if (isSaving || saved) return
-    const e = validateBasic(value, existingCourses, id); setErrors(e)
+    if (saveLock.current || saved) return
+    const e = validateBasic(value, existingCourses, persistedId ?? id); setErrors(e)
     if (Object.keys(e).length) return
+    saveLock.current = true
     setIsSaving(true); setError('')
     try {
       const latestCourses = (await courseApi.getAll()).map(mapCourse)
       setExistingCourses(latestCourses)
-      const latestErrors = validateBasic(value, latestCourses, id)
+      const latestErrors = validateBasic(value, latestCourses, persistedId ?? id)
       if (Object.keys(latestErrors).length) { setErrors(latestErrors); return }
       const payload = payloadFor(value)
-      const response = id ? await updateCourse(id, payload) : await createCourse(payload)
+      const targetId = persistedId ?? id
+      const response = targetId ? await updateCourse(targetId, payload) : await createCourse(payload)
+      if (response?.data?.success === false) throw new Error('Course could not be saved.')
       const result = recordFrom(response)
-      const courseId = result?.id ?? result?.courseId ?? id
-      if (value.status === 'Inactive' && courseId) await updateCourseStatus(courseId, 0)
+      const courseId = result?.id ?? result?.courseId ?? targetId
+      if (!courseId) { setSaved(true); throw new Error('Course saved, but its ID was not returned. Check the course list before making further changes.') }
+      setPersistedId(courseId)
+      const statusResponse = await updateCourseStatus(courseId, value.status === 'Active' ? 1 : 0)
+      if (statusResponse?.data?.success === false) throw new Error('Course saved, but its status could not be updated. Please retry.')
       setSaved(true)
       setTimeout(() => navigate('/courses'), 500)
     } catch (requestError) {
@@ -280,38 +310,46 @@ function CourseForm() {
         setErrors(current => ({ ...current, code: 'This course code already exists. Enter a unique code.' }))
       } else setError(message)
     } finally {
+      saveLock.current = false
       setIsSaving(false)
     }
   }
 
   if (isLoading) return <Page><div className="cm-empty">Loading course...</div></Page>
 
+  const departmentOptions = departments.filter(x => x.status !== 'Inactive' || String(x.id) === String(value.departmentId))
+  const branchOptions = branches.filter(x => String(x.departmentId) === String(value.departmentId))
   return <Page><Header title={id ? 'Edit B.Tech Course' : 'Add B.Tech Course'} text="Create a focused B.Tech undergraduate course."><Link className="cm-button secondary" to="/courses"><FiArrowLeft /> Cancel</Link></Header>
-    {saved && <div className="course-toast"><FiCheckCircle /> Course saved successfully.</div>}
-    {error && <p className="cm-error" role="alert">{error}</p>}
+    {saved && !error && <div className="course-toast"><FiCheckCircle /> Course saved successfully.</div>}
+    {error && <p className="cm-error" role="alert">{error} <button type="button" className="cm-button secondary" disabled={isSaving} onClick={load}>Reload options</button></p>}
     <div className="course-form-layout">
       <section className="cm-panel course-form">
         <section><h2>Course Identity</h2><div className="cm-form-grid">
-          <Field label="Course Name *" error={errors.name || (value.name ? live.name : '')}><input value="B.Tech" readOnly /></Field>
+          <Field label="Course Name *" error={errors.name || (value.name ? live.name : '')}><input value={value.name} required onChange={e => update('name', e.target.value)} /></Field>
           <Field label="Course Code *" error={errors.code || (value.code ? live.code : '')}><input value={value.code} required minLength={2} maxLength={20} aria-invalid={Boolean(errors.code || live.code)} onChange={e => update('code', e.target.value)} onBlur={() => setErrors(current => ({ ...current, code: live.code || '' }))} placeholder="e.g. BTECH-02 (2?20 characters)" /></Field>
+          <Field label="Short Name (Optional)"><input value={value.shortName} onChange={e => update('shortName', e.target.value)} placeholder="e.g. B.Tech" /></Field>
         </div></section>
         <section><h2>Academic Mapping</h2><div className="cm-form-grid">
-          <Field label="Department *" error={errors.departmentId || (value.departmentId ? live.departmentId : '')}><select value={value.departmentId} onChange={e => update('departmentId', e.target.value)}><option value="">Select B.Tech department</option>{departments.filter(x => x.status !== 'Inactive' || String(x.id) === String(value.departmentId)).map(x => <option value={x.id} key={x.id}>{x.code ? `${x.code} — ` : ''}{x.name}</option>)}</select></Field>
-          <Field label="Branch / Specialization *" error={errors.branchId}><select value={value.branchId} disabled={!value.departmentId} onChange={e => update('branchId', e.target.value)}><option value="">{value.departmentId ? 'Select core branch or specialization' : 'Select department first'}</option>{branches.filter(branch => String(branch.departmentId) === String(value.departmentId)).map(branch => <option key={branch.id} value={branch.id}>{branch.code ? `${branch.code} - ` : ''}{branch.name} ({branchType(branch)})</option>)}</select></Field>
-          <Field label="Eligibility"><input value={value.eligibility || ''} onChange={e => update('eligibility', e.target.value)} placeholder="e.g. 10+2 with PCM" /></Field>
+          <Field label="Department *" error={errors.departmentId || (value.departmentId ? live.departmentId : '')}><select value={value.departmentId} onChange={e => update('departmentId', e.target.value)}><option value="">{departmentOptions.length ? 'Select department' : 'No departments available'}</option>{departmentOptions.map(x => <option value={x.id} key={x.id}>{x.code ? `${x.code} — ` : ''}{x.name}</option>)}</select></Field>
+          <Field label="Department Code"><input value={value.departmentCode || ''} placeholder="Resolved from department" readOnly /></Field>
+          <Field label="Branch / Specialization *" error={errors.branchId}><select value={value.branchId} disabled={!value.departmentId} onChange={e => update('branchId', e.target.value)}><option value="">{value.departmentId ? (branchOptions.length ? 'Select core branch or specialization' : 'No branches for this department') : 'Select department first'}</option>{branchOptions.map(branch => <option key={branch.id} value={branch.id}>{branch.code ? `${branch.code} - ` : ''}{branch.name} ({branchType(branch)})</option>)}</select></Field>
+          <Field label="Branch Code"><input value={value.branchCode || ''} placeholder="Resolved from branch" readOnly /></Field>
         </div></section>
         <section><h2>Academic Structure</h2><div className="cm-form-grid">
-          <Field label="Duration"><input value="4 Years" readOnly /></Field>
+          <Field label="Duration *" error={errors.durationValue}><select value={value.durationValue} onChange={e => update('durationValue', e.target.value ? Number(e.target.value) : '')}><option value="">Select Duration</option><option value="3">3 Years</option><option value="4">4 Years</option></select></Field>
           <Field label="Academic Pattern"><input value="Semester" readOnly /></Field>
-          <Field label="Total Semesters"><input value="8" readOnly /></Field>
-          <Field label="Status *" error={errors.status}><select required value={value.status} onChange={e => update('status', e.target.value)}><option value="" disabled>Select Status</option><option value="Active">Active</option><option value="Inactive">Deactive</option></select></Field>
+          <Field label="Total Semesters"><input value={value.semesters || ''} placeholder="Calculated from duration" readOnly /></Field>
+          <Field label="Status *" error={errors.status}><select required value={value.status} onChange={e => update('status', e.target.value)}><option value="" disabled>Select Status</option><option value="Active">Active</option><option value="Inactive">Inactive</option></select></Field>
         </div></section>
-        <footer><span></span><button className="cm-button" disabled={isSaving} onClick={submit}>{isSaving ? 'Saving...' : id ? 'Save Changes' : 'Create Course'}</button></footer>
+        <footer><button type="button" className="cm-button" disabled={isSaving || saved} onClick={submit}>{isSaving ? 'Saving...' : id ? 'Save Changes' : 'Create Course'}</button></footer>
       </section>
-      <aside className="course-preview"><span>Live Preview</span><div>
-        {value.status ? <Badge value={value.status} /> : <span className="course-badge">Select Status</span>}<h2>{value.name || 'Course Name'}</h2><strong>{value.code || 'CODE'}</strong><p>B.Tech Undergraduate</p><hr />
-        <b>{departments.find(x => String(x.id) === String(value.departmentId))?.name || 'B.Tech Department'}</b><p>4 Years · 8 Semesters</p>
-        {value.eligibility && <p className="course-preview-note"><strong>Eligibility:</strong> {value.eligibility}</p>}
+      <aside className="course-preview" aria-label="Course preview"><span>Live Preview</span><div>
+        <h2>{value.name.trim() || 'Course Preview'}</h2>
+        {[
+          ['Basic Information', [['Course Name', value.name], ...(value.shortName.trim() ? [['Short Name', value.shortName]] : []), ['Course Code', value.code], ['Department', departments.find(x => String(x.id) === String(value.departmentId))?.name], ['Department Code', value.departmentCode], ['Branch', branches.find(x => String(x.id) === String(value.branchId))?.name], ['Branch Code', value.branchCode]]],
+          ['Academic Structure', [['Course Type', value.type], ['Duration', value.durationValue ? value.durationValue + ' Years' : ''], ['Total Semesters', value.semesters]]],
+        ].map(([title, fields]) => <section key={title}><h3>{title}</h3><dl>{fields.map(([label, text]) => <div key={label}><dt>{label}</dt><dd>{typeof text === 'string' ? text.trim() || 'Not provided' : typeof text === 'number' ? text : 'Not provided'}</dd></div>)}</dl></section>)}
+        <h3>Status</h3>{value.status ? <Badge value={value.status} /> : 'Not provided'}
       </div></aside>
     </div>
   </Page>
@@ -345,25 +383,17 @@ function CourseDetails() {
   if (error || !course) return <Page><div className="course-empty"><strong>{error || 'Course not found.'}</strong><Link className="cm-button" to="/courses">Back to Courses</Link></div></Page>
 
   const department = departments.find(x => String(x.id) === String(course.departmentId))
-  const stats = [['Total Branches', branches.length], ['Active Branches', branches.filter(x => (x.status || 'Active') === 'Active').length], ['Inactive Branches', branches.filter(x => x.status === 'Inactive').length], ['Total Approved Intake', branches.reduce((n, x) => n + Number(x.intakeCapacity ?? x.intake ?? 0), 0)]]
+  const valueText = value => value === null || value === undefined || String(value).trim() === '' ? '' : String(value)
+  const detailRows = (rows) => rows.filter(([, value]) => valueText(value)).map(([label, value]) => <div className="course-detail-row" key={label}><span>{label}</span><strong>{valueText(value)}</strong></div>)
+  const duration = course.durationValue ? `${course.durationValue} ${course.durationUnit || 'Years'}` : ''
+  const pattern = course.academicSystem || 'Semester'
 
   return <Page><Header title="B.Tech Course Details" text="Course configuration and associated B.Tech branches."><Link className="cm-button secondary" to="/courses"><FiArrowLeft /> Back</Link><Link className="cm-button" to={`/courses/${id}/edit`}><FiEdit2 className="module-action-icon module-action-icon--edit" /> Edit Course</Link></Header>
-    <section className="course-detail-hero"><div><span className="cm-eyebrow">B.Tech Course</span><h2>{course.name}</h2><Badge value={course.status || 'Active'} /></div><strong>{course.code}</strong></section>
-    <section className="cm-panel course-detail-grid">{[
-      ['Course Name', course.name],
-      ['Course Code', course.code],
-      ['Short Name', course.shortName],
-      ['Course Type', course.type],
-      ['College', course.college],
-      ['Department', department?.name || course.department],
-      ['Duration', `${course.durationValue || 4} ${course.durationUnit || 'Years'}`],
-      ['Academic Pattern', course.academicSystem],
-      ['Total Semesters', course.semesters],
-      ['Eligibility', course.eligibility],
-      ['Status', course.status],
-    ].map(([label, value]) => <div className="cm-detail" key={label}><span>{label}</span><strong>{value === null || value === undefined || String(value).trim() === '' ? 'Not provided' : String(value)}</strong></div>)}</section>
-    <section className="course-summary course-detail-stats">{stats.map(x => <article key={x[0]}><span>{x[0]}</span><strong>{x[1]}</strong></article>)}</section>
-    <section className="cm-panel course-branches"><div><h2>Associated Branches</h2><Link className="cm-button secondary" to={`/branches?course=${id}`}>View All</Link></div>{branches.length ? <div className="course-branch-grid">{branches.map(b => <Link to={`/branches/${b.id}`} key={b.id}><strong>{b.name}</strong><span>{b.code} · {branchType(b)}</span><small>Intake: {Number(b.intakeCapacity ?? b.intake ?? 0)} · {b.status || 'Active'}</small></Link>)}</div> : <p>No branches are configured for this course.</p>}</section>
+    <section className="course-detail-summary"><div className="course-detail-summary__main"><span className="cm-eyebrow">B.Tech Course</span><h2>{course.name || 'Course'}</h2>{valueText(course.shortName) && <p className="course-detail-summary__short">{course.shortName}</p>}<strong className="course-detail-summary__code">Course Code: {course.code || '—'}</strong></div><div className="course-detail-summary__meta"><span>Department <b>{department?.name || course.department || '—'}</b></span><span>{course.type || 'Undergraduate'} {duration && ` · ${duration}`} {course.semesters && ` · ${course.semesters} Semesters`}</span><Badge value={course.status || 'Active'} /></div></section>
+    <div className="course-detail-sections">
+      <section className="cm-panel course-detail-section"><header><span>Course identity</span><h2>Basic Information</h2></header><div className="course-detail-rows">{detailRows([['Course Name', course.name], ['Course Code', course.code], ['Short Name', course.shortName], ['Course Type', course.type], ['College', course.college]])}</div></section>
+      <section className="cm-panel course-detail-section"><header><span>Academic context</span><h2>Academic Information</h2></header><div className="course-detail-rows">{detailRows([['Department', department?.name || course.department], ['Department Code', department?.code || course.departmentCode], ['College', course.college], ['Branch', course.branch], ['Branch Code', course.branchCode], ['Duration', duration], ['Academic Pattern', pattern], ['Total Semesters', course.semesters]])}</div></section>
+    </div>
   </Page>
 }
 
