@@ -5,6 +5,96 @@
   color: var(--brand-navy, #0f172a);
 }
 
+.cm-summary {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  margin: 0 0 18px;
+}
+
+.cm-summary-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 86px;
+  padding: 14px 16px;
+  border: 1px solid var(--border, #dfeaf3);
+  border-radius: 10px;
+  background: var(--surface, #fff);
+  box-shadow: var(--shadow-sm, 0 8px 20px rgba(15, 23, 42, 0.04));
+}
+
+.cm-summary-card > div {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+
+.cm-summary-card small {
+  color: var(--text-muted, #5e7897);
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.cm-summary-card strong {
+  color: var(--text-primary, #0f172a);
+  font-size: 1.5rem;
+  line-height: 1.1;
+}
+
+.cm-summary-icon {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 9px;
+  flex-shrink: 0;
+}
+
+.cm-summary-card--default .cm-summary-icon {
+  color: #0d5c9d;
+  background: #e6f1fb;
+}
+
+.cm-summary-card--active .cm-summary-icon {
+  color: #0b7d4d;
+  background: #e8f8ef;
+}
+
+.cm-summary-card--inactive .cm-summary-icon {
+  color: #996100;
+  background: #fff4dc;
+}
+
+.cm-summary-card--active strong {
+  color: var(--success, #0b7d4d);
+}
+
+.cm-summary-card--inactive strong {
+  color: #8a5f00;
+}
+
+.cm-summary-card.is-loading {
+  opacity: 0.75;
+}
+
+.cm-summary-card.is-loading strong {
+  color: var(--text-muted, #5e7897);
+}
+
+.cm-summary-error {
+  margin: 0 0 14px;
+  padding: 10px 12px;
+  border: 1px solid rgba(190, 80, 80, 0.2);
+  border-radius: 8px;
+  color: var(--danger, #b42318);
+  background: rgba(226, 53, 53, 0.05);
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
 .cm-header {
   display: flex;
   justify-content: space-between;
@@ -46,6 +136,21 @@
 .cm-college-draft__actions { display: flex; gap: 8px; }
 .cm-college-draft__actions button { min-height: 34px; padding: 7px 11px; font-size: .76rem; }
 @media (max-width: 760px) { .cm-college-draft { grid-template-columns: 1fr; gap: 10px; } .cm-college-draft__actions { justify-content: flex-start; } }
+
+@media (max-width: 900px) {
+  .cm-summary { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+
+@media (max-width: 640px) {
+  .cm-summary { grid-template-columns: 1fr; }
+  .cm-summary-card {
+    min-height: 74px;
+    padding: 12px 14px;
+  }
+  .cm-summary-card strong {
+    font-size: 1.25rem;
+  }
+}
 
 /* Buttons */
 .cm-primary-btn {
