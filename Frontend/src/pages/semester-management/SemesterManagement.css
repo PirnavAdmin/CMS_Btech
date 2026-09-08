@@ -1,28 +1,981 @@
-.semester-pagination>p{display:none!important}.semester-pagination{justify-content:flex-end!important}.semester-pagination>div{margin-left:auto}
-.semester-management{--sem-navy:var(--brand-navy,#154273);--sem-blue:var(--brand-blue,#1970b3);--sem-blue-hover:var(--brand-blue-hover,#095e9f);--sem-text:#123962;--sem-muted:#687f96;--sem-line:#d7e4ee;--sem-soft:#edf5fb;display:grid;width:100%;max-width:none;box-sizing:border-box;gap:12px;padding:0 0 8px;color:var(--sem-text)}.semester-pagination>p{display:none}.semester-details-panel>footer .semester-primary{display:none}
-.semester-page-header{display:flex;min-height:54px;align-items:flex-start;justify-content:space-between;gap:20px}.semester-breadcrumb{margin:0 0 4px;color:var(--sem-blue);font-size:.68rem;font-weight:800;letter-spacing:.08em;text-transform:uppercase}.semester-breadcrumb span{padding:0 5px;color:#8ba0b4}.semester-page-header h1{margin:0;color:#062e59;font-size:2rem;line-height:1.18;letter-spacing:-.035em}.semester-page-header>div>p:last-child{max-width:620px;margin:7px 0 0;color:#5e7897;font-size:1rem;line-height:1.45}.management-header-actions{display:flex;align-items:center;gap:12px;flex-wrap:wrap;justify-content:flex-end}.compact-summary{display:flex;align-items:stretch;gap:0;padding:6px 8px;border:1px solid var(--border);border-radius:9px;background:var(--surface);box-shadow:var(--shadow-sm)}.compact-summary--inline{min-height:42px}.compact-summary__item{display:grid;place-items:center;min-width:70px;padding:8px 12px;border-right:1px solid var(--border);text-align:center}.compact-summary__item:last-child{border-right:0}.compact-summary__item strong{display:block;color:var(--text-primary);font-size:1.05rem;line-height:1.1}.compact-summary__item small{display:block;margin-top:3px;color:var(--text-muted);font-size:.62rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase}.compact-summary__item--active strong{color:var(--success)}.compact-summary__item--inactive strong{color:#8a5f00}
-.semester-primary,.semester-danger{display:inline-flex;min-height:40px;padding:0 15px;align-items:center;justify-content:center;gap:7px;border:0;border-radius:8px;color:#fff;background:var(--sem-blue);box-shadow:0 4px 10px rgba(25,112,179,.18);font-size:.84rem;font-weight:700;white-space:nowrap}.semester-primary:hover{background:var(--sem-blue-hover)}.semester-danger{background:#b42318;box-shadow:0 4px 10px rgba(180,35,24,.18)}.semester-danger:hover{background:#912018}.semester-primary:focus-visible,.semester-danger:focus-visible{outline:3px solid rgba(25,112,179,.28);outline-offset:2px}
-.semester-stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}.semester-stat-card{display:flex;min-height:92px;padding:17px 20px;align-items:center;gap:12px;border:1px solid #d8e7f3;border-radius:12px;background:#fff;box-shadow:0 4px 14px rgba(6,46,89,.05)}.semester-stat-card span{color:#67809d;font-size:.82rem;font-weight:750}.semester-stat-card strong{color:#062e59;font-size:1.75rem;line-height:1.2}.semester-stat-card>div{display:grid;gap:5px;min-width:0}
-.semester-stat-card .cm-kpi-icon{display:grid;width:38px;height:38px;flex:0 0 38px;place-items:center;border-radius:9px;color:#15803d;background:#e9f8ef}.semester-stat-card .cm-kpi-icon svg{width:18px;height:18px}
-.semester-stat-card:nth-child(2) .cm-kpi-icon{color:#1970b3;background:#e8f3fc}.semester-stat-card:nth-child(3) .cm-kpi-icon{color:#7c3aed;background:#f3e8ff}.semester-stat-card:nth-child(4) .cm-kpi-icon{color:#c2410c;background:#fff1e8}
-.semester-directory-card{overflow:hidden;border:1px solid #dce8f2;border-radius:15px;background:#fff;box-shadow:0 10px 30px rgba(6,46,89,.07)}.semester-directory-heading{display:flex;padding:12px 16px;align-items:center;gap:10px;border-bottom:1px solid #e3edf5;background:#fff}.semester-directory-heading i{display:grid;width:30px;height:30px;place-items:center;border-radius:8px;color:var(--sem-blue);background:#e8f3fc}.semester-directory-heading h2,.semester-directory-heading p{margin:0}.semester-directory-heading h2{color:#062e59;font-size:1rem}.semester-directory-heading p{margin-top:2px;color:#6c84a0;font-size:.7rem}
-.semester-filters{display:grid;grid-template-columns:minmax(200px,1.55fr) repeat(4,minmax(110px,1fr)) auto;gap:7px;padding:9px 12px;border-bottom:1px solid #e3edf5;background:#fbfdff}.semester-search,.semester-filters select,.semester-clear{height:36px;min-height:36px;border:1px solid #cbddeb;border-radius:8px;background:#fff}.semester-search{display:flex;min-width:0;padding:0 10px;align-items:center;gap:7px;color:#6c8499}.semester-search input{width:100%;min-width:0;height:32px;border:0;outline:0;color:var(--sem-text);background:transparent;font-size:.78rem}.semester-filters select{min-width:0;padding:0 10px;color:var(--sem-text);font-size:.73rem}.semester-clear{display:inline-flex;padding:0 10px;align-items:center;justify-content:center;gap:5px;color:#0968b0;font-size:.73rem;font-weight:700;white-space:nowrap}.semester-search:focus-within,.semester-filters select:focus{border-color:var(--sem-blue);outline:0;box-shadow:0 0 0 3px rgba(25,112,179,.12)}.semester-clear:hover{border-color:var(--sem-blue);background:#f2f8fd}
-.semester-table-wrapper{overflow:auto}.semester-table{width:100%;min-width:900px;border-collapse:collapse}.semester-table th,.semester-table td{padding:10px 12px;text-align:left;vertical-align:middle}.semester-table th{color:#fff;background:var(--sem-navy);font-size:.65rem;font-weight:800;letter-spacing:.075em;text-transform:uppercase}.semester-table td{border-bottom:1px solid #e5edf4;color:#345778;font-size:.78rem}.semester-table tbody tr{transition:background-color .16s}.semester-table tbody tr:hover{background:#f9fcff}.semester-table .current-row{background:#f5fbff;box-shadow:inset 3px 0 0 var(--sem-blue)}.semester-table td>strong,.semester-table td>small{display:block}.semester-table td>strong{color:#0b3e72;font-size:.84rem}.semester-table td>small{margin-top:4px;color:#728daa;font-size:.69rem}.semester-sort{display:inline-flex;align-items:center;gap:4px;border:0;padding:0;color:inherit;background:transparent;font:inherit;font-weight:inherit;text-transform:inherit}.semester-sort:hover{box-shadow:none;transform:none}.semester-sort:focus-visible{outline:2px solid #fff;outline-offset:3px}.semester-badge{display:inline-block;padding:5px 8px;border-radius:999px;font-size:.66rem;font-weight:800;white-space:nowrap}.semester-badge.status.active{color:#087443;background:#dff7ec}.semester-badge.status.inactive{color:#9b5710;background:#fff0d8}.semester-badge.timeline.current{color:#175cd3;background:#e5f1ff}.semester-badge.timeline.upcoming{color:#a15c00;background:#fff3d6}.semester-badge.timeline.completed,.semester-badge.timeline.not-scheduled{color:#64748b;background:#eef2f6}
-.semester-table tbody tr.semester-branch-start td{border-top:3px solid #9fc5df}
-.semester-row-actions{display:flex;align-items:center;gap:4px}.semester-row-actions button{display:inline-flex;min-width:30px;width:30px;height:30px;padding:0;align-items:center;justify-content:center;border:1px solid #c7dbe9;border-radius:7px;color:#0968b0;background:#fff;font-size:.68rem;font-weight:700}.semester-row-actions button:hover{border-color:var(--sem-blue);color:#0968b0;background:#f2f8fd}.semester-row-actions button:focus-visible{outline:3px solid rgba(25,112,179,.22);outline-offset:2px}.semester-row-actions .wide{width:auto;padding:0 8px;white-space:nowrap}
-.semester-pagination{display:flex;min-height:48px;padding:8px 14px;align-items:center;justify-content:space-between;gap:15px;border-top:1px solid #e5edf4;background:#fbfdff}.semester-pagination p{margin:0;color:#5e7897;font-size:.75rem;font-weight:600}.semester-pagination div{display:flex;align-items:center;gap:6px}.semester-pagination button{min-width:30px;height:30px;padding:4px 8px;border:1px solid #c7dbe9;border-radius:7px;color:#0968b0;background:#fff;font-size:.72rem;font-weight:700}.semester-pagination button:hover:not(:disabled):not(.active){border-color:var(--sem-blue);background:#f0f7fc}.semester-pagination button.active{border-color:var(--sem-blue);color:#fff;background:var(--sem-blue)}.semester-pagination button:disabled{cursor:not-allowed;opacity:.43}
-.semester-empty-state{display:grid;min-height:250px;padding:28px;place-items:center;align-content:center;text-align:center}.semester-empty-state>svg{width:34px;height:34px;color:#7ba9c8}.semester-empty-state h3{margin:10px 0 4px;color:#062e59;font-size:1rem}.semester-empty-state p{max-width:480px;margin:0 0 14px;color:var(--sem-muted);font-size:.78rem}
-.semester-overlay{position:fixed;inset:0;z-index:1000;display:flex;padding:20px;align-items:center;justify-content:center;background:rgba(8,24,43,.48);backdrop-filter:blur(6px)}.semester-form-panel,.semester-details-panel,.semester-confirm{position:relative;max-height:calc(100vh - 40px);overflow:auto;border:1px solid rgba(255,255,255,.7);border-radius:16px;color:var(--sem-text);background:#fff;box-shadow:0 24px 70px rgba(8,24,43,.28)}.semester-form-panel{width:min(100%,920px)}.semester-form-panel>header,.semester-details-panel>header{position:sticky;top:0;z-index:2;display:flex;padding:22px 26px 16px;align-items:flex-start;justify-content:space-between;border-bottom:1px solid #e8edf3;background:#fff}.semester-form-panel header p,.semester-details-panel header p{margin:0 0 4px;color:var(--sem-blue);font-size:.72rem;font-weight:800;letter-spacing:.09em;text-transform:uppercase}.semester-form-panel h2,.semester-details-panel h2,.semester-confirm h2{margin:0;color:#062e59;font-size:1.4rem}.semester-form-panel header span,.semester-details-panel header span{display:block;margin-top:6px;color:var(--sem-muted);font-size:.84rem}.semester-form-panel header>button,.semester-details-panel header>button{display:grid;width:34px;height:34px;padding:0;place-items:center;border:1px solid #c7dbe9;border-radius:8px;color:#0968b0;background:#fff}.semester-form-panel header>button:hover,.semester-details-panel header>button:hover{border-color:var(--sem-blue);background:#f2f8fd}
-.semester-form-panel form{padding:22px 26px 0}.semester-form-panel fieldset{margin:0 0 22px;padding:0;border:0}.semester-form-panel legend{width:100%;margin-bottom:15px;padding:0 0 10px;border-bottom:1px solid #e1ecf4;color:#062e59;font-size:.78rem;font-weight:800;letter-spacing:.06em;text-transform:uppercase}.semester-form-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px 18px}.semester-form-grid.two{grid-template-columns:repeat(2,minmax(0,1fr))}.semester-field{display:grid;align-content:start;gap:7px;color:var(--sem-text);font-size:.86rem;font-weight:700}.semester-field b{color:#d92d20;font-weight:800}.semester-field input,.semester-field select{width:100%;height:43px;padding:0 12px;border:1px solid #c7d7e7;border-radius:8px;outline:0;color:var(--sem-text);background:#fff;font-size:.86rem}.semester-field input:focus,.semester-field select:focus{border-color:#1471b3;box-shadow:0 0 0 3px rgba(25,118,184,.13)}.semester-field.invalid>span{color:#8f1d18}.semester-field.invalid input,.semester-field.invalid select,.semester-field input[aria-invalid=true],.semester-field select[aria-invalid=true]{border-color:#d92d20;background:#fffafa;box-shadow:0 0 0 3px rgba(217,45,32,.1)}.semester-field.invalid input:focus,.semester-field.invalid select:focus{box-shadow:0 0 0 3px rgba(217,45,32,.16)}.semester-field small[role=alert]{display:flex;min-height:16px;align-items:flex-start;margin:0;color:#b42318;font-size:.76rem;font-weight:650;line-height:1.35}.semester-field small[role=alert]::before{margin-right:4px;content:'!';font-weight:900}.semester-form-error{margin:12px 0 0;padding:10px 12px;border:1px solid #fecdca;border-radius:8px;color:#b42318;background:#fffbfa;font-size:.78rem;font-weight:650}.semester-form-error::before{margin-right:6px;content:'!';font-weight:900}.semester-form-panel footer,.semester-details-panel footer,.semester-confirm footer{display:flex;justify-content:flex-end;gap:8px}.semester-form-panel footer{position:sticky;bottom:0;margin:4px -26px 0;padding:15px 26px;border-top:1px solid #e5edf4;background:#fbfdff}.semester-form-panel footer>button:not(.semester-primary),.semester-details-panel footer>button:not(.semester-primary),.semester-confirm footer>button:not(.semester-primary):not(.semester-danger){min-height:40px;padding:0 15px;border:1px solid #c7dbe9;border-radius:8px;color:#0968b0;background:#fff;font-size:.84rem;font-weight:700}.semester-form-panel footer>button:hover:not(.semester-primary),.semester-details-panel footer>button:hover:not(.semester-primary){border-color:var(--sem-blue);background:#f2f8fd}
-.semester-structure-preview{margin-top:22px;padding:16px;border:1px solid #cfe0ed;border-radius:10px;background:#f7fbfe}.semester-structure-preview h3{margin:0 0 12px;color:#062e59;font-size:.9rem}.semester-structure-preview>div{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.semester-structure-preview span{display:flex;padding:10px 12px;align-items:center;justify-content:space-between;border:1px solid #dce9f2;border-radius:8px;color:#345778;background:#fff;font-size:.78rem}.semester-structure-preview span b{color:#0b3e72}
-.semester-details-panel{width:min(680px,100%)}.semester-details-grid{display:grid;grid-template-columns:repeat(2,1fr);padding:9px 22px 18px}.semester-details-grid>div{padding:13px 10px;border-bottom:1px solid #e1ecf4}.semester-details-grid span,.semester-details-grid strong{display:block}.semester-details-grid span{color:#7890aa;font-size:.68rem;font-weight:750;text-transform:uppercase}.semester-details-grid strong{margin-top:4px;color:var(--sem-text);font-size:.82rem}.semester-details-panel footer{padding:15px 24px;border-top:1px solid #e5edf4;background:#fbfdff}.semester-confirm{width:min(430px,100%);padding:25px;text-align:center}.semester-confirm>i{display:grid;width:48px;height:48px;margin:0 auto 13px;place-items:center;border-radius:50%;color:#b54708;background:#fff2d6;font-style:normal;font-size:1.3rem;font-weight:850}.semester-confirm h2{font-size:1.2rem}.semester-confirm p{margin:8px 0 20px;color:var(--sem-muted);font-size:.8rem;line-height:1.55}.semester-confirm p strong{color:var(--sem-text)}.semester-confirm .semester-warning{padding:10px;border:1px solid #fedf89;border-radius:8px;color:#934b08;background:#fffaeb}.semester-confirm footer{justify-content:center}
-.semester-toast{position:fixed;top:22px;right:22px;z-index:1100;display:flex;max-width:360px;padding:11px 10px 11px 13px;align-items:center;gap:8px;border:1px solid #9ddbbb;border-radius:9px;color:#087443;background:#effbf4;box-shadow:0 14px 35px rgba(8,52,89,.18);font-size:.78rem;font-weight:750}.semester-toast button{display:grid;width:25px;height:25px;padding:0;place-items:center;border:0;border-radius:5px;color:inherit;background:transparent}
-@media(max-width:1180px){.semester-stats{grid-template-columns:repeat(3,1fr)}.semester-filters{grid-template-columns:repeat(3,minmax(120px,1fr))}.semester-search{grid-column:span 2}}
-@media(max-width:760px){.semester-page-header{min-height:0;flex-direction:column}.semester-page-header .semester-primary{width:100%}.semester-stats,.semester-filters{grid-template-columns:1fr 1fr}.semester-search{grid-column:1/-1}.semester-pagination{align-items:flex-start;flex-direction:column}.semester-overlay{padding:12px}.semester-form-panel{max-height:calc(100dvh - 24px);border-radius:13px}.semester-form-panel>header{padding:18px}.semester-form-panel form{padding:18px 18px 0}.semester-form-panel footer{margin-inline:-18px;padding:14px 18px}.semester-form-grid,.semester-form-grid.two,.semester-details-grid{grid-template-columns:1fr}}
-@media(max-width:480px){.semester-stats,.semester-filters{grid-template-columns:1fr}.semester-search{grid-column:auto}.semester-pagination div{max-width:100%;overflow:auto}.semester-form-panel footer{flex-direction:column-reverse}.semester-form-panel footer button{width:100%}}
+.semester-management {
+  --sem-navy: var(--brand-navy, #154273);
+  --sem-blue: var(--brand-blue, #1970b3);
+  --sem-blue-hover: var(--brand-blue-hover, #095e9f);
+  --sem-text: var(--text-primary, #123962);
+  --sem-muted: var(--text-muted, #687f96);
+  --sem-line: var(--border, #d7e4ee);
+  --sem-soft: var(--surface-soft, #edf5fb);
+  display: grid;
+  width: 100%;
+  gap: 14px;
+  padding: 0 0 12px;
+  color: var(--sem-text);
+}
 
-.semester-badge.status.inactive{font-size:0}.semester-badge.status.inactive::after{content:'● Deactive';font-size:.66rem}
-.semester-pagination{justify-content:center!important}.semester-pagination>p{display:block!important;order:2}.semester-pagination>div{display:contents}.semester-pagination>div>button:first-child{order:1}.semester-pagination>div>button:last-child{order:3}.semester-pagination>div>button:not(:first-child):not(:last-child){display:none}
-.semester-field:has(input[name="semesterName"]){display:none}
-.semester-field:has(input[name="yearNumber"]){display:none}
-.semester-table tbody tr.semester-branch-start td{border-top:0!important}
+.semester-page-header {
+  display: flex;
+  min-height: 58px;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 20px;
+}
+
+.semester-breadcrumb {
+  margin: 0 0 4px;
+  color: var(--sem-blue);
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.semester-breadcrumb span {
+  padding: 0 5px;
+  color: #8ba0b4;
+}
+
+.semester-page-header h1 {
+  margin: 0;
+  color: var(--sem-navy);
+  font-size: 2rem;
+  line-height: 1.18;
+}
+
+.semester-page-header p:last-child {
+  max-width: 680px;
+  margin: 7px 0 0;
+  color: var(--sem-muted);
+  font-size: 0.96rem;
+  line-height: 1.45;
+}
+
+.management-header-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.compact-summary {
+  display: flex;
+  align-items: stretch;
+  gap: 0;
+  padding: 6px 8px;
+  border: 1px solid var(--sem-line);
+  border-radius: 9px;
+  background: var(--surface, #fff);
+  box-shadow: var(--shadow-sm, 0 4px 14px rgba(6, 46, 89, 0.05));
+}
+
+.compact-summary__item {
+  display: grid;
+  min-width: 72px;
+  padding: 8px 12px;
+  place-items: center;
+  border-right: 1px solid var(--sem-line);
+  text-align: center;
+}
+
+.compact-summary__item:last-child {
+  border-right: 0;
+}
+
+.compact-summary__item strong {
+  color: var(--text-primary, #102f49);
+  font-size: 1.05rem;
+  line-height: 1.1;
+}
+
+.compact-summary__item small {
+  margin-top: 3px;
+  color: var(--sem-muted);
+  font-size: 0.62rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.compact-summary__item--active strong { color: #087443; }
+.compact-summary__item--upcoming strong { color: #a15c00; }
+.compact-summary__item--completed strong { color: #64748b; }
+
+.semester-primary,
+.semester-row-actions a,
+.semester-row-actions button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  min-height: 38px;
+  border: 0;
+  border-radius: 8px;
+  color: #fff;
+  background: var(--sem-blue);
+  box-shadow: 0 4px 10px rgba(25, 112, 179, 0.18);
+  font-size: 0.82rem;
+  font-weight: 800;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.semester-primary {
+  padding: 0 15px;
+}
+
+.semester-primary:hover {
+  background: var(--sem-blue-hover);
+  color: #fff;
+}
+
+.semester-primary.secondary {
+  border: 1px solid var(--sem-line);
+  color: var(--sem-blue);
+  background: var(--surface, #fff);
+  box-shadow: none;
+}
+
+.semester-primary.secondary:hover {
+  border-color: var(--sem-blue);
+  background: #f2f8fd;
+  color: var(--sem-blue);
+}
+
+.semester-primary:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.semester-directory-card,
+.semester-workflow-main,
+.semester-live-preview,
+.semester-form-card {
+  border: 1px solid var(--sem-line);
+  border-radius: 14px;
+  background: var(--surface, #fff);
+  box-shadow: 0 10px 30px rgba(6, 46, 89, 0.07);
+}
+
+.semester-directory-card {
+  overflow: hidden;
+}
+
+.semester-directory-heading {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 13px 16px;
+  border-bottom: 1px solid var(--sem-line);
+  background: var(--surface, #fff);
+}
+
+.semester-directory-heading i {
+  display: grid;
+  width: 30px;
+  height: 30px;
+  place-items: center;
+  border-radius: 8px;
+  color: var(--sem-blue);
+  background: #e8f3fc;
+}
+
+.semester-directory-heading h2,
+.semester-directory-heading p {
+  margin: 0;
+}
+
+.semester-directory-heading h2 {
+  color: var(--sem-navy);
+  font-size: 1rem;
+}
+
+.semester-directory-heading p {
+  margin-top: 2px;
+  color: var(--sem-muted);
+  font-size: 0.72rem;
+}
+
+.semester-filters {
+  display: grid;
+  grid-template-columns: minmax(220px, 1.65fr) repeat(4, minmax(120px, 1fr)) auto;
+  gap: 8px;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--sem-line);
+  background: var(--surface-soft, #fbfdff);
+}
+
+.semester-search,
+.semester-filters select,
+.semester-clear {
+  min-height: 37px;
+  border: 1px solid #cbddeb;
+  border-radius: 8px;
+  background: var(--surface, #fff);
+}
+
+.semester-search {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 7px;
+  padding: 0 10px;
+  color: #6c8499;
+}
+
+.semester-search input {
+  width: 100%;
+  min-width: 0;
+  height: 34px;
+  border: 0;
+  outline: 0;
+  color: var(--sem-text);
+  background: transparent;
+  font-size: 0.78rem;
+}
+
+.semester-filters select {
+  min-width: 0;
+  padding: 0 10px;
+  color: var(--sem-text);
+  font-size: 0.74rem;
+}
+
+.semester-clear {
+  padding: 0 10px;
+  color: var(--sem-blue);
+  font-size: 0.73rem;
+  font-weight: 800;
+}
+
+.semester-table-wrapper {
+  overflow: auto;
+}
+
+.semester-table {
+  width: 100%;
+  min-width: 980px;
+  border-collapse: collapse;
+}
+
+.semester-table th,
+.semester-table td {
+  padding: 11px 12px;
+  text-align: left;
+  vertical-align: middle;
+}
+
+.semester-table th {
+  color: #fff;
+  background: var(--sem-navy);
+  font-size: 0.65rem;
+  font-weight: 850;
+  letter-spacing: 0.075em;
+  text-transform: uppercase;
+}
+
+.semester-table td {
+  border-bottom: 1px solid var(--sem-line);
+  color: var(--text-secondary, #345778);
+  background: var(--surface, #fff);
+  font-size: 0.78rem;
+}
+
+.semester-table tbody tr:hover td {
+  background: var(--surface-soft, #f9fcff);
+}
+
+.semester-table td > strong,
+.semester-table td > small {
+  display: block;
+}
+
+.semester-table td > strong {
+  color: var(--text-primary, #0b3e72);
+  font-size: 0.84rem;
+}
+
+.semester-table td > small {
+  margin-top: 4px;
+  color: var(--sem-muted);
+  font-size: 0.69rem;
+}
+
+.semester-badge {
+  display: inline-flex;
+  align-items: center;
+  min-height: 24px;
+  padding: 4px 9px;
+  border-radius: 999px;
+  font-size: 0.66rem;
+  font-weight: 850;
+  white-space: nowrap;
+}
+
+.semester-badge.status.active { color: #087443; background: #dff7ec; }
+.semester-badge.status.upcoming { color: #a15c00; background: #fff3d6; }
+.semester-badge.status.completed { color: #64748b; background: #eef2f6; }
+.semester-badge.status.inactive { color: #9b5710; background: #fff0d8; }
+
+.semester-row-actions {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.semester-row-actions a,
+.semester-row-actions button {
+  width: 31px;
+  min-height: 31px;
+  padding: 0;
+  border: 1px solid #c7dbe9;
+  color: var(--sem-blue);
+  background: var(--surface, #fff);
+  box-shadow: none;
+}
+
+.semester-row-actions a:hover,
+.semester-row-actions button:hover {
+  border-color: var(--sem-blue);
+  background: #f2f8fd;
+}
+
+.semester-pagination {
+  display: flex;
+  min-height: 49px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 14px;
+  border-top: 1px solid var(--sem-line);
+  background: var(--surface-soft, #fbfdff);
+}
+
+.semester-pagination p {
+  margin: 0;
+  color: var(--sem-muted);
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+.semester-pagination div {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.semester-pagination button {
+  min-width: 32px;
+  height: 32px;
+  padding: 4px 9px;
+  border: 1px solid #c7dbe9;
+  border-radius: 7px;
+  color: var(--sem-blue);
+  background: var(--surface, #fff);
+  font-size: 0.72rem;
+  font-weight: 800;
+}
+
+.semester-pagination button.active {
+  color: #fff;
+  background: var(--sem-blue);
+}
+
+.semester-pagination button:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
+.semester-empty-state {
+  display: grid;
+  min-height: 245px;
+  place-items: center;
+  align-content: center;
+  gap: 10px;
+  padding: 28px;
+  text-align: center;
+}
+
+.semester-empty-state svg {
+  width: 34px;
+  height: 34px;
+  color: #7ba9c8;
+}
+
+.semester-empty-state h3 {
+  margin: 0;
+  color: var(--sem-navy);
+  font-size: 1rem;
+}
+
+.semester-workflow {
+  display: grid;
+  grid-template-columns: minmax(0, 1.9fr) minmax(300px, 0.9fr);
+  align-items: start;
+  gap: 16px;
+}
+
+.semester-workflow-main,
+.semester-live-preview {
+  padding: 18px;
+}
+
+.semester-stepper {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+
+.semester-stepper button {
+  min-height: 38px;
+  padding: 0 13px;
+  border: 1px solid var(--sem-line);
+  border-radius: 999px;
+  color: var(--sem-muted);
+  background: var(--surface, #fff);
+  font-size: 0.76rem;
+  font-weight: 850;
+}
+
+.semester-stepper button.active {
+  border-color: var(--sem-blue);
+  color: var(--sem-blue);
+  background: #e8f3fc;
+}
+
+.semester-stepper button:disabled {
+  opacity: 0.5;
+}
+
+.semester-form-card {
+  padding: 20px;
+  box-shadow: none;
+}
+
+.semester-form-card > header,
+.semester-live-preview > header {
+  margin-bottom: 16px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--sem-line);
+}
+
+.semester-form-card header span,
+.semester-live-preview header span {
+  display: block;
+  margin-bottom: 4px;
+  color: var(--sem-blue);
+  font-size: 0.68rem;
+  font-weight: 850;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.semester-form-card h2,
+.semester-live-preview h2 {
+  margin: 0;
+  color: var(--sem-navy);
+  font-size: 1.12rem;
+}
+
+.semester-form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px 18px;
+}
+
+.semester-field {
+  display: grid;
+  align-content: start;
+  gap: 7px;
+  color: var(--sem-text);
+  font-size: 0.86rem;
+  font-weight: 800;
+}
+
+.semester-field input,
+.semester-field select,
+.semester-field .searchable-select__trigger {
+  width: 100%;
+  min-height: 43px;
+  border: 1px solid #c7d7e7;
+  border-radius: 8px;
+  color: var(--sem-text);
+  background: var(--surface, #fff);
+  font-size: 0.86rem;
+}
+
+.semester-field input {
+  padding: 0 12px;
+}
+
+.semester-field input[readonly] {
+  color: var(--text-secondary, #345778);
+  background: var(--surface-soft, #f6f9fc);
+}
+
+.semester-form-error,
+.semester-config-warning {
+  margin: 0 0 14px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  font-size: 0.78rem;
+  font-weight: 750;
+  line-height: 1.45;
+}
+
+.semester-form-error {
+  border: 1px solid #fecdca;
+  color: #b42318;
+  background: #fffbfa;
+}
+
+.semester-config-warning {
+  border: 1px solid #fedf89;
+  color: #934b08;
+  background: #fffaeb;
+}
+
+.semester-workflow-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 16px;
+}
+
+.semester-structure-summary {
+  margin-bottom: 16px;
+}
+
+.semester-generated-list,
+.semester-preview-list {
+  display: grid;
+  gap: 8px;
+}
+
+.semester-generated-item,
+.semester-preview-list > div {
+  display: grid;
+  grid-template-columns: minmax(150px, 1fr) minmax(240px, 1.2fr) auto;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  border: 1px solid var(--sem-line);
+  border-radius: 9px;
+  background: var(--surface, #fff);
+}
+
+.semester-generated-item strong,
+.semester-generated-item span,
+.semester-preview-list span {
+  display: block;
+}
+
+.semester-generated-item strong {
+  color: var(--sem-navy);
+}
+
+.semester-generated-item span {
+  margin-top: 2px;
+  color: var(--sem-muted);
+  font-size: 0.74rem;
+}
+
+.semester-date-pair {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.semester-date-pair input {
+  min-height: 36px;
+  padding: 0 8px;
+  border: 1px solid #c7d7e7;
+  border-radius: 7px;
+  color: var(--sem-text);
+  background: var(--surface, #fff);
+}
+
+.semester-live-preview {
+  position: sticky;
+  top: 16px;
+}
+
+.semester-live-preview p {
+  margin: 0;
+  color: var(--sem-muted);
+  font-size: 0.84rem;
+  line-height: 1.55;
+}
+
+.semester-live-preview .cm-info-rows {
+  grid-template-columns: 1fr;
+  margin-bottom: 14px;
+}
+
+.semester-live-preview .cm-info-row {
+  border-right: 0;
+}
+
+.semester-preview-list > div {
+  grid-template-columns: 1fr auto;
+  padding: 9px 10px;
+}
+
+.semester-preview-year {
+  display: block;
+  margin-top: 4px;
+  color: var(--sem-muted);
+  font-size: 0.72rem;
+}
+
+.semester-toast {
+  position: fixed;
+  top: 22px;
+  right: 22px;
+  z-index: 1400;
+  display: flex;
+  max-width: 380px;
+  align-items: center;
+  gap: 8px;
+  padding: 11px 10px 11px 13px;
+  border: 1px solid #9ddbbb;
+  border-radius: 9px;
+  color: #087443;
+  background: #effbf4;
+  box-shadow: 0 14px 35px rgba(8, 52, 89, 0.18);
+  font-size: 0.78rem;
+  font-weight: 800;
+}
+
+.semester-toast button {
+  display: grid;
+  width: 25px;
+  height: 25px;
+  padding: 0;
+  place-items: center;
+  border: 0;
+  border-radius: 5px;
+  color: inherit;
+  background: transparent;
+}
+
+.semester-management .cm-profile-card {
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+  background: #fff;
+  overflow: hidden;
+  box-shadow: 0 4px 16px rgba(15, 23, 42, 0.04);
+}
+
+.semester-management .cm-profile-banner {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  padding: 26px 30px;
+  background: linear-gradient(135deg, #0d3761 0%, #174d82 100%);
+  color: #fff;
+}
+
+.semester-management .cm-profile-avatar-wrap {
+  flex-shrink: 0;
+}
+
+.semester-management .cm-profile-placeholder {
+  display: grid;
+  width: 72px;
+  height: 72px;
+  place-items: center;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-radius: 14px;
+  color: #fff;
+  background: var(--brand-blue, #1e5a96);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.semester-management .cm-profile-placeholder svg {
+  width: 32px;
+  height: 32px;
+}
+
+.semester-management .cm-profile-header-info {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.semester-management .cm-profile-badges {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.semester-management .cm-badge,
+.semester-management .cm-status-badge {
+  display: inline-flex;
+  align-items: center;
+  min-height: 26px;
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-size: 0.78rem;
+  font-weight: 800;
+  line-height: 1.2;
+}
+
+.semester-management .cm-badge-code {
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: #fff;
+  background: rgba(255, 255, 255, 0.18);
+}
+
+.semester-management .cm-badge-type {
+  color: #0d3761;
+  background: #fff;
+}
+
+.semester-management .cm-status-badge {
+  border-radius: 999px;
+  color: #087443;
+  background: #dff7ec;
+  text-transform: uppercase;
+}
+
+.semester-management .cm-status-badge.upcoming { color: #a15c00; background: #fff3d6; }
+.semester-management .cm-status-badge.completed { color: #64748b; background: #eef2f6; }
+.semester-management .cm-status-badge.inactive { color: #9b5710; background: #fff0d8; }
+
+.semester-management .cm-profile-title {
+  margin: 2px 0 0;
+  color: #fff;
+  font-size: 1.55rem;
+  font-weight: 700;
+  line-height: 1.25;
+}
+
+.semester-management .cm-profile-subtitle {
+  margin: 0;
+  color: #fff;
+  font-size: 0.92rem;
+}
+
+.semester-management .cm-profile-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 16px;
+  padding: 24px 30px;
+}
+
+.semester-management .cm-info-card {
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 22px;
+  background: #f8fafc;
+}
+
+.semester-management .cm-info-card-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 18px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid #e2e8f0;
+  color: var(--brand-blue, #1e5a96);
+}
+
+.semester-management .cm-info-card-header h2 {
+  margin: 0;
+  color: var(--brand-navy, #0f172a);
+  font-size: 1.05rem;
+  font-weight: 700;
+}
+
+.semester-management .cm-info-rows {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0;
+  overflow: hidden;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  background: #fff;
+}
+
+.semester-management .cm-info-row {
+  display: grid;
+  min-height: 72px;
+  align-content: center;
+  gap: 4px;
+  padding: 12px 14px;
+  border-right: 1px solid #e2e8f0;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.semester-management .cm-info-row:nth-child(3n) {
+  border-right: 0;
+}
+
+.semester-management .cm-info-label {
+  color: #40566f;
+  font-size: 0.75rem;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.semester-management .cm-info-val {
+  color: #102f49;
+  font-size: 0.95rem;
+  font-weight: 700;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+
+.semester-profile-page {
+  width: min(1120px, 100%);
+}
+
+:root[data-theme="dark"] .semester-management {
+  --sem-text: var(--text-primary, #e5edf7);
+  --sem-muted: var(--text-muted, #9fb0c3);
+}
+
+:root[data-theme="dark"] .semester-directory-card,
+:root[data-theme="dark"] .semester-workflow-main,
+:root[data-theme="dark"] .semester-live-preview,
+:root[data-theme="dark"] .semester-form-card,
+:root[data-theme="dark"] .semester-table td,
+:root[data-theme="dark"] .semester-management .cm-profile-card,
+:root[data-theme="dark"] .semester-management .cm-info-rows,
+:root[data-theme="dark"] .semester-management .cm-info-row {
+  border-color: var(--border, #26384d);
+  background: var(--surface-raised, #111827);
+}
+
+:root[data-theme="dark"] .semester-management .cm-info-card,
+:root[data-theme="dark"] .semester-filters,
+:root[data-theme="dark"] .semester-pagination {
+  border-color: var(--border, #26384d);
+  background: var(--surface, #0f172a);
+}
+
+:root[data-theme="dark"] .semester-management .cm-info-val,
+:root[data-theme="dark"] .semester-table td > strong,
+:root[data-theme="dark"] .semester-form-card h2,
+:root[data-theme="dark"] .semester-live-preview h2 {
+  color: var(--text-primary, #e5edf7);
+}
+
+:root[data-theme="dark"] .semester-management .cm-info-label {
+  color: var(--text-muted, #9fb0c3);
+}
+
+@media (max-width: 1180px) {
+  .semester-filters {
+    grid-template-columns: repeat(3, minmax(120px, 1fr));
+  }
+
+  .semester-search {
+    grid-column: span 2;
+  }
+}
+
+@media (max-width: 900px) {
+  .semester-workflow {
+    grid-template-columns: 1fr;
+  }
+
+  .semester-live-preview {
+    position: static;
+  }
+}
+
+@media (max-width: 760px) {
+  .semester-page-header {
+    flex-direction: column;
+  }
+
+  .management-header-actions,
+  .semester-primary {
+    width: 100%;
+  }
+
+  .compact-summary {
+    width: 100%;
+    overflow-x: auto;
+  }
+
+  .semester-filters,
+  .semester-form-grid,
+  .semester-generated-item {
+    grid-template-columns: 1fr;
+  }
+
+  .semester-search {
+    grid-column: auto;
+  }
+
+  .semester-date-pair {
+    grid-template-columns: 1fr;
+  }
+
+  .semester-pagination {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .semester-management .cm-profile-banner {
+    align-items: flex-start;
+    padding: 20px;
+  }
+
+  .semester-management .cm-profile-placeholder {
+    width: 56px;
+    height: 56px;
+  }
+
+  .semester-management .cm-profile-grid {
+    padding: 16px;
+  }
+
+  .semester-management .cm-info-card {
+    padding: 16px;
+  }
+
+  .semester-management .cm-info-rows {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .semester-management .cm-info-row:nth-child(3n) {
+    border-right: 1px solid #e2e8f0;
+  }
+
+  .semester-management .cm-info-row:nth-child(2n) {
+    border-right: 0;
+  }
+}
+
+@media (max-width: 480px) {
+  .semester-page-header h1 {
+    font-size: 1.65rem;
+  }
+
+  .semester-stepper {
+    flex-direction: column;
+  }
+
+  .semester-workflow-actions {
+    flex-direction: column-reverse;
+  }
+
+  .semester-management .cm-profile-banner {
+    flex-direction: column;
+  }
+
+  .semester-management .cm-info-rows {
+    grid-template-columns: 1fr;
+  }
+
+  .semester-management .cm-info-row {
+    border-right: 0;
+  }
+}

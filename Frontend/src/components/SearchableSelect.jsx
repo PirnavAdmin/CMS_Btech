@@ -106,16 +106,6 @@ export default function SearchableSelect({
       }
     }
 
-    const handleScroll = (event) => {
-      const target = event.target
-      const insideMenu = menuRef.current && (menuRef.current.contains(target) || target === menuRef.current)
-      const insideTrigger = wrapperRef.current && wrapperRef.current.contains(target)
-
-      if (!insideMenu && !insideTrigger) {
-        setOpen(false)
-      }
-    }
-
     const handleResize = () => setOpen(false)
     const handleKeyDown = (event) => {
       if (event.key === 'Escape') {
@@ -128,13 +118,11 @@ export default function SearchableSelect({
     }
 
     document.addEventListener('mousedown', handlePointerDown)
-    document.addEventListener('scroll', handleScroll, true)
     window.addEventListener('resize', handleResize)
     document.addEventListener('keydown', handleKeyDown)
 
     return () => {
       document.removeEventListener('mousedown', handlePointerDown)
-      document.removeEventListener('scroll', handleScroll, true)
       window.removeEventListener('resize', handleResize)
       document.removeEventListener('keydown', handleKeyDown)
     }

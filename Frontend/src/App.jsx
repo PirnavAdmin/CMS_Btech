@@ -111,6 +111,9 @@ export default function App() {
           <Route path="/academic-year-management" element={<AcademicYearManagement />} />
           <Route path="/department-management" element={<DepartmentManagement />} />
           <Route path="/semester-management" element={<SemesterManagement />} />
+          <Route path="/semester-management/add" element={<SemesterManagement mode="form" />} />
+          <Route path="/semester-management/:id" element={<SemesterManagement mode="details" />} />
+          <Route path="/semester-management/:id/edit" element={<SemesterManagement mode="edit" />} />
           <Route path="/section-management" element={<SectionManagement />} />
         </Route>
 
