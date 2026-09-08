@@ -39,8 +39,9 @@ export default function SearchableSelect({
 }) {
   const [open, setOpen] = useState(false)
   const [query, setQuery] = useState('')
-  const [menuStyle, setMenuStyle] = useState({ top: 0, left: 0, width: 0 })
+  const [menuStyle, setMenuStyle] = useState({ top: 0, left: 0, width: 0, maxHeight: 280 })
   const wrapperRef = useRef(null)
+  const menuRef = useRef(null)
   const triggerRef = useRef(null)
   const inputRef = useRef(null)
   const id = useMemo(() => `searchable-select-${Math.random().toString(36).slice(2, 9)}`, [])
@@ -51,7 +52,17 @@ export default function SearchableSelect({
   )
 
   const selectedOption = useMemo(
-    () => normalizedOptions.find((option) => String(option.value) === String(value ?? '')) || null,
+    () => normalizedOptions.find((option) => {
+      const candidates = [
+        option.value,
+        option.raw?.value,
+        option.raw?.id,
+        option.raw?.courseId,
+        option.raw?.code,
+        option.raw?.courseCode,
+      ]
+      return candidates.some((candidate) => String(candidate ?? '') === String(value ?? ''))
+    }) || null,
     [normalizedOptions, value],
   )
 
@@ -87,12 +98,24 @@ export default function SearchableSelect({
     if (!open) return undefined
 
     const handlePointerDown = (event) => {
-      if (wrapperRef.current && !wrapperRef.current.contains(event.target)) {
+      const target = event.target
+      const insideMenu = menuRef.current && menuRef.current.contains(target)
+      const insideTrigger = wrapperRef.current && wrapperRef.current.contains(target)
+      if (!insideMenu && !insideTrigger) {
         setOpen(false)
       }
     }
 
-    const handleScroll = () => setOpen(false)
+    const handleScroll = (event) => {
+      const target = event.target
+      const insideMenu = menuRef.current && (menuRef.current.contains(target) || target === menuRef.current)
+      const insideTrigger = wrapperRef.current && wrapperRef.current.contains(target)
+
+      if (!insideMenu && !insideTrigger) {
+        setOpen(false)
+      }
+    }
+
     const handleResize = () => setOpen(false)
     const handleKeyDown = (event) => {
       if (event.key === 'Escape') {
@@ -126,12 +149,11 @@ export default function SearchableSelect({
   const handleSelect = (next) => {
     setOpen(false)
     setQuery('')
-    onChange?.(next.value)
+    const selectedValue = next?.raw?.value ?? next?.raw?.id ?? next?.raw?.courseId ?? next?.value ?? next?.id ?? next?.courseId ?? ''
+    onChange?.(selectedValue)
   }
 
-  const triggerLabel = selectedOption
-    ? `${selectedOption.code ? `${selectedOption.code} — ` : ''}${selectedOption.label}`
-    : placeholder
+  const triggerLabel = selectedOption ? selectedOption.label : placeholder
 
   const handleKeyDown = (event) => {
     if (disabled) return
@@ -146,7 +168,7 @@ export default function SearchableSelect({
   }
 
   const menu = open && !disabled ? createPortal(
-    <div id={id} className="searchable-select__menu" role="listbox" aria-label={label || 'Options'} style={{ position: 'fixed', top: menuStyle.top, left: menuStyle.left, width: menuStyle.width, maxHeight: menuStyle.maxHeight, zIndex: 1050 }}>
+    <div ref={menuRef} id={id} className="searchable-select__menu" role="listbox" aria-label={label || 'Options'} style={{ position: 'fixed', top: menuStyle.top, left: menuStyle.left, width: menuStyle.width, maxHeight: menuStyle.maxHeight, zIndex: 1050 }}>
       <label className="searchable-select__search">
         <FiSearch aria-hidden="true" />
         <input
@@ -173,7 +195,8 @@ export default function SearchableSelect({
                 aria-selected={active}
                 onClick={() => handleSelect(option)}
               >
-                <span className="searchable-select__option-label">{option.code ? `${option.code} — ${option.label}` : option.label}</span>
+                <span className="searchable-select__option-label">{option.label}</span>
+                {option.code && <span className="searchable-select__option-code">{option.code}</span>}
               </button>
             )
           })

@@ -1,70 +1,498 @@
-import { cloneElement, useEffect, useMemo, useState } from 'react'
+import { cloneElement, useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { FiAlertCircle, FiArrowLeft, FiCheckCircle, FiEdit2, FiEye, FiFilter, FiGitBranch, FiLayers, FiPlus, FiSearch, FiTarget, FiToggleLeft, FiToggleRight, FiUsers } from 'react-icons/fi'
 import DashboardLayout from '../../layouts/DashboardLayout'
 import FilterPanel from '../../components/FilterPanel'
 import SearchableSelect from '../../components/SearchableSelect'
 import TablePagination, { PAGE_SIZE } from '../../components/TablePagination'
-import { branchApi, courseApi, departmentApi } from '../../api/apiEndpoints'
+import CompactSummary from '../../components/CompactSummary'
+import { academicYearApi, branchApi, courseApi } from '../../api/apiEndpoints'
 import './Branch.css'
 
-const blank={departmentId:'',courseId:'',name:'',code:'',shortName:'',branchType:'Core',intakeCapacity:'',status:''}
-const isBtech=c=>!c.type||/undergraduate|\bug\b|b\.?\s*tech/i.test(String(c.type))
-const listFrom=response=>{const data=response?.data??response;return Array.isArray(data)?data:Array.isArray(data?.items)?data.items:Array.isArray(data?.data)?data.data:[]}
-const isJunkDepartment = (name) => {
-  if (!name || name.length < 3) return true
-  const lower = String(name || '').toLowerCase().trim()
-  if (['sfdg', 'sdffgg', 'cse', 'select department', 'test department redmark'].includes(lower)) return true
-  if (/[b-df-hj-np-tv-z]{5,}/i.test(lower)) return true
-  return false
+const blank = {
+  courseId: '',
+  courseCode: '',
+  branchName: '',
+  branchCode: '',
+  shortName: '',
+  branchType: 'Core',
+  specialization: '',
+  intakeCapacity: '',
+  status: 'Active',
+  academicYearId: '',
+  duration: '',
+  academicPattern: '',
+  totalSemesters: '',
+  description: '',
 }
 
-const mapDepartment=record=>({id:record.id??record.departmentId,name:String(record.departmentName??record.name??'').trim()})
-const dedupeDepartments=rows=>{const map=new Map();for(const raw of rows){const item=mapDepartment(raw),name=item.name;if(!item.id||!name||isJunkDepartment(name))continue;const key=name.toLowerCase();if(!map.has(key))map.set(key,{...item,name})}return Array.from(map.values())}
-const mapCourse=record=>({id:record.id??record.courseId,name:record.courseName??record.name??'',code:record.courseCode??record.code??'',shortName:record.courseShortName??record.shortName??'',type:record.courseType??record.type??'Undergraduate',departmentId:record.departmentId??record.department?.departmentId??record.department?.id??'',departmentName:record.departmentName??record.department?.departmentName??record.department?.name??(typeof record.department==='string'?record.department:'')})
-const coursesForDepartment=(courses,_departments,departmentId)=>courses.filter(course=>!departmentId||!course.departmentId||String(course.departmentId)===String(departmentId))
-const branchRecordFrom=response=>{let current=response;for(let depth=0;depth<5&&current&&typeof current==='object';depth+=1){if(current.branch&&typeof current.branch==='object')return current.branch;if(current.branchDetails&&typeof current.branchDetails==='object')return current.branchDetails;if(current.item&&typeof current.item==='object')return current.item;if(current.result&&typeof current.result==='object')return current.result;if(current.record&&typeof current.record==='object')return current.record;if(current.data&&typeof current.data==='object'){current=current.data;continue}break}return current&&typeof current==='object'?current:{}}
-export const normalize=input=>{const b=branchRecordFrom(input);return({...b,id:b.branchId??b.id,name:b.branchName??b.name??'',code:b.branchCode??b.code??'',shortName:b.branchShortName??b.shortName??'',courseId:b.courseId??'',courseName:b.courseName??b.course??'',departmentId:b.departmentId??'',departmentName:b.departmentName??b.department??'',branchType:b.branchType??b.type??(b.specialization?'Specialization':'Core'),specialization:b.specialization??'',duration:b.duration??b.durationYears??4,totalSemesters:b.totalSemesters??b.semesters??8,intakeCapacity:b.intakeCapacity??b.intake??0,startingAcademicYearId:b.startingAcademicYearId??b.academicYearId??'',startingAcademicYearName:b.startingAcademicYearName??b.academicYearName??'',status:Number(b.status)===0||b.status==='Inactive'||b.isActive===false?'Inactive':'Active'})}
-export const intake=b=>Number(b.intakeCapacity??b.intake??0), type=b=>b.branchType||(b.specialization?'Specialization':'Core')
-const Page=({children})=><DashboardLayout><main className="cm-page branch-management">{children}</main></DashboardLayout>
-const Header=({title,text,children})=><header className="cm-header"><div><h1>{title.replace(/^B\.Tech\s+/, '')}</h1><p>{text}</p></div><div className="cm-row-actions">{children}</div></header>
-const Badge=({value,kind='status'})=><span className={`branch-badge ${kind} ${String(value).toLowerCase()}`}>{kind==='status'&&<i/>}{kind==='status'&&value==='Inactive'?'Deactive':value}</span>
-const Notice=({children})=>{
- if(!children)return null 
- if(children?.kind==='confirm')return <div className="branch-confirm-backdrop" role="presentation" onMouseDown={event=>event.target===event.currentTarget&&children.cancel()}><section className="branch-confirm" role="alertdialog" aria-modal="true" aria-labelledby="branch-confirm-title" aria-describedby="branch-confirm-message"><div className="branch-confirm-icon"><FiAlertCircle/></div><h2 id="branch-confirm-title">{children.action} Branch?</h2><p id="branch-confirm-message">Are you sure you want to {children.action.toLowerCase()} <strong>{children.code}</strong>?</p><footer><button type="button" className="cm-button secondary" onClick={children.cancel}>Cancel</button><button type="button" className={`cm-button ${children.action==='Deactivate'?'danger':''}`} onClick={children.confirm}>{children.action} Branch</button></footer></section></div>
- const success=String(children).startsWith('Branch ')
- return <p className={success?'branch-api-success':'branch-api-error'} role={success?'status':'alert'}><FiAlertCircle/>{children}</p>
-}
-const fieldPlaceholders={'Branch Name *':'Enter branch name','Branch Code *':'Enter branch code, e.g. CSE','Short Name':'Enter short name','Approved Intake *':'Enter approved enrollment capacity'}
-const Field=({label,error,wide,children})=>{const required=label.trim().endsWith('*'),text=label.replace(/\s*\*$/,''),numeric=children.props.type==='number';return <label className={`cm-field ${wide?'wide':''}`}><span>{text}{required&&<b className="required-mark"> *</b>}</span>{cloneElement(children,{placeholder:children.props.placeholder||fieldPlaceholders[label],...(numeric?{onKeyDown:e=>{if(['-','+','e','E','.'].includes(e.key))e.preventDefault()},onPaste:e=>{if(/\D/.test(e.clipboardData.getData('text')))e.preventDefault()}}:{})})}{error&&<small className="cm-error">{error}</small>}</label>}
-const codeFor=name=>name.split(/\s+/).filter(Boolean).filter(w=>!['and','&','of','the'].includes(w.toLowerCase())).map(w=>w[0]).join('').slice(0,8).toUpperCase()
-
-function List(){
- const [params]=useSearchParams(),[departments,setDepartments]=useState([]),[courses,setCourses]=useState([]),[branches,setBranches]=useState([]),[loading,setLoading]=useState(true),[error,setError]=useState(''),[page,setPage]=useState(1)
- const [filters,setFilters]=useState({query:'',departmentId:'',courseId:params.get('course')||'',branchType:'',status:''})
- const load=async(courseId='')=>{setLoading(true);try{const [branchRows,departmentRows,courseRows]=await Promise.all([courseId?branchApi.getByCourse(courseId):branchApi.getAll(),departmentApi.getAll(),courseApi.getAll()]);setBranches(branchRows.map(normalize));setDepartments(dedupeDepartments(departmentRows));setCourses(courseRows.map(mapCourse).filter(isBtech));setError('')}catch(e){setError(e.message||'Unable to load branch data.')}finally{setLoading(false)}}
- useEffect(()=>{load(filters.courseId)},[filters.courseId])
- const dep=id=>departments.find(x=>String(x.id)===String(id))?.name||branches.find(x=>String(x.departmentId)===String(id))?.departmentName||'Not available',course=id=>courses.find(x=>String(x.id)===String(id))?.shortName||branches.find(x=>String(x.courseId)===String(id))?.courseName||'Not available'
- const rows=useMemo(()=>branches.filter(b=>`${b.name} ${b.code} ${b.departmentName||dep(b.departmentId)} ${b.courseName||course(b.courseId)}`.toLowerCase().includes(filters.query.toLowerCase())&&(!filters.departmentId||String(b.departmentId)===filters.departmentId)&&(!filters.courseId||String(b.courseId)===filters.courseId)&&(!filters.branchType||type(b)===filters.branchType)&&(!filters.status||b.status===filters.status)),[branches,filters])
- const totalPages=Math.max(1,Math.ceil(rows.length/PAGE_SIZE)),currentPage=Math.min(page,totalPages),pageRows=rows.slice((currentPage-1)*PAGE_SIZE,currentPage*PAGE_SIZE)
- useEffect(()=>setPage(1),[filters])
- const stats=[['Total Branches',branches.length,FiGitBranch],['Active Branches',branches.filter(x=>x.status==='Active').length,FiCheckCircle],['Inactive Branches',branches.filter(x=>x.status==='Inactive').length,FiToggleLeft],['Core Branches',branches.filter(x=>type(x)==='Core').length,FiLayers],['Specializations',branches.filter(x=>type(x)==='Specialization').length,FiTarget],['Total Approved Intake',branches.reduce((n,x)=>n+intake(x),0).toLocaleString('en-IN'),FiUsers]]
- const set=(key,value)=>setFilters(current=>key==='departmentId'?{...current,departmentId:value,courseId:''}:{...current,[key]:value})
- const toggle=b=>{const status=b.status==='Active'?'Inactive':'Active',action=status==='Inactive'?'Deactivate':'Activate';setError({kind:'confirm',action,code:b.code,cancel:()=>setError(''),confirm:async()=>{setError('');try{const saved=normalize(await branchApi.update(b.id,{...b,status}));setBranches(rows=>rows.map(x=>x.id===b.id?saved:x));setError(`Branch ${status==='Inactive'?'deactivated':'activated'} successfully.`)}catch(e){setError(e.message||'Unable to update branch status.')}}})}
- const has=Object.values(filters).some(Boolean),courseOptions=coursesForDepartment(courses,departments,filters.departmentId)
- return <Page><Header title="B.Tech Branch Management" text="Manage B.Tech undergraduate branches and specializations."><Link className="cm-button" to="/branches/add"><FiPlus/> Add Branch</Link></Header><section className="branch-summary">{stats.map(([a,b,Icon])=><article key={a}><span className="cm-kpi-icon"><Icon aria-hidden="true" /></span><div><span>{a}</span><strong>{b}</strong></div></article>)}</section><Notice>{error}</Notice><FilterPanel active={has} onClear={()=>{setFilters({query:'',departmentId:'',courseId:'',branchType:'',status:''});setPage(1)}}><section className="cm-panel branch-filter-toolbar"><label className="branch-search"><FiSearch/><input value={filters.query} onChange={e=>set('query',e.target.value)} placeholder="Search branch name, code or department"/></label><SearchableSelect label="Department" value={filters.departmentId} options={departments.map(x=>({id:x.id,name:x.name,code:''}))} onChange={value => set('departmentId', value)} placeholder="Select Department" searchPlaceholder="Search departments..." noOptionsMessage="No departments found." /><SearchableSelect label="Course" value={filters.courseId} options={courseOptions.map(x=>({id:x.id,name:x.shortName||x.name,code:x.code||''}))} onChange={value => set('courseId', value)} placeholder="Select Course" searchPlaceholder="Search courses..." noOptionsMessage="No courses found." disabled={!filters.departmentId && !courseOptions.length} /><select value={filters.branchType} onChange={e=>set('branchType',e.target.value)}><option value="">Select Type</option><option value="Core">Core</option><option value="Specialization">Specialization</option></select><select value={filters.status} onChange={e=>set('status',e.target.value)}><option value="">Select Status</option><option value="Active">Active</option><option value="Inactive">Deactive</option></select>{has&&<button className="branch-clear" onClick={()=>setFilters({query:'',departmentId:'',courseId:'',branchType:'',status:''})}><FiFilter/> Clear Filters</button>}</section></FilterPanel><section className="cm-panel branch-directory"><div className="branch-results">{loading?'Loading branches…':<>Showing <strong>{rows.length}</strong> of <strong>{branches.length}</strong> branches</>}</div>{rows.length?<><div className="branch-table-scroll"><table className="branch-table"><thead><tr>{['Branch','Code','Department','Course','Type','Duration','Enrollment Capacity','Status','Actions'].map(x=><th key={x}>{x}</th>)}</tr></thead><tbody>{pageRows.map(b=><tr key={b.id}><td><strong>{b.name}</strong><small>{b.code}</small></td><td><b>{b.code}</b></td><td>{b.departmentName||dep(b.departmentId)}</td><td>{b.courseName||course(b.courseId)}</td><td><Badge value={type(b)} kind="type"/></td><td>{b.duration} Years<small>{b.totalSemesters} Semesters</small></td><td>{intake(b)}</td><td><Badge value={b.status}/></td><td><div className="branch-actions"><Link to={`/branches/${b.id}`}><FiEye className="module-action-icon module-action-icon--view" /></Link><Link to={`/branches/${b.id}/edit`}><FiEdit2 className="module-action-icon module-action-icon--edit" /></Link><button className={`branch-status-action ${b.status==='Active'?'danger':'success'}`} title={b.status==='Active'?`Mark ${b.name} inactive`:`Mark ${b.name} active`} aria-label={b.status==='Active'?`Mark ${b.name} inactive`:`Mark ${b.name} active`} onClick={()=>toggle(b)}>{b.status==='Active'?<FiToggleRight/>:<FiToggleLeft/>}</button></div></td></tr>)}</tbody></table></div><TablePagination page={currentPage} totalPages={totalPages} onPageChange={setPage}/></>:!loading&&<div className="branch-empty"><FiGitBranch/><strong>No branches match your filters.</strong></div>}</section></Page>
+const normalizeId = (value) => {
+  if (value === null || value === undefined || value === '') return ''
+  const normalized = String(value).trim()
+  return normalized === 'null' || normalized === 'undefined' ? '' : normalized
 }
 
-const validate=(v,rows,id,courses)=>{const e={},code=v.code.trim().toUpperCase();if(!v.name.trim())e.name='Branch name is required.';if(!code)e.code='Branch code is required.';else if(!/^[A-Z0-9]+(?:[-/][A-Z0-9]+)*$/.test(code))e.code='Use uppercase letters, numbers, hyphens, or forward slashes only.';else if(rows.some(x=>String(x.id)!==String(id)&&String(x.code).toUpperCase()===code))e.code='Branch code already exists.';if(!v.departmentId)e.departmentId='Department is required.';if(!v.courseId)e.courseId='Course is required.';if(v.branchType==='Specialization'&&!String(v.specialization||'').trim())e.specialization='Specialization name is required.';if(!v.status)e.status='Status is required.';if(!Number.isInteger(Number(v.intakeCapacity))||Number(v.intakeCapacity)<1)e.intakeCapacity='Approved intake must be a positive whole number.';const c=courses.find(x=>String(x.id)===String(v.courseId));if(c&&String(c.departmentId)!==String(v.departmentId))e.departmentId='The selected department does not match this course.';return e}
-function Form(){
- const {id}=useParams(),[params]=useSearchParams(),navigate=useNavigate(),[departments,setDepartments]=useState([]),[courses,setCourses]=useState([]),[branches,setBranches]=useState([]),[value,setValue]=useState(blank),[errors,setErrors]=useState({}),[step,setStep]=useState(0),[saving,setSaving]=useState(false),[error,setError]=useState(''),[edited,setEdited]=useState(Boolean(id))
- const selectedCourseId=params.get('course')
- useEffect(()=>{let alive=true;Promise.allSettled([departmentApi.getAll(),courseApi.getAll()]).then(([departmentResult,courseResult])=>{if(!alive)return;const departmentRows=departmentResult.status==='fulfilled'?departmentResult.value:[],courseRows=courseResult.status==='fulfilled'?courseResult.value:[];setDepartments(dedupeDepartments(departmentRows));setCourses(courseRows.map(mapCourse).filter(isBtech));if(departmentResult.status==='rejected')setError(departmentResult.reason?.message||'Unable to load departments.');else if(courseResult.status==='rejected')setError(courseResult.reason?.message||'Unable to load B.Tech courses.');else setError('')});return()=>{alive=false}},[])
- useEffect(()=>{let alive=true;Promise.all([branchApi.getAll(),id?branchApi.getById(id):Promise.resolve(null)]).then(([all,current])=>{if(!alive)return;setBranches(all.map(normalize));const selected=courses.find(c=>String(c.id)===selectedCourseId)||courses.find(c=>[c.code,c.shortName,c.name].some(value=>String(value||'').replace(/[^a-z0-9]/gi,'').toUpperCase()==='BTECH'))||courses[0],departmentId=current?.departmentId||selected?.departmentId||'',department=departments.find(d=>String(d.id)===String(departmentId)),branchName=current?.name||department?.name||selected?.departmentName||'';setValue({...blank,...(current?normalize(current):{}),courseId:current?.courseId||selected?.id||'',departmentId,name:branchName,code:current?.code||codeFor(branchName),intakeCapacity:current?.intakeCapacity??'',status:''})}).catch(e=>alive&&setError(e.message||'Unable to load branch data.'));return()=>{alive=false}},[id,courses,departments,selectedCourseId])
- const update=(key,next)=>{setValue(v=>{const n={...v,[key]:next};if(key==='departmentId'){const department=departments.find(d=>String(d.id)===String(next));n.courseId='';if(v.branchType==='Core'){n.name=department?.name||'';if(!edited)n.code=codeFor(n.name)}}if(key==='courseId')n.departmentId=courses.find(c=>String(c.id)===String(next))?.departmentId||n.departmentId;if(key==='branchType'){if(next==='Core'){const department=departments.find(d=>String(d.id)===String(v.departmentId));n.specialization='';n.name=department?.name||'';if(!edited)n.code=codeFor(n.name)}else{n.name=v.specialization||'';if(!edited)n.code=codeFor(n.name)}}if(key==='specialization'){n.name=next;if(!edited)n.code=codeFor(next)}if(key==='name'&&!edited)n.code=codeFor(next);if(key==='code'){n.code=next.toUpperCase().replace(/\s/g,'');setEdited(true)}return n});setErrors(e=>({...e,[key]:'',...(key==='specialization'?{name:''}:{})}))}
- const submit=async()=>{const department=departments.find(d=>String(d.id)===String(value.departmentId)),name=value.branchType==='Specialization'?String(value.specialization||'').trim():department?.name||value.name,payload={...value,name,code:String(value.code||codeFor(name)).trim().toUpperCase()};const e=validate(payload,branches,id,courses);setErrors(e);if(Object.keys(e).length){setError(Object.values(e)[0]);return}setSaving(true);setError('');try{const result=normalize(id?await branchApi.update(id,payload):await branchApi.create(payload));navigate(id?`/branches/${result.id}`:'/branches')}catch(err){setError(err.message||'Unable to save branch.')}finally{setSaving(false)}}
- const options=coursesForDepartment(courses,departments,value.departmentId),steps=['Branch Details','Structure, Capacity & Status']
- return <Page><Header title={id?'Edit B.Tech Branch':'Add B.Tech Branch'} text="Create a B.Tech undergraduate branch with its academic mapping."><Link className="cm-button secondary" to="/branches"><FiArrowLeft/> Cancel</Link></Header><Notice>{error}</Notice><div className="branch-form-layout"><section className="cm-panel branch-form"><nav className="branch-steps">{steps.map((x,i)=><button type="button" key={x} className={step===i?'active':''} onClick={()=>setStep(i)}><b>{i+1}</b>{x}</button>)}</nav>{step===0&&<section><div className="cm-form-grid"><Field label="Department *" error={errors.departmentId}><select value={value.departmentId} onChange={e=>update('departmentId',e.target.value)}><option value="">Select department</option>{departments.map(d=><option key={d.id} value={d.id}>{d.name}</option>)}</select></Field><Field label="B.Tech Course *" error={errors.courseId}><select value={value.courseId} disabled={!value.departmentId} onChange={e=>update('courseId',e.target.value)}><option value="">Select B.Tech course</option>{options.map(c=><option key={c.id} value={c.id}>{c.shortName||c.name}</option>)}</select></Field></div><div className="cm-form-grid"><Field label="Branch Type *"><select value={value.branchType} onChange={e=>update('branchType',e.target.value)}><option>Core</option><option>Specialization</option></select></Field>{value.branchType==='Specialization'&&<Field label="Specialization *" error={errors.specialization}><input value={value.specialization||''} onChange={e=>update('specialization',e.target.value)} placeholder="e.g. Artificial Intelligence & Machine Learning"/></Field>}<Field label="Branch Code *" error={errors.code}><input value={value.code} onChange={e=>update('code',e.target.value)}/></Field><Field label="Short Name"><input value={value.shortName||''} onChange={e=>update('shortName',e.target.value)}/></Field></div></section>}{step===1&&<section><h2>Academic Structure, Capacity & Status</h2><div className="cm-form-grid"><Field label="Duration"><input value="4 Years" readOnly/></Field><Field label="Total Semesters"><input value="8" readOnly/></Field><Field label="Approved Intake *" error={errors.intakeCapacity}><input type="number" min="1" step="1" value={value.intakeCapacity} onChange={e=>update('intakeCapacity',e.target.value.replace(/\D/g,''))}/></Field><Field label="Status" error={errors.status}><select required value={value.status} onChange={e=>update('status',e.target.value)}><option value="" disabled>Select Status</option><option value="Active">Active</option><option value="Inactive">Deactive</option></select></Field></div></section>}<footer className="branch-form-footer">{step>0?<button type="button" className="cm-button secondary" onClick={()=>setStep(s=>s-1)}>Back</button>:<span aria-hidden="true"/>}{step<1?<button type="button" className="cm-button" onClick={()=>setStep(s=>s+1)}>Continue</button>:<button type="button" className="cm-button" disabled={saving} onClick={submit}>{saving?'Saving…':id?'Save Changes':'Create Branch'}</button>}</footer></section><aside className="branch-preview"><span>Live Preview</span><div className="branch-preview-body"><Badge value={value.status}/><h2>{value.name||'Branch Name'}</h2><strong>{value.code||'CODE'}</strong>{value.shortName&&<p className="branch-preview-short">{value.shortName}</p>}<p>{value.branchType||'Core'}</p>{value.specialization&&<p><strong>Specialization:</strong> {value.specialization}</p>}<hr/><b>{courses.find(c=>String(c.id)===String(value.courseId))?.shortName||courses.find(c=>String(c.id)===String(value.courseId))?.name||'B.Tech Course'}</b><p>{departments.find(d=>String(d.id)===String(value.departmentId))?.name||'Department'}</p><p>Intake: {value.intakeCapacity||'—'}</p><p>4 Years · 8 Semesters</p>{value.description&&<p className="branch-preview-note"><strong>Description:</strong> {value.description}</p>}</div></aside></div></Page>
+const content = (value) => {
+  if (value === null || value === undefined) return ''
+  if (typeof value === 'string') return value.trim()
+  return String(value).trim()
 }
-function Details(){const{id}=useParams(),[branch,setBranch]=useState(null),[error,setError]=useState('');useEffect(()=>{branchApi.getById(id).then(x=>setBranch(normalize(x))).catch(e=>setError(e.message||'Unable to load branch details.'))},[id]);if(error)return <Page><Notice>{error}</Notice></Page>;if(!branch)return <Page><div className="branch-empty">Loading branch details…</div></Page>;const display=value=>value===null||value===undefined||String(value).trim()===''?'Not provided':String(value),fields=[['Branch Name',branch.name],['Branch Code',branch.code],['Short Name',branch.shortName],['Course',branch.courseName],['Department',branch.departmentName],['Branch Type',type(branch)],['Specialization',branch.specialization],['Duration',branch.duration?`${branch.duration} Years`:''],['Total Semesters',branch.totalSemesters],['Approved Intake',intake(branch)],['Starting Academic Year',branch.startingAcademicYearName],['Status',branch.status]];return <Page><Header title="B.Tech Branch Details" text="Academic information for this engineering branch."><Link className="cm-button secondary" to="/branches"><FiArrowLeft/> Back</Link><Link className="cm-button" to={`/branches/${id}/edit`}><FiEdit2 className="module-action-icon module-action-icon--edit" /> Edit Branch</Link></Header><section className="branch-detail-hero"><div><span className="cm-eyebrow">B.Tech Branch</span><h2>{branch.name}</h2><Badge value={branch.status}/></div><strong>{branch.code}</strong></section><section className="cm-panel branch-detail-grid">{fields.map(([label,value])=><div className="cm-detail" key={label}><span>{label}</span><strong>{display(value)}</strong></div>)}</section></Page>}
-export default function Branch({mode='list'}){return mode==='form'?<Form/>:mode==='details'?<Details/>:<List/>}
+
+const toLower = (value) => String(value ?? '').trim().toLowerCase()
+
+const courseMap = (record = {}) => ({
+  id: normalizeId(record.id ?? record.courseId),
+  name: content(record.courseName ?? record.name ?? ''),
+  code: content(record.courseCode ?? record.code ?? record.shortName ?? ''),
+  shortName: content(record.courseShortName ?? record.shortName ?? record.courseCode ?? record.code ?? ''),
+  type: content(record.courseType ?? record.type ?? ''),
+  departmentId: normalizeId(record.departmentId ?? record.department?.departmentId ?? record.department?.id ?? ''),
+  departmentName: content(record.departmentName ?? record.department?.departmentName ?? record.department?.name ?? ''),
+  durationValue: normalizeId(record.durationYears ?? record.durationValue ?? record.duration ?? ''),
+  academicPattern: content(record.academicSystem ?? record.academicPattern ?? record.pattern ?? ''),
+  totalSemesters: normalizeId(record.totalSemesters ?? record.semesters ?? record.semesterCount ?? record.numberOfSemesters ?? ''),
+  status: content(record.status ?? record.courseStatus ?? ''),
+})
+
+const academicYearMap = (record = {}) => {
+  const rawStatus = record.status ?? record.academicYearStatus ?? record.state ?? ''
+  const status = record.isActive === true || Number(rawStatus) === 1 || toLower(rawStatus) === 'active' ? 'Active' : content(rawStatus)
+  return {
+    id: normalizeId(record.academicYearId ?? record.id ?? record.yearId ?? ''),
+    name: content(record.academicYearName ?? record.name ?? record.academicYear ?? ''),
+    status,
+  }
+}
+
+export const normalize = (input = {}) => {
+  const b = input?.branch ?? input?.branchDetails ?? input?.item ?? input?.result ?? input?.record ?? input?.data ?? input
+  return {
+    id: normalizeId(b.branchId ?? b.id),
+    courseId: normalizeId(b.courseId ?? b.course?.id ?? ''),
+    courseName: content(b.courseName ?? b.course?.name ?? b.course?.courseName ?? ''),
+    courseCode: content(b.courseCode ?? b.course?.code ?? b.courseShortName ?? b.course?.courseCode ?? ''),
+    branchName: content(b.branchName ?? b.name ?? ''),
+    branchCode: content(b.branchCode ?? b.code ?? ''),
+    branchType: content(b.branchType ?? b.type ?? (b.specialization ? 'Specialization' : 'Core')),
+    specialization: content(b.specialization ?? ''),
+    shortName: content(b.shortName ?? b.branchShortName ?? ''),
+    duration: normalizeId(b.duration ?? b.durationYears ?? ''),
+    academicPattern: content(b.academicPattern ?? b.academicSystem ?? b.pattern ?? ''),
+    totalSemesters: normalizeId(b.totalSemesters ?? b.semesters ?? b.totalSemester ?? ''),
+    intakeCapacity: normalizeId(b.intakeCapacity ?? b.intake ?? ''),
+    status: Number(b.status) === 0 || toLower(b.status) === 'inactive' || b.isActive === false ? 'Inactive' : 'Active',
+    startingAcademicYearId: normalizeId(b.startingAcademicYearId ?? b.academicYearId ?? b.yearId ?? ''),
+    startingAcademicYearName: content(b.startingAcademicYearName ?? b.academicYearName ?? b.yearName ?? ''),
+    departmentId: normalizeId(b.departmentId ?? b.department?.departmentId ?? b.department?.id ?? ''),
+    departmentName: content(b.departmentName ?? b.department?.departmentName ?? b.department?.name ?? ''),
+    description: content(b.description ?? ''),
+  }
+}
+
+const normalizeBranch = (input = {}) => normalize(input)
+
+const typeOf = (branch) => content(branch?.branchType || branch?.type || (branch?.specialization ? 'Specialization' : 'Core'))
+
+const Page = ({ children }) => <DashboardLayout><main className="cm-page branch-management">{children}</main></DashboardLayout>
+
+const Header = ({ title, text, children }) => <header className="cm-header"><div><h1>{title}</h1><p>{text}</p></div><div className="cm-row-actions">{children}</div></header>
+
+const Badge = ({ value }) => <span className={`branch-badge ${String(value || 'Active').toLowerCase()}`}><i />{value === 'Inactive' ? 'Deactive' : value || 'Active'}</span>
+
+const Notice = ({ children }) => {
+  if (!children) return null
+  if (children?.kind === 'confirm') {
+    return <div className="branch-confirm-backdrop" role="presentation" onMouseDown={(event) => event.target === event.currentTarget && children.cancel()}><section className="branch-confirm" role="alertdialog" aria-modal="true" aria-labelledby="branch-confirm-title" aria-describedby="branch-confirm-message"><div className="branch-confirm-icon"><FiAlertCircle /></div><h2 id="branch-confirm-title">{children.action} Branch?</h2><p id="branch-confirm-message">Are you sure you want to {children.action.toLowerCase()} <strong>{children.code}</strong>?</p><footer><button type="button" className="cm-button secondary" onClick={children.cancel}>Cancel</button><button type="button" className={`cm-button ${children.action === 'Deactivate' ? 'danger' : ''}`} onClick={children.confirm}>{children.action} Branch</button></footer></section></div>
+  }
+
+  const success = String(children).startsWith('Branch ')
+  return <p className={success ? 'branch-api-success' : 'branch-api-error'} role={success ? 'status' : 'alert'}><FiAlertCircle />{children}</p>
+}
+
+const Field = ({ label, error, children, wide = false }) => {
+  const required = label.trim().endsWith('*')
+  const text = label.replace(/\s*\*$/, '')
+  const numeric = children?.props?.type === 'number'
+  return <label className={`cm-field ${wide ? 'wide' : ''}`}><span>{text}{required && <b className="required-mark"> *</b>}</span>{cloneElement(children, {
+    placeholder: children.props.placeholder || children.props.defaultValue || '',
+    ...(numeric ? { onKeyDown: (event) => { if (['-', '+', 'e', 'E', '.'].includes(event.key)) event.preventDefault() }, onPaste: (event) => { if (/\D/.test(event.clipboardData.getData('text'))) event.preventDefault() } } : {}),
+  })}{error && <small className="cm-error">{error}</small>}</label>
+}
+
+function List() {
+  const [params] = useSearchParams()
+  const [courses, setCourses] = useState([])
+  const [branches, setBranches] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
+  const [page, setPage] = useState(1)
+  const [filters, setFilters] = useState({ query: '', courseId: params.get('course') || '', branchType: '', status: '' })
+
+  const load = async () => {
+    setLoading(true)
+    try {
+      const [branchRows, courseRows] = await Promise.all([branchApi.getAll(), courseApi.getAll()])
+      setBranches((branchRows || []).map(normalizeBranch))
+      setCourses((courseRows || []).map(courseMap).filter((course) => course.id && course.name))
+      setError('')
+    } catch (requestError) {
+      setError(requestError?.message || 'Unable to load branch data.')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  useEffect(() => { load() }, [])
+
+  const courseById = useMemo(() => new Map(courses.map((course) => [String(course.id), course])), [courses])
+  const rows = useMemo(() => {
+    const needle = filters.query.trim().toLowerCase()
+    return branches.filter((branch) => {
+      const course = courseById.get(String(branch.courseId))
+      const haystack = `${branch.branchName} ${branch.branchCode} ${course?.name || branch.courseName || ''}`.toLowerCase()
+      return (!needle || haystack.includes(needle))
+        && (!filters.courseId || String(branch.courseId) === String(filters.courseId))
+        && (!filters.branchType || typeOf(branch) === filters.branchType)
+        && (!filters.status || branch.status === filters.status)
+    })
+  }, [branches, courseById, filters])
+
+  const totalPages = Math.max(1, Math.ceil(rows.length / PAGE_SIZE))
+  const currentPage = Math.min(page, totalPages)
+  const pageRows = rows.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE)
+  useEffect(() => setPage(1), [filters])
+
+  const stats = { total: branches.length, active: branches.filter((row) => row.status === 'Active').length, inactive: branches.filter((row) => row.status === 'Inactive').length }
+
+  const setFilter = (key, value) => setFilters((current) => ({ ...current, [key]: value }))
+  const clearFilters = () => setFilters({ query: '', courseId: '', branchType: '', status: '' })
+  const hasFilters = Object.values(filters).some(Boolean)
+
+  const onToggleStatus = (branch) => {
+    const nextStatus = branch.status === 'Active' ? 'Inactive' : 'Active'
+    setError({ kind: 'confirm', action: nextStatus === 'Active' ? 'Activate' : 'Deactivate', code: branch.branchCode || branch.branchName, cancel: () => setError(''), confirm: async () => {
+      setError('')
+      try {
+        const updated = normalizeBranch(await branchApi.update(branch.id, { ...branch, status: nextStatus }))
+        setBranches((current) => current.map((row) => String(row.id) === String(updated.id) ? updated : row))
+        setError(`Branch ${nextStatus === 'Active' ? 'activated' : 'deactivated'} successfully.`)
+      } catch (requestError) {
+        setError(requestError?.message || 'Unable to update branch status.')
+      }
+    }})
+  }
+
+  return <Page>
+    <Header title="B.Tech Branch Management" text="Manage branches using the selected course as the source of truth.">
+      <CompactSummary label="Branch summary" items={[{ label: 'Total', value: stats.total }, { label: 'Active', value: stats.active, tone: 'active' }, { label: 'Inactive', value: stats.inactive, tone: 'inactive' }]} />
+    </Header>
+    <Notice>{error}</Notice>
+    <section className="cm-panel branch-directory-card">
+      <header className="branch-directory-heading"><div><span className="cm-eyebrow">Branch Directory</span></div><Link className="cm-button" to="/branches/add"><FiPlus /> Add Branch</Link></header>
+    <FilterPanel active={hasFilters} onClear={clearFilters}>
+      <section className="cm-panel branch-filter-toolbar">
+        <label className="branch-search"><FiSearch /><input aria-label="Search branches" value={filters.query} onChange={(event) => setFilter('query', event.target.value)} placeholder="Search branch name, code or course" /></label>
+        <SearchableSelect label="Course" value={filters.courseId} options={courses.map((course) => ({ id: course.id, name: course.name, code: course.code }))} onChange={(value) => setFilter('courseId', value)} placeholder="Select Course" searchPlaceholder="Search course..." noOptionsMessage="No courses found." />
+        <select value={filters.branchType} onChange={(event) => setFilter('branchType', event.target.value)}><option value="">Type</option><option value="Core">Core</option><option value="Specialization">Specialization</option></select>
+        <select value={filters.status} onChange={(event) => setFilter('status', event.target.value)}><option value="">Status</option><option value="Active">Active</option><option value="Inactive">Deactive</option></select>
+        {hasFilters && <button className="branch-clear" onClick={clearFilters}><FiFilter /> Clear</button>}
+      </section>
+    </FilterPanel>
+
+    {loading ? <div className="branch-empty">Loading branches…</div> : rows.length ? <>
+      <div className="branch-results">Showing <strong>{rows.length}</strong> branches</div>
+      <div className="branch-table-scroll"><table className="branch-table"><thead><tr>{['Branch', 'Code', 'Course', 'Type', 'Approved Intake', 'Status', 'Actions'].map((heading) => <th key={heading}>{heading}</th>)}</tr></thead><tbody>{pageRows.map((branch) => {
+        const course = courseById.get(String(branch.courseId))
+        return <tr key={branch.id}><td><strong>{branch.branchName}</strong>{branch.shortName && <small>{branch.shortName}</small>}</td><td>{branch.branchCode}</td><td>{course?.name || branch.courseName || ''}</td><td>{typeOf(branch)}</td><td>{branch.intakeCapacity || ''}</td><td><Badge value={branch.status} /></td><td className="branch-actions"><Link aria-label={`View ${branch.branchName}`} title="View" to={`/branches/${branch.id}`}><FiEye /></Link><Link aria-label={`Edit ${branch.branchName}`} title="Edit" to={`/branches/${branch.id}/edit`}><FiEdit2 /></Link><button type="button" title={branch.status === 'Active' ? 'Deactivate' : 'Activate'} aria-label={`${branch.status === 'Active' ? 'Deactivate' : 'Activate'} ${branch.branchName}`} className={`branch-status-action ${branch.status === 'Active' ? 'danger' : 'success'}`} onClick={() => onToggleStatus(branch)}>{branch.status === 'Active' ? <FiToggleRight /> : <FiToggleLeft />}</button></td></tr>
+      })}</tbody></table></div>
+      <TablePagination currentPage={currentPage} totalPages={totalPages} onPageChange={setPage} />
+    </> : <div className="branch-empty">No branches match the current filters.</div> }
+    </section>
+  </Page>
+}
+
+const validateBranch = (value, branchId, existingRows, courses) => {
+  const errors = {}
+  const code = String(value.branchCode || '').trim().toUpperCase()
+  const name = String(value.branchName || '').trim()
+
+  if (!value.courseId) errors.courseId = 'Course is required.'
+  if (!name) errors.branchName = 'Branch name is required.'
+  if (!code) errors.branchCode = 'Branch code is required.'
+  else if (!/^[A-Z0-9]+(?:[-/][A-Z0-9]+)*$/.test(code)) errors.branchCode = 'Use uppercase letters, numbers, hyphens, or slashes only.'
+  else if (existingRows.some((row) => String(row.id) !== String(branchId) && String(row.branchCode || '').trim().toUpperCase() === code)) errors.branchCode = 'Branch code already exists.'
+
+  if (value.branchType === 'Specialization' && !String(value.specialization || '').trim()) errors.specialization = 'Specialization is required.'
+  if (!Number.isInteger(Number(value.intakeCapacity)) || Number(value.intakeCapacity) < 1) errors.intakeCapacity = 'Approved intake must be a positive whole number.'
+  if (!value.status) errors.status = 'Status is required.'
+
+  const chosenCourse = courses.find((course) => String(course.id) === String(value.courseId))
+  if (chosenCourse && String(chosenCourse.departmentId || '') && String(value.departmentId || '') && String(chosenCourse.departmentId) !== String(value.departmentId)) {
+    errors.departmentId = 'The selected course department does not match the branch record.'
+  }
+
+  return errors
+}
+
+function Form() {
+  const { id } = useParams()
+  const [params] = useSearchParams()
+  const navigate = useNavigate()
+  const [courses, setCourses] = useState([])
+  const [years, setYears] = useState([])
+  const [branches, setBranches] = useState([])
+  const [errors, setErrors] = useState({})
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState('')
+  const [value, setValue] = useState(blank)
+  const [step, setStep] = useState(0)
+  const [courseStructureLoading, setCourseStructureLoading] = useState(false)
+  const [mastersReady, setMastersReady] = useState(false)
+  const hydratedRef = useRef(false)
+  const courseDetailRequestsRef = useRef(new Set())
+
+  useEffect(() => {
+    let alive = true
+    Promise.allSettled([courseApi.getAll(), academicYearApi.getAll(), branchApi.getAll()]).then(([courseResult, yearResult, branchResult]) => {
+      if (!alive) return
+      const courseRows = courseResult.status === 'fulfilled' ? (courseResult.value || []) : []
+      const yearRows = yearResult.status === 'fulfilled' ? (yearResult.value || []) : []
+      const branchRows = branchResult.status === 'fulfilled' ? (branchResult.value || []) : []
+      const allCourses = courseRows.map(courseMap).filter((course) => course.id && course.name)
+      const activeYears = (yearRows || []).map(academicYearMap).filter((year) => year.id && year.name && (!year.status || ['active', 'upcoming'].includes(toLower(year.status))))
+      setCourses(allCourses)
+      setYears(activeYears)
+      setBranches((branchRows || []).map(normalizeBranch))
+      setMastersReady(true)
+      if (courseResult.status === 'rejected') setError(courseResult.reason?.message || 'Unable to load courses.')
+      else if (yearResult.status === 'rejected') setError(yearResult.reason?.message || 'Unable to load academic years.')
+      else setError('')
+    })
+    return () => { alive = false }
+  }, [])
+
+  useEffect(() => {
+    if (!mastersReady || hydratedRef.current) return
+    hydratedRef.current = true
+    if (id) {
+      branchApi.getById(id).then((record) => {
+        const current = normalizeBranch(record)
+        const selectedCourse = courses.find((course) => String(course.id) === String(current.courseId)) || courses[0]
+        const selectedYear = years.find((year) => String(year.id) === String(current.startingAcademicYearId)) || years[0] || null
+        setValue({
+          ...blank,
+          ...current,
+          courseId: current.courseId || selectedCourse?.id || '',
+          courseCode: current.courseCode || selectedCourse?.code || '',
+          branchName: current.branchName || '',
+          branchCode: current.branchCode || '',
+          branchType: current.branchType || 'Core',
+          specialization: current.specialization || '',
+          academicYearId: current.startingAcademicYearId || selectedYear?.id || '',
+          duration: current.duration || selectedCourse?.durationValue || '',
+          academicPattern: current.academicPattern || selectedCourse?.academicPattern || '',
+          totalSemesters: current.totalSemesters || selectedCourse?.totalSemesters || '',
+          departmentId: current.departmentId || selectedCourse?.departmentId || '',
+          status: current.status || 'Active',
+        })
+        if (selectedCourse && (!selectedCourse.durationValue || !selectedCourse.totalSemesters) && !courseDetailRequestsRef.current.has(selectedCourse.id)) {
+          courseDetailRequestsRef.current.add(selectedCourse.id)
+          courseApi.getById(selectedCourse.id).then((detail) => {
+            const detailedCourse = courseMap(detail)
+            setCourses((currentCourses) => currentCourses.map((course) => String(course.id) === String(selectedCourse.id) ? { ...course, ...detailedCourse } : course))
+          }).catch(() => {})
+        }
+      }).catch((requestError) => setError(requestError?.message || 'Unable to load branch details.'))
+      return
+    }
+
+    const courseId = params.get('course') || ''
+    const selectedCourse = courses.find((course) => String(course.id) === String(courseId)) || null
+    const selectedYear = years.length === 1 ? years[0] : null
+    setValue({
+      ...blank,
+      courseId: selectedCourse?.id || '',
+      courseCode: selectedCourse?.code || '',
+      departmentId: selectedCourse?.departmentId || '',
+      duration: selectedCourse?.durationValue || '',
+      academicPattern: selectedCourse?.academicPattern || '',
+      totalSemesters: selectedCourse?.totalSemesters || '',
+      academicYearId: selectedYear?.id || '',
+      status: 'Active',
+    })
+    if (selectedCourse && (!selectedCourse.durationValue || !selectedCourse.totalSemesters) && !courseDetailRequestsRef.current.has(selectedCourse.id)) {
+      courseDetailRequestsRef.current.add(selectedCourse.id)
+      courseApi.getById(selectedCourse.id).then((detail) => {
+        const detailedCourse = courseMap(detail)
+        setCourses((currentCourses) => currentCourses.map((course) => String(course.id) === String(selectedCourse.id) ? { ...course, ...detailedCourse } : course))
+      }).catch(() => {})
+    }
+  }, [mastersReady, id, params])
+
+  const update = (key, nextValue) => setValue((current) => {
+    const next = { ...current, [key]: nextValue }
+    if (key === 'courseId') {
+      const selectedCourse = courses.find((course) => String(course.id) === String(nextValue)) || null
+      next.courseCode = selectedCourse?.code || ''
+      next.departmentId = selectedCourse?.departmentId || ''
+      next.duration = selectedCourse?.durationValue || ''
+      next.academicPattern = selectedCourse?.academicPattern || ''
+      next.totalSemesters = selectedCourse?.totalSemesters || ''
+    }
+    if (key === 'branchType' && nextValue === 'Core') next.specialization = ''
+    if (key === 'branchCode') next.branchCode = String(nextValue || '').toUpperCase().replace(/\s+/g, '')
+    return next
+  })
+
+  const selectCourse = async (courseId) => {
+    update('courseId', courseId)
+    if (!courseId) return
+    const selectedCourse = courses.find((course) => String(course.id) === String(courseId))
+    if (selectedCourse?.durationValue && selectedCourse?.totalSemesters) return
+    if (courseDetailRequestsRef.current.has(courseId)) return
+    courseDetailRequestsRef.current.add(courseId)
+    setCourseStructureLoading(true)
+    try {
+      const detailedCourse = courseMap(await courseApi.getById(courseId))
+      setCourses((current) => current.map((course) => String(course.id) === String(courseId) ? { ...course, ...detailedCourse } : course))
+    } catch (requestError) {
+      setError(requestError?.message || 'Unable to load course structure.')
+    } finally {
+      setCourseStructureLoading(false)
+    }
+  }
+
+  const submit = async (event) => {
+    event.preventDefault()
+    const selectedCourse = courses.find((course) => String(course.id) === String(value.courseId)) || null
+    const academicYear = years.find((year) => String(year.id) === String(value.academicYearId)) || null
+    const payload = {
+      ...value,
+      courseId: selectedCourse?.id || value.courseId,
+      departmentId: selectedCourse?.departmentId || value.departmentId || '',
+      courseName: selectedCourse?.name || value.courseName || '',
+      courseCode: selectedCourse?.code || value.courseCode || '',
+      branchName: String(value.branchName || '').trim(),
+      branchCode: String(value.branchCode || '').trim().toUpperCase(),
+      specialization: String(value.specialization || '').trim(),
+      duration: selectedCourse?.durationValue || value.duration || '',
+      academicPattern: selectedCourse?.academicPattern || value.academicPattern || '',
+      totalSemesters: selectedCourse?.totalSemesters || value.totalSemesters || '',
+      startingAcademicYearId: academicYear?.id || value.academicYearId || '',
+      startingAcademicYearName: academicYear?.name || value.startingAcademicYearName || '',
+      status: value.status === 'Inactive' ? 'Inactive' : 'Active',
+    }
+
+    const validationErrors = validateBranch(payload, id || '', branches, courses)
+    setErrors(validationErrors)
+    if (Object.keys(validationErrors).length) {
+      setError(Object.values(validationErrors)[0])
+      return
+    }
+
+    setSaving(true)
+    setError('')
+    try {
+      const result = normalizeBranch(id ? await branchApi.update(id, payload) : await branchApi.create(payload))
+      navigate(id ? `/branches/${result.id}` : '/branches')
+    } catch (requestError) {
+      setError(requestError?.message || 'Unable to save branch.')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const selectedCourse = courses.find((course) => String(course.id) === String(value.courseId)) || null
+
+  const nextStep = () => {
+    const selectedCourse = courses.find((course) => String(course.id) === String(value.courseId))
+    if (!selectedCourse) {
+      setErrors((current) => ({ ...current, courseId: 'Course is required.' }))
+      setError('Course is required.')
+      return
+    }
+    setStep(1)
+  }
+
+  return <Page>
+    <Header title={id ? 'Edit B.Tech Branch' : 'Add B.Tech Branch'} text="Select a course and let the system resolve the structure details automatically.">
+      <Link className="cm-button secondary" to="/branches"><FiArrowLeft /> Cancel</Link>
+    </Header>
+    <Notice>{error}</Notice>
+    <form onSubmit={submit} className="branch-form-layout">
+      <section className="cm-panel branch-form">
+        <nav className="branch-steps"><button type="button" className={step === 0 ? 'active' : ''} onClick={() => setStep(0)}><b>1</b>Branch Details</button><button type="button" className={step === 1 ? 'active' : ''} onClick={nextStep}><b>2</b>Branch Configuration</button></nav>
+        {step === 0 && <section className="branch-step-content">
+          <div className="cm-form-grid"><Field label="Course Name *" error={errors.courseId}><SearchableSelect label="Course Name" value={value.courseId} options={courses.map((course) => ({ id: course.id, name: course.name, code: course.code }))} onChange={selectCourse} placeholder="Select Course" searchPlaceholder="Search course name or code..." noOptionsMessage="No courses found." error={Boolean(errors.courseId)} /></Field><Field label="Course Code"><input value={selectedCourse?.code || value.courseCode || ''} readOnly /></Field></div>
+          {!value.courseId && <p className="branch-structure-empty">Select a course to load its academic structure.</p>}
+          <div className="cm-form-grid"><Field label="Branch Name *" error={errors.branchName}><input value={value.branchName} onChange={(event) => update('branchName', event.target.value)} placeholder="Enter branch name" /></Field><Field label="Branch Code *" error={errors.branchCode}><input value={value.branchCode} onChange={(event) => update('branchCode', event.target.value)} placeholder="e.g. CSE" /></Field></div>
+          <div className="cm-form-grid"><Field label="Branch Type *"><select value={value.branchType} onChange={(event) => update('branchType', event.target.value)}><option value="Core">Core</option><option value="Specialization">Specialization</option></select></Field>{value.branchType === 'Specialization' && <Field label="Specialization *" error={errors.specialization}><input value={value.specialization} onChange={(event) => update('specialization', event.target.value)} placeholder="e.g. Artificial Intelligence" /></Field>}<Field label="Short Name"><input value={value.shortName} onChange={(event) => update('shortName', event.target.value)} placeholder="Optional short name" /></Field></div>
+          <div className="cm-form-grid"><Field label="Active Academic Year"><select value={value.academicYearId} onChange={(event) => update('academicYearId', event.target.value)}><option value="">Select active year</option>{years.map((year) => <option key={year.id} value={year.id}>{year.name}</option>)}</select></Field></div>
+          <div className="branch-form-actions"><span aria-hidden="true" /><button type="button" className="cm-button" onClick={nextStep}>Next</button></div>
+        </section>}
+        {step === 1 && <section className="branch-step-content"><h2>Branch Configuration</h2><div className="branch-structure-summary"><h3>Course Structure</h3>{courseStructureLoading ? <p>Loading course structure...</p> : <><div><span>Duration</span><strong>{selectedCourse?.durationValue ? `${selectedCourse.durationValue} Years` : ''}</strong></div><div><span>Total Semesters</span><strong>{selectedCourse?.totalSemesters || ''}</strong></div></>}</div><div className="cm-form-grid"><Field label="Approved Intake *" error={errors.intakeCapacity}><input type="number" min="1" value={value.intakeCapacity} onChange={(event) => update('intakeCapacity', event.target.value)} placeholder="Enter approved intake" /></Field><Field label="Status *" error={errors.status}><select value={value.status} onChange={(event) => update('status', event.target.value)}><option value="Active">Active</option><option value="Inactive">Inactive</option></select></Field></div><div className="branch-form-actions"><button type="button" className="cm-button secondary" onClick={() => setStep(0)}>Back</button><button type="submit" className="cm-button" disabled={saving || courseStructureLoading}>{saving ? 'Saving…' : id ? 'Update Branch' : 'Create Branch'}</button></div></section>}
+      </section>
+      <aside className="cm-panel course-preview branch-course-preview" aria-label="Branch preview"><span>Live Preview</span><div>
+        <h2>{value.branchName.trim() || 'Branch Preview'}</h2>
+        {[
+          ['Basic Information', [
+            ['Branch Name', value.branchName],
+            ...(value.shortName.trim() ? [['Short Name', value.shortName]] : []),
+            ...(value.branchCode.trim() ? [['Branch Code', value.branchCode]] : []),
+            ...(value.branchType ? [['Branch Type', value.branchType]] : []),
+            ...(selectedCourse?.name ? [['Course', selectedCourse.name]] : []),
+            ...(selectedCourse?.code ? [['Course Code', selectedCourse.code]] : []),
+          ]],
+          ['Academic Structure', [
+            ...(selectedCourse?.durationValue ? [['Duration', `${selectedCourse.durationValue} Years`]] : []),
+            ...(selectedCourse?.totalSemesters ? [['Total Semesters', selectedCourse.totalSemesters]] : []),
+          ]],
+        ].filter(([, fields]) => fields.some(([, text]) => String(text || '').trim())).map(([title, fields]) => <section key={title}><h3>{title}</h3><dl>{fields.filter(([, text]) => String(text || '').trim()).map(([label, text]) => <div key={label}><dt>{label}</dt><dd>{String(text).trim()}</dd></div>)}</dl></section>)}
+        {value.academicYearId && <section><h3>Academic Year</h3><dl><div><dt>Active Academic Year</dt><dd>{years.find((year) => String(year.id) === String(value.academicYearId))?.name || ''}</dd></div></dl></section>}
+        {(value.intakeCapacity || value.status) && <section><h3>Branch Configuration</h3><dl>{value.intakeCapacity && <div><dt>Approved Intake</dt><dd>{value.intakeCapacity}</dd></div>}{value.status && <div><dt>Status</dt><dd>{value.status}</dd></div>}</dl></section>}
+      </div></aside>
+    </form>
+  </Page>
+}
+
+function Details() {
+  const { id } = useParams()
+  const [branch, setBranch] = useState(null)
+  const [error, setError] = useState('')
+
+  useEffect(() => {
+    if (!id) return
+    branchApi.getById(id).then((record) => setBranch(normalizeBranch(record))).catch((requestError) => setError(requestError?.message || 'Unable to load branch details.'))
+  }, [id])
+
+  if (error) return <Page><Notice>{error}</Notice></Page>
+  if (!branch) return <Page><div className="branch-empty">Loading branch details…</div></Page>
+
+  const fields = [
+    ['Course Name', branch.courseName],
+    ['Course Code', branch.courseCode],
+    ['Branch Name', branch.branchName],
+    ['Branch Type', typeOf(branch)],
+    ...(branch.specialization ? [['Specialization', branch.specialization]] : []),
+    ['Branch Code', branch.branchCode],
+    ['Duration', branch.duration ? `${branch.duration} Years` : ''],
+    ['Total Semesters', branch.totalSemesters],
+    ['Active Academic Year', branch.startingAcademicYearName],
+    ['Status', branch.status],
+  ].filter(([, value]) => value !== null && value !== undefined && String(value).trim() !== '')
+
+  return <Page>
+    <Header title="B.Tech Branch Details" text="Current branch summary with only meaningful values shown.">
+      <Link className="cm-button secondary" to="/branches"><FiArrowLeft /> Back</Link>
+      <Link className="cm-button" to={`/branches/${id}/edit`}><FiEdit2 /> Edit</Link>
+    </Header>
+    <section className="branch-detail-hero"><div><span className="cm-eyebrow">B.Tech Branch</span><h2>{branch.branchName}</h2><Badge value={branch.status} /></div><strong>{branch.branchCode}</strong></section>
+    <section className="cm-panel branch-detail-grid">{fields.map(([label, value]) => <div className="cm-detail" key={label}><span>{label}</span><strong>{value}</strong></div>)}</section>
+  </Page>
+}
+
+export default function Branch({ mode = 'list' }) {
+  if (mode === 'form') return <Form />
+  if (mode === 'details') return <Details />
+  return <List />
+}

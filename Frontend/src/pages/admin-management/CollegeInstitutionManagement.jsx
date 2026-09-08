@@ -640,9 +640,9 @@ export default function CollegeInstitutionManagement({ initialView = 'list' }) {
   }
 
   const summaryCards = [
-    { label: 'Total Colleges', value: collegeSummary.total, icon: FiHome, tone: 'default' },
-    { label: 'Active Colleges', value: collegeSummary.active, icon: FiCheckCircle, tone: 'active' },
-    { label: 'Inactive Colleges', value: collegeSummary.inactive, icon: FiAlertCircle, tone: 'inactive' },
+    { label: 'Total', value: collegeSummary.total, tone: 'default' },
+    { label: 'Active', value: collegeSummary.active, tone: 'active' },
+    { label: 'Inactive', value: collegeSummary.inactive, tone: 'inactive' },
   ]
 
   return (
@@ -651,30 +651,28 @@ export default function CollegeInstitutionManagement({ initialView = 'list' }) {
         {/* LIST VIEW */}
         {viewMode === 'list' && (
           <>
-            <header className="cm-header">
+            <header className="cm-header management-page__heading">
               <div>
                 <h1>College Management</h1>
                 <p>Manage colleges, institutional details, and academic configurations.</p>
               </div>
-              <button type="button" className="cm-primary-btn" onClick={openAdd}>
-                <Plus aria-hidden="true" /> Add College
-              </button>
+              <div className="management-header-actions">
+                <div className="compact-summary" aria-label="College status summary">
+                  {summaryCards.map(({ label, value, tone }) => {
+                    const isLoading = collegeSummary.loading || value === null
+                    return (
+                      <div key={label} className={`compact-summary__item compact-summary__item--${tone} ${isLoading ? 'is-loading' : ''}`}>
+                        <strong>{isLoading ? '—' : Number(value).toLocaleString('en-IN')}</strong>
+                        <small>{label}</small>
+                      </div>
+                    )
+                  })}
+                </div>
+                <button type="button" className="cm-primary-btn" onClick={openAdd}>
+                  <Plus aria-hidden="true" /> Add College
+                </button>
+              </div>
             </header>
-
-            <section className="cm-summary" aria-label="College status summary">
-              {summaryCards.map(({ label, value, icon: Icon, tone }) => {
-                const isLoading = collegeSummary.loading || value === null
-                return (
-                  <article key={label} className={`cm-summary-card cm-summary-card--${tone} ${isLoading ? 'is-loading' : ''}`}>
-                    <span className="cm-summary-icon"><Icon aria-hidden="true" /></span>
-                    <div>
-                      <small>{label}</small>
-                      <strong>{isLoading ? '—' : Number(value).toLocaleString('en-IN')}</strong>
-                    </div>
-                  </article>
-                )
-              })}
-            </section>
 
             {collegeSummary.error && (
               <p className="cm-summary-error" role="alert">{collegeSummary.error}</p>

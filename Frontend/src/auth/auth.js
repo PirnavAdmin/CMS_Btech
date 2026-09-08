@@ -1,6 +1,22 @@
 const AUTH_STORAGE_KEY = 'btech-authenticated'
 const ROLE_STORAGE_KEY = 'btech-user-role'
 
+const safeStorage = (storageName) => {
+  try {
+    return window?.[storageName]
+  } catch {
+    return null
+  }
+}
+
+const readStorageValue = (storage, key) => {
+  try {
+    return storage?.getItem(key) ?? ''
+  } catch {
+    return ''
+  }
+}
+
 function normalizeStoredRole(role) {
   const rawRole = Array.isArray(role) ? role[0] : role
   const normalizedRole = String(rawRole || '').trim().toLowerCase().replace(/[\s-]+/g, '_')
@@ -10,26 +26,37 @@ function normalizeStoredRole(role) {
 }
 
 export function getAuthStorage() {
-  if (localStorage.getItem(AUTH_STORAGE_KEY) === 'true') return localStorage
-  if (sessionStorage.getItem(AUTH_STORAGE_KEY) === 'true') return sessionStorage
-  return localStorage.getItem('btech-remember-me') === 'true' ? localStorage : sessionStorage
+  const localStore = safeStorage('localStorage')
+  const sessionStore = safeStorage('sessionStorage')
+
+  if (localStore && readStorageValue(localStore, AUTH_STORAGE_KEY) === 'true') return localStore
+  if (sessionStore && readStorageValue(sessionStore, AUTH_STORAGE_KEY) === 'true') return sessionStore
+
+  if (localStore && readStorageValue(localStore, 'btech-remember-me') === 'true') return localStore
+  return sessionStore || localStore || null
 }
 
 export function getAccessToken() {
-  return localStorage.getItem('btech-access-token')
-    || sessionStorage.getItem('btech-access-token')
-    || localStorage.getItem('accessToken')
-    || sessionStorage.getItem('accessToken')
-    || localStorage.getItem('token')
-    || sessionStorage.getItem('token')
+  const localStore = safeStorage('localStorage')
+  const sessionStore = safeStorage('sessionStorage')
+
+  return readStorageValue(localStore, 'btech-access-token')
+    || readStorageValue(sessionStore, 'btech-access-token')
+    || readStorageValue(localStore, 'accessToken')
+    || readStorageValue(sessionStore, 'accessToken')
+    || readStorageValue(localStore, 'token')
+    || readStorageValue(sessionStore, 'token')
     || ''
 }
 
 export function getRefreshToken() {
-  return localStorage.getItem('btech-refresh-token')
-    || sessionStorage.getItem('btech-refresh-token')
-    || localStorage.getItem('refreshToken')
-    || sessionStorage.getItem('refreshToken')
+  const localStore = safeStorage('localStorage')
+  const sessionStore = safeStorage('sessionStorage')
+
+  return readStorageValue(localStore, 'btech-refresh-token')
+    || readStorageValue(sessionStore, 'btech-refresh-token')
+    || readStorageValue(localStore, 'refreshToken')
+    || readStorageValue(sessionStore, 'refreshToken')
     || ''
 }
 
@@ -44,12 +71,18 @@ export function setRefreshToken(token, rememberMe = false) {
 }
 
 export function isAuthenticated() {
-  return localStorage.getItem(AUTH_STORAGE_KEY) === 'true' || sessionStorage.getItem(AUTH_STORAGE_KEY) === 'true'
+  const localStore = safeStorage('localStorage')
+  const sessionStore = safeStorage('sessionStorage')
+
+  return readStorageValue(localStore, AUTH_STORAGE_KEY) === 'true' || readStorageValue(sessionStore, AUTH_STORAGE_KEY) === 'true'
 }
 
 export function signIn(role, accessToken, refreshToken, rememberMe = false, user = {}) {
   signOut()
-  const storage = rememberMe ? localStorage : sessionStorage
+
+  const storage = rememberMe ? safeStorage('localStorage') : safeStorage('sessionStorage')
+  if (!storage) return
+
   storage.setItem(AUTH_STORAGE_KEY, 'true')
   storage.setItem(ROLE_STORAGE_KEY, normalizeStoredRole(role))
   storage.setItem('btech-access-token', accessToken)
@@ -59,22 +92,31 @@ export function signIn(role, accessToken, refreshToken, rememberMe = false, user
 }
 
 export function signOut() {
-  localStorage.removeItem(AUTH_STORAGE_KEY)
-  localStorage.removeItem(ROLE_STORAGE_KEY)
-  sessionStorage.removeItem(AUTH_STORAGE_KEY)
-  sessionStorage.removeItem(ROLE_STORAGE_KEY)
+  const localStore = safeStorage('localStorage')
+  const sessionStore = safeStorage('sessionStorage')
+
+  if (localStore) {
+    localStore.removeItem(AUTH_STORAGE_KEY)
+    localStore.removeItem(ROLE_STORAGE_KEY)
+  }
+  if (sessionStore) {
+    sessionStore.removeItem(AUTH_STORAGE_KEY)
+    sessionStore.removeItem(ROLE_STORAGE_KEY)
+  }
   ;['btech-access-token', 'btech-refresh-token', 'btech-user-name', 'btech-user-id', 'btech-jwt', 'btech-session', 'accessToken', 'refreshToken', 'jwt', 'token'].forEach((key) => {
-    localStorage.removeItem(key)
-    sessionStorage.removeItem(key)
+    localStore?.removeItem(key)
+    sessionStore?.removeItem(key)
   })
 }
 
 export function getUserRole() {
-  const storedRole = localStorage.getItem(ROLE_STORAGE_KEY) || sessionStorage.getItem(ROLE_STORAGE_KEY)
+  const localStore = safeStorage('localStorage')
+  const sessionStore = safeStorage('sessionStorage')
+  const storedRole = readStorageValue(localStore, ROLE_STORAGE_KEY) || readStorageValue(sessionStore, ROLE_STORAGE_KEY)
   const normalizedRole = normalizeStoredRole(storedRole)
 
-  if (storedRole && storedRole !== normalizedRole) {
-    localStorage.setItem(ROLE_STORAGE_KEY, normalizedRole)
+  if (storedRole && storedRole !== normalizedRole && localStore) {
+    localStore.setItem(ROLE_STORAGE_KEY, normalizedRole)
   }
 
   return normalizedRole || null

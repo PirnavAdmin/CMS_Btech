@@ -28,6 +28,7 @@ import {
   updateDepartmentStatus,
 } from "../../auth/collegeApi";
 import "./DepartmentManagement.css";
+import CompactSummary from "../../components/CompactSummary";
 import "../../styles/directory-search.css";
 
 const empty = {
@@ -403,11 +404,7 @@ export default function DepartmentManagement() {
               <div>
                 <h1>Department Management</h1>
               </div>
-              <div className="department-heading-summary" aria-label="Department status summary">
-                <div><strong>{totalCount}</strong><small>Total</small></div>
-                <div className="active"><strong>{activeCount}</strong><small>Active</small></div>
-                <div className="inactive"><strong>{inactiveCount}</strong><small>Inactive</small></div>
-              </div>
+              <CompactSummary label="Department summary" items={[{ label: "Total", value: totalCount }, { label: "Active", value: activeCount, tone: "active" }, { label: "Inactive", value: inactiveCount, tone: "inactive" }]} />
             </div>
             <section className="management-card department-list">
               <div className="department-list__top">
