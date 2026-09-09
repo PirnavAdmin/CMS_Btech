@@ -123,6 +123,7 @@ export default function AddCollege() {
   const [removeExistingLogo, setRemoveExistingLogo] = useState(false)
   const [pendingLogoCollegeId, setPendingLogoCollegeId] = useState(null)
   const [existingCollegeCodes, setExistingCollegeCodes] = useState([])
+  const [existingColleges, setExistingColleges] = useState([])
   const [touched, setTouched] = useState({})
   const [logoError, setLogoError] = useState('')
   const [dirty, setDirty] = useState(false)
@@ -136,9 +137,39 @@ export default function AddCollege() {
   const [pincodeStatus, setPincodeStatus] = useState('')
   const [saved, setSaved] = useState(false)
   const redirectTimer = useRef(null)
+  const originalEditValues = useRef(null)
   const errors = validate(values)
-  const duplicateCode = values.collegeCode && existingCollegeCodes.includes(values.collegeCode.trim().toUpperCase()) && !editId
-  const isValid = Object.keys(errors).length === 0 && !logoError && !duplicateCode
+  const normalizeDuplicate = (value) => String(value || '').trim().toLowerCase()
+  const currentId = normalizeDuplicate(editId)
+  const currentCode = normalizeDuplicate(values.collegeCode)
+  const original = originalEditValues.current || {}
+  const changedFromOriginal = (field) => !editId || normalizeDuplicate(values[field]) !== normalizeDuplicate(original[field])
+  const duplicateCandidates = existingColleges.filter((college) => {
+    const collegeId = normalizeDuplicate(college.id ?? college.collegeId ?? college.CollegeId ?? college.Id)
+    const collegeCode = normalizeDuplicate(college.code ?? college.collegeCode ?? college.CollegeCode)
+    const isCurrentById = currentId && collegeId === currentId
+    const isCurrentByCode = editId && currentCode && collegeCode === currentCode
+    return !isCurrentById && !isCurrentByCode
+  })
+  const duplicateCode = normalizeDuplicate(values.collegeCode) && duplicateCandidates.some((college) => normalizeDuplicate(college.code ?? college.collegeCode) === normalizeDuplicate(values.collegeCode))
+  const duplicateName = changedFromOriginal('collegeName') && normalizeDuplicate(values.collegeName) && duplicateCandidates.some((college) => normalizeDuplicate(college.name ?? college.collegeName) === normalizeDuplicate(values.collegeName))
+  const duplicateEmail = changedFromOriginal('email') && normalizeDuplicate(values.email) && duplicateCandidates.some((college) => normalizeDuplicate(college.email ?? college.collegeEmail) === normalizeDuplicate(values.email))
+  const duplicateContact = changedFromOriginal('contactNumber') && normalizeDuplicate(values.contactNumber) && duplicateCandidates.some((college) => normalizeDuplicate(college.contact ?? college.contactNumber ?? college.phoneNumber) === normalizeDuplicate(values.contactNumber))
+  const identityChanged = ['collegeName', 'addressLine1', 'city', 'state', 'pincode'].some(changedFromOriginal)
+  const duplicateIdentity = identityChanged && [values.collegeName, values.addressLine1, values.city, values.state, values.pincode].every((value) => normalizeDuplicate(value)) && duplicateCandidates.some((college) => [college.name ?? college.collegeName, college.addressLine1 ?? college.address, college.city, college.state, college.pincode].map(normalizeDuplicate).join('|') === [values.collegeName, values.addressLine1, values.city, values.state, values.pincode].map(normalizeDuplicate).join('|'))
+  const duplicateReason = duplicateName ? 'A college with this name already exists.' : duplicateCode ? 'This college code already exists.' : duplicateEmail ? 'This college email already exists.' : duplicateContact ? 'This college contact number already exists.' : duplicateIdentity ? 'A college with the same name and address already exists.' : ''
+  const duplicateTab = duplicateName || duplicateCode ? 'college' : duplicateIdentity ? 'address' : duplicateEmail || duplicateContact ? 'contact' : ''
+  const duplicateReasonForTab = activeTab === 'college'
+    ? (duplicateName ? 'A college with this name already exists.' : duplicateCode ? 'This college code already exists.' : '')
+    : activeTab === 'address'
+      ? (duplicateIdentity ? 'A college with the same name, university, and address already exists.' : '')
+      : activeTab === 'contact'
+        ? (duplicateEmail ? 'This college email already exists.' : duplicateContact ? 'This college contact number already exists.' : '')
+        : ''
+  const hasDuplicate = Boolean(duplicateReason)
+  const isValid = Object.keys(errors).length === 0 && !logoError && !hasDuplicate
+  const firstInvalidTab = duplicateTab || FORM_TABS.find((tab) => TAB_FIELDS[tab.id]?.some((field) => errors[field]))?.id || ''
+  const invalidMessage = duplicateReason || Object.values(errors)[0] || logoError || 'Please complete the highlighted fields before continuing.'
   const progress = draftProgress(values)
 
   useEffect(() => {
@@ -156,6 +187,7 @@ export default function AddCollege() {
     setRemoveExistingLogo(false)
     setPendingLogoCollegeId(null)
     if (!editId) {
+      originalEditValues.current = null
       try {
         const draft = JSON.parse(localStorage.getItem(draftKey(editId)) || 'null')
         setValues(draft?.values ? { ...initialValues, ...draft.values } : initialValues)
@@ -177,6 +209,7 @@ export default function AddCollege() {
       const isKnownType = TYPES.includes(rawType)
       const loadedValues = { ...initialValues, collegeName: record.name ?? record.collegeName ?? '', collegeCode: record.code ?? record.collegeCode ?? '', collegeType: rawType && !isKnownType ? 'Other' : rawType, collegeTypeOther: rawType && !isKnownType ? rawType : '', universityName: record.university ?? record.universityName ?? '', addressLine1: record.addressLine1 ?? addressRecord.addressLine1 ?? addressParts[0] ?? '', addressLine2: record.addressLine2 ?? addressRecord.addressLine2 ?? addressParts.slice(1).join(', '), area: record.area ?? addressRecord.area ?? extended.area ?? '', district: record.district ?? addressRecord.district ?? extended.district ?? '', city: record.city ?? addressRecord.city ?? '', state: record.state ?? addressRecord.state ?? '', pincode: String(record.pincode ?? addressRecord.pincode ?? ''), country: record.country ?? addressRecord.country ?? 'India', contactNumber: String(record.contact ?? record.contactNumber ?? record.phoneNumber ?? record.mobile ?? record.phone ?? contactRecord.contactNumber ?? contactRecord.phoneNumber ?? contactRecord.mobile ?? contactRecord.phone ?? ''), alternateContactNumber: String(record.alternateContact ?? record.alternateContactNumber ?? record.alternatePhoneNumber ?? contactRecord.alternateContactNumber ?? extended.alternateContactNumber ?? ''), email: record.email ?? record.collegeEmail ?? contactRecord.email ?? '', website: record.website ?? record.Website ?? contactRecord.website ?? contactRecord.Website ?? '', principalName: record.principal ?? record.principalName ?? principalRecord.principalName ?? '', principalEmail: record.principalEmail ?? principalRecord.principalEmail ?? extended.principalEmail ?? '', principalContact: String(record.principalContact ?? record.principalPhone ?? principalRecord.principalContact ?? extended.principalContact ?? ''), accreditationBody: record.accreditationBody ?? accreditationRecord.body ?? accreditationRecord.accreditationBody ?? extended.accreditationBody ?? '', accreditationStatus: record.accreditationStatus ?? accreditationRecord.status ?? 'Not Accredited', accreditationGrade: record.accreditationGrade ?? accreditationRecord.grade ?? extended.accreditationGrade ?? '', accreditationNumber: record.accreditationNumber ?? accreditationRecord.number ?? extended.accreditationNumber ?? '', validFrom: dateInputValue(record.validFrom ?? record.accreditationValidFrom ?? accreditationRecord.validFrom ?? extended.validFrom), validUntil: dateInputValue(record.validUntil ?? record.accreditationValidUntil ?? accreditationRecord.validUntil ?? extended.validUntil), logo: record.logo ?? record.logoUrl ?? record.collegeLogo ?? record.collegeLogoUrl ?? record.logoPath ?? '', logoName: record.logoName ?? extended.logoName ?? '' }
       try { setValues({ ...loadedValues, ...(JSON.parse(localStorage.getItem(draftKey(editId)) || 'null')?.values || {}) }) } catch { setValues(loadedValues) }
+      originalEditValues.current = loadedValues
     }).catch((error) => { if (active) setNotice(error.message || 'Unable to load college details.') }).finally(() => { if (active) setLoadingCollege(false) })
     return () => { active = false }
   }, [editId])
@@ -191,6 +224,7 @@ export default function AddCollege() {
       .then((response) => {
         const records = response?.data?.data ?? response?.data ?? response
         const colleges = Array.isArray(records) ? records : Array.isArray(records?.items) ? records.items : []
+        setExistingColleges(colleges)
         setExistingCollegeCodes(colleges.map((college) => String(college.code ?? college.collegeCode ?? '').trim().toUpperCase()).filter(Boolean))
       })
       .catch(() => setExistingCollegeCodes([]))
@@ -244,7 +278,14 @@ export default function AddCollege() {
     setLogoError('')
     if (!file) return
     if (!['image/png', 'image/jpeg', 'image/webp'].includes(file.type)) return setLogoError('Choose a PNG, JPG, JPEG, or WEBP image.')
-    if (file.size > 5 * 1024 * 1024) return setLogoError('Logo must be 5 MB or smaller.')
+    if (file.size > 2 * 1024 * 1024) {
+      setLogoFile(null)
+      setValues((current) => ({ ...current, logo: '', logoName: '' }))
+      if (fileRef.current) fileRef.current.value = ''
+      setLogoError('Logo must be 2 MB or smaller. Save was stopped.')
+      setDirty(true)
+      return
+    }
     setLogoFile(file)
     setRemoveExistingLogo(false)
     const reader = new FileReader()
@@ -258,18 +299,34 @@ export default function AddCollege() {
   const saveDraft = () => { localStorage.setItem(draftKey(editId), JSON.stringify({ values, activeTab, progress: draftProgress(values), savedAt: new Date().toISOString() })) }
   const requestLeave = () => { if (dirty) { saveDraft(); setNotice(`Draft saved · ${progress}% complete.`); setDialog('leave'); return } navigate('/college-institution-management') }
   const showTab = (tabId) => {
+    if (tabId === 'preview' && !isValid) {
+      const targetTab = firstInvalidTab || 'college'
+      setTouched((current) => (TAB_FIELDS[targetTab] || []).reduce((next, field) => ({ ...next, [field]: true }), current))
+      setActiveTab(targetTab)
+      setNotice(invalidMessage)
+      return
+    }
     setActiveTab(tabId)
     window.scrollTo({ top: 0, left: 0, behavior: 'auto' })
   }
+
+  useEffect(() => {
+    if (activeTab === 'preview' && !isValid) {
+      const targetTab = firstInvalidTab || 'college'
+      setTouched((current) => (TAB_FIELDS[targetTab] || []).reduce((next, field) => ({ ...next, [field]: true }), current))
+      setActiveTab(targetTab)
+      setNotice(invalidMessage)
+    }
+  }, [activeTab, firstInvalidTab, invalidMessage, isValid])
   const saveAndNext = () => {
     const fields = TAB_FIELDS[activeTab]
     setTouched((current) => fields.reduce((next, field) => ({ ...next, [field]: true }), { ...current }))
-    if (activeTab === 'college' && duplicateCode) {
-      setNotice('This college code already exists. Enter a unique code before continuing.')
+    if (duplicateReasonForTab) {
+      setNotice(duplicateReasonForTab)
       return
     }
     if (fields.some((field) => errors[field])) {
-      setNotice('Please correct the highlighted fields before continuing.')
+      setNotice(errors[fields.find((field) => errors[field])] || 'Please correct the highlighted fields before continuing.')
       return
     }
     const currentIndex = FORM_TABS.findIndex((tab) => tab.id === activeTab)
@@ -282,7 +339,7 @@ export default function AddCollege() {
 
   const submit = async () => {
     touchAll()
-    if (!isValid || submitting) { setDialog(null); return }
+    if (logoError || !isValid || submitting) { setDialog(null); return }
     setSubmitting(true)
     let collegeId = editId || pendingLogoCollegeId
     try {
@@ -355,14 +412,14 @@ export default function AddCollege() {
     <form onSubmit={(event) => event.preventDefault()} noValidate>
       {activeTab === 'college' && <>
       {section('College Information', 'Core identity and affiliation details.', <>
-        <Field label="College Name" name="collegeName" values={values} errors={errors} touched={touched} onChange={update} required maxLength={120} placeholder="e.g. Crescent Institute of Technology" />
+        <Field label="College Name" name="collegeName" values={values} errors={{ ...errors, ...(duplicateName ? { collegeName: 'A college with this name already exists.' } : {}) }} touched={touched} onChange={update} required maxLength={120} placeholder="e.g. Crescent Institute of Technology" />
         <Field label="College Code" name="collegeCode" values={values} errors={{ ...errors, ...(duplicateCode ? { collegeCode: 'This college code already exists.' } : {}) }} touched={touched} onChange={update} required maxLength={12} placeholder="e.g. CIT2026" />
         <label className="ac-field" htmlFor="ac-collegeType"><span>College Type <b>*</b></span><select id="ac-collegeType" name="collegeType" value={values.collegeType} onChange={update} aria-invalid={Boolean(touched.collegeType && errors.collegeType)}><option value="">Select type</option>{TYPES.map((type) => <option key={type}>{type}</option>)}</select>{touched.collegeType && errors.collegeType && <small className="ac-error" role="alert">{errors.collegeType}</small>}</label>
         {values.collegeType === 'Other' && <Field label="Specify College Type" name="collegeTypeOther" values={values} errors={errors} touched={touched} onChange={update} required maxLength={60} placeholder="e.g. Community College" />}
         <Field label="University Name" name="universityName" values={values} errors={errors} touched={touched} onChange={update} required maxLength={120} placeholder="Affiliated university" readOnly={values.collegeType === 'Deemed University'} />
         <div className="ac-upload ac-span-2" onDragOver={(e) => e.preventDefault()} onDrop={(e) => { e.preventDefault(); selectLogo(e.dataTransfer.files[0]) }}>
           <input ref={fileRef} type="file" accept=".png,.jpg,.jpeg,.webp" onChange={(e) => selectLogo(e.target.files?.[0])} hidden />
-          {values.logo || (editId && !removeExistingLogo) ? <div className="ac-logo-preview"><img src={logoFile ? values.logo : getCollegeLogoUrl(editId, values.logo)} alt="College logo preview" /><div><strong>{values.logoName || (logoFile ? logoFile.name : 'Current college logo')}</strong><button type="button" onClick={() => { setLogoFile(null); setRemoveExistingLogo(Boolean(editId)); setValues((v) => ({ ...v, logo: '', logoName: '' })); if (fileRef.current) fileRef.current.value = ''; setDirty(true) }}>Remove image</button></div></div> : <button type="button" className="ac-upload-button" onClick={() => fileRef.current?.click()}><strong>Upload college logo</strong><span>Click or drag and drop PNG, JPG, JPEG, or WEBP · Max 5 MB</span></button>}
+          {values.logo || (editId && !removeExistingLogo) ? <div className="ac-logo-preview"><img src={logoFile ? values.logo : getCollegeLogoUrl(editId, values.logo)} alt="College logo preview" /><div><strong>{values.logoName || (logoFile ? logoFile.name : 'Current college logo')}</strong><button type="button" onClick={() => { setLogoFile(null); setRemoveExistingLogo(Boolean(editId)); setValues((v) => ({ ...v, logo: '', logoName: '' })); if (fileRef.current) fileRef.current.value = ''; setDirty(true) }}>Remove image</button></div></div> : <button type="button" className="ac-upload-button" onClick={() => fileRef.current?.click()}><strong>Upload college logo</strong><span>Click or drag and drop PNG, JPG, JPEG, or WEBP · Max 2 MB</span></button>}
           {logoError && <small className="ac-error" role="alert">{logoError}</small>}
         </div>
       </>)}
@@ -381,9 +438,9 @@ export default function AddCollege() {
       </>)}
       </>}
       {activeTab === 'contact' && section('Contact Information', 'Public college contact channels.', <>
-        <Field label="Official Contact Number" name="contactNumber" values={values} errors={errors} touched={touched} onChange={update} required maxLength={10} inputMode="tel" placeholder="10-digit mobile number" />
+        <Field label="Official Contact Number" name="contactNumber" values={values} errors={{ ...errors, ...(duplicateContact ? { contactNumber: 'This contact number already exists.' } : {}) }} touched={touched} onChange={update} required maxLength={10} inputMode="tel" placeholder="10-digit mobile number" />
         <Field label="Alternate Contact Number" name="alternateContactNumber" values={values} errors={errors} touched={touched} onChange={update} maxLength={10} inputMode="tel" />
-        <Field label="Official Email" name="email" type="email" values={values} errors={errors} touched={touched} onChange={update} required maxLength={120} placeholder="office@college.edu" />
+        <Field label="Official Email" name="email" type="email" values={values} errors={{ ...errors, ...(duplicateEmail ? { email: 'This college email already exists.' } : {}) }} touched={touched} onChange={update} required maxLength={120} placeholder="office@college.edu" />
         <Field label="Website" name="website" type="url" values={values} errors={errors} touched={touched} onChange={update} onBlur={normalizeWebsiteField} maxLength={160} placeholder="https://college.edu" />
       </>)}
       {activeTab === 'administration' && section('Administration', 'Principal or institutional head details.', <>
@@ -399,11 +456,11 @@ export default function AddCollege() {
         <Field label="Valid Until" name="validUntil" type="date" values={values} errors={errors} touched={touched} onChange={update} />
         {values.accreditationStatus === 'Accredited' && <p className="ac-hint ac-span-2">Complete the accreditation grade, number, and validity dates for a comprehensive record.</p>}
       </>)}
-      {activeTab === 'preview' && <section className="ac-preview ac-final-preview"><h2>Preview &amp; Submit</h2><p>Review all college fields before submitting.</p>{values.logo && <img src={values.logo} alt="College logo preview" />}<dl>{Object.entries({ 'College Name': values.collegeName, 'College Code': values.collegeCode, 'College Type': values.collegeType === 'Other' ? values.collegeTypeOther : values.collegeType, 'University Name': values.universityName, 'Logo File Name': values.logoName, 'Address Line 1': values.addressLine1, 'Address Line 2': values.addressLine2, Area: values.area, District: values.district, City: values.city, State: values.state, Country: values.country, Pincode: values.pincode, 'Contact Number': values.contactNumber, 'Alternate Contact Number': values.alternateContactNumber, 'Official Email': values.email, Website: values.website, 'Principal Name': values.principalName, 'Principal Email': values.principalEmail, 'Principal Contact Number': values.principalContact, 'Accreditation Status': values.accreditationStatus, 'Accreditation Body': values.accreditationBody, 'Accreditation Grade': values.accreditationGrade, 'Accreditation Number': values.accreditationNumber, 'Valid From': values.validFrom, 'Valid Until': values.validUntil }).map(([label, value]) => <div key={label}><dt>{label}</dt><dd className={!hasValue(value) ? 'ac-not-provided' : ''}>{hasValue(value) ? value : 'Not provided'}</dd></div>)}</dl></section>}
+      {activeTab === 'preview' && <section className="ac-preview ac-final-preview"><h2>Preview &amp; Submit</h2><p>Review all college fields before submitting.</p>{values.logo && <img src={values.logo} alt="College logo preview" />}<dl>{Object.entries({ 'College Name': values.collegeName, 'College Code': values.collegeCode, 'College Type': values.collegeType === 'Other' ? values.collegeTypeOther : values.collegeType, 'University Name': values.universityName, 'Logo File Name': values.logoName, 'Address Line 1': values.addressLine1, 'Address Line 2': values.addressLine2, Area: values.area, District: values.district, City: values.city, State: values.state, Country: values.country, Pincode: values.pincode, 'Contact Number': values.contactNumber, 'Alternate Contact Number': values.alternateContactNumber, 'Official Email': values.email, Website: values.website, 'Principal Name': values.principalName, 'Principal Email': values.principalEmail, 'Principal Contact Number': values.principalContact, 'Accreditation Status': values.accreditationStatus, 'Accreditation Body': values.accreditationBody, 'Accreditation Grade': values.accreditationGrade, 'Accreditation Number': values.accreditationNumber, 'Valid From': values.validFrom, 'Valid Until': values.validUntil }).filter(([, value]) => hasValue(value)).map(([label, value]) => <div key={label}><dt>{label}</dt><dd>{value}</dd></div>)}</dl></section>}
       {activeTab !== 'accreditation' && activeTab !== 'preview' ? (
         <footer className="ac-actions ac-next-actions"><button type="button" className="ac-primary" onClick={saveAndNext}>Save &amp; Next →</button></footer>
       ) : activeTab === 'accreditation' ? (
-        <footer className="ac-actions"><button type="button" className="ac-secondary" onClick={() => showTab('college')}>Start Over</button><button type="button" className="ac-primary" onClick={() => { if (isValid) showTab('preview'); else { touchAll(); setNotice('Please correct the highlighted fields before continuing.') } }}>Next: Preview</button></footer>
+        <footer className="ac-actions"><button type="button" className="ac-secondary" onClick={() => showTab('college')}>Start Over</button><button type="button" className="ac-primary" onClick={() => showTab('preview')}>Next: Preview</button></footer>
       ) : (
         <footer className="ac-actions"><button type="button" className="ac-secondary" onClick={() => showTab('accreditation')}>← Previous</button><button type="button" className="ac-primary" onClick={submit} disabled={!isValid || submitting || loadingCollege || saved}>{submitting ? 'Saving...' : saved ? 'Saved. Redirecting...' : editId ? 'Save Changes' : 'Submit College'}</button></footer>
       )}

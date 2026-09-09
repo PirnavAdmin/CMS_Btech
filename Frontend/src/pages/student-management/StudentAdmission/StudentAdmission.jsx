@@ -518,7 +518,6 @@ function AdmissionList() {
 
   return (
     <>
-      <Breadcrumb />
       <header className="sa-page-header cm-header">
         <div>
           <h1>Student Admissions</h1>
@@ -1150,11 +1149,11 @@ function AdmissionDetails({ approval = false }) {
             </button>
           ))}
         </nav>
-      </div>
 
-      <section className="sa-detail-card" style={{ marginTop: '16px' }}>
-        <DetailContent data={data} tab={tab} />
-      </section>
+        <section className="sa-detail-card">
+          <DetailContent data={data} tab={tab} />
+        </section>
+      </div>
     </div>
   );
 }

@@ -28,6 +28,23 @@
 .pirnav-login .account-link,
 .pirnav-login .access-note{width:100%;text-align:center}
 
+/* Text-style auth action should not inherit the global button hover lift. */
+.pirnav-login .forgot-password-link:hover,
+.pirnav-login .forgot-password-link:active {
+  transform: none;
+  box-shadow: none;
+  color: inherit;
+  background: transparent;
+  text-decoration: underline;
+}
+
+.pirnav-login .forgot-password-link:focus-visible {
+  transform: none;
+  box-shadow: none;
+  outline: 2px solid var(--brand, #176fae);
+  outline-offset: 3px;
+}
+
 /* Public theme control mirrors the authenticated header control. */
 .login-public-actions{position:absolute;top:20px;right:22px;z-index:3;display:flex;align-items:center;gap:9px}
 .login-public-actions .login-home-link{position:static}

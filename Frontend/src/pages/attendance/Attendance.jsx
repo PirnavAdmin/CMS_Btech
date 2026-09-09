@@ -276,7 +276,6 @@ export default function Attendance() {
           title="Attendance Management"
           subtitle="Daily class attendance registers, session entry, and student shortage monitoring."
           breadcrumb={[
-            { label: 'Academic ERP', link: '/dashboard' },
             { label: 'Attendance' },
           ]}
           actions={

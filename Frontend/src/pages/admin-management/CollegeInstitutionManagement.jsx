@@ -13,6 +13,7 @@ import CompactSummary from '../../components/CompactSummary'
 import {
   createCollegeSettings,
   fetchCollegeLogo,
+  getCollegeLogoUrl,
   getCollegeById,
   getCollegeSettings,
   getColleges,
@@ -227,13 +228,15 @@ const deriveCollegeSummary = (source, records = []) => {
 }
 
 const mapCollege = (record) => {
+  const id = record.id ?? record.collegeId
+  const logoValue = record.logo ?? record.logoUrl ?? record.collegeLogo ?? record.collegeLogoUrl ?? record.logoPath ?? ''
   const address = record.addressDetails ?? record.addressInfo ?? {}
   const contact = record.contactDetails ?? record.contactInfo ?? {}
   const administration = record.administration ?? record.principalDetails ?? {}
   const accreditation = record.accreditationDetails && typeof record.accreditationDetails === 'object' ? record.accreditationDetails : {}
   const extended = readCollegeExtendedDetails(record)
   return ({
-  id: record.id ?? record.collegeId,
+  id,
   name: record.name ?? record.collegeName ?? '',
   code: record.code ?? record.collegeCode ?? '',
   type: record.type ?? record.collegeType ?? record.institutionType ?? COLLEGE_TYPES[0],
@@ -254,7 +257,7 @@ const mapCollege = (record) => {
   // Do not probe the protected logo endpoint for every directory record. The
   // college list does not guarantee a logo exists, and a missing one should use
   // the existing initial-based placeholder rather than generate a 404 request.
-  logo: record.logo ?? record.logoUrl ?? record.collegeLogo ?? record.collegeLogoUrl ?? record.logoPath ?? '',
+  logo: getCollegeLogoUrl(id, logoValue),
   principal: record.principal ?? record.principalName ?? administration.principalName ?? '',
   principalEmail: record.principalEmail ?? administration.principalEmail ?? extended.principalEmail ?? '',
   principalContact: record.principalContact ?? record.principalPhone ?? administration.principalContact ?? extended.principalContact ?? '',
@@ -660,7 +663,6 @@ export default function CollegeInstitutionManagement({ initialView = 'list' }) {
           <>
             <header className="cm-header management-page__heading">
               <div>
-                <span className="cm-eyebrow">Academic ERP</span>
                 <h1>College Management</h1>
                 <p>Manage colleges, institutional details, and academic configurations.</p>
               </div>
@@ -776,9 +778,9 @@ export default function CollegeInstitutionManagement({ initialView = 'list' }) {
                       {displayedColleges.map((college) => (
                         <tr key={college.id}>
                           <td className="table-center" style={{ width: '60px' }}>
-                            {college.logo && !brokenLogoIds.has(college.id) ? (
+                            {college.id && !brokenLogoIds.has(college.id) ? (
                               <CollegeLogoImage
-                                src={college.logo}
+                                src={college.logo || getCollegeLogoUrl(college.id, '')}
                                 alt={college.name}
                                 className="cm-logo-thumb"
                                 onError={() => markLogoBroken(college.id)}
@@ -989,9 +991,9 @@ export default function CollegeInstitutionManagement({ initialView = 'list' }) {
               {/* Header Profile Banner */}
               <div className="cm-profile-banner">
                 <div className="cm-profile-avatar-wrap">
-                  {activeCollege.logo && !brokenLogoIds.has(activeCollege.id) ? (
+                  {activeCollege.id && !brokenLogoIds.has(activeCollege.id) ? (
                     <CollegeLogoImage
-                      src={activeCollege.logo}
+                      src={activeCollege.logo || getCollegeLogoUrl(activeCollege.id, '')}
                       alt={activeCollege.name}
                       className="cm-profile-logo"
                       onError={() => markLogoBroken(activeCollege.id)}

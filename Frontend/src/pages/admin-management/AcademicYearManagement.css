@@ -1,4 +1,8 @@
-.ay{display:grid;width:100%;min-width:0;gap:16px;color:var(--text-primary)}
+.ay{display:grid;width:100%;min-width:0;gap:12px;color:var(--text-primary)}
+.ay-details-view{gap:12px!important;margin-top:0!important}
+.ay-details-view .cm-profile-top-bar{justify-content:flex-end;min-height:36px}
+.ay-details-view .cm-profile-card{margin-top:0}
+.ay-profile-info-card{grid-column:1 / -1}
 .ay>header .eyebrow,.ay>header>div>p:last-child,.ay .modal>.eyebrow{display:none!important}
 .ay>header{display:flex;align-items:flex-start;justify-content:space-between;gap:20px}.ay>header h1,.ay>header p{margin:0}.ay>header h1{font-size:28px;line-height:1.2;letter-spacing:-.025em}.ay>header>div>p:last-child{margin-top:6px;color:var(--text-muted);font-size:13px}.ay .eyebrow{margin:0 0 5px;color:var(--brand);font-size:11px;font-weight:850;letter-spacing:.12em;text-transform:uppercase}.ay .headerActions{display:flex;flex-wrap:wrap;gap:8px}
 .ay .ay-btn{min-height:38px;padding:0 13px;border:1px solid var(--border-strong);border-radius:var(--radius-sm,8px);color:var(--text-secondary);background:var(--surface);font:750 12px inherit;cursor:pointer}.ay .ay-btn:hover{border-color:var(--brand);color:var(--brand);background:var(--brand-soft)}.ay .ay-btn.solid{border-color:var(--brand);color:#fff;background:var(--brand)}.ay .ay-btn.red{border-color:var(--danger);color:#fff;background:var(--danger)}

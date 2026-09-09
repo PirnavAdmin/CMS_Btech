@@ -306,7 +306,6 @@ export default function Results() {
           title="Results & Marks Management"
           subtitle="Examination grading, marks entry registers, pass/fail publication, and student transcripts."
           breadcrumb={[
-            { label: 'Academic ERP', link: '/dashboard' },
             { label: 'Results' },
           ]}
           actions={

@@ -296,6 +296,15 @@
   box-shadow: var(--shadow-sm, 0 2px 8px rgba(15, 42, 66, .06));
 }
 
+.cm-profile-card > .sa-detail-card,
+.cm-profile-card > .sp-panel {
+  margin: 0 !important;
+  border: 0 !important;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
 .cm-profile-view .cm-profile-grid,
 .department-profile-view .cm-profile-grid {
   display: block;

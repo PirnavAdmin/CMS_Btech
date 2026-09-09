@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { AuthRequestError, generateOtp, resendOtp, verifyOtp, resetPassword } from '../auth/authApi'
-import { FiArrowLeft } from 'react-icons/fi'
+import { FiArrowLeft, FiEye, FiEyeOff } from 'react-icons/fi'
 import './ForgotPassword.css'
 
 const isValidContact = (value, method) => method === 'email'
@@ -17,6 +17,7 @@ export default function ForgotPassword({ onBack }) {
   const [demoOtp, setDemoOtp] = useState('')
   const [timer, setTimer] = useState(0)
   const [passwords, setPasswords] = useState({ password: '', confirmPassword: '' })
+  const [visiblePasswords, setVisiblePasswords] = useState({ password: false, confirmPassword: false })
   const otpRefs = useRef([])
 
   useEffect(() => {
@@ -110,8 +111,8 @@ export default function ForgotPassword({ onBack }) {
   if (step === 'change-password') return (
     <form className="login-form" onSubmit={changePassword} noValidate>
       <header><h2>Change password</h2><p>Create a new password for your account.</p></header>
-      <label className="recovery-password" htmlFor="new-password"><span>New password</span><input id="new-password" type="password" autoComplete="new-password" value={passwords.password} onChange={(event) => { setPasswords((current) => ({ ...current, password: event.target.value })); setError('') }} /></label>
-      <label className="recovery-password" htmlFor="confirm-password"><span>Confirm new password</span><input id="confirm-password" type="password" autoComplete="new-password" value={passwords.confirmPassword} onChange={(event) => { setPasswords((current) => ({ ...current, confirmPassword: event.target.value })); setError('') }} /></label>
+      <label className="recovery-password" htmlFor="new-password"><span>New password</span><div className="recovery-password-input"><input id="new-password" type={visiblePasswords.password ? 'text' : 'password'} autoComplete="new-password" value={passwords.password} onChange={(event) => { setPasswords((current) => ({ ...current, password: event.target.value })); setError('') }} /><button type="button" className="recovery-password-toggle" aria-label={`${visiblePasswords.password ? 'Hide' : 'Show'} new password`} title={`${visiblePasswords.password ? 'Hide' : 'Show'} new password`} onClick={() => setVisiblePasswords((current) => ({ ...current, password: !current.password }))}>{visiblePasswords.password ? <FiEyeOff aria-hidden="true" /> : <FiEye aria-hidden="true" />}</button></div></label>
+      <label className="recovery-password" htmlFor="confirm-password"><span>Confirm new password</span><div className="recovery-password-input"><input id="confirm-password" type={visiblePasswords.confirmPassword ? 'text' : 'password'} autoComplete="new-password" value={passwords.confirmPassword} onChange={(event) => { setPasswords((current) => ({ ...current, confirmPassword: event.target.value })); setError('') }} /><button type="button" className="recovery-password-toggle" aria-label={`${visiblePasswords.confirmPassword ? 'Hide' : 'Show'} confirm new password`} title={`${visiblePasswords.confirmPassword ? 'Hide' : 'Show'} confirm new password`} onClick={() => setVisiblePasswords((current) => ({ ...current, confirmPassword: !current.confirmPassword }))}>{visiblePasswords.confirmPassword ? <FiEyeOff aria-hidden="true" /> : <FiEye aria-hidden="true" />}</button></div></label>
       {error && <p className="form-error" role="alert">{error}</p>}
       <button className="sign-in-button" type="submit" disabled={loading}>{loading ? 'Updating...' : 'Change Password'}</button>
       <button type="button" className="text-button back-to-login" onClick={onBack}>Cancel</button>

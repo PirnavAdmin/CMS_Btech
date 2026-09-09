@@ -195,7 +195,6 @@ export default function Faculty() {
           title="Faculty Management"
           subtitle="Faculty profiles, departmental assignments, teaching workloads, and class advisor roles."
           breadcrumb={[
-            { label: 'Academic ERP', link: '/dashboard' },
             { label: 'Faculty' },
           ]}
         />

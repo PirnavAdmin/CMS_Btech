@@ -317,7 +317,6 @@ export default function DepartmentManagement() {
         {screen === 'list' && (
           <>
             <PageHeader
-              breadcrumb="Institution Management / Structure"
               title="Department Management"
               subtitle="Organize academic departments, faculty leadership, and institutional branches."
               compactSummary={summaryCards}

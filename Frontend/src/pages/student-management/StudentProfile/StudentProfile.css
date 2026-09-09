@@ -30,3 +30,81 @@
 main.student-profile .sp-directory-table{min-width:900px!important;table-layout:auto!important}main.student-profile .sp-directory-table :is(th,td){width:auto!important;text-align:left!important;vertical-align:middle!important}main.student-profile .sp-directory-table th:last-child,main.student-profile .sp-directory-table td:last-child{text-align:center!important;white-space:nowrap}main.student-profile .sp-directory-table td:last-child>div{justify-content:center!important}
 /* Match the fixed, evenly spaced layout used by the academic management tables. */
 main.student-profile .sp-directory-table{width:100%;min-width:1040px!important;table-layout:fixed!important}main.student-profile .sp-directory-table th,main.student-profile .sp-directory-table td{box-sizing:border-box;text-align:left!important;vertical-align:middle!important}main.student-profile .sp-directory-table th:nth-child(1),main.student-profile .sp-directory-table td:nth-child(1){width:25%!important}main.student-profile .sp-directory-table th:nth-child(2),main.student-profile .sp-directory-table td:nth-child(2){width:38%!important}main.student-profile .sp-directory-table th:nth-child(3),main.student-profile .sp-directory-table td:nth-child(3){width:19%!important}main.student-profile .sp-directory-table th:nth-child(4),main.student-profile .sp-directory-table td:nth-child(4){width:10%!important}main.student-profile .sp-directory-table th:nth-child(5),main.student-profile .sp-directory-table td:nth-child(5){width:8%!important;text-align:center!important}main.student-profile .sp-directory-table td:nth-child(2) strong{overflow-wrap:anywhere}main.student-profile .sp-directory-table td:nth-child(3) strong,main.student-profile .sp-directory-table td:nth-child(3) small{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+/* Keep all profile navigation visible when the workspace narrows. */
+.student-profile .cm-profile-view > .cm-profile-top-bar {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+}
+.student-profile .cm-profile-card > .sp-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  min-width: 0;
+  height: auto;
+  margin: 0;
+  padding: 12px 16px;
+  box-sizing: border-box;
+  overflow: visible;
+  border: 0;
+  border-bottom: 1px solid var(--border);
+  border-radius: 0;
+}
+.student-profile .cm-profile-card > .sp-tabs button {
+  flex: 0 1 auto;
+  min-width: 0;
+  min-height: 42px;
+  height: auto;
+  padding: 10px 12px;
+  white-space: normal;
+  text-align: left;
+  cursor: pointer;
+}
+.student-profile .cm-profile-card > .sp-tabs button svg {
+  flex-shrink: 0;
+  width: 16px;
+  height: 16px;
+}
+.student-profile .cm-profile-card > .sp-tabs button.active {
+  color: var(--brand);
+  background: var(--surface);
+  box-shadow: inset 0 -3px var(--brand), var(--shadow-sm);
+}
+.student-profile .cm-profile-card > .sp-tabs button:focus-visible {
+  outline: 2px solid var(--brand);
+  outline-offset: 2px;
+}
+.student-profile .cm-profile-card > .sp-tabs button:hover {
+  color: var(--brand);
+  background: var(--surface);
+}
+@media (max-width: 480px) {
+  .student-profile .cm-profile-card > .sp-tabs button { flex: 1 1 140px; }
+  .student-profile .cm-profile-view > .cm-profile-top-bar button { flex: 1 1 auto; }
+}
+
+.student-profile .sp-breadcrumb {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 16px;
+  color: var(--text-muted);
+  font-size: 13px;
+  line-height: 1.5;
+}
+.student-profile .sp-breadcrumb a {
+  color: var(--brand);
+  font-weight: 650;
+  text-decoration: none;
+}
+.student-profile .sp-breadcrumb a:hover { text-decoration: underline; }
+.student-profile .sp-breadcrumb a:focus-visible {
+  outline: 2px solid var(--brand);
+  outline-offset: 3px;
+}

@@ -822,7 +822,6 @@ export default function StudentProfile() {
     <>
       <header className="sp-heading cm-header">
         <div>
-          <span className="cm-eyebrow">Student Management</span>
           <h1>Student Profiles</h1>
           <p>
             Find, preview and manage profiles created from student admissions.
@@ -1278,10 +1277,12 @@ function Profile({ student, tab, setTab, back, edit, canEdit }) {
           </div>
         </div>
 
-        <nav className="sp-tabs">
+        <nav className="sp-tabs" aria-label="Student profile sections">
           {TABS.map(([id, label, Icon]) => (
             <button
               key={id}
+              type="button"
+              aria-current={tab === id ? "page" : undefined}
               className={tab === id ? "active" : ""}
               onClick={() => setTab(id)}
             >
@@ -1290,7 +1291,6 @@ function Profile({ student, tab, setTab, back, edit, canEdit }) {
             </button>
           ))}
         </nav>
-      </div>
       {tab === "documents" ? (
         <section className="sp-panel">
           <header>
@@ -1314,7 +1314,7 @@ function Profile({ student, tab, setTab, back, edit, canEdit }) {
           </div>
         </section>
       ) : panels[tab] ? (
-        <div className="cm-profile-grid" style={{ padding: '20px 0' }}>
+        <div className="cm-profile-grid">
           <InfoCard
             title={TABS.find((item) => item[0] === tab)[1]}
             icon={TABS.find((item) => item[0] === tab)[2]}
@@ -1328,6 +1328,7 @@ function Profile({ student, tab, setTab, back, edit, canEdit }) {
           No admission information is available for this section.
         </Empty>
       )}
+      </div>
     </div>
   );
 }
