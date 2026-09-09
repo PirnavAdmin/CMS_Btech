@@ -435,66 +435,68 @@ export default function DepartmentManagement() {
                     <table className="erp-table">
                       <thead>
                         <tr>
-                          <th>Department</th>
-                          <th>Code</th>
-                          <th>Head / In-Charge</th>
-                          <th>Status</th>
-                          <th style={{ textAlign: 'center' }}>Actions</th>
+                          <th style={{ minWidth: '220px' }}>Department</th>
+                          <th className="table-center" style={{ width: '120px' }}>Code</th>
+                          <th style={{ minWidth: '180px', maxWidth: '240px' }}>Head / In-Charge</th>
+                          <th className="table-center" style={{ width: '120px' }}>Status</th>
+                          <th className="table-center" style={{ width: '160px' }}>Actions</th>
                         </tr>
                       </thead>
                       <tbody>
                         {pageItems.map((item) => (
                           <tr key={item.id}>
-                            <td>
-                              <strong>{item.name}</strong>
+                            <td style={{ minWidth: '220px' }}>
+                              <strong className="table-cell-truncate" title={item.name}>{item.name}</strong>
                             </td>
-                            <td>
+                            <td className="table-center" style={{ width: '120px' }}>
                               <code>{item.code || '—'}</code>
                             </td>
-                            <td>{item.hod}</td>
-                            <td>
-                              <StatusBadge status={item.status} />
+                            <td style={{ minWidth: '180px', maxWidth: '240px' }}>
+                              <span className="table-cell-truncate" title={item.hod || 'Unassigned'}>{item.hod || '—'}</span>
                             </td>
-                            <td>
-                              <div className="erp-row-actions">
+                            <td className="table-center" style={{ width: '120px' }}>
+                              <StatusBadge value={item.status} />
+                            </td>
+                            <td className="table-center" style={{ width: '160px' }}>
+                              <div className="erp-row-actions table-actions-group">
                                 <button
                                   type="button"
-                                  className="erp-action-btn"
+                                  className="table-action-btn action-view erp-action-btn"
                                   title={`View ${item.name}`}
                                   aria-label={`View ${item.name}`}
                                   onClick={() => loadDetail(item, 'details')}
                                 >
-                                  <FiEye className="module-action-icon module-action-icon--view" />
+                                  <FiEye />
                                 </button>
                                 <button
                                   type="button"
-                                  className="erp-action-btn"
+                                  className="table-action-btn action-edit erp-action-btn"
                                   title={`Edit ${item.name}`}
                                   aria-label={`Edit ${item.name}`}
                                   onClick={() => loadDetail(item, 'form')}
                                 >
-                                  <FiEdit2 className="module-action-icon module-action-icon--edit" />
+                                  <FiEdit2 />
                                 </button>
                                 <button
                                   type="button"
-                                  className="erp-action-btn"
+                                  className="table-action-btn action-assign erp-action-btn"
                                   title={`Assign Head / In-Charge for ${item.name}`}
                                   aria-label={`Assign Head for ${item.name}`}
                                   onClick={() => loadDetail(item, 'assign-hod')}
                                 >
-                                  <FiUserPlus className="module-action-icon" />
+                                  <FiUserPlus />
                                 </button>
                                 <button
                                   type="button"
-                                  className={`erp-action-btn erp-action-btn--${item.status === 'Active' ? 'success' : 'danger'}`}
-                                  title={item.status === 'Active' ? `Mark ${item.name} inactive` : `Mark ${item.name} active`}
-                                  aria-label={item.status === 'Active' ? `Mark ${item.name} inactive` : `Mark ${item.name} active`}
+                                  className={`table-action-btn ${item.status === 'Active' ? 'action-deactivate erp-action-btn--danger' : 'action-activate erp-action-btn--success'}`}
+                                  title={item.status === 'Active' ? `Deactivate ${item.name}` : `Activate ${item.name}`}
+                                  aria-label={item.status === 'Active' ? `Deactivate ${item.name}` : `Activate ${item.name}`}
                                   onClick={() => toggleStatus(item)}
                                 >
                                   {item.status === 'Active' ? (
-                                    <FiToggleRight className="module-action-icon" />
+                                    <FiToggleRight />
                                   ) : (
-                                    <FiToggleLeft className="module-action-icon" />
+                                    <FiToggleLeft />
                                   )}
                                 </button>
                               </div>
@@ -689,44 +691,44 @@ export default function DepartmentManagement() {
         )}
 
         {screen === 'details' && selected && (
-          <div className="department-profile-view">
-            <PageHeader
-              breadcrumb="Institution Management / Departments"
-              title={selected.name}
-              subtitle={`${selected.code || 'No code'} · Organizational Department`}
-            >
-              <PrintDetailsButton title={`${selected.name} details`} selector=".department-details-body" />
-              <button type="button" className="erp-btn erp-btn--secondary" onClick={closeToList}>
-                <FiArrowLeft /> Back to List
+          <div className="cm-profile-view">
+            <div className="cm-profile-top-bar">
+              <button type="button" className="cm-secondary-btn erp-btn erp-btn--secondary" onClick={closeToList}>
+                &larr; Back to Departments List
               </button>
-              <button
-                type="button"
-                className="erp-btn erp-btn--primary"
-                onClick={() => loadDetail(selected, 'form')}
-              >
-                <FiEdit2 /> Edit Department
-              </button>
-            </PageHeader>
+            </div>
 
-            <div className="department-details-body">
-              {/* Profile Banner */}
-              <div className="cm-profile-banner" style={{ marginBottom: '20px' }}>
-                <div className="cm-profile-monogram">
-                  {(selected.code || selected.name).slice(0, 3).toUpperCase()}
+            <div className="cm-profile-card">
+              {/* Header Profile Banner */}
+              <div className="cm-profile-banner">
+                <div className="cm-profile-avatar-wrap">
+                  <div className="cm-profile-placeholder">
+                    {(selected.code || selected.name).slice(0, 3).toUpperCase()}
+                  </div>
                 </div>
-                <div className="cm-profile-identity">
-                  <h2>{selected.name}</h2>
-                  <p>
-                    Code: <code>{selected.code || '—'}</code>
-                    {selected.collegeName ? ` · College: ${selected.collegeName}` : ''}
+                <div className="cm-profile-header-info">
+                  <div className="cm-profile-badges">
+                    <span className="cm-badge cm-badge-code">Code: {selected.code || '—'}</span>
+                    <span className="cm-badge cm-badge-type">Department</span>
+                    <span className={`cm-status-badge ${String(selected.status).toLowerCase()}`}>
+                      {selected.status}
+                    </span>
+                  </div>
+                  <h1 className="cm-profile-title"><span style={{ color: '#fff' }}>{selected.name}</span></h1>
+                  <p className="cm-profile-subtitle">
+                    {selected.collegeName ? (
+                      <>
+                        <span style={{ color: '#fff' }}>College: </span>
+                        <strong style={{ color: '#fff' }}>{selected.collegeName}</strong>
+                      </>
+                    ) : (
+                      <span style={{ color: '#fff' }}>Academic Department</span>
+                    )}
                   </p>
-                </div>
-                <div className="cm-profile-status">
-                  <StatusBadge status={selected.status} />
                 </div>
               </div>
 
-              {/* InfoCards */}
+              {/* Profile Information Cards Grid */}
               <div className="cm-profile-grid">
                 <InfoCard
                   title="Department Information"

@@ -276,13 +276,16 @@
 .cm-table th,
 .cm-table td {
   padding: 12px 14px;
-  text-align: left;
+  text-align: center;
+  vertical-align: middle;
   border-bottom: 1px solid #eef1f5;
   white-space: nowrap;
 }
 
-.college-management .cm-table thead th {
+.college-management .cm-table thead th,
+.college-management .cm-table tbody td {
   text-align: center !important;
+  vertical-align: middle !important;
 }
 
 .cm-table td {
@@ -399,57 +402,12 @@
 }
 
 .cm-actions {
-  display: flex;
-  flex-direction: row;
-  align-items: center;
-  justify-content: center;
-  gap: 4px;
-  white-space: nowrap;
-  flex-wrap: nowrap;
-}
-
-.cm-action-icon-btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 30px;
-  height: 30px;
-  border: 1px solid #c7d7e7;
-  border-radius: 8px;
-  padding: 0;
-  background: #fff;
-  color: var(--brand-navy, #0f172a);
-  cursor: pointer;
-  flex-shrink: 0;
-  transition: all 0.15s ease;
-}
-
-.cm-action-icon-btn:hover {
-  background: #f3f7fb;
-  border-color: var(--brand-blue, #1e5a96);
-  color: var(--brand-blue, #1e5a96);
-}
-
-.cm-action-icon-btn.cm-danger {
-  border-color: #fecdca;
-  color: #b42318;
-}
-
-.cm-action-icon-btn.cm-danger:hover {
-  background: #fff5f5;
-  border-color: #f04438;
-  color: #b42318;
-}
-
-.cm-action-icon-btn.cm-success {
-  border-color: #bbf7d0;
-  color: #15803d;
-}
-
-.cm-action-icon-btn.cm-success:hover {
-  background: #f0fdf4;
-  border-color: #22c55e;
-  color: #15803d;
+  gap: 6px;
+  white-space: nowrap;
+  flex-wrap: nowrap;
 }
 
 /* Pagination Bar */
@@ -1073,36 +1031,8 @@
 .college-management .filter-disclosure .cm-toolbar {
   background: transparent !important;
 }
-.college-management .cm-actions .cm-action-icon-btn.cm-discard-action {
-  color: #b42318 !important;
-  background: #fff5f5 !important;
-  border-color: #fecdca !important;
-}
-.college-management .cm-actions .cm-action-icon-btn.cm-discard-action:hover {
-  color: #912018 !important;
-  background: #fee4e2 !important;
-  border-color: #f04438 !important;
-}
-.college-management .cm-actions .cm-discard-action:focus-visible {
-  outline: 2px solid #f04438;
-  outline-offset: 2px;
-}
-:root[data-theme="dark"] .college-management .cm-actions .cm-discard-action {
-  color: #ff8f87 !important;
-  background: #3a1d25 !important;
-  border-color: #7f3030 !important;
-}
-:root[data-theme="dark"] .college-management .cm-actions .cm-discard-action:hover {
-  color: #ffb4ad !important;
-  background: #51232b !important;
-  border-color: #f04438 !important;
-}
 :root[data-theme="light"] .college-management .cm-toolbar select,
 :root[data-theme="light"] .college-management .cm-toolbar select option { color: #173b5c; background: #fff; }
-:root[data-theme="light"] .college-management .cm-action-icon-btn.cm-danger { border-color: #fecdca; color: #b42318; background: #fff5f5; }
-:root[data-theme="light"] .college-management .cm-action-icon-btn.cm-danger:hover { border-color: #f04438; color: #b42318; background: #fee4e2; }
-:root[data-theme="dark"] .college-management .cm-action-icon-btn.cm-danger { border-color: #7f3030; color: #ff8f87; background: #3a1d25; }
-:root[data-theme="dark"] .college-management .cm-action-icon-btn.cm-danger:hover { border-color: #f04438; color: #ffb4ad; background: #51232b; }
 @media(max-width:760px){.college-management .cm-toolbar{flex-direction:column!important}.college-management .cm-toolbar .cm-search,.college-management .cm-toolbar select{width:100%!important;max-width:none!important;flex:auto!important}}
 @media (max-width: 520px) {
   .cm-info-rows { grid-template-columns: 1fr; }

@@ -259,7 +259,6 @@ export default function Login() {
             <button className="sign-in-button" type="submit" disabled={isSubmitting} aria-busy={isSubmitting}>
               {isSubmitting ? 'Signing in...' : 'Login to Digital Campus'}
             </button>
-            <p className="account-link">Don&apos;t have an account? <Link to="/register">Request access</Link></p>
             <p className="access-note">© {new Date().getFullYear()} Pirnav Engineering College. All rights reserved.</p>
           </form>
         )}

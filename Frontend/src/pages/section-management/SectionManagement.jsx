@@ -7,6 +7,7 @@ import DashboardLayout from '../../layouts/DashboardLayout'
 import FilterPanel from '../../components/FilterPanel'
 import SearchableSelect from '../../components/SearchableSelect'
 import CompactSummary from '../../components/CompactSummary'
+import StatusBadge from '../../components/StatusBadge'
 import { academicYearApi, branchApi, courseApi, sectionAllocationApi, sectionApi, sectionAssignmentApi, studentApi } from '../../api/apiEndpoints'
 import { searchSemesters } from '../../auth/collegeApi'
 import { getActiveAcademicYears, normalizeAcademicYear } from '../../utils/academicYearUtils'
@@ -150,26 +151,62 @@ function SectionList() {
         <>
           <div className="section-table-wrap">
             <table className="section-table">
-              <thead><tr>{['Section', 'Course', 'Branch', 'Semester', 'Academic Year', 'Strength / Capacity', 'Faculty Advisor', 'Status', 'Actions'].map((heading) => <th key={heading}>{heading}</th>)}</tr></thead>
+              <thead>
+                <tr>
+                  <th style={{ minWidth: '150px' }}>Section</th>
+                  <th style={{ minWidth: '150px' }}>Course</th>
+                  <th style={{ minWidth: '150px' }}>Branch</th>
+                  <th className="table-center" style={{ width: '100px' }}>Semester</th>
+                  <th className="table-center" style={{ width: '130px' }}>Academic Year</th>
+                  <th className="table-center" style={{ width: '150px' }}>Strength / Capacity</th>
+                  <th style={{ minWidth: '170px', maxWidth: '220px' }}>Faculty Advisor</th>
+                  <th className="table-center" style={{ width: '120px' }}>Status</th>
+                  <th className="table-center" style={{ width: '170px' }}>Actions</th>
+                </tr>
+              </thead>
               <tbody>
                 {visible.map((section) => {
                   const assigned = Math.max(count(section.id), Number(section.currentStrength || 0))
                   return (
                     <tr key={section.id}>
-                      <td><strong className="section-name">{section.name}</strong><small>{section.code}</small></td>
-                      <td><strong>{section.course}</strong>{section.courseCode && <small>{section.courseCode}</small>}</td>
-                      <td><strong>{section.branch}</strong>{section.branchCode && <small>{section.branchCode}</small>}</td>
-                      <td>{section.semester}</td>
-                      <td>{section.academicYear}</td>
-                      <td><strong>{assigned} / {section.capacity}</strong><small>{Math.max(Number(section.capacity || 0) - assigned, 0)} seats available</small></td>
-                      <td>{section.advisor ? <strong>{section.advisor}</strong> : <span className="section-unassigned">Unassigned</span>}</td>
-                      <td><Status value={section.status} /></td>
-                      <td>
-                        <div className="section-actions">
-                          <Link title="View details" to={`/section-management/${section.id}`}><FiEye className="module-action-icon module-action-icon--view" /></Link>
-                          <Link title="Edit section" to={`/section-management/${section.id}/edit`}><FiEdit2 className="module-action-icon module-action-icon--edit" /></Link>
-                          <button className="section-assign-action" onClick={() => openAssign(section)}><FiUserPlus /> Assign</button>
-                          <button className={`section-status-action ${section.status === 'Active' ? 'success' : 'danger'}`} onClick={() => toggle(section)}>{section.status === 'Active' ? <FiToggleRight /> : <FiToggleLeft />}</button>
+                      <td style={{ minWidth: '150px' }}>
+                        <div className="table-primary-cell">
+                          <strong className="section-name" title={section.name}>{section.name}</strong>
+                          <small>{section.code}</small>
+                        </div>
+                      </td>
+                      <td style={{ minWidth: '150px' }}>
+                        <div className="table-primary-cell">
+                          <strong title={section.course}>{section.course}</strong>
+                          {section.courseCode && <small title={section.courseCode}>{section.courseCode}</small>}
+                        </div>
+                      </td>
+                      <td style={{ minWidth: '150px' }}>
+                        <div className="table-primary-cell">
+                          <strong title={section.branch}>{section.branch}</strong>
+                          {section.branchCode && <small title={section.branchCode}>{section.branchCode}</small>}
+                        </div>
+                      </td>
+                      <td className="table-center" style={{ width: '100px' }}>{section.semester}</td>
+                      <td className="table-center" style={{ width: '130px' }}>{section.academicYear}</td>
+                      <td className="table-center" style={{ width: '150px' }}>
+                        <strong>{assigned} / {section.capacity}</strong>
+                        <small>{Math.max(Number(section.capacity || 0) - assigned, 0)} seats available</small>
+                      </td>
+                      <td style={{ minWidth: '170px', maxWidth: '220px' }}>
+                        {section.advisor ? (
+                          <strong className="table-cell-truncate" title={section.advisor}>{section.advisor}</strong>
+                        ) : (
+                          <span className="section-unassigned">Unassigned</span>
+                        )}
+                      </td>
+                      <td className="table-center" style={{ width: '120px' }}><StatusBadge value={section.status} /></td>
+                      <td className="table-center" style={{ width: '170px' }}>
+                        <div className="section-actions table-actions-group">
+                          <Link className="table-action-btn action-view" title={`View details for ${section.name}`} aria-label={`View details for ${section.name}`} to={`/section-management/${section.id}`}><FiEye /></Link>
+                          <Link className="table-action-btn action-edit" title={`Edit ${section.name}`} aria-label={`Edit ${section.name}`} to={`/section-management/${section.id}/edit`}><FiEdit2 /></Link>
+                          <button type="button" className="table-action-btn action-assign section-assign-action" title={`Assign Students / Faculty to ${section.name}`} aria-label={`Assign Students to ${section.name}`} onClick={() => openAssign(section)}><FiUserPlus /></button>
+                          <button type="button" className={`table-action-btn ${section.status === 'Active' ? 'action-deactivate' : 'action-activate'}`} title={section.status === 'Active' ? `Deactivate ${section.name}` : `Activate ${section.name}`} aria-label={section.status === 'Active' ? `Deactivate ${section.name}` : `Activate ${section.name}`} onClick={() => toggle(section)}>{section.status === 'Active' ? <FiToggleRight /> : <FiToggleLeft />}</button>
                         </div>
                       </td>
                     </tr>
@@ -235,9 +272,46 @@ function SectionDetails() {
   const [section, setSection] = useState(null), [assignments, setAssignments] = useState([]), [loading, setLoading] = useState(true), [error, setError] = useState('')
   useEffect(() => { let alive = true; const load = async () => { setLoading(true); try { const sources = await loadSources(); const base = sources.sections.find((item) => String(item.id) === String(id)) || {}; const detail = normalizeSection({ ...base, ...responseRecord(await sectionApi.getById(id)) }, makeLookups(sources.courses, sources.branches, sources.semesters, sources.years)); const rows = await sectionAssignmentApi.listBySection(id).catch(() => []); if (alive) { setSection(detail); setAssignments(rows.map((item) => normalizeAssignment({ ...item, sectionId: id }))) } } catch (requestError) { if (alive) setError(apiError(requestError, 'Unable to load section details.')) } finally { if (alive) setLoading(false) } }; load(); return () => { alive = false } }, [id])
   if (loading) return <Page><Empty icon={FiClock} title="Loading section details..." /></Page>
-  if (error || !section) return <Page><Header title="Section Details"><Link className="section-primary secondary" to="/section-management"><FiArrowLeft /> Back</Link></Header><Empty icon={FiLayers} title={error || 'Section not found.'} /></Page>
+  if (error || !section) return <Page><div className="cm-profile-view"><div className="cm-profile-top-bar"><Link className="cm-button secondary" to="/section-management">&larr; Back to Sections List</Link></div><Empty icon={FiLayers} title={error || 'Section not found.'} /></div></Page>
   const assigned = Math.max(assignments.length, Number(section.currentStrength || 0)), available = Math.max(Number(section.capacity || 0) - assigned, 0)
-  return <Page><Header title="Section Details" text="View section identity, academic mapping, and allocation capacity."><PrintDetailsButton title={section.name + " details"} selector=".section-profile-page" /><Link className="section-primary secondary" to="/section-management"><FiArrowLeft /> Back to Sections</Link><Link className="section-primary" to={`/section-management/${section.id}/edit`}><FiEdit2 /> Edit Section</Link></Header><article className="section-profile-page"><div className="cm-profile-card"><div className="cm-profile-banner"><div className="cm-profile-avatar-wrap"><div className="cm-profile-placeholder"><FiUsers /></div></div><div className="cm-profile-header-info"><div className="cm-profile-badges"><span className="cm-badge cm-badge-code">SECTION</span>{section.code && <span className="cm-badge cm-badge-type">{section.code}</span>}<span className={`cm-status-badge ${String(section.status).toLowerCase()}`}>{section.status}</span></div><h1 className="cm-profile-title">{section.name}</h1><p className="cm-profile-subtitle">{[section.course, section.branchCode || section.branch, section.semester].filter(clean).join(' • ')}</p></div></div><div className="cm-profile-grid"><InfoCard icon={FiGrid} title="Basic Information" rows={[["Section Name", section.name], ["Section Code", section.code], ["Capacity", section.capacity], ["Current Strength", assigned], ["Available Seats", available], ["Status", section.status]]} /><InfoCard icon={FiBookOpen} title="Academic Mapping" rows={[["Course Name", section.course], ["Course Code", section.courseCode], ["Branch Name", section.branch], ["Branch Code", section.branchCode], ["Semester", section.semester], ["Academic Year", section.academicYear]]} /><InfoCard icon={FiUser} title="Section Allocation" rows={[["Faculty Advisor", section.advisor], ["Room / Classroom", section.room], ["Assigned Students", assigned], ["Available Seats", available]]} /></div></div></article></Page>
+  return (
+    <Page>
+      <div className="cm-profile-view">
+        <div className="cm-profile-top-bar">
+          <Link className="cm-button secondary" to="/section-management">
+            &larr; Back to Sections List
+          </Link>
+        </div>
+        <article className="section-profile-page">
+          <div className="cm-profile-card">
+            <div className="cm-profile-banner">
+              <div className="cm-profile-avatar-wrap">
+                <div className="cm-profile-placeholder">
+                  <FiUsers />
+                </div>
+              </div>
+              <div className="cm-profile-header-info">
+                <div className="cm-profile-badges">
+                  <span className="cm-badge cm-badge-code">SECTION</span>
+                  {section.code && <span className="cm-badge cm-badge-type">{section.code}</span>}
+                  <span className={`cm-status-badge ${String(section.status).toLowerCase()}`}>{section.status}</span>
+                </div>
+                <h1 className="cm-profile-title"><span style={{ color: '#fff' }}>{section.name}</span></h1>
+                <p className="cm-profile-subtitle">
+                  <span style={{ color: '#fff' }}>{[section.course, section.branchCode || section.branch, section.semester].filter(clean).join(' • ')}</span>
+                </p>
+              </div>
+            </div>
+            <div className="cm-profile-grid">
+              <InfoCard icon={FiGrid} title="Basic Information" rows={[["Section Name", section.name], ["Section Code", section.code], ["Capacity", section.capacity], ["Current Strength", assigned], ["Available Seats", available], ["Status", section.status]]} />
+              <InfoCard icon={FiBookOpen} title="Academic Mapping" rows={[["Course Name", section.course], ["Course Code", section.courseCode], ["Branch Name", section.branch], ["Branch Code", section.branchCode], ["Semester", section.semester], ["Academic Year", section.academicYear]]} />
+              <InfoCard icon={FiUser} title="Section Allocation" rows={[["Faculty Advisor", section.advisor], ["Room / Classroom", section.room], ["Assigned Students", assigned], ["Available Seats", available]]} />
+            </div>
+          </div>
+        </article>
+      </div>
+    </Page>
+  )
 }
 
 function Select({ label, value, change, first, values }) { return <SearchableSelect label={'Filter by ' + label} value={value} onChange={(next) => change(label, next)} placeholder={first} options={[{ value: '', name: first }, ...values.map((item) => ({ value: item, name: item }))]} searchPlaceholder={'Search ' + label + '...'} /> }
@@ -327,10 +401,11 @@ function AssignStudents({ section, assignments, allAssignments = [], sections = 
 }
 function Confirm({ action, close, confirm }) { const activate = action.nextStatus === 'Active'; return <div className="section-overlay centered"><section className="section-confirm" role="alertdialog" aria-modal="true"><i>!</i><h2>{activate ? 'Activate' : 'Deactivate'} Section?</h2><p><strong>{action.row.name} ({action.row.code})</strong> {activate ? 'will become available for student allocations.' : `${action.assigned} students are currently assigned to this section. Deactivating this section will prevent new allocations. Existing allocations are not removed by this action.`}</p><footer><button onClick={close}>Cancel</button><button className={activate ? 'section-primary' : 'section-danger'} onClick={confirm}>{activate ? 'Activate' : 'Confirm Deactivate'}</button></footer></section></div> }
 
-export default function SectionManagement({ mode = 'list' }) {
+export default function SectionManagement({ mode }) {
+  const { id } = useParams()
   if (mode === 'form') return <SectionForm />
   if (mode === 'edit') return <SectionForm editMode />
-  if (mode === 'details') return <SectionDetails />
+  if (mode === 'details' || id) return <SectionDetails />
   return <SectionList />
 }
 

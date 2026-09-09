@@ -6,6 +6,7 @@ import { ROLES } from './auth/roles'
 import Dashboard from './pages/Dashboard'
 import LandingPage from './pages/LandingPage'
 import Login from './pages/Login'
+import ActivateAccount from './pages/ActivateAccount'
 import Register from './pages/Register'
 import MySubjects from './pages/MySubjects'
 import Unauthorized from './pages/Unauthorized'
@@ -29,6 +30,7 @@ import Results from './pages/results/Results'
 import Faculty from './pages/faculty/Faculty'
 import { AcademicProvider } from './context/AcademicContext'
 import './styles/erp-theme.css'
+import './App.css'
 
 class AppErrorBoundary extends Component {
   constructor(props) {
@@ -92,111 +94,94 @@ export default function App() {
       <AcademicProvider>
         <TableOverflowTitles />
         <Routes>
-        {/* Public */}
-        <Route path="/" element={<LandingPage />} />
-        <Route path="/login" element={<Login />} />
-        <Route path="/register" element={<Register />} />
+          {/* Public */}
+          <Route path="/" element={<LandingPage />} />
+          <Route path="/login" element={<Login />} />
+          <Route path="/activate-account" element={<ActivateAccount />} />
+          <Route path="/register" element={<Register />} />
 
-        {/* Dashboard - All Roles */}
-        <Route
-          element={
-            <ProtectedRoute
-              allowedRoles={[
-                ROLES.ADMIN,
-                ROLES.FACULTY,
-                ROLES.STUDENT,
-              ]}
-            />
-          }
-        >
-          <Route path="/dashboard" element={<Dashboard />} />
-          <Route path="/my-profile" element={<MyProfile />} />
-          <Route path="/settings" element={<Settings />} />
-        </Route>
+          {/* Dashboard - All Roles */}
+          <Route
+            element={
+              <ProtectedRoute
+                allowedRoles={[
+                  ROLES.ADMIN,
+                  ROLES.FACULTY,
+                  ROLES.STUDENT,
+                ]}
+              />
+            }
+          >
+            <Route path="/dashboard" element={<Dashboard />} />
+            <Route path="/my-profile" element={<MyProfile />} />
+            <Route path="/settings" element={<Settings />} />
+          </Route>
 
-        <Route element={<ProtectedRoute allowedRoles={[ROLES.ADMIN, ROLES.FACULTY]} />}>
-          <Route path="/faculty/*" element={<Faculty/>}/>
-          <Route path="/attendance/*" element={<Attendance/>}/>
-          <Route path="/marks/*" element={<Marks/>}/>
-          <Route path="/results/*" element={<Results/>}/>
-        </Route>
-        <Route element={<ProtectedRoute allowedRoles={[ROLES.ADMIN]} />}>
-          <Route path="/fees/*" element={<Fees/>}/>
-        </Route>
+          {/* Faculty / Operations */}
+          <Route element={<ProtectedRoute allowedRoles={[ROLES.ADMIN, ROLES.FACULTY]} />}>
+            <Route path="/faculty/*" element={<Faculty />} />
+            <Route path="/attendance/*" element={<Attendance />} />
+            <Route path="/marks/*" element={<Marks />} />
+            <Route path="/results/*" element={<Results />} />
+          </Route>
 
-        {/* Administration - Admin Only */}
-        <Route
-          element={
-            <ProtectedRoute
-              allowedRoles={[ROLES.ADMIN]}
-            />
-          }
-        >
-          <Route path="/college-institution-management" element={<CollegeInstitutionManagement />} />
-          <Route path="/college-institution-management/add" element={<AddCollege />} />
-          <Route path="/academic-year-management" element={<AcademicYearManagement />} />
-          <Route path="/department-management" element={<DepartmentManagement />} />
-          <Route path="/semester-management" element={<SemesterManagement />} />
-          <Route path="/semester-management/add" element={<SemesterManagement mode="form" />} />
-          <Route path="/semester-management/:id" element={<SemesterManagement mode="details" />} />
-          <Route path="/semester-management/:id/edit" element={<SemesterManagement mode="edit" />} />
-          <Route path="/section-management" element={<SectionManagement />} />
-          <Route path="/section-management/add" element={<SectionManagement mode="form" />} />
-          <Route path="/section-management/:id" element={<SectionManagement mode="details" />} />
-          <Route path="/section-management/:id/edit" element={<SectionManagement mode="edit" />} />
-        </Route>
+          {/* Administration - Admin Only */}
+          <Route element={<ProtectedRoute allowedRoles={[ROLES.ADMIN]} />}>
+            <Route path="/college-institution-management" element={<CollegeInstitutionManagement />} />
+            <Route path="/college-institution-management/add" element={<AddCollege />} />
+            <Route path="/academic-year-management" element={<AcademicYearManagement />} />
+            <Route path="/academic-year-management/:id" element={<AcademicYearManagement />} />
+            <Route path="/department-management" element={<DepartmentManagement />} />
+            <Route path="/department-management/:id" element={<DepartmentManagement />} />
+            <Route path="/courses" element={<Course />} />
+            <Route path="/courses/add" element={<Course mode="form" />} />
+            <Route path="/courses/:id/edit" element={<Course mode="form" />} />
+            <Route path="/courses/:id" element={<Course mode="details" />} />
+            <Route path="/courses/structure" element={<CourseStructure />} />
+            <Route path="/branches" element={<Branch />} />
+            <Route path="/branches/add" element={<Branch mode="form" />} />
+            <Route path="/branches/:id/edit" element={<Branch mode="form" />} />
+            <Route path="/branches/:id" element={<Branch mode="details" />} />
+            <Route path="/semester-management" element={<SemesterManagement />} />
+            <Route path="/semester-management/add" element={<SemesterManagement mode="form" />} />
+            <Route path="/semester-management/:id/edit" element={<SemesterManagement mode="edit" />} />
+            <Route path="/semester-management/:id" element={<SemesterManagement mode="details" />} />
+            <Route path="/section-management" element={<SectionManagement />} />
+            <Route path="/section-management/add" element={<SectionManagement mode="form" />} />
+            <Route path="/section-management/:id/edit" element={<SectionManagement mode="edit" />} />
+            <Route path="/section-management/:id" element={<SectionManagement mode="details" />} />
+            <Route path="/student-management/admissions" element={<StudentAdmission />} />
+            <Route path="/student-management/admissions/new" element={<StudentAdmission />} />
+            <Route path="/student-management/admissions/add" element={<StudentAdmission />} />
+            <Route path="/student-management/admissions/:id/edit" element={<StudentAdmission />} />
+            <Route path="/student-management/admissions/:id/approval" element={<StudentAdmission />} />
+            <Route path="/student-management/admissions/:id" element={<StudentAdmission />} />
+            <Route path="/student-management/profiles" element={<StudentProfile />} />
+            <Route path="/student-management/profiles/:id" element={<StudentProfile />} />
+            <Route path="/student-management/promotions" element={<StudentPromotion />} />
+            <Route path="/fees/*" element={<Fees />} />
+          </Route>
 
-        {/* Course Management - Admin Only */}
-        <Route element={<ProtectedRoute allowedRoles={[ROLES.ADMIN]} />}>
-          <Route path="/courses" element={<Course />} />
-          <Route path="/courses/add" element={<Course mode="form" />} />
-          <Route path="/courses/:id" element={<Course mode="details" />} />
-          <Route path="/courses/:id/edit" element={<Course mode="form" />} />
-          <Route path="/branches" element={<Branch />} />
-          <Route path="/branches/add" element={<Branch mode="form" />} />
-          <Route path="/branches/:id" element={<Branch mode="details" />} />
-          <Route path="/branches/:id/edit" element={<Branch mode="form" />} />
-          <Route path="/courses/:courseId/branches/:branchId/structure" element={<CourseStructure />} />
-        </Route>
+          {/* Faculty & Student */}
+          <Route
+            element={
+              <ProtectedRoute
+                allowedRoles={[
+                  ROLES.FACULTY,
+                  ROLES.STUDENT,
+                ]}
+              />
+            }
+          >
+            <Route path="/my-subjects" element={<MySubjects />} />
+          </Route>
 
-        {/* Student Admissions - Admin Only */}
-        <Route element={<ProtectedRoute allowedRoles={[ROLES.ADMIN]} />}>
-          <Route path="/student-management/admissions" element={<StudentAdmission />} />
-          <Route path="/student-management/admissions/new" element={<StudentAdmission />} />
-          <Route path="/student-management/admissions/:id" element={<StudentAdmission />} />
-          <Route path="/student-management/admissions/:id/edit" element={<StudentAdmission />} />
-          <Route path="/student-management/admissions/:id/documents" element={<StudentAdmission />} />
-          <Route path="/student-management/admissions/:id/approval" element={<StudentAdmission />} />
-          <Route path="/student-management/profiles" element={<StudentProfile />} />
-          <Route path="/student-management/promotions" element={<StudentPromotion />} />
-        </Route>
+          {/* Unauthorized */}
+          <Route path="/unauthorized" element={<Unauthorized />} />
 
-        {/* My Subjects - Faculty + Student */}
-        <Route
-          element={
-            <ProtectedRoute
-              allowedRoles={[
-                ROLES.FACULTY,
-                ROLES.STUDENT,
-              ]}
-            />
-          }
-        >
-          <Route path="/my-subjects" element={<MySubjects />} />
-        </Route>
-
-        {/* Unauthorized */}
-        <Route
-          path="/unauthorized"
-          element={<Unauthorized />}
-        />
-
-        {/* Unknown route */}
-        <Route
-          path="*"
-          element={<Navigate to="/" replace />}
-        />
-      </Routes>
+          {/* Unknown route */}
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
       </AcademicProvider>
     </AppErrorBoundary>
   )

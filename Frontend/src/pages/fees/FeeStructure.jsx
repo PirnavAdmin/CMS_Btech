@@ -105,10 +105,12 @@ function List({rows,query,setQuery,view,edit,loading}){
                       <td>{money(t.optional)}</td>
                       <td>{x.effectiveFrom}<small>{x.effectiveTo||'Open ended'}</small></td>
                       <td><Badge value={x.status}/></td>
-                      <td>
-                        <button onClick={()=>view(x)}><FiEye className="module-action-icon module-action-icon--view" /></button>
-                        <button onClick={()=>edit(x)}><FiEdit2 className="module-action-icon module-action-icon--edit" /></button>
-                        <button onClick={()=>edit({...structuredClone(x),id:'',version:1,status:'Draft'})}><FiCopy/></button>
+                      <td className="table-center">
+                        <div className="table-actions-group">
+                          <button type="button" className="table-action-btn action-view" title="View Details" onClick={()=>view(x)}><FiEye /></button>
+                          <button type="button" className="table-action-btn action-edit" title="Edit" onClick={()=>edit(x)}><FiEdit2 /></button>
+                          <button type="button" className="table-action-btn action-assign" title="Duplicate Draft" onClick={()=>edit({...structuredClone(x),id:'',version:1,status:'Draft'})}><FiCopy /></button>
+                        </div>
                       </td>
                     </tr>
                   )
@@ -193,10 +195,12 @@ function Facility({type,rows,edit,view,persist}){
                     <td><strong>{money(x.fee)}</strong></td>
                     <td>{x.effectiveFrom||'—'}<small>{x.effectiveTo||'Open ended'}</small></td>
                     <td><Badge value={x.status}/></td>
-                    <td>
-                      <button onClick={()=>view(x)} title="View"><FiEye className="module-action-icon module-action-icon--view" /></button>
-                      <button onClick={()=>edit(x)} title="Edit"><FiEdit2 className="module-action-icon module-action-icon--edit" /></button>
-                      <button onClick={()=>persist(rows.filter(r=>r.id!==x.id))} title="Delete"><FiTrash2 className="module-action-icon module-action-icon--danger" /></button>
+                    <td className="table-center">
+                      <div className="table-actions-group">
+                        <button type="button" className="table-action-btn action-view" onClick={()=>view(x)} title="View"><FiEye /></button>
+                        <button type="button" className="table-action-btn action-edit" onClick={()=>edit(x)} title="Edit"><FiEdit2 /></button>
+                        <button type="button" className="table-action-btn action-deactivate" onClick={()=>persist(rows.filter(r=>r.id!==x.id))} title="Delete"><FiTrash2 /></button>
+                      </div>
                     </td>
                   </tr>
                 ))}

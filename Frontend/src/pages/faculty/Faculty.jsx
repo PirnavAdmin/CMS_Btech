@@ -322,15 +322,17 @@ export default function Faculty() {
                         <td>
                           <StatusBadge status={f.status} />
                         </td>
-                        <td>
-                          <button
-                            type="button"
-                            className="erp-btn erp-btn--icon"
-                            title="View Faculty Profile"
-                            onClick={() => setSelectedFaculty(f)}
-                          >
-                            <FiEye />
-                          </button>
+                        <td className="table-center">
+                          <div className="table-actions-group">
+                            <button
+                              type="button"
+                              className="table-action-btn action-view"
+                              title="View Faculty Profile"
+                              onClick={() => setSelectedFaculty(f)}
+                            >
+                              <FiEye />
+                            </button>
+                          </div>
                         </td>
                       </tr>
                     ))}

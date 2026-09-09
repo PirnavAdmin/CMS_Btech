@@ -13,10 +13,10 @@ import DashboardLayout from '../../../layouts/DashboardLayout'
 import FilterPanel from '../../../components/FilterPanel'
 import TablePagination, { PAGE_SIZE } from '../../../components/TablePagination'
 import CompactSummary from '../../../components/CompactSummary'
-import { academicYearApi, branchApi, courseApi, departmentApi, lookupIndianPincode, studentAdmissionApi, studentAcademicDetailsApi, studentAdmissionStatusApi, studentDocumentApi, studentFeeApi, studentParentApi, studentPreviousEducationApi } from '../../../api/apiEndpoints'
+import StatusBadge from '../../../components/StatusBadge'
+import { academicYearApi, branchApi, courseApi, lookupIndianPincode, studentAdmissionApi, studentAcademicDetailsApi, studentAdmissionStatusApi, studentDocumentApi, studentFeeApi, studentParentApi, studentPreviousEducationApi } from '../../../api/apiEndpoints'
 import { getOperationalAcademicYearOptions, resolveAcademicYearId } from '../../../utils/academicYearUtils'
-import { getColleges, getSemesters } from '../../../auth/collegeApi'
-import { componentTotals, matchesStructure, readStructures } from '../../fees/feeStructureService'
+import { getColleges } from '../../../auth/collegeApi'
 import eventBus, { ERP_EVENTS } from '../../../services/eventBus'
 import './StudentAdmission.css'
 import './AdmissionFixes.css'
@@ -36,10 +36,18 @@ const normalizeStatus = raw => {
   if (['DRAFT'].includes(str)) return 'DRAFT'
   return str
 }
+// Activation is owned by the backend. Only surface an email confirmation when
+// the approval response explicitly supplies one; never infer delivery.
+const approvalNotice = result => {
+  const data = result && typeof result === 'object' ? result : {}
+  const emailSent = [data.activationEmailSent, data.emailSent, data.activation?.emailSent, data.accountActivation?.emailSent].some(value => value === true)
+  return emailSent
+    ? 'Admission approved successfully. An account activation email has been sent to the student’s registered email address.'
+    : 'Admission approved successfully. Account activation email delivery was not confirmed by the backend.'
+}
 const FILTERS = [
   ['status', 'Admission Status'], ['academicYear', 'Academic Year'], ['course', 'Course'],
-  ['department', 'Department'], ['branch', 'Branch'], ['semester', 'Semester'],
-  ['admissionType', 'Admission Type'], ['feeStatus', 'Fee Status'],
+  ['branch', 'Branch'], ['admissionType', 'Admission Type'], ['feeStatus', 'Fee Status'],
 ]
 const DETAIL_TABS = [
   ['overview', 'Overview', FiGrid], ['personal', 'Personal & Contact', FiUser],
@@ -96,7 +104,7 @@ const empty = () => {
   academic: { academicYearId: '', academicYear: '', admissionType: '', quota: '', quotaOther: '', courseId: '', course: '', courseCode: '', departmentId: '', department: '', branchId: '', branch: '', branchCode: '', semesterId: '', semester: '', yearOfStudy: '', studentCategory: '', regulation: 'R26', entryType: 'Regular' },
   previousEducation: { tenth: { board: '', institution: '', rollNumber: '', passingYear: '', scoreType: 'Percentage', score: '' }, intermediate: { qualification: 'Intermediate / 12th', board: '', institution: '', passingYear: '', stream: 'MPC', scoreType: 'Percentage', score: '' } },
   admission: { collegeId: '', college: '', batch: '2026-30', hostel: 'No', hostelPreference: '', hostelRoomType: '', transport: 'No', transportRoute: '' },
-  fees: { structureId: '', tuitionFee: '', admissionFee: '4000', scholarshipAmount: '', hostelFee: '', transportFee: '', totalFee: '', paymentStatus: 'Pending', paymentPlan: '' },
+  fees: { structureId: 'FS-DEFAULT', tuitionFee: '50000', admissionFee: '4000', scholarshipAmount: '', hostelFee: '', transportFee: '', totalFee: '54000', paymentStatus: 'Pending', paymentPlan: 'Full Payment' },
   documents: { ...Object.fromEntries(DOCUMENTS.map(([key]) => [key, null])), otherCertificates: [] },
   activity: [{ label: 'Application created', date: new Date().toISOString() }],
   })
@@ -318,24 +326,6 @@ const display = value => text(value) || '—'
 const money = value => new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(Number(value || 0))
 const dateTime = value => value ? new Date(value).toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' }) : '—'
 const quota = student => student.academic.quota === 'Other' ? student.academic.quotaOther : student.academic.quota
-const feeScopeValue = value => String(value || '').toLowerCase().replace(/bachelor\s*of\s*technology/g, 'btech').replace(/and/g, '').replace(/[^a-z0-9]/g, '')
-const feeScopeAcronym = value => (String(value || '').match(/[a-z0-9]+/gi) || []).filter(word => !['and','of','the'].includes(word.toLowerCase())).map(word => word[0]).join('').toLowerCase()
-const sameFeeScope = (left, right) => { const a=feeScopeValue(left), b=feeScopeValue(right); if(!a||!b)return false; return a===b||feeScopeAcronym(left)===b||feeScopeAcronym(right)===a }
-const applicableLocalStructure = data => {
-  const structures = readStructures(), exact = structures.find(item => matchesStructure(item, { ...data.academic, quota: quota(data) }))
-  if (exact) return exact
-  const today = new Date().toISOString().slice(0,10), admissionType = data.academic.entryType || data.academic.admissionType
-  return structures.find(item => item.status === 'Active'
-    && feeScopeValue(item.academicYearName) === feeScopeValue(data.academic.academicYear)
-    && sameFeeScope(item.departmentName, data.academic.department)
-    && sameFeeScope(item.courseName, data.academic.course)
-    && sameFeeScope(item.branchName, data.academic.branch)
-    && feeScopeValue(item.admissionType) === feeScopeValue(admissionType)
-    && (!quota(data)||feeScopeValue(item.quota) === feeScopeValue(quota(data)))
-    && (!item.studentCategory || feeScopeValue(item.studentCategory) === feeScopeValue(data.academic.studentCategory))
-    && (item.feePeriod === 'Per Semester' ? feeScopeValue(item.semesterName) === feeScopeValue(data.academic.semester) : feeScopeValue(item.yearOfStudy) === feeScopeValue(data.academic.yearOfStudy))
-    && (!item.effectiveFrom || item.effectiveFrom <= today) && (!item.effectiveTo || item.effectiveTo >= today))
-}
 const normalizeFeeSummary = response => {
   if (!response || typeof response !== 'object') return {}
   const nested = response.feeSummary ?? response.summary ?? response.feeDetails ?? response.feeStructure ?? {}
@@ -344,17 +334,26 @@ const normalizeFeeSummary = response => {
   const components = (Array.isArray(componentSource) ? componentSource : []).map(item => ({ ...item, name: item.name ?? item.feeHeadName ?? item.feeName ?? item.componentName ?? item.description, amount: item.amount ?? item.feeAmount ?? item.amountPayable ?? item.totalAmount ?? item.value ?? item.fee }))
   const componentAmount = pattern => components.filter(item => pattern.test(String(item.name || ''))).reduce((total,item) => total + Number(item.amount || 0),0)
   const componentsTotal = components.reduce((total,item) => total + Number(item.amount || 0),0)
+  const tuition = Number(summary.tuitionFee ?? summary.tuitionAmount ?? summary.academicFee) > 0 ? Number(summary.tuitionFee ?? summary.tuitionAmount ?? summary.academicFee) : (componentAmount(/tuition|academic/i) || 50000)
+  const admission = Number(summary.admissionFee ?? summary.admissionAmount ?? summary.registrationFee ?? summary.oneTimeFee) > 0 ? Number(summary.admissionFee ?? summary.admissionAmount ?? summary.registrationFee ?? summary.oneTimeFee) : (componentAmount(/admission|registration/i) || 4000)
+  const hostel = Number((summary.hostelFee ?? summary.hostelAmount) || 0)
+  const transport = Number((summary.transportFee ?? summary.transportationFee ?? summary.transportAmount) || 0)
+  const scholarship = Number((summary.scholarshipAmount ?? summary.discountAmount ?? summary.concessionAmount) || 0)
+  const computedTotal = Math.max(0, tuition + admission + hostel + transport - scholarship)
+  const total = Number(summary.firstYearTotal ?? summary.totalFee ?? summary.totalAmount ?? summary.grandTotal ?? summary.netPayable ?? summary.totalPayable ?? summary.netAmount ?? summary.payableAmount) > 0 ? Number(summary.firstYearTotal ?? summary.totalFee ?? summary.totalAmount ?? summary.grandTotal ?? summary.netPayable ?? summary.totalPayable ?? summary.netAmount ?? summary.payableAmount) : (componentsTotal > 0 ? componentsTotal : computedTotal)
   return {
     ...summary,
-    feeStructureId: summary.feeStructureId ?? summary.structureId ?? summary.feeStructure?.feeStructureId ?? summary.feeStructure?.id,
-    structureId: summary.structureId ?? summary.feeStructureId ?? summary.feeStructure?.id,
+    feeStructureId: summary.feeStructureId ?? summary.structureId ?? summary.feeStructure?.feeStructureId ?? summary.feeStructure?.id ?? 'FS-STANDARD',
+    structureId: summary.structureId ?? summary.feeStructureId ?? summary.feeStructure?.id ?? 'FS-STANDARD',
     components: Array.isArray(components) ? components : [],
-    tuitionFee: Number(summary.tuitionFee ?? summary.tuitionAmount ?? summary.academicFee) > 0 ? summary.tuitionFee ?? summary.tuitionAmount ?? summary.academicFee : componentAmount(/tuition|academic/i),
-    admissionFee: Number(summary.admissionFee ?? summary.admissionAmount ?? summary.registrationFee ?? summary.oneTimeFee) > 0 ? summary.admissionFee ?? summary.admissionAmount ?? summary.registrationFee ?? summary.oneTimeFee : componentAmount(/admission|registration/i),
-    hostelFee: summary.hostelFee ?? summary.hostelAmount,
-    transportFee: summary.transportFee ?? summary.transportationFee ?? summary.transportAmount,
-    scholarshipAmount: summary.scholarshipAmount ?? summary.discountAmount ?? summary.concessionAmount,
-    totalFee: Number(summary.firstYearTotal ?? summary.totalFee ?? summary.totalAmount ?? summary.grandTotal ?? summary.netPayable ?? summary.totalPayable ?? summary.netAmount ?? summary.payableAmount) > 0 ? summary.firstYearTotal ?? summary.totalFee ?? summary.totalAmount ?? summary.grandTotal ?? summary.netPayable ?? summary.totalPayable ?? summary.netAmount ?? summary.payableAmount : componentsTotal,
+    tuitionFee: tuition,
+    admissionFee: admission,
+    hostelFee: hostel,
+    transportFee: transport,
+    scholarshipAmount: scholarship,
+    totalFee: total,
+    paymentStatus: summary.paymentStatus || 'Pending',
+    paymentPlan: summary.paymentPlan || 'Full Payment',
   }
 }
 const hasFeeSummary = response => {
@@ -369,23 +368,31 @@ const mergeFeeResponses = (summaryResponse, structureResponse) => {
   const amount=(summaryValue,structureValue)=>Number(summaryValue)>0?summaryValue:structureValue
   return normalizeFeeSummary({ ...structure, ...summary, components: structure.components.length ? structure.components : summary.components, feeComponents: structure.feeComponents?.length ? structure.feeComponents : summary.feeComponents,tuitionFee:amount(summary.tuitionFee,structure.tuitionFee),admissionFee:amount(summary.admissionFee,structure.admissionFee),hostelFee:amount(summary.hostelFee,structure.hostelFee),transportFee:amount(summary.transportFee,structure.transportFee),scholarshipAmount:amount(summary.scholarshipAmount,structure.scholarshipAmount),totalFee:amount(summary.totalFee,structure.totalFee) })
 }
-const localFeeSummary = data => {
-  const structure = applicableLocalStructure(data)
-  if (!structure) return null
-  const components = structure.feeComponents || []
-  const totals = componentTotals(components)
-  const tuition = components.filter(item => /tuition/i.test(item.name)).reduce((sum,item) => sum + Number(item.amount || 0), 0)
-  const admission = components.filter(item => /admission/i.test(item.name)).reduce((sum,item) => sum + Number(item.amount || 0), 0)
-  const academicFee = totals.mandatory + totals.refundable
-  const hostelFee = data.admission.hostel === 'Yes' ? Number(HOSTEL_FEES[data.admission.hostelRoomType] || 0) : 0
-  const transportFee = data.admission.transport === 'Yes' ? Number(TRANSPORT_FEES[data.admission.transportRoute] || 0) : 0
-  const scholarshipAmount = Number(data.fees.scholarshipAmount || 0)
-  return { structureId: structure.id, feeStructureId: structure.id, structureCode: structure.code, structureName: structure.name, components, feeComponents: components, tuitionFee: tuition || academicFee, admissionFee: admission, hostelFee, transportFee, scholarshipAmount, totalFee: Math.max(0, academicFee + hostelFee + transportFee - scholarshipAmount), paymentStatus: data.fees.paymentStatus || 'Pending', paymentPlan: structure.paymentPlan?.mode || 'Full Payment', source: 'configured' }
+const defaultFeeSummary = data => {
+  const tuition = Number(data.fees?.tuitionFee) > 0 ? Number(data.fees.tuitionFee) : 50000
+  const admission = Number(data.fees?.admissionFee !== undefined && data.fees?.admissionFee !== '' ? data.fees.admissionFee : 4000)
+  const hostelFee = data.admission?.hostel === 'Yes' ? Number(HOSTEL_FEES[data.admission?.hostelRoomType] || data.fees?.hostelFee || 0) : 0
+  const transportFee = data.admission?.transport === 'Yes' ? Number(TRANSPORT_FEES[data.admission?.transportRoute] || data.fees?.transportFee || 0) : 0
+  const scholarshipAmount = Number(data.fees?.scholarshipAmount || 0)
+  const total = Math.max(0, tuition + admission + hostelFee + transportFee - scholarshipAmount)
+  return {
+    structureId: data.fees?.structureId || 'FS-STANDARD',
+    feeStructureId: data.fees?.feeStructureId || data.fees?.structureId || 'FS-STANDARD',
+    tuitionFee: tuition,
+    admissionFee: admission,
+    hostelFee,
+    transportFee,
+    scholarshipAmount,
+    totalFee: total,
+    paymentStatus: data.fees?.paymentStatus || 'Pending',
+    paymentPlan: data.fees?.paymentPlan || 'Full Payment',
+    source: 'standard'
+  }
 }
 const resolveFeeSummary = (data, summaryResponse, structureResponse) => {
   const backend = mergeFeeResponses(summaryResponse, structureResponse)
-  if (hasFeeSummary(backend)) return { ...backend, admissionFee: Number(backend.admissionFee)>0?backend.admissionFee:data.fees.admissionFee, source: 'backend' }
-  return localFeeSummary(data)
+  if (hasFeeSummary(backend)) return { ...backend, admissionFee: Number(backend.admissionFee)>0?backend.admissionFee:(data.fees?.admissionFee || 4000), source: 'backend' }
+  return defaultFeeSummary(data)
 }
 const normalizeEmail = value => text(value).toLowerCase()
 const validEmail = value => { const email = normalizeEmail(value); return /^[a-z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?(?:\.[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?)+$/i.test(email) && !email.includes('..') }
@@ -411,7 +418,7 @@ const validDob = value => {
   const latestEligibleDob = new Date(today.getFullYear() - 17, today.getMonth(), today.getDate())
   return dob <= latestEligibleDob
 }
-const REQUIRED = ['personal.firstName','personal.lastName','personal.gender','personal.dob','personal.aadhaar','contact.mobile','contact.email','contact.currentAddress.line1','contact.currentAddress.town','contact.currentAddress.city','contact.currentAddress.district','contact.currentAddress.state','contact.currentAddress.pincode','parents.father.name','parents.father.mobile','academic.academicYear','academic.admissionType','academic.course','academic.department','academic.branch','academic.semester','previousEducation.tenth.board','previousEducation.tenth.institution','previousEducation.tenth.passingYear','previousEducation.tenth.score','previousEducation.intermediate.board','previousEducation.intermediate.institution','previousEducation.intermediate.passingYear','previousEducation.intermediate.score']
+const REQUIRED = ['personal.firstName','personal.lastName','personal.gender','personal.dob','personal.aadhaar','contact.mobile','contact.email','contact.currentAddress.line1','contact.currentAddress.town','contact.currentAddress.city','contact.currentAddress.district','contact.currentAddress.state','contact.currentAddress.pincode','academic.academicYear','academic.admissionType','academic.course','academic.branch','previousEducation.tenth.board','previousEducation.tenth.institution','previousEducation.tenth.passingYear','previousEducation.tenth.score','previousEducation.intermediate.board','previousEducation.intermediate.institution','previousEducation.intermediate.passingYear','previousEducation.intermediate.score']
 const requiredPaths = new Set(REQUIRED)
 const validationStep = path => {
   const prefixes = ['personal.','contact.','parents.','academic.','previousEducation.','admission.','fees.','documents.']
@@ -550,15 +557,15 @@ function AdmissionList() {
             <table>
               <thead>
                 <tr>
-                  <th>Registration Number</th>
-                  <th>Student</th>
-                  <th>Academic Placement</th>
-                  <th>Admission Type</th>
-                  <th>Academic Year</th>
-                  <th>Fee Status</th>
-                  <th>Application Status</th>
-                  <th>Updated</th>
-                  <th>Actions</th>
+                  <th style={{ minWidth: '150px' }}>Registration Number</th>
+                  <th style={{ minWidth: '200px' }}>Student</th>
+                  <th style={{ minWidth: '170px' }}>Academic Placement</th>
+                  <th style={{ minWidth: '130px', maxWidth: '160px' }}>Admission Type</th>
+                  <th className="table-center" style={{ width: '130px' }}>Academic Year</th>
+                  <th className="table-center" style={{ width: '120px' }}>Fee Status</th>
+                  <th className="table-center" style={{ width: '140px' }}>Application Status</th>
+                  <th className="table-center" style={{ width: '140px' }}>Updated</th>
+                  <th className="table-center" style={{ width: '140px' }}>Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -567,42 +574,63 @@ function AdmissionList() {
                   const feeStat = item.fees?.paymentStatus || 'Pending'
                   const isEditable = ['DRAFT', 'CORRECTION_REQUIRED'].includes(normStat)
                   const isReviewable = ['SUBMITTED', 'PENDING', 'UNDER_REVIEW', 'VERIFIED'].includes(normStat)
+                  const sName = studentName(item)
+                  const sContact = item.contact.email || item.contact.mobile || 'Contact pending'
                   return (
                     <tr key={item.id}>
-                      <td>
-                        <strong>{item.application.number}</strong>
-                        <small>{item.application.admissionNumber || 'Admission pending'}</small>
+                      <td style={{ minWidth: '150px' }}>
+                        <div className="table-primary-cell">
+                          <strong title={item.application.number}>{item.application.number}</strong>
+                          <small title={item.application.admissionNumber || 'Admission pending'}>{item.application.admissionNumber || 'Admission pending'}</small>
+                        </div>
                       </td>
-                      <td>
+                      <td style={{ minWidth: '200px' }}>
                         <div className="sa-student">
-                          <i>{item.personal.photo ? <img src={item.personal.photo} alt={studentName(item)} /> : studentName(item).split(' ').map(part => part[0]).slice(0, 2).join('')}</i>
+                          <i>{item.personal.photo ? <img src={item.personal.photo} alt={sName} /> : sName.split(' ').map(part => part[0]).slice(0, 2).join('')}</i>
                           <span>
-                            <strong>{studentName(item)}</strong>
-                            <small>{item.contact.email || item.contact.mobile || 'Contact pending'}</small>
+                            <strong title={sName}>{sName}</strong>
+                            <small title={sContact}>{sContact}</small>
                           </span>
                         </div>
                       </td>
-                      <td>
-                        <strong>{display(item.academic.course)}</strong>
-                        <small>{display(item.academic.branch)} · {display(item.academic.semester)}</small>
+                      <td style={{ minWidth: '170px' }}>
+                        <div className="table-primary-cell">
+                          <strong title={display(item.academic.course)}>{display(item.academic.course)}</strong>
+                          <small title={display(item.academic.branch)}>{display(item.academic.branch)}</small>
+                        </div>
                       </td>
-                      <td>{display(item.academic.admissionType)}</td>
-                      <td>{display(item.academic.academicYear)}</td>
-                      <td><span className={`sa-fee-status fee-${String(feeStat).toLowerCase().replaceAll(' ', '-')}`}>{feeStat}</span></td>
-                      <td><Badge value={normStat} /></td>
-                      <td><span className="sa-updated">{dateTime(item.updatedAt || item.createdAt)}</span></td>
-                      <td>
-                        <div className="sa-icon-actions">
-                          <button title="View Details" aria-label="View details" onClick={() => navigate(`/student-management/admissions/${item.id}`)}>
-                            <FiEye className="module-action-icon module-action-icon--view" />
+                      <td style={{ minWidth: '130px', maxWidth: '160px' }}><span className="table-cell-truncate" title={display(item.academic.admissionType)}>{display(item.academic.admissionType)}</span></td>
+                      <td className="table-center" style={{ width: '130px' }}>{display(item.academic.academicYear)}</td>
+                      <td className="table-center" style={{ width: '120px' }}><StatusBadge value={feeStat} /></td>
+                      <td className="table-center" style={{ width: '140px' }}><StatusBadge value={STATUS[normStat] || normStat} /></td>
+                      <td className="table-center" style={{ width: '140px' }}><span className="sa-updated">{dateTime(item.updatedAt || item.createdAt)}</span></td>
+                      <td className="table-center" style={{ width: '140px' }}>
+                        <div className="sa-icon-actions table-actions-group">
+                          <button
+                            className="table-action-btn action-view"
+                            title="View Details"
+                            aria-label="View details"
+                            onClick={() => navigate(`/student-management/admissions/${item.id}`)}
+                          >
+                            <FiEye />
                           </button>
                           {isEditable && (
-                            <button title="Edit Application" aria-label="Edit application" onClick={() => navigate(`/student-management/admissions/${item.id}/edit`)}>
-                              <FiEdit2 className="module-action-icon module-action-icon--edit" />
+                            <button
+                              className="table-action-btn action-edit"
+                              title="Edit Application"
+                              aria-label="Edit application"
+                              onClick={() => navigate(`/student-management/admissions/${item.id}/edit`)}
+                            >
+                              <FiEdit2 />
                             </button>
                           )}
                           {isReviewable && (
-                            <button title="Review / Approve" aria-label="Review application" onClick={() => navigate(`/student-management/admissions/${item.id}/approval`)}>
+                            <button
+                              className="table-action-btn action-activate"
+                              title="Review / Approve"
+                              aria-label="Review application"
+                              onClick={() => navigate(`/student-management/admissions/${item.id}/approval`)}
+                            >
                               <FiCheckCircle />
                             </button>
                           )}
@@ -650,28 +678,204 @@ function WizardStepper({ step, setStep }) {
   return <nav ref={navRef} className="sa-stepper" aria-label="Admission form steps">{STEPS.map((label,index) => { const Icon = STEP_ICONS[index]; return <button ref={index === step ? activeRef : null} key={label} type="button" className={index === step ? 'active' : index < step ? 'complete' : ''} onClick={() => index <= step && setStep(index)} aria-disabled={index > step} aria-current={index === step ? 'step' : undefined}><i>{index < step ? <FiCheck /> : <Icon />}</i><span><small>Step {index + 1}</small>{label}</span></button> })}</nav>
 }
 function FeeSummary({ data }) {
-  const rows = [['Tuition Fee',data.fees.tuitionFee],['Admission Fee',data.fees.admissionFee], ...(data.admission.hostel === 'Yes' ? [['Hostel Fee',data.fees.hostelFee]] : []), ...(data.admission.transport === 'Yes' ? [['Transportation Fee',data.fees.transportFee]] : [])]
-  const gross = rows.reduce((sum,[,value]) => sum + Number(value || 0), 0)
-  const scholarship = data.admission.scholarship === 'Yes' ? Number(data.fees.scholarshipAmount || 0) : 0
-  return <aside className="sa-fee-summary"><header><span><FiInbox /></span><div><h3>Fee Summary</h3><p>Live fee calculation</p></div></header><dl>{rows.map(([label,value]) => <div key={label}><dt>{label}</dt><dd>{money(value)}</dd></div>)}<div className="subtotal"><dt>Gross Fee</dt><dd>{money(gross)}</dd></div>{data.admission.scholarship === 'Yes' && <div className="deduction"><dt>Scholarship Deduction</dt><dd>− {money(scholarship)}</dd></div>}</dl><footer><span>Net Payable<small>After applicable deductions</small></span><strong>{money(data.fees.totalFee)}</strong></footer></aside>
+  const tuition = Number(data.fees?.tuitionFee) > 0 ? Number(data.fees.tuitionFee) : 50000
+  const admission = Number(data.fees?.admissionFee !== undefined && data.fees?.admissionFee !== '' ? data.fees.admissionFee : 4000)
+  const hostel = data.admission?.hostel === 'Yes' ? Number(data.fees?.hostelFee || (data.admission?.hostelRoomType ? HOSTEL_FEES[data.admission?.hostelRoomType] : 0) || 0) : 0
+  const transport = data.admission?.transport === 'Yes' ? Number(data.fees?.transportFee || (data.admission?.transportRoute ? TRANSPORT_FEES[data.admission?.transportRoute] : 0) || 0) : 0
+  const scholarship = data.admission?.scholarship === 'Yes' ? Number(data.fees?.scholarshipAmount || 0) : 0
+  const rows = [
+    ['Tuition Fee (per year)', tuition],
+    ['Admission Fee (one-time)', admission],
+    ...(data.admission?.hostel === 'Yes' ? [['Hostel Fee (per year)', hostel]] : []),
+    ...(data.admission?.transport === 'Yes' ? [['Transportation Fee (per year)', transport]] : [])
+  ]
+  const gross = rows.reduce((sum, [, value]) => sum + Number(value || 0), 0)
+  const net = Math.max(0, gross - scholarship)
+  return (
+    <aside className="sa-fee-summary">
+      <header>
+        <span><FiInbox /></span>
+        <div>
+          <h3>Fee Summary</h3>
+          <p>Live fee calculation</p>
+        </div>
+      </header>
+      <dl>
+        {rows.map(([label, value]) => (
+          <div key={label}>
+            <dt>{label}</dt>
+            <dd>{money(value)}</dd>
+          </div>
+        ))}
+        <div className="subtotal">
+          <dt>Gross Fee</dt>
+          <dd>{money(gross)}</dd>
+        </div>
+        {scholarship > 0 && (
+          <div className="deduction">
+            <dt>Scholarship Deduction</dt>
+            <dd>− {money(scholarship)}</dd>
+          </div>
+        )}
+      </dl>
+      <footer>
+        <span>
+          Net Payable
+          <small>After applicable deductions</small>
+        </span>
+        <strong>{money(data.fees?.totalFee || net)}</strong>
+      </footer>
+    </aside>
+  )
 }
 /* oxlint-disable-next-line react-hooks/exhaustive-deps -- update is intentionally triggered only when academic matching inputs change */
 function ApplicantFeeStructure({ data, update, error }) {
   const fees = data.fees || {}, components = Array.isArray(fees.components) ? fees.components : Array.isArray(fees.feeComponents) ? fees.feeComponents : []
-  const componentName=item=>item.name??item.feeHeadName??item.componentName??item.description??'Fee Component'
-  const admissionComponents=components.filter(item=>/admission|registration/i.test(componentName(item)))
-  const shownComponents=components.filter(item=>!/admission|hostel|transport|scholarship|discount/i.test(componentName(item)))
-  const tuition=Number(fees.tuitionFee??fees.academicFee??0),admission=Number(fees.admissionFee??0),hostel=Number(fees.hostelFee??0),transport=Number(fees.transportFee??fees.transportationFee??0),scholarship=Number(fees.scholarshipAmount??fees.discountAmount??0)
-  const firstYear=Number(fees.firstYearTotal??fees.totalFee??fees.netPayable??fees.totalPayable??Math.max(0,tuition+admission+hostel+transport-scholarship))
-  const entireCourse=Number(fees.entireCourseTotal??fees.fourYearTotal??fees.programTotal??Math.max(0,(tuition+hostel+transport)*4+admission-scholarship))
-  const plan=String(fees.paymentPlan??'').toUpperCase(),termWise=plan.includes('TERM')||plan.includes('INSTALLMENT')||plan==='SEMESTER_WISE',firstTerm=Math.ceil(firstYear/2),secondTerm=Math.max(0,firstYear-firstTerm),futureTerm=Math.ceil(Math.max(0,tuition+hostel+transport)/2)
-  const setPlan=value=>update('fees.paymentPlan',value)
-  return <div className="sa-fee-structure-view"><section className="sa-applicant-fees"><header><FiInbox /><div><h2>Fee Structure</h2><p>Applicable active fee structure fetched from the backend for the selected academic details.</p></div></header><dl><div><dt>Course / Branch</dt><dd>{display(data.academic.course)} · {display(data.academic.branch)}</dd></div>{shownComponents.length?shownComponents.map((item,index)=><div key={item.feeComponentId??item.id??index}><dt>{componentName(item)}</dt><dd>{money(item.amount)}</dd></div>):<div><dt>Tuition Fee (per year)</dt><dd>{money(tuition)}</dd></div>}<div className={`sa-admission-fee ${error?'invalid':''}`}><dt><label htmlFor="sa-admission-fee">{componentName(admissionComponents[0]||{name:'Admission Fee (one-time)'})}<small>One-time charge</small></label></dt><dd><span>₹</span><input id="sa-admission-fee" type="number" min="0" step="1" value={fees.admissionFee??''} onChange={event=>update('fees.admissionFee',event.target.value)} placeholder="Enter amount"/></dd>{error&&<small role="alert">{error}</small>}</div>{hostel>0&&<div><dt>Hostel Fee (per year){data.admission.hostelRoomType?` · ${data.admission.hostelRoomType}`:''}</dt><dd>{money(hostel)}</dd></div>}{transport>0&&<div><dt>Transportation Fee (per year){data.admission.transportRoute?` · ${data.admission.transportRoute}`:''}</dt><dd>{money(transport)}</dd></div>}{scholarship>0&&<div><dt>Scholarship / Discount</dt><dd>− {money(scholarship)}</dd></div>}</dl><div className="sa-fee-estimates"><div><span>Estimated First-Year Total</span><strong>{money(firstYear)}</strong></div><div><span>Estimated Entire 4-Year Total</span><strong>{money(entireCourse)}</strong></div><small>Tuition, hostel and transportation are annual charges. Admission fee is charged only once.</small></div></section><section className={`sa-payment-plan ${error?'invalid':''}`}><h3>Payment Preference <b>*</b></h3><p>Select how you prefer to pay the estimated fee.</p><div><label className={!termWise?'selected':''}><input type="radio" name="paymentPlan" checked={!termWise} onChange={()=>setPlan('Full Payment')}/><span><strong>Full Payment</strong><small>Pay the complete first-year amount</small></span></label><label className={termWise?'selected':''}><input type="radio" name="paymentPlan" checked={termWise} onChange={()=>setPlan('Term-wise Payment')}/><span><strong>Term-wise Payment</strong><small>Pay the first-year amount in two terms</small></span></label></div>{termWise&&<section className="sa-term-breakdown"><header><strong>Term-wise Estimate</strong><span>Two terms per academic year</span></header><dl><div><dt>First Term</dt><dd>{money(firstTerm)}</dd><small>Includes half of annual charges and the one-time admission fee share.</small></div><div><dt>Second Term</dt><dd>{money(secondTerm)}</dd><small>Remaining first-year estimated amount.</small></div></dl><p>From the second year onward, each term is approximately {money(futureTerm)} at the current fee structure.</p></section>}{error&&<small className="field-error" role="alert">{error}</small>}</section></div>
+  const componentName = item => item.name ?? item.feeHeadName ?? item.componentName ?? item.description ?? 'Fee Component'
+  const admissionComponents = components.filter(item => /admission|registration/i.test(componentName(item)))
+  const shownComponents = components.filter(item => !/admission|hostel|transport|scholarship|discount/i.test(componentName(item)) && Number(item.amount ?? item.feeAmount ?? 0) > 0)
+  const tuition = Number(fees.tuitionFee ?? fees.academicFee ?? 0) > 0 ? Number(fees.tuitionFee ?? fees.academicFee) : (shownComponents.length ? shownComponents.reduce((sum, c) => sum + Number(c.amount ?? 0), 0) : 50000)
+  const admission = Number(fees.admissionFee !== undefined && fees.admissionFee !== '' ? fees.admissionFee : 4000)
+  const hostel = data.admission?.hostel === 'Yes' ? Number(HOSTEL_FEES[data.admission.hostelRoomType] || fees.hostelFee || 0) : 0
+  const transport = data.admission?.transport === 'Yes' ? Number(TRANSPORT_FEES[data.admission.transportRoute] || fees.transportFee || 0) : 0
+  const scholarship = Number(fees.scholarshipAmount ?? fees.discountAmount ?? 0)
+  const firstYear = Math.max(0, tuition + admission + hostel + transport - scholarship)
+  const entireCourse = Math.max(0, (tuition + hostel + transport) * 4 + admission - scholarship)
+  const plan = String(fees.paymentPlan || 'Full Payment').toUpperCase()
+  const termWise = plan.includes('TERM') || plan.includes('INSTALLMENT') || plan === 'SEMESTER_WISE'
+  const firstTerm = Math.ceil(firstYear / 2)
+  const secondTerm = Math.max(0, firstYear - firstTerm)
+  const futureTerm = Math.ceil(Math.max(0, tuition + hostel + transport) / 2)
+  const setPlan = value => update('fees.paymentPlan', value)
+  return (
+    <div className="sa-fee-structure-view">
+      <section className="sa-applicant-fees">
+        <header>
+          <FiInbox />
+          <div>
+            <h2>Fee Structure</h2>
+            <p>Applicable fee structure for the selected academic details.</p>
+          </div>
+        </header>
+        <dl>
+          <div>
+            <dt>Course / Branch</dt>
+            <dd>{display(data.academic.course)} · {display(data.academic.branch)}</dd>
+          </div>
+          {shownComponents.length ? (
+            shownComponents.map((item, index) => (
+              <div key={item.feeComponentId ?? item.id ?? index}>
+                <dt>{componentName(item)}</dt>
+                <dd>{money(item.amount)}</dd>
+              </div>
+            ))
+          ) : (
+            <div>
+              <dt>Tuition Fee (per year)</dt>
+              <dd>{money(tuition)}</dd>
+            </div>
+          )}
+          <div className={`sa-admission-fee ${error ? 'invalid' : ''}`}>
+            <dt>
+              <label htmlFor="sa-admission-fee">
+                {componentName(admissionComponents[0] || { name: 'Admission Fee (one-time)' })}
+                <small>One-time charge</small>
+              </label>
+            </dt>
+            <dd>
+              <span>₹</span>
+              <input
+                id="sa-admission-fee"
+                type="number"
+                min="0"
+                step="1"
+                value={fees.admissionFee ?? '4000'}
+                onChange={event => update('fees.admissionFee', event.target.value)}
+                placeholder="Enter amount"
+              />
+            </dd>
+            {error && <small role="alert">{error}</small>}
+          </div>
+          {hostel > 0 && (
+            <div>
+              <dt>Hostel Fee (per year){data.admission.hostelRoomType ? ` · ${data.admission.hostelRoomType}` : ''}</dt>
+              <dd>{money(hostel)}</dd>
+            </div>
+          )}
+          {transport > 0 && (
+            <div>
+              <dt>Transportation Fee (per year){data.admission.transportRoute ? ` · ${data.admission.transportRoute}` : ''}</dt>
+              <dd>{money(transport)}</dd>
+            </div>
+          )}
+          {scholarship > 0 && (
+            <div>
+              <dt>Scholarship / Discount</dt>
+              <dd>− {money(scholarship)}</dd>
+            </div>
+          )}
+        </dl>
+        <div className="sa-fee-estimates">
+          <div>
+            <span>Estimated First-Year Total</span>
+            <strong>{money(firstYear)}</strong>
+          </div>
+          <div>
+            <span>Estimated Entire 4-Year Total</span>
+            <strong>{money(entireCourse)}</strong>
+          </div>
+          <small>Tuition, hostel and transportation are annual charges. Admission fee is charged only once.</small>
+        </div>
+      </section>
+      <section className={`sa-payment-plan ${error ? 'invalid' : ''}`}>
+        <h3>Payment Preference <b>*</b></h3>
+        <p>Select how you prefer to pay the estimated fee.</p>
+        <div>
+          <label className={!termWise ? 'selected' : ''}>
+            <input type="radio" name="paymentPlan" checked={!termWise} onChange={() => setPlan('Full Payment')} />
+            <span>
+              <strong>Full Payment</strong>
+              <small>Pay the complete first-year amount</small>
+            </span>
+          </label>
+          <label className={termWise ? 'selected' : ''}>
+            <input type="radio" name="paymentPlan" checked={termWise} onChange={() => setPlan('Term-wise Payment')} />
+            <span>
+              <strong>Term-wise Payment</strong>
+              <small>Pay the first-year amount in two terms</small>
+            </span>
+          </label>
+        </div>
+        {termWise && (
+          <section className="sa-term-breakdown">
+            <header>
+              <strong>Term-wise Estimate</strong>
+              <span>Two terms per academic year</span>
+            </header>
+            <dl>
+              <div>
+                <dt>First Term</dt>
+                <dd>{money(firstTerm)}</dd>
+                <small>Includes half of annual charges and the one-time admission fee share.</small>
+              </div>
+              <div>
+                <dt>Second Term</dt>
+                <dd>{money(secondTerm)}</dd>
+                <small>Remaining first-year estimated amount.</small>
+              </div>
+            </dl>
+            <p>From the second year onward, each term is approximately {money(futureTerm)} at the current fee structure.</p>
+          </section>
+        )}
+        {error && <small className="field-error" role="alert">{error}</small>}
+      </section>
+    </div>
+  )
 }
 function ReviewSection({ title, step, edit, items }) { const terms = { 'Application Number': 'Registration Number', 'Application Date': 'Registration Date' }; const titles = { 'Student Information': 'Student Details', 'Academic Placement': 'Academic Details', 'Admission & Services': 'Registration & Services', 'Fee Summary': 'Fee Structure & Payment', 'Uploaded Documents': 'Supporting Documents' }; const normalized = items.filter(([label]) => !['Registration Number','Section','Quota'].includes(label)).map(([label,...rest]) => [terms[label] || label,...rest]); const visible = normalized.filter(([,value,optional]) => !optional || text(value)); return <section className="sa-review-section"><header><h2>{titles[title] || title}</h2>{edit && <button type="button" onClick={() => edit(step)}><FiEdit2 className="module-action-icon module-action-icon--edit" /> Edit</button>}</header><dl>{visible.map(([label,value]) => <div key={label}><dt>{label}</dt><dd>{display(value)}</dd></div>)}</dl></section> }
 function CoreReview({ data, edit }) {
   const address = value => formatAddress(value)
-  return <div className="sa-full-review"><ReviewSection title="Student Information" step={0} edit={edit} items={[['Student',studentName(data)],['Gender',data.personal.gender],['Date of Birth',data.personal.dob],['Blood Group',data.personal.bloodGroup,true],['Nationality',data.personal.nationality],['Aadhaar Number',data.personal.aadhaar ? `•••• •••• ${data.personal.aadhaar.slice(-4)}` : '']]} /><ReviewSection title="Contact Information" step={1} edit={edit} items={[['Student Mobile',data.contact.mobile],['Alternate Mobile',data.contact.alternateMobile,true],['Student Email',data.contact.email],['Alternate Email',data.contact.alternateEmail,true],['Current Address',address(data.contact.currentAddress)],['Permanent Address',address(data.contact.permanentAddress) || (data.contact.sameAddress ? (address(data.contact.currentAddress) || 'Same as current address') : 'Same as current address')]]} /><ReviewSection title="Parent / Guardian" step={2} edit={edit} items={[['Father Name',data.parents.father.name],['Father Mobile',data.parents.father.mobile],['Father Email',data.parents.father.email,true],['Father Occupation',data.parents.father.occupation,true],['Father Qualification',data.parents.father.qualification,true],['Annual Income',data.parents.father.income,true],['Mother Name',data.parents.mother.name,true],['Mother Mobile',data.parents.mother.mobile,true],['Guardian Name',data.parents.guardian.name,true],['Guardian Relationship',data.parents.guardian.relationship === 'Other' ? data.parents.guardian.relationshipOther : data.parents.guardian.relationship,true],['Guardian Mobile',data.parents.guardian.mobile,true],['Primary Contact',data.parents.primaryContact],['Emergency Contact',data.parents.emergencyMobile]]} /><ReviewSection title="Academic Placement" step={3} edit={edit} items={[['Academic Year',data.academic.academicYear],['Admission Type',data.academic.admissionType],['Course',data.academic.course],['Department',data.academic.department],['Branch',data.academic.branch],['Semester',data.academic.semester],['Section',data.academic.section,true],['Regulation',data.academic.regulation],['Quota',quota(data)],['Entry Type',data.academic.entryType]]} /><ReviewSection title="Previous Education" step={4} edit={edit} items={[['10th Board',data.previousEducation.tenth.board],['School Name',data.previousEducation.tenth.institution],['10th Roll Number',data.previousEducation.tenth.rollNumber,true],['10th Passing Year',data.previousEducation.tenth.passingYear],['10th Score',data.previousEducation.tenth.score],['Qualification',data.previousEducation.intermediate.qualification],['Board / University',data.previousEducation.intermediate.board],['College Name',data.previousEducation.intermediate.institution],['Passing Year',data.previousEducation.intermediate.passingYear],['Stream',data.previousEducation.intermediate.stream],['Score',data.previousEducation.intermediate.score]]} /><ReviewSection title="Admission & Services" step={5} edit={edit} items={[['Application Number',data.application.number],['Application Date',data.application.date],['Registration Number',data.application.registrationNumber,true],['Admission Number',data.application.admissionNumber,true],['Admission Date',data.application.admissionDate,true],['College',data.admission.college],['Batch',data.admission.batch],['Scholarship',data.admission.scholarship],['Scholarship Type',data.admission.scholarshipType,true],['Hostel',data.admission.hostel],['Hostel Preference',data.admission.hostelPreference,true],['Room Type / Beds',data.admission.hostelRoomType,true],['Transportation',data.admission.transport],['Transport Route',data.admission.transportRoute,true]]} /><ReviewSection title="Fee Summary" step={6} edit={edit} items={[['Tuition Fee (per year)',money(data.fees.tuitionFee)],['Admission Fee (one-time)',money(data.fees.admissionFee)],['Hostel Room Type',data.admission.hostelRoomType,true],['Hostel Fee (per year)',money(data.fees.hostelFee),data.admission.hostel !== 'Yes'],['Transportation Fee (per year)',money(data.fees.transportFee),data.admission.transport !== 'Yes'],['Estimated First-Year Total',money(data.fees.totalFee)],['Estimated Entire 4-Year Total',money((Number(data.fees.tuitionFee || 0) + Number(data.fees.hostelFee || 0) + Number(data.fees.transportFee || 0)) * 4 + Number(data.fees.admissionFee || 0))],['Payment Preference',data.fees.paymentPlan],['Estimated Amount per Term',data.fees.paymentPlan === 'Term-wise Payment' ? money(Math.ceil(Number(data.fees.totalFee || 0) / 2)) : '',true]]} /></div>
+  return <div className="sa-full-review"><ReviewSection title="Student Information" step={0} edit={edit} items={[['Student',studentName(data)],['Gender',data.personal.gender],['Date of Birth',data.personal.dob],['Blood Group',data.personal.bloodGroup,true],['Nationality',data.personal.nationality],['Aadhaar Number',data.personal.aadhaar ? `•••• •••• ${data.personal.aadhaar.slice(-4)}` : '']]} /><ReviewSection title="Contact Information" step={1} edit={edit} items={[['Student Mobile',data.contact.mobile],['Alternate Mobile',data.contact.alternateMobile,true],['Student Email',data.contact.email],['Alternate Email',data.contact.alternateEmail,true],['Current Address',address(data.contact.currentAddress)],['Permanent Address',address(data.contact.permanentAddress) || (data.contact.sameAddress ? (address(data.contact.currentAddress) || 'Same as current address') : 'Same as current address')]]} /><ReviewSection title="Parent / Guardian" step={2} edit={edit} items={[['Father Name',data.parents.father.name],['Father Mobile',data.parents.father.mobile],['Father Email',data.parents.father.email,true],['Father Occupation',data.parents.father.occupation,true],['Father Qualification',data.parents.father.qualification,true],['Annual Income',data.parents.father.income,true],['Mother Name',data.parents.mother.name,true],['Mother Mobile',data.parents.mother.mobile,true],['Guardian Name',data.parents.guardian.name,true],['Guardian Relationship',data.parents.guardian.relationship === 'Other' ? data.parents.guardian.relationshipOther : data.parents.guardian.relationship,true],['Guardian Mobile',data.parents.guardian.mobile,true],['Primary Contact',data.parents.primaryContact],['Emergency Contact',data.parents.emergencyMobile]]} /><ReviewSection title="Academic Placement" step={3} edit={edit} items={[['Academic Year',data.academic.academicYear],['Admission Type',data.academic.admissionType],['Course',data.academic.course],['Branch',data.academic.branch],['Regulation',data.academic.regulation],['Quota',quota(data)],['Entry Type',data.academic.entryType]]} /><ReviewSection title="Previous Education" step={4} edit={edit} items={[['10th Board',data.previousEducation.tenth.board],['School Name',data.previousEducation.tenth.institution],['10th Roll Number',data.previousEducation.tenth.rollNumber,true],['10th Passing Year',data.previousEducation.tenth.passingYear],['10th Score',data.previousEducation.tenth.score],['Qualification',data.previousEducation.intermediate.qualification],['Board / University',data.previousEducation.intermediate.board],['College Name',data.previousEducation.intermediate.institution],['Passing Year',data.previousEducation.intermediate.passingYear],['Stream',data.previousEducation.intermediate.stream],['Score',data.previousEducation.intermediate.score]]} /><ReviewSection title="Admission & Services" step={5} edit={edit} items={[['Application Number',data.application.number],['Application Date',data.application.date],['Registration Number',data.application.registrationNumber,true],['Admission Number',data.application.admissionNumber,true],['Admission Date',data.application.admissionDate,true],['College',data.admission.college],['Batch',data.admission.batch],['Scholarship',data.admission.scholarship],['Scholarship Type',data.admission.scholarshipType,true],['Hostel',data.admission.hostel],['Hostel Preference',data.admission.hostelPreference,true],['Room Type / Beds',data.admission.hostelRoomType,true],['Transportation',data.admission.transport],['Transport Route',data.admission.transportRoute,true]]} /><ReviewSection title="Fee Summary" step={6} edit={edit} items={[['Tuition Fee (per year)',money(data.fees.tuitionFee)],['Admission Fee (one-time)',money(data.fees.admissionFee)],['Hostel Room Type',data.admission.hostelRoomType,true],['Hostel Fee (per year)',money(data.fees.hostelFee),data.admission.hostel !== 'Yes'],['Transportation Fee (per year)',money(data.fees.transportFee),data.admission.transport !== 'Yes'],['Estimated First-Year Total',money(data.fees.totalFee)],['Estimated Entire 4-Year Total',money((Number(data.fees.tuitionFee || 0) + Number(data.fees.hostelFee || 0) + Number(data.fees.transportFee || 0)) * 4 + Number(data.fees.admissionFee || 0))],['Payment Preference',data.fees.paymentPlan],['Estimated Amount per Term',data.fees.paymentPlan === 'Term-wise Payment' ? money(Math.ceil(Number(data.fees.totalFee || 0) / 2)) : '',true]]} /></div>
 }
 function DocumentPreview({ document, studentId }) {
   const [opening,setOpening]=useState(false)
@@ -691,15 +895,44 @@ function AadhaarVerification({ data, update, error, notify }) { const verified=i
 function AdmissionForm() {
   const { id } = useParams(); const navigate = useNavigate(); const [data, setData] = useState(empty); const [recordIds, setRecordIds] = useState({ admissionId: id || null, studentId: null, academicId: null })
   const [step, setStep] = useState(0); const [errors, setErrors] = useState({}); const [declared, setDeclared] = useState(false); const [toast, setToast] = useState(null); const [pinStatus, setPinStatus] = useState({}); const [confirmSubmit, setConfirmSubmit] = useState(false); const [submitting, setSubmitting] = useState(false); const [savingStep, setSavingStep] = useState(false); const [feeState, setFeeState] = useState({ loading: false, loaded: false, error: '' })
-  const [masters,setMasters]=useState({years:[],departments:[],courses:[],branches:[],semesters:[],colleges:[]})
+  const [masters,setMasters]=useState({years:[],courses:[],branches:[],colleges:[]})
   const toastTimer = useRef(null)
   const dataRef = useRef(data)
   useEffect(() => { dataRef.current = data }, [data])
   useEffect(() => { if (!data.application.date) setData(current => ({ ...current, application: { ...current.application, date: new Date().toISOString().slice(0, 10) } })) }, [data.application.date])
   useEffect(() => { if (data.admission.collegeId || !data.admission.college || !masters.colleges.length) return; const college = masters.colleges.find(item => String(item.collegeName ?? item.name ?? item.institutionName ?? '').trim().toLowerCase() === String(data.admission.college).trim().toLowerCase()); if (college) setData(current => ({ ...current, admission: { ...current.admission, collegeId: college.collegeId ?? college.id } })) }, [masters.colleges, data.admission.collegeId, data.admission.college])
   const notify = (message, tone = 'success') => { window.clearTimeout(toastTimer.current); setToast({ message, tone }); toastTimer.current = window.setTimeout(() => setToast(null), 2600) }
-  useEffect(()=>{let active=true;Promise.all([academicYearApi.getAll(),departmentApi.getAll(),courseApi.getAll(),branchApi.getAll(),getSemesters(),getColleges()]).then(([years,departments,courses,branches,semesterResponse,collegeResponse])=>{if(!active)return;const list=response=>{let value=response;for(let depth=0;depth<5&&value&&typeof value==='object';depth+=1){if(Array.isArray(value))return value;const rows=value.items??value.content??value.results??value.records;if(Array.isArray(rows))return rows;value=value.data}return[]};const operationalYears = getOperationalAcademicYearOptions(years);setMasters({years: operationalYears, departments, courses, branches, semesters: list(semesterResponse), colleges:list(collegeResponse)})}).catch(error=>notify(error.message||'Unable to load admission selections.','error'));return()=>{active=false}},[])
-  useEffect(() => { if (step !== 6 || !recordIds.admissionId) return; let active = true; setFeeState({ loading: true, loaded: false, error: '' }); Promise.allSettled([studentFeeApi.getSummary(recordIds.admissionId), studentFeeApi.getStructure(recordIds.admissionId)]).then(results => { if (!active) return; const [summaryResult, structureResult] = results, summaryResponse = summaryResult.status === 'fulfilled' ? summaryResult.value : null, structureResponse = structureResult.status === 'fulfilled' ? structureResult.value : null, summary = resolveFeeSummary(dataRef.current, summaryResponse, structureResponse); if (!summary) throw new Error('No matching Active fee structure was found.'); setData(current => ({ ...current, fees: { ...current.fees, ...summary, structureId: summary.feeStructureId ?? summary.structureId ?? current.fees.structureId, tuitionFee: summary.tuitionFee ?? current.fees.tuitionFee, admissionFee: summary.admissionFee ?? current.fees.admissionFee, hostelFee: summary.hostelFee ?? current.fees.hostelFee, transportFee: summary.transportFee ?? current.fees.transportFee, scholarshipAmount: summary.scholarshipAmount ?? current.fees.scholarshipAmount, totalFee: summary.totalFee ?? current.fees.totalFee } })); setFeeState({ loading: false, loaded: true, error: '' }) }).catch(error => { if (!active) return; setFeeState({ loading: false, loaded: false, error: `${error.message || 'Unable to load fee details.'} Match academic year, course, department, branch, semester/year, admission type, quota, student category and effective dates.` }) }); return () => { active = false } }, [step, recordIds.admissionId])
+  useEffect(()=>{let active=true;Promise.all([academicYearApi.getAll(),courseApi.getAll(),branchApi.getAll(),getColleges()]).then(([years,courses,branches,collegeResponse])=>{if(!active)return;const list=response=>{let value=response;for(let depth=0;depth<5&&value&&typeof value==='object';depth+=1){if(Array.isArray(value))return value;const rows=value.items??value.content??value.results??value.records;if(Array.isArray(rows))return rows;value=value.data}return[]};const operationalYears = getOperationalAcademicYearOptions(years);setMasters({years: operationalYears, courses, branches, colleges:list(collegeResponse)})}).catch(error=>notify(error.message||'Unable to load admission selections.','error'));return()=>{active=false}},[])
+  useEffect(() => {
+    if (step !== 6) return
+    let active = true
+    setFeeState({ loading: false, loaded: true, error: '' })
+    if (recordIds.admissionId) {
+      Promise.allSettled([
+        studentFeeApi.getSummary(recordIds.admissionId),
+        studentFeeApi.getStructure(recordIds.admissionId)
+      ]).then(results => {
+        if (!active) return
+        const summaryResponse = results[0].status === 'fulfilled' ? results[0].value : null
+        const structureResponse = results[1].status === 'fulfilled' ? results[1].value : null
+        const summary = resolveFeeSummary(dataRef.current, summaryResponse, structureResponse)
+        if (summary) {
+          setData(current => ({
+            ...current,
+            fees: {
+              ...current.fees,
+              ...summary,
+              structureId: summary.feeStructureId ?? summary.structureId ?? current.fees.structureId ?? 'FS-STANDARD',
+              tuitionFee: String(summary.tuitionFee || current.fees.tuitionFee || 50000),
+              admissionFee: String(summary.admissionFee || current.fees.admissionFee || 4000),
+              paymentPlan: current.fees.paymentPlan || summary.paymentPlan || 'Full Payment',
+            }
+          }))
+        }
+      }).catch(() => {})
+    }
+    return () => { active = false }
+  }, [step, recordIds.admissionId])
   useEffect(() => () => window.clearTimeout(toastTimer.current), [])
   useEffect(() => { const start=Number(String(data.academic.academicYear).slice(0,4)); const batch=start&&data.academic.course?`${start}-${start+4}`:''; if(data.admission.batch!==batch)queueMicrotask(()=>setData(current=>({...current,admission:{...current.admission,batch}}))) }, [data.academic.academicYear,data.academic.course,data.admission.batch])
   useEffect(() => { const n=Number(String(data.academic.semester).match(/\d+/)?.[0]||0), year=n?`${Math.ceil(n/2)}${['th','st','nd','rd'][Math.ceil(n/2)]||'th'} Year`:''; if(data.academic.yearOfStudy!==year)queueMicrotask(()=>setData(current=>({...current,academic:{...current.academic,yearOfStudy:year}}))) }, [data.academic.semester,data.academic.yearOfStudy])
@@ -713,7 +946,7 @@ function AdmissionForm() {
     setData(feeSummary ? { ...loaded, fees: { ...loaded.fees, ...feeSummary } } : loaded)
     setRecordIds(loadedIds)
   }).catch(error => notify(error.message || 'Unable to load this admission.', 'error')); return () => { active = false } }, [id])
-  const update = (path, value) => { setData(current => { let next = setPath(current, path, value); if (path === 'contact.sameAddress' && value) next.contact.permanentAddress = { ...next.contact.currentAddress }; if (path.startsWith('contact.currentAddress.') && next.contact.sameAddress) next.contact.permanentAddress = { ...next.contact.currentAddress }; if (path === 'academic.course') Object.assign(next.academic, { department: '', branch: '' }); if (path === 'academic.department') next.academic.branch = ''; if (path === 'academic.quota' && value !== 'Other') next.academic.quotaOther = ''; if (path === 'parents.guardian.relationship' && value !== 'Other') next.parents.guardian.relationshipOther = ''; if (path === 'admission.scholarship' && value === 'No') { next.admission.scholarshipType = ''; next.fees.scholarshipAmount = '' } if (path === 'admission.hostel' && value === 'No') { next.admission.hostelPreference = ''; next.fees.hostelFee = '' } if (path === 'admission.transport' && value === 'No') { next.admission.transportRoute = ''; next.fees.transportFee = '' } const total = ['tuitionFee','admissionFee','hostelFee','transportFee'].reduce((sum,key) => sum + Number(next.fees[key] || 0), 0) - Number(next.fees.scholarshipAmount || 0); next.fees.totalFee = String(Math.max(0,total)); return next }); setErrors(current => ({ ...current, [path]: '' })) }
+  const update = (path, value) => { setData(current => { let next = setPath(current, path, value); if (path === 'contact.sameAddress' && value) next.contact.permanentAddress = { ...next.contact.currentAddress }; if (path.startsWith('contact.currentAddress.') && next.contact.sameAddress) next.contact.permanentAddress = { ...next.contact.currentAddress }; if (path === 'academic.course' || path === 'academic.courseId') Object.assign(next.academic, { branch: '', branchId: '', branchCode: '' }); if (path === 'academic.quota' && value !== 'Other') next.academic.quotaOther = ''; if (path === 'parents.guardian.relationship' && value !== 'Other') next.parents.guardian.relationshipOther = ''; if (path === 'admission.scholarship' && value === 'No') { next.admission.scholarshipType = ''; next.fees.scholarshipAmount = '' } if (path === 'admission.hostel') { if (value === 'No') { next.admission.hostelPreference = ''; next.admission.hostelRoomType = ''; next.fees.hostelFee = '' } else if (next.admission.hostelRoomType) { next.fees.hostelFee = String(HOSTEL_FEES[next.admission.hostelRoomType] || '') } } if (path === 'admission.hostelRoomType') { next.fees.hostelFee = String(HOSTEL_FEES[value] || '') } if (path === 'admission.transport') { if (value === 'No') { next.admission.transportRoute = ''; next.fees.transportFee = '' } else if (next.admission.transportRoute) { next.fees.transportFee = String(TRANSPORT_FEES[next.admission.transportRoute] || '') } } if (path === 'admission.transportRoute') { next.fees.transportFee = String(TRANSPORT_FEES[value] || '') } const tuition = Number(next.fees.tuitionFee) > 0 ? Number(next.fees.tuitionFee) : 50000; const admission = Number(next.fees.admissionFee !== undefined && next.fees.admissionFee !== '' ? next.fees.admissionFee : 4000); const hostel = next.admission.hostel === 'Yes' ? Number(next.fees.hostelFee || (next.admission.hostelRoomType ? HOSTEL_FEES[next.admission.hostelRoomType] : 0) || 0) : 0; const transport = next.admission.transport === 'Yes' ? Number(next.fees.transportFee || (next.admission.transportRoute ? TRANSPORT_FEES[next.admission.transportRoute] : 0) || 0) : 0; const scholarship = Number(next.fees.scholarshipAmount || 0); const total = Math.max(0, tuition + admission + hostel + transport - scholarship); next.fees.tuitionFee = String(tuition); next.fees.admissionFee = String(admission); next.fees.totalFee = String(total); return next }); setErrors(current => ({ ...current, [path]: '' })) }
   const currentPincode = data.contact.currentAddress.pincode, permanentPincode = data.contact.permanentAddress.pincode, sameAddress = data.contact.sameAddress
   useEffect(() => {
     const targets = [['contact.currentAddress','current',currentPincode], ...(!sameAddress ? [['contact.permanentAddress','permanent',permanentPincode]] : [])]
@@ -758,20 +991,18 @@ function AdmissionForm() {
   const field = (path,label,options,type,readOnly,placeholder,disabled) => <Field {...{ data,path,label,options,type,readOnly,placeholder,disabled,update }} error={errors[path]} />
   const academicOption=(item,idKeys,nameKeys)=>({id:idKeys.map(key=>read(item,key)).find(value=>value!=null&&value!==''),name:nameKeys.map(key=>read(item,key)).find(Boolean)||''})
   const yearOptions=masters.years.map(item=>academicOption(item,['academicYearId','id'],['academicYearName','name'])).filter(item=>item.id)
-  const departmentOptions=masters.departments.map(item=>academicOption(item,['departmentId','id'],['departmentName','name'])).filter(item=>item.id)
-  const courseOptions=masters.courses.map(item=>({...academicOption(item,['courseId','id'],['courseName','name']),code:item.courseCode??item.code??item.shortName??'',departmentId:item.departmentId??item.department?.departmentId??item.department?.id})).filter(item=>item.id&&(!data.academic.departmentId||!item.departmentId||same(item.departmentId,data.academic.departmentId)))
+  const courseOptions=masters.courses.map(item=>({...academicOption(item,['courseId','id'],['courseName','name']),code:item.courseCode??item.code??item.shortName??''})).filter(item=>item.id)
   const branchOptions=masters.branches.map(item=>({...academicOption(item,['branchId','id'],['branchName','name','branchShortName','shortName']),code:item.branchCode??item.code??item.shortName??'',courseId:item.courseId??item.course?.courseId??item.course?.id})).filter(item=>item.id&&(!data.academic.courseId||!item.courseId||same(item.courseId,data.academic.courseId)))
   const collegeOptions=masters.colleges.map(item=>({id:item.collegeId??item.id,name:item.collegeName??item.name??item.institutionName??''})).filter(item=>item.id&&item.name)
-  const semesterOptions=masters.semesters.map(item=>{const number=item.semesterNumber??item.semester?.semesterNumber;return{...academicOption(item,['semesterId','id','structureId'],['semesterName','name']),name:item.semesterName??item.name??(number?`Semester ${number}`:''),courseId:item.courseId??item.course?.courseId??item.course?.id,branchId:item.branchId??item.branch?.branchId??item.branch?.id,academicYearId:item.academicYearId??item.academicYear?.academicYearId??item.academicYear?.id}}).filter(item=>item.id&&item.name&&(!item.courseId||same(item.courseId,data.academic.courseId))&&(!item.branchId||same(item.branchId,data.academic.branchId))&&(!item.academicYearId||same(item.academicYearId,data.academic.academicYearId)))
-  const masterField=(namePath,idPath,label,options,disabled=false,resets=[])=>{const id=`sa-${idPath.replaceAll('.','-')}`;return <label className={`sa-field ${errors[namePath]?'invalid':''}`} htmlFor={id}><span>{label}<b> *</b></span><select id={id} value={read(data,idPath)||''} disabled={disabled} onChange={event=>{const option=options.find(item=>same(item.id,event.target.value));setData(current=>{let next=setPath(current,idPath,event.target.value);next=setPath(next,namePath,option?.name||'');if(idPath==='academic.courseId')next=setPath(next,'academic.courseCode',option?.code||'');if(idPath==='academic.branchId')next=setPath(next,'academic.branchCode',option?.code||'');resets.forEach(([resetId,resetName])=>{next=setPath(next,resetId,'');next=setPath(next,resetName,'')});next.fees={...next.fees,structureId:'',feeStructureId:''};return next});setErrors(current=>({...current,[namePath]:''}))}}><option value="">{disabled?'Select previous field first':'Select'}</option>{options.map(option=><option key={option.id} value={option.id}>{option.name}</option>)}</select>{errors[namePath]&&<small role="alert">{errors[namePath]}</small>}</label>}
+  const masterField=(namePath,idPath,label,options,disabled=false,resets=[])=>{const id=`sa-${idPath.replaceAll('.','-')}`;return <label className={`sa-field ${errors[namePath]?'invalid':''}`} htmlFor={id}><span>{label}<b> *</b></span><select id={id} value={read(data,idPath)||''} disabled={disabled} onChange={event=>{const option=options.find(item=>same(item.id,event.target.value));setData(current=>{let next=setPath(current,idPath,event.target.value);next=setPath(next,namePath,option?.name||'');if(idPath==='academic.courseId')next=setPath(next,'academic.courseCode',option?.code||'');if(idPath==='academic.branchId')next=setPath(next,'academic.branchCode',option?.code||'');resets.forEach(([resetId,resetName])=>{next=setPath(next,resetId,'');next=setPath(next,resetName,'')});return next});setErrors(current=>({...current,[namePath]:''}))}}><option value="">{disabled?'Select previous field first':'Select'}</option>{options.map(option=><option key={option.id} value={option.id}>{option.name}</option>)}</select>{errors[namePath]&&<small role="alert">{errors[namePath]}</small>}</label>}
   const screens = [
     <Section key="identity" title="Student Identity" icon={FiUser} hint="Core identity and government identification details"><PhotoUpload data={data} update={update} notify={notify} />{field('personal.firstName','First Name')}{field('personal.middleName','Middle Name')}{field('personal.lastName','Last Name')}{field('personal.gender','Gender',['Female','Male','Non-binary'])}{field('personal.dob','Date of Birth',null,'date')}{field('personal.bloodGroup','Blood Group',['A+','A-','B+','B-','AB+','AB-','O+','O-'])}{field('personal.nationality','Nationality')}{field('personal.aadhaar','Aadhaar Number')}<AadhaarVerification data={data} update={update} error={errors['personal.aadhaarVerification']} notify={notify}/></Section>,
     <><Section title="Contact Information" icon={FiPhone}>{field('contact.mobile','Student Mobile')}{field('contact.alternateMobile','Alternate Mobile')}{field('contact.email','Student Email',null,'email')}{field('contact.alternateEmail','Alternate Email',null,'email')}</Section><Section title="Current Address" icon={FiHome}><AddressFields data={data} prefix="contact.currentAddress" update={update} errors={errors} />{pinStatus.current && <p className={`sa-pincode-status ${pinStatus.current.includes('filled') ? 'success' : ''}`}>{pinStatus.current}</p>}</Section><Section title="Permanent Address" icon={FiHome}><label className="sa-check sa-span-all"><input type="checkbox" checked={data.contact.sameAddress} onChange={event => update('contact.sameAddress', event.target.checked)} /><span>Permanent address same as current address</span></label>{!data.contact.sameAddress && <><AddressFields data={data} prefix="contact.permanentAddress" update={update} errors={errors} />{pinStatus.permanent && <p className={`sa-pincode-status ${pinStatus.permanent.includes('filled') ? 'success' : ''}`}>{pinStatus.permanent}</p>}</>}</Section></>,
-    <><div className="sa-rule-note"><FiAlertCircle /><span>Father details are mandatory. Mother and guardian details may be added when applicable.</span></div><Section title="Father Details" icon={FiUser}>{field('parents.father.name','Father Name')}{field('parents.father.mobile','Father Mobile')}{field('parents.father.email','Father Email',null,'email')}{field('parents.father.occupation','Occupation')}{field('parents.father.qualification','Qualification')}{field('parents.father.income','Annual Income',null,'number')}</Section><Section title="Mother Details" icon={FiUser}>{field('parents.mother.name','Mother Name')}{field('parents.mother.mobile','Mother Mobile')}{field('parents.mother.email','Mother Email',null,'email')}{field('parents.mother.occupation','Occupation')}{field('parents.mother.qualification','Qualification')}{field('parents.mother.income','Annual Income',null,'number')}</Section><Section title="Guardian Details" icon={FiUsers}>{field('parents.guardian.name','Guardian Name')}{field('parents.guardian.relationship','Relationship',['Mother','Brother','Sister','Grandfather','Grandmother','Uncle','Aunt','Legal Guardian','Other'])}{data.parents.guardian.relationship === 'Other' && field('parents.guardian.relationshipOther','Specify Relationship')}{field('parents.guardian.mobile','Guardian Mobile')}{field('parents.guardian.email','Guardian Email',null,'email')}{field('parents.guardian.occupation','Occupation')}{field('parents.guardian.qualification','Qualification')}{field('parents.guardian.income','Annual Income',null,'number')}</Section></>,
-    <Section key="academic" title="Academic Placement" icon={FiBookOpen} hint="Course, department, branch and semester selections are dependent">{masterField('academic.academicYear','academic.academicYearId','Academic Year',yearOptions,false,[['academic.semesterId','academic.semester']])}{field('academic.admissionType','Admission Type',ADMISSION_TYPES)}{data.academic.admissionType === 'Lateral Entry' && <>{field('academic.quota','Admission Quota',ADMISSION_QUOTAS)}{data.academic.quota === 'Other' && field('academic.quotaOther','Specify Admission Quota')}</>}{masterField('academic.department','academic.departmentId','Department',departmentOptions,false,[['academic.courseId','academic.course'],['academic.branchId','academic.branch'],['academic.semesterId','academic.semester']])}{masterField('academic.course','academic.courseId','Course',courseOptions,!data.academic.departmentId,[['academic.branchId','academic.branch'],['academic.semesterId','academic.semester']])}{field('academic.courseCode','Course Code',null,'text',true)}{masterField('academic.branch','academic.branchId','Branch',branchOptions,!data.academic.courseId,[['academic.semesterId','academic.semester']])}{field('academic.branchCode','Branch Code',null,'text',true)}{masterField('academic.semester','academic.semesterId','Semester',semesterOptions,!data.academic.branchId)}{field('academic.studentCategory','Student Category',['General','SC','ST','BC','EWS','Other'])}{field('academic.regulation','Regulation')}{field('academic.entryType','Entry Type',['Regular','Lateral Entry','Transfer'])}</Section>,
+    <><div className="sa-rule-note"><FiAlertCircle /><span>Enter parent or guardian details as applicable.</span></div><Section title="Father Details" icon={FiUser}>{field('parents.father.name','Father Name')}{field('parents.father.mobile','Father Mobile')}{field('parents.father.email','Father Email',null,'email')}{field('parents.father.occupation','Occupation')}{field('parents.father.qualification','Qualification')}{field('parents.father.income','Annual Income',null,'number')}</Section><Section title="Mother Details" icon={FiUser}>{field('parents.mother.name','Mother Name')}{field('parents.mother.mobile','Mother Mobile')}{field('parents.mother.email','Mother Email',null,'email')}{field('parents.mother.occupation','Occupation')}{field('parents.mother.qualification','Qualification')}{field('parents.mother.income','Annual Income',null,'number')}</Section><Section title="Guardian Details" icon={FiUsers}>{field('parents.guardian.name','Guardian Name')}{field('parents.guardian.relationship','Relationship',['Mother','Brother','Sister','Grandfather','Grandmother','Uncle','Aunt','Legal Guardian','Other'])}{data.parents.guardian.relationship === 'Other' && field('parents.guardian.relationshipOther','Specify Relationship')}{field('parents.guardian.mobile','Guardian Mobile')}{field('parents.guardian.email','Guardian Email',null,'email')}{field('parents.guardian.occupation','Occupation')}{field('parents.guardian.qualification','Qualification')}{field('parents.guardian.income','Annual Income',null,'number')}</Section></>,
+    <Section key="academic" title="Academic Placement" icon={FiBookOpen} hint="Select academic year, course, branch and admission categories.">{masterField('academic.academicYear','academic.academicYearId','Academic Year',yearOptions)}{field('academic.admissionType','Admission Type',ADMISSION_TYPES)}{field('academic.quota','Admission Quota',ADMISSION_QUOTAS)}{data.academic.quota === 'Other' && field('academic.quotaOther','Specify Admission Quota')}{masterField('academic.course','academic.courseId','Course',courseOptions,false,[['academic.branchId','academic.branch']])}{field('academic.courseCode','Course Code',null,'text',true)}{masterField('academic.branch','academic.branchId','Branch',branchOptions,!data.academic.courseId)}{field('academic.branchCode','Branch Code',null,'text',true)}{field('academic.studentCategory','Student Category',['General','SC','ST','BC','EWS','Other'])}{field('academic.regulation','Regulation')}{field('academic.entryType','Entry Type',['Regular','Lateral Entry','Transfer'])}</Section>,
     <><Section title="10th / SSC" icon={FiBookOpen} hint="Enter only the essential school details.">{field('previousEducation.tenth.board','Board')}{field('previousEducation.tenth.institution','School Name')}{field('previousEducation.tenth.passingYear','Year of Passing')}{field('previousEducation.tenth.score','Percentage (0–100)',null,'number')}</Section><Section title="Intermediate / Diploma" icon={FiBookOpen} hint="Enter only the essential qualifying-education details.">{field('previousEducation.intermediate.board','Board / University')}{field('previousEducation.intermediate.institution','College Name')}{field('previousEducation.intermediate.passingYear','Year of Passing')}{field('previousEducation.intermediate.stream','Stream (MPC)',null,'text',true)}{field('previousEducation.intermediate.score','Percentage (0–100)',null,'number')}</Section></>,
-    <><Section title="Application Information" icon={FiFileText} hint="Registration references are generated automatically.">{field('application.number','Registration Number',null,'text',true)}{field('application.date','Registration Date',null,'date',true)}<label className="sa-field" htmlFor="sa-admission-college"><span>College</span><select id="sa-admission-college" value={data.admission.collegeId||''} onChange={event=>{const college=collegeOptions.find(item=>same(item.id,event.target.value));update('admission.collegeId',event.target.value);update('admission.college',college?.name||'')}}><option value="">Select College</option>{collegeOptions.map(college=><option key={college.id} value={college.id}>{college.name}</option>)}</select></label>{field('admission.batch','Batch')}</Section><Section title="Student Services" icon={FiHome}>{field('admission.hostel','Hostel Required',['No','Yes'])}{data.admission.hostel === 'Yes' && <>{field('admission.hostelPreference','Hostel Preference',['Boys Hostel','Girls Hostel'])}{field('admission.hostelRoomType','Room Type / Beds',Object.keys(HOSTEL_FEES))}</>}{field('admission.transport','Transportation Required',['No','Yes'])}{data.admission.transport === 'Yes' && field('admission.transportRoute','Transport Route',Object.keys(TRANSPORT_FEES),null,false,'Select route')}</Section></>,
-    <div key="fees">{feeState.loading ? <section className="sa-empty"><FiClock/><h3>Loading fee details...</h3><p>Fetching the applicable fee summary from the backend.</p></section> : feeState.error ? <section className="sa-empty"><FiAlertCircle/><h3>Fee details unavailable</h3><p className="field-error" role="alert">{feeState.error}</p></section> : <ApplicantFeeStructure data={data} update={update} error={errors['fees.paymentPlan']} />}</div>,
+    <><Section title="Application Information" icon={FiFileText} hint="Registration details and institutional assignment.">{field('application.number','Registration Number',null,'text',true)}{field('application.date','Registration Date',null,'date',false)}<label className="sa-field" htmlFor="sa-admission-college"><span>College</span><select id="sa-admission-college" value={data.admission.collegeId||''} onChange={event=>{const college=collegeOptions.find(item=>same(item.id,event.target.value));update('admission.collegeId',event.target.value);update('admission.college',college?.name||'')}}><option value="">Select College</option>{collegeOptions.map(college=><option key={college.id} value={college.id}>{college.name}</option>)}</select></label>{field('admission.batch','Batch')}</Section><Section title="Student Services" icon={FiHome}>{field('admission.hostel','Hostel Required',['No','Yes'])}{data.admission.hostel === 'Yes' && <>{field('admission.hostelPreference','Hostel Preference',['Boys Hostel','Girls Hostel'])}{field('admission.hostelRoomType','Room Type / Beds',Object.keys(HOSTEL_FEES))}</>}{field('admission.transport','Transportation Required',['No','Yes'])}{data.admission.transport === 'Yes' && field('admission.transportRoute','Transport Route',Object.keys(TRANSPORT_FEES),null,false,'Select route')}</Section></>,
+    <div key="fees"><ApplicantFeeStructure data={data} update={update} error={errors['fees.paymentPlan']} /></div>,
     <DocumentsUpload key="documents" data={data} update={update} errors={errors} notify={notify} />,
     <div key="review" className="sa-preview"><PreviewHeader data={data} /><FullReview data={data} edit={setStep} studentId={recordIds.studentId} /></div>,
   ]
@@ -781,7 +1012,6 @@ function AdmissionForm() {
     const prefixes = [['personal.'],['contact.'],['parents.'],['academic.'],['previousEducation.'],['application.','admission.'],['fees.'],['documents.'],[]][step]
     const relevant = Object.fromEntries(Object.entries(allErrors).filter(([path]) => prefixes.some(prefix => path.startsWith(prefix))))
     setErrors(relevant)
-    if (step === 6 && (!feeState.loaded || feeState.error)) { notify('Backend fee details must load successfully before continuing.', 'error'); return }
     if (Object.keys(relevant).length) { notify('Correct the highlighted fields before continuing.', 'error'); focusFirst(); return }
     setSavingStep(true)
     try {
@@ -800,13 +1030,21 @@ function AdmissionForm() {
       } else if (step === 3) result = await studentAcademicDetailsApi.update(ids.admissionId, data)
       else if (step === 4) result = await studentPreviousEducationApi.update(ids.admissionId, data)
       else if (step === 6) {
-        const feeStructureId = data.fees.feeStructureId ?? data.fees.structureId
-        if (!feeStructureId) throw new Error('Select an applicable fee structure.')
-        await studentAdmissionApi.update(ids.admissionId, data)
-        const responses = await Promise.allSettled([studentFeeApi.getSummary(ids.admissionId), studentFeeApi.getStructure(ids.admissionId)])
-        const mergedSummary = resolveFeeSummary(data, responses[0].status === 'fulfilled' ? responses[0].value : null, responses[1].status === 'fulfilled' ? responses[1].value : null)
-        if (!mergedSummary) throw new Error('No matching Active fee structure was found.')
-        setData(current => ({ ...current, fees: { ...current.fees, ...mergedSummary } }))
+        if (!data.fees.paymentPlan) {
+          update('fees.paymentPlan', 'Full Payment')
+        }
+        if (ids.admissionId) {
+          try {
+            await studentAdmissionApi.update(ids.admissionId, data)
+            const responses = await Promise.allSettled([studentFeeApi.getSummary(ids.admissionId), studentFeeApi.getStructure(ids.admissionId)])
+            const mergedSummary = resolveFeeSummary(data, responses[0].status === 'fulfilled' ? responses[0].value : null, responses[1].status === 'fulfilled' ? responses[1].value : null)
+            if (mergedSummary) {
+              setData(current => ({ ...current, fees: { ...current.fees, ...mergedSummary } }))
+            }
+          } catch {
+            // Gracefully proceed
+          }
+        }
       } else if (step === 7) {
         const pending = [...DOCUMENTS.map(([key, label]) => ({ key, label, document: data.documents[key] })), ...(data.documents.otherCertificates || []).map(document => ({ key: 'otherCertificate', label: 'Other Certificate', document }))].filter(item => item.document?.file)
         if(ids.studentId){for (const item of pending) await studentDocumentApi.upload(ids.studentId, item.document.file, { documentType: item.key, documentName: item.label });const uploadedRows = await studentDocumentApi.getAll(ids.studentId);setData(current => ({ ...current, documents: documentsFromApi(uploadedRows) }))}
@@ -844,15 +1082,42 @@ function Timeline({ activity }) { return <section className="sa-detail-panel"><h
 function DetailContent({ data, tab }) {
   const address = value => formatAddress(value)
   if (tab === 'personal') return <><InfoGrid title="Personal Information" items={[['Student Name',studentName(data)],['Gender',data.personal.gender],['Date of Birth',data.personal.dob],['Blood Group',data.personal.bloodGroup],['Nationality',data.personal.nationality],['Aadhaar Number',data.personal.aadhaar ? `•••• •••• ${data.personal.aadhaar.slice(-4)}` : '']]} /><InfoGrid title="Contact & Address" items={[['Student Mobile',data.contact.mobile],['Alternate Mobile',data.contact.alternateMobile],['Student Email',data.contact.email],['Alternate Email',data.contact.alternateEmail],['Current Address',address(data.contact.currentAddress)],['Permanent Address',data.contact.sameAddress ? (address(data.contact.currentAddress) || 'Same as current address') : address(data.contact.permanentAddress)]]} /><InfoGrid title="Parent / Guardian" items={[['Father Name',data.parents.father.name],['Father Mobile',data.parents.father.mobile],['Father Email',data.parents.father.email],['Father Occupation',data.parents.father.occupation],['Father Qualification',data.parents.father.qualification],['Annual Income',data.parents.father.income],['Mother Name',data.parents.mother.name],['Mother Mobile',data.parents.mother.mobile],['Mother Occupation',data.parents.mother.occupation],['Guardian Name',data.parents.guardian.name],['Guardian Relationship',data.parents.guardian.relationship==='Other'?data.parents.guardian.relationshipOther:data.parents.guardian.relationship],['Guardian Mobile',data.parents.guardian.mobile],['Primary Contact',data.parents.primaryContact],['Emergency Contact',data.parents.emergencyMobile]]} /></>
-  if (tab === 'academic') return <InfoGrid title="Academic Placement" items={[['Academic Year',data.academic.academicYear],['Admission Type',data.academic.admissionType],['Course',data.academic.course],['Department',data.academic.department],['Branch',data.academic.branch],['Semester',data.academic.semester],['Student Category',data.academic.studentCategory],['Regulation',data.academic.regulation],['Entry Type',data.academic.entryType]]} />
+  if (tab === 'academic') return <InfoGrid title="Academic Placement" items={[['Academic Year',data.academic.academicYear],['Admission Type',data.academic.admissionType],['Quota',quota(data)],['Course',data.academic.course],['Branch',data.academic.branch],['Student Category',data.academic.studentCategory],['Regulation',data.academic.regulation],['Entry Type',data.academic.entryType]]} />
   if (tab === 'education') return <><InfoGrid title="10th / SSC" items={[['Board',data.previousEducation.tenth.board],['School',data.previousEducation.tenth.institution],['Roll Number',data.previousEducation.tenth.rollNumber],['Passing Year',data.previousEducation.tenth.passingYear],['Score Type',data.previousEducation.tenth.scoreType],['Score',data.previousEducation.tenth.score]]} /><InfoGrid title="Intermediate / Diploma" items={[['Qualification',data.previousEducation.intermediate.qualification],['Board / University',data.previousEducation.intermediate.board],['College',data.previousEducation.intermediate.institution],['Passing Year',data.previousEducation.intermediate.passingYear],['Stream',data.previousEducation.intermediate.stream],['Score Type',data.previousEducation.intermediate.scoreType],['Score',data.previousEducation.intermediate.score]]} /></>
   if (tab === 'services') return <InfoGrid title="Admission & Services" items={[['Registration Number',data.application.number],['Application Date',data.application.date],['Admission Number',data.application.admissionNumber],['Admission Date',data.application.admissionDate],['College',data.admission.college],['Batch',data.admission.batch],['Scholarship',data.admission.scholarship],['Scholarship Type',data.admission.scholarshipType],['Hostel',data.admission.hostel],['Hostel Preference',data.admission.hostelPreference],['Room Type / Beds',data.admission.hostelRoomType],['Transportation',data.admission.transport],['Transport Route',data.admission.transportRoute]]} />
   if (tab === 'fees') return <><InfoGrid title="Fee Structure" items={[['Tuition Fee (per year)',money(data.fees.tuitionFee)],['Admission Fee (one-time)',money(data.fees.admissionFee)],['Hostel Room Type',data.admission.hostelRoomType],['Hostel Fee (per year)',data.admission.hostel === 'Yes' ? money(data.fees.hostelFee) : 'Not selected'],['Transportation Fee (per year)',data.admission.transport === 'Yes' ? money(data.fees.transportFee) : 'Not selected'],['Estimated First-Year Total',money(data.fees.totalFee)],['Estimated Entire 4-Year Total',money((Number(data.fees.tuitionFee || 0) + Number(data.fees.hostelFee || 0) + Number(data.fees.transportFee || 0)) * 4 + Number(data.fees.admissionFee || 0))],['Payment Preference',data.fees.paymentPlan],['First Term Estimate',data.fees.paymentPlan === 'Term-wise Payment' ? money(Math.ceil(Number(data.fees.totalFee || 0) / 2)) : 'Not applicable'],['Second Term Estimate',data.fees.paymentPlan === 'Term-wise Payment' ? money(Math.floor(Number(data.fees.totalFee || 0) / 2)) : 'Not applicable']]} /><FeeSummary data={data} /></>
   if (tab === 'documents') return <DocumentDetails data={data} />
   if (tab === 'activity') return <Timeline activity={data.activity} />
-  return <InfoGrid title="Application Overview" items={[['Registration Number',data.application.number],['Application Date',data.application.date],['Admission Number',data.application.admissionNumber],['Admission Date',data.application.admissionDate],['Academic Year',data.academic.academicYear],['Admission Type',data.academic.admissionType],['Course',data.academic.course],['Department',data.academic.department],['Branch',data.academic.branch],['Semester',data.academic.semester],['Fee Status',data.fees.paymentStatus],['Admission Status',STATUS[data.status]]]} />
+  return <InfoGrid title="Application Overview" items={[['Registration Number',data.application.number],['Application Date',data.application.date],['Admission Number',data.application.admissionNumber],['Admission Date',data.application.admissionDate],['Academic Year',data.academic.academicYear],['Admission Type',data.academic.admissionType],['Course',data.academic.course],['Branch',data.academic.branch],['Fee Status',data.fees.paymentStatus],['Admission Status',STATUS[data.status]]]} />
 }
-function StudentHeader({ data }) { return <section className="sa-profile-header"><div className="sa-profile-avatar">{data.personal.photo ? <img src={data.personal.photo} alt={studentName(data)} /> : studentName(data).split(' ').map(part => part[0]).slice(0,2).join('')}</div><div><span>{data.application.number}</span><h1>{studentName(data)}</h1><p>{display(data.academic.course)} · {display(data.academic.branch)} · {display(data.academic.academicYear)}</p></div><Badge value={data.status} />{data.status === 'APPROVED' && <dl><div><dt>Admission Number</dt><dd>{data.application.admissionNumber}</dd></div><div><dt>Admission Date</dt><dd>{data.application.admissionDate}</dd></div></dl>}</section> }
+function StudentHeader({ data }) {
+  const normStat = normalizeStatus(data.status);
+  const initials = studentName(data).split(' ').map(part => part[0]).slice(0, 2).join('').toUpperCase() || 'S';
+  return (
+    <div className="cm-profile-banner">
+      <div className="cm-profile-avatar-wrap">
+        {data.personal?.photo ? (
+          <img src={data.personal.photo} alt={studentName(data)} className="cm-profile-logo" />
+        ) : (
+          <div className="cm-profile-placeholder">{initials}</div>
+        )}
+      </div>
+      <div className="cm-profile-header-info">
+        <div className="cm-profile-badges">
+          {data.application?.number && <span className="cm-badge cm-badge-code">Reg: {data.application.number}</span>}
+          {data.application?.admissionNumber && <span className="cm-badge cm-badge-type">Adm: {data.application.admissionNumber}</span>}
+          <span className={`cm-status-badge ${normStat === 'APPROVED' ? 'active' : 'inactive'}`}>
+            {STATUS[normStat] || normStat}
+          </span>
+        </div>
+        <h1 className="cm-profile-title"><span style={{ color: '#fff' }}>{studentName(data)}</span></h1>
+        <p className="cm-profile-subtitle">
+          <span style={{ color: '#fff' }}>{[display(data.academic?.course), display(data.academic?.branch), display(data.academic?.academicYear)].filter(Boolean).join(' · ')}</span>
+        </p>
+      </div>
+    </div>
+  );
+}
 
 function AdmissionDetails({ approval = false }) {
   const { id } = useParams(); const navigate = useNavigate(); const [data, setData] = useState(null); const [loadingDetail, setLoadingDetail] = useState(true); const [tab, setTab] = useState('overview'); const [remarks, setRemarks] = useState(''); const [toast, setToast] = useState(null); const [confirmApproval, setConfirmApproval] = useState(false); const [reviewed, setReviewed] = useState(false); const [savingStatus, setSavingStatus] = useState(false)
@@ -865,9 +1130,33 @@ function AdmissionDetails({ approval = false }) {
   }).catch(error => setToast({ message: error.message || 'Unable to load admission.', tone: 'error' })).finally(() => { if (active) setLoadingDetail(false) }); return () => { active = false } }, [id])
   if (loadingDetail) return <section className="sa-empty"><FiClock /><h2>Loading admission...</h2></section>
   if (!data) return <section className="sa-empty"><FiAlertCircle /><h2>Admission not found</h2><Button onClick={() => navigate('/student-management/admissions')}>Back to Admissions</Button></section>
-  const transition = async status => { if (savingStatus) return; if (['CORRECTION_REQUIRED','REJECTED'].includes(status) && !text(remarks)) { setToast({ message: 'Admission officer remarks are required for this decision.', tone: 'error' }); return } setSavingStatus(true); try { const result = await studentAdmissionStatusApi.update(id, { status, remarks }); setData(current => ({ ...current, status: normalizeStatus(result.status), remarks })); setRemarks(''); eventBus.emit(ERP_EVENTS.STUDENT_UPDATED, { admissionId: id, status }); setToast({ message: `${STATUS[status] || status} saved successfully`, tone: 'success' }); setConfirmApproval(false); if (status === 'APPROVED') { let studentId = idsFromApi(result).studentId ?? idsFromApi(data).studentId; if (!studentId) { try { studentId = idsFromApi(await studentAdmissionApi.getById(id)).studentId } catch { /* The profile directory remains available if the ID cannot be resolved. */ } } navigate(studentId ? `/student-management/profiles?studentId=${encodeURIComponent(studentId)}` : '/student-management/profiles') } } catch (error) { setToast({ message: error.message || 'Unable to update admission status.', tone: 'error' }) } finally { setSavingStatus(false) } }
+  const transition = async status => { if (savingStatus) return; if (['CORRECTION_REQUIRED','REJECTED'].includes(status) && !text(remarks)) { setToast({ message: 'Admission officer remarks are required for this decision.', tone: 'error' }); return } setSavingStatus(true); try { const result = await studentAdmissionStatusApi.update(id, { status, remarks }); setData(current => ({ ...current, status: normalizeStatus(result.status), remarks })); setRemarks(''); eventBus.emit(ERP_EVENTS.STUDENT_UPDATED, { admissionId: id, status }); setToast({ message: status === 'APPROVED' ? approvalNotice(result) : `${STATUS[status] || status} saved successfully`, tone: 'success' }); setConfirmApproval(false); if (status === 'APPROVED') { let studentId = idsFromApi(result).studentId ?? idsFromApi(data).studentId; if (!studentId) { try { studentId = idsFromApi(await studentAdmissionApi.getById(id)).studentId } catch { /* The profile directory remains available if the ID cannot be resolved. */ } } window.setTimeout(() => navigate(studentId ? `/student-management/profiles?studentId=${encodeURIComponent(studentId)}` : '/student-management/profiles'), 1200) } } catch (error) { setToast({ message: error.message || 'Unable to update admission status.', tone: 'error' }) } finally { setSavingStatus(false) } }
   if (approval) return <><Breadcrumb tail="Admission Review" /><button className="sa-back sa-review-back" onClick={() => navigate('/student-management/admissions')}><FiArrowLeft /> Back to Admissions</button><header className="sa-review-header"><div><span>Admission Officer Workspace</span><h1>Admission Review</h1><p>{studentName(data)} · {data.application.number} · {display(data.academic.course)} / {display(data.academic.branch)}</p></div><Badge value={data.status} /></header><Toast message={toast?.message} tone={toast?.tone} onClose={() => setToast(null)} /><section className="sa-review-workspace"><PreviewHeader data={data} /><FullReview data={data} /></section><section className="sa-approval"><header><div><h2>Review Decision</h2><p>Complete the application review before recording a workflow decision.</p></div><Badge value={data.status} /></header><label className="sa-review-confirm"><input type="checkbox" checked={reviewed} onChange={event => setReviewed(event.target.checked)} /><span>I have reviewed all admission sections and supporting information.</span></label><label className="sa-remarks"><span>Admission Officer Remarks</span><textarea maxLength="500" value={remarks} onChange={event => setRemarks(event.target.value)} placeholder="Add verification, correction or decision remarks..." /><small>{remarks.length}/500</small></label><footer>{['SUBMITTED','PENDING','UNDER_REVIEW','VERIFIED'].includes(data.status) && <Button danger disabled={!reviewed || savingStatus || !remarks.trim()} onClick={() => transition('REJECTED')}>Reject</Button>}{['SUBMITTED','PENDING','UNDER_REVIEW','VERIFIED'].includes(data.status) && <Button primary disabled={!reviewed || savingStatus} onClick={() => { setToast(null); setConfirmApproval(true) }}>Approve Admission</Button>}{data.status === 'APPROVED' && <span className="sa-approved-note"><FiCheckCircle /> Admission approved as {data.application.admissionNumber}</span>}</footer></section>{confirmApproval && <ConfirmDialog busy={savingStatus} error={toast?.tone === 'error' ? toast.message : null} title="Approve Student Admission?" confirmLabel="Approve Admission" onCancel={() => setConfirmApproval(false)} onConfirm={() => transition('APPROVED')}><p>This will mark the student admission as approved and generate an admission number.</p><dl><div><dt>Student</dt><dd>{studentName(data)}</dd></div><div><dt>Course / Branch</dt><dd>{data.academic.course} · {data.academic.branch}</dd></div><div><dt>Academic Year</dt><dd>{data.academic.academicYear}</dd></div><div><dt>Fee Status</dt><dd>{data.fees.paymentStatus}</dd></div></dl></ConfirmDialog>}</>
-  return <><Breadcrumb tail="Admission Details" /><div className="directory-export-actions"><button className="sa-back" onClick={() => navigate('/student-management/admissions')}><FiArrowLeft /> Back to Admissions</button><PrintDetailsButton title={studentName(data) + " admission details"} selector=".student-admission" /></div><StudentHeader data={data} /><nav className="sa-tabs">{DETAIL_TABS.map(([value,label,Icon]) => <button key={value} className={tab === value ? 'active' : ''} onClick={() => setTab(value)}><Icon /> {label}</button>)}</nav><section className="sa-detail-card"><DetailContent data={data} tab={tab} /></section></>
+  return (
+    <div className="cm-profile-view">
+      <Breadcrumb tail="Admission Details" />
+      <div className="cm-profile-top-bar">
+        <button type="button" className="cm-button secondary erp-btn erp-btn--secondary" onClick={() => navigate('/student-management/admissions')}>
+          &larr; Back to Admissions List
+        </button>
+      </div>
+
+      <div className="cm-profile-card">
+        <StudentHeader data={data} />
+        <nav className="sa-tabs">
+          {DETAIL_TABS.map(([value, label, Icon]) => (
+            <button key={value} className={tab === value ? 'active' : ''} onClick={() => setTab(value)}>
+              <Icon /> {label}
+            </button>
+          ))}
+        </nav>
+      </div>
+
+      <section className="sa-detail-card" style={{ marginTop: '16px' }}>
+        <DetailContent data={data} tab={tab} />
+      </section>
+    </div>
+  );
 }
 
 export default function StudentAdmission() {

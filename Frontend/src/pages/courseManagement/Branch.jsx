@@ -9,6 +9,7 @@ import SearchableSelect from '../../components/SearchableSelect'
 import TablePagination, { PAGE_SIZE } from '../../components/TablePagination'
 import CompactSummary from '../../components/CompactSummary'
 import InfoCard from '../../components/InfoCard'
+import StatusBadge from '../../components/StatusBadge'
 import { academicYearApi, branchApi, courseApi } from '../../api/apiEndpoints'
 import { branchTypeLabel } from '../../utils/semesterUtils'
 import ViewDialog from '../../components/ViewDialog'
@@ -206,10 +207,53 @@ function List() {
 
     {loading ? <div className="branch-empty">Loading branches…</div> : rows.length ? <>
       <div className="branch-results">Showing <strong>{rows.length}</strong> branches</div>
-      <div className="branch-table-scroll"><table className="branch-table"><thead><tr>{['Branch', 'Code', 'Course', 'Type', 'Duration', 'Semesters', 'Approved Intake', 'Status', 'Actions'].map((heading) => <th key={heading}>{heading}</th>)}</tr></thead><tbody>{pageRows.map((branch) => {
-        const course = courseById.get(String(branch.courseId))
-        return <tr key={branch.id}><td><strong>{branch.branchName}</strong>{branch.shortName && <small>{branch.shortName}</small>}</td><td>{branch.branchCode}</td><td>{course?.name || branch.courseName || ''}</td><td>{typeOf(branch)}</td><td>{course?.durationValue ? `${course.durationValue} Years` : ''}</td><td>{course?.totalSemesters || ''}</td><td>{branch.intakeCapacity || ''}</td><td><Badge value={branch.status} /></td><td className="branch-actions"><Link aria-label={`View ${branch.branchName}`} title="View" to={`/branches/${branch.id}`}><FiEye className="module-action-icon module-action-icon--view" /></Link><Link aria-label={`Edit ${branch.branchName}`} title="Edit" to={`/branches/${branch.id}/edit`}><FiEdit2 className="module-action-icon module-action-icon--edit" /></Link><button type="button" title={branch.status === 'Active' ? 'Deactivate' : 'Activate'} aria-label={`${branch.status === 'Active' ? 'Deactivate' : 'Activate'} ${branch.branchName}`} className={`branch-status-action ${branch.status === 'Active' ? 'success' : 'danger'}`} onClick={() => onToggleStatus(branch)}>{branch.status === 'Active' ? <FiToggleRight /> : <FiToggleLeft />}</button></td></tr>
-      })}</tbody></table></div>
+      <div className="branch-table-scroll">
+        <table className="branch-table">
+          <thead>
+            <tr>
+              <th style={{ minWidth: '220px' }}>Branch</th>
+              <th className="table-center" style={{ width: '110px' }}>Code</th>
+              <th style={{ minWidth: '160px', maxWidth: '220px' }}>Course</th>
+              <th className="table-center" style={{ width: '130px' }}>Type</th>
+              <th className="table-center" style={{ width: '110px' }}>Duration</th>
+              <th className="table-center" style={{ width: '110px' }}>Semesters</th>
+              <th className="table-center" style={{ width: '130px' }}>Approved Intake</th>
+              <th className="table-center" style={{ width: '120px' }}>Status</th>
+              <th className="table-center" style={{ width: '140px' }}>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {pageRows.map((branch) => {
+              const course = courseById.get(String(branch.courseId))
+              const courseDisplayName = course?.name || branch.courseName || ''
+              return (
+                <tr key={branch.id}>
+                  <td style={{ minWidth: '220px' }}>
+                    <div className="table-primary-cell">
+                      <strong title={branch.branchName}>{branch.branchName}</strong>
+                      {branch.shortName && <small title={branch.shortName}>{branch.shortName}</small>}
+                    </div>
+                  </td>
+                  <td className="table-center" style={{ width: '110px' }}>{branch.branchCode}</td>
+                  <td style={{ minWidth: '160px', maxWidth: '220px' }}><span className="table-cell-truncate" title={courseDisplayName}>{courseDisplayName || '—'}</span></td>
+                  <td className="table-center" style={{ width: '130px' }}>{typeOf(branch)}</td>
+                  <td className="table-center" style={{ width: '110px' }}>{course?.durationValue ? `${course.durationValue} Years` : ''}</td>
+                  <td className="table-center" style={{ width: '110px' }}>{course?.totalSemesters || ''}</td>
+                  <td className="table-center" style={{ width: '130px' }}>{branch.intakeCapacity || ''}</td>
+                  <td className="table-center" style={{ width: '120px' }}><StatusBadge value={branch.status} /></td>
+                  <td className="table-center" style={{ width: '140px' }}>
+                    <div className="branch-actions table-actions-group">
+                      <Link className="table-action-btn action-view" aria-label={`View ${branch.branchName}`} title={`View ${branch.branchName}`} to={`/branches/${branch.id}`}><FiEye /></Link>
+                      <Link className="table-action-btn action-edit" aria-label={`Edit ${branch.branchName}`} title={`Edit ${branch.branchName}`} to={`/branches/${branch.id}/edit`}><FiEdit2 /></Link>
+                      <button type="button" title={branch.status === 'Active' ? `Deactivate ${branch.branchName}` : `Activate ${branch.branchName}`} aria-label={branch.status === 'Active' ? `Deactivate ${branch.branchName}` : `Activate ${branch.branchName}`} className={`table-action-btn ${branch.status === 'Active' ? 'action-deactivate' : 'action-activate'}`} onClick={() => onToggleStatus(branch)}>{branch.status === 'Active' ? <FiToggleRight /> : <FiToggleLeft />}</button>
+                    </div>
+                  </td>
+                </tr>
+              )
+            })}
+          </tbody>
+        </table>
+      </div>
       <TablePagination currentPage={currentPage} totalPages={totalPages} onPageChange={setPage} />
     </> : <div className="branch-empty">No branches match the current filters.</div> }
     </section>
@@ -498,54 +542,76 @@ function Details() {
     ['Status', branch.status],
   ].filter(([, value]) => value !== null && value !== undefined && String(value).trim() !== '')
 
-  return <Page>
-    <Header title="B.Tech Branch Details" text="Current branch summary with only meaningful values shown.">
-      <PrintDetailsButton title={branch.branchName + " details"} selector=".branch-detail-content" />
-      <Link className="cm-button secondary" to="/branches"><FiArrowLeft /> Back</Link>
-      <Link className="cm-button" to={`/branches/${id}/edit`}><FiEdit2 /> Edit</Link>
-    </Header>
-    <ViewDialog title="Branch Details" onClose={() => navigate('/branches')}>
-      <Link className="cm-button" to={`/branches/${id}/edit`}><FiEdit2 /> Edit</Link>
-      <section className="branch-detail-hero">
-        <div>
-          <span className="cm-eyebrow">B.Tech Branch</span>
-          <h2>{branch.branchName}</h2>
-          <Badge value={branch.status} />
+  return (
+    <Page>
+      <div className="cm-profile-view">
+        <div className="cm-profile-top-bar">
+          <Link className="cm-button secondary" to="/branches">
+            &larr; Back to Branches List
+          </Link>
         </div>
-        <strong>{branch.branchCode}</strong>
-      </section>
-      <div className="branch-detail-content cm-profile-grid" style={{ marginTop: '16px' }}>
-        <InfoCard
-          title="Branch Information"
-          icon={FiGitBranch}
-          items={[
-            { label: 'Course Name', value: branch.courseName },
-            { label: 'Course Code', value: branch.courseCode },
-            { label: 'Branch Name', value: branch.branchName },
-            { label: 'Branch Code', value: branch.branchCode },
-            { label: 'Branch Type', value: typeOf(branch) },
-            { label: 'Specialization', value: branch.specialization },
-            { label: 'Status', value: branch.status },
-          ]}
-        />
-        <InfoCard
-          title="Academic Structure"
-          icon={FiLayers}
-          items={[
-            { label: 'Duration', value: branch.duration ? `${branch.duration} Years` : '' },
-            { label: 'Academic Pattern', value: branch.academicPattern },
-            { label: 'Total Semesters', value: branch.totalSemesters },
-            { label: 'Approved Intake', value: branch.intakeCapacity },
-            { label: 'Academic Year', value: branch.startingAcademicYearName },
-          ]}
-        />
+
+        <div className="cm-profile-card">
+          {/* Header Profile Banner */}
+          <div className="cm-profile-banner">
+            <div className="cm-profile-avatar-wrap">
+              <div className="cm-profile-placeholder">
+                <FiGitBranch />
+              </div>
+            </div>
+            <div className="cm-profile-header-info">
+              <div className="cm-profile-badges">
+                <span className="cm-badge cm-badge-code">Code: {branch.branchCode || '—'}</span>
+                <span className="cm-badge cm-badge-type">{typeOf(branch)}</span>
+                <span className={`cm-status-badge ${String(branch.status || 'Active').toLowerCase()}`}>
+                  {branch.status || 'Active'}
+                </span>
+              </div>
+              <h1 className="cm-profile-title"><span style={{ color: '#fff' }}>{branch.branchName}</span></h1>
+              <p className="cm-profile-subtitle">
+                <span style={{ color: '#fff' }}>Course: </span>
+                <strong style={{ color: '#fff' }}>{branch.courseName || branch.courseCode || '—'}</strong>
+                {branch.specialization && <span style={{ color: '#fff' }}> · Specialization: {branch.specialization}</span>}
+              </p>
+            </div>
+          </div>
+
+          {/* Profile Information Cards Grid */}
+          <div className="cm-profile-grid">
+            <InfoCard
+              title="Branch Information"
+              icon={FiGitBranch}
+              items={[
+                { label: 'Course Name', value: branch.courseName },
+                { label: 'Course Code', value: branch.courseCode },
+                { label: 'Branch Name', value: branch.branchName },
+                { label: 'Branch Code', value: branch.branchCode },
+                { label: 'Branch Type', value: typeOf(branch) },
+                { label: 'Specialization', value: branch.specialization },
+                { label: 'Status', value: branch.status },
+              ]}
+            />
+            <InfoCard
+              title="Academic Structure"
+              icon={FiLayers}
+              items={[
+                { label: 'Duration', value: branch.duration ? `${branch.duration} Years` : '' },
+                { label: 'Academic Pattern', value: branch.academicPattern },
+                { label: 'Total Semesters', value: branch.totalSemesters },
+                { label: 'Approved Intake', value: branch.intakeCapacity },
+                { label: 'Academic Year', value: branch.startingAcademicYearName },
+              ]}
+            />
+          </div>
+        </div>
       </div>
-    </ViewDialog>
-  </Page>
+    </Page>
+  );
 }
 
-export default function Branch({ mode = 'list' }) {
+export default function Branch({ mode }) {
+  const { id } = useParams()
   if (mode === 'form') return <Form />
-  if (mode === 'details') return <Details />
+  if (mode === 'details' || id) return <Details />
   return <List />
 }

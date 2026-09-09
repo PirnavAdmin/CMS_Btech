@@ -276,22 +276,49 @@ function SemesterList() {
           <div className="semester-table-wrapper">
             <table className="semester-table">
               <thead>
-                <tr>{['Semester', 'Course', 'Branch', 'Academic Year', 'Start Date', 'End Date', 'Status', 'Actions'].map((heading) => <th key={heading}>{heading}</th>)}</tr>
+                <tr>
+                  <th style={{ minWidth: '160px' }}>Semester</th>
+                  <th style={{ minWidth: '160px' }}>Course</th>
+                  <th style={{ minWidth: '160px' }}>Branch</th>
+                  <th className="table-center" style={{ width: '130px' }}>Academic Year</th>
+                  <th className="table-center" style={{ width: '120px' }}>Start Date</th>
+                  <th className="table-center" style={{ width: '120px' }}>End Date</th>
+                  <th className="table-center" style={{ width: '120px' }}>Status</th>
+                  <th className="table-center" style={{ width: '130px' }}>Actions</th>
+                </tr>
               </thead>
               <tbody>
                 {visible.map((item) => (
                   <tr key={item.id || `${item.branchId}-${item.semesterNumber}`}>
-                    <td><strong>{item.semesterName}</strong><small>Semester {item.semesterNumber}</small></td>
-                    <td><strong>{item.courseName}</strong>{item.courseCode && <small>{item.courseCode}</small>}</td>
-                    <td><strong>{item.branchName}</strong>{item.branchCode && <small>{item.branchCode}</small>}{item.branchType && <small>{item.branchType}</small>}</td>
-                    <td>{item.academicYearName}</td>
-                    <td>{displayDate(item.startDate)}</td>
-                    <td>{displayDate(item.endDate)}</td>
-                    <td><StatusBadge value={item.status} /></td>
-                    <td>
-                      <div className="semester-row-actions">
-                        <Link aria-label={`View ${item.semesterName}`} to={`/semester-management/${item.id}`}><FiEye className="module-action-icon module-action-icon--view" /></Link>
-                        <Link aria-label={`Edit ${item.semesterName}`} to={`/semester-management/${item.id}/edit`}><FiEdit2 className="module-action-icon module-action-icon--edit" /></Link>
+                    <td style={{ minWidth: '160px' }}>
+                      <div className="table-primary-cell">
+                        <strong title={item.semesterName}>{item.semesterName}</strong>
+                        {item.semesterName && item.semesterNumber && String(item.semesterName).trim().toLowerCase() !== `semester ${item.semesterNumber}`.toLowerCase() ? (
+                          <small>Semester {item.semesterNumber}</small>
+                        ) : null}
+                      </div>
+                    </td>
+                    <td style={{ minWidth: '160px' }}>
+                      <div className="table-primary-cell">
+                        <strong title={item.courseName}>{item.courseName}</strong>
+                        {item.courseCode && <small title={item.courseCode}>{item.courseCode}</small>}
+                      </div>
+                    </td>
+                    <td style={{ minWidth: '160px' }}>
+                      <div className="table-primary-cell">
+                        <strong title={item.branchName}>{item.branchName}</strong>
+                        {item.branchCode && <small title={item.branchCode}>{item.branchCode}</small>}
+                        {item.branchType && <small title={item.branchType}>{item.branchType}</small>}
+                      </div>
+                    </td>
+                    <td className="table-center" style={{ width: '130px' }}>{item.academicYearName}</td>
+                    <td className="table-center" style={{ width: '120px' }}>{displayDate(item.startDate)}</td>
+                    <td className="table-center" style={{ width: '120px' }}>{displayDate(item.endDate)}</td>
+                    <td className="table-center" style={{ width: '120px' }}><StatusBadge value={item.status} /></td>
+                    <td className="table-center" style={{ width: '130px' }}>
+                      <div className="semester-row-actions table-actions-group">
+                        <Link className="table-action-btn action-view" title={`View ${item.semesterName}`} aria-label={`View ${item.semesterName}`} to={`/semester-management/${item.id}`}><FiEye /></Link>
+                        <Link className="table-action-btn action-edit" title={`Edit ${item.semesterName}`} aria-label={`Edit ${item.semesterName}`} to={`/semester-management/${item.id}/edit`}><FiEdit2 /></Link>
                       </div>
                     </td>
                   </tr>
@@ -477,14 +504,53 @@ function SemesterDetailsPage() {
   }, [id])
 
   if (loading) return <Page><Empty icon={FiClock} title="Loading semester details..." /></Page>
-  if (error || !item) return <Page><Header title="Semester Details"><Link className="semester-primary secondary" to="/semester-management"><FiArrowLeft /> Back</Link></Header><Empty icon={FiLayers} title={error || 'Semester not found.'} /></Page>
-  return <Page><Header title="Semester Details" text="View semester configuration, mapping, schedule, and course structure."><Link className="semester-primary secondary" to="/semester-management"><FiArrowLeft /> Back</Link><Link className="semester-primary" to={`/semester-management/${item.id}/edit`}><FiEdit2 /> Edit Semester</Link></Header><ViewDialog title="Semester Details" onClose={() => navigate('/semester-management')}><Link className="semester-primary" to={`/semester-management/${item.id}/edit`}><FiEdit2 /> Edit Semester</Link><SemesterProfile item={{ ...item, status: deriveLifecycleStatus(item, 'Upcoming', now) }} /></ViewDialog></Page>
+  if (error || !item) return <Page><div className="cm-profile-view"><div className="cm-profile-top-bar"><Link className="cm-button secondary" to="/semester-management">&larr; Back to Semesters List</Link></div><Empty icon={FiLayers} title={error || 'Semester not found.'} /></div></Page>
+  const semesterItem = { ...item, status: deriveLifecycleStatus(item, 'Upcoming', now) }
+  return (
+    <Page>
+      <div className="cm-profile-view">
+        <div className="cm-profile-top-bar">
+          <Link className="cm-button secondary" to="/semester-management">
+            &larr; Back to Semesters List
+          </Link>
+        </div>
+        <SemesterProfile item={semesterItem} />
+      </div>
+    </Page>
+  )
 }
 
 function SemesterProfile({ item }) {
   const startYear = item.courseDuration && item.academicYearName ? parseAcademicYearStart({ academicYearName: item.academicYearName }) - Math.floor((Number(item.semesterNumber || 1) - 1) / 2) : null
   const coursePeriod = periodLabel(startYear, item.courseDuration)
-  return <article className="semester-profile-page"><div className="cm-profile-card"><div className="cm-profile-banner"><div className="cm-profile-avatar-wrap"><div className="cm-profile-placeholder"><FiCalendar /></div></div><div className="cm-profile-header-info"><div className="cm-profile-badges"><span className="cm-badge cm-badge-code">Semester {item.semesterNumber}</span>{item.courseCode && <span className="cm-badge cm-badge-type">{item.courseCode}</span>}<span className={`cm-status-badge ${String(item.status).toLowerCase()}`}>{item.status}</span></div><h1 className="cm-profile-title">{item.semesterName}</h1><p className="cm-profile-subtitle">{[item.courseName, item.branchCode || item.branchName, item.academicYearName].filter(clean).join(' • ')}</p></div></div><div className="cm-profile-grid"><InfoCard icon={FiCalendar} title="Basic Information" rows={[["Semester Name", item.semesterName], ["Semester Number", item.semesterNumber], ["Academic Year", item.academicYearName], ["Status", item.status]]} /><InfoCard icon={FiBookOpen} title="Academic Mapping" rows={[["Course Name", item.courseName], ["Course Code", item.courseCode], ["Branch Name", item.branchName], ["Branch Code", item.branchCode], ["Branch Type", item.branchType]]} /><InfoCard icon={FiClock} title="Academic Schedule" rows={[["Start Date", displayDate(item.startDate)], ["End Date", displayDate(item.endDate)]]} /><InfoCard icon={FiLayers} title="Course Structure" rows={[["Starting Academic Year", yearLabelFromStart(cohortStart(item))], ["Course Duration", item.courseDuration ? `${item.courseDuration} Years` : ''], ["Academic Pattern", item.academicPattern], ["Total Semesters", item.totalSemesters], ["Course Period", coursePeriod]]} /></div></div></article>
+  return (
+    <div className="cm-profile-card">
+      <div className="cm-profile-banner">
+        <div className="cm-profile-avatar-wrap">
+          <div className="cm-profile-placeholder">
+            <FiCalendar />
+          </div>
+        </div>
+        <div className="cm-profile-header-info">
+          <div className="cm-profile-badges">
+            <span className="cm-badge cm-badge-code">Semester {item.semesterNumber}</span>
+            {item.courseCode && <span className="cm-badge cm-badge-type">{item.courseCode}</span>}
+            <span className={`cm-status-badge ${String(item.status).toLowerCase()}`}>{item.status}</span>
+          </div>
+          <h1 className="cm-profile-title"><span style={{ color: '#fff' }}>{item.semesterName}</span></h1>
+          <p className="cm-profile-subtitle">
+            <span style={{ color: '#fff' }}>{[item.courseName, item.branchCode || item.branchName, item.academicYearName].filter(clean).join(' • ')}</span>
+          </p>
+        </div>
+      </div>
+      <div className="cm-profile-grid">
+        <InfoCard icon={FiCalendar} title="Basic Information" rows={[["Semester Name", item.semesterName], ["Semester Number", item.semesterNumber], ["Academic Year", item.academicYearName], ["Status", item.status]]} />
+        <InfoCard icon={FiBookOpen} title="Academic Mapping" rows={[["Course Name", item.courseName], ["Course Code", item.courseCode], ["Branch Name", item.branchName], ["Branch Code", item.branchCode], ["Branch Type", item.branchType]]} />
+        <InfoCard icon={FiClock} title="Academic Schedule" rows={[["Start Date", displayDate(item.startDate)], ["End Date", displayDate(item.endDate)]]} />
+        <InfoCard icon={FiLayers} title="Course Structure" rows={[["Starting Academic Year", yearLabelFromStart(cohortStart(item))], ["Course Duration", item.courseDuration ? `${item.courseDuration} Years` : ''], ["Academic Pattern", item.academicPattern], ["Total Semesters", item.totalSemesters], ["Course Period", coursePeriod]]} />
+      </div>
+    </div>
+  )
 }
 
 function InfoCard({ icon: Icon, title, rows }) {
@@ -501,9 +567,10 @@ function Pagination({ page, pageCount, setPage }) {
   return <div className="semester-pagination"><p>Page {page} of {pageCount}</p><div><button disabled={page <= 1} onClick={() => setPage((value) => Math.max(1, value - 1))}>Previous</button><button className="active">{page}</button><button disabled={page >= pageCount} onClick={() => setPage((value) => Math.min(pageCount, value + 1))}>Next</button></div></div>
 }
 
-export default function SemesterManagement({ mode = 'list' }) {
+export default function SemesterManagement({ mode }) {
+  const { id } = useParams()
   if (mode === 'form') return <SemesterForm />
   if (mode === 'edit') return <SemesterForm editMode />
-  if (mode === 'details') return <SemesterDetailsPage />
+  if (mode === 'details' || id) return <SemesterDetailsPage />
   return <SemesterList />
 }

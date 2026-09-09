@@ -194,3 +194,367 @@ button.btn-primary:hover,
 .p-header h1 {
   margin-top: 0;
 }
+
+/* ============================
+   MASTER PROFILE / DETAILS VIEW STYLES
+   ============================ */
+.cm-profile-view {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  width: 100%;
+}
+
+.cm-profile-top-bar {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 10px;
+}
+
+.cm-profile-card {
+  border: 1px solid var(--border, #e2e8f0);
+  border-radius: 16px;
+  background: var(--surface, #fff);
+  overflow: hidden;
+  box-shadow: 0 4px 16px rgba(15, 23, 42, 0.04);
+}
+
+.cm-profile-banner {
+  display: flex !important;
+  align-items: center !important;
+  gap: 20px !important;
+  padding: 26px 30px !important;
+  background: linear-gradient(135deg, #0d3761 0%, #174d82 100%) !important;
+  color: #fff !important;
+}
+
+.cm-profile-avatar-wrap {
+  flex-shrink: 0 !important;
+  display: flex !important;
+}
+
+.cm-profile-logo,
+.cm-profile-placeholder {
+  display: grid !important;
+  place-items: center !important;
+  width: 72px !important;
+  height: 72px !important;
+  border-radius: 14px !important;
+  background: var(--brand-blue, #1e5a96) !important;
+  color: #fff !important;
+  font-size: 1.8rem !important;
+  font-weight: 800 !important;
+  border: 2px solid rgba(255, 255, 255, 0.3) !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;
+  object-fit: cover !important;
+}
+
+.cm-profile-placeholder svg {
+  width: 32px !important;
+  height: 32px !important;
+}
+
+.cm-profile-header-info {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+.cm-profile-badges {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.cm-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  line-height: 1.2;
+}
+
+.cm-badge-code {
+  background: rgba(255, 255, 255, 0.18);
+  color: #fff;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.cm-badge-type {
+  background: #ffffff;
+  color: #0d3761;
+}
+
+.cm-status-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  background: #dff7ec;
+  color: #087443;
+}
+
+.cm-status-badge.inactive,
+.cm-status-badge.archived,
+.cm-status-badge.deactive {
+  background: #fee2e2;
+  color: #b91c1c;
+}
+
+.cm-status-badge.active {
+  background: #dff7ec;
+  color: #087443;
+}
+
+.cm-profile-title {
+  margin: 2px 0 0;
+  font-size: 1.55rem;
+  font-weight: 700;
+  color: #fff !important;
+  line-height: 1.25;
+}
+
+.cm-profile-subtitle {
+  margin: 0;
+  font-size: 0.92rem;
+  color: rgba(255, 255, 255, 0.9) !important;
+}
+
+.cm-profile-subtitle strong {
+  color: #ffffff !important;
+}
+
+.cm-profile-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 16px;
+  padding: 24px 30px;
+}
+
+.cm-info-card {
+  border: 1px solid var(--border, #e2e8f0);
+  border-radius: 12px;
+  padding: 22px;
+  background: var(--surface-subtle, #f8fafc);
+}
+
+.cm-info-card-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 18px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--border, #e2e8f0);
+  color: var(--brand-blue, #1e5a96);
+}
+
+.cm-info-card-header h2 {
+  margin: 0;
+  color: var(--text-primary, #0f172a);
+  font-size: 1.05rem;
+  font-weight: 700;
+}
+
+.cm-info-rows {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 0;
+  overflow: hidden;
+  border: 1px solid var(--border, #e2e8f0);
+  border-radius: 8px;
+  background: var(--surface, #fff);
+}
+
+.cm-info-row {
+  display: grid;
+  min-height: 72px;
+  align-content: center;
+  gap: 4px;
+  padding: 12px 14px;
+  border-right: 1px solid var(--border, #e2e8f0);
+  border-bottom: 1px solid var(--border, #e2e8f0);
+}
+
+.cm-info-label {
+  color: var(--text-secondary, #40566f);
+  font-size: 0.75rem;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.cm-info-val {
+  color: var(--text-primary, #102f49);
+  font-size: 0.95rem;
+  font-weight: 700;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+
+/* ==========================================================================
+   PROJECT-WIDE TABLE ALIGNMENT STANDARDIZATION
+   Master Reference: Course Management Table Standard
+   ========================================================================== */
+
+/* Universal table wrapper and table layout */
+.page-content table,
+.page-content .cm-table,
+.page-content .course-advanced-table,
+.page-content .branch-table,
+.page-content .semester-table,
+.page-content .section-table,
+.page-content .erp-table,
+.page-content .sa-table-wrap table,
+.page-content .sp-directory-table,
+.page-content .department-table-wrap table {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: auto;
+}
+
+/* 1. Header (th) Vertical Alignment & Center Align */
+.page-content table thead th,
+.page-content .cm-table thead th,
+.page-content .course-advanced-table thead th,
+.page-content .branch-table thead th,
+.page-content .semester-table thead th,
+.page-content .section-table thead th,
+.page-content .erp-table thead th,
+.page-content .sa-table-wrap table thead th,
+.page-content .sp-directory-table thead th,
+.page-content .department-table-wrap table thead th {
+  height: 44px !important;
+  vertical-align: middle !important;
+  text-align: center !important;
+  padding: 11px 16px !important;
+  background: #123f63 !important;
+  color: #f4f9fc !important;
+  font-size: 11px !important;
+  font-weight: 800 !important;
+  letter-spacing: 0.055em;
+  text-transform: uppercase;
+  border-color: #244f70 !important;
+  box-sizing: border-box;
+}
+
+/* 2. Body Cell (td) Vertical Alignment & Center Align */
+.page-content table tbody td,
+.page-content .cm-table tbody td,
+.page-content .course-advanced-table tbody td,
+.page-content .branch-table tbody td,
+.page-content .semester-table tbody td,
+.page-content .section-table tbody td,
+.page-content .erp-table tbody td,
+.page-content .sa-table-wrap table tbody td,
+.page-content .sp-directory-table tbody td,
+.page-content .department-table-wrap table tbody td {
+  height: 52px !important;
+  vertical-align: middle !important;
+  text-align: center !important;
+  padding: 11px 16px !important;
+  border-bottom: 1px solid var(--border);
+  color: var(--text-secondary);
+  background: var(--surface);
+  font-size: 13px !important;
+  box-sizing: border-box;
+}
+
+/* 3. Center alignment classes for header and data cells */
+.page-content table th.table-center,
+.page-content table td.table-center,
+.page-content table th.text-center,
+.page-content table td.text-center,
+.table-center,
+.text-center {
+  text-align: center !important;
+  vertical-align: middle !important;
+}
+
+/* 4. Multi-line primary cell structure (Centered) */
+.table-primary-cell {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  gap: 3px;
+  min-height: 38px;
+  width: 100%;
+  margin: 0 auto;
+}
+
+.table-primary-cell strong,
+.page-content table tbody td strong {
+  display: block;
+  color: var(--text-primary);
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1.25;
+  text-align: center;
+  width: 100%;
+}
+
+.table-primary-cell small,
+.page-content table tbody td small {
+  display: block;
+  color: var(--text-muted);
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1.2;
+  text-align: center;
+  width: 100%;
+}
+
+/* 5. Status Badges & Cells */
+.table-status-cell {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+}
+
+.page-content table tbody td .badge,
+.page-content table tbody td .cm-status-badge,
+.page-content table tbody td .sp-badge,
+.page-content table tbody td .status-badge,
+.page-content table tbody td .sa-status-badge,
+.page-content table tbody td [class*="status-badge"],
+.page-content table tbody td [class*="status-pill"] {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto;
+}
+
+/* 6. Action Column & Action Icon Buttons */
+.table-actions-cell,
+.table-actions-group,
+.course-actions,
+.branch-actions,
+.semester-row-actions,
+.section-actions,
+.sa-icon-actions,
+.cm-actions,
+.erp-row-actions,
+.module-row-actions {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 6px !important;
+  vertical-align: middle !important;
+  white-space: nowrap !important;
+  width: auto !important;
+  margin: 0 auto !important;
+}
+
+

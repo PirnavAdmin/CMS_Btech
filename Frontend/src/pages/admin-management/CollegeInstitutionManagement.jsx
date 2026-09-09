@@ -2,18 +2,18 @@ import ExportMenu, { PrintDetailsButton } from '../../components/ExportMenu'
 import { collegeColumns, collegeSettingsColumns } from '../../utils/exportColumns'
 import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { FiAlertCircle, FiCheckCircle, FiEye as EyeIcon, FiEdit2 as EditIcon, FiHome, FiPlus as Plus, FiToggleLeft, FiToggleRight, FiX, FiSearch, FiFilter } from 'react-icons/fi'
+import { FiAlertCircle, FiCheckCircle, FiEye as EyeIcon, FiEdit2 as EditIcon, FiHome, FiPlus as Plus, FiToggleLeft, FiToggleRight, FiX, FiSearch, FiFilter, FiTrash2 } from 'react-icons/fi'
 import DashboardLayout from '../../layouts/DashboardLayout'
 import FilterPanel from '../../components/FilterPanel'
 import TablePagination, { PAGE_SIZE } from '../../components/TablePagination'
 import StatusConfirmDialog from '../../components/StatusConfirmDialog'
+import StatusBadge from '../../components/StatusBadge'
 import InfoCard from '../../components/InfoCard'
 import CompactSummary from '../../components/CompactSummary'
 import {
   createCollegeSettings,
   fetchCollegeLogo,
   getCollegeById,
-  getCollegeLogoUrl,
   getCollegeSettings,
   getColleges,
   isValidWebsite,
@@ -251,7 +251,10 @@ const mapCollege = (record) => {
   alternateContact: String(record.alternateContact ?? record.alternateContactNumber ?? record.alternatePhoneNumber ?? contact.alternateContactNumber ?? extended.alternateContactNumber ?? ''),
   email: record.email ?? record.collegeEmail ?? contact.email ?? '',
   website: record.website ?? record.Website ?? contact.website ?? contact.Website ?? '',
-  logo: getCollegeLogoUrl(record.id ?? record.collegeId, record.logo ?? record.logoUrl ?? record.collegeLogo ?? record.collegeLogoUrl ?? record.logoPath ?? ''),
+  // Do not probe the protected logo endpoint for every directory record. The
+  // college list does not guarantee a logo exists, and a missing one should use
+  // the existing initial-based placeholder rather than generate a 404 request.
+  logo: record.logo ?? record.logoUrl ?? record.collegeLogo ?? record.collegeLogoUrl ?? record.logoPath ?? '',
   principal: record.principal ?? record.principalName ?? administration.principalName ?? '',
   principalEmail: record.principalEmail ?? administration.principalEmail ?? extended.principalEmail ?? '',
   principalContact: record.principalContact ?? record.principalPhone ?? administration.principalContact ?? extended.principalContact ?? '',
@@ -378,7 +381,7 @@ export default function CollegeInstitutionManagement({ initialView = 'list' }) {
   const [brokenLogoIds, setBrokenLogoIds] = useState(() => new Set())
   const markLogoBroken = (id) => setBrokenLogoIds((current) => new Set(current).add(id))
 
-  const activeCollege = colleges.find((c) => c.id === activeId) || null
+  const activeCollege = colleges.find((c) => String(c.id) === String(activeId)) || null
 
   const refreshCollegeSummary = async () => {
     try {
@@ -499,7 +502,7 @@ export default function CollegeInstitutionManagement({ initialView = 'list' }) {
       const response = await getCollegeById(college.id)
       const detailRecord = unwrapCollegeRecord(response)
       const detail = mapCollege(Object.keys(detailRecord).length ? detailRecord : college)
-      setColleges((current) => current.map((item) => (item.id === detail.id ? detail : item)))
+      setColleges((current) => current.map((item) => (String(item.id) === String(detail.id) ? detail : item)))
     } catch (error) {
       setCollegeError(getApiErrorMessage(error, 'Unable to load college details. Please try again.'))
     } finally {
@@ -749,30 +752,30 @@ export default function CollegeInstitutionManagement({ initialView = 'list' }) {
                   <table className="cm-table">
                     <thead>
                       <tr>
-                        <th><span className="cm-table-heading" style={{ display: 'flex', justifyContent: 'center' }}>Logo</span></th>
-                        <th><span className="cm-table-heading" style={{ display: 'flex', justifyContent: 'center' }}>College Name</span></th>
-                        <th><span className="cm-table-heading" style={{ display: 'flex', justifyContent: 'center' }}>Code</span></th>
-                        <th><span className="cm-table-heading" style={{ display: 'flex', justifyContent: 'center' }}>Type</span></th>
-                        <th><span className="cm-table-heading" style={{ display: 'flex', justifyContent: 'center' }}>City</span></th>
-                        <th><span className="cm-table-heading" style={{ display: 'flex', justifyContent: 'center' }}>Contact</span></th>
-                        <th><span className="cm-table-heading" style={{ display: 'flex', justifyContent: 'center' }}>Status</span></th>
-                        <th className="cm-actions-header"><span className="cm-table-heading" style={{ display: 'flex', justifyContent: 'center' }}>Actions</span></th>
+                        <th className="table-center" style={{ width: '60px' }}>Logo</th>
+                        <th style={{ minWidth: '220px', maxWidth: '300px' }}>College Name</th>
+                        <th className="table-center" style={{ width: '120px' }}>Code</th>
+                        <th style={{ minWidth: '130px', maxWidth: '170px' }}>Type</th>
+                        <th style={{ minWidth: '120px', maxWidth: '160px' }}>City</th>
+                        <th style={{ minWidth: '130px', maxWidth: '160px' }}>Contact</th>
+                        <th className="table-center" style={{ width: '120px' }}>Status</th>
+                        <th className="table-center" style={{ width: '140px' }}>Actions</th>
                       </tr>
                     </thead>
                     <tbody>
                       {collegeDraft?.values && <tr className="cm-draft-row">
-                        <td><span className="cm-draft-row__mark">D</span></td>
-                        <td><span className="cm-college-name">{collegeDraft.values.collegeName || 'New college draft'}</span><small className="cm-draft-row__label">Draft saved</small></td>
-                        <td>{collegeDraft.values.collegeCode || '—'}</td>
-                        <td>Draft</td>
-                        <td>{collegeDraft.values.city || '—'}</td>
-                        <td>{collegeDraft.values.contactNumber || '—'}</td>
-                        <td><span className="cm-status-badge draft">{collegeDraft.progress || 0}% complete</span></td>
-                        <td className="cm-actions-cell"><div className="cm-actions"><button type="button" className="cm-action-icon-btn cm-edit-action" title="Resume draft" aria-label="Resume draft" onClick={() => navigate('/college-institution-management/add')}><EditIcon /></button><button type="button" className="cm-action-icon-btn cm-danger cm-discard-action" title="Discard draft" aria-label="Discard draft" onClick={() => { localStorage.removeItem(NEW_COLLEGE_DRAFT_KEY); setCollegeDraft(null) }}><FiX aria-hidden="true" /></button></div></td>
+                        <td className="table-center" style={{ width: '60px' }}><span className="cm-draft-row__mark">D</span></td>
+                        <td style={{ minWidth: '220px', maxWidth: '300px' }}><span className="table-cell-truncate cm-college-name" title={collegeDraft.values.collegeName || 'New college draft'}>{collegeDraft.values.collegeName || 'New college draft'}</span><small className="cm-draft-row__label">Draft saved</small></td>
+                        <td className="table-center" style={{ width: '120px' }}>{collegeDraft.values.collegeCode || '—'}</td>
+                        <td style={{ minWidth: '130px', maxWidth: '170px' }}><span className="table-cell-truncate" title={collegeDraft.values.institutionType || '—'}>{collegeDraft.values.institutionType || '—'}</span></td>
+                        <td style={{ minWidth: '120px', maxWidth: '160px' }}><span className="table-cell-truncate" title={collegeDraft.values.city || '—'}>{collegeDraft.values.city || '—'}</span></td>
+                        <td style={{ minWidth: '130px', maxWidth: '160px' }}><span className="table-cell-truncate" title={collegeDraft.values.contactNumber || '—'}>{collegeDraft.values.contactNumber || '—'}</span></td>
+                        <td className="table-center" style={{ width: '120px' }}><StatusBadge tone="pending">Pending</StatusBadge></td>
+                        <td className="table-center" style={{ width: '140px' }}><div className="cm-actions table-actions-group"><button type="button" className="table-action-btn action-edit cm-action-icon-btn cm-edit-action" title="Resume draft" aria-label="Resume draft" onClick={() => navigate('/college-institution-management/add')}><EditIcon /></button><button type="button" className="table-action-btn action-deactivate cm-action-icon-btn cm-danger cm-discard-action" title="Discard draft" aria-label="Discard draft" onClick={() => { localStorage.removeItem(NEW_COLLEGE_DRAFT_KEY); setCollegeDraft(null) }}><FiTrash2 aria-hidden="true" /></button></div></td>
                       </tr>}
                       {displayedColleges.map((college) => (
                         <tr key={college.id}>
-                          <td>
+                          <td className="table-center" style={{ width: '60px' }}>
                             {college.logo && !brokenLogoIds.has(college.id) ? (
                               <CollegeLogoImage
                                 src={college.logo}
@@ -784,41 +787,39 @@ export default function CollegeInstitutionManagement({ initialView = 'list' }) {
                               <span className="cm-logo-placeholder">{college.name.charAt(0).toUpperCase()}</span>
                             )}
                           </td>
-                          <td><span className="cm-college-name">{college.name}</span></td>
-                          <td>{college.code}</td>
-                          <td>{college.type}</td>
-                          <td>{college.city}</td>
-                          <td>{college.contact}</td>
-                          <td>
-                            <span className={`cm-status-badge ${college.status}`}>
-                              {college.status === 'active' ? 'Active' : 'Inactive'}
-                            </span>
+                          <td style={{ minWidth: '220px', maxWidth: '300px' }}><span className="table-cell-truncate cm-college-name" title={college.name}>{college.name}</span></td>
+                          <td className="table-center" style={{ width: '120px' }}>{college.code}</td>
+                          <td style={{ minWidth: '130px', maxWidth: '170px' }}><span className="table-cell-truncate" title={college.type}>{college.type}</span></td>
+                          <td style={{ minWidth: '120px', maxWidth: '160px' }}><span className="table-cell-truncate" title={college.city}>{college.city}</span></td>
+                          <td style={{ minWidth: '130px', maxWidth: '160px' }}><span className="table-cell-truncate" title={college.contact}>{college.contact}</span></td>
+                          <td className="table-center" style={{ width: '120px' }}>
+                            <StatusBadge value={college.status === 'active' ? 'Active' : 'Inactive'} />
                           </td>
-                          <td className="cm-actions-cell">
-                            <div className="cm-actions">
+                          <td className="table-center" style={{ width: '140px' }}>
+                            <div className="cm-actions table-actions-group">
                               <button
                                 type="button"
-                                className="cm-action-icon-btn cm-view-action"
-                                title="View Details"
-                                aria-label="View Details"
+                                className="table-action-btn action-view cm-action-icon-btn cm-view-action"
+                                title={`View Details for ${college.name}`}
+                                aria-label={`View Details for ${college.name}`}
                                 onClick={() => openDetails(college)}
                               >
-                                <EyeIcon className="module-action-icon module-action-icon--view" />
+                                <EyeIcon />
                               </button>
                               <button
                                 type="button"
-                                className="cm-action-icon-btn cm-edit-action"
-                                title="Edit College"
-                                aria-label="Edit College"
+                                className="table-action-btn action-edit cm-action-icon-btn cm-edit-action"
+                                title={`Edit ${college.name}`}
+                                aria-label={`Edit ${college.name}`}
                                 onClick={() => openEdit(college)}
                               >
-                                <EditIcon className="module-action-icon module-action-icon--edit" />
+                                <EditIcon />
                               </button>
                               <button
                                 type="button"
-                                className={`cm-action-icon-btn cm-status-action ${college.status === 'active' ? 'cm-success' : 'cm-danger'}`}
-                                title={college.status === 'active' ? 'Deactivate college' : 'Activate college'}
-                                aria-label={college.status === 'active' ? 'Deactivate college' : 'Activate college'}
+                                className={`table-action-btn cm-action-icon-btn cm-status-action ${college.status === 'active' ? 'action-deactivate cm-danger' : 'action-activate cm-success'}`}
+                                title={college.status === 'active' ? `Deactivate ${college.name}` : `Activate ${college.name}`}
+                                aria-label={college.status === 'active' ? `Deactivate ${college.name}` : `Activate ${college.name}`}
                                 onClick={() => toggleStatus(college)}
                               >
                                 {college.status === 'active' ? <FiToggleRight /> : <FiToggleLeft />}
@@ -976,7 +977,6 @@ export default function CollegeInstitutionManagement({ initialView = 'list' }) {
         {viewMode === 'details' && activeCollege && (
           <div className="cm-profile-view">
             <div className="cm-profile-top-bar">
-              <PrintDetailsButton title={activeCollege.name + " details"} selector=".cm-profile-card" />
               <button type="button" className="cm-secondary-btn" onClick={backToList}>
                 &larr; Back to Colleges List
               </button>
@@ -1126,44 +1126,44 @@ export default function CollegeInstitutionManagement({ initialView = 'list' }) {
                   <thead>
                     <tr>
                       <th>College Name</th>
-                      <th>Code</th>
+                      <th className="table-center">Code</th>
                       <th>Email</th>
                       <th>City / State</th>
-                      <th>Academic Year</th>
-                      <th>Semester</th>
+                      <th className="table-center">Academic Year</th>
+                      <th className="table-center">Semester</th>
                       <th>Type</th>
-                      <th>Status</th>
-                      <th className="cm-actions-header">Actions</th>
+                      <th className="table-center">Status</th>
+                      <th className="table-center">Actions</th>
                     </tr>
                   </thead>
                   <tbody>
                     {displayedSettings.map((item) => (
                       <tr key={item.id}>
                         <td>{item.collegeName}</td>
-                        <td>{item.collegeCode}</td>
+                        <td className="table-center">{item.collegeCode}</td>
                         <td>{item.collegeEmail}</td>
                         <td>{item.city}, {item.state}</td>
-                        <td>{item.academicYear}</td>
-                        <td>{item.semester}</td>
+                        <td className="table-center">{item.academicYear}</td>
+                        <td className="table-center">{item.semester}</td>
                         <td>{item.institutionType}</td>
-                        <td>
+                        <td className="table-center">
                           <span className={`cm-status-badge ${item.status === 1 ? 'active' : 'inactive'}`}>
                             {item.status === 1 ? 'Active' : 'Inactive'}
                           </span>
                         </td>
-                        <td className="cm-actions-cell">
-                          <div className="cm-actions">
-                            <button
-                              type="button"
-                              className="cm-action-icon-btn"
-                              title="Edit Settings"
-                              aria-label="Edit Settings"
-                              onClick={() => openEditSettings(item)}
-                            >
-                              <EditIcon className="module-action-icon module-action-icon--edit" />
-                            </button>
-                          </div>
-                        </td>
+                        <td className="table-center">
+                            <div className="cm-actions table-actions-group">
+                              <button
+                                type="button"
+                                className="table-action-btn action-edit cm-action-icon-btn cm-edit-action"
+                                title="Edit Settings"
+                                aria-label="Edit Settings"
+                                onClick={() => openEditSettings(item)}
+                              >
+                                <EditIcon />
+                              </button>
+                            </div>
+                          </td>
                       </tr>
                     ))}
                   </tbody>

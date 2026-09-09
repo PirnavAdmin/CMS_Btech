@@ -2,12 +2,13 @@ import ExportMenu, { PrintDetailsButton } from '../../components/ExportMenu'
 import { courseColumns, structureColumns } from '../../utils/exportColumns'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useParams, useNavigate } from 'react-router-dom'
-import { FiArrowLeft, FiBookOpen, FiCheckCircle, FiEdit2, FiEye, FiFilter, FiPlus, FiSearch, FiToggleLeft, FiToggleRight, FiUsers } from 'react-icons/fi'
+import { FiArrowLeft, FiBookOpen, FiCheckCircle, FiEdit2, FiEye, FiFilter, FiLayers, FiPlus, FiSearch, FiToggleLeft, FiToggleRight, FiUsers } from 'react-icons/fi'
 import DashboardLayout from '../../layouts/DashboardLayout'
 import FilterPanel from '../../components/FilterPanel'
 import SearchableSelect from '../../components/SearchableSelect'
 import TablePagination, { PAGE_SIZE } from '../../components/TablePagination'
 import StatusConfirmDialog from '../../components/StatusConfirmDialog'
+import StatusBadge from '../../components/StatusBadge'
 import CompactSummary from '../../components/CompactSummary'
 import InfoCard from '../../components/InfoCard'
 import { branchApi, courseApi, courseStructureApi, departmentApi, studentAdmissionApi } from '../../api/apiEndpoints'
@@ -215,22 +216,36 @@ function CourseList() {
             <div className="course-results">Showing <strong>{rows.length}</strong> of <strong>{courses.length}</strong> courses</div>
             <div className="course-table-scroll">
               <table className="course-advanced-table">
-                <thead><tr>{['Course', 'Duration', 'Semesters', 'Status', 'Actions'].map(label => <th key={label}>{label}</th>)}</tr></thead>
+                <thead>
+                  <tr>
+                    <th style={{ minWidth: '240px' }}>Course</th>
+                    <th className="table-center" style={{ width: '130px' }}>Duration</th>
+                    <th className="table-center" style={{ width: '130px' }}>Semesters</th>
+                    <th className="table-center" style={{ width: '120px' }}>Status</th>
+                    <th className="table-center" style={{ width: '140px' }}>Actions</th>
+                  </tr>
+                </thead>
                 <tbody>
                   {pageRows.map(c => {
                     const semesterText = Number(c.semesters) > 0 ? `${Number(c.semesters)} Semesters` : 'Not available'
                     const durationText = c.durationValue ? `${c.durationValue} ${c.durationUnit || 'Years'}`.trim() : 'Not available'
+                    const secondaryText = `${c.code || ''}${c.shortName ? ` • ${c.shortName}` : ''}`.trim()
                     return (
                       <tr key={c.id}>
-                        <td><strong>{c.name}</strong><small>{c.code}{c.shortName ? ` • ${c.shortName}` : ''}</small></td>
-                        <td>{durationText}</td>
-                        <td>{semesterText}</td>
-                        <td>{c.status ? <Badge value={c.status} /> : 'Not available'}</td>
-                        <td>
-                          <div className="course-actions">
-                            <Link aria-label={`View ${c.name}`} to={`/courses/${c.id}`}><FiEye className="module-action-icon module-action-icon--view" /></Link>
-                            <Link aria-label={`Edit ${c.name}`} to={`/courses/${c.id}/edit`}><FiEdit2 className="module-action-icon module-action-icon--edit" /></Link>
-                            <button className={`course-status-action ${(c.status || 'Active') === 'Active' ? 'success' : 'danger'}`} title={(c.status || 'Active') === 'Active' ? `Mark ${c.name} inactive` : `Mark ${c.name} active`} aria-label={(c.status || 'Active') === 'Active' ? `Mark ${c.name} inactive` : `Mark ${c.name} active`} onClick={() => toggleStatus(c)}>{(c.status || 'Active') === 'Active' ? <FiToggleRight /> : <FiToggleLeft />}</button>
+                        <td style={{ minWidth: '240px' }}>
+                          <div className="table-primary-cell">
+                            <strong title={c.name}>{c.name}</strong>
+                            {secondaryText && <small title={secondaryText}>{secondaryText}</small>}
+                          </div>
+                        </td>
+                        <td className="table-center" style={{ width: '130px' }}>{durationText}</td>
+                        <td className="table-center" style={{ width: '130px' }}>{semesterText}</td>
+                        <td className="table-center" style={{ width: '120px' }}><StatusBadge value={c.status || 'Active'} /></td>
+                        <td className="table-center" style={{ width: '140px' }}>
+                          <div className="course-actions table-actions-group">
+                            <Link className="table-action-btn action-view" title={`View ${c.name}`} aria-label={`View ${c.name}`} to={`/courses/${c.id}`}><FiEye /></Link>
+                            <Link className="table-action-btn action-edit" title={`Edit ${c.name}`} aria-label={`Edit ${c.name}`} to={`/courses/${c.id}/edit`}><FiEdit2 /></Link>
+                            <button type="button" className={`table-action-btn ${(c.status || 'Active') === 'Active' ? 'action-deactivate' : 'action-activate'}`} title={(c.status || 'Active') === 'Active' ? `Deactivate ${c.name}` : `Activate ${c.name}`} aria-label={(c.status || 'Active') === 'Active' ? `Deactivate ${c.name}` : `Activate ${c.name}`} onClick={() => toggleStatus(c)}>{(c.status || 'Active') === 'Active' ? <FiToggleRight /> : <FiToggleLeft />}</button>
                           </div>
                         </td>
                       </tr>
@@ -391,10 +406,44 @@ function CourseDetails() {
   const load = async () => {
     setIsLoading(true); setError('')
     try {
-      const [course, departmentRows, branchRows] = await Promise.all([courseApi.getById(id), departmentApi.getAll(), branchApi.getByCourse(id)])
-      setCourse(mapCourse(recordFrom(course)))
-      setDepartments(dedupeDepartmentOptions(departmentRows))
-      setBranches(branchRows.map(normalize))
+      let rawCourse = null
+      try {
+        const res = await courseApi.getById(id)
+        rawCourse = recordFrom(res)
+      } catch {
+        try {
+          const res = await getCourseById(id)
+          rawCourse = recordFrom(res)
+        } catch {
+          const allCourses = await courseApi.getAll().catch(() => [])
+          rawCourse = allCourses.find(c => String(c.id || c.courseId) === String(id))
+        }
+      }
+
+      if (!rawCourse || (!rawCourse.id && !rawCourse.courseId && !rawCourse.name && !rawCourse.courseName)) {
+        const allCourses = await courseApi.getAll().catch(() => [])
+        rawCourse = allCourses.find(c => String(c.id || c.courseId) === String(id)) || rawCourse
+      }
+
+      if (!rawCourse) {
+        throw new Error('Course not found.')
+      }
+
+      setCourse(mapCourse(rawCourse))
+
+      try {
+        const departmentRows = await departmentApi.getAll()
+        setDepartments(dedupeDepartmentOptions(departmentRows))
+      } catch {
+        setDepartments([])
+      }
+
+      try {
+        const branchRows = await branchApi.getAll()
+        setBranches(branchRows.map(normalize).filter(b => String(b.courseId) === String(id)))
+      } catch {
+        setBranches([])
+      }
     } catch (requestError) {
       setCourse(null)
       setError(apiError(requestError, 'Unable to load course details. Please try again.'))
@@ -413,32 +462,70 @@ function CourseDetails() {
   const duration = course.durationValue ? `${course.durationValue} ${course.durationUnit || 'Years'}` : ''
   const pattern = course.academicSystem || 'Semester'
 
-  return <Page><Header title="B.Tech Course Details" text="Course configuration and associated B.Tech branches."><PrintDetailsButton title={course.name + " details"} selector=".course-management" /><Link className="cm-button secondary" to="/courses"><FiArrowLeft /> Back</Link><Link className="cm-button" to={`/courses/${id}/edit`}><FiEdit2 className="module-action-icon module-action-icon--edit" /> Edit Course</Link></Header>
-    <section className="course-detail-summary"><div className="course-detail-summary__main"><span className="cm-eyebrow">B.Tech Course</span><h2>{course.name || 'Course'}</h2>{valueText(course.shortName) && <p className="course-detail-summary__short">{course.shortName}</p>}<strong className="course-detail-summary__code">Course Code: {course.code || '—'}</strong></div><div className="course-detail-summary__meta"><span>Department <b>{department?.name || course.department || '—'}</b></span><span>{course.type || 'Undergraduate'} {duration && ` · ${duration}`} {course.semesters && ` · ${course.semesters} Semesters`}</span><Badge value={course.status || 'Active'} /></div></section>
-    <div className="cm-profile-grid" style={{ marginTop: '20px' }}>
-      <InfoCard
-        title="Basic Information"
-        icon={FiBookOpen}
-        items={[
-          { label: 'Course Name', value: course.name },
-          { label: 'Course Code', value: course.code },
-          { label: 'Short Name', value: course.shortName },
-          { label: 'Course Type', value: course.type },
-          { label: 'College', value: course.college },
-        ]}
-      />
-      <InfoCard
-        title="Academic Information"
-        icon={FiBookOpen}
-        items={[
-          { label: 'College', value: course.college },
-          { label: 'Duration', value: duration },
-          { label: 'Academic Pattern', value: pattern },
-          { label: 'Total Semesters', value: course.semesters },
-        ]}
-      />
-    </div>
-  </Page>
+  return (
+    <Page>
+      <div className="cm-profile-view">
+        <div className="cm-profile-top-bar">
+          <Link className="cm-button secondary" to="/courses">
+            &larr; Back to Courses List
+          </Link>
+        </div>
+
+        <div className="cm-profile-card">
+          {/* Header Profile Banner */}
+          <div className="cm-profile-banner">
+            <div className="cm-profile-avatar-wrap">
+              <div className="cm-profile-placeholder">
+                <FiBookOpen />
+              </div>
+            </div>
+            <div className="cm-profile-header-info">
+              <div className="cm-profile-badges">
+                <span className="cm-badge cm-badge-code">Code: {course.code || '—'}</span>
+                <span className="cm-badge cm-badge-type">{course.type || 'Undergraduate'}</span>
+                <span className={`cm-status-badge ${String(course.status || 'Active').toLowerCase()}`}>
+                  {course.status || 'Active'}
+                </span>
+              </div>
+              <h1 className="cm-profile-title"><span style={{ color: '#fff' }}>{course.name || 'Course'}</span></h1>
+              <p className="cm-profile-subtitle">
+                <span style={{ color: '#fff' }}>Department: </span>
+                <strong style={{ color: '#fff' }}>{department?.name || course.department || '—'}</strong>
+                {duration && <span style={{ color: '#fff' }}> · {duration}</span>}
+                {course.semesters && <span style={{ color: '#fff' }}> · {course.semesters} Semesters</span>}
+              </p>
+            </div>
+          </div>
+
+          {/* Profile Information Cards Grid */}
+          <div className="cm-profile-grid">
+            <InfoCard
+              title="Basic Information"
+              icon={FiBookOpen}
+              items={[
+                { label: 'Course Name', value: course.name },
+                { label: 'Course Code', value: course.code },
+                { label: 'Short Name', value: course.shortName },
+                { label: 'Course Type', value: course.type },
+                { label: 'College', value: course.college },
+                { label: 'Status', value: course.status || 'Active' },
+              ]}
+            />
+            <InfoCard
+              title="Academic Information"
+              icon={FiLayers}
+              items={[
+                { label: 'College', value: course.college },
+                { label: 'Duration', value: duration },
+                { label: 'Academic Pattern', value: pattern },
+                { label: 'Total Semesters', value: course.semesters },
+              ]}
+            />
+          </div>
+        </div>
+      </div>
+    </Page>
+  );
 }
 
 const branchType = b => b.branchType || (b.specialization ? 'Specialization' : 'Core')
@@ -487,4 +574,9 @@ export function CourseStructure() {
   </Page>
 }
 
-export default function Course({ mode = 'list' }) { return mode === 'form' ? <CourseForm /> : mode === 'details' ? <CourseDetails /> : <CourseList /> }
+export default function Course({ mode }) {
+  const { id } = useParams()
+  if (mode === 'form') return <CourseForm />
+  if (mode === 'details' || id) return <CourseDetails />
+  return <CourseList />
+}

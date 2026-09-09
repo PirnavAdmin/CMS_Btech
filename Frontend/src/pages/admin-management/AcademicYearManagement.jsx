@@ -264,191 +264,243 @@ export default function AcademicYear() {
           </div>
         )}
 
-        {active ? (
-          <section className="hero">
-            <div>
-              <p className="eyebrow">Active Academic Context</p>
-              <h2>{active.name}</h2>
-              <p>
-                {formatDate(active.startDate)} — {formatDate(active.endDate)}
-              </p>
-              <StatusBadge status="ACTIVE" />
-            </div>
-            <div className="metrics">
-              <p>
-                <b>{Math.max(0, days(active.endDate))}</b>Days remaining
-              </p>
-              <p>
-                <b>{progress(active.startDate, active.endDate)}%</b>Year progress
-              </p>
-            </div>
-            <div className="bar">
-              <span style={{ width: `${progress(active.startDate, active.endDate)}%` }} />
-            </div>
-          </section>
-        ) : (
-          <section className="hero">
-            <h2>No active academic year</h2>
-            <p>Activate an upcoming academic year to establish current college operations context.</p>
-          </section>
-        )}
-
-        <section className="cm-panel course-directory">
-          <header className="course-directory-heading">
-            <div>
-              <span className="cm-eyebrow">Academic Year Directory</span>
-              <p>{shown.length} records</p>
-            </div>
-            <div className="directory-export-actions">
-              <ExportMenu
-                rows={shown}
-                columns={yearColumns}
-                title="Academic Years"
-                filename="academic-years"
-                loading={exportLoading || noticeTone === 'error'}
-              />
-              <button type="button" className="cm-button secondary" onClick={() => setModal('generate')}>
-                Generate Next Year
-              </button>
-              <button type="button" className="cm-button" onClick={openAdd}>
-                <FiPlus /> Add Academic Year
+        {modal === 'view' && selected ? (
+          <div className="cm-profile-view" style={{ marginTop: '16px' }}>
+            <div className="cm-profile-top-bar">
+              <button type="button" className="erp-btn erp-btn--secondary" onClick={close}>
+                &larr; Back to Academic Years List
               </button>
             </div>
-          </header>
 
-          <FilterPanel
-            active={Boolean(search || filter !== 'ALL')}
-            onClear={() => {
-              setSearch('');
-              setFilter('ALL');
-              setPage(1);
-            }}
-          >
-            <section className="cm-panel course-toolbar">
-              <label className="course-search">
-                <FiSearch />
-                <input
-                  aria-label="Search academic years"
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  placeholder="Search year title or status..."
-                />
-              </label>
-              <div className="erp-filter-buttons">
-                {['ALL', ...states].map((x) => (
-                  <button
-                    key={x}
-                    type="button"
-                    className={`erp-pill ${filter === x ? 'active' : ''}`}
-                    onClick={() => setFilter(x)}
-                  >
-                    {x === 'ALL' ? 'All' : x.charAt(0) + x.slice(1).toLowerCase()}
-                  </button>
-                ))}
+            <div className="cm-profile-card">
+              <div className="cm-profile-banner">
+                <div className="cm-profile-avatar-wrap">
+                  <div className="cm-profile-placeholder">
+                    <FiCalendar />
+                  </div>
+                </div>
+                <div className="cm-profile-header-info">
+                  <div className="cm-profile-badges">
+                    <span className="cm-badge cm-badge-code">Cycle</span>
+                    <span className={`cm-status-badge ${String(selected.status).toLowerCase()}`}>
+                      {selected.status}
+                    </span>
+                  </div>
+                  <h1 className="cm-profile-title"><span style={{ color: '#fff' }}>{selected.name}</span></h1>
+                  <p className="cm-profile-subtitle">
+                    <span style={{ color: '#fff' }}>Duration: </span>
+                    <strong style={{ color: '#fff' }}>{duration(selected.startDate, selected.endDate)} days</strong>
+                    <span style={{ color: '#fff' }}> ({formatDate(selected.startDate)} — {formatDate(selected.endDate)})</span>
+                  </p>
+                </div>
               </div>
-              {Boolean(search || filter !== 'ALL') && (
-                <button
-                  className="course-clear"
-                  onClick={() => {
-                    setSearch('');
-                    setFilter('ALL');
-                    setPage(1);
-                  }}
-                >
-                  Clear Filters
-                </button>
+
+              <div className="cm-profile-grid">
+                <InfoCard
+                  title="Cycle Information"
+                  icon={FiCalendar}
+                  items={[
+                    { label: 'Academic Year', value: selected.name },
+                    { label: 'Start Date', value: formatDate(selected.startDate) },
+                    { label: 'End Date', value: formatDate(selected.endDate) },
+                    { label: 'Duration', value: `${duration(selected.startDate, selected.endDate)} days` },
+                    { label: 'Status', value: selected.status },
+                    { label: 'Auto Activation', value: selected.autoActivate ? 'Enabled' : 'Manual' },
+                  ]}
+                />
+              </div>
+            </div>
+          </div>
+        ) : (
+          <>
+            {active ? (
+              <section className="hero">
+                <div>
+                  <p className="eyebrow">Active Academic Context</p>
+                  <h2>{active.name}</h2>
+                  <p>
+                    {formatDate(active.startDate)} — {formatDate(active.endDate)}
+                  </p>
+                  <StatusBadge status="ACTIVE" />
+                </div>
+                <div className="metrics">
+                  <p>
+                    <b>{Math.max(0, days(active.endDate))}</b>Days remaining
+                  </p>
+                  <p>
+                    <b>{progress(active.startDate, active.endDate)}%</b>Year progress
+                  </p>
+                </div>
+                <div className="bar">
+                  <span style={{ width: `${progress(active.startDate, active.endDate)}%` }} />
+                </div>
+              </section>
+            ) : (
+              <section className="hero">
+                <h2>No active academic year</h2>
+                <p>Activate an upcoming academic year to establish current college operations context.</p>
+              </section>
+            )}
+
+            <section className="cm-panel course-directory">
+              <header className="course-directory-heading">
+                <div>
+                  <span className="cm-eyebrow">Academic Year Directory</span>
+                  <p>{shown.length} records</p>
+                </div>
+                <div className="directory-export-actions">
+                  <ExportMenu
+                    rows={shown}
+                    columns={yearColumns}
+                    title="Academic Years"
+                    filename="academic-years"
+                    loading={exportLoading || noticeTone === 'error'}
+                  />
+                  <button type="button" className="cm-button secondary" onClick={() => setModal('generate')}>
+                    Generate Next Year
+                  </button>
+                  <button type="button" className="cm-button" onClick={openAdd}>
+                    <FiPlus /> Add Academic Year
+                  </button>
+                </div>
+              </header>
+
+              <FilterPanel
+                active={Boolean(search || filter !== 'ALL')}
+                onClear={() => {
+                  setSearch('');
+                  setFilter('ALL');
+                  setPage(1);
+                }}
+              >
+                <section className="cm-panel course-toolbar">
+                  <label className="course-search">
+                    <FiSearch />
+                    <input
+                      aria-label="Search academic years"
+                      value={search}
+                      onChange={(e) => setSearch(e.target.value)}
+                      placeholder="Search year title or status..."
+                    />
+                  </label>
+                  <div className="erp-filter-buttons">
+                    {['ALL', ...states].map((x) => (
+                      <button
+                        key={x}
+                        type="button"
+                        className={`erp-pill ${filter === x ? 'active' : ''}`}
+                        onClick={() => setFilter(x)}
+                      >
+                        {x === 'ALL' ? 'All' : x.charAt(0) + x.slice(1).toLowerCase()}
+                      </button>
+                    ))}
+                  </div>
+                  {Boolean(search || filter !== 'ALL') && (
+                    <button
+                      className="course-clear"
+                      type="button"
+                      onClick={() => {
+                        setSearch('');
+                        setFilter('ALL');
+                        setPage(1);
+                      }}
+                    >
+                      Clear Filters
+                    </button>
+                  )}
+                </section>
+              </FilterPanel>
+
+              <div className="erp-table-responsive">
+                <table className="erp-table">
+                  <thead>
+                    <tr>
+                      <th style={{ minWidth: '180px' }}>Academic Year</th>
+                      <th className="table-center" style={{ width: '130px' }}>Start Date</th>
+                      <th className="table-center" style={{ width: '130px' }}>End Date</th>
+                      <th className="table-center" style={{ width: '120px' }}>Status</th>
+                      <th className="table-center" style={{ width: '120px' }}>Duration</th>
+                      <th className="table-center" style={{ width: '140px' }}>Auto Activation</th>
+                      <th className="table-center" style={{ width: '140px' }}>Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {pageRows.map((x) => (
+                      <tr key={x.id}>
+                        <td style={{ minWidth: '180px' }}>
+                          <strong className="table-cell-truncate" title={x.name}>{x.name}</strong>
+                        </td>
+                        <td className="table-center" style={{ width: '130px' }}>{formatDate(x.startDate)}</td>
+                        <td className="table-center" style={{ width: '130px' }}>{formatDate(x.endDate)}</td>
+                        <td className="table-center" style={{ width: '120px' }}>
+                          <StatusBadge value={x.status} />
+                        </td>
+                        <td className="table-center" style={{ width: '120px' }}>{duration(x.startDate, x.endDate)} days</td>
+                        <td className="table-center" style={{ width: '140px' }}>{x.autoActivate ? 'Enabled' : 'Manual'}</td>
+                        <td className="table-center" style={{ width: '140px' }}>
+                          <div className="erp-row-actions table-actions-group">
+                            <button
+                              type="button"
+                              className="table-action-btn action-view erp-action-btn"
+                              title={`View ${x.name || 'Academic Year'}`}
+                              aria-label={`View ${x.name || 'Academic Year'}`}
+                              onClick={() => openView(x)}
+                            >
+                              <FiEye />
+                            </button>
+                            <button
+                              type="button"
+                              className="table-action-btn action-edit erp-action-btn"
+                              title={`Edit ${x.name || 'Academic Year'}`}
+                              aria-label={`Edit ${x.name || 'Academic Year'}`}
+                              onClick={() => edit(x)}
+                              disabled={x.status === 'ARCHIVED' || isPresentYear(x)}
+                            >
+                              <FiEdit2 />
+                            </button>
+                            {x.status === 'UPCOMING' && (
+                              <button
+                                type="button"
+                                className="table-action-btn action-activate erp-action-btn erp-action-btn--success"
+                                title={`Activate ${x.name || 'Academic Year'}`}
+                                aria-label={`Activate ${x.name || 'Academic Year'}`}
+                                onClick={() => setConfirmStatus({ year: x, targetStatus: 'ACTIVE' })}
+                              >
+                                <FiToggleLeft />
+                              </button>
+                            )}
+                            {isPastYear(x) && x.status !== 'ARCHIVED' && (
+                              <button
+                                type="button"
+                                className="table-action-btn action-deactivate erp-action-btn erp-action-btn--danger"
+                                title={`Archive ${x.name || 'Academic Year'}`}
+                                aria-label={`Archive ${x.name || 'Academic Year'}`}
+                                onClick={() => setConfirmStatus({ year: x, targetStatus: 'ARCHIVED' })}
+                              >
+                                <FiXCircle />
+                              </button>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                    {!shown.length && (
+                      <tr>
+                        <td colSpan="7" style={{ textAlign: 'center', padding: '32px' }}>
+                          No academic years match your search or filter.
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+
+              {!!shown.length && (
+                <TablePagination page={currentPage} totalPages={totalPages} onPageChange={setPage} />
               )}
             </section>
-          </FilterPanel>
-
-          <div className="erp-table-responsive">
-            <table className="erp-table">
-              <thead>
-                <tr>
-                  <th>Academic Year</th>
-                  <th>Start Date</th>
-                  <th>End Date</th>
-                  <th>Status</th>
-                  <th>Duration</th>
-                  <th>Auto Activation</th>
-                  <th style={{ textAlign: 'center' }}>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {pageRows.map((x) => (
-                  <tr key={x.id}>
-                    <td>
-                      <strong>{x.name}</strong>
-                    </td>
-                    <td>{formatDate(x.startDate)}</td>
-                    <td>{formatDate(x.endDate)}</td>
-                    <td>
-                      <StatusBadge status={x.status} />
-                    </td>
-                    <td>{duration(x.startDate, x.endDate)} days</td>
-                    <td>{x.autoActivate ? 'Enabled' : 'Manual'}</td>
-                    <td>
-                      <div className="erp-row-actions">
-                        <button
-                          type="button"
-                          className="erp-action-btn"
-                          title="View Details"
-                          aria-label="View academic year"
-                          onClick={() => openView(x)}
-                        >
-                          <FiEye className="module-action-icon module-action-icon--view" />
-                        </button>
-                        <button
-                          type="button"
-                          className="erp-action-btn"
-                          title="Edit Academic Year"
-                          aria-label="Edit academic year"
-                          onClick={() => edit(x)}
-                          disabled={x.status === 'ARCHIVED' || isPresentYear(x)}
-                        >
-                          <FiEdit2 className="module-action-icon module-action-icon--edit" />
-                        </button>
-                        {x.status === 'UPCOMING' && (
-                          <button
-                            type="button"
-                            className="erp-action-btn erp-action-btn--success"
-                            title="Activate Academic Year"
-                            aria-label="Activate academic year"
-                            onClick={() => setConfirmStatus({ year: x, targetStatus: 'ACTIVE' })}
-                          >
-                            <FiToggleLeft className="module-action-icon" style={{ color: 'var(--success)' }} />
-                          </button>
-                        )}
-                        {isPastYear(x) && x.status !== 'ARCHIVED' && (
-                          <button
-                            type="button"
-                            className="erp-action-btn erp-action-btn--danger"
-                            title="Archive Academic Year"
-                            aria-label="Archive academic year"
-                            onClick={() => setConfirmStatus({ year: x, targetStatus: 'ARCHIVED' })}
-                          >
-                            <FiXCircle className="module-action-icon" style={{ color: 'var(--danger)' }} />
-                          </button>
-                        )}
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-                {!shown.length && (
-                  <tr>
-                    <td colSpan="7" style={{ textAlign: 'center', padding: '32px' }}>
-                      No academic years match your search or filter.
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
-
-          {!!shown.length && (
-            <TablePagination page={currentPage} totalPages={totalPages} onPageChange={setPage} />
-          )}
-        </section>
+          </>
+        )}
 
         {/* Add/Edit Modal */}
         {(modal === 'add' || modal === 'edit') && (
@@ -553,38 +605,6 @@ export default function AcademicYear() {
                 </button>
                 <button type="button" className="erp-btn erp-btn--primary" onClick={generate} disabled={saving}>
                   {saving ? 'Generating...' : 'Generate Cycle'}
-                </button>
-              </footer>
-            </section>
-          </div>
-        )}
-
-        {/* View Details Modal with InfoCard & Print Button */}
-        {modal === 'view' && selected && (
-          <div className="backdrop" onMouseDown={(e) => e.target === e.currentTarget && close()}>
-            <section className="modal" role="dialog" aria-modal="true" aria-labelledby="view-title">
-              <button type="button" className="x" aria-label="Close dialog" onClick={close}>
-                ×
-              </button>
-              <h2 id="view-title">Academic Year Details</h2>
-              <div className="academic-year-view-content" style={{ marginTop: '16px' }}>
-                <InfoCard
-                  title="Cycle Information"
-                  icon={FiCalendar}
-                  items={[
-                    { label: 'Academic Year', value: selected.name },
-                    { label: 'Start Date', value: formatDate(selected.startDate) },
-                    { label: 'End Date', value: formatDate(selected.endDate) },
-                    { label: 'Duration', value: `${duration(selected.startDate, selected.endDate)} days` },
-                    { label: 'Status', value: selected.status },
-                    { label: 'Auto Activation', value: selected.autoActivate ? 'Enabled' : 'Manual' },
-                  ]}
-                />
-              </div>
-              <footer>
-                <PrintDetailsButton title={`${selected.name} details`} selector=".academic-year-view-content" />
-                <button type="button" className="erp-btn erp-btn--primary" onClick={close}>
-                  Done
                 </button>
               </footer>
             </section>

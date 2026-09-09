@@ -1,4 +1,5 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react'
+import React, { useState, useEffect, useCallback, useMemo } from 'react'
+import InfoCard from '../../../components/InfoCard'
 import {
   FiCheckCircle,
   FiClock,
@@ -9,6 +10,8 @@ import {
   FiUsers,
   FiX,
   FiAward,
+  FiBookOpen,
+  FiUser,
 } from 'react-icons/fi'
 import DashboardLayout from '../../../layouts/DashboardLayout'
 import PageHeader from '../../../components/PageHeader'
@@ -59,50 +62,62 @@ function ConfirmModal({ rows, busy, onCancel, onConfirm, isDegreeReview }) {
 function ReviewDrawer({ student, onClose, onStatus, canEdit }) {
   return (
     <div className="p-overlay" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
-      <section className="p-drawer" data-print-scope>
-        <header>
-          <div>
-            <span>Promotion & Academic Review</span>
-            <h2>{nameOf(student)}</h2>
-            <PrintDetailsButton title={nameOf(student) + ' promotion review'} />
-            <p>{idOf(student)} · {student.rollNumber || student.academic?.rollNumber || 'No roll number'}</p>
-          </div>
-          <button onClick={onClose} aria-label="Close">
-            <FiX />
+      <section className="p-drawer cm-profile-view" data-print-scope style={{ maxWidth: '780px', width: '92vw', padding: '20px' }}>
+        <div className="cm-profile-top-bar">
+          <button className="erp-btn erp-btn--secondary" onClick={onClose} aria-label="Close">
+            <FiX /> Close
           </button>
-        </header>
-
-        <div className="p-grid">
-          <article>
-            <h3>Academic Mapping</h3>
-            <p>
-              {student.course || student.academic?.course || '—'} ·{' '}
-              {student.branch || student.academic?.branch || '—'} · Section{' '}
-              {student.section || student.academic?.section || '—'}
-            </p>
-            <p>
-              {student.currentSemester ?? student.semester ?? student.academic?.semester ?? '—'} →{' '}
-              {student.nextSemester ?? student.targetSemester ?? 'Next Term'}
-            </p>
-          </article>
-          <article>
-            <h3>Performance Summary</h3>
-            <p>
-              Credits: {student.creditsEarned ?? '24'} · SGPA: {student.sgpa ?? '8.4'} · CGPA: {student.cgpa ?? '8.2'}
-            </p>
-          </article>
         </div>
 
-        <article className="p-decision">
-          <h3>Eligibility Decision</h3>
-          <StatusBadge
-            status={statusOf(student) === 'eligible' ? 'Active' : statusOf(student) === 'ineligible' ? 'Danger' : 'Warning'}
-            label={student.eligibilityLabel ?? student.status ?? 'Eligible'}
-          />
-          <p>{student.eligibilityReason ?? student.reason ?? 'Satisfies minimum semester credits and attendance threshold.'}</p>
-        </article>
+        <div className="cm-profile-card">
+          <div className="cm-profile-banner">
+            <div className="cm-profile-avatar-wrap">
+              <div className="cm-profile-placeholder">
+                <FiUser />
+              </div>
+            </div>
+            <div className="cm-profile-header-info">
+              <div className="cm-profile-badges">
+                <span className="cm-badge cm-badge-code">{idOf(student)}</span>
+                <span className="cm-badge cm-badge-type">{student.rollNumber || student.academic?.rollNumber || 'Student'}</span>
+                <span className={`cm-status-badge ${statusOf(student) === 'eligible' ? 'active' : 'inactive'}`}>
+                  {student.eligibilityLabel ?? student.status ?? 'Eligible'}
+                </span>
+              </div>
+              <h1 className="cm-profile-title"><span style={{ color: '#fff' }}>{nameOf(student)}</span></h1>
+              <p className="cm-profile-subtitle">
+                <span style={{ color: '#fff' }}>{[student.course || student.academic?.course, student.branch || student.academic?.branch, student.section ? `Section ${student.section}` : null].filter(Boolean).join(' · ')}</span>
+              </p>
+            </div>
+          </div>
 
-        <footer>
+          <div className="cm-profile-grid">
+            <InfoCard
+              title="Academic Mapping"
+              icon={FiBookOpen}
+              items={[
+                { label: 'Course', value: student.course || student.academic?.course },
+                { label: 'Branch', value: student.branch || student.academic?.branch },
+                { label: 'Section', value: student.section || student.academic?.section },
+                { label: 'Current Term', value: student.currentSemester ?? student.semester ?? student.academic?.semester },
+                { label: 'Target Term', value: student.nextSemester ?? student.targetSemester ?? 'Next Term' },
+              ]}
+            />
+            <InfoCard
+              title="Performance & Eligibility"
+              icon={FiTrendingUp}
+              items={[
+                { label: 'Credits Earned', value: student.creditsEarned ?? '24' },
+                { label: 'SGPA', value: student.sgpa ?? '8.4' },
+                { label: 'CGPA', value: student.cgpa ?? '8.2' },
+                { label: 'Eligibility Status', value: student.eligibilityLabel ?? student.status ?? 'Eligible' },
+                { label: 'Decision Reason', value: student.eligibilityReason ?? student.reason ?? 'Satisfies minimum semester credits and attendance threshold.' },
+              ]}
+            />
+          </div>
+        </div>
+
+        <footer style={{ marginTop: '16px', display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
           {canEdit && (
             <>
               <button className="erp-btn erp-btn--secondary" onClick={() => onStatus('ELIGIBLE')}>
@@ -359,7 +374,7 @@ export default function StudentPromotion() {
         <section className="p-scope erp-card">
           <div className="erp-form-grid">
             <div className="erp-form-group">
-              <label>Course *</label>
+              <label>Course <span className="text-danger" style={{ color: '#dc2626' }}>*</span></label>
               <select
                 className="erp-select"
                 value={courseId}
@@ -380,7 +395,7 @@ export default function StudentPromotion() {
             </div>
 
             <div className="erp-form-group">
-              <label>Branch *</label>
+              <label>Branch <span className="text-danger" style={{ color: '#dc2626' }}>*</span></label>
               <select
                 className="erp-select"
                 value={selectedBranchId}
@@ -401,7 +416,7 @@ export default function StudentPromotion() {
             </div>
 
             <div className="erp-form-group">
-              <label>Current Academic Year *</label>
+              <label>Current Academic Year <span className="text-danger" style={{ color: '#dc2626' }}>*</span></label>
               <select
                 className="erp-select"
                 value={selectedAcademicYearId}
@@ -420,7 +435,7 @@ export default function StudentPromotion() {
             </div>
 
             <div className="erp-form-group">
-              <label>Current Semester *</label>
+              <label>Current Semester <span className="text-danger" style={{ color: '#dc2626' }}>*</span></label>
               <select
                 className="erp-select"
                 value={selectedSemesterNumber}
@@ -508,24 +523,6 @@ export default function StudentPromotion() {
               </section>
             ) : (
               <>
-                {/* KPI Strip */}
-                <div className="erp-kpi-strip">
-                  <div className="erp-kpi-card">
-                    <span className="erp-kpi-label">Total in Semester Scope</span>
-                    <span className="erp-kpi-value">{students.length}</span>
-                  </div>
-                  <div className="erp-kpi-card">
-                    <span className="erp-kpi-label">Eligible for Advancement</span>
-                    <span className="erp-kpi-value erp-kpi-value--success">
-                      {students.filter((x) => statusOf(x) === 'eligible').length}
-                    </span>
-                  </div>
-                  <div className="erp-kpi-card">
-                    <span className="erp-kpi-label">Selected for Promotion</span>
-                    <span className="erp-kpi-value">{eligibleSelected.length}</span>
-                  </div>
-                </div>
-
                 <section className="p-panel erp-card">
                   <header className="erp-card-header">
                     <div>
@@ -583,7 +580,7 @@ export default function StudentPromotion() {
                     <table className="erp-table">
                       <thead>
                         <tr>
-                          <th style={{ width: '40px' }}>
+                          <th className="table-center" style={{ width: '44px' }}>
                             <input
                               type="checkbox"
                               checked={
@@ -605,14 +602,14 @@ export default function StudentPromotion() {
                               }}
                             />
                           </th>
-                          <th>Student</th>
-                          <th>Roll / Reg No</th>
-                          <th>Academic Scope</th>
-                          <th>Current → Target</th>
-                          <th>Credits</th>
-                          <th>SGPA / CGPA</th>
-                          <th>Eligibility</th>
-                          <th>Action</th>
+                          <th style={{ minWidth: '160px' }}>Student</th>
+                          <th style={{ minWidth: '130px' }}>Roll / Reg No</th>
+                          <th style={{ minWidth: '150px' }}>Academic Scope</th>
+                          <th style={{ minWidth: '170px' }}>Current → Target</th>
+                          <th className="table-center" style={{ width: '90px' }}>Credits</th>
+                          <th className="table-center" style={{ width: '120px' }}>SGPA / CGPA</th>
+                          <th className="table-center" style={{ width: '120px' }}>Eligibility</th>
+                          <th className="table-center" style={{ width: '80px' }}>Action</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -625,7 +622,7 @@ export default function StudentPromotion() {
                         ) : (
                           paginatedCandidates.map((x) => (
                             <tr key={idOf(x)}>
-                              <td>
+                              <td className="table-center" style={{ width: '44px' }}>
                                 <input
                                   type="checkbox"
                                   disabled={statusOf(x) !== 'eligible'}
@@ -639,43 +636,52 @@ export default function StudentPromotion() {
                                   }
                                 />
                               </td>
-                              <td>
-                                <strong>{nameOf(x)}</strong>
-                                <small className="text-muted block">{idOf(x)}</small>
+                              <td style={{ minWidth: '160px' }}>
+                                <div style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{nameOf(x)}</div>
+                                {idOf(x) && idOf(x) !== nameOf(x) && (
+                                  <div className="text-muted" style={{ fontSize: '11px', marginTop: '2px' }}>
+                                    {String(idOf(x)).startsWith('STU') ? idOf(x) : `ID: ${idOf(x)}`}
+                                  </div>
+                                )}
                               </td>
-                              <td>
-                                {x.rollNumber || '—'}
-                                <small className="text-muted block">{x.registrationNumber}</small>
+                              <td style={{ minWidth: '130px' }}>
+                                <div>{x.rollNumber || x.registrationNumber || '—'}</div>
+                                {x.registrationNumber && x.rollNumber && x.registrationNumber !== x.rollNumber && (
+                                  <div className="text-muted" style={{ fontSize: '11px', marginTop: '2px' }}>{x.registrationNumber}</div>
+                                )}
                               </td>
-                              <td>
-                                {x.course} · {x.branch}
-                                <small className="text-muted block">Section {x.section}</small>
+                              <td style={{ minWidth: '150px' }}>
+                                <div>{x.course} · {x.branch}</div>
+                                <div className="text-muted" style={{ fontSize: '11px', marginTop: '2px' }}>Section {x.section || 'A'}</div>
                               </td>
-                              <td>
-                                <strong>{x.currentSemester}</strong> →{' '}
-                                <span className={isSemester8 ? 'text-primary font-semibold' : 'text-success'}>
+                              <td style={{ minWidth: '170px' }}>
+                                <span style={{ fontWeight: 600 }}>{x.currentSemester}</span>{' '}
+                                <span style={{ color: 'var(--text-muted)' }}>→</span>{' '}
+                                <span className={isSemester8 ? 'text-primary font-semibold' : 'text-success font-semibold'}>
                                   {x.nextSemester}
                                 </span>
                               </td>
-                              <td>{x.creditsEarned}</td>
-                              <td>
+                              <td className="table-center" style={{ width: '90px' }}>{x.creditsEarned}</td>
+                              <td className="table-center" style={{ width: '120px', whiteSpace: 'nowrap' }}>
                                 {x.sgpa} / {x.cgpa}
                               </td>
-                              <td>
+                              <td className="table-center" style={{ width: '120px' }}>
                                 <StatusBadge
-                                  status={statusOf(x) === 'eligible' ? 'Active' : 'Danger'}
-                                  label={x.eligibilityLabel ?? x.status}
+                                  value={statusOf(x) === 'eligible' ? 'Eligible' : 'Ineligible'}
                                 />
                               </td>
-                              <td>
-                                <button
-                                  type="button"
-                                  className="erp-btn erp-btn--icon"
-                                  title="Review Eligibility"
-                                  onClick={() => setReview(x)}
-                                >
-                                  <FiEye />
-                                </button>
+                              <td className="table-center" style={{ width: '80px' }}>
+                                <div className="table-actions-group">
+                                  <button
+                                    type="button"
+                                    className="table-action-btn action-view"
+                                    title="Review Eligibility"
+                                    aria-label="Review Eligibility"
+                                    onClick={() => setReview(x)}
+                                  >
+                                    <FiEye />
+                                  </button>
+                                </div>
                               </td>
                             </tr>
                           ))
@@ -716,11 +722,11 @@ export default function StudentPromotion() {
               <table className="erp-table">
                 <thead>
                   <tr>
-                    <th>Student Name</th>
-                    <th>Roll / Reg No</th>
-                    <th>Transition (From → To)</th>
-                    <th>Date</th>
-                    <th>Status</th>
+                    <th style={{ minWidth: '170px' }}>Student Name</th>
+                    <th style={{ minWidth: '140px' }}>Roll / Reg No</th>
+                    <th style={{ minWidth: '170px' }}>Transition (From → To)</th>
+                    <th className="table-center" style={{ width: '120px' }}>Date</th>
+                    <th className="table-center" style={{ width: '120px' }}>Status</th>
                     <th>Remarks</th>
                   </tr>
                 </thead>
@@ -734,20 +740,26 @@ export default function StudentPromotion() {
                   ) : (
                     paginatedHistory.map((h, i) => (
                       <tr key={h.promotionId || i}>
-                        <td>
-                          <strong>{h.studentName || 'Student'}</strong>
-                          <small className="text-muted block">{h.studentId}</small>
+                        <td style={{ minWidth: '170px' }}>
+                          <div style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{h.studentName || 'Student'}</div>
+                          {h.studentId && (
+                            <div className="text-muted" style={{ fontSize: '11px', marginTop: '2px' }}>
+                              {String(h.studentId).startsWith('STU') ? h.studentId : `ID: ${h.studentId}`}
+                            </div>
+                          )}
                         </td>
-                        <td>{h.rollNumber || h.registrationNumber || '—'}</td>
-                        <td>
-                          <strong>{h.fromSemester || 'Semester'}</strong> →{' '}
+                        <td style={{ minWidth: '140px' }}>{h.rollNumber || h.registrationNumber || '—'}</td>
+                        <td style={{ minWidth: '170px' }}>
+                          <span style={{ fontWeight: 600 }}>{h.fromSemester || 'Semester'}</span>{' '}
+                          <span style={{ color: 'var(--text-muted)' }}>→</span>{' '}
                           <span className="text-success font-semibold">{h.toSemester || 'Next'}</span>
                         </td>
-                        <td>{h.promotionDate ? new Date(h.promotionDate).toLocaleDateString('en-IN') : '—'}</td>
-                        <td>
+                        <td className="table-center" style={{ width: '120px' }}>
+                          {h.promotionDate ? new Date(h.promotionDate).toLocaleDateString('en-IN') : '—'}
+                        </td>
+                        <td className="table-center" style={{ width: '120px' }}>
                           <StatusBadge
-                            status={h.status === 'Graduated' ? 'Active' : 'Active'}
-                            label={h.status || 'Promoted'}
+                            value={h.status || 'Promoted'}
                           />
                         </td>
                         <td>{h.remarks || 'Standard promotion'}</td>

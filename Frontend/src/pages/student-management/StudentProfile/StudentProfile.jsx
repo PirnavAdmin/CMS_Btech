@@ -20,6 +20,8 @@ import {
   FiUsers,
   FiX,
 } from "react-icons/fi";
+import InfoCard from "../../../components/InfoCard";
+import StatusBadge from "../../../components/StatusBadge";
 import DashboardLayout from "../../../layouts/DashboardLayout";
 import FilterPanel from "../../../components/FilterPanel";
 import CompactSummary from "../../../components/CompactSummary";
@@ -696,19 +698,7 @@ export default function StudentProfile() {
     shown = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE),
     selected = students.find((x) => String(x.id) === String(selectedId));
   useEffect(() => setPage(1), [query, filters]);
-  // Narrow the "Academic details" column so Contact sits closer to it.
-  // Uses setProperty(..., "important") because the CSS file locks these
-  // widths with !important, which a plain inline style can't override.
-  useEffect(() => {
-    const table = tableRef.current;
-    if (!table) return;
-    const widths = ["24%", "26%", "22%", "10%", "8%"]; // Student, Academic, Contact, Status, Actions
-    table.querySelectorAll("th, td").forEach((cell, i) => {
-      const colIndex = i % widths.length;
-      if (widths[colIndex])
-        cell.style.setProperty("width", widths[colIndex], "important");
-    });
-  }, [shown]);
+
   const updateFilter = (key, next) =>
     setFilters((current) => {
       const updated = { ...current, [key]: next };
@@ -941,11 +931,11 @@ export default function StudentProfile() {
               <table className="sp-directory-table" ref={tableRef}>
                 <thead>
                   <tr>
-                    <th>Student</th>
-                    <th>Academic details</th>
-                    <th>Contact</th>
-                    <th>Status</th>
-                    <th />
+                    <th style={{ minWidth: "220px" }}>Student</th>
+                    <th style={{ minWidth: "240px" }}>Academic details</th>
+                    <th style={{ minWidth: "180px" }}>Contact</th>
+                    <th className="table-center" style={{ minWidth: "120px", width: "120px" }}>Status</th>
+                    <th className="table-center" style={{ minWidth: "130px", width: "130px" }}>Actions</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -967,52 +957,45 @@ export default function StudentProfile() {
                                 initials(student)
                               )}
                             </i>
-                            <div>
-                              <strong>
+                            <div className="table-cell-group" style={{ minWidth: 0 }}>
+                              <strong className="table-cell-truncate" title={name(student) || "Unnamed student"}>
                                 {name(student) || "Unnamed student"}
                               </strong>
-                              <small>
+                              <small className="table-cell-truncate" title={`Admission No: ${value(app.admissionNumber)}`}>
                                 Admission No: {value(app.admissionNumber)}
                               </small>
                             </div>
                           </div>
                         </td>
                         <td>
-                          <div style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
-                            <strong style={{ margin: 0, lineHeight: 1.3 }}>
+                          <div className="table-cell-group" style={{ minWidth: 0, display: "flex", flexDirection: "column", gap: "2px" }}>
+                            <strong className="table-cell-truncate" style={{ margin: 0, lineHeight: 1.3 }} title={`${value(shortLabel(a.course))} · ${value(shortLabel(a.branch))}`}>
                               {value(shortLabel(a.course))} ·{" "}
                               {value(shortLabel(a.branch))}
                             </strong>
-                            <small style={{ margin: 0, lineHeight: 1.3 }}>
+                            <small className="table-cell-truncate" style={{ margin: 0, lineHeight: 1.3 }} title={`${value(shortLabel(a.department))} · ${value(a.academicYear)}`}>
                               {value(shortLabel(a.department))} ·{" "}
                               {value(a.academicYear)}
                             </small>
-                            <small style={{ margin: 0, lineHeight: 1.3 }}>
+                            <small className="table-cell-truncate" style={{ margin: 0, lineHeight: 1.3 }} title={`${value(a.semester)}${a.section ? ` · Section ${a.section}` : ""}`}>
                               {value(a.semester)}{" "}
                               {a.section && `· Section ${a.section}`}
                             </small>
                           </div>
                         </td>
                         <td>
-                          <strong>{value(student.contact?.mobile)}</strong>
-                          <small>{value(student.contact?.email)}</small>
+                          <div className="table-cell-group" style={{ minWidth: 0, display: "flex", flexDirection: "column" }}>
+                            <strong className="table-cell-truncate" title={value(student.contact?.mobile)}>{value(student.contact?.mobile)}</strong>
+                            <small className="table-cell-truncate" title={value(student.contact?.email)}>{value(student.contact?.email)}</small>
+                          </div>
                         </td>
-                        <td>
-                          <span className="sp-badge active">
-                            <i />
-                            {status(student.status)}
-                          </span>
+                        <td className="table-center">
+                          <StatusBadge value={status(student.status)} />
                         </td>
-                        <td>
-                          <div
-                            style={{
-                              display: "flex",
-                              gap: "6px",
-                              justifyContent: "flex-end",
-                            }}
-                          >
+                        <td className="table-center">
+                          <div className="table-actions-cell table-actions-group">
                             <button
-                              className="sp-table-button"
+                              className="table-action-btn action-view"
                               aria-label="View student profile"
                               title="View student profile"
                               onClick={(e) => {
@@ -1020,18 +1003,19 @@ export default function StudentProfile() {
                                 openProfile(student.id);
                               }}
                             >
-                              <FiEye className="module-action-icon module-action-icon--view" />
+                              <FiEye />
                             </button>
                             {canEdit && (
                               <button
-                                className="sp-table-button"
+                                className="table-action-btn action-edit"
+                                aria-label="Edit student profile"
+                                title="Edit student profile"
                                 onClick={(e) => {
                                   e.stopPropagation();
                                   beginEdit(student);
                                 }}
                               >
-                                <FiEdit2 className="module-action-icon module-action-icon--edit" />{" "}
-                                Edit
+                                <FiEdit2 />
                               </button>
                             )}
                           </div>
@@ -1248,35 +1232,14 @@ function Profile({ student, tab, setTab, back, edit, canEdit }) {
     ]),
   ];
   return (
-    <>
-      <button className="sp-back" onClick={back}>
-        <FiArrowLeft /> Back to student directory
-      </button>
-      <section className="sp-hero">
-        <div className="sp-avatar">
-          {p.photo ? (
-            <img src={p.photo} alt={name(student)} />
-          ) : (
-            initials(student)
-          )}
-        </div>
-        <div className="sp-identity">
-          <h2>{name(student) || "Unnamed student"}</h2>
-          <p>
-            Admission No. {value(app.admissionNumber)} · Registration No.{" "}
-            {value(app.registrationNumber || app.number)}
-          </p>
-          <span>
-            {value(a.course)} · {value(a.branch)} · {value(a.semester)}
-          </span>
-        </div>
-        <span className="sp-badge active">
-          <i />
-          {status(student.status)}
-        </span>
-        <PrintDetailsButton title={name(student) + " profile"} selector=".sp-profile" />
+    <div className="cm-profile-view">
+      <div className="cm-profile-top-bar">
+        <button type="button" className="cm-button secondary erp-btn erp-btn--secondary" onClick={back}>
+          &larr; Back to Student Directory
+        </button>
         <button
-          className="sp-button sp-hero-edit"
+          type="button"
+          className="cm-button erp-btn erp-btn--primary"
           onClick={edit}
           disabled={!canEdit}
           title={
@@ -1285,22 +1248,49 @@ function Profile({ student, tab, setTab, back, edit, canEdit }) {
               : "Only administrators can edit student profiles"
           }
         >
-          <FiEdit2 className="module-action-icon module-action-icon--edit" />{" "}
-          Edit Student
+          <FiEdit2 className="module-action-icon module-action-icon--edit" /> Edit Student
         </button>
-      </section>
-      <nav className="sp-tabs">
-        {TABS.map(([id, label, Icon]) => (
-          <button
-            key={id}
-            className={tab === id ? "active" : ""}
-            onClick={() => setTab(id)}
-          >
-            <Icon />
-            {label}
-          </button>
-        ))}
-      </nav>
+      </div>
+
+      <div className="cm-profile-card">
+        <div className="cm-profile-banner">
+          <div className="cm-profile-avatar-wrap">
+            {p.photo ? (
+              <img src={p.photo} alt={name(student)} className="cm-profile-logo" />
+            ) : (
+              <div className="cm-profile-placeholder">
+                {initials(student)}
+              </div>
+            )}
+          </div>
+          <div className="cm-profile-header-info">
+            <div className="cm-profile-badges">
+              {app.admissionNumber && <span className="cm-badge cm-badge-code">Adm: {app.admissionNumber}</span>}
+              {app.registrationNumber && <span className="cm-badge cm-badge-type">Reg: {app.registrationNumber}</span>}
+              <span className="cm-status-badge active">
+                {status(student.status)}
+              </span>
+            </div>
+            <h1 className="cm-profile-title"><span style={{ color: '#fff' }}>{name(student) || "Unnamed student"}</span></h1>
+            <p className="cm-profile-subtitle">
+              <span style={{ color: '#fff' }}>{[value(a.course), value(a.branch), value(a.semester)].filter((x) => x !== 'Not provided').join(' · ')}</span>
+            </p>
+          </div>
+        </div>
+
+        <nav className="sp-tabs">
+          {TABS.map(([id, label, Icon]) => (
+            <button
+              key={id}
+              className={tab === id ? "active" : ""}
+              onClick={() => setTab(id)}
+            >
+              <Icon />
+              {label}
+            </button>
+          ))}
+        </nav>
+      </div>
       {tab === "documents" ? (
         <section className="sp-panel">
           <header>
@@ -1324,27 +1314,21 @@ function Profile({ student, tab, setTab, back, edit, canEdit }) {
           </div>
         </section>
       ) : panels[tab] ? (
-        <section className="sp-panel">
-          <header>
-            <h2>{TABS.find((item) => item[0] === tab)[1]}</h2>
-          </header>
-          <dl className="sp-info-grid">
-            {panels[tab]
+        <div className="cm-profile-grid" style={{ padding: '20px 0' }}>
+          <InfoCard
+            title={TABS.find((item) => item[0] === tab)[1]}
+            icon={TABS.find((item) => item[0] === tab)[2]}
+            items={panels[tab]
               .filter(([, content]) => content !== null && content !== undefined && String(content).trim() !== "" && String(content).trim() !== "Not provided" && String(content).trim() !== "—" && String(content).trim() !== "N/A")
-              .map(([label, content]) => (
-                <div key={label}>
-                  <dt>{label}</dt>
-                  <dd>{content}</dd>
-                </div>
-              ))}
-          </dl>
-        </section>
+              .map(([label, value]) => ({ label, value }))}
+          />
+        </div>
       ) : (
         <Empty title="Information unavailable">
           No admission information is available for this section.
         </Empty>
       )}
-    </>
+    </div>
   );
 }
 function EditStudent({ student, onCancel, onSave }) {

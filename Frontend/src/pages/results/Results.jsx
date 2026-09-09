@@ -476,15 +476,17 @@ export default function Results() {
                                   label={`${rate}%`}
                                 />
                               </td>
-                              <td>
-                                <button
-                                  type="button"
-                                  className="erp-btn erp-btn--icon"
-                                  title="View Grade Breakdown"
-                                  onClick={() => setSelectedSheet(sheet)}
-                                >
-                                  <FiEye />
-                                </button>
+                              <td className="table-center">
+                                <div className="table-actions-group">
+                                  <button
+                                    type="button"
+                                    className="table-action-btn action-view"
+                                    title="View Grade Breakdown"
+                                    onClick={() => setSelectedSheet(sheet)}
+                                  >
+                                    <FiEye />
+                                  </button>
+                                </div>
                               </td>
                             </tr>
                           )

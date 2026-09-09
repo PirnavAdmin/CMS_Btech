@@ -18,10 +18,12 @@ export default function InfoCard({
   icon: Icon,
   title,
   rows = [],
+  items = [],
   children,
   className = '',
 }) {
-  const visibleRows = rows.filter((item) => {
+  const combinedRows = rows.length > 0 ? rows : items
+  const visibleRows = combinedRows.filter((item) => {
     if (!item) return false
     if (Array.isArray(item)) {
       return isCleanValue(item[1])

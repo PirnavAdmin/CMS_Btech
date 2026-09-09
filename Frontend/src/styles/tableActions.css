@@ -1,0 +1,804 @@
+/* ==========================================================================
+   PROJECT-WIDE COMPACT TABLE ACTION BUTTON SYSTEM
+   Unified style, 34px compact dimensions, 8px border radius, 16px icons,
+   6px gap, subtle pastel tints, consistent semantic colors, dark mode
+   ========================================================================== */
+
+/* 1. Container for grouping table actions */
+.table-actions-group,
+.cm-actions,
+.erp-row-actions,
+.course-actions,
+.branch-actions,
+.semester-row-actions,
+.section-actions,
+.sa-icon-actions,
+.table-actions-cell,
+.sp-table-actions,
+.module-row-actions,
+.row-actions {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 6px !important;
+  vertical-align: middle !important;
+  white-space: nowrap !important;
+  width: auto !important;
+  margin: 0 auto !important;
+}
+
+/* 2. Base Action Button Style */
+.table-action-btn,
+.table-actions-group > :is(a, button),
+.cm-actions > :is(a, button),
+.erp-row-actions > :is(a, button),
+.course-actions > :is(a, button),
+.branch-actions > :is(a, button),
+.semester-row-actions > :is(a, button),
+.section-actions > :is(a, button),
+.sa-icon-actions > :is(a, button),
+.table-actions-cell > :is(a, button),
+.module-row-actions > :is(a, button),
+.row-actions > :is(a, button) {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  width: 34px !important;
+  height: 34px !important;
+  min-width: 34px !important;
+  min-height: 34px !important;
+  max-width: 34px !important;
+  max-height: 34px !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  border-radius: 8px !important;
+  border: 1px solid var(--border, #e2e8f0) !important;
+  box-sizing: border-box !important;
+  background: var(--surface, #ffffff) !important;
+  color: var(--text-primary, #0f172a) !important;
+  font-size: 14px !important;
+  line-height: 1 !important;
+  cursor: pointer !important;
+  text-decoration: none !important;
+  transition: all 0.15s ease-in-out !important;
+  outline: none !important;
+  box-shadow: none !important;
+}
+
+/* 3. Icon Dimensions inside Action Buttons */
+.table-action-btn svg,
+.table-actions-group svg,
+.cm-actions svg,
+.erp-row-actions svg,
+.course-actions svg,
+.branch-actions svg,
+.semester-row-actions svg,
+.section-actions svg,
+.sa-icon-actions svg,
+.table-actions-cell svg,
+.module-row-actions svg,
+.row-actions svg {
+  width: 16px !important;
+  height: 16px !important;
+  min-width: 16px !important;
+  min-height: 16px !important;
+  max-width: 16px !important;
+  max-height: 16px !important;
+  stroke-width: 2 !important;
+  display: block !important;
+  flex-shrink: 0 !important;
+  margin: auto !important;
+  color: inherit !important;
+  stroke: currentColor !important;
+  fill: none !important;
+}
+
+/* 4. Hover State: subtle lift and stronger background */
+.table-action-btn:hover:not(:disabled),
+.table-actions-group > :is(a, button):hover:not(:disabled),
+.cm-actions > :is(a, button):hover:not(:disabled),
+.erp-row-actions > :is(a, button):hover:not(:disabled),
+.course-actions > :is(a, button):hover:not(:disabled),
+.branch-actions > :is(a, button):hover:not(:disabled),
+.semester-row-actions > :is(a, button):hover:not(:disabled),
+.section-actions > :is(a, button):hover:not(:disabled),
+.sa-icon-actions > :is(a, button):hover:not(:disabled),
+.table-actions-cell > :is(a, button):hover:not(:disabled) {
+  transform: translateY(-1px) !important;
+  filter: brightness(0.96) !important;
+}
+
+/* 5. Focus State: visible clean ring */
+.table-action-btn:focus-visible,
+.table-actions-group > :is(a, button):focus-visible,
+.cm-actions > :is(a, button):focus-visible,
+.erp-row-actions > :is(a, button):focus-visible,
+.course-actions > :is(a, button):focus-visible,
+.branch-actions > :is(a, button):focus-visible,
+.semester-row-actions > :is(a, button):focus-visible,
+.section-actions > :is(a, button):focus-visible,
+.sa-icon-actions > :is(a, button):focus-visible,
+.table-actions-cell > :is(a, button):focus-visible {
+  outline: 2px solid currentColor !important;
+  outline-offset: 1px !important;
+}
+
+/* 6. Disabled State */
+.table-action-btn:disabled,
+.table-actions-group > :is(a, button):disabled,
+.cm-actions > :is(a, button):disabled,
+.erp-row-actions > :is(a, button):disabled,
+.course-actions > :is(a, button):disabled,
+.branch-actions > :is(a, button):disabled,
+.semester-row-actions > :is(a, button):disabled,
+.section-actions > :is(a, button):disabled,
+.sa-icon-actions > :is(a, button):disabled,
+.table-actions-cell > :is(a, button):disabled {
+  opacity: 0.4 !important;
+  cursor: not-allowed !important;
+  pointer-events: none !important;
+  transform: none !important;
+}
+
+/* ==========================================================================
+   SEMANTIC ACTION COLORS (LIGHT THEME)
+   ========================================================================== */
+
+/* 1. VIEW ACTION (Eye Icon -> Subtle Blue) */
+.action-view,
+.cm-view-action,
+.table-action-btn.action-view,
+.table-actions-group > :is(a, button).action-view,
+.table-actions-group > :is(a, button):first-child:not(.action-edit):not(.action-deactivate):not(.action-activate):not(.action-assign),
+.course-actions > a:first-child,
+.branch-actions > a:first-child,
+.semester-row-actions > a:first-child,
+.section-actions > a:first-child,
+.sa-icon-actions > button:first-child,
+.table-actions-cell > button:first-child {
+  color: #1970b3 !important;
+  background: #e8f3fc !important;
+  border-color: #c5dfef !important;
+}
+.action-view:hover:not(:disabled),
+.cm-view-action:hover:not(:disabled),
+.table-action-btn.action-view:hover:not(:disabled),
+.table-actions-group > :is(a, button).action-view:hover:not(:disabled),
+.table-actions-group > :is(a, button):first-child:not(.action-edit):not(.action-deactivate):not(.action-activate):not(.action-assign):hover:not(:disabled),
+.course-actions > a:first-child:hover:not(:disabled),
+.branch-actions > a:first-child:hover:not(:disabled),
+.semester-row-actions > a:first-child:hover:not(:disabled),
+.section-actions > a:first-child:hover:not(:disabled),
+.sa-icon-actions > button:first-child:hover:not(:disabled),
+.table-actions-cell > button:first-child:hover:not(:disabled) {
+  background: #dbeafe !important;
+  border-color: #93c5fd !important;
+  color: #1d4ed8 !important;
+}
+
+/* 2. EDIT ACTION (Pencil Icon -> Subtle Purple) */
+.action-edit,
+.cm-edit-action,
+.table-action-btn.action-edit,
+.table-actions-group > :is(a, button).action-edit,
+.table-actions-group > :is(a, button):nth-child(2):not(.action-view):not(.action-deactivate):not(.action-activate):not(.action-assign),
+.course-actions > a:nth-child(2),
+.branch-actions > a:nth-child(2),
+.semester-row-actions > a:nth-child(2),
+.section-actions > a:nth-child(2),
+.sa-icon-actions > button.action-edit,
+.table-actions-cell > button:nth-child(2) {
+  color: #7c3aed !important;
+  background: #f3e8ff !important;
+  border-color: #dfccff !important;
+}
+.action-edit:hover:not(:disabled),
+.cm-edit-action:hover:not(:disabled),
+.table-action-btn.action-edit:hover:not(:disabled),
+.table-actions-group > :is(a, button).action-edit:hover:not(:disabled),
+.table-actions-group > :is(a, button):nth-child(2):not(.action-view):not(.action-deactivate):not(.action-activate):not(.action-assign):hover:not(:disabled),
+.course-actions > a:nth-child(2):hover:not(:disabled),
+.branch-actions > a:nth-child(2):hover:not(:disabled),
+.semester-row-actions > a:nth-child(2):hover:not(:disabled),
+.section-actions > a:nth-child(2):hover:not(:disabled),
+.sa-icon-actions > button.action-edit:hover:not(:disabled),
+.table-actions-cell > button:nth-child(2):hover:not(:disabled) {
+  background: #ede9fe !important;
+  border-color: #c4b5fd !important;
+  color: #6d28d9 !important;
+}
+
+/* 3. ASSIGN ACTION (User Plus Icon -> Subtle Amber) */
+.action-assign,
+.section-assign-action,
+.table-action-btn.action-assign,
+.table-actions-group > :is(a, button).action-assign,
+.section-actions > .section-assign-action {
+  color: #b45309 !important;
+  background: #fef3c7 !important;
+  border-color: #fde68a !important;
+}
+.action-assign:hover:not(:disabled),
+.section-assign-action:hover:not(:disabled),
+.table-action-btn.action-assign:hover:not(:disabled),
+.table-actions-group > :is(a, button).action-assign:hover:not(:disabled),
+.section-actions > .section-assign-action:hover:not(:disabled) {
+  background: #fde68a !important;
+  border-color: #fcd34d !important;
+  color: #92400e !important;
+}
+
+/* 4. ACTIVATE / APPROVAL ACTION (Toggle / Check Icon -> Subtle Green) */
+.action-activate,
+.table-action-btn.action-activate,
+.table-action-btn.cm-success,
+.table-action-btn.erp-action-btn--success,
+.table-action-btn.success,
+.table-actions-group > :is(a, button).action-activate,
+.table-actions-group > :is(a, button).cm-success,
+.table-actions-group > :is(a, button).erp-action-btn--success,
+.table-actions-group > :is(a, button).success,
+.sa-icon-actions button.action-activate,
+.sa-icon-actions button[title*="Review"],
+.sa-icon-actions button[title*="Approve"] {
+  color: #15803d !important;
+  background: #e9f8ef !important;
+  border-color: #bbf7d0 !important;
+}
+.action-activate:hover:not(:disabled),
+.table-action-btn.action-activate:hover:not(:disabled),
+.table-action-btn.cm-success:hover:not(:disabled),
+.table-action-btn.erp-action-btn--success:hover:not(:disabled),
+.table-action-btn.success:hover:not(:disabled),
+.table-actions-group > :is(a, button).action-activate:hover:not(:disabled),
+.table-actions-group > :is(a, button).cm-success:hover:not(:disabled),
+.table-actions-group > :is(a, button).erp-action-btn--success:hover:not(:disabled),
+.table-actions-group > :is(a, button).success:hover:not(:disabled),
+.sa-icon-actions button.action-activate:hover:not(:disabled),
+.sa-icon-actions button[title*="Review"]:hover:not(:disabled),
+.sa-icon-actions button[title*="Approve"]:hover:not(:disabled) {
+  background: #dcfce7 !important;
+  border-color: #86efac !important;
+  color: #166534 !important;
+}
+
+/* 5. DEACTIVATE / DISCARD ACTION (Toggle / Discard Icon -> Subtle Red) */
+.action-deactivate,
+.cm-discard-action,
+.table-action-btn.action-deactivate,
+.table-action-btn.cm-danger,
+.table-action-btn.cm-discard-action,
+.table-action-btn.erp-action-btn--danger,
+.table-action-btn.danger,
+.table-actions-group > :is(a, button).action-deactivate,
+.table-actions-group > :is(a, button).cm-danger,
+.table-actions-group > :is(a, button).cm-discard-action,
+.table-actions-group > :is(a, button).erp-action-btn--danger,
+.table-actions-group > :is(a, button).danger,
+.cm-actions .cm-discard-action {
+  color: #b42318 !important;
+  background: #fee4e2 !important;
+  border-color: #fecdca !important;
+}
+.action-deactivate:hover:not(:disabled),
+.cm-discard-action:hover:not(:disabled),
+.table-action-btn.action-deactivate:hover:not(:disabled),
+.table-action-btn.cm-danger:hover:not(:disabled),
+.table-action-btn.cm-discard-action:hover:not(:disabled),
+.table-action-btn.erp-action-btn--danger:hover:not(:disabled),
+.table-action-btn.danger:hover:not(:disabled),
+.table-actions-group > :is(a, button).action-deactivate:hover:not(:disabled),
+.table-actions-group > :is(a, button).cm-danger:hover:not(:disabled),
+.table-actions-group > :is(a, button).cm-discard-action:hover:not(:disabled),
+.table-actions-group > :is(a, button).erp-action-btn--danger:hover:not(:disabled),
+.table-actions-group > :is(a, button).danger:hover:not(:disabled),
+.cm-actions .cm-discard-action:hover:not(:disabled) {
+  background: #fee2e2 !important;
+  border-color: #fca5a5 !important;
+  color: #991b1b !important;
+}
+
+/* ==========================================================================
+   DARK THEME PALETTE FOR ACTION BUTTONS
+   ========================================================================== */
+
+/* 1. VIEW ACTION (Dark) */
+:root[data-theme="dark"] .action-view,
+:root[data-theme="dark"] .cm-view-action,
+:root[data-theme="dark"] .table-action-btn.action-view,
+:root[data-theme="dark"] .table-actions-group > :is(a, button).action-view,
+:root[data-theme="dark"] .table-actions-group > :is(a, button):first-child:not(.action-edit):not(.action-deactivate):not(.action-activate):not(.action-assign),
+:root[data-theme="dark"] .course-actions > a:first-child,
+:root[data-theme="dark"] .branch-actions > a:first-child,
+:root[data-theme="dark"] .semester-row-actions > a:first-child,
+:root[data-theme="dark"] .section-actions > a:first-child,
+:root[data-theme="dark"] .sa-icon-actions > button:first-child,
+:root[data-theme="dark"] .table-actions-cell > button:first-child {
+  color: #60a5fa !important;
+  background: rgba(30, 64, 175, 0.25) !important;
+  border-color: rgba(59, 130, 246, 0.4) !important;
+}
+:root[data-theme="dark"] .action-view:hover:not(:disabled),
+:root[data-theme="dark"] .cm-view-action:hover:not(:disabled),
+:root[data-theme="dark"] .table-action-btn.action-view:hover:not(:disabled),
+:root[data-theme="dark"] .table-actions-group > :is(a, button).action-view:hover:not(:disabled),
+:root[data-theme="dark"] .table-actions-group > :is(a, button):first-child:not(.action-edit):not(.action-deactivate):not(.action-activate):not(.action-assign):hover:not(:disabled),
+:root[data-theme="dark"] .course-actions > a:first-child:hover:not(:disabled),
+:root[data-theme="dark"] .branch-actions > a:first-child:hover:not(:disabled),
+:root[data-theme="dark"] .semester-row-actions > a:first-child:hover:not(:disabled),
+:root[data-theme="dark"] .section-actions > a:first-child:hover:not(:disabled),
+:root[data-theme="dark"] .sa-icon-actions > button:first-child:hover:not(:disabled),
+:root[data-theme="dark"] .table-actions-cell > button:first-child:hover:not(:disabled) {
+  background: rgba(30, 64, 175, 0.45) !important;
+  border-color: rgba(96, 165, 250, 0.6) !important;
+  color: #93c5fd !important;
+}
+
+/* 2. EDIT ACTION (Dark) */
+:root[data-theme="dark"] .action-edit,
+:root[data-theme="dark"] .cm-edit-action,
+:root[data-theme="dark"] .table-action-btn.action-edit,
+:root[data-theme="dark"] .table-actions-group > :is(a, button).action-edit,
+:root[data-theme="dark"] .table-actions-group > :is(a, button):nth-child(2):not(.action-view):not(.action-deactivate):not(.action-activate):not(.action-assign),
+:root[data-theme="dark"] .course-actions > a:nth-child(2),
+:root[data-theme="dark"] .branch-actions > a:nth-child(2),
+:root[data-theme="dark"] .semester-row-actions > a:nth-child(2),
+:root[data-theme="dark"] .section-actions > a:nth-child(2),
+:root[data-theme="dark"] .sa-icon-actions > button.action-edit,
+:root[data-theme="dark"] .table-actions-cell > button:nth-child(2) {
+  color: #c084fc !important;
+  background: rgba(126, 34, 206, 0.25) !important;
+  border-color: rgba(168, 85, 247, 0.4) !important;
+}
+:root[data-theme="dark"] .action-edit:hover:not(:disabled),
+:root[data-theme="dark"] .cm-edit-action:hover:not(:disabled),
+:root[data-theme="dark"] .table-action-btn.action-edit:hover:not(:disabled),
+:root[data-theme="dark"] .table-actions-group > :is(a, button).action-edit:hover:not(:disabled),
+:root[data-theme="dark"] .table-actions-group > :is(a, button):nth-child(2):not(.action-view):not(.action-deactivate):not(.action-activate):not(.action-assign):hover:not(:disabled),
+:root[data-theme="dark"] .course-actions > a:nth-child(2):hover:not(:disabled),
+:root[data-theme="dark"] .branch-actions > a:nth-child(2):hover:not(:disabled),
+:root[data-theme="dark"] .semester-row-actions > a:nth-child(2):hover:not(:disabled),
+:root[data-theme="dark"] .section-actions > a:nth-child(2):hover:not(:disabled),
+:root[data-theme="dark"] .sa-icon-actions > button.action-edit:hover:not(:disabled),
+:root[data-theme="dark"] .table-actions-cell > button:nth-child(2):hover:not(:disabled) {
+  background: rgba(126, 34, 206, 0.45) !important;
+  border-color: rgba(192, 132, 252, 0.6) !important;
+  color: #e9d5ff !important;
+}
+
+/* 3. ASSIGN ACTION (Dark) */
+:root[data-theme="dark"] .action-assign,
+:root[data-theme="dark"] .section-assign-action,
+:root[data-theme="dark"] .table-action-btn.action-assign,
+:root[data-theme="dark"] .table-actions-group > :is(a, button).action-assign,
+:root[data-theme="dark"] .section-actions > .section-assign-action {
+  color: #fbbf24 !important;
+  background: rgba(180, 83, 9, 0.25) !important;
+  border-color: rgba(245, 158, 11, 0.4) !important;
+}
+:root[data-theme="dark"] .action-assign:hover:not(:disabled),
+:root[data-theme="dark"] .section-assign-action:hover:not(:disabled),
+:root[data-theme="dark"] .table-action-btn.action-assign:hover:not(:disabled),
+:root[data-theme="dark"] .table-actions-group > :is(a, button).action-assign:hover:not(:disabled),
+:root[data-theme="dark"] .section-actions > .section-assign-action:hover:not(:disabled) {
+  background: rgba(180, 83, 9, 0.45) !important;
+  border-color: rgba(251, 191, 36, 0.6) !important;
+  color: #fde68a !important;
+}
+
+/* 4. ACTIVATE / APPROVAL ACTION (Dark) */
+:root[data-theme="dark"] .action-activate,
+:root[data-theme="dark"] .table-action-btn.action-activate,
+:root[data-theme="dark"] .table-action-btn.cm-success,
+:root[data-theme="dark"] .table-action-btn.erp-action-btn--success,
+:root[data-theme="dark"] .table-action-btn.success,
+:root[data-theme="dark"] .table-actions-group > :is(a, button).action-activate,
+:root[data-theme="dark"] .table-actions-group > :is(a, button).cm-success,
+:root[data-theme="dark"] .table-actions-group > :is(a, button).erp-action-btn--success,
+:root[data-theme="dark"] .table-actions-group > :is(a, button).success,
+:root[data-theme="dark"] .sa-icon-actions button.action-activate,
+:root[data-theme="dark"] .sa-icon-actions button[title*="Review"],
+:root[data-theme="dark"] .sa-icon-actions button[title*="Approve"] {
+  color: #4ade80 !important;
+  background: rgba(21, 128, 61, 0.25) !important;
+  border-color: rgba(34, 197, 94, 0.4) !important;
+}
+:root[data-theme="dark"] .action-activate:hover:not(:disabled),
+:root[data-theme="dark"] .table-action-btn.action-activate:hover:not(:disabled),
+:root[data-theme="dark"] .table-action-btn.cm-success:hover:not(:disabled),
+:root[data-theme="dark"] .table-action-btn.erp-action-btn--success:hover:not(:disabled),
+:root[data-theme="dark"] .table-action-btn.success:hover:not(:disabled),
+:root[data-theme="dark"] .table-actions-group > :is(a, button).action-activate:hover:not(:disabled),
+:root[data-theme="dark"] .table-actions-group > :is(a, button).cm-success:hover:not(:disabled),
+:root[data-theme="dark"] .table-actions-group > :is(a, button).erp-action-btn--success:hover:not(:disabled),
+:root[data-theme="dark"] .table-actions-group > :is(a, button).success:hover:not(:disabled),
+:root[data-theme="dark"] .sa-icon-actions button.action-activate:hover:not(:disabled),
+:root[data-theme="dark"] .sa-icon-actions button[title*="Review"]:hover:not(:disabled),
+:root[data-theme="dark"] .sa-icon-actions button[title*="Approve"]:hover:not(:disabled) {
+  background: rgba(21, 128, 61, 0.45) !important;
+  border-color: rgba(74, 222, 128, 0.6) !important;
+  color: #86efac !important;
+}
+
+/* 5. DEACTIVATE / DISCARD ACTION (Dark) */
+:root[data-theme="dark"] .action-deactivate,
+:root[data-theme="dark"] .cm-discard-action,
+:root[data-theme="dark"] .table-action-btn.action-deactivate,
+:root[data-theme="dark"] .table-action-btn.cm-danger,
+:root[data-theme="dark"] .table-action-btn.cm-discard-action,
+:root[data-theme="dark"] .table-action-btn.erp-action-btn--danger,
+:root[data-theme="dark"] .table-action-btn.danger,
+:root[data-theme="dark"] .table-actions-group > :is(a, button).action-deactivate,
+:root[data-theme="dark"] .table-actions-group > :is(a, button).cm-danger,
+:root[data-theme="dark"] .table-actions-group > :is(a, button).cm-discard-action,
+:root[data-theme="dark"] .table-actions-group > :is(a, button).erp-action-btn--danger,
+:root[data-theme="dark"] .table-actions-group > :is(a, button).danger,
+:root[data-theme="dark"] .cm-actions .cm-discard-action {
+  color: #f87171 !important;
+  background: rgba(180, 35, 24, 0.25) !important;
+  border-color: rgba(239, 68, 68, 0.4) !important;
+}
+:root[data-theme="dark"] .action-deactivate:hover:not(:disabled),
+:root[data-theme="dark"] .cm-discard-action:hover:not(:disabled),
+:root[data-theme="dark"] .table-action-btn.action-deactivate:hover:not(:disabled),
+:root[data-theme="dark"] .table-action-btn.cm-danger:hover:not(:disabled),
+:root[data-theme="dark"] .table-action-btn.cm-discard-action:hover:not(:disabled),
+:root[data-theme="dark"] .table-action-btn.erp-action-btn--danger:hover:not(:disabled),
+:root[data-theme="dark"] .table-action-btn.danger:hover:not(:disabled),
+:root[data-theme="dark"] .table-actions-group > :is(a, button).action-deactivate:hover:not(:disabled),
+:root[data-theme="dark"] .table-actions-group > :is(a, button).cm-danger:hover:not(:disabled),
+:root[data-theme="dark"] .table-actions-group > :is(a, button).cm-discard-action:hover:not(:disabled),
+:root[data-theme="dark"] .table-actions-group > :is(a, button).erp-action-btn--danger:hover:not(:disabled),
+:root[data-theme="dark"] .table-actions-group > :is(a, button).danger:hover:not(:disabled),
+:root[data-theme="dark"] .cm-actions .cm-discard-action:hover:not(:disabled) {
+  background: rgba(180, 35, 24, 0.45) !important;
+  border-color: rgba(248, 113, 113, 0.6) !important;
+  color: #fca5a5 !important;
+}
+
+/* ==========================================================================
+   PROJECT-WIDE TABLE SYSTEM: OVERFLOW, ELLIPSIS, ALIGNMENT & WIDTHS
+   Provides unified single-line ellipsis handling with hover tooltip access,
+   consistent column min/max-widths, stable vertical centering, and responsive scroll.
+   ========================================================================== */
+
+/* 1. Responsive Table Containers */
+.cm-table-wrap,
+.course-table-scroll,
+.branch-table-scroll,
+.semester-table-wrapper,
+.section-table-wrap,
+.sa-table-wrap,
+.sp-table-wrap,
+.erp-table-responsive,
+.table-responsive,
+.table-scroll-container,
+.p-history-wrap,
+.p-table {
+  width: 100% !important;
+  max-width: 100% !important;
+  overflow-x: auto !important;
+  -webkit-overflow-scrolling: touch !important;
+  position: relative !important;
+  scrollbar-width: thin !important;
+  margin-bottom: 0 !important;
+  background: var(--surface, #ffffff);
+  border-radius: var(--radius-md, 8px);
+}
+
+/* 2. Base Table Element */
+.cm-table,
+.course-advanced-table,
+.branch-table,
+.semester-table,
+.section-table,
+.sa-table-wrap table,
+.sp-directory-table,
+.erp-table,
+.department-table-wrap table,
+.p-history-table,
+.p-candidate-table,
+.academic-table,
+.promotion-table,
+table.cm-table,
+table.erp-table {
+  width: 100% !important;
+  min-width: 100% !important;
+  border-collapse: collapse !important;
+  table-layout: auto !important;
+  text-align: center !important;
+  font-variant-numeric: tabular-nums;
+  margin: 0 !important;
+}
+
+/* 3. Header Cells (th) - Uniform Vertical & Horizontal Center Alignment */
+.cm-table thead th,
+.course-advanced-table thead th,
+.branch-table thead th,
+.semester-table thead th,
+.section-table thead th,
+.sa-table-wrap table thead th,
+.sp-directory-table thead th,
+.erp-table thead th,
+.department-table-wrap table thead th,
+.p-history-table thead th,
+.p-candidate-table thead th,
+.academic-table thead th,
+.promotion-table thead th,
+.page-content table thead th {
+  height: 44px !important;
+  min-height: 44px !important;
+  max-height: 44px !important;
+  vertical-align: middle !important;
+  text-align: center !important;
+  padding: 10px 14px !important;
+  background: #123f63 !important;
+  color: #f4f9fc !important;
+  font-size: 11px !important;
+  font-weight: 800 !important;
+  letter-spacing: 0.055em !important;
+  text-transform: uppercase !important;
+  white-space: nowrap !important;
+  border-bottom: 1px solid #244f70 !important;
+  border-top: none !important;
+  box-sizing: border-box !important;
+}
+
+/* 4. Body Data Cells (td) - Uniform Height, Vertical Middle & Horizontal Center */
+.cm-table tbody td,
+.course-advanced-table tbody td,
+.branch-table tbody td,
+.semester-table tbody td,
+.section-table tbody td,
+.sa-table-wrap table tbody td,
+.sp-directory-table tbody td,
+.erp-table tbody td,
+.department-table-wrap table tbody td,
+.p-history-table tbody td,
+.p-candidate-table tbody td,
+.academic-table tbody td,
+.promotion-table tbody td,
+.page-content table tbody td {
+  height: 52px !important;
+  vertical-align: middle !important;
+  text-align: center !important;
+  padding: 10px 14px !important;
+  border-bottom: 1px solid var(--border, #e2e8f0) !important;
+  border-top: none !important;
+  color: var(--text-primary, #1e293b) !important;
+  background: var(--surface, #ffffff) !important;
+  font-size: 13px !important;
+  line-height: 1.4 !important;
+  box-sizing: border-box !important;
+}
+
+/* 5. Universal Center Alignment Classes */
+.cm-table :is(th, td),
+.course-advanced-table :is(th, td),
+.branch-table :is(th, td),
+.semester-table :is(th, td),
+.section-table :is(th, td),
+.sa-table-wrap table :is(th, td),
+.sp-directory-table :is(th, td),
+.erp-table :is(th, td),
+.department-table-wrap table :is(th, td),
+.p-history-table :is(th, td),
+.p-candidate-table :is(th, td),
+.table-center,
+.text-center {
+  text-align: center !important;
+  vertical-align: middle !important;
+}
+
+/* 6. Universal Ellipsis & Text Overflow Classes (Centered) */
+.table-cell-truncate,
+.table-truncate,
+.truncate,
+.cm-college-name,
+.section-name,
+.course-name,
+.branch-name,
+.dept-name {
+  display: block !important;
+  width: 100% !important;
+  max-width: 100% !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
+  text-align: center !important;
+  vertical-align: middle !important;
+  margin-left: auto !important;
+  margin-right: auto !important;
+}
+
+/* 7. Primary + Secondary Dual Line Cell Pattern (Centered) */
+.table-primary-cell,
+.table-cell-group,
+.erp-table-cell-stack,
+.sp-student > div,
+.sa-student > span {
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: center !important;
+  text-align: center !important;
+  width: 100% !important;
+  min-width: 0 !important;
+  max-width: 100% !important;
+  margin: 0 auto !important;
+}
+
+.erp-table-cell-content {
+  width: 100% !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  text-align: center !important;
+  min-width: 0 !important;
+  margin: 0 auto !important;
+}
+
+.table-primary-cell strong,
+.table-cell-group strong,
+.table-cell-primary,
+.sp-student strong,
+.sa-student strong {
+  display: block !important;
+  width: 100% !important;
+  max-width: 100% !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
+  text-align: center !important;
+  font-weight: 600 !important;
+  color: var(--text-primary, #0f172a) !important;
+  font-size: 13px !important;
+  line-height: 1.35 !important;
+  margin: 0 auto !important;
+}
+
+.table-primary-cell small,
+.table-cell-group small,
+.table-cell-secondary,
+.sp-student small,
+.sa-student small {
+  display: block !important;
+  width: 100% !important;
+  max-width: 100% !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
+  text-align: center !important;
+  font-size: 11px !important;
+  color: var(--text-muted, #64748b) !important;
+  margin: 2px auto 0 !important;
+  line-height: 1.3 !important;
+}
+
+/* 8. Avatar & Logo Thumbnails inside Table Cells (Centered) */
+.cm-logo-thumb,
+.cm-logo-placeholder,
+.sp-student i,
+.sa-student i {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  width: 34px !important;
+  height: 34px !important;
+  min-width: 34px !important;
+  min-height: 34px !important;
+  border-radius: 8px !important;
+  background: var(--surface-soft, #f1f5f9) !important;
+  color: var(--brand, #0284c7) !important;
+  font-weight: 700 !important;
+  font-size: 13px !important;
+  border: 1px solid var(--border, #e2e8f0) !important;
+  overflow: hidden !important;
+  flex-shrink: 0 !important;
+  margin: 0 auto !important;
+  vertical-align: middle !important;
+}
+
+.cm-logo-thumb img,
+.sp-student i img,
+.sa-student i img {
+  width: 100% !important;
+  height: 100% !important;
+  object-fit: cover !important;
+}
+
+.sp-student,
+.sa-student {
+  display: flex !important;
+  flex-direction: row !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 10px !important;
+  width: 100% !important;
+  min-width: 0 !important;
+  text-align: center !important;
+  margin: 0 auto !important;
+}
+
+/* 9. Status & Actions Column Centering */
+.erp-status-badge,
+.cm-status-badge,
+.semester-badge,
+.status-badge,
+.status-pill,
+.badge {
+  white-space: nowrap !important;
+  flex-shrink: 0 !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  text-align: center !important;
+  margin: 0 auto !important;
+}
+
+.erp-table-actions {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 6px !important;
+  margin: 0 auto !important;
+}
+
+/* 10. Hover Row State */
+.cm-table tbody tr:hover > td,
+.course-advanced-table tbody tr:hover > td,
+.branch-table tbody tr:hover > td,
+.semester-table tbody tr:hover > td,
+.section-table tbody tr:hover > td,
+.sa-table-wrap table tbody tr:hover > td,
+.sp-directory-table tbody tr:hover > td,
+.erp-table tbody tr:hover > td,
+.department-table-wrap table tbody tr:hover > td,
+.p-history-table tbody tr:hover > td {
+  background-color: var(--surface-hover, #f8fafc) !important;
+}
+
+/* 11. Dark Theme Table System */
+:root[data-theme="dark"] .cm-table thead th,
+:root[data-theme="dark"] .course-advanced-table thead th,
+:root[data-theme="dark"] .branch-table thead th,
+:root[data-theme="dark"] .semester-table thead th,
+:root[data-theme="dark"] .section-table thead th,
+:root[data-theme="dark"] .sa-table-wrap table thead th,
+:root[data-theme="dark"] .sp-directory-table thead th,
+:root[data-theme="dark"] .erp-table thead th,
+:root[data-theme="dark"] .department-table-wrap table thead th,
+:root[data-theme="dark"] .p-history-table thead th {
+  background: #0d2133 !important;
+  color: #eaf4ff !important;
+  border-bottom: 1px solid #1e3a56 !important;
+}
+
+:root[data-theme="dark"] .cm-table tbody td,
+:root[data-theme="dark"] .course-advanced-table tbody td,
+:root[data-theme="dark"] .branch-table tbody td,
+:root[data-theme="dark"] .semester-table tbody td,
+:root[data-theme="dark"] .section-table tbody td,
+:root[data-theme="dark"] .sa-table-wrap table tbody td,
+:root[data-theme="dark"] .sp-directory-table tbody td,
+:root[data-theme="dark"] .erp-table tbody td,
+:root[data-theme="dark"] .department-table-wrap table tbody td,
+:root[data-theme="dark"] .p-history-table tbody td {
+  background: #0f1d2c !important;
+  color: #cbd5e1 !important;
+  border-bottom: 1px solid #1e293b !important;
+}
+
+:root[data-theme="dark"] .cm-table tbody tr:hover > td,
+:root[data-theme="dark"] .course-advanced-table tbody tr:hover > td,
+:root[data-theme="dark"] .branch-table tbody tr:hover > td,
+:root[data-theme="dark"] .semester-table tbody tr:hover > td,
+:root[data-theme="dark"] .section-table tbody tr:hover > td,
+:root[data-theme="dark"] .sa-table-wrap table tbody tr:hover > td,
+:root[data-theme="dark"] .sp-directory-table tbody tr:hover > td,
+:root[data-theme="dark"] .erp-table tbody tr:hover > td,
+:root[data-theme="dark"] .department-table-wrap table tbody tr:hover > td,
+:root[data-theme="dark"] .p-history-table tbody tr:hover > td {
+  background: #162a3f !important;
+}
+
