@@ -162,22 +162,7 @@ export default function Attendance() {
         section: selectedSection?.name,
       })
 
-      if (!list.length) {
-        // Generate mock class roll if students haven't been enrolled yet for this section
-        const branchCode = selectedBranch?.code || 'CS'
-        const semNum = selectedSemester?.semesterNumber || 1
-        const sectionName = selectedSection?.name || 'A'
-        const fallbackList = Array.from({ length: 15 }, (_, i) => ({
-          studentId: `STU-${branchCode}-${semNum}-${101 + i}`,
-          id: `STU-${branchCode}-${semNum}-${101 + i}`,
-          name: `Student ${101 + i} (${branchCode})`,
-          rollNumber: `26${branchCode}${String(101 + i).slice(-3)}`,
-          status: 'Present',
-        }))
-        setMarkingStudents(fallbackList)
-      } else {
-        setMarkingStudents(list)
-      }
+      setMarkingStudents(list)
     } catch (err) {
       notify('Failed to load students for attendance.')
     } finally {

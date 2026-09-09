@@ -343,6 +343,22 @@ export default function AddCollege() {
     setSubmitting(true)
     let collegeId = editId || pendingLogoCollegeId
     try {
+      // Re-read the directory immediately before writing.  The form-level
+      // checks are useful feedback, but this closes the gap when another user
+      // creates the same college while this form is open.
+      const latestResponse = await getColleges()
+      const latestData = latestResponse?.data?.data ?? latestResponse?.data ?? latestResponse
+      const latestColleges = Array.isArray(latestData) ? latestData : Array.isArray(latestData?.items) ? latestData.items : []
+      const normalized = (item) => String(item || '').trim().toLowerCase()
+      const duplicate = latestColleges.find((item) => {
+        const itemId = normalized(item.id ?? item.collegeId)
+        if (editId && itemId === normalized(editId)) return false
+        return normalized(item.code ?? item.collegeCode) === normalized(values.collegeCode)
+          || normalized(item.name ?? item.collegeName) === normalized(values.collegeName)
+          || normalized(item.email ?? item.collegeEmail) === normalized(values.email)
+          || normalized(item.contact ?? item.contactNumber ?? item.phoneNumber) === normalized(values.contactNumber)
+      })
+      if (duplicate) throw new Error('A college with the same name, code, email, or contact number already exists.')
       const website = normalizeWebsite(values.website)
       const college = {
         name: values.collegeName.trim(), code: values.collegeCode, type: values.collegeType === 'Other' ? values.collegeTypeOther.trim() : values.collegeType,

@@ -294,6 +294,7 @@ const validateBranch = (value, branchId, existingRows, courses) => {
   if (!code) errors.branchCode = 'Branch code is required.'
   else if (!/^[A-Z0-9]+(?:[-/][A-Z0-9]+)*$/.test(code)) errors.branchCode = 'Use uppercase letters, numbers, hyphens, or slashes only.'
   else if (existingRows.some((row) => String(row.id) !== String(branchId) && String(row.branchCode || '').trim().toUpperCase() === code)) errors.branchCode = 'Branch code already exists.'
+  else if (existingRows.some((row) => String(row.id) !== String(branchId) && String(row.courseId) === String(value.courseId) && String(row.branchName || '').trim().toLowerCase() === name.toLowerCase())) errors.branchName = 'This branch name already exists for the selected course.'
 
   if (value.branchType === 'Specialization' && !String(value.specialization || '').trim()) errors.specialization = 'Specialization is required.'
   if (!Number.isInteger(Number(value.intakeCapacity)) || Number(value.intakeCapacity) < 1) errors.intakeCapacity = 'Approved intake must be a positive whole number.'

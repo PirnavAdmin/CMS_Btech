@@ -107,3 +107,9 @@
 .student-admission .sa-remarks{display:grid;gap:6px;margin:0 16px 14px;color:var(--text-secondary);font-size:10px;font-weight:750}.student-admission .sa-remarks textarea{width:100%;min-height:82px;padding:10px 11px;border:1px solid var(--border);border-radius:8px;color:var(--text-primary);background:var(--surface);font:inherit;font-weight:500;resize:vertical}.student-admission .sa-remarks small{justify-self:end;color:var(--text-muted)}
 .student-admission .sa-approval>footer{display:flex;align-items:center;justify-content:flex-end;gap:8px;padding:13px 16px;border-top:1px solid var(--border);background:var(--surface-soft)}
 @media(max-width:620px){.student-admission .sa-review-header{align-items:stretch;flex-direction:column}.student-admission .sa-review-header>.sa-badge{align-self:flex-start}.student-admission .sa-approval>footer{align-items:stretch;flex-direction:column}.student-admission .sa-approval>footer button{width:100%}}
+
+/* Reserve fixed slots so View never moves when Edit or Approve is available. */
+.student-admission .sa-table-wrap th:last-child{width:160px!important;min-width:160px!important}
+.student-admission .sa-table-wrap td:last-child{width:160px!important;min-width:160px!important;padding-inline:14px!important}
+.student-admission .sa-icon-actions{display:grid!important;grid-template-columns:repeat(3,34px);justify-content:start!important;gap:6px!important;width:114px!important;min-width:114px!important;margin:0 auto!important}
+.student-admission .sa-icon-actions .table-action-btn{grid-row:1!important}
