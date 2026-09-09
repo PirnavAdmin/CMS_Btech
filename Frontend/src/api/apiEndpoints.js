@@ -16,10 +16,13 @@ export const API_BASE_URL = import.meta.env.DEV
   ? ''
   : normalizeBaseUrl(import.meta.env.VITE_API_BASE_URL || DEFAULT_API_BASE_URL)
 
-const AUTH_LOGIN_URL = normalizeBaseUrl(import.meta.env.VITE_AUTH_API_URL || `${DEFAULT_API_BASE_URL}/api/v1/auth/login`)
-// Development uses Vite's configured /api proxy, so an explicit absolute
-// login URL is only mandatory for a production build.
-const hasConfiguredAuthLoginUrl = import.meta.env.DEV || Boolean(AUTH_LOGIN_URL || API_BASE_URL)
+// Keep local login on the same Vite /api proxy as the rest of the app. Using
+// the old public tunnel directly in development makes login fail when that
+// tunnel changes or is unavailable, even though the local proxy is configured.
+const AUTH_LOGIN_URL = import.meta.env.DEV
+  ? '/api/v1/auth/login'
+  : normalizeBaseUrl(import.meta.env.VITE_AUTH_API_URL || `${DEFAULT_API_BASE_URL}/api/v1/auth/login`)
+const hasConfiguredAuthLoginUrl = Boolean(AUTH_LOGIN_URL || API_BASE_URL)
 
 const endpoint = (path) => `${API_BASE_URL}${path}`
 
@@ -611,6 +614,14 @@ export const sectionApi = {
 }
 
 const compact = (object) => Object.fromEntries(Object.entries(object).filter(([, value]) => value !== undefined))
+// API DTOs define academic references as nullable Int64 values.  Form controls
+// use an empty string while no option is selected, which cannot be deserialized
+// by ASP.NET as a nullable number.  Omit empty values and normalize valid IDs.
+const nullableNumericId = (value) => {
+  if (value === undefined || value === null || String(value).trim() === '') return undefined
+  const parsed = Number(value)
+  return Number.isInteger(parsed) && parsed > 0 ? parsed : undefined
+}
 const normalizeRecord = (source) => dataResponse(source) || {}
 export const normalizeAdmission = (source) => {
   const { currentStatus, admissionStatus, applicationStatus, ...record } = normalizeRecord(source)
@@ -647,13 +658,16 @@ const studentAdmissionPayload = (form) => {
   address: form.address ?? addressText(currentAddress), city: form.city ?? currentAddress?.city, district: form.district ?? currentAddress?.district,
   state: form.state ?? currentAddress?.state, pincode: form.pincode ?? currentAddress?.pincode,
   admissionType: form.admissionType ?? form.academic?.admissionType,
-  academicYearId: form.academicYearId ?? form.academic?.academicYearId, courseId: form.courseId ?? form.academic?.courseId,
-  branchId: form.branchId ?? form.academic?.branchId, semesterId: form.semesterId ?? form.academic?.semesterId,
+  academicYearId: nullableNumericId(form.academicYearId ?? form.academic?.academicYearId),
+  departmentId: nullableNumericId(form.departmentId ?? form.academic?.departmentId),
+  courseId: nullableNumericId(form.courseId ?? form.academic?.courseId),
+  branchId: nullableNumericId(form.branchId ?? form.academic?.branchId),
+  semesterId: nullableNumericId(form.semesterId ?? form.academic?.semesterId),
   fatherName: form.fatherName ?? parents.father?.name, motherName: form.motherName ?? parents.mother?.name,
   guardianName: form.guardianName ?? parents.guardian?.name, motherEmail: form.motherEmail ?? parents.mother?.email,
   guardianMobile: form.guardianMobile ?? parents.guardian?.mobile, guardianEmail: form.guardianEmail ?? parents.guardian?.email,
   occupation: form.occupation ?? parents.father?.occupation, annualIncome: form.annualIncome ?? parents.father?.income,
-  collegeId: form.collegeId ?? form.admission?.collegeId,
+  collegeId: nullableNumericId(form.collegeId ?? form.admission?.collegeId),
   college: form.college ?? form.admission?.college,
   feeStructureId: form.feeStructureId ?? form.fees?.feeStructureId ?? form.fees?.structureId,
   admissionFee: form.admissionFee ?? form.fees?.admissionFee,
@@ -662,9 +676,12 @@ const studentAdmissionPayload = (form) => {
   })
 }
 const academicDetailsPayload = (form) => compact({
-  collegeId: form.collegeId ?? form.academic?.collegeId, academicYearId: form.academicYearId ?? form.academic?.academicYearId,
-  departmentId: form.departmentId ?? form.academic?.departmentId, courseId: form.courseId ?? form.academic?.courseId,
-  branchId: form.branchId ?? form.academic?.branchId, semesterId: form.semesterId ?? form.academic?.semesterId,
+  collegeId: nullableNumericId(form.collegeId ?? form.academic?.collegeId),
+  academicYearId: nullableNumericId(form.academicYearId ?? form.academic?.academicYearId),
+  departmentId: nullableNumericId(form.departmentId ?? form.academic?.departmentId),
+  courseId: nullableNumericId(form.courseId ?? form.academic?.courseId),
+  branchId: nullableNumericId(form.branchId ?? form.academic?.branchId),
+  semesterId: nullableNumericId(form.semesterId ?? form.academic?.semesterId),
   admissionType: form.admissionType ?? form.academic?.admissionType,
   quota: form.quota ?? form.academic?.quota,
   quotaOther: form.quotaOther ?? form.academic?.quotaOther,

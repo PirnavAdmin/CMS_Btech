@@ -168,12 +168,7 @@ async function loadSemesterSources() {
     return normalizeCourse({ ...courseRows.find((row) => String(courseIdOf(row)) === String(item.id)), ...responseRecord(await courseApi.getById(item.id)) })
   }))
   const branches = branchRows.map(normalizeBranch).filter((item) => item.id && item.name)
-  const years = yearRows.map((row) => {
-    const normalized = normalizeAcademicYear(row)
-    const raw = row.status ?? row.academicYearStatus ?? row.state ?? row.yearStatus
-    const active = raw === true || String(raw).toUpperCase() === 'ACTIVE' || String(raw) === '1' || row.isActive === true || row.active === true
-    return { ...normalized, status: active ? 'ACTIVE' : 'ARCHIVED', isActive: active, active }
-  }).filter((item) => item.id && item.name)
+  const years = yearRows.map(normalizeAcademicYear).filter((item) => item.id && item.name)
   const rows = responseList(semesterRows).map((item) => mapSemester(item, makeLookups(courses, branches, years)))
   return { courses, branches, years, rows }
 }

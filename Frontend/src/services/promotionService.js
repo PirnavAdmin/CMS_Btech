@@ -146,10 +146,26 @@ class PromotionService {
   async promoteBulk(students, promotionScope) {
     const currentSemester = parseInt(String(promotionScope.currentSemester || promotionScope.currentSemesterId).replace(/\D/g, ''), 10) || 1
     const isDegreeCompletion = currentSemester >= 8
+    const positiveId = (value) => {
+      const parsed = Number(value)
+      return Number.isInteger(parsed) && parsed > 0 ? parsed : null
+    }
+    const studentIds = students
+      .map((student) => positiveId(student.studentId ?? student.id))
+      .filter((value) => value !== null)
+    const branchId = positiveId(promotionScope.branchId)
+    const currentAcademicYearId = positiveId(promotionScope.currentAcademicYearId)
+    const targetAcademicYearId = positiveId(promotionScope.targetAcademicYearId) || currentAcademicYearId
+
+    // Do not send NaN/0 IDs to the API. Those values produce an opaque 400
+    // response and usually mean the promotion scope dropdowns are incomplete.
+    if (!studentIds.length) throw new Error('Select at least one valid student for promotion.')
+    if (!branchId || !currentAcademicYearId) throw new Error('Select a valid branch and current academic year before promoting.')
+
     await studentPromotionApi.promoteBulkAtomic({
-      studentIds: students.map((student) => Number(student.studentId || student.id)).filter(Number.isInteger),
-      branchId: Number(promotionScope.branchId),
-      academicYearId: Number(isDegreeCompletion ? promotionScope.currentAcademicYearId : (promotionScope.targetAcademicYearId || promotionScope.currentAcademicYearId)),
+      studentIds,
+      branchId,
+      academicYearId: isDegreeCompletion ? currentAcademicYearId : targetAcademicYearId,
       currentSemester,
       nextSemester: isDegreeCompletion ? currentSemester : currentSemester + 1,
       eligibilityStatus: 'ELIGIBLE',

@@ -6,11 +6,9 @@ const normalizeStatus = (year = {}) => {
 
   if (isActiveFlag || rawText === 'ACTIVE') return 'ACTIVE'
   if (isArchivedFlag || rawText === 'INACTIVE' || rawText === 'ARCHIVED') return 'ARCHIVED'
-  if (rawText === 'UPCOMING') return 'UPCOMING'
-
   const startDate = String(year?.startDate ?? '').slice(0, 10)
   const endDate = String(year?.endDate ?? '').slice(0, 10)
-  if (!startDate || !endDate) return 'ACTIVE'
+  if (!startDate || !endDate) return rawText === 'UPCOMING' ? 'UPCOMING' : 'ACTIVE'
 
   const today = new Date();
   const start = new Date(`${startDate}T00:00:00`)
@@ -32,11 +30,28 @@ export const normalizeAcademicYear = (year = {}) => {
   }
 }
 
-export const getActiveAcademicYears = (years = []) => {
+const sortAcademicYears = (years) => [...years].sort((left, right) => {
+  const statusRank = { ACTIVE: 0, UPCOMING: 1, ARCHIVED: 2 }
+  const rank = (statusRank[left.status] ?? 3) - (statusRank[right.status] ?? 3)
+  if (rank) return rank
+  return String(left.startDate || left.name).localeCompare(String(right.startDate || right.name))
+})
+
+export const getSelectableAcademicYears = (years = []) => {
   const rows = Array.isArray(years) ? years : []
-  return rows
+  return sortAcademicYears(rows
     .map(normalizeAcademicYear)
-    .filter((year) => year.id && year.name && year.status === 'ACTIVE')
+    .filter((year) => year.id && year.name && year.status !== 'ARCHIVED'))
+}
+
+export const getActiveAcademicYears = (years = []) => {
+  const selectableYears = getSelectableAcademicYears(years)
+  const activeYears = selectableYears.filter((year) => year.status === 'ACTIVE')
+
+  // A newly configured college can legitimately have no active year yet. In
+  // that case retain upcoming, non-archived years so dependent forms do not
+  // render an empty academic-year dropdown.
+  return activeYears.length ? activeYears : selectableYears
 }
 
 export const getDefaultAcademicYear = (years = []) => {

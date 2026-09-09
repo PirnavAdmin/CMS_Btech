@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react'
-import academicService, { filterActiveOnly, isRecordActive } from '../services/academicService'
+import academicService, { filterActiveOnly } from '../services/academicService'
 import eventBus, { ERP_EVENTS } from '../services/eventBus'
+import { getActiveAcademicYears } from '../utils/academicYearUtils'
 
 const AcademicContext = createContext(null)
 
@@ -51,10 +52,10 @@ export const AcademicProvider = ({ children }) => {
 
   // Active items helpers
   const activeColleges = filterActiveOnly(colleges)
-  // Academic-year responses are not fully consistent across backend versions
-  // (some return `isCurrent`, others only `status`). Keep both signals so the
-  // current year is not accidentally hidden from dependent screens.
-  const activeAcademicYears = academicYears.filter((year) => year?.isCurrent || isRecordActive(year))
+  // Some backend records use numeric status values. Normalize them through
+  // the shared selector so operational screens still receive a usable
+  // upcoming year when no year is marked active.
+  const activeAcademicYears = getActiveAcademicYears(academicYears)
   const activeDepartments = filterActiveOnly(departments)
   const activeCourses = filterActiveOnly(courses)
   const activeBranches = filterActiveOnly(branches)
