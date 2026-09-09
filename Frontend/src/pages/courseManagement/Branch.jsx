@@ -179,8 +179,8 @@ function List() {
     setError({ kind: 'confirm', action: nextStatus === 'Active' ? 'Activate' : 'Deactivate', code: branch.branchCode || branch.branchName, cancel: () => setError(''), confirm: async () => {
       setError('')
       try {
-        const updated = normalizeBranch(await branchApi.update(branch.id, { ...branch, status: nextStatus }))
-        setBranches((current) => current.map((row) => String(row.id) === String(updated.id) ? updated : row))
+        await branchApi.updateStatus(branch.id, nextStatus)
+        setBranches((current) => current.map((row) => String(row.id) === String(branch.id) ? { ...row, status: nextStatus } : row))
         setError(`Branch ${nextStatus === 'Active' ? 'activated' : 'deactivated'} successfully.`)
       } catch (requestError) {
         setError(requestError?.message || 'Unable to update branch status.')

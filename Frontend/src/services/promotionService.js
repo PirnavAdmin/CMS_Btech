@@ -65,6 +65,8 @@ class PromotionService {
     targetSemester,
     targetSectionId = null,
     targetSection = null,
+    branchId,
+    skipBackend = false,
     promotionDate = new Date().toISOString().slice(0, 10),
     remarks = 'Promoted to next academic term',
   }) {
@@ -81,22 +83,15 @@ class PromotionService {
 
     const payload = {
       studentId: Number(studentId) || studentId,
-      currentAcademicYearId,
-      currentSemesterId,
-      targetAcademicYearId: isDegreeCompletion ? currentAcademicYearId : targetAcademicYearId,
-      targetSemesterId: isDegreeCompletion ? currentSemesterId : targetSemesterId,
-      targetSectionId: isDegreeCompletion ? null : targetSectionId,
-      promotionDate,
+      branchId: Number(branchId),
+      academicYearId: Number(isDegreeCompletion ? currentAcademicYearId : (targetAcademicYearId || currentAcademicYearId)),
+      currentSemester: currentSemNum,
+      nextSemester: isDegreeCompletion ? currentSemNum : currentSemNum + 1,
+      eligibilityStatus: 'ELIGIBLE',
       remarks,
-      isGraduated: isDegreeCompletion,
     }
 
-    let backendResult = null
-    try {
-      backendResult = await studentPromotionApi.promote(payload)
-    } catch (err) {
-      console.warn('Backend promote endpoint fallback:', err)
-    }
+    const backendResult = skipBackend ? null : await studentPromotionApi.promote(payload)
 
     // Update the student profile in memory / storage
     let existingProfile = null
@@ -149,12 +144,24 @@ class PromotionService {
   }
 
   async promoteBulk(students, promotionScope) {
+    const currentSemester = parseInt(String(promotionScope.currentSemester || promotionScope.currentSemesterId).replace(/\D/g, ''), 10) || 1
+    const isDegreeCompletion = currentSemester >= 8
+    await studentPromotionApi.promoteBulkAtomic({
+      studentIds: students.map((student) => Number(student.studentId || student.id)).filter(Number.isInteger),
+      branchId: Number(promotionScope.branchId),
+      academicYearId: Number(isDegreeCompletion ? promotionScope.currentAcademicYearId : (promotionScope.targetAcademicYearId || promotionScope.currentAcademicYearId)),
+      currentSemester,
+      nextSemester: isDegreeCompletion ? currentSemester : currentSemester + 1,
+      eligibilityStatus: 'ELIGIBLE',
+      remarks: promotionScope.remarks || 'Bulk batch promotion',
+    })
     const results = []
     for (const student of students) {
       const res = await this.promoteStudent({
         studentId: student.studentId || student.id,
         studentName: student.name || student.studentName || student.personal?.fullName,
         registrationNumber: student.registrationNumber || student.rollNumber,
+        branchId: promotionScope.branchId,
         currentAcademicYearId: promotionScope.currentAcademicYearId,
         currentAcademicYear: promotionScope.currentAcademicYear,
         currentSemesterId: promotionScope.currentSemesterId,
@@ -167,6 +174,7 @@ class PromotionService {
         targetSection: promotionScope.targetSection,
         promotionDate: promotionScope.promotionDate || new Date().toISOString().slice(0, 10),
         remarks: promotionScope.remarks || 'Bulk batch promotion',
+        skipBackend: true,
       })
       results.push(res)
     }

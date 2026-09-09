@@ -69,6 +69,7 @@ export const API_ENDPOINTS = Object.freeze({
     byCourse: (courseId) => endpoint(`/api/v1/branches/course/${courseId}`),
     detail: (id) => endpoint(`/api/v1/branches/${id}`),
     update: (id) => endpoint(`/api/v1/branches/${id}`),
+    status: (id) => endpoint(`/api/v1/branches/${id}/status`),
   }),
   courses: Object.freeze({
     list: endpoint('/api/v1/courses'),
@@ -111,11 +112,7 @@ export const API_ENDPOINTS = Object.freeze({
     detail: (id) => endpoint(`/api/v1/student-admissions/${id}`), update: (id) => endpoint(`/api/v1/student-admissions/${id}`),
     academicDetails: (id) => endpoint(`/api/v1/student-admissions/${id}/academic-details`),
     previousEducation: (id) => endpoint(`/api/v1/student-admissions/${id}/previous-education`),
-    status: (id) => endpoint(`/api/admissions/${id}/status`), submit: (id) => endpoint(`/api/v1/student-admissions/${id}/submit`),
-    approve: (id) => endpoint(`/api/Admissions/${id}/approve`),
-    reject: (id) => endpoint(`/api/Admissions/${id}/reject`),
-    history: (id) => endpoint(`/api/Admissions/${id}/history`),
-    statusHistory: (id) => endpoint(`/api/admissions/${id}/status-history`),
+    status: (id) => endpoint(`/api/v1/student-admissions/${id}/status`), submit: (id) => endpoint(`/api/v1/student-admissions/${id}/submit`),
     feeSummary: (id) => endpoint(`/api/v1/student-admissions/${id}/fee-summary`), feeStructure: (id) => endpoint(`/api/v1/student-admissions/${id}/fee-structure`),
   }),
   studentAcademicInformation: Object.freeze({ detail: (id) => endpoint(`/api/v1/student-academic-information/${id}`), update: (id) => endpoint(`/api/v1/student-academic-information/${id}`) }),
@@ -131,7 +128,7 @@ export const API_ENDPOINTS = Object.freeze({
   promotions: Object.freeze({
     dashboard: endpoint('/api/v1/promotions/dashboard'), directory: endpoint('/api/v1/promotions/directory'), history: endpoint('/api/v1/promotions/history'),
     eligibleStudents: endpoint('/api/v1/promotions/eligible-students'), eligibility: (id) => endpoint(`/api/v1/promotions/student-eligibility/${id}`), eligibilityStatus: (id) => endpoint(`/api/v1/promotions/eligibility-status/${id}`),
-    promote: endpoint('/api/v1/promotions/promote'), promoteBulk: endpoint('/api/v1/promotions/promote-bulk'), promotedStudents: endpoint('/api/v1/promotions/promoted-students'),
+    promote: endpoint('/api/v1/promotions/promote'), promoteBulk: endpoint('/api/v1/promotions/promote-bulk'), promoteBulkAtomic: endpoint('/api/v1/promotions/promote-bulk-atomic'), promotedStudents: endpoint('/api/v1/promotions/promoted-students'),
     studentHistory: (id) => endpoint(`/api/v1/promotions/student/${id}/history`), historyByStudent: (id) => endpoint(`/api/v1/promotions/history/${id}`),
   }),
   authorizationTest: Object.freeze({
@@ -506,6 +503,7 @@ export const branchApi = {
     const response = await request(API_ENDPOINTS.branches.update(id), { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(branchPayload(branch)) })
     return response?.data
   },
+  updateStatus: async (id, status) => request(API_ENDPOINTS.branches.status(id), { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status: status === 'Active' || status === 1 || status === true }) }),
 }
 
 export const departmentApi = {
@@ -625,7 +623,16 @@ export const normalizeParent = (source) => normalizeRecord(source)
 export const normalizeDocument = (source) => normalizeRecord(source)
 export const normalizePromotion = (source) => normalizeRecord(source)
 
-const studentAdmissionPayload = (form) => compact({
+const addressText = (address) => {
+  if (typeof address === 'string') return address.trim()
+  if (!address || typeof address !== 'object') return undefined
+  return [address.line1 ?? address.addressLine1, address.line2 ?? address.addressLine2, address.town ?? address.village, address.city, address.district, address.state, address.pincode ?? address.postalCode].filter(value => value !== undefined && value !== null && String(value).trim() !== '').join(', ')
+}
+
+const studentAdmissionPayload = (form) => {
+  const currentAddress = form.currentAddress ?? form.contact?.currentAddress
+  const parents = form.parents ?? {}
+  return compact({
   registrationNumber: form.registrationNumber ?? form.application?.registrationNumber ?? form.application?.number,
   registrationDate: form.registrationDate ?? form.application?.date,
   firstName: form.firstName ?? form.personal?.firstName, middleName: form.middleName ?? form.personal?.middleName,
@@ -635,15 +642,24 @@ const studentAdmissionPayload = (form) => compact({
   nationality: form.nationality ?? form.personal?.nationality, aadhaarNumber: form.aadhaarNumber ?? form.personal?.aadhaar,
   mobile: form.mobile ?? form.contact?.mobile, alternateMobile: form.alternateMobile ?? form.contact?.alternateMobile,
   email: form.email ?? form.contact?.email, alternateEmail: form.alternateEmail ?? form.contact?.alternateEmail,
-  currentAddress: form.currentAddress ?? form.contact?.currentAddress, permanentAddress: form.permanentAddress ?? form.contact?.permanentAddress,
+  currentAddress, permanentAddress: form.permanentAddress ?? form.contact?.permanentAddress,
+  address: form.address ?? addressText(currentAddress), city: form.city ?? currentAddress?.city, district: form.district ?? currentAddress?.district,
+  state: form.state ?? currentAddress?.state, pincode: form.pincode ?? currentAddress?.pincode,
   admissionType: form.admissionType ?? form.academic?.admissionType,
+  academicYearId: form.academicYearId ?? form.academic?.academicYearId, courseId: form.courseId ?? form.academic?.courseId,
+  branchId: form.branchId ?? form.academic?.branchId, semesterId: form.semesterId ?? form.academic?.semesterId,
+  fatherName: form.fatherName ?? parents.father?.name, motherName: form.motherName ?? parents.mother?.name,
+  guardianName: form.guardianName ?? parents.guardian?.name, motherEmail: form.motherEmail ?? parents.mother?.email,
+  guardianMobile: form.guardianMobile ?? parents.guardian?.mobile, guardianEmail: form.guardianEmail ?? parents.guardian?.email,
+  occupation: form.occupation ?? parents.father?.occupation, annualIncome: form.annualIncome ?? parents.father?.income,
   collegeId: form.collegeId ?? form.admission?.collegeId,
   college: form.college ?? form.admission?.college,
   feeStructureId: form.feeStructureId ?? form.fees?.feeStructureId ?? form.fees?.structureId,
   admissionFee: form.admissionFee ?? form.fees?.admissionFee,
   paymentPlan: form.paymentPlan ?? form.fees?.paymentPlan,
   documentStatuses: form.documentStatuses ?? Object.fromEntries(Object.entries(form.documents || {}).filter(([, value]) => value && !Array.isArray(value)).map(([key, value]) => [key, typeof value === 'object' ? value.status ?? '' : value])),
-})
+  })
+}
 const academicDetailsPayload = (form) => compact({
   collegeId: form.collegeId ?? form.academic?.collegeId, academicYearId: form.academicYearId ?? form.academic?.academicYearId,
   departmentId: form.departmentId ?? form.academic?.departmentId, courseId: form.courseId ?? form.academic?.courseId,
@@ -755,34 +771,19 @@ export const studentAdmissionApi = {
     }
   },
   create: async (form) => {
-    let res
-    try {
-      res = normalizeAdmission(await request(API_ENDPOINTS.studentAdmissions.create, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(studentAdmissionPayload(form)) }))
-    } catch {
-      res = normalizeAdmission({ ...form, id: form.id || `LOCAL-ADM-${Date.now()}`, status: 'DRAFT', createdAt: new Date().toISOString() })
-    }
+    const res = normalizeAdmission(await request(API_ENDPOINTS.studentAdmissions.create, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(studentAdmissionPayload(form)) }))
     const saved = saveLocalAdmission(res, form)
     return normalizeAdmission(saved || { ...form, ...res })
   },
   update: async (id, form) => {
     const reqId = requiredId(id, 'Admission ID')
-    let res
-    try {
-      res = normalizeAdmission(await request(API_ENDPOINTS.studentAdmissions.update(reqId), { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(studentAdmissionPayload(form)) }))
-    } catch {
-      res = normalizeAdmission({ ...form, id, updatedAt: new Date().toISOString() })
-    }
+    const res = normalizeAdmission(await request(API_ENDPOINTS.studentAdmissions.update(reqId), { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(studentAdmissionPayload(form)) }))
     const saved = saveLocalAdmission(res, form)
     return normalizeAdmission(saved || { ...form, ...res })
   },
   submit: async (id) => {
     const reqId = requiredId(id, 'Admission ID')
-    let res
-    try {
-      res = normalizeAdmission(await request(API_ENDPOINTS.studentAdmissions.submit(reqId), { method: 'POST' }))
-    } catch {
-      res = { id, status: 'SUBMITTED', updatedAt: new Date().toISOString() }
-    }
+    const res = normalizeAdmission(await request(API_ENDPOINTS.studentAdmissions.submit(reqId), { method: 'POST' }))
     const localItems = readLocalAdmissions()
     const found = localItems.find(x => String(x.admissionId ?? x.id) === String(id))
     const updated = saveLocalAdmission({ ...(found || {}), ...res, id, status: 'SUBMITTED', updatedAt: new Date().toISOString() })
@@ -802,8 +803,6 @@ export const studentAcademicInformationApi = {
   update: async (id, payload) => normalizeAcademicDetails(await request(API_ENDPOINTS.studentAcademicInformation.update(requiredId(id, 'Academic ID')), { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) })),
 }
 export const studentAdmissionStatusApi = {
-  history: async (id) => listData(await request(API_ENDPOINTS.studentAdmissions.history(requiredId(id, 'Admission ID')), { cache: 'no-store' })),
-  statusHistory: async (id) => listData(await request(API_ENDPOINTS.studentAdmissions.statusHistory(requiredId(id, 'Admission ID')), { cache: 'no-store' })),
   get: async (id) => {
     const reqId = requiredId(id, 'Admission ID')
     return normalizeAdmission(await request(API_ENDPOINTS.studentAdmissions.status(reqId), { cache: 'no-store' }))
@@ -812,13 +811,12 @@ export const studentAdmissionStatusApi = {
     const reqId = requiredId(id, 'Admission ID')
     const newStatus = payload.newStatus ?? payload.status
     const body = { newStatus, remarks: payload.remarks, rejectionReason: payload.rejectionReason ?? (newStatus === 'REJECTED' ? payload.remarks : undefined) }
-    const decision = newStatus === 'APPROVED' ? 'approve' : newStatus === 'REJECTED' ? 'reject' : null
     let res
     try {
-      res = normalizeAdmission(await request(decision ? API_ENDPOINTS.studentAdmissions[decision](reqId) : API_ENDPOINTS.studentAdmissions.status(reqId), { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(decision ? { remarks: body.remarks, rejectionReason: body.rejectionReason } : { newStatus, actionType: payload.actionType, remarks: payload.remarks, reason: payload.reason ?? payload.rejectionReason, changedBy: payload.changedBy }) }))
+      res = normalizeAdmission(await request(API_ENDPOINTS.studentAdmissions.status(reqId), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }))
     } catch (error) {
       if (error.status >= 500) {
-        error.message = `The admission server failed to ${decision || 'update'} this application (HTTP ${error.status}). The decision could not be confirmed.${error.correlationId ? ` Reference: ${error.correlationId}.` : ''} Refresh to check its status and contact the administrator before retrying.`
+        error.message = `The admission server failed to update this application (HTTP ${error.status}). The decision could not be confirmed.${error.correlationId ? ` Reference: ${error.correlationId}.` : ''} Refresh to check its status and contact the administrator before retrying.`
       }
       throw error
     }
@@ -1081,12 +1079,7 @@ export const studentProfilesApi = {
 
   update: async (id, payload) => {
     const reqId = requiredId(id, 'Student ID')
-    let res = null
-    try {
-      res = normalizeStudentProfile(await request(API_ENDPOINTS.studentProfiles.update(reqId), { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) }))
-    } catch {
-      res = null
-    }
+    const res = normalizeStudentProfile(await request(API_ENDPOINTS.studentProfiles.update(reqId), { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) }))
 
     const studentObj = payload.student || payload
     const saved = saveLocalStudentProfile(id, {
@@ -1107,6 +1100,7 @@ export const studentPromotionApi = {
   updateEligibilityStatus: async (id, eligibilityStatus) => normalizePromotion(await request(withQuery(API_ENDPOINTS.promotions.eligibilityStatus(requiredId(id, 'Student ID')), { eligibilityStatus }), { method: 'PUT' })),
   promote: async (payload) => normalizePromotion(await request(API_ENDPOINTS.promotions.promote, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) })),
   promoteBulk: async (payload) => normalizePromotion(await request(API_ENDPOINTS.promotions.promoteBulk, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) })),
+  promoteBulkAtomic: async (payload) => normalizePromotion(await request(API_ENDPOINTS.promotions.promoteBulkAtomic, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) })),
   getPromotedStudents: async (params) => listData(await request(withQuery(API_ENDPOINTS.promotions.promotedStudents, params))), getStudentHistory: async (id) => listData(await request(API_ENDPOINTS.promotions.studentHistory(requiredId(id, 'Student ID')))), getHistoryByStudent: async (id) => listData(await request(API_ENDPOINTS.promotions.historyByStudent(requiredId(id, 'Student ID')))),
 }
 
