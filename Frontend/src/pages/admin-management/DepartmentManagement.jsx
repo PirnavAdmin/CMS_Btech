@@ -16,6 +16,8 @@ import {
   updateDepartment,
   updateDepartmentStatus,
 } from '../../auth/collegeApi';
+import { studentApi } from '../../api/apiEndpoints';
+import { showDeactivationBlocked } from '../../components/DeactivationBlockedDialog';
 import {
   FiEye,
   FiEdit2,
@@ -222,9 +224,23 @@ export default function DepartmentManagement() {
     }
   };
 
-  const toggleStatus = (item) => {
+  const toggleStatus = async (item) => {
     setError('');
-    setPendingStatus({ item, nextStatus: item.status === 'Active' ? 'Inactive' : 'Active' });
+    const nextStatus = item.status === 'Active' ? 'Inactive' : 'Active';
+    if (nextStatus === 'Inactive') {
+      try {
+        const students = await studentApi.getAll();
+        const associated = students.filter((student) => String(student.departmentId ?? student.department?.id ?? student.academic?.departmentId ?? student.academicInformation?.departmentId ?? '') === String(item.id));
+        if (associated.length > 0) {
+          showDeactivationBlocked(`Cannot deactivate ${item.name}. ${associated.length} student${associated.length === 1 ? '' : 's'} are associated with this department.`);
+          return;
+        }
+      } catch (requestError) {
+        setError(apiError(requestError, 'Unable to verify associated students. The department was not deactivated.'));
+        return;
+      }
+    }
+    setPendingStatus({ item, nextStatus });
   };
 
   const confirmStatusChange = async () => {

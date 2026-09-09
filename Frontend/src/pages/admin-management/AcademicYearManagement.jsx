@@ -8,7 +8,8 @@ import FilterPanel from '../../components/FilterPanel';
 import TablePagination, { PAGE_SIZE } from '../../components/TablePagination';
 import StatusConfirmDialog from '../../components/StatusConfirmDialog';
 import InfoCard from '../../components/InfoCard';
-import { academicYearApi } from '../../api/apiEndpoints';
+import { academicYearApi, studentApi } from '../../api/apiEndpoints';
+import { showDeactivationBlocked } from '../../components/DeactivationBlockedDialog';
 import { FiCheckCircle, FiEye, FiEdit2, FiToggleLeft, FiToggleRight, FiPlus, FiCalendar, FiClock, FiSearch } from 'react-icons/fi';
 import './AcademicYearManagement.css';
 
@@ -217,6 +218,22 @@ export default function AcademicYear() {
     } finally {
       setSaving(false);
     }
+  }
+
+  async function requestStatusChange(year, targetStatus) {
+    if (targetStatus === 'ARCHIVED') {
+      try {
+        const students = await studentApi.getAll({ AcademicYearId: Number(year.id) });
+        if (students.length > 0) {
+          showDeactivationBlocked(`Cannot deactivate ${year.name}. ${students.length} student${students.length === 1 ? '' : 's'} are associated with this academic year.`);
+          return;
+        }
+      } catch (error) {
+        setNotice(error.message || 'Unable to verify associated students. The academic year was not deactivated.', 'error');
+        return;
+      }
+    }
+    setConfirmStatus({ year, targetStatus });
   }
 
   async function generate() {
@@ -467,7 +484,7 @@ export default function AcademicYear() {
                                 className="table-action-btn action-activate erp-action-btn erp-action-btn--success"
                                 title={`Activate ${x.name || 'Academic Year'}`}
                                 aria-label={`Activate ${x.name || 'Academic Year'}`}
-                                onClick={() => setConfirmStatus({ year: x, targetStatus: 'ACTIVE' })}
+                                onClick={() => requestStatusChange(x, 'ACTIVE')}
                               >
                                 <FiToggleLeft />
                               </button>
@@ -478,7 +495,7 @@ export default function AcademicYear() {
                                 className="table-action-btn action-deactivate erp-action-btn erp-action-btn--danger"
                                 title={`Deactivate ${x.name || 'Academic Year'}`}
                                 aria-label={`Deactivate ${x.name || 'Academic Year'}`}
-                                onClick={() => setConfirmStatus({ year: x, targetStatus: 'ARCHIVED' })}
+                                onClick={() => requestStatusChange(x, 'ARCHIVED')}
                               >
                                 <FiToggleRight />
                               </button>

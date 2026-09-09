@@ -29,6 +29,7 @@ import {
   WEBSITE_VALIDATION_MESSAGE,
 } from '../../auth/collegeApi'
 import { studentApi } from '../../api/apiEndpoints'
+import { showDeactivationBlocked } from '../../components/DeactivationBlockedDialog'
 import './CollegeInstitutionManagement.css'
 
 const COLLEGE_TYPES = ['Engineering', 'Arts & Science', 'Medical', 'Management', 'Polytechnic', 'Other']
@@ -553,28 +554,40 @@ export default function CollegeInstitutionManagement({ initialView = 'list' }) {
   }
 
   const loadCollegeImpact = async (collegeId) => {
-    setCollegeImpact({ state: 'loading' })
     try {
       const students = await studentApi.getAll({ CollegeId: Number(collegeId) })
-      setCollegeImpact({ state: 'known', count: students.length })
-    } catch {
-      setCollegeImpact({ state: 'unavailable' })
+      return students.length
+    } catch (error) {
+      throw new Error(getApiErrorMessage(error, 'Unable to verify associated students. The college was not deactivated.'))
     }
   }
 
-  const toggleStatus = (college) => {
+  const toggleStatus = async (college) => {
     if (statusLock.current) return
     setStatusError('')
     setStatusNotice('')
     const nextStatus = college.status === 'active' ? 'inactive' : 'active'
-    setPendingStatus({ college, nextStatus })
     setCollegeImpact(null)
-    if (nextStatus === 'inactive') loadCollegeImpact(college.id)
+    if (nextStatus === 'inactive') {
+      try {
+        const count = await loadCollegeImpact(college.id)
+        setCollegeImpact({ state: 'known', count })
+      } catch (error) {
+        showDeactivationBlocked(error.message)
+        return
+      }
+    }
+    setPendingStatus({ college, nextStatus })
   }
   const confirmStatusChange = async () => {
     if (!pendingStatus || statusLock.current) return
     statusLock.current = true
     const { college, nextStatus } = pendingStatus
+    if (nextStatus === 'inactive' && collegeImpact?.state === 'known' && collegeImpact.count > 0) {
+      setPendingStatus(null)
+      showDeactivationBlocked(`Cannot deactivate ${college.name}. ${collegeImpact.count} student${collegeImpact.count === 1 ? '' : 's'} are associated with this college.`)
+      return
+    }
     setIsStatusSaving(true)
     setStatusError('')
     try {
@@ -1317,11 +1330,11 @@ export default function CollegeInstitutionManagement({ initialView = 'list' }) {
         details={[
           ['College', pendingStatus.college.name],
           ['Current Status', pendingStatus.college.status === 'active' ? 'Active' : 'Inactive'],
-          ...(pendingStatus.nextStatus === 'inactive' ? [['Associated Students', collegeImpact?.state === 'loading' ? 'Checking…' : collegeImpact?.state === 'known' ? `${collegeImpact.count} student${collegeImpact.count === 1 ? '' : 's'}` : 'Could not load the student count'], ['Impact', 'Existing students and records associated with this college may remain available after deactivation.']] : []),
+          ...(pendingStatus.nextStatus === 'inactive' ? [['Associated Students', `${collegeImpact?.count ?? 0} student${collegeImpact?.count === 1 ? '' : 's'}`], ['Impact', collegeImpact?.count > 0 ? 'Students are associated with this college. Deactivation will be checked when you continue.' : 'No students are associated with this college, so it can be deactivated.']] : []),
         ]}
         description={pendingStatus.nextStatus === 'active'
           ? 'This college will become active again for operations permitted for active colleges.'
-          : 'This action requests a college status change. The current API does not confirm how deactivation affects access to existing records or new admissions.'} />}
+          : 'This college has no associated students and will be marked inactive.'} />}
     </DashboardLayout>
   )
 }

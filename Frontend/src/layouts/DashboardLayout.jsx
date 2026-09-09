@@ -4,6 +4,7 @@ import { FiLock, FiLogOut, FiMenu, FiMoon, FiSearch, FiSun, FiUser } from 'react
 import { getUserRole, signOut } from '../auth/auth'
 import { changePassword, profileApi } from '../api/apiEndpoints'
 import Sidebar from '../components/Sidebar'
+import DeactivationBlockedDialog from '../components/DeactivationBlockedDialog'
 import './DashboardLayout.css'
 import './AccountMenu.css'
 
@@ -302,6 +303,7 @@ export default function DashboardLayout({ children }) {
         </header>
 
         <section className="page-content"><nav className="app-breadcrumb" aria-label="Breadcrumb"><Link to="/dashboard">Home</Link><span aria-hidden="true">/</span><span>{breadcrumbSection}</span>{pageName !== breadcrumbSection && <><span aria-hidden="true">/</span><strong>{pageName}</strong></>}</nav>{children}</section>
+        <DeactivationBlockedDialog />
 
         {/* Logout Confirmation Modal */}
         {showLogoutConfirmation && (
