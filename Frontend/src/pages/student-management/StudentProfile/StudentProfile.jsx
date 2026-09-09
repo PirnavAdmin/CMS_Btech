@@ -593,8 +593,6 @@ export default function StudentProfile() {
       course: "",
       branch: "",
       academicYear: "",
-      semester: "",
-      section: "",
       status: "",
     }),
     [page, setPage] = useState(1),
@@ -718,13 +716,9 @@ export default function StudentProfile() {
         Object.assign(updated, {
           course: "",
           branch: "",
-          semester: "",
-          section: "",
         });
       if (key === "course")
-        Object.assign(updated, { branch: "", semester: "", section: "" });
-      if (key === "branch")
-        Object.assign(updated, { semester: "", section: "" });
+        Object.assign(updated, { branch: "" });
       return updated;
     });
   const openProfile = async (id) => {
@@ -883,8 +877,6 @@ export default function StudentProfile() {
                   course: "",
                   branch: "",
                   academicYear: "",
-                  semester: "",
-                  section: "",
                   status: "",
                 });
                 setPage(1);
@@ -907,8 +899,6 @@ export default function StudentProfile() {
                   ["course", "Course"],
                   ["branch", "Branch"],
                   ["academicYear", "Academic year"],
-                  ["semester", "Semester"],
-                  ["section", "Section"],
                   ["status", "Status"],
                 ].map(([key, label]) => (
                   <label key={key}>
@@ -1063,8 +1053,6 @@ export default function StudentProfile() {
                       course: "",
                       branch: "",
                       academicYear: "",
-                      semester: "",
-                      section: "",
                       status: "",
                     });
                   }}

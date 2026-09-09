@@ -11,17 +11,53 @@ export function validateDemo(v) {
   if (v.fullName.trim().length < 2 || !/^\p{L}[\p{L}\p{M} .?'-]*$/u.test(v.fullName.trim())) errors.fullName = 'Enter your full name (at least 2 characters).'
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v.email.trim())) errors.email = 'Enter a valid work or college email.'
   if (!/^[6-9]\d{9}$/.test(v.mobile.trim())) errors.mobile = 'Enter a 10-digit Indian mobile number starting with 6–9.'
-  if (v.role && !demoRoles.includes(v.role)) errors.role = 'Select your role.'
+  if (!v.institution.trim()) errors.institution = 'Enter your organization or college name.'
+  if (!demoRoles.includes(v.role)) errors.role = 'Select your role.'
   if (v.role === 'Other' && !v.otherRole.trim()) errors.otherRole = 'Enter your designation.'
   if (v.studentCount !== '' && (!Number.isInteger(Number(v.studentCount)) || Number(v.studentCount) < 1)) errors.studentCount = 'Enter a positive whole number.'
   if (v.preferredDate && (!/^\d{4}-\d{2}-\d{2}$/.test(v.preferredDate) || v.preferredDate < demoToday())) errors.preferredDate = 'Choose today or a future date.'
   if (!v.consent) errors.consent = 'Please agree to be contacted about your demo.'
-  if (v.message.trim().length < 10 || v.message.trim().length > 1000) errors.message = 'Enter a message between 10 and 1,000 characters.'
   return errors
 }
 export async function submitDemoRequest(request) {
   if (Object.keys(validateDemo({ ...request, studentCount: request.studentCount ?? '' })).length) throw new Error('Please check your details and try again.')
-  // Connect only after the endpoint and payload contract are confirmed.
-  // No guessed endpoint, fake confirmation, or persistence of contact details.
-  throw new Error('Online enquiries are currently unavailable. Your request has not been sent. Please try again later.')
+  const values = normalizeDemo(request)
+  const controller = new AbortController()
+  const timeout = setTimeout(() => controller.abort(), 30000)
+  try {
+    const response = await fetch(demoRequestUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Accept: 'application/json', 'ngrok-skip-browser-warning': 'true' },
+      signal: controller.signal,
+      body: JSON.stringify({
+        fullName: values.fullName,
+        email: values.email,
+        mobile: values.mobile,
+        institutionName: values.institution,
+        role: values.role === 'Other' ? values.otherRole : values.role,
+        city: values.city || null,
+        state: values.state || null,
+        numberOfStudents: values.studentCount,
+        agreeToContact: values.consent,
+      }),
+    })
+    const text = await response.text()
+    let body = null
+    try { body = text ? JSON.parse(text) : null } catch { /* Reject unexpected proxy or HTML responses below. */ }
+    if (!response.ok || body?.success === false || body?.isSuccess === false) {
+      const errors = body?.errors
+      const details = errors && typeof errors === 'object' ? Object.values(errors).flat().filter(value => typeof value === 'string').join(' ') : ''
+      throw new Error(details || body?.message || body?.detail || body?.title || 'Unable to submit your demo request. Please try again.')
+    }
+    if (response.status !== 204 && (!body || typeof body !== 'object')) throw new Error('Your request could not be confirmed. Please try again later.')
+    const data = body?.data ?? body
+    return { success: true, reference: data?.reference || data?.requestId || data?.id }
+  } catch (error) {
+    if (error.name === 'AbortError') throw new Error('The request timed out. Please try again shortly.')
+    if (error instanceof TypeError) throw new Error('Unable to connect. Please check your connection and try again.')
+    throw error
+  } finally {
+    clearTimeout(timeout)
+  }
 }
+const demoRequestUrl = `${import.meta.env.DEV ? '' : (import.meta.env.VITE_API_BASE_URL || '').trim().replace(/\/+$/, '')}/api/v1/demo-requests`
