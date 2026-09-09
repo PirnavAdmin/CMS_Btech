@@ -31,6 +31,7 @@ import Faculty from './pages/faculty/Faculty'
 import { AcademicProvider } from './context/AcademicContext'
 import './styles/erp-theme.css'
 import './App.css'
+import './styles/details-layout.css'
 
 class AppErrorBoundary extends Component {
   constructor(props) {

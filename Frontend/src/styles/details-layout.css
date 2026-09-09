@@ -1,0 +1,855 @@
+/* Shared read-only details layout. Form controls use separate classes and are unaffected. */
+.cm-profile-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+  padding: 20px 24px;
+}
+
+.cm-profile-grid > .cm-info-card:only-child {
+  grid-column: 1 / -1;
+}
+
+/* View modules have older, more specific single-column rules. */
+.cm-profile-view .cm-profile-grid,
+.department-profile-view .cm-profile-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.cm-profile-view .cm-profile-grid > .cm-info-card:only-child,
+.department-profile-view .cm-profile-grid > .cm-info-card:only-child {
+  grid-column: 1 / -1;
+}
+
+.cm-info-card {
+  min-width: 0;
+  padding: 16px 18px;
+  border: 1px solid var(--border, #dbe4eb);
+  border-radius: 12px;
+  background: var(--surface, #fff);
+  box-shadow: var(--shadow-sm, 0 2px 8px rgba(15, 42, 66, .06));
+}
+
+.cm-info-card-header {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin: 0 0 8px;
+  padding: 0 0 11px;
+  border-bottom: 1px solid var(--border, #dbe4eb);
+  color: var(--brand, #176fae);
+}
+
+.cm-info-card-header h2 {
+  margin: 0;
+  color: var(--text-primary, #132a3e);
+  font-size: .96rem;
+  font-weight: 750;
+}
+
+.cm-info-rows {
+  display: grid;
+  gap: 0;
+  overflow: visible;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+}
+
+.cm-info-row {
+  display: grid;
+  grid-template-columns: minmax(140px, 34%) minmax(0, 1fr);
+  align-items: start;
+  gap: 20px;
+  min-height: 0;
+  padding: 9px 0;
+  border: 0;
+  border-bottom: 1px solid var(--border, #dbe4eb);
+  font-size: .82rem;
+  line-height: 1.4;
+}
+
+.cm-info-row:last-child {
+  border-bottom: 0;
+}
+
+.cm-info-label {
+  min-width: 0;
+  color: var(--text-muted, #6d8294);
+  font-size: .76rem;
+  font-weight: 700;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.cm-info-val {
+  min-width: 0;
+  color: var(--text-primary, #132a3e);
+  font-size: .84rem;
+  font-weight: 650;
+  text-align: left;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+/* The College module has legacy selectors with higher specificity than the shared base. */
+.cm-profile-view .cm-info-card .cm-info-rows {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0;
+  overflow: visible;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+}
+
+.cm-profile-view .cm-info-card .cm-info-row,
+.cm-profile-view .cm-info-card .cm-info-row:nth-child(2n),
+.cm-profile-view .cm-info-card .cm-info-row:nth-child(3n) {
+  display: grid;
+  grid-template-columns: minmax(140px, 34%) minmax(0, 1fr);
+  align-items: start;
+  gap: 20px;
+  min-height: 0;
+  padding: 9px 0;
+  border: 0;
+  border-bottom: 1px solid var(--border, #dbe4eb);
+  background: transparent;
+}
+
+.cm-profile-view .cm-info-card .cm-info-row:last-child {
+  border-bottom: 0;
+}
+
+.cm-profile-view .cm-info-card .cm-info-label {
+  color: var(--text-muted, #6d8294);
+  font-size: .76rem;
+  font-weight: 700;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.cm-profile-view .cm-info-card .cm-info-val {
+  min-width: 0;
+  color: var(--text-primary, #132a3e);
+  font-size: .84rem;
+  font-weight: 650;
+  text-align: left;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.details-status-badge {
+  display: inline-flex;
+  align-items: center;
+  min-height: 23px;
+  padding: 3px 9px;
+  border-radius: 999px;
+  color: #087443;
+  background: #dff7ec;
+  font-size: .68rem;
+  font-weight: 800;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+.details-status-badge.inactive,
+.details-status-badge.ineligible,
+.details-status-badge.rejected {
+  color: #a33a2b;
+  background: #fde8e5;
+}
+
+.details-status-badge.upcoming,
+.details-status-badge.pending {
+  color: #9a5b00;
+  background: #fff2d6;
+}
+
+:root[data-theme="dark"] .details-status-badge {
+  color: #69d6aa;
+  background: #123c34;
+}
+
+:root[data-theme="dark"] .details-status-badge.inactive,
+:root[data-theme="dark"] .details-status-badge.ineligible,
+:root[data-theme="dark"] .details-status-badge.rejected {
+  color: #ffaaa0;
+  background: #482622;
+}
+
+:root[data-theme="dark"] .details-status-badge.upcoming,
+:root[data-theme="dark"] .details-status-badge.pending {
+  color: #efbd6f;
+  background: #3a2c18;
+}
+
+@media (max-width: 760px) {
+  .cm-profile-grid {
+    grid-template-columns: 1fr;
+    gap: 14px;
+    padding: 16px;
+  }
+
+  .cm-profile-grid > .cm-info-card:only-child {
+    grid-column: auto;
+  }
+
+  .cm-profile-view .cm-profile-grid,
+  .department-profile-view .cm-profile-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .cm-info-row {
+    grid-template-columns: minmax(110px, 38%) minmax(0, 1fr);
+    gap: 14px;
+  }
+
+  .cm-profile-view .cm-info-card .cm-info-row,
+  .cm-profile-view .cm-info-card .cm-info-row:nth-child(2n),
+  .cm-profile-view .cm-info-card .cm-info-row:nth-child(3n) {
+    grid-template-columns: minmax(110px, 38%) minmax(0, 1fr);
+    gap: 14px;
+  }
+}
+
+/* Custom tabbed detail views use their own class names but share the same surface. */
+.student-admission .sa-detail-card,
+.student-profile .sp-panel {
+  border: 1px solid var(--border, #dbe4eb);
+  border-radius: 14px;
+  background: var(--surface, #fff);
+  box-shadow: var(--shadow-sm, 0 2px 8px rgba(15, 42, 66, .06));
+}
+
+.student-admission .sa-detail-card {
+  padding: 20px;
+}
+
+.student-admission .sa-detail-card .sa-detail-panel,
+.student-admission .sa-review-section,
+.student-profile .sp-info-grid {
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+  background: transparent;
+}
+
+.student-admission .sa-detail-card .sa-detail-panel + .sa-detail-panel,
+.student-admission .sa-review-section + .sa-review-section {
+  margin-top: 18px;
+  padding-top: 18px;
+  border-top: 1px solid var(--border, #dbe4eb);
+}
+
+.student-admission .sa-detail-card .sa-detail-panel > header,
+.student-admission .sa-review-section > header {
+  padding: 0 0 10px;
+  border-bottom: 1px solid var(--border, #dbe4eb);
+  background: transparent;
+}
+
+.student-admission .sa-detail-card .sa-detail-panel > dl,
+.student-admission .sa-review-section dl,
+.student-profile .sp-info-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  column-gap: 32px;
+  row-gap: 12px;
+  padding: 12px 0 0;
+}
+
+.student-admission .sa-detail-card .sa-detail-panel > dl > div,
+.student-admission .sa-review-section dl > div,
+.student-profile .sp-info-grid > div {
+  grid-template-columns: 1fr;
+  gap: 4px;
+  padding: 0;
+  border: 0 !important;
+}
+
+@media (max-width: 760px) {
+  .student-admission .sa-detail-card {
+    padding: 16px;
+  }
+
+  .student-admission .sa-detail-card .sa-detail-panel + .sa-detail-panel,
+  .student-admission .sa-review-section + .sa-review-section {
+    margin-top: 14px;
+    padding-top: 14px;
+  }
+
+  .student-admission .sa-detail-card .sa-detail-panel > dl,
+  .student-admission .sa-review-section dl,
+  .student-profile .sp-info-grid {
+    grid-template-columns: 1fr;
+    row-gap: 10px;
+  }
+}
+
+/* Unified entity details surface: sections flow in one profile workspace. */
+.cm-profile-view .cm-profile-card,
+.department-profile-view .department-profile-card {
+  overflow: hidden;
+  border: 1px solid var(--border, #dbe4eb);
+  border-radius: 14px;
+  background: var(--surface, #fff);
+  box-shadow: var(--shadow-sm, 0 2px 8px rgba(15, 42, 66, .06));
+}
+
+.cm-profile-view .cm-profile-grid,
+.department-profile-view .cm-profile-grid {
+  display: block;
+  padding: 20px 24px;
+  background: var(--surface, #fff);
+}
+
+.cm-profile-view .cm-profile-grid > .cm-info-card,
+.department-profile-view .cm-profile-grid > .cm-info-card {
+  border: 0;
+  border-radius: 0;
+  padding: 0 0 18px;
+  box-shadow: none;
+  background: transparent;
+}
+
+.cm-profile-view .cm-profile-grid > .cm-info-card + .cm-info-card,
+.department-profile-view .cm-profile-grid > .cm-info-card + .cm-info-card {
+  margin-top: 18px;
+  padding-top: 18px;
+  border-top: 1px solid var(--border, #dbe4eb);
+}
+
+.cm-profile-view .cm-profile-grid > .cm-info-card .cm-info-card-header,
+.department-profile-view .cm-profile-grid > .cm-info-card .cm-info-card-header {
+  margin-bottom: 12px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--border, #dbe4eb);
+}
+
+.cm-profile-view .cm-profile-grid > .cm-info-card .cm-info-rows,
+.department-profile-view .cm-profile-grid > .cm-info-card .cm-info-rows {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  column-gap: 32px;
+  row-gap: 12px;
+}
+
+.cm-profile-view .cm-profile-grid > .cm-info-card .cm-info-row,
+.cm-profile-view .cm-profile-grid > .cm-info-card .cm-info-row:nth-child(2n),
+.cm-profile-view .cm-profile-grid > .cm-info-card .cm-info-row:nth-child(3n),
+.department-profile-view .cm-profile-grid > .cm-info-card .cm-info-row,
+.department-profile-view .cm-profile-grid > .cm-info-card .cm-info-row:nth-child(2n),
+.department-profile-view .cm-profile-grid > .cm-info-card .cm-info-row:nth-child(3n) {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 4px;
+  padding: 0;
+  border: 0 !important;
+  background: transparent;
+}
+
+@media (max-width: 760px) {
+  .cm-profile-view .cm-profile-grid,
+  .department-profile-view .cm-profile-grid {
+    padding: 16px;
+  }
+
+  .cm-profile-view .cm-profile-grid > .cm-info-card + .cm-info-card,
+  .department-profile-view .cm-profile-grid > .cm-info-card + .cm-info-card {
+    margin-top: 14px;
+    padding-top: 14px;
+  }
+
+  .cm-profile-view .cm-profile-grid > .cm-info-card .cm-info-rows,
+  .department-profile-view .cm-profile-grid > .cm-info-card .cm-info-rows {
+    grid-template-columns: 1fr;
+    row-gap: 10px;
+  }
+}
+
+/* Shared compact density tokens. Keep this block last so module legacy rules cannot
+   reintroduce large gaps or fixed-height detail cards. */
+.cm-profile-view,
+.department-profile-view,
+.student-admission,
+.student-profile,
+.student-promotion {
+  --details-section-gap: 14px;
+  --details-card-padding: 16px;
+  --details-field-row-gap: 12px;
+  --details-column-gap: 28px;
+  --details-label-gap: 4px;
+}
+
+.cm-profile-view .cm-profile-grid,
+.department-profile-view .cm-profile-grid {
+  gap: var(--details-section-gap);
+  padding: var(--details-card-padding);
+}
+
+.cm-profile-view .cm-info-card,
+.department-profile-view .cm-info-card {
+  padding: var(--details-card-padding);
+}
+
+.cm-profile-view .cm-info-card .cm-info-card-header,
+.department-profile-view .cm-info-card .cm-info-card-header {
+  margin-bottom: 10px;
+  padding-bottom: 9px;
+}
+
+.cm-profile-view .cm-info-card .cm-info-rows,
+.department-profile-view .cm-info-card .cm-info-rows {
+  row-gap: var(--details-field-row-gap);
+}
+
+.cm-profile-view .cm-info-card .cm-info-row,
+.cm-profile-view .cm-info-card .cm-info-row:nth-child(2n),
+.cm-profile-view .cm-info-card .cm-info-row:nth-child(3n),
+.department-profile-view .cm-info-card .cm-info-row,
+.department-profile-view .cm-info-card .cm-info-row:nth-child(2n),
+.department-profile-view .cm-info-card .cm-info-row:nth-child(3n) {
+  gap: var(--details-label-gap);
+  min-height: 0;
+  padding: 7px 12px 8px 0;
+}
+
+.department-details__grid,
+.student-admission .sa-detail-panel > dl,
+.student-admission .sa-review-section dl,
+.student-admission .sa-info-grid,
+.student-profile .sp-info-grid {
+  column-gap: var(--details-column-gap);
+  row-gap: var(--details-field-row-gap);
+}
+
+.department-details__grid > div,
+.student-admission .sa-detail-panel > dl > div,
+.student-admission .sa-review-section dl > div,
+.student-admission .sa-info-grid > div,
+.student-profile .sp-info-grid > div {
+  gap: var(--details-label-gap);
+  min-height: 0;
+  padding: 7px 0 8px;
+}
+
+/* Keep the profile banner close to its first details card. */
+.cm-profile-view .cm-profile-banner + .cm-profile-grid,
+.department-profile-view .cm-profile-banner + .cm-profile-grid,
+.student-profile .sp-hero + .sp-tabs,
+.student-admission .sa-profile-header + .sa-tabs {
+  margin-top: 0;
+}
+
+@media (max-width: 760px) {
+  .cm-profile-view .cm-profile-grid,
+  .department-profile-view .cm-profile-grid {
+    gap: 12px;
+    padding: 14px;
+  }
+
+  .cm-profile-view .cm-info-card,
+  .department-profile-view .cm-info-card {
+    padding: 14px 16px;
+  }
+
+  .department-details__grid,
+  .student-admission .sa-detail-panel > dl,
+  .student-admission .sa-review-section dl,
+  .student-admission .sa-info-grid,
+  .student-profile .sp-info-grid {
+    column-gap: 0;
+    row-gap: 0;
+  }
+
+  .department-details__grid > div,
+  .student-admission .sa-detail-panel > dl > div,
+  .student-admission .sa-review-section dl > div,
+  .student-admission .sa-info-grid > div,
+  .student-profile .sp-info-grid > div {
+    padding: 6px 0 8px;
+  }
+}
+
+@media (max-width: 480px) {
+  .cm-info-row {
+    grid-template-columns: 1fr;
+    gap: 3px;
+    padding: 8px 0;
+  }
+
+  .cm-profile-view .cm-info-card .cm-info-row,
+  .cm-profile-view .cm-info-card .cm-info-row:nth-child(2n),
+  .cm-profile-view .cm-info-card .cm-info-row:nth-child(3n) {
+    grid-template-columns: 1fr;
+    gap: 3px;
+    padding: 8px 0;
+  }
+}
+
+/* Legacy view-only grids that do not use InfoCard yet. */
+.department-details__grid,
+.student-admission .sa-detail-panel > dl,
+.student-admission .sa-review-section dl,
+.student-admission .sa-info-grid,
+.student-profile .sp-info-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0;
+  overflow: visible;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+}
+
+.department-details__grid > div,
+.student-admission .sa-detail-panel > dl > div,
+.student-admission .sa-review-section dl > div,
+.student-admission .sa-info-grid > div,
+.student-profile .sp-info-grid > div {
+  display: grid;
+  grid-template-columns: minmax(140px, 34%) minmax(0, 1fr);
+  align-items: start;
+  gap: 20px;
+  min-height: 0;
+  padding: 9px 0;
+  border: 0;
+  border-bottom: 1px solid var(--border, #dbe4eb);
+  background: transparent;
+}
+
+.department-details__grid > div:last-child,
+.student-admission .sa-detail-panel > dl > div:last-child,
+.student-admission .sa-review-section dl > div:last-child,
+.student-admission .sa-info-grid > div:last-child,
+.student-profile .sp-info-grid > div:last-child {
+  border-bottom: 0;
+}
+
+.department-details__grid span,
+.student-admission .sa-detail-panel dt,
+.student-admission .sa-review-section dt,
+.student-admission .sa-info-grid dt,
+.student-profile .sp-info-grid dt {
+  color: var(--text-muted);
+  font-size: .76rem;
+  font-weight: 700;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.department-details__grid strong,
+.student-admission .sa-detail-panel dd,
+.student-admission .sa-review-section dd,
+.student-admission .sa-info-grid dd,
+.student-profile .sp-info-grid dd {
+  min-width: 0;
+  margin: 0;
+  color: var(--text-primary);
+  font-size: .84rem;
+  font-weight: 650;
+  text-align: left;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+@media (max-width: 480px) {
+  .department-details__grid > div,
+  .student-admission .sa-detail-panel > dl > div,
+  .student-admission .sa-review-section dl > div,
+  .student-admission .sa-info-grid > div,
+  .student-profile .sp-info-grid > div {
+    grid-template-columns: 1fr;
+    gap: 3px;
+  }
+}
+
+/* Compact the detail cards by placing two read-only fields on each desktop row. */
+.cm-profile-view .cm-info-card .cm-info-rows {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  column-gap: 0;
+}
+
+.cm-profile-view .cm-info-card .cm-info-row,
+.cm-profile-view .cm-info-card .cm-info-row:nth-child(2n),
+.cm-profile-view .cm-info-card .cm-info-row:nth-child(3n) {
+  grid-template-columns: 1fr;
+  gap: 4px;
+  padding: 9px 14px;
+  border-right: 1px solid var(--border, #dbe4eb);
+  border-bottom: 1px solid var(--border, #dbe4eb);
+}
+
+.cm-profile-view .cm-info-card .cm-info-row:nth-child(2n) {
+  border-right: 0;
+}
+
+.cm-profile-view .cm-info-card .cm-info-row:nth-last-child(-n + 2) {
+
+/* Authoritative view system: one surface, natural sections, no dashboard cards. */
+.cm-profile-view .cm-profile-card,
+.department-profile-view .department-profile-card,
+.student-admission .sa-detail-card,
+.student-profile .sp-panel {
+  border: 1px solid var(--border, #dbe4eb) !important;
+  border-radius: 14px;
+  background: var(--surface, #fff);
+  box-shadow: var(--shadow-sm, 0 2px 8px rgba(15, 42, 66, .06));
+}
+
+.cm-profile-view .cm-profile-grid,
+.department-profile-view .cm-profile-grid {
+  display: block;
+  padding: 20px 24px !important;
+  background: var(--surface, #fff);
+}
+
+.cm-profile-view .cm-profile-grid > .cm-info-card,
+.department-profile-view .cm-profile-grid > .cm-info-card {
+  display: block;
+  min-height: 0;
+  margin: 0;
+  padding: 0 0 18px !important;
+  border: 0 !important;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.cm-profile-view .cm-profile-grid > .cm-info-card + .cm-info-card,
+.department-profile-view .cm-profile-grid > .cm-info-card + .cm-info-card {
+  margin-top: 18px;
+  padding-top: 18px !important;
+  border-top: 1px solid var(--border, #dbe4eb) !important;
+}
+
+.cm-profile-view .cm-profile-grid > .cm-info-card .cm-info-card-header,
+.department-profile-view .cm-profile-grid > .cm-info-card .cm-info-card-header {
+  margin: 0 0 12px;
+  padding: 0 0 10px;
+  border-bottom: 1px solid var(--border, #dbe4eb);
+}
+
+.cm-profile-view .cm-profile-grid > .cm-info-card .cm-info-rows,
+.department-profile-view .cm-profile-grid > .cm-info-card .cm-info-rows {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  column-gap: 32px;
+  row-gap: 14px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+}
+
+.cm-profile-view .cm-profile-grid > .cm-info-card .cm-info-row,
+.cm-profile-view .cm-profile-grid > .cm-info-card .cm-info-row:nth-child(2n),
+.cm-profile-view .cm-profile-grid > .cm-info-card .cm-info-row:nth-child(3n),
+.department-profile-view .cm-profile-grid > .cm-info-card .cm-info-row,
+.department-profile-view .cm-profile-grid > .cm-info-card .cm-info-row:nth-child(2n),
+.department-profile-view .cm-profile-grid > .cm-info-card .cm-info-row:nth-child(3n) {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 4px;
+  min-height: 0;
+  padding: 0;
+  border: 0 !important;
+  background: transparent;
+}
+
+.student-admission .sa-detail-card,
+.student-profile .sp-panel {
+  padding: 20px !important;
+}
+
+.student-admission .sa-detail-card .sa-detail-panel,
+.student-admission .sa-review-section,
+.student-profile .sp-info-grid {
+  margin: 0;
+  padding: 0;
+  border: 0 !important;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.student-admission .sa-detail-card .sa-detail-panel + .sa-detail-panel,
+.student-admission .sa-review-section + .sa-review-section {
+  margin-top: 18px;
+  padding-top: 18px;
+  border-top: 1px solid var(--border, #dbe4eb) !important;
+}
+
+.student-admission .sa-detail-card .sa-detail-panel > header,
+.student-admission .sa-review-section > header {
+  margin: 0 0 12px;
+  padding: 0 0 10px;
+  border-bottom: 1px solid var(--border, #dbe4eb);
+  background: transparent;
+}
+
+.student-admission .sa-detail-card .sa-detail-panel > dl,
+.student-admission .sa-review-section dl,
+.student-profile .sp-info-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  column-gap: 32px;
+  row-gap: 14px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+}
+
+.student-admission .sa-detail-card .sa-detail-panel > dl > div,
+.student-admission .sa-review-section dl > div,
+.student-profile .sp-info-grid > div {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 4px;
+  min-height: 0;
+  padding: 0;
+  border: 0 !important;
+  background: transparent;
+}
+
+@media (max-width: 760px) {
+  .cm-profile-view .cm-profile-grid,
+  .department-profile-view .cm-profile-grid {
+    padding: 16px !important;
+  }
+
+  .cm-profile-view .cm-profile-grid > .cm-info-card + .cm-info-card,
+  .department-profile-view .cm-profile-grid > .cm-info-card + .cm-info-card,
+  .student-admission .sa-detail-card .sa-detail-panel + .sa-detail-panel,
+  .student-admission .sa-review-section + .sa-review-section {
+    margin-top: 14px;
+    padding-top: 14px !important;
+  }
+
+  .cm-profile-view .cm-profile-grid > .cm-info-card .cm-info-rows,
+  .department-profile-view .cm-profile-grid > .cm-info-card .cm-info-rows,
+  .student-admission .sa-detail-card .sa-detail-panel > dl,
+  .student-admission .sa-review-section dl,
+  .student-profile .sp-info-grid {
+    grid-template-columns: 1fr;
+    row-gap: 10px;
+  }
+
+  .student-admission .sa-detail-card,
+  .student-profile .sp-panel {
+    padding: 16px !important;
+  }
+}
+  border-bottom: 0;
+}
+
+@media (max-width: 760px) {
+  .cm-profile-view .cm-info-card .cm-info-rows {
+    grid-template-columns: 1fr;
+  }
+
+  .cm-profile-view .cm-info-card .cm-info-row,
+  .cm-profile-view .cm-info-card .cm-info-row:nth-child(2n),
+  .cm-profile-view .cm-info-card .cm-info-row:nth-child(3n) {
+    grid-template-columns: minmax(110px, 38%) minmax(0, 1fr);
+    gap: 14px;
+    padding: 9px 0;
+    border-right: 0;
+    border-bottom: 1px solid var(--border, #dbe4eb);
+  }
+
+  .cm-profile-view .cm-info-card .cm-info-row:last-child {
+    border-bottom: 0;
+  }
+}
+
+@media (max-width: 480px) {
+  .cm-profile-view .cm-info-card .cm-info-row,
+  .cm-profile-view .cm-info-card .cm-info-row:nth-child(2n),
+  .cm-profile-view .cm-info-card .cm-info-row:nth-child(3n) {
+    grid-template-columns: 1fr;
+    gap: 3px;
+    padding: 8px 0;
+  }
+}
+
+/* Final read-only treatment: whitespace separates fields, never cell borders. */
+.cm-profile-view .cm-info-card .cm-info-row,
+.cm-profile-view .cm-info-card .cm-info-row:nth-child(2n),
+.cm-profile-view .cm-info-card .cm-info-row:nth-child(3n),
+.department-details__grid > div,
+.student-admission .sa-detail-panel > dl > div,
+.student-admission .sa-review-section dl > div,
+.student-admission .sa-info-grid > div,
+.student-profile .sp-info-grid > div {
+  border: 0 !important;
+  border-right: 0 !important;
+  border-bottom: 0 !important;
+  background: transparent;
+}
+
+.cm-profile-view .cm-info-card .cm-info-row,
+.department-details__grid > div,
+.student-admission .sa-detail-panel > dl > div,
+.student-admission .sa-review-section dl > div,
+.student-admission .sa-info-grid > div,
+.student-profile .sp-info-grid > div {
+  grid-template-columns: 1fr;
+  gap: 5px;
+  min-height: 0;
+  padding: 9px 14px 12px 0;
+}
+
+.cm-profile-view .cm-info-card .cm-info-label,
+.department-details__grid span,
+.student-admission .sa-detail-panel dt,
+.student-admission .sa-review-section dt,
+.student-admission .sa-info-grid dt,
+.student-profile .sp-info-grid dt {
+  font-size: .72rem;
+  font-weight: 650;
+  letter-spacing: .01em;
+  text-transform: none;
+}
+
+.cm-profile-view .cm-info-card .cm-info-val,
+.department-details__grid strong,
+.student-admission .sa-detail-panel dd,
+.student-admission .sa-review-section dd,
+.student-admission .sa-info-grid dd,
+.student-profile .sp-info-grid dd {
+  font-size: .86rem;
+  font-weight: 700;
+  line-height: 1.45;
+  text-align: left;
+}
+
+.department-details__grid,
+.student-admission .sa-detail-panel > dl,
+.student-admission .sa-review-section dl,
+.student-admission .sa-info-grid,
+.student-profile .sp-info-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  column-gap: 28px;
+  row-gap: 12px;
+}
+
+@media (max-width: 760px) {
+  .department-details__grid,
+  .student-admission .sa-detail-panel > dl,
+  .student-admission .sa-review-section dl,
+  .student-admission .sa-info-grid,
+  .student-profile .sp-info-grid {
+    grid-template-columns: 1fr;
+    gap: 0;
+  }
+
+  .cm-profile-view .cm-info-card .cm-info-row,
+  .department-details__grid > div,
+  .student-admission .sa-detail-panel > dl > div,
+  .student-admission .sa-review-section dl > div,
+  .student-admission .sa-info-grid > div,
+  .student-profile .sp-info-grid > div {
+    grid-template-columns: 1fr;
+    padding: 8px 0 10px;
+  }
+}
