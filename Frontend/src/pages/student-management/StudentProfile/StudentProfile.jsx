@@ -29,6 +29,7 @@ import { hasRole } from "../../../auth/auth";
 import { ROLES } from "../../../auth/roles";
 import {
   studentDocumentApi,
+  studentPreviousEducationApi,
   studentProfilesApi,
 } from "../../../api/apiEndpoints";
 import StudentProfileEdit from "./StudentProfileEdit";
@@ -377,23 +378,35 @@ const profileFromApi = (x) => {
     admissionDate: "",
     ...x.application,
   };
+  const previousRaw = x.previousEducation || x.previousEducationDetails || {
+    tenth: x.ssc || x.tenthDetails,
+    qualifyingEducation: x.qualifyingEducation || x.intermediateDetails,
+  };
+  const tenthRaw = previousRaw.tenth || previousRaw.ssc || previousRaw.tenthDetails || {};
+  const intermediateRaw =
+    previousRaw.intermediate ||
+    previousRaw.qualifyingEducation ||
+    previousRaw.intermediateDetails ||
+    previousRaw.diploma ||
+    {};
   const previousEducation = {
     tenth: {
-      board: "",
-      institution: "",
-      rollNumber: "",
-      passingYear: "",
-      score: "",
+      board: tenthRaw.board ?? x.tenthBoard ?? "",
+      institution: tenthRaw.institution ?? tenthRaw.schoolName ?? x.tenthInstitution ?? "",
+      rollNumber: tenthRaw.rollNumber ?? tenthRaw.hallTicket ?? "",
+      passingYear: tenthRaw.passingYear ?? tenthRaw.yearOfPassing ?? "",
+      score: tenthRaw.score ?? tenthRaw.percentage ?? "",
+      ...tenthRaw,
     },
     intermediate: {
-      qualification: "",
-      board: "",
-      institution: "",
-      passingYear: "",
-      stream: "",
-      score: "",
+      qualification: intermediateRaw.qualification ?? intermediateRaw.educationLevel ?? "",
+      board: intermediateRaw.board ?? intermediateRaw.university ?? "",
+      institution: intermediateRaw.institution ?? intermediateRaw.collegeName ?? "",
+      passingYear: intermediateRaw.passingYear ?? intermediateRaw.yearOfPassing ?? "",
+      stream: intermediateRaw.stream ?? "",
+      score: intermediateRaw.score ?? intermediateRaw.percentage ?? "",
+      ...intermediateRaw,
     },
-    ...x.previousEducation,
   };
   const admission = {
     collegeId: x.collegeId ?? x.admission?.collegeId ?? "",
@@ -716,12 +729,15 @@ export default function StudentProfile() {
     url.searchParams.set("studentId", id);
     window.history.pushState({}, "", url);
     try {
-      const [preview, documentRows] = await Promise.all([
-        studentProfilesApi.preview(id),
+      const preview = await studentProfilesApi.preview(id);
+      const admissionId = preview.admissionId ?? preview.application?.admissionId ?? preview.admission?.admissionId;
+      const [documentRows, previousEducation] = await Promise.all([
         studentDocumentApi.getAll(id).catch(() => []),
+        admissionId ? studentPreviousEducationApi.get(admissionId).catch(() => null) : Promise.resolve(null),
       ]);
       const latest = profileFromApi({
         ...preview,
+        ...(previousEducation ? { previousEducation } : {}),
         documents: documentsFromApi(documentRows),
       });
       setStudents((current) => [
@@ -792,12 +808,19 @@ export default function StudentProfile() {
         "Student profile updated from the College Management System.",
       student,
     });
-    const [preview, documentRows] = await Promise.all([
-      studentProfilesApi.preview(student.id),
+    const admissionId = student.admissionId ?? student.application?.admissionId ?? student.admission?.admissionId;
+    if (admissionId && student.previousEducation) {
+      await studentPreviousEducationApi.update(admissionId, student.previousEducation);
+    }
+    const preview = await studentProfilesApi.preview(student.id);
+    const refetchAdmissionId = student.admissionId ?? student.application?.admissionId ?? student.admission?.admissionId;
+    const [documentRows, previousEducation] = await Promise.all([
       studentDocumentApi.getAll(student.id).catch(() => []),
+      refetchAdmissionId ? studentPreviousEducationApi.get(refetchAdmissionId).catch(() => null) : Promise.resolve(null),
     ]);
     const next = profileFromApi({
       ...preview,
+      ...(previousEducation ? { previousEducation } : {}),
       documents: documentsFromApi(documentRows),
     });
     if (student.personal?.photo) next.personal.photo = student.personal.photo;
@@ -1076,14 +1099,13 @@ export default function StudentProfile() {
     <DashboardLayout>
       <main className="student-profile">
         {notice && <Notice message={notice} close={() => setNotice("")} />}{" "}
-        {body}
-        {editing && (
+        {editing ? (
           <StudentProfileEdit
             student={editing}
             onCancel={() => setEditing(null)}
             onSave={saveStudent}
           />
-        )}
+        ) : body}
       </main>
     </DashboardLayout>
   );
@@ -1172,6 +1194,7 @@ function Profile({ student, tab, setTab, back, edit, canEdit }) {
       ["10th institution", previous.tenth?.institution],
       ["10th roll number", previous.tenth?.rollNumber],
       ["10th passing year", previous.tenth?.passingYear],
+      ["10th score type", previous.tenth?.scoreType],
       ["10th score", previous.tenth?.score],
       ["Qualification", previous.intermediate?.qualification],
       ["Board / University", previous.intermediate?.board],
@@ -1181,6 +1204,7 @@ function Profile({ student, tab, setTab, back, edit, canEdit }) {
       ],
       ["Passing year", previous.intermediate?.passingYear],
       ["Stream", previous.intermediate?.stream],
+      ["Score type", previous.intermediate?.scoreType],
       ["Score", previous.intermediate?.score],
     ],
     services: [

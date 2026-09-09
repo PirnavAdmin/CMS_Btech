@@ -30,3 +30,35 @@
 main.student-profile .sp-directory-table{min-width:900px!important;table-layout:auto!important}main.student-profile .sp-directory-table :is(th,td){width:auto!important;text-align:left!important;vertical-align:middle!important}main.student-profile .sp-directory-table th:last-child,main.student-profile .sp-directory-table td:last-child{text-align:center!important;white-space:nowrap}main.student-profile .sp-directory-table td:last-child>div{justify-content:center!important}
 /* Match the fixed, evenly spaced layout used by the academic management tables. */
 main.student-profile .sp-directory-table{width:100%;min-width:1040px!important;table-layout:fixed!important}main.student-profile .sp-directory-table th,main.student-profile .sp-directory-table td{box-sizing:border-box;text-align:left!important;vertical-align:middle!important}main.student-profile .sp-directory-table th:nth-child(1),main.student-profile .sp-directory-table td:nth-child(1){width:25%!important}main.student-profile .sp-directory-table th:nth-child(2),main.student-profile .sp-directory-table td:nth-child(2){width:38%!important}main.student-profile .sp-directory-table th:nth-child(3),main.student-profile .sp-directory-table td:nth-child(3){width:19%!important}main.student-profile .sp-directory-table th:nth-child(4),main.student-profile .sp-directory-table td:nth-child(4){width:10%!important}main.student-profile .sp-directory-table th:nth-child(5),main.student-profile .sp-directory-table td:nth-child(5){width:8%!important;text-align:center!important}main.student-profile .sp-directory-table td:nth-child(2) strong{overflow-wrap:anywhere}main.student-profile .sp-directory-table td:nth-child(3) strong,main.student-profile .sp-directory-table td:nth-child(3) small{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+/* Compact directory and keep the final action controls visible. */
+main.student-profile .sp-table-wrap{overflow-x:auto}
+main.student-profile .sp-directory-table{min-width:0!important;width:100%;table-layout:fixed!important}
+main.student-profile .sp-directory-table :is(th,td){padding:8px 9px!important}
+main.student-profile .sp-directory-table th:nth-child(1),main.student-profile .sp-directory-table td:nth-child(1){width:25%!important}
+main.student-profile .sp-directory-table th:nth-child(2),main.student-profile .sp-directory-table td:nth-child(2){width:32%!important}
+main.student-profile .sp-directory-table th:nth-child(3),main.student-profile .sp-directory-table td:nth-child(3){width:20%!important}
+main.student-profile .sp-directory-table th:nth-child(4),main.student-profile .sp-directory-table td:nth-child(4){width:13%!important}
+main.student-profile .sp-directory-table th:nth-child(5),main.student-profile .sp-directory-table td:nth-child(5){width:10%!important}
+main.student-profile .sp-directory-table td:last-child>div{display:flex;gap:5px;flex-wrap:nowrap;min-width:0}
+main.student-profile .sp-directory-table td:last-child .table-action-btn{width:30px!important;min-width:30px!important;height:30px!important;padding:0!important}
+main.student-profile .sp-tabs{overflow:visible;flex-wrap:wrap}
+main.student-profile .sp-tabs button{flex:1 1 125px;justify-content:center}
+@media(max-width:620px){main.student-profile .sp-directory-table{min-width:680px!important}main.student-profile .sp-tabs{overflow-x:auto;flex-wrap:nowrap}main.student-profile .sp-tabs button{flex:0 0 auto}}
+
+/* Header labels use the same centered grid as their row values. The legacy
+   pseudo-label caused the last heading to render as "ActionsActions". */
+main.student-profile .sp-directory-table thead th{text-align:center!important;vertical-align:middle!important}
+main.student-profile .sp-directory-table thead th:last-child::after{content:none!important;display:none!important}
+/* Profile editing is an inline professional page, not a modal popup. */
+.student-profile .sp-edit-page{width:100%;min-width:0}
+.student-profile .sp-edit-inline{position:relative;width:100%;max-width:none;max-height:none;min-height:0;overflow:visible;margin:0;border:1px solid var(--border);border-radius:var(--radius-md);background:var(--surface-raised);box-shadow:var(--shadow-sm)}
+.student-profile .sp-edit-inline>header{position:relative;top:auto;padding:20px 56px 17px 24px}
+.student-profile .sp-edit-inline .sp-edit-tabs{position:sticky;top:0;z-index:2;background:var(--surface-raised)}
+.student-profile .sp-edit-inline form{padding:14px 24px 20px}
+.student-profile .sp-edit-inline .sp-close{top:18px;right:18px}
+.student-profile .sp-edit-inline .sp-edit-tabs{scrollbar-width:none;overflow-x:auto}
+.student-profile .sp-edit-inline .sp-edit-tabs::-webkit-scrollbar{display:none}
+.student-profile .sp-edit-tabs-scroll-bottom{display:block;overflow-x:auto;overflow-y:hidden;height:14px;margin:0 24px 4px;border-top:1px solid var(--border);scrollbar-width:thin;scrollbar-color:var(--brand) var(--surface-soft)}
+.student-profile .sp-edit-tabs-scroll-bottom>div{height:1px;min-width:100%}
+.student-profile .sp-edit-inline .sp-edit-progress{position:relative!important;top:auto!important;margin-bottom:0!important}

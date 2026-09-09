@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   FiCheckCircle,
   FiFileText,
@@ -43,7 +43,7 @@ const initialEditForm = (student) => {
   form.previousEducation ??= {};
   form.previousEducation.intermediate ??= {};
   form.application.date ??= new Date().toISOString().slice(0, 10);
-  form.previousEducation.intermediate.stream = "MPC";
+  form.previousEducation.intermediate.stream ??= "";
   return form;
 };
 
@@ -66,8 +66,24 @@ export default function StudentProfileEdit({ student, onCancel, onSave }) {
     [tab, setTab] = useState("personal"),
     [pinStatus, setPinStatus] = useState({ current: "", permanent: "" }),
     [colleges, setColleges] = useState([]),
+    tabNavRef = useRef(null),
+    bottomScrollRef = useRef(null),
+    [tabScrollWidth, setTabScrollWidth] = useState(0),
     original = useMemo(() => JSON.stringify(student), [student]),
     dirty = JSON.stringify(form) !== original;
+  useEffect(() => {
+    const nav = tabNavRef.current;
+    if (!nav) return undefined;
+    const updateWidth = () => setTabScrollWidth(nav.scrollWidth);
+    updateWidth();
+    const observer = typeof ResizeObserver !== "undefined" ? new ResizeObserver(updateWidth) : null;
+    observer?.observe(nav);
+    window.addEventListener("resize", updateWidth);
+    return () => {
+      observer?.disconnect();
+      window.removeEventListener("resize", updateWidth);
+    };
+  }, []);
   useEffect(() => {
     let active = true;
     getColleges()
@@ -460,11 +476,8 @@ export default function StudentProfileEdit({ student, onCancel, onSave }) {
     update(`documentUploads.${key}`, file);
   };
   return (
-    <div
-      className="sp-edit-backdrop"
-      onMouseDown={(event) => event.target === event.currentTarget && close()}
-    >
-      <section className="sp-edit-dialog" role="dialog" aria-modal="true">
+    <div className="sp-edit-page">
+      <section className="sp-edit-dialog sp-edit-inline" aria-labelledby="edit-student-title">
         <header>
           <div>
             <span>
@@ -480,7 +493,11 @@ export default function StudentProfileEdit({ student, onCancel, onSave }) {
           </button>
         </header>
         <nav
+          ref={tabNavRef}
           className="sp-edit-tabs"
+          onScroll={(event) => {
+            if (bottomScrollRef.current) bottomScrollRef.current.scrollLeft = event.currentTarget.scrollLeft;
+          }}
           aria-label="Student profile edit sections"
         >
           {tabs.map(([id, label], index) => (
@@ -673,6 +690,8 @@ export default function StudentProfileEdit({ student, onCancel, onSave }) {
                   "Guardian annual income",
                   { type: "number" },
                 ],
+                ["parents.primaryContact", "Primary contact"],
+                ["parents.emergencyMobile", "Emergency mobile"],
               ])}
             </fieldset>
           )}
@@ -706,6 +725,7 @@ export default function StudentProfileEdit({ student, onCancel, onSave }) {
                 {fields([
                   ["previousEducation.tenth.board", "Board"],
                   ["previousEducation.tenth.institution", "School name"],
+                  ["previousEducation.tenth.rollNumber", "10th roll number"],
                   ["previousEducation.tenth.passingYear", "Year of passing"],
                   [
                     "previousEducation.tenth.score",
@@ -717,6 +737,7 @@ export default function StudentProfileEdit({ student, onCancel, onSave }) {
               <fieldset>
                 <legend>Intermediate / Diploma</legend>
                 {fields([
+                  ["previousEducation.intermediate.qualification", "Qualification"],
                   [
                     "previousEducation.intermediate.board",
                     "Board / University",
@@ -731,8 +752,12 @@ export default function StudentProfileEdit({ student, onCancel, onSave }) {
                   ],
                   [
                     "previousEducation.intermediate.stream",
-                    "Stream (MPC)",
-                    { readOnly: true },
+                    "Stream",
+                  ],
+                  [
+                    "previousEducation.intermediate.scoreType",
+                    "Score type",
+                    { options: ["Percentage", "CGPA"] },
                   ],
                   [
                     "previousEducation.intermediate.score",
@@ -768,6 +793,8 @@ export default function StudentProfileEdit({ student, onCancel, onSave }) {
                   { type: "date", readOnly: true },
                 ],
                 ["admission.batch", "Batch", { readOnly: true }],
+                ["admission.scholarship", "Scholarship", { options: ["No", "Yes"] }],
+                ["admission.scholarshipType", "Scholarship type"],
                 [
                   "admission.hostel",
                   "Hostel required",
@@ -984,6 +1011,16 @@ export default function StudentProfileEdit({ student, onCancel, onSave }) {
             )}
           </footer>
         </form>
+        <div
+          ref={bottomScrollRef}
+          className="sp-edit-tabs-scroll-bottom"
+          aria-label="Scroll edit sections"
+          onScroll={(event) => {
+            if (tabNavRef.current) tabNavRef.current.scrollLeft = event.currentTarget.scrollLeft;
+          }}
+        >
+          <div style={{ width: `${Math.max(tabScrollWidth, 1)}px` }} />
+        </div>
         {discard && (
           <div className="sp-confirm">
             <div>

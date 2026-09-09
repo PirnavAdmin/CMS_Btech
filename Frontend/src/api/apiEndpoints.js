@@ -148,7 +148,7 @@ const listResponse = (response) => {
   let current = response
   for (let depth = 0; depth < 5 && current && typeof current === 'object'; depth += 1) {
     if (Array.isArray(current)) return current
-    const list = current.items ?? current.content ?? current.results ?? current.records
+    const list = current.items ?? current.content ?? current.results ?? current.records ?? current.academicYears ?? current.years
     if (Array.isArray(list)) return list
     current = current.data
   }

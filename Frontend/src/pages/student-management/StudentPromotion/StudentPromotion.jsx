@@ -141,6 +141,7 @@ export default function StudentPromotion() {
   const canPromote = hasRole([ROLES.ADMIN])
   const {
     activeAcademicYears,
+    currentAcademicYear,
     activeCourses,
     getBranchesForCourse,
     getSemestersForCourse,
@@ -174,10 +175,12 @@ export default function StudentPromotion() {
 
   // Initialize active academic year
   useEffect(() => {
-    if (activeAcademicYears.length && !selectedAcademicYearId) {
-      setSelectedAcademicYearId(String(activeAcademicYears[0].id))
+    if (!selectedAcademicYearId) {
+      const preferred = currentAcademicYear || activeAcademicYears[0]
+      const id = preferred?.id ?? preferred?.academicYearId
+      if (id !== undefined && id !== null && id !== '') setSelectedAcademicYearId(String(id))
     }
-  }, [activeAcademicYears, selectedAcademicYearId])
+  }, [activeAcademicYears, currentAcademicYear, selectedAcademicYearId])
 
   const availableBranches = useMemo(() => {
     return getBranchesForCourse(courseId, true)

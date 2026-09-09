@@ -131,3 +131,10 @@
 .course-management .course-branch-list{grid-template-columns:1fr;padding:0;gap:0}
 .course-management .course-branch-list a{padding:10px 0;border:0;border-bottom:1px solid var(--border);border-radius:0;background:transparent}
 .course-management .course-branch-list a:hover{border-color:var(--border);background:var(--brand-soft)}
+.course-management .course-advanced-table{width:100%!important;min-width:0!important;table-layout:fixed!important}
+.course-management .course-advanced-table :is(th,td){box-sizing:border-box!important}
+.course-management .course-advanced-table :is(th,td):nth-child(1){width:30%!important}
+.course-management .course-advanced-table :is(th,td):nth-child(2){width:17%!important}
+.course-management .course-advanced-table :is(th,td):nth-child(3){width:18%!important}
+.course-management .course-advanced-table :is(th,td):nth-child(4){width:15%!important}
+.course-management .course-advanced-table :is(th,td):nth-child(5){width:20%!important}

@@ -108,16 +108,25 @@ class AcademicService {
     const data = await this._fetchCached('academicYears', async () => {
       try {
         const list = await academicYearApi.getAll()
-        return (list || []).map(y => ({
-          id: y.academicYearId ?? y.id,
-          academicYearId: y.academicYearId ?? y.id,
-          name: y.academicYearName ?? y.name ?? '',
-          academicYearName: y.academicYearName ?? y.name ?? '',
-          startDate: y.startDate,
-          endDate: y.endDate,
-          status: y.status ?? (y.isCurrent ? 'Active' : 'Inactive'),
-          isCurrent: Boolean(y.isCurrent || y.status === 'Active' || y.status === 1)
-        }))
+        return (Array.isArray(list) ? list : []).map(y => {
+          const status = String(y.status ?? '').trim().toLowerCase()
+          const start = y.startDate ? new Date(y.startDate) : null
+          const end = y.endDate ? new Date(y.endDate) : null
+          const today = new Date()
+          const dateCurrent = start && end && !Number.isNaN(start.getTime()) && !Number.isNaN(end.getTime()) && today >= start && today <= end
+          const isCurrent = Boolean(y.isCurrent || y.isActive === true || Number(y.isActive) === 1 || status === 'active' || status === 'current' || Number(y.status) === 1 || dateCurrent)
+          return {
+            ...y,
+            id: y.academicYearId ?? y.id,
+            academicYearId: y.academicYearId ?? y.id,
+            name: y.academicYearName ?? y.name ?? '',
+            academicYearName: y.academicYearName ?? y.name ?? '',
+            startDate: y.startDate,
+            endDate: y.endDate,
+            status: isCurrent ? 'Active' : (y.status ?? 'Inactive'),
+            isCurrent,
+          }
+        })
       } catch (err) {
         console.warn('Fallback loading academic years:', err)
         return []
