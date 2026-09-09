@@ -22,6 +22,16 @@ const hasConfiguredAuthLoginUrl = import.meta.env.DEV || Boolean(AUTH_LOGIN_URL 
 
 const endpoint = (path) => `${API_BASE_URL}${path}`
 
+export const SCREEN_EXPORT_ENDPOINTS = Object.freeze(Object.fromEntries([
+  'colleges', 'college-settings', 'academic-years', 'academic-levels',
+  'departments', 'courses', 'branches', 'semester', 'sections',
+  'course-structures', 'students', 'student-profiles', 'student-admissions',
+  'promotions', 'users', 'roles', 'faculty', 'fee-structures', 'hostel-fees', 'transport-fees',
+].map(screen => {
+  const prefix = ['college-settings', 'academic-levels', 'semester', 'roles'].includes(screen) ? '/api' : '/api/v1'
+  return [screen, Object.freeze({ download: endpoint(`${prefix}/${screen}/download`), export: endpoint(`${prefix}/${screen}/export`) })]
+})))
+
 export class AuthRequestError extends Error {
   constructor(message, status = 0) {
     super(message)
@@ -31,6 +41,10 @@ export class AuthRequestError extends Error {
 }
 
 export const API_ENDPOINTS = Object.freeze({
+  exports: Object.freeze({
+    list: endpoint('/api/v1/exports'),
+    screen: screen => endpoint(`/api/v1/exports/${encodeURIComponent(screen === 'semester' ? 'semesters' : screen)}`),
+  }),
   auth: Object.freeze({
     login: AUTH_LOGIN_URL || endpoint('/api/v1/auth/login'),
     refresh: endpoint('/api/v1/auth/refresh'),
@@ -257,8 +271,42 @@ const blobRequest = async (url, options = {}, retried = false) => {
   try { response = await fetch(url, { ...options, headers: { 'ngrok-skip-browser-warning': 'true', ...options.headers, ...(token ? { Authorization: `Bearer ${token}` } : {}) } }) }
   catch { throw new Error('We’re having trouble connecting right now. Please try again shortly.') }
   if (response.status === 401 && !retried && url !== API_ENDPOINTS.auth.refresh) { await refreshAccessToken(); return blobRequest(url, options, true) }
-  if (!response.ok) { const body = await readBody(response); throw new Error(validationMessage(body) || 'The document request could not be completed.') }
+  if (!response.ok) { const body = await readBody(response); throw new AuthRequestError(validationMessage(body) || 'The download request could not be completed.', response.status) }
   return { blob: await response.blob(), contentDisposition: response.headers.get('content-disposition') || '', contentType: response.headers.get('content-type') || '' }
+}
+
+export const screenExportsApi = {
+  list: params => request(withQuery(API_ENDPOINTS.exports.list, params)),
+  getScreen: (screen, params) => {
+    if (!String(screen || '').trim()) throw new Error('Screen is required.')
+    return readExportFile(withQuery(API_ENDPOINTS.exports.screen(screen), params))
+  },
+  download: (screen, params) => requestScreenFile(screen, 'download', params),
+  export: (screen, params) => requestScreenFile(screen, 'export', params),
+  save: async (screen, params) => {
+    for (const action of ['export', 'download']) {
+      try { return await requestScreenFile(screen, action, params) }
+      catch (error) { if (![404, 405].includes(error.status)) throw error }
+    }
+    return screenExportsApi.getScreen(screen, params)
+  },
+}
+
+async function requestScreenFile(screen, action, params) {
+  const routes = SCREEN_EXPORT_ENDPOINTS[screen]
+  if (!routes) throw new Error('This screen does not support server exports.')
+  return readExportFile(withQuery(routes[action], params))
+}
+
+async function readExportFile(url) {
+  const result = await blobRequest(url)
+  if (/json|text\/html/i.test(result.contentType)) {
+    let body
+    try { body = JSON.parse(await result.blob.text()) } catch { /* Unexpected gateway page. */ }
+    throw new Error(validationMessage(body) || 'The server did not return an export file.')
+  }
+  if (!result.blob.size) throw new Error('The server returned an empty export file.')
+  return result
 }
 
 const normalizeFrontendRole = (roleValue) => {
