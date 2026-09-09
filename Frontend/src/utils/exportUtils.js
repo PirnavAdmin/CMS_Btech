@@ -33,6 +33,17 @@ export function downloadFile(content, filename, mimeType) {
 }
 
 export const exportToCsv = ({ rows, columns, filename }) => downloadFile(toCsv(rows, columns), `${sanitizeFilename(filename)}.csv`, 'text/csv;charset=utf-8')
+
+export function downloadServerExport({ blob, contentDisposition, contentType }, fallback = 'export') {
+  const encoded = /filename\*=UTF-8''([^;]+)/i.exec(contentDisposition)?.[1]
+  const plain = /filename="([^"]+)"|filename=([^;]+)/i.exec(contentDisposition)
+  let filename = plain?.[1] || plain?.[2]?.trim()
+  if (encoded) {
+    try { filename = decodeURIComponent(encoded) } catch { /* Use the plain filename. */ }
+  }
+  const extension = /csv/i.test(contentType) ? 'csv' : /pdf/i.test(contentType) ? 'pdf' : /spreadsheetml/i.test(contentType) ? 'xlsx' : /excel/i.test(contentType) ? 'xls' : 'bin'
+  downloadFile(blob, filename || `${fallback}.${extension}`, contentType)
+}
 const escapeHtml = value => exportValue(value).replace(/[&<>"']/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[char])
 
 export function reportHtml({ title, scope, rows, columns }) {
