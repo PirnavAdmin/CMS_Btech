@@ -9,7 +9,7 @@ import SearchableSelect from '../../components/SearchableSelect'
 import CompactSummary from '../../components/CompactSummary'
 import StatusBadge from '../../components/StatusBadge'
 import { academicYearApi, branchApi, courseApi, sectionAllocationApi, sectionApi, sectionAssignmentApi, studentApi } from '../../api/apiEndpoints'
-import { searchSemesters } from '../../auth/collegeApi'
+import { getSemesters, searchSemesters } from '../../auth/collegeApi'
 import { getActiveAcademicYears, normalizeAcademicYear } from '../../utils/academicYearUtils'
 import { branchTypeLabel } from '../../utils/semesterUtils'
 import eventBus, { ERP_EVENTS } from '../../services/eventBus'
@@ -74,11 +74,11 @@ const normalizeSection = (item = {}, lookups = {}) => {
 }
 
 async function loadSources() {
-  const [sectionRows, courseRows, branchRows, yearRows, assignmentRows, summaryData] = await Promise.all([sectionApi.getAll(), courseApi.getAll(), branchApi.getAll(), academicYearApi.getAll(), sectionAssignmentApi.list().catch(() => []), sectionApi.summary().catch(() => null)])
+  const [sectionRows, courseRows, branchRows, yearRows, semesterRows, assignmentRows, summaryData] = await Promise.all([sectionApi.getAll(), courseApi.getAll(), branchApi.getAll(), academicYearApi.getAll(), getSemesters(), sectionAssignmentApi.list().catch(() => []), sectionApi.summary().catch(() => null)])
   const courses = courseRows.map(normalizeCourse).filter((item) => item.id && item.name)
   const branches = branchRows.map(normalizeBranch).filter((item) => item.id && item.name)
   const years = yearRows.map((year) => normalizeAcademicYear({ ...year, status: year.status === false || year.status === 0 || year.isActive === false ? 'ARCHIVED' : year.status })).filter((item) => item.id && item.name)
-  const semesters = []
+  const semesters = responseList(semesterRows).map(normalizeSemester).filter((item) => item.id && item.name)
   const sections = sectionRows.map((item) => normalizeSection(item, makeLookups(courses, branches, semesters, years)))
   return { courses, branches, years, semesters, sections, assignments: assignmentRows.map(normalizeAssignment), summary: summaryData }
 }

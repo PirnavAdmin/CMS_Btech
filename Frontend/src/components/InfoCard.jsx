@@ -14,6 +14,16 @@ const isCleanValue = (value) => {
   return true
 }
 
+const isStatusLabel = (label = '') => /status|state|eligibility/i.test(String(label))
+
+function DetailsValue({ label, value }) {
+  if (isStatusLabel(label)) {
+    const statusClass = String(value).trim().toLowerCase().replace(/\s+/g, '-')
+    return <span className={`details-status-badge ${statusClass}`}>{value}</span>
+  }
+  return value
+}
+
 export default function InfoCard({
   icon: Icon,
   title,
@@ -36,7 +46,7 @@ export default function InfoCard({
   }
 
   return (
-    <section className={`cm-info-card ${className}`}>
+    <section className={`cm-info-card erp-view-section ${className}`}>
       {(Icon || title) && (
         <div className="cm-info-card-header">
           {Icon && <Icon aria-hidden="true" />}
@@ -45,14 +55,14 @@ export default function InfoCard({
       )}
 
       {visibleRows.length > 0 && (
-        <div className="cm-info-rows">
+        <div className="cm-info-rows erp-view-grid">
           {visibleRows.map((item, idx) => {
             const label = Array.isArray(item) ? item[0] : item.label
             const value = Array.isArray(item) ? item[1] : item.value
             return (
-              <div className="cm-info-row" key={label || idx}>
-                <span className="cm-info-label">{label}</span>
-                <span className="cm-info-val">{value}</span>
+              <div className="cm-info-row erp-view-field" key={label || idx}>
+                <span className="cm-info-label erp-view-label">{label}</span>
+                <span className="cm-info-val erp-view-value"><DetailsValue label={label} value={value} /></span>
               </div>
             )
           })}
