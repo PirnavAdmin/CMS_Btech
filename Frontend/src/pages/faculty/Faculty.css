@@ -1,1 +1,11 @@
-.faculty-module .module-chart i{background:#238aa0}
+.faculty-page {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+}
+
+.faculty-dialog-content {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+}

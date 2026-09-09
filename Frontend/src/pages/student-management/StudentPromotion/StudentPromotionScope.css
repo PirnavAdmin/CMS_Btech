@@ -1,12 +1,25 @@
 .p-scope {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(160px, 1fr));
-  gap: 14px;
   margin-bottom: 18px;
   padding: 16px;
   border: 1px solid var(--border);
   border-radius: var(--radius-md);
   background: var(--surface);
+}
+
+/* Keep the promotion scope selectors in one straight row on desktop. */
+.p-scope .erp-form-grid {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 14px;
+  width: 100%;
+}
+
+.p-scope .erp-form-group { min-width: 0; }
+
+.p-scope .erp-form-group label {
+  display: block;
+  margin-bottom: 6px;
+  white-space: nowrap;
 }
 
 .p-scope label {
@@ -88,6 +101,14 @@
 .p-history-table th:nth-child(4) { width: 26%; }
 .p-history-table th:nth-child(5) { width: 17%; }
 
+@media (max-width: 1200px) {
+  .p-scope .erp-form-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+
+@media (max-width: 760px) {
+  .p-scope .erp-form-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
 @media (max-width: 650px) {
-  .p-scope { grid-template-columns: 1fr; }
+  .p-scope .erp-form-grid { grid-template-columns: 1fr; }
 }

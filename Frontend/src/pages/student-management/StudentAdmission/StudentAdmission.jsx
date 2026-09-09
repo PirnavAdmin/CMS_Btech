@@ -1,3 +1,6 @@
+import { isApiResult } from '../../../utils/exportProvenance'
+import ExportMenu, { PrintDetailsButton } from '../../../components/ExportMenu'
+import { admissionColumns } from '../../../utils/exportColumns'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import {
   FiAlertCircle, FiArrowLeft, FiArrowRight, FiBookOpen, FiCamera, FiCheck, FiCheckCircle,
@@ -9,10 +12,12 @@ import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import DashboardLayout from '../../../layouts/DashboardLayout'
 import FilterPanel from '../../../components/FilterPanel'
 import TablePagination, { PAGE_SIZE } from '../../../components/TablePagination'
+import CompactSummary from '../../../components/CompactSummary'
 import { academicYearApi, branchApi, courseApi, departmentApi, lookupIndianPincode, studentAdmissionApi, studentAcademicDetailsApi, studentAdmissionStatusApi, studentDocumentApi, studentFeeApi, studentParentApi, studentPreviousEducationApi } from '../../../api/apiEndpoints'
 import { getOperationalAcademicYearOptions, resolveAcademicYearId } from '../../../utils/academicYearUtils'
 import { getColleges, getSemesters } from '../../../auth/collegeApi'
 import { componentTotals, matchesStructure, readStructures } from '../../fees/feeStructureService'
+import eventBus, { ERP_EVENTS } from '../../../services/eventBus'
 import './StudentAdmission.css'
 import './AdmissionFixes.css'
 import './DocumentPreviewFixes.css'
@@ -480,11 +485,12 @@ function AdmissionList() {
   const navigate = useNavigate()
   const [rows, setRows] = useState([])
   const [, setLoadError] = useState('')
+  const [exportReady, setExportReady] = useState(false)
   const [query, setQuery] = useState('')
   const [page, setPage] = useState(1)
   const initialFilters = Object.fromEntries(FILTERS.map(([key]) => [key, '']))
   const [filters, setFilters] = useState(initialFilters)
-  useEffect(() => { let active = true; studentAdmissionApi.getAll().then(items => { if (active) setRows(items.map(admissionFromApi)) }).catch(error => { if (active) setLoadError(error.message || 'Unable to load admissions.') }); return () => { active = false } }, [])
+  useEffect(() => { let active = true; studentAdmissionApi.getAll().then(items => { if (active) { setExportReady(isApiResult(items)); setRows(items.map(admissionFromApi)) } }).catch(error => { if (active) setLoadError(error.message || 'Unable to load admissions.') }); return () => { active = false } }, [])
   const shown = useMemo(() => rows.filter(item => {
     const needle = [studentName(item),item?.application?.number,item?.application?.admissionNumber,item?.application?.registrationNumber,item?.contact?.mobile,item?.contact?.email].join(' ').toLowerCase()
     const normStat = normalizeStatus(item?.status)
@@ -496,25 +502,44 @@ function AdmissionList() {
   const currentPage = Math.min(page, totalPages)
   const pageRows = shown.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE)
   const clear = () => { setQuery(''); setFilters(initialFilters); setPage(1) }
+  const stats = {
+    total: rows.length,
+    approved: rows.filter(item => normalizeStatus(item.status) === 'APPROVED').length,
+    pending: rows.filter(item => ['SUBMITTED', 'PENDING', 'UNDER_REVIEW', 'VERIFIED'].includes(normalizeStatus(item.status))).length,
+    draft: rows.filter(item => normalizeStatus(item.status) === 'DRAFT').length,
+  }
+
   return (
     <>
       <Breadcrumb />
-      <header className="sa-page-header">
+      <header className="sa-page-header cm-header">
         <div>
           <h1>Student Admissions</h1>
           <p>Manage student registrations, verification, approval and enrollment</p>
         </div>
-        <div>
-          <Button primary onClick={() => navigate('/student-management/admissions/new')}>
-            <FiPlus /> New Admission
-          </Button>
+        <div className="cm-row-actions">
+          <CompactSummary
+            label="Admission summary"
+            items={[
+              { label: 'Total', value: stats.total },
+              { label: 'Approved', value: stats.approved, tone: 'active' },
+              { label: 'Pending', value: stats.pending, tone: 'upcoming' },
+              { label: 'Draft', value: stats.draft, tone: 'inactive' },
+            ]}
+          />
         </div>
       </header>
-      <section className="sa-directory">
-        <header>
+      <section className="sa-directory cm-panel">
+        <header className="course-directory-heading">
           <div>
-            <h2>Admission Directory</h2>
-            <span>{shown.length} of {rows.length} registrations</span>
+            <span className="cm-eyebrow">Admission Directory</span>
+            <p>{shown.length} records</p>
+          </div>
+          <div className="directory-export-actions">
+            <ExportMenu rows={shown} columns={admissionColumns} title="Student Admissions" filename="student-admissions" loading={!exportReady} scope="Current filtered API results" />
+            <button className="cm-button" type="button" onClick={() => navigate('/student-management/admissions/new')}>
+              <FiPlus /> New Admission
+            </button>
           </div>
         </header>
         <AdmissionFilters {...{ rows, query, setQuery, filters, setFilters }} />
@@ -809,7 +834,7 @@ function AdmissionForm() {
     if (!declared) { notify('Confirm the declaration before submitting.', 'error'); return }
     setConfirmSubmit(true)
   }
-  const submit = async () => { if (submitting || !recordIds.admissionId) return; setSubmitting(true); try { const submitted=await studentAdmissionApi.submit(recordIds.admissionId),submittedIds=idsFromApi(submitted,recordIds.admissionId),studentId=submittedIds.studentId??recordIds.studentId;const pending=[...DOCUMENTS.map(([key,label])=>({key,label,document:data.documents[key]})),...(data.documents.otherCertificates||[]).map(document=>({key:'otherCertificate',label:'Other Certificate',document}))].filter(item=>item.document?.file);if(studentId){for(const item of pending)await studentDocumentApi.upload(studentId,item.document.file,{documentType:item.key,documentName:item.label})}const latest = await studentAdmissionStatusApi.get(recordIds.admissionId); setData(current => ({ ...current, status: latest.status ?? 'SUBMITTED' }));setRecordIds(current=>({...current,studentId:studentId??current.studentId})); setConfirmSubmit(false); notify(studentId&&pending.length?'Admission submitted and documents uploaded successfully':'Admission application submitted successfully'); window.setTimeout(() => navigate('/student-management/admissions'), 700) } catch (error) { notify(error.message || 'Unable to submit this admission.', 'error'); setSubmitting(false) } }
+  const submit = async () => { if (submitting || !recordIds.admissionId) return; setSubmitting(true); try { const submitted=await studentAdmissionApi.submit(recordIds.admissionId),submittedIds=idsFromApi(submitted,recordIds.admissionId),studentId=submittedIds.studentId??recordIds.studentId;const pending=[...DOCUMENTS.map(([key,label])=>({key,label,document:data.documents[key]})),...(data.documents?.otherCertificates||[]).map(document=>({key:'otherCertificate',label:'Other Certificate',document}))].filter(item=>item.document?.file);if(studentId){for(const item of pending)await studentDocumentApi.upload(studentId,item.document.file,{documentType:item.key,documentName:item.label})}const latest = await studentAdmissionStatusApi.get(recordIds.admissionId); setData(current => ({ ...current, status: latest.status ?? 'SUBMITTED' }));setRecordIds(current=>({...current,studentId:studentId??current.studentId})); setConfirmSubmit(false); eventBus.emit(ERP_EVENTS.STUDENT_UPDATED, { admissionId: recordIds.admissionId, status: 'SUBMITTED' }); notify(studentId&&pending.length?'Admission submitted and documents uploaded successfully':'Admission application submitted successfully'); window.setTimeout(() => navigate('/student-management/admissions'), 700) } catch (error) { notify(error.message || 'Unable to submit this admission.', 'error'); setSubmitting(false) } }
   return <><Breadcrumb tail={id ? 'Edit Admission' : 'New Admission'} /><header className="sa-page-header sa-wizard-header"><div><h1>{id ? 'Edit Student Admission' : 'New Student Admission'}</h1><p>Registration Number <strong>{data.application.number}</strong></p></div><div><Badge value={data.status} /><Button onClick={() => navigate('/student-management/admissions')}>Cancel</Button></div></header><Toast message={toast?.message} tone={toast?.tone} onClose={() => setToast(null)} /><WizardStepper step={step} setStep={setStep} /><form className="sa-wizard-card" onSubmit={event => event.preventDefault()}><header className="sa-step-heading"><div><small>Step {step + 1} of {STEPS.length}</small><h2>{STEPS[step]}</h2></div><span>{Math.round(((step + 1) / STEPS.length) * 100)}% complete</span></header>{screens[step]}{step === STEPS.length - 1 && <label className="sa-declaration"><input type="checkbox" checked={declared} onChange={event => setDeclared(event.target.checked)} /><span><strong>Registration Declaration</strong>I confirm that the information entered above is correct.</span></label>}<footer className="sa-wizard-actions"><Button disabled={!step || submitting} onClick={() => setStep(current => current - 1)}><FiArrowLeft /> Previous</Button><span />{step < STEPS.length - 1 ? <Button primary onClick={nextStep}>Save & Continue <FiArrowRight /></Button> : <Button primary disabled={!declared || submitting} onClick={requestSubmit}>{submitting ? 'Submitting...' : 'Submit Application'}</Button>}</footer></form>{confirmSubmit && <ConfirmDialog icon={FiCheckCircle} title="Confirm Registration Submission" confirmLabel="Confirm & Submit" onCancel={() => setConfirmSubmit(false)} onConfirm={submit}><p>Please verify the student details below. Once submitted, the registration will be sent to the admissions team for review.</p><dl><div><dt>Student</dt><dd>{studentName(data)}</dd></div><div><dt>Registration Number</dt><dd>{data.application.number}</dd></div></dl></ConfirmDialog>}</>
 }
 
@@ -840,9 +865,9 @@ function AdmissionDetails({ approval = false }) {
   }).catch(error => setToast({ message: error.message || 'Unable to load admission.', tone: 'error' })).finally(() => { if (active) setLoadingDetail(false) }); return () => { active = false } }, [id])
   if (loadingDetail) return <section className="sa-empty"><FiClock /><h2>Loading admission...</h2></section>
   if (!data) return <section className="sa-empty"><FiAlertCircle /><h2>Admission not found</h2><Button onClick={() => navigate('/student-management/admissions')}>Back to Admissions</Button></section>
-  const transition = async status => { if (savingStatus) return; if (['CORRECTION_REQUIRED','REJECTED'].includes(status) && !text(remarks)) { setToast({ message: 'Admission officer remarks are required for this decision.', tone: 'error' }); return } setSavingStatus(true); try { const result = await studentAdmissionStatusApi.update(id, { status, remarks }); setData(current => ({ ...current, status: normalizeStatus(result.status), remarks })); setRemarks(''); setToast({ message: `${STATUS[status] || status} saved successfully`, tone: 'success' }); setConfirmApproval(false); if (status === 'APPROVED') { let studentId = idsFromApi(result).studentId ?? idsFromApi(data).studentId; if (!studentId) { try { studentId = idsFromApi(await studentAdmissionApi.getById(id)).studentId } catch { /* The profile directory remains available if the ID cannot be resolved. */ } } navigate(studentId ? `/student-management/profiles?studentId=${encodeURIComponent(studentId)}` : '/student-management/profiles') } } catch (error) { setToast({ message: error.message || 'Unable to update admission status.', tone: 'error' }) } finally { setSavingStatus(false) } }
+  const transition = async status => { if (savingStatus) return; if (['CORRECTION_REQUIRED','REJECTED'].includes(status) && !text(remarks)) { setToast({ message: 'Admission officer remarks are required for this decision.', tone: 'error' }); return } setSavingStatus(true); try { const result = await studentAdmissionStatusApi.update(id, { status, remarks }); setData(current => ({ ...current, status: normalizeStatus(result.status), remarks })); setRemarks(''); eventBus.emit(ERP_EVENTS.STUDENT_UPDATED, { admissionId: id, status }); setToast({ message: `${STATUS[status] || status} saved successfully`, tone: 'success' }); setConfirmApproval(false); if (status === 'APPROVED') { let studentId = idsFromApi(result).studentId ?? idsFromApi(data).studentId; if (!studentId) { try { studentId = idsFromApi(await studentAdmissionApi.getById(id)).studentId } catch { /* The profile directory remains available if the ID cannot be resolved. */ } } navigate(studentId ? `/student-management/profiles?studentId=${encodeURIComponent(studentId)}` : '/student-management/profiles') } } catch (error) { setToast({ message: error.message || 'Unable to update admission status.', tone: 'error' }) } finally { setSavingStatus(false) } }
   if (approval) return <><Breadcrumb tail="Admission Review" /><button className="sa-back sa-review-back" onClick={() => navigate('/student-management/admissions')}><FiArrowLeft /> Back to Admissions</button><header className="sa-review-header"><div><span>Admission Officer Workspace</span><h1>Admission Review</h1><p>{studentName(data)} · {data.application.number} · {display(data.academic.course)} / {display(data.academic.branch)}</p></div><Badge value={data.status} /></header><Toast message={toast?.message} tone={toast?.tone} onClose={() => setToast(null)} /><section className="sa-review-workspace"><PreviewHeader data={data} /><FullReview data={data} /></section><section className="sa-approval"><header><div><h2>Review Decision</h2><p>Complete the application review before recording a workflow decision.</p></div><Badge value={data.status} /></header><label className="sa-review-confirm"><input type="checkbox" checked={reviewed} onChange={event => setReviewed(event.target.checked)} /><span>I have reviewed all admission sections and supporting information.</span></label><label className="sa-remarks"><span>Admission Officer Remarks</span><textarea maxLength="500" value={remarks} onChange={event => setRemarks(event.target.value)} placeholder="Add verification, correction or decision remarks..." /><small>{remarks.length}/500</small></label><footer>{['SUBMITTED','PENDING','UNDER_REVIEW','VERIFIED'].includes(data.status) && <Button danger disabled={!reviewed || savingStatus || !remarks.trim()} onClick={() => transition('REJECTED')}>Reject</Button>}{['SUBMITTED','PENDING','UNDER_REVIEW','VERIFIED'].includes(data.status) && <Button primary disabled={!reviewed || savingStatus} onClick={() => { setToast(null); setConfirmApproval(true) }}>Approve Admission</Button>}{data.status === 'APPROVED' && <span className="sa-approved-note"><FiCheckCircle /> Admission approved as {data.application.admissionNumber}</span>}</footer></section>{confirmApproval && <ConfirmDialog busy={savingStatus} error={toast?.tone === 'error' ? toast.message : null} title="Approve Student Admission?" confirmLabel="Approve Admission" onCancel={() => setConfirmApproval(false)} onConfirm={() => transition('APPROVED')}><p>This will mark the student admission as approved and generate an admission number.</p><dl><div><dt>Student</dt><dd>{studentName(data)}</dd></div><div><dt>Course / Branch</dt><dd>{data.academic.course} · {data.academic.branch}</dd></div><div><dt>Academic Year</dt><dd>{data.academic.academicYear}</dd></div><div><dt>Fee Status</dt><dd>{data.fees.paymentStatus}</dd></div></dl></ConfirmDialog>}</>
-  return <><Breadcrumb tail="Admission Details" /><button className="sa-back" onClick={() => navigate('/student-management/admissions')}><FiArrowLeft /> Back to Admissions</button><StudentHeader data={data} /><nav className="sa-tabs">{DETAIL_TABS.map(([value,label,Icon]) => <button key={value} className={tab === value ? 'active' : ''} onClick={() => setTab(value)}><Icon /> {label}</button>)}</nav><section className="sa-detail-card"><DetailContent data={data} tab={tab} /></section></>
+  return <><Breadcrumb tail="Admission Details" /><div className="directory-export-actions"><button className="sa-back" onClick={() => navigate('/student-management/admissions')}><FiArrowLeft /> Back to Admissions</button><PrintDetailsButton title={studentName(data) + " admission details"} selector=".student-admission" /></div><StudentHeader data={data} /><nav className="sa-tabs">{DETAIL_TABS.map(([value,label,Icon]) => <button key={value} className={tab === value ? 'active' : ''} onClick={() => setTab(value)}><Icon /> {label}</button>)}</nav><section className="sa-detail-card"><DetailContent data={data} tab={tab} /></section></>
 }
 
 export default function StudentAdmission() {

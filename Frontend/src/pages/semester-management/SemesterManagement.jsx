@@ -1,9 +1,12 @@
+import ExportMenu, { PrintDetailsButton } from '../../components/ExportMenu'
+import { semesterColumns } from '../../utils/exportColumns'
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { FiArrowLeft, FiBookOpen, FiCalendar, FiCheckCircle, FiClock, FiEdit2, FiEye, FiFilter, FiLayers, FiPlus, FiSearch } from 'react-icons/fi'
 import DashboardLayout from '../../layouts/DashboardLayout'
 import FilterPanel from '../../components/FilterPanel'
 import SearchableSelect from '../../components/SearchableSelect'
+import CompactSummary from '../../components/CompactSummary'
 import { academicYearApi, branchApi, courseApi } from '../../api/apiEndpoints'
 import { createSemester, getSemesterById, getSemesters, updateSemester } from '../../auth/collegeApi'
 import { getActiveAcademicYears, normalizeAcademicYear } from '../../utils/academicYearUtils'
@@ -220,7 +223,7 @@ function SemesterList() {
   const filteredBranches = branches.filter((item) => !filters.courseId || String(item.courseId) === String(filters.courseId))
   const filtered = useMemo(() => lifecycleRows.filter((item) => `${item.semesterName} ${item.courseName} ${item.courseCode} ${item.branchName} ${item.branchCode} ${item.academicYearName}`.toLowerCase().includes(query.trim().toLowerCase()) && (!filters.courseId || String(item.courseId) === String(filters.courseId)) && (!filters.branchId || String(item.branchId) === String(filters.branchId)) && (!filters.academicYearId || String(item.academicYearId) === String(filters.academicYearId)) && (!filters.status || item.status === filters.status)).sort((left, right) => String(left.courseName).localeCompare(String(right.courseName)) || String(left.branchName).localeCompare(String(right.branchName)) || Number(left.semesterNumber) - Number(right.semesterNumber)), [lifecycleRows, query, filters])
   const counts = { total: rows.length, active: lifecycleRows.filter((item) => item.status === 'Active').length, upcoming: lifecycleRows.filter((item) => item.status === 'Upcoming').length, completed: lifecycleRows.filter((item) => item.status === 'Completed').length }
-  const pageSize = 8
+  const pageSize = 5
   const pageCount = Math.max(1, Math.ceil(filtered.length / pageSize))
   const currentPage = Math.min(page, pageCount)
   const visible = filtered.slice((currentPage - 1) * pageSize, currentPage * pageSize)
@@ -229,8 +232,79 @@ function SemesterList() {
   const hasFilters = Boolean(query || Object.values(filters).some(Boolean))
 
   return <Page>
-    <Header title="Semester Management" text="Manage course-based semester structures, academic years, schedules, and lifecycle status."><div className="compact-summary compact-summary--inline" aria-label="Semester status summary">{[{ label: 'Total', value: counts.total }, { label: 'Active', value: counts.active, tone: 'active' }, { label: 'Upcoming', value: counts.upcoming, tone: 'upcoming' }, { label: 'Completed', value: counts.completed, tone: 'completed' }].map(({ label, value, tone = 'default' }) => <div key={label} className={`compact-summary__item compact-summary__item--${tone}`}><strong>{value}</strong><small>{label}</small></div>)}</div><Link className="semester-primary" to="/semester-management/add"><FiPlus /> Add Semester Structure</Link></Header>
-    <section className="semester-directory-card"><div className="semester-directory-heading"><i><FiLayers /></i><div><h2>Semester Directory</h2><p>{filtered.length} configured semesters</p></div></div><FilterPanel active={hasFilters} onClear={clearFilters}><div className="semester-filters"><label className="semester-search"><FiSearch /><input aria-label="Search semesters" value={query} onChange={(event) => { setQuery(event.target.value); setPage(1) }} placeholder="Search semester, course, code or branch..." /></label><select aria-label="Filter by course" value={filters.courseId} onChange={(event) => changeFilter('courseId', event.target.value)}><option value="">Select Course</option>{courses.map((item) => <option key={item.id} value={item.id}>{item.name}{item.code ? ` - ${item.code}` : ''}</option>)}</select><select aria-label="Filter by branch" value={filters.branchId} onChange={(event) => changeFilter('branchId', event.target.value)}><option value="">Select Branch</option>{filteredBranches.map((item) => <option key={item.id} value={item.id}>{item.code ? `${item.code} - ` : ''}{item.name}</option>)}</select><select aria-label="Filter by academic year" value={filters.academicYearId} onChange={(event) => changeFilter('academicYearId', event.target.value)}><option value="">Select Academic Year</option>{years.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select><select aria-label="Filter by status" value={filters.status} onChange={(event) => changeFilter('status', event.target.value)}><option value="">Select Status</option>{['Active', 'Upcoming', 'Completed'].map((item) => <option key={item} value={item}>{item}</option>)}</select>{hasFilters && <button className="semester-clear" onClick={clearFilters}><FiFilter /> Clear</button>}</div></FilterPanel>{loading ? <Empty icon={FiClock} title="Loading semesters..." /> : error ? <Empty icon={FiLayers} title={error} action={<button className="semester-primary" onClick={load}>Retry</button>} /> : visible.length ? <><div className="semester-table-wrapper"><table className="semester-table"><thead><tr>{['Semester', 'Course', 'Branch', 'Academic Year', 'Start Date', 'End Date', 'Status', 'Actions'].map((heading) => <th key={heading}>{heading}</th>)}</tr></thead><tbody>{visible.map((item) => <tr key={item.id || `${item.branchId}-${item.semesterNumber}`}><td><strong>{item.semesterName}</strong><small>Semester {item.semesterNumber}</small></td><td><strong>{item.courseName}</strong>{item.courseCode && <small>{item.courseCode}</small>}</td><td><strong>{item.branchName}</strong>{item.branchCode && <small>{item.branchCode}</small>}{item.branchType && <small>{item.branchType}</small>}</td><td>{item.academicYearName}</td><td>{displayDate(item.startDate)}</td><td>{displayDate(item.endDate)}</td><td><StatusBadge value={item.status} /></td><td><div className="semester-row-actions"><Link aria-label={`View ${item.semesterName}`} to={`/semester-management/${item.id}`}><FiEye /></Link><Link aria-label={`Edit ${item.semesterName}`} to={`/semester-management/${item.id}/edit`}><FiEdit2 /></Link></div></td></tr>)}</tbody></table></div><Pagination page={currentPage} pageCount={pageCount} setPage={setPage} /></> : <Empty icon={FiLayers} title="No semesters match the current filters." />}</section>
+    <Header title="Semester Management" text="Manage course-based semester structures, academic years, schedules, and lifecycle status.">
+      <CompactSummary label="Semester summary" items={[{ label: 'Total', value: counts.total }, { label: 'Active', value: counts.active, tone: 'active' }, { label: 'Upcoming', value: counts.upcoming, tone: 'upcoming' }, { label: 'Completed', value: counts.completed, tone: 'completed' }]} />
+    </Header>
+    <section className="semester-directory-card">
+      <header className="course-directory-heading">
+        <div>
+          <span className="cm-eyebrow">Semester Directory</span>
+          <p>{filtered.length} configured semesters</p>
+        </div>
+        <div className="directory-export-actions">
+          <ExportMenu rows={filtered} columns={semesterColumns} title="Semesters" filename="semesters" loading={loading || Boolean(error)} />
+          <Link className="cm-button" to="/semester-management/add"><FiPlus /> Add Semester Structure</Link>
+        </div>
+      </header>
+      <FilterPanel active={hasFilters} onClear={clearFilters}>
+        <div className="semester-filters">
+          <label className="semester-search">
+            <FiSearch />
+            <input aria-label="Search semesters" value={query} onChange={(event) => { setQuery(event.target.value); setPage(1) }} placeholder="Search semester, course, code or branch..." />
+          </label>
+          <select aria-label="Filter by course" value={filters.courseId} onChange={(event) => changeFilter('courseId', event.target.value)}>
+            <option value="">Select Course</option>
+            {courses.map((item) => <option key={item.id} value={item.id}>{item.name}{item.code ? ` - ${item.code}` : ''}</option>)}
+          </select>
+          <select aria-label="Filter by branch" value={filters.branchId} onChange={(event) => changeFilter('branchId', event.target.value)}>
+            <option value="">Select Branch</option>
+            {filteredBranches.map((item) => <option key={item.id} value={item.id}>{item.code ? `${item.code} - ` : ''}{item.name}</option>)}
+          </select>
+          <select aria-label="Filter by academic year" value={filters.academicYearId} onChange={(event) => changeFilter('academicYearId', event.target.value)}>
+            <option value="">Select Academic Year</option>
+            {years.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}
+          </select>
+          <select aria-label="Filter by status" value={filters.status} onChange={(event) => changeFilter('status', event.target.value)}>
+            <option value="">Select Status</option>
+            {['Active', 'Upcoming', 'Completed'].map((item) => <option key={item} value={item}>{item}</option>)}
+          </select>
+          {hasFilters && <button className="semester-clear" onClick={clearFilters}><FiFilter /> Clear</button>}
+        </div>
+      </FilterPanel>
+      {loading ? <Empty icon={FiClock} title="Loading semesters..." /> : error ? <Empty icon={FiLayers} title={error} action={<button className="semester-primary" onClick={load}>Retry</button>} /> : visible.length ? (
+        <>
+          <div className="semester-table-wrapper">
+            <table className="semester-table">
+              <thead>
+                <tr>{['Semester', 'Course', 'Branch', 'Academic Year', 'Start Date', 'End Date', 'Status', 'Actions'].map((heading) => <th key={heading}>{heading}</th>)}</tr>
+              </thead>
+              <tbody>
+                {visible.map((item) => (
+                  <tr key={item.id || `${item.branchId}-${item.semesterNumber}`}>
+                    <td><strong>{item.semesterName}</strong><small>Semester {item.semesterNumber}</small></td>
+                    <td><strong>{item.courseName}</strong>{item.courseCode && <small>{item.courseCode}</small>}</td>
+                    <td><strong>{item.branchName}</strong>{item.branchCode && <small>{item.branchCode}</small>}{item.branchType && <small>{item.branchType}</small>}</td>
+                    <td>{item.academicYearName}</td>
+                    <td>{displayDate(item.startDate)}</td>
+                    <td>{displayDate(item.endDate)}</td>
+                    <td><StatusBadge value={item.status} /></td>
+                    <td>
+                      <div className="semester-row-actions">
+                        <Link aria-label={`View ${item.semesterName}`} to={`/semester-management/${item.id}`}><FiEye className="module-action-icon module-action-icon--view" /></Link>
+                        <Link aria-label={`Edit ${item.semesterName}`} to={`/semester-management/${item.id}/edit`}><FiEdit2 className="module-action-icon module-action-icon--edit" /></Link>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <Pagination page={currentPage} pageCount={pageCount} setPage={setPage} />
+        </>
+      ) : (
+        <Empty icon={FiLayers} title="No semesters match the current filters." />
+      )}
+    </section>
   </Page>
 }
 

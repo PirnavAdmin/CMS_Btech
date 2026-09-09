@@ -1,4 +1,4 @@
-.section-pagination>p{display:none!important}.section-pagination{justify-content:flex-end!important}
+.section-pagination{justify-content:flex-end!important}
 .section-assignment-chooser{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;padding:22px}.section-assignment-chooser button{display:flex;min-height:112px;padding:18px;align-items:center;gap:14px;border:1px solid #c7dbe9;border-radius:12px;color:#123962;background:#fff;text-align:left}.section-assignment-chooser button:hover{border-color:#1970b3;background:#f2f8fd}.section-assignment-chooser svg{width:24px;height:24px;flex:0 0 24px;color:#1970b3}.section-assignment-chooser strong,.section-assignment-chooser small{display:block}.section-assignment-chooser strong{margin-bottom:4px;color:#062e59;font-size:.92rem}.section-assignment-chooser small{color:#687f96;font-size:.76rem}.section-assignment-form-head{display:flex;margin-bottom:12px;align-items:center;justify-content:space-between;gap:12px}.section-assignment-form-head h3{margin:0!important}.section-assignment-form-head button{min-height:32px;padding:0 10px;border:1px solid #c7dbe9;border-radius:7px;color:#0968b0;background:#fff;font-size:.76rem;font-weight:700}
 .section-teacher-form>div{grid-template-columns:minmax(0,1fr) auto}.section-teacher-current{margin:10px 0 0;color:#687f96;font-size:.76rem}.section-teacher-current strong{color:#062e59}
 .section-management{--sm-navy:#062e59;--sm-blue:#1970b3;--sm-text:#123962;--sm-muted:#687f96;--sm-line:#d7e4ee;--sm-soft:#edf5fb;display:grid;gap:16px;max-width:1440px;margin:auto;padding:4px 0 24px;color:var(--sm-text)}
@@ -102,5 +102,118 @@
 
 /* Use formal terminology for sections still awaiting an advisor allocation. */
 .section-stat-card:nth-child(4) div>span{font-size:0}.section-stat-card:nth-child(4) div>span::after{content:'Sections Requiring Faculty Advisors';font-size:.72rem}
-.section-status.inactive{font-size:0}.section-status.inactive::after{content:'Deactive';font-size:.68rem}
-.section-table td:first-child>small{display:none}
+
+
+
+/* Routed add/edit Section workflow. */
+.section-header-actions{display:flex;align-items:center;justify-content:flex-end;gap:12px;flex-wrap:wrap}.section-primary.secondary{border:1px solid #c7dbe9;color:#0968b0;background:#fff;box-shadow:none}.section-primary.secondary:hover{border-color:#1970b3;color:#0968b0;background:#f2f8fd}.compact-summary{display:flex;align-items:stretch;gap:0;padding:6px 8px;border:1px solid #d7e4ee;border-radius:9px;background:#fff;box-shadow:0 4px 14px rgba(6,46,89,.05)}.compact-summary__item{display:grid;min-width:70px;padding:8px 12px;place-items:center;border-right:1px solid #d7e4ee;text-align:center}.compact-summary__item:last-child{border-right:0}.compact-summary__item strong{color:#062e59;font-size:1.05rem;line-height:1.1}.compact-summary__item small{margin-top:3px;color:#687f96;font-size:.62rem;font-weight:800;letter-spacing:.08em;text-transform:uppercase}.compact-summary__item--active strong{color:#087443}.compact-summary__item--inactive strong{color:#b91c1c}.section-form-page{display:grid;gap:16px;width:min(1120px,100%)}.section-form-card{padding:20px;border:1px solid #dce8f2;border-radius:14px;background:#fff;box-shadow:0 10px 30px rgba(6,46,89,.07)}.section-form-card>header{margin-bottom:16px;padding-bottom:12px;border-bottom:1px solid #e3edf5}.section-form-card>header span{display:block;margin-bottom:4px;color:#1970b3;font-size:.68rem;font-weight:850;letter-spacing:.08em;text-transform:uppercase}.section-form-card>header h2{margin:0;color:#062e59;font-size:1.1rem}.section-form-page .section-form-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px 18px}.section-form-page .section-field{display:grid;align-content:start;gap:7px;color:#123962;font-size:.86rem;font-weight:800}.section-form-page .section-field input,.section-form-page .section-field select,.section-form-page .section-field .searchable-select__trigger{width:100%;min-height:43px;border:1px solid #c7d7e7;border-radius:8px;color:#123962;background:#fff;font-size:.86rem}.section-form-page .section-field input{padding:0 12px}.section-form-page .section-field input[readonly]{color:#345778;background:#f6f9fc}.section-required{color:#d92d20}.section-field.invalid>span{color:#8f1d18}.section-field.invalid input,.section-field.invalid select,.section-field.invalid .searchable-select__trigger{border-color:#d92d20;background:#fffafa;box-shadow:0 0 0 3px rgba(217,45,32,.1)}.section-field small[role=alert]{color:#b42318;font-size:.76rem}.section-form-error,.section-form-warning{padding:10px 12px;border-radius:8px;font-size:.78rem;font-weight:750;line-height:1.45}.section-form-error{border:1px solid #fecdca;color:#b42318;background:#fffbfa}.section-form-warning{border:1px solid #fedf89;color:#934b08;background:#fffaeb}.section-form-actions{display:flex;justify-content:flex-end;gap:10px}.section-actions a{display:inline-flex;min-width:30px;width:30px;height:30px;align-items:center;justify-content:center;border:1px solid #c7dbe9;border-radius:7px;color:#0968b0;background:#fff}.section-actions a:hover{border-color:#1970b3;background:#f2f8fd}
+
+/* Branch/College-style Section details page. */
+.section-profile-page{width:min(1120px,100%)}.section-management .cm-profile-card{border:1px solid #e2e8f0;border-radius:16px;background:#fff;overflow:hidden;box-shadow:0 4px 16px rgba(15,23,42,.04)}.section-management .cm-profile-banner{display:flex;align-items:center;gap:20px;padding:26px 30px;background:linear-gradient(135deg,#0d3761 0%,#174d82 100%);color:#fff}.section-management .cm-profile-avatar-wrap{flex-shrink:0}.section-management .cm-profile-placeholder{display:grid;width:72px;height:72px;place-items:center;border:2px solid rgba(255,255,255,.3);border-radius:14px;color:#fff;background:#1e5a96;box-shadow:0 4px 12px rgba(0,0,0,.15)}.section-management .cm-profile-placeholder svg{width:32px;height:32px}.section-management .cm-profile-header-info{display:flex;min-width:0;flex-direction:column;gap:6px}.section-management .cm-profile-badges{display:flex;align-items:center;gap:8px;flex-wrap:wrap}.section-management .cm-badge,.section-management .cm-status-badge{display:inline-flex;align-items:center;min-height:26px;padding:4px 10px;border-radius:6px;font-size:.78rem;font-weight:800;line-height:1.2}.section-management .cm-badge-code{border:1px solid rgba(255,255,255,.2);color:#fff;background:rgba(255,255,255,.18)}.section-management .cm-badge-type{color:#0d3761;background:#fff}.section-management .cm-status-badge{border-radius:999px;color:#087443;background:#dff7ec;text-transform:uppercase}.section-management .cm-status-badge.inactive{color:#b91c1c;background:#fee2e2}.section-management .cm-profile-title{margin:2px 0 0;color:#fff;font-size:1.55rem;font-weight:700;line-height:1.25}.section-management .cm-profile-subtitle{margin:0;color:#fff;font-size:.92rem}.section-management .cm-profile-grid{display:grid;grid-template-columns:minmax(0,1fr);gap:16px;padding:24px 30px}.section-management .cm-info-card{border:1px solid #e2e8f0;border-radius:12px;padding:22px;background:#f8fafc}.section-management .cm-info-card-header{display:flex;align-items:center;gap:8px;margin-bottom:18px;padding-bottom:12px;border-bottom:1px solid #e2e8f0;color:#1e5a96}.section-management .cm-info-card-header h2{margin:0;color:#0f172a;font-size:1.05rem;font-weight:700}.section-management .cm-info-rows{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:0;overflow:hidden;border:1px solid #e2e8f0;border-radius:8px;background:#fff}.section-management .cm-info-row{display:grid;min-height:72px;align-content:center;gap:4px;padding:12px 14px;border-right:1px solid #e2e8f0;border-bottom:1px solid #e2e8f0}.section-management .cm-info-row:nth-child(3n){border-right:0}.section-management .cm-info-label{color:#40566f;font-size:.75rem;font-weight:800;letter-spacing:.05em;text-transform:uppercase}.section-management .cm-info-val{color:#102f49;font-size:.95rem;font-weight:700;line-height:1.45;overflow-wrap:anywhere}
+
+@media(max-width:760px){.section-header-actions{width:100%;justify-content:stretch}.section-header-actions>.section-primary,.section-header-actions>.compact-summary{width:100%}.section-form-page .section-form-grid,.section-management .cm-info-rows{grid-template-columns:1fr}.section-form-actions{flex-direction:column-reverse}.section-form-actions .section-primary{width:100%}.section-management .cm-profile-banner{align-items:flex-start;padding:20px}.section-management .cm-profile-placeholder{width:56px;height:56px}.section-management .cm-profile-grid{padding:16px}.section-management .cm-info-card{padding:16px}.section-management .cm-info-row{border-right:0}}
+
+/* Use the application theme for the routed workflow and allocation controls. */
+.section-management{--sm-navy:var(--text-primary);--sm-text:var(--text-primary);--sm-muted:var(--text-muted);--sm-line:var(--border);--sm-soft:var(--surface-soft)}
+.section-management .section-filter-bar>.searchable-select{min-width:0}
+.section-management .section-filter-bar .searchable-select__trigger{min-height:36px;font-size:.75rem}
+.section-management :is(.section-form-card,.compact-summary,.cm-profile-card,.cm-info-rows,.section-assignment-panel){background:var(--surface);border-color:var(--border);color:var(--text-primary)}
+.section-management :is(.cm-info-card,.section-assignment-form,.section-assignment-panel>header,.section-assignment-panel>footer){background:var(--surface-soft);border-color:var(--border)}
+.section-management :is(.cm-info-val,.section-field,.compact-summary strong,.section-assignment-panel h2,.section-assignment-panel h3,.section-capacity strong,.section-assigned-list strong){color:var(--text-primary)}
+.section-management :is(.cm-info-label,.compact-summary small,.section-assignment-panel small,.section-assignment-panel header span){color:var(--text-muted)}
+.section-management .section-form-page .section-field :is(input,select){background:var(--surface);color:var(--text-primary);border-color:var(--border)}
+.section-management .section-form-page .section-field input[readonly]{background:var(--surface-soft);color:var(--text-secondary)}
+.section-management :is(.cm-info-row,.cm-info-rows,.cm-info-card-header,.section-form-card>header){border-color:var(--border)}
+.section-management .cm-profile-banner :is(.cm-profile-title,.cm-profile-subtitle){color:#fff!important}
+.section-management .section-assignment-chooser button{background:var(--surface);border-color:var(--border);color:var(--text-primary)}
+.section-management .section-assignment-chooser strong{color:var(--text-primary)}
+.section-management .section-primary:disabled{opacity:.5;cursor:not-allowed}
+.section-management .section-field>small:not([role]){color:var(--text-muted);font-weight:400;line-height:1.5}
+.section-management .section-pagination{flex-direction:row;align-items:center}
+.section-management .section-assignment-form>div{grid-template-columns:minmax(0,1fr) auto}
+@media(max-width:620px){.section-management .section-assignment-form>div{grid-template-columns:1fr}.section-management .compact-summary__item{min-width:0;flex:1;padding:8px}}
+
+/* Two-tab Add/Edit Section workflow. */
+.section-form-tabs{display:flex;gap:8px;padding:6px;border:1px solid var(--border);border-radius:10px;background:var(--surface-soft)}
+.section-form-tabs button{min-height:38px;padding:0 14px;border:1px solid transparent;border-radius:8px;color:var(--text-muted);background:transparent;font-size:.82rem;font-weight:800;cursor:pointer}
+.section-form-tabs button.active{border-color:#1970b3;color:#0968b0;background:var(--surface);box-shadow:0 3px 10px rgba(6,46,89,.08)}
+.section-form-tabs button:disabled{cursor:not-allowed;opacity:.45}
+.section-form-page--mapping .section-form-card--details{display:none}
+.section-form-page--details .section-form-card--mapping{display:none}
+.section-form-page--details .section-form-card--details{display:block}
+.section-form-actions{display:flex;justify-content:flex-end;gap:10px}
+@media(max-width:620px){.section-form-tabs{flex-direction:column}.section-form-tabs button,.section-form-actions .section-primary{width:100%}}
+
+/* Eligible student allocation list. */
+.section-student-allocation{display:grid;gap:12px;padding:16px 20px;border-top:1px solid var(--border);background:var(--surface)}
+
+/* The wrapper owns the single border and focus ring, as in directory searches. */
+.section-management .section-assignment-panel .section-student-allocation .section-student-search {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+  height: 46px;
+  padding: 0 14px;
+  border: 1px solid var(--border-strong);
+  border-radius: 10px;
+  background: var(--surface);
+  cursor: text;
+  transition: border-color .18s ease, box-shadow .18s ease;
+}
+.section-management .section-assignment-panel .section-student-allocation .section-student-search:focus-within {
+  border-color: var(--brand);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--brand) 16%, transparent);
+}
+.section-management .section-assignment-panel .section-student-allocation .section-student-search > svg {
+  display: block;
+  flex: 0 0 18px;
+  width: 18px;
+  height: 18px;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  color: var(--text-muted);
+  background: transparent;
+  box-shadow: none;
+}
+/* Override the global input border and !important focus-visible ring. */
+.section-management .section-assignment-panel .section-student-allocation .section-student-search > input,
+.section-management .section-assignment-panel .section-student-allocation .section-student-search > input:focus-visible {
+  flex: 1 1 0%;
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+  height: 100%;
+  min-height: 0;
+  margin: 0;
+  padding: 0;
+  border: 0 !important;
+  border-radius: 0;
+  outline: 0 !important;
+  color: var(--text-primary);
+  background: transparent;
+  box-shadow: none !important;
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 1.4;
+  appearance: none;
+}
+.section-management .section-assignment-panel .section-student-allocation .section-student-search > input::placeholder {
+  color: var(--text-muted);
+  opacity: 1;
+}
+.section-management .section-student-allocation {
+  min-width: 0;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 12px;
+}
+.section-select-all{display:flex;align-items:center;gap:8px;color:var(--text-primary);font-size:.82rem;font-weight:800}
+.section-eligible-list{display:grid;max-height:300px;overflow:auto;border:1px solid var(--border);border-radius:10px;background:var(--surface)}
+.section-student-row{display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:10px;padding:11px 12px;border-bottom:1px solid var(--border);cursor:pointer}
+.section-student-row:last-child{border-bottom:0}.section-student-row:hover{background:var(--surface-soft)}
+.section-student-row strong,.section-student-row small{display:block}.section-student-row strong{color:var(--text-primary);font-size:.84rem}.section-student-row small{margin-top:3px;color:var(--text-muted);font-size:.72rem}.section-student-row em{padding:4px 8px;border-radius:999px;color:#087443;background:#dff7ec;font-size:.68rem;font-style:normal;font-weight:800;white-space:nowrap}.section-student-row.disabled{cursor:not-allowed;opacity:.72}.section-student-row.disabled em{color:#a15c00;background:#fff3d6}.section-student-actions{display:flex;align-items:center;justify-content:space-between;gap:12px}.section-student-actions span{color:var(--text-muted);font-size:.8rem;font-weight:800}.section-assignment-empty{margin:0;padding:16px;color:var(--text-muted);font-size:.82rem;text-align:center}
+@media(max-width:620px){.section-student-row{grid-template-columns:auto minmax(0,1fr)}.section-student-row em{grid-column:2}.section-student-actions{align-items:stretch;flex-direction:column}.section-student-actions .section-primary{width:100%}}

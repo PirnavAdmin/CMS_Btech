@@ -1,4 +1,4 @@
-import { Component } from 'react'
+import { Component, useEffect } from 'react'
 import { Navigate, Route, Routes } from 'react-router-dom'
 import ProtectedRoute from './components/ProtectedRoute'
 import { ROLES } from './auth/roles'
@@ -27,16 +27,17 @@ import Attendance from './pages/attendance/Attendance'
 import Marks from './pages/marks/Marks'
 import Results from './pages/results/Results'
 import Faculty from './pages/faculty/Faculty'
+import { AcademicProvider } from './context/AcademicContext'
 import './styles/erp-theme.css'
 
 class AppErrorBoundary extends Component {
   constructor(props) {
     super(props)
-    this.state = { hasError: false }
+    this.state = { hasError: false, error: null }
   }
 
-  static getDerivedStateFromError() {
-    return { hasError: true }
+  static getDerivedStateFromError(error) {
+    return { hasError: true, error }
   }
 
   componentDidCatch(error, info) {
@@ -47,9 +48,14 @@ class AppErrorBoundary extends Component {
     if (this.state.hasError) {
       return (
         <main style={{ minHeight: '100vh', display: 'grid', placeItems: 'center', padding: '24px', fontFamily: 'system-ui, sans-serif' }}>
-          <div style={{ maxWidth: '420px', textAlign: 'center', background: '#fff', borderRadius: '16px', padding: '32px 24px', boxShadow: '0 12px 32px rgba(15, 23, 42, 0.12)' }}>
+          <div style={{ maxWidth: '500px', textAlign: 'center', background: '#fff', borderRadius: '16px', padding: '32px 24px', boxShadow: '0 12px 32px rgba(15, 23, 42, 0.12)' }}>
             <h1 style={{ margin: '0 0 12px', color: '#0f172a' }}>Something went wrong</h1>
-            <p style={{ margin: '0 0 20px', color: '#475569' }}>The app hit an unexpected error. Please reload the page or return home.</p>
+            <p style={{ margin: '0 0 12px', color: '#475569' }}>The app hit an unexpected error. Please reload the page or return home.</p>
+            {this.state.error && (
+              <pre style={{ margin: '0 0 20px', padding: '10px', background: '#f1f5f9', color: '#dc2626', borderRadius: '8px', fontSize: '13px', textAlign: 'left', overflowX: 'auto', whiteSpace: 'pre-wrap' }}>
+                {this.state.error.message || String(this.state.error)}
+              </pre>
+            )}
             <button type="button" onClick={() => window.location.href = '/'} style={{ border: 'none', background: '#2563eb', color: '#fff', borderRadius: '10px', padding: '10px 16px', cursor: 'pointer', fontWeight: 700 }}>
               Go to home
             </button>
@@ -62,10 +68,30 @@ class AppErrorBoundary extends Component {
   }
 }
 
+function TableOverflowTitles() {
+  useEffect(() => {
+    const actionSelector = '.erp-row-actions,.row-actions,.cm-actions,.cm-row-actions,.semester-row-actions,.section-actions,.course-actions,.branch-actions,.sa-icon-actions,.sa-row-actions'
+    const showFullValue = (event) => {
+      const cell = event.target.closest('td, th')
+      if (!cell || cell.querySelector(actionSelector)) return
+
+      const children = Array.from(cell.children)
+      const isTruncated = cell.scrollWidth > cell.clientWidth || children.some((child) => child.scrollWidth > child.clientWidth)
+      if (isTruncated && !cell.title) cell.title = cell.innerText.replace(/\s+/g, ' ').trim()
+    }
+    document.addEventListener('mouseover', showFullValue)
+    return () => document.removeEventListener('mouseover', showFullValue)
+  }, [])
+
+  return null
+}
+
 export default function App() {
   return (
     <AppErrorBoundary>
-      <Routes>
+      <AcademicProvider>
+        <TableOverflowTitles />
+        <Routes>
         {/* Public */}
         <Route path="/" element={<LandingPage />} />
         <Route path="/login" element={<Login />} />
@@ -115,6 +141,9 @@ export default function App() {
           <Route path="/semester-management/:id" element={<SemesterManagement mode="details" />} />
           <Route path="/semester-management/:id/edit" element={<SemesterManagement mode="edit" />} />
           <Route path="/section-management" element={<SectionManagement />} />
+          <Route path="/section-management/add" element={<SectionManagement mode="form" />} />
+          <Route path="/section-management/:id" element={<SectionManagement mode="details" />} />
+          <Route path="/section-management/:id/edit" element={<SectionManagement mode="edit" />} />
         </Route>
 
         {/* Course Management - Admin Only */}
@@ -168,6 +197,7 @@ export default function App() {
           element={<Navigate to="/" replace />}
         />
       </Routes>
+      </AcademicProvider>
     </AppErrorBoundary>
   )
 }

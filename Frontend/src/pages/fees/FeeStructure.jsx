@@ -1,11 +1,14 @@
 import { useEffect, useMemo, useState } from 'react'
 import { FiCopy, FiEdit2, FiEye, FiFilter, FiPlus, FiSearch, FiSettings, FiTrash2, FiX } from 'react-icons/fi'
+import ExportMenu, { PrintDetailsButton } from '../../components/ExportMenu'
+import { feeStructureColumns, hostelFeeColumns, transportFeeColumns } from '../../utils/exportColumns'
 import DashboardLayout from '../../layouts/DashboardLayout'
 import { academicYearApi, branchApi, courseApi, departmentApi } from '../../api/apiEndpoints'
 import { getSemesters } from '../../auth/collegeApi'
 import { getOperationalAcademicYearOptions } from '../../utils/academicYearUtils'
 import { blankAcademic, componentTotals, feeComponent, findConflict, money, persistHostelStructures, persistTransportStructures, readHostelStructures, readStructures, readTransportStructures, saveAcademic, structureCode, structureName, uid } from './feeStructureService'
 import SearchableSelect from '../../components/SearchableSelect'
+import TablePagination from '../../components/TablePagination'
 import './FeeStructure.css'
 const PERIODS=['Per Semester','Per Academic Year'], YEARS=['1st Year','2nd Year','3rd Year','4th Year'], ADMISSIONS=['Regular','Lateral Entry','Transfer'], QUOTAS=['Convener','Management','NRI','Sports','Other'], CATEGORIES=['Academic','University','Examination','Laboratory','Administrative','Student Service','Deposit','Miscellaneous'], FREQUENCIES=['One Time','Per Academic Year','Per Semester','Monthly','Custom'], STATUSES=['Draft','Active','Inactive','Archived']
 const isJunkName = (name) => {
@@ -42,13 +45,90 @@ export default function FeeStructure(){
  const create=()=>domain==='academic'?setForm(blankAcademic()):setFacilityForm({type:domain,value:domain==='hostel'?blankHostel():blankTransport()})
  const saveFacility=(type,value)=>{const source=type==='hostel'?hostels:transports,next=[value,...source.filter(x=>x.id!==value.id)];if(type==='hostel'){setHostels(next);persistHostelStructures(next)}else{setTransports(next);persistTransportStructures(next)}setFacilityForm(null);notify(`${type==='hostel'?'Hostel':'Transportation'} fee structure saved.`)}
  return <DashboardLayout><main className="fs-page">{toast&&<div className="fs-toast">{toast}</div>}<header className="fs-head"><div><p>Dashboard / Fee Management</p><h1>Fee Structure Configuration</h1><span>Independent academic, hostel and transport financial models.</span></div><button className="primary" onClick={create}><FiPlus/> Create {domain==='academic'?'Academic Structure':domain==='hostel'?'Hostel Plan':'Transport Route'}</button></header><nav className="fs-domain-tabs">{[['academic','Academic Fee Structures'],['hostel','Hostel Fee Structures'],['transport','Transport Fee Structures']].map(([k,v])=><button className={domain===k?'active':''} onClick={()=>setDomain(k)} key={k}>{v}</button>)}</nav>
- {domain==='academic'&&<><div className="fs-filter-actions"><button className={showFilters?'active':''} onClick={()=>setShowFilters(value=>!value)}><FiFilter/> Filter</button>{Boolean(query || Object.values(filters).some(Boolean))&&<button onClick={()=>{setFilters({});setQuery('')}}>Clear Filters</button>}</div>{showFilters&&<Filters masters={masters} value={filters} change={setFilters}/>} {loading?<Empty text="Loading academic masters..."/>:loadError?<Empty text={loadError}/>:<List rows={filtered} query={query} setQuery={setQuery} view={setDetails} edit={setForm}/>}</>}
- {domain==='hostel'&&<Facility type="hostel" rows={hostels} edit={value=>setFacilityForm({type:'hostel',value})} view={value=>setFacilityDetails({type:'hostel',value})} persist={x=>{setHostels(x);persistHostelStructures(x)}}/>}{domain==='transport'&&<Facility type="transport" rows={transports} edit={value=>setFacilityForm({type:'transport',value})} view={value=>setFacilityDetails({type:'transport',value})} persist={x=>{setTransports(x);persistTransportStructures(x)}}/>}
- {form&&<Editor value={structuredClone(form)} masters={masters} rows={rows} close={()=>setForm(null)} save={save}/>} {details&&<Details row={details} close={()=>setDetails(null)} edit={()=>{setForm(details);setDetails(null)}}/>}{facilityForm&&<FacilityEditor type={facilityForm.type} value={structuredClone(facilityForm.value)} masters={masters} close={()=>setFacilityForm(null)} save={saveFacility}/>} {facilityDetails&&<FacilityDetails type={facilityDetails.type} value={facilityDetails.value} close={()=>setFacilityDetails(null)} edit={()=>{setFacilityForm(facilityDetails);setFacilityDetails(null)}}/>}</main></DashboardLayout>
+  {domain==='academic'&&<><div className="fs-filter-actions"><button className={showFilters?'active':''} onClick={()=>setShowFilters(value=>!value)}><FiFilter/> Filter</button>{Boolean(query || Object.values(filters).some(Boolean))&&<button onClick={()=>{setFilters({});setQuery('')}}>Clear Filters</button>}</div>{showFilters&&<Filters masters={masters} value={filters} change={setFilters}/>} {loading?<Empty text="Loading academic masters..."/>:loadError?<Empty text={loadError}/>:<List rows={filtered} query={query} setQuery={setQuery} view={setDetails} edit={setForm} loading={loading}/>}</>}
+  {domain==='hostel'&&<Facility type="hostel" rows={hostels} edit={value=>setFacilityForm({type:'hostel',value})} view={value=>setFacilityDetails({type:'hostel',value})} persist={x=>{setHostels(x);persistHostelStructures(x)}}/>}{domain==='transport'&&<Facility type="transport" rows={transports} edit={value=>setFacilityForm({type:'transport',value})} view={value=>setFacilityDetails({type:'transport',value})} persist={x=>{setTransports(x);persistTransportStructures(x)}}/>}
+  {form&&<Editor value={structuredClone(form)} masters={masters} rows={rows} close={()=>setForm(null)} save={save}/>} {details&&<Details row={details} close={()=>setDetails(null)} edit={()=>{setForm(details);setDetails(null)}}/>}{facilityForm&&<FacilityEditor type={facilityForm.type} value={structuredClone(facilityForm.value)} masters={masters} close={()=>setFacilityForm(null)} save={saveFacility}/>} {facilityDetails&&<FacilityDetails type={facilityDetails.type} value={facilityDetails.value} close={()=>setFacilityDetails(null)} edit={()=>{setFacilityForm(facilityDetails);setFacilityDetails(null)}}/>}</main></DashboardLayout>
 }
 
 function Filters({masters,value,change}){const courses=masters.courses.filter(x=>!value.departmentId||same(x.departmentId??x.department?.id,value.departmentId)),branches=masters.branches.filter(x=>!value.courseId||same(x.courseId??x.course?.id,value.courseId));return <section className="fs-filters"><div><MasterSelect label="Academic Year" rows={masters.years} value={value.academicYearId} change={academicYearId=>change({...value,academicYearId})}/><MasterSelect label="Department" rows={masters.departments} value={value.departmentId} change={departmentId=>change({...value,departmentId,courseId:'',branchId:''})}/><MasterSelect label="Course" rows={courses} value={value.courseId} change={courseId=>change({...value,courseId,branchId:''})}/><MasterSelect label="Branch" rows={branches} value={value.branchId} change={branchId=>change({...value,branchId})}/><SimpleSelect label="Fee Period" values={PERIODS} value={value.feePeriod} change={feePeriod=>change({...value,feePeriod})}/><SimpleSelect label="Admission Type" values={ADMISSIONS} value={value.admissionType} change={admissionType=>change({...value,admissionType})}/><SimpleSelect label="Quota" values={QUOTAS} value={value.quota} change={quota=>change({...value,quota})}/><SimpleSelect label="Status" values={STATUSES} value={value.status} change={status=>change({...value,status})}/></div></section>}
-function List({rows,query,setQuery,view,edit}){return <section className="fs-card"><header className="fs-list-head"><div><h2>Academic Fee Structures</h2><span>{rows.length} records</span></div><label><FiSearch/><input value={query} onChange={e=>setQuery(e.target.value)} placeholder="Search code or structure"/></label></header>{!rows.length?<Empty text="No academic fee structures match this scope."/>:<div className="fs-table"><table><thead><tr><th>Code / Version</th><th>Structure Name</th><th>Academic Setup</th><th>Fee Period</th><th>Admission / Quota</th><th>Mandatory</th><th>Refundable</th><th>Optional</th><th>Effective Period</th><th>Status</th><th>Actions</th></tr></thead><tbody>{rows.map(x=>{const t=componentTotals(x.feeComponents);return <tr key={x.id}><td><strong>{x.code}</strong><small>Version {x.version}</small></td><td>{x.name}</td><td>{x.departmentName}<small>{x.courseName} / {x.branchName}</small></td><td>{x.feePeriod}<small>{x.semesterName||x.yearOfStudy}</small></td><td>{x.admissionType}<small>{x.quota}{x.studentCategory?` / ${x.studentCategory}`:''}</small></td><td>{money(t.mandatory)}</td><td>{money(t.refundable)}</td><td>{money(t.optional)}</td><td>{x.effectiveFrom}<small>{x.effectiveTo||'Open ended'}</small></td><td><Badge value={x.status}/></td><td><button onClick={()=>view(x)}><FiEye className="module-action-icon module-action-icon--view" /></button><button onClick={()=>edit(x)}><FiEdit2 className="module-action-icon module-action-icon--edit" /></button><button onClick={()=>edit({...structuredClone(x),id:'',version:1,status:'Draft'})}><FiCopy/></button></td></tr>})}</tbody></table></div>}</section>}
+function List({rows,query,setQuery,view,edit,loading}){
+  const [currentPage, setCurrentPage] = useState(1)
+  const [pageSize, setPageSize] = useState(5)
+  useEffect(() => { setCurrentPage(1) }, [query, rows.length])
+  const paginatedRows = rows.slice((currentPage - 1) * pageSize, currentPage * pageSize)
+
+  return (
+    <section className="fs-card">
+      <header className="fs-list-head">
+        <div>
+          <h2>Academic Fee Structures</h2>
+          <span>{rows.length} records</span>
+        </div>
+        <div className="directory-export-actions">
+          <ExportMenu rows={rows} columns={feeStructureColumns} title="Academic Fee Structures" filename="fee-structures-academic" loading={loading} />
+          <label><FiSearch/><input value={query} onChange={e=>setQuery(e.target.value)} placeholder="Search code or structure"/></label>
+        </div>
+      </header>
+      {!rows.length ? (
+        <Empty text="No academic fee structures match this scope."/>
+      ) : (
+        <>
+          <div className="fs-table">
+            <table>
+              <thead>
+                <tr>
+                  <th>Code / Version</th>
+                  <th>Structure Name</th>
+                  <th>Academic Setup</th>
+                  <th>Fee Period</th>
+                  <th>Admission / Quota</th>
+                  <th>Mandatory</th>
+                  <th>Refundable</th>
+                  <th>Optional</th>
+                  <th>Effective Period</th>
+                  <th>Status</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {paginatedRows.map(x=>{
+                  const t=componentTotals(x.feeComponents);
+                  return (
+                    <tr key={x.id}>
+                      <td><strong>{x.code}</strong><small>Version {x.version}</small></td>
+                      <td>{x.name}</td>
+                      <td>{x.departmentName}<small>{x.courseName} / {x.branchName}</small></td>
+                      <td>{x.feePeriod}<small>{x.semesterName||x.yearOfStudy}</small></td>
+                      <td>{x.admissionType}<small>{x.quota}{x.studentCategory?` / ${x.studentCategory}`:''}</small></td>
+                      <td>{money(t.mandatory)}</td>
+                      <td>{money(t.refundable)}</td>
+                      <td>{money(t.optional)}</td>
+                      <td>{x.effectiveFrom}<small>{x.effectiveTo||'Open ended'}</small></td>
+                      <td><Badge value={x.status}/></td>
+                      <td>
+                        <button onClick={()=>view(x)}><FiEye className="module-action-icon module-action-icon--view" /></button>
+                        <button onClick={()=>edit(x)}><FiEdit2 className="module-action-icon module-action-icon--edit" /></button>
+                        <button onClick={()=>edit({...structuredClone(x),id:'',version:1,status:'Draft'})}><FiCopy/></button>
+                      </td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
+          </div>
+          <TablePagination
+            totalItems={rows.length}
+            pageSize={pageSize}
+            currentPage={currentPage}
+            onPageChange={setCurrentPage}
+            onPageSizeChange={s => { setPageSize(s); setCurrentPage(1) }}
+            pageSizeOptions={[5, 10, 20]}
+          />
+        </>
+      )}
+    </section>
+  )
+}
 
 function Editor({value,masters,rows,close,save}){
  const[f,setF]=useState(value),[step,setStep]=useState(0),[errors,setErrors]=useState({}),[message,setMessage]=useState(''),steps=['Basic Information','Academic Applicability','Fee Components','Payment Schedule','Fine & Concession Rules','Preview'],totals=componentTotals(f.feeComponents),amountPayable=payable(f),p=f.paymentPlan,allocated=p.allocationMode==='Percentage'?p.installments.reduce((a,x)=>a+Number(x.percentage||0),0):p.installments.reduce((a,x)=>a+Number(x.amount||0),0)
@@ -64,14 +144,82 @@ function Components({f,setF,errors,totals,amountPayable}){const update=(id,k,v)=
 function Payment({f,setF,amountPayable,allocated,error}){const p=f.paymentPlan,set=v=>setF({...f,paymentPlan:{...p,...v}}),update=(id,k,v)=>set({installments:p.installments.map(x=>x.id===id?{...x,[k]:v}:x)}),allocationKey=p.allocationMode==='Percentage'?'percentage':'amount';return <><StepTitle title="Payment Schedule" text="Allocate mandatory payable; refundable deposits are opt-in."/><div className="fs-grid"><SimpleField label="Payment Mode" values={['Full Payment','Installments']} value={p.mode} change={mode=>set({mode})}/><Toggle label="Include refundable deposits" checked={p.includeRefundable} change={includeRefundable=>set({includeRefundable})}/>{p.mode==='Full Payment'?<Field label="Due Date *" error={error}><input type="date" value={p.dueDate} onChange={e=>set({dueDate:e.target.value})}/></Field>:<SimpleField label="Allocation Mode" values={['Amount','Percentage']} value={p.allocationMode} change={allocationMode=>set({allocationMode})}/>}</div>{p.mode==='Installments'&&<><button className="primary" onClick={()=>set({installments:[...p.installments,{id:uid('IN'),name:`Installment ${p.installments.length+1}`,amount:'',percentage:'',dueDate:'',gracePeriod:'',fineRule:'Use Structure Rule'}]})}><FiPlus/> Add Installment</button>{p.installments.map(x=><div className="fs-installment" key={x.id}><input placeholder="Name" value={x.name} onChange={e=>update(x.id,'name',e.target.value)}/><input type="number" min="0" placeholder={p.allocationMode} value={x[allocationKey]} onChange={e=>update(x.id,allocationKey,e.target.value)}/><input type="date" value={x.dueDate} onChange={e=>update(x.id,'dueDate',e.target.value)}/><input type="number" min="0" placeholder="Grace days" value={x.gracePeriod} onChange={e=>update(x.id,'gracePeriod',e.target.value)}/><select value={x.fineRule} onChange={e=>update(x.id,'fineRule',e.target.value)}><option>Use Structure Rule</option><option>No Fine</option></select><button onClick={()=>set({installments:p.installments.filter(i=>i.id!==x.id)})}><FiTrash2 className="module-action-icon module-action-icon--danger" /></button></div>)}</>}<div className="fs-allocation"><span>Mandatory Payable<strong>{money(amountPayable)}</strong></span><span>Allocated<strong>{p.allocationMode==='Percentage'?`${allocated}%`:money(allocated)}</strong></span><span>Remaining<strong>{p.allocationMode==='Percentage'?`${100-allocated}%`:money(amountPayable-allocated)}</strong></span></div>{error&&<p className="error">{error}</p>}</>}
 function Rules({f,setF,error}){const r=f.fineRules,set=v=>setF({...f,fineRules:{...r,...v}});return <><StepTitle title="Fine & Concession Rules" text="Reusable policy only; student concessions belong to the concession module."/><div className="fs-grid"><SimpleField label="Fine Rule" values={['No Fine','Fixed','Per Day','Percentage','Slab Based']} value={r.type} change={type=>set({type})}/>{r.type!=='No Fine'&&<><Field label="Grace Period"><input type="number" min="0" value={r.gracePeriod} onChange={e=>set({gracePeriod:e.target.value})}/></Field><Field label="Fine Value" error={error}><input type="number" min="0" value={r.value} onChange={e=>set({value:e.target.value})}/></Field><Field label="Maximum Fine"><input type="number" min="0" value={r.maximumFine} onChange={e=>set({maximumFine:e.target.value})}/></Field></>}<Toggle label="Allow concession on eligible fee heads" checked={f.concessionPolicy.allowed} change={allowed=>setF({...f,concessionPolicy:{...f.concessionPolicy,allowed}})}/></div><div className="fs-check-list">{f.feeComponents.map(x=><label key={x.id}><input type="checkbox" checked={r.applicableComponentIds.includes(x.id)} onChange={e=>set({applicableComponentIds:e.target.checked?[...r.applicableComponentIds,x.id]:r.applicableComponentIds.filter(id=>id!==x.id)})}/>{x.name||'Unnamed fee head'}</label>)}</div></>}
 function Preview({f}){const t=componentTotals(f.feeComponents);return <><StepTitle title="Fee Structure Preview" text="Complete applicability and financial configuration."/><dl className="fs-preview">{[['Structure Name',structureName(f)],['Code',structureCode(f)],['Version',f.version],['Status',f.status],['Academic Year',f.academicYearName],['Department',f.departmentName],['Course / Branch',`${f.courseName} / ${f.branchName}`],['Fee Period',f.feePeriod],['Year / Semester',f.semesterName||f.yearOfStudy],['Admission / Quota',`${f.admissionType} / ${f.quota}`],['Student Category',f.studentCategory||'All Categories'],['Effective Dates',`${f.effectiveFrom} to ${f.effectiveTo||'Open ended'}`]].map(([k,v])=><div key={k}><dt>{k}</dt><dd>{v||'—'}</dd></div>)}</dl><FeeTable rows={f.feeComponents}/><Totals totals={t} amountPayable={payable(f)}/><h3>Payment Schedule</h3><p>{f.paymentPlan.mode}{f.paymentPlan.mode==='Full Payment'?` · Due ${f.paymentPlan.dueDate}`:` · ${f.paymentPlan.installments.length} installments`}</p><h3>Fine Rules</h3><p>{f.fineRules.type} · Concession {f.concessionPolicy.allowed?'allowed':'not allowed'}</p></>}
-function Details({row,close,edit}){const[tab,setTab]=useState('Overview'),tabs=['Overview','Fee Components','Payment Schedule','Fine Rules','Versions','Students Assigned'];return <div className="fs-overlay"><section className="fs-editor details"><header><div><span>FEE STRUCTURE DETAILS</span><h2>{row.name}</h2><p>{row.code} · Version {row.version}</p></div><button onClick={close}><FiX/></button></header><nav>{tabs.map(x=><button className={tab===x?'active':''} onClick={()=>setTab(x)} key={x}>{x}</button>)}</nav><div className="fs-editor-body">{tab==='Overview'&&<Preview f={row}/>} {tab==='Fee Components'&&<FeeTable rows={row.feeComponents}/>} {tab==='Payment Schedule'&&<pre className="fs-json">{JSON.stringify(row.paymentPlan,null,2)}</pre>} {tab==='Fine Rules'&&<pre className="fs-json">{JSON.stringify({fineRules:row.fineRules,concessionPolicy:row.concessionPolicy},null,2)}</pre>} {tab==='Versions'&&<Empty text={`Current version ${row.version}; every version has its own immutable ID.`}/>} {tab==='Students Assigned'&&<Empty text={row.assignedCount?`${row.assignedCount} student(s) assigned.`:'No assignment data available.'}/>}</div><footer><button onClick={close}>Back</button><span/><button className="primary" onClick={edit}><FiEdit2 className="module-action-icon module-action-icon--edit" /> Edit</button></footer></section></div>}
+function Details({row,close,edit}){const[tab,setTab]=useState('Overview'),tabs=['Overview','Fee Components','Payment Schedule','Fine Rules','Versions','Students Assigned'];return <div className="fs-overlay"><section className="fs-editor details"><header><div><span>FEE STRUCTURE DETAILS</span><h2>{row.name}</h2><p>{row.code} · Version {row.version}</p></div><button onClick={close}><FiX/></button></header><nav>{tabs.map(x=><button className={tab===x?'active':''} onClick={()=>setTab(x)} key={x}>{x}</button>)}</nav><div className="fs-editor-body">{tab==='Overview'&&<Preview f={row}/>} {tab==='Fee Components'&&<FeeTable rows={row.feeComponents}/>} {tab==='Payment Schedule'&&<pre className="fs-json">{JSON.stringify(row.paymentPlan,null,2)}</pre>} {tab==='Fine Rules'&&<pre className="fs-json">{JSON.stringify({fineRules:row.fineRules,concessionPolicy:row.concessionPolicy},null,2)}</pre>} {tab==='Versions'&&<Empty text={`Current version ${row.version}; every version has its own immutable ID.`}/>} {tab==='Students Assigned'&&<Empty text={row.assignedCount?`${row.assignedCount} student(s) assigned.`:'No assignment data available.'}/>}</div><footer><button onClick={close}>Back</button><span/><PrintDetailsButton title={row.name + " details"} selector=".fs-editor.details" /><button className="primary" onClick={edit}><FiEdit2 className="module-action-icon module-action-icon--edit" /> Edit</button></footer></section></div>}
 
 const blankHostel=()=>({id:uid('HF'),academicYearId:'',academicYearName:'',hostelName:'',hostelType:'Boys Hostel',roomType:'Double Sharing',acType:'Non-AC',messPlan:'Standard',componentsText:'',fee:'',effectiveFrom:'',effectiveTo:'',status:'Draft'}), blankTransport=()=>({id:uid('TF'),academicYearId:'',academicYearName:'',route:'',routeCode:'',pickupPoint:'',distance:'',fee:'',frequency:'Per Academic Year',effectiveFrom:'',effectiveTo:'',status:'Draft'})
-function Facility({type,rows,edit,view,persist}){const hostel=type==='hostel';return <section className="fs-card"><header className="fs-list-head"><div><h2>{hostel?'Hostel Fee Structures':'Transportation Fee Structures'}</h2><span>{rows.length} records · independent from course and branch</span></div></header>{!rows.length?<Empty text={`No ${hostel?'hostel plans':'transport routes'} configured.`}/>:<div className="fs-table"><table><thead><tr><th>{hostel?'Hostel / Type':'Route / Code'}</th><th>{hostel?'Room / AC':'Pickup Point'}</th><th>Academic Year</th><th>{hostel?'Mess / Components':'Distance / Frequency'}</th><th>Fee</th><th>Effective Period</th><th>Status</th><th>Actions</th></tr></thead><tbody>{rows.map(x=><tr key={x.id}><td><strong>{hostel?x.hostelName:x.route}</strong><small>{hostel?x.hostelType:x.routeCode}</small></td><td>{hostel?`${x.roomType} · ${x.acType}`:x.pickupPoint}</td><td>{x.academicYearName||'—'}</td><td>{hostel?<>{x.messPlan}<small>{x.componentsText}</small></>:<>{x.distance?`${x.distance} km`:'—'}<small>{x.frequency}</small></>}</td><td><strong>{money(x.fee)}</strong></td><td>{x.effectiveFrom||'—'}<small>{x.effectiveTo||'Open ended'}</small></td><td><Badge value={x.status}/></td><td><button onClick={()=>view(x)} title="View"><FiEye className="module-action-icon module-action-icon--view" /></button><button onClick={()=>edit(x)} title="Edit"><FiEdit2 className="module-action-icon module-action-icon--edit" /></button><button onClick={()=>persist(rows.filter(r=>r.id!==x.id))} title="Delete"><FiTrash2 className="module-action-icon module-action-icon--danger" /></button></td></tr>)}</tbody></table></div>}</section>}
+function Facility({type,rows,edit,view,persist}){
+  const hostel=type==='hostel'
+  const [currentPage, setCurrentPage] = useState(1)
+  const [pageSize, setPageSize] = useState(5)
+  useEffect(() => { setCurrentPage(1) }, [rows.length, type])
+  const paginatedRows = rows.slice((currentPage - 1) * pageSize, currentPage * pageSize)
+
+  return (
+    <section className="fs-card">
+      <header className="fs-list-head">
+        <div>
+          <h2>{hostel?'Hostel Fee Structures':'Transportation Fee Structures'}</h2>
+          <span>{rows.length} records · independent from course and branch</span>
+        </div>
+        <div className="directory-export-actions">
+          <ExportMenu rows={rows} columns={hostel?hostelFeeColumns:transportFeeColumns} title={hostel?'Hostel Fee Structures':'Transportation Fee Structures'} filename={hostel?'fee-structures-hostel':'fee-structures-transport'} />
+        </div>
+      </header>
+      {!rows.length ? (
+        <Empty text={`No ${hostel?'hostel plans':'transport routes'} configured.`}/>
+      ) : (
+        <>
+          <div className="fs-table">
+            <table>
+              <thead>
+                <tr>
+                  <th>{hostel?'Hostel / Type':'Route / Code'}</th>
+                  <th>{hostel?'Room / AC':'Pickup Point'}</th>
+                  <th>Academic Year</th>
+                  <th>{hostel?'Mess / Components':'Distance / Frequency'}</th>
+                  <th>Fee</th>
+                  <th>Effective Period</th>
+                  <th>Status</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {paginatedRows.map(x=>(
+                  <tr key={x.id}>
+                    <td><strong>{hostel?x.hostelName:x.route}</strong><small>{hostel?x.hostelType:x.routeCode}</small></td>
+                    <td>{hostel?`${x.roomType} · ${x.acType}`:x.pickupPoint}</td>
+                    <td>{x.academicYearName||'—'}</td>
+                    <td>{hostel?<>{x.messPlan}<small>{x.componentsText}</small></>:<>{x.distance?`${x.distance} km`:'—'}<small>{x.frequency}</small></>}</td>
+                    <td><strong>{money(x.fee)}</strong></td>
+                    <td>{x.effectiveFrom||'—'}<small>{x.effectiveTo||'Open ended'}</small></td>
+                    <td><Badge value={x.status}/></td>
+                    <td>
+                      <button onClick={()=>view(x)} title="View"><FiEye className="module-action-icon module-action-icon--view" /></button>
+                      <button onClick={()=>edit(x)} title="Edit"><FiEdit2 className="module-action-icon module-action-icon--edit" /></button>
+                      <button onClick={()=>persist(rows.filter(r=>r.id!==x.id))} title="Delete"><FiTrash2 className="module-action-icon module-action-icon--danger" /></button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <TablePagination
+            totalItems={rows.length}
+            pageSize={pageSize}
+            currentPage={currentPage}
+            onPageChange={setCurrentPage}
+            onPageSizeChange={s => { setPageSize(s); setCurrentPage(1) }}
+            pageSizeOptions={[5, 10, 20]}
+          />
+        </>
+      )}
+    </section>
+  )
+}
 
 function FacilityEditor({type,value,masters,close,save}){const hostel=type==='hostel',[f,setF]=useState(value),[step,setStep]=useState(0),[errors,setErrors]=useState({}),steps=['Basic Information',hostel?'Accommodation & Fee':'Route & Fee','Preview'],patch=(key,v)=>setF(current=>({...current,[key]:v}));const validate=i=>{const e={};if(i===0){e.academicYearId=required(f.academicYearId);e[hostel?'hostelName':'route']=required(f[hostel?'hostelName':'route']);if(!hostel)e.routeCode=required(f.routeCode)}if(i===1){if(hostel){e.roomType=required(f.roomType);e.messPlan=required(f.messPlan)}else e.pickupPoint=required(f.pickupPoint);if(Number(f.fee)<=0)e.fee='Enter a positive fee.';e.effectiveFrom=required(f.effectiveFrom);if(f.effectiveFrom&&f.effectiveTo&&f.effectiveTo<f.effectiveFrom)e.effectiveTo='End date cannot precede start date.'}return Object.fromEntries(Object.entries(e).filter(([,v])=>v))},go=n=>{if(n>step){const e=validate(step);if(Object.keys(e).length){setErrors(e);return}}setErrors({});setStep(n)},submit=()=>{const e={...validate(0),...validate(1)};if(Object.keys(e).length){setErrors(e);setStep(Object.keys(validate(0)).length?0:1);return}save(type,{...f,status:'Active'})},selectYear=id=>{const y=masters.years.find(x=>same(x.id,id));setF(current=>({...current,academicYearId:id,academicYearName:y?.name||''}))};return <div className="fs-overlay"><section className="fs-editor"><header><div><span>{hostel?'HOSTEL':'TRANSPORTATION'} FEE STRUCTURE</span><h2>{value.id&&((hostel&&value.hostelName)||(!hostel&&value.route))?'Edit':'Create'} {hostel?'Hostel':'Transportation'} Fee Structure</h2><p>{[f.academicYearName,hostel?f.hostelName:f.route].filter(Boolean).join(' / ')||`Configure ${hostel?'accommodation':'route'} applicability and charges.`}</p></div><button onClick={close}><FiX/></button></header><nav>{steps.map((x,i)=><button key={x} className={step===i?'active':i<step?'done':''} onClick={()=>go(i)}><i>{i<step?'Done':i+1}</i>{x}</button>)}</nav><div className="fs-editor-body">{step===0&&<><StepTitle title="Basic Information" text={`Define the ${hostel?'hostel plan':'transport route'} and academic year.`}/><div className="fs-grid"><MasterField label="Academic Year *" error={errors.academicYearId} rows={masters.years} value={f.academicYearId} change={selectYear}/>{hostel?<><Field label="Hostel Name *" error={errors.hostelName}><input value={f.hostelName} onChange={e=>patch('hostelName',e.target.value)}/></Field><SimpleField label="Hostel Type *" values={['Boys Hostel','Girls Hostel','Co-ed Hostel']} value={f.hostelType} change={v=>patch('hostelType',v)}/></>:<><Field label="Route Name *" error={errors.route}><input value={f.route} onChange={e=>patch('route',e.target.value)}/></Field><Field label="Route Code *" error={errors.routeCode}><input value={f.routeCode} onChange={e=>patch('routeCode',e.target.value)}/></Field></>}<SimpleField label="Status" values={STATUSES} value={f.status} change={v=>patch('status',v)}/></div></>}{step===1&&<><StepTitle title={hostel?'Accommodation & Fee':'Route & Fee'} text="Configure service details, charge and effective period."/><div className="fs-grid">{hostel?<><SimpleField label="Room Type *" error={errors.roomType} values={['Single Sharing','Double Sharing','Triple Sharing','Four Sharing','Dormitory']} value={f.roomType} change={v=>patch('roomType',v)}/><SimpleField label="AC Type" values={['Non-AC','AC']} value={f.acType} change={v=>patch('acType',v)}/><Field label="Mess Plan *" error={errors.messPlan}><input value={f.messPlan} onChange={e=>patch('messPlan',e.target.value)}/></Field><Field label="Fee Components"><textarea placeholder="Room Rent, Mess, Maintenance, Deposit" value={f.componentsText} onChange={e=>patch('componentsText',e.target.value)}/></Field></>:<><Field label="Pickup Point *" error={errors.pickupPoint}><input value={f.pickupPoint} onChange={e=>patch('pickupPoint',e.target.value)}/></Field><Field label="Distance (km)"><input type="number" min="0" value={f.distance} onChange={e=>patch('distance',e.target.value)}/></Field><SimpleField label="Frequency" values={FREQUENCIES} value={f.frequency} change={v=>patch('frequency',v)}/></>}<Field label="Fee *" error={errors.fee}><input type="number" min="0" value={f.fee} onChange={e=>patch('fee',e.target.value)}/></Field><Field label="Effective From *" error={errors.effectiveFrom}><input type="date" value={f.effectiveFrom} onChange={e=>patch('effectiveFrom',e.target.value)}/></Field><Field label="Effective To" error={errors.effectiveTo}><input type="date" min={f.effectiveFrom} value={f.effectiveTo} onChange={e=>patch('effectiveTo',e.target.value)}/></Field></div></>}{step===2&&<FacilityPreview type={type} value={f}/>}</div><footer><button disabled={!step} onClick={()=>go(step-1)}>Back</button><span/>{step<2?<button className="primary" onClick={()=>go(step+1)}>Continue</button>:<><button onClick={()=>save(type,{...f,status:'Draft'})}>Save as Draft</button><button className="primary" onClick={submit}>Save & Activate</button></>}</footer></section></div>}
 function FacilityPreview({type,value}){const hostel=type==='hostel',items=hostel?[['Academic Year',value.academicYearName],['Hostel',value.hostelName],['Hostel Type',value.hostelType],['Room Type',value.roomType],['AC Type',value.acType],['Mess Plan',value.messPlan],['Components',value.componentsText]]:[['Academic Year',value.academicYearName],['Route',value.route],['Route Code',value.routeCode],['Pickup Point',value.pickupPoint],['Distance',value.distance?`${value.distance} km`:'—'],['Frequency',value.frequency]];return <><StepTitle title={`${hostel?'Hostel':'Transportation'} Fee Structure Preview`} text="Review all details before activation."/><dl className="fs-preview">{[...items,['Fee',money(value.fee)],['Effective Dates',`${value.effectiveFrom||'—'} to ${value.effectiveTo||'Open ended'}`],['Status',value.status]].map(([k,v])=><div key={k}><dt>{k}</dt><dd>{v||'—'}</dd></div>)}</dl><section className="fs-facility-total"><span>Configured Fee<strong>{money(value.fee)}</strong></span><span>Billing Frequency<strong>{hostel?'As configured':value.frequency}</strong></span><span>Current Status<strong>{value.status}</strong></span></section></>}
-function FacilityDetails({type,value,close,edit}){return <div className="fs-overlay"><section className="fs-editor details"><header><div><span>{type==='hostel'?'HOSTEL':'TRANSPORTATION'} FEE STRUCTURE DETAILS</span><h2>{type==='hostel'?value.hostelName:value.route}</h2><p>{value.academicYearName} · {money(value.fee)}</p></div><button onClick={close}><FiX/></button></header><div className="fs-editor-body"><FacilityPreview type={type} value={value}/></div><footer><button onClick={close}>Back</button><span/><button className="primary" onClick={edit}><FiEdit2 className="module-action-icon module-action-icon--edit" /> Edit</button></footer></section></div>}
+function FacilityDetails({type,value,close,edit}){return <div className="fs-overlay"><section className="fs-editor details"><header><div><span>{type==='hostel'?'HOSTEL':'TRANSPORTATION'} FEE STRUCTURE DETAILS</span><h2>{type==='hostel'?value.hostelName:value.route}</h2><p>{value.academicYearName} · {money(value.fee)}</p></div><button onClick={close}><FiX/></button></header><div className="fs-editor-body"><FacilityPreview type={type} value={value}/></div><footer><button onClick={close}>Back</button><span/><PrintDetailsButton title={(type==='hostel'?value.hostelName:value.route) + " details"} selector=".fs-editor.details" /><button className="primary" onClick={edit}><FiEdit2 className="module-action-icon module-action-icon--edit" /> Edit</button></footer></section></div>}
 
 function FeeTable({rows}){return <div className="fs-table"><table><thead><tr><th>Fee Head</th><th>Category</th><th>Frequency</th><th>Requirement</th><th>Refundability</th><th>Amount</th></tr></thead><tbody>{rows.map(x=><tr key={x.id}><td>{x.name}</td><td>{x.category}</td><td>{x.frequency}</td><td>{x.requirement}</td><td>{x.refundable}</td><td>{money(x.amount)}</td></tr>)}</tbody></table></div>}
 const Totals=({totals,amountPayable})=><section className="fs-totals"><div><span>Mandatory Academic</span><strong>{money(totals.mandatory)}</strong></div><div><span>Refundable Deposit</span><strong>{money(totals.refundable)}</strong></div><div><span>Optional Academic</span><strong>{money(totals.optional)}</strong></div><div><span>Configured Payable</span><strong>{money(amountPayable)}</strong></div></section>

@@ -1,0 +1,59 @@
+.cm-info-card {
+  border: 1px solid var(--border, #dbe4eb);
+  border-radius: var(--radius-md, 11px);
+  background: var(--surface, #fff);
+  box-shadow: var(--shadow-sm, 0 2px 8px rgba(15,42,66,.06));
+  padding: 16px 18px;
+}
+
+.cm-info-card-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding-bottom: 12px;
+  margin-bottom: 12px;
+  border-bottom: 1px solid var(--border, #dbe4eb);
+  color: var(--brand, #176fae);
+}
+
+.cm-info-card-header svg {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+}
+
+.cm-info-card-header h2 {
+  margin: 0;
+  color: var(--text-primary, #132a3e);
+  font-size: 0.92rem;
+  font-weight: 750;
+  letter-spacing: -0.01em;
+}
+
+.cm-info-rows {
+  display: grid;
+  gap: 10px;
+}
+
+.cm-info-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+  font-size: 0.8rem;
+  line-height: 1.4;
+}
+
+.cm-info-label {
+  color: var(--text-muted, #6d8294);
+  font-weight: 600;
+  flex: 0 0 42%;
+}
+
+.cm-info-val {
+  color: var(--text-primary, #132a3e);
+  font-weight: 700;
+  text-align: right;
+  flex: 1 1 auto;
+  word-break: break-word;
+}

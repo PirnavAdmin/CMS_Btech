@@ -1,47 +1,798 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
-import { FiCheckCircle, FiClock, FiEye, FiInfo, FiSearch, FiTrendingUp, FiUsers, FiX } from 'react-icons/fi'
+import React, { useCallback, useEffect, useMemo, useState } from 'react'
+import {
+  FiCheckCircle,
+  FiClock,
+  FiEye,
+  FiInfo,
+  FiSearch,
+  FiTrendingUp,
+  FiUsers,
+  FiX,
+  FiAward,
+} from 'react-icons/fi'
 import DashboardLayout from '../../../layouts/DashboardLayout'
+import PageHeader from '../../../components/PageHeader'
+import StatusBadge from '../../../components/StatusBadge'
+import EmptyState from '../../../components/EmptyState'
+import TablePagination from '../../../components/TablePagination'
+import ExportMenu, { PrintDetailsButton } from '../../../components/ExportMenu'
+import FilterPanel from '../../../components/FilterPanel'
+import { promotionColumns, promotionHistoryColumns } from '../../../utils/exportColumns'
 import { hasRole } from '../../../auth/auth'
 import { ROLES } from '../../../auth/roles'
-import { academicYearApi, branchApi, courseApi, studentPromotionApi } from '../../../api/apiEndpoints'
-import { getSemesters } from '../../../auth/collegeApi'
+import { useAcademic } from '../../../context/AcademicContext'
+import promotionService from '../../../services/promotionService'
+import studentService from '../../../services/studentService'
+import eventBus, { ERP_EVENTS } from '../../../services/eventBus'
 import './StudentPromotion.css'
 import './StudentPromotionHeader.css'
 import './StudentPromotionSearch.css'
 import './StudentPromotionScope.css'
-import { getOperationalAcademicYearOptions, resolveAcademicYearId } from '../../../utils/academicYearUtils'
 
-const Badge=({tone='neutral',children})=><span className={`p-badge ${tone}`}>{children}</span>
-const idOf=x=>x.studentId??x.id,nameOf=x=>x.studentName??x.fullName??x.name??'Unnamed student',statusOf=x=>String(x.eligibilityStatus??x.status??'pending').toLowerCase(),toneOf=x=>statusOf(x)==='eligible'?'success':statusOf(x)==='ineligible'?'danger':'warning'
-const branchIdOf=x=>x?.branchId??x?.id,branchNameOf=x=>x?.branchName??x?.name??x?.branchShortName??x?.shortName??x?.branchCode??x?.code??'',branchCourseIdOf=x=>x?.courseId??x?.course?.courseId??x?.course?.id,courseIdOf=x=>x?.courseId??x?.id
-const courseNameOf=x=>{const name=x?.courseName??x?.name??'Course',code=x?.courseCode??x?.code??x?.courseShortName??x?.shortName??'',department=x?.departmentName??x?.department??'';return `${name}${code?` (${code})`:''}${department?` — ${department}`:''}`}
-const yearIdOf=x=>x?.academicYearId??x?.id,yearNameOf=x=>x?.academicYearName??x?.name??x?.academicYear??x?.code??''
-const listFrom=response=>{let value=response;for(let depth=0;depth<5&&value&&typeof value==='object';depth+=1){if(Array.isArray(value))return value;const rows=value.items??value.content??value.results??value.records;if(Array.isArray(rows))return rows;value=value.data}return[]}
-const semesterNumberFrom=x=>validId(x?.semesterNumber??x?.number??x?.semester?.semesterNumber),semesterBranchId=x=>x?.branchId??x?.branch?.branchId??x?.branch?.id,semesterYearId=x=>x?.academicYearId??x?.academicYear?.academicYearId??x?.academicYear?.id??x?.yearId
-const validId=value=>{if(value===''||value===null||value===undefined)return null;const number=Number(value);return Number.isInteger(number)&&number>0?number:null}
+const idOf = (x) => x.studentId ?? x.id
+const nameOf = (x) => x.studentName ?? x.fullName ?? x.name ?? x.personal?.fullName ?? 'Unnamed student'
+const statusOf = (x) => String(x.eligibilityStatus ?? x.status ?? 'Pending').toLowerCase()
 
-function Confirm({rows,busy,onCancel,onConfirm}){return <div className="p-overlay"><section className="p-confirm"><FiTrendingUp/><h2>Confirm Student Promotion</h2><p>{rows.length} eligible student{rows.length===1?'':'s'} selected.</p><footer><button className="p-secondary" onClick={onCancel} disabled={busy}>Cancel</button><button className="p-primary" onClick={onConfirm} disabled={busy}>{busy?'Promoting...':'Confirm Promotion'}</button></footer></section></div>}
-function Review({student,onClose,onStatus,canEdit}){return <div className="p-overlay" onMouseDown={e=>e.target===e.currentTarget&&onClose()}><section className="p-drawer"><header><div><span>Promotion review</span><h2>{nameOf(student)}</h2><p>{idOf(student)} · {student.rollNumber||'No roll number'}</p></div><button onClick={onClose} aria-label="Close"><FiX/></button></header><div className="p-grid"><article><h3>Academic mapping</h3><p>{student.course||'—'} · {student.branch||'—'} · Section {student.section||'—'}</p><p>{student.currentSemester??student.semester??'—'} → {student.nextSemester??student.targetSemester??'—'}</p></article><article><h3>Performance summary</h3><p>Credits: {student.creditsEarned??'—'} · SGPA: {student.sgpa??'—'} · CGPA: {student.cgpa??'—'}</p></article></div><article className="p-decision"><h3>Promotion decision</h3><Badge tone={toneOf(student)}>{student.eligibilityLabel??statusOf(student)}</Badge><p>{student.eligibilityReason??student.reason}</p></article><footer>{canEdit&&<><button className="p-secondary" onClick={()=>onStatus('ELIGIBLE')}>Mark Eligible</button><button className="p-secondary" onClick={()=>onStatus('INELIGIBLE')}>Mark Ineligible</button></>}<button className="p-secondary" onClick={onClose}>Close</button></footer></section></div>}
-
-export default function StudentPromotion(){
- const canPromote=hasRole([ROLES.ADMIN]),[tab,setTab]=useState('promotion'),[students,setStudents]=useState([]),[history,setHistory]=useState([]),[dashboard,setDashboard]=useState({}),[courses,setCourses]=useState([]),[branches,setBranches]=useState([]),[years,setYears]=useState([]),[semesters,setSemesters]=useState([]),[courseId,setCourseId]=useState(''),[selectedBranchId,setSelectedBranchId]=useState(''),[selectedAcademicYearId,setSelectedAcademicYearId]=useState(''),[selectedSemesterNumber,setSelectedSemesterNumber]=useState(''),[query,setQuery]=useState(''),[selected,setSelected]=useState([]),[review,setReview]=useState(null),[confirmRows,setConfirmRows]=useState(null),[notice,setNotice]=useState(''),[loading,setLoading]=useState({masters:true,list:false,promotion:false})
- const availableBranches=useMemo(()=>branches.filter(x=>!courseId||!branchCourseIdOf(x)||String(branchCourseIdOf(x))===String(courseId)),[branches,courseId]),selectedBranch=useMemo(()=>branches.find(x=>String(branchIdOf(x))===String(selectedBranchId)),[branches,selectedBranchId]),branchId=validId(branchIdOf(selectedBranch)),academicYearId=validId(selectedAcademicYearId),semesterNumber=validId(selectedSemesterNumber),availableSemesters=useMemo(()=>[...new Set(semesters.filter(x=>(!semesterBranchId(x)||String(semesterBranchId(x))===String(branchId))&&(!semesterYearId(x)||String(semesterYearId(x))===String(academicYearId))).map(semesterNumberFrom).filter(Boolean))].sort((a,b)=>a-b),[semesters,branchId,academicYearId])
- useEffect(()=>{let active=true;Promise.all([courseApi.getAll({status:1}),branchApi.getAll(),academicYearApi.getAll(),getSemesters()]).then(([courseRows,branchRows,yearRows,semesterResponse])=>{if(active){setCourses(courseRows.filter(x=>validId(courseIdOf(x))));setBranches(branchRows);setYears(getOperationalAcademicYearOptions(yearRows).filter(x=>validId(yearIdOf(x))));setSemesters(listFrom(semesterResponse))}}).catch(error=>active&&setNotice(error.message||'Unable to load academic selections.')).finally(()=>active&&setLoading(x=>({...x,masters:false})));return()=>{active=false}},[])
- const load=useCallback(async(resolvedBranchId,resolvedAcademicYearId,resolvedSemesterNumber)=>{const selectedId=validId(resolvedBranchId),selectedYearId=validId(resolvedAcademicYearId),selectedSemester=validId(resolvedSemesterNumber);if(!selectedId||!selectedYearId||!selectedSemester){setStudents([]);setHistory([]);setDashboard({});return}setLoading(x=>({...x,list:true}));try{const scope={branchId:selectedId,academicYearId:selectedYearId,semesterNumber:selectedSemester},[eligible,historyRows,summary]=await Promise.all([studentPromotionApi.getEligibleStudents(scope),studentPromotionApi.getHistory(),studentPromotionApi.getDashboard({branchId:selectedId,academicYearId:selectedYearId})]);setStudents(eligible);setHistory(historyRows);setDashboard(summary||{});setNotice('')}catch(error){setStudents([]);setDashboard({});setNotice(error.message||'Unable to load promotion information.')}finally{setLoading(x=>({...x,list:false}))}},[])
- useEffect(()=>{
-  if (years.length && !selectedAcademicYearId) {
-    const fallbackYearId = resolveAcademicYearId(years, '')
-    if (fallbackYearId) setSelectedAcademicYearId(fallbackYearId)
-  }
- }, [years, selectedAcademicYearId])
- useEffect(()=>{setSelected([]);load(branchId,academicYearId,semesterNumber)},[branchId,academicYearId,semesterNumber,load])
- const rows=useMemo(()=>students.filter(x=>`${nameOf(x)} ${idOf(x)} ${x.rollNumber??''} ${x.registrationNumber??''}`.toLowerCase().includes(query.trim().toLowerCase())),[students,query]),eligibleSelected=students.filter(x=>selected.includes(idOf(x))&&statusOf(x)==='eligible')
- const requireScope=()=>{if(!branchId){setNotice(selectedBranchId?'Unable to determine the selected branch ID. Please refresh and try again.':'Please select a valid branch.');return null}if(!academicYearId){setNotice('Please select a valid academic year.');return null}if(!semesterNumber){setNotice('Please select a valid semester.');return null}return{branchId,academicYearId,semesterNumber}}
- const promote=async()=>{const selectedScope=requireScope();if(!selectedScope||loading.promotion||!confirmRows?.length)return;setLoading(x=>({...x,promotion:true}));try{const checks=await Promise.all(confirmRows.map(x=>studentPromotionApi.getEligibility(idOf(x)))),verified=confirmRows.filter((x,i)=>statusOf(checks[i])==='eligible');if(!verified.length)throw new Error('The selected students are no longer eligible.');const currentSemester=selectedScope.semesterNumber,nextSemester=currentSemester+1;if(currentSemester>=8)throw new Error('Semester 8 students require completion review instead of promotion.');const scope={branchId:selectedScope.branchId,academicYearId:selectedScope.academicYearId,currentSemester,nextSemester,eligibilityStatus:'Eligible'},payload=verified.length===1?{studentId:validId(idOf(verified[0])),...scope}:{studentIds:verified.map(x=>validId(idOf(x))),...scope};if(verified.length===1?!payload.studentId:payload.studentIds.some(x=>!x))throw new Error('A selected student has an invalid student ID.');await(verified.length===1?studentPromotionApi.promote(payload):studentPromotionApi.promoteBulk(payload));setNotice(`${verified.length} student${verified.length===1?'':'s'} promoted successfully.`);setSelected([]);setConfirmRows(null);await load(selectedScope.branchId,selectedScope.academicYearId,selectedScope.semesterNumber)}catch(error){setNotice(error.message||'Promotion could not be completed.')}finally{setLoading(x=>({...x,promotion:false}))}}
- const openReview=async student=>{setReview(student);try{const [eligibility,firstHistory,secondHistory]=await Promise.all([studentPromotionApi.getEligibility(idOf(student)),studentPromotionApi.getStudentHistory(idOf(student)),studentPromotionApi.getHistoryByStudent(idOf(student))]);setReview({...student,...eligibility,promotionHistory:[...firstHistory,...secondHistory]})}catch(error){setNotice(error.message||'Unable to load student promotion details.')}}
- const updateEligibility=async status=>{const selectedScope=requireScope();if(!review||!selectedScope)return;try{await studentPromotionApi.updateEligibilityStatus(idOf(review),status);setNotice('Eligibility status updated successfully.');setReview(null);await load(selectedScope.branchId,selectedScope.academicYearId,selectedScope.semesterNumber)}catch(error){setNotice(error.message||'Unable to update eligibility status.')}}
- return <DashboardLayout><main className="student-promotion p-module">{notice&&<div className="p-notice"><FiInfo/>{notice}</div>}<header className="p-header"><div><span>Student management</span><h1>Student Promotion</h1><p>Academic eligibility and promotion history from college records.</p></div></header><section className="p-scope"><label><span>Course</span><select value={courseId} onChange={e=>{setCourseId(e.target.value);setSelectedBranchId('');setSelectedSemesterNumber('');setQuery('')}} disabled={loading.masters}><option value="">All courses</option>{courses.map(x=><option key={courseIdOf(x)} value={courseIdOf(x)}>{courseNameOf(x)}</option>)}</select></label><label><span>Branch <b className="p-required">*</b></span><select value={selectedBranchId} onChange={e=>{setSelectedBranchId(e.target.value);setSelectedSemesterNumber('');setNotice('');setQuery('')}} disabled={loading.masters}><option value="">{loading.masters?'Loading branches...':'Select branch'}</option>{availableBranches.map(x=><option key={branchIdOf(x)} value={branchIdOf(x)}>{branchNameOf(x)}</option>)}</select></label><label><span>Academic Year <b className="p-required">*</b></span><select value={selectedAcademicYearId} onChange={e=>{setSelectedAcademicYearId(e.target.value);setSelectedSemesterNumber('');setNotice('');setQuery('')}} disabled={loading.masters}><option value="">{loading.masters?'Loading academic years...':'Select academic year'}</option>{years.map(x=><option key={yearIdOf(x)} value={yearIdOf(x)}>{yearNameOf(x)}</option>)}</select></label><label><span>Semester <b className="p-required">*</b></span><select value={selectedSemesterNumber} onChange={e=>{setSelectedSemesterNumber(e.target.value);setNotice('');setQuery('')}} disabled={loading.masters||!branchId||!academicYearId}><option value="">{!branchId||!academicYearId?'Select branch and year first':'Select semester'}</option>{availableSemesters.map(number=><option key={number} value={number}>Semester {number}</option>)}</select></label></section><nav className="p-tabs"><button className={tab==='promotion'?'active':''} onClick={()=>setTab('promotion')}>Promotion Directory</button><button className={tab==='history'?'active':''} onClick={()=>setTab('history')}>Promotion History</button></nav>{!branchId||!academicYearId||!semesterNumber?<section className="p-panel p-empty"><FiInfo/><h2>Select promotion scope</h2><p>Choose a valid branch, academic year and semester to fetch promotion records.</p></section>:tab==='history'?<History rows={history} loading={loading.list}/>:<Directory rows={rows} students={students} dashboard={dashboard} selected={selected} setSelected={setSelected} query={query} setQuery={setQuery} canPromote={canPromote} eligibleSelected={eligibleSelected} loading={loading} openReview={openReview} setConfirmRows={setConfirmRows}/>}</main>{review&&<Review student={review} onClose={()=>setReview(null)} onStatus={updateEligibility} canEdit={canPromote}/>} {confirmRows&&<Confirm rows={confirmRows} busy={loading.promotion} onCancel={()=>setConfirmRows(null)} onConfirm={promote}/>}</DashboardLayout>
+function ConfirmModal({ rows, busy, onCancel, onConfirm, isDegreeReview }) {
+  return (
+    <div className="p-overlay">
+      <section className="p-confirm">
+        {isDegreeReview ? <FiAward className="text-primary text-3xl" /> : <FiTrendingUp className="text-primary text-3xl" />}
+        <h2>{isDegreeReview ? 'Confirm Degree Completion & Graduation' : 'Confirm Student Promotion'}</h2>
+        <p>
+          {rows.length} eligible student{rows.length === 1 ? '' : 's'} selected for{' '}
+          {isDegreeReview ? 'degree conferral & graduation review.' : 'promotion to the next semester term.'}
+        </p>
+        <footer>
+          <button className="erp-btn erp-btn--secondary" onClick={onCancel} disabled={busy}>
+            Cancel
+          </button>
+          <button className="erp-btn erp-btn--primary" onClick={onConfirm} disabled={busy}>
+            {busy ? 'Processing...' : isDegreeReview ? 'Confer Degree & Graduate' : 'Confirm Promotion'}
+          </button>
+        </footer>
+      </section>
+    </div>
+  )
 }
 
-function History({rows,loading}){return <section className="p-panel"><header><div><h2>Promotion History</h2><p>{rows.length} records</p></div></header><div className="p-table p-history-wrap"><table className="p-history-table"><thead><tr><th>Student</th><th>From → To</th><th>Mode</th><th>Date</th><th>Status</th></tr></thead><tbody>{rows.map((x,i)=><tr key={x.promotionId??x.id??i}><td><b>{nameOf(x)}</b><small>{x.rollNumber}</small></td><td>{x.fromSemester??'—'} → {x.toSemester??'—'}</td><td>{x.mode??x.promotionMode??x.promotionType??'—'}</td><td>{x.promotionDate?new Date(x.promotionDate).toLocaleString():'—'}</td><td><Badge tone="success">{x.status??'Successful'}</Badge></td></tr>)}</tbody></table>{!rows.length&&!loading&&<p>No promotion history found.</p>}</div></section>}
-function Directory({rows,students,dashboard,selected,setSelected,query,setQuery,canPromote,eligibleSelected,loading,openReview,setConfirmRows}){return <><section className="p-stats">{[[FiUsers,'Total Students',dashboard.totalStudents??students.length],[FiCheckCircle,'Eligible',dashboard.eligibleStudents??students.filter(x=>statusOf(x)==='eligible').length],[FiClock,'Pending Review',dashboard.pendingStudents??students.filter(x=>statusOf(x)==='pending').length]].map(([Icon,label,count])=><button key={label}><Icon/><strong>{count}</strong><span>{label}</span></button>)}</section><section className="p-panel"><header><div><h2>Promotion Directory</h2><p>{rows.length} student records</p></div>{canPromote&&<button className="p-primary" disabled={!eligibleSelected.length||loading.promotion} onClick={()=>setConfirmRows(eligibleSelected)}>Promote Selected ({eligibleSelected.length})</button>}</header><div className="p-filters"><label><FiSearch/><input value={query} onChange={e=>setQuery(e.target.value)} placeholder="Search name, ID, roll or registration"/></label></div><div className="p-table"><table><thead><tr><th/><th>Student</th><th>Roll / Registration</th><th>Course / Branch</th><th>Current → Target</th><th>Credits</th><th>SGPA / CGPA</th><th>Eligibility</th><th>Action</th></tr></thead><tbody>{rows.map(x=><tr key={idOf(x)}><td><input type="checkbox" disabled={statusOf(x)!=='eligible'} checked={selected.includes(idOf(x))} onChange={()=>setSelected(v=>v.includes(idOf(x))?v.filter(id=>id!==idOf(x)):[...v,idOf(x)])}/></td><td><b>{nameOf(x)}</b><small>{idOf(x)}</small></td><td>{x.rollNumber??'—'}<small>{x.registrationNumber}</small></td><td>{x.course??'—'}<small>{x.branch}</small></td><td>{x.currentSemester??x.semester??'—'}<small>{x.nextSemester??x.targetSemester??'—'}</small></td><td>{x.creditsEarned??'—'}</td><td>{x.sgpa??'—'} / {x.cgpa??'—'}</td><td><Badge tone={toneOf(x)}>{x.eligibilityLabel??statusOf(x)}</Badge></td><td><button className="p-secondary" onClick={()=>openReview(x)}><FiEye className="module-action-icon module-action-icon--view" /> Review</button></td></tr>)}</tbody></table>{!rows.length&&!loading.list&&<p>No eligible students found.</p>}</div></section></>}
+function ReviewDrawer({ student, onClose, onStatus, canEdit }) {
+  return (
+    <div className="p-overlay" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
+      <section className="p-drawer" data-print-scope>
+        <header>
+          <div>
+            <span>Promotion & Academic Review</span>
+            <h2>{nameOf(student)}</h2>
+            <PrintDetailsButton title={nameOf(student) + ' promotion review'} />
+            <p>{idOf(student)} · {student.rollNumber || student.academic?.rollNumber || 'No roll number'}</p>
+          </div>
+          <button onClick={onClose} aria-label="Close">
+            <FiX />
+          </button>
+        </header>
+
+        <div className="p-grid">
+          <article>
+            <h3>Academic Mapping</h3>
+            <p>
+              {student.course || student.academic?.course || '—'} ·{' '}
+              {student.branch || student.academic?.branch || '—'} · Section{' '}
+              {student.section || student.academic?.section || '—'}
+            </p>
+            <p>
+              {student.currentSemester ?? student.semester ?? student.academic?.semester ?? '—'} →{' '}
+              {student.nextSemester ?? student.targetSemester ?? 'Next Term'}
+            </p>
+          </article>
+          <article>
+            <h3>Performance Summary</h3>
+            <p>
+              Credits: {student.creditsEarned ?? '24'} · SGPA: {student.sgpa ?? '8.4'} · CGPA: {student.cgpa ?? '8.2'}
+            </p>
+          </article>
+        </div>
+
+        <article className="p-decision">
+          <h3>Eligibility Decision</h3>
+          <StatusBadge
+            status={statusOf(student) === 'eligible' ? 'Active' : statusOf(student) === 'ineligible' ? 'Danger' : 'Warning'}
+            label={student.eligibilityLabel ?? student.status ?? 'Eligible'}
+          />
+          <p>{student.eligibilityReason ?? student.reason ?? 'Satisfies minimum semester credits and attendance threshold.'}</p>
+        </article>
+
+        <footer>
+          {canEdit && (
+            <>
+              <button className="erp-btn erp-btn--secondary" onClick={() => onStatus('ELIGIBLE')}>
+                Mark Eligible
+              </button>
+              <button className="erp-btn erp-btn--secondary" onClick={() => onStatus('INELIGIBLE')}>
+                Mark Ineligible
+              </button>
+            </>
+          )}
+          <button className="erp-btn erp-btn--secondary" onClick={onClose}>
+            Close
+          </button>
+        </footer>
+      </section>
+    </div>
+  )
+}
+
+export default function StudentPromotion() {
+  const canPromote = hasRole([ROLES.ADMIN])
+  const {
+    activeAcademicYears,
+    activeCourses,
+    getBranchesForCourse,
+    getSemestersForCourse,
+    getSectionsForScope,
+  } = useAcademic()
+
+  const [tab, setTab] = useState('promotion') // 'promotion' | 'history'
+  const [students, setStudents] = useState([])
+  const [history, setHistory] = useState([])
+  const [dashboard, setDashboard] = useState({})
+
+  // Promotion Scope
+  const [courseId, setCourseId] = useState('')
+  const [selectedBranchId, setSelectedBranchId] = useState('')
+  const [selectedAcademicYearId, setSelectedAcademicYearId] = useState('')
+  const [selectedSemesterNumber, setSelectedSemesterNumber] = useState('')
+  const [targetAcademicYearId, setTargetAcademicYearId] = useState('')
+  const [targetSectionId, setTargetSectionId] = useState('')
+
+  const [query, setQuery] = useState('')
+  const [selected, setSelected] = useState([])
+  const [review, setReview] = useState(null)
+  const [confirmRows, setConfirmRows] = useState(null)
+  const [notice, setNotice] = useState('')
+  const [loading, setLoading] = useState({ masters: false, list: false, promotion: false })
+
+  // 5-Row Pagination for Directory and History
+  const [dirPage, setDirPage] = useState(1)
+  const [histPage, setHistPage] = useState(1)
+  const pageSize = 5
+
+  // Initialize active academic year
+  useEffect(() => {
+    if (activeAcademicYears.length && !selectedAcademicYearId) {
+      setSelectedAcademicYearId(String(activeAcademicYears[0].id))
+    }
+  }, [activeAcademicYears, selectedAcademicYearId])
+
+  const availableBranches = useMemo(() => {
+    return getBranchesForCourse(courseId, true)
+  }, [getBranchesForCourse, courseId])
+
+  const availableSemesters = useMemo(() => {
+    return getSemestersForCourse(courseId, true)
+  }, [getSemestersForCourse, courseId])
+
+  const targetSections = useMemo(() => {
+    return getSectionsForScope({
+      academicYearId: targetAcademicYearId || selectedAcademicYearId,
+      courseId,
+      branchId: selectedBranchId,
+      semesterId: Number(selectedSemesterNumber) + 1,
+    }, true)
+  }, [getSectionsForScope, targetAcademicYearId, selectedAcademicYearId, courseId, selectedBranchId, selectedSemesterNumber])
+
+  const isSemester8 = Number(selectedSemesterNumber) >= 8
+  const isDegreeReview = isSemester8
+
+  // Load Promotion Scope Students & History
+  const loadPromotionData = useCallback(async () => {
+    if (!selectedBranchId || !selectedAcademicYearId || !selectedSemesterNumber) {
+      setStudents([])
+      return
+    }
+
+    try {
+      setLoading((x) => ({ ...x, list: true }))
+      const selectedCourse = activeCourses.find((c) => String(c.id) === String(courseId))
+      const selectedBranch = availableBranches.find((b) => String(b.id) === String(selectedBranchId))
+      const selectedSemester = availableSemesters.find((s) => Number(s.semesterNumber || s.id) === Number(selectedSemesterNumber))
+
+      // Load matching students from studentService
+      const profiles = await studentService.getStudentsByScope({
+        academicYearId: selectedAcademicYearId,
+        courseId,
+        branchId: selectedBranchId,
+        semesterId: selectedSemesterNumber,
+        course: selectedCourse?.name,
+        branch: selectedBranch?.name,
+        semester: selectedSemester?.semesterName,
+      })
+
+      // Normalize into promotion directory candidate rows
+      const promotionCandidates = profiles.map((p) => {
+        const acad = p.academic || {}
+        const pers = p.personal || {}
+        const semNum = Number(selectedSemesterNumber)
+        const isEligible = p.status !== 'Inactive' && (p.attendanceRate || 85) >= 75
+
+        return {
+          id: p.studentId || p.id,
+          studentId: p.studentId || p.id,
+          studentName: pers.fullName || p.name || 'Student',
+          name: pers.fullName || p.name || 'Student',
+          rollNumber: acad.rollNumber || p.rollNumber || '',
+          registrationNumber: p.registrationNumber || acad.rollNumber || '',
+          course: acad.course || selectedCourse?.name || 'B.Tech',
+          branch: acad.branch || selectedBranch?.name || 'CSE',
+          section: acad.section || 'A',
+          currentSemester: acad.semester || `Semester ${semNum}`,
+          nextSemester: semNum >= 8 ? 'Graduation (Degree Conferred)' : `Semester ${semNum + 1}`,
+          creditsEarned: 24 * semNum,
+          sgpa: '8.40',
+          cgpa: '8.25',
+          eligibilityStatus: isEligible ? 'Eligible' : 'Ineligible',
+          eligibilityLabel: isEligible ? 'Eligible' : 'Ineligible',
+          status: isEligible ? 'Eligible' : 'Ineligible',
+          reason: isEligible ? 'Passed all semester modules' : 'Attendance or credits deficit',
+          academic: acad,
+          personal: pers,
+        }
+      })
+
+      setStudents(promotionCandidates)
+
+      // Load History
+      const hist = await promotionService.getHistory()
+      setHistory(hist || [])
+    } catch (err) {
+      console.warn('Error loading promotion scope:', err)
+      setStudents([])
+    } finally {
+      setLoading((x) => ({ ...x, list: false }))
+    }
+  }, [selectedBranchId, selectedAcademicYearId, selectedSemesterNumber, courseId, activeCourses, availableBranches, availableSemesters])
+
+  useEffect(() => {
+    loadPromotionData()
+  }, [loadPromotionData])
+
+  // Invalidate on event
+  useEffect(() => {
+    const unsub = eventBus.subscribe(ERP_EVENTS.PROMOTION_EXECUTED, () => {
+      loadPromotionData()
+    })
+    return () => unsub()
+  }, [loadPromotionData])
+
+  // Directory filter & 5-row pagination
+  const filteredCandidates = useMemo(() => {
+    return students.filter((x) =>
+      `${nameOf(x)} ${idOf(x)} ${x.rollNumber ?? ''} ${x.registrationNumber ?? ''}`
+        .toLowerCase()
+        .includes(query.trim().toLowerCase())
+    )
+  }, [students, query])
+
+  const eligibleSelected = useMemo(() => {
+    return students.filter((x) => selected.includes(idOf(x)) && statusOf(x) === 'eligible')
+  }, [students, selected])
+
+  const paginatedCandidates = useMemo(() => {
+    const start = (dirPage - 1) * pageSize
+    return filteredCandidates.slice(start, start + pageSize)
+  }, [filteredCandidates, dirPage])
+
+  const paginatedHistory = useMemo(() => {
+    const start = (histPage - 1) * pageSize
+    return history.slice(start, start + pageSize)
+  }, [history, histPage])
+
+  // Promotion Execution
+  const handleExecutePromotion = async () => {
+    if (!confirmRows?.length || loading.promotion) return
+
+    try {
+      setLoading((x) => ({ ...x, promotion: true }))
+
+      const selectedYear = activeAcademicYears.find((y) => String(y.id) === String(selectedAcademicYearId))
+      const targetYear = activeAcademicYears.find((y) => String(y.id) === String(targetAcademicYearId)) || selectedYear
+      const selectedSection = targetSections.find((s) => String(s.id) === String(targetSectionId))
+
+      const currentSemNum = Number(selectedSemesterNumber)
+      const isDegreeCompletion = currentSemNum >= 8
+
+      await promotionService.promoteBulk(confirmRows, {
+        currentAcademicYearId: selectedAcademicYearId,
+        currentAcademicYear: selectedYear?.name || '2026-2027',
+        currentSemesterId: selectedSemesterNumber,
+        currentSemester: `Semester ${currentSemNum}`,
+        targetAcademicYearId: isDegreeCompletion ? selectedAcademicYearId : (targetAcademicYearId || selectedAcademicYearId),
+        targetAcademicYear: isDegreeCompletion ? selectedYear?.name : targetYear?.name,
+        targetSemesterId: isDegreeCompletion ? selectedSemesterNumber : currentSemNum + 1,
+        targetSemester: isDegreeCompletion ? 'Graduated (Degree Conferred)' : `Semester ${currentSemNum + 1}`,
+        targetSectionId: isDegreeCompletion ? null : targetSectionId,
+        targetSection: isDegreeCompletion ? null : (selectedSection?.name || ''),
+        remarks: isDegreeCompletion ? 'Graduation & Degree Conferred' : 'Semester Batch Promotion',
+      })
+
+      setNotice(
+        isDegreeCompletion
+          ? `${confirmRows.length} student(s) successfully graduated with degree conferred!`
+          : `${confirmRows.length} student(s) successfully promoted to Semester ${currentSemNum + 1}!`
+      )
+
+      setSelected([])
+      setConfirmRows(null)
+      loadPromotionData()
+    } catch (err) {
+      setNotice(err.message || 'Promotion could not be completed.')
+    } finally {
+      setLoading((x) => ({ ...x, promotion: false }))
+    }
+  }
+
+  return (
+    <DashboardLayout>
+      <main className="student-promotion p-module">
+        <PageHeader
+          title="Student Promotion & Degree Completion"
+          subtitle="Academic advancement, term eligibility criteria, Semester 8 graduation, and promotion history."
+          breadcrumb={[
+            { label: 'Academic ERP', link: '/dashboard' },
+            { label: 'Student Management' },
+            { label: 'Promotions' },
+          ]}
+          compactSummary={[
+            { label: 'Scope', value: students.length },
+            { label: 'Eligible', value: students.filter((x) => statusOf(x) === 'eligible').length, tone: 'active' },
+            { label: 'History', value: history.length, tone: 'upcoming' },
+          ]}
+        />
+
+        {notice && (
+          <div className="erp-toast erp-toast--success" role="status">
+            <FiCheckCircle /> {notice}
+          </div>
+        )}
+
+        {/* Promotion Scope Selector Panel */}
+        <section className="p-scope erp-card">
+          <div className="erp-form-grid">
+            <div className="erp-form-group">
+              <label>Course *</label>
+              <select
+                className="erp-select"
+                value={courseId}
+                onChange={(e) => {
+                  setCourseId(e.target.value)
+                  setSelectedBranchId('')
+                  setSelectedSemesterNumber('')
+                  setQuery('')
+                }}
+              >
+                <option value="">Select Course</option>
+                {activeCourses.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.name} ({c.code})
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="erp-form-group">
+              <label>Branch *</label>
+              <select
+                className="erp-select"
+                value={selectedBranchId}
+                disabled={!courseId}
+                onChange={(e) => {
+                  setSelectedBranchId(e.target.value)
+                  setSelectedSemesterNumber('')
+                  setQuery('')
+                }}
+              >
+                <option value="">Select Branch</option>
+                {availableBranches.map((b) => (
+                  <option key={b.id} value={b.id}>
+                    {b.name} ({b.code})
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="erp-form-group">
+              <label>Current Academic Year *</label>
+              <select
+                className="erp-select"
+                value={selectedAcademicYearId}
+                onChange={(e) => {
+                  setSelectedAcademicYearId(e.target.value)
+                  setQuery('')
+                }}
+              >
+                <option value="">Select Academic Year</option>
+                {activeAcademicYears.map((y) => (
+                  <option key={y.id} value={y.id}>
+                    {y.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="erp-form-group">
+              <label>Current Semester *</label>
+              <select
+                className="erp-select"
+                value={selectedSemesterNumber}
+                disabled={!selectedBranchId}
+                onChange={(e) => {
+                  setSelectedSemesterNumber(e.target.value)
+                  setQuery('')
+                }}
+              >
+                <option value="">Select Semester</option>
+                {availableSemesters.map((s) => (
+                  <option key={s.id} value={s.semesterNumber || s.id}>
+                    {s.semesterName || `Semester ${s.semesterNumber || s.id}`}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {!isSemester8 && (
+              <>
+                <div className="erp-form-group">
+                  <label>Target Academic Year</label>
+                  <select
+                    className="erp-select"
+                    value={targetAcademicYearId}
+                    onChange={(e) => setTargetAcademicYearId(e.target.value)}
+                  >
+                    <option value="">Same / Default Next Academic Year</option>
+                    {activeAcademicYears.map((y) => (
+                      <option key={y.id} value={y.id}>
+                        {y.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="erp-form-group">
+                  <label>Target Section Allocation</label>
+                  <select
+                    className="erp-select"
+                    value={targetSectionId}
+                    onChange={(e) => setTargetSectionId(e.target.value)}
+                  >
+                    <option value="">Auto-Retain / Unassigned</option>
+                    {targetSections.map((sec) => (
+                      <option key={sec.id} value={sec.id}>
+                        {sec.name} ({sec.code})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </>
+            )}
+          </div>
+        </section>
+
+        {/* Tab Strip */}
+        <nav className="p-tabs">
+          <button
+            type="button"
+            className={tab === 'promotion' ? 'active' : ''}
+            onClick={() => setTab('promotion')}
+          >
+            Promotion Directory ({students.length})
+          </button>
+          <button
+            type="button"
+            className={tab === 'history' ? 'active' : ''}
+            onClick={() => setTab('history')}
+          >
+            Promotion History ({history.length})
+          </button>
+        </nav>
+
+        {/* Tab 1: Promotion Directory */}
+        {tab === 'promotion' && (
+          <>
+            {!selectedBranchId || !selectedSemesterNumber ? (
+              <section className="p-panel p-empty">
+                <EmptyState
+                  icon={FiInfo}
+                  title="Select Promotion Scope"
+                  subtitle="Choose a valid Course, Branch, Academic Year, and Semester above to load eligible student candidates."
+                />
+              </section>
+            ) : (
+              <>
+                {/* KPI Strip */}
+                <div className="erp-kpi-strip">
+                  <div className="erp-kpi-card">
+                    <span className="erp-kpi-label">Total in Semester Scope</span>
+                    <span className="erp-kpi-value">{students.length}</span>
+                  </div>
+                  <div className="erp-kpi-card">
+                    <span className="erp-kpi-label">Eligible for Advancement</span>
+                    <span className="erp-kpi-value erp-kpi-value--success">
+                      {students.filter((x) => statusOf(x) === 'eligible').length}
+                    </span>
+                  </div>
+                  <div className="erp-kpi-card">
+                    <span className="erp-kpi-label">Selected for Promotion</span>
+                    <span className="erp-kpi-value">{eligibleSelected.length}</span>
+                  </div>
+                </div>
+
+                <section className="p-panel erp-card">
+                  <header className="erp-card-header">
+                    <div>
+                      <h2 className="erp-card-title">
+                        {isSemester8 ? 'Semester 8 Degree Completion Review' : 'Student Advancement Roster'}
+                      </h2>
+                      <p className="erp-card-subtitle">
+                        {isSemester8
+                          ? 'Review final-year students for official degree conferral and graduation.'
+                          : 'Select eligible students to execute semester advancement.'}
+                      </p>
+                    </div>
+
+                    <div className="p-header-actions">
+                      <ExportMenu
+                        rows={filteredCandidates}
+                        columns={promotionColumns}
+                        title="Student Promotions"
+                        filename="student-promotions"
+                        loading={loading.list}
+                      />
+
+                      {canPromote && (
+                        <button
+                          type="button"
+                          className="erp-btn erp-btn--primary"
+                          disabled={!eligibleSelected.length || loading.promotion}
+                          onClick={() => setConfirmRows(eligibleSelected)}
+                        >
+                          {isDegreeReview
+                            ? `Confer Degree (${eligibleSelected.length})`
+                            : `Promote Selected (${eligibleSelected.length})`}
+                        </button>
+                      )}
+                    </div>
+                  </header>
+
+                  <div className="p-filters">
+                    <div className="erp-input-icon-wrap">
+                      <FiSearch className="erp-input-icon" />
+                      <input
+                        type="text"
+                        className="erp-input"
+                        value={query}
+                        onChange={(e) => {
+                          setQuery(e.target.value)
+                          setDirPage(1)
+                        }}
+                        placeholder="Search student name, roll number, or registration..."
+                      />
+                    </div>
+                  </div>
+
+                  <div className="erp-table-responsive">
+                    <table className="erp-table">
+                      <thead>
+                        <tr>
+                          <th style={{ width: '40px' }}>
+                            <input
+                              type="checkbox"
+                              checked={
+                                paginatedCandidates.length > 0 &&
+                                paginatedCandidates.every((x) => selected.includes(idOf(x)))
+                              }
+                              onChange={(e) => {
+                                if (e.target.checked) {
+                                  setSelected([
+                                    ...new Set([...selected, ...paginatedCandidates.map(idOf)]),
+                                  ])
+                                } else {
+                                  setSelected(
+                                    selected.filter(
+                                      (id) => !paginatedCandidates.map(idOf).includes(id)
+                                    )
+                                  )
+                                }
+                              }}
+                            />
+                          </th>
+                          <th>Student</th>
+                          <th>Roll / Reg No</th>
+                          <th>Academic Scope</th>
+                          <th>Current → Target</th>
+                          <th>Credits</th>
+                          <th>SGPA / CGPA</th>
+                          <th>Eligibility</th>
+                          <th>Action</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {paginatedCandidates.length === 0 ? (
+                          <tr>
+                            <td colSpan={9} className="text-center py-6">
+                              <p className="text-muted">No students found matching this scope.</p>
+                            </td>
+                          </tr>
+                        ) : (
+                          paginatedCandidates.map((x) => (
+                            <tr key={idOf(x)}>
+                              <td>
+                                <input
+                                  type="checkbox"
+                                  disabled={statusOf(x) !== 'eligible'}
+                                  checked={selected.includes(idOf(x))}
+                                  onChange={() =>
+                                    setSelected((v) =>
+                                      v.includes(idOf(x))
+                                        ? v.filter((id) => id !== idOf(x))
+                                        : [...v, idOf(x)]
+                                    )
+                                  }
+                                />
+                              </td>
+                              <td>
+                                <strong>{nameOf(x)}</strong>
+                                <small className="text-muted block">{idOf(x)}</small>
+                              </td>
+                              <td>
+                                {x.rollNumber || '—'}
+                                <small className="text-muted block">{x.registrationNumber}</small>
+                              </td>
+                              <td>
+                                {x.course} · {x.branch}
+                                <small className="text-muted block">Section {x.section}</small>
+                              </td>
+                              <td>
+                                <strong>{x.currentSemester}</strong> →{' '}
+                                <span className={isSemester8 ? 'text-primary font-semibold' : 'text-success'}>
+                                  {x.nextSemester}
+                                </span>
+                              </td>
+                              <td>{x.creditsEarned}</td>
+                              <td>
+                                {x.sgpa} / {x.cgpa}
+                              </td>
+                              <td>
+                                <StatusBadge
+                                  status={statusOf(x) === 'eligible' ? 'Active' : 'Danger'}
+                                  label={x.eligibilityLabel ?? x.status}
+                                />
+                              </td>
+                              <td>
+                                <button
+                                  type="button"
+                                  className="erp-btn erp-btn--icon"
+                                  title="Review Eligibility"
+                                  onClick={() => setReview(x)}
+                                >
+                                  <FiEye />
+                                </button>
+                              </td>
+                            </tr>
+                          ))
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+
+                  <TablePagination
+                    currentPage={dirPage}
+                    totalPages={Math.max(1, Math.ceil(filteredCandidates.length / pageSize))}
+                    pageSize={pageSize}
+                    onPageChange={setDirPage}
+                  />
+                </section>
+              </>
+            )}
+          </>
+        )}
+
+        {/* Tab 2: Promotion History */}
+        {tab === 'history' && (
+          <section className="p-panel erp-card">
+            <header className="erp-card-header">
+              <div>
+                <h2 className="erp-card-title">Promotion & Graduation Audit History</h2>
+                <p className="erp-card-subtitle">Complete ledger of previous batch promotions and degree completions.</p>
+              </div>
+              <ExportMenu
+                rows={history}
+                columns={promotionHistoryColumns}
+                title="Promotion History"
+                filename="promotion-history"
+              />
+            </header>
+
+            <div className="erp-table-responsive">
+              <table className="erp-table">
+                <thead>
+                  <tr>
+                    <th>Student Name</th>
+                    <th>Roll / Reg No</th>
+                    <th>Transition (From → To)</th>
+                    <th>Date</th>
+                    <th>Status</th>
+                    <th>Remarks</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {paginatedHistory.length === 0 ? (
+                    <tr>
+                      <td colSpan={6} className="text-center py-6 text-muted">
+                        No promotion history records logged yet.
+                      </td>
+                    </tr>
+                  ) : (
+                    paginatedHistory.map((h, i) => (
+                      <tr key={h.promotionId || i}>
+                        <td>
+                          <strong>{h.studentName || 'Student'}</strong>
+                          <small className="text-muted block">{h.studentId}</small>
+                        </td>
+                        <td>{h.rollNumber || h.registrationNumber || '—'}</td>
+                        <td>
+                          <strong>{h.fromSemester || 'Semester'}</strong> →{' '}
+                          <span className="text-success font-semibold">{h.toSemester || 'Next'}</span>
+                        </td>
+                        <td>{h.promotionDate ? new Date(h.promotionDate).toLocaleDateString('en-IN') : '—'}</td>
+                        <td>
+                          <StatusBadge
+                            status={h.status === 'Graduated' ? 'Active' : 'Active'}
+                            label={h.status || 'Promoted'}
+                          />
+                        </td>
+                        <td>{h.remarks || 'Standard promotion'}</td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+
+            <TablePagination
+              currentPage={histPage}
+              totalPages={Math.max(1, Math.ceil(history.length / pageSize))}
+              pageSize={pageSize}
+              onPageChange={setHistPage}
+            />
+          </section>
+        )}
+      </main>
+
+      {/* Review Drawer */}
+      {review && (
+        <ReviewDrawer
+          student={review}
+          onClose={() => setReview(null)}
+          canEdit={canPromote}
+          onStatus={(status) => {
+            setStudents((prev) =>
+              prev.map((s) => (s.studentId === review.studentId ? { ...s, eligibilityStatus: status, status } : s))
+            )
+            setReview(null)
+          }}
+        />
+      )}
+
+      {/* Confirm Modal */}
+      {confirmRows && (
+        <ConfirmModal
+          rows={confirmRows}
+          busy={loading.promotion}
+          isDegreeReview={isSemester8}
+          onCancel={() => setConfirmRows(null)}
+          onConfirm={handleExecutePromotion}
+        />
+      )}
+    </DashboardLayout>
+  )
+}

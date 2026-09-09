@@ -6,6 +6,7 @@
   --success:#16805b;--warning:#ad6b0a;--danger:#c43d3d;--info:#176fae;
   --shadow-sm:0 2px 8px rgba(15,42,66,.06);--shadow-md:0 12px 30px rgba(15,42,66,.09);
   --radius-sm:7px;--radius-md:11px;--radius-lg:16px;
+  --scrollbar-track:transparent;--scrollbar-thumb:#94a3b8;--scrollbar-thumb-hover:#64748b;
 }
 html,body,#root{max-width:100%;overflow-x:hidden}
 :root[data-theme="dark"] {
@@ -15,6 +16,26 @@ html,body,#root{max-width:100%;overflow-x:hidden}
   --shadow-sm:0 2px 8px rgba(0,0,0,.2);--shadow-md:0 16px 34px rgba(0,0,0,.28);
   --erp-bg:var(--app-bg);--erp-surface:var(--surface);--erp-text:var(--text-primary);--erp-muted:var(--text-muted);
   --erp-border:var(--border);--erp-navy:var(--text-primary);--erp-blue:var(--brand);--erp-blue-soft:var(--brand-soft);
+  --scrollbar-track:transparent;--scrollbar-thumb:#334155;--scrollbar-thumb-hover:#475569;
+}
+* {
+  scrollbar-width:thin;
+  scrollbar-color:var(--scrollbar-thumb) var(--scrollbar-track);
+}
+::-webkit-scrollbar {
+  width:7px;
+  height:7px;
+}
+::-webkit-scrollbar-track {
+  background:var(--scrollbar-track);
+}
+::-webkit-scrollbar-thumb {
+  background:var(--scrollbar-thumb);
+  border-radius:999px;
+  border:1px solid transparent;
+}
+::-webkit-scrollbar-thumb:hover {
+  background:var(--scrollbar-thumb-hover);
 }
 .dashboard-layout{display:block;width:100%;max-width:100vw;overflow-x:hidden;background:var(--app-bg)}
 .dashboard-layout>main{width:calc(100% - 248px);max-width:calc(100vw - 248px);min-width:0;margin-left:248px;padding-top:64px;overflow-x:hidden;background:var(--app-bg)}
@@ -29,7 +50,7 @@ html,body,#root{max-width:100%;overflow-x:hidden}
 .mobile-menu-button,.theme-toggle,.sidebar-close{display:grid;width:40px;height:40px;padding:0!important;place-items:center;border:1px solid var(--border)!important;border-radius:var(--radius-sm)!important;background:var(--surface)!important;color:var(--text-secondary)!important;box-shadow:none!important}.mobile-menu-button{display:none}.theme-toggle:hover{border-color:var(--brand)!important;color:var(--brand)!important;background:var(--brand-soft)!important}.theme-toggle svg,.mobile-menu-button svg{width:18px;height:18px}
 .sidebar{position:fixed;inset:0 auto 0 0;z-index:50;width:248px;height:100dvh;min-height:0;overflow:hidden;box-sizing:border-box;padding:0 12px 16px;background:#0d3658;box-shadow:inset -1px 0 rgba(255,255,255,.08)}
 .sidebar-brand{flex-shrink:0;position:relative;z-index:10;height:64px;box-sizing:border-box;margin:0 2px 18px;padding:0 4px}.sidebar-brand__mark{flex-basis:38px;width:38px;height:38px;border-radius:9px}.sidebar-brand__copy strong{font-size:.8rem;line-height:1.25}.sidebar-brand__copy small{font-size:.58rem}.sidebar-close{display:none;margin-left:auto;border-color:rgba(255,255,255,.2)!important;background:transparent!important;color:#fff!important}
-.sidebar nav{flex:1;min-height:0;overflow-y:auto;overflow-x:hidden;gap:2px;scrollbar-width:none;-ms-overflow-style:none}.sidebar nav::-webkit-scrollbar{display:none;width:0;height:0}.sidebar-section-label{margin:15px 10px 5px;color:#8fb4d0;font-size:.61rem;font-weight:800;letter-spacing:.14em;text-transform:uppercase}
+.sidebar nav{flex:1;min-height:0;overflow-y:auto;overflow-x:hidden;gap:2px;scrollbar-width:thin;scrollbar-color:rgba(255,255,255,.25) transparent}.sidebar nav::-webkit-scrollbar{width:5px}.sidebar nav::-webkit-scrollbar-thumb{background:rgba(255,255,255,.25);border-radius:4px}.sidebar-section-label{margin:15px 10px 5px;color:#8fb4d0;font-size:.61rem;font-weight:800;letter-spacing:.14em;text-transform:uppercase}
 .sidebar nav>a,.sidebar-group summary{display:flex;align-items:center;gap:10px;min-height:40px;box-sizing:border-box;margin:1px 0;padding:8px 10px;border:0;border-left:0;border-radius:8px;color:#c5d9e8;font-size:.83rem;font-weight:650}.sidebar nav>a svg,.sidebar-group summary>svg:first-child{flex:0 0 17px;width:17px;height:17px}.sidebar nav>a:hover,.sidebar nav>a.active,.sidebar-group summary:hover{background:rgba(255,255,255,.1);color:#fff}.sidebar nav>a.active{box-shadow:inset 3px 0 #69b9e8}.sidebar .sidebar-group summary::before{display:none;content:none}.sidebar-group__chevron{width:14px;height:14px;margin-left:auto;transition:transform .2s ease}.sidebar-group[open] .sidebar-group__chevron{transform:rotate(180deg)}.sidebar .sidebar-group div{gap:1px;margin:2px 0 4px 18px;padding-left:14px;border-left:1px solid rgba(255,255,255,.15)}.sidebar .sidebar-group div a{padding:7px 10px;border:0;border-radius:7px;font-size:.78rem}.sidebar-scrim{display:none}
 .sidebar-link--blue svg{color:#75c7f4}.sidebar-link--cyan svg{color:#63d9db}.sidebar-link--green svg{color:#70d6a0}.sidebar-link--purple svg{color:#c7a3ff}.sidebar-link--orange svg{color:#ffc275}.sidebar-link--pink svg{color:#f5a4ca}.sidebar-link--gold svg{color:#ffd370}.sidebar nav>a.active svg,.sidebar nav>a:hover svg{color:#fff}
 
@@ -76,7 +97,7 @@ html,body,#root{max-width:100%;overflow-x:hidden}
 
 /* Unified data-table and pagination presentation across every management page. */
 .page-content :is(.cm-table,.course-advanced-table,.branch-table,.department-table-wrap table,.semester-table,.section-table,.ay .table table,.sa-table-wrap table){width:100%;border-collapse:collapse;background:var(--surface)}
-.page-content :is(.cm-table,.course-advanced-table,.branch-table,.department-table-wrap table,.semester-table,.section-table,.ay .table table,.sa-table-wrap table) thead th{height:42px;padding:10px 12px!important;border-color:#244f70!important;color:#f4f9fc!important;background:#123f63!important;font-size:.68rem!important;font-weight:800!important;letter-spacing:.055em;text-align:left;text-transform:uppercase}
+.page-content :is(.cm-table,.course-advanced-table,.branch-table,.department-table-wrap table,.semester-table,.section-table,.ay .table table,.sa-table-wrap table) thead th{position:sticky;top:0;z-index:2;height:42px;padding:10px 12px!important;border-color:#244f70!important;color:#f4f9fc!important;background:#123f63!important;font-size:.68rem!important;font-weight:800!important;letter-spacing:.055em;text-align:left;text-transform:uppercase}
 .page-content :is(.cm-table,.course-advanced-table,.branch-table,.department-table-wrap table,.semester-table,.section-table,.ay .table table,.sa-table-wrap table) tbody td{padding:11px 12px;border-bottom:1px solid var(--border);color:var(--text-secondary);background:var(--surface);font-size:.78rem}
 .page-content :is(.cm-table,.course-advanced-table,.branch-table,.department-table-wrap table,.semester-table,.section-table,.ay .table table,.sa-table-wrap table) tbody tr:hover td{background:var(--surface-soft)}
 .page-content :is(.table-pagination,.course-pagination,.department-pagination,.cm-pagination,.semester-pagination,.section-pagination){display:flex!important;min-height:52px;box-sizing:border-box;align-items:center!important;justify-content:flex-end!important;gap:10px!important;padding:10px 16px!important;border-top:1px solid var(--border)!important;background:var(--surface-soft)!important}
@@ -310,6 +331,64 @@ html,body,#root{max-width:100%;overflow-x:hidden}
 .page-content .ay .ay-actions :is(.danger,.archived-action){color:#b42318!important;background:#fee4e2!important;border-color:#fecdca!important}
 .page-content .sa-icon-actions button[aria-label="Review application"]{color:#15803d!important;background:#e9f8ef!important;border-color:#bbf7d0!important}
 
+/* Keep Academic Years and Departments action buttons identical to the other directories. */
+.page-content .erp-row-actions{
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap:5px;
+  white-space:nowrap;
+}
+.page-content .erp-row-actions .erp-action-btn{
+  display:inline-flex;
+  width:32px;
+  min-width:32px;
+  height:32px;
+  min-height:32px;
+  padding:0;
+  align-items:center;
+  justify-content:center;
+  border:1px solid var(--border)!important;
+  border-radius:6px!important;
+  color:var(--brand)!important;
+  background:var(--surface)!important;
+  cursor:pointer;
+}
+.page-content .erp-row-actions .erp-action-btn svg{width:16px;height:16px}
+.page-content .erp-row-actions .erp-action-btn:has(>.module-action-icon--view){color:#1970b3!important;background:#e8f3fc!important;border-color:#c5dfef!important}
+.page-content .erp-row-actions .erp-action-btn:has(>.module-action-icon--edit){color:#7c3aed!important;background:#f3e8ff!important;border-color:#dfccff!important}
+.page-content .erp-row-actions .erp-action-btn:nth-child(3):not(.erp-action-btn--success):not(.erp-action-btn--danger){color:#a15c00!important;background:#fff3d6!important;border-color:#fedf89!important}
+.page-content .erp-row-actions .erp-action-btn--success{color:#15803d!important;background:#e9f8ef!important;border-color:#bbf7d0!important}
+.page-content .erp-row-actions .erp-action-btn--danger{color:#b42318!important;background:#fee4e2!important;border-color:#fecdca!important}
+.page-content .erp-row-actions .erp-action-btn:hover:not(:disabled){filter:brightness(.97)}
+.page-content .erp-row-actions .erp-action-btn:focus-visible{outline:2px solid currentColor;outline-offset:2px}
+.page-content .erp-row-actions .erp-action-btn:disabled{cursor:not-allowed;opacity:.55}
+
+/* Consistent directory-table truncation and action-column alignment. */
+.page-content table :is(td,th):not(:has(.erp-row-actions,.row-actions,.cm-actions,.cm-row-actions,.semester-row-actions,.section-actions,.course-actions,.branch-actions,.sa-icon-actions,.sa-row-actions)){
+  max-width:240px;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+.page-content table :is(td,th):not(:has(.erp-row-actions,.row-actions,.cm-actions,.cm-row-actions,.semester-row-actions,.section-actions,.course-actions,.branch-actions,.sa-icon-actions,.sa-row-actions)) > :is(strong,small,span,b,code,a){
+  max-width:100%;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+.page-content table td:has(.erp-row-actions,.row-actions,.cm-actions,.cm-row-actions,.semester-row-actions,.section-actions,.course-actions,.branch-actions,.sa-icon-actions,.sa-row-actions){
+  text-align:center!important;
+  vertical-align:middle!important;
+  white-space:nowrap;
+}
+.page-content table :is(.erp-row-actions,.row-actions,.cm-actions,.cm-row-actions,.semester-row-actions,.section-actions,.course-actions,.branch-actions,.sa-icon-actions,.sa-row-actions){
+  width:100%;
+  min-width:max-content;
+  align-items:center;
+  justify-content:center;
+}
+
 /* Preserve semantic colors for the Branch directory row actions. */
 .page-content .branch-actions a:first-child{color:#1970b3!important;background:#e8f3fc!important;border-color:#c5dfef!important}.page-content .branch-actions a:nth-child(2){color:#7c3aed!important;background:#f3e8ff!important;border-color:#dfccff!important}.page-content .branch-actions .branch-status-action.danger{color:#b42318!important;background:#fee4e2!important;border-color:#fecdca!important}.page-content .branch-actions .branch-status-action.success{color:#15803d!important;background:#e9f8ef!important;border-color:#bbf7d0!important}
 .page-content .cm-actions .cm-view-action{color:#1970b3!important;background:#e8f3fc!important;border-color:#c5dfef!important}.page-content .cm-actions .cm-edit-action{color:#7c3aed!important;background:#f3e8ff!important;border-color:#dfccff!important}.page-content .cm-actions .cm-status-action.cm-danger{color:#b42318!important;background:#fee4e2!important;border-color:#fecdca!important}.page-content .cm-actions .cm-status-action.cm-success{color:#15803d!important;background:#e9f8ef!important;border-color:#bbf7d0!important}
@@ -447,10 +526,10 @@ html,body,#root{max-width:100%;overflow-x:hidden}
 .page-content :is(input:not([type=checkbox]):not([type=radio]),select){padding:0 11px}.page-content textarea{padding:10px 11px;resize:vertical}
 .page-content :is(input,select,textarea):focus-visible{border-color:var(--brand)!important;outline:0!important;box-shadow:var(--focus-ring)!important}
 .page-content label{color:var(--text-secondary)}.page-content label>span,.page-content fieldset>legend{font-weight:700}
-.page-content :is(.module-table,.fs-table,.p-table,.sp-table-wrap,.course-table-scroll,.branch-table-scroll,.semester-table-wrapper,.section-table-wrap,.department-table-wrap,.cm-table-wrap,.ay .table){max-width:100%;overflow-x:auto;overscroll-behavior-inline:contain}
-.page-content :is(.module-table,.fs-table,.p-table,.sp-table-wrap) table{width:100%;min-width:720px;border-collapse:collapse;background:var(--surface)}
-.page-content :is(.module-table,.fs-table,.p-table,.sp-table-wrap) th{height:42px;padding:10px 12px;border-bottom:1px solid var(--border);color:var(--text-secondary);background:var(--surface-soft);font-size:11px;font-weight:800;letter-spacing:.045em;text-align:left;text-transform:uppercase;white-space:nowrap}
-.page-content :is(.module-table,.fs-table,.p-table,.sp-table-wrap) td{padding:11px 12px;border-bottom:1px solid var(--border);color:var(--text-secondary);background:var(--surface);font-size:13px;vertical-align:middle}.page-content :is(.module-table,.fs-table,.p-table,.sp-table-wrap) tr:hover td{background:var(--surface-soft)}
+.page-content :is(.module-table,.fs-table,.p-table,.sp-table-wrap,.sa-table-wrap,.course-table-scroll,.branch-table-scroll,.semester-table-wrapper,.section-table-wrap,.department-table-wrap,.cm-table-wrap,.ay .table){max-width:100%;overflow-x:auto;overscroll-behavior-inline:contain}
+.page-content :is(.module-table,.fs-table,.p-table,.sp-table-wrap,.sa-table-wrap) table{width:100%;min-width:720px;border-collapse:collapse;background:var(--surface)}
+.page-content :is(.module-table,.fs-table,.p-table,.sp-table-wrap,.sa-table-wrap) th{position:sticky;top:0;z-index:2;height:42px;padding:10px 12px;border-bottom:1px solid var(--border);color:var(--text-secondary);background:var(--surface-soft);font-size:11px;font-weight:800;letter-spacing:.045em;text-align:left;text-transform:uppercase;white-space:nowrap}
+.page-content :is(.module-table,.fs-table,.p-table,.sp-table-wrap,.sa-table-wrap) td{padding:11px 12px;border-bottom:1px solid var(--border);color:var(--text-secondary);background:var(--surface);font-size:13px;vertical-align:middle}.page-content :is(.module-table,.fs-table,.p-table,.sp-table-wrap,.sa-table-wrap) tr:hover td{background:var(--surface-soft)}
 .page-content :is([class*="badge"],[class*="status"]){font-weight:750}
 .page-content :is(.module-dialog,.fs-editor,.fs-dialog,.p-confirm,.p-review,.profile-edit-dialog,.semester-form-panel,.semester-details-panel,.section-form-panel,.section-details-panel,.cm-modal-card,.ac-dialog){border:1px solid var(--border);border-radius:var(--radius-lg);color:var(--text-primary);background:var(--surface-raised);box-shadow:var(--shadow-md)}
 .page-content :is(.module-overlay,.fs-overlay,.p-overlay,.profile-modal,.semester-overlay,.section-overlay,.cm-modal-overlay){background:rgba(3,18,31,.58)}
@@ -474,3 +553,410 @@ html,body,#root{max-width:100%;overflow-x:hidden}
   box-shadow:none!important;
 }
 :where(.page-content,.dashboard-layout) :is(.required-mark,.section-required,label>span>b,label>b,legend>b){color:#d92d20!important;font-weight:800!important}
+
+/* Standardized Export and Print Action Controls */
+.export-control {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+.export-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  height: 38px;
+  min-height: 38px;
+  padding: 0 14px;
+  border: 1px solid var(--border-strong, #bdccd8);
+  border-radius: var(--radius-sm, 7px);
+  background: var(--surface, #fff);
+  color: var(--text-primary, #132a3e);
+  font-family: inherit;
+  font-size: 0.82rem;
+  font-weight: 700;
+  line-height: 1;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background-color .15s ease, border-color .15s ease, color .15s ease, box-shadow .15s ease;
+}
+.export-button:hover:not(:disabled) {
+  border-color: var(--brand, #176fae);
+  background: var(--brand-soft, #eaf4fb);
+  color: var(--brand, #176fae);
+}
+.export-button:focus-visible {
+  outline: 2px solid var(--brand, #176fae);
+  outline-offset: 2px;
+}
+.export-button:disabled {
+  opacity: .45;
+  cursor: not-allowed;
+  border-color: var(--border, #dbe4eb);
+}
+.export-button svg {
+  width: 15px;
+  height: 15px;
+  flex-shrink: 0;
+}
+.export-options {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  z-index: 100;
+  display: flex;
+  flex-direction: column;
+  min-width: 200px;
+  padding: 6px;
+  border: 1px solid var(--border, #dbe4eb);
+  border-radius: 9px;
+  background: var(--surface, #fff);
+  box-shadow: var(--shadow-md, 0 12px 30px rgba(15,42,66,.12));
+}
+.export-options small {
+  display: block;
+  padding: 6px 10px;
+  color: var(--text-muted, #6d8294);
+  font-size: 0.72rem;
+  font-weight: 600;
+  border-bottom: 1px solid var(--border, #dbe4eb);
+  margin-bottom: 4px;
+}
+.export-options button {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 8px 10px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text-primary, #132a3e);
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+  transition: background-color .12s ease, color .12s ease;
+}
+.export-options button:hover {
+  background: var(--brand-soft, #eaf4fb);
+  color: var(--brand, #176fae);
+}
+.export-options button svg {
+  width: 15px;
+  height: 15px;
+  color: var(--text-muted, #6d8294);
+}
+.export-options button:hover svg {
+  color: var(--brand, #176fae);
+}
+.export-error {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  color: var(--danger, #c43d3d);
+  font-size: 0.72rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.print-control {
+  display: inline-flex;
+  align-items: center;
+}
+.directory-export-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+/* ========================================================
+   UNIFIED ERP DIRECTORY CARD & LAYOUT
+   ======================================================== */
+.erp-directory-card,
+.page-content :is(.course-directory, .branch-directory-card, .department-list, .semester-directory-card, .section-table-card, .sa-directory, .sp-directory, .p-panel, .fs-card) {
+  border: 1px solid var(--border, #dbe4eb);
+  border-radius: var(--radius-md, 11px);
+  background: var(--surface, #fff);
+  box-shadow: var(--shadow-sm, 0 2px 8px rgba(15,42,66,.06));
+  overflow: hidden;
+  margin-bottom: 24px;
+}
+
+.erp-directory-header,
+.page-content :is(.course-directory-heading, .branch-directory-heading, .department-list__top, .semester-directory-heading, .section-directory-heading, .fs-list-head, .module-directory-head) {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  padding: 14px 18px;
+  border-bottom: 1px solid var(--border, #dbe4eb);
+  background: var(--surface, #fff);
+}
+
+.erp-directory-header h2,
+.page-content :is(.course-directory-heading, .branch-directory-heading, .department-list__top, .semester-directory-heading, .section-directory-heading, .fs-list-head, .module-directory-head) h2 {
+  margin: 0;
+  color: var(--text-primary, #132a3e);
+  font-size: 1.05rem;
+  font-weight: 750;
+  letter-spacing: -0.01em;
+}
+
+.erp-directory-header p,
+.erp-directory-header span,
+.page-content :is(.course-directory-heading, .branch-directory-heading, .department-list__top, .semester-directory-heading, .section-directory-heading, .fs-list-head, .module-directory-head) :is(p, span, small) {
+  margin: 0;
+  color: var(--text-muted, #6d8294);
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+
+/* ========================================================
+   UNIFIED BUTTON VARIANTS
+   ======================================================== */
+.erp-btn,
+.page-content :is(.primary-button, .cm-primary-btn, .cm-button:not(.secondary), .semester-primary:not(.secondary), .section-primary:not(.secondary), .p-primary, .ac-primary, .solid) {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  height: 38px;
+  min-height: 38px;
+  padding: 0 16px;
+  border: 1px solid var(--brand, #176fae) !important;
+  border-radius: var(--radius-sm, 7px) !important;
+  background: var(--brand, #176fae) !important;
+  color: #fff !important;
+  font-family: inherit;
+  font-size: 0.82rem !important;
+  font-weight: 750 !important;
+  line-height: 1;
+  text-decoration: none;
+  cursor: pointer;
+  white-space: nowrap;
+  box-shadow: 0 1px 3px rgba(23, 111, 174, 0.2);
+  transition: background-color 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease, transform 0.1s ease;
+}
+
+.erp-btn:hover:not(:disabled),
+.page-content :is(.primary-button, .cm-primary-btn, .cm-button:not(.secondary), .semester-primary:not(.secondary), .section-primary:not(.secondary), .p-primary, .ac-primary, .solid):hover:not(:disabled) {
+  background: var(--brand-hover, #125b90) !important;
+  border-color: var(--brand-hover, #125b90) !important;
+  color: #fff !important;
+  box-shadow: 0 3px 8px rgba(23, 111, 174, 0.3);
+}
+
+.erp-btn--secondary,
+.page-content :is(.secondary-button, .cm-secondary-btn, .cm-button.secondary, .semester-primary.secondary, .section-primary.secondary, .section-back-button, .p-secondary, .profile-button.secondary) {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  height: 38px;
+  min-height: 38px;
+  padding: 0 15px;
+  border: 1px solid var(--border-strong, #bdccd8) !important;
+  border-radius: var(--radius-sm, 7px) !important;
+  background: var(--surface, #fff) !important;
+  color: var(--text-primary, #132a3e) !important;
+  font-family: inherit;
+  font-size: 0.82rem !important;
+  font-weight: 700 !important;
+  line-height: 1;
+  text-decoration: none;
+  cursor: pointer;
+  white-space: nowrap;
+  box-shadow: none;
+  transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+
+.erp-btn--secondary:hover:not(:disabled),
+.page-content :is(.secondary-button, .cm-secondary-btn, .cm-button.secondary, .semester-primary.secondary, .section-primary.secondary, .section-back-button, .p-secondary, .profile-button.secondary):hover:not(:disabled) {
+  border-color: var(--brand, #176fae) !important;
+  background: var(--brand-soft, #eaf4fb) !important;
+  color: var(--brand, #176fae) !important;
+}
+
+/* ========================================================
+   UNIFIED TABLE ACTION ICONS (Eye, Edit, Toggle, Delete)
+   ======================================================== */
+.page-content :is(.row-actions, .cm-actions, .course-actions, .branch-actions, .semester-row-actions, .section-actions, .sa-icon-actions, .sp-actions, .ay-actions) {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+.page-content :is(.row-actions, .cm-actions, .course-actions, .branch-actions, .semester-row-actions, .section-actions, .sa-icon-actions, .sp-actions, .ay-actions) :is(button, a) {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  min-height: 32px;
+  min-width: 32px;
+  padding: 0;
+  border: 1px solid var(--border, #dbe4eb);
+  border-radius: 6px;
+  background: var(--surface, #fff);
+  color: var(--text-secondary, #425e75);
+  cursor: pointer;
+  text-decoration: none;
+  transition: all 0.15s ease;
+}
+
+.page-content :is(.row-actions, .cm-actions, .course-actions, .branch-actions, .semester-row-actions, .section-actions, .sa-icon-actions, .sp-actions, .ay-actions) :is(button, a) svg {
+  width: 15px;
+  height: 15px;
+}
+
+.page-content :is(.row-actions, .cm-actions, .course-actions, .branch-actions, .semester-row-actions, .section-actions, .sa-icon-actions, .sp-actions, .ay-actions) :is(button, a):hover:not(:disabled) {
+  border-color: var(--brand, #176fae);
+  background: var(--brand-soft, #eaf4fb);
+  color: var(--brand, #176fae);
+}
+
+.page-content :is(.row-actions, .cm-actions, .course-actions, .branch-actions, .semester-row-actions, .section-actions, .sa-icon-actions, .sp-actions, .ay-actions) :is(.danger, .cm-danger):hover:not(:disabled) {
+  border-color: var(--danger, #c43d3d);
+  background: #fef2f2;
+  color: var(--danger, #c43d3d);
+}
+
+.page-content :is(.row-actions, .cm-actions, .course-actions, .branch-actions, .semester-row-actions, .section-actions, .sa-icon-actions, .sp-actions, .ay-actions) :is(.success):hover:not(:disabled) {
+  border-color: var(--success, #16805b);
+  background: #ecfdf5;
+  color: var(--success, #16805b);
+}
+
+/* ========================================================
+   UNIFIED SEARCH & FILTERS CONTROLS
+   ======================================================== */
+.page-content :is(.cm-search, .course-search, .branch-search, .department-search, .semester-search, .section-search, .sa-search, .sp-search, .fs-search) {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  min-width: 220px;
+  height: 38px;
+  box-sizing: border-box;
+  padding: 0 10px;
+  border: 1px solid var(--border-strong, #bdccd8);
+  border-radius: var(--radius-sm, 7px);
+  background: var(--surface, #fff);
+  color: var(--text-muted, #6d8294);
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.page-content :is(.cm-search, .course-search, .branch-search, .department-search, .semester-search, .section-search, .sa-search, .sp-search, .fs-search):focus-within {
+  border-color: var(--brand, #176fae);
+  box-shadow: var(--focus-ring);
+}
+
+.page-content :is(.cm-search, .course-search, .branch-search, .department-search, .semester-search, .section-search, .sa-search, .sp-search, .fs-search) svg {
+  width: 15px;
+  height: 15px;
+  margin-right: 8px;
+  flex-shrink: 0;
+}
+
+.page-content :is(.cm-search, .course-search, .branch-search, .department-search, .semester-search, .section-search, .sa-search, .sp-search, .fs-search) input {
+  width: 100%;
+  height: 100%;
+  padding: 0;
+  border: 0 !important;
+  outline: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  color: var(--text-primary, #132a3e);
+  font-size: 0.82rem;
+}
+
+/* ========================================================
+   UNIFIED FORM FIELDS & READONLY STYLES
+   ======================================================== */
+.page-content input[readonly],
+.page-content select[readonly],
+.page-content textarea[readonly],
+.erp-readonly-field {
+  background: var(--surface-soft, #f7fafc) !important;
+  border-color: var(--border, #dbe4eb) !important;
+  color: var(--text-secondary, #425e75) !important;
+  cursor: default !important;
+  box-shadow: none !important;
+  font-weight: 600;
+}
+
+/* Print-Friendly Document Rendering */
+@media print {
+  @page {
+    size: auto;
+    margin: 12mm;
+  }
+  html, body, #root, .dashboard-layout, .dashboard-layout > main, .page-content {
+    background: #fff !important;
+    color: #000 !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    overflow: visible !important;
+  }
+  .sidebar,
+  .dashboard-header,
+  .global-search,
+  .mobile-menu-button,
+  .theme-toggle,
+  .sidebar-scrim,
+  .export-control,
+  .print-control,
+  .directory-export-actions,
+  .pagination,
+  .table-pagination,
+  .course-pagination,
+  .department-pagination,
+  .cm-pagination,
+  .semester-pagination,
+  .section-pagination,
+  .module-pagination,
+  .filter-panel,
+  .branch-filter-toolbar,
+  .course-toolbar,
+  .department-filter-wrap,
+  .section-filter-bar,
+  .sp-toolbar,
+  .p-filters,
+  .fs-filter-actions,
+  .fs-filters,
+  nav,
+  button,
+  [data-no-print],
+  dialog::backdrop,
+  .backdrop {
+    display: none !important;
+  }
+  dialog, .shared-view-dialog, .section-details-panel, .section-form-panel {
+    position: static !important;
+    display: block !important;
+    border: none !important;
+    box-shadow: none !important;
+    max-height: none !important;
+    overflow: visible !important;
+    width: 100% !important;
+  }
+  table {
+    width: 100% !important;
+    border-collapse: collapse !important;
+  }
+  th, td {
+    border: 1px solid #ddd !important;
+    color: #000 !important;
+    background: transparent !important;
+  }
+  tr {
+    break-inside: avoid;
+  }
+  h1, h2, h3 {
+    color: #000 !important;
+    break-after: avoid;
+  }
+}

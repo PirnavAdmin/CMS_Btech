@@ -1,3 +1,6 @@
+import { isApiResult } from '../../../utils/exportProvenance'
+import ExportMenu, { PrintDetailsButton } from '../../../components/ExportMenu'
+import { profileColumns } from '../../../utils/exportColumns'
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
   FiAlertCircle,
@@ -19,6 +22,7 @@ import {
 } from "react-icons/fi";
 import DashboardLayout from "../../../layouts/DashboardLayout";
 import FilterPanel from "../../../components/FilterPanel";
+import CompactSummary from "../../../components/CompactSummary";
 import { hasRole } from "../../../auth/auth";
 import { ROLES } from "../../../auth/roles";
 import {
@@ -29,7 +33,7 @@ import StudentProfileEdit from "./StudentProfileEdit";
 import "./StudentProfile.css";
 import "./StudentProfileDocuments.css";
 
-const PAGE_SIZE = 10;
+const PAGE_SIZE = 5;
 const TABS = [
   ["overview", "Overview", FiUser],
   ["personal", "Personal & Contact", FiUser],
@@ -618,7 +622,7 @@ export default function StudentProfile() {
       ]);
       let rows =
         directory.status === "fulfilled"
-          ? directory.value.map(profileFromApi)
+          ? directory.value.map(row => ({ ...profileFromApi(row), exportVerified: isApiResult(directory.value) }))
           : [];
       if (profile.status === "fulfilled" && profile.value) {
         const [preview, documents] = profile.value;
@@ -628,7 +632,7 @@ export default function StudentProfile() {
           documents: documentsFromApi(documents),
         });
         rows = [
-          latest,
+          { ...latest, exportVerified: isApiResult(preview) },
           ...rows.filter((row) => String(row.id) !== String(requestedId)),
         ];
       } else if (profile.status === "rejected")
@@ -832,30 +836,42 @@ export default function StudentProfile() {
     />
   ) : (
     <>
-      <header className="sp-heading">
+      <header className="sp-heading cm-header">
         <div>
-          <span>Student management</span>
+          <span className="cm-eyebrow">Student Management</span>
           <h1>Student Profiles</h1>
           <p>
             Find, preview and manage profiles created from student admissions.
           </p>
         </div>
-        <button className="sp-button secondary" onClick={load}>
-          <FiRefreshCw /> Refresh
-        </button>
+        <div className="cm-row-actions">
+          <CompactSummary
+            label="Student summary"
+            items={[
+              { label: 'Total', value: students.length },
+              { label: 'Active', value: students.filter(s => status(s.status) === 'Active' || status(s.status) === 'Approved').length, tone: 'active' },
+              { label: 'Inactive', value: students.filter(s => status(s.status) === 'Inactive').length, tone: 'inactive' },
+            ]}
+          />
+        </div>
       </header>
       {error ? (
         <State error={error} onRetry={load} />
       ) : (
         <>
-          <section className="sp-directory">
-            <header>
+          <section className="sp-directory cm-panel">
+            <header className="course-directory-heading">
               <div>
-                <h2>Student profile directory</h2>
+                <span className="cm-eyebrow">Student Profile Directory</span>
                 <p>
-                  {filtered.length}{" "}
-                  {filtered.length === 1 ? "student" : "students"} found
+                  {filtered.length} records
                 </p>
+              </div>
+              <div className="directory-export-actions">
+                <ExportMenu rows={filtered.filter(row => row.exportVerified)} columns={profileColumns} title="Student Profiles" filename="student-profiles" loading={loading || Boolean(error)} scope="Current filtered API results (offline records excluded)" />
+                <button className="cm-button secondary" onClick={load}>
+                  <FiRefreshCw /> Refresh
+                </button>
               </div>
             </header>
             <FilterPanel
@@ -1270,6 +1286,7 @@ function Profile({ student, tab, setTab, back, edit, canEdit }) {
           <i />
           {status(student.status)}
         </span>
+        <PrintDetailsButton title={name(student) + " profile"} selector=".sp-profile" />
         <button
           className="sp-button sp-hero-edit"
           onClick={edit}
@@ -1324,7 +1341,14 @@ function Profile({ student, tab, setTab, back, edit, canEdit }) {
             <h2>{TABS.find((item) => item[0] === tab)[1]}</h2>
           </header>
           <dl className="sp-info-grid">
-            {panels[tab].map(([label, content]) => detail(label, content))}
+            {panels[tab]
+              .filter(([, content]) => content !== null && content !== undefined && String(content).trim() !== "" && String(content).trim() !== "Not provided" && String(content).trim() !== "—" && String(content).trim() !== "N/A")
+              .map(([label, content]) => (
+                <div key={label}>
+                  <dt>{label}</dt>
+                  <dd>{content}</dd>
+                </div>
+              ))}
           </dl>
         </section>
       ) : (

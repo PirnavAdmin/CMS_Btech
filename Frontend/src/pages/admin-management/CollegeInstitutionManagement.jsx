@@ -1,10 +1,14 @@
+import ExportMenu, { PrintDetailsButton } from '../../components/ExportMenu'
+import { collegeColumns, collegeSettingsColumns } from '../../utils/exportColumns'
 import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { FiAlertCircle, FiCheckCircle, FiEye as EyeIcon, FiEdit2 as EditIcon, FiHome, FiPlus as Plus, FiToggleLeft, FiToggleRight, FiX } from 'react-icons/fi'
+import { FiAlertCircle, FiCheckCircle, FiEye as EyeIcon, FiEdit2 as EditIcon, FiHome, FiPlus as Plus, FiToggleLeft, FiToggleRight, FiX, FiSearch, FiFilter } from 'react-icons/fi'
 import DashboardLayout from '../../layouts/DashboardLayout'
 import FilterPanel from '../../components/FilterPanel'
 import TablePagination, { PAGE_SIZE } from '../../components/TablePagination'
 import StatusConfirmDialog from '../../components/StatusConfirmDialog'
+import InfoCard from '../../components/InfoCard'
+import CompactSummary from '../../components/CompactSummary'
 import {
   createCollegeSettings,
   fetchCollegeLogo,
@@ -653,47 +657,73 @@ export default function CollegeInstitutionManagement({ initialView = 'list' }) {
           <>
             <header className="cm-header management-page__heading">
               <div>
+                <span className="cm-eyebrow">Academic ERP</span>
                 <h1>College Management</h1>
                 <p>Manage colleges, institutional details, and academic configurations.</p>
               </div>
-              <div className="management-header-actions">
-                <div className="compact-summary" aria-label="College status summary">
-                  {summaryCards.map(({ label, value, tone }) => {
-                    const isLoading = collegeSummary.loading || value === null
-                    return (
-                      <div key={label} className={`compact-summary__item compact-summary__item--${tone} ${isLoading ? 'is-loading' : ''}`}>
-                        <strong>{isLoading ? '—' : Number(value).toLocaleString('en-IN')}</strong>
-                        <small>{label}</small>
-                      </div>
-                    )
-                  })}
-                </div>
-                <button type="button" className="cm-primary-btn" onClick={openAdd}>
-                  <Plus aria-hidden="true" /> Add College
-                </button>
-              </div>
+              <CompactSummary
+                label="College status summary"
+                items={summaryCards.map(({ label, value, tone }) => ({
+                  label,
+                  value: collegeSummary.loading || value === null ? '—' : Number(value).toLocaleString('en-IN'),
+                  tone,
+                }))}
+              />
             </header>
 
             {collegeSummary.error && (
               <p className="cm-summary-error" role="alert">{collegeSummary.error}</p>
             )}
 
-            <FilterPanel active={Boolean(searchTerm || typeFilter || statusFilter)} onClear={() => { setSearchTerm(''); setTypeFilter(''); setStatusFilter(''); setCurrentPage(1); loadColleges('') }}><div className="cm-toolbar">
-              <input
-                type="text"
-                className="cm-search"
-                placeholder="Search by name, code or city..."
-                value={searchTerm}
-                onChange={handleSearchChange}
-              />
-              <select aria-label="Filter colleges by type" value={typeFilter} onChange={(event) => { setTypeFilter(event.target.value); setCurrentPage(1) }}>
-                <option value="">Select Type</option>
-                {availableCollegeTypes.map((type) => <option key={type} value={type}>{type}</option>)}
-              </select>
-              <select aria-label="Filter colleges by status" value={statusFilter} onChange={(event) => { setStatusFilter(event.target.value); setCurrentPage(1) }}>
-                <option value="">All</option><option value="active">Active</option><option value="inactive">Inactive</option>
-              </select>
-            </div></FilterPanel>
+            <section className="cm-panel course-directory">
+              <header className="course-directory-heading">
+                <div>
+                  <span className="cm-eyebrow">College Directory</span>
+                  <p>{filteredColleges.length} records</p>
+                </div>
+                <div className="directory-export-actions">
+                  <ExportMenu
+                    rows={filteredColleges}
+                    columns={collegeColumns}
+                    title="Colleges"
+                    filename="colleges"
+                    loading={isCollegesLoading || Boolean(collegeError)}
+                    scope="Current filtered loaded results"
+                  />
+                  <button type="button" className="cm-button" onClick={openAdd}>
+                    <Plus aria-hidden="true" /> Add College
+                  </button>
+                </div>
+              </header>
+
+              <FilterPanel active={Boolean(searchTerm || typeFilter || statusFilter)} onClear={() => { setSearchTerm(''); setTypeFilter(''); setStatusFilter(''); setCurrentPage(1); loadColleges('') }}>
+                <section className="cm-panel course-toolbar">
+                  <label className="course-search">
+                    <FiSearch />
+                    <input
+                      type="text"
+                      placeholder="Search by name, code or city..."
+                      value={searchTerm}
+                      onChange={handleSearchChange}
+                      aria-label="Search colleges"
+                    />
+                  </label>
+                  <select aria-label="Filter colleges by type" value={typeFilter} onChange={(event) => { setTypeFilter(event.target.value); setCurrentPage(1) }}>
+                    <option value="">Select Type</option>
+                    {availableCollegeTypes.map((type) => <option key={type} value={type}>{type}</option>)}
+                  </select>
+                  <select aria-label="Filter colleges by status" value={statusFilter} onChange={(event) => { setStatusFilter(event.target.value); setCurrentPage(1) }}>
+                    <option value="">Select Status</option>
+                    <option value="active">Active</option>
+                    <option value="inactive">Inactive</option>
+                  </select>
+                  {Boolean(searchTerm || typeFilter || statusFilter) && (
+                    <button className="course-clear" onClick={() => { setSearchTerm(''); setTypeFilter(''); setStatusFilter(''); setCurrentPage(1); loadColleges('') }}>
+                      <FiFilter /> Clear Filters
+                    </button>
+                  )}
+                </section>
+              </FilterPanel>
 
             {isCollegesLoading ? (
               <div className="cm-empty">
@@ -786,7 +816,7 @@ export default function CollegeInstitutionManagement({ initialView = 'list' }) {
                               </button>
                               <button
                                 type="button"
-                                className={`cm-action-icon-btn cm-status-action ${college.status === 'active' ? 'cm-danger' : 'cm-success'}`}
+                                className={`cm-action-icon-btn cm-status-action ${college.status === 'active' ? 'cm-success' : 'cm-danger'}`}
                                 title={college.status === 'active' ? 'Deactivate college' : 'Activate college'}
                                 aria-label={college.status === 'active' ? 'Deactivate college' : 'Activate college'}
                                 onClick={() => toggleStatus(college)}
@@ -802,40 +832,28 @@ export default function CollegeInstitutionManagement({ initialView = 'list' }) {
                 </div>
 
                 {/* Table Pagination Controls */}
-                <div className="cm-pagination">
-                  <div className="cm-pagination-info">
-                    <label htmlFor="college-page-size">Show
-                      <select id="college-page-size" value={itemsPerPage} onChange={(event) => { setItemsPerPage(Number(event.target.value)); setCurrentPage(1) }}>
-                        <option value="5">5</option>
-                        <option value="10">10</option>
-                        <option value="100">100</option>
-                      </select>
-                      entries
-                    </label>
-                  </div>
-                  <div className="cm-pagination-controls">
-                    <button
-                      type="button"
-                      className="cm-page-btn"
-                      onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
-                      disabled={safeCurrentPage === 1}
-                    >
-                      Previous
-                    </button>
-                    <span className="cm-page-indicator">Page {safeCurrentPage} of {totalPages}</span>
-                    <button
-                      type="button"
-                      className="cm-page-btn"
-                      onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
-                      disabled={safeCurrentPage === totalPages}
-                    >
-                      Next
-                    </button>
-                  </div>
+                <div className="course-pagination">
+                  <button
+                    type="button"
+                    className="pagination-btn"
+                    onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
+                    disabled={safeCurrentPage === 1}
+                  >
+                    Previous
+                  </button>
+                  <span className="pagination-status">Page {safeCurrentPage} of {totalPages}</span>
+                  <button
+                    type="button"
+                    className="pagination-btn"
+                    onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
+                    disabled={safeCurrentPage === totalPages}
+                  >
+                    Next
+                  </button>
                 </div>
               </>
             )}
-
+            </section>
           </>
         )}
 
@@ -958,6 +976,7 @@ export default function CollegeInstitutionManagement({ initialView = 'list' }) {
         {viewMode === 'details' && activeCollege && (
           <div className="cm-profile-view">
             <div className="cm-profile-top-bar">
+              <PrintDetailsButton title={activeCollege.name + " details"} selector=".cm-profile-card" />
               <button type="button" className="cm-secondary-btn" onClick={backToList}>
                 &larr; Back to Colleges List
               </button>
@@ -998,61 +1017,66 @@ export default function CollegeInstitutionManagement({ initialView = 'list' }) {
 
               {/* Profile Information Cards Grid */}
               <div className="cm-profile-grid">
-                <div className="cm-info-card">
-                  <div className="cm-info-card-header"><AcademicIcon /><h2>Basic College Information</h2></div>
-                  <div className="cm-info-rows">
-                    <div className="cm-info-row"><span className="cm-info-label">College Name</span><span className="cm-info-val">{displayValue(activeCollege.name)}</span></div>
-                    <div className="cm-info-row"><span className="cm-info-label">College Code</span><span className="cm-info-val">{displayValue(activeCollege.code)}</span></div>
-                    <div className="cm-info-row"><span className="cm-info-label">College Type</span><span className="cm-info-val">{displayValue(activeCollege.type)}</span></div>
-                    <div className="cm-info-row"><span className="cm-info-label">University Name</span><span className="cm-info-val">{displayValue(activeCollege.university)}</span></div>
-                    <div className="cm-info-row"><span className="cm-info-label">College Status</span><span className="cm-info-val">{activeCollege.status === 'active' ? 'Active' : 'Inactive'}</span></div>
-                  </div>
-                </div>
+                <InfoCard
+                  title="Basic College Information"
+                  icon={AcademicIcon}
+                  items={[
+                    { label: 'College Name', value: activeCollege.name },
+                    { label: 'College Code', value: activeCollege.code },
+                    { label: 'College Type', value: activeCollege.type },
+                    { label: 'University Name', value: activeCollege.university },
+                    { label: 'College Status', value: activeCollege.status === 'active' ? 'Active' : 'Inactive' },
+                  ]}
+                />
 
-                <div className="cm-info-card">
-                  <div className="cm-info-card-header"><ContactIcon /><h2>Address Details</h2></div>
-                  <div className="cm-info-rows">
-                    <div className="cm-info-row"><span className="cm-info-label">Address Line 1</span><span className="cm-info-val">{displayValue(activeCollege.addressLine1)}</span></div>
-                    <div className="cm-info-row"><span className="cm-info-label">Address Line 2</span><span className="cm-info-val">{displayValue(activeCollege.addressLine2)}</span></div>
-                    <div className="cm-info-row"><span className="cm-info-label">Area</span><span className="cm-info-val">{displayValue(activeCollege.area)}</span></div>
-                    <div className="cm-info-row"><span className="cm-info-label">District</span><span className="cm-info-val">{displayValue(activeCollege.district)}</span></div>
-                    <div className="cm-info-row"><span className="cm-info-label">City</span><span className="cm-info-val">{displayValue(activeCollege.city)}</span></div>
-                    <div className="cm-info-row"><span className="cm-info-label">State</span><span className="cm-info-val">{displayValue(activeCollege.state)}</span></div>
-                    <div className="cm-info-row"><span className="cm-info-label">Pincode</span><span className="cm-info-val">{displayValue(activeCollege.pincode)}</span></div>
-                    <div className="cm-info-row"><span className="cm-info-label">Country</span><span className="cm-info-val">{displayValue(activeCollege.country)}</span></div>
-                  </div>
-                </div>
+                <InfoCard
+                  title="Address Details"
+                  icon={ContactIcon}
+                  items={[
+                    { label: 'Address Line 1', value: activeCollege.addressLine1 },
+                    { label: 'Address Line 2', value: activeCollege.addressLine2 },
+                    { label: 'Area', value: activeCollege.area },
+                    { label: 'District', value: activeCollege.district },
+                    { label: 'City', value: activeCollege.city },
+                    { label: 'State', value: activeCollege.state },
+                    { label: 'Pincode', value: activeCollege.pincode },
+                    { label: 'Country', value: activeCollege.country },
+                  ]}
+                />
 
-                <div className="cm-info-card">
-                  <div className="cm-info-card-header"><ContactIcon /><h2>Contact Details</h2></div>
-                  <div className="cm-info-rows">
-                    <div className="cm-info-row"><span className="cm-info-label">Contact Number</span><span className="cm-info-val">{displayValue(activeCollege.contact)}</span></div>
-                    <div className="cm-info-row"><span className="cm-info-label">Alternate Contact Number</span><span className="cm-info-val">{displayValue(activeCollege.alternateContact)}</span></div>
-                    <div className="cm-info-row"><span className="cm-info-label">Email</span><span className="cm-info-val">{displayValue(activeCollege.email)}</span></div>
-                    <div className="cm-info-row"><span className="cm-info-label">Website</span><span className="cm-info-val">{displayValue(activeCollege.website)}</span></div>
-                  </div>
-                </div>
+                <InfoCard
+                  title="Contact Details"
+                  icon={ContactIcon}
+                  items={[
+                    { label: 'Contact Number', value: activeCollege.contact },
+                    { label: 'Alternate Contact Number', value: activeCollege.alternateContact },
+                    { label: 'Email', value: activeCollege.email },
+                    { label: 'Website', value: activeCollege.website },
+                  ]}
+                />
 
-                <div className="cm-info-card">
-                  <div className="cm-info-card-header"><AcademicIcon /><h2>Administration</h2></div>
-                  <div className="cm-info-rows">
-                    <div className="cm-info-row"><span className="cm-info-label">Principal Name</span><span className="cm-info-val">{displayValue(activeCollege.principal)}</span></div>
-                    <div className="cm-info-row"><span className="cm-info-label">Principal Email</span><span className="cm-info-val">{displayValue(activeCollege.principalEmail)}</span></div>
-                    <div className="cm-info-row"><span className="cm-info-label">Principal Contact</span><span className="cm-info-val">{displayValue(activeCollege.principalContact)}</span></div>
-                  </div>
-                </div>
+                <InfoCard
+                  title="Administration"
+                  icon={AcademicIcon}
+                  items={[
+                    { label: 'Principal Name', value: activeCollege.principal },
+                    { label: 'Principal Email', value: activeCollege.principalEmail },
+                    { label: 'Principal Contact', value: activeCollege.principalContact },
+                  ]}
+                />
 
-                <div className="cm-info-card">
-                  <div className="cm-info-card-header"><AcademicIcon /><h2>Accreditation Details</h2></div>
-                  <div className="cm-info-rows">
-                    <div className="cm-info-row"><span className="cm-info-label">Accreditation Status</span><span className="cm-info-val">{displayValue(activeCollege.accreditationStatus)}</span></div>
-                    <div className="cm-info-row"><span className="cm-info-label">Accreditation Body</span><span className="cm-info-val">{displayValue(activeCollege.accreditationBody)}</span></div>
-                    <div className="cm-info-row"><span className="cm-info-label">Accreditation Grade</span><span className="cm-info-val">{displayValue(activeCollege.accreditationGrade)}</span></div>
-                    <div className="cm-info-row"><span className="cm-info-label">Accreditation Number</span><span className="cm-info-val">{displayValue(activeCollege.accreditationNumber)}</span></div>
-                    <div className="cm-info-row"><span className="cm-info-label">Valid From</span><span className="cm-info-val">{displayValue(activeCollege.validFrom)}</span></div>
-                    <div className="cm-info-row"><span className="cm-info-label">Valid Until</span><span className="cm-info-val">{displayValue(activeCollege.validUntil)}</span></div>
-                  </div>
-                </div>
+                <InfoCard
+                  title="Accreditation Details"
+                  icon={AcademicIcon}
+                  items={[
+                    { label: 'Accreditation Status', value: activeCollege.accreditationStatus },
+                    { label: 'Accreditation Body', value: activeCollege.accreditationBody },
+                    { label: 'Accreditation Grade', value: activeCollege.accreditationGrade },
+                    { label: 'Accreditation Number', value: activeCollege.accreditationNumber },
+                    { label: 'Valid From', value: activeCollege.validFrom },
+                    { label: 'Valid Until', value: activeCollege.validUntil },
+                  ]}
+                />
               </div>
             </div>
           </div>
@@ -1067,7 +1091,7 @@ export default function CollegeInstitutionManagement({ initialView = 'list' }) {
                 <p>Manage academic and college settings for every college.</p>
               </div>
               <div style={{ display: 'flex', gap: '8px' }}>
-                <button type="button" className="cm-primary-btn" onClick={openAddSettings}>
+                <ExportMenu rows={settingsList} columns={collegeSettingsColumns} title="College Settings" filename="college-settings" loading={isSettingsLoading || Boolean(settingsListError)} /><button type="button" className="cm-primary-btn" onClick={openAddSettings}>
                   + Add Settings
                 </button>
                 <button type="button" className="cm-secondary-btn" onClick={backToList}>

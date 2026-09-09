@@ -1,3 +1,5 @@
+import ExportMenu, { PrintDetailsButton } from '../../components/ExportMenu'
+import { branchColumns } from '../../utils/exportColumns'
 import { cloneElement, useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { FiAlertCircle, FiArrowLeft, FiCheckCircle, FiEdit2, FiEye, FiFilter, FiGitBranch, FiLayers, FiPlus, FiSearch, FiTarget, FiToggleLeft, FiToggleRight, FiUsers } from 'react-icons/fi'
@@ -6,6 +8,7 @@ import FilterPanel from '../../components/FilterPanel'
 import SearchableSelect from '../../components/SearchableSelect'
 import TablePagination, { PAGE_SIZE } from '../../components/TablePagination'
 import CompactSummary from '../../components/CompactSummary'
+import InfoCard from '../../components/InfoCard'
 import { academicYearApi, branchApi, courseApi } from '../../api/apiEndpoints'
 import { branchTypeLabel } from '../../utils/semesterUtils'
 import ViewDialog from '../../components/ViewDialog'
@@ -190,7 +193,7 @@ function List() {
     </Header>
     <Notice>{error}</Notice>
     <section className="cm-panel branch-directory-card">
-      <header className="branch-directory-heading"><div><span className="cm-eyebrow">Branch Directory</span></div><Link className="cm-button" to="/branches/add"><FiPlus /> Add Branch</Link></header>
+      <header className="branch-directory-heading"><div><span className="cm-eyebrow">Branch Directory</span><p>{rows.length} records</p></div><div className="directory-export-actions"><ExportMenu rows={rows.map(branch => ({ ...branch, courseName: courseById.get(String(branch.courseId))?.name || branch.courseName }))} columns={branchColumns} title="Branches" filename="branches" loading={loading || Boolean(error)} /><Link className="cm-button" to="/branches/add"><FiPlus /> Add Branch</Link></div></header>
     <FilterPanel active={hasFilters} onClear={clearFilters}>
       <section className="cm-panel branch-filter-toolbar">
         <label className="branch-search"><FiSearch /><input aria-label="Search branches" value={filters.query} onChange={(event) => setFilter('query', event.target.value)} placeholder="Search branch name, code or course" /></label>
@@ -205,7 +208,7 @@ function List() {
       <div className="branch-results">Showing <strong>{rows.length}</strong> branches</div>
       <div className="branch-table-scroll"><table className="branch-table"><thead><tr>{['Branch', 'Code', 'Course', 'Type', 'Duration', 'Semesters', 'Approved Intake', 'Status', 'Actions'].map((heading) => <th key={heading}>{heading}</th>)}</tr></thead><tbody>{pageRows.map((branch) => {
         const course = courseById.get(String(branch.courseId))
-        return <tr key={branch.id}><td><strong>{branch.branchName}</strong>{branch.shortName && <small>{branch.shortName}</small>}</td><td>{branch.branchCode}</td><td>{course?.name || branch.courseName || ''}</td><td>{typeOf(branch)}</td><td>{course?.durationValue ? `${course.durationValue} Years` : ''}</td><td>{course?.totalSemesters || ''}</td><td>{branch.intakeCapacity || ''}</td><td><Badge value={branch.status} /></td><td className="branch-actions"><Link aria-label={`View ${branch.branchName}`} title="View" to={`/branches/${branch.id}`}><FiEye /></Link><Link aria-label={`Edit ${branch.branchName}`} title="Edit" to={`/branches/${branch.id}/edit`}><FiEdit2 /></Link><button type="button" title={branch.status === 'Active' ? 'Deactivate' : 'Activate'} aria-label={`${branch.status === 'Active' ? 'Deactivate' : 'Activate'} ${branch.branchName}`} className={`branch-status-action ${branch.status === 'Active' ? 'danger' : 'success'}`} onClick={() => onToggleStatus(branch)}>{branch.status === 'Active' ? <FiToggleRight /> : <FiToggleLeft />}</button></td></tr>
+        return <tr key={branch.id}><td><strong>{branch.branchName}</strong>{branch.shortName && <small>{branch.shortName}</small>}</td><td>{branch.branchCode}</td><td>{course?.name || branch.courseName || ''}</td><td>{typeOf(branch)}</td><td>{course?.durationValue ? `${course.durationValue} Years` : ''}</td><td>{course?.totalSemesters || ''}</td><td>{branch.intakeCapacity || ''}</td><td><Badge value={branch.status} /></td><td className="branch-actions"><Link aria-label={`View ${branch.branchName}`} title="View" to={`/branches/${branch.id}`}><FiEye className="module-action-icon module-action-icon--view" /></Link><Link aria-label={`Edit ${branch.branchName}`} title="Edit" to={`/branches/${branch.id}/edit`}><FiEdit2 className="module-action-icon module-action-icon--edit" /></Link><button type="button" title={branch.status === 'Active' ? 'Deactivate' : 'Activate'} aria-label={`${branch.status === 'Active' ? 'Deactivate' : 'Activate'} ${branch.branchName}`} className={`branch-status-action ${branch.status === 'Active' ? 'success' : 'danger'}`} onClick={() => onToggleStatus(branch)}>{branch.status === 'Active' ? <FiToggleRight /> : <FiToggleLeft />}</button></td></tr>
       })}</tbody></table></div>
       <TablePagination currentPage={currentPage} totalPages={totalPages} onPageChange={setPage} />
     </> : <div className="branch-empty">No branches match the current filters.</div> }
@@ -497,11 +500,47 @@ function Details() {
 
   return <Page>
     <Header title="B.Tech Branch Details" text="Current branch summary with only meaningful values shown.">
+      <PrintDetailsButton title={branch.branchName + " details"} selector=".branch-detail-content" />
       <Link className="cm-button secondary" to="/branches"><FiArrowLeft /> Back</Link>
       <Link className="cm-button" to={`/branches/${id}/edit`}><FiEdit2 /> Edit</Link>
     </Header>
-    <ViewDialog title="Branch Details" onClose={() => navigate('/branches')}><Link className="cm-button" to={`/branches/${id}/edit`}><FiEdit2 /> Edit</Link><section className="branch-detail-hero"><div><span className="cm-eyebrow">B.Tech Branch</span><h2>{branch.branchName}</h2><Badge value={branch.status} /></div><strong>{branch.branchCode}</strong></section>
-    <section className="cm-panel branch-detail-grid">{fields.map(([label, value]) => <div className="cm-detail" key={label}><span>{label}</span><strong>{value}</strong></div>)}</section></ViewDialog>
+    <ViewDialog title="Branch Details" onClose={() => navigate('/branches')}>
+      <Link className="cm-button" to={`/branches/${id}/edit`}><FiEdit2 /> Edit</Link>
+      <section className="branch-detail-hero">
+        <div>
+          <span className="cm-eyebrow">B.Tech Branch</span>
+          <h2>{branch.branchName}</h2>
+          <Badge value={branch.status} />
+        </div>
+        <strong>{branch.branchCode}</strong>
+      </section>
+      <div className="branch-detail-content cm-profile-grid" style={{ marginTop: '16px' }}>
+        <InfoCard
+          title="Branch Information"
+          icon={FiGitBranch}
+          items={[
+            { label: 'Course Name', value: branch.courseName },
+            { label: 'Course Code', value: branch.courseCode },
+            { label: 'Branch Name', value: branch.branchName },
+            { label: 'Branch Code', value: branch.branchCode },
+            { label: 'Branch Type', value: typeOf(branch) },
+            { label: 'Specialization', value: branch.specialization },
+            { label: 'Status', value: branch.status },
+          ]}
+        />
+        <InfoCard
+          title="Academic Structure"
+          icon={FiLayers}
+          items={[
+            { label: 'Duration', value: branch.duration ? `${branch.duration} Years` : '' },
+            { label: 'Academic Pattern', value: branch.academicPattern },
+            { label: 'Total Semesters', value: branch.totalSemesters },
+            { label: 'Approved Intake', value: branch.intakeCapacity },
+            { label: 'Academic Year', value: branch.startingAcademicYearName },
+          ]}
+        />
+      </div>
+    </ViewDialog>
   </Page>
 }
 

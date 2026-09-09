@@ -1,3 +1,5 @@
+import ExportMenu, { PrintDetailsButton } from '../../components/ExportMenu'
+import { courseColumns, structureColumns } from '../../utils/exportColumns'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useParams, useNavigate } from 'react-router-dom'
 import { FiArrowLeft, FiBookOpen, FiCheckCircle, FiEdit2, FiEye, FiFilter, FiPlus, FiSearch, FiToggleLeft, FiToggleRight, FiUsers } from 'react-icons/fi'
@@ -7,6 +9,7 @@ import SearchableSelect from '../../components/SearchableSelect'
 import TablePagination, { PAGE_SIZE } from '../../components/TablePagination'
 import StatusConfirmDialog from '../../components/StatusConfirmDialog'
 import CompactSummary from '../../components/CompactSummary'
+import InfoCard from '../../components/InfoCard'
 import { branchApi, courseApi, courseStructureApi, departmentApi, studentAdmissionApi } from '../../api/apiEndpoints'
 import { getCourseById, createCourse, updateCourse, updateCourseStatus, getSemesters, getCourseSemesterMappings, createCourseSemesterMapping, updateCourseSemesterMapping, updateCourseSemesterMappingStatus } from '../../auth/collegeApi'
 import { normalize } from './Branch'
@@ -198,7 +201,7 @@ function CourseList() {
     </Header>
     {statusNotice && <div className="course-toast" role="status">{statusNotice}</div>}
     <section className="cm-panel course-directory">
-      <header className="course-directory-heading"><div><span className="cm-eyebrow">Course Directory</span><p>{rows.length} records</p></div><Link className="cm-button" to="/courses/add"><FiPlus /> Add Course</Link></header>
+      <header className="course-directory-heading"><div><span className="cm-eyebrow">Course Directory</span><p>{rows.length} records</p></div><div className="directory-export-actions"><ExportMenu rows={rows} columns={courseColumns} title="Courses" filename="courses" loading={isLoading || Boolean(error)} /><Link className="cm-button" to="/courses/add"><FiPlus /> Add Course</Link></div></header>
       <FilterPanel active={hasFilters} onClear={clearFilters}><section className="cm-panel course-toolbar">
         <label className="course-search"><FiSearch /><input aria-label="Search courses" value={query} onChange={e => { setQuery(e.target.value); setCurrentPage(1) }} placeholder="Search course name or code" /></label>
         <select aria-label="Status" value={statusFilter} onChange={e => { setStatusFilter(e.target.value); setCurrentPage(1) }}><option value="">Select Status</option><option value="Active">Active</option><option value="Inactive">Inactive</option></select>
@@ -227,7 +230,7 @@ function CourseList() {
                           <div className="course-actions">
                             <Link aria-label={`View ${c.name}`} to={`/courses/${c.id}`}><FiEye className="module-action-icon module-action-icon--view" /></Link>
                             <Link aria-label={`Edit ${c.name}`} to={`/courses/${c.id}/edit`}><FiEdit2 className="module-action-icon module-action-icon--edit" /></Link>
-                            <button className={`course-status-action ${(c.status || 'Active') === 'Active' ? 'danger' : 'success'}`} title={(c.status || 'Active') === 'Active' ? `Mark ${c.name} inactive` : `Mark ${c.name} active`} aria-label={(c.status || 'Active') === 'Active' ? `Mark ${c.name} inactive` : `Mark ${c.name} active`} onClick={() => toggleStatus(c)}>{(c.status || 'Active') === 'Active' ? <FiToggleRight /> : <FiToggleLeft />}</button>
+                            <button className={`course-status-action ${(c.status || 'Active') === 'Active' ? 'success' : 'danger'}`} title={(c.status || 'Active') === 'Active' ? `Mark ${c.name} inactive` : `Mark ${c.name} active`} aria-label={(c.status || 'Active') === 'Active' ? `Mark ${c.name} inactive` : `Mark ${c.name} active`} onClick={() => toggleStatus(c)}>{(c.status || 'Active') === 'Active' ? <FiToggleRight /> : <FiToggleLeft />}</button>
                           </div>
                         </td>
                       </tr>
@@ -410,11 +413,30 @@ function CourseDetails() {
   const duration = course.durationValue ? `${course.durationValue} ${course.durationUnit || 'Years'}` : ''
   const pattern = course.academicSystem || 'Semester'
 
-  return <Page><Header title="B.Tech Course Details" text="Course configuration and associated B.Tech branches."><Link className="cm-button secondary" to="/courses"><FiArrowLeft /> Back</Link><Link className="cm-button" to={`/courses/${id}/edit`}><FiEdit2 className="module-action-icon module-action-icon--edit" /> Edit Course</Link></Header>
+  return <Page><Header title="B.Tech Course Details" text="Course configuration and associated B.Tech branches."><PrintDetailsButton title={course.name + " details"} selector=".course-management" /><Link className="cm-button secondary" to="/courses"><FiArrowLeft /> Back</Link><Link className="cm-button" to={`/courses/${id}/edit`}><FiEdit2 className="module-action-icon module-action-icon--edit" /> Edit Course</Link></Header>
     <section className="course-detail-summary"><div className="course-detail-summary__main"><span className="cm-eyebrow">B.Tech Course</span><h2>{course.name || 'Course'}</h2>{valueText(course.shortName) && <p className="course-detail-summary__short">{course.shortName}</p>}<strong className="course-detail-summary__code">Course Code: {course.code || '—'}</strong></div><div className="course-detail-summary__meta"><span>Department <b>{department?.name || course.department || '—'}</b></span><span>{course.type || 'Undergraduate'} {duration && ` · ${duration}`} {course.semesters && ` · ${course.semesters} Semesters`}</span><Badge value={course.status || 'Active'} /></div></section>
-    <div className="course-detail-sections">
-      <section className="cm-panel course-detail-section"><header><span>Course identity</span><h2>Basic Information</h2></header><div className="course-detail-rows">{detailRows([['Course Name', course.name], ['Course Code', course.code], ['Short Name', course.shortName], ['Course Type', course.type], ['College', course.college]])}</div></section>
-      <section className="cm-panel course-detail-section"><header><span>Academic context</span><h2>Academic Information</h2></header><div className="course-detail-rows">{detailRows([['College', course.college], ['Duration', duration], ['Academic Pattern', pattern], ['Total Semesters', course.semesters]])}</div></section>
+    <div className="cm-profile-grid" style={{ marginTop: '20px' }}>
+      <InfoCard
+        title="Basic Information"
+        icon={FiBookOpen}
+        items={[
+          { label: 'Course Name', value: course.name },
+          { label: 'Course Code', value: course.code },
+          { label: 'Short Name', value: course.shortName },
+          { label: 'Course Type', value: course.type },
+          { label: 'College', value: course.college },
+        ]}
+      />
+      <InfoCard
+        title="Academic Information"
+        icon={FiBookOpen}
+        items={[
+          { label: 'College', value: course.college },
+          { label: 'Duration', value: duration },
+          { label: 'Academic Pattern', value: pattern },
+          { label: 'Total Semesters', value: course.semesters },
+        ]}
+      />
     </div>
   </Page>
 }
@@ -451,7 +473,7 @@ export function CourseStructure() {
   const edit = (row) => { setEditing(row.structureId); setForm({ semesterId: row.semesterId, yearNumber: row.yearNumber, semesterNumber: row.semesterNumber, semesterName: row.semesterName || `Semester ${row.semesterNumber}` }); setSemester(Number(row.semesterNumber)) }
   const toggleStatus = async (row) => { try { await updateCourseSemesterMappingStatus(row.structureId, Number(row.status) === 0 ? 1 : 0); setRows(current => current.map(x => x.structureId === row.structureId ? { ...x, status: Number(x.status) === 0 ? 1 : 0 } : x)) } catch (e) { setError(e.message || 'Unable to update mapping status.') } }
 
-  return <Page><Header title="Course Structure" text={`${course.name} / ${branch.name}`}><Link className="cm-button secondary" to={`/branches/${branchId}`}><FiArrowLeft /> Back to Branch</Link></Header>
+  return <Page><ExportMenu rows={visible} columns={structureColumns} title="Course Structure" filename="course-structure" loading={loading || Boolean(error)} /><Header title="Course Structure" text={`${course.name} / ${branch.name}`}><Link className="cm-button secondary" to={`/branches/${branchId}`}><FiArrowLeft /> Back to Branch</Link></Header>
     {error && <p className="cm-error" role="alert">{error}</p>}
     <div className="cm-semesters">{Array.from({ length: 8 }, (_, i) => i + 1).map(x => <button className={`cm-semester ${semester === x ? 'active' : ''}`} onClick={() => changeSemester(x)} key={x}>Semester {x}</button>)}</div>
     <section className="cm-panel cm-form-grid">

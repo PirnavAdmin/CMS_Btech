@@ -1,87 +1,613 @@
-import{useEffect,useMemo,useState}from'react';
-import DashboardLayout from'../../layouts/DashboardLayout';
-import FilterPanel from'../../components/FilterPanel';
-import TablePagination,{PAGE_SIZE}from'../../components/TablePagination';
-import{academicYearApi}from'../../api/apiEndpoints';
-import{FiCheckCircle,FiEye,FiEdit2,FiToggleLeft,FiXCircle}from'react-icons/fi';
-import'./AcademicYearManagement.css';
+import { useEffect, useMemo, useState } from 'react';
+import ExportMenu, { PrintDetailsButton } from '../../components/ExportMenu';
+import { yearColumns } from '../../utils/exportColumns';
+import DashboardLayout from '../../layouts/DashboardLayout';
+import PageHeader from '../../components/PageHeader';
+import StatusBadge from '../../components/StatusBadge';
+import FilterPanel from '../../components/FilterPanel';
+import TablePagination, { PAGE_SIZE } from '../../components/TablePagination';
+import StatusConfirmDialog from '../../components/StatusConfirmDialog';
+import InfoCard from '../../components/InfoCard';
+import { academicYearApi } from '../../api/apiEndpoints';
+import { FiCheckCircle, FiEye, FiEdit2, FiToggleLeft, FiXCircle, FiPlus, FiCalendar, FiClock, FiSearch } from 'react-icons/fi';
+import './AcademicYearManagement.css';
 
-const DAY=864e5,states=['UPCOMING','ACTIVE','ARCHIVED'],blank={name:'',startDate:'',endDate:'',autoActivate:false};
+const DAY = 864e5;
+const states = ['UPCOMING', 'ACTIVE', 'ARCHIVED'];
+const blank = { name: '', startDate: '', endDate: '', autoActivate: false };
 
-const d=x=>{let z=new Date(`${x}T00:00:00`);
-z.setHours(0,0,0,0);
-return z},now=()=>{let z=new Date;
-z.setHours(0,0,0,0);
-return z},isPresentYear=x=>x?.startDate&&x?.endDate&&now()>=d(x.startDate)&&now()<=d(x.endDate),isPastYear=x=>x?.endDate&&now()>d(x.endDate),date=x=>d(x).toLocaleDateString('en-IN',{day:'2-digit',month:'long',year:'numeric'}),days=x=>Math.ceil((d(x)-now())/DAY),duration=(a,b)=>Math.round((d(b)-d(a))/DAY)+1,progress=(a,b)=>Math.max(0,Math.min(100,Math.round((now()-d(a))*100/(d(b)-d(a))))),autoStatus=(a,b)=>now()<d(a)?'UPCOMING':now()>d(b)?'ARCHIVED':'ACTIVE';
-const mapYear=x=>({id:String(x.academicYearId??x.id),name:x.academicYearName??x.name??'',startDate:String(x.startDate??'').slice(0,10),endDate:String(x.endDate??'').slice(0,10),status:x.isActive||Number(x.status)===1?'ACTIVE':Number(x.isArchived)===1?'ARCHIVED':autoStatus(String(x.startDate??'').slice(0,10),String(x.endDate??'').slice(0,10)),autoActivate:false});
+const d = (x) => {
+  let z = new Date(`${x}T00:00:00`);
+  z.setHours(0, 0, 0, 0);
+  return z;
+};
+const now = () => {
+  let z = new Date();
+  z.setHours(0, 0, 0, 0);
+  return z;
+};
+const isPresentYear = (x) => x?.startDate && x?.endDate && now() >= d(x.startDate) && now() <= d(x.endDate);
+const isPastYear = (x) => x?.endDate && now() > d(x.endDate);
+const formatDate = (x) => (x ? d(x).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '—');
+const days = (x) => Math.ceil((d(x) - now()) / DAY);
+const duration = (a, b) => Math.round((d(b) - d(a)) / DAY) + 1;
+const progress = (a, b) => Math.max(0, Math.min(100, Math.round(((now() - d(a)) * 100) / (d(b) - d(a)))));
+const autoStatus = (a, b) => (now() < d(a) ? 'UPCOMING' : now() > d(b) ? 'ARCHIVED' : 'ACTIVE');
 
-export default function AcademicYear(){const[years,setYears]=useState([]),[search,setSearch]=useState(''),[filter,setFilter]=useState('ALL'),[modal,setModal]=useState(null),[selected,setSelected]=useState(null),[form,setForm]=useState(blank),[errors,setErrors]=useState({}),[notice,setNoticeValue]=useState('Loading academic years...'),[noticeTone,setNoticeTone]=useState('info'),[activity,setActivity]=useState([]),[saving,setSaving]=useState(false),[page,setPage]=useState(1);
-const close=()=>{setModal(null);
-setSelected(null);
-setErrors({})};
-const setNotice=(message,tone='info')=>{setNoticeValue(message);setNoticeTone(tone)};
-const loadYears=async()=>{try{const data=await academicYearApi.getAll();setYears(data.map(mapYear));setNotice(`${data.length} academic year${data.length===1?'':'s'} retrieved successfully.`)}catch(error){setNotice(error.message||'Unable to load academic years.','error')}};
-useEffect(()=>{loadYears()},[]);
-useEffect(()=>{
-  const f=e=>e.key==='Escape'&&close();
-  const htmlOverflow=document.documentElement.style.overflow;
-  const bodyOverflow=document.body.style.overflow;
-  const root=document.getElementById('root');
-  const rootOverflow=root?.style.overflow;
-  document.documentElement.style.overflow='auto';
-  document.body.style.overflow='auto';
-  if(root)root.style.overflow='visible';
-  addEventListener('keydown',f);
-  return()=>{
-    removeEventListener('keydown',f);
-    document.documentElement.style.overflow=htmlOverflow;
-    document.body.style.overflow=bodyOverflow;
-    if(root)root.style.overflow=rootOverflow;
+const mapYear = (x) => ({
+  id: String(x.academicYearId ?? x.id),
+  name: x.academicYearName ?? x.name ?? '',
+  startDate: String(x.startDate ?? '').slice(0, 10),
+  endDate: String(x.endDate ?? '').slice(0, 10),
+  status:
+    x.isActive || Number(x.status) === 1
+      ? 'ACTIVE'
+      : Number(x.isArchived) === 1
+      ? 'ARCHIVED'
+      : autoStatus(String(x.startDate ?? '').slice(0, 10), String(x.endDate ?? '').slice(0, 10)),
+  autoActivate: false,
+});
+
+export default function AcademicYear() {
+  const [years, setYears] = useState([]);
+  const [search, setSearch] = useState('');
+  const [filter, setFilter] = useState('ALL');
+  const [modal, setModal] = useState(null); // 'add' | 'edit' | 'view' | 'generate'
+  const [confirmStatus, setConfirmStatus] = useState(null); // { year, targetStatus }
+  const [selected, setSelected] = useState(null);
+  const [form, setForm] = useState(blank);
+  const [errors, setErrors] = useState({});
+  const [notice, setNoticeValue] = useState('');
+  const [noticeTone, setNoticeTone] = useState('info');
+  const [exportLoading, setExportLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [page, setPage] = useState(1);
+
+  const close = () => {
+    setModal(null);
+    setSelected(null);
+    setErrors({});
+  };
+
+  const setNotice = (message, tone = 'info') => {
+    setNoticeValue(message);
+    setNoticeTone(tone);
+  };
+
+  const loadYears = async () => {
+    setExportLoading(true);
+    try {
+      const data = await academicYearApi.getAll();
+      setYears(data.map(mapYear));
+    } catch (error) {
+      setNotice(error.message || 'Unable to load academic years.', 'error');
+    } finally {
+      setExportLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadYears();
+  }, []);
+
+  const active = years.find((x) => x.status === 'ACTIVE' || isPresentYear(x));
+  const next = years
+    .filter((x) => x.status === 'UPCOMING')
+    .sort((a, b) => a.startDate.localeCompare(b.startDate))[0];
+
+  const shown = useMemo(
+    () =>
+      years.filter(
+        (x) =>
+          `${x.name} ${x.status}`.toLowerCase().includes(search.toLowerCase().trim()) &&
+          (filter === 'ALL' || x.status === filter)
+      ),
+    [years, search, filter]
+  );
+
+  const totalPages = Math.max(1, Math.ceil(shown.length / PAGE_SIZE));
+  const currentPage = Math.min(page, totalPages);
+  const pageRows = shown.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
+  const count = (s) => years.filter((x) => x.status === s).length;
+
+  useEffect(() => setPage(1), [search, filter]);
+
+  const openAdd = () => {
+    setForm(blank);
+    setErrors({});
+    setModal('add');
+  };
+
+  const edit = (x) => {
+    if (isPresentYear(x)) {
+      setNotice('Present academic year cannot be edited directly.', 'error');
+      return;
+    }
+    setSelected(x);
+    setForm({ ...x });
+    setErrors({});
+    setModal('edit');
+  };
+
+  function validate() {
+    let e = {},
+      others = years.filter((x) => x.id !== selected?.id);
+    if (!form.name.trim()) e.name = 'Academic year title is required.';
+    if (!form.startDate) e.startDate = 'Start date is required.';
+    if (!form.endDate) e.endDate = 'End date is required.';
+    if (form.startDate && form.endDate && d(form.endDate) <= d(form.startDate))
+      e.endDate = 'End date must be after start date.';
+    if (form.name.trim() && others.some((x) => x.name.toLowerCase() === form.name.trim().toLowerCase()))
+      e.name = 'This academic year already exists.';
+    if (
+      form.startDate &&
+      form.endDate &&
+      others.some((x) => d(form.startDate) <= d(x.endDate) && d(form.endDate) >= d(x.startDate))
+    )
+      e.range = 'This date range overlaps an existing academic year.';
+    setErrors(e);
+    return !Object.keys(e).length;
   }
-},[]);
 
-const active=years.find(x=>x.status==='ACTIVE'||isPresentYear(x)),next=years.filter(x=>x.status==='UPCOMING').sort((a,b)=>a.startDate.localeCompare(b.startDate))[0],shown=useMemo(()=>years.filter(x=>`${x.name} ${x.status}`.toLowerCase().includes(search.toLowerCase().trim())&&(filter==='ALL'||x.status===filter)),[years,search,filter]),totalPages=Math.max(1,Math.ceil(shown.length/PAGE_SIZE)),currentPage=Math.min(page,totalPages),pageRows=shown.slice((currentPage-1)*PAGE_SIZE,currentPage*PAGE_SIZE),count=s=>years.filter(x=>x.status===s).length,warnings=active?[days(active.endDate)<0?['danger','The active academic year has passed its end date.']:days(active.endDate)<7?['warning','Academic year is approaching closure.']:days(active.endDate)<30?['warning',`Academic year ends in ${days(active.endDate)} days.`]:['success','Academic year is operating normally.'],next?['info',`Next academic year ${next.name} is scheduled.`]:['warning','Next academic year is not configured.']]:[['warning','No active academic year is currently available.']];
-useEffect(()=>setPage(1),[search,filter]);
+  async function save(e) {
+    e.preventDefault();
+    if (selected && isPresentYear(selected)) {
+      setErrors({ form: 'Present academic year cannot be modified.' });
+      return;
+    }
+    if (!validate() || saving) return;
+    setSaving(true);
+    try {
+      const data = selected ? await academicYearApi.update(selected.id, form) : await academicYearApi.create(form);
+      const item = data
+        ? mapYear(data)
+        : {
+            ...form,
+            id: selected?.id || Date.now().toString(),
+            name: form.name.trim(),
+            status: autoStatus(form.startDate, form.endDate),
+          };
+      setYears((x) => (selected ? x.map((y) => (y.id === selected.id ? item : y)) : [...x, item]));
+      setNotice(`${item.name} has been ${selected ? 'updated' : 'created'} successfully.`, 'success');
+      close();
+      await loadYears();
+    } catch (error) {
+      setErrors({ form: error.message || 'Unable to save the academic year.' });
+    } finally {
+      setSaving(false);
+    }
+  }
 
-const addActivity=(title,detail)=>setActivity(x=>[{title,detail,time:'Just now'},...x]);
-const openAdd=()=>{setForm(blank);
-setErrors({});
-setModal('add')},edit=x=>{if(isPresentYear(x)){setNotice('Present academic year cannot be changed.');return}setSelected(x);
-setForm({...x});
-setErrors({});
-setModal('edit')};
-function validate(){let e={},others=years.filter(x=>x.id!==selected?.id);
-if(!form.name.trim())e.name='Academic year is required.';
-if(!form.startDate)e.startDate='Start date is required.';
-if(!form.endDate)e.endDate='End date is required.';
-if(form.startDate&&form.endDate&&d(form.endDate)<=d(form.startDate))e.endDate='End date must be after start date.';
-if(form.name.trim()&&others.some(x=>x.name.toLowerCase()===form.name.trim().toLowerCase()))e.name='This academic year already exists.';
-if(form.startDate&&form.endDate&&others.some(x=>d(form.startDate)<=d(x.endDate)&&d(form.endDate)>=d(x.startDate)))e.range='This date range overlaps an existing academic year.';
-setErrors(e);
-return!Object.keys(e).length}async function save(e){e.preventDefault();
-if(selected&&isPresentYear(selected)){setErrors({form:'Present academic year cannot be changed.'});return}
-if(!validate()||saving)return;
-setSaving(true);
-try{const data=selected?await academicYearApi.update(selected.id,form):await academicYearApi.create(form);const item=data?mapYear(data):{...form,id:selected?.id||Date.now().toString(),name:form.name.trim(),status:autoStatus(form.startDate,form.endDate)};setYears(x=>selected?x.map(y=>y.id===selected.id?item:y):[...x,item]);addActivity(selected?'Academic Year Updated':'Academic Year Created',item.name);setNotice(`${item.name} has been ${selected?'updated':'created'} successfully.`);close();await loadYears()}catch(error){setErrors({form:error.message||'Unable to save the academic year.'})}finally{setSaving(false)}}async function move(status){if(!selected||saving)return;
-setSaving(true);
-if(status==='ARCHIVED'&&isPresentYear(selected)){setNotice('Present academic year cannot be archived.');close();return}
-if(status==='ARCHIVED'&&!isPastYear(selected)){setNotice('Archive option is available only for previous academic years.');close();return}
-try{if(status==='ACTIVE')await academicYearApi.activate(selected.id);else await academicYearApi.deactivate(selected.id);addActivity(`Academic Year ${status==='ACTIVE'?'Activated':'Archived'}`,selected.name);setNotice(`${selected.name} has been ${status==='ACTIVE'?'activated':'archived'} successfully.`);close();await loadYears()}catch(error){setNotice(error.message||'Unable to update the academic year status.','error')}finally{setSaving(false)}}async function generate(){if(!active||saving)return;
-let s=d(active.endDate);
-s.setDate(s.getDate()+1);
-let e=new Date(s);
-e.setFullYear(e.getFullYear()+1);
-e.setDate(e.getDate()-1);
-let item={name:`${s.getFullYear()} - ${e.getFullYear()}`,startDate:s.toISOString().slice(0,10),endDate:e.toISOString().slice(0,10),status:'UPCOMING',autoActivate:false};
-if(years.some(x=>x.name===item.name))setNotice(`${item.name} already exists, so no duplicate was created.`);
-else{setSaving(true);try{await academicYearApi.create(item);addActivity('Next Academic Year Generated',item.name);setNotice(`${item.name} was generated successfully.`);await loadYears()}catch(error){setNotice(error.message||'Unable to generate the next academic year.','error')}finally{setSaving(false)}}close()}
-const openView=async x=>{setSelected(x);setModal('view');try{const data=await academicYearApi.getById(x.id);if(data)setSelected(mapYear(data))}catch(error){setNotice(error.message||'Unable to load academic year details.','error')}};
-const action=x=><div className="ay-actions"><button title="View academic year" aria-label="View academic year" onClick={()=>openView(x)}><FiEye className="module-action-icon module-action-icon--view" /></button><button title="Edit academic year" aria-label="Edit academic year" onClick={()=>edit(x)} disabled={x.status==='ARCHIVED'||isPresentYear(x)}><FiEdit2 className="module-action-icon module-action-icon--edit" /></button>{isPresentYear(x)&&<button className="current-action" title="Present year" aria-label="Present year" disabled><FiToggleLeft/></button>}{x.status==='ARCHIVED'&&<button className="archived-action" title="Archived" aria-label="Archived" disabled><FiXCircle/></button>}{x.status==='UPCOMING'&&<button className="primary" title="Activate academic year" aria-label="Activate academic year" onClick={()=>{setSelected(x);
-setModal('activate')}}><FiToggleLeft/></button>}{isPastYear(x)&&x.status!=='ARCHIVED'&&<button className="danger" title="Archive academic year" aria-label="Archive academic year" onClick={()=>{setSelected(x);
-setModal('archive')}}><FiXCircle/></button>}</div>;
+  async function handleStatusConfirm() {
+    if (!confirmStatus || saving) return;
+    const { year, targetStatus } = confirmStatus;
+    setSaving(true);
+    try {
+      if (targetStatus === 'ACTIVE') {
+        await academicYearApi.activate(year.id);
+      } else {
+        await academicYearApi.deactivate(year.id);
+      }
+      setNotice(`${year.name} has been ${targetStatus === 'ACTIVE' ? 'activated' : 'archived'} successfully.`, 'success');
+      setConfirmStatus(null);
+      await loadYears();
+    } catch (error) {
+      setNotice(error.message || 'Unable to update academic year status.', 'error');
+    } finally {
+      setSaving(false);
+    }
+  }
 
-return <DashboardLayout><main className="ay"><header><div><p className="eyebrow">Academic Year Control Center</p><h1>Academic Year</h1><p>Manage academic cycles, lifecycle, and academic transitions.</p></div><div className="headerActions"><button onClick={()=>setModal('generate')}>Generate Next Year</button><button className="solid" onClick={openAdd}>+ Add Academic Year</button></div></header><p className="local" data-message-tone={noticeTone} role={noticeTone==='error'?'alert':'status'}>ⓘ {notice}</p>{active?<section className="hero"><div><p className="eyebrow">Active Academic Year</p><h2>{active.name}</h2><p>{date(active.startDate)} — {date(active.endDate)}</p><Badge s="ACTIVE"/></div><div className="metrics"><p><b>{Math.max(0,days(active.endDate))}</b>Days remaining</p><p><b>{progress(active.startDate,active.endDate)}%</b>Year progress</p></div><div className="bar"><span style={{width:`${progress(active.startDate,active.endDate)}%`}}/></div></section>:<section className="hero"><h2>No active academic year</h2><p>Activate an upcoming year to establish the active context.</p></section>}<section className="kpis">{[['Academic Years',years.length,'Configured locally'],['Active Year',count('ACTIVE'),'One allowed at a time'],['Upcoming Year',count('UPCOMING'),'Scheduled next cycles'],['Archived Years',count('ARCHIVED'),'Historical records']].map(x=><article key={x[0]}><span>{x[0]}</span><b>{x[1]}</b><small>{x[2]}</small></article>)}</section><div className="grid"><Panel label="Lifecycle" title="Academic Year Lifecycle"><div className="life">{states.map((x,i)=><div key={x}><span className={count(x)?'on':''}>✓</span><b>{x}</b>{i<3&&<i>↓</i>}</div>)}</div><p className="muted">Lifecycle changes are limited to valid forward transitions in this demo.</p></Panel><Panel label="Smart Notifications" title="Academic Year Health"><div className="notices">{warnings.map((x,i)=><p className={x[0]} key={i}>{x[0]==='success'?'✓':x[0]==='info'?'ⓘ':'⚠'} {x[1]}</p>)}</div></Panel></div><Panel label="Academic Years" title="Cycle Register" wide><FilterPanel active={Boolean(search || filter !== 'ALL')} onClear={()=>{setSearch('');setFilter('ALL');setPage(1)}}><div className="tools"><input aria-label="Search academic years" value={search} onChange={e=>setSearch(e.target.value)} placeholder="Search year or status"/><div className="filters">{['ALL',...states].map(x=><button className={filter===x?'selected':''} onClick={()=>setFilter(x)} key={x}>{x[0]+x.slice(1).toLowerCase()}</button>)}</div></div></FilterPanel><div className="table"><table><thead><tr>{['Academic Year','Start Date','End Date','Status','Duration','Auto Activation','Actions'].map(x=><th key={x}>{x}</th>)}</tr></thead><tbody>{pageRows.map(x=><tr key={x.id}><td data-label="Academic Year"><b>{x.name}</b></td><td data-label="Start Date">{date(x.startDate)}</td><td data-label="End Date">{date(x.endDate)}</td><td data-label="Status"><Badge s={x.status}/></td><td data-label="Duration">{duration(x.startDate,x.endDate)} days</td><td data-label="Auto Activation">{x.autoActivate?'Enabled':'Manual'}</td><td data-label="Actions">{action(x)}</td></tr>)}{!shown.length&&<tr><td colSpan="7">No academic years match your search or filter.</td></tr>}</tbody></table></div>{!!shown.length&&<TablePagination page={currentPage} totalPages={totalPages} onPageChange={setPage}/>}</Panel><div className="grid bottom"><Panel label="Demo Readiness" title="Academic Year Readiness"><Checks items={['✓ Academic year configured','✓ Date range valid',`${active?'✓':'⚠'} Active academic year available`,`${next?'✓':'⚠'} Next academic year configured`,'✓ Academic calendar ready']}/><p className="muted">UI/demo readiness indicators — not backend verification.</p></Panel><Panel label="Academic Year Transition" title="Rollover Preview"><div className="transition"><b>{active?.name||'No active year'}</b><span>↓</span><b>{next?.name||'Next year not configured'}</b></div><Checks items={['✓ Academic calendar','✓ Course configuration','✓ Semester structure','○ Student promotion','○ Fee configuration','○ Examination configuration']}/></Panel><Panel label="Local Activity" title="Activity Timeline"><ol>{activity.slice(0,4).map((x,i)=><li key={i}><span/><div><b>{x.title}</b><p>{x.detail}</p><small>{x.time}</small></div></li>)}</ol></Panel></div>{modal&&<Modal type={modal} selected={selected} active={active} form={form} setForm={setForm} errors={errors} close={close} save={save} generate={generate} move={move}/>}</main></DashboardLayout>}
-function Badge({s}){return <span className={`badge ${s}`}>● {s}</span>}function Panel({label,title,children,wide}) {return <section className={`panel ${wide?'wide':''}`}><p className="eyebrow">{label}</p><h2>{title}</h2>{children}</section>}function Checks({items}){return <ul className="checks">{items.map(x=><li className={x[0]==='⚠'||x[0]==='○'?'warn':''} key={x}>{x}</li>)}</ul>}
-function Modal({type,selected,active,form,setForm,errors,close,save,generate,move}){let formMode=type==='add'||type==='edit',title=formMode?(type==='add'?'Add':'Edit')+' Academic Year':type==='generate'?'Generate Next Academic Year?':type==='activate'?'Activate Academic Year?':type==='archive'?'Archive Academic Year?':'Academic Year Details',confirm=type==='generate'?`${active?.name} → proposed next cycle`:selected?.name,desc=type==='activate'?'Activating this academic year changes the active academic context.':type==='archive'?'Only previous academic years can be archived. Present year dates will stay unchanged.':'This will prepare the next annual cycle.';
-return <div className="backdrop" onMouseDown={e=>e.target===e.currentTarget&&close()}><section className="modal" role="dialog" aria-modal="true" aria-labelledby="title"><button className="x" aria-label="Close dialog" onClick={close}>×</button><p className="eyebrow">Academic Year Control Center</p><h2 id="title">{title}</h2>{formMode?<form onSubmit={save} noValidate><label>Academic Year<input autoFocus value={form.name} onChange={e=>setForm(x=>({...x,name:e.target.value}))}/>{errors.name&&<em className="field-error" role="alert">{errors.name}</em>}</label><div className="formgrid"><label>Start Date<input type="date" value={form.startDate} onChange={e=>setForm(x=>({...x,startDate:e.target.value}))}/>{errors.startDate&&<em className="field-error" role="alert">{errors.startDate}</em>}</label><label>End Date<input type="date" value={form.endDate} onChange={e=>setForm(x=>({...x,endDate:e.target.value}))}/>{errors.endDate&&<em className="field-error" role="alert">{errors.endDate}</em>}</label></div>{errors.range&&<em className="field-error" role="alert">{errors.range}</em>}{errors.form&&<em className="field-error" role="alert">{errors.form}</em>}{type==='add'&&<label className="toggle"><input type="checkbox" checked={form.autoActivate} onChange={e=>setForm(x=>({...x,autoActivate:e.target.checked}))}/> Enable auto activation <small>Display preference only;
- no background automation runs.</small></label>}<footer><button type="button" onClick={close}>Cancel</button><button className="solid">{type==='add'?'Add Academic Year':'Save Changes'}</button></footer></form>:<><p className="confirm">{confirm}</p>{type==='view'?selected&&<div className="details"><p>Academic year <b>{selected.name}</b></p><p>Date range <b>{date(selected.startDate)} — {date(selected.endDate)}</b></p><p>Status <b>{selected.status}</b></p></div>:<p className="muted">{desc}</p>}<footer><button onClick={close}>Cancel</button><button className="solid" onClick={()=>type==='view'?close():type==='generate'?generate():move(type==='activate'?'ACTIVE':'ARCHIVED')}>{type==='view'?'Done':type==='generate'?'Generate Year':type==='activate'?'Activate':'Archive'}</button></footer></>}</section></div>}
+  async function generate() {
+    if (!active || saving) return;
+    let s = d(active.endDate);
+    s.setDate(s.getDate() + 1);
+    let end = new Date(s);
+    end.setFullYear(end.getFullYear() + 1);
+    end.setDate(end.getDate() - 1);
+    let item = {
+      name: `${s.getFullYear()} - ${end.getFullYear()}`,
+      startDate: s.toISOString().slice(0, 10),
+      endDate: end.toISOString().slice(0, 10),
+      status: 'UPCOMING',
+      autoActivate: false,
+    };
+    if (years.some((x) => x.name === item.name)) {
+      setNotice(`${item.name} already exists, so no duplicate was created.`, 'info');
+    } else {
+      setSaving(true);
+      try {
+        await academicYearApi.create(item);
+        setNotice(`${item.name} was generated successfully.`, 'success');
+        await loadYears();
+      } catch (error) {
+        setNotice(error.message || 'Unable to generate next academic year.', 'error');
+      } finally {
+        setSaving(false);
+      }
+    }
+    close();
+  }
+
+  const openView = async (x) => {
+    setSelected(x);
+    setModal('view');
+    try {
+      const data = await academicYearApi.getById(x.id);
+      if (data) setSelected(mapYear(data));
+    } catch (error) {
+      setNotice(error.message || 'Unable to load academic year details.', 'error');
+    }
+  };
+
+  const summaryCards = [
+    { label: 'Total', value: years.length },
+    { label: 'Active', value: count('ACTIVE'), tone: 'active' },
+    { label: 'Upcoming', value: count('UPCOMING'), tone: 'upcoming' },
+    { label: 'Archived', value: count('ARCHIVED'), tone: 'archived' },
+  ];
+
+  return (
+    <DashboardLayout>
+      <main className="ay">
+        <PageHeader
+          breadcrumb="Academic Management / Cycles"
+          title="Academic Year"
+          subtitle="Manage academic cycles, lifecycle status, and rollover transitions."
+          compactSummary={summaryCards}
+        />
+
+        {notice && (
+          <div className={`erp-notice erp-notice--${noticeTone}`} role="status">
+            <span>{noticeTone === 'error' ? '⚠' : noticeTone === 'success' ? '✓' : 'ⓘ'}</span>
+            <p>{notice}</p>
+          </div>
+        )}
+
+        {active ? (
+          <section className="hero">
+            <div>
+              <p className="eyebrow">Active Academic Context</p>
+              <h2>{active.name}</h2>
+              <p>
+                {formatDate(active.startDate)} — {formatDate(active.endDate)}
+              </p>
+              <StatusBadge status="ACTIVE" />
+            </div>
+            <div className="metrics">
+              <p>
+                <b>{Math.max(0, days(active.endDate))}</b>Days remaining
+              </p>
+              <p>
+                <b>{progress(active.startDate, active.endDate)}%</b>Year progress
+              </p>
+            </div>
+            <div className="bar">
+              <span style={{ width: `${progress(active.startDate, active.endDate)}%` }} />
+            </div>
+          </section>
+        ) : (
+          <section className="hero">
+            <h2>No active academic year</h2>
+            <p>Activate an upcoming academic year to establish current college operations context.</p>
+          </section>
+        )}
+
+        <section className="cm-panel course-directory">
+          <header className="course-directory-heading">
+            <div>
+              <span className="cm-eyebrow">Academic Year Directory</span>
+              <p>{shown.length} records</p>
+            </div>
+            <div className="directory-export-actions">
+              <ExportMenu
+                rows={shown}
+                columns={yearColumns}
+                title="Academic Years"
+                filename="academic-years"
+                loading={exportLoading || noticeTone === 'error'}
+              />
+              <button type="button" className="cm-button secondary" onClick={() => setModal('generate')}>
+                Generate Next Year
+              </button>
+              <button type="button" className="cm-button" onClick={openAdd}>
+                <FiPlus /> Add Academic Year
+              </button>
+            </div>
+          </header>
+
+          <FilterPanel
+            active={Boolean(search || filter !== 'ALL')}
+            onClear={() => {
+              setSearch('');
+              setFilter('ALL');
+              setPage(1);
+            }}
+          >
+            <section className="cm-panel course-toolbar">
+              <label className="course-search">
+                <FiSearch />
+                <input
+                  aria-label="Search academic years"
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  placeholder="Search year title or status..."
+                />
+              </label>
+              <div className="erp-filter-buttons">
+                {['ALL', ...states].map((x) => (
+                  <button
+                    key={x}
+                    type="button"
+                    className={`erp-pill ${filter === x ? 'active' : ''}`}
+                    onClick={() => setFilter(x)}
+                  >
+                    {x === 'ALL' ? 'All' : x.charAt(0) + x.slice(1).toLowerCase()}
+                  </button>
+                ))}
+              </div>
+              {Boolean(search || filter !== 'ALL') && (
+                <button
+                  className="course-clear"
+                  onClick={() => {
+                    setSearch('');
+                    setFilter('ALL');
+                    setPage(1);
+                  }}
+                >
+                  Clear Filters
+                </button>
+              )}
+            </section>
+          </FilterPanel>
+
+          <div className="erp-table-responsive">
+            <table className="erp-table">
+              <thead>
+                <tr>
+                  <th>Academic Year</th>
+                  <th>Start Date</th>
+                  <th>End Date</th>
+                  <th>Status</th>
+                  <th>Duration</th>
+                  <th>Auto Activation</th>
+                  <th style={{ textAlign: 'center' }}>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {pageRows.map((x) => (
+                  <tr key={x.id}>
+                    <td>
+                      <strong>{x.name}</strong>
+                    </td>
+                    <td>{formatDate(x.startDate)}</td>
+                    <td>{formatDate(x.endDate)}</td>
+                    <td>
+                      <StatusBadge status={x.status} />
+                    </td>
+                    <td>{duration(x.startDate, x.endDate)} days</td>
+                    <td>{x.autoActivate ? 'Enabled' : 'Manual'}</td>
+                    <td>
+                      <div className="erp-row-actions">
+                        <button
+                          type="button"
+                          className="erp-action-btn"
+                          title="View Details"
+                          aria-label="View academic year"
+                          onClick={() => openView(x)}
+                        >
+                          <FiEye className="module-action-icon module-action-icon--view" />
+                        </button>
+                        <button
+                          type="button"
+                          className="erp-action-btn"
+                          title="Edit Academic Year"
+                          aria-label="Edit academic year"
+                          onClick={() => edit(x)}
+                          disabled={x.status === 'ARCHIVED' || isPresentYear(x)}
+                        >
+                          <FiEdit2 className="module-action-icon module-action-icon--edit" />
+                        </button>
+                        {x.status === 'UPCOMING' && (
+                          <button
+                            type="button"
+                            className="erp-action-btn erp-action-btn--success"
+                            title="Activate Academic Year"
+                            aria-label="Activate academic year"
+                            onClick={() => setConfirmStatus({ year: x, targetStatus: 'ACTIVE' })}
+                          >
+                            <FiToggleLeft className="module-action-icon" style={{ color: 'var(--success)' }} />
+                          </button>
+                        )}
+                        {isPastYear(x) && x.status !== 'ARCHIVED' && (
+                          <button
+                            type="button"
+                            className="erp-action-btn erp-action-btn--danger"
+                            title="Archive Academic Year"
+                            aria-label="Archive academic year"
+                            onClick={() => setConfirmStatus({ year: x, targetStatus: 'ARCHIVED' })}
+                          >
+                            <FiXCircle className="module-action-icon" style={{ color: 'var(--danger)' }} />
+                          </button>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+                {!shown.length && (
+                  <tr>
+                    <td colSpan="7" style={{ textAlign: 'center', padding: '32px' }}>
+                      No academic years match your search or filter.
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+
+          {!!shown.length && (
+            <TablePagination page={currentPage} totalPages={totalPages} onPageChange={setPage} />
+          )}
+        </section>
+
+        {/* Add/Edit Modal */}
+        {(modal === 'add' || modal === 'edit') && (
+          <div className="backdrop" onMouseDown={(e) => e.target === e.currentTarget && close()}>
+            <section className="modal" role="dialog" aria-modal="true" aria-labelledby="form-title">
+              <button type="button" className="x" aria-label="Close dialog" onClick={close}>
+                ×
+              </button>
+              <h2 id="form-title">{modal === 'add' ? 'Add Academic Year' : 'Edit Academic Year'}</h2>
+              <form onSubmit={save} noValidate>
+                <label>
+                  Academic Year Title
+                  <input
+                    autoFocus
+                    placeholder="e.g. 2025 - 2026"
+                    value={form.name}
+                    onChange={(e) => setForm((x) => ({ ...x, name: e.target.value }))}
+                  />
+                  {errors.name && (
+                    <em className="field-error" role="alert">
+                      {errors.name}
+                    </em>
+                  )}
+                </label>
+                <div className="formgrid">
+                  <label>
+                    Start Date
+                    <input
+                      type="date"
+                      value={form.startDate}
+                      onChange={(e) => setForm((x) => ({ ...x, startDate: e.target.value }))}
+                    />
+                    {errors.startDate && (
+                      <em className="field-error" role="alert">
+                        {errors.startDate}
+                      </em>
+                    )}
+                  </label>
+                  <label>
+                    End Date
+                    <input
+                      type="date"
+                      value={form.endDate}
+                      onChange={(e) => setForm((x) => ({ ...x, endDate: e.target.value }))}
+                    />
+                    {errors.endDate && (
+                      <em className="field-error" role="alert">
+                        {errors.endDate}
+                      </em>
+                    )}
+                  </label>
+                </div>
+                {errors.range && (
+                  <em className="field-error" role="alert">
+                    {errors.range}
+                  </em>
+                )}
+                {errors.form && (
+                  <em className="field-error" role="alert">
+                    {errors.form}
+                  </em>
+                )}
+                {modal === 'add' && (
+                  <label className="toggle">
+                    <input
+                      type="checkbox"
+                      checked={form.autoActivate}
+                      onChange={(e) => setForm((x) => ({ ...x, autoActivate: e.target.checked }))}
+                    />
+                    <span>Enable auto activation</span>
+                    <small>Display preference only; manual status confirmation applies.</small>
+                  </label>
+                )}
+                <footer>
+                  <button type="button" className="erp-btn erp-btn--secondary" onClick={close}>
+                    Cancel
+                  </button>
+                  <button type="submit" className="erp-btn erp-btn--primary" disabled={saving}>
+                    {saving ? 'Saving...' : modal === 'add' ? 'Add Academic Year' : 'Save Changes'}
+                  </button>
+                </footer>
+              </form>
+            </section>
+          </div>
+        )}
+
+        {/* Generate Next Year Modal */}
+        {modal === 'generate' && (
+          <div className="backdrop" onMouseDown={(e) => e.target === e.currentTarget && close()}>
+            <section className="modal" role="dialog" aria-modal="true" aria-labelledby="gen-title">
+              <button type="button" className="x" aria-label="Close dialog" onClick={close}>
+                ×
+              </button>
+              <h2 id="gen-title">Generate Next Academic Year</h2>
+              <p style={{ marginTop: '12px', color: 'var(--text-secondary)' }}>
+                This will automatically compute and prepare the next consecutive annual academic cycle following{' '}
+                <strong>{active?.name || 'the current active cycle'}</strong>.
+              </p>
+              <footer>
+                <button type="button" className="erp-btn erp-btn--secondary" onClick={close}>
+                  Cancel
+                </button>
+                <button type="button" className="erp-btn erp-btn--primary" onClick={generate} disabled={saving}>
+                  {saving ? 'Generating...' : 'Generate Cycle'}
+                </button>
+              </footer>
+            </section>
+          </div>
+        )}
+
+        {/* View Details Modal with InfoCard & Print Button */}
+        {modal === 'view' && selected && (
+          <div className="backdrop" onMouseDown={(e) => e.target === e.currentTarget && close()}>
+            <section className="modal" role="dialog" aria-modal="true" aria-labelledby="view-title">
+              <button type="button" className="x" aria-label="Close dialog" onClick={close}>
+                ×
+              </button>
+              <h2 id="view-title">Academic Year Details</h2>
+              <div className="academic-year-view-content" style={{ marginTop: '16px' }}>
+                <InfoCard
+                  title="Cycle Information"
+                  icon={FiCalendar}
+                  items={[
+                    { label: 'Academic Year', value: selected.name },
+                    { label: 'Start Date', value: formatDate(selected.startDate) },
+                    { label: 'End Date', value: formatDate(selected.endDate) },
+                    { label: 'Duration', value: `${duration(selected.startDate, selected.endDate)} days` },
+                    { label: 'Status', value: selected.status },
+                    { label: 'Auto Activation', value: selected.autoActivate ? 'Enabled' : 'Manual' },
+                  ]}
+                />
+              </div>
+              <footer>
+                <PrintDetailsButton title={`${selected.name} details`} selector=".academic-year-view-content" />
+                <button type="button" className="erp-btn erp-btn--primary" onClick={close}>
+                  Done
+                </button>
+              </footer>
+            </section>
+          </div>
+        )}
+
+        {/* Status Confirmation Dialog */}
+        {confirmStatus && (
+          <StatusConfirmDialog
+            entity="Academic Year"
+            name={confirmStatus.year.name}
+            nextStatus={confirmStatus.targetStatus}
+            onCancel={() => setConfirmStatus(null)}
+            onConfirm={handleStatusConfirm}
+            busy={saving}
+            description={
+              confirmStatus.targetStatus === 'ACTIVE'
+                ? 'Activating this academic year sets it as the current active operational cycle for the institution.'
+                : 'Archiving marks this academic cycle as historical records.'
+            }
+          />
+        )}
+      </main>
+    </DashboardLayout>
+  );
+}

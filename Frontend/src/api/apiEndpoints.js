@@ -1,3 +1,4 @@
+import { markApiResult } from '../utils/exportProvenance'
 import { getAccessToken, getAuthStorage, getRefreshToken, signOut } from '../auth/auth'
 
 if (typeof window !== 'undefined' && window.localStorage) {
@@ -687,7 +688,7 @@ export const studentAdmissionApi = {
       apiItems = []
     }
     if (apiSuccess) {
-      return apiItems.map(normalizeAdmission)
+      return markApiResult(apiItems.map(normalizeAdmission))
     }
     const localItems = readLocalAdmissions()
     return localItems.map(normalizeAdmission)
@@ -946,7 +947,7 @@ export const studentProfilesApi = {
     }
 
     if (apiSuccess) {
-      return apiItems.map(normalizeStudentProfile)
+      return markApiResult(apiItems.map(normalizeStudentProfile))
     }
 
     const localAdmissions = readLocalAdmissions()
@@ -1006,7 +1007,7 @@ export const studentProfilesApi = {
     const reqId = requiredId(id, 'Student ID')
     try {
       const res = normalizeStudentProfile(await request(API_ENDPOINTS.studentProfiles.preview(reqId)))
-      if (res) return res
+      if (res) return markApiResult(res)
     } catch {
       /* fallback to local if backend fails */
     }

@@ -1,5 +1,7 @@
-.shared-view-dialog { width: min(1120px, calc(100vw - 32px)); max-height: 90vh; padding: 0; border: 1px solid var(--border, #d7e4ee); border-radius: 14px; color: var(--text-primary, #123962); background: var(--surface, #fff); }
+.shared-view-dialog { display: flex; flex-direction: column; width: min(1120px, calc(100vw - 32px)); max-height: 90vh; padding: 0; border: 1px solid var(--border, #d7e4ee); border-radius: 14px; color: var(--text-primary, #123962); background: var(--surface, #fff); overflow: hidden; }
 .shared-view-dialog::backdrop { background: rgb(10 30 50 / 55%); }
-.shared-view-dialog > header { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 12px 20px; }
+.shared-view-dialog > header { flex-shrink: 0; display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 14px 20px; border-bottom: 1px solid var(--border, #d7e4ee); background: var(--surface, #fff); }
 .shared-view-dialog > header h2 { margin: 0; font-size: 1.1rem; }
 .shared-view-dialog > header button { display: grid; place-items: center; width: 36px; height: 36px; border: 1px solid var(--border, #d7e4ee); border-radius: 8px; color: inherit; background: var(--surface, #fff); cursor: pointer; }
+.shared-view-dialog > header button:hover { border-color: var(--brand, #176fae); color: var(--brand, #176fae); }
+.shared-view-dialog__body { flex: 1; min-height: 0; overflow-y: auto; padding: 20px; }
