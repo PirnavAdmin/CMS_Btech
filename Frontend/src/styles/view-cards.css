@@ -1,0 +1,119 @@
+/* Reference: College view screenshot. Keep after legacy module styles. */
+:root body :is(.cm-profile-grid, .shared-view-dialog .erp-detail-grid, .cm-profile-view .sa-detail-card) {
+  display: grid !important;
+  grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  align-items: stretch;
+  gap: 16px !important;
+  padding: 20px !important;
+  background: var(--surface, #fff);
+}
+:root body :is(.cm-profile-grid, .shared-view-dialog .erp-detail-grid, .cm-profile-view .sa-detail-card) > :is(.cm-info-card, .sa-detail-panel) {
+  grid-column: auto !important;
+  min-width: 0;
+  margin: 0 !important;
+  padding: 20px !important;
+  border: 1px solid var(--border, #d7e4ee) !important;
+  border-radius: 14px !important;
+  background: var(--surface, #fff) !important;
+  box-shadow: 0 3px 10px rgb(15 42 66 / 6%) !important;
+  transition: border-color 180ms ease, box-shadow 180ms ease, transform 180ms ease;
+}
+/* Override legacy sibling separators without joining adjacent cards. */
+:root body :is(.cm-profile-grid, .shared-view-dialog .erp-detail-grid, .cm-profile-view .sa-detail-card) > :is(.cm-info-card, .sa-detail-panel) + :is(.cm-info-card, .sa-detail-panel) {
+  margin-top: 0 !important;
+  padding-top: 20px !important;
+  border-top: 1px solid var(--border, #d7e4ee) !important;
+}
+:root body :is(.cm-info-card-header, .cm-profile-view .sa-detail-panel > header) {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0 0 16px !important;
+  padding: 0 0 14px !important;
+  border-bottom: 1px solid var(--border, #d7e4ee) !important;
+  color: var(--brand, #0879c1);
+  background: transparent;
+}
+:root body :is(.cm-info-card-header, .cm-profile-view .sa-detail-panel > header) h2 {
+  margin: 0;
+  color: var(--brand, #0879c1) !important;
+  font-size: 1rem !important;
+  font-weight: 750;
+  line-height: 1.35;
+}
+:root body :is(.cm-info-card-header, .cm-profile-view .sa-detail-panel > header) svg {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+}
+:root body :is(.cm-info-card .cm-info-rows, .cm-profile-view .sa-detail-panel > dl, .fs-editor.details .fs-preview) {
+  display: grid !important;
+  grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  gap: 20px 28px !important;
+  margin: 0;
+  padding: 0 !important;
+  border: 0 !important;
+  background: transparent !important;
+}
+:root body :is(.cm-profile-grid, .shared-view-dialog, .cm-profile-view .sa-detail-card, .fs-editor.details)
+:is(.cm-info-row, .sa-detail-panel > dl > div, .fs-preview > div) {
+  display: grid !important;
+  grid-template-columns: 1fr !important;
+  align-content: start;
+  align-items: start;
+  min-width: 0;
+  gap: 5px !important;
+  padding: 0 !important;
+  border: 0 !important;
+  background: transparent !important;
+}
+:root body :is(.cm-info-card .cm-info-label, .cm-profile-view .sa-detail-panel dt, .fs-editor.details .fs-preview dt) {
+  margin: 0;
+  color: var(--text-muted, #71869c) !important;
+  font-size: .76rem !important;
+  font-weight: 650 !important;
+  letter-spacing: 0;
+  text-transform: none;
+}
+:root body :is(.cm-info-card .cm-info-val, .cm-profile-view .sa-detail-panel dd, .fs-editor.details .fs-preview dd) {
+  min-width: 0;
+  margin: 0;
+  color: var(--text-primary, #102c46) !important;
+  font-size: .86rem !important;
+  font-weight: 700 !important;
+  line-height: 1.5;
+  text-align: left !important;
+  overflow-wrap: anywhere;
+}
+.shared-view-dialog__body { padding: 0; }
+:root body .fs-editor.details .fs-preview {
+  padding: 20px !important;
+  border: 1px solid var(--border, #d7e4ee) !important;
+  border-radius: 14px;
+  box-shadow: 0 3px 10px rgb(15 42 66 / 6%);
+}
+@media (hover: hover) {
+  :root body :is(.cm-profile-grid, .shared-view-dialog .erp-detail-grid, .cm-profile-view .sa-detail-card) > :is(.cm-info-card, .sa-detail-panel):hover {
+    border-color: var(--brand, #0879c1) !important;
+    box-shadow: 0 6px 18px rgb(15 70 110 / 12%) !important;
+    transform: translateY(-2px);
+  }
+}
+@media (max-width: 760px) {
+  :root body :is(.cm-profile-grid, .shared-view-dialog .erp-detail-grid, .cm-profile-view .sa-detail-card) {
+    grid-template-columns: 1fr !important;
+    padding: 16px !important;
+  }
+}
+@media (max-width: 480px) {
+  :root body :is(.cm-info-card .cm-info-rows, .cm-profile-view .sa-detail-panel > dl, .fs-editor.details .fs-preview) {
+    grid-template-columns: 1fr !important;
+    gap: 16px !important;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  :root body :is(.cm-info-card, .sa-detail-panel) {
+    transition: none !important;
+    transform: none !important;
+  }
+}

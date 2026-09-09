@@ -103,6 +103,41 @@
 :root[data-theme="light"] .lp-page a:not(.lp-button):hover{color:#095e9f}
 :root[data-theme="dark"] .lp-page a:not(.lp-button):hover{color:#83c6ee}
 
+/* Explicit dark-theme CTA contrast: the request section and inverse button must
+   remain readable when the public page is switched from light mode. */
+:root[data-theme="dark"] .lp-page .lp-cta {
+  color: #edf7fd;
+  border-color: #29465d;
+  background: linear-gradient(135deg, #123f5d, #17608c);
+  box-shadow: 0 18px 42px rgba(0, 0, 0, .24);
+}
+
+:root[data-theme="dark"] .lp-page .lp-cta h2 {
+  color: #f4f9fc;
+}
+
+:root[data-theme="dark"] .lp-page .lp-cta > div > p:last-child {
+  color: #c4d9e6;
+}
+
+:root[data-theme="dark"] .lp-page .lp-cta .lp-eyebrow.light {
+  color: #9bd9f5;
+}
+
+:root[data-theme="dark"] .lp-page .lp-button.inverse {
+  border-color: #9fd5f2;
+  color: #082f52 !important;
+  background: #eaf6fc;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, .2);
+}
+
+:root[data-theme="dark"] .lp-page .lp-button.inverse:hover,
+:root[data-theme="dark"] .lp-page .lp-button.inverse:focus-visible {
+  border-color: #fff;
+  color: #061f35 !important;
+  background: #fff;
+}
+
 /* Keep every landing-page surface readable when light mode is selected, even on a dark OS. */
 :root[data-theme="light"] .lp-page .lp-eyebrow{color:#1970b3}
 :root[data-theme="light"] .lp-page .lp-eyebrow.light{color:#8dd4f5}

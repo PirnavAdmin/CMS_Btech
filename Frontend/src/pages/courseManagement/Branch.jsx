@@ -10,9 +10,11 @@ import TablePagination, { PAGE_SIZE } from '../../components/TablePagination'
 import CompactSummary from '../../components/CompactSummary'
 import InfoCard from '../../components/InfoCard'
 import StatusBadge from '../../components/StatusBadge'
-import { academicYearApi, branchApi, courseApi } from '../../api/apiEndpoints'
+import StatusConfirmDialog from '../../components/StatusConfirmDialog'
+import { academicYearApi, branchApi, courseApi, studentApi } from '../../api/apiEndpoints'
 import { branchTypeLabel } from '../../utils/semesterUtils'
 import ViewDialog from '../../components/ViewDialog'
+import { showDeactivationBlocked } from '../../components/DeactivationBlockedDialog'
 import './Branch.css'
 
 const blank = {
@@ -127,6 +129,7 @@ const Field = ({ label, error, children, wide = false }) => {
 
 function List() {
   const [params] = useSearchParams()
+  const [pendingStatus, setPendingStatus] = useState(null)
   const [courses, setCourses] = useState([])
   const [branches, setBranches] = useState([])
   const [loading, setLoading] = useState(true)
@@ -174,18 +177,38 @@ function List() {
   const clearFilters = () => setFilters({ query: '', courseId: '', branchType: '', status: '' })
   const hasFilters = Object.values(filters).some(Boolean)
 
-  const onToggleStatus = (branch) => {
+  const onToggleStatus = async (branch) => {
     const nextStatus = branch.status === 'Active' ? 'Inactive' : 'Active'
-    setError({ kind: 'confirm', action: nextStatus === 'Active' ? 'Activate' : 'Deactivate', code: branch.branchCode || branch.branchName, cancel: () => setError(''), confirm: async () => {
-      setError('')
+    let studentCount = 0
+    if (nextStatus === 'Inactive') {
       try {
-        await branchApi.updateStatus(branch.id, nextStatus)
-        setBranches((current) => current.map((row) => String(row.id) === String(branch.id) ? { ...row, status: nextStatus } : row))
-        setError(`Branch ${nextStatus === 'Active' ? 'activated' : 'deactivated'} successfully.`)
+        const students = await studentApi.getAll({ BranchId: Number(branch.id) })
+        studentCount = students.length
       } catch (requestError) {
-        setError(requestError?.message || 'Unable to update branch status.')
+        showDeactivationBlocked(requestError?.message || 'Unable to verify associated students. The branch was not deactivated.')
+        return
       }
-    }})
+    }
+    setPendingStatus({ branch, nextStatus, studentCount })
+  }
+
+  const confirmStatusChange = async () => {
+    if (!pendingStatus) return
+    const { branch, nextStatus, studentCount } = pendingStatus
+    if (nextStatus === 'Inactive' && studentCount > 0) {
+      setPendingStatus(null)
+      showDeactivationBlocked(`Cannot deactivate ${branch.branchName}. ${studentCount} student${studentCount === 1 ? '' : 's'} are associated with this branch.`)
+      return
+    }
+    setPendingStatus(null)
+    setError('')
+    try {
+      await branchApi.updateStatus(branch.id, nextStatus)
+      setBranches((current) => current.map((row) => String(row.id) === String(branch.id) ? { ...row, status: nextStatus } : row))
+      setError(`Branch ${nextStatus === 'Active' ? 'activated' : 'deactivated'} successfully.`)
+    } catch (requestError) {
+      setError(requestError?.message || 'Unable to update branch status.')
+    }
   }
 
   return <Page>
@@ -193,6 +216,7 @@ function List() {
       <CompactSummary label="Branch summary" items={[{ label: 'Total', value: stats.total }, { label: 'Active', value: stats.active, tone: 'active' }, { label: 'Inactive', value: stats.inactive, tone: 'inactive' }]} />
     </Header>
     <Notice>{error}</Notice>
+    {pendingStatus && <StatusConfirmDialog entity="Branch" name={`${pendingStatus.branch.branchName} (${pendingStatus.branch.branchCode})`} nextStatus={pendingStatus.nextStatus} onCancel={() => setPendingStatus(null)} onConfirm={confirmStatusChange} details={pendingStatus.nextStatus === 'Inactive' ? [['Associated Students', `${pendingStatus.studentCount} student${pendingStatus.studentCount === 1 ? '' : 's'}`]] : []} description={pendingStatus.nextStatus === 'Inactive' ? pendingStatus.studentCount > 0 ? 'Students are associated with this branch. Deactivation will be checked when you continue.' : 'No students are associated with this branch, so it can be deactivated.' : 'This branch will become active again.'} confirmLabel={pendingStatus.nextStatus === 'Inactive' ? 'Deactivate Branch' : 'Activate Branch'} />}
     <section className="cm-panel branch-directory-card">
       <header className="branch-directory-heading"><div><span className="cm-eyebrow">Branch Directory</span><p>{rows.length} records</p></div><div className="directory-export-actions"><ExportMenu rows={rows.map(branch => ({ ...branch, courseName: courseById.get(String(branch.courseId))?.name || branch.courseName }))} columns={branchColumns} title="Branches" filename="branches" loading={loading || Boolean(error)} /><Link className="cm-button" to="/branches/add"><FiPlus /> Add Branch</Link></div></header>
     <FilterPanel active={hasFilters} onClear={clearFilters}>

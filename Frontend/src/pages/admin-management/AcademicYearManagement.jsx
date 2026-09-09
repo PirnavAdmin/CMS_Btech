@@ -8,8 +8,9 @@ import FilterPanel from '../../components/FilterPanel';
 import TablePagination, { PAGE_SIZE } from '../../components/TablePagination';
 import StatusConfirmDialog from '../../components/StatusConfirmDialog';
 import InfoCard from '../../components/InfoCard';
-import { academicYearApi } from '../../api/apiEndpoints';
-import { FiCheckCircle, FiEye, FiEdit2, FiToggleLeft, FiXCircle, FiPlus, FiCalendar, FiClock, FiSearch } from 'react-icons/fi';
+import { academicYearApi, studentApi } from '../../api/apiEndpoints';
+import { showDeactivationBlocked } from '../../components/DeactivationBlockedDialog';
+import { FiCheckCircle, FiEye, FiEdit2, FiToggleLeft, FiToggleRight, FiPlus, FiCalendar, FiClock, FiSearch } from 'react-icons/fi';
 import './AcademicYearManagement.css';
 
 const DAY = 864e5;
@@ -33,20 +34,38 @@ const days = (x) => Math.ceil((d(x) - now()) / DAY);
 const duration = (a, b) => Math.round((d(b) - d(a)) / DAY) + 1;
 const progress = (a, b) => Math.max(0, Math.min(100, Math.round(((now() - d(a)) * 100) / (d(b) - d(a)))));
 const autoStatus = (a, b) => (now() < d(a) ? 'UPCOMING' : now() > d(b) ? 'ARCHIVED' : 'ACTIVE');
+const nextCycle = (year) => {
+  if (!year) return null;
+  const start = d(year.endDate);
+  start.setDate(start.getDate() + 1);
+  const end = new Date(start);
+  end.setFullYear(end.getFullYear() + 1);
+  end.setDate(end.getDate() - 1);
+  return {
+    name: `${start.getFullYear()} - ${end.getFullYear()}`,
+    startDate: start.toISOString().slice(0, 10),
+    endDate: end.toISOString().slice(0, 10),
+    status: 'UPCOMING',
+    autoActivate: false,
+  };
+};
 
-const mapYear = (x) => ({
-  id: String(x.academicYearId ?? x.id),
-  name: x.academicYearName ?? x.name ?? '',
-  startDate: String(x.startDate ?? '').slice(0, 10),
-  endDate: String(x.endDate ?? '').slice(0, 10),
-  status:
-    x.isActive || Number(x.status) === 1
-      ? 'ACTIVE'
-      : Number(x.isArchived) === 1
-      ? 'ARCHIVED'
-      : autoStatus(String(x.startDate ?? '').slice(0, 10), String(x.endDate ?? '').slice(0, 10)),
-  autoActivate: false,
-});
+const mapYear = (x) => {
+  const startDate = String(x.startDate ?? '').slice(0, 10);
+  const endDate = String(x.endDate ?? '').slice(0, 10);
+
+  return {
+    id: String(x.academicYearId ?? x.id),
+    name: x.academicYearName ?? x.name ?? '',
+    startDate,
+    endDate,
+    status:
+      x.isActive || Number(x.status) === 1
+        ? 'ACTIVE'
+        : autoStatus(startDate, endDate),
+    autoActivate: false,
+  };
+};
 
 export default function AcademicYear() {
   const [years, setYears] = useState([]);
@@ -94,6 +113,11 @@ export default function AcademicYear() {
   const next = years
     .filter((x) => x.status === 'UPCOMING')
     .sort((a, b) => a.startDate.localeCompare(b.startDate))[0];
+  const generationBase = years.reduce(
+    (latest, year) => (!latest || year.endDate > latest.endDate ? year : latest),
+    null
+  );
+  const generatedCycle = nextCycle(generationBase);
 
   const shown = useMemo(
     () =>
@@ -108,8 +132,6 @@ export default function AcademicYear() {
   const totalPages = Math.max(1, Math.ceil(shown.length / PAGE_SIZE));
   const currentPage = Math.min(page, totalPages);
   const pageRows = shown.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
-  const count = (s) => years.filter((x) => x.status === s).length;
-
   useEffect(() => setPage(1), [search, filter]);
 
   const openAdd = () => {
@@ -198,20 +220,25 @@ export default function AcademicYear() {
     }
   }
 
+  async function requestStatusChange(year, targetStatus) {
+    if (targetStatus === 'ARCHIVED') {
+      try {
+        const students = await studentApi.getAll({ AcademicYearId: Number(year.id) });
+        if (students.length > 0) {
+          showDeactivationBlocked(`Cannot deactivate ${year.name}. ${students.length} student${students.length === 1 ? '' : 's'} are associated with this academic year.`);
+          return;
+        }
+      } catch (error) {
+        setNotice(error.message || 'Unable to verify associated students. The academic year was not deactivated.', 'error');
+        return;
+      }
+    }
+    setConfirmStatus({ year, targetStatus });
+  }
+
   async function generate() {
-    if (!active || saving) return;
-    let s = d(active.endDate);
-    s.setDate(s.getDate() + 1);
-    let end = new Date(s);
-    end.setFullYear(end.getFullYear() + 1);
-    end.setDate(end.getDate() - 1);
-    let item = {
-      name: `${s.getFullYear()} - ${end.getFullYear()}`,
-      startDate: s.toISOString().slice(0, 10),
-      endDate: end.toISOString().slice(0, 10),
-      status: 'UPCOMING',
-      autoActivate: false,
-    };
+    if (!generatedCycle || saving) return;
+    const item = generatedCycle;
     if (years.some((x) => x.name === item.name)) {
       setNotice(`${item.name} already exists, so no duplicate was created.`, 'info');
     } else {
@@ -240,22 +267,13 @@ export default function AcademicYear() {
     }
   };
 
-  const summaryCards = [
-    { label: 'Total', value: years.length },
-    { label: 'Active', value: count('ACTIVE'), tone: 'active' },
-    { label: 'Upcoming', value: count('UPCOMING'), tone: 'upcoming' },
-    { label: 'Archived', value: count('ARCHIVED'), tone: 'archived' },
-  ];
-
   return (
     <DashboardLayout>
       <main className="ay">
-        <PageHeader
-          breadcrumb="Academic Management / Cycles"
+        {modal !== 'view' && <PageHeader
           title="Academic Year"
           subtitle="Manage academic cycles, lifecycle status, and rollover transitions."
-          compactSummary={summaryCards}
-        />
+        />}
 
         {notice && (
           <div className={`erp-notice erp-notice--${noticeTone}`} role="status">
@@ -265,7 +283,7 @@ export default function AcademicYear() {
         )}
 
         {modal === 'view' && selected ? (
-          <div className="cm-profile-view" style={{ marginTop: '16px' }}>
+          <div className="cm-profile-view ay-details-view">
             <div className="cm-profile-top-bar">
               <button type="button" className="erp-btn erp-btn--secondary" onClick={close}>
                 &larr; Back to Academic Years List
@@ -295,19 +313,21 @@ export default function AcademicYear() {
                 </div>
               </div>
 
-              <div className="cm-profile-grid">
-                <InfoCard
-                  title="Cycle Information"
-                  icon={FiCalendar}
-                  items={[
-                    { label: 'Academic Year', value: selected.name },
-                    { label: 'Start Date', value: formatDate(selected.startDate) },
-                    { label: 'End Date', value: formatDate(selected.endDate) },
-                    { label: 'Duration', value: `${duration(selected.startDate, selected.endDate)} days` },
-                    { label: 'Status', value: selected.status },
-                    { label: 'Auto Activation', value: selected.autoActivate ? 'Enabled' : 'Manual' },
-                  ]}
-                />
+              <div className="cm-profile-grid ay-profile-grid">
+                <div className="ay-profile-info-card">
+                  <InfoCard
+                    title="Cycle Information"
+                    icon={FiCalendar}
+                    items={[
+                      { label: 'Academic Year', value: selected.name },
+                      { label: 'Start Date', value: formatDate(selected.startDate) },
+                      { label: 'End Date', value: formatDate(selected.endDate) },
+                      { label: 'Duration', value: `${duration(selected.startDate, selected.endDate)} days` },
+                      { label: 'Status', value: selected.status },
+                      { label: 'Auto Activation', value: selected.autoActivate ? 'Enabled' : 'Manual' },
+                    ]}
+                  />
+                </div>
               </div>
             </div>
           </div>
@@ -464,20 +484,20 @@ export default function AcademicYear() {
                                 className="table-action-btn action-activate erp-action-btn erp-action-btn--success"
                                 title={`Activate ${x.name || 'Academic Year'}`}
                                 aria-label={`Activate ${x.name || 'Academic Year'}`}
-                                onClick={() => setConfirmStatus({ year: x, targetStatus: 'ACTIVE' })}
+                                onClick={() => requestStatusChange(x, 'ACTIVE')}
                               >
                                 <FiToggleLeft />
                               </button>
                             )}
-                            {isPastYear(x) && x.status !== 'ARCHIVED' && (
+                            {(x.status === 'ACTIVE' || (isPastYear(x) && x.status !== 'ARCHIVED')) && (
                               <button
                                 type="button"
                                 className="table-action-btn action-deactivate erp-action-btn erp-action-btn--danger"
-                                title={`Archive ${x.name || 'Academic Year'}`}
-                                aria-label={`Archive ${x.name || 'Academic Year'}`}
-                                onClick={() => setConfirmStatus({ year: x, targetStatus: 'ARCHIVED' })}
+                                title={`Deactivate ${x.name || 'Academic Year'}`}
+                                aria-label={`Deactivate ${x.name || 'Academic Year'}`}
+                                onClick={() => requestStatusChange(x, 'ARCHIVED')}
                               >
-                                <FiXCircle />
+                                <FiToggleRight />
                               </button>
                             )}
                           </div>
@@ -597,7 +617,7 @@ export default function AcademicYear() {
               <h2 id="gen-title">Generate Next Academic Year</h2>
               <p style={{ marginTop: '12px', color: 'var(--text-secondary)' }}>
                 This will automatically compute and prepare the next consecutive annual academic cycle following{' '}
-                <strong>{active?.name || 'the current active cycle'}</strong>.
+                <strong>{generationBase?.name || 'the latest available cycle'}</strong>: <strong>{generatedCycle?.name || 'the next cycle'}</strong>.
               </p>
               <footer>
                 <button type="button" className="erp-btn erp-btn--secondary" onClick={close}>

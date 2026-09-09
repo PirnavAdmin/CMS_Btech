@@ -13,6 +13,7 @@ import CompactSummary from '../../components/CompactSummary'
 import {
   createCollegeSettings,
   fetchCollegeLogo,
+  getCollegeLogoUrl,
   getCollegeById,
   getCollegeSettings,
   getColleges,
@@ -27,6 +28,8 @@ import {
   uploadCollegeLogo,
   WEBSITE_VALIDATION_MESSAGE,
 } from '../../auth/collegeApi'
+import { studentApi } from '../../api/apiEndpoints'
+import { showDeactivationBlocked } from '../../components/DeactivationBlockedDialog'
 import './CollegeInstitutionManagement.css'
 
 const COLLEGE_TYPES = ['Engineering', 'Arts & Science', 'Medical', 'Management', 'Polytechnic', 'Other']
@@ -227,13 +230,15 @@ const deriveCollegeSummary = (source, records = []) => {
 }
 
 const mapCollege = (record) => {
+  const id = record.id ?? record.collegeId
+  const logoValue = record.logo ?? record.logoUrl ?? record.collegeLogo ?? record.collegeLogoUrl ?? record.logoPath ?? ''
   const address = record.addressDetails ?? record.addressInfo ?? {}
   const contact = record.contactDetails ?? record.contactInfo ?? {}
   const administration = record.administration ?? record.principalDetails ?? {}
   const accreditation = record.accreditationDetails && typeof record.accreditationDetails === 'object' ? record.accreditationDetails : {}
   const extended = readCollegeExtendedDetails(record)
   return ({
-  id: record.id ?? record.collegeId,
+  id,
   name: record.name ?? record.collegeName ?? '',
   code: record.code ?? record.collegeCode ?? '',
   type: record.type ?? record.collegeType ?? record.institutionType ?? COLLEGE_TYPES[0],
@@ -254,7 +259,7 @@ const mapCollege = (record) => {
   // Do not probe the protected logo endpoint for every directory record. The
   // college list does not guarantee a logo exists, and a missing one should use
   // the existing initial-based placeholder rather than generate a 404 request.
-  logo: record.logo ?? record.logoUrl ?? record.collegeLogo ?? record.collegeLogoUrl ?? record.logoPath ?? '',
+  logo: getCollegeLogoUrl(id, logoValue),
   principal: record.principal ?? record.principalName ?? administration.principalName ?? '',
   principalEmail: record.principalEmail ?? administration.principalEmail ?? extended.principalEmail ?? '',
   principalContact: record.principalContact ?? record.principalPhone ?? administration.principalContact ?? extended.principalContact ?? '',
@@ -370,6 +375,7 @@ export default function CollegeInstitutionManagement({ initialView = 'list' }) {
   const [statusError, setStatusError] = useState('')
   const [statusNotice, setStatusNotice] = useState('')
   const [pendingStatus, setPendingStatus] = useState(null)
+  const [collegeImpact, setCollegeImpact] = useState(null)
   const [isStatusSaving, setIsStatusSaving] = useState(false)
   const [collegeSummary, setCollegeSummary] = useState({ total: null, active: null, inactive: null, loading: true, error: '' })
 
@@ -547,22 +553,48 @@ export default function CollegeInstitutionManagement({ initialView = 'list' }) {
     }
   }
 
-  const toggleStatus = (college) => {
+  const loadCollegeImpact = async (collegeId) => {
+    try {
+      const students = await studentApi.getAll({ CollegeId: Number(collegeId) })
+      return students.length
+    } catch (error) {
+      throw new Error(getApiErrorMessage(error, 'Unable to verify associated students. The college was not deactivated.'))
+    }
+  }
+
+  const toggleStatus = async (college) => {
     if (statusLock.current) return
     setStatusError('')
     setStatusNotice('')
-    setPendingStatus({ college, nextStatus: college.status === 'active' ? 'inactive' : 'active' })
+    const nextStatus = college.status === 'active' ? 'inactive' : 'active'
+    setCollegeImpact(null)
+    if (nextStatus === 'inactive') {
+      try {
+        const count = await loadCollegeImpact(college.id)
+        setCollegeImpact({ state: 'known', count })
+      } catch (error) {
+        showDeactivationBlocked(error.message)
+        return
+      }
+    }
+    setPendingStatus({ college, nextStatus })
   }
   const confirmStatusChange = async () => {
     if (!pendingStatus || statusLock.current) return
     statusLock.current = true
     const { college, nextStatus } = pendingStatus
+    if (nextStatus === 'inactive' && collegeImpact?.state === 'known' && collegeImpact.count > 0) {
+      setPendingStatus(null)
+      showDeactivationBlocked(`Cannot deactivate ${college.name}. ${collegeImpact.count} student${collegeImpact.count === 1 ? '' : 's'} are associated with this college.`)
+      return
+    }
     setIsStatusSaving(true)
     setStatusError('')
     try {
       const response = await updateCollegeStatus(college.id, nextStatus === 'active' ? 1 : 0)
       if (response.data?.success === false) throw new Error('College status could not be updated. Please try again.')
       setPendingStatus(null)
+      setCollegeImpact(null)
       setStatusNotice(nextStatus === 'active' ? 'College activated successfully.' : 'College deactivated successfully.')
       await Promise.all([loadColleges(searchTerm), refreshCollegeSummary()])
     } catch (error) {
@@ -660,7 +692,6 @@ export default function CollegeInstitutionManagement({ initialView = 'list' }) {
           <>
             <header className="cm-header management-page__heading">
               <div>
-                <span className="cm-eyebrow">Academic ERP</span>
                 <h1>College Management</h1>
                 <p>Manage colleges, institutional details, and academic configurations.</p>
               </div>
@@ -776,9 +807,9 @@ export default function CollegeInstitutionManagement({ initialView = 'list' }) {
                       {displayedColleges.map((college) => (
                         <tr key={college.id}>
                           <td className="table-center" style={{ width: '60px' }}>
-                            {college.logo && !brokenLogoIds.has(college.id) ? (
+                            {college.id && !brokenLogoIds.has(college.id) ? (
                               <CollegeLogoImage
-                                src={college.logo}
+                                src={college.logo || getCollegeLogoUrl(college.id, '')}
                                 alt={college.name}
                                 className="cm-logo-thumb"
                                 onError={() => markLogoBroken(college.id)}
@@ -989,9 +1020,9 @@ export default function CollegeInstitutionManagement({ initialView = 'list' }) {
               {/* Header Profile Banner */}
               <div className="cm-profile-banner">
                 <div className="cm-profile-avatar-wrap">
-                  {activeCollege.logo && !brokenLogoIds.has(activeCollege.id) ? (
+                  {activeCollege.id && !brokenLogoIds.has(activeCollege.id) ? (
                     <CollegeLogoImage
-                      src={activeCollege.logo}
+                      src={activeCollege.logo || getCollegeLogoUrl(activeCollege.id, '')}
                       alt={activeCollege.name}
                       className="cm-profile-logo"
                       onError={() => markLogoBroken(activeCollege.id)}
@@ -1294,16 +1325,16 @@ export default function CollegeInstitutionManagement({ initialView = 'list' }) {
         )}
       </div>
       {statusNotice && <div className="cm-college-status-notice" role="status">{statusNotice}<button type="button" aria-label="Dismiss status message" onClick={() => setStatusNotice('')}><FiX /></button></div>}
-      {pendingStatus && <StatusConfirmDialog entity="College" name={`${pendingStatus.college.name} (${pendingStatus.college.code})`} nextStatus={pendingStatus.nextStatus} onCancel={() => setPendingStatus(null)} onConfirm={confirmStatusChange} busy={isStatusSaving} error={statusError}
+      {pendingStatus && <StatusConfirmDialog entity="College" name={`${pendingStatus.college.name} (${pendingStatus.college.code})`} nextStatus={pendingStatus.nextStatus} onCancel={() => { setPendingStatus(null); setCollegeImpact(null) }} onConfirm={confirmStatusChange} busy={isStatusSaving} error={statusError}
         confirmLabel={pendingStatus.nextStatus === 'active' ? 'Activate College' : 'Deactivate College'}
         details={[
           ['College', pendingStatus.college.name],
           ['Current Status', pendingStatus.college.status === 'active' ? 'Active' : 'Inactive'],
-          ...(pendingStatus.nextStatus === 'inactive' ? [['Associated Students', 'Count unavailable from the current college API'], ['Impact', 'Existing students and records associated with this college may remain available after deactivation.']] : []),
+          ...(pendingStatus.nextStatus === 'inactive' ? [['Associated Students', `${collegeImpact?.count ?? 0} student${collegeImpact?.count === 1 ? '' : 's'}`], ['Impact', collegeImpact?.count > 0 ? 'Students are associated with this college. Deactivation will be checked when you continue.' : 'No students are associated with this college, so it can be deactivated.']] : []),
         ]}
         description={pendingStatus.nextStatus === 'active'
           ? 'This college will become active again for operations permitted for active colleges.'
-          : 'This action requests a college status change. The current API does not confirm how deactivation affects access to existing records or new admissions.'} />}
+          : 'This college has no associated students and will be marked inactive.'} />}
     </DashboardLayout>
   )
 }

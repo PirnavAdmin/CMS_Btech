@@ -1,5 +1,5 @@
 import { Component, useEffect } from 'react'
-import { Navigate, Route, Routes } from 'react-router-dom'
+import { Navigate, Outlet, Route, Routes } from 'react-router-dom'
 import ProtectedRoute from './components/ProtectedRoute'
 import { ROLES } from './auth/roles'
 
@@ -32,6 +32,7 @@ import { AcademicProvider } from './context/AcademicContext'
 import './styles/erp-theme.css'
 import './App.css'
 import './styles/details-layout.css'
+import './styles/view-cards.css'
 
 class AppErrorBoundary extends Component {
   constructor(props) {
@@ -92,9 +93,8 @@ function TableOverflowTitles() {
 export default function App() {
   return (
     <AppErrorBoundary>
-      <AcademicProvider>
-        <TableOverflowTitles />
-        <Routes>
+      <TableOverflowTitles />
+      <Routes>
           {/* Public */}
           <Route path="/" element={<LandingPage />} />
           <Route path="/login" element={<Login />} />
@@ -120,47 +120,51 @@ export default function App() {
 
           {/* Faculty / Operations */}
           <Route element={<ProtectedRoute allowedRoles={[ROLES.ADMIN, ROLES.FACULTY]} />}>
-            <Route path="/faculty/*" element={<Faculty />} />
-            <Route path="/attendance/*" element={<Attendance />} />
-            <Route path="/marks/*" element={<Marks />} />
-            <Route path="/results/*" element={<Results />} />
+            <Route element={<AcademicProvider><Outlet /></AcademicProvider>}>
+              <Route path="/faculty/*" element={<Faculty />} />
+              <Route path="/attendance/*" element={<Attendance />} />
+              <Route path="/marks/*" element={<Marks />} />
+              <Route path="/results/*" element={<Results />} />
+            </Route>
           </Route>
 
           {/* Administration - Admin Only */}
           <Route element={<ProtectedRoute allowedRoles={[ROLES.ADMIN]} />}>
-            <Route path="/college-institution-management" element={<CollegeInstitutionManagement />} />
-            <Route path="/college-institution-management/add" element={<AddCollege />} />
-            <Route path="/academic-year-management" element={<AcademicYearManagement />} />
-            <Route path="/academic-year-management/:id" element={<AcademicYearManagement />} />
-            <Route path="/department-management" element={<DepartmentManagement />} />
-            <Route path="/department-management/:id" element={<DepartmentManagement />} />
-            <Route path="/courses" element={<Course />} />
-            <Route path="/courses/add" element={<Course mode="form" />} />
-            <Route path="/courses/:id/edit" element={<Course mode="form" />} />
-            <Route path="/courses/:id" element={<Course mode="details" />} />
-            <Route path="/courses/structure" element={<CourseStructure />} />
-            <Route path="/branches" element={<Branch />} />
-            <Route path="/branches/add" element={<Branch mode="form" />} />
-            <Route path="/branches/:id/edit" element={<Branch mode="form" />} />
-            <Route path="/branches/:id" element={<Branch mode="details" />} />
-            <Route path="/semester-management" element={<SemesterManagement />} />
-            <Route path="/semester-management/add" element={<SemesterManagement mode="form" />} />
-            <Route path="/semester-management/:id/edit" element={<SemesterManagement mode="edit" />} />
-            <Route path="/semester-management/:id" element={<SemesterManagement mode="details" />} />
-            <Route path="/section-management" element={<SectionManagement />} />
-            <Route path="/section-management/add" element={<SectionManagement mode="form" />} />
-            <Route path="/section-management/:id/edit" element={<SectionManagement mode="edit" />} />
-            <Route path="/section-management/:id" element={<SectionManagement mode="details" />} />
-            <Route path="/student-management/admissions" element={<StudentAdmission />} />
-            <Route path="/student-management/admissions/new" element={<StudentAdmission />} />
-            <Route path="/student-management/admissions/add" element={<StudentAdmission />} />
-            <Route path="/student-management/admissions/:id/edit" element={<StudentAdmission />} />
-            <Route path="/student-management/admissions/:id/approval" element={<StudentAdmission />} />
-            <Route path="/student-management/admissions/:id" element={<StudentAdmission />} />
-            <Route path="/student-management/profiles" element={<StudentProfile />} />
-            <Route path="/student-management/profiles/:id" element={<StudentProfile />} />
-            <Route path="/student-management/promotions" element={<StudentPromotion />} />
-            <Route path="/fees/*" element={<Fees />} />
+            <Route element={<AcademicProvider><Outlet /></AcademicProvider>}>
+              <Route path="/college-institution-management" element={<CollegeInstitutionManagement />} />
+              <Route path="/college-institution-management/add" element={<AddCollege />} />
+              <Route path="/academic-year-management" element={<AcademicYearManagement />} />
+              <Route path="/academic-year-management/:id" element={<AcademicYearManagement />} />
+              <Route path="/department-management" element={<DepartmentManagement />} />
+              <Route path="/department-management/:id" element={<DepartmentManagement />} />
+              <Route path="/courses" element={<Course />} />
+              <Route path="/courses/add" element={<Course mode="form" />} />
+              <Route path="/courses/:id/edit" element={<Course mode="form" />} />
+              <Route path="/courses/:id" element={<Course mode="details" />} />
+              <Route path="/courses/structure" element={<CourseStructure />} />
+              <Route path="/branches" element={<Branch />} />
+              <Route path="/branches/add" element={<Branch mode="form" />} />
+              <Route path="/branches/:id/edit" element={<Branch mode="form" />} />
+              <Route path="/branches/:id" element={<Branch mode="details" />} />
+              <Route path="/semester-management" element={<SemesterManagement />} />
+              <Route path="/semester-management/add" element={<SemesterManagement mode="form" />} />
+              <Route path="/semester-management/:id/edit" element={<SemesterManagement mode="edit" />} />
+              <Route path="/semester-management/:id" element={<SemesterManagement mode="details" />} />
+              <Route path="/section-management" element={<SectionManagement />} />
+              <Route path="/section-management/add" element={<SectionManagement mode="form" />} />
+              <Route path="/section-management/:id/edit" element={<SectionManagement mode="edit" />} />
+              <Route path="/section-management/:id" element={<SectionManagement mode="details" />} />
+              <Route path="/student-management/admissions" element={<StudentAdmission />} />
+              <Route path="/student-management/admissions/new" element={<StudentAdmission />} />
+              <Route path="/student-management/admissions/add" element={<StudentAdmission />} />
+              <Route path="/student-management/admissions/:id/edit" element={<StudentAdmission />} />
+              <Route path="/student-management/admissions/:id/approval" element={<StudentAdmission />} />
+              <Route path="/student-management/admissions/:id" element={<StudentAdmission />} />
+              <Route path="/student-management/profiles" element={<StudentProfile />} />
+              <Route path="/student-management/profiles/:id" element={<StudentProfile />} />
+              <Route path="/student-management/promotions" element={<StudentPromotion />} />
+              <Route path="/fees/*" element={<Fees />} />
+            </Route>
           </Route>
 
           {/* Faculty & Student */}
@@ -182,8 +186,7 @@ export default function App() {
 
           {/* Unknown route */}
           <Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
-      </AcademicProvider>
+      </Routes>
     </AppErrorBoundary>
   )
 }

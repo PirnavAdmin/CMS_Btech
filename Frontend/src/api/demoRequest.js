@@ -60,4 +60,4 @@ export async function submitDemoRequest(request) {
     clearTimeout(timeout)
   }
 }
-const demoRequestUrl = `${import.meta.env.DEV ? '' : (import.meta.env.VITE_API_BASE_URL || '').trim().replace(/\/+$/, '')}/api/v1/demo-requests`
+const demoRequestUrl = `${import.meta.env.DEV ? '' : (import.meta.env.VITE_API_BASE_URL || 'https://abreast-curling-tutor.ngrok-free.dev').trim().replace(/\/+$/, '')}/api/v1/demo-requests`

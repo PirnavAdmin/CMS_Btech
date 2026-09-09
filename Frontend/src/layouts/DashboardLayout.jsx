@@ -4,6 +4,7 @@ import { FiLock, FiLogOut, FiMenu, FiMoon, FiSearch, FiSun, FiUser } from 'react
 import { getUserRole, signOut } from '../auth/auth'
 import { changePassword, profileApi } from '../api/apiEndpoints'
 import Sidebar from '../components/Sidebar'
+import DeactivationBlockedDialog from '../components/DeactivationBlockedDialog'
 import './DashboardLayout.css'
 import './AccountMenu.css'
 
@@ -41,7 +42,7 @@ export default function DashboardLayout({ children }) {
     '/department-management': 'Departments', '/semester-management': 'Semesters', '/section-management': 'Sections',
     '/student-management/admissions': 'Student Admissions',
     '/student-management/profiles': 'Student Profiles', '/student-management/promotions': 'Student Promotions',
-  })[pathname] || (pathname.startsWith('/student-management/admissions') ? 'Student Admissions' : pathname.startsWith('/courses') ? 'Courses' : pathname.startsWith('/branches') ? 'Branches' : 'Digital Campus')
+  })[pathname] || (pathname.startsWith('/student-management/admissions') ? 'Student Admissions' : pathname.startsWith('/student-management/profiles') ? 'Student Profiles' : pathname.startsWith('/student-management/promotions') ? 'Student Promotions' : pathname.startsWith('/courses') ? 'Courses' : pathname.startsWith('/branches') ? 'Branches' : 'Digital Campus')
   const breadcrumbSection = ['My Profile', 'Settings'].includes(pageName) ? 'Account' : pageName === 'Dashboard' ? 'Digital Campus' : pageName.startsWith('Student ') ? 'Student Management' : 'Academic Configuration'
 
   // Logout confirmation state
@@ -301,7 +302,8 @@ export default function DashboardLayout({ children }) {
           </div>
         </header>
 
-        <section className="page-content">{!['Student Promotions', 'Student Profiles'].includes(pageName) && <nav className="app-breadcrumb" aria-label="Breadcrumb"><Link to="/dashboard">Home</Link><span aria-hidden="true">/</span><span>{breadcrumbSection}</span>{pageName !== breadcrumbSection && <><span aria-hidden="true">/</span><strong>{pageName}</strong></>}</nav>}{children}</section>
+        <section className="page-content"><nav className="app-breadcrumb" aria-label="Breadcrumb"><Link to="/dashboard">Home</Link><span aria-hidden="true">/</span><span>{breadcrumbSection}</span>{pageName !== breadcrumbSection && <><span aria-hidden="true">/</span><strong>{pageName}</strong></>}</nav>{children}</section>
+        <DeactivationBlockedDialog />
 
         {/* Logout Confirmation Modal */}
         {showLogoutConfirmation && (

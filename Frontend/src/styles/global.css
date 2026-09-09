@@ -167,14 +167,32 @@ button:disabled, input:disabled, select:disabled, textarea:disabled { cursor: no
 
 /* ==========================================================================\n+   Centralized ERP record-details system\n+   Existing View routes keep their data and markup, but share this visual contract.\n+   ========================================================================== */
 :root {
-  --view-hero-padding-y: 18px;
-  --view-hero-padding-x: 22px;
-  --view-hero-min-height: 126px;
-  --view-section-gap: 18px;
-  --view-field-gap-y: 14px;
-  --view-field-gap-x: 28px;
-  --view-content-padding: 20px;
-  --view-radius: 14px;
+  --view-primary: var(--brand, #176fae);
+  --view-primary-dark: var(--brand-hover, #125b90);
+  --view-accent: var(--brand-soft, #eaf4fb);
+  --view-surface: var(--surface, #fff);
+  --view-surface-muted: var(--surface-soft, #f7fafc);
+  --view-border: var(--border, #dbe4eb);
+  --view-divider: color-mix(in srgb, var(--border, #dbe4eb) 70%, transparent);
+  --view-label: var(--text-muted, #6d8294);
+  --view-value: var(--text-primary, #132a3e);
+  --view-muted: var(--text-secondary, #425e75);
+  --view-success: var(--success, #16805b);
+  --view-warning: var(--warning, #ad6b0a);
+  --view-danger: var(--danger, #c43d3d);
+  --view-page-gap: 12px;
+  --view-hero-gap: 12px;
+  --view-hero-padding-y: 16px;
+  --view-hero-padding-x: 20px;
+  --view-hero-min-height: 110px;
+  --view-section-gap: 14px;
+  --view-section-padding-y: 12px;
+  --view-section-padding-x: 0px;
+  --view-field-gap-y: 10px;
+  --view-field-gap-x: 20px;
+  --view-label-value-gap: 3px;
+  --view-content-padding: 16px;
+  --view-radius: 12px;
 }
 
 /* Route-level View shells must scroll naturally below the fixed application header. */
@@ -309,4 +327,1085 @@ button:disabled, input:disabled, select:disabled, textarea:disabled { cursor: no
   .student-admission .sa-detail-card, .student-profile .sp-panel { padding: 16px !important; }
   .cm-profile-view .cm-info-rows, .section-profile-page .cm-info-rows, .semester-management .cm-info-rows, .department-profile-view .cm-info-rows,
   .student-admission .sa-detail-panel > dl, .student-admission .sa-review-section dl, .student-profile .sp-info-grid { grid-template-columns: 1fr; gap: 10px; }
+}
+
+/* Profile pages use the same surface-and-groups model as entity Views. */
+.profile-page .profile-details-card {
+  height: auto;
+  min-height: 0;
+  overflow: visible;
+  padding: 0;
+  border: 1px solid var(--border-color);
+  border-radius: var(--view-radius);
+  background: var(--bg-surface);
+  box-shadow: var(--shadow-sm);
+}
+
+.profile-page .profile-preview-group {
+  min-height: 0;
+  margin: 0;
+  padding: var(--view-content-padding);
+  border: 0;
+  background: transparent;
+}
+
+.profile-page .profile-preview-group + .profile-preview-group {
+  margin-top: 0;
+  border-top: 1px solid color-mix(in srgb, var(--border-color) 70%, transparent);
+}
+
+.profile-page .profile-preview-group > header {
+  display: flex;
+  min-height: 0;
+  margin: 0 0 12px;
+  padding: 0 0 10px;
+  align-items: center;
+  gap: 9px;
+  border: 0;
+  background: transparent;
+}
+
+.profile-page .profile-preview-group > header > span {
+  display: grid;
+  width: 30px;
+  height: 30px;
+  flex: 0 0 30px;
+  place-items: center;
+  border: 0;
+  border-radius: 8px;
+  color: var(--color-primary);
+  background: var(--color-primary-soft);
+}
+
+.profile-page .profile-preview-group > header h2 {
+  margin: 0;
+  color: var(--text-main);
+  font-size: 16px;
+  font-weight: 750;
+}
+
+.profile-page .profile-preview-group > header p {
+  margin: 3px 0 0;
+  color: var(--text-muted-global);
+  font-size: 12px;
+}
+
+.profile-page .profile-detail-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: var(--view-field-gap-y) var(--view-field-gap-x);
+  padding: 0;
+}
+
+.profile-page .profile-detail {
+  display: grid;
+  min-width: 0;
+  min-height: 0;
+  gap: 4px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+}
+
+.profile-page .profile-detail span {
+  color: var(--text-muted-global);
+  font-size: 12px;
+  font-weight: 650;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.profile-page .profile-detail strong {
+  min-width: 0;
+  color: var(--text-main);
+  font-size: 14px;
+  font-weight: 650;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+  white-space: normal;
+}
+
+.profile-page .profile-detail.wide { grid-column: 1 / -1; }
+
+.profile-page .profile-address-card {
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.profile-page .profile-address-card + .profile-address-card { margin-top: 14px; }
+.profile-page .profile-address-card header { margin: 0 0 8px; padding: 0; border: 0; background: transparent; }
+.profile-page .profile-address-card dl { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px 24px; margin: 0; }
+.profile-page .profile-address-card dl + dl { margin-top: 12px; }
+.profile-page .profile-address-card dl > div { display: grid; gap: 4px; padding: 0; border: 0; }
+.profile-page .profile-address-card dt { color: var(--text-muted-global); font-size: 12px; font-weight: 650; }
+.profile-page .profile-address-card dd { margin: 0; color: var(--text-main); font-size: 14px; font-weight: 650; line-height: 1.45; overflow-wrap: anywhere; }
+
+@media (max-width: 760px) {
+  .profile-page .profile-preview-group { padding: 16px; }
+  .profile-page .profile-detail-grid, .profile-page .profile-address-card dl { grid-template-columns: 1fr; gap: 10px; }
+  .profile-page .profile-detail.wide { grid-column: auto; }
+}
+
+/* Keep Current and Permanent Address together as a compact two-column group. */
+.profile-page .profile-preview-group:has(> .profile-detail-grid > .profile-address-card) > .profile-detail-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  column-gap: 24px;
+  row-gap: 14px;
+  padding: 0;
+}
+
+.profile-page .profile-preview-group:has(> .profile-detail-grid > .profile-address-card) .profile-address-card {
+  grid-column: auto;
+  min-width: 0;
+  margin: 0;
+  padding: 14px;
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+  background: var(--bg-muted);
+  box-shadow: none;
+}
+
+.profile-page .profile-preview-group:has(> .profile-detail-grid > .profile-address-card) .profile-address-card header {
+  margin-bottom: 10px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid color-mix(in srgb, var(--border-color) 70%, transparent);
+}
+
+@media (max-width: 760px) {
+  .profile-page .profile-preview-group:has(> .profile-detail-grid > .profile-address-card) > .profile-detail-grid {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  .profile-page .profile-preview-group:has(> .profile-detail-grid > .profile-address-card) .profile-address-card {
+    padding: 13px;
+  }
+}
+
+/* Workspace-width reset: Views belong to the dashboard column, not a narrow
+   centered profile canvas. */
+.cm-profile-view, .department-profile-view, .section-profile-page,
+.student-admission:has(.sa-profile-header), .student-profile:has(.sp-hero), .profile-page {
+  width: 100%;
+  max-width: none !important;
+  margin-inline: 0;
+}
+
+.cm-profile-view .cm-profile-card, .section-profile-page .cm-profile-card,
+.student-admission .sa-detail-card, .student-profile .sp-panel,
+.profile-page .profile-overview, .profile-page .profile-details-card {
+  width: 100%;
+  max-width: none;
+}
+
+.profile-page .profile-details-card {
+  grid-template-columns: minmax(0, 7fr) minmax(0, 5fr);
+  align-items: start;
+  gap: 16px;
+}
+
+.profile-page .profile-details-card > .profile-preview-group:has(.profile-address-card) {
+  grid-column: 1 / -1;
+}
+
+.profile-page .profile-details-card > .profile-preview-group:not(:has(.profile-address-card)) {
+  align-self: start;
+}
+
+.profile-page .profile-overview {
+  min-height: 110px;
+  max-height: 135px;
+}
+
+@media (max-width: 760px) {
+  .profile-page .profile-details-card { grid-template-columns: 1fr; }
+  .profile-page .profile-details-card > .profile-preview-group:has(.profile-address-card) { grid-column: auto; }
+  .profile-page .profile-overview { max-height: none; }
+}
+
+/* Project-wide reference composition: all entity Views follow My Profile's
+   compact hero + two-card details rhythm. */
+.cm-profile-view .cm-profile-banner,
+.section-profile-page .cm-profile-banner,
+.semester-management .cm-profile-banner,
+.student-admission .sa-profile-header,
+.student-profile .sp-hero,
+.course-management .course-detail-hero,
+.branch-management .branch-detail-hero {
+  min-height: 110px !important;
+  max-height: 130px;
+  padding: 16px 20px !important;
+  border-radius: 12px;
+  background: linear-gradient(115deg, var(--view-primary-dark), var(--view-primary));
+  box-shadow: var(--shadow-sm);
+}
+
+.cm-profile-view .cm-profile-grid,
+.section-profile-page .cm-profile-grid,
+.semester-management .cm-profile-grid,
+.department-profile-view .cm-profile-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  padding: 14px !important;
+  background: var(--view-surface-muted);
+}
+
+.cm-profile-view .cm-profile-grid > .cm-info-card,
+.section-profile-page .cm-profile-grid > .cm-info-card,
+.semester-management .cm-profile-grid > .cm-info-card,
+.department-profile-view .cm-profile-grid > .cm-info-card {
+  min-width: 0;
+  min-height: 0;
+  height: auto;
+  padding: 14px !important;
+  border: 1px solid var(--view-border) !important;
+  border-radius: 10px;
+  background: var(--view-surface);
+  box-shadow: var(--shadow-sm);
+}
+
+.cm-profile-view .cm-profile-grid > .cm-info-card + .cm-info-card,
+.section-profile-page .cm-profile-grid > .cm-info-card + .cm-info-card,
+.semester-management .cm-profile-grid > .cm-info-card + .cm-info-card,
+.department-profile-view .cm-profile-grid > .cm-info-card + .cm-info-card {
+  margin-top: 0;
+  padding-top: 14px !important;
+  border-top: 1px solid var(--view-border) !important;
+}
+
+.cm-profile-view .cm-profile-grid > .cm-info-card:last-child,
+.section-profile-page .cm-profile-grid > .cm-info-card:last-child,
+.semester-management .cm-profile-grid > .cm-info-card:last-child,
+.department-profile-view .cm-profile-grid > .cm-info-card:last-child { grid-column: 1 / -1; }
+
+.cm-profile-view .cm-profile-grid > .cm-info-card .cm-info-card-header,
+.section-profile-page .cm-profile-grid > .cm-info-card .cm-info-card-header,
+.semester-management .cm-profile-grid > .cm-info-card .cm-info-card-header,
+.department-profile-view .cm-profile-grid > .cm-info-card .cm-info-card-header {
+  margin-bottom: 10px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--view-divider);
+}
+
+.cm-profile-view .cm-profile-grid > .cm-info-card .cm-info-rows,
+.section-profile-page .cm-profile-grid > .cm-info-card .cm-info-rows,
+.semester-management .cm-profile-grid > .cm-info-card .cm-info-rows,
+.department-profile-view .cm-profile-grid > .cm-info-card .cm-info-rows {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px 18px;
+}
+
+.cm-profile-view .cm-profile-grid > .cm-info-card .cm-info-row,
+.section-profile-page .cm-profile-grid > .cm-info-card .cm-info-row,
+.semester-management .cm-profile-grid > .cm-info-card .cm-info-row,
+.department-profile-view .cm-profile-grid > .cm-info-card .cm-info-row {
+  gap: 2px;
+}
+
+@media (max-width: 760px) {
+  .cm-profile-view .cm-profile-banner,
+  .section-profile-page .cm-profile-banner,
+  .semester-management .cm-profile-banner,
+  .student-admission .sa-profile-header,
+  .student-profile .sp-hero,
+  .course-management .course-detail-hero,
+  .branch-management .branch-detail-hero { max-height: none; min-height: 0 !important; padding: 14px 16px !important; }
+
+  .cm-profile-view .cm-profile-grid,
+  .section-profile-page .cm-profile-grid,
+  .semester-management .cm-profile-grid,
+  .department-profile-view .cm-profile-grid { grid-template-columns: 1fr; gap: 12px; padding: 12px !important; }
+
+  .cm-profile-view .cm-profile-grid > .cm-info-card:last-child,
+  .section-profile-page .cm-profile-grid > .cm-info-card:last-child,
+  .semester-management .cm-profile-grid > .cm-info-card:last-child,
+  .department-profile-view .cm-profile-grid > .cm-info-card:last-child { grid-column: auto; }
+
+  .cm-profile-view .cm-profile-grid > .cm-info-card .cm-info-rows,
+  .section-profile-page .cm-profile-grid > .cm-info-card .cm-info-rows,
+  .semester-management .cm-profile-grid > .cm-info-card .cm-info-rows,
+  .department-profile-view .cm-profile-grid > .cm-info-card .cm-info-rows { grid-template-columns: 1fr; gap: 9px; }
+}
+
+/* Side-by-side detail cards for compact desktop View screens. */
+.cm-profile-view .cm-profile-grid,
+.section-profile-page .cm-profile-grid,
+.semester-management .cm-profile-grid,
+.department-profile-view .cm-profile-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+  padding: 18px !important;
+  background: var(--bg-muted);
+}
+
+.cm-profile-view .cm-profile-grid > .cm-info-card,
+.section-profile-page .cm-profile-grid > .cm-info-card,
+.semester-management .cm-profile-grid > .cm-info-card,
+.department-profile-view .cm-profile-grid > .cm-info-card {
+  min-width: 0;
+  padding: 16px !important;
+  border: 1px solid var(--border-color) !important;
+  border-radius: 12px;
+  background: var(--bg-surface);
+  box-shadow: var(--shadow-sm);
+}
+
+.cm-profile-view .cm-profile-grid > .cm-info-card + .cm-info-card,
+.section-profile-page .cm-profile-grid > .cm-info-card + .cm-info-card,
+.semester-management .cm-profile-grid > .cm-info-card + .cm-info-card,
+.department-profile-view .cm-profile-grid > .cm-info-card + .cm-info-card {
+  margin-top: 0;
+  padding-top: 16px !important;
+  border-top: 1px solid var(--border-color) !important;
+}
+
+.cm-profile-view .cm-profile-grid > .cm-info-card:only-child,
+.section-profile-page .cm-profile-grid > .cm-info-card:only-child,
+.semester-management .cm-profile-grid > .cm-info-card:only-child,
+.department-profile-view .cm-profile-grid > .cm-info-card:only-child { grid-column: 1 / -1; }
+
+.profile-page .profile-details-card {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+  padding: 18px;
+  background: var(--bg-muted);
+}
+
+.profile-page .profile-preview-group {
+  min-width: 0;
+  padding: 16px;
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  background: var(--bg-surface);
+  box-shadow: var(--shadow-sm);
+}
+
+.profile-page .profile-preview-group + .profile-preview-group {
+  margin-top: 0;
+  padding-top: 16px;
+  border-top: 1px solid var(--border-color);
+}
+
+@media (max-width: 760px) {
+  .cm-profile-view .cm-profile-grid,
+  .section-profile-page .cm-profile-grid,
+  .semester-management .cm-profile-grid,
+  .department-profile-view .cm-profile-grid,
+  .profile-page .profile-details-card { grid-template-columns: 1fr; gap: 12px; padding: 14px !important; }
+}
+
+/* Final compact ERP View template. */
+.cm-profile-view, .department-profile-view, .section-profile-page,
+.student-admission:has(.sa-profile-header), .student-profile:has(.sp-hero),
+.profile-page { max-width: 1240px; margin-inline: auto; }
+
+.cm-profile-view .cm-profile-card, .section-profile-page .cm-profile-card,
+.student-admission .sa-detail-card, .student-profile .sp-panel,
+.profile-page .profile-details-card { min-height: 0 !important; height: auto !important; }
+
+.cm-profile-view .cm-profile-banner, .section-management .cm-profile-banner,
+.semester-management .cm-profile-banner, .student-admission .sa-profile-header,
+.student-profile .sp-hero, .profile-page .profile-overview {
+  min-height: 110px !important;
+  max-height: 135px;
+  padding: 18px 22px !important;
+}
+
+.cm-profile-view .cm-profile-grid, .section-profile-page .cm-profile-grid,
+.semester-management .cm-profile-grid, .department-profile-view .cm-profile-grid,
+.student-admission .sa-detail-card, .student-profile .sp-panel,
+.profile-page .profile-details-card { padding: 18px !important; }
+
+.cm-profile-view .cm-profile-grid > .cm-info-card,
+.section-profile-page .cm-profile-grid > .cm-info-card,
+.semester-management .cm-profile-grid > .cm-info-card,
+.department-profile-view .cm-profile-grid > .cm-info-card { padding-bottom: 16px !important; }
+
+.cm-profile-view .cm-profile-grid > .cm-info-card + .cm-info-card,
+.section-profile-page .cm-profile-grid > .cm-info-card + .cm-info-card,
+.semester-management .cm-profile-grid > .cm-info-card + .cm-info-card,
+.department-profile-view .cm-profile-grid > .cm-info-card + .cm-info-card,
+.student-admission .sa-detail-panel + .sa-detail-panel,
+.student-admission .sa-review-section + .sa-review-section,
+.profile-page .profile-preview-group + .profile-preview-group { margin-top: 16px; padding-top: 16px !important; }
+
+.cm-profile-view .cm-info-rows, .section-profile-page .cm-info-rows,
+.semester-management .cm-info-rows, .department-profile-view .cm-info-rows,
+.student-admission .sa-detail-panel > dl, .student-admission .sa-review-section dl,
+.student-profile .sp-info-grid, .profile-page .profile-detail-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  column-gap: 24px;
+  row-gap: 12px;
+}
+
+.cm-profile-view .cm-info-row, .section-profile-page .cm-info-row,
+.semester-management .cm-info-row, .department-profile-view .cm-info-row,
+.student-admission .sa-detail-panel > dl > div, .student-admission .sa-review-section dl > div,
+.student-profile .sp-info-grid > div, .profile-page .profile-detail { gap: 3px; }
+
+.cm-profile-view .cm-info-label, .section-profile-page .cm-info-label,
+.semester-management .cm-info-label, .department-profile-view .cm-info-label,
+.student-admission .sa-detail-panel dt, .student-admission .sa-review-section dt,
+.student-profile .sp-info-grid dt, .profile-page .profile-detail span { font-size: 12px; }
+
+.cm-profile-view .cm-info-val, .section-profile-page .cm-info-val,
+.semester-management .cm-info-val, .department-profile-view .cm-info-val,
+.student-admission .sa-detail-panel dd, .student-admission .sa-review-section dd,
+.student-profile .sp-info-grid dd, .profile-page .profile-detail strong { font-size: 14px; font-weight: 650; }
+
+@media (max-width: 1000px) {
+  .cm-profile-view .cm-info-rows, .section-profile-page .cm-info-rows,
+  .semester-management .cm-info-rows, .department-profile-view .cm-info-rows,
+  .student-admission .sa-detail-panel > dl, .student-admission .sa-review-section dl,
+  .student-profile .sp-info-grid, .profile-page .profile-detail-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+@media (max-width: 760px) {
+  .cm-profile-view, .department-profile-view, .section-profile-page,
+  .student-admission:has(.sa-profile-header), .student-profile:has(.sp-hero), .profile-page { max-width: none; }
+  .cm-profile-view .cm-profile-banner, .section-management .cm-profile-banner,
+  .semester-management .cm-profile-banner, .student-admission .sa-profile-header,
+  .student-profile .sp-hero, .profile-page .profile-overview { max-height: none; min-height: 0 !important; padding: 16px !important; }
+  .cm-profile-view .cm-profile-grid, .section-profile-page .cm-profile-grid,
+  .semester-management .cm-profile-grid, .department-profile-view .cm-profile-grid,
+  .student-admission .sa-detail-card, .student-profile .sp-panel,
+  .profile-page .profile-details-card { padding: 16px !important; }
+  .cm-profile-view .cm-info-rows, .section-profile-page .cm-info-rows,
+  .semester-management .cm-info-rows, .department-profile-view .cm-info-rows,
+  .student-admission .sa-detail-panel > dl, .student-admission .sa-review-section dl,
+  .student-profile .sp-info-grid, .profile-page .profile-detail-grid { grid-template-columns: 1fr; gap: 10px; }
+}
+
+/* Final workspace composition overrides. */
+.cm-profile-view, .department-profile-view, .section-profile-page,
+.student-admission:has(.sa-profile-header), .student-profile:has(.sp-hero), .profile-page {
+  width: 100%;
+  max-width: none !important;
+  margin-inline: 0;
+}
+
+.cm-profile-view .cm-profile-card, .section-profile-page .cm-profile-card,
+.student-admission .sa-detail-card, .student-profile .sp-panel,
+.profile-page .profile-overview, .profile-page .profile-details-card { width: 100%; max-width: none; }
+
+.profile-page .profile-details-card {
+  grid-template-columns: minmax(0, 7fr) minmax(0, 5fr);
+  align-items: start;
+  gap: 16px;
+}
+
+.profile-page .profile-details-card > .profile-preview-group:has(.profile-address-card) { grid-column: 1 / -1; }
+.profile-page .profile-details-card > .profile-preview-group:not(:has(.profile-address-card)) { align-self: start; }
+.profile-page .profile-overview { min-height: 110px; max-height: 135px; }
+
+@media (max-width: 760px) {
+  .profile-page .profile-details-card { grid-template-columns: 1fr; }
+  .profile-page .profile-details-card > .profile-preview-group:has(.profile-address-card) { grid-column: auto; }
+  .profile-page .profile-overview { max-height: none; }
+}
+
+/* Final flat details surface: one outer surface, no section cards or nested cards. */
+.cm-profile-view .cm-profile-grid,
+.section-profile-page .cm-profile-grid,
+.semester-management .cm-profile-grid,
+.department-profile-view .cm-profile-grid {
+  display: block;
+  padding: 20px !important;
+  background: var(--bg-surface);
+}
+
+.cm-profile-view .cm-profile-grid > .cm-info-card,
+.section-profile-page .cm-profile-grid > .cm-info-card,
+.semester-management .cm-profile-grid > .cm-info-card,
+.department-profile-view .cm-profile-grid > .cm-info-card {
+  min-height: 0;
+  margin: 0;
+  padding: 0 0 18px !important;
+  border: 0 !important;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.cm-profile-view .cm-profile-grid > .cm-info-card + .cm-info-card,
+.section-profile-page .cm-profile-grid > .cm-info-card + .cm-info-card,
+.semester-management .cm-profile-grid > .cm-info-card + .cm-info-card,
+.department-profile-view .cm-profile-grid > .cm-info-card + .cm-info-card {
+  margin-top: 18px;
+  padding-top: 18px !important;
+  border-top: 1px solid color-mix(in srgb, var(--border-color) 70%, transparent) !important;
+}
+
+.cm-profile-view .cm-profile-grid > .cm-info-card .cm-info-rows,
+.section-profile-page .cm-profile-grid > .cm-info-card .cm-info-rows,
+.semester-management .cm-profile-grid > .cm-info-card .cm-info-rows,
+.department-profile-view .cm-profile-grid > .cm-info-card .cm-info-rows {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 14px 28px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+}
+
+.cm-profile-view .cm-profile-grid > .cm-info-card .cm-info-row,
+.section-profile-page .cm-profile-grid > .cm-info-card .cm-info-row,
+.semester-management .cm-profile-grid > .cm-info-card .cm-info-row,
+.department-profile-view .cm-profile-grid > .cm-info-card .cm-info-row {
+  display: grid;
+  min-width: 0;
+  gap: 4px;
+  padding: 0 !important;
+  border: 0 !important;
+  background: transparent;
+}
+
+.profile-page .profile-details-card {
+  display: block;
+  padding: 20px !important;
+  border: 1px solid var(--border-color);
+  border-radius: var(--view-radius);
+  background: var(--bg-surface);
+  box-shadow: var(--shadow-sm);
+}
+
+.profile-page .profile-preview-group {
+  min-height: 0;
+  margin: 0;
+  padding: 0 0 18px;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.profile-page .profile-preview-group + .profile-preview-group {
+  margin-top: 18px;
+  padding-top: 18px;
+  border-top: 1px solid color-mix(in srgb, var(--border-color) 70%, transparent);
+}
+
+.profile-page .profile-detail-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 14px 28px;
+  padding: 0;
+}
+
+.profile-page .profile-detail {
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+}
+
+.profile-page .profile-preview-group:has(> .profile-detail-grid > .profile-address-card) > .profile-detail-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px 28px;
+}
+
+.profile-page .profile-address-card {
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.profile-page .profile-address-card header {
+  margin: 0 0 8px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+}
+
+.profile-page .profile-address-card dl,
+.profile-page .profile-address-card dl + dl {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+}
+
+.profile-page .profile-address-card dl > div {
+  display: block;
+  padding: 0;
+  border: 0;
+}
+
+.profile-page .profile-address-card dt { display: none; }
+.profile-page .profile-address-card dd { margin: 0; color: var(--text-main); font-size: 14px; line-height: 1.45; overflow-wrap: anywhere; }
+
+@media (max-width: 760px) {
+  .cm-profile-view .cm-profile-grid, .section-profile-page .cm-profile-grid,
+  .semester-management .cm-profile-grid, .department-profile-view .cm-profile-grid,
+  .profile-page .profile-details-card { padding: 16px !important; }
+  .cm-profile-view .cm-profile-grid > .cm-info-card + .cm-info-card,
+  .section-profile-page .cm-profile-grid > .cm-info-card + .cm-info-card,
+  .semester-management .cm-profile-grid > .cm-info-card + .cm-info-card,
+  .department-profile-view .cm-profile-grid > .cm-info-card + .cm-info-card,
+  .profile-page .profile-preview-group + .profile-preview-group { margin-top: 14px; padding-top: 14px !important; }
+  .profile-page .profile-preview-group:has(> .profile-detail-grid > .profile-address-card) > .profile-detail-grid { grid-template-columns: 1fr; }
+}
+
+/* Final shared View token consumption. */
+.cm-profile-view, .department-profile-view, .section-profile-page,
+.student-admission:has(.sa-profile-header), .student-profile:has(.sp-hero), .profile-page {
+  gap: var(--view-page-gap);
+  color: var(--view-value);
+}
+
+.cm-profile-view .cm-profile-banner, .section-management .cm-profile-banner,
+.semester-management .cm-profile-banner, .student-admission .sa-profile-header,
+.student-profile .sp-hero, .profile-page .profile-overview {
+  gap: var(--view-hero-gap);
+  min-height: var(--view-hero-min-height) !important;
+  padding: var(--view-hero-padding-y) var(--view-hero-padding-x) !important;
+  background: linear-gradient(115deg, var(--view-primary-dark), var(--view-primary));
+  box-shadow: var(--shadow-sm);
+}
+
+.cm-profile-view .cm-profile-card, .section-profile-page .cm-profile-card,
+.student-admission .sa-detail-card, .student-profile .sp-panel,
+.profile-page .profile-details-card {
+  border-color: var(--view-border);
+  border-radius: var(--view-radius);
+  background: var(--view-surface);
+  box-shadow: var(--shadow-sm);
+}
+
+.cm-profile-view .cm-info-card-header, .section-profile-page .cm-info-card-header,
+.semester-management .cm-info-card-header, .department-profile-view .cm-info-card-header,
+.profile-page .profile-preview-group > header {
+  gap: 8px;
+  margin-bottom: 10px;
+  padding-bottom: 8px;
+  border-bottom-color: var(--view-divider);
+  color: var(--view-primary);
+}
+
+.cm-profile-view .cm-info-card-header h2, .section-profile-page .cm-info-card-header h2,
+.semester-management .cm-info-card-header h2, .department-profile-view .cm-info-card-header h2,
+.profile-page .profile-preview-group > header h2 { color: var(--view-primary); font-size: 16px; }
+
+.cm-profile-view .cm-info-card-header svg, .section-profile-page .cm-info-card-header svg,
+.semester-management .cm-info-card-header svg, .department-profile-view .cm-info-card-header svg,
+.profile-page .profile-preview-group > header svg { color: var(--view-primary); }
+
+.cm-profile-view .cm-info-label, .section-profile-page .cm-info-label,
+.semester-management .cm-info-label, .department-profile-view .cm-info-label,
+.student-admission .sa-detail-panel dt, .student-admission .sa-review-section dt,
+.student-profile .sp-info-grid dt, .profile-page .profile-detail span { color: var(--view-label); }
+
+.cm-profile-view .cm-info-val, .section-profile-page .cm-info-val,
+.semester-management .cm-info-val, .department-profile-view .cm-info-val,
+.student-admission .sa-detail-panel dd, .student-admission .sa-review-section dd,
+.student-profile .sp-info-grid dd, .profile-page .profile-detail strong,
+.profile-page .profile-address-card dd { color: var(--view-value); }
+
+.cm-profile-view .cm-profile-grid > .cm-info-card + .cm-info-card,
+.section-profile-page .cm-profile-grid > .cm-info-card + .cm-info-card,
+.semester-management .cm-profile-grid > .cm-info-card + .cm-info-card,
+.department-profile-view .cm-profile-grid > .cm-info-card + .cm-info-card,
+.student-admission .sa-detail-panel + .sa-detail-panel,
+.student-admission .sa-review-section + .sa-review-section,
+.profile-page .profile-preview-group + .profile-preview-group { border-top-color: var(--view-divider) !important; }
+
+.profile-page .profile-address-card,
+.profile-page .profile-address-card header,
+.profile-page .profile-address-card dl,
+.profile-page .profile-address-card dl > div { border-color: transparent; box-shadow: none; }
+
+.details-status-badge, .cm-status-badge, .section-status, .status-pill, .sa-badge, .sp-badge {
+  border-radius: 999px;
+}
+
+@media (max-width: 760px) {
+  .cm-profile-view .cm-profile-banner, .section-management .cm-profile-banner,
+  .semester-management .cm-profile-banner, .student-admission .sa-profile-header,
+  .student-profile .sp-hero, .profile-page .profile-overview {
+    min-height: 0 !important;
+    padding: 14px 16px !important;
+  }
+}
+
+/* My Profile composition: Personal and Institutional details share a compact row;
+   Address & Bio remains full width because it contains paired address groups. */
+.profile-page .profile-details-card {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+  padding: 18px !important;
+  background: var(--view-surface-muted);
+}
+
+.profile-page .profile-details-card > .profile-preview-group {
+  min-width: 0;
+  padding: 16px;
+  border: 1px solid var(--view-border);
+  border-radius: var(--view-radius);
+  background: var(--view-surface);
+  box-shadow: var(--shadow-sm);
+}
+
+.profile-page .profile-details-card > .profile-preview-group + .profile-preview-group {
+  margin-top: 0;
+  padding-top: 16px;
+  border-top: 1px solid var(--view-border);
+}
+
+.profile-page .profile-details-card > .profile-preview-group:has(.profile-address-card) {
+  grid-column: 1 / -1;
+}
+
+@media (max-width: 760px) {
+  .profile-page .profile-details-card {
+    grid-template-columns: 1fr;
+    gap: 12px;
+    padding: 14px !important;
+  }
+
+  .profile-page .profile-details-card > .profile-preview-group:has(.profile-address-card) {
+    grid-column: auto;
+  }
+}
+
+/* Compact field alignment inside the Personal and Institutional cards. */
+.profile-page .profile-details-card > .profile-preview-group:not(:has(.profile-address-card)) {
+  padding: 14px;
+}
+
+.profile-page .profile-details-card > .profile-preview-group:not(:has(.profile-address-card)) > header {
+  margin-bottom: 10px;
+  padding-bottom: 8px;
+}
+
+.profile-page .profile-details-card > .profile-preview-group:not(:has(.profile-address-card)) .profile-detail-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  column-gap: 20px;
+  row-gap: 12px;
+}
+
+.profile-page .profile-details-card > .profile-preview-group:not(:has(.profile-address-card)) .profile-detail {
+  gap: 3px;
+}
+
+.profile-page .profile-details-card > .profile-preview-group:not(:has(.profile-address-card)) .profile-detail span {
+  font-size: 11px;
+}
+
+.profile-page .profile-details-card > .profile-preview-group:not(:has(.profile-address-card)) .profile-detail strong {
+  font-size: 14px;
+  line-height: 1.35;
+}
+
+.profile-page .profile-details-card {
+  align-items: stretch;
+}
+
+.profile-page .profile-details-card > .profile-preview-group:not(:has(.profile-address-card)) {
+  height: 100%;
+  align-self: stretch;
+}
+
+@media (max-width: 760px) {
+  .profile-page .profile-details-card > .profile-preview-group:not(:has(.profile-address-card)) .profile-detail-grid {
+    grid-template-columns: 1fr;
+    row-gap: 10px;
+  }
+
+  .profile-page .profile-details-card > .profile-preview-group:not(:has(.profile-address-card)) {
+    height: auto;
+  }
+}
+
+/* Authoritative project-wide View reference layout. */
+.cm-profile-view .cm-profile-grid,
+.section-profile-page .cm-profile-grid,
+.semester-management .cm-profile-grid,
+.department-profile-view .cm-profile-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  padding: 14px !important;
+  background: var(--view-surface-muted);
+}
+
+.cm-profile-view .cm-profile-grid > .cm-info-card,
+.section-profile-page .cm-profile-grid > .cm-info-card,
+.semester-management .cm-profile-grid > .cm-info-card,
+.department-profile-view .cm-profile-grid > .cm-info-card {
+  min-height: 0;
+  height: auto;
+  padding: 14px !important;
+  border: 1px solid var(--view-border) !important;
+  border-radius: 10px;
+  background: var(--view-surface);
+  box-shadow: var(--shadow-sm);
+}
+
+.cm-profile-view .cm-profile-grid > .cm-info-card + .cm-info-card,
+.section-profile-page .cm-profile-grid > .cm-info-card + .cm-info-card,
+.semester-management .cm-profile-grid > .cm-info-card + .cm-info-card,
+.department-profile-view .cm-profile-grid > .cm-info-card + .cm-info-card {
+  margin-top: 0;
+  padding-top: 14px !important;
+  border-top: 1px solid var(--view-border) !important;
+}
+
+.cm-profile-view .cm-profile-grid > .cm-info-card:last-child,
+.section-profile-page .cm-profile-grid > .cm-info-card:last-child,
+.semester-management .cm-profile-grid > .cm-info-card:last-child,
+.department-profile-view .cm-profile-grid > .cm-info-card:last-child { grid-column: 1 / -1; }
+
+.cm-profile-view .cm-profile-grid > .cm-info-card .cm-info-rows,
+.section-profile-page .cm-profile-grid > .cm-info-card .cm-info-rows,
+.semester-management .cm-profile-grid > .cm-info-card .cm-info-rows,
+.department-profile-view .cm-profile-grid > .cm-info-card .cm-info-rows {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px 18px;
+}
+
+.profile-page .profile-details-card {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+  padding: 18px !important;
+  background: var(--view-surface-muted);
+}
+
+.profile-page .profile-details-card > .profile-preview-group {
+  min-width: 0;
+  height: 100%;
+  align-self: stretch;
+  padding: 14px;
+  border: 1px solid var(--view-border);
+  border-radius: 10px;
+  background: var(--view-surface);
+  box-shadow: var(--shadow-sm);
+}
+
+.profile-page .profile-details-card > .profile-preview-group + .profile-preview-group {
+  margin-top: 0;
+  padding-top: 14px;
+  border-top: 1px solid var(--view-border);
+}
+
+.profile-page .profile-details-card > .profile-preview-group:has(.profile-address-card) { grid-column: 1 / -1; }
+
+@media (max-width: 760px) {
+  .cm-profile-view .cm-profile-grid, .section-profile-page .cm-profile-grid,
+  .semester-management .cm-profile-grid, .department-profile-view .cm-profile-grid,
+  .profile-page .profile-details-card { grid-template-columns: 1fr; gap: 12px; padding: 14px !important; }
+  .cm-profile-view .cm-profile-grid > .cm-info-card:last-child,
+  .section-profile-page .cm-profile-grid > .cm-info-card:last-child,
+  .semester-management .cm-profile-grid > .cm-info-card:last-child,
+  .department-profile-view .cm-profile-grid > .cm-info-card:last-child,
+  .profile-page .profile-details-card > .profile-preview-group:has(.profile-address-card) { grid-column: auto; }
+  .cm-profile-view .cm-profile-grid > .cm-info-card .cm-info-rows,
+  .section-profile-page .cm-profile-grid > .cm-info-card .cm-info-rows,
+  .semester-management .cm-profile-grid > .cm-info-card .cm-info-rows,
+  .department-profile-view .cm-profile-grid > .cm-info-card .cm-info-rows { grid-template-columns: 1fr; }
+  .profile-page .profile-details-card > .profile-preview-group { height: auto; }
+}
+
+/* Final request: every View section uses two side-by-side cards on desktop. */
+.cm-profile-view .cm-profile-grid > .cm-info-card:last-child,
+.section-profile-page .cm-profile-grid > .cm-info-card:last-child,
+.semester-management .cm-profile-grid > .cm-info-card:last-child,
+.department-profile-view .cm-profile-grid > .cm-info-card:last-child,
+.profile-page .profile-details-card > .profile-preview-group:has(.profile-address-card) {
+  grid-column: auto;
+}
+
+.profile-page .profile-details-card > .profile-preview-group:has(.profile-address-card) .profile-detail-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+@media (max-width: 760px) {
+  .cm-profile-view .cm-profile-grid > .cm-info-card:last-child,
+  .section-profile-page .cm-profile-grid > .cm-info-card:last-child,
+  .semester-management .cm-profile-grid > .cm-info-card:last-child,
+  .department-profile-view .cm-profile-grid > .cm-info-card:last-child,
+  .profile-page .profile-details-card > .profile-preview-group:has(.profile-address-card) { grid-column: auto; }
+
+  .profile-page .profile-details-card > .profile-preview-group:has(.profile-address-card) .profile-detail-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* College module legacy CSS has its own single-column profile-grid rule. */
+.college-management .cm-profile-view .cm-profile-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.college-management .cm-profile-view .cm-profile-grid > .cm-info-card:last-child {
+  grid-column: auto;
+}
+
+.college-management .cm-profile-view .cm-profile-grid {
+  align-items: stretch;
+}
+
+.college-management .cm-profile-view .cm-profile-grid > .cm-info-card,
+.college-management .cm-profile-view .cm-profile-grid > .cm-info-card + .cm-info-card {
+  height: 100%;
+  margin-top: 0;
+  padding: 14px !important;
+  border: 1px solid var(--view-border) !important;
+  border-radius: 10px;
+  background: var(--view-surface);
+  box-shadow: var(--shadow-sm);
+}
+
+@media (max-width: 760px) {
+  .college-management .cm-profile-view .cm-profile-grid { grid-template-columns: 1fr; }
+  .college-management .cm-profile-view .cm-profile-grid > .cm-info-card,
+  .college-management .cm-profile-view .cm-profile-grid > .cm-info-card + .cm-info-card { height: auto; }
+}
+
+/* Address & Bio owns the full row; only its two address groups share columns. */
+.profile-page .profile-details-card > .profile-preview-group:has(.profile-address-card) {
+  grid-column: 1 / -1 !important;
+}
+
+.profile-page .profile-details-card > .profile-preview-group:has(.profile-address-card) .profile-detail-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+@media (max-width: 760px) {
+  .profile-page .profile-details-card > .profile-preview-group:has(.profile-address-card) {
+    grid-column: auto !important;
+  }
+
+  .profile-page .profile-details-card > .profile-preview-group:has(.profile-address-card) .profile-detail-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Cascade guard for legacy module View selectors. */
+.page-content .cm-profile-view .cm-profile-grid,
+.page-content .section-management .cm-profile-view .cm-profile-grid,
+.page-content .semester-management .cm-profile-view .cm-profile-grid,
+.page-content .department-profile-view .cm-profile-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.page-content .cm-profile-view .cm-profile-grid > .cm-info-card:last-child,
+.page-content .section-management .cm-profile-view .cm-profile-grid > .cm-info-card:last-child,
+.page-content .semester-management .cm-profile-view .cm-profile-grid > .cm-info-card:last-child,
+.page-content .department-profile-view .cm-profile-grid > .cm-info-card:last-child { grid-column: auto; }
+
+@media (max-width: 760px) {
+  .page-content .cm-profile-view .cm-profile-grid,
+  .page-content .section-management .cm-profile-view .cm-profile-grid,
+  .page-content .semester-management .cm-profile-view .cm-profile-grid,
+  .page-content .department-profile-view .cm-profile-grid { grid-template-columns: 1fr; }
+}
+
+/* Entity View hero matches the My Profile header language. */
+.cm-profile-view .cm-profile-banner,
+.section-profile-page .cm-profile-banner,
+.semester-management .cm-profile-banner,
+.student-admission .sa-profile-header,
+.student-profile .sp-hero,
+.course-management .course-detail-hero,
+.branch-management .branch-detail-hero {
+  position: relative;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  min-height: 110px !important;
+  max-height: 130px;
+  align-items: center;
+  gap: 16px;
+  padding: 18px 22px !important;
+  border: 0;
+  border-radius: 12px;
+  color: #fff;
+  background: linear-gradient(115deg, #073763, #0d6099);
+  box-shadow: var(--shadow-sm);
+}
+
+.cm-profile-view .cm-profile-avatar-wrap,
+.section-profile-page .cm-profile-avatar-wrap,
+.semester-management .cm-profile-avatar-wrap,
+.student-admission .sa-profile-avatar,
+.student-profile .sp-avatar {
+  width: 66px;
+  height: 66px;
+  min-width: 66px;
+  flex: 0 0 66px;
+  border-radius: 14px;
+}
+
+.cm-profile-view .cm-profile-placeholder,
+.section-profile-page .cm-profile-placeholder,
+.semester-management .cm-profile-placeholder {
+  width: 66px !important;
+  height: 66px !important;
+  border-radius: 14px !important;
+  font-size: 1.25rem !important;
+}
+
+.cm-profile-view .cm-profile-header-info,
+.section-profile-page .cm-profile-header-info,
+.semester-management .cm-profile-header-info,
+.student-admission .sa-profile-header > div:nth-child(2),
+.student-profile .sp-identity { min-width: 0; gap: 3px; }
+
+.cm-profile-view .cm-profile-title,
+.section-profile-page .cm-profile-title,
+.semester-management .cm-profile-title,
+.student-admission .sa-profile-header h1,
+.student-profile .sp-identity h2 { margin: 0; color: #fff; font-size: 24px; line-height: 1.15; }
+
+.cm-profile-view .cm-profile-subtitle,
+.section-profile-page .cm-profile-subtitle,
+.semester-management .cm-profile-subtitle,
+.student-admission .sa-profile-header p,
+.student-profile .sp-identity p { margin: 4px 0 0; color: #d2e2ee; font-size: 13px; line-height: 1.4; }
+
+.cm-profile-view .cm-profile-badges,
+.section-profile-page .cm-profile-badges,
+.semester-management .cm-profile-badges { display: flex; gap: 6px; margin-bottom: 3px; }
+
+.cm-profile-view .cm-profile-badges .cm-status-badge,
+.section-profile-page .cm-profile-badges .cm-status-badge,
+.semester-management .cm-profile-badges .cm-status-badge {
+  position: absolute;
+  top: 18px;
+  right: 22px;
+  min-height: 24px;
+  padding: 4px 9px;
+  border-radius: 999px;
+  color: #087443;
+  background: #dff7ec;
+  font-size: 11px;
+  font-weight: 800;
+}
+
+@media (max-width: 760px) {
+  .cm-profile-view .cm-profile-banner,
+  .section-profile-page .cm-profile-banner,
+  .semester-management .cm-profile-banner,
+  .student-admission .sa-profile-header,
+  .student-profile .sp-hero { display: flex; min-height: 0 !important; max-height: none; flex-wrap: wrap; align-items: flex-start; padding: 16px !important; }
+
+  .cm-profile-view .cm-profile-badges .cm-status-badge,
+  .section-profile-page .cm-profile-badges .cm-status-badge,
+  .semester-management .cm-profile-badges .cm-status-badge { position: static; }
 }

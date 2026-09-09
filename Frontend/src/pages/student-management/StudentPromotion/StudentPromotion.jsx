@@ -356,11 +356,6 @@ export default function StudentPromotion() {
         <PageHeader
           title="Student Promotion & Degree Completion"
           subtitle="Academic advancement, term eligibility criteria, Semester 8 graduation, and promotion history."
-          breadcrumb={[
-            { label: 'Academic ERP', link: '/dashboard' },
-            { label: 'Student Management' },
-            { label: 'Promotions' },
-          ]}
           compactSummary={[
             { label: 'Scope', value: students.length },
             { label: 'Eligible', value: students.filter((x) => statusOf(x) === 'eligible').length, tone: 'active' },

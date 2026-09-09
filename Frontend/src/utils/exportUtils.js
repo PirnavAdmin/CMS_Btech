@@ -60,6 +60,8 @@ function printDocument(title, html) {
     body{font:12px/1.5 Arial,sans-serif;color:#172b3a;margin:24px}h1{font-size:22px}h2{font-size:17px}h3{font-size:14px}table{width:100%;border-collapse:collapse;margin:16px 0}th,td{border:1px solid #bbc6ce;padding:7px;text-align:left;overflow-wrap:anywhere}th{background:#eef2f5}thead{display:table-header-group}tr{break-inside:avoid}section,article{margin:16px 0}dl>div,[class*="info-row"],[class*="detail-row"],[class*="cm-detail"]{padding:8px 0;border-bottom:1px solid #dbe3e8}dt{font-weight:bold}dd{margin:4px 0}small{display:block}svg,img,button,input,select,textarea,nav,footer,[data-no-print]{display:none!important}dialog{position:static;display:block;border:0;width:auto;max-height:none}a{color:inherit;text-decoration:none} @media print{@page{size:auto;margin:12mm}body{margin:0}h1,h2,h3{break-after:avoid}}
   </style></head><body>${html}</body></html>`)
   target.document.close()
+  const closeAfterPrint = () => window.setTimeout(() => { if (!target.closed) target.close() }, 0)
+  target.addEventListener('afterprint', closeAfterPrint, { once: true })
   const ready = () => { target.focus(); target.print() }
   if (target.document.readyState === 'complete') ready()
   else target.addEventListener('load', ready, { once: true })
@@ -71,6 +73,17 @@ export function printEntityDetails({ title, element }) {
   if (!element) throw new Error('Details are not available to print.')
   const clone = element.cloneNode(true)
   clone.querySelectorAll('script,style,link,iframe,object,embed,button,input,select,textarea,nav,footer,[data-no-print],.export-control,.print-control').forEach(node => node.remove())
+  const emptyValues = new Set(['', '—', '-', 'n/a', 'not provided', 'not available', 'null', 'undefined'])
+  clone.querySelectorAll('.erp-view-field,.cm-info-row,.profile-detail,.detail-grid > div,dl > div').forEach(field => {
+    const valueNode = field.querySelector('.erp-view-value,.cm-info-val,.profile-detail strong,dd') || field.lastElementChild
+    const value = valueNode?.textContent?.replace(/\s+/g, ' ').trim().toLowerCase() || ''
+    if (emptyValues.has(value)) field.remove()
+  })
+  clone.querySelectorAll('.erp-view-section,.cm-info-card,.profile-preview-group,.sa-detail-panel').forEach(section => {
+    const hasValue = [...section.querySelectorAll('.erp-view-value,.cm-info-val,.profile-detail strong,dd')]
+      .some(node => !emptyValues.has(node.textContent.replace(/\s+/g, ' ').trim().toLowerCase()))
+    if (!hasValue) section.remove()
+  })
   // Use only the rendered detail content. Strip event handlers and external resource URLs.
   for (const node of [clone, ...clone.querySelectorAll('*')]) {
     for (const attr of [...node.attributes]) if (!['class', 'colspan', 'rowspan', 'open'].includes(attr.name)) node.removeAttribute(attr.name)

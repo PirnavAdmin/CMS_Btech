@@ -11,9 +11,10 @@ import StatusConfirmDialog from '../../components/StatusConfirmDialog'
 import StatusBadge from '../../components/StatusBadge'
 import CompactSummary from '../../components/CompactSummary'
 import InfoCard from '../../components/InfoCard'
-import { branchApi, courseApi, courseStructureApi, departmentApi, studentAdmissionApi } from '../../api/apiEndpoints'
+import { branchApi, courseApi, courseStructureApi, departmentApi, studentApi } from '../../api/apiEndpoints'
 import { getCourseById, createCourse, updateCourse, updateCourseStatus, getSemesters, getCourseSemesterMappings, createCourseSemesterMapping, updateCourseSemesterMapping, updateCourseSemesterMappingStatus } from '../../auth/collegeApi'
 import { normalize } from './Branch'
+import { showDeactivationBlocked } from '../../components/DeactivationBlockedDialog'
 import './Course.css'
 
 const blank = { name: 'B.Tech', code: 'BTECH', shortName: '', type: 'Undergraduate', durationValue: '', semesters: '', description: '', departmentId: '', departmentCode: '', branchId: '', branchCode: '', collegeId: '', status: '' }
@@ -165,22 +166,31 @@ function CourseList() {
   const clearFilters = () => { setQuery(''); setStatusFilter(''); setCurrentPage(1) }
   const studentCourseId = student => student.courseId ?? student.course?.id ?? student.academic?.courseId ?? student.academicInformation?.courseId ?? null
   const checkCourseImpact = async course => {
-    const students = await studentAdmissionApi.getAll({ courseId: course.id })
-    const canMatch = students.every(student => studentCourseId(student) !== null && studentCourseId(student) !== undefined && studentCourseId(student) !== '')
-    return canMatch ? { state: 'known', count: students.filter(student => String(studentCourseId(student)) === String(course.id)).length } : { state: 'unknown' }
+    const students = await studentApi.getAll({ CourseId: Number(course.id) })
+    return { state: 'known', count: students.length }
   }
   const toggleStatus = async course => {
     setStatusError(''); setStatusNotice('')
     if (course.status !== 'Active') { setPendingStatus({ course, nextStatus: 'Active' }); return }
     setImpactChecking(true); setCourseImpact(null); setStatusNotice('Checking course dependencies...')
-    try { setCourseImpact(await checkCourseImpact(course)) } catch { setCourseImpact({ state: 'unknown' }) }
-    finally { setImpactChecking(false); setStatusNotice(''); setPendingStatus({ course, nextStatus: 'Inactive' }) }
+    try {
+      const impact = await checkCourseImpact(course)
+      setCourseImpact(impact)
+      setPendingStatus({ course, nextStatus: 'Inactive' })
+    } catch (error) {
+      showDeactivationBlocked(apiError(error, 'Unable to verify associated students. The course was not deactivated.'))
+    } finally { setImpactChecking(false); setStatusNotice('') }
   }
 
   const confirmStatusChange = async () => {
     if (!pendingStatus || statusLock.current) return
     statusLock.current = true
     const { course, nextStatus } = pendingStatus
+    if (nextStatus === 'Inactive' && courseImpact?.state === 'known' && courseImpact.count > 0) {
+      setPendingStatus(null)
+      showDeactivationBlocked(`Cannot deactivate ${course.name}. ${courseImpact.count} student${courseImpact.count === 1 ? '' : 's'} are associated with this course.`)
+      return
+    }
     setIsStatusSaving(true); setStatusError('')
     try {
       const response = await updateCourseStatus(course.id, nextStatus === 'Active' ? 1 : 0)

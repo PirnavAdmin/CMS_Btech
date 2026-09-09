@@ -62,3 +62,80 @@ main.student-profile .sp-directory-table thead th:last-child::after{content:none
 .student-profile .sp-edit-tabs-scroll-bottom{display:block;overflow-x:auto;overflow-y:hidden;height:14px;margin:0 24px 4px;border-top:1px solid var(--border);scrollbar-width:thin;scrollbar-color:var(--brand) var(--surface-soft)}
 .student-profile .sp-edit-tabs-scroll-bottom>div{height:1px;min-width:100%}
 .student-profile .sp-edit-inline .sp-edit-progress{position:relative!important;top:auto!important;margin-bottom:0!important}
+ /* Keep all profile navigation visible when the workspace narrows. */
+.student-profile .cm-profile-view > .cm-profile-top-bar {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+}
+.student-profile .cm-profile-card > .sp-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  min-width: 0;
+  height: auto;
+  margin: 0;
+  padding: 12px 16px;
+  box-sizing: border-box;
+  overflow: visible;
+  border: 0;
+  border-bottom: 1px solid var(--border);
+  border-radius: 0;
+}
+.student-profile .cm-profile-card > .sp-tabs button {
+  flex: 0 1 auto;
+  min-width: 0;
+  min-height: 42px;
+  height: auto;
+  padding: 10px 12px;
+  white-space: normal;
+  text-align: left;
+  cursor: pointer;
+}
+.student-profile .cm-profile-card > .sp-tabs button svg {
+  flex-shrink: 0;
+  width: 16px;
+  height: 16px;
+}
+.student-profile .cm-profile-card > .sp-tabs button.active {
+  color: var(--brand);
+  background: var(--surface);
+  box-shadow: inset 0 -3px var(--brand), var(--shadow-sm);
+}
+.student-profile .cm-profile-card > .sp-tabs button:focus-visible {
+  outline: 2px solid var(--brand);
+  outline-offset: 2px;
+}
+.student-profile .cm-profile-card > .sp-tabs button:hover {
+  color: var(--brand);
+  background: var(--surface);
+}
+@media (max-width: 480px) {
+  .student-profile .cm-profile-card > .sp-tabs button { flex: 1 1 140px; }
+  .student-profile .cm-profile-view > .cm-profile-top-bar button { flex: 1 1 auto; }
+}
+
+.student-profile .sp-breadcrumb {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 16px;
+  color: var(--text-muted);
+  font-size: 13px;
+  line-height: 1.5;
+}
+.student-profile .sp-breadcrumb a {
+  color: var(--brand);
+  font-weight: 650;
+  text-decoration: none;
+}
+.student-profile .sp-breadcrumb a:hover { text-decoration: underline; }
+.student-profile .sp-breadcrumb a:focus-visible {
+  outline: 2px solid var(--brand);
+  outline-offset: 3px;
+}

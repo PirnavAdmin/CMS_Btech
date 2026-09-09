@@ -8,6 +8,7 @@ import FilterPanel from '../../components/FilterPanel'
 import SearchableSelect from '../../components/SearchableSelect'
 import CompactSummary from '../../components/CompactSummary'
 import StatusBadge from '../../components/StatusBadge'
+import { showDeactivationBlocked } from '../../components/DeactivationBlockedDialog'
 import { academicYearApi, branchApi, courseApi, sectionAllocationApi, sectionApi, sectionAssignmentApi, studentApi } from '../../api/apiEndpoints'
 import { getSemesters, searchSemesters } from '../../auth/collegeApi'
 import { getActiveAcademicYears, normalizeAcademicYear } from '../../utils/academicYearUtils'
@@ -115,7 +116,12 @@ function SectionList() {
   const toggle = async (section) => {
     try {
       const rows = await sectionAssignmentApi.listBySection(section.id)
-      setConfirmAction({ row: section, nextStatus: section.status === 'Active' ? 'Inactive' : 'Active', assigned: rows.length })
+      const nextStatus = section.status === 'Active' ? 'Inactive' : 'Active'
+      if (nextStatus === 'Inactive' && rows.length > 0) {
+        showDeactivationBlocked(`Cannot deactivate ${section.name}. ${rows.length} student${rows.length === 1 ? '' : 's'} are assigned to this section.`)
+        return
+      }
+      setConfirmAction({ row: section, nextStatus, assigned: rows.length })
     } catch (error) { setToast(apiError(error, 'Unable to verify the assigned student count.')) }
   }
   const confirm = async () => { const { row, nextStatus } = confirmAction; try { await sectionApi.updateStatus(row.id, nextStatus); eventBus.emit(ERP_EVENTS.ACADEMIC_UPDATED, { sectionId: row.id, status: nextStatus }); setSections(sections.map((item) => item.id === row.id ? { ...item, status: nextStatus } : item)); setSummaryData(null); setToast(`Section ${nextStatus === 'Active' ? 'activated' : 'deactivated'}.`); setConfirmAction(null) } catch (requestError) { setToast(apiError(requestError, 'Unable to update section status.')) } }
