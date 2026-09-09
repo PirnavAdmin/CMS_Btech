@@ -298,6 +298,18 @@
   color: #991b1b !important;
 }
 
+/* Apply the same action palette even in legacy tables that omit action classes. */
+.page-content table :is(a, button)[title^="View"],
+.page-content table :is(a, button)[aria-label^="View"] { color:#1970b3!important;background:#e8f3fc!important;border-color:#c5dfef!important; }
+.page-content table :is(a, button)[title^="Edit"],
+.page-content table :is(a, button)[aria-label^="Edit"] { color:#7c3aed!important;background:#f3e8ff!important;border-color:#dfccff!important; }
+.page-content table :is(a, button)[title^="Deactivate"],
+.page-content table :is(a, button)[aria-label^="Deactivate"],
+.page-content table :is(a, button)[title^="Delete"],
+.page-content table :is(a, button)[aria-label^="Delete"] { color:#b42318!important;background:#fee4e2!important;border-color:#fecdca!important; }
+.page-content table :is(a, button)[title^="Activate"],
+.page-content table :is(a, button)[aria-label^="Activate"] { color:#15803d!important;background:#e9f8ef!important;border-color:#bbf7d0!important; }
+
 /* ==========================================================================
    DARK THEME PALETTE FOR ACTION BUTTONS
    ========================================================================== */
@@ -801,4 +813,3 @@ table.erp-table {
 :root[data-theme="dark"] .p-history-table tbody tr:hover > td {
   background: #162a3f !important;
 }
-

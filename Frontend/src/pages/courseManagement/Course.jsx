@@ -109,6 +109,7 @@ const validateBasic = (v, courses = [], editingId = null) => {
   else if (code.length < 2 || code.length > 20) e.code = 'Course code must be 2?20 characters.'
   else if (!/^[A-Z][A-Z0-9]*(?:-[A-Z0-9]+)*$/.test(code)) e.code = 'Start with a letter. Use letters, numbers and single hyphens only.'
   else if (courses.some(course => String(course.id) !== String(editingId) && String(course.code || '').trim().toUpperCase() === code)) e.code = 'This course code already exists. Enter a unique code.'
+  else if (courses.some(course => String(course.id) !== String(editingId) && String(course.name || '').trim().toLowerCase() === name.toLowerCase())) e.name = 'This course name already exists. Enter a unique name.'
   if (!v.durationValue) e.durationValue = 'Duration is required.'
   if (String(v.durationValue) && Number(v.durationValue) !== 3 && Number(v.durationValue) !== 4) e.durationValue = 'Select a supported duration.'
   if (!v.status) e.status = 'Status is required.'

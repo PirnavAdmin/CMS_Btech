@@ -168,26 +168,7 @@ export default function Results() {
         section: selectedSection?.name,
       })
 
-      if (!list.length) {
-        // Class roster fallback if students are not yet assigned to section
-        const branchCode = selectedBranch?.code || 'CS'
-        const semNum = selectedSemester?.semesterNumber || 1
-        const fallbackList = Array.from({ length: 10 }, (_, i) => ({
-          studentId: `STU-${branchCode}-${semNum}-${101 + i}`,
-          id: `STU-${branchCode}-${semNum}-${101 + i}`,
-          name: `Student ${101 + i} (${branchCode})`,
-          rollNumber: `26${branchCode}${String(101 + i).slice(-3)}`,
-          internalMarks: 24,
-          externalMarks: 58,
-          totalMarks: 82,
-          grade: 'A+',
-          gradePoint: 9,
-          status: 'Passed',
-        }))
-        setEntryStudents(fallbackList)
-      } else {
-        setEntryStudents(list)
-      }
+      setEntryStudents(list)
     } catch (err) {
       notify('Failed to load students for marks entry.')
     } finally {

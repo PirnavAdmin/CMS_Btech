@@ -459,6 +459,23 @@ const validate = data => {
   return errors
 }
 
+const duplicateAdmissionMessage = (rows, candidate, currentAdmissionId = '') => {
+  const normalize = value => String(value || '').trim().toLowerCase()
+  const digits = value => String(value || '').replace(/\D/g, '')
+  const candidateId = String(currentAdmissionId || candidate.id || candidate.admissionId || '')
+  const match = rows.map(admissionFromApi).find((row) => {
+    const rowId = String(row.id || row.admissionId || '')
+    if (candidateId && rowId === candidateId) return false
+    return (digits(candidate.personal?.aadhaar).length === 12 && digits(row.personal?.aadhaar) === digits(candidate.personal?.aadhaar))
+      || (normalize(candidate.contact?.email) && normalize(row.contact?.email) === normalize(candidate.contact?.email))
+      || (digits(candidate.contact?.mobile).length === 10 && digits(row.contact?.mobile) === digits(candidate.contact?.mobile))
+  })
+  if (!match) return ''
+  if (digits(candidate.personal?.aadhaar).length === 12 && digits(match.personal?.aadhaar) === digits(candidate.personal?.aadhaar)) return 'An admission with this Aadhaar number already exists.'
+  if (normalize(candidate.contact?.email) && normalize(match.contact?.email) === normalize(candidate.contact?.email)) return 'An admission with this student email already exists.'
+  return 'An admission with this student mobile number already exists.'
+}
+
 function Badge({ value }) { const norm = normalizeStatus(value); return <span className={`sa-badge status-${norm.toLowerCase().replaceAll('_', '-')}`}><i />{STATUS[norm] || STATUS[value] || value}</span> }
 function Button({ primary = false, danger = false, children, ...props }) { return <button className={danger ? 'sa-danger' : primary ? 'sa-primary' : 'sa-secondary'} {...props}>{children}</button> }
 function Toast({ message, tone = 'success', onClose }) { if (!message) return null; return <div className={`sa-toast tone-${tone}`} role={tone === 'error' ? 'alert' : 'status'}><FiCheckCircle /><span>{message}</span><button onClick={onClose} aria-label="Dismiss notification"><FiX /></button></div> }
@@ -603,7 +620,7 @@ function AdmissionList() {
                       <td className="table-center" style={{ width: '120px' }}><StatusBadge value={feeStat} /></td>
                       <td className="table-center" style={{ width: '140px' }}><StatusBadge value={STATUS[normStat] || normStat} /></td>
                       <td className="table-center" style={{ width: '140px' }}><span className="sa-updated">{dateTime(item.updatedAt || item.createdAt)}</span></td>
-                      <td className="table-center" style={{ width: '140px' }}>
+                      <td className="table-center" style={{ width: '160px', minWidth: '160px' }}>
                         <div className="sa-icon-actions table-actions-group">
                           <button
                             className="table-action-btn action-view"
@@ -1017,6 +1034,8 @@ function AdmissionForm() {
     try {
       let result, ids = recordIds
       if (!ids.admissionId) {
+        const duplicate = duplicateAdmissionMessage(await studentAdmissionApi.getAll(), data)
+        if (duplicate) throw new Error(duplicate)
         result = await studentAdmissionApi.create(data)
         ids = idsFromApi(result)
         if (!ids.admissionId) throw new Error('The admission was created but no admission ID was returned.')
@@ -1072,7 +1091,7 @@ function AdmissionForm() {
     if (!declared) { notify('Confirm the declaration before submitting.', 'error'); return }
     setConfirmSubmit(true)
   }
-  const submit = async () => { if (submitting || !recordIds.admissionId) return; setSubmitting(true); try { const submitted=await studentAdmissionApi.submit(recordIds.admissionId),submittedIds=idsFromApi(submitted,recordIds.admissionId),studentId=submittedIds.studentId??recordIds.studentId;const pending=[...DOCUMENTS.map(([key,label])=>({key,label,document:data.documents[key]})),...(data.documents?.otherCertificates||[]).map(document=>({key:'otherCertificate',label:'Other Certificate',document}))].filter(item=>item.document?.file);if(studentId){for(const item of pending)await studentDocumentApi.upload(studentId,item.document.file,{documentType:item.key,documentName:item.label})}const latest = await studentAdmissionStatusApi.get(recordIds.admissionId); setData(current => ({ ...current, status: latest.status ?? 'SUBMITTED' }));setRecordIds(current=>({...current,studentId:studentId??current.studentId})); setConfirmSubmit(false); eventBus.emit(ERP_EVENTS.STUDENT_UPDATED, { admissionId: recordIds.admissionId, status: 'SUBMITTED' }); notify(studentId&&pending.length?'Admission submitted and documents uploaded successfully':'Admission application submitted successfully'); window.setTimeout(() => navigate('/student-management/admissions'), 700) } catch (error) { notify(error.message || 'Unable to submit this admission.', 'error'); setSubmitting(false) } }
+  const submit = async () => { if (submitting || !recordIds.admissionId) return; setSubmitting(true); try { const duplicate = duplicateAdmissionMessage(await studentAdmissionApi.getAll(), data, recordIds.admissionId); if (duplicate) throw new Error(duplicate); const submitted=await studentAdmissionApi.submit(recordIds.admissionId),submittedIds=idsFromApi(submitted,recordIds.admissionId),studentId=submittedIds.studentId??recordIds.studentId;const pending=[...DOCUMENTS.map(([key,label])=>({key,label,document:data.documents[key]})),...(data.documents?.otherCertificates||[]).map(document=>({key:'otherCertificate',label:'Other Certificate',document}))].filter(item=>item.document?.file);if(studentId){for(const item of pending)await studentDocumentApi.upload(studentId,item.document.file,{documentType:item.key,documentName:item.label})}const latest = await studentAdmissionStatusApi.get(recordIds.admissionId); setData(current => ({ ...current, status: latest.status ?? 'SUBMITTED' }));setRecordIds(current=>({...current,studentId:studentId??current.studentId})); setConfirmSubmit(false); eventBus.emit(ERP_EVENTS.STUDENT_UPDATED, { admissionId: recordIds.admissionId, status: 'SUBMITTED' }); notify(studentId&&pending.length?'Admission submitted and documents uploaded successfully':'Admission application submitted successfully'); window.setTimeout(() => navigate('/student-management/admissions'), 700) } catch (error) { notify(error.message || 'Unable to submit this admission.', 'error'); setSubmitting(false) } }
   return <><Breadcrumb tail={id ? 'Edit Admission' : 'New Admission'} /><header className="sa-page-header sa-wizard-header"><div><h1>{id ? 'Edit Student Admission' : 'New Student Admission'}</h1><p>Registration Number <strong>{data.application.number}</strong></p></div><div><Badge value={data.status} /><Button onClick={() => navigate('/student-management/admissions')}>Cancel</Button></div></header><Toast message={toast?.message} tone={toast?.tone} onClose={() => setToast(null)} /><WizardStepper step={step} setStep={setStep} /><form className="sa-wizard-card" onSubmit={event => event.preventDefault()}><header className="sa-step-heading"><div><small>Step {step + 1} of {STEPS.length}</small><h2>{STEPS[step]}</h2></div><span>{Math.round(((step + 1) / STEPS.length) * 100)}% complete</span></header>{screens[step]}{step === STEPS.length - 1 && <label className="sa-declaration"><input type="checkbox" checked={declared} onChange={event => setDeclared(event.target.checked)} /><span><strong>Registration Declaration</strong>I confirm that the information entered above is correct.</span></label>}<footer className="sa-wizard-actions"><Button disabled={!step || submitting} onClick={() => setStep(current => current - 1)}><FiArrowLeft /> Previous</Button><span />{step < STEPS.length - 1 ? <Button primary onClick={nextStep}>Save & Continue <FiArrowRight /></Button> : <Button primary disabled={!declared || submitting} onClick={requestSubmit}>{submitting ? 'Submitting...' : 'Submit Application'}</Button>}</footer></form>{confirmSubmit && <ConfirmDialog icon={FiCheckCircle} title="Confirm Registration Submission" confirmLabel="Confirm & Submit" onCancel={() => setConfirmSubmit(false)} onConfirm={submit}><p>Please verify the student details below. Once submitted, the registration will be sent to the admissions team for review.</p><dl><div><dt>Student</dt><dd>{studentName(data)}</dd></div><div><dt>Registration Number</dt><dd>{data.application.number}</dd></div></dl></ConfirmDialog>}</>
 }
 

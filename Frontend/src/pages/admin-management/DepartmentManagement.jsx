@@ -272,8 +272,19 @@ export default function DepartmentManagement() {
     if (!form.status) return setError('Select a status for this department.');
     if (form.hodUserId !== '' && (!Number.isInteger(Number(form.hodUserId)) || Number(form.hodUserId) < 0))
       return setError('Head / In-Charge user ID must be a valid number.');
-    if (items.some((item) => item.code === form.code.trim().toUpperCase() && item.id !== form.id))
-      return setError('This department code already exists.');
+    const normalizedName = form.name.trim().toLowerCase();
+    const normalizedCode = form.code.trim().toUpperCase();
+    const selectedCollegeId = String(form.collegeNumericId ?? form.collegeId);
+    const duplicate = allDepartments.find((item) =>
+      String(item.id) !== String(form.id) &&
+      String(item.collegeNumericId ?? item.collegeId) === selectedCollegeId &&
+      (String(item.code || '').trim().toUpperCase() === normalizedCode || String(item.name || '').trim().toLowerCase() === normalizedName)
+    );
+    if (duplicate) {
+      return setError(String(duplicate.code || '').trim().toUpperCase() === normalizedCode
+        ? 'This department code already exists for the selected college.'
+        : 'This department name already exists for the selected college.');
+    }
     setIsSaving(true);
     setError('');
     try {
