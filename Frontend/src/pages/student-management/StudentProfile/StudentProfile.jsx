@@ -473,8 +473,6 @@ const completion = (x) => {
       a.course,
       a.branch,
       a.academicYear,
-      a.semester,
-      a.section,
       app.registrationNumber,
       app.admissionNumber,
     ];
@@ -977,10 +975,6 @@ export default function StudentProfile() {
                               {value(shortLabel(a.department))} ·{" "}
                               {value(a.academicYear)}
                             </small>
-                            <small className="table-cell-truncate" style={{ margin: 0, lineHeight: 1.3 }} title={`${value(a.semester)}${a.section ? ` · Section ${a.section}` : ""}`}>
-                              {value(a.semester)}{" "}
-                              {a.section && `· Section ${a.section}`}
-                            </small>
                           </div>
                         </td>
                         <td>
@@ -1125,8 +1119,6 @@ function Profile({ student, tab, setTab, back, edit, canEdit }) {
       ["Department", a.department],
       ["Branch", a.branch],
       ["Academic year", a.academicYear],
-      ["Semester", a.semester],
-      ["Section", a.section],
       ["Status", status(student.status)],
     ],
     personal: [
@@ -1171,8 +1163,6 @@ function Profile({ student, tab, setTab, back, edit, canEdit }) {
       ["Course", a.course],
       ["Department", a.department],
       ["Branch", a.branch],
-      ["Semester", a.semester],
-      ["Section", a.section],
       ["Regulation", a.regulation],
       ["Quota", a.quota === "Other" ? a.quotaOther : a.quota],
       ["Entry type", a.entryType],
@@ -1273,7 +1263,7 @@ function Profile({ student, tab, setTab, back, edit, canEdit }) {
             </div>
             <h1 className="cm-profile-title"><span style={{ color: '#fff' }}>{name(student) || "Unnamed student"}</span></h1>
             <p className="cm-profile-subtitle">
-              <span style={{ color: '#fff' }}>{[value(a.course), value(a.branch), value(a.semester)].filter((x) => x !== 'Not provided').join(' · ')}</span>
+              <span style={{ color: '#fff' }}>{[value(a.course), value(a.branch)].filter((x) => x !== 'Not provided').join(' · ')}</span>
             </p>
           </div>
         </div>
@@ -1502,8 +1492,6 @@ function EditStudent({ student, onCancel, onSave }) {
                 label="Academic year"
                 readOnly
               />
-              <Field path="academic.semester" label="Semester" readOnly />
-              <Field path="academic.section" label="Section" readOnly />
               <Field
                 path="academic.admissionType"
                 label="Admission type"

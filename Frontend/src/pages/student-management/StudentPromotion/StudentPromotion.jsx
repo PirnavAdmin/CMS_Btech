@@ -317,6 +317,7 @@ export default function StudentPromotion() {
       const isDegreeCompletion = currentSemNum >= 8
 
       await promotionService.promoteBulk(confirmRows, {
+        branchId: selectedBranchId,
         currentAcademicYearId: selectedAcademicYearId,
         currentAcademicYear: selectedYear?.name || '2026-2027',
         currentSemesterId: selectedSemesterNumber,
