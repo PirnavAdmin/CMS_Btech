@@ -1,4 +1,5 @@
 const cleanUrl = (url) => (url || "").replace(/\/+$/, "");
+const DEFAULT_API_BASE_URL = "https://abreast-curling-tutor.ngrok-free.dev";
 
 const friendlyValidationMessage = (errors) => {
   if (!errors || typeof errors !== "object") return "";
@@ -39,7 +40,7 @@ const getErrorMessage = (data, status) => {
   }[status] || "We couldn’t complete your request. Please try again.";
 };
 
-const commonBaseUrl = cleanUrl(import.meta.env.VITE_API_BASE_URL);
+const commonBaseUrl = cleanUrl(import.meta.env.DEV ? "" : (import.meta.env.VITE_API_BASE_URL || DEFAULT_API_BASE_URL));
 const collegesBaseUrl = cleanUrl(import.meta.env.VITE_API_BASE_URL_COLLEGES) || commonBaseUrl;
 const academicBaseUrl = cleanUrl(import.meta.env.VITE_API_BASE_URL_ACADEMIC) || commonBaseUrl;
 const settingsBaseUrl = cleanUrl(import.meta.env.VITE_API_BASE_URL_SETTINGS) || commonBaseUrl;

@@ -28,6 +28,7 @@ import {
   uploadCollegeLogo,
   WEBSITE_VALIDATION_MESSAGE,
 } from '../../auth/collegeApi'
+import { studentApi } from '../../api/apiEndpoints'
 import './CollegeInstitutionManagement.css'
 
 const COLLEGE_TYPES = ['Engineering', 'Arts & Science', 'Medical', 'Management', 'Polytechnic', 'Other']
@@ -373,6 +374,7 @@ export default function CollegeInstitutionManagement({ initialView = 'list' }) {
   const [statusError, setStatusError] = useState('')
   const [statusNotice, setStatusNotice] = useState('')
   const [pendingStatus, setPendingStatus] = useState(null)
+  const [collegeImpact, setCollegeImpact] = useState(null)
   const [isStatusSaving, setIsStatusSaving] = useState(false)
   const [collegeSummary, setCollegeSummary] = useState({ total: null, active: null, inactive: null, loading: true, error: '' })
 
@@ -550,11 +552,24 @@ export default function CollegeInstitutionManagement({ initialView = 'list' }) {
     }
   }
 
+  const loadCollegeImpact = async (collegeId) => {
+    setCollegeImpact({ state: 'loading' })
+    try {
+      const students = await studentApi.getAll({ CollegeId: Number(collegeId) })
+      setCollegeImpact({ state: 'known', count: students.length })
+    } catch {
+      setCollegeImpact({ state: 'unavailable' })
+    }
+  }
+
   const toggleStatus = (college) => {
     if (statusLock.current) return
     setStatusError('')
     setStatusNotice('')
-    setPendingStatus({ college, nextStatus: college.status === 'active' ? 'inactive' : 'active' })
+    const nextStatus = college.status === 'active' ? 'inactive' : 'active'
+    setPendingStatus({ college, nextStatus })
+    setCollegeImpact(null)
+    if (nextStatus === 'inactive') loadCollegeImpact(college.id)
   }
   const confirmStatusChange = async () => {
     if (!pendingStatus || statusLock.current) return
@@ -566,6 +581,7 @@ export default function CollegeInstitutionManagement({ initialView = 'list' }) {
       const response = await updateCollegeStatus(college.id, nextStatus === 'active' ? 1 : 0)
       if (response.data?.success === false) throw new Error('College status could not be updated. Please try again.')
       setPendingStatus(null)
+      setCollegeImpact(null)
       setStatusNotice(nextStatus === 'active' ? 'College activated successfully.' : 'College deactivated successfully.')
       await Promise.all([loadColleges(searchTerm), refreshCollegeSummary()])
     } catch (error) {
@@ -1296,12 +1312,12 @@ export default function CollegeInstitutionManagement({ initialView = 'list' }) {
         )}
       </div>
       {statusNotice && <div className="cm-college-status-notice" role="status">{statusNotice}<button type="button" aria-label="Dismiss status message" onClick={() => setStatusNotice('')}><FiX /></button></div>}
-      {pendingStatus && <StatusConfirmDialog entity="College" name={`${pendingStatus.college.name} (${pendingStatus.college.code})`} nextStatus={pendingStatus.nextStatus} onCancel={() => setPendingStatus(null)} onConfirm={confirmStatusChange} busy={isStatusSaving} error={statusError}
+      {pendingStatus && <StatusConfirmDialog entity="College" name={`${pendingStatus.college.name} (${pendingStatus.college.code})`} nextStatus={pendingStatus.nextStatus} onCancel={() => { setPendingStatus(null); setCollegeImpact(null) }} onConfirm={confirmStatusChange} busy={isStatusSaving} error={statusError}
         confirmLabel={pendingStatus.nextStatus === 'active' ? 'Activate College' : 'Deactivate College'}
         details={[
           ['College', pendingStatus.college.name],
           ['Current Status', pendingStatus.college.status === 'active' ? 'Active' : 'Inactive'],
-          ...(pendingStatus.nextStatus === 'inactive' ? [['Associated Students', 'Count unavailable from the current college API'], ['Impact', 'Existing students and records associated with this college may remain available after deactivation.']] : []),
+          ...(pendingStatus.nextStatus === 'inactive' ? [['Associated Students', collegeImpact?.state === 'loading' ? 'Checking…' : collegeImpact?.state === 'known' ? `${collegeImpact.count} student${collegeImpact.count === 1 ? '' : 's'}` : 'Could not load the student count'], ['Impact', 'Existing students and records associated with this college may remain available after deactivation.']] : []),
         ]}
         description={pendingStatus.nextStatus === 'active'
           ? 'This college will become active again for operations permitted for active colleges.'

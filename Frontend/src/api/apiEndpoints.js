@@ -10,12 +10,13 @@ if (typeof window !== 'undefined' && window.localStorage) {
 }
 
 const normalizeBaseUrl = (value = '') => value.trim().replace(/\/+$/, '')
+const DEFAULT_API_BASE_URL = 'https://abreast-curling-tutor.ngrok-free.dev'
 
 export const API_BASE_URL = import.meta.env.DEV
   ? ''
-  : normalizeBaseUrl(import.meta.env.VITE_API_BASE_URL)
+  : normalizeBaseUrl(import.meta.env.VITE_API_BASE_URL || DEFAULT_API_BASE_URL)
 
-const AUTH_LOGIN_URL = normalizeBaseUrl(import.meta.env.VITE_AUTH_API_URL)
+const AUTH_LOGIN_URL = normalizeBaseUrl(import.meta.env.VITE_AUTH_API_URL || `${DEFAULT_API_BASE_URL}/api/v1/auth/login`)
 // Development uses Vite's configured /api proxy, so an explicit absolute
 // login URL is only mandatory for a production build.
 const hasConfiguredAuthLoginUrl = import.meta.env.DEV || Boolean(AUTH_LOGIN_URL || API_BASE_URL)
