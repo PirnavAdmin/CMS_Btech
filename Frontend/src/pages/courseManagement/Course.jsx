@@ -20,7 +20,7 @@ import { normalize } from './Branch'
 import { showDeactivationBlocked } from '../../components/DeactivationBlockedDialog'
 import './Course.css'
 
-const blank = { name: '', code: '', shortName: '', type: '', durationValue: '', semesters: '', description: '', departmentId: '', departmentCode: '', branchId: '', branchCode: '', collegeId: '', status: '' }
+const blank = { name: '', code: '', shortName: '', type: '', durationValue: '', semesters: '', description: '', departmentId: '', departmentCode: '', branchId: '', branchCode: '', collegeId: '', status: '', startDate: '', endDate: '' }
 
 const apiError = (error, fallback) => error?.response?.status === 401 ? 'Your session has expired. Please sign in again.' : error?.response?.status === 403 ? "You don't have permission to manage courses." : error?.response?.data?.message || error?.response?.data?.error || error?.message || fallback
 const listFrom = (response) => { const data = response?.data ?? response; return Array.isArray(data) ? data : Array.isArray(data?.items) ? data.items : Array.isArray(data?.data) ? data.data : data && typeof data === 'object' ? [data] : [] }
@@ -396,6 +396,8 @@ function CourseForm() {
           <Field label="Duration *" error={errors.durationValue}><select value={value.durationValue} onChange={e => update('durationValue', e.target.value ? Number(e.target.value) : '')}><option value="">Select Duration</option><option value="3">3 Years</option><option value="4">4 Years</option></select></Field>
           <Field label="Academic Pattern"><input value="Semester" readOnly /></Field>
           <Field label="Total Semesters"><input value={value.semesters || ''} placeholder="Calculated from duration" readOnly /></Field>
+          <Field label="Start Date"><input type="date" value={value.startDate || ''} onChange={e => update('startDate', e.target.value)} /></Field>
+          <Field label="End Date"><input type="date" value={value.endDate || ''} onChange={e => update('endDate', e.target.value)} /></Field>
           <Field label="Status *" error={errors.status}><select required value={value.status} onChange={e => update('status', e.target.value)}><option value="" disabled>Select Status</option><option value="Active">Active</option><option value="Inactive">Inactive</option></select></Field>
         </div></section>
         <footer><button type="button" className="cm-button" disabled={isSaving || saved} onClick={submit}>{isSaving ? 'Saving...' : id ? 'Save Changes' : 'Create Course'}</button></footer>

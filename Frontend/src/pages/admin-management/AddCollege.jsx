@@ -43,7 +43,7 @@ const initialValues = {
   contactNumber: '', alternateContactNumber: '', email: '', website: '',
   principalName: '', principalEmail: '', principalContact: '',
   accreditationBody: '', accreditationStatus: 'Not Accredited', accreditationGrade: '',
-  accreditationNumber: '', validFrom: '', validUntil: '',
+  accreditationNumber: '', validFrom: '', validUntil: '', startDate: '', endDate: '',
 }
 const requiredDraftFields = ['collegeName', 'collegeCode', 'collegeType', 'universityName', 'addressLine1', 'city', 'state', 'pincode', 'contactNumber', 'email', 'principalName']
 const draftKey = (editId) => `pirnav-college-draft-${editId || 'new'}`
@@ -461,6 +461,8 @@ export default function AddCollege() {
         <label className="ac-field" htmlFor="ac-collegeType"><span>College Type <b>*</b></span><select id="ac-collegeType" name="collegeType" value={values.collegeType} onChange={update} aria-invalid={Boolean(touched.collegeType && errors.collegeType)}><option value="">Select type</option>{TYPES.map((type) => <option key={type}>{type}</option>)}</select>{touched.collegeType && errors.collegeType && <small className="ac-error" role="alert">{errors.collegeType}</small>}</label>
         {values.collegeType === 'Other' && <Field label="Specify College Type" name="collegeTypeOther" values={values} errors={errors} touched={touched} onChange={update} required maxLength={60} placeholder="e.g. Community College" />}
         <Field label="University Name" name="universityName" values={values} errors={errors} touched={touched} onChange={update} required maxLength={120} placeholder="Affiliated university" readOnly={values.collegeType === 'Deemed University'} />
+        <Field label="Start Date" name="startDate" type="date" values={values} errors={errors} touched={touched} onChange={update} />
+        <Field label="End Date" name="endDate" type="date" values={values} errors={errors} touched={touched} onChange={update} />
         <div className="ac-upload ac-span-2" onDragOver={(e) => e.preventDefault()} onDrop={(e) => { e.preventDefault(); selectLogo(e.dataTransfer.files[0]) }}>
           <input ref={fileRef} type="file" accept=".png,.jpg,.jpeg,.webp" onChange={(e) => selectLogo(e.target.files?.[0])} hidden />
           {values.logo || (editId && !removeExistingLogo) ? <div className="ac-logo-preview"><img src={logoFile ? values.logo : getCollegeLogoUrl(editId, values.logo)} alt="College logo preview" /><div><strong>{values.logoName || (logoFile ? logoFile.name : 'Current college logo')}</strong><button type="button" onClick={() => { setLogoFile(null); setRemoveExistingLogo(Boolean(editId)); setValues((v) => ({ ...v, logo: '', logoName: '' })); if (fileRef.current) fileRef.current.value = ''; setDirty(true) }}>Remove image</button></div></div> : <button type="button" className="ac-upload-button" onClick={() => fileRef.current?.click()}><strong>Upload college logo</strong><span>Click or drag and drop PNG, JPG, JPEG, or WEBP · Max 2 MB</span></button>}

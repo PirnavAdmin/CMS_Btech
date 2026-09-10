@@ -22,7 +22,7 @@ import '../../styles/directory-search.css'
 
 const PAGE_SIZE = 5
 const sectionLabel = (index) => { let label = ''; for (let n = index + 1; n > 0; n = Math.floor((n - 1) / 26)) label = String.fromCharCode(65 + (n - 1) % 26) + label; return label }
-const emptyForm = { name: '', code: '', courseId: '', branchId: '', semesterId: '', academicYearId: '', capacity: 60, facultyAdvisorEmployeeProfileId: '', advisor: '', room: '', status: '' }
+const emptyForm = { name: '', code: '', courseId: '', branchId: '', semesterId: '', academicYearId: '', capacity: 60, facultyAdvisorEmployeeProfileId: '', advisor: '', room: '', status: '', startDate: '', endDate: '' }
 const clean = (value) => value !== null && value !== undefined && !['', 'null', 'undefined', 'not provided', 'not set', '?'].includes(String(value).trim().toLowerCase())
 const idOf = (item = {}, ...keys) => keys.map((key) => item?.[key]).find((value) => clean(value)) ?? ''
 const sem = (value) => /^\d+$/.test(String(value)) ? `Semester ${value}` : String(value || '')

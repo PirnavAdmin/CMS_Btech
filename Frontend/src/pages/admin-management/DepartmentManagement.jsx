@@ -46,6 +46,8 @@ const empty = {
   hodUserId: '',
   hodName: '',
   description: '',
+  startDate: '',
+  endDate: '',
   status: 'Active',
 };
 
@@ -660,6 +662,8 @@ export default function DepartmentManagement() {
                       rows={3}
                     />
                   </label>
+                  <label><span>Start Date</span><input type="date" value={form.startDate || ''} onChange={(e) => setForm({ ...form, startDate: e.target.value })} /></label>
+                  <label><span>End Date</span><input type="date" value={form.endDate || ''} onChange={(e) => setForm({ ...form, endDate: e.target.value })} /></label>
                 </div>
 
                 {isDetailsLoading && <p className="department-no-results">Loading department details...</p>}
