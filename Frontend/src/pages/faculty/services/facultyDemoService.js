@@ -19,9 +19,18 @@ export const facultyDemoService = {
   getNextEmployeeId() { return nextEmployeeId() },
   create(values) { const record = { ...values, id: `faculty-${Date.now()}`, employeeStatus: values.employmentStatus || 'Working', documents: values.documents || [] }; state.faculty = [record, ...state.faculty]; notify(); return clone(record) },
   update(id, values) { state.faculty = state.faculty.map((row) => String(row.id) === String(id) ? { ...row, ...values } : row); notify(); return this.getById(id) },
-  updateStatus(id, employmentStatus) { return this.update(id, { employmentStatus }) },
+  updateStatus(id, employmentStatus) {
+    const faculty = find(state.faculty, id)
+    if (!faculty) throw new Error('Faculty record was not found.')
+    if (['Resigned', 'Retired'].includes(employmentStatus)) {
+      const hasAssignments = state.advisors.some((row) => row.facultyId === id) || state.allocations.some((row) => row.facultyId === id && row.status !== 'Inactive')
+      if (hasAssignments) throw new Error('This faculty member currently has academic responsibilities. Reassign the active responsibilities before completing the employment status change.')
+    }
+    const historyEvent = employmentStatus === 'Working' && faculty.employmentStatus === 'On Leave' ? 'Returned to Work' : employmentStatus
+    return this.update(id, { employmentStatus, employmentHistory: [...(faculty.employmentHistory || []), { event: historyEvent, date: new Date().toISOString().slice(0, 10), detail: `Employment status changed to ${employmentStatus}` }] })
+  },
   getAllocations(filters = {}) { return state.allocations.filter((row) => Object.entries(filters).every(([key, value]) => !value || String(row[key]) === String(value))).map(join).map(clone) },
-  createAllocation(values) { const duplicate = state.allocations.some((row) => ['academicYearId', 'courseId', 'branchId', 'semesterId', 'sectionId', 'subjectId', 'facultyId'].every((key) => String(row[key]) === String(values[key]))); if (duplicate) throw new Error('This subject is already allocated to this faculty for the selected section.'); const record = { ...values, id: `alloc-${Date.now()}`, status: values.status || 'Active' }; state.allocations = [...state.allocations, record]; notify(); return clone(join(record)) },
+  createAllocation(values) { const faculty = find(state.faculty, values.facultyId); if (faculty?.employmentStatus !== 'Working') throw new Error('Only Working Faculty can receive new subject allocations.'); const duplicate = state.allocations.some((row) => ['academicYearId', 'courseId', 'branchId', 'semesterId', 'sectionId', 'subjectId', 'facultyId', 'type'].every((key) => String(row[key]) === String(values[key]))); if (duplicate) throw new Error('This subject is already allocated to this faculty for the selected section and type.'); const record = { ...values, id: `alloc-${Date.now()}`, allocationStatus: values.allocationStatus || 'Active' }; state.allocations = [...state.allocations, record]; notify(); return clone(join(record)) },
   updateAllocation(id, values) { state.allocations = state.allocations.map((row) => row.id === id ? { ...row, ...values } : row); notify(); return this.getAllocations().find((row) => row.id === id) },
   updateAllocationStatus(id, status) { return this.updateAllocation(id, { status }) },
   getAdvisors() { return state.advisors.map((row) => ({ ...row, section: find(sections, row.sectionId), faculty: find(state.faculty, row.facultyId), academicYear: find(academicYears, row.academicYearId) })).map(clone) },

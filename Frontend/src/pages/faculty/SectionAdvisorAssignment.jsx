@@ -1,6 +1,5 @@
 import { useMemo, useState } from 'react'
 import { FiCheckCircle, FiSearch } from 'react-icons/fi'
-import StatusBadge from '../../components/StatusBadge'
 import { FacultyHeader } from './FacultyShared'
 
 export default function SectionAdvisorAssignment({ faculty, sections, advisors, onAssign }) {
