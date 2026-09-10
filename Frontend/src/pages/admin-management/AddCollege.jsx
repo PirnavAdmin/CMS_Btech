@@ -27,6 +27,16 @@ const TAB_FIELDS = {
   administration: ['principalName', 'principalEmail', 'principalContact'],
   accreditation: ['accreditationBody', 'accreditationStatus', 'accreditationGrade', 'accreditationNumber', 'validFrom', 'validUntil'],
 }
+// A Skip action is only meaningful when a whole wizard step is optional.
+// Keep this separate from TAB_FIELDS because TAB_FIELDS is also used for
+// touched/error handling and therefore contains both required and optional inputs.
+const REQUIRED_TAB_FIELDS = {
+  college: ['collegeName', 'collegeCode', 'collegeType', 'universityName'],
+  address: ['addressLine1', 'city', 'state', 'pincode'],
+  contact: ['contactNumber', 'email'],
+  administration: ['principalName', 'principalEmail', 'principalContact'],
+  accreditation: [],
+}
 const initialValues = {
   collegeName: '', collegeCode: '', collegeType: '', collegeTypeOther: '', universityName: '', logo: '', logoName: '',
   addressLine1: '', addressLine2: '', area: '', district: '', city: '', state: '', pincode: '', country: 'India',
@@ -335,6 +345,25 @@ export default function AddCollege() {
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }
 
+  const canSkipTab = (tabId) => tabId !== 'preview' && (REQUIRED_TAB_FIELDS[tabId] || []).length === 0
+  const skipCurrentTab = () => {
+    if (!canSkipTab(activeTab)) return
+
+    // Skipping means omitting this optional section. Clearing its values also
+    // prevents a partially entered optional value (for example, invalid dates)
+    // from blocking Preview & Submit later.
+    const fields = TAB_FIELDS[activeTab] || []
+    setValues((current) => fields.reduce((next, field) => ({ ...next, [field]: initialValues[field] }), current))
+    setTouched((current) => fields.reduce((next, field) => ({ ...next, [field]: false }), { ...current }))
+    setDirty(true)
+    const currentIndex = FORM_TABS.findIndex((tab) => tab.id === activeTab)
+    const nextIndex = currentIndex + 1
+    setHighestUnlockedTab((current) => Math.max(current, nextIndex))
+    setActiveTab(FORM_TABS[nextIndex].id)
+    setNotice('Optional section skipped.')
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }
+
   const submit = async () => {
     touchAll()
     if (logoError || !isValid || submitting) { setDialog(null); return }
@@ -473,9 +502,9 @@ export default function AddCollege() {
       </>)}
       {activeTab === 'preview' && <section className="ac-preview ac-final-preview"><h2>Preview &amp; Submit</h2><p>Review all college fields before submitting.</p>{values.logo && <img src={values.logo} alt="College logo preview" />}<dl>{Object.entries({ 'College Name': values.collegeName, 'College Code': values.collegeCode, 'College Type': values.collegeType === 'Other' ? values.collegeTypeOther : values.collegeType, 'University Name': values.universityName, 'Logo File Name': values.logoName, 'Address Line 1': values.addressLine1, 'Address Line 2': values.addressLine2, Area: values.area, District: values.district, City: values.city, State: values.state, Country: values.country, Pincode: values.pincode, 'Contact Number': values.contactNumber, 'Alternate Contact Number': values.alternateContactNumber, 'Official Email': values.email, Website: values.website, 'Principal Name': values.principalName, 'Principal Email': values.principalEmail, 'Principal Contact Number': values.principalContact, 'Accreditation Status': values.accreditationStatus, 'Accreditation Body': values.accreditationBody, 'Accreditation Grade': values.accreditationGrade, 'Accreditation Number': values.accreditationNumber, 'Valid From': values.validFrom, 'Valid Until': values.validUntil }).filter(([, value]) => hasValue(value)).map(([label, value]) => <div key={label}><dt>{label}</dt><dd>{value}</dd></div>)}</dl></section>}
       {activeTab !== 'accreditation' && activeTab !== 'preview' ? (
-        <footer className="ac-actions ac-next-actions"><button type="button" className="ac-primary" onClick={saveAndNext}>Save &amp; Next →</button></footer>
+        <footer className="ac-actions ac-next-actions">{canSkipTab(activeTab) && <button type="button" className="ac-secondary" onClick={skipCurrentTab}>Skip</button>}<button type="button" className="ac-primary" onClick={saveAndNext}>Save &amp; Next →</button></footer>
       ) : activeTab === 'accreditation' ? (
-        <footer className="ac-actions"><button type="button" className="ac-secondary" onClick={() => showTab('college')}>Start Over</button><button type="button" className="ac-primary" onClick={() => showTab('preview')}>Next: Preview</button></footer>
+        <footer className="ac-actions"><button type="button" className="ac-secondary" onClick={() => showTab('college')}>Start Over</button>{canSkipTab(activeTab) && <button type="button" className="ac-secondary" onClick={skipCurrentTab}>Skip</button>}<button type="button" className="ac-primary" onClick={() => showTab('preview')}>Next: Preview</button></footer>
       ) : (
         <footer className="ac-actions"><button type="button" className="ac-secondary" onClick={() => showTab('accreditation')}>← Previous</button><button type="button" className="ac-primary" onClick={submit} disabled={!isValid || submitting || loadingCollege || saved}>{submitting ? 'Saving...' : saved ? 'Saved. Redirecting...' : editId ? 'Save Changes' : 'Submit College'}</button></footer>
       )}

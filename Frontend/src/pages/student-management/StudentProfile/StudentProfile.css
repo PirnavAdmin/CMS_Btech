@@ -70,6 +70,17 @@ main.student-profile .sp-directory-table thead th:last-child::after{content:none
   gap: 12px;
   width: 100%;
 }
+.student-profile .sp-profile-top-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.student-profile .sp-profile-edit-icon {
+  width: 18px;
+  height: 18px;
+  color: #fff !important;
+  stroke-width: 2.5;
+}
 .student-profile .cm-profile-card > .sp-tabs {
   display: flex;
   flex-wrap: wrap;
@@ -117,6 +128,7 @@ main.student-profile .sp-directory-table thead th:last-child::after{content:none
 @media (max-width: 480px) {
   .student-profile .cm-profile-card > .sp-tabs button { flex: 1 1 140px; }
   .student-profile .cm-profile-view > .cm-profile-top-bar button { flex: 1 1 auto; }
+  .student-profile .sp-profile-top-actions { width: 100%; }
 }
 
 .student-profile .sp-breadcrumb {

@@ -1241,23 +1241,25 @@ function Profile({ student, tab, setTab, back, edit, canEdit }) {
   return (
     <div className="cm-profile-view" data-export-record>
       <div className="cm-profile-top-bar">
-        <ExportMenu mode="single" title="Student Profile" filename={`student_${app.admissionNumber || app.registrationNumber || student.id}`} recordSections={Object.entries(panels).map(([key, rows]) => ({ title: TABS.find(item => item[0] === key)?.[1] || key, rows }))} />
         <button type="button" className="cm-button secondary erp-btn erp-btn--secondary" onClick={back}>
           &larr; Back to Student Directory
         </button>
-        <button
-          type="button"
-          className="cm-button erp-btn erp-btn--primary"
-          onClick={edit}
-          disabled={!canEdit}
-          title={
-            canEdit
-              ? "Edit student profile"
-              : "Only administrators can edit student profiles"
-          }
-        >
-          <FiEdit2 className="module-action-icon module-action-icon--edit" /> Edit Student
-        </button>
+        <div className="sp-profile-top-actions">
+          <ExportMenu mode="single" title="Student Profile" filename={`student_${app.admissionNumber || app.registrationNumber || student.id}`} recordSections={Object.entries(panels).map(([key, rows]) => ({ title: TABS.find(item => item[0] === key)?.[1] || key, rows }))} />
+          <button
+            type="button"
+            className="cm-button erp-btn erp-btn--primary"
+            onClick={edit}
+            disabled={!canEdit}
+            title={
+              canEdit
+                ? "Edit student profile"
+                : "Only administrators can edit student profiles"
+            }
+          >
+            <FiEdit2 className="sp-profile-edit-icon" aria-hidden="true" /> Edit Student
+          </button>
+        </div>
       </div>
 
       <div className="cm-profile-card">
