@@ -1,7 +1,9 @@
+import { promotionDetailSections } from '../../../utils/recordDetailSections'
+import { showError } from '../../../utils/toast'
+import useToastState from '../../../hooks/useToastState'
 import React, { useState, useEffect, useCallback, useMemo } from 'react'
 import InfoCard from '../../../components/InfoCard'
 import {
-  FiCheckCircle,
   FiClock,
   FiEye,
   FiInfo,
@@ -62,8 +64,9 @@ function ConfirmModal({ rows, busy, onCancel, onConfirm, isDegreeReview }) {
 function ReviewDrawer({ student, onClose, onStatus, canEdit }) {
   return (
     <div className="p-overlay" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
-      <section className="p-drawer cm-profile-view" data-print-scope style={{ maxWidth: '780px', width: '92vw', padding: '20px' }}>
+      <section className="p-drawer cm-profile-view" data-print-scope data-export-record style={{ maxWidth: '780px', width: '92vw', padding: '20px' }}>
         <div className="cm-profile-top-bar">
+          <ExportMenu mode="single" title="Promotion Details" filename={`promotion_${student.registrationNumber || student.rollNumber || idOf(student)}_${student.fromSemester || student.currentSemester || ""}-to-${student.toSemester || student.nextSemester || student.targetSemester || ""}`} recordSections={promotionDetailSections(student)} />
           <button className="erp-btn erp-btn--secondary" onClick={onClose} aria-label="Close">
             <FiX /> Close
           </button>
@@ -92,28 +95,7 @@ function ReviewDrawer({ student, onClose, onStatus, canEdit }) {
           </div>
 
           <div className="cm-profile-grid">
-            <InfoCard
-              title="Academic Mapping"
-              icon={FiBookOpen}
-              items={[
-                { label: 'Course', value: student.course || student.academic?.course },
-                { label: 'Branch', value: student.branch || student.academic?.branch },
-                { label: 'Section', value: student.section || student.academic?.section },
-                { label: 'Current Term', value: student.currentSemester ?? student.semester ?? student.academic?.semester },
-                { label: 'Target Term', value: student.nextSemester ?? student.targetSemester ?? 'Next Term' },
-              ]}
-            />
-            <InfoCard
-              title="Performance & Eligibility"
-              icon={FiTrendingUp}
-              items={[
-                { label: 'Credits Earned', value: student.creditsEarned ?? '24' },
-                { label: 'SGPA', value: student.sgpa ?? '8.4' },
-                { label: 'CGPA', value: student.cgpa ?? '8.2' },
-                { label: 'Eligibility Status', value: student.eligibilityLabel ?? student.status ?? 'Eligible' },
-                { label: 'Decision Reason', value: student.eligibilityReason ?? student.reason ?? 'Satisfies minimum semester credits and attendance threshold.' },
-              ]}
-            />
+            {promotionDetailSections(student).map(section => <InfoCard key={section.title} title={section.title} rows={section.rows} />)}
           </div>
         </div>
 
@@ -165,7 +147,7 @@ export default function StudentPromotion() {
   const [selected, setSelected] = useState([])
   const [review, setReview] = useState(null)
   const [confirmRows, setConfirmRows] = useState(null)
-  const [notice, setNotice] = useState('')
+  const [, setNotice] = useToastState('', 'success')
   const [loading, setLoading] = useState({ masters: false, list: false, promotion: false })
 
   // 5-Row Pagination for Directory and History
@@ -263,7 +245,7 @@ export default function StudentPromotion() {
       const hist = await promotionService.getHistory()
       setHistory(hist || [])
     } catch (err) {
-      console.warn('Error loading promotion scope:', err)
+      showError(err.message || 'Unable to load promotion scope.')
       setStudents([])
     } finally {
       setLoading((x) => ({ ...x, list: false }))
@@ -344,7 +326,7 @@ export default function StudentPromotion() {
       setConfirmRows(null)
       loadPromotionData()
     } catch (err) {
-      setNotice(err.message || 'Promotion could not be completed.')
+      setNotice(err.message || 'Promotion could not be completed.', 'error')
     } finally {
       setLoading((x) => ({ ...x, promotion: false }))
     }
@@ -363,11 +345,7 @@ export default function StudentPromotion() {
           ]}
         />
 
-        {notice && (
-          <div className="erp-toast erp-toast--success" role="status">
-            <FiCheckCircle /> {notice}
-          </div>
-        )}
+
 
         {/* Promotion Scope Selector Panel */}
         <section className="p-scope erp-card">
@@ -740,7 +718,7 @@ export default function StudentPromotion() {
                     paginatedHistory.map((h, i) => (
                       <tr key={h.promotionId || i}>
                         <td style={{ minWidth: '170px' }}>
-                          <div style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{h.studentName || 'Student'}</div>
+                          <button type="button" className="erp-btn erp-btn--secondary" title="View promotion details" onClick={() => setReview(h)}>{h.studentName || 'Student'} <FiEye /></button>
                           {h.studentId && (
                             <div className="text-muted" style={{ fontSize: '11px', marginTop: '2px' }}>
                               {String(h.studentId).startsWith('STU') ? h.studentId : `ID: ${h.studentId}`}
@@ -784,7 +762,7 @@ export default function StudentPromotion() {
         <ReviewDrawer
           student={review}
           onClose={() => setReview(null)}
-          canEdit={canPromote}
+          canEdit={canPromote && !review.promotionDate}
           onStatus={(status) => {
             setStudents((prev) =>
               prev.map((s) => (s.studentId === review.studentId ? { ...s, eligibilityStatus: status, status } : s))

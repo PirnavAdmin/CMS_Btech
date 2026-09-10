@@ -1,3 +1,4 @@
+import { showSuccess, showError, showWarning } from '../utils/toast'
 import { useEffect, useRef, useState } from 'react'
 import { FiBookOpen, FiCheckCircle, FiShield, FiTrendingUp, FiX } from 'react-icons/fi'
 import { demoRoles, emptyDemo, normalizeDemo, validateDemo, submitDemoRequest } from '../api/demoRequest'
@@ -24,14 +25,14 @@ export default function RequestDemo({ onClose }) {
     e.preventDefault()
     if (lock.current) return
     const next = validateDemo(values); setErrors(next)
-    if (Object.keys(next).length) { requestAnimationFrame(() => dialog.current.querySelector('[aria-invalid="true"]')?.focus()); return }
+    if (Object.keys(next).length) { showWarning('Correct the highlighted fields before submitting.'); requestAnimationFrame(() => dialog.current.querySelector('[aria-invalid="true"]')?.focus()); return }
     lock.current = true; setBusy(true); setFailure('')
     try {
       const response = await submitDemoRequest(normalizeDemo(values))
       if (!response || response.success === false) throw new Error('Your request could not be confirmed. Please try again.')
-      if (mounted.current) { setResult(response); setValues(emptyDemo) }
+      if (mounted.current) { setResult(response); setValues(emptyDemo); showSuccess('Your enquiry was submitted successfully.') }
     }
-    catch (error) { if (mounted.current) setFailure(error.message || 'We couldn’t submit your demo request. Please try again.') }
+    catch (error) { showError(error.message || 'Unable to submit your enquiry.'); if (mounted.current) setFailure(error.message || 'We couldn’t submit your demo request. Please try again.') }
     finally { lock.current = false; if (mounted.current) setBusy(false) }
   }
   return <dialog ref={dialog} className={`rd-dialog${result ? " rd-dialog--success" : ""}`} aria-labelledby="rd-title" onCancel={e => { e.preventDefault(); if (!lock.current) onClose() }}>

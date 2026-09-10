@@ -1,3 +1,5 @@
+import { showSuccess, showWarning } from '../utils/toast'
+import useToastState from '../hooks/useToastState'
 import { useState, useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { signIn } from '../auth/auth'
@@ -6,7 +8,7 @@ import { AuthRequestError, login } from '../api/apiEndpoints'
 import { validateLogin } from '../auth/loginValidation'
 import ForgotPassword from './ForgotPassword'
 import ThemeToggle from '../components/ThemeToggle'
-import { FiArrowLeft, FiBell, FiBookOpen, FiCalendar, FiFileText, FiX } from 'react-icons/fi'
+import { FiArrowLeft, FiBell, FiBookOpen, FiCalendar, FiFileText } from 'react-icons/fi'
 import campusHero from '../assets/college-campus-hero.png'
 import './Login.css'
 
@@ -16,7 +18,7 @@ export default function Login() {
   const [rememberMe, setRememberMe] = useState(() => localStorage.getItem('btech-remember-me') === 'true')
   const [values, setValues] = useState(() => ({ identifier: localStorage.getItem('btech-remember-me') === 'true' ? localStorage.getItem('btech-remembered-identifier') || '' : '', password: '' }))
   const [errors, setErrors] = useState({ identifier: '', password: '' })
-  const [submitError, setSubmitError] = useState('')
+  const [submitError, setSubmitError] = useToastState('', 'error')
   const [isSubmitting, setIsSubmitting] = useState(false)
   const greeting = new Date().getHours() < 12 ? 'Good morning' : new Date().getHours() < 18 ? 'Good afternoon' : 'Good evening'
   const greetingParts = greeting.split(' ')
@@ -25,25 +27,20 @@ export default function Login() {
   // OTP Flow States: 'login' | 'request_otp' | 'verify_otp' | 'success'
   const [viewMode, setViewMode] = useState('login')
   const [otpContact, setOtpContact] = useState('')
-  const [contactError, setContactError] = useState('')
+  const [contactError, setContactError] = useToastState('', 'error')
   const [otp, setOtp] = useState('')
-  const [otpError, setOtpError] = useState('')
+  const [otpError, setOtpError] = useToastState('', 'error')
   const [demoOtpHint, setDemoOtpHint] = useState('')
   const [timer, setTimer] = useState(0)
-  const [logoutMessage, setLogoutMessage] = useState('')
+  const [, setLogoutMessage] = useToastState('', 'success')
 
   useEffect(() => {
     const message = sessionStorage.getItem('btech-logout-message')
     if (!message) return
     setLogoutMessage(message)
     sessionStorage.removeItem('btech-logout-message')
-  }, [])
+  }, [setLogoutMessage])
 
-  useEffect(() => {
-    if (!logoutMessage) return
-    const timeout = setTimeout(() => setLogoutMessage(''), 2000)
-    return () => clearTimeout(timeout)
-  }, [logoutMessage])
 
   useEffect(() => {
     let interval = null
@@ -95,7 +92,7 @@ export default function Login() {
 
     const nextErrors = validateLogin(values)
     setErrors(nextErrors)
-    if (nextErrors.identifier || nextErrors.password) return
+    if (nextErrors.identifier || nextErrors.password) { showWarning('Enter your login ID and password.'); return }
 
     setIsSubmitting(true)
     setSubmitError('')
@@ -104,7 +101,7 @@ export default function Login() {
       localStorage.setItem('btech-remember-me', String(rememberMe))
       if (rememberMe) localStorage.setItem('btech-remembered-identifier', values.identifier.trim())
       else localStorage.removeItem('btech-remembered-identifier')
-      signIn(session.roles, session.accessToken, session.refreshToken, rememberMe, session.user)
+      signIn(session.roles, session.accessToken, session.refreshToken, rememberMe, session.user); showSuccess('Logged in successfully.')
       navigate('/dashboard')
     } catch (error) {
       setSubmitError(error instanceof AuthRequestError ? error.message : 'Unable to sign in right now. Please try again.')
@@ -129,7 +126,7 @@ export default function Login() {
       if (result.demoOtp) {
         setDemoOtpHint(`Verification code: ${result.demoOtp}`)
       }
-      setViewMode('verify_otp')
+      setViewMode('verify_otp'); showSuccess('Verification code sent successfully.')
       setTimer(60)
     } catch (error) {
       setOtpError(error instanceof AuthRequestError ? error.message : 'Failed to send verification code. Please try again.')
@@ -150,7 +147,7 @@ export default function Login() {
     setIsSubmitting(true)
     try {
       await verifyOtp({ contact: otpContact.trim(), otp })
-      setViewMode('success')
+      setViewMode('success'); showSuccess('Verification code verified successfully.')
     } catch (error) {
       setOtpError(error instanceof AuthRequestError ? error.message : 'OTP verification failed. Please try again.')
     } finally {
@@ -184,7 +181,7 @@ export default function Login() {
               <h2 id="login-title">Welcome back</h2>
               <p>Securely access your academic dashboard and campus services.</p>
             </header>
-            {logoutMessage && <div className="logout-success" role="status"><span>{logoutMessage}</span><button type="button" onClick={() => setLogoutMessage('')} aria-label="Dismiss signed out message"><FiX aria-hidden="true" /></button></div>}
+
             <label htmlFor="identifier">
               <span>College Email / Mobile / ID</span>
               <input

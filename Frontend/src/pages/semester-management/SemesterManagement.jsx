@@ -1,8 +1,10 @@
+import { newestFirst, rememberCreated } from '../../utils/newestFirst'
+import useToastState from '../../hooks/useToastState'
 import ExportMenu, { PrintDetailsButton } from '../../components/ExportMenu'
 import { semesterColumns } from '../../utils/exportColumns'
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
-import { FiArrowLeft, FiBookOpen, FiCalendar, FiCheckCircle, FiClock, FiEdit2, FiEye, FiFilter, FiLayers, FiPlus, FiSearch } from 'react-icons/fi'
+import { FiArrowLeft, FiBookOpen, FiCalendar, FiClock, FiEdit2, FiEye, FiFilter, FiLayers, FiPlus, FiSearch } from 'react-icons/fi'
 import DashboardLayout from '../../layouts/DashboardLayout'
 import FilterPanel from '../../components/FilterPanel'
 import SearchableSelect from '../../components/SearchableSelect'
@@ -194,7 +196,7 @@ function SemesterList() {
   const [filters, setFilters] = useState({ courseId: '', branchId: '', academicYearId: '', status: '' })
   const [page, setPage] = useState(1)
   const [loading, setLoading] = useState(true)
-  const [error, setError] = useState('')
+  const [error, setError] = useToastState('', 'error')
 
   const load = async () => {
     setLoading(true)
@@ -216,7 +218,7 @@ function SemesterList() {
 
   const lifecycleRows = useMemo(() => rows.map((item) => ({ ...item, status: deriveLifecycleStatus(item, 'Upcoming', now) })), [rows, now])
   const filteredBranches = branches.filter((item) => !filters.courseId || String(item.courseId) === String(filters.courseId))
-  const filtered = useMemo(() => lifecycleRows.filter((item) => `${item.semesterName} ${item.courseName} ${item.courseCode} ${item.branchName} ${item.branchCode} ${item.academicYearName}`.toLowerCase().includes(query.trim().toLowerCase()) && (!filters.courseId || String(item.courseId) === String(filters.courseId)) && (!filters.branchId || String(item.branchId) === String(filters.branchId)) && (!filters.academicYearId || String(item.academicYearId) === String(filters.academicYearId)) && (!filters.status || item.status === filters.status)).sort((left, right) => String(left.courseName).localeCompare(String(right.courseName)) || String(left.branchName).localeCompare(String(right.branchName)) || Number(left.semesterNumber) - Number(right.semesterNumber)), [lifecycleRows, query, filters])
+  const filtered = useMemo(() => newestFirst('semesters', lifecycleRows.filter((item) => `${item.semesterName} ${item.courseName} ${item.courseCode} ${item.branchName} ${item.branchCode} ${item.academicYearName}`.toLowerCase().includes(query.trim().toLowerCase()) && (!filters.courseId || String(item.courseId) === String(filters.courseId)) && (!filters.branchId || String(item.branchId) === String(filters.branchId)) && (!filters.academicYearId || String(item.academicYearId) === String(filters.academicYearId)) && (!filters.status || item.status === filters.status)).sort((left, right) => String(left.courseName).localeCompare(String(right.courseName)) || String(left.branchName).localeCompare(String(right.branchName)) || Number(left.semesterNumber) - Number(right.semesterNumber))), [lifecycleRows, query, filters])
   const counts = { total: rows.length, active: lifecycleRows.filter((item) => item.status === 'Active').length, upcoming: lifecycleRows.filter((item) => item.status === 'Upcoming').length, completed: lifecycleRows.filter((item) => item.status === 'Completed').length }
   const pageSize = 5
   const pageCount = Math.max(1, Math.ceil(filtered.length / pageSize))
@@ -343,8 +345,8 @@ function SemesterForm({ editMode = false }) {
   const [step, setStep] = useState(1)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
-  const [error, setError] = useState('')
-  const [notice, setNotice] = useState('')
+  const [error, setError] = useToastState('', 'error')
+  const [notice, setNotice] = useToastState('', 'success')
   const [editingSemester, setEditingSemester] = useState(null)
 
   const course = courses.find((item) => String(item.id || item.courseId) === String(form.courseId))
@@ -429,8 +431,9 @@ function SemesterForm({ editMode = false }) {
         setExistingRows(freshRows)
         if (freshRows.some((item) => sameCohort(item, plan[0]))) throw new Error(`Semester structure already exists for ${course.name} - ${branch.code || branch.name} - ${coursePeriod}.`)
         const missing = plan.filter((row) => !freshRows.some((item) => sameCohort(item, row) && Number(item.semesterNumber) === Number(row.semesterNumber)))
-        if (!missing.length) { setNotice('Semester structure is already saved.'); return }
+        if (!missing.length) { setNotice('Semester structure is already saved.', 'info'); return }
         const results = await Promise.allSettled(missing.map((item) => createSemester({ courseId: Number(item.courseId), branchId: Number(item.branchId), academicYearId: Number(item.academicYearId), semesterName: item.semesterName, semesterNumber: Number(item.semesterNumber), yearNumber: Number(item.yearNumber), startDate: item.startDate || null, endDate: item.endDate || null, status: semesterPayloadStatus(item.status), createdBy: 1 })))
+        results.filter(result => result.status === 'fulfilled').forEach(result => rememberCreated('semesters', result.value))
         const created = results.filter((result) => result.status === 'fulfilled').length
         if (!created) throw results.find((result) => result.status === 'rejected')?.reason || new Error('Unable to generate semester structure.')
         if (created !== missing.length) throw new Error(`${created} of ${missing.length} semesters created. Use Generate again to retry missing semesters. ${apiError(results.find((result) => result.status === 'rejected')?.reason, '')}`)
@@ -446,7 +449,7 @@ function SemesterForm({ editMode = false }) {
 
   if (loading) return <Page><Empty icon={FiClock} title="Loading semester workflow..." /></Page>
   return <Page>
-    {notice && <div className="semester-toast" role="status"><FiCheckCircle />{notice}</div>}
+
     <Header title={editMode ? 'Edit Semester' : 'Add Semester Structure'} text={editMode ? 'Update schedule and lifecycle details without replacing the historical academic year.' : 'Configure semesters from Course, Branch, and the active Academic Year.'}><Link className="semester-primary secondary" to="/semester-management"><FiArrowLeft /> Back</Link></Header>
     <div className="semester-workflow">
       <section className="semester-workflow-main">
@@ -472,7 +475,7 @@ function SemesterDetailsPage() {
   const { id } = useParams()
   const [item, setItem] = useState(null)
   const [loading, setLoading] = useState(true)
-  const [error, setError] = useState('')
+  const [error, setError] = useToastState('', 'error')
 
   useEffect(() => {
     let alive = true
@@ -494,15 +497,16 @@ function SemesterDetailsPage() {
     }
     load()
     return () => { alive = false }
-  }, [id])
+  }, [id, setError])
 
   if (loading) return <Page><Empty icon={FiClock} title="Loading semester details..." /></Page>
-  if (error || !item) return <Page><div className="cm-profile-view"><div className="cm-profile-top-bar"><Link className="cm-button secondary" to="/semester-management">&larr; Back to Semesters List</Link></div><Empty icon={FiLayers} title={error || 'Semester not found.'} /></div></Page>
+  if (error || !item) return <Page><div className="cm-profile-view" data-export-record><div className="cm-profile-top-bar"><Link className="cm-button secondary" to="/semester-management">&larr; Back to Semesters List</Link></div><Empty icon={FiLayers} title={error || 'Semester not found.'} /></div></Page>
   const semesterItem = { ...item, status: deriveLifecycleStatus(item, 'Upcoming', now) }
   return (
     <Page>
-      <div className="cm-profile-view">
+      <div className="cm-profile-view" data-export-record>
         <div className="cm-profile-top-bar">
+          <ExportMenu mode="single" title="Semester Details" filename={`semester_${item.semesterName || item.id}_${item.academicYearName || ""}`} />
           <Link className="cm-button secondary" to="/semester-management">
             &larr; Back to Semesters List
           </Link>
@@ -539,7 +543,7 @@ function SemesterProfile({ item }) {
       <div className="cm-profile-grid">
         <InfoCard icon={FiCalendar} title="Basic Information" rows={[["Semester Name", item.semesterName], ["Semester Number", item.semesterNumber], ["Academic Year", item.academicYearName], ["Status", item.status]]} />
         <InfoCard icon={FiBookOpen} title="Academic Mapping" rows={[["Course Name", item.courseName], ["Course Code", item.courseCode], ["Branch Name", item.branchName], ["Branch Code", item.branchCode], ["Branch Type", item.branchType]]} />
-        <InfoCard icon={FiClock} title="Academic Schedule" rows={[["Start Date", displayDate(item.startDate)], ["End Date", displayDate(item.endDate)]]} />
+        <InfoCard icon={FiClock} title="Semester Schedule" rows={[["Start Date", displayDate(item.startDate)], ["End Date", displayDate(item.endDate)]]} />
         <InfoCard icon={FiLayers} title="Course Structure" rows={[["Starting Academic Year", yearLabelFromStart(cohortStart(item))], ["Course Duration", item.courseDuration ? `${item.courseDuration} Years` : ''], ["Academic Pattern", item.academicPattern], ["Total Semesters", item.totalSemesters], ["Course Period", coursePeriod]]} />
       </div>
     </div>
@@ -562,8 +566,8 @@ function Pagination({ page, pageCount, setPage }) {
 
 export default function SemesterManagement({ mode }) {
   const { id } = useParams()
-  if (mode === 'form') return <SemesterForm />
-  if (mode === 'edit') return <SemesterForm editMode />
+  if (mode === 'form') return <SemesterForm key="add" />
+  if (mode === 'edit') return <SemesterForm key={id} editMode />
   if (mode === 'details' || id) return <SemesterDetailsPage />
   return <SemesterList />
 }

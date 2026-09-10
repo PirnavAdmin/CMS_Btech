@@ -1,3 +1,4 @@
+import useToastState from '../hooks/useToastState'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { FiLock, FiLogOut, FiMenu, FiMoon, FiSearch, FiSun, FiUser } from 'react-icons/fi'
@@ -52,7 +53,7 @@ export default function DashboardLayout({ children }) {
   // Change password state
   const [open, setOpen] = useState(false)
   const [values, setValues] = useState(empty)
-  const [errors, setErrors] = useState({})
+  const [errors, setErrors] = useToastState({}, 'error')
   const [visible, setVisible] = useState({})
   const [submitting, setSubmitting] = useState(false)
   const [success, setSuccess] = useState(false)

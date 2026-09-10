@@ -1,8 +1,9 @@
+import { showError } from '../../utils/toast'
+import useToastState from '../../hooks/useToastState'
 import React, { useState, useEffect, useMemo, useCallback } from 'react'
 import {
   FiAward,
   FiBookOpen,
-  FiCheckCircle,
   FiClock,
   FiEdit2,
   FiEye,
@@ -54,7 +55,7 @@ export default function Results() {
   const [activeTab, setActiveTab] = useState('directory') // 'directory' | 'entry' | 'transcripts'
   const [resultSheets, setResultSheets] = useState([])
   const [loading, setLoading] = useState(false)
-  const [toast, setToast] = useState('')
+  const [, setToast] = useToastState('', 'success')
   const [selectedSheet, setSelectedSheet] = useState(null)
 
   // Scope Filters for Directory
@@ -89,10 +90,7 @@ export default function Results() {
   const [studentTranscript, setStudentTranscript] = useState(null)
   const [allProfiles, setAllProfiles] = useState([])
 
-  const notify = (msg) => {
-    setToast(msg)
-    setTimeout(() => setToast(''), 3000)
-  }
+  const notify = (msg, type = 'success') => setToast(msg, type)
 
   const loadResultSheets = useCallback(async () => {
     try {
@@ -100,7 +98,7 @@ export default function Results() {
       const data = await resultsService.getResults()
       setResultSheets(data || [])
     } catch (err) {
-      console.warn('Error loading results sheets:', err)
+      showError(err.message || 'Error loading results sheets:')
     } finally {
       setLoading(false)
     }
@@ -114,7 +112,7 @@ export default function Results() {
         setSelectedStudentId(profiles[0].studentId || profiles[0].id)
       }
     } catch (err) {
-      console.warn('Error loading student profiles for results:', err)
+      showError(err.message || 'Error loading student profiles for results:')
     }
   }, [selectedStudentId])
 
@@ -145,7 +143,7 @@ export default function Results() {
   // Load students for marks entry
   const handleFetchStudentsForEntry = async () => {
     if (!entryScope.courseId || !entryScope.branchId || !entryScope.semesterId) {
-      notify('Please select Course, Branch, and Semester first.')
+      notify('Please select Course, Branch, and Semester first.', 'warning')
       return
     }
 
@@ -170,7 +168,7 @@ export default function Results() {
 
       setEntryStudents(list)
     } catch (err) {
-      notify('Failed to load students for marks entry.')
+      notify(err.message || 'Failed to load students for marks entry.', 'error')
     } finally {
       setLoadingStudents(false)
     }
@@ -201,7 +199,7 @@ export default function Results() {
   // Save Marks & Publish Results
   const handleSaveResults = async () => {
     if (!entryStudents.length) {
-      notify('No student marks to save.')
+      notify('No student marks to save.', 'warning')
       return
     }
 
@@ -237,7 +235,7 @@ export default function Results() {
       loadResultSheets()
       setActiveTab('directory')
     } catch (err) {
-      notify('Failed to save results.')
+      notify(err.message || 'Failed to save results.', 'error')
     } finally {
       setSavingResults(false)
     }
@@ -300,11 +298,7 @@ export default function Results() {
           }
         />
 
-        {toast && (
-          <div className="erp-toast erp-toast--success" role="status">
-            <FiCheckCircle /> {toast}
-          </div>
-        )}
+
 
         {/* Tab Navigation */}
         <nav className="results-tabs">
@@ -807,6 +801,7 @@ export default function Results() {
         {/* View Details Dialog */}
         {selectedSheet && (
           <ViewDialog
+            exportFilename={`result_${selectedSheet.id || selectedSheet.subjectCode}`}
             title={`Result Sheet: ${selectedSheet.subjectName}`}
             onClose={() => setSelectedSheet(null)}
           >

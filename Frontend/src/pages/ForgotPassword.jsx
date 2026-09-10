@@ -1,3 +1,5 @@
+import { showSuccess } from '../utils/toast'
+import useToastState from '../hooks/useToastState'
 import { useEffect, useRef, useState } from 'react'
 import { AuthRequestError, generateOtp, resendOtp, verifyOtp, resetPassword } from '../auth/authApi'
 import { FiArrowLeft, FiEye, FiEyeOff } from 'react-icons/fi'
@@ -12,7 +14,7 @@ export default function ForgotPassword({ onBack }) {
   const [contact, setContact] = useState('')
   const [otp, setOtp] = useState('')
   const [step, setStep] = useState('contact')
-  const [error, setError] = useState('')
+  const [error, setError] = useToastState('', 'error')
   const [loading, setLoading] = useState(false)
   const [demoOtp, setDemoOtp] = useState('')
   const [timer, setTimer] = useState(0)
@@ -42,7 +44,7 @@ export default function ForgotPassword({ onBack }) {
     try {
       await (step === 'otp' ? resendOtp : generateOtp)({ contact: cleanContact, purpose: 'PASSWORD_RESET' })
       setDemoOtp('')
-      setStep('otp')
+      setStep('otp'); showSuccess('Verification code sent successfully.')
       setTimer(60)
     } catch (requestError) {
       setError(requestError instanceof AuthRequestError ? requestError.message : 'Unable to send the verification code.')
@@ -58,7 +60,7 @@ export default function ForgotPassword({ onBack }) {
     setError('')
     try {
       await verifyOtp({ contact: contact.trim(), otp, purpose: 'PASSWORD_RESET' })
-      setStep('change-password')
+      setStep('change-password'); showSuccess('Verification code verified successfully.')
     } catch (verificationError) {
       setError(verificationError instanceof AuthRequestError ? verificationError.message : 'Unable to verify the OTP.')
     } finally {

@@ -1,3 +1,6 @@
+import { newestFirst, rememberCreated } from '../../utils/newestFirst'
+import { showSuccess } from '../../utils/toast'
+import useToastState from '../../hooks/useToastState'
 import { useEffect, useMemo, useState } from 'react';
 import ExportMenu, { PrintDetailsButton } from '../../components/ExportMenu';
 import { departmentColumns } from '../../utils/exportColumns';
@@ -133,7 +136,7 @@ export default function DepartmentManagement() {
   const [form, setForm] = useState(empty);
   const [query, setQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
-  const [error, setError] = useState('');
+  const [error, setError] = useToastState('', 'error');
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [isHodSaving, setIsHodSaving] = useState(false);
@@ -149,7 +152,7 @@ export default function DepartmentManagement() {
     setError('');
     try {
       const response = searchTerm.trim() ? await searchDepartments(searchTerm.trim()) : await getDepartments();
-      const mapped = listFrom(response.data).map(mapDepartment);
+      const mapped = newestFirst('departments', listFrom(response.data)).map(mapDepartment);
       setAllDepartments(mapped);
       setItems(mapped);
     } catch (requestError) {
@@ -172,6 +175,7 @@ export default function DepartmentManagement() {
           records.map((record) => ({
             id: record.id ?? record.collegeId,
             name: record.name ?? record.collegeName ?? 'Unnamed college',
+            active: ['1', 'true', 'active'].includes(String(record.status ?? record.collegeStatus ?? record.isActive ?? '').toLowerCase()),
           }))
         );
       })
@@ -197,6 +201,7 @@ export default function DepartmentManagement() {
   const totalCount = countSource.length;
 
   const closeToList = () => {
+    setForm({ ...empty });
     setScreen('list');
     setSelected(null);
     setError('');
@@ -251,7 +256,9 @@ export default function DepartmentManagement() {
     try {
       const response = await updateDepartmentStatus(item.id, status === 'Active' ? 1 : 0);
       const result = recordFrom(response);
+      if (!form.id) { rememberCreated('departments', result); setQuery(''); setStatusFilter(''); setCurrentPage(1); }
       const updated = result?.id || result?.departmentId ? mapDepartment(result) : { ...item, status };
+      showSuccess(`Department ${status === 'Active' ? 'activated' : 'deactivated'} successfully.`);
       await loadDepartments(query);
       setItems((current) => current.map((entry) => (entry.id === item.id ? updated : entry)));
       setAllDepartments((current) => current.map((entry) => (entry.id === item.id ? updated : entry)));
@@ -269,6 +276,7 @@ export default function DepartmentManagement() {
     if (!form.name.trim()) return setError('Department name is required.');
     if (!form.code.trim()) return setError('Department code is required.');
     if (!form.collegeId) return setError('Select a college for this department.');
+    if (!colleges.find(college => String(college.id) === String(form.collegeNumericId ?? form.collegeId))?.active) return setError('Select an active college');
     if (!form.status) return setError('Select a status for this department.');
     if (form.hodUserId !== '' && (!Number.isInteger(Number(form.hodUserId)) || Number(form.hodUserId) < 0))
       return setError('Head / In-Charge user ID must be a valid number.');
@@ -290,9 +298,11 @@ export default function DepartmentManagement() {
     try {
       const response = form.id ? await updateDepartment(form.id, payloadFor(form)) : await createDepartment(payloadFor(form));
       const result = recordFrom(response);
+      if (!form.id) { rememberCreated('departments', result); setQuery(''); setStatusFilter(''); setCurrentPage(1); }
       const id = result?.id ?? result?.departmentId ?? form.id;
       if (form.status === 'Inactive' && id) await updateDepartmentStatus(id, 0);
-      await loadDepartments();
+      showSuccess(`Department ${form.id ? 'updated' : 'created'} successfully.`);
+      await loadDepartments('');
       closeToList();
     } catch (requestError) {
       setError(apiError(requestError, `Unable to ${form.id ? 'update' : 'create'} this department. Please try again.`));
@@ -314,6 +324,7 @@ export default function DepartmentManagement() {
       if (Number(form.hodUserId) > 0) {
         const response = await updateDepartment(form.id, payloadFor({ ...form, hodUserId: Number(form.hodUserId) }));
         const result = recordFrom(response);
+      if (!form.id) { rememberCreated('departments', result); setQuery(''); setStatusFilter(''); setCurrentPage(1); }
         updated = mapDepartment({
           ...form,
           ...(result || {}),
@@ -324,6 +335,7 @@ export default function DepartmentManagement() {
       }
       setItems((current) => current.map((item) => (item.id === form.id ? updated : item)));
       setSelected(updated);
+      showSuccess('Head / In-Charge assigned successfully.');
       closeToList();
     } catch (requestError) {
       setError(apiError(requestError, 'Unable to assign the Head / In-Charge. Please try again.'));
@@ -610,17 +622,19 @@ export default function DepartmentManagement() {
                       College <b className="required-mark">*</b>
                     </span>
                     <select
-                      value={form.collegeId}
-                      onChange={(e) => setForm({ ...form, collegeId: e.target.value })}
+                      value={form.collegeNumericId ?? form.collegeId}
+                      onChange={(e) => { setForm({ ...form, collegeId: e.target.value, collegeNumericId: e.target.value }); setError('') }}
+                      aria-invalid={Boolean(form.collegeId && !colleges.find(college => String(college.id) === String(form.collegeNumericId ?? form.collegeId))?.active)}
                       required
                     >
                       <option value="">Select college</option>
                       {colleges.map((college) => (
                         <option key={college.id} value={college.id}>
-                          {college.name}
+                          {college.name}{college.active ? '' : ' (Inactive)'}
                         </option>
                       ))}
                     </select>
+                    {form.collegeId && !colleges.find(college => String(college.id) === String(form.collegeNumericId ?? form.collegeId))?.active && <small role="alert">Select an active college</small>}
                   </label>
 
                   <label>
@@ -717,8 +731,9 @@ export default function DepartmentManagement() {
         )}
 
         {screen === 'details' && selected && (
-          <div className="cm-profile-view">
+          <div className="cm-profile-view" data-export-record>
             <div className="cm-profile-top-bar">
+          <ExportMenu mode="single" title="Department Details" filename={`department_${selected.code || selected.id}`} />
               <button type="button" className="cm-secondary-btn erp-btn erp-btn--secondary" onClick={closeToList}>
                 &larr; Back to Departments List
               </button>

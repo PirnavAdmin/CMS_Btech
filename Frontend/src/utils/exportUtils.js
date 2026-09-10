@@ -69,6 +69,13 @@ function printDocument(title, html) {
 
 export const printResults = options => printDocument(options.title, reportHtml(options))
 
+export function singleRecordHtml({ title, sections }) {
+  if (!sections?.some(section => section.rows?.length)) throw new Error('No record details available to print.')
+  return `<h1>${escapeHtml(title)}</h1>${sections.map(section => `<section><h2>${escapeHtml(section.title)}</h2><table><tbody>${section.rows.map(([label, value]) => `<tr><th scope="row">${escapeHtml(label)}</th><td>${escapeHtml(value)}</td></tr>`).join('')}</tbody></table></section>`).join('')}`
+}
+
+export const printSingleRecord = options => printDocument(options.title, singleRecordHtml(options))
+
 export function printEntityDetails({ title, element }) {
   if (!element) throw new Error('Details are not available to print.')
   const clone = element.cloneNode(true)

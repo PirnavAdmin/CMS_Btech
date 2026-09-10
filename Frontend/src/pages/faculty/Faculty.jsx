@@ -1,3 +1,4 @@
+import { showError } from '../../utils/toast'
 import React, { useState, useEffect, useMemo, useCallback } from 'react'
 import {
   FiUsers,
@@ -7,7 +8,6 @@ import {
   FiEye,
   FiSearch,
   FiPlus,
-  FiCheckCircle,
   FiBriefcase,
   FiLayers,
 } from 'react-icons/fi'
@@ -41,19 +41,14 @@ export default function Faculty() {
   const [filterDept, setFilterDept] = useState('')
   const [currentPage, setCurrentPage] = useState(1)
   const [selectedFaculty, setSelectedFaculty] = useState(null)
-  const [toast, setToast] = useState('')
   const pageSize = 5
 
-  const notify = (msg) => {
-    setToast(msg)
-    setTimeout(() => setToast(''), 3000)
-  }
 
   const loadFaculty = useCallback(async () => {
     try {
       setLoading(true)
       // Query teacher candidates from backend section allocation API
-      let list = await sectionAllocationApi.getTeacherCandidates(0).catch(() => [])
+      let list = await sectionAllocationApi.getTeacherCandidates(0)
 
       if (!Array.isArray(list)) list = []
 
@@ -73,7 +68,7 @@ export default function Faculty() {
         }))
       )
     } catch (err) {
-      console.warn('Error loading faculty list:', err)
+      showError(err.message || 'Error loading faculty list:')
     } finally {
       setLoading(false)
     }
@@ -111,11 +106,7 @@ export default function Faculty() {
           ]}
         />
 
-        {toast && (
-          <div className="erp-toast erp-toast--success" role="status">
-            <FiCheckCircle /> {toast}
-          </div>
-        )}
+
 
         {/* KPI Strip */}
         <div className="erp-kpi-strip">
@@ -264,6 +255,7 @@ export default function Faculty() {
         {/* Faculty Details View Dialog */}
         {selectedFaculty && (
           <ViewDialog
+            exportFilename={`faculty_${selectedFaculty.employeeCode || selectedFaculty.id}`}
             title={`Faculty Profile: ${selectedFaculty.fullName}`}
             onClose={() => setSelectedFaculty(null)}
           >

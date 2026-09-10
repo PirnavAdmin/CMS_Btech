@@ -1,3 +1,5 @@
+import { showInfo, showWarning } from '../../../utils/toast'
+import useToastState from '../../../hooks/useToastState'
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
   FiCheckCircle,
@@ -59,7 +61,7 @@ export default function StudentProfileEdit({ student, onCancel, onSave }) {
     ["documents", "Documents"],
   ];
   const [form, setForm] = useState(() => initialEditForm(student)),
-    [errors, setErrors] = useState({}),
+    [errors, setErrors] = useToastState({}, 'error'),
     [saving, setSaving] = useState(false),
     [photoName, setPhotoName] = useState(""),
     [discard, setDiscard] = useState(false),
@@ -243,6 +245,7 @@ export default function StudentProfileEdit({ student, onCancel, onSave }) {
     if (admission.transport === "Yes" && !clean(admission.transportRoute))
       next["admission.transportRoute"] = "Enter the transportation route.";
     setErrors(next);
+    if (Object.keys(next).length) showWarning('Correct the highlighted fields before saving the profile.');
     if (Object.keys(next).length) {
       const first = Object.keys(next)[0],
         section = first.split(".")[0];
@@ -460,6 +463,7 @@ export default function StudentProfileEdit({ student, onCancel, onSave }) {
     event.target.value = "";
     if (!file) return;
     if (!["application/pdf", "image/jpeg", "image/png"].includes(file.type)) {
+      showWarning('Select a PDF, JPG or PNG file no larger than 500 KB.');
       setErrors((current) => ({
         ...current,
         [`documentUploads.${key}`]: "Only PDF, JPG and PNG files are allowed.",
@@ -467,6 +471,7 @@ export default function StudentProfileEdit({ student, onCancel, onSave }) {
       return;
     }
     if (file.size > 500 * 1024) {
+      showWarning('Select a PDF, JPG or PNG file no larger than 500 KB.');
       setErrors((current) => ({
         ...current,
         [`documentUploads.${key}`]: "File must be 500 KB or smaller.",
@@ -474,6 +479,7 @@ export default function StudentProfileEdit({ student, onCancel, onSave }) {
       return;
     }
     update(`documentUploads.${key}`, file);
+    showInfo('Document selected. Save the profile to upload it.');
   };
   return (
     <div className="sp-edit-page">

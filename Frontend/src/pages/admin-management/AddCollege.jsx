@@ -1,3 +1,5 @@
+import { rememberCreated } from '../../utils/newestFirst'
+import useToastState from '../../hooks/useToastState'
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import DashboardLayout from '../../layouts/DashboardLayout'
@@ -125,10 +127,10 @@ export default function AddCollege() {
   const [existingCollegeCodes, setExistingCollegeCodes] = useState([])
   const [existingColleges, setExistingColleges] = useState([])
   const [touched, setTouched] = useState({})
-  const [logoError, setLogoError] = useState('')
+  const [logoError, setLogoError] = useToastState('', 'error')
   const [dirty, setDirty] = useState(false)
   const [dialog, setDialog] = useState(null)
-  const [notice, setNotice] = useState('')
+  const [, setNotice] = useToastState('', 'success')
   const [submitting, setSubmitting] = useState(false)
   const [activeTab, setActiveTab] = useState(editId ? 'college' : 'college')
   const [highestUnlockedTab, setHighestUnlockedTab] = useState(editId ? FORM_TABS.length - 1 : 0)
@@ -188,11 +190,7 @@ export default function AddCollege() {
     setPendingLogoCollegeId(null)
     if (!editId) {
       originalEditValues.current = null
-      try {
-        const draft = JSON.parse(localStorage.getItem(draftKey(editId)) || 'null')
-        setValues(draft?.values ? { ...initialValues, ...draft.values } : initialValues)
-        if (draft?.activeTab) setActiveTab(draft.activeTab)
-      } catch { setValues(initialValues) }
+      setValues({ ...initialValues })
       return undefined
     }
     let active = true
@@ -208,11 +206,11 @@ export default function AddCollege() {
       const rawType = record.type ?? record.collegeType ?? record.institutionType ?? ''
       const isKnownType = TYPES.includes(rawType)
       const loadedValues = { ...initialValues, collegeName: record.name ?? record.collegeName ?? '', collegeCode: record.code ?? record.collegeCode ?? '', collegeType: rawType && !isKnownType ? 'Other' : rawType, collegeTypeOther: rawType && !isKnownType ? rawType : '', universityName: record.university ?? record.universityName ?? '', addressLine1: record.addressLine1 ?? addressRecord.addressLine1 ?? addressParts[0] ?? '', addressLine2: record.addressLine2 ?? addressRecord.addressLine2 ?? addressParts.slice(1).join(', '), area: record.area ?? addressRecord.area ?? extended.area ?? '', district: record.district ?? addressRecord.district ?? extended.district ?? '', city: record.city ?? addressRecord.city ?? '', state: record.state ?? addressRecord.state ?? '', pincode: String(record.pincode ?? addressRecord.pincode ?? ''), country: record.country ?? addressRecord.country ?? 'India', contactNumber: String(record.contact ?? record.contactNumber ?? record.phoneNumber ?? record.mobile ?? record.phone ?? contactRecord.contactNumber ?? contactRecord.phoneNumber ?? contactRecord.mobile ?? contactRecord.phone ?? ''), alternateContactNumber: String(record.alternateContact ?? record.alternateContactNumber ?? record.alternatePhoneNumber ?? contactRecord.alternateContactNumber ?? extended.alternateContactNumber ?? ''), email: record.email ?? record.collegeEmail ?? contactRecord.email ?? '', website: record.website ?? record.Website ?? contactRecord.website ?? contactRecord.Website ?? '', principalName: record.principal ?? record.principalName ?? principalRecord.principalName ?? '', principalEmail: record.principalEmail ?? principalRecord.principalEmail ?? extended.principalEmail ?? '', principalContact: String(record.principalContact ?? record.principalPhone ?? principalRecord.principalContact ?? extended.principalContact ?? ''), accreditationBody: record.accreditationBody ?? accreditationRecord.body ?? accreditationRecord.accreditationBody ?? extended.accreditationBody ?? '', accreditationStatus: record.accreditationStatus ?? accreditationRecord.status ?? 'Not Accredited', accreditationGrade: record.accreditationGrade ?? accreditationRecord.grade ?? extended.accreditationGrade ?? '', accreditationNumber: record.accreditationNumber ?? accreditationRecord.number ?? extended.accreditationNumber ?? '', validFrom: dateInputValue(record.validFrom ?? record.accreditationValidFrom ?? accreditationRecord.validFrom ?? extended.validFrom), validUntil: dateInputValue(record.validUntil ?? record.accreditationValidUntil ?? accreditationRecord.validUntil ?? extended.validUntil), logo: record.logo ?? record.logoUrl ?? record.collegeLogo ?? record.collegeLogoUrl ?? record.logoPath ?? '', logoName: record.logoName ?? extended.logoName ?? '' }
-      try { setValues({ ...loadedValues, ...(JSON.parse(localStorage.getItem(draftKey(editId)) || 'null')?.values || {}) }) } catch { setValues(loadedValues) }
+      setValues(loadedValues)
       originalEditValues.current = loadedValues
-    }).catch((error) => { if (active) setNotice(error.message || 'Unable to load college details.') }).finally(() => { if (active) setLoadingCollege(false) })
+    }).catch((error) => { if (active) setNotice(error.message || 'Unable to load college details.', 'error') }).finally(() => { if (active) setLoadingCollege(false) })
     return () => { active = false }
-  }, [editId])
+  }, [editId, setNotice])
 
   useEffect(() => {
     if (!dirty) return
@@ -303,7 +301,7 @@ export default function AddCollege() {
       const targetTab = firstInvalidTab || 'college'
       setTouched((current) => (TAB_FIELDS[targetTab] || []).reduce((next, field) => ({ ...next, [field]: true }), current))
       setActiveTab(targetTab)
-      setNotice(invalidMessage)
+      setNotice(invalidMessage, 'warning')
       return
     }
     setActiveTab(tabId)
@@ -315,18 +313,18 @@ export default function AddCollege() {
       const targetTab = firstInvalidTab || 'college'
       setTouched((current) => (TAB_FIELDS[targetTab] || []).reduce((next, field) => ({ ...next, [field]: true }), current))
       setActiveTab(targetTab)
-      setNotice(invalidMessage)
+      setNotice(invalidMessage, 'warning')
     }
-  }, [activeTab, firstInvalidTab, invalidMessage, isValid])
+  }, [activeTab, firstInvalidTab, invalidMessage, isValid, setNotice])
   const saveAndNext = () => {
     const fields = TAB_FIELDS[activeTab]
     setTouched((current) => fields.reduce((next, field) => ({ ...next, [field]: true }), { ...current }))
     if (duplicateReasonForTab) {
-      setNotice(duplicateReasonForTab)
+      setNotice(duplicateReasonForTab, 'warning')
       return
     }
     if (fields.some((field) => errors[field])) {
-      setNotice(errors[fields.find((field) => errors[field])] || 'Please correct the highlighted fields before continuing.')
+      setNotice(errors[fields.find((field) => errors[field])] || 'Please correct the highlighted fields before continuing.', 'warning')
       return
     }
     const currentIndex = FORM_TABS.findIndex((tab) => tab.id === activeTab)
@@ -391,6 +389,7 @@ export default function AddCollege() {
       // The list route fetches from the backend when it mounts, so navigating
       // after the success message ensures the new row uses server data and the
       // list's established ordering and pagination rules.
+      if (!editId) rememberCreated('colleges', collegeId)
       setDirty(false)
       localStorage.removeItem(draftKey(editId))
       setDialog(null)
@@ -411,7 +410,7 @@ export default function AddCollege() {
       const partialSave = !editId && collegeId
       setNotice(partialSave
         ? `College was created, but the logo upload failed: ${getApiErrorMessage(error)} Submit again to retry the logo upload.`
-        : getApiErrorMessage(error))
+        : getApiErrorMessage(error), 'error')
       setDialog(null)
     }
     finally { setSubmitting(false) }
@@ -424,7 +423,7 @@ export default function AddCollege() {
     <nav className="ac-tabs" aria-label="College form sections" role="tablist">
       {FORM_TABS.map((tab, index) => <button key={tab.id} type="button" role="tab" aria-selected={activeTab === tab.id} aria-disabled={index > highestUnlockedTab} disabled={index > highestUnlockedTab} className={activeTab === tab.id ? 'active' : ''} onClick={() => showTab(tab.id)}><span>{index + 1}</span>{tab.label}</button>)}
     </nav>
-    {loadingCollege && <div className="ac-notice" role="status">Loading college details...</div>}{notice && <div className={`ac-notice${notice === 'College added successfully!' ? ' ac-notice-success' : ''}`} role="status">{notice}</div>}
+    {loadingCollege && <div className="ac-notice" role="status">Loading college details...</div>}
     <form onSubmit={(event) => event.preventDefault()} noValidate>
       {activeTab === 'college' && <>
       {section('College Information', 'Core identity and affiliation details.', <>
