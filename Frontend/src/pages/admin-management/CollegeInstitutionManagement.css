@@ -172,7 +172,7 @@
   border: 1px solid #c7d7e7;
   border-radius: 8px;
   padding: 9px 16px;
-  background: #fff;
+  background: var(--surface, #fff);
   color: var(--brand-navy, #0f172a);
   font-weight: 700;
   font-size: 0.9rem;
@@ -244,7 +244,7 @@
   padding: 26px;
   border: 1px solid rgba(255, 255, 255, 0.7);
   border-radius: 16px;
-  background: #fff;
+  background: var(--surface, #fff);
   box-shadow: 0 24px 70px rgba(8, 24, 43, 0.28);
 }
 .cm-modal-card .cm-header {
@@ -254,7 +254,7 @@
   margin: -26px -26px 20px;
   padding: 22px 26px 16px;
   border-bottom: 1px solid #e8edf3;
-  background: #fff;
+  background: var(--surface, #fff);
   border-radius: 16px 16px 0 0;
 }
 
@@ -416,7 +416,7 @@
   justify-content: space-between;
   align-items: center;
   padding: 14px 18px;
-  background: #fff;
+  background: var(--surface, #fff);
   border: 1px solid #e3e7ee;
   border-top: none;
   border-radius: 0 0 12px 12px;
@@ -451,7 +451,7 @@
   border: 1px solid #c7d7e7;
   border-radius: 6px;
   color: var(--brand-navy, #0f172a);
-  background: #fff;
+  background: var(--surface, #fff);
   font-size: .8rem;
   font-weight: 700;
 }
@@ -474,7 +474,7 @@
   border: 1px solid #c7d7e7;
   border-radius: 6px;
   padding: 6px 12px;
-  background: #fff;
+  background: var(--surface, #fff);
   color: var(--brand-navy, #0f172a);
   font-size: 0.84rem;
   font-weight: 600;
@@ -499,7 +499,7 @@
   height: 32px;
   display: grid;
   place-items: center;
-  background: #fff;
+  background: var(--surface, #fff);
   color: var(--brand-navy, #0f172a);
   font-size: 0.84rem;
   font-weight: 600;
@@ -535,7 +535,7 @@
 .cm-profile-card {
   border: 1px solid #e2e8f0;
   border-radius: 16px;
-  background: #fff;
+  background: var(--surface, #fff);
   overflow: hidden;
   box-shadow: 0 4px 16px rgba(15, 23, 42, 0.04);
 }
@@ -606,7 +606,7 @@
 }
 
 .cm-badge-type {
-  background: #ffffff;
+  background: var(--surface, #fff);
   color: #0d3761;
 }
 
@@ -789,7 +789,7 @@
 
 .cm-form-grid select {
   appearance: none;
-  background: #fff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='9' viewBox='0 0 14 9'%3E%3Cpath fill='%235e7897' d='M1 1l6 6 6-6'/%3E%3C/svg%3E") no-repeat right 14px center;
+  background: var(--surface, #fff) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='9' viewBox='0 0 14 9'%3E%3Cpath fill='%235e7897' d='M1 1l6 6 6-6'/%3E%3C/svg%3E") no-repeat right 14px center;
   background-size: 12px;
   padding-right: 36px;
   cursor: pointer;
@@ -1027,7 +1027,7 @@
 .college-management .cm-toolbar select{width:190px!important;min-width:190px!important;flex:0 0 190px!important}
 .college-management .filter-disclosure,
 .college-management .filter-disclosure__bar,
-.college-management .filter-disclosure__content { background: #fff; }
+.college-management .filter-disclosure__content { background: var(--surface, #fff); }
 .college-management .filter-disclosure .cm-toolbar {
   background: transparent !important;
 }

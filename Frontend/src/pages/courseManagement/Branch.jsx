@@ -11,7 +11,7 @@ import CompactSummary from '../../components/CompactSummary'
 import InfoCard from '../../components/InfoCard'
 import StatusBadge from '../../components/StatusBadge'
 import StatusConfirmDialog from '../../components/StatusConfirmDialog'
-import { academicYearApi, branchApi, courseApi, departmentApi, studentApi } from '../../api/apiEndpoints'
+import { academicYearApi, branchApi, courseApi, studentApi } from '../../api/apiEndpoints'
 import { branchTypeLabel } from '../../utils/semesterUtils'
 import ViewDialog from '../../components/ViewDialog'
 import { showDeactivationBlocked } from '../../components/DeactivationBlockedDialog'
@@ -27,7 +27,7 @@ const blank = {
   branchType: 'Core',
   specialization: '',
   intakeCapacity: '',
-  status: 'Active',
+  status: '',
   academicYearId: '',
   duration: '',
   academicPattern: '',
@@ -285,13 +285,12 @@ function List() {
   </Page>
 }
 
-const validateBranch = (value, branchId, existingRows, courses) => {
+const validateBranch = (value, branchId, existingRows) => {
   const errors = {}
   const code = String(value.branchCode || '').trim().toUpperCase()
   const name = String(value.branchName || '').trim()
 
   if (!value.courseId) errors.courseId = 'Course is required.'
-  if (!value.departmentId) errors.departmentId = 'Select an active department.'
   if (!name) errors.branchName = 'Branch name is required.'
   if (!code) errors.branchCode = 'Branch code is required.'
   else if (!/^[A-Z0-9]+(?:[-/][A-Z0-9]+)*$/.test(code)) errors.branchCode = 'Use uppercase letters, numbers, hyphens, or slashes only.'
@@ -302,10 +301,6 @@ const validateBranch = (value, branchId, existingRows, courses) => {
   if (!Number.isInteger(Number(value.intakeCapacity)) || Number(value.intakeCapacity) < 1) errors.intakeCapacity = 'Approved intake must be a positive whole number.'
   if (!value.status) errors.status = 'Status is required.'
 
-  const chosenCourse = courses.find((course) => String(course.id) === String(value.courseId))
-  if (chosenCourse && String(chosenCourse.departmentId || '') && String(value.departmentId || '') && String(chosenCourse.departmentId) !== String(value.departmentId)) {
-    errors.departmentId = 'The selected course department does not match the branch record.'
-  }
 
   return errors
 }
@@ -315,7 +310,6 @@ function Form() {
   const [params] = useSearchParams()
   const navigate = useNavigate()
   const [courses, setCourses] = useState([])
-  const [departments, setDepartments] = useState([])
   const [years, setYears] = useState([])
   const [branches, setBranches] = useState([])
   const [errors, setErrors] = useState({})
@@ -330,26 +324,19 @@ function Form() {
 
   useEffect(() => {
     let alive = true
-    Promise.allSettled([courseApi.getAll(), academicYearApi.getAll(), branchApi.getAll(), departmentApi.getAll()]).then(([courseResult, yearResult, branchResult, departmentResult]) => {
+    Promise.allSettled([courseApi.getAll(), academicYearApi.getAll(), branchApi.getAll()]).then(([courseResult, yearResult, branchResult]) => {
       if (!alive) return
       const courseRows = courseResult.status === 'fulfilled' ? (courseResult.value || []) : []
       const yearRows = yearResult.status === 'fulfilled' ? (yearResult.value || []) : []
       const branchRows = branchResult.status === 'fulfilled' ? (branchResult.value || []) : []
-      const departmentRows = departmentResult.status === 'fulfilled' ? (departmentResult.value || []) : []
       const allCourses = courseRows.map(courseMap).filter((course) => course.id && course.name)
       const activeYears = getOperationalAcademicYearOptions(yearRows || []).map((year) => ({ ...year, status: 'Active' }))
       setCourses(allCourses)
-      setDepartments(departmentRows.map((department) => ({
-        id: normalizeId(department.departmentId ?? department.id),
-        name: content(department.departmentName ?? department.name ?? department.department ?? ''),
-        status: content(department.status ?? 'Active'),
-      })).filter((department) => department.id && department.name && !['inactive', 'archived'].includes(toLower(department.status))))
       setYears(activeYears)
       setBranches((branchRows || []).map(normalizeBranch))
       setMastersReady(true)
       if (courseResult.status === 'rejected') setError(courseResult.reason?.message || 'Unable to load courses.')
       else if (yearResult.status === 'rejected') setError(yearResult.reason?.message || 'Unable to load academic years.')
-      else if (departmentResult.status === 'rejected') setError(departmentResult.reason?.message || 'Unable to load departments.')
       else setError('')
     })
     return () => { alive = false }
@@ -402,7 +389,7 @@ function Form() {
       academicPattern: selectedCourse?.academicPattern || '',
       totalSemesters: selectedCourse?.totalSemesters || '',
       academicYearId: selectedYear?.id || '',
-      status: 'Active',
+      status: '',
     })
     if (selectedCourse && (!selectedCourse.durationValue || !selectedCourse.totalSemesters) && !courseDetailRequestsRef.current.has(selectedCourse.id)) {
       courseDetailRequestsRef.current.add(selectedCourse.id)
@@ -464,10 +451,10 @@ function Form() {
       totalSemesters: selectedCourse?.totalSemesters || '',
       startingAcademicYearId: academicYear?.id || value.academicYearId || '',
       startingAcademicYearName: academicYear?.name || value.startingAcademicYearName || '',
-      status: value.status === 'Inactive' ? 'Inactive' : 'Active',
+      status: value.status,
     }
 
-    const validationErrors = validateBranch(payload, id || '', branches, courses)
+    const validationErrors = validateBranch(payload, id || '', branches)
     setErrors(validationErrors)
     if (Object.keys(validationErrors).length) {
       setError(Object.values(validationErrors)[0])
@@ -477,8 +464,8 @@ function Form() {
     setSaving(true)
     setError('')
     try {
-      const result = normalizeBranch(id ? await branchApi.update(id, payload) : await branchApi.create(payload))
-      navigate(id ? `/branches/${result.id}` : '/branches')
+      await (id ? branchApi.update(id, payload) : branchApi.create(payload))
+      navigate('/branches')
     } catch (requestError) {
       setError(requestError?.message || 'Unable to save branch.')
     } finally {
@@ -508,14 +495,13 @@ function Form() {
         <nav className="branch-steps"><button type="button" className={step === 0 ? 'active' : ''} onClick={() => setStep(0)}><b>1</b>Branch Details</button><button type="button" className={step === 1 ? 'active' : ''} onClick={nextStep}><b>2</b>Branch Configuration</button></nav>
         {step === 0 && <section className="branch-step-content">
           <div className="cm-form-grid"><Field label="Course Name *" error={errors.courseId}><SearchableSelect label="Course Name" value={value.courseId} options={courses.map((course) => ({ id: course.id, name: course.name, code: course.code }))} onChange={selectCourse} placeholder="Select Course" searchPlaceholder="Search course name or code..." noOptionsMessage="No courses found." error={Boolean(errors.courseId)} /></Field><Field label="Course Code"><input value={selectedCourse?.code || value.courseCode || ''} readOnly /></Field></div>
-          <div className="cm-form-grid"><Field label="Department *" error={errors.departmentId}><select value={value.departmentId} onChange={(event) => update('departmentId', event.target.value)}><option value="">Select active department</option>{departments.map((department) => <option key={department.id} value={department.id}>{department.name}</option>)}</select></Field></div>
           {!value.courseId && <p className="branch-structure-empty">Select a course to load its academic structure.</p>}
           <div className="cm-form-grid"><Field label="Branch Name *" error={errors.branchName}><input value={value.branchName} onChange={(event) => update('branchName', event.target.value)} placeholder="Enter branch name" /></Field><Field label="Branch Code *" error={errors.branchCode}><input value={value.branchCode} onChange={(event) => update('branchCode', event.target.value)} placeholder="e.g. CSE" /></Field></div>
           <div className="cm-form-grid"><Field label="Branch Type *"><select value={value.branchType} onChange={(event) => update('branchType', event.target.value)}><option value="Core">Core</option><option value="Specialization">Specialization</option></select></Field>{value.branchType === 'Specialization' && <Field label="Specialization *" error={errors.specialization}><input value={value.specialization} onChange={(event) => update('specialization', event.target.value)} placeholder="e.g. Artificial Intelligence" /></Field>}<Field label="Short Name"><input value={value.shortName} onChange={(event) => update('shortName', event.target.value)} placeholder="Optional short name" /></Field></div>
           <div className="cm-form-grid"><Field label="Active Academic Year"><select value={value.academicYearId} onChange={(event) => update('academicYearId', event.target.value)}><option value="">Select active year</option>{years.map((year) => <option key={year.id} value={year.id}>{year.name}</option>)}</select></Field></div>
           <div className="branch-form-actions"><span aria-hidden="true" /><button type="button" className="cm-button" onClick={nextStep}>Next</button></div>
         </section>}
-        {step === 1 && <section className="branch-step-content"><h2>Branch Configuration</h2><div className="branch-structure-summary"><h3>Course Structure</h3>{courseStructureLoading ? <p>Loading course structure...</p> : <><div><span>Duration</span><strong>{selectedCourse?.durationValue ? `${selectedCourse.durationValue} Years` : ''}</strong></div><div><span>Total Semesters</span><strong>{selectedCourse?.totalSemesters || ''}</strong></div></>}</div><div className="cm-form-grid"><Field label="Approved Intake *" error={errors.intakeCapacity}><input type="number" min="1" value={value.intakeCapacity} onChange={(event) => update('intakeCapacity', event.target.value)} placeholder="Enter approved intake" /></Field><Field label="Status *" error={errors.status}><select value={value.status} onChange={(event) => update('status', event.target.value)}><option value="Active">Active</option><option value="Inactive">Inactive</option></select></Field></div><div className="branch-form-actions"><button type="button" className="cm-button secondary" onClick={() => setStep(0)}>Back</button><button type="submit" className="cm-button" disabled={saving || courseStructureLoading}>{saving ? 'Saving…' : id ? 'Update Branch' : 'Create Branch'}</button></div></section>}
+        {step === 1 && <section className="branch-step-content"><h2>Branch Configuration</h2><div className="branch-structure-summary"><h3>Course Structure</h3>{courseStructureLoading ? <p>Loading course structure...</p> : <><div><span>Duration</span><strong>{selectedCourse?.durationValue ? `${selectedCourse.durationValue} Years` : ''}</strong></div><div><span>Total Semesters</span><strong>{selectedCourse?.totalSemesters || ''}</strong></div></>}</div><div className="cm-form-grid"><Field label="Approved Intake *" error={errors.intakeCapacity}><input type="number" min="1" value={value.intakeCapacity} onChange={(event) => update('intakeCapacity', event.target.value)} placeholder="Enter approved intake" /></Field><Field label="Status *" error={errors.status}><select value={value.status} onChange={(event) => update('status', event.target.value)}><option value="" disabled>Select Status</option><option value="Active">Active</option><option value="Inactive">Inactive</option></select></Field></div><div className="branch-form-actions"><button type="button" className="cm-button secondary" onClick={() => setStep(0)}>Back</button><button type="submit" className="cm-button" disabled={saving || courseStructureLoading}>{saving ? 'Saving…' : id ? 'Update Branch' : 'Create Branch'}</button></div></section>}
       </section>
       <aside className="cm-panel course-preview branch-course-preview" aria-label="Branch preview"><span>Live Preview</span><div>
         <h2>{value.branchName.trim() || 'Branch Preview'}</h2>

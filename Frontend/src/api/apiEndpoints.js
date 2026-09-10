@@ -112,6 +112,7 @@ export const API_ENDPOINTS = Object.freeze({
     student: (sectionId, studentId) => endpoint(`/api/v1/sections/${sectionId}/students/${studentId}`),
   }),
   studentAdmissions: Object.freeze({
+    approve: (id) => endpoint(`/api/Admissions/${id}/approve`),
     list: endpoint('/api/v1/student-admissions'), create: endpoint('/api/v1/student-admissions'),
     detail: (id) => endpoint(`/api/v1/student-admissions/${id}`), update: (id) => endpoint(`/api/v1/student-admissions/${id}`),
     academicDetails: (id) => endpoint(`/api/v1/student-admissions/${id}/academic-details`),
@@ -476,7 +477,7 @@ const branchPayload = (branch) => ({
   branchName: String(branch.name || branch.branchName || '').trim(),
   shortName: String(branch.shortName || '').trim() || null,
   specialization: branch.specialization || null,
-  departmentId: Number(branch.departmentId),
+  ...(branch.departmentId ? { departmentId: Number(branch.departmentId) } : {}),
   branchType: branch.branchType || 'Core',
   duration: branch.duration || branch.durationValue ? Number(branch.duration || branch.durationValue) : null,
   totalSemesters: branch.totalSemesters || branch.semesters ? Number(branch.totalSemesters || branch.semesters) : null,
@@ -564,6 +565,20 @@ export const sectionAssignmentApi = {
 export const sectionAllocationApi = {
   getTeacher: async (sectionId) => (await request(API_ENDPOINTS.sections.classTeacher(sectionId)))?.data,
   getTeacherCandidates: async (sectionId) => listResponse(await request(API_ENDPOINTS.sections.classTeacherCandidates(sectionId))),
+  getFormTeacherCandidates: async (sectionId, sections = []) => {
+    if (sectionId) return sectionAllocationApi.getTeacherCandidates(sectionId)
+    const sectionIds = [...new Set(sections.map((section) => section.sectionId ?? section.id).filter((id) => Number(id) > 0))]
+    const results = await Promise.allSettled(sectionIds.map((id) => sectionAllocationApi.getTeacherCandidates(id)))
+    const candidates = new Map()
+    for (const result of results) {
+      if (result.status !== 'fulfilled') continue
+      for (const candidate of result.value) {
+        if (candidate.employeeProfileId) candidates.set(String(candidate.employeeProfileId), candidate)
+      }
+    }
+    if (results.length && results.every((result) => result.status === 'rejected')) throw results[0].reason
+    return [...candidates.values()]
+  },
   assignTeacher: async (sectionId, employeeProfileId) => (await request(API_ENDPOINTS.sections.classTeacher(sectionId), { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ employeeProfileId: Number(employeeProfileId) }) }))?.data,
   removeTeacher: async (sectionId) => request(API_ENDPOINTS.sections.classTeacher(sectionId), { method: 'DELETE' }),
   getCapacity: async (sectionId) => (await request(API_ENDPOINTS.sections.capacity(sectionId)))?.data,
@@ -831,7 +846,8 @@ export const studentAdmissionStatusApi = {
     const body = { newStatus, remarks: payload.remarks, rejectionReason: payload.rejectionReason ?? (newStatus === 'REJECTED' ? payload.remarks : undefined) }
     let res
     try {
-      res = normalizeAdmission(await request(API_ENDPOINTS.studentAdmissions.status(reqId), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }))
+      const approving = newStatus === 'APPROVED'
+      res = normalizeAdmission(await request(approving ? API_ENDPOINTS.studentAdmissions.approve(reqId) : API_ENDPOINTS.studentAdmissions.status(reqId), { method: approving ? 'PUT' : 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(approving ? { remarks: payload.remarks } : body) }))
     } catch (error) {
       if (error.status >= 500) {
         error.message = `The admission server failed to update this application (HTTP ${error.status}). The decision could not be confirmed.${error.correlationId ? ` Reference: ${error.correlationId}.` : ''} Refresh to check its status and contact the administrator before retrying.`

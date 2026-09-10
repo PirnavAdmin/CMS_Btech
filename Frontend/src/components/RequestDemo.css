@@ -10,3 +10,23 @@
 .rd-dialog .rd-main legend{margin-bottom:10px}
 .rd-dialog .rd-grid{gap:12px}
 .rd-dialog .rd-footer{margin-top:16px}
+
+/* Compact confirmation layout independent of the enquiry form. */
+.rd-dialog.rd-dialog--success{width:min(460px,calc(100vw - 32px));height:fit-content;min-height:0;max-height:calc(100dvh - 32px);margin:auto;border:1px solid var(--line,#d7e4ed);border-radius:18px}
+.rd-dialog--success .rd-header{padding:16px 20px;gap:12px}
+.rd-dialog--success .rd-header>span{min-width:0;font-size:15px}
+.rd-dialog--success .rd-header button{flex-shrink:0}
+.rd-dialog--success .rd-layout{display:block;height:auto;min-height:0}
+.rd-dialog--success .rd-brand{display:none}
+.rd-dialog--success .rd-main{height:auto;min-height:0;margin:0;padding:24px 24px 20px}
+.rd-dialog--success .rd-success{min-height:0;gap:8px;justify-items:center;text-align:center}
+.rd-dialog--success .rd-success>svg{width:64px;height:64px;padding:12px;margin-bottom:8px;border-radius:50%;background:#eaf7ee;color:#15803d}
+.rd-dialog--success .rd-success h1{margin:0 0 8px;font-size:28px;outline:none}
+.rd-dialog--success .rd-success p{color:var(--text-muted,#6d8294);font-size:14px;line-height:1.6}
+.rd-reference{display:flex;align-items:center;justify-content:space-between;gap:16px;width:fit-content;max-width:100%;margin-top:10px;padding:8px 12px;border:1px solid var(--border,#d7e4ed);border-radius:10px;background:var(--surface-soft,#f3f8fb);text-align:left}
+.rd-success .rd-reference small{margin:0;font-size:13px}
+.rd-reference strong{min-width:0;overflow-wrap:anywhere;font-size:15px}
+.rd-dialog--success .rd-footer{width:100%;display:flex;flex-direction:row;justify-content:center;gap:10px;margin-top:14px}
+.rd-dialog--success .rd-footer button{display:flex;align-items:center;justify-content:center;width:auto;min-width:0;min-height:36px;padding:8px 14px;font-size:13px;line-height:1.4}
+.rd-dialog--success .rd-footer .lp-button{flex:0 1 auto;box-shadow:none}
+@media(max-width:400px){.rd-dialog--success .rd-main{padding:20px 16px 18px}.rd-dialog--success .rd-header{padding:12px 16px}.rd-dialog--success .rd-header>span{font-size:13px}.rd-dialog--success .rd-success h1{font-size:25px}.rd-dialog--success .rd-footer{flex-direction:row;flex-wrap:wrap}.rd-dialog--success .rd-footer button{width:auto}}

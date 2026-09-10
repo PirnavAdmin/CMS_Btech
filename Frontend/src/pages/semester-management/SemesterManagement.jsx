@@ -146,7 +146,7 @@ const createPlan = ({ course, branch, activeYear, academicYears, dates = {}, edi
       branchCode: branch.code,
       branchType: branch.branchType,
     }
-  })
+  }).filter((item) => item.academicYearId)
 }
 
 const Page = ({ children }) => <DashboardLayout><main className="semester-management">{children}</main></DashboardLayout>
@@ -360,7 +360,6 @@ function SemesterForm({ editMode = false }) {
   const noActiveYear = !editMode && activeYears.length === 0
   const yearWarning = noActiveYear ? 'No active academic year is configured.' : !editMode && activeYears.length > 1 ? 'Multiple active academic years are configured. Using the first active academic year for this semester structure.' : ''
   const duplicateRows = branch ? existingRows.filter((item) => sameCohort(item, { courseId: form.courseId, branchId: form.branchId, semesterNumber: 1, academicYearName: yearName(activeYear) })) : []
-  const missingYears = plan.filter((item) => !item.academicYearId).map((item) => item.academicYearName)
 
   const load = async () => {
     setLoading(true)
@@ -410,7 +409,6 @@ function SemesterForm({ editMode = false }) {
     if (unsupportedPattern) return `${course.academicPattern} courses are not supported for semester generation.`
     if (course.totalSemesters !== course.durationYears * 2) return 'Course duration and total semesters do not match the standard two-semester academic year.'
     if (!coursePeriod) return 'Course period could not be calculated from academic year and course duration.'
-    if (missingYears.length) return `Academic year records are missing for: ${[...new Set(missingYears)].join(', ')}.`
     return ''
   }
 

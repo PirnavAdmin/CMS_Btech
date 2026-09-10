@@ -1,0 +1,70 @@
+/* Shared dark-mode contrast for directory tools, record banners and dialogs. */
+:root[data-theme="dark"] {
+  --text-on-accent: #07131f;
+  --hero-dark: #10263d;
+  --hero-blue: #173d58;
+}
+:root[data-theme="dark"] .filter-disclosure,
+:root[data-theme="dark"] .filter-disclosure__bar,
+:root[data-theme="dark"] .filter-disclosure__content {
+  color: var(--text-primary);
+  border-color: var(--border);
+  background: var(--surface);
+}
+:root[data-theme="dark"] .filter-disclosure .filter-disclosure__search > * {
+  background: transparent !important;
+  box-shadow: none !important;
+}
+:root[data-theme="dark"] :is(.cm-profile-view .cm-profile-banner, .section-management .cm-profile-banner,
+.semester-management .cm-profile-banner, .student-admission .sa-profile-header,
+.student-profile .sp-hero, .course-management .course-detail-hero, .branch-management .branch-detail-hero) {
+  background: linear-gradient(115deg, var(--hero-dark), var(--hero-blue));
+}
+/* Bright accents need dark text, including hover states. */
+:root[data-theme="dark"] :is(.btn, .cm-button, .primary-button, .module-primary-action, .semester-primary,
+.section-primary, .ac-primary, .settings-button, .sa-primary, .p-primary, .password-modal__primary):not(.secondary):not(.danger):not(.btn-secondary):not(.btn-danger):not(.btn-ghost),
+:root[data-theme="dark"] .logout-confirmation__confirm {
+  color: var(--text-on-accent) !important;
+  background: var(--brand) !important;
+  border-color: var(--brand) !important;
+}
+:root[data-theme="dark"] :is(.btn, .cm-button, .primary-button, .module-primary-action, .semester-primary,
+.section-primary, .ac-primary, .settings-button, .sa-primary, .p-primary, .password-modal__primary):not(.secondary):not(.danger):not(.btn-secondary):not(.btn-danger):not(.btn-ghost):hover,
+:root[data-theme="dark"] .logout-confirmation__confirm:hover {
+  background: var(--brand-hover) !important;
+  border-color: var(--brand-hover) !important;
+}
+:root[data-theme="dark"] :is(.section-assignment-panel, .section-form-card, .compact-summary,
+.department-profile-card, .department-details__grid > div, .department-profile-card .department-details__identity,
+.department-profile-card .department-branch-list a, .erp-message-card) {
+  color: var(--text-primary);
+  border-color: var(--border);
+  background: var(--surface);
+}
+:root[data-theme="dark"] :is(.section-assignment-chooser button, .section-assignment-form-head button,
+.section-assignment-panel header > button, .section-assigned-list article button,
+.section-assignment-panel > footer button, .section-back-button,
+.password-card footer button:first-child, .password-modal footer button:not(.password-modal__primary),
+.profile-modal-close, .ac-dialog-close, .ac-back) {
+  color: var(--brand);
+  border-color: var(--border-strong);
+  background: var(--surface-raised);
+}
+:root[data-theme="dark"] :is(.settings-page header span, .settings-card > span,
+.settings-card > p:not(:first-child), .strength ul, .password-modal__strength ul) {
+  color: var(--text-secondary);
+}
+:root[data-theme="dark"] :is(.settings-field button, .strength > div b) { color: var(--brand); }
+:root[data-theme="dark"] :is(.settings-field small, .password-modal__field small,
+.form-error, .field-error, .rd-error) { color: var(--danger); }
+:root[data-theme="dark"] :is(.strength li.met, .password-modal__strength li.met) { color: var(--success); }
+:root[data-theme="dark"] .settings-page .notice {
+  color: var(--danger);
+  background: color-mix(in srgb, var(--danger) 10%, var(--surface));
+  border-color: color-mix(in srgb, var(--danger) 40%, var(--border));
+}
+:root[data-theme="dark"] .settings-page .notice.success {
+  color: var(--success);
+  background: color-mix(in srgb, var(--success) 10%, var(--surface));
+  border-color: color-mix(in srgb, var(--success) 40%, var(--border));
+}

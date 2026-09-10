@@ -172,7 +172,7 @@ export default function DashboardLayout({ children }) {
     }
 
     setValues(next)
-    setErrors(validate(next))
+    setErrors(previous => ({ ...previous, [event.target.name]: undefined }))
   }
 
   const submit = async (event) => {
@@ -192,7 +192,9 @@ export default function DashboardLayout({ children }) {
         confirmNewPassword: values.confirmPassword,
       })
       setValues(empty)
-      setSuccess(true)
+      signOut()
+      sessionStorage.setItem('btech-logout-message', 'Password changed successfully. Please sign in with your new password.')
+      navigate('/login', { replace: true })
     } catch (error) {
       setErrors({ currentPassword: error.message || 'Unable to change password. Please try again.' })
       setSuccess(false)
@@ -446,7 +448,7 @@ export default function DashboardLayout({ children }) {
                       <button
                         type="submit"
                         className="password-modal__primary"
-                        disabled={submitting || Object.keys(validate()).length > 0}
+                        disabled={submitting}
                       >
                         {submitting
                           ? 'Updating Password...'

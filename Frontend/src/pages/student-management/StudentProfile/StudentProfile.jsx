@@ -1,4 +1,5 @@
 import { isApiResult } from '../../../utils/exportProvenance'
+import { approvedStudentProfiles } from '../../../utils/approvedStudentProfiles'
 import ExportMenu, { PrintDetailsButton } from '../../../components/ExportMenu'
 import { profileColumns } from '../../../utils/exportColumns'
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -31,6 +32,7 @@ import {
   studentDocumentApi,
   studentPreviousEducationApi,
   studentProfilesApi,
+  studentAdmissionApi,
 } from "../../../api/apiEndpoints";
 import StudentProfileEdit from "./StudentProfileEdit";
 import "./StudentProfile.css";
@@ -622,7 +624,7 @@ export default function StudentProfile() {
       "studentId",
     );
     try {
-      const [directory, profile] = await Promise.allSettled([
+      const [directory, profile, admissions] = await Promise.allSettled([
         studentProfilesApi.getAll(),
         requestedId
           ? Promise.all([
@@ -630,6 +632,7 @@ export default function StudentProfile() {
               studentDocumentApi.getAll(requestedId).catch(() => []),
             ])
           : Promise.resolve(null),
+        studentAdmissionApi.getAll(),
       ]);
       let rows =
         directory.status === "fulfilled"
@@ -651,6 +654,11 @@ export default function StudentProfile() {
           profile.reason?.message ||
             "Unable to load the approved student profile.",
         );
+      if (admissions.status !== 'fulfilled' || !isApiResult(admissions.value)) {
+        setStudents([]);
+        throw new Error('Unable to verify admission approvals. Please refresh the student list.');
+      }
+      rows = approvedStudentProfiles(rows, admissions.value);
       setStudents(rows);
       if (directory.status === "rejected" && !rows.length)
         setError(

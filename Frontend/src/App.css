@@ -36,7 +36,7 @@
    TOP HEADER
    ============================ */
 .dashboard-header {
-  background-color: #FFFFFF;
+  background-color: var(--surface, #fff);
   border-bottom: 1px solid #E5E9EF;
   display: flex;
   align-items: center;
@@ -287,7 +287,7 @@ button.btn-primary:hover,
 }
 
 .cm-badge-type {
-  background: #ffffff;
+  background: var(--surface, #fff);
   color: #0d3761;
 }
 

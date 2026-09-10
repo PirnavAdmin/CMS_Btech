@@ -662,7 +662,7 @@
 .semester-management .cm-profile-card {
   border: 1px solid #e2e8f0;
   border-radius: 16px;
-  background: #fff;
+  background: var(--surface, #fff);
   overflow: hidden;
   box-shadow: 0 4px 16px rgba(15, 23, 42, 0.04);
 }
@@ -731,7 +731,7 @@
 
 .semester-management .cm-badge-type {
   color: #0d3761;
-  background: #fff;
+  background: var(--surface, #fff);
 }
 
 .semester-management .cm-status-badge {
@@ -797,7 +797,7 @@
   overflow: hidden;
   border: 1px solid #e2e8f0;
   border-radius: 8px;
-  background: #fff;
+  background: var(--surface, #fff);
 }
 
 .semester-management .cm-info-row {
