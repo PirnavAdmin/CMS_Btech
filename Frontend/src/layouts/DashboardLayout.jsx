@@ -42,6 +42,7 @@ export default function DashboardLayout({ children }) {
     '/department-management': 'Departments', '/semester-management': 'Semesters', '/section-management': 'Sections',
     '/student-management/admissions': 'Student Admissions',
     '/student-management/profiles': 'Student Profiles', '/student-management/promotions': 'Student Promotions',
+    '/faculty': 'Faculty Management', '/faculty/advisors': 'Class Advisor Allocation', '/faculty/subjects': 'Subject Allocation',
   })[pathname] || (pathname.startsWith('/student-management/admissions') ? 'Student Admissions' : pathname.startsWith('/student-management/profiles') ? 'Student Profiles' : pathname.startsWith('/student-management/promotions') ? 'Student Promotions' : pathname.startsWith('/courses') ? 'Courses' : pathname.startsWith('/branches') ? 'Branches' : 'Digital Campus')
   const breadcrumbSection = ['My Profile', 'Settings'].includes(pageName) ? 'Account' : pageName === 'Dashboard' ? 'Digital Campus' : pageName.startsWith('Student ') ? 'Student Management' : 'Academic Configuration'
 
@@ -66,6 +67,7 @@ export default function DashboardLayout({ children }) {
   }, [theme])
 
   useEffect(() => {
+    if (pathname.startsWith('/faculty')) return undefined
     let active = true
     profileApi.getProfile()
       .then((profile) => { if (active) setAccount({ name: profile.fullName || '', identifier: profile.identifier || profile.admissionNumber || '' }) })
@@ -73,7 +75,7 @@ export default function DashboardLayout({ children }) {
     return () => { active = false }
   }, [])
 
-  const globalLinks = [['Dashboard', '/dashboard'], ['Student Admissions', '/student-management/admissions'], ['Student Profiles', '/student-management/profiles'], ['Student Promotions', '/student-management/promotions'], ['College', '/college-institution-management'], ['Academic Years', '/academic-year-management'], ['Courses', '/courses'], ['Departments', '/department-management'], ['Branches', '/branches'], ['Semesters', '/semester-management'], ['Sections', '/section-management'], ['My Profile', '/my-profile'], ['Settings', '/settings']]
+  const globalLinks = [['Dashboard', '/dashboard'], ['Student Admissions', '/student-management/admissions'], ['Student Profiles', '/student-management/profiles'], ['Student Promotions', '/student-management/promotions'], ['Faculty Management', '/faculty'], ['Class Advisor Allocation', '/faculty/advisors'], ['Subject Allocation', '/faculty/subjects'], ['College', '/college-institution-management'], ['Academic Years', '/academic-year-management'], ['Courses', '/courses'], ['Departments', '/department-management'], ['Branches', '/branches'], ['Semesters', '/semester-management'], ['Sections', '/section-management'], ['My Profile', '/my-profile'], ['Settings', '/settings']]
   const globalResults = globalQuery.trim() ? globalLinks.filter(([label]) => label.toLowerCase().includes(globalQuery.trim().toLowerCase())) : []
   const rules = useMemo(
     () => requirements(values.newPassword),

@@ -118,10 +118,14 @@ export default function App() {
             <Route path="/settings" element={<Settings />} />
           </Route>
 
-          {/* Faculty / Operations */}
+          {/* Faculty demo module is self-contained and does not require backend masters. */}
+          <Route element={<ProtectedRoute allowedRoles={[ROLES.ADMIN, ROLES.FACULTY]} />}>
+            <Route path="/faculty/*" element={<Faculty />} />
+          </Route>
+
+          {/* Faculty / Operations backed modules */}
           <Route element={<ProtectedRoute allowedRoles={[ROLES.ADMIN, ROLES.FACULTY]} />}>
             <Route element={<AcademicProvider><Outlet /></AcademicProvider>}>
-              <Route path="/faculty/*" element={<Faculty />} />
               <Route path="/attendance/*" element={<Attendance />} />
               <Route path="/marks/*" element={<Marks />} />
               <Route path="/results/*" element={<Results />} />

@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react'
 import { NavLink } from 'react-router-dom'
-import { FiBarChart2, FiBookOpen, FiCalendar, FiCheckSquare, FiChevronLeft, FiChevronRight, FiCreditCard, FiEdit3, FiGitBranch, FiGrid, FiHome, FiLayers, FiTrendingUp, FiUser, FiUserPlus, FiUsers, FiX } from 'react-icons/fi'
+import { FiBarChart2, FiBookOpen, FiBriefcase, FiCalendar, FiCheckSquare, FiChevronLeft, FiChevronRight, FiCreditCard, FiEdit3, FiGitBranch, FiGrid, FiHome, FiLayers, FiTrendingUp, FiUser, FiUserPlus, FiUsers, FiX } from 'react-icons/fi'
 import { getUserRole } from '../auth/auth'
 import { ROLES } from '../auth/roles'
 
@@ -51,12 +51,16 @@ export default function Sidebar({ open = false, onClose = () => {}, collapsed = 
           <Item to="/student-management/admissions" icon={FiUserPlus} tone="orange" onNavigate={onClose}>Student Admissions</Item>
           <Item to="/student-management/profiles" icon={FiUser} tone="cyan" onNavigate={onClose}>Student Profiles</Item>
           <Item to="/student-management/promotions" icon={FiTrendingUp} tone="green" onNavigate={onClose}>Student Promotions</Item>
+          <p className="sidebar-section-label">Faculty</p>
+          <Item to="/faculty" icon={FiBriefcase} tone="cyan" onNavigate={onClose}>Faculty Management</Item>
+          <Item to="/faculty/advisors" icon={FiBookOpen} tone="blue" onNavigate={onClose}>Class Advisor Allocation</Item>
+          <Item to="/faculty/subjects" icon={FiBookOpen} tone="purple" onNavigate={onClose}>Subject Allocation</Item>
+          <Item to="/faculty/attendance" icon={FiCheckSquare} tone="green" onNavigate={onClose}>Faculty Attendance</Item>
           <p className="sidebar-section-label">Campus Operations</p>
           <Item to="/fees" icon={FiCreditCard} tone="gold" onNavigate={onClose}>Fee Structure</Item>
           <Item to="/attendance" icon={FiCheckSquare} tone="green" onNavigate={onClose}>Attendance</Item>
           <Item to="/marks" icon={FiEdit3} tone="orange" onNavigate={onClose}>Marks</Item>
           <Item to="/results" icon={FiBarChart2} tone="purple" onNavigate={onClose}>Results</Item>
-          <Item to="/faculty" icon={FiUsers} tone="cyan" onNavigate={onClose}>Faculty</Item>
         </>}
         {[ROLES.FACULTY, ROLES.STUDENT].includes(userRole) && <><p className="sidebar-section-label">Academics</p><Item to="/my-subjects" icon={FiBookOpen} tone="blue" onNavigate={onClose}>My Subjects</Item>{userRole===ROLES.FACULTY&&<><Item to="/attendance/take" icon={FiCheckSquare} tone="green" onNavigate={onClose}>Take Attendance</Item><Item to="/marks/entry" icon={FiEdit3} tone="orange" onNavigate={onClose}>Enter Marks</Item></>}</>}
       </nav>
