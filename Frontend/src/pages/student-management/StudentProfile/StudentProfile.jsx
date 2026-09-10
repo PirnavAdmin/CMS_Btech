@@ -1,3 +1,4 @@
+import useToastState from '../../../hooks/useToastState'
 import { isApiResult } from '../../../utils/exportProvenance'
 import { approvedStudentProfiles } from '../../../utils/approvedStudentProfiles'
 import ExportMenu, { PrintDetailsButton } from '../../../components/ExportMenu'
@@ -584,24 +585,14 @@ function Empty({ title, children }) {
     </div>
   );
 }
-function Notice({ message, close }) {
-  return (
-    <div className="sp-toast" role="status">
-      <FiCheckCircle />
-      {message}
-      <button onClick={close} aria-label="Dismiss">
-        <FiX />
-      </button>
-    </div>
-  );
-}
+
 
 export default function StudentProfile() {
   const canEdit = hasRole([ROLES.ADMIN]);
   const [students, setStudents] = useState([]),
     [loading, setLoading] = useState(true),
-    [error, setError] = useState(""),
-    [notice, setNotice] = useState(""),
+    [error, setError] = useToastState("", 'error'),
+    [, setNotice] = useToastState("", 'success'),
     [query, setQuery] = useState(""),
     [filters, setFilters] = useState({
       department: "",
@@ -652,7 +643,7 @@ export default function StudentProfile() {
       } else if (profile.status === "rejected")
         setNotice(
           profile.reason?.message ||
-            "Unable to load the approved student profile.",
+            "Unable to load the approved student profile.", "error",
         );
       if (admissions.status !== 'fulfilled' || !isApiResult(admissions.value)) {
         setStudents([]);
@@ -673,11 +664,6 @@ export default function StudentProfile() {
   useEffect(() => {
     load();
   }, []);
-  useEffect(() => {
-    if (!notice) return;
-    const t = setTimeout(() => setNotice(""), 2800);
-    return () => clearTimeout(t);
-  }, [notice]);
   const options = (key) =>
     [
       ...new Set(
@@ -753,7 +739,7 @@ export default function StudentProfile() {
         ...current.filter((x) => String(x.id) !== String(id)),
       ]);
     } catch (previewError) {
-      setNotice(previewError.message || "Unable to load the latest profile.");
+      setNotice(previewError.message || "Unable to load the latest profile.", 'error');
     }
   };
   const closeProfile = () => {
@@ -764,7 +750,7 @@ export default function StudentProfile() {
   };
   const beginEdit = (student) => {
     if (!canEdit) {
-      setNotice("You do not have permission to edit student profiles.");
+      setNotice("You do not have permission to edit student profiles.", "warning");
       return;
     }
     setEditing(clone(student));
@@ -1105,7 +1091,7 @@ export default function StudentProfile() {
   return (
     <DashboardLayout>
       <main className="student-profile">
-        {notice && <Notice message={notice} close={() => setNotice("")} />}{" "}
+        {" "}
         {editing ? (
           <StudentProfileEdit
             student={editing}
@@ -1253,24 +1239,27 @@ function Profile({ student, tab, setTab, back, edit, canEdit }) {
     ]),
   ];
   return (
-    <div className="cm-profile-view">
+    <div className="cm-profile-view" data-export-record>
       <div className="cm-profile-top-bar">
         <button type="button" className="cm-button secondary erp-btn erp-btn--secondary" onClick={back}>
           &larr; Back to Student Directory
         </button>
-        <button
-          type="button"
-          className="cm-button erp-btn erp-btn--primary"
-          onClick={edit}
-          disabled={!canEdit}
-          title={
-            canEdit
-              ? "Edit student profile"
-              : "Only administrators can edit student profiles"
-          }
-        >
-          <FiEdit2 className="module-action-icon module-action-icon--edit" /> Edit Student
-        </button>
+        <div className="sp-profile-top-actions">
+          <ExportMenu mode="single" title="Student Profile" filename={`student_${app.admissionNumber || app.registrationNumber || student.id}`} recordSections={Object.entries(panels).map(([key, rows]) => ({ title: TABS.find(item => item[0] === key)?.[1] || key, rows }))} />
+          <button
+            type="button"
+            className="cm-button erp-btn erp-btn--primary"
+            onClick={edit}
+            disabled={!canEdit}
+            title={
+              canEdit
+                ? "Edit student profile"
+                : "Only administrators can edit student profiles"
+            }
+          >
+            <FiEdit2 className="sp-profile-edit-icon" aria-hidden="true" /> Edit Student
+          </button>
+        </div>
       </div>
 
       <div className="cm-profile-card">
@@ -1356,7 +1345,7 @@ function Profile({ student, tab, setTab, back, edit, canEdit }) {
 }
 function EditStudent({ student, onCancel, onSave }) {
   const [form, setForm] = useState(() => clone(student)),
-    [errors, setErrors] = useState({}),
+    [errors, setErrors] = useToastState({}, 'error'),
     [saving, setSaving] = useState(false),
     [discard, setDiscard] = useState(false),
     original = useMemo(() => JSON.stringify(student), [student]),

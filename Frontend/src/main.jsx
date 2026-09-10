@@ -5,10 +5,11 @@ import './index.css'
 import './App.css'
 import './styles/global.css'
 import App from './App.jsx'
+import ToastProvider from './components/ToastProvider.jsx'
 import './styles/dark-mode.css'
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>
-    <BrowserRouter><App /></BrowserRouter>
+    <ToastProvider><BrowserRouter><App /></BrowserRouter></ToastProvider>
   </StrictMode>,
 )

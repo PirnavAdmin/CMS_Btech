@@ -1,3 +1,5 @@
+import { showError } from '../../utils/toast'
+import useToastState from '../../hooks/useToastState'
 import React, { useState, useEffect, useMemo, useCallback } from 'react'
 import {
   FiCalendar,
@@ -55,7 +57,7 @@ export default function Attendance() {
   const [activeTab, setActiveTab] = useState('register') // 'register' | 'take' | 'shortage'
   const [sessions, setSessions] = useState([])
   const [loading, setLoading] = useState(false)
-  const [toast, setToast] = useState('')
+  const [, setToast] = useToastState('', 'success')
   const [selectedSession, setSelectedSession] = useState(null)
 
   // Scope Filters for Register
@@ -86,10 +88,7 @@ export default function Attendance() {
   // Shortage list state
   const [allProfiles, setAllProfiles] = useState([])
 
-  const notify = (msg) => {
-    setToast(msg)
-    setTimeout(() => setToast(''), 3000)
-  }
+  const notify = (msg, type = 'success') => setToast(msg, type)
 
   const loadSessions = useCallback(async () => {
     try {
@@ -97,7 +96,7 @@ export default function Attendance() {
       const data = await attendanceService.getSessions()
       setSessions(data || [])
     } catch (err) {
-      console.warn('Error loading attendance sessions:', err)
+      showError(err.message || 'Error loading attendance sessions:')
     } finally {
       setLoading(false)
     }
@@ -108,7 +107,7 @@ export default function Attendance() {
       const profiles = await studentService.getAllProfiles()
       setAllProfiles(profiles || [])
     } catch (err) {
-      console.warn('Error loading profiles for shortage:', err)
+      showError(err.message || 'Error loading profiles for shortage:')
     }
   }, [])
 
@@ -139,7 +138,7 @@ export default function Attendance() {
   // Load students to mark attendance
   const handleFetchStudentsForMarking = async () => {
     if (!takeScope.courseId || !takeScope.branchId || !takeScope.semesterId) {
-      notify('Please select Course, Branch, and Semester first.')
+      notify('Please select Course, Branch, and Semester first.', 'warning')
       return
     }
 
@@ -164,7 +163,7 @@ export default function Attendance() {
 
       setMarkingStudents(list)
     } catch (err) {
-      notify('Failed to load students for attendance.')
+      notify(err.message || 'Failed to load students for attendance.', 'error')
     } finally {
       setLoadingStudents(false)
     }
@@ -183,7 +182,7 @@ export default function Attendance() {
   // Save session
   const handleSaveAttendance = async () => {
     if (!markingStudents.length) {
-      notify('No students to record attendance for.')
+      notify('No students to record attendance for.', 'warning')
       return
     }
 
@@ -216,7 +215,7 @@ export default function Attendance() {
       loadSessions()
       setActiveTab('register')
     } catch (err) {
-      notify('Failed to save attendance.')
+      notify(err.message || 'Failed to save attendance.', 'error')
     } finally {
       setSavingSession(false)
     }
@@ -274,11 +273,7 @@ export default function Attendance() {
           }
         />
 
-        {toast && (
-          <div className="erp-toast erp-toast--success" role="status">
-            <FiCheckCircle /> {toast}
-          </div>
-        )}
+
 
         {/* Tab Navigation */}
         <nav className="attendance-tabs">
@@ -779,6 +774,7 @@ export default function Attendance() {
         {/* View Details Dialog */}
         {selectedSession && (
           <ViewDialog
+            exportFilename={`attendance_${selectedSession.id || selectedSession.subject}_${selectedSession.date}`}
             title={`Session Details: ${selectedSession.subject}`}
             onClose={() => setSelectedSession(null)}
           >

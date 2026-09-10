@@ -1,3 +1,5 @@
+import { showSuccess, showWarning } from '../utils/toast'
+import useToastState from '../hooks/useToastState'
 import { useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { AuthRequestError, register } from '../auth/authApi'
@@ -12,8 +14,8 @@ export default function Register() {
   const submitLock = useRef(false)
   const formRef = useRef(null)
   const [values, setValues] = useState(initialValues)
-  const [errors, setErrors] = useState({})
-  const [submitError, setSubmitError] = useState('')
+  const [errors, setErrors] = useToastState({}, 'error')
+  const [submitError, setSubmitError] = useToastState('', 'error')
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [isComplete, setIsComplete] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
@@ -41,6 +43,7 @@ export default function Register() {
     const nextErrors = validateRegistration(values)
     setErrors(nextErrors)
     if (Object.values(nextErrors).some(Boolean)) {
+      showWarning('Correct the highlighted fields before submitting.')
       requestAnimationFrame(() => formRef.current?.querySelector('[aria-invalid="true"]')?.focus())
       return
     }
@@ -58,7 +61,7 @@ export default function Register() {
         agreeToTerms: values.terms,
       })
       setValues(initialValues)
-      setIsComplete(true)
+      setIsComplete(true); showSuccess('Access request submitted successfully.')
     } catch (error) {
       setSubmitError(error instanceof AuthRequestError ? error.message : 'Unable to submit your request right now. Please try again.')
     } finally {

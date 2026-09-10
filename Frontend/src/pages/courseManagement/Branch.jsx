@@ -1,8 +1,11 @@
+import { newestFirst, rememberCreated } from '../../utils/newestFirst'
+import { showSuccess } from '../../utils/toast'
+import useToastState from '../../hooks/useToastState'
 import ExportMenu, { PrintDetailsButton } from '../../components/ExportMenu'
 import { branchColumns } from '../../utils/exportColumns'
 import { cloneElement, useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
-import { FiAlertCircle, FiArrowLeft, FiCheckCircle, FiEdit2, FiEye, FiFilter, FiGitBranch, FiLayers, FiPlus, FiSearch, FiTarget, FiToggleLeft, FiToggleRight, FiUsers } from 'react-icons/fi'
+import { FiAlertCircle, FiArrowLeft, FiEdit2, FiEye, FiFilter, FiGitBranch, FiLayers, FiPlus, FiSearch, FiTarget, FiToggleLeft, FiToggleRight, FiUsers } from 'react-icons/fi'
 import DashboardLayout from '../../layouts/DashboardLayout'
 import FilterPanel from '../../components/FilterPanel'
 import SearchableSelect from '../../components/SearchableSelect'
@@ -33,6 +36,8 @@ const blank = {
   academicPattern: '',
   totalSemesters: '',
   description: '',
+  startDate: '',
+  endDate: '',
 }
 
 const normalizeId = (value) => {
@@ -134,7 +139,7 @@ function List() {
   const [courses, setCourses] = useState([])
   const [branches, setBranches] = useState([])
   const [loading, setLoading] = useState(true)
-  const [error, setError] = useState('')
+  const [error, setError] = useToastState('', 'error')
   const [page, setPage] = useState(1)
   const [filters, setFilters] = useState({ query: '', courseId: params.get('course') || '', branchType: '', status: '' })
 
@@ -142,7 +147,7 @@ function List() {
     setLoading(true)
     try {
       const [branchRows, courseRows] = await Promise.all([branchApi.getAll(), courseApi.getAll()])
-      setBranches((branchRows || []).map(normalizeBranch))
+      setBranches(newestFirst('branches', branchRows || []).map(normalizeBranch))
       setCourses(await Promise.all((courseRows || []).map(courseMap).filter((course) => course.id && course.name).map(async (course) => course.durationValue && course.totalSemesters ? course : courseMap(await courseApi.getById(course.id)))))
       setError('')
     } catch (requestError) {
@@ -206,7 +211,7 @@ function List() {
     try {
       await branchApi.updateStatus(branch.id, nextStatus)
       setBranches((current) => current.map((row) => String(row.id) === String(branch.id) ? { ...row, status: nextStatus } : row))
-      setError(`Branch ${nextStatus === 'Active' ? 'activated' : 'deactivated'} successfully.`)
+      showSuccess(`Branch ${nextStatus === 'Active' ? 'activated' : 'deactivated'} successfully.`)
     } catch (requestError) {
       setError(requestError?.message || 'Unable to update branch status.')
     }
@@ -312,9 +317,9 @@ function Form() {
   const [courses, setCourses] = useState([])
   const [years, setYears] = useState([])
   const [branches, setBranches] = useState([])
-  const [errors, setErrors] = useState({})
+  const [errors, setErrors] = useToastState({}, 'error')
   const [saving, setSaving] = useState(false)
-  const [error, setError] = useState('')
+  const [error, setError] = useToastState('', 'error')
   const [value, setValue] = useState(blank)
   const [step, setStep] = useState(0)
   const [courseStructureLoading, setCourseStructureLoading] = useState(false)
@@ -333,14 +338,14 @@ function Form() {
       const activeYears = getOperationalAcademicYearOptions(yearRows || []).map((year) => ({ ...year, status: 'Active' }))
       setCourses(allCourses)
       setYears(activeYears)
-      setBranches((branchRows || []).map(normalizeBranch))
+      setBranches(newestFirst('branches', branchRows || []).map(normalizeBranch))
       setMastersReady(true)
       if (courseResult.status === 'rejected') setError(courseResult.reason?.message || 'Unable to load courses.')
       else if (yearResult.status === 'rejected') setError(yearResult.reason?.message || 'Unable to load academic years.')
       else setError('')
     })
     return () => { alive = false }
-  }, [])
+  }, [setError])
 
   useEffect(() => {
     if (!mastersReady || hydratedRef.current) return
@@ -398,7 +403,7 @@ function Form() {
         setCourses((currentCourses) => currentCourses.map((course) => String(course.id) === String(selectedCourse.id) ? { ...course, ...detailedCourse } : course))
       }).catch(() => {})
     }
-  }, [mastersReady, id, params])
+  }, [mastersReady, id, params, setError])
 
   const update = (key, nextValue) => setValue((current) => {
     const next = { ...current, [key]: nextValue }
@@ -464,7 +469,7 @@ function Form() {
     setSaving(true)
     setError('')
     try {
-      await (id ? branchApi.update(id, payload) : branchApi.create(payload))
+      const result = await (id ? branchApi.update(id, payload) : branchApi.create(payload)); if (!id) rememberCreated('branches', result); showSuccess(`Branch ${id ? 'updated' : 'created'} successfully.`)
       navigate('/branches')
     } catch (requestError) {
       setError(requestError?.message || 'Unable to save branch.')
@@ -498,7 +503,7 @@ function Form() {
           {!value.courseId && <p className="branch-structure-empty">Select a course to load its academic structure.</p>}
           <div className="cm-form-grid"><Field label="Branch Name *" error={errors.branchName}><input value={value.branchName} onChange={(event) => update('branchName', event.target.value)} placeholder="Enter branch name" /></Field><Field label="Branch Code *" error={errors.branchCode}><input value={value.branchCode} onChange={(event) => update('branchCode', event.target.value)} placeholder="e.g. CSE" /></Field></div>
           <div className="cm-form-grid"><Field label="Branch Type *"><select value={value.branchType} onChange={(event) => update('branchType', event.target.value)}><option value="Core">Core</option><option value="Specialization">Specialization</option></select></Field>{value.branchType === 'Specialization' && <Field label="Specialization *" error={errors.specialization}><input value={value.specialization} onChange={(event) => update('specialization', event.target.value)} placeholder="e.g. Artificial Intelligence" /></Field>}<Field label="Short Name"><input value={value.shortName} onChange={(event) => update('shortName', event.target.value)} placeholder="Optional short name" /></Field></div>
-          <div className="cm-form-grid"><Field label="Active Academic Year"><select value={value.academicYearId} onChange={(event) => update('academicYearId', event.target.value)}><option value="">Select active year</option>{years.map((year) => <option key={year.id} value={year.id}>{year.name}</option>)}</select></Field></div>
+          <div className="cm-form-grid"><Field label="Active Academic Year"><select value={value.academicYearId} onChange={(event) => update('academicYearId', event.target.value)}><option value="">Select active year</option>{years.map((year) => <option key={year.id} value={year.id}>{year.name}</option>)}</select></Field><Field label="Start Date"><input type="date" value={value.startDate || ''} onChange={(event) => update('startDate', event.target.value)} /></Field><Field label="End Date"><input type="date" value={value.endDate || ''} onChange={(event) => update('endDate', event.target.value)} /></Field></div>
           <div className="branch-form-actions"><span aria-hidden="true" /><button type="button" className="cm-button" onClick={nextStep}>Next</button></div>
         </section>}
         {step === 1 && <section className="branch-step-content"><h2>Branch Configuration</h2><div className="branch-structure-summary"><h3>Course Structure</h3>{courseStructureLoading ? <p>Loading course structure...</p> : <><div><span>Duration</span><strong>{selectedCourse?.durationValue ? `${selectedCourse.durationValue} Years` : ''}</strong></div><div><span>Total Semesters</span><strong>{selectedCourse?.totalSemesters || ''}</strong></div></>}</div><div className="cm-form-grid"><Field label="Approved Intake *" error={errors.intakeCapacity}><input type="number" min="1" value={value.intakeCapacity} onChange={(event) => update('intakeCapacity', event.target.value)} placeholder="Enter approved intake" /></Field><Field label="Status *" error={errors.status}><select value={value.status} onChange={(event) => update('status', event.target.value)}><option value="" disabled>Select Status</option><option value="Active">Active</option><option value="Inactive">Inactive</option></select></Field></div><div className="branch-form-actions"><button type="button" className="cm-button secondary" onClick={() => setStep(0)}>Back</button><button type="submit" className="cm-button" disabled={saving || courseStructureLoading}>{saving ? 'Saving…' : id ? 'Update Branch' : 'Create Branch'}</button></div></section>}
@@ -530,7 +535,7 @@ function Details() {
   const navigate = useNavigate()
   const { id } = useParams()
   const [branch, setBranch] = useState(null)
-  const [error, setError] = useState('')
+  const [error, setError] = useToastState('', 'error')
 
   useEffect(() => {
     if (!id) return
@@ -544,7 +549,7 @@ function Details() {
     }
     load().catch((requestError) => { if (alive) setError(requestError?.message || 'Unable to load branch details.') })
     return () => { alive = false }
-  }, [id])
+  }, [id, setError])
 
   if (error) return <Page><Notice>{error}</Notice></Page>
   if (!branch) return <Page><div className="branch-empty">Loading branch details…</div></Page>
@@ -566,8 +571,9 @@ function Details() {
 
   return (
     <Page>
-      <div className="cm-profile-view">
+      <div className="cm-profile-view" data-export-record>
         <div className="cm-profile-top-bar">
+          <ExportMenu mode="single" title="Branch Details" filename={`branch_${branch.branchCode || branch.id}`} />
           <Link className="cm-button secondary" to="/branches">
             &larr; Back to Branches List
           </Link>
@@ -633,7 +639,7 @@ function Details() {
 
 export default function Branch({ mode }) {
   const { id } = useParams()
-  if (mode === 'form') return <Form />
+  if (mode === 'form') return <Form key={id || 'add'} />
   if (mode === 'details' || id) return <Details />
   return <List />
 }

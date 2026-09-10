@@ -1,8 +1,11 @@
+import { newestFirst, rememberCreated } from '../../utils/newestFirst'
+import { showSuccess } from '../../utils/toast'
+import useToastState from '../../hooks/useToastState'
 import ExportMenu, { PrintDetailsButton } from '../../components/ExportMenu'
 import { courseColumns, structureColumns } from '../../utils/exportColumns'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useParams, useNavigate } from 'react-router-dom'
-import { FiArrowLeft, FiBookOpen, FiCheckCircle, FiEdit2, FiEye, FiFilter, FiLayers, FiPlus, FiSearch, FiToggleLeft, FiToggleRight, FiUsers } from 'react-icons/fi'
+import { FiArrowLeft, FiBookOpen, FiEdit2, FiEye, FiFilter, FiLayers, FiPlus, FiSearch, FiToggleLeft, FiToggleRight, FiUsers } from 'react-icons/fi'
 import DashboardLayout from '../../layouts/DashboardLayout'
 import FilterPanel from '../../components/FilterPanel'
 import SearchableSelect from '../../components/SearchableSelect'
@@ -17,7 +20,7 @@ import { normalize } from './Branch'
 import { showDeactivationBlocked } from '../../components/DeactivationBlockedDialog'
 import './Course.css'
 
-const blank = { name: 'B.Tech', code: 'BTECH', shortName: '', type: 'Undergraduate', durationValue: '', semesters: '', description: '', departmentId: '', departmentCode: '', branchId: '', branchCode: '', collegeId: '', status: '' }
+const blank = { name: '', code: '', shortName: '', type: '', durationValue: '', semesters: '', description: '', departmentId: '', departmentCode: '', branchId: '', branchCode: '', collegeId: '', status: '', startDate: '', endDate: '' }
 
 const apiError = (error, fallback) => error?.response?.status === 401 ? 'Your session has expired. Please sign in again.' : error?.response?.status === 403 ? "You don't have permission to manage courses." : error?.response?.data?.message || error?.response?.data?.error || error?.message || fallback
 const listFrom = (response) => { const data = response?.data ?? response; return Array.isArray(data) ? data : Array.isArray(data?.items) ? data.items : Array.isArray(data?.data) ? data.data : data && typeof data === 'object' ? [data] : [] }
@@ -130,11 +133,11 @@ function CourseList() {
   const [query, setQuery] = useState('')
   const [statusFilter, setStatusFilter] = useState('')
   const [isLoading, setIsLoading] = useState(true)
-  const [error, setError] = useState('')
+  const [error, setError] = useToastState('', 'error')
   const [currentPage, setCurrentPage] = useState(1)
   const statusLock = useRef(false)
-  const [statusNotice, setStatusNotice] = useState('')
-  const [statusError, setStatusError] = useState('')
+  const [, setStatusNotice] = useToastState('', 'success')
+  const [statusError, setStatusError] = useToastState('', 'error')
   const [pendingStatus, setPendingStatus] = useState(null)
   const [impactChecking, setImpactChecking] = useState(false)
   const [courseImpact, setCourseImpact] = useState(null)
@@ -145,7 +148,7 @@ function CourseList() {
     setIsLoading(true); setError('')
     try {
       const [courseRows, departmentRows, branchRows] = await Promise.all([courseApi.getAll(), departmentApi.getAll(), branchApi.getAll()])
-      setCourses(courseRows.map(mapCourse).filter(course => course.id && course.name))
+      setCourses(newestFirst('courses', courseRows).map(mapCourse).filter(course => course.id && course.name))
       setDepartments(dedupeDepartmentOptions(departmentRows))
       setBranches(branchRows)
     } catch (requestError) {
@@ -173,7 +176,7 @@ function CourseList() {
   const toggleStatus = async course => {
     setStatusError(''); setStatusNotice('')
     if (course.status !== 'Active') { setPendingStatus({ course, nextStatus: 'Active' }); return }
-    setImpactChecking(true); setCourseImpact(null); setStatusNotice('Checking course dependencies...')
+    setImpactChecking(true); setCourseImpact(null); setStatusNotice('Checking course dependencies...', 'info')
     try {
       const impact = await checkCourseImpact(course)
       setCourseImpact(impact)
@@ -211,7 +214,7 @@ function CourseList() {
     <Header title="Course Management" text="Manage B.Tech courses, branches and structures.">
       <CompactSummary label="Course summary" items={[{ label: 'Total', value: stats.total }, { label: 'Active', value: stats.active, tone: 'active' }, { label: 'Inactive', value: stats.inactive, tone: 'inactive' }]} />
     </Header>
-    {statusNotice && <div className="course-toast" role="status">{statusNotice}</div>}
+
     <section className="cm-panel course-directory">
       <header className="course-directory-heading"><div><span className="cm-eyebrow">Course Directory</span><p>{rows.length} records</p></div><div className="directory-export-actions"><ExportMenu rows={rows} columns={courseColumns} title="Courses" filename="courses" loading={isLoading || Boolean(error)} /><Link className="cm-button" to="/courses/add"><FiPlus /> Add Course</Link></div></header>
       <FilterPanel active={hasFilters} onClear={clearFilters}><section className="cm-panel course-toolbar">
@@ -287,12 +290,12 @@ function CourseForm() {
   const [departments, setDepartments] = useState([])
   const [branches, setBranches] = useState([])
   const [value, setValue] = useState(blank)
-  const [errors, setErrors] = useState({})
+  const [errors, setErrors] = useToastState({}, 'error')
   const [codeEdited, setCodeEdited] = useState(false)
   const [saved, setSaved] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
   const [isSaving, setIsSaving] = useState(false)
-  const [error, setError] = useState('')
+  const [error, setError] = useToastState('', 'error')
   const hydrationRef = useRef(false)
 
   const load = async () => {
@@ -352,10 +355,13 @@ function CourseForm() {
       const result = recordFrom(response)
       const courseId = result?.id ?? result?.courseId ?? targetId
       if (!courseId) { setSaved(true); throw new Error('Course saved, but its ID was not returned. Check the course list before making further changes.') }
+      if (!targetId) rememberCreated('courses', courseId)
       setPersistedId(courseId)
       const statusResponse = await updateCourseStatus(courseId, value.status === 'Active' ? 1 : 0)
       if (statusResponse?.data?.success === false) throw new Error('Course saved, but its status could not be updated. Please retry.')
       setSaved(true)
+      setValue({ ...blank }); setErrors({})
+      showSuccess(id ? 'Course updated successfully.' : 'Course created successfully.')
       setTimeout(() => navigate('/courses'), 500)
     } catch (requestError) {
       const message = apiError(requestError, `Unable to ${id ? 'update' : 'create'} this course. Please try again.`)
@@ -377,7 +383,7 @@ function CourseForm() {
     return matchesDepartment
   })
   return <Page><Header title={id ? 'Edit B.Tech Course' : 'Add B.Tech Course'} text="Create a focused B.Tech undergraduate course."><Link className="cm-button secondary" to="/courses"><FiArrowLeft /> Cancel</Link></Header>
-    {saved && !error && <div className="course-toast"><FiCheckCircle /> Course saved successfully.</div>}
+
     {error && <p className="cm-error" role="alert">{error} <button type="button" className="cm-button secondary" disabled={isSaving} onClick={load}>Reload options</button></p>}
     <div className="course-form-layout">
       <section className="cm-panel course-form">
@@ -390,6 +396,8 @@ function CourseForm() {
           <Field label="Duration *" error={errors.durationValue}><select value={value.durationValue} onChange={e => update('durationValue', e.target.value ? Number(e.target.value) : '')}><option value="">Select Duration</option><option value="3">3 Years</option><option value="4">4 Years</option></select></Field>
           <Field label="Academic Pattern"><input value="Semester" readOnly /></Field>
           <Field label="Total Semesters"><input value={value.semesters || ''} placeholder="Calculated from duration" readOnly /></Field>
+          <Field label="Start Date"><input type="date" value={value.startDate || ''} onChange={e => update('startDate', e.target.value)} /></Field>
+          <Field label="End Date"><input type="date" value={value.endDate || ''} onChange={e => update('endDate', e.target.value)} /></Field>
           <Field label="Status *" error={errors.status}><select required value={value.status} onChange={e => update('status', e.target.value)}><option value="" disabled>Select Status</option><option value="Active">Active</option><option value="Inactive">Inactive</option></select></Field>
         </div></section>
         <footer><button type="button" className="cm-button" disabled={isSaving || saved} onClick={submit}>{isSaving ? 'Saving...' : id ? 'Save Changes' : 'Create Course'}</button></footer>
@@ -412,7 +420,7 @@ function CourseDetails() {
   const [departments, setDepartments] = useState([])
   const [branches, setBranches] = useState([])
   const [isLoading, setIsLoading] = useState(true)
-  const [error, setError] = useState('')
+  const [error, setError] = useToastState('', 'error')
 
   const load = async () => {
     setIsLoading(true); setError('')
@@ -475,8 +483,9 @@ function CourseDetails() {
 
   return (
     <Page>
-      <div className="cm-profile-view">
+      <div className="cm-profile-view" data-export-record>
         <div className="cm-profile-top-bar">
+          <ExportMenu mode="single" title="Course Details" filename={`course_${course.code || course.id}`} />
           <Link className="cm-button secondary" to="/courses">
             &larr; Back to Courses List
           </Link>
@@ -545,7 +554,7 @@ export function CourseStructure() {
   const { courseId, branchId } = useParams()
   const [course, setCourse] = useState(null)
   const [branch, setBranch] = useState(null)
-  const [rows, setRows] = useState([]), [semesterOptions, setSemesterOptions] = useState([]), [semester, setSemester] = useState(1), [form, setForm] = useState({ semesterId: '', yearNumber: 1, semesterNumber: 1, semesterName: 'Semester 1' }), [editing, setEditing] = useState(null), [loading, setLoading] = useState(true), [error, setError] = useState(''), [saving, setSaving] = useState(false), [page, setPage] = useState(1)
+  const [rows, setRows] = useState([]), [semesterOptions, setSemesterOptions] = useState([]), [semester, setSemester] = useState(1), [form, setForm] = useState({ semesterId: '', yearNumber: 1, semesterNumber: 1, semesterName: 'Semester 1' }), [editing, setEditing] = useState(null), [loading, setLoading] = useState(true), [error, setError] = useToastState('', 'error'), [saving, setSaving] = useState(false), [page, setPage] = useState(1)
 
   const load = async () => {
     setLoading(true)
@@ -567,9 +576,9 @@ export function CourseStructure() {
   if (!course || !branch) return <Page><div className="cm-empty">Academic structure not found.</div></Page>
 
   const visible = rows.filter(x => Number(x.semesterNumber) === semester), totalPages = Math.max(1, Math.ceil(visible.length / PAGE_SIZE)), currentPage = Math.min(page, totalPages), pageRows = visible.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE), changeSemester = (value) => { const option = semesterOptions.find(x => Number(x.semesterNumber) === value); setSemester(value); setPage(1); setEditing(null); setForm({ semesterId: option?.semesterId || '', yearNumber: Math.ceil(value / 2), semesterNumber: value, semesterName: option?.semesterName || `Semester ${value}` }) }
-  const submit = async () => { if (!form.semesterId) { setError('Select a semester to map.'); return } setSaving(true); try { const payload = { courseId: Number(courseId), semesterId: Number(form.semesterId), ...(editing ? { updatedBy: 1 } : { createdBy: 1 }) }; const result = editing ? await updateCourseSemesterMapping(editing, payload) : await createCourseSemesterMapping(payload); const mapped = result?.data?.data || result?.data || result; const option = semesterOptions.find(x => String(x.semesterId) === String(form.semesterId)) || {}; const row = { ...mapped, structureId: mapped.courseSemesterMappingId || editing, semesterNumber: Number(option.semesterNumber || form.semesterNumber), semesterName: option.semesterName || form.semesterName, yearNumber: Math.ceil(Number(option.semesterNumber || form.semesterNumber) / 2) }; setRows(current => editing ? current.map(x => x.structureId === editing ? row : x) : [...current, row]); setEditing(null); setError('') } catch (e) { setError(e.message || 'Unable to save semester mapping.') } finally { setSaving(false) } }
+  const submit = async () => { if (!form.semesterId) { setError('Select a semester to map.'); return } setSaving(true); try { const payload = { courseId: Number(courseId), semesterId: Number(form.semesterId), ...(editing ? { updatedBy: 1 } : { createdBy: 1 }) }; const result = editing ? await updateCourseSemesterMapping(editing, payload) : await createCourseSemesterMapping(payload); const mapped = result?.data?.data || result?.data || result; const option = semesterOptions.find(x => String(x.semesterId) === String(form.semesterId)) || {}; const row = { ...mapped, structureId: mapped.courseSemesterMappingId || editing, semesterNumber: Number(option.semesterNumber || form.semesterNumber), semesterName: option.semesterName || form.semesterName, yearNumber: Math.ceil(Number(option.semesterNumber || form.semesterNumber) / 2) }; setRows(current => editing ? current.map(x => x.structureId === editing ? row : x) : [row, ...current]); setEditing(null); setForm({ semesterId: '', yearNumber: 1, semesterNumber: semester, semesterName: '' }); setPage(1); setError(''); showSuccess('Semester mapping saved successfully.') } catch (e) { setError(e.message || 'Unable to save semester mapping.') } finally { setSaving(false) } }
   const edit = (row) => { setEditing(row.structureId); setForm({ semesterId: row.semesterId, yearNumber: row.yearNumber, semesterNumber: row.semesterNumber, semesterName: row.semesterName || `Semester ${row.semesterNumber}` }); setSemester(Number(row.semesterNumber)) }
-  const toggleStatus = async (row) => { try { await updateCourseSemesterMappingStatus(row.structureId, Number(row.status) === 0 ? 1 : 0); setRows(current => current.map(x => x.structureId === row.structureId ? { ...x, status: Number(x.status) === 0 ? 1 : 0 } : x)) } catch (e) { setError(e.message || 'Unable to update mapping status.') } }
+  const toggleStatus = async (row) => { try { await updateCourseSemesterMappingStatus(row.structureId, Number(row.status) === 0 ? 1 : 0); setRows(current => current.map(x => x.structureId === row.structureId ? { ...x, status: Number(x.status) === 0 ? 1 : 0 } : x)); showSuccess('Semester mapping status updated successfully.') } catch (e) { setError(e.message || 'Unable to update mapping status.') } }
 
   return <Page><ExportMenu rows={visible} columns={structureColumns} title="Course Structure" filename="course-structure" loading={loading || Boolean(error)} /><Header title="Course Structure" text={`${course.name} / ${branch.name}`}><Link className="cm-button secondary" to={`/branches/${branchId}`}><FiArrowLeft /> Back to Branch</Link></Header>
     {error && <p className="cm-error" role="alert">{error}</p>}
@@ -587,7 +596,7 @@ export function CourseStructure() {
 
 export default function Course({ mode }) {
   const { id } = useParams()
-  if (mode === 'form') return <CourseForm />
+  if (mode === 'form') return <CourseForm key={id || 'add'} />
   if (mode === 'details' || id) return <CourseDetails />
   return <CourseList />
 }

@@ -1,8 +1,11 @@
+import { newestFirst, rememberCreated } from '../../utils/newestFirst'
+import { showSuccess } from '../../utils/toast'
+import useToastState from '../../hooks/useToastState'
 import ExportMenu, { PrintDetailsButton } from '../../components/ExportMenu'
 import { collegeColumns, collegeSettingsColumns } from '../../utils/exportColumns'
 import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { FiAlertCircle, FiCheckCircle, FiEye as EyeIcon, FiEdit2 as EditIcon, FiHome, FiPlus as Plus, FiToggleLeft, FiToggleRight, FiX, FiSearch, FiFilter, FiTrash2 } from 'react-icons/fi'
+import { FiAlertCircle, FiEye as EyeIcon, FiEdit2 as EditIcon, FiHome, FiPlus as Plus, FiToggleLeft, FiToggleRight, FiSearch, FiFilter, FiTrash2 } from 'react-icons/fi'
 import DashboardLayout from '../../layouts/DashboardLayout'
 import FilterPanel from '../../components/FilterPanel'
 import TablePagination, { PAGE_SIZE } from '../../components/TablePagination'
@@ -346,7 +349,7 @@ export default function CollegeInstitutionManagement({ initialView = 'list' }) {
   const navigate = useNavigate()
   const [colleges, setColleges] = useState([])
   const [isCollegesLoading, setIsCollegesLoading] = useState(true)
-  const [collegeError, setCollegeError] = useState('')
+  const [collegeError, setCollegeError] = useToastState('', 'error')
   const [isCollegeSaving, setIsCollegeSaving] = useState(false)
   const [isCollegeDetailsLoading, setIsCollegeDetailsLoading] = useState(false)
 
@@ -354,7 +357,7 @@ export default function CollegeInstitutionManagement({ initialView = 'list' }) {
   const [activeId, setActiveId] = useState(null)
   const [formValues, setFormValues] = useState(emptyCollege)
   const [editLogoFile, setEditLogoFile] = useState(null)
-  const [errors, setErrors] = useState({})
+  const [errors, setErrors] = useToastState({}, 'error')
   const [searchTerm, setSearchTerm] = useState('')
   const [typeFilter, setTypeFilter] = useState('')
   const [statusFilter, setStatusFilter] = useState('')
@@ -363,17 +366,17 @@ export default function CollegeInstitutionManagement({ initialView = 'list' }) {
   // College Settings state — real list from the backend
   const [settingsList, setSettingsList] = useState([])
   const [isSettingsLoading, setIsSettingsLoading] = useState(false)
-  const [settingsListError, setSettingsListError] = useState('')
+  const [settingsListError, setSettingsListError] = useToastState('', 'error')
 
   const [settingsForm, setSettingsForm] = useState(emptySettingsForm)
-  const [settingsErrors, setSettingsErrors] = useState({})
+  const [settingsErrors, setSettingsErrors] = useToastState({}, 'error')
   const [activeSettingsId, setActiveSettingsId] = useState(null)
   const [isSettingsSaving, setIsSettingsSaving] = useState(false)
-  const [settingsSubmitError, setSettingsSubmitError] = useState('')
+  const [settingsSubmitError, setSettingsSubmitError] = useToastState('', 'error')
   const [settingsPage, setSettingsPage] = useState(1)
   const statusLock = useRef(false)
-  const [statusError, setStatusError] = useState('')
-  const [statusNotice, setStatusNotice] = useState('')
+  const [statusError, setStatusError] = useToastState('', 'error')
+  const [, setStatusNotice] = useToastState('', 'success')
   const [pendingStatus, setPendingStatus] = useState(null)
   const [collegeImpact, setCollegeImpact] = useState(null)
   const [isStatusSaving, setIsStatusSaving] = useState(false)
@@ -392,7 +395,7 @@ export default function CollegeInstitutionManagement({ initialView = 'list' }) {
   const refreshCollegeSummary = async () => {
     try {
       const response = await getColleges()
-      const records = getCollegeRecords(response?.data ?? response).map(mapCollege)
+      const records = newestFirst('colleges', getCollegeRecords(response?.data ?? response)).map(mapCollege)
       const summary = deriveCollegeSummary(response?.data ?? response, records)
       setCollegeSummary({
         total: summary.total,
@@ -429,8 +432,8 @@ export default function CollegeInstitutionManagement({ initialView = 'list' }) {
     setCollegeError('')
     try {
       const response = term.trim() ? await searchColleges(term.trim()) : await getColleges()
-      const records = getCollegeRecords(response?.data ?? response).map(mapCollege)
-      setColleges(records)
+      const records = newestFirst('colleges', getCollegeRecords(response?.data ?? response)).map(mapCollege)
+      setColleges(newestFirst('colleges', records))
 
       if (!term.trim()) {
         const summary = deriveCollegeSummary(response?.data ?? response, records)
@@ -545,7 +548,7 @@ export default function CollegeInstitutionManagement({ initialView = 'list' }) {
       const updated = mapCollege((response.data?.data ?? response.data) || { ...formValues, id: activeId })
       setColleges((current) => current.map((college) => (college.id === activeId ? updated : college)))
       backToList()
-      await Promise.all([loadColleges(searchTerm), refreshCollegeSummary()])
+      showSuccess('College updated successfully.'); await Promise.all([loadColleges(searchTerm), refreshCollegeSummary()])
     } catch (error) {
       setCollegeError(getApiErrorMessage(error, 'Unable to update this college. Please try again.'))
     } finally {
@@ -611,7 +614,7 @@ export default function CollegeInstitutionManagement({ initialView = 'list' }) {
     setSettingsListError('')
     try {
       const response = await getCollegeSettings()
-      setSettingsList(getResponseList(response.data))
+      setSettingsList(newestFirst('college-settings', getResponseList(response.data)))
       setSettingsPage(1)
     } catch (error) {
       setSettingsListError(getApiErrorMessage(error, 'Unable to load college settings. Please try again.'))
@@ -625,6 +628,7 @@ export default function CollegeInstitutionManagement({ initialView = 'list' }) {
   }, [initialView])
 
   const backToSettingsList = () => {
+    setSettingsForm({ ...emptySettingsForm })
     setViewMode('settings')
     setActiveSettingsId(null)
     setSettingsErrors({})
@@ -667,10 +671,12 @@ export default function CollegeInstitutionManagement({ initialView = 'list' }) {
       if (activeSettingsId) {
         await updateCollegeSettings(activeSettingsId, settingsForm)
       } else {
-        await createCollegeSettings(settingsForm)
+        rememberCreated('college-settings', await createCollegeSettings(settingsForm))
+        setSettingsPage(1)
       }
-      await fetchSettingsList()
-      setViewMode('settings')
+      showSuccess('College settings saved successfully.'); await fetchSettingsList()
+      setSettingsForm({ ...emptySettingsForm })
+    setViewMode('settings')
     } catch (error) {
       setSettingsSubmitError(getApiErrorMessage(error, 'Unable to save college settings. Please try again.'))
     } finally {
@@ -1006,8 +1012,9 @@ export default function CollegeInstitutionManagement({ initialView = 'list' }) {
 
         {/* FULL COLLEGE DETAILS / PROFILE SCREEN */}
         {viewMode === 'details' && activeCollege && (
-          <div className="cm-profile-view">
+          <div className="cm-profile-view" data-export-record>
             <div className="cm-profile-top-bar">
+          <ExportMenu mode="single" title="College Details" filename={`college_${activeCollege.code || activeCollege.id}`} loading={isCollegeDetailsLoading || Boolean(collegeError)} />
               <button type="button" className="cm-secondary-btn" onClick={backToList}>
                 &larr; Back to Colleges List
               </button>
@@ -1324,7 +1331,7 @@ export default function CollegeInstitutionManagement({ initialView = 'list' }) {
           </>
         )}
       </div>
-      {statusNotice && <div className="cm-college-status-notice" role="status">{statusNotice}<button type="button" aria-label="Dismiss status message" onClick={() => setStatusNotice('')}><FiX /></button></div>}
+
       {pendingStatus && <StatusConfirmDialog entity="College" name={`${pendingStatus.college.name} (${pendingStatus.college.code})`} nextStatus={pendingStatus.nextStatus} onCancel={() => { setPendingStatus(null); setCollegeImpact(null) }} onConfirm={confirmStatusChange} busy={isStatusSaving} error={statusError}
         confirmLabel={pendingStatus.nextStatus === 'active' ? 'Activate College' : 'Deactivate College'}
         details={[

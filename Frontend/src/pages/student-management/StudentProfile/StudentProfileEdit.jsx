@@ -1,3 +1,5 @@
+import { showInfo, showWarning } from '../../../utils/toast'
+import useToastState from '../../../hooks/useToastState'
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
   FiCheckCircle,
@@ -59,7 +61,7 @@ export default function StudentProfileEdit({ student, onCancel, onSave }) {
     ["documents", "Documents"],
   ];
   const [form, setForm] = useState(() => initialEditForm(student)),
-    [errors, setErrors] = useState({}),
+    [errors, setErrors] = useToastState({}, 'error'),
     [saving, setSaving] = useState(false),
     [photoName, setPhotoName] = useState(""),
     [discard, setDiscard] = useState(false),
@@ -243,6 +245,7 @@ export default function StudentProfileEdit({ student, onCancel, onSave }) {
     if (admission.transport === "Yes" && !clean(admission.transportRoute))
       next["admission.transportRoute"] = "Enter the transportation route.";
     setErrors(next);
+    if (Object.keys(next).length) showWarning('Correct the highlighted fields before saving the profile.');
     if (Object.keys(next).length) {
       const first = Object.keys(next)[0],
         section = first.split(".")[0];
@@ -460,6 +463,7 @@ export default function StudentProfileEdit({ student, onCancel, onSave }) {
     event.target.value = "";
     if (!file) return;
     if (!["application/pdf", "image/jpeg", "image/png"].includes(file.type)) {
+      showWarning('Select a PDF, JPG or PNG file no larger than 500 KB.');
       setErrors((current) => ({
         ...current,
         [`documentUploads.${key}`]: "Only PDF, JPG and PNG files are allowed.",
@@ -467,6 +471,7 @@ export default function StudentProfileEdit({ student, onCancel, onSave }) {
       return;
     }
     if (file.size > 500 * 1024) {
+      showWarning('Select a PDF, JPG or PNG file no larger than 500 KB.');
       setErrors((current) => ({
         ...current,
         [`documentUploads.${key}`]: "File must be 500 KB or smaller.",
@@ -474,6 +479,7 @@ export default function StudentProfileEdit({ student, onCancel, onSave }) {
       return;
     }
     update(`documentUploads.${key}`, file);
+    showInfo('Document selected. Save the profile to upload it.');
   };
   return (
     <div className="sp-edit-page">
@@ -690,8 +696,6 @@ export default function StudentProfileEdit({ student, onCancel, onSave }) {
                   "Guardian annual income",
                   { type: "number" },
                 ],
-                ["parents.primaryContact", "Primary contact"],
-                ["parents.emergencyMobile", "Emergency mobile"],
               ])}
             </fieldset>
           )}
@@ -725,7 +729,6 @@ export default function StudentProfileEdit({ student, onCancel, onSave }) {
                 {fields([
                   ["previousEducation.tenth.board", "Board"],
                   ["previousEducation.tenth.institution", "School name"],
-                  ["previousEducation.tenth.rollNumber", "10th roll number"],
                   ["previousEducation.tenth.passingYear", "Year of passing"],
                   [
                     "previousEducation.tenth.score",
@@ -753,11 +756,6 @@ export default function StudentProfileEdit({ student, onCancel, onSave }) {
                   [
                     "previousEducation.intermediate.stream",
                     "Stream",
-                  ],
-                  [
-                    "previousEducation.intermediate.scoreType",
-                    "Score type",
-                    { options: ["Percentage", "CGPA"] },
                   ],
                   [
                     "previousEducation.intermediate.score",
@@ -793,8 +791,6 @@ export default function StudentProfileEdit({ student, onCancel, onSave }) {
                   { type: "date", readOnly: true },
                 ],
                 ["admission.batch", "Batch", { readOnly: true }],
-                ["admission.scholarship", "Scholarship", { options: ["No", "Yes"] }],
-                ["admission.scholarshipType", "Scholarship type"],
                 [
                   "admission.hostel",
                   "Hostel required",
@@ -889,7 +885,7 @@ export default function StudentProfileEdit({ student, onCancel, onSave }) {
                   return <article key={key} className={`sp-document-upload ${documentStatus === "Submitted" ? "has-file" : ""}`}>
                     <div className="sp-document-upload-icon">{documentStatus === "Submitted" ? <FiCheckCircle /> : <FiFileText />}</div>
                     <div className="sp-document-upload-copy"><strong>{label}</strong><span>{documentStatus || "Status not selected"}</span></div>
-                    <div className="sp-document-upload-actions"><select value={documentStatus} onChange={(event) => update(`documents.${key}`, event.target.value ? { status: event.target.value } : null)}><option value="">Select status</option><option>Submitted</option><option>Pending</option><option>Not Submitted</option></select></div>
+                    <div className="sp-document-upload-actions"><select value={documentStatus} onChange={(event) => update(`documents.${key}`, event.target.value ? { status: event.target.value } : null)}><option value="">Select status</option><option>Submitted</option><option>Pending</option></select></div>
                   </article>;
                 })}
               </div>

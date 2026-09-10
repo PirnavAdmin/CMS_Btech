@@ -1,3 +1,6 @@
+import { newestFirst, rememberCreated } from '../../utils/newestFirst'
+import { showWarning } from '../../utils/toast'
+import useToastState from '../../hooks/useToastState'
 import { useEffect, useMemo, useState } from 'react';
 import ExportMenu, { PrintDetailsButton } from '../../components/ExportMenu';
 import { yearColumns } from '../../utils/exportColumns';
@@ -10,7 +13,7 @@ import StatusConfirmDialog from '../../components/StatusConfirmDialog';
 import InfoCard from '../../components/InfoCard';
 import { academicYearApi, studentApi } from '../../api/apiEndpoints';
 import { showDeactivationBlocked } from '../../components/DeactivationBlockedDialog';
-import { FiCheckCircle, FiEye, FiEdit2, FiToggleLeft, FiToggleRight, FiPlus, FiCalendar, FiClock, FiSearch } from 'react-icons/fi';
+import { FiEye, FiEdit2, FiToggleLeft, FiToggleRight, FiPlus, FiCalendar, FiClock, FiSearch } from 'react-icons/fi';
 import './AcademicYearManagement.css';
 
 const DAY = 864e5;
@@ -75,21 +78,22 @@ export default function AcademicYear() {
   const [confirmStatus, setConfirmStatus] = useState(null); // { year, targetStatus }
   const [selected, setSelected] = useState(null);
   const [form, setForm] = useState(blank);
-  const [errors, setErrors] = useState({});
-  const [notice, setNoticeValue] = useState('');
+  const [errors, setErrors] = useToastState({}, 'error');
+  const [, setNoticeValue] = useToastState('', 'success');
   const [noticeTone, setNoticeTone] = useState('info');
   const [exportLoading, setExportLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [page, setPage] = useState(1);
 
   const close = () => {
+    setForm({ ...blank });
     setModal(null);
     setSelected(null);
     setErrors({});
   };
 
   const setNotice = (message, tone = 'info') => {
-    setNoticeValue(message);
+    setNoticeValue(message, tone);
     setNoticeTone(tone);
   };
 
@@ -97,7 +101,7 @@ export default function AcademicYear() {
     setExportLoading(true);
     try {
       const data = await academicYearApi.getAll();
-      setYears(data.map(mapYear));
+      setYears(newestFirst('academic-years', data).map(mapYear));
     } catch (error) {
       setNotice(error.message || 'Unable to load academic years.', 'error');
     } finally {
@@ -135,6 +139,7 @@ export default function AcademicYear() {
   useEffect(() => setPage(1), [search, filter]);
 
   const openAdd = () => {
+    setSelected(null);
     setForm(blank);
     setErrors({});
     setModal('add');
@@ -168,6 +173,7 @@ export default function AcademicYear() {
     )
       e.range = 'This date range overlaps an existing academic year.';
     setErrors(e);
+    if (Object.keys(e).length) showWarning('Correct the highlighted academic year fields.');
     return !Object.keys(e).length;
   }
 
@@ -189,7 +195,8 @@ export default function AcademicYear() {
             name: form.name.trim(),
             status: autoStatus(form.startDate, form.endDate),
           };
-      setYears((x) => (selected ? x.map((y) => (y.id === selected.id ? item : y)) : [...x, item]));
+      if (!selected) { rememberCreated('academic-years', item); setSearch(''); setFilter('ALL'); setPage(1); }
+      setYears((x) => (selected ? x.map((y) => (y.id === selected.id ? item : y)) : [item, ...x]));
       setNotice(`${item.name} has been ${selected ? 'updated' : 'created'} successfully.`, 'success');
       close();
       await loadYears();
@@ -244,7 +251,8 @@ export default function AcademicYear() {
     } else {
       setSaving(true);
       try {
-        await academicYearApi.create(item);
+        rememberCreated('academic-years', await academicYearApi.create(item));
+        setSearch(''); setFilter('ALL'); setPage(1);
         setNotice(`${item.name} was generated successfully.`, 'success');
         await loadYears();
       } catch (error) {
@@ -275,16 +283,12 @@ export default function AcademicYear() {
           subtitle="Manage academic cycles, lifecycle status, and rollover transitions."
         />}
 
-        {notice && (
-          <div className={`erp-notice erp-notice--${noticeTone}`} role="status">
-            <span>{noticeTone === 'error' ? '⚠' : noticeTone === 'success' ? '✓' : 'ⓘ'}</span>
-            <p>{notice}</p>
-          </div>
-        )}
+
 
         {modal === 'view' && selected ? (
-          <div className="cm-profile-view ay-details-view">
+          <div className="cm-profile-view ay-details-view" data-export-record>
             <div className="cm-profile-top-bar">
+          <ExportMenu mode="single" title="Academic Year Details" filename={`academic-year_${selected.name || selected.id}`} />
               <button type="button" className="erp-btn erp-btn--secondary" onClick={close}>
                 &larr; Back to Academic Years List
               </button>

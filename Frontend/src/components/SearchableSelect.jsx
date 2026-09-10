@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { FiSearch } from 'react-icons/fi'
 import './SearchableSelect.css'
@@ -44,7 +44,7 @@ export default function SearchableSelect({
   const menuRef = useRef(null)
   const triggerRef = useRef(null)
   const inputRef = useRef(null)
-  const id = useMemo(() => `searchable-select-${Math.random().toString(36).slice(2, 9)}`, [])
+  const id = useId()
 
   const normalizedOptions = useMemo(
     () => options.map((option) => normalize(option, getOptionLabel, getOptionValue)),
@@ -52,7 +52,7 @@ export default function SearchableSelect({
   )
 
   const selectedOption = useMemo(
-    () => normalizedOptions.find((option) => {
+    () => value == null || value === '' ? null : normalizedOptions.find((option) => {
       const candidates = [
         option.value,
         option.raw?.value,
@@ -77,22 +77,42 @@ export default function SearchableSelect({
 
   useLayoutEffect(() => {
     if (!open || !triggerRef.current) return
-    const rect = triggerRef.current.getBoundingClientRect()
-    const gap = 8
-    const menuWidth = Math.max(rect.width, 180)
-    const maxHeight = 280
-    const viewportPadding = 16
-    const spaceBelow = window.innerHeight - rect.bottom - viewportPadding
-    const spaceAbove = rect.top - viewportPadding
-    const shouldFlip = spaceBelow < 180 && spaceAbove > 180
-
-    setMenuStyle({
-      top: shouldFlip ? Math.max(viewportPadding, rect.top - maxHeight - gap) : Math.min(window.innerHeight - viewportPadding, rect.bottom + gap),
-      left: Math.min(rect.left, window.innerWidth - menuWidth - viewportPadding),
-      width: menuWidth,
-      maxHeight,
-    })
-  }, [open, options, query])
+    const position = () => {
+      const rect = triggerRef.current.getBoundingClientRect()
+      const viewport = window.visualViewport
+      const viewportTop = viewport?.offsetTop || 0
+      const viewportLeft = viewport?.offsetLeft || 0
+      const viewportHeight = viewport?.height || window.innerHeight
+      const viewportWidth = viewport?.width || window.innerWidth
+      const padding = 8, gap = 8
+      const below = Math.max(0, viewportTop + viewportHeight - rect.bottom - padding - gap)
+      const above = Math.max(0, rect.top - viewportTop - padding - gap)
+      const desiredHeight = Math.min(280, (menuRef.current?.querySelector('.searchable-select__search')?.offsetHeight || 50) + (menuRef.current?.querySelector('.searchable-select__options')?.scrollHeight || 40) + 2)
+      const flip = below < desiredHeight && above > below
+      const maxHeight = Math.min(280, flip ? above : below)
+      const width = Math.min(rect.width, viewportWidth - padding * 2)
+      setMenuStyle({
+        top: flip ? undefined : rect.bottom + gap,
+        bottom: flip ? window.innerHeight - rect.top + gap : undefined,
+        left: Math.max(viewportLeft + padding, Math.min(rect.left, viewportLeft + viewportWidth - width - padding)),
+        width, maxHeight,
+      })
+    }
+    const onScroll = event => {
+      if (!menuRef.current?.contains(event.target)) position()
+    }
+    position()
+    window.addEventListener('scroll', onScroll, true)
+    window.addEventListener('resize', position)
+    window.visualViewport?.addEventListener('resize', position)
+    window.visualViewport?.addEventListener('scroll', position)
+    return () => {
+      window.removeEventListener('scroll', onScroll, true)
+      window.removeEventListener('resize', position)
+      window.visualViewport?.removeEventListener('resize', position)
+      window.visualViewport?.removeEventListener('scroll', position)
+    }
+  }, [open, options, query, loading])
 
   useEffect(() => {
     if (!open) return undefined
@@ -106,31 +126,32 @@ export default function SearchableSelect({
       }
     }
 
-    const handleResize = () => setOpen(false)
+
     const handleKeyDown = (event) => {
       if (event.key === 'Escape') {
         setOpen(false)
         setQuery('')
+        triggerRef.current?.focus({ preventScroll: true })
       }
       if (event.key === 'Tab') {
+        triggerRef.current?.focus({ preventScroll: true })
         setOpen(false)
       }
     }
 
     document.addEventListener('mousedown', handlePointerDown)
-    window.addEventListener('resize', handleResize)
     document.addEventListener('keydown', handleKeyDown)
 
     return () => {
       document.removeEventListener('mousedown', handlePointerDown)
-      window.removeEventListener('resize', handleResize)
       document.removeEventListener('keydown', handleKeyDown)
     }
   }, [open])
 
   useEffect(() => {
     if (open && inputRef.current) {
-      requestAnimationFrame(() => inputRef.current.focus())
+      const frame = requestAnimationFrame(() => inputRef.current?.focus({ preventScroll: true }))
+      return () => cancelAnimationFrame(frame)
     }
   }, [open])
 
@@ -139,6 +160,7 @@ export default function SearchableSelect({
     setQuery('')
     const selectedValue = next?.raw?.value ?? next?.raw?.id ?? next?.raw?.courseId ?? next?.value ?? next?.id ?? next?.courseId ?? ''
     onChange?.(selectedValue)
+    triggerRef.current?.focus({ preventScroll: true })
   }
 
   const triggerLabel = selectedOption ? selectedOption.label : placeholder
@@ -147,6 +169,7 @@ export default function SearchableSelect({
     if (disabled) return
     if (['ArrowDown', 'Enter', ' '].includes(event.key)) {
       event.preventDefault()
+      setQuery('')
       setOpen((current) => !current)
     }
     if (event.key === 'Escape') {
@@ -156,7 +179,16 @@ export default function SearchableSelect({
   }
 
   const menu = open && !disabled ? createPortal(
-    <div ref={menuRef} id={id} className="searchable-select__menu" role="listbox" aria-label={label || 'Options'} style={{ position: 'fixed', top: menuStyle.top, left: menuStyle.left, width: menuStyle.width, maxHeight: menuStyle.maxHeight, zIndex: 1050 }}>
+    <div ref={menuRef} id={id} className="searchable-select__menu" onKeyDown={(event) => {
+      if (!['ArrowDown', 'ArrowUp', 'Home', 'End'].includes(event.key)) return
+      if (event.target === inputRef.current && ['Home', 'End'].includes(event.key)) return
+      event.preventDefault()
+      const buttons = Array.from(menuRef.current.querySelectorAll('[role=option]'))
+      const current = buttons.indexOf(document.activeElement)
+      const index = event.key === 'Home' ? 0 : event.key === 'End' ? buttons.length - 1 : event.key === 'ArrowDown' ? (current + 1) % buttons.length : (current <= 0 ? buttons.length - 1 : current - 1)
+      buttons[index]?.focus({ preventScroll: true })
+      buttons[index]?.scrollIntoView({ block: 'nearest' })
+    }} style={{ position: 'fixed', top: menuStyle.top, bottom: menuStyle.bottom, left: menuStyle.left, width: menuStyle.width, maxHeight: menuStyle.maxHeight, zIndex: 2000 }}>
       <label className="searchable-select__search">
         <FiSearch aria-hidden="true" />
         <input
@@ -168,7 +200,7 @@ export default function SearchableSelect({
           aria-label={searchPlaceholder}
         />
       </label>
-      <div className="searchable-select__options" style={{ maxHeight: menuStyle.maxHeight - 50 }}>
+      <div className="searchable-select__options" role="listbox" aria-label={label || 'Options'}>
         {loading ? (
           <div className="searchable-select__empty">Loading options...</div>
         ) : filteredOptions.length ? (
@@ -181,6 +213,7 @@ export default function SearchableSelect({
                 className={`searchable-select__option ${active ? 'is-active' : ''}`}
                 role="option"
                 aria-selected={active}
+                tabIndex={-1}
                 onClick={() => handleSelect(option)}
               >
                 <span className="searchable-select__option-label">{option.label}</span>
@@ -208,7 +241,7 @@ export default function SearchableSelect({
         aria-invalid={error}
         aria-label={label || placeholder}
         disabled={disabled}
-        onClick={() => !disabled && setOpen((current) => !current)}
+        onClick={() => { if (!disabled) { setQuery(''); setOpen((current) => !current) } }}
         onKeyDown={handleKeyDown}
       >
         <span className="searchable-select__trigger-text">{triggerLabel}</span>
