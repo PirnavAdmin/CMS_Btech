@@ -420,6 +420,19 @@
   color: #637d94;
   font-weight: 500;
 }
+.faculty-management .export-control .export-button {
+  border-color: var(--brand);
+  background: var(--brand);
+  color: var(--text-on-accent, #fff);
+}
+.faculty-management .export-control .export-button:hover:not(:disabled) {
+  border-color: var(--brand-hover, var(--brand));
+  background: var(--brand-hover, var(--brand));
+  color: var(--text-on-accent, #fff);
+}
+.faculty-management .export-control .export-button:focus-visible {
+  outline-color: var(--brand);
+}
 
 /* Directory and filters */
 .faculty-management .faculty-directory {
@@ -1176,7 +1189,7 @@
 @media (min-width: 1000px) {
   .faculty-management {
     position: relative;
-    grid-template-columns: minmax(0, 1fr) minmax(320px, 360px);
+    grid-template-columns: minmax(0, 1fr) minmax(300px, 320px);
     align-items: start;
   }
   .faculty-management > .faculty-page-header {
@@ -1190,7 +1203,7 @@
   }
   .faculty-management > .faculty-page-header > .fm-actions {
     position: absolute;
-    top: 100px;
+    top: 102px;
     right: 0;
     z-index: 2;
   }

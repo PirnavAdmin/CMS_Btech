@@ -1,0 +1,172 @@
+/* Attendance-only layout and controls. Loaded after the shared faculty styles. */
+.faculty-management .fm-attendance-screen {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(300px, 320px);
+  gap: 14px;
+  min-width: 0;
+}
+
+@media (min-width: 1000px) {
+  .faculty-management > .fm-attendance-screen {
+    grid-column: 1 / -1;
+  }
+}
+
+.faculty-management .fm-attendance-screen > .faculty-summary {
+  grid-column: 2;
+  grid-row: 1;
+  width: 100%;
+  min-height: 76px;
+}
+
+.faculty-management .fm-attendance-header {
+  grid-column: 1;
+  grid-row: 1;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 0 2px 6px;
+}
+
+.faculty-management .fm-attendance-header h1 {
+  font-size: 28px;
+  white-space: nowrap;
+}
+
+.faculty-management .fm-attendance-header > div > p:not(.fm-eyebrow) {
+  max-width: 720px;
+  font-size: 14px;
+}
+
+.faculty-management .fm-attendance-workspace {
+  grid-column: 1 / -1;
+  grid-row: 2;
+  min-width: 0;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface);
+  box-shadow: var(--shadow-sm);
+}
+
+.faculty-management .fm-attendance-header-actions {
+  display: flex;
+  align-items: flex-end;
+  justify-content: flex-end;
+  gap: 12px;
+  width: 100%;
+}
+
+.faculty-management .fm-attendance-search-row {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+  margin-left: 0;
+}
+
+.faculty-management .fm-attendance-search-field {
+  flex: 0 1 430px;
+  min-width: 180px;
+}
+
+.faculty-management .fm-attendance-search {
+  display: flex;
+  width: 100%;
+  min-width: 0;
+  height: 42px;
+  min-height: 42px;
+  align-items: center;
+  gap: 8px;
+  padding: 0 11px;
+  border: 1px solid var(--border-strong);
+  border-radius: 7px;
+  background: var(--surface);
+  color: var(--text-primary);
+  font-size: 12px;
+}
+
+.faculty-management .fm-attendance-search:focus-within {
+  border-color: var(--brand);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--brand) 18%, transparent);
+}
+
+.faculty-management .fm-attendance-search input,
+.faculty-management .fm-attendance-search input:focus,
+.faculty-management .fm-attendance-search input:focus-visible {
+  width: 100%;
+  min-width: 0;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  border: 0 !important;
+  outline: 0 !important;
+  box-shadow: none !important;
+  border-radius: 0;
+  background: transparent;
+  color: var(--text-primary);
+  font: inherit;
+}
+
+.faculty-management .fm-attendance-filter-toggle {
+  display: inline-flex;
+  min-width: 122px;
+  height: 42px;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 0 14px;
+  border: 1px solid var(--border-strong);
+  border-radius: 7px;
+  background: var(--surface);
+  color: var(--text-primary);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.faculty-management .fm-attendance-filter-toggle:hover,
+.faculty-management .fm-attendance-filter-toggle[aria-expanded="true"] {
+  border-color: var(--brand);
+  color: var(--brand);
+  background: var(--brand-soft);
+}
+
+.faculty-management .fm-attendance-screen .export-control .export-button {
+  border-color: var(--brand);
+  background: var(--brand);
+  color: var(--text-on-accent, #fff);
+}
+
+@media (max-width: 760px) {
+  .faculty-management .fm-attendance-screen {
+    grid-template-columns: 1fr;
+  }
+
+  .faculty-management .fm-attendance-screen > .faculty-summary,
+  .faculty-management .fm-attendance-header,
+  .faculty-management .fm-attendance-workspace {
+    grid-column: 1;
+    grid-row: auto;
+  }
+
+  .faculty-management .fm-attendance-header {
+    flex-direction: column;
+  }
+
+  .faculty-management .fm-attendance-header h1 {
+    white-space: normal;
+  }
+
+  .faculty-management .fm-attendance-header-actions,
+  .faculty-management .fm-attendance-search-row {
+    align-items: stretch;
+    flex-wrap: wrap;
+  }
+
+  .faculty-management .fm-attendance-search-field {
+    flex-basis: 100%;
+  }
+}

@@ -8,6 +8,7 @@ import StatusBadge from '../../components/StatusBadge'
 import TablePagination from '../../components/TablePagination'
 import SearchableSelect from '../../components/SearchableSelect'
 import './FacultyManagement.css'
+import './FacultyAttendance.css'
 
 const PAGE_SIZE = 5
 const WORKLOAD_LIMITS = { under: 12, normal: 20 }
