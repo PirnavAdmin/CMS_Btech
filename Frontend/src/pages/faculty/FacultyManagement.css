@@ -1193,8 +1193,12 @@
     align-items: start;
   }
   .faculty-management > .faculty-page-header {
-    grid-column: 1;
+    grid-column: 1 / -1;
     grid-row: 1;
+  }
+  .faculty-management > .fm-form {
+    grid-column: 1 / -1;
+    grid-row: 2;
   }
   .faculty-management > .faculty-summary {
     grid-column: 2;
