@@ -4,7 +4,7 @@ import react from '@vitejs/plugin-react'
 // https://vite.dev/config/
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '')
-  const baseUrl = (env.VITE_API_BASE_URL || 'https://abreast-curling-tutor.ngrok-free.dev').trim().replace(/\/+$/, '')
+  const baseUrl = (env.VITE_API_BASE_URL || 'https://clarity-math-delouse.ngrok-free.dev').trim().replace(/\/+$/, '')
   return {
   plugins: [react()],
   server: {

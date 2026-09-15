@@ -7,13 +7,14 @@ import { SCREEN_EXPORT_ENDPOINTS, screenExportsApi } from '../api/apiEndpoints'
 
 const screenAliases = { semesters: 'semester', 'course-structure': 'course-structures', 'fee-structures-academic': 'fee-structures', 'fee-structures-hostel': 'hostel-fees', 'fee-structures-transport': 'transport-fees', 'student-promotions': 'promotions', 'promotion-history': 'promotions' }
 
-export default function ExportMenu({ rows = [], columns, filename, title, loading = false, scope = 'Current filtered results', unavailable = '', screen, exportParams, mode = 'list', recordSections }) {
+export default function ExportMenu({ rows = [], columns, filename, title, loading = false, scope = 'Current filtered results', unavailable = '', screen, exportParams, mode = 'list', recordSections, reportType = '' }) {
   const [open, setOpen] = useState(false)
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
   const serverScreen = screen || (filename === 'faculty-roster' ? 'faculty' : screenAliases[filename]) || filename
   const single = mode === 'single'
   const supportsServerExport = !single && Object.hasOwn(SCREEN_EXPORT_ENDPOINTS, serverScreen)
+  const reportLabel = reportType ? `${reportType[0].toUpperCase()}${reportType.slice(1)} Sheet` : ''
   const root = useRef(null), trigger = useRef(null), id = useId()
   const disabled = busy || loading || (!single && !rows.length && !supportsServerExport) || Boolean(unavailable)
   useEffect(() => {
@@ -27,9 +28,10 @@ export default function ExportMenu({ rows = [], columns, filename, title, loadin
   const selectedSections = () => recordSections ? cleanRecordSections(recordSections) : readVisibleRecordSections(root.current?.closest('[data-export-record]'))
   const downloadRecord = () => exportToCsv(singleRecordCsvOptions(selectedSections(), filename))
   const printRecord = () => printSingleRecord({ title, sections: selectedSections() })
+  const csvLabel = reportLabel || 'CSV'
   return <div className="export-control" ref={root} data-no-print onKeyDown={event => { if (event.key === 'Escape') { setOpen(false); trigger.current?.focus() } }}>
     <button className="export-button" type="button" ref={trigger} disabled={disabled} aria-expanded={open && !disabled} aria-controls={id} aria-label={`Export ${title}`} title={unavailable || (loading ? 'Loading records...' : rows.length ? scope : 'No records available to export.')} onClick={() => setOpen(value => !value)}><FiDownload aria-hidden="true" /> Export <FiChevronDown aria-hidden="true" /></button>
-    {open && !disabled && <div className="export-options" id={id}><small>{single ? 'Current record only' : `${scope} (${rows.length})`}</small><button type="button" disabled={!single && !rows.length && !supportsServerExport} onClick={() => run(single ? downloadRecord : supportsServerExport ? download : exportToCsv, single ? 'Record downloaded successfully' : 'CSV downloaded successfully')}><FiDownload aria-hidden="true" /> Download CSV</button><button type="button" disabled={!single && !rows.length} onClick={() => run(single ? printRecord : printResults, 'Print preview opened. Choose Print or Save as PDF in your browser.')}><FiPrinter aria-hidden="true" /> Print / Save as PDF</button></div>}
+    {open && !disabled && <div className="export-options" id={id}><small>{single ? 'Current record only' : `${scope} (${rows.length})`}</small><button type="button" disabled={!single && !rows.length && !supportsServerExport} onClick={() => run(single ? downloadRecord : supportsServerExport ? download : exportToCsv, single ? 'Record downloaded successfully' : `${csvLabel} downloaded successfully`)}><FiDownload aria-hidden="true" /> {reportLabel ? `Download ${reportLabel}` : 'Download CSV'}</button><button type="button" disabled={!single && !rows.length} onClick={() => run(single ? printRecord : printResults, 'Print preview opened. Choose Print or Save as PDF in your browser.')}><FiPrinter aria-hidden="true" /> Print / Save as PDF</button></div>}
     {busy && <span role="status">Preparing download...</span>}
     {error && <span className="export-error" role="alert">{error}</span>}
   </div>
