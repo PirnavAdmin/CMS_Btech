@@ -121,6 +121,14 @@
   color: var(--danger, #c53c49);
 }
 
+/* Assignment actions are managed outside the faculty profile view. */
+.faculty-management .fm-profile-header .fm-actions > button:nth-child(2) {
+  display: none;
+}
+.faculty-management .fm-profile-sections + .fm-panel .fm-empty .fm-button {
+  display: none;
+}
+
 /* Attendance workspace: isolated from the faculty directory. */
 .faculty-management .fm-attendance-screen { display: grid; gap: 14px; min-width: 0; }
 .faculty-management .fm-attendance-header h1 { font-size: 28px; }
@@ -1185,6 +1193,37 @@
   border-top: 1px solid var(--border);
 }
 
+/* Faculty profile view has five detail metrics, so keep its cards readable. */
+.faculty-management .fm-profile-header + .faculty-summary {
+  display: none;
+}
+.faculty-management .fm-profile-header + .faculty-summary > div,
+.faculty-management .fm-profile-header + .faculty-summary > div:nth-child(n + 5) {
+  display: flex;
+  min-height: 82px;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 10px 8px;
+  border-top: 0;
+  text-align: center;
+}
+.faculty-management .fm-profile-header + .faculty-summary > div > span {
+  display: grid;
+  justify-items: center;
+  gap: 3px;
+}
+.faculty-management .fm-profile-header + .faculty-summary small {
+  max-width: 100%;
+  font-size: 10px;
+  letter-spacing: .06em;
+}
+.faculty-management .fm-profile-header + .faculty-summary strong {
+  font-size: 17px;
+  white-space: nowrap;
+}
+
 /* Keep the compact summary beside the page heading on wide screens. */
 @media (min-width: 1000px) {
   .faculty-management {
@@ -1196,9 +1235,24 @@
     grid-column: 1 / -1;
     grid-row: 1;
   }
+  .faculty-management > .fm-profile-header {
+    grid-column: 1 / -1;
+    grid-row: 1;
+    width: 100%;
+  }
   .faculty-management > .fm-form {
     grid-column: 1 / -1;
     grid-row: 2;
+  }
+  .faculty-management > .fm-profile-sections {
+    grid-column: 1 / -1;
+    grid-row: 2;
+    width: 100%;
+  }
+  .faculty-management > .fm-profile-sections + .fm-panel {
+    grid-column: 1 / -1;
+    grid-row: 3;
+    width: 100%;
   }
   .faculty-management > .faculty-summary {
     grid-column: 2;

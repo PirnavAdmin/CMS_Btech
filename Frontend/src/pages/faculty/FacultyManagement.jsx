@@ -7,6 +7,7 @@ import FilterPanel from '../../components/FilterPanel'
 import StatusBadge from '../../components/StatusBadge'
 import TablePagination from '../../components/TablePagination'
 import SearchableSelect from '../../components/SearchableSelect'
+import academicService from '../../services/academicService'
 import './FacultyManagement.css'
 import './FacultyAttendance.css'
 
@@ -296,9 +297,10 @@ const assignmentOptions = {
   section: ['Section A', 'Section B', 'Section C'],
   assignmentType: ['Subject Faculty', 'Lab Faculty', 'Class Advisor', 'Mentor', 'Project Guide'],
 }
+const COLLEGE_NAME = 'Pirnav Engineering College'
 const sections = [
   { title: 'Personal Details', heading: 'Personal Information', icon: FiUser, description: 'Identity, photograph and primary contact information.', fields: [
-    ['employeeId', 'Employee ID', 'readonly'], ['fullName', 'Faculty Full Name', 'text', true],
+    ['collegeName', 'College Name', 'college', true], ['employeeId', 'Employee ID', 'readonly'], ['fullName', 'Faculty Full Name', 'text', true],
     ['gender', 'Gender', ['Male', 'Female', 'Other'], true], ['dob', 'Date of Birth', 'date', true],
     ['mobile', 'Mobile Number', 'tel', true], ['email', 'Email', 'email', true],
   ] },
@@ -325,7 +327,7 @@ const today = () => {
   return [date.getFullYear(), String(date.getMonth() + 1).padStart(2, '0'), String(date.getDate()).padStart(2, '0')].join('-')
 }
 const years = value => value === '' || value == null ? '—' : (parseFloat(value) || 0) + ' Years'
-const normalize = row => ({ ...Object.fromEntries(sections.flatMap(s => s.fields.map(([key]) => [key, '']))), photo: '', assignments: [], ...row, experience: row.experience == null ? '' : String(parseFloat(row.experience) || 0) })
+const normalize = row => ({ ...Object.fromEntries(sections.flatMap(s => s.fields.map(([key]) => [key, '']))), photo: '', assignments: [], ...row, collegeName: row.collegeName || COLLEGE_NAME, experience: row.experience == null ? '' : String(parseFloat(row.experience) || 0) })
 const clean = data => Object.fromEntries(Object.entries(data).map(([key, value]) => [key, typeof value === 'string' ? value.trim() : value]))
 const workload = row => {
   const assignments = row.assignments || []
@@ -778,16 +780,16 @@ function ProfileSections({ data }) {
     return <section className="fm-panel" key={section.title}><h2><section.icon />{section.heading}</h2>{fields.length ? <dl className="fm-info-grid">{fields.map(([key, label]) => <div key={key}><dt>{label}</dt><dd>{experienceKeys.includes(key) ? years(data[key]) : data[key] || '—'}</dd></div>)}</dl> : <p className="fm-muted">No optional contact information provided.</p>}</section>
   })}</div>
 }
-function Field({ field, data, errors, update, native = false }) {
+function Field({ field, data, errors, update, native = false, collegeOptions = [COLLEGE_NAME] }) {
   const [key, label, type, required] = field
   const id = 'fm-' + key
   const props = { id, value: data[key] ?? '', onChange: event => update(key, event.target.value), 'aria-invalid': Boolean(errors[key]), 'aria-describedby': errors[key] ? id + '-error' : undefined, required: Boolean(required) }
   return <div className={'fm-field ' + (type === 'textarea' ? 'fm-wide' : '') + (key === 'gender' ? ' fm-gender' : '')}><label htmlFor={Array.isArray(type) && !native ? undefined : id}>{label}{required && <span className="fm-required" aria-hidden="true"> *</span>}</label>
-    {Array.isArray(type) ? native ? <select {...props}><option value="">Select {label.toLowerCase()}</option>{type.map(value => <option key={value}>{value}</option>)}</select> : <SearchableSelect label={label} value={data[key] || ''} options={type} onChange={value => update(key, value)} required={required} error={Boolean(errors[key])} placeholder={'Select ' + label.toLowerCase()} hideSearch={key === 'gender'} /> : type === 'textarea' ? <textarea {...props} rows={2} /> : <input {...props} type={type === 'readonly' ? 'text' : type} readOnly={type === 'readonly'} max={type === 'date' ? today() : key === 'passingYear' ? new Date().getFullYear() : key === 'weeklyHours' ? 60 : type === 'number' ? 80 : undefined} min={key === 'passingYear' ? 1950 : type === 'number' ? 0 : undefined} step={key === 'passingYear' ? 1 : type === 'number' ? 0.5 : undefined} inputMode={type === 'tel' || key === 'pincode' ? 'numeric' : undefined} />}
+    {type === 'college' ? <SearchableSelect label={label} value={data[key] || ''} options={collegeOptions} onChange={value => update(key, value)} required={required} error={Boolean(errors[key])} placeholder={'Select ' + label.toLowerCase()} /> : Array.isArray(type) ? native ? <select {...props}><option value="">Select {label.toLowerCase()}</option>{type.map(value => <option key={value}>{value}</option>)}</select> : <SearchableSelect label={label} value={data[key] || ''} options={type} onChange={value => update(key, value)} required={required} error={Boolean(errors[key])} placeholder={'Select ' + label.toLowerCase()} hideSearch={key === 'gender'} /> : type === 'textarea' ? <textarea {...props} rows={2} /> : <input {...props} type={type === 'readonly' ? 'text' : type} readOnly={type === 'readonly'} max={type === 'date' ? today() : key === 'passingYear' ? new Date().getFullYear() : key === 'weeklyHours' ? 60 : type === 'number' ? 80 : undefined} min={key === 'passingYear' ? 1950 : type === 'number' ? 0 : undefined} step={key === 'passingYear' ? 1 : type === 'number' ? 0.5 : undefined} inputMode={type === 'tel' || key === 'pincode' ? 'numeric' : undefined} />}
     {errors[key] && <small id={id + '-error'} className="fm-error">{errors[key]}</small>}
   </div>
 }
-function FacultyForm({ initial, faculty, onSave, onCancel }) {
+function FacultyForm({ initial, faculty, onSave, onCancel, collegeOptions }) {
   const [data, setData] = useState(() => normalize(initial))
   const [step, setStep] = useState(0)
   const [errors, setErrors] = useState({})
@@ -830,7 +832,7 @@ function FacultyForm({ initial, faculty, onSave, onCancel }) {
     <ol className="fm-stepper">{[...sections.map(s => s.title), 'Preview'].map((title, index) => <li key={title} className={step === index ? 'active' : step > index ? 'complete' : ''} aria-current={step === index ? 'step' : undefined}><span>{step > index ? <FiCheckCircle /> : index + 1}</span>{title}</li>)}</ol>
     <div className="fm-section-heading"><h2>{section ? <section.icon /> : <FiCheckCircle />}{section?.title || 'Faculty Profile Preview'}</h2><p>{section?.description || 'Review the details below before saving this faculty record.'}</p></div>
     {step === 0 && <div className="fm-photo-picker"><Avatar faculty={data} large /><div><span className="fm-photo-label">Profile Photo</span><label className="fm-photo-button" htmlFor="fm-photo">{data.photo ? 'Change Photo' : 'Choose Photo'}<input id="fm-photo" type="file" accept="image/*" onChange={photo} /></label><small className="fm-muted">JPG, PNG or WebP · Maximum 3 MB</small>{errors.photo && <small className="fm-error" role="alert">{errors.photo}</small>}</div></div>}
-    {section ? <div className="fm-form-grid">{section.fields.map(field => <Field key={field[0]} field={field} data={data} errors={errors} update={update} />)}</div> : <><div className="fm-identity"><Avatar faculty={data} large /><div><h2>{data.fullName}</h2><p>{data.employeeId} · {data.designation}</p></div></div><ProfileSections data={data} /></>}
+    {section ? <div className="fm-form-grid">{section.fields.map(field => <Field key={field[0]} field={field} data={data} errors={errors} update={update} collegeOptions={collegeOptions} />)}</div> : <><div className="fm-identity"><Avatar faculty={data} large /><div><h2>{data.fullName}</h2><p>{data.employeeId} · {data.designation}</p></div></div><ProfileSections data={data} /></>}
     {step === 0 && faculty.some(row => row.id !== data.id && row.mobile === data.mobile) && <p className="fm-warning">Another faculty member uses this mobile number. Please verify it before saving.</p>}
     <footer className="fm-form-footer"><button type="button" className="fm-button secondary" onClick={onCancel}>Cancel</button><span className="fm-muted">Step {step + 1} of 5</span><div className="fm-actions">{step > 0 && <button type="button" className="fm-button secondary" onClick={() => { setErrors({}); setStep(step - 1) }}>Previous</button>}<button type="submit" className="fm-button" disabled={photoBusy}>{step === 4 ? <><FiCheckCircle /> Save Faculty</> : 'Next'}</button></div></footer>
   </form>
@@ -887,9 +889,19 @@ export default function FacultyManagement() {
   const [filters, setFilters] = useState({ department: '', designation: '', employmentType: '', employmentStatus: '' })
   const [page, setPage] = useState(1)
   const [assignmentId, setAssignmentId] = useState(null)
+  const [collegeOptions, setCollegeOptions] = useState([COLLEGE_NAME])
   const [toast, setToast] = useState('')
   const toastTimer = useRef(null)
   useEffect(() => () => clearTimeout(toastTimer.current), [])
+  useEffect(() => {
+    let active = true
+    academicService.getColleges(true).then(colleges => {
+      if (!active) return
+      const names = colleges.map(college => college.name).filter(Boolean)
+      setCollegeOptions([...new Set([COLLEGE_NAME, ...names])])
+    }).catch(() => {})
+    return () => { active = false }
+  }, [])
   const notify = message => {
     clearTimeout(toastTimer.current)
     setToast(message)
@@ -926,7 +938,7 @@ export default function FacultyManagement() {
   else if (((editId || detailId) && !selected) || (!['/faculty', '/faculty/new'].includes(path) && !editId && !detailId)) {
     content = <section className="fm-panel"><EmptyState title="Faculty record not found" action="Back to Faculty Directory" onAction={back} /></section>
   } else if (path === '/faculty/new' || editId) {
-    content = <><header className="faculty-page-header"><div><h1>{editId ? 'Edit Faculty' : 'Add Faculty'}</h1><p>Faculty registration and employment record</p></div><button type="button" className="fm-button secondary" onClick={back}><FiArrowLeft /> Back</button></header><FacultyForm key={location.key} initial={selected || { employeeId: nextId, employmentType: 'Permanent', employmentStatus: 'Working', employeeCategory: 'Teaching' }} faculty={faculty} onSave={save} onCancel={back} /></>
+    content = <><header className="faculty-page-header"><div><h1>{editId ? 'Edit Faculty' : 'Add Faculty'}</h1><p>Faculty registration and employment record</p></div><button type="button" className="fm-button secondary" onClick={back}><FiArrowLeft /> Back</button></header><FacultyForm key={location.key} initial={selected || { employeeId: nextId, employmentType: 'Permanent', employmentStatus: 'Working', employeeCategory: 'Teaching' }} faculty={faculty} collegeOptions={collegeOptions} onSave={save} onCancel={back} /></>
   } else if (selected) {
     const load = workload(selected)
     content = <><header className="fm-panel fm-profile-header"><div className="fm-identity"><Avatar faculty={selected} large /><div><p className="fm-eyebrow">FACULTY PROFILE · {selected.employeeId}</p><h1>{selected.fullName}</h1><p>{selected.designation} · {selected.department}</p><StatusBadge value={selected.employmentStatus} /></div></div><div className="fm-actions"><button type="button" className="fm-button secondary" onClick={() => navigate('/faculty/' + selected.id + '/edit')}><FiEdit2 /> Edit</button><button type="button" className="fm-button" onClick={() => setAssignmentId(selected.id)}><FiBriefcase /> Academic Assignment</button><button type="button" className="fm-button secondary" onClick={back}><FiArrowLeft /> Back</button></div></header><div className="faculty-summary">{[['Total Experience', years(selected.experience)], ['Employment Type', selected.employmentType], ['Qualification', selected.qualification], ['Assigned Subjects', load.subjects + ' Subjects'], ['Weekly Workload', load.hours + ' Hrs / Week']].map(([label, value]) => <div key={label}><small>{label}</small><strong>{value || '—'}</strong></div>)}</div><ProfileSections data={selected} /><section className="fm-panel"><div className="fm-section-bar"><h2><FiBriefcase /> Current Academic Responsibilities</h2><span className="fm-load-status">{load.status}</span></div>{selected.assignments?.length ? <AssignmentList faculty={selected} /> : <EmptyState title="No academic responsibilities assigned." action="Assign Academic Work" onAction={() => setAssignmentId(selected.id)} />}</section></>
