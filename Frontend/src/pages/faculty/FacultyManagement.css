@@ -367,7 +367,7 @@
 /* Summary */
 .faculty-management .faculty-summary {
   display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   min-height: 76px;
   gap: 0;
   padding: 0;
@@ -402,6 +402,13 @@
   margin-top: 3px;
   font-size: 17px;
   font-weight: 700;
+}
+.faculty-management .fm-gender .searchable-select__trigger {
+  background: #ffffff;
+}
+.faculty-management .fm-gender .searchable-select__trigger-text.is-placeholder {
+  color: #637d94;
+  font-weight: 500;
 }
 
 /* Directory and filters */

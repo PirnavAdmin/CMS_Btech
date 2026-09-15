@@ -28,6 +28,7 @@ export default function SearchableSelect({
   onChange,
   placeholder = 'Select an option',
   searchPlaceholder = 'Search...',
+  hideSearch = false,
   disabled = false,
   loading = false,
   error = false,
@@ -189,17 +190,17 @@ export default function SearchableSelect({
       buttons[index]?.focus({ preventScroll: true })
       buttons[index]?.scrollIntoView({ block: 'nearest' })
     }} style={{ position: 'fixed', top: menuStyle.top, bottom: menuStyle.bottom, left: menuStyle.left, width: menuStyle.width, maxHeight: menuStyle.maxHeight, zIndex: 2000 }}>
-      <label className="searchable-select__search">
-        <FiSearch aria-hidden="true" />
-        <input
-          ref={inputRef}
-          type="text"
-          value={query}
-          onChange={(event) => setQuery(event.target.value)}
-          placeholder={searchPlaceholder}
-          aria-label={searchPlaceholder}
-        />
-      </label>
+      {!hideSearch && <label className="searchable-select__search">
+          <FiSearch aria-hidden="true" />
+          <input
+            ref={inputRef}
+            type="text"
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+            placeholder={searchPlaceholder}
+            aria-label={searchPlaceholder}
+          />
+        </label>}
       <div className="searchable-select__options" role="listbox" aria-label={label || 'Options'}>
         {loading ? (
           <div className="searchable-select__empty">Loading options...</div>
@@ -244,7 +245,7 @@ export default function SearchableSelect({
         onClick={() => { if (!disabled) { setQuery(''); setOpen((current) => !current) } }}
         onKeyDown={handleKeyDown}
       >
-        <span className="searchable-select__trigger-text">{triggerLabel}</span>
+        <span className={`searchable-select__trigger-text${selectedOption ? '' : ' is-placeholder'}`}>{triggerLabel}</span>
         <span className="searchable-select__caret" aria-hidden="true">▾</span>
       </button>
       {menu}
