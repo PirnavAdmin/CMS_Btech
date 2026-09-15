@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react'
-import { NavLink } from 'react-router-dom'
+import { NavLink, useLocation } from 'react-router-dom'
 import { FiBarChart2, FiBookOpen, FiBriefcase, FiCalendar, FiCheckSquare, FiChevronLeft, FiChevronRight, FiCreditCard, FiEdit3, FiGitBranch, FiGrid, FiHome, FiLayers, FiTrendingUp, FiUser, FiUserPlus, FiUsers, FiX } from 'react-icons/fi'
 import { getUserRole } from '../auth/auth'
 import { ROLES } from '../auth/roles'
@@ -14,12 +14,14 @@ const academicLinks = [
   { label: 'Sections', to: '/section-management', icon: FiUsers, tone: 'pink' },
 ]
 
-function Item({ to, icon: Icon, children, onNavigate, tone = 'blue' }) {
-  return <NavLink to={to} onClick={onNavigate} className={`sidebar-link sidebar-link--${tone}`}><Icon aria-hidden="true" /><span>{children}</span></NavLink>
+function Item({ to, icon: Icon, children, onNavigate, tone = 'blue', activeWhen }) {
+  const location = useLocation()
+  return <NavLink to={to} onClick={onNavigate} className={({ isActive }) => `sidebar-link sidebar-link--${tone} ${(activeWhen ? activeWhen(location.pathname) : isActive) ? 'active' : ''}`}><Icon aria-hidden="true" /><span>{children}</span></NavLink>
 }
 
 export default function Sidebar({ open = false, onClose = () => {}, collapsed = false, onToggleCollapse = () => {} }) {
   const userRole = getUserRole()
+  const { pathname } = useLocation()
   const navigationRef = useRef(null)
 
   useEffect(() => {
@@ -52,10 +54,8 @@ export default function Sidebar({ open = false, onClose = () => {}, collapsed = 
           <Item to="/student-management/profiles" icon={FiUser} tone="cyan" onNavigate={onClose}>Student Profiles</Item>
           <Item to="/student-management/promotions" icon={FiTrendingUp} tone="green" onNavigate={onClose}>Student Promotions</Item>
           <p className="sidebar-section-label">Faculty</p>
-          <Item to="/faculty" icon={FiBriefcase} tone="cyan" onNavigate={onClose}>Faculty Management</Item>
-          <Item to="/faculty/advisors" icon={FiBookOpen} tone="blue" onNavigate={onClose}>Class Advisor Allocation</Item>
-          <Item to="/faculty/subjects" icon={FiBookOpen} tone="purple" onNavigate={onClose}>Subject Allocation</Item>
-          <Item to="/faculty/attendance" icon={FiCheckSquare} tone="green" onNavigate={onClose}>Faculty Attendance</Item>
+          <Item to="/faculty" icon={FiBriefcase} tone="cyan" onNavigate={onClose} activeWhen={pathname => !['attendance', 'advisors', 'subjects'].includes(pathname.split('/')[2]) && pathname.startsWith('/faculty')}>Faculty Management</Item>
+          <Item to="/faculty/attendance" icon={FiCheckSquare} tone="green" onNavigate={onClose} activeWhen={pathname => pathname === '/faculty/attendance' || pathname.startsWith('/faculty/attendance/')}>Faculty Attendance</Item>
           <p className="sidebar-section-label">Campus Operations</p>
           <Item to="/fees" icon={FiCreditCard} tone="gold" onNavigate={onClose}>Fee Structure</Item>
           <Item to="/attendance" icon={FiCheckSquare} tone="green" onNavigate={onClose}>Attendance</Item>

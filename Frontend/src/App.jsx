@@ -27,7 +27,7 @@ import Fees from './pages/fees/FeeStructure'
 import Attendance from './pages/attendance/Attendance'
 import Marks from './pages/marks/Marks'
 import Results from './pages/results/Results'
-import Faculty from './pages/faculty/Faculty'
+import FacultyManagement from './pages/faculty/FacultyManagement'
 import { AcademicProvider } from './context/AcademicContext'
 import './styles/erp-theme.css'
 import './App.css'
@@ -120,7 +120,7 @@ export default function App() {
 
           {/* Faculty demo module is self-contained and does not require backend masters. */}
           <Route element={<ProtectedRoute allowedRoles={[ROLES.ADMIN, ROLES.FACULTY]} />}>
-            <Route path="/faculty/*" element={<Faculty />} />
+            <Route path="/faculty/*" element={<FacultyManagement />} />
           </Route>
 
           {/* Faculty / Operations backed modules */}
