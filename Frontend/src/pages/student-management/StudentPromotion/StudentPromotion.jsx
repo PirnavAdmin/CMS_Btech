@@ -1,3 +1,4 @@
+import { newestFirst } from '../../../utils/newestFirst'
 import { promotionDetailSections } from '../../../utils/recordDetailSections'
 import { showError } from '../../../utils/toast'
 import useToastState from '../../../hooks/useToastState'
@@ -239,11 +240,11 @@ export default function StudentPromotion() {
         }
       })
 
-      setStudents(promotionCandidates)
+      setStudents(newestFirst('student-profiles', promotionCandidates))
 
       // Load History
       const hist = await promotionService.getHistory()
-      setHistory(hist || [])
+      setHistory(newestFirst('promotions', hist || []))
     } catch (err) {
       showError(err.message || 'Unable to load promotion scope.')
       setStudents([])

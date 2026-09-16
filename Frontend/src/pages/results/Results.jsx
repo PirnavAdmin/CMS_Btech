@@ -1,3 +1,4 @@
+import { newestFirst } from '../../utils/newestFirst'
 import { showError } from '../../utils/toast'
 import useToastState from '../../hooks/useToastState'
 import React, { useState, useEffect, useMemo, useCallback } from 'react'
@@ -96,7 +97,7 @@ export default function Results() {
     try {
       setLoading(true)
       const data = await resultsService.getResults()
-      setResultSheets(data || [])
+      setResultSheets(newestFirst('results', data || []))
     } catch (err) {
       showError(err.message || 'Error loading results sheets:')
     } finally {

@@ -1,7 +1,7 @@
-// Session-only display priority; IDs and timestamps always come from existing records.
+// Creation timestamps take precedence; numeric record IDs break ties when dates are unavailable.
 const created = new Map()
 let sequence = 0
-const idKeys = { colleges: 'collegeId', departments: 'departmentId', courses: 'courseId', branches: 'branchId', 'academic-years': 'academicYearId', semesters: 'semesterId', sections: 'sectionId', admissions: 'admissionId', 'college-settings': 'collegeSettingsId' }
+const idKeys = { colleges: 'collegeId', departments: 'departmentId', courses: 'courseId', branches: 'branchId', 'academic-years': 'academicYearId', semesters: 'semesterId', sections: 'sectionId', admissions: 'admissionId', 'college-settings': 'collegeSettingsId', 'student-profiles': 'studentId', 'course-mappings': 'courseSemesterMappingId', attendance: 'sessionId', results: 'sheetId', promotions: 'promotionId' }
 export function recordId(record, module) {
   if (record == null) return ''
   if (typeof record !== 'object') return String(record)
@@ -21,6 +21,16 @@ export function rememberCreated(module, record) {
 }
 export function newestFirst(module, rows) {
   const priority = created.get(module)
-  const timestamp = row => Date.parse(row.createdAt ?? row.createdDate ?? row.createdOn ?? '') || 0
-  return [...rows].sort((a, b) => (priority?.get(recordId(b, module)) || 0) - (priority?.get(recordId(a, module)) || 0) || timestamp(b) - timestamp(a))
+  const timestamp = row => {
+    for (const key of ['createdAt', 'createdDate', 'createdOn', 'created_at', 'CreatedAt', 'CreatedDate', 'CreatedOn']) {
+      const value = Date.parse(row[key]); if (Number.isFinite(value)) return value
+    }
+    return 0
+  }
+  const compareIds = (a, b) => {
+    const left = recordId(a, module), right = recordId(b, module)
+    if (!/^\d+$/.test(left) || !/^\d+$/.test(right)) return 0
+    return BigInt(right) > BigInt(left) ? 1 : BigInt(right) < BigInt(left) ? -1 : 0
+  }
+  return [...rows].sort((a, b) => (priority?.get(recordId(b, module)) || 0) - (priority?.get(recordId(a, module)) || 0) || timestamp(b) - timestamp(a) || compareIds(a, b))
 }

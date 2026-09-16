@@ -1,3 +1,4 @@
+import { newestFirst } from '../../../utils/newestFirst'
 import useToastState from '../../../hooks/useToastState'
 import { isApiResult } from '../../../utils/exportProvenance'
 import { approvedStudentProfiles } from '../../../utils/approvedStudentProfiles'
@@ -650,7 +651,7 @@ export default function StudentProfile() {
         throw new Error('Unable to verify admission approvals. Please refresh the student list.');
       }
       rows = approvedStudentProfiles(rows, admissions.value);
-      setStudents(rows);
+      setStudents(newestFirst('student-profiles', rows));
       if (directory.status === "rejected" && !rows.length)
         setError(
           directory.reason?.message || "Student profiles could not be loaded.",
