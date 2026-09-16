@@ -1,3 +1,4 @@
+import { newestFirst } from '../../utils/newestFirst'
 import { showError } from '../../utils/toast'
 import useToastState from '../../hooks/useToastState'
 import React, { useState, useEffect, useMemo, useCallback } from 'react'
@@ -94,7 +95,7 @@ export default function Attendance() {
     try {
       setLoading(true)
       const data = await attendanceService.getSessions()
-      setSessions(data || [])
+      setSessions(newestFirst('attendance', data || []))
     } catch (err) {
       showError(err.message || 'Error loading attendance sessions:')
     } finally {

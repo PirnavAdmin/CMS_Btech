@@ -566,7 +566,7 @@ export function CourseStructure() {
       const mappings = listFrom(mappingRes?.data).filter(x => String(x.courseId) === String(courseId))
       const byId = new Map(semesters.map(x => [String(x.semesterId), x]))
       setSemesterOptions(semesters)
-      setRows(mappings.map(x => { const s = byId.get(String(x.semesterId)) || {}; return { ...x, structureId: x.courseSemesterMappingId, semesterNumber: Number(s.semesterNumber || 1), semesterName: s.semesterName || `Semester ${s.semesterNumber || 1}`, yearNumber: Math.ceil(Number(s.semesterNumber || 1) / 2) } }))
+      setRows(newestFirst('course-mappings', mappings).map(x => { const s = byId.get(String(x.semesterId)) || {}; return { ...x, structureId: x.courseSemesterMappingId, semesterNumber: Number(s.semesterNumber || 1), semesterName: s.semesterName || `Semester ${s.semesterNumber || 1}`, yearNumber: Math.ceil(Number(s.semesterNumber || 1) / 2) } }))
       setError('')
     } catch (e) { setError(e.message || 'Unable to load course structures.') } finally { setLoading(false) }
   }

@@ -307,7 +307,6 @@ const assignmentOptions = {
   section: ['Section A', 'Section B', 'Section C'],
   assignmentType: ['Subject Faculty', 'Lab Faculty', 'Class Advisor', 'Mentor', 'Project Guide'],
 }
-const COLLEGE_NAME = 'Pirnav Engineering College'
 const sections = [
   { title: 'Personal Details', heading: 'Personal Information', icon: FiUser, description: 'Identity, photograph and primary contact information.', fields: [
     ['collegeName', 'College Name', 'college', true], ['employeeId', 'Employee ID', 'readonly'], ['fullName', 'Faculty Full Name', 'text', true],
@@ -337,7 +336,7 @@ const today = () => {
   return [date.getFullYear(), String(date.getMonth() + 1).padStart(2, '0'), String(date.getDate()).padStart(2, '0')].join('-')
 }
 const years = value => value === '' || value == null ? '—' : (parseFloat(value) || 0) + ' Years'
-const normalize = row => ({ ...Object.fromEntries(sections.flatMap(s => s.fields.map(([key]) => [key, '']))), photo: '', assignments: [], ...row, collegeName: row.collegeName || COLLEGE_NAME, experience: row.experience == null ? '' : String(parseFloat(row.experience) || 0) })
+const normalize = row => ({ ...Object.fromEntries(sections.flatMap(s => s.fields.map(([key]) => [key, '']))), photo: '', assignments: [], ...row, collegeName: row.collegeName || '', experience: row.experience == null ? '' : String(parseFloat(row.experience) || 0) })
 const clean = data => Object.fromEntries(Object.entries(data).map(([key, value]) => [key, typeof value === 'string' ? value.trim() : value]))
 const workload = row => {
   const assignments = row.assignments || []
@@ -848,7 +847,7 @@ function ProfileSections({ data }) {
     return <section className="fm-panel" key={section.title}><h2><section.icon />{section.heading}</h2>{fields.length ? <dl className="fm-info-grid">{fields.map(([key, label]) => <div key={key}><dt>{label}</dt><dd>{experienceKeys.includes(key) ? years(data[key]) : data[key] || '—'}</dd></div>)}</dl> : <p className="fm-muted">No optional contact information provided.</p>}</section>
   })}</div>
 }
-function Field({ field, data, errors, update, native = false, collegeOptions = [COLLEGE_NAME] }) {
+function Field({ field, data, errors, update, native = false, collegeOptions = [] }) {
   const [key, label, type, required] = field
   const id = 'fm-' + key
   const props = { id, value: data[key] ?? '', onChange: event => update(key, event.target.value), 'aria-invalid': Boolean(errors[key]), 'aria-describedby': errors[key] ? id + '-error' : undefined, required: Boolean(required) }
@@ -958,7 +957,7 @@ export default function FacultyManagement() {
   const [filters, setFilters] = useState({ department: '', designation: '', employmentType: '', employmentStatus: '' })
   const [page, setPage] = useState(1)
   const [assignmentId, setAssignmentId] = useState(null)
-  const [collegeOptions, setCollegeOptions] = useState([COLLEGE_NAME])
+  const [collegeOptions, setCollegeOptions] = useState([])
   const [toast, setToast] = useState('')
   const toastTimer = useRef(null)
   useEffect(() => () => clearTimeout(toastTimer.current), [])
@@ -983,7 +982,7 @@ export default function FacultyManagement() {
     academicService.getColleges(true).then(colleges => {
       if (!active) return
       const names = colleges.map(college => college.name).filter(Boolean)
-      setCollegeOptions([...new Set([COLLEGE_NAME, ...names])])
+      setCollegeOptions([...new Set(names)])
     }).catch(() => {})
     return () => { active = false }
   }, [])
