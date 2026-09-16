@@ -54,8 +54,10 @@ export default function Sidebar({ open = false, onClose = () => {}, collapsed = 
           <Item to="/student-management/profiles" icon={FiUser} tone="cyan" onNavigate={onClose}>Student Profiles</Item>
           <Item to="/student-management/promotions" icon={FiTrendingUp} tone="green" onNavigate={onClose}>Student Promotions</Item>
           <p className="sidebar-section-label">Faculty</p>
-          <Item to="/faculty" icon={FiBriefcase} tone="cyan" onNavigate={onClose} activeWhen={pathname => !['attendance', 'advisors', 'subjects'].includes(pathname.split('/')[2]) && pathname.startsWith('/faculty')}>Faculty Management</Item>
+          <Item to="/faculty" icon={FiBriefcase} tone="cyan" onNavigate={onClose} activeWhen={pathname => !['attendance', 'leave-management', 'payroll', 'advisors', 'subjects'].includes(pathname.split('/')[2]) && pathname.startsWith('/faculty')}>Faculty Management</Item>
           <Item to="/faculty/attendance" icon={FiCheckSquare} tone="green" onNavigate={onClose} activeWhen={pathname => pathname === '/faculty/attendance' || pathname.startsWith('/faculty/attendance/')}>Faculty Attendance</Item>
+          <Item to="/faculty/leave-management" icon={FiCalendar} tone="orange" onNavigate={onClose}>Faculty Leave Management</Item>
+          <Item to="/faculty/payroll" icon={FiCreditCard} tone="gold" onNavigate={onClose}>Faculty Payroll</Item>
           <p className="sidebar-section-label">Campus Operations</p>
           <Item to="/fees" icon={FiCreditCard} tone="gold" onNavigate={onClose}>Fee Structure</Item>
           <Item to="/attendance" icon={FiCheckSquare} tone="green" onNavigate={onClose}>Attendance</Item>
