@@ -32,14 +32,18 @@ main.student-profile .sp-directory-table{min-width:900px!important;table-layout:
 main.student-profile .sp-directory-table{width:100%;min-width:1040px!important;table-layout:fixed!important}main.student-profile .sp-directory-table th,main.student-profile .sp-directory-table td{box-sizing:border-box;text-align:left!important;vertical-align:middle!important}main.student-profile .sp-directory-table th:nth-child(1),main.student-profile .sp-directory-table td:nth-child(1){width:25%!important}main.student-profile .sp-directory-table th:nth-child(2),main.student-profile .sp-directory-table td:nth-child(2){width:38%!important}main.student-profile .sp-directory-table th:nth-child(3),main.student-profile .sp-directory-table td:nth-child(3){width:19%!important}main.student-profile .sp-directory-table th:nth-child(4),main.student-profile .sp-directory-table td:nth-child(4){width:10%!important}main.student-profile .sp-directory-table th:nth-child(5),main.student-profile .sp-directory-table td:nth-child(5){width:8%!important;text-align:center!important}main.student-profile .sp-directory-table td:nth-child(2) strong{overflow-wrap:anywhere}main.student-profile .sp-directory-table td:nth-child(3) strong,main.student-profile .sp-directory-table td:nth-child(3) small{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 
 /* Compact directory and keep the final action controls visible. */
-main.student-profile .sp-table-wrap{overflow-x:auto}
-main.student-profile .sp-directory-table{min-width:0!important;width:100%;table-layout:fixed!important}
+main.student-profile .sp-table-wrap{overflow-x:scroll;overflow-y:hidden;padding-bottom:6px;scrollbar-color:var(--brand) var(--surface-soft);scrollbar-width:thin}
+main.student-profile .sp-directory-table{min-width:1100px!important;width:100%;table-layout:fixed!important}
+main.student-profile .sp-table-wrap::-webkit-scrollbar{height:9px}
+main.student-profile .sp-table-wrap::-webkit-scrollbar-track{background:var(--surface-soft);border-radius:999px}
+main.student-profile .sp-table-wrap::-webkit-scrollbar-thumb{background:var(--brand);border-radius:999px}
 main.student-profile .sp-directory-table :is(th,td){padding:8px 9px!important}
-main.student-profile .sp-directory-table th:nth-child(1),main.student-profile .sp-directory-table td:nth-child(1){width:25%!important}
-main.student-profile .sp-directory-table th:nth-child(2),main.student-profile .sp-directory-table td:nth-child(2){width:32%!important}
-main.student-profile .sp-directory-table th:nth-child(3),main.student-profile .sp-directory-table td:nth-child(3){width:20%!important}
-main.student-profile .sp-directory-table th:nth-child(4),main.student-profile .sp-directory-table td:nth-child(4){width:13%!important}
-main.student-profile .sp-directory-table th:nth-child(5),main.student-profile .sp-directory-table td:nth-child(5){width:10%!important}
+main.student-profile .sp-directory-table th:nth-child(1),main.student-profile .sp-directory-table td:nth-child(1){width:23%!important}
+main.student-profile .sp-directory-table th:nth-child(2),main.student-profile .sp-directory-table td:nth-child(2){width:22%!important}
+main.student-profile .sp-directory-table th:nth-child(3),main.student-profile .sp-directory-table td:nth-child(3){width:22%!important}
+main.student-profile .sp-directory-table th:nth-child(4),main.student-profile .sp-directory-table td:nth-child(4){width:16%!important}
+main.student-profile .sp-directory-table th:nth-child(5),main.student-profile .sp-directory-table td:nth-child(5){width:9%!important}
+main.student-profile .sp-directory-table th:nth-child(6),main.student-profile .sp-directory-table td:nth-child(6){width:8%!important}
 main.student-profile .sp-directory-table td:last-child>div{display:flex;gap:5px;flex-wrap:nowrap;min-width:0}
 main.student-profile .sp-directory-table td:last-child .table-action-btn{width:30px!important;min-width:30px!important;height:30px!important;padding:0!important}
 main.student-profile .sp-tabs{overflow:visible;flex-wrap:wrap}

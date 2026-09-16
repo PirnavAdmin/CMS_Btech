@@ -128,6 +128,16 @@ const merge = row => {
     fees: { ...base.fees, ...row.fees }, documents: { ...base.documents, ...row.documents, otherCertificates: Array.isArray(row.documents?.otherCertificates) ? row.documents.otherCertificates : [] }, activity: Array.isArray(row.activity) ? row.activity : base.activity,
   }
 }
+const dateInputValue = value => {
+  if (!value) return ''
+  const text = String(value).trim()
+  const iso = text.match(/^(\d{4}-\d{2}-\d{2})/)
+  if (iso) return iso[1]
+  const dayFirst = text.match(/^(\d{2})[/-](\d{2})[/-](\d{4})$/)
+  if (dayFirst) return `${dayFirst[3]}-${dayFirst[2]}-${dayFirst[1]}`
+  const parsed = new Date(text)
+  return Number.isNaN(parsed.getTime()) ? '' : parsed.toISOString().slice(0, 10)
+}
 const admissionFromApi = row => {
   if (!row) return empty()
   const base = empty()
@@ -171,7 +181,7 @@ const admissionFromApi = row => {
       lastName,
       fullName,
       gender: row.gender ?? row.personal?.gender ?? row.personalInformation?.gender ?? base.personal.gender,
-      dob: row.dateOfBirth ?? row.dob ?? row.personal?.dob ?? row.personalInformation?.dob ?? base.personal.dob,
+      dob: dateInputValue(row.dateOfBirth ?? row.DateOfBirth ?? row.dob ?? row.personal?.dateOfBirth ?? row.personal?.dob ?? row.personalInformation?.dateOfBirth ?? row.personalInformation?.dob ?? base.personal.dob),
       bloodGroup: row.bloodGroup ?? row.personal?.bloodGroup ?? row.personalInformation?.bloodGroup ?? base.personal.bloodGroup,
       nationality: row.nationality ?? row.personal?.nationality ?? row.personalInformation?.nationality ?? base.personal.nationality,
       aadhaar: row.aadhaarNumber ?? row.aadhaar ?? row.personal?.aadhaar ?? row.personalInformation?.aadhaar ?? base.personal.aadhaar,

@@ -817,8 +817,19 @@ const academicDetailsPayload = (form) => compact({
   entryType: form.entryType ?? form.academic?.entryType,
   regulation: form.regulation ?? form.academic?.regulation, batch: form.batch ?? form.admission?.batch,
 })
+const educationRecordPayload = (record) => {
+  if (!record || typeof record !== 'object') return record
+  const score = record.score
+  // ASP.NET nullable Decimal fields accept null, but cannot deserialize an
+  // empty form-control string (e.g. an optional SSC percentage).
+  return {
+    ...record,
+    score: score === undefined || score === null || String(score).trim() === '' ? null : Number(score),
+  }
+}
 const previousEducationPayload = (form) => compact({
-  tenth: form.tenth ?? form.previousEducation?.tenth, qualifyingEducation: form.qualifyingEducation ?? form.intermediate ?? form.previousEducation?.intermediate,
+  tenth: educationRecordPayload(form.tenth ?? form.previousEducation?.tenth),
+  qualifyingEducation: educationRecordPayload(form.qualifyingEducation ?? form.intermediate ?? form.previousEducation?.intermediate),
 })
 const parentPayload = (form) => compact({
   fatherName: form.fatherName ?? form.father?.name ?? form.parents?.father?.name, motherName: form.motherName ?? form.mother?.name ?? form.parents?.mother?.name,

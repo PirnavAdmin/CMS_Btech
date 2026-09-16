@@ -5,6 +5,7 @@ import { approvedStudentProfiles, isApprovedAdmission } from '../../../utils/app
 import ExportMenu, { PrintDetailsButton } from '../../../components/ExportMenu'
 import { profileColumns } from '../../../utils/exportColumns'
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   FiAlertCircle,
   FiArrowLeft,
@@ -29,7 +30,10 @@ import DashboardLayout from "../../../layouts/DashboardLayout";
 import FilterPanel from "../../../components/FilterPanel";
 import CompactSummary from "../../../components/CompactSummary";
 import {
+  studentAcademicDetailsApi,
   studentDocumentApi,
+  studentFeeApi,
+  studentParentApi,
   studentPreviousEducationApi,
   studentProfilesApi,
   studentAdmissionApi,
@@ -354,19 +358,20 @@ const profileFromApi = (x) => {
     },
   };
   const academic = {
-    academicYear: x.academicYear ?? "",
+    academicYear: x.academicYear ?? x.academicYearName ?? "",
     admissionType: "",
-    course: x.course ?? "",
-    department: x.department ?? "",
-    branch: x.branch ?? "",
-    semester: x.semester ?? "",
-    section: x.section ?? "",
+    course: x.course ?? x.courseName ?? "",
+    department: x.department ?? x.departmentName ?? "",
+    branch: x.branch ?? x.branchName ?? "",
+    semester: x.semester ?? x.semesterName ?? "",
+    section: x.section ?? x.sectionName ?? "",
     regulation: "",
     quota: "",
     quotaOther: "",
     entryType: "",
     ...x.academic,
     ...x.academicInformation,
+    ...x.academicDetails,
   };
   const application = {
     registrationNumber:
@@ -462,6 +467,100 @@ const profileFromApi = (x) => {
     fees,
     documents,
   };
+};
+
+const profileAdmissionId = (source) =>
+  source?.admissionId ??
+  source?.application?.admissionId ??
+  source?.admission?.admissionId;
+
+const profileStudentId = (source) =>
+  source?.studentId ?? source?.header?.studentId ?? source?.id;
+
+const normalizeProfileFees = (...responses) => {
+  const source = responses.reduce((merged, response) => {
+    const nested = response?.feeSummary ?? response?.summary ?? response?.feeDetails ?? response?.feeStructure ?? {};
+    return { ...merged, ...(typeof nested === "object" ? nested : {}), ...(response || {}) };
+  }, {});
+  const components = source.components ?? source.feeComponents ?? source.feeHeads ?? source.feeBreakdown ?? source.items ?? [];
+  const amount = (...keys) => keys.map((key) => Number(source[key] || 0)).find((value) => value > 0) || 0;
+  return {
+    ...source,
+    components: Array.isArray(components) ? components : [],
+    tuitionFee: amount("tuitionFee", "tuitionAmount", "academicFee"),
+    admissionFee: amount("admissionFee", "admissionAmount", "registrationFee", "oneTimeFee"),
+    hostelFee: amount("hostelFee", "hostelAmount"),
+    transportFee: amount("transportFee", "transportationFee", "transportAmount"),
+    scholarshipAmount: amount("scholarshipAmount", "discountAmount", "concessionAmount"),
+    totalFee: amount("firstYearTotal", "totalFee", "totalAmount", "grandTotal", "netPayable", "totalPayable", "netAmount", "payableAmount"),
+    paymentPlan: source.paymentPlan ?? "",
+    paymentStatus: source.paymentStatus ?? "",
+  };
+};
+
+// A student profile response is intentionally small. The admission wizard
+// stores academic, education, parent, fee and document data in separate API
+// resources, so hydrate those sections when opening a profile.
+const hydrateProfile = async (source) => {
+  let sourceData = source ?? {};
+  let admissionId = profileAdmissionId(sourceData);
+  let studentId = profileStudentId(sourceData);
+
+  // Directory fallback rows can be keyed by admission ID until a Student ID is
+  // returned by the profile service. Resolve both IDs before calling detail APIs.
+  if (!admissionId || !studentId) {
+    try {
+      const admissions = await studentAdmissionApi.getAll();
+      const sourceId = String(sourceData.id ?? "");
+      const matched = admissions.find((admission) => {
+        const candidateAdmissionId = String(admission.admissionId ?? admission.id ?? "");
+        const candidateStudentId = String(
+          admission.studentId ?? admission.student?.studentId ?? admission.student?.id ?? "",
+        );
+        return (
+          (admissionId && candidateAdmissionId === String(admissionId)) ||
+          (studentId && candidateStudentId === String(studentId)) ||
+          candidateAdmissionId === sourceId ||
+          candidateStudentId === sourceId
+        );
+      });
+      if (matched) {
+        admissionId ??= matched.admissionId ?? matched.id;
+        if (!studentId || String(studentId) === sourceId)
+          studentId = matched.studentId ?? matched.student?.studentId ?? matched.student?.id;
+        sourceData = { ...matched, ...sourceData };
+      }
+    } catch {
+      // The profile summary can still be shown if admission-ID resolution fails.
+    }
+  }
+  const [admission, academic, education, parent, feeSummary, feeStructure, documents] =
+    await Promise.allSettled([
+      admissionId ? studentAdmissionApi.getById(admissionId) : Promise.resolve(null),
+      admissionId ? studentAcademicDetailsApi.get(admissionId) : Promise.resolve(null),
+      admissionId ? studentPreviousEducationApi.get(admissionId) : Promise.resolve(null),
+      studentId ? studentParentApi.get(studentId) : Promise.resolve(null),
+      admissionId ? studentFeeApi.getSummary(admissionId) : Promise.resolve(null),
+      admissionId ? studentFeeApi.getStructure(admissionId) : Promise.resolve(null),
+      studentId ? studentDocumentApi.getAll(studentId) : Promise.resolve([]),
+    ]);
+  const read = (result, fallback = null) =>
+    result.status === "fulfilled" ? result.value : fallback;
+  const admissionData = read(admission, {});
+  const parentData = read(parent);
+  return profileFromApi({
+    ...admissionData,
+    ...sourceData,
+    id: studentId ?? admissionData.studentId ?? admissionData.id,
+    studentId: studentId ?? admissionData.studentId,
+    admissionId: admissionId ?? admissionData.admissionId ?? admissionData.id,
+    academicDetails: read(academic),
+    previousEducation: read(education),
+    parents: parentData ?? sourceData.parents,
+    parentDetails: parentData ?? sourceData.parentDetails,
+    fees: normalizeProfileFees(read(feeStructure), read(feeSummary)),
+    documents: documentsFromApi(read(documents, [])),
+  });
 };
 const detail = (label, content) => (
   <div key={label}>
@@ -591,6 +690,7 @@ export default function StudentProfile() {
   // available to every user who can open this screen; the API remains the
   // source of truth for save authorization.
   const canEdit = true;
+  const navigate = useNavigate();
   const [students, setStudents] = useState([]),
     [loading, setLoading] = useState(true),
     [error, setError] = useToastState("", 'error'),
@@ -634,7 +734,7 @@ export default function StudentProfile() {
           : [];
       if (profile.status === "fulfilled" && profile.value) {
         const [preview, documents] = profile.value;
-        const latest = profileFromApi({
+        const latest = await hydrateProfile({
           ...preview,
           studentId: requestedId,
           documents: documentsFromApi(documents),
@@ -738,27 +838,43 @@ export default function StudentProfile() {
         Object.assign(updated, { branch: "" });
       return updated;
     });
-  const openProfile = async (id) => {
-    setSelectedId(id);
+  const openProfile = async (studentOrId) => {
+    const directoryStudent =
+      typeof studentOrId === "object"
+        ? studentOrId
+        : students.find((student) => String(student.id) === String(studentOrId));
+    const requestedId = directoryStudent?.studentId ?? directoryStudent?.id ?? studentOrId;
+    setSelectedId(requestedId);
     setTab("overview");
     const url = new URL(window.location.href);
-    url.searchParams.set("studentId", id);
+    url.searchParams.set("studentId", requestedId);
     window.history.pushState({}, "", url);
     try {
-      const preview = await studentProfilesApi.preview(id);
-      const admissionId = preview.admissionId ?? preview.application?.admissionId ?? preview.admission?.admissionId;
-      const [documentRows, previousEducation] = await Promise.all([
-        studentDocumentApi.getAll(id).catch(() => []),
-        admissionId ? studentPreviousEducationApi.get(admissionId).catch(() => null) : Promise.resolve(null),
-      ]);
-      const latest = profileFromApi({
+      let preview = directoryStudent ?? { id: requestedId };
+      try {
+        preview = {
+          ...preview,
+          ...(await studentProfilesApi.preview(requestedId)),
+        };
+      } catch {
+        // Some newly approved rows are initially keyed by admission ID rather
+        // than student ID. Hydration below resolves the correct student record.
+      }
+      const latest = await hydrateProfile({
         ...preview,
-        ...(previousEducation ? { previousEducation } : {}),
-        documents: documentsFromApi(documentRows),
+        studentId: directoryStudent?.studentId,
       });
+      const resolvedId = latest.id ?? requestedId;
+      setSelectedId(resolvedId);
+      url.searchParams.set("studentId", resolvedId);
+      window.history.replaceState({}, "", url);
       setStudents((current) => [
         latest,
-        ...current.filter((x) => String(x.id) !== String(id)),
+        ...current.filter(
+          (x) =>
+            String(x.id) !== String(resolvedId) &&
+            String(x.id) !== String(requestedId),
+        ),
       ]);
     } catch (previewError) {
       setNotice(previewError.message || "Unable to load the latest profile.", 'error');
@@ -770,12 +886,22 @@ export default function StudentProfile() {
     url.searchParams.delete("studentId");
     window.history.pushState({}, "", url);
   };
-  const beginEdit = (student) => {
+  const beginEdit = async (student) => {
     if (!canEdit) {
       setNotice("You do not have permission to edit student profiles.", "warning");
       return;
     }
-    setEditing(clone(student));
+    try {
+      // Reuse the admission wizard for editing so fields, required rules,
+      // dropdown options and save behaviour exactly match Student Admission.
+      const hydrated = await hydrateProfile(student);
+      const admissionId = profileAdmissionId(hydrated);
+      if (!admissionId)
+        throw new Error("This student is not linked to an admission record.");
+      navigate(`/student-management/admissions/${admissionId}/edit`);
+    } catch (editError) {
+      setNotice(editError.message || "Unable to open the admission editor.", "error");
+    }
   };
   const saveStudent = async (student) => {
     const p = student.personal || {},
@@ -783,7 +909,8 @@ export default function StudentProfile() {
       father = student.parents?.father || {},
       mother = student.parents?.mother || {},
       guardian = student.parents?.guardian || {};
-    await studentProfilesApi.update(student.id, {
+    const admissionId = profileAdmissionId(student);
+    const profilePayload = {
       fullName: name(student),
       gender: p.gender,
       dateOfBirth: p.dob || null,
@@ -823,21 +950,37 @@ export default function StudentProfile() {
       changeReason:
         "Student profile updated from the College Management System.",
       student,
-    });
-    const admissionId = student.admissionId ?? student.application?.admissionId ?? student.admission?.admissionId;
+    };
+    try {
+      await studentProfilesApi.update(student.id, profilePayload);
+    } catch (profileError) {
+      const missingProfile =
+        Number(profileError?.status) === 404 ||
+        /student profile not found/i.test(profileError?.message || "");
+      if (!missingProfile || !admissionId) throw profileError;
+
+      // Approved admissions may not yet have a separate student-profile row.
+      // Persist through the admission resources until the backend creates one.
+      await studentAdmissionApi.update(admissionId, student);
+      await Promise.allSettled([
+        studentAcademicDetailsApi.update(admissionId, student),
+        studentParentApi.update(student.id, student),
+      ]);
+    }
     if (admissionId && student.previousEducation) {
       await studentPreviousEducationApi.update(admissionId, student.previousEducation);
     }
-    const preview = await studentProfilesApi.preview(student.id);
-    const refetchAdmissionId = student.admissionId ?? student.application?.admissionId ?? student.admission?.admissionId;
-    const [documentRows, previousEducation] = await Promise.all([
-      studentDocumentApi.getAll(student.id).catch(() => []),
-      refetchAdmissionId ? studentPreviousEducationApi.get(refetchAdmissionId).catch(() => null) : Promise.resolve(null),
-    ]);
-    const next = profileFromApi({
+    let preview;
+    try {
+      preview = await studentProfilesApi.preview(student.id);
+    } catch {
+      // The admission fallback above is valid even before the backend exposes
+      // a separate profile-preview resource for this student.
+      preview = { ...student, studentId: student.id, admissionId };
+    }
+    const next = await hydrateProfile({
       ...preview,
-      ...(previousEducation ? { previousEducation } : {}),
-      documents: documentsFromApi(documentRows),
+      studentId: student.id,
     });
     if (student.personal?.photo) next.personal.photo = student.personal.photo;
     setStudents((current) =>
@@ -985,7 +1128,7 @@ export default function StudentProfile() {
                     return (
                       <tr
                         key={student.id}
-                        onClick={() => openProfile(student.id)}
+                        onClick={() => openProfile(student)}
                       >
                         <td>
                           <div className="sp-student">
@@ -1003,17 +1146,6 @@ export default function StudentProfile() {
                               <small className="table-cell-truncate" title={`Admission No: ${value(app.admissionNumber)}`}>
                                 Admission No: {value(app.admissionNumber)}
                               </small>
-                              <button
-                                type="button"
-                                className="table-action-btn action-edit"
-                                style={{ alignSelf: "flex-start", marginTop: "6px" }}
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  beginEdit(student);
-                                }}
-                              >
-                                <FiEdit2 aria-hidden="true" /> Edit
-                              </button>
                             </div>
                           </div>
                         </td>
@@ -1044,18 +1176,20 @@ export default function StudentProfile() {
                         <td className="table-center">
                           <div className="table-actions-cell table-actions-group">
                             <button
+                              type="button"
                               className="table-action-btn action-view"
                               aria-label="View student profile"
                               title="View student profile"
                               onClick={(e) => {
                                 e.stopPropagation();
-                                openProfile(student.id);
+                                openProfile(student);
                               }}
                             >
-                              <FiEye />
+                              <FiEye aria-hidden="true" />
                             </button>
                             {canEdit && (
                               <button
+                                type="button"
                                 className="table-action-btn action-edit"
                                 aria-label="Edit student profile"
                                 title="Edit student profile"
@@ -1064,7 +1198,7 @@ export default function StudentProfile() {
                                   beginEdit(student);
                                 }}
                               >
-                                <FiEdit2 />
+                                <FiEdit2 aria-hidden="true" />
                               </button>
                             )}
                           </div>

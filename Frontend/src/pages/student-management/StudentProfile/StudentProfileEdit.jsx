@@ -191,9 +191,9 @@ export default function StudentProfileEdit({ student, onCancel, onSave }) {
         )
           next[`contact.${prefix}.${key}`] = `Enter a valid ${key}.`;
     }
-    if (!validName(father.name))
+    if (clean(father.name) && !validName(father.name))
       next["parents.father.name"] = "Enter a valid father name.";
-    if (!validMobile(father.mobile))
+    if (clean(father.mobile) && !validMobile(father.mobile))
       next["parents.father.mobile"] = "Enter a valid father mobile number.";
     if (clean(father.email) && !validEmail(father.email))
       next["parents.father.email"] = "Enter a valid father email address.";
@@ -648,8 +648,8 @@ export default function StudentProfileEdit({ student, onCancel, onSave }) {
             <fieldset>
               <legend>Parent / Guardian</legend>
               {fields([
-                ["parents.father.name", "Father name", { required: true }],
-                ["parents.father.mobile", "Father mobile", { required: true }],
+                ["parents.father.name", "Father name"],
+                ["parents.father.mobile", "Father mobile"],
                 ["parents.father.email", "Father email", { type: "email" }],
                 ["parents.father.occupation", "Father occupation"],
                 ["parents.father.qualification", "Father qualification"],
