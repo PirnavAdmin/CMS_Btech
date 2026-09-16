@@ -7,7 +7,11 @@ const list = value => Array.isArray(value) ? value : []
 
 // The UI historically used employeeId/employmentStatus while the API may use
 // employeeCode/status. Normalising at this boundary keeps pages API-agnostic.
-export const normalizeFaculty = (source = {}) => ({
+export const normalizeFaculty = (source = {}) => {
+  // A partially populated result (or a null item in a paginated response)
+  // must not take down the Faculty directory.
+  source = source || {}
+  return {
   ...source,
   id: String(first(source, ['facultyId', 'id', 'employeeProfileId'], '')),
   facultyId: first(source, ['facultyId', 'id', 'employeeProfileId'], ''),
@@ -27,18 +31,20 @@ export const normalizeFaculty = (source = {}) => ({
   emergencyName: first(source, ['emergencyName', 'emergencyContactName']), emergencyMobile: first(source, ['emergencyMobile', 'emergencyContactNumber']), relationship: first(source, ['relationship', 'emergencyContactRelation']),
   employeeCategory: first(source, ['employeeCategory', 'category'], 'Teaching'),
   assignments: list(source.assignments ?? source.subjectAllocations),
-})
+  }
+}
 
 const listFaculty = async (params, search = false) => {
   const records = []; let page = 1
   while (true) {
     const rows = await (search ? facultyApi.search : facultyApi.getAll)({ ...params, PageNumber: page, PageSize: 100 })
-    const fresh = rows.filter(row => !records.some(existing => String(existing.facultyId ?? existing.id) === String(row.facultyId ?? row.id)))
+    const validRows = rows.filter(row => row && typeof row === 'object')
+    const fresh = validRows.filter(row => !records.some(existing => String(existing.facultyId ?? existing.id) === String(row.facultyId ?? row.id)))
     records.push(...fresh)
     if (rows.length < 100 || !fresh.length) break
     page++
   }
-  return newestFirst('faculty', records.map(normalizeFaculty))
+  return newestFirst('faculty', records.filter(row => row && typeof row === 'object').map(normalizeFaculty))
 }
 
 export const facultyService = {
