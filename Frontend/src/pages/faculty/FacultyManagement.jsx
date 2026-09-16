@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Navigate, useLocation, useNavigate } from 'react-router-dom'
 import { FiAlertCircle, FiArrowLeft, FiBriefcase, FiCheckCircle, FiChevronDown, FiChevronUp, FiEdit2, FiEye, FiFilter, FiPlus, FiSearch, FiUser, FiUsers, FiClock, FiBookOpen, FiMapPin, FiX, FiTrash2 } from 'react-icons/fi'
 import DashboardLayout from '../../layouts/DashboardLayout'
@@ -7,7 +7,10 @@ import FilterPanel from '../../components/FilterPanel'
 import StatusBadge from '../../components/StatusBadge'
 import TablePagination from '../../components/TablePagination'
 import SearchableSelect from '../../components/SearchableSelect'
-import academicService from '../../services/academicService'
+import { departmentApi, facultyMasterApi } from '../../api/apiEndpoints'
+import { attendancePayload, requiredNumber } from '../../services/facultyContracts'
+import { downloadServerExport } from '../../utils/exportUtils'
+import { FacultyDocuments, FacultyStatus, ApiAssignmentDialog } from './FacultyApiPanels'
 import facultyService, { normalizeFaculty } from '../../services/facultyService'
 import './FacultyManagement.css'
 import './FacultyAttendance.css'
@@ -18,7 +21,7 @@ const departments = ['Computer Science & Engineering', 'Electronics & Communicat
 // Kept as an empty export for older screens; faculty data must come from the API.
 export const readStoredFaculty = () => []
 export const readStoredAttendanceRecords = () => []
-export const facultySeed = [['FAC001','Dr. Anitha Sharma','Professor','Ph.D','14 Years','9876543210','anitha.sharma@pirnav.edu.in','Permanent','Working'],['FAC002','Dr. Rakesh Kumar','Associate Professor','Ph.D','11 Years','9876543211','rakesh.kumar@pirnav.edu.in','Permanent','Working'],['FAC003','Prof. Meera Nair','Assistant Professor','M.Tech','8 Years','9876543212','meera.nair@pirnav.edu.in','Permanent','Working'],['FAC004','Dr. Vikram Rao','Professor','Ph.D','18 Years','9876543213','vikram.rao@pirnav.edu.in','Permanent','On Leave'],['FAC005','Ms. Priya Menon','Assistant Professor','M.Tech','6 Years','9876543214','priya.menon@pirnav.edu.in','Contract','Working'],['FAC006','Mr. Arjun Reddy','Senior Lecturer','M.Tech','10 Years','9876543215','arjun.reddy@pirnav.edu.in','Permanent','Working'],['FAC007','Dr. Sneha Iyer','Associate Professor','Ph.D','12 Years','9876543216','sneha.iyer@pirnav.edu.in','Permanent','Working'],['FAC008','Mr. Karthik Bose','Lab Instructor','M.Sc','5 Years','9876543217','karthik.bose@pirnav.edu.in','Contract','Resigned'],['FAC009','Ms. Divya Joseph','Assistant Professor','M.Tech','7 Years','9876543218','divya.joseph@pirnav.edu.in','Permanent','Working'],['FAC010','Dr. Nitin Kapoor','Professor','Ph.D','20 Years','9876543219','nitin.kapoor@pirnav.edu.in','Permanent','Working'],['FAC011','Ms. Farah Khan','Visiting Faculty','MCA','4 Years','9876543220','farah.khan@pirnav.edu.in','Visiting','Working'],['FAC012','Mr. Suresh Patil','Lecturer','M.Tech','9 Years','9876543221','suresh.patil@pirnav.edu.in','Permanent','Retired']].map((row, index) => ({ id: `faculty-${index + 1}`, employeeId: row[0], fullName: row[1], designation: row[2], qualification: row[3], experience: row[4], mobile: row[5], email: row[6], employmentType: row[7], employmentStatus: row[8], employeeCategory: 'Teaching', department: departments[index % departments.length] }))
+export const facultySeed = []
 const statuses = ['Working', 'On Leave', 'Resigned', 'Retired']
 const designations = ['Professor', 'Associate Professor', 'Assistant Professor', 'Senior Lecturer', 'Lecturer', 'Lab Instructor', 'Visiting Faculty']
 const employmentTypes = ['Permanent', 'Contract', 'Visiting', 'Guest']
@@ -289,12 +292,12 @@ const assignmentOptions = {
 }
 const sections = [
   { title: 'Personal Details', heading: 'Personal Information', icon: FiUser, description: 'Identity, photograph and primary contact information.', fields: [
-    ['collegeName', 'College Name', 'college', true], ['employeeId', 'Employee ID', 'readonly'], ['fullName', 'Faculty Full Name', 'text', true],
+    ['collegeId', 'College Name', 'college', true], ['userId', 'Linked User ID', 'text', true], ['employeeId', 'Employee ID', 'readonly'], ['fullName', 'Faculty Full Name', 'text', true],
     ['gender', 'Gender', ['Male', 'Female', 'Other'], true], ['dob', 'Date of Birth', 'date', true],
     ['mobile', 'Mobile Number', 'tel', true], ['email', 'Email', 'email', true],
   ] },
   { title: 'Employment', heading: 'Employment Information', icon: FiBriefcase, description: 'Faculty designation, department and employment information.', fields: [
-    ['department', 'Department', departments, true], ['designation', 'Designation', designations, true],
+    ['departmentId', 'Department', 'department', true], ['designation', 'Designation', designations, true],
     ['employmentType', 'Employment Type', employmentTypes, true], ['employmentStatus', 'Employment Status', statuses, true],
     ['joiningDate', 'Date of Joining', 'date', true], ['employeeCategory', 'Employee Category', ['Teaching', 'Technical', 'Visiting']],
     ['experience', 'Total Experience', 'number'],
@@ -402,6 +405,9 @@ function FacultyAttendanceScreen({ faculty, onNotify }) {
   const [attendanceSuccess, setAttendanceSuccess] = useState(null)
   const [selectedFacultyIds, setSelectedFacultyIds] = useState([])
   const [attendanceRecords, setAttendanceRecords] = useState([])
+  const [serverDaily, setServerDaily] = useState([]), [serverReport, setServerReport] = useState([])
+  const [attendanceBusy, setAttendanceBusy] = useState(false), [attendanceError, setAttendanceError] = useState('')
+  const attendanceLock = useRef(false), attendanceVersion = useRef(0)
   const [dailyPage, setDailyPage] = useState(1)
   const [registerPage, setRegisterPage] = useState(1)
   const [reportPage, setReportPage] = useState(1)
@@ -412,25 +418,32 @@ function FacultyAttendanceScreen({ faculty, onNotify }) {
   const [registerFilters, setRegisterFilters] = useState(defaultRegister)
   const [reportFilters, setReportFilters] = useState(() => ({ daily: defaultReport(), weekly: defaultReport(), monthly: defaultReport() }))
   const currentReport = reportFilters[reportType]
-  useEffect(() => {
-    let active = true
-    facultyService.getAttendance().then(rows => {
-      if (!active) return
-      setAttendanceRecords(mergeAttendanceRecords(faculty, rows.map(row => ({ ...row, id: row.attendanceId ?? row.id, facultyId: row.facultyId ?? row.employeeProfileId, date: row.date ?? row.attendanceDate, checkIn: row.checkIn ?? row.checkInTime, checkOut: row.checkOut ?? row.checkOutTime }))))
-    }).catch(error => onNotify?.(error.message || 'Could not load faculty attendance.'))
-    return () => { active = false }
-  }, [faculty, onNotify])
+  const normalizeAttendance = rows => mergeAttendanceRecords(faculty, rows.map(row => ({ ...row, id: row.attendanceId ?? row.id, facultyId: row.facultyId ?? row.employeeProfileId ?? row.faculty?.id, date: row.date ?? row.attendanceDate, checkIn: row.checkIn ?? row.checkInTime, checkOut: row.checkOut ?? row.checkOutTime })))
+  const loadAttendance = useCallback(async () => {
+    const version = ++attendanceVersion.current; setAttendanceError('')
+    try {
+      const reportFilter = reportFilters[reportType]
+      const dates = attendancePeriod(reportType, reportFilter)
+      const params = tab === 'register' ? { facultyId: registerFilters.facultyId, fromDate: registerFilters.from, toDate: registerFilters.to, status: registerFilters.status } : tab === 'reports' ? { facultyId: reportFilter.facultyId, fromDate: dates.from, toDate: dates.to } : { fromDate: dailyFilters.date, toDate: dailyFilters.date }
+      const records = await (tab === 'reports' ? facultyService.getAttendanceReports(params) : facultyService.getAttendance(params))
+      const daily = tab === 'daily' ? await facultyService.getDailyAttendance(dailyFilters) : []
+      const report = tab === 'reports' && reportType !== 'daily' ? await (reportType === 'weekly' ? facultyService.getWeeklyAttendance : facultyService.getMonthlyAttendance)(reportFilter) : []
+      if (version !== attendanceVersion.current) return
+      setAttendanceRecords(normalizeAttendance(records)); setServerDaily(normalizeAttendance(daily.map(row => ({ ...row, date: row.date ?? row.attendanceDate ?? dailyFilters.date })))); setServerReport(report)
+    } catch (error) { if (version === attendanceVersion.current) { setAttendanceError(error.message); setAttendanceRecords([]); setServerDaily([]); setServerReport([]) } }
+  }, [faculty, tab, dailyFilters, registerFilters, reportFilters, reportType])
+  useEffect(() => { const timer = setTimeout(() => { loadAttendance() }, 200); return () => { clearTimeout(timer); attendanceVersion.current++ } }, [loadAttendance])
 
   // The existing faculty.attendance collection is the only source. No generated
   // Daily rows are persisted or fed into historical reports.
   const resolvedRecords = useMemo(() => resolveAttendanceRecords(attendanceRecords, faculty), [attendanceRecords, faculty])
-  const dailyRows = useMemo(() => dailyAttendanceRows(attendanceRecords, faculty, dailyFilters), [attendanceRecords, faculty, dailyFilters])
+  const dailyRows = useMemo(() => filterAttendanceRecords(resolveAttendanceRecords(serverDaily, faculty), { ...dailyFilters, from: dailyFilters.date, to: dailyFilters.date }), [serverDaily, faculty, dailyFilters])
   const registerRows = useMemo(() => filterAttendanceRecords(resolvedRecords, registerFilters), [resolvedRecords, registerFilters])
   const period = useMemo(() => attendancePeriod(reportType, currentReport), [reportType, currentReport])
   const reportRecords = useMemo(() => period.from && period.to ? filterAttendanceRecords(resolvedRecords, { ...currentReport, ...period, status: reportType === 'daily' ? currentReport.status : '' }).filter(row => !currentReport.facultyType || (row.faculty.employeeCategory === 'Non-Teaching' ? 'Non-Teaching' : 'Teaching') === currentReport.facultyType) : [], [resolvedRecords, currentReport, period, reportType])
   const periodKey = reportType === 'monthly' ? period.from.slice(0, 7) : period.from === period.to ? period.from : period.from + '-to-' + period.to
   const periodLabel = reportType === 'monthly' ? period.from.slice(0, 7) : period.from === period.to ? period.from : period.from + ' – ' + period.to
-  const reportRows = useMemo(() => reportType === 'daily' ? reportRecords : aggregateFacultyAttendance(reportRecords, periodLabel), [reportRecords, reportType, periodLabel])
+  const reportRows = useMemo(() => reportType === 'daily' ? reportRecords : serverReport.map(row => ({ ...row, facultyId: String(row.facultyId), faculty: faculty.find(member => String(member.id) === String(row.facultyId)) || normalizeFaculty(row), totalDays: row.totalDays ?? row.workingDays ?? 0, present: row.present ?? row.presentDays ?? 0, absent: row.absent ?? row.absentDays ?? 0, late: row.late ?? row.lateDays ?? 0, halfDay: row.halfDay ?? row.halfDays ?? 0, onLeave: row.onLeave ?? row.leaveDays ?? 0, lop: row.lop ?? row.lopDays ?? 0, period: periodLabel })), [reportRecords, reportType, serverReport, faculty, periodLabel])
   const dailySummary = useMemo(() => summarizeAttendance(dailyRows), [dailyRows])
   const reportSummary = useMemo(() => summarizeAttendance(reportRecords), [reportRecords])
   const reportFaculty = useMemo(() => faculty.filter(item => !currentReport.facultyType || (item.employeeCategory === 'Non-Teaching' ? 'Non-Teaching' : 'Teaching') === currentReport.facultyType).filter(item => !currentReport.department || item.department === currentReport.department), [faculty, currentReport.facultyType, currentReport.department])
@@ -447,75 +460,41 @@ function FacultyAttendanceScreen({ faculty, onNotify }) {
     else if (tab === 'register') { setRegisterFilters(defaultRegister()); setRegisterPage(1) }
     else { setReportFilters(old => ({ ...old, [reportType]: defaultReport() })); setReportPage(1) }
   }
-  const saveAttendance = async (values, options = {}) => {
-    const { silent = false } = options
-    const facultyId = String(values.facultyId)
-    const date = String(values.date)
-    const status = values.status || 'Not Marked'
-    if (!date || date > today()) return onNotify?.('Attendance cannot be recorded for a future date.')
-    const isWorkedStatus = ['Present', 'Late', 'Half Day'].includes(status)
-    const normalizedCheckIn = isWorkedStatus ? (values.checkIn && values.checkIn !== '—' ? values.checkIn : DEFAULT_ATTENDANCE_WINDOW.checkIn) : '—'
-    const normalizedCheckOut = isWorkedStatus ? (values.checkOut && values.checkOut !== '—' ? values.checkOut : DEFAULT_ATTENDANCE_WINDOW.checkOut) : '—'
-    const normalizedValues = { ...values, status, checkIn: normalizedCheckIn, checkOut: normalizedCheckOut, remarks: values.remarks || '—' }
+  const saveAttendance = async values => {
+    if (attendanceLock.current) return
+    if (!values.date || values.date > today()) { setAttendanceError('Attendance cannot be recorded for a future date.'); return }
+    attendanceLock.current = true; setAttendanceBusy(true); setAttendanceError('')
     try {
-      const existingAttendanceId = values.attendanceId || (values.id && !String(values.id).includes(':') ? values.id : null)
-      const payload = { facultyId, date, attendanceDate: date, status, checkIn: values.checkIn || null, checkOut: values.checkOut || null, remarks: values.remarks || '' }
-      if (existingAttendanceId) await facultyService.updateAttendance(existingAttendanceId, payload)
-      else await facultyService.createAttendance(payload)
-    } catch (error) {
-      onNotify?.(error.message || 'Attendance could not be saved.')
-      return
-    }
-    setAttendanceRecords(current => {
-      const remaining = current.filter(record => !(String(record.facultyId) === facultyId && record.date === date))
-      if (status === 'Not Marked') return remaining
-      const workingMinutes = calculateWorkingMinutes(normalizedValues)
-      return [...remaining, {
-        id: `${facultyId}:${date}`,
-        facultyId,
-        date,
-        status,
-        checkIn: normalizedCheckIn,
-        checkOut: normalizedCheckOut,
-        workingMinutes,
-        remarks: values.remarks || '—',
-        source: values.source || 'Manual',
-      }].sort((left, right) => right.date.localeCompare(left.date))
-    })
-    setEditingRecord(null)
-    if (!silent) {
-      const facultyMember = faculty.find(item => String(item.id) === facultyId) || values.faculty
-      const formattedDate = new Date(date + 'T00:00:00').toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
-      setAttendanceSuccess({
-        title: 'Attendance Updated',
-        message: status === 'LOP'
-          ? `${facultyMember?.fullName || 'Faculty member'} has been marked as LOP (Loss of Pay) for ${formattedDate}.`
-          : `${facultyMember?.fullName || 'Faculty member'} has been marked ${status} for ${formattedDate}.`,
-      })
-    }
-  }
-  const applyBulkMark = (status, selectedRows, remarks) => {
-    const date = dailyFilters.date
-    selectedRows.forEach(row => {
-      const baseValues = {
-        facultyId: row.facultyId,
-        date,
-        status,
-        checkIn: ['Present', 'Late', 'Half Day'].includes(status) ? DEFAULT_ATTENDANCE_WINDOW.checkIn : '—',
-        checkOut: ['Present', 'Late', 'Half Day'].includes(status) ? DEFAULT_ATTENDANCE_WINDOW.checkOut : '—',
-        remarks: remarks || '',
-        source: 'Bulk Admin',
+      let id = values.attendanceId || (values.id && !String(values.id).includes(':') ? values.id : null)
+      const payload = attendancePayload(values)
+      if (id) await facultyService.updateAttendance(id, payload)
+      else {
+        const created = await facultyService.createAttendance({ facultyId: requiredNumber(values.facultyId, 'Faculty'), attendanceDate: values.date, status: values.status, remarks: values.remarks || null })
+        id = created.attendanceId ?? created.id
+        if (!id) throw new Error('Attendance was saved without an ID. Reload before editing its times.')
+        if (payload.checkIn) await facultyService.checkIn(id, { checkIn: payload.checkIn })
+        if (payload.checkOut) await facultyService.checkOut(id, { checkOut: payload.checkOut })
       }
-      saveAttendance(baseValues, { silent: true })
-    })
-    setSelectedFacultyIds([])
-    const formattedDate = new Date(date + 'T00:00:00').toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
-    setAttendanceSuccess({
-      title: 'Attendance Updated',
-      message: status === 'LOP'
-        ? `${selectedRows.length} faculty members have been marked as LOP (Loss of Pay) for ${formattedDate}.`
-        : `${selectedRows.length} faculty members have been marked ${status} for ${formattedDate}.`,
-    })
+      setEditingRecord(null); await loadAttendance(); setAttendanceSuccess({ title: 'Attendance Updated', message: 'Attendance saved successfully.' })
+    } catch (error) { setAttendanceError(error.message); await loadAttendance() }
+    finally { attendanceLock.current = false; setAttendanceBusy(false) }
+  }
+  const applyBulkMark = async (status, selectedRows, remarks) => {
+    if (attendanceLock.current || !selectedRows.length) return
+    attendanceLock.current = true; setAttendanceBusy(true); setAttendanceError('')
+    try {
+      await facultyService.bulkAttendance({ facultyIds: selectedRows.map(row => requiredNumber(row.facultyId, 'Faculty')), attendanceDate: dailyFilters.date, status, remarks: remarks || null })
+      await loadAttendance(); setSelectedFacultyIds([]); setAttendanceSuccess({ title: 'Attendance Updated', message: selectedRows.length + ' attendance records saved.' })
+    } catch (error) { setAttendanceError(error.message) }
+    finally { attendanceLock.current = false; setAttendanceBusy(false) }
+  }
+  const openAttendance = async (row, edit = false) => {
+    try {
+      const id = row.attendanceId || (row.id && !String(row.id).includes(':') ? row.id : null)
+      const detail = id ? normalizeAttendance([await facultyService.getAttendanceById(id)])[0] : row
+      const value = { ...row, ...detail, faculty: row.faculty }
+      if (edit) setEditingRecord(value); else setSelected(value)
+    } catch (error) { setAttendanceError(error.message) }
   }
   const bulkMark = status => {
     const selectedRows = dailyRows.filter(row => selectedFacultyIds.includes(String(row.facultyId)))
@@ -545,11 +524,11 @@ function FacultyAttendanceScreen({ faculty, onNotify }) {
   const displayDate = value => value ? new Date(value + 'T00:00:00').toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : 'All dates'
   const rangeLabel = tab === 'daily' ? displayDate(dailyFilters.date) : tab === 'register' ? displayDate(registerFilters.from) + ' – ' + (registerFilters.to ? displayDate(registerFilters.to) : 'Latest') : period.from && period.to ? displayDate(period.from) + (period.from === period.to ? '' : ' – ' + displayDate(period.to)) : 'Select a valid period'
   const exportScope = ['All filtered results', rangeLabel, filters.department, faculty.find(item => String(item.id) === filters.facultyId)?.fullName, (!aggregated && filters.status), filters.search && 'Search: ' + filters.search, tab === 'reports' && ATTENDANCE_PERCENTAGE_NOTE].filter(Boolean).join(' · ')
-  const contextualExport = <ExportMenu key={tab + reportType} rows={exportRows} columns={columns} screen="faculty-attendance-local" filename={filename} title={exportTitle} scope={exportScope} reportType={tab === 'reports' ? reportType : undefined} />
+  const contextualExport = <button className="export-button" disabled={attendanceBusy} onClick={async () => { setAttendanceBusy(true); try { const params = tab === 'daily' ? { fromDate: dailyFilters.date, toDate: dailyFilters.date } : tab === 'register' ? { facultyId: registerFilters.facultyId, fromDate: registerFilters.from, toDate: registerFilters.to } : { facultyId: currentReport.facultyId, fromDate: period.from, toDate: period.to }; downloadServerExport(await facultyService.exportAttendance(params), filename) } catch (error) { setAttendanceError(error.message) } finally { setAttendanceBusy(false) } }}>Export {exportTitle}</button>
   const attendanceBadge = value => <StatusBadge value={value} className={value === 'Not Marked' ? 'fm-attendance-pending' : value === 'Present' ? 'fm-attendance-present' : value === 'Absent' ? 'fm-attendance-absent' : value === 'Late' ? 'fm-attendance-late' : value === 'Half Day' ? 'fm-attendance-half-day' : value === 'On Leave' ? 'fm-attendance-leave' : value === 'LOP' ? 'fm-attendance-lop' : ''} />
   const dateControl = (key, label, options = {}) => <label className="fm-attendance-field"><span>{label}</span><input type="date" value={filters[key]} max={today()} onChange={event => updateFilter(key, event.target.value)} {...options} /></label>
   const selectControl = (key, label, options, placeholder) => <div className="fm-attendance-field"><span>{label}</span><SearchableSelect label={label} value={filters[key]} options={[{ value: '', label: placeholder }, ...options]} onChange={value => updateFilter(key, value)} placeholder={placeholder} /></div>
-  const facultySummary = [[FiUsers, 'Total Faculty', faculty.length], [FiCheckCircle, 'Working', faculty.filter(row => row.employmentStatus === 'Working').length], [FiClock, 'On Leave', faculty.filter(row => row.employmentStatus === 'On Leave').length], [FiBriefcase, 'Permanent', faculty.filter(row => row.employmentType === 'Permanent').length], [FiBookOpen, 'Contract / Visiting', faculty.filter(row => ['Contract', 'Visiting'].includes(row.employmentType)).length], [FiBookOpen, 'Assigned', faculty.filter(row => row.assignments?.length).length], [FiBookOpen, 'Unassigned', faculty.filter(row => !row.assignments?.length).length], [FiClock, 'Overloaded', faculty.filter(row => workload(row).status === 'Over Load').length]]
+  const facultySummary = [[FiUsers, 'Total Faculty', serverSummary?.totalFaculty ?? faculty.length], [FiCheckCircle, 'Working', faculty.filter(row => row.employmentStatus === 'Working').length], [FiClock, 'On Leave', faculty.filter(row => row.employmentStatus === 'On Leave').length], [FiBriefcase, 'Permanent', faculty.filter(row => row.employmentType === 'Permanent').length], [FiBookOpen, 'Contract / Visiting', faculty.filter(row => ['Contract', 'Visiting'].includes(row.employmentType)).length], [FiBookOpen, 'Assigned', faculty.filter(row => row.assignments?.length).length], [FiBookOpen, 'Unassigned', faculty.filter(row => !row.assignments?.length).length], [FiClock, 'Overloaded', faculty.filter(row => workload(row).status === 'Over Load').length]]
   const searchControl = <div className="fm-attendance-search-row"><label className="fm-attendance-field fm-attendance-search-field"><span className="fm-attendance-input-label">Search</span><span className="fm-attendance-search"><FiSearch aria-hidden="true" /><input value={filters.search} onChange={event => updateFilter('search', event.target.value)} placeholder="Search attendance..." /></span></label>{tab !== 'reports' && <button type="button" className="fm-attendance-filter-toggle" aria-expanded={showFilters} aria-controls="faculty-attendance-filters-panel" onClick={() => setShowFilters(value => !value)}>{showFilters ? <FiChevronUp aria-hidden="true" /> : <FiChevronDown aria-hidden="true" />} <span>Filters</span></button>}</div>
   const formatTimeView = value => {
     if (!value || value === '—') return '—'
@@ -655,7 +634,7 @@ function FacultyAttendanceScreen({ faculty, onNotify }) {
       <td><div className="fm-attendance-identity"><Avatar faculty={row.faculty} /><div><strong>{row.faculty.fullName}</strong><small>{row.faculty.designation}</small></div></div></td>
       <td className="fm-department-cell">{row.faculty.department}</td><td>{attendanceBadge(row.status)}</td><td>{row.checkIn}</td><td>{row.checkOut}</td><td>{row.hours}</td>
       {showRemarks && <td className="fm-remarks-cell"><span className="fm-attendance-remarks" title={row.remarks}>{row.remarks}</span></td>}
-      {showAction && <td className="fm-action-cell"><div className="fm-table-actions"><button className="fm-icon-button" type="button" title="View Attendance" aria-label={'View attendance record for ' + row.faculty.fullName + ' on ' + row.date} onClick={() => setSelected(row)}><FiEye /></button><button className="fm-icon-button" type="button" title="Edit attendance" aria-label={'Edit attendance for ' + row.faculty.fullName + ' on ' + row.date} onClick={() => setEditingRecord(row)}><FiEdit2 /></button></div></td>}
+      {showAction && <td className="fm-action-cell"><div className="fm-table-actions"><button className="fm-icon-button" type="button" title="View Attendance" aria-label={'View attendance record for ' + row.faculty.fullName + ' on ' + row.date} onClick={() => openAttendance(row)}><FiEye /></button><button className="fm-icon-button" type="button" title="Edit attendance" aria-label={'Edit attendance for ' + row.faculty.fullName + ' on ' + row.date} onClick={() => openAttendance(row, true)}><FiEdit2 /></button></div></td>}
     </tr>)}</tbody>
   </table></div>
   const aggregatedTable = reportType === 'daily' ? <div className="fm-attendance-table fm-attendance-aggregate-table"><table><thead><tr>{['Employee ID', 'Faculty', 'Department', 'Days With Data', 'Present', 'Absent', 'Late', 'Half Day', 'On Leave', 'Total Hours', 'Attendance %'].map(label => <th scope="col" key={label}>{label}</th>)}</tr></thead><tbody>{visibleReportRows.map(row => <tr key={row.facultyId}><td><span className="fm-attendance-employee">{row.faculty.employeeId}</span></td><td><strong>{row.faculty.fullName}</strong></td><td>{row.faculty.department}</td><td>{row.total}</td>{['Present', 'Absent', 'Late', 'Half Day', 'On Leave'].map(status => <td key={status}>{row[status]}</td>)}<td>{row.hours}</td><td>{row.percentage}</td></tr>)}</tbody></table></div> : <><div className="fm-report-legend" aria-label="Attendance status legend">{Object.entries(statusMeta).map(([status, [code, tone]]) => <span key={status}>{statusCell({ status, date: period.from, checkIn: '—', checkOut: '—', hours: '—' })}<small>{status}</small></span>)}</div><div className="fm-attendance-table fm-attendance-matrix"><table><thead><tr><th>Employee ID</th><th>Faculty</th>{matrixDates.map(date => <th key={date}><span>{new Date(date + 'T00:00:00').toLocaleDateString('en-GB', { weekday: 'short' }).toUpperCase()}</span><b>{new Date(date + 'T00:00:00').toLocaleDateString('en-GB', { day: '2-digit', month: 'short' }).toUpperCase()}</b></th>)}{['P', 'A', 'L', 'HD', 'OL', 'LOP', '%'].map(label => <th key={label}>{label}</th>)}</tr></thead><tbody>{visibleMatrixRows.map(({ member, cells, totals }) => <tr key={member.id}><td>{member.employeeId}</td><td className="fm-matrix-faculty"><strong>{member.fullName}</strong><small>{member.department}</small></td>{cells.map(cell => <td key={cell.date}>{statusCell(cell)}</td>)}{[['Present', 'present'], ['Absent', 'absent'], ['Late', 'late'], ['Half Day', 'half-day'], ['On Leave', 'leave'], ['LOP', 'lop']].map(([status, tone]) => <td className={`fm-report-total fm-report-total--${tone}`} key={status}>{totals[status]}</td>)}<td className="fm-report-total fm-report-total--percentage">{totals.percentage}</td></tr>)}</tbody></table></div></>
@@ -785,7 +764,7 @@ function FacultyAttendanceScreen({ faculty, onNotify }) {
         </div>
       )}
 
-      {editingRecord && <AttendanceEditor record={editingRecord} onClose={() => setEditingRecord(null)} onSave={saveAttendance} onReset={record => saveAttendance({ ...record, status: 'Not Marked' })} />}
+      {attendanceError && <p className="fm-error" role="alert" style={{ position: 'relative', zIndex: 1500 }}>{attendanceError}</p>}{editingRecord && <fieldset disabled={attendanceBusy} style={{ border: 0, margin: 0, padding: 0 }}><AttendanceEditor record={editingRecord} onClose={() => setEditingRecord(null)} onSave={saveAttendance} onReset={record => saveAttendance({ ...record, status: 'Not Marked' })} /></fieldset>}
       {attendanceSuccess && (
         <div className="fm-modal-backdrop fm-success-backdrop" role="presentation">
           <section className="fm-attendance-success" role="dialog" aria-modal="true" aria-labelledby="attendance-success-title">
@@ -826,16 +805,16 @@ function ProfileSections({ data }) {
     return <section className="fm-panel" key={section.title}><h2><section.icon />{section.heading}</h2>{fields.length ? <dl className="fm-info-grid">{fields.map(([key, label]) => <div key={key}><dt>{label}</dt><dd>{experienceKeys.includes(key) ? years(data[key]) : data[key] || '—'}</dd></div>)}</dl> : <p className="fm-muted">No optional contact information provided.</p>}</section>
   })}</div>
 }
-function Field({ field, data, errors, update, native = false, collegeOptions = [] }) {
+function Field({ field, data, errors, update, native = false, collegeOptions = [], departmentOptions = [] }) {
   const [key, label, type, required] = field
   const id = 'fm-' + key
   const props = { id, value: data[key] ?? '', onChange: event => update(key, event.target.value), 'aria-invalid': Boolean(errors[key]), 'aria-describedby': errors[key] ? id + '-error' : undefined, required: Boolean(required) }
   return <div className={'fm-field ' + (type === 'textarea' ? 'fm-wide' : '') + (key === 'gender' ? ' fm-gender' : '')}><label htmlFor={Array.isArray(type) && !native ? undefined : id}>{label}{required && <span className="fm-required" aria-hidden="true"> *</span>}</label>
-    {type === 'college' ? <SearchableSelect label={label} value={data[key] || ''} options={collegeOptions} onChange={value => update(key, value)} required={required} error={Boolean(errors[key])} placeholder={'Select ' + label.toLowerCase()} /> : Array.isArray(type) ? native ? <select {...props}><option value="">Select {label.toLowerCase()}</option>{type.map(value => <option key={value}>{value}</option>)}</select> : <SearchableSelect label={label} value={data[key] || ''} options={type} onChange={value => update(key, value)} required={required} error={Boolean(errors[key])} placeholder={'Select ' + label.toLowerCase()} hideSearch={key === 'gender'} /> : type === 'textarea' ? <textarea {...props} rows={2} /> : <input {...props} type={type === 'readonly' ? 'text' : type} readOnly={type === 'readonly'} max={type === 'date' ? today() : key === 'passingYear' ? new Date().getFullYear() : key === 'weeklyHours' ? 60 : type === 'number' ? 80 : undefined} min={key === 'passingYear' ? 1950 : type === 'number' ? 0 : undefined} step={key === 'passingYear' ? 1 : type === 'number' ? 0.5 : undefined} inputMode={type === 'tel' || key === 'pincode' ? 'numeric' : undefined} />}
+    {type === 'college' || type === 'department' ? <SearchableSelect label={label} value={data[key] || ''} options={type === 'college' ? collegeOptions : departmentOptions} onChange={value => update(key, value)} required={required} error={Boolean(errors[key])} placeholder={'Select ' + label.toLowerCase()} /> : Array.isArray(type) ? native ? <select {...props}><option value="">Select {label.toLowerCase()}</option>{type.map(value => <option key={value}>{value}</option>)}</select> : <SearchableSelect label={label} value={data[key] || ''} options={type} onChange={value => update(key, value)} required={required} error={Boolean(errors[key])} placeholder={'Select ' + label.toLowerCase()} hideSearch={key === 'gender'} /> : type === 'textarea' ? <textarea {...props} rows={2} /> : <input {...props} type={type === 'readonly' ? 'text' : type} readOnly={type === 'readonly'} max={type === 'date' ? today() : key === 'passingYear' ? new Date().getFullYear() : key === 'weeklyHours' ? 60 : type === 'number' ? 80 : undefined} min={key === 'passingYear' ? 1950 : type === 'number' ? 0 : undefined} step={key === 'passingYear' ? 1 : type === 'number' ? 0.5 : undefined} inputMode={type === 'tel' || key === 'pincode' ? 'numeric' : undefined} />}
     {errors[key] && <small id={id + '-error'} className="fm-error">{errors[key]}</small>}
   </div>
 }
-function FacultyForm({ initial, faculty, onSave, onCancel, collegeOptions }) {
+function FacultyForm({ initial, faculty, onSave, onCancel, collegeOptions, departmentOptions, saving }) {
   const [data, setData] = useState(() => normalize(initial))
   const [step, setStep] = useState(0)
   const [errors, setErrors] = useState({})
@@ -868,7 +847,7 @@ function FacultyForm({ initial, faculty, onSave, onCancel, collegeOptions }) {
     const reader = new FileReader()
     readerRef.current = reader
     setPhotoBusy(true)
-    reader.onload = () => { update('photo', reader.result); setPhotoBusy(false) }
+    reader.onload = () => { update('photo', reader.result); update('photoFile', file); setPhotoBusy(false) }
     reader.onerror = () => { setErrors(old => ({ ...old, photo: 'Could not read this image. Please choose another.' })); setPhotoBusy(false) }
     reader.onabort = () => setPhotoBusy(false)
     reader.readAsDataURL(file)
@@ -878,9 +857,9 @@ function FacultyForm({ initial, faculty, onSave, onCancel, collegeOptions }) {
     <ol className="fm-stepper">{[...sections.map(s => s.title), 'Preview'].map((title, index) => <li key={title} className={step === index ? 'active' : step > index ? 'complete' : ''} aria-current={step === index ? 'step' : undefined}><span>{step > index ? <FiCheckCircle /> : index + 1}</span>{title}</li>)}</ol>
     <div className="fm-section-heading"><h2>{section ? <section.icon /> : <FiCheckCircle />}{section?.title || 'Faculty Profile Preview'}</h2><p>{section?.description || 'Review the details below before saving this faculty record.'}</p></div>
     {step === 0 && <div className="fm-photo-picker"><Avatar faculty={data} large /><div><span className="fm-photo-label">Profile Photo</span><label className="fm-photo-button" htmlFor="fm-photo">{data.photo ? 'Change Photo' : 'Choose Photo'}<input id="fm-photo" type="file" accept="image/*" onChange={photo} /></label><small className="fm-muted">JPG, PNG or WebP · Maximum 3 MB</small>{errors.photo && <small className="fm-error" role="alert">{errors.photo}</small>}</div></div>}
-    {section ? <div className="fm-form-grid">{section.fields.map(field => <Field key={field[0]} field={field} data={data} errors={errors} update={update} collegeOptions={collegeOptions} />)}</div> : <><div className="fm-identity"><Avatar faculty={data} large /><div><h2>{data.fullName}</h2><p>{data.employeeId} · {data.designation}</p></div></div><ProfileSections data={data} /></>}
+    {section ? <div className="fm-form-grid">{section.fields.map(field => <Field key={field[0]} field={field} data={data} errors={errors} update={update} collegeOptions={collegeOptions} departmentOptions={departmentOptions} />)}</div> : <><div className="fm-identity"><Avatar faculty={data} large /><div><h2>{data.fullName}</h2><p>{data.employeeId} · {data.designation}</p></div></div><ProfileSections data={data} /></>}
     {step === 0 && faculty.some(row => row.id !== data.id && row.mobile === data.mobile) && <p className="fm-warning">Another faculty member uses this mobile number. Please verify it before saving.</p>}
-    <footer className="fm-form-footer"><button type="button" className="fm-button secondary" onClick={onCancel}>Cancel</button><span className="fm-muted">Step {step + 1} of 5</span><div className="fm-actions">{step > 0 && <button type="button" className="fm-button secondary" onClick={() => { setErrors({}); setStep(step - 1) }}>Previous</button>}<button type="submit" className="fm-button" disabled={photoBusy}>{step === 4 ? <><FiCheckCircle /> Save Faculty</> : 'Next'}</button></div></footer>
+    <footer className="fm-form-footer"><button type="button" className="fm-button secondary" onClick={onCancel}>Cancel</button><span className="fm-muted">Step {step + 1} of 5</span><div className="fm-actions">{step > 0 && <button type="button" className="fm-button secondary" onClick={() => { setErrors({}); setStep(step - 1) }}>Previous</button>}<button type="submit" className="fm-button" disabled={photoBusy || saving}>{step === 4 ? <><FiCheckCircle /> Save Faculty</> : 'Next'}</button></div></footer>
   </form>
 }
 function AssignmentList({ faculty, onRemove }) {
@@ -937,12 +916,18 @@ export default function FacultyManagement() {
   const [page, setPage] = useState(1)
   const [assignmentId, setAssignmentId] = useState(null)
   const [collegeOptions, setCollegeOptions] = useState([])
+  const [departmentOptions, setDepartmentOptions] = useState([])
+  const [saving, setSaving] = useState(false)
+  const [loadError, setLoadError] = useState('')
+  const [serverSummary, setServerSummary] = useState(null)
+  const [detail, setDetail] = useState(null)
+  const saveLock = useRef(false)
   const [toast, setToast] = useState('')
   const toastTimer = useRef(null)
   useEffect(() => () => clearTimeout(toastTimer.current), [])
   useEffect(() => {
     let active = true
-    Promise.all([facultyService.list(), facultyService.getSubjectAllocations().catch(() => [])])
+    Promise.all([facultyService.list(), facultyService.getSubjectAllocations()])
       .then(([members, allocations]) => {
         if (!active) return
         const allocationMap = new Map()
@@ -952,28 +937,39 @@ export default function FacultyManagement() {
         })
         setFaculty(members.map(member => normalize({ ...normalizeFaculty(member), assignments: allocationMap.get(String(member.id)) || member.assignments || [] })))
       })
-      .catch(error => notify(error.message || 'Could not load faculty records.'))
+      .catch(error => setLoadError(error.message || 'Could not load faculty records.'))
       .finally(() => { if (active) setLoadingFaculty(false) })
     return () => { active = false }
   }, [])
   useEffect(() => {
     let active = true
-    academicService.getColleges(true).then(colleges => {
+    Promise.all([facultyMasterApi.getColleges(), departmentApi.getAll()]).then(([colleges, departments]) => {
       if (!active) return
-      const names = colleges.map(college => college.name).filter(Boolean)
-      setCollegeOptions([...new Set(names)])
-    }).catch(() => {})
+      setCollegeOptions(colleges.map(row => ({ value: String(row.collegeId ?? row.id), label: row.collegeName ?? row.name })))
+      setDepartmentOptions(departments.map(row => ({ value: String(row.departmentId ?? row.id), label: row.departmentName ?? row.name })))
+    }).catch(error => { if (active) setLoadError(error.message) })
+    facultyService.getSummary().then(value => { if (active) setServerSummary(value) }).catch(error => { if (active) setLoadError(error.message) })
     return () => { active = false }
   }, [])
-  const notify = message => {
+  const notify = useCallback(message => {
     clearTimeout(toastTimer.current)
     setToast(message)
     toastTimer.current = setTimeout(() => setToast(''), 2800)
-  }
+  }, [])
   const path = location.pathname.replace(/\/$/, '')
   const editId = path.match(/^\/faculty\/([^/]+)\/edit$/)?.[1]
   const detailId = path !== '/faculty/new' ? path.match(/^\/faculty\/([^/]+)$/)?.[1] : null
-  const selected = faculty.find(item => item.id === (editId || detailId))
+  const targetId = editId || (detailId === 'attendance' ? null : detailId)
+  useEffect(() => {
+    setDetail(null); if (!targetId) return
+    let active = true
+    Promise.all([facultyService.getById(targetId), facultyService.getProfile(targetId).catch(error => { if (error.status === 404) return null; throw error }), facultyService.getWorkload(targetId)])
+      .then(([member, profile, work]) => { if (active) setDetail(normalize({ ...member, ...normalizeFaculty({ ...member, ...(profile || {}), facultyId: member.id }), profileExists: Boolean(profile), apiWorkload: work, assignments: member.assignments })) })
+      .catch(error => { if (active) setLoadError(error.message) })
+    return () => { active = false }
+  }, [targetId])
+  const listed = faculty.find(item => item.id === targetId)
+  const selected = detail?.id === targetId ? { ...listed, ...detail, assignments: listed?.assignments || detail.assignments } : listed
   const assignedFaculty = faculty.find(item => item.id === assignmentId)
   const filtered = useMemo(() => faculty.filter(item => [item.fullName, item.employeeId, item.email, item.mobile, item.department, item.designation].join(' ').toLowerCase().includes(query.trim().toLowerCase()) && Object.entries(filters).every(([key, value]) => !value || item[key] === value)), [faculty, query, filters])
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE))
@@ -984,15 +980,27 @@ export default function FacultyManagement() {
   const addFaculty = () => navigate('/faculty/new')
   const nextId = 'FAC' + String(Math.max(0, ...faculty.map(item => Number(item.employeeId.replace(/^FAC/, '')) || 0)) + 1).padStart(3, '0')
   const save = async data => {
+    if (saveLock.current) return
+    saveLock.current = true; setSaving(true); setLoadError('')
+    let savedId = data.id
     try {
       const saved = data.id ? await facultyService.update(data.id, data) : await facultyService.create(data)
-      setFaculty(rows => data.id ? rows.map(row => row.id === data.id ? normalize({ ...row, ...saved, assignments: row.assignments }) : row) : [normalize(saved), ...rows])
-      notify(data.id ? 'Faculty updated successfully' : 'Faculty created successfully')
-      clear()
-      back()
+      savedId = String(saved.id || data.id || '')
+      if (!savedId) throw new Error('Faculty saved, but the server did not return its ID. Reload the directory before retrying.')
+      if (data.profileExists) await facultyService.updateProfile(savedId, data)
+      else await facultyService.createProfile(savedId, data)
+      if (data.photoFile) await facultyService.uploadProfilePhoto(savedId, data.photoFile)
+      const refreshed = await facultyService.getById(savedId)
+      setFaculty(rows => data.id ? rows.map(row => row.id === data.id ? normalize({ ...row, ...refreshed, assignments: row.assignments }) : row) : [normalize(refreshed), ...rows])
+      notify(data.id ? 'Faculty updated successfully' : 'Faculty created successfully'); clear(); back()
     } catch (error) {
-      notify(error.message || 'Faculty could not be saved.')
-    }
+      setLoadError(error.message || 'Faculty could not be saved.')
+      if (!data.id && savedId) navigate('/faculty/' + savedId + '/edit')
+    } finally { saveLock.current = false; setSaving(false) }
+  }
+  const refreshAssignments = async () => {
+    const assignments = await facultyService.getSubjectAllocations({ FacultyId: assignmentId })
+    setFaculty(rows => rows.map(row => row.id === assignmentId ? { ...row, assignments } : row))
   }
   const addAssignment = async item => {
     try {
@@ -1016,13 +1024,13 @@ export default function FacultyManagement() {
   else if (((editId || detailId) && !selected) || (!['/faculty', '/faculty/new'].includes(path) && !editId && !detailId)) {
     content = <section className="fm-panel"><EmptyState title="Faculty record not found" action="Back to Faculty Directory" onAction={back} /></section>
   } else if (path === '/faculty/new' || editId) {
-    content = <><header className="faculty-page-header"><div><h1>{editId ? 'Edit Faculty' : 'Add Faculty'}</h1><p>Faculty registration and employment record</p></div><button type="button" className="fm-button secondary" onClick={back}><FiArrowLeft /> Back</button></header><FacultyForm key={location.key} initial={selected || { employeeId: nextId, employmentType: 'Permanent', employmentStatus: 'Working', employeeCategory: 'Teaching' }} faculty={faculty} collegeOptions={collegeOptions} onSave={save} onCancel={back} /></>
+    content = <><header className="faculty-page-header"><div><h1>{editId ? 'Edit Faculty' : 'Add Faculty'}</h1><p>Faculty registration and employment record</p></div><button type="button" className="fm-button secondary" onClick={back}><FiArrowLeft /> Back</button></header><FacultyForm key={location.key + ':' + Boolean(detail)} initial={selected || { employeeId: nextId, employmentType: 'Permanent', employmentStatus: 'Working', employeeCategory: 'Teaching' }} faculty={faculty} collegeOptions={collegeOptions} departmentOptions={departmentOptions} saving={saving} onSave={save} onCancel={back} /></>
   } else if (selected) {
-    const load = workload(selected)
-    content = <><header className="fm-panel fm-profile-header"><div className="fm-identity"><Avatar faculty={selected} large /><div><p className="fm-eyebrow">FACULTY PROFILE · {selected.employeeId}</p><h1>{selected.fullName}</h1><p>{selected.designation} · {selected.department}</p><StatusBadge value={selected.employmentStatus} /></div></div><div className="fm-actions"><button type="button" className="fm-button secondary" onClick={() => navigate('/faculty/' + selected.id + '/edit')}><FiEdit2 /> Edit</button><button type="button" className="fm-button" onClick={() => setAssignmentId(selected.id)}><FiBriefcase /> Academic Assignment</button><button type="button" className="fm-button secondary" onClick={back}><FiArrowLeft /> Back</button></div></header><div className="faculty-summary">{[['Total Experience', years(selected.experience)], ['Employment Type', selected.employmentType], ['Qualification', selected.qualification], ['Assigned Subjects', load.subjects + ' Subjects'], ['Weekly Workload', load.hours + ' Hrs / Week']].map(([label, value]) => <div key={label}><small>{label}</small><strong>{value || '—'}</strong></div>)}</div><ProfileSections data={selected} /><section className="fm-panel"><div className="fm-section-bar"><h2><FiBriefcase /> Current Academic Responsibilities</h2><span className="fm-load-status">{load.status}</span></div>{selected.assignments?.length ? <AssignmentList faculty={selected} /> : <EmptyState title="No academic responsibilities assigned." action="Assign Academic Work" onAction={() => setAssignmentId(selected.id)} />}</section></>
+    const load = selected.apiWorkload ? { ...workload(selected), hours: selected.apiWorkload.totalHours ?? selected.apiWorkload.totalPeriodsPerWeek ?? workload(selected).hours, subjects: selected.apiWorkload.totalSubjects ?? workload(selected).subjects } : workload(selected)
+    content = <><header className="fm-panel fm-profile-header"><div className="fm-identity"><Avatar faculty={selected} large /><div><p className="fm-eyebrow">FACULTY PROFILE · {selected.employeeId}</p><h1>{selected.fullName}</h1><p>{selected.designation} · {selected.department}</p><StatusBadge value={selected.employmentStatus} /></div></div><div className="fm-actions"><button type="button" className="fm-button secondary" onClick={() => navigate('/faculty/' + selected.id + '/edit')}><FiEdit2 /> Edit</button><button type="button" className="fm-button" onClick={() => setAssignmentId(selected.id)}><FiBriefcase /> Academic Assignment</button><button type="button" className="fm-button secondary" onClick={back}><FiArrowLeft /> Back</button></div></header><div className="faculty-summary">{[['Total Experience', years(selected.experience)], ['Employment Type', selected.employmentType], ['Qualification', selected.qualification], ['Assigned Subjects', load.subjects + ' Subjects'], ['Weekly Workload', load.hours + ' Hrs / Week']].map(([label, value]) => <div key={label}><small>{label}</small><strong>{value || '—'}</strong></div>)}</div><ProfileSections data={selected} /><FacultyDocuments facultyId={selected.id} /><FacultyStatus faculty={selected} onChanged={status => { setFaculty(rows => rows.map(row => row.id === selected.id ? { ...row, employmentStatus: status } : row)); setDetail(value => value ? { ...value, employmentStatus: status } : value) }} /><section className="fm-panel"><div className="fm-section-bar"><h2><FiBriefcase /> Current Academic Responsibilities</h2><span className="fm-load-status">{load.status}</span></div>{selected.assignments?.length ? <AssignmentList faculty={selected} /> : <EmptyState title="No academic responsibilities assigned." action="Assign Academic Work" onAction={() => setAssignmentId(selected.id)} />}</section></>
   } else {
     const summary = [[FiUsers, 'Total Faculty', faculty.length], [FiCheckCircle, 'Working', faculty.filter(row => row.employmentStatus === 'Working').length], [FiClock, 'On Leave', faculty.filter(row => row.employmentStatus === 'On Leave').length], [FiBriefcase, 'Permanent', faculty.filter(row => row.employmentType === 'Permanent').length], [FiBookOpen, 'Contract / Visiting', faculty.filter(row => ['Contract', 'Visiting'].includes(row.employmentType)).length], [FiBookOpen, 'Assigned', faculty.filter(row => row.assignments?.length).length], [FiBookOpen, 'Unassigned', faculty.filter(row => !row.assignments?.length).length], [FiClock, 'Overloaded', faculty.filter(row => workload(row).status === 'Over Load').length]]
     content = <><header className="faculty-page-header"><div><p className="fm-eyebrow">ACADEMIC RESOURCES</p><h1>Faculty Management</h1><p>Manage faculty profiles, employment records, academic responsibilities and workload.</p></div><div className="fm-actions">{directoryActions}</div></header><div className="faculty-summary">{summary.map(([Icon, label, value]) => <div key={label}><Icon aria-hidden="true" /><span><small>{label}</small><strong>{value}</strong>{label === 'Academic Load' && <small>Assigned / Total</small>}</span></div>)}</div><section className="faculty-directory"><header className="fm-section-bar"><div><p className="fm-eyebrow">FACULTY DIRECTORY</p><p className="fm-muted">{filtered.length} faculty records</p></div></header><FilterPanel active={active} onClear={clear}><div className="faculty-filters"><label className="faculty-search"><FiSearch /><input aria-label="Search faculty" value={query} onChange={event => { setQuery(event.target.value); setPage(1) }} placeholder="Search faculty by name, employee ID, email or mobile" /></label>{[['department', 'Department', departments], ['designation', 'Designation', designations], ['employmentType', 'Employment Type', employmentTypes], ['employmentStatus', 'Employment Status', statuses]].map(([key, label, options]) => <SearchableSelect key={key} label={label} value={filters[key]} options={options} placeholder={label} onChange={value => { setFilters(old => ({ ...old, [key]: value })); setPage(1) }} />)}</div></FilterPanel>{filtered.length ? <><div className="faculty-table-wrap"><table><caption className="fm-sr-only">Faculty directory and academic workload</caption><thead><tr>{['Employee', 'Faculty', 'Department', 'Designation', 'Experience', 'Employment', 'Workload', 'Status', 'Actions'].map(label => <th scope="col" key={label}>{label}</th>)}</tr></thead><tbody>{filtered.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE).map(item => { const load = workload(item); return <tr key={item.id}><td><span className="fm-employee-id">{item.employeeId}</span></td><td><div className="fm-identity"><Avatar faculty={item} /><div><strong>{item.fullName}</strong><small>{item.email}</small></div></div></td><td className="fm-department">{item.department}</td><td>{item.designation}</td><td>{years(item.experience)}</td><td>{item.employmentType}</td><td><strong>{item.assignments?.length ? load.subjects + ' Subjects' : 'Not Assigned'}</strong><small>{load.hours} Hrs / Week · {load.status}</small></td><td><StatusBadge value={item.employmentStatus} /></td><td><div className="fm-actions">{[[FiEye, 'View faculty', () => navigate('/faculty/' + item.id)], [FiEdit2, 'Edit faculty', () => navigate('/faculty/' + item.id + '/edit')], [FiBriefcase, 'Academic Assignment', () => setAssignmentId(item.id)]].map(([Icon, label, action]) => <button type="button" className="fm-icon-button" title={label} aria-label={label + ': ' + item.fullName} key={label} onClick={action}><Icon /></button>)}</div></td></tr> })}</tbody></table></div><TablePagination currentPage={currentPage} totalPages={totalPages} onPageChange={setPage} /></> : <EmptyState title={faculty.length ? 'No faculty found' : 'No faculty records available'} description={faculty.length ? 'Try changing your search or filters.' : 'Add faculty members to start managing academic resources.'} action={faculty.length ? 'Clear Filters' : 'Add Faculty'} onAction={faculty.length ? clear : addFaculty} />}</section></>
   }
-  return <DashboardLayout><main className="faculty-management">{loadingFaculty ? <section className="fm-panel">Loading faculty records…</section> : content}{assignedFaculty && <AssignmentDialog key={assignedFaculty.id} faculty={assignedFaculty} toast={toast} onClose={() => setAssignmentId(null)} onAdd={addAssignment} onRemove={removeAssignment} />}<div className={'fm-toast ' + (toast && !assignedFaculty ? 'visible' : '')} role="status" aria-live="polite">{toast && !assignedFaculty && <><FiCheckCircle />{toast}</>}</div></main></DashboardLayout>
+  return <DashboardLayout><main className="faculty-management">{loadError && <p className="fm-error" role="alert">{loadError}</p>}{loadingFaculty ? <section className="fm-panel">Loading faculty records…</section> : content}{assignedFaculty && <ApiAssignmentDialog key={assignedFaculty.id} faculty={assignedFaculty} toast={toast} onClose={() => setAssignmentId(null)} onChanged={refreshAssignments} />}<div className={'fm-toast ' + (toast && !assignedFaculty ? 'visible' : '')} role="status" aria-live="polite">{toast && !assignedFaculty && <><FiCheckCircle />{toast}</>}</div></main></DashboardLayout>
 }

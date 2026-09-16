@@ -1,58 +1,21 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { FiCheck, FiChevronDown, FiChevronUp, FiEdit2, FiEye, FiFilter, FiPlus, FiSearch, FiX } from 'react-icons/fi'
 import DashboardLayout from '../../layouts/DashboardLayout'
 import ExportMenu from '../../components/ExportMenu'
 import TablePagination from '../../components/TablePagination'
-import { academicYearApi } from '../../api/apiEndpoints'
-import { facultySeed, readStoredFaculty } from './FacultyManagement'
+import { academicYearApi, facultyLeaveApi } from '../../api/apiEndpoints'
+import facultyService, { normalizeFaculty } from '../../services/facultyService'
+import { normalizeLeaveType, normalizeLeavePolicy, normalizeLeaveRequest, leavePolicyPayload } from '../../services/facultyContracts'
+import { newestFirst, rememberCreated } from '../../utils/newestFirst'
 import './FacultyLeaveManagement.css'
 
 const PAGE_SIZE = 5
 const TABS = ['Leave Requests', 'Leave History', 'Leave Balances', 'Leave Types', 'Leave Policies']
-const STANDARD_LEAVE_TYPES = [
-  ['casual-leave', 'Casual Leave', 'CL', 'Regular', 'Paid Leave', 'Short-duration personal leave'],
-  ['sick-leave', 'Sick Leave', 'SL', 'Medical', 'Paid Leave', 'Leave due to illness'],
-  ['earned-leave', 'Earned Leave', 'EL', 'Regular', 'Paid Leave', 'Accrued leave subject to college policy'],
-  ['medical-leave', 'Medical Leave', 'ML', 'Medical', 'Paid Leave', 'Extended medical leave subject to policy'],
-  ['maternity-leave', 'Maternity Leave', 'MTL', 'Family', 'Paid Leave', 'Maternity leave subject to college policy'],
-  ['paternity-leave', 'Paternity Leave', 'PTL', 'Family', 'Paid Leave', 'Paternity leave subject to college policy'],
-  ['duty-leave', 'Duty Leave', 'DL', 'Duty', 'Paid Leave', 'Official institutional duty'],
-  ['on-duty', 'On Duty', 'OD', 'Duty', 'Paid Leave', 'Official duty attendance category'],
-  ['compensatory-off', 'Compensatory Off', 'CO', 'Compensatory', 'Paid Leave', 'Compensatory leave subject to college policy'],
-  ['bereavement-leave', 'Bereavement Leave', 'BL', 'Family', 'Paid Leave', 'Bereavement leave subject to college policy'],
-  ['study-leave', 'Study Leave', 'STL', 'Academic', 'Policy Based', 'Academic leave subject to college policy'],
-  ['sabbatical-leave', 'Sabbatical Leave', 'SBL', 'Academic', 'Policy Based', 'Sabbatical leave subject to college policy'],
-  ['leave-without-pay', 'Leave Without Pay', 'LWP', 'Unpaid', 'Unpaid Leave', 'Unpaid leave subject to college policy'],
-].map(([id, name, code, category, payCategory, description]) => ({ id, name, code, category, payCategory, description, status: 'Active' }))
-// Frontend seed data used until leave policy/request APIs are connected.
-const INITIAL_LEAVE_POLICIES = [
-  { id: 'policy-teaching-2026-27', name: 'Teaching Faculty Leave Policy 2026-27', academicYear: '2026-27', applicableTo: 'Teaching', departments: [], from: '2026-07-01', to: '2027-06-30', status: 'Active', entitlements: [
-    { typeId: 'casual-leave', entitlement: 12, maxDays: 3, carryForward: false, maxCarryForward: '', documentRequired: false }, { typeId: 'sick-leave', entitlement: 10, maxDays: 5, carryForward: false, maxCarryForward: '', documentRequired: true }, { typeId: 'earned-leave', entitlement: 15, maxDays: 5, carryForward: true, maxCarryForward: 10, documentRequired: false }, { typeId: 'duty-leave', entitlement: 10, maxDays: 5, carryForward: false, maxCarryForward: '', documentRequired: false }, { typeId: 'on-duty', entitlement: 15, maxDays: 5, carryForward: false, maxCarryForward: '', documentRequired: false }, { typeId: 'study-leave', entitlement: 5, maxDays: 5, carryForward: false, maxCarryForward: '', documentRequired: true }, { typeId: 'leave-without-pay', entitlement: null, maxDays: '', carryForward: false, maxCarryForward: '', documentRequired: false },
-  ] },
-  { id: 'policy-nonteaching-2026-27', name: 'Non-Teaching Staff Leave Policy 2026-27', academicYear: '2026-27', applicableTo: 'Non-Teaching', departments: [], from: '2026-07-01', to: '2027-06-30', status: 'Active', entitlements: [
-    { typeId: 'casual-leave', entitlement: 10, maxDays: 3, carryForward: false, maxCarryForward: '', documentRequired: false }, { typeId: 'sick-leave', entitlement: 10, maxDays: 5, carryForward: false, maxCarryForward: '', documentRequired: true }, { typeId: 'earned-leave', entitlement: 18, maxDays: 6, carryForward: true, maxCarryForward: 12, documentRequired: false }, { typeId: 'medical-leave', entitlement: 10, maxDays: 5, carryForward: false, maxCarryForward: '', documentRequired: true }, { typeId: 'compensatory-off', entitlement: 6, maxDays: 2, carryForward: false, maxCarryForward: '', documentRequired: false }, { typeId: 'leave-without-pay', entitlement: null, maxDays: '', carryForward: false, maxCarryForward: '', documentRequired: false },
-  ] },
-  { id: 'policy-teaching-2025-26', name: 'Teaching Faculty Leave Policy 2025-26', academicYear: '2025-26', applicableTo: 'Teaching', departments: [], from: '2025-07-01', to: '2026-06-30', status: 'Expired', entitlements: [{ typeId: 'casual-leave', entitlement: 12, maxDays: 3, carryForward: false, maxCarryForward: '', documentRequired: false }, { typeId: 'sick-leave', entitlement: 10, maxDays: 5, carryForward: false, maxCarryForward: '', documentRequired: true }, { typeId: 'earned-leave', entitlement: 15, maxDays: 5, carryForward: true, maxCarryForward: 10, documentRequired: false }] },
-  { id: 'policy-draft-2027-28', name: 'Faculty Leave Policy 2027-28', academicYear: '2027-28', applicableTo: 'Both', departments: [], from: '2027-07-01', to: '2028-06-30', status: 'Draft', entitlements: [{ typeId: 'casual-leave', entitlement: 0, maxDays: '', carryForward: false, maxCarryForward: '', documentRequired: false }, { typeId: 'sick-leave', entitlement: 0, maxDays: '', carryForward: false, maxCarryForward: '', documentRequired: false }, { typeId: 'leave-without-pay', entitlement: null, maxDays: '', carryForward: false, maxCarryForward: '', documentRequired: false }] },
-]
-const INITIAL_LEAVE_REQUESTS = [
-  { id: 'FL-2026-001', facultyId: 'faculty-1', policyId: 'policy-teaching-2026-27', typeId: 'casual-leave', from: '2026-09-21', to: '2026-09-22', days: 2, applied: '2026-09-15', reason: 'Personal work', status: 'Pending' },
-  { id: 'FL-2026-002', facultyId: 'faculty-2', policyId: 'policy-teaching-2026-27', typeId: 'sick-leave', from: '2026-09-23', to: '2026-09-25', days: 3, applied: '2026-09-15', reason: 'Medical rest', status: 'Pending' },
-  { id: 'FL-2026-003', facultyId: 'faculty-5', policyId: 'policy-teaching-2026-27', typeId: 'earned-leave', from: '2026-09-28', to: '2026-09-29', days: 2, applied: '2026-09-14', reason: 'Family commitment', status: 'Pending' },
-  { id: 'FL-2026-004', facultyId: 'faculty-6', policyId: 'policy-teaching-2026-27', typeId: 'duty-leave', from: '2026-09-30', to: '2026-09-30', days: 1, applied: '2026-09-13', reason: 'Institutional duty', status: 'Pending' },
-  { id: 'FL-2026-005', facultyId: 'faculty-1', policyId: 'policy-teaching-2026-27', typeId: 'casual-leave', from: '2026-08-10', to: '2026-08-11', days: 2, applied: '2026-08-05', decisionDate: '2026-08-06', reason: 'Personal work', status: 'Approved' },
-  { id: 'FL-2026-006', facultyId: 'faculty-2', policyId: 'policy-teaching-2026-27', typeId: 'sick-leave', from: '2026-08-17', to: '2026-08-18', days: 2, applied: '2026-08-16', decisionDate: '2026-08-16', reason: 'Seasonal illness', status: 'Approved' },
-  { id: 'FL-2026-007', facultyId: 'faculty-3', policyId: 'policy-teaching-2026-27', typeId: 'earned-leave', from: '2026-08-24', to: '2026-08-26', days: 3, applied: '2026-08-12', decisionDate: '2026-08-14', reason: 'Family travel', status: 'Approved' },
-  { id: 'FL-2026-008', facultyId: 'faculty-4', policyId: 'policy-teaching-2026-27', typeId: 'duty-leave', from: '2026-09-14', to: '2026-09-16', days: 3, applied: '2026-09-10', decisionDate: '2026-09-11', reason: 'University duty', status: 'Approved' },
-  { id: 'FL-2026-009', facultyId: 'faculty-7', policyId: 'policy-teaching-2026-27', typeId: 'study-leave', from: '2026-08-20', to: '2026-08-22', days: 3, applied: '2026-08-10', decisionDate: '2026-08-11', reason: 'Research preparation', rejectionReason: 'Insufficient supporting information.', status: 'Rejected' },
-  { id: 'FL-2026-010', facultyId: 'faculty-9', policyId: 'policy-teaching-2026-27', typeId: 'casual-leave', from: '2026-08-28', to: '2026-08-29', days: 2, applied: '2026-08-20', decisionDate: '2026-08-21', reason: 'Personal work', rejectionReason: 'Department coverage was not confirmed.', status: 'Rejected' },
-  { id: 'FL-2026-011', facultyId: 'faculty-10', policyId: 'policy-teaching-2026-27', typeId: 'on-duty', from: '2026-08-05', to: '2026-08-05', days: 1, applied: '2026-08-01', decisionDate: '2026-08-02', reason: 'Professional engagement', status: 'Cancelled' },
-]
 const today = () => new Date().toISOString().slice(0, 10)
 const typeOf = employee => employee?.employeeCategory === 'Non-Teaching' ? 'Non-Teaching' : 'Teaching'
 const statusClass = value => String(value || '').toLowerCase().replace(/\s+/g, '-')
 const dateLabel = value => value ? new Date(`${String(value).slice(0, 10)}T00:00:00`).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : '—'
-const range = (from, to) => from === to ? dateLabel(from) : `${new Date(`${from}T00:00:00`).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' })} - ${dateLabel(to)}`
+const range = (from, to) => !from || !to ? '?' : from === to ? dateLabel(from) : `${new Date(`${from}T00:00:00`).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' })} - ${dateLabel(to)}`
 const initials = value => String(value || 'Employee').replace(/^(Dr|Prof|Mr|Ms|Mrs)\.\s*/i, '').split(' ').filter(Boolean).slice(0, 2).map(word => word[0]).join('').toUpperCase()
 const hasOverlap = (left, right) => left.from <= right.to && left.to >= right.from
 const policyScopesOverlap = (left, right) => {
@@ -63,11 +26,16 @@ const policyScopesOverlap = (left, right) => {
 const exportColumns = [{ label: 'Employee ID', value: 'employeeId' }, { label: 'Employee', value: 'employee' }, { label: 'Department', value: 'department' }, { label: 'Status', value: 'status' }]
 
 export default function FacultyLeaveManagement() {
-  const faculty = readStoredFaculty()
+  const [faculty, setFaculty] = useState([])
+  const [balances, setBalances] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [loadError, setLoadError] = useState('')
+  const [busy, setBusy] = useState(false)
+  const mutationLock = useRef(false)
   const [tab, setTab] = useState(TABS[0])
-  const [leaveTypes, setLeaveTypes] = useState(() => STANDARD_LEAVE_TYPES.map(item => ({ ...item })))
-  const [policies, setPolicies] = useState(() => INITIAL_LEAVE_POLICIES.map(item => ({ ...item, entitlements: item.entitlements.map(rule => ({ ...rule })) })))
-  const [requests, setRequests] = useState(() => INITIAL_LEAVE_REQUESTS.map(item => ({ ...item })))
+  const [leaveTypes, setLeaveTypes] = useState([])
+  const [policies, setPolicies] = useState([])
+  const [requests, setRequests] = useState([])
   const [query, setQuery] = useState('')
   const [filters, setFilters] = useState({ type: '', department: '', status: '' })
   const [showFilters, setShowFilters] = useState(false)
@@ -76,29 +44,45 @@ export default function FacultyLeaveManagement() {
   const [notice, setNotice] = useState('')
   const [academicYears, setAcademicYears] = useState([])
 
-  useEffect(() => {
-    let active = true
-    academicYearApi.getAll().then(rows => {
-      if (!active) return
-      setAcademicYears(rows.map(row => row.academicYearName || row.name).filter(Boolean))
-    }).catch(() => {})
-    return () => { active = false }
+  const reload = useCallback(async () => {
+    setLoading(true); setLoadError('')
+    try {
+      const [members, types, policyRows, pending, history, balanceRows] = await Promise.all([
+        facultyService.list(), facultyLeaveApi.getTypes(), facultyLeaveApi.getPolicies(),
+        facultyLeaveApi.getRequests(), facultyLeaveApi.getHistory(), facultyLeaveApi.getBalances(),
+      ])
+      setFaculty(members); setLeaveTypes(newestFirst('leave-types', types.map(normalizeLeaveType)))
+      setPolicies(newestFirst('leave-policies', policyRows.map(normalizeLeavePolicy)))
+      setRequests(newestFirst('leave-requests', [...new Map([...pending, ...history].map(normalizeLeaveRequest).map(row => [row.id, row])).values()]))
+      setBalances(balanceRows)
+    } catch (error) { setLoadError(error.message || 'Unable to load leave records.'); throw error }
+    finally { setLoading(false) }
   }, [])
-
+  useEffect(() => { reload().catch(() => {}) }, [reload])
+  useEffect(() => { let active = true; academicYearApi.getAll().then(rows => { if (active) setAcademicYears(rows.map(row => row.academicYearName || row.name).filter(Boolean)) }).catch(error => { if (active) setNotice(error.message) }); return () => { active = false } }, [])
+  const mutate = async (action, message, module) => {
+    if (mutationLock.current) return
+    mutationLock.current = true; setBusy(true)
+    try {
+      const saved = await action()
+      if (module) { rememberCreated(module, saved); setPage(1); setQuery(''); setFilters({ type: '', department: '', status: '' }) }
+      setDialog(null); setNotice(message)
+      await reload().catch(() => {})
+    } catch (error) { setNotice(error.message || 'Could not save the change.') }
+    finally { mutationLock.current = false; setBusy(false) }
+  }
   const getApplicablePolicy = (employee, targetDate = today()) => {
     const matches = policies.filter(policy => policy.status === 'Active' && policy.from <= targetDate && policy.to >= targetDate && (policy.applicableTo === 'Both' || policy.applicableTo === typeOf(employee)) && (!policy.departments?.length || policy.departments.includes(employee.department)))
     return matches.length === 1 ? matches[0] : null
   }
   const getBalance = (employee, policy, typeId) => {
-    const rule = policy?.entitlements?.find(item => item.typeId === typeId)
-    if (!rule) return null
-    const relevant = requests.filter(item => item.facultyId === employee.id && item.policyId === policy.id && item.typeId === typeId)
-    const used = relevant.filter(item => item.status === 'Approved').reduce((sum, item) => sum + item.days, 0)
-    const pending = relevant.filter(item => item.status === 'Pending').reduce((sum, item) => sum + item.days, 0)
-    const leaveType = leaveTypes.find(item => item.id === typeId)
-    return { entitled: rule.entitlement, used, pending, available: leaveType?.payCategory === 'Unpaid Leave' ? null : Math.max(0, rule.entitlement - used - pending) }
+    const group = balances.find(row => String(row.facultyId ?? row.employee?.id ?? row.id) === String(employee.id))
+    const entries = group?.balances ?? group?.leaveBalances ?? group?.leaveTypes ?? (group?.leaveTypeId ? [group] : [])
+    const row = entries.find(item => String(item.leaveTypeId ?? item.typeId) === String(typeId) && (!item.policyId || String(item.policyId) === String(policy?.id)))
+      ?? balances.find(item => String(item.facultyId) === String(employee.id) && String(item.leaveTypeId ?? item.typeId) === String(typeId))
+    return row ? { entitled: row.entitled ?? row.entitlement ?? null, used: Number(row.used ?? row.usedDays ?? 0), pending: Number(row.pending ?? row.pendingDays ?? 0), available: row.available ?? row.availableDays ?? null } : null
   }
-  const requestRows = requests.map(request => ({ ...request, employee: faculty.find(item => item.id === request.facultyId) })).filter(row => row.employee)
+  const requestRows = requests.map(request => ({ ...request, employee: faculty.find(item => String(item.id) === String(request.facultyId)) || normalizeFaculty(request.employee || { ...request, facultyName: request.facultyName || request.employeeName, facultyId: request.facultyId }) })).filter(row => row.employee)
   const sourceRows = tab === 'Leave Requests' ? requestRows.filter(row => row.status === 'Pending') : tab === 'Leave History' ? requestRows.filter(row => ['Approved', 'Rejected', 'Cancelled'].includes(row.status)) : tab === 'Leave Balances' ? faculty.map(employee => ({ employee, policy: getApplicablePolicy(employee) })) : tab === 'Leave Types' ? leaveTypes : policies
   const filtered = sourceRows.filter(item => {
     const employee = item.employee?.fullName ? item.employee : item.employee || item
@@ -115,27 +99,19 @@ export default function FacultyLeaveManagement() {
   const switchTab = value => { setTab(value); setPage(1); setQuery(''); setFilters({ type: '', department: '', status: '' }); setShowFilters(false) }
   const changeFilter = (key, value) => { setFilters(current => ({ ...current, [key]: value })); setPage(1) }
   const saveType = value => {
-    const name = value.name.trim(); const code = value.code.trim().toUpperCase()
-    if (!name || !code) return 'Leave Type Name and Leave Code are required.'
-    if (leaveTypes.some(item => item.id !== value.id && (item.name.toLowerCase() === name.toLowerCase() || item.code.toLowerCase() === code.toLowerCase()))) return 'Leave Type Name and Leave Code must be unique.'
-    setLeaveTypes(current => value.id ? current.map(item => item.id === value.id ? { ...value, name, code } : item) : [{ ...value, id: crypto.randomUUID(), name, code }, ...current])
-    if (!value.id) { setPage(1); setQuery(''); setFilters({ type: '', department: '', status: '' }) }
-    setDialog(null); setNotice(value.id ? 'Leave type updated.' : 'Leave type created.'); return ''
+    const payload = { name: value.name.trim(), code: value.code.trim().toUpperCase(), category: value.category || 'Regular', payCategory: value.payCategory, description: value.description, status: value.status }
+    if (!payload.name || !payload.code) { setNotice('Leave Type Name and Leave Code are required.'); return }
+    return mutate(() => value.id ? facultyLeaveApi.updateType(value.id, payload) : facultyLeaveApi.createType(payload), 'Leave type saved.', value.id ? null : 'leave-types')
   }
-  const activatePolicy = policy => {
-    const overlaps = policies.some(item => item.id !== policy.id && item.status === 'Active' && policyScopesOverlap(item, policy))
-    if (overlaps) return 'Active Policy Conflict: an overlapping active policy applies to the same employee scope.'
-    setPolicies(current => current.map(item => item.id === policy.id ? { ...item, status: 'Active' } : item)); setDialog(null); setNotice('Leave policy activated.'); return ''
+  const savePolicy = policy => mutate(() => policy.id ? facultyLeaveApi.updatePolicy(policy.id, leavePolicyPayload(policy)) : facultyLeaveApi.createPolicy(leavePolicyPayload(policy)), 'Leave policy saved.', policy.id ? null : 'leave-policies')
+  const activatePolicy = policy => mutate(() => facultyLeaveApi.activatePolicy(policy.id), 'Leave policy activated.')
+  const decideRequest = (request, status, reason = '') => mutate(() => status === 'Approved' ? facultyLeaveApi.approve(request.id) : facultyLeaveApi.reject(request.id, reason.trim()), 'Leave request ' + status.toLowerCase() + '.')
+  const viewRecord = async item => {
+    if (!item.typeId) { setDialog({ kind: 'view', item }); return }
+    try { const detail = normalizeLeaveRequest(await facultyLeaveApi.getRequest(item.id)); setDialog({ kind: 'view', item: { ...item, ...detail, employee: item.employee } }) }
+    catch (error) { setNotice(error.message) }
   }
-  const decideRequest = (request, status, rejectionReason = '') => {
-    const employee = faculty.find(item => item.id === request.facultyId)
-    const policy = policies.find(item => item.id === request.policyId)
-    const balance = getBalance(employee, policy, request.typeId)
-    if (status === 'Approved' && (!policy || !balance || (balance.available !== null && balance.available + request.days < request.days))) return 'This request can no longer be approved because its policy or balance is unavailable.'
-    setRequests(current => current.map(item => item.id === request.id ? { ...item, status, decisionDate: today(), ...(rejectionReason ? { rejectionReason } : {}) } : item))
-    setDialog(null); setNotice(`Leave request ${status.toLowerCase()}.`); return ''
-  }
-  return <DashboardLayout><main className="flm-page"><header className="flm-header"><div><p>FACULTY / LEAVE MANAGEMENT</p><h1>Faculty Leave Management</h1><span>Configure leave policies, manage employee balances and process faculty and staff leave requests.</span></div><div className="flm-summary">{summary.map(([label, value]) => <div key={label}><strong>{value}</strong><small>{label}</small></div>)}</div></header><section className="flm-card"><header className="flm-card-header"><div><p>{title}</p><h2>{description}</h2></div><div className="flm-header-actions"><ExportMenu rows={filtered} columns={exportColumns} screen="faculty-leave-local" filename={`faculty-leave-${tab.toLowerCase().replace(/\s+/g, '-')}`} title={tab} scope="All filtered results" />{tab === 'Leave Types' && <button className="flm-primary" onClick={() => setDialog({ kind: 'type' })}><FiPlus /> Add Leave Type</button>}{tab === 'Leave Policies' && <button className="flm-primary" onClick={() => setDialog({ kind: 'policy' })}><FiPlus /> Create Leave Policy</button>}</div></header><nav className="flm-tabs">{TABS.map(value => <button key={value} className={tab === value ? 'active' : ''} onClick={() => switchTab(value)}>{value}</button>)}</nav><div className="flm-toolbar"><label className="flm-search"><FiSearch /><input value={query} onChange={event => { setQuery(event.target.value); setPage(1) }} placeholder={tab === 'Leave Types' ? 'Search leave type or code...' : tab === 'Leave Policies' ? 'Search leave policy...' : tab === 'Leave Balances' ? 'Search employee...' : 'Search request, employee or leave type...'} /></label><button className="flm-filter-toggle" onClick={() => setShowFilters(value => !value)}><FiFilter /> Filters {showFilters ? <FiChevronUp /> : <FiChevronDown />}</button></div>{showFilters && <div className="flm-filter-panel">{['Leave Requests', 'Leave History', 'Leave Balances'].includes(tab) && <><FilterSelect label="Faculty Type" value={filters.type} values={['Teaching', 'Non-Teaching']} onChange={value => changeFilter('type', value)} /><FilterSelect label="Department" value={filters.department} values={departments} onChange={value => changeFilter('department', value)} /></>}{['Leave History', 'Leave Types', 'Leave Policies'].includes(tab) && <FilterSelect label="Status" value={filters.status} values={tab === 'Leave Types' ? ['Active', 'Inactive'] : tab === 'Leave Policies' ? ['Draft', 'Active', 'Inactive', 'Expired'] : ['Approved', 'Rejected', 'Cancelled']} onChange={value => changeFilter('status', value)} />}<button className="flm-clear" onClick={() => { setQuery(''); setFilters({ type: '', department: '', status: '' }); setPage(1) }}>Clear Filters</button></div>}<p className="flm-count">Showing {filtered.length ? (currentPage - 1) * PAGE_SIZE + 1 : 0}-{Math.min(currentPage * PAGE_SIZE, filtered.length)} of {filtered.length} records</p><LeaveList tab={tab} rows={visible} leaveTypes={leaveTypes} getBalance={getBalance} onView={item => setDialog({ kind: 'view', item })} onEdit={item => setDialog({ kind: Array.isArray(item.entitlements) ? 'policy' : 'type', item })} onActivate={item => setDialog({ kind: 'activate', item })} onDecision={(item, status) => setDialog({ kind: 'decision', item, status })} />{filtered.length > PAGE_SIZE && <TablePagination currentPage={currentPage} totalPages={pages} onPageChange={setPage} />}</section>{dialog && <LeaveDialog dialog={dialog} faculty={faculty} leaveTypes={leaveTypes} policies={policies} requests={requests} academicYears={academicYears} getBalance={getBalance} onClose={() => setDialog(null)} onSaveType={saveType} onSavePolicy={policy => { setPolicies(current => policy.id ? current.map(item => item.id === policy.id ? { ...policy } : item) : [{ ...policy, id: crypto.randomUUID(), status: 'Draft' }, ...current]); if (!policy.id) { setPage(1); setQuery(''); setFilters({ type: '', department: '', status: '' }) } setDialog(null); setNotice(policy.id ? 'Leave policy updated.' : 'Leave policy created as Draft.'); return '' }} onActivate={activatePolicy} onDecision={decideRequest} />}{notice && <div className="flm-toast">{notice}<button onClick={() => setNotice('')}><FiX /></button></div>}</main></DashboardLayout>
+  return <DashboardLayout><main className="flm-page">{loadError && <p className="flm-error" role="alert">{loadError} <button onClick={() => reload().catch(() => {})}>Retry</button></p>}{loading && <p role="status">Loading leave records?</p>}<header className="flm-header"><div><p>FACULTY / LEAVE MANAGEMENT</p><h1>Faculty Leave Management</h1><span>Configure leave policies, manage employee balances and process faculty and staff leave requests.</span></div><div className="flm-summary">{summary.map(([label, value]) => <div key={label}><strong>{value}</strong><small>{label}</small></div>)}</div></header><section className="flm-card"><header className="flm-card-header"><div><p>{title}</p><h2>{description}</h2></div><div className="flm-header-actions"><ExportMenu rows={filtered} columns={exportColumns} screen="faculty-leave-local" filename={`faculty-leave-${tab.toLowerCase().replace(/\s+/g, '-')}`} title={tab} scope="All filtered results" />{tab === 'Leave Types' && <button className="flm-primary" onClick={() => setDialog({ kind: 'type' })}><FiPlus /> Add Leave Type</button>}{tab === 'Leave Policies' && <button className="flm-primary" onClick={() => setDialog({ kind: 'policy' })}><FiPlus /> Create Leave Policy</button>}</div></header><nav className="flm-tabs">{TABS.map(value => <button key={value} className={tab === value ? 'active' : ''} onClick={() => switchTab(value)}>{value}</button>)}</nav><div className="flm-toolbar"><label className="flm-search"><FiSearch /><input value={query} onChange={event => { setQuery(event.target.value); setPage(1) }} placeholder={tab === 'Leave Types' ? 'Search leave type or code...' : tab === 'Leave Policies' ? 'Search leave policy...' : tab === 'Leave Balances' ? 'Search employee...' : 'Search request, employee or leave type...'} /></label><button className="flm-filter-toggle" onClick={() => setShowFilters(value => !value)}><FiFilter /> Filters {showFilters ? <FiChevronUp /> : <FiChevronDown />}</button></div>{showFilters && <div className="flm-filter-panel">{['Leave Requests', 'Leave History', 'Leave Balances'].includes(tab) && <><FilterSelect label="Faculty Type" value={filters.type} values={['Teaching', 'Non-Teaching']} onChange={value => changeFilter('type', value)} /><FilterSelect label="Department" value={filters.department} values={departments} onChange={value => changeFilter('department', value)} /></>}{['Leave History', 'Leave Types', 'Leave Policies'].includes(tab) && <FilterSelect label="Status" value={filters.status} values={tab === 'Leave Types' ? ['Active', 'Inactive'] : tab === 'Leave Policies' ? ['Draft', 'Active', 'Inactive', 'Expired'] : ['Approved', 'Rejected', 'Cancelled']} onChange={value => changeFilter('status', value)} />}<button className="flm-clear" onClick={() => { setQuery(''); setFilters({ type: '', department: '', status: '' }); setPage(1) }}>Clear Filters</button></div>}<p className="flm-count">Showing {filtered.length ? (currentPage - 1) * PAGE_SIZE + 1 : 0}-{Math.min(currentPage * PAGE_SIZE, filtered.length)} of {filtered.length} records</p><LeaveList tab={tab} rows={visible} leaveTypes={leaveTypes} getBalance={getBalance} onView={viewRecord} onEdit={item => setDialog({ kind: Array.isArray(item.entitlements) ? 'policy' : 'type', item })} onActivate={item => setDialog({ kind: 'activate', item })} onDecision={(item, status) => setDialog({ kind: 'decision', item, status })} />{filtered.length > PAGE_SIZE && <TablePagination currentPage={currentPage} totalPages={pages} onPageChange={setPage} />}</section>{dialog && <fieldset disabled={busy} style={{ border: 0, padding: 0, margin: 0 }}><LeaveDialog dialog={dialog} faculty={faculty} leaveTypes={leaveTypes} policies={policies} requests={requests} academicYears={academicYears} getBalance={getBalance} onClose={() => setDialog(null)} onSaveType={saveType} onSavePolicy={savePolicy} onActivate={activatePolicy} onDecision={decideRequest} /></fieldset>}{notice && <div className="flm-toast">{notice}<button onClick={() => setNotice('')}><FiX /></button></div>}</main></DashboardLayout>
 }
 
 function LeaveList({ tab, rows, leaveTypes, getBalance, onView, onEdit, onActivate, onDecision }) {
@@ -155,15 +131,15 @@ function LeaveDialog({ dialog, leaveTypes, policies, academicYears, getBalance, 
 }
 
 function ViewDialog({ item, leaveTypes, policies, getBalance, onClose }) { const isBalance = item.employee && Object.hasOwn(item, 'policy'); const isPolicy = Array.isArray(item.entitlements); const isType = Object.hasOwn(item, 'payCategory'); const employee = item.employee; return <View title={isBalance ? 'Leave Balance Details' : isPolicy ? 'Leave Policy Details' : isType ? 'Leave Type Details' : 'Leave Request Details'} onClose={onClose}>{employee && <Identity employee={employee} status={item.status} />}{isBalance ? <>{item.policy ? <><Info title="Applicable Policy" rows={[['Policy', item.policy.name], ['Academic Year', item.policy.academicYear], ['Effective Period', range(item.policy.from, item.policy.to)]]} /><BalanceTable employee={employee} policy={item.policy} leaveTypes={leaveTypes} getBalance={getBalance} /></> : <Info title="Applicable Policy" rows={[['Not Assigned', 'No active leave policy is applicable to this employee.']]} />}</> : isPolicy ? <><h2>{item.name} <Status value={item.status} /></h2><Info title="Policy Information" rows={[['Academic Year', item.academicYear], ['Applicable To', item.applicableTo], ['Department Scope', item.departments?.length ? item.departments.join(', ') : 'All Departments'], ['Effective Period', range(item.from, item.to)]]} /><section className="flm-view-section"><h3>Leave Entitlements</h3><table className="flm-dialog-table"><thead><tr><th>Leave Type</th><th>Code</th><th>Pay Type</th><th>Entitled</th><th>Max / Request</th><th>Carry Forward</th><th>Document</th></tr></thead><tbody>{item.entitlements.map(rule => { const leaveType = leaveTypes.find(type => type.id === rule.typeId); return <tr key={rule.typeId}><td>{leaveType?.name || 'Unavailable'}</td><td>{leaveType?.code || '—'}</td><td>{leaveType?.payCategory || '—'}</td><td>{rule.entitlement ?? 'Unlimited'}</td><td>{rule.maxDays || '—'}</td><td>{rule.carryForward ? 'Yes' : 'No'}</td><td>{rule.documentRequired ? 'Yes' : 'No'}</td></tr> })}</tbody></table></section></> : isType ? <><h2>{item.name} <Status value={item.status} /></h2><Info title="General Information" rows={[['Leave Type', item.name], ['Leave Code', item.code], ['Category', item.category || 'Regular'], ['Pay Category', item.payCategory], ['Status', item.status], ['Description', item.description || 'No description provided.']]} /></> : <><Info title="Request Information" rows={[['Request ID', item.id], ['Leave Type', leaveTypes.find(type => type.id === item.typeId)?.name || 'Unavailable'], ['Applied On', dateLabel(item.applied)], ['Policy', policies.find(policy => policy.id === item.policyId)?.name || 'Not Assigned']]} /><Info title="Leave Period" columns={3} rows={[['From', dateLabel(item.from)], ['To', dateLabel(item.to)], ['Duration', `${item.days} Days`]]} /><section className="flm-view-section"><h3>Reason</h3><p className="flm-view-reason">{item.reason}</p></section>{item.decisionDate && <Info title="Decision Details" rows={[['Decision Date', dateLabel(item.decisionDate)], ...(item.rejectionReason ? [['Rejection Reason', item.rejectionReason]] : [])]} />}</>}</View> }
-function TypeDialog({ item = {}, onClose, onSave }) { const [data, setData] = useState({ name: item.name || '', code: item.code || '', payCategory: item.payCategory || 'Paid Leave', description: item.description || '', status: item.status || 'Active' }); const [error, setError] = useState(''); const save = () => setError(onSave({ ...item, ...data }) || ''); return <Modal title={item.id ? 'Edit Leave Type' : 'Add Leave Type'} onClose={onClose}><Form><Input label="Leave Type Name *" value={data.name} onChange={value => setData({ ...data, name: value })} /><Input label="Leave Code *" value={data.code} onChange={value => setData({ ...data, code: value })} /><Select label="Pay Category" value={data.payCategory} values={['Paid Leave', 'Unpaid Leave']} onChange={value => setData({ ...data, payCategory: value })} /><Select label="Status" value={data.status} values={['Active', 'Inactive']} onChange={value => setData({ ...data, status: value })} /><label>Description<textarea value={data.description} onChange={event => setData({ ...data, description: event.target.value })} /></label></Form>{error && <p className="flm-error">{error}</p>}<Footer><button onClick={onClose}>Cancel</button><button className="approve-action" onClick={save}>Save Leave Type</button></Footer></Modal> }
+function TypeDialog({ item = {}, onClose, onSave }) { const [data, setData] = useState({ name: item.name || '', code: item.code || '', payCategory: item.payCategory || 'Paid Leave', description: item.description || '', status: item.status || 'Active' }); const [error, setError] = useState(''); const save = async () => { setError(''); await onSave({ ...item, ...data }) }; return <Modal title={item.id ? 'Edit Leave Type' : 'Add Leave Type'} onClose={onClose}><Form><Input label="Leave Type Name *" value={data.name} onChange={value => setData({ ...data, name: value })} /><Input label="Leave Code *" value={data.code} onChange={value => setData({ ...data, code: value })} /><Select label="Pay Category" value={data.payCategory} values={['Paid Leave', 'Unpaid Leave']} onChange={value => setData({ ...data, payCategory: value })} /><Select label="Status" value={data.status} values={['Active', 'Inactive']} onChange={value => setData({ ...data, status: value })} /><label>Description<textarea value={data.description} onChange={event => setData({ ...data, description: event.target.value })} /></label></Form>{error && <p className="flm-error">{error}</p>}<Footer><button onClick={onClose}>Cancel</button><button className="approve-action" onClick={save}>Save Leave Type</button></Footer></Modal> }
 function PolicyDialog({ item = {}, leaveTypes, academicYears, onClose, onSave }) {
   const [data, setData] = useState({ name: item.name || '', academicYear: item.academicYear || '', applicableTo: item.applicableTo || 'Teaching', from: item.from || '', to: item.to || '', departments: item.departments || [], entitlements: item.entitlements || [] })
   const toggle = type => setData(current => ({ ...current, entitlements: current.entitlements.some(rule => rule.typeId === type.id) ? current.entitlements.filter(rule => rule.typeId !== type.id) : [...current.entitlements, { typeId: type.id, entitlement: 0, maxDays: '', carryForward: false, maxCarryForward: '', documentRequired: false }] }))
   return <Modal title={item.id ? 'Edit Leave Policy' : 'Create Leave Policy'} onClose={onClose}><Form><Input label="Policy Name *" value={data.name} onChange={value => setData({ ...data, name: value })} /><label>Academic Year *<select value={data.academicYear} onChange={event => setData({ ...data, academicYear: event.target.value })}><option value="">{academicYears.length ? 'Select academic year' : 'No academic years available'}</option>{academicYears.map(year => <option key={year} value={year}>{year}</option>)}</select></label><Select label="Applicable To" value={data.applicableTo} values={['Teaching', 'Non-Teaching', 'Both']} onChange={value => setData({ ...data, applicableTo: value })} /><Input label="Effective From *" type="date" value={data.from} onChange={value => setData({ ...data, from: value })} /><Input label="Effective To *" type="date" value={data.to} onChange={value => setData({ ...data, to: value })} /></Form><h3>Leave Entitlements</h3>{leaveTypes.filter(type => type.status === 'Active').map(type => { const rule = data.entitlements.find(value => value.typeId === type.id); return <label className="flm-rule" key={type.id}><input type="checkbox" checked={Boolean(rule)} onChange={() => toggle(type)} /><span>{type.name} ({type.payCategory})</span>{rule && <input type="number" min="0" placeholder="Annual entitlement" value={rule.entitlement} onChange={event => setData({ ...data, entitlements: data.entitlements.map(value => value.typeId === type.id ? { ...value, entitlement: Number(event.target.value) } : value) })} />}</label> })}<Footer><button onClick={onClose}>Cancel</button><button className="approve-action" disabled={!data.name || !data.academicYear || !data.from || !data.to || data.from > data.to || !data.entitlements.length} onClick={() => onSave({ ...item, ...data })}>{item.id ? 'Save Changes' : 'Create Policy'}</button></Footer></Modal>
 }
-function ActivationDialog({ policy, onClose, onActivate }) { const [error, setError] = useState(''); return <Modal title="Activate Leave Policy" onClose={onClose}><p>Activate <strong>{policy.name}</strong> for {policy.applicableTo} employees?</p>{error && <p className="flm-error">{error}</p>}<Footer><button onClick={onClose}>Cancel</button><button className="approve-action" onClick={() => setError(onActivate(policy) || '')}>Activate Policy</button></Footer></Modal> }
+function ActivationDialog({ policy, onClose, onActivate }) { const [error, setError] = useState(''); return <Modal title="Activate Leave Policy" onClose={onClose}><p>Activate <strong>{policy.name}</strong> for {policy.applicableTo} employees?</p>{error && <p className="flm-error">{error}</p>}<Footer><button onClick={onClose}>Cancel</button><button className="approve-action" onClick={() => onActivate(policy)}>Activate Policy</button></Footer></Modal> }
 function DecisionDialog({ request, status, onClose, onSave }) { const [reason, setReason] = useState(''); const reject = status === 'Rejected'; return <Modal title={reject ? 'Reject Leave Request' : 'Approve Leave Request?'} onClose={onClose}>{reject && <label>Reason for Rejection *<textarea value={reason} onChange={event => setReason(event.target.value)} /></label>}<Footer><button onClick={onClose}>Cancel</button><button className={reject ? 'reject-action' : 'approve-action'} disabled={reject && reason.trim().length < 3} onClick={() => onSave(request, status, reason)}>Confirm</button></Footer></Modal> }
-function BalanceTable({ employee, policy, leaveTypes, getBalance }) { return <section className="flm-view-section"><h3>Leave Type Balances</h3><table className="flm-dialog-table"><thead><tr><th>Leave Type</th><th>Entitled</th><th>Used</th><th>Pending</th><th>Available</th></tr></thead><tbody>{policy.entitlements.map(rule => { const totals = getBalance(employee, policy, rule.typeId); return <tr key={rule.typeId}><td>{leaveTypes.find(type => type.id === rule.typeId)?.name || 'Unavailable'}</td><td>{totals.entitled}</td><td>{totals.used}</td><td>{totals.pending}</td><td>{totals.available ?? 'Unlimited'}</td></tr> })}</tbody></table></section> }
+function BalanceTable({ employee, policy, leaveTypes, getBalance }) { return <section className="flm-view-section"><h3>Leave Type Balances</h3><table className="flm-dialog-table"><thead><tr><th>Leave Type</th><th>Entitled</th><th>Used</th><th>Pending</th><th>Available</th></tr></thead><tbody>{policy.entitlements.map(rule => { const totals = getBalance(employee, policy, rule.typeId); if (!totals) return <tr key={rule.typeId}><td>{leaveTypes.find(type => type.id === rule.typeId)?.name || 'Leave type'}</td><td colSpan={4}>Balance unavailable</td></tr>; return <tr key={rule.typeId}><td>{leaveTypes.find(type => type.id === rule.typeId)?.name || 'Unavailable'}</td><td>{totals.entitled}</td><td>{totals.used}</td><td>{totals.pending}</td><td>{totals.available ?? 'Unlimited'}</td></tr> })}</tbody></table></section> }
 function View({ title, children, onClose }) { return <div className="flm-overlay"><section className="flm-view-dialog" role="dialog" aria-modal="true"><button className="flm-close" aria-label="Close" onClick={onClose}><FiX /></button><p className="flm-eyebrow">{title.toUpperCase()}</p>{children}</section></div> }
 function Identity({ employee, status }) { return <div className="flm-view-identity"><span>{initials(employee?.fullName)}</span><div><h2>{employee?.fullName}</h2><p className="flm-view-meta">{employee?.employeeId} <b>•</b> {typeOf(employee)}</p><p className="flm-view-meta">{employee?.designation} <b>•</b> {employee?.department}</p></div>{status && <Status value={status} />}</div> }
 function Info({ title, rows, columns = 2 }) { return <section className="flm-view-section"><h3>{title}</h3><div className={`flm-info-grid flm-info-grid--${columns}`}>{rows.map(([label, value]) => <div key={label}><small>{label}</small><strong>{value}</strong></div>)}</div></section> }
