@@ -64,8 +64,13 @@ const HOSTEL_FEES = { '2 Bed Sharing': 55000, '3 Bed Sharing': 45000, '4 Bed Sha
 const TRANSPORT_FEES = { 'Route 1': 18000, 'Route 2': 22000, 'Route 3': 26000, 'Route 4': 30000 }
 const blankAddress = () => ({ line1: '', line2: '', town: '', city: '', district: '', state: '', country: 'India', pincode: '' })
 const admissionPhotoKey=id=>`pirnav-admission-photo-${id}`
-const readAdmissionPhoto=id=>{try{return id?localStorage.getItem(admissionPhotoKey(id))||'':''}catch{return''}}
+const readAdmissionPhoto=id=>{try{return id?localStorage.getItem(admissionPhotoKey(id))||null:null}catch{return null}}
 const saveAdmissionPhoto=(id,photo)=>{try{if(!id)return;if(photo)localStorage.setItem(admissionPhotoKey(id),photo);else localStorage.removeItem(admissionPhotoKey(id))}catch{/* storage may be unavailable */}}
+const firstPhoto=(...values)=>values.find(value=>typeof value==='string'&&value.trim()&&!['null','undefined'].includes(value.trim().toLowerCase()))||''
+// Detail APIs sometimes return an empty summary property and the populated
+// value in a nested DTO. Prefer a populated value so the View/Edit pages do
+// not erase already-saved admission data.
+const firstFilled=(...values)=>values.find(value=>value!==null&&value!==undefined&&(typeof value!=='string'||value.trim()!==''))
 const normalizeAddressObj = addr => {
   if (!addr) return blankAddress()
   if (typeof addr === 'string') return { line1: addr.trim(), line2: '', town: '', city: '', district: '', state: '', country: 'India', pincode: '' }
@@ -143,12 +148,14 @@ const admissionFromApi = row => {
   const base = empty()
   const admissionId = row.admissionId ?? row.id ?? row.studentAdmissionId ?? base.id
   const status = normalizeStatus(row.status ?? row.applicationStatus ?? row.admissionStatus ?? 'DRAFT')
-  const currAddr = normalizeAddressObj(row.contact?.currentAddress ?? row.contactInformation?.currentAddress ?? row.currentAddress ?? row.address)
-  const permAddr = normalizeAddressObj(row.contact?.permanentAddress ?? row.contactInformation?.permanentAddress ?? row.permanentAddress)
-  const firstName = row.personal?.firstName ?? row.personalInformation?.firstName ?? row.firstName ?? ''
-  const middleName = row.personal?.middleName ?? row.personalInformation?.middleName ?? row.middleName ?? ''
-  const lastName = row.personal?.lastName ?? row.personalInformation?.lastName ?? row.lastName ?? ''
-  const fullName = row.personal?.fullName ?? row.personalInformation?.fullName ?? row.fullName ?? row.name ?? row.studentName ?? ''
+  const flatCurrentAddress = { line1: row.currentAddressLine1 ?? row.addressLine1 ?? row.address, line2: row.currentAddressLine2 ?? row.addressLine2, town: row.town ?? row.village, city: row.city, district: row.district, state: row.state, country: row.country, pincode: row.pincode ?? row.postalCode ?? row.zip }
+  const flatPermanentAddress = { line1: row.permanentAddressLine1, line2: row.permanentAddressLine2, town: row.permanentTown ?? row.permanentVillage, city: row.permanentCity, district: row.permanentDistrict, state: row.permanentState, country: row.permanentCountry, pincode: row.permanentPincode ?? row.permanentPostalCode }
+  const currAddr = normalizeAddressObj([row.contact?.currentAddress,row.contactInformation?.currentAddress,row.currentAddress,row.address,flatCurrentAddress].find(value=>formatAddress(value)))
+  const permAddr = normalizeAddressObj([row.contact?.permanentAddress,row.contactInformation?.permanentAddress,row.permanentAddress,flatPermanentAddress].find(value=>formatAddress(value)))
+  const firstName = firstFilled(row.personal?.firstName,row.personalInformation?.firstName,row.firstName) ?? ''
+  const middleName = firstFilled(row.personal?.middleName,row.personalInformation?.middleName,row.middleName) ?? ''
+  const lastName = firstFilled(row.personal?.lastName,row.personalInformation?.lastName,row.lastName) ?? ''
+  const fullName = firstFilled(row.personal?.fullName,row.personalInformation?.fullName,row.fullName,row.name,row.studentName) ?? ''
   const parentData = row.parentDetails ?? row.parents ?? {}
   const educationData = row.previousEducation ?? {}
   const tenthData = educationData.tenth ?? educationData.ssc ?? educationData.tenthDetails ?? {}
@@ -166,11 +173,11 @@ const admissionFromApi = row => {
     application: {
       ...base.application,
       ...(row.application || {}),
-      number: row.registrationNumber ?? row.application?.registrationNumber ?? row.application?.number ?? row.number ?? base.application.number,
-      registrationNumber: row.registrationNumber ?? row.application?.registrationNumber ?? row.application?.number ?? row.number ?? base.application.registrationNumber,
-      admissionNumber: row.admissionNumber ?? row.application?.admissionNumber ?? base.application.admissionNumber,
-      date: row.registrationDate ?? row.applicationDate ?? row.application?.date ?? base.application.date,
-      admissionDate: row.admissionDate ?? row.application?.admissionDate ?? base.application.admissionDate
+      number: firstFilled(row.registrationNumber,row.application?.registrationNumber,row.application?.number,row.number,base.application.number),
+      registrationNumber: firstFilled(row.registrationNumber,row.application?.registrationNumber,row.application?.number,row.number,base.application.registrationNumber),
+      admissionNumber: firstFilled(row.admissionNumber,row.application?.admissionNumber,base.application.admissionNumber),
+      date: firstFilled(row.registrationDate,row.applicationDate,row.application?.date,base.application.date),
+      admissionDate: firstFilled(row.admissionDate,row.application?.admissionDate,base.application.admissionDate)
     },
     personal: {
       ...base.personal,
@@ -180,21 +187,23 @@ const admissionFromApi = row => {
       middleName,
       lastName,
       fullName,
-      gender: row.gender ?? row.personal?.gender ?? row.personalInformation?.gender ?? base.personal.gender,
-      dob: dateInputValue(row.dateOfBirth ?? row.DateOfBirth ?? row.dob ?? row.personal?.dateOfBirth ?? row.personal?.dob ?? row.personalInformation?.dateOfBirth ?? row.personalInformation?.dob ?? base.personal.dob),
-      bloodGroup: row.bloodGroup ?? row.personal?.bloodGroup ?? row.personalInformation?.bloodGroup ?? base.personal.bloodGroup,
-      nationality: row.nationality ?? row.personal?.nationality ?? row.personalInformation?.nationality ?? base.personal.nationality,
-      aadhaar: row.aadhaarNumber ?? row.aadhaar ?? row.personal?.aadhaar ?? row.personalInformation?.aadhaar ?? base.personal.aadhaar,
-      photo: row.photo ?? row.photoUrl ?? row.profilePhoto ?? row.profilePhotoUrl ?? row.studentPhoto ?? row.personal?.photo ?? row.personal?.photoUrl ?? row.personalInformation?.photo ?? row.personalInformation?.photoUrl ?? readAdmissionPhoto(admissionId) ?? base.personal.photo
+      gender: firstFilled(row.gender,row.personal?.gender,row.personalInformation?.gender,base.personal.gender),
+      dob: dateInputValue(firstFilled(row.dateOfBirth,row.DateOfBirth,row.dob,row.personal?.dateOfBirth,row.personal?.dob,row.personalInformation?.dateOfBirth,row.personalInformation?.dob,base.personal.dob)),
+      bloodGroup: firstFilled(row.bloodGroup,row.personal?.bloodGroup,row.personalInformation?.bloodGroup,base.personal.bloodGroup),
+      nationality: firstFilled(row.nationality,row.personal?.nationality,row.personalInformation?.nationality,base.personal.nationality),
+      aadhaar: firstFilled(row.aadhaarNumber,row.aadhaar,row.personal?.aadhaar,row.personalInformation?.aadhaar,base.personal.aadhaar),
+      // API DTOs sometimes include an empty photo string after an update.
+      // Treat it as absent so it cannot hide the persisted student picture.
+      photo: firstPhoto(row.photo, row.photoUrl, row.profilePhoto, row.profilePhotoUrl, row.studentPhoto, row.personal?.photo, row.personal?.photoUrl, row.personalInformation?.photo, row.personalInformation?.photoUrl, readAdmissionPhoto(admissionId), base.personal.photo)
     },
     contact: {
       ...base.contact,
       ...(row.contact || {}),
       ...(row.contactInformation || {}),
-      mobile: row.mobile ?? row.studentMobile ?? row.contact?.mobile ?? row.contactInformation?.mobile ?? base.contact.mobile,
-      alternateMobile: row.alternateMobile ?? row.contact?.alternateMobile ?? row.contactInformation?.alternateMobile ?? base.contact.alternateMobile,
-      email: row.email ?? row.studentEmail ?? row.contact?.email ?? row.contactInformation?.email ?? base.contact.email,
-      alternateEmail: row.alternateEmail ?? row.contact?.alternateEmail ?? row.contactInformation?.alternateEmail ?? base.contact.alternateEmail,
+      mobile: firstFilled(row.mobile,row.studentMobile,row.contact?.mobile,row.contactInformation?.mobile,base.contact.mobile),
+      alternateMobile: firstFilled(row.alternateMobile,row.contact?.alternateMobile,row.contactInformation?.alternateMobile,base.contact.alternateMobile),
+      email: firstFilled(row.email,row.studentEmail,row.contact?.email,row.contactInformation?.email,base.contact.email),
+      alternateEmail: firstFilled(row.alternateEmail,row.contact?.alternateEmail,row.contactInformation?.alternateEmail,base.contact.alternateEmail),
       sameAddress: row.sameAddress ?? row.contact?.sameAddress ?? true,
       currentAddress: formatAddress(currAddr) ? currAddr : base.contact.currentAddress,
       permanentAddress: formatAddress(permAddr) ? permAddr : (row.contact?.sameAddress ? currAddr : base.contact.permanentAddress)
@@ -205,18 +214,18 @@ const admissionFromApi = row => {
       ...(row.academicDetails || {}),
       ...(row.academicInformation || {}),
       academicYearId: row.academicYearId ?? row.academic?.academicYearId ?? row.academicDetails?.academicYearId ?? '',
-      academicYear: row.academicYear ?? row.academicYearName ?? row.academic?.academicYear ?? row.academicDetails?.academicYear ?? '',
+      academicYear: firstFilled(row.academicYear,row.academicYearName,row.academic?.academicYear,row.academicDetails?.academicYear,row.academicDetails?.academicYearName) ?? '',
       courseId: row.courseId ?? row.academic?.courseId ?? row.academicDetails?.courseId ?? '',
-      course: row.course ?? row.courseName ?? row.academic?.course ?? row.academicDetails?.course ?? '',
+      course: firstFilled(row.course,row.courseName,row.academic?.course,row.academicDetails?.course,row.academicDetails?.courseName) ?? '',
       departmentId: row.departmentId ?? row.academic?.departmentId ?? row.academicDetails?.departmentId ?? '',
-      department: row.department ?? row.departmentName ?? row.academic?.department ?? row.academicDetails?.department ?? '',
+      department: firstFilled(row.department,row.departmentName,row.academic?.department,row.academicDetails?.department,row.academicDetails?.departmentName) ?? '',
       branchId: row.branchId ?? row.academic?.branchId ?? row.academicDetails?.branchId ?? '',
-      branch: row.branch ?? row.branchName ?? row.academic?.branch ?? row.academicDetails?.branch ?? '',
+      branch: firstFilled(row.branch,row.branchName,row.academic?.branch,row.academicDetails?.branch,row.academicDetails?.branchName) ?? '',
       semesterId: row.semesterId ?? row.academic?.semesterId ?? row.academicDetails?.semesterId ?? '',
-      semester: row.semester ?? row.semesterName ?? row.academic?.semester ?? row.academicDetails?.semester ?? '',
+      semester: firstFilled(row.semester,row.semesterName,row.academic?.semester,row.academicDetails?.semester,row.academicDetails?.semesterName) ?? '',
       sectionId: row.sectionId ?? row.academic?.sectionId ?? row.academicDetails?.sectionId ?? '',
       section: row.section ?? row.sectionName ?? row.academic?.section ?? row.academicDetails?.section ?? '',
-      admissionType: row.admissionType ?? row.academic?.admissionType ?? row.academicDetails?.admissionType ?? '',
+      admissionType: firstFilled(row.admissionType,row.academic?.admissionType,row.academicDetails?.admissionType) ?? '',
       entryType: row.entryType ?? row.academic?.entryType ?? row.academicDetails?.entryType ?? '',
       quota: row.quota ?? row.academic?.quota ?? row.academicDetails?.quota ?? '',
       quotaOther: row.quotaOther ?? row.academic?.quotaOther ?? row.academicDetails?.quotaOther ?? '',

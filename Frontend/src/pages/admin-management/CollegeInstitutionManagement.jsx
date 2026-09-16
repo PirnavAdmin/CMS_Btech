@@ -15,6 +15,7 @@ import InfoCard from '../../components/InfoCard'
 import CompactSummary from '../../components/CompactSummary'
 import {
   createCollegeSettings,
+  cacheCollegeLogo,
   fetchCollegeLogo,
   getCollegeLogoUrl,
   getCollegeById,
@@ -23,6 +24,7 @@ import {
   isValidWebsite,
   normalizeWebsite,
   readCollegeExtendedDetails,
+  readCachedCollegeLogo,
   unwrapCollegeRecord,
   searchColleges,
   updateCollege,
@@ -262,7 +264,7 @@ const mapCollege = (record) => {
   // Do not probe the protected logo endpoint for every directory record. The
   // college list does not guarantee a logo exists, and a missing one should use
   // the existing initial-based placeholder rather than generate a 404 request.
-  logo: getCollegeLogoUrl(id, logoValue),
+  logo: getCollegeLogoUrl(id, logoValue || readCachedCollegeLogo(id)),
   principal: record.principal ?? record.principalName ?? administration.principalName ?? '',
   principalEmail: record.principalEmail ?? administration.principalEmail ?? extended.principalEmail ?? '',
   principalContact: record.principalContact ?? record.principalPhone ?? administration.principalContact ?? extended.principalContact ?? '',
@@ -543,6 +545,7 @@ export default function CollegeInstitutionManagement({ initialView = 'list' }) {
       const response = await updateCollege(activeId, collegePayload(formValues, Boolean(editLogoFile)))
       if (editLogoFile) {
         await uploadCollegeLogo(activeId, editLogoFile)
+        cacheCollegeLogo(activeId, formValues.logo)
         setBrokenLogoIds((current) => { const next = new Set(current); next.delete(activeId); return next })
       }
       const updated = mapCollege((response.data?.data ?? response.data) || { ...formValues, id: activeId })

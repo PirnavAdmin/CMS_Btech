@@ -5,7 +5,6 @@ import { approvedStudentProfiles, isApprovedAdmission } from '../../../utils/app
 import ExportMenu, { PrintDetailsButton } from '../../../components/ExportMenu'
 import { profileColumns } from '../../../utils/exportColumns'
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useNavigate } from "react-router-dom";
 import {
   FiAlertCircle,
   FiArrowLeft,
@@ -115,6 +114,19 @@ const normalizeAddressObj = (addr) => {
     };
   }
   if (typeof addr === "object" && addr !== null) {
+    // The admission API can wrap the address in `address`, `value` or
+    // `details`. Unwrap it before reading its fields; otherwise approved
+    // admissions render as an empty address in Student Profiles.
+    const nested = [addr.address, addr.value, addr.details].find(
+      (item) => item && typeof item === "object",
+    );
+    if (nested)
+      return normalizeAddressObj({
+        ...nested,
+        ...Object.fromEntries(
+          Object.entries(addr).filter(([, item]) => typeof item !== "object"),
+        ),
+      });
     const line1 =
       addr.line1 ?? addr.address ?? addr.street ?? addr.addressLine1 ?? "";
     const line2 = addr.line2 ?? addr.addressLine2 ?? "";
@@ -143,18 +155,24 @@ const formatAddress = (item) => {
   if (typeof item === "object" && item !== null) {
     const parts = [
       item.line1,
+      item.addressLine1,
+      item.street,
       item.line2,
+      item.addressLine2,
       item.town,
+      item.village,
       item.city,
       item.district,
       item.state,
       item.country && item.country !== "India" ? item.country : "",
       item.pincode,
+      item.postalCode,
+      item.zip,
     ]
       .map((v) => String(v || "").trim())
       .filter(Boolean);
     if (parts.length > 0) return parts.join(", ");
-    if (item.address) return String(item.address).trim();
+    if (item.address) return formatAddress(item.address);
     if (item.fullAddress) return String(item.fullAddress).trim();
   }
   return String(item || "").trim();
@@ -226,6 +244,37 @@ const apiAssetUrl = (value) => {
     ? value
     : `${base}/${String(value).replace(/^\/+/, "")}`;
 };
+const photoStorageKey = (kind, id) => `pirnav-${kind}-photo-${id}`;
+const readStoredPhoto = (kind, id) => {
+  try {
+    return id ? localStorage.getItem(photoStorageKey(kind, id)) || "" : "";
+  } catch {
+    return "";
+  }
+};
+const saveStoredPhoto = (kind, id, photo) => {
+  try {
+    if (!id) return;
+    if (photo) localStorage.setItem(photoStorageKey(kind, id), photo);
+    else localStorage.removeItem(photoStorageKey(kind, id));
+  } catch {
+    // A successful API update remains the source of truth if storage is unavailable.
+  }
+};
+const firstPhoto = (...values) =>
+  values.find((item) => {
+    const text = String(item ?? "").trim();
+    return text && !["null", "undefined"].includes(text.toLowerCase());
+  }) || "";
+// API summaries often include an empty top-level property alongside the real
+// value in a nested detail DTO. Empty strings must not win that comparison.
+const firstFilled = (...values) =>
+  values.find(
+    (item) =>
+      item !== null &&
+      item !== undefined &&
+      (typeof item !== "string" || item.trim() !== ""),
+  );
 const profileFromApi = (x) => {
   const header = x.header ?? {},
     summary = x.summary ?? {},
@@ -236,59 +285,59 @@ const profileFromApi = (x) => {
   );
   const personal = {
     firstName:
-      x.firstName ??
-      x.personal?.firstName ??
-      personalRaw.firstName ??
-      parsedName.firstName,
+      firstFilled(x.firstName, x.personal?.firstName, personalRaw.firstName, parsedName.firstName) ?? "",
     middleName:
-      x.middleName ??
-      x.personal?.middleName ??
-      personalRaw.middleName ??
-      parsedName.middleName,
+      firstFilled(x.middleName, x.personal?.middleName, personalRaw.middleName, parsedName.middleName) ?? "",
     lastName:
-      x.lastName ??
-      x.personal?.lastName ??
-      personalRaw.lastName ??
-      parsedName.lastName,
-    gender: x.gender ?? x.personal?.gender ?? personalRaw.gender ?? "",
+      firstFilled(x.lastName, x.personal?.lastName, personalRaw.lastName, parsedName.lastName) ?? "",
+    gender: firstFilled(x.gender, x.personal?.gender, personalRaw.gender) ?? "",
     dob: dateOnly(
-      x.dateOfBirth ??
-        x.personal?.dob ??
-        personalRaw.dateOfBirth ??
-        personalRaw.dob,
+      firstFilled(x.dateOfBirth, x.personal?.dob, personalRaw.dateOfBirth, personalRaw.dob),
     ),
     bloodGroup:
-      x.bloodGroup ?? x.personal?.bloodGroup ?? personalRaw.bloodGroup ?? "",
+      firstFilled(x.bloodGroup, x.personal?.bloodGroup, personalRaw.bloodGroup) ?? "",
     nationality:
-      x.nationality ??
-      x.personal?.nationality ??
-      personalRaw.nationality ??
-      "Indian",
+      firstFilled(x.nationality, x.personal?.nationality, personalRaw.nationality) ?? "Indian",
     aadhaar:
-      x.aadhaarNumber ??
-      x.personal?.aadhaar ??
-      personalRaw.aadhaarNumber ??
-      personalRaw.aadhaar ??
-      "",
-    photo: apiAssetUrl(
-      x.profilePhoto ??
-        header.profilePhoto ??
-        x.personal?.photo ??
-        personalRaw.profilePhoto ??
-        personalRaw.photo,
-    ),
+      firstFilled(x.aadhaarNumber, x.aadhaar, x.personal?.aadhaar, personalRaw.aadhaarNumber, personalRaw.aadhaar) ?? "",
+    photo: apiAssetUrl(firstPhoto(
+      x.profilePhoto,
+      header.profilePhoto,
+      x.personal?.photo,
+      personalRaw.profilePhoto,
+      personalRaw.photo,
+      readStoredPhoto("student-profile", x.studentId ?? header.studentId ?? x.id),
+      readStoredPhoto("admission", x.admissionId ?? x.application?.admissionId ?? x.admission?.admissionId),
+    )),
   };
-  const contactRaw = x.contact ?? x.contactInformation ?? {};
-  const currRaw =
-    contactRaw.currentAddress ??
-    x.currentAddress ??
-    x.contactInformation?.currentAddress ??
-    x.address ??
-    personalRaw.address;
-  const permRaw =
-    contactRaw.permanentAddress ??
-    x.permanentAddress ??
-    x.contactInformation?.permanentAddress;
+  const contactRaw = mergeFilledProfileData(
+    x.contactInformation,
+    x.contact,
+  ) ?? {};
+  const flatCurrentAddress = {
+    line1: x.currentAddressLine1 ?? x.addressLine1 ?? x.address,
+    line2: x.currentAddressLine2 ?? x.addressLine2,
+    town: x.town ?? x.village,
+    city: x.city,
+    district: x.district,
+    state: x.state,
+    country: x.country,
+    pincode: x.pincode ?? x.postalCode ?? x.zip,
+  };
+  const flatPermanentAddress = {
+    line1: x.permanentAddressLine1,
+    line2: x.permanentAddressLine2,
+    town: x.permanentTown ?? x.permanentVillage,
+    city: x.permanentCity,
+    district: x.permanentDistrict,
+    state: x.permanentState,
+    country: x.permanentCountry,
+    pincode: x.permanentPincode ?? x.permanentPostalCode,
+  };
+  const currRaw = [contactRaw.currentAddress, x.currentAddress, x.contactInformation?.currentAddress, x.address, personalRaw.address, flatCurrentAddress]
+    .find((item) => Boolean(formatAddress(normalizeAddressObj(item))));
+  const permRaw = [contactRaw.permanentAddress, x.permanentAddress, x.contactInformation?.permanentAddress, flatPermanentAddress]
+    .find((item) => Boolean(formatAddress(normalizeAddressObj(item))));
   const currentAddress = normalizeAddressObj(currRaw);
   const permanentAddress = normalizeAddressObj(permRaw);
   const hasPerm = Boolean(formatAddress(permanentAddress));
@@ -298,12 +347,12 @@ const profileFromApi = (x) => {
       ? Boolean(sameAddressExplicit)
       : !hasPerm && Boolean(formatAddress(currentAddress));
   const contact = {
-    mobile: tenDigitMobile(x.mobile ?? personalRaw.mobile ?? contactRaw.mobile),
+    mobile: tenDigitMobile(firstFilled(x.mobile, x.studentMobile, personalRaw.mobile, contactRaw.mobile)),
     alternateMobile: tenDigitMobile(
-      x.alternateMobile ?? contactRaw.alternateMobile,
+      firstFilled(x.alternateMobile, contactRaw.alternateMobile),
     ),
-    email: x.email ?? personalRaw.email ?? contactRaw.email ?? "",
-    alternateEmail: x.alternateEmail ?? contactRaw.alternateEmail ?? "",
+    email: firstFilled(x.email, x.studentEmail, personalRaw.email, contactRaw.email) ?? "",
+    alternateEmail: firstFilled(x.alternateEmail, contactRaw.alternateEmail) ?? "",
     sameAddress,
     currentAddress,
     permanentAddress:
@@ -311,79 +360,88 @@ const profileFromApi = (x) => {
   };
   const parents = {
     father: {
-      name: parentRaw.fatherName ?? x.parents?.father?.name ?? "",
+      name: x.fatherName ?? parentRaw.fatherName ?? x.parents?.father?.name ?? "",
       mobile: tenDigitMobile(
-        parentRaw.fatherMobile ??
+        x.fatherMobile ??
+          parentRaw.fatherMobile ??
           parentRaw.parentMobile ??
           x.parents?.father?.mobile,
       ),
       email:
+        x.fatherEmail ??
         parentRaw.fatherEmail ??
-        parentRaw.parentEmail ??
-        x.parents?.father?.email ??
-        "",
+          parentRaw.parentEmail ??
+          x.parents?.father?.email ??
+          "",
       occupation:
-        parentRaw.fatherOccupation ?? x.parents?.father?.occupation ?? "",
-      qualification: x.parents?.father?.qualification ?? "",
-      income: x.parents?.father?.income ?? "",
+        x.fatherOccupation ?? parentRaw.fatherOccupation ?? x.parents?.father?.occupation ?? "",
+      qualification: x.fatherQualification ?? parentRaw.fatherQualification ?? x.parents?.father?.qualification ?? "",
+      income: x.fatherIncome ?? parentRaw.fatherIncome ?? parentRaw.annualIncome ?? x.parents?.father?.income ?? "",
     },
     mother: {
-      name: parentRaw.motherName ?? x.parents?.mother?.name ?? "",
+      name: x.motherName ?? parentRaw.motherName ?? x.parents?.mother?.name ?? "",
       mobile: tenDigitMobile(
-        parentRaw.motherMobile ?? x.parents?.mother?.mobile,
+        x.motherMobile ?? parentRaw.motherMobile ?? x.parents?.mother?.mobile,
       ),
-      email: parentRaw.motherEmail ?? x.parents?.mother?.email ?? "",
+      email: x.motherEmail ?? parentRaw.motherEmail ?? x.parents?.mother?.email ?? "",
       occupation:
-        parentRaw.motherOccupation ?? x.parents?.mother?.occupation ?? "",
+        x.motherOccupation ?? parentRaw.motherOccupation ?? x.parents?.mother?.occupation ?? "",
       qualification:
-        parentRaw.motherQualification ?? x.parents?.mother?.qualification ?? "",
-      income: parentRaw.motherIncome ?? x.parents?.mother?.income ?? "",
+        x.motherQualification ?? parentRaw.motherQualification ?? x.parents?.mother?.qualification ?? "",
+      income: x.motherIncome ?? parentRaw.motherIncome ?? x.parents?.mother?.income ?? "",
     },
     guardian: {
-      name: parentRaw.guardianName ?? x.parents?.guardian?.name ?? "",
+      name: x.guardianName ?? parentRaw.guardianName ?? x.parents?.guardian?.name ?? "",
       relationship:
-        parentRaw.guardianRelationship ??
-        x.parents?.guardian?.relationship ??
-        "",
-      relationshipOther: x.parents?.guardian?.relationshipOther ?? "",
+        x.guardianRelationship ?? parentRaw.guardianRelationship ??
+          x.parents?.guardian?.relationship ??
+          "",
+      relationshipOther: x.guardianRelationshipOther ?? parentRaw.guardianRelationshipOther ?? x.parents?.guardian?.relationshipOther ?? "",
       mobile: tenDigitMobile(
-        parentRaw.guardianMobile ?? x.parents?.guardian?.mobile,
+        x.guardianMobile ?? parentRaw.guardianMobile ?? x.parents?.guardian?.mobile,
       ),
-      email: parentRaw.guardianEmail ?? x.parents?.guardian?.email ?? "",
+      email: x.guardianEmail ?? parentRaw.guardianEmail ?? x.parents?.guardian?.email ?? "",
       occupation:
-        parentRaw.guardianOccupation ?? x.parents?.guardian?.occupation ?? "",
+        x.guardianOccupation ?? parentRaw.guardianOccupation ?? x.parents?.guardian?.occupation ?? "",
       qualification:
-        parentRaw.guardianQualification ?? x.parents?.guardian?.qualification ?? "",
-      income: parentRaw.guardianIncome ?? x.parents?.guardian?.income ?? "",
+        x.guardianQualification ?? parentRaw.guardianQualification ?? x.parents?.guardian?.qualification ?? "",
+      income: x.guardianIncome ?? parentRaw.guardianIncome ?? x.parents?.guardian?.income ?? "",
     },
+    primaryContact: x.primaryContact ?? parentRaw.primaryContact ?? x.parents?.primaryContact ?? "",
+    emergencyMobile: x.emergencyMobile ?? x.emergencyContact ?? parentRaw.emergencyMobile ?? parentRaw.emergencyContact ?? x.parents?.emergencyMobile ?? "",
   };
   const academic = {
-    academicYear: x.academicYear ?? x.academicYearName ?? "",
-    admissionType: "",
-    course: x.course ?? x.courseName ?? "",
-    department: x.department ?? x.departmentName ?? "",
-    branch: x.branch ?? x.branchName ?? "",
-    semester: x.semester ?? x.semesterName ?? "",
-    section: x.section ?? x.sectionName ?? "",
-    regulation: "",
-    quota: "",
-    quotaOther: "",
-    entryType: "",
     ...x.academic,
     ...x.academicInformation,
     ...x.academicDetails,
+    academicYear: firstFilled(x.academicYear, x.academicYearName, x.academic?.academicYear, x.academicDetails?.academicYear, x.academicDetails?.academicYearName) ?? "",
+    academicYearId: x.academicYearId ?? x.academic?.academicYearId ?? x.academicDetails?.academicYearId ?? "",
+    admissionType: x.admissionType ?? x.academic?.admissionType ?? x.academicDetails?.admissionType ?? "",
+    course: firstFilled(x.course, x.courseName, x.academic?.course, x.academicDetails?.course, x.academicDetails?.courseName) ?? "",
+    courseId: x.courseId ?? x.academic?.courseId ?? x.academicDetails?.courseId ?? "",
+    department: firstFilled(x.department, x.departmentName, x.academic?.department, x.academicDetails?.department, x.academicDetails?.departmentName) ?? "",
+    departmentId: x.departmentId ?? x.academic?.departmentId ?? x.academicDetails?.departmentId ?? "",
+    branch: firstFilled(x.branch, x.branchName, x.academic?.branch, x.academicDetails?.branch, x.academicDetails?.branchName) ?? "",
+    branchId: x.branchId ?? x.academic?.branchId ?? x.academicDetails?.branchId ?? "",
+    semester: x.semester ?? x.semesterName ?? x.academic?.semester ?? x.academicDetails?.semester ?? x.academicDetails?.semesterName ?? "",
+    semesterId: x.semesterId ?? x.academic?.semesterId ?? x.academicDetails?.semesterId ?? "",
+    section: x.section ?? x.sectionName ?? x.academic?.section ?? x.academicDetails?.section ?? x.academicDetails?.sectionName ?? "",
+    sectionId: x.sectionId ?? x.academic?.sectionId ?? x.academicDetails?.sectionId ?? "",
+    regulation: x.regulation ?? x.academic?.regulation ?? x.academicDetails?.regulation ?? "",
+    quota: x.quota ?? x.academic?.quota ?? x.academicDetails?.quota ?? "",
+    quotaOther: x.quotaOther ?? x.academic?.quotaOther ?? x.academicDetails?.quotaOther ?? "",
+    entryType: x.entryType ?? x.academic?.entryType ?? x.academicDetails?.entryType ?? "",
+    courseCode: x.courseCode ?? x.academic?.courseCode ?? x.academicDetails?.courseCode ?? "",
+    branchCode: x.branchCode ?? x.academic?.branchCode ?? x.academicDetails?.branchCode ?? "",
+    studentCategory: x.studentCategory ?? x.academic?.studentCategory ?? x.academicDetails?.studentCategory ?? "",
   };
   const application = {
-    registrationNumber:
-      x.registrationNumber ??
-      summary.registrationNumber ??
-      x.academicInformation?.registrationNumber ??
-      "",
-    admissionNumber: x.admissionNumber ?? summary.admissionNumber ?? "",
-    number: "",
-    date: dateOnly(x.registrationDate ?? summary.registrationDate ?? x.application?.date) || new Date().toISOString().slice(0, 10),
-    admissionDate: "",
-    ...x.application,
+    registrationNumber: firstFilled(x.registrationNumber, summary.registrationNumber, x.application?.registrationNumber, x.application?.number, x.academicInformation?.registrationNumber) ?? "",
+    admissionNumber: firstFilled(x.admissionNumber, summary.admissionNumber, x.application?.admissionNumber) ?? "",
+    number: firstFilled(x.registrationNumber, summary.registrationNumber, x.application?.registrationNumber, x.application?.number) ?? "",
+    date: dateOnly(firstFilled(x.registrationDate, x.applicationDate, summary.registrationDate, x.application?.date)),
+    admissionDate: dateOnly(firstFilled(x.admissionDate, summary.admissionDate, x.application?.admissionDate)),
+    ...Object.fromEntries(Object.entries(x.application ?? {}).filter(([, item]) => item !== "" && item !== null && item !== undefined)),
   };
   const previousRaw = x.previousEducation || x.previousEducationDetails || {
     tenth: x.ssc || x.tenthDetails,
@@ -416,27 +474,27 @@ const profileFromApi = (x) => {
     },
   };
   const admission = {
-    collegeId: x.collegeId ?? x.admission?.collegeId ?? "",
-    college: x.college ?? x.collegeName ?? "",
-    batch: "",
-    scholarship: "",
-    scholarshipType: "",
-    hostel: "",
-    hostelPreference: "",
-    hostelRoomType: "",
-    transport: "",
-    transportRoute: "",
     ...x.admission,
+    collegeId: x.collegeId ?? x.admission?.collegeId ?? "",
+    college: x.college ?? x.collegeName ?? x.admission?.college ?? "",
+    batch: x.batch ?? x.admission?.batch ?? "",
+    scholarship: x.scholarship ?? x.admission?.scholarship ?? "",
+    scholarshipType: x.scholarshipType ?? x.admission?.scholarshipType ?? "",
+    hostel: x.hostel === true ? "Yes" : x.hostel ?? x.admission?.hostel ?? "",
+    hostelPreference: x.hostelPreference ?? x.admission?.hostelPreference ?? "",
+    hostelRoomType: x.hostelRoomType ?? x.admission?.hostelRoomType ?? "",
+    transport: x.transport === true ? "Yes" : x.transport ?? x.admission?.transport ?? "",
+    transportRoute: x.transportRoute ?? x.admission?.transportRoute ?? "",
   };
   const fees = {
-    tuitionFee: "",
-    admissionFee: "",
-    scholarshipAmount: "",
-    hostelFee: "",
-    transportFee: "",
-    totalFee: "",
-    paymentPlan: "",
-    paymentStatus: "",
+    tuitionFee: x.tuitionFee ?? "",
+    admissionFee: x.admissionFee ?? "",
+    scholarshipAmount: x.scholarshipAmount ?? "",
+    hostelFee: x.hostelFee ?? "",
+    transportFee: x.transportFee ?? "",
+    totalFee: x.totalFee ?? "",
+    paymentPlan: x.paymentPlan ?? "",
+    paymentStatus: x.paymentStatus ?? "",
     ...x.fees,
   };
   const documents = {
@@ -452,7 +510,10 @@ const profileFromApi = (x) => {
   };
   return {
     ...x,
-    id: x.studentId ?? header.studentId ?? x.id,
+    // An approved admission can expose the enrolled student only through its
+    // nested student DTO. Always keep that ID: parent, document and profile
+    // updates are student-scoped, while the admission ID is a different key.
+    id: x.studentId ?? x.student?.studentId ?? x.student?.id ?? header.studentId ?? x.id,
     studentCode: x.studentCode ?? "",
     status: x.status ?? header.status ?? summary.studentStatus ?? "",
     profileCompletionPercentage:
@@ -475,7 +536,11 @@ const profileAdmissionId = (source) =>
   source?.admission?.admissionId;
 
 const profileStudentId = (source) =>
-  source?.studentId ?? source?.header?.studentId ?? source?.id;
+  source?.studentId ??
+  source?.student?.studentId ??
+  source?.student?.id ??
+  source?.header?.studentId ??
+  source?.id;
 
 const normalizeProfileFees = (...responses) => {
   const source = responses.reduce((merged, response) => {
@@ -496,6 +561,30 @@ const normalizeProfileFees = (...responses) => {
     paymentPlan: source.paymentPlan ?? "",
     paymentStatus: source.paymentStatus ?? "",
   };
+};
+
+// List and preview responses are intentionally compact and may contain empty
+// nested objects. Do not let those placeholders erase values returned by the
+// approved-admission detail endpoint while preparing an edit form.
+const mergeFilledProfileData = (base, overlay) => {
+  if (!overlay || typeof overlay !== "object" || Array.isArray(overlay))
+    return overlay ?? base;
+  const result = base && typeof base === "object" && !Array.isArray(base)
+    ? { ...base }
+    : {};
+  for (const [key, value] of Object.entries(overlay)) {
+    if (value === "" || value === null || value === undefined) continue;
+    if (
+      value &&
+      typeof value === "object" &&
+      !Array.isArray(value)
+    ) {
+      result[key] = mergeFilledProfileData(result[key], value);
+    } else {
+      result[key] = value;
+    }
+  }
+  return result;
 };
 
 // A student profile response is intentionally small. The admission wizard
@@ -548,9 +637,9 @@ const hydrateProfile = async (source) => {
     result.status === "fulfilled" ? result.value : fallback;
   const admissionData = read(admission, {});
   const parentData = read(parent);
+  const combinedSource = mergeFilledProfileData(admissionData, sourceData);
   return profileFromApi({
-    ...admissionData,
-    ...sourceData,
+    ...combinedSource,
     id: studentId ?? admissionData.studentId ?? admissionData.id,
     studentId: studentId ?? admissionData.studentId,
     admissionId: admissionId ?? admissionData.admissionId ?? admissionData.id,
@@ -559,7 +648,9 @@ const hydrateProfile = async (source) => {
     parents: parentData ?? sourceData.parents,
     parentDetails: parentData ?? sourceData.parentDetails,
     fees: normalizeProfileFees(read(feeStructure), read(feeSummary)),
-    documents: documentsFromApi(read(documents, [])),
+    documents: documents.status === "fulfilled"
+      ? mergeFilledProfileData(sourceData.documents, documentsFromApi(documents.value))
+      : sourceData.documents,
   });
 };
 const detail = (label, content) => (
@@ -690,7 +781,6 @@ export default function StudentProfile() {
   // available to every user who can open this screen; the API remains the
   // source of truth for save authorization.
   const canEdit = true;
-  const navigate = useNavigate();
   const [students, setStudents] = useState([]),
     [loading, setLoading] = useState(true),
     [error, setError] = useToastState("", 'error'),
@@ -892,30 +982,55 @@ export default function StudentProfile() {
       return;
     }
     try {
-      // Reuse the admission wizard for editing so fields, required rules,
-      // dropdown options and save behaviour exactly match Student Admission.
-      const hydrated = await hydrateProfile(student);
-      const admissionId = profileAdmissionId(hydrated);
-      if (!admissionId)
-        throw new Error("This student is not linked to an admission record.");
-      navigate(`/student-management/admissions/${admissionId}/edit`);
+      // Profile editing is deliberately independent from the admission
+      // registration workflow. Hydrating first makes every saved profile
+      // section available in the editor without asking for a declaration or
+      // re-submission of an already-approved admission.
+      const studentId = profileStudentId(student);
+      let latestProfile = student;
+      if (studentId) {
+        try {
+          latestProfile = mergeFilledProfileData(
+            student,
+            await studentProfilesApi.preview(studentId),
+          );
+        } catch {
+          // Approved-admission fallback rows can briefly have only an
+          // admission ID. hydrateProfile resolves them below.
+        }
+      }
+      const hydrated = await hydrateProfile(latestProfile);
+      setEditing(hydrated);
     } catch (editError) {
-      setNotice(editError.message || "Unable to open the admission editor.", "error");
+      setNotice(editError.message || "Unable to open the student profile editor.", "error");
     }
   };
-  const saveStudent = async (student) => {
+  const saveStudent = async (student, originalStudent = {}) => {
     const p = student.personal || {},
       c = student.contact || {},
       father = student.parents?.father || {},
       mother = student.parents?.mother || {},
       guardian = student.parents?.guardian || {};
     const admissionId = profileAdmissionId(student);
+    const studentId = profileStudentId(student);
+    if (!studentId)
+      throw new Error("This approved admission is not linked to a student record yet.");
     const profilePayload = {
       fullName: name(student),
+      firstName: p.firstName,
+      middleName: p.middleName,
+      lastName: p.lastName,
       gender: p.gender,
       dateOfBirth: p.dob || null,
+      nationality: p.nationality,
+      aadhaarNumber: p.aadhaar,
       email: c.email,
       mobile: c.mobile,
+      alternateMobile: c.alternateMobile,
+      alternateEmail: c.alternateEmail,
+      currentAddress: c.currentAddress,
+      permanentAddress: c.permanentAddress,
+      sameAddress: c.sameAddress,
       bloodGroup: p.bloodGroup,
       photo: p.photo || '',
       profilePhoto: p.photo || '',
@@ -924,6 +1039,8 @@ export default function StudentProfile() {
       fatherMobile: father.mobile,
       fatherEmail: father.email,
       fatherOccupation: father.occupation,
+      fatherQualification: father.qualification,
+      fatherIncome: father.income,
       motherName: mother.name,
       motherMobile: mother.mobile,
       motherEmail: mother.email,
@@ -938,6 +1055,8 @@ export default function StudentProfile() {
       guardianOccupation: guardian.occupation,
       guardianQualification: guardian.qualification,
       guardianIncome: guardian.income,
+      primaryContact: student.parents?.primaryContact,
+      emergencyMobile: student.parents?.emergencyMobile,
       registrationDate: student.application?.date,
       collegeId: student.admission?.collegeId,
       college: student.admission?.college,
@@ -949,45 +1068,51 @@ export default function StudentProfile() {
       documentStatuses: Object.fromEntries(Object.entries(student.documents || {}).filter(([, item]) => item && !Array.isArray(item)).map(([key, item]) => [key, typeof item === "object" ? item.status ?? "" : item])),
       changeReason:
         "Student profile updated from the College Management System.",
-      student,
     };
+    let savedThroughAdmission = false;
     try {
-      await studentProfilesApi.update(student.id, profilePayload);
+      await studentProfilesApi.update(studentId, profilePayload);
     } catch (profileError) {
       const missingProfile =
         Number(profileError?.status) === 404 ||
+        Number(profileError?.status) === 405 ||
         /student profile not found/i.test(profileError?.message || "");
       if (!missingProfile || !admissionId) throw profileError;
 
-      // Approved admissions may not yet have a separate student-profile row.
-      // Persist through the admission resources until the backend creates one.
+      // Some deployments create the Student Profile projection lazily after
+      // approval. The admission record remains the authoritative store for
+      // these fields, so do not lose the user's edits while that projection is
+      // unavailable.
       await studentAdmissionApi.update(admissionId, student);
-      await Promise.allSettled([
-        studentAcademicDetailsApi.update(admissionId, student),
-        studentParentApi.update(student.id, student),
-      ]);
+      savedThroughAdmission = true;
     }
-    if (admissionId && student.previousEducation) {
-      await studentPreviousEducationApi.update(admissionId, student.previousEducation);
-    }
-    let preview;
-    try {
-      preview = await studentProfilesApi.preview(student.id);
-    } catch {
-      // The admission fallback above is valid even before the backend exposes
-      // a separate profile-preview resource for this student.
-      preview = { ...student, studentId: student.id, admissionId };
-    }
-    const next = await hydrateProfile({
-      ...preview,
-      studentId: student.id,
-    });
-    if (student.personal?.photo) next.personal.photo = student.personal.photo;
-    setStudents((current) =>
-      current.map((x) => (String(x.id) === String(next.id) ? next : x)),
-    );
+    // These resources own the editable parent and education sections. The
+    // profile endpoint owns personal/contact/document-status fields.
+    const changed = (key) =>
+      JSON.stringify(student[key] ?? {}) !== JSON.stringify(originalStudent[key] ?? {});
+    const relatedUpdates = [
+      changed("parents") ? studentParentApi.update(studentId, student) : Promise.resolve(),
+      admissionId && changed("previousEducation")
+        ? studentPreviousEducationApi.update(admissionId, student.previousEducation)
+        : Promise.resolve(),
+      admissionId && !savedThroughAdmission && changed("admission")
+        ? studentAdmissionApi.update(admissionId, student)
+        : Promise.resolve(),
+    ];
+    const relatedResults = await Promise.allSettled(relatedUpdates);
+    const failedUpdate = relatedResults.find((result) => result.status === "rejected");
+    if (failedUpdate) throw failedUpdate.reason;
+    // Keep the image visible when an API returns a compact record without its
+    // photo field; the API value still takes precedence whenever it is present.
+    saveStoredPhoto("student-profile", studentId, p.photo);
+    saveStoredPhoto("admission", admissionId, p.photo);
+    await load();
     setEditing(null);
-    setNotice("Student updated successfully.");
+    setSelectedId(null);
+    const url = new URL(window.location.href);
+    url.searchParams.delete("studentId");
+    window.history.replaceState({}, "", url);
+    setNotice("Student profile updated successfully.");
   };
   const body = selected ? (
     <Profile
@@ -1339,9 +1464,17 @@ function Profile({ student, tab, setTab, back, edit, canEdit }) {
       ["Father annual income", parents.father?.income],
       ["Mother name", parents.mother?.name],
       ["Mother mobile", parents.mother?.mobile],
+      ["Mother email", parents.mother?.email],
+      ["Mother occupation", parents.mother?.occupation],
+      ["Mother qualification", parents.mother?.qualification],
+      ["Mother annual income", parents.mother?.income],
       ["Guardian name", parents.guardian?.name],
       ["Guardian relationship", relationship],
       ["Guardian mobile", parents.guardian?.mobile],
+      ["Guardian email", parents.guardian?.email],
+      ["Guardian occupation", parents.guardian?.occupation],
+      ["Guardian qualification", parents.guardian?.qualification],
+      ["Guardian annual income", parents.guardian?.income],
       ["Primary contact", parents.primaryContact],
       ["Emergency contact", parents.emergencyMobile],
     ],
@@ -1351,6 +1484,11 @@ function Profile({ student, tab, setTab, back, edit, canEdit }) {
       ["Course", a.course],
       ["Department", a.department],
       ["Branch", a.branch],
+      ["Semester", a.semester],
+      ["Section", a.section],
+      ["Course code", a.courseCode],
+      ["Branch code", a.branchCode],
+      ["Student category", a.studentCategory],
       ["Regulation", a.regulation],
       ["Quota", a.quota === "Other" ? a.quotaOther : a.quota],
       ["Entry type", a.entryType],
@@ -1397,6 +1535,10 @@ function Profile({ student, tab, setTab, back, edit, canEdit }) {
       ["First-year total", money(fees.totalFee)],
       ["Payment preference", fees.paymentPlan],
       ["Payment status", fees.paymentStatus],
+      ...(fees.components || []).map((component, index) => [
+        component.name ?? component.componentName ?? component.feeHead ?? `Fee component ${index + 1}`,
+        component.amount,
+      ]),
     ],
   };
   const documentRows = [

@@ -55,6 +55,7 @@ export default function StudentProfileEdit({ student, onCancel, onSave }) {
     ["contact", "Contact & Address"],
     ["parents", "Parent / Guardian"],
     ["academic", "Academic"],
+    ["application", "Application"],
     ["education", "Previous Education"],
     ["services", "Admission & Services"],
     ["fees", "Fees"],
@@ -275,7 +276,7 @@ export default function StudentProfileEdit({ student, onCancel, onSave }) {
     }
     setSaving(true);
     try {
-      await onSave(form);
+      await onSave(form, student);
     } catch (error) {
       setErrors({ form: error?.message || "Unable to update this student." });
       setSaving(false);
@@ -696,6 +697,8 @@ export default function StudentProfileEdit({ student, onCancel, onSave }) {
                   "Guardian annual income",
                   { type: "number" },
                 ],
+                ["parents.primaryContact", "Primary contact"],
+                ["parents.emergencyMobile", "Emergency contact"],
               ])}
             </fieldset>
           )}
@@ -714,12 +717,26 @@ export default function StudentProfileEdit({ student, onCancel, onSave }) {
                   ["academic.department", "Department"],
                   ["academic.branch", "Branch"],
                   ["academic.branchCode", "Branch code"],
+                  ["academic.semester", "Semester"],
+                  ["academic.section", "Section"],
                   ["academic.studentCategory", "Student category"],
                   ["academic.regulation", "Regulation"],
                   ...(form.academic?.admissionType === "Lateral Entry" ? [["academic.quota", "Admission quota"], ["academic.quotaOther", "Specify admission quota"]] : []),
                   ["academic.entryType", "Entry type"],
                 ].map(([path, label]) => [path, label, { readOnly: true }]),
               )}
+            </fieldset>
+          )}
+          {tab === "application" && (
+            <fieldset>
+              <legend>Application Information</legend>
+              <p className="sp-edit-note">Registration and admission numbers are created by the admission workflow and cannot be changed here.</p>
+              {fields([
+                ["application.registrationNumber", "Registration number", { readOnly: true }],
+                ["application.date", "Registration date", { type: "date", readOnly: true }],
+                ["application.admissionNumber", "Admission number", { readOnly: true }],
+                ["application.admissionDate", "Admission date", { type: "date", readOnly: true }],
+              ])}
             </fieldset>
           )}
           {tab === "education" && (
@@ -729,7 +746,9 @@ export default function StudentProfileEdit({ student, onCancel, onSave }) {
                 {fields([
                   ["previousEducation.tenth.board", "Board"],
                   ["previousEducation.tenth.institution", "School name"],
+                  ["previousEducation.tenth.rollNumber", "Roll number"],
                   ["previousEducation.tenth.passingYear", "Year of passing"],
+                  ["previousEducation.tenth.scoreType", "Score type"],
                   [
                     "previousEducation.tenth.score",
                     "Percentage (0–100)",
@@ -757,6 +776,8 @@ export default function StudentProfileEdit({ student, onCancel, onSave }) {
                     "previousEducation.intermediate.stream",
                     "Stream",
                   ],
+                  ["previousEducation.intermediate.streamOther", "Specify stream"],
+                  ["previousEducation.intermediate.scoreType", "Score type"],
                   [
                     "previousEducation.intermediate.score",
                     "Percentage (0–100)",
@@ -872,6 +893,16 @@ export default function StudentProfileEdit({ student, onCancel, onSave }) {
                 ["fees.paymentPlan", "Payment preference", { readOnly: true }],
                 ["fees.paymentStatus", "Payment status", { readOnly: true }],
               ])}
+              {form.fees?.components?.length > 0 && (
+                <div className="sp-edit-grid">
+                  {form.fees.components.map((component, index) => (
+                    <label className="sp-edit-field" key={component.id ?? component.componentId ?? index}>
+                      <span>{component.name ?? component.componentName ?? component.feeHead ?? `Fee component ${index + 1}`}</span>
+                      <input readOnly value={component.amount ?? ""} />
+                    </label>
+                  ))}
+                </div>
+              )}
             </fieldset>
           )}
           {tab === "documents" && (
@@ -888,6 +919,13 @@ export default function StudentProfileEdit({ student, onCancel, onSave }) {
                     <div className="sp-document-upload-actions"><select value={documentStatus} onChange={(event) => update(`documents.${key}`, event.target.value ? { status: event.target.value } : null)}><option value="">Select status</option><option>Submitted</option><option>Pending</option></select></div>
                   </article>;
                 })}
+                {(form.documents?.otherCertificates || []).map((document, index) => (
+                  <article key={document.id ?? `other-${index}`} className="sp-document-upload has-file">
+                    <div className="sp-document-upload-icon"><FiFileText /></div>
+                    <div className="sp-document-upload-copy"><strong>Other certificate</strong><span>{document.name || "Submitted"}</span></div>
+                    {document.data && <a href={document.data} target="_blank" rel="noreferrer">Preview</a>}
+                  </article>
+                ))}
               </div>
             </fieldset>
           )}

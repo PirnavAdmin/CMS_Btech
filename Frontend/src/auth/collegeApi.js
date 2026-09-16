@@ -163,6 +163,21 @@ export const uploadCollegeLogo = (collegeId, logoFile) => {
   return COLLEGE_LOGO_API.postForm("/logo", formData);
 };
 
+// Some College API versions return an empty logo field immediately after a
+// successful multipart upload. Keep the selected image as a display fallback;
+// a non-empty server logo always remains the preferred value.
+const collegeLogoCacheKey = (collegeId) => `pirnav-college-logo-${collegeId}`;
+export const readCachedCollegeLogo = (collegeId) => {
+  try { return collegeId ? localStorage.getItem(collegeLogoCacheKey(collegeId)) || '' : '' } catch { return '' }
+};
+export const cacheCollegeLogo = (collegeId, logo) => {
+  try {
+    if (!collegeId) return;
+    if (logo) localStorage.setItem(collegeLogoCacheKey(collegeId), logo);
+    else localStorage.removeItem(collegeLogoCacheKey(collegeId));
+  } catch { /* The uploaded server logo remains available when storage is unavailable. */ }
+};
+
 export const getCollegeLogoUrl = (collegeId, logoValue) => {
   const logo = String(logoValue ?? "").trim();
   if (logo) {
