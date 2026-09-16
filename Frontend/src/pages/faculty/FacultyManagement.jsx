@@ -8,6 +8,7 @@ import StatusBadge from '../../components/StatusBadge'
 import TablePagination from '../../components/TablePagination'
 import SearchableSelect from '../../components/SearchableSelect'
 import academicService from '../../services/academicService'
+import facultyService, { normalizeFaculty } from '../../services/facultyService'
 import './FacultyManagement.css'
 import './FacultyAttendance.css'
 
@@ -432,6 +433,14 @@ function FacultyAttendanceScreen({ faculty, onNotify }) {
   const [registerFilters, setRegisterFilters] = useState(defaultRegister)
   const [reportFilters, setReportFilters] = useState(() => ({ daily: defaultReport(), weekly: defaultReport(), monthly: defaultReport() }))
   const currentReport = reportFilters[reportType]
+  useEffect(() => {
+    let active = true
+    facultyService.getAttendance().then(rows => {
+      if (!active) return
+      setAttendanceRecords(mergeAttendanceRecords(faculty, rows.map(row => ({ ...row, id: row.attendanceId ?? row.id, facultyId: row.facultyId ?? row.employeeProfileId, date: row.date ?? row.attendanceDate, checkIn: row.checkIn ?? row.checkInTime, checkOut: row.checkOut ?? row.checkOutTime }))))
+    }).catch(error => onNotify?.(error.message || 'Could not load faculty attendance.'))
+    return () => { active = false }
+  }, [faculty, onNotify])
   useEffect(() => { writeStoredAttendanceRecords(attendanceRecords) }, [attendanceRecords])
 
   // The existing faculty.attendance collection is the only source. No generated
@@ -460,7 +469,7 @@ function FacultyAttendanceScreen({ faculty, onNotify }) {
     else if (tab === 'register') { setRegisterFilters(defaultRegister()); setRegisterPage(1) }
     else { setReportFilters(old => ({ ...old, [reportType]: defaultReport() })); setReportPage(1) }
   }
-  const saveAttendance = (values, options = {}) => {
+  const saveAttendance = async (values, options = {}) => {
     const { silent = false } = options
     const facultyId = String(values.facultyId)
     const date = String(values.date)
@@ -470,6 +479,15 @@ function FacultyAttendanceScreen({ faculty, onNotify }) {
     const normalizedCheckIn = isWorkedStatus ? (values.checkIn && values.checkIn !== '—' ? values.checkIn : DEFAULT_ATTENDANCE_WINDOW.checkIn) : '—'
     const normalizedCheckOut = isWorkedStatus ? (values.checkOut && values.checkOut !== '—' ? values.checkOut : DEFAULT_ATTENDANCE_WINDOW.checkOut) : '—'
     const normalizedValues = { ...values, status, checkIn: normalizedCheckIn, checkOut: normalizedCheckOut, remarks: values.remarks || '—' }
+    try {
+      const existingAttendanceId = values.attendanceId || (values.id && !String(values.id).includes(':') ? values.id : null)
+      const payload = { facultyId, date, attendanceDate: date, status, checkIn: values.checkIn || null, checkOut: values.checkOut || null, remarks: values.remarks || '' }
+      if (existingAttendanceId) await facultyService.updateAttendance(existingAttendanceId, payload)
+      else await facultyService.createAttendance(payload)
+    } catch (error) {
+      onNotify?.(error.message || 'Attendance could not be saved.')
+      return
+    }
     setAttendanceRecords(current => {
       const remaining = current.filter(record => !(String(record.facultyId) === facultyId && record.date === date))
       if (status === 'Not Marked') return remaining
@@ -934,10 +952,8 @@ function AssignmentDialog({ faculty, onClose, onAdd, onRemove, toast }) {
 export default function FacultyManagement() {
   const location = useLocation()
   const navigate = useNavigate()
-  const [faculty, setFaculty] = useState(() => {
-    const stored = readStoredFaculty()
-    return (stored.length ? stored : facultySeed).map(normalize)
-  })
+  const [faculty, setFaculty] = useState([])
+  const [loadingFaculty, setLoadingFaculty] = useState(true)
   const [query, setQuery] = useState('')
   const [filters, setFilters] = useState({ department: '', designation: '', employmentType: '', employmentStatus: '' })
   const [page, setPage] = useState(1)
@@ -947,8 +963,21 @@ export default function FacultyManagement() {
   const toastTimer = useRef(null)
   useEffect(() => () => clearTimeout(toastTimer.current), [])
   useEffect(() => {
-    try { localStorage.setItem(facultyStorageKey, JSON.stringify(faculty)) } catch {}
-  }, [faculty])
+    let active = true
+    Promise.all([facultyService.list(), facultyService.getSubjectAllocations().catch(() => [])])
+      .then(([members, allocations]) => {
+        if (!active) return
+        const allocationMap = new Map()
+        allocations.forEach(item => {
+          const facultyId = String(item.facultyId ?? item.employeeProfileId ?? '')
+          if (facultyId) allocationMap.set(facultyId, [...(allocationMap.get(facultyId) || []), { ...item, id: item.allocationId ?? item.id }])
+        })
+        setFaculty(members.map(member => normalize({ ...normalizeFaculty(member), assignments: allocationMap.get(String(member.id)) || member.assignments || [] })))
+      })
+      .catch(error => notify(error.message || 'Could not load faculty records.'))
+      .finally(() => { if (active) setLoadingFaculty(false) })
+    return () => { active = false }
+  }, [])
   useEffect(() => {
     let active = true
     academicService.getColleges(true).then(colleges => {
@@ -976,15 +1005,30 @@ export default function FacultyManagement() {
   const back = () => navigate('/faculty')
   const addFaculty = () => navigate('/faculty/new')
   const nextId = 'FAC' + String(Math.max(0, ...faculty.map(item => Number(item.employeeId.replace(/^FAC/, '')) || 0)) + 1).padStart(3, '0')
-  const save = data => {
-    setFaculty(rows => data.id ? rows.map(row => row.id === data.id ? { ...row, ...data, id: row.id, assignments: row.assignments } : row) : [{ ...data, id: crypto.randomUUID() }, ...rows])
-    notify(data.id ? 'Faculty updated successfully' : 'Faculty created successfully')
-    clear()
-    back()
+  const save = async data => {
+    try {
+      const saved = data.id ? await facultyService.update(data.id, data) : await facultyService.create(data)
+      setFaculty(rows => data.id ? rows.map(row => row.id === data.id ? normalize({ ...row, ...saved, assignments: row.assignments }) : row) : [normalize(saved), ...rows])
+      notify(data.id ? 'Faculty updated successfully' : 'Faculty created successfully')
+      clear()
+      back()
+    } catch (error) {
+      notify(error.message || 'Faculty could not be saved.')
+    }
   }
-  const changeAssignments = (transform, message) => {
-    setFaculty(rows => rows.map(row => row.id === assignmentId ? { ...row, assignments: transform(row.assignments || []) } : row))
-    notify(message)
+  const addAssignment = async item => {
+    try {
+      const saved = await facultyService.createSubjectAllocation({ ...item, facultyId: assignmentId })
+      setFaculty(rows => rows.map(row => row.id === assignmentId ? { ...row, assignments: [...(row.assignments || []), { ...saved, id: saved.allocationId ?? saved.id }] } : row))
+      notify('Academic assignment added')
+    } catch (error) { notify(error.message || 'Academic assignment could not be added.') }
+  }
+  const removeAssignment = async id => {
+    try {
+      await facultyService.deleteSubjectAllocation(id)
+      setFaculty(rows => rows.map(row => row.id === assignmentId ? { ...row, assignments: (row.assignments || []).filter(item => String(item.id) !== String(id)) } : row))
+      notify('Academic assignment removed')
+    } catch (error) { notify(error.message || 'Academic assignment could not be removed.') }
   }
   // Explicit local scope prevents ExportMenu's faculty filename alias using a server endpoint.
   const directoryActions = <><ExportMenu rows={filtered} columns={exportColumns} screen="faculty-local-directory" filename="faculty-roster" title="Faculty Directory" /><button className="fm-button" type="button" onClick={addFaculty}><FiPlus /> Add Faculty</button></>
@@ -1002,5 +1046,5 @@ export default function FacultyManagement() {
     const summary = [[FiUsers, 'Total Faculty', faculty.length], [FiCheckCircle, 'Working', faculty.filter(row => row.employmentStatus === 'Working').length], [FiClock, 'On Leave', faculty.filter(row => row.employmentStatus === 'On Leave').length], [FiBriefcase, 'Permanent', faculty.filter(row => row.employmentType === 'Permanent').length], [FiBookOpen, 'Contract / Visiting', faculty.filter(row => ['Contract', 'Visiting'].includes(row.employmentType)).length], [FiBookOpen, 'Assigned', faculty.filter(row => row.assignments?.length).length], [FiBookOpen, 'Unassigned', faculty.filter(row => !row.assignments?.length).length], [FiClock, 'Overloaded', faculty.filter(row => workload(row).status === 'Over Load').length]]
     content = <><header className="faculty-page-header"><div><p className="fm-eyebrow">ACADEMIC RESOURCES</p><h1>Faculty Management</h1><p>Manage faculty profiles, employment records, academic responsibilities and workload.</p></div><div className="fm-actions">{directoryActions}</div></header><div className="faculty-summary">{summary.map(([Icon, label, value]) => <div key={label}><Icon aria-hidden="true" /><span><small>{label}</small><strong>{value}</strong>{label === 'Academic Load' && <small>Assigned / Total</small>}</span></div>)}</div><section className="faculty-directory"><header className="fm-section-bar"><div><p className="fm-eyebrow">FACULTY DIRECTORY</p><p className="fm-muted">{filtered.length} faculty records</p></div></header><FilterPanel active={active} onClear={clear}><div className="faculty-filters"><label className="faculty-search"><FiSearch /><input aria-label="Search faculty" value={query} onChange={event => { setQuery(event.target.value); setPage(1) }} placeholder="Search faculty by name, employee ID, email or mobile" /></label>{[['department', 'Department', departments], ['designation', 'Designation', designations], ['employmentType', 'Employment Type', employmentTypes], ['employmentStatus', 'Employment Status', statuses]].map(([key, label, options]) => <SearchableSelect key={key} label={label} value={filters[key]} options={options} placeholder={label} onChange={value => { setFilters(old => ({ ...old, [key]: value })); setPage(1) }} />)}</div></FilterPanel>{filtered.length ? <><div className="faculty-table-wrap"><table><caption className="fm-sr-only">Faculty directory and academic workload</caption><thead><tr>{['Employee', 'Faculty', 'Department', 'Designation', 'Experience', 'Employment', 'Workload', 'Status', 'Actions'].map(label => <th scope="col" key={label}>{label}</th>)}</tr></thead><tbody>{filtered.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE).map(item => { const load = workload(item); return <tr key={item.id}><td><span className="fm-employee-id">{item.employeeId}</span></td><td><div className="fm-identity"><Avatar faculty={item} /><div><strong>{item.fullName}</strong><small>{item.email}</small></div></div></td><td className="fm-department">{item.department}</td><td>{item.designation}</td><td>{years(item.experience)}</td><td>{item.employmentType}</td><td><strong>{item.assignments?.length ? load.subjects + ' Subjects' : 'Not Assigned'}</strong><small>{load.hours} Hrs / Week · {load.status}</small></td><td><StatusBadge value={item.employmentStatus} /></td><td><div className="fm-actions">{[[FiEye, 'View faculty', () => navigate('/faculty/' + item.id)], [FiEdit2, 'Edit faculty', () => navigate('/faculty/' + item.id + '/edit')], [FiBriefcase, 'Academic Assignment', () => setAssignmentId(item.id)]].map(([Icon, label, action]) => <button type="button" className="fm-icon-button" title={label} aria-label={label + ': ' + item.fullName} key={label} onClick={action}><Icon /></button>)}</div></td></tr> })}</tbody></table></div><TablePagination currentPage={currentPage} totalPages={totalPages} onPageChange={setPage} /></> : <EmptyState title={faculty.length ? 'No faculty found' : 'No faculty records available'} description={faculty.length ? 'Try changing your search or filters.' : 'Add faculty members to start managing academic resources.'} action={faculty.length ? 'Clear Filters' : 'Add Faculty'} onAction={faculty.length ? clear : addFaculty} />}</section></>
   }
-  return <DashboardLayout><main className="faculty-management">{content}{assignedFaculty && <AssignmentDialog key={assignedFaculty.id} faculty={assignedFaculty} toast={toast} onClose={() => setAssignmentId(null)} onAdd={item => changeAssignments(rows => [...rows, item], 'Academic assignment added')} onRemove={id => changeAssignments(rows => rows.filter(row => row.id !== id), 'Assignment removed')} />}<div className={'fm-toast ' + (toast && !assignedFaculty ? 'visible' : '')} role="status" aria-live="polite">{toast && !assignedFaculty && <><FiCheckCircle />{toast}</>}</div></main></DashboardLayout>
+  return <DashboardLayout><main className="faculty-management">{loadingFaculty ? <section className="fm-panel">Loading faculty records…</section> : content}{assignedFaculty && <AssignmentDialog key={assignedFaculty.id} faculty={assignedFaculty} toast={toast} onClose={() => setAssignmentId(null)} onAdd={addAssignment} onRemove={removeAssignment} />}<div className={'fm-toast ' + (toast && !assignedFaculty ? 'visible' : '')} role="status" aria-live="polite">{toast && !assignedFaculty && <><FiCheckCircle />{toast}</>}</div></main></DashboardLayout>
 }

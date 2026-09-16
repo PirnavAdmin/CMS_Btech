@@ -130,6 +130,43 @@ export const API_ENDPOINTS = Object.freeze({
     personalInformation: (id) => endpoint(`/api/v1/students/${id}/profile/personal-information`), examResults: (id) => endpoint(`/api/v1/students/${id}/profile/exam-results`),
   }),
   studentProfiles: Object.freeze({ list: endpoint('/api/v1/student-profiles'), preview: (id) => endpoint(`/api/v1/student-profiles/${id}/preview`), update: (id) => endpoint(`/api/v1/student-profiles/${id}`), myProfile: endpoint('/api/StudentProfile/my-profile') }),
+  faculty: Object.freeze({
+    list: endpoint('/api/v1/faculty'),
+    create: endpoint('/api/v1/faculty'),
+    search: endpoint('/api/v1/faculty/search'),
+    detail: (id) => endpoint(`/api/v1/faculty/${id}`),
+    update: (id) => endpoint(`/api/v1/faculty/${id}`),
+    workload: (id) => endpoint(`/api/v1/faculty/${id}/workload`),
+    profilePhoto: (id) => endpoint(`/api/v1/faculty/${id}/profile-photo`),
+    status: (id) => endpoint(`/api/v1/faculty/${id}/status`),
+    statusHistory: (id) => endpoint(`/api/v1/faculty/${id}/status-history`),
+    summary: endpoint('/api/v1/faculty/summary'),
+  }),
+  facultyProfiles: Object.freeze({
+    detail: (facultyId) => endpoint(`/api/v1/faculty-profile/${facultyId}`),
+    create: (facultyId) => endpoint(`/api/v1/faculty-profile/${facultyId}`),
+    update: (facultyId) => endpoint(`/api/v1/faculty-profile/${facultyId}`),
+  }),
+  facultyDocuments: Object.freeze({
+    list: (facultyId) => endpoint(`/api/v1/faculty-documents/faculty/${facultyId}`),
+    upload: (facultyId) => endpoint(`/api/v1/faculty-documents/faculty/${facultyId}`),
+    detail: (documentId) => endpoint(`/api/v1/faculty-documents/${documentId}`),
+  }),
+  facultySubjectAllocations: Object.freeze({
+    list: endpoint('/api/v1/faculty-subject-allocations'),
+    create: endpoint('/api/v1/faculty-subject-allocations'),
+    detail: (allocationId) => endpoint(`/api/v1/faculty-subject-allocations/${allocationId}`),
+  }),
+  facultyAttendance: Object.freeze({
+    list: endpoint('/api/v1/faculty-attendance'),
+    create: endpoint('/api/v1/faculty-attendance'),
+    detail: (attendanceId) => endpoint(`/api/v1/faculty-attendance/${attendanceId}`),
+    update: (attendanceId) => endpoint(`/api/v1/faculty-attendance/${attendanceId}`),
+    checkIn: (attendanceId) => endpoint(`/api/v1/faculty-attendance/${attendanceId}/check-in`),
+    checkOut: (attendanceId) => endpoint(`/api/v1/faculty-attendance/${attendanceId}/check-out`),
+    reports: endpoint('/api/v1/faculty-attendance/reports'),
+    export: endpoint('/api/v1/faculty-attendance/export'),
+  }),
   promotions: Object.freeze({
     dashboard: endpoint('/api/v1/promotions/dashboard'), directory: endpoint('/api/v1/promotions/directory'), history: endpoint('/api/v1/promotions/history'),
     eligibleStudents: endpoint('/api/v1/promotions/eligible-students'), eligibility: (id) => endpoint(`/api/v1/promotions/student-eligibility/${id}`), eligibilityStatus: (id) => endpoint(`/api/v1/promotions/eligibility-status/${id}`),
@@ -649,6 +686,71 @@ export const normalizePreviousEducation = (source) => normalizeRecord(source)
 export const normalizeParent = (source) => normalizeRecord(source)
 export const normalizeDocument = (source) => normalizeRecord(source)
 export const normalizePromotion = (source) => normalizeRecord(source)
+
+// Faculty APIs deliberately keep payloads transparent: the faculty module has
+// several independently versioned DTOs (master, profile, attendance, and
+// allocations), so callers can pass the schema supplied by the API contract.
+const jsonRequest = (url, method, payload) => request(url, {
+  method,
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify(payload),
+})
+const multipartRequest = (url, form) => request(url, { method: 'POST', body: form })
+
+export const facultyApi = {
+  getAll: async (params) => listData(await request(withQuery(API_ENDPOINTS.faculty.list, params))),
+  search: async (params) => listData(await request(withQuery(API_ENDPOINTS.faculty.search, params))),
+  getById: async (facultyId) => normalizeRecord(await request(API_ENDPOINTS.faculty.detail(requiredId(facultyId, 'Faculty ID')))),
+  create: async (payload) => normalizeRecord(await jsonRequest(API_ENDPOINTS.faculty.create, 'POST', payload)),
+  update: async (facultyId, payload) => normalizeRecord(await jsonRequest(API_ENDPOINTS.faculty.update(requiredId(facultyId, 'Faculty ID')), 'PUT', payload)),
+  getWorkload: async (facultyId, params) => normalizeRecord(await request(withQuery(API_ENDPOINTS.faculty.workload(requiredId(facultyId, 'Faculty ID')), params))),
+  uploadProfilePhoto: async (facultyId, file, metadata = {}) => {
+    if (!(file instanceof File)) throw new Error('Choose a profile photo to upload.')
+    const form = new FormData()
+    form.append('file', file)
+    Object.entries(metadata).filter(([, value]) => value !== undefined && value !== null && value !== '').forEach(([key, value]) => form.append(key, String(value)))
+    return normalizeRecord(await multipartRequest(API_ENDPOINTS.faculty.profilePhoto(requiredId(facultyId, 'Faculty ID')), form))
+  },
+  updateStatus: async (facultyId, payload) => normalizeRecord(await jsonRequest(API_ENDPOINTS.faculty.status(requiredId(facultyId, 'Faculty ID')), 'PATCH', typeof payload === 'object' ? payload : { status: payload })),
+  getStatusHistory: async (facultyId, params) => listData(await request(withQuery(API_ENDPOINTS.faculty.statusHistory(requiredId(facultyId, 'Faculty ID')), params))),
+  getSummary: async (params) => normalizeRecord(await request(withQuery(API_ENDPOINTS.faculty.summary, params))),
+}
+
+export const facultyProfileApi = {
+  get: async (facultyId) => normalizeRecord(await request(API_ENDPOINTS.facultyProfiles.detail(requiredId(facultyId, 'Faculty ID')))),
+  create: async (facultyId, payload) => normalizeRecord(await jsonRequest(API_ENDPOINTS.facultyProfiles.create(requiredId(facultyId, 'Faculty ID')), 'POST', payload)),
+  update: async (facultyId, payload) => normalizeRecord(await jsonRequest(API_ENDPOINTS.facultyProfiles.update(requiredId(facultyId, 'Faculty ID')), 'PUT', payload)),
+}
+
+export const facultyDocumentApi = {
+  getAll: async (facultyId, params) => listData(await request(withQuery(API_ENDPOINTS.facultyDocuments.list(requiredId(facultyId, 'Faculty ID')), params))),
+  upload: async (facultyId, file, metadata = {}) => {
+    if (!(file instanceof File)) throw new Error('Choose a document to upload.')
+    const form = new FormData()
+    form.append('file', file)
+    Object.entries(metadata).filter(([, value]) => value !== undefined && value !== null && value !== '').forEach(([key, value]) => form.append(key, String(value)))
+    return normalizeRecord(await multipartRequest(API_ENDPOINTS.facultyDocuments.upload(requiredId(facultyId, 'Faculty ID')), form))
+  },
+  remove: async (facultyDocumentId) => request(API_ENDPOINTS.facultyDocuments.detail(requiredId(facultyDocumentId, 'Faculty document ID')), { method: 'DELETE' }),
+}
+
+export const facultySubjectAllocationApi = {
+  getAll: async (params) => listData(await request(withQuery(API_ENDPOINTS.facultySubjectAllocations.list, params))),
+  create: async (payload) => normalizeRecord(await jsonRequest(API_ENDPOINTS.facultySubjectAllocations.create, 'POST', payload)),
+  update: async (allocationId, payload) => normalizeRecord(await jsonRequest(API_ENDPOINTS.facultySubjectAllocations.detail(requiredId(allocationId, 'Allocation ID')), 'PUT', payload)),
+  remove: async (allocationId) => request(API_ENDPOINTS.facultySubjectAllocations.detail(requiredId(allocationId, 'Allocation ID')), { method: 'DELETE' }),
+}
+
+export const facultyAttendanceApi = {
+  getAll: async (params) => listData(await request(withQuery(API_ENDPOINTS.facultyAttendance.list, params))),
+  getById: async (attendanceId) => normalizeRecord(await request(API_ENDPOINTS.facultyAttendance.detail(requiredId(attendanceId, 'Attendance ID')))),
+  create: async (payload) => normalizeRecord(await jsonRequest(API_ENDPOINTS.facultyAttendance.create, 'POST', payload)),
+  update: async (attendanceId, payload) => normalizeRecord(await jsonRequest(API_ENDPOINTS.facultyAttendance.update(requiredId(attendanceId, 'Attendance ID')), 'PUT', payload)),
+  checkIn: async (attendanceId, payload = {}) => normalizeRecord(await jsonRequest(API_ENDPOINTS.facultyAttendance.checkIn(requiredId(attendanceId, 'Attendance ID')), 'POST', payload)),
+  checkOut: async (attendanceId, payload = {}) => normalizeRecord(await jsonRequest(API_ENDPOINTS.facultyAttendance.checkOut(requiredId(attendanceId, 'Attendance ID')), 'POST', payload)),
+  getReports: async (params) => listData(await request(withQuery(API_ENDPOINTS.facultyAttendance.reports, params))),
+  export: async (params) => blobRequest(withQuery(API_ENDPOINTS.facultyAttendance.export, params)),
+}
 
 const addressText = (address) => {
   if (typeof address === 'string') return address.trim()

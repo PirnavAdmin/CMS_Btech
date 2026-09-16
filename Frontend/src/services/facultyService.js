@@ -1,80 +1,48 @@
-import { sectionApi } from '../api/apiEndpoints'
-import facultyAllocationService from './facultyAllocationService'
+import { facultyApi, facultyAttendanceApi, facultyDocumentApi, facultyProfileApi, facultySubjectAllocationApi } from '../api/apiEndpoints'
 
-const valueOf = (source, keys, fallback = '') => keys.map((key) => source?.[key]).find((value) => value !== undefined && value !== null && String(value).trim() !== '') ?? fallback
+const first = (source, keys, fallback = '') => keys.map(key => source?.[key]).find(value => value !== undefined && value !== null && String(value).trim() !== '') ?? fallback
+const list = value => Array.isArray(value) ? value : []
 
-const normalizeCandidate = (candidate, index = 0) => ({
-  id: valueOf(candidate, ['employeeProfileId', 'facultyId', 'id'], `candidate-${index}`),
-  employeeProfileId: valueOf(candidate, ['employeeProfileId', 'facultyId', 'id']),
-  employeeCode: valueOf(candidate, ['employeeCode', 'employeeId', 'employeeNumber'], 'Not assigned'),
-  fullName: valueOf(candidate, ['fullName', 'name', 'facultyName'], 'Faculty Member'),
-  email: valueOf(candidate, ['email', 'officialEmail', 'workEmail']),
-  mobile: valueOf(candidate, ['mobile', 'phone', 'mobileNumber']),
-  departmentId: valueOf(candidate, ['departmentId', 'department?.id']),
-  department: valueOf(candidate, ['departmentName', 'department']),
-  designation: valueOf(candidate, ['designation', 'title'], 'Faculty'),
-  qualification: valueOf(candidate, ['qualification', 'highestQualification']),
-  experience: valueOf(candidate, ['experience', 'teachingExperience']),
-  status: valueOf(candidate, ['status', 'employmentStatus'], 'Active'),
+// The UI historically used employeeId/employmentStatus while the API may use
+// employeeCode/status. Normalising at this boundary keeps pages API-agnostic.
+export const normalizeFaculty = (source = {}) => ({
+  ...source,
+  id: String(first(source, ['facultyId', 'id', 'employeeProfileId'], '')),
+  facultyId: first(source, ['facultyId', 'id', 'employeeProfileId'], ''),
+  employeeId: first(source, ['employeeId', 'employeeCode', 'employeeNumber'], ''),
+  fullName: first(source, ['fullName', 'name', 'facultyName'], ''),
+  email: first(source, ['email', 'officialEmail', 'workEmail'], ''),
+  mobile: first(source, ['mobile', 'phone', 'mobileNumber'], ''),
+  department: first(source, ['departmentName', 'department'], ''),
+  departmentId: first(source, ['departmentId'], ''),
+  designation: first(source, ['designation', 'title'], ''),
+  qualification: first(source, ['qualification', 'highestQualification'], ''),
+  experience: first(source, ['experience', 'teachingExperience'], ''),
+  employmentType: first(source, ['employmentType', 'appointmentType'], ''),
+  employmentStatus: first(source, ['employmentStatus', 'status'], 'Working'),
+  employeeCategory: first(source, ['employeeCategory', 'category'], 'Teaching'),
+  assignments: list(source.assignments ?? source.subjectAllocations),
 })
 
-const normalizeSection = (section) => ({
-  id: valueOf(section, ['sectionId', 'id']),
-  name: valueOf(section, ['sectionName', 'name', 'sectionCode']),
-  code: valueOf(section, ['sectionCode', 'code']),
-  academicYearId: valueOf(section, ['academicYearId']),
-  academicYear: valueOf(section, ['academicYearName', 'academicYear']),
-  courseId: valueOf(section, ['courseId']),
-  course: valueOf(section, ['courseName', 'course']),
-  branchId: valueOf(section, ['branchId']),
-  branch: valueOf(section, ['branchName', 'branch']),
-  semesterId: valueOf(section, ['semesterId']),
-  semester: valueOf(section, ['semesterName', 'semester']),
-  facultyAdvisorEmployeeProfileId: valueOf(section, ['facultyAdvisorEmployeeProfileId']),
-  advisor: valueOf(section, ['advisor', 'facultyAdvisorName']),
-  status: valueOf(section, ['status'], 'Active'),
-})
+const facultyPayload = faculty => ({ ...faculty, facultyId: faculty.facultyId || faculty.id })
 
 export const facultyService = {
-  async list() {
-    const sections = (await sectionApi.getAll()).map(normalizeSection).filter((section) => section.id)
-    const results = await Promise.allSettled(sections.map((section) => facultyAllocationService.listCandidates(section.id)))
-    const faculty = new Map()
-    results.forEach((result) => {
-      if (result.status !== 'fulfilled') return
-      result.value.forEach((candidate, index) => {
-        const normalized = normalizeCandidate(candidate, index)
-        if (normalized.employeeProfileId) faculty.set(String(normalized.employeeProfileId), normalized)
-      })
-    })
-    return { faculty: [...faculty.values()], sections }
-  },
-
-  async getById(id) {
-    const { faculty, sections } = await this.list()
-    const profile = faculty.find((item) => String(item.id) === String(id) || String(item.employeeProfileId) === String(id))
-    return profile ? { ...profile, allocations: sections.filter((section) => String(section.facultyAdvisorEmployeeProfileId) === String(id)) } : null
-  },
-
-  async assignAdvisor(sectionId, facultyId) {
-    return facultyAllocationService.assignAdvisor(sectionId, facultyId)
-  },
-
-  async removeAdvisor(sectionId) {
-    return facultyAllocationService.removeAdvisor(sectionId)
-  },
-
-  unsupported(operation) {
-    throw new Error(`${operation} is not available because the backend exposes no faculty CRUD or subject-allocation endpoint yet.`)
-  },
+  list: async params => (await facultyApi.getAll(params)).map(normalizeFaculty),
+  search: async params => (await facultyApi.search(params)).map(normalizeFaculty),
+  getById: async id => normalizeFaculty(await facultyApi.getById(id)),
+  create: async payload => normalizeFaculty(await facultyApi.create(facultyPayload(payload))),
+  update: async (id, payload) => normalizeFaculty(await facultyApi.update(id, facultyPayload(payload))),
+  getSummary: facultyApi.getSummary, getWorkload: facultyApi.getWorkload,
+  updateStatus: facultyApi.updateStatus, getStatusHistory: facultyApi.getStatusHistory, uploadProfilePhoto: facultyApi.uploadProfilePhoto,
+  getProfile: facultyProfileApi.get, createProfile: facultyProfileApi.create, updateProfile: facultyProfileApi.update,
+  getDocuments: facultyDocumentApi.getAll, uploadDocument: facultyDocumentApi.upload, deleteDocument: facultyDocumentApi.remove,
+  getSubjectAllocations: facultySubjectAllocationApi.getAll, createSubjectAllocation: facultySubjectAllocationApi.create,
+  updateSubjectAllocation: facultySubjectAllocationApi.update, deleteSubjectAllocation: facultySubjectAllocationApi.remove,
+  getAttendance: facultyAttendanceApi.getAll, getAttendanceById: facultyAttendanceApi.getById,
+  createAttendance: facultyAttendanceApi.create, updateAttendance: facultyAttendanceApi.update,
+  checkIn: facultyAttendanceApi.checkIn, checkOut: facultyAttendanceApi.checkOut,
+  getAttendanceReports: facultyAttendanceApi.getReports, exportAttendance: facultyAttendanceApi.export,
 }
 
-export const facultyCapability = Object.freeze({
-  directory: true,
-  details: true,
-  advisorAssignment: true,
-  facultyCrud: false,
-  documents: false,
-  subjectAllocation: false,
-  workloadEndpoint: false,
-})
+export const facultyCapability = Object.freeze({ directory: true, details: true, facultyCrud: true, documents: true, subjectAllocation: true, workloadEndpoint: true, attendance: true })
+export default facultyService
