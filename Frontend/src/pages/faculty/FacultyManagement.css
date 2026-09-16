@@ -1147,12 +1147,16 @@
   min-height: 0;
   border-radius: 14px;
   overflow: hidden;
+  border-color: #d5e2ed;
+  box-shadow: 0 5px 16px rgba(18, 55, 88, .06);
 }
 .faculty-management .faculty-summary > div {
-  min-height: 58px;
+  position: relative;
+  min-height: 76px;
   justify-content: center;
-  padding: 7px 5px;
+  padding: 10px 8px 9px;
   text-align: center;
+  border-top: 3px solid transparent;
 }
 .faculty-management .faculty-summary > div > svg {
   display: none;
@@ -1164,17 +1168,26 @@
 }
 .faculty-management .faculty-summary small {
   margin: 0;
-  font-size: 8px;
+  max-width: 100%;
+  overflow: visible;
+  font-size: 9px;
   font-weight: 800;
-  letter-spacing: .1em;
+  line-height: 1.25;
+  letter-spacing: .075em;
   text-transform: uppercase;
+  text-overflow: clip;
+  white-space: normal;
 }
 .faculty-management .faculty-summary strong {
   margin: 0;
   color: var(--text-primary);
-  font-size: 18px;
+  font-size: 21px;
   line-height: 1;
 }
+.faculty-management .faculty-summary > div:nth-child(1) { border-top-color: var(--brand); }
+.faculty-management .faculty-summary > div:nth-child(2) { border-top-color: var(--success, #138a67); }
+.faculty-management .faculty-summary > div:nth-child(3) { border-top-color: var(--danger, #c53c49); }
+.faculty-management .faculty-summary > div:nth-child(4) { border-top-color: #2563a8; }
 .faculty-management .faculty-summary > div:nth-child(2) strong {
   color: var(--success, #138a67);
 }
@@ -1254,10 +1267,11 @@
     grid-row: 3;
     width: 100%;
   }
-  .faculty-management > .faculty-summary {
+  .faculty-management > .faculty-header-summary {
     grid-column: 2;
     grid-row: 1;
     width: 100%;
+    justify-self: end;
   }
   .faculty-management > .faculty-page-header > .fm-actions {
     position: absolute;

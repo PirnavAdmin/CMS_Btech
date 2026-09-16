@@ -164,8 +164,33 @@ export const API_ENDPOINTS = Object.freeze({
     update: (attendanceId) => endpoint(`/api/v1/faculty-attendance/${attendanceId}`),
     checkIn: (attendanceId) => endpoint(`/api/v1/faculty-attendance/${attendanceId}/check-in`),
     checkOut: (attendanceId) => endpoint(`/api/v1/faculty-attendance/${attendanceId}/check-out`),
+    daily: endpoint('/api/v1/faculty-attendance/daily'),
+    bulk: endpoint('/api/v1/faculty-attendance/bulk'),
+    weekly: endpoint('/api/v1/faculty-attendance/reports/weekly'),
+    monthly: endpoint('/api/v1/faculty-attendance/reports/monthly'),
     reports: endpoint('/api/v1/faculty-attendance/reports'),
     export: endpoint('/api/v1/faculty-attendance/export'),
+  }),
+  facultyLeave: Object.freeze({
+    requests: endpoint('/api/v1/faculty-leave/requests'),
+    request: id => endpoint('/api/v1/faculty-leave/requests/' + id),
+    approve: id => endpoint('/api/v1/faculty-leave/requests/' + id + '/approve'),
+    reject: id => endpoint('/api/v1/faculty-leave/requests/' + id + '/reject'),
+    history: endpoint('/api/v1/faculty-leave/history'),
+    balances: endpoint('/api/v1/faculty-leave/balances'),
+    types: endpoint('/api/v1/faculty-leave/types'),
+    type: id => endpoint('/api/v1/faculty-leave/types/' + id),
+    policies: endpoint('/api/v1/faculty-leave/policies'),
+    policy: id => endpoint('/api/v1/faculty-leave/policies/' + id),
+    activate: id => endpoint('/api/v1/faculty-leave/policies/' + id + '/activate'),
+  }),
+  facultyPayroll: Object.freeze({
+    list: endpoint('/api/v1/faculty-payroll'),
+    detail: id => endpoint('/api/v1/faculty-payroll/' + id),
+    salaries: endpoint('/api/v1/faculty-payroll/salary-records'),
+    payslips: endpoint('/api/v1/faculty-payroll/payslips'),
+    hold: id => endpoint('/api/v1/faculty-payroll/' + id + '/hold'),
+    export: endpoint('/api/v1/faculty-payroll/export'),
   }),
   studentAttendance: Object.freeze({
     list: endpoint('/api/v1/attendance'),
@@ -298,7 +323,9 @@ const request = async (url, options = {}, retried = false, bypassDedupe = false)
       422: 'Some submitted values are invalid.',
       500: 'Something went wrong while completing your request. Please try again.',
     }[response.status] || 'The request could not be completed.'
-    throw new Error(validationMessage(body) || fallback)
+    const error = new Error(validationMessage(body) || fallback)
+    error.status = response.status
+    throw error
   }
   return body
 }
@@ -752,6 +779,10 @@ export const facultySubjectAllocationApi = {
 }
 
 export const facultyAttendanceApi = {
+  getDaily: async params => listData(await request(withQuery(API_ENDPOINTS.facultyAttendance.daily, params))),
+  bulk: async payload => normalizeRecord(await jsonRequest(API_ENDPOINTS.facultyAttendance.bulk, 'POST', payload)),
+  getWeekly: async params => listData(await request(withQuery(API_ENDPOINTS.facultyAttendance.weekly, params))),
+  getMonthly: async params => listData(await request(withQuery(API_ENDPOINTS.facultyAttendance.monthly, params))),
   getAll: async (params) => listData(await request(withQuery(API_ENDPOINTS.facultyAttendance.list, params))),
   getById: async (attendanceId) => normalizeRecord(await request(API_ENDPOINTS.facultyAttendance.detail(requiredId(attendanceId, 'Attendance ID')))),
   create: async (payload) => normalizeRecord(await jsonRequest(API_ENDPOINTS.facultyAttendance.create, 'POST', payload)),
@@ -975,3 +1006,34 @@ export async function lookupIndianPincode(pincode) {
 }
 
 export default API_ENDPOINTS
+
+export const facultyLeaveApi = {
+  getRequests: async params => listData(await request(withQuery(API_ENDPOINTS.facultyLeave.requests, params))),
+  createRequest: async payload => normalizeRecord(await jsonRequest(API_ENDPOINTS.facultyLeave.requests, 'POST', payload)),
+  getRequest: async id => normalizeRecord(await request(API_ENDPOINTS.facultyLeave.request(requiredId(id, 'Request ID')))),
+  approve: async id => request(API_ENDPOINTS.facultyLeave.approve(requiredId(id, 'Request ID')), { method: 'PUT' }),
+  reject: async (id, rejectionReason) => jsonRequest(API_ENDPOINTS.facultyLeave.reject(requiredId(id, 'Request ID')), 'PUT', { rejectionReason }),
+  getHistory: async params => listData(await request(withQuery(API_ENDPOINTS.facultyLeave.history, params))),
+  getBalances: async params => listData(await request(withQuery(API_ENDPOINTS.facultyLeave.balances, params))),
+  getTypes: async params => listData(await request(withQuery(API_ENDPOINTS.facultyLeave.types, params))),
+  createType: async payload => normalizeRecord(await jsonRequest(API_ENDPOINTS.facultyLeave.types, 'POST', payload)),
+  updateType: async (id, payload) => normalizeRecord(await jsonRequest(API_ENDPOINTS.facultyLeave.type(requiredId(id, 'Leave type ID')), 'PUT', payload)),
+  getPolicies: async params => listData(await request(withQuery(API_ENDPOINTS.facultyLeave.policies, params))),
+  createPolicy: async payload => normalizeRecord(await jsonRequest(API_ENDPOINTS.facultyLeave.policies, 'POST', payload)),
+  updatePolicy: async (id, payload) => normalizeRecord(await jsonRequest(API_ENDPOINTS.facultyLeave.policy(requiredId(id, 'Policy ID')), 'PUT', payload)),
+  activatePolicy: async id => request(API_ENDPOINTS.facultyLeave.activate(requiredId(id, 'Policy ID')), { method: 'POST' }),
+}
+export const facultyPayrollApi = {
+  getAll: async params => listData(await request(withQuery(API_ENDPOINTS.facultyPayroll.list, params))),
+  getById: async id => normalizeRecord(await request(API_ENDPOINTS.facultyPayroll.detail(requiredId(id, 'Payroll ID')))),
+  getSalaryRecords: async params => listData(await request(withQuery(API_ENDPOINTS.facultyPayroll.salaries, params))),
+  getPayslips: async params => listData(await request(withQuery(API_ENDPOINTS.facultyPayroll.payslips, params))),
+  hold: async (id, reason) => jsonRequest(API_ENDPOINTS.facultyPayroll.hold(requiredId(id, 'Payroll ID')), 'PUT', { reason }),
+  export: async params => blobRequest(withQuery(API_ENDPOINTS.facultyPayroll.export, params)),
+}
+
+export const facultyMasterApi = {
+  getSemesters: async () => listData(await request(endpoint('/api/semester'))),
+  getColleges: async () => listData(await request(endpoint('/api/v1/colleges'))),
+  getSubjects: async params => listData(await request(withQuery(endpoint('/api/v1/subjects'), params))),
+}
