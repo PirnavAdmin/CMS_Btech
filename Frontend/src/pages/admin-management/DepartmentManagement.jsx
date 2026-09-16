@@ -236,10 +236,14 @@ export default function DepartmentManagement() {
     const nextStatus = item.status === 'Active' ? 'Inactive' : 'Active';
     if (nextStatus === 'Inactive') {
       try {
-        const students = await studentApi.getAll();
-        const associated = students.filter((student) => String(student.departmentId ?? student.department?.id ?? student.academic?.departmentId ?? student.academicInformation?.departmentId ?? '') === String(item.id));
+        const associated = await studentApi.getAll({ DepartmentId: Number(item.id) });
         if (associated.length > 0) {
-          showDeactivationBlocked(`Cannot deactivate ${item.name}. ${associated.length} student${associated.length === 1 ? '' : 's'} are associated with this department.`);
+          showDeactivationBlocked({
+            message: `Cannot deactivate ${item.name}. ${associated.length} student${associated.length === 1 ? '' : 's'} are associated with this department.`,
+            count: associated.length,
+            name: item.name,
+            entity: 'department',
+          });
           return;
         }
       } catch (requestError) {
@@ -267,7 +271,13 @@ export default function DepartmentManagement() {
       if (selected?.id === item.id) setSelected(updated);
       setPendingStatus(null);
     } catch (requestError) {
-      setError(apiError(requestError, 'Unable to update department status. Please try again.'));
+      const message = apiError(requestError, 'Unable to update department status. Please try again.');
+      setPendingStatus(null);
+      if (/dependent|associated|reassign|cannot deactivate/i.test(message)) {
+        showDeactivationBlocked(`Cannot deactivate ${item.name}. Active dependent records exist. Reassign or deactivate them first.`);
+      } else {
+        setError(message);
+      }
     } finally {
       setIsStatusSaving(false);
     }

@@ -1,7 +1,7 @@
 import { newestFirst } from '../../../utils/newestFirst'
 import useToastState from '../../../hooks/useToastState'
 import { isApiResult } from '../../../utils/exportProvenance'
-import { approvedStudentProfiles } from '../../../utils/approvedStudentProfiles'
+import { approvedStudentProfiles, isApprovedAdmission } from '../../../utils/approvedStudentProfiles'
 import ExportMenu, { PrintDetailsButton } from '../../../components/ExportMenu'
 import { profileColumns } from '../../../utils/exportColumns'
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -28,8 +28,6 @@ import StatusBadge from "../../../components/StatusBadge";
 import DashboardLayout from "../../../layouts/DashboardLayout";
 import FilterPanel from "../../../components/FilterPanel";
 import CompactSummary from "../../../components/CompactSummary";
-import { hasRole } from "../../../auth/auth";
-import { ROLES } from "../../../auth/roles";
 import {
   studentDocumentApi,
   studentPreviousEducationApi,
@@ -589,13 +587,17 @@ function Empty({ title, children }) {
 
 
 export default function StudentProfile() {
-  const canEdit = hasRole([ROLES.ADMIN]);
+  // Student Profiles is an administrative workspace. Keep the edit action
+  // available to every user who can open this screen; the API remains the
+  // source of truth for save authorization.
+  const canEdit = true;
   const [students, setStudents] = useState([]),
     [loading, setLoading] = useState(true),
     [error, setError] = useToastState("", 'error'),
     [, setNotice] = useToastState("", 'success'),
     [query, setQuery] = useState(""),
     [filters, setFilters] = useState({
+      college: "",
       department: "",
       course: "",
       branch: "",
@@ -651,6 +653,25 @@ export default function StudentProfile() {
         throw new Error('Unable to verify admission approvals. Please refresh the student list.');
       }
       rows = approvedStudentProfiles(rows, admissions.value);
+      const existingAdmissions = new Set(rows.map(row => String(row.admissionId ?? row.application?.admissionId ?? row.admission?.admissionId ?? '')));
+      const existingStudents = new Set(rows.map(row => String(row.studentId ?? row.id ?? '')));
+      const missingApprovedAdmissions = admissions.value.filter(admission => {
+        if (!isApprovedAdmission(admission.status ?? admission.currentStatus ?? admission.admissionStatus ?? admission.applicationStatus)) return false;
+        const admissionId = String(admission.admissionId ?? admission.id ?? '');
+        const studentId = String(admission.studentId ?? admission.student?.studentId ?? admission.student?.id ?? '');
+        return !existingAdmissions.has(admissionId) && (!studentId || !existingStudents.has(studentId));
+      });
+      rows = [
+        ...rows,
+        ...missingApprovedAdmissions.map(admission => profileFromApi({
+          ...admission,
+          id: admission.studentId ?? admission.student?.studentId ?? admission.student?.id ?? admission.admissionId ?? admission.id,
+          studentId: admission.studentId ?? admission.student?.studentId ?? admission.student?.id,
+          admissionId: admission.admissionId ?? admission.id,
+          status: 'APPROVED',
+          exportVerified: isApiResult(admissions.value),
+        })),
+      ];
       setStudents(newestFirst('student-profiles', rows));
       if (directory.status === "rejected" && !rows.length)
         setError(
@@ -669,7 +690,7 @@ export default function StudentProfile() {
     [
       ...new Set(
         students
-          .map((x) => (key === "status" ? status(x.status) : x.academic?.[key]))
+          .map((x) => key === "status" ? status(x.status) : key === "college" ? x.admission?.college : x.academic?.[key])
           .filter(Boolean),
       ),
     ].sort();
@@ -694,7 +715,7 @@ export default function StudentProfile() {
           Object.entries(filters).every(
             ([key, selected]) =>
               !selected ||
-              (key === "status" ? status(x.status) : a[key]) === selected,
+              (key === "status" ? status(x.status) : key === "college" ? x.admission?.college : a[key]) === selected,
           )
         );
       }),
@@ -878,6 +899,7 @@ export default function StudentProfile() {
               onClear={() => {
                 setQuery("");
                 setFilters({
+                  college: "",
                   department: "",
                   course: "",
                   branch: "",
@@ -900,6 +922,7 @@ export default function StudentProfile() {
               </div>
               <div className="sp-filters">
                 {[
+                  ["college", "College"],
                   ["department", "Department"],
                   ["course", "Course"],
                   ["branch", "Branch"],
@@ -947,6 +970,7 @@ export default function StudentProfile() {
                 <thead>
                   <tr>
                     <th style={{ minWidth: "220px" }}>Student</th>
+                    <th style={{ minWidth: "180px" }}>College</th>
                     <th style={{ minWidth: "240px" }}>Academic details</th>
                     <th style={{ minWidth: "180px" }}>Contact</th>
                     <th className="table-center" style={{ minWidth: "120px", width: "120px" }}>Status</th>
@@ -979,8 +1003,22 @@ export default function StudentProfile() {
                               <small className="table-cell-truncate" title={`Admission No: ${value(app.admissionNumber)}`}>
                                 Admission No: {value(app.admissionNumber)}
                               </small>
+                              <button
+                                type="button"
+                                className="table-action-btn action-edit"
+                                style={{ alignSelf: "flex-start", marginTop: "6px" }}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  beginEdit(student);
+                                }}
+                              >
+                                <FiEdit2 aria-hidden="true" /> Edit
+                              </button>
                             </div>
                           </div>
+                        </td>
+                        <td>
+                          <span className="table-cell-truncate" title={value(student.admission?.college)}>{value(student.admission?.college)}</span>
                         </td>
                         <td>
                           <div className="table-cell-group" style={{ minWidth: 0, display: "flex", flexDirection: "column", gap: "2px" }}>

@@ -1,5 +1,5 @@
 const key = value => value == null ? '' : String(value).trim()
-const approved = value => ['APPROVED', 'APPROVE', 'ENROLLED'].includes(key(value).toUpperCase())
+export const isApprovedAdmission = value => ['APPROVED', 'APPROVE', 'ENROLLED'].includes(key(value).toUpperCase())
 
 export function approvedStudentProfiles(profiles, admissions) {
   const byAdmission = new Map()
@@ -13,6 +13,6 @@ export function approvedStudentProfiles(profiles, admissions) {
   return profiles.filter(profile => {
     const admissionId = key(profile.admissionId ?? profile.application?.admissionId ?? profile.admission?.admissionId)
     const admission = byAdmission.get(admissionId) ?? byStudent.get(key(profile.studentId ?? profile.id))
-    return admission && approved(admission.currentStatus ?? admission.admissionStatus ?? admission.applicationStatus ?? admission.status)
+    return admission && isApprovedAdmission(admission.currentStatus ?? admission.admissionStatus ?? admission.applicationStatus ?? admission.status)
   })
 }
