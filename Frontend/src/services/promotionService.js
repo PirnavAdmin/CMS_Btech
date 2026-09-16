@@ -2,26 +2,6 @@ import { studentPromotionApi } from '../api/apiEndpoints'
 import studentService from './studentService'
 import eventBus, { ERP_EVENTS } from './eventBus'
 
-const PROMOTION_HISTORY_KEY = 'pirnav-promotion-history-v1'
-
-const readPromotionHistory = () => {
-  try {
-    return JSON.parse(localStorage.getItem(PROMOTION_HISTORY_KEY)) || []
-  } catch {
-    return []
-  }
-}
-
-const savePromotionRecord = (record) => {
-  try {
-    const list = readPromotionHistory()
-    const updated = [record, ...list]
-    localStorage.setItem(PROMOTION_HISTORY_KEY, JSON.stringify(updated))
-  } catch (err) {
-    console.warn('Failed to save local promotion history:', err)
-  }
-}
-
 class PromotionService {
   async getDashboard() {
     try {
@@ -32,23 +12,7 @@ class PromotionService {
   }
 
   async getHistory(params = {}) {
-    let apiList = []
-    try {
-      apiList = await studentPromotionApi.getHistory(params)
-    } catch {
-      apiList = []
-    }
-    const localList = readPromotionHistory()
-    const combined = [...(Array.isArray(apiList) ? apiList : []), ...localList]
-    
-    // Deduplicate by promotionId or studentId + timestamp
-    const seen = new Set()
-    return combined.filter((item) => {
-      const key = item.promotionId || `${item.studentId}_${item.promotionDate || item.date || item.id}`
-      if (seen.has(key)) return false
-      seen.add(key)
-      return true
-    })
+    return studentPromotionApi.getHistory(params)
   }
 
   async promoteStudent({
@@ -119,7 +83,7 @@ class PromotionService {
     }
 
     const historyEntry = {
-      promotionId: `PROM-${Date.now()}-${studentId}`,
+      promotionId: backendResult?.promotionId || backendResult?.id,
       studentId,
       studentName,
       registrationNumber,
@@ -132,10 +96,8 @@ class PromotionService {
       promotionDate,
       status: isDegreeCompletion ? 'Graduated' : 'Promoted',
       remarks,
-      ...(backendResult || {}),
+      ...backendResult,
     }
-
-    savePromotionRecord(historyEntry)
 
     eventBus.emit(ERP_EVENTS.PROMOTION_EXECUTED, historyEntry)
     eventBus.emit(ERP_EVENTS.STUDENT_UPDATED, { studentId })

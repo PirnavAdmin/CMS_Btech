@@ -176,10 +176,14 @@ function CourseList() {
   const toggleStatus = async course => {
     setStatusError(''); setStatusNotice('')
     if (course.status !== 'Active') { setPendingStatus({ course, nextStatus: 'Active' }); return }
-    setImpactChecking(true); setCourseImpact(null); setStatusNotice('Checking course dependencies...', 'info')
+    setImpactChecking(true); setCourseImpact(null)
     try {
       const impact = await checkCourseImpact(course)
       setCourseImpact(impact)
+      if (impact.count > 0) {
+        showDeactivationBlocked(`Cannot deactivate ${course.name}. ${impact.count} student${impact.count === 1 ? '' : 's'} are associated with this course.`)
+        return
+      }
       setPendingStatus({ course, nextStatus: 'Inactive' })
     } catch (error) {
       showDeactivationBlocked(apiError(error, 'Unable to verify associated students. The course was not deactivated.'))
@@ -278,7 +282,7 @@ function CourseList() {
           <div className="course-empty"><strong>No courses match your filters.</strong><button className="cm-button" onClick={clearFilters}>Clear Filters</button></div>
         )}
     </section>
-    {pendingStatus && <StatusConfirmDialog entity="Course" name={`${pendingStatus.course.name} (${pendingStatus.course.code})`} nextStatus={pendingStatus.nextStatus} onCancel={() => { if (!isStatusSaving) { setPendingStatus(null); setCourseImpact(null) } }} onConfirm={confirmStatusChange} busy={isStatusSaving || impactChecking} error={statusError} details={pendingStatus.nextStatus === 'Inactive' && courseImpact?.state === 'known' ? [['Associated Students', `${courseImpact.count} Students`]] : []} description={pendingStatus.nextStatus === 'Active' ? 'This course will be marked active.' : courseImpact?.state === 'known' && courseImpact.count === 0 ? 'No students are currently associated with this course. This course will be marked inactive for operations that exclude inactive courses.' : courseImpact?.state === 'known' ? `This course currently has ${courseImpact.count} associated students. Existing student records will not be deleted by this action.` : 'The associated student count could not be determined from the available data. Existing student or academic records may remain available according to current system rules.'} confirmLabel={pendingStatus.nextStatus === 'Inactive' ? 'Deactivate Course' : 'Activate Course'} />}
+    {pendingStatus && <StatusConfirmDialog entity="Course" name={`${pendingStatus.course.name} (${pendingStatus.course.code})`} nextStatus={pendingStatus.nextStatus} onCancel={() => { if (!isStatusSaving) { setPendingStatus(null); setCourseImpact(null) } }} onConfirm={confirmStatusChange} busy={isStatusSaving || impactChecking} blocked={Boolean(pendingStatus.blocked)} error={statusError} details={pendingStatus.nextStatus === 'Inactive' && courseImpact?.state === 'known' ? [['Associated Students', `${courseImpact.count} student${courseImpact.count === 1 ? '' : 's'}`]] : []} description={pendingStatus.blocked ? 'Deactivate is unavailable until all associated students are moved or removed from this course.' : pendingStatus.nextStatus === 'Active' ? 'This course will be marked active.' : 'No students are currently associated with this course. This course will be marked inactive for operations that exclude inactive courses.'} confirmLabel={pendingStatus.nextStatus === 'Inactive' ? 'Deactivate Course' : 'Activate Course'} />}
   </Page>
 }
 

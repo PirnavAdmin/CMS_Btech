@@ -1,25 +1,7 @@
+import { resultsApi } from '../api/apiEndpoints'
 import studentService from './studentService'
 import eventBus, { ERP_EVENTS } from './eventBus'
 
-const RESULTS_STORAGE_KEY = 'pirnav-results-records-v1'
-
-const readResultsRecords = () => {
-  try {
-    return JSON.parse(localStorage.getItem(RESULTS_STORAGE_KEY)) || []
-  } catch {
-    return []
-  }
-}
-
-const saveResultsRecords = (records) => {
-  try {
-    localStorage.setItem(RESULTS_STORAGE_KEY, JSON.stringify(records))
-  } catch (err) {
-    console.warn('Failed to save results records:', err)
-  }
-}
-
-// Grading Scale Calculator (UGC/AICTE 10-point scale)
 export const calculateGrade = (totalMarks) => {
   const marks = Number(totalMarks) || 0
   if (marks >= 90) return { grade: 'O', gradePoint: 10, status: 'Passed' }
@@ -31,164 +13,46 @@ export const calculateGrade = (totalMarks) => {
   return { grade: 'F', gradePoint: 0, status: 'Failed' }
 }
 
+const clean = value => String(value ?? '').trim()
+const same = (left, right) => clean(left).toLowerCase() === clean(right).toLowerCase()
+
 class ResultsService {
-  // Query existing results sheets matching filters
-  async getResults(filter = {}) {
-    const all = readResultsRecords()
-    return all.filter((r) => {
-      if (filter.academicYearId && String(r.academicYearId) !== String(filter.academicYearId)) return false
-      if (filter.courseId && String(r.courseId) !== String(filter.courseId)) return false
-      if (filter.branchId && String(r.branchId) !== String(filter.branchId)) return false
-      if (filter.semesterId && String(r.semesterId) !== String(filter.semesterId)) return false
-      if (filter.sectionId && String(r.sectionId) !== String(filter.sectionId)) return false
-      if (filter.examType && r.examType !== filter.examType) return false
-      if (filter.subjectCode && r.subjectCode !== filter.subjectCode) return false
-      return true
+  async getResults(filter = {}) { return resultsApi.list(filter) }
+
+  async getStudentsForResults(scope) {
+    const students = await studentService.getStudentsByScope(scope)
+    return students.map((student) => {
+      const personal = student.personal || {}
+      const academic = student.academic || {}
+      return { studentId: student.studentId || student.id, id: student.studentId || student.id, name: personal.fullName || student.name || student.studentName || '', rollNumber: academic.rollNumber || student.rollNumber || student.registrationNumber || '', internalMarks: '', externalMarks: '', totalMarks: '', grade: '', status: 'Pending' }
     })
   }
 
-  // Load students ready for marks entry
-  async getStudentsForResults({ academicYearId, courseId, branchId, semesterId, sectionId, course, branch, semester, section }) {
-    const students = await studentService.getStudentsByScope({
-      academicYearId,
-      courseId,
-      branchId,
-      semesterId,
-      sectionId,
-      course,
-      branch,
-      semester,
-      section,
-    })
-
-    return students.map((s) => {
-      const p = s.personal || {}
-      const a = s.academic || {}
-      return {
-        studentId: s.studentId || s.id,
-        id: s.studentId || s.id,
-        name: p.fullName || s.name || s.studentName || 'Student',
-        rollNumber: a.rollNumber || s.rollNumber || s.registrationNumber || '',
-        internalMarks: '',
-        externalMarks: '',
-        totalMarks: '',
-        grade: '',
-        status: 'Pending',
-      }
-    })
-  }
-
-  // Save marks / results sheet
-  async recordResults({
-    academicYearId,
-    courseId,
-    branchId,
-    semesterId,
-    sectionId,
-    academicYear,
-    course,
-    branch,
-    semester,
-    section,
-    examType = 'Regular Semester End Exam',
-    subjectCode = 'CS801',
-    subjectName = 'Distributed Systems',
-    maxInternal = 30,
-    maxExternal = 70,
-    credits = 4,
-    records = [], // [{ studentId, name, rollNumber, internalMarks, externalMarks, totalMarks, grade, gradePoint, status }]
-  }) {
-    const sheetId = `RES-${academicYearId || 'AY'}-${courseId || 'C'}-${branchId || 'B'}-${semesterId || 'S'}-${sectionId || 'SEC'}-${subjectCode}`
-
-    const enrichedRecords = records.map((rec) => {
-      const internal = Number(rec.internalMarks) || 0
-      const external = Number(rec.externalMarks) || 0
+  async recordResults(sheet) {
+    const required = ['academicYearId', 'courseId', 'branchId', 'semesterId', 'sectionId', 'examType', 'subjectCode', 'subjectName']
+    const missing = required.find(key => !clean(sheet[key]))
+    if (missing) throw new Error(`Complete ${missing.replace(/Id$/, '').replace(/([A-Z])/g, ' $1').toLowerCase()} before publishing results.`)
+    const maxInternal = Number(sheet.maxInternal)
+    const maxExternal = Number(sheet.maxExternal)
+    if (!(maxInternal > 0) || !(maxExternal > 0) || !(Number(sheet.credits) > 0)) throw new Error('Maximum marks and credits must be positive numbers.')
+    if (!Array.isArray(sheet.records) || !sheet.records.length) throw new Error('Load students and enter marks before publishing results.')
+    const records = sheet.records.map((record) => {
+      const internal = Number(record.internalMarks)
+      const external = Number(record.externalMarks)
+      if (!clean(record.studentId) || !Number.isFinite(internal) || !Number.isFinite(external) || internal < 0 || external < 0 || internal > maxInternal || external > maxExternal) throw new Error('Enter valid marks for every student; marks cannot exceed their maximum.')
       const total = internal + external
-      const { grade, gradePoint, status } = calculateGrade(total)
-      return {
-        ...rec,
-        internalMarks: internal,
-        externalMarks: external,
-        totalMarks: total,
-        grade: rec.grade || grade,
-        gradePoint: rec.gradePoint !== undefined ? rec.gradePoint : gradePoint,
-        status: rec.status || status,
-        credits,
-      }
+      return { ...record, internalMarks: internal, externalMarks: external, totalMarks: total, ...calculateGrade(total), credits: Number(sheet.credits) }
     })
-
-    const existing = readResultsRecords()
-    const resultSheet = {
-      sheetId,
-      academicYearId,
-      courseId,
-      branchId,
-      semesterId,
-      sectionId,
-      academicYear,
-      course,
-      branch,
-      semester,
-      section,
-      examType,
-      subjectCode,
-      subjectName,
-      maxInternal,
-      maxExternal,
-      credits,
-      totalStudents: enrichedRecords.length,
-      passedCount: enrichedRecords.filter((r) => r.status === 'Passed').length,
-      failedCount: enrichedRecords.filter((r) => r.status === 'Failed').length,
-      records: enrichedRecords,
-      updatedAt: new Date().toISOString(),
-    }
-
-    const index = existing.findIndex((r) => r.sheetId === sheetId)
-    let updated
-    if (index >= 0) {
-      updated = existing.map((r, i) => (i === index ? resultSheet : r))
-    } else {
-      updated = [resultSheet, ...existing]
-    }
-
-    saveResultsRecords(updated)
-    eventBus.emit(ERP_EVENTS.RESULTS_RECORDED, resultSheet)
-    return resultSheet
+    const existing = await this.getResults({ academicYearId: sheet.academicYearId, courseId: sheet.courseId, branchId: sheet.branchId, semesterId: sheet.semesterId, sectionId: sheet.sectionId, examType: sheet.examType, subjectCode: sheet.subjectCode })
+    if (existing.some(item => same(item.subjectCode, sheet.subjectCode) && same(item.examType, sheet.examType))) throw new Error('Results for this section, exam, and subject already exist. Use the existing result sheet to correct marks.')
+    const saved = await resultsApi.create({ ...sheet, records, totalStudents: records.length, passedCount: records.filter(record => record.status === 'Passed').length, failedCount: records.filter(record => record.status === 'Failed').length })
+    eventBus.emit(ERP_EVENTS.RESULTS_RECORDED, saved)
+    return saved
   }
 
-  // Get student academic transcript across semesters
   async getStudentTranscript(studentId) {
-    const all = readResultsRecords()
-    const studentRecords = []
-
-    all.forEach((sheet) => {
-      const rec = (sheet.records || []).find((r) => String(r.studentId) === String(studentId))
-      if (rec) {
-        studentRecords.push({
-          semester: sheet.semester,
-          subjectCode: sheet.subjectCode,
-          subjectName: sheet.subjectName,
-          credits: sheet.credits,
-          internalMarks: rec.internalMarks,
-          externalMarks: rec.externalMarks,
-          totalMarks: rec.totalMarks,
-          grade: rec.grade,
-          gradePoint: rec.gradePoint,
-          status: rec.status,
-        })
-      }
-    })
-
-    const totalCredits = studentRecords.reduce((sum, r) => sum + (r.credits || 0), 0)
-    const weightedPoints = studentRecords.reduce((sum, r) => sum + ((r.gradePoint || 0) * (r.credits || 0)), 0)
-    const cgpa = totalCredits > 0 ? (weightedPoints / totalCredits).toFixed(2) : '8.25'
-
-    return {
-      studentId,
-      totalCredits,
-      cgpa,
-      courses: studentRecords,
-    }
+    if (!clean(studentId)) throw new Error('Select a student to view a transcript.')
+    return resultsApi.getTranscript(studentId)
   }
 }
 

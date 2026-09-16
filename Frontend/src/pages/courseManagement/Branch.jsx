@@ -190,6 +190,10 @@ function List() {
       try {
         const students = await studentApi.getAll({ BranchId: Number(branch.id) })
         studentCount = students.length
+        if (studentCount > 0) {
+          showDeactivationBlocked(`Cannot deactivate ${branch.branchName}. ${studentCount} student${studentCount === 1 ? '' : 's'} are associated with this branch.`)
+          return
+        }
       } catch (requestError) {
         showDeactivationBlocked(requestError?.message || 'Unable to verify associated students. The branch was not deactivated.')
         return

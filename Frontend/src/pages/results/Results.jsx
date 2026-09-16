@@ -75,12 +75,12 @@ export default function Results() {
     branchId: '',
     semesterId: '',
     sectionId: '',
-    examType: 'End Semester Regular Exam',
-    subjectCode: 'CS801',
-    subjectName: 'Distributed Systems & Cloud Computing',
-    credits: 4,
-    maxInternal: 30,
-    maxExternal: 70,
+    examType: '',
+    subjectCode: '',
+    subjectName: '',
+    credits: '',
+    maxInternal: '',
+    maxExternal: '',
   })
   const [entryStudents, setEntryStudents] = useState([])
   const [loadingStudents, setLoadingStudents] = useState(false)
@@ -199,6 +199,10 @@ export default function Results() {
 
   // Save Marks & Publish Results
   const handleSaveResults = async () => {
+    if (!entryScope.academicYearId || !entryScope.courseId || !entryScope.branchId || !entryScope.semesterId || !entryScope.sectionId || !entryScope.examType || !entryScope.subjectCode.trim() || !entryScope.subjectName.trim()) {
+      notify('Select the complete class scope and exam details before publishing results.', 'warning')
+      return
+    }
     if (!entryStudents.length) {
       notify('No student marks to save.', 'warning')
       return
@@ -218,11 +222,11 @@ export default function Results() {
         branchId: entryScope.branchId,
         semesterId: entryScope.semesterId,
         sectionId: entryScope.sectionId,
-        academicYear: selectedYear?.name || '2026-2027',
-        course: selectedCourse?.name || 'B.Tech',
-        branch: selectedBranch?.name || 'Computer Science & Engineering',
-        semester: selectedSemester?.semesterName || 'Semester 1',
-        section: selectedSection?.name || 'Section A',
+        academicYear: selectedYear?.name || '',
+        course: selectedCourse?.name || '',
+        branch: selectedBranch?.name || '',
+        semester: selectedSemester?.semesterName || '',
+        section: selectedSection?.name || '',
         examType: entryScope.examType,
         subjectCode: entryScope.subjectCode,
         subjectName: entryScope.subjectName,

@@ -574,6 +574,10 @@ export default function CollegeInstitutionManagement({ initialView = 'list' }) {
     if (nextStatus === 'inactive') {
       try {
         const count = await loadCollegeImpact(college.id)
+        if (count > 0) {
+          showDeactivationBlocked(`Cannot deactivate ${college.name}. ${count} student${count === 1 ? '' : 's'} are associated with this college.`)
+          return
+        }
         setCollegeImpact({ state: 'known', count })
       } catch (error) {
         showDeactivationBlocked(error.message)
@@ -1341,7 +1345,7 @@ export default function CollegeInstitutionManagement({ initialView = 'list' }) {
         ]}
         description={pendingStatus.nextStatus === 'active'
           ? 'This college will become active again for operations permitted for active colleges.'
-          : 'This college has no associated students and will be marked inactive.'} />}
+          : 'No students are associated with this college. It will be marked inactive.'} />}
     </DashboardLayout>
   )
 }

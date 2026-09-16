@@ -15,6 +15,9 @@ import './FacultyAttendance.css'
 const PAGE_SIZE = 5
 const WORKLOAD_LIMITS = { under: 12, normal: 20 }
 const departments = ['Computer Science & Engineering', 'Electronics & Communication', 'Electrical & Electronics', 'Mechanical Engineering', 'Civil Engineering']
+// Kept as an empty export for older screens; faculty data must come from the API.
+export const readStoredFaculty = () => []
+export const readStoredAttendanceRecords = () => []
 export const facultySeed = [['FAC001','Dr. Anitha Sharma','Professor','Ph.D','14 Years','9876543210','anitha.sharma@pirnav.edu.in','Permanent','Working'],['FAC002','Dr. Rakesh Kumar','Associate Professor','Ph.D','11 Years','9876543211','rakesh.kumar@pirnav.edu.in','Permanent','Working'],['FAC003','Prof. Meera Nair','Assistant Professor','M.Tech','8 Years','9876543212','meera.nair@pirnav.edu.in','Permanent','Working'],['FAC004','Dr. Vikram Rao','Professor','Ph.D','18 Years','9876543213','vikram.rao@pirnav.edu.in','Permanent','On Leave'],['FAC005','Ms. Priya Menon','Assistant Professor','M.Tech','6 Years','9876543214','priya.menon@pirnav.edu.in','Contract','Working'],['FAC006','Mr. Arjun Reddy','Senior Lecturer','M.Tech','10 Years','9876543215','arjun.reddy@pirnav.edu.in','Permanent','Working'],['FAC007','Dr. Sneha Iyer','Associate Professor','Ph.D','12 Years','9876543216','sneha.iyer@pirnav.edu.in','Permanent','Working'],['FAC008','Mr. Karthik Bose','Lab Instructor','M.Sc','5 Years','9876543217','karthik.bose@pirnav.edu.in','Contract','Resigned'],['FAC009','Ms. Divya Joseph','Assistant Professor','M.Tech','7 Years','9876543218','divya.joseph@pirnav.edu.in','Permanent','Working'],['FAC010','Dr. Nitin Kapoor','Professor','Ph.D','20 Years','9876543219','nitin.kapoor@pirnav.edu.in','Permanent','Working'],['FAC011','Ms. Farah Khan','Visiting Faculty','MCA','4 Years','9876543220','farah.khan@pirnav.edu.in','Visiting','Working'],['FAC012','Mr. Suresh Patil','Lecturer','M.Tech','9 Years','9876543221','suresh.patil@pirnav.edu.in','Permanent','Retired']].map((row, index) => ({ id: `faculty-${index + 1}`, employeeId: row[0], fullName: row[1], designation: row[2], qualification: row[3], experience: row[4], mobile: row[5], email: row[6], employmentType: row[7], employmentStatus: row[8], employeeCategory: 'Teaching', department: departments[index % departments.length] }))
 const statuses = ['Working', 'On Leave', 'Resigned', 'Retired']
 const designations = ['Professor', 'Associate Professor', 'Assistant Professor', 'Senior Lecturer', 'Lecturer', 'Lab Instructor', 'Visiting Faculty']
@@ -22,16 +25,6 @@ const employmentTypes = ['Permanent', 'Contract', 'Visiting', 'Guest']
 const ATTENDANCE_STATUSES = ['Present', 'Absent', 'Late', 'Half Day', 'On Leave', 'LOP', 'Not Marked']
 const ATTENDANCE_PERCENTAGE_NOTE = 'Attendance percentage is calculated using marked attendance records only.'
 const DEFAULT_ATTENDANCE_WINDOW = { checkIn: '09:00', checkOut: '17:00' }
-const attendanceStorageKey = 'faculty-attendance-local-records-v1'
-export const facultyStorageKey = 'faculty-master-local-records-v1'
-export const readStoredFaculty = () => {
-  try {
-    const rows = JSON.parse(localStorage.getItem(facultyStorageKey) || '[]')
-    return Array.isArray(rows) ? rows : []
-  } catch {
-    return []
-  }
-}
 const formatMinutes = minutes => {
   const total = Number(minutes) || 0
   const hours = Math.floor(total / 60)
@@ -48,19 +41,6 @@ const normalizeAttendanceDate = value => {
   const [year, month, day] = clean.split('-')
   if (!year || !month || !day) return clean
   return `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`
-}
-export const readStoredAttendanceRecords = () => {
-  try {
-    const raw = localStorage.getItem(attendanceStorageKey)
-    return raw ? JSON.parse(raw) : []
-  } catch {
-    return []
-  }
-}
-const writeStoredAttendanceRecords = records => {
-  try {
-    localStorage.setItem(attendanceStorageKey, JSON.stringify(records))
-  } catch {}
 }
 const mergeAttendanceRecords = (faculty, records = []) => {
   const validFaculty = new Set((faculty || []).map(item => String(item.id)))
@@ -421,7 +401,7 @@ function FacultyAttendanceScreen({ faculty, onNotify }) {
   const [bulkRemarks, setBulkRemarks] = useState('')
   const [attendanceSuccess, setAttendanceSuccess] = useState(null)
   const [selectedFacultyIds, setSelectedFacultyIds] = useState([])
-  const [attendanceRecords, setAttendanceRecords] = useState(() => mergeAttendanceRecords(faculty, readStoredAttendanceRecords()))
+  const [attendanceRecords, setAttendanceRecords] = useState([])
   const [dailyPage, setDailyPage] = useState(1)
   const [registerPage, setRegisterPage] = useState(1)
   const [reportPage, setReportPage] = useState(1)
@@ -440,7 +420,6 @@ function FacultyAttendanceScreen({ faculty, onNotify }) {
     }).catch(error => onNotify?.(error.message || 'Could not load faculty attendance.'))
     return () => { active = false }
   }, [faculty, onNotify])
-  useEffect(() => { writeStoredAttendanceRecords(attendanceRecords) }, [attendanceRecords])
 
   // The existing faculty.attendance collection is the only source. No generated
   // Daily rows are persisted or fed into historical reports.

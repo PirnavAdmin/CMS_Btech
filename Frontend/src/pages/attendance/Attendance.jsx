@@ -79,8 +79,8 @@ export default function Attendance() {
     semesterId: '',
     sectionId: '',
     date: new Date().toISOString().slice(0, 10),
-    subject: 'Data Structures & Algorithms',
-    faculty: 'Dr. S. K. Raman',
+    subject: '',
+    faculty: '',
   })
   const [markingStudents, setMarkingStudents] = useState([])
   const [loadingStudents, setLoadingStudents] = useState(false)
@@ -182,6 +182,10 @@ export default function Attendance() {
 
   // Save session
   const handleSaveAttendance = async () => {
+    if (!takeScope.academicYearId || !takeScope.courseId || !takeScope.branchId || !takeScope.semesterId || !takeScope.sectionId || !takeScope.subject.trim() || !takeScope.faculty.trim()) {
+      notify('Select the complete class scope, subject, and faculty before saving attendance.', 'warning')
+      return
+    }
     if (!markingStudents.length) {
       notify('No students to record attendance for.', 'warning')
       return
@@ -201,11 +205,11 @@ export default function Attendance() {
         branchId: takeScope.branchId,
         semesterId: takeScope.semesterId,
         sectionId: takeScope.sectionId,
-        academicYear: selectedYear?.name || '2026-2027',
-        course: selectedCourse?.name || 'B.Tech',
-        branch: selectedBranch?.name || 'Computer Science & Engineering',
-        semester: selectedSemester?.semesterName || 'Semester 1',
-        section: selectedSection?.name || 'Section A',
+        academicYear: selectedYear?.name || '',
+        course: selectedCourse?.name || '',
+        branch: selectedBranch?.name || '',
+        semester: selectedSemester?.semesterName || '',
+        section: selectedSection?.name || '',
         date: takeScope.date,
         subject: takeScope.subject,
         faculty: takeScope.faculty,
@@ -244,13 +248,13 @@ export default function Attendance() {
     const totalSessions = sessions.length
     const totalPresent = sessions.reduce((acc, s) => acc + (s.presentCount || 0), 0)
     const totalHeadcount = sessions.reduce((acc, s) => acc + (s.totalStudents || 0), 0)
-    const avgPercentage = totalHeadcount > 0 ? Math.round((totalPresent / totalHeadcount) * 100) : 92
+    const avgPercentage = totalHeadcount > 0 ? Math.round((totalPresent / totalHeadcount) * 100) : 0
 
     return {
       totalSessions,
       totalPresent,
       avgPercentage: `${avgPercentage}%`,
-      shortageCount: allProfiles.filter(p => (p.attendanceRate || 82) < 75).length,
+      shortageCount: allProfiles.filter(p => Number(p.attendanceRate) < 75).length,
     }
   }, [sessions, allProfiles])
 

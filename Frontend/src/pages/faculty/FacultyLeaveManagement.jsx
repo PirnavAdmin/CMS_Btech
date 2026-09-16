@@ -63,7 +63,7 @@ const policyScopesOverlap = (left, right) => {
 const exportColumns = [{ label: 'Employee ID', value: 'employeeId' }, { label: 'Employee', value: 'employee' }, { label: 'Department', value: 'department' }, { label: 'Status', value: 'status' }]
 
 export default function FacultyLeaveManagement() {
-  const faculty = readStoredFaculty().length ? readStoredFaculty() : facultySeed
+  const faculty = readStoredFaculty()
   const [tab, setTab] = useState(TABS[0])
   const [leaveTypes, setLeaveTypes] = useState(() => STANDARD_LEAVE_TYPES.map(item => ({ ...item })))
   const [policies, setPolicies] = useState(() => INITIAL_LEAVE_POLICIES.map(item => ({ ...item, entitlements: item.entitlements.map(rule => ({ ...rule })) })))

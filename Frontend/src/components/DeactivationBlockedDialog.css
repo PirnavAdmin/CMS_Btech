@@ -1,6 +1,38 @@
-.deactivation-blocked-backdrop{position:fixed;inset:0;z-index:1000;display:grid;place-items:center;padding:20px;background:rgba(4,21,35,.54);backdrop-filter:blur(3px)}
-.deactivation-blocked-dialog{position:relative;width:min(100%,580px);padding:36px;border:1px solid var(--border);border-radius:16px;background:var(--surface-raised);box-shadow:var(--shadow-md);text-align:center}
-.deactivation-blocked-icon{display:grid;width:64px;height:64px;margin:0 auto 20px;place-items:center;border-radius:50%;color:var(--danger);background:color-mix(in srgb,var(--danger) 12%,var(--surface))}.deactivation-blocked-icon svg{width:29px;height:29px}
-.deactivation-blocked-dialog h2{margin:0;color:var(--text-primary);font-size:24px}.deactivation-blocked-dialog p{margin:13px 0 22px;color:var(--text-secondary);font-size:15px;font-weight:650;line-height:1.55}
-.deactivation-blocked-count{display:grid;place-items:center;gap:4px;margin:0 0 24px;padding:14px 16px;border-top:1px solid var(--border);border-bottom:1px solid var(--border);color:var(--text-primary);background:var(--surface-soft);text-align:center}.deactivation-blocked-count strong{font-size:22px;line-height:1;color:var(--danger)}.deactivation-blocked-count span{font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.05em;color:var(--text-muted)}
-.deactivation-blocked-close{position:absolute;top:17px;right:17px;display:grid;width:42px;height:42px;place-items:center;border:1px solid var(--border);border-radius:8px;color:var(--text-muted);background:var(--surface);cursor:pointer}.deactivation-blocked-button{min-width:170px;min-height:44px;padding:0 20px;border:0;border-radius:8px;color:#fff;background:var(--brand);font-size:14px;font-weight:750;cursor:pointer}
+.deactivation-blocked-backdrop {
+  position: fixed; inset: 0; z-index: 100000; display: grid; place-items: center; padding: 24px;
+  background: rgb(9 28 45 / 56%); backdrop-filter: blur(6px); animation: deactivation-backdrop-in 160ms ease-out both;
+}
+.deactivation-blocked-dialog {
+  position: relative; width: min(100%, 500px); box-sizing: border-box; padding: 28px 32px 26px;
+  border: 1px solid color-mix(in srgb, var(--border) 78%, var(--brand)); border-radius: 18px;
+  color: var(--text-primary); background: var(--surface-raised); box-shadow: 0 28px 72px rgb(5 25 43 / 32%);
+  text-align: center; animation: deactivation-dialog-in 180ms ease-out both;
+}
+.deactivation-blocked-icon { display: grid; width: 56px; height: 56px; margin: 0 auto 16px; place-items: center; border-radius: 50%; color: #b54708; background: #fff0d1; }
+.deactivation-blocked-icon svg { width: 25px; height: 25px; stroke-width: 2.5; }
+.deactivation-blocked-dialog h2 { margin: 0; color: var(--text-primary); font-size: clamp(20px, 2vw, 24px); line-height: 1.25; letter-spacing: -.02em; }
+.deactivation-blocked-dialog p { max-width: 420px; margin: 13px auto 18px; color: var(--text-secondary); font-size: 14px; font-weight: 600; line-height: 1.55; }
+.deactivation-blocked-dialog p strong { color: var(--text-primary); font-weight: 800; }
+.deactivation-blocked-count { margin: 0; padding: 13px 0; border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); text-align: center; }
+.deactivation-blocked-count dt { color: var(--text-muted); font-size: 13px; font-weight: 800; letter-spacing: .01em; }
+.deactivation-blocked-count dd { margin: 5px 0 0; color: var(--text-primary); font-size: 17px; font-weight: 800; }
+.deactivation-blocked-help { margin: 18px auto 20px !important; color: var(--text-secondary) !important; }
+.deactivation-blocked-close, .deactivation-blocked-button {
+  border: 1px solid var(--brand); color: #fff; background: var(--brand); font: inherit; font-weight: 800; cursor: pointer;
+  transition: background .16s ease, border-color .16s ease, transform .16s ease, box-shadow .16s ease;
+}
+.deactivation-blocked-close { position: absolute; top: 18px; right: 18px; display: grid; width: 42px; height: 42px; padding: 0; place-items: center; border-radius: 9px; }
+.deactivation-blocked-close svg { width: 20px; height: 20px; stroke-width: 2.8; }
+.deactivation-blocked-button { min-width: 150px; min-height: 42px; padding: 0 22px; border-radius: 8px; font-size: 14px; }
+.deactivation-blocked-close:hover, .deactivation-blocked-button:hover { border-color: var(--brand-hover); background: var(--brand-hover); box-shadow: 0 7px 16px color-mix(in srgb, var(--brand) 28%, transparent); transform: translateY(-1px); }
+.deactivation-blocked-close:focus-visible, .deactivation-blocked-button:focus-visible { outline: 3px solid color-mix(in srgb, var(--brand) 32%, transparent); outline-offset: 3px; }
+@keyframes deactivation-backdrop-in { from { opacity: 0; } to { opacity: 1; } }
+@keyframes deactivation-dialog-in { from { opacity: 0; transform: translateY(12px) scale(.98); } to { opacity: 1; transform: translateY(0) scale(1); } }
+@media (max-width: 600px) {
+  .deactivation-blocked-backdrop { padding: 14px; }
+  .deactivation-blocked-dialog { padding: 72px 24px 28px; border-radius: 14px; }
+  .deactivation-blocked-dialog p { font-size: 14px; }
+  .deactivation-blocked-icon { width: 62px; height: 62px; margin-bottom: 18px; }
+  .deactivation-blocked-button { width: 100%; }
+}
+:root[data-theme="dark"] .deactivation-blocked-icon { color: #ffd28b; background: #583812; }
