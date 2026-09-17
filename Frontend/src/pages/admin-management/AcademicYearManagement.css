@@ -1,4 +1,46 @@
 .ay{display:grid;width:100%;min-width:0;gap:12px;color:var(--text-primary)}
+
+/* Status filters share the directory's blue accent and wrap on narrow screens. */
+.ay .erp-filter-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+.ay .erp-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 38px;
+  padding: 8px 18px;
+  border: 1px solid var(--border-strong);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--text-secondary);
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.4;
+  cursor: pointer;
+  transition: background-color .15s ease, border-color .15s ease, color .15s ease;
+}
+.ay .erp-pill:hover {
+  border-color: var(--brand);
+  background: var(--brand-soft);
+  color: var(--brand);
+}
+.ay .erp-pill.active {
+  border-color: var(--brand);
+  background: var(--brand);
+  color: #fff;
+}
+.ay .erp-pill:focus-visible {
+  outline: 2px solid var(--brand);
+  outline-offset: 3px;
+}
+@media (prefers-reduced-motion: reduce) {
+  .ay .erp-pill { transition: none; }
+}
 .ay-details-view{gap:12px!important;margin-top:0!important}
 .ay-details-view .cm-profile-top-bar{justify-content:flex-end;min-height:36px}
 .ay-details-view .cm-profile-card{margin-top:0}

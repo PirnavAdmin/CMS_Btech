@@ -407,12 +407,13 @@ export default function AcademicYear() {
                       placeholder="Search year title or status..."
                     />
                   </label>
-                  <div className="erp-filter-buttons">
+                  <div className="erp-filter-buttons" role="group" aria-label="Academic year status">
                     {['ALL', ...states].map((x) => (
                       <button
                         key={x}
                         type="button"
                         className={`erp-pill ${filter === x ? 'active' : ''}`}
+                        aria-pressed={filter === x}
                         onClick={() => setFilter(x)}
                       >
                         {x === 'ALL' ? 'All' : x.charAt(0) + x.slice(1).toLowerCase()}
