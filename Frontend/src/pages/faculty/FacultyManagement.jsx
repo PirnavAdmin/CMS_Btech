@@ -12,7 +12,7 @@ import { academicYearApi, branchApi, courseApi, departmentApi, facultyMasterApi,
 import { attendancePayload, requiredNumber } from '../../services/facultyContracts'
 import { downloadServerExport } from '../../utils/exportUtils'
 import { FacultyDocuments, FacultyStatus, ApiAssignmentDialog } from './FacultyApiPanels'
-import facultyService, { normalizeFaculty } from '../../services/facultyService'
+import facultyService, { normalizeFaculty, mergeFacultyData } from '../../services/facultyService'
 import './FacultyManagement.css'
 import './FacultyAttendance.css'
 
@@ -351,10 +351,12 @@ function validateFaculty(data, rows) {
   if (['Others', 'Other'].includes(data.employeeCategory) && !String(data.employeeCategoryOther || '').trim()) errors.employeeCategoryOther = 'Specify the employee category.'
   if (!data.employeeId || rows.some(row => row.id !== data.id && (row.employeeId || row.facultyCode) === data.employeeId)) errors.employeeId = 'Faculty Code must be unique.'
   if (!data.fullName?.trim()) errors.fullName = 'Faculty full name is required.'
+  else if (data.fullName.trim().length < 2 || !/^[\p{L}\p{M} .?'-]+$/u.test(data.fullName.trim())) errors.fullName = 'Enter a valid name using letters (at least 2 characters).'
+  for (const key of ['collegeId', 'departmentId']) if (!Number.isSafeInteger(Number(data[key])) || Number(data[key]) <= 0) errors[key] = 'Select a valid ' + (key === 'collegeId' ? 'college.' : 'department.')
   for (const key of ['email', 'personalEmail']) if (data[key] && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(data[key].trim())) errors[key] = 'Enter a valid email address.'
-  if (rows.some(row => row.id !== data.id && row.email.trim().toLowerCase() === data.email?.trim().toLowerCase())) errors.email = 'A faculty member with this email already exists.'
+  if (rows.some(row => row.id !== data.id && String(row.email || '').trim().toLowerCase() === data.email?.trim().toLowerCase())) errors.email = 'A faculty member with this email already exists.'
   for (const key of ['mobile', 'alternateMobile', 'emergencyMobile']) if (data[key] && !/^\d{10}$/.test(String(data[key]).trim())) errors[key] = 'Enter exactly 10 numeric digits.'
-  for (const key of ['dob', 'joiningDate']) if (data[key] && (!/^\d{4}-\d{2}-\d{2}$/.test(data[key]) || !Number.isFinite(Date.parse(data[key])) || data[key] > today())) errors[key] = 'Enter a valid date that is not in the future.'
+  for (const key of ['dob', 'joiningDate']) if (data[key] && (!/^\d{4}-\d{2}-\d{2}$/.test(data[key]) || !Number.isFinite(Date.parse(data[key])) || new Date(data[key]).toISOString().slice(0, 10) !== data[key] || data[key] > today())) errors[key] = 'Enter a valid date that is not in the future.'
   if (data.dob && data.joiningDate && data.joiningDate <= data.dob) errors.joiningDate = 'Joining date must be after date of birth.'
   for (const key of experienceKeys) if (data[key] !== '' && (!Number.isFinite(Number(data[key])) || Number(data[key]) < 0 || Number(data[key]) > 80)) errors[key] = 'Enter experience between 0 and 80 years.'
   if (data.passingYear && (!/^\d{4}$/.test(data.passingYear) || Number(data.passingYear) < 1950 || Number(data.passingYear) > new Date().getFullYear())) errors.passingYear = 'Enter a four-digit year from 1950 to the current year.'
@@ -366,8 +368,9 @@ function validateFaculty(data, rows) {
 }
 
 function Avatar({ faculty, large = false }) {
+  const [failedPhoto, setFailedPhoto] = useState('')
   const initials = (faculty.fullName || '').replace(/^(dr|prof|mr|mrs|ms)\.?\s+/i, '').split(/\s+/).filter(Boolean).map(part => part[0]).filter((_, i, all) => i === 0 || i === all.length - 1).join('').slice(0, 2) || 'FM'
-  return <span className={'fm-avatar ' + (large ? 'fm-avatar-large' : '')}>{faculty.photo ? <img src={faculty.photo} alt={(faculty.fullName || 'Faculty') + ' profile'} /> : initials}</span>
+  return <span className={'fm-avatar ' + (large ? 'fm-avatar-large' : '')}>{faculty.photo && failedPhoto !== faculty.photo ? <img onError={() => setFailedPhoto(faculty.photo)} src={faculty.photo} alt={(faculty.fullName || 'Faculty') + ' profile'} /> : initials}</span>
 }
 function EmptyState({ title, description, action, onAction }) {
   return <div className="fm-empty"><FiUsers aria-hidden="true" /><h3>{title}</h3>{description && <p>{description}</p>}{action && <button type="button" className="fm-button secondary" onClick={onAction}>{action}</button>}</div>
@@ -820,11 +823,11 @@ function FacultyAttendanceScreen({ faculty, onNotify }) {
 }
 function ProfileSections({ data, collegeOptions = [], departmentOptions = [] }) {
   const getFieldValue = (key, value) => {
-    if (key === 'collegeName') {
+    if (key === 'collegeName' || key === 'collegeId') {
       const match = collegeOptions.find(c => String(c.value) === String(value))
       return match ? match.label : value || '—'
     }
-    if (key === 'department') {
+    if (key === 'department' || key === 'departmentId') {
       const match = departmentOptions.find(d => String(d.value) === String(value))
       return match ? match.label : value || '—'
     }
@@ -1001,7 +1004,7 @@ function FacultyForm({ initial, faculty, onSave, onCancel, collegeOptions, depar
     event.preventDefault()
     const checked = validateFaculty(clean(data), faculty)
     if (step < sections.length) {
-      const keys = sections[step].fields.map(([key]) => key)
+      const keys = [...sections[step].fields.map(([key]) => key), ...(step === 1 ? ['employeeCategoryOther'] : [])]
       const currentErrors = Object.fromEntries(Object.entries(checked).filter(([key]) => keys.includes(key)))
       setErrors(currentErrors)
       if (Object.keys(currentErrors).length) { focusError(); return }
@@ -1012,7 +1015,7 @@ function FacultyForm({ initial, faculty, onSave, onCancel, collegeOptions, depar
     } else {
       setErrors(checked)
       if (Object.keys(checked).length) {
-        setStep(sections.findIndex(section => section.fields.some(([key]) => checked[key])))
+        setStep(checked.employeeCategoryOther ? 1 : Math.max(0, sections.findIndex(section => section.fields.some(([key]) => checked[key]))))
         focusError()
         return
       }
@@ -1096,7 +1099,7 @@ function FacultyForm({ initial, faculty, onSave, onCancel, collegeOptions, depar
               <p>{data.employeeId} · {data.designation}</p>
             </div>
           </div>
-          <ProfileSections data={data} />
+          <ProfileSections data={data} collegeOptions={collegeOptions} departmentOptions={departmentOptions} />
         </>
       )}
       {step === 0 && faculty.some(row => row.id !== data.id && row.mobile === data.mobile) && (
@@ -1635,7 +1638,7 @@ export default function FacultyManagement() {
           const existingAssignments = (allocations && allocations.length) ? allocations : (matchedListed?.assignments || safeMember.assignments || [])
           setDetail(normalize({
             ...safeMember,
-            ...normalizeFaculty({ ...safeMember, ...(profile || {}), facultyId: safeMember.id || targetId }),
+            ...normalizeFaculty({ ...mergeFacultyData(matchedListed, safeMember, profile), facultyId: safeMember.id || targetId }),
             profileExists: Boolean(profile),
             apiWorkload: work,
             assignments: existingAssignments
@@ -1673,9 +1676,9 @@ export default function FacultyManagement() {
       if (!savedId) throw new Error('Faculty saved, but the server did not return its ID. Reload the directory before retrying.')
       if (data.profileExists) await facultyService.updateProfile(savedId, data).catch(() => {})
       else await facultyService.createProfile(savedId, data).catch(() => {})
-      if (data.photoFile) await facultyService.uploadProfilePhoto(savedId, data.photoFile).catch(() => {})
+      if (data.photoFile) await facultyService.uploadProfilePhoto(savedId, data.photoFile)
       const refreshed = await facultyService.getById(savedId).catch(() => saved)
-      const normalizedRecord = normalize({ ...data, ...refreshed, id: savedId, facultyId: savedId })
+      const normalizedRecord = normalize({ ...mergeFacultyData(data, refreshed), id: savedId, facultyId: savedId })
       setFaculty(rows => data.id ? rows.map(row => row.id === data.id ? { ...row, ...normalizedRecord, assignments: row.assignments } : row) : [normalizedRecord, ...rows.filter(r => r.id !== savedId && r.employeeId !== normalizedRecord.employeeId)])
       notify(data.id ? 'Faculty updated successfully' : 'Faculty created successfully'); clear(); back()
     } catch (error) {
@@ -1731,7 +1734,7 @@ export default function FacultyManagement() {
     content = <><header className="faculty-page-header"><div><h1>{editId ? 'Edit Faculty' : 'Add Faculty'}</h1><p>Faculty registration and employment record</p></div><button type="button" className="fm-button secondary" onClick={back}><FiArrowLeft /> Back</button></header><FacultyForm key={location.key + ':' + Boolean(detail)} initial={selected || { employeeId: nextId, employmentType: 'Permanent', employmentStatus: 'Working', employeeCategory: 'Teaching' }} faculty={faculty} collegeOptions={collegeOptions} departmentOptions={departmentOptions} saving={saving} onSave={save} onCancel={back} /></>
   } else if (selected) {
     const load = workload(selected)
-    const departmentName = departmentOptions.find(d => String(d.value) === String(selected.department))?.label || selected.department || '—'
+    const departmentName = departmentOptions.find(d => String(d.value) === String(selected.departmentId || selected.department))?.label || selected.department || '—'
     content = (
       <>
         <div className="fm-breadcrumb">
@@ -1838,7 +1841,7 @@ export default function FacultyManagement() {
     )
   } else {
     const summary = [{ label: 'Total Faculty', value: faculty.length }, { label: 'Working', value: faculty.filter(row => row.employmentStatus === 'Working').length, tone: 'active' }, { label: 'On Leave', value: faculty.filter(row => row.employmentStatus === 'On Leave').length, tone: 'danger' }, { label: 'Permanent', value: faculty.filter(row => row.employmentType === 'Permanent').length, tone: 'upcoming' }]
-    content = <><header className="faculty-page-header"><div><p className="fm-eyebrow">ACADEMIC RESOURCES</p><h1>Faculty Management</h1><p>Manage faculty profiles, employment records, academic responsibilities and workload.</p></div><div className="fm-actions">{directoryActions}</div></header><div className="faculty-header-summary"><CompactSummary label="Faculty management summary" items={summary} /></div><section className="faculty-directory"><header className="fm-section-bar"><div><p className="fm-eyebrow">FACULTY DIRECTORY</p><p className="fm-muted">{filtered.length} faculty records</p></div></header><FilterPanel active={active} onClear={clear}><div className="faculty-filters"><label className="faculty-search"><FiSearch /><input aria-label="Search faculty" value={query} onChange={event => { setQuery(event.target.value); setPage(1) }} placeholder="Search faculty by name, employee ID, email or mobile" /></label>{[['department', 'Department', departments], ['designation', 'Designation', designations], ['employmentType', 'Employment Type', employmentTypes], ['employmentStatus', 'Employment Status', statuses]].map(([key, label, options]) => <SearchableSelect key={key} label={label} value={filters[key]} options={options} placeholder={label} onChange={value => { setFilters(old => ({ ...old, [key]: value })); setPage(1) }} />)}</div></FilterPanel>{filtered.length ? <><div className="faculty-table-wrap"><table><caption className="fm-sr-only">Faculty directory and records</caption><thead><tr>{['Faculty Code', 'Faculty Name', 'Department', 'Designation', 'Total Experience', 'Employment Type', 'Status', 'Actions'].map(label => <th scope="col" key={label}>{label}</th>)}</tr></thead><tbody>{filtered.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE).map(item => <tr key={item.id}><td><span className="fm-employee-id">{item.employeeId}</span></td><td><div className="fm-identity"><Avatar faculty={item} /><div><strong>{item.fullName}</strong><small>{item.email}</small></div></div></td><td className="fm-department">{departmentOptions.find(d => String(d.value) === String(item.department))?.label || item.department || '—'}</td><td>{item.designation || '—'}</td><td>{years(item.experience)}</td><td>{item.employmentType || '—'}</td><td><StatusBadge value={item.employmentStatus} /></td><td><div className="fm-actions"><button type="button" className="fm-icon-button" title="View faculty" aria-label={'View: ' + item.fullName} onClick={() => navigate('/faculty/' + item.id)}><FiEye /></button><button type="button" className="fm-icon-button" title="Assign Academic Work" aria-label={'Assign academic work: ' + item.fullName} onClick={() => setAssignmentId(item.id)}><FiBriefcase /></button></div></td></tr>)}</tbody></table></div><TablePagination currentPage={currentPage} totalPages={totalPages} onPageChange={setPage} /></> : <EmptyState title={faculty.length ? 'No faculty found' : 'No faculty records available'} description={faculty.length ? 'Try changing your search or filters.' : 'Add faculty members to start managing academic resources.'} action={faculty.length ? 'Clear Filters' : 'Add Faculty'} onAction={faculty.length ? clear : addFaculty} />}</section></>
+    content = <><header className="faculty-page-header"><div><p className="fm-eyebrow">ACADEMIC RESOURCES</p><h1>Faculty Management</h1><p>Manage faculty profiles, employment records, academic responsibilities and workload.</p></div><div className="fm-actions">{directoryActions}</div></header><div className="faculty-header-summary"><CompactSummary label="Faculty management summary" items={summary} /></div><section className="faculty-directory"><header className="fm-section-bar"><div><p className="fm-eyebrow">FACULTY DIRECTORY</p><p className="fm-muted">{filtered.length} faculty records</p></div></header><FilterPanel active={active} onClear={clear}><div className="faculty-filters"><label className="faculty-search"><FiSearch /><input aria-label="Search faculty" value={query} onChange={event => { setQuery(event.target.value); setPage(1) }} placeholder="Search faculty by name, employee ID, email or mobile" /></label>{[['department', 'Department', departments], ['designation', 'Designation', designations], ['employmentType', 'Employment Type', employmentTypes], ['employmentStatus', 'Employment Status', statuses]].map(([key, label, options]) => <SearchableSelect key={key} label={label} value={filters[key]} options={options} placeholder={label} onChange={value => { setFilters(old => ({ ...old, [key]: value })); setPage(1) }} />)}</div></FilterPanel>{filtered.length ? <><div className="faculty-table-wrap"><table><caption className="fm-sr-only">Faculty directory and records</caption><thead><tr>{['Faculty Code', 'Faculty Name', 'Department', 'Designation', 'Total Experience', 'Employment Type', 'Status', 'Actions'].map(label => <th scope="col" key={label}>{label}</th>)}</tr></thead><tbody>{filtered.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE).map(item => <tr key={item.id}><td><span className="fm-employee-id">{item.employeeId}</span></td><td><div className="fm-identity"><Avatar faculty={item} /><div><strong>{item.fullName}</strong><small>{item.email}</small></div></div></td><td className="fm-department">{departmentOptions.find(d => String(d.value) === String(item.departmentId || item.department))?.label || item.department || '—'}</td><td>{item.designation || '—'}</td><td>{years(item.experience)}</td><td>{item.employmentType || '—'}</td><td><StatusBadge value={item.employmentStatus} /></td><td><div className="fm-actions"><button type="button" className="fm-icon-button" title="View faculty" aria-label={'View: ' + item.fullName} onClick={() => navigate('/faculty/' + item.id)}><FiEye /></button><button type="button" className="fm-icon-button" title="Assign Academic Work" aria-label={'Assign academic work: ' + item.fullName} onClick={() => setAssignmentId(item.id)}><FiBriefcase /></button></div></td></tr>)}</tbody></table></div><TablePagination currentPage={currentPage} totalPages={totalPages} onPageChange={setPage} /></> : <EmptyState title={faculty.length ? 'No faculty found' : 'No faculty records available'} description={faculty.length ? 'Try changing your search or filters.' : 'Add faculty members to start managing academic resources.'} action={faculty.length ? 'Clear Filters' : 'Add Faculty'} onAction={faculty.length ? clear : addFaculty} />}</section></>
   }
   return (
     <DashboardLayout>
