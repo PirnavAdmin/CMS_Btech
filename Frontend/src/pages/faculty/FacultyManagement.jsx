@@ -1267,7 +1267,16 @@ function AssignmentDialog({ faculty, onClose, onAdd, onRemove, toast }) {
 
   const subjectOptions = useMemo(() => {
     if (masters.subjects.length) {
-      return masters.subjects.map(s => ({ value: String(s.subjectId ?? s.id), code: s.subjectCode ?? s.code ?? '', name: s.subjectName ?? s.name ?? '', label: `${s.subjectCode ? `${s.subjectCode} - ` : ''}${s.subjectName ?? s.name}` }))
+      return masters.subjects.map(subject => {
+        // Subject master APIs have used both SubjectCode/SubjectName and
+        // Code/Name (plus a few legacy variants). Normalise them here so a
+        // schema variation can never render the literal text "undefined".
+        const value = subject.subjectId ?? subject.id ?? subject.subjectMasterId ?? subject.courseSubjectId
+        const code = subject.subjectCode ?? subject.code ?? subject.subject_code ?? subject.courseCode ?? ''
+        const name = subject.subjectName ?? subject.name ?? subject.subject ?? subject.title ?? subject.subjectTitle ?? subject.subject_name ?? subject.courseName ?? ''
+        const label = [code, name].filter(value => value !== undefined && value !== null && String(value).trim() !== '').join(' - ')
+        return { value: value == null ? '' : String(value), code: String(code || ''), name: String(name || ''), label: label || 'Unnamed subject' }
+      }).filter(subject => subject.value)
     }
     return []
   }, [masters.subjects])

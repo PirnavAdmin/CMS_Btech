@@ -297,9 +297,13 @@ export function ApiAssignmentDialog({ faculty, onClose, onChanged }) {
                     onChange={e => setForm({ ...form, [key]: e.target.value })}
                   >
                     <option value="">Select {label}</option>
-                    {(masters[collection] || []).filter(row => !(key === 'branchId' && form.courseId && row.courseId && String(row.courseId) !== String(form.courseId)) && !(['semesterId', 'sectionId', 'subjectId'].includes(key) && form.branchId && row.branchId && String(row.branchId) !== String(form.branchId))).map(row => (
-                      <option key={row[idKey] ?? row.id} value={row[idKey] ?? row.id}>{row[nameKey] ?? row.name ?? row.code}</option>
-                    ))}
+                    {(masters[collection] || []).filter(row => !(key === 'branchId' && form.courseId && row.courseId && String(row.courseId) !== String(form.courseId)) && !(['semesterId', 'sectionId', 'subjectId'].includes(key) && form.branchId && row.branchId && String(row.branchId) !== String(form.branchId))).map(row => {
+                      const optionId = row[idKey] ?? row.id ?? (key === 'subjectId' ? row.subjectMasterId ?? row.courseSubjectId : undefined)
+                      const optionLabel = key === 'subjectId'
+                        ? [row.subjectCode ?? row.code ?? row.subject_code, row.subjectName ?? row.name ?? row.subject ?? row.title ?? row.subjectTitle ?? row.subject_name ?? row.courseName].filter(value => value !== undefined && value !== null && String(value).trim() !== '').join(' - ') || 'Unnamed subject'
+                        : row[nameKey] ?? row.name ?? row.code ?? 'Unnamed option'
+                      return optionId == null ? null : <option key={optionId} value={optionId}>{optionLabel}</option>
+                    })}
                   </select>
                 </label>
               ))}
