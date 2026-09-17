@@ -487,10 +487,28 @@ export default function CollegeInstitutionManagement({ initialView = 'list' }) {
   const handleLogoUpload = (e) => {
     const file = e.target.files?.[0]
     if (!file) return
+    // Use the same server-safe image rules as the Add College screen. The
+    // edit panel previously accepted any file and only failed after it had
+    // been submitted to the logo endpoint.
+    if (!['image/png', 'image/jpeg', 'image/webp'].includes(file.type)) {
+      e.target.value = ''
+      setCollegeError('Choose a PNG, JPG, JPEG, or WEBP image for the college logo.')
+      return
+    }
+    if (file.size > 2 * 1024 * 1024) {
+      e.target.value = ''
+      setCollegeError('College logo must be 2 MB or smaller.')
+      return
+    }
+    setCollegeError('')
     setEditLogoFile(file)
     const reader = new FileReader()
     reader.onload = () => {
       setFormValues((current) => ({ ...current, logo: reader.result }))
+    }
+    reader.onerror = () => {
+      setEditLogoFile(null)
+      setCollegeError('The selected college logo could not be read. Please choose another image.')
     }
     reader.readAsDataURL(file)
   }

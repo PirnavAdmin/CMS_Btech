@@ -307,7 +307,13 @@ const request = async (url, options = {}, retried = false, bypassDedupe = false)
   }
   const body = await readBody(response)
   if (!response.ok || body?.success === false) {
-    console.error('API request failed', { url, method: options.method || 'GET', status: response.status })
+    // Some read APIs are deliberately optional. Their callers can provide the
+    // statuses that mean "no related record yet" so an expected absence does
+    // not look like a failed request in the browser console.
+    const silentStatuses = Array.isArray(options.silentStatuses) ? options.silentStatuses : []
+    if (!silentStatuses.includes(response.status)) {
+      console.error('API request failed', { url, method: options.method || 'GET', status: response.status })
+    }
     if (response.status >= 500) {
       const error = new Error('Something went wrong while completing your request. Please try again.')
       error.status = response.status
@@ -754,7 +760,10 @@ export const facultyApi = {
 }
 
 export const facultyProfileApi = {
-  get: async (facultyId) => normalizeRecord(await request(API_ENDPOINTS.facultyProfiles.detail(requiredId(facultyId, 'Faculty ID')))),
+  // The faculty master record may exist before its optional extended profile.
+  // The current API returns 409 for that state in some deployments; treat it
+  // like a normal missing profile while keeping all other failures visible.
+  get: async (facultyId) => normalizeRecord(await request(API_ENDPOINTS.facultyProfiles.detail(requiredId(facultyId, 'Faculty ID')), { silentStatuses: [404, 409] })),
   create: async (facultyId, payload) => normalizeRecord(await jsonRequest(API_ENDPOINTS.facultyProfiles.create(requiredId(facultyId, 'Faculty ID')), 'POST', payload)),
   update: async (facultyId, payload) => normalizeRecord(await jsonRequest(API_ENDPOINTS.facultyProfiles.update(requiredId(facultyId, 'Faculty ID')), 'PUT', payload)),
 }
@@ -828,8 +837,11 @@ const studentAdmissionPayload = (form = {}) => {
     lastName: form.lastName ?? personal.lastName,
     fullName: form.fullName ?? personal.fullName,
     gender: form.gender ?? personal.gender,
+    // Student-admissions Swagger accepts `photo` (not the legacy
+    // `profilePhoto` field). Keep the selected data URL in that one
+    // contract field so an image upload cannot trigger model validation on
+    // deployments that reject unknown JSON properties.
     photo: form.photo ?? personal.photo ?? personal.photoUrl,
-    profilePhoto: form.photo ?? personal.photo ?? personal.photoUrl,
     dateOfBirth: form.dateOfBirth ?? form.dob ?? personal.dob ?? personal.dateOfBirth,
     bloodGroup: form.bloodGroup ?? personal.bloodGroup,
     nationality: form.nationality ?? personal.nationality,

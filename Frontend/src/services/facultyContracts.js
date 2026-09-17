@@ -1,5 +1,13 @@
 // Payloads follow the Faculty Swagger DTOs; UI labels never substitute for IDs.
-const optionalNumber = value => value === '' || value == null ? null : Number(value)
+// Never substitute a display label (or a made-up value) for an API foreign
+// key. Swagger accepts numeric IDs for these fields; sending `NaN`, a label,
+// or the old fallback value of `1` creates allocations against the wrong
+// master record.
+const optionalNumber = value => {
+  if (value === '' || value == null) return null
+  const number = Number(value)
+  return Number.isSafeInteger(number) && number > 0 ? number : null
+}
 export const requiredNumber = (value, label) => {
   const number = Number(value)
   if (!Number.isSafeInteger(number) || number <= 0) throw new Error(`${label} is required. Select a valid record.`)
@@ -61,12 +69,13 @@ export const normalizeAllocation = row => {
   }
 }
 export const allocationPayload = (row, updating = false) => {
-  const facultyId = optionalNumber(row.facultyId) || Number(String(row.facultyId || '').replace(/\D/g, '')) || 1
-  const branchId = optionalNumber(row.branchId) || 1
-  const semesterId = optionalNumber(row.semesterId) || 1
+  const facultyId = requiredNumber(row.facultyId, 'Faculty')
+  const courseId = requiredNumber(row.courseId, 'Course')
+  const branchId = requiredNumber(row.branchId, 'Branch')
+  const semesterId = requiredNumber(row.semesterId, 'Semester')
   return {
     facultyId,
-    courseId: optionalNumber(row.courseId) || 1,
+    courseId,
     branchId,
     semesterId,
     sectionId: optionalNumber(row.sectionId),

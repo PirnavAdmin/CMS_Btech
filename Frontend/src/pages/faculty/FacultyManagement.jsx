@@ -11,6 +11,7 @@ import CompactSummary from '../../components/CompactSummary'
 import { academicYearApi, branchApi, courseApi, departmentApi, facultyMasterApi, sectionApi } from '../../api/apiEndpoints'
 import { attendancePayload, requiredNumber } from '../../services/facultyContracts'
 import { downloadServerExport } from '../../utils/exportUtils'
+import { getDefaultAcademicYear } from '../../utils/academicYearUtils'
 import { FacultyDocuments, FacultyStatus, ApiAssignmentDialog } from './FacultyApiPanels'
 import facultyService, { normalizeFaculty } from '../../services/facultyService'
 import './FacultyManagement.css'
@@ -283,13 +284,6 @@ const attendanceFilename = (prefix, period, department) => {
   const cleanPeriod = String(period || 'all').replace(/[^a-z0-9-]+/gi, '-').toLowerCase().replace(/^-|-$/g, '')
   const cleanDept = String(department || '').replace(/[^a-z0-9-]+/gi, '-').toLowerCase().replace(/^-|-$/g, '')
   return [cleanPrefix, cleanPeriod, cleanDept].filter(Boolean).join('-') || 'attendance'
-}
-// Local configuration, intentionally independent of backend master data.
-const assignmentOptions = {
-  academicYear: ['2026-27', '2027-28', '2028-29'], course: ['B.Tech'], branch: departments,
-  semester: Array.from({ length: 8 }, (_, i) => 'Semester ' + (i + 1)),
-  section: ['Section A', 'Section B', 'Section C'],
-  assignmentType: ['Subject Faculty', 'Lab Faculty', 'Class Advisor', 'Mentor', 'Project Guide'],
 }
 const sections = [
   { title: 'Personal Details', heading: 'Personal Information', icon: FiUser, description: 'Identity, photograph and primary contact information.', fields: [
@@ -1165,7 +1159,7 @@ function AssignmentDialog({ faculty, onClose, onAdd, onRemove, toast }) {
   })
   const [data, setData] = useState({
     academicYearId: '',
-    academicYear: '2026-27',
+    academicYear: '',
     courseId: '',
     course: 'B.Tech',
     branchId: '',
@@ -1206,7 +1200,13 @@ function AssignmentDialog({ faculty, onClose, onAdd, onRemove, toast }) {
       facultyMasterApi.getSubjects(),
     ]).then(([yearsRes, coursesRes, branchesRes, semRes, secRes, subRes]) => {
       if (!active) return
-      const years = yearsRes.status === 'fulfilled' && Array.isArray(yearsRes.value) ? yearsRes.value : []
+      const allYears = yearsRes.status === 'fulfilled' && Array.isArray(yearsRes.value) ? yearsRes.value : []
+      // Academic assignments can only be created in the configured current
+      // year. Prefer the explicit current marker; older API responses that
+      // do not expose it fall back to the single operational year selector.
+      const markedCurrentYear = allYears.find(year => year?.isCurrent === true || year?.current === true || Number(year?.isCurrent) === 1 || Number(year?.current) === 1)
+      const currentYear = markedCurrentYear || getDefaultAcademicYear(allYears)
+      const years = currentYear ? [currentYear] : []
       const courses = coursesRes.status === 'fulfilled' && Array.isArray(coursesRes.value) ? coursesRes.value : []
       const branches = branchesRes.status === 'fulfilled' && Array.isArray(branchesRes.value) ? branchesRes.value : []
       const semesters = semRes.status === 'fulfilled' && Array.isArray(semRes.value) ? semRes.value : []
@@ -1235,12 +1235,12 @@ function AssignmentDialog({ faculty, onClose, onAdd, onRemove, toast }) {
 
   const yearOptions = useMemo(() => {
     if (masters.years.length) return masters.years.map(y => ({ value: String(y.academicYearId ?? y.id), label: y.academicYearName ?? y.name }))
-    return ['2026-27', '2027-28', '2028-29'].map(y => ({ value: y, label: y }))
+    return []
   }, [masters.years])
 
   const courseOptions = useMemo(() => {
     if (masters.courses.length) return masters.courses.map(c => ({ value: String(c.courseId ?? c.id), label: c.courseName ?? c.name ?? c.courseCode }))
-    return ['B.Tech'].map(c => ({ value: c, label: c }))
+    return []
   }, [masters.courses])
 
   const branchOptions = useMemo(() => {
@@ -1248,21 +1248,21 @@ function AssignmentDialog({ faculty, onClose, onAdd, onRemove, toast }) {
       const list = data.courseId ? masters.branches.filter(b => !b.courseId || String(b.courseId) === String(data.courseId)) : masters.branches
       return list.map(b => ({ value: String(b.branchId ?? b.id), label: b.branchName ?? b.name }))
     }
-    return departments.map(d => ({ value: d, label: d }))
+    return []
   }, [masters.branches, data.courseId])
 
   const semesterOptions = useMemo(() => {
     if (masters.semesters.length) {
       return masters.semesters.map(s => ({ value: String(s.semesterId ?? s.id), label: s.semesterName ?? s.name ?? `Semester ${s.semesterNumber ?? s.number}` }))
     }
-    return Array.from({ length: 8 }, (_, i) => ({ value: `Semester ${i + 1}`, label: `Semester ${i + 1}` }))
+    return []
   }, [masters.semesters])
 
   const sectionOptions = useMemo(() => {
     if (masters.sections.length) {
       return masters.sections.map(s => ({ value: String(s.sectionId ?? s.id), label: s.sectionName ?? s.name ?? s.sectionCode }))
     }
-    return ['Section A', 'Section B', 'Section C'].map(s => ({ value: s, label: s }))
+    return []
   }, [masters.sections])
 
   const subjectOptions = useMemo(() => {
@@ -1287,11 +1287,13 @@ function AssignmentDialog({ faculty, onClose, onAdd, onRemove, toast }) {
     event.preventDefault()
     if (inactive) return
     const issues = {}
-    if (!data.academicYear) issues.academicYear = 'Academic Year is required.'
-    if (!data.course) issues.course = 'Course is required.'
-    if (!data.branch) issues.branch = 'Branch is required.'
-    if (!data.semester) issues.semester = 'Semester is required.'
-    if (!data.section) issues.section = 'Section is required.'
+    const hasId = value => Number.isSafeInteger(Number(value)) && Number(value) > 0
+    if (!hasId(data.academicYearId)) issues.academicYear = 'Select an academic year from the master list.'
+    if (!hasId(data.courseId)) issues.course = 'Select a course from the master list.'
+    if (!hasId(data.branchId)) issues.branch = 'Select a branch from the master list.'
+    if (!hasId(data.semesterId)) issues.semester = 'Select a semester from the master list.'
+    if (!hasId(data.sectionId)) issues.section = 'Select a section from the master list.'
+    if (subjectRequired && !hasId(data.subjectId)) issues.subjectName = 'Select a subject from the master list.'
     if ((subjectRequired || data.subjectName) && !data.subjectCode?.trim()) issues.subjectCode = 'Subject code is required.'
     if ((subjectRequired || data.subjectCode) && !data.subjectName?.trim()) issues.subjectName = 'Subject name is required.'
 
