@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Navigate, useLocation, useNavigate } from 'react-router-dom'
-import { FiAlertCircle, FiArrowLeft, FiBriefcase, FiCheckCircle, FiChevronDown, FiChevronUp, FiEdit2, FiEye, FiFilter, FiPlus, FiSearch, FiUser, FiUsers, FiClock, FiBookOpen, FiMapPin, FiX, FiTrash2 } from 'react-icons/fi'
+import { FiAlertCircle, FiArrowLeft, FiBriefcase, FiCheckCircle, FiChevronDown, FiChevronUp, FiEdit2, FiEye, FiFilter, FiPlus, FiSearch, FiUser, FiUsers, FiClock, FiBookOpen, FiMapPin, FiX, FiTrash2, FiFileText } from 'react-icons/fi'
 import DashboardLayout from '../../layouts/DashboardLayout'
 import ExportMenu from '../../components/ExportMenu'
 import FilterPanel from '../../components/FilterPanel'
@@ -8,7 +8,7 @@ import StatusBadge from '../../components/StatusBadge'
 import TablePagination from '../../components/TablePagination'
 import SearchableSelect from '../../components/SearchableSelect'
 import CompactSummary from '../../components/CompactSummary'
-import { departmentApi, facultyMasterApi } from '../../api/apiEndpoints'
+import { academicYearApi, branchApi, courseApi, departmentApi, facultyMasterApi, sectionApi } from '../../api/apiEndpoints'
 import { attendancePayload, requiredNumber } from '../../services/facultyContracts'
 import { downloadServerExport } from '../../utils/exportUtils'
 import { FacultyDocuments, FacultyStatus, ApiAssignmentDialog } from './FacultyApiPanels'
@@ -293,26 +293,35 @@ const assignmentOptions = {
 }
 const sections = [
   { title: 'Personal Details', heading: 'Personal Information', icon: FiUser, description: 'Identity, photograph and primary contact information.', fields: [
-    ['collegeId', 'College Name', 'college', true], ['userId', 'Linked User ID', 'text', true], ['employeeId', 'Employee ID', 'readonly'], ['fullName', 'Faculty Full Name', 'text', true],
+    ['collegeId', 'College Name', 'college', true], ['employeeId', 'Faculty Code', 'readonly'], ['fullName', 'Faculty Full Name', 'text', true],
     ['gender', 'Gender', ['Male', 'Female', 'Other'], true], ['dob', 'Date of Birth', 'date', true],
     ['mobile', 'Mobile Number', 'tel', true], ['email', 'Email', 'email', true],
   ] },
   { title: 'Employment', heading: 'Employment Information', icon: FiBriefcase, description: 'Faculty designation, department and employment information.', fields: [
     ['departmentId', 'Department', 'department', true], ['designation', 'Designation', designations, true],
-    ['employmentType', 'Employment Type', employmentTypes, true], ['employmentStatus', 'Employment Status', statuses, true],
-    ['joiningDate', 'Date of Joining', 'date', true], ['employeeCategory', 'Employee Category', ['Teaching', 'Technical', 'Visiting']],
-    ['experience', 'Total Experience', 'number'],
+    ['employmentType', 'Employment Type', employmentTypes, true],
+    ['joiningDate', 'Date of Joining', 'date', true], ['employeeCategory', 'Employee Category', ['Teaching', 'Non-Teaching', 'Others']],
+    ['experience', 'Total Experience (Years)', 'number'],
   ] },
   { title: 'Academic Details', heading: 'Academic Information', icon: FiBookOpen, description: 'Qualifications, specialization and professional experience.', fields: [
     ['qualification', 'Highest Qualification', ['Ph.D', 'M.Tech', 'M.E', 'MCA', 'M.Sc', 'B.Tech', 'Other'], true],
     ['specialization', 'Specialization', 'text'], ['university', 'University / Institution', 'text'],
-    ['passingYear', 'Year of Passing', 'number'], ['teachingExperience', 'Teaching Experience', 'number'], ['industryExperience', 'Industry Experience', 'number'],
+    ['passingYear', 'Year of Passing', 'number'], ['teachingExperience', 'Teaching Experience (Years)', 'number'], ['industryExperience', 'Industry Experience (Years)', 'number'],
   ] },
   { title: 'Contact', heading: 'Contact Information', icon: FiMapPin, description: 'Address and emergency contacts. These details are optional.', fields: [
     ['alternateMobile', 'Alternate Mobile', 'tel'], ['personalEmail', 'Personal Email', 'email'],
     ['address', 'Address', 'textarea'], ['city', 'City', 'text'], ['state', 'State', 'text'], ['pincode', 'Pincode', 'text'],
     ['emergencyName', 'Emergency Contact Name', 'text'], ['emergencyMobile', 'Emergency Contact Number', 'tel'], ['relationship', 'Relationship', 'text'],
   ] },
+]
+const FACULTY_DOCUMENTS = [
+  ['aadhaar', 'Aadhaar Card'],
+  ['pan', 'PAN Card'],
+  ['qualificationCert', 'Highest Qualification / Degree Certificate'],
+  ['experienceCert', 'Previous Experience / Relieving Certificate'],
+  ['resume', 'Resume / Curriculum Vitae (CV)'],
+  ['photoId', 'Passport Size Photo / ID Proof'],
+  ['joiningReport', 'Joining Report / Appointment Order'],
 ]
 const experienceKeys = ['experience', 'teachingExperience', 'industryExperience']
 const today = () => {
@@ -322,7 +331,7 @@ const today = () => {
 const years = value => value === '' || value == null ? '—' : (parseFloat(value) || 0) + ' Years'
 const normalize = (row = {}) => {
   const safeRow = row && typeof row === 'object' ? row : {}
-  return { ...Object.fromEntries(sections.flatMap(s => s.fields.map(([key]) => [key, '']))), photo: '', assignments: [], ...safeRow, assignments: Array.isArray(safeRow.assignments) ? safeRow.assignments : [], collegeName: safeRow.collegeName || '', experience: safeRow.experience == null ? '' : String(parseFloat(safeRow.experience) || 0) }
+  return { ...Object.fromEntries(sections.flatMap(s => s.fields.map(([key]) => [key, '']))), employeeCategoryOther: safeRow.employeeCategoryOther || '', employmentStatus: 'Working', documents: safeRow.documents || {}, photo: '', assignments: [], ...safeRow, employmentStatus: safeRow.employmentStatus || 'Working', documents: safeRow.documents || {}, assignments: Array.isArray(safeRow.assignments) ? safeRow.assignments : [], collegeName: safeRow.collegeName || '', experience: safeRow.experience == null ? '' : String(parseFloat(safeRow.experience) || 0) }
 }
 const clean = data => Object.fromEntries(Object.entries(data).map(([key, value]) => [key, typeof value === 'string' ? value.trim() : value]))
 const workload = row => {
@@ -339,7 +348,8 @@ function validateFaculty(data, rows) {
     if (required && !String(data[key] ?? '').trim()) errors[key] = label + ' is required.'
     if (data[key] && Array.isArray(type) && !type.includes(data[key])) errors[key] = 'Select a valid ' + label.toLowerCase() + '.'
   }))
-  if (!data.employeeId || rows.some(row => row.id !== data.id && row.employeeId === data.employeeId)) errors.employeeId = 'Employee ID must be unique.'
+  if (['Others', 'Other'].includes(data.employeeCategory) && !String(data.employeeCategoryOther || '').trim()) errors.employeeCategoryOther = 'Specify the employee category.'
+  if (!data.employeeId || rows.some(row => row.id !== data.id && (row.employeeId || row.facultyCode) === data.employeeId)) errors.employeeId = 'Faculty Code must be unique.'
   if (!data.fullName?.trim()) errors.fullName = 'Faculty full name is required.'
   for (const key of ['email', 'personalEmail']) if (data[key] && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(data[key].trim())) errors[key] = 'Enter a valid email address.'
   if (rows.some(row => row.id !== data.id && row.email.trim().toLowerCase() === data.email?.trim().toLowerCase())) errors.email = 'A faculty member with this email already exists.'
@@ -808,23 +818,173 @@ function FacultyAttendanceScreen({ faculty, onNotify }) {
     </div>
   )
 }
-function ProfileSections({ data }) {
-  return <div className="fm-profile-sections">{sections.map(section => {
-    const fields = section.fields.filter(([key, , , required]) => required || key === 'employeeId' || (data[key] !== '' && data[key] != null))
-    return <section className="fm-panel" key={section.title}><h2><section.icon />{section.heading}</h2>{fields.length ? <dl className="fm-info-grid">{fields.map(([key, label]) => <div key={key}><dt>{label}</dt><dd>{experienceKeys.includes(key) ? years(data[key]) : data[key] || '—'}</dd></div>)}</dl> : <p className="fm-muted">No optional contact information provided.</p>}</section>
-  })}</div>
+function ProfileSections({ data, collegeOptions = [], departmentOptions = [] }) {
+  const getFieldValue = (key, value) => {
+    if (key === 'collegeName') {
+      const match = collegeOptions.find(c => String(c.value) === String(value))
+      return match ? match.label : value || '—'
+    }
+    if (key === 'department') {
+      const match = departmentOptions.find(d => String(d.value) === String(value))
+      return match ? match.label : value || '—'
+    }
+    if (key === 'employeeCategory' && ['Others', 'Other'].includes(data.employeeCategory)) {
+      return data.employeeCategoryOther ? `Other (${data.employeeCategoryOther})` : 'Other'
+    }
+    if (experienceKeys.includes(key)) {
+      return years(value)
+    }
+    return value || '—'
+  }
+
+  return (
+    <>
+      <div className="fm-profile-sections">
+        {sections.map(section => {
+          const fields = section.fields.filter(([key, , , required]) => required || key === 'employeeId' || (data[key] !== '' && data[key] != null))
+          return (
+            <section className="fm-panel" key={section.title}>
+              <h2><section.icon />{section.heading}</h2>
+              {fields.length ? (
+                <dl className="fm-info-grid">
+                  {fields.map(([key, label]) => (
+                    <div key={key}>
+                      <dt>{label}</dt>
+                      <dd>{getFieldValue(key, data[key])}</dd>
+                    </div>
+                  ))}
+                </dl>
+              ) : (
+                <p className="fm-muted">No optional contact information provided.</p>
+              )}
+            </section>
+          )
+        })}
+      </div>
+      <section className="fm-panel fm-docs-verification">
+        <h2><FiFileText /> Supporting Documents</h2>
+        <div className="fm-document-grid">
+          {FACULTY_DOCUMENTS.map(([key, label]) => {
+            const doc = data.documents?.[key] || {}
+            const status = typeof doc === 'string' ? doc : doc.status || 'Not Submitted'
+            const isSubmitted = status === 'Submitted'
+            return (
+              <article className={'fm-document-card ' + (isSubmitted ? 'submitted' : '')} key={key}>
+                <div className="fm-document-icon">
+                  {isSubmitted ? <FiCheckCircle aria-hidden="true" /> : <FiFileText aria-hidden="true" />}
+                </div>
+                <div className="fm-document-info">
+                  <strong title={label}>{label}</strong>
+                  <span className={'fm-doc-status ' + (isSubmitted ? 'active' : 'muted')}>
+                    {status}
+                  </span>
+                </div>
+              </article>
+            )
+          })}
+        </div>
+      </section>
+    </>
+  )
+}
+function FacultyDocumentsForm({ documents = {}, onChange }) {
+  const count = FACULTY_DOCUMENTS.filter(([key]) => {
+    const val = documents[key]
+    const status = typeof val === 'string' ? val : val?.status
+    return status === 'Submitted'
+  }).length
+
+  return (
+    <div className="fm-documents-form">
+      <div className="fm-documents-header">
+        <p className="fm-muted">Mark submission status for each faculty document. Document submission is optional and can be updated anytime.</p>
+        <span className="fm-doc-summary-pill">{count} of {FACULTY_DOCUMENTS.length} Submitted</span>
+      </div>
+      <div className="fm-document-grid">
+        {FACULTY_DOCUMENTS.map(([key, label]) => {
+          const doc = documents[key] || {}
+          const status = typeof doc === 'string' ? doc : doc.status || 'Not Submitted'
+          const isSubmitted = status === 'Submitted'
+          return (
+            <article className={'fm-document-card ' + (isSubmitted ? 'submitted' : '')} key={key}>
+              <div className="fm-document-icon">
+                {isSubmitted ? <FiCheckCircle aria-hidden="true" /> : <FiFileText aria-hidden="true" />}
+              </div>
+              <div className="fm-document-info">
+                <strong title={label}>{label}</strong>
+                <span className={'fm-doc-status ' + (isSubmitted ? 'active' : 'muted')}>
+                  {status}
+                </span>
+              </div>
+              <div className="fm-document-actions">
+                <select
+                  aria-label={`${label} submission status`}
+                  value={status}
+                  onChange={e => onChange(key, { ...(typeof doc === 'object' ? doc : {}), status: e.target.value })}
+                >
+                  <option value="Not Submitted">Not Submitted</option>
+                  <option value="Submitted">Submitted</option>
+                  <option value="Pending">Pending</option>
+                </select>
+              </div>
+            </article>
+          )
+        })}
+      </div>
+    </div>
+  )
 }
 function Field({ field, data, errors, update, native = false, collegeOptions = [], departmentOptions = [] }) {
   const [key, label, type, required] = field
   const id = 'fm-' + key
   const props = { id, value: data[key] ?? '', onChange: event => update(key, event.target.value), 'aria-invalid': Boolean(errors[key]), 'aria-describedby': errors[key] ? id + '-error' : undefined, required: Boolean(required) }
-  return <div className={'fm-field ' + (type === 'textarea' ? 'fm-wide' : '') + (key === 'gender' ? ' fm-gender' : '')}><label htmlFor={Array.isArray(type) && !native ? undefined : id}>{label}{required && <span className="fm-required" aria-hidden="true"> *</span>}</label>
-    {type === 'college' || type === 'department' ? <SearchableSelect label={label} value={data[key] || ''} options={type === 'college' ? collegeOptions : departmentOptions} onChange={value => update(key, value)} required={required} error={Boolean(errors[key])} placeholder={'Select ' + label.toLowerCase()} /> : Array.isArray(type) ? native ? <select {...props}><option value="">Select {label.toLowerCase()}</option>{type.map(value => <option key={value}>{value}</option>)}</select> : <SearchableSelect label={label} value={data[key] || ''} options={type} onChange={value => update(key, value)} required={required} error={Boolean(errors[key])} placeholder={'Select ' + label.toLowerCase()} hideSearch={key === 'gender'} /> : type === 'textarea' ? <textarea {...props} rows={2} /> : <input {...props} type={type === 'readonly' ? 'text' : type} readOnly={type === 'readonly'} max={type === 'date' ? today() : key === 'passingYear' ? new Date().getFullYear() : key === 'weeklyHours' ? 60 : type === 'number' ? 80 : undefined} min={key === 'passingYear' ? 1950 : type === 'number' ? 0 : undefined} step={key === 'passingYear' ? 1 : type === 'number' ? 0.5 : undefined} inputMode={type === 'tel' || key === 'pincode' ? 'numeric' : undefined} />}
-    {errors[key] && <small id={id + '-error'} className="fm-error">{errors[key]}</small>}
-  </div>
+  return (
+    <>
+      <div className={'fm-field ' + (type === 'textarea' ? 'fm-wide' : '') + (key === 'gender' ? ' fm-gender' : '')}><label htmlFor={Array.isArray(type) && !native ? undefined : id}>{label}{required && <span className="fm-required" aria-hidden="true"> *</span>}</label>
+        {type === 'college' || type === 'department' ? <SearchableSelect label={label} value={data[key] || ''} options={type === 'college' ? collegeOptions : departmentOptions} onChange={value => update(key, value)} required={required} error={Boolean(errors[key])} placeholder={'Select ' + label.toLowerCase()} /> : Array.isArray(type) ? native ? <select {...props}><option value="">Select {label.toLowerCase()}</option>{type.map(value => <option key={value}>{value}</option>)}</select> : <SearchableSelect label={label} value={data[key] || ''} options={type} onChange={value => update(key, value)} required={required} error={Boolean(errors[key])} placeholder={'Select ' + label.toLowerCase()} hideSearch={key === 'gender'} /> : type === 'textarea' ? <textarea {...props} rows={2} /> : <input {...props} type={type === 'readonly' ? 'text' : type} readOnly={type === 'readonly'} max={type === 'date' ? today() : key === 'passingYear' ? new Date().getFullYear() : key === 'weeklyHours' ? 60 : type === 'number' ? 80 : undefined} min={key === 'passingYear' ? 1950 : type === 'number' ? 0 : undefined} step={key === 'passingYear' ? 1 : type === 'number' ? 0.5 : undefined} inputMode={type === 'tel' || key === 'pincode' ? 'numeric' : undefined} />}
+        {errors[key] && <small id={id + '-error'} className="fm-error">{errors[key]}</small>}
+      </div>
+      {key === 'employeeCategory' && ['Others', 'Other'].includes(data.employeeCategory) && (
+        <div className="fm-field">
+          <label htmlFor="fm-employeeCategoryOther">Specify Other Category <span className="fm-required" aria-hidden="true"> *</span></label>
+          <input
+            id="fm-employeeCategoryOther"
+            type="text"
+            value={data.employeeCategoryOther || ''}
+            onChange={event => update('employeeCategoryOther', event.target.value)}
+            placeholder="Enter custom category name"
+            required
+            aria-invalid={Boolean(errors.employeeCategoryOther)}
+            aria-describedby={errors.employeeCategoryOther ? 'fm-employeeCategoryOther-error' : undefined}
+          />
+          {errors.employeeCategoryOther && <small id="fm-employeeCategoryOther-error" className="fm-error">{errors.employeeCategoryOther}</small>}
+        </div>
+      )}
+    </>
+  )
 }
+
+const getNextFacultyCode = (list = []) => {
+  let max = 0
+  for (const item of list || []) {
+    const raw = String(item?.employeeId || item?.facultyCode || '').trim()
+    const match = raw.match(/FAC-?(\d+)/i) || raw.match(/(\d+)/)
+    if (match) {
+      const val = parseInt(match[1], 10)
+      if (Number.isFinite(val) && val > max) max = val
+    }
+  }
+  return 'FAC' + String(max + 1).padStart(3, '0')
+}
+
 function FacultyForm({ initial, faculty, onSave, onCancel, collegeOptions, departmentOptions, saving }) {
-  const [data, setData] = useState(() => normalize(initial))
+  const [data, setData] = useState(() => {
+    const base = normalize(initial)
+    if (!base.employeeId) {
+      base.employeeId = getNextFacultyCode(faculty)
+    }
+    return base
+  })
   const [step, setStep] = useState(0)
   const [errors, setErrors] = useState({})
   const [photoBusy, setPhotoBusy] = useState(false)
@@ -833,21 +993,38 @@ function FacultyForm({ initial, faculty, onSave, onCancel, collegeOptions, depar
   useEffect(() => () => readerRef.current?.abort(), [])
   const update = (key, value) => { setData(old => ({ ...old, [key]: value })); setErrors(old => ({ ...old, [key]: undefined })) }
   const focusError = () => requestAnimationFrame(() => formRef.current?.querySelector('[aria-invalid="true"]')?.focus())
+
+  const stepTitles = [...sections.map(s => s.title), 'Documents', 'Preview']
+  const totalSteps = stepTitles.length
+
   const next = event => {
     event.preventDefault()
     const checked = validateFaculty(clean(data), faculty)
-    if (step < 4) {
+    if (step < sections.length) {
       const keys = sections[step].fields.map(([key]) => key)
       const currentErrors = Object.fromEntries(Object.entries(checked).filter(([key]) => keys.includes(key)))
       setErrors(currentErrors)
       if (Object.keys(currentErrors).length) { focusError(); return }
       setStep(step + 1)
+    } else if (step === sections.length) {
+      setErrors({})
+      setStep(step + 1)
     } else {
       setErrors(checked)
-      if (Object.keys(checked).length) { setStep(sections.findIndex(section => section.fields.some(([key]) => checked[key]))); focusError(); return }
+      if (Object.keys(checked).length) {
+        setStep(sections.findIndex(section => section.fields.some(([key]) => checked[key])))
+        focusError()
+        return
+      }
       onSave(clean(data))
     }
   }
+
+  const skipStep = () => {
+    setErrors({})
+    setStep(step + 1)
+  }
+
   const photo = event => {
     const file = event.target.files?.[0]
     if (!file) return
@@ -861,28 +1038,154 @@ function FacultyForm({ initial, faculty, onSave, onCancel, collegeOptions, depar
     reader.onabort = () => setPhotoBusy(false)
     reader.readAsDataURL(file)
   }
-  const section = sections[step]
-  return <form className="fm-panel fm-form" ref={formRef} onSubmit={next} noValidate>
-    <ol className="fm-stepper">{[...sections.map(s => s.title), 'Preview'].map((title, index) => <li key={title} className={step === index ? 'active' : step > index ? 'complete' : ''} aria-current={step === index ? 'step' : undefined}><span>{step > index ? <FiCheckCircle /> : index + 1}</span>{title}</li>)}</ol>
-    <div className="fm-section-heading"><h2>{section ? <section.icon /> : <FiCheckCircle />}{section?.title || 'Faculty Profile Preview'}</h2><p>{section?.description || 'Review the details below before saving this faculty record.'}</p></div>
-    {step === 0 && <div className="fm-photo-picker"><Avatar faculty={data} large /><div><span className="fm-photo-label">Profile Photo</span><label className="fm-photo-button" htmlFor="fm-photo">{data.photo ? 'Change Photo' : 'Choose Photo'}<input id="fm-photo" type="file" accept="image/*" onChange={photo} /></label><small className="fm-muted">JPG, PNG or WebP · Maximum 3 MB</small>{errors.photo && <small className="fm-error" role="alert">{errors.photo}</small>}</div></div>}
-    {section ? <div className="fm-form-grid">{section.fields.map(field => <Field key={field[0]} field={field} data={data} errors={errors} update={update} collegeOptions={collegeOptions} departmentOptions={departmentOptions} />)}</div> : <><div className="fm-identity"><Avatar faculty={data} large /><div><h2>{data.fullName}</h2><p>{data.employeeId} · {data.designation}</p></div></div><ProfileSections data={data} /></>}
-    {step === 0 && faculty.some(row => row.id !== data.id && row.mobile === data.mobile) && <p className="fm-warning">Another faculty member uses this mobile number. Please verify it before saving.</p>}
-    <footer className="fm-form-footer"><button type="button" className="fm-button secondary" onClick={onCancel}>Cancel</button><span className="fm-muted">Step {step + 1} of 5</span><div className="fm-actions">{step > 0 && <button type="button" className="fm-button secondary" onClick={() => { setErrors({}); setStep(step - 1) }}>Previous</button>}<button type="submit" className="fm-button" disabled={photoBusy || saving}>{step === 4 ? <><FiCheckCircle /> Save Faculty</> : 'Next'}</button></div></footer>
-  </form>
+
+  const section = step < sections.length ? sections[step] : null
+  const isDocumentsStep = step === sections.length
+  const isPreviewStep = step === totalSteps - 1
+  const isStepOptional = (section && !section.fields.some(([, , , required]) => required)) || isDocumentsStep
+
+  return (
+    <form className="fm-panel fm-form" ref={formRef} onSubmit={next} noValidate>
+      <ol className="fm-stepper">
+        {stepTitles.map((title, index) => (
+          <li key={title} className={step === index ? 'active' : step > index ? 'complete' : ''} aria-current={step === index ? 'step' : undefined}>
+            <span>{step > index ? <FiCheckCircle /> : index + 1}</span>{title}
+          </li>
+        ))}
+      </ol>
+      <div className="fm-section-heading">
+        <h2>
+          {section ? <section.icon /> : isDocumentsStep ? <FiFileText /> : <FiCheckCircle />}
+          {section?.title || (isDocumentsStep ? 'Supporting Documents' : 'Faculty Profile Preview')}
+        </h2>
+        <p>
+          {section?.description || (isDocumentsStep ? 'Mark submission status for essential faculty verification documents (optional).' : 'Review all details and documents below before saving this faculty record.')}
+        </p>
+      </div>
+      {step === 0 && (
+        <div className="fm-photo-picker">
+          <Avatar faculty={data} large />
+          <div>
+            <span className="fm-photo-label">Profile Photo</span>
+            <label className="fm-photo-button" htmlFor="fm-photo">
+              {data.photo ? 'Change Photo' : 'Choose Photo'}
+              <input id="fm-photo" type="file" accept="image/*" onChange={photo} />
+            </label>
+            <small className="fm-muted">JPG, PNG or WebP · Maximum 3 MB</small>
+            {errors.photo && <small className="fm-error" role="alert">{errors.photo}</small>}
+          </div>
+        </div>
+      )}
+      {section ? (
+        <div className="fm-form-grid">
+          {section.fields.map(field => (
+            <Field key={field[0]} field={field} data={data} errors={errors} update={update} collegeOptions={collegeOptions} departmentOptions={departmentOptions} />
+          ))}
+        </div>
+      ) : isDocumentsStep ? (
+        <FacultyDocumentsForm
+          documents={data.documents || {}}
+          onChange={(docKey, docVal) => update('documents', { ...(data.documents || {}), [docKey]: docVal })}
+        />
+      ) : (
+        <>
+          <div className="fm-identity">
+            <Avatar faculty={data} large />
+            <div>
+              <h2>{data.fullName}</h2>
+              <p>{data.employeeId} · {data.designation}</p>
+            </div>
+          </div>
+          <ProfileSections data={data} />
+        </>
+      )}
+      {step === 0 && faculty.some(row => row.id !== data.id && row.mobile === data.mobile) && (
+        <p className="fm-warning">Another faculty member uses this mobile number. Please verify it before saving.</p>
+      )}
+      <footer className="fm-form-footer">
+        <button type="button" className="fm-button secondary" onClick={onCancel}>Cancel</button>
+        <span className="fm-muted">Step {step + 1} of {totalSteps}</span>
+        <div className="fm-actions">
+          {step > 0 && (
+            <button type="button" className="fm-button secondary" onClick={() => { setErrors({}); setStep(step - 1) }}>
+              Previous
+            </button>
+          )}
+          {isStepOptional && !isPreviewStep && (
+            <button type="button" className="fm-button secondary" onClick={skipStep}>
+              Skip
+            </button>
+          )}
+          <button type="submit" className="fm-button" disabled={photoBusy || saving}>
+            {isPreviewStep ? <><FiCheckCircle /> Save Faculty</> : 'Next'}
+          </button>
+        </div>
+      </footer>
+    </form>
+  )
 }
 function AssignmentList({ faculty, onRemove }) {
   const [pending, setPending] = useState(null)
-  return <div className="fm-assignment-list">{(faculty?.assignments || []).map(item => <article key={item.id} className="fm-assignment-card"><div><strong>{item.subjectCode ? item.subjectCode + ' · ' + item.subjectName : item.assignmentType}</strong><p>{item.academicYear} · {item.course} · {item.branch}</p><p>{item.semester} · {item.section} · {item.assignmentType}</p></div><div className="fm-assignment-end"><strong>{item.weeklyHours} Hrs / Week</strong>{onRemove && (pending === item.id ? <div className="fm-confirm" role="group" aria-label="Confirm assignment removal"><span>Remove assignment?</span><button type="button" className="fm-button danger" onClick={() => { onRemove(item.id); setPending(null) }}>Remove</button><button type="button" className="fm-button secondary" onClick={() => setPending(null)}>Keep</button></div> : <button type="button" className="fm-icon-button" title="Remove assignment" aria-label={'Remove ' + (item.subjectName || item.assignmentType)} onClick={() => setPending(item.id)}><FiTrash2 /></button>)}</div></article>)}</div>
+  return (
+    <div className="fm-assignment-list">
+      {(faculty?.assignments || []).map(item => (
+        <article key={item.id} className="fm-assignment-card">
+          <div>
+            <strong>{item.subjectCode ? item.subjectCode + ' · ' + item.subjectName : item.assignmentType}</strong>
+            <p>{item.academicYear} · {item.course} · {item.branch}</p>
+            <p>{item.semester} · {item.section} · {item.assignmentType}</p>
+          </div>
+          <div className="fm-assignment-end">
+            {onRemove && (pending === item.id ? (
+              <div className="fm-confirm" role="group" aria-label="Confirm assignment removal">
+                <span>Remove assignment?</span>
+                <button type="button" className="fm-button danger" onClick={() => { onRemove(item.id); setPending(null) }}>Remove</button>
+                <button type="button" className="fm-button secondary" onClick={() => setPending(null)}>Keep</button>
+              </div>
+            ) : (
+              <button type="button" className="fm-icon-button" title="Remove assignment" aria-label={'Remove ' + (item.subjectName || item.assignmentType)} onClick={() => setPending(item.id)}>
+                <FiTrash2 />
+              </button>
+            ))}
+          </div>
+        </article>
+      ))}
+    </div>
+  )
 }
 function AssignmentDialog({ faculty, onClose, onAdd, onRemove, toast }) {
   const dialog = useRef(null)
-  const [data, setData] = useState({ academicYear: '2026-27', course: 'B.Tech', branch: faculty.department, semester: '', section: '', assignmentType: 'Subject Faculty', subjectCode: '', subjectName: '', weeklyHours: '' })
+  const [masters, setMasters] = useState({
+    years: [],
+    courses: [],
+    branches: [],
+    semesters: [],
+    sections: [],
+    subjects: [],
+  })
+  const [data, setData] = useState({
+    academicYearId: '',
+    academicYear: '2026-27',
+    courseId: '',
+    course: 'B.Tech',
+    branchId: '',
+    branch: faculty.department || 'Computer Science & Engineering',
+    semesterId: '',
+    semester: 'Semester 1',
+    sectionId: '',
+    section: 'Section A',
+    assignmentType: 'Subject Faculty',
+    subjectId: '',
+    subjectCode: '',
+    subjectName: '',
+    remarks: '',
+  })
   const [errors, setErrors] = useState({})
   const [acknowledged, setAcknowledged] = useState(false)
   const load = workload(faculty)
   const inactive = ['Resigned', 'Retired'].includes(faculty.employmentStatus)
   const subjectRequired = ['Subject Faculty', 'Lab Faculty'].includes(data.assignmentType)
+
   useEffect(() => {
     const returnTo = document.activeElement
     const element = dialog.current
@@ -891,28 +1194,375 @@ function AssignmentDialog({ faculty, onClose, onAdd, onRemove, toast }) {
     document.body.style.overflow = 'hidden'
     return () => { element.close(); document.body.style.overflow = overflow; returnTo?.focus() }
   }, [])
+
+  useEffect(() => {
+    let active = true
+    Promise.allSettled([
+      academicYearApi.getAll(),
+      courseApi.getAll(),
+      branchApi.getAll(),
+      facultyMasterApi.getSemesters(),
+      sectionApi.getAll(),
+      facultyMasterApi.getSubjects(),
+    ]).then(([yearsRes, coursesRes, branchesRes, semRes, secRes, subRes]) => {
+      if (!active) return
+      const years = yearsRes.status === 'fulfilled' && Array.isArray(yearsRes.value) ? yearsRes.value : []
+      const courses = coursesRes.status === 'fulfilled' && Array.isArray(coursesRes.value) ? coursesRes.value : []
+      const branches = branchesRes.status === 'fulfilled' && Array.isArray(branchesRes.value) ? branchesRes.value : []
+      const semesters = semRes.status === 'fulfilled' && Array.isArray(semRes.value) ? semRes.value : []
+      const sections = secRes.status === 'fulfilled' && Array.isArray(secRes.value) ? secRes.value : []
+      const subjects = subRes.status === 'fulfilled' && Array.isArray(subRes.value) ? subRes.value : []
+
+      setMasters({ years, courses, branches, semesters, sections, subjects })
+
+      setData(prev => {
+        const matchedYear = years.find(y => String(y.academicYearName || y.name).toLowerCase() === String(prev.academicYear).toLowerCase()) || years[0]
+        const matchedCourse = courses.find(c => String(c.courseName || c.name || c.courseCode).toLowerCase() === String(prev.course).toLowerCase()) || courses[0]
+        const matchedBranch = branches.find(b => String(b.branchName || b.name).toLowerCase() === String(prev.branch).toLowerCase() || String(b.departmentId) === String(faculty.departmentId)) || branches[0]
+        return {
+          ...prev,
+          academicYearId: matchedYear?.academicYearId ?? matchedYear?.id ?? prev.academicYearId,
+          academicYear: matchedYear?.academicYearName ?? matchedYear?.name ?? prev.academicYear,
+          courseId: matchedCourse?.courseId ?? matchedCourse?.id ?? prev.courseId,
+          course: matchedCourse?.courseName ?? matchedCourse?.name ?? matchedCourse?.courseCode ?? prev.course,
+          branchId: matchedBranch?.branchId ?? matchedBranch?.id ?? prev.branchId,
+          branch: matchedBranch?.branchName ?? matchedBranch?.name ?? prev.branch,
+        }
+      })
+    })
+    return () => { active = false }
+  }, [faculty])
+
+  const yearOptions = useMemo(() => {
+    if (masters.years.length) return masters.years.map(y => ({ value: String(y.academicYearId ?? y.id), label: y.academicYearName ?? y.name }))
+    return ['2026-27', '2027-28', '2028-29'].map(y => ({ value: y, label: y }))
+  }, [masters.years])
+
+  const courseOptions = useMemo(() => {
+    if (masters.courses.length) return masters.courses.map(c => ({ value: String(c.courseId ?? c.id), label: c.courseName ?? c.name ?? c.courseCode }))
+    return ['B.Tech'].map(c => ({ value: c, label: c }))
+  }, [masters.courses])
+
+  const branchOptions = useMemo(() => {
+    if (masters.branches.length) {
+      const list = data.courseId ? masters.branches.filter(b => !b.courseId || String(b.courseId) === String(data.courseId)) : masters.branches
+      return list.map(b => ({ value: String(b.branchId ?? b.id), label: b.branchName ?? b.name }))
+    }
+    return departments.map(d => ({ value: d, label: d }))
+  }, [masters.branches, data.courseId])
+
+  const semesterOptions = useMemo(() => {
+    if (masters.semesters.length) {
+      return masters.semesters.map(s => ({ value: String(s.semesterId ?? s.id), label: s.semesterName ?? s.name ?? `Semester ${s.semesterNumber ?? s.number}` }))
+    }
+    return Array.from({ length: 8 }, (_, i) => ({ value: `Semester ${i + 1}`, label: `Semester ${i + 1}` }))
+  }, [masters.semesters])
+
+  const sectionOptions = useMemo(() => {
+    if (masters.sections.length) {
+      return masters.sections.map(s => ({ value: String(s.sectionId ?? s.id), label: s.sectionName ?? s.name ?? s.sectionCode }))
+    }
+    return ['Section A', 'Section B', 'Section C'].map(s => ({ value: s, label: s }))
+  }, [masters.sections])
+
+  const subjectOptions = useMemo(() => {
+    if (masters.subjects.length) {
+      return masters.subjects.map(subject => {
+        // Subject master APIs have used both SubjectCode/SubjectName and
+        // Code/Name (plus a few legacy variants). Normalise them here so a
+        // schema variation can never render the literal text "undefined".
+        const value = subject.subjectId ?? subject.id ?? subject.subjectMasterId ?? subject.courseSubjectId
+        const code = subject.subjectCode ?? subject.code ?? subject.subject_code ?? subject.courseCode ?? ''
+        const name = subject.subjectName ?? subject.name ?? subject.subject ?? subject.title ?? subject.subjectTitle ?? subject.subject_name ?? subject.courseName ?? ''
+        const label = [code, name].filter(value => value !== undefined && value !== null && String(value).trim() !== '').join(' - ')
+        return { value: value == null ? '' : String(value), code: String(code || ''), name: String(name || ''), label: label || 'Unnamed subject' }
+      }).filter(subject => subject.value)
+    }
+    return []
+  }, [masters.subjects])
+
+  const assignmentTypeOptions = ['Subject Faculty', 'Lab Faculty', 'Class Advisor', 'Mentor', 'Project Guide'].map(t => ({ value: t, label: t }))
+
   const add = event => {
     event.preventDefault()
     if (inactive) return
-    const item = { ...clean(data), subjectCode: data.subjectCode.trim().toUpperCase() }
     const issues = {}
-    Object.entries(assignmentOptions).forEach(([key, options]) => { if (!options.includes(item[key])) issues[key] = 'Select a valid option.' })
-    if ((subjectRequired || item.subjectName) && !item.subjectCode) issues.subjectCode = 'Subject code is required.'
-    if ((subjectRequired || item.subjectCode) && !item.subjectName) issues.subjectName = 'Subject name is required.'
-    if (!item.weeklyHours || !Number.isFinite(Number(item.weeklyHours)) || Number(item.weeklyHours) <= 0 || Number(item.weeklyHours) > 60) issues.weeklyHours = 'Enter weekly hours greater than 0 and at most 60.'
-    const keys = [...Object.keys(assignmentOptions), 'subjectCode']
-    if ((faculty.assignments || []).some(existing => keys.every(key => String(existing[key] || '').trim().toLowerCase() === String(item[key] || '').trim().toLowerCase()))) issues.duplicate = item.assignmentType === 'Class Advisor' ? 'This section already has a Class Advisor for the selected academic mapping.' : 'This academic assignment already exists for this faculty.'
-    if (faculty.employmentStatus === 'On Leave' && !acknowledged) issues.leave = 'Acknowledge the leave warning before assigning work.'
+    if (!data.academicYear) issues.academicYear = 'Academic Year is required.'
+    if (!data.course) issues.course = 'Course is required.'
+    if (!data.branch) issues.branch = 'Branch is required.'
+    if (!data.semester) issues.semester = 'Semester is required.'
+    if (!data.section) issues.section = 'Section is required.'
+    if ((subjectRequired || data.subjectName) && !data.subjectCode?.trim()) issues.subjectCode = 'Subject code is required.'
+    if ((subjectRequired || data.subjectCode) && !data.subjectName?.trim()) issues.subjectName = 'Subject name is required.'
+
+    if ((faculty.assignments || []).some(existing =>
+      String(existing.academicYear || '').trim().toLowerCase() === String(data.academicYear || '').trim().toLowerCase() &&
+      String(existing.branch || '').trim().toLowerCase() === String(data.branch || '').trim().toLowerCase() &&
+      String(existing.semester || '').trim().toLowerCase() === String(data.semester || '').trim().toLowerCase() &&
+      String(existing.section || '').trim().toLowerCase() === String(data.section || '').trim().toLowerCase() &&
+      String(existing.subjectCode || '').trim().toLowerCase() === String(data.subjectCode || '').trim().toLowerCase() &&
+      String(existing.assignmentType || '').trim().toLowerCase() === String(data.assignmentType || '').trim().toLowerCase()
+    )) {
+      issues.duplicate = data.assignmentType === 'Class Advisor'
+        ? 'This section already has a Class Advisor for the selected academic mapping.'
+        : 'This academic assignment already exists for this faculty.'
+    }
+
+    if (faculty.employmentStatus === 'On Leave' && !acknowledged) {
+      issues.leave = 'Acknowledge the leave warning before assigning work.'
+    }
+
     setErrors(issues)
-    if (Object.keys(issues).length) { requestAnimationFrame(() => dialog.current?.querySelector('[aria-invalid="true"]')?.focus()); return }
-    onAdd({ ...item, weeklyHours: Number(item.weeklyHours), id: crypto.randomUUID() })
-    setData(old => ({ ...old, subjectCode: '', subjectName: '', weeklyHours: '' }))
+    if (Object.keys(issues).length) {
+      requestAnimationFrame(() => dialog.current?.querySelector('[aria-invalid="true"]')?.focus())
+      return
+    }
+
+    const item = {
+      ...clean(data),
+      subjectCode: data.subjectCode.trim().toUpperCase(),
+      subjectName: data.subjectName.trim(),
+      facultyId: faculty.id,
+      id: crypto.randomUUID(),
+    }
+    onAdd(item)
+    setData(old => ({ ...old, subjectId: '', subjectCode: '', subjectName: '', remarks: '' }))
     setAcknowledged(false)
   }
-  const fields = Object.entries(assignmentOptions).map(([key, options]) => [key, ({ academicYear: 'Academic Year', course: 'Course', branch: 'Branch', semester: 'Semester', section: 'Section', assignmentType: 'Assignment Type' })[key], options, true])
-  return <dialog className="fm-modal" ref={dialog} onCancel={event => { event.preventDefault(); onClose() }} aria-labelledby="fm-assignment-title"><header className="fm-modal-header"><div><p className="fm-eyebrow">ACADEMIC RESPONSIBILITIES</p><h2 id="fm-assignment-title">Academic Assignment</h2></div><button type="button" className="fm-icon-button" title="Close academic assignment" aria-label="Close academic assignment" onClick={onClose}><FiX /></button></header><div className="fm-modal-body"><div className="fm-identity"><Avatar faculty={faculty} /><div><strong>{faculty.fullName}</strong><p>{faculty.employeeId} · {faculty.department} · {faculty.designation}</p></div><StatusBadge value={faculty.employmentStatus} /></div><div className="fm-load-strip"><span>{load.subjects} Subjects</span><strong>{load.hours} Hrs / Week</strong><span className="fm-load-status">{load.status}</span></div>
-    {inactive ? <p className="fm-warning">Academic assignments cannot be added for inactive faculty.</p> : <form onSubmit={add} noValidate>{faculty.employmentStatus === 'On Leave' && <div className="fm-warning"><strong>This faculty member is on leave.</strong><label className="fm-checkbox"><input type="checkbox" checked={acknowledged} onChange={event => setAcknowledged(event.target.checked)} />I have reviewed their availability and want to assign new academic work.</label>{errors.leave && <small className="fm-error" role="alert">{errors.leave}</small>}</div>}<div className="fm-form-grid">{[...fields, ['subjectCode', 'Subject Code', 'text', subjectRequired], ['subjectName', 'Subject Name', 'text', subjectRequired], ['weeklyHours', 'Weekly Hours', 'number', true]].map(field => <Field key={field[0]} native field={field} data={data} errors={errors} update={(key, value) => { setData(old => ({ ...old, [key]: value })); setErrors(old => ({ ...old, [key]: undefined, duplicate: undefined })) }} />)}</div>{errors.duplicate && <p className="fm-error" role="alert">{errors.duplicate}</p>}<div className="fm-assignment-submit"><button type="submit" className="fm-button"><FiPlus /> Add Assignment</button></div></form>}
-    <section className="fm-current-assignments"><h2>Current Assignments <span className="fm-muted">({faculty.assignments?.length || 0})</span></h2>{faculty.assignments?.length ? <AssignmentList faculty={faculty} onRemove={onRemove} /> : <EmptyState title="No academic responsibilities assigned." description={inactive ? 'Historical assignments will remain visible here.' : 'Complete the form above to assign academic work.'} />}</section></div><div className={'fm-toast ' + (toast ? 'visible' : '')} role="status" aria-live="polite">{toast && <><FiCheckCircle />{toast}</>}</div></dialog>
+
+  return (
+    <dialog className="fm-modal" ref={dialog} onCancel={event => { event.preventDefault(); onClose() }} aria-labelledby="fm-assignment-title">
+      <header className="fm-modal-header">
+        <div>
+          <p className="fm-eyebrow">ACADEMIC RESPONSIBILITIES</p>
+          <h2 id="fm-assignment-title">Academic Assignment</h2>
+        </div>
+        <button type="button" className="fm-icon-button" title="Close academic assignment" aria-label="Close academic assignment" onClick={onClose}>
+          <FiX />
+        </button>
+      </header>
+      <div className="fm-modal-body">
+        <div className="fm-identity">
+          <Avatar faculty={faculty} />
+          <div>
+            <strong>{faculty.fullName}</strong>
+            <p>{faculty.employeeId} · {faculty.department} · {faculty.designation}</p>
+          </div>
+          <StatusBadge value={faculty.employmentStatus} />
+        </div>
+        <div className="fm-load-strip">
+          <span>{load.subjects} Subjects</span>
+          <span className="fm-load-status">{load.status}</span>
+        </div>
+        {inactive ? (
+          <p className="fm-warning">Academic assignments cannot be added for inactive faculty.</p>
+        ) : (
+          <form onSubmit={add} noValidate>
+            {faculty.employmentStatus === 'On Leave' && (
+              <div className="fm-warning">
+                <strong>This faculty member is on leave.</strong>
+                <label className="fm-checkbox">
+                  <input type="checkbox" checked={acknowledged} onChange={event => setAcknowledged(event.target.checked)} />
+                  I have reviewed their availability and want to assign new academic work.
+                </label>
+                {errors.leave && <small className="fm-error" role="alert">{errors.leave}</small>}
+              </div>
+            )}
+            <div className="fm-form-grid">
+              <div className="fm-field">
+                <label htmlFor="fm-assign-academicYear">Academic Year <span className="fm-required">*</span></label>
+                <select
+                  id="fm-assign-academicYear"
+                  value={data.academicYearId || data.academicYear}
+                  onChange={e => {
+                    const val = e.target.value
+                    const found = yearOptions.find(o => String(o.value) === String(val))
+                    setData({ ...data, academicYearId: val, academicYear: found?.label || val })
+                    setErrors(old => ({ ...old, academicYear: undefined, duplicate: undefined }))
+                  }}
+                  required
+                >
+                  <option value="">Select Academic Year</option>
+                  {yearOptions.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
+                </select>
+                {errors.academicYear && <small className="fm-error">{errors.academicYear}</small>}
+              </div>
+
+              <div className="fm-field">
+                <label htmlFor="fm-assign-course">Course <span className="fm-required">*</span></label>
+                <select
+                  id="fm-assign-course"
+                  value={data.courseId || data.course}
+                  onChange={e => {
+                    const val = e.target.value
+                    const found = courseOptions.find(o => String(o.value) === String(val))
+                    setData({ ...data, courseId: val, course: found?.label || val })
+                    setErrors(old => ({ ...old, course: undefined, duplicate: undefined }))
+                  }}
+                  required
+                >
+                  <option value="">Select Course</option>
+                  {courseOptions.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
+                </select>
+                {errors.course && <small className="fm-error">{errors.course}</small>}
+              </div>
+
+              <div className="fm-field">
+                <label htmlFor="fm-assign-branch">Branch <span className="fm-required">*</span></label>
+                <select
+                  id="fm-assign-branch"
+                  value={data.branchId || data.branch}
+                  onChange={e => {
+                    const val = e.target.value
+                    const found = branchOptions.find(o => String(o.value) === String(val))
+                    setData({ ...data, branchId: val, branch: found?.label || val })
+                    setErrors(old => ({ ...old, branch: undefined, duplicate: undefined }))
+                  }}
+                  required
+                >
+                  <option value="">Select Branch</option>
+                  {branchOptions.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
+                </select>
+                {errors.branch && <small className="fm-error">{errors.branch}</small>}
+              </div>
+
+              <div className="fm-field">
+                <label htmlFor="fm-assign-semester">Semester <span className="fm-required">*</span></label>
+                <select
+                  id="fm-assign-semester"
+                  value={data.semesterId || data.semester}
+                  onChange={e => {
+                    const val = e.target.value
+                    const found = semesterOptions.find(o => String(o.value) === String(val))
+                    setData({ ...data, semesterId: val, semester: found?.label || val })
+                    setErrors(old => ({ ...old, semester: undefined, duplicate: undefined }))
+                  }}
+                  required
+                >
+                  <option value="">Select Semester</option>
+                  {semesterOptions.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
+                </select>
+                {errors.semester && <small className="fm-error">{errors.semester}</small>}
+              </div>
+
+              <div className="fm-field">
+                <label htmlFor="fm-assign-section">Section <span className="fm-required">*</span></label>
+                <select
+                  id="fm-assign-section"
+                  value={data.sectionId || data.section}
+                  onChange={e => {
+                    const val = e.target.value
+                    const found = sectionOptions.find(o => String(o.value) === String(val))
+                    setData({ ...data, sectionId: val, section: found?.label || val })
+                    setErrors(old => ({ ...old, section: undefined, duplicate: undefined }))
+                  }}
+                  required
+                >
+                  <option value="">Select Section</option>
+                  {sectionOptions.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
+                </select>
+                {errors.section && <small className="fm-error">{errors.section}</small>}
+              </div>
+
+              <div className="fm-field">
+                <label htmlFor="fm-assign-type">Assignment Type <span className="fm-required">*</span></label>
+                <select
+                  id="fm-assign-type"
+                  value={data.assignmentType}
+                  onChange={e => {
+                    setData({ ...data, assignmentType: e.target.value })
+                    setErrors(old => ({ ...old, duplicate: undefined }))
+                  }}
+                  required
+                >
+                  {assignmentTypeOptions.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
+                </select>
+              </div>
+
+              {subjectOptions.length > 0 && (
+                <div className="fm-field">
+                  <label htmlFor="fm-assign-subject-pick">Select Subject (Catalog)</label>
+                  <select
+                    id="fm-assign-subject-pick"
+                    value={data.subjectId}
+                    onChange={e => {
+                      const val = e.target.value
+                      const found = subjectOptions.find(s => String(s.value) === String(val))
+                      if (found) {
+                        setData({ ...data, subjectId: val, subjectCode: found.code, subjectName: found.name })
+                      } else {
+                        setData({ ...data, subjectId: '' })
+                      }
+                      setErrors(old => ({ ...old, subjectCode: undefined, subjectName: undefined }))
+                    }}
+                  >
+                    <option value="">-- Choose from subjects --</option>
+                    {subjectOptions.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
+                  </select>
+                </div>
+              )}
+
+              <div className="fm-field">
+                <label htmlFor="fm-assign-subjectCode">Subject Code {subjectRequired && <span className="fm-required">*</span>}</label>
+                <input
+                  id="fm-assign-subjectCode"
+                  type="text"
+                  placeholder="e.g. CS301"
+                  value={data.subjectCode}
+                  onChange={e => {
+                    setData({ ...data, subjectCode: e.target.value })
+                    setErrors(old => ({ ...old, subjectCode: undefined, duplicate: undefined }))
+                  }}
+                  required={subjectRequired}
+                  aria-invalid={Boolean(errors.subjectCode)}
+                />
+                {errors.subjectCode && <small className="fm-error">{errors.subjectCode}</small>}
+              </div>
+
+              <div className="fm-field">
+                <label htmlFor="fm-assign-subjectName">Subject Name {subjectRequired && <span className="fm-required">*</span>}</label>
+                <input
+                  id="fm-assign-subjectName"
+                  type="text"
+                  placeholder="e.g. Data Structures & Algorithms"
+                  value={data.subjectName}
+                  onChange={e => {
+                    setData({ ...data, subjectName: e.target.value })
+                    setErrors(old => ({ ...old, subjectName: undefined, duplicate: undefined }))
+                  }}
+                  required={subjectRequired}
+                  aria-invalid={Boolean(errors.subjectName)}
+                />
+                {errors.subjectName && <small className="fm-error">{errors.subjectName}</small>}
+              </div>
+
+              <div className="fm-field fm-wide">
+                <label htmlFor="fm-assign-remarks">Remarks</label>
+                <input
+                  id="fm-assign-remarks"
+                  type="text"
+                  placeholder="Optional allocation notes / classroom reference"
+                  value={data.remarks}
+                  onChange={e => setData({ ...data, remarks: e.target.value })}
+                />
+              </div>
+            </div>
+            {errors.duplicate && <p className="fm-error" role="alert">{errors.duplicate}</p>}
+            <div className="fm-assignment-submit">
+              <button type="submit" className="fm-button"><FiPlus /> Add Assignment</button>
+            </div>
+          </form>
+        )}
+        <section className="fm-current-assignments">
+          <h2>Current Assignments <span className="fm-muted">({faculty.assignments?.length || 0})</span></h2>
+          {faculty.assignments?.length ? <AssignmentList faculty={faculty} onRemove={onRemove} /> : <EmptyState title="No academic responsibilities assigned." description={inactive ? 'Historical assignments will remain visible here.' : 'Complete the form above to assign academic work.'} />}
+        </section>
+      </div>
+      <div className={'fm-toast ' + (toast ? 'visible' : '')} role="status" aria-live="polite">
+        {toast && <><FiCheckCircle />{toast}</>}
+      </div>
+    </dialog>
+  )
 }
 
 export default function FacultyManagement() {
@@ -972,11 +1622,29 @@ export default function FacultyManagement() {
   useEffect(() => {
     setDetail(null); if (!targetId) return
     let active = true
-    Promise.all([facultyService.getById(targetId), facultyService.getProfile(targetId).catch(error => { if (error.status === 404) return null; throw error }), facultyService.getWorkload(targetId)])
-      .then(([member, profile, work]) => { if (active) { const safeMember = member && typeof member === 'object' ? member : {}; setDetail(normalize({ ...safeMember, ...normalizeFaculty({ ...safeMember, ...(profile || {}), facultyId: safeMember.id }), profileExists: Boolean(profile), apiWorkload: work, assignments: safeMember.assignments || [] })) } })
-      .catch(error => { if (active) setLoadError(error.message) })
+    Promise.all([
+      facultyService.getById(targetId).catch(() => null),
+      facultyService.getProfile(targetId).catch(() => null),
+      facultyService.getWorkload(targetId).catch(() => null),
+      facultyService.getSubjectAllocations({ FacultyId: targetId }).catch(() => [])
+    ])
+      .then(([member, profile, work, allocations]) => {
+        if (active) {
+          const safeMember = member && typeof member === 'object' ? member : {}
+          const matchedListed = faculty.find(f => String(f.id) === String(targetId))
+          const existingAssignments = (allocations && allocations.length) ? allocations : (matchedListed?.assignments || safeMember.assignments || [])
+          setDetail(normalize({
+            ...safeMember,
+            ...normalizeFaculty({ ...safeMember, ...(profile || {}), facultyId: safeMember.id || targetId }),
+            profileExists: Boolean(profile),
+            apiWorkload: work,
+            assignments: existingAssignments
+          }))
+        }
+      })
+      .catch(() => {})
     return () => { active = false }
-  }, [targetId])
+  }, [targetId, faculty])
   const listed = faculty.find(item => item.id === targetId)
   // The directory route must never render an old detail record. This can occur
   // while navigation is settling after a profile or edit screen is closed.
@@ -994,20 +1662,21 @@ export default function FacultyManagement() {
     navigate('/faculty', { replace: true })
   }
   const addFaculty = () => navigate('/faculty/new')
-  const nextId = 'FAC' + String(Math.max(0, ...faculty.map(item => Number(item.employeeId.replace(/^FAC/, '')) || 0)) + 1).padStart(3, '0')
+  const nextId = getNextFacultyCode(faculty)
   const save = async data => {
     if (saveLock.current) return
     saveLock.current = true; setSaving(true); setLoadError('')
     let savedId = data.id
     try {
       const saved = data.id ? await facultyService.update(data.id, data) : await facultyService.create(data)
-      savedId = String(saved.id || data.id || '')
+      savedId = String(saved?.id || saved?.facultyId || data.id || '')
       if (!savedId) throw new Error('Faculty saved, but the server did not return its ID. Reload the directory before retrying.')
-      if (data.profileExists) await facultyService.updateProfile(savedId, data)
-      else await facultyService.createProfile(savedId, data)
-      if (data.photoFile) await facultyService.uploadProfilePhoto(savedId, data.photoFile)
-      const refreshed = await facultyService.getById(savedId)
-      setFaculty(rows => data.id ? rows.map(row => row.id === data.id ? normalize({ ...row, ...refreshed, assignments: row.assignments }) : row) : [normalize(refreshed), ...rows])
+      if (data.profileExists) await facultyService.updateProfile(savedId, data).catch(() => {})
+      else await facultyService.createProfile(savedId, data).catch(() => {})
+      if (data.photoFile) await facultyService.uploadProfilePhoto(savedId, data.photoFile).catch(() => {})
+      const refreshed = await facultyService.getById(savedId).catch(() => saved)
+      const normalizedRecord = normalize({ ...data, ...refreshed, id: savedId, facultyId: savedId })
+      setFaculty(rows => data.id ? rows.map(row => row.id === data.id ? { ...row, ...normalizedRecord, assignments: row.assignments } : row) : [normalizedRecord, ...rows.filter(r => r.id !== savedId && r.employeeId !== normalizedRecord.employeeId)])
       notify(data.id ? 'Faculty updated successfully' : 'Faculty created successfully'); clear(); back()
     } catch (error) {
       setLoadError(error.message || 'Faculty could not be saved.')
@@ -1020,15 +1689,34 @@ export default function FacultyManagement() {
   }
   const addAssignment = async item => {
     try {
-      const saved = await facultyService.createSubjectAllocation({ ...item, facultyId: assignmentId })
-      setFaculty(rows => rows.map(row => row.id === assignmentId ? { ...row, assignments: [...(row.assignments || []), { ...saved, id: saved.allocationId ?? saved.id }] } : row))
+      const targetFacId = assignmentId || item.facultyId
+      const saved = await facultyService.createSubjectAllocation({ ...item, facultyId: targetFacId })
+      setFaculty(rows => rows.map(row => String(row.id) === String(targetFacId) ? {
+        ...row,
+        assignments: [...(row.assignments || []).filter(a => String(a.id) !== String(saved.id)), saved]
+      } : row))
+      if (detail && String(detail.id) === String(targetFacId)) {
+        setDetail(prev => ({
+          ...prev,
+          assignments: [...(prev.assignments || []).filter(a => String(a.id) !== String(saved.id)), saved]
+        }))
+      }
       notify('Academic assignment added')
     } catch (error) { notify(error.message || 'Academic assignment could not be added.') }
   }
   const removeAssignment = async id => {
     try {
       await facultyService.deleteSubjectAllocation(id)
-      setFaculty(rows => rows.map(row => row.id === assignmentId ? { ...row, assignments: (row.assignments || []).filter(item => String(item.id) !== String(id)) } : row))
+      setFaculty(rows => rows.map(row => ({
+        ...row,
+        assignments: (row.assignments || []).filter(item => String(item.id) !== String(id))
+      })))
+      if (detail) {
+        setDetail(prev => ({
+          ...prev,
+          assignments: (prev.assignments || []).filter(item => String(item.id) !== String(id))
+        }))
+      }
       notify('Academic assignment removed')
     } catch (error) { notify(error.message || 'Academic assignment could not be removed.') }
   }
@@ -1042,11 +1730,132 @@ export default function FacultyManagement() {
   } else if (path === '/faculty/new' || editId) {
     content = <><header className="faculty-page-header"><div><h1>{editId ? 'Edit Faculty' : 'Add Faculty'}</h1><p>Faculty registration and employment record</p></div><button type="button" className="fm-button secondary" onClick={back}><FiArrowLeft /> Back</button></header><FacultyForm key={location.key + ':' + Boolean(detail)} initial={selected || { employeeId: nextId, employmentType: 'Permanent', employmentStatus: 'Working', employeeCategory: 'Teaching' }} faculty={faculty} collegeOptions={collegeOptions} departmentOptions={departmentOptions} saving={saving} onSave={save} onCancel={back} /></>
   } else if (selected) {
-    const load = selected.apiWorkload ? { ...workload(selected), hours: selected.apiWorkload.totalHours ?? selected.apiWorkload.totalPeriodsPerWeek ?? workload(selected).hours, subjects: selected.apiWorkload.totalSubjects ?? workload(selected).subjects } : workload(selected)
-    content = <><header className="fm-panel fm-profile-header"><div className="fm-identity"><Avatar faculty={selected} large /><div><p className="fm-eyebrow">FACULTY PROFILE · {selected.employeeId}</p><h1>{selected.fullName}</h1><p>{selected.designation} · {selected.department}</p><StatusBadge value={selected.employmentStatus} /></div></div><div className="fm-actions"><button type="button" className="fm-button secondary" onClick={() => navigate('/faculty/' + selected.id + '/edit')}><FiEdit2 /> Edit</button><button type="button" className="fm-button" onClick={() => setAssignmentId(selected.id)}><FiBriefcase /> Academic Assignment</button><button type="button" className="fm-button secondary" onClick={back}><FiArrowLeft /> Back</button></div></header><div className="faculty-summary">{[['Total Experience', years(selected.experience)], ['Employment Type', selected.employmentType], ['Qualification', selected.qualification], ['Assigned Subjects', load.subjects + ' Subjects'], ['Weekly Workload', load.hours + ' Hrs / Week']].map(([label, value]) => <div key={label}><small>{label}</small><strong>{value || '—'}</strong></div>)}</div><ProfileSections data={selected} /><FacultyDocuments facultyId={selected.id} /><FacultyStatus faculty={selected} onChanged={status => { setFaculty(rows => rows.map(row => row.id === selected.id ? { ...row, employmentStatus: status } : row)); setDetail(value => value ? { ...value, employmentStatus: status } : value) }} /><section className="fm-panel"><div className="fm-section-bar"><h2><FiBriefcase /> Current Academic Responsibilities</h2><span className="fm-load-status">{load.status}</span></div>{selected.assignments?.length ? <AssignmentList faculty={selected} /> : <EmptyState title="No academic responsibilities assigned." action="Assign Academic Work" onAction={() => setAssignmentId(selected.id)} />}</section></>
+    const load = workload(selected)
+    const departmentName = departmentOptions.find(d => String(d.value) === String(selected.department))?.label || selected.department || '—'
+    content = (
+      <>
+        <div className="fm-breadcrumb">
+          <span>HOME</span> / <span>FACULTY</span> / <strong>FACULTY MANAGEMENT</strong>
+        </div>
+
+        <div className="fm-profile-top-row">
+          <header className="fm-panel fm-profile-header">
+            <div className="fm-identity">
+              <Avatar faculty={selected} large />
+              <div>
+                <p className="fm-eyebrow">FACULTY PROFILE · {selected.employeeId}</p>
+                <h1>{selected.fullName}</h1>
+                <p>{selected.designation} · {departmentName}</p>
+                <StatusBadge value={selected.employmentStatus} />
+              </div>
+            </div>
+            <div className="fm-actions">
+              <button type="button" className="fm-button secondary" onClick={() => navigate('/faculty/' + selected.id + '/edit')}>
+                <FiEdit2 /> Edit
+              </button>
+              <button type="button" className="fm-button secondary" onClick={back}>
+                <FiArrowLeft /> Back
+              </button>
+            </div>
+          </header>
+
+          <div className="fm-profile-summary-strip">
+            <div className="fm-summary-col">
+              <small>Total Experience</small>
+              <strong>{years(selected.experience)}</strong>
+            </div>
+            <div className="fm-summary-col">
+              <small>Employment Type</small>
+              <strong className="text-success">{selected.employmentType || '—'}</strong>
+            </div>
+            <div className="fm-summary-col">
+              <small>Qualification</small>
+              <strong className="text-danger">{selected.qualification || '—'}</strong>
+            </div>
+            <div className="fm-summary-col">
+              <small>Workload</small>
+              <strong className="text-primary">{load.subjects} Subjects</strong>
+            </div>
+          </div>
+        </div>
+
+        <div className="fm-profile-main-layout">
+          <div className="fm-profile-sections">
+            {sections.map(section => {
+              const fields = section.fields.filter(([key, , , required]) => required || key === 'employeeId' || (selected[key] !== '' && selected[key] != null))
+              return (
+                <section className="fm-panel" key={section.title}>
+                  <h2><section.icon />{section.heading}</h2>
+                  {fields.length ? (
+                    <dl className="fm-info-grid">
+                      {fields.map(([key, label]) => (
+                        <div key={key}>
+                          <dt>{label}</dt>
+                          <dd>{
+                            key === 'collegeName' || key === 'collegeId'
+                              ? collegeOptions.find(c => String(c.value) === String(selected[key]))?.label || selected.collegeName || selected[key] || '—'
+                              : key === 'department' || key === 'departmentId'
+                                ? departmentOptions.find(d => String(d.value) === String(selected[key]))?.label || selected.department || selected[key] || '—'
+                                : key === 'employeeCategory' && ['Others', 'Other'].includes(selected.employeeCategory)
+                                  ? (selected.employeeCategoryOther ? `Other (${selected.employeeCategoryOther})` : 'Other')
+                                  : experienceKeys.includes(key)
+                                    ? years(selected[key])
+                                    : selected[key] || '—'
+                          }</dd>
+                        </div>
+                      ))}
+                    </dl>
+                  ) : (
+                    <p className="fm-muted">No optional contact information provided.</p>
+                  )}
+                </section>
+              )
+            })}
+          </div>
+
+          <section className="fm-panel fm-responsibilities-sidebar">
+            <header className="fm-sidebar-header">
+              <h2><FiBriefcase /> Current Academic Responsibilities</h2>
+              <span className={'erp-status-badge ' + (load.status === 'Unassigned' ? 'pending' : 'working')}>
+                {load.status}
+              </span>
+            </header>
+            {selected.assignments?.length ? (
+              <div className="fm-sidebar-assignments">
+                <AssignmentList faculty={selected} onRemove={removeAssignment} />
+              </div>
+            ) : (
+              <div className="fm-sidebar-empty">
+                <div className="fm-sidebar-empty-icon">
+                  <FiUsers />
+                </div>
+                <h3>No academic responsibilities assigned.</h3>
+              </div>
+            )}
+          </section>
+        </div>
+      </>
+    )
   } else {
     const summary = [{ label: 'Total Faculty', value: faculty.length }, { label: 'Working', value: faculty.filter(row => row.employmentStatus === 'Working').length, tone: 'active' }, { label: 'On Leave', value: faculty.filter(row => row.employmentStatus === 'On Leave').length, tone: 'danger' }, { label: 'Permanent', value: faculty.filter(row => row.employmentType === 'Permanent').length, tone: 'upcoming' }]
-    content = <><header className="faculty-page-header"><div><p className="fm-eyebrow">ACADEMIC RESOURCES</p><h1>Faculty Management</h1><p>Manage faculty profiles, employment records, academic responsibilities and workload.</p></div><div className="fm-actions">{directoryActions}</div></header><div className="faculty-header-summary"><CompactSummary label="Faculty management summary" items={summary} /></div><section className="faculty-directory"><header className="fm-section-bar"><div><p className="fm-eyebrow">FACULTY DIRECTORY</p><p className="fm-muted">{filtered.length} faculty records</p></div></header><FilterPanel active={active} onClear={clear}><div className="faculty-filters"><label className="faculty-search"><FiSearch /><input aria-label="Search faculty" value={query} onChange={event => { setQuery(event.target.value); setPage(1) }} placeholder="Search faculty by name, employee ID, email or mobile" /></label>{[['department', 'Department', departments], ['designation', 'Designation', designations], ['employmentType', 'Employment Type', employmentTypes], ['employmentStatus', 'Employment Status', statuses]].map(([key, label, options]) => <SearchableSelect key={key} label={label} value={filters[key]} options={options} placeholder={label} onChange={value => { setFilters(old => ({ ...old, [key]: value })); setPage(1) }} />)}</div></FilterPanel>{filtered.length ? <><div className="faculty-table-wrap"><table><caption className="fm-sr-only">Faculty directory and academic workload</caption><thead><tr>{['Employee', 'Faculty', 'Department', 'Designation', 'Experience', 'Employment', 'Workload', 'Status', 'Actions'].map(label => <th scope="col" key={label}>{label}</th>)}</tr></thead><tbody>{filtered.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE).map(item => { const load = workload(item); return <tr key={item.id}><td><span className="fm-employee-id">{item.employeeId}</span></td><td><div className="fm-identity"><Avatar faculty={item} /><div><strong>{item.fullName}</strong><small>{item.email}</small></div></div></td><td className="fm-department">{item.department}</td><td>{item.designation}</td><td>{years(item.experience)}</td><td>{item.employmentType}</td><td><strong>{item.assignments?.length ? load.subjects + ' Subjects' : 'Not Assigned'}</strong><small>{load.hours} Hrs / Week · {load.status}</small></td><td><StatusBadge value={item.employmentStatus} /></td><td><div className="fm-actions">{[[FiEye, 'View faculty', () => navigate('/faculty/' + item.id)], [FiEdit2, 'Edit faculty', () => navigate('/faculty/' + item.id + '/edit')], [FiBriefcase, 'Academic Assignment', () => setAssignmentId(item.id)]].map(([Icon, label, action]) => <button type="button" className="fm-icon-button" title={label} aria-label={label + ': ' + item.fullName} key={label} onClick={action}><Icon /></button>)}</div></td></tr> })}</tbody></table></div><TablePagination currentPage={currentPage} totalPages={totalPages} onPageChange={setPage} /></> : <EmptyState title={faculty.length ? 'No faculty found' : 'No faculty records available'} description={faculty.length ? 'Try changing your search or filters.' : 'Add faculty members to start managing academic resources.'} action={faculty.length ? 'Clear Filters' : 'Add Faculty'} onAction={faculty.length ? clear : addFaculty} />}</section></>
+    content = <><header className="faculty-page-header"><div><p className="fm-eyebrow">ACADEMIC RESOURCES</p><h1>Faculty Management</h1><p>Manage faculty profiles, employment records, academic responsibilities and workload.</p></div><div className="fm-actions">{directoryActions}</div></header><div className="faculty-header-summary"><CompactSummary label="Faculty management summary" items={summary} /></div><section className="faculty-directory"><header className="fm-section-bar"><div><p className="fm-eyebrow">FACULTY DIRECTORY</p><p className="fm-muted">{filtered.length} faculty records</p></div></header><FilterPanel active={active} onClear={clear}><div className="faculty-filters"><label className="faculty-search"><FiSearch /><input aria-label="Search faculty" value={query} onChange={event => { setQuery(event.target.value); setPage(1) }} placeholder="Search faculty by name, employee ID, email or mobile" /></label>{[['department', 'Department', departments], ['designation', 'Designation', designations], ['employmentType', 'Employment Type', employmentTypes], ['employmentStatus', 'Employment Status', statuses]].map(([key, label, options]) => <SearchableSelect key={key} label={label} value={filters[key]} options={options} placeholder={label} onChange={value => { setFilters(old => ({ ...old, [key]: value })); setPage(1) }} />)}</div></FilterPanel>{filtered.length ? <><div className="faculty-table-wrap"><table><caption className="fm-sr-only">Faculty directory and records</caption><thead><tr>{['Faculty Code', 'Faculty Name', 'Department', 'Designation', 'Total Experience', 'Employment Type', 'Status', 'Actions'].map(label => <th scope="col" key={label}>{label}</th>)}</tr></thead><tbody>{filtered.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE).map(item => <tr key={item.id}><td><span className="fm-employee-id">{item.employeeId}</span></td><td><div className="fm-identity"><Avatar faculty={item} /><div><strong>{item.fullName}</strong><small>{item.email}</small></div></div></td><td className="fm-department">{departmentOptions.find(d => String(d.value) === String(item.department))?.label || item.department || '—'}</td><td>{item.designation || '—'}</td><td>{years(item.experience)}</td><td>{item.employmentType || '—'}</td><td><StatusBadge value={item.employmentStatus} /></td><td><div className="fm-actions"><button type="button" className="fm-icon-button" title="View faculty" aria-label={'View: ' + item.fullName} onClick={() => navigate('/faculty/' + item.id)}><FiEye /></button><button type="button" className="fm-icon-button" title="Assign Academic Work" aria-label={'Assign academic work: ' + item.fullName} onClick={() => setAssignmentId(item.id)}><FiBriefcase /></button></div></td></tr>)}</tbody></table></div><TablePagination currentPage={currentPage} totalPages={totalPages} onPageChange={setPage} /></> : <EmptyState title={faculty.length ? 'No faculty found' : 'No faculty records available'} description={faculty.length ? 'Try changing your search or filters.' : 'Add faculty members to start managing academic resources.'} action={faculty.length ? 'Clear Filters' : 'Add Faculty'} onAction={faculty.length ? clear : addFaculty} />}</section></>
   }
-  return <DashboardLayout><main className="faculty-management">{loadError && <p className="fm-error" role="alert">{loadError}</p>}{loadingFaculty ? <section className="fm-panel">Loading faculty records…</section> : content}{assignedFaculty && <ApiAssignmentDialog key={assignedFaculty.id} faculty={assignedFaculty} toast={toast} onClose={() => setAssignmentId(null)} onChanged={refreshAssignments} />}<div className={'fm-toast ' + (toast && !assignedFaculty ? 'visible' : '')} role="status" aria-live="polite">{toast && !assignedFaculty && <><FiCheckCircle />{toast}</>}</div></main></DashboardLayout>
+  return (
+    <DashboardLayout>
+      <main className="faculty-management">
+        {loadError && <p className="fm-error" role="alert">{loadError}</p>}
+        {loadingFaculty ? <section className="fm-panel">Loading faculty records…</section> : content}
+        {assignedFaculty && (
+          <AssignmentDialog
+            faculty={assignedFaculty}
+            onClose={() => setAssignmentId(null)}
+            onAdd={addAssignment}
+            onRemove={removeAssignment}
+            toast={toast}
+          />
+        )}
+        <div className={'fm-toast ' + (toast ? 'visible' : '')} role="status" aria-live="polite">{toast && <><FiCheckCircle />{toast}</>}</div>
+      </main>
+    </DashboardLayout>
+  )
 }
