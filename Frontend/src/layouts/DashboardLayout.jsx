@@ -36,7 +36,9 @@ export default function DashboardLayout({ children }) {
   const [theme, setTheme] = useState(() => localStorage.getItem('pirnav-theme') || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'))
 
   const userRole = getUserRole() || 'user'
-  const roleLabel = userRole.charAt(0).toUpperCase() + userRole.slice(1)
+  const roleLabel = ['admin', 'college_admin', 'super_admin'].includes(String(userRole).toLowerCase())
+    ? 'Administrator'
+    : userRole.charAt(0).toUpperCase() + userRole.slice(1)
   const pageName = ({
     '/dashboard': 'Dashboard', '/my-profile': 'My Profile', '/settings': 'Settings',
     '/college-institution-management': 'College', '/academic-year-management': 'Academic Years',
@@ -268,7 +270,7 @@ export default function DashboardLayout({ children }) {
 
               <span>
                 <strong>{account.name || roleLabel}</strong>
-                <small>{account.identifier || roleLabel}</small>
+                <small>{roleLabel}</small>
               </span>
 
               <i className="account-menu__chevron" aria-hidden="true" />

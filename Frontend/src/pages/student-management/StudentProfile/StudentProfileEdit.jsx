@@ -7,9 +7,29 @@ import {
   FiSave,
   FiUploadCloud,
   FiX,
+  FiInbox,
 } from "react-icons/fi";
 import { lookupIndianPincode } from "../../../api/apiEndpoints";
 import { getColleges } from "../../../auth/collegeApi";
+import {
+  createEmptyCanonicalStudent,
+  normalizeCanonicalStudent,
+  studentFullName,
+  studentInitials,
+  studentQuotaDisplay,
+  formatAddress,
+  formatMoney,
+  formatDateTime,
+  formatDisplay,
+  apiAssetUrl,
+  tenDigitMobile,
+  normalizeAddressObj,
+  dateInputValue,
+  REQUIRED_FIELDS,
+  DOCUMENTS_CONFIG,
+  HOSTEL_FEES,
+  TRANSPORT_FEES,
+} from "../../../utils/studentCanonicalModel";
 
 const clone = (value) => structuredClone(value);
 const setPath = (source, path, value) => {
@@ -23,14 +43,7 @@ const setPath = (source, path, value) => {
   cursor[parts.at(-1)] = value;
   return next;
 };
-const studentName = (student) =>
-  [
-    student?.personal?.firstName,
-    student?.personal?.middleName,
-    student?.personal?.lastName,
-  ]
-    .filter(Boolean)
-    .join(" ");
+const studentName = (student) => studentFullName(student);
 const validMobile = (value) => /^[6-9]\d{9}$/.test(String(value || ""));
 const clean = (value) => String(value ?? "").trim();
 const validName = (value) => /^[A-Za-z][A-Za-z .'-]{1,79}$/.test(clean(value));
@@ -39,27 +52,18 @@ const validYear = (value) =>
   /^\d{4}$/.test(clean(value)) &&
   Number(value) >= 1950 &&
   Number(value) <= new Date().getFullYear() + 1;
-const initialEditForm = (student) => {
-  const form = clone(student);
-  form.application ??= {};
-  form.previousEducation ??= {};
-  form.previousEducation.intermediate ??= {};
-  form.application.date ??= new Date().toISOString().slice(0, 10);
-  form.previousEducation.intermediate.stream ??= "";
-  return form;
-};
+const initialEditForm = (student) => normalizeCanonicalStudent(student);
 
 export default function StudentProfileEdit({ student, onCancel, onSave }) {
   const tabs = [
-    ["personal", "Personal"],
+    ["personal", "Basic Information"],
     ["contact", "Contact & Address"],
     ["parents", "Parent / Guardian"],
-    ["academic", "Academic"],
-    ["application", "Application"],
+    ["academic", "Academic Information"],
     ["education", "Previous Education"],
     ["services", "Admission & Services"],
-    ["fees", "Fees"],
-    ["documents", "Documents"],
+    ["fees", "Fee Structure & Payment"],
+    ["documents", "Supporting Documents"],
   ];
   const [form, setForm] = useState(() => initialEditForm(student)),
     [errors, setErrors] = useToastState({}, 'error'),
@@ -118,7 +122,64 @@ export default function StudentProfileEdit({ student, onCancel, onSave }) {
     );
   };
   const update = (path, value) => {
-      setForm((current) => setPath(current, path, value));
+      setForm((current) => {
+        let next = setPath(current, path, value);
+        if (path === "contact.sameAddress" && value) {
+          next.contact.permanentAddress = clone(next.contact.currentAddress || {});
+        }
+        if (path.startsWith("contact.currentAddress.") && next.contact?.sameAddress) {
+          next.contact.permanentAddress = clone(next.contact.currentAddress || {});
+        }
+        if (path === "parents.guardian.relationship" && value !== "Other") {
+          next.parents.guardian.relationshipOther = "";
+        }
+        if (path === "previousEducation.intermediate.stream" && value !== "Other") {
+          next.previousEducation.intermediate.streamOther = "";
+        }
+        if (path === "academic.quota" && value !== "Other") {
+          next.academic.quotaOther = "";
+        }
+        if (path === "admission.scholarship" && value === "No") {
+          next.admission.scholarshipType = "";
+          next.fees.scholarshipAmount = 0;
+        }
+        if (path === "admission.hostel") {
+          if (value === "No") {
+            next.admission.hostelPreference = "";
+            next.admission.hostelRoomType = "";
+            next.fees.hostelFee = 0;
+          } else if (next.admission?.hostelRoomType) {
+            next.fees.hostelFee = HOSTEL_FEES[next.admission.hostelRoomType] || 0;
+          }
+        }
+        if (path === "admission.hostelRoomType") {
+          next.fees.hostelFee = HOSTEL_FEES[value] || 0;
+        }
+        if (path === "admission.transport") {
+          if (value === "No") {
+            next.admission.transportRoute = "";
+            next.fees.transportFee = 0;
+          } else if (next.admission?.transportRoute) {
+            next.fees.transportFee = TRANSPORT_FEES[next.admission.transportRoute] || 0;
+          }
+        }
+        if (path === "admission.transportRoute") {
+          next.fees.transportFee = TRANSPORT_FEES[value] || 0;
+        }
+        const tuition = Number(next.fees?.tuitionFee) > 0 ? Number(next.fees.tuitionFee) : 50000;
+        const admission = Number(next.fees?.admissionFee !== undefined && next.fees?.admissionFee !== "" ? next.fees.admissionFee : 4000);
+        const hostel = next.admission?.hostel === "Yes" ? Number(next.fees?.hostelFee || (next.admission?.hostelRoomType ? HOSTEL_FEES[next.admission.hostelRoomType] : 0) || 0) : 0;
+        const transport = next.admission?.transport === "Yes" ? Number(next.fees?.transportFee || (next.admission?.transportRoute ? TRANSPORT_FEES[next.admission.transportRoute] : 0) || 0) : 0;
+        const scholarship = Number(next.fees?.scholarshipAmount || 0);
+        const total = Math.max(0, tuition + admission + hostel + transport - scholarship);
+        if (!next.fees) next.fees = {};
+        next.fees.tuitionFee = tuition;
+        next.fees.admissionFee = admission;
+        next.fees.hostelFee = hostel;
+        next.fees.transportFee = transport;
+        next.fees.totalFee = total;
+        return next;
+      });
       setErrors((current) => ({ ...current, [path]: "" }));
     },
     close = () => {
@@ -362,18 +423,18 @@ export default function StudentProfileEdit({ student, onCancel, onSave }) {
       )}
     </div>
   );
-  const addresses = (prefix) =>
+  const addresses = (prefix, isRequired = false) =>
     fields(
       [
-        ["line1", "Address line 1"],
+        ["line1", "Address line 1", { required: isRequired }],
         ["line2", "Landmark (Optional)"],
         ["town", "Village / Town"],
-        ["city", "City"],
+        ["city", "City", { required: isRequired }],
         ["district", "District"],
         ["state", "State"],
         ["country", "Country"],
-        ["pincode", "PIN code"],
-      ].map(([key, label]) => [`${prefix}.${key}`, label]),
+        ["pincode", "PIN code", { required: isRequired }],
+      ].map(([key, label, opts]) => [`${prefix}.${key}`, label, opts]),
     );
   const currentPin = form.contact?.currentAddress?.pincode || "",
     permanentPin = form.contact?.permanentAddress?.pincode || "",
@@ -549,7 +610,7 @@ export default function StudentProfileEdit({ student, onCancel, onSave }) {
                 [
                   "personal.gender",
                   "Gender",
-                  { options: ["Female", "Male", "Non-binary"] },
+                  { options: ["Female", "Male", "Non-binary"], required: true },
                 ],
                 [
                   "personal.dob",
@@ -589,7 +650,7 @@ export default function StudentProfileEdit({ student, onCancel, onSave }) {
               </fieldset>
               <fieldset>
                 <legend>Current Address</legend>
-                {addresses("contact.currentAddress")}
+                {addresses("contact.currentAddress", true)}
                 {pinStatus.current && (
                   <p
                     className={`sp-pincode-status ${pinStatus.current === "Address details filled" ? "success" : ""}`}
@@ -632,7 +693,7 @@ export default function StudentProfileEdit({ student, onCancel, onSave }) {
                 </label>
                 {!form.contact?.sameAddress && (
                   <>
-                    {addresses("contact.permanentAddress")}
+                    {addresses("contact.permanentAddress", true)}
                     {pinStatus.permanent && (
                       <p
                         className={`sp-pincode-status ${pinStatus.permanent === "Address details filled" ? "success" : ""}`}
@@ -687,7 +748,7 @@ export default function StudentProfileEdit({ student, onCancel, onSave }) {
                     ],
                   },
                 ],
-                ["parents.guardian.relationshipOther", "Specify relationship"],
+                ["parents.guardian.relationshipOther", "Specify relationship", { required: form.parents?.guardian?.relationship === "Other" }],
                 ["parents.guardian.mobile", "Guardian mobile"],
                 ["parents.guardian.email", "Guardian email", { type: "email" }],
                 ["parents.guardian.occupation", "Guardian occupation"],
@@ -706,36 +767,56 @@ export default function StudentProfileEdit({ student, onCancel, onSave }) {
             <fieldset>
               <legend>Academic Information</legend>
               <p className="sp-edit-note">
-                Academic placement is system-managed and read-only.
+                Academic placement details.
               </p>
-              {fields(
-                [
-                  ["academic.academicYear", "Academic year"],
-                  ["academic.admissionType", "Admission type"],
-                  ["academic.course", "Course"],
-                  ["academic.courseCode", "Course code"],
-                  ["academic.department", "Department"],
-                  ["academic.branch", "Branch"],
-                  ["academic.branchCode", "Branch code"],
-                  ["academic.semester", "Semester"],
-                  ["academic.section", "Section"],
-                  ["academic.studentCategory", "Student category"],
-                  ["academic.regulation", "Regulation"],
-                  ...(form.academic?.admissionType === "Lateral Entry" ? [["academic.quota", "Admission quota"], ["academic.quotaOther", "Specify admission quota"]] : []),
-                  ["academic.entryType", "Entry type"],
-                ].map(([path, label]) => [path, label, { readOnly: true }]),
-              )}
-            </fieldset>
-          )}
-          {tab === "application" && (
-            <fieldset>
-              <legend>Application Information</legend>
-              <p className="sp-edit-note">Registration and admission numbers are created by the admission workflow and cannot be changed here.</p>
               {fields([
-                ["application.registrationNumber", "Registration number", { readOnly: true }],
-                ["application.date", "Registration date", { type: "date", readOnly: true }],
-                ["application.admissionNumber", "Admission number", { readOnly: true }],
-                ["application.admissionDate", "Admission date", { type: "date", readOnly: true }],
+                ["academic.academicYear", "Academic year"],
+                ["admission.college", "Joining college"],
+                [
+                  "academic.admissionType",
+                  "Admission type",
+                  {
+                    options: [
+                      "Regular / Counselling",
+                      "Management",
+                      "Spot Admission",
+                      "Lateral Entry",
+                      "Transfer",
+                      "Direct Admission",
+                      "Re-Admission",
+                      "International Admission",
+                    ],
+                  },
+                ],
+                [
+                  "academic.quota",
+                  "Admission quota",
+                  {
+                    options: [
+                      "Government / Convener",
+                      "Management",
+                      "NRI",
+                      "NRI Sponsored",
+                      "Institutional",
+                      "Other",
+                    ],
+                  },
+                ],
+                ["academic.quotaOther", "Specify quota", { required: form.academic?.quota === "Other" }],
+                ["academic.course", "Course"],
+                ["academic.courseCode", "Course code"],
+                ["academic.department", "Department"],
+                ["academic.branch", "Branch"],
+                ["academic.branchCode", "Branch code"],
+                ["academic.semester", "Semester"],
+                ["academic.section", "Section"],
+                [
+                  "academic.studentCategory",
+                  "Student category",
+                  { options: ["General", "SC", "ST", "BC", "EWS", "Other"] },
+                ],
+                ["academic.regulation", "Regulation"],
+                ["academic.entryType", "Entry type", { options: ["Regular", "Lateral Entry"] }],
               ])}
             </fieldset>
           )}
@@ -748,10 +829,10 @@ export default function StudentProfileEdit({ student, onCancel, onSave }) {
                   ["previousEducation.tenth.institution", "School name"],
                   ["previousEducation.tenth.rollNumber", "Roll number"],
                   ["previousEducation.tenth.passingYear", "Year of passing"],
-                  ["previousEducation.tenth.scoreType", "Score type"],
+                  ["previousEducation.tenth.scoreType", "Score type", { options: ["Percentage", "CGPA"] }],
                   [
                     "previousEducation.tenth.score",
-                    "Percentage (0–100)",
+                    "Percentage / CGPA",
                     { type: "number" },
                   ],
                 ])}
@@ -759,7 +840,11 @@ export default function StudentProfileEdit({ student, onCancel, onSave }) {
               <fieldset>
                 <legend>Intermediate / Diploma</legend>
                 {fields([
-                  ["previousEducation.intermediate.qualification", "Qualification"],
+                  [
+                    "previousEducation.intermediate.qualification",
+                    "Qualification",
+                    { options: ["Intermediate", "Diploma", "12th Standard", "Other"] },
+                  ],
                   [
                     "previousEducation.intermediate.board",
                     "Board / University",
@@ -769,18 +854,23 @@ export default function StudentProfileEdit({ student, onCancel, onSave }) {
                     "College name",
                   ],
                   [
+                    "previousEducation.intermediate.rollNumber",
+                    "Roll / Hall ticket number",
+                  ],
+                  [
                     "previousEducation.intermediate.passingYear",
                     "Year of passing",
                   ],
                   [
                     "previousEducation.intermediate.stream",
                     "Stream",
+                    { options: ["MPC", "BiPC", "MEC", "CEC", "Diploma in Engineering", "Other"] },
                   ],
-                  ["previousEducation.intermediate.streamOther", "Specify stream"],
-                  ["previousEducation.intermediate.scoreType", "Score type"],
+                  ["previousEducation.intermediate.streamOther", "Specify stream", { required: form.previousEducation?.intermediate?.stream === "Other" }],
+                  ["previousEducation.intermediate.scoreType", "Score type", { options: ["Percentage", "CGPA"] }],
                   [
                     "previousEducation.intermediate.score",
-                    "Percentage (0–100)",
+                    "Percentage / CGPA",
                     { type: "number" },
                   ],
                 ])}
@@ -788,76 +878,89 @@ export default function StudentProfileEdit({ student, onCancel, onSave }) {
             </>
           )}
           {tab === "services" && (
-            <fieldset>
-              <legend>Admission & Services</legend>
-              {fields([
-                [
-                  "application.registrationNumber",
-                  "Registration number",
-                  { readOnly: true },
-                ],
-                [
-                  "application.date",
-                  "Registration date",
-                  { type: "date", readOnly: true },
-                ],
-                [
-                  "application.admissionNumber",
-                  "Admission number",
-                  { readOnly: true },
-                ],
-                [
-                  "application.admissionDate",
-                  "Admission date",
-                  { type: "date", readOnly: true },
-                ],
-                ["admission.batch", "Batch", { readOnly: true }],
-                [
-                  "admission.hostel",
-                  "Hostel required",
-                  { options: ["No", "Yes"] },
-                ],
-                [
-                  "admission.hostelPreference",
-                  "Hostel preference",
-                  { options: ["Boys Hostel", "Girls Hostel"] },
-                ],
-                ["admission.hostelRoomType", "Room type / Beds"],
-                [
-                  "admission.transport",
-                  "Transportation required",
-                  { options: ["No", "Yes"] },
-                ],
-                ["admission.transportRoute", "Transport route"],
-              ])}
-              <div className="sp-edit-grid">
-                <label className="sp-edit-field">
-                  <span>College</span>
-                  <select
-                    value={form.admission?.collegeId || ""}
-                    onChange={(event) => {
-                      const college = colleges.find((item) => String(item.collegeId ?? item.id) === event.target.value);
-                      update("admission.collegeId", event.target.value);
-                      update("admission.college", college?.collegeName ?? college?.name ?? college?.institutionName ?? "");
-                    }}
-                  >
-                    <option value="">Select College</option>
-                    {colleges.map((college) => {
-                      const id = college.collegeId ?? college.id;
-                      const label = college.collegeName ?? college.name ?? college.institutionName;
-                      return id && label ? <option key={id} value={id}>{label}</option> : null;
-                    })}
-                  </select>
-                </label>
-              </div>
-            </fieldset>
+            <>
+              <fieldset>
+                <legend>Application Information</legend>
+                {fields([
+                  [
+                    "application.registrationNumber",
+                    "Registration number",
+                    { readOnly: true },
+                  ],
+                  [
+                    "application.date",
+                    "Registration date",
+                    { type: "date" },
+                  ],
+                  [
+                    "application.admissionNumber",
+                    "Admission number",
+                    { readOnly: true },
+                  ],
+                  [
+                    "application.admissionDate",
+                    "Admission date",
+                    { type: "date" },
+                  ],
+                  ["admission.college", "College"],
+                  ["admission.batch", "Batch"],
+                ])}
+              </fieldset>
+              <fieldset>
+                <legend>Student Services</legend>
+                {fields([
+                  [
+                    "admission.scholarship",
+                    "Scholarship",
+                    { options: ["No", "Yes"] },
+                  ],
+                  [
+                    "admission.scholarshipType",
+                    "Scholarship type",
+                    {
+                      options: [
+                        "Merit Scholarship",
+                        "Government Scholarship",
+                        "Institutional Concession",
+                        "Sports / Special Quota",
+                        "Other",
+                      ],
+                    },
+                  ],
+                  [
+                    "admission.hostel",
+                    "Hostel required",
+                    { options: ["No", "Yes"] },
+                  ],
+                  [
+                    "admission.hostelPreference",
+                    "Hostel preference",
+                    { options: ["Boys Hostel", "Girls Hostel"], required: form.admission?.hostel === "Yes" },
+                  ],
+                  [
+                    "admission.hostelRoomType",
+                    "Room type / Beds",
+                    { options: Object.keys(HOSTEL_FEES) },
+                  ],
+                  [
+                    "admission.transport",
+                    "Transportation required",
+                    { options: ["No", "Yes"] },
+                  ],
+                  [
+                    "admission.transportRoute",
+                    "Transport route",
+                    { options: Object.keys(TRANSPORT_FEES), required: form.admission?.transport === "Yes" },
+                  ],
+                ])}
+              </fieldset>
+            </>
           )}
           {tab === "fees" && (
             <fieldset>
-              <legend>Fee Information</legend>
+              <legend>Fee Structure & Payment Preference</legend>
               <p className="sp-edit-note">
-                Fee values are managed by Fee Structure and are shown here for
-                reference.
+                Live calculated fee structure based on academic details and services.
               </p>
               {fields([
                 [
@@ -867,42 +970,71 @@ export default function StudentProfileEdit({ student, onCancel, onSave }) {
                 ],
                 [
                   "fees.admissionFee",
-                  "Admission fee",
-                  { type: "number", readOnly: true },
+                  "Admission fee (one-time)",
+                  { type: "number" },
                 ],
                 [
                   "fees.scholarshipAmount",
-                  "Scholarship amount",
-                  { type: "number", readOnly: true },
+                  "Scholarship deduction",
+                  { type: "number" },
                 ],
                 [
                   "fees.hostelFee",
-                  "Hostel fee",
+                  "Hostel fee (per year)",
                   { type: "number", readOnly: true },
                 ],
                 [
                   "fees.transportFee",
-                  "Transportation fee",
+                  "Transportation fee (per year)",
                   { type: "number", readOnly: true },
                 ],
                 [
                   "fees.totalFee",
-                  "Total fee",
+                  "Estimated first-year total",
                   { type: "number", readOnly: true },
                 ],
-                ["fees.paymentPlan", "Payment preference", { readOnly: true }],
-                ["fees.paymentStatus", "Payment status", { readOnly: true }],
+                ["fees.paymentStatus", "Payment status", { options: ["Pending", "Paid", "Partially Paid", "Exempted"] }],
               ])}
-              {form.fees?.components?.length > 0 && (
-                <div className="sp-edit-grid">
-                  {form.fees.components.map((component, index) => (
-                    <label className="sp-edit-field" key={component.id ?? component.componentId ?? index}>
-                      <span>{component.name ?? component.componentName ?? component.feeHead ?? `Fee component ${index + 1}`}</span>
-                      <input readOnly value={component.amount ?? ""} />
-                    </label>
-                  ))}
+
+              <div style={{ marginTop: "18px", padding: "16px", border: "1px solid var(--border)", borderRadius: "10px", background: "var(--surface-soft)" }}>
+                <h3 style={{ margin: "0 0 10px", fontSize: "14px", color: "var(--text-primary)" }}>Payment Preference</h3>
+                <div style={{ display: "flex", gap: "12px", flexWrap: "wrap" }}>
+                  <label style={{ display: "flex", alignItems: "center", gap: "8px", padding: "10px 14px", border: "1px solid var(--border)", borderRadius: "8px", background: form.fees?.paymentPlan !== "Term-wise Payment" ? "var(--brand-soft)" : "var(--surface)", cursor: "pointer" }}>
+                    <input
+                      type="radio"
+                      name="sp-payment-plan"
+                      checked={form.fees?.paymentPlan !== "Term-wise Payment"}
+                      onChange={() => update("fees.paymentPlan", "Full Payment")}
+                    />
+                    <span><strong>Full Payment</strong> <small style={{ display: "block", color: "var(--text-muted)", fontSize: "11px" }}>Pay complete first-year amount ({formatMoney(form.fees?.totalFee || 54000)})</small></span>
+                  </label>
+                  <label style={{ display: "flex", alignItems: "center", gap: "8px", padding: "10px 14px", border: "1px solid var(--border)", borderRadius: "8px", background: form.fees?.paymentPlan === "Term-wise Payment" ? "var(--brand-soft)" : "var(--surface)", cursor: "pointer" }}>
+                    <input
+                      type="radio"
+                      name="sp-payment-plan"
+                      checked={form.fees?.paymentPlan === "Term-wise Payment"}
+                      onChange={() => update("fees.paymentPlan", "Term-wise Payment")}
+                    />
+                    <span><strong>Term-wise Payment</strong> <small style={{ display: "block", color: "var(--text-muted)", fontSize: "11px" }}>Two installments per academic year</small></span>
+                  </label>
                 </div>
-              )}
+
+                {form.fees?.paymentPlan === "Term-wise Payment" && (
+                  <div style={{ marginTop: "12px", padding: "12px", border: "1px dashed var(--border)", borderRadius: "8px", background: "var(--surface)" }}>
+                    <strong style={{ fontSize: "12px", color: "var(--text-primary)" }}>Term Breakdown</strong>
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px", marginTop: "8px" }}>
+                      <div>
+                        <small style={{ color: "var(--text-muted)", display: "block" }}>First Term</small>
+                        <strong style={{ fontSize: "14px", color: "var(--brand)" }}>{formatMoney(Math.ceil((Number(form.fees?.totalFee) || 54000) / 2))}</strong>
+                      </div>
+                      <div>
+                        <small style={{ color: "var(--text-muted)", display: "block" }}>Second Term</small>
+                        <strong style={{ fontSize: "14px", color: "var(--brand)" }}>{formatMoney(Math.max(0, (Number(form.fees?.totalFee) || 54000) - Math.ceil((Number(form.fees?.totalFee) || 54000) / 2)))}</strong>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
             </fieldset>
           )}
           {tab === "documents" && (
@@ -1018,6 +1150,16 @@ export default function StudentProfileEdit({ student, onCancel, onSave }) {
                 disabled={saving}
               >
                 Previous
+              </button>
+            )}
+            {["parents", "education", "services", "fees", "documents"].includes(tab) && !lastStep && (
+              <button
+                type="button"
+                className="sp-button secondary"
+                onClick={() => moveStep(1)}
+                disabled={saving}
+              >
+                Skip
               </button>
             )}
             {!lastStep ? (
