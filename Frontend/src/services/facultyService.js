@@ -1,22 +1,34 @@
 import { facultyCreatePayload, facultyUpdatePayload, facultyProfilePayload, normalizeAllocation, allocationPayload } from './facultyContracts'
 import { newestFirst } from '../utils/newestFirst'
-import { facultyApi, facultyAttendanceApi, facultyDocumentApi, facultyLeaveApi, facultyPayrollApi, facultyProfileApi, facultySubjectAllocationApi } from '../api/apiEndpoints'
+import { API_BASE_URL, facultyApi, facultyAttendanceApi, facultyDocumentApi, facultyLeaveApi, facultyPayrollApi, facultyProfileApi, facultySubjectAllocationApi } from '../api/apiEndpoints'
 
 const first = (source, keys, fallback = '') => keys.map(key => source?.[key]).find(value => value !== undefined && value !== null && String(value).trim() !== '') ?? fallback
 const list = value => Array.isArray(value) ? value : []
+
+export const mergeFacultyData = (...records) => Object.assign({}, ...records.map(record => Object.fromEntries(Object.entries(record || {}).filter(([, value]) => value !== undefined && value !== null && value !== ''))))
+export const resolveFacultyPhoto = value => {
+  if (typeof value !== 'string' || !value.trim()) return ''
+  if (['string', 'null', 'undefined'].includes(value.trim().toLowerCase())) return ''
+  const path = value.trim().replace(/\\/g, '/')
+  if (/^(https?:|data:image\/|blob:)/i.test(path)) return path
+  if (/^[a-z]+:/i.test(path)) return ''
+  return API_BASE_URL + '/' + path.replace(/^\/+/, '')
+}
+const facultyPhoto = source => ['profilePhotoUrl', 'photoUrl', 'profilePhoto', 'photoPath', 'photo']
+  .map(key => resolveFacultyPhoto(source?.[key])).find(Boolean) || ''
 
 // The UI historically used employeeId/employmentStatus while the API may use
 // employeeCode/status. Normalising at this boundary keeps pages API-agnostic.
 export const normalizeFaculty = (source = {}) => {
   // A partially populated result (or a null item in a paginated response)
   // must not take down the Faculty directory.
-  source = source || {}
+  source = mergeFacultyData(source?.employeeProfile, source?.profile, source)
   return {
   ...source,
   id: String(first(source, ['facultyId', 'id', 'employeeProfileId'], '')),
   facultyId: first(source, ['facultyId', 'id', 'employeeProfileId'], ''),
   employeeId: first(source, ['facultyCode', 'employeeId', 'employeeCode', 'employeeNumber'], ''),
-  fullName: first(source, ['fullName', 'facultyName', 'name'], ''),
+  fullName: first(source, ['fullName', 'facultyName', 'name'], [source.firstName, source.lastName].filter(Boolean).join(' ')),
   email: first(source, ['email', 'officialEmail', 'workEmail'], ''),
   mobile: first(source, ['mobile', 'phoneNumber', 'phone', 'mobileNumber'], ''),
   department: first(source, ['departmentName', 'department'], ''),
@@ -26,8 +38,8 @@ export const normalizeFaculty = (source = {}) => {
   experience: first(source, ['experienceYears', 'experience', 'teachingExperience'], ''),
   employmentType: first(source, ['employmentType', 'appointmentType'], ''),
   employmentStatus: first(source, ['employmentStatus', 'statusName'], typeof source.status === 'string' ? source.status : source.status === 0 ? 'Inactive' : 'Working'),
-  dob: first(source, ['dob', 'dateOfBirth']), joiningDate: first(source, ['joiningDate', 'dateOfJoining']),
-  photo: first(source, ['photo', 'profilePhotoUrl', 'photoUrl']),
+  dob: String(first(source, ['dob', 'dateOfBirth'])).slice(0, 10), joiningDate: String(first(source, ['joiningDate', 'dateOfJoining'])).slice(0, 10),
+  photo: facultyPhoto(source),
   emergencyName: first(source, ['emergencyName', 'emergencyContactName']), emergencyMobile: first(source, ['emergencyMobile', 'emergencyContactNumber']), relationship: first(source, ['relationship', 'emergencyContactRelation']),
   employeeCategory: first(source, ['employeeCategory', 'category', 'facultyType'], 'Teaching'),
   assignments: list(source.assignments ?? source.subjectAllocations),
@@ -81,6 +93,21 @@ const saveLocalProfile = (id, profile) => {
     profiles[id] = { ...(profiles[id] || {}), ...profile }
     localStorage.setItem(LOCAL_PROFILE_KEY, JSON.stringify(profiles))
   } catch { /* ignore */ }
+}
+
+// Attendance fallback rows do not contain profile photos. Recover the photo
+// from the profile store/API while retaining the faculty record's identity.
+const withFacultyPhoto = async row => {
+  const member = normalizeFaculty(row)
+  if (member.photo || !member.id) return member
+  const cachedPhoto = normalizeFaculty(getLocalProfile(member.id)).photo
+  if (cachedPhoto) return { ...member, photo: cachedPhoto }
+  try {
+    const profile = await facultyProfileApi.get(member.id)
+    const photo = normalizeFaculty(profile).photo
+    if (photo) return { ...member, photo }
+  } catch { /* A missing profile must not hide the faculty row. */ }
+  return member
 }
 
 const getLocalAllocations = () => {
@@ -200,7 +227,17 @@ const listFaculty = async (params, search = false) => {
       records.unshift(item)
     }
   }
-  return newestFirst('faculty', records.filter(row => row && typeof row === 'object').map(normalizeFaculty))
+  const members = records.filter(row => row && typeof row === 'object').map(row => {
+    const cached = local.find(item => String(item.id) === String(row.facultyId ?? row.id)
+      || (item.employeeId && item.employeeId === (row.facultyCode || row.employeeId)))
+    return normalizeFaculty(mergeFacultyData(cached, normalizeFaculty(row)))
+  })
+  const enriched = []
+  // Bound requests when the backend list omits photos for many faculty.
+  for (let index = 0; index < members.length; index += 4) {
+    enriched.push(...await Promise.all(members.slice(index, index + 4).map(withFacultyPhoto)))
+  }
+  return newestFirst('faculty', enriched)
 }
 
 export const facultyService = {
@@ -209,7 +246,7 @@ export const facultyService = {
   getById: async id => {
     try {
       const res = await facultyApi.getById(id)
-      if (res && (res.id || res.facultyId || res.fullName || res.facultyName)) return normalizeFaculty(res)
+      if (res && (res.id || res.facultyId || res.fullName || res.facultyName)) return withFacultyPhoto(mergeFacultyData(getLocalFaculty().find(item => String(item.id) === String(id)), normalizeFaculty(res)))
     } catch { /* fallback */ }
     try {
       const all = await listFaculty()
@@ -221,37 +258,17 @@ export const facultyService = {
     return normalizeFaculty({ id: String(id), facultyId: String(id) })
   },
   create: async payload => {
-    try {
-      const created = await facultyApi.create(facultyCreatePayload(payload))
-      const result = normalizeFaculty(created)
-      if (result && (result.id || result.facultyId)) {
-        saveLocalFaculty({ ...payload, ...result })
-        return result
-      }
-    } catch {
-      // Remote API user constraint / User not found fallback:
-      const list = getLocalFaculty()
-      const nextNum = Math.max(10, ...list.map(i => Number(i.id) || 0)) + 1
-      const fallbackRecord = normalizeFaculty({
-        ...payload,
-        id: String(nextNum),
-        facultyId: String(nextNum),
-        facultyCode: payload.employeeId || payload.facultyCode,
-        facultyName: payload.fullName || payload.facultyName,
-        createdAt: new Date().toISOString(),
-      })
-      saveLocalFaculty(fallbackRecord)
-      return fallbackRecord
-    }
+    const created = await facultyApi.create(facultyCreatePayload(payload))
+    if (!created?.id && !created?.facultyId) throw new Error('The server did not return the saved faculty record.')
+    const result = normalizeFaculty(mergeFacultyData(payload, created))
+    saveLocalFaculty(result)
+    return result
   },
   update: async (id, payload) => {
-    let result = null
-    try {
-      result = normalizeFaculty(await facultyApi.update(id, facultyUpdatePayload(payload)))
-    } catch { /* fallback */ }
-    const updated = normalizeFaculty({ ...payload, id: String(id), facultyId: String(id) })
+    const response = await facultyApi.update(id, facultyUpdatePayload(payload))
+    const updated = normalizeFaculty({ ...mergeFacultyData(payload, response), id: String(id), facultyId: String(id) })
     saveLocalFaculty(updated)
-    return result || updated
+    return updated
   },
   getSummary: async params => {
     try {
@@ -277,16 +294,18 @@ export const facultyService = {
     }
   },
   uploadProfilePhoto: async (id, file, metadata = {}) => {
-    try {
-      return await facultyApi.uploadProfilePhoto(id, file, metadata)
-    } catch {
-      return null
+    const result = await facultyApi.uploadProfilePhoto(id, file, metadata)
+    const photo = resolveFacultyPhoto(typeof result === 'string' ? result : first(result, ['profilePhotoUrl', 'photoUrl', 'profilePhoto', 'photoPath', 'photo', 'fileUrl', 'url']))
+    if (photo) {
+      const cached = getLocalFaculty().find(item => String(item.id) === String(id))
+      saveLocalFaculty({ ...cached, id: String(id), photo, profilePhotoUrl: photo })
     }
+    return result
   },
   getProfile: async id => {
     try {
       const res = await facultyProfileApi.get(id)
-      if (res && typeof res === 'object' && Object.keys(res).length) return res
+      if (res && typeof res === 'object' && Object.keys(res).length) return mergeFacultyData(getLocalProfile(id), res)
     } catch { /* fallback */ }
     return getLocalProfile(id)
   },

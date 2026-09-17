@@ -748,7 +748,9 @@
 .faculty-management .fm-stepper {
   list-style: none;
   display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(max-content, 1fr);
+  overflow-x: auto;
   padding: 0 0 16px;
   margin: 0;
   gap: 8px;
@@ -757,6 +759,7 @@
 .faculty-management .fm-stepper li {
   display: flex;
   align-items: center;
+  white-space: nowrap;
   gap: 8px;
   color: var(--text-muted);
   font-size: 12px;
