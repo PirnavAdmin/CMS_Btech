@@ -89,7 +89,7 @@ const makeLookups = (courses, branches, years, colleges = []) => ({
 })
 
 const mapSemester = (record = {}, lookups = {}) => {
-  const semesterNumber = Number(record.semesterNumber ?? 1)
+  const semesterNumber = Number(record.semesterNumber ?? 0)
   const branchId = (record.branchId ?? record.branchID ?? record.BranchId ?? record.BranchID) || record.branch?.branchId || record.branch?.id || ''
   const branch = lookups.branchById?.get(String(branchId))
   const courseId = (record.courseId ?? record.courseID ?? record.CourseId ?? record.CourseID) || record.course?.courseId || record.course?.id || branch?.courseId || ''

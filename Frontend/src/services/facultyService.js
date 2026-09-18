@@ -38,6 +38,7 @@ export const normalizeFaculty = (source = {}) => {
   experience: first(source, ['experienceYears', 'experience', 'teachingExperience'], ''),
   employmentType: first(source, ['employmentType', 'appointmentType'], ''),
   employmentStatus: first(source, ['employmentStatus', 'statusName'], typeof source.status === 'string' ? source.status : source.status === 0 ? 'Inactive' : 'Working'),
+  gender: first(source, ['gender', 'genderName', 'sex'], ''),
   dob: String(first(source, ['dob', 'dateOfBirth'])).slice(0, 10), joiningDate: String(first(source, ['joiningDate', 'dateOfJoining'])).slice(0, 10),
   photo: facultyPhoto(source),
   emergencyName: first(source, ['emergencyName', 'emergencyContactName']), emergencyMobile: first(source, ['emergencyMobile', 'emergencyContactNumber']), relationship: first(source, ['relationship', 'emergencyContactRelation']),
@@ -391,25 +392,13 @@ export const facultyService = {
     }
     return true
   },
-  getAttendance: async params => {
-    try {
-      return await facultyAttendanceApi.getAll(params)
-    } catch {
-      return []
-    }
-  },
+  getAttendance: facultyAttendanceApi.getAll,
   getAttendanceById: facultyAttendanceApi.getById,
   createAttendance: facultyAttendanceApi.create,
   updateAttendance: facultyAttendanceApi.update,
   checkIn: facultyAttendanceApi.checkIn,
   checkOut: facultyAttendanceApi.checkOut,
-  getDailyAttendance: async params => {
-    try {
-      return await facultyAttendanceApi.getDaily(params)
-    } catch {
-      return []
-    }
-  },
+  getDailyAttendance: facultyAttendanceApi.getDaily,
   bulkAttendance: facultyAttendanceApi.bulk,
   getWeeklyAttendance: async params => {
     try {

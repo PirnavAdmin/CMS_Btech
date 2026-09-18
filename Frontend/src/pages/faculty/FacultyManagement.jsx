@@ -16,6 +16,7 @@ import { FacultyDocuments, FacultyStatus, ApiAssignmentDialog } from './FacultyA
 import facultyService, { normalizeFaculty, mergeFacultyData } from '../../services/facultyService'
 import './FacultyManagement.css'
 import './FacultyAttendance.css'
+import { localAttendanceDate, loadDailyAttendancePeriod, attendanceStatusLabel, normalizeAttendanceRow, combineAttendance } from '../../utils/facultyAttendance'
 
 const PAGE_SIZE = 5
 const WORKLOAD_LIMITS = { under: 12, normal: 20 }
@@ -47,18 +48,51 @@ const normalizeAttendanceDate = value => {
   if (!year || !month || !day) return clean
   return `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`
 }
+const normalizeAttendanceStatus = value => {
+  const key = String(value ?? '').trim().replace(/[\s_-]+/g, '').toLowerCase()
+  const statuses = {
+    p: 'Present', present: 'Present',
+    a: 'Absent', absent: 'Absent',
+    l: 'Late', late: 'Late',
+    hd: 'Half Day', halfday: 'Half Day',
+    ol: 'On Leave', onleave: 'On Leave', leave: 'On Leave',
+    lop: 'LOP', lossofpay: 'LOP',
+    notmarked: 'Not Marked', unmarked: 'Not Marked', pending: 'Not Marked',
+  }
+  return statuses[key] || 'Not Marked'
+}
 const mergeAttendanceRecords = (faculty, records = []) => {
   const validFaculty = new Set((faculty || []).map(item => String(item.id)))
-  return (Array.isArray(records) ? records : []).filter(record => validFaculty.has(String(record.facultyId))).map(record => ({
+  const normalized = (Array.isArray(records) ? records : []).filter(record => validFaculty.has(String(record.facultyId))).map(record => ({
     ...record,
     facultyId: String(record.facultyId),
     date: normalizeAttendanceDate(record.date),
-    status: record.status || 'Not Marked',
+    status: normalizeAttendanceStatus(record.status ?? record.attendanceStatus),
     checkIn: record.checkIn || '—',
     checkOut: record.checkOut || '—',
     remarks: record.remarks || '—',
     source: record.source || 'Manual',
   }))
+  // The list and daily views can both contain the same faculty/date. Keep one
+  // record per cell and always prefer the saved marked status over a generated
+  // "Not Marked" daily placeholder.
+  const byFacultyAndDate = new Map()
+  for (const record of normalized) {
+    const key = `${record.facultyId}|${record.date}`
+    const current = byFacultyAndDate.get(key)
+    if (!current || (current.status === 'Not Marked' && record.status !== 'Not Marked') || (!current.attendanceId && record.attendanceId)) {
+      byFacultyAndDate.set(key, record)
+    }
+  }
+  return [...byFacultyAndDate.values()]
+}
+const attendanceDatesInRange = (from, to) => {
+  if (!from || !to || from > to) return []
+  const values = []
+  for (const value = new Date(`${from}T00:00:00`); value <= new Date(`${to}T00:00:00`); value.setDate(value.getDate() + 1)) {
+    values.push(normalizeAttendanceDate(value.toISOString().slice(0, 10)))
+  }
+  return values
 }
 const mondayOf = value => {
   const date = new Date(String(value || today()) + 'T00:00:00')
@@ -98,7 +132,7 @@ const resolveAttendanceRecords = (records, faculty) => {
       designation: 'N/A',
     }
     const workingMinutes = typeof record.workingMinutes === 'number' ? record.workingMinutes : calculateWorkingMinutes(record)
-    const status = record.status || 'Not Marked'
+    const status = normalizeAttendanceStatus(record.status ?? record.attendanceStatus)
     const normalizedCheckIn = ['Present', 'Late', 'Half Day'].includes(status) && record.checkIn && record.checkIn !== '—' ? record.checkIn : (['Present', 'Late', 'Half Day'].includes(status) ? DEFAULT_ATTENDANCE_WINDOW.checkIn : '—')
     const normalizedCheckOut = ['Present', 'Late', 'Half Day'].includes(status) && record.checkOut && record.checkOut !== '—' ? record.checkOut : (['Present', 'Late', 'Half Day'].includes(status) ? DEFAULT_ATTENDANCE_WINDOW.checkOut : '—')
     return {
@@ -131,7 +165,8 @@ const dailyAttendanceRows = (records, faculty, filters = {}) => {
     const status = current?.status || 'Not Marked'
     const workingMinutes = current?.workingMinutes ?? calculateWorkingMinutes(current || {})
     const row = {
-      id: `${facultyId}-${targetDate}`,
+      id: current?.attendanceId || current?.id || '',
+      attendanceId: current?.attendanceId || null,
       facultyId,
       faculty: item,
       date: targetDate,
@@ -140,7 +175,7 @@ const dailyAttendanceRows = (records, faculty, filters = {}) => {
       checkOut: ['Present', 'Late', 'Half Day'].includes(status) ? (current?.checkOut && current.checkOut !== '—' ? current.checkOut : DEFAULT_ATTENDANCE_WINDOW.checkOut) : '—',
       remarks: current?.remarks || '—',
       hours: getAttendanceDisplayHours({ ...current, status, workingMinutes, checkIn: ['Present', 'Late', 'Half Day'].includes(status) ? (current?.checkIn && current.checkIn !== '—' ? current.checkIn : DEFAULT_ATTENDANCE_WINDOW.checkIn) : '—', checkOut: ['Present', 'Late', 'Half Day'].includes(status) ? (current?.checkOut && current.checkOut !== '—' ? current.checkOut : DEFAULT_ATTENDANCE_WINDOW.checkOut) : '—' }),
-      synthetic: !current,
+      synthetic: !current?.attendanceId,
       source: current?.source || 'Manual',
     }
     return row
@@ -171,13 +206,13 @@ const attendancePeriod = (reportType, report) => {
     const start = new Date((report?.weekStart || mondayOf(today())) + 'T00:00:00')
     const end = new Date(start)
     end.setDate(end.getDate() + 6)
-    return { from: normalizeAttendanceDate(start.toISOString().slice(0, 10)), to: normalizeAttendanceDate(end.toISOString().slice(0, 10)) }
+    return { from: normalizeAttendanceDate(localAttendanceDate(start)), to: normalizeAttendanceDate(localAttendanceDate(end)) }
   }
   const year = Number(report?.year || new Date().getFullYear())
   const month = Number(report?.month || new Date().getMonth() + 1)
   const first = new Date(year, month - 1, 1)
   const last = new Date(year, month, 0)
-  return { from: normalizeAttendanceDate(first.toISOString().slice(0, 10)), to: normalizeAttendanceDate(last.toISOString().slice(0, 10)) }
+  return { from: normalizeAttendanceDate(localAttendanceDate(first)), to: normalizeAttendanceDate(localAttendanceDate(last)) }
 }
 const summarizeAttendance = rows => {
   const base = { total: rows.length, Present: 0, Absent: 0, Late: 0, 'Half Day': 0, 'On Leave': 0, LOP: 0, 'Not Marked': 0 }
@@ -403,7 +438,7 @@ function AttendanceEditor({ record, onClose, onSave, onReset }) {
   const isLop = data.status === 'LOP'
   const isNonWorkingStatus = ['Absent', 'On Leave', 'LOP'].includes(data.status)
   const save = event => { event.preventDefault(); if (['On Leave', 'LOP'].includes(data.status) && !confirmLop) return setConfirmLop(true); if (!isLop && ['Present', 'Late', 'Half Day'].includes(data.status) && !data.checkIn) return setError('Check In is required for this attendance status.'); if (!isLop && ['Present', 'Late'].includes(data.status) && !data.checkOut) return setError('Check Out is required for Present and Late attendance.'); if (!isLop && data.checkIn && data.checkOut && data.checkOut <= data.checkIn) return setError('Check Out must be later than Check In.'); setError(''); onSave({ ...record, ...data, status: isLop ? 'LOP' : data.status, checkIn: isNonWorkingStatus ? '' : data.checkIn, checkOut: isNonWorkingStatus ? '' : data.checkOut, remarks: data.remarks || '', facultyId: record.faculty.id, date: record.date }) }
-  return <div className="fm-modal-backdrop"><form className="fm-attendance-editor" onSubmit={save}><header><div><p className="fm-eyebrow">{record.status === 'Not Marked' ? 'MARK ATTENDANCE' : 'EDIT ATTENDANCE'}</p><h2>{record.faculty.fullName}</h2><p>{record.faculty.employeeId} · {record.faculty.department}</p></div><button className="fm-icon-button" type="button" aria-label="Close attendance editor" onClick={onClose}><FiX /></button></header><div className="fm-form-grid"><label>Status<select value={data.status} onChange={event => { const status = event.target.value; const clearTimes = ['Absent', 'On Leave', 'LOP'].includes(status); setData({ ...data, status, checkIn: clearTimes ? '' : data.checkIn, checkOut: clearTimes ? '' : data.checkOut }); setError(''); setConfirmLop(false) }}>{['Present', 'Absent', 'Late', 'Half Day', 'On Leave'].map(value => <option key={value}>{value}</option>)}<option value="LOP">LOP (Loss of Pay)</option></select></label><AttendanceTimeField label="Check In" value={data.checkIn} disabled={isNonWorkingStatus} onChange={value => { setData({ ...data, checkIn: value }); setError('') }} /><AttendanceTimeField label="Check Out" value={data.checkOut} disabled={isNonWorkingStatus} onChange={value => { setData({ ...data, checkOut: value }); setError('') }} /><label className="fm-wide">Remarks<textarea rows="2" value={data.remarks} onChange={event => setData({ ...data, remarks: event.target.value })} /></label></div>{error && <p className="fm-error" role="alert">{error}</p>}{confirmLop && <div className="fm-lop-confirm" role="alert"><div><strong>Confirm attendance status?</strong><p>You are marking {record.faculty.fullName} ({record.faculty.employeeId}) as {data.status} for {new Date(record.date + 'T00:00:00').toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}.</p></div><div><button className="fm-button secondary" type="button" onClick={() => setConfirmLop(false)}>Cancel</button><button className="fm-button" type="button" onClick={() => { setConfirmLop(false); onSave({ ...record, ...data, status: data.status, checkIn: isNonWorkingStatus ? '' : data.checkIn, checkOut: isNonWorkingStatus ? '' : data.checkOut, remarks: data.remarks || '', facultyId: record.faculty.id, date: record.date }) }}>{data.status === 'LOP' ? 'Mark LOP' : 'Mark On Leave'}</button></div></div>}{confirmReset && <div className="fm-reset-confirm" role="alert"><div><strong>Reset this attendance record?</strong><p>The current status, time, and remarks will be cleared.</p></div><div><button className="fm-button secondary" type="button" onClick={() => setConfirmReset(false)}>Keep Editing</button><button className="fm-button danger" type="button" onClick={() => onReset(record)}>Reset Record</button></div></div>}<footer>{record.status !== 'Not Marked' && !confirmReset && <button className="fm-button danger" type="button" onClick={() => setConfirmReset(true)}>Reset to Not Marked</button>}<button className="fm-button secondary" type="button" onClick={onClose}>Cancel</button><button className="fm-button" type="submit">Save Attendance</button></footer></form></div>
+  return <div className="fm-modal-backdrop"><form className="fm-attendance-editor" onSubmit={save}><header><div><p className="fm-eyebrow">{record.status === 'Not Marked' ? 'MARK ATTENDANCE' : 'EDIT ATTENDANCE'}</p><h2>{record.faculty.fullName}</h2><p>{record.faculty.employeeId} · {record.faculty.department}</p></div><button className="fm-icon-button" type="button" aria-label="Close attendance editor" onClick={onClose}><FiX /></button></header><div className="fm-form-grid"><label>Status<select value={data.status} onChange={event => { const status = event.target.value; const clearTimes = ['Absent', 'On Leave', 'LOP'].includes(status); setData({ ...data, status, checkIn: clearTimes ? '' : data.checkIn, checkOut: clearTimes ? '' : data.checkOut }); setError(''); setConfirmLop(false) }}>{['Present', 'Absent', 'Late', 'Half Day', 'On Leave'].map(value => <option key={value}>{value}</option>)}<option value="LOP">Loss of Pay</option></select></label><AttendanceTimeField label="Check In" value={data.checkIn} disabled={isNonWorkingStatus} onChange={value => { setData({ ...data, checkIn: value }); setError('') }} /><AttendanceTimeField label="Check Out" value={data.checkOut} disabled={isNonWorkingStatus} onChange={value => { setData({ ...data, checkOut: value }); setError('') }} /><label className="fm-wide">Remarks<textarea rows="2" value={data.remarks} onChange={event => setData({ ...data, remarks: event.target.value })} /></label></div>{error && <p className="fm-error" role="alert">{error}</p>}{confirmLop && <div className="fm-lop-confirm" role="alert"><div><strong>Confirm attendance status?</strong><p>You are marking {record.faculty.fullName} ({record.faculty.employeeId}) as {attendanceStatusLabel(data.status)} for {new Date(record.date + 'T00:00:00').toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}.</p></div><div><button className="fm-button secondary" type="button" onClick={() => setConfirmLop(false)}>Cancel</button><button className="fm-button" type="button" onClick={() => { setConfirmLop(false); onSave({ ...record, ...data, status: data.status, checkIn: isNonWorkingStatus ? '' : data.checkIn, checkOut: isNonWorkingStatus ? '' : data.checkOut, remarks: data.remarks || '', facultyId: record.faculty.id, date: record.date }) }}>{data.status === 'LOP' ? 'Mark Loss of Pay' : 'Mark On Leave'}</button></div></div>}{confirmReset && <div className="fm-reset-confirm" role="alert"><div><strong>Reset this attendance record?</strong><p>The current status, time, and remarks will be cleared.</p></div><div><button className="fm-button secondary" type="button" onClick={() => setConfirmReset(false)}>Keep Editing</button><button className="fm-button danger" type="button" onClick={() => onReset(record)}>Reset Record</button></div></div>}<footer>{record.status !== 'Not Marked' && !confirmReset && <button className="fm-button danger" type="button" onClick={() => setConfirmReset(true)}>Reset to Not Marked</button>}<button className="fm-button secondary" type="button" onClick={onClose}>Cancel</button><button className="fm-button" type="submit">Save Attendance</button></footer></form></div>
 }
 function FacultyAttendanceScreen({ faculty, onNotify }) {
   const [tab, setTab] = useState('daily')
@@ -416,6 +451,7 @@ function FacultyAttendanceScreen({ faculty, onNotify }) {
   const [attendanceSuccess, setAttendanceSuccess] = useState(null)
   const [selectedFacultyIds, setSelectedFacultyIds] = useState([])
   const [attendanceRecords, setAttendanceRecords] = useState([])
+  const [todayRecords, setTodayRecords] = useState([])
   const [serverDaily, setServerDaily] = useState([]), [serverReport, setServerReport] = useState([])
   const [attendanceBusy, setAttendanceBusy] = useState(false), [attendanceError, setAttendanceError] = useState('')
   const attendanceLock = useRef(false), attendanceVersion = useRef(0)
@@ -429,29 +465,38 @@ function FacultyAttendanceScreen({ faculty, onNotify }) {
   const [registerFilters, setRegisterFilters] = useState(defaultRegister)
   const [reportFilters, setReportFilters] = useState(() => ({ daily: defaultReport(), weekly: defaultReport(), monthly: defaultReport() }))
   const currentReport = reportFilters[reportType]
-  const normalizeAttendance = rows => mergeAttendanceRecords(faculty, rows.map(row => ({ ...row, id: row.attendanceId ?? row.id, facultyId: row.facultyId ?? row.employeeProfileId ?? row.faculty?.id, date: row.date ?? row.attendanceDate, checkIn: row.checkIn ?? row.checkInTime, checkOut: row.checkOut ?? row.checkOutTime })))
+  const normalizeAttendance = useCallback((rows, options) => mergeAttendanceRecords(faculty, rows.map(row => normalizeAttendanceRow(row, options))), [faculty])
   const loadAttendance = useCallback(async () => {
     const version = ++attendanceVersion.current; setAttendanceError('')
     try {
       const reportFilter = reportFilters[reportType]
       const dates = attendancePeriod(reportType, reportFilter)
       const params = tab === 'register' ? { facultyId: registerFilters.facultyId, fromDate: registerFilters.from, toDate: registerFilters.to, status: registerFilters.status } : tab === 'reports' ? { facultyId: reportFilter.facultyId, fromDate: dates.from, toDate: dates.to } : { fromDate: dailyFilters.date, toDate: dailyFilters.date }
-      const records = await (tab === 'reports' ? facultyService.getAttendanceReports(params) : facultyService.getAttendance(params))
-      const daily = tab === 'daily' ? await facultyService.getDailyAttendance(dailyFilters) : []
-      const report = tab === 'reports' && reportType !== 'daily' ? await (reportType === 'weekly' ? facultyService.getWeeklyAttendance : facultyService.getMonthlyAttendance)(reportFilter) : []
+      const records = await facultyService.getAttendance(params)
+      const dailyDate = tab === 'reports' && reportType === 'daily' ? reportFilter.date : dailyFilters.date
+      const needsDaily = tab === 'daily' || (tab === 'reports' && reportType === 'daily')
+      const daily = needsDaily ? await facultyService.getDailyAttendance({ date: dailyDate }) : []
+      const periodDaily = tab === 'reports' && reportType !== 'daily'
+        ? await loadDailyAttendancePeriod(facultyService.getDailyAttendance, dates.from, dates.to, today())
+        : []
+      const combined = combineAttendance(mergeAttendanceRecords(faculty, periodDaily), normalizeAttendance(daily, { daily: true, date: dailyDate }), normalizeAttendance(records))
+      const todayRows = params.fromDate === today() && params.toDate === today() && !params.facultyId && !params.status
+        ? combined
+        : normalizeAttendance(await facultyService.getAttendance({ fromDate: today(), toDate: today() }))
       if (version !== attendanceVersion.current) return
-      setAttendanceRecords(normalizeAttendance(records)); setServerDaily(normalizeAttendance(daily.map(row => ({ ...row, date: row.date ?? row.attendanceDate ?? dailyFilters.date })))); setServerReport(report)
-    } catch (error) { if (version === attendanceVersion.current) { setAttendanceError(error.message); setAttendanceRecords([]); setServerDaily([]); setServerReport([]) } }
-  }, [faculty, tab, dailyFilters, registerFilters, reportFilters, reportType])
+      setTodayRecords(todayRows)
+      setAttendanceRecords(combined); setServerDaily(combined); setServerReport([])
+      return true
+    } catch (error) { if (version === attendanceVersion.current) { setAttendanceError(error.message); } return false }
+  }, [faculty, normalizeAttendance, tab, dailyFilters, registerFilters, reportFilters, reportType])
   useEffect(() => { const timer = setTimeout(() => { loadAttendance() }, 200); return () => { clearTimeout(timer); attendanceVersion.current++ } }, [loadAttendance])
 
-  // The existing faculty.attendance collection is the only source. No generated
-  // Daily rows are persisted or fed into historical reports.
+  // Missing attendance is displayed as Not Marked; only API records are persisted.
   const resolvedRecords = useMemo(() => resolveAttendanceRecords(attendanceRecords, faculty), [attendanceRecords, faculty])
-  const dailyRows = useMemo(() => filterAttendanceRecords(resolveAttendanceRecords(serverDaily, faculty), { ...dailyFilters, from: dailyFilters.date, to: dailyFilters.date }), [serverDaily, faculty, dailyFilters])
+  const dailyRows = useMemo(() => dailyAttendanceRows(serverDaily, faculty, dailyFilters), [serverDaily, faculty, dailyFilters])
   const registerRows = useMemo(() => filterAttendanceRecords(resolvedRecords, registerFilters), [resolvedRecords, registerFilters])
   const period = useMemo(() => attendancePeriod(reportType, currentReport), [reportType, currentReport])
-  const reportRecords = useMemo(() => period.from && period.to ? filterAttendanceRecords(resolvedRecords, { ...currentReport, ...period, status: reportType === 'daily' ? currentReport.status : '' }).filter(row => !currentReport.facultyType || (row.faculty.employeeCategory === 'Non-Teaching' ? 'Non-Teaching' : 'Teaching') === currentReport.facultyType) : [], [resolvedRecords, currentReport, period, reportType])
+  const reportRecords = useMemo(() => period.from && period.to ? filterAttendanceRecords(reportType === 'daily' ? dailyAttendanceRows(resolvedRecords, faculty, { date: currentReport.date }) : resolvedRecords, { ...currentReport, ...period, status: reportType === 'daily' ? currentReport.status : '' }).filter(row => !currentReport.facultyType || (row.faculty.employeeCategory === 'Non-Teaching' ? 'Non-Teaching' : 'Teaching') === currentReport.facultyType) : [], [resolvedRecords, faculty, currentReport, period, reportType])
   const periodKey = reportType === 'monthly' ? period.from.slice(0, 7) : period.from === period.to ? period.from : period.from + '-to-' + period.to
   const periodLabel = reportType === 'monthly' ? period.from.slice(0, 7) : period.from === period.to ? period.from : period.from + ' – ' + period.to
   const reportRows = useMemo(() => reportType === 'daily' ? reportRecords : serverReport.map(row => ({ ...row, facultyId: String(row.facultyId), faculty: faculty.find(member => String(member.id) === String(row.facultyId)) || normalizeFaculty(row), totalDays: row.totalDays ?? row.workingDays ?? 0, present: row.present ?? row.presentDays ?? 0, absent: row.absent ?? row.absentDays ?? 0, late: row.late ?? row.lateDays ?? 0, halfDay: row.halfDay ?? row.halfDays ?? 0, onLeave: row.onLeave ?? row.leaveDays ?? 0, lop: row.lop ?? row.lopDays ?? 0, period: periodLabel })), [reportRecords, reportType, serverReport, faculty, periodLabel])
@@ -476,7 +521,7 @@ function FacultyAttendanceScreen({ faculty, onNotify }) {
     if (!values.date || values.date > today()) { setAttendanceError('Attendance cannot be recorded for a future date.'); return }
     attendanceLock.current = true; setAttendanceBusy(true); setAttendanceError('')
     try {
-      let id = values.attendanceId || (values.id && !String(values.id).includes(':') ? values.id : null)
+      let id = values.attendanceId
       const payload = attendancePayload(values)
       if (id) await facultyService.updateAttendance(id, payload)
       else {
@@ -486,8 +531,8 @@ function FacultyAttendanceScreen({ faculty, onNotify }) {
         if (payload.checkIn) await facultyService.checkIn(id, { checkIn: payload.checkIn })
         if (payload.checkOut) await facultyService.checkOut(id, { checkOut: payload.checkOut })
       }
-      setEditingRecord(null); await loadAttendance(); setAttendanceSuccess({ title: 'Attendance Updated', message: 'Attendance saved successfully.' })
-    } catch (error) { setAttendanceError(error.message); await loadAttendance() }
+      setEditingRecord(null); if (!await loadAttendance()) return; setAttendanceSuccess({ title: 'Attendance Updated', message: 'Attendance saved successfully.' })
+    } catch (error) { await loadAttendance(); setAttendanceError(error.message) }
     finally { attendanceLock.current = false; setAttendanceBusy(false) }
   }
   const applyBulkMark = async (status, selectedRows, remarks) => {
@@ -495,13 +540,13 @@ function FacultyAttendanceScreen({ faculty, onNotify }) {
     attendanceLock.current = true; setAttendanceBusy(true); setAttendanceError('')
     try {
       await facultyService.bulkAttendance({ facultyIds: selectedRows.map(row => requiredNumber(row.facultyId, 'Faculty')), attendanceDate: dailyFilters.date, status, remarks: remarks || null })
-      await loadAttendance(); setSelectedFacultyIds([]); setAttendanceSuccess({ title: 'Attendance Updated', message: selectedRows.length + ' attendance records saved.' })
+      if (!await loadAttendance()) return; setSelectedFacultyIds([]); setAttendanceSuccess({ title: 'Attendance Updated', message: selectedRows.length + ' attendance records saved.' })
     } catch (error) { setAttendanceError(error.message) }
     finally { attendanceLock.current = false; setAttendanceBusy(false) }
   }
   const openAttendance = async (row, edit = false) => {
     try {
-      const id = row.attendanceId || (row.id && !String(row.id).includes(':') ? row.id : null)
+      const id = row.attendanceId
       const detail = id ? normalizeAttendance([await facultyService.getAttendanceById(id)])[0] : row
       const value = { ...row, ...detail, faculty: row.faculty }
       if (edit) setEditingRecord(value); else setSelected(value)
@@ -536,14 +581,16 @@ function FacultyAttendanceScreen({ faculty, onNotify }) {
   const rangeLabel = tab === 'daily' ? displayDate(dailyFilters.date) : tab === 'register' ? displayDate(registerFilters.from) + ' – ' + (registerFilters.to ? displayDate(registerFilters.to) : 'Latest') : period.from && period.to ? displayDate(period.from) + (period.from === period.to ? '' : ' – ' + displayDate(period.to)) : 'Select a valid period'
   const exportScope = ['All filtered results', rangeLabel, filters.department, faculty.find(item => String(item.id) === filters.facultyId)?.fullName, (!aggregated && filters.status), filters.search && 'Search: ' + filters.search, tab === 'reports' && ATTENDANCE_PERCENTAGE_NOTE].filter(Boolean).join(' · ')
   const contextualExport = <button className="export-button" disabled={attendanceBusy} onClick={async () => { setAttendanceBusy(true); try { const params = tab === 'daily' ? { fromDate: dailyFilters.date, toDate: dailyFilters.date } : tab === 'register' ? { facultyId: registerFilters.facultyId, fromDate: registerFilters.from, toDate: registerFilters.to } : { facultyId: currentReport.facultyId, fromDate: period.from, toDate: period.to }; downloadServerExport(await facultyService.exportAttendance(params), filename) } catch (error) { setAttendanceError(error.message) } finally { setAttendanceBusy(false) } }}>Export {exportTitle}</button>
-  const attendanceBadge = value => <StatusBadge value={value} className={value === 'Not Marked' ? 'fm-attendance-pending' : value === 'Present' ? 'fm-attendance-present' : value === 'Absent' ? 'fm-attendance-absent' : value === 'Late' ? 'fm-attendance-late' : value === 'Half Day' ? 'fm-attendance-half-day' : value === 'On Leave' ? 'fm-attendance-leave' : value === 'LOP' ? 'fm-attendance-lop' : ''} />
+  const attendanceBadge = value => <StatusBadge value={attendanceStatusLabel(value)} className={value === 'Not Marked' ? 'fm-attendance-pending' : value === 'Present' ? 'fm-attendance-present' : value === 'Absent' ? 'fm-attendance-absent' : value === 'Late' ? 'fm-attendance-late' : value === 'Half Day' ? 'fm-attendance-half-day' : value === 'On Leave' ? 'fm-attendance-leave' : value === 'LOP' ? 'fm-attendance-lop' : ''} />
   const dateControl = (key, label, options = {}) => <label className="fm-attendance-field"><span>{label}</span><input type="date" value={filters[key]} max={today()} onChange={event => updateFilter(key, event.target.value)} {...options} /></label>
-  const selectControl = (key, label, options, placeholder) => <div className="fm-attendance-field"><span>{label}</span><SearchableSelect label={label} value={filters[key]} options={[{ value: '', label: placeholder }, ...options]} onChange={value => updateFilter(key, value)} placeholder={placeholder} /></div>
+  const selectControl = (key, label, options, placeholder) => <div className="fm-attendance-field"><span>{label}</span><SearchableSelect label={label} value={filters[key]} options={[{ value: '', label: placeholder }, ...options.map(option => option === 'LOP' ? { value: 'LOP', label: 'Loss of Pay' } : option)]} onChange={value => updateFilter(key, value)} placeholder={placeholder} /></div>
+  const todaySummary = summarizeAttendance(resolveAttendanceRecords(todayRecords.filter(row => row.date === today()), faculty))
   const facultySummary = [
     { label: 'Total Faculty', value: faculty.length },
-    { label: 'Present Today', value: dailySummary.Present || 0, tone: 'active' },
-    { label: 'Late Today', value: dailySummary.Late || 0, tone: 'danger' },
-    { label: 'On Leave Today', value: dailySummary['On Leave'] || 0, tone: 'upcoming' },
+    { label: 'Present Today', value: todaySummary.Present || 0, tone: 'active' },
+    { label: 'Absent Today', value: todaySummary.Absent || 0, tone: 'danger' },
+    { label: 'Late Today', value: todaySummary.Late || 0, tone: 'danger' },
+    { label: 'On Leave Today', value: todaySummary['On Leave'] || 0, tone: 'upcoming' },
   ]
   const searchControl = <div className="fm-attendance-search-row"><label className="fm-attendance-field fm-attendance-search-field"><span className="fm-attendance-input-label">Search</span><span className="fm-attendance-search"><FiSearch aria-hidden="true" /><input value={filters.search} onChange={event => updateFilter('search', event.target.value)} placeholder="Search attendance..." /></span></label>{tab !== 'reports' && <button type="button" className="fm-attendance-filter-toggle" aria-expanded={showFilters} aria-controls="faculty-attendance-filters-panel" onClick={() => setShowFilters(value => !value)}>{showFilters ? <FiChevronUp aria-hidden="true" /> : <FiChevronDown aria-hidden="true" />} <span>Filters</span></button>}</div>
   const formatTimeView = value => {
@@ -573,7 +620,7 @@ function FacultyAttendanceScreen({ faculty, onNotify }) {
   const matrixDates = useMemo(() => {
     if (reportType === 'daily' || !period.from || !period.to) return []
     const dates = []
-    for (const date = new Date(period.from + 'T00:00:00'); date <= new Date(period.to + 'T00:00:00'); date.setDate(date.getDate() + 1)) dates.push(normalizeAttendanceDate(date.toISOString().slice(0, 10)))
+    for (const date = new Date(period.from + 'T00:00:00'); date <= new Date(period.to + 'T00:00:00'); date.setDate(date.getDate() + 1)) dates.push(normalizeAttendanceDate(localAttendanceDate(date)))
     return dates
   }, [period.from, period.to, reportType])
   const matrixRows = useMemo(() => {
@@ -592,7 +639,7 @@ function FacultyAttendanceScreen({ faculty, onNotify }) {
   const visibleMatrixRows = matrixRows.slice((currentReportPage - 1) * PAGE_SIZE, currentReportPage * PAGE_SIZE)
   const statusCell = cell => {
     const [code, tone] = statusMeta[cell.status] || statusMeta['Not Marked']
-    const detail = [displayDate(cell.date), cell.status === 'LOP' ? 'LOP (Loss of Pay)' : cell.status, ...(['Present', 'Late', 'Half Day'].includes(cell.status) ? [`Check In: ${formatTimeView(cell.checkIn)}`, `Check Out: ${formatTimeView(cell.checkOut)}`, `Working Hours: ${cell.hours || '—'}`] : [])].join('\n')
+    const detail = [displayDate(cell.date), cell.status === 'LOP' ? 'Loss of Pay' : cell.status, ...(['Present', 'Late', 'Half Day'].includes(cell.status) ? [`Check In: ${formatTimeView(cell.checkIn)}`, `Check Out: ${formatTimeView(cell.checkOut)}`, `Working Hours: ${cell.hours || '—'}`] : [])].join('\n')
     return <span className={`fm-report-status fm-report-status--${tone}`} title={detail} aria-label={detail}>{code}</span>
   }
   const allDailySelected = dailyRows.length > 0 && dailyRows.every(row => selectedFacultyIds.includes(String(row.facultyId)))
@@ -603,6 +650,7 @@ function FacultyAttendanceScreen({ faculty, onNotify }) {
     ['Late', dailySummary.Late, FiClock, 'warning'],
     ['Half Day', dailySummary['Half Day'], FiClock, 'warning'],
     ['On Leave', dailySummary['On Leave'], FiBriefcase, 'info'],
+    ['Loss of Pay', dailySummary.LOP, FiBriefcase, 'danger'],
     ['Not Marked', dailySummary['Not Marked'], FiEdit2, 'muted']
   ].map(([label, value, Icon, tone]) => (
     <article className={'fm-attendance-kpi fm-attendance-kpi--' + tone} key={label}>
@@ -627,9 +675,9 @@ function FacultyAttendanceScreen({ faculty, onNotify }) {
     })
   }
   const showDate = tab === 'register'
-  const showRemarks = tab !== 'reports'
+  const showRemarks = true
   const showAction = tab !== 'reports'
-  const recordTable = <div className={'fm-attendance-table' + (showDate ? ' fm-attendance-history-table' : '')}><table>
+  const recordTable = <div key={tab} className={'fm-attendance-table' + (showDate ? ' fm-attendance-history-table' : '')}><table>
     {tab === 'daily' ? <colgroup>
       <col className="fm-col-select" style={{ width: '50px' }} />
       <col className="fm-col-employee" style={{ width: '120px' }} />
@@ -641,9 +689,9 @@ function FacultyAttendanceScreen({ faculty, onNotify }) {
       <col className="fm-col-hours" style={{ width: '135px' }} />
       <col className="fm-col-remarks" style={{ width: '150px' }} />
       <col className="fm-col-action" style={{ width: '80px' }} />
-    </colgroup> : (showDate ? <colgroup>{[10, 8, 20, 17, 10, 7, 7, 8, 7, 6].map((width, index) => <col key={index} style={{ width: width + '%' }} />)}</colgroup> : showAction ? <colgroup>{[8, 23, 19, 11, 7, 7, 9, 9, 7].map((width, index) => <col key={index} style={{ width: width + '%' }} />)}</colgroup> : <colgroup>{[10, 26, 22, 12, 10, 10, 10].map((width, index) => <col key={index} style={{ width: width + '%' }} />)}</colgroup>)}
+    </colgroup> : (showDate ? <colgroup>{[10, 8, 20, 17, 10, 7, 7, 8, 7, 6].map((width, index) => <col key={index} style={{ width: width + '%' }} />)}</colgroup> : showAction ? <colgroup>{[8, 23, 19, 11, 7, 7, 9, 9, 7].map((width, index) => <col key={index} style={{ width: width + '%' }} />)}</colgroup> : <colgroup>{[9, 22, 19, 11, 9, 9, 9, 12].map((width, index) => <col key={index} style={{ width: width + '%' }} />)}</colgroup>)}
     <thead><tr>{[...(tab === 'daily' ? [<th scope="col" key="select-header"><input type="checkbox" aria-label="Select all daily attendance rows" checked={allDailySelected} onChange={toggleSelectAllDaily} /></th>] : []), ...(showDate ? ['Date'] : []), 'Employee ID', 'Faculty', 'Department', 'Status', 'Check In', 'Check Out', 'Working Hours', ...(showRemarks ? ['Remarks'] : []), ...(showAction ? ['Action'] : [])].map((label, index) => typeof label === 'string' ? <th scope="col" key={label}>{label}</th> : label)}</tr></thead>
-    <tbody>{(aggregated ? [] : visibleRows).map(row => <tr key={row.id}>
+    <tbody>{(aggregated ? [] : visibleRows).map(row => <tr key={`${row.facultyId}:${row.date}`}>
       {tab === 'daily' && <td><input type="checkbox" aria-label={'Select ' + row.faculty.fullName} checked={selectedFacultyIds.includes(String(row.facultyId))} onChange={event => setSelectedFacultyIds(current => event.target.checked ? [...new Set([...current, String(row.facultyId)])] : current.filter(id => id !== String(row.facultyId)))} /></td>}
       {showDate && <td>{displayDate(row.date)}</td>}
       <td><span className="fm-attendance-employee">{row.faculty.employeeId}</span></td>
@@ -653,7 +701,7 @@ function FacultyAttendanceScreen({ faculty, onNotify }) {
       {showAction && <td className="fm-action-cell"><div className="fm-table-actions"><button className="fm-icon-button" type="button" title="View Attendance" aria-label={'View attendance record for ' + row.faculty.fullName + ' on ' + row.date} onClick={() => openAttendance(row)}><FiEye /></button><button className="fm-icon-button" type="button" title="Edit attendance" aria-label={'Edit attendance for ' + row.faculty.fullName + ' on ' + row.date} onClick={() => openAttendance(row, true)}><FiEdit2 /></button></div></td>}
     </tr>)}</tbody>
   </table></div>
-  const aggregatedTable = reportType === 'daily' ? <div className="fm-attendance-table fm-attendance-aggregate-table"><table><thead><tr>{['Employee ID', 'Faculty', 'Department', 'Days With Data', 'Present', 'Absent', 'Late', 'Half Day', 'On Leave', 'Total Hours', 'Attendance %'].map(label => <th scope="col" key={label}>{label}</th>)}</tr></thead><tbody>{visibleReportRows.map(row => <tr key={row.facultyId}><td><span className="fm-attendance-employee">{row.faculty.employeeId}</span></td><td><strong>{row.faculty.fullName}</strong></td><td>{row.faculty.department}</td><td>{row.total}</td>{['Present', 'Absent', 'Late', 'Half Day', 'On Leave'].map(status => <td key={status}>{row[status]}</td>)}<td>{row.hours}</td><td>{row.percentage}</td></tr>)}</tbody></table></div> : <><div className="fm-report-legend" aria-label="Attendance status legend">{Object.entries(statusMeta).map(([status, [code, tone]]) => <span key={status}>{statusCell({ status, date: period.from, checkIn: '—', checkOut: '—', hours: '—' })}<small>{status}</small></span>)}</div><div className="fm-attendance-table fm-attendance-matrix"><table><thead><tr><th>Employee ID</th><th>Faculty</th>{matrixDates.map(date => <th key={date}><span>{new Date(date + 'T00:00:00').toLocaleDateString('en-GB', { weekday: 'short' }).toUpperCase()}</span><b>{new Date(date + 'T00:00:00').toLocaleDateString('en-GB', { day: '2-digit', month: 'short' }).toUpperCase()}</b></th>)}{['P', 'A', 'L', 'HD', 'OL', 'LOP', '%'].map(label => <th key={label}>{label}</th>)}</tr></thead><tbody>{visibleMatrixRows.map(({ member, cells, totals }) => <tr key={member.id}><td>{member.employeeId}</td><td className="fm-matrix-faculty"><strong>{member.fullName}</strong><small>{member.department}</small></td>{cells.map(cell => <td key={cell.date}>{statusCell(cell)}</td>)}{[['Present', 'present'], ['Absent', 'absent'], ['Late', 'late'], ['Half Day', 'half-day'], ['On Leave', 'leave'], ['LOP', 'lop']].map(([status, tone]) => <td className={`fm-report-total fm-report-total--${tone}`} key={status}>{totals[status]}</td>)}<td className="fm-report-total fm-report-total--percentage">{totals.percentage}</td></tr>)}</tbody></table></div></>
+  const aggregatedTable = reportType === 'daily' ? <div className="fm-attendance-table fm-attendance-aggregate-table"><table><thead><tr>{['Employee ID', 'Faculty', 'Department', 'Days With Data', 'Present', 'Absent', 'Late', 'Half Day', 'On Leave', 'Total Hours', 'Attendance %'].map(label => <th scope="col" key={label}>{label}</th>)}</tr></thead><tbody>{visibleReportRows.map(row => <tr key={row.facultyId}><td><span className="fm-attendance-employee">{row.faculty.employeeId}</span></td><td><strong>{row.faculty.fullName}</strong></td><td>{row.faculty.department}</td><td>{row.total}</td>{['Present', 'Absent', 'Late', 'Half Day', 'On Leave'].map(status => <td key={status}>{row[status]}</td>)}<td>{row.hours}</td><td>{row.percentage}</td></tr>)}</tbody></table></div> : <><div className="fm-report-legend" aria-label="Attendance status legend">{Object.entries(statusMeta).map(([status, [code, tone]]) => <span key={status}>{statusCell({ status, date: period.from, checkIn: '—', checkOut: '—', hours: '—' })}<small>{attendanceStatusLabel(status)}</small></span>)}</div><div className="fm-attendance-table fm-attendance-matrix"><table><thead><tr><th>Employee ID</th><th>Faculty</th>{matrixDates.map(date => <th key={date}><span>{new Date(date + 'T00:00:00').toLocaleDateString('en-GB', { weekday: 'short' }).toUpperCase()}</span><b>{new Date(date + 'T00:00:00').toLocaleDateString('en-GB', { day: '2-digit', month: 'short' }).toUpperCase()}</b></th>)}{['P', 'A', 'L', 'HD', 'OL', 'LOP', '%'].map(label => <th key={label}>{label}</th>)}</tr></thead><tbody>{visibleMatrixRows.map(({ member, cells, totals }) => <tr key={member.id}><td>{member.employeeId}</td><td className="fm-matrix-faculty"><strong>{member.fullName}</strong><small>{member.department}</small></td>{cells.map(cell => <td key={cell.date}>{statusCell(cell)}</td>)}{[['Present', 'present'], ['Absent', 'absent'], ['Late', 'late'], ['Half Day', 'half-day'], ['On Leave', 'leave'], ['LOP', 'lop']].map(([status, tone]) => <td className={`fm-report-total fm-report-total--${tone}`} key={status}>{totals[status]}</td>)}<td className="fm-report-total fm-report-total--percentage">{totals.percentage}</td></tr>)}</tbody></table></div></>
   const noSource = tab !== 'daily' && !attendanceRecords.length
   const empty = <EmptyState title={noSource ? 'No attendance records are available yet.' : 'No attendance records match the selected filters.'} description={noSource ? 'Daily Attendance shows missing records as Not Marked; these are not saved historical records.' : undefined} action={noSource ? 'Go to Daily Attendance' : 'Clear Filters'} onAction={noSource ? () => setTab('daily') : clearFilters} />
   return (
@@ -740,14 +788,14 @@ function FacultyAttendanceScreen({ faculty, onNotify }) {
               </div>
             )}
 
-            {resultRows.length ? aggregated ? aggregatedTable : recordTable : empty}
+            {(aggregated ? matrixRows.length : resultRows.length) ? aggregated ? aggregatedTable : recordTable : empty}
             {tab === 'daily' && dailyRows.length > PAGE_SIZE && <TablePagination currentPage={currentDailyPage} totalPages={dailyPageCount} onPageChange={setDailyPage} />}
             {tab === 'reports' && reportEmployeeRows.length > PAGE_SIZE && <TablePagination currentPage={currentReportPage} totalPages={reportPageCount} onPageChange={setReportPage} />}
           </section>
         </div>
       </section>
 
-      {selected && (
+      {tab !== 'reports' && selected && (
         <div className="fm-modal-backdrop">
           <section className="fm-attendance-detail" role="dialog" aria-modal="true" aria-label="Attendance details">
             <div className="fm-attendance-detail-header">
@@ -780,7 +828,7 @@ function FacultyAttendanceScreen({ faculty, onNotify }) {
         </div>
       )}
 
-      {attendanceError && <p className="fm-error" role="alert" style={{ position: 'relative', zIndex: 1500 }}>{attendanceError}</p>}{editingRecord && <fieldset disabled={attendanceBusy} style={{ border: 0, margin: 0, padding: 0 }}><AttendanceEditor record={editingRecord} onClose={() => setEditingRecord(null)} onSave={saveAttendance} onReset={record => saveAttendance({ ...record, status: 'Not Marked' })} /></fieldset>}
+      {attendanceError && <p className="fm-error" role="alert" style={{ position: 'relative', zIndex: 1500 }}>{attendanceError}</p>}{tab !== 'reports' && editingRecord && <fieldset disabled={attendanceBusy} style={{ border: 0, margin: 0, padding: 0 }}><AttendanceEditor record={editingRecord} onClose={() => setEditingRecord(null)} onSave={saveAttendance} onReset={record => saveAttendance({ ...record, status: 'Not Marked' })} /></fieldset>}
       {attendanceSuccess && (
         <div className="fm-modal-backdrop fm-success-backdrop" role="presentation">
           <section className="fm-attendance-success" role="dialog" aria-modal="true" aria-labelledby="attendance-success-title">
@@ -1096,9 +1144,6 @@ function FacultyForm({ initial, faculty, onSave, onCancel, collegeOptions, depar
           <ProfileSections data={data} collegeOptions={collegeOptions} departmentOptions={departmentOptions} />
         </>
       )}
-      {step === 0 && faculty.some(row => row.id !== data.id && row.mobile === data.mobile) && (
-        <p className="fm-warning">Another faculty member uses this mobile number. Please verify it before saving.</p>
-      )}
       <footer className="fm-form-footer">
         <button type="button" className="fm-button secondary" onClick={onCancel}>Cancel</button>
         <span className="fm-muted">Step {step + 1} of {totalSteps}</span>
@@ -1255,18 +1300,24 @@ function AssignmentDialog({ faculty, onClose, onAdd, onRemove, toast }) {
   }, [masters.branches, data.courseId])
 
   const semesterOptions = useMemo(() => {
-    if (masters.semesters.length) {
-      return masters.semesters.map(s => ({ value: String(s.semesterId ?? s.id), label: s.semesterName ?? s.name ?? `Semester ${s.semesterNumber ?? s.number}` }))
-    }
-    return []
-  }, [masters.semesters])
+    const branchId = String(data.branchId || '')
+    const options = masters.semesters.filter(s => {
+      const mappedBranchId = s.branchId ?? s.branch?.branchId ?? s.branch?.id
+      return branchId && mappedBranchId != null && String(mappedBranchId) === branchId
+    }).map(s => ({ value: String(s.semesterId ?? s.id), label: s.semesterName ?? s.name ?? `Semester ${s.semesterNumber ?? s.number}` }))
+    return [...new Map(options.map(option => [option.label.trim().toLowerCase(), option])).values()]
+  }, [masters.semesters, data.branchId])
 
   const sectionOptions = useMemo(() => {
-    if (masters.sections.length) {
-      return masters.sections.map(s => ({ value: String(s.sectionId ?? s.id), label: s.sectionName ?? s.name ?? s.sectionCode }))
-    }
-    return []
-  }, [masters.sections])
+    const branchId = String(data.branchId || '')
+    const semesterId = String(data.semesterId || '')
+    const options = masters.sections.filter(s => {
+      const mappedBranchId = s.branchId ?? s.branch?.branchId ?? s.branch?.id
+      const mappedSemesterId = s.semesterId ?? s.semester?.semesterId ?? s.semester?.id
+      return branchId && semesterId && String(mappedBranchId) === branchId && String(mappedSemesterId) === semesterId
+    }).map(s => ({ value: String(s.sectionId ?? s.id), label: s.sectionName ?? s.name ?? s.sectionCode }))
+    return [...new Map(options.map(option => [option.label.trim().toLowerCase(), option])).values()]
+  }, [masters.sections, data.branchId, data.semesterId])
 
   const subjectOptions = useMemo(() => {
     if (masters.subjects.length) {
@@ -1296,7 +1347,6 @@ function AssignmentDialog({ faculty, onClose, onAdd, onRemove, toast }) {
     if (!hasId(data.branchId)) issues.branch = 'Select a branch from the master list.'
     if (!hasId(data.semesterId)) issues.semester = 'Select a semester from the master list.'
     if (!hasId(data.sectionId)) issues.section = 'Select a section from the master list.'
-    if (subjectRequired && !hasId(data.subjectId)) issues.subjectName = 'Select a subject from the master list.'
     if ((subjectRequired || data.subjectName) && !data.subjectCode?.trim()) issues.subjectCode = 'Subject code is required.'
     if ((subjectRequired || data.subjectCode) && !data.subjectName?.trim()) issues.subjectName = 'Subject name is required.'
 
@@ -1420,7 +1470,7 @@ function AssignmentDialog({ faculty, onClose, onAdd, onRemove, toast }) {
                   onChange={e => {
                     const val = e.target.value
                     const found = branchOptions.find(o => String(o.value) === String(val))
-                    setData({ ...data, branchId: val, branch: found?.label || val })
+                    setData({ ...data, branchId: val, branch: found?.label || val, semesterId: '', semester: '', sectionId: '', section: '' })
                     setErrors(old => ({ ...old, branch: undefined, duplicate: undefined }))
                   }}
                   required
@@ -1439,7 +1489,7 @@ function AssignmentDialog({ faculty, onClose, onAdd, onRemove, toast }) {
                   onChange={e => {
                     const val = e.target.value
                     const found = semesterOptions.find(o => String(o.value) === String(val))
-                    setData({ ...data, semesterId: val, semester: found?.label || val })
+                    setData({ ...data, semesterId: val, semester: found?.label || val, sectionId: '', section: '' })
                     setErrors(old => ({ ...old, semester: undefined, duplicate: undefined }))
                   }}
                   required
@@ -1515,7 +1565,11 @@ function AssignmentDialog({ faculty, onClose, onAdd, onRemove, toast }) {
                   placeholder="e.g. CS301"
                   value={data.subjectCode}
                   onChange={e => {
-                    setData({ ...data, subjectCode: e.target.value })
+                    // Subject Management is not available yet.  A faculty
+                    // allocation can therefore use a manually entered code
+                    // and name; do not retain an unrelated catalog id after
+                    // the user changes either value.
+                    setData({ ...data, subjectId: '', subjectCode: e.target.value })
                     setErrors(old => ({ ...old, subjectCode: undefined, duplicate: undefined }))
                   }}
                   required={subjectRequired}
@@ -1532,7 +1586,8 @@ function AssignmentDialog({ faculty, onClose, onAdd, onRemove, toast }) {
                   placeholder="e.g. Data Structures & Algorithms"
                   value={data.subjectName}
                   onChange={e => {
-                    setData({ ...data, subjectName: e.target.value })
+                    // See the matching Subject Code handler above.
+                    setData({ ...data, subjectId: '', subjectName: e.target.value })
                     setErrors(old => ({ ...old, subjectName: undefined, duplicate: undefined }))
                   }}
                   required={subjectRequired}

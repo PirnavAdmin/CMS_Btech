@@ -22,6 +22,7 @@
 .department-modal-backdrop{position:fixed;inset:0;z-index:1000;display:grid;place-items:center;padding:18px;background:rgba(8,31,53,.46);backdrop-filter:blur(4px)}
 .department-modal-backdrop .management-card{width:min(100%,680px);max-height:calc(100dvh - 36px);overflow-y:auto;box-sizing:border-box;box-shadow:0 24px 70px rgba(8,31,53,.3)}
 .department-modal-backdrop .hod-card{width:min(100%,520px)}
+.department-modal-close{display:grid;width:36px;height:36px;flex:0 0 36px;place-items:center;padding:0;border:1px solid var(--border,#c8d8e5);border-radius:8px;color:var(--brand,#1970b3);background:var(--surface,#fff);cursor:pointer}.department-modal-close:hover{border-color:var(--brand,#1970b3);background:var(--surface-soft,#f3f8fc)}.department-modal-close:disabled{cursor:not-allowed;opacity:.55}.department-modal-close svg{width:19px;height:19px}
 .department-popup-close{display:grid;place-items:center;width:34px;height:34px;border:0;border-radius:7px;background:transparent;color:var(--text-muted);cursor:pointer}.department-popup-close:hover{color:var(--text-primary);background:var(--surface-soft)}.department-popup-close svg{width:19px;height:19px}
 @media(max-width:760px){.department-modal-backdrop{padding:12px}.department-modal-backdrop .management-card{max-height:calc(100dvh - 24px)}}
 

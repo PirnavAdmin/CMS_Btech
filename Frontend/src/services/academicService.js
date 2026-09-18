@@ -83,21 +83,15 @@ class AcademicService {
           return {
             id: unwrapped.collegeId ?? unwrapped.id,
             collegeId: unwrapped.collegeId ?? unwrapped.id,
-            name: unwrapped.collegeName ?? unwrapped.name ?? 'Pirnav Engineering College',
-            code: unwrapped.collegeCode ?? unwrapped.code ?? 'PEC',
-            status: unwrapped.status ?? 'Active',
+            name: unwrapped.collegeName ?? unwrapped.name ?? '',
+            code: unwrapped.collegeCode ?? unwrapped.code ?? '',
+            status: unwrapped.status,
             ...unwrapped
           }
         })
       } catch (err) {
-        console.warn('Fallback loading colleges:', err)
-        return [{
-          id: 1,
-          collegeId: 1,
-          name: 'Pirnav Engineering College',
-          code: 'PEC',
-          status: 'Active'
-        }]
+        console.warn('Unable to load colleges:', err)
+        return []
       }
     })
     return activeOnly ? filterActiveOnly(data) : data
@@ -151,8 +145,8 @@ class AcademicService {
           departmentId: d.departmentId ?? d.id,
           name: d.departmentName ?? d.name ?? '',
           code: d.departmentCode ?? d.code ?? '',
-          collegeId: d.collegeId ?? 1,
-          status: d.status ?? 'Active',
+          collegeId: d.collegeId,
+          status: d.status,
           ...d
         }))
       } catch (err) {
@@ -181,10 +175,10 @@ class AcademicService {
           name: c.courseName ?? c.name ?? '',
           code: c.courseCode ?? c.code ?? '',
           departmentId: c.departmentId,
-          collegeId: c.collegeId ?? 1,
-          status: c.status ?? 'Active',
-          durationYears: c.durationYears ?? 4,
-          totalSemesters: c.totalSemesters ?? 8,
+          collegeId: c.collegeId,
+          status: c.status,
+          durationYears: c.durationYears,
+          totalSemesters: c.totalSemesters,
           ...c
         }))
       } catch (err) {
@@ -213,9 +207,9 @@ class AcademicService {
           code: b.branchCode ?? b.code ?? '',
           courseId: b.courseId,
           departmentId: b.departmentId,
-          status: b.status ?? (b.status === 0 ? 'Inactive' : 'Active'),
-          totalSemesters: b.totalSemesters ?? 8,
-          intakeCapacity: b.intakeCapacity ?? 60,
+          status: b.status,
+          totalSemesters: b.totalSemesters,
+          intakeCapacity: b.intakeCapacity,
           ...b
         }))
       } catch (err) {
@@ -242,35 +236,19 @@ class AcademicService {
             list = await courseStructureApi.getAll()
           }
         }
-        if (!Array.isArray(list) || list.length === 0) {
-          // Standard 8 Semesters fallback if structure is not yet seeded
-          list = Array.from({ length: 8 }, (_, i) => ({
-            semesterId: i + 1,
-            id: i + 1,
-            semesterNumber: i + 1,
-            semesterName: `Semester ${i + 1}`,
-            status: 'Active',
-          }))
-        }
-        return list.map(s => ({
+        return (Array.isArray(list) ? list : []).map(s => ({
           id: s.semesterId ?? s.id ?? s.semesterNumber,
           semesterId: s.semesterId ?? s.id ?? s.semesterNumber,
           semesterNumber: s.semesterNumber ?? s.id,
-          semesterName: s.semesterName ?? s.name ?? `Semester ${s.semesterNumber ?? s.id}`,
+          semesterName: s.semesterName ?? s.name ?? '',
           courseId: s.courseId,
           branchId: s.branchId,
-          status: s.status ?? 'Active',
+          status: s.status,
           ...s
         }))
       } catch (err) {
-        console.warn('Fallback loading semesters:', err)
-        return Array.from({ length: 8 }, (_, i) => ({
-          semesterId: i + 1,
-          id: i + 1,
-          semesterNumber: i + 1,
-          semesterName: `Semester ${i + 1}`,
-          status: 'Active',
-        }))
+        console.warn('Unable to load semesters:', err)
+        return []
       }
     })
     return activeOnly ? filterActiveOnly(data) : data
@@ -298,9 +276,9 @@ class AcademicService {
           courseId: sec.courseId,
           branchId: sec.branchId,
           semesterId: sec.semesterId,
-          capacity: sec.capacity ?? 60,
-          status: sec.status ?? 'Active',
-          shift: sec.shift ?? 'Morning',
+          capacity: sec.capacity,
+          status: sec.status,
+          shift: sec.shift,
           room: sec.room ?? '',
           ...sec
         }))
@@ -335,12 +313,12 @@ class AcademicService {
     const section = sections.find(sec => String(sec.id) === String(sectionId))
 
     return {
-      collegeName: college?.name || 'Pirnav Engineering College',
+      collegeName: college?.name || '',
       academicYearName: academicYear?.name || '',
       departmentName: department?.name || '',
       courseName: course?.name || '',
       branchName: branch?.name || '',
-      semesterName: semester?.semesterName || (semesterId ? `Semester ${semesterId}` : ''),
+      semesterName: semester?.semesterName || '',
       sectionName: section?.name || '',
     }
   }

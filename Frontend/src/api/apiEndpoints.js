@@ -1127,18 +1127,32 @@ export async function lookupIndianPincode(pincode) {
 
 export default API_ENDPOINTS
 
+// Leave endpoints may wrap their collection by resource name. Do not turn
+// an unrecognized response (including an HTML tunnel page) into "no records".
+const leaveList = async (url, params, keys) => {
+  let current = await request(withQuery(url, params))
+  for (let depth = 0; depth < 6; depth += 1) {
+    if (Array.isArray(current)) return current
+    if (!current || typeof current !== 'object') break
+    const key = [...keys, 'items', 'content', 'results', 'records', 'rows', 'data'].find(name => current[name] != null)
+    if (!key) break
+    current = current[key]
+  }
+  throw new Error('The leave API returned an unexpected response. Please retry or contact the administrator.')
+}
+
 export const facultyLeaveApi = {
-  getRequests: async params => listData(await request(withQuery(API_ENDPOINTS.facultyLeave.requests, params))),
+  getRequests: async params => leaveList(API_ENDPOINTS.facultyLeave.requests, params, ['requests', 'leaveRequests']),
   createRequest: async payload => normalizeRecord(await jsonRequest(API_ENDPOINTS.facultyLeave.requests, 'POST', payload)),
   getRequest: async id => normalizeRecord(await request(API_ENDPOINTS.facultyLeave.request(requiredId(id, 'Request ID')))),
   approve: async id => request(API_ENDPOINTS.facultyLeave.approve(requiredId(id, 'Request ID')), { method: 'PUT' }),
   reject: async (id, rejectionReason) => jsonRequest(API_ENDPOINTS.facultyLeave.reject(requiredId(id, 'Request ID')), 'PUT', { rejectionReason }),
-  getHistory: async params => listData(await request(withQuery(API_ENDPOINTS.facultyLeave.history, params))),
-  getBalances: async params => listData(await request(withQuery(API_ENDPOINTS.facultyLeave.balances, params))),
-  getTypes: async params => listData(await request(withQuery(API_ENDPOINTS.facultyLeave.types, params))),
+  getHistory: async params => leaveList(API_ENDPOINTS.facultyLeave.history, params, ['history', 'leaveHistory', 'requests', 'leaveRequests']),
+  getBalances: async params => leaveList(API_ENDPOINTS.facultyLeave.balances, params, ['balances', 'leaveBalances']),
+  getTypes: async params => leaveList(API_ENDPOINTS.facultyLeave.types, params, ['types', 'leaveTypes']),
   createType: async payload => normalizeRecord(await jsonRequest(API_ENDPOINTS.facultyLeave.types, 'POST', payload)),
   updateType: async (id, payload) => normalizeRecord(await jsonRequest(API_ENDPOINTS.facultyLeave.type(requiredId(id, 'Leave type ID')), 'PUT', payload)),
-  getPolicies: async params => listData(await request(withQuery(API_ENDPOINTS.facultyLeave.policies, params))),
+  getPolicies: async params => leaveList(API_ENDPOINTS.facultyLeave.policies, params, ['policies', 'leavePolicies']),
   createPolicy: async payload => normalizeRecord(await jsonRequest(API_ENDPOINTS.facultyLeave.policies, 'POST', payload)),
   updatePolicy: async (id, payload) => normalizeRecord(await jsonRequest(API_ENDPOINTS.facultyLeave.policy(requiredId(id, 'Policy ID')), 'PUT', payload)),
   activatePolicy: async id => request(API_ENDPOINTS.facultyLeave.activate(requiredId(id, 'Policy ID')), { method: 'POST' }),

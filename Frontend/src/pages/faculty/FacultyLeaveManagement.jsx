@@ -7,16 +7,26 @@ import { academicYearApi, facultyLeaveApi } from '../../api/apiEndpoints'
 import facultyService, { normalizeFaculty } from '../../services/facultyService'
 import { normalizeLeaveType, normalizeLeavePolicy, normalizeLeaveRequest, leavePolicyPayload } from '../../services/facultyContracts'
 import { newestFirst, rememberCreated } from '../../utils/newestFirst'
+import { employeeLeaveBalances, leaveBalanceRules } from '../../utils/facultyLeaveBalances'
 import './FacultyLeaveManagement.css'
 
 const PAGE_SIZE = 5
 const TABS = ['Leave Requests', 'Leave History', 'Leave Balances', 'Leave Types', 'Leave Policies']
-const today = () => new Date().toISOString().slice(0, 10)
+const today = () => { const date = new Date(); return [date.getFullYear(), String(date.getMonth() + 1).padStart(2, '0'), String(date.getDate()).padStart(2, '0')].join('-') }
 const typeOf = employee => employee?.employeeCategory === 'Non-Teaching' ? 'Non-Teaching' : 'Teaching'
 const statusClass = value => String(value || '').toLowerCase().replace(/\s+/g, '-')
 const dateLabel = value => value ? new Date(`${String(value).slice(0, 10)}T00:00:00`).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : '—'
 const range = (from, to) => !from || !to ? '?' : from === to ? dateLabel(from) : `${new Date(`${from}T00:00:00`).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' })} - ${dateLabel(to)}`
 const initials = value => String(value || 'Employee').replace(/^(Dr|Prof|Mr|Ms|Mrs)\.\s*/i, '').split(' ').filter(Boolean).slice(0, 2).map(word => word[0]).join('').toUpperCase()
+const femaleOnlyLeave = type => {
+  const scope = String(type?.applicableGender ?? type?.gender ?? type?.genderEligibility ?? '').trim().toLowerCase()
+  if (['female', 'women', 'woman'].includes(scope)) return true
+  return /maternity|pregnancy|miscarriage|adoption leave/i.test(`${type?.name || ''} ${type?.code || ''} ${type?.category || ''}`)
+}
+const eligibleLeaveTypes = (types, employee) => {
+  const gender = String(employee?.gender || '').trim().toLowerCase()
+  return types.filter(type => type.status === 'Active' && (gender !== 'male' || !femaleOnlyLeave(type)))
+}
 const hasOverlap = (left, right) => left.from <= right.to && left.to >= right.from
 const policyScopesOverlap = (left, right) => {
   const categoryOverlaps = left.applicableTo === 'Both' || right.applicableTo === 'Both' || left.applicableTo === right.applicableTo
@@ -35,7 +45,10 @@ export default function FacultyLeaveManagement() {
   const [tab, setTab] = useState(TABS[0])
   const [leaveTypes, setLeaveTypes] = useState([])
   const [policies, setPolicies] = useState([])
-  const [requests, setRequests] = useState([])
+  const [pendingRequests, setPendingRequests] = useState([])
+  const [historyRequests, setHistoryRequests] = useState([])
+  const reloadVersion = useRef(0)
+  const requests = newestFirst('leave-requests', [...new Map([...pendingRequests, ...historyRequests].map(row => [row.id, row])).values()])
   const [query, setQuery] = useState('')
   const [filters, setFilters] = useState({ type: '', department: '', status: '' })
   const [showFilters, setShowFilters] = useState(false)
@@ -45,21 +58,27 @@ export default function FacultyLeaveManagement() {
   const [academicYears, setAcademicYears] = useState([])
 
   const reload = useCallback(async () => {
+    const version = ++reloadVersion.current
     setLoading(true); setLoadError('')
-    try {
-      const [members, types, policyRows, pending, history, balanceRows] = await Promise.all([
-        facultyService.list(), facultyLeaveApi.getTypes(), facultyLeaveApi.getPolicies(),
-        facultyLeaveApi.getRequests(), facultyLeaveApi.getHistory(), facultyLeaveApi.getBalances(),
-      ])
-      const activeTypes = types.map(normalizeLeaveType).filter(t => t.status === 'Active' || !t.status)
-      setFaculty(members); setLeaveTypes(newestFirst('leave-types', activeTypes))
-      setPolicies(newestFirst('leave-policies', policyRows.map(normalizeLeavePolicy)))
-      setRequests(newestFirst('leave-requests', [...new Map([...pending, ...history].map(normalizeLeaveRequest).map(row => [row.id, row])).values()]))
-      setBalances(balanceRows)
-    } catch (error) { setLoadError(error.message || 'Unable to load leave records.'); throw error }
-    finally { setLoading(false) }
+    const resources = [
+      ['Faculty', () => facultyService.list(), setFaculty],
+      ['Leave types', () => facultyLeaveApi.getTypes(), rows => setLeaveTypes(newestFirst('leave-types', rows.map(normalizeLeaveType)))],
+      ['Leave policies', () => facultyLeaveApi.getPolicies(), rows => setPolicies(newestFirst('leave-policies', rows.map(normalizeLeavePolicy)))],
+      ['Leave requests', () => facultyLeaveApi.getRequests(), rows => setPendingRequests(rows.map(normalizeLeaveRequest))],
+      ['Leave history', () => facultyLeaveApi.getHistory(), rows => setHistoryRequests(rows.map(normalizeLeaveRequest))],
+      ['Leave balances', () => facultyLeaveApi.getBalances(), setBalances],
+    ]
+    await Promise.allSettled(resources.map(async ([label, fetchRows, saveRows]) => {
+      try {
+        const rows = await fetchRows()
+        if (version === reloadVersion.current) saveRows(rows)
+      } catch (error) {
+        if (version === reloadVersion.current) setLoadError(current => [current, `${label}: ${error.message || 'Unable to load'}. Previously loaded data, if any, is still displayed.`].filter(Boolean).join(' | '))
+      }
+    }))
+    if (version === reloadVersion.current) setLoading(false)
   }, [])
-  useEffect(() => { reload().catch(() => {}) }, [reload])
+  useEffect(() => { reload(); return () => { reloadVersion.current += 1 } }, [reload])
   useEffect(() => { let active = true; academicYearApi.getAll().then(rows => { if (active) setAcademicYears(rows.map(row => row.academicYearName || row.name).filter(Boolean)) }).catch(error => { if (active) setNotice(error.message) }); return () => { active = false } }, [])
   const mutate = async (action, message, module) => {
     if (mutationLock.current) return
@@ -78,18 +97,9 @@ export default function FacultyLeaveManagement() {
     return matches.length === 1 ? matches[0] : null
   }
   const getBalance = (employee, policy, typeId) => {
-    if (!employee) return null
-    const group = balances.find(row => String(row.facultyId ?? row.employee?.id ?? row.id) === String(employee.id))
-    const entries = group?.balances ?? group?.leaveBalances ?? group?.leaveTypes ?? (group?.leaveTypeId ? [group] : [])
-    const row = entries.find(item => String(item.leaveTypeId ?? item.typeId) === String(typeId) && (!item.policyId || String(item.policyId) === String(policy?.id)))
-      ?? balances.find(item => String(item.facultyId) === String(employee.id) && String(item.leaveTypeId ?? item.typeId) === String(typeId))
-    if (!row) return null
-    const entitled = row.entitled ?? row.entitlement ?? null
-    const used = Number(row.used ?? row.usedDays ?? 0)
-    const pending = Number(row.pending ?? row.pendingDays ?? 0)
-    const rawAvailable = row.available ?? row.availableDays
-    const available = rawAvailable != null ? Number(rawAvailable) : (entitled != null ? Math.max(0, Number(entitled) - used - pending) : null)
-    return { entitled, used, pending, available }
+    const balance = employeeLeaveBalances(balances, employee, policy)
+    if (typeId === undefined) return balance
+    return balance.details.find(row => row.typeId === String(typeId)) ?? null
   }
   const requestRows = requests.map(request => ({ ...request, employee: faculty.find(item => String(item.id) === String(request.facultyId)) || normalizeFaculty(request.employee || { ...request, facultyName: request.facultyName || request.employeeName, facultyId: request.facultyId }) })).filter(row => row.employee)
   const sourceRows = tab === 'Leave Requests' ? requestRows.filter(row => row.status === 'Pending') : tab === 'Leave History' ? requestRows.filter(row => ['Approved', 'Rejected', 'Cancelled'].includes(row.status)) : tab === 'Leave Balances' ? faculty.filter(Boolean).map(employee => ({ employee, policy: getApplicablePolicy(employee) })).filter(row => Boolean(row.employee)) : tab === 'Leave Types' ? leaveTypes : policies
@@ -141,16 +151,20 @@ export default function FacultyLeaveManagement() {
     reason: req.reason.trim(),
     days: Number(req.days) || 1,
   }), 'Leave request submitted.', 'leave-requests')
-  const viewRecord = async item => {
-    if (!item.typeId) { setDialog({ kind: 'view', item }); return }
-    try { const detail = normalizeLeaveRequest(await facultyLeaveApi.getRequest(item.id)); setDialog({ kind: 'view', item: { ...item, ...detail, employee: item.employee } }) }
-    catch (error) { setNotice(error.message) }
+  const viewRecord = item => {
+    // The row is already built from the leave-request response and its
+    // resolved faculty record. Calling GET /requests/{id} again makes some
+    // backend deployments try to load an optional faculty profile; when that
+    // profile has not been created yet, the endpoint returns "Profile not
+    // found" even though the leave request itself is valid. View the data we
+    // already have instead of making that unrelated profile lookup.
+    setDialog({ kind: 'view', item })
   }
-  return <DashboardLayout><main className="flm-page">{loadError && <p className="flm-error" role="alert">{loadError} <button onClick={() => reload().catch(() => {})}>Retry</button></p>}{loading && <p role="status">Loading leave records?</p>}<header className="flm-header"><div><p>FACULTY / LEAVE MANAGEMENT</p><h1>Faculty Leave Management</h1><span>Configure leave policies, manage employee balances and process faculty and staff leave requests.</span></div><div className="flm-summary">{summary.map(([label, value]) => <div key={label}><strong>{value}</strong><small>{label}</small></div>)}</div></header><section className="flm-card"><header className="flm-card-header"><div><p>{title}</p><h2>{description}</h2></div><div className="flm-header-actions"><ExportMenu rows={filtered} columns={exportColumns} screen="faculty-leave-local" filename={`faculty-leave-${tab.toLowerCase().replace(/\s+/g, '-')}`} title={tab} scope="All filtered results" />{['Leave Requests', 'Leave History'].includes(tab) && <button className="flm-primary" onClick={() => setDialog({ kind: 'request' })}><FiPlus /> Apply Leave</button>}{tab === 'Leave Types' && <button className="flm-primary" onClick={() => setDialog({ kind: 'type' })}><FiPlus /> Add Leave Type</button>}{tab === 'Leave Policies' && <button className="flm-primary" onClick={() => setDialog({ kind: 'policy' })}><FiPlus /> Create Leave Policy</button>}</div></header><nav className="flm-tabs">{TABS.map(value => <button key={value} className={tab === value ? 'active' : ''} onClick={() => switchTab(value)}>{value}</button>)}</nav><div className="flm-toolbar"><label className="flm-search"><FiSearch /><input value={query} onChange={event => { setQuery(event.target.value); setPage(1) }} placeholder={tab === 'Leave Types' ? 'Search leave type or code...' : tab === 'Leave Policies' ? 'Search leave policy...' : tab === 'Leave Balances' ? 'Search employee...' : 'Search request, employee or leave type...'} /></label><button className="flm-filter-toggle" onClick={() => setShowFilters(value => !value)}><FiFilter /> Filters {showFilters ? <FiChevronUp /> : <FiChevronDown />}</button></div>{showFilters && <div className="flm-filter-panel">{['Leave Requests', 'Leave History', 'Leave Balances'].includes(tab) && <><FilterSelect label="Faculty Type" value={filters.type} values={['Teaching', 'Non-Teaching']} onChange={value => changeFilter('type', value)} /><FilterSelect label="Department" value={filters.department} values={departments} onChange={value => changeFilter('department', value)} /></>}{['Leave History', 'Leave Types', 'Leave Policies'].includes(tab) && <FilterSelect label="Status" value={filters.status} values={tab === 'Leave Types' ? ['Active', 'Inactive'] : tab === 'Leave Policies' ? ['Draft', 'Active', 'Inactive', 'Expired'] : ['Approved', 'Rejected', 'Cancelled']} onChange={value => changeFilter('status', value)} />}<button className="flm-clear" onClick={() => { setQuery(''); setFilters({ type: '', department: '', status: '' }); setPage(1) }}>Clear Filters</button></div>}<p className="flm-count">Showing {filtered.length ? (currentPage - 1) * PAGE_SIZE + 1 : 0}-{Math.min(currentPage * PAGE_SIZE, filtered.length)} of {filtered.length} records</p><LeaveList tab={tab} rows={visible} leaveTypes={leaveTypes} getBalance={getBalance} onView={viewRecord} onEdit={item => setDialog({ kind: Array.isArray(item.entitlements) ? 'policy' : 'type', item })} onActivate={item => setDialog({ kind: 'activate', item })} onDecision={(item, status) => setDialog({ kind: 'decision', item, status })} onToggleType={item => setDialog({ kind: 'toggleType', item })} />{filtered.length > PAGE_SIZE && <TablePagination currentPage={currentPage} totalPages={pages} onPageChange={setPage} />}</section>{dialog && <fieldset disabled={busy} style={{ border: 0, padding: 0, margin: 0 }}><LeaveDialog dialog={dialog} faculty={faculty} leaveTypes={leaveTypes} policies={policies} requests={requests} academicYears={academicYears} getBalance={getBalance} onClose={() => setDialog(null)} onSaveType={saveType} onToggleType={toggleType} onSavePolicy={savePolicy} onActivate={activatePolicy} onDecision={decideRequest} onSaveRequest={saveRequest} /></fieldset>}{notice && <div className="flm-toast">{notice}<button onClick={() => setNotice('')}><FiX /></button></div>}</main></DashboardLayout>
+  return <DashboardLayout><main className="flm-page">{loadError && <p className="flm-error" role="alert">{loadError} <button onClick={() => reload().catch(() => {})}>Retry</button></p>}{loading && <p role="status">Loading leave records...</p>}<header className="flm-header"><div><p>FACULTY / LEAVE MANAGEMENT</p><h1>Faculty Leave Management</h1><span>Configure leave policies, manage employee balances and process faculty and staff leave requests.</span></div><div className="flm-summary">{summary.map(([label, value]) => <div key={label}><strong>{value}</strong><small>{label}</small></div>)}</div></header><section className="flm-card"><header className="flm-card-header"><div><p>{title}</p><h2>{description}</h2></div><div className="flm-header-actions"><ExportMenu rows={filtered} columns={exportColumns} screen="faculty-leave-local" filename={`faculty-leave-${tab.toLowerCase().replace(/\s+/g, '-')}`} title={tab} scope="All filtered results" />{['Leave Requests', 'Leave History'].includes(tab) && <button className="flm-primary" onClick={() => setDialog({ kind: 'request' })}><FiPlus /> Apply Leave</button>}{tab === 'Leave Types' && <button className="flm-primary" onClick={() => setDialog({ kind: 'type' })}><FiPlus /> Add Leave Type</button>}{tab === 'Leave Policies' && <button className="flm-primary" onClick={() => setDialog({ kind: 'policy' })}><FiPlus /> Create Leave Policy</button>}</div></header><nav className="flm-tabs">{TABS.map(value => <button key={value} className={tab === value ? 'active' : ''} onClick={() => switchTab(value)}>{value}</button>)}</nav><div className="flm-toolbar"><label className="flm-search"><FiSearch /><input value={query} onChange={event => { setQuery(event.target.value); setPage(1) }} placeholder={tab === 'Leave Types' ? 'Search leave type or code...' : tab === 'Leave Policies' ? 'Search leave policy...' : tab === 'Leave Balances' ? 'Search employee...' : 'Search request, employee or leave type...'} /></label><button className="flm-filter-toggle" onClick={() => setShowFilters(value => !value)}><FiFilter /> Filters {showFilters ? <FiChevronUp /> : <FiChevronDown />}</button></div>{showFilters && <div className="flm-filter-panel">{['Leave Requests', 'Leave History', 'Leave Balances'].includes(tab) && <><FilterSelect label="Faculty Type" value={filters.type} values={['Teaching', 'Non-Teaching']} onChange={value => changeFilter('type', value)} /><FilterSelect label="Department" value={filters.department} values={departments} onChange={value => changeFilter('department', value)} /></>}{['Leave History', 'Leave Types', 'Leave Policies'].includes(tab) && <FilterSelect label="Status" value={filters.status} values={tab === 'Leave Types' ? ['Active', 'Inactive'] : tab === 'Leave Policies' ? ['Draft', 'Active', 'Inactive', 'Expired'] : ['Approved', 'Rejected', 'Cancelled']} onChange={value => changeFilter('status', value)} />}<button className="flm-clear" onClick={() => { setQuery(''); setFilters({ type: '', department: '', status: '' }); setPage(1) }}>Clear Filters</button></div>}<p className="flm-count">Showing {filtered.length ? (currentPage - 1) * PAGE_SIZE + 1 : 0}-{Math.min(currentPage * PAGE_SIZE, filtered.length)} of {filtered.length} records</p><LeaveList tab={tab} rows={visible} leaveTypes={leaveTypes} getBalance={getBalance} onView={viewRecord} onEdit={item => setDialog({ kind: Array.isArray(item.entitlements) ? 'policy' : 'type', item })} onActivate={item => setDialog({ kind: 'activate', item })} onDecision={(item, status) => setDialog({ kind: 'decision', item, status })} onToggleType={item => setDialog({ kind: 'toggleType', item })} />{filtered.length > PAGE_SIZE && <TablePagination currentPage={currentPage} totalPages={pages} onPageChange={setPage} />}</section>{dialog && <fieldset disabled={busy} style={{ border: 0, padding: 0, margin: 0 }}><LeaveDialog dialog={dialog} faculty={faculty} leaveTypes={leaveTypes} policies={policies} requests={requests} academicYears={academicYears} getBalance={getBalance} onClose={() => setDialog(null)} onSaveType={saveType} onToggleType={toggleType} onSavePolicy={savePolicy} onActivate={activatePolicy} onDecision={decideRequest} onSaveRequest={saveRequest} /></fieldset>}{notice && <div className="flm-toast">{notice}<button onClick={() => setNotice('')}><FiX /></button></div>}</main></DashboardLayout>
 }
 
 function LeaveList({ tab, rows, leaveTypes, getBalance, onView, onEdit, onActivate, onDecision, onToggleType }) {
-  if (!rows.length) return <div className="flm-empty"><FiFilter /><h3>No Records Found</h3><p>Create configuration records to begin this workflow.</p></div>
+  if (!rows.length) return <div className="flm-empty"><FiFilter /><h3>No Records Found</h3><p>{tab === 'Leave Requests' ? 'No pending leave requests.' : tab === 'Leave History' ? 'No completed leave decisions match these filters.' : tab === 'Leave Balances' ? 'No employee balances are available.' : 'No configuration records match these filters.'}</p></div>
   if (tab === 'Leave Types') return (
     <DataTable headers={['Leave Type', 'Code', 'Category', 'Pay Type', 'Description', 'Status', 'Action']}>
       {rows.map(row => (
@@ -181,8 +195,12 @@ function LeaveList({ tab, rows, leaveTypes, getBalance, onView, onEdit, onActiva
     </DataTable>
   )
   if (tab === 'Leave Policies') return <DataTable headers={['Policy Name', 'Academic Year', 'Applicable To', 'Effective Period', 'Leave Types', 'Status', 'Action']}>{rows.map(row => <tr key={row.id}><td>{row.name}</td><td>{row.academicYear}</td><td>{row.applicableTo}</td><td>{range(row.from, row.to)}</td><td>{row.leaveTypes ?? row.entitlements?.length ?? 0}</td><td><Status value={row.status} /></td><td><Actions><Action title="View leave policy" onClick={() => onView(row)}><FiEye /></Action>{['Draft', 'Inactive'].includes(row.status) && <Action title="Edit leave policy" onClick={() => onEdit(row)}><FiEdit2 /></Action>}{['Draft', 'Inactive'].includes(row.status) && <Action title="Activate leave policy" onClick={() => onActivate(row)}><FiCheck /></Action>}</Actions></td></tr>)}</DataTable>
-  if (tab === 'Leave Balances') return <DataTable headers={['Employee ID', 'Employee', 'Faculty Type', 'Department', 'Applicable Policy', 'Entitled', 'Used', 'Pending', 'Available', 'Action']}>{rows.map(({ employee, policy }) => { if (!employee) return null; const activeRules = (policy?.entitlements && policy.entitlements.length) ? policy.entitlements : leaveTypes.map(t => ({ typeId: t.id })); const balances = activeRules.map(rule => getBalance(employee, policy, rule.typeId)).filter(Boolean) || []; const hasUnlimited = balances.some(item => item.available === null); const totals = balances.reduce((sum, item) => ({ entitled: sum.entitled + (Number(item.entitled) || 0), used: sum.used + item.used, pending: sum.pending + item.pending, available: sum.available + (Number(item.available) || 0) }), { entitled: 0, used: 0, pending: 0, available: 0 }); return <tr key={employee.id}><td>{employee.employeeId || employee.id}</td><td><Employee employee={employee} /></td><td>{typeOf(employee)}</td><td>{employee.department || '—'}</td><td>{policy ? policy.name : <span className="flm-unassigned">Not Assigned</span>}</td><td>{policy ? totals.entitled : '—'}</td><td>{policy ? totals.used : '—'}</td><td>{policy ? totals.pending : '—'}</td><td>{policy ? `${totals.available}${hasUnlimited ? ' + Unlimited' : ''}` : '—'}</td><td><Actions><Action title="View leave balance" onClick={() => onView({ employee, policy })}><FiEye /></Action></Actions></td></tr> })}</DataTable>
-  return <DataTable headers={['Request ID', 'Employee', 'Faculty Type', 'Department', 'Leave Type', 'Duration', 'Days', 'Applied On', 'Status', 'Action']}>{rows.map(row => <tr key={row.id}><td>{row.id}</td><td><Employee employee={row.employee || {}} /></td><td>{typeOf(row.employee)}</td><td>{row.employee?.department || '—'}</td><td>{leaveTypes.find(type => type.id === row.typeId)?.name || 'Unavailable'}</td><td>{range(row.from, row.to)}</td><td>{row.days}</td><td>{dateLabel(row.applied)}</td><td><Status value={row.status} /></td><td><Actions><Action title="View request" onClick={() => onView(row)}><FiEye /></Action>{row.status === 'Pending' && <><Action title="Approve request" onClick={() => onDecision(row, 'Approved')}><FiCheck /></Action><Action title="Reject request" onClick={() => onDecision(row, 'Rejected')}><FiX /></Action></>}</Actions></td></tr>)}</DataTable>
+  if (tab === 'Leave Balances') return <DataTable headers={['Employee ID', 'Employee', 'Faculty Type', 'Department', 'Applicable Policy', 'Entitled', 'Used', 'Pending', 'Available', 'Action']}>{rows.map(({ employee, policy }) => {
+    if (!employee) return null
+    const { totals } = getBalance(employee, policy)
+    return <tr key={employee.id}><td>{employee.employeeId || employee.id}</td><td><Employee employee={employee} /></td><td>{typeOf(employee)}</td><td>{employee.department || '?'}</td><td>{policy ? policy.name : <span className="flm-unassigned">Not Assigned</span>}</td>{['entitled', 'used', 'pending', 'available'].map(key => <td key={key}>{totals[key] ?? '?'}</td>)}<td><Actions><Action title="View leave balance" onClick={() => onView({ employee, policy })}><FiEye /></Action></Actions></td></tr>
+  })}</DataTable>
+  return <DataTable headers={['Request ID', 'Employee', 'Faculty Type', 'Department', 'Leave Type', 'Duration', 'Days', 'Applied On', 'Status', 'Action']}>{rows.map(row => <tr key={row.id}><td>{row.id}</td><td><Employee employee={row.employee || {}} /></td><td>{typeOf(row.employee)}</td><td>{row.employee?.department || '—'}</td><td>{leaveTypes.find(type => type.id === row.typeId)?.name || row.leaveTypeName || 'Unavailable'}</td><td>{range(row.from, row.to)}</td><td>{row.days ?? '?'}</td><td>{dateLabel(row.applied)}</td><td><Status value={row.status} /></td><td><Actions><Action title="View request" onClick={() => onView(row)}><FiEye /></Action>{row.status === 'Pending' && <><Action title="Approve request" onClick={() => onDecision(row, 'Approved')}><FiCheck /></Action><Action title="Reject request" onClick={() => onDecision(row, 'Rejected')}><FiX /></Action></>}</Actions></td></tr>)}</DataTable>
 }
 
 function LeaveDialog({ dialog, faculty, leaveTypes, policies, academicYears, getBalance, onClose, onSaveType, onToggleType, onSavePolicy, onActivate, onDecision, onSaveRequest }) {
@@ -200,15 +218,7 @@ function ViewDialog({ item, leaveTypes, policies, getBalance, onClose }) {
   const isPolicy = Array.isArray(item.entitlements) || item.leaveTypes !== undefined || Object.hasOwn(item, 'applicableTo')
   const isType = Object.hasOwn(item, 'payCategory')
   const employee = item.employee
-  const policyEntitlements = (item.entitlements && item.entitlements.length > 0)
-    ? item.entitlements
-    : leaveTypes.filter(type => type.status === 'Active' || !type.status).map(type => ({
-        typeId: type.id,
-        entitlement: 12,
-        maxDays: '—',
-        carryForward: false,
-        documentRequired: false
-      }))
+  const policyEntitlements = item.entitlements || []
 
   return (
     <View title={isBalance ? 'Leave Balance Details' : isPolicy ? 'Leave Policy Details' : isType ? 'Leave Type Details' : 'Leave Request Details'} onClose={onClose}>
@@ -221,7 +231,7 @@ function ViewDialog({ item, leaveTypes, policies, getBalance, onClose }) {
               <BalanceTable employee={employee} policy={item.policy} leaveTypes={leaveTypes} getBalance={getBalance} />
             </>
           ) : (
-            <Info title="Applicable Policy" rows={[['Not Assigned', 'No active leave policy is applicable to this employee.']]} />
+            <><Info title="Applicable Policy" rows={[['Not Assigned', 'No active leave policy is applicable to this employee.']]} /><BalanceTable employee={employee} policy={null} leaveTypes={leaveTypes} getBalance={getBalance} /></>
           )}
         </>
       ) : isPolicy ? (
@@ -243,14 +253,15 @@ function ViewDialog({ item, leaveTypes, policies, getBalance, onClose }) {
                 </tr>
               </thead>
               <tbody>
+                {!policyEntitlements.length && <tr><td colSpan={7}>No leave entitlements were returned for this policy. Check the policy configuration or the policy API response.</td></tr>}
                 {policyEntitlements.map(rule => {
                   const leaveType = leaveTypes.find(type => String(type.id) === String(rule.typeId))
                   return (
                     <tr key={rule.typeId}>
                       <td>{leaveType?.name || rule.name || 'Unavailable'}</td>
                       <td>{leaveType?.code || rule.code || '—'}</td>
-                      <td>{leaveType?.payCategory || rule.payCategory || 'Paid Leave'}</td>
-                      <td>{rule.entitlement ?? 12}</td>
+                      <td>{leaveType?.payCategory || rule.payCategory || 'Not provided'}</td>
+                      <td>{rule.entitlement ?? '?'}</td>
                       <td>{rule.maxDays || '—'}</td>
                       <td>{rule.carryForward ? 'Yes' : 'No'}</td>
                       <td>{rule.documentRequired ? 'Yes' : 'No'}</td>
@@ -268,7 +279,7 @@ function ViewDialog({ item, leaveTypes, policies, getBalance, onClose }) {
         </>
       ) : (
         <>
-          <Info title="Request Information" rows={[['Request ID', item.id], ['Leave Type', leaveTypes.find(type => type.id === item.typeId)?.name || 'Unavailable'], ['Applied On', dateLabel(item.applied)], ['Policy', policies.find(policy => policy.id === item.policyId)?.name || 'Not Assigned']]} />
+          <Info title="Request Information" rows={[['Request ID', item.id], ['Leave Type', leaveTypes.find(type => type.id === item.typeId)?.name || item.leaveTypeName || 'Unavailable'], ['Applied On', dateLabel(item.applied)], ['Policy', policies.find(policy => policy.id === item.policyId)?.name || 'Not Assigned']]} />
           <Info title="Leave Period" columns={3} rows={[['From', dateLabel(item.from)], ['To', dateLabel(item.to)], ['Duration', `${item.days} Days`]]} />
           <section className="flm-view-section">
             <h3>Reason</h3>
@@ -387,6 +398,13 @@ function RequestLeaveDialog({ faculty, leaveTypes, policies, onClose, onSave }) 
     reason: ''
   })
   const [error, setError] = useState('')
+  const selectedFaculty = faculty.find(f => String(f.id) === String(data.facultyId))
+  const availableLeaveTypes = eligibleLeaveTypes(leaveTypes, selectedFaculty)
+
+  useEffect(() => {
+    if (availableLeaveTypes.some(type => String(type.id) === String(data.leaveTypeId))) return
+    setData(current => ({ ...current, leaveTypeId: availableLeaveTypes[0]?.id || '' }))
+  }, [data.facultyId, data.leaveTypeId, availableLeaveTypes])
 
   const handleDateChange = (key, val) => {
     setData(prev => {
@@ -439,7 +457,7 @@ function RequestLeaveDialog({ faculty, leaveTypes, policies, onClose, onSave }) 
           <span>Leave Type *</span>
           <select value={data.leaveTypeId} onChange={e => setData({ ...data, leaveTypeId: e.target.value })}>
             <option value="">Select Leave Type</option>
-            {leaveTypes.map(t => (
+            {availableLeaveTypes.map(t => (
               <option key={t.id} value={t.id}>
                 {t.name} ({t.code || t.category || t.payCategory})
               </option>
@@ -477,13 +495,14 @@ function RequestLeaveDialog({ faculty, leaveTypes, policies, onClose, onSave }) 
 function ActivationDialog({ policy, onClose, onActivate }) { const [error, setError] = useState(''); return <Modal title="Activate Leave Policy" onClose={onClose}><p>Activate <strong>{policy.name}</strong> for {policy.applicableTo} employees?</p>{error && <p className="flm-error">{error}</p>}<Footer><button onClick={onClose}>Cancel</button><button className="approve-action" onClick={() => onActivate(policy)}>Activate Policy</button></Footer></Modal> }
 function DecisionDialog({ request, status, onClose, onSave }) { const [reason, setReason] = useState(''); const reject = status === 'Rejected'; return <Modal title={reject ? 'Reject Leave Request' : 'Approve Leave Request?'} onClose={onClose}>{reject && <label>Reason for Rejection *<textarea value={reason} onChange={event => setReason(event.target.value)} /></label>}<Footer><button onClick={onClose}>Cancel</button><button className={reject ? 'reject-action' : 'approve-action'} disabled={reject && reason.trim().length < 3} onClick={() => onSave(request, status, reason)}>Confirm</button></Footer></Modal> }
 function BalanceTable({ employee, policy, leaveTypes, getBalance }) {
-  const rules = (policy?.entitlements && policy.entitlements.length > 0)
-    ? policy.entitlements
-    : leaveTypes.map(type => ({ typeId: type.id }))
+  const balance = getBalance(employee, policy)
+  const rules = leaveBalanceRules(balance, policy, leaveTypes)
 
   return (
     <section className="flm-view-section">
+      <Info title="Balance Totals" rows={['entitled', 'used', 'pending', 'available'].map(key => [key[0].toUpperCase() + key.slice(1), balance.totals[key] ?? 'Not provided'])} />
       <h3>Leave Type Balances</h3>
+      {!balance.details.length && <p>The API has not provided a breakdown by leave type.</p>}
       <table className="flm-dialog-table">
         <thead>
           <tr>
@@ -498,11 +517,13 @@ function BalanceTable({ employee, policy, leaveTypes, getBalance }) {
           {rules.map(rule => {
             const totals = getBalance(employee, policy, rule.typeId)
             const typeInfo = leaveTypes.find(type => String(type.id) === String(rule.typeId))
-            const typeName = typeInfo?.name || rule.leaveTypeName || rule.typeId
-            const entitled = totals?.entitled ?? 12
+            const typeName = typeInfo?.name || rule.leaveTypeName || rule.name || rule.typeId
+            // A missing type-level balance means no usage was supplied by the
+            // API. Render a consistent zero balance instead of ambiguous ?.
+            const entitled = totals?.entitled ?? rule.entitlement ?? 0
             const used = totals?.used ?? 0
             const pending = totals?.pending ?? 0
-            const available = totals?.available ?? (entitled != null ? Math.max(0, entitled - used - pending) : 'Unlimited')
+            const available = totals?.available ?? Math.max(0, Number(entitled) - Number(used) - Number(pending))
             return (
               <tr key={rule.typeId}>
                 <td>{typeName} ({typeInfo?.code || '—'})</td>
@@ -532,4 +553,3 @@ function Modal({ title, children, onClose }) { return <div className="flm-overla
 function Form({ children }) { return <div className="flm-config-form">{children}</div> }
 function Input({ label, type = 'text', value, onChange }) { return <label>{label}<input type={type} value={value} onChange={event => onChange(event.target.value)} /></label> }
 function Footer({ children }) { return <footer>{children}</footer> }
-
