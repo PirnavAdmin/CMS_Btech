@@ -471,6 +471,22 @@ export default function StudentProfile() {
         setStudents([]);
         throw new Error('Unable to verify admission approvals. Please refresh the student list.');
       }
+      // The profile-directory endpoint is intentionally compact and, for some
+      // records, omits the college display name even though it is present on
+      // the approved admission. Merge that source before rendering the
+      // directory so valid selections are not shown as "Not provided".
+      rows = rows.map((row) => {
+        const admission = admissions.value.find((item) => {
+          const rowAdmissionId = String(row.admissionId ?? row.application?.admissionId ?? '');
+          const itemAdmissionId = String(item.admissionId ?? item.id ?? '');
+          const rowStudentId = String(row.studentId ?? row.id ?? '');
+          const itemStudentId = String(item.studentId ?? item.student?.studentId ?? item.student?.id ?? '');
+          return (rowAdmissionId && rowAdmissionId === itemAdmissionId) || (rowStudentId && rowStudentId === itemStudentId);
+        });
+        return admission
+          ? { ...profileFromApi(mergeFilledProfileData(admission, row)), exportVerified: row.exportVerified }
+          : row;
+      });
       rows = approvedStudentProfiles(rows, admissions.value);
       const existingAdmissions = new Set(rows.map(row => String(row.admissionId ?? row.application?.admissionId ?? row.admission?.admissionId ?? '')));
       const existingStudents = new Set(rows.map(row => String(row.studentId ?? row.id ?? '')));

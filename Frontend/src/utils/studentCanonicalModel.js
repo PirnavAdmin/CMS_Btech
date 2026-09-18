@@ -17,6 +17,30 @@ export const apiAssetUrl = (value) => {
 export const firstFilled = (...values) =>
   values.find((item) => item !== null && item !== undefined && (typeof item !== 'string' || item.trim() !== ''))
 
+// Master-data references can be returned either as a display string or as a
+// nested object, depending on the endpoint. Keep table labels readable in
+// both cases instead of allowing an empty/missing alias to hide the value.
+export const referenceLabel = (...values) => {
+  for (const value of values) {
+    if (value === null || value === undefined) continue
+    if (typeof value === 'string' || typeof value === 'number') {
+      if (String(value).trim()) return String(value).trim()
+      continue
+    }
+    if (typeof value === 'object') {
+      const label = firstFilled(
+        value.name,
+        value.collegeName,
+        value.institutionName,
+        value.displayName,
+        value.title,
+      )
+      if (label !== undefined && String(label).trim()) return String(label).trim()
+    }
+  }
+  return ''
+}
+
 export const firstPhoto = (...values) => {
   for (const item of values) {
     if (typeof item === 'string' && item.trim()) {
@@ -530,7 +554,28 @@ export const normalizeCanonicalStudent = (source = {}) => {
 
   // Dates & Registration Numbers
   const regNumber = firstFilled(raw.registrationNumber, raw.application?.registrationNumber, raw.application?.number, summary.registrationNumber, academicRaw.registrationNumber, raw.number, base.application.number)
-  const admNumber = firstFilled(raw.admissionNumber, raw.application?.admissionNumber, summary.admissionNumber, '')
+  // Profile and admission endpoints use different DTOs for this value.  Read
+  // all supported aliases so the directory never loses an admission number
+  // that is already stored on the approved admission.
+  const admNumber = firstFilled(
+    raw.admissionNumber,
+    raw.admissionNo,
+    raw.studentAdmissionNumber,
+    raw.applicationNumber,
+    raw.application?.admissionNumber,
+    raw.application?.admissionNo,
+    raw.application?.applicationNumber,
+    raw.application?.number,
+    admissionRaw.admissionNumber,
+    admissionRaw.admissionNo,
+    admissionRaw.studentAdmissionNumber,
+    admissionRaw.applicationNumber,
+    admissionRaw.number,
+    summary.admissionNumber,
+    summary.admissionNo,
+    summary.studentAdmissionNumber,
+    ''
+  )
   const regDate = dateInputValue(firstFilled(raw.registrationDate, raw.applicationDate, raw.application?.date, summary.registrationDate, base.application.date))
   const admDate = dateInputValue(firstFilled(raw.admissionDate, raw.application?.admissionDate, summary.admissionDate, ''))
 
@@ -673,12 +718,35 @@ export const normalizeCanonicalStudent = (source = {}) => {
       quota: firstFilled(academicRaw.quota, raw.quota, '') ?? '',
       quotaOther: firstFilled(academicRaw.quotaOther, raw.quotaOther, '') ?? '',
       courseId: firstFilled(academicRaw.courseId, raw.courseId, ''),
-      course: firstFilled(academicRaw.course, academicRaw.courseName, raw.course, raw.courseName, '') ?? '',
+      course: referenceLabel(academicRaw.course, academicRaw.courseName, raw.course, raw.courseName),
       courseCode: firstFilled(academicRaw.courseCode, raw.courseCode, '') ?? '',
       departmentId: firstFilled(academicRaw.departmentId, raw.departmentId, ''),
-      department: firstFilled(academicRaw.department, academicRaw.departmentName, raw.department, raw.departmentName, '') ?? '',
+      // Some profile responses only carry the department as part of the
+      // selected branch/course master. Resolve those nested references for
+      // the directory's Academic details line as well.
+      department: referenceLabel(
+        academicRaw.department,
+        academicRaw.departmentName,
+        academicRaw.branch?.department,
+        academicRaw.branch?.departmentName,
+        academicRaw.course?.department,
+        academicRaw.course?.departmentName,
+        raw.department,
+        raw.departmentName,
+        raw.branch?.department,
+        raw.branch?.departmentName,
+        raw.course?.department,
+        raw.course?.departmentName,
+        // The admission form's branch is scoped to a department. Older
+        // records persisted only that branch label, so use it as the final
+        // readable fallback rather than rendering "Not provided".
+        academicRaw.branch,
+        academicRaw.branchName,
+        raw.branch,
+        raw.branchName,
+      ),
       branchId: firstFilled(academicRaw.branchId, raw.branchId, ''),
-      branch: firstFilled(academicRaw.branch, academicRaw.branchName, raw.branch, raw.branchName, '') ?? '',
+      branch: referenceLabel(academicRaw.branch, academicRaw.branchName, raw.branch, raw.branchName),
       branchCode: firstFilled(academicRaw.branchCode, raw.branchCode, '') ?? '',
       semesterId: firstFilled(academicRaw.semesterId, raw.semesterId, ''),
       semester: firstFilled(academicRaw.semester, academicRaw.semesterName, raw.semester, raw.semesterName, '') ?? '',
@@ -695,8 +763,8 @@ export const normalizeCanonicalStudent = (source = {}) => {
       intermediate,
     },
     admission: {
-      collegeId: firstFilled(admissionRaw.collegeId, raw.collegeId, ''),
-      college: firstFilled(admissionRaw.college, admissionRaw.collegeName, raw.college, raw.collegeName, '') ?? '',
+      collegeId: firstFilled(admissionRaw.collegeId, admissionRaw.college?.collegeId, admissionRaw.college?.id, raw.collegeId, raw.college?.collegeId, raw.college?.id, ''),
+      college: referenceLabel(admissionRaw.college, admissionRaw.collegeName, admissionRaw.institutionName, raw.college, raw.collegeName, raw.institutionName, raw.collegeDetails, raw.institution),
       batch: firstFilled(admissionRaw.batch, raw.batch, base.admission.batch) ?? base.admission.batch,
       scholarship: scholarshipVal || 'No',
       scholarshipType: firstFilled(admissionRaw.scholarshipType, raw.scholarshipType, '') ?? '',
