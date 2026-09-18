@@ -29,7 +29,19 @@ export default function Payroll() {
   useEffect(() => { load(); return () => { requestVersion.current++ } }, [load])
   const departments = [...new Set(payroll.map(item => item.department).filter(Boolean))]
   const rows = useMemo(() => payroll.filter(row => (!query || (row.employeeId + ' ' + row.fullName + ' ' + row.department).toLowerCase().includes(query.toLowerCase())) && (!filters.type || row.type === filters.type) && (!filters.department || row.department === filters.department) && (!filters.status || row.status === filters.status)), [payroll, query, filters])
-  const view = async row => { setError(''); try { setSelected(normalizePayroll({ ...row, ...await facultyPayrollApi.getById(row.id) })); setHoldReason('') } catch (reason) { setError(reason.message) } }
+  const view = async row => {
+    // A new faculty member can have a draft processing row before a separate
+    // payroll detail record exists. The row itself is enough for View.
+    setError('')
+    setSelected(normalizePayroll(row))
+    setHoldReason('')
+    try {
+      const detail = await facultyPayrollApi.getById(row.id)
+      setSelected(normalizePayroll({ ...row, ...detail }))
+    } catch {
+      // Keep the list row open when the optional detail record is unavailable.
+    }
+  }
   const placeHold = async event => {
     event.preventDefault(); if (!holdReason.trim() || holdLock.current) return
     holdLock.current = true; setBusy(true); setError('')

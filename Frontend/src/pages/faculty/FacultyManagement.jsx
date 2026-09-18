@@ -1144,9 +1144,6 @@ function FacultyForm({ initial, faculty, onSave, onCancel, collegeOptions, depar
           <ProfileSections data={data} collegeOptions={collegeOptions} departmentOptions={departmentOptions} />
         </>
       )}
-      {step === 0 && faculty.some(row => row.id !== data.id && row.mobile === data.mobile) && (
-        <p className="fm-warning">Another faculty member uses this mobile number. Please verify it before saving.</p>
-      )}
       <footer className="fm-form-footer">
         <button type="button" className="fm-button secondary" onClick={onCancel}>Cancel</button>
         <span className="fm-muted">Step {step + 1} of {totalSteps}</span>
@@ -1303,18 +1300,24 @@ function AssignmentDialog({ faculty, onClose, onAdd, onRemove, toast }) {
   }, [masters.branches, data.courseId])
 
   const semesterOptions = useMemo(() => {
-    if (masters.semesters.length) {
-      return masters.semesters.map(s => ({ value: String(s.semesterId ?? s.id), label: s.semesterName ?? s.name ?? `Semester ${s.semesterNumber ?? s.number}` }))
-    }
-    return []
-  }, [masters.semesters])
+    const branchId = String(data.branchId || '')
+    const options = masters.semesters.filter(s => {
+      const mappedBranchId = s.branchId ?? s.branch?.branchId ?? s.branch?.id
+      return branchId && mappedBranchId != null && String(mappedBranchId) === branchId
+    }).map(s => ({ value: String(s.semesterId ?? s.id), label: s.semesterName ?? s.name ?? `Semester ${s.semesterNumber ?? s.number}` }))
+    return [...new Map(options.map(option => [option.label.trim().toLowerCase(), option])).values()]
+  }, [masters.semesters, data.branchId])
 
   const sectionOptions = useMemo(() => {
-    if (masters.sections.length) {
-      return masters.sections.map(s => ({ value: String(s.sectionId ?? s.id), label: s.sectionName ?? s.name ?? s.sectionCode }))
-    }
-    return []
-  }, [masters.sections])
+    const branchId = String(data.branchId || '')
+    const semesterId = String(data.semesterId || '')
+    const options = masters.sections.filter(s => {
+      const mappedBranchId = s.branchId ?? s.branch?.branchId ?? s.branch?.id
+      const mappedSemesterId = s.semesterId ?? s.semester?.semesterId ?? s.semester?.id
+      return branchId && semesterId && String(mappedBranchId) === branchId && String(mappedSemesterId) === semesterId
+    }).map(s => ({ value: String(s.sectionId ?? s.id), label: s.sectionName ?? s.name ?? s.sectionCode }))
+    return [...new Map(options.map(option => [option.label.trim().toLowerCase(), option])).values()]
+  }, [masters.sections, data.branchId, data.semesterId])
 
   const subjectOptions = useMemo(() => {
     if (masters.subjects.length) {
@@ -1467,7 +1470,7 @@ function AssignmentDialog({ faculty, onClose, onAdd, onRemove, toast }) {
                   onChange={e => {
                     const val = e.target.value
                     const found = branchOptions.find(o => String(o.value) === String(val))
-                    setData({ ...data, branchId: val, branch: found?.label || val })
+                    setData({ ...data, branchId: val, branch: found?.label || val, semesterId: '', semester: '', sectionId: '', section: '' })
                     setErrors(old => ({ ...old, branch: undefined, duplicate: undefined }))
                   }}
                   required
@@ -1486,7 +1489,7 @@ function AssignmentDialog({ faculty, onClose, onAdd, onRemove, toast }) {
                   onChange={e => {
                     const val = e.target.value
                     const found = semesterOptions.find(o => String(o.value) === String(val))
-                    setData({ ...data, semesterId: val, semester: found?.label || val })
+                    setData({ ...data, semesterId: val, semester: found?.label || val, sectionId: '', section: '' })
                     setErrors(old => ({ ...old, semester: undefined, duplicate: undefined }))
                   }}
                   required
