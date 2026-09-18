@@ -47,18 +47,51 @@ const normalizeAttendanceDate = value => {
   if (!year || !month || !day) return clean
   return `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`
 }
+const normalizeAttendanceStatus = value => {
+  const key = String(value ?? '').trim().replace(/[\s_-]+/g, '').toLowerCase()
+  const statuses = {
+    p: 'Present', present: 'Present',
+    a: 'Absent', absent: 'Absent',
+    l: 'Late', late: 'Late',
+    hd: 'Half Day', halfday: 'Half Day',
+    ol: 'On Leave', onleave: 'On Leave', leave: 'On Leave',
+    lop: 'LOP', lossofpay: 'LOP',
+    notmarked: 'Not Marked', unmarked: 'Not Marked', pending: 'Not Marked',
+  }
+  return statuses[key] || 'Not Marked'
+}
 const mergeAttendanceRecords = (faculty, records = []) => {
   const validFaculty = new Set((faculty || []).map(item => String(item.id)))
-  return (Array.isArray(records) ? records : []).filter(record => validFaculty.has(String(record.facultyId))).map(record => ({
+  const normalized = (Array.isArray(records) ? records : []).filter(record => validFaculty.has(String(record.facultyId))).map(record => ({
     ...record,
     facultyId: String(record.facultyId),
     date: normalizeAttendanceDate(record.date),
-    status: record.status || 'Not Marked',
+    status: normalizeAttendanceStatus(record.status ?? record.attendanceStatus),
     checkIn: record.checkIn || '—',
     checkOut: record.checkOut || '—',
     remarks: record.remarks || '—',
     source: record.source || 'Manual',
   }))
+  // The list and daily views can both contain the same faculty/date. Keep one
+  // record per cell and always prefer the saved marked status over a generated
+  // "Not Marked" daily placeholder.
+  const byFacultyAndDate = new Map()
+  for (const record of normalized) {
+    const key = `${record.facultyId}|${record.date}`
+    const current = byFacultyAndDate.get(key)
+    if (!current || (current.status === 'Not Marked' && record.status !== 'Not Marked') || (!current.attendanceId && record.attendanceId)) {
+      byFacultyAndDate.set(key, record)
+    }
+  }
+  return [...byFacultyAndDate.values()]
+}
+const attendanceDatesInRange = (from, to) => {
+  if (!from || !to || from > to) return []
+  const values = []
+  for (const value = new Date(`${from}T00:00:00`); value <= new Date(`${to}T00:00:00`); value.setDate(value.getDate() + 1)) {
+    values.push(normalizeAttendanceDate(value.toISOString().slice(0, 10)))
+  }
+  return values
 }
 const mondayOf = value => {
   const date = new Date(String(value || today()) + 'T00:00:00')
@@ -98,7 +131,7 @@ const resolveAttendanceRecords = (records, faculty) => {
       designation: 'N/A',
     }
     const workingMinutes = typeof record.workingMinutes === 'number' ? record.workingMinutes : calculateWorkingMinutes(record)
-    const status = record.status || 'Not Marked'
+    const status = normalizeAttendanceStatus(record.status ?? record.attendanceStatus)
     const normalizedCheckIn = ['Present', 'Late', 'Half Day'].includes(status) && record.checkIn && record.checkIn !== '—' ? record.checkIn : (['Present', 'Late', 'Half Day'].includes(status) ? DEFAULT_ATTENDANCE_WINDOW.checkIn : '—')
     const normalizedCheckOut = ['Present', 'Late', 'Half Day'].includes(status) && record.checkOut && record.checkOut !== '—' ? record.checkOut : (['Present', 'Late', 'Half Day'].includes(status) ? DEFAULT_ATTENDANCE_WINDOW.checkOut : '—')
     return {
@@ -429,18 +462,35 @@ function FacultyAttendanceScreen({ faculty, onNotify }) {
   const [registerFilters, setRegisterFilters] = useState(defaultRegister)
   const [reportFilters, setReportFilters] = useState(() => ({ daily: defaultReport(), weekly: defaultReport(), monthly: defaultReport() }))
   const currentReport = reportFilters[reportType]
-  const normalizeAttendance = rows => mergeAttendanceRecords(faculty, rows.map(row => ({ ...row, id: row.attendanceId ?? row.id, facultyId: row.facultyId ?? row.employeeProfileId ?? row.faculty?.id, date: row.date ?? row.attendanceDate, checkIn: row.checkIn ?? row.checkInTime, checkOut: row.checkOut ?? row.checkOutTime })))
+  const normalizeAttendance = rows => mergeAttendanceRecords(faculty, rows.map(row => ({
+    ...row,
+    id: row.attendanceId ?? row.id,
+    facultyId: row.facultyId ?? row.employeeProfileId ?? row.faculty?.facultyId ?? row.faculty?.id ?? row.employeeProfile?.id,
+    date: row.date ?? row.attendanceDate,
+    status: row.status ?? row.attendanceStatus,
+    checkIn: row.checkIn ?? row.checkInTime,
+    checkOut: row.checkOut ?? row.checkOutTime,
+  })))
   const loadAttendance = useCallback(async () => {
     const version = ++attendanceVersion.current; setAttendanceError('')
     try {
       const reportFilter = reportFilters[reportType]
       const dates = attendancePeriod(reportType, reportFilter)
       const params = tab === 'register' ? { facultyId: registerFilters.facultyId, fromDate: registerFilters.from, toDate: registerFilters.to, status: registerFilters.status } : tab === 'reports' ? { facultyId: reportFilter.facultyId, fromDate: dates.from, toDate: dates.to } : { fromDate: dailyFilters.date, toDate: dailyFilters.date }
-      const records = await (tab === 'reports' ? facultyService.getAttendanceReports(params) : facultyService.getAttendance(params))
+      // The report endpoints return aggregates.  The weekly/monthly matrix
+      // needs the individual attendance rows from the main endpoint so that
+      // each faculty/date cell can show the status that was actually marked.
+      const records = await facultyService.getAttendance(params)
       const daily = tab === 'daily' ? await facultyService.getDailyAttendance(dailyFilters) : []
+      // Weekly/monthly endpoints are aggregates and cannot fill the date
+      // cells. Fetch the authoritative daily records for the displayed
+      // period, without querying future dates in the active month.
+      const reportDaily = tab === 'reports' && ['weekly', 'monthly'].includes(reportType)
+        ? (await Promise.all(attendanceDatesInRange(dates.from, dates.to).filter(date => date <= today()).map(date => facultyService.getDailyAttendance({ date })))).flat().map(row => ({ ...row, date: row.date ?? row.attendanceDate }))
+        : []
       const report = tab === 'reports' && reportType !== 'daily' ? await (reportType === 'weekly' ? facultyService.getWeeklyAttendance : facultyService.getMonthlyAttendance)(reportFilter) : []
       if (version !== attendanceVersion.current) return
-      setAttendanceRecords(normalizeAttendance(records)); setServerDaily(normalizeAttendance(daily.map(row => ({ ...row, date: row.date ?? row.attendanceDate ?? dailyFilters.date })))); setServerReport(report)
+      setAttendanceRecords(normalizeAttendance([...reportDaily, ...records])); setServerDaily(normalizeAttendance(daily.map(row => ({ ...row, date: row.date ?? row.attendanceDate ?? dailyFilters.date })))); setServerReport(report)
     } catch (error) { if (version === attendanceVersion.current) { setAttendanceError(error.message); setAttendanceRecords([]); setServerDaily([]); setServerReport([]) } }
   }, [faculty, tab, dailyFilters, registerFilters, reportFilters, reportType])
   useEffect(() => { const timer = setTimeout(() => { loadAttendance() }, 200); return () => { clearTimeout(timer); attendanceVersion.current++ } }, [loadAttendance])
@@ -1296,7 +1346,6 @@ function AssignmentDialog({ faculty, onClose, onAdd, onRemove, toast }) {
     if (!hasId(data.branchId)) issues.branch = 'Select a branch from the master list.'
     if (!hasId(data.semesterId)) issues.semester = 'Select a semester from the master list.'
     if (!hasId(data.sectionId)) issues.section = 'Select a section from the master list.'
-    if (subjectRequired && !hasId(data.subjectId)) issues.subjectName = 'Select a subject from the master list.'
     if ((subjectRequired || data.subjectName) && !data.subjectCode?.trim()) issues.subjectCode = 'Subject code is required.'
     if ((subjectRequired || data.subjectCode) && !data.subjectName?.trim()) issues.subjectName = 'Subject name is required.'
 
@@ -1515,7 +1564,11 @@ function AssignmentDialog({ faculty, onClose, onAdd, onRemove, toast }) {
                   placeholder="e.g. CS301"
                   value={data.subjectCode}
                   onChange={e => {
-                    setData({ ...data, subjectCode: e.target.value })
+                    // Subject Management is not available yet.  A faculty
+                    // allocation can therefore use a manually entered code
+                    // and name; do not retain an unrelated catalog id after
+                    // the user changes either value.
+                    setData({ ...data, subjectId: '', subjectCode: e.target.value })
                     setErrors(old => ({ ...old, subjectCode: undefined, duplicate: undefined }))
                   }}
                   required={subjectRequired}
@@ -1532,7 +1585,8 @@ function AssignmentDialog({ faculty, onClose, onAdd, onRemove, toast }) {
                   placeholder="e.g. Data Structures & Algorithms"
                   value={data.subjectName}
                   onChange={e => {
-                    setData({ ...data, subjectName: e.target.value })
+                    // See the matching Subject Code handler above.
+                    setData({ ...data, subjectId: '', subjectName: e.target.value })
                     setErrors(old => ({ ...old, subjectName: undefined, duplicate: undefined }))
                   }}
                   required={subjectRequired}

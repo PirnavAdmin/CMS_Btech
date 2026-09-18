@@ -20,6 +20,7 @@ import {
   updateDepartmentStatus,
 } from '../../auth/collegeApi';
 import { studentApi } from '../../api/apiEndpoints';
+import facultyService, { normalizeFaculty } from '../../services/facultyService';
 import { showDeactivationBlocked } from '../../components/DeactivationBlockedDialog';
 import {
   FiEye,
@@ -34,6 +35,7 @@ import {
   FiArrowLeft,
   FiBookOpen,
   FiUser,
+  FiX,
 } from 'react-icons/fi';
 import './DepartmentManagement.css';
 import '../../styles/directory-search.css';
@@ -144,6 +146,7 @@ export default function DepartmentManagement() {
   const [isHodSaving, setIsHodSaving] = useState(false);
   const [isDetailsLoading, setIsDetailsLoading] = useState(false);
   const [colleges, setColleges] = useState([]);
+  const [faculty, setFaculty] = useState([]);
   const [currentPage, setCurrentPage] = useState(1);
   const [pendingStatus, setPendingStatus] = useState(null);
   const [isStatusSaving, setIsStatusSaving] = useState(false);
@@ -224,12 +227,39 @@ export default function DepartmentManagement() {
         collegeId: detail.collegeNumericId ?? detail.collegeId,
       });
       setItems((current) => current.map((entry) => (entry.id === detail.id ? detail : entry)));
+      if (nextScreen === 'assign-hod') {
+        const records = await facultyService.list({ DepartmentId: Number(detail.id) });
+        setFaculty(records.map(normalizeFaculty));
+      }
     } catch (requestError) {
       setError(apiError(requestError, 'Unable to load department details. Please try again.'));
     } finally {
       setIsDetailsLoading(false);
     }
   };
+
+  const hodCandidates = useMemo(() => faculty
+    .filter((member) => {
+      const memberDepartmentId = member.departmentId ?? member.department?.departmentId ?? member.department?.id;
+      const memberDepartmentName = String(member.departmentName ?? member.department ?? '').trim().toLowerCase();
+      const departmentName = String(form.name ?? '').trim().toLowerCase();
+      // Faculty API deployments differ: some return departmentId, while
+      // others return only departmentName. Use IDs when both exist, then the
+      // department name as the reliable compatibility fallback.
+      const matchesDepartment = memberDepartmentId !== '' && memberDepartmentId !== undefined && memberDepartmentId !== null
+        ? String(memberDepartmentId) === String(form.id)
+        : Boolean(memberDepartmentName && departmentName && memberDepartmentName === departmentName);
+      const unavailable = ['inactive', 'resigned', 'retired'].includes(String(member.employmentStatus || member.status || '').trim().toLowerCase());
+      return matchesDepartment && !unavailable;
+    })
+    .map((member) => ({
+      ...member,
+      // Department API stores the linked user ID when one exists. Older
+      // Faculty responses only expose EmployeeProfileId, which is the ID
+      // accepted by the same department linkage in those deployments.
+      hodId: member.userId ?? member.employeeProfileId ?? member.facultyId ?? member.id,
+    }))
+    .filter((member) => member.hodId !== undefined && member.hodId !== null && member.hodId !== ''), [faculty, form.id]);
 
   const toggleStatus = async (item) => {
     setError('');
@@ -325,7 +355,7 @@ export default function DepartmentManagement() {
 
   const saveHod = async (event) => {
     event.preventDefault();
-    if (!String(form.hodName || '').trim()) return setError('Enter the Head / In-Charge name.');
+    if (!String(form.hodUserId || '').trim()) return setError('Select a faculty member as Head / In-Charge.');
     setIsHodSaving(true);
     setError('');
     try {
@@ -365,7 +395,7 @@ export default function DepartmentManagement() {
   return (
     <DashboardLayout>
       <div className="management-page department-management">
-        {screen === 'list' && (
+        {(screen === 'list' || screen === 'assign-hod') && (
           <>
             <PageHeader
               title="Department Management"
@@ -697,31 +727,39 @@ export default function DepartmentManagement() {
         )}
 
         {screen === 'assign-hod' && (
-          <div className="erp-form-page">
-            <PageHeader
-              breadcrumb="Institution Management / Departments"
-              title="Assign Head / In-Charge"
-              subtitle={`Set the responsible departmental head for ${form.name || 'this department'}.`}
-            >
-              <button type="button" className="erp-btn erp-btn--secondary" onClick={closeToList}>
-                <FiArrowLeft /> Back to List
-              </button>
-            </PageHeader>
-
-            <section className="erp-directory-card" style={{ maxWidth: '600px', margin: '0 auto', padding: '24px' }}>
+          <div className="department-modal-backdrop" onMouseDown={(event) => event.target === event.currentTarget && !isHodSaving && closeToList()}>
+            <section className="erp-directory-card hod-card" role="dialog" aria-modal="true" aria-labelledby="assign-hod-title" style={{ padding: '24px' }}>
               <form onSubmit={saveHod}>
+                <header className="course-directory-heading" style={{ marginBottom: '20px' }}>
+                  <div>
+                    <span className="cm-eyebrow">DEPARTMENT LEADERSHIP</span>
+                    <h2 id="assign-hod-title">Assign Head / In-Charge</h2>
+                    <p>Choose an active faculty member from {form.name || 'this department'}.</p>
+                  </div>
+                  <button type="button" className="department-modal-close" onClick={closeToList} disabled={isHodSaving} aria-label="Close assign head dialog" title="Close">
+                    <FiX />
+                  </button>
+                </header>
                 <div className="department-form-grid" style={{ gridTemplateColumns: '1fr' }}>
                   <label>
-                    <span>
-                      Head / In-Charge Name <b className="required-mark">*</b>
-                    </span>
-                    <input
-                      value={form.hodName}
-                      onChange={(e) => setForm({ ...form, hodName: e.target.value })}
-                      placeholder="e.g. Dr. Jane Smith"
+                    <span>Head / In-Charge <b className="required-mark">*</b></span>
+                    <select
+                      value={form.hodUserId}
+                      onChange={(e) => {
+                        const candidate = hodCandidates.find((member) => String(member.hodId) === String(e.target.value));
+                        setForm({ ...form, hodUserId: e.target.value, hodName: candidate?.fullName || '' });
+                      }}
                       required
                       autoFocus
-                    />
+                    >
+                      <option value="">Select faculty member</option>
+                      {hodCandidates.map((member) => (
+                        <option key={member.hodId} value={member.hodId}>
+                          {[member.fullName, member.employeeId, member.designation].filter(Boolean).join(' — ')}
+                        </option>
+                      ))}
+                    </select>
+                    {!hodCandidates.length && <small>No active faculty members are available in this department.</small>}
                   </label>
                 </div>
 

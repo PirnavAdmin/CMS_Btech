@@ -17,6 +17,7 @@ import { getSemesters, searchSemesters } from '../../auth/collegeApi'
 import { getActiveAcademicYears, normalizeAcademicYear } from '../../utils/academicYearUtils'
 import { branchTypeLabel } from '../../utils/semesterUtils'
 import eventBus, { ERP_EVENTS } from '../../services/eventBus'
+import facultyService, { normalizeFaculty } from '../../services/facultyService'
 import './SectionManagement.css'
 import '../../styles/directory-search.css'
 
@@ -49,7 +50,7 @@ const branchName = (item = {}) => item.branchName ?? item.BranchName ?? item.nam
 const branchCode = (item = {}) => item.branchCode ?? item.BranchCode ?? item.code ?? item.Code ?? item.shortName ?? item.branchShortName ?? ''
 const yearName = (item = {}) => item.academicYearName ?? item.name ?? item.academicYear ?? item.code ?? ''
 const normalizeCourse = (item = {}) => ({ ...item, id: idOf(item, 'courseId', 'CourseId', 'id', 'Id'), name: courseName(item), code: courseCode(item), collegeId: item.collegeId ?? item.college?.collegeId ?? item.college?.id ?? '', departmentId: item.departmentId ?? item.department?.departmentId ?? item.department?.id ?? '' })
-const normalizeBranch = (item = {}) => ({ ...item, id: idOf(item, 'branchId', 'BranchId', 'id', 'Id'), courseId: idOf(item, 'courseId', 'CourseId') || item.course?.courseId || item.course?.id || '', name: branchName(item), code: branchCode(item), branchType: branchTypeLabel(item), collegeId: item.collegeId ?? item.college?.collegeId ?? item.college?.id ?? '', departmentId: item.departmentId ?? item.department?.departmentId ?? item.department?.id ?? '' })
+const normalizeBranch = (item = {}) => ({ ...item, id: idOf(item, 'branchId', 'BranchId', 'id', 'Id'), courseId: idOf(item, 'courseId', 'CourseId') || item.course?.courseId || item.course?.id || '', name: branchName(item), code: branchCode(item), branchType: branchTypeLabel(item), collegeId: item.collegeId ?? item.college?.collegeId ?? item.college?.id ?? '', departmentId: item.departmentId ?? item.department?.departmentId ?? item.department?.id ?? '', departmentName: item.departmentName ?? item.department?.departmentName ?? item.department?.name ?? '' })
 const normalizeSemester = (item = {}) => {
   const number = item.semesterNumber ?? item.semester?.semesterNumber ?? item.number
   return { ...item, id: idOf(item, 'semesterId', 'courseStructureId', 'structureId', 'id') || item.semester?.semesterId || item.semester?.id || '', name: number ? `Semester ${number}` : sem(item.semesterName ?? item.semester?.semesterName ?? item.semester?.name ?? item.name ?? ''), number: Number(number || String(item.semesterName || '').match(/\d+/)?.[0] || 0), courseId: item.courseId ?? item.course?.courseId ?? item.course?.id ?? '', branchId: item.branchId ?? item.branch?.branchId ?? item.branch?.id ?? '', academicYearId: item.academicYearId ?? item.academicYear?.academicYearId ?? item.academicYear?.id ?? item.yearId ?? '', academicYearName: item.academicYearName ?? item.academicYear?.academicYearName ?? item.academicYear?.name ?? item.yearName ?? '' }
@@ -61,6 +62,24 @@ const sameStudent = (assignment = {}, student = {}) => [assignment.studentId, as
 const matchesStudentMapping = (student, section) => ['courseId', 'branchId', 'semesterId', 'academicYearId'].every((key) => clean(section?.[key]) && clean(student?.[key]) && String(student[key]) === String(section[key]))
 const sectionLetter = (section) => String(section.name || '').match(/^Section\s+([A-Z]+)$/i)?.[1]?.toUpperCase() || String(section.code || '').match(/(?:^|-)([A-Z]+)$/i)?.[1]?.toUpperCase()
 const sameMapping = (left, right) => ['courseId', 'branchId', 'semesterId', 'academicYearId'].every((key) => clean(left?.[key]) && clean(right?.[key]) ? String(left[key]) === String(right[key]) : false)
+const teacherCandidatesForDepartment = (faculty = [], departmentId, departmentName = '') => faculty
+  .map((member) => normalizeFaculty(member))
+  .filter((member) => {
+    const memberDepartmentId = member.departmentId ?? member.department?.departmentId ?? member.department?.id
+    const facultyDepartmentName = String(member.departmentName ?? member.department ?? '').trim().toLowerCase()
+    const expectedDepartmentName = String(departmentName).trim().toLowerCase()
+    const matchesDepartment = memberDepartmentId !== '' && memberDepartmentId !== undefined && memberDepartmentId !== null
+      ? String(memberDepartmentId) === String(departmentId)
+      : Boolean(facultyDepartmentName && expectedDepartmentName && facultyDepartmentName === expectedDepartmentName)
+    const unavailable = ['inactive', 'resigned', 'retired'].includes(String(member.employmentStatus || member.status || '').trim().toLowerCase())
+    return matchesDepartment && !unavailable
+  })
+  .map((member) => ({
+    ...member,
+    employeeProfileId: member.employeeProfileId ?? member.facultyId ?? member.id,
+    employeeCode: member.employeeCode ?? member.employeeId,
+  }))
+  .filter((member) => clean(member.employeeProfileId) && clean(member.fullName))
 
 const makeLookups = (courses, branches, semesters, years) => ({ courseById: new Map(courses.map((item) => [String(item.id), item])), branchById: new Map(branches.map((item) => [String(item.id), item])), semesterById: new Map(semesters.map((item) => [String(item.id), item])), yearById: new Map(years.map((item) => [String(item.id), item])) })
 const normalizeSection = (item = {}, lookups = {}) => {
@@ -74,17 +93,17 @@ const normalizeSection = (item = {}, lookups = {}) => {
   const year = lookups.yearById?.get(String(academicYearId))
   const capacity = Number(item.capacity) || 0
   const currentStrength = Number(item.currentStrength ?? item.assignedStudents ?? item.studentCount ?? 0) || 0
-  return { ...item, id: item.sectionId ?? item.id ?? '', name: item.sectionName ?? item.name ?? '', code: item.sectionCode ?? item.code ?? '', courseId, course: item.courseName ?? item.course?.courseName ?? item.course?.name ?? course?.name ?? '', courseCode: item.courseCode ?? item.course?.courseCode ?? course?.code ?? '', branchId, branch: item.branchName ?? item.branch?.branchName ?? item.branch?.name ?? branch?.name ?? '', branchCode: item.branchCode ?? item.branch?.branchCode ?? branch?.code ?? '', branchType: branchTypeLabel(item.branch ?? branch ?? { branchType: item.branchType }), semesterId, semester: sem(item.semesterName ?? item.semester?.semesterName ?? semester?.name ?? item.semesterNumber ?? ''), semesterNumber: item.semesterNumber ?? semester?.number ?? '', academicYearId, academicYear: item.academicYearName ?? item.academicYear?.academicYearName ?? item.academicYear?.name ?? yearName(year), collegeId: item.collegeId ?? branch?.collegeId ?? course?.collegeId ?? '', departmentId: item.departmentId ?? branch?.departmentId ?? course?.departmentId ?? '', capacity, currentStrength, availableSeats: Number(item.availableSeats ?? Math.max(capacity - currentStrength, 0)), advisor: item.advisor ?? item.facultyAdvisorName ?? item.classTeacherName ?? '', facultyAdvisorEmployeeProfileId: item.facultyAdvisorEmployeeProfileId ?? item.classTeacherEmployeeProfileId ?? '', room: item.room ?? item.classRoom ?? '', status: item.status === false || item.status === 0 || item.status === 'Inactive' ? 'Inactive' : 'Active' }
+  return { ...item, id: item.sectionId ?? item.id ?? '', name: item.sectionName ?? item.name ?? '', code: item.sectionCode ?? item.code ?? '', courseId, course: item.courseName ?? item.course?.courseName ?? item.course?.name ?? course?.name ?? '', courseCode: item.courseCode ?? item.course?.courseCode ?? course?.code ?? '', branchId, branch: item.branchName ?? item.branch?.branchName ?? item.branch?.name ?? branch?.name ?? '', branchCode: item.branchCode ?? item.branch?.branchCode ?? branch?.code ?? '', branchType: branchTypeLabel(item.branch ?? branch ?? { branchType: item.branchType }), semesterId, semester: sem(item.semesterName ?? item.semester?.semesterName ?? semester?.name ?? item.semesterNumber ?? ''), semesterNumber: item.semesterNumber ?? semester?.number ?? '', academicYearId, academicYear: item.academicYearName ?? item.academicYear?.academicYearName ?? item.academicYear?.name ?? yearName(year), collegeId: item.collegeId ?? branch?.collegeId ?? course?.collegeId ?? '', departmentId: item.departmentId ?? branch?.departmentId ?? course?.departmentId ?? '', departmentName: item.departmentName ?? item.department?.departmentName ?? item.department?.name ?? branch?.departmentName ?? course?.departmentName ?? '', capacity, currentStrength, availableSeats: Number(item.availableSeats ?? Math.max(capacity - currentStrength, 0)), advisor: item.advisor ?? item.facultyAdvisorName ?? item.classTeacherName ?? '', facultyAdvisorEmployeeProfileId: item.facultyAdvisorEmployeeProfileId ?? item.classTeacherEmployeeProfileId ?? '', room: item.room ?? item.classRoom ?? '', status: item.status === false || item.status === 0 || item.status === 'Inactive' ? 'Inactive' : 'Active' }
 }
 
 async function loadSources() {
-  const [sectionRows, courseRows, branchRows, yearRows, semesterRows, assignmentRows, summaryData] = await Promise.all([sectionApi.getAll(), courseApi.getAll(), branchApi.getAll(), academicYearApi.getAll(), getSemesters(), sectionAssignmentApi.list().catch(() => []), sectionApi.summary().catch(() => null)])
+  const [sectionRows, courseRows, branchRows, yearRows, semesterRows, assignmentRows, summaryData, facultyRows] = await Promise.all([sectionApi.getAll(), courseApi.getAll(), branchApi.getAll(), academicYearApi.getAll(), getSemesters(), sectionAssignmentApi.list().catch(() => []), sectionApi.summary().catch(() => null), facultyService.list().catch(() => [])])
   const courses = courseRows.map(normalizeCourse).filter((item) => item.id && item.name)
   const branches = branchRows.map(normalizeBranch).filter((item) => item.id && item.name)
   const years = yearRows.map(normalizeAcademicYear).filter((item) => item.id && item.name)
   const semesters = responseList(semesterRows).map(normalizeSemester).filter((item) => item.id && item.name)
   const sections = sectionRows.map((item) => normalizeSection(item, makeLookups(courses, branches, semesters, years)))
-  return { courses, branches, years, semesters, sections, assignments: assignmentRows.map(normalizeAssignment), summary: summaryData }
+  return { courses, branches, years, semesters, sections, assignments: assignmentRows.map(normalizeAssignment), summary: summaryData, faculty: facultyRows }
 }
 
 const Page = ({ children }) => <DashboardLayout><main className="section-management">{children}</main></DashboardLayout>
@@ -97,9 +116,9 @@ function InfoCard({ icon: Icon, title, rows }) { const visible = rows.filter(([,
 function Empty({ icon: Icon, title, action }) { return <div className="section-empty"><Icon /><h3>{title}</h3>{action}</div> }
 
 function SectionList() {
-  const [sections, setSections] = useState([]), [assignments, setAssignments] = useState([]), [summaryData, setSummaryData] = useState(null)
+  const [sections, setSections] = useState([]), [assignments, setAssignments] = useState([]), [summaryData, setSummaryData] = useState(null), [faculty, setFaculty] = useState([])
   const [filters, setFilters] = useState({ query: '', course: '', branch: '', semester: '', status: '', academicYear: '' }), [page, setPage] = useState(1), [loading, setLoading] = useState(true), [error, setError] = useToastState('', 'error'), [, setToast] = useToastState('', 'success'), [assigning, setAssigning] = useState(null), [confirmAction, setConfirmAction] = useState(null)
-  const load = useCallback(async () => { setLoading(true); setError(''); try { const data = await loadSources(); setSections(newestFirst('sections', data.sections)); setAssignments(data.assignments);  setSummaryData(data.summary) } catch (requestError) { setError(apiError(requestError, 'Unable to load sections.')) } finally { setLoading(false) } }, [setError])
+  const load = useCallback(async () => { setLoading(true); setError(''); try { const data = await loadSources(); setSections(newestFirst('sections', data.sections)); setAssignments(data.assignments); setSummaryData(data.summary); setFaculty(data.faculty) } catch (requestError) { setError(apiError(requestError, 'Unable to load sections.')) } finally { setLoading(false) } }, [setError])
   useEffect(() => { load() }, [load])
   const count = (sectionId) => assignments.filter((item) => String(item.sectionId) === String(sectionId)).length
   const courses = [...new Set(sections.map((item) => item.course).filter(Boolean))]
@@ -229,14 +248,14 @@ function SectionList() {
         <Empty icon={FiUsers} title="No sections configured" action={<Link className="cm-button" to="/section-management/add">Add Section</Link>} />
       )}
     </section>
-    {assigning && <AssignStudents section={assigning} assignments={assignments.filter((item) => String(item.sectionId) === String(assigning.id))} allAssignments={assignments} sections={sections} assign={assignStudent} assignTeacher={assignTeacher} remove={removeAssignment} close={() => setAssigning(null)} />}
+    {assigning && <AssignStudents section={assigning} faculty={faculty} assignments={assignments.filter((item) => String(item.sectionId) === String(assigning.id))} allAssignments={assignments} sections={sections} assign={assignStudent} assignTeacher={assignTeacher} remove={removeAssignment} close={() => setAssigning(null)} />}
     {confirmAction && <Confirm action={confirmAction} close={() => setConfirmAction(null)} confirm={confirm} />}
   </Page>
 }
 
 function SectionForm({ editMode = false }) {
   const { id } = useParams(), navigate = useNavigate()
-  const [masters, setMasters] = useState({ courses: [], branches: [], years: [], semesters: [] }), [sections, setSections] = useState([]), [assignments, setAssignments] = useState([]), [teacherCandidates, setTeacherCandidates] = useState([])
+  const [masters, setMasters] = useState({ courses: [], branches: [], years: [], semesters: [] }), [sections, setSections] = useState([]), [assignments, setAssignments] = useState([]), [faculty, setFaculty] = useState([])
   const semesterRequest = useRef(0)
   const legacy = useRef({})
   const [form, setForm] = useState(emptyForm), [errors, setErrors] = useToastState({}, 'error'), [loading, setLoading] = useState(true), [saving, setSaving] = useState(false), [, setNotice] = useToastState('', 'success')
@@ -249,6 +268,7 @@ function SectionForm({ editMode = false }) {
   const semesters = masters.semesters.filter((item) => (!form.courseId || (!item.courseId || String(item.courseId) === String(form.courseId))) && (!form.branchId || (!item.branchId || String(item.branchId) === String(form.branchId))) && (!form.academicYearId || !item.academicYearId || String(item.academicYearId) === String(form.academicYearId)))
   const semester = semesters.find((item) => String(item.id) === String(form.semesterId))
   const assignedCount = Math.max(Number(form.currentStrength || 0), assignments.filter((item) => String(item.sectionId) === String(id)).length)
+  const teacherCandidates = useMemo(() => teacherCandidatesForDepartment(faculty, branch?.departmentId, branch?.departmentName), [faculty, branch?.departmentId, branch?.departmentName])
   const noActiveYear = !editMode && activeYears.length === 0
   const yearWarning = noActiveYear ? 'No active academic year is configured.' : !editMode && activeYears.length > 1 ? 'Multiple active academic years are configured. Select the applicable active year.' : ''
   const canOpenDetailsTab = Boolean(form.courseId && form.branchId && form.semesterId && form.academicYearId)
@@ -262,7 +282,7 @@ function SectionForm({ editMode = false }) {
       if (request === semesterRequest.current) setMasters((current) => ({ ...current, semesters: responseList(response).map(normalizeSemester) }))
     } catch (error) { if (request === semesterRequest.current) setErrors((current) => ({ ...current, semesterId: apiError(error, 'Unable to load semesters.') })) }
   }, [setErrors])
-  const load = useCallback(async () => { setLoading(true); try { const data = await loadSources(); setMasters({ courses: data.courses, branches: data.branches, years: data.years, semesters: [] }); setSections(newestFirst('sections', data.sections)); setAssignments(data.assignments); setTeacherCandidates(await sectionAllocationApi.getFormTeacherCandidates(id, data.sections).catch((error) => { setErrors((current) => ({ ...current, facultyAdvisorEmployeeProfileId: apiError(error, 'Unable to load faculty candidates.') })); return [] })); if (editMode && id) { const detail = normalizeSection({ ...(data.sections.find((item) => String(item.id) === String(id)) || {}), ...responseRecord(await sectionApi.getById(id)) }, makeLookups(data.courses, data.branches, [], data.years)); legacy.current = { sectionType: detail.sectionType ?? detail.type, shift: detail.shift }; const editable = { ...detail }; delete editable.type; delete editable.sectionType; delete editable.shift; setForm({ ...emptyForm, ...editable, courseId: String(detail.courseId || ''), branchId: String(detail.branchId || ''), semesterId: String(detail.semesterId || ''), academicYearId: String(detail.academicYearId || ''), facultyAdvisorEmployeeProfileId: detail.facultyAdvisorEmployeeProfileId || '' }); setFormTab('details'); await fetchSemesters(detail.branchId, detail.academicYearId, detail.courseId) } else { const active = getActiveAcademicYears(data.years); setForm(() => ({ ...emptyForm, academicYearId: active.length === 1 ? String(active[0].id) : '', status: '' })); setFormTab('mapping') } } catch (error) { setErrors({ form: apiError(error, 'Unable to load section form.') }) } finally { setLoading(false) } }, [id, editMode, fetchSemesters, setErrors])
+  const load = useCallback(async () => { setLoading(true); try { const data = await loadSources(); setMasters({ courses: data.courses, branches: data.branches, years: data.years, semesters: [] }); setSections(newestFirst('sections', data.sections)); setAssignments(data.assignments); setFaculty(data.faculty); if (editMode && id) { const detail = normalizeSection({ ...(data.sections.find((item) => String(item.id) === String(id)) || {}), ...responseRecord(await sectionApi.getById(id)) }, makeLookups(data.courses, data.branches, [], data.years)); legacy.current = { sectionType: detail.sectionType ?? detail.type, shift: detail.shift }; const editable = { ...detail }; delete editable.type; delete editable.sectionType; delete editable.shift; setForm({ ...emptyForm, ...editable, courseId: String(detail.courseId || ''), branchId: String(detail.branchId || ''), semesterId: String(detail.semesterId || ''), academicYearId: String(detail.academicYearId || ''), facultyAdvisorEmployeeProfileId: detail.facultyAdvisorEmployeeProfileId || '' }); setFormTab('details'); await fetchSemesters(detail.branchId, detail.academicYearId, detail.courseId) } else { const active = getActiveAcademicYears(data.years); setForm(() => ({ ...emptyForm, academicYearId: active.length === 1 ? String(active[0].id) : '', status: '' })); setFormTab('mapping') } } catch (error) { setErrors({ form: apiError(error, 'Unable to load section form.') }) } finally { setLoading(false) } }, [id, editMode, fetchSemesters, setErrors])
   useEffect(() => { load() }, [load])
   const setCourse = async (courseId) => { semesterRequest.current += 1; const selectedCourse = masters.courses.find((item) => String(item.id) === String(courseId)); setForm((current) => ({ ...current, courseId, course: selectedCourse?.name || '', courseCode: selectedCourse?.code || '', branchId: '', branch: '', branchCode: '', semesterId: '', semester: '', name: '', code: '' })); setMasters((current) => ({ ...current, semesters: [] })); setErrors({}) }
   const setBranch = async (branchId) => { const selectedBranch = masters.branches.find((item) => String(item.id) === String(branchId)); setForm((current) => ({ ...current, branchId, branch: selectedBranch?.name || '', branchCode: selectedBranch?.code || '', semesterId: '', semester: '', name: '', code: '' })); setErrors({}); await fetchSemesters(branchId, form.academicYearId, form.courseId) }
@@ -326,7 +346,7 @@ function SectionDetails() {
 function Select({ label, value, change, first, values }) { return <SearchableSelect label={'Filter by ' + label} value={value} onChange={(next) => change(label, next)} placeholder={first} options={[{ value: '', name: first }, ...values.map((item) => ({ value: item, name: item }))]} searchPlaceholder={'Search ' + label + '...'} /> }
 function Pagination({ page, pageCount, setPage }) { return <footer className="section-pagination"><p>Page {page} of {pageCount}</p><div><button disabled={page <= 1} onClick={() => setPage((value) => Math.max(1, value - 1))}>Previous</button><button className="active">{page}</button><button disabled={page >= pageCount} onClick={() => setPage((value) => Math.min(pageCount, value + 1))}>Next</button></div></footer> }
 
-function AssignStudents({ section, assignments, allAssignments = [], sections = [], assign, assignTeacher, remove, close }) {
+function AssignStudents({ section, faculty = [], assignments, allAssignments = [], sections = [], assign, assignTeacher, remove, close }) {
   const [mode, setMode] = useState('')
   const [query, setQuery] = useState('')
   const [selectedIds, setSelectedIds] = useState([])
@@ -340,7 +360,7 @@ function AssignStudents({ section, assignments, allAssignments = [], sections = 
   const available = Math.max(Number(section.capacity || 0) - assignedCount, 0)
   const isAssignedToCurrentSection = (student) => [...assignments, ...allAssignments].some((assignment) => String(assignment.sectionId) === String(section.id) && sameStudent(assignment, student))
 
-  useEffect(() => { sectionAllocationApi.getTeacherCandidates(section.id).then(setTeacherCandidates).catch((reason) => setTeacherError(apiError(reason, 'Unable to load faculty candidates.'))) }, [section.id, setTeacherError])
+  useEffect(() => { setTeacherCandidates(teacherCandidatesForDepartment(faculty, section.departmentId, section.departmentName)) }, [faculty, section.departmentId, section.departmentName])
   useEffect(() => {
     if (mode !== 'student') return undefined
     let active = true

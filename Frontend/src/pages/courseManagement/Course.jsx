@@ -558,7 +558,7 @@ export function CourseStructure() {
   const { courseId, branchId } = useParams()
   const [course, setCourse] = useState(null)
   const [branch, setBranch] = useState(null)
-  const [rows, setRows] = useState([]), [semesterOptions, setSemesterOptions] = useState([]), [semester, setSemester] = useState(1), [form, setForm] = useState({ semesterId: '', yearNumber: 1, semesterNumber: 1, semesterName: 'Semester 1' }), [editing, setEditing] = useState(null), [loading, setLoading] = useState(true), [error, setError] = useToastState('', 'error'), [saving, setSaving] = useState(false), [page, setPage] = useState(1)
+  const [rows, setRows] = useState([]), [semesterOptions, setSemesterOptions] = useState([]), [semester, setSemester] = useState(''), [form, setForm] = useState({ semesterId: '', yearNumber: '', semesterNumber: '', semesterName: '' }), [editing, setEditing] = useState(null), [loading, setLoading] = useState(true), [error, setError] = useToastState('', 'error'), [saving, setSaving] = useState(false), [page, setPage] = useState(1)
 
   const load = async () => {
     setLoading(true)
@@ -570,6 +570,11 @@ export function CourseStructure() {
       const mappings = listFrom(mappingRes?.data).filter(x => String(x.courseId) === String(courseId))
       const byId = new Map(semesters.map(x => [String(x.semesterId), x]))
       setSemesterOptions(semesters)
+      if (semesters.length) {
+        const first = semesters[0]
+        setSemester(Number(first.semesterNumber))
+        setForm({ semesterId: '', yearNumber: Math.ceil(Number(first.semesterNumber) / 2), semesterNumber: Number(first.semesterNumber), semesterName: first.semesterName || '' })
+      }
       setRows(newestFirst('course-mappings', mappings).map(x => { const s = byId.get(String(x.semesterId)) || {}; return { ...x, structureId: x.courseSemesterMappingId, semesterNumber: Number(s.semesterNumber || 1), semesterName: s.semesterName || `Semester ${s.semesterNumber || 1}`, yearNumber: Math.ceil(Number(s.semesterNumber || 1) / 2) } }))
       setError('')
     } catch (e) { setError(e.message || 'Unable to load course structures.') } finally { setLoading(false) }
@@ -586,7 +591,7 @@ export function CourseStructure() {
 
   return <Page><ExportMenu rows={visible} columns={structureColumns} title="Course Structure" filename="course-structure" loading={loading || Boolean(error)} /><Header title="Course Structure" text={`${course.name} / ${branch.name}`}><Link className="cm-button secondary" to={`/branches/${branchId}`}><FiArrowLeft /> Back to Branch</Link></Header>
     {error && <p className="cm-error" role="alert">{error}</p>}
-    <div className="cm-semesters">{Array.from({ length: 8 }, (_, i) => i + 1).map(x => <button className={`cm-semester ${semester === x ? 'active' : ''}`} onClick={() => changeSemester(x)} key={x}>Semester {x}</button>)}</div>
+    <div className="cm-semesters">{semesterOptions.map(option => <button className={`cm-semester ${semester === Number(option.semesterNumber) ? 'active' : ''}`} onClick={() => changeSemester(Number(option.semesterNumber))} key={option.semesterId}>{option.semesterName}</button>)}</div>
     <section className="cm-panel cm-form-grid">
       <Field label="Year"><input type="number" min="1" max="4" value={form.yearNumber} onChange={e => setForm({ ...form, yearNumber: e.target.value })} /></Field>
       <Field label="Semester"><select value={form.semesterId} onChange={e => { const option = semesterOptions.find(x => String(x.semesterId) === e.target.value); const number = Number(option?.semesterNumber || form.semesterNumber); setForm({ ...form, semesterId: e.target.value, semesterNumber: number, semesterName: option?.semesterName || form.semesterName, yearNumber: Math.ceil(number / 2) }); setSemester(number) }}><option value="">Select semester</option>{semesterOptions.map(x => <option key={x.semesterId} value={x.semesterId}>{x.semesterName || `Semester ${x.semesterNumber}`}</option>)}</select></Field>
