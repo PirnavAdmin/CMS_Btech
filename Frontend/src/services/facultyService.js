@@ -391,25 +391,13 @@ export const facultyService = {
     }
     return true
   },
-  getAttendance: async params => {
-    try {
-      return await facultyAttendanceApi.getAll(params)
-    } catch {
-      return []
-    }
-  },
+  getAttendance: facultyAttendanceApi.getAll,
   getAttendanceById: facultyAttendanceApi.getById,
   createAttendance: facultyAttendanceApi.create,
   updateAttendance: facultyAttendanceApi.update,
   checkIn: facultyAttendanceApi.checkIn,
   checkOut: facultyAttendanceApi.checkOut,
-  getDailyAttendance: async params => {
-    try {
-      return await facultyAttendanceApi.getDaily(params)
-    } catch {
-      return []
-    }
-  },
+  getDailyAttendance: facultyAttendanceApi.getDaily,
   bulkAttendance: facultyAttendanceApi.bulk,
   getWeeklyAttendance: async params => {
     try {
