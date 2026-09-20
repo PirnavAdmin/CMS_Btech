@@ -162,7 +162,7 @@ const createPlan = ({ course, branch, activeYear, academicYears, dates = {}, edi
 const Page = ({ children }) => <DashboardLayout><main className="semester-management">{children}</main></DashboardLayout>
 const Header = ({ title, text, children }) => <header className="semester-page-header"><div><p className="semester-breadcrumb">Academic Configuration <span>/</span> Semesters</p><h1>{title}</h1>{text && <p>{text}</p>}</div><div className="management-header-actions">{children}</div></header>
 const StatusBadge = ({ value }) => <span className={`semester-badge status ${String(value || '').toLowerCase().replace(/\s+/g, '-')}`}>{value}</span>
-const Field = ({ label, children }) => <label className="semester-field"><span>{label}</span>{children}</label>
+const Field = ({ label, children }) => <label className="semester-field"><span>{typeof label === 'string' && label.endsWith(' *') ? <>{label.slice(0, -2)} <b className="required-mark">*</b></> : typeof label === 'string' && label.endsWith('*') ? <>{label.slice(0, -1).trim()} <b className="required-mark">*</b></> : label}</span>{children}</label>
 const ReadOnly = ({ value, placeholder = 'Resolved after selection' }) => <input value={value || ''} placeholder={placeholder} readOnly />
 
 function InfoRows({ rows }) {

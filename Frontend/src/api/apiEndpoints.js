@@ -10,7 +10,7 @@ if (typeof window !== 'undefined' && window.localStorage) {
 }
 
 const normalizeBaseUrl = (value = '') => value.trim().replace(/\/+$/, '')
-const DEFAULT_API_BASE_URL = 'https://movable-swampland-tinderbox.ngrok-free.dev'
+const DEFAULT_API_BASE_URL = 'https://clarity-math-delouse.ngrok-free.dev'
 
 export const API_BASE_URL = import.meta.env.DEV
   ? ''
@@ -1153,6 +1153,7 @@ export const facultyLeaveApi = {
   createType: async payload => normalizeRecord(await jsonRequest(API_ENDPOINTS.facultyLeave.types, 'POST', payload)),
   updateType: async (id, payload) => normalizeRecord(await jsonRequest(API_ENDPOINTS.facultyLeave.type(requiredId(id, 'Leave type ID')), 'PUT', payload)),
   getPolicies: async params => leaveList(API_ENDPOINTS.facultyLeave.policies, params, ['policies', 'leavePolicies']),
+  getPolicy: async id => normalizeRecord(await request(API_ENDPOINTS.facultyLeave.policy(requiredId(id, 'Policy ID')))),
   createPolicy: async payload => normalizeRecord(await jsonRequest(API_ENDPOINTS.facultyLeave.policies, 'POST', payload)),
   updatePolicy: async (id, payload) => normalizeRecord(await jsonRequest(API_ENDPOINTS.facultyLeave.policy(requiredId(id, 'Policy ID')), 'PUT', payload)),
   activatePolicy: async id => request(API_ENDPOINTS.facultyLeave.activate(requiredId(id, 'Policy ID')), { method: 'POST' }),

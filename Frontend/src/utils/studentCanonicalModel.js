@@ -3,7 +3,7 @@
  * Single source of truth across Add, Edit, View, Review/Approval, and Profile.
  */
 
-export const API_BASE_URL_FALLBACK = 'https://movable-swampland-tinderbox.ngrok-free.dev'
+export const API_BASE_URL_FALLBACK = 'https://clarity-math-delouse.ngrok-free.dev'
 
 export const apiAssetUrl = (value) => {
   if (!value || ['string', 'null', 'undefined'].includes(String(value).trim().toLowerCase())) return ''

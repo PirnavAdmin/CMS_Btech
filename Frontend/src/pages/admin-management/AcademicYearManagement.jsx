@@ -537,7 +537,7 @@ export default function AcademicYear() {
               <h2 id="form-title">{modal === 'add' ? 'Add Academic Year' : 'Edit Academic Year'}</h2>
               <form onSubmit={save} noValidate>
                 <label>
-                  Academic Year Title
+                  <span>Academic Year Title <b className="required-mark">*</b></span>
                   <input
                     autoFocus
                     placeholder="e.g. 2025 - 2026"
@@ -552,7 +552,7 @@ export default function AcademicYear() {
                 </label>
                 <div className="formgrid">
                   <label>
-                    Start Date
+                    <span>Start Date <b className="required-mark">*</b></span>
                     <input
                       type="date"
                       value={form.startDate}
@@ -565,7 +565,7 @@ export default function AcademicYear() {
                     )}
                   </label>
                   <label>
-                    End Date
+                    <span>End Date <b className="required-mark">*</b></span>
                     <input
                       type="date"
                       value={form.endDate}

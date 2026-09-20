@@ -50,7 +50,7 @@ const empty = {
   description: '',
   startDate: '',
   endDate: '',
-  status: 'Active',
+  status: '',
 };
 
 const HOD_NAMES_KEY = 'btech-department-hod-names';

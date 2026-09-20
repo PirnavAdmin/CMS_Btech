@@ -531,6 +531,15 @@
   text-align: center;
   padding-left: 16px;
 }
+/* Keep directory headings and college names readable over global truncation. */
+.faculty-management .faculty-directory .faculty-table-wrap table th,
+.faculty-management .faculty-directory .faculty-table-wrap table td.fm-college-name {
+  max-width: none !important;
+  overflow: visible !important;
+  text-overflow: clip !important;
+  white-space: normal !important;
+  overflow-wrap: anywhere;
+}
 .faculty-management .faculty-table-wrap th:last-child,
 .faculty-management .faculty-table-wrap td:last-child {
   text-align: center;

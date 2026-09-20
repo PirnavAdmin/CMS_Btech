@@ -388,7 +388,6 @@ function Form() {
 
     const courseId = params.get('course') || ''
     const selectedCourse = courses.find((course) => String(course.id) === String(courseId)) || null
-    const selectedYear = years[0] || null
     setValue({
       ...blank,
       courseId: selectedCourse?.id || '',
@@ -397,7 +396,7 @@ function Form() {
       duration: selectedCourse?.durationValue || '',
       academicPattern: selectedCourse?.academicPattern || '',
       totalSemesters: selectedCourse?.totalSemesters || '',
-      academicYearId: selectedYear?.id || '',
+      academicYearId: '',
       status: '',
     })
     if (selectedCourse && (!selectedCourse.durationValue || !selectedCourse.totalSemesters) && !courseDetailRequestsRef.current.has(selectedCourse.id)) {

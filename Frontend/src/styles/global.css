@@ -1409,3 +1409,95 @@ button:disabled, input:disabled, select:disabled, textarea:disabled { cursor: no
   .section-profile-page .cm-profile-badges .cm-status-badge,
   .semester-management .cm-profile-badges .cm-status-badge { position: static; }
 }
+
+/* ==========================================================================
+   Project-Wide Required Field Asterisk Indicator (* Red Mark)
+   ========================================================================== */
+:where(
+  .required-mark,
+  .required-asterisk,
+  .required-star,
+  .req-star,
+  .req-mark,
+  .fm-required,
+  .section-required,
+  .profile-required,
+  .required-indicator,
+  .required,
+  label span b,
+  label b,
+  label strong b,
+  .form-label b,
+  .form-group label b,
+  .ac-field span b,
+  .cm-field label b,
+  .cm-field span b,
+  .flm-field b,
+  .sa-field b,
+  .sp-edit-field b,
+  .fp-field span b,
+  .fp-field b,
+  .semester-field span b
+),
+.required-mark,
+.fm-required,
+.section-required,
+.profile-required,
+b[aria-hidden="true"],
+label span > b,
+label > b,
+.sa-field span > b,
+.sp-edit-field span > b,
+.ac-field span > b,
+.cm-field span > b,
+.semester-field span > b {
+  color: #dc2626 !important;
+  font-weight: 700 !important;
+  margin-left: 2px;
+  display: inline-block;
+}
+
+:root[data-theme="dark"] :where(
+  .required-mark,
+  .required-asterisk,
+  .required-star,
+  .req-star,
+  .req-mark,
+  .fm-required,
+  .section-required,
+  .profile-required,
+  .required-indicator,
+  .required,
+  label span b,
+  label b,
+  label strong b,
+  .form-label b,
+  .form-group label b,
+  .ac-field span b,
+  .cm-field label b,
+  .cm-field span b,
+  .flm-field b,
+  .sa-field b,
+  .sp-edit-field b,
+  .fp-field span b,
+  .fp-field b,
+  .semester-field span b
+),
+:root[data-theme="dark"] .required-mark,
+:root[data-theme="dark"] .fm-required,
+:root[data-theme="dark"] .section-required,
+:root[data-theme="dark"] .profile-required,
+:root[data-theme="dark"] b[aria-hidden="true"],
+:root[data-theme="dark"] label span > b,
+:root[data-theme="dark"] label > b,
+:root[data-theme="dark"] .sa-field span > b,
+:root[data-theme="dark"] .sp-edit-field span > b,
+:root[data-theme="dark"] .ac-field span > b,
+:root[data-theme="dark"] .cm-field span > b,
+:root[data-theme="dark"] .semester-field span > b {
+  color: #ef4444 !important;
+  font-weight: 700 !important;
+  margin-left: 2px;
+  display: inline-block;
+}
+
