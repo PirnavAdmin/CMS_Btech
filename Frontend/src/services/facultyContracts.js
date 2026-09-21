@@ -175,10 +175,16 @@ export const normalizePayroll = row => {
   const type = row.facultyType ?? row.employeeCategory ?? row.type ?? (String(designation).toLowerCase().includes('lab') || (String(designation).toLowerCase().includes('assistant') && String(designation).toLowerCase().includes('admin')) ? 'Non-Teaching' : 'Teaching');
   const department = row.departmentName ?? row.department ?? '';
   
-  const working = Number(row.workingDays ?? row.working ?? row.totalWorkingDays ?? row.totalDays ?? 26) || 26;
-  const present = Number(row.presentDays ?? row.present ?? row.totalPresent ?? row.attendedDays ?? (working - Number(row.paidLeaveDays ?? row.paidLeave ?? 0) - Number(row.lopDays ?? row.lop ?? 0))) || (working - Number(row.paidLeaveDays ?? row.paidLeave ?? 0) - Number(row.lopDays ?? row.lop ?? 0));
+  // Zero is a valid value for a future payroll period. Do not use `||` here:
+  // it previously converted zero assessed/present days into a full 26 days.
+  const numeric = (value, fallback = 0) => value === null || value === undefined || value === '' || Number.isNaN(Number(value)) ? fallback : Number(value);
+  const working = numeric(row.workingDays ?? row.working ?? row.totalWorkingDays ?? row.totalDays, 26);
+  const presentSource = row.presentDays ?? row.present ?? row.totalPresent ?? row.attendedDays;
+  const present = presentSource === null || presentSource === undefined || presentSource === ''
+    ? Math.max(0, working - numeric(row.paidLeaveDays ?? row.paidLeave, 0) - numeric(row.lopDays ?? row.lop, 0))
+    : numeric(presentSource, 0);
   const paidLeave = Number(row.paidLeaveDays ?? row.paidLeave ?? row.paidLeaves ?? row.leaveDays ?? row.approvedLeaves ?? 0) || 0;
-  const lop = Number(row.lopDays ?? row.lop ?? row.lossOfPayDays ?? row.lossOfPay ?? row.unpaidLeaveDays ?? row.unpaidLeaves ?? Math.max(0, working - present - paidLeave)) || 0;
+  const lop = numeric(row.lopDays ?? row.lop ?? row.lossOfPayDays ?? row.lossOfPay ?? row.unpaidLeaveDays ?? row.unpaidLeaves, Math.max(0, working - present - paidLeave));
 
   const defaultSalary = calculateFacultySalary(row, designation, type);
   const grossSalary = row.grossSalary ?? row.gross ?? row.grossPay ?? row.basicSalary ?? row.baseSalary ?? row.salary ?? row.totalEarnings ?? row.monthlySalary ?? defaultSalary.gross;

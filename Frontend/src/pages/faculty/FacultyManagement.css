@@ -1501,6 +1501,36 @@
 .faculty-management .fm-form--preview .fm-form-footer {
   padding-top: 10px;
 }
+
+/* Keep the read-only faculty view dense: it is information-heavy and does
+   not need the larger spacing used by the data-entry workflow. */
+.faculty-management .fm-profile-view { gap: 6px; }
+.faculty-management .fm-profile-view .fm-panel { padding: 10px; }
+.faculty-management .fm-profile-view .fm-panel > h2 { margin-bottom: 7px; }
+.faculty-management .fm-profile-hero-card { gap: 6px; }
+.faculty-management .fm-profile-header { gap: 10px; padding: 10px 12px; }
+.faculty-management .fm-profile-header .fm-identity { gap: 9px; }
+.faculty-management .fm-profile-header .fm-eyebrow { margin-bottom: 3px; }
+.faculty-management .fm-profile-header h1 { font-size: clamp(20px, 1.7vw, 25px); }
+.faculty-management .fm-profile-summary-strip .fm-summary-col { min-height: 58px; padding: 7px 9px; gap: 2px; }
+.faculty-management .fm-profile-summary-strip strong { font-size: 14px; }
+.faculty-management .fm-profile-main-layout { grid-template-columns: minmax(0, 1fr) minmax(280px, 320px); gap: 6px; }
+.faculty-management .fm-profile-content-col,
+.faculty-management .fm-profile-sections,
+.faculty-management .fm-responsibilities-sidebar { gap: 6px; }
+.faculty-management .fm-profile-view .fm-info-grid { gap: 5px 8px; }
+.faculty-management .fm-info-grid dt { margin-bottom: 1px; }
+.faculty-management .fm-info-grid dd { line-height: 1.28; }
+.faculty-management .fm-sidebar-header { padding-bottom: 6px; }
+.faculty-management .fm-sidebar-empty { min-height: 130px; padding: 18px 12px; gap: 6px; }
+.faculty-management .fm-sidebar-assignments,
+.faculty-management .fm-assignment-list { gap: 6px; }
+.faculty-management .fm-profile-view .fm-assignment-card { gap: 8px; padding: 8px 9px; }
+.faculty-management .fm-profile-view .fm-assignment-end { gap: 6px; }
+
+@media (max-width: 990px) {
+  .faculty-management .fm-profile-main-layout { grid-template-columns: 1fr; }
+}
 @media (max-width: 768px) {
   .faculty-management .fm-document-grid {
     grid-template-columns: 1fr;
