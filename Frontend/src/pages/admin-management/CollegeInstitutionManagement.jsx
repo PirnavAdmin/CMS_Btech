@@ -642,8 +642,6 @@ export default function CollegeInstitutionManagement({ initialView = 'list' }) {
           console.warn('Backend logo upload notice:', logoErr.message)
         }
         cacheCollegeLogo(activeId, formValues.logo)
-        if (formValues.code) cacheCollegeLogo(formValues.code, formValues.logo)
-        if (formValues.name) cacheCollegeLogo(formValues.name, formValues.logo)
         setBrokenLogoIds((current) => { const next = new Set(current); next.delete(activeId); return next })
       }
       const updated = mapCollege((response.data?.data ?? response.data) || { ...formValues, id: activeId })
@@ -1100,7 +1098,13 @@ export default function CollegeInstitutionManagement({ initialView = 'list' }) {
                 <label className="cm-span-2">
                   <span>College Logo</span>
                   <input type="file" accept="image/*" onChange={handleLogoUpload} />
-                  {formValues.logo && <img src={formValues.logo} alt="Logo preview" className="cm-logo-preview" />}
+                  {(formValues.logo || activeId) && <CollegeLogoImage
+                    src={formValues.logo}
+                    fallbackSrc={activeId ? getCollegeLogoEndpoint(activeId) : ''}
+                    alt={formValues.name || 'College logo'}
+                    code={formValues.code}
+                    className="cm-logo-preview"
+                  />}
                 </label>
               </div>
 

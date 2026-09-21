@@ -813,18 +813,39 @@
 }
 
 /* Preview and faculty profile */
+.faculty-management .fm-profile-view {
+  display: grid;
+  gap: 8px;
+}
+.faculty-management .fm-profile-view .fm-panel {
+  padding: 12px;
+}
+.faculty-management .fm-profile-view .fm-panel > h2 {
+  margin-bottom: 9px;
+}
+.faculty-management .fm-profile-view .fm-info-grid {
+  gap: 7px 10px;
+}
+.faculty-management .fm-profile-view .fm-document-grid {
+  gap: 8px;
+  margin-top: 2px;
+}
+.faculty-management .fm-profile-view .fm-document-card {
+  gap: 8px;
+  padding: 9px 10px;
+}
 .faculty-management .fm-profile-hero-card {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 8px;
   width: 100%;
 }
 .faculty-management .fm-profile-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  gap: 16px;
-  padding: 16px 20px;
+  gap: 12px;
+  padding: 12px 16px;
   border-top: 3px solid var(--brand);
 }
 .faculty-management .fm-profile-header .erp-status-badge {
@@ -845,7 +866,7 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 12px 16px;
+  padding: 9px 12px;
   text-align: center;
   border-right: 1px solid var(--border);
   gap: 4px;
@@ -883,7 +904,7 @@
 .faculty-management .fm-profile-main-layout {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(320px, 360px);
-  gap: 14px;
+  gap: 8px;
   align-items: start;
 }
 @media (max-width: 990px) {
@@ -894,13 +915,13 @@
 .faculty-management .fm-profile-content-col {
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 8px;
   min-width: 0;
 }
 .faculty-management .fm-profile-sections {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 14px;
+  gap: 8px;
   align-items: start;
 }
 @media (max-width: 768px) {
@@ -911,7 +932,7 @@
 .faculty-management .fm-responsibilities-sidebar {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 8px;
   min-height: 100%;
 }
 .faculty-management .fm-sidebar-header {
@@ -1434,6 +1455,51 @@
   background: var(--surface);
   color: var(--text-primary);
   font-size: 12px;
+}
+
+/* Preview is read-only, so it can be denser than the data-entry steps. */
+.faculty-management .fm-form--preview {
+  gap: 10px;
+  padding: 12px;
+}
+.faculty-management .fm-form--preview .fm-stepper {
+  padding-bottom: 10px;
+}
+.faculty-management .fm-form--preview .fm-section-heading h2 {
+  margin-bottom: 2px;
+}
+.faculty-management .fm-form--preview .fm-section-heading p {
+  margin: 2px 0 0;
+}
+.faculty-management .fm-form--preview > .fm-identity {
+  gap: 8px;
+  padding-bottom: 2px;
+}
+.faculty-management .fm-form--preview > .fm-identity h2 {
+  margin-bottom: 2px;
+}
+.faculty-management .fm-form--preview .fm-profile-sections {
+  gap: 8px;
+}
+.faculty-management .fm-form--preview .fm-panel {
+  padding: 11px;
+}
+.faculty-management .fm-form--preview .fm-panel > h2 {
+  margin-bottom: 8px;
+}
+.faculty-management .fm-form--preview .fm-info-grid {
+  gap: 7px 10px;
+}
+.faculty-management .fm-form--preview .fm-document-grid {
+  gap: 8px;
+  margin-top: 2px;
+}
+.faculty-management .fm-form--preview .fm-document-card {
+  gap: 8px;
+  padding: 9px 10px;
+}
+.faculty-management .fm-form--preview .fm-form-footer {
+  padding-top: 10px;
 }
 @media (max-width: 768px) {
   .faculty-management .fm-document-grid {

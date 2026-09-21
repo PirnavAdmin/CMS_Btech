@@ -237,7 +237,10 @@ export default function AddCollege() {
           setValues((current) => ({ ...current, logo: objectUrl }))
           originalEditValues.current = { ...originalEditValues.current, logo: objectUrl }
         }).catch(() => {
-          // A logo is optional, so an unavailable image must not block editing.
+          // Some deployments expose the logo URL to the browser but reject a
+          // cross-origin fetch. Let the image element make that final request
+          // instead of hiding an existing saved logo.
+          if (active) setValues((current) => ({ ...current, logo: logoUrl }))
         })
       }
     }).catch((error) => { if (active) setNotice(error.message || 'Unable to load college details.', 'error') }).finally(() => { if (active) setLoadingCollege(false) })
@@ -450,12 +453,8 @@ export default function AddCollege() {
           }
         }
         cacheCollegeLogo(collegeId, values.logo)
-        if (values.collegeCode) cacheCollegeLogo(values.collegeCode, values.logo)
-        if (values.collegeName) cacheCollegeLogo(values.collegeName, values.logo)
       } else if (editId && removeExistingLogo) {
         cacheCollegeLogo(collegeId, '')
-        if (values.collegeCode) cacheCollegeLogo(values.collegeCode, '')
-        if (values.collegeName) cacheCollegeLogo(values.collegeName, '')
       }
 
       // The list route fetches from the backend when it mounts, so navigating

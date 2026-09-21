@@ -341,7 +341,7 @@ const sections = [
     ['experience', 'Total Experience (Years)', 'number'],
   ] },
   { title: 'Academic Details', heading: 'Academic Information', icon: FiBookOpen, description: 'Qualifications, specialization and professional experience.', fields: [
-    ['qualification', 'Highest Qualification', ['Ph.D', 'M.Tech', 'M.E', 'MCA', 'M.Sc', 'B.Tech', 'Other'], true],
+    ['qualification', 'Highest Qualification', ['Ph.D', 'M.Tech', 'M.E', 'MCA', 'M.Sc', 'B.Tech', 'Other']],
     ['specialization', 'Specialization', 'text'], ['university', 'University / Institution', 'text'],
     ['passingYear', 'Year of Passing', 'number'], ['teachingExperience', 'Teaching Experience (Years)', 'number'], ['industryExperience', 'Industry Experience (Years)', 'number'],
   ] },
@@ -368,7 +368,7 @@ const today = () => {
 const years = value => value === '' || value == null ? '—' : (parseFloat(value) || 0) + ' Years'
 const normalize = (row = {}) => {
   const safeRow = row && typeof row === 'object' ? row : {}
-  return { ...Object.fromEntries(sections.flatMap(s => s.fields.map(([key]) => [key, '']))), employeeCategoryOther: safeRow.employeeCategoryOther || '', employmentStatus: 'Working', documents: safeRow.documents || {}, photo: '', assignments: [], ...safeRow, employmentStatus: safeRow.employmentStatus || 'Working', documents: safeRow.documents || {}, assignments: Array.isArray(safeRow.assignments) ? safeRow.assignments : [], collegeName: safeRow.collegeName || '', experience: safeRow.experience == null ? '' : String(parseFloat(safeRow.experience) || 0) }
+  return { ...Object.fromEntries(sections.flatMap(s => s.fields.map(([key]) => [key, '']))), employeeCategoryOther: safeRow.employeeCategoryOther || '', qualificationOther: safeRow.qualificationOther || '', employmentStatus: 'Working', documents: safeRow.documents || {}, photo: '', assignments: [], ...safeRow, employmentStatus: safeRow.employmentStatus || 'Working', documents: safeRow.documents || {}, assignments: Array.isArray(safeRow.assignments) ? safeRow.assignments : [], collegeName: safeRow.collegeName || '', experience: safeRow.experience == null ? '' : String(parseFloat(safeRow.experience) || 0) }
 }
 const clean = data => Object.fromEntries(Object.entries(data).map(([key, value]) => [key, typeof value === 'string' ? value.trim() : value]))
 const workload = row => {
@@ -942,6 +942,9 @@ function ProfileSections({ data, collegeOptions = [], departmentOptions = [], fa
     if (key === 'employeeCategory' && ['Others', 'Other'].includes(data.employeeCategory)) {
       return data.employeeCategoryOther ? `Other (${data.employeeCategoryOther})` : 'Other'
     }
+    if (key === 'qualification' && data.qualification === 'Other') {
+      return data.qualificationOther ? `Other (${data.qualificationOther})` : 'Other'
+    }
     if (experienceKeys.includes(key)) {
       return years(value)
     }
@@ -1058,6 +1061,17 @@ function Field({ field, data, errors, update, native = false, collegeOptions = [
       if (/^\d{0,10}$/.test(value)) update(key, value)
     }
   }
+  if (experienceKeys.includes(key)) {
+    props.onChange = event => {
+      const value = event.target.value
+      // Keep the controlled value non-negative even when a negative value is
+      // pasted. A single decimal place matches the field's 0.5 step.
+      if (/^\d*(?:\.\d{0,1})?$/.test(value)) update(key, value)
+    }
+    props.onKeyDown = event => {
+      if (['-', '+', 'e', 'E'].includes(event.key)) event.preventDefault()
+    }
+  }
   return (
     <>
       <div className={'fm-field ' + (type === 'textarea' ? 'fm-wide' : '') + (key === 'gender' ? ' fm-gender' : '')}><label htmlFor={Array.isArray(type) && !native ? undefined : id}>{label}{required && <span className="fm-required" aria-hidden="true"> *</span>}</label>
@@ -1078,6 +1092,21 @@ function Field({ field, data, errors, update, native = false, collegeOptions = [
             aria-describedby={errors.employeeCategoryOther ? 'fm-employeeCategoryOther-error' : undefined}
           />
           {errors.employeeCategoryOther && <small id="fm-employeeCategoryOther-error" className="fm-error">{errors.employeeCategoryOther}</small>}
+        </div>
+      )}
+      {key === 'qualification' && data.qualification === 'Other' && (
+        <div className="fm-field">
+          <label htmlFor="fm-qualificationOther">Specify Highest Qualification</label>
+          <input
+            id="fm-qualificationOther"
+            type="text"
+            value={data.qualificationOther || ''}
+            onChange={event => update('qualificationOther', event.target.value)}
+            placeholder="Enter highest qualification"
+            aria-invalid={Boolean(errors.qualificationOther)}
+            aria-describedby={errors.qualificationOther ? 'fm-qualificationOther-error' : undefined}
+          />
+          {errors.qualificationOther && <small id="fm-qualificationOther-error" className="fm-error">{errors.qualificationOther}</small>}
         </div>
       )}
     </>
@@ -1271,7 +1300,7 @@ function FacultyForm({ initial, faculty, onSave, onCancel, collegeOptions, depar
   const isStepOptional = (section && !section.fields.some(([, , , required]) => required)) || isDocumentsStep
 
   return (
-    <form className="fm-panel fm-form" ref={formRef} onSubmit={next} noValidate>
+    <form className={'fm-panel fm-form' + (isPreviewStep ? ' fm-form--preview' : '')} ref={formRef} onSubmit={next} noValidate>
       <ol className="fm-stepper">
         {stepTitles.map((title, index) => (
           <li key={title} className={step === index ? 'active' : step > index ? 'complete' : ''} aria-current={step === index ? 'step' : undefined}>
@@ -1984,7 +2013,7 @@ export default function FacultyManagement() {
     const load = workload(selected)
     const departmentName = departmentOptions.find(d => String(d.value) === String(selected.departmentId || selected.department))?.label || selected.department || '—'
     content = (
-      <>
+      <div className="fm-profile-view">
         <div className="fm-breadcrumb">
           <span>HOME</span> / <span>FACULTY</span> / <strong>FACULTY MANAGEMENT</strong>
         </div>
@@ -2061,7 +2090,7 @@ export default function FacultyManagement() {
             )}
           </section>
         </div>
-      </>
+      </div>
     )
   } else {
     const summary = [{ label: 'Total Faculty', value: faculty.length }, { label: 'Working', value: faculty.filter(row => row.employmentStatus === 'Working').length, tone: 'active' }, { label: 'On Leave', value: faculty.filter(row => row.employmentStatus === 'On Leave').length, tone: 'danger' }, { label: 'Permanent', value: faculty.filter(row => row.employmentType === 'Permanent').length, tone: 'upcoming' }]

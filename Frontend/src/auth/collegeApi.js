@@ -1,4 +1,5 @@
 import { resolveCollegeLogo } from '../utils/collegeLogo'
+import { getAccessToken } from './auth'
 const cleanUrl = (url) => (url || "").replace(/\/+$/, "");
 const DEFAULT_API_BASE_URL = "https://abreast-curling-tutor.ngrok-free.dev";
 
@@ -190,12 +191,9 @@ export const cacheCollegeLogo = (collegeId, logo) => {
     if (!collegeId) return;
     const key = String(collegeId).trim();
     if (logo) {
+      // Data URLs can be several megabytes. Duplicating each logo under six
+      // aliases exhausts localStorage and makes the Edit College fallback fail.
       localStorage.setItem(collegeLogoCacheKey(key), logo);
-      localStorage.setItem(`college-logo-${key}`, logo);
-      localStorage.setItem(collegeLogoCacheKey(key.toLowerCase()), logo);
-      localStorage.setItem(collegeLogoCacheKey(key.toUpperCase()), logo);
-      localStorage.setItem(`college-logo-${key.toLowerCase()}`, logo);
-      localStorage.setItem(`college-logo-${key.toUpperCase()}`, logo);
     } else {
       localStorage.removeItem(collegeLogoCacheKey(key));
       localStorage.removeItem(`college-logo-${key}`);
@@ -221,7 +219,7 @@ export const isBackendCollegeLogo = value => {
 // An <img> tag cannot attach that header, so fetch the image first and let the
 // caller render its blob URL.
 export const fetchCollegeLogo = async (logoUrl) => {
-  const token = localStorage.getItem("btech-access-token") || sessionStorage.getItem("btech-access-token");
+  const token = getAccessToken();
   const response = await fetch(logoUrl, {
     cache: "no-store",
     headers: {
