@@ -5,6 +5,7 @@ import { FiLock, FiLogOut, FiMenu, FiMoon, FiSearch, FiSun, FiUser } from 'react
 import { getUserRole, signOut } from '../auth/auth'
 import { changePassword, profileApi } from '../api/apiEndpoints'
 import Sidebar from '../components/Sidebar'
+import HeaderAcademicYear from '../components/HeaderAcademicYear'
 import DeactivationBlockedDialog from '../components/DeactivationBlockedDialog'
 import './DashboardLayout.css'
 import './AccountMenu.css'
@@ -260,6 +261,7 @@ export default function DashboardLayout({ children }) {
           <div className="global-search"><FiSearch aria-hidden="true" /><input aria-label="Search modules" value={globalQuery} onChange={(event) => setGlobalQuery(event.target.value)} placeholder="Search" />{globalResults.length > 0 && <div className="global-search-results">{globalResults.map(([label, to]) => <Link to={to} key={to} onClick={() => setGlobalQuery('')}>{label}</Link>)}</div>}</div>
 
           <div className="dashboard-header__actions">
+          <HeaderAcademicYear />
           <button className="theme-toggle" onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')} aria-label={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`} title={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}>{theme === 'dark' ? <FiSun /> : <FiMoon />}</button>
 
           <details className="account-menu" ref={accountMenuRef}>

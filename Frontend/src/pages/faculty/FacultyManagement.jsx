@@ -331,7 +331,7 @@ const attendanceFilename = (prefix, period, department) => {
 }
 const sections = [
   { title: 'Personal Details', heading: 'Personal Information', icon: FiUser, description: 'Identity, photograph and primary contact information.', fields: [
-    ['collegeId', 'College Name', 'college', true], ['employeeId', 'Faculty Code', 'readonly'], ['fullName', 'Faculty Full Name', 'text', true],
+    ['collegeId', 'College Name', 'college', true], ['employeeId', 'Faculty ID', 'readonly'], ['fullName', 'Faculty Full Name', 'text', true],
     ['gender', 'Gender', ['Male', 'Female', 'Other'], true], ['dob', 'Date of Birth', 'date', true],
     ['mobile', 'Mobile Number', 'tel', true], ['email', 'Email', 'email', true],
   ] },
@@ -393,7 +393,10 @@ function validateFaculty(data, rows) {
   for (const key of ['collegeId', 'departmentId']) if (!Number.isSafeInteger(Number(data[key])) || Number(data[key]) <= 0) errors[key] = 'Select a valid ' + (key === 'collegeId' ? 'college.' : 'department.')
   for (const key of ['email', 'personalEmail']) if (data[key] && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(data[key].trim())) errors[key] = 'Enter a valid email address.'
   if (rows.some(row => row.id !== data.id && String(row.email || '').trim().toLowerCase() === data.email?.trim().toLowerCase())) errors.email = 'A faculty member with this email already exists.'
-  for (const key of ['mobile', 'alternateMobile', 'emergencyMobile']) if (data[key] && !/^\d{10}$/.test(String(data[key]).trim())) errors[key] = 'Enter exactly 10 numeric digits.'
+  for (const key of ['mobile', 'alternateMobile', 'emergencyMobile']) {
+    const number = String(data[key] ?? '').trim()
+    if (number && !/^[6-9]\d{9}$/.test(number)) errors[key] = 'Enter a valid 10-digit mobile number starting with 6, 7, 8 or 9.'
+  }
   for (const key of ['dob', 'joiningDate']) if (data[key] && (!/^\d{4}-\d{2}-\d{2}$/.test(data[key]) || !Number.isFinite(Date.parse(data[key])) || new Date(data[key]).toISOString().slice(0, 10) !== data[key] || data[key] > today())) errors[key] = 'Enter a valid date that is not in the future.'
   if (data.dob && data.joiningDate && data.joiningDate <= data.dob) errors.joiningDate = 'Joining date must be after date of birth.'
   for (const key of experienceKeys) if (data[key] !== '' && (!Number.isFinite(Number(data[key])) || Number(data[key]) < 0 || Number(data[key]) > 80)) errors[key] = 'Enter experience between 0 and 80 years.'
@@ -454,7 +457,7 @@ function AttendanceEditor({ record, collegeOptions = [], departmentOptions = [],
 function FacultyAttendanceScreen({ faculty, collegeOptions = [], departmentOptions = [], onNotify }) {
   const [tab, setTab] = useState('daily')
   const [reportType, setReportType] = useState('daily')
-  const [showFilters, setShowFilters] = useState(true)
+  const [showFilters, setShowFilters] = useState(false)
   const [selected, setSelected] = useState(null)
   const [editingRecord, setEditingRecord] = useState(null)
   const [bulkConfirmation, setBulkConfirmation] = useState(null)
@@ -638,10 +641,13 @@ function FacultyAttendanceScreen({ faculty, collegeOptions = [], departmentOptio
   const displayDate = value => value ? new Date(value + 'T00:00:00').toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : 'All dates'
   const rangeLabel = tab === 'daily' ? displayDate(dailyFilters.date) : tab === 'register' ? displayDate(registerFilters.from) + ' – ' + (registerFilters.to ? displayDate(registerFilters.to) : 'Latest') : period.from && period.to ? displayDate(period.from) + (period.from === period.to ? '' : ' – ' + displayDate(period.to)) : 'Select a valid period'
   const exportScope = ['All filtered results', rangeLabel, filters.department, faculty.find(item => String(item.id) === filters.facultyId)?.fullName, (!aggregated && filters.status), filters.search && 'Search: ' + filters.search, tab === 'reports' && ATTENDANCE_PERCENTAGE_NOTE].filter(Boolean).join(' · ')
-  const contextualExport = <button className="export-button" disabled={attendanceBusy} onClick={async () => { setAttendanceBusy(true); try { const params = tab === 'daily' ? { fromDate: dailyFilters.date, toDate: dailyFilters.date } : tab === 'register' ? { facultyId: registerFilters.facultyId, fromDate: registerFilters.from, toDate: registerFilters.to } : { facultyId: currentReport.facultyId, fromDate: period.from, toDate: period.to }; downloadServerExport(await facultyService.exportAttendance(params), filename) } catch (error) { setAttendanceError(error.message) } finally { setAttendanceBusy(false) } }}>Export {exportTitle}</button>
+  const contextualExport = <ExportMenu rows={exportRows} columns={columns} filename={filename} title={exportTitle} scope={exportScope} loading={attendanceBusy} unavailable={rangeInvalid || periodInvalid ? 'Select a valid date range.' : ''} onDownload={async () => {
+    const params = tab === 'daily' ? { fromDate: dailyFilters.date, toDate: dailyFilters.date } : tab === 'register' ? { facultyId: registerFilters.facultyId, fromDate: registerFilters.from, toDate: registerFilters.to } : { facultyId: currentReport.facultyId, fromDate: period.from, toDate: period.to }
+    downloadServerExport(await facultyService.exportAttendance(params), filename)
+  }} />
   const attendanceBadge = value => <StatusBadge value={attendanceStatusLabel(value)} className={value === 'Not Marked' ? 'fm-attendance-pending' : value === 'Present' ? 'fm-attendance-present' : value === 'Absent' ? 'fm-attendance-absent' : value === 'Late' ? 'fm-attendance-late' : value === 'Half Day' ? 'fm-attendance-half-day' : value === 'On Leave' ? 'fm-attendance-leave' : value === 'LOP' ? 'fm-attendance-lop' : ''} />
   const dateControl = (key, label, options = {}) => <label className="fm-attendance-field"><span>{label}</span><input type="date" value={filters[key]} max={today()} onChange={event => updateFilter(key, event.target.value)} {...options} /></label>
-  const selectControl = (key, label, options, placeholder) => <div className="fm-attendance-field"><span>{label}</span><SearchableSelect label={label} value={filters[key]} options={[{ value: '', label: placeholder }, ...options.map(option => option === 'LOP' ? { value: 'LOP', label: 'Loss of Pay' } : option)]} onChange={value => updateFilter(key, value)} placeholder={placeholder} /></div>
+  const selectControl = (key, label, options, placeholder) => <div className="fm-attendance-field"><span>{label}</span><SearchableSelect placement="bottom" label={label} value={filters[key]} options={[{ value: '', label: placeholder }, ...options.map(option => option === 'LOP' ? { value: 'LOP', label: 'Loss of Pay' } : option)]} onChange={value => updateFilter(key, value)} placeholder={placeholder} /></div>
   const todaySummary = summarizeAttendance(resolveAttendanceRecords(todayRecords.filter(row => row.date === today()), faculty))
   const facultySummary = [
     { label: 'Total Faculty', value: faculty.length },
@@ -1044,10 +1050,19 @@ function Field({ field, data, errors, update, native = false, collegeOptions = [
   const [key, label, type, required] = field
   const id = 'fm-' + key
   const props = { id, value: data[key] ?? '', onChange: event => update(key, event.target.value), 'aria-invalid': Boolean(errors[key]), 'aria-describedby': errors[key] ? id + '-error' : undefined, required: Boolean(required) }
+  if (['mobile', 'alternateMobile', 'emergencyMobile'].includes(key)) {
+    props.maxLength = 10
+    props.pattern = '[6-9][0-9]{9}'
+    props.title = 'Enter a 10-digit mobile number starting with 6, 7, 8 or 9.'
+    props.onChange = event => {
+      const value = event.target.value
+      if (/^\d{0,10}$/.test(value)) update(key, value)
+    }
+  }
   return (
     <>
       <div className={'fm-field ' + (type === 'textarea' ? 'fm-wide' : '') + (key === 'gender' ? ' fm-gender' : '')}><label htmlFor={Array.isArray(type) && !native ? undefined : id}>{label}{required && <span className="fm-required" aria-hidden="true"> *</span>}</label>
-        {type === 'college' || type === 'department' ? <SearchableSelect label={label} value={data[key] || ''} options={type === 'college' ? collegeOptions : departmentOptions} onChange={value => update(key, value)} required={required} error={Boolean(errors[key])} placeholder={'Select ' + label.toLowerCase()} /> : Array.isArray(type) ? native ? <select {...props}><option value="">Select {label.toLowerCase()}</option>{type.map(value => <option key={value}>{value}</option>)}</select> : <SearchableSelect label={label} value={data[key] || ''} options={type} onChange={value => update(key, value)} required={required} error={Boolean(errors[key])} placeholder={'Select ' + label.toLowerCase()} hideSearch={key === 'gender'} /> : type === 'textarea' ? <textarea {...props} rows={2} /> : <input {...props} type={type === 'readonly' ? 'text' : type} readOnly={type === 'readonly'} max={type === 'date' ? today() : key === 'passingYear' ? new Date().getFullYear() : key === 'weeklyHours' ? 60 : type === 'number' ? 80 : undefined} min={key === 'passingYear' ? 1950 : type === 'number' ? 0 : undefined} step={key === 'passingYear' ? 1 : type === 'number' ? 0.5 : undefined} inputMode={type === 'tel' || key === 'pincode' ? 'numeric' : undefined} />}
+        {type === 'college' || type === 'department' ? <SearchableSelect placement="bottom" label={label} value={data[key] || ''} options={type === 'college' ? collegeOptions : departmentOptions} onChange={value => update(key, value)} required={required} error={Boolean(errors[key])} placeholder={'Select ' + label.toLowerCase()} /> : Array.isArray(type) ? native ? <select {...props}><option value="">Select {label.toLowerCase()}</option>{type.map(value => <option key={value}>{value}</option>)}</select> : <SearchableSelect placement="bottom" label={label} value={data[key] || ''} options={type} onChange={value => update(key, value)} required={required} error={Boolean(errors[key])} placeholder={'Select ' + label.toLowerCase()} hideSearch={key === 'gender'} /> : type === 'textarea' ? <textarea {...props} rows={2} /> : <input {...props} type={type === 'readonly' ? 'text' : type} readOnly={type === 'readonly'} max={type === 'date' ? today() : key === 'passingYear' ? new Date().getFullYear() : key === 'weeklyHours' ? 60 : type === 'number' ? 80 : undefined} min={key === 'passingYear' ? 1950 : type === 'number' ? 0 : undefined} step={key === 'passingYear' ? 1 : type === 'number' ? 0.5 : undefined} inputMode={type === 'tel' || key === 'pincode' ? 'numeric' : undefined} />}
         {errors[key] && <small id={id + '-error'} className="fm-error">{errors[key]}</small>}
       </div>
       {key === 'employeeCategory' && ['Others', 'Other'].includes(data.employeeCategory) && (

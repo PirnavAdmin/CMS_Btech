@@ -29,6 +29,7 @@ export default function SearchableSelect({
   placeholder = 'Select an option',
   searchPlaceholder = 'Search...',
   hideSearch = false,
+  placement = 'auto',
   disabled = false,
   loading = false,
   error = false,
@@ -89,7 +90,7 @@ export default function SearchableSelect({
       const below = Math.max(0, viewportTop + viewportHeight - rect.bottom - padding - gap)
       const above = Math.max(0, rect.top - viewportTop - padding - gap)
       const desiredHeight = Math.min(280, (menuRef.current?.querySelector('.searchable-select__search')?.offsetHeight || 50) + (menuRef.current?.querySelector('.searchable-select__options')?.scrollHeight || 40) + 2)
-      const flip = below < desiredHeight && above > below
+      const flip = placement !== 'bottom' && below < desiredHeight && above > below
       const maxHeight = Math.min(280, flip ? above : below)
       const width = Math.min(rect.width, viewportWidth - padding * 2)
       setMenuStyle({
@@ -113,7 +114,7 @@ export default function SearchableSelect({
       window.visualViewport?.removeEventListener('resize', position)
       window.visualViewport?.removeEventListener('scroll', position)
     }
-  }, [open, options, query, loading])
+  }, [open, options, query, loading, placement])
 
   useEffect(() => {
     if (!open) return undefined

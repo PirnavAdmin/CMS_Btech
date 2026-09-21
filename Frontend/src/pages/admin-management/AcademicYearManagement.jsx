@@ -12,6 +12,7 @@ import TablePagination, { PAGE_SIZE } from '../../components/TablePagination';
 import StatusConfirmDialog from '../../components/StatusConfirmDialog';
 import InfoCard from '../../components/InfoCard';
 import { academicYearApi, studentApi } from '../../api/apiEndpoints';
+import eventBus, { ERP_EVENTS } from '../../services/eventBus';
 import { showDeactivationBlocked } from '../../components/DeactivationBlockedDialog';
 import { FiEye, FiEdit2, FiToggleLeft, FiToggleRight, FiPlus, FiCalendar, FiClock, FiSearch } from 'react-icons/fi';
 import './AcademicYearManagement.css';
@@ -102,6 +103,7 @@ export default function AcademicYear() {
     try {
       const data = await academicYearApi.getAll();
       setYears(newestFirst('academic-years', data).map(mapYear));
+      eventBus.emit(ERP_EVENTS.ACADEMIC_UPDATED);
     } catch (error) {
       setNotice(error.message || 'Unable to load academic years.', 'error');
     } finally {

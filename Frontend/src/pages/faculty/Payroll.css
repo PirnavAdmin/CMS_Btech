@@ -349,3 +349,42 @@
   to { transform: rotate(360deg); }
 }
 
+
+/* Keep payroll search as one control, including when the input is focused. */
+.page-content .fp-tools > label {
+  min-width: 0;
+  height: 40px;
+  min-height: 40px;
+  padding: 0 12px;
+  gap: 10px;
+  background: var(--surface);
+}
+.page-content .fp-tools > label > svg {
+  width: 16px;
+  height: 16px;
+  flex: 0 0 16px;
+}
+.page-content .fp-tools > label:focus-within {
+  border-color: var(--brand);
+  box-shadow: var(--focus-ring);
+}
+.page-content .fp-tools > label > input {
+  flex: 1;
+  min-width: 0;
+  height: 100% !important;
+  min-height: 0 !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  outline: none !important;
+  box-shadow: none !important;
+  background: transparent !important;
+  color: var(--text-primary);
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 400;
+}
+@media (max-width: 760px) {
+  .page-content .fp-tools > label { flex: 0 0 100%; max-width: none; }
+}
