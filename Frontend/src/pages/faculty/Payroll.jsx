@@ -824,6 +824,12 @@ export default function Payroll() {
   const title = tab === 'Payroll Processing' ? 'Payroll Processing' : tab
   const emptyText = tab === 'Payroll Processing' ? `No payroll records found for ${monthLabel(month)}.` : tab === 'Salary Records' ? 'No salary records found.' : 'No payslips found for the selected filters.'
   return <DashboardLayout><main className="faculty-payroll">{error && <p className="flm-error" role="alert">{error} <button onClick={load}>Retry</button></p>}<header className="fp-header"><div><p>HOME / FACULTY / PAYROLL</p><h1>Faculty Payroll</h1><span>Process faculty salaries using attendance, leave and payroll data.</span></div><div className="fp-summary">{[['Total Employees', rows.length], ['Processed', processed], ['On Hold', onHold], ['LOP Days', lop]].map(([label, value]) => <div key={label}><strong>{value}</strong><small>{label}</small></div>)}</div></header><section className="fp-card"><header><div><p>{title.toUpperCase()}</p><h2>{tab === 'Payroll Processing' ? monthLabel(month) : title}</h2></div><div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+          {tab === 'Payroll Processing' && (
+            <label className="fp-payroll-period">
+              <span>Payroll Period</span>
+              <input type="month" value={month} onChange={event => { setMonth(event.target.value); setPage(1) }} aria-label="Payroll Period" />
+            </label>
+          )}
           {tab === 'Salary Records' && (
             <button
               type="button"

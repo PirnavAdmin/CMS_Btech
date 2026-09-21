@@ -388,3 +388,5 @@
 @media (max-width: 760px) {
   .page-content .fp-tools > label { flex: 0 0 100%; max-width: none; }
 }
+.fp-payroll-period{display:grid;gap:4px;color:var(--text-muted);font-size:10px;font-weight:800;letter-spacing:.08em;text-transform:uppercase}.fp-payroll-period input{height:38px;padding:0 10px;border:1px solid var(--border-strong);border-radius:7px;background:var(--surface);color:var(--text-primary);font:inherit;font-size:13px;font-weight:700;letter-spacing:0;text-transform:none}
+.fp-card>header>div:last-child{align-items:flex-end!important}

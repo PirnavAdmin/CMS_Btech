@@ -311,7 +311,7 @@ export default function DashboardLayout({ children }) {
           </div>
         </header>
 
-        <section className="page-content"><nav className="app-breadcrumb" aria-label="Breadcrumb"><Link to="/dashboard">Home</Link><span aria-hidden="true">/</span><span>{breadcrumbSection}</span>{pageName !== breadcrumbSection && <><span aria-hidden="true">/</span><strong>{pageName}</strong></>}</nav>{children}</section>
+        <section className="page-content">{!(pathname === '/faculty' || pathname.startsWith('/faculty/')) && <nav className="app-breadcrumb" aria-label="Breadcrumb"><Link to="/dashboard">Home</Link><span aria-hidden="true">/</span><span>{breadcrumbSection}</span>{pageName !== breadcrumbSection && <><span aria-hidden="true">/</span><strong>{pageName}</strong></>}</nav>}{children}</section>
         <DeactivationBlockedDialog />
 
         {/* Logout Confirmation Modal */}
