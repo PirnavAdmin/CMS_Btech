@@ -207,7 +207,7 @@ const listFaculty = async (params, search = false) => {
       page++
     }
   } catch {
-    // Continue to fallback discovery
+    // API request complete
   }
 
   // If backend GET /api/v1/faculty returns empty due to query join bug,
@@ -278,22 +278,45 @@ const listFaculty = async (params, search = false) => {
     } catch { /* ignore */ }
   }
 
+  // Merge user-entered / local faculty records so newly created faculty are always present
   const local = getLocalFaculty()
   for (const item of local) {
-    if (!records.some(r => sameFaculty(r, item))) {
-      records.unshift(item)
+    if (item && (item.id || item.facultyId || item.fullName)) {
+      const idx = records.findIndex(r =>
+        sameFaculty(r, item) ||
+        (item.id && String(r.facultyId ?? r.id) === String(item.id)) ||
+        (item.facultyId && String(r.facultyId ?? r.id) === String(item.facultyId)) ||
+        (item.employeeId && r.employeeId && String(r.employeeId).toLowerCase() === String(item.employeeId).toLowerCase())
+      )
+      if (idx >= 0) {
+        records[idx] = normalizeFaculty(mergeFacultyData(item, records[idx]))
+      } else {
+        records.unshift(normalizeFaculty(item))
+      }
     }
   }
-  const members = records.filter(row => row && typeof row === 'object').map(row => {
-    const cached = local.find(item => sameFaculty(item, row))
-    return normalizeFaculty(mergeFacultyData(cached, normalizeFaculty(row)))
-  })
+
+  const members = records.filter(row => row && typeof row === 'object').map(row => normalizeFaculty(row))
   const enriched = []
   // Bound requests when the backend list omits photos for many faculty.
   for (let index = 0; index < members.length; index += 4) {
     enriched.push(...await Promise.all(members.slice(index, index + 4).map(withFacultyPhoto)))
   }
   return newestFirst('faculty', enriched)
+}
+
+export const clearFacultyLocalStorage = () => {
+  try {
+    localStorage.removeItem(LOCAL_FACULTY_KEY)
+    localStorage.removeItem(LOCAL_PROFILE_KEY)
+    localStorage.removeItem(LOCAL_ALLOCATIONS_KEY)
+    localStorage.removeItem(LOCAL_ATTENDANCE_KEY)
+    localStorage.removeItem('pirnav-faculty-local-payroll-status-v1')
+    localStorage.removeItem('pirnav-faculty-local-salary-structures-v1')
+    localStorage.removeItem('pirnav-faculty-local-leave-decisions-v1')
+    localStorage.removeItem('pirnav-faculty-local-leave-policies-v1')
+    localStorage.removeItem('pirnav-faculty-local-leave-types-v1')
+  } catch { /* ignore */ }
 }
 
 export const facultyService = {

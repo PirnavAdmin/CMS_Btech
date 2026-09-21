@@ -12,8 +12,7 @@ import { academicYearApi, branchApi, courseApi, departmentApi, facultyMasterApi,
 import { attendancePayload, requiredNumber } from '../../services/facultyContracts'
 import { downloadServerExport } from '../../utils/exportUtils'
 import { getDefaultAcademicYear } from '../../utils/academicYearUtils'
-import { FacultyDocuments, FacultyStatus, ApiAssignmentDialog } from './FacultyApiPanels'
-import facultyService, { normalizeFaculty, mergeFacultyData } from '../../services/facultyService'
+import facultyService, { normalizeFaculty, mergeFacultyData, clearFacultyLocalStorage } from '../../services/facultyService'
 import './FacultyManagement.css'
 import './FacultyAttendance.css'
 import { localAttendanceDate, loadDailyAttendancePeriod, attendanceStatusLabel, normalizeAttendanceRow, combineAttendance } from '../../utils/facultyAttendance'
@@ -1993,7 +1992,7 @@ export default function FacultyManagement() {
           <span>HOME</span> / <span>FACULTY</span> / <strong>FACULTY MANAGEMENT</strong>
         </div>
 
-        <div className="fm-profile-top-row">
+        <div className="fm-profile-hero-card">
           <header className="fm-panel fm-profile-header">
             <div className="fm-identity">
               <Avatar faculty={selected} large />
@@ -2006,10 +2005,10 @@ export default function FacultyManagement() {
             </div>
             <div className="fm-actions">
               <button type="button" className="fm-button secondary" onClick={() => navigate('/faculty/' + selected.id + '/edit')}>
-                <FiEdit2 /> Edit
+                <FiEdit2 /> Edit Faculty
               </button>
               <button type="button" className="fm-button secondary" onClick={back}>
-                <FiArrowLeft /> Back
+                <FiArrowLeft /> Back to Directory
               </button>
             </div>
           </header>
@@ -2029,45 +2028,19 @@ export default function FacultyManagement() {
             </div>
             <div className="fm-summary-col">
               <small>Workload</small>
-              <strong className="text-primary">{load.subjects} Subjects</strong>
+              <strong className="text-primary">{load.subjects} Subjects · {load.status}</strong>
             </div>
           </div>
         </div>
 
         <div className="fm-profile-main-layout">
-          <div className="fm-profile-sections">
-            {sections.map(section => {
-              const fields = section.fields.filter(([key, , , required]) => required || key === 'employeeId' || (selected[key] !== '' && selected[key] != null))
-              return (
-                <section className="fm-panel" key={section.title}>
-                  <h2><section.icon />{section.heading}</h2>
-                  {fields.length ? (
-                    <dl className="fm-info-grid">
-                      {fields.map(([key, label]) => (
-                        <div key={key}>
-                          <dt>{label}</dt>
-                          <dd>{
-                            key === 'employeeId'
-                              ? formatFacultyDisplayCode(selected, collegeOptions, faculty)
-                              : key === 'collegeName' || key === 'collegeId'
-                              ? collegeOptions.find(c => String(c.value) === String(selected[key]))?.label || selected.collegeName || selected[key] || '—'
-                              : key === 'department' || key === 'departmentId'
-                                ? departmentOptions.find(d => String(d.value) === String(selected[key]))?.label || selected.department || selected[key] || '—'
-                                : key === 'employeeCategory' && ['Others', 'Other'].includes(selected.employeeCategory)
-                                  ? (selected.employeeCategoryOther ? `Other (${selected.employeeCategoryOther})` : 'Other')
-                                  : experienceKeys.includes(key)
-                                    ? years(selected[key])
-                                    : selected[key] || '—'
-                          }</dd>
-                        </div>
-                      ))}
-                    </dl>
-                  ) : (
-                    <p className="fm-muted">No optional contact information provided.</p>
-                  )}
-                </section>
-              )
-            })}
+          <div className="fm-profile-content-col">
+            <ProfileSections
+              data={selected}
+              collegeOptions={collegeOptions}
+              departmentOptions={departmentOptions}
+              faculty={faculty}
+            />
           </div>
 
           <section className="fm-panel fm-responsibilities-sidebar">
