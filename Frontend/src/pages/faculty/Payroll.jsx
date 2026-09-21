@@ -1,5 +1,7 @@
+import FilterPanel from '../../components/FilterPanel'
+import SearchableSelect from '../../components/SearchableSelect'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { FiCheck, FiPlus, FiChevronDown, FiChevronUp, FiDownload, FiEdit2, FiEye, FiFileText, FiFilter, FiPrinter, FiSearch, FiSlash, FiX } from 'react-icons/fi'
+import { FiCheck, FiPlus, FiDownload, FiEdit2, FiEye, FiFileText, FiPrinter, FiSearch, FiSlash, FiX } from 'react-icons/fi'
 import DashboardLayout from '../../layouts/DashboardLayout'
 import TablePagination from '../../components/TablePagination'
 import ExportMenu from '../../components/ExportMenu'
@@ -428,7 +430,7 @@ const monthLabel = value => value ? new Date(`${value}-01T00:00:00`).toLocaleDat
 const money = value => (value == null || isNaN(Number(value))) ? '—' : new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(Number(value))
 const statusClass = value => String(value || 'Draft').toLowerCase().replace(/\s+/g, '-')
 export default function Payroll() {
-  const [tab, setTab] = useState('Payroll Processing'), [month, setMonth] = useState(getDefaultPayrollMonth), [selectedIds, setSelectedIds] = useState([]), [query, setQuery] = useState(''), [filters, setFilters] = useState({ type: '', department: '', status: '' }), [showFilters, setShowFilters] = useState(false), [page, setPage] = useState(1), [selected, setSelected] = useState(null), [hold, setHold] = useState(false), [holdReason, setHoldReason] = useState(''), [editingSalary, setEditingSalary] = useState(null), [payslipItem, setPayslipItem] = useState(null)
+  const [tab, setTab] = useState('Payroll Processing'), [month, setMonth] = useState(getDefaultPayrollMonth), [selectedIds, setSelectedIds] = useState([]), [query, setQuery] = useState(''), [filters, setFilters] = useState({ type: '', department: '', status: '' }), [page, setPage] = useState(1), [selected, setSelected] = useState(null), [hold, setHold] = useState(false), [holdReason, setHoldReason] = useState(''), [editingSalary, setEditingSalary] = useState(null), [payslipItem, setPayslipItem] = useState(null)
   const [payroll, setPayroll] = useState([]), [facultyList, setFacultyList] = useState([]), [loading, setLoading] = useState(true), [error, setError] = useState(''), [busy, setBusy] = useState(false), [notice, setNotice] = useState('')
   const requestVersion = useRef(0), holdLock = useRef(false)
   const load = useCallback(async () => {
@@ -833,7 +835,14 @@ export default function Payroll() {
             </button>
           )}
           <ExportMenu rows={rows} columns={exportColumns} title={title} filename={`faculty-payroll-${month}`} loading={loading || Boolean(error)} scope="All filtered results" />
-        </div></header><nav>{['Payroll Processing', 'Salary Records', 'Payslips'].map(item => <button type="button" className={tab === item ? 'active' : ''} onClick={() => { setTab(item); setPage(1); setSelectedIds([]) }} key={item}>{item}</button>)}</nav><div className="fp-tools"><label><FiSearch /><input value={query} onChange={event => { setQuery(event.target.value); setPage(1) }} aria-label="Search payroll employees" placeholder="Search employee..." /></label><button type="button" className="fp-filter-button" onClick={() => setShowFilters(value => !value)}><FiFilter /> Filters {showFilters ? <FiChevronUp /> : <FiChevronDown />}</button></div>{showFilters && <div className="fp-filters"><label>Payroll Month<input type="month" value={month} onChange={event => { setMonth(event.target.value); setPage(1) }} /></label><label>Faculty Type<select value={filters.type} onChange={event => updateFilter('type', event.target.value)}><option value="">All Faculty</option><option>Teaching</option><option>Non-Teaching</option></select></label><label>Department<select value={filters.department} onChange={event => updateFilter('department', event.target.value)}><option value="">All Departments</option>{departments.map(item => <option key={item}>{item}</option>)}</select></label>{tab !== 'Payslips' && <label>Payroll Status<select value={filters.status} onChange={event => updateFilter('status', event.target.value)}><option value="">All Statuses</option>{['Draft', 'Processed', 'Paid', 'Hold'].map(item => <option key={item}>{item}</option>)}</select></label>}<button type="button" onClick={clear}>Clear Filters</button></div>}
+        </div></header><nav>{['Payroll Processing', 'Salary Records', 'Payslips'].map(item => <button type="button" className={tab === item ? 'active' : ''} onClick={() => { setTab(item); setPage(1); setSelectedIds([]) }} key={item}>{item}</button>)}</nav><FilterPanel className="fp-filter-panel" active={Boolean(query || Object.values(filters).some(Boolean))} onClear={clear} showClearWhenOpen>
+          <div className="fp-filter-fields">
+            <label className="fp-search"><FiSearch aria-hidden="true" /><input value={query} onChange={event => { setQuery(event.target.value); setPage(1) }} aria-label="Search payroll employees" placeholder="Search employee..." /></label>
+            <div className="fp-filter-field"><span>Faculty Type</span><SearchableSelect label="Faculty Type" value={filters.type} options={[{ value: '', label: 'All Faculty' }, 'Teaching', 'Non-Teaching']} placeholder="All Faculty" onChange={value => updateFilter('type', value)} hideSearch /></div>
+            <div className="fp-filter-field"><span>Department</span><SearchableSelect label="Department" value={filters.department} options={[{ value: '', label: 'All Departments' }, ...departments]} placeholder="All Departments" onChange={value => updateFilter('department', value)} /></div>
+            {tab !== 'Payslips' && <div className="fp-filter-field"><span>Payroll Status</span><SearchableSelect label="Payroll Status" value={filters.status} options={[{ value: '', label: 'All Statuses' }, 'Draft', 'Processed', 'Paid', 'Hold']} placeholder="All Statuses" onChange={value => updateFilter('status', value)} hideSearch /></div>}
+          </div>
+        </FilterPanel>
       {tab === 'Payroll Processing' && selectedIds.length > 0 && (
         <div className="fp-bulkbar">
           <strong>{selectedIds.length} employee(s) selected</strong>
@@ -946,15 +955,6 @@ export default function Payroll() {
     )}
     {tab === 'Payslips' && (
       <>
-        <button
-          type="button"
-          className="fp-view-payslip-btn"
-          title="View Official Salary Slip"
-          aria-label={`View salary slip for ${row.fullName}`}
-          onClick={() => handleOpenPayslip(row)}
-        >
-          <FiEye />
-        </button>
         <button
           type="button"
           className="fp-print-payslip-btn"
