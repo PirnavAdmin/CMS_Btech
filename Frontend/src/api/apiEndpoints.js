@@ -10,7 +10,7 @@ if (typeof window !== 'undefined' && window.localStorage) {
 }
 
 const normalizeBaseUrl = (value = '') => value.trim().replace(/\/+$/, '')
-const DEFAULT_API_BASE_URL = 'https://clarity-math-delouse.ngrok-free.dev'
+const DEFAULT_API_BASE_URL = 'https://abreast-curling-tutor.ngrok-free.dev'
 
 export const API_BASE_URL = import.meta.env.DEV
   ? ''

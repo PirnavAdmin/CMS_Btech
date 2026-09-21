@@ -20,30 +20,36 @@ const facultyPhoto = source => ['profilePhotoUrl', 'photoUrl', 'profilePhoto', '
 export const normalizeFaculty = (source = {}) => {
   // A partially populated result (or a null item in a paginated response)
   // must not take down the Faculty directory.
-  source = mergeFacultyData(source?.employeeProfile, source?.profile, source)
+  source = mergeFacultyData(source?.employeeProfile, source?.profile, source?.data, source)
+  const id = String(first(source, ['facultyId', 'id', 'employeeProfileId', 'FacultyId', 'Id', 'EmployeeProfileId'], ''))
+  const facultyId = first(source, ['facultyId', 'id', 'employeeProfileId', 'FacultyId', 'Id', 'EmployeeProfileId'], '')
+
   return {
-  ...source,
-  id: String(first(source, ['facultyId', 'id', 'employeeProfileId'], '')),
-  facultyId: first(source, ['facultyId', 'id', 'employeeProfileId'], ''),
-  collegeId: first(source, ['collegeId', 'college_id'], ''),
-  facultyCode: first(source, ['facultyCode', 'faculty_code'], /^FAC\d+$/i.test(source.employeeId || '') ? source.employeeId : ''),
-  employeeId: facultyEmployeeCode(first(source, ['facultyId', 'id'], '')),
-  fullName: first(source, ['fullName', 'facultyName', 'name'], [source.firstName, source.lastName].filter(Boolean).join(' ')),
-  email: first(source, ['email', 'officialEmail', 'workEmail'], ''),
-  mobile: first(source, ['mobile', 'phoneNumber', 'phone', 'mobileNumber'], ''),
-  department: first(source, ['departmentName', 'department'], ''),
-  departmentId: first(source, ['departmentId'], ''),
-  designation: first(source, ['designation', 'title'], ''),
-  qualification: first(source, ['qualification', 'highestQualification'], ''),
-  experience: first(source, ['experienceYears', 'experience', 'teachingExperience'], ''),
-  employmentType: first(source, ['employmentType', 'appointmentType'], ''),
-  employmentStatus: first(source, ['employmentStatus', 'statusName'], typeof source.status === 'string' ? source.status : source.status === 0 ? 'Inactive' : 'Working'),
-  gender: first(source, ['gender', 'genderName', 'sex'], ''),
-  dob: String(first(source, ['dob', 'dateOfBirth'])).slice(0, 10), joiningDate: String(first(source, ['joiningDate', 'dateOfJoining'])).slice(0, 10),
-  photo: facultyPhoto(source),
-  emergencyName: first(source, ['emergencyName', 'emergencyContactName']), emergencyMobile: first(source, ['emergencyMobile', 'emergencyContactNumber']), relationship: first(source, ['relationship', 'emergencyContactRelation']),
-  employeeCategory: first(source, ['employeeCategory', 'category', 'facultyType'], 'Teaching'),
-  assignments: list(source.assignments ?? source.subjectAllocations),
+    ...source,
+    id,
+    facultyId,
+    collegeId: first(source, ['collegeId', 'college_id', 'CollegeId', 'collId', 'CollId'], ''),
+    facultyCode: first(source, ['facultyCode', 'faculty_code', 'FacultyCode'], /^FAC\d+$/i.test(source.employeeId || '') ? source.employeeId : ''),
+    employeeId: facultyEmployeeCode(first(source, ['facultyId', 'id', 'employeeProfileId', 'FacultyId', 'Id', 'EmployeeProfileId'], '')),
+    fullName: first(source, ['fullName', 'facultyName', 'name', 'FullName', 'FacultyName', 'userName', 'username'], [source.firstName, source.lastName].filter(Boolean).join(' ')),
+    email: first(source, ['email', 'officialEmail', 'workEmail', 'Email', 'OfficialEmail'], ''),
+    mobile: first(source, ['mobile', 'phoneNumber', 'phone', 'mobileNumber', 'Mobile', 'PhoneNumber', 'Phone', 'MobileNumber'], ''),
+    department: first(source, ['departmentName', 'department', 'DepartmentName', 'Department', 'deptName', 'DeptName'], ''),
+    departmentId: first(source, ['departmentId', 'DepartmentId', 'department_id', 'deptId', 'DeptId'], ''),
+    designation: first(source, ['designation', 'title', 'Designation', 'Title', 'designationName', 'DesignationName'], ''),
+    qualification: first(source, ['qualification', 'highestQualification', 'Qualification'], ''),
+    experience: first(source, ['experienceYears', 'experience', 'teachingExperience', 'ExperienceYears', 'Experience'], ''),
+    employmentType: first(source, ['employmentType', 'appointmentType', 'EmploymentType'], ''),
+    employmentStatus: first(source, ['employmentStatus', 'statusName', 'EmploymentStatus', 'StatusName'], typeof source.status === 'string' ? source.status : source.status === 0 ? 'Inactive' : 'Working'),
+    gender: first(source, ['gender', 'genderName', 'sex', 'Gender'], ''),
+    dob: String(first(source, ['dob', 'dateOfBirth', 'DateOfBirth', 'DOB'])).slice(0, 10),
+    joiningDate: String(first(source, ['joiningDate', 'dateOfJoining', 'DateOfJoining', 'JoiningDate'])).slice(0, 10),
+    photo: facultyPhoto(source),
+    emergencyName: first(source, ['emergencyName', 'emergencyContactName', 'EmergencyContactName']),
+    emergencyMobile: first(source, ['emergencyMobile', 'emergencyContactNumber', 'EmergencyContactNumber']),
+    relationship: first(source, ['relationship', 'emergencyContactRelation', 'EmergencyContactRelation']),
+    employeeCategory: first(source, ['employeeCategory', 'category', 'facultyType', 'EmployeeCategory', 'Category', 'FacultyType'], 'Teaching'),
+    assignments: list(source.assignments ?? source.subjectAllocations),
   }
 }
 
@@ -201,7 +207,7 @@ const listFaculty = async (params, search = false) => {
       page++
     }
   } catch {
-    // Continue to fallback discovery
+    // API request complete
   }
 
   // If backend GET /api/v1/faculty returns empty due to query join bug,
@@ -272,22 +278,45 @@ const listFaculty = async (params, search = false) => {
     } catch { /* ignore */ }
   }
 
+  // Merge user-entered / local faculty records so newly created faculty are always present
   const local = getLocalFaculty()
   for (const item of local) {
-    if (!records.some(r => sameFaculty(r, item))) {
-      records.unshift(item)
+    if (item && (item.id || item.facultyId || item.fullName)) {
+      const idx = records.findIndex(r =>
+        sameFaculty(r, item) ||
+        (item.id && String(r.facultyId ?? r.id) === String(item.id)) ||
+        (item.facultyId && String(r.facultyId ?? r.id) === String(item.facultyId)) ||
+        (item.employeeId && r.employeeId && String(r.employeeId).toLowerCase() === String(item.employeeId).toLowerCase())
+      )
+      if (idx >= 0) {
+        records[idx] = normalizeFaculty(mergeFacultyData(item, records[idx]))
+      } else {
+        records.unshift(normalizeFaculty(item))
+      }
     }
   }
-  const members = records.filter(row => row && typeof row === 'object').map(row => {
-    const cached = local.find(item => sameFaculty(item, row))
-    return normalizeFaculty(mergeFacultyData(cached, normalizeFaculty(row)))
-  })
+
+  const members = records.filter(row => row && typeof row === 'object').map(row => normalizeFaculty(row))
   const enriched = []
   // Bound requests when the backend list omits photos for many faculty.
   for (let index = 0; index < members.length; index += 4) {
     enriched.push(...await Promise.all(members.slice(index, index + 4).map(withFacultyPhoto)))
   }
   return newestFirst('faculty', enriched)
+}
+
+export const clearFacultyLocalStorage = () => {
+  try {
+    localStorage.removeItem(LOCAL_FACULTY_KEY)
+    localStorage.removeItem(LOCAL_PROFILE_KEY)
+    localStorage.removeItem(LOCAL_ALLOCATIONS_KEY)
+    localStorage.removeItem(LOCAL_ATTENDANCE_KEY)
+    localStorage.removeItem('pirnav-faculty-local-payroll-status-v1')
+    localStorage.removeItem('pirnav-faculty-local-salary-structures-v1')
+    localStorage.removeItem('pirnav-faculty-local-leave-decisions-v1')
+    localStorage.removeItem('pirnav-faculty-local-leave-policies-v1')
+    localStorage.removeItem('pirnav-faculty-local-leave-types-v1')
+  } catch { /* ignore */ }
 }
 
 export const facultyService = {

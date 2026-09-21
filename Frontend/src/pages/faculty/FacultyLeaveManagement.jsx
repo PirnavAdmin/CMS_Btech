@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { FiCheck, FiChevronDown, FiChevronUp, FiEdit2, FiEye, FiFilter, FiPlus, FiPower, FiSearch, FiSlash, FiX } from 'react-icons/fi'
+import { FiBriefcase, FiCheck, FiChevronDown, FiChevronUp, FiEdit2, FiEye, FiFilter, FiPlus, FiPower, FiSearch, FiSlash, FiX } from 'react-icons/fi'
 import DashboardLayout from '../../layouts/DashboardLayout'
 import ExportMenu from '../../components/ExportMenu'
 import TablePagination from '../../components/TablePagination'
@@ -819,8 +819,57 @@ function BalanceTable({ employee, policy, leaveTypes, getBalance }) {
     </section>
   )
 }
-function View({ title, children, onClose }) { return <div className="flm-overlay"><section className="flm-view-dialog" role="dialog" aria-modal="true"><button className="flm-close" aria-label="Close" onClick={onClose}><FiX /></button><p className="flm-eyebrow">{title.toUpperCase()}</p>{children}</section></div> }
-function Identity({ employee, status }) { return <div className="flm-view-identity"><span>{initials(employee?.fullName)}</span><div><h2>{employee?.fullName}</h2><p className="flm-view-meta">{employee?.employeeId} <b>•</b> {typeOf(employee)}</p><p className="flm-view-meta">{employee?.designation} <b>•</b> {employee?.department}</p></div>{status && <Status value={status} />}</div> }
+function View({ title, children, onClose }) {
+  return (
+    <div className="flm-overlay" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
+      <section className="flm-view-dialog shared-view-dialog" role="dialog" aria-modal="true" style={{ maxWidth: '860px' }}>
+        <header className="shared-view-dialog__header">
+          <div className="shared-view-dialog__heading">
+            <div className="shared-view-dialog__icon-badge">
+              <FiBriefcase />
+            </div>
+            <div>
+              <h2 className="shared-view-dialog__title">{title}</h2>
+              <p className="shared-view-dialog__subtitle">Faculty Leave Management & Records</p>
+            </div>
+          </div>
+          <div className="shared-view-dialog__actions">
+            <button type="button" className="shared-view-dialog__close-btn" aria-label="Close" title="Close" onClick={onClose}>
+              <FiX size={18} />
+            </button>
+          </div>
+        </header>
+        <div className="shared-view-dialog__body flm-view-body" style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+          {children}
+        </div>
+        <footer className="shared-view-dialog__footer">
+          <button type="button" className="erp-btn erp-btn--secondary" onClick={onClose}>
+            Close
+          </button>
+        </footer>
+      </section>
+    </div>
+  )
+}
+
+function Identity({ employee, status }) {
+  return (
+    <div className="view-modal-banner">
+      <div className="view-modal-avatar">
+        {initials(employee?.fullName)}
+      </div>
+      <div className="view-modal-header-info">
+        <div className="view-modal-badges">
+          {employee?.employeeId && <span className="view-modal-badge">{employee.employeeId}</span>}
+          {typeOf(employee) && <span className="view-modal-badge">{typeOf(employee)}</span>}
+          {status && <span className={`view-modal-badge-status ${status === 'Approved' ? 'active' : status === 'Pending' ? 'warning' : 'inactive'}`}>{status}</span>}
+        </div>
+        <h1 className="view-modal-title">{employee?.fullName}</h1>
+        <p className="view-modal-subtitle">{employee?.designation || 'Faculty'} · {employee?.department || 'Department'}</p>
+      </div>
+    </div>
+  )
+}
 function Info({ title, rows, columns = 2 }) { return <section className="flm-view-section"><h3>{title}</h3><div className={`flm-info-grid flm-info-grid--${columns}`}>{rows.map(([label, value]) => <div key={label}><small>{label}</small><strong>{value}</strong></div>)}</div></section> }
 function DataTable({ headers, children }) { return <div className="flm-table-wrap"><table className="flm-table"><thead><tr>{headers.map(header => <th key={header}>{header}</th>)}</tr></thead><tbody>{children}</tbody></table></div> }
 function Employee({ employee }) { return <div className="flm-employee"><span>{initials(employee.fullName)}</span><div><strong>{employee.fullName}</strong><small>{employee.employeeId}</small></div></div> }

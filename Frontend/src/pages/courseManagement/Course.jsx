@@ -402,7 +402,7 @@ function CourseForm() {
           <Field label="Total Semesters"><input value={value.semesters || ''} placeholder="Calculated from duration" readOnly /></Field>
           <Field label="Start Date"><input type="date" value={value.startDate || ''} onChange={e => update('startDate', e.target.value)} /></Field>
           <Field label="End Date"><input type="date" value={value.endDate || ''} onChange={e => update('endDate', e.target.value)} /></Field>
-          <Field label="Status *" error={errors.status}><select required value={value.status} onChange={e => update('status', e.target.value)}><option value="" disabled>Select Status</option><option value="Active">Active</option><option value="Inactive">Inactive</option></select></Field>
+          <Field label="Status *" error={errors.status}><select required value={value.status} onChange={e => update('status', e.target.value)}><option value="">Select Status</option><option value="Active">Active</option><option value="Inactive">Inactive</option></select></Field>
         </div></section>
         <footer><button type="button" className="cm-button" disabled={isSaving || saved} onClick={submit}>{isSaving ? 'Saving...' : id ? 'Save Changes' : 'Create Course'}</button></footer>
       </section>

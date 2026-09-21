@@ -781,10 +781,27 @@ export default function Attendance() {
           <ViewDialog
             exportFilename={`attendance_${selectedSession.id || selectedSession.subject}_${selectedSession.date}`}
             title={`Session Details: ${selectedSession.subject}`}
+            subtitle={`${selectedSession.course || 'B.Tech'} · ${selectedSession.branch || 'CSE'} · Semester ${selectedSession.semester || '1'}`}
+            icon={FiCalendar}
             onClose={() => setSelectedSession(null)}
           >
-            <div className="attendance-session-detail">
-              <div className="erp-detail-grid">
+            <div className="attendance-session-detail" style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              <div className="view-modal-banner">
+                <div className="view-modal-avatar">
+                  <FiCalendar />
+                </div>
+                <div className="view-modal-header-info">
+                  <div className="view-modal-badges">
+                    <span className="view-modal-badge">{selectedSession.date}</span>
+                    <span className="view-modal-badge">Section {selectedSession.section}</span>
+                    <span className="view-modal-badge-status active">{selectedSession.status || 'Marked'}</span>
+                  </div>
+                  <h1 className="view-modal-title">{selectedSession.subject}</h1>
+                  <p className="view-modal-subtitle">Faculty: {selectedSession.faculty} · Total Students: {selectedSession.totalStudents}</p>
+                </div>
+              </div>
+
+              <div className="view-modal-grid">
                 <InfoCard
                   icon={FiCalendar}
                   title="Session Information"

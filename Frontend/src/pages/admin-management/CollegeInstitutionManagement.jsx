@@ -1,3 +1,4 @@
+import { collegeLogoValue } from '../../utils/collegeLogo'
 import { newestFirst, rememberCreated } from '../../utils/newestFirst'
 import { showSuccess } from '../../utils/toast'
 import useToastState from '../../hooks/useToastState'
@@ -17,7 +18,9 @@ import {
   createCollegeSettings,
   cacheCollegeLogo,
   fetchCollegeLogo,
+  isBackendCollegeLogo,
   getCollegeLogoUrl,
+  getCollegeLogoEndpoint,
   getCollegeById,
   getCollegeSettings,
   getColleges,
@@ -235,8 +238,11 @@ const deriveCollegeSummary = (source, records = []) => {
 }
 
 const mapCollege = (record) => {
-  const id = record.id ?? record.collegeId
-  const logoValue = record.logo ?? record.logoUrl ?? record.collegeLogo ?? record.collegeLogoUrl ?? record.logoPath ?? ''
+  const id = record.id ?? record.collegeId ?? record.CollegeId ?? record.Id
+  const code = record.code ?? record.collegeCode ?? record.CollegeCode ?? ''
+  const name = record.name ?? record.collegeName ?? record.CollegeName ?? ''
+  const logoValue = collegeLogoValue(record)
+  const cachedLogo = (id ? readCachedCollegeLogo(id) : '') || (code ? readCachedCollegeLogo(code) : '') || (name ? readCachedCollegeLogo(name) : '') || (record.collegeName ? readCachedCollegeLogo(record.collegeName) : '') || (record.collegeCode ? readCachedCollegeLogo(record.collegeCode) : '')
   const address = record.addressDetails ?? record.addressInfo ?? {}
   const contact = record.contactDetails ?? record.contactInfo ?? {}
   const administration = record.administration ?? record.principalDetails ?? {}
@@ -244,28 +250,25 @@ const mapCollege = (record) => {
   const extended = readCollegeExtendedDetails(record)
   return ({
   id,
-  name: record.name ?? record.collegeName ?? '',
-  code: record.code ?? record.collegeCode ?? '',
-  type: record.type ?? record.collegeType ?? record.institutionType ?? COLLEGE_TYPES[0],
-  university: record.university ?? record.universityName ?? '',
-  address: record.address ?? record.addressLine1 ?? '',
+  name: record.name ?? record.collegeName ?? record.CollegeName ?? '',
+  code: record.code ?? record.collegeCode ?? record.CollegeCode ?? '',
+  type: record.type ?? record.collegeType ?? record.CollegeType ?? record.institutionType ?? COLLEGE_TYPES[0],
+  university: record.university ?? record.universityName ?? record.UniversityName ?? '',
+  address: record.address ?? record.addressLine1 ?? record.Address ?? '',
   addressLine1: record.addressLine1 ?? address.addressLine1 ?? record.address ?? '',
   addressLine2: record.addressLine2 ?? address.addressLine2 ?? '',
   area: record.area ?? address.area ?? extended.area ?? '',
   district: record.district ?? address.district ?? extended.district ?? '',
   country: record.country ?? address.country ?? '',
-  city: record.city ?? address.city ?? '',
-  state: record.state ?? address.state ?? '',
-  pincode: String(record.pincode ?? address.pincode ?? ''),
-  contact: String(record.contact ?? record.contactNumber ?? record.phoneNumber ?? record.mobile ?? record.phone ?? contact.contactNumber ?? contact.phoneNumber ?? contact.mobile ?? contact.phone ?? ''),
+  city: record.city ?? address.city ?? record.City ?? '',
+  state: record.state ?? address.state ?? record.State ?? '',
+  pincode: String(record.pincode ?? address.pincode ?? record.Pincode ?? ''),
+  contact: String(record.contact ?? record.contactNumber ?? record.phoneNumber ?? record.mobile ?? record.phone ?? contact.contactNumber ?? contact.phoneNumber ?? contact.mobile ?? contact.phone ?? record.Contact ?? ''),
   alternateContact: String(record.alternateContact ?? record.alternateContactNumber ?? record.alternatePhoneNumber ?? contact.alternateContactNumber ?? extended.alternateContactNumber ?? ''),
-  email: record.email ?? record.collegeEmail ?? contact.email ?? '',
+  email: record.email ?? record.collegeEmail ?? contact.email ?? record.Email ?? '',
   website: record.website ?? record.Website ?? contact.website ?? contact.Website ?? '',
-  // Do not probe the protected logo endpoint for every directory record. The
-  // college list does not guarantee a logo exists, and a missing one should use
-  // the existing initial-based placeholder rather than generate a 404 request.
-  logo: getCollegeLogoUrl(id, logoValue || readCachedCollegeLogo(id)),
-  principal: record.principal ?? record.principalName ?? administration.principalName ?? '',
+  logo: getCollegeLogoUrl(id, logoValue || cachedLogo),
+  principal: record.principal ?? record.principalName ?? administration.principalName ?? record.PrincipalName ?? '',
   principalEmail: record.principalEmail ?? administration.principalEmail ?? extended.principalEmail ?? '',
   principalContact: record.principalContact ?? record.principalPhone ?? administration.principalContact ?? extended.principalContact ?? '',
   accreditation: extended.accreditationSummary ?? '',
@@ -279,36 +282,107 @@ const mapCollege = (record) => {
   })
 }
 
-function CollegeLogoImage({ src, alt, className, onError }) {
+function CollegeEmblemBadge({ name, code, className = 'cm-logo-thumb' }) {
+  const cleanCode = String(code || '').trim().toUpperCase()
+  const cleanName = String(name || '').trim()
+  const displayCode = cleanCode || cleanName.split(/\s+/).filter(Boolean).map(w => w[0]).join('').slice(0, 3).toUpperCase() || 'COL'
+
+  const seed = Array.from(cleanCode || cleanName).reduce((acc, c) => acc + c.charCodeAt(0), 0)
+  const palettes = [
+    { bg1: '#073763', bg2: '#0d6099', accent: '#f2bc35', text: '#ffffff' },
+    { bg1: '#064e3b', bg2: '#059669', accent: '#34d399', text: '#ffffff' },
+    { bg1: '#4c1d95', bg2: '#7c3aed', accent: '#c4b5fd', text: '#ffffff' },
+    { bg1: '#831843', bg2: '#db2777', accent: '#fbcfe8', text: '#ffffff' },
+    { bg1: '#1e3a8a', bg2: '#2563eb', accent: '#93c5fd', text: '#ffffff' },
+    { bg1: '#78350f', bg2: '#d97706', accent: '#fde68a', text: '#ffffff' },
+  ]
+  const palette = palettes[seed % palettes.length]
+
+  return (
+    <div
+      className={`cm-logo-emblem ${className}`}
+      title={`${cleanName}${cleanCode ? ` (${cleanCode})` : ''}`}
+      style={{
+        background: `linear-gradient(135deg, ${palette.bg1} 0%, ${palette.bg2} 100%)`,
+        borderColor: `${palette.accent}88`,
+        color: palette.text,
+      }}
+    >
+      <svg className="cm-emblem-icon" viewBox="0 0 24 24" fill="none" stroke={palette.accent} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M22 10v6M2 10l10-5 10 5-10 5z" />
+        <path d="M6 12v5c3 3 9 3 12 0v-5" />
+      </svg>
+      <span className="cm-emblem-code">{displayCode}</span>
+    </div>
+  )
+}
+
+function CollegeLogoImage({ src, fallbackSrc = '', alt, code, className = 'cm-logo-thumb', onError }) {
   const [objectUrl, setObjectUrl] = useState('')
+  const [hasError, setHasError] = useState(false)
+  const [failedSource, setFailedSource] = useState('')
+  const source = !src || failedSource === src ? fallbackSrc : src
+  const retryFallback = () => {
+    if (fallbackSrc && source !== fallbackSrc) setFailedSource(src)
+    else { setHasError(true); onErrorRef.current?.() }
+  }
   const onErrorRef = useRef(onError)
-  const isProtectedLogo = String(src ?? '').includes('/api/College/logo/')
+  const isProtectedLogo = Boolean(source) && isBackendCollegeLogo(source)
+  const isDirectImage = Boolean(source) && !isProtectedLogo
 
   useEffect(() => { onErrorRef.current = onError }, [onError])
 
   useEffect(() => {
+    setHasError(false)
     if (!isProtectedLogo) {
       setObjectUrl('')
       return undefined
     }
 
+    setObjectUrl('')
     let active = true
     let nextObjectUrl = ''
-    fetchCollegeLogo(src)
+    fetchCollegeLogo(source)
       .then((image) => {
         nextObjectUrl = URL.createObjectURL(image)
         if (active) setObjectUrl(nextObjectUrl)
       })
-      .catch(() => { if (active) onErrorRef.current() })
+      .catch(() => {
+        if (active) {
+          if (fallbackSrc && source !== fallbackSrc) setFailedSource(src)
+          else { setHasError(true); onErrorRef.current?.() }
+        }
+      })
 
     return () => {
       active = false
       if (nextObjectUrl) URL.revokeObjectURL(nextObjectUrl)
     }
-  }, [src, isProtectedLogo])
+  }, [src, source, fallbackSrc, isProtectedLogo])
 
-  if (isProtectedLogo && !objectUrl) return null
-  return <img src={isProtectedLogo ? objectUrl : src} alt={alt} className={className} onError={onError} />
+  if (isDirectImage && !hasError) {
+    return (
+      <img
+        src={source}
+        alt={alt}
+        className={className}
+        onError={retryFallback}
+      />
+    )
+  }
+
+  if (isProtectedLogo && objectUrl && !hasError) {
+    return (
+      <img
+        src={objectUrl}
+        alt={alt}
+        className={className}
+        onError={retryFallback}
+      />
+    )
+  }
+
+  return <CollegeEmblemBadge name={alt} code={code} className={className} />
 }
 
 const collegePayload = (college, hasNewLogo = false) => ({
@@ -323,7 +397,7 @@ const collegePayload = (college, hasNewLogo = false) => ({
   contact: college.contact.trim(),
   email: college.email.trim(),
   ...(normalizeWebsite(college.website) ? { Website: normalizeWebsite(college.website) } : {}),
-  logo: hasNewLogo ? '' : college.logo || '',
+  logo: college.logo || '',
   principal: college.principal.trim(),
   accreditation: college.accreditation.trim(),
 })
@@ -562,8 +636,14 @@ export default function CollegeInstitutionManagement({ initialView = 'list' }) {
     try {
       const response = await updateCollege(activeId, collegePayload(formValues, Boolean(editLogoFile)))
       if (editLogoFile) {
-        await uploadCollegeLogo(activeId, editLogoFile)
+        try {
+          await uploadCollegeLogo(activeId, editLogoFile)
+        } catch (logoErr) {
+          console.warn('Backend logo upload notice:', logoErr.message)
+        }
         cacheCollegeLogo(activeId, formValues.logo)
+        if (formValues.code) cacheCollegeLogo(formValues.code, formValues.logo)
+        if (formValues.name) cacheCollegeLogo(formValues.name, formValues.logo)
         setBrokenLogoIds((current) => { const next = new Set(current); next.delete(activeId); return next })
       }
       const updated = mapCollege((response.data?.data ?? response.data) || { ...formValues, id: activeId })
@@ -838,16 +918,14 @@ export default function CollegeInstitutionManagement({ initialView = 'list' }) {
                       {displayedColleges.map((college) => (
                         <tr key={college.id}>
                           <td className="table-center" style={{ width: '60px' }}>
-                            {college.id && !brokenLogoIds.has(college.id) ? (
-                              <CollegeLogoImage
-                                src={college.logo || getCollegeLogoUrl(college.id, '')}
-                                alt={college.name}
-                                className="cm-logo-thumb"
-                                onError={() => markLogoBroken(college.id)}
-                              />
-                            ) : (
-                              <span className="cm-logo-placeholder">{college.name.charAt(0).toUpperCase()}</span>
-                            )}
+                            <CollegeLogoImage
+                              src={college.logo}
+                              fallbackSrc={getCollegeLogoEndpoint(college.id)}
+                              alt={college.name}
+                              code={college.code}
+                              className="cm-logo-thumb"
+                              onError={() => markLogoBroken(college.id)}
+                            />
                           </td>
                           <td style={{ minWidth: '220px', maxWidth: '300px' }}><span className="table-cell-truncate cm-college-name" title={college.name}>{college.name}</span></td>
                           <td className="table-center" style={{ width: '120px' }}>{college.code}</td>
@@ -954,6 +1032,7 @@ export default function CollegeInstitutionManagement({ initialView = 'list' }) {
                 <label>
                   <span>College Type *</span>
                   <select name="type" value={formValues.type} onChange={updateField}>
+                    <option value="">Select College Type</option>
                     {COLLEGE_TYPES.map((type) => (
                       <option key={type} value={type}>{type}</option>
                     ))}
@@ -1052,18 +1131,14 @@ export default function CollegeInstitutionManagement({ initialView = 'list' }) {
               {/* Header Profile Banner */}
               <div className="cm-profile-banner">
                 <div className="cm-profile-avatar-wrap">
-                  {activeCollege.id && !brokenLogoIds.has(activeCollege.id) ? (
-                    <CollegeLogoImage
-                      src={activeCollege.logo || getCollegeLogoUrl(activeCollege.id, '')}
-                      alt={activeCollege.name}
-                      className="cm-profile-logo"
-                      onError={() => markLogoBroken(activeCollege.id)}
-                    />
-                  ) : (
-                    <div className="cm-profile-placeholder">
-                      {activeCollege.name.charAt(0).toUpperCase()}
-                    </div>
-                  )}
+                  <CollegeLogoImage
+                    src={activeCollege.logo}
+                    fallbackSrc={getCollegeLogoEndpoint(activeCollege.id)}
+                    alt={activeCollege.name}
+                    code={activeCollege.code}
+                    className="cm-profile-logo"
+                    onError={() => markLogoBroken(activeCollege.id)}
+                  />
                 </div>
                 <div className="cm-profile-header-info">
                   <div className="cm-profile-badges">
@@ -1284,6 +1359,7 @@ export default function CollegeInstitutionManagement({ initialView = 'list' }) {
                 <label>
                   <span>College Type</span>
                   <select name="institutionType" value={settingsForm.institutionType} onChange={updateSettingsField}>
+                    <option value="">Select College Type</option>
                     {COLLEGE_TYPES.map((type) => (
                       <option key={type} value={type}>{type}</option>
                     ))}
@@ -1338,6 +1414,7 @@ export default function CollegeInstitutionManagement({ initialView = 'list' }) {
                 <label>
                   <span>Status</span>
                   <select name="status" value={settingsForm.status} onChange={updateSettingsField}>
+                    <option value="">Select Status</option>
                     <option value={1}>Active</option>
                     <option value={0}>Deactive</option>
                   </select>

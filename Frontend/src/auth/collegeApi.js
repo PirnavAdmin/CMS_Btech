@@ -1,5 +1,6 @@
+import { resolveCollegeLogo } from '../utils/collegeLogo'
 const cleanUrl = (url) => (url || "").replace(/\/+$/, "");
-const DEFAULT_API_BASE_URL = "https://clarity-math-delouse.ngrok-free.dev";
+const DEFAULT_API_BASE_URL = "https://abreast-curling-tutor.ngrok-free.dev";
 
 const friendlyValidationMessage = (errors) => {
   if (!errors || typeof errors !== "object") return "";
@@ -168,27 +169,52 @@ export const uploadCollegeLogo = (collegeId, logoFile) => {
 // a non-empty server logo always remains the preferred value.
 const collegeLogoCacheKey = (collegeId) => `pirnav-college-logo-${collegeId}`;
 export const readCachedCollegeLogo = (collegeId) => {
-  try { return collegeId ? localStorage.getItem(collegeLogoCacheKey(collegeId)) || '' : '' } catch { return '' }
+  try {
+    if (!collegeId) return "";
+    const key = String(collegeId).trim();
+    return (
+      localStorage.getItem(collegeLogoCacheKey(key)) ||
+      localStorage.getItem(`college-logo-${key}`) ||
+      localStorage.getItem(collegeLogoCacheKey(key.toLowerCase())) ||
+      localStorage.getItem(collegeLogoCacheKey(key.toUpperCase())) ||
+      localStorage.getItem(`college-logo-${key.toLowerCase()}`) ||
+      localStorage.getItem(`college-logo-${key.toUpperCase()}`) ||
+      ""
+    );
+  } catch {
+    return "";
+  }
 };
 export const cacheCollegeLogo = (collegeId, logo) => {
   try {
     if (!collegeId) return;
-    if (logo) localStorage.setItem(collegeLogoCacheKey(collegeId), logo);
-    else localStorage.removeItem(collegeLogoCacheKey(collegeId));
-  } catch { /* The uploaded server logo remains available when storage is unavailable. */ }
+    const key = String(collegeId).trim();
+    if (logo) {
+      localStorage.setItem(collegeLogoCacheKey(key), logo);
+      localStorage.setItem(`college-logo-${key}`, logo);
+      localStorage.setItem(collegeLogoCacheKey(key.toLowerCase()), logo);
+      localStorage.setItem(collegeLogoCacheKey(key.toUpperCase()), logo);
+      localStorage.setItem(`college-logo-${key.toLowerCase()}`, logo);
+      localStorage.setItem(`college-logo-${key.toUpperCase()}`, logo);
+    } else {
+      localStorage.removeItem(collegeLogoCacheKey(key));
+      localStorage.removeItem(`college-logo-${key}`);
+      localStorage.removeItem(collegeLogoCacheKey(key.toLowerCase()));
+      localStorage.removeItem(collegeLogoCacheKey(key.toUpperCase()));
+      localStorage.removeItem(`college-logo-${key.toLowerCase()}`);
+      localStorage.removeItem(`college-logo-${key.toUpperCase()}`);
+    }
+  } catch { /* storage fallback */ }
 };
 
-export const getCollegeLogoUrl = (collegeId, logoValue) => {
-  const logo = String(logoValue ?? "").trim();
-  if (logo) {
-    if (logo.startsWith("data:") || logo.startsWith("blob:") || /^https?:\/\//i.test(logo)) return logo;
-    // Some College API versions return a server file name/path. That path is
-    // not publicly readable; use the authenticated logo endpoint instead.
-    if (/^[A-Za-z0-9+/=\s]+$/.test(logo) && logo.replace(/\s/g, "").length > 100) {
-      return `data:image/png;base64,${logo.replace(/\s/g, "")}`;
-    }
-  }
-  return collegeId ? `${collegesBaseUrl}/api/College/logo/${encodeURIComponent(collegeId)}` : "";
+export const getCollegeLogoEndpoint = collegeId => collegeId == null || collegeId === '' ? '' : `${collegesBaseUrl}/api/College/logo/${encodeURIComponent(collegeId)}`;
+
+export const getCollegeLogoUrl = (collegeId, logoValue) => resolveCollegeLogo(logoValue || readCachedCollegeLogo(collegeId), collegesBaseUrl) || getCollegeLogoEndpoint(collegeId);
+
+export const isBackendCollegeLogo = value => {
+  const url = new URL(value, window.location.origin);
+  const backend = new URL(collegesBaseUrl || window.location.origin, window.location.origin);
+  return url.origin === backend.origin && /^\/(api|uploads|images)\//i.test(url.pathname);
 };
 
 // The logo endpoint is protected by the same bearer token as the College API.
@@ -200,7 +226,7 @@ export const fetchCollegeLogo = async (logoUrl) => {
     cache: "no-store",
     headers: {
       "ngrok-skip-browser-warning": "true",
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      ...(token && isBackendCollegeLogo(logoUrl) ? { Authorization: `Bearer ${token}` } : {}),
     },
   });
   if (!response.ok) throw new Error("Unable to load college logo.");

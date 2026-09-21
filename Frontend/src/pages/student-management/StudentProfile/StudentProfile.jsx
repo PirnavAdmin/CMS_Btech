@@ -1,4 +1,4 @@
-import { newestFirst } from '../../../utils/newestFirst'
+import { newestFirst, rememberCreated } from '../../../utils/newestFirst'
 import useToastState from '../../../hooks/useToastState'
 import { isApiResult } from '../../../utils/exportProvenance'
 import { approvedStudentProfiles, isApprovedAdmission } from '../../../utils/approvedStudentProfiles'
@@ -710,7 +710,6 @@ export default function StudentProfile() {
       college: student.admission?.college,
       batch: student.admission?.batch,
       scholarship: student.admission?.scholarship,
-      scholarshipType: student.admission?.scholarshipType,
       hostel: student.admission?.hostel,
       hostelPreference: student.admission?.hostelPreference,
       hostelRoomType: student.admission?.hostelRoomType,
@@ -734,7 +733,6 @@ export default function StudentProfile() {
       regulation: student.academic?.regulation,
       quota: student.academic?.quota,
       quotaOther: student.academic?.quotaOther,
-      entryType: student.academic?.entryType,
       studentCategory: student.academic?.studentCategory,
       documentStatuses: Object.fromEntries(
         Object.entries(student.documents || {})
@@ -745,13 +743,16 @@ export default function StudentProfile() {
         "Student profile updated from the College Management System.",
     };
     let savedThroughAdmission = false;
+    let profileUpdateSucceeded = false;
     try {
       await studentProfilesApi.update(studentId, profilePayload);
+      profileUpdateSucceeded = true;
     } catch (profileError) {
       const missingProfile =
         Number(profileError?.status) === 404 ||
         Number(profileError?.status) === 405 ||
-        /student profile not found/i.test(profileError?.message || "");
+        /profile not found/i.test(profileError?.message || "") ||
+        /not found/i.test(profileError?.message || "");
       if (!missingProfile || !admissionId) throw profileError;
 
       // Some deployments create the Student Profile projection lazily after
@@ -766,12 +767,23 @@ export default function StudentProfile() {
     const changed = (key) =>
       JSON.stringify(student[key] ?? {}) !== JSON.stringify(originalStudent[key] ?? {});
     const relatedUpdates = [
-      changed("parents") ? studentParentApi.update(studentId, student) : Promise.resolve(),
+      changed("parents")
+        ? studentParentApi.update(studentId, student).catch((err) => {
+            if (profileUpdateSucceeded && (Number(err?.status) === 404 || /not found/i.test(err?.message || ""))) return null;
+            throw err;
+          })
+        : Promise.resolve(),
       admissionId && changed("previousEducation")
-        ? studentPreviousEducationApi.update(admissionId, student.previousEducation)
+        ? studentPreviousEducationApi.update(admissionId, student.previousEducation).catch((err) => {
+            if (profileUpdateSucceeded && (Number(err?.status) === 404 || /not found/i.test(err?.message || ""))) return null;
+            throw err;
+          })
         : Promise.resolve(),
       admissionId && !savedThroughAdmission && changed("admission")
-        ? studentAdmissionApi.update(admissionId, student)
+        ? studentAdmissionApi.update(admissionId, student).catch((err) => {
+            if (profileUpdateSucceeded && (Number(err?.status) === 404 || /not found/i.test(err?.message || ""))) return null;
+            throw err;
+          })
         : Promise.resolve(),
     ];
     const relatedResults = await Promise.allSettled(relatedUpdates);
@@ -781,6 +793,8 @@ export default function StudentProfile() {
     // photo field; the API value still takes precedence whenever it is present.
     saveStoredPhoto("student-profile", studentId, p.photo);
     saveStoredPhoto("admission", admissionId, p.photo);
+    if (studentId) rememberCreated('student-profiles', studentId);
+    if (admissionId) rememberCreated('admissions', admissionId);
     await load();
     setEditing(null);
     setSelectedId(null);
@@ -832,9 +846,6 @@ export default function StudentProfile() {
               </div>
               <div className="directory-export-actions">
                 <ExportMenu rows={filtered.filter(row => row.exportVerified)} columns={profileColumns} title="Student Profiles" filename="student-profiles" loading={loading || Boolean(error)} scope="Current filtered API results (offline records excluded)" />
-                <button className="cm-button secondary" onClick={load}>
-                  <FiRefreshCw /> Refresh
-                </button>
               </div>
             </header>
             <FilterPanel
@@ -1205,11 +1216,8 @@ function Profile({ student, tab, setTab, back, edit, canEdit }) {
           ["Department", a.department],
           ["Branch", a.branch],
           ["Branch Code", a.branchCode],
-          ["Semester", a.semester],
-          ["Section", a.section],
           ["Student Category", a.studentCategory],
           ["Regulation", a.regulation],
-          ["Entry Type", a.entryType],
           ["Year of Study", a.yearOfStudy],
           ["Roll Number", a.rollNumber],
         ],
@@ -1261,7 +1269,6 @@ function Profile({ student, tab, setTab, back, edit, canEdit }) {
         icon: FiCheckCircle,
         rows: [
           ["Scholarship", admission.scholarship],
-          ["Scholarship Type", admission.scholarshipType],
           ["Hostel Accommodation", admission.hostel],
           ["Hostel Preference", admission.hostelPreference],
           ["Room Type / Beds", admission.hostelRoomType],

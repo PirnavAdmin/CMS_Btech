@@ -1,7 +1,283 @@
-.shared-view-dialog { display: flex; flex-direction: column; width: min(1120px, calc(100vw - 32px)); max-height: 90vh; padding: 0; border: 1px solid var(--border, #d7e4ee); border-radius: 14px; color: var(--text-primary, #123962); background: var(--surface, #fff); overflow: hidden; }
-.shared-view-dialog::backdrop { background: rgb(10 30 50 / 55%); }
-.shared-view-dialog > header { flex-shrink: 0; display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 14px 20px; border-bottom: 1px solid var(--border, #d7e4ee); background: var(--surface, #fff); }
-.shared-view-dialog > header h2 { margin: 0; font-size: 1.1rem; }
-.shared-view-dialog > header > button { display: grid; place-items: center; width: 36px; height: 36px; border: 1px solid var(--border, #d7e4ee); border-radius: 8px; color: inherit; background: var(--surface, #fff); cursor: pointer; }
-.shared-view-dialog > header > button:hover { border-color: var(--brand, #176fae); color: var(--brand, #176fae); }
-.shared-view-dialog__body { flex: 1; min-height: 0; overflow-y: auto; padding: 20px; }
+/* Shared Unified View Dialog & Details Modal Styles */
+.shared-view-dialog {
+  display: flex;
+  flex-direction: column;
+  width: min(860px, calc(100vw - 32px));
+  max-height: min(90vh, 760px);
+  padding: 0;
+  border: 1px solid var(--border, #e2e8f0);
+  border-radius: 14px;
+  color: var(--text-primary, #0f172a);
+  background: var(--surface, #ffffff);
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+  overflow: hidden;
+}
+
+.shared-view-dialog::backdrop {
+  background: rgba(10, 30, 50, 0.55);
+  backdrop-filter: blur(2px);
+}
+
+.shared-view-dialog__header {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 16px 22px;
+  border-bottom: 1px solid var(--border, #e2e8f0);
+  background: var(--surface, #ffffff);
+}
+
+.shared-view-dialog__heading {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+.shared-view-dialog__icon-badge {
+  width: 38px;
+  height: 38px;
+  border-radius: 9px;
+  background: rgba(2, 132, 199, 0.1);
+  color: var(--brand, #0284c7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  flex-shrink: 0;
+}
+
+.shared-view-dialog__title {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text-primary, #0f172a);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.shared-view-dialog__subtitle {
+  margin: 2px 0 0;
+  font-size: 12px;
+  color: var(--text-muted, #64748b);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.shared-view-dialog__actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.shared-view-dialog__close-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border: 1px solid var(--border, #e2e8f0);
+  border-radius: 8px;
+  background: var(--surface, #ffffff);
+  color: var(--text-secondary, #475569);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.shared-view-dialog__close-btn:hover {
+  background: var(--surface-soft, #f1f5f9);
+  color: var(--text-primary, #0f172a);
+  border-color: var(--border-strong, #cbd5e1);
+}
+
+.shared-view-dialog__body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 20px 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.shared-view-dialog__footer {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 22px;
+  border-top: 1px solid var(--border, #e2e8f0);
+  background: var(--surface-soft, #f8fafc);
+}
+
+.shared-view-dialog__footer-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+/* Reusable Banner Styles for Modals and View Pages */
+.view-modal-banner {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  padding: 18px 22px;
+  background: linear-gradient(135deg, #0f3d64 0%, #1e5a8a 100%);
+  border-radius: 12px;
+  color: #ffffff;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.08);
+}
+
+.view-modal-avatar {
+  width: 58px;
+  height: 58px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2.5px solid rgba(255, 255, 255, 0.4);
+  background: rgba(255, 255, 255, 0.2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 22px;
+  font-weight: 700;
+  color: #ffffff;
+  flex-shrink: 0;
+}
+
+.view-modal-header-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.view-modal-badges {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.view-modal-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 10px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  background: rgba(255, 255, 255, 0.18);
+  color: #ffffff;
+}
+
+.view-modal-badge-status {
+  padding: 3px 10px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.view-modal-badge-status.active {
+  background: #10b981;
+  color: #ffffff;
+}
+
+.view-modal-badge-status.inactive {
+  background: #ef4444;
+  color: #ffffff;
+}
+
+.view-modal-badge-status.warning {
+  background: #f59e0b;
+  color: #ffffff;
+}
+
+.view-modal-title {
+  margin: 0 0 3px;
+  font-size: 18px;
+  font-weight: 700;
+  color: #ffffff !important;
+}
+
+.view-modal-subtitle {
+  margin: 0;
+  font-size: 12.5px;
+  color: rgba(255, 255, 255, 0.88) !important;
+}
+
+/* Reusable 2-Column Info Cards Grid */
+.view-modal-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
+@media (max-width: 640px) {
+  .view-modal-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.view-modal-card {
+  border: 1px solid var(--border, #e2e8f0);
+  border-radius: 10px;
+  background: var(--surface, #ffffff);
+  padding: 16px 18px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
+}
+
+.view-modal-card-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding-bottom: 10px;
+  margin-bottom: 12px;
+  border-bottom: 1px solid var(--border, #e2e8f0);
+  color: var(--brand, #176fae);
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.view-modal-card-header h3 {
+  margin: 0;
+  font-size: 13.5px;
+  font-weight: 700;
+  color: var(--text-primary, #0f172a);
+}
+
+.view-modal-fields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px 14px;
+}
+
+.view-modal-field {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.view-modal-field.full-width {
+  grid-column: 1 / -1;
+}
+
+.view-modal-label {
+  font-size: 10.5px;
+  font-weight: 650;
+  color: var(--text-muted, #64748b);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.view-modal-value {
+  font-size: 13px;
+  font-weight: 650;
+  color: var(--text-primary, #1e293b);
+  word-break: break-word;
+}

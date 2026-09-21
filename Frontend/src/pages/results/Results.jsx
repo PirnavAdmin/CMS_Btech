@@ -592,6 +592,7 @@ export default function Results() {
                     value={entryScope.examType}
                     onChange={(e) => setEntryScope(prev => ({ ...prev, examType: e.target.value }))}
                   >
+                    <option value="">Select Exam Type</option>
                     <option value="End Semester Regular Exam">End Semester Regular Exam</option>
                     <option value="Supplementary Exam">Supplementary Exam</option>
                     <option value="Improvement Exam">Improvement Exam</option>
@@ -808,10 +809,27 @@ export default function Results() {
           <ViewDialog
             exportFilename={`result_${selectedSheet.id || selectedSheet.subjectCode}`}
             title={`Result Sheet: ${selectedSheet.subjectName}`}
+            subtitle={`${selectedSheet.course || 'B.Tech'} · ${selectedSheet.branch || 'CSE'} · Semester ${selectedSheet.semester || '1'}`}
+            icon={FiBookOpen}
             onClose={() => setSelectedSheet(null)}
           >
-            <div className="results-sheet-detail">
-              <div className="erp-detail-grid">
+            <div className="results-sheet-detail" style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              <div className="view-modal-banner">
+                <div className="view-modal-avatar">
+                  <FiBookOpen />
+                </div>
+                <div className="view-modal-header-info">
+                  <div className="view-modal-badges">
+                    <span className="view-modal-badge">Code: {selectedSheet.subjectCode}</span>
+                    <span className="view-modal-badge">{selectedSheet.examType}</span>
+                    <span className="view-modal-badge-status active">{selectedSheet.status || 'Published'}</span>
+                  </div>
+                  <h1 className="view-modal-title">{selectedSheet.subjectName}</h1>
+                  <p className="view-modal-subtitle">Credits: {selectedSheet.credits} · Section {selectedSheet.section} · Total: {selectedSheet.totalStudents} Students</p>
+                </div>
+              </div>
+
+              <div className="view-modal-grid">
                 <InfoCard
                   icon={FiBookOpen}
                   title="Subject Information"

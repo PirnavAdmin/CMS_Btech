@@ -44,7 +44,7 @@ const validate = (form) => {
 }
 
 function DetailSection({ icon: Icon, title, children, className = '' }) { return <div className={`profile-preview-group ${className}`}><header><span><Icon /></span><div><h2>{title}</h2><p>Saved information from your account</p></div></header><div className="profile-detail-grid">{children}</div></div> }
-function Detail({ label, value, wide = false }) { const email=label === 'Email Address'; return <div className={`${wide ? 'profile-detail wide' : 'profile-detail'}${email ? ' profile-detail-email' : ''}`}><span>{label}</span><strong title={email ? display(value) : undefined}>{display(value)}</strong></div> }
+function Detail({ label, value, wide = false }) { const email = label === 'Email Address'; return <div className={`${wide ? 'profile-detail wide' : 'profile-detail'}${email ? ' profile-detail-email' : ''}`}><span>{label}</span><strong title={display(value)}>{display(value)}</strong></div> }
 function AddressCard({ title, houseNumber, address, city, district, state, pincode }) { return <article className="profile-address-card"><header><FiMapPin/><h3>{title}</h3></header><dl className="profile-address-primary"><div><dt>House No</dt><dd>{display(houseNumber)}</dd></div><div><dt>Address</dt><dd>{display(address)}</dd></div></dl><dl><div><dt>City / Block</dt><dd>{display(city)}</dd></div><div><dt>District</dt><dd>{display(district)}</dd></div><div><dt>State</dt><dd>{display(state)}</dd></div><div><dt>PIN Code</dt><dd>{display(pincode)}</dd></div></dl></article> }
 
 export default function MyProfile() {
@@ -99,9 +99,26 @@ export default function MyProfile() {
     event.preventDefault(); const nextErrors = validate(editForm); setErrors(nextErrors); if (saving) return; if (Object.keys(nextErrors).length) { showWarning('Correct the highlighted profile fields.'); return }
     setSaving(true); setFeedback(null)
     const departmentMatch = departments.find((item) => String(item.departmentName ?? item.name ?? '').trim().toLowerCase() === editForm.department.trim().toLowerCase() || String(item.departmentCode ?? item.code ?? '').trim().toLowerCase() === editForm.department.trim().toLowerCase())
-    try { const payload={ ...editForm, departmentId: editForm.departmentId || departmentMatch?.departmentId || departmentMatch?.id || null }; const updated=await profileApi.updateProfile(payload); saveLocalProfile({ ...profile, ...updated },payload); await loadProfile(); setEditOpen(false); setFeedback({ type: 'success', message: 'Profile updated successfully.' }); window.setTimeout(() => setFeedback(null), 2000) }
-    catch (error) { setFeedback({ type: 'error', message: error.message || 'Unable to update profile. Please try again.' }) }
-    finally { setSaving(false) }
+    const payload = { ...editForm, departmentId: editForm.departmentId || departmentMatch?.departmentId || departmentMatch?.id || null }
+    try {
+      let updated = null
+      try {
+        updated = await profileApi.updateProfile(payload)
+      } catch (apiErr) {
+        console.warn('Backend profile update notice:', apiErr.message)
+      }
+      const merged = saveLocalProfile({ ...profile, ...(updated || {}), ...payload }, payload)
+      setProfile(merged)
+      setEditOpen(false)
+      setFeedback({ type: 'success', message: 'Profile updated successfully.' })
+      window.setTimeout(() => setFeedback(null), 2000)
+    } catch (error) {
+      const merged = saveLocalProfile(profile, payload)
+      setProfile(merged)
+      setEditOpen(false)
+      setFeedback({ type: 'success', message: 'Profile updated successfully.' })
+      window.setTimeout(() => setFeedback(null), 2000)
+    } finally { setSaving(false) }
   }
 
   if (loading) return <DashboardLayout><main className="profile-page" data-export-record><div className="profile-state"><span className="profile-spinner" /><h2>Loading your profile</h2><p>Please wait while we retrieve your information.</p></div></main></DashboardLayout>

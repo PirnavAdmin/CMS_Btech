@@ -70,20 +70,8 @@ const saveLocalSalaryStructure = (item, salaryData) => {
   } catch {}
 }
 
-const calculateDefaultSalaryBreakdown = (designation, type) => {
-  const isNonTeaching = String(type || '').toLowerCase().includes('non-teaching')
-  const desig = String(designation || '').toLowerCase()
-  if (isNonTeaching) return { basicSalary: 20000, hra: 8000, da: 4000, allowances: 3000, grossSalary: 35000, pf: 2400, tax: 1100, deductions: 3500, netSalary: 31500 }
-  if (desig.includes('hod') || desig.includes('head') || (desig.includes('professor') && !desig.includes('assistant') && !desig.includes('associate'))) {
-    return { basicSalary: 70000, hra: 28000, da: 14000, allowances: 8000, grossSalary: 120000, pf: 8400, tax: 3600, deductions: 12000, netSalary: 108000 }
-  }
-  if (desig.includes('associate')) {
-    return { basicSalary: 50000, hra: 20000, da: 10000, allowances: 5000, grossSalary: 85000, pf: 6000, tax: 2500, deductions: 8500, netSalary: 76500 }
-  }
-  if (desig.includes('assistant') || desig.includes('senior')) {
-    return { basicSalary: 38000, hra: 15200, da: 7600, allowances: 4200, grossSalary: 65000, pf: 4560, tax: 1940, deductions: 6500, netSalary: 58500 }
-  }
-  return { basicSalary: 30000, hra: 12000, da: 5000, allowances: 3000, grossSalary: 50000, pf: 3600, tax: 1400, deductions: 5000, netSalary: 45000 }
+const calculateDefaultSalaryBreakdown = () => {
+  return { basicSalary: 0, hra: 0, da: 0, allowances: 0, grossSalary: 0, pf: 0, tax: 0, deductions: 0, netSalary: 0 }
 }
 
 const calculateEmployeeAttendanceAndLeaves = (fac, m, allAttendance = [], allRequests = [], allDecisions = {}, allTypes = []) => {

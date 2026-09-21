@@ -3,8 +3,8 @@
   align-items: center;
   justify-content: space-between;
   flex-wrap: wrap;
-  gap: 16px;
-  margin-bottom: 20px;
+  gap: 12px;
+  margin-bottom: 12px;
 }
 
 .erp-page-header__left {
@@ -16,7 +16,7 @@
   display: flex;
   align-items: center;
   gap: 6px;
-  margin-bottom: 6px;
+  margin-bottom: 4px;
   color: var(--brand, #176fae);
   font-size: 0.7rem;
   font-weight: 800;
@@ -27,7 +27,7 @@
 .erp-page-header__title {
   margin: 0;
   color: var(--text-primary, #132a3e);
-  font-size: clamp(1.5rem, 2.2vw, 1.85rem);
+  font-size: clamp(1.35rem, 1.8vw, 1.65rem);
   font-weight: 800;
   line-height: 1.2;
   letter-spacing: -0.025em;
@@ -35,10 +35,10 @@
 
 .erp-page-header__subtitle {
   max-width: 680px;
-  margin: 6px 0 0;
+  margin: 3px 0 0;
   color: var(--text-muted, #6d8294);
-  font-size: 0.86rem;
-  line-height: 1.45;
+  font-size: 0.82rem;
+  line-height: 1.4;
 }
 
 .erp-page-header__right {

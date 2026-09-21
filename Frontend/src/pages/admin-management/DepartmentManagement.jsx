@@ -394,7 +394,7 @@ export default function DepartmentManagement() {
 
   return (
     <DashboardLayout>
-      <div className="management-page department-management">
+      <main className="department-management">
         {(screen === 'list' || screen === 'assign-hod') && (
           <>
             <PageHeader
@@ -623,7 +623,6 @@ export default function DepartmentManagement() {
         {screen === 'form' && (
           <div className="erp-form-page">
             <PageHeader
-              breadcrumb="Institution Management / Departments"
               title={form.id ? 'Edit Department' : 'Add Department'}
               subtitle="Enter the department information, code, college association, and status."
             >
@@ -632,7 +631,7 @@ export default function DepartmentManagement() {
               </button>
             </PageHeader>
 
-            <section className="erp-directory-card" style={{ maxWidth: '800px', margin: '0 auto', padding: '24px' }}>
+            <section className="erp-directory-card department-form-card-container">
               <form onSubmit={save}>
                 <div className="department-form-grid">
                   <label>
@@ -669,7 +668,7 @@ export default function DepartmentManagement() {
                       aria-invalid={Boolean(form.collegeId && !colleges.find(college => String(college.id) === String(form.collegeNumericId ?? form.collegeId))?.active)}
                       required
                     >
-                      <option value="">Select college</option>
+                      <option value="">Select College</option>
                       {colleges.map((college) => (
                         <option key={college.id} value={college.id}>
                           {college.name}{college.active ? '' : ' (Inactive)'}
@@ -688,9 +687,28 @@ export default function DepartmentManagement() {
                       value={form.status}
                       onChange={(e) => setForm({ ...form, status: e.target.value })}
                     >
+                      <option value="">Select Status</option>
                       <option value="Active">Active</option>
                       <option value="Inactive">Inactive</option>
                     </select>
+                  </label>
+
+                  <label>
+                    <span>Start Date</span>
+                    <input
+                      type="date"
+                      value={form.startDate || ''}
+                      onChange={(e) => setForm({ ...form, startDate: e.target.value })}
+                    />
+                  </label>
+
+                  <label>
+                    <span>End Date</span>
+                    <input
+                      type="date"
+                      value={form.endDate || ''}
+                      onChange={(e) => setForm({ ...form, endDate: e.target.value })}
+                    />
                   </label>
 
                   <label className="full-width">
@@ -699,21 +717,19 @@ export default function DepartmentManagement() {
                       value={form.description}
                       onChange={(e) => setForm({ ...form, description: e.target.value })}
                       placeholder="Describe this organizational department..."
-                      rows={3}
+                      rows={2}
                     />
                   </label>
-                  <label><span>Start Date</span><input type="date" value={form.startDate || ''} onChange={(e) => setForm({ ...form, startDate: e.target.value })} /></label>
-                  <label><span>End Date</span><input type="date" value={form.endDate || ''} onChange={(e) => setForm({ ...form, endDate: e.target.value })} /></label>
                 </div>
 
                 {isDetailsLoading && <p className="department-no-results">Loading department details...</p>}
                 {error && (
-                  <p className="department-error" role="alert" style={{ marginTop: '16px' }}>
+                  <p className="department-error" role="alert" style={{ marginTop: '10px' }}>
                     {error}
                   </p>
                 )}
 
-                <div className="erp-form-actions" style={{ marginTop: '24px', display: 'flex', justifyContent: 'flex-end', gap: '12px' }}>
+                <div className="erp-form-actions">
                   <button type="button" className="erp-btn erp-btn--secondary" onClick={closeToList} disabled={isSaving}>
                     Cancel
                   </button>
@@ -864,7 +880,7 @@ export default function DepartmentManagement() {
             confirmLabel={pendingStatus.nextStatus === 'Active' ? 'Activate Department' : 'Deactivate Department'}
           />
         )}
-      </div>
+      </main>
     </DashboardLayout>
   );
 }

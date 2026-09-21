@@ -18,15 +18,31 @@ export const loadDailyAttendancePeriod = async (getDaily, from, to, lastDate = l
   return records
 }
 export const normalizeAttendanceRow = (row, { daily = false, date = '' } = {}) => {
-  const statusText = String(row.statusName || row.attendanceStatus || row.status || 'Not Marked').trim()
+  if (!row || typeof row !== 'object') return row
+  const statusText = String(row.statusName || row.attendanceStatus || row.status || row.StatusName || row.AttendanceStatus || row.Status || 'Not Marked').trim()
   const statuses = { p: 'Present', present: 'Present', a: 'Absent', absent: 'Absent', l: 'Late', late: 'Late', hd: 'Half Day', halfday: 'Half Day', ol: 'On Leave', onleave: 'On Leave', leave: 'On Leave', lop: 'LOP', lossofpay: 'LOP', notmarked: 'Not Marked', unmarked: 'Not Marked', pending: 'Not Marked' }
-  const attendanceId = row.attendanceId || row.facultyAttendanceId || (!daily ? row.id : null)
-  const time = value => String(value || '').includes('T') ? String(value).split('T')[1].slice(0, 5) : value || ''
-  return { ...row, id: attendanceId || '', attendanceId: attendanceId || null,
-    facultyId: String(row.facultyId ?? row.faculty?.facultyId ?? row.faculty?.id ?? row.employeeProfileId ?? row.facultyProfileId ?? row.employeeProfile?.id ?? (daily ? row.id : '') ?? ''),
-    date: String(row.attendanceDate || row.date || date).slice(0, 10),
+  const attendanceId = row.attendanceId ?? row.AttendanceId ?? row.facultyAttendanceId ?? row.FacultyAttendanceId ?? (!daily ? (row.id ?? row.Id) : null)
+  const time = value => {
+    if (!value || value === '—') return ''
+    const str = String(value).trim()
+    return str.includes('T') ? str.split('T')[1].slice(0, 5) : str.length >= 5 ? str.slice(0, 5) : str
+  }
+  const rawFacultyId = row.facultyId ?? row.FacultyId ?? row.faculty?.facultyId ?? row.faculty?.FacultyId ?? row.faculty?.id ?? row.faculty?.Id ?? row.employeeProfileId ?? row.EmployeeProfileId ?? row.facultyProfileId ?? row.FacultyProfileId ?? row.employeeProfile?.id ?? row.employeeProfile?.Id ?? (daily ? (row.id ?? row.Id) : '') ?? ''
+  const attendanceDate = String(row.attendanceDate ?? row.AttendanceDate ?? row.date ?? row.Date ?? date).slice(0, 10)
+  const remarks = row.remarks ?? row.Remarks ?? ''
+
+  return {
+    ...row,
+    id: attendanceId || '',
+    attendanceId: attendanceId || null,
+    facultyId: String(rawFacultyId),
+    date: attendanceDate,
     status: statuses[statusText.toLowerCase().replace(/[\s_-]/g, '')] || statusText,
-    checkIn: time(row.checkIn ?? row.checkInTime), checkOut: time(row.checkOut ?? row.checkOutTime), synthetic: !attendanceId }
+    checkIn: time(row.checkIn ?? row.CheckIn ?? row.checkInTime ?? row.CheckInTime),
+    checkOut: time(row.checkOut ?? row.CheckOut ?? row.checkOutTime ?? row.CheckOutTime),
+    remarks: remarks || '—',
+    synthetic: !attendanceId,
+  }
 }
 export const combineAttendance = (...collections) => {
   const rows = new Map()

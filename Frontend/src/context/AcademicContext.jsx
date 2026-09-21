@@ -79,8 +79,22 @@ export const AcademicProvider = ({ children }) => {
 
   const getSemestersForCourse = useCallback((courseId, activeOnly = true) => {
     const list = activeOnly ? activeSemesters : semesters
-    if (!courseId) return list
-    return list.filter(s => !s.courseId || String(s.courseId) === String(courseId))
+    const filtered = !courseId ? list : list.filter(s => !s.courseId || String(s.courseId) === String(courseId))
+    const map = new Map()
+    filtered.forEach(s => {
+      const num = Number(s.semesterNumber ?? String(s.semesterName || s.name || s.id).match(/\d+/)?.[0] ?? s.id)
+      const name = s.semesterName || s.name || (num ? `Semester ${num}` : `Semester ${s.id}`)
+      const key = num || name
+      if (!map.has(key)) {
+        map.set(key, {
+          ...s,
+          id: s.id ?? key,
+          semesterNumber: num || s.semesterNumber || key,
+          semesterName: name,
+        })
+      }
+    })
+    return Array.from(map.values()).sort((a, b) => (Number(a.semesterNumber) || 0) - (Number(b.semesterNumber) || 0))
   }, [semesters, activeSemesters])
 
   const getSectionsForScope = useCallback((scope = {}, activeOnly = true) => {

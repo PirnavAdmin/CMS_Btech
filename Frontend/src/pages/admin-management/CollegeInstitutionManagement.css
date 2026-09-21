@@ -345,6 +345,61 @@
   border-radius: 8px;
   object-fit: cover;
   overflow: hidden;
+  margin: 0 auto;
+}
+
+.cm-logo-emblem {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  border: 1.5px solid rgba(242, 188, 53, 0.45);
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.12);
+  user-select: none;
+  overflow: hidden;
+  margin: 0 auto;
+  box-sizing: border-box;
+}
+
+.cm-emblem-icon {
+  width: 14px;
+  height: 14px;
+  margin-bottom: 0;
+  flex-shrink: 0;
+}
+
+.cm-emblem-code {
+  font-size: 0.52rem;
+  font-weight: 850;
+  letter-spacing: 0.03em;
+  line-height: 1;
+  text-transform: uppercase;
+  max-width: 32px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cm-profile-logo.cm-logo-emblem {
+  width: 64px;
+  height: 64px;
+  border-radius: 12px;
+  border-width: 2px;
+}
+
+.cm-profile-logo.cm-logo-emblem .cm-emblem-icon {
+  width: 24px;
+  height: 24px;
+  margin-bottom: 2px;
+}
+
+.cm-profile-logo.cm-logo-emblem .cm-emblem-code {
+  font-size: 0.72rem;
+  font-weight: 900;
+  max-width: 58px;
 }
 
 .cm-logo-placeholder {
@@ -356,6 +411,7 @@
   background: var(--brand-navy-light, #1e3a5f);
   color: #fff;
   font-weight: 700;
+  margin: 0 auto;
 }
 
 .cm-logo-preview {

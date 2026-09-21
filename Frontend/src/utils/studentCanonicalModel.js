@@ -3,7 +3,7 @@
  * Single source of truth across Add, Edit, View, Review/Approval, and Profile.
  */
 
-export const API_BASE_URL_FALLBACK = 'https://clarity-math-delouse.ngrok-free.dev'
+export const API_BASE_URL_FALLBACK = 'https://abreast-curling-tutor.ngrok-free.dev'
 
 export const apiAssetUrl = (value) => {
   if (!value || ['string', 'null', 'undefined'].includes(String(value).trim().toLowerCase())) return ''
@@ -39,6 +39,33 @@ export const referenceLabel = (...values) => {
     }
   }
   return ''
+}
+
+export const photoStorageKey = (kind, id) => `pirnav-${kind}-photo-${id}`
+
+export const readStoredPhoto = (kind, id) => {
+  try {
+    return id ? localStorage.getItem(photoStorageKey(kind, id)) || '' : ''
+  } catch {
+    return ''
+  }
+}
+
+export const saveStoredPhoto = (kind, id, photo) => {
+  try {
+    if (!id) return
+    if (photo) localStorage.setItem(photoStorageKey(kind, id), photo)
+    else localStorage.removeItem(photoStorageKey(kind, id))
+  } catch { /* storage fallback */ }
+}
+
+export const saveAdmissionPhoto = (id, photo) => {
+  saveStoredPhoto('admission', id, photo)
+  saveStoredPhoto('student-profile', id, photo)
+}
+
+export const readAdmissionPhoto = (id) => {
+  return readStoredPhoto('admission', id) || readStoredPhoto('student-profile', id)
 }
 
 export const firstPhoto = (...values) => {
@@ -200,9 +227,6 @@ export const HOSTEL_FEES = {
   'Double Sharing': 35000,
   'Triple Sharing': 28000,
   'Four Sharing': 22000,
-  '2 Bed Sharing': 55000,
-  '3 Bed Sharing': 45000,
-  '4 Bed Sharing': 38000,
 }
 export const HOSTEL_FEES_DEFAULT = HOSTEL_FEES
 
@@ -212,10 +236,6 @@ export const TRANSPORT_FEES = {
   'Route 3 - South Suburbs': 15000,
   'Route 4 - East District': 18000,
   'Route 5 - West District': 18000,
-  'Route 1': 18000,
-  'Route 2': 22000,
-  'Route 3': 26000,
-  'Route 4': 30000,
 }
 export const TRANSPORT_FEES_DEFAULT = TRANSPORT_FEES
 
@@ -719,7 +739,15 @@ export const normalizeCanonicalStudent = (source = {}) => {
       quotaOther: firstFilled(academicRaw.quotaOther, raw.quotaOther, '') ?? '',
       courseId: firstFilled(academicRaw.courseId, raw.courseId, ''),
       course: referenceLabel(academicRaw.course, academicRaw.courseName, raw.course, raw.courseName),
-      courseCode: firstFilled(academicRaw.courseCode, raw.courseCode, '') ?? '',
+      courseCode: firstFilled(
+        academicRaw.courseCode,
+        academicRaw.course?.code,
+        academicRaw.course?.courseCode,
+        raw.courseCode,
+        raw.course?.code,
+        raw.course?.courseCode,
+        ''
+      ) ?? '',
       departmentId: firstFilled(academicRaw.departmentId, raw.departmentId, ''),
       // Some profile responses only carry the department as part of the
       // selected branch/course master. Resolve those nested references for
@@ -747,7 +775,15 @@ export const normalizeCanonicalStudent = (source = {}) => {
       ),
       branchId: firstFilled(academicRaw.branchId, raw.branchId, ''),
       branch: referenceLabel(academicRaw.branch, academicRaw.branchName, raw.branch, raw.branchName),
-      branchCode: firstFilled(academicRaw.branchCode, raw.branchCode, '') ?? '',
+      branchCode: firstFilled(
+        academicRaw.branchCode,
+        academicRaw.branch?.code,
+        academicRaw.branch?.branchCode,
+        raw.branchCode,
+        raw.branch?.code,
+        raw.branch?.branchCode,
+        ''
+      ) ?? '',
       semesterId: firstFilled(academicRaw.semesterId, raw.semesterId, ''),
       semester: firstFilled(academicRaw.semester, academicRaw.semesterName, raw.semester, raw.semesterName, '') ?? '',
       sectionId: firstFilled(academicRaw.sectionId, raw.sectionId, ''),
