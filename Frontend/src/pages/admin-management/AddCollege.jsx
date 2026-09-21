@@ -215,7 +215,9 @@ export default function AddCollege() {
       const addressParts = String(record.address ?? '').split(',').map((part) => part.trim())
       const rawType = record.type ?? record.collegeType ?? record.institutionType ?? ''
       const isKnownType = TYPES.includes(rawType)
-      const loadedValues = { ...initialValues, collegeName: record.name ?? record.collegeName ?? '', collegeCode: record.code ?? record.collegeCode ?? '', collegeType: rawType && !isKnownType ? 'Other' : rawType, collegeTypeOther: rawType && !isKnownType ? rawType : '', universityName: record.university ?? record.universityName ?? '', addressLine1: record.addressLine1 ?? addressRecord.addressLine1 ?? addressParts[0] ?? '', addressLine2: record.addressLine2 ?? addressRecord.addressLine2 ?? addressParts.slice(1).join(', '), area: record.area ?? addressRecord.area ?? extended.area ?? '', district: record.district ?? addressRecord.district ?? extended.district ?? '', city: record.city ?? addressRecord.city ?? '', state: record.state ?? addressRecord.state ?? '', pincode: String(record.pincode ?? addressRecord.pincode ?? ''), country: record.country ?? addressRecord.country ?? 'India', contactNumber: String(record.contact ?? record.contactNumber ?? record.phoneNumber ?? record.mobile ?? record.phone ?? contactRecord.contactNumber ?? contactRecord.phoneNumber ?? contactRecord.mobile ?? contactRecord.phone ?? ''), alternateContactNumber: String(record.alternateContact ?? record.alternateContactNumber ?? record.alternatePhoneNumber ?? contactRecord.alternateContactNumber ?? extended.alternateContactNumber ?? ''), email: record.email ?? record.collegeEmail ?? contactRecord.email ?? '', website: record.website ?? record.Website ?? contactRecord.website ?? contactRecord.Website ?? '', principalName: record.principal ?? record.principalName ?? principalRecord.principalName ?? '', principalEmail: record.principalEmail ?? principalRecord.principalEmail ?? extended.principalEmail ?? '', principalContact: String(record.principalContact ?? record.principalPhone ?? principalRecord.principalContact ?? extended.principalContact ?? ''), accreditationBody: record.accreditationBody ?? accreditationRecord.body ?? accreditationRecord.accreditationBody ?? extended.accreditationBody ?? '', accreditationStatus: record.accreditationStatus ?? accreditationRecord.status ?? 'Not Accredited', accreditationGrade: record.accreditationGrade ?? accreditationRecord.grade ?? extended.accreditationGrade ?? '', accreditationNumber: record.accreditationNumber ?? accreditationRecord.number ?? extended.accreditationNumber ?? '', validFrom: dateInputValue(record.validFrom ?? record.accreditationValidFrom ?? accreditationRecord.validFrom ?? extended.validFrom), validUntil: dateInputValue(record.validUntil ?? record.accreditationValidUntil ?? accreditationRecord.validUntil ?? extended.validUntil), logo: record.logo || record.logoUrl || record.collegeLogo || record.collegeLogoUrl || record.logoPath || readCachedCollegeLogo(editId), logoName: record.logoName ?? extended.logoName ?? '' }
+      const loadedLogo = record.logo || record.logoUrl || record.collegeLogo || record.collegeLogoUrl || record.logoPath || record.Logo || record.LogoUrl || record.CollegeLogo || record.CollegeLogoUrl || readCachedCollegeLogo(editId) || (record.code ? readCachedCollegeLogo(record.code) : '') || (record.collegeCode ? readCachedCollegeLogo(record.collegeCode) : '') || (record.name ? readCachedCollegeLogo(record.name) : '') || (record.collegeName ? readCachedCollegeLogo(record.collegeName) : '') || ''
+      const resolvedLogo = loadedLogo ? getCollegeLogoUrl(editId, loadedLogo) : ''
+      const loadedValues = { ...initialValues, collegeName: record.name ?? record.collegeName ?? record.CollegeName ?? '', collegeCode: record.code ?? record.collegeCode ?? record.CollegeCode ?? '', collegeType: rawType && !isKnownType ? 'Other' : rawType, collegeTypeOther: rawType && !isKnownType ? rawType : '', universityName: record.university ?? record.universityName ?? record.UniversityName ?? '', addressLine1: record.addressLine1 ?? addressRecord.addressLine1 ?? addressParts[0] ?? '', addressLine2: record.addressLine2 ?? addressRecord.addressLine2 ?? addressParts.slice(1).join(', '), area: record.area ?? addressRecord.area ?? extended.area ?? '', district: record.district ?? addressRecord.district ?? extended.district ?? '', city: record.city ?? addressRecord.city ?? record.City ?? '', state: record.state ?? addressRecord.state ?? record.State ?? '', pincode: String(record.pincode ?? addressRecord.pincode ?? record.Pincode ?? ''), country: record.country ?? addressRecord.country ?? 'India', contactNumber: String(record.contact ?? record.contactNumber ?? record.phoneNumber ?? record.mobile ?? record.phone ?? contactRecord.contactNumber ?? contactRecord.phoneNumber ?? contactRecord.mobile ?? contactRecord.phone ?? record.Contact ?? ''), alternateContactNumber: String(record.alternateContact ?? record.alternateContactNumber ?? record.alternatePhoneNumber ?? contactRecord.alternateContactNumber ?? extended.alternateContactNumber ?? ''), email: record.email ?? record.collegeEmail ?? contactRecord.email ?? record.Email ?? '', website: record.website ?? record.Website ?? contactRecord.website ?? contactRecord.Website ?? '', principalName: record.principal ?? record.principalName ?? principalRecord.principalName ?? record.PrincipalName ?? '', principalEmail: record.principalEmail ?? principalRecord.principalEmail ?? extended.principalEmail ?? '', principalContact: String(record.principalContact ?? record.principalPhone ?? principalRecord.principalContact ?? extended.principalContact ?? ''), accreditationBody: record.accreditationBody ?? accreditationRecord.body ?? accreditationRecord.accreditationBody ?? extended.accreditationBody ?? '', accreditationStatus: record.accreditationStatus ?? accreditationRecord.status ?? 'Not Accredited', accreditationGrade: record.accreditationGrade ?? accreditationRecord.grade ?? extended.accreditationGrade ?? '', accreditationNumber: record.accreditationNumber ?? accreditationRecord.number ?? extended.accreditationNumber ?? '', validFrom: dateInputValue(record.validFrom ?? record.accreditationValidFrom ?? accreditationRecord.validFrom ?? extended.validFrom), validUntil: dateInputValue(record.validUntil ?? record.accreditationValidUntil ?? accreditationRecord.validUntil ?? extended.validUntil), logo: resolvedLogo, logoName: record.logoName ?? extended.logoName ?? '' }
       setValues(loadedValues)
       originalEditValues.current = loadedValues
     }).catch((error) => { if (active) setNotice(error.message || 'Unable to load college details.', 'error') }).finally(() => { if (active) setLoadingCollege(false) })
@@ -393,7 +395,7 @@ export default function AddCollege() {
         addressLine1: values.addressLine1.trim(), addressLine2: values.addressLine2.trim(),
         area: values.area.trim(), district: values.district.trim(), country: values.country.trim(),
         city: values.city.trim(), state: values.state.trim(), pincode: values.pincode.trim(), contact: values.contactNumber,
-        email: values.email.trim(), logo: logoFile ? '' : values.logo, clearLogo: Boolean(editId && removeExistingLogo && !logoFile), logoName: values.logoName, principal: values.principalName.trim(),
+        email: values.email.trim(), logo: values.logo || '', clearLogo: Boolean(editId && removeExistingLogo && !logoFile), logoName: values.logoName, principal: values.principalName.trim(),
         accreditation: [values.accreditationBody, values.accreditationGrade, values.accreditationNumber].filter(Boolean).join(' · '),
         accreditationStatus: values.accreditationStatus, accreditationBody: values.accreditationBody.trim(),
         accreditationGrade: values.accreditationGrade.trim(), accreditationNumber: values.accreditationNumber.trim(),
@@ -413,11 +415,21 @@ export default function AddCollege() {
       } else if (editId) {
         await updateCollege(editId, college)
       }
-      if (logoFile) {
-        await uploadCollegeLogo(collegeId, logoFile)
+      if (values.logo) {
+        if (logoFile) {
+          try {
+            await uploadCollegeLogo(collegeId, logoFile)
+          } catch (logoErr) {
+            console.warn('Backend logo upload notice:', logoErr.message)
+          }
+        }
         cacheCollegeLogo(collegeId, values.logo)
+        if (values.collegeCode) cacheCollegeLogo(values.collegeCode, values.logo)
+        if (values.collegeName) cacheCollegeLogo(values.collegeName, values.logo)
       } else if (editId && removeExistingLogo) {
         cacheCollegeLogo(collegeId, '')
+        if (values.collegeCode) cacheCollegeLogo(values.collegeCode, '')
+        if (values.collegeName) cacheCollegeLogo(values.collegeName, '')
       }
 
       // The list route fetches from the backend when it mounts, so navigating
@@ -470,7 +482,23 @@ export default function AddCollege() {
         <Field label="End Date" name="endDate" type="date" values={values} errors={errors} touched={touched} onChange={update} />
         <div className="ac-upload ac-span-2" onDragOver={(e) => e.preventDefault()} onDrop={(e) => { e.preventDefault(); selectLogo(e.dataTransfer.files[0]) }}>
           <input ref={fileRef} type="file" accept=".png,.jpg,.jpeg,.webp" onChange={(e) => selectLogo(e.target.files?.[0])} hidden />
-          {values.logo || (editId && !removeExistingLogo) ? <div className="ac-logo-preview"><img src={logoFile ? values.logo : getCollegeLogoUrl(editId, values.logo)} alt="College logo preview" /><div><strong>{values.logoName || (logoFile ? logoFile.name : 'Current college logo')}</strong><button type="button" onClick={() => { setLogoFile(null); setRemoveExistingLogo(Boolean(editId)); setValues((v) => ({ ...v, logo: '', logoName: '' })); if (fileRef.current) fileRef.current.value = ''; setDirty(true) }}>Remove image</button></div></div> : <button type="button" className="ac-upload-button" onClick={() => fileRef.current?.click()}><strong>Upload college logo</strong><span>Click or drag and drop PNG, JPG, JPEG, or WEBP · Max 2 MB</span></button>}
+          {values.logo ? (
+            <div className="ac-logo-preview">
+              <img src={values.logo} alt="College logo preview" onError={() => setValues((v) => ({ ...v, logo: '' }))} />
+              <div>
+                <strong>{values.logoName || (logoFile ? logoFile.name : 'College logo')}</strong>
+                <div style={{ display: 'flex', gap: '10px', marginTop: '4px' }}>
+                  <button type="button" className="ac-change-btn" onClick={() => fileRef.current?.click()}>Change image</button>
+                  <button type="button" onClick={() => { setLogoFile(null); setRemoveExistingLogo(Boolean(editId)); setValues((v) => ({ ...v, logo: '', logoName: '' })); if (fileRef.current) fileRef.current.value = ''; setDirty(true) }}>Remove image</button>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <button type="button" className="ac-upload-button" onClick={() => fileRef.current?.click()}>
+              <strong>Upload college logo</strong>
+              <span>Click or drag and drop PNG, JPG, JPEG, or WEBP · Max 2 MB</span>
+            </button>
+          )}
           {logoError && <small className="ac-error" role="alert">{logoError}</small>}
         </div>
       </>)}
@@ -500,7 +528,7 @@ export default function AddCollege() {
         <Field label="Principal Contact Number" name="principalContact" values={values} errors={errors} touched={touched} onChange={update} required maxLength={10} inputMode="tel" />
       </>)}
       {activeTab === 'accreditation' && section('Accreditation Details', 'Current accreditation standing and validity.', <>
-        <label className="ac-field" htmlFor="ac-accreditationStatus"><span>Accreditation Status</span><select id="ac-accreditationStatus" name="accreditationStatus" value={values.accreditationStatus} onChange={update}>{ACCREDITATION_STATUSES.map((status) => <option key={status}>{status}</option>)}</select></label>
+        <label className="ac-field" htmlFor="ac-accreditationStatus"><span>Accreditation Status</span><select id="ac-accreditationStatus" name="accreditationStatus" value={values.accreditationStatus} onChange={update}><option value="">Select Accreditation Status</option>{ACCREDITATION_STATUSES.map((status) => <option key={status}>{status}</option>)}</select></label>
         <Field label="Accreditation Grade" name="accreditationGrade" values={values} errors={errors} touched={touched} onChange={update} maxLength={20} placeholder="e.g. A+" />
         <Field label="Accreditation Number" name="accreditationNumber" values={values} errors={errors} touched={touched} onChange={update} maxLength={50} />
         <Field label="Valid From" name="validFrom" type="date" values={values} errors={errors} touched={touched} onChange={update} />

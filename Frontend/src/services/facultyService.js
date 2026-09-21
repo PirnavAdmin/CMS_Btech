@@ -20,30 +20,36 @@ const facultyPhoto = source => ['profilePhotoUrl', 'photoUrl', 'profilePhoto', '
 export const normalizeFaculty = (source = {}) => {
   // A partially populated result (or a null item in a paginated response)
   // must not take down the Faculty directory.
-  source = mergeFacultyData(source?.employeeProfile, source?.profile, source)
+  source = mergeFacultyData(source?.employeeProfile, source?.profile, source?.data, source)
+  const id = String(first(source, ['facultyId', 'id', 'employeeProfileId', 'FacultyId', 'Id', 'EmployeeProfileId'], ''))
+  const facultyId = first(source, ['facultyId', 'id', 'employeeProfileId', 'FacultyId', 'Id', 'EmployeeProfileId'], '')
+
   return {
-  ...source,
-  id: String(first(source, ['facultyId', 'id', 'employeeProfileId'], '')),
-  facultyId: first(source, ['facultyId', 'id', 'employeeProfileId'], ''),
-  collegeId: first(source, ['collegeId', 'college_id'], ''),
-  facultyCode: first(source, ['facultyCode', 'faculty_code'], /^FAC\d+$/i.test(source.employeeId || '') ? source.employeeId : ''),
-  employeeId: facultyEmployeeCode(first(source, ['facultyId', 'id'], '')),
-  fullName: first(source, ['fullName', 'facultyName', 'name'], [source.firstName, source.lastName].filter(Boolean).join(' ')),
-  email: first(source, ['email', 'officialEmail', 'workEmail'], ''),
-  mobile: first(source, ['mobile', 'phoneNumber', 'phone', 'mobileNumber'], ''),
-  department: first(source, ['departmentName', 'department'], ''),
-  departmentId: first(source, ['departmentId'], ''),
-  designation: first(source, ['designation', 'title'], ''),
-  qualification: first(source, ['qualification', 'highestQualification'], ''),
-  experience: first(source, ['experienceYears', 'experience', 'teachingExperience'], ''),
-  employmentType: first(source, ['employmentType', 'appointmentType'], ''),
-  employmentStatus: first(source, ['employmentStatus', 'statusName'], typeof source.status === 'string' ? source.status : source.status === 0 ? 'Inactive' : 'Working'),
-  gender: first(source, ['gender', 'genderName', 'sex'], ''),
-  dob: String(first(source, ['dob', 'dateOfBirth'])).slice(0, 10), joiningDate: String(first(source, ['joiningDate', 'dateOfJoining'])).slice(0, 10),
-  photo: facultyPhoto(source),
-  emergencyName: first(source, ['emergencyName', 'emergencyContactName']), emergencyMobile: first(source, ['emergencyMobile', 'emergencyContactNumber']), relationship: first(source, ['relationship', 'emergencyContactRelation']),
-  employeeCategory: first(source, ['employeeCategory', 'category', 'facultyType'], 'Teaching'),
-  assignments: list(source.assignments ?? source.subjectAllocations),
+    ...source,
+    id,
+    facultyId,
+    collegeId: first(source, ['collegeId', 'college_id', 'CollegeId', 'collId', 'CollId'], ''),
+    facultyCode: first(source, ['facultyCode', 'faculty_code', 'FacultyCode'], /^FAC\d+$/i.test(source.employeeId || '') ? source.employeeId : ''),
+    employeeId: facultyEmployeeCode(first(source, ['facultyId', 'id', 'employeeProfileId', 'FacultyId', 'Id', 'EmployeeProfileId'], '')),
+    fullName: first(source, ['fullName', 'facultyName', 'name', 'FullName', 'FacultyName', 'userName', 'username'], [source.firstName, source.lastName].filter(Boolean).join(' ')),
+    email: first(source, ['email', 'officialEmail', 'workEmail', 'Email', 'OfficialEmail'], ''),
+    mobile: first(source, ['mobile', 'phoneNumber', 'phone', 'mobileNumber', 'Mobile', 'PhoneNumber', 'Phone', 'MobileNumber'], ''),
+    department: first(source, ['departmentName', 'department', 'DepartmentName', 'Department', 'deptName', 'DeptName'], ''),
+    departmentId: first(source, ['departmentId', 'DepartmentId', 'department_id', 'deptId', 'DeptId'], ''),
+    designation: first(source, ['designation', 'title', 'Designation', 'Title', 'designationName', 'DesignationName'], ''),
+    qualification: first(source, ['qualification', 'highestQualification', 'Qualification'], ''),
+    experience: first(source, ['experienceYears', 'experience', 'teachingExperience', 'ExperienceYears', 'Experience'], ''),
+    employmentType: first(source, ['employmentType', 'appointmentType', 'EmploymentType'], ''),
+    employmentStatus: first(source, ['employmentStatus', 'statusName', 'EmploymentStatus', 'StatusName'], typeof source.status === 'string' ? source.status : source.status === 0 ? 'Inactive' : 'Working'),
+    gender: first(source, ['gender', 'genderName', 'sex', 'Gender'], ''),
+    dob: String(first(source, ['dob', 'dateOfBirth', 'DateOfBirth', 'DOB'])).slice(0, 10),
+    joiningDate: String(first(source, ['joiningDate', 'dateOfJoining', 'DateOfJoining', 'JoiningDate'])).slice(0, 10),
+    photo: facultyPhoto(source),
+    emergencyName: first(source, ['emergencyName', 'emergencyContactName', 'EmergencyContactName']),
+    emergencyMobile: first(source, ['emergencyMobile', 'emergencyContactNumber', 'EmergencyContactNumber']),
+    relationship: first(source, ['relationship', 'emergencyContactRelation', 'EmergencyContactRelation']),
+    employeeCategory: first(source, ['employeeCategory', 'category', 'facultyType', 'EmployeeCategory', 'Category', 'FacultyType'], 'Teaching'),
+    assignments: list(source.assignments ?? source.subjectAllocations),
   }
 }
 

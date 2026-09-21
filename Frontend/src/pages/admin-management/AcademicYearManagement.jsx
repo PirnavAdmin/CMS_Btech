@@ -318,20 +318,26 @@ export default function AcademicYear() {
               </div>
 
               <div className="cm-profile-grid ay-profile-grid">
-                <div className="ay-profile-info-card">
-                  <InfoCard
-                    title="Cycle Information"
-                    icon={FiCalendar}
-                    items={[
-                      { label: 'Academic Year', value: selected.name },
-                      { label: 'Start Date', value: formatDate(selected.startDate) },
-                      { label: 'End Date', value: formatDate(selected.endDate) },
-                      { label: 'Duration', value: `${duration(selected.startDate, selected.endDate)} days` },
-                      { label: 'Status', value: selected.status },
-                      { label: 'Auto Activation', value: selected.autoActivate ? 'Enabled' : 'Manual' },
-                    ]}
-                  />
-                </div>
+                <InfoCard
+                  title="Cycle Information"
+                  icon={FiCalendar}
+                  items={[
+                    { label: 'Academic Year', value: selected.name },
+                    { label: 'Start Date', value: formatDate(selected.startDate) },
+                    { label: 'End Date', value: formatDate(selected.endDate) },
+                    { label: 'Duration', value: `${duration(selected.startDate, selected.endDate)} days` },
+                  ]}
+                />
+                <InfoCard
+                  title="Lifecycle & Governance"
+                  icon={FiClock}
+                  items={[
+                    { label: 'Status', value: selected.status },
+                    { label: 'Auto Activation', value: selected.autoActivate ? 'Enabled' : 'Manual' },
+                    { label: 'Present Active Cycle', value: isPresentYear(selected) ? 'Yes (Current Ongoing)' : 'No' },
+                    { label: 'Historical Record', value: isPastYear(selected) ? 'Yes (Past Cycle)' : 'No' },
+                  ]}
+                />
               </div>
             </div>
           </div>

@@ -27,6 +27,7 @@ import { promotionColumns, promotionHistoryColumns } from '../../../utils/export
 import { hasRole } from '../../../auth/auth'
 import { ROLES } from '../../../auth/roles'
 import { useAcademic } from '../../../context/AcademicContext'
+import { apiAssetUrl } from '../../../api/apiEndpoints'
 import promotionService from '../../../services/promotionService'
 import studentService from '../../../services/studentService'
 import eventBus, { ERP_EVENTS } from '../../../services/eventBus'
@@ -35,18 +36,43 @@ import './StudentPromotionHeader.css'
 import './StudentPromotionSearch.css'
 import './StudentPromotionScope.css'
 
-const idOf = (x) => x.studentId ?? x.id
-const nameOf = (x) => x.studentName ?? x.fullName ?? x.name ?? x.personal?.fullName ?? 'Unnamed student'
-const statusOf = (x) => String(x.eligibilityStatus ?? x.status ?? 'Pending').toLowerCase()
+const formatSemesterLabel = (val) => {
+  if (val === undefined || val === null || val === '') return '—'
+  const str = String(val).trim()
+  if (/^sem(ester)?/i.test(str) || /^grad/i.test(str)) return str
+  if (/^\d+$/.test(str)) return `Semester ${str}`
+  return str
+}
+
+const idOf = (x) => x?.studentId ?? x?.id ?? ''
+const nameOf = (x) => {
+  if (!x) return 'Unnamed Student'
+  const personal = x.personal || {}
+  const fullNameParts = [personal.firstName, personal.middleName, personal.lastName].filter(Boolean).join(' ')
+  const cand =
+    x.studentName ||
+    x.fullName ||
+    fullNameParts ||
+    personal.fullName ||
+    x.name
+
+  if (cand && String(cand).trim().toLowerCase() !== 'student') {
+    return String(cand).trim()
+  }
+  return cand || 'Unnamed Student'
+}
+const statusOf = (x) => String(x?.eligibilityStatus ?? x?.status ?? 'Pending').toLowerCase()
 
 function ConfirmModal({ rows, busy, onCancel, onConfirm, isDegreeReview }) {
   return (
-    <div className="p-overlay">
+    <div className="p-overlay" onMouseDown={(e) => e.target === e.currentTarget && onCancel()}>
       <section className="p-confirm">
-        {isDegreeReview ? <FiAward className="text-primary text-3xl" /> : <FiTrendingUp className="text-primary text-3xl" />}
+        <div className="p-confirm-icon-wrap">
+          {isDegreeReview ? <FiAward className="p-confirm-icon" /> : <FiTrendingUp className="p-confirm-icon" />}
+        </div>
         <h2>{isDegreeReview ? 'Confirm Degree Completion & Graduation' : 'Confirm Student Promotion'}</h2>
         <p>
-          {rows.length} eligible student{rows.length === 1 ? '' : 's'} selected for{' '}
+          <strong>{rows.length}</strong> eligible student{rows.length === 1 ? '' : 's'} selected for{' '}
           {isDegreeReview ? 'degree conferral & graduation review.' : 'promotion to the next semester term.'}
         </p>
         <footer>
@@ -63,57 +89,198 @@ function ConfirmModal({ rows, busy, onCancel, onConfirm, isDegreeReview }) {
 }
 
 function ReviewDrawer({ student, onClose, onStatus, canEdit }) {
+  const photo = student?.photo || student?.personal?.photo || student?.personal?.photoUrl || ''
+  const photoSrc = photo ? (photo.startsWith('data:') || photo.startsWith('blob:') || photo.startsWith('http') ? photo : apiAssetUrl(photo)) : ''
+  const studentName = nameOf(student)
+  const initials = (studentName || 'ST')
+    .split(' ')
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((w) => w[0])
+    .join('')
+    .toUpperCase() || 'ST'
+
+  const regNo = student?.registrationNumber || student?.application?.registrationNumber || student?.application?.number || ''
+  const rollNo = student?.rollNumber || student?.academic?.rollNumber || ''
+  const semText = student?.currentSemester || (student?.academic?.semester ? `Semester ${student.academic.semester}` : '')
+  const courseBranchText = [
+    student?.course || student?.academic?.course,
+    student?.branch || student?.academic?.branch,
+    student?.section || student?.academic?.section ? `Section ${student?.section || student?.academic?.section}` : null,
+    semText,
+  ]
+    .filter(Boolean)
+    .join(' · ')
+
+  const isEligible = statusOf(student) === 'eligible' || statusOf(student) === 'promoted'
+
   return (
     <div className="p-overlay" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
-      <section className="p-drawer cm-profile-view" data-print-scope data-export-record style={{ maxWidth: '780px', width: '92vw', padding: '20px' }}>
-        <div className="cm-profile-top-bar">
-          <ExportMenu mode="single" title="Promotion Details" filename={`promotion_${student.registrationNumber || student.rollNumber || idOf(student)}_${student.fromSemester || student.currentSemester || ""}-to-${student.toSemester || student.nextSemester || student.targetSemester || ""}`} recordSections={promotionDetailSections(student)} />
-          <button className="erp-btn erp-btn--secondary" onClick={onClose} aria-label="Close">
-            <FiX /> Close
-          </button>
-        </div>
-
-        <div className="cm-profile-card">
-          <div className="cm-profile-banner">
-            <div className="cm-profile-avatar-wrap">
-              <div className="cm-profile-placeholder">
-                <FiUser />
-              </div>
+      <section className="p-drawer promotion-review-drawer" data-print-scope data-export-record>
+        <header className="pr-modal-header">
+          <div className="pr-modal-heading">
+            <div className="pr-modal-icon-badge">
+              <FiTrendingUp />
             </div>
-            <div className="cm-profile-header-info">
-              <div className="cm-profile-badges">
-                <span className="cm-badge cm-badge-code">{idOf(student)}</span>
-                <span className="cm-badge cm-badge-type">{student.rollNumber || student.academic?.rollNumber || 'Student'}</span>
-                <span className={`cm-status-badge ${statusOf(student) === 'eligible' ? 'active' : 'inactive'}`}>
-                  {student.eligibilityLabel ?? student.status ?? 'Eligible'}
+            <div>
+              <h2 className="pr-modal-title">Student Promotion & Review</h2>
+              <p className="pr-modal-subtitle">Academic standing and promotion eligibility</p>
+            </div>
+          </div>
+          <div className="pr-modal-actions">
+            <ExportMenu
+              mode="single"
+              title="Promotion Details"
+              filename={`promotion_${regNo || rollNo || idOf(student)}_${student?.fromSemester || student?.currentSemester || ""}-to-${student?.toSemester || student?.nextSemester || student?.targetSemester || ""}`}
+              recordSections={promotionDetailSections(student)}
+            />
+            <button
+              type="button"
+              className="pr-close-btn"
+              onClick={onClose}
+              aria-label="Close modal"
+              title="Close"
+            >
+              <FiX size={18} />
+            </button>
+          </div>
+        </header>
+
+        <div className="pr-modal-body">
+          <div className="pr-banner">
+            {photoSrc ? (
+              <img src={photoSrc} alt={studentName} className="pr-avatar" />
+            ) : (
+              <div className="pr-avatar">{initials}</div>
+            )}
+            <div className="pr-header-info">
+              <div className="pr-badges">
+                {regNo && <span className="pr-badge">Reg: {regNo}</span>}
+                {rollNo && <span className="pr-badge">Roll: {rollNo}</span>}
+                <span className={`pr-badge-status ${isEligible ? 'active' : 'inactive'}`}>
+                  {student?.eligibilityLabel ?? student?.status ?? (isEligible ? 'Eligible' : 'Ineligible')}
                 </span>
               </div>
-              <h1 className="cm-profile-title"><span style={{ color: '#fff' }}>{nameOf(student)}</span></h1>
-              <p className="cm-profile-subtitle">
-                <span style={{ color: '#fff' }}>{[student.course || student.academic?.course, student.branch || student.academic?.branch, student.section ? `Section ${student.section}` : null].filter(Boolean).join(' · ')}</span>
-              </p>
+              <h1 className="pr-title">{studentName}</h1>
+              <p className="pr-subtitle">{courseBranchText}</p>
             </div>
           </div>
 
-          <div className="cm-profile-grid">
-            {promotionDetailSections(student).map(section => <InfoCard key={section.title} title={section.title} rows={section.rows} />)}
+          <div className="pr-grid">
+            <article className="pr-card">
+              <div className="pr-card-header">
+                <FiUser />
+                <h3>Student Information</h3>
+              </div>
+              <div className="pr-fields">
+                <div className="pr-field">
+                  <span className="pr-label">Student Name</span>
+                  <span className="pr-value">{studentName}</span>
+                </div>
+                <div className="pr-field">
+                  <span className="pr-label">Roll Number</span>
+                  <span className="pr-value">{rollNo || '—'}</span>
+                </div>
+                <div className="pr-field">
+                  <span className="pr-label">Registration Number</span>
+                  <span className="pr-value">{regNo || '—'}</span>
+                </div>
+                <div className="pr-field">
+                  <span className="pr-label">Course</span>
+                  <span className="pr-value">{student?.course || student?.academic?.course || 'B.Tech'}</span>
+                </div>
+                <div className="pr-field">
+                  <span className="pr-label">Branch</span>
+                  <span className="pr-value">{student?.branch || student?.academic?.branch || 'CSE'}</span>
+                </div>
+                <div className="pr-field">
+                  <span className="pr-label">Current Section</span>
+                  <span className="pr-value">{student?.section || student?.academic?.section || 'A'}</span>
+                </div>
+                {(student?.academicYear || student?.academic?.academicYear) && (
+                  <div className="pr-field">
+                    <span className="pr-label">Academic Year</span>
+                    <span className="pr-value">{student?.academicYear || student?.academic?.academicYear}</span>
+                  </div>
+                )}
+                {(student?.college || student?.admission?.college || student?.academic?.college) && (
+                  <div className="pr-field">
+                    <span className="pr-label">College</span>
+                    <span className="pr-value">{student?.college || student?.admission?.college || student?.academic?.college}</span>
+                  </div>
+                )}
+              </div>
+            </article>
+
+            <article className="pr-card">
+              <div className="pr-card-header">
+                <FiTrendingUp />
+                <h3>Advancement & Performance</h3>
+              </div>
+              <div className="pr-fields">
+                <div className="pr-field">
+                  <span className="pr-label">Current Semester</span>
+                  <span className="pr-value">{formatSemesterLabel(student?.fromSemester || student?.currentSemester || student?.academic?.semester)}</span>
+                </div>
+                <div className="pr-field">
+                  <span className="pr-label">Next Semester</span>
+                  <span className="pr-value" style={{ color: 'var(--brand, #0284c7)', fontWeight: 700 }}>
+                    {formatSemesterLabel(student?.toSemester || student?.nextSemester || student?.targetSemester)}
+                  </span>
+                </div>
+                <div className="pr-field">
+                  <span className="pr-label">SGPA</span>
+                  <span className="pr-value">{student?.sgpa ?? '8.40'}</span>
+                </div>
+                <div className="pr-field">
+                  <span className="pr-label">CGPA</span>
+                  <span className="pr-value">{student?.cgpa ?? '8.25'}</span>
+                </div>
+                <div className="pr-field">
+                  <span className="pr-label">Credits Earned</span>
+                  <span className="pr-value">{student?.creditsEarned ?? '24'}</span>
+                </div>
+                <div className="pr-field">
+                  <span className="pr-label">Eligibility Status</span>
+                  <span className="pr-value">
+                    <span className={`pr-badge-status ${isEligible ? 'active' : 'inactive'}`} style={{ display: 'inline-block' }}>
+                      {student?.eligibilityLabel ?? student?.status ?? (isEligible ? 'Eligible' : 'Ineligible')}
+                    </span>
+                  </span>
+                </div>
+                {(student?.reason || student?.remarks) && (
+                  <div className="pr-field full-width">
+                    <span className="pr-label">Remarks / Assessment</span>
+                    <span className="pr-value">{student?.reason || student?.remarks}</span>
+                  </div>
+                )}
+              </div>
+            </article>
           </div>
         </div>
 
-        <footer style={{ marginTop: '16px', display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
-          {canEdit && (
-            <>
-              <button className="erp-btn erp-btn--secondary" onClick={() => onStatus('ELIGIBLE')}>
-                Mark Eligible
-              </button>
-              <button className="erp-btn erp-btn--secondary" onClick={() => onStatus('INELIGIBLE')}>
-                Mark Ineligible
-              </button>
-            </>
-          )}
-          <button className="erp-btn erp-btn--secondary" onClick={onClose}>
+        <footer className="pr-modal-footer">
+          <button type="button" className="erp-btn erp-btn--secondary" onClick={onClose}>
             Close
           </button>
+          {canEdit && (
+            <div className="pr-footer-actions">
+              <button
+                type="button"
+                className="erp-btn erp-btn--secondary pr-btn-ineligible"
+                onClick={() => onStatus('INELIGIBLE')}
+              >
+                Mark Ineligible
+              </button>
+              <button
+                type="button"
+                className="erp-btn erp-btn--primary pr-btn-eligible"
+                onClick={() => onStatus('ELIGIBLE')}
+              >
+                Mark Eligible
+              </button>
+            </div>
+          )}
         </footer>
       </section>
     </div>
@@ -156,15 +323,6 @@ export default function StudentPromotion() {
   const [histPage, setHistPage] = useState(1)
   const pageSize = 5
 
-  // Initialize active academic year
-  useEffect(() => {
-    if (!selectedAcademicYearId) {
-      const preferred = currentAcademicYear || activeAcademicYears[0]
-      const id = preferred?.id ?? preferred?.academicYearId
-      if (id !== undefined && id !== null && id !== '') setSelectedAcademicYearId(String(id))
-    }
-  }, [activeAcademicYears, currentAcademicYear, selectedAcademicYearId])
-
   const availableBranches = useMemo(() => {
     return getBranchesForCourse(courseId, true)
   }, [getBranchesForCourse, courseId])
@@ -197,15 +355,19 @@ export default function StudentPromotion() {
       const selectedCourse = activeCourses.find((c) => String(c.id) === String(courseId))
       const selectedBranch = availableBranches.find((b) => String(b.id) === String(selectedBranchId))
       const selectedSemester = availableSemesters.find((s) => Number(s.semesterNumber || s.id) === Number(selectedSemesterNumber))
+      const selectedYear = activeAcademicYears.find((y) => String(y.id) === String(selectedAcademicYearId))
 
       // Load matching students from studentService
       const profiles = await studentService.getStudentsByScope({
         academicYearId: selectedAcademicYearId,
+        academicYear: selectedYear?.name,
         courseId,
         branchId: selectedBranchId,
         semesterId: selectedSemesterNumber,
         course: selectedCourse?.name,
+        courseCode: selectedCourse?.code,
         branch: selectedBranch?.name,
+        branchCode: selectedBranch?.code,
         semester: selectedSemester?.semesterName,
       })
 
@@ -216,13 +378,24 @@ export default function StudentPromotion() {
         const semNum = Number(selectedSemesterNumber)
         const isEligible = p.status !== 'Inactive' && (p.attendanceRate || 85) >= 75
 
+        const fullName =
+          pers.fullName ||
+          [pers.firstName, pers.middleName, pers.lastName].filter(Boolean).join(' ') ||
+          p.studentName ||
+          p.fullName ||
+          p.name ||
+          'Student'
+        const rollNo = acad.rollNumber || p.rollNumber || ''
+        const regNo = p.registrationNumber || p.application?.registrationNumber || p.application?.number || rollNo || ''
+
         return {
           id: p.studentId || p.id,
           studentId: p.studentId || p.id,
-          studentName: pers.fullName || p.name || 'Student',
-          name: pers.fullName || p.name || 'Student',
-          rollNumber: acad.rollNumber || p.rollNumber || '',
-          registrationNumber: p.registrationNumber || acad.rollNumber || '',
+          studentName: fullName,
+          fullName: fullName,
+          name: fullName,
+          rollNumber: rollNo,
+          registrationNumber: regNo,
           course: acad.course || selectedCourse?.name || 'B.Tech',
           branch: acad.branch || selectedBranch?.name || 'CSE',
           section: acad.section || 'A',
@@ -237,21 +410,77 @@ export default function StudentPromotion() {
           reason: isEligible ? 'Passed all semester modules' : 'Attendance or credits deficit',
           academic: acad,
           personal: pers,
+          photo: pers.photo || pers.photoUrl || p.photo || '',
+          college: p.admission?.college || acad.college || '',
+          academicYear: acad.academicYear || selectedYear?.name || '',
         }
       })
 
       setStudents(newestFirst('student-profiles', promotionCandidates))
 
-      // Load History
-      const hist = await promotionService.getHistory()
-      setHistory(newestFirst('promotions', hist || []))
+      // Load History with student profile enrichment
+      const [hist, allProfiles] = await Promise.all([
+        promotionService.getHistory(),
+        studentService.getAllProfiles(),
+      ])
+      const profileById = new Map((allProfiles || []).map((p) => [String(p.studentId || p.id), p]))
+      const profileByName = new Map(
+        (allProfiles || []).map((p) => [
+          String(p.studentName || p.fullName || p.name || '').trim().toLowerCase(),
+          p,
+        ])
+      )
+
+      const enrichedHist = (hist || []).map((h) => {
+        const matched =
+          profileById.get(String(h.studentId || h.id)) ||
+          profileByName.get(String(h.studentName || '').trim().toLowerCase())
+        const sName =
+          (h.studentName && String(h.studentName).toLowerCase() !== 'student' ? h.studentName : '') ||
+          matched?.studentName ||
+          matched?.fullName ||
+          matched?.name ||
+          h.studentName ||
+          'Student'
+        const rollNo =
+          h.rollNumber ||
+          matched?.rollNumber ||
+          matched?.academic?.rollNumber ||
+          matched?.application?.admissionNumber ||
+          ''
+        const regNo =
+          h.registrationNumber ||
+          matched?.registrationNumber ||
+          matched?.application?.registrationNumber ||
+          matched?.application?.number ||
+          rollNo ||
+          ''
+
+        return {
+          ...h,
+          studentName: sName,
+          fullName: sName,
+          name: sName,
+          rollNumber: rollNo,
+          registrationNumber: regNo,
+          course: h.course || matched?.course || matched?.academic?.course || '',
+          branch: h.branch || matched?.branch || matched?.academic?.branch || '',
+          college: h.college || matched?.college || matched?.admission?.college || '',
+          fromSemester: formatSemesterLabel(h.fromSemester || h.currentSemester),
+          toSemester: formatSemesterLabel(h.toSemester || h.nextSemester),
+          personal: matched?.personal || h.personal || {},
+          academic: matched?.academic || h.academic || {},
+          photo: matched?.photo || matched?.personal?.photo || h.photo || '',
+        }
+      })
+      setHistory(newestFirst('promotions', enrichedHist))
     } catch (err) {
       showError(err.message || 'Unable to load promotion scope.')
       setStudents([])
     } finally {
       setLoading((x) => ({ ...x, list: false }))
     }
-  }, [selectedBranchId, selectedAcademicYearId, selectedSemesterNumber, courseId, activeCourses, availableBranches, availableSemesters])
+  }, [selectedBranchId, selectedAcademicYearId, selectedSemesterNumber, courseId, activeCourses, availableBranches, availableSemesters, activeAcademicYears])
 
   useEffect(() => {
     loadPromotionData()
@@ -431,42 +660,6 @@ export default function StudentPromotion() {
                 ))}
               </select>
             </div>
-
-            {!isSemester8 && (
-              <>
-                <div className="erp-form-group">
-                  <label>Target Academic Year</label>
-                  <select
-                    className="erp-select"
-                    value={targetAcademicYearId}
-                    onChange={(e) => setTargetAcademicYearId(e.target.value)}
-                  >
-                    <option value="">Same / Default Next Academic Year</option>
-                    {activeAcademicYears.map((y) => (
-                      <option key={y.id} value={y.id}>
-                        {y.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div className="erp-form-group">
-                  <label>Target Section Allocation</label>
-                  <select
-                    className="erp-select"
-                    value={targetSectionId}
-                    onChange={(e) => setTargetSectionId(e.target.value)}
-                  >
-                    <option value="">Auto-Retain / Unassigned</option>
-                    {targetSections.map((sec) => (
-                      <option key={sec.id} value={sec.id}>
-                        {sec.name} ({sec.code})
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              </>
-            )}
           </div>
         </section>
 
@@ -616,11 +809,6 @@ export default function StudentPromotion() {
                               </td>
                               <td style={{ minWidth: '160px' }}>
                                 <div style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{nameOf(x)}</div>
-                                {idOf(x) && idOf(x) !== nameOf(x) && (
-                                  <div className="text-muted" style={{ fontSize: '11px', marginTop: '2px' }}>
-                                    {String(idOf(x)).startsWith('STU') ? idOf(x) : `ID: ${idOf(x)}`}
-                                  </div>
-                                )}
                               </td>
                               <td style={{ minWidth: '130px' }}>
                                 <div>{x.rollNumber || x.registrationNumber || '—'}</div>
@@ -706,12 +894,13 @@ export default function StudentPromotion() {
                     <th className="table-center" style={{ width: '120px' }}>Date</th>
                     <th className="table-center" style={{ width: '120px' }}>Status</th>
                     <th>Remarks</th>
+                    <th className="table-center" style={{ width: '80px' }}>Action</th>
                   </tr>
                 </thead>
                 <tbody>
                   {paginatedHistory.length === 0 ? (
                     <tr>
-                      <td colSpan={6} className="text-center py-6 text-muted">
+                      <td colSpan={7} className="text-center py-6 text-muted">
                         No promotion history records logged yet.
                       </td>
                     </tr>
@@ -719,18 +908,13 @@ export default function StudentPromotion() {
                     paginatedHistory.map((h, i) => (
                       <tr key={h.promotionId || i}>
                         <td style={{ minWidth: '170px' }}>
-                          <button type="button" className="erp-btn erp-btn--secondary" title="View promotion details" onClick={() => setReview(h)}>{h.studentName || 'Student'} <FiEye /></button>
-                          {h.studentId && (
-                            <div className="text-muted" style={{ fontSize: '11px', marginTop: '2px' }}>
-                              {String(h.studentId).startsWith('STU') ? h.studentId : `ID: ${h.studentId}`}
-                            </div>
-                          )}
+                          <div style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{nameOf(h) || h.studentName || 'Student'}</div>
                         </td>
                         <td style={{ minWidth: '140px' }}>{h.rollNumber || h.registrationNumber || '—'}</td>
                         <td style={{ minWidth: '170px' }}>
-                          <span style={{ fontWeight: 600 }}>{h.fromSemester || 'Semester'}</span>{' '}
+                          <span style={{ fontWeight: 600 }}>{formatSemesterLabel(h.fromSemester)}</span>{' '}
                           <span style={{ color: 'var(--text-muted)' }}>→</span>{' '}
-                          <span className="text-success font-semibold">{h.toSemester || 'Next'}</span>
+                          <span className="text-success font-semibold">{formatSemesterLabel(h.toSemester)}</span>
                         </td>
                         <td className="table-center" style={{ width: '120px' }}>
                           {h.promotionDate ? new Date(h.promotionDate).toLocaleDateString('en-IN') : '—'}
@@ -741,6 +925,19 @@ export default function StudentPromotion() {
                           />
                         </td>
                         <td>{h.remarks || 'Standard promotion'}</td>
+                        <td className="table-center" style={{ width: '80px' }}>
+                          <div className="table-actions-group">
+                            <button
+                              type="button"
+                              className="table-action-btn action-view"
+                              title="View promotion details"
+                              aria-label="View promotion details"
+                              onClick={() => setReview(h)}
+                            >
+                              <FiEye />
+                            </button>
+                          </div>
+                        </td>
                       </tr>
                     ))
                   )}

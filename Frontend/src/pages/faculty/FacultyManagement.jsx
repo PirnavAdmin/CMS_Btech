@@ -62,20 +62,29 @@ const normalizeAttendanceStatus = value => {
   return statuses[key] || 'Not Marked'
 }
 const mergeAttendanceRecords = (faculty, records = []) => {
-  const validFaculty = new Set((faculty || []).map(item => String(item.id)))
-  const normalized = (Array.isArray(records) ? records : []).filter(record => validFaculty.has(String(record.facultyId))).map(record => ({
-    ...record,
-    facultyId: String(record.facultyId),
-    date: normalizeAttendanceDate(record.date),
-    status: normalizeAttendanceStatus(record.status ?? record.attendanceStatus),
-    checkIn: record.checkIn || '—',
-    checkOut: record.checkOut || '—',
-    remarks: record.remarks || '—',
-    source: record.source || 'Manual',
-  }))
-  // The list and daily views can both contain the same faculty/date. Keep one
-  // record per cell and always prefer the saved marked status over a generated
-  // "Not Marked" daily placeholder.
+  const facultyMap = new Map()
+  for (const item of (faculty || [])) {
+    if (item.id) facultyMap.set(String(item.id), String(item.id))
+    if (item.facultyId) facultyMap.set(String(item.facultyId), String(item.id))
+    if (item.employeeProfileId) facultyMap.set(String(item.employeeProfileId), String(item.id))
+    if (item.employeeId) facultyMap.set(String(item.employeeId), String(item.id))
+  }
+
+  const normalized = (Array.isArray(records) ? records : []).map(record => {
+    const rawFacId = String(record.facultyId ?? record.FacultyId ?? record.faculty?.facultyId ?? record.faculty?.id ?? record.employeeProfileId ?? '')
+    const matchedCanonicalId = facultyMap.get(rawFacId) || rawFacId
+    return {
+      ...record,
+      facultyId: matchedCanonicalId,
+      date: normalizeAttendanceDate(record.attendanceDate ?? record.date ?? record.Date),
+      status: normalizeAttendanceStatus(record.status ?? record.attendanceStatus ?? record.Status ?? record.AttendanceStatus),
+      checkIn: record.checkIn || record.CheckIn || record.checkInTime || record.CheckInTime || '—',
+      checkOut: record.checkOut || record.CheckOut || record.checkOutTime || record.CheckOutTime || '—',
+      remarks: record.remarks || record.Remarks || '—',
+      source: record.source || 'Manual',
+    }
+  }).filter(record => facultyMap.has(String(record.facultyId)))
+
   const byFacultyAndDate = new Map()
   for (const record of normalized) {
     const key = `${record.facultyId}|${record.date}`
@@ -378,7 +387,7 @@ function validateFaculty(data, rows) {
     if (data[key] && Array.isArray(type) && !type.includes(data[key])) errors[key] = 'Select a valid ' + label.toLowerCase() + '.'
   }))
   if (['Others', 'Other'].includes(data.employeeCategory) && !String(data.employeeCategoryOther || '').trim()) errors.employeeCategoryOther = 'Specify the employee category.'
-  if (!data.employeeId || rows.some(row => row.id !== data.id && (row.employeeId || row.facultyCode) === data.employeeId)) errors.employeeId = 'Faculty Code must be unique.'
+  if (!data.employeeId || rows.some(row => row.id !== data.id && String(row.collegeId ?? row.college_id ?? '') === String(data.collegeId ?? '') && (row.employeeId || row.facultyCode) === data.employeeId)) errors.employeeId = 'Faculty Code must be unique for this college.'
   if (!data.fullName?.trim()) errors.fullName = 'Faculty full name is required.'
   else if (data.fullName.trim().length < 2 || !/^[\p{L}\p{M} .?'-]+$/u.test(data.fullName.trim())) errors.fullName = 'Enter a valid name using letters (at least 2 characters).'
   for (const key of ['collegeId', 'departmentId']) if (!Number.isSafeInteger(Number(data[key])) || Number(data[key]) <= 0) errors[key] = 'Select a valid ' + (key === 'collegeId' ? 'college.' : 'department.')
@@ -430,17 +439,19 @@ function AttendanceTimeField({ label, value, disabled, onChange }) {
   }
   return <div className="fm-attendance-time-field"><span>{label}</span><span className="fm-attendance-time-controls">{disabled ? <span className="fm-attendance-disabled-value">—</span> : <><select aria-label={`${label} hour`} value={parts.hour} onChange={event => update('hour', event.target.value)}><option value="">HH</option>{Array.from({ length: 12 }, (_, index) => { const item = String(index + 1).padStart(2, '0'); return <option key={item} value={item}>{item}</option> })}</select><span>:</span><select aria-label={`${label} minute`} value={parts.minute} onChange={event => update('minute', event.target.value)}><option value="">MM</option>{Array.from({ length: 60 }, (_, index) => { const item = String(index).padStart(2, '0'); return <option key={item} value={item}>{item}</option> })}</select><select aria-label={`${label} period`} value={parts.period} onChange={event => update('period', event.target.value)}><option value="">AM/PM</option><option value="AM">AM</option><option value="PM">PM</option></select></>}</span></div>
 }
-function AttendanceEditor({ record, onClose, onSave, onReset }) {
+function AttendanceEditor({ record, collegeOptions = [], departmentOptions = [], allFaculty = [], onClose, onSave, onReset }) {
   const [data, setData] = useState({ status: record.status === 'Not Marked' ? 'Present' : record.status, checkIn: record.checkIn === '—' ? '' : record.checkIn, checkOut: record.checkOut === '—' ? '' : record.checkOut, remarks: record.remarks === '—' ? '' : record.remarks })
   const [error, setError] = useState('')
   const [confirmReset, setConfirmReset] = useState(false)
   const [confirmLop, setConfirmLop] = useState(false)
   const isLop = data.status === 'LOP'
   const isNonWorkingStatus = ['Absent', 'On Leave', 'LOP'].includes(data.status)
+  const displayCode = formatFacultyDisplayCode(record.faculty, collegeOptions, allFaculty) || record.faculty.employeeId || '—'
+  const departmentName = departmentOptions.find(d => String(d.value) === String(record.faculty.departmentId || record.faculty.department))?.label || record.faculty.department || record.faculty.departmentName || '—'
   const save = event => { event.preventDefault(); if (['On Leave', 'LOP'].includes(data.status) && !confirmLop) return setConfirmLop(true); if (!isLop && ['Present', 'Late', 'Half Day'].includes(data.status) && !data.checkIn) return setError('Check In is required for this attendance status.'); if (!isLop && ['Present', 'Late'].includes(data.status) && !data.checkOut) return setError('Check Out is required for Present and Late attendance.'); if (!isLop && data.checkIn && data.checkOut && data.checkOut <= data.checkIn) return setError('Check Out must be later than Check In.'); setError(''); onSave({ ...record, ...data, status: isLop ? 'LOP' : data.status, checkIn: isNonWorkingStatus ? '' : data.checkIn, checkOut: isNonWorkingStatus ? '' : data.checkOut, remarks: data.remarks || '', facultyId: record.faculty.id, date: record.date }) }
-  return <div className="fm-modal-backdrop"><form className="fm-attendance-editor" onSubmit={save}><header><div><p className="fm-eyebrow">{record.status === 'Not Marked' ? 'MARK ATTENDANCE' : 'EDIT ATTENDANCE'}</p><h2>{record.faculty.fullName}</h2><p>{record.faculty.employeeId} · {record.faculty.department}</p></div><button className="fm-icon-button" type="button" aria-label="Close attendance editor" onClick={onClose}><FiX /></button></header><div className="fm-form-grid"><label>Status<select value={data.status} onChange={event => { const status = event.target.value; const clearTimes = ['Absent', 'On Leave', 'LOP'].includes(status); setData({ ...data, status, checkIn: clearTimes ? '' : data.checkIn, checkOut: clearTimes ? '' : data.checkOut }); setError(''); setConfirmLop(false) }}>{['Present', 'Absent', 'Late', 'Half Day', 'On Leave'].map(value => <option key={value}>{value}</option>)}<option value="LOP">Loss of Pay</option></select></label><AttendanceTimeField label="Check In" value={data.checkIn} disabled={isNonWorkingStatus} onChange={value => { setData({ ...data, checkIn: value }); setError('') }} /><AttendanceTimeField label="Check Out" value={data.checkOut} disabled={isNonWorkingStatus} onChange={value => { setData({ ...data, checkOut: value }); setError('') }} /><label className="fm-wide">Remarks<textarea rows="2" value={data.remarks} onChange={event => setData({ ...data, remarks: event.target.value })} /></label></div>{error && <p className="fm-error" role="alert">{error}</p>}{confirmLop && <div className="fm-lop-confirm" role="alert"><div><strong>Confirm attendance status?</strong><p>You are marking {record.faculty.fullName} ({record.faculty.employeeId}) as {attendanceStatusLabel(data.status)} for {new Date(record.date + 'T00:00:00').toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}.</p></div><div><button className="fm-button secondary" type="button" onClick={() => setConfirmLop(false)}>Cancel</button><button className="fm-button" type="button" onClick={() => { setConfirmLop(false); onSave({ ...record, ...data, status: data.status, checkIn: isNonWorkingStatus ? '' : data.checkIn, checkOut: isNonWorkingStatus ? '' : data.checkOut, remarks: data.remarks || '', facultyId: record.faculty.id, date: record.date }) }}>{data.status === 'LOP' ? 'Mark Loss of Pay' : 'Mark On Leave'}</button></div></div>}{confirmReset && <div className="fm-reset-confirm" role="alert"><div><strong>Reset this attendance record?</strong><p>The current status, time, and remarks will be cleared.</p></div><div><button className="fm-button secondary" type="button" onClick={() => setConfirmReset(false)}>Keep Editing</button><button className="fm-button danger" type="button" onClick={() => onReset(record)}>Reset Record</button></div></div>}<footer>{record.status !== 'Not Marked' && !confirmReset && <button className="fm-button danger" type="button" onClick={() => setConfirmReset(true)}>Reset to Not Marked</button>}<button className="fm-button secondary" type="button" onClick={onClose}>Cancel</button><button className="fm-button" type="submit">Save Attendance</button></footer></form></div>
+  return <div className="fm-modal-backdrop"><form className="fm-attendance-editor" onSubmit={save}><header><div><p className="fm-eyebrow">{record.status === 'Not Marked' ? 'MARK ATTENDANCE' : 'EDIT ATTENDANCE'}</p><h2>{record.faculty.fullName}</h2><p>{displayCode} · {departmentName}</p></div><button className="fm-icon-button" type="button" aria-label="Close attendance editor" onClick={onClose}><FiX /></button></header><div className="fm-form-grid"><label>Status<select value={data.status} onChange={event => { const status = event.target.value; const clearTimes = ['Absent', 'On Leave', 'LOP'].includes(status); setData({ ...data, status, checkIn: clearTimes ? '' : data.checkIn, checkOut: clearTimes ? '' : data.checkOut }); setError(''); setConfirmLop(false) }}>{['Present', 'Absent', 'Late', 'Half Day', 'On Leave'].map(value => <option key={value}>{value}</option>)}<option value="LOP">Loss of Pay</option></select></label><AttendanceTimeField label="Check In" value={data.checkIn} disabled={isNonWorkingStatus} onChange={value => { setData({ ...data, checkIn: value }); setError('') }} /><AttendanceTimeField label="Check Out" value={data.checkOut} disabled={isNonWorkingStatus} onChange={value => { setData({ ...data, checkOut: value }); setError('') }} /><label className="fm-wide">Remarks<textarea rows="2" value={data.remarks} onChange={event => setData({ ...data, remarks: event.target.value })} /></label></div>{error && <p className="fm-error" role="alert">{error}</p>}{confirmLop && <div className="fm-lop-confirm" role="alert"><div><strong>Confirm attendance status?</strong><p>You are marking {record.faculty.fullName} ({displayCode}) as {attendanceStatusLabel(data.status)} for {new Date(record.date + 'T00:00:00').toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}.</p></div><div><button className="fm-button secondary" type="button" onClick={() => setConfirmLop(false)}>Cancel</button><button className="fm-button" type="button" onClick={() => { setConfirmLop(false); onSave({ ...record, ...data, status: data.status, checkIn: isNonWorkingStatus ? '' : data.checkIn, checkOut: isNonWorkingStatus ? '' : data.checkOut, remarks: data.remarks || '', facultyId: record.faculty.id, date: record.date }) }}>{data.status === 'LOP' ? 'Mark Loss of Pay' : 'Mark On Leave'}</button></div></div>}{confirmReset && <div className="fm-reset-confirm" role="alert"><div><strong>Reset this attendance record?</strong><p>The current status, time, and remarks will be cleared.</p></div><div><button className="fm-button secondary" type="button" onClick={() => setConfirmReset(false)}>Keep Editing</button><button className="fm-button danger" type="button" onClick={() => onReset(record)}>Reset Record</button></div></div>}<footer>{record.status !== 'Not Marked' && !confirmReset && <button className="fm-button danger" type="button" onClick={() => setConfirmReset(true)}>Reset to Not Marked</button>}<button className="fm-button secondary" type="button" onClick={onClose}>Cancel</button><button className="fm-button" type="submit">Save Attendance</button></footer></form></div>
 }
-function FacultyAttendanceScreen({ faculty, onNotify }) {
+function FacultyAttendanceScreen({ faculty, collegeOptions = [], departmentOptions = [], onNotify }) {
   const [tab, setTab] = useState('daily')
   const [reportType, setReportType] = useState('daily')
   const [showFilters, setShowFilters] = useState(true)
@@ -465,6 +476,17 @@ function FacultyAttendanceScreen({ faculty, onNotify }) {
   const [registerFilters, setRegisterFilters] = useState(defaultRegister)
   const [reportFilters, setReportFilters] = useState(() => ({ daily: defaultReport(), weekly: defaultReport(), monthly: defaultReport() }))
   const currentReport = reportFilters[reportType]
+  const getFacultyDept = f => {
+    if (!f) return '—'
+    const match = departmentOptions.find(d => String(d.value) === String(f.departmentId || f.department))
+    return match ? match.label : f.department || f.departmentName || '—'
+  }
+  const getFacultyCode = f => {
+    if (!f) return '—'
+    const code = formatFacultyDisplayCode(f, collegeOptions, faculty)
+    if (code && code !== '—') return code
+    return f.employeeId || f.facultyCode || (f.id ? `FAC-${f.id}` : '—')
+  }
   const normalizeAttendance = useCallback((rows, options) => mergeAttendanceRecords(faculty, rows.map(row => normalizeAttendanceRow(row, options))), [faculty])
   const loadAttendance = useCallback(async () => {
     const version = ++attendanceVersion.current; setAttendanceError('')
@@ -502,9 +524,14 @@ function FacultyAttendanceScreen({ faculty, onNotify }) {
   const reportRows = useMemo(() => reportType === 'daily' ? reportRecords : serverReport.map(row => ({ ...row, facultyId: String(row.facultyId), faculty: faculty.find(member => String(member.id) === String(row.facultyId)) || normalizeFaculty(row), totalDays: row.totalDays ?? row.workingDays ?? 0, present: row.present ?? row.presentDays ?? 0, absent: row.absent ?? row.absentDays ?? 0, late: row.late ?? row.lateDays ?? 0, halfDay: row.halfDay ?? row.halfDays ?? 0, onLeave: row.onLeave ?? row.leaveDays ?? 0, lop: row.lop ?? row.lopDays ?? 0, period: periodLabel })), [reportRecords, reportType, serverReport, faculty, periodLabel])
   const dailySummary = useMemo(() => summarizeAttendance(dailyRows), [dailyRows])
   const reportSummary = useMemo(() => summarizeAttendance(reportRecords), [reportRecords])
-  const reportFaculty = useMemo(() => faculty.filter(item => !currentReport.facultyType || (item.employeeCategory === 'Non-Teaching' ? 'Non-Teaching' : 'Teaching') === currentReport.facultyType).filter(item => !currentReport.department || item.department === currentReport.department), [faculty, currentReport.facultyType, currentReport.department])
-  const departmentOptions = useMemo(() => [...new Set((tab === 'reports' ? faculty.filter(item => !currentReport.facultyType || (item.employeeCategory === 'Non-Teaching' ? 'Non-Teaching' : 'Teaching') === currentReport.facultyType) : faculty).map(item => item.department).filter(Boolean))], [faculty, tab, currentReport.facultyType])
-  const facultyOptions = useMemo(() => (tab === 'reports' ? reportFaculty : faculty).map(item => ({ value: String(item.id), label: item.employeeId + ' · ' + item.fullName })), [faculty, reportFaculty, tab])
+  const reportFaculty = useMemo(() => faculty.filter(item => !currentReport.facultyType || (item.employeeCategory === 'Non-Teaching' ? 'Non-Teaching' : 'Teaching') === currentReport.facultyType).filter(item => !currentReport.department || getFacultyDept(item) === currentReport.department || item.department === currentReport.department), [faculty, currentReport.facultyType, currentReport.department])
+  const attendanceDepartmentOptions = useMemo(() => {
+    if (departmentOptions && departmentOptions.length > 0) {
+      return departmentOptions.map(d => typeof d === 'string' ? d : d.label || d.value)
+    }
+    return [...new Set((tab === 'reports' ? faculty.filter(item => !currentReport.facultyType || (item.employeeCategory === 'Non-Teaching' ? 'Non-Teaching' : 'Teaching') === currentReport.facultyType) : faculty).map(item => getFacultyDept(item)).filter(Boolean))]
+  }, [faculty, tab, currentReport.facultyType, departmentOptions])
+  const facultyOptions = useMemo(() => (tab === 'reports' ? reportFaculty : faculty).map(item => ({ value: String(item.id), label: getFacultyCode(item) + ' · ' + item.fullName })), [faculty, reportFaculty, tab, collegeOptions])
   const filters = tab === 'daily' ? dailyFilters : tab === 'register' ? registerFilters : currentReport
   const updateFilter = (key, value) => {
     if (tab === 'daily') { setDailyFilters(old => ({ ...old, [key]: value })); setDailyPage(1) }
@@ -523,26 +550,57 @@ function FacultyAttendanceScreen({ faculty, onNotify }) {
     try {
       let id = values.attendanceId
       const payload = attendancePayload(values)
-      if (id) await facultyService.updateAttendance(id, payload)
-      else {
-        const created = await facultyService.createAttendance({ facultyId: requiredNumber(values.facultyId, 'Faculty'), attendanceDate: values.date, status: values.status, remarks: values.remarks || null })
+      const targetFacultyId = values.facultyId || values.faculty?.id || values.faculty?.facultyId
+      const numFacultyId = Number(targetFacultyId)
+      const facultyIdParam = Number.isSafeInteger(numFacultyId) && numFacultyId > 0 ? numFacultyId : targetFacultyId
+      if (id) {
+        await facultyService.updateAttendance(id, { ...payload, facultyId: facultyIdParam, status: values.status, remarks: values.remarks || null })
+      } else {
+        const created = await facultyService.createAttendance({
+          facultyId: facultyIdParam,
+          attendanceDate: values.date,
+          status: values.status,
+          remarks: values.remarks || null,
+          checkIn: payload.checkIn,
+          checkOut: payload.checkOut,
+        })
         id = created.attendanceId ?? created.id
-        if (!id) throw new Error('Attendance was saved without an ID. Reload before editing its times.')
-        if (payload.checkIn) await facultyService.checkIn(id, { checkIn: payload.checkIn })
-        if (payload.checkOut) await facultyService.checkOut(id, { checkOut: payload.checkOut })
+        if (id) {
+          if (payload.checkIn) await facultyService.checkIn(id, { checkIn: payload.checkIn }).catch(() => {})
+          if (payload.checkOut) await facultyService.checkOut(id, { checkOut: payload.checkOut }).catch(() => {})
+        }
       }
-      setEditingRecord(null); if (!await loadAttendance()) return; setAttendanceSuccess({ title: 'Attendance Updated', message: 'Attendance saved successfully.' })
-    } catch (error) { await loadAttendance(); setAttendanceError(error.message) }
-    finally { attendanceLock.current = false; setAttendanceBusy(false) }
+      setEditingRecord(null)
+      await loadAttendance()
+      setAttendanceSuccess({ title: 'Attendance Updated', message: 'Attendance saved successfully.' })
+    } catch (error) {
+      await loadAttendance()
+      setAttendanceError(error.message)
+    } finally {
+      attendanceLock.current = false
+      setAttendanceBusy(false)
+    }
   }
   const applyBulkMark = async (status, selectedRows, remarks) => {
     if (attendanceLock.current || !selectedRows.length) return
     attendanceLock.current = true; setAttendanceBusy(true); setAttendanceError('')
     try {
-      await facultyService.bulkAttendance({ facultyIds: selectedRows.map(row => requiredNumber(row.facultyId, 'Faculty')), attendanceDate: dailyFilters.date, status, remarks: remarks || null })
-      if (!await loadAttendance()) return; setSelectedFacultyIds([]); setAttendanceSuccess({ title: 'Attendance Updated', message: selectedRows.length + ' attendance records saved.' })
-    } catch (error) { setAttendanceError(error.message) }
-    finally { attendanceLock.current = false; setAttendanceBusy(false) }
+      const ids = selectedRows.map(row => {
+        const raw = row.facultyId || row.faculty?.id || row.faculty?.facultyId
+        const num = Number(raw)
+        return Number.isSafeInteger(num) && num > 0 ? num : raw
+      })
+      await facultyService.bulkAttendance({ facultyIds: ids, attendanceDate: dailyFilters.date, status, remarks: remarks || null })
+      setSelectedFacultyIds([])
+      await loadAttendance()
+      setAttendanceSuccess({ title: 'Attendance Updated', message: selectedRows.length + ' attendance records saved.' })
+    } catch (error) {
+      await loadAttendance()
+      setAttendanceError(error.message)
+    } finally {
+      attendanceLock.current = false
+      setAttendanceBusy(false)
+    }
   }
   const openAttendance = async (row, edit = false) => {
     try {
@@ -626,7 +684,7 @@ function FacultyAttendanceScreen({ faculty, onNotify }) {
   const matrixRows = useMemo(() => {
     if (!matrixDates.length) return []
     const search = currentReport.search.trim().toLowerCase()
-    return faculty.filter(member => (!currentReport.facultyType || (member.employeeCategory === 'Non-Teaching' ? 'Non-Teaching' : 'Teaching') === currentReport.facultyType) && (!currentReport.department || member.department === currentReport.department) && (!currentReport.facultyId || String(member.id) === String(currentReport.facultyId)) && (!search || `${member.employeeId} ${member.fullName}`.toLowerCase().includes(search))).map(member => {
+    return faculty.filter(member => (!currentReport.facultyType || (member.employeeCategory === 'Non-Teaching' ? 'Non-Teaching' : 'Teaching') === currentReport.facultyType) && (!currentReport.department || getFacultyDept(member) === currentReport.department || member.department === currentReport.department) && (!currentReport.facultyId || String(member.id) === String(currentReport.facultyId)) && (!search || `${getFacultyCode(member)} ${member.employeeId || ''} ${member.fullName}`.toLowerCase().includes(search))).map(member => {
       const cells = matrixDates.map(date => resolvedRecords.find(record => String(record.facultyId) === String(member.id) && record.date === date) || { faculty: member, facultyId: member.id, date, status: 'Not Marked', checkIn: '—', checkOut: '—', hours: '—' })
       const totals = summarizeAttendance(cells)
       return { member, cells, totals }
@@ -690,18 +748,18 @@ function FacultyAttendanceScreen({ faculty, onNotify }) {
       <col className="fm-col-remarks" style={{ width: '150px' }} />
       <col className="fm-col-action" style={{ width: '80px' }} />
     </colgroup> : (showDate ? <colgroup>{[10, 8, 20, 17, 10, 7, 7, 8, 7, 6].map((width, index) => <col key={index} style={{ width: width + '%' }} />)}</colgroup> : showAction ? <colgroup>{[8, 23, 19, 11, 7, 7, 9, 9, 7].map((width, index) => <col key={index} style={{ width: width + '%' }} />)}</colgroup> : <colgroup>{[9, 22, 19, 11, 9, 9, 9, 12].map((width, index) => <col key={index} style={{ width: width + '%' }} />)}</colgroup>)}
-    <thead><tr>{[...(tab === 'daily' ? [<th scope="col" key="select-header"><input type="checkbox" aria-label="Select all daily attendance rows" checked={allDailySelected} onChange={toggleSelectAllDaily} /></th>] : []), ...(showDate ? ['Date'] : []), 'Employee ID', 'Faculty', 'Department', 'Status', 'Check In', 'Check Out', 'Working Hours', ...(showRemarks ? ['Remarks'] : []), ...(showAction ? ['Action'] : [])].map((label, index) => typeof label === 'string' ? <th scope="col" key={label}>{label}</th> : label)}</tr></thead>
+    <thead><tr>{[...(tab === 'daily' ? [<th scope="col" key="select-header"><input type="checkbox" aria-label="Select all daily attendance rows" checked={allDailySelected} onChange={toggleSelectAllDaily} /></th>] : []), ...(showDate ? ['Date'] : []), 'Faculty Code', 'Faculty', 'Department', 'Status', 'Check In', 'Check Out', 'Working Hours', ...(showRemarks ? ['Remarks'] : []), ...(showAction ? ['Action'] : [])].map((label, index) => typeof label === 'string' ? <th scope="col" key={label}>{label}</th> : label)}</tr></thead>
     <tbody>{(aggregated ? [] : visibleRows).map(row => <tr key={`${row.facultyId}:${row.date}`}>
       {tab === 'daily' && <td><input type="checkbox" aria-label={'Select ' + row.faculty.fullName} checked={selectedFacultyIds.includes(String(row.facultyId))} onChange={event => setSelectedFacultyIds(current => event.target.checked ? [...new Set([...current, String(row.facultyId)])] : current.filter(id => id !== String(row.facultyId)))} /></td>}
       {showDate && <td>{displayDate(row.date)}</td>}
-      <td><span className="fm-attendance-employee">{row.faculty.employeeId}</span></td>
-      <td><div className="fm-attendance-identity"><Avatar faculty={row.faculty} /><div><strong>{row.faculty.fullName}</strong><small>{row.faculty.designation}</small></div></div></td>
-      <td className="fm-department-cell">{row.faculty.department}</td><td>{attendanceBadge(row.status)}</td><td>{row.checkIn}</td><td>{row.checkOut}</td><td>{row.hours}</td>
+      <td><span className="fm-attendance-employee">{getFacultyCode(row.faculty)}</span></td>
+      <td><div className="fm-attendance-identity"><Avatar faculty={row.faculty} /><div><strong>{row.faculty.fullName}</strong><small>{row.faculty.designation || 'Faculty'}</small></div></div></td>
+      <td className="fm-department-cell">{getFacultyDept(row.faculty)}</td><td>{attendanceBadge(row.status)}</td><td>{row.checkIn}</td><td>{row.checkOut}</td><td>{row.hours}</td>
       {showRemarks && <td className="fm-remarks-cell"><span className="fm-attendance-remarks" title={row.remarks}>{row.remarks}</span></td>}
       {showAction && <td className="fm-action-cell"><div className="fm-table-actions"><button className="fm-icon-button" type="button" title="View Attendance" aria-label={'View attendance record for ' + row.faculty.fullName + ' on ' + row.date} onClick={() => openAttendance(row)}><FiEye /></button><button className="fm-icon-button" type="button" title="Edit attendance" aria-label={'Edit attendance for ' + row.faculty.fullName + ' on ' + row.date} onClick={() => openAttendance(row, true)}><FiEdit2 /></button></div></td>}
     </tr>)}</tbody>
   </table></div>
-  const aggregatedTable = reportType === 'daily' ? <div className="fm-attendance-table fm-attendance-aggregate-table"><table><thead><tr>{['Employee ID', 'Faculty', 'Department', 'Days With Data', 'Present', 'Absent', 'Late', 'Half Day', 'On Leave', 'Total Hours', 'Attendance %'].map(label => <th scope="col" key={label}>{label}</th>)}</tr></thead><tbody>{visibleReportRows.map(row => <tr key={row.facultyId}><td><span className="fm-attendance-employee">{row.faculty.employeeId}</span></td><td><strong>{row.faculty.fullName}</strong></td><td>{row.faculty.department}</td><td>{row.total}</td>{['Present', 'Absent', 'Late', 'Half Day', 'On Leave'].map(status => <td key={status}>{row[status]}</td>)}<td>{row.hours}</td><td>{row.percentage}</td></tr>)}</tbody></table></div> : <><div className="fm-report-legend" aria-label="Attendance status legend">{Object.entries(statusMeta).map(([status, [code, tone]]) => <span key={status}>{statusCell({ status, date: period.from, checkIn: '—', checkOut: '—', hours: '—' })}<small>{attendanceStatusLabel(status)}</small></span>)}</div><div className="fm-attendance-table fm-attendance-matrix"><table><thead><tr><th>Employee ID</th><th>Faculty</th>{matrixDates.map(date => <th key={date}><span>{new Date(date + 'T00:00:00').toLocaleDateString('en-GB', { weekday: 'short' }).toUpperCase()}</span><b>{new Date(date + 'T00:00:00').toLocaleDateString('en-GB', { day: '2-digit', month: 'short' }).toUpperCase()}</b></th>)}{['P', 'A', 'L', 'HD', 'OL', 'LOP', '%'].map(label => <th key={label}>{label}</th>)}</tr></thead><tbody>{visibleMatrixRows.map(({ member, cells, totals }) => <tr key={member.id}><td>{member.employeeId}</td><td className="fm-matrix-faculty"><strong>{member.fullName}</strong><small>{member.department}</small></td>{cells.map(cell => <td key={cell.date}>{statusCell(cell)}</td>)}{[['Present', 'present'], ['Absent', 'absent'], ['Late', 'late'], ['Half Day', 'half-day'], ['On Leave', 'leave'], ['LOP', 'lop']].map(([status, tone]) => <td className={`fm-report-total fm-report-total--${tone}`} key={status}>{totals[status]}</td>)}<td className="fm-report-total fm-report-total--percentage">{totals.percentage}</td></tr>)}</tbody></table></div></>
+  const aggregatedTable = reportType === 'daily' ? <div className="fm-attendance-table fm-attendance-aggregate-table"><table><thead><tr>{['Faculty Code', 'Faculty', 'Department', 'Days With Data', 'Present', 'Absent', 'Late', 'Half Day', 'On Leave', 'Total Hours', 'Attendance %'].map(label => <th scope="col" key={label}>{label}</th>)}</tr></thead><tbody>{visibleReportRows.map(row => <tr key={row.facultyId}><td><span className="fm-attendance-employee">{getFacultyCode(row.faculty)}</span></td><td><strong>{row.faculty.fullName}</strong></td><td>{getFacultyDept(row.faculty)}</td><td>{row.total}</td>{['Present', 'Absent', 'Late', 'Half Day', 'On Leave'].map(status => <td key={status}>{row[status]}</td>)}<td>{row.hours}</td><td>{row.percentage}</td></tr>)}</tbody></table></div> : <><div className="fm-report-legend" aria-label="Attendance status legend">{Object.entries(statusMeta).map(([status, [code, tone]]) => <span key={status}>{statusCell({ status, date: period.from, checkIn: '—', checkOut: '—', hours: '—' })}<small>{attendanceStatusLabel(status)}</small></span>)}</div><div className="fm-attendance-table fm-attendance-matrix"><table><thead><tr><th>Faculty Code</th><th>Faculty</th>{matrixDates.map(date => <th key={date}><span>{new Date(date + 'T00:00:00').toLocaleDateString('en-GB', { weekday: 'short' }).toUpperCase()}</span><b>{new Date(date + 'T00:00:00').toLocaleDateString('en-GB', { day: '2-digit', month: 'short' }).toUpperCase()}</b></th>)}{['P', 'A', 'L', 'HD', 'OL', 'LOP', '%'].map(label => <th key={label}>{label}</th>)}</tr></thead><tbody>{visibleMatrixRows.map(({ member, cells, totals }) => <tr key={member.id}><td>{getFacultyCode(member)}</td><td className="fm-matrix-faculty"><strong>{member.fullName}</strong><small>{getFacultyDept(member)}</small></td>{cells.map(cell => <td key={cell.date}>{statusCell(cell)}</td>)}{[['Present', 'present'], ['Absent', 'absent'], ['Late', 'late'], ['Half Day', 'half-day'], ['On Leave', 'leave'], ['LOP', 'lop']].map(([status, tone]) => <td className={`fm-report-total fm-report-total--${tone}`} key={status}>{totals[status]}</td>)}<td className="fm-report-total fm-report-total--percentage">{totals.percentage}</td></tr>)}</tbody></table></div></>
   const noSource = tab !== 'daily' && !attendanceRecords.length
   const empty = <EmptyState title={noSource ? 'No attendance records are available yet.' : 'No attendance records match the selected filters.'} description={noSource ? 'Daily Attendance shows missing records as Not Marked; these are not saved historical records.' : undefined} action={noSource ? 'Go to Daily Attendance' : 'Clear Filters'} onAction={noSource ? () => setTab('daily') : clearFilters} />
   return (
@@ -734,7 +792,7 @@ function FacultyAttendanceScreen({ faculty, onNotify }) {
                   </label>
                 </>
               )}
-              {selectControl('department', 'Department', departmentOptions, 'All Departments')}
+              {selectControl('department', 'Department', attendanceDepartmentOptions, 'All Departments')}
               {tab !== 'daily' && selectControl('facultyId', 'Faculty', facultyOptions, 'All Faculty')}
               {(!aggregated) && selectControl('status', 'Status', ATTENDANCE_STATUSES, 'All Statuses')}
               <button className="fm-attendance-clear" type="button" onClick={clearFilters}>Clear Filters</button>
@@ -763,7 +821,7 @@ function FacultyAttendanceScreen({ faculty, onNotify }) {
             {reportType === 'weekly' && dateControl('weekStart', 'Week Start')}
             {reportType === 'monthly' && <>{selectControl('month', 'Month', Array.from({ length: 12 }, (_, index) => ({ value: String(index + 1).padStart(2, '0'), label: new Date(2000, index, 1).toLocaleDateString('en-GB', { month: 'long' }) })), 'Select month')}<label className="fm-attendance-field"><span>Year</span><input type="number" min="1900" max="9999" value={filters.year} onChange={event => updateFilter('year', event.target.value)} /></label></>}
             {selectControl('facultyType', 'Faculty Type', ['Teaching', 'Non-Teaching'], 'All Faculty')}
-            {selectControl('department', 'Department', departmentOptions, 'All Departments')}
+            {selectControl('department', 'Department', attendanceDepartmentOptions, 'All Departments')}
             {selectControl('facultyId', 'Faculty', facultyOptions, 'All Employees')}
             {selectControl('status', 'Status', ATTENDANCE_STATUSES, 'All Statuses')}
             <button className="fm-attendance-clear" type="button" onClick={clearFilters}>Clear Filters</button>
@@ -807,9 +865,9 @@ function FacultyAttendanceScreen({ faculty, onNotify }) {
               <span className="fm-attendance-detail-avatar">{(selected.faculty.fullName || 'FM').split(' ').filter(Boolean).slice(0, 2).map(part => part[0]).join('').toUpperCase().slice(0, 2) || 'FM'}</span>
               <div className="fm-attendance-detail-identity">
                 <h2>{selected.faculty.fullName}</h2>
-                <p>{selected.faculty.employeeId}</p>
-                <p>{selected.faculty.designation}</p>
-                <p>{selected.faculty.department}</p>
+                <p>{getFacultyCode(selected.faculty)}</p>
+                <p>{selected.faculty.designation || 'Faculty'}</p>
+                <p>{getFacultyDept(selected.faculty)}</p>
               </div>
               <div className="fm-attendance-detail-status">{attendanceBadge(selected.status)}</div>
             </div>
@@ -828,7 +886,7 @@ function FacultyAttendanceScreen({ faculty, onNotify }) {
         </div>
       )}
 
-      {attendanceError && <p className="fm-error" role="alert" style={{ position: 'relative', zIndex: 1500 }}>{attendanceError}</p>}{tab !== 'reports' && editingRecord && <fieldset disabled={attendanceBusy} style={{ border: 0, margin: 0, padding: 0 }}><AttendanceEditor record={editingRecord} onClose={() => setEditingRecord(null)} onSave={saveAttendance} onReset={record => saveAttendance({ ...record, status: 'Not Marked' })} /></fieldset>}
+      {attendanceError && <p className="fm-error" role="alert" style={{ position: 'relative', zIndex: 1500 }}>{attendanceError}</p>}{tab !== 'reports' && editingRecord && <fieldset disabled={attendanceBusy} style={{ border: 0, margin: 0, padding: 0 }}><AttendanceEditor record={editingRecord} collegeOptions={collegeOptions} departmentOptions={departmentOptions} allFaculty={faculty} onClose={() => setEditingRecord(null)} onSave={saveAttendance} onReset={record => saveAttendance({ ...record, status: 'Not Marked' })} /></fieldset>}
       {attendanceSuccess && (
         <div className="fm-modal-backdrop fm-success-backdrop" role="presentation">
           <section className="fm-attendance-success" role="dialog" aria-modal="true" aria-labelledby="attendance-success-title">
@@ -863,8 +921,11 @@ function FacultyAttendanceScreen({ faculty, onNotify }) {
     </div>
   )
 }
-function ProfileSections({ data, collegeOptions = [], departmentOptions = [] }) {
+function ProfileSections({ data, collegeOptions = [], departmentOptions = [], faculty = [] }) {
   const getFieldValue = (key, value) => {
+    if (key === 'employeeId') {
+      return formatFacultyDisplayCode(data, collegeOptions, faculty)
+    }
     if (key === 'collegeName' || key === 'collegeId') {
       const match = collegeOptions.find(c => String(c.value) === String(value))
       return match ? match.label : value || '—'
@@ -1009,24 +1070,103 @@ function Field({ field, data, errors, update, native = false, collegeOptions = [
   )
 }
 
-const getNextFacultyCode = (list = []) => {
-  let max = 0
-  for (const item of list || []) {
-    const raw = String(item?.employeeId || item?.facultyCode || '').trim()
-    const match = raw.match(/FAC-?(\d+)/i) || raw.match(/(\d+)/)
-    if (match) {
-      const val = parseInt(match[1], 10)
-      if (Number.isFinite(val) && val > max) max = val
+const getCollegePrefix = (collegeId, collegeOptions = []) => {
+  const selectedCollege = (collegeOptions || []).find(c => String(c.value) === String(collegeId) || String(c.id) === String(collegeId) || String(c.label) === String(collegeId))
+  if (!selectedCollege) return 'FAC'
+
+  let raw = String(selectedCollege.code || selectedCollege.collegeCode || selectedCollege.CollegeCode || '').trim()
+  let collegeCode = raw.toUpperCase().replace(/[^A-Z0-9]/g, '')
+  const alphaMatch = collegeCode.match(/^([A-Z]{2,})\d+$/)
+  if (alphaMatch) {
+    collegeCode = alphaMatch[1]
+  }
+
+  if (!collegeCode && selectedCollege.label) {
+    const cleanLabel = selectedCollege.label.replace(/college|institute|engineering|technology|university/gi, '').trim()
+    const targetLabel = cleanLabel || selectedCollege.label
+    const words = targetLabel.trim().split(/[\s-]+/).filter(Boolean)
+    collegeCode = (words.length > 1 ? words.map(w => w[0]).join('') : words[0]?.slice(0, 5) || '').toUpperCase().replace(/[^A-Z0-9]/g, '')
+  }
+
+  if (!collegeCode) return 'FAC'
+  if (collegeCode.endsWith('FAC')) return `${collegeCode}-`
+  return `${collegeCode}-FAC`
+}
+
+export const formatFacultyDisplayCode = (item, collegeOptions = [], allFaculty = []) => {
+  if (!item) return '—'
+
+  const collegeId = item.collegeId ?? item.college_id ?? (collegeOptions.length === 1 ? collegeOptions[0].value : '')
+  const prefix = collegeId ? getCollegePrefix(collegeId, collegeOptions) : 'FAC'
+
+  if (collegeId && Array.isArray(allFaculty) && allFaculty.length > 0) {
+    const sameCollegeFaculty = allFaculty
+      .filter(f => {
+        const cId = f.collegeId ?? f.college_id ?? (collegeOptions.length === 1 ? collegeOptions[0].value : '')
+        return String(cId || '') === String(collegeId || '')
+      })
+      .sort((a, b) => {
+        const idA = Number(a.id || a.facultyId || 0)
+        const idB = Number(b.id || b.facultyId || 0)
+        if (Number.isFinite(idA) && Number.isFinite(idB) && idA > 0 && idB > 0) return idA - idB
+        return String(a.joiningDate || a.id || '').localeCompare(String(b.joiningDate || b.id || ''))
+      })
+
+    const index = sameCollegeFaculty.findIndex(f => String(f.id || f.facultyId) === String(item.id || item.facultyId))
+    if (index >= 0) {
+      return `${prefix}${String(index + 1).padStart(3, '0')}`
     }
   }
-  return 'FAC' + String(max + 1).padStart(3, '0')
+
+  const explicitCode = String(item.facultyCode || '').trim()
+  if (explicitCode && !/^[0-9a-f]{8}-[0-9a-f]{4}/i.test(explicitCode) && !/^[0-9a-f]{32}$/i.test(explicitCode)) {
+    const numMatch = explicitCode.match(/(\d+)$/)
+    if (numMatch) {
+      return `${prefix}${numMatch[1].padStart(3, '0')}`
+    }
+    return explicitCode.toUpperCase()
+  }
+
+  const numMatch = String(item.id || item.employeeId || '').match(/(\d+)$/)
+  if (numMatch) {
+    return `${prefix}${numMatch[1].padStart(3, '0')}`
+  }
+  return `${prefix}001`
+}
+
+const getNextFacultyCode = (list = [], collegeId, collegeOptions = []) => {
+  const prefix = getCollegePrefix(collegeId, collegeOptions)
+  const collegeList = collegeId
+    ? (list || []).filter(item => {
+        const cId = item?.collegeId ?? item?.college_id ?? (collegeOptions.length === 1 ? collegeOptions[0].value : '')
+        return String(cId || '') === String(collegeId || '')
+      })
+    : (list || [])
+
+  let max = 0
+  const prefixEscaped = prefix.replace(/[-/\\^$*+?.()|[\]{}]/g, '\\$&')
+  const regex = new RegExp(`(?:${prefixEscaped}|FAC)-?(\\d+)`, 'i')
+
+  for (const item of collegeList) {
+    const raw = String(item?.facultyCode || item?.faculty_code || '').trim()
+    if (raw) {
+      const match = raw.match(regex) || raw.match(/FAC-?(\d+)/i)
+      if (match) {
+        const val = parseInt(match[1], 10)
+        if (Number.isFinite(val) && val > max) max = val
+      }
+    }
+  }
+
+  const nextSeq = Math.max(max, collegeList.length) + 1
+  return `${prefix}${String(nextSeq).padStart(3, '0')}`
 }
 
 function FacultyForm({ initial, faculty, onSave, onCancel, collegeOptions, departmentOptions, saving }) {
   const [data, setData] = useState(() => {
     const base = normalize(initial)
     if (!base.employeeId) {
-      base.employeeId = getNextFacultyCode(faculty)
+      base.employeeId = getNextFacultyCode(faculty, base.collegeId, collegeOptions)
     }
     return base
   })
@@ -1036,7 +1176,35 @@ function FacultyForm({ initial, faculty, onSave, onCancel, collegeOptions, depar
   const readerRef = useRef(null)
   const formRef = useRef(null)
   useEffect(() => () => readerRef.current?.abort(), [])
-  const update = (key, value) => { setData(old => ({ ...old, [key]: value })); setErrors(old => ({ ...old, [key]: undefined })) }
+
+  useEffect(() => {
+    if (!initial?.id) {
+      const activeCollegeId = data.collegeId || collegeOptions[0]?.value || ''
+      if (activeCollegeId) {
+        const newCode = getNextFacultyCode(faculty, activeCollegeId, collegeOptions)
+        const expectedPrefix = getCollegePrefix(activeCollegeId, collegeOptions)
+        if (newCode && (!data.employeeId || data.employeeId === 'FAC001' || !data.employeeId.startsWith(expectedPrefix))) {
+          setData(old => ({
+            ...old,
+            collegeId: old.collegeId || activeCollegeId,
+            employeeId: newCode,
+          }))
+        }
+      }
+    }
+  }, [collegeOptions, data.collegeId, faculty, initial?.id])
+
+  const update = (key, value) => {
+    setData(old => {
+      const colId = typeof value === 'object' && value !== null ? (value.value ?? value.id ?? '') : String(value ?? '')
+      const nextData = { ...old, [key]: value }
+      if (key === 'collegeId' && !initial?.id) {
+        nextData.employeeId = getNextFacultyCode(faculty, colId, collegeOptions)
+      }
+      return nextData
+    })
+    setErrors(old => ({ ...old, [key]: undefined }))
+  }
   const focusError = () => requestAnimationFrame(() => formRef.current?.querySelector('[aria-invalid="true"]')?.focus())
 
   const stepTitles = [...sections.map(s => s.title), 'Documents', 'Preview']
@@ -1138,10 +1306,10 @@ function FacultyForm({ initial, faculty, onSave, onCancel, collegeOptions, depar
             <Avatar faculty={data} large />
             <div>
               <h2>{data.fullName}</h2>
-              <p>{data.employeeId} · {data.designation}</p>
+              <p>{formatFacultyDisplayCode(data, collegeOptions, faculty)} · {data.designation}</p>
             </div>
           </div>
-          <ProfileSections data={data} collegeOptions={collegeOptions} departmentOptions={departmentOptions} />
+          <ProfileSections data={data} collegeOptions={collegeOptions} departmentOptions={departmentOptions} faculty={faculty} />
         </>
       )}
       <footer className="fm-form-footer">
@@ -1530,6 +1698,7 @@ function AssignmentDialog({ faculty, onClose, onAdd, onRemove, toast }) {
                   }}
                   required
                 >
+                  <option value="">Select Assignment Type</option>
                   {assignmentTypeOptions.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
                 </select>
               </div>
@@ -1665,8 +1834,15 @@ export default function FacultyManagement() {
     let active = true
     Promise.all([facultyMasterApi.getColleges(), departmentApi.getAll()]).then(([colleges, departments]) => {
       if (!active) return
-      setCollegeOptions(colleges.map(row => ({ value: String(row.collegeId ?? row.id), label: row.collegeName ?? row.name })))
-      setDepartmentOptions(departments.map(row => ({ value: String(row.departmentId ?? row.id), label: row.departmentName ?? row.name })))
+      setCollegeOptions((colleges || []).map(row => ({
+        value: String(row.collegeId ?? row.CollegeId ?? row.id ?? row.Id ?? ''),
+        label: row.collegeName ?? row.CollegeName ?? row.name ?? row.Name ?? '',
+        code: row.collegeCode ?? row.CollegeCode ?? row.code ?? row.Code ?? '',
+      })))
+      setDepartmentOptions((departments || []).map(row => ({
+        value: String(row.departmentId ?? row.DepartmentId ?? row.id ?? row.Id ?? ''),
+        label: row.departmentName ?? row.DepartmentName ?? row.name ?? row.Name ?? '',
+      })))
     }).catch(error => { if (active) setLoadError(error.message) })
     return () => { active = false }
   }, [])
@@ -1710,7 +1886,10 @@ export default function FacultyManagement() {
   // while navigation is settling after a profile or edit screen is closed.
   const selected = targetId ? (detail?.id === targetId ? { ...listed, ...detail, assignments: listed?.assignments || detail?.assignments || [] } : listed) : null
   const assignedFaculty = faculty.find(item => item.id === assignmentId)
-  const filtered = useMemo(() => faculty.filter(item => [item.fullName, item.employeeId, item.email, item.mobile, item.department, item.designation].join(' ').toLowerCase().includes(query.trim().toLowerCase()) && Object.entries(filters).every(([key, value]) => !value || item[key] === value)), [faculty, query, filters])
+  const filtered = useMemo(() => faculty.filter(item => {
+    const displayCode = formatFacultyDisplayCode(item, collegeOptions, faculty)
+    return [item.fullName, item.employeeId, displayCode, item.email, item.mobile, item.department, item.designation].join(' ').toLowerCase().includes(query.trim().toLowerCase()) && Object.entries(filters).every(([key, value]) => !value || item[key] === value)
+  }), [faculty, query, filters, collegeOptions])
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE))
   const currentPage = Math.min(page, totalPages)
   const active = Boolean(query || Object.values(filters).some(Boolean))
@@ -1722,7 +1901,8 @@ export default function FacultyManagement() {
     navigate('/faculty', { replace: true })
   }
   const addFaculty = () => navigate('/faculty/new')
-  const nextId = getNextFacultyCode(faculty)
+  const defaultCollegeId = collegeOptions[0]?.value || ''
+  const nextId = getNextFacultyCode(faculty, defaultCollegeId, collegeOptions)
   const save = async data => {
     if (saveLock.current) return
     saveLock.current = true; setSaving(true); setLoadError('')
@@ -1735,7 +1915,7 @@ export default function FacultyManagement() {
       else await facultyService.createProfile(savedId, data).catch(() => {})
       if (data.photoFile) await facultyService.uploadProfilePhoto(savedId, data.photoFile)
       const refreshed = await facultyService.getById(savedId).catch(() => saved)
-      const normalizedRecord = normalize({ ...mergeFacultyData(data, refreshed), id: savedId, facultyId: savedId })
+      const normalizedRecord = normalize({ ...mergeFacultyData(data, refreshed), id: savedId, facultyId: savedId, facultyCode: data.employeeId || refreshed.facultyCode })
       setFaculty(rows => data.id ? rows.map(row => row.id === data.id ? { ...row, ...normalizedRecord, assignments: row.assignments } : row) : [normalizedRecord, ...rows.filter(r => r.id !== savedId && r.employeeId !== normalizedRecord.employeeId)])
       notify(data.id ? 'Faculty updated successfully' : 'Faculty created successfully'); clear(); back()
     } catch (error) {
@@ -1784,11 +1964,11 @@ export default function FacultyManagement() {
   const directoryActions = <><ExportMenu rows={filtered} columns={exportColumns} screen="faculty-local-directory" filename="faculty-roster" title="Faculty Directory" /><button className="fm-button" type="button" onClick={addFaculty}><FiPlus /> Add Faculty</button></>
   let content
   if (path === '/faculty/advisors' || path === '/faculty/subjects') return <Navigate to="/faculty" replace />
-  if (path === '/faculty/attendance') content = <FacultyAttendanceScreen faculty={faculty} onNotify={notify} />
+  if (path === '/faculty/attendance') content = <FacultyAttendanceScreen faculty={faculty} collegeOptions={collegeOptions} departmentOptions={departmentOptions} onNotify={notify} />
   else if (((editId || detailId) && !selected) || (!['/faculty', '/faculty/new'].includes(path) && !editId && !detailId)) {
     content = <section className="fm-panel"><EmptyState title="Faculty record not found" action="Back to Faculty Directory" onAction={back} /></section>
   } else if (path === '/faculty/new' || editId) {
-    content = <><header className="faculty-page-header"><div><h1>{editId ? 'Edit Faculty' : 'Add Faculty'}</h1><p>Faculty registration and employment record</p></div><button type="button" className="fm-button secondary" onClick={back}><FiArrowLeft /> Back</button></header><FacultyForm key={location.key + ':' + Boolean(detail)} initial={selected || { employeeId: nextId, employmentType: 'Permanent', employmentStatus: 'Working', employeeCategory: 'Teaching' }} faculty={faculty} collegeOptions={collegeOptions} departmentOptions={departmentOptions} saving={saving} onSave={save} onCancel={back} /></>
+    content = <><header className="faculty-page-header"><div><h1>{editId ? 'Edit Faculty' : 'Add Faculty'}</h1><p>Faculty registration and employment record</p></div><button type="button" className="fm-button secondary" onClick={back}><FiArrowLeft /> Back</button></header><FacultyForm key={location.key + ':' + Boolean(detail) + ':' + (collegeOptions[0]?.value || '')} initial={selected || { collegeId: defaultCollegeId, employeeId: nextId, employmentType: 'Permanent', employmentStatus: 'Working', employeeCategory: 'Teaching' }} faculty={faculty} collegeOptions={collegeOptions} departmentOptions={departmentOptions} saving={saving} onSave={save} onCancel={back} /></>
   } else if (selected) {
     const load = workload(selected)
     const departmentName = departmentOptions.find(d => String(d.value) === String(selected.departmentId || selected.department))?.label || selected.department || '—'
@@ -1803,7 +1983,7 @@ export default function FacultyManagement() {
             <div className="fm-identity">
               <Avatar faculty={selected} large />
               <div>
-                <p className="fm-eyebrow">FACULTY PROFILE · {selected.employeeId}</p>
+                <p className="fm-eyebrow">FACULTY PROFILE · {formatFacultyDisplayCode(selected, collegeOptions, faculty)}</p>
                 <h1>{selected.fullName}</h1>
                 <p>{selected.designation} · {departmentName}</p>
                 <StatusBadge value={selected.employmentStatus} />
@@ -1852,7 +2032,9 @@ export default function FacultyManagement() {
                         <div key={key}>
                           <dt>{label}</dt>
                           <dd>{
-                            key === 'collegeName' || key === 'collegeId'
+                            key === 'employeeId'
+                              ? formatFacultyDisplayCode(selected, collegeOptions, faculty)
+                              : key === 'collegeName' || key === 'collegeId'
                               ? collegeOptions.find(c => String(c.value) === String(selected[key]))?.label || selected.collegeName || selected[key] || '—'
                               : key === 'department' || key === 'departmentId'
                                 ? departmentOptions.find(d => String(d.value) === String(selected[key]))?.label || selected.department || selected[key] || '—'
@@ -1898,7 +2080,7 @@ export default function FacultyManagement() {
     )
   } else {
     const summary = [{ label: 'Total Faculty', value: faculty.length }, { label: 'Working', value: faculty.filter(row => row.employmentStatus === 'Working').length, tone: 'active' }, { label: 'On Leave', value: faculty.filter(row => row.employmentStatus === 'On Leave').length, tone: 'danger' }, { label: 'Permanent', value: faculty.filter(row => row.employmentType === 'Permanent').length, tone: 'upcoming' }]
-    content = <><header className="faculty-page-header"><div><p className="fm-eyebrow">ACADEMIC RESOURCES</p><h1>Faculty Management</h1><p>Manage faculty profiles, employment records, academic responsibilities and workload.</p></div><div className="fm-actions">{directoryActions}</div></header><div className="faculty-header-summary"><CompactSummary label="Faculty management summary" items={summary} /></div><section className="faculty-directory"><header className="fm-section-bar"><div><p className="fm-eyebrow">FACULTY DIRECTORY</p><p className="fm-muted">{filtered.length} faculty records</p></div></header><FilterPanel active={active} onClear={clear}><div className="faculty-filters"><label className="faculty-search"><FiSearch /><input aria-label="Search faculty" value={query} onChange={event => { setQuery(event.target.value); setPage(1) }} placeholder="Search faculty by name, employee ID, email or mobile" /></label>{[['department', 'Department', departments], ['designation', 'Designation', designations], ['employmentType', 'Employment Type', employmentTypes], ['employmentStatus', 'Employment Status', statuses]].map(([key, label, options]) => <SearchableSelect key={key} label={label} value={filters[key]} options={options} placeholder={label} onChange={value => { setFilters(old => ({ ...old, [key]: value })); setPage(1) }} />)}</div></FilterPanel>{filtered.length ? <><div className="faculty-table-wrap"><table><caption className="fm-sr-only">Faculty directory and records</caption><thead><tr>{['Faculty Code', 'Faculty Name', 'Department', 'Designation', 'Total Experience', 'Employment Type', 'Status', 'Actions'].map(label => <th scope="col" key={label}>{label}</th>)}</tr></thead><tbody>{filtered.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE).map(item => <tr key={item.id}><td><span className="fm-employee-id">{item.employeeId}</span></td><td><div className="fm-identity"><Avatar faculty={item} /><div><strong>{item.fullName}</strong><small>{item.email}</small></div></div></td><td className="fm-department">{departmentOptions.find(d => String(d.value) === String(item.departmentId || item.department))?.label || item.department || '—'}</td><td>{item.designation || '—'}</td><td>{years(item.experience)}</td><td>{item.employmentType || '—'}</td><td><StatusBadge value={item.employmentStatus} /></td><td><div className="fm-actions"><button type="button" className="fm-icon-button" title="View faculty" aria-label={'View: ' + item.fullName} onClick={() => navigate('/faculty/' + item.id)}><FiEye /></button><button type="button" className="fm-icon-button" title="Assign Academic Work" aria-label={'Assign academic work: ' + item.fullName} onClick={() => setAssignmentId(item.id)}><FiBriefcase /></button></div></td></tr>)}</tbody></table></div><TablePagination currentPage={currentPage} totalPages={totalPages} onPageChange={setPage} /></> : <EmptyState title={faculty.length ? 'No faculty found' : 'No faculty records available'} description={faculty.length ? 'Try changing your search or filters.' : 'Add faculty members to start managing academic resources.'} action={faculty.length ? 'Clear Filters' : 'Add Faculty'} onAction={faculty.length ? clear : addFaculty} />}</section></>
+    content = <><header className="faculty-page-header"><div><p className="fm-eyebrow">ACADEMIC RESOURCES</p><h1>Faculty Management</h1><p>Manage faculty profiles, employment records, academic responsibilities and workload.</p></div><div className="fm-actions">{directoryActions}</div></header><div className="faculty-header-summary"><CompactSummary label="Faculty management summary" items={summary} /></div><section className="faculty-directory"><header className="fm-section-bar"><div><p className="fm-eyebrow">FACULTY DIRECTORY</p><p className="fm-muted">{filtered.length} faculty records</p></div></header><FilterPanel active={active} onClear={clear}><div className="faculty-filters"><label className="faculty-search"><FiSearch /><input aria-label="Search faculty" value={query} onChange={event => { setQuery(event.target.value); setPage(1) }} placeholder="Search faculty by name, employee ID, email or mobile" /></label>{[['department', 'Department', departments], ['designation', 'Designation', designations], ['employmentType', 'Employment Type', employmentTypes], ['employmentStatus', 'Employment Status', statuses]].map(([key, label, options]) => <SearchableSelect key={key} label={label} value={filters[key]} options={options} placeholder={label} onChange={value => { setFilters(old => ({ ...old, [key]: value })); setPage(1) }} />)}</div></FilterPanel>{filtered.length ? <><div className="faculty-table-wrap"><table><caption className="fm-sr-only">Faculty directory and records</caption><thead><tr>{['Faculty Code', 'Faculty Name', 'Department', 'Designation', 'Total Experience', 'Employment Type', 'Status', 'Actions'].map(label => <th scope="col" key={label}>{label}</th>)}</tr></thead><tbody>{filtered.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE).map(item => <tr key={item.id}><td><span className="fm-employee-id">{formatFacultyDisplayCode(item, collegeOptions, faculty)}</span></td><td><div className="fm-identity"><Avatar faculty={item} /><div><strong>{item.fullName}</strong><small>{item.email}</small></div></div></td><td className="fm-department">{departmentOptions.find(d => String(d.value) === String(item.departmentId || item.department))?.label || item.department || '—'}</td><td>{item.designation || '—'}</td><td>{years(item.experience)}</td><td>{item.employmentType || '—'}</td><td><StatusBadge value={item.employmentStatus} /></td><td><div className="fm-actions"><button type="button" className="fm-icon-button" title="View faculty" aria-label={'View: ' + item.fullName} onClick={() => navigate('/faculty/' + item.id)}><FiEye /></button><button type="button" className="fm-icon-button" title="Assign Academic Work" aria-label={'Assign academic work: ' + item.fullName} onClick={() => setAssignmentId(item.id)}><FiBriefcase /></button></div></td></tr>)}</tbody></table></div><TablePagination currentPage={currentPage} totalPages={totalPages} onPageChange={setPage} /></> : <EmptyState title={faculty.length ? 'No faculty found' : 'No faculty records available'} description={faculty.length ? 'Try changing your search or filters.' : 'Add faculty members to start managing academic resources.'} action={faculty.length ? 'Clear Filters' : 'Add Faculty'} onAction={faculty.length ? clear : addFaculty} />}</section></>
   }
   return (
     <DashboardLayout>

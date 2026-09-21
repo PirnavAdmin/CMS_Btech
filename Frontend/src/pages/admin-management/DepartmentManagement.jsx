@@ -688,6 +688,7 @@ export default function DepartmentManagement() {
                       value={form.status}
                       onChange={(e) => setForm({ ...form, status: e.target.value })}
                     >
+                      <option value="">Select Status</option>
                       <option value="Active">Active</option>
                       <option value="Inactive">Inactive</option>
                     </select>

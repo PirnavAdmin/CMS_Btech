@@ -9,8 +9,14 @@ import {
   FiX,
   FiInbox,
 } from "react-icons/fi";
-import { lookupIndianPincode } from "../../../api/apiEndpoints";
+import {
+  academicYearApi,
+  branchApi,
+  courseApi,
+  lookupIndianPincode,
+} from "../../../api/apiEndpoints";
 import { getColleges } from "../../../auth/collegeApi";
+import { getOperationalAcademicYearOptions } from "../../../utils/academicYearUtils";
 import {
   createEmptyCanonicalStudent,
   normalizeCanonicalStudent,
@@ -73,6 +79,9 @@ export default function StudentProfileEdit({ student, onCancel, onSave }) {
     [tab, setTab] = useState("personal"),
     [pinStatus, setPinStatus] = useState({ current: "", permanent: "" }),
     [colleges, setColleges] = useState([]),
+    [courses, setCourses] = useState([]),
+    [branches, setBranches] = useState([]),
+    [academicYears, setAcademicYears] = useState([]),
     tabNavRef = useRef(null),
     bottomScrollRef = useRef(null),
     [tabScrollWidth, setTabScrollWidth] = useState(0),
@@ -93,18 +102,122 @@ export default function StudentProfileEdit({ student, onCancel, onSave }) {
   }, []);
   useEffect(() => {
     let active = true;
-    getColleges()
-      .then((response) => {
+    Promise.all([
+      getColleges().catch(() => []),
+      courseApi.getAll().catch(() => []),
+      branchApi.getAll().catch(() => []),
+      academicYearApi.getAll().catch(() => []),
+    ]).then(([collegeResponse, courseResponse, branchResponse, yearResponse]) => {
+      if (!active) return;
+      const unwrap = (response) => {
         let value = response;
         for (let depth = 0; depth < 5 && value && typeof value === "object"; depth += 1) {
-          if (Array.isArray(value)) break;
-          value = value.items ?? value.content ?? value.records ?? value.data;
+          if (Array.isArray(value)) return value;
+          const rows = value.items ?? value.content ?? value.results ?? value.records;
+          if (Array.isArray(rows)) return rows;
+          value = value.data;
         }
-        if (active) setColleges(Array.isArray(value) ? value : []);
-      })
-      .catch(() => { if (active) setColleges([]); });
-    return () => { active = false; };
+        return Array.isArray(value) ? value : [];
+      };
+      setColleges(unwrap(collegeResponse));
+      setCourses(unwrap(courseResponse));
+      setBranches(unwrap(branchResponse));
+      setAcademicYears(getOperationalAcademicYearOptions(unwrap(yearResponse)));
+    });
+    return () => {
+      active = false;
+    };
   }, []);
+
+  const same = (left, right) => String(left ?? "").trim() === String(right ?? "").trim();
+  const selectedCollegeId = form.admission?.collegeId;
+  const selectedCollegeName = form.admission?.college;
+  const matchedCollege = colleges.find(
+    (c) =>
+      (selectedCollegeId && same(c.collegeId ?? c.id, selectedCollegeId)) ||
+      (selectedCollegeName && (same(c.collegeName, selectedCollegeName) || same(c.name, selectedCollegeName) || same(c.institutionName, selectedCollegeName)))
+  );
+  const effectiveCollegeId = form.admission?.collegeId || matchedCollege?.collegeId || matchedCollege?.id || "";
+
+  const courseOptions = useMemo(() => {
+    return courses
+      .map((item) => {
+        const id = item.courseId ?? item.id ?? "";
+        const name = item.courseName ?? item.name ?? "";
+        const code = item.courseCode ?? item.code ?? item.shortName ?? "";
+        const collegeId = item.collegeId ?? item.college?.collegeId ?? item.college?.id;
+        const department = item.departmentName ?? item.department ?? "";
+        return { id: String(id), name, code, collegeId, department };
+      })
+      .filter(
+        (item) =>
+          item.name &&
+          (!effectiveCollegeId || !item.collegeId || same(item.collegeId, effectiveCollegeId))
+      );
+  }, [courses, effectiveCollegeId]);
+
+  const selectedCourseId = form.academic?.courseId;
+  const selectedCourseName = form.academic?.course;
+  const matchedCourse = courseOptions.find(
+    (c) =>
+      (selectedCourseId && same(c.id, selectedCourseId)) ||
+      (selectedCourseName && same(c.name, selectedCourseName))
+  );
+  const effectiveCourseId = selectedCourseId || matchedCourse?.id || "";
+
+  const availableBranches = useMemo(() => {
+    return branches
+      .map((item) => {
+        const id = item.branchId ?? item.id ?? "";
+        const name = item.branchName ?? item.name ?? item.branchShortName ?? item.shortName ?? "";
+        const code = item.branchCode ?? item.code ?? item.shortName ?? "";
+        const courseId = item.courseId ?? item.course?.courseId ?? item.course?.id;
+        const collegeId = item.collegeId ?? item.college?.collegeId ?? item.college?.id;
+        const department = item.departmentName ?? item.department ?? "";
+        return { id: String(id), name, code, courseId, collegeId, department };
+      })
+      .filter(
+        (item) =>
+          item.name &&
+          (!effectiveCourseId || !item.courseId || same(item.courseId, effectiveCourseId))
+      );
+  }, [branches, effectiveCourseId]);
+
+  // Auto-fill courseCode / branchCode if missing but course / branch is selected
+  useEffect(() => {
+    if (!courses.length && !branches.length) return;
+    setForm((current) => {
+      let next = current;
+      let changed = false;
+      if (current.academic?.course && !current.academic?.courseCode) {
+        const matched = courses.find((c) =>
+          same(c.courseName ?? c.name, current.academic.course) ||
+          same(c.courseId ?? c.id, current.academic.courseId)
+        );
+        if (matched) {
+          const code = matched.courseCode ?? matched.code ?? matched.shortName ?? "";
+          if (code) {
+            next = setPath(next, "academic.courseCode", code);
+            changed = true;
+          }
+        }
+      }
+      if (current.academic?.branch && !current.academic?.branchCode) {
+        const matched = branches.find((b) =>
+          same(b.branchName ?? b.name ?? b.branchShortName ?? b.shortName, current.academic.branch) ||
+          same(b.branchId ?? b.id, current.academic.branchId)
+        );
+        if (matched) {
+          const code = matched.branchCode ?? matched.code ?? matched.shortName ?? "";
+          if (code) {
+            next = setPath(next, "academic.branchCode", code);
+            changed = true;
+          }
+        }
+      }
+      return changed ? next : current;
+    });
+  }, [courses, branches, form.academic?.course, form.academic?.branch]);
   const stepIndex = Math.max(
       0,
       tabs.findIndex(([id]) => id === tab),
@@ -124,6 +237,12 @@ export default function StudentProfileEdit({ student, onCancel, onSave }) {
   const update = (path, value) => {
       setForm((current) => {
         let next = setPath(current, path, value);
+        if (path === "personal.gender") {
+          if (next.admission?.hostel === "Yes") {
+            next.admission.hostelPreference =
+              value === "Male" ? "Boys Hostel" : value === "Female" ? "Girls Hostel" : next.admission.hostelPreference || "Boys Hostel";
+          }
+        }
         if (path === "contact.sameAddress" && value) {
           next.contact.permanentAddress = clone(next.contact.currentAddress || {});
         }
@@ -135,6 +254,10 @@ export default function StudentProfileEdit({ student, onCancel, onSave }) {
         }
         if (path === "previousEducation.intermediate.stream" && value !== "Other") {
           next.previousEducation.intermediate.streamOther = "";
+        }
+        if (path === "academic.admissionType" && value !== "Lateral Entry") {
+          next.academic.quota = "";
+          next.academic.quotaOther = "";
         }
         if (path === "academic.quota" && value !== "Other") {
           next.academic.quotaOther = "";
@@ -148,8 +271,16 @@ export default function StudentProfileEdit({ student, onCancel, onSave }) {
             next.admission.hostelPreference = "";
             next.admission.hostelRoomType = "";
             next.fees.hostelFee = 0;
-          } else if (next.admission?.hostelRoomType) {
-            next.fees.hostelFee = HOSTEL_FEES[next.admission.hostelRoomType] || 0;
+          } else if (value === "Yes") {
+            next.admission.hostelPreference =
+              current.personal?.gender === "Male"
+                ? "Boys Hostel"
+                : current.personal?.gender === "Female"
+                  ? "Girls Hostel"
+                  : "Boys Hostel";
+            if (next.admission?.hostelRoomType) {
+              next.fees.hostelFee = HOSTEL_FEES[next.admission.hostelRoomType] || 0;
+            }
           }
         }
         if (path === "admission.hostelRoomType") {
@@ -300,7 +431,7 @@ export default function StudentProfileEdit({ student, onCancel, onSave }) {
     }
     if (form.academic?.admissionType === "Lateral Entry" && !clean(form.academic?.quota))
       next["academic.quota"] = "Select the admission quota for lateral entry.";
-    if (form.academic?.quota === "Other" && !clean(form.academic?.quotaOther))
+    if (form.academic?.admissionType === "Lateral Entry" && form.academic?.quota === "Other" && !clean(form.academic?.quotaOther))
       next["academic.quotaOther"] = "Specify the admission quota.";
     if (admission.hostel === "Yes" && !clean(admission.hostelPreference))
       next["admission.hostelPreference"] = "Select a hostel preference.";
@@ -354,6 +485,7 @@ export default function StudentProfileEdit({ student, onCancel, onSave }) {
     min,
     max,
     step,
+    onChange,
   }) => {
     const current =
         path.split(".").reduce((value, key) => value?.[key], form) ?? "",
@@ -375,13 +507,13 @@ export default function StudentProfileEdit({ student, onCancel, onSave }) {
       required,
       "aria-invalid": Boolean(message),
       "aria-describedby": message ? `${path}-error` : undefined,
-      onChange: (event) => {
+      onChange: onChange || ((event) => {
         const next =
           mobile || numeric
             ? event.target.value.replace(/\D/g, "").slice(0, limit)
             : event.target.value;
         update(path, next);
-      },
+      }),
     };
     return (
       <label key={path} className={`sp-edit-field ${message ? "invalid" : ""}`}>
@@ -392,9 +524,20 @@ export default function StudentProfileEdit({ student, onCancel, onSave }) {
         {options ? (
           <select {...common}>
             <option value="">Select</option>
-            {options.map((option) => (
-              <option key={option}>{option}</option>
-            ))}
+            {options.map((option) => {
+              if (typeof option === "object" && option !== null) {
+                return (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                );
+              }
+              return (
+                <option key={option} value={option}>
+                  {option}
+                </option>
+              );
+            })}
           </select>
         ) : (
           <input
@@ -770,8 +913,64 @@ export default function StudentProfileEdit({ student, onCancel, onSave }) {
                 Academic placement details.
               </p>
               {fields([
-                ["academic.academicYear", "Academic year"],
-                ["admission.college", "Joining college"],
+                [
+                  "academic.academicYear",
+                  "Academic year",
+                  {
+                    options: academicYears.map((y) => ({
+                      value: y.name || y.academicYearName,
+                      label: y.name || y.academicYearName,
+                    })),
+                    onChange: (event) => {
+                      const val = event.target.value;
+                      const selected = academicYears.find(
+                        (y) => (y.name || y.academicYearName) === val
+                      );
+                      setForm((current) => {
+                        let next = setPath(current, "academic.academicYear", val);
+                        next = setPath(
+                          next,
+                          "academic.academicYearId",
+                          selected?.id || selected?.academicYearId || ""
+                        );
+                        return next;
+                      });
+                      setErrors((current) => ({ ...current, "academic.academicYear": "" }));
+                    },
+                  },
+                ],
+                [
+                  "admission.college",
+                  "Joining college",
+                  {
+                    options: colleges.map((c) => ({
+                      value: c.collegeName || c.name || c.institutionName,
+                      label: c.collegeName || c.name || c.institutionName,
+                    })),
+                    onChange: (event) => {
+                      const val = event.target.value;
+                      const selected = colleges.find(
+                        (c) => (c.collegeName || c.name || c.institutionName) === val
+                      );
+                      setForm((current) => {
+                        let next = setPath(current, "admission.college", val);
+                        next = setPath(
+                          next,
+                          "admission.collegeId",
+                          selected?.collegeId || selected?.id || ""
+                        );
+                        next = setPath(next, "academic.course", "");
+                        next = setPath(next, "academic.courseId", "");
+                        next = setPath(next, "academic.courseCode", "");
+                        next = setPath(next, "academic.branch", "");
+                        next = setPath(next, "academic.branchId", "");
+                        next = setPath(next, "academic.branchCode", "");
+                        return next;
+                      });
+                      setErrors((current) => ({ ...current, "admission.college": "" }));
+                    },
+                  },
+                ],
                 [
                   "academic.admissionType",
                   "Admission type",
@@ -788,35 +987,87 @@ export default function StudentProfileEdit({ student, onCancel, onSave }) {
                     ],
                   },
                 ],
+                ...(form.academic?.admissionType === "Lateral Entry"
+                  ? [
+                      [
+                        "academic.quota",
+                        "Admission quota",
+                        {
+                          options: [
+                            "Government / Convener",
+                            "Management",
+                            "NRI",
+                            "NRI Sponsored",
+                            "Institutional",
+                            "Other",
+                          ],
+                        },
+                      ],
+                      ...(form.academic?.quota === "Other"
+                        ? [["academic.quotaOther", "Specify quota", { required: true }]]
+                        : []),
+                    ]
+                  : []),
                 [
-                  "academic.quota",
-                  "Admission quota",
+                  "academic.course",
+                  "Course",
                   {
-                    options: [
-                      "Government / Convener",
-                      "Management",
-                      "NRI",
-                      "NRI Sponsored",
-                      "Institutional",
-                      "Other",
-                    ],
+                    options: courseOptions.map((c) => ({
+                      value: c.name,
+                      label: c.code ? `${c.name} (${c.code})` : c.name,
+                    })),
+                    onChange: (event) => {
+                      const val = event.target.value;
+                      const selected = courseOptions.find((c) => c.name === val);
+                      setForm((current) => {
+                        let next = setPath(current, "academic.course", val);
+                        next = setPath(next, "academic.courseId", selected?.id || "");
+                        next = setPath(next, "academic.courseCode", selected?.code || "");
+                        if (selected?.department) {
+                          next = setPath(next, "academic.department", selected.department);
+                        }
+                        next = setPath(next, "academic.branch", "");
+                        next = setPath(next, "academic.branchId", "");
+                        next = setPath(next, "academic.branchCode", "");
+                        return next;
+                      });
+                      setErrors((current) => ({ ...current, "academic.course": "" }));
+                    },
                   },
                 ],
-                ["academic.quotaOther", "Specify quota", { required: form.academic?.quota === "Other" }],
-                ["academic.course", "Course"],
-                ["academic.courseCode", "Course code"],
+                ["academic.courseCode", "Course code", { readOnly: true }],
                 ["academic.department", "Department"],
-                ["academic.branch", "Branch"],
-                ["academic.branchCode", "Branch code"],
-                ["academic.semester", "Semester"],
-                ["academic.section", "Section"],
+                [
+                  "academic.branch",
+                  "Branch",
+                  {
+                    options: availableBranches.map((b) => ({
+                      value: b.name,
+                      label: b.code ? `${b.name} (${b.code})` : b.name,
+                    })),
+                    onChange: (event) => {
+                      const val = event.target.value;
+                      const selected = availableBranches.find((b) => b.name === val);
+                      setForm((current) => {
+                        let next = setPath(current, "academic.branch", val);
+                        next = setPath(next, "academic.branchId", selected?.id || "");
+                        next = setPath(next, "academic.branchCode", selected?.code || "");
+                        if (selected?.department && !current.academic?.department) {
+                          next = setPath(next, "academic.department", selected.department);
+                        }
+                        return next;
+                      });
+                      setErrors((current) => ({ ...current, "academic.branch": "" }));
+                    },
+                  },
+                ],
+                ["academic.branchCode", "Branch code", { readOnly: true }],
                 [
                   "academic.studentCategory",
                   "Student category",
                   { options: ["General", "SC", "ST", "BC", "EWS", "Other"] },
                 ],
                 ["academic.regulation", "Regulation"],
-                ["academic.entryType", "Entry type", { options: ["Regular", "Lateral Entry"] }],
               ])}
             </fieldset>
           )}
@@ -915,43 +1166,46 @@ export default function StudentProfileEdit({ student, onCancel, onSave }) {
                     { options: ["No", "Yes"] },
                   ],
                   [
-                    "admission.scholarshipType",
-                    "Scholarship type",
-                    {
-                      options: [
-                        "Merit Scholarship",
-                        "Government Scholarship",
-                        "Institutional Concession",
-                        "Sports / Special Quota",
-                        "Other",
-                      ],
-                    },
-                  ],
-                  [
                     "admission.hostel",
                     "Hostel required",
                     { options: ["No", "Yes"] },
                   ],
-                  [
-                    "admission.hostelPreference",
-                    "Hostel preference",
-                    { options: ["Boys Hostel", "Girls Hostel"], required: form.admission?.hostel === "Yes" },
-                  ],
-                  [
-                    "admission.hostelRoomType",
-                    "Room type / Beds",
-                    { options: Object.keys(HOSTEL_FEES) },
-                  ],
+                  ...(form.admission?.hostel === "Yes"
+                    ? [
+                        [
+                          "admission.hostelPreference",
+                          "Hostel preference",
+                          {
+                            options:
+                              form.personal?.gender === "Male"
+                                ? ["Boys Hostel"]
+                                : form.personal?.gender === "Female"
+                                  ? ["Girls Hostel"]
+                                  : ["Boys Hostel", "Girls Hostel"],
+                            required: true,
+                          },
+                        ],
+                        [
+                          "admission.hostelRoomType",
+                          "Room type / Beds",
+                          { options: Object.keys(HOSTEL_FEES), required: true },
+                        ],
+                      ]
+                    : []),
                   [
                     "admission.transport",
                     "Transportation required",
                     { options: ["No", "Yes"] },
                   ],
-                  [
-                    "admission.transportRoute",
-                    "Transport route",
-                    { options: Object.keys(TRANSPORT_FEES), required: form.admission?.transport === "Yes" },
-                  ],
+                  ...(form.admission?.transport === "Yes"
+                    ? [
+                        [
+                          "admission.transportRoute",
+                          "Transport route",
+                          { options: Object.keys(TRANSPORT_FEES), required: true },
+                        ],
+                      ]
+                    : []),
                 ])}
               </fieldset>
             </>
@@ -1002,20 +1256,26 @@ export default function StudentProfileEdit({ student, onCancel, onSave }) {
                   <label style={{ display: "flex", alignItems: "center", gap: "8px", padding: "10px 14px", border: "1px solid var(--border)", borderRadius: "8px", background: form.fees?.paymentPlan !== "Term-wise Payment" ? "var(--brand-soft)" : "var(--surface)", cursor: "pointer" }}>
                     <input
                       type="radio"
-                      name="sp-payment-plan"
+                      name="paymentPlan"
                       checked={form.fees?.paymentPlan !== "Term-wise Payment"}
                       onChange={() => update("fees.paymentPlan", "Full Payment")}
                     />
-                    <span><strong>Full Payment</strong> <small style={{ display: "block", color: "var(--text-muted)", fontSize: "11px" }}>Pay complete first-year amount ({formatMoney(form.fees?.totalFee || 54000)})</small></span>
+                    <span>
+                      <strong>Full Payment</strong>
+                      <small style={{ display: "block", color: "var(--text-secondary)", fontSize: "11px" }}>Pay complete first-year amount</small>
+                    </span>
                   </label>
                   <label style={{ display: "flex", alignItems: "center", gap: "8px", padding: "10px 14px", border: "1px solid var(--border)", borderRadius: "8px", background: form.fees?.paymentPlan === "Term-wise Payment" ? "var(--brand-soft)" : "var(--surface)", cursor: "pointer" }}>
                     <input
                       type="radio"
-                      name="sp-payment-plan"
+                      name="paymentPlan"
                       checked={form.fees?.paymentPlan === "Term-wise Payment"}
                       onChange={() => update("fees.paymentPlan", "Term-wise Payment")}
                     />
-                    <span><strong>Term-wise Payment</strong> <small style={{ display: "block", color: "var(--text-muted)", fontSize: "11px" }}>Two installments per academic year</small></span>
+                    <span>
+                      <strong>Term-wise Payment</strong>
+                      <small style={{ display: "block", color: "var(--text-secondary)", fontSize: "11px" }}>Pay in two terms per year</small>
+                    </span>
                   </label>
                 </div>
 
@@ -1150,16 +1410,6 @@ export default function StudentProfileEdit({ student, onCancel, onSave }) {
                 disabled={saving}
               >
                 Previous
-              </button>
-            )}
-            {["parents", "education", "services", "fees", "documents"].includes(tab) && !lastStep && (
-              <button
-                type="button"
-                className="sp-button secondary"
-                onClick={() => moveStep(1)}
-                disabled={saving}
-              >
-                Skip
               </button>
             )}
             {!lastStep ? (

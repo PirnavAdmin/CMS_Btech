@@ -608,43 +608,50 @@
 
 .cm-profile-view .cm-profile-grid,
 .department-profile-view .cm-profile-grid {
-  display: block;
+  display: grid !important;
+  grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  gap: 16px !important;
   padding: 20px 24px !important;
   background: var(--surface, #fff);
+}
+
+.cm-profile-view .cm-profile-grid > .cm-info-card:only-child,
+.department-profile-view .cm-profile-grid > .cm-info-card:only-child {
+  grid-column: 1 / -1 !important;
 }
 
 .cm-profile-view .cm-profile-grid > .cm-info-card,
 .department-profile-view .cm-profile-grid > .cm-info-card {
   display: block;
   min-height: 0;
-  margin: 0;
-  padding: 0 0 18px !important;
-  border: 0 !important;
-  border-radius: 0;
-  background: transparent;
-  box-shadow: none;
+  margin: 0 !important;
+  padding: 16px 18px !important;
+  border: 1px solid var(--border, #e2e8f0) !important;
+  border-radius: 10px !important;
+  background: var(--surface, #fff) !important;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03) !important;
 }
 
 .cm-profile-view .cm-profile-grid > .cm-info-card + .cm-info-card,
 .department-profile-view .cm-profile-grid > .cm-info-card + .cm-info-card {
-  margin-top: 18px;
-  padding-top: 18px !important;
-  border-top: 1px solid var(--border, #dbe4eb) !important;
+  margin-top: 0 !important;
+  padding-top: 16px !important;
+  border-top: 1px solid var(--border, #e2e8f0) !important;
 }
 
 .cm-profile-view .cm-profile-grid > .cm-info-card .cm-info-card-header,
 .department-profile-view .cm-profile-grid > .cm-info-card .cm-info-card-header {
   margin: 0 0 12px;
   padding: 0 0 10px;
-  border-bottom: 1px solid var(--border, #dbe4eb);
+  border-bottom: 1px solid var(--border, #e2e8f0);
 }
 
 .cm-profile-view .cm-profile-grid > .cm-info-card .cm-info-rows,
 .department-profile-view .cm-profile-grid > .cm-info-card .cm-info-rows {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  column-gap: 32px;
-  row-gap: 14px;
+  column-gap: 16px;
+  row-gap: 12px;
   padding: 0;
   border: 0;
   background: transparent;

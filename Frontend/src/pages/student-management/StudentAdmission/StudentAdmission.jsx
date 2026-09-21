@@ -35,7 +35,9 @@ import {
   normalizeAddressObj,
   normalizeAdmissionStatus,
   normalizeCanonicalStudent,
+  readAdmissionPhoto,
   REQUIRED_FIELDS,
+  saveAdmissionPhoto,
   studentFullName,
   studentInitials,
   studentQuotaDisplay,
@@ -228,7 +230,7 @@ const validate = data => {
   if (text(data.contact.alternateEmail) && text(data.contact.email).toLowerCase() === text(data.contact.alternateEmail).toLowerCase()) errors['contact.alternateEmail'] = 'Alternate email must be different from the student email.'
   ;[['tenth','tenth'],['intermediate','intermediate']].forEach(([key,level]) => { const item=data.previousEducation[key], yearError=item.passingYear?validPassingYear(item.passingYear,data,level):''; if(yearError)errors[`previousEducation.${key}.passingYear`]=yearError; const scoreError=validScore(item); if(scoreError)errors[`previousEducation.${key}.score`]=scoreError })
   if (data.academic.admissionType === 'Lateral Entry' && !text(data.academic.quota)) errors['academic.quota'] = 'Select the admission quota for lateral entry.'
-  if (data.academic.quota === 'Other' && !text(data.academic.quotaOther)) errors['academic.quotaOther'] = 'Enter the admission quota.'
+  if (data.academic.admissionType === 'Lateral Entry' && data.academic.quota === 'Other' && !text(data.academic.quotaOther)) errors['academic.quotaOther'] = 'Enter the admission quota.'
   if (data.previousEducation.intermediate.stream === 'Other' && !text(data.previousEducation.intermediate.streamOther)) errors['previousEducation.intermediate.streamOther'] = 'Enter the stream name.'
   if (data.admission.hostel === 'Yes' && !text(data.admission.hostelPreference)) errors['admission.hostelPreference'] = 'Select a hostel preference.'
   if (data.admission.hostel === 'Yes' && !text(data.admission.hostelRoomType)) errors['admission.hostelRoomType'] = 'Select a room type / number of beds.'
@@ -267,7 +269,7 @@ function Field({ data, path, label, update, options, type = 'text', readOnly = f
     requiredPaths.has(path) ||
     (!data?.contact?.sameAddress && path.startsWith('contact.permanentAddress.') && ['line1','town','city','district','state','pincode'].includes(path.split('.').at(-1))) ||
     (data?.academic?.admissionType === 'Lateral Entry' && path === 'academic.quota') ||
-    (data?.academic?.quota === 'Other' && path === 'academic.quotaOther') ||
+    (data?.academic?.admissionType === 'Lateral Entry' && data?.academic?.quota === 'Other' && path === 'academic.quotaOther') ||
     (data?.previousEducation?.intermediate?.stream === 'Other' && path === 'previousEducation.intermediate.streamOther') ||
     (data?.parents?.guardian?.relationship === 'Other' && path === 'parents.guardian.relationshipOther') ||
     (data?.admission?.hostel === 'Yes' && ['admission.hostelPreference', 'admission.hostelRoomType'].includes(path)) ||
@@ -845,11 +847,8 @@ function CoreReview({ data, edit }) {
           ['Department', data.academic.department, true],
           ['Branch', data.academic.branch],
           ['Branch Code', data.academic.branchCode, true],
-          ['Section', data.academic.section, true],
-          ['Semester', data.academic.semester, true],
           ['Student Category', data.academic.studentCategory, true],
           ['Regulation', data.academic.regulation, true],
-          ['Entry Type', data.academic.entryType, true],
         ]}
       />
       <ReviewSection
@@ -884,7 +883,6 @@ function CoreReview({ data, edit }) {
           ['College', data.admission.college],
           ['Batch', data.admission.batch],
           ['Scholarship', data.admission.scholarship],
-          ['Scholarship Type', data.admission.scholarshipType, true],
           ['Hostel', data.admission.hostel],
           ['Hostel Preference', data.admission.hostelPreference, true],
           ['Room Type / Beds', data.admission.hostelRoomType, true],
@@ -1040,7 +1038,66 @@ function AdmissionForm() {
     setData(feeSummary ? { ...loaded, fees: { ...loaded.fees, ...feeSummary } } : loaded)
     setRecordIds(loadedIds)
   }).catch(error => notify(error.message || 'Unable to load this admission.', 'error')); return () => { active = false } }, [validId])
-  const update = (path, value) => { setData(current => { let next = setPath(current, path, value); if (path === 'contact.sameAddress' && value) next.contact.permanentAddress = { ...next.contact.currentAddress }; if (path.startsWith('contact.currentAddress.') && next.contact.sameAddress) next.contact.permanentAddress = { ...next.contact.currentAddress }; if (path === 'academic.course' || path === 'academic.courseId') Object.assign(next.academic, { branch: '', branchId: '', branchCode: '' }); if (path === 'academic.quota' && value !== 'Other') next.academic.quotaOther = ''; if (path === 'parents.guardian.relationship' && value !== 'Other') next.parents.guardian.relationshipOther = ''; if (path === 'previousEducation.intermediate.stream' && value !== 'Other') next.previousEducation.intermediate.streamOther = ''; if (path === 'admission.scholarship' && value === 'No') { next.admission.scholarshipType = ''; next.fees.scholarshipAmount = '' } if (path === 'admission.hostel') { if (value === 'No') { next.admission.hostelPreference = ''; next.admission.hostelRoomType = ''; next.fees.hostelFee = '' } else if (next.admission.hostelRoomType) { next.fees.hostelFee = String(HOSTEL_FEES[next.admission.hostelRoomType] || '') } } if (path === 'admission.hostelRoomType') { next.fees.hostelFee = String(HOSTEL_FEES[value] || '') } if (path === 'admission.transport') { if (value === 'No') { next.admission.transportRoute = ''; next.fees.transportFee = '' } else if (next.admission.transportRoute) { next.fees.transportFee = String(TRANSPORT_FEES[next.admission.transportRoute] || '') } } if (path === 'admission.transportRoute') { next.fees.transportFee = String(TRANSPORT_FEES[value] || '') } const tuition = Number(next.fees.tuitionFee) > 0 ? Number(next.fees.tuitionFee) : 50000; const admission = Number(next.fees.admissionFee !== undefined && next.fees.admissionFee !== '' ? next.fees.admissionFee : 4000); const hostel = next.admission.hostel === 'Yes' ? Number(next.fees.hostelFee || (next.admission.hostelRoomType ? HOSTEL_FEES[next.admission.hostelRoomType] : 0) || 0) : 0; const transport = next.admission.transport === 'Yes' ? Number(next.fees.transportFee || (next.admission.transportRoute ? TRANSPORT_FEES[next.admission.transportRoute] : 0) || 0) : 0; const scholarship = Number(next.fees.scholarshipAmount || 0); const total = Math.max(0, tuition + admission + hostel + transport - scholarship); next.fees.tuitionFee = String(tuition); next.fees.admissionFee = String(admission); next.fees.totalFee = String(total); return next }); setErrors(current => ({ ...current, [path]: '' })) }
+  const update = (path, value) => {
+    setData(current => {
+      let next = setPath(current, path, value);
+      if (path === 'personal.gender') {
+        if (next.admission.hostel === 'Yes') {
+          next.admission.hostelPreference = (value === 'Male' ? 'Boys Hostel' : value === 'Female' ? 'Girls Hostel' : next.admission.hostelPreference || 'Boys Hostel');
+        }
+      }
+      if (path === 'contact.sameAddress' && value) next.contact.permanentAddress = { ...next.contact.currentAddress };
+      if (path.startsWith('contact.currentAddress.') && next.contact.sameAddress) next.contact.permanentAddress = { ...next.contact.currentAddress };
+      if (path === 'academic.course' || path === 'academic.courseId') Object.assign(next.academic, { branch: '', branchId: '', branchCode: '' });
+      if (path === 'academic.admissionType' && value !== 'Lateral Entry') {
+        next.academic.quota = '';
+        next.academic.quotaOther = '';
+      }
+      if (path === 'academic.quota' && value !== 'Other') next.academic.quotaOther = '';
+      if (path === 'parents.guardian.relationship' && value !== 'Other') next.parents.guardian.relationshipOther = '';
+      if (path === 'previousEducation.intermediate.stream' && value !== 'Other') next.previousEducation.intermediate.streamOther = '';
+      if (path === 'admission.scholarship' && value === 'No') { next.admission.scholarshipType = ''; next.fees.scholarshipAmount = '' }
+      if (path === 'admission.hostel') {
+        if (value === 'No') {
+          next.admission.hostelPreference = '';
+          next.admission.hostelRoomType = '';
+          next.fees.hostelFee = '';
+        } else if (value === 'Yes') {
+          next.admission.hostelPreference = (current.personal?.gender === 'Male' ? 'Boys Hostel' : current.personal?.gender === 'Female' ? 'Girls Hostel' : 'Boys Hostel');
+          if (next.admission.hostelRoomType) {
+            next.fees.hostelFee = String(HOSTEL_FEES[next.admission.hostelRoomType] || '');
+          }
+        }
+      }
+      if (path === 'admission.hostelRoomType') {
+        next.fees.hostelFee = String(HOSTEL_FEES[value] || '');
+      }
+      if (path === 'admission.transport') {
+        if (value === 'No') {
+          next.admission.transportRoute = '';
+          next.fees.transportFee = '';
+        } else if (next.admission.transportRoute) {
+          next.fees.transportFee = String(TRANSPORT_FEES[next.admission.transportRoute] || '');
+        }
+      }
+      if (path === 'admission.transportRoute') {
+        next.fees.transportFee = String(TRANSPORT_FEES[value] || '');
+      }
+      const tuition = Number(next.fees.tuitionFee) > 0 ? Number(next.fees.tuitionFee) : 50000;
+      const admission = Number(next.fees.admissionFee !== undefined && next.fees.admissionFee !== '' ? next.fees.admissionFee : 4000);
+      const hostel = next.admission.hostel === 'Yes' ? Number(next.fees.hostelFee || (next.admission.hostelRoomType ? HOSTEL_FEES[next.admission.hostelRoomType] : 0) || 0) : 0;
+      const transport = next.admission.transport === 'Yes' ? Number(next.fees.transportFee || (next.admission.transportRoute ? TRANSPORT_FEES[next.admission.transportRoute] : 0) || 0) : 0;
+      const scholarship = Number(next.fees.scholarshipAmount || 0);
+      const total = Math.max(0, tuition + admission + hostel + transport - scholarship);
+      next.fees.tuitionFee = String(tuition);
+      next.fees.admissionFee = String(admission);
+      next.fees.hostelFee = String(hostel);
+      next.fees.transportFee = String(transport);
+      next.fees.totalFee = String(total);
+      return next;
+    });
+    setErrors(current => ({ ...current, [path]: '' }));
+  }
   const currentPincode = data.contact.currentAddress.pincode, permanentPincode = data.contact.permanentAddress.pincode, sameAddress = data.contact.sameAddress
   useEffect(() => {
     const targets = [['contact.currentAddress','current',currentPincode], ...(!sameAddress ? [['contact.permanentAddress','permanent',permanentPincode]] : [])]
@@ -1154,9 +1211,16 @@ function AdmissionForm() {
         const pending = [...DOCUMENTS.map(([key, label]) => ({ key, label, document: data.documents[key] })), ...(data.documents.otherCertificates || []).map(document => ({ key: 'otherCertificate', label: 'Other Certificate', document }))].filter(item => item.document?.file)
         if(ids.studentId){for (const item of pending) await studentDocumentApi.upload(ids.studentId, item.document.file, { documentType: item.key, documentName: item.label });const uploadedRows = await studentDocumentApi.getAll(ids.studentId);setData(current => ({ ...current, documents: documentsFromApi(uploadedRows) }))}
       }
+      if (data.personal?.photo) {
+        saveAdmissionPhoto(ids.admissionId, data.personal.photo)
+        if (ids.studentId) saveAdmissionPhoto(ids.studentId, data.personal.photo)
+      }
       if (result) {
         const returnedIds = idsFromApi(result, ids.admissionId)
-        saveAdmissionPhoto(returnedIds.admissionId??ids.admissionId,data.personal.photo)
+        if (data.personal?.photo) {
+          saveAdmissionPhoto(returnedIds.admissionId ?? ids.admissionId, data.personal.photo)
+          if (returnedIds.studentId ?? ids.studentId) saveAdmissionPhoto(returnedIds.studentId ?? ids.studentId, data.personal.photo)
+        }
         setRecordIds(current => ({ admissionId: returnedIds.admissionId ?? current.admissionId, studentId: returnedIds.studentId ?? current.studentId, academicId: returnedIds.academicId ?? current.academicId }))
       }
       notify(step === 7 && !ids.studentId ? 'Documents are ready to upload when the admission is submitted.' : 'Admission step saved successfully.', step === 7 && !ids.studentId ? 'info' : 'success')
@@ -1198,8 +1262,34 @@ function AdmissionForm() {
     setStep(current => current + 1)
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }
-  const submit = async () => { if (submitting || !recordIds.admissionId) return; setSubmitting(true); try { const duplicate = duplicateAdmissionMessage(await studentAdmissionApi.getAll(), data, recordIds.admissionId); if (duplicate) throw new Error(duplicate); const submitted=await studentAdmissionApi.submit(recordIds.admissionId),submittedIds=idsFromApi(submitted,recordIds.admissionId),studentId=submittedIds.studentId??recordIds.studentId;const pending=[...DOCUMENTS.map(([key,label])=>({key,label,document:data.documents[key]})),...(data.documents?.otherCertificates||[]).map(document=>({key:'otherCertificate',label:'Other Certificate',document}))].filter(item=>item.document?.file);if(studentId){for(const item of pending)await studentDocumentApi.upload(studentId,item.document.file,{documentType:item.key,documentName:item.label})}const latest = await studentAdmissionStatusApi.get(recordIds.admissionId); setData(current => ({ ...current, status: latest.status ?? 'SUBMITTED' }));setRecordIds(current=>({...current,studentId:studentId??current.studentId})); setConfirmSubmit(false); eventBus.emit(ERP_EVENTS.STUDENT_UPDATED, { admissionId: recordIds.admissionId, status: 'SUBMITTED' }); notify(studentId&&pending.length?'Admission submitted and documents uploaded successfully':'Admission application submitted successfully'); window.setTimeout(() => navigate('/student-management/admissions'), 700) } catch (error) { notify(error.message || 'Unable to submit this admission.', 'error'); setSubmitting(false) } }
-  return <><Breadcrumb tail={id ? 'Edit Admission' : 'New Admission'} /><header className="sa-page-header sa-wizard-header"><div><h1>{id ? 'Edit Student Admission' : 'New Student Admission'}</h1><p>Registration Number <strong>{data.application.number}</strong></p></div><div><Badge value={data.status} /><Button onClick={() => navigate('/student-management/admissions')}>Cancel</Button></div></header><WizardStepper step={step} setStep={setStep} /><form className="sa-wizard-card" onSubmit={event => event.preventDefault()}><header className="sa-step-heading"><div><small>Step {step + 1} of {STEPS.length}</small><h2>{STEPS[step]}</h2></div><span>{Math.round(((step + 1) / STEPS.length) * 100)}% complete</span></header>{screens[step]}{step === STEPS.length - 1 && <label className="sa-declaration"><input type="checkbox" checked={declared} onChange={event => setDeclared(event.target.checked)} /><span><strong>Registration Declaration</strong>I confirm that the information entered above is correct.</span></label>}<footer className="sa-wizard-actions"><Button disabled={!step || submitting} onClick={() => setStep(current => current - 1)}><FiArrowLeft /> Previous</Button><span />{[2, 4, 7].includes(step) && <Button onClick={skipCurrentStep} disabled={submitting}>Skip <FiArrowRight /></Button>}{step < STEPS.length - 1 ? <Button primary onClick={nextStep}>Save & Continue <FiArrowRight /></Button> : <Button primary disabled={!declared || submitting} onClick={requestSubmit}>{submitting ? 'Submitting...' : 'Submit Application'}</Button>}</footer></form>{confirmSubmit && <ConfirmDialog icon={FiCheckCircle} title="Confirm Registration Submission" confirmLabel="Confirm & Submit" onCancel={() => setConfirmSubmit(false)} onConfirm={submit}><p>Please verify the student details below. Once submitted, the registration will be sent to the admissions team for review.</p><dl><div><dt>Student</dt><dd>{studentName(data)}</dd></div><div><dt>Registration Number</dt><dd>{data.application.number}</dd></div></dl></ConfirmDialog>}</>
+  const submit = async () => {
+    if (submitting || !recordIds.admissionId) return;
+    setSubmitting(true);
+    try {
+      const duplicate = duplicateAdmissionMessage(await studentAdmissionApi.getAll(), data, recordIds.admissionId);
+      if (duplicate) throw new Error(duplicate);
+      const submitted = await studentAdmissionApi.submit(recordIds.admissionId);
+      const submittedIds = idsFromApi(submitted, recordIds.admissionId);
+      const studentId = submittedIds.studentId ?? recordIds.studentId;
+      rememberCreated('admissions', recordIds.admissionId);
+      if (studentId) rememberCreated('student-profiles', studentId);
+      const pending = [...DOCUMENTS.map(([key, label]) => ({ key, label, document: data.documents[key] })), ...(data.documents?.otherCertificates || []).map(document => ({ key: 'otherCertificate', label: 'Other Certificate', document }))].filter(item => item.document?.file);
+      if (studentId) {
+        for (const item of pending) await studentDocumentApi.upload(studentId, item.document.file, { documentType: item.key, documentName: item.label });
+      }
+      const latest = await studentAdmissionStatusApi.get(recordIds.admissionId);
+      setData(current => ({ ...current, status: latest.status ?? 'SUBMITTED' }));
+      setRecordIds(current => ({ ...current, studentId: studentId ?? current.studentId }));
+      setConfirmSubmit(false);
+      eventBus.emit(ERP_EVENTS.STUDENT_UPDATED, { admissionId: recordIds.admissionId, status: 'SUBMITTED' });
+      notify(studentId && pending.length ? 'Admission submitted and documents uploaded successfully' : 'Admission application submitted successfully');
+      window.setTimeout(() => navigate('/student-management/admissions'), 700);
+    } catch (error) {
+      notify(error.message || 'Unable to submit this admission.', 'error');
+      setSubmitting(false);
+    }
+  }
+  return <><Breadcrumb tail={id ? 'Edit Admission' : 'New Admission'} /><header className="sa-page-header sa-wizard-header"><div><h1>{id ? 'Edit Student Admission' : 'New Student Admission'}</h1><p>Registration Number <strong>{data.application.number}</strong></p></div><div><Badge value={data.status} /><Button onClick={() => navigate('/student-management/admissions')}>Cancel</Button></div></header><WizardStepper step={step} setStep={setStep} /><form className="sa-wizard-card" onSubmit={event => event.preventDefault()}><header className="sa-step-heading"><div><small>Step {step + 1} of {STEPS.length}</small><h2>{STEPS[step]}</h2></div><span>{Math.round(((step + 1) / STEPS.length) * 100)}% complete</span></header>{screens[step]}{step === STEPS.length - 1 && <label className="sa-declaration"><input type="checkbox" checked={declared} onChange={event => setDeclared(event.target.checked)} /><span><strong>Registration Declaration</strong>I confirm that the information entered above is correct.</span></label>}<footer className="sa-wizard-actions"><Button disabled={!step || submitting} onClick={() => setStep(current => current - 1)}><FiArrowLeft /> Previous</Button><span />{step < STEPS.length - 1 ? <Button primary onClick={nextStep}>Save & Continue <FiArrowRight /></Button> : <Button primary disabled={!declared || submitting} onClick={requestSubmit}>{submitting ? 'Submitting...' : 'Submit Application'}</Button>}</footer></form>{confirmSubmit && <ConfirmDialog icon={FiCheckCircle} title="Confirm Registration Submission" confirmLabel="Confirm & Submit" onCancel={() => setConfirmSubmit(false)} onConfirm={submit}><p>Please verify the student details below. Once submitted, the registration will be sent to the admissions team for review.</p><dl><div><dt>Student</dt><dd>{studentName(data)}</dd></div><div><dt>Registration Number</dt><dd>{data.application.number}</dd></div></dl></ConfirmDialog>}</>
 }
 
 function InfoGrid({ title, items }) {
@@ -1224,8 +1314,9 @@ function InfoGrid({ title, items }) {
         ))}
       </dl>
     </section>
-  );
+  )
 }
+
 function DocumentDetails({ data }) { const documents = [...DOCUMENTS.map(([key,label]) => [key,label,data.documents?.[key]]), ...(data.documents?.otherCertificates || []).map(item => [item.id,'Other Certificate',item])]; return <section className="sa-detail-panel"><header><h2>Uploaded Documents</h2><p>Documents submitted with the admission application</p></header><div className="sa-document-detail-list">{documents.map(([key,label,document]) => <article key={key}><FiFileText /><div><strong>{label}</strong><span>{document?.name || 'Not uploaded'}</span></div>{document?.data && <a href={document.data} target="_blank" rel="noreferrer">Preview</a>}</article>)}</div></section> }
 function Timeline({ activity }) { return <section className="sa-detail-panel"><header><h2>Admission Activity</h2><p>Complete application history</p></header><ol className="sa-timeline">{[...activity].reverse().map((item,index) => <li key={`${item.date}-${index}`}><i>{index === 0 ? <FiCheck /> : ''}</i><div><strong>{item.label}</strong>{item.remarks && <p>{item.remarks}</p>}<span>{dateTime(item.date)}</span></div></li>)}</ol></section> }
 function DetailContent({ data, tab }) {
@@ -1301,11 +1392,8 @@ function DetailContent({ data, tab }) {
           ['Department', data.academic.department],
           ['Branch', data.academic.branch],
           ['Branch Code', data.academic.branchCode],
-          ['Section', data.academic.section],
-          ['Semester', data.academic.semester],
           ['Student Category', data.academic.studentCategory],
           ['Regulation', data.academic.regulation],
-          ['Entry Type', data.academic.entryType],
         ]}
       />
     )
@@ -1352,7 +1440,6 @@ function DetailContent({ data, tab }) {
           ['College', data.admission.college],
           ['Batch', data.admission.batch],
           ['Scholarship', data.admission.scholarship],
-          ['Scholarship Type', data.admission.scholarshipType],
           ['Hostel', data.admission.hostel],
           ['Hostel Preference', data.admission.hostelPreference],
           ['Room Type / Beds', data.admission.hostelRoomType],
@@ -1400,7 +1487,6 @@ function DetailContent({ data, tab }) {
         ['Admission Type', data.academic.admissionType],
         ['Course', data.academic.course],
         ['Branch', data.academic.branch],
-        ['Section', data.academic.section],
         ['Quota', quota(data)],
         ['Fee Status', data.fees.paymentStatus],
         ['Admission Status', STATUS[data.status] || data.status],
