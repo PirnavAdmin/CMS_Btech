@@ -1,3 +1,4 @@
+import { collegeLogoValue } from '../../utils/collegeLogo'
 import { newestFirst, rememberCreated } from '../../utils/newestFirst'
 import { showSuccess } from '../../utils/toast'
 import useToastState from '../../hooks/useToastState'
@@ -17,7 +18,9 @@ import {
   createCollegeSettings,
   cacheCollegeLogo,
   fetchCollegeLogo,
+  isBackendCollegeLogo,
   getCollegeLogoUrl,
+  getCollegeLogoEndpoint,
   getCollegeById,
   getCollegeSettings,
   getColleges,
@@ -238,7 +241,7 @@ const mapCollege = (record) => {
   const id = record.id ?? record.collegeId ?? record.CollegeId ?? record.Id
   const code = record.code ?? record.collegeCode ?? record.CollegeCode ?? ''
   const name = record.name ?? record.collegeName ?? record.CollegeName ?? ''
-  const logoValue = record.logo ?? record.logoUrl ?? record.collegeLogo ?? record.collegeLogoUrl ?? record.logoPath ?? record.Logo ?? record.LogoUrl ?? record.CollegeLogo ?? record.CollegeLogoUrl ?? record.LogoPath ?? record.logo_url ?? record.logo_path ?? ''
+  const logoValue = collegeLogoValue(record)
   const cachedLogo = (id ? readCachedCollegeLogo(id) : '') || (code ? readCachedCollegeLogo(code) : '') || (name ? readCachedCollegeLogo(name) : '') || (record.collegeName ? readCachedCollegeLogo(record.collegeName) : '') || (record.collegeCode ? readCachedCollegeLogo(record.collegeCode) : '')
   const address = record.addressDetails ?? record.addressInfo ?? {}
   const contact = record.contactDetails ?? record.contactInfo ?? {}
@@ -314,12 +317,18 @@ function CollegeEmblemBadge({ name, code, className = 'cm-logo-thumb' }) {
   )
 }
 
-function CollegeLogoImage({ src, alt, code, className = 'cm-logo-thumb', onError }) {
+function CollegeLogoImage({ src, fallbackSrc = '', alt, code, className = 'cm-logo-thumb', onError }) {
   const [objectUrl, setObjectUrl] = useState('')
   const [hasError, setHasError] = useState(false)
+  const [failedSource, setFailedSource] = useState('')
+  const source = !src || failedSource === src ? fallbackSrc : src
+  const retryFallback = () => {
+    if (fallbackSrc && source !== fallbackSrc) setFailedSource(src)
+    else { setHasError(true); onErrorRef.current?.() }
+  }
   const onErrorRef = useRef(onError)
-  const isProtectedLogo = String(src ?? '').includes('/api/College/logo/')
-  const isDirectImage = Boolean(src) && !isProtectedLogo
+  const isProtectedLogo = Boolean(source) && isBackendCollegeLogo(source)
+  const isDirectImage = Boolean(source) && !isProtectedLogo
 
   useEffect(() => { onErrorRef.current = onError }, [onError])
 
@@ -330,17 +339,18 @@ function CollegeLogoImage({ src, alt, code, className = 'cm-logo-thumb', onError
       return undefined
     }
 
+    setObjectUrl('')
     let active = true
     let nextObjectUrl = ''
-    fetchCollegeLogo(src)
+    fetchCollegeLogo(source)
       .then((image) => {
         nextObjectUrl = URL.createObjectURL(image)
         if (active) setObjectUrl(nextObjectUrl)
       })
       .catch(() => {
         if (active) {
-          setHasError(true)
-          onErrorRef.current?.()
+          if (fallbackSrc && source !== fallbackSrc) setFailedSource(src)
+          else { setHasError(true); onErrorRef.current?.() }
         }
       })
 
@@ -348,18 +358,15 @@ function CollegeLogoImage({ src, alt, code, className = 'cm-logo-thumb', onError
       active = false
       if (nextObjectUrl) URL.revokeObjectURL(nextObjectUrl)
     }
-  }, [src, isProtectedLogo])
+  }, [src, source, fallbackSrc, isProtectedLogo])
 
   if (isDirectImage && !hasError) {
     return (
       <img
-        src={src}
+        src={source}
         alt={alt}
         className={className}
-        onError={() => {
-          setHasError(true)
-          onErrorRef.current?.()
-        }}
+        onError={retryFallback}
       />
     )
   }
@@ -370,10 +377,7 @@ function CollegeLogoImage({ src, alt, code, className = 'cm-logo-thumb', onError
         src={objectUrl}
         alt={alt}
         className={className}
-        onError={() => {
-          setHasError(true)
-          onErrorRef.current?.()
-        }}
+        onError={retryFallback}
       />
     )
   }
@@ -916,6 +920,7 @@ export default function CollegeInstitutionManagement({ initialView = 'list' }) {
                           <td className="table-center" style={{ width: '60px' }}>
                             <CollegeLogoImage
                               src={college.logo}
+                              fallbackSrc={getCollegeLogoEndpoint(college.id)}
                               alt={college.name}
                               code={college.code}
                               className="cm-logo-thumb"
@@ -1128,6 +1133,7 @@ export default function CollegeInstitutionManagement({ initialView = 'list' }) {
                 <div className="cm-profile-avatar-wrap">
                   <CollegeLogoImage
                     src={activeCollege.logo}
+                    fallbackSrc={getCollegeLogoEndpoint(activeCollege.id)}
                     alt={activeCollege.name}
                     code={activeCollege.code}
                     className="cm-profile-logo"

@@ -1,3 +1,4 @@
+import { resolveCollegeLogo } from '../utils/collegeLogo'
 const cleanUrl = (url) => (url || "").replace(/\/+$/, "");
 const DEFAULT_API_BASE_URL = "https://abreast-curling-tutor.ngrok-free.dev";
 
@@ -206,25 +207,14 @@ export const cacheCollegeLogo = (collegeId, logo) => {
   } catch { /* storage fallback */ }
 };
 
-export const getCollegeLogoUrl = (collegeId, logoValue) => {
-  const logo = String(logoValue ?? "").trim();
-  if (logo) {
-    if (logo.startsWith("data:") || logo.startsWith("blob:") || /^https?:\/\//i.test(logo)) return logo;
-    // Base64 without data URI scheme
-    if (/^[A-Za-z0-9+/=\s]+$/.test(logo) && logo.replace(/\s/g, "").length > 100) {
-      return `data:image/png;base64,${logo.replace(/\s/g, "")}`;
-    }
-    if (logo.startsWith("/")) {
-      return `${collegesBaseUrl}${logo}`;
-    }
-    if (logo.includes("uploads") || logo.includes("images") || /\.(png|jpg|jpeg|webp|svg|gif)$/i.test(logo)) {
-      return `${collegesBaseUrl}/${logo.replace(/^\/+/, "")}`;
-    }
-    return logo;
-  }
-  const cached = readCachedCollegeLogo(collegeId);
-  if (cached) return cached;
-  return "";
+export const getCollegeLogoEndpoint = collegeId => collegeId == null || collegeId === '' ? '' : `${collegesBaseUrl}/api/College/logo/${encodeURIComponent(collegeId)}`;
+
+export const getCollegeLogoUrl = (collegeId, logoValue) => resolveCollegeLogo(logoValue || readCachedCollegeLogo(collegeId), collegesBaseUrl) || getCollegeLogoEndpoint(collegeId);
+
+export const isBackendCollegeLogo = value => {
+  const url = new URL(value, window.location.origin);
+  const backend = new URL(collegesBaseUrl || window.location.origin, window.location.origin);
+  return url.origin === backend.origin && /^\/(api|uploads|images)\//i.test(url.pathname);
 };
 
 // The logo endpoint is protected by the same bearer token as the College API.
@@ -236,7 +226,7 @@ export const fetchCollegeLogo = async (logoUrl) => {
     cache: "no-store",
     headers: {
       "ngrok-skip-browser-warning": "true",
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      ...(token && isBackendCollegeLogo(logoUrl) ? { Authorization: `Bearer ${token}` } : {}),
     },
   });
   if (!response.ok) throw new Error("Unable to load college logo.");

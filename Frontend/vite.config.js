@@ -51,6 +51,11 @@ export default defineConfig(({ mode }) => {
           'ngrok-skip-browser-warning': 'true',
         },
       },
+      '/images': {
+        target: baseUrl,
+        changeOrigin: true,
+        headers: { 'ngrok-skip-browser-warning': 'true' },
+      },
     },
   },
   }
