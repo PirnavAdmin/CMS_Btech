@@ -6,7 +6,7 @@ import ExportMenu from '../../components/ExportMenu'
 import { facultyPayrollApi, facultyAttendanceApi, facultyLeaveApi } from '../../api/apiEndpoints'
 import facultyService from '../../services/facultyService'
 import { normalizePayroll } from '../../services/facultyContracts'
-import { newestFirst } from '../../utils/newestFirst'
+import { newestFirst, rememberCreated } from '../../utils/newestFirst'
 import './Payroll.css'
 
 const LOCAL_PAYROLL_STATUS_KEY = 'pirnav-faculty-local-payroll-status-v1'
@@ -653,7 +653,8 @@ export default function Payroll() {
         (facultyItem.employeeId && String(item.employeeId) === String(facultyItem.employeeId))
       )
       if (exists) {
-        return prev.map(item => {
+        let savedRecord = null
+        const updated = prev.map(item => {
           const match = (String(item.id) === String(facultyItem.id)) ||
             (facultyItem.facultyId && String(item.facultyId) === String(facultyItem.facultyId)) ||
             (facultyItem.employeeId && String(item.employeeId) === String(facultyItem.employeeId))
@@ -661,8 +662,11 @@ export default function Payroll() {
           const working = Number(item.working || item.workingDays) || 26
           const lop = Number(item.lop || item.lopDays) || 0
           const figures = calculateEmployeePayrollFigures(salaryData, working, lop)
-          return { ...item, ...salaryData, ...figures }
+          savedRecord = { ...item, ...salaryData, ...figures, updatedAt: new Date().toISOString() }
+          return savedRecord
         })
+        if (savedRecord) rememberCreated('payroll', savedRecord)
+        return newestFirst('payroll', updated)
       } else {
         const resolvedEmpId = facultyItem.employeeId || (facultyItem.id ? `EMP${String(facultyItem.id).padStart(6, '0')}` : '')
         const figures = calculateEmployeePayrollFigures(salaryData, 26, 0)
@@ -683,9 +687,12 @@ export default function Payroll() {
           ...salaryData,
           ...figures
         })
-        return [newRecord, ...prev]
+        const createdRecord = { ...newRecord, createdAt: new Date().toISOString() }
+        rememberCreated('payroll', createdRecord)
+        return newestFirst('payroll', [createdRecord, ...prev])
       }
     })
+    setPage(1)
     setEditingSalary(null)
     setNotice(`Salary structure configured for ${facultyItem.fullName || facultyItem.name}.`)
   }
