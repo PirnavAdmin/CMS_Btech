@@ -390,3 +390,24 @@
 }
 .fp-payroll-period{display:grid;gap:4px;color:var(--text-muted);font-size:10px;font-weight:800;letter-spacing:.08em;text-transform:uppercase}.fp-payroll-period input{height:38px;padding:0 10px;border:1px solid var(--border-strong);border-radius:7px;background:var(--surface);color:var(--text-primary);font:inherit;font-size:13px;font-weight:700;letter-spacing:0;text-transform:none}
 .fp-card>header>div:last-child{align-items:flex-end!important}
+
+/* Use the shared directory filter controls at every viewport width. */
+.faculty-payroll .fp-filter-panel { margin: 0; border: 0; border-bottom: 1px solid var(--border); border-radius: 0; box-shadow: none; }
+.faculty-payroll .fp-filter-fields { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr)); gap: 12px; align-items: end; }
+.faculty-payroll .filter-disclosure__search .fp-filter-fields { display: block; }
+.faculty-payroll .fp-filter-field { display: grid; gap: 6px; min-width: 0; }
+.faculty-payroll .fp-filter-field > span { color: var(--text-muted); font-size: 11px; font-weight: 600; }
+.faculty-payroll .fp-search { display: flex; align-items: center; gap: 10px; width: 100%; max-width: 460px; min-width: 0; height: 40px; padding: 0 12px; border: 1px solid var(--border-strong); border-radius: 8px; background: var(--surface); box-sizing: border-box; }
+.faculty-payroll .fp-search > svg { flex: 0 0 16px; color: var(--text-muted); }
+.faculty-payroll .fp-search:focus-within { border-color: var(--brand); box-shadow: var(--focus-ring); }
+.page-content .faculty-payroll .fp-search > input { width: 100%; min-width: 0; height: 100% !important; min-height: 0 !important; padding: 0 !important; border: 0 !important; background: transparent !important; box-shadow: none !important; outline: none; font-size: 13px; font-weight: 400; }
+.faculty-payroll .fp-card > header { flex-wrap: wrap; gap: 12px; }
+.faculty-payroll .fp-card > header > div:last-child { flex-wrap: wrap; max-width: 100%; }
+.faculty-payroll .fp-payroll-period { min-width: 0; }
+.faculty-payroll .fp-payroll-period input { width: 100%; min-width: 0; height: 40px; box-sizing: border-box; font-weight: 500; }
+@media (max-width: 640px) {
+  .faculty-payroll .fp-search { max-width: none; }
+  .faculty-payroll .fp-filter-fields { grid-template-columns: minmax(0, 1fr); }
+  .faculty-payroll .fp-card nav { gap: 10px; overflow-x: auto; }
+  .faculty-payroll .fp-card nav button { flex-shrink: 0; }
+}
