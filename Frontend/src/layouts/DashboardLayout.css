@@ -544,3 +544,11 @@
     transition: none;
   }
 }
+/* Give module search more room on desktop while retaining the mobile row. */
+@media (min-width: 761px) {
+  .dashboard-header > .global-search {
+    width: min(320px, 30vw);
+    min-width: 120px;
+    flex-shrink: 1;
+  }
+}
