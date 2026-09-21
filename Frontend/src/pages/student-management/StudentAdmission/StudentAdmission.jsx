@@ -98,6 +98,20 @@ const documentsFromApi = rows => {
   }
   return mapped
 }
+const mergeDocumentStatuses = (savedDocuments, uploadedDocuments) => {
+  const uploaded = uploadedDocuments || {}
+  const merged = { ...(savedDocuments || {}) }
+  DOCUMENTS.forEach(([key]) => {
+    if (uploaded[key]) merged[key] = uploaded[key]
+  })
+  if (Array.isArray(uploaded.otherCertificates) && uploaded.otherCertificates.length) merged.otherCertificates = uploaded.otherCertificates
+  return merged
+}
+const documentStatus = document => {
+  const savedStatus = typeof document === 'object' ? document?.status : document
+  if (text(savedStatus)) return String(savedStatus)
+  return document?.uploaded || document?.file || document?.data || document?.id ? 'Submitted' : 'Not Submitted'
+}
 const idsFromApi = (row = {}, fallbackAdmissionId = null) => ({
   admissionId: row.admissionId ?? row.studentAdmissionId ?? row.admission?.admissionId ?? row.id ?? fallbackAdmissionId,
   studentId: row.studentId ?? row.student?.studentId ?? row.student?.id ?? row.studentDetails?.studentId ?? row.personalInformation?.studentId ?? null,
@@ -250,12 +264,10 @@ const duplicateAdmissionMessage = (rows, candidate, currentAdmissionId = '') => 
     const rowId = String(row.id || row.admissionId || '')
     if (candidateId && rowId === candidateId) return false
     return (digits(candidate.personal?.aadhaar).length === 12 && digits(row.personal?.aadhaar) === digits(candidate.personal?.aadhaar))
-      || (normalize(candidate.contact?.email) && normalize(row.contact?.email) === normalize(candidate.contact?.email))
       || (digits(candidate.contact?.mobile).length === 10 && digits(row.contact?.mobile) === digits(candidate.contact?.mobile))
   })
   if (!match) return ''
   if (digits(candidate.personal?.aadhaar).length === 12 && digits(match.personal?.aadhaar) === digits(candidate.personal?.aadhaar)) return 'An admission with this Aadhaar number already exists.'
-  if (normalize(candidate.contact?.email) && normalize(match.contact?.email) === normalize(candidate.contact?.email)) return 'An admission with this student email already exists.'
   return 'An admission with this student mobile number already exists.'
 }
 
@@ -921,7 +933,7 @@ function DocumentPreview({ document, studentId }) {
 }
 function DocumentReview({ data, edit, studentId }) {
   const documents = [
-    ...DOCUMENTS.map(([key, label]) => ({ key, label, ...data.documents?.[key] })),
+    ...DOCUMENTS.map(([key, label]) => ({ key, label, document: data.documents?.[key], ...(typeof data.documents?.[key] === 'object' ? data.documents[key] : {}) })),
     ...(data.documents?.otherCertificates || []).map(item => ({ key: item.id, label: 'Other Certificate', ...item }))
   ]
   return (
@@ -933,14 +945,15 @@ function DocumentReview({ data, edit, studentId }) {
       <div>
         {documents.map(document => {
           const ready = Boolean(document.uploaded || document.file || document.data || document.id)
+          const status = documentStatus(document.document || document)
           return (
             <article key={document.key}>
               <FiFileText />
               <span>
                 <strong>{document.label}</strong>
-                <small>{document.name || 'Not uploaded'}</small>
+                <small>{status}</small>
               </span>
-              <Badge value={ready ? 'Uploaded' : 'Not Uploaded'} />
+              <Badge value={status} />
               {ready && <DocumentPreview document={document} studentId={studentId} />}
             </article>
           )
@@ -951,7 +964,7 @@ function DocumentReview({ data, edit, studentId }) {
 }
 function FullReview({ data, edit, studentId }) { return <><CoreReview data={data} edit={edit} /><DocumentReview data={data} edit={edit} studentId={studentId} /></> }
 function PreviewHeader({ data }) {
-  const uploaded = DOCUMENTS.filter(([key]) => data.documents?.[key]).length
+  const marked = DOCUMENTS.filter(([key]) => text(data.documents?.[key]?.status || data.documents?.[key])).length
   const photoSrc = data.personal?.photo ? apiAssetUrl(data.personal.photo) : (data.personal?.photoUrl ? apiAssetUrl(data.personal.photoUrl) : '')
   return (
     <section className="sa-preview-header">
@@ -973,8 +986,8 @@ function PreviewHeader({ data }) {
           <dd>{display(data.fees?.paymentPlan)}</dd>
         </div>
         <div>
-          <dt>Documents</dt>
-          <dd>{uploaded}/{DOCUMENTS.length} uploaded</dd>
+          <dt>Document Status</dt>
+          <dd>{marked}/{DOCUMENTS.length} marked</dd>
         </div>
       </dl>
     </section>
@@ -1033,7 +1046,7 @@ function AdmissionForm() {
     const loadedIds = idsFromApi(row, validId), admissionId = loadedIds.admissionId, studentId = loadedIds.studentId
     const sections = await Promise.allSettled([studentAcademicDetailsApi.get(admissionId), studentPreviousEducationApi.get(admissionId), studentId ? studentParentApi.get(studentId) : Promise.resolve(null), studentId ? studentDocumentApi.getAll(studentId) : Promise.resolve([]), studentFeeApi.getSummary(admissionId), studentFeeApi.getStructure(admissionId)])
     if (!active) return
-    const loaded = admissionFromApi({ ...row, academicDetails: sections[0].status === 'fulfilled' ? sections[0].value : row.academicDetails, previousEducation: sections[1].status === 'fulfilled' ? sections[1].value : row.previousEducation, parents: sections[2].status === 'fulfilled' ? sections[2].value : row.parents, documents: sections[3].status === 'fulfilled' ? documentsFromApi(sections[3].value) : row.documents })
+    const loaded = admissionFromApi({ ...row, academicDetails: sections[0].status === 'fulfilled' ? sections[0].value : row.academicDetails, previousEducation: sections[1].status === 'fulfilled' ? sections[1].value : row.previousEducation, parents: sections[2].status === 'fulfilled' ? sections[2].value : row.parents, documents: sections[3].status === 'fulfilled' ? mergeDocumentStatuses(row.documents, documentsFromApi(sections[3].value)) : row.documents })
     const feeSummary = resolveFeeSummary(loaded, sections[4].status === 'fulfilled' ? sections[4].value : row.feeSummary, sections[5].status === 'fulfilled' ? sections[5].value : null)
     setData(feeSummary ? { ...loaded, fees: { ...loaded.fees, ...feeSummary } } : loaded)
     setRecordIds(loadedIds)
@@ -1210,6 +1223,9 @@ function AdmissionForm() {
       } else if (step === 7) {
         const pending = [...DOCUMENTS.map(([key, label]) => ({ key, label, document: data.documents[key] })), ...(data.documents.otherCertificates || []).map(document => ({ key: 'otherCertificate', label: 'Other Certificate', document }))].filter(item => item.document?.file)
         if(ids.studentId){for (const item of pending) await studentDocumentApi.upload(ids.studentId, item.document.file, { documentType: item.key, documentName: item.label });const uploadedRows = await studentDocumentApi.getAll(ids.studentId);setData(current => ({ ...current, documents: documentsFromApi(uploadedRows) }))}
+        // Submission status is selected in this step even when no file exists.
+        // Save it with the admission record so it is available in View mode.
+        if (ids.admissionId) await studentAdmissionApi.update(ids.admissionId, data)
       }
       if (data.personal?.photo) {
         saveAdmissionPhoto(ids.admissionId, data.personal.photo)
@@ -1289,7 +1305,7 @@ function AdmissionForm() {
       setSubmitting(false);
     }
   }
-  return <><Breadcrumb tail={id ? 'Edit Admission' : 'New Admission'} /><header className="sa-page-header sa-wizard-header"><div><h1>{id ? 'Edit Student Admission' : 'New Student Admission'}</h1><p>Registration Number <strong>{data.application.number}</strong></p></div><div><Badge value={data.status} /><Button onClick={() => navigate('/student-management/admissions')}>Cancel</Button></div></header><WizardStepper step={step} setStep={setStep} /><form className="sa-wizard-card" onSubmit={event => event.preventDefault()}><header className="sa-step-heading"><div><small>Step {step + 1} of {STEPS.length}</small><h2>{STEPS[step]}</h2></div><span>{Math.round(((step + 1) / STEPS.length) * 100)}% complete</span></header>{screens[step]}{step === STEPS.length - 1 && <label className="sa-declaration"><input type="checkbox" checked={declared} onChange={event => setDeclared(event.target.checked)} /><span><strong>Registration Declaration</strong>I confirm that the information entered above is correct.</span></label>}<footer className="sa-wizard-actions"><Button disabled={!step || submitting} onClick={() => setStep(current => current - 1)}><FiArrowLeft /> Previous</Button><span />{step < STEPS.length - 1 ? <Button primary onClick={nextStep}>Save & Continue <FiArrowRight /></Button> : <Button primary disabled={!declared || submitting} onClick={requestSubmit}>{submitting ? 'Submitting...' : 'Submit Application'}</Button>}</footer></form>{confirmSubmit && <ConfirmDialog icon={FiCheckCircle} title="Confirm Registration Submission" confirmLabel="Confirm & Submit" onCancel={() => setConfirmSubmit(false)} onConfirm={submit}><p>Please verify the student details below. Once submitted, the registration will be sent to the admissions team for review.</p><dl><div><dt>Student</dt><dd>{studentName(data)}</dd></div><div><dt>Registration Number</dt><dd>{data.application.number}</dd></div></dl></ConfirmDialog>}</>
+  return <><Breadcrumb tail={id ? 'Edit Admission' : 'New Admission'} /><header className="sa-page-header sa-wizard-header"><div><h1>{id ? 'Edit Student Admission' : 'New Student Admission'}</h1><p>Registration Number <strong>{data.application.number}</strong></p></div><div><Badge value={data.status} /><Button onClick={() => navigate('/student-management/admissions')}>Cancel</Button></div></header><WizardStepper step={step} setStep={setStep} /><form className="sa-wizard-card" onSubmit={event => event.preventDefault()}><header className="sa-step-heading"><div><small>Step {step + 1} of {STEPS.length}</small><h2>{STEPS[step]}</h2></div><span>{Math.round(((step + 1) / STEPS.length) * 100)}% complete</span></header>{screens[step]}{step === STEPS.length - 1 && <label className="sa-declaration"><input type="checkbox" checked={declared} onChange={event => setDeclared(event.target.checked)} /><span><strong>Registration Declaration</strong>I confirm that the information entered above is correct.</span></label>}<footer className="sa-wizard-actions"><Button disabled={!step || submitting} onClick={() => setStep(current => current - 1)}><FiArrowLeft /> Previous</Button><span />{[2, 4].includes(step) && <Button disabled={submitting} onClick={skipCurrentStep}>Skip</Button>}{step < STEPS.length - 1 ? <Button primary onClick={nextStep}>Save & Continue <FiArrowRight /></Button> : <Button primary disabled={!declared || submitting} onClick={requestSubmit}>{submitting ? 'Submitting...' : 'Submit Application'}</Button>}</footer></form>{confirmSubmit && <ConfirmDialog icon={FiCheckCircle} title="Confirm Registration Submission" confirmLabel="Confirm & Submit" onCancel={() => setConfirmSubmit(false)} onConfirm={submit}><p>Please verify the student details below. Once submitted, the registration will be sent to the admissions team for review.</p><dl><div><dt>Student</dt><dd>{studentName(data)}</dd></div><div><dt>Registration Number</dt><dd>{data.application.number}</dd></div></dl></ConfirmDialog>}</>
 }
 
 function InfoGrid({ title, items }) {
@@ -1317,7 +1333,7 @@ function InfoGrid({ title, items }) {
   )
 }
 
-function DocumentDetails({ data }) { const documents = [...DOCUMENTS.map(([key,label]) => [key,label,data.documents?.[key]]), ...(data.documents?.otherCertificates || []).map(item => [item.id,'Other Certificate',item])]; return <section className="sa-detail-panel"><header><h2>Uploaded Documents</h2><p>Documents submitted with the admission application</p></header><div className="sa-document-detail-list">{documents.map(([key,label,document]) => <article key={key}><FiFileText /><div><strong>{label}</strong><span>{document?.name || 'Not uploaded'}</span></div>{document?.data && <a href={document.data} target="_blank" rel="noreferrer">Preview</a>}</article>)}</div></section> }
+function DocumentDetails({ data }) { const documents = [...DOCUMENTS.map(([key,label]) => [key,label,data.documents?.[key]]), ...(data.documents?.otherCertificates || []).map(item => [item.id,'Other Certificate',item])]; return <section className="sa-detail-panel"><header><h2>Document Status</h2><p>Current submission status for this admission</p></header><div className="sa-document-detail-list">{documents.map(([key,label,document]) => { const status = documentStatus(document); return <article key={key}><FiFileText /><div><strong>{label}</strong><span>{status}</span></div><Badge value={status} />{document?.data && <a href={document.data} target="_blank" rel="noreferrer">Preview</a>}</article> })}</div></section> }
 function Timeline({ activity }) { return <section className="sa-detail-panel"><header><h2>Admission Activity</h2><p>Complete application history</p></header><ol className="sa-timeline">{[...activity].reverse().map((item,index) => <li key={`${item.date}-${index}`}><i>{index === 0 ? <FiCheck /> : ''}</i><div><strong>{item.label}</strong>{item.remarks && <p>{item.remarks}</p>}<span>{dateTime(item.date)}</span></div></li>)}</ol></section> }
 function DetailContent({ data, tab }) {
   const address = value => formatAddress(value)
@@ -1533,7 +1549,7 @@ function AdmissionDetails({ approval = false }) {
       const admissionId = row.admissionId ?? row.id ?? validId
       const studentId=idsFromApi(row,admissionId).studentId
       const optional = await Promise.allSettled([studentAcademicDetailsApi.get(admissionId), studentPreviousEducationApi.get(admissionId), studentFeeApi.getSummary(admissionId), studentAdmissionStatusApi.get(admissionId),studentId?studentParentApi.get(studentId):Promise.resolve(null),studentId?studentDocumentApi.getAll(studentId):Promise.resolve([])])
-      const hydrated = admissionFromApi({ ...row, academicDetails: optional[0].status === 'fulfilled' ? optional[0].value : row.academicDetails, previousEducation: optional[1].status === 'fulfilled' ? optional[1].value : row.previousEducation, feeSummary: optional[2].status === 'fulfilled' && hasFeeSummary(optional[2].value) ? optional[2].value : row.feeSummary, status: optional[3].status === 'fulfilled' ? optional[3].value?.status ?? row.status : row.status,parents:optional[4].status==='fulfilled'&&optional[4].value?optional[4].value:row.parents,documents:optional[5].status==='fulfilled'?documentsFromApi(optional[5].value):row.documents })
+      const hydrated = admissionFromApi({ ...row, academicDetails: optional[0].status === 'fulfilled' ? optional[0].value : row.academicDetails, previousEducation: optional[1].status === 'fulfilled' ? optional[1].value : row.previousEducation, feeSummary: optional[2].status === 'fulfilled' && hasFeeSummary(optional[2].value) ? optional[2].value : row.feeSummary, status: optional[3].status === 'fulfilled' ? optional[3].value?.status ?? row.status : row.status,parents:optional[4].status==='fulfilled'&&optional[4].value?optional[4].value:row.parents,documents:optional[5].status==='fulfilled'?mergeDocumentStatuses(row.documents, documentsFromApi(optional[5].value)):row.documents })
       if (active) setData(hydrated)
     }).catch(error => setToast({ message: error.message || 'Unable to load admission.', tone: 'error' })).finally(() => { if (active) setLoadingDetail(false) }); return () => { active = false } }, [validId, setToast])
   if (loadingDetail) return <section className="sa-empty"><FiClock /><h2>Loading admission...</h2></section>
