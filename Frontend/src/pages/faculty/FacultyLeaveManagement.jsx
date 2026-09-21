@@ -842,11 +842,6 @@ function View({ title, children, onClose }) {
         <div className="shared-view-dialog__body flm-view-body" style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
           {children}
         </div>
-        <footer className="shared-view-dialog__footer">
-          <button type="button" className="erp-btn erp-btn--secondary" onClick={onClose}>
-            Close
-          </button>
-        </footer>
       </section>
     </div>
   )

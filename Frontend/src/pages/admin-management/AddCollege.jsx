@@ -5,7 +5,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import DashboardLayout from '../../layouts/DashboardLayout'
 import SearchableSelect from '../../components/SearchableSelect'
-import { cacheCollegeLogo, createCollege, getCollegeById, getCollegeLogoUrl, getColleges, isValidWebsite, normalizeWebsite, readCachedCollegeLogo, readCollegeExtendedDetails, unwrapCollegeRecord, updateCollege, uploadCollegeLogo, WEBSITE_VALIDATION_MESSAGE } from '../../auth/collegeApi'
+import { cacheCollegeLogo, createCollege, fetchCollegeLogo, getCollegeById, getCollegeLogoUrl, getColleges, isBackendCollegeLogo, isValidWebsite, normalizeWebsite, readCachedCollegeLogo, readCollegeExtendedDetails, unwrapCollegeRecord, updateCollege, uploadCollegeLogo, WEBSITE_VALIDATION_MESSAGE } from '../../auth/collegeApi'
 import './AddCollege.css'
 
 const hasValue = (value) => value !== null && value !== undefined && String(value).trim() !== ''
@@ -128,6 +128,7 @@ export default function AddCollege() {
   const [searchParams] = useSearchParams()
   const editId = searchParams.get('edit')
   const fileRef = useRef(null)
+  const logoObjectUrlRef = useRef('')
   const [storedValues, setValues] = useState(initialValues)
   const values = storedValues.collegeType === 'Deemed University'
     ? { ...storedValues, universityName: storedValues.collegeName }
@@ -186,6 +187,10 @@ export default function AddCollege() {
   const progress = draftProgress(values)
 
   useEffect(() => {
+    if (logoObjectUrlRef.current) {
+      URL.revokeObjectURL(logoObjectUrlRef.current)
+      logoObjectUrlRef.current = ''
+    }
     // Reset wizard state whenever the edited college changes so a previous save/preview doesn't carry over.
     window.clearTimeout(redirectTimer.current)
     setActiveTab('college')
@@ -217,12 +222,32 @@ export default function AddCollege() {
       const rawType = record.type ?? record.collegeType ?? record.institutionType ?? ''
       const isKnownType = TYPES.includes(rawType)
       const loadedLogo = collegeLogoValue(record) || readCachedCollegeLogo(editId) || (record.code ? readCachedCollegeLogo(record.code) : '') || (record.collegeCode ? readCachedCollegeLogo(record.collegeCode) : '') || (record.name ? readCachedCollegeLogo(record.name) : '') || (record.collegeName ? readCachedCollegeLogo(record.collegeName) : '') || ''
-      const resolvedLogo = loadedLogo ? getCollegeLogoUrl(editId, loadedLogo) : ''
+      const logoUrl = getCollegeLogoUrl(editId, loadedLogo)
+      // Backend logo URLs need an authorization header, which an <img> element
+      // cannot send. They are fetched below and displayed as a blob URL.
+      const resolvedLogo = logoUrl && !isBackendCollegeLogo(logoUrl) ? logoUrl : ''
       const loadedValues = { ...initialValues, collegeName: record.name ?? record.collegeName ?? record.CollegeName ?? '', collegeCode: record.code ?? record.collegeCode ?? record.CollegeCode ?? '', collegeType: rawType && !isKnownType ? 'Other' : rawType, collegeTypeOther: rawType && !isKnownType ? rawType : '', universityName: record.university ?? record.universityName ?? record.UniversityName ?? '', addressLine1: record.addressLine1 ?? addressRecord.addressLine1 ?? addressParts[0] ?? '', addressLine2: record.addressLine2 ?? addressRecord.addressLine2 ?? addressParts.slice(1).join(', '), area: record.area ?? addressRecord.area ?? extended.area ?? '', district: record.district ?? addressRecord.district ?? extended.district ?? '', city: record.city ?? addressRecord.city ?? record.City ?? '', state: record.state ?? addressRecord.state ?? record.State ?? '', pincode: String(record.pincode ?? addressRecord.pincode ?? record.Pincode ?? ''), country: record.country ?? addressRecord.country ?? 'India', contactNumber: String(record.contact ?? record.contactNumber ?? record.phoneNumber ?? record.mobile ?? record.phone ?? contactRecord.contactNumber ?? contactRecord.phoneNumber ?? contactRecord.mobile ?? contactRecord.phone ?? record.Contact ?? ''), alternateContactNumber: String(record.alternateContact ?? record.alternateContactNumber ?? record.alternatePhoneNumber ?? contactRecord.alternateContactNumber ?? extended.alternateContactNumber ?? ''), email: record.email ?? record.collegeEmail ?? contactRecord.email ?? record.Email ?? '', website: record.website ?? record.Website ?? contactRecord.website ?? contactRecord.Website ?? '', principalName: record.principal ?? record.principalName ?? principalRecord.principalName ?? record.PrincipalName ?? '', principalEmail: record.principalEmail ?? principalRecord.principalEmail ?? extended.principalEmail ?? '', principalContact: String(record.principalContact ?? record.principalPhone ?? principalRecord.principalContact ?? extended.principalContact ?? ''), accreditationBody: record.accreditationBody ?? accreditationRecord.body ?? accreditationRecord.accreditationBody ?? extended.accreditationBody ?? '', accreditationStatus: record.accreditationStatus ?? accreditationRecord.status ?? 'Not Accredited', accreditationGrade: record.accreditationGrade ?? accreditationRecord.grade ?? extended.accreditationGrade ?? '', accreditationNumber: record.accreditationNumber ?? accreditationRecord.number ?? extended.accreditationNumber ?? '', validFrom: dateInputValue(record.validFrom ?? record.accreditationValidFrom ?? accreditationRecord.validFrom ?? extended.validFrom), validUntil: dateInputValue(record.validUntil ?? record.accreditationValidUntil ?? accreditationRecord.validUntil ?? extended.validUntil), logo: resolvedLogo, logoName: record.logoName ?? extended.logoName ?? '' }
       setValues(loadedValues)
       originalEditValues.current = loadedValues
+      if (logoUrl && isBackendCollegeLogo(logoUrl)) {
+        fetchCollegeLogo(logoUrl).then((blob) => {
+          if (!active) return
+          const objectUrl = URL.createObjectURL(blob)
+          logoObjectUrlRef.current = objectUrl
+          setValues((current) => ({ ...current, logo: objectUrl }))
+          originalEditValues.current = { ...originalEditValues.current, logo: objectUrl }
+        }).catch(() => {
+          // A logo is optional, so an unavailable image must not block editing.
+        })
+      }
     }).catch((error) => { if (active) setNotice(error.message || 'Unable to load college details.', 'error') }).finally(() => { if (active) setLoadingCollege(false) })
-    return () => { active = false }
+    return () => {
+      active = false
+      if (logoObjectUrlRef.current) {
+        URL.revokeObjectURL(logoObjectUrlRef.current)
+        logoObjectUrlRef.current = ''
+      }
+    }
   }, [editId, setNotice])
 
   useEffect(() => {
@@ -444,6 +469,11 @@ export default function AddCollege() {
       setNotice(editId ? 'College updated successfully.' : 'College added successfully!')
       setPendingLogoCollegeId(null)
       if (!editId) {
+        // Reset the wizard to its first step before clearing values. Otherwise
+        // the Preview-tab validation sees the fresh blank form and incorrectly
+        // raises a "College name is required" toast after a successful save.
+        setActiveTab('college')
+        setHighestUnlockedTab(0)
         setValues(initialValues)
         setLogoFile(null)
         setRemoveExistingLogo(false)

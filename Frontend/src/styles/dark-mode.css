@@ -68,3 +68,56 @@
   background: color-mix(in srgb, var(--success) 10%, var(--surface));
   border-color: color-mix(in srgb, var(--success) 40%, var(--border));
 }
+
+/*
+ * Several older feature stylesheets use fixed navy text and white surfaces.
+ * Keep those screens readable without requiring every module to duplicate the
+ * same dark-theme rules. Brand banners and status badges retain their own
+ * deliberate accent colours below.
+ */
+:root[data-theme="dark"] :is(.dashboard-layout > main, .page-content) {
+  color: var(--text-primary);
+  background-color: var(--app-bg);
+}
+:root[data-theme="dark"] .page-content :is(input, select, textarea, .searchable-select__trigger) {
+  color: var(--text-primary) !important;
+  border-color: var(--border-strong) !important;
+  background: var(--surface) !important;
+}
+:root[data-theme="dark"] .page-content :is(input, textarea)::placeholder {
+  color: var(--text-muted) !important;
+  opacity: 1;
+}
+:root[data-theme="dark"] .page-content :is(
+  [class*="-card"], [class*="-panel"], [class*="-dialog"], [class*="-modal"],
+  [class*="-section"], [class*="-form"], [class*="-table-wrap"], [class*="-table"]
+):not(.view-modal-banner):not(.cm-profile-banner):not(.sa-profile-header):not(.sp-hero):not(.course-detail-hero):not(.branch-detail-hero) {
+  color: var(--text-primary);
+  border-color: var(--border);
+}
+:root[data-theme="dark"] .page-content :is(
+  [class*="-card"], [class*="-panel"], [class*="-dialog"], [class*="-modal"],
+  [class*="-section"], [class*="-form"], [class*="-table-wrap"]
+):not(.view-modal-banner):not(.cm-profile-banner):not(.sa-profile-header):not(.sp-hero):not(.course-detail-hero):not(.branch-detail-hero) {
+  background-color: var(--surface);
+}
+:root[data-theme="dark"] .page-content :is(h1, h2, h3, h4, strong, td, dd, .text-primary, [class*="-value"], [class*="-title"]) {
+  color: var(--text-primary) !important;
+}
+:root[data-theme="dark"] .page-content :is(p, small, label, dt, th, caption, [class*="-muted"], [class*="-subtitle"], [class*="-label"]) {
+  color: var(--text-secondary) !important;
+}
+:root[data-theme="dark"] .page-content :is(table, thead, tbody, tr, th, td) {
+  border-color: var(--border) !important;
+}
+:root[data-theme="dark"] .page-content thead :is(th, td) {
+  color: var(--text-primary) !important;
+  background: var(--surface-raised) !important;
+}
+:root[data-theme="dark"] .page-content tbody tr:hover > :is(th, td) {
+  background: var(--surface-soft) !important;
+}
+/* Preserve intentionally high-contrast text on the dark blue record banners. */
+:root[data-theme="dark"] :is(.view-modal-banner, .cm-profile-banner, .sa-profile-header, .sp-hero, .course-detail-hero, .branch-detail-hero) :is(h1, h2, h3, h4, p, small, strong, span) {
+  color: #fff !important;
+}

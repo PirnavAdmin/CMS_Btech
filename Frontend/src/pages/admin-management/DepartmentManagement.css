@@ -64,6 +64,9 @@
 
 /* Assign HOD popup: present a single, focused Head of Department field. */
 .hod-card{width:min(100%,560px)!important;border-radius:16px!important}
+.hod-card .course-directory-heading{display:flex;flex-wrap:nowrap;align-items:flex-start;gap:16px}
+.hod-card .course-directory-heading>div{min-width:0;flex:1}
+.hod-card .department-modal-close{margin-left:auto}
 .hod-card .screen-title{padding:28px 36px 12px;border-bottom:0;background:var(--surface, #fff)}
 .hod-card .screen-title h2{font-size:1.45rem}
 .hod-card .screen-title p{max-width:520px;margin-top:8px;font-size:.95rem;line-height:1.45}
