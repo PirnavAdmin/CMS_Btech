@@ -1179,7 +1179,7 @@ const getNextFacultyCode = (list = [], collegeId, collegeOptions = []) => {
 function FacultyForm({ initial, faculty, onSave, onCancel, collegeOptions, departmentOptions, saving }) {
   const [data, setData] = useState(() => {
     const base = normalize(initial)
-    if (!base.employeeId) {
+    if (!base.employeeId && base.collegeId) {
       base.employeeId = getNextFacultyCode(faculty, base.collegeId, collegeOptions)
     }
     return base
@@ -1193,14 +1193,13 @@ function FacultyForm({ initial, faculty, onSave, onCancel, collegeOptions, depar
 
   useEffect(() => {
     if (!initial?.id) {
-      const activeCollegeId = data.collegeId || collegeOptions[0]?.value || ''
+      const activeCollegeId = data.collegeId || ''
       if (activeCollegeId) {
         const newCode = getNextFacultyCode(faculty, activeCollegeId, collegeOptions)
         const expectedPrefix = getCollegePrefix(activeCollegeId, collegeOptions)
         if (newCode && (!data.employeeId || data.employeeId === 'FAC001' || !data.employeeId.startsWith(expectedPrefix))) {
           setData(old => ({
             ...old,
-            collegeId: old.collegeId || activeCollegeId,
             employeeId: newCode,
           }))
         }
@@ -1915,8 +1914,6 @@ export default function FacultyManagement() {
     navigate('/faculty', { replace: true })
   }
   const addFaculty = () => navigate('/faculty/new')
-  const defaultCollegeId = collegeOptions[0]?.value || ''
-  const nextId = getNextFacultyCode(faculty, defaultCollegeId, collegeOptions)
   const save = async data => {
     if (saveLock.current) return
     saveLock.current = true; setSaving(true); setLoadError('')
@@ -1982,7 +1979,7 @@ export default function FacultyManagement() {
   else if (((editId || detailId) && !selected) || (!['/faculty', '/faculty/new'].includes(path) && !editId && !detailId)) {
     content = <section className="fm-panel"><EmptyState title="Faculty record not found" action="Back to Faculty Directory" onAction={back} /></section>
   } else if (path === '/faculty/new' || editId) {
-    content = <><header className="faculty-page-header"><div><h1>{editId ? 'Edit Faculty' : 'Add Faculty'}</h1><p>Faculty registration and employment record</p></div><button type="button" className="fm-button secondary" onClick={back}><FiArrowLeft /> Back</button></header><FacultyForm key={location.key + ':' + Boolean(detail) + ':' + (collegeOptions[0]?.value || '')} initial={selected || { collegeId: defaultCollegeId, employeeId: nextId, employmentType: 'Permanent', employmentStatus: 'Working', employeeCategory: 'Teaching' }} faculty={faculty} collegeOptions={collegeOptions} departmentOptions={departmentOptions} saving={saving} onSave={save} onCancel={back} /></>
+    content = <><header className="faculty-page-header"><div><h1>{editId ? 'Edit Faculty' : 'Add Faculty'}</h1><p>Faculty registration and employment record</p></div><button type="button" className="fm-button secondary" onClick={back}><FiArrowLeft /> Back</button></header><FacultyForm key={location.key + ':' + Boolean(detail) + ':' + (collegeOptions[0]?.value || '')} initial={selected || { employmentStatus: 'Working' }} faculty={faculty} collegeOptions={collegeOptions} departmentOptions={departmentOptions} saving={saving} onSave={save} onCancel={back} /></>
   } else if (selected) {
     const load = workload(selected)
     const departmentName = departmentOptions.find(d => String(d.value) === String(selected.departmentId || selected.department))?.label || selected.department || '—'

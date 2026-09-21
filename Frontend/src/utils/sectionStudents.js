@@ -6,19 +6,23 @@ const label = value => text(value).toLowerCase().replace(/\s+/g, ' ')
 const sectionLabel = value => label(value).replace(/^section\s+/, '')
 
 export function sectionStudentProfiles(profiles, admissions) {
+  const normalizedAdmissions = admissions.filter(row => isApprovedAdmission(row.currentStatus ?? row.admissionStatus ?? row.applicationStatus ?? row.status)).map(normalizeCanonicalStudent)
   const approved = approvedStudentProfiles(profiles.map(row => normalizeCanonicalStudent({ ...row, studentId: row.studentId || row.header?.studentId || row.personalInformation?.studentId || row.id })), admissions)
+  const profileByStudentId = new Map(approved.map(profile => [text(profile.studentId), profile]))
   const seen = new Set()
-  const candidates = [...approved, ...admissions.filter(row => isApprovedAdmission(row.currentStatus ?? row.admissionStatus ?? row.applicationStatus ?? row.status)).map(normalizeCanonicalStudent)]
+  // Admissions are authoritative for eligibility and academic mapping. Profiles only enrich records not already represented by an admission.
+  const candidates = [...normalizedAdmissions, ...approved]
   return candidates.flatMap(profile => {
     // Admission IDs cannot be submitted as student IDs.
     const id = text(profile.studentId)
     if (!id || seen.has(id)) return []
     seen.add(id)
-    const academic = profile.academic
-    const registrationNumber = profile.application?.registrationNumber || ''
-    const admissionNumber = profile.application?.admissionNumber || ''
-    const rollNumber = academic.rollNumber || ''
-    return [{ ...academic, id, studentId: id, name: studentFullName(profile), registrationNumber, admissionNumber, rollNumber,
+    const enrichment = profileByStudentId.get(id)
+    const academic = Object.fromEntries(Object.keys(profile.academic).map(key => [key, text(profile.academic[key]) || enrichment?.academic?.[key] || '']))
+    const registrationNumber = profile.application?.registrationNumber || enrichment?.application?.registrationNumber || ''
+    const admissionNumber = profile.application?.admissionNumber || enrichment?.application?.admissionNumber || ''
+    const rollNumber = academic.rollNumber || enrichment?.academic?.rollNumber || ''
+    return [{ ...academic, id, studentId: id, name: studentFullName(profile) || studentFullName(enrichment), registrationNumber, admissionNumber, rollNumber,
       code: [...new Set([admissionNumber, registrationNumber, rollNumber].filter(Boolean))].join(' / '),
       enrollmentNo: rollNumber || registrationNumber || admissionNumber }]
   })

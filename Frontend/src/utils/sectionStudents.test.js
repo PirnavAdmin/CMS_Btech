@@ -28,3 +28,11 @@ test('approval filtering and admission fallback use only real student IDs withou
   const admissions = [{ admissionId: 11, studentId: 1, status: 'APPROVED' }, { admissionId: 12, studentId: 2, status: 'REJECTED' }, { admissionId: 13, studentId: 3, status: 'APPROVED', branchId: 2 }, { admissionId: 14, status: 'APPROVED' }]
   assert.deepEqual(sectionStudentProfiles(profiles, admissions).map(row => row.id), ['1', '3'])
 })
+test('approved admission is eligible without a profile and remains authoritative for academic mapping', () => {
+  const admissions = [{ admissionId: 21, studentId: 42, status: 'APPROVED', academicInformation: { academicYearId: 4, courseId: 1, branchId: 2, semesterId: 3, sectionId: '' }, personalInformation: { firstName: 'Ravi', lastName: 'Kumar' } }]
+  const profiles = [{ studentId: 42, academicInformation: { academicYearId: 99, courseId: 99, branchId: 99, semesterId: 99 } }]
+  const [student] = sectionStudentProfiles(profiles, admissions)
+  assert.equal(student.id, '42')
+  assert.equal(student.name, 'Ravi Kumar')
+  assert.equal(matchesSectionStudent(student, section), true)
+})

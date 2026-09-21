@@ -48,7 +48,7 @@ export const normalizeFaculty = (source = {}) => {
     emergencyName: first(source, ['emergencyName', 'emergencyContactName', 'EmergencyContactName']),
     emergencyMobile: first(source, ['emergencyMobile', 'emergencyContactNumber', 'EmergencyContactNumber']),
     relationship: first(source, ['relationship', 'emergencyContactRelation', 'EmergencyContactRelation']),
-    employeeCategory: first(source, ['employeeCategory', 'category', 'facultyType', 'EmployeeCategory', 'Category', 'FacultyType'], 'Teaching'),
+    employeeCategory: first(source, ['employeeCategory', 'category', 'facultyType', 'EmployeeCategory', 'Category', 'FacultyType'], ''),
     assignments: list(source.assignments ?? source.subjectAllocations),
   }
 }
@@ -226,7 +226,7 @@ const listFaculty = async (params, search = false) => {
             fullName: row.facultyName || row.fullName || row.name,
             designation: row.designation,
             department: row.department,
-            employeeCategory: row.facultyType || row.employeeCategory || 'Teaching',
+            employeeCategory: row.facultyType || row.employeeCategory || '',
             status: 'Working'
           }))
         }
@@ -248,7 +248,7 @@ const listFaculty = async (params, search = false) => {
             fullName: row.fullName || row.facultyName || row.name,
             designation: row.designation,
             department: row.department,
-            employeeCategory: row.employeeCategory || 'Teaching',
+            employeeCategory: row.employeeCategory || '',
             status: 'Working'
           }))
         }
@@ -270,7 +270,7 @@ const listFaculty = async (params, search = false) => {
             fullName: row.fullName || row.facultyName || row.name,
             designation: row.designation,
             department: row.department,
-            employeeCategory: row.type || row.employeeCategory || 'Teaching',
+            employeeCategory: row.type || row.employeeCategory || '',
             status: 'Working'
           }))
         }

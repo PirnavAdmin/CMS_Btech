@@ -367,9 +367,14 @@ function AssignStudents({ section, faculty = [], assignments, allAssignments = [
     setStudentsLoading(true)
     setStudents([])
     setSelectedIds([])
-    Promise.all([studentProfilesApi.getAll(), studentAdmissionApi.getAll()])
-      .then(([profiles, admissions]) => active && setStudents(sectionStudentProfiles(profiles, admissions).filter(student => matchesSectionStudent(student, section))))
-      .catch((reason) => active && setError(apiError(reason, 'Unable to load eligible students.')))
+    Promise.allSettled([studentProfilesApi.getAll(), studentAdmissionApi.getAll()])
+      .then(([profilesResult, admissionsResult]) => {
+        if (admissionsResult.status !== 'fulfilled') throw admissionsResult.reason
+        const profiles = profilesResult.status === 'fulfilled' ? profilesResult.value : []
+        const admissions = admissionsResult.value
+        if (active) setStudents(sectionStudentProfiles(profiles, admissions).filter(student => matchesSectionStudent(student, section)))
+      })
+      .catch((reason) => active && setError(apiError(reason, 'Unable to load admitted students.')))
       .finally(() => { if (active) setStudentsLoading(false) })
     return () => { active = false }
   }, [mode, section, setError])

@@ -2,11 +2,11 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { FiCheck, FiPlus, FiChevronDown, FiChevronUp, FiDownload, FiEdit2, FiEye, FiFileText, FiFilter, FiPrinter, FiSearch, FiSlash, FiX } from 'react-icons/fi'
 import DashboardLayout from '../../layouts/DashboardLayout'
 import TablePagination from '../../components/TablePagination'
+import ExportMenu from '../../components/ExportMenu'
 import { facultyPayrollApi, facultyAttendanceApi, facultyLeaveApi } from '../../api/apiEndpoints'
 import facultyService from '../../services/facultyService'
 import { normalizePayroll } from '../../services/facultyContracts'
 import { newestFirst } from '../../utils/newestFirst'
-import { downloadServerExport, printEntityDetails } from '../../utils/exportUtils'
 import './Payroll.css'
 
 const LOCAL_PAYROLL_STATUS_KEY = 'pirnav-faculty-local-payroll-status-v1'
@@ -803,11 +803,15 @@ export default function Payroll() {
       setNotice(`Payroll for ${selected.fullName} placed on hold.`)
     }
   }
-  const download = async () => { setBusy(true); setError(''); try { downloadServerExport(await facultyPayrollApi.export({ month }), 'faculty-payroll-' + month) } catch (reason) { setError(reason.message) } finally { setBusy(false) } }
   const totalPages = Math.max(1, Math.ceil(rows.length / PAGE_SIZE)), currentPage = Math.min(page, totalPages), visible = rows.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE)
   const updateFilter = (key, value) => { setFilters(current => ({ ...current, [key]: value })); setPage(1) }
   const clear = () => { setQuery(''); setFilters({ type: '', department: '', status: '' }); setPage(1) }
   const columns = [['employeeId', 'Employee ID'], ['fullName', 'Employee'], ['type', 'Type'], ['department', 'Department'], ['working', 'Working Days'], ['present', 'Present'], ['paidLeave', 'Paid Leave'], ['lop', 'LOP'], ['status', 'Status']].map(([value, label]) => ({ label, value }))
+  const exportColumns = tab === 'Payroll Processing'
+    ? [...columns, { label: 'Gross Salary', value: 'grossSalary' }, { label: 'Deductions', value: 'deductions' }, { label: 'Net Salary', value: 'netSalary' }]
+    : tab === 'Salary Records'
+      ? [['employeeId', 'Employee ID'], ['fullName', 'Employee'], ['type', 'Type'], ['department', 'Department'], ['basicSalary', 'Basic Salary'], ['grossSalary', 'Gross Salary'], ['deductions', 'Deductions'], ['netSalary', 'Net Salary']].map(([value, label]) => ({ label, value }))
+      : [['month', 'Payroll Month'], ['employeeId', 'Employee ID'], ['fullName', 'Employee'], ['type', 'Type'], ['department', 'Department'], ['grossSalary', 'Gross Salary'], ['deductions', 'Deductions'], ['netSalary', 'Net Salary'], ['status', 'Status']].map(([value, label]) => ({ label, value }))
   const processed = rows.filter(row => row.status === 'Processed').length, onHold = rows.filter(row => row.status === 'Hold').length, lop = rows.reduce((sum, row) => sum + row.lop, 0)
   const title = tab === 'Payroll Processing' ? 'Payroll Processing' : tab
   const emptyText = tab === 'Payroll Processing' ? `No payroll records found for ${monthLabel(month)}.` : tab === 'Salary Records' ? 'No salary records found.' : 'No payslips found for the selected filters.'
@@ -828,7 +832,7 @@ export default function Payroll() {
               <FiPlus /> Add Salary Structure
             </button>
           )}
-          <button type="button" className="export-button" disabled={busy || loading} onClick={download}>Export Payroll</button>
+          <ExportMenu rows={rows} columns={exportColumns} title={title} filename={`faculty-payroll-${month}`} loading={loading || Boolean(error)} scope="All filtered results" />
         </div></header><nav>{['Payroll Processing', 'Salary Records', 'Payslips'].map(item => <button type="button" className={tab === item ? 'active' : ''} onClick={() => { setTab(item); setPage(1); setSelectedIds([]) }} key={item}>{item}</button>)}</nav><div className="fp-tools"><label><FiSearch /><input value={query} onChange={event => { setQuery(event.target.value); setPage(1) }} aria-label="Search payroll employees" placeholder="Search employee..." /></label><button type="button" className="fp-filter-button" onClick={() => setShowFilters(value => !value)}><FiFilter /> Filters {showFilters ? <FiChevronUp /> : <FiChevronDown />}</button></div>{showFilters && <div className="fp-filters"><label>Payroll Month<input type="month" value={month} onChange={event => { setMonth(event.target.value); setPage(1) }} /></label><label>Faculty Type<select value={filters.type} onChange={event => updateFilter('type', event.target.value)}><option value="">All Faculty</option><option>Teaching</option><option>Non-Teaching</option></select></label><label>Department<select value={filters.department} onChange={event => updateFilter('department', event.target.value)}><option value="">All Departments</option>{departments.map(item => <option key={item}>{item}</option>)}</select></label>{tab !== 'Payslips' && <label>Payroll Status<select value={filters.status} onChange={event => updateFilter('status', event.target.value)}><option value="">All Statuses</option>{['Draft', 'Processed', 'Paid', 'Hold'].map(item => <option key={item}>{item}</option>)}</select></label>}<button type="button" onClick={clear}>Clear Filters</button></div>}
       {tab === 'Payroll Processing' && selectedIds.length > 0 && (
         <div className="fp-bulkbar">
