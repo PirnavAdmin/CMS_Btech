@@ -44,7 +44,7 @@ const formatSemesterLabel = (val) => {
   return str
 }
 
-const idOf = (x) => x?.studentId ?? x?.id ?? ''
+const idOf = (x) => [x?.studentId, x?.id, x?.admissionId, x?.admissionNumber, x?.registrationNumber, x?.rollNumber].find((value) => value !== null && value !== undefined && String(value).trim() !== '')?.toString() || ''
 const nameOf = (x) => {
   if (!x) return 'Unnamed Student'
   const personal = x.personal || {}
@@ -260,9 +260,6 @@ function ReviewDrawer({ student, onClose, onStatus, canEdit }) {
         </div>
 
         <footer className="pr-modal-footer">
-          <button type="button" className="erp-btn erp-btn--secondary" onClick={onClose}>
-            Close
-          </button>
           {canEdit && (
             <div className="pr-footer-actions">
               <button
