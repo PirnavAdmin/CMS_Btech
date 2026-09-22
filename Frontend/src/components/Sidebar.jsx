@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react'
 import { NavLink, useLocation } from 'react-router-dom'
-import { FiBarChart2, FiBookOpen, FiBriefcase, FiCalendar, FiCheckSquare, FiChevronLeft, FiChevronRight, FiCreditCard, FiEdit3, FiGitBranch, FiGrid, FiHome, FiLayers, FiTrendingUp, FiUser, FiUserPlus, FiUsers, FiX } from 'react-icons/fi'
+import { FiAward, FiBarChart2, FiBook, FiBookOpen, FiBriefcase, FiCalendar, FiCheckCircle, FiCheckSquare, FiChevronLeft, FiChevronRight, FiCreditCard, FiEdit3, FiFileText, FiGitBranch, FiGrid, FiHome, FiLayers, FiTrendingUp, FiUser, FiUserPlus, FiUsers, FiX } from 'react-icons/fi'
 import { getUserRole } from '../auth/auth'
 import { ROLES } from '../auth/roles'
 
@@ -12,6 +12,12 @@ const academicLinks = [
   { label: 'Branches', to: '/branches', icon: FiGitBranch, tone: 'purple' },
   { label: 'Semesters', to: '/semester-management', icon: FiLayers, tone: 'orange' },
   { label: 'Sections', to: '/section-management', icon: FiUsers, tone: 'pink' },
+]
+
+const curriculumLinks = [
+  { label: 'Subject Management', to: '/subject-management', icon: FiBook, tone: 'blue' },
+  { label: 'Credits Management', to: '/credits-management', icon: FiAward, tone: 'green' },
+  { label: 'Elective Management', to: '/elective-management', icon: FiCheckCircle, tone: 'purple' },
 ]
 
 function Item({ to, icon: Icon, children, onNavigate, tone = 'blue', activeWhen }) {
@@ -58,6 +64,8 @@ export default function Sidebar({ open = false, onClose = () => {}, collapsed = 
           <Item to="/faculty/attendance" icon={FiCheckSquare} tone="green" onNavigate={onClose} activeWhen={pathname => pathname === '/faculty/attendance' || pathname.startsWith('/faculty/attendance/')}>Faculty Attendance</Item>
           <Item to="/faculty/leave-management" icon={FiCalendar} tone="orange" onNavigate={onClose}>Faculty Leave Management</Item>
           <Item to="/faculty/payroll" icon={FiCreditCard} tone="gold" onNavigate={onClose}>Faculty Payroll</Item>
+          <p className="sidebar-section-label">Curriculum & Subjects</p>
+          {curriculumLinks.map(link => <Item {...link} key={link.to} onNavigate={onClose}>{link.label}</Item>)}
           <p className="sidebar-section-label">Campus Operations</p>
           <Item to="/fees" icon={FiCreditCard} tone="gold" onNavigate={onClose}>Fee Structure</Item>
           <Item to="/attendance" icon={FiCheckSquare} tone="green" onNavigate={onClose}>Attendance</Item>

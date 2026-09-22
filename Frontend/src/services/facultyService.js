@@ -58,6 +58,37 @@ const LOCAL_PROFILE_KEY = 'pirnav-faculty-local-profiles-v1'
 const LOCAL_ALLOCATIONS_KEY = 'pirnav-faculty-local-allocations-v1'
 const LOCAL_ATTENDANCE_KEY = 'pirnav-faculty-local-attendance-v1'
 
+const getAttendanceFacultyId = row => {
+  if (!row || typeof row !== 'object') return ''
+  return String(
+    row.facultyId ??
+    row.FacultyId ??
+    row.faculty?.facultyId ??
+    row.faculty?.FacultyId ??
+    row.faculty?.id ??
+    row.faculty?.Id ??
+    row.employeeProfileId ??
+    row.EmployeeProfileId ??
+    row.facultyProfileId ??
+    row.FacultyProfileId ??
+    row.employeeProfile?.id ??
+    row.employeeProfile?.Id ??
+    row.employeeId ??
+    row.EmployeeId ??
+    row.facultyCode ??
+    row.FacultyCode ??
+    row.id ??
+    row.Id ??
+    ''
+  )
+}
+
+const getAttendanceDate = row => {
+  if (!row || typeof row !== 'object') return ''
+  const val = String(row.attendanceDate ?? row.AttendanceDate ?? row.date ?? row.Date ?? '')
+  return val.includes('T') ? val.split('T')[0] : val.slice(0, 10)
+}
+
 const getLocalAttendance = () => {
   try {
     return JSON.parse(localStorage.getItem(LOCAL_ATTENDANCE_KEY)) || []
@@ -66,13 +97,13 @@ const getLocalAttendance = () => {
   }
 }
 
-const saveLocalAttendanceRecord = (record) => {
+export const saveLocalAttendanceRecord = (record) => {
   try {
     const list = getLocalAttendance()
-    const facId = String(record.facultyId ?? record.faculty?.id ?? '')
-    const date = String(record.date || record.attendanceDate || '').slice(0, 10)
+    const facId = getAttendanceFacultyId(record)
+    const date = getAttendanceDate(record)
     if (!facId || !date) return record
-    const index = list.findIndex(item => String(item.facultyId) === facId && String(item.date || item.attendanceDate).slice(0, 10) === date)
+    const index = list.findIndex(item => (getAttendanceFacultyId(item) === facId || (item.employeeId && record.employeeId && item.employeeId === record.employeeId) || (item.facultyCode && record.facultyCode && item.facultyCode === record.facultyCode)) && getAttendanceDate(item) === date)
     const normalized = {
       ...record,
       id: record.id || record.attendanceId || (index >= 0 ? list[index].id : `ATT-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`),
@@ -80,10 +111,10 @@ const saveLocalAttendanceRecord = (record) => {
       facultyId: facId,
       date,
       attendanceDate: date,
-      status: record.status || record.attendanceStatus || 'Present',
-      checkIn: record.checkIn || record.checkInTime || '',
-      checkOut: record.checkOut || record.checkOutTime || '',
-      remarks: record.remarks || '',
+      status: record.status || record.Status || record.attendanceStatus || record.AttendanceStatus || 'Present',
+      checkIn: record.checkIn || record.CheckIn || record.checkInTime || record.CheckInTime || '',
+      checkOut: record.checkOut || record.CheckOut || record.checkOutTime || record.CheckOutTime || '',
+      remarks: record.remarks || record.Remarks || '',
     }
     if (index >= 0) {
       list[index] = { ...list[index], ...normalized }
@@ -491,9 +522,21 @@ export const facultyService = {
     const local = getLocalAttendance()
     const list = Array.isArray(remote) ? [...remote] : []
     for (const item of local) {
-      const matchIndex = list.findIndex(r => String(r.facultyId ?? r.faculty?.id) === String(item.facultyId) && String(r.attendanceDate ?? r.date).slice(0, 10) === String(item.date).slice(0, 10))
+      const itemFacId = getAttendanceFacultyId(item)
+      const itemDate = getAttendanceDate(item)
+      const matchIndex = list.findIndex(r => {
+        const rFacId = getAttendanceFacultyId(r)
+        const rDate = getAttendanceDate(r)
+        return (rFacId === itemFacId || (r.employeeId && item.employeeId && r.employeeId === item.employeeId) || (r.facultyCode && item.facultyCode && r.facultyCode === item.facultyCode)) && rDate === itemDate
+      })
       if (matchIndex >= 0) {
-        list[matchIndex] = { ...item, ...list[matchIndex], status: list[matchIndex].status && list[matchIndex].status !== 'Not Marked' ? list[matchIndex].status : item.status, checkIn: list[matchIndex].checkIn || item.checkIn, checkOut: list[matchIndex].checkOut || item.checkOut }
+        list[matchIndex] = {
+          ...list[matchIndex],
+          ...item,
+          status: item.status && item.status !== 'Not Marked' ? item.status : (list[matchIndex].status || list[matchIndex].Status || 'Not Marked'),
+          checkIn: item.checkIn || list[matchIndex].checkIn || list[matchIndex].CheckIn || '',
+          checkOut: item.checkOut || list[matchIndex].checkOut || list[matchIndex].CheckOut || '',
+        }
       } else {
         list.push(item)
       }
@@ -506,7 +549,36 @@ export const facultyService = {
     try {
       result = await facultyAttendanceApi.create(payload)
     } catch (err) {
-      console.warn('Backend create attendance failed, saving to local store:', err)
+      if (/already exists|duplicate|conflict/i.test(err.message || '')) {
+        try {
+          const targetDate = String(payload.attendanceDate || '').slice(0, 10)
+          const existingList = await facultyAttendanceApi.getAll({
+            facultyId: payload.facultyId,
+            fromDate: targetDate,
+            toDate: targetDate,
+          }).catch(() => [])
+          const match = (Array.isArray(existingList) ? existingList : []).find(r =>
+            String(r.facultyId ?? r.faculty?.id) === String(payload.facultyId) &&
+            String(r.attendanceDate ?? r.date).slice(0, 10) === targetDate
+          )
+          const existingId = match?.attendanceId || match?.id || match?.facultyAttendanceId
+          if (existingId) {
+            result = await facultyAttendanceApi.update(existingId, payload)
+          } else {
+            const dailyList = await facultyAttendanceApi.getDaily({ date: targetDate }).catch(() => [])
+            const dailyMatch = (Array.isArray(dailyList) ? dailyList : []).find(r =>
+              String(r.facultyId ?? r.faculty?.id ?? r.id) === String(payload.facultyId)
+            )
+            const dailyId = dailyMatch?.attendanceId || dailyMatch?.id
+            if (dailyId) {
+              result = await facultyAttendanceApi.update(dailyId, payload)
+            }
+          }
+        } catch { /* ignore fallback errors */ }
+      }
+      if (!result) {
+        throw err
+      }
     }
     const local = saveLocalAttendanceRecord({
       ...payload,
@@ -519,12 +591,7 @@ export const facultyService = {
     return result || local
   },
   updateAttendance: async (id, payload) => {
-    let result = null
-    try {
-      result = await facultyAttendanceApi.update(id, payload)
-    } catch (err) {
-      console.warn('Backend update attendance failed, saving to local store:', err)
-    }
+    const result = await facultyAttendanceApi.update(id, payload)
     saveLocalAttendanceRecord({
       ...payload,
       id,
@@ -538,7 +605,7 @@ export const facultyService = {
     try {
       result = await facultyAttendanceApi.checkIn(id, payload)
     } catch { /* ignore */ }
-    const timeVal = payload?.checkIn ? (payload.checkIn.includes('T') ? payload.checkIn.split('T')[1].slice(0, 5) : payload.checkIn) : '09:00'
+    const timeVal = payload?.checkIn ? (payload.checkIn.includes('T') ? payload.checkIn.split('T')[1].slice(0, 5) : payload.checkIn) : ''
     const list = getLocalAttendance()
     const item = list.find(r => String(r.id) === String(id) || String(r.attendanceId) === String(id))
     if (item) {
@@ -552,7 +619,7 @@ export const facultyService = {
     try {
       result = await facultyAttendanceApi.checkOut(id, payload)
     } catch { /* ignore */ }
-    const timeVal = payload?.checkOut ? (payload.checkOut.includes('T') ? payload.checkOut.split('T')[1].slice(0, 5) : payload.checkOut) : '17:00'
+    const timeVal = payload?.checkOut ? (payload.checkOut.includes('T') ? payload.checkOut.split('T')[1].slice(0, 5) : payload.checkOut) : ''
     const list = getLocalAttendance()
     const item = list.find(r => String(r.id) === String(id) || String(r.attendanceId) === String(id))
     if (item) {
@@ -566,13 +633,24 @@ export const facultyService = {
     try {
       remote = await facultyAttendanceApi.getDaily(params)
     } catch { /* ignore */ }
-    const date = params?.date || new Date().toISOString().slice(0, 10)
-    const local = getLocalAttendance().filter(item => String(item.date || item.attendanceDate).slice(0, 10) === date)
+    const targetDate = String(params?.date || new Date().toISOString().slice(0, 10)).slice(0, 10)
+    const local = getLocalAttendance().filter(item => getAttendanceDate(item) === targetDate)
     const list = Array.isArray(remote) ? [...remote] : []
     for (const item of local) {
-      const matchIndex = list.findIndex(r => String(r.facultyId ?? r.id) === String(item.facultyId))
+      const itemFacId = getAttendanceFacultyId(item)
+      const matchIndex = list.findIndex(r => {
+        const rFacId = getAttendanceFacultyId(r)
+        return rFacId === itemFacId || (r.employeeId && item.employeeId && r.employeeId === item.employeeId) || (r.facultyCode && item.facultyCode && r.facultyCode === item.facultyCode)
+      })
       if (matchIndex >= 0) {
-        list[matchIndex] = { ...list[matchIndex], ...item, attendanceId: list[matchIndex].attendanceId || item.attendanceId || item.id }
+        list[matchIndex] = {
+          ...list[matchIndex],
+          ...item,
+          status: item.status && item.status !== 'Not Marked' ? item.status : (list[matchIndex].status || list[matchIndex].Status || 'Not Marked'),
+          attendanceId: list[matchIndex].attendanceId || list[matchIndex].AttendanceId || item.attendanceId || item.id,
+          checkIn: item.checkIn || list[matchIndex].checkIn || list[matchIndex].CheckIn || '',
+          checkOut: item.checkOut || list[matchIndex].checkOut || list[matchIndex].CheckOut || '',
+        }
       } else {
         list.push(item)
       }
@@ -580,25 +658,19 @@ export const facultyService = {
     return list
   },
   bulkAttendance: async payload => {
-    let result = null
-    try {
-      result = await facultyAttendanceApi.bulk(payload)
-    } catch (err) {
-      console.warn('Backend bulk attendance failed, saving to local store:', err)
-    }
+    const result = await facultyAttendanceApi.bulk(payload)
     const facultyIds = payload.facultyIds || []
     const date = String(payload.attendanceDate || new Date().toISOString().slice(0, 10)).slice(0, 10)
     const status = payload.status || 'Present'
     const remarks = payload.remarks || ''
-    const isWorking = ['Present', 'Late', 'Half Day'].includes(status)
     for (const facId of facultyIds) {
       saveLocalAttendanceRecord({
         facultyId: String(facId),
         date,
         attendanceDate: date,
         status,
-        checkIn: isWorking ? '09:00' : '',
-        checkOut: isWorking ? '17:00' : '',
+        checkIn: payload.checkIn || '',
+        checkOut: payload.checkOut || '',
         remarks,
       })
     }

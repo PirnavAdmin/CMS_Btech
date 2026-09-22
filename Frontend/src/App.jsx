@@ -30,6 +30,9 @@ import Results from './pages/results/Results'
 import FacultyManagement from './pages/faculty/FacultyManagement'
 import FacultyLeaveManagement from './pages/faculty/FacultyLeaveManagement'
 import Payroll from './pages/faculty/Payroll'
+import SubjectManagement from './pages/subject-management/SubjectManagement'
+import CreditsManagement from './pages/credits-management/CreditsManagement'
+import ElectiveManagement from './pages/elective-management/ElectiveManagement'
 import { AcademicProvider } from './context/AcademicContext'
 import './styles/erp-theme.css'
 import './App.css'
@@ -165,6 +168,9 @@ export default function App() {
               <Route path="/section-management/add" element={<SectionManagement mode="form" />} />
               <Route path="/section-management/:id/edit" element={<SectionManagement mode="edit" />} />
               <Route path="/section-management/:id" element={<SectionManagement mode="details" />} />
+              <Route path="/subject-management" element={<SubjectManagement />} />
+              <Route path="/credits-management" element={<CreditsManagement />} />
+              <Route path="/elective-management" element={<ElectiveManagement />} />
               <Route path="/student-management/admissions" element={<StudentAdmission />} />
               <Route path="/student-management/admissions/new" element={<StudentAdmission />} />
               <Route path="/student-management/admissions/add" element={<StudentAdmission />} />

@@ -12,24 +12,20 @@ import { academicYearApi, branchApi, courseApi, departmentApi, facultyMasterApi,
 import { attendancePayload, requiredNumber } from '../../services/facultyContracts'
 import { downloadServerExport } from '../../utils/exportUtils'
 import { getDefaultAcademicYear } from '../../utils/academicYearUtils'
-import facultyService, { normalizeFaculty, mergeFacultyData, clearFacultyLocalStorage } from '../../services/facultyService'
+import facultyService, { normalizeFaculty, mergeFacultyData, clearFacultyLocalStorage, saveLocalAttendanceRecord } from '../../services/facultyService'
 import './FacultyManagement.css'
 import './FacultyAttendance.css'
-import { localAttendanceDate, loadDailyAttendancePeriod, attendanceStatusLabel, normalizeAttendanceRow, combineAttendance } from '../../utils/facultyAttendance'
+import { localAttendanceDate, loadDailyAttendancePeriod, attendanceStatusLabel, normalizeAttendanceRow, combineAttendance, attendanceFacultyMap } from '../../utils/facultyAttendance'
+import { showSuccess, showError, showWarning, showInfo } from '../../utils/toast'
 
 const PAGE_SIZE = 5
 const WORKLOAD_LIMITS = { under: 12, normal: 20 }
-const departments = ['Computer Science & Engineering', 'Electronics & Communication', 'Electrical & Electronics', 'Mechanical Engineering', 'Civil Engineering']
-// Kept as an empty export for older screens; faculty data must come from the API.
-export const readStoredFaculty = () => []
-export const readStoredAttendanceRecords = () => []
-export const facultySeed = []
 const statuses = ['Working', 'On Leave', 'Resigned', 'Retired']
 const designations = ['Professor', 'Associate Professor', 'Assistant Professor', 'Senior Lecturer', 'Lecturer', 'Lab Instructor', 'Visiting Faculty']
 const employmentTypes = ['Permanent', 'Contract', 'Visiting', 'Guest']
 const ATTENDANCE_STATUSES = ['Present', 'Absent', 'Late', 'Half Day', 'On Leave', 'LOP', 'Not Marked']
 const ATTENDANCE_PERCENTAGE_NOTE = 'Attendance percentage is calculated using marked attendance records only.'
-const DEFAULT_ATTENDANCE_WINDOW = { checkIn: '09:00', checkOut: '17:00' }
+const today = () => localAttendanceDate(new Date())
 const formatMinutes = minutes => {
   const total = Number(minutes) || 0
   const hours = Math.floor(total / 60)
@@ -37,6 +33,18 @@ const formatMinutes = minutes => {
   if (!hours && !mins) return '0h'
   if (!mins) return `${hours}h`
   return `${hours}h ${mins}m`
+}
+export const formatTimeView = value => {
+  if (!value || value === '—' || value === '') return '—'
+  const str = String(value).trim()
+  if (/^(1[0-2]|0?[1-9]):[0-5][0-9]\s*(AM|PM)$/i.test(str)) return str
+  const [hourText, minuteText] = str.split(':')
+  const hour = Number(hourText)
+  const minute = Number(minuteText || 0)
+  if (!Number.isFinite(hour) || !Number.isFinite(minute)) return value
+  const suffix = hour >= 12 ? 'PM' : 'AM'
+  const displayHour = hour % 12 || 12
+  return `${displayHour}:${String(minute).padStart(2, '0')} ${suffix}`
 }
 const normalizeAttendanceDate = value => {
   if (!value) return ''
@@ -61,35 +69,61 @@ const normalizeAttendanceStatus = value => {
   return statuses[key] || 'Not Marked'
 }
 const mergeAttendanceRecords = (faculty, records = []) => {
-  const facultyMap = new Map()
-  for (const item of (faculty || [])) {
-    if (item.id) facultyMap.set(String(item.id), String(item.id))
-    if (item.facultyId) facultyMap.set(String(item.facultyId), String(item.id))
-    if (item.employeeProfileId) facultyMap.set(String(item.employeeProfileId), String(item.id))
-    if (item.employeeId) facultyMap.set(String(item.employeeId), String(item.id))
-  }
+  const facultyMap = attendanceFacultyMap(faculty || [])
+  const statusPriority = { Present: 5, Late: 4, 'Half Day': 4, 'On Leave': 3, LOP: 3, Absent: 2, 'Not Marked': 1 }
 
   const normalized = (Array.isArray(records) ? records : []).map(record => {
-    const rawFacId = String(record.facultyId ?? record.FacultyId ?? record.faculty?.facultyId ?? record.faculty?.id ?? record.employeeProfileId ?? '')
+    const rawFacId = String(
+      record.facultyId ??
+      record.FacultyId ??
+      record.faculty?.facultyId ??
+      record.faculty?.FacultyId ??
+      record.faculty?.id ??
+      record.faculty?.Id ??
+      record.employeeProfileId ??
+      record.EmployeeProfileId ??
+      ''
+    )
     const matchedCanonicalId = facultyMap.get(rawFacId) || rawFacId
+    const status = normalizeAttendanceStatus(record.status ?? record.attendanceStatus ?? record.Status ?? record.AttendanceStatus)
+    const isWorking = ['Present', 'Late', 'Half Day'].includes(status)
+    const defIn = status === 'Late' ? '09:30' : isWorking ? '09:00' : ''
+    const defOut = status === 'Half Day' ? '13:00' : isWorking ? '17:00' : ''
+    const checkIn = (record.checkIn && record.checkIn !== '—' && record.checkIn !== '') ? record.checkIn : (record.CheckIn || record.checkInTime || record.CheckInTime || (isWorking ? defIn : '—'))
+    const checkOut = (record.checkOut && record.checkOut !== '—' && record.checkOut !== '') ? record.checkOut : (record.CheckOut || record.checkOutTime || record.CheckOutTime || (isWorking ? defOut : '—'))
     return {
       ...record,
       facultyId: matchedCanonicalId,
       date: normalizeAttendanceDate(record.attendanceDate ?? record.date ?? record.Date),
-      status: normalizeAttendanceStatus(record.status ?? record.attendanceStatus ?? record.Status ?? record.AttendanceStatus),
-      checkIn: record.checkIn || record.CheckIn || record.checkInTime || record.CheckInTime || '—',
-      checkOut: record.checkOut || record.CheckOut || record.checkOutTime || record.CheckOutTime || '—',
+      status,
+      checkIn,
+      checkOut,
       remarks: record.remarks || record.Remarks || '—',
       source: record.source || 'Manual',
     }
-  }).filter(record => facultyMap.has(String(record.facultyId)))
+  })
 
   const byFacultyAndDate = new Map()
   for (const record of normalized) {
     const key = `${record.facultyId}|${record.date}`
     const current = byFacultyAndDate.get(key)
-    if (!current || (current.status === 'Not Marked' && record.status !== 'Not Marked') || (!current.attendanceId && record.attendanceId)) {
+    if (!current) {
       byFacultyAndDate.set(key, record)
+    } else {
+      const curPriority = statusPriority[current.status] || 0
+      const recPriority = statusPriority[record.status] || 0
+      const bestStatus = recPriority >= curPriority ? record.status : current.status
+      const attId = record.attendanceId || current.attendanceId || null
+      byFacultyAndDate.set(key, {
+        ...current,
+        ...record,
+        attendanceId: attId,
+        id: attId || record.id || current.id || '',
+        status: bestStatus,
+        checkIn: (record.checkIn && record.checkIn !== '—' && record.checkIn !== '') ? record.checkIn : current.checkIn,
+        checkOut: (record.checkOut && record.checkOut !== '—' && record.checkOut !== '') ? record.checkOut : current.checkOut,
+        remarks: (record.remarks && record.remarks !== '—' && record.remarks !== '') ? record.remarks : current.remarks,
+      })
     }
   }
   return [...byFacultyAndDate.values()]
@@ -110,9 +144,8 @@ const mondayOf = value => {
 }
 const calculateWorkingMinutes = values => {
   if (!values || values.status === 'Not Marked' || ['Absent', 'On Leave'].includes(values.status)) return 0
-  const defaultWindow = DEFAULT_ATTENDANCE_WINDOW
-  const checkInValue = values.checkIn && values.checkIn !== '—' ? values.checkIn : defaultWindow.checkIn
-  const checkOutValue = values.checkOut && values.checkOut !== '—' ? values.checkOut : defaultWindow.checkOut
+  const checkInValue = values.checkIn && values.checkIn !== '—' ? values.checkIn : ''
+  const checkOutValue = values.checkOut && values.checkOut !== '—' ? values.checkOut : ''
   const checkIn = checkInValue ? checkInValue.split(':').map(Number) : null
   const checkOut = checkOutValue ? checkOutValue.split(':').map(Number) : null
   if (checkIn && checkOut && ((checkOut[0] > checkIn[0]) || (checkOut[0] === checkIn[0] && checkOut[1] > checkIn[1]))) {
@@ -120,8 +153,6 @@ const calculateWorkingMinutes = values => {
     const end = checkOut[0] * 60 + checkOut[1]
     return Math.max(0, end - start)
   }
-  if (values.status === 'Half Day') return 240
-  if (['Present', 'Late'].includes(values.status)) return 480
   return 0
 }
 const getAttendanceDisplayHours = row => {
@@ -132,26 +163,38 @@ const getAttendanceDisplayHours = row => {
 const resolveAttendanceRecords = (records, faculty) => {
   const facultyMap = new Map((faculty || []).map(item => [String(item.id), item]))
   return mergeAttendanceRecords(faculty, records).map(record => {
-    const matched = facultyMap.get(String(record.facultyId)) || {
+    const matched = facultyMap.get(String(record.facultyId)) || (faculty || []).find(item =>
+      String(item.id) === String(record.facultyId) ||
+      String(item.facultyId) === String(record.facultyId) ||
+      (item.employeeId && (record.employeeId === item.employeeId || record.facultyCode === item.employeeId || String(record.facultyId) === String(item.employeeId))) ||
+      (item.facultyCode && (record.facultyCode === item.facultyCode || record.employeeId === item.facultyCode || String(record.facultyId) === String(item.facultyCode))) ||
+      (item.employeeProfileId && (String(record.employeeProfileId) === String(item.employeeProfileId) || String(record.facultyId) === String(item.employeeProfileId)))
+    ) || {
       id: record.facultyId,
       fullName: 'Unknown Faculty',
       employeeId: 'N/A',
       department: 'N/A',
       designation: 'N/A',
     }
-    const workingMinutes = typeof record.workingMinutes === 'number' ? record.workingMinutes : calculateWorkingMinutes(record)
     const status = normalizeAttendanceStatus(record.status ?? record.attendanceStatus)
-    const normalizedCheckIn = ['Present', 'Late', 'Half Day'].includes(status) && record.checkIn && record.checkIn !== '—' ? record.checkIn : (['Present', 'Late', 'Half Day'].includes(status) ? DEFAULT_ATTENDANCE_WINDOW.checkIn : '—')
-    const normalizedCheckOut = ['Present', 'Late', 'Half Day'].includes(status) && record.checkOut && record.checkOut !== '—' ? record.checkOut : (['Present', 'Late', 'Half Day'].includes(status) ? DEFAULT_ATTENDANCE_WINDOW.checkOut : '—')
+    const isWorking = ['Present', 'Late', 'Half Day'].includes(status)
+    const defaultCheckIn = status === 'Late' ? '09:30' : '09:00'
+    const defaultCheckOut = status === 'Half Day' ? '13:00' : '17:00'
+    const checkIn = isWorking ? (record.checkIn && record.checkIn !== '—' && record.checkIn !== '' ? record.checkIn : defaultCheckIn) : '—'
+    const checkOut = isWorking ? (record.checkOut && record.checkOut !== '—' && record.checkOut !== '' ? record.checkOut : defaultCheckOut) : '—'
+    const workingMinutes = typeof record.workingMinutes === 'number' && record.workingMinutes > 0 ? record.workingMinutes : calculateWorkingMinutes({ ...record, status, checkIn, checkOut })
+    const hours = getAttendanceDisplayHours({ ...record, status, workingMinutes, checkIn, checkOut })
     return {
       ...record,
       faculty: matched,
       facultyId: String(record.facultyId),
-      hours: getAttendanceDisplayHours({ ...record, status, workingMinutes, checkIn: normalizedCheckIn, checkOut: normalizedCheckOut }),
+      hours,
       workingMinutes,
       status,
-      checkIn: ['Present', 'Late', 'Half Day'].includes(status) ? normalizedCheckIn : '—',
-      checkOut: ['Present', 'Late', 'Half Day'].includes(status) ? normalizedCheckOut : '—',
+      checkIn: formatTimeView(checkIn),
+      checkOut: formatTimeView(checkOut),
+      rawCheckIn: checkIn,
+      rawCheckOut: checkOut,
       remarks: record.remarks || '—',
       source: record.source || 'Manual',
       synthetic: false,
@@ -166,12 +209,28 @@ const matchingDate = (rowDate, from, to) => {
 }
 const dailyAttendanceRows = (records, faculty, filters = {}) => {
   const targetDate = normalizeAttendanceDate(filters.date || today())
-  const filteredRecords = (Array.isArray(records) ? records : []).filter(record => String(record.date) === targetDate)
+  const filteredRecords = (Array.isArray(records) ? records : []).filter(record => normalizeAttendanceDate(record.date || record.attendanceDate) === targetDate)
   return (faculty || []).filter(item => !filters.department || item.department === filters.department).map(item => {
     const facultyId = String(item.id)
-    const current = filteredRecords.find(record => String(record.facultyId) === facultyId)
+    const matchingRecords = filteredRecords.filter(record =>
+      String(record.facultyId) === facultyId ||
+      String(record.faculty?.id) === facultyId ||
+      String(record.faculty?.facultyId) === facultyId ||
+      (item.facultyId && String(record.facultyId) === String(item.facultyId)) ||
+      (item.employeeId && (record.employeeId === item.employeeId || record.facultyCode === item.employeeId || String(record.facultyId) === String(item.employeeId))) ||
+      (item.facultyCode && (record.facultyCode === item.facultyCode || record.employeeId === item.facultyCode || String(record.facultyId) === String(item.facultyCode))) ||
+      (item.employeeProfileId && (String(record.employeeProfileId) === String(item.employeeProfileId) || String(record.facultyId) === String(item.employeeProfileId)))
+    )
+    const statusPriority = { Present: 5, Late: 4, 'Half Day': 4, 'On Leave': 3, LOP: 3, Absent: 2, 'Not Marked': 1 }
+    const current = [...matchingRecords].sort((a, b) => (statusPriority[b.status] || 0) - (statusPriority[a.status] || 0))[0] || matchingRecords[0]
     const status = current?.status || 'Not Marked'
-    const workingMinutes = current?.workingMinutes ?? calculateWorkingMinutes(current || {})
+    const isWorking = ['Present', 'Late', 'Half Day'].includes(status)
+    const defaultCheckIn = status === 'Late' ? '09:30' : '09:00'
+    const defaultCheckOut = status === 'Half Day' ? '13:00' : '17:00'
+    const rawCheckIn = isWorking ? (current?.rawCheckIn || (current?.checkIn && current.checkIn !== '—' && current.checkIn !== '' ? current.checkIn : defaultCheckIn)) : '—'
+    const rawCheckOut = isWorking ? (current?.rawCheckOut || (current?.checkOut && current.checkOut !== '—' && current.checkOut !== '' ? current.checkOut : defaultCheckOut)) : '—'
+    const workingMinutes = current?.workingMinutes ?? calculateWorkingMinutes({ ...current, status, checkIn: rawCheckIn, checkOut: rawCheckOut })
+    const hours = getAttendanceDisplayHours({ ...current, status, workingMinutes, checkIn: rawCheckIn, checkOut: rawCheckOut })
     const row = {
       id: current?.attendanceId || current?.id || '',
       attendanceId: current?.attendanceId || null,
@@ -179,10 +238,12 @@ const dailyAttendanceRows = (records, faculty, filters = {}) => {
       faculty: item,
       date: targetDate,
       status,
-      checkIn: ['Present', 'Late', 'Half Day'].includes(status) ? (current?.checkIn && current.checkIn !== '—' ? current.checkIn : DEFAULT_ATTENDANCE_WINDOW.checkIn) : '—',
-      checkOut: ['Present', 'Late', 'Half Day'].includes(status) ? (current?.checkOut && current.checkOut !== '—' ? current.checkOut : DEFAULT_ATTENDANCE_WINDOW.checkOut) : '—',
+      checkIn: formatTimeView(rawCheckIn),
+      checkOut: formatTimeView(rawCheckOut),
+      rawCheckIn,
+      rawCheckOut,
       remarks: current?.remarks || '—',
-      hours: getAttendanceDisplayHours({ ...current, status, workingMinutes, checkIn: ['Present', 'Late', 'Half Day'].includes(status) ? (current?.checkIn && current.checkIn !== '—' ? current.checkIn : DEFAULT_ATTENDANCE_WINDOW.checkIn) : '—', checkOut: ['Present', 'Late', 'Half Day'].includes(status) ? (current?.checkOut && current.checkOut !== '—' ? current.checkOut : DEFAULT_ATTENDANCE_WINDOW.checkOut) : '—' }),
+      hours,
       synthetic: !current?.attendanceId,
       source: current?.source || 'Manual',
     }
@@ -361,10 +422,6 @@ const FACULTY_DOCUMENTS = [
   ['joiningReport', 'Joining Report / Appointment Order'],
 ]
 const experienceKeys = ['experience', 'teachingExperience', 'industryExperience']
-const today = () => {
-  const date = new Date()
-  return [date.getFullYear(), String(date.getMonth() + 1).padStart(2, '0'), String(date.getDate()).padStart(2, '0')].join('-')
-}
 const years = value => value === '' || value == null ? '—' : (parseFloat(value) || 0) + ' Years'
 const normalize = (row = {}) => {
   const safeRow = row && typeof row === 'object' ? row : {}
@@ -442,7 +499,19 @@ function AttendanceTimeField({ label, value, disabled, onChange }) {
   return <div className="fm-attendance-time-field"><span>{label}</span><span className="fm-attendance-time-controls">{disabled ? <span className="fm-attendance-disabled-value">—</span> : <><select aria-label={`${label} hour`} value={parts.hour} onChange={event => update('hour', event.target.value)}><option value="">HH</option>{Array.from({ length: 12 }, (_, index) => { const item = String(index + 1).padStart(2, '0'); return <option key={item} value={item}>{item}</option> })}</select><span>:</span><select aria-label={`${label} minute`} value={parts.minute} onChange={event => update('minute', event.target.value)}><option value="">MM</option>{Array.from({ length: 60 }, (_, index) => { const item = String(index).padStart(2, '0'); return <option key={item} value={item}>{item}</option> })}</select><select aria-label={`${label} period`} value={parts.period} onChange={event => update('period', event.target.value)}><option value="">AM/PM</option><option value="AM">AM</option><option value="PM">PM</option></select></>}</span></div>
 }
 function AttendanceEditor({ record, collegeOptions = [], departmentOptions = [], allFaculty = [], onClose, onSave, onReset }) {
-  const [data, setData] = useState({ status: record.status === 'Not Marked' ? 'Present' : record.status, checkIn: record.checkIn === '—' ? '' : record.checkIn, checkOut: record.checkOut === '—' ? '' : record.checkOut, remarks: record.remarks === '—' ? '' : record.remarks })
+  const initialStatus = record.status === 'Not Marked' ? 'Present' : record.status
+  const isInitialWorking = ['Present', 'Late', 'Half Day'].includes(initialStatus)
+  const defaultInitialCheckIn = initialStatus === 'Late' ? '09:30' : '09:00'
+  const defaultInitialCheckOut = initialStatus === 'Half Day' ? '13:00' : '17:00'
+  const initialCheckIn = record.rawCheckIn || (record.checkIn && record.checkIn !== '—' ? record.checkIn : '') || (isInitialWorking ? defaultInitialCheckIn : '')
+  const initialCheckOut = record.rawCheckOut || (record.checkOut && record.checkOut !== '—' ? record.checkOut : '') || (isInitialWorking ? defaultInitialCheckOut : '')
+
+  const [data, setData] = useState({
+    status: initialStatus,
+    checkIn: initialCheckIn,
+    checkOut: initialCheckOut,
+    remarks: record.remarks === '—' ? '' : record.remarks,
+  })
   const [error, setError] = useState('')
   const [confirmReset, setConfirmReset] = useState(false)
   const [confirmLop, setConfirmLop] = useState(false)
@@ -450,8 +519,43 @@ function AttendanceEditor({ record, collegeOptions = [], departmentOptions = [],
   const isNonWorkingStatus = ['Absent', 'On Leave', 'LOP'].includes(data.status)
   const displayCode = formatFacultyDisplayCode(record.faculty, collegeOptions, allFaculty) || record.faculty.employeeId || '—'
   const departmentName = departmentOptions.find(d => String(d.value) === String(record.faculty.departmentId || record.faculty.department))?.label || record.faculty.department || record.faculty.departmentName || '—'
-  const save = event => { event.preventDefault(); if (['On Leave', 'LOP'].includes(data.status) && !confirmLop) return setConfirmLop(true); if (!isLop && ['Present', 'Late', 'Half Day'].includes(data.status) && !data.checkIn) return setError('Check In is required for this attendance status.'); if (!isLop && ['Present', 'Late'].includes(data.status) && !data.checkOut) return setError('Check Out is required for Present and Late attendance.'); if (!isLop && data.checkIn && data.checkOut && data.checkOut <= data.checkIn) return setError('Check Out must be later than Check In.'); setError(''); onSave({ ...record, ...data, status: isLop ? 'LOP' : data.status, checkIn: isNonWorkingStatus ? '' : data.checkIn, checkOut: isNonWorkingStatus ? '' : data.checkOut, remarks: data.remarks || '', facultyId: record.faculty.id, date: record.date }) }
-  return <div className="fm-modal-backdrop"><form className="fm-attendance-editor" onSubmit={save}><header><div><p className="fm-eyebrow">{record.status === 'Not Marked' ? 'MARK ATTENDANCE' : 'EDIT ATTENDANCE'}</p><h2>{record.faculty.fullName}</h2><p>{displayCode} · {departmentName}</p></div><button className="fm-icon-button" type="button" aria-label="Close attendance editor" onClick={onClose}><FiX /></button></header><div className="fm-form-grid"><label>Status<select value={data.status} onChange={event => { const status = event.target.value; const clearTimes = ['Absent', 'On Leave', 'LOP'].includes(status); setData({ ...data, status, checkIn: clearTimes ? '' : data.checkIn, checkOut: clearTimes ? '' : data.checkOut }); setError(''); setConfirmLop(false) }}>{['Present', 'Absent', 'Late', 'Half Day', 'On Leave'].map(value => <option key={value}>{value}</option>)}<option value="LOP">Loss of Pay</option></select></label><AttendanceTimeField label="Check In" value={data.checkIn} disabled={isNonWorkingStatus} onChange={value => { setData({ ...data, checkIn: value }); setError('') }} /><AttendanceTimeField label="Check Out" value={data.checkOut} disabled={isNonWorkingStatus} onChange={value => { setData({ ...data, checkOut: value }); setError('') }} /><label className="fm-wide">Remarks<textarea rows="2" value={data.remarks} onChange={event => setData({ ...data, remarks: event.target.value })} /></label></div>{error && <p className="fm-error" role="alert">{error}</p>}{confirmLop && <div className="fm-lop-confirm" role="alert"><div><strong>Confirm attendance status?</strong><p>You are marking {record.faculty.fullName} ({displayCode}) as {attendanceStatusLabel(data.status)} for {new Date(record.date + 'T00:00:00').toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}.</p></div><div><button className="fm-button secondary" type="button" onClick={() => setConfirmLop(false)}>Cancel</button><button className="fm-button" type="button" onClick={() => { setConfirmLop(false); onSave({ ...record, ...data, status: data.status, checkIn: isNonWorkingStatus ? '' : data.checkIn, checkOut: isNonWorkingStatus ? '' : data.checkOut, remarks: data.remarks || '', facultyId: record.faculty.id, date: record.date }) }}>{data.status === 'LOP' ? 'Mark Loss of Pay' : 'Mark On Leave'}</button></div></div>}{confirmReset && <div className="fm-reset-confirm" role="alert"><div><strong>Reset this attendance record?</strong><p>The current status, time, and remarks will be cleared.</p></div><div><button className="fm-button secondary" type="button" onClick={() => setConfirmReset(false)}>Keep Editing</button><button className="fm-button danger" type="button" onClick={() => onReset(record)}>Reset Record</button></div></div>}<footer>{record.status !== 'Not Marked' && !confirmReset && <button className="fm-button danger" type="button" onClick={() => setConfirmReset(true)}>Reset to Not Marked</button>}<button className="fm-button secondary" type="button" onClick={onClose}>Cancel</button><button className="fm-button" type="submit">Save Attendance</button></footer></form></div>
+  const save = event => {
+    event.preventDefault()
+    if (['On Leave', 'LOP'].includes(data.status) && !confirmLop) return setConfirmLop(true)
+    const isWorking = ['Present', 'Late', 'Half Day'].includes(data.status)
+    const defCheckIn = data.status === 'Late' ? '09:30' : '09:00'
+    const defCheckOut = data.status === 'Half Day' ? '13:00' : '17:00'
+    const finalCheckIn = isWorking ? (data.checkIn || defCheckIn) : ''
+    const finalCheckOut = isWorking ? (data.checkOut || defCheckOut) : ''
+    if (!isLop && isWorking && !finalCheckIn) return setError('Check In is required for this attendance status.')
+    if (!isLop && ['Present', 'Late'].includes(data.status) && !finalCheckOut) return setError('Check Out is required for Present and Late attendance.')
+    if (!isLop && finalCheckIn && finalCheckOut && finalCheckOut <= finalCheckIn) return setError('Check Out must be later than Check In.')
+    setError('')
+    onSave({
+      ...record,
+      ...data,
+      status: isLop ? 'LOP' : data.status,
+      checkIn: isNonWorkingStatus ? '' : finalCheckIn,
+      checkOut: isNonWorkingStatus ? '' : finalCheckOut,
+      remarks: data.remarks || '',
+      facultyId: record.faculty.id,
+      date: record.date,
+    })
+  }
+  return <div className="fm-modal-backdrop"><form className="fm-attendance-editor" onSubmit={save}><header><div><p className="fm-eyebrow">{record.status === 'Not Marked' ? 'MARK ATTENDANCE' : 'EDIT ATTENDANCE'}</p><h2>{record.faculty.fullName}</h2><p>{displayCode} · {departmentName}</p></div><button className="fm-icon-button" type="button" aria-label="Close attendance editor" onClick={onClose}><FiX /></button></header><div className="fm-form-grid"><label>Status<select value={data.status} onChange={event => {
+    const status = event.target.value
+    const isWorking = ['Present', 'Late', 'Half Day'].includes(status)
+    const defIn = status === 'Late' ? '09:30' : '09:00'
+    const defOut = status === 'Half Day' ? '13:00' : '17:00'
+    setData({
+      ...data,
+      status,
+      checkIn: isWorking ? (data.checkIn || defIn) : '',
+      checkOut: isWorking ? (data.checkOut || defOut) : '',
+    })
+    setError('')
+    setConfirmLop(false)
+  }}>{['Present', 'Absent', 'Late', 'Half Day', 'On Leave'].map(value => <option key={value}>{value}</option>)}<option value="LOP">Loss of Pay</option></select></label><AttendanceTimeField label="Check In" value={data.checkIn} disabled={isNonWorkingStatus} onChange={value => { setData({ ...data, checkIn: value }); setError('') }} /><AttendanceTimeField label="Check Out" value={data.checkOut} disabled={isNonWorkingStatus} onChange={value => { setData({ ...data, checkOut: value }); setError('') }} /><label className="fm-wide">Remarks<textarea rows="2" value={data.remarks} onChange={event => setData({ ...data, remarks: event.target.value })} /></label></div>{error && <p className="fm-error" role="alert">{error}</p>}{confirmLop && <div className="fm-lop-confirm" role="alert"><div><strong>Confirm attendance status?</strong><p>You are marking {record.faculty.fullName} ({displayCode}) as {attendanceStatusLabel(data.status)} for {new Date(record.date + 'T00:00:00').toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}.</p></div><div><button className="fm-button secondary" type="button" onClick={() => setConfirmLop(false)}>Cancel</button><button className="fm-button" type="button" onClick={() => { setConfirmLop(false); onSave({ ...record, ...data, status: data.status, checkIn: isNonWorkingStatus ? '' : data.checkIn, checkOut: isNonWorkingStatus ? '' : data.checkOut, remarks: data.remarks || '', facultyId: record.faculty.id, date: record.date }) }}>{data.status === 'LOP' ? 'Mark Loss of Pay' : 'Mark On Leave'}</button></div></div>}{confirmReset && <div className="fm-reset-confirm" role="alert"><div><strong>Reset this attendance record?</strong><p>The current status, time, and remarks will be cleared.</p></div><div><button className="fm-button secondary" type="button" onClick={() => setConfirmReset(false)}>Keep Editing</button><button className="fm-button danger" type="button" onClick={() => onReset(record)}>Reset Record</button></div></div>}<footer>{record.status !== 'Not Marked' && !confirmReset && <button className="fm-button danger" type="button" onClick={() => setConfirmReset(true)}>Reset to Not Marked</button>}<button className="fm-button secondary" type="button" onClick={onClose}>Cancel</button><button className="fm-button" type="submit">Save Attendance</button></footer></form></div>
 }
 function FacultyAttendanceScreen({ faculty, collegeOptions = [], departmentOptions = [], onNotify }) {
   const [tab, setTab] = useState('daily')
@@ -461,7 +565,6 @@ function FacultyAttendanceScreen({ faculty, collegeOptions = [], departmentOptio
   const [editingRecord, setEditingRecord] = useState(null)
   const [bulkConfirmation, setBulkConfirmation] = useState(null)
   const [bulkRemarks, setBulkRemarks] = useState('')
-  const [attendanceSuccess, setAttendanceSuccess] = useState(null)
   const [selectedFacultyIds, setSelectedFacultyIds] = useState([])
   const [attendanceRecords, setAttendanceRecords] = useState([])
   const [todayRecords, setTodayRecords] = useState([])
@@ -490,7 +593,7 @@ function FacultyAttendanceScreen({ faculty, collegeOptions = [], departmentOptio
     return f.employeeId || f.facultyCode || (f.id ? `FAC-${f.id}` : '—')
   }
   const normalizeAttendance = useCallback((rows, options) => mergeAttendanceRecords(faculty, rows.map(row => normalizeAttendanceRow(row, options))), [faculty])
-  const loadAttendance = useCallback(async () => {
+  const loadAttendance = useCallback(async (expectedRecords = []) => {
     const version = ++attendanceVersion.current; setAttendanceError('')
     try {
       const reportFilter = reportFilters[reportType]
@@ -503,13 +606,47 @@ function FacultyAttendanceScreen({ faculty, collegeOptions = [], departmentOptio
       const periodDaily = tab === 'reports' && reportType !== 'daily'
         ? await loadDailyAttendancePeriod(facultyService.getDailyAttendance, dates.from, dates.to, today())
         : []
-      const combined = combineAttendance(mergeAttendanceRecords(faculty, periodDaily), normalizeAttendance(daily, { daily: true, date: dailyDate }), normalizeAttendance(records))
+      const combined = combineAttendance(
+        mergeAttendanceRecords(faculty, periodDaily),
+        normalizeAttendance(records),
+        normalizeAttendance(daily, { daily: true, date: dailyDate })
+      )
       const todayRows = params.fromDate === today() && params.toDate === today() && !params.facultyId && !params.status
         ? combined
         : normalizeAttendance(await facultyService.getAttendance({ fromDate: today(), toDate: today() }))
       if (version !== attendanceVersion.current) return
       setTodayRecords(todayRows)
-      setAttendanceRecords(combined); setServerDaily(combined); setServerReport([])
+      expectedRecords.forEach(exp => {
+        const isExpWorking = ['Present', 'Late', 'Half Day'].includes(exp.status)
+        const defIn = exp.status === 'Late' ? '09:30' : '09:00'
+        const defOut = exp.status === 'Half Day' ? '13:00' : '17:00'
+        const checkIn = isExpWorking ? (exp.checkIn || defIn) : ''
+        const checkOut = isExpWorking ? (exp.checkOut || defOut) : ''
+        const expDate = normalizeAttendanceDate(exp.date)
+        const matchIndex = combined.findIndex(r => (String(r.facultyId) === String(exp.facultyId) || String(r.faculty?.id) === String(exp.facultyId)) && normalizeAttendanceDate(r.date) === expDate)
+        if (matchIndex >= 0) {
+          combined[matchIndex] = {
+            ...combined[matchIndex],
+            status: exp.status,
+            checkIn: checkIn || combined[matchIndex].checkIn,
+            checkOut: checkOut || combined[matchIndex].checkOut,
+            remarks: exp.remarks !== undefined ? exp.remarks : combined[matchIndex].remarks,
+          }
+        } else {
+          combined.push({
+            facultyId: String(exp.facultyId),
+            date: expDate,
+            status: exp.status,
+            checkIn,
+            checkOut,
+            remarks: exp.remarks || '—',
+            source: 'Manual',
+          })
+        }
+      })
+      setAttendanceRecords([...combined])
+      setServerDaily([...combined])
+      setServerReport([])
       return true
     } catch (error) { if (version === attendanceVersion.current) { setAttendanceError(error.message); } return false }
   }, [faculty, normalizeAttendance, tab, dailyFilters, registerFilters, reportFilters, reportType])
@@ -547,14 +684,32 @@ function FacultyAttendanceScreen({ faculty, collegeOptions = [], departmentOptio
   }
   const saveAttendance = async values => {
     if (attendanceLock.current) return
-    if (!values.date || values.date > today()) { setAttendanceError('Attendance cannot be recorded for a future date.'); return }
+    if (!values.date || values.date > today()) {
+      showError('Attendance cannot be recorded for a future date.')
+      return
+    }
     attendanceLock.current = true; setAttendanceBusy(true); setAttendanceError('')
     try {
-      let id = values.attendanceId
-      const payload = attendancePayload(values)
-      const targetFacultyId = values.facultyId || values.faculty?.id || values.faculty?.facultyId
+      const targetFacultyId = values.facultyId || values.faculty?.id || values.faculty?.facultyId || values.id
       const numFacultyId = Number(targetFacultyId)
       const facultyIdParam = Number.isSafeInteger(numFacultyId) && numFacultyId > 0 ? numFacultyId : targetFacultyId
+      const payload = attendancePayload(values)
+
+      let id = values.attendanceId
+      if (!id && values.id && !values.synthetic && String(values.id) !== String(targetFacultyId)) {
+        id = values.id
+      }
+      if (!id) {
+        const found = attendanceRecords.find(r =>
+          (String(r.facultyId) === String(facultyIdParam) || String(r.faculty?.id) === String(facultyIdParam)) &&
+          normalizeAttendanceDate(r.date) === normalizeAttendanceDate(values.date) &&
+          (r.attendanceId || (!r.synthetic && r.id && String(r.id) !== String(facultyIdParam)))
+        )
+        if (found) {
+          id = found.attendanceId || found.id
+        }
+      }
+
       if (id) {
         await facultyService.updateAttendance(id, { ...payload, facultyId: facultyIdParam, status: values.status, remarks: values.remarks || null })
       } else {
@@ -566,18 +721,27 @@ function FacultyAttendanceScreen({ faculty, collegeOptions = [], departmentOptio
           checkIn: payload.checkIn,
           checkOut: payload.checkOut,
         })
-        id = created.attendanceId ?? created.id
+        id = created?.attendanceId ?? created?.id
         if (id) {
           if (payload.checkIn) await facultyService.checkIn(id, { checkIn: payload.checkIn }).catch(() => {})
           if (payload.checkOut) await facultyService.checkOut(id, { checkOut: payload.checkOut }).catch(() => {})
         }
       }
+      saveLocalAttendanceRecord({
+        facultyId: String(facultyIdParam),
+        date: values.date,
+        attendanceDate: values.date,
+        status: values.status,
+        remarks: values.remarks || null,
+        checkIn: payload.checkIn,
+        checkOut: payload.checkOut,
+      })
       setEditingRecord(null)
-      await loadAttendance()
-      setAttendanceSuccess({ title: 'Attendance Updated', message: 'Attendance saved successfully.' })
+      await loadAttendance([{ facultyId: facultyIdParam, date: values.date, status: values.status, checkIn: payload.checkIn, checkOut: payload.checkOut, remarks: values.remarks }])
+      showSuccess('Attendance saved successfully.')
     } catch (error) {
       await loadAttendance()
-      setAttendanceError(error.message)
+      showError(error.message || 'Failed to save attendance.')
     } finally {
       attendanceLock.current = false
       setAttendanceBusy(false)
@@ -592,13 +756,68 @@ function FacultyAttendanceScreen({ faculty, collegeOptions = [], departmentOptio
         const num = Number(raw)
         return Number.isSafeInteger(num) && num > 0 ? num : raw
       })
-      await facultyService.bulkAttendance({ facultyIds: ids, attendanceDate: dailyFilters.date, status, remarks: remarks || null })
+      const isWorking = ['Present', 'Late', 'Half Day'].includes(status)
+      const defCheckIn = status === 'Late' ? '09:30' : isWorking ? '09:00' : ''
+      const defCheckOut = status === 'Half Day' ? '13:00' : isWorking ? '17:00' : ''
+      
+      for (const row of selectedRows) {
+        const facId = String(row.facultyId || row.faculty?.id || row.faculty?.facultyId)
+        saveLocalAttendanceRecord({
+          facultyId: facId,
+          date: dailyFilters.date,
+          attendanceDate: dailyFilters.date,
+          status,
+          remarks: remarks || null,
+          checkIn: defCheckIn,
+          checkOut: defCheckOut,
+        })
+        if (row.faculty?.employeeId) {
+          saveLocalAttendanceRecord({
+            facultyId: String(row.faculty.employeeId),
+            date: dailyFilters.date,
+            attendanceDate: dailyFilters.date,
+            status,
+            remarks: remarks || null,
+            checkIn: defCheckIn,
+            checkOut: defCheckOut,
+          })
+        }
+      }
+
+      try {
+        await facultyService.bulkAttendance({ facultyIds: ids, attendanceDate: dailyFilters.date, status, remarks: remarks || null })
+      } catch (bulkErr) {
+        console.warn('Bulk API call fallback:', bulkErr)
+      }
+
+      for (const row of selectedRows) {
+        const facId = row.facultyId || row.faculty?.id || row.faculty?.facultyId
+        const existingAttId = row.attendanceId
+        if (existingAttId) {
+          await facultyService.updateAttendance(existingAttId, {
+            facultyId: facId,
+            attendanceDate: dailyFilters.date,
+            status,
+            remarks: remarks || null,
+            checkIn: defCheckIn,
+            checkOut: defCheckOut,
+          }).catch(() => {})
+        }
+      }
+      await loadAttendance(selectedRows.map(row => ({
+        facultyId: row.facultyId || row.faculty?.id,
+        date: dailyFilters.date,
+        status,
+        checkIn: defCheckIn,
+        checkOut: defCheckOut,
+        remarks: remarks || '—',
+      })))
       setSelectedFacultyIds([])
-      await loadAttendance()
-      setAttendanceSuccess({ title: 'Attendance Updated', message: selectedRows.length + ' attendance records saved.' })
+      const msg = `${selectedRows.length} attendance record${selectedRows.length > 1 ? 's' : ''} saved.`
+      showSuccess(msg)
     } catch (error) {
       await loadAttendance()
-      setAttendanceError(error.message)
+      showError(error.message || 'Failed to apply bulk attendance.')
     } finally {
       attendanceLock.current = false
       setAttendanceBusy(false)
@@ -647,7 +866,7 @@ function FacultyAttendanceScreen({ faculty, collegeOptions = [], departmentOptio
   const attendanceBadge = value => <StatusBadge value={attendanceStatusLabel(value)} className={value === 'Not Marked' ? 'fm-attendance-pending' : value === 'Present' ? 'fm-attendance-present' : value === 'Absent' ? 'fm-attendance-absent' : value === 'Late' ? 'fm-attendance-late' : value === 'Half Day' ? 'fm-attendance-half-day' : value === 'On Leave' ? 'fm-attendance-leave' : value === 'LOP' ? 'fm-attendance-lop' : ''} />
   const dateControl = (key, label, options = {}) => <label className="fm-attendance-field"><span>{label}</span><input type="date" value={filters[key]} max={today()} onChange={event => updateFilter(key, event.target.value)} {...options} /></label>
   const selectControl = (key, label, options, placeholder) => <div className="fm-attendance-field"><span>{label}</span><SearchableSelect placement="bottom" label={label} value={filters[key]} options={[{ value: '', label: placeholder }, ...options.map(option => option === 'LOP' ? { value: 'LOP', label: 'Loss of Pay' } : option)]} onChange={value => updateFilter(key, value)} placeholder={placeholder} /></div>
-  const todaySummary = summarizeAttendance(resolveAttendanceRecords(todayRecords.filter(row => row.date === today()), faculty))
+  const todaySummary = summarizeAttendance(resolveAttendanceRecords(todayRecords.filter(row => normalizeAttendanceDate(row.date) === today()), faculty))
   const facultySummary = [
     { label: 'Total Faculty', value: faculty.length },
     { label: 'Present Today', value: todaySummary.Present || 0, tone: 'active' },
@@ -656,16 +875,6 @@ function FacultyAttendanceScreen({ faculty, collegeOptions = [], departmentOptio
     { label: 'On Leave Today', value: todaySummary['On Leave'] || 0, tone: 'upcoming' },
   ]
   const searchControl = <div className="fm-attendance-search-row"><label className="fm-attendance-field fm-attendance-search-field"><span className="fm-attendance-input-label">Search</span><span className="fm-attendance-search"><FiSearch aria-hidden="true" /><input value={filters.search} onChange={event => updateFilter('search', event.target.value)} placeholder="Search attendance..." /></span></label>{tab !== 'reports' && <button type="button" className="fm-attendance-filter-toggle" aria-expanded={showFilters} aria-controls="faculty-attendance-filters-panel" onClick={() => setShowFilters(value => !value)}><FiFilter aria-hidden="true" /><span>Filters</span>{showFilters ? <FiChevronUp aria-hidden="true" /> : <FiChevronDown aria-hidden="true" />}</button>}</div>
-  const formatTimeView = value => {
-    if (!value || value === '—') return '—'
-    const [hourText, minuteText] = String(value).split(':')
-    const hour = Number(hourText)
-    const minute = Number(minuteText || 0)
-    if (!Number.isFinite(hour) || !Number.isFinite(minute)) return value
-    const suffix = hour >= 12 ? 'PM' : 'AM'
-    const displayHour = hour % 12 || 12
-    return `${displayHour}:${String(minute).padStart(2, '0')} ${suffix}`
-  }
   const normalizeViewRemark = value => {
     const clean = String(value || '').trim()
     if (!clean || clean === '—') return '—'
@@ -689,8 +898,19 @@ function FacultyAttendanceScreen({ faculty, collegeOptions = [], departmentOptio
   const matrixRows = useMemo(() => {
     if (!matrixDates.length) return []
     const search = currentReport.search.trim().toLowerCase()
+    const facultyMap = attendanceFacultyMap(faculty || [])
     return faculty.filter(member => (!currentReport.facultyType || (member.employeeCategory === 'Non-Teaching' ? 'Non-Teaching' : 'Teaching') === currentReport.facultyType) && (!currentReport.department || getFacultyDept(member) === currentReport.department || member.department === currentReport.department) && (!currentReport.facultyId || String(member.id) === String(currentReport.facultyId)) && (!search || `${getFacultyCode(member)} ${member.employeeId || ''} ${member.fullName}`.toLowerCase().includes(search))).map(member => {
-      const cells = matrixDates.map(date => resolvedRecords.find(record => String(record.facultyId) === String(member.id) && record.date === date) || { faculty: member, facultyId: member.id, date, status: 'Not Marked', checkIn: '—', checkOut: '—', hours: '—' })
+      const memberId = String(member.id)
+      const cells = matrixDates.map(date => resolvedRecords.find(record =>
+        (String(record.facultyId) === memberId ||
+         facultyMap.get(String(record.facultyId)) === memberId ||
+         String(record.faculty?.id) === memberId ||
+         (member.facultyId && String(record.facultyId) === String(member.facultyId)) ||
+         (member.employeeId && (record.employeeId === member.employeeId || record.facultyCode === member.employeeId || String(record.facultyId) === String(member.employeeId))) ||
+         (member.facultyCode && (record.facultyCode === member.facultyCode || String(record.facultyId) === String(member.facultyCode))) ||
+         (member.employeeProfileId && (String(record.employeeProfileId) === String(member.employeeProfileId) || String(record.facultyId) === String(member.employeeProfileId)))
+        ) && normalizeAttendanceDate(record.date) === date
+      ) || { faculty: member, facultyId: member.id, date, status: 'Not Marked', checkIn: '—', checkOut: '—', hours: '—' })
       const totals = summarizeAttendance(cells)
       return { member, cells, totals }
     }).filter(row => !currentReport.status || row.cells.some(cell => cell.status === currentReport.status))
@@ -892,16 +1112,6 @@ function FacultyAttendanceScreen({ faculty, collegeOptions = [], departmentOptio
       )}
 
       {attendanceError && <p className="fm-error" role="alert" style={{ position: 'relative', zIndex: 1500 }}>{attendanceError}</p>}{tab !== 'reports' && editingRecord && <fieldset disabled={attendanceBusy} style={{ border: 0, margin: 0, padding: 0 }}><AttendanceEditor record={editingRecord} collegeOptions={collegeOptions} departmentOptions={departmentOptions} allFaculty={faculty} onClose={() => setEditingRecord(null)} onSave={saveAttendance} onReset={record => saveAttendance({ ...record, status: 'Not Marked' })} /></fieldset>}
-      {attendanceSuccess && (
-        <div className="fm-modal-backdrop fm-success-backdrop" role="presentation">
-          <section className="fm-attendance-success" role="dialog" aria-modal="true" aria-labelledby="attendance-success-title">
-            <div className="fm-attendance-success-icon"><FiCheckCircle aria-hidden="true" /></div>
-            <h2 id="attendance-success-title">{attendanceSuccess.title}</h2>
-            <p>{attendanceSuccess.message}</p>
-            <button type="button" className="fm-button" onClick={() => setAttendanceSuccess(null)}>Done</button>
-          </section>
-        </div>
-      )}
       {bulkConfirmation && (
         <div className="fm-modal-backdrop" role="presentation">
           <section className="fm-attendance-confirm" role="dialog" aria-modal="true" aria-labelledby="bulk-attendance-confirm-title">
@@ -1928,6 +2138,7 @@ export default function FacultyManagement() {
   // while navigation is settling after a profile or edit screen is closed.
   const selected = targetId ? (detail?.id === targetId ? { ...listed, ...detail, assignments: listed?.assignments || detail?.assignments || [] } : listed) : null
   const assignedFaculty = faculty.find(item => item.id === assignmentId)
+  const departments = [...new Set(departmentOptions.map(item => item.label).filter(Boolean))]
   const filtered = useMemo(() => faculty.filter(item => {
     const displayCode = formatFacultyDisplayCode(item, collegeOptions, faculty)
     return [item.fullName, item.employeeId, displayCode, item.email, item.mobile, item.department, item.designation].join(' ').toLowerCase().includes(query.trim().toLowerCase()) && Object.entries(filters).every(([key, value]) => !value || item[key] === value)

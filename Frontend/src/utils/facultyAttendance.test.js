@@ -1,6 +1,32 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { normalizeAttendanceRow, combineAttendance, localAttendanceDate, attendanceStatusLabel } from './facultyAttendance.js'
+import { normalizeAttendanceRow, combineAttendance, localAttendanceDate, attendanceStatusLabel, attendanceFacultyMap } from './facultyAttendance.js'
+
+test('attendance remains on its faculty when another employee profile has the same numeric ID', () => {
+  const faculty = [{ id: '1', facultyId: 1, employeeProfileId: 9 }, { id: '9', facultyId: 9, employeeProfileId: 1 }]
+  for (const members of [faculty, [...faculty].reverse()]) {
+    const map = attendanceFacultyMap(members)
+    assert.equal(map.get('1'), '1')
+    assert.equal(map.get('9'), '9')
+  }
+})
+
+test('attendance supports unique legacy aliases without mapping shared aliases to an arbitrary faculty', () => {
+  const map = attendanceFacultyMap([{ id: '1', employeeProfileId: 20, employeeId: 'shared' }, { id: '2', employeeProfileId: 21, employeeId: 'shared' }])
+  assert.equal(map.get('20'), '1')
+  assert.equal(map.get('21'), '2')
+  assert.equal(map.has('shared'), false)
+})
+
+test('saved status wins over stale daily status aliases after marking attendance', () => {
+  for (const alias of ['statusName', 'attendanceStatus', 'StatusName', 'AttendanceStatus']) {
+    const row = normalizeAttendanceRow({ facultyId: 9, status: 'Present', [alias]: 'Not Marked' }, { daily: true, date: '2026-09-22' })
+    assert.equal(row.status, 'Present')
+    assert.equal(normalizeAttendanceRow(row).status, 'Present')
+  }
+  assert.equal(normalizeAttendanceRow({ status: 1, statusName: 'Present' }).status, 'Present')
+  assert.equal(normalizeAttendanceRow({ status: 'Absent', statusName: 'Present' }).status, 'Absent')
+})
 
 test('daily faculty ID must never become the attendance update ID', () => {
   const row = normalizeAttendanceRow({ id: 9, status: 'Not Marked' }, { daily: true, date: '2026-09-18' })

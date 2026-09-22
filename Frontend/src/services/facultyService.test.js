@@ -3,9 +3,40 @@ import assert from 'node:assert/strict'
 import vm from 'node:vm'
 import { readFileSync } from 'node:fs'
 import { facultyCreatePayload, facultyEmployeeCode } from './facultyContracts.js'
+import { normalizeAttendanceRow } from '../utils/facultyAttendance.js'
+
+test('marking present survives refresh of a daily row with stale statusName', async () => {
+  const app = setup({ records: [{ facultyId: 9, statusName: 'Not Marked', status: 'Not Marked' }] })
+  app.facultyAttendanceApi.bulk = async () => ({ success: true })
+  await app.service.bulkAttendance({ facultyIds: [9], attendanceDate: '2026-09-22', status: 'Present' })
+  const rows = await app.service.getDailyAttendance({ date: '2026-09-22' })
+  assert.equal(rows.length, 1)
+  assert.equal(normalizeAttendanceRow(rows[0], { daily: true, date: '2026-09-22' }).status, 'Present')
+})
+
+test('failed attendance writes reject without creating local success records', async () => {
+  const app = setup()
+  const fail = async () => { throw new Error('Unable to save attendance') }
+  Object.assign(app.facultyAttendanceApi, { create: fail, update: fail, bulk: fail })
+  await assert.rejects(app.service.createAttendance({ facultyId: 9, attendanceDate: '2026-09-22', status: 'Present' }), /Unable to save/)
+  await assert.rejects(app.service.updateAttendance(1, { facultyId: 9, attendanceDate: '2026-09-22', status: 'Present' }), /Unable to save/)
+  await assert.rejects(app.service.bulkAttendance({ facultyIds: [9], attendanceDate: '2026-09-22', status: 'Present' }), /Unable to save/)
+  assert.equal((await app.service.getDailyAttendance({ date: '2026-09-22' })).length, 0)
+})
 
 const source = readFileSync(new URL('./facultyService.js', import.meta.url), 'utf8')
   .replace(/^import .*$/gm, '').replace(/export default facultyService/, '').replace(/export const /g, 'const ')
+
+test('bulk attendance does not invent check-in or check-out times', async () => {
+  const app = setup()
+  app.facultyAttendanceApi.bulk = async () => ({ success: true })
+  await app.service.bulkAttendance({ facultyIds: [9], attendanceDate: '2026-09-22', status: 'Present' })
+  const rows = await app.service.getDailyAttendance({ date: '2026-09-22' })
+  assert.equal(rows.length, 1)
+  assert.equal(rows[0].status, 'Present')
+  assert.equal(rows[0].checkIn, '')
+  assert.equal(rows[0].checkOut, '')
+})
 function setup({ records = [], profiles = {}, cachedProfiles = {}, cachedFaculty = [], failProfile = false, colleges = [] } = {}) {
   const storage = new Map([
     ['pirnav-faculty-local-profiles-v1', JSON.stringify(cachedProfiles)],
