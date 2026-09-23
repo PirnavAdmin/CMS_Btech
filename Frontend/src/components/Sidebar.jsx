@@ -15,6 +15,7 @@ const academicLinks = [
 ]
 
 const curriculumLinks = [
+  { label: 'Timetable Management', to: '/timetable', icon: FiCalendar, tone: 'orange' },
   { label: 'Subject Management', to: '/subject-management', icon: FiBook, tone: 'blue' },
   { label: 'Credits Management', to: '/credits-management', icon: FiAward, tone: 'green' },
   { label: 'Elective Management', to: '/elective-management', icon: FiCheckCircle, tone: 'purple' },

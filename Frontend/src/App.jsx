@@ -32,6 +32,7 @@ import FacultyLeaveManagement from './pages/faculty/FacultyLeaveManagement'
 import Payroll from './pages/faculty/Payroll'
 import SubjectManagement from './pages/subject-management/SubjectManagement'
 import CreditsManagement from './pages/credits-management/CreditsManagement'
+import TimetableManagement from './pages/timetable/TimetableManagement'
 import ElectiveManagement from './pages/elective-management/ElectiveManagement'
 import { AcademicProvider } from './context/AcademicContext'
 import './styles/erp-theme.css'
@@ -170,6 +171,7 @@ export default function App() {
               <Route path="/section-management/:id" element={<SectionManagement mode="details" />} />
               <Route path="/subject-management" element={<SubjectManagement />} />
               <Route path="/credits-management" element={<CreditsManagement />} />
+              <Route path="/timetable" element={<TimetableManagement />} />
               <Route path="/elective-management" element={<ElectiveManagement />} />
               <Route path="/student-management/admissions" element={<StudentAdmission />} />
               <Route path="/student-management/admissions/new" element={<StudentAdmission />} />

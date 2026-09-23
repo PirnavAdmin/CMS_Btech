@@ -1172,3 +1172,17 @@ export const facultyMasterApi = {
   getColleges: async () => listData(await request(endpoint('/api/v1/colleges'))),
   getSubjects: async params => listData(await request(withQuery(endpoint('/api/v1/subjects'), params))),
 }
+
+// Verified against the deployed Swagger TimetableEntries contract (2026-09-23).
+// Timetable/slot setup and publication routes are not exposed by this contract.
+export const timetableEntryApi = {
+  list: async () => {
+    const response = await request(endpoint('/api/v1/timetable-entries'))
+    const rows = response?.data ?? response
+    if (!Array.isArray(rows) || (response?.count != null && Number(response.count) !== rows.length)) throw new Error('The timetable service returned an incomplete or invalid schedule. Conflict validation requires the complete list.')
+    return rows
+  },
+  create: payload => jsonRequest(endpoint('/api/v1/timetable-entries'), 'POST', payload),
+  update: (id, payload) => jsonRequest(endpoint(`/api/v1/timetable-entries/${requiredId(id, 'Timetable entry ID')}`), 'PUT', payload),
+  remove: id => request(endpoint(`/api/v1/timetable-entries/${requiredId(id, 'Timetable entry ID')}`), { method: 'DELETE' }),
+}
