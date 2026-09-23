@@ -1,0 +1,2956 @@
+[
+  {
+    "method": "GET",
+    "path": "/api/v1/courses/1/dependencies",
+    "case": "authenticated read",
+    "status": 200,
+    "passed": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/courses/1/deactivation-impact",
+    "case": "authenticated read",
+    "status": 200,
+    "passed": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/academic-levels",
+    "case": "authenticated read",
+    "status": 200,
+    "passed": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/academic-levels/1",
+    "case": "authenticated read",
+    "status": 200,
+    "passed": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/academic-years",
+    "case": "authenticated read",
+    "status": 200,
+    "passed": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/academic-years/dashboard",
+    "case": "authenticated read",
+    "status": 200,
+    "passed": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/academic-years/1",
+    "case": "authenticated read",
+    "status": 200,
+    "passed": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/access-requests/1/status",
+    "case": "authenticated read",
+    "status": 200,
+    "passed": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/access-requests/pending",
+    "case": "authenticated read",
+    "status": 200,
+    "passed": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/activity-logs",
+    "case": "authenticated read",
+    "status": 200,
+    "passed": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/activity-logs/status-history/courses/1",
+    "case": "authenticated read",
+    "status": 200,
+    "passed": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/Admissions/1/history",
+    "case": "authenticated read",
+    "status": 200,
+    "passed": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/admissions/1/status",
+    "case": "authenticated read",
+    "status": 200,
+    "passed": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/admissions/1/status-history",
+    "case": "authenticated read",
+    "status": 200,
+    "passed": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/authorization-test/authenticated",
+    "case": "authenticated read",
+    "status": 200,
+    "passed": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/authorization-test/admin",
+    "case": "authenticated read",
+    "status": 200,
+    "passed": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/authorization-test/faculty",
+    "case": "authenticated read",
+    "status": 200,
+    "passed": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/authorization-test/student",
+    "case": "authenticated read",
+    "status": 200,
+    "passed": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/authorization-test/admin-faculty",
+    "case": "authenticated read",
+    "status": 200,
+    "passed": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/branches",
+    "case": "authenticated read",
+    "status": 200,
+    "passed": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/branches/course/1",
+    "case": "authenticated read",
+    "status": 200,
+    "passed": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/branches/1",
+    "case": "authenticated read",
+    "status": 200,
+    "passed": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/College/logo/1",
+    "case": "authenticated read",
+    "status": 404,
+    "passed": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/colleges",
+    "case": "authenticated read",
+    "status": 200,
+    "passed": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/colleges/search",
+    "case": "authenticated read",
+    "status": 200,
+    "passed": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/colleges/1",
+    "case": "authenticated read",
+    "status": 200,
+    "passed": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/college-settings",
+    "case": "authenticated read",
+    "status": 200,
+    "passed": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/college-settings/1",
+    "case": "authenticated read",
+    "status": 200,
+    "passed": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/college-settings/college/1",
+    "case": "authenticated read",
+    "status": 200,
+    "passed": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/super-admin/college-mappings",
+    "case": "authenticated read",
+    "status": 200,
+    "passed": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/super-admin/college-mappings/user/1",
+    "case": "authenticated read",
+    "status": 200,
+    "passed": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/courses",
+    "case": "authenticated read",
+    "status": 200,
+    "passed": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/courses/1",
+    "case": "authenticated read",
+    "status": 200,
+    "passed": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/course-semester-mappings",
+    "case": "authenticated read",
+    "status": 200,
+    "passed": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/course-semester-mappings/1",
+    "case": "authenticated read",
+    "status": 200,
+    "passed": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/course-structures",
+    "case": "authenticated read",
+    "status": 200,
+    "passed": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/course-structures/course/1",
+    "case": "authenticated read",
+    "status": 200,
+    "passed": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/course-structures/1",
+    "case": "authenticated read",
+    "status": 404,
+    "passed": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/demo-requests",
+    "case": "authenticated read",
+    "status": 200,
+    "passed": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/demo-requests/1",
+    "case": "authenticated read",
+    "status": 404,
+    "passed": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/demo-requests/1/status",
+    "case": "authenticated read",
+    "status": 404,
+    "passed": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/departments",
+    "case": "authenticated read",
+    "status": 200,
+    "passed": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/departments/search",
+    "case": "authenticated read",
+    "status": 200,
+    "passed": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/departments/paginated",
+    "case": "authenticated read",
+    "status": 200,
+    "passed": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/departments/1",
+    "case": "authenticated read",
+    "status": 200,
+    "passed": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/departments/1/hod",
+    "case": "authenticated read",
+    "status": 200,
+    "passed": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/departments/1/hod-candidates",
+    "case": "authenticated read",
+    "status": 200,
+    "passed": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/student-promotions/failed",
+    "case": "authenticated read",
+    "status": 400,
+    "passed": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/student-promotions/detained",
+    "case": "authenticated read",
+    "status": 400,
+    "passed": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/profile",
+    "case": "authenticated read",
+    "status": 200,
+    "passed": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/profile/1",
+    "case": "authenticated read",
+    "status": 200,
+    "passed": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/profile/1/fee-summary",
+    "case": "authenticated read",
+    "status": 404,
+    "passed": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/profile/change-history",
+    "case": "authenticated read",
+    "status": 200,
+    "passed": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/roles",
+    "case": "authenticated read",
+    "status": 200,
+    "passed": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/roles/1",
+    "case": "authenticated read",
+    "status": 200,
+    "passed": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/exports",
+    "case": "authenticated read",
+    "status": 200,
+    "passed": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/exports/courses",
+    "case": "authenticated read",
+    "status": 200,
+    "passed": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/colleges/download",
+    "case": "authenticated read",
+    "status": 200,
+    "passed": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/colleges/export",
+    "case": "authenticated read",
+    "status": 200,
+    "passed": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/college-settings/download",
+    "case": "authenticated read",
+    "status": 200,
+    "passed": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/college-settings/export",
+    "case": "authenticated read",
+    "status": 200,
+    "passed": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/academic-years/download",
+    "case": "authenticated read",
+    "status": 200,
+    "passed": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/academic-years/export",
+    "case": "authenticated read",
+    "status": 200,
+    "passed": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/academic-levels/download",
+    "case": "authenticated read",
+    "status": 200,
+    "passed": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/academic-levels/export",
+    "case": "authenticated read",
+    "status": 200,
+    "passed": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/departments/download",
+    "case": "authenticated read",
+    "status": 200,
+    "passed": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/departments/export",
+    "case": "authenticated read",
+    "status": 200,
+    "passed": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/courses/download",
+    "case": "authenticated read",
+    "status": 200,
+    "passed": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/courses/export",
+    "case": "authenticated read",
+    "status": 200,
+    "passed": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/branches/download",
+    "case": "authenticated read",
+    "status": 200,
+    "passed": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/branches/export",
+    "case": "authenticated read",
+    "status": 200,
+    "passed": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/semester/download",
+    "case": "authenticated read",
+    "status": 200,
+    "passed": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/semester/export",
+    "case": "authenticated read",
+    "status": 200,
+    "passed": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/sections/download",
+    "case": "authenticated read",
+    "status": 200,
+    "passed": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/sections/export",
+    "case": "authenticated read",
+    "status": 200,
+    "passed": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/course-structures/download",
+    "case": "authenticated read",
+    "status": 200,
+    "passed": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/course-structures/export",
+    "case": "authenticated read",
+    "status": 200,
+    "passed": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/students/download",
+    "case": "authenticated read",
+    "status": 200,
+    "passed": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/students/export",
+    "case": "authenticated read",
+    "status": 200,
+    "passed": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/student-profiles/download",
+    "case": "authenticated read",
+    "status": 200,
+    "passed": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/student-profiles/export",
+    "case": "authenticated read",
+    "status": 200,
+    "passed": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/student-admissions/download",
+    "case": "authenticated read",
+    "status": 200,
+    "passed": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/student-admissions/export",
+    "case": "authenticated read",
+    "status": 200,
+    "passed": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/promotions/download",
+    "case": "authenticated read",
+    "status": 200,
+    "passed": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/promotions/export",
+    "case": "authenticated read",
+    "status": 200,
+    "passed": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/users/download",
+    "case": "authenticated read",
+    "status": 200,
+    "passed": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/users/export",
+    "case": "authenticated read",
+    "status": 200,
+    "passed": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/roles/download",
+    "case": "authenticated read",
+    "status": 200,
+    "passed": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/roles/export",
+    "case": "authenticated read",
+    "status": 200,
+    "passed": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/faculty/download",
+    "case": "authenticated read",
+    "status": 200,
+    "passed": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/faculty/export",
+    "case": "authenticated read",
+    "status": 200,
+    "passed": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/fee-structures/download",
+    "case": "authenticated read",
+    "status": 200,
+    "passed": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/fee-structures/export",
+    "case": "authenticated read",
+    "status": 200,
+    "passed": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/hostel-fees/download",
+    "case": "authenticated read",
+    "status": 200,
+    "passed": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/hostel-fees/export",
+    "case": "authenticated read",
+    "status": 200,
+    "passed": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/transport-fees/download",
+    "case": "authenticated read",
+    "status": 200,
+    "passed": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/transport-fees/export",
+    "case": "authenticated read",
+    "status": 200,
+    "passed": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/section-assignments",
+    "case": "authenticated read",
+    "status": 200,
+    "passed": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/sections/1/class-teacher",
+    "case": "authenticated read",
+    "status": 200,
+    "passed": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/sections/1/class-teacher-candidates",
+    "case": "authenticated read",
+    "status": 200,
+    "passed": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/sections/1/capacity",
+    "case": "authenticated read",
+    "status": 200,
+    "passed": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/sections/1/student-candidates",
+    "case": "authenticated read",
+    "status": 200,
+    "passed": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/sections/1/students",
+    "case": "authenticated read",
+    "status": 200,
+    "passed": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/sections",
+    "case": "authenticated read",
+    "status": 200,
+    "passed": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/sections/1",
+    "case": "authenticated read",
+    "status": 200,
+    "passed": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/sections/search",
+    "case": "authenticated read",
+    "status": 200,
+    "passed": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/sections/validate-capacity",
+    "case": "authenticated read",
+    "status": 400,
+    "passed": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/sections/summary",
+    "case": "authenticated read",
+    "status": 200,
+    "passed": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/semester",
+    "case": "authenticated read",
+    "status": 200,
+    "passed": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/semester/search",
+    "case": "authenticated read",
+    "status": 200,
+    "passed": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/semester/1",
+    "case": "authenticated read",
+    "status": 200,
+    "passed": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/semester/summary",
+    "case": "authenticated read",
+    "status": 200,
+    "passed": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/student-admissions/1/academic-details",
+    "case": "authenticated read",
+    "status": 200,
+    "passed": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/student-academic-information/1",
+    "case": "authenticated read",
+    "status": 404,
+    "passed": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/student-admissions",
+    "case": "authenticated read",
+    "status": 200,
+    "passed": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/student-admissions/1",
+    "case": "authenticated read",
+    "status": 200,
+    "passed": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/student-admissions/1/status",
+    "case": "authenticated read",
+    "status": 200,
+    "passed": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/students/1/documents",
+    "case": "authenticated read",
+    "status": 200,
+    "passed": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/students/1/documents/1",
+    "case": "authenticated read",
+    "status": 404,
+    "passed": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/students/1/documents/1/download",
+    "case": "authenticated read",
+    "status": 404,
+    "passed": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/student-admissions/1/fee-summary",
+    "case": "authenticated read",
+    "status": 200,
+    "passed": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/student-admissions/1/fee-structure",
+    "case": "authenticated read",
+    "status": 200,
+    "passed": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/student-admissions/1/previous-education",
+    "case": "authenticated read",
+    "status": 200,
+    "passed": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/promotions/dashboard",
+    "case": "authenticated read",
+    "status": 200,
+    "passed": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/promotions/directory",
+    "case": "authenticated read",
+    "status": 200,
+    "passed": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/promotions/history",
+    "case": "authenticated read",
+    "status": 200,
+    "passed": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/student-parents/1",
+    "case": "authenticated read",
+    "status": 200,
+    "passed": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/StudentProfile/my-profile",
+    "case": "authenticated read",
+    "status": 200,
+    "passed": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/students/1/profile/personal-information",
+    "case": "authenticated read",
+    "status": 200,
+    "passed": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/students/1/profile/exam-results",
+    "case": "authenticated read",
+    "status": 200,
+    "passed": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/student-profiles",
+    "case": "authenticated read",
+    "status": 200,
+    "passed": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/student-profiles/1/preview",
+    "case": "authenticated read",
+    "status": 200,
+    "passed": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/promotions/eligible-students",
+    "case": "authenticated read",
+    "status": 400,
+    "passed": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/promotions/student-eligibility/1",
+    "case": "authenticated read",
+    "status": 200,
+    "passed": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/promotions/promoted-students",
+    "case": "authenticated read",
+    "status": 200,
+    "passed": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/promotions/student/1/history",
+    "case": "authenticated read",
+    "status": 200,
+    "passed": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/promotions/history/1",
+    "case": "authenticated read",
+    "status": 200,
+    "passed": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/students",
+    "case": "authenticated read",
+    "status": 200,
+    "passed": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/students/search?Query=1",
+    "case": "authenticated read",
+    "status": 400,
+    "passed": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/students/1",
+    "case": "authenticated read",
+    "status": 200,
+    "passed": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/subject-assignments",
+    "case": "authenticated read",
+    "status": 200,
+    "passed": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/subject-assignments/1",
+    "case": "authenticated read",
+    "status": 200,
+    "passed": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/UserRoleMapping",
+    "case": "authenticated read",
+    "status": 200,
+    "passed": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/UserRoleMapping/1",
+    "case": "authenticated read",
+    "status": 200,
+    "passed": true
+  },
+  {
+    "method": "PATCH",
+    "path": "/api/v1/branches/9223372036854770000/status",
+    "case": "invalid input rejection",
+    "status": 400,
+    "passed": true
+  },
+  {
+    "method": "PATCH",
+    "path": "/api/semester/9223372036854770000/status",
+    "case": "invalid input rejection",
+    "status": 400,
+    "passed": true
+  },
+  {
+    "method": "PATCH",
+    "path": "/api/v1/semesters/9223372036854770000/status",
+    "case": "invalid input rejection",
+    "status": 400,
+    "passed": true
+  },
+  {
+    "method": "POST",
+    "path": "/api/academic-levels",
+    "case": "invalid input rejection",
+    "status": 400,
+    "passed": true
+  },
+  {
+    "method": "PUT",
+    "path": "/api/academic-levels/9223372036854770000",
+    "case": "invalid input rejection",
+    "status": 400,
+    "passed": true
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/academic-levels/9223372036854770000",
+    "case": "missing record rejection",
+    "status": 404,
+    "passed": true
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/academic-years",
+    "case": "invalid input rejection",
+    "status": 400,
+    "passed": true
+  },
+  {
+    "method": "PUT",
+    "path": "/api/v1/academic-years/9223372036854770000",
+    "case": "invalid input rejection",
+    "status": 400,
+    "passed": true
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/academic-years/generate-next-year",
+    "case": "generate next academic year",
+    "status": 200,
+    "passed": true
+  },
+  {
+    "method": "PATCH",
+    "path": "/api/v1/academic-years/9223372036854770000/activate",
+    "case": "invalid input rejection",
+    "status": 404,
+    "passed": true
+  },
+  {
+    "method": "PATCH",
+    "path": "/api/v1/academic-years/9223372036854770000/deactivate",
+    "case": "invalid input rejection",
+    "status": 404,
+    "passed": true
+  },
+  {
+    "method": "PATCH",
+    "path": "/api/v1/academic-years/9223372036854770000/archive",
+    "case": "invalid input rejection",
+    "status": 404,
+    "passed": true
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/access-requests",
+    "case": "invalid input rejection",
+    "status": 400,
+    "passed": true
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/access-requests/9223372036854770000/approve",
+    "case": "invalid input rejection",
+    "status": 404,
+    "passed": true
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/access-requests/9223372036854770000/reject",
+    "case": "invalid input rejection",
+    "status": 404,
+    "passed": true
+  },
+  {
+    "method": "PUT",
+    "path": "/api/Admissions/9223372036854770000/approve",
+    "case": "invalid input rejection",
+    "status": 404,
+    "passed": true
+  },
+  {
+    "method": "PUT",
+    "path": "/api/Admissions/9223372036854770000/reject",
+    "case": "invalid input rejection",
+    "status": 404,
+    "passed": true
+  },
+  {
+    "method": "PUT",
+    "path": "/api/admissions/9223372036854770000/status",
+    "case": "invalid input rejection",
+    "status": 400,
+    "passed": true
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/auth/login",
+    "case": "invalid input rejection",
+    "status": 400,
+    "passed": true
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/auth/refresh",
+    "case": "invalid input rejection",
+    "status": 400,
+    "passed": true
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/auth/change-password",
+    "case": "invalid input rejection",
+    "status": 400,
+    "passed": true
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/auth/forgot-password",
+    "case": "invalid input rejection",
+    "status": 400,
+    "passed": true
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/branches",
+    "case": "invalid input rejection",
+    "status": 400,
+    "passed": true
+  },
+  {
+    "method": "PUT",
+    "path": "/api/v1/branches/9223372036854770000",
+    "case": "invalid input rejection",
+    "status": 400,
+    "passed": true
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/v1/branches/9223372036854770000",
+    "case": "missing record rejection",
+    "status": 404,
+    "passed": true
+  },
+  {
+    "method": "POST",
+    "path": "/api/College/logo",
+    "case": "invalid input rejection",
+    "status": 400,
+    "passed": true
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/colleges",
+    "case": "invalid input rejection",
+    "status": 400,
+    "passed": true
+  },
+  {
+    "method": "PUT",
+    "path": "/api/v1/colleges/9223372036854770000",
+    "case": "invalid input rejection",
+    "status": 400,
+    "passed": true
+  },
+  {
+    "method": "PATCH",
+    "path": "/api/v1/colleges/9223372036854770000",
+    "case": "invalid input rejection",
+    "status": 400,
+    "passed": true
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/v1/colleges/9223372036854770000",
+    "case": "missing record rejection",
+    "status": 404,
+    "passed": true
+  },
+  {
+    "method": "PATCH",
+    "path": "/api/v1/colleges/9223372036854770000/status",
+    "case": "invalid input rejection",
+    "status": 400,
+    "passed": true
+  },
+  {
+    "method": "POST",
+    "path": "/api/college-settings",
+    "case": "invalid input rejection",
+    "status": 409,
+    "passed": true
+  },
+  {
+    "method": "PUT",
+    "path": "/api/college-settings/9223372036854770000",
+    "case": "invalid input rejection",
+    "status": 404,
+    "passed": true
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/super-admin/college-mappings",
+    "case": "invalid input rejection",
+    "status": 400,
+    "passed": true
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/v1/super-admin/college-mappings/user/9223372036854770000/college/9223372036854770000",
+    "case": "missing record rejection",
+    "status": 404,
+    "passed": true
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/courses",
+    "case": "invalid input rejection",
+    "status": 400,
+    "passed": true
+  },
+  {
+    "method": "PUT",
+    "path": "/api/v1/courses/9223372036854770000",
+    "case": "invalid input rejection",
+    "status": 400,
+    "passed": true
+  },
+  {
+    "method": "PATCH",
+    "path": "/api/v1/courses/9223372036854770000/status",
+    "case": "invalid input rejection",
+    "status": 400,
+    "passed": true
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/course-semester-mappings",
+    "case": "invalid input rejection",
+    "status": 400,
+    "passed": true
+  },
+  {
+    "method": "PUT",
+    "path": "/api/v1/course-semester-mappings/9223372036854770000",
+    "case": "invalid input rejection",
+    "status": 400,
+    "passed": true
+  },
+  {
+    "method": "PATCH",
+    "path": "/api/v1/course-semester-mappings/9223372036854770000/status",
+    "case": "invalid input rejection",
+    "status": 400,
+    "passed": true
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/course-structures",
+    "case": "invalid input rejection",
+    "status": 400,
+    "passed": true
+  },
+  {
+    "method": "PUT",
+    "path": "/api/v1/course-structures/9223372036854770000",
+    "case": "invalid input rejection",
+    "status": 400,
+    "passed": true
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/v1/course-structures/9223372036854770000",
+    "case": "missing record rejection",
+    "status": 404,
+    "passed": true
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/demo-requests",
+    "case": "invalid input rejection",
+    "status": 400,
+    "passed": true
+  },
+  {
+    "method": "PUT",
+    "path": "/api/v1/demo-requests/9223372036854770000/status",
+    "case": "invalid input rejection",
+    "status": 400,
+    "passed": true
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/demo-requests/9223372036854770000/schedule",
+    "case": "invalid input rejection",
+    "status": 404,
+    "passed": true
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/departments",
+    "case": "invalid input rejection",
+    "status": 400,
+    "passed": true
+  },
+  {
+    "method": "PUT",
+    "path": "/api/v1/departments/9223372036854770000",
+    "case": "invalid input rejection",
+    "status": 400,
+    "passed": true
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/v1/departments/9223372036854770000",
+    "case": "missing record rejection",
+    "status": 404,
+    "passed": true
+  },
+  {
+    "method": "PATCH",
+    "path": "/api/v1/departments/9223372036854770000/status",
+    "case": "invalid input rejection",
+    "status": 400,
+    "passed": true
+  },
+  {
+    "method": "PUT",
+    "path": "/api/v1/departments/9223372036854770000/hod",
+    "case": "invalid input rejection",
+    "status": 400,
+    "passed": true
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/v1/departments/9223372036854770000/hod",
+    "case": "missing record rejection",
+    "status": 400,
+    "passed": true
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/student-academic-details/validate-numbers",
+    "case": "invalid input rejection",
+    "status": 400,
+    "passed": true
+  },
+  {
+    "method": "POST",
+    "path": "/api/otp/generate",
+    "case": "invalid input rejection",
+    "status": 400,
+    "passed": true
+  },
+  {
+    "method": "POST",
+    "path": "/api/otp/verify",
+    "case": "invalid input rejection",
+    "status": 400,
+    "passed": true
+  },
+  {
+    "method": "POST",
+    "path": "/api/otp/resend",
+    "case": "invalid input rejection",
+    "status": 400,
+    "passed": true
+  },
+  {
+    "method": "POST",
+    "path": "/api/otp/reset-password",
+    "case": "invalid input rejection",
+    "status": 400,
+    "passed": true
+  },
+  {
+    "method": "PATCH",
+    "path": "/api/v1/profile",
+    "case": "invalid input rejection",
+    "status": 400,
+    "passed": true
+  },
+  {
+    "method": "PUT",
+    "path": "/api/profile/9223372036854770000",
+    "case": "invalid input rejection",
+    "status": 400,
+    "passed": true
+  },
+  {
+    "method": "POST",
+    "path": "/api/roles",
+    "case": "invalid input rejection",
+    "status": 409,
+    "passed": true
+  },
+  {
+    "method": "PUT",
+    "path": "/api/roles/9223372036854770000",
+    "case": "invalid input rejection",
+    "status": 409,
+    "passed": true
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/roles/9223372036854770000",
+    "case": "missing record rejection",
+    "status": 404,
+    "passed": true
+  },
+  {
+    "method": "PUT",
+    "path": "/api/v1/sections/9223372036854770000/class-teacher",
+    "case": "invalid input rejection",
+    "status": 400,
+    "passed": true
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/v1/sections/9223372036854770000/class-teacher",
+    "case": "missing record rejection",
+    "status": 400,
+    "passed": true
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/sections/9223372036854770000/students",
+    "case": "invalid input rejection",
+    "status": 400,
+    "passed": true
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/sections/9223372036854770000/students/assign",
+    "case": "invalid input rejection",
+    "status": 400,
+    "passed": true
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/v1/sections/9223372036854770000/students/9223372036854770000",
+    "case": "missing record rejection",
+    "status": 400,
+    "passed": true
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/sections",
+    "case": "invalid input rejection",
+    "status": 400,
+    "passed": true
+  },
+  {
+    "method": "PUT",
+    "path": "/api/v1/sections/9223372036854770000",
+    "case": "invalid input rejection",
+    "status": 400,
+    "passed": true
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/v1/sections/9223372036854770000",
+    "case": "missing record rejection",
+    "status": 404,
+    "passed": true
+  },
+  {
+    "method": "PATCH",
+    "path": "/api/v1/sections/9223372036854770000/status",
+    "case": "invalid input rejection",
+    "status": 400,
+    "passed": true
+  },
+  {
+    "method": "POST",
+    "path": "/api/semester",
+    "case": "invalid input rejection",
+    "status": 400,
+    "passed": true
+  },
+  {
+    "method": "PUT",
+    "path": "/api/semester/9223372036854770000",
+    "case": "invalid input rejection",
+    "status": 404,
+    "passed": true
+  },
+  {
+    "method": "PUT",
+    "path": "/api/v1/student-admissions/9223372036854770000/academic-details",
+    "case": "invalid input rejection",
+    "status": 400,
+    "passed": true
+  },
+  {
+    "method": "PUT",
+    "path": "/api/v1/student-academic-information/9223372036854770000",
+    "case": "invalid input rejection",
+    "status": 404,
+    "passed": true
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/student-admissions/9223372036854770000/resolve-fees",
+    "case": "invalid input rejection",
+    "status": 400,
+    "passed": true
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/student-admissions",
+    "case": "invalid input rejection",
+    "status": 400,
+    "passed": true
+  },
+  {
+    "method": "PUT",
+    "path": "/api/v1/student-admissions/9223372036854770000",
+    "case": "invalid input rejection",
+    "status": 400,
+    "passed": true
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/student-admissions/9223372036854770000/status",
+    "case": "invalid input rejection",
+    "status": 400,
+    "passed": true
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/students/9223372036854770000/documents",
+    "case": "invalid input rejection",
+    "status": 415,
+    "passed": true
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/v1/students/9223372036854770000/documents/9223372036854770000",
+    "case": "missing record rejection",
+    "status": 404,
+    "passed": true
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/student-admissions/9223372036854770000/submit",
+    "case": "invalid input rejection",
+    "status": 400,
+    "passed": true
+  },
+  {
+    "method": "PUT",
+    "path": "/api/v1/student-admissions/9223372036854770000/fee-structure",
+    "case": "invalid input rejection",
+    "status": 400,
+    "passed": true
+  },
+  {
+    "method": "PUT",
+    "path": "/api/v1/student-admissions/9223372036854770000/previous-education",
+    "case": "invalid input rejection",
+    "status": 400,
+    "passed": true
+  },
+  {
+    "method": "PUT",
+    "path": "/api/student-parents/9223372036854770000",
+    "case": "invalid input rejection",
+    "status": 404,
+    "passed": true
+  },
+  {
+    "method": "PATCH",
+    "path": "/api/v1/students/9223372036854770000/profile/personal-information",
+    "case": "invalid input rejection",
+    "status": 400,
+    "passed": true
+  },
+  {
+    "method": "PATCH",
+    "path": "/api/v1/student-profiles/9223372036854770000",
+    "case": "invalid input rejection",
+    "status": 404,
+    "passed": true
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/promotions/promote",
+    "case": "invalid input rejection",
+    "status": 400,
+    "passed": true
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/promotions/promote-bulk",
+    "case": "invalid input rejection",
+    "status": 400,
+    "passed": true
+  },
+  {
+    "method": "PUT",
+    "path": "/api/v1/promotions/eligibility-status/9223372036854770000",
+    "case": "invalid input rejection",
+    "status": 400,
+    "passed": true
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/students",
+    "case": "invalid input rejection",
+    "status": 400,
+    "passed": true
+  },
+  {
+    "method": "PUT",
+    "path": "/api/v1/students/9223372036854770000",
+    "case": "invalid input rejection",
+    "status": 400,
+    "passed": true
+  },
+  {
+    "method": "PATCH",
+    "path": "/api/v1/students/9223372036854770000/status",
+    "case": "invalid input rejection",
+    "status": 400,
+    "passed": true
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/subject-assignments",
+    "case": "invalid input rejection",
+    "status": 400,
+    "passed": true
+  },
+  {
+    "method": "PUT",
+    "path": "/api/v1/subject-assignments/9223372036854770000",
+    "case": "invalid input rejection",
+    "status": 400,
+    "passed": true
+  },
+  {
+    "method": "PATCH",
+    "path": "/api/v1/subject-assignments/9223372036854770000/status",
+    "case": "invalid input rejection",
+    "status": 400,
+    "passed": true
+  },
+  {
+    "method": "POST",
+    "path": "/api/UserRoleMapping",
+    "case": "invalid input rejection",
+    "status": 400,
+    "passed": true
+  },
+  {
+    "method": "PUT",
+    "path": "/api/UserRoleMapping/9223372036854770000",
+    "case": "invalid input rejection",
+    "status": 400,
+    "passed": true
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/UserRoleMapping/9223372036854770000",
+    "case": "missing record rejection",
+    "status": 400,
+    "passed": true
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/colleges",
+    "case": "create valid record",
+    "status": 201,
+    "passed": true
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/departments",
+    "case": "create valid record",
+    "status": 200,
+    "passed": true
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/courses",
+    "case": "create valid record",
+    "status": 201,
+    "passed": true
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/branches",
+    "case": "create valid record",
+    "status": 200,
+    "passed": true
+  },
+  {
+    "method": "ASSERT",
+    "path": "branch specialization persisted",
+    "case": "business assertion",
+    "status": 0,
+    "passed": true
+  },
+  {
+    "method": "POST",
+    "path": "/api/semester",
+    "case": "create valid record",
+    "status": 200,
+    "passed": true
+  },
+  {
+    "method": "ASSERT",
+    "path": "semester course resolved from branch",
+    "case": "business assertion",
+    "status": 0,
+    "passed": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/departments/22/dependencies",
+    "case": "request",
+    "status": 200,
+    "passed": true
+  },
+  {
+    "method": "ASSERT",
+    "path": "departments reports dependencies",
+    "case": "business assertion",
+    "status": 0,
+    "passed": true
+  },
+  {
+    "method": "PATCH",
+    "path": "/api/v1/departments/22/status",
+    "case": "blocked parent deactivation",
+    "status": 409,
+    "passed": true
+  },
+  {
+    "method": "ASSERT",
+    "path": "departments deactivation has clear reason",
+    "case": "business assertion",
+    "status": 0,
+    "passed": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/courses/17/dependencies",
+    "case": "request",
+    "status": 200,
+    "passed": true
+  },
+  {
+    "method": "ASSERT",
+    "path": "courses reports dependencies",
+    "case": "business assertion",
+    "status": 0,
+    "passed": true
+  },
+  {
+    "method": "PATCH",
+    "path": "/api/v1/courses/17/status",
+    "case": "blocked parent deactivation",
+    "status": 400,
+    "passed": true
+  },
+  {
+    "method": "ASSERT",
+    "path": "courses deactivation has clear reason",
+    "case": "business assertion",
+    "status": 0,
+    "passed": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/branches/15/dependencies",
+    "case": "request",
+    "status": 200,
+    "passed": true
+  },
+  {
+    "method": "ASSERT",
+    "path": "branches reports dependencies",
+    "case": "business assertion",
+    "status": 0,
+    "passed": true
+  },
+  {
+    "method": "PATCH",
+    "path": "/api/v1/branches/15/status",
+    "case": "blocked parent deactivation",
+    "status": 400,
+    "passed": true
+  },
+  {
+    "method": "ASSERT",
+    "path": "branches deactivation has clear reason",
+    "case": "business assertion",
+    "status": 0,
+    "passed": true
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/students",
+    "case": "create valid record",
+    "status": 200,
+    "passed": true
+  },
+  {
+    "method": "PATCH",
+    "path": "/api/v1/colleges/65/status",
+    "case": "missing college status rejected",
+    "status": 400,
+    "passed": true
+  },
+  {
+    "method": "PATCH",
+    "path": "/api/v1/students/4/status",
+    "case": "missing student status rejected",
+    "status": 400,
+    "passed": true
+  },
+  {
+    "method": "PUT",
+    "path": "/api/v1/courses/17",
+    "case": "edit course",
+    "status": 200,
+    "passed": true
+  },
+  {
+    "method": "PUT",
+    "path": "/api/v1/branches/15",
+    "case": "edit branch",
+    "status": 200,
+    "passed": true
+  },
+  {
+    "method": "ASSERT",
+    "path": "edited specialization saved",
+    "case": "business assertion",
+    "status": 0,
+    "passed": true
+  },
+  {
+    "method": "PATCH",
+    "path": "/api/v1/courses/17/status",
+    "case": "missing status cannot deactivate",
+    "status": 400,
+    "passed": true
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/sections",
+    "case": "create valid record",
+    "status": 201,
+    "passed": true
+  },
+  {
+    "method": "PATCH",
+    "path": "/api/v1/sections/10/status",
+    "case": "missing section status rejected",
+    "status": 400,
+    "passed": true
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/sections/10/students/assign",
+    "case": "assign student to section",
+    "status": 200,
+    "passed": true
+  },
+  {
+    "method": "PATCH",
+    "path": "/api/v1/sections/10/status",
+    "case": "section blocked by active student",
+    "status": 400,
+    "passed": true
+  },
+  {
+    "method": "POST",
+    "path": "/api/semester",
+    "case": "create valid record",
+    "status": 200,
+    "passed": true
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/sections",
+    "case": "create valid record",
+    "status": 201,
+    "passed": true
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/promotions/promote",
+    "case": "promote student with capacity and target level",
+    "status": 200,
+    "passed": true
+  },
+  {
+    "method": "ASSERT",
+    "path": "promotion changes current section atomically",
+    "case": "business assertion",
+    "status": 0,
+    "passed": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/promotions/history?collegeId=65",
+    "case": "promotion history readable",
+    "status": 200,
+    "passed": true
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/v1/sections/11/students/4",
+    "case": "remove active section allocation",
+    "status": 200,
+    "passed": true
+  },
+  {
+    "method": "PATCH",
+    "path": "/api/v1/sections/10/status",
+    "case": "deactivate empty first section",
+    "status": 200,
+    "passed": true
+  },
+  {
+    "method": "PATCH",
+    "path": "/api/v1/sections/11/status",
+    "case": "deactivate empty target section",
+    "status": 200,
+    "passed": true
+  },
+  {
+    "method": "PATCH",
+    "path": "/api/semester/100/status",
+    "case": "deactivate empty second semester",
+    "status": 200,
+    "passed": true
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/access-requests",
+    "case": "new ZIP weak-password rule",
+    "status": 400,
+    "passed": true
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/auth/login",
+    "case": "real password login",
+    "status": 200,
+    "passed": true
+  },
+  {
+    "method": "ASSERT",
+    "path": "login issues tokens",
+    "case": "business assertion",
+    "status": 0,
+    "passed": true
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/auth/refresh",
+    "case": "refresh token rotation",
+    "status": 200,
+    "passed": true
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/auth/refresh",
+    "case": "old refresh token rejected",
+    "status": 401,
+    "passed": true
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/auth/login",
+    "case": "wrong password rejected",
+    "status": 401,
+    "passed": true
+  },
+  {
+    "method": "PATCH",
+    "path": "/api/v1/students/4/profile/personal-information",
+    "case": "save student addresses",
+    "status": 200,
+    "passed": true
+  },
+  {
+    "method": "ASSERT",
+    "path": "all student address fields round-trip",
+    "case": "business assertion",
+    "status": 0,
+    "passed": true
+  },
+  {
+    "method": "ASSERT",
+    "path": "student address history created",
+    "case": "business assertion",
+    "status": 0,
+    "passed": true
+  },
+  {
+    "method": "PATCH",
+    "path": "/api/v1/profile",
+    "case": "save employee addresses",
+    "status": 200,
+    "passed": true
+  },
+  {
+    "method": "ASSERT",
+    "path": "employee address fields round-trip",
+    "case": "business assertion",
+    "status": 0,
+    "passed": true
+  },
+  {
+    "method": "PATCH",
+    "path": "/api/v1/student-profiles/4?collegeId=65",
+    "case": "full profile nested form save",
+    "status": 200,
+    "passed": true
+  },
+  {
+    "method": "ASSERT",
+    "path": "full profile contact preserved",
+    "case": "business assertion",
+    "status": 0,
+    "passed": true
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/students/4/documents",
+    "case": "upload document multipart",
+    "status": 201,
+    "passed": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/students/4/documents/1000000001/download",
+    "case": "download uploaded document",
+    "status": 200,
+    "passed": true
+  },
+  {
+    "method": "ASSERT",
+    "path": "document download bytes equal original upload",
+    "case": "business assertion",
+    "status": 0,
+    "passed": true
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/v1/students/4/documents/1000000001",
+    "case": "delete uploaded test document",
+    "status": 200,
+    "passed": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/students/4/documents/1000000001/download",
+    "case": "deleted document unavailable",
+    "status": 404,
+    "passed": true
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/student-admissions",
+    "case": "create valid record",
+    "status": 201,
+    "passed": true
+  },
+  {
+    "method": "ASSERT",
+    "path": "admission registration and mobile aliases saved",
+    "case": "business assertion",
+    "status": 0,
+    "passed": true
+  },
+  {
+    "method": "PUT",
+    "path": "/api/v1/student-admissions/23/academic-details",
+    "case": "save all frontend academic fields",
+    "status": 200,
+    "passed": true
+  },
+  {
+    "method": "ASSERT",
+    "path": "academic fields round-trip",
+    "case": "business assertion",
+    "status": 0,
+    "passed": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/student-admissions?courseId=17",
+    "case": "course impact filter",
+    "status": 200,
+    "passed": true
+  },
+  {
+    "method": "ASSERT",
+    "path": "admission filter returns only selected course",
+    "case": "business assertion",
+    "status": 0,
+    "passed": true
+  },
+  {
+    "method": "ASSERT",
+    "path": "structured addresses preserved after academic update",
+    "case": "business assertion",
+    "status": 0,
+    "passed": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/courses/download?collegeId=65",
+    "case": "CSV download",
+    "status": 200,
+    "passed": true
+  },
+  {
+    "method": "ASSERT",
+    "path": "download filename present",
+    "case": "business assertion",
+    "status": 0,
+    "passed": true
+  },
+  {
+    "method": "ASSERT",
+    "path": "download CORS exposes filename",
+    "case": "business assertion",
+    "status": 0,
+    "passed": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/courses/download?collegeId=65&format=json",
+    "case": "JSON download",
+    "status": 200,
+    "passed": true
+  },
+  {
+    "method": "ASSERT",
+    "path": "filtered export contains complete course",
+    "case": "business assertion",
+    "status": 0,
+    "passed": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/courses/download?format=xlsx",
+    "case": "unsupported export format",
+    "status": 400,
+    "passed": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/courses/download?courseId=-1",
+    "case": "invalid export filter",
+    "status": 400,
+    "passed": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/courses/download",
+    "case": "unauthenticated export denied",
+    "status": 401,
+    "passed": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/courses/download?collegeId=65",
+    "case": "college administrator own export",
+    "status": 200,
+    "passed": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/courses/download?collegeId=65",
+    "case": "cross-college export denied",
+    "status": 403,
+    "passed": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/courses/download",
+    "case": "student cannot export administration data",
+    "status": 403,
+    "passed": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/exports",
+    "case": "download catalog",
+    "status": 200,
+    "passed": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/exports/colleges",
+    "case": "screen CSV colleges",
+    "status": 200,
+    "passed": true
+  },
+  {
+    "method": "ASSERT",
+    "path": "CSV contract colleges",
+    "case": "business assertion",
+    "status": 0,
+    "passed": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/exports/colleges?format=json",
+    "case": "screen JSON colleges",
+    "status": 200,
+    "passed": true
+  },
+  {
+    "method": "ASSERT",
+    "path": "JSON row count colleges",
+    "case": "business assertion",
+    "status": 0,
+    "passed": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/exports/college-settings",
+    "case": "screen CSV college-settings",
+    "status": 200,
+    "passed": true
+  },
+  {
+    "method": "ASSERT",
+    "path": "CSV contract college-settings",
+    "case": "business assertion",
+    "status": 0,
+    "passed": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/exports/college-settings?format=json",
+    "case": "screen JSON college-settings",
+    "status": 200,
+    "passed": true
+  },
+  {
+    "method": "ASSERT",
+    "path": "JSON row count college-settings",
+    "case": "business assertion",
+    "status": 0,
+    "passed": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/exports/academic-years",
+    "case": "screen CSV academic-years",
+    "status": 200,
+    "passed": true
+  },
+  {
+    "method": "ASSERT",
+    "path": "CSV contract academic-years",
+    "case": "business assertion",
+    "status": 0,
+    "passed": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/exports/academic-years?format=json",
+    "case": "screen JSON academic-years",
+    "status": 200,
+    "passed": true
+  },
+  {
+    "method": "ASSERT",
+    "path": "JSON row count academic-years",
+    "case": "business assertion",
+    "status": 0,
+    "passed": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/exports/academic-levels",
+    "case": "screen CSV academic-levels",
+    "status": 200,
+    "passed": true
+  },
+  {
+    "method": "ASSERT",
+    "path": "CSV contract academic-levels",
+    "case": "business assertion",
+    "status": 0,
+    "passed": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/exports/academic-levels?format=json",
+    "case": "screen JSON academic-levels",
+    "status": 200,
+    "passed": true
+  },
+  {
+    "method": "ASSERT",
+    "path": "JSON row count academic-levels",
+    "case": "business assertion",
+    "status": 0,
+    "passed": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/exports/departments",
+    "case": "screen CSV departments",
+    "status": 200,
+    "passed": true
+  },
+  {
+    "method": "ASSERT",
+    "path": "CSV contract departments",
+    "case": "business assertion",
+    "status": 0,
+    "passed": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/exports/departments?format=json",
+    "case": "screen JSON departments",
+    "status": 200,
+    "passed": true
+  },
+  {
+    "method": "ASSERT",
+    "path": "JSON row count departments",
+    "case": "business assertion",
+    "status": 0,
+    "passed": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/exports/courses",
+    "case": "screen CSV courses",
+    "status": 200,
+    "passed": true
+  },
+  {
+    "method": "ASSERT",
+    "path": "CSV contract courses",
+    "case": "business assertion",
+    "status": 0,
+    "passed": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/exports/courses?format=json",
+    "case": "screen JSON courses",
+    "status": 200,
+    "passed": true
+  },
+  {
+    "method": "ASSERT",
+    "path": "JSON row count courses",
+    "case": "business assertion",
+    "status": 0,
+    "passed": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/exports/branches",
+    "case": "screen CSV branches",
+    "status": 200,
+    "passed": true
+  },
+  {
+    "method": "ASSERT",
+    "path": "CSV contract branches",
+    "case": "business assertion",
+    "status": 0,
+    "passed": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/exports/branches?format=json",
+    "case": "screen JSON branches",
+    "status": 200,
+    "passed": true
+  },
+  {
+    "method": "ASSERT",
+    "path": "JSON row count branches",
+    "case": "business assertion",
+    "status": 0,
+    "passed": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/exports/semesters",
+    "case": "screen CSV semesters",
+    "status": 200,
+    "passed": true
+  },
+  {
+    "method": "ASSERT",
+    "path": "CSV contract semesters",
+    "case": "business assertion",
+    "status": 0,
+    "passed": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/exports/semesters?format=json",
+    "case": "screen JSON semesters",
+    "status": 200,
+    "passed": true
+  },
+  {
+    "method": "ASSERT",
+    "path": "JSON row count semesters",
+    "case": "business assertion",
+    "status": 0,
+    "passed": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/exports/sections",
+    "case": "screen CSV sections",
+    "status": 200,
+    "passed": true
+  },
+  {
+    "method": "ASSERT",
+    "path": "CSV contract sections",
+    "case": "business assertion",
+    "status": 0,
+    "passed": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/exports/sections?format=json",
+    "case": "screen JSON sections",
+    "status": 200,
+    "passed": true
+  },
+  {
+    "method": "ASSERT",
+    "path": "JSON row count sections",
+    "case": "business assertion",
+    "status": 0,
+    "passed": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/exports/course-structures",
+    "case": "screen CSV course-structures",
+    "status": 200,
+    "passed": true
+  },
+  {
+    "method": "ASSERT",
+    "path": "CSV contract course-structures",
+    "case": "business assertion",
+    "status": 0,
+    "passed": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/exports/course-structures?format=json",
+    "case": "screen JSON course-structures",
+    "status": 200,
+    "passed": true
+  },
+  {
+    "method": "ASSERT",
+    "path": "JSON row count course-structures",
+    "case": "business assertion",
+    "status": 0,
+    "passed": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/exports/students",
+    "case": "screen CSV students",
+    "status": 200,
+    "passed": true
+  },
+  {
+    "method": "ASSERT",
+    "path": "CSV contract students",
+    "case": "business assertion",
+    "status": 0,
+    "passed": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/exports/students?format=json",
+    "case": "screen JSON students",
+    "status": 200,
+    "passed": true
+  },
+  {
+    "method": "ASSERT",
+    "path": "JSON row count students",
+    "case": "business assertion",
+    "status": 0,
+    "passed": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/exports/student-profiles",
+    "case": "screen CSV student-profiles",
+    "status": 200,
+    "passed": true
+  },
+  {
+    "method": "ASSERT",
+    "path": "CSV contract student-profiles",
+    "case": "business assertion",
+    "status": 0,
+    "passed": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/exports/student-profiles?format=json",
+    "case": "screen JSON student-profiles",
+    "status": 200,
+    "passed": true
+  },
+  {
+    "method": "ASSERT",
+    "path": "JSON row count student-profiles",
+    "case": "business assertion",
+    "status": 0,
+    "passed": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/exports/student-admissions",
+    "case": "screen CSV student-admissions",
+    "status": 200,
+    "passed": true
+  },
+  {
+    "method": "ASSERT",
+    "path": "CSV contract student-admissions",
+    "case": "business assertion",
+    "status": 0,
+    "passed": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/exports/student-admissions?format=json",
+    "case": "screen JSON student-admissions",
+    "status": 200,
+    "passed": true
+  },
+  {
+    "method": "ASSERT",
+    "path": "JSON row count student-admissions",
+    "case": "business assertion",
+    "status": 0,
+    "passed": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/exports/promotions",
+    "case": "screen CSV promotions",
+    "status": 200,
+    "passed": true
+  },
+  {
+    "method": "ASSERT",
+    "path": "CSV contract promotions",
+    "case": "business assertion",
+    "status": 0,
+    "passed": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/exports/promotions?format=json",
+    "case": "screen JSON promotions",
+    "status": 200,
+    "passed": true
+  },
+  {
+    "method": "ASSERT",
+    "path": "JSON row count promotions",
+    "case": "business assertion",
+    "status": 0,
+    "passed": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/exports/users",
+    "case": "screen CSV users",
+    "status": 200,
+    "passed": true
+  },
+  {
+    "method": "ASSERT",
+    "path": "CSV contract users",
+    "case": "business assertion",
+    "status": 0,
+    "passed": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/exports/users?format=json",
+    "case": "screen JSON users",
+    "status": 200,
+    "passed": true
+  },
+  {
+    "method": "ASSERT",
+    "path": "JSON row count users",
+    "case": "business assertion",
+    "status": 0,
+    "passed": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/exports/roles",
+    "case": "screen CSV roles",
+    "status": 200,
+    "passed": true
+  },
+  {
+    "method": "ASSERT",
+    "path": "CSV contract roles",
+    "case": "business assertion",
+    "status": 0,
+    "passed": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/exports/roles?format=json",
+    "case": "screen JSON roles",
+    "status": 200,
+    "passed": true
+  },
+  {
+    "method": "ASSERT",
+    "path": "JSON row count roles",
+    "case": "business assertion",
+    "status": 0,
+    "passed": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/exports/faculty",
+    "case": "screen CSV faculty",
+    "status": 200,
+    "passed": true
+  },
+  {
+    "method": "ASSERT",
+    "path": "CSV contract faculty",
+    "case": "business assertion",
+    "status": 0,
+    "passed": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/exports/faculty?format=json",
+    "case": "screen JSON faculty",
+    "status": 200,
+    "passed": true
+  },
+  {
+    "method": "ASSERT",
+    "path": "JSON row count faculty",
+    "case": "business assertion",
+    "status": 0,
+    "passed": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/exports/fee-structures",
+    "case": "screen CSV fee-structures",
+    "status": 200,
+    "passed": true
+  },
+  {
+    "method": "ASSERT",
+    "path": "CSV contract fee-structures",
+    "case": "business assertion",
+    "status": 0,
+    "passed": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/exports/fee-structures?format=json",
+    "case": "screen JSON fee-structures",
+    "status": 200,
+    "passed": true
+  },
+  {
+    "method": "ASSERT",
+    "path": "JSON row count fee-structures",
+    "case": "business assertion",
+    "status": 0,
+    "passed": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/exports/hostel-fees",
+    "case": "screen CSV hostel-fees",
+    "status": 200,
+    "passed": true
+  },
+  {
+    "method": "ASSERT",
+    "path": "CSV contract hostel-fees",
+    "case": "business assertion",
+    "status": 0,
+    "passed": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/exports/hostel-fees?format=json",
+    "case": "screen JSON hostel-fees",
+    "status": 200,
+    "passed": true
+  },
+  {
+    "method": "ASSERT",
+    "path": "JSON row count hostel-fees",
+    "case": "business assertion",
+    "status": 0,
+    "passed": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/exports/transport-fees",
+    "case": "screen CSV transport-fees",
+    "status": 200,
+    "passed": true
+  },
+  {
+    "method": "ASSERT",
+    "path": "CSV contract transport-fees",
+    "case": "business assertion",
+    "status": 0,
+    "passed": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/exports/transport-fees?format=json",
+    "case": "screen JSON transport-fees",
+    "status": 200,
+    "passed": true
+  },
+  {
+    "method": "ASSERT",
+    "path": "JSON row count transport-fees",
+    "case": "business assertion",
+    "status": 0,
+    "passed": true
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/student-admissions",
+    "case": "create valid record",
+    "status": 201,
+    "passed": true
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/student-admissions",
+    "case": "duplicate Aadhaar create rejected",
+    "status": 409,
+    "passed": true
+  },
+  {
+    "method": "ASSERT",
+    "path": "duplicate Aadhaar has clear error without number",
+    "case": "business assertion",
+    "status": 0,
+    "passed": true
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/student-admissions",
+    "case": "create valid record",
+    "status": 201,
+    "passed": true
+  },
+  {
+    "method": "ASSERT",
+    "path": "blank Aadhaar stored as NULL",
+    "case": "business assertion",
+    "status": 0,
+    "passed": true
+  },
+  {
+    "method": "PUT",
+    "path": "/api/v1/student-admissions/26",
+    "case": "duplicate Aadhaar update rejected",
+    "status": 409,
+    "passed": true
+  },
+  {
+    "method": "ASSERT",
+    "path": "failed duplicate update leaves original unchanged",
+    "case": "business assertion",
+    "status": 0,
+    "passed": true
+  },
+  {
+    "method": "PUT",
+    "path": "/api/v1/student-admissions/24",
+    "case": "same owner Aadhaar update allowed",
+    "status": 200,
+    "passed": true
+  },
+  {
+    "method": "ASSERT",
+    "path": "Aadhaar unique constraint survives migration rerun",
+    "case": "business assertion",
+    "status": 0,
+    "passed": true
+  },
+  {
+    "method": "PATCH",
+    "path": "/api/semester/99/status",
+    "case": "semester blocked by admission",
+    "status": 400,
+    "passed": true
+  },
+  {
+    "method": "PATCH",
+    "path": "/api/semester/99/status",
+    "case": "deactivate unreferenced semester",
+    "status": 200,
+    "passed": true
+  },
+  {
+    "method": "PATCH",
+    "path": "/api/v1/students/4/status",
+    "case": "deactivate student retains history",
+    "status": 200,
+    "passed": true
+  },
+  {
+    "method": "PATCH",
+    "path": "/api/v1/branches/15/status",
+    "case": "deactivate branch after dependencies inactive",
+    "status": 200,
+    "passed": true
+  },
+  {
+    "method": "PATCH",
+    "path": "/api/v1/courses/17/status",
+    "case": "deactivate course after dependencies inactive",
+    "status": 200,
+    "passed": true
+  },
+  {
+    "method": "PATCH",
+    "path": "/api/v1/departments/22/status",
+    "case": "deactivate department after dependencies inactive",
+    "status": 200,
+    "passed": true
+  },
+  {
+    "method": "ASSERT",
+    "path": "deactivation never deletes students",
+    "case": "business assertion",
+    "status": 0,
+    "passed": true
+  },
+  {
+    "method": "PATCH",
+    "path": "/api/v1/branches/15/status",
+    "case": "cannot reactivate child below inactive course",
+    "status": 400,
+    "passed": true
+  },
+  {
+    "method": "ASSERT",
+    "path": "student audit retained after deactivation",
+    "case": "business assertion",
+    "status": 0,
+    "passed": true
+  },
+  {
+    "method": "ASSERT",
+    "path": "status history recorded",
+    "case": "business assertion",
+    "status": 0,
+    "passed": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/activity-logs?limit=10",
+    "case": "activity logs readable",
+    "status": 200,
+    "passed": true
+  },
+  {
+    "method": "ASSERT",
+    "path": "every completed request writes activity",
+    "case": "business assertion",
+    "status": 0,
+    "passed": true
+  },
+  {
+    "method": "ASSERT",
+    "path": "every original route preserved",
+    "case": "business assertion",
+    "status": 0,
+    "passed": true
+  }
+]

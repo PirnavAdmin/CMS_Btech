@@ -1,0 +1,91 @@
+@baseUrl = http://localhost:5084
+@token = PASTE_JWT_TOKEN_HERE
+
+### 1. Dashboard
+GET {{baseUrl}}/api/v1/credits/dashboard
+Authorization: Bearer {{token}}
+
+### 2. Configurations
+GET {{baseUrl}}/api/v1/credits/configurations
+Authorization: Bearer {{token}}
+
+### 3. Configuration by ID
+GET {{baseUrl}}/api/v1/credits/configurations/1
+Authorization: Bearer {{token}}
+
+### 4. Create configuration
+POST {{baseUrl}}/api/v1/credits/configurations
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "subjectId": 1,
+  "courseId": 1,
+  "branchId": 1,
+  "semesterId": 1,
+  "credits": 4.0,
+  "minimumCredits": 4.0,
+  "maximumCredits": 4.0,
+  "status": 1,
+  "createdBy": 1
+}
+
+### 5. Update configuration
+PUT {{baseUrl}}/api/v1/credits/configurations/1
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "subjectId": 1,
+  "courseId": 1,
+  "branchId": 1,
+  "semesterId": 1,
+  "credits": 4.0,
+  "minimumCredits": 4.0,
+  "maximumCredits": 4.0,
+  "status": 1,
+  "updatedBy": 1
+}
+
+### 6. Registrations
+GET {{baseUrl}}/api/v1/credits/registrations?studentId=2&semesterId=1
+Authorization: Bearer {{token}}
+
+### 7. Registration by ID
+GET {{baseUrl}}/api/v1/credits/registrations/1
+Authorization: Bearer {{token}}
+
+### 8. Create registration
+# Use a subject/semester combination that is not already registered.
+POST {{baseUrl}}/api/v1/credits/registrations
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "studentId": 2,
+  "subjectId": 1,
+  "semesterId": 1,
+  "createdBy": 1
+}
+
+### 9. Update registration
+PUT {{baseUrl}}/api/v1/credits/registrations/1
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "registrationStatus": "COMPLETED",
+  "grade": "A",
+  "gradePoints": 9.0,
+  "isCompleted": true,
+  "status": 1,
+  "updatedBy": 1
+}
+
+### 10. Summary - semester
+GET {{baseUrl}}/api/v1/credits/summary?studentId=2&semesterId=1
+Authorization: Bearer {{token}}
+
+### 11. Summary - all semesters
+GET {{baseUrl}}/api/v1/credits/summary?studentId=2
+Authorization: Bearer {{token}}
