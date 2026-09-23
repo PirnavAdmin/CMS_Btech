@@ -135,15 +135,23 @@ export default function FacultyLeaveManagement() {
       ['Leave history', () => facultyLeaveApi.getHistory(), rows => setHistoryRequests(rows.map(normalizeLeaveRequest))],
       ['Leave balances', () => facultyLeaveApi.getBalances(), setBalances],
     ]
+    const errors = []
     await Promise.allSettled(resources.map(async ([label, fetchRows, saveRows]) => {
       try {
         const rows = await fetchRows()
         if (version === reloadVersion.current) saveRows(rows)
       } catch (error) {
-        if (version === reloadVersion.current) setLoadError(current => [current, `${label}: ${error.message || 'Unable to load'}. Previously loaded data, if any, is still displayed.`].filter(Boolean).join(' | '))
+        errors.push(`${label}: ${error.message || 'Unable to load'}`)
       }
     }))
-    if (version === reloadVersion.current) setLoading(false)
+    if (version === reloadVersion.current) {
+      if (errors.length >= resources.length) {
+        setLoadError('Unable to connect to backend server. Please verify the server is running.')
+      } else if (errors.length > 0) {
+        setLoadError(errors.join(' | '))
+      }
+      setLoading(false)
+    }
   }, [])
   useEffect(() => { reload(); return () => { reloadVersion.current += 1 } }, [reload])
   useEffect(() => { let active = true; academicYearApi.getAll().then(rows => { if (active) setAcademicYears(rows.map(row => row.academicYearName || row.name).filter(Boolean)) }).catch(error => { if (active) setNotice(error.message) }); return () => { active = false } }, [])

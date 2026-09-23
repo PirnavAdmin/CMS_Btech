@@ -9,6 +9,7 @@ const source = readFileSync(new URL('./collegeApi.js', import.meta.url), 'utf8')
 const setup = () => {
   const requests = []
   const context = vm.createContext({ env: { DEV: true }, resolveCollegeLogo, URL,
+    getAccessToken: () => 'test-token',
     window: { location: { origin: 'http://localhost:5173' } },
     localStorage: { getItem: key => key === 'btech-access-token' ? 'test-token' : null },
     sessionStorage: { getItem: () => null },

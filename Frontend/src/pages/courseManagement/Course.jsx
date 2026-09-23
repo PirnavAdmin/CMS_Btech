@@ -16,6 +16,7 @@ import CompactSummary from '../../components/CompactSummary'
 import InfoCard from '../../components/InfoCard'
 import { branchApi, courseApi, courseStructureApi, departmentApi, studentApi } from '../../api/apiEndpoints'
 import { getCourseById, createCourse, updateCourse, updateCourseStatus, getSemesters, getCourseSemesterMappings, createCourseSemesterMapping, updateCourseSemesterMapping, updateCourseSemesterMappingStatus } from '../../auth/collegeApi'
+import { useAcademic } from '../../context/AcademicContext'
 import { normalize } from './Branch'
 import { showDeactivationBlocked } from '../../components/DeactivationBlockedDialog'
 import './Course.css'
@@ -127,6 +128,7 @@ const Field = ({ label, error, wide, children }) => <label className={`cm-field 
 const Badge = ({ value }) => <span className={`course-badge ${String(value).toLowerCase()}`}><i />{value}</span>
 
 function CourseList() {
+  const { selectedCollegeId, selectedCollege } = useAcademic()
   const [courses, setCourses] = useState([])
   const [departments, setDepartments] = useState([])
   const [branches, setBranches] = useState([])
@@ -160,12 +162,14 @@ function CourseList() {
   }
   useEffect(() => { load() }, [])
 
+  const scopedCourses = courses
+
   const departmentName = (c) => departments.find(d => String(d.id) === String(c.departmentId))?.name || c.department || ''
-  const rows = useMemo(() => courses.filter(c => `${c.name} ${c.code}`.toLowerCase().includes(query.trim().toLowerCase()) && (!statusFilter || c.status === statusFilter)), [courses, query, statusFilter])
+  const rows = useMemo(() => scopedCourses.filter(c => `${c.name} ${c.code}`.toLowerCase().includes(query.trim().toLowerCase()) && (!statusFilter || c.status === statusFilter)), [scopedCourses, query, statusFilter])
   const totalPages = Math.ceil(rows.length / itemsPerPage) || 1
   const currentPageClamped = Math.min(Math.max(currentPage, 1), totalPages)
   const pageRows = useMemo(() => rows.slice((currentPageClamped - 1) * itemsPerPage, currentPageClamped * itemsPerPage), [rows, currentPageClamped])
-  const stats = { total: courses.length, active: courses.filter(c => c.status === 'Active').length, inactive: courses.filter(c => c.status === 'Inactive').length }
+  const stats = { total: scopedCourses.length, active: scopedCourses.filter(c => c.status === 'Active').length, inactive: scopedCourses.filter(c => c.status === 'Inactive').length }
   const hasFilters = Boolean(query || statusFilter)
   const clearFilters = () => { setQuery(''); setStatusFilter(''); setCurrentPage(1) }
   const studentCourseId = student => student.courseId ?? student.course?.id ?? student.academic?.courseId ?? student.academicInformation?.courseId ?? null
@@ -287,13 +291,14 @@ function CourseList() {
 }
 
 function CourseForm() {
+  const { selectedCollegeId } = useAcademic()
   const saveLock = useRef(false)
   const [persistedId, setPersistedId] = useState(null)
   const [existingCourses, setExistingCourses] = useState([])
   const { id } = useParams(), navigate = useNavigate()
   const [departments, setDepartments] = useState([])
   const [branches, setBranches] = useState([])
-  const [value, setValue] = useState(blank)
+  const [value, setValue] = useState(() => ({ ...blank, collegeId: selectedCollegeId || '' }))
   const [errors, setErrors] = useToastState({}, 'error')
   const [codeEdited, setCodeEdited] = useState(false)
   const [saved, setSaved] = useState(false)

@@ -121,30 +121,23 @@ export default function App() {
               />
             }
           >
-            <Route path="/dashboard" element={<Dashboard />} />
-            <Route path="/my-profile" element={<MyProfile />} />
-            <Route path="/settings" element={<Settings />} />
-          </Route>
-
-          {/* Faculty demo module is self-contained and does not require backend masters. */}
-          <Route element={<ProtectedRoute allowedRoles={[ROLES.ADMIN, ROLES.FACULTY]} />}>
-            <Route path="/faculty/*" element={<FacultyManagement />} />
-            <Route path="/faculty/leave-management" element={<FacultyLeaveManagement />} />
-            <Route path="/faculty/payroll" element={<Payroll />} />
-          </Route>
-
-          {/* Faculty / Operations backed modules */}
-          <Route element={<ProtectedRoute allowedRoles={[ROLES.ADMIN, ROLES.FACULTY]} />}>
             <Route element={<AcademicProvider><Outlet /></AcademicProvider>}>
+              <Route path="/dashboard" element={<Dashboard />} />
+              <Route path="/my-profile" element={<MyProfile />} />
+              <Route path="/settings" element={<Settings />} />
+              <Route path="/settings/academic-context" element={<Settings />} />
+
+              {/* Faculty demo module */}
+              <Route path="/faculty/*" element={<FacultyManagement />} />
+              <Route path="/faculty/leave-management" element={<FacultyLeaveManagement />} />
+              <Route path="/faculty/payroll" element={<Payroll />} />
+
+              {/* Faculty / Operations backed modules */}
               <Route path="/attendance/*" element={<Attendance />} />
               <Route path="/marks/*" element={<Marks />} />
               <Route path="/results/*" element={<Results />} />
-            </Route>
-          </Route>
 
-          {/* Administration - Admin Only */}
-          <Route element={<ProtectedRoute allowedRoles={[ROLES.ADMIN]} />}>
-            <Route element={<AcademicProvider><Outlet /></AcademicProvider>}>
+              {/* Administration - Admin Only */}
               <Route path="/college-institution-management" element={<CollegeInstitutionManagement />} />
               <Route path="/college-institution-management/add" element={<AddCollege />} />
               <Route path="/academic-year-management" element={<AcademicYearManagement />} />

@@ -7,6 +7,7 @@ import DashboardLayout from '../layouts/DashboardLayout'
 import { branchApi } from '../api/apiEndpoints'
 import { normalize as normalizeBranch } from './courseManagement/Branch'
 import { getDepartments, getCourses } from '../auth/collegeApi'
+import { useAcademic } from '../context/AcademicContext'
 import './Dashboard.css'
 
 const adminLinks = [
@@ -23,6 +24,7 @@ const listFrom = (response) => { const data = response?.data ?? response; return
 
 export default function Dashboard() {
   const role = getUserRole()
+  const { selectedCollege, selectedCollegeId } = useAcademic()
   const links = role === ROLES.ADMIN ? adminLinks : [{ to: '/my-subjects', label: 'My subjects', icon: FiBookOpen }]
   const [departments, setDepartments] = useState([])
   const [courses, setCourses] = useState([])
@@ -35,13 +37,26 @@ export default function Dashboard() {
     branchApi.getAll().then((rows) => setBranches(rows.map(normalizeBranch))).catch(() => setBranches([]))
   }, [role])
 
-  const activeBranches = branches.filter((branch) => branch.status === 'Active').length
-  const activeCourses = courses.filter((course) => (course.status === 'Active' || Number(course.status) === 1)).length
+  const scopedDepartments = departments.filter((dept) => {
+    const id = dept.collegeId ?? dept.college?.collegeId ?? dept.college?.id
+    return !selectedCollegeId || !id || String(id) === String(selectedCollegeId)
+  })
+  const scopedCourses = courses.filter((course) => {
+    const id = course.collegeId ?? course.college?.collegeId ?? course.college?.id
+    return !selectedCollegeId || !id || String(id) === String(selectedCollegeId)
+  })
+  const scopedBranches = branches.filter((branch) => {
+    const id = branch.collegeId ?? branch.college?.collegeId ?? branch.college?.id
+    return !selectedCollegeId || !id || String(id) === String(selectedCollegeId)
+  })
+
+  const activeBranches = scopedBranches.filter((branch) => branch.status === 'Active').length
+  const activeCourses = scopedCourses.filter((course) => (course.status === 'Active' || Number(course.status) === 1)).length
   const roleName = role ? `${role.charAt(0).toUpperCase()}${role.slice(1)}` : 'User'
 
   return <DashboardLayout><div className="erp-page dashboard-home">
-    <header className="erp-page-heading dashboard-hero"><div><p className="erp-eyebrow">Institution overview</p><h1>Good day, {roleName}</h1><p>Keep your academic operations moving from one connected workspace.</p></div><div className="dashboard-hero-mark"><FiHome aria-hidden="true" /><span>Pirnav Engineering College</span></div></header>
-    {role === ROLES.ADMIN && <section className="dashboard-kpis" aria-label="Academic overview"><article><span className="dashboard-kpi-icon"><FiHome /></span><div><small>Departments</small><strong>{departments.length}</strong><em>Configured units</em></div></article><article><span className="dashboard-kpi-icon"><FiBookOpen /></span><div><small>Active courses</small><strong>{activeCourses}</strong><em>{courses.length} total courses</em></div></article><article><span className="dashboard-kpi-icon"><FiGitBranch /></span><div><small>Active branches</small><strong>{activeBranches}</strong><em>{branches.length} total branches</em></div></article><article><span className="dashboard-kpi-icon"><FiUsers /></span><div><small>Academic coverage</small><strong>{new Set(branches.map((branch) => String(branch.departmentId))).size}</strong><em>Departments with branches</em></div></article></section>}
+    <header className="erp-page-heading dashboard-hero"><div><p className="erp-eyebrow">Institution overview</p><h1>Good day, {roleName}</h1><p>Keep your academic operations moving from one connected workspace.</p></div><div className="dashboard-hero-mark"><FiHome aria-hidden="true" /><span>{selectedCollege?.name || 'Pirnav Engineering College'}</span></div></header>
+    {role === ROLES.ADMIN && <section className="dashboard-kpis" aria-label="Academic overview"><article><span className="dashboard-kpi-icon"><FiHome /></span><div><small>Departments</small><strong>{scopedDepartments.length}</strong><em>Configured units</em></div></article><article><span className="dashboard-kpi-icon"><FiBookOpen /></span><div><small>Active courses</small><strong>{activeCourses}</strong><em>{scopedCourses.length} total courses</em></div></article><article><span className="dashboard-kpi-icon"><FiGitBranch /></span><div><small>Active branches</small><strong>{activeBranches}</strong><em>{scopedBranches.length} total branches</em></div></article><article><span className="dashboard-kpi-icon"><FiUsers /></span><div><small>Academic coverage</small><strong>{new Set(scopedBranches.map((branch) => String(branch.departmentId))).size}</strong><em>Departments with branches</em></div></article></section>}
     <section className="dashboard-workspace" aria-labelledby="quick-access-title"><div className="erp-panel dashboard-actions"><div className="erp-panel-heading"><div><p className="erp-eyebrow">Workspace</p><h2 id="quick-access-title">Quick access</h2></div><span className="dashboard-panel-note">{links.length} modules available</span></div><div className="erp-link-grid">
       {links.map(({ to, label, icon: Icon }) => <Link className="erp-link-card" to={to} key={to}><span className="erp-link-card__icon"><Icon aria-hidden="true" /></span><span><strong>{label}</strong><small>Open module</small></span><FiArrowRight aria-hidden="true" /></Link>)}
       <Link className="erp-link-card" to="/my-profile"><span className="erp-link-card__icon"><FiUser aria-hidden="true" /></span><span><strong>My profile</strong><small>Review personal details</small></span><FiArrowRight aria-hidden="true" /></Link>

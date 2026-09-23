@@ -1,8 +1,9 @@
 import { useEffect, useRef } from 'react'
 import { NavLink, useLocation } from 'react-router-dom'
-import { FiAward, FiBarChart2, FiBook, FiBookOpen, FiBriefcase, FiCalendar, FiCheckCircle, FiCheckSquare, FiChevronLeft, FiChevronRight, FiCreditCard, FiEdit3, FiFileText, FiGitBranch, FiGrid, FiHome, FiLayers, FiTrendingUp, FiUser, FiUserPlus, FiUsers, FiX } from 'react-icons/fi'
+import { FiAward, FiBarChart2, FiBook, FiBookOpen, FiBriefcase, FiCalendar, FiCheckCircle, FiCheckSquare, FiChevronLeft, FiChevronRight, FiCreditCard, FiEdit3, FiFileText, FiGitBranch, FiGrid, FiHome, FiLayers, FiSliders, FiTrendingUp, FiUser, FiUserPlus, FiUsers, FiX } from 'react-icons/fi'
 import { getUserRole } from '../auth/auth'
 import { ROLES } from '../auth/roles'
+import { useAcademic } from '../context/AcademicContext'
 
 const academicLinks = [
   { label: 'College', to: '/college-institution-management', icon: FiHome, tone: 'gold' },
@@ -29,6 +30,9 @@ export default function Sidebar({ open = false, onClose = () => {}, collapsed = 
   const userRole = getUserRole()
   const { pathname } = useLocation()
   const navigationRef = useRef(null)
+  const { selectedCollege } = useAcademic()
+
+  const collegeDisplayName = selectedCollege?.name || selectedCollege?.collegeName || 'Pirnav Engineering College'
 
   useEffect(() => {
     const navigation = navigationRef.current
@@ -45,7 +49,7 @@ export default function Sidebar({ open = false, onClose = () => {}, collapsed = 
     <aside className={`sidebar ${open ? 'is-open' : ''} ${collapsed ? 'is-collapsed' : ''}`} aria-label="Primary navigation">
       <div className="sidebar-brand">
         <span className="sidebar-brand__mark" aria-hidden="true"><svg viewBox="0 0 32 32"><path d="M4 12 16 5l12 7H4Z"/><path d="M7 14v10M12 14v10M20 14v10M25 14v10"/><path d="M4 25h24M2.5 28h27"/></svg></span>
-        <span className="sidebar-brand__copy"><strong>Pirnav Engineering College</strong><small>Digital Campus</small></span>
+        <span className="sidebar-brand__copy"><strong>{collegeDisplayName}</strong><small>Digital Campus</small></span>
         <button className="sidebar-collapse" onClick={onToggleCollapse} aria-label={collapsed ? 'Expand navigation' : 'Collapse navigation'} title={collapsed ? 'Expand navigation' : 'Collapse navigation'}>{collapsed ? <FiChevronRight /> : <FiChevronLeft />}</button>
         <button className="sidebar-close" onClick={onClose} aria-label="Close navigation"><FiX /></button>
       </div>
@@ -71,6 +75,8 @@ export default function Sidebar({ open = false, onClose = () => {}, collapsed = 
           <Item to="/attendance" icon={FiCheckSquare} tone="green" onNavigate={onClose}>Attendance</Item>
           <Item to="/marks" icon={FiEdit3} tone="orange" onNavigate={onClose}>Marks</Item>
           <Item to="/results" icon={FiBarChart2} tone="purple" onNavigate={onClose}>Results</Item>
+          <p className="sidebar-section-label">Settings</p>
+          <Item to="/settings" icon={FiSliders} tone="blue" onNavigate={onClose}>Academic Context</Item>
         </>}
         {[ROLES.FACULTY, ROLES.STUDENT].includes(userRole) && <><p className="sidebar-section-label">Academics</p><Item to="/my-subjects" icon={FiBookOpen} tone="blue" onNavigate={onClose}>My Subjects</Item>{userRole===ROLES.FACULTY&&<><Item to="/attendance/take" icon={FiCheckSquare} tone="green" onNavigate={onClose}>Take Attendance</Item><Item to="/marks/entry" icon={FiEdit3} tone="orange" onNavigate={onClose}>Enter Marks</Item></>}</>}
       </nav>
