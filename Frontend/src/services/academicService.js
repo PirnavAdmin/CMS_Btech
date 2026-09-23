@@ -110,27 +110,10 @@ class AcademicService {
           }
         }).filter(c => Boolean(c.name))
 
-        const standardColleges = [
-          { id: '1', collegeId: '1', name: 'Pirnav Engineering College', code: 'PEC', status: 'Active' },
-          { id: '2', collegeId: '2', name: 'VNR VJIET', code: 'VNR', status: 'Active' },
-        ]
-
-        const combined = [...mapped]
-        for (const std of standardColleges) {
-          const normStdName = std.name.toLowerCase().replace(/\s+/g, '')
-          const exists = combined.some(c => (c.name || '').toLowerCase().replace(/\s+/g, '') === normStdName || String(c.id) === String(std.id))
-          if (!exists) {
-            combined.push(std)
-          }
-        }
-
-        return combined
+        return mapped
       } catch (err) {
         console.warn('Fallback loading colleges:', err)
-        return [
-          { id: '1', collegeId: '1', name: 'Pirnav Engineering College', code: 'PEC', status: 'Active' },
-          { id: '2', collegeId: '2', name: 'VNR VJIET', code: 'VNR', status: 'Active' },
-        ]
+        return []
       }
     })
     return activeOnly ? filterActiveOnly(data) : data
@@ -159,38 +142,16 @@ class AcademicService {
             status: isCurrent ? 'Active' : (y.status ?? 'Archived'),
             isCurrent,
           }
-        })
+        }).filter(y => Boolean(y.name))
 
-        // Standard historical & upcoming academic years to ensure complete historical access
-        const standardYears = [
-          { id: 'ay-2026-2027', academicYearId: 'ay-2026-2027', name: '2026-2027', academicYearName: '2026-2027', startDate: '2026-06-01', endDate: '2027-05-31', status: 'Active', isCurrent: true },
-          { id: 'ay-2025-2026', academicYearId: 'ay-2025-2026', name: '2025-2026', academicYearName: '2025-2026', startDate: '2025-06-01', endDate: '2026-05-31', status: 'Archived', isCurrent: false },
-          { id: 'ay-2024-2025', academicYearId: 'ay-2024-2025', name: '2024-2025', academicYearName: '2024-2025', startDate: '2024-06-01', endDate: '2025-05-31', status: 'Archived', isCurrent: false },
-          { id: 'ay-2027-2028', academicYearId: 'ay-2027-2028', name: '2027-2028', academicYearName: '2027-2028', startDate: '2027-06-01', endDate: '2028-05-31', status: 'Upcoming', isCurrent: false },
-        ]
-
-        const combined = [...mapped]
-        for (const std of standardYears) {
-          const normStdName = std.name.replace(/\s+/g, '')
-          const exists = combined.some(y => (y.name || '').replace(/\s+/g, '') === normStdName)
-          if (!exists) {
-            combined.push(std)
-          }
-        }
-
-        // Sort: Active first, then by year descending
-        return combined.sort((a, b) => {
+        return mapped.sort((a, b) => {
           if (a.isCurrent && !b.isCurrent) return -1
           if (!a.isCurrent && b.isCurrent) return 1
           return String(b.name || '').localeCompare(String(a.name || ''))
         })
       } catch (err) {
         console.warn('Fallback loading academic years:', err)
-        return [
-          { id: 'ay-2026-2027', academicYearId: 'ay-2026-2027', name: '2026-2027', academicYearName: '2026-2027', startDate: '2026-06-01', endDate: '2027-05-31', status: 'Active', isCurrent: true },
-          { id: 'ay-2025-2026', academicYearId: 'ay-2025-2026', name: '2025-2026', academicYearName: '2025-2026', startDate: '2025-06-01', endDate: '2026-05-31', status: 'Archived', isCurrent: false },
-          { id: 'ay-2024-2025', academicYearId: 'ay-2024-2025', name: '2024-2025', academicYearName: '2024-2025', startDate: '2024-06-01', endDate: '2025-05-31', status: 'Archived', isCurrent: false },
-        ]
+        return []
       }
     })
     return activeOnly ? filterActiveOnly(data) : data

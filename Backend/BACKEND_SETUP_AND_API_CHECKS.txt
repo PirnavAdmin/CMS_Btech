@@ -1,0 +1,331 @@
+BACKEND BACKEND TASKS - SETUP AND API CHECKING GUIDE
+=================================================
+
+SCOPE
+-----
+Only Backend-owned backend/database gaps were changed. No frontend file was
+modified and no existing controller/module was removed.
+
+AUDIT RESULT
+------------
+1. Users database design
+   Existing: users, roles, and user_roles tables were present.
+   Result: preserved the normalized role design and added an idempotent setup
+   script plus collation-safe password-reset lookup procedures.
+
+2. Forgot Password API
+   Existing: POST /api/v1/auth/forgot-password created an OTP record.
+   Missing: frontend OTP generation did not validate the user, and
+   POST /api/otp/reset-password did not exist.
+   Result: user validation and the reset endpoint were added.
+
+3. College CRUD APIs
+   Existing: College repository/service and most stored procedures existed.
+   Missing: the CRUD controller, dedicated status procedure, and frontend
+   payload compatibility.
+   Result: /api/v1/colleges endpoints were added. They accept both canonical
+   DTO names (collegeName, collegeCode) and current frontend names
+   (name, code). Status accepts 0/1 or active/inactive.
+
+4. Single Active Academic Year
+   Existing: controller/service existed.
+   Problem: the actual EF repository created every new year as active and did
+   not deactivate the old active year.
+   Result: new years are Upcoming; activation uses a serializable transaction,
+   archives the previous active year, and the SQL script adds a unique database
+   guard that permits at most one active year.
+
+5. Branch table/API
+   Existing: controller/service/repository existed.
+   Problem: the dump's branch procedures used specialization, but the table
+   omitted it; older scripts used procedure names that did not match the
+   repository. The delete repository also treated a zero-row update as success.
+   Result: a schema-safe script fixes specialization/duration, recreates the
+   exact sp_branch_* procedures, and delete now checks AffectedRows.
+
+6. Course CRUD APIs
+   Existing: courses table and a partial model existed.
+   Missing: full model fields, DTOs, repository, service, controller, DI, and
+   stored procedures.
+   Result: Add/List/Details/Edit/Status APIs were added.
+
+
+STEP 1 - DATABASE
+-----------------
+Open MySQL Workbench and connect to the same schema used by appsettings.json.
+
+If cms_btech_db_dump (1).sql is not imported yet:
+1. Server > Data Import.
+2. Select Import from Self-Contained File.
+3. Choose cms_btech_db_dump (1).sql.
+4. Set the target schema to the same database used by the backend.
+5. Start Import.
+
+Then run these backend files in this exact order:
+
+Database/BackendTasks/01_Users_And_ForgotPassword.sql
+Database/BackendTasks/02_College_CRUD.sql
+Database/BackendTasks/03_Single_Active_AcademicYear.sql
+Database/BackendTasks/05_Course_CRUD.sql
+Database/BackendTasks/04_Branch.sql
+
+Do not run Database/Branch_CourseStructure_SP.sql for the Backend Branch APIs. It
+contains legacy procedure names that do not match the current repository.
+
+Verify:
+
+SELECT COUNT(*) AS active_count
+FROM academicyears
+WHERE status = 1 AND is_archived = 0 AND deleted_at IS NULL;
+
+Expected: active_count is 0 or 1, never greater than 1.
+
+SHOW PROCEDURE STATUS
+WHERE Db = DATABASE()
+  AND Name REGEXP '^(sp_College_|sp_course_|sp_branch_|sp_AcademicYear_|sp_user_)';
+
+
+STEP 2 - BACKEND CONFIGURATION
+------------------------------
+Open appsettings.json and set ConnectionStrings:DefaultConnection to your real
+MySQL host, port, schema, user, and password. Do not commit a production
+password to source control.
+
+JWT Key must remain at least 32 bytes long.
+
+
+STEP 3 - BUILD AND RUN (WINDOWS POWERSHELL)
+-------------------------------------------
+Open PowerShell in the folder containing BTech.csproj:
+
+dotnet --version
+dotnet clean
+dotnet restore
+dotnet build
+dotnet run
+
+Use the HTTPS/HTTP URL printed by dotnet run. Open:
+
+<backend-url>/swagger/index.html
+
+Swagger is enabled in Development and Release/Production in this package.
+
+IMPORTANT: rebuild this source. Do not start an old copied BTech.dll/BTech.exe,
+because an old compiled binary cannot contain the new controllers.
+
+
+STEP 4 - SWAGGER VISIBILITY CHECK
+---------------------------------
+The following existing API groups should remain visible:
+
+AcademicLevel, AcademicYear, Auth, AuthorizationTest, Branch, College,
+Colleges, CollegeSettings, CollegeUserMappings, Courses, CourseStructure,
+CourseSemesterMapping, Department, OTP, Profile, Roles, SectionAssignments,
+Sections, SubjectAssignment, and UserRoleMapping.
+
+New task groups/routes:
+
+POST   /api/v1/colleges
+GET    /api/v1/colleges
+GET    /api/v1/colleges/search
+GET    /api/v1/colleges/{id}
+PUT    /api/v1/colleges/{id}
+PATCH  /api/v1/colleges/{id}/status
+
+POST   /api/v1/courses
+GET    /api/v1/courses
+GET    /api/v1/courses/{id}
+PUT    /api/v1/courses/{id}
+PATCH  /api/v1/courses/{id}/status
+
+POST   /api/otp/reset-password
+
+If a controller is missing from Swagger:
+1. Stop the running backend.
+2. Confirm you opened this updated folder, not an older extracted copy.
+3. Run dotnet clean, dotnet build, and dotnet run.
+4. Refresh Swagger with Ctrl+F5.
+
+
+STEP 5 - LOGIN AND AUTHORIZE
+----------------------------
+Use POST /api/v1/auth/login with an active database user:
+
+{
+  "loginId": "ADM001",
+  "password": "your-real-password"
+}
+
+Copy data.accessToken. In Swagger click Authorize and enter:
+
+Bearer <access-token>
+
+
+STEP 6 - CHECK FORGOT PASSWORD FLOW
+-----------------------------------
+A. Validate/initiate by Employee ID, email, or mobile:
+
+POST /api/v1/auth/forgot-password
+{
+  "identifier": "ADM001"
+}
+
+B. Frontend-compatible OTP generation:
+
+POST /api/otp/generate
+{
+  "email": "rajesh.kumar@btechcollege.edu.in",
+  "mobile": "",
+  "purpose": "LOGIN"
+}
+
+Use the returned testing OTP:
+
+POST /api/otp/verify
+{
+  "email": "rajesh.kumar@btechcollege.edu.in",
+  "mobile": "",
+  "otpCode": "123456",
+  "purpose": "LOGIN"
+}
+
+POST /api/otp/reset-password
+{
+  "contact": "rajesh.kumar@btechcollege.edu.in",
+  "otp": "123456",
+  "password": "NewSecurePassword@123"
+}
+
+Replace 123456 with the actual generated value. The OTP is returned only for
+Swagger/development testing. Connect an email/SMS provider and remove the OTP
+from API responses before production use.
+
+
+STEP 7 - CHECK COLLEGE CRUD
+---------------------------
+POST /api/v1/colleges
+
+Frontend-compatible payload:
+{
+  "name": "Andhra Engineering College",
+  "code": "AEC001",
+  "type": "Engineering",
+  "university": "JNTU Kakinada",
+  "address": "Main Road",
+  "city": "Vijayawada",
+  "state": "Andhra Pradesh",
+  "country": "India",
+  "pincode": "520001",
+  "contact": "9876543210",
+  "email": "office@aec.edu.in",
+  "website": "https://aec.edu.in"
+}
+
+Then check:
+
+GET /api/v1/colleges
+GET /api/v1/colleges/{returned-collegeId}
+GET /api/v1/colleges/search?Query=Andhra
+PUT /api/v1/colleges/{returned-collegeId}  (use the same payload shape)
+
+PATCH /api/v1/colleges/{returned-collegeId}/status
+{
+  "status": "inactive"
+}
+
+Both "active"/"inactive" and 1/0 are accepted.
+
+
+STEP 8 - CHECK SINGLE ACTIVE ACADEMIC YEAR
+-------------------------------------------
+GET /api/v1/academic-years
+
+POST /api/v1/academic-years
+{
+  "academicYearName": "2034-35",
+  "startDate": "2034-06-01",
+  "endDate": "2035-05-31"
+}
+
+The new row must return status 0 (Upcoming).
+
+PATCH /api/v1/academic-years/{new-id}/activate
+
+Run the active_count SQL from Step 1 again. Expected: 1.
+
+
+STEP 9 - CHECK COURSE CRUD
+---------------------------
+Use valid collegeId and departmentId values from your database.
+
+POST /api/v1/courses
+{
+  "collegeId": 1,
+  "departmentId": 1,
+  "courseCode": "MTECH",
+  "courseName": "Master of Technology",
+  "courseShortName": "M.Tech",
+  "courseType": "Postgraduate",
+  "durationYears": 2,
+  "totalSemesters": 4,
+  "eligibility": "B.E. or B.Tech",
+  "description": "Postgraduate engineering programme"
+}
+
+Then check:
+
+GET /api/v1/courses
+GET /api/v1/courses/{returned-courseId}
+PUT /api/v1/courses/{returned-courseId}
+PATCH /api/v1/courses/{returned-courseId}/status
+{
+  "status": "inactive"
+}
+
+
+STEP 10 - CHECK BRANCH APIs
+----------------------------
+Use the numeric courseId returned by Course CRUD.
+
+POST /api/v1/branches
+{
+  "courseId": 1,
+  "branchCode": "AIML",
+  "branchName": "Artificial Intelligence and Machine Learning",
+  "shortName": "AI & ML",
+  "specialization": "Artificial Intelligence",
+  "departmentId": 1,
+  "branchType": "Specialization",
+  "duration": 4,
+  "totalSemesters": 8,
+  "intakeCapacity": 60,
+  "startingAcademicYearId": 2,
+  "description": "AI and machine learning specialization",
+  "status": 1
+}
+
+Then check:
+
+GET /api/v1/branches
+GET /api/v1/branches/{returned-branchId}
+GET /api/v1/branches/course/{courseId}
+PUT /api/v1/branches/{returned-branchId}
+DELETE /api/v1/branches/{returned-branchId}
+
+
+FRONTEND INTEGRATION STATUS (NO FRONTEND FILES CHANGED)
+--------------------------------------------------------
+College and Academic Year backend paths/payloads are compatible with the
+provided frontend contract.
+
+The provided Course.jsx and Branch.jsx pages currently read/write browser
+localStorage and do not call any backend API. Therefore their screens cannot
+show database data until the frontend team connects them to /api/v1/courses
+and /api/v1/branches. This cannot be solved only inside the backend while also
+leaving frontend code unchanged.
+
+The provided frontend also contains two different ngrok targets: VITE_API_BASE_URL
+and the Vite proxy target. Both must point to the same running backend during
+integration, and the frontend must use a real JWT instead of demo login mode.
+
+No frontend source file was modified in this delivery.

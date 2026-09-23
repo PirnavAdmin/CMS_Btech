@@ -1,0 +1,40 @@
+{
+  "engine": "8.0.46-0ubuntu0.24.04.4",
+  "fresh_import": true,
+  "first_application": true,
+  "second_application": true,
+  "row_counts_before": {
+    "colleges": 28,
+    "departments": 16,
+    "courses": 13,
+    "branches": 14,
+    "semesters": 98,
+    "students": 3,
+    "studentadmissions": 22,
+    "student_profiles": 3,
+    "employee_profiles": 5
+  },
+  "row_counts_after": {
+    "colleges": 28,
+    "departments": 16,
+    "courses": 13,
+    "branches": 14,
+    "semesters": 98,
+    "students": 3,
+    "studentadmissions": 22,
+    "student_profiles": 3,
+    "employee_profiles": 5
+  },
+  "row_counts_after_rerun": {
+    "colleges": 28,
+    "departments": 16,
+    "courses": 13,
+    "branches": 14,
+    "semesters": 98,
+    "students": 3,
+    "studentadmissions": 22,
+    "student_profiles": 3,
+    "employee_profiles": 5
+  },
+  "row_counts_preserved": true
+}
