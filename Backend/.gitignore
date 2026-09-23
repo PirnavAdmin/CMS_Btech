@@ -1,7 +1,15 @@
 .vs/
 bin/
 obj/
-Logs/*.log
-Uploads/*
+
+Logs/
+Uploads/
 !Uploads/.gitkeep
+
 appsettings.Local.json
+appsettings.Development.json
+
+.env
+*.user
+*.suo
+Tests/test-password-hash.txt
