@@ -252,14 +252,14 @@ export default function CreditsManagement() {
                             }}
                           />
                         ) : (
-                          <span style={{ fontWeight: 700, color: '#2563eb' }}>{item.credits} Credits</span>
+                          <span style={{ fontWeight: 700, color: '#0F172A' }}>{item.credits} Credits</span>
                         )}
                       </td>
                       <td>{item.coursesCount} Courses</td>
                       <td>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                           <div style={{ width: '120px', height: '6px', background: '#e2e8f0', borderRadius: '4px', overflow: 'hidden' }}>
-                            <div style={{ width: `${(item.credits / 26) * 100}%`, height: '100%', background: '#2563eb' }} />
+                            <div style={{ width: `${(item.credits / 26) * 100}%`, height: '100%', background: '#0F172A' }} />
                           </div>
                           <small style={{ color: '#64748b' }}>{Math.round((item.credits / currentData.totalProgramCredits) * 100)}% of Total</small>
                         </div>
@@ -302,7 +302,7 @@ export default function CreditsManagement() {
                     { grade: 'AB', point: 0, marks: 'Absent', desc: 'Absent', example: '0 Points' },
                   ].map(row => (
                     <tr key={row.grade}>
-                      <td><strong style={{ fontSize: '1.05rem', color: row.point >= 7 ? '#16a34a' : row.point === 0 ? '#dc2626' : '#2563eb' }}>{row.grade}</strong></td>
+                      <td><strong style={{ fontSize: '1.05rem', color: row.point >= 7 ? '#16a34a' : row.point === 0 ? '#dc2626' : '#0F172A' }}>{row.grade}</strong></td>
                       <td><strong>{row.point}</strong></td>
                       <td>{row.marks}</td>
                       <td>{row.desc}</td>

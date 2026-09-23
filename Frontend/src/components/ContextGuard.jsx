@@ -1,9 +1,18 @@
 import React, { useState } from 'react'
-import { FiHome, FiCalendar, FiCheckCircle, FiArrowRight } from 'react-icons/fi'
+import { Link, useLocation } from 'react-router-dom'
+import { FiHome, FiCalendar, FiCheckCircle, FiArrowRight, FiPlusCircle } from 'react-icons/fi'
 import { useAcademic } from '../context/AcademicContext'
 import './ContextGuard.css'
 
+const SETUP_ROUTES = [
+  '/college-institution-management',
+  '/academic-year-management',
+  '/department-management',
+  '/settings',
+]
+
 export default function ContextGuard({ children }) {
+  const location = useLocation()
   const {
     loading,
     colleges,
@@ -18,6 +27,12 @@ export default function ContextGuard({ children }) {
   const [tempCollegeId, setTempCollegeId] = useState('')
   const [tempYearId, setTempYearId] = useState('')
   const [saving, setSaving] = useState(false)
+
+  // Allow administrative management routes to be accessed even without established context
+  const isSetupRoute = SETUP_ROUTES.some((route) => location.pathname.startsWith(route))
+  if (isSetupRoute) {
+    return children
+  }
 
   // Context is valid if both college and academic year are resolved
   const hasValidContext = Boolean(
@@ -39,6 +54,9 @@ export default function ContextGuard({ children }) {
   if (hasValidContext) {
     return children
   }
+
+  const hasColleges = Array.isArray(colleges) && colleges.length > 0
+  const hasYears = Array.isArray(academicYears) && academicYears.length > 0
 
   // If no valid context is available, show the setup experience
   const handleProceed = async (e) => {
@@ -75,40 +93,58 @@ export default function ContextGuard({ children }) {
             <span>
               <FiHome aria-hidden="true" /> College / Institution
             </span>
-            <select
-              value={tempCollegeId || selectedCollegeId || (colleges[0] ? String(colleges[0].id ?? colleges[0].collegeId) : '')}
-              onChange={(e) => setTempCollegeId(e.target.value)}
-              required
-            >
-              {colleges.map((c) => {
-                const id = String(c.id ?? c.collegeId)
-                return (
-                  <option key={id} value={id}>
-                    {c.name || c.collegeName || 'College'}
-                  </option>
-                )
-              })}
-            </select>
+            {hasColleges ? (
+              <select
+                value={tempCollegeId || selectedCollegeId || (colleges[0] ? String(colleges[0].id ?? colleges[0].collegeId) : '')}
+                onChange={(e) => setTempCollegeId(e.target.value)}
+                required
+              >
+                {colleges.map((c) => {
+                  const id = String(c.id ?? c.collegeId)
+                  return (
+                    <option key={id} value={id}>
+                      {c.name || c.collegeName || 'College'}
+                    </option>
+                  )
+                })}
+              </select>
+            ) : (
+              <div className="context-guard-empty-box">
+                <span>No colleges found.</span>
+                <Link to="/college-institution-management/add" className="context-guard-link-btn">
+                  <FiPlusCircle /> Add College
+                </Link>
+              </div>
+            )}
           </label>
 
           <label className="context-guard-field">
             <span>
               <FiCalendar aria-hidden="true" /> Academic Year
             </span>
-            <select
-              value={tempYearId || selectedAcademicYearId || (academicYears[0] ? String(academicYears[0].id ?? academicYears[0].academicYearId) : '')}
-              onChange={(e) => setTempYearId(e.target.value)}
-              required
-            >
-              {academicYears.map((y) => {
-                const id = String(y.id ?? y.academicYearId)
-                return (
-                  <option key={id} value={id}>
-                    {y.academicYearName || y.name || 'Academic Year'} {y.isCurrent ? '(Current)' : ''}
-                  </option>
-                )
-              })}
-            </select>
+            {hasYears ? (
+              <select
+                value={tempYearId || selectedAcademicYearId || (academicYears[0] ? String(academicYears[0].id ?? academicYears[0].academicYearId) : '')}
+                onChange={(e) => setTempYearId(e.target.value)}
+                required
+              >
+                {academicYears.map((y) => {
+                  const id = String(y.id ?? y.academicYearId)
+                  return (
+                    <option key={id} value={id}>
+                      {y.academicYearName || y.name || 'Academic Year'} {y.isCurrent ? '(Current)' : ''}
+                    </option>
+                  )
+                })}
+              </select>
+            ) : (
+              <div className="context-guard-empty-box">
+                <span>No academic years found.</span>
+                <Link to="/academic-year-management" className="context-guard-link-btn">
+                  <FiPlusCircle /> Manage Academic Years
+                </Link>
+              </div>
+            )}
           </label>
 
           <div className="context-guard-hint">
@@ -119,7 +155,7 @@ export default function ContextGuard({ children }) {
           <button
             type="submit"
             className="context-guard-btn"
-            disabled={saving || !colleges.length || !academicYears.length}
+            disabled={saving || !hasColleges || !hasYears}
           >
             {saving ? 'Setting up workspace...' : 'Continue to Dashboard'} <FiArrowRight />
           </button>

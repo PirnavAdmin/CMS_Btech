@@ -1,8 +1,8 @@
 /* Shared dark-mode contrast for directory tools, record banners and dialogs. */
 :root[data-theme="dark"] {
-  --text-on-accent: #07131f;
-  --hero-dark: #10263d;
-  --hero-blue: #173d58;
+  --text-on-accent: #FFFFFF;
+  --hero-dark: #0F172A;
+  --hero-blue: #1E293B;
 }
 :root[data-theme="dark"] .filter-disclosure,
 :root[data-theme="dark"] .filter-disclosure__bar,
@@ -22,17 +22,17 @@
 }
 /* Bright accents need dark text, including hover states. */
 :root[data-theme="dark"] :is(.btn, .cm-button, .primary-button, .module-primary-action, .semester-primary,
-.section-primary, .ac-primary, .settings-button, .sa-primary, .p-primary, .password-modal__primary):not(.secondary):not(.danger):not(.btn-secondary):not(.btn-danger):not(.btn-ghost),
+.section-primary, .ac-primary, .settings-button, .sa-primary, .p-primary, .password-modal__primary, .ay-btn.solid, [class*="-primary-btn"]):not(.secondary):not(.danger):not(.btn-secondary):not(.btn-danger):not(.btn-ghost),
 :root[data-theme="dark"] .logout-confirmation__confirm {
-  color: var(--text-on-accent) !important;
-  background: var(--brand) !important;
-  border-color: var(--brand) !important;
+  color: #FFFFFF !important;
+  background: #8782BC !important;
+  border-color: #8782BC !important;
 }
 :root[data-theme="dark"] :is(.btn, .cm-button, .primary-button, .module-primary-action, .semester-primary,
-.section-primary, .ac-primary, .settings-button, .sa-primary, .p-primary, .password-modal__primary):not(.secondary):not(.danger):not(.btn-secondary):not(.btn-danger):not(.btn-ghost):hover,
+.section-primary, .ac-primary, .settings-button, .sa-primary, .p-primary, .password-modal__primary, .ay-btn.solid, [class*="-primary-btn"]):not(.secondary):not(.danger):not(.btn-secondary):not(.btn-danger):not(.btn-ghost):hover,
 :root[data-theme="dark"] .logout-confirmation__confirm:hover {
-  background: var(--brand-hover) !important;
-  border-color: var(--brand-hover) !important;
+  background: #756FB2 !important;
+  border-color: #756FB2 !important;
 }
 :root[data-theme="dark"] :is(.section-assignment-panel, .section-form-card, .compact-summary,
 .department-profile-card, .department-details__grid > div, .department-profile-card .department-details__identity,
@@ -110,14 +110,192 @@
 :root[data-theme="dark"] .page-content :is(table, thead, tbody, tr, th, td) {
   border-color: var(--border) !important;
 }
-:root[data-theme="dark"] .page-content thead :is(th, td) {
-  color: var(--text-primary) !important;
-  background: var(--surface-raised) !important;
+:root[data-theme="dark"] .page-content thead :is(th, td),
+:root[data-theme="dark"] .page-content :is(table, .cm-table, .course-advanced-table, .branch-table, .department-table-wrap table, .semester-table, .section-table, .ay .table table, .sa-table-wrap table, .sm-table, .em-table) thead th,
+:root[data-theme="dark"] .page-content :is(table, .cm-table, .course-advanced-table, .branch-table, .department-table-wrap table, .semester-table, .section-table, .ay .table table, .sa-table-wrap table, .sm-table, .em-table) th {
+  color: #FFFFFF !important;
+  background: #8782BC !important;
+  border-bottom: 2px solid #756FB2 !important;
 }
 :root[data-theme="dark"] .page-content tbody tr:hover > :is(th, td) {
   background: var(--surface-soft) !important;
 }
 /* Preserve intentionally high-contrast text on the dark blue record banners. */
-:root[data-theme="dark"] :is(.view-modal-banner, .cm-profile-banner, .sa-profile-header, .sp-hero, .course-detail-hero, .branch-detail-hero) :is(h1, h2, h3, h4, p, small, strong, span) {
+:root[data-theme="dark"] :is(.view-modal-banner, .cm-profile-banner, .sa-profile-header, .sp-hero, .course-detail-hero, .branch-detail-hero, .ay .hero) :is(h1, h2, h3, h4, p, small, strong, span) {
   color: #fff !important;
 }
+
+/* Dark Mode Universal Secondary, Toolbar, Export, and Filter Buttons */
+:root[data-theme="dark"] :where(
+  .export-button,
+  .filter-disclosure__toggle,
+  .filter-disclosure__clear,
+  .btn-secondary,
+  .secondary-button,
+  .cm-secondary-btn,
+  .cm-button.secondary,
+  .semester-primary.secondary,
+  .section-primary.secondary,
+  .section-back-button,
+  .sa-secondary,
+  .sa-back,
+  .p-secondary,
+  .profile-button.secondary,
+  .ac-secondary,
+  .fs-filter-actions button,
+  .course-clear,
+  .branch-clear,
+  .section-clear,
+  .ay-btn:not(.solid),
+  .ay .ay-btn:not(.solid),
+  .filter-btn,
+  .filters button
+) {
+  background: #1E293B !important;
+  color: #E2E8F0 !important;
+  border-color: #334155 !important;
+}
+
+:root[data-theme="dark"] :where(
+  .export-button,
+  .filter-disclosure__toggle,
+  .filter-disclosure__clear,
+  .btn-secondary,
+  .secondary-button,
+  .cm-secondary-btn,
+  .cm-button.secondary,
+  .semester-primary.secondary,
+  .section-primary.secondary,
+  .section-back-button,
+  .sa-secondary,
+  .sa-back,
+  .p-secondary,
+  .profile-button.secondary,
+  .ac-secondary,
+  .fs-filter-actions button,
+  .course-clear,
+  .branch-clear,
+  .section-clear,
+  .ay-btn:not(.solid),
+  .ay .ay-btn:not(.solid),
+  .filter-btn,
+  .filters button
+):hover:not(:disabled) {
+  background: #273549 !important;
+  color: #8782BC !important;
+  border-color: #0F172A !important;
+}
+
+:root[data-theme="dark"] .sidebar {
+  background: #0B0F17 !important;
+  border-right: 1px solid #1E293B !important;
+}
+:root[data-theme="dark"] .sidebar nav>a.active,
+:root[data-theme="dark"] .sidebar-link.active {
+  background: #8782BC !important;
+  color: #FFFFFF !important;
+  border-left: none !important;
+}
+:root[data-theme="dark"] .sidebar nav>a.active svg,
+:root[data-theme="dark"] .sidebar-link.active svg {
+  color: #FFFFFF !important;
+}
+
+
+/* Subject, Elective, Credit Management Dark Theme Support */
+:root[data-theme="dark"] :is(.sm-screen, .em-screen, .cm-screen) {
+  color: var(--text-primary);
+}
+:root[data-theme="dark"] :is(.sm-kpi-card, .em-kpi-card, .cm-kpi-card, .sm-card, .em-card, .cm-card, .sm-modal, .em-modal, .cm-modal, .sm-preview, .sm-details-section > div) {
+  background: var(--surface) !important;
+  border-color: var(--border) !important;
+  color: var(--text-primary) !important;
+}
+:root[data-theme="dark"] :is(.sm-card-header, .em-toolbar, .cm-card-header, .sm-modal-header, .sm-modal-footer, .sm-filter-grid, .em-tabs, .cm-tabs) {
+  background: var(--surface-soft) !important;
+  border-color: var(--border) !important;
+  color: var(--text-primary) !important;
+}
+:root[data-theme="dark"] :is(.sm-search-wrap, .em-search, .sm-select, .em-filters select, .sm-field input, .sm-field select, .sm-field textarea, .sm-active-year-field) {
+  background: var(--surface) !important;
+  border-color: var(--border) !important;
+  color: var(--text-primary) !important;
+}
+:root[data-theme="dark"] :is(.sm-btn--primary, .em-header-actions .sm-btn--primary) {
+  background: #8782BC !important;
+  color: #FFFFFF !important;
+  border-color: #8782BC !important;
+}
+:root[data-theme="dark"] :is(.sm-btn--primary, .em-header-actions .sm-btn--primary):hover {
+  background: #756FB2 !important;
+  border-color: #756FB2 !important;
+}
+:root[data-theme="dark"] :is(.sm-btn--secondary, .sm-icon-btn, .em-tab-btn:not(.active), .cm-tab-btn:not(.active)) {
+  background: var(--surface-raised) !important;
+  color: var(--text-primary) !important;
+  border-color: var(--border) !important;
+}
+:root[data-theme="dark"] :is(.em-tab-btn.active, .cm-tab-btn.active) {
+  color: #8782BC !important;
+  border-bottom-color: #8782BC !important;
+}
+:root[data-theme="dark"] :is(.sm-table td, .em-table td, .cm-table td) {
+  background: var(--surface) !important;
+  color: var(--text-secondary) !important;
+  border-color: var(--border) !important;
+}
+:root[data-theme="dark"] :is(.sm-table tr:hover td, .em-table tr:hover td, .cm-table tr:hover td) {
+  background: var(--surface-soft) !important;
+}
+:root[data-theme="dark"] :is(.sm-code-badge, .cm-cat-code) {
+  background: var(--surface-soft) !important;
+  color: var(--text-primary) !important;
+  border-color: var(--border) !important;
+}
+:root[data-theme="dark"] :is(.sm-kpi-content strong, .em-kpi-content strong, .cm-kpi-card strong, .cm-cat-name, .cm-cat-credits, .sm-directory-title h2, .sm-header h1, .em-header h1, .cm-header h1) {
+  color: var(--text-primary) !important;
+}
+:root[data-theme="dark"] :is(.sm-kpi-content small, .em-kpi-content small, .cm-kpi-card small, .sm-directory-title p, .sm-header p, .em-header p, .cm-header p, .sm-details-section span) {
+  color: var(--text-muted) !important;
+}
+
+
+/* All Table Headers in Dark Mode: Lavender Background with Crisp White Text */
+:root[data-theme="dark"] :is(
+  table th,
+  table thead th,
+  .page-content th,
+  .page-content thead th,
+  .section-table th,
+  .section-table thead th,
+  .semester-table th,
+  .semester-table thead th,
+  .cm-table th,
+  .cm-table thead th,
+  .course-advanced-table th,
+  .course-advanced-table thead th,
+  .branch-table th,
+  .branch-table thead th,
+  .department-table-wrap th,
+  .department-table-wrap table th,
+  .ay .table th,
+  .ay .table table th,
+  .sa-table-wrap th,
+  .sa-table-wrap table th,
+  .sm-table th,
+  .sm-table thead th,
+  .em-table th,
+  .em-table thead th,
+  .marks-table th,
+  .attendance-table th,
+  .payroll-table th,
+  .faculty-table th,
+  .fees-table th
+) {
+  background: #8782BC !important;
+  color: #FFFFFF !important;
+  border-color: #756FB2 !important;
+  border-bottom: 2px solid #6E68A8 !important;
+  font-weight: 800 !important;
+}
+

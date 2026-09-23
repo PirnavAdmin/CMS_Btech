@@ -40,7 +40,7 @@
   padding: 3px 8px;
   border-radius: 6px;
   background: var(--brand-subtle, rgba(37, 99, 235, 0.1));
-  color: var(--brand, #2563eb);
+  color: var(--brand, #8782BC);
   text-transform: uppercase;
   letter-spacing: 0.5px;
 }
@@ -68,7 +68,7 @@
 }
 
 .acs-label svg {
-  color: var(--brand, #2563eb);
+  color: var(--brand, #8782BC);
 }
 
 .acs-req {
@@ -155,7 +155,7 @@
   font-size: 14px;
   font-weight: 600;
   color: #ffffff;
-  background: var(--brand, #2563eb);
+  background: var(--brand, #8782BC);
   border: none;
   border-radius: 8px;
   cursor: pointer;
@@ -163,7 +163,7 @@
 }
 
 .acs-apply-btn:hover:not(:disabled) {
-  background: var(--brand-hover, #1d4ed8);
+  background: var(--brand-hover, #8782BC);
   transform: translateY(-1px);
 }
 

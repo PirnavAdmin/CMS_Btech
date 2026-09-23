@@ -22,7 +22,7 @@
 }
 
 .header-academic-year.is-historical > summary {
-  border-color: #f59e0b;
+  border-color: #8B82C7;
   background: rgba(245, 158, 11, 0.05);
 }
 
@@ -37,7 +37,7 @@
 }
 
 .header-academic-year.is-historical > summary > svg {
-  color: #d97706;
+  color: #8782BC;
 }
 
 .header-academic-year__content {
@@ -90,7 +90,7 @@
 }
 
 .header-academic-year.is-historical .header-academic-year__progress i {
-  background: #f59e0b;
+  background: #8B82C7;
 }
 
 .header-academic-year__progress b {

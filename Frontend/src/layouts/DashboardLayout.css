@@ -2,6 +2,57 @@
    Account Menu Dropdown & Header
    ========================================================================== */
 
+.dashboard-header__title {
+  margin: 0;
+  font-size: 1.45rem;
+  font-weight: 750;
+  color: var(--text-primary, #0F172A);
+  letter-spacing: -0.02em;
+}
+
+.notification-btn {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  border: 1px solid var(--border, #E2E8F0);
+  border-radius: var(--radius-sm, 8px);
+  background: var(--surface, #FFFFFF);
+  color: var(--text-secondary, #475569);
+  cursor: pointer;
+  transition: all 0.18s ease;
+}
+
+.notification-btn:hover {
+  border-color: var(--brand, #8782BC);
+  color: #8782BC;
+  background: #F9F8FD;
+}
+
+.notification-btn svg {
+  width: 18px;
+  height: 18px;
+}
+
+.notification-badge {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  display: grid;
+  place-items: center;
+  min-width: 17px;
+  height: 17px;
+  padding: 0 4px;
+  border-radius: 99px;
+  background: #F43F5E;
+  color: #FFFFFF;
+  font-size: 10px;
+  font-weight: 800;
+  border: 2px solid var(--surface, #FFFFFF);
+}
+
 .account-menu {
   position: relative;
   display: inline-block;
@@ -11,12 +62,14 @@
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 6px 12px;
-  border-radius: 8px;
+  padding: 4px 10px;
+  border: 1px solid var(--border, #E2E8F0);
+  border-radius: 12px;
   cursor: pointer;
   list-style: none;
   user-select: none;
-  transition: background 0.15s ease;
+  background: var(--surface, #FFFFFF);
+  transition: background 0.15s ease, border-color 0.15s ease;
 }
 
 .account-menu summary::-webkit-details-marker {
@@ -24,22 +77,23 @@
 }
 
 .account-menu summary:hover {
-  background: rgba(6, 46, 89, 0.05);
+  border-color: var(--brand, #8782BC);
+  background: #F9F8FD;
 }
 
 .account-avatar {
   display: grid;
   place-items: center;
-  width: 36px;
-  height: 36px;
+  width: 34px;
+  height: 34px;
   border-radius: 50%;
-  background: #e8f3fc;
-  color: #1970b3;
+  background: #0F172A;
+  color: #8782BC;
 }
 
 .account-avatar svg {
-  width: 20px;
-  height: 20px;
+  width: 18px;
+  height: 18px;
   fill: none;
   stroke: currentColor;
   stroke-width: 2;
@@ -52,14 +106,14 @@
 }
 
 .account-menu summary strong {
-  color: #062e59;
-  font-size: 0.88rem;
-
+  color: var(--text-primary, #0F172A);
+  font-size: 0.86rem;
+  font-weight: 700;
 }
 
 .account-menu summary small {
-  color: #5e7897;
-  font-size: 0.72rem;
+  color: var(--text-muted, #64748B);
+  font-size: 0.7rem;
 }
 
 .account-menu__chevron {
@@ -86,7 +140,7 @@
   padding: 6px;
   border-radius: 12px;
   background: var(--surface, #fff);
-  box-shadow: 0 10px 30px rgba(6, 46, 89, 0.15);
+  box-shadow: 0 10px 30px rgba(0, 77, 81, 0.15);
   display: flex;
   flex-direction: column;
   gap: 2px;
@@ -101,7 +155,7 @@
   border: 0;
   border-radius: 8px;
   background: transparent;
-  color: #123962;
+  color: #0F172A;
   font: 600 0.85rem inherit;
   text-align: left;
   cursor: pointer;
@@ -143,7 +197,7 @@
   display: grid;
   place-items: center;
   padding: 16px;
-  background: rgba(6, 46, 89, 0.42);
+  background: rgba(0, 77, 81, 0.42);
   backdrop-filter: blur(4px);
   animation: password-fade 0.18s ease;
 }
@@ -158,7 +212,7 @@
   padding: 32px;
   border-radius: 20px;
   background: var(--surface, #fff);
-  box-shadow: 0 24px 70px rgba(6, 46, 89, 0.28);
+  box-shadow: 0 24px 70px rgba(0, 77, 81, 0.28);
   animation: password-pop 0.2s ease;
 }
 
@@ -169,8 +223,8 @@
   height: 48px;
   margin-bottom: 20px;
   border-radius: 12px;
-  background: #e8f3fc;
-  color: #1970b3;
+  background: #FEE2E2;
+  color: #DC2626;
 }
 
 .logout-confirmation__icon svg {
@@ -185,7 +239,7 @@
 
 .logout-confirmation__eyebrow {
   margin: 0 0 6px;
-  color: #1970b3;
+  color: #DC2626;
   text-transform: uppercase;
   font-size: 0.75rem;
   font-weight: 800;
@@ -194,7 +248,7 @@
 
 .logout-confirmation h2 {
   margin: 0 0 8px;
-  color: #062e59;
+  color: #0F172A;
   font-size: 1.55rem;
   font-weight: 700;
   line-height: 1.25;
@@ -202,7 +256,7 @@
 
 .logout-confirmation p:not(.logout-confirmation__eyebrow) {
   margin: 0 0 28px;
-  color: #5e7897;
+  color: #64748B;
   font-size: 0.95rem;
   line-height: 1.45;
 }
@@ -215,34 +269,36 @@
 
 .logout-confirmation__cancel,
 .logout-confirmation__confirm {
-  height: 42px;
-  padding: 0 20px;
-  border-radius: 10px;
+  height: 40px;
+  padding: 0 18px;
+  border-radius: 8px;
   font: 700 0.88rem inherit;
   cursor: pointer;
   transition: all 0.15s ease;
 }
 
 .logout-confirmation__cancel {
-  border: 1px solid #c7d7e7;
+  border: 1px solid #CBD5E1;
   background: var(--surface, #fff);
-  color: #0968b0;
+  color: #334155;
 }
 
 .logout-confirmation__cancel:hover {
-  background: #f4f9fc;
-  border-color: #b0c9e1;
+  background: #F8FAFC;
+  border-color: #94A3B8;
+  color: #0F172A;
 }
 
 .logout-confirmation__confirm {
-  border: 1px solid #1970b3;
-  background: #1970b3;
+  border: 1px solid #DC2626;
+  background: #DC2626;
   color: #ffffff;
+  box-shadow: 0 2px 8px rgba(220, 38, 38, 0.25);
 }
 
 .logout-confirmation__confirm:hover {
-  background: #135d96;
-  border-color: #135d96;
+  background: #B91C1C;
+  border-color: #B91C1C;
 }
 
 /* --------------------------------------------------------------------------
@@ -255,13 +311,13 @@
   padding: 28px 32px;
   border-radius: 20px;
   background: var(--surface, #fff);
-  box-shadow: 0 24px 70px rgba(6, 46, 89, 0.3);
+  box-shadow: 0 24px 70px rgba(0, 77, 81, 0.3);
   animation: password-pop 0.2s ease;
 }
 
 .password-modal h2 {
   margin: 0;
-  color: #062e59;
+  color: #0F172A;
   font-size: 1.45rem;
   font-weight: 700;
 }
@@ -269,7 +325,7 @@
 .password-modal__eyebrow,
 .password-modal__success p {
   margin: 0 0 5px;
-  color: #1970b3;
+  color: #8782BC;
   text-transform: uppercase;
   font-size: 0.72rem;
   font-weight: 800;
@@ -308,7 +364,7 @@
   display: grid;
   gap: 6px;
   margin-top: 14px;
-  color: #123962;
+  color: #0F172A;
   font-size: 0.82rem;
   font-weight: 800;
 }
@@ -324,7 +380,7 @@
   padding: 0 58px 0 14px;
   border: 1px solid #c7d7e7;
   border-radius: 10px;
-  color: #123962;
+  color: #0F172A;
   font: inherit;
   transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
@@ -351,7 +407,7 @@
   transform: translateY(-50%);
   border: 0;
   background: transparent;
-  color: #0968b0;
+  color: #8782BC;
   font-size: 0.8rem;
   font-weight: 800;
   cursor: pointer;
@@ -384,7 +440,7 @@
 }
 
 .password-modal__strength strong {
-  color: #0968b0;
+  color: #8782BC;
 }
 
 .password-modal__strength i {
@@ -399,8 +455,8 @@
 .password-modal__strength .level-0 { width: 0; }
 .password-modal__strength .level-1,
 .password-modal__strength .level-2 { width: 40%; background: #d92d20; }
-.password-modal__strength .level-3 { width: 60%; background: #d97706; }
-.password-modal__strength .level-4 { width: 80%; background: #1970b3; }
+.password-modal__strength .level-3 { width: 60%; background: #8782BC; }
+.password-modal__strength .level-4 { width: 80%; background: #8782BC; }
 .password-modal__strength .level-5 { width: 100%; background: #16803c; }
 
 .password-modal__strength ul {
@@ -437,7 +493,7 @@
   border: 1px solid #c7d7e7;
   border-radius: 10px;
   background: var(--surface, #fff);
-  color: #0968b0;
+  color: #8782BC;
   font: 700 0.85rem inherit;
   cursor: pointer;
   transition: all 0.15s ease;
@@ -448,8 +504,8 @@
 }
 
 .password-modal__primary {
-  border-color: #1970b3 !important;
-  background: #1970b3 !important;
+  border-color: #8782BC !important;
+  background: #8782BC !important;
   color: #ffffff !important;
 }
 

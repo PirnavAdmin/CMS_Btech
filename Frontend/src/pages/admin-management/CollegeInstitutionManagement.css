@@ -127,11 +127,11 @@
   background: #f2f8fd;
 }
 .cm-college-draft > div:first-child { display: grid; gap: 3px; }
-.cm-college-draft__eyebrow { color: #1970b3; font-size: .68rem; font-weight: 850; letter-spacing: .1em; text-transform: uppercase; }
-.cm-college-draft strong { color: #123f63; font-size: .92rem; }
+.cm-college-draft__eyebrow { color: #8782BC; font-size: .68rem; font-weight: 850; letter-spacing: .1em; text-transform: uppercase; }
+.cm-college-draft strong { color: #0F172A; font-size: .92rem; }
 .cm-college-draft small { color: #668198; font-size: .75rem; }
 .cm-college-draft__progress { display: grid; gap: 6px; color: #52728c; font-size: .72rem; font-weight: 750; }
-.cm-college-draft__progress > span { display: block; height: 6px; overflow: hidden; border-radius: 99px; background: #1970b3; }
+.cm-college-draft__progress > span { display: block; height: 6px; overflow: hidden; border-radius: 99px; background: #8782BC; }
 .cm-college-draft__actions { display: flex; gap: 8px; }
 .cm-college-draft__actions button { min-height: 34px; padding: 7px 11px; font-size: .76rem; }
 @media (max-width: 760px) { .cm-college-draft { grid-template-columns: 1fr; gap: 10px; } .cm-college-draft__actions { justify-content: flex-start; } }
@@ -156,7 +156,7 @@
   border: 0;
   border-radius: 8px;
   padding: 10px 18px;
-  background: var(--brand-blue, #1e5a96);
+  background: var(--brand-blue, #8782BC);
   color: #fff;
   font-weight: 700;
   font-size: 0.92rem;
@@ -165,7 +165,7 @@
 }
 
 .cm-primary-btn:hover {
-  background: var(--brand-blue-hover, #164677);
+  background: var(--brand-blue-hover, #0F172A);
 }
 
 .cm-secondary-btn {
@@ -205,7 +205,7 @@
 }
 
 .cm-search:focus {
-  border-color: var(--brand-blue, #1e5a96);
+  border-color: var(--brand-blue, #8782BC);
   box-shadow: 0 0 0 3px rgba(30, 90, 150, 0.13);
 }
 .cm-toolbar select{min-width:170px;height:42px;padding:0 36px 0 12px;border:1px solid var(--border-strong,#cbd8e3);border-radius:8px;color:var(--text-primary);background:var(--surface);font:inherit}.college-management .cm-toolbar{justify-content:flex-start}.college-management .cm-toolbar .cm-search{flex:1 1 420px;max-width:510px}.college-management .cm-toolbar select{flex:0 0 190px}
@@ -442,11 +442,11 @@
   background: #fee2e2;
   color: #b91c1c;
 }
-.cm-status-badge.draft { background: #e8f3fc; color: #176fae; }
-.cm-draft-row { background: #f7fbfe; }
+.cm-status-badge.draft { background: #F3F1FA; color: #8782BC; }
+.cm-draft-row { background: #FAF9FD; }
 .cm-draft-row td { border-bottom-color: #cfe2f0; }
-.cm-draft-row__mark { display: grid; width: 36px; height: 36px; place-items: center; border: 1px dashed #1970b3; border-radius: 8px; color: #1970b3; background: #e8f3fc; font-size: .78rem; font-weight: 850; }
-.cm-draft-row__label { display: block; margin-top: 3px; color: #1970b3; font-size: .68rem; font-weight: 750; }
+.cm-draft-row__mark { display: grid; width: 36px; height: 36px; place-items: center; border: 1px dashed #8782BC; border-radius: 8px; color: #8782BC; background: #F3F1FA; font-size: .78rem; font-weight: 850; }
+.cm-draft-row__label { display: block; margin-top: 3px; color: #8782BC; font-size: .68rem; font-weight: 750; }
 
 /* Actions Column: Square icon-only buttons side-by-side */
 .cm-actions-header,
@@ -540,7 +540,7 @@
 
 .cm-page-btn:hover:not(:disabled) {
   background: #f3f7fb;
-  border-color: var(--brand-blue, #1e5a96);
+  border-color: var(--brand-blue, #8782BC);
 }
 
 .cm-page-btn:disabled {
@@ -568,8 +568,8 @@
 }
 
 .cm-page-num.active {
-  background: var(--brand-blue, #1e5a96);
-  border-color: var(--brand-blue, #1e5a96);
+  background: var(--brand-blue, #8782BC);
+  border-color: var(--brand-blue, #8782BC);
   color: #fff;
 }
 
@@ -602,7 +602,7 @@
   align-items: center;
   gap: 20px;
   padding: 26px 30px;
-  background: linear-gradient(135deg, #0d3761 0%, #174d82 100%);
+  background: linear-gradient(135deg, #0F172A 0%, #0F172A 100%);
   color: #fff;
 }
 
@@ -626,7 +626,7 @@
   width: 72px;
   height: 72px;
   border-radius: 14px;
-  background: var(--brand-blue, #1e5a96);
+  background: var(--brand-blue, #8782BC);
   color: #fff;
   font-size: 2rem;
   font-weight: 800;
@@ -663,7 +663,7 @@
 
 .cm-badge-type {
   background: var(--surface, #fff);
-  color: #0d3761;
+  color: #0F172A;
 }
 
 .cm-profile-title {
@@ -728,7 +728,7 @@
   margin-bottom: 18px;
   padding-bottom: 12px;
   border-bottom: 1px solid #e2e8f0;
-  color: var(--brand-blue, #1e5a96);
+  color: var(--brand-blue, #8782BC);
 }
 
 .cm-info-card-header h2 {
@@ -770,7 +770,7 @@
 .cm-info-val {
   font-size: 0.95rem;
   font-weight: 600;
-  color: #102f49;
+  color: #0F172A;
   line-height: 1.45;
 }
 
@@ -780,14 +780,14 @@
 }
 
 :root:not([data-theme="dark"]) .college-management .cm-info-val {
-  color: #102f49;
+  color: #0F172A;
   font-weight: 700;
 }
 
 .cm-link {
   display: inline-flex;
   align-items: center;
-  color: var(--brand-blue, #1e5a96);
+  color: var(--brand-blue, #8782BC);
   text-decoration: none;
   font-weight: 600;
   word-break: break-all;
@@ -861,7 +861,7 @@
 .cm-form-grid input:focus,
 .cm-form-grid select:focus,
 .cm-form-grid textarea:focus {
-  border-color: var(--brand-blue, #1e5a96);
+  border-color: var(--brand-blue, #8782BC);
   box-shadow: 0 0 0 3px rgba(30, 90, 150, 0.13);
 }
 
@@ -909,7 +909,7 @@
 .cm-toggle-row input[type="checkbox"] {
   width: 20px;
   height: 20px;
-  accent-color: var(--brand-blue, #1e5a96);
+  accent-color: var(--brand-blue, #8782BC);
 }
 
 .cm-select-row {
@@ -1029,7 +1029,7 @@
 
 :root[data-theme="dark"] .college-management .cm-table th {
   color: #eef6fc;
-  background: #102f49;
+  background: #0F172A;
   border-color: var(--border);
 }
 
