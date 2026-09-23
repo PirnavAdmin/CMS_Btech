@@ -1,51 +1,255 @@
 import { useEffect, useState } from 'react'
-import { Link } from 'react-router-dom'
-import { FiArrowRight, FiBookOpen, FiCalendar, FiGitBranch, FiGrid, FiHome, FiLayers, FiSettings, FiUser, FiUsers } from 'react-icons/fi'
+import { Link, useNavigate } from 'react-router-dom'
+import {
+  FiArrowRight,
+  FiAward,
+  FiBookOpen,
+  FiBriefcase,
+  FiCalendar,
+  FiCheckCircle,
+  FiClock,
+  FiGitBranch,
+  FiGrid,
+  FiHome,
+  FiLayers,
+  FiPlus,
+  FiSettings,
+  FiSliders,
+  FiTrendingUp,
+  FiUser,
+  FiUserCheck,
+  FiUserPlus,
+  FiUsers,
+} from 'react-icons/fi'
 import { getUserRole } from '../auth/auth'
 import { ROLES } from '../auth/roles'
 import DashboardLayout from '../layouts/DashboardLayout'
-import { branchApi } from '../api/apiEndpoints'
-import { normalize as normalizeBranch } from './courseManagement/Branch'
-import { getDepartments, getCourses } from '../auth/collegeApi'
+import { studentAdmissionApi, facultyApi } from '../api/apiEndpoints'
+import subjectService from '../services/subjectService'
+import { useAcademic } from '../context/AcademicContext'
 import './Dashboard.css'
 
-const adminLinks = [
-  { to: '/college-institution-management', label: 'College', icon: FiHome },
-  { to: '/academic-year-management', label: 'Academic years', icon: FiCalendar },
-  { to: '/courses', label: 'Courses', icon: FiBookOpen },
-  { to: '/department-management', label: 'Departments', icon: FiGrid },
-  { to: '/semester-management', label: 'Semesters', icon: FiLayers },
-  { to: '/branches', label: 'Branches', icon: FiGitBranch },
-  { to: '/section-management', label: 'Sections', icon: FiUsers },
-]
-
-const listFrom = (response) => { const data = response?.data ?? response; return Array.isArray(data) ? data : Array.isArray(data?.items) ? data.items : Array.isArray(data?.data) ? data.data : [] }
-
 export default function Dashboard() {
+  const navigate = useNavigate()
   const role = getUserRole()
-  const links = role === ROLES.ADMIN ? adminLinks : [{ to: '/my-subjects', label: 'My subjects', icon: FiBookOpen }]
-  const [departments, setDepartments] = useState([])
-  const [courses, setCourses] = useState([])
-  const [branches, setBranches] = useState([])
+  const {
+    selectedCollege,
+    selectedCollegeId,
+    selectedAcademicYear,
+    selectedAcademicYearId,
+    departments,
+    courses,
+    branches,
+    semesters,
+    sections,
+  } = useAcademic()
+
+  const [admissions, setAdmissions] = useState([])
+  const [faculty, setFaculty] = useState([])
+  const [subjects, setSubjects] = useState([])
+  const [loadingStats, setLoadingStats] = useState(true)
 
   useEffect(() => {
-    if (role !== ROLES.ADMIN) return
-    getDepartments().then((response) => setDepartments(listFrom(response.data))).catch(() => setDepartments([]))
-    getCourses().then((response) => setCourses(listFrom(response.data))).catch(() => setCourses([]))
-    branchApi.getAll().then((rows) => setBranches(rows.map(normalizeBranch))).catch(() => setBranches([]))
-  }, [role])
+    let active = true
+    if (role !== ROLES.ADMIN) {
+      setLoadingStats(false)
+      return
+    }
 
-  const activeBranches = branches.filter((branch) => branch.status === 'Active').length
-  const activeCourses = courses.filter((course) => (course.status === 'Active' || Number(course.status) === 1)).length
-  const roleName = role ? `${role.charAt(0).toUpperCase()}${role.slice(1)}` : 'User'
+    Promise.allSettled([
+      studentAdmissionApi.getAll(),
+      facultyApi.getAll(),
+      subjectService.getSubjects(),
+    ]).then(([admRes, facRes, subRes]) => {
+      if (!active) return
+      if (admRes.status === 'fulfilled' && Array.isArray(admRes.value)) {
+        setAdmissions(admRes.value)
+      }
+      if (facRes.status === 'fulfilled' && Array.isArray(facRes.value)) {
+        setFaculty(facRes.value)
+      }
+      if (subRes.status === 'fulfilled' && Array.isArray(subRes.value)) {
+        setSubjects(subRes.value)
+      }
+      setLoadingStats(false)
+    }).catch(() => {
+      if (active) setLoadingStats(false)
+    })
 
-  return <DashboardLayout><div className="erp-page dashboard-home">
-    <header className="erp-page-heading dashboard-hero"><div><p className="erp-eyebrow">Institution overview</p><h1>Good day, {roleName}</h1><p>Keep your academic operations moving from one connected workspace.</p></div><div className="dashboard-hero-mark"><FiHome aria-hidden="true" /><span>Pirnav Engineering College</span></div></header>
-    {role === ROLES.ADMIN && <section className="dashboard-kpis" aria-label="Academic overview"><article><span className="dashboard-kpi-icon"><FiHome /></span><div><small>Departments</small><strong>{departments.length}</strong><em>Configured units</em></div></article><article><span className="dashboard-kpi-icon"><FiBookOpen /></span><div><small>Active courses</small><strong>{activeCourses}</strong><em>{courses.length} total courses</em></div></article><article><span className="dashboard-kpi-icon"><FiGitBranch /></span><div><small>Active branches</small><strong>{activeBranches}</strong><em>{branches.length} total branches</em></div></article><article><span className="dashboard-kpi-icon"><FiUsers /></span><div><small>Academic coverage</small><strong>{new Set(branches.map((branch) => String(branch.departmentId))).size}</strong><em>Departments with branches</em></div></article></section>}
-    <section className="dashboard-workspace" aria-labelledby="quick-access-title"><div className="erp-panel dashboard-actions"><div className="erp-panel-heading"><div><p className="erp-eyebrow">Workspace</p><h2 id="quick-access-title">Quick access</h2></div><span className="dashboard-panel-note">{links.length} modules available</span></div><div className="erp-link-grid">
-      {links.map(({ to, label, icon: Icon }) => <Link className="erp-link-card" to={to} key={to}><span className="erp-link-card__icon"><Icon aria-hidden="true" /></span><span><strong>{label}</strong><small>Open module</small></span><FiArrowRight aria-hidden="true" /></Link>)}
-      <Link className="erp-link-card" to="/my-profile"><span className="erp-link-card__icon"><FiUser aria-hidden="true" /></span><span><strong>My profile</strong><small>Review personal details</small></span><FiArrowRight aria-hidden="true" /></Link>
-      <Link className="erp-link-card" to="/settings"><span className="erp-link-card__icon"><FiSettings aria-hidden="true" /></span><span><strong>Settings</strong><small>Manage preferences</small></span><FiArrowRight aria-hidden="true" /></Link>
-    </div></div><aside className="dashboard-side-panel"><p className="erp-eyebrow">Academic flow</p><h2>From setup to delivery</h2><p>Keep the academic hierarchy connected as your institution grows.</p><div className="dashboard-flow"><span>Department</span><FiArrowRight /><span>Course</span><FiArrowRight /><span>Branch</span><FiArrowRight /><span>Sections</span></div><Link className="dashboard-outline-link" to={role === ROLES.ADMIN ? '/branches' : '/my-subjects'}>{role === ROLES.ADMIN ? 'Review branches' : 'Open my subjects'} <FiArrowRight /></Link></aside></section>
-  </div></DashboardLayout>
+    return () => { active = false }
+  }, [role, selectedCollegeId, selectedAcademicYearId])
+
+  // Context-filtered metrics
+  const scopedAdmissions = admissions.filter((item) => {
+    let colMatch = true
+    if (selectedCollegeId) {
+      const colId = item.admission?.collegeId ?? item.collegeId ?? item.academic?.collegeId
+      colMatch = !colId || String(colId) === String(selectedCollegeId)
+    }
+    let yrMatch = true
+    if (selectedAcademicYearId) {
+      const yrId = item.academic?.academicYearId ?? item.academicYearId
+      const yrName = item.academic?.academicYear ?? item.academicYear
+      yrMatch = (!yrId && !yrName) ||
+        (yrId && String(yrId) === String(selectedAcademicYearId)) ||
+        (selectedAcademicYear?.name && yrName && yrName.trim().toLowerCase() === selectedAcademicYear.name.trim().toLowerCase())
+    }
+    return colMatch && yrMatch
+  })
+
+  const approvedAdmissions = scopedAdmissions.filter((item) => {
+    const s = String(item.status || item.currentStatus || '').toUpperCase()
+    return s === 'APPROVED' || s === 'ADMITTED'
+  })
+  const pendingAdmissions = scopedAdmissions.filter((item) => {
+    const s = String(item.status || item.currentStatus || '').toUpperCase()
+    return ['SUBMITTED', 'PENDING', 'UNDER_REVIEW', 'VERIFIED'].includes(s)
+  })
+
+  const scopedBranches = branches.filter((b) => !selectedCollegeId || !b.collegeId || String(b.collegeId) === String(selectedCollegeId))
+  const scopedCourses = courses.filter((c) => !selectedCollegeId || !c.collegeId || String(c.collegeId) === String(selectedCollegeId))
+  const scopedSections = sections.filter((s) => !selectedAcademicYearId || !s.academicYearId || String(s.academicYearId) === String(selectedAcademicYearId))
+
+  const collegeName = selectedCollege?.name || selectedCollege?.collegeName || 'Pirnav Engineering College'
+  const yearName = selectedAcademicYear?.academicYearName || selectedAcademicYear?.name || 'Active Academic Session'
+  const roleName = role ? `${role.charAt(0).toUpperCase()}${role.slice(1)}` : 'Administrator'
+
+  return (
+    <DashboardLayout>
+      <div className="erp-page dashboard-home">
+        {/* Working Context Hero */}
+        <header className="erp-page-heading dashboard-hero">
+          <div>
+            <p className="erp-eyebrow">Enterprise Command Center</p>
+            <h1>Welcome back, {roleName}</h1>
+            <p>Unified institutional operations, student lifecycle management, and academic delivery.</p>
+          </div>
+          <div className="dashboard-hero-mark">
+            <FiHome aria-hidden="true" />
+            <div>
+              <strong>{collegeName}</strong>
+              <small>{yearName}</small>
+            </div>
+          </div>
+        </header>
+
+        {/* Real-time KPI Cards */}
+        {role === ROLES.ADMIN && (
+          <section className="dashboard-kpis" aria-label="Academic overview">
+            <article>
+              <span className="dashboard-kpi-icon"><FiUsers /></span>
+              <div>
+                <small>Total Admissions</small>
+                <strong>{scopedAdmissions.length}</strong>
+                <em>{approvedAdmissions.length} approved · {pendingAdmissions.length} pending</em>
+              </div>
+            </article>
+            <article>
+              <span className="dashboard-kpi-icon"><FiBriefcase /></span>
+              <div>
+                <small>Faculty Directory</small>
+                <strong>{faculty.length}</strong>
+                <em>Active teaching faculty</em>
+              </div>
+            </article>
+            <article>
+              <span className="dashboard-kpi-icon"><FiBookOpen /></span>
+              <div>
+                <small>Curriculum Subjects</small>
+                <strong>{subjects.length}</strong>
+                <em>Configured syllabus courses</em>
+              </div>
+            </article>
+            <article>
+              <span className="dashboard-kpi-icon"><FiGitBranch /></span>
+              <div>
+                <small>Academic Units</small>
+                <strong>{scopedBranches.length} Branches</strong>
+                <em>{scopedCourses.length} Courses · {departments.length} Depts</em>
+              </div>
+            </article>
+          </section>
+        )}
+
+        {/* Quick Operational Actions & Academic Flow */}
+        <section className="dashboard-workspace" aria-labelledby="quick-access-title">
+          <div className="erp-panel dashboard-actions">
+            <div className="erp-panel-heading">
+              <div>
+                <p className="erp-eyebrow">Workspace</p>
+                <h2 id="quick-access-title">Quick Actions & Shortcuts</h2>
+              </div>
+              <span className="dashboard-panel-note">Direct entry points</span>
+            </div>
+
+            <div className="erp-link-grid">
+              {role === ROLES.ADMIN ? (
+                <>
+                  <Link className="erp-link-card" to="/student-management/admissions/new">
+                    <span className="erp-link-card__icon"><FiUserPlus aria-hidden="true" /></span>
+                    <span><strong>New Student Admission</strong><small>Register applicant</small></span>
+                    <FiArrowRight aria-hidden="true" />
+                  </Link>
+
+                  <Link className="erp-link-card" to="/student-management/admissions">
+                    <span className="erp-link-card__icon"><FiUserCheck aria-hidden="true" /></span>
+                    <span><strong>Review Admissions</strong><small>{pendingAdmissions.length} awaiting decision</small></span>
+                    <FiArrowRight aria-hidden="true" />
+                  </Link>
+
+                  <Link className="erp-link-card" to="/subject-management">
+                    <span className="erp-link-card__icon"><FiBookOpen aria-hidden="true" /></span>
+                    <span><strong>Subject Management</strong><small>Course catalog & credits</small></span>
+                    <FiArrowRight aria-hidden="true" />
+                  </Link>
+
+                  <Link className="erp-link-card" to="/section-management">
+                    <span className="erp-link-card__icon"><FiUsers aria-hidden="true" /></span>
+                    <span><strong>Section Management</strong><small>{scopedSections.length} sections active</small></span>
+                    <FiArrowRight aria-hidden="true" />
+                  </Link>
+
+                  <Link className="erp-link-card" to="/faculty">
+                    <span className="erp-link-card__icon"><FiBriefcase aria-hidden="true" /></span>
+                    <span><strong>Faculty Directory</strong><small>Faculty & allocations</small></span>
+                    <FiArrowRight aria-hidden="true" />
+                  </Link>
+
+                  <Link className="erp-link-card" to="/settings">
+                    <span className="erp-link-card__icon"><FiSliders aria-hidden="true" /></span>
+                    <span><strong>Academic Context</strong><small>Switch college / year</small></span>
+                    <FiArrowRight aria-hidden="true" />
+                  </Link>
+                </>
+              ) : (
+                <Link className="erp-link-card" to="/my-subjects">
+                  <span className="erp-link-card__icon"><FiBookOpen aria-hidden="true" /></span>
+                  <span><strong>My Subjects</strong><small>View assigned curriculum</small></span>
+                  <FiArrowRight aria-hidden="true" />
+                </Link>
+              )}
+            </div>
+          </div>
+
+          {/* Academic Delivery Structure side card */}
+          <aside className="dashboard-side-panel">
+            <p className="erp-eyebrow">Academic Architecture</p>
+            <h2>Connected Setup Flow</h2>
+            <p>Maintain structural alignment across the academic delivery pipeline.</p>
+            <div className="dashboard-flow">
+              {['Academic Year', 'Department', 'Course', 'Branch', 'Semester', 'Section', 'Subject'].map((step, index, steps) => (
+                <div className="dashboard-flow-step" key={step}>
+                  <span>{step}</span>
+                  {index < steps.length - 1 && <FiArrowRight aria-hidden="true" />}
+                </div>
+              ))}
+            </div>
+            <Link className="dashboard-outline-link" to={role === ROLES.ADMIN ? '/academic-year-management' : '/my-subjects'}>
+              {role === ROLES.ADMIN ? 'Manage Academic Setup' : 'View Curriculum'} <FiArrowRight />
+            </Link>
+          </aside>
+        </section>
+      </div>
+    </DashboardLayout>
+  )
 }

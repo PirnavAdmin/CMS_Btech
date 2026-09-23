@@ -16,7 +16,7 @@
   vertical-align: middle !important;
   text-align: center !important;
   padding: 11px 16px !important;
-  background: #123f63 !important;
+  background: #0F172A !important;
   color: #f4f9fc !important;
   font-size: 11px !important;
   font-weight: 800 !important;
@@ -69,8 +69,8 @@
 }
 
 .p-tabs button.active {
-  border-bottom: 2px solid var(--brand, #0284c7);
-  color: var(--brand, #0284c7);
+  border-bottom: 2px solid var(--brand, #8782BC);
+  color: var(--brand, #8782BC);
 }
 
 .p-panel {
@@ -157,7 +157,7 @@
   height: 38px;
   border-radius: 9px;
   background: rgba(2, 132, 199, 0.1);
-  color: var(--brand, #0284c7);
+  color: var(--brand, #8782BC);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -218,7 +218,7 @@
   align-items: center;
   gap: 18px;
   padding: 18px 22px;
-  background: linear-gradient(135deg, #0f3d64 0%, #1e5a8a 100%);
+  background: linear-gradient(135deg, #0F172A 0%, #1e5a8a 100%);
   border-radius: 12px;
   color: #ffffff;
   box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.08);
@@ -323,7 +323,7 @@
   padding-bottom: 10px;
   margin-bottom: 12px;
   border-bottom: 1px solid var(--border, #e2e8f0);
-  color: var(--brand, #176fae);
+  color: var(--brand, #8782BC);
   font-size: 14px;
   font-weight: 700;
 }
@@ -362,7 +362,7 @@
 .promotion-review-drawer .pr-value {
   font-size: 13px;
   font-weight: 650;
-  color: var(--text-primary, #1e293b);
+  color: var(--text-primary, #0F172A);
   word-break: break-word;
 }
 
@@ -424,7 +424,7 @@
   height: 52px;
   border-radius: 50%;
   background: rgba(2, 132, 199, 0.1);
-  color: var(--brand, #0284c7);
+  color: var(--brand, #8782BC);
   display: flex;
   align-items: center;
   justify-content: center;

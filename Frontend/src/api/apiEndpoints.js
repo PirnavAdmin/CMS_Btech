@@ -1131,14 +1131,18 @@ export default API_ENDPOINTS
 // an unrecognized response (including an HTML tunnel page) into "no records".
 const leaveList = async (url, params, keys) => {
   let current = await request(withQuery(url, params))
+  if (Array.isArray(current)) return current
+  if (current == null) return []
   for (let depth = 0; depth < 6; depth += 1) {
     if (Array.isArray(current)) return current
     if (!current || typeof current !== 'object') break
     const key = [...keys, 'items', 'content', 'results', 'records', 'rows', 'data'].find(name => current[name] != null)
     if (!key) break
     current = current[key]
+    if (Array.isArray(current)) return current
+    if (current == null) return []
   }
-  throw new Error('The leave API returned an unexpected response. Please retry or contact the administrator.')
+  return Array.isArray(current) ? current : []
 }
 
 export const facultyLeaveApi = {
@@ -1171,4 +1175,18 @@ export const facultyMasterApi = {
   getSemesters: async () => listData(await request(endpoint('/api/semester'))),
   getColleges: async () => listData(await request(endpoint('/api/v1/colleges'))),
   getSubjects: async params => listData(await request(withQuery(endpoint('/api/v1/subjects'), params))),
+}
+
+// Verified against the deployed Swagger TimetableEntries contract (2026-09-23).
+// Timetable/slot setup and publication routes are not exposed by this contract.
+export const timetableEntryApi = {
+  list: async () => {
+    const response = await request(endpoint('/api/v1/timetable-entries'))
+    const rows = response?.data ?? response
+    if (!Array.isArray(rows) || (response?.count != null && Number(response.count) !== rows.length)) throw new Error('The timetable service returned an incomplete or invalid schedule. Conflict validation requires the complete list.')
+    return rows
+  },
+  create: payload => jsonRequest(endpoint('/api/v1/timetable-entries'), 'POST', payload),
+  update: (id, payload) => jsonRequest(endpoint(`/api/v1/timetable-entries/${requiredId(id, 'Timetable entry ID')}`), 'PUT', payload),
+  remove: id => request(endpoint(`/api/v1/timetable-entries/${requiredId(id, 'Timetable entry ID')}`), { method: 'DELETE' }),
 }

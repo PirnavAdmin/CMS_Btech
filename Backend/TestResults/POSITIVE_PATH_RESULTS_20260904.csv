@@ -1,0 +1,15 @@
+test_case,operations,status,result
+Role login,"POST /api/v1/auth/login (SUPER_ADMIN, COLLEGE_ADMIN, FACULTY, STUDENT)",200,PASS
+Refresh token rotation,POST /api/v1/auth/refresh,200,PASS
+Promotion eligible filter,GET /api/v1/promotions/eligible-students,200,PASS
+Promotion detained filter,GET /api/v1/student-promotions/detained,200,PASS
+Promotion failed filter,GET /api/v1/student-promotions/failed,200,PASS
+Student search,GET /api/v1/students/search,200,PASS
+Academic Level CRUD,"POST, PUT, DELETE /api/academic-levels",200,PASS
+Department CRUD/status,"POST, PUT, PATCH status, DELETE /api/v1/departments",200,PASS
+Section list/detail,"GET /api/v1/sections and GET /api/v1/sections/1",200,PASS
+Duplicate Course/Semester mapping,POST /api/v1/course-semester-mappings,409,PASS_EXPECTED_CONFLICT
+Department missing code,POST /api/v1/departments,400,PASS_EXPECTED_VALIDATION
+Academic Level empty body,POST /api/academic-levels,400,PASS_EXPECTED_VALIDATION
+Fresh combined database import,Database/CompleteDatabase/CMS_BTECH_COMPLETE_UPDATED.sql,0,PASS
+Read-only post-import validation,Database/Validation/CMS_BTECH_POST_IMPORT_VALIDATION.sql,0,PASS

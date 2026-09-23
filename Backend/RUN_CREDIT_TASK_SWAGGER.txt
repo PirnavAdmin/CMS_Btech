@@ -1,0 +1,37 @@
+TASK: Dashboard, Configuration, Registration and Summary APIs
+
+Existing APIs outside this credit module are unchanged.
+
+DATABASE TABLES USED:
+1. credit_configurations
+2. student_credit_registrations
+3. student_credit_summary
+
+SQL:
+Database/Phase4_Credit_Module.sql
+
+RUN:
+1. Confirm appsettings.json DefaultConnection points to cms_btech.
+2. Run the SQL only if these credit tables are not already present.
+3. dotnet restore
+4. dotnet run
+5. Open /swagger
+6. Authorize with JWT.
+
+TASK ROUTES:
+GET  /api/v1/credits/dashboard
+GET  /api/v1/credits/configurations
+GET  /api/v1/credits/configurations/{configurationId}
+POST /api/v1/credits/configurations
+PUT  /api/v1/credits/configurations/{configurationId}
+GET  /api/v1/credits/registrations
+GET  /api/v1/credits/registrations/{registrationId}
+POST /api/v1/credits/registrations
+PUT  /api/v1/credits/registrations/{registrationId}
+GET  /api/v1/credits/summary?studentId=2&semesterId=1
+GET  /api/v1/credits/summary?studentId=2
+
+NOTE:
+- Registration credits come from credit_configurations.
+- Creating/updating a registration refreshes student_credit_summary.
+- No existing non-credit controller/query was changed for this task.

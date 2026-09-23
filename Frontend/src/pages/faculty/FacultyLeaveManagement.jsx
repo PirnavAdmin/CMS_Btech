@@ -8,6 +8,7 @@ import facultyService, { normalizeFaculty } from '../../services/facultyService'
 import { normalizeLeaveType, normalizeLeavePolicy, normalizeLeaveRequest, leavePolicyPayload } from '../../services/facultyContracts'
 import { newestFirst, rememberCreated } from '../../utils/newestFirst'
 import { employeeLeaveBalances, leaveBalanceRules } from '../../utils/facultyLeaveBalances'
+import eventBus, { ERP_EVENTS } from '../../services/eventBus'
 import './FacultyLeaveManagement.css'
 
 const PAGE_SIZE = 5
@@ -135,15 +136,23 @@ export default function FacultyLeaveManagement() {
       ['Leave history', () => facultyLeaveApi.getHistory(), rows => setHistoryRequests(rows.map(normalizeLeaveRequest))],
       ['Leave balances', () => facultyLeaveApi.getBalances(), setBalances],
     ]
+    const errors = []
     await Promise.allSettled(resources.map(async ([label, fetchRows, saveRows]) => {
       try {
         const rows = await fetchRows()
         if (version === reloadVersion.current) saveRows(rows)
       } catch (error) {
-        if (version === reloadVersion.current) setLoadError(current => [current, `${label}: ${error.message || 'Unable to load'}. Previously loaded data, if any, is still displayed.`].filter(Boolean).join(' | '))
+        errors.push(`${label}: ${error.message || 'Unable to load'}`)
       }
     }))
-    if (version === reloadVersion.current) setLoading(false)
+    if (version === reloadVersion.current) {
+      if (errors.length >= resources.length) {
+        setLoadError('Unable to connect to backend server. Please verify the server is running.')
+      } else if (errors.length > 0) {
+        setLoadError(errors.join(' | '))
+      }
+      setLoading(false)
+    }
   }, [])
   useEffect(() => { reload(); return () => { reloadVersion.current += 1 } }, [reload])
   useEffect(() => { let active = true; academicYearApi.getAll().then(rows => { if (active) setAcademicYears(rows.map(row => row.academicYearName || row.name).filter(Boolean)) }).catch(error => { if (active) setNotice(error.message) }); return () => { active = false } }, [])
@@ -296,6 +305,7 @@ export default function FacultyLeaveManagement() {
     const updatedRequest = { ...request, status, rejectionReason: reason || null }
     setPendingRequests(prev => prev.filter(r => String(r.id) !== String(request.id)))
     setHistoryRequests(prev => [updatedRequest, ...prev.filter(r => String(r.id) !== String(request.id))])
+    eventBus.emit(ERP_EVENTS.LEAVE_UPDATED, { request: updatedRequest, status })
     return mutate(async () => {
       try {
         if (status === 'Approved') {
@@ -324,15 +334,19 @@ export default function FacultyLeaveManagement() {
       }
     }, 'Leave request ' + status.toLowerCase() + '.')
   }
-  const saveRequest = req => mutate(() => facultyLeaveApi.createRequest({
-    facultyId: Number(req.facultyId),
-    leaveTypeId: String(req.leaveTypeId),
-    policyId: String(req.policyId),
-    fromDate: req.fromDate,
-    toDate: req.toDate,
-    reason: req.reason.trim(),
-    days: Number(req.days) || 1,
-  }), 'Leave request submitted.', 'leave-requests')
+  const saveRequest = req => mutate(async () => {
+    const res = await facultyLeaveApi.createRequest({
+      facultyId: Number(req.facultyId),
+      leaveTypeId: String(req.leaveTypeId),
+      policyId: String(req.policyId),
+      fromDate: req.fromDate,
+      toDate: req.toDate,
+      reason: req.reason.trim(),
+      days: Number(req.days) || 1,
+    })
+    eventBus.emit(ERP_EVENTS.LEAVE_UPDATED, { request: req })
+    return res
+  }, 'Leave request submitted.', 'leave-requests')
   const viewRecord = item => {
     if (item?.applicableTo || item?.academicYear || Array.isArray(item?.entitlements)) {
       const local = getLocalPolicies()[String(item.id)]
@@ -346,7 +360,7 @@ export default function FacultyLeaveManagement() {
     }
     setDialog({ kind: 'view', item })
   }
-  return <DashboardLayout><main className="flm-page">{loadError && <p className="flm-error" role="alert">{loadError} <button onClick={() => reload().catch(() => {})}>Retry</button></p>}{loading && <p role="status">Loading leave records...</p>}<header className="flm-header"><div><h1>Faculty Leave Management</h1><span>Configure leave policies, manage employee balances and process faculty and staff leave requests.</span></div><div className="flm-summary">{summary.map(([label, value]) => <div key={label}><strong>{value}</strong><small>{label}</small></div>)}</div></header><section className="flm-card"><header className="flm-card-header"><div><p>{title}</p><h2>{description}</h2></div><div className="flm-header-actions"><ExportMenu rows={filtered} columns={exportColumns} screen="faculty-leave-local" filename={`faculty-leave-${tab.toLowerCase().replace(/\s+/g, '-')}`} title={tab} scope="All filtered results" />{tab === 'Leave Types' && <button className="flm-primary" onClick={() => setDialog({ kind: 'type' })}><FiPlus /> Add Leave Type</button>}{tab === 'Leave Policies' && <button className="flm-primary" onClick={() => setDialog({ kind: 'policy' })}><FiPlus /> Create Leave Policy</button>}</div></header><nav className="flm-tabs">{TABS.map(value => <button key={value} className={tab === value ? 'active' : ''} onClick={() => switchTab(value)}>{value}</button>)}</nav><div className="flm-toolbar"><label className="flm-search"><FiSearch /><input value={query} onChange={event => { setQuery(event.target.value); setPage(1) }} placeholder={tab === 'Leave Types' ? 'Search leave type or code...' : tab === 'Leave Policies' ? 'Search leave policy...' : tab === 'Leave Balances' ? 'Search employee...' : 'Search request, employee or leave type...'} /></label><button className="flm-filter-toggle" onClick={() => setShowFilters(value => !value)}><FiFilter /> Filters {showFilters ? <FiChevronUp /> : <FiChevronDown />}</button></div>{showFilters && <div className="flm-filter-panel">{['Leave Requests', 'Leave History', 'Leave Balances'].includes(tab) && <><FilterSelect label="Faculty Type" value={filters.type} values={['Teaching', 'Non-Teaching']} onChange={value => changeFilter('type', value)} /><FilterSelect label="Department" value={filters.department} values={departments} onChange={value => changeFilter('department', value)} /></>}{['Leave History', 'Leave Types', 'Leave Policies'].includes(tab) && <FilterSelect label="Status" value={filters.status} values={tab === 'Leave Types' ? ['Active', 'Inactive'] : tab === 'Leave Policies' ? ['Draft', 'Active', 'Inactive', 'Expired'] : ['Approved', 'Rejected', 'Cancelled']} onChange={value => changeFilter('status', value)} />}<button className="flm-clear" onClick={() => { setQuery(''); setFilters({ type: '', department: '', status: '' }); setPage(1) }}>Clear Filters</button></div>}<p className="flm-count">Showing {filtered.length ? (currentPage - 1) * PAGE_SIZE + 1 : 0}-{Math.min(currentPage * PAGE_SIZE, filtered.length)} of {filtered.length} records</p><LeaveList tab={tab} rows={visible} leaveTypes={leaveTypes} getBalance={getBalance} onView={viewRecord} onEdit={item => {
+  return <DashboardLayout><main className="flm-page">{loadError && <p className="flm-error" role="alert">{loadError} <button onClick={() => reload().catch(() => {})}>Retry</button></p>}{loading && <p role="status">Loading leave records...</p>}<header className="flm-header"><div><h1>Faculty Leave Management</h1><span>Configure leave policies, manage employee balances and process faculty and staff leave requests.</span></div><div className="flm-summary">{summary.map(([label, value]) => <div key={label}><strong>{value}</strong><small>{label}</small></div>)}</div></header><section className="flm-card"><header className="flm-card-header"><div><p>{title}</p><h2>{description}</h2></div><div className="flm-header-actions"><ExportMenu rows={filtered} columns={exportColumns} screen="faculty-leave-local" filename={`faculty-leave-${tab.toLowerCase().replace(/\s+/g, '-')}`} title={tab} scope="All filtered results" />{tab === 'Leave Types' && <button className="flm-primary" onClick={() => setDialog({ kind: 'type' })}><FiPlus /> Add Leave Type</button>}{tab === 'Leave Policies' && <button className="flm-primary" onClick={() => setDialog({ kind: 'policy' })}><FiPlus /> Create Leave Policy</button>}</div></header><nav className="flm-tabs">{TABS.map(value => <button key={value} className={tab === value ? 'active' : ''} onClick={() => switchTab(value)}>{value}</button>)}</nav><div className="flm-toolbar"><label className="flm-search"><FiSearch /><input value={query} onChange={event => { setQuery(event.target.value); setPage(1) }} placeholder={tab === 'Leave Types' ? 'Search leave type or code...' : tab === 'Leave Policies' ? 'Search leave policy...' : tab === 'Leave Balances' ? 'Search employee...' : 'Search request, employee or leave type...'} /></label><div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>{['Leave Requests', 'Leave History', 'Leave Balances'].includes(tab) && <div className="flm-category-toggle" role="group" aria-label="Filter by Faculty Type"><button type="button" className={`flm-cat-btn ${!filters.type ? 'active' : ''}`} onClick={() => changeFilter('type', '')}>All</button><button type="button" className={`flm-cat-btn ${filters.type === 'Teaching' ? 'active' : ''}`} onClick={() => changeFilter('type', 'Teaching')}>Teaching</button><button type="button" className={`flm-cat-btn ${filters.type === 'Non-Teaching' ? 'active' : ''}`} onClick={() => changeFilter('type', 'Non-Teaching')}>Non-Teaching</button></div>}<button className="flm-filter-toggle" onClick={() => setShowFilters(value => !value)}><FiFilter /> Filters {showFilters ? <FiChevronUp /> : <FiChevronDown />}</button></div></div>{showFilters && <div className="flm-filter-panel">{['Leave Requests', 'Leave History', 'Leave Balances'].includes(tab) && <><FilterSelect label="Faculty Type" value={filters.type} values={['Teaching', 'Non-Teaching']} onChange={value => changeFilter('type', value)} /><FilterSelect label="Department" value={filters.department} values={departments} onChange={value => changeFilter('department', value)} /></>}{['Leave History', 'Leave Types', 'Leave Policies'].includes(tab) && <FilterSelect label="Status" value={filters.status} values={tab === 'Leave Types' ? ['Active', 'Inactive'] : tab === 'Leave Policies' ? ['Draft', 'Active', 'Inactive', 'Expired'] : ['Approved', 'Rejected', 'Cancelled']} onChange={value => changeFilter('status', value)} />}<button className="flm-clear" onClick={() => { setQuery(''); setFilters({ type: '', department: '', status: '' }); setPage(1) }}>Clear Filters</button></div>}<p className="flm-count">Showing {filtered.length ? (currentPage - 1) * PAGE_SIZE + 1 : 0}-{Math.min(currentPage * PAGE_SIZE, filtered.length)} of {filtered.length} records</p><LeaveList tab={tab} rows={visible} leaveTypes={leaveTypes} getBalance={getBalance} onView={viewRecord} onEdit={item => {
     if (tab === 'Leave Policies') {
       const local = getLocalPolicies()[String(item.id)]
       setDialog({ kind: 'policy', item: { ...item, ...(local || {}), entitlements: (local?.entitlements && local.entitlements.length > 0) ? local.entitlements : (item.entitlements || []) } })

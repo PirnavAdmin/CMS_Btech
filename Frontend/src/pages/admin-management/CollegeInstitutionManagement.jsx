@@ -243,6 +243,9 @@ const mapCollege = (record) => {
   const name = record.name ?? record.collegeName ?? record.CollegeName ?? ''
   const logoValue = collegeLogoValue(record)
   const cachedLogo = (id ? readCachedCollegeLogo(id) : '') || (code ? readCachedCollegeLogo(code) : '') || (name ? readCachedCollegeLogo(name) : '') || (record.collegeName ? readCachedCollegeLogo(record.collegeName) : '') || (record.collegeCode ? readCachedCollegeLogo(record.collegeCode) : '')
+  if (logoValue) {
+    cacheCollegeLogo(id, logoValue, [code, name, record.collegeCode, record.collegeName])
+  }
   const address = record.addressDetails ?? record.addressInfo ?? {}
   const contact = record.contactDetails ?? record.contactInfo ?? {}
   const administration = record.administration ?? record.principalDetails ?? {}
@@ -267,7 +270,7 @@ const mapCollege = (record) => {
   alternateContact: String(record.alternateContact ?? record.alternateContactNumber ?? record.alternatePhoneNumber ?? contact.alternateContactNumber ?? extended.alternateContactNumber ?? ''),
   email: record.email ?? record.collegeEmail ?? contact.email ?? record.Email ?? '',
   website: record.website ?? record.Website ?? contact.website ?? contact.Website ?? '',
-  logo: getCollegeLogoUrl(id, logoValue || cachedLogo),
+  logo: getCollegeLogoUrl(id, logoValue || cachedLogo, [code, name, record.collegeCode, record.collegeName]),
   principal: record.principal ?? record.principalName ?? administration.principalName ?? record.PrincipalName ?? '',
   principalEmail: record.principalEmail ?? administration.principalEmail ?? extended.principalEmail ?? '',
   principalContact: record.principalContact ?? record.principalPhone ?? administration.principalContact ?? extended.principalContact ?? '',
@@ -289,12 +292,12 @@ function CollegeEmblemBadge({ name, code, className = 'cm-logo-thumb' }) {
 
   const seed = Array.from(cleanCode || cleanName).reduce((acc, c) => acc + c.charCodeAt(0), 0)
   const palettes = [
-    { bg1: '#073763', bg2: '#0d6099', accent: '#f2bc35', text: '#ffffff' },
+    { bg1: '#0F172A', bg2: '#0F172A', accent: '#f2bc35', text: '#ffffff' },
     { bg1: '#064e3b', bg2: '#059669', accent: '#34d399', text: '#ffffff' },
     { bg1: '#4c1d95', bg2: '#7c3aed', accent: '#c4b5fd', text: '#ffffff' },
     { bg1: '#831843', bg2: '#db2777', accent: '#fbcfe8', text: '#ffffff' },
-    { bg1: '#1e3a8a', bg2: '#2563eb', accent: '#93c5fd', text: '#ffffff' },
-    { bg1: '#78350f', bg2: '#d97706', accent: '#fde68a', text: '#ffffff' },
+    { bg1: '#0F172A', bg2: '#8782BC', accent: '#DDD8F0', text: '#ffffff' },
+    { bg1: '#78350f', bg2: '#8782BC', accent: '#DDD8F0', text: '#ffffff' },
   ]
   const palette = palettes[seed % palettes.length]
 
@@ -635,13 +638,15 @@ export default function CollegeInstitutionManagement({ initialView = 'list' }) {
     setCollegeError('')
     try {
       const response = await updateCollege(activeId, collegePayload(formValues, Boolean(editLogoFile)))
-      if (editLogoFile) {
-        try {
-          await uploadCollegeLogo(activeId, editLogoFile)
-        } catch (logoErr) {
-          console.warn('Backend logo upload notice:', logoErr.message)
+      if (editLogoFile || formValues.logo) {
+        if (editLogoFile) {
+          try {
+            await uploadCollegeLogo(activeId, editLogoFile)
+          } catch (logoErr) {
+            console.warn('Backend logo upload notice:', logoErr.message)
+          }
         }
-        cacheCollegeLogo(activeId, formValues.logo)
+        cacheCollegeLogo(activeId, formValues.logo, [formValues.code, formValues.name, formValues.collegeCode, formValues.collegeName])
         setBrokenLogoIds((current) => { const next = new Set(current); next.delete(activeId); return next })
       }
       const updated = mapCollege((response.data?.data ?? response.data) || { ...formValues, id: activeId })

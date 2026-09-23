@@ -4,6 +4,9 @@
     {
         public long user_id { get; set; }
 
+        // Nullable because system-level users may not belong to a college.
+        public long? college_id { get; set; }
+
         public string EmployeeUserId { get; set; } = string.Empty;
 
         public string FullName { get; set; } = string.Empty;

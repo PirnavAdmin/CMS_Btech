@@ -54,17 +54,7 @@ export default function SearchableSelect({
   )
 
   const selectedOption = useMemo(
-    () => value == null || value === '' ? null : normalizedOptions.find((option) => {
-      const candidates = [
-        option.value,
-        option.raw?.value,
-        option.raw?.id,
-        option.raw?.courseId,
-        option.raw?.code,
-        option.raw?.courseCode,
-      ]
-      return candidates.some((candidate) => String(candidate ?? '') === String(value ?? ''))
-    }) || null,
+    () => value == null || value === '' ? null : normalizedOptions.find((option) => option.value === String(value)) || null,
     [normalizedOptions, value],
   )
 
@@ -141,11 +131,11 @@ export default function SearchableSelect({
       }
     }
 
-    document.addEventListener('mousedown', handlePointerDown)
+    document.addEventListener('pointerdown', handlePointerDown, true)
     document.addEventListener('keydown', handleKeyDown)
 
     return () => {
-      document.removeEventListener('mousedown', handlePointerDown)
+      document.removeEventListener('pointerdown', handlePointerDown, true)
       document.removeEventListener('keydown', handleKeyDown)
     }
   }, [open])
@@ -192,16 +182,16 @@ export default function SearchableSelect({
       buttons[index]?.scrollIntoView({ block: 'nearest' })
     }} style={{ position: 'fixed', top: menuStyle.top, bottom: menuStyle.bottom, left: menuStyle.left, width: menuStyle.width, maxHeight: menuStyle.maxHeight, zIndex: 2000 }}>
       {!hideSearch && <label className="searchable-select__search">
-          <FiSearch aria-hidden="true" />
-          <input
-            ref={inputRef}
-            type="text"
-            value={query}
-            onChange={(event) => setQuery(event.target.value)}
-            placeholder={searchPlaceholder}
-            aria-label={searchPlaceholder}
-          />
-        </label>}
+        <FiSearch aria-hidden="true" />
+        <input
+          ref={inputRef}
+          type="text"
+          value={query}
+          onChange={(event) => setQuery(event.target.value)}
+          placeholder={searchPlaceholder}
+          aria-label={searchPlaceholder}
+        />
+      </label>}
       <div className="searchable-select__options" role="listbox" aria-label={label || 'Options'}>
         {loading ? (
           <div className="searchable-select__empty">Loading options...</div>

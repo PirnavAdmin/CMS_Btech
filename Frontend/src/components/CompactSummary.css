@@ -50,7 +50,7 @@
 }
 
 .compact-summary__item--upcoming strong {
-  color: var(--brand, #176fae) !important;
+  color: var(--brand, #8782BC) !important;
 }
 
 .compact-summary__item--inactive strong {
@@ -62,7 +62,7 @@
 }
 
 .compact-summary__item--completed strong {
-  color: #0284c7 !important;
+  color: #8782BC !important;
 }
 
 .compact-summary__item--danger strong {

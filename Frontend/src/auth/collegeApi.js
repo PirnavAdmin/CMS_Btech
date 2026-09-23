@@ -165,49 +165,80 @@ export const uploadCollegeLogo = (collegeId, logoFile) => {
   return COLLEGE_LOGO_API.postForm("/logo", formData);
 };
 
-// Some College API versions return an empty logo field immediately after a
-// successful multipart upload. Keep the selected image as a display fallback;
-// a non-empty server logo always remains the preferred value.
-const collegeLogoCacheKey = (collegeId) => `pirnav-college-logo-${collegeId}`;
-export const readCachedCollegeLogo = (collegeId) => {
+// Persistent logo storage helper across IDs, codes, and college names
+const collegeLogoCacheKey = (key) => `pirnav-college-logo-${String(key || '').trim().toLowerCase().replace(/\s+/g, '-')}`;
+const LOGOS_MAP_KEY = 'pirnav_college_logos_map';
+
+const getLogosMap = () => {
   try {
-    if (!collegeId) return "";
-    const key = String(collegeId).trim();
-    return (
-      localStorage.getItem(collegeLogoCacheKey(key)) ||
+    const raw = localStorage.getItem(LOGOS_MAP_KEY);
+    return raw ? JSON.parse(raw) : {};
+  } catch {
+    return {};
+  }
+};
+
+const setLogosMap = (map) => {
+  try {
+    localStorage.setItem(LOGOS_MAP_KEY, JSON.stringify(map));
+  } catch {}
+};
+
+export const readCachedCollegeLogo = (identifier) => {
+  try {
+    if (!identifier) return "";
+    const key = String(identifier).trim();
+    const cleanKey = key.toLowerCase().replace(/\s+/g, '-');
+    const direct = localStorage.getItem(collegeLogoCacheKey(key)) ||
+      localStorage.getItem(`pirnav-college-logo-${key}`) ||
       localStorage.getItem(`college-logo-${key}`) ||
-      localStorage.getItem(collegeLogoCacheKey(key.toLowerCase())) ||
-      localStorage.getItem(collegeLogoCacheKey(key.toUpperCase())) ||
-      localStorage.getItem(`college-logo-${key.toLowerCase()}`) ||
-      localStorage.getItem(`college-logo-${key.toUpperCase()}`) ||
-      ""
-    );
+      localStorage.getItem(`pirnav-college-logo-${cleanKey}`);
+    if (direct) return direct;
+
+    const map = getLogosMap();
+    return map[key] || map[cleanKey] || map[key.toLowerCase()] || map[key.toUpperCase()] || "";
   } catch {
     return "";
   }
 };
-export const cacheCollegeLogo = (collegeId, logo) => {
+
+export const cacheCollegeLogo = (identifier, logo, extraKeys = []) => {
   try {
-    if (!collegeId) return;
-    const key = String(collegeId).trim();
-    if (logo) {
-      // Data URLs can be several megabytes. Duplicating each logo under six
-      // aliases exhausts localStorage and makes the Edit College fallback fail.
-      localStorage.setItem(collegeLogoCacheKey(key), logo);
-    } else {
-      localStorage.removeItem(collegeLogoCacheKey(key));
-      localStorage.removeItem(`college-logo-${key}`);
-      localStorage.removeItem(collegeLogoCacheKey(key.toLowerCase()));
-      localStorage.removeItem(collegeLogoCacheKey(key.toUpperCase()));
-      localStorage.removeItem(`college-logo-${key.toLowerCase()}`);
-      localStorage.removeItem(`college-logo-${key.toUpperCase()}`);
-    }
+    if (!identifier && !extraKeys.length) return;
+    const allKeys = [identifier, ...extraKeys]
+      .filter(k => k != null && String(k).trim() !== '')
+      .map(k => String(k).trim());
+
+    const map = getLogosMap();
+    allKeys.forEach((key) => {
+      const cleanKey = key.toLowerCase().replace(/\s+/g, '-');
+      if (logo) {
+        localStorage.setItem(collegeLogoCacheKey(key), logo);
+        localStorage.setItem(collegeLogoCacheKey(cleanKey), logo);
+        map[key] = logo;
+        map[cleanKey] = logo;
+        map[key.toLowerCase()] = logo;
+      } else {
+        localStorage.removeItem(collegeLogoCacheKey(key));
+        localStorage.removeItem(collegeLogoCacheKey(cleanKey));
+        localStorage.removeItem(`pirnav-college-logo-${key}`);
+        localStorage.removeItem(`college-logo-${key}`);
+        delete map[key];
+        delete map[cleanKey];
+        delete map[key.toLowerCase()];
+      }
+    });
+    setLogosMap(map);
   } catch { /* storage fallback */ }
 };
 
 export const getCollegeLogoEndpoint = collegeId => collegeId == null || collegeId === '' ? '' : `${collegesBaseUrl}/api/College/logo/${encodeURIComponent(collegeId)}`;
 
-export const getCollegeLogoUrl = (collegeId, logoValue) => resolveCollegeLogo(logoValue || readCachedCollegeLogo(collegeId), collegesBaseUrl) || getCollegeLogoEndpoint(collegeId);
+export const getCollegeLogoUrl = (collegeId, logoValue, extraKeys = []) => {
+  const cached = (collegeId ? readCachedCollegeLogo(collegeId) : "") ||
+    extraKeys.map(k => readCachedCollegeLogo(k)).find(Boolean) || "";
+  return resolveCollegeLogo(logoValue || cached, collegesBaseUrl) || (collegeId ? getCollegeLogoEndpoint(collegeId) : '');
+};
 
 export const isBackendCollegeLogo = value => {
   const url = new URL(value, window.location.origin);

@@ -10,6 +10,7 @@ import { academicYearApi, branchApi, courseApi, departmentApi } from '../../api/
 import { getSemesters } from '../../auth/collegeApi'
 import { getOperationalAcademicYearOptions } from '../../utils/academicYearUtils'
 import { blankAcademic, componentTotals, feeComponent, findConflict, money, persistHostelStructures, persistTransportStructures, readHostelStructures, readStructures, readTransportStructures, saveAcademic, structureCode, structureName, uid } from './feeStructureService'
+import { useAcademic } from '../../context/AcademicContext'
 import SearchableSelect from '../../components/SearchableSelect'
 import TablePagination from '../../components/TablePagination'
 import './FeeStructure.css'
@@ -41,9 +42,23 @@ const normSemesters=response=>responseList(response).map(x=>{const number=Number
 const payable=f=>{const t=componentTotals(f.feeComponents);return t.mandatory+(f.paymentPlan.includeRefundable?t.refundable:0)}
 
 export default function FeeStructure(){
+ const { selectedAcademicYearId, selectedAcademicYear } = useAcademic()
  const[domain,setDomain]=useState('academic'),[rows,setRows]=useState(readStructures),[hostels,setHostels]=useState(readHostelStructures),[transports,setTransports]=useState(readTransportStructures),[masters,setMasters]=useState({years:[],departments:[],courses:[],branches:[],semesters:[]}),[loading,setLoading]=useState(true),[loadError, setLoadError] = useToastState('', 'error'),[form,setForm]=useState(null),[details,setDetails]=useState(null),[facilityForm,setFacilityForm]=useState(null),[facilityDetails,setFacilityDetails]=useState(null),[query,setQuery]=useState(''),[filters,setFilters]=useState({}),[showFilters,setShowFilters]=useState(false),[, setToast] = useToastState('', 'success')
  useEffect(()=>{Promise.all([academicYearApi.getAll(),departmentApi.getAll(),courseApi.getAll(),branchApi.getAll(),getSemesters()]).then(([y,d,c,b,s])=>setMasters({years:getOperationalAcademicYearOptions(y),departments:norm(d,['departmentId','id'],['departmentName','name']),courses:norm(c,['courseId','id'],['courseName','name']),branches:norm(b,['branchId','id'],['branchName','name']),semesters:normSemesters(s)})).catch(e=>setLoadError(e.message||'Unable to load academic masters.')).finally(()=>setLoading(false))},[setLoadError])
- const notify=m=>setToast(m), filtered=useMemo(()=>rows.filter(x=>`${x.code} ${x.name}`.toLowerCase().includes(query.toLowerCase())&&Object.entries(filters).every(([k,v])=>!v||same(k==='level'?(x.semesterId||x.yearOfStudy):x[k],v))),[rows,query,filters])
+ const notify=m=>setToast(m), normYear = (y) => String(y || '').replace(/[^0-9]/g, ''), filtered=useMemo(()=>rows.filter(x=>{
+   const textMatch = `${x.code} ${x.name}`.toLowerCase().includes(query.toLowerCase())
+   const filterMatch = Object.entries(filters).every(([k,v])=>!v||same(k==='level'?(x.semesterId||x.yearOfStudy):x[k],v))
+   let yearMatch = true
+   if (selectedAcademicYearId) {
+     const matchById = x.academicYearId && String(x.academicYearId) === String(selectedAcademicYearId)
+     const matchByName = selectedAcademicYear?.name && x.academicYearName && (
+       normYear(x.academicYearName) === normYear(selectedAcademicYear.name) ||
+       String(x.academicYearName).trim().toLowerCase() === String(selectedAcademicYear.name).trim().toLowerCase()
+     )
+     yearMatch = Boolean(matchById || matchByName)
+   }
+   return textMatch && filterMatch && yearMatch
+ }),[rows,query,filters,selectedAcademicYearId,selectedAcademicYear])
  const save=(data,newVersion=false)=>{try{const result=saveAcademic(rows,data,newVersion);if(result.error)return result.error;setRows(result.rows);setForm(null);notify(newVersion?'New version created.':'Academic fee structure saved.');return''}catch(error){return error.message || 'Unable to save fee structure.'}}
  const create=()=>domain==='academic'?setForm(blankAcademic()):setFacilityForm({type:domain,value:domain==='hostel'?blankHostel():blankTransport()})
  const saveFacility=(type,value)=>{try{const source=type==='hostel'?hostels:transports,next=[value,...source.filter(x=>x.id!==value.id)];if(type==='hostel'){setHostels(next);persistHostelStructures(next)}else{setTransports(next);persistTransportStructures(next)}setFacilityForm(null);notify(`${type==='hostel'?'Hostel':'Transportation'} fee structure saved.`)}catch(error){showError(error.message || 'Unable to save fee structure.')}}

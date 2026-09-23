@@ -1,0 +1,29 @@
+@baseUrl = https://localhost:7174
+@token = PASTE_JWT_TOKEN_HERE
+@studentId = 1
+
+### View personal information
+GET {{baseUrl}}/api/v1/students/{{studentId}}/profile/personal-information
+Authorization: Bearer {{token}}
+Accept: application/json
+
+### Update personal information
+PATCH {{baseUrl}}/api/v1/students/{{studentId}}/profile/personal-information
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "alternateEmail": "student.personal@example.com",
+  "alternateMobile": "9000000099",
+  "city": "Hyderabad",
+  "district": "Hyderabad",
+  "state": "Telangana",
+  "country": "India",
+  "pincode": "500001",
+  "changeReason": "Student updated personal contact details"
+}
+
+### Future Examination/Results integration contract
+GET {{baseUrl}}/api/v1/students/{{studentId}}/profile/exam-results
+Authorization: Bearer {{token}}
+Accept: application/json

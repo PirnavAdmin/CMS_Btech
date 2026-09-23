@@ -2,13 +2,13 @@
    THEME VARIABLES
    ============================ */
 :root {
-  --brand-navy: #1E5A8E;
-  --brand-navy-dark: #144873;
-  --brand-navy-light: #2E70A8;
-  --brand-blue: #2C7DBE;
-  --brand-blue-hover: #3C8FD0;
+  --brand-navy: #0F172A;
+  --brand-navy-dark: #0F172A;
+  --brand-navy-light: #8782BC;
+  --brand-blue: #8782BC;
+  --brand-blue-hover: #0F172A;
   --brand-text-light: #FFFFFF;
-  --brand-text-muted: #C3D6E5;
+  --brand-text-muted: #94A3B8;
 }
 
 /* ============================
@@ -23,7 +23,7 @@
   flex: 1;
   display: flex;
   flex-direction: column;
-  background-color: #F7F9FC;
+  background-color: var(--app-bg, #F4F7F8);
   min-width: 0;
 }
 
@@ -94,25 +94,28 @@
 }
 
 .sidebar nav a {
-  padding: 12px 20px;
-  color: var(--brand-text-muted);
+  padding: 10px 14px;
+  color: #FFFFFF;
   text-decoration: none;
-  font-size: .95rem;
+  font-size: .88rem;
+  font-weight: 600;
   transition: background-color .15s ease, color .15s ease;
-  border-left: 3px solid transparent;
+  border: none;
 }
 
 .sidebar nav a:hover {
-  background-color: rgba(255, 255, 255, 0.1);
-  color: var(--brand-text-light);
+  background-color: rgba(255, 255, 255, 0.14);
+  color: #FFFFFF;
 }
 
 .sidebar nav a.active {
-  background-color: var(--brand-navy-dark);
-  color: var(--brand-text-light);
-  font-weight: 600;
-  border-left: 3px solid var(--brand-blue-hover);
+  background-color: #8782BC !important; color: #FFFFFF !important;
+  font-weight: 800 !important;
+  border-left: none !important;
+  border-radius: 10px !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, .14) !important;
 }
+.sidebar nav a.active svg { color: #FFFFFF !important; }
 
 /* Course Management collapsible group */
 .sidebar .sidebar-group {
@@ -225,7 +228,7 @@ button.btn-primary:hover,
   align-items: center !important;
   gap: 20px !important;
   padding: 26px 30px !important;
-  background: linear-gradient(135deg, #0d3761 0%, #174d82 100%) !important;
+  background: linear-gradient(135deg, #0F172A 0%, #8782BC 100%) !important;
   color: #fff !important;
 }
 
@@ -241,7 +244,7 @@ button.btn-primary:hover,
   width: 72px !important;
   height: 72px !important;
   border-radius: 14px !important;
-  background: var(--brand-blue, #1e5a96) !important;
+  background: var(--brand-blue, #8782BC) !important;
   color: #fff !important;
   font-size: 1.8rem !important;
   font-weight: 800 !important;
@@ -288,7 +291,7 @@ button.btn-primary:hover,
 
 .cm-badge-type {
   background: var(--surface, #fff);
-  color: #0d3761;
+  color: #0F172A;
 }
 
 .cm-status-badge {
@@ -355,7 +358,7 @@ button.btn-primary:hover,
   margin-bottom: 18px;
   padding-bottom: 12px;
   border-bottom: 1px solid var(--border, #e2e8f0);
-  color: var(--brand-blue, #1e5a96);
+  color: var(--brand-blue, #8782BC);
 }
 
 .cm-info-card-header h2 {
@@ -394,7 +397,7 @@ button.btn-primary:hover,
 }
 
 .cm-info-val {
-  color: var(--text-primary, #102f49);
+  color: var(--text-primary, #0F172A);
   font-size: 0.95rem;
   font-weight: 700;
   line-height: 1.45;
@@ -437,13 +440,13 @@ button.btn-primary:hover,
   vertical-align: middle !important;
   text-align: center !important;
   padding: 11px 16px !important;
-  background: #123f63 !important;
+  background: #8782BC !important;
   color: #f4f9fc !important;
   font-size: 11px !important;
   font-weight: 800 !important;
   letter-spacing: 0.055em;
   text-transform: uppercase;
-  border-color: #244f70 !important;
+  border-color: #334155 !important;
   box-sizing: border-box;
 }
 

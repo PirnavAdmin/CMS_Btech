@@ -48,7 +48,13 @@ export const normalizeFaculty = (source = {}) => {
     emergencyName: first(source, ['emergencyName', 'emergencyContactName', 'EmergencyContactName']),
     emergencyMobile: first(source, ['emergencyMobile', 'emergencyContactNumber', 'EmergencyContactNumber']),
     relationship: first(source, ['relationship', 'emergencyContactRelation', 'EmergencyContactRelation']),
-    employeeCategory: first(source, ['employeeCategory', 'category', 'facultyType', 'EmployeeCategory', 'Category', 'FacultyType'], ''),
+    employeeCategory: (() => {
+      const raw = first(source, ['employeeCategory', 'category', 'facultyType', 'EmployeeCategory', 'Category', 'FacultyType'], '')
+      if (raw) return /non/i.test(raw) ? 'Non-Teaching' : 'Teaching'
+      const des = String(first(source, ['designation', 'title', 'Designation', 'Title', 'designationName', 'DesignationName'], '')).trim().toLowerCase()
+      const nonTeachingRoles = ['librarian', 'assistant librarian', 'lab assistant', 'lab technician', 'system administrator', 'network administrator', 'network engineer', 'accountant', 'administrative officer', 'office assistant', 'junior assistant', 'attender', 'store keeper', 'technical assistant', 'clerk']
+      return nonTeachingRoles.includes(des) ? 'Non-Teaching' : 'Teaching'
+    })(),
     assignments: list(source.assignments ?? source.subjectAllocations),
   }
 }

@@ -1,572 +1,78 @@
-import { useState, useEffect, useMemo } from 'react'
-import { FiBookOpen, FiPlus, FiSearch, FiFilter, FiEdit2, FiTrash2, FiEye, FiDownload, FiCheckCircle, FiLayers, FiFileText, FiX, FiAward } from 'react-icons/fi'
+import { useEffect, useMemo, useState } from 'react'
+import { FiBookOpen, FiCheckCircle, FiEdit2, FiEye, FiFileText, FiLayers, FiPlus, FiRotateCcw, FiSearch, FiX } from 'react-icons/fi'
 import DashboardLayout from '../../layouts/DashboardLayout'
-import StatusBadge from '../../components/StatusBadge'
 import EmptyState from '../../components/EmptyState'
+import ExportMenu from '../../components/ExportMenu'
+import FilterPanel from '../../components/FilterPanel'
+import SearchableSelect from '../../components/SearchableSelect'
+import StatusBadge from '../../components/StatusBadge'
+import TableActionButton from '../../components/TableActionButton'
+import TablePagination, { PAGE_SIZE } from '../../components/TablePagination'
 import subjectService from '../../services/subjectService'
-import { showSuccess, showError } from '../../utils/toast'
+import academicService from '../../services/academicService'
+import { showError, showSuccess } from '../../utils/toast'
+import { useAcademic } from '../../context/AcademicContext'
 import './SubjectManagement.css'
 
+const blank = () => ({ academicYearId: '', courseId: '', branchId: '', semesterId: '', subjectCode: '', subjectName: '', subjectType: '', credits: '', status: 'Active', shortName: '', lectureHours: '', tutorialHours: '', practicalHours: '', internalMarks: '', externalMarks: '' })
+const key = v => String(v ?? '')
+const semNo = s => Number(s?.semesterNumber ?? String(s?.semesterName ?? s?.semester ?? s?.name ?? s?.id ?? '').match(/\d+/)?.[0] ?? 0)
+const ACADEMIC_LEVELS = ['1st Year', '2nd Year', '3rd Year', '4th Year']
+export const getAcademicLevelFromSemester = s => { const n = semNo(s); const year = Math.ceil(n / 2); return n > 0 ? `${year}${year === 1 ? 'st' : year === 2 ? 'nd' : year === 3 ? 'rd' : 'th'} Year` : '' }
+export const getSemestersForAcademicLevel = (list, level) => list.filter(s => getAcademicLevelFromSemester(s) === level)
+const entityName = (list, value, fallback = '') => list.find(x => key(x.id) === key(value))?.name || fallback || '—'
+
 export default function SubjectManagement() {
-  const [subjects, setSubjects] = useState([])
-  const [loading, setLoading] = useState(true)
-  const [filters, setFilters] = useState({
-    search: '',
-    department: 'All Departments',
-    branch: 'All Branches',
-    semester: 'All Semesters',
-    subjectType: 'All Types',
-  })
-
-  const [modalOpen, setModalOpen] = useState(false)
-  const [viewingSubject, setViewingSubject] = useState(null)
-  const [editingId, setEditingId] = useState(null)
-  const [formData, setFormData] = useState({
-    subjectCode: '',
-    subjectName: '',
-    shortName: '',
-    department: 'Computer Science and Engineering',
-    course: 'B.Tech',
-    branch: 'Computer Science & Engineering',
-    semester: 'Semester 3',
-    subjectType: 'Theory',
-    category: 'Professional Core (PCC)',
-    lectureHours: 3,
-    tutorialHours: 0,
-    practicalHours: 0,
-    credits: 3,
-    internalMarks: 30,
-    externalMarks: 70,
-    status: 'Active',
-    description: '',
-    facultyName: '',
-  })
-
-  const fetchSubjects = async () => {
-    setLoading(true)
-    try {
-      const data = await subjectService.getSubjects(filters)
-      setSubjects(data)
-    } catch {
-      showError('Failed to load subjects.')
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  useEffect(() => {
-    fetchSubjects()
-  }, [filters])
-
-  const kpis = useMemo(() => {
-    const total = subjects.length
-    const theory = subjects.filter(s => s.subjectType === 'Theory').length
-    const labs = subjects.filter(s => s.subjectType.includes('Practical') || s.subjectType.includes('Lab')).length
-    const electives = subjects.filter(s => s.subjectType.includes('Elective')).length
-    const totalCredits = subjects.reduce((sum, s) => sum + Number(s.credits || 0), 0)
-    return { total, theory, labs, electives, totalCredits }
-  }, [subjects])
-
-  const openCreateModal = () => {
-    setEditingId(null)
-    setFormData({
-      subjectCode: '',
-      subjectName: '',
-      shortName: '',
-      department: 'Computer Science and Engineering',
-      course: 'B.Tech',
-      branch: 'Computer Science & Engineering',
-      semester: 'Semester 3',
-      subjectType: 'Theory',
-      category: 'Professional Core (PCC)',
-      lectureHours: 3,
-      tutorialHours: 0,
-      practicalHours: 0,
-      credits: 3,
-      internalMarks: 30,
-      externalMarks: 70,
-      status: 'Active',
-      description: '',
-      facultyName: '',
+  const { selectedCollegeId, selectedAcademicYearId, selectedAcademicYear } = useAcademic()
+  const [subjects, setSubjects] = useState([]), [loading, setLoading] = useState(true), [loadError, setLoadError] = useState('')
+  const [page, setPage] = useState(1)
+  const [masters, setMasters] = useState({ years: [], courses: [], branches: [], semesters: [] })
+  const [filters, updateFilters] = useState({ search: '', academicYearId: '', courseId: '', branchId: '', level: '', semesterId: '', subjectType: '', status: '' })
+  const [form, setForm] = useState(blank), [editing, setEditing] = useState(null), [editorOpen, setEditorOpen] = useState(false), [viewing, setViewing] = useState(null), [saving, setSaving] = useState(false), [recentId, setRecentId] = useState('')
+  const setFilters = next => { setPage(1); updateFilters(next) }
+  const loadSubjects = async () => { setLoading(true); setLoadError(''); try { setSubjects(await subjectService.getSubjects()) } catch (e) { setLoadError(e.message || 'Unable to load subjects.') } finally { setLoading(false) } }
+  useEffect(() => { loadSubjects() }, [])
+  useEffect(() => { let active = true; Promise.all([academicService.getAcademicYears(), academicService.getCourses(), academicService.getBranches(), academicService.getSemesters()]).then(([years, courses, branches, semesters]) => active && setMasters({ years, courses, branches, semesters })).catch(() => active && showError('Academic mapping options could not be loaded.')); return () => { active = false } }, [])
+  const scopedCourses = masters.courses
+  const branches = courseId => masters.branches.filter(b => (!courseId || key(b.courseId) === key(courseId)))
+  const semesters = (courseId, branchId) => masters.semesters.filter(s => (!courseId || !s.courseId || key(s.courseId) === key(courseId)) && (!branchId || !s.branchId || key(s.branchId) === key(branchId)))
+  const filterSemesters = semesters(filters.courseId, filters.branchId), formSemesters = semesters(form.courseId, form.branchId)
+  const levels = list => [...new Set(list.map(getAcademicLevelFromSemester).filter(Boolean))]
+  const types = useMemo(() => [...new Set(subjects.map(s => s.subjectType).filter(Boolean))], [subjects])
+  const mapping = s => ({ year: entityName(masters.years, s.academicYearId, s.academicYear), course: entityName(masters.courses, s.courseId, s.course), branch: entityName(masters.branches, s.branchId, s.branch), semester: entityName(masters.semesters, s.semesterId, s.semester) })
+  
+  const scopedSubjects = useMemo(() => {
+    return subjects.filter((s) => {
+      const matchesYear = !selectedAcademicYearId || !s.academicYearId || key(s.academicYearId) === key(selectedAcademicYearId)
+      const course = masters.courses.find(c => key(c.id) === key(s.courseId))
+      const branch = masters.branches.find(b => key(b.id) === key(s.branchId))
+      const itemCollegeId = s.collegeId || course?.collegeId || branch?.collegeId
+      const matchesCollege = !selectedCollegeId || !itemCollegeId || key(itemCollegeId) === key(selectedCollegeId)
+      return matchesYear && matchesCollege
     })
-    setModalOpen(true)
-  }
+  }, [subjects, selectedAcademicYearId, selectedCollegeId, masters.courses, masters.branches])
 
-  const openEditModal = (subject) => {
-    setEditingId(subject.id)
-    setFormData({ ...subject })
-    setModalOpen(true)
-  }
-
-  const handleSave = async (e) => {
-    e.preventDefault()
-    if (!formData.subjectCode.trim() || !formData.subjectName.trim()) {
-      showError('Please provide subject code and subject name.')
-      return
-    }
-
-    try {
-      if (editingId) {
-        await subjectService.updateSubject(editingId, formData)
-        showSuccess(`Subject ${formData.subjectCode} updated successfully.`)
-      } else {
-        await subjectService.createSubject(formData)
-        showSuccess(`Subject ${formData.subjectCode} added successfully.`)
-      }
-      setModalOpen(false)
-      fetchSubjects()
-    } catch {
-      showError('Failed to save subject.')
-    }
-  }
-
-  const handleDelete = async (id, code) => {
-    if (window.confirm(`Are you sure you want to delete subject ${code}?`)) {
-      try {
-        await subjectService.deleteSubject(id)
-        showSuccess(`Subject ${code} deleted.`)
-        fetchSubjects()
-      } catch {
-        showError('Failed to delete subject.')
-      }
-    }
-  }
-
-  const exportCSV = () => {
-    const headers = ['Code,Name,Short Name,Department,Branch,Semester,Type,Credits,L-T-P,Max Marks,Status']
-    const rows = subjects.map(s => `"${s.subjectCode}","${s.subjectName}","${s.shortName}","${s.department}","${s.branch}","${s.semester}","${s.subjectType}",${s.credits},"${s.lectureHours}-${s.tutorialHours}-${s.practicalHours}",${s.totalMarks},"${s.status}"`)
-    const csvContent = 'data:text/csv;charset=utf-8,' + [headers, ...rows].join('\n')
-    const encodedUri = encodeURI(csvContent)
-    const link = document.createElement('a')
-    link.setAttribute('href', encodedUri)
-    link.setAttribute('download', `btech_subjects_${new Date().toISOString().slice(0, 10)}.csv`)
-    document.body.appendChild(link)
-    link.click()
-    document.body.removeChild(link)
-  }
-
-  return (
-    <DashboardLayout>
-      <div className="sm-screen">
-        <header className="sm-header">
-          <div>
-            <h1>Subject Management</h1>
-            <p>Manage courses curriculum, syllabus catalogs, credit distribution, and theory/lab allocations.</p>
-          </div>
-          <div className="sm-actions">
-            <button type="button" className="sm-btn sm-btn--secondary" onClick={exportCSV}>
-              <FiDownload /> Export CSV
-            </button>
-            <button type="button" className="sm-btn sm-btn--primary" onClick={openCreateModal}>
-              <FiPlus /> Add Subject
-            </button>
-          </div>
-        </header>
-
-        {/* KPI Row */}
-        <section className="sm-kpi-grid">
-          <div className="sm-kpi-card">
-            <div className="sm-kpi-icon sm-kpi-icon--blue"><FiBookOpen /></div>
-            <div className="sm-kpi-content">
-              <small>Total Subjects</small>
-              <strong>{kpis.total}</strong>
-            </div>
-          </div>
-          <div className="sm-kpi-card">
-            <div className="sm-kpi-icon sm-kpi-icon--green"><FiFileText /></div>
-            <div className="sm-kpi-content">
-              <small>Theory Courses</small>
-              <strong>{kpis.theory}</strong>
-            </div>
-          </div>
-          <div className="sm-kpi-card">
-            <div className="sm-kpi-icon sm-kpi-icon--purple"><FiLayers /></div>
-            <div className="sm-kpi-content">
-              <small>Practicals & Labs</small>
-              <strong>{kpis.labs}</strong>
-            </div>
-          </div>
-          <div className="sm-kpi-card">
-            <div className="sm-kpi-icon sm-kpi-icon--amber"><FiCheckCircle /></div>
-            <div className="sm-kpi-content">
-              <small>Elective Offerings</small>
-              <strong>{kpis.electives}</strong>
-            </div>
-          </div>
-          <div className="sm-kpi-card">
-            <div className="sm-kpi-icon sm-kpi-icon--cyan"><FiAward /></div>
-            <div className="sm-kpi-content">
-              <small>Total Credits</small>
-              <strong>{kpis.totalCredits}</strong>
-            </div>
-          </div>
-        </section>
-
-        {/* Filters & Table Card */}
-        <div className="sm-card">
-          <div className="sm-card-header">
-            <div className="sm-search-wrap">
-              <FiSearch color="#64748b" />
-              <input
-                type="text"
-                placeholder="Search by code, subject name, department..."
-                value={filters.search}
-                onChange={e => setFilters({ ...filters, search: e.target.value })}
-              />
-            </div>
-            <div className="sm-filters-row">
-              <select
-                className="sm-select"
-                value={filters.branch}
-                onChange={e => setFilters({ ...filters, branch: e.target.value })}
-              >
-                <option>All Branches</option>
-                <option>Computer Science & Engineering</option>
-                <option>Electronics & Communication Engineering</option>
-                <option>Electrical & Electronics Engineering</option>
-                <option>Mechanical Engineering</option>
-                <option>Civil Engineering</option>
-              </select>
-
-              <select
-                className="sm-select"
-                value={filters.semester}
-                onChange={e => setFilters({ ...filters, semester: e.target.value })}
-              >
-                <option>All Semesters</option>
-                {Array.from({ length: 8 }, (_, i) => `Semester ${i + 1}`).map(sem => (
-                  <option key={sem}>{sem}</option>
-                ))}
-              </select>
-
-              <select
-                className="sm-select"
-                value={filters.subjectType}
-                onChange={e => setFilters({ ...filters, subjectType: e.target.value })}
-              >
-                <option>All Types</option>
-                <option>Theory</option>
-                <option>Practical / Lab</option>
-                <option>Elective (PE)</option>
-                <option>Elective (OE)</option>
-                <option>Mandatory Non-Credit</option>
-              </select>
-            </div>
-          </div>
-
-          <div className="sm-table-wrap">
-            {subjects.length === 0 ? (
-              <EmptyState
-                title="No subjects found"
-                description="Try adjusting your search criteria or add a new subject."
-                action="Add Subject"
-                onAction={openCreateModal}
-              />
-            ) : (
-              <table className="sm-table">
-                <thead>
-                  <tr>
-                    <th>Code</th>
-                    <th>Subject Name</th>
-                    <th>Department & Branch</th>
-                    <th>Semester</th>
-                    <th>Type</th>
-                    <th>L-T-P</th>
-                    <th>Credits</th>
-                    <th>Max Marks</th>
-                    <th>Status</th>
-                    <th style={{ textAlign: 'right' }}>Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {subjects.map(s => (
-                    <tr key={s.id}>
-                      <td><span className="sm-code-badge">{s.subjectCode}</span></td>
-                      <td>
-                        <strong>{s.subjectName}</strong>
-                        {s.shortName && <div style={{ fontSize: '0.8rem', color: '#64748b' }}>{s.shortName}</div>}
-                      </td>
-                      <td>
-                        <div>{s.branch}</div>
-                        <small style={{ color: '#64748b' }}>{s.department}</small>
-                      </td>
-                      <td>{s.semester}</td>
-                      <td>
-                        <span className={`sm-type-tag ${
-                          s.subjectType === 'Theory' ? 'sm-type-tag--theory' :
-                          s.subjectType.includes('Practical') || s.subjectType.includes('Lab') ? 'sm-type-tag--lab' :
-                          s.subjectType.includes('(PE)') ? 'sm-type-tag--pe' :
-                          s.subjectType.includes('(OE)') ? 'sm-type-tag--oe' : 'sm-type-tag--mc'
-                        }`}>
-                          {s.subjectType}
-                        </span>
-                      </td>
-                      <td>
-                        <span className="sm-ltp-pill">{s.lectureHours}-{s.tutorialHours}-{s.practicalHours}</span>
-                      </td>
-                      <td><span className="sm-credit-badge">{s.credits}</span></td>
-                      <td>
-                        <span title={`Internal: ${s.internalMarks} | External: ${s.externalMarks}`}>
-                          {s.totalMarks || (s.internalMarks + s.externalMarks)}
-                        </span>
-                      </td>
-                      <td><StatusBadge value={s.status} /></td>
-                      <td>
-                        <div className="sm-row-actions" style={{ justifyContent: 'flex-end' }}>
-                          <button
-                            type="button"
-                            className="sm-icon-btn"
-                            title="View details"
-                            onClick={() => setViewingSubject(s)}
-                          >
-                            <FiEye />
-                          </button>
-                          <button
-                            type="button"
-                            className="sm-icon-btn"
-                            title="Edit subject"
-                            onClick={() => openEditModal(s)}
-                          >
-                            <FiEdit2 />
-                          </button>
-                          <button
-                            type="button"
-                            className="sm-icon-btn"
-                            title="Delete subject"
-                            style={{ color: '#dc2626' }}
-                            onClick={() => handleDelete(s.id, s.subjectCode)}
-                          >
-                            <FiTrash2 />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            )}
-          </div>
-        </div>
-
-        {/* View Details Modal */}
-        {viewingSubject && (
-          <div className="sm-modal-backdrop" onClick={() => setViewingSubject(null)}>
-            <div className="sm-modal" onClick={e => e.stopPropagation()}>
-              <div className="sm-modal-header">
-                <div>
-                  <span className="sm-code-badge">{viewingSubject.subjectCode}</span>
-                  <h2>{viewingSubject.subjectName}</h2>
-                </div>
-                <button type="button" className="sm-icon-btn" onClick={() => setViewingSubject(null)}><FiX /></button>
-              </div>
-              <div className="sm-modal-body">
-                <div className="sm-form-grid-2">
-                  <div><strong>Department:</strong> <p>{viewingSubject.department}</p></div>
-                  <div><strong>Branch:</strong> <p>{viewingSubject.branch}</p></div>
-                  <div><strong>Semester:</strong> <p>{viewingSubject.semester}</p></div>
-                  <div><strong>Curriculum Category:</strong> <p>{viewingSubject.category}</p></div>
-                  <div><strong>Teaching Scheme (L-T-P):</strong> <p>{viewingSubject.lectureHours} Lectures, {viewingSubject.tutorialHours} Tutorials, {viewingSubject.practicalHours} Practicals</p></div>
-                  <div><strong>Credits:</strong> <p><span className="sm-credit-badge">{viewingSubject.credits} Credits</span></p></div>
-                  <div><strong>Examination Scheme:</strong> <p>Internal: {viewingSubject.internalMarks} Marks | External: {viewingSubject.externalMarks} Marks (Total: {viewingSubject.totalMarks})</p></div>
-                  <div><strong>Faculty Coordinator:</strong> <p>{viewingSubject.facultyName || 'Department Faculty'}</p></div>
-                </div>
-                <div>
-                  <strong>Course Overview / Syllabus:</strong>
-                  <p style={{ color: '#475569', marginTop: '6px', lineHeight: 1.6 }}>{viewingSubject.description || 'Syllabus details adhere to university guidelines and board of studies specifications.'}</p>
-                </div>
-              </div>
-              <div className="sm-modal-footer">
-                <button type="button" className="sm-btn sm-btn--secondary" onClick={() => setViewingSubject(null)}>Close</button>
-                <button type="button" className="sm-btn sm-btn--primary" onClick={() => { const s = viewingSubject; setViewingSubject(null); openEditModal(s) }}>Edit Subject</button>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Add / Edit Subject Modal */}
-        {modalOpen && (
-          <div className="sm-modal-backdrop" onClick={() => setModalOpen(false)}>
-            <div className="sm-modal" onClick={e => e.stopPropagation()}>
-              <form onSubmit={handleSave}>
-                <div className="sm-modal-header">
-                  <h2>{editingId ? 'Edit Subject' : 'Add New Subject'}</h2>
-                  <button type="button" className="sm-icon-btn" onClick={() => setModalOpen(false)}><FiX /></button>
-                </div>
-                <div className="sm-modal-body">
-                  <div className="sm-form-grid-2">
-                    <div className="sm-field">
-                      <label>Subject Code *</label>
-                      <input
-                        type="text"
-                        required
-                        placeholder="e.g. CS301PC"
-                        value={formData.subjectCode}
-                        onChange={e => setFormData({ ...formData, subjectCode: e.target.value })}
-                      />
-                    </div>
-                    <div className="sm-field">
-                      <label>Short Name / Abbr</label>
-                      <input
-                        type="text"
-                        placeholder="e.g. DSA"
-                        value={formData.shortName}
-                        onChange={e => setFormData({ ...formData, shortName: e.target.value })}
-                      />
-                    </div>
-                  </div>
-
-                  <div className="sm-field">
-                    <label>Subject Name *</label>
-                    <input
-                      type="text"
-                      required
-                      placeholder="e.g. Data Structures & Algorithms"
-                      value={formData.subjectName}
-                      onChange={e => setFormData({ ...formData, subjectName: e.target.value })}
-                    />
-                  </div>
-
-                  <div className="sm-form-grid-2">
-                    <div className="sm-field">
-                      <label>Branch</label>
-                      <select
-                        value={formData.branch}
-                        onChange={e => setFormData({ ...formData, branch: e.target.value })}
-                      >
-                        <option>Computer Science & Engineering</option>
-                        <option>Electronics & Communication Engineering</option>
-                        <option>Electrical & Electronics Engineering</option>
-                        <option>Mechanical Engineering</option>
-                        <option>Civil Engineering</option>
-                        <option>All Branches</option>
-                      </select>
-                    </div>
-                    <div className="sm-field">
-                      <label>Semester</label>
-                      <select
-                        value={formData.semester}
-                        onChange={e => setFormData({ ...formData, semester: e.target.value })}
-                      >
-                        {Array.from({ length: 8 }, (_, i) => `Semester ${i + 1}`).map(sem => (
-                          <option key={sem}>{sem}</option>
-                        ))}
-                      </select>
-                    </div>
-                  </div>
-
-                  <div className="sm-form-grid-2">
-                    <div className="sm-field">
-                      <label>Subject Type</label>
-                      <select
-                        value={formData.subjectType}
-                        onChange={e => setFormData({ ...formData, subjectType: e.target.value })}
-                      >
-                        <option>Theory</option>
-                        <option>Practical / Lab</option>
-                        <option>Elective (PE)</option>
-                        <option>Elective (OE)</option>
-                        <option>Mandatory Non-Credit</option>
-                        <option>Project / Seminar</option>
-                      </select>
-                    </div>
-                    <div className="sm-field">
-                      <label>Curriculum Category</label>
-                      <select
-                        value={formData.category}
-                        onChange={e => setFormData({ ...formData, category: e.target.value })}
-                      >
-                        <option>Professional Core (PCC)</option>
-                        <option>Professional Core Lab (PCC Lab)</option>
-                        <option>Professional Elective (PEC)</option>
-                        <option>Open Elective (OEC)</option>
-                        <option>Basic Sciences (BSC)</option>
-                        <option>Engineering Sciences (ESC)</option>
-                        <option>Humanities & Management (HSMC)</option>
-                        <option>Mandatory Course (MC)</option>
-                      </select>
-                    </div>
-                  </div>
-
-                  <div className="sm-form-grid-4" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '12px' }}>
-                    <div className="sm-field">
-                      <label>Lectures (L)</label>
-                      <input
-                        type="number"
-                        min="0"
-                        value={formData.lectureHours}
-                        onChange={e => setFormData({ ...formData, lectureHours: Number(e.target.value) })}
-                      />
-                    </div>
-                    <div className="sm-field">
-                      <label>Tutorial (T)</label>
-                      <input
-                        type="number"
-                        min="0"
-                        value={formData.tutorialHours}
-                        onChange={e => setFormData({ ...formData, tutorialHours: Number(e.target.value) })}
-                      />
-                    </div>
-                    <div className="sm-field">
-                      <label>Practical (P)</label>
-                      <input
-                        type="number"
-                        min="0"
-                        value={formData.practicalHours}
-                        onChange={e => setFormData({ ...formData, practicalHours: Number(e.target.value) })}
-                      />
-                    </div>
-                    <div className="sm-field">
-                      <label>Credits</label>
-                      <input
-                        type="number"
-                        step="0.5"
-                        min="0"
-                        value={formData.credits}
-                        onChange={e => setFormData({ ...formData, credits: Number(e.target.value) })}
-                      />
-                    </div>
-                  </div>
-
-                  <div className="sm-form-grid-2">
-                    <div className="sm-field">
-                      <label>Internal Max Marks</label>
-                      <input
-                        type="number"
-                        min="0"
-                        value={formData.internalMarks}
-                        onChange={e => setFormData({ ...formData, internalMarks: Number(e.target.value) })}
-                      />
-                    </div>
-                    <div className="sm-field">
-                      <label>External Max Marks</label>
-                      <input
-                        type="number"
-                        min="0"
-                        value={formData.externalMarks}
-                        onChange={e => setFormData({ ...formData, externalMarks: Number(e.target.value) })}
-                      />
-                    </div>
-                  </div>
-
-                  <div className="sm-field">
-                    <label>Description / Syllabus Highlights</label>
-                    <textarea
-                      rows="3"
-                      placeholder="Brief course objectives and syllabus contents..."
-                      value={formData.description}
-                      onChange={e => setFormData({ ...formData, description: e.target.value })}
-                    />
-                  </div>
-                </div>
-                <div className="sm-modal-footer">
-                  <button type="button" className="sm-btn sm-btn--secondary" onClick={() => setModalOpen(false)}>Cancel</button>
-                  <button type="submit" className="sm-btn sm-btn--primary">{editingId ? 'Update Subject' : 'Create Subject'}</button>
-                </div>
-              </form>
-            </div>
-          </div>
-        )}
-      </div>
-    </DashboardLayout>
-  )
+  const records = useMemo(() => scopedSubjects.filter(s => { const q = filters.search.trim().toLowerCase(), n = semNo(s); return (!q || `${s.subjectCode} ${s.subjectName}`.toLowerCase().includes(q)) && (!filters.academicYearId || key(s.academicYearId) === key(filters.academicYearId)) && (!filters.courseId || key(s.courseId) === key(filters.courseId)) && (!filters.branchId || key(s.branchId) === key(filters.branchId)) && (!filters.semesterId || key(s.semesterId) === key(filters.semesterId)) && (!filters.level || getAcademicLevelFromSemester({ semesterNumber: n }) === filters.level) && (!filters.subjectType || s.subjectType === filters.subjectType) && (!filters.status || s.status === filters.status) }).sort((left, right) => key(left.id) === key(recentId) ? -1 : key(right.id) === key(recentId) ? 1 : 0), [scopedSubjects, filters, recentId])
+  const totalPages = Math.max(1, Math.ceil(records.length / PAGE_SIZE))
+  const currentPage = Math.min(page, totalPages)
+  const paginatedRecords = records.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE)
+  const kpis = useMemo(() => ({ total: records.length, active: records.filter(s => String(s.status).toLowerCase() === 'active').length, theory: records.filter(s => /theory/i.test(s.subjectType)).length, lab: records.filter(s => /lab|practical/i.test(s.subjectType)).length, credits: records.reduce((n, s) => n + Number(s.credits || 0), 0) }), [records])
+  const changeFilter = (field, value) => setFilters(old => field === 'courseId' ? { ...old, courseId: value, branchId: '', level: '', semesterId: '' } : field === 'branchId' ? { ...old, branchId: value, level: '', semesterId: '' } : field === 'level' ? { ...old, level: value, semesterId: '' } : { ...old, [field]: value })
+  const changeForm = (field, value) => setForm(old => field === 'courseId' ? { ...old, courseId: value, branchId: '', semesterId: '' } : field === 'branchId' ? { ...old, branchId: value, semesterId: '' } : { ...old, [field]: value })
+  const formLevel = getAcademicLevelFromSemester(formSemesters.find(s => key(s.id) === key(form.semesterId)) || { semester: form.semester })
+  const openAdd = () => { const activeYear = masters.years.find(year => year.isCurrent || String(year.status).toLowerCase() === 'active' || String(year.status).toLowerCase() === 'current'); setEditing(null); setForm({ ...blank(), academicYearId: selectedAcademicYearId || (activeYear ? key(activeYear.id) : '') }); setEditorOpen(true) }
+  const closeEditor = () => { setEditing(null); setForm(blank()); setEditorOpen(false) }
+  const openEdit = s => { setViewing(null); setEditing(s); setForm({ ...blank(), ...s, academicYearId: key(s.academicYearId), courseId: key(s.courseId), branchId: key(s.branchId), semesterId: key(s.semesterId) }); setEditorOpen(true) }
+  const save = async e => { e.preventDefault(); if (!form.subjectCode.trim() || !form.subjectName.trim() || !form.academicYearId || !form.courseId || !form.branchId || !form.semesterId) return showError('Complete the academic mapping, subject code, and subject name.'); const selectedCourse = masters.courses.find(course => key(course.id) === key(form.courseId)); const selectedBranch = branches(form.courseId).find(branch => key(branch.id) === key(form.branchId)); if (!selectedCourse || !selectedBranch) return showError('Select a valid course and a branch belonging to that course.'); const numericFields = [['Credits', form.credits], ['Lecture hours', form.lectureHours], ['Tutorial hours', form.tutorialHours], ['Practical hours', form.practicalHours], ['Internal marks', form.internalMarks], ['External marks', form.externalMarks]]; if (numericFields.some(([, value]) => value !== '' && (!Number.isFinite(Number(value)) || Number(value) < 0))) return showError('Credits, hours, and marks must be non-negative numbers.'); if (subjects.some(s => key(s.id) !== key(editing?.id) && s.subjectCode?.toLowerCase() === form.subjectCode.trim().toLowerCase())) return showError('Subject code already exists.'); const semester = formSemesters.find(s => key(s.id) === key(form.semesterId)); if (!semester) return showError('Select a valid semester for this course and branch.'); const payload = { ...form, credits: Number(form.credits || 0), semester: semester.semesterName || semester.name || `Semester ${semNo(semester)}`, academicYear: entityName(masters.years, form.academicYearId), course: entityName(masters.courses, form.courseId), branch: entityName(masters.branches, form.branchId) }; setSaving(true); try { if (editing) { await subjectService.updateSubject(editing.id, payload); showSuccess('Subject updated successfully') } else { const created = await subjectService.createSubject(payload); setRecentId(created?.id || ''); setPage(1); showSuccess('Subject created successfully') } closeEditor(); await loadSubjects() } catch (err) { showError(err.message || 'Failed to save subject.') } finally { setSaving(false) } }
+  const updateStatus = async s => { const status = String(s.status).toLowerCase() === 'active' ? 'Inactive' : 'Active'; if (!window.confirm(`${status === 'Active' ? 'Activate' : 'Deactivate'} ${s.subjectCode}?`)) return; try { await subjectService.updateSubject(s.id, { ...s, status }); showSuccess(`Subject ${status.toLowerCase()}d successfully`); await loadSubjects() } catch (err) { showError(err.message || 'Unable to update status.') } }
+  const columns = [{ label: 'Subject Code', value: 'subjectCode' }, { label: 'Subject Name', value: 'subjectName' }, { label: 'Academic Year', value: s => mapping(s).year }, { label: 'Course', value: s => mapping(s).course }, { label: 'Branch', value: s => mapping(s).branch }, { label: 'Academic Level', value: s => getAcademicLevelFromSemester(s) }, { label: 'Semester', value: s => mapping(s).semester }, { label: 'Subject Type', value: 'subjectType' }, { label: 'Credits', value: 'credits' }, { label: 'Status', value: 'status' }]
+  const activeFilterText = [filters.academicYearId && entityName(masters.years, filters.academicYearId), filters.courseId && entityName(masters.courses, filters.courseId), filters.branchId && entityName(masters.branches, filters.branchId), filters.level, filters.semesterId && entityName(masters.semesters, filters.semesterId)].filter(Boolean)
+  const detailSections = s => { const m = mapping(s); return [{ title: 'Subject Information', rows: [['Subject Code', s.subjectCode], ['Subject Name', s.subjectName], ['Type', s.subjectType], ['Credits', s.credits], ['Status', s.status]] }, { title: 'Academic Mapping', rows: [['Academic Year', m.year], ['Course', m.course], ['Branch', m.branch], ['Academic Level', getAcademicLevelFromSemester({ semester: m.semester })], ['Semester', m.semester]] }, { title: 'Academic Configuration', rows: [['Lecture Hours', s.lectureHours], ['Tutorial Hours', s.tutorialHours], ['Practical Hours', s.practicalHours], ['Internal Marks', s.internalMarks], ['External Marks', s.externalMarks]].filter(([, v]) => v !== '' && v != null) }].filter(x => x.rows.length) }
+  const open = editorOpen
+  return <DashboardLayout><main className="sm-screen"><header className="sm-header"><div><h1>Subject Management</h1><p>Configure and manage subjects across academic programs and semesters.</p></div><div className="sm-actions"><ExportMenu rows={records} columns={columns} filename="subject-directory" title="Subject Directory" scope="All matching subjects" /><button className="sm-btn sm-btn--primary" onClick={openAdd}><FiPlus /> Add Subject</button></div></header><section className="sm-kpi-grid">{[[FiBookOpen, 'Total Subjects', kpis.total, 'blue'], [FiCheckCircle, 'Active Subjects', kpis.active, 'green'], [FiFileText, 'Theory Subjects', kpis.theory, 'purple'], [FiLayers, 'Practical / Lab', kpis.lab, 'amber'], [FiBookOpen, 'Total Credits', kpis.credits, 'cyan']].map(([Icon, label, value, color]) => <div className="sm-kpi-card" key={label}><div className={`sm-kpi-icon sm-kpi-icon--${color}`}><Icon /></div><div className="sm-kpi-content"><small>{label}</small><strong>{value}</strong></div></div>)}</section><section className="sm-card"><div className="sm-directory-title"><div><h2>Subject Directory</h2><p>{loading ? 'Loading subjects…' : `${records.length} subjects found`}</p></div>{activeFilterText.length > 0 && <div className="sm-filter-context">{activeFilterText.join(' / ')} <button onClick={() => setFilters({ search: '', academicYearId: '', courseId: '', branchId: '', level: '', semesterId: '', subjectType: '', status: '' })}><FiRotateCcw /> Clear filters</button></div>}</div><FilterPanel active={Boolean(filters.search || activeFilterText.length || filters.subjectType || filters.status)} onClear={() => setFilters({ search: '', academicYearId: '', courseId: '', branchId: '', level: '', semesterId: '', subjectType: '', status: '' })} className="sm-filter-panel"><div className="sm-filter-grid"><label className="sm-search-wrap"><FiSearch aria-hidden="true" /><input aria-label="Search subjects" value={filters.search} onChange={e => changeFilter('search', e.target.value)} placeholder="Search subject code or name" /></label><Select label="Academic Year" value={filters.academicYearId} options={masters.years} onChange={v => changeFilter('academicYearId', v)} /><Select label="Course" value={filters.courseId} options={scopedCourses} onChange={v => changeFilter('courseId', v)} /><Select label="Branch" value={filters.branchId} options={branches(filters.courseId)} onChange={v => changeFilter('branchId', v)} disabled={!filters.courseId} /><Select label="Academic Level" value={filters.level} options={levels(filterSemesters)} onChange={v => changeFilter('level', v)} disabled={!filters.branchId} /><Select label="Semester" value={filters.semesterId} options={getSemestersForAcademicLevel(filterSemesters, filters.level)} onChange={v => changeFilter('semesterId', v)} disabled={!filters.level} semester /><Select label="Subject Type" value={filters.subjectType} options={types} onChange={v => changeFilter('subjectType', v)} /><Select label="Status" value={filters.status} options={['Active', 'Inactive']} onChange={v => changeFilter('status', v)} /></div></FilterPanel><div className="sm-table-wrap">{loading ? <div className="sm-loading">Loading subject directory…</div> : loadError ? <div className="sm-error">{loadError}<button className="sm-btn sm-btn--secondary" onClick={loadSubjects}>Retry</button></div> : !records.length ? <EmptyState title={filters.search ? `No subjects found for “${filters.search}”.` : activeFilterText.length ? 'No subjects match the selected academic filters.' : 'No subjects configured'} description={activeFilterText.length ? 'Clear filters or choose another academic mapping.' : 'No subjects have been configured yet.'} action="Add Subject" onAction={openAdd} /> : <table className="sm-table"><thead><tr><th>Subject Code</th><th>Subject Name</th><th>Academic Mapping</th><th>Academic Level</th><th>Semester</th><th>Type</th><th>Credits</th><th>Status</th><th>Actions</th></tr></thead><tbody>{paginatedRecords.map(s => { const m = mapping(s); return <tr key={s.id}><td><span className="sm-code-badge">{s.subjectCode}</span></td><td><strong>{s.subjectName}</strong>{s.shortName && <small>{s.shortName}</small>}</td><td>{m.course}<small>• {m.branch}</small></td><td>{getAcademicLevelFromSemester({ semester: m.semester }) || '—'}</td><td>{m.semester}</td><td>{s.subjectType && <span className={`sm-type-tag ${/lab|practical/i.test(s.subjectType) ? 'sm-type-tag--lab' : 'sm-type-tag--theory'}`}>{s.subjectType}</span>}</td><td><span className="sm-credit-badge">{s.credits}</span></td><td><StatusBadge value={s.status} /></td><td><div className="sm-row-actions"><button className="sm-icon-btn" title="View" onClick={() => setViewing(s)}><FiEye /></button><button className="sm-icon-btn" title="Edit" onClick={() => openEdit(s)}><FiEdit2 /></button><TableActionButton type={String(s.status).toLowerCase() === 'active' ? 'deactivate' : 'activate'} ariaLabel={`${String(s.status).toLowerCase() === 'active' ? 'Deactivate' : 'Activate'} ${s.subjectCode}`} onClick={() => updateStatus(s)} /></div></td></tr> })}</tbody></table>}</div>{!loading && !loadError && records.length > 0 && <TablePagination currentPage={currentPage} totalPages={totalPages} onPageChange={setPage} />}</section>{open && <Editor form={form} editing={editing} masters={{ ...masters, courses: scopedCourses }} branches={branches(form.courseId)} semesters={formSemesters} levels={ACADEMIC_LEVELS} typeOptions={types} formLevel={formLevel} change={changeForm} close={closeEditor} save={save} saving={saving} />}{viewing && <Details subject={viewing} sections={detailSections(viewing)} close={() => setViewing(null)} edit={() => openEdit(viewing)} />}</main></DashboardLayout>
 }
+function Select({ label, value, options, onChange, disabled, semester = false, hideSearch = false }) { return <SearchableSelect placement="bottom" hideSearch={hideSearch} label={label} value={value} options={options} onChange={onChange} placeholder={label} disabled={disabled} getOptionLabel={semester ? s => s.semesterName || s.name || `Semester ${semNo(s)}` : undefined} /> }
+function Field({ label, children }) { return <div className="sm-field"><label>{label}</label>{children}</div> }
+function Input({ label, value, change, type = 'text' }) { return <Field label={label}><input type={type} min={type === 'number' ? '0' : undefined} value={value ?? ''} onChange={e => change(e.target.value)} /></Field> }
+function Editor({ form, editing, masters, branches, semesters, levels, typeOptions, formLevel: initialLevel, change: updateForm, close, save, saving }) { const [formLevel, setFormLevel] = useState(initialLevel); const change = (field, value) => { if (field === 'courseId' || field === 'branchId') setFormLevel(''); updateForm(field, value) }; const selectedCourse = masters.courses.find(course => key(course.id) === key(form.courseId)); const selectedBranch = branches.find(branch => key(branch.id) === key(form.branchId)); const selected = semesters.find(s => key(s.id) === key(form.semesterId)); const selectLevel = v => { setFormLevel(v); const first = getSemestersForAcademicLevel(semesters, v)[0]; change('semesterId', first ? key(first.id) : '') }; return <div className="sm-modal-backdrop" onMouseDown={close}><div className="sm-modal sm-modal--wide" onMouseDown={e => e.stopPropagation()}><form onSubmit={save}><div className="sm-modal-header"><div><h2>{editing ? `Edit ${editing.subjectCode}` : 'Add Subject'}</h2><p>Map the subject to a valid academic program and semester.</p></div><button type="button" className="sm-icon-btn" onClick={close}><FiX /></button></div><div className="sm-modal-body"><section><h3>Academic Mapping</h3><div className="sm-form-grid-2"><Field label={<>Course <span className="sm-required">*</span></>}><Select label="Course" value={form.courseId} options={masters.courses} onChange={v => change('courseId', v)} /></Field><Field label="Course Code"><div className="sm-active-year-field">{selectedCourse?.code || 'Auto-filled'}</div></Field><Field label={<>Branch <span className="sm-required">*</span></>}><Select label="Branch" value={form.branchId} options={branches} onChange={v => change('branchId', v)} disabled={!form.courseId} /></Field><Field label="Branch Code"><div className="sm-active-year-field">{selectedBranch?.code || 'Auto-filled'}</div></Field><Field label={<>Academic Level <span className="sm-required">*</span></>}><Select label="Academic Level" value={formLevel} options={levels} onChange={selectLevel} disabled={!form.branchId} /></Field><Field label={<>Semester <span className="sm-required">*</span></>}><Select label="Semester" hideSearch value={form.semesterId} options={getSemestersForAcademicLevel(semesters, formLevel)} onChange={v => change('semesterId', v)} disabled={!form.branchId || !formLevel} semester /></Field></div></section><section><h3>Subject Information</h3><div className="sm-form-grid-2"><Input label={<>Subject Name <span className="sm-required">*</span></>} value={form.subjectName} change={v => change('subjectName', v)} /><Input label={<>Subject Code <span className="sm-required">*</span></>} value={form.subjectCode} change={v => change('subjectCode', v)} /><Field label="Subject Type"><Select label="Subject Type" value={form.subjectType} options={typeOptions} onChange={v => change('subjectType', v)} disabled={!typeOptions.length} /></Field><Input label="Credits" type="number" value={form.credits} change={v => change('credits', v)} /><Input label="Short Name" value={form.shortName} change={v => change('shortName', v)} /><Field label="Status"><Select label="Status" value={form.status} options={['Active', 'Inactive']} onChange={v => change('status', v)} /></Field></div></section><section><h3>Academic Configuration</h3><div className="sm-form-grid-3"><Input label="Lecture Hours" type="number" value={form.lectureHours} change={v => change('lectureHours', v)} /><Input label="Tutorial Hours" type="number" value={form.tutorialHours} change={v => change('tutorialHours', v)} /><Input label="Practical Hours" type="number" value={form.practicalHours} change={v => change('practicalHours', v)} /><Input label="Internal Marks" type="number" value={form.internalMarks} change={v => change('internalMarks', v)} /><Input label="External Marks" type="number" value={form.externalMarks} change={v => change('externalMarks', v)} /></div></section><aside className="sm-preview"><strong>Academic Mapping Preview</strong><p>{entityName(masters.years, form.academicYearId, 'Academic Year')}</p><p>{selectedCourse ? `${selectedCourse.name}${selectedCourse.code ? ` (${selectedCourse.code})` : ''}` : 'Course'} → {selectedBranch ? `${selectedBranch.name}${selectedBranch.code ? ` (${selectedBranch.code})` : ''}` : 'Branch'}</p><p>{formLevel || 'Academic Level'} → {selected?.semesterName || selected?.name || 'Semester'}</p><hr /><b>{form.subjectCode || 'Subject Code'}</b><p>{form.subjectName || 'Subject Name'}</p><small>{form.subjectType || 'Type'} {form.credits !== '' && `• ${form.credits} Credits`}</small></aside></div><div className="sm-modal-footer"><button type="button" className="sm-btn sm-btn--secondary" onClick={close}>Cancel</button><button disabled={saving} className="sm-btn sm-btn--primary">{saving ? 'Saving…' : editing ? 'Update Subject' : 'Create Subject'}</button></div></form></div></div> }
+function Details({ subject, sections, close, edit }) { return <div className="sm-modal-backdrop" onMouseDown={close}><div className="sm-modal sm-modal--details" onMouseDown={e => e.stopPropagation()}><div className="sm-modal-header"><div><span className="sm-code-badge">{subject.subjectCode}</span><h2>{subject.subjectName}</h2><StatusBadge value={subject.status} /></div><button className="sm-icon-btn" onClick={close}><FiX /></button></div><div className="sm-modal-body">{sections.map(section => <section className="sm-details-section" key={section.title}><h3>{section.title}</h3>{section.rows.map(([label, value]) => <div key={label}><span>{label}</span><strong>{value}</strong></div>)}</section>)}</div><div className="sm-modal-footer"><ExportMenu mode="single" title={`${subject.subjectCode} — Subject Details`} filename={`subject-${subject.subjectCode}`} recordSections={sections} /><button className="sm-btn sm-btn--primary" onClick={edit}>Edit Subject</button></div></div></div> }

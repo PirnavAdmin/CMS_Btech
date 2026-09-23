@@ -1,0 +1,15 @@
+.vs/
+bin/
+obj/
+
+Logs/
+Uploads/
+!Uploads/.gitkeep
+
+appsettings.Local.json
+appsettings.Development.json
+
+.env
+*.user
+*.suo
+Tests/test-password-hash.txt

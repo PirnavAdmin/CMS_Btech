@@ -1,0 +1,27 @@
+STUDENT ACADEMIC DETAILS - CLEAN SEPARATION
+
+Controller:
+  Controllers/V1/StudentAcademicDetailsController.cs
+
+DTOs:
+  DTOs/StudentAcademicDetails/StudentAcademicDetailsDtos.cs
+
+Service:
+  Services/Interfaces/IStudentAcademicDetailsService.cs
+  Services/Implementations/StudentAcademicDetailsService.cs
+
+Repository:
+  Repositories/Interfaces/IStudentAcademicDetailsRepository.cs
+  Repositories/Implementations/StudentAcademicDetailsRepository.cs
+
+Model:
+  Models/StudentAcademicDetails.cs
+
+Stored Procedures:
+  Database/StudentAdmissions/StudentAcademicDetailsStoredProcedures.sql
+
+API flow:
+  GET/PUT -> StudentAcademicDetailsController -> StudentAcademicDetailsService
+  -> StudentAcademicDetailsRepository -> Stored Procedures -> studentadmissions table
+
+Admission module no longer contains Student Academic Details service/repository methods.

@@ -1,17 +1,20 @@
-﻿using BTech.DTOs;
+using BTech.DTOs.Profile;
 
 namespace BTech.Services.Interfaces
 {
     public interface IProfileService
     {
-        Task<ProfileResponseDto?> GetProfileAsync(
-            long userId);
+        Task<ProfileResponseDto?> GetProfileAsync(long userId);
 
-        Task<(bool Success,
-              string Message,
-              ProfileResponseDto? Data)>
+        Task<(
+            bool Success,
+            string Message,
+            ProfileResponseDto? Data)>
             UpdateProfileAsync(
                 long userId,
-                UpdateProfileRequestDto request);
+                UpdateProfileRequestDto request,
+                long? changedBy = null);
+
+        Task<FeeSummaryDto?> GetFeeSummaryAsync(long studentId);
     }
 }

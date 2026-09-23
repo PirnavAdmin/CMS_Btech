@@ -162,10 +162,10 @@
 }
 
 .faculty-management .fm-attendance-screen .export-control .export-button {
-  border-color: var(--brand);
+  border-color: #0F172A;
   background: var(--brand);
   color: var(--text-on-accent, #fff);
-}
+ border: 1px solid #CBD5E1;}
 
 .faculty-management .fm-attendance-screen {
   --attendance-present-bg: color-mix(in srgb, var(--success, #15935b) 16%, var(--surface));
@@ -176,8 +176,8 @@
   --attendance-late-text: #9a6700;
   --attendance-half-day-bg: color-mix(in srgb, #e87516 15%, var(--surface));
   --attendance-half-day-text: #a04c06;
-  --attendance-leave-bg: color-mix(in srgb, var(--info, #1970b3) 15%, var(--surface));
-  --attendance-leave-text: var(--info, #0968b0);
+  --attendance-leave-bg: color-mix(in srgb, var(--info, #8782BC) 15%, var(--surface));
+  --attendance-leave-text: var(--info, #8782BC);
   --attendance-lop-bg: color-mix(in srgb, #9f1239 16%, var(--surface));
   --attendance-lop-text: #9f1239;
   --attendance-unmarked-bg: var(--surface-soft);
