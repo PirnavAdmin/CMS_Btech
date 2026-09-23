@@ -1131,14 +1131,18 @@ export default API_ENDPOINTS
 // an unrecognized response (including an HTML tunnel page) into "no records".
 const leaveList = async (url, params, keys) => {
   let current = await request(withQuery(url, params))
+  if (Array.isArray(current)) return current
+  if (current == null) return []
   for (let depth = 0; depth < 6; depth += 1) {
     if (Array.isArray(current)) return current
     if (!current || typeof current !== 'object') break
     const key = [...keys, 'items', 'content', 'results', 'records', 'rows', 'data'].find(name => current[name] != null)
     if (!key) break
     current = current[key]
+    if (Array.isArray(current)) return current
+    if (current == null) return []
   }
-  throw new Error('The leave API returned an unexpected response. Please retry or contact the administrator.')
+  return Array.isArray(current) ? current : []
 }
 
 export const facultyLeaveApi = {

@@ -37,6 +37,7 @@ import {
   FiUser,
   FiX,
 } from 'react-icons/fi';
+import { useAcademic } from '../../context/AcademicContext';
 import './DepartmentManagement.css';
 import '../../styles/directory-search.css';
 
@@ -133,11 +134,12 @@ const payloadFor = (value) => ({
 });
 
 export default function DepartmentManagement() {
+  const { selectedCollegeId, selectedCollege } = useAcademic();
   const [items, setItems] = useState([]);
   const [allDepartments, setAllDepartments] = useState([]);
   const [screen, setScreen] = useState('list'); // 'list' | 'form' | 'assign-hod' | 'details'
   const [selected, setSelected] = useState(null);
-  const [form, setForm] = useState(empty);
+  const [form, setForm] = useState(() => ({ ...empty, collegeId: selectedCollegeId || '', collegeNumericId: selectedCollegeId || '' }));
   const [query, setQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
   const [error, setError] = useToastState('', 'error');
@@ -187,26 +189,48 @@ export default function DepartmentManagement() {
       .catch(() => setColleges([]));
   }, []);
 
+  const scopedItems = useMemo(() => {
+    if (!selectedCollegeId) return items;
+    return items.filter(item => {
+      const itemColId = item.collegeNumericId ?? item.collegeId ?? '';
+      const itemColName = item.collegeName ?? '';
+      const matchById = itemColId && String(itemColId) === String(selectedCollegeId);
+      const matchByName = selectedCollege?.name && itemColName && itemColName.trim().toLowerCase() === selectedCollege.name.trim().toLowerCase();
+      return Boolean(matchById || matchByName);
+    });
+  }, [items, selectedCollegeId, selectedCollege]);
+
+  const scopedAllDepartments = useMemo(() => {
+    if (!selectedCollegeId) return allDepartments;
+    return allDepartments.filter(item => {
+      const itemColId = item.collegeNumericId ?? item.collegeId ?? '';
+      const itemColName = item.collegeName ?? '';
+      const matchById = itemColId && String(itemColId) === String(selectedCollegeId);
+      const matchByName = selectedCollege?.name && itemColName && itemColName.trim().toLowerCase() === selectedCollege.name.trim().toLowerCase();
+      return Boolean(matchById || matchByName);
+    });
+  }, [allDepartments, selectedCollegeId, selectedCollege]);
+
   const visible = useMemo(
     () =>
-      items.filter(
+      scopedItems.filter(
         (item) =>
           `${item.name} ${item.code} ${item.hod}`.toLowerCase().includes(query.toLowerCase()) &&
           (!statusFilter || item.status === statusFilter)
       ),
-    [items, query, statusFilter]
+    [scopedItems, query, statusFilter]
   );
 
   const totalPages = Math.max(1, Math.ceil(visible.length / itemsPerPage));
   const currentPageClamped = Math.min(Math.max(currentPage, 1), totalPages);
   const pageItems = visible.slice((currentPageClamped - 1) * itemsPerPage, currentPageClamped * itemsPerPage);
-  const countSource = allDepartments.length ? allDepartments : items;
+  const countSource = scopedAllDepartments.length ? scopedAllDepartments : scopedItems;
   const activeCount = countSource.filter((item) => item.status === 'Active').length;
   const inactiveCount = countSource.filter((item) => item.status === 'Inactive').length;
   const totalCount = countSource.length;
 
   const closeToList = () => {
-    setForm({ ...empty });
+    setForm({ ...empty, collegeId: selectedCollegeId || '', collegeNumericId: selectedCollegeId || '' });
     setScreen('list');
     setSelected(null);
     setError('');
@@ -317,28 +341,30 @@ export default function DepartmentManagement() {
     event.preventDefault();
     if (!form.name.trim()) return setError('Department name is required.');
     if (!form.code.trim()) return setError('Department code is required.');
-    if (!form.collegeId) return setError('Select a college for this department.');
-    if (!colleges.find(college => String(college.id) === String(form.collegeNumericId ?? form.collegeId))?.active) return setError('Select an active college');
+    const effectiveCollegeId = String(form.collegeNumericId || form.collegeId || selectedCollegeId || colleges[0]?.id || '');
     if (!form.status) return setError('Select a status for this department.');
     if (form.hodUserId !== '' && (!Number.isInteger(Number(form.hodUserId)) || Number(form.hodUserId) < 0))
       return setError('Head / In-Charge user ID must be a valid number.');
     const normalizedName = form.name.trim().toLowerCase();
     const normalizedCode = form.code.trim().toUpperCase();
-    const selectedCollegeId = String(form.collegeNumericId ?? form.collegeId);
     const duplicate = allDepartments.find((item) =>
       String(item.id) !== String(form.id) &&
-      String(item.collegeNumericId ?? item.collegeId) === selectedCollegeId &&
+      (!effectiveCollegeId || String(item.collegeNumericId ?? item.collegeId) === effectiveCollegeId) &&
       (String(item.code || '').trim().toUpperCase() === normalizedCode || String(item.name || '').trim().toLowerCase() === normalizedName)
     );
     if (duplicate) {
       return setError(String(duplicate.code || '').trim().toUpperCase() === normalizedCode
-        ? 'This department code already exists for the selected college.'
-        : 'This department name already exists for the selected college.');
+        ? 'This department code already exists for this college.'
+        : 'This department name already exists for this college.');
     }
     setIsSaving(true);
     setError('');
     try {
-      const response = form.id ? await updateDepartment(form.id, payloadFor(form)) : await createDepartment(payloadFor(form));
+      const payload = {
+        ...payloadFor(form),
+        ...(effectiveCollegeId ? { collegeId: Number(effectiveCollegeId) } : {}),
+      };
+      const response = form.id ? await updateDepartment(form.id, payload) : await createDepartment(payload);
       const result = recordFrom(response);
       if (!form.id) { rememberCreated('departments', result); setQuery(''); setStatusFilter(''); setCurrentPage(1); }
       const id = result?.id ?? result?.departmentId ?? form.id;
@@ -424,7 +450,7 @@ export default function DepartmentManagement() {
                     type="button"
                     className="cm-button"
                     onClick={() => {
-                      setForm(empty);
+                      setForm({ ...empty, collegeId: selectedCollegeId || '', collegeNumericId: selectedCollegeId || '' });
                       setSelected(null);
                       setError('');
                       setScreen('form');
@@ -656,26 +682,6 @@ export default function DepartmentManagement() {
                       placeholder="e.g. CSE"
                       required
                     />
-                  </label>
-
-                  <label>
-                    <span>
-                      College <b className="required-mark">*</b>
-                    </span>
-                    <select
-                      value={form.collegeNumericId ?? form.collegeId}
-                      onChange={(e) => { setForm({ ...form, collegeId: e.target.value, collegeNumericId: e.target.value }); setError('') }}
-                      aria-invalid={Boolean(form.collegeId && !colleges.find(college => String(college.id) === String(form.collegeNumericId ?? form.collegeId))?.active)}
-                      required
-                    >
-                      <option value="">Select College</option>
-                      {colleges.map((college) => (
-                        <option key={college.id} value={college.id}>
-                          {college.name}{college.active ? '' : ' (Inactive)'}
-                        </option>
-                      ))}
-                    </select>
-                    {form.collegeId && !colleges.find(college => String(college.id) === String(form.collegeNumericId ?? form.collegeId))?.active && <small role="alert">Select an active college</small>}
                   </label>
 
                   <label>

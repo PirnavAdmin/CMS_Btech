@@ -625,6 +625,16 @@
 .faculty-management .fm-identity > div {
   min-width: 0;
 }
+.faculty-management .faculty-directory .fm-identity > div {
+  flex: 1;
+  overflow: hidden;
+}
+.faculty-management .faculty-directory .fm-identity strong,
+.faculty-management .faculty-directory .fm-identity small {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
 .faculty-management .fm-identity p {
   color: var(--text-secondary);
   font-size: 12px;

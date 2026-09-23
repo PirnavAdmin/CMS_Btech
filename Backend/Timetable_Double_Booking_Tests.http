@@ -1,0 +1,43 @@
+@baseUrl = http://localhost:5084
+
+### Existing sample already uses faculty 1, Monday, slot 1 (09:00-10:00).
+### Create another entry using that same faculty/time in another timetable.
+### Replace IDs below with valid IDs from your database.
+### Expected: 409 Conflict when the requested slot overlaps 09:00-10:00.
+POST {{baseUrl}}/api/v1/timetable-entries
+Content-Type: application/json
+
+{
+  "timetableId": 2,
+  "timetableSlotId": 4,
+  "facultyId": 1,
+  "subjectId": 2,
+  "sectionId": 2,
+  "dayOfWeek": "MONDAY",
+  "classroom": "Room 202",
+  "entryType": "LECTURE",
+  "createdBy": 1
+}
+
+### List faculty entries
+GET {{baseUrl}}/api/v1/timetable-entries?facultyId=1&dayOfWeek=MONDAY
+
+### Update - replace 1 and request IDs with valid values
+PUT {{baseUrl}}/api/v1/timetable-entries/1
+Content-Type: application/json
+
+{
+  "timetableId": 1,
+  "timetableSlotId": 2,
+  "facultyId": 1,
+  "subjectId": 1,
+  "sectionId": 1,
+  "dayOfWeek": "MONDAY",
+  "classroom": "Room 101",
+  "entryType": "LECTURE",
+  "status": true,
+  "updatedBy": 1
+}
+
+### Deactivate - replace 1 with a valid timetable entry ID
+DELETE {{baseUrl}}/api/v1/timetable-entries/1

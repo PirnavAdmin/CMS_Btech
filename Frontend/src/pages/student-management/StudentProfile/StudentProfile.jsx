@@ -54,6 +54,7 @@ import {
   DOCUMENTS_CONFIG,
   resolveFeeSummary,
 } from "../../../utils/studentCanonicalModel";
+import { useAcademic } from "../../../context/AcademicContext";
 import StudentProfileEdit from "./StudentProfileEdit";
 import "./StudentProfile.css";
 import "./StudentProfileDocuments.css";
@@ -410,17 +411,16 @@ export default function StudentProfile() {
   // available to every user who can open this screen; the API remains the
   // source of truth for save authorization.
   const canEdit = true;
+  const { selectedCollegeId, selectedCollege, selectedAcademicYearId, selectedAcademicYear } = useAcademic();
   const [students, setStudents] = useState([]),
     [loading, setLoading] = useState(true),
     [error, setError] = useToastState("", 'error'),
     [, setNotice] = useToastState("", 'success'),
     [query, setQuery] = useState(""),
     [filters, setFilters] = useState({
-      college: "",
       department: "",
       course: "",
       branch: "",
-      academicYear: "",
       status: "",
     }),
     [page, setPage] = useState(1),
@@ -521,17 +521,46 @@ export default function StudentProfile() {
   useEffect(() => {
     load();
   }, []);
+
+  const normYear = y => String(y || '').replace(/[^0-9]/g, '')
+  const scopedStudents = useMemo(() => {
+    return students.filter(item => {
+      let collegeMatches = true
+      if (selectedCollegeId) {
+        const itemCollegeId = item.admission?.collegeId ?? item.collegeId ?? item.academic?.collegeId ?? ''
+        const itemCollegeName = item.admission?.college ?? item.college ?? ''
+        const matchById = itemCollegeId && String(itemCollegeId) === String(selectedCollegeId)
+        const matchByName = selectedCollege?.name && itemCollegeName && itemCollegeName.trim().toLowerCase() === selectedCollege.name.trim().toLowerCase()
+        collegeMatches = Boolean(matchById || matchByName)
+      }
+
+      let yearMatches = true
+      if (selectedAcademicYearId) {
+        const itemYearId = item.academic?.academicYearId ?? item.academicYearId ?? ''
+        const itemYearName = item.academic?.academicYear ?? item.academicYear ?? ''
+        const matchById = itemYearId && String(itemYearId) === String(selectedAcademicYearId)
+        const matchByName = selectedAcademicYear?.name && itemYearName && (
+          normYear(itemYearName) === normYear(selectedAcademicYear.name) ||
+          itemYearName.trim().toLowerCase() === selectedAcademicYear.name.trim().toLowerCase()
+        )
+        yearMatches = Boolean(matchById || matchByName)
+      }
+
+      return collegeMatches && yearMatches
+    })
+  }, [students, selectedCollegeId, selectedCollege, selectedAcademicYearId, selectedAcademicYear])
+
   const options = (key) =>
     [
       ...new Set(
-        students
-          .map((x) => key === "status" ? status(x.status) : key === "college" ? x.admission?.college : x.academic?.[key])
+        scopedStudents
+          .map((x) => key === "status" ? status(x.status) : x.academic?.[key])
           .filter(Boolean),
       ),
     ].sort();
   const filtered = useMemo(
     () =>
-      students.filter((x) => {
+      scopedStudents.filter((x) => {
         const a = x.academic || {},
           app = x.application || {},
           c = x.contact || {},
@@ -550,15 +579,15 @@ export default function StudentProfile() {
           Object.entries(filters).every(
             ([key, selected]) =>
               !selected ||
-              (key === "status" ? status(x.status) : key === "college" ? x.admission?.college : a[key]) === selected,
+              (key === "status" ? status(x.status) : a[key]) === selected,
           )
         );
       }),
-    [students, query, filters],
+    [scopedStudents, query, filters],
   );
   const pages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE)),
     shown = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE),
-    selected = students.find((x) => String(x.id) === String(selectedId));
+    selected = scopedStudents.find((x) => String(x.id) === String(selectedId)) || students.find((x) => String(x.id) === String(selectedId));
   useEffect(() => setPage(1), [query, filters]);
 
   const updateFilter = (key, next) =>
@@ -825,9 +854,9 @@ export default function StudentProfile() {
           <CompactSummary
             label="Student summary"
             items={[
-              { label: 'Total', value: students.length },
-              { label: 'Active', value: students.filter(s => status(s.status) === 'Active' || status(s.status) === 'Approved').length, tone: 'active' },
-              { label: 'Inactive', value: students.filter(s => status(s.status) === 'Inactive').length, tone: 'inactive' },
+              { label: 'Total', value: scopedStudents.length },
+              { label: 'Active', value: scopedStudents.filter(s => status(s.status) === 'Active' || status(s.status) === 'Approved').length, tone: 'active' },
+              { label: 'Inactive', value: scopedStudents.filter(s => status(s.status) === 'Inactive').length, tone: 'inactive' },
             ]}
           />
         </div>
@@ -853,11 +882,9 @@ export default function StudentProfile() {
               onClear={() => {
                 setQuery("");
                 setFilters({
-                  college: "",
                   department: "",
                   course: "",
                   branch: "",
-                  academicYear: "",
                   status: "",
                 });
                 setPage(1);
@@ -876,11 +903,9 @@ export default function StudentProfile() {
               </div>
               <div className="sp-filters">
                 {[
-                  ["college", "College"],
                   ["department", "Department"],
                   ["course", "Course"],
                   ["branch", "Branch"],
-                  ["academicYear", "Academic year"],
                   ["status", "Status"],
                 ].map(([key, label]) => (
                   <label key={key}>
@@ -895,7 +920,7 @@ export default function StudentProfile() {
                           (o) =>
                             key !== "course" ||
                             !filters.department ||
-                            students.some(
+                            scopedStudents.some(
                               (x) =>
                                 x.academic?.department === filters.department &&
                                 x.academic?.course === o,
@@ -905,7 +930,7 @@ export default function StudentProfile() {
                           (o) =>
                             key !== "branch" ||
                             !filters.course ||
-                            students.some(
+                            scopedStudents.some(
                               (x) =>
                                 x.academic?.course === filters.course &&
                                 x.academic?.branch === o,
@@ -924,7 +949,6 @@ export default function StudentProfile() {
                 <thead>
                   <tr>
                     <th style={{ minWidth: "220px" }}>Student</th>
-                    <th style={{ minWidth: "180px" }}>College</th>
                     <th style={{ minWidth: "240px" }}>Academic details</th>
                     <th style={{ minWidth: "180px" }}>Contact</th>
                     <th className="table-center" style={{ minWidth: "120px", width: "120px" }}>Status</th>
@@ -959,9 +983,6 @@ export default function StudentProfile() {
                               </small>
                             </div>
                           </div>
-                        </td>
-                        <td>
-                          <span className="table-cell-truncate" title={formatDisplay(student.admission?.college)}>{formatDisplay(student.admission?.college)}</span>
                         </td>
                         <td>
                           <div className="table-cell-group" style={{ minWidth: 0, display: "flex", flexDirection: "column", gap: "2px" }}>

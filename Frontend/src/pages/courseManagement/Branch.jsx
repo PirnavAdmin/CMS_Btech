@@ -18,6 +18,7 @@ import { academicYearApi, branchApi, courseApi, studentApi } from '../../api/api
 import { branchTypeLabel } from '../../utils/semesterUtils'
 import ViewDialog from '../../components/ViewDialog'
 import { showDeactivationBlocked } from '../../components/DeactivationBlockedDialog'
+import { useAcademic } from '../../context/AcademicContext'
 import { getOperationalAcademicYearOptions } from '../../utils/academicYearUtils'
 import './Branch.css'
 
@@ -134,6 +135,7 @@ const Field = ({ label, error, children, wide = false }) => {
 }
 
 function List() {
+  const { selectedCollegeId, selectedAcademicYearId } = useAcademic()
   const [params] = useSearchParams()
   const [pendingStatus, setPendingStatus] = useState(null)
   const [courses, setCourses] = useState([])
@@ -146,9 +148,32 @@ function List() {
   const load = async () => {
     setLoading(true)
     try {
-      const [branchRows, courseRows] = await Promise.all([branchApi.getAll(), courseApi.getAll()])
+      const [branchRows, courseRows] = await Promise.all([
+        branchApi.getAll().catch((err) => {
+          console.warn('Unable to load branch rows:', err)
+          return []
+        }),
+        courseApi.getAll().catch((err) => {
+          console.warn('Unable to load course rows:', err)
+          return []
+        }),
+      ])
       setBranches(newestFirst('branches', branchRows || []).map(normalizeBranch))
-      setCourses(await Promise.all((courseRows || []).map(courseMap).filter((course) => course.id && course.name).map(async (course) => course.durationValue && course.totalSemesters ? course : courseMap(await courseApi.getById(course.id)))))
+      const safeCourses = await Promise.all(
+        (courseRows || [])
+          .map(courseMap)
+          .filter((course) => course.id && course.name)
+          .map(async (course) => {
+            if (course.durationValue && course.totalSemesters) return course
+            try {
+              const detail = await courseApi.getById(course.id)
+              return detail ? courseMap(detail) : course
+            } catch {
+              return course
+            }
+          })
+      )
+      setCourses(safeCourses)
       setError('')
     } catch (requestError) {
       setError(requestError?.message || 'Unable to load branch data.')
@@ -160,9 +185,12 @@ function List() {
   useEffect(() => { load() }, [])
 
   const courseById = useMemo(() => new Map(courses.map((course) => [String(course.id), course])), [courses])
+
+  const scopedBranches = branches
+
   const rows = useMemo(() => {
     const needle = filters.query.trim().toLowerCase()
-    return branches.filter((branch) => {
+    return scopedBranches.filter((branch) => {
       const course = courseById.get(String(branch.courseId))
       const haystack = `${branch.branchName} ${branch.branchCode} ${course?.name || branch.courseName || ''}`.toLowerCase()
       return (!needle || haystack.includes(needle))
@@ -170,14 +198,14 @@ function List() {
         && (!filters.branchType || typeOf(branch) === filters.branchType)
         && (!filters.status || branch.status === filters.status)
     })
-  }, [branches, courseById, filters])
+  }, [scopedBranches, courseById, filters])
 
   const totalPages = Math.max(1, Math.ceil(rows.length / PAGE_SIZE))
   const currentPage = Math.min(page, totalPages)
   const pageRows = rows.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE)
   useEffect(() => setPage(1), [filters])
 
-  const stats = { total: branches.length, active: branches.filter((row) => row.status === 'Active').length, inactive: branches.filter((row) => row.status === 'Inactive').length }
+  const stats = { total: scopedBranches.length, active: scopedBranches.filter((row) => row.status === 'Active').length, inactive: scopedBranches.filter((row) => row.status === 'Inactive').length }
 
   const setFilter = (key, value) => setFilters((current) => ({ ...current, [key]: value }))
   const clearFilters = () => setFilters({ query: '', courseId: '', branchType: '', status: '' })
@@ -315,6 +343,7 @@ const validateBranch = (value, branchId, existingRows) => {
 }
 
 function Form() {
+  const { selectedAcademicYearId } = useAcademic()
   const { id } = useParams()
   const [params] = useSearchParams()
   const navigate = useNavigate()
@@ -324,7 +353,7 @@ function Form() {
   const [errors, setErrors] = useToastState({}, 'error')
   const [saving, setSaving] = useState(false)
   const [error, setError] = useToastState('', 'error')
-  const [value, setValue] = useState(blank)
+  const [value, setValue] = useState(() => ({ ...blank, academicYearId: selectedAcademicYearId || '' }))
   const [step, setStep] = useState(0)
   const [courseStructureLoading, setCourseStructureLoading] = useState(false)
   const [mastersReady, setMastersReady] = useState(false)
@@ -444,7 +473,8 @@ function Form() {
   const submit = async (event) => {
     event.preventDefault()
     const selectedCourse = courses.find((course) => String(course.id) === String(value.courseId)) || null
-    const academicYear = years.find((year) => String(year.id) === String(value.academicYearId)) || null
+    const effectiveYearId = value.academicYearId || selectedAcademicYearId || (years[0]?.id ? String(years[0].id) : '')
+    const academicYear = years.find((year) => String(year.id) === String(effectiveYearId)) || null
     const payload = {
       ...value,
       courseId: selectedCourse?.id || value.courseId,
@@ -457,7 +487,7 @@ function Form() {
       duration: selectedCourse?.durationValue || '',
       academicPattern: selectedCourse?.academicPattern || '',
       totalSemesters: selectedCourse?.totalSemesters || '',
-      startingAcademicYearId: academicYear?.id || value.academicYearId || '',
+      startingAcademicYearId: academicYear?.id || effectiveYearId || '',
       startingAcademicYearName: academicYear?.name || value.startingAcademicYearName || '',
       status: value.status,
     }
@@ -506,7 +536,7 @@ function Form() {
           {!value.courseId && <p className="branch-structure-empty">Select a course to load its academic structure.</p>}
           <div className="cm-form-grid"><Field label="Branch Name *" error={errors.branchName}><input value={value.branchName} onChange={(event) => update('branchName', event.target.value)} placeholder="Enter branch name" /></Field><Field label="Branch Code *" error={errors.branchCode}><input value={value.branchCode} onChange={(event) => update('branchCode', event.target.value)} placeholder="e.g. CSE" /></Field></div>
           <div className="cm-form-grid"><Field label="Branch Type *"><select value={value.branchType} onChange={(event) => update('branchType', event.target.value)}><option value="">Select Branch Type</option><option value="Core">Core</option><option value="Specialization">Specialization</option></select></Field>{value.branchType === 'Specialization' && <Field label="Specialization *" error={errors.specialization}><input value={value.specialization} onChange={(event) => update('specialization', event.target.value)} placeholder="e.g. Artificial Intelligence" /></Field>}<Field label="Short Name"><input value={value.shortName} onChange={(event) => update('shortName', event.target.value)} placeholder="Optional short name" /></Field></div>
-          <div className="cm-form-grid"><Field label="Active Academic Year"><select value={value.academicYearId} onChange={(event) => update('academicYearId', event.target.value)}><option value="">Select Active Year</option>{years.map((year) => <option key={year.id} value={year.id}>{year.name}</option>)}</select></Field><Field label="Start Date"><input type="date" value={value.startDate || ''} onChange={(event) => update('startDate', event.target.value)} /></Field><Field label="End Date"><input type="date" value={value.endDate || ''} onChange={(event) => update('endDate', event.target.value)} /></Field></div>
+          <div className="cm-form-grid"><Field label="Start Date"><input type="date" value={value.startDate || ''} onChange={(event) => update('startDate', event.target.value)} /></Field><Field label="End Date"><input type="date" value={value.endDate || ''} onChange={(event) => update('endDate', event.target.value)} /></Field></div>
           <div className="branch-form-actions"><span aria-hidden="true" /><button type="button" className="cm-button" onClick={nextStep}>Next</button></div>
         </section>}
         {step === 1 && <section className="branch-step-content"><h2>Branch Configuration</h2><div className="branch-structure-summary"><h3>Course Structure</h3>{courseStructureLoading ? <p>Loading course structure...</p> : <><div><span>Duration</span><strong>{selectedCourse?.durationValue ? `${selectedCourse.durationValue} Years` : ''}</strong></div><div><span>Total Semesters</span><strong>{selectedCourse?.totalSemesters || ''}</strong></div></>}</div><div className="cm-form-grid"><Field label="Approved Intake *" error={errors.intakeCapacity}><input type="number" min="1" value={value.intakeCapacity} onChange={(event) => update('intakeCapacity', event.target.value)} placeholder="Enter approved intake" /></Field><Field label="Status *" error={errors.status}><select value={value.status} onChange={(event) => update('status', event.target.value)}><option value="" disabled>Select Status</option><option value="Active">Active</option><option value="Inactive">Inactive</option></select></Field></div><div className="branch-form-actions"><button type="button" className="cm-button secondary" onClick={() => setStep(0)}>Back</button><button type="submit" className="cm-button" disabled={saving || courseStructureLoading}>{saving ? 'Saving…' : id ? 'Update Branch' : 'Create Branch'}</button></div></section>}

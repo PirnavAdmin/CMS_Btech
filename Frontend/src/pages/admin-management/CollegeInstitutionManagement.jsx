@@ -243,6 +243,9 @@ const mapCollege = (record) => {
   const name = record.name ?? record.collegeName ?? record.CollegeName ?? ''
   const logoValue = collegeLogoValue(record)
   const cachedLogo = (id ? readCachedCollegeLogo(id) : '') || (code ? readCachedCollegeLogo(code) : '') || (name ? readCachedCollegeLogo(name) : '') || (record.collegeName ? readCachedCollegeLogo(record.collegeName) : '') || (record.collegeCode ? readCachedCollegeLogo(record.collegeCode) : '')
+  if (logoValue) {
+    cacheCollegeLogo(id, logoValue, [code, name, record.collegeCode, record.collegeName])
+  }
   const address = record.addressDetails ?? record.addressInfo ?? {}
   const contact = record.contactDetails ?? record.contactInfo ?? {}
   const administration = record.administration ?? record.principalDetails ?? {}
@@ -267,7 +270,7 @@ const mapCollege = (record) => {
   alternateContact: String(record.alternateContact ?? record.alternateContactNumber ?? record.alternatePhoneNumber ?? contact.alternateContactNumber ?? extended.alternateContactNumber ?? ''),
   email: record.email ?? record.collegeEmail ?? contact.email ?? record.Email ?? '',
   website: record.website ?? record.Website ?? contact.website ?? contact.Website ?? '',
-  logo: getCollegeLogoUrl(id, logoValue || cachedLogo),
+  logo: getCollegeLogoUrl(id, logoValue || cachedLogo, [code, name, record.collegeCode, record.collegeName]),
   principal: record.principal ?? record.principalName ?? administration.principalName ?? record.PrincipalName ?? '',
   principalEmail: record.principalEmail ?? administration.principalEmail ?? extended.principalEmail ?? '',
   principalContact: record.principalContact ?? record.principalPhone ?? administration.principalContact ?? extended.principalContact ?? '',
@@ -635,13 +638,15 @@ export default function CollegeInstitutionManagement({ initialView = 'list' }) {
     setCollegeError('')
     try {
       const response = await updateCollege(activeId, collegePayload(formValues, Boolean(editLogoFile)))
-      if (editLogoFile) {
-        try {
-          await uploadCollegeLogo(activeId, editLogoFile)
-        } catch (logoErr) {
-          console.warn('Backend logo upload notice:', logoErr.message)
+      if (editLogoFile || formValues.logo) {
+        if (editLogoFile) {
+          try {
+            await uploadCollegeLogo(activeId, editLogoFile)
+          } catch (logoErr) {
+            console.warn('Backend logo upload notice:', logoErr.message)
+          }
         }
-        cacheCollegeLogo(activeId, formValues.logo)
+        cacheCollegeLogo(activeId, formValues.logo, [formValues.code, formValues.name, formValues.collegeCode, formValues.collegeName])
         setBrokenLogoIds((current) => { const next = new Set(current); next.delete(activeId); return next })
       }
       const updated = mapCollege((response.data?.data ?? response.data) || { ...formValues, id: activeId })

@@ -452,9 +452,9 @@ export default function AddCollege() {
             console.warn('Backend logo upload notice:', logoErr.message)
           }
         }
-        cacheCollegeLogo(collegeId, values.logo)
+        cacheCollegeLogo(collegeId, values.logo, [values.collegeCode, values.collegeName, college?.code, college?.name])
       } else if (editId && removeExistingLogo) {
-        cacheCollegeLogo(collegeId, '')
+        cacheCollegeLogo(collegeId, '', [values.collegeCode, values.collegeName])
       }
 
       // The list route fetches from the backend when it mounts, so navigating

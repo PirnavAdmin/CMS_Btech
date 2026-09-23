@@ -76,21 +76,43 @@ class AcademicService {
     const data = await this._fetchCached('colleges', async () => {
       try {
         const res = await getColleges()
-        const raw = res?.data?.data ?? res?.data?.colleges ?? res?.data ?? []
-        const list = Array.isArray(raw) ? raw : [raw]
-        return list.map(c => {
+        let raw = res?.data ?? res
+        let list = []
+        if (Array.isArray(raw)) {
+          list = raw
+        } else if (Array.isArray(raw?.colleges)) {
+          list = raw.colleges
+        } else if (Array.isArray(raw?.items)) {
+          list = raw.items
+        } else if (Array.isArray(raw?.records)) {
+          list = raw.records
+        } else if (Array.isArray(raw?.results)) {
+          list = raw.results
+        } else if (Array.isArray(raw?.data)) {
+          list = raw.data
+        } else if (raw && typeof raw === 'object' && (raw.id || raw.collegeId || raw.name || raw.collegeName)) {
+          list = [raw]
+        }
+
+        const mapped = list.map(c => {
           const unwrapped = unwrapCollegeRecord(c)
+          const id = String(unwrapped.collegeId ?? unwrapped.id ?? unwrapped.CollegeId ?? unwrapped.Id ?? '')
+          const name = unwrapped.collegeName ?? unwrapped.name ?? unwrapped.CollegeName ?? unwrapped.institutionName ?? ''
+          const code = unwrapped.collegeCode ?? unwrapped.code ?? unwrapped.CollegeCode ?? ''
+          const status = unwrapped.status ?? unwrapped.collegeStatus ?? unwrapped.isActive ?? 'Active'
           return {
-            id: unwrapped.collegeId ?? unwrapped.id,
-            collegeId: unwrapped.collegeId ?? unwrapped.id,
-            name: unwrapped.collegeName ?? unwrapped.name ?? '',
-            code: unwrapped.collegeCode ?? unwrapped.code ?? '',
-            status: unwrapped.status,
-            ...unwrapped
+            ...unwrapped,
+            id: id || name,
+            collegeId: id || name,
+            name,
+            code,
+            status,
           }
-        })
+        }).filter(c => Boolean(c.name))
+
+        return mapped
       } catch (err) {
-        console.warn('Unable to load colleges:', err)
+        console.warn('Fallback loading colleges:', err)
         return []
       }
     })
@@ -102,7 +124,7 @@ class AcademicService {
     const data = await this._fetchCached('academicYears', async () => {
       try {
         const list = await academicYearApi.getAll()
-        return (Array.isArray(list) ? list : []).map(y => {
+        const mapped = (Array.isArray(list) ? list : []).map(y => {
           const status = String(y.status ?? '').trim().toLowerCase()
           const start = y.startDate ? new Date(y.startDate) : null
           const end = y.endDate ? new Date(y.endDate) : null
@@ -111,15 +133,21 @@ class AcademicService {
           const isCurrent = Boolean(y.isCurrent || y.isActive === true || Number(y.isActive) === 1 || status === 'active' || status === 'current' || Number(y.status) === 1 || dateCurrent)
           return {
             ...y,
-            id: y.academicYearId ?? y.id,
-            academicYearId: y.academicYearId ?? y.id,
+            id: String(y.academicYearId ?? y.id),
+            academicYearId: String(y.academicYearId ?? y.id),
             name: y.academicYearName ?? y.name ?? '',
             academicYearName: y.academicYearName ?? y.name ?? '',
             startDate: y.startDate,
             endDate: y.endDate,
-            status: isCurrent ? 'Active' : (y.status ?? 'Inactive'),
+            status: isCurrent ? 'Active' : (y.status ?? 'Archived'),
             isCurrent,
           }
+        }).filter(y => Boolean(y.name))
+
+        return mapped.sort((a, b) => {
+          if (a.isCurrent && !b.isCurrent) return -1
+          if (!a.isCurrent && b.isCurrent) return 1
+          return String(b.name || '').localeCompare(String(a.name || ''))
         })
       } catch (err) {
         console.warn('Fallback loading academic years:', err)
