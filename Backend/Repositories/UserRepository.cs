@@ -1,4 +1,6 @@
-﻿using BTech.Data;
+﻿using System;
+using System.Threading.Tasks;
+using BTech.Data;
 using BTech.Models;
 using BTech.Repositories.Interfaces;
 using Microsoft.EntityFrameworkCore;
@@ -14,8 +16,7 @@ namespace BTech.Repositories
             _context = context;
         }
 
-        public async Task<User?> FindByLoginIdentifierAsync(
-            string loginIdentifier)
+        public async Task<User?> FindByLoginIdentifierAsync(string loginIdentifier)
         {
             loginIdentifier = loginIdentifier.Trim();
 
@@ -43,8 +44,7 @@ namespace BTech.Repositories
             await _context.SaveChangesAsync();
         }
 
-        public async Task<User?> GetByIdAsync(
-    long userId)
+        public async Task<User?> GetByIdAsync(long userId)
         {
             return await _context.Users
                 .AsNoTracking()
@@ -53,8 +53,7 @@ namespace BTech.Repositories
                     u.DeletedAt == null);
         }
 
-        public async Task<User?> GetProfileByIdAsync(
-    long userId)
+        public async Task<User?> GetProfileByIdAsync(long userId)
         {
             return await _context.Users
                 .AsNoTracking()
@@ -64,10 +63,10 @@ namespace BTech.Repositories
         }
 
         public async Task<bool> UpdateProfileAsync(
-    long userId,
-    string? fullName,
-    string? email,
-    string? mobile)
+            long userId,
+            string? fullName,
+            string? email,
+            string? mobile)
         {
             var user = await _context.Users
                 .FirstOrDefaultAsync(u =>
@@ -79,9 +78,7 @@ namespace BTech.Repositories
                 return false;
             }
 
-            // PATCH:
-            // Update only fields that were supplied.
-
+            // PATCH: Update only fields that were supplied
             if (fullName != null)
             {
                 user.FullName = fullName.Trim();
@@ -103,6 +100,26 @@ namespace BTech.Repositories
             await _context.SaveChangesAsync();
 
             return true;
+        }
+
+        public async Task<User?> GetByIdentifierForUpdateAsync(string identifier)
+        {
+            identifier = identifier.Trim();
+
+            return await _context.Users
+                .FirstOrDefaultAsync(u =>
+                    u.DeletedAt == null &&
+                    (
+                        u.EmployeeUserId == identifier ||
+                        u.Email == identifier ||
+                        u.Mobile == identifier
+                    ));
+        }
+
+        public async Task UpdateAsync(User user)
+        {
+            _context.Users.Update(user);
+            await _context.SaveChangesAsync();
         }
     }
 }

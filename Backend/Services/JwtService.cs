@@ -5,6 +5,7 @@ using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Text;
+using System.Linq;
 
 namespace BTech.Services
 {
@@ -18,9 +19,10 @@ namespace BTech.Services
             _configuration = configuration;
         }
 
-        public string GenerateToken(
-            User user,
-            List<string> roles)
+        
+public string GenerateToken(
+    User user,
+    List<string> roles)
         {
             var jwtKey =
                 _configuration["Jwt:Key"];
@@ -40,24 +42,50 @@ namespace BTech.Services
             var expiryMinutes =
                 GetAccessTokenExpiryMinutes();
 
-            var claims = new List<Claim>
+            // -------------------------------------------------
+            // Validate College ID
+            // -------------------------------------------------
+
+            bool isSuperAdmin =
+                roles.Any(r =>
+                    string.Equals(
+                        r,
+                        "SuperAdmin",
+                        StringComparison.OrdinalIgnoreCase));
+
+            // Every role except SuperAdmin must have college_id
+            if (!isSuperAdmin && !user.college_id.HasValue)
             {
-                new Claim(
-                    JwtRegisteredClaimNames.Sub,
-                    user.user_id.ToString()),
+                throw new InvalidOperationException(
+                    "College ID is required for this user role.");
+            }
 
-                new Claim(
-                    ClaimTypes.NameIdentifier,
-                    user.user_id.ToString()),
+            // -------------------------------------------------
+            // Basic Claims
+            // -------------------------------------------------
 
-                new Claim(
-                    ClaimTypes.Name,
-                    user.FullName),
+            var claims = new List<Claim>
+    {
+        new Claim(
+            JwtRegisteredClaimNames.Sub,
+            user.user_id.ToString()),
 
-                new Claim(
-                    "employeeUserId",
-                    user.EmployeeUserId)
-            };
+        new Claim(
+            ClaimTypes.NameIdentifier,
+            user.user_id.ToString()),
+
+        new Claim(
+            ClaimTypes.Name,
+            user.FullName),
+
+        new Claim(
+            "employeeUserId",
+            user.EmployeeUserId)
+    };
+
+            // -------------------------------------------------
+            // Email
+            // -------------------------------------------------
 
             if (!string.IsNullOrWhiteSpace(user.Email))
             {
@@ -67,6 +95,27 @@ namespace BTech.Services
                         user.Email));
             }
 
+            // -------------------------------------------------
+            // College ID
+            // -------------------------------------------------
+            // SuperAdmin can manage multiple colleges,
+            // therefore SuperAdmin does NOT get a fixed collegeId.
+            //
+            // Every other role MUST have collegeId.
+            // -------------------------------------------------
+
+            if (!isSuperAdmin)
+            {
+                claims.Add(
+                    new Claim(
+                        "collegeId",
+                        user.college_id!.Value.ToString()));
+            }
+
+            // -------------------------------------------------
+            // Roles
+            // -------------------------------------------------
+
             foreach (var role in roles)
             {
                 claims.Add(
@@ -74,6 +123,10 @@ namespace BTech.Services
                         ClaimTypes.Role,
                         role));
             }
+
+            // -------------------------------------------------
+            // Create JWT
+            // -------------------------------------------------
 
             var key =
                 new SymmetricSecurityKey(
@@ -98,6 +151,13 @@ namespace BTech.Services
             return new JwtSecurityTokenHandler()
                 .WriteToken(token);
         }
+
+
+
+
+
+
+
 
         public string GenerateRefreshToken()
         {

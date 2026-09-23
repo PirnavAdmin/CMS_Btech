@@ -21,5 +21,8 @@
         public string? Mobile { get; set; }
 
         public List<string> Roles { get; set; } = new();
+
+        // REMEMBER ME
+        public bool RememberMe { get; set; }
     }
 }

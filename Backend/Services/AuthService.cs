@@ -1,8 +1,12 @@
-﻿using BTech.DTOs;
+﻿using BCrypt.Net;
+using BTech.DTOs;
+using BTech.DTOs.ForgotPassword;
 using BTech.Models;
 using BTech.Repositories.Interfaces;
 using BTech.Services.Interfaces;
-using BCrypt.Net;
+using System;
+using System.Security.Cryptography;
+using System.Threading.Tasks;
 
 namespace BTech.Services
 {
@@ -13,19 +17,22 @@ namespace BTech.Services
         private readonly ILoginAuditRepository _loginAuditRepository;
         private readonly IJwtService _jwtService;
         private readonly IRefreshTokenRepository _refreshTokenRepository;
+        private readonly IOtpVerificationRepository _otpVerificationRepository;
 
         public AuthService(
-    IUserRepository userRepository,
-    IUserRoleRepository userRoleRepository,
-    ILoginAuditRepository loginAuditRepository,
-    IRefreshTokenRepository refreshTokenRepository,
-    IJwtService jwtService)
+            IUserRepository userRepository,
+            IUserRoleRepository userRoleRepository,
+            ILoginAuditRepository loginAuditRepository,
+            IRefreshTokenRepository refreshTokenRepository,
+            IJwtService jwtService,
+            IOtpVerificationRepository otpVerificationRepository)
         {
             _userRepository = userRepository;
             _userRoleRepository = userRoleRepository;
             _loginAuditRepository = loginAuditRepository;
             _refreshTokenRepository = refreshTokenRepository;
             _jwtService = jwtService;
+            _otpVerificationRepository = otpVerificationRepository;
         }
 
         public async Task<(bool Success, string Message, LoginResponseDto? Data)>
@@ -75,9 +82,9 @@ namespace BTech.Services
             }
 
             // Password verification
-            //bool passwordValid = request.Password == user.PasswordHash;
-
-            bool passwordValid = BCrypt.Net.BCrypt.Verify( request.Password, user.PasswordHash );
+            bool passwordValid = BCrypt.Net.BCrypt.Verify(
+                request.Password,
+                user.PasswordHash);
 
             if (!passwordValid)
             {
@@ -116,16 +123,11 @@ namespace BTech.Services
                     null);
             }
 
-            // Generate JWT
-            //var token =
-            //    _jwtService.GenerateToken(
-            //        user,
-            //        roles);
-
+            // Generate JWT Tokens
             var accessToken =
-    _jwtService.GenerateToken(
-        user,
-        roles);
+                _jwtService.GenerateToken(
+                    user,
+                    roles);
 
             var refreshToken =
                 _jwtService.GenerateRefreshToken();
@@ -138,19 +140,12 @@ namespace BTech.Services
                 new RefreshToken
                 {
                     UserId = user.user_id,
-
-                    TokenHash =
-                        refreshTokenHash,
-
+                    TokenHash = refreshTokenHash,
                     ExpiresAt =
                         DateTime.UtcNow.AddDays(
                             _jwtService.GetRefreshTokenExpiryDays()),
-
-                    CreatedAt =
-                        DateTime.UtcNow,
-
-                    CreatedByIp =
-                        ipAddress
+                    CreatedAt = DateTime.UtcNow,
+                    CreatedByIp = ipAddress
                 };
 
             await _refreshTokenRepository
@@ -169,41 +164,26 @@ namespace BTech.Services
                 ipAddress,
                 userAgent);
 
-            
-
             var accessTokenExpiresAt =
-    DateTime.UtcNow.AddMinutes(
-        _jwtService.GetAccessTokenExpiryMinutes());
+                DateTime.UtcNow.AddMinutes(
+                    _jwtService.GetAccessTokenExpiryMinutes());
 
             var response = new LoginResponseDto
             {
                 AccessToken = accessToken,
-
                 RefreshToken = refreshToken,
-
                 ExpiresIn =
-                    _jwtService.GetAccessTokenExpiryMinutes()
-                    * 60,
-
-                AccessTokenExpiresAt =
-                    accessTokenExpiresAt,
-
+                    _jwtService.GetAccessTokenExpiryMinutes() * 60,
+                AccessTokenExpiresAt = accessTokenExpiresAt,
                 UserId = user.user_id,
+                EmployeeUserId = user.EmployeeUserId,
+                FullName = user.FullName,
+                Email = user.Email,
+                Mobile = user.Mobile,
+                Roles = roles,
 
-                EmployeeUserId =
-                    user.EmployeeUserId,
-
-                FullName =
-                    user.FullName,
-
-                Email =
-                    user.Email,
-
-                Mobile =
-                    user.Mobile,
-
-                Roles =
-                    roles
+                // ADDED - REMEMBER ME
+                RememberMe = request.RememberMe
             };
 
             return (
@@ -212,38 +192,10 @@ namespace BTech.Services
                 response);
         }
 
-        private async Task CreateAuditAsync(
-            long? userId,
-            string identifier,
-            string status,
-            string? failureReason,
-            string? ipAddress,
-            string? userAgent)
-        {
-            var audit = new LoginAudit
-            {
-                UserId = userId,
-                LoginIdentifier = identifier,
-                EventType = "LOGIN",
-                LoginStatus = status,
-                IpAddress = ipAddress,
-                UserAgent = userAgent,
-                FailureReason = failureReason,
-                LoginAt = DateTime.UtcNow,
-                CreatedAt = DateTime.UtcNow
-            };
-
-            await _loginAuditRepository
-                .CreateAsync(audit);
-        }
-
-        public async Task<(
-    bool Success,
-    string Message,
-    RefreshTokenResponseDto? Data)>
-    RefreshTokenAsync(
-        string refreshToken,
-        string? ipAddress)
+        public async Task<(bool Success, string Message, RefreshTokenResponseDto? Data)>
+            RefreshTokenAsync(
+                string refreshToken,
+                string? ipAddress)
         {
             if (string.IsNullOrWhiteSpace(refreshToken))
             {
@@ -279,8 +231,7 @@ namespace BTech.Services
             }
 
             // Expired
-            if (storedToken.ExpiresAt <=
-                DateTime.UtcNow)
+            if (storedToken.ExpiresAt <= DateTime.UtcNow)
             {
                 return (
                     false,
@@ -342,52 +293,210 @@ namespace BTech.Services
             var newRefreshTokenEntity =
                 new RefreshToken
                 {
-                    UserId =
-                        user.user_id,
-
-                    TokenHash =
-                        newRefreshTokenHash,
-
+                    UserId = user.user_id,
+                    TokenHash = newRefreshTokenHash,
                     ExpiresAt =
                         DateTime.UtcNow.AddDays(
-                            _jwtService
-                                .GetRefreshTokenExpiryDays()),
-
-                    CreatedAt =
-                        DateTime.UtcNow,
-
-                    CreatedByIp =
-                        ipAddress
+                            _jwtService.GetRefreshTokenExpiryDays()),
+                    CreatedAt = DateTime.UtcNow,
+                    CreatedByIp = ipAddress
                 };
 
             await _refreshTokenRepository
-                .CreateAsync(
-                    newRefreshTokenEntity);
+                .CreateAsync(newRefreshTokenEntity);
 
             var expiresAt =
                 DateTime.UtcNow.AddMinutes(
-                    _jwtService
-                        .GetAccessTokenExpiryMinutes());
+                    _jwtService.GetAccessTokenExpiryMinutes());
 
             return (
                 true,
                 "Token refreshed successfully.",
                 new RefreshTokenResponseDto
                 {
-                    AccessToken =
-                        newAccessToken,
-
-                    RefreshToken =
-                        newRefreshToken,
-
+                    AccessToken = newAccessToken,
+                    RefreshToken = newRefreshToken,
                     ExpiresIn =
-                        _jwtService
-                            .GetAccessTokenExpiryMinutes()
-                        * 60,
-
-                    AccessTokenExpiresAt =
-                        expiresAt
+                        _jwtService.GetAccessTokenExpiryMinutes() * 60,
+                    AccessTokenExpiresAt = expiresAt
                 });
+        }
+
+        public async Task<(bool Success, string Message, ForgotPasswordResponseDto? Data)>
+            ForgotPasswordAsync(
+                ForgotPasswordRequestDto request,
+                string? ipAddress,
+                string? userAgent)
+        {
+            var identifier = request.Identifier.Trim();
+
+            var user = await _userRepository
+                .FindByLoginIdentifierAsync(identifier);
+
+            // Return generic message for non-existent users to avoid account enumeration
+            if (user == null)
+            {
+                await CreateAuditAsync(
+                    null,
+                    identifier,
+                    "FAILED",
+                    "Forgot password requested for non-existent user",
+                    ipAddress,
+                    userAgent);
+
+                return (
+                    true,
+                    "If an account matches the provided identifier, an OTP has been sent.",
+                    new ForgotPasswordResponseDto
+                    {
+                        Success = true,
+                        Message = "If an account matches the provided identifier, an OTP has been sent."
+                    });
+            }
+
+            // Inactive / Deleted user check
+            if (user.Status != 1 || user.DeletedAt != null)
+            {
+                await CreateAuditAsync(
+                    user.user_id,
+                    identifier,
+                    "FAILED",
+                    "Forgot password requested for inactive user",
+                    ipAddress,
+                    userAgent);
+
+                return (
+                    false,
+                    "User account is inactive. Please contact administration.",
+                    null);
+            }
+
+            var destination =
+                !string.IsNullOrWhiteSpace(user.Email)
+                    ? user.Email
+                    : user.Mobile ?? identifier;
+
+            var deliveryMethod =
+                !string.IsNullOrWhiteSpace(user.Email)
+                    ? "EMAIL"
+                    : "SMS";
+
+            // Invalidate any active previous OTPs
+            await _otpVerificationRepository
+                .InvalidatePreviousOtpsAsync(
+                    destination,
+                    "PASSWORD_RESET");
+
+            // Generate secure 6-digit numeric OTP
+            string plainOtp =
+                RandomNumberGenerator
+                    .GetInt32(100000, 1000000)
+                    .ToString();
+
+            string otpHash =
+                BCrypt.Net.BCrypt.HashPassword(
+                    plainOtp);
+
+            var otpRecord = new OtpVerification
+            {
+                UserId = user.user_id,
+                Identifier = destination,
+                OtpHash = otpHash,
+                OtpType = "PASSWORD_RESET",
+                DeliveryMethod = deliveryMethod,
+                ExpiresAt =
+                    DateTime.UtcNow.AddMinutes(10),
+                Attempts = 0,
+                MaxAttempts = 5,
+                Status = 1,
+                CreatedAt = DateTime.UtcNow
+            };
+
+            await _otpVerificationRepository
+                .CreateOtpAsync(otpRecord);
+
+            // Audit the request
+            await CreateAuditAsync(
+                user.user_id,
+                identifier,
+                "SUCCESS",
+                "Password reset OTP generated",
+                ipAddress,
+                userAgent);
+
+            // Mask destination for security
+            string maskedDestination =
+                MaskIdentifier(destination);
+
+            return (
+                true,
+                "Password reset OTP has been sent.",
+                new ForgotPasswordResponseDto
+                {
+                    Success = true,
+                    Message =
+                        "Password reset OTP has been sent successfully.",
+                    DeliveryDestination =
+                        maskedDestination
+                });
+        }
+
+        private async Task CreateAuditAsync(
+            long? userId,
+            string identifier,
+            string status,
+            string? failureReason,
+            string? ipAddress,
+            string? userAgent)
+        {
+            var audit = new LoginAudit
+            {
+                UserId = userId,
+                LoginIdentifier = identifier,
+                EventType = "LOGIN",
+                LoginStatus = status,
+                IpAddress = ipAddress,
+                UserAgent = userAgent,
+                FailureReason = failureReason,
+                LoginAt = DateTime.UtcNow,
+                CreatedAt = DateTime.UtcNow
+            };
+
+            await _loginAuditRepository
+                .CreateAsync(audit);
+        }
+
+        private static string MaskIdentifier(
+            string identifier)
+        {
+            if (string.IsNullOrWhiteSpace(identifier))
+                return "configured contact";
+
+            if (identifier.Contains('@'))
+            {
+                var parts =
+                    identifier.Split('@');
+
+                var name = parts[0];
+                var domain = parts[1];
+
+                if (name.Length <= 2)
+                    return $"{name[0]}*@{domain}";
+
+                return
+                    $"{name[0]}" +
+                    $"{new string('*', name.Length - 2)}" +
+                    $"{name[^1]}@{domain}";
+            }
+
+            if (identifier.Length >= 6)
+            {
+                return
+                    $"{identifier[..2]}******" +
+                    $"{identifier[^2..]}";
+            }
+
+            return "****";
         }
     }
 }
