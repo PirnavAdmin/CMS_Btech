@@ -1,7 +1,7 @@
 .em-screen {
     max-width: 1440px;
     margin: 0 auto;
-    padding: 24px;
+    padding: 28px 32px 28px 0;
     color: #0f172a;
 }
 
@@ -10,7 +10,7 @@
     align-items: flex-start;
     justify-content: space-between;
     gap: 16px;
-    margin-bottom: 24px;
+    margin-bottom: 28px;
 }
 
 .em-header h1 {
@@ -44,7 +44,7 @@
     gap: 8px;
     overflow-x: auto;
     border-bottom: 1px solid #e2e8f0;
-    margin-bottom: 24px;
+    margin-bottom: 28px;
 }
 
 .em-tab-btn {
@@ -70,17 +70,16 @@
 }
 
 .em-kpi-grid {
-    display: flex;
+    display: grid;
+    grid-template-columns: repeat(6, minmax(0, 1fr));
     gap: 16px;
-    overflow-x: auto;
-    margin-bottom: 24px;
-    padding-bottom: 2px;
+    overflow: visible;
+    margin-bottom: 28px;
 }
 
 .em-kpi-card {
     display: flex;
     align-items: center;
-    flex: 1 0 170px;
     gap: 14px;
     padding: 16px 18px;
     border: 1px solid #e2e8f0;
@@ -196,6 +195,18 @@
     padding: 9px 0;
     border: 0;
     outline: 0;
+}
+
+.page-content .em-search input,
+.page-content .em-search input:focus,
+.page-content .em-search input:focus-visible {
+    min-height: 0 !important;
+    height: auto !important;
+    padding: 9px 0 !important;
+    border: 0 !important;
+    border-radius: 0 !important;
+    background: transparent !important;
+    box-shadow: none !important;
 }
 
 .em-filters {
@@ -503,6 +514,15 @@
     font-weight: 700;
 }
 
+.sm-modal .sm-field .searchable-select {
+    width: 100%;
+}
+
+.sm-modal .sm-field .searchable-select__trigger {
+    width: 100%;
+    min-height: 40px;
+}
+
 .em-required-star {
     margin-left: 3px;
     color: #dc2626;
@@ -640,6 +660,10 @@
 }
 
 @media (max-width: 1000px) {
+    .em-kpi-grid {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
     .em-student-card {
         grid-template-columns: auto 1fr;
     }
@@ -692,6 +716,7 @@
     }
 
     .em-kpi-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
         gap: 10px;
     }
 

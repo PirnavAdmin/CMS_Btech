@@ -6,16 +6,17 @@ import { ROLES } from '../auth/roles'
 import { useAcademic } from '../context/AcademicContext'
 
 const academicLinks = [
+  { label: 'Colleges', to: '/college-institution-management', icon: FiHome, tone: 'gold' },
   { label: 'Academic Years', to: '/academic-year-management', icon: FiCalendar, tone: 'green' },
   { label: 'Departments', to: '/department-management', icon: FiGrid, tone: 'cyan' },
   { label: 'Courses', to: '/courses', icon: FiBookOpen, tone: 'blue' },
   { label: 'Branches', to: '/branches', icon: FiGitBranch, tone: 'purple' },
   { label: 'Semesters', to: '/semester-management', icon: FiLayers, tone: 'orange' },
   { label: 'Sections', to: '/section-management', icon: FiUsers, tone: 'pink' },
-  { label: 'Colleges & Institutions', to: '/college-institution-management', icon: FiHome, tone: 'gold' },
 ]
 
 const curriculumLinks = [
+  { label: 'Timetable Management', to: '/timetable', icon: FiCalendar, tone: 'orange' },
   { label: 'Subject Management', to: '/subject-management', icon: FiBook, tone: 'blue' },
   { label: 'Credits Management', to: '/credits-management', icon: FiAward, tone: 'green' },
   { label: 'Elective Management', to: '/elective-management', icon: FiCheckCircle, tone: 'purple' },
@@ -62,6 +63,7 @@ export default function Sidebar({ open = false, onClose = () => {}, collapsed = 
           <p className="sidebar-section-label">Student Management</p>
           <Item to="/student-management/admissions" icon={FiUserPlus} tone="orange" onNavigate={onClose}>Admissions</Item>
           <Item to="/student-management/profiles" icon={FiUser} tone="cyan" onNavigate={onClose}>Student Profiles</Item>
+          <Item to="/student-management/attendance" icon={FiCheckSquare} tone="green" onNavigate={onClose}>Student Attendance</Item>
           <Item to="/student-management/promotions" icon={FiTrendingUp} tone="green" onNavigate={onClose}>Student Promotions</Item>
           <p className="sidebar-section-label">Faculty Management</p>
           <Item to="/faculty" icon={FiBriefcase} tone="cyan" onNavigate={onClose} activeWhen={pathname => !['attendance', 'leave-management', 'payroll', 'advisors', 'subjects'].includes(pathname.split('/')[2]) && pathname.startsWith('/faculty')}>Faculty Directory</Item>
@@ -79,7 +81,7 @@ export default function Sidebar({ open = false, onClose = () => {}, collapsed = 
           <p className="sidebar-section-label">Settings</p>
           <Item to="/settings" icon={FiSliders} tone="blue" onNavigate={onClose}>Academic Context</Item>
         </>}
-        {[ROLES.FACULTY, ROLES.STUDENT].includes(userRole) && <><p className="sidebar-section-label">Academics</p><Item to="/my-subjects" icon={FiBookOpen} tone="blue" onNavigate={onClose}>My Subjects</Item>{userRole===ROLES.FACULTY&&<><Item to="/attendance/take" icon={FiCheckSquare} tone="green" onNavigate={onClose}>Take Attendance</Item><Item to="/marks/entry" icon={FiEdit3} tone="orange" onNavigate={onClose}>Enter Marks</Item></>}</>}
+        {[ROLES.FACULTY, ROLES.STUDENT].includes(userRole) && <><p className="sidebar-section-label">Academics</p><Item to="/my-subjects" icon={FiBookOpen} tone="blue" onNavigate={onClose}>My Subjects</Item>{userRole===ROLES.FACULTY&&<><Item to="/student-management/attendance/take" icon={FiCheckSquare} tone="green" onNavigate={onClose}>Take Attendance</Item><Item to="/marks/entry" icon={FiEdit3} tone="orange" onNavigate={onClose}>Enter Marks</Item></>}</>}
       </nav>
     </aside>
   </>

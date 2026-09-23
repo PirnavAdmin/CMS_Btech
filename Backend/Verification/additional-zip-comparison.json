@@ -1,0 +1,10 @@
+{
+  "added": [],
+  "removed": [],
+  "changed": [
+    "Controllers/AccessRequestsController.cs",
+    "Logs/backend-20260908.log",
+    "appsettings.json"
+  ],
+  "unchanged": 421
+}

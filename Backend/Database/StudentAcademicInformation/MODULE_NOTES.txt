@@ -1,0 +1,13 @@
+Two separate academic modules are intentionally preserved.
+
+1) Student Academic Details (existing task)
+   GET /api/v1/student-admissions/{admissionId}/academic-details
+   PUT /api/v1/student-admissions/{admissionId}/academic-details
+   Source table: studentadmissions
+   SPs: sp_StudentAdmission_GetAcademicDetails, sp_StudentAdmission_UpdateAcademicDetails
+
+2) Academic Information View/Update (Uday task)
+   GET /api/v1/student-academic-information/{academicId}
+   PUT /api/v1/student-academic-information/{academicId}
+   Source table: student_academic_details
+   SPs: sp_StudentAcademicInformation_GetById, sp_StudentAcademicInformation_Update

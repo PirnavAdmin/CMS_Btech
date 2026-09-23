@@ -32,9 +32,9 @@ import FacultyLeaveManagement from './pages/faculty/FacultyLeaveManagement'
 import Payroll from './pages/faculty/Payroll'
 import SubjectManagement from './pages/subject-management/SubjectManagement'
 import CreditsManagement from './pages/credits-management/CreditsManagement'
+import TimetableManagement from './pages/timetable/TimetableManagement'
 import ElectiveManagement from './pages/elective-management/ElectiveManagement'
 import { AcademicProvider } from './context/AcademicContext'
-import ContextGuard from './components/ContextGuard'
 import './styles/erp-theme.css'
 import './App.css'
 import './styles/details-layout.css'
@@ -122,7 +122,7 @@ export default function App() {
               />
             }
           >
-            <Route element={<AcademicProvider><ContextGuard><Outlet /></ContextGuard></AcademicProvider>}>
+            <Route element={<AcademicProvider><Outlet /></AcademicProvider>}>
               <Route path="/dashboard" element={<Dashboard />} />
               <Route path="/my-profile" element={<MyProfile />} />
               <Route path="/settings" element={<Settings />} />
@@ -134,7 +134,8 @@ export default function App() {
               <Route path="/faculty/payroll" element={<Payroll />} />
 
               {/* Faculty / Operations backed modules */}
-              <Route path="/attendance/*" element={<Attendance />} />
+              {/* Retain the former URL as a safe bookmark redirect. */}
+              <Route path="/attendance/*" element={<Navigate to="/student-management/attendance" replace />} />
               <Route path="/marks/*" element={<Marks />} />
               <Route path="/results/*" element={<Results />} />
 
@@ -164,6 +165,7 @@ export default function App() {
               <Route path="/section-management/:id" element={<SectionManagement mode="details" />} />
               <Route path="/subject-management" element={<SubjectManagement />} />
               <Route path="/credits-management" element={<CreditsManagement />} />
+              <Route path="/timetable" element={<TimetableManagement />} />
               <Route path="/elective-management" element={<ElectiveManagement />} />
               <Route path="/student-management/admissions" element={<StudentAdmission />} />
               <Route path="/student-management/admissions/new" element={<StudentAdmission />} />
@@ -173,6 +175,7 @@ export default function App() {
               <Route path="/student-management/admissions/:id" element={<StudentAdmission />} />
               <Route path="/student-management/profiles" element={<StudentProfile />} />
               <Route path="/student-management/profiles/:id" element={<StudentProfile />} />
+              <Route path="/student-management/attendance/*" element={<Attendance />} />
               <Route path="/student-management/promotions" element={<StudentPromotion />} />
               <Route path="/fees/*" element={<Fees />} />
             </Route>

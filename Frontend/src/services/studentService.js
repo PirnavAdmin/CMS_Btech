@@ -69,15 +69,18 @@ class StudentService {
   }
 
   async getAllProfiles(params = {}) {
-    const key = `profiles:${JSON.stringify(params)}`
-    if (this._cache.has(key)) {
+    // Attendance must be able to see a profile immediately after it is saved.
+    // `forceRefresh` is client-only and must never be sent as an API query.
+    const { forceRefresh = false, ...apiParams } = params
+    const key = `profiles:${JSON.stringify(apiParams)}`
+    if (!forceRefresh && this._cache.has(key)) {
       const entry = this._cache.get(key)
       if (Date.now() - entry.timestamp < this._ttl) return entry.data
     }
 
     try {
       const [profilesRes, admissionsRes] = await Promise.allSettled([
-        studentProfilesApi.getAll(params),
+        studentProfilesApi.getAll(apiParams),
         studentAdmissionApi.getAll(),
       ])
       const profiles = profilesRes.status === 'fulfilled' && Array.isArray(profilesRes.value) ? profilesRes.value : []
@@ -252,8 +255,9 @@ class StudentService {
     semester,
     sectionId,
     section,
+    forceRefresh = false,
   } = {}) {
-    const all = await this.getAllProfiles()
+    const all = await this.getAllProfiles({ forceRefresh })
 
     const parseNum = (val) => {
       if (val === undefined || val === null || val === '') return null
