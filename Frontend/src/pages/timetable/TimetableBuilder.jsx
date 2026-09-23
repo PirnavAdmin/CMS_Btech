@@ -10,8 +10,9 @@ export default function TimetableBuilder({ step, setStep, contextFields, summary
   const visibleStep = (step === 2 && !validScope) || (step === 3 && !table?.planning) ? 1 : step
   const [error, setError] = useState('')
   const [config, setConfig] = useState(() => table?.planning ? { ...table.planning, periodMode: table.planning.periodMode || 'manual' } : {
-    calendar: { ...calendarBounds(sources, scope), workingDays: [], holidays: [], reviewed: false },
-    periods: automaticPeriods(DEFAULT_PERIOD_SETUP).periods, automatic: { ...DEFAULT_PERIOD_SETUP }, periodMode: 'automatic', rooms: roomOptions(sources, entries).map(row => row.value), requirements: {},
+    calendar: { ...calendarBounds(sources, scope), workingDays: [], holidays: [], reviewed: false, ...sources.yearSettings?.[scope.academicYearId]?.calendar },
+    periods: sources.yearSettings?.[scope.academicYearId]?.periods?.length ? sources.yearSettings[scope.academicYearId].periods : automaticPeriods(DEFAULT_PERIOD_SETUP).periods,
+    automatic: { ...DEFAULT_PERIOD_SETUP }, periodMode: sources.yearSettings?.[scope.academicYearId]?.periods?.length ? 'manual' : 'automatic', rooms: roomOptions(sources, entries).map(row => row.value), requirements: {},
   })
   const setupErrors = validScope ? [...planningErrors(config, sources, scope, entries), ...(config.periodMode === 'automatic' ? config.automaticErrors || [] : [])] : ['Complete Academic Setup first.']
   const setupDirty = Boolean(table?.planning && JSON.stringify(config) !== JSON.stringify({ ...table.planning, periodMode: table.planning.periodMode || 'manual' }))
