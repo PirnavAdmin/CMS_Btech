@@ -24,6 +24,7 @@ import {
 } from 'react-icons/fi'
 import DashboardLayout from '../../layouts/DashboardLayout'
 import PageHeader from '../../components/PageHeader'
+import CompactSummary from '../../components/CompactSummary'
 import StatusBadge from '../../components/StatusBadge'
 import EmptyState from '../../components/EmptyState'
 import InfoCard from '../../components/InfoCard'
@@ -378,65 +379,15 @@ export default function Attendance() {
             { label: 'Student Management', link: '/student-management/profiles' },
             { label: 'Student Attendance' },
           ]}
-        >
-            <button
-              type="button"
-              className="erp-btn erp-btn--primary"
-              onClick={() => setTakeModalOpen(true)}
-            >
-              <FiPlus /> Take Attendance
-            </button>
-        </PageHeader>
+          compactSummary={[
+            { label: 'Recorded Sessions', value: summaryMetrics.totalSessions },
+            { label: 'Avg Attendance Rate', value: summaryMetrics.avgPercentage, tone: 'active' },
+            { label: 'Total Student Entries', value: summaryMetrics.totalPresent },
+            { label: 'Shortage Risk Students', value: summaryMetrics.shortageCount, tone: summaryMetrics.shortageCount > 0 ? 'inactive' : 'default' },
+          ]}
+        />
 
 
-
-        {/* Tab Navigation */}
-        <nav className="attendance-tabs">
-          <button
-            type="button"
-            className={`attendance-tab ${activeTab === 'register' ? 'active' : ''}`}
-            onClick={() => setActiveTab('register')}
-          >
-            <FiCalendar /> Attendance Dashboard
-          </button>
-          <button
-            type="button"
-            className={`attendance-tab ${activeTab === 'reports' ? 'active' : ''}`}
-            onClick={() => setActiveTab('reports')}
-          >
-            <FiBarChart2 /> Reports
-          </button>
-          <button
-            type="button"
-            className={`attendance-tab ${activeTab === 'shortage' ? 'active' : ''}`}
-            onClick={() => setActiveTab('shortage')}
-          >
-            <FiAlertTriangle /> Shortage List (&lt;75%)
-          </button>
-        </nav>
-
-        {/* TAB 1: Attendance Register */}
-        {activeTab === 'register' && (
-          <section className="attendance-content">
-            {/* KPI Summary Strip */}
-            <div className="erp-kpi-strip">
-              <div className="erp-kpi-card">
-                <span className="erp-kpi-label">Recorded Sessions</span>
-                <span className="erp-kpi-value">{summaryMetrics.totalSessions}</span>
-              </div>
-              <div className="erp-kpi-card">
-                <span className="erp-kpi-label">Avg Attendance Rate</span>
-                <span className="erp-kpi-value erp-kpi-value--success">{summaryMetrics.avgPercentage}</span>
-              </div>
-              <div className="erp-kpi-card">
-                <span className="erp-kpi-label">Total Student Entries</span>
-                <span className="erp-kpi-value">{summaryMetrics.totalPresent}</span>
-              </div>
-              <div className="erp-kpi-card">
-                <span className="erp-kpi-label">Shortage Risk Students</span>
-                <span className="erp-kpi-value erp-kpi-value--warning">{summaryMetrics.shortageCount}</span>
-              </div>
-            </div>
 
             {/* Filter Panel */}
             <div className="erp-card erp-filter-card">
@@ -477,6 +428,13 @@ export default function Attendance() {
                   title="Attendance Register"
                   filename="attendance-register"
                 />
+                <button
+                  type="button"
+                  className="erp-btn erp-btn--primary"
+                  onClick={() => setTakeModalOpen(true)}
+                >
+                  <FiPlus /> Take Attendance
+                </button>
               </div>
               {showRegisterFilters && <div id="attendance-register-filters" className="attendance-register-filters">
                 <div className="erp-form-group">
@@ -510,6 +468,37 @@ export default function Attendance() {
                 {hasRegisterFilters && <button type="button" className="attendance-clear-filters" onClick={clearRegisterFilters}>Clear Filters</button>}
               </div>}
             </div>
+
+        {/* Tab Navigation */}
+        <nav className="attendance-tabs">
+          <button
+            type="button"
+            className={`attendance-tab ${activeTab === 'register' ? 'active' : ''}`}
+            onClick={() => setActiveTab('register')}
+          >
+            <FiCalendar /> Attendance Dashboard
+          </button>
+          <button
+            type="button"
+            className={`attendance-tab ${activeTab === 'reports' ? 'active' : ''}`}
+            onClick={() => setActiveTab('reports')}
+          >
+            <FiBarChart2 /> Reports
+          </button>
+          <button
+            type="button"
+            className={`attendance-tab ${activeTab === 'shortage' ? 'active' : ''}`}
+            onClick={() => setActiveTab('shortage')}
+          >
+            <FiAlertTriangle /> Shortage List (&lt;75%)
+          </button>
+        </nav>
+
+        {/* TAB 1: Attendance Register */}
+        {activeTab === 'register' && (
+          <section className="attendance-content">
+
+
 
             {/* Attendance Table */}
             <div className="erp-card erp-table-card">
