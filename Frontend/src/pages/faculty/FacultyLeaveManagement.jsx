@@ -8,6 +8,7 @@ import facultyService, { normalizeFaculty } from '../../services/facultyService'
 import { normalizeLeaveType, normalizeLeavePolicy, normalizeLeaveRequest, leavePolicyPayload } from '../../services/facultyContracts'
 import { newestFirst, rememberCreated } from '../../utils/newestFirst'
 import { employeeLeaveBalances, leaveBalanceRules } from '../../utils/facultyLeaveBalances'
+import eventBus, { ERP_EVENTS } from '../../services/eventBus'
 import './FacultyLeaveManagement.css'
 
 const PAGE_SIZE = 5
@@ -304,6 +305,7 @@ export default function FacultyLeaveManagement() {
     const updatedRequest = { ...request, status, rejectionReason: reason || null }
     setPendingRequests(prev => prev.filter(r => String(r.id) !== String(request.id)))
     setHistoryRequests(prev => [updatedRequest, ...prev.filter(r => String(r.id) !== String(request.id))])
+    eventBus.emit(ERP_EVENTS.LEAVE_UPDATED, { request: updatedRequest, status })
     return mutate(async () => {
       try {
         if (status === 'Approved') {
@@ -332,15 +334,19 @@ export default function FacultyLeaveManagement() {
       }
     }, 'Leave request ' + status.toLowerCase() + '.')
   }
-  const saveRequest = req => mutate(() => facultyLeaveApi.createRequest({
-    facultyId: Number(req.facultyId),
-    leaveTypeId: String(req.leaveTypeId),
-    policyId: String(req.policyId),
-    fromDate: req.fromDate,
-    toDate: req.toDate,
-    reason: req.reason.trim(),
-    days: Number(req.days) || 1,
-  }), 'Leave request submitted.', 'leave-requests')
+  const saveRequest = req => mutate(async () => {
+    const res = await facultyLeaveApi.createRequest({
+      facultyId: Number(req.facultyId),
+      leaveTypeId: String(req.leaveTypeId),
+      policyId: String(req.policyId),
+      fromDate: req.fromDate,
+      toDate: req.toDate,
+      reason: req.reason.trim(),
+      days: Number(req.days) || 1,
+    })
+    eventBus.emit(ERP_EVENTS.LEAVE_UPDATED, { request: req })
+    return res
+  }, 'Leave request submitted.', 'leave-requests')
   const viewRecord = item => {
     if (item?.applicableTo || item?.academicYear || Array.isArray(item?.entitlements)) {
       const local = getLocalPolicies()[String(item.id)]

@@ -99,16 +99,13 @@ export default function AcademicContextSettings() {
   const academicYearOptions = useMemo(() => {
     return academicYears.map(y => {
       const yearName = y.name || y.academicYearName || 'Unnamed Year'
-      const start = y.startDate ? String(y.startDate).slice(0, 10) : ''
-      const end = y.endDate ? String(y.endDate).slice(0, 10) : ''
-      const dates = start && end ? `(${start} – ${end})` : ''
       return {
         id: String(y.id ?? y.academicYearId),
         value: String(y.id ?? y.academicYearId),
-        name: `${yearName} ${dates}`.trim(),
-        code: y.isCurrent ? 'Active' : (y.status || 'Archived'),
+        name: yearName.trim(),
+        code: y.isCurrent || String(y.status).toLowerCase() === 'active' ? 'Active' : '',
       }
-    })
+    }).filter(opt => opt.name && opt.name !== 'Unnamed Year')
   }, [academicYears])
 
   return (

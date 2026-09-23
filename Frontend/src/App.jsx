@@ -34,6 +34,7 @@ import SubjectManagement from './pages/subject-management/SubjectManagement'
 import CreditsManagement from './pages/credits-management/CreditsManagement'
 import ElectiveManagement from './pages/elective-management/ElectiveManagement'
 import { AcademicProvider } from './context/AcademicContext'
+import ContextGuard from './components/ContextGuard'
 import './styles/erp-theme.css'
 import './App.css'
 import './styles/details-layout.css'
@@ -121,7 +122,7 @@ export default function App() {
               />
             }
           >
-            <Route element={<AcademicProvider><Outlet /></AcademicProvider>}>
+            <Route element={<AcademicProvider><ContextGuard><Outlet /></ContextGuard></AcademicProvider>}>
               <Route path="/dashboard" element={<Dashboard />} />
               <Route path="/my-profile" element={<MyProfile />} />
               <Route path="/settings" element={<Settings />} />

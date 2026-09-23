@@ -148,9 +148,32 @@ function List() {
   const load = async () => {
     setLoading(true)
     try {
-      const [branchRows, courseRows] = await Promise.all([branchApi.getAll(), courseApi.getAll()])
+      const [branchRows, courseRows] = await Promise.all([
+        branchApi.getAll().catch((err) => {
+          console.warn('Unable to load branch rows:', err)
+          return []
+        }),
+        courseApi.getAll().catch((err) => {
+          console.warn('Unable to load course rows:', err)
+          return []
+        }),
+      ])
       setBranches(newestFirst('branches', branchRows || []).map(normalizeBranch))
-      setCourses(await Promise.all((courseRows || []).map(courseMap).filter((course) => course.id && course.name).map(async (course) => course.durationValue && course.totalSemesters ? course : courseMap(await courseApi.getById(course.id)))))
+      const safeCourses = await Promise.all(
+        (courseRows || [])
+          .map(courseMap)
+          .filter((course) => course.id && course.name)
+          .map(async (course) => {
+            if (course.durationValue && course.totalSemesters) return course
+            try {
+              const detail = await courseApi.getById(course.id)
+              return detail ? courseMap(detail) : course
+            } catch {
+              return course
+            }
+          })
+      )
+      setCourses(safeCourses)
       setError('')
     } catch (requestError) {
       setError(requestError?.message || 'Unable to load branch data.')
