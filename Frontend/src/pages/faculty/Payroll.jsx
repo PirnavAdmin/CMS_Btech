@@ -9,6 +9,7 @@ import { facultyPayrollApi, facultyAttendanceApi, facultyLeaveApi } from '../../
 import facultyService from '../../services/facultyService'
 import { normalizePayroll } from '../../services/facultyContracts'
 import { newestFirst, rememberCreated } from '../../utils/newestFirst'
+import eventBus, { ERP_EVENTS } from '../../services/eventBus'
 import './Payroll.css'
 
 const LOCAL_PAYROLL_STATUS_KEY = 'pirnav-faculty-local-payroll-status-v1'
@@ -72,8 +73,28 @@ const saveLocalSalaryStructure = (item, salaryData) => {
   } catch {}
 }
 
-const calculateDefaultSalaryBreakdown = () => {
-  return { basicSalary: 0, hra: 0, da: 0, allowances: 0, grossSalary: 0, pf: 0, tax: 0, deductions: 0, netSalary: 0 }
+const calculateDefaultSalaryBreakdown = (designation = '', employeeCategory = '') => {
+  const d = String(designation || '').toLowerCase()
+  const c = String(employeeCategory || '').toLowerCase()
+  let basic = 45000
+  if (d.includes('professor') && !d.includes('assistant') && !d.includes('associate')) basic = 85000
+  else if (d.includes('associate')) basic = 65000
+  else if (d.includes('assistant')) basic = 50000
+  else if (d.includes('senior lecturer')) basic = 42000
+  else if (d.includes('lecturer')) basic = 35000
+  else if (d.includes('lab') || d.includes('instructor')) basic = 28000
+  else if (c.includes('non-teaching')) basic = 24000
+
+  const hra = Math.round(basic * 0.20)
+  const da = Math.round(basic * 0.15)
+  const allowances = Math.round(basic * 0.10)
+  const grossSalary = basic + hra + da + allowances
+  const pf = Math.round(basic * 0.12)
+  const tax = basic > 50000 ? 2500 : 1200
+  const deductions = pf + tax
+  const netSalary = Math.max(0, grossSalary - deductions)
+
+  return { basicSalary: basic, hra, da, allowances, grossSalary, pf, tax, deductions, netSalary }
 }
 
 const calculateEmployeeAttendanceAndLeaves = (fac, m, allAttendance = [], allRequests = [], allDecisions = {}, allTypes = []) => {
@@ -598,6 +619,18 @@ export default function Payroll() {
     finally { if (version === requestVersion.current) setLoading(false) }
   }, [month, tab])
   useEffect(() => { load(); return () => { requestVersion.current++ } }, [load])
+  useEffect(() => {
+    const unsubLeave = eventBus.subscribe(ERP_EVENTS.LEAVE_UPDATED, () => {
+      load()
+    })
+    const unsubAtt = eventBus.subscribe(ERP_EVENTS.ATTENDANCE_RECORDED, () => {
+      load()
+    })
+    return () => {
+      unsubLeave()
+      unsubAtt()
+    }
+  }, [load])
   useEffect(() => {
     if (!notice) return
     const timer = setTimeout(() => setNotice(''), 2000)

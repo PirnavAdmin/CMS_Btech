@@ -1,0 +1,70 @@
+@baseUrl = http://localhost:5084
+@token = PUT_JWT_TOKEN_HERE
+
+### 1. Existing seeded session details (Dump20260922.sql)
+GET {{baseUrl}}/api/v1/student-attendance/sessions/1
+Authorization: Bearer {{token}}
+
+### 2. List sessions
+GET {{baseUrl}}/api/v1/student-attendance/sessions?academicYearId=2
+Authorization: Bearer {{token}}
+
+### 3. Create a new OPEN session using seeded academic data
+# For SUPER_ADMIN add: "collegeId": 1
+POST {{baseUrl}}/api/v1/student-attendance/sessions
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "academicYearId": 2,
+  "semesterId": 2,
+  "sectionId": 2,
+  "subjectId": 4,
+  "facultyId": 2,
+  "attendanceDate": "2026-09-23",
+  "remarks": "Ticket 159 test attendance session"
+}
+
+### 4. Load roster for the newly created session
+# Replace 2 with the attendanceSessionId returned by POST
+GET {{baseUrl}}/api/v1/student-attendance/sessions/2/students
+Authorization: Bearer {{token}}
+
+### 5. Mark attendance (seed dump has student 3 actively assigned to section 2 / academic year 2)
+PUT {{baseUrl}}/api/v1/student-attendance/sessions/2/mark
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "students": [
+    {
+      "studentId": 3,
+      "attendanceStatus": "PRESENT",
+      "remarks": "Present"
+    }
+  ],
+  "markUnlistedAsAbsent": true,
+  "completeSession": true
+}
+
+### 6. Daily report - seeded attendance exists on 2026-09-22
+GET {{baseUrl}}/api/v1/student-attendance/reports/daily?date=2026-09-22
+Authorization: Bearer {{token}}
+
+### 7. Subject report - seeded subject 1 has attendance on 2026-09-22
+GET {{baseUrl}}/api/v1/student-attendance/reports/subject?subjectId=1&fromDate=2026-09-01&toDate=2026-09-30
+Authorization: Bearer {{token}}
+
+### 8. Monthly report
+GET {{baseUrl}}/api/v1/student-attendance/reports/monthly?year=2026&month=9
+Authorization: Bearer {{token}}
+
+### 9. Reopen a completed session if correction is needed
+PATCH {{baseUrl}}/api/v1/student-attendance/sessions/2/status
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "sessionStatus": "OPEN",
+  "remarks": "Reopened for correction"
+}

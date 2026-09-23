@@ -1,0 +1,78 @@
+@baseUrl = https://localhost:7174
+@token = PASTE_JWT_ACCESS_TOKEN_HERE
+@studentId = 4
+
+### 1. Student list
+GET {{baseUrl}}/api/v1/students?pageNumber=1&pageSize=20
+Authorization: Bearer {{token}}
+Accept: application/json
+
+### 2. Student details
+GET {{baseUrl}}/api/v1/students/1
+Authorization: Bearer {{token}}
+Accept: application/json
+
+### 3. Search students
+GET {{baseUrl}}/api/v1/students/search?query=STU&status=1&pageNumber=1&pageSize=20
+Authorization: Bearer {{token}}
+Accept: application/json
+
+### 4. Create student
+POST {{baseUrl}}/api/v1/students
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "collegeId": 1,
+  "studentCode": "STU004",
+  "fullName": "Meera Rao",
+  "gender": "Female",
+  "dateOfBirth": "2005-07-18",
+  "email": "meera.rao@example.com",
+  "mobile": "9000000004",
+  "bloodGroup": "A+",
+  "address": "Hyderabad, Telangana",
+  "courseId": 1,
+  "branchId": 1,
+  "academicYearId": 2,
+  "status": 1
+}
+
+### 5. Edit student
+PUT {{baseUrl}}/api/v1/students/{{studentId}}
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "collegeId": 1,
+  "studentCode": "STU004",
+  "fullName": "Meera Rao Updated",
+  "gender": "Female",
+  "dateOfBirth": "2005-07-18",
+  "email": "meera.updated@example.com",
+  "mobile": "9000000004",
+  "bloodGroup": "A+",
+  "address": "Secunderabad, Telangana",
+  "courseId": 1,
+  "branchId": 1,
+  "academicYearId": 2,
+  "status": 1
+}
+
+### 6. Deactivate student
+PATCH {{baseUrl}}/api/v1/students/{{studentId}}/status
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "status": 0
+}
+
+### 7. Activate student
+PATCH {{baseUrl}}/api/v1/students/{{studentId}}/status
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "status": 1
+}

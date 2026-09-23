@@ -9,5 +9,8 @@ namespace BTech.DTOs
 
         [Required]
         public string Password { get; set; } = string.Empty;
+
+        // REMEMBER ME
+        public bool RememberMe { get; set; }
     }
 }

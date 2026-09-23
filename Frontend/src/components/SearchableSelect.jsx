@@ -54,17 +54,7 @@ export default function SearchableSelect({
   )
 
   const selectedOption = useMemo(
-    () => value == null || value === '' ? null : normalizedOptions.find((option) => {
-      const candidates = [
-        option.value,
-        option.raw?.value,
-        option.raw?.id,
-        option.raw?.courseId,
-        option.raw?.code,
-        option.raw?.courseCode,
-      ]
-      return candidates.some((candidate) => String(candidate ?? '') === String(value ?? ''))
-    }) || null,
+    () => value == null || value === '' ? null : normalizedOptions.find((option) => option.value === String(value)) || null,
     [normalizedOptions, value],
   )
 

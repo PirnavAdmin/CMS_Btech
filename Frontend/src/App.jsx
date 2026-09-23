@@ -32,6 +32,7 @@ import FacultyLeaveManagement from './pages/faculty/FacultyLeaveManagement'
 import Payroll from './pages/faculty/Payroll'
 import SubjectManagement from './pages/subject-management/SubjectManagement'
 import CreditsManagement from './pages/credits-management/CreditsManagement'
+import TimetableManagement from './pages/timetable/TimetableManagement'
 import ElectiveManagement from './pages/elective-management/ElectiveManagement'
 import { AcademicProvider } from './context/AcademicContext'
 import './styles/erp-theme.css'
@@ -121,30 +122,24 @@ export default function App() {
               />
             }
           >
-            <Route path="/dashboard" element={<Dashboard />} />
-            <Route path="/my-profile" element={<MyProfile />} />
-            <Route path="/settings" element={<Settings />} />
-          </Route>
-
-          {/* Faculty demo module is self-contained and does not require backend masters. */}
-          <Route element={<ProtectedRoute allowedRoles={[ROLES.ADMIN, ROLES.FACULTY]} />}>
-            <Route path="/faculty/*" element={<FacultyManagement />} />
-            <Route path="/faculty/leave-management" element={<FacultyLeaveManagement />} />
-            <Route path="/faculty/payroll" element={<Payroll />} />
-          </Route>
-
-          {/* Faculty / Operations backed modules */}
-          <Route element={<ProtectedRoute allowedRoles={[ROLES.ADMIN, ROLES.FACULTY]} />}>
             <Route element={<AcademicProvider><Outlet /></AcademicProvider>}>
-              <Route path="/attendance/*" element={<Attendance />} />
+              <Route path="/dashboard" element={<Dashboard />} />
+              <Route path="/my-profile" element={<MyProfile />} />
+              <Route path="/settings" element={<Settings />} />
+              <Route path="/settings/academic-context" element={<Settings />} />
+
+              {/* Faculty demo module */}
+              <Route path="/faculty/*" element={<FacultyManagement />} />
+              <Route path="/faculty/leave-management" element={<FacultyLeaveManagement />} />
+              <Route path="/faculty/payroll" element={<Payroll />} />
+
+              {/* Faculty / Operations backed modules */}
+              {/* Retain the former URL as a safe bookmark redirect. */}
+              <Route path="/attendance/*" element={<Navigate to="/student-management/attendance" replace />} />
               <Route path="/marks/*" element={<Marks />} />
               <Route path="/results/*" element={<Results />} />
-            </Route>
-          </Route>
 
-          {/* Administration - Admin Only */}
-          <Route element={<ProtectedRoute allowedRoles={[ROLES.ADMIN]} />}>
-            <Route element={<AcademicProvider><Outlet /></AcademicProvider>}>
+              {/* Administration - Admin Only */}
               <Route path="/college-institution-management" element={<CollegeInstitutionManagement />} />
               <Route path="/college-institution-management/add" element={<AddCollege />} />
               <Route path="/academic-year-management" element={<AcademicYearManagement />} />
@@ -170,6 +165,7 @@ export default function App() {
               <Route path="/section-management/:id" element={<SectionManagement mode="details" />} />
               <Route path="/subject-management" element={<SubjectManagement />} />
               <Route path="/credits-management" element={<CreditsManagement />} />
+              <Route path="/timetable" element={<TimetableManagement />} />
               <Route path="/elective-management" element={<ElectiveManagement />} />
               <Route path="/student-management/admissions" element={<StudentAdmission />} />
               <Route path="/student-management/admissions/new" element={<StudentAdmission />} />
@@ -179,6 +175,7 @@ export default function App() {
               <Route path="/student-management/admissions/:id" element={<StudentAdmission />} />
               <Route path="/student-management/profiles" element={<StudentProfile />} />
               <Route path="/student-management/profiles/:id" element={<StudentProfile />} />
+              <Route path="/student-management/attendance/*" element={<Attendance />} />
               <Route path="/student-management/promotions" element={<StudentPromotion />} />
               <Route path="/fees/*" element={<Fees />} />
             </Route>

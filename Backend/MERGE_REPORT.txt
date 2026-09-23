@@ -1,0 +1,63 @@
+CMS BTECH PHASE02 - MERGED PROJECT
+=================================
+
+Source archives merged:
+1. CMS_BTECH_PHASE02- sept-2 -08.zip
+2. CMS_PHASE02.zip
+
+Merge strategy:
+- Preserved the complete source tree from both archives.
+- Added files that existed in only one archive.
+- For conflicting files, combined the functionality rather than simply overwriting when needed.
+- Kept the newer/admission-aware AppDbContext and the student/academic-information ApplicationDbContext functionality.
+- Preserved the Student documents API and related DTO/repository/service methods.
+- Preserved Admission APIs including approve, reject, and history.
+- Preserved Student Academic Information APIs.
+- Preserved both profile API styles by combining the profile controller routes.
+- Preserved all repository/service registrations from both Program.cs files, including Admission, Profile, Student Profile, and Student Academic Information services.
+- Registered both ApplicationDbContext and AppDbContext with the existing MySQL DefaultConnection.
+
+API/controller coverage:
+- Access Requests
+- Authentication / Refresh / Password operations
+- Authorization test endpoints
+- College settings
+- OTP
+- Roles
+- Semester
+- Academic Level
+- Academic Year
+- Admission Status
+- Admissions (approve/reject/history)
+- Branch
+- College logo
+- College user mappings
+- Colleges
+- Course semester mappings
+- Course structures
+- Courses
+- Departments and HOD operations
+- Number validation
+- Profile APIs
+- Section assignments
+- Sections
+- Student academic details
+- Student academic information
+- Student admission status
+- Student admissions
+- Student parent
+- Student profile
+- Students, including documents
+- Subject assignments
+- User role mappings
+
+Important compatibility notes:
+- Build/editor artifacts (.vs, bin, obj) were intentionally excluded so the merged project does not carry stale compiled binaries or Visual Studio state.
+- The legacy /api/profile/{studentId}/fee-summary route is preserved. Neither source archive contains a fee repository/entity/stored procedure implementation, so the merged service returns no fee summary for that endpoint until a fee module is added.
+- The two source archives contained two different IStudentProfileService designs. The user-profile implementation is preserved for the exposed StudentProfileController API; the older unused student-profile implementation was retained under a legacy interface name to avoid a compile-time interface collision.
+- The project uses the connection string named DefaultConnection from appsettings.json.
+
+Validation:
+- Source/path coverage was checked against the union of both archives (excluding .vs/bin/obj): 326 non-build files are present in the merged project.
+- 34 controller source files are present.
+- The environment used to prepare this archive does not have the dotnet CLI installed, so a local `dotnet build` could not be executed here. Please run `dotnet clean`, `dotnet restore`, and `dotnet build` on the Windows development machine after extracting the archive.
