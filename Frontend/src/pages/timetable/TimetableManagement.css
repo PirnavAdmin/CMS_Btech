@@ -16,6 +16,7 @@
 .tt-workspace{display:flex;flex-direction:column;min-height:390px;min-width:0;border:1px solid var(--border);border-radius:12px;background:var(--surface);overflow:hidden}
 .tt-context-bar{position:sticky;top:0;z-index:3;background:var(--surface);border-bottom:1px solid var(--border);padding:10px 12px 6px;flex-shrink:0}
 .tt-context-bar .tt-filters{grid-template-columns:repeat(6,minmax(0,1fr));gap:8px;padding:0}
+.tt-schedule>.tt-card-heading>.tt-actions{align-items:flex-end}
 .tt-context-bar .tt-field{gap:4px;font-size:.7rem}
 .tt-context-bar .searchable-select__trigger{min-height:36px;padding:7px 9px;font-size:.76rem}
 .tt-context-summary{margin:7px 0 0!important;font-size:.72rem!important;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
