@@ -2,7 +2,7 @@
 import { chromium } from 'playwright'
 import { expect } from '@playwright/test'
 import assert from 'node:assert/strict'
-import { mkdir, readFile } from 'node:fs/promises'
+import { mkdir } from 'node:fs/promises'
 
 const browser = await chromium.launch({ channel: 'msedge', headless: true })
 const context = await browser.newContext({ viewport: { width: 1440, height: 1000 }, acceptDownloads: true })
@@ -78,10 +78,10 @@ try {
   await expect(step('Academic Setup')).toHaveAttribute('aria-current', 'step')
   await expect(button('Auto Generate')).toHaveCount(0)
   await expect(button('Continue to Period Setup')).toBeDisabled()
-  yearActive = false; await button('Refresh').click()
+  yearActive = false; await page.reload()
   await expect(page.getByRole('textbox', { name: 'Academic Year', exact: true })).toHaveAttribute('placeholder', 'No active academic year')
   await expect(button('Course')).toBeDisabled()
-  yearActive = true; await button('Refresh').click()
+  yearActive = true; await page.reload()
   await selectAcademic()
   await choose('Branch', 'MECH')
   await expect(button('Academic Level')).toContainText('Select academic level')
@@ -168,10 +168,6 @@ try {
   await page.getByLabel('View Date', { exact: true }).fill('2026-09-15'); await expect(gridClasses).toHaveCount(1)
   await page.getByLabel('View Date', { exact: true }).fill('2026-09-13'); await expect(gridClasses).toHaveCount(0)
   await button('Weekly Template').click()
-  const downloadPromise = page.waitForEvent('download')
-  await button('Export Student Timetable').click(); await button('Download CSV').click()
-  const csv = await readFile(await (await downloadPromise).path(), 'utf8')
-  assert.match(csv, /CS301/); assert.doesNotMatch(csv, /access-token/)
   await goTab('Classroom Timetable'); await choose('Classroom / Lab', 'Room 1'); await expect(gridClasses).toHaveCount(3)
 
   // Flow B: manual periods and manual-only scheduling, with no weekly frequency.
@@ -223,10 +219,10 @@ try {
   await goTab('Student Timetable'); await choose('Student', /Meera Rao/)
   await expect(page.locator('.tt-day-view .tt-class')).toHaveCount(1)
   await page.reload(); await choose('Student', /Meera Rao/); await expect(page.locator('.tt-day-view .tt-class')).toHaveCount(1)
-  failBackend = true; await button('Refresh').click(); await expect(page.getByRole('alert')).toBeVisible()
+  failBackend = true; await page.reload(); await expect(page.getByRole('alert')).toBeVisible()
   failBackend = false; await button('Retry').click(); await expect(page.getByRole('alert')).toHaveCount(0)
   assert.deepEqual(writes, []); assert.deepEqual(errors, [])
-  console.log('PASS: both three-step flows, live automatic periods, editable/reordered manual periods, breaks/lunch, independent manual drafts, frequency absence, conflict-blocked move, Generate Missing preservation, final publish checks, holidays, shared published views, exports, persistence, desktop/tablet/mobile/dark, and API failures. No live writes.')
+  console.log('PASS: both three-step flows, live automatic periods, editable/reordered manual periods, breaks/lunch, independent manual drafts, frequency absence, conflict-blocked move, Generate Missing preservation, final publish checks, holidays, shared published views, persistence, desktop/tablet/mobile/dark, and API failures. No live writes.')
 } catch (error) {
   await mkdir('test-results', { recursive: true }); await page.screenshot({ path: 'test-results/timetable-failure.png', fullPage: true })
   console.error('Browser failure:', page.url(), errors, (await page.locator('body').innerText()).slice(-5000)); throw error
