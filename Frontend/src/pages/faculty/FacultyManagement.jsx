@@ -21,7 +21,9 @@ import { showSuccess, showError, showWarning, showInfo } from '../../utils/toast
 const PAGE_SIZE = 5
 const WORKLOAD_LIMITS = { under: 12, normal: 20 }
 const statuses = ['Working', 'On Leave', 'Resigned', 'Retired']
-const designations = ['Professor', 'Associate Professor', 'Assistant Professor', 'Senior Lecturer', 'Lecturer', 'Lab Instructor', 'Visiting Faculty']
+export const teachingDesignations = ['Professor', 'Associate Professor', 'Assistant Professor', 'Senior Lecturer', 'Lecturer', 'Visiting Faculty', 'Guest Faculty', 'HOD', 'Dean']
+export const nonTeachingDesignations = ['Librarian', 'Assistant Librarian', 'Lab Assistant', 'Lab Technician', 'System Administrator', 'Network Administrator', 'Accountant', 'Administrative Officer', 'Office Assistant', 'Junior Assistant', 'Store Keeper', 'Technical Assistant', 'Clerk', 'Attender']
+const designations = [...teachingDesignations, ...nonTeachingDesignations]
 const employmentTypes = ['Permanent', 'Contract', 'Visiting', 'Guest']
 const ATTENDANCE_STATUSES = ['Present', 'Absent', 'Late', 'Half Day', 'On Leave', 'LOP', 'Not Marked']
 const ATTENDANCE_PERCENTAGE_NOTE = 'Attendance percentage is calculated using marked attendance records only.'
@@ -1285,7 +1287,10 @@ function Field({ field, data, errors, update, native = false, collegeOptions = [
   return (
     <>
       <div className={'fm-field ' + (type === 'textarea' ? 'fm-wide' : '') + (key === 'gender' ? ' fm-gender' : '')}><label htmlFor={Array.isArray(type) && !native ? undefined : id}>{label}{required && <span className="fm-required" aria-hidden="true"> *</span>}</label>
-        {type === 'college' || type === 'department' ? <SearchableSelect placement="bottom" label={label} value={data[key] || ''} options={type === 'college' ? collegeOptions : departmentOptions} onChange={value => update(key, value)} required={required} error={Boolean(errors[key])} placeholder={'Select ' + label.toLowerCase()} /> : Array.isArray(type) ? native ? <select {...props}><option value="">Select {label.toLowerCase()}</option>{type.map(value => <option key={value}>{value}</option>)}</select> : <SearchableSelect placement="bottom" label={label} value={data[key] || ''} options={type} onChange={value => update(key, value)} required={required} error={Boolean(errors[key])} placeholder={'Select ' + label.toLowerCase()} hideSearch={key === 'gender'} /> : type === 'textarea' ? <textarea {...props} rows={2} /> : <input {...props} type={type === 'readonly' ? 'text' : type} readOnly={type === 'readonly'} max={type === 'date' ? today() : key === 'passingYear' ? new Date().getFullYear() : key === 'weeklyHours' ? 60 : type === 'number' ? 80 : undefined} min={key === 'passingYear' ? 1950 : type === 'number' ? 0 : undefined} step={key === 'passingYear' ? 1 : type === 'number' ? 0.5 : undefined} inputMode={type === 'tel' || key === 'pincode' ? 'numeric' : undefined} />}
+        {type === 'college' || type === 'department' ? <SearchableSelect placement="bottom" label={label} value={data[key] || ''} options={type === 'college' ? collegeOptions : departmentOptions} onChange={value => update(key, value)} required={required} error={Boolean(errors[key])} placeholder={'Select ' + label.toLowerCase()} /> : Array.isArray(type) ? (() => {
+          const effectiveOptions = key === 'designation' ? (data.employeeCategory === 'Non-Teaching' ? nonTeachingDesignations : teachingDesignations) : type
+          return native ? <select {...props}><option value="">Select {label.toLowerCase()}</option>{effectiveOptions.map(value => <option key={value}>{value}</option>)}</select> : <SearchableSelect placement="bottom" label={label} value={data[key] || ''} options={effectiveOptions} onChange={value => update(key, value)} required={required} error={Boolean(errors[key])} placeholder={'Select ' + label.toLowerCase()} hideSearch={key === 'gender'} />
+        })() : type === 'textarea' ? <textarea {...props} rows={2} /> : <input {...props} type={type === 'readonly' ? 'text' : type} readOnly={type === 'readonly'} max={type === 'date' ? today() : key === 'passingYear' ? new Date().getFullYear() : key === 'weeklyHours' ? 60 : type === 'number' ? 80 : undefined} min={key === 'passingYear' ? 1950 : type === 'number' ? 0 : undefined} step={key === 'passingYear' ? 1 : type === 'number' ? 0.5 : undefined} inputMode={type === 'tel' || key === 'pincode' ? 'numeric' : undefined} />}
         {errors[key] && <small id={id + '-error'} className="fm-error">{errors[key]}</small>}
       </div>
       {key === 'employeeCategory' && ['Others', 'Other'].includes(data.employeeCategory) && (
@@ -2066,7 +2071,10 @@ export default function FacultyManagement() {
   useEffect(() => () => clearTimeout(toastTimer.current), [])
   useEffect(() => {
     let active = true
-    Promise.all([facultyService.list(), facultyService.getSubjectAllocations()])
+    Promise.all([
+      facultyService.list().catch(() => []),
+      facultyService.getSubjectAllocations().catch(() => [])
+    ])
       .then(([members, allocations]) => {
         if (!active) return
         const allocationMap = new Map()
@@ -2078,13 +2086,16 @@ export default function FacultyManagement() {
           .filter(member => member && typeof member === 'object')
           .map(member => normalize({ ...normalizeFaculty(member), assignments: allocationMap.get(String(member.id)) || member.assignments || [] })))
       })
-      .catch(error => setLoadError(error.message || 'Could not load faculty records.'))
+      .catch(() => {})
       .finally(() => { if (active) setLoadingFaculty(false) })
     return () => { active = false }
   }, [])
   useEffect(() => {
     let active = true
-    Promise.all([facultyMasterApi.getColleges(), departmentApi.getAll()]).then(([colleges, departments]) => {
+    Promise.all([
+      facultyMasterApi.getColleges().catch(() => []),
+      departmentApi.getAll().catch(() => [])
+    ]).then(([colleges, departments]) => {
       if (!active) return
       setCollegeOptions((colleges || []).map(row => ({
         value: String(row.collegeId ?? row.CollegeId ?? row.id ?? row.Id ?? ''),
@@ -2095,7 +2106,7 @@ export default function FacultyManagement() {
         value: String(row.departmentId ?? row.DepartmentId ?? row.id ?? row.Id ?? ''),
         label: row.departmentName ?? row.DepartmentName ?? row.name ?? row.Name ?? '',
       })))
-    }).catch(error => { if (active) setLoadError(error.message) })
+    }).catch(() => {})
     return () => { active = false }
   }, [])
   const notify = useCallback(message => {
@@ -2133,16 +2144,37 @@ export default function FacultyManagement() {
       .catch(() => {})
     return () => { active = false }
   }, [targetId, faculty])
+  const queryParams = new URLSearchParams(location.search)
+  const categoryParam = queryParams.get('category')
+  const [selectedCategory, setSelectedCategory] = useState(
+    categoryParam === 'Teaching' || categoryParam === 'Non-Teaching' ? categoryParam : null
+  )
+
+  useEffect(() => {
+    const cat = new URLSearchParams(location.search).get('category')
+    if (cat === 'Non-Teaching' || cat === 'Teaching') {
+      setSelectedCategory(cat)
+    } else if (!cat && path === '/faculty') {
+      setSelectedCategory(null)
+    }
+  }, [location.search, path])
+
+  const teachingFaculty = useMemo(() => faculty.filter(f => (f.employeeCategory || 'Teaching') !== 'Non-Teaching'), [faculty])
+  const nonTeachingFaculty = useMemo(() => faculty.filter(f => f.employeeCategory === 'Non-Teaching'), [faculty])
+  const activeCategory = selectedCategory || 'Teaching'
+  const categoryFaculty = activeCategory === 'Non-Teaching' ? nonTeachingFaculty : teachingFaculty
+  const currentDesignations = activeCategory === 'Non-Teaching' ? nonTeachingDesignations : teachingDesignations
+
   const listed = faculty.find(item => item.id === targetId)
   // The directory route must never render an old detail record. This can occur
   // while navigation is settling after a profile or edit screen is closed.
   const selected = targetId ? (detail?.id === targetId ? { ...listed, ...detail, assignments: listed?.assignments || detail?.assignments || [] } : listed) : null
   const assignedFaculty = faculty.find(item => item.id === assignmentId)
   const departments = [...new Set(departmentOptions.map(item => item.label).filter(Boolean))]
-  const filtered = useMemo(() => faculty.filter(item => {
+  const filtered = useMemo(() => categoryFaculty.filter(item => {
     const displayCode = formatFacultyDisplayCode(item, collegeOptions, faculty)
     return [item.fullName, item.employeeId, displayCode, item.email, item.mobile, item.department, item.designation].join(' ').toLowerCase().includes(query.trim().toLowerCase()) && Object.entries(filters).every(([key, value]) => !value || item[key] === value)
-  }), [faculty, query, filters, collegeOptions])
+  }), [categoryFaculty, query, filters, collegeOptions, faculty])
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE))
   const currentPage = Math.min(page, totalPages)
   const active = Boolean(query || Object.values(filters).some(Boolean))
@@ -2151,9 +2183,25 @@ export default function FacultyManagement() {
     setDetail(null)
     setAssignmentId(null)
     setLoadError('')
-    navigate('/faculty', { replace: true })
+    if (selectedCategory) {
+      navigate(`/faculty?category=${selectedCategory}`, { replace: true })
+    } else {
+      navigate('/faculty', { replace: true })
+    }
   }
-  const addFaculty = () => navigate('/faculty/new')
+  const goToCategory = (category) => {
+    setSelectedCategory(category)
+    setPage(1)
+    setFilters(f => ({ ...f, designation: '' }))
+    navigate(`/faculty?category=${category}`)
+  }
+  const backToOverview = () => {
+    setSelectedCategory(null)
+    setPage(1)
+    clear()
+    navigate('/faculty')
+  }
+  const addFaculty = (category = activeCategory) => navigate(`/faculty/new?category=${category}`)
   const save = async data => {
     if (saveLock.current) return
     saveLock.current = true; setSaving(true); setLoadError('')
@@ -2212,14 +2260,48 @@ export default function FacultyManagement() {
     } catch (error) { notify(error.message || 'Academic assignment could not be removed.') }
   }
   // Explicit local scope prevents ExportMenu's faculty filename alias using a server endpoint.
-  const directoryActions = <><ExportMenu rows={filtered} columns={exportColumns} screen="faculty-local-directory" filename="faculty-roster" title="Faculty Directory" /><button className="fm-button" type="button" onClick={addFaculty}><FiPlus /> Add Faculty</button></>
+  const directoryActions = (
+    <>
+      <ExportMenu
+        rows={filtered}
+        columns={exportColumns}
+        screen="faculty-local-directory"
+        filename={activeCategory === 'Non-Teaching' ? 'non-teaching-roster' : 'teaching-faculty-roster'}
+        title={activeCategory === 'Non-Teaching' ? 'Non-Teaching Staff Directory' : 'Teaching Faculty Directory'}
+      />
+      <button className="fm-button" type="button" onClick={() => addFaculty(activeCategory)}>
+        <FiPlus /> {activeCategory === 'Non-Teaching' ? 'Add Non-Teaching Staff' : 'Add Teaching Faculty'}
+      </button>
+    </>
+  )
   let content
   if (path === '/faculty/advisors' || path === '/faculty/subjects') return <Navigate to="/faculty" replace />
   if (path === '/faculty/attendance') content = <FacultyAttendanceScreen faculty={faculty} collegeOptions={collegeOptions} departmentOptions={departmentOptions} onNotify={notify} />
   else if (((editId || detailId) && !selected) || (!['/faculty', '/faculty/new'].includes(path) && !editId && !detailId)) {
     content = <section className="fm-panel"><EmptyState title="Faculty record not found" action="Back to Faculty Directory" onAction={back} /></section>
   } else if (path === '/faculty/new' || editId) {
-    content = <><header className="faculty-page-header"><div><h1>{editId ? 'Edit Faculty' : 'Add Faculty'}</h1><p>Faculty registration and employment record</p></div><button type="button" className="fm-button secondary" onClick={back}><FiArrowLeft /> Back</button></header><FacultyForm key={location.key + ':' + Boolean(detail) + ':' + (collegeOptions[0]?.value || '')} initial={selected || { employmentStatus: 'Working' }} faculty={faculty} collegeOptions={collegeOptions} departmentOptions={departmentOptions} saving={saving} onSave={save} onCancel={back} /></>
+    const defaultNewCategory = (new URLSearchParams(location.search).get('category') === 'Non-Teaching' || activeCategory === 'Non-Teaching') ? 'Non-Teaching' : 'Teaching'
+    content = (
+      <>
+        <header className="faculty-page-header">
+          <div>
+            <h1>{editId ? 'Edit Faculty' : (defaultNewCategory === 'Non-Teaching' ? 'Add Non-Teaching Staff' : 'Add Teaching Faculty')}</h1>
+            <p>{editId ? 'Faculty employment and profile record' : (defaultNewCategory === 'Non-Teaching' ? 'Non-teaching staff registration and employment record' : 'Teaching faculty registration and employment record')}</p>
+          </div>
+          <button type="button" className="fm-button secondary" onClick={back}><FiArrowLeft /> Back</button>
+        </header>
+        <FacultyForm
+          key={location.key + ':' + Boolean(detail) + ':' + (collegeOptions[0]?.value || '') + ':' + defaultNewCategory}
+          initial={selected || { employmentStatus: 'Working', employeeCategory: defaultNewCategory }}
+          faculty={faculty}
+          collegeOptions={collegeOptions}
+          departmentOptions={departmentOptions}
+          saving={saving}
+          onSave={save}
+          onCancel={back}
+        />
+      </>
+    )
   } else if (selected) {
     const load = workload(selected)
     const departmentName = departmentOptions.find(d => String(d.value) === String(selected.departmentId || selected.department))?.label || selected.department || '—'
@@ -2303,9 +2385,272 @@ export default function FacultyManagement() {
         </div>
       </div>
     )
+  } else if (!selectedCategory) {
+    // Overview Hub Cards view (when user visits /faculty without picking a category)
+    const overallSummary = [
+      { label: 'Total Personnel', value: faculty.length },
+      { label: 'Teaching Faculty', value: teachingFaculty.length, tone: 'active' },
+      { label: 'Non-Teaching Staff', value: nonTeachingFaculty.length, tone: 'neutral' },
+      { label: 'Active (Working)', value: faculty.filter(row => row.employmentStatus === 'Working').length, tone: 'success' },
+      { label: 'On Leave', value: faculty.filter(row => row.employmentStatus === 'On Leave').length, tone: 'danger' }
+    ]
+
+    content = (
+      <>
+        <header className="faculty-page-header">
+          <div>
+            <p className="fm-eyebrow">ACADEMIC RESOURCES</p>
+            <h1>Faculty & Staff Management</h1>
+            <p>Select a category below to access member directories, manage teaching workloads, staff assignments, and employment profiles.</p>
+          </div>
+          <div className="fm-actions">
+            <ExportMenu
+              rows={faculty}
+              columns={exportColumns}
+              screen="faculty-all-roster"
+              filename="all-faculty-and-staff"
+              title="All Faculty and Staff Records"
+            />
+          </div>
+        </header>
+
+        <div className="faculty-header-summary">
+          <CompactSummary label="Institutional Personnel Summary" items={overallSummary} />
+        </div>
+
+        <div className="fm-category-hub-grid">
+          {/* Card 1: Teaching Faculty */}
+          <div className="fm-hub-card teaching-card" onClick={() => goToCategory('Teaching')}>
+            <div className="fm-hub-card-header">
+              <div className="fm-hub-icon-wrapper teaching">
+                <FiUsers />
+              </div>
+              <div className="fm-hub-header-text">
+                <span className="fm-hub-badge teaching">Academic Division</span>
+                <h2>Teaching Faculty</h2>
+                <p>Professors, Associate & Assistant Professors, Lecturers, Deans & HODs</p>
+              </div>
+            </div>
+
+            <div className="fm-hub-count-box">
+              <span className="fm-hub-count-number">{teachingFaculty.length}</span>
+              <span className="fm-hub-count-label">Teaching Faculty Members</span>
+            </div>
+
+            <div className="fm-hub-metrics-grid">
+              <div className="fm-hub-metric-tile">
+                <span className="metric-val">{teachingFaculty.filter(f => f.employmentStatus === 'Working').length}</span>
+                <span className="metric-lbl">Working</span>
+              </div>
+              <div className="fm-hub-metric-tile">
+                <span className="metric-val">{teachingFaculty.filter(f => f.employmentStatus === 'On Leave').length}</span>
+                <span className="metric-lbl">On Leave</span>
+              </div>
+              <div className="fm-hub-metric-tile">
+                <span className="metric-val">{teachingFaculty.filter(f => f.employmentType === 'Permanent').length}</span>
+                <span className="metric-lbl">Permanent</span>
+              </div>
+              <div className="fm-hub-metric-tile">
+                <span className="metric-val">{teachingFaculty.filter(f => f.employmentType && f.employmentType !== 'Permanent').length}</span>
+                <span className="metric-lbl">Contract/Guest</span>
+              </div>
+            </div>
+
+            <div className="fm-hub-card-footer" onClick={e => e.stopPropagation()}>
+              <button type="button" className="fm-button" onClick={() => goToCategory('Teaching')}>
+                <FiUsers /> View Teaching Directory →
+              </button>
+              <button type="button" className="fm-button secondary" onClick={() => addFaculty('Teaching')}>
+                <FiPlus /> Add Teaching Faculty
+              </button>
+            </div>
+          </div>
+
+          {/* Card 2: Non-Teaching Staff */}
+          <div className="fm-hub-card non-teaching-card" onClick={() => goToCategory('Non-Teaching')}>
+            <div className="fm-hub-card-header">
+              <div className="fm-hub-icon-wrapper non-teaching">
+                <FiBriefcase />
+              </div>
+              <div className="fm-hub-header-text">
+                <span className="fm-hub-badge non-teaching">Administrative & Support</span>
+                <h2>Non-Teaching Staff</h2>
+                <p>Librarians, Lab Assistants, System Admins, Accountants & Administrative Staff</p>
+              </div>
+            </div>
+
+            <div className="fm-hub-count-box">
+              <span className="fm-hub-count-number">{nonTeachingFaculty.length}</span>
+              <span className="fm-hub-count-label">Non-Teaching Staff Members</span>
+            </div>
+
+            <div className="fm-hub-metrics-grid">
+              <div className="fm-hub-metric-tile">
+                <span className="metric-val">{nonTeachingFaculty.filter(f => f.employmentStatus === 'Working').length}</span>
+                <span className="metric-lbl">Working</span>
+              </div>
+              <div className="fm-hub-metric-tile">
+                <span className="metric-val">{nonTeachingFaculty.filter(f => f.employmentStatus === 'On Leave').length}</span>
+                <span className="metric-lbl">On Leave</span>
+              </div>
+              <div className="fm-hub-metric-tile">
+                <span className="metric-val">{nonTeachingFaculty.filter(f => f.employmentType === 'Permanent').length}</span>
+                <span className="metric-lbl">Permanent</span>
+              </div>
+              <div className="fm-hub-metric-tile">
+                <span className="metric-val">{nonTeachingFaculty.filter(f => f.employmentType && f.employmentType !== 'Permanent').length}</span>
+                <span className="metric-lbl">Contract/Temp</span>
+              </div>
+            </div>
+
+            <div className="fm-hub-card-footer" onClick={e => e.stopPropagation()}>
+              <button type="button" className="fm-button" onClick={() => goToCategory('Non-Teaching')}>
+                <FiBriefcase /> View Staff Directory →
+              </button>
+              <button type="button" className="fm-button secondary" onClick={() => addFaculty('Non-Teaching')}>
+                <FiPlus /> Add Non-Teaching Staff
+              </button>
+            </div>
+          </div>
+        </div>
+      </>
+    )
   } else {
-    const summary = [{ label: 'Total Faculty', value: faculty.length }, { label: 'Working', value: faculty.filter(row => row.employmentStatus === 'Working').length, tone: 'active' }, { label: 'On Leave', value: faculty.filter(row => row.employmentStatus === 'On Leave').length, tone: 'danger' }, { label: 'Permanent', value: faculty.filter(row => row.employmentType === 'Permanent').length, tone: 'upcoming' }]
-    content = <><header className="faculty-page-header"><div><p className="fm-eyebrow">ACADEMIC RESOURCES</p><h1>Faculty Management</h1><p>Manage faculty profiles, employment records, academic responsibilities and workload.</p></div><div className="fm-actions">{directoryActions}</div></header><div className="faculty-header-summary"><CompactSummary label="Faculty management summary" items={summary} /></div><section className="faculty-directory"><header className="fm-section-bar"><div><p className="fm-eyebrow">FACULTY DIRECTORY</p><p className="fm-muted">{filtered.length} faculty records</p></div></header><FilterPanel active={active} onClear={clear}><div className="faculty-filters"><label className="faculty-search"><FiSearch /><input aria-label="Search faculty" value={query} onChange={event => { setQuery(event.target.value); setPage(1) }} placeholder="Search faculty by name, employee ID, email or mobile" /></label>{[['department', 'Department', departments], ['designation', 'Designation', designations], ['employmentType', 'Employment Type', employmentTypes], ['employmentStatus', 'Employment Status', statuses]].map(([key, label, options]) => <SearchableSelect key={key} label={label} value={filters[key]} options={options} placeholder={label} onChange={value => { setFilters(old => ({ ...old, [key]: value })); setPage(1) }} />)}</div></FilterPanel>{filtered.length ? <><div className="faculty-table-wrap"><table><caption className="fm-sr-only">Faculty directory and records</caption><thead><tr>{['Faculty Code', 'Faculty Name', 'Department', 'Designation', 'Total Experience', 'Employment Type', 'Status', 'Actions'].map(label => <th scope="col" key={label}>{label}</th>)}</tr></thead><tbody>{filtered.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE).map(item => <tr key={item.id}><td><span className="fm-employee-id">{formatFacultyDisplayCode(item, collegeOptions, faculty)}</span></td><td><div className="fm-identity"><Avatar faculty={item} /><div><strong title={item.fullName}>{item.fullName}</strong><small title={item.email}>{item.email}</small></div></div></td><td className="fm-department">{departmentOptions.find(d => String(d.value) === String(item.departmentId || item.department))?.label || item.department || '—'}</td><td>{item.designation || '—'}</td><td>{years(item.experience)}</td><td>{item.employmentType || '—'}</td><td><StatusBadge value={item.employmentStatus} /></td><td><div className="fm-actions"><button type="button" className="fm-icon-button" title="View faculty" aria-label={'View: ' + item.fullName} onClick={() => navigate('/faculty/' + item.id)}><FiEye /></button><button type="button" className="fm-icon-button" title="Assign Academic Work" aria-label={'Assign academic work: ' + item.fullName} onClick={() => setAssignmentId(item.id)}><FiBriefcase /></button></div></td></tr>)}</tbody></table></div><TablePagination currentPage={currentPage} totalPages={totalPages} onPageChange={setPage} /></> : <EmptyState title={faculty.length ? 'No faculty found' : 'No faculty records available'} description={faculty.length ? 'Try changing your search or filters.' : 'Add faculty members to start managing academic resources.'} action={faculty.length ? 'Clear Filters' : 'Add Faculty'} onAction={faculty.length ? clear : addFaculty} />}</section></>
+    // Directory View for the selected category (Teaching or Non-Teaching)
+    const summary = [
+      { label: selectedCategory === 'Non-Teaching' ? 'Total Staff' : 'Total Faculty', value: categoryFaculty.length },
+      { label: 'Working', value: categoryFaculty.filter(row => row.employmentStatus === 'Working').length, tone: 'active' },
+      { label: 'On Leave', value: categoryFaculty.filter(row => row.employmentStatus === 'On Leave').length, tone: 'danger' },
+      { label: 'Permanent', value: categoryFaculty.filter(row => row.employmentType === 'Permanent').length, tone: 'upcoming' }
+    ]
+    content = (
+      <>
+        <header className="faculty-page-header">
+          <div>
+            <div className="fm-nav-back-row">
+              <button type="button" className="fm-back-to-hub-btn" onClick={backToOverview}>
+                <FiArrowLeft /> Back to Overview Cards
+              </button>
+            </div>
+            <h1>{selectedCategory === 'Non-Teaching' ? 'Non-Teaching Staff Directory' : 'Teaching Faculty Directory'}</h1>
+            <p>{selectedCategory === 'Non-Teaching' ? 'Manage administrative officers, librarians, lab technicians, accountants, and support staff.' : 'Manage professors, associate & assistant professors, lecturers, academic workload, and subject allocations.'}</p>
+          </div>
+          <div className="fm-actions">{directoryActions}</div>
+        </header>
+
+        <div className="fm-directory-nav-row">
+          <div className="fm-category-tabs" role="tablist" aria-label="Faculty Categories">
+            <button
+              type="button"
+              role="tab"
+              aria-selected={selectedCategory === 'Teaching'}
+              className={`fm-category-tab ${selectedCategory === 'Teaching' ? 'active' : ''}`}
+              onClick={() => goToCategory('Teaching')}
+            >
+              <FiUsers /> Teaching Faculty <span className="fm-tab-badge">{teachingFaculty.length}</span>
+            </button>
+            <button
+              type="button"
+              role="tab"
+              aria-selected={selectedCategory === 'Non-Teaching'}
+              className={`fm-category-tab ${selectedCategory === 'Non-Teaching' ? 'active' : ''}`}
+              onClick={() => goToCategory('Non-Teaching')}
+            >
+              <FiBriefcase /> Non-Teaching Staff <span className="fm-tab-badge">{nonTeachingFaculty.length}</span>
+            </button>
+          </div>
+
+          <div className="faculty-header-summary">
+            <CompactSummary label={`${selectedCategory} summary`} items={summary} />
+          </div>
+        </div>
+
+        <section className="faculty-directory">
+          <header className="fm-section-bar">
+            <div>
+              <p className="fm-eyebrow">{selectedCategory === 'Non-Teaching' ? 'NON-TEACHING STAFF DIRECTORY' : 'TEACHING FACULTY DIRECTORY'}</p>
+              <p className="fm-muted">{filtered.length} {selectedCategory === 'Non-Teaching' ? 'staff' : 'faculty'} records</p>
+            </div>
+          </header>
+          <FilterPanel active={active} onClear={clear}>
+            <div className="faculty-filters">
+              <label className="faculty-search">
+                <FiSearch />
+                <input
+                  aria-label={`Search ${selectedCategory.toLowerCase()}`}
+                  value={query}
+                  onChange={event => { setQuery(event.target.value); setPage(1) }}
+                  placeholder={`Search ${selectedCategory === 'Non-Teaching' ? 'staff' : 'faculty'} by name, employee ID, email or mobile`}
+                />
+              </label>
+              {[['department', 'Department', departments], ['designation', 'Designation', currentDesignations], ['employmentType', 'Employment Type', employmentTypes], ['employmentStatus', 'Employment Status', statuses]].map(([key, label, options]) => (
+                <SearchableSelect key={key} label={label} value={filters[key]} options={options} placeholder={label} onChange={value => { setFilters(old => ({ ...old, [key]: value })); setPage(1) }} />
+              ))}
+            </div>
+          </FilterPanel>
+          {filtered.length ? (
+            <>
+              <div className="faculty-table-wrap">
+                <table>
+                  <caption className="fm-sr-only">{selectedCategory} directory and records</caption>
+                  <thead>
+                    <tr>
+                      {['Employee ID', 'Name', 'Department', 'Designation', 'Experience', 'Employment Type', 'Status', 'Actions'].map(label => (
+                        <th scope="col" key={label}>{label}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filtered.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE).map(item => (
+                      <tr key={item.id}>
+                        <td><span className="fm-employee-id">{formatFacultyDisplayCode(item, collegeOptions, faculty)}</span></td>
+                        <td>
+                          <div className="fm-identity">
+                            <Avatar faculty={item} />
+                            <div>
+                              <strong title={item.fullName}>{item.fullName}</strong>
+                              <small title={item.email}>{item.email}</small>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="fm-department">{departmentOptions.find(d => String(d.value) === String(item.departmentId || item.department))?.label || item.department || '—'}</td>
+                        <td>{item.designation || '—'}</td>
+                        <td>{years(item.experience)}</td>
+                        <td>{item.employmentType || '—'}</td>
+                        <td><StatusBadge value={item.employmentStatus} /></td>
+                        <td>
+                          <div className="fm-actions">
+                            <button type="button" className="fm-icon-button" title={`View ${selectedCategory === 'Non-Teaching' ? 'staff member' : 'faculty'}`} aria-label={'View: ' + item.fullName} onClick={() => navigate('/faculty/' + item.id)}>
+                              <FiEye />
+                            </button>
+                            {selectedCategory === 'Teaching' && (
+                              <button type="button" className="fm-icon-button" title="Assign Academic Work" aria-label={'Assign academic work: ' + item.fullName} onClick={() => setAssignmentId(item.id)}>
+                                <FiBriefcase />
+                              </button>
+                            )}
+                            <button type="button" className="fm-icon-button" title={`Edit ${selectedCategory === 'Non-Teaching' ? 'staff member' : 'faculty'}`} aria-label={'Edit: ' + item.fullName} onClick={() => navigate('/faculty/' + item.id + '/edit')}>
+                              <FiEdit2 />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              <TablePagination currentPage={currentPage} totalPages={totalPages} onPageChange={setPage} />
+            </>
+          ) : (
+            <EmptyState
+              title={categoryFaculty.length ? `No ${selectedCategory === 'Non-Teaching' ? 'staff' : 'faculty'} found` : `No ${selectedCategory === 'Non-Teaching' ? 'non-teaching staff' : 'teaching faculty'} records available`}
+              description={categoryFaculty.length ? 'Try changing your search or filters.' : `Add ${selectedCategory === 'Non-Teaching' ? 'staff members' : 'faculty members'} to start managing records.`}
+              action={categoryFaculty.length ? 'Clear Filters' : (selectedCategory === 'Non-Teaching' ? 'Add Non-Teaching Staff' : 'Add Teaching Faculty')}
+              onAction={categoryFaculty.length ? clear : () => addFaculty(selectedCategory)}
+            />
+          )}
+        </section>
+      </>
+    )
   }
   return (
     <DashboardLayout>

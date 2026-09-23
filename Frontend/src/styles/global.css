@@ -1,21 +1,23 @@
 :root {
-  --color-primary: var(--brand, #176fae);
-  --color-primary-hover: var(--brand-hover, #125b90);
-  --color-primary-soft: var(--brand-soft, #eaf4fb);
-  --color-success: var(--success, #16805b);
-  --color-warning: var(--warning, #ad6b0a);
-  --color-danger: var(--danger, #c43d3d);
-  --color-info: var(--info, #176fae);
-  --bg-page: var(--app-bg, #f4f7fa);
-  --bg-surface: var(--surface, #fff);
-  --bg-muted: var(--surface-soft, #f7fafc);
-  --text-main: var(--text-primary, #132a3e);
-  --text-secondary-global: var(--text-secondary, #425e75);
-  --text-muted-global: var(--text-muted, #6d8294);
-  --border-color: var(--border, #dbe4eb);
-  --border-strong-global: var(--border-strong, #bdccd8);
-  --radius-control: var(--radius-sm, 7px);
-  --radius-surface: var(--radius-md, 11px);
+  --color-primary: var(--brand, #8782BC);
+  --color-primary-hover: var(--brand-hover, #756FB2);
+  --color-primary-soft: var(--brand-soft, #EDEBF6);
+  --color-dark: #0F172A;
+  --color-dark-hover: #0B1120;
+  --color-success: var(--success, #16A34A);
+  --color-warning: var(--warning, #8B82C7);
+  --color-danger: var(--danger, #EF4444);
+  --color-info: var(--info, #8B82C7);
+  --bg-page: var(--app-bg, #F4F7FB);
+  --bg-surface: var(--surface, #FFFFFF);
+  --bg-muted: var(--surface-soft, #F8FAFC);
+  --text-main: var(--text-primary, #0F172A);
+  --text-secondary-global: var(--text-secondary, #475569);
+  --text-muted-global: var(--text-muted, #64748B);
+  --border-color: var(--border, #E2E8F0);
+  --border-strong-global: var(--border-strong, #CBD5E1);
+  --radius-control: var(--radius-sm, 8px);
+  --radius-surface: var(--radius-md, 12px);
   --radius-dialog: var(--radius-lg, 16px);
   --space-1: 4px;
   --space-2: 8px;
@@ -25,25 +27,25 @@
   --space-6: 24px;
   --control-height: 40px;
   --button-height: 38px;
-  --focus-ring: 0 0 0 3px color-mix(in srgb, var(--color-primary) 18%, transparent);
+  --focus-ring: 0 0 0 3px color-mix(in srgb, var(--color-primary) 24%, transparent);
   /* Compatibility aliases for the operational screens still using the older token names. */
-  --primary-50: var(--brand-soft, #eaf4fb);
-  --primary-500: var(--brand, #176fae);
-  --primary-600: var(--brand, #176fae);
-  --primary-700: var(--brand-hover, #125b90);
-  --success-50: color-mix(in srgb, var(--success, #16805b) 12%, var(--surface, #fff));
-  --success-500: var(--success, #16805b);
-  --success-600: var(--success, #16805b);
-  --success-700: var(--success, #16805b);
-  --warning-50: color-mix(in srgb, var(--warning, #ad6b0a) 12%, var(--surface, #fff));
-  --warning-500: var(--warning, #ad6b0a);
-  --warning-700: var(--warning, #ad6b0a);
-  --danger-50: color-mix(in srgb, var(--danger, #c43d3d) 12%, var(--surface, #fff));
-  --danger-500: var(--danger, #c43d3d);
-  --danger-700: var(--danger, #c43d3d);
-  --bg-surface: var(--surface, #fff);
-  --bg-hover: var(--surface-soft, #f7fafc);
-  --border-color: var(--border, #dbe4eb);
+  --primary-50: var(--brand-soft, #EDEBF6);
+  --primary-500: #8782BC;
+  --primary-600: #8782BC;
+  --primary-700: #756FB2;
+  --success-50: color-mix(in srgb, var(--success, #16A34A) 12%, var(--surface, #FFFFFF));
+  --success-500: var(--success, #16A34A);
+  --success-600: var(--success, #16A34A);
+  --success-700: var(--success, #16A34A);
+  --warning-50: color-mix(in srgb, var(--warning, #8B82C7) 12%, var(--surface, #FFFFFF));
+  --warning-500: var(--warning, #8B82C7);
+  --warning-700: var(--warning, #8B82C7);
+  --danger-50: color-mix(in srgb, var(--danger, #EF4444) 12%, var(--surface, #FFFFFF));
+  --danger-500: var(--danger, #EF4444);
+  --danger-700: var(--danger, #EF4444);
+  --bg-surface: var(--surface, #FFFFFF);
+  --bg-hover: var(--surface-soft, #F8FAFC);
+  --border-color: var(--border, #E2E8F0);
 }
 
 *, *::before, *::after { box-sizing: border-box; }
@@ -66,19 +68,19 @@ body { margin: 0; color: var(--text-main); background: var(--bg-page); font-fami
 .btn, .cm-button, .primary-button, .module-primary-action, .semester-primary, .section-primary,
 .ac-primary, .profile-button, .settings-button, .sa-primary, .p-primary {
   display: inline-flex; min-height: var(--button-height); align-items: center; justify-content: center;
-  gap: 7px; padding: 0 14px; border: 1px solid var(--color-primary); border-radius: var(--radius-control);
-  color: #fff; background: var(--color-primary); font: inherit; font-size: 13px; font-weight: 750;
+  gap: 7px; padding: 0 16px; border: 1px solid var(--color-dark); border-radius: var(--radius-control);
+  color: #FFFFFF; background: var(--color-dark); font: inherit; font-size: 13px; font-weight: 750;
   text-decoration: none; cursor: pointer; transition: color .16s ease, background-color .16s ease, border-color .16s ease, box-shadow .16s ease;
 }
 .btn:hover, .cm-button:hover, .primary-button:hover, .module-primary-action:hover, .semester-primary:hover,
 .section-primary:hover, .ac-primary:hover, .profile-button:hover, .settings-button:hover, .sa-primary:hover, .p-primary:hover {
-  border-color: var(--color-primary-hover); color: #fff; background: var(--color-primary-hover);
+  border-color: var(--color-primary-hover); color: #0F172A; background: var(--color-primary); box-shadow: 0 4px 12px rgba(183, 177, 221, .25);
 }
 .btn-secondary, .cm-button.secondary, .secondary-button, .cm-secondary-btn, .semester-primary.secondary,
-.section-primary.secondary, .ac-secondary, .profile-button.secondary { border-color: var(--border-strong-global); color: var(--color-primary); background: var(--bg-surface); }
+.section-primary.secondary, .ac-secondary, .profile-button.secondary { border-color: var(--border-strong-global); color: var(--text-main); background: var(--bg-surface); }
 .btn-danger, .cm-button.danger, .section-danger, .sa-danger, .profile-button.danger { border-color: var(--color-danger); color: #fff; background: var(--color-danger); }
-.btn-ghost { border-color: transparent; color: var(--color-primary); background: transparent; }
-.btn-icon, .table-action-btn, .action-btn { display: inline-grid; width: 32px; height: 32px; min-width: 32px; min-height: 32px; padding: 0; place-items: center; border: 1px solid var(--border-color); border-radius: var(--radius-control); color: var(--color-primary); background: var(--bg-surface); cursor: pointer; }
+.btn-ghost { border-color: transparent; color: var(--color-dark); background: transparent; }
+.btn-icon, .table-action-btn, .action-btn { display: inline-grid; width: 32px; height: 32px; min-width: 32px; min-height: 32px; padding: 0; place-items: center; border: 1px solid var(--border-color); border-radius: var(--radius-control); color: var(--color-dark); background: var(--bg-surface); cursor: pointer; }
 .btn:focus-visible, button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 2px; }
 button:disabled, input:disabled, select:disabled, textarea:disabled { cursor: not-allowed; opacity: .55; }
 
@@ -114,7 +116,7 @@ button:disabled, input:disabled, select:disabled, textarea:disabled { cursor: no
 .department-table-wrap table, .sa-table-wrap table, .module-table table { width: 100%; border-collapse: collapse; color: var(--text-secondary-global); background: var(--bg-surface); font-size: 13px; }
 .erp-table thead th, .cm-table thead th, .course-advanced-table thead th, .branch-table thead th, .semester-table thead th,
 .section-table thead th, .department-table-wrap th, .sa-table-wrap th, .module-table th {
-  height: 42px; padding: 10px 12px; border-bottom: 1px solid var(--border-color); color: #eef6fc; background: #123f63;
+  height: 42px; padding: 10px 12px; border-bottom: 1px solid var(--border-color); color: #eef6fc; background: #0F172A;
   font-size: 11px; font-weight: 800; letter-spacing: .055em; text-align: center; text-transform: uppercase; vertical-align: middle; white-space: nowrap;
 }
 .erp-table tbody td, .cm-table tbody td, .course-advanced-table tbody td, .branch-table tbody td, .semester-table tbody td,
@@ -128,7 +130,7 @@ button:disabled, input:disabled, select:disabled, textarea:disabled { cursor: no
 .table-actions, .action-group, .table-actions-group, .cm-actions, .row-actions, .course-actions, .branch-actions,
 .semester-row-actions, .section-actions, .sa-icon-actions { display: inline-flex; align-items: center; justify-content: center; gap: 6px; white-space: nowrap; }
 .table-actions > button, .table-actions > a, .action-group > button, .action-group > a { width: 32px; height: 32px; }
-.action-view, .action-btn.action-view { color: #1970b3; background: #e8f3fc; border-color: #c5dfef; }
+.action-view, .action-btn.action-view { color: #0F172A; background: #EDEBF6; border-color: #DFDCED; font-weight: 700; }
 .action-edit, .action-btn.action-edit { color: #7c3aed; background: #f3e8ff; border-color: #dfccff; }
 .action-assign { color: #a15c00; background: #fff3d6; border-color: #fedf89; }
 .action-delete, .action-toggle, .action-btn.action-danger { color: var(--color-danger); background: #fee4e2; border-color: #fecdca; }
@@ -167,9 +169,9 @@ button:disabled, input:disabled, select:disabled, textarea:disabled { cursor: no
 
 /* ==========================================================================\n+   Centralized ERP record-details system\n+   Existing View routes keep their data and markup, but share this visual contract.\n+   ========================================================================== */
 :root {
-  --view-primary: var(--brand, #176fae);
-  --view-primary-dark: var(--brand-hover, #125b90);
-  --view-accent: var(--brand-soft, #eaf4fb);
+  --view-primary: #8782BC;
+  --view-primary-dark: var(--brand-hover, #8782BC);
+  --view-accent: var(--brand-soft, #F9F8FD);
   --view-surface: var(--surface, #fff);
   --view-surface-muted: var(--surface-soft, #f7fafc);
   --view-border: var(--border, #dbe4eb);
@@ -216,7 +218,7 @@ button:disabled, input:disabled, select:disabled, textarea:disabled { cursor: no
 .profile-page .profile-overview {
   position: relative; display: flex; min-height: var(--view-hero-min-height); height: auto; box-sizing: border-box;
   align-items: center; gap: 16px; padding: var(--view-hero-padding-y) var(--view-hero-padding-x) !important;
-  overflow: hidden; border-radius: var(--view-radius); background: linear-gradient(115deg, #073763, #0d6099); box-shadow: var(--shadow-md);
+  overflow: hidden; border-radius: var(--view-radius); background: linear-gradient(115deg, #0F172A, #0F172A); box-shadow: var(--shadow-md);
 }
 
 .cm-profile-view .cm-profile-avatar-wrap, .section-management .cm-profile-avatar-wrap,
@@ -1336,7 +1338,7 @@ button:disabled, input:disabled, select:disabled, textarea:disabled { cursor: no
   border: 0;
   border-radius: 12px;
   color: #fff;
-  background: linear-gradient(115deg, #073763, #0d6099);
+  background: linear-gradient(115deg, #0F172A, #0F172A);
   box-shadow: var(--shadow-sm);
 }
 

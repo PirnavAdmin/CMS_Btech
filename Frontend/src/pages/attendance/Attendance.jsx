@@ -24,6 +24,7 @@ import {
 } from 'react-icons/fi'
 import DashboardLayout from '../../layouts/DashboardLayout'
 import PageHeader from '../../components/PageHeader'
+import CompactSummary from '../../components/CompactSummary'
 import StatusBadge from '../../components/StatusBadge'
 import EmptyState from '../../components/EmptyState'
 import InfoCard from '../../components/InfoCard'
@@ -70,6 +71,9 @@ export default function Attendance() {
   const [selectedSession, setSelectedSession] = useState(null)
   const [selectedStudentReport, setSelectedStudentReport] = useState(null)
   const [shortageDepartmentId, setShortageDepartmentId] = useState('')
+  const [shortageCourseId, setShortageCourseId] = useState('')
+  const [shortageBranchId, setShortageBranchId] = useState('')
+  const [showShortageFilters, setShowShortageFilters] = useState(false)
 
   // Scope Filters for Register
   const [filterQuery, setFilterQuery] = useState('')
@@ -188,6 +192,7 @@ export default function Attendance() {
   }, [activeFaculty, facultyAssignments, selectedTakeBranch, takeScope.branchId, takeScope.courseId])
 
   const filterBranches = useMemo(() => getBranchesForCourse(filterCourseId, true), [getBranchesForCourse, filterCourseId])
+  const shortageBranches = useMemo(() => getBranchesForCourse(shortageCourseId, true), [getBranchesForCourse, shortageCourseId])
 
   const takeSections = useMemo(() => {
     return getSectionsForScope({
@@ -359,14 +364,31 @@ export default function Attendance() {
     return result
   }, {})).map(row => ({ ...row, rate: row.total ? Math.round((row.present / row.total) * 100) : 0 })), [sessions, allProfiles])
   const shortageStudents = useMemo(() => allProfiles.filter(profile => {
-    const departmentMatches = !shortageDepartmentId || String(profile.academic?.departmentId || profile.departmentId || '') === String(shortageDepartmentId)
+    const courseId = profile.academic?.courseId || profile.courseId
+    const courseName = String(profile.academic?.course || profile.course || '').trim().toLowerCase()
+    const branchId = profile.academic?.branchId || profile.branchId
+    const branchName = String(profile.academic?.branch || profile.branch || '').trim().toLowerCase()
+
+    const selectedCourseObj = activeCourses.find(c => String(c.id) === String(shortageCourseId))
+    const selectedBranchObj = shortageBranches.find(b => String(b.id) === String(shortageBranchId))
+
+    const courseMatches = !shortageCourseId ||
+      String(courseId) === String(shortageCourseId) ||
+      (selectedCourseObj && courseName === String(selectedCourseObj.name || '').trim().toLowerCase())
+
+    const branchMatches = !shortageBranchId ||
+      String(branchId) === String(shortageBranchId) ||
+      (selectedBranchObj && branchName === String(selectedBranchObj.name || selectedBranchObj.branchName || '').trim().toLowerCase())
+
     const matchingReport = studentAttendance.find(row => String(row.id) === String(profile.studentId || profile.id))
     const rate = matchingReport?.rate ?? Number(profile.attendanceRate)
-    return departmentMatches && Number.isFinite(rate) && rate < 75
+    return courseMatches && branchMatches && Number.isFinite(rate) && rate < 75
   }).map(profile => {
     const report = studentAttendance.find(row => String(row.id) === String(profile.studentId || profile.id))
     return { ...profile, attendanceRate: report?.rate ?? Number(profile.attendanceRate), attendanceReport: report }
-  }), [allProfiles, shortageDepartmentId, studentAttendance])
+  }), [allProfiles, shortageCourseId, shortageBranchId, shortageBranches, activeCourses, studentAttendance])
+
+  const hasShortageFilters = Boolean(shortageCourseId || shortageBranchId)
 
   return (
     <DashboardLayout>
@@ -378,65 +400,15 @@ export default function Attendance() {
             { label: 'Student Management', link: '/student-management/profiles' },
             { label: 'Student Attendance' },
           ]}
-        >
-            <button
-              type="button"
-              className="erp-btn erp-btn--primary"
-              onClick={() => setTakeModalOpen(true)}
-            >
-              <FiPlus /> Take Attendance
-            </button>
-        </PageHeader>
+          compactSummary={[
+            { label: 'Recorded Sessions', value: summaryMetrics.totalSessions },
+            { label: 'Avg Attendance Rate', value: summaryMetrics.avgPercentage, tone: 'active' },
+            { label: 'Total Student Entries', value: summaryMetrics.totalPresent },
+            { label: 'Shortage Risk Students', value: summaryMetrics.shortageCount, tone: summaryMetrics.shortageCount > 0 ? 'inactive' : 'default' },
+          ]}
+        />
 
 
-
-        {/* Tab Navigation */}
-        <nav className="attendance-tabs">
-          <button
-            type="button"
-            className={`attendance-tab ${activeTab === 'register' ? 'active' : ''}`}
-            onClick={() => setActiveTab('register')}
-          >
-            <FiCalendar /> Attendance Dashboard
-          </button>
-          <button
-            type="button"
-            className={`attendance-tab ${activeTab === 'reports' ? 'active' : ''}`}
-            onClick={() => setActiveTab('reports')}
-          >
-            <FiBarChart2 /> Reports
-          </button>
-          <button
-            type="button"
-            className={`attendance-tab ${activeTab === 'shortage' ? 'active' : ''}`}
-            onClick={() => setActiveTab('shortage')}
-          >
-            <FiAlertTriangle /> Shortage List (&lt;75%)
-          </button>
-        </nav>
-
-        {/* TAB 1: Attendance Register */}
-        {activeTab === 'register' && (
-          <section className="attendance-content">
-            {/* KPI Summary Strip */}
-            <div className="erp-kpi-strip">
-              <div className="erp-kpi-card">
-                <span className="erp-kpi-label">Recorded Sessions</span>
-                <span className="erp-kpi-value">{summaryMetrics.totalSessions}</span>
-              </div>
-              <div className="erp-kpi-card">
-                <span className="erp-kpi-label">Avg Attendance Rate</span>
-                <span className="erp-kpi-value erp-kpi-value--success">{summaryMetrics.avgPercentage}</span>
-              </div>
-              <div className="erp-kpi-card">
-                <span className="erp-kpi-label">Total Student Entries</span>
-                <span className="erp-kpi-value">{summaryMetrics.totalPresent}</span>
-              </div>
-              <div className="erp-kpi-card">
-                <span className="erp-kpi-label">Shortage Risk Students</span>
-                <span className="erp-kpi-value erp-kpi-value--warning">{summaryMetrics.shortageCount}</span>
-              </div>
-            </div>
 
             {/* Filter Panel */}
             <div className="erp-card erp-filter-card">
@@ -477,6 +449,13 @@ export default function Attendance() {
                   title="Attendance Register"
                   filename="attendance-register"
                 />
+                <button
+                  type="button"
+                  className="erp-btn erp-btn--primary"
+                  onClick={() => setTakeModalOpen(true)}
+                >
+                  <FiPlus /> Take Attendance
+                </button>
               </div>
               {showRegisterFilters && <div id="attendance-register-filters" className="attendance-register-filters">
                 <div className="erp-form-group">
@@ -510,6 +489,37 @@ export default function Attendance() {
                 {hasRegisterFilters && <button type="button" className="attendance-clear-filters" onClick={clearRegisterFilters}>Clear Filters</button>}
               </div>}
             </div>
+
+        {/* Tab Navigation */}
+        <nav className="attendance-tabs">
+          <button
+            type="button"
+            className={`attendance-tab ${activeTab === 'register' ? 'active' : ''}`}
+            onClick={() => setActiveTab('register')}
+          >
+            <FiCalendar /> Attendance Dashboard
+          </button>
+          <button
+            type="button"
+            className={`attendance-tab ${activeTab === 'reports' ? 'active' : ''}`}
+            onClick={() => setActiveTab('reports')}
+          >
+            <FiBarChart2 /> Reports
+          </button>
+          <button
+            type="button"
+            className={`attendance-tab ${activeTab === 'shortage' ? 'active' : ''}`}
+            onClick={() => setActiveTab('shortage')}
+          >
+            <FiAlertTriangle /> Shortage List (&lt;75%)
+          </button>
+        </nav>
+
+        {/* TAB 1: Attendance Register */}
+        {activeTab === 'register' && (
+          <section className="attendance-content">
+
+
 
             {/* Attendance Table */}
             <div className="erp-card erp-table-card">
@@ -863,10 +873,20 @@ export default function Attendance() {
               <div className="erp-card-header">
                 <div>
                   <h2 className="erp-card-title">Attendance Shortage List (&lt; 75% Threshold)</h2>
-                  <p className="erp-card-subtitle">{shortageStudents.length} students require attendance intervention. Filter by department or notify an affected student.</p>
+                  <p className="erp-card-subtitle">{shortageStudents.length} students require attendance intervention. Filter by course or branch to notify an affected student.</p>
                 </div>
-                <div className="attendance-shortage-actions"><select className="erp-select" value={shortageDepartmentId} onChange={event => setShortageDepartmentId(event.target.value)}><option value="">All Departments</option>{activeDepartments.map(department => <option key={department.id} value={department.id}>{department.name}</option>)}</select>
-                <ExportMenu
+                <div className="attendance-shortage-actions">
+                  <button
+                    type="button"
+                    className={`attendance-filter-toggle${hasShortageFilters ? ' attendance-filter-toggle--active' : ''}`}
+                    aria-expanded={showShortageFilters}
+                    onClick={() => setShowShortageFilters(value => !value)}
+                  >
+                    <FiFilter aria-hidden="true" /> Filters
+                    {hasShortageFilters && <span className="attendance-filter-count" aria-label="Filters applied">{[shortageCourseId, shortageBranchId].filter(Boolean).length}</span>}
+                    {showShortageFilters ? <FiChevronUp aria-hidden="true" /> : <FiChevronDown aria-hidden="true" />}
+                  </button>
+                  <ExportMenu
                   rows={shortageStudents.map(p => ({
                     studentId: p.studentId || p.id,
                     name: p.personal?.fullName || p.name,
@@ -891,6 +911,52 @@ export default function Attendance() {
                 />
                 </div>
               </div>
+
+              {showShortageFilters && (
+                <div className="attendance-register-filters" style={{ margin: '0 22px 16px', borderTop: 'none', paddingTop: '14px' }}>
+                  <div className="erp-form-group">
+                    <label>Course</label>
+                    <select
+                      className="erp-select"
+                      value={shortageCourseId}
+                      onChange={event => {
+                        setShortageCourseId(event.target.value)
+                        setShortageBranchId('')
+                      }}
+                    >
+                      <option value="">All Courses</option>
+                      {activeCourses.map(course => (
+                        <option key={course.id} value={course.id}>{course.name}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="erp-form-group">
+                    <label>Branch</label>
+                    <select
+                      className="erp-select"
+                      value={shortageBranchId}
+                      onChange={event => setShortageBranchId(event.target.value)}
+                    >
+                      <option value="">All Branches</option>
+                      {shortageBranches.map(branch => (
+                        <option key={branch.id} value={branch.id}>{branch.name || branch.branchName}</option>
+                      ))}
+                    </select>
+                  </div>
+                  {hasShortageFilters && (
+                    <button
+                      type="button"
+                      className="attendance-clear-filters"
+                      onClick={() => {
+                        setShortageCourseId('')
+                        setShortageBranchId('')
+                      }}
+                    >
+                      Clear Filters
+                    </button>
+                  )}
+                </div>
+              )}
 
               <div className="erp-table-responsive">
                 <table className="erp-table">

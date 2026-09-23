@@ -144,7 +144,7 @@
    SEMANTIC ACTION COLORS (LIGHT THEME)
    ========================================================================== */
 
-/* 1. VIEW ACTION (Eye Icon -> Subtle Blue) */
+/* 1. VIEW ACTION (Eye Icon -> Subtle Gold / Dark Slate) */
 .action-view,
 .cm-view-action,
 .table-action-btn.action-view,
@@ -156,9 +156,9 @@
 .section-actions > a:first-child,
 .sa-icon-actions > button:first-child,
 .table-actions-cell > button:first-child {
-  color: #1970b3 !important;
-  background: #e8f3fc !important;
-  border-color: #c5dfef !important;
+  color: #8782BC !important;
+  background: #EDEBF6 !important;
+  border-color: #DFDCED !important;
 }
 .action-view:hover:not(:disabled),
 .cm-view-action:hover:not(:disabled),
@@ -171,9 +171,9 @@
 .section-actions > a:first-child:hover:not(:disabled),
 .sa-icon-actions > button:first-child:hover:not(:disabled),
 .table-actions-cell > button:first-child:hover:not(:disabled) {
-  background: #dbeafe !important;
-  border-color: #93c5fd !important;
-  color: #1d4ed8 !important;
+  background: #EDEBF6 !important;
+  border-color: #DFDCED !important;
+  color: #8782BC !important;
 }
 
 /* 2. EDIT ACTION (Pencil Icon -> Subtle Purple) */
@@ -215,16 +215,16 @@
 .table-actions-group > :is(a, button).action-assign,
 .section-actions > .section-assign-action {
   color: #b45309 !important;
-  background: #fef3c7 !important;
-  border-color: #fde68a !important;
+  background: #EDEBF6 !important;
+  border-color: #DFDCED !important;
 }
 .action-assign:hover:not(:disabled),
 .section-assign-action:hover:not(:disabled),
 .table-action-btn.action-assign:hover:not(:disabled),
 .table-actions-group > :is(a, button).action-assign:hover:not(:disabled),
 .section-actions > .section-assign-action:hover:not(:disabled) {
-  background: #fde68a !important;
-  border-color: #fcd34d !important;
+  background: #DFDCED !important;
+  border-color: #8782BC !important;
   color: #92400e !important;
 }
 
@@ -300,7 +300,7 @@
 
 /* Apply the same action palette even in legacy tables that omit action classes. */
 .page-content table :is(a, button)[title^="View"],
-.page-content table :is(a, button)[aria-label^="View"] { color:#1970b3!important;background:#e8f3fc!important;border-color:#c5dfef!important; }
+.page-content table :is(a, button)[aria-label^="View"] { color: #8782BC !important;background:#EDEBF6!important;border-color:#DFDCED!important;font-weight:700; }
 .page-content table :is(a, button)[title^="Edit"],
 .page-content table :is(a, button)[aria-label^="Edit"] { color:#7c3aed!important;background:#f3e8ff!important;border-color:#dfccff!important; }
 .page-content table :is(a, button)[title^="Deactivate"],
@@ -326,9 +326,9 @@
 :root[data-theme="dark"] .section-actions > a:first-child,
 :root[data-theme="dark"] .sa-icon-actions > button:first-child,
 :root[data-theme="dark"] .table-actions-cell > button:first-child {
-  color: #60a5fa !important;
-  background: rgba(30, 64, 175, 0.25) !important;
-  border-color: rgba(59, 130, 246, 0.4) !important;
+  color: #8B82C7 !important;
+  background: rgba(183, 177, 221, 0.25) !important;
+  border-color: rgba(245, 158, 11, 0.4) !important;
 }
 :root[data-theme="dark"] .action-view:hover:not(:disabled),
 :root[data-theme="dark"] .cm-view-action:hover:not(:disabled),
@@ -341,9 +341,9 @@
 :root[data-theme="dark"] .section-actions > a:first-child:hover:not(:disabled),
 :root[data-theme="dark"] .sa-icon-actions > button:first-child:hover:not(:disabled),
 :root[data-theme="dark"] .table-actions-cell > button:first-child:hover:not(:disabled) {
-  background: rgba(30, 64, 175, 0.45) !important;
+  background: rgba(183, 177, 221, 0.45) !important;
   border-color: rgba(96, 165, 250, 0.6) !important;
-  color: #93c5fd !important;
+  color: #DFDCED !important;
 }
 
 /* 2. EDIT ACTION (Dark) */
@@ -395,7 +395,7 @@
 :root[data-theme="dark"] .section-actions > .section-assign-action:hover:not(:disabled) {
   background: rgba(180, 83, 9, 0.45) !important;
   border-color: rgba(251, 191, 36, 0.6) !important;
-  color: #fde68a !important;
+  color: #DFDCED !important;
 }
 
 /* 4. ACTIVATE / APPROVAL ACTION (Dark) */
@@ -537,6 +537,9 @@ table.erp-table {
 .p-candidate-table thead th,
 .academic-table thead th,
 .promotion-table thead th,
+.faculty-table-wrap th,
+.faculty-table-wrap table thead th,
+.faculty-directory table thead th,
 .page-content table thead th {
   height: 44px !important;
   min-height: 44px !important;
@@ -544,14 +547,14 @@ table.erp-table {
   vertical-align: middle !important;
   text-align: center !important;
   padding: 10px 14px !important;
-  background: #123f63 !important;
+  background: #0F172A !important;
   color: #f4f9fc !important;
   font-size: 11px !important;
   font-weight: 800 !important;
   letter-spacing: 0.055em !important;
   text-transform: uppercase !important;
   white-space: nowrap !important;
-  border-bottom: 1px solid #244f70 !important;
+  border-bottom: 2px solid #8782BC !important;
   border-top: none !important;
   box-sizing: border-box !important;
 }
@@ -577,7 +580,7 @@ table.erp-table {
   padding: 10px 14px !important;
   border-bottom: 1px solid var(--border, #e2e8f0) !important;
   border-top: none !important;
-  color: var(--text-primary, #1e293b) !important;
+  color: var(--text-primary, #0F172A) !important;
   background: var(--surface, #ffffff) !important;
   font-size: 13px !important;
   line-height: 1.4 !important;
@@ -701,7 +704,7 @@ table.erp-table {
   min-height: 34px !important;
   border-radius: 8px !important;
   background: var(--surface-soft, #f1f5f9) !important;
-  color: var(--brand, #0284c7) !important;
+  color: var(--brand, #8782BC) !important;
   font-weight: 700 !important;
   font-size: 13px !important;
   border: 1px solid var(--border, #e2e8f0) !important;
@@ -781,9 +784,9 @@ table.erp-table {
 :root[data-theme="dark"] .erp-table thead th,
 :root[data-theme="dark"] .department-table-wrap table thead th,
 :root[data-theme="dark"] .p-history-table thead th {
-  background: #0d2133 !important;
+  background: #0F172A !important;
   color: #eaf4ff !important;
-  border-bottom: 1px solid #1e3a56 !important;
+  border-bottom: 1px solid #334155 !important;
 }
 
 :root[data-theme="dark"] .cm-table tbody td,
@@ -796,9 +799,9 @@ table.erp-table {
 :root[data-theme="dark"] .erp-table tbody td,
 :root[data-theme="dark"] .department-table-wrap table tbody td,
 :root[data-theme="dark"] .p-history-table tbody td {
-  background: #0f1d2c !important;
+  background: #0F172A !important;
   color: #cbd5e1 !important;
-  border-bottom: 1px solid #1e293b !important;
+  border-bottom: 1px solid #0F172A !important;
 }
 
 :root[data-theme="dark"] .cm-table tbody tr:hover > td,
@@ -811,5 +814,5 @@ table.erp-table {
 :root[data-theme="dark"] .erp-table tbody tr:hover > td,
 :root[data-theme="dark"] .department-table-wrap table tbody tr:hover > td,
 :root[data-theme="dark"] .p-history-table tbody tr:hover > td {
-  background: #162a3f !important;
+  background: #0F172A !important;
 }
