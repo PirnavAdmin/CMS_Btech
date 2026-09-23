@@ -1190,3 +1190,12 @@ export const timetableEntryApi = {
   update: (id, payload) => jsonRequest(endpoint(`/api/v1/timetable-entries/${requiredId(id, 'Timetable entry ID')}`), 'PUT', payload),
   remove: id => request(endpoint(`/api/v1/timetable-entries/${requiredId(id, 'Timetable entry ID')}`), { method: 'DELETE' }),
 }
+
+// Phase 5 API: all calls use the shared bearer-token, refresh and error handling.
+const timetableManagementUrl = (path = '') => endpoint(`/api/v1/timetable-management${path}`)
+export const timetableManagementApi = {
+  get: async (path, query) => dataResponse(await request(withQuery(timetableManagementUrl(path), query))),
+  post: async (path, payload) => dataResponse(await jsonRequest(timetableManagementUrl(path), 'POST', payload)),
+  put: async (path, payload) => dataResponse(await jsonRequest(timetableManagementUrl(path), 'PUT', payload)),
+  remove: async path => dataResponse(await request(timetableManagementUrl(path), { method: 'DELETE' })),
+}

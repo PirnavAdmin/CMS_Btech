@@ -38,7 +38,7 @@ export function calendarDays(calendar) {
 }
 
 export function roomOptions(sources, entries = []) {
-  const rooms = [...sources.sections.filter(active).filter(row => row.room).map(row => ({ classroom: row.room, roomId: row.roomId ?? row.classroomId, roomType: row.roomType })), ...entries.filter(active)]
+  const rooms = [...(sources.classrooms || []).filter(row => row.active !== false).map(row => ({ classroom: row.classroomName, roomId: row.classroomId, roomType: row.roomType })), ...sources.sections.filter(active).filter(row => row.room).map(row => ({ classroom: row.room, roomId: row.roomId ?? row.classroomId, roomType: row.roomType })), ...entries.filter(active)]
   const result = new Map()
   for (const row of rooms.filter(row => key(row.classroom))) {
     const id = key(row.roomId ?? row.classroomId)
@@ -46,6 +46,7 @@ export function roomOptions(sources, entries = []) {
     const previous = result.get(value)
     result.set(value, { value, name: key(row.classroom), classroom: key(row.classroom), ...(id ? { roomId: id } : {}), roomType: row.roomType || previous?.roomType || '' })
   }
+  if (sources.classrooms) return [...result.values()].filter(room => sources.classrooms.some(row => row.active !== false && same(row.classroomId, room.roomId))).sort((a, b) => a.name.localeCompare(b.name))
   // When an authoritative ID exists, prefer it over a text-only alias.
   const all = [...result.values()]
   return all.filter(room => room.roomId || !all.some(other => other.roomId && roomKey(other) === roomKey(room))).sort((a, b) => a.name.localeCompare(b.name))
@@ -86,7 +87,7 @@ export function planningErrors(config, sources, scope, entries = []) {
   if ((calendar?.holidays || []).some(date => !validDate(date))) errors.push('Enter holidays as valid YYYY-MM-DD dates.')
   errors.push(...periodSetupErrors(periods))
   const rooms = roomOptions(sources, entries)
-  if (!config?.rooms?.length || config.rooms.some(value => !rooms.some(room => room.value === value))) errors.push('Select available room references from sections or scheduled classes.')
+  if (!config?.rooms?.length || config.rooms.some(value => !rooms.some(room => room.value === value))) errors.push('Select an available classroom or lab.')
   return errors
 }
 
