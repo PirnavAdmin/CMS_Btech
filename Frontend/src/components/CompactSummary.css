@@ -12,12 +12,12 @@
 
 .compact-summary__item {
   display: flex;
-  min-width: 76px;
+  min-width: 64px;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 8px 14px;
-  gap: 2px;
+  padding: 6px 10px;
+  gap: 1px;
   border-right: 1px solid var(--border);
   text-align: center;
   box-sizing: border-box;
@@ -30,23 +30,29 @@
 .compact-summary__item strong {
   display: block;
   color: var(--text-primary);
-  font-size: 1.25rem;
+  font-size: 1.15rem;
   font-weight: 800;
   line-height: 1.1;
 }
 
 .compact-summary__item small {
   display: block;
-  margin-top: 3px;
+  margin-top: 2px;
   color: var(--text-muted);
-  font-size: 0.64rem;
+  font-size: 0.60rem;
   font-weight: 750;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.06em;
   text-transform: uppercase;
+  max-width: 95px;
+  line-height: 1.2;
 }
 
 .compact-summary__item--active strong {
   color: var(--success, #15803d) !important;
+}
+
+.compact-summary__item--warning strong {
+  color: #d97706 !important;
 }
 
 .compact-summary__item--upcoming strong {
