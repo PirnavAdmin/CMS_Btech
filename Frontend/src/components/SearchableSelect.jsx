@@ -182,16 +182,16 @@ export default function SearchableSelect({
       buttons[index]?.scrollIntoView({ block: 'nearest' })
     }} style={{ position: 'fixed', top: menuStyle.top, bottom: menuStyle.bottom, left: menuStyle.left, width: menuStyle.width, maxHeight: menuStyle.maxHeight, zIndex: 2000 }}>
       {!hideSearch && <label className="searchable-select__search">
-          <FiSearch aria-hidden="true" />
-          <input
-            ref={inputRef}
-            type="text"
-            value={query}
-            onChange={(event) => setQuery(event.target.value)}
-            placeholder={searchPlaceholder}
-            aria-label={searchPlaceholder}
-          />
-        </label>}
+        <FiSearch aria-hidden="true" />
+        <input
+          ref={inputRef}
+          type="text"
+          value={query}
+          onChange={(event) => setQuery(event.target.value)}
+          placeholder={searchPlaceholder}
+          aria-label={searchPlaceholder}
+        />
+      </label>}
       <div className="searchable-select__options" role="listbox" aria-label={label || 'Options'}>
         {loading ? (
           <div className="searchable-select__empty">Loading options...</div>
