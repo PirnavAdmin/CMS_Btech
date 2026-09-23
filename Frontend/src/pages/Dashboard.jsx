@@ -237,19 +237,12 @@ export default function Dashboard() {
             <h2>Connected Setup Flow</h2>
             <p>Maintain structural alignment across the academic delivery pipeline.</p>
             <div className="dashboard-flow">
-              <span>Academic Year</span>
-              <FiArrowRight />
-              <span>Department</span>
-              <FiArrowRight />
-              <span>Course</span>
-              <FiArrowRight />
-              <span>Branch</span>
-              <FiArrowRight />
-              <span>Semester</span>
-              <FiArrowRight />
-              <span>Section</span>
-              <FiArrowRight />
-              <span>Subject</span>
+              {['Academic Year', 'Department', 'Course', 'Branch', 'Semester', 'Section', 'Subject'].map((step, index, steps) => (
+                <div className="dashboard-flow-step" key={step}>
+                  <span>{step}</span>
+                  {index < steps.length - 1 && <FiArrowRight aria-hidden="true" />}
+                </div>
+              ))}
             </div>
             <Link className="dashboard-outline-link" to={role === ROLES.ADMIN ? '/academic-year-management' : '/my-subjects'}>
               {role === ROLES.ADMIN ? 'Manage Academic Setup' : 'View Curriculum'} <FiArrowRight />
