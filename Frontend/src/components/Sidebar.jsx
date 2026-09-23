@@ -6,13 +6,13 @@ import { ROLES } from '../auth/roles'
 import { useAcademic } from '../context/AcademicContext'
 
 const academicLinks = [
+  { label: 'Colleges', to: '/college-institution-management', icon: FiHome, tone: 'gold' },
   { label: 'Academic Years', to: '/academic-year-management', icon: FiCalendar, tone: 'green' },
   { label: 'Departments', to: '/department-management', icon: FiGrid, tone: 'cyan' },
   { label: 'Courses', to: '/courses', icon: FiBookOpen, tone: 'blue' },
   { label: 'Branches', to: '/branches', icon: FiGitBranch, tone: 'purple' },
   { label: 'Semesters', to: '/semester-management', icon: FiLayers, tone: 'orange' },
   { label: 'Sections', to: '/section-management', icon: FiUsers, tone: 'pink' },
-  { label: 'Colleges & Institutions', to: '/college-institution-management', icon: FiHome, tone: 'gold' },
 ]
 
 const curriculumLinks = [
