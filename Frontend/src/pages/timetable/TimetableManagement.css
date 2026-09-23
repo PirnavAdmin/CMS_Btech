@@ -148,7 +148,7 @@
 .tt-period-preview{display:flex;flex-direction:column;min-height:0;min-width:0}
 .tt-period-preview .tt-card-heading{padding:12px;font-size:.8rem;flex-shrink:0}
 .tt-period-preview-scroll{flex:1;min-height:0;overflow:auto;overscroll-behavior:contain}
-.tt-period-preview table{width:100%;min-width:510px;border-collapse:separate;border-spacing:0;font-size:.76rem;table-layout:fixed}
+.tt-period-preview table{width:100%;min-width:700px;border-collapse:separate;border-spacing:0;font-size:.76rem;table-layout:fixed}
 .tt-period-preview th{position:sticky;top:0;z-index:1;background:var(--surface-soft);text-align:left;padding:9px}
 .tt-period-preview th:last-child{width:102px}
 .tt-period-preview td{padding:7px;border-bottom:1px solid var(--border);vertical-align:middle}

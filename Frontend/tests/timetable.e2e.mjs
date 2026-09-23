@@ -13,12 +13,13 @@ page.on('pageerror', error => errors.push(error.message))
 const scope = { academicYearId: 1, courseId: 2, branchId: 2, semesterId: 4, sectionId: 5 }
 const otherScope = { ...scope, sectionId: 50 }
 const students = [{ ...scope, studentId: 10, admissionId: 11, status: 'Approved', firstName: 'Ravi', lastName: 'Kumar', rollNumber: 'ROLL001' }, { ...otherScope, studentId: 20, admissionId: 21, status: 'Approved', firstName: 'Meera', lastName: 'Rao', rollNumber: 'ROLL002' }]
-let failBackend = false
+let failBackend = false, yearActive = true
 await context.route(url => url.pathname.startsWith('/api/'), route => {
   const path = new URL(route.request().url()).pathname
   if (route.request().method() !== 'GET') writes.push(path)
   if (failBackend && path.endsWith('/timetable-entries')) return route.fulfill({ status: 500, json: { message: 'Schedule unavailable' } })
-  const data = path.endsWith('/academic-years') ? [{ academicYearId: 1, academicYearName: '2026-2027', startDate: '2026-06-01', endDate: '2027-05-31', status: 'Active' }]
+  const data = path.toLowerCase().endsWith('/colleges') || path.toLowerCase() === '/api/college' ? [{ collegeId: 1, collegeName: 'Pirnav Engineering College', status: 'Active' }]
+    : path.endsWith('/academic-years') ? [{ academicYearId: 1, academicYearName: '2026-2027', startDate: '2026-06-01', endDate: '2027-05-31', status: yearActive ? 'Active' : 'Upcoming' }]
     : path.endsWith('/courses') ? [{ courseId: 2, courseName: 'B.Tech' }]
       : path.endsWith('/branches') ? [{ courseId: 2, branchId: 30, branchName: 'MECH' }, { courseId: 2, branchId: 2, branchName: 'CSE' }]
         : path.endsWith('/semester') ? [{ ...scope, semesterId: 4, semesterNumber: 3, semesterName: 'Semester 3', startDate: '2026-09-01', endDate: '2026-12-31' }, { ...scope, semesterId: 40, semesterNumber: 4, semesterName: 'Semester 4' }]
@@ -42,7 +43,9 @@ const gridClasses = page.locator('.tt-grid-scroll .tt-class')
 const records = () => page.evaluate(() => JSON.parse(localStorage.getItem('pirnav-timetables-v1:tt-test') || '[]'))
 const tableFor = async id => (await records()).find(row => row.sectionId === String(id))
 const selectAcademic = async (section = 'Section A') => {
-  await expect(button('Academic Year')).toContainText('2026-2027')
+  await expect(page.getByRole('textbox', { name: 'Academic Year', exact: true })).toHaveValue('2026-2027')
+  await expect(page.getByRole('textbox', { name: 'Academic Year', exact: true })).toHaveAttribute('readonly', '')
+  await expect(button('Academic Year')).toHaveCount(0)
   await choose('Course', 'B.Tech'); await choose('Branch', 'CSE')
   await expect(button('Branch')).toContainText('CSE')
   await choose('Academic Level', '2nd Year')
@@ -75,11 +78,15 @@ try {
   await expect(step('Academic Setup')).toHaveAttribute('aria-current', 'step')
   await expect(button('Auto Generate')).toHaveCount(0)
   await expect(button('Continue to Period Setup')).toBeDisabled()
+  yearActive = false; await button('Refresh').click()
+  await expect(page.getByRole('textbox', { name: 'Academic Year', exact: true })).toHaveAttribute('placeholder', 'No active academic year')
+  await expect(button('Course')).toBeDisabled()
+  yearActive = true; await button('Refresh').click()
   await selectAcademic()
   await choose('Branch', 'MECH')
   await expect(button('Academic Level')).toContainText('Select academic level')
   await expect(button('Semester')).toBeDisabled(); await expect(button('Section')).toBeDisabled()
-  await choose('Academic Year', '2026-2027'); await expect(button('Branch')).toBeDisabled()
+  await choose('Course', 'B.Tech'); await expect(button('Branch')).toContainText('Select branch')
   await selectAcademic()
   await page.screenshot({ path: 'test-results/timetable-step1-desktop.png', fullPage: true })
 

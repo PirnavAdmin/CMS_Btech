@@ -12,6 +12,7 @@ import { key, same, active, completeScope, matchesScope, normalizeEntry, conflic
 import { calendarBounds, classesOnDate, localDate, roomOptions, schedulingIssues, weekday, workingDate } from '../../utils/timetablePlanner'
 import { showError, showSuccess } from '../../utils/toast'
 import { getDefaultAcademicYear } from '../../utils/academicYearUtils'
+import { selectHeaderAcademicYear } from '../../utils/headerAcademicYear'
 import { TimetableSelect, WeeklyGrid, ScheduleDialog } from './TimetableComponents'
 import { SchedulingIssues } from './TimetablePlanner'
 import TimetableBuilder from './TimetableBuilder'
@@ -47,8 +48,13 @@ export default function TimetableManagement() {
   const state = useResource(loadData, version), studentState = useResource(loadStudents, version)
   const sources = state.data?.sources || EMPTY_SOURCES, tables = state.data?.tables || []
   const defaultAcademicYearId = key(getDefaultAcademicYear(sources.years)?.id)
-  const scope = { ...(['faculty', 'classroom'].includes(tab) ? EMPTY_SCOPE : storedScope), academicYearId: storedScope.academicYearId || defaultAcademicYearId }
-  const setScope = next => updateScope(current => typeof next === 'function' ? next({ ...current, academicYearId: current.academicYearId || defaultAcademicYearId }) : next)
+  const activeYear = selectHeaderAcademicYear(sources.years)
+  // Existing timetables keep their original year; new setup uses the header's active year.
+  const openedTable = tab === 'create' ? tables.find(row => same(row.id, tableId)) : null
+  const createYearId = key(openedTable?.academicYearId || activeYear.year?.id)
+  const yearChanged = tab === 'create' && storedScope.academicYearId && !same(storedScope.academicYearId, createYearId)
+  const scope = { ...(['faculty', 'classroom'].includes(tab) || yearChanged ? EMPTY_SCOPE : storedScope), academicYearId: tab === 'create' ? createYearId : storedScope.academicYearId || defaultAcademicYearId }
+  const setScope = next => updateScope(typeof next === 'function' ? next(scope) : next)
   const backend = (state.data?.backend || []).map(row => ({ ...normalizeEntry(row, sources.sections), origin: 'backend' }))
   const entries = [...localEntries(tables), ...backend]
   const refresh = () => { setDialog(null); setVersion(value => value + 1) }
@@ -119,7 +125,7 @@ export default function TimetableManagement() {
   const viewScope = tab === 'student' && selectedStudent ? `Student: ${selectedStudent.name} · ${selectedStudent.enrollmentNo} · Published timetable` : Object.entries(scope).filter(([, value]) => value).map(([field, value]) => field === 'level' ? value : nameOf(sources[{ academicYearId: 'years', courseId: 'courses', branchId: 'branches', semesterId: 'semesters', sectionId: 'sections' }[field]], value)).join(' / ') || 'All academic contexts'
   const academicContextFields = <section className="tt-filters" aria-label="Academic context">{[
     ['academicYearId', 'Academic Year', sources.years, false], ['courseId', 'Course', sources.courses.filter(active), !scope.academicYearId], ['branchId', 'Branch', sources.branches.filter(row => active(row) && same(row.courseId, scope.courseId)), !scope.courseId], ['level', 'Academic Level', levels, !scope.branchId], ['semesterId', 'Semester', getSemestersForAcademicLevel(semesters, scope.level), !scope.level], ['sectionId', 'Section', sections, !scope.semesterId],
-  ].map(([field, label, options, disabled]) => <TimetableSelect key={field} required={tab === 'create'} label={label} value={scope[field]} options={options} disabled={disabled || busy} onChange={value => changeScope(field, value)} />)}</section>
+  ].map(([field, label, options, disabled]) => field === 'academicYearId' && tab === 'create' ? <label key={field} className="tt-field"><span>Academic Year *</span><input aria-label="Academic Year" readOnly value={scope.academicYearId ? nameOf(sources.years, scope.academicYearId) : ''} placeholder={activeYear.state === 'conflict' ? 'Multiple active years' : 'No active academic year'} />{!scope.academicYearId && <small>{activeYear.state === 'conflict' ? 'Resolve the active-year conflict in Academic Years.' : 'Activate an academic year in Academic Years to continue.'}</small>}</label> : <TimetableSelect key={field} required={tab === 'create'} label={label} value={scope[field]} options={options} disabled={disabled || busy} onChange={value => changeScope(field, value)} />)}</section>
 
   const schedule = <section className="tt-card tt-schedule"><div className="tt-card-heading"><div><h2>{date ? 'Schedule for Date' : 'Weekly Schedule'}</h2><p>{viewScope} · {visible.length} matching classes</p></div><div className="tt-actions"><label className="tt-field"><span>View Date (optional)</span><input type="date" aria-label="View Date" value={date} onChange={event => setDate(event.target.value)} /></label>{date && <button className="tt-button" onClick={() => setDate('')}>Weekly Template</button>}<label className="tt-search"><span className="tt-sr-only">Search schedule</span><input aria-label="Search schedule" value={search} placeholder="Search subject, faculty, room or day" onChange={event => setSearch(event.target.value)} /></label></div></div>{dateNotes.length > 0 && <p className="tt-notice">{dateNotes.join(' · ')}. These classes are excluded from this date.</p>}<WeeklyGrid rows={visible} periods={gridPeriods} workingDays={gridDays} editable={canEdit} add={initial => setDialog({ initial, table: selectedTable })} inspect={inspect} occupancy={tab === 'classroom' && Boolean(room)} /></section>
 

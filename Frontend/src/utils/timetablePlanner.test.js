@@ -95,3 +95,12 @@ test('missing frequency warns without inventing demand for manually scheduled cl
   assert.equal(generate({ sources: noFrequency, existing: [manual] }).added, 0)
   assert.equal(schedulingIssues(noFrequency, scope, { ...config, requirements: { 6: { periodsPerWeek: 0 } } }, [manual])[0].blocking, true)
 })
+
+test('known classroom types distinguish theory rooms from laboratories', () => {
+  const theory = { ...sources, subjects: [{ ...sources.subjects[0], subjectType: 'Theory' }], sections: [{ ...sources.sections[0], roomType: 'Lab' }] }
+  assert.equal(generate({ sources: theory }).added, 0)
+  const classroom = { ...theory, sections: [{ ...theory.sections[0], roomType: 'Classroom' }] }
+  const result = generate({ sources: classroom })
+  assert.equal(result.added, 2)
+  assert.match(entryPlanningErrors(result.entries[0], config, theory, scope).join(), /suitable classroom or lab/)
+})
