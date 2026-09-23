@@ -2,8 +2,8 @@
   --ss-border: var(--border, #d8e3ee);
   --ss-surface: var(--surface, #ffffff);
   --ss-surface-soft: var(--surface-soft, #f6f9fc);
-  --ss-brand: var(--brand, #176fae);
-  --ss-brand-soft: var(--brand-soft, #eaf4fb);
+  --ss-brand: var(--brand, #8782BC);
+  --ss-brand-soft: var(--brand-soft, #F9F8FD);
   --ss-text: var(--text-primary, #143553);
   --ss-text-muted: var(--text-muted, #637d94);
   --ss-danger: var(--danger, #d94d4d);
@@ -40,7 +40,7 @@
 .searchable-select__trigger:focus-visible {
   outline: none;
   border-color: var(--ss-brand);
-  box-shadow: 0 0 0 3px rgba(23, 111, 174, 0.15);
+  box-shadow: 0 0 0 3px rgba(183, 177, 221, 0.15);
 }
 
 .searchable-select__trigger-text {

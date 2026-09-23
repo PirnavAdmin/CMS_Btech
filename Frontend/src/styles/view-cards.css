@@ -31,12 +31,12 @@
   margin: 0 0 16px !important;
   padding: 0 0 14px !important;
   border-bottom: 1px solid var(--border, #d7e4ee) !important;
-  color: var(--brand, #0879c1);
+  color: var(--brand, #8782BC);
   background: transparent;
 }
 :root body :is(.cm-info-card-header, .cm-profile-view .sa-detail-panel > header) h2 {
   margin: 0;
-  color: var(--brand, #0879c1) !important;
+  color: var(--brand, #8782BC) !important;
   font-size: 1rem !important;
   font-weight: 750;
   line-height: 1.35;
@@ -94,7 +94,7 @@
 }
 @media (hover: hover) {
   :root body :is(.cm-profile-grid, .shared-view-dialog .erp-detail-grid, .cm-profile-view .sa-detail-card) > :is(.cm-info-card, .sa-detail-panel):hover {
-    border-color: var(--brand, #0879c1) !important;
+    border-color: var(--brand, #8782BC) !important;
     box-shadow: 0 6px 18px rgb(15 70 110 / 12%) !important;
     transform: translateY(-2px);
   }

@@ -306,7 +306,7 @@ export default function Login() {
             <header>
               <h2>OTP Verification</h2>
               <p>Enter the 6-digit code sent to <strong>{otpContact}</strong></p>
-              {demoOtpHint && <p style={{ color: '#2563eb', fontSize: '0.85rem', fontWeight: 600, marginTop: '4px' }}>{demoOtpHint}</p>}
+              {demoOtpHint && <p style={{ color: '#8782BC', fontSize: '0.85rem', fontWeight: 600, marginTop: '4px' }}>{demoOtpHint}</p>}
             </header>
 
             <label htmlFor="otp-code">
@@ -335,7 +335,7 @@ export default function Login() {
                 type="button"
                 disabled={timer > 0 || isSubmitting}
                 onClick={handleSendCode}
-                style={{ background: 'none', border: 'none', color: timer > 0 ? '#9ca3af' : '#2563eb', cursor: timer > 0 ? 'not-allowed' : 'pointer', fontSize: '0.9rem' }}
+                style={{ background: 'none', border: 'none', color: timer > 0 ? '#9ca3af' : '#8782BC', cursor: timer > 0 ? 'not-allowed' : 'pointer', fontSize: '0.9rem' }}
               >
                 {timer > 0 ? `Resend OTP in ${timer}s` : 'Resend OTP'}
               </button>

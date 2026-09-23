@@ -274,9 +274,9 @@ const printSalarySlip = (item, month) => {
   <style>
     @page { size: A4 portrait; margin: 12mm; }
     body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #0f172a; margin: 0; padding: 12px; background: #fff; }
-    .payslip-wrapper { border: 2px solid #0f766e; border-radius: 8px; padding: 24px; max-width: 800px; margin: 0 auto; box-sizing: border-box; }
-    .header { text-align: center; border-bottom: 2px solid #0f766e; padding-bottom: 12px; margin-bottom: 16px; }
-    .college-title { font-size: 22px; font-weight: 800; color: #0f766e; margin: 0 0 4px; letter-spacing: 0.5px; }
+    .payslip-wrapper { border: 2px solid #8782BC; border-radius: 8px; padding: 24px; max-width: 800px; margin: 0 auto; box-sizing: border-box; }
+    .header { text-align: center; border-bottom: 2px solid #8782BC; padding-bottom: 12px; margin-bottom: 16px; }
+    .college-title { font-size: 22px; font-weight: 800; color: #8782BC; margin: 0 0 4px; letter-spacing: 0.5px; }
     .college-sub { font-size: 11px; color: #475569; margin: 0 0 8px; }
     .slip-badge { display: inline-block; padding: 4px 16px; background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 20px; font-size: 12px; font-weight: 800; color: #166534; text-transform: uppercase; }
     
@@ -286,13 +286,13 @@ const printSalarySlip = (item, month) => {
     .info-table .val { font-weight: 600; color: #0f172a; width: 28%; }
     
     .salary-table { width: 100%; border-collapse: collapse; margin-bottom: 16px; font-size: 12px; }
-    .salary-table th { background: #0f766e; color: #ffffff; padding: 8px 12px; text-align: left; font-weight: 700; border: 1px solid #0f766e; }
+    .salary-table th { background: #8782BC; color: #ffffff; padding: 8px 12px; text-align: left; font-weight: 700; border: 1px solid #8782BC; }
     .salary-table th.num { text-align: right; }
     .salary-table td { padding: 7px 12px; border: 1px solid #cbd5e1; }
     .salary-table td.num { text-align: right; font-weight: 600; }
     .salary-table .deduct-val { color: #b91c1c; }
     .salary-table .total-row { background: #f8fafc; font-weight: 800; }
-    .salary-table .total-row td { border-top: 2px solid #0f766e; border-bottom: 2px solid #0f766e; padding: 9px 12px; }
+    .salary-table .total-row td { border-top: 2px solid #8782BC; border-bottom: 2px solid #8782BC; padding: 9px 12px; }
     
     .net-box { display: flex; justify-content: space-between; align-items: center; background: #ecfdf5; border: 2px solid #10b981; border-radius: 8px; padding: 14px 18px; margin-bottom: 24px; }
     .net-title { font-size: 12px; font-weight: 800; color: #065f46; text-transform: uppercase; margin-bottom: 4px; }
@@ -376,8 +376,8 @@ const printSalarySlip = (item, month) => {
           <td class="num" style="color:#94a3b8;">—</td>
         </tr>
         <tr class="total-row">
-          <td style="color:#0f766e;">TOTAL GROSS EARNINGS</td>
-          <td class="num" style="color:#0f766e;">${money(gross)}</td>
+          <td style="color:#8782BC;">TOTAL GROSS EARNINGS</td>
+          <td class="num" style="color:#8782BC;">${money(gross)}</td>
           <td style="color:#b91c1c;">TOTAL DEDUCTIONS</td>
           <td class="num" style="color:#b91c1c;">- ${money(totalDeductions)}</td>
         </tr>
@@ -875,7 +875,7 @@ export default function Payroll() {
             </button>
           )}
           <ExportMenu rows={rows} columns={exportColumns} title={title} filename={`faculty-payroll-${month}`} loading={loading || Boolean(error)} scope="All filtered results" />
-        </div></header><nav>{['Payroll Processing', 'Salary Records', 'Payslips'].map(item => <button type="button" className={tab === item ? 'active' : ''} onClick={() => { setTab(item); setPage(1); setSelectedIds([]) }} key={item}>{item}</button>)}</nav><FilterPanel className="fp-filter-panel" active={Boolean(query || Object.values(filters).some(Boolean))} onClear={clear} showClearWhenOpen>
+        </div></header><nav>{['Payroll Processing', 'Salary Records', 'Payslips'].map(item => <button type="button" className={tab === item ? 'active' : ''} onClick={() => { setTab(item); setPage(1); setSelectedIds([]) }} key={item}>{item}</button>)}</nav><div className="fp-category-toggle" role="group" aria-label="Filter by Employee Category" style={{ padding: '10px 16px 2px', display: 'flex', gap: '8px' }}><button type="button" className={`flm-cat-btn ${!filters.type ? 'active' : ''}`} onClick={() => updateFilter('type', '')}>All Employees ({payroll.length})</button><button type="button" className={`flm-cat-btn ${filters.type === 'Teaching' ? 'active' : ''}`} onClick={() => updateFilter('type', 'Teaching')}>Teaching Faculty ({payroll.filter(p => (p.type || 'Teaching') !== 'Non-Teaching').length})</button><button type="button" className={`flm-cat-btn ${filters.type === 'Non-Teaching' ? 'active' : ''}`} onClick={() => updateFilter('type', 'Non-Teaching')}>Non-Teaching Staff ({payroll.filter(p => p.type === 'Non-Teaching').length})</button></div><FilterPanel className="fp-filter-panel" active={Boolean(query || Object.values(filters).some(Boolean))} onClear={clear} showClearWhenOpen>
           <div className="fp-filter-fields">
             <label className="fp-search"><FiSearch aria-hidden="true" /><input value={query} onChange={event => { setQuery(event.target.value); setPage(1) }} aria-label="Search payroll employees" placeholder="Search employee..." /></label>
             <div className="fp-filter-field"><span>Faculty Type</span><SearchableSelect label="Faculty Type" value={filters.type} options={[{ value: '', label: 'All Faculty' }, 'Teaching', 'Non-Teaching']} placeholder="All Faculty" onChange={value => updateFilter('type', value)} hideSearch /></div>
@@ -911,7 +911,7 @@ export default function Payroll() {
       )}
 <div className="fp-table">{loading ? (
   <div className="fp-empty" role="status" style={{ padding: '36px 16px', textAlign: 'center' }}>
-    <div style={{ display: 'inline-block', width: '24px', height: '24px', border: '3px solid #0f766e', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.8s linear infinite', marginBottom: '8px' }} />
+    <div style={{ display: 'inline-block', width: '24px', height: '24px', border: '3px solid #8782BC', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.8s linear infinite', marginBottom: '8px' }} />
     <p style={{ margin: 0, color: 'var(--text-muted)', fontSize: '13px' }}>Loading payroll records...</p>
   </div>
 ) : rows.length ? <table><thead><tr>{tab === 'Payroll Processing' && (
@@ -1048,7 +1048,7 @@ export default function Payroll() {
 
         <h3 style={{ marginTop: '18px' }}>Salary Breakdown & Structure</h3>
         <div className="fp-salary-breakdown-card">
-          <h4 style={{ margin: '0 0 8px', fontSize: '11px', fontWeight: '800', color: 'var(--brand, #0f766e)', textTransform: 'uppercase' }}>Earnings & Allowances</h4>
+          <h4 style={{ margin: '0 0 8px', fontSize: '11px', fontWeight: '800', color: 'var(--brand, #8782BC)', textTransform: 'uppercase' }}>Earnings & Allowances</h4>
           <dl className="fp-breakdown-grid">
             <div><dt>Basic Salary</dt><dd>{money(basic)}</dd></div>
             <div><dt>HRA (House Rent)</dt><dd>{money(hra)}</dd></div>
@@ -1235,7 +1235,7 @@ function SalaryConfigModal({ item, facultyList = [], onClose, onSave }) {
             </div>
           )}
 
-          <h3 style={{ margin: '14px 0 8px', fontSize: '12px', fontWeight: '800', color: 'var(--brand, #0f766e)', textTransform: 'uppercase' }}>Earnings / Allowances</h3>
+          <h3 style={{ margin: '14px 0 8px', fontSize: '12px', fontWeight: '800', color: 'var(--brand, #8782BC)', textTransform: 'uppercase' }}>Earnings / Allowances</h3>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
             <label className="fp-field">
               <span>Basic Salary (₹) <b className="required-mark">*</b></span>
@@ -1280,7 +1280,7 @@ function SalaryConfigModal({ item, facultyList = [], onClose, onSave }) {
               <span>Standard Deductions (PF + Tax):</span>
               <strong>- {new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(deductions)}</strong>
             </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', paddingTop: '8px', borderTop: '1px dashed var(--border)', fontSize: '14px', fontWeight: '700', color: 'var(--brand, #0f766e)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', paddingTop: '8px', borderTop: '1px dashed var(--border)', fontSize: '14px', fontWeight: '700', color: 'var(--brand, #8782BC)' }}>
               <span>Base Net Take-Home:</span>
               <span>{new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(net)}</span>
             </div>
@@ -1324,8 +1324,8 @@ function SalarySlipModal({ item, month, onClose }) {
 
         <div className="fp-payslip-document" data-print-scope style={{ background: '#ffffff', padding: '20px 24px', border: '1px solid #cbd5e1', borderRadius: '8px', color: '#0f172a', boxSizing: 'border-box' }}>
           {/* Header */}
-          <div style={{ textAlign: 'center', borderBottom: '2px solid #0f766e', paddingBottom: '12px', marginBottom: '14px' }}>
-            <h1 style={{ margin: '0 0 3px', fontSize: '20px', fontWeight: '800', color: '#0f766e', letterSpacing: '0.04em' }}>PIRNAV ENGINEERING COLLEGE</h1>
+          <div style={{ textAlign: 'center', borderBottom: '2px solid #8782BC', paddingBottom: '12px', marginBottom: '14px' }}>
+            <h1 style={{ margin: '0 0 3px', fontSize: '20px', fontWeight: '800', color: '#8782BC', letterSpacing: '0.04em' }}>PIRNAV ENGINEERING COLLEGE</h1>
             <p style={{ margin: '0 0 4px', fontSize: '11px', color: '#475569' }}>Approved by AICTE, Affiliated to JNTUH · Hyderabad, Telangana - 500075</p>
             <div style={{ display: 'inline-block', marginTop: '4px', padding: '3px 14px', background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '20px', fontSize: '11px', fontWeight: '800', color: '#166534', textTransform: 'uppercase' }}>
               SALARY SLIP — {monthLabel(month).toUpperCase()}
@@ -1347,7 +1347,7 @@ function SalarySlipModal({ item, month, onClose }) {
           {/* Side-by-side Earnings and Deductions Table */}
           <table style={{ width: '100%', tableLayout: 'fixed', borderCollapse: 'collapse', marginBottom: '14px', fontSize: '12px' }}>
             <thead>
-              <tr style={{ background: '#0f766e', color: '#ffffff', textAlign: 'left' }}>
+              <tr style={{ background: '#8782BC', color: '#ffffff', textAlign: 'left' }}>
                 <th style={{ padding: '8px 10px', width: '32%' }}>EARNINGS</th>
                 <th style={{ padding: '8px 10px', width: '18%', textAlign: 'right' }}>AMOUNT (₹)</th>
                 <th style={{ padding: '8px 10px', width: '32%', borderLeft: '1px solid #14b8a6' }}>DEDUCTIONS</th>
@@ -1380,8 +1380,8 @@ function SalarySlipModal({ item, month, onClose }) {
                 <td style={{ padding: '7px 10px', textAlign: 'right', color: '#64748b' }}>—</td>
               </tr>
               <tr style={{ background: '#f8fafc', fontWeight: '800', borderBottom: '2px solid #cbd5e1' }}>
-                <td style={{ padding: '8px 10px', color: '#0f766e' }}>TOTAL GROSS EARNINGS</td>
-                <td style={{ padding: '8px 10px', textAlign: 'right', color: '#0f766e' }}>{money(gross)}</td>
+                <td style={{ padding: '8px 10px', color: '#8782BC' }}>TOTAL GROSS EARNINGS</td>
+                <td style={{ padding: '8px 10px', textAlign: 'right', color: '#8782BC' }}>{money(gross)}</td>
                 <td style={{ padding: '8px 10px', color: '#b91c1c', borderLeft: '1px solid #e2e8f0' }}>TOTAL DEDUCTIONS</td>
                 <td style={{ padding: '8px 10px', textAlign: 'right', color: '#b91c1c' }}>- {money(totalDeductions)}</td>
               </tr>
@@ -1415,7 +1415,7 @@ function SalarySlipModal({ item, month, onClose }) {
 
         <footer style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '14px' }}>
           <button type="button" onClick={onClose}>Close</button>
-          <button type="button" className="primary" onClick={handlePrint} style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', background: '#0f766e', color: '#fff' }}>
+          <button type="button" className="primary" onClick={handlePrint} style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', background: '#8782BC', color: '#fff' }}>
             <FiPrinter /> Print / Save as PDF
           </button>
         </footer>

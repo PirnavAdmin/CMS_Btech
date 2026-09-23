@@ -66,7 +66,7 @@ class AppErrorBoundary extends Component {
                 {this.state.error.message || String(this.state.error)}
               </pre>
             )}
-            <button type="button" onClick={() => this.setState({ hasError: false, error: null })} style={{ border: 'none', background: '#2563eb', color: '#fff', borderRadius: '10px', padding: '10px 16px', cursor: 'pointer', fontWeight: 700, marginRight: '8px' }}>
+            <button type="button" onClick={() => this.setState({ hasError: false, error: null })} style={{ border: 'none', background: '#8782BC', color: '#fff', borderRadius: '10px', padding: '10px 16px', cursor: 'pointer', fontWeight: 700, marginRight: '8px' }}>
               Try again
             </button>
             <button type="button" onClick={() => window.location.href = '/'} style={{ border: 'none', background: '#475569', color: '#fff', borderRadius: '10px', padding: '10px 16px', cursor: 'pointer', fontWeight: 700 }}>

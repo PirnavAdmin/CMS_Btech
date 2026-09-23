@@ -292,12 +292,12 @@ function CollegeEmblemBadge({ name, code, className = 'cm-logo-thumb' }) {
 
   const seed = Array.from(cleanCode || cleanName).reduce((acc, c) => acc + c.charCodeAt(0), 0)
   const palettes = [
-    { bg1: '#073763', bg2: '#0d6099', accent: '#f2bc35', text: '#ffffff' },
+    { bg1: '#0F172A', bg2: '#0F172A', accent: '#f2bc35', text: '#ffffff' },
     { bg1: '#064e3b', bg2: '#059669', accent: '#34d399', text: '#ffffff' },
     { bg1: '#4c1d95', bg2: '#7c3aed', accent: '#c4b5fd', text: '#ffffff' },
     { bg1: '#831843', bg2: '#db2777', accent: '#fbcfe8', text: '#ffffff' },
-    { bg1: '#1e3a8a', bg2: '#2563eb', accent: '#93c5fd', text: '#ffffff' },
-    { bg1: '#78350f', bg2: '#d97706', accent: '#fde68a', text: '#ffffff' },
+    { bg1: '#0F172A', bg2: '#8782BC', accent: '#DDD8F0', text: '#ffffff' },
+    { bg1: '#78350f', bg2: '#8782BC', accent: '#DDD8F0', text: '#ffffff' },
   ]
   const palette = palettes[seed % palettes.length]
 
