@@ -1,662 +1,96 @@
-import { useState, useEffect, useMemo } from 'react'
-import { FiLayers, FiUsers, FiPlus, FiSearch, FiCheckCircle, FiEdit2, FiTrash2, FiClock, FiX, FiCheckSquare, FiAward } from 'react-icons/fi'
+import { useEffect, useMemo, useState } from 'react'
+import { FiAward, FiCheck, FiCheckCircle, FiInfo, FiLayers, FiPlus, FiSearch, FiUsers, FiX } from 'react-icons/fi'
 import DashboardLayout from '../../layouts/DashboardLayout'
 import StatusBadge from '../../components/StatusBadge'
 import EmptyState from '../../components/EmptyState'
-import subjectService from '../../services/subjectService'
-import { showSuccess, showError } from '../../utils/toast'
+import ExportMenu from '../../components/ExportMenu'
+import FilterPanel from '../../components/FilterPanel'
+import { API_BASE_URL, profileApi } from '../../api/apiEndpoints'
+import { getAccessToken } from '../../auth/auth'
+import { subjectService } from '../../services/subjectService'
+import { showError, showSuccess } from '../../utils/toast'
 import './ElectiveManagement.css'
 
-export default function ElectiveManagement() {
-  const [activeTab, setActiveTab] = useState('baskets')
-  const [groups, setGroups] = useState([])
-  const [allocations, setAllocations] = useState([])
-  const [loading, setLoading] = useState(true)
+const tabs = [{ id: 'groups', label: 'Elective Groups' }, { id: 'selection', label: 'Student Selection' }, { id: 'approval', label: 'Faculty Approval' }, { id: 'allocation', label: 'Allocation' }, { id: 'report', label: 'Allocation Report' }]
+const blankGroup = () => ({ groupCode: '', groupName: '', department: '', branch: '', academicYear: '', semester: '', electiveType: 'Professional Elective (PE)', credits: '', minimumSelection: 1, maximumSelection: 1, selectionStartDate: '', selectionEndDate: '', status: 'Open' })
+const text = (value, fallback = 'N/A') => value === null || value === undefined || value === '' ? fallback : value
+const rowId = row => row?.id ?? row?.selectionId ?? row?.studentElectiveSelectionId
+const approvalStatus = row => row?.approvalStatus || row?.status || 'Pending'
+const allocationStatus = row => row?.allocationStatus || (String(row?.status).toLowerCase() === 'allocated' ? 'Allocated' : 'Pending')
+const groupExportColumns = [
+    { label: 'Group Code', value: row => row.groupCode },
+    { label: 'Group Name', value: row => row.groupName },
+    { label: 'Department', value: row => row.department },
+    { label: 'Branch', value: row => row.branch },
+    { label: 'Academic Year', value: row => row.academicYear },
+    { label: 'Semester', value: row => row.semester },
+    { label: 'Elective Type', value: row => row.electiveType || row.type },
+    { label: 'Credits', value: row => row.credits },
+    { label: 'Status', value: row => row.status },
+]
+const reportExportColumns = [
+    { label: 'Student', value: row => row.studentName || row.fullName || row.rollNumber || row.studentId },
+    { label: 'Student Code', value: row => row.studentCode || row.studentId || row.rollNumber },
+    { label: 'Group', value: row => row.groupCode || row.electiveGroupCode },
+    { label: 'Subject', value: row => row.subjectCode },
+    { label: 'Subject Name', value: row => row.subjectName },
+    { label: 'Approval', value: row => approvalStatus(row) },
+    { label: 'Allocation', value: row => allocationStatus(row) },
+]
 
-  const [groupModalOpen, setGroupModalOpen] = useState(false)
-  const [allocModalOpen, setAllocModalOpen] = useState(false)
-  const [editingGroupId, setEditingGroupId] = useState(null)
-
-  const [groupFormData, setGroupFormData] = useState({
-    groupCode: '',
-    groupName: '',
-    type: 'Professional Elective (PE)',
-    semester: 'Semester 5',
-    branch: 'Computer Science & Engineering',
-    totalCapacity: 120,
-    minOptionsRequired: 1,
-    maxAllowed: 1,
-    status: 'Open',
-    subjects: [
-      { code: '', name: '', capacity: 60, faculty: '' }
-    ]
-  })
-
-  const [allocFormData, setAllocFormData] = useState({
-    rollNumber: '',
-    studentName: '',
-    branch: 'CSE',
-    semester: 'Semester 5',
-    groupCode: 'PE-I',
-    subjectCode: '',
-    preferenceRank: 1,
-  })
-
-  const loadData = async () => {
-    setLoading(true)
-    try {
-      const [groupsData, allocsData] = await Promise.all([
-        subjectService.getElectiveGroups(),
-        subjectService.getStudentAllocations(),
-      ])
-      setGroups(groupsData)
-      setAllocations(allocsData)
-    } catch {
-      showError('Failed to load elective data.')
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  useEffect(() => {
-    loadData()
-  }, [])
-
-  const kpis = useMemo(() => {
-    const totalGroups = groups.length
-    const peGroups = groups.filter(g => g.type.includes('Professional')).length
-    const oeGroups = groups.filter(g => g.type.includes('Open')).length
-    const totalCapacity = groups.reduce((sum, g) => sum + Number(g.totalCapacity || 0), 0)
-    const totalEnrolled = allocations.length
-    return { totalGroups, peGroups, oeGroups, totalCapacity, totalEnrolled }
-  }, [groups, allocations])
-
-  const openCreateGroup = () => {
-    setEditingGroupId(null)
-    setGroupFormData({
-      groupCode: '',
-      groupName: '',
-      type: 'Professional Elective (PE)',
-      semester: 'Semester 5',
-      branch: 'Computer Science & Engineering',
-      totalCapacity: 120,
-      minOptionsRequired: 1,
-      maxAllowed: 1,
-      status: 'Open',
-      subjects: [
-        { code: '', name: '', capacity: 60, faculty: '' },
-        { code: '', name: '', capacity: 60, faculty: '' }
-      ]
-    })
-    setGroupModalOpen(true)
-  }
-
-  const handleSaveGroup = async (e) => {
-    e.preventDefault()
-    if (!groupFormData.groupCode.trim() || !groupFormData.groupName.trim()) {
-      showError('Please provide group code and name.')
-      return
-    }
-
-    try {
-      if (editingGroupId) {
-        await subjectService.updateElectiveGroup(editingGroupId, groupFormData)
-        showSuccess('Elective basket updated.')
-      } else {
-        await subjectService.createElectiveGroup(groupFormData)
-        showSuccess('Elective basket created.')
-      }
-      setGroupModalOpen(false)
-      loadData()
-    } catch {
-      showError('Failed to save elective group.')
-    }
-  }
-
-  const handleDeleteGroup = async (id, code) => {
-    if (window.confirm(`Delete elective group ${code}?`)) {
-      try {
-        await subjectService.deleteElectiveGroup(id)
-        showSuccess(`Elective group ${code} deleted.`)
-        loadData()
-      } catch {
-        showError('Failed to delete elective group.')
-      }
-    }
-  }
-
-  const handleSaveAllocation = async (e) => {
-    e.preventDefault()
-    if (!allocFormData.rollNumber.trim() || !allocFormData.studentName.trim() || !allocFormData.subjectCode) {
-      showError('Please complete all allocation fields.')
-      return
-    }
-
-    try {
-      const selectedGroup = groups.find(g => g.groupCode === allocFormData.groupCode)
-      const selectedSub = selectedGroup?.subjects.find(s => s.code === allocFormData.subjectCode)
-      await subjectService.createAllocation({
-        ...allocFormData,
-        groupName: selectedGroup?.groupName || allocFormData.groupCode,
-        subjectName: selectedSub?.name || allocFormData.subjectCode,
-      })
-      showSuccess(`Elective assigned to ${allocFormData.studentName}.`)
-      setAllocModalOpen(false)
-      loadData()
-    } catch {
-      showError('Failed to record allocation.')
-    }
-  }
-
-  const handleDeleteAllocation = async (id, studentName) => {
-    if (window.confirm(`Remove elective allocation for ${studentName}?`)) {
-      try {
-        await subjectService.removeAllocation(id)
-        showSuccess('Allocation removed.')
-        loadData()
-      } catch {
-        showError('Failed to remove allocation.')
-      }
-    }
-  }
-
-  return (
-    <DashboardLayout>
-      <div className="em-screen">
-        <header className="em-header">
-          <div>
-            <h1>Elective Courses & Baskets Management</h1>
-            <p>Manage Professional Elective (PE) tracks, Open Elective (OE) inter-disciplinary pools, and student choice allocations.</p>
-          </div>
-          <div style={{ display: 'flex', gap: '10px' }}>
-            <button type="button" className="sm-btn sm-btn--secondary" onClick={() => setAllocModalOpen(true)}>
-              <FiCheckSquare /> Allocate Student Elective
-            </button>
-            <button type="button" className="sm-btn sm-btn--primary" onClick={openCreateGroup}>
-              <FiPlus /> Create Elective Basket
-            </button>
-          </div>
-        </header>
-
-        {/* Tab Selection */}
-        <div className="em-tabs">
-          <button
-            type="button"
-            className={`em-tab-btn ${activeTab === 'baskets' ? 'active' : ''}`}
-            onClick={() => setActiveTab('baskets')}
-          >
-            Elective Baskets & Tracks ({groups.length})
-          </button>
-          <button
-            type="button"
-            className={`em-tab-btn ${activeTab === 'allocations' ? 'active' : ''}`}
-            onClick={() => setActiveTab('allocations')}
-          >
-            Student Allocations ({allocations.length})
-          </button>
-        </div>
-
-        {/* KPI Row */}
-        <section className="em-kpi-grid">
-          <div className="em-kpi-card">
-            <div className="sm-kpi-icon sm-kpi-icon--blue"><FiLayers /></div>
-            <div className="sm-kpi-content">
-              <small>Total Baskets</small>
-              <strong>{kpis.totalGroups}</strong>
-            </div>
-          </div>
-          <div className="em-kpi-card">
-            <div className="sm-kpi-icon sm-kpi-icon--amber"><FiAward /></div>
-            <div className="sm-kpi-content">
-              <small>Professional Electives (PE)</small>
-              <strong>{kpis.peGroups} Baskets</strong>
-            </div>
-          </div>
-          <div className="em-kpi-card">
-            <div className="sm-kpi-icon sm-kpi-icon--purple"><FiCheckCircle /></div>
-            <div className="sm-kpi-content">
-              <small>Open Electives (OE)</small>
-              <strong>{kpis.oeGroups} Pools</strong>
-            </div>
-          </div>
-          <div className="em-kpi-card">
-            <div className="sm-kpi-icon sm-kpi-icon--green"><FiUsers /></div>
-            <div className="sm-kpi-content">
-              <small>Enrolled Students</small>
-              <strong>{kpis.totalEnrolled} / {kpis.totalCapacity}</strong>
-            </div>
-          </div>
-        </section>
-
-        {/* Baskets View */}
-        {activeTab === 'baskets' && (
-          <div className="em-groups-grid">
-            {groups.map(group => {
-              const fillPercent = Math.round((group.enrolledStudents / (group.totalCapacity || 1)) * 100)
-              return (
-                <div className="em-group-card" key={group.id}>
-                  <div className="em-group-header">
-                    <div>
-                      <span className="em-group-code">{group.groupCode}</span>
-                      <h3>{group.groupName}</h3>
-                    </div>
-                    <StatusBadge value={group.status} />
-                  </div>
-
-                  <div className="em-group-body">
-                    <div className="em-group-meta">
-                      <span><strong>Type:</strong> {group.type}</span>
-                      <span><strong>Semester:</strong> {group.semester}</span>
-                    </div>
-                    <div className="em-group-meta">
-                      <span><strong>Branch:</strong> {group.branch}</span>
-                      <span><strong>Capacity:</strong> {group.enrolledStudents} / {group.totalCapacity} ({fillPercent}%)</span>
-                    </div>
-
-                    <div className="cm-progress-bar-wrap" style={{ margin: '0 0 10px 0' }}>
-                      <div
-                        className="cm-progress-bar-fill"
-                        style={{ width: `${Math.min(100, fillPercent)}%`, background: fillPercent > 90 ? '#dc2626' : '#2563eb' }}
-                      />
-                    </div>
-
-                    <div>
-                      <small style={{ fontWeight: 700, color: '#475569', textTransform: 'uppercase', fontSize: '0.75rem' }}>
-                        Offered Courses in this Basket ({group.subjects?.length || 0}):
-                      </small>
-                      <div className="em-subject-list" style={{ marginTop: '6px' }}>
-                        {group.subjects?.map((sub, i) => (
-                          <div className="em-subject-item" key={i}>
-                            <div>
-                              <span className="em-subject-title">{sub.code}: {sub.name}</span>
-                              <div className="em-subject-faculty">Instructor: {sub.faculty || 'Department Faculty'}</div>
-                            </div>
-                            <span className="sm-credit-badge">Max {sub.capacity}</span>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="em-group-footer">
-                    <button
-                      type="button"
-                      className="sm-icon-btn"
-                      title="Delete Basket"
-                      style={{ color: '#dc2626' }}
-                      onClick={() => handleDeleteGroup(group.id, group.groupCode)}
-                    >
-                      <FiTrash2 />
-                    </button>
-                    <button
-                      type="button"
-                      className="sm-btn sm-btn--secondary"
-                      style={{ padding: '6px 12px', fontSize: '0.82rem' }}
-                      onClick={() => {
-                        setEditingGroupId(group.id)
-                        setGroupFormData({ ...group })
-                        setGroupModalOpen(true)
-                      }}
-                    >
-                      <FiEdit2 /> Edit Basket
-                    </button>
-                  </div>
-                </div>
-              )
-            })}
-          </div>
-        )}
-
-        {/* Allocations View */}
-        {activeTab === 'allocations' && (
-          <div className="sm-card">
-            <div className="sm-card-header">
-              <h2>Allocated Student Electives</h2>
-              <button type="button" className="sm-btn sm-btn--primary" onClick={() => setAllocModalOpen(true)}>
-                <FiPlus /> New Allocation
-              </button>
-            </div>
-            <div className="sm-table-wrap">
-              {allocations.length === 0 ? (
-                <EmptyState
-                  title="No allocations yet"
-                  description="Students will appear here once they choose their elective courses."
-                  action="Allocate Elective"
-                  onAction={() => setAllocModalOpen(true)}
-                />
-              ) : (
-                <table className="em-table">
-                  <thead>
-                    <tr>
-                      <th>Roll Number</th>
-                      <th>Student Name</th>
-                      <th>Branch & Semester</th>
-                      <th>Elective Basket</th>
-                      <th>Allocated Subject</th>
-                      <th>Preference</th>
-                      <th>Date</th>
-                      <th>Status</th>
-                      <th style={{ textAlign: 'right' }}>Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {allocations.map(al => (
-                      <tr key={al.id}>
-                        <td><span className="sm-code-badge">{al.rollNumber}</span></td>
-                        <td><strong>{al.studentName}</strong></td>
-                        <td>{al.branch} · {al.semester}</td>
-                        <td><span className="em-group-code">{al.groupCode}</span></td>
-                        <td>
-                          <strong>{al.subjectCode}</strong>: {al.subjectName}
-                        </td>
-                        <td><span className="sm-ltp-pill">Choice #{al.preferenceRank}</span></td>
-                        <td>{al.allocationDate}</td>
-                        <td><StatusBadge value={al.status} /></td>
-                        <td style={{ textAlign: 'right' }}>
-                          <button
-                            type="button"
-                            className="sm-icon-btn"
-                            style={{ color: '#dc2626', display: 'inline-grid' }}
-                            title="Remove allocation"
-                            onClick={() => handleDeleteAllocation(al.id, al.studentName)}
-                          >
-                            <FiTrash2 />
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              )}
-            </div>
-          </div>
-        )}
-
-        {/* Create / Edit Group Modal */}
-        {groupModalOpen && (
-          <div className="sm-modal-backdrop" onClick={() => setGroupModalOpen(false)}>
-            <div className="sm-modal" onClick={e => e.stopPropagation()}>
-              <form onSubmit={handleSaveGroup}>
-                <div className="sm-modal-header">
-                  <h2>{editingGroupId ? 'Edit Elective Basket' : 'Create New Elective Basket'}</h2>
-                  <button type="button" className="sm-icon-btn" onClick={() => setGroupModalOpen(false)}><FiX /></button>
-                </div>
-                <div className="sm-modal-body">
-                  <div className="sm-form-grid-2">
-                    <div className="sm-field">
-                      <label>Basket Code *</label>
-                      <input
-                        type="text"
-                        required
-                        placeholder="e.g. PE-I or OE-II"
-                        value={groupFormData.groupCode}
-                        onChange={e => setGroupFormData({ ...groupFormData, groupCode: e.target.value })}
-                      />
-                    </div>
-                    <div className="sm-field">
-                      <label>Elective Type</label>
-                      <select
-                        value={groupFormData.type}
-                        onChange={e => setGroupFormData({ ...groupFormData, type: e.target.value })}
-                      >
-                        <option>Professional Elective (PE)</option>
-                        <option>Open Elective (OE)</option>
-                        <option>Value Added Course (VAC)</option>
-                      </select>
-                    </div>
-                  </div>
-
-                  <div className="sm-field">
-                    <label>Basket Title / Track Name *</label>
-                    <input
-                      type="text"
-                      required
-                      placeholder="e.g. Professional Elective - I (Track: Intelligent Systems)"
-                      value={groupFormData.groupName}
-                      onChange={e => setGroupFormData({ ...groupFormData, groupName: e.target.value })}
-                    />
-                  </div>
-
-                  <div className="sm-form-grid-2">
-                    <div className="sm-field">
-                      <label>Applicable Branch</label>
-                      <select
-                        value={groupFormData.branch}
-                        onChange={e => setGroupFormData({ ...groupFormData, branch: e.target.value })}
-                      >
-                        <option>Computer Science & Engineering</option>
-                        <option>Electronics & Communication Engineering</option>
-                        <option>Electrical & Electronics Engineering</option>
-                        <option>Mechanical Engineering</option>
-                        <option>All Branches</option>
-                      </select>
-                    </div>
-                    <div className="sm-field">
-                      <label>Semester</label>
-                      <select
-                        value={groupFormData.semester}
-                        onChange={e => setGroupFormData({ ...groupFormData, semester: e.target.value })}
-                      >
-                        {Array.from({ length: 8 }, (_, i) => `Semester ${i + 1}`).map(sem => (
-                          <option key={sem}>{sem}</option>
-                        ))}
-                      </select>
-                    </div>
-                  </div>
-
-                  <div className="sm-form-grid-2">
-                    <div className="sm-field">
-                      <label>Total Intake Capacity (Seats)</label>
-                      <input
-                        type="number"
-                        min="10"
-                        value={groupFormData.totalCapacity}
-                        onChange={e => setGroupFormData({ ...groupFormData, totalCapacity: Number(e.target.value) })}
-                      />
-                    </div>
-                    <div className="sm-field">
-                      <label>Enrollment Status</label>
-                      <select
-                        value={groupFormData.status}
-                        onChange={e => setGroupFormData({ ...groupFormData, status: e.target.value })}
-                      >
-                        <option>Open</option>
-                        <option>Closed</option>
-                        <option>Upcoming</option>
-                      </select>
-                    </div>
-                  </div>
-
-                  <div style={{ marginTop: '10px' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                      <label style={{ fontWeight: 700, fontSize: '0.88rem', color: '#1e293b' }}>Courses Offered in this Group:</label>
-                      <button
-                        type="button"
-                        className="sm-btn sm-btn--secondary"
-                        style={{ padding: '4px 10px', fontSize: '0.8rem' }}
-                        onClick={() => setGroupFormData({
-                          ...groupFormData,
-                          subjects: [...groupFormData.subjects, { code: '', name: '', capacity: 60, faculty: '' }]
-                        })}
-                      >
-                        + Add Course
-                      </button>
-                    </div>
-
-                    {groupFormData.subjects.map((sub, index) => (
-                      <div key={index} style={{ display: 'grid', gridTemplateColumns: '100px 1.5fr 1fr 70px 30px', gap: '8px', alignItems: 'center', marginBottom: '8px' }}>
-                        <input
-                          type="text"
-                          placeholder="Code"
-                          style={{ padding: '6px 8px', fontSize: '0.85rem' }}
-                          value={sub.code}
-                          onChange={e => {
-                            const subs = [...groupFormData.subjects]
-                            subs[index].code = e.target.value
-                            setGroupFormData({ ...groupFormData, subjects: subs })
-                          }}
-                        />
-                        <input
-                          type="text"
-                          placeholder="Course Title"
-                          style={{ padding: '6px 8px', fontSize: '0.85rem' }}
-                          value={sub.name}
-                          onChange={e => {
-                            const subs = [...groupFormData.subjects]
-                            subs[index].name = e.target.value
-                            setGroupFormData({ ...groupFormData, subjects: subs })
-                          }}
-                        />
-                        <input
-                          type="text"
-                          placeholder="Faculty"
-                          style={{ padding: '6px 8px', fontSize: '0.85rem' }}
-                          value={sub.faculty}
-                          onChange={e => {
-                            const subs = [...groupFormData.subjects]
-                            subs[index].faculty = e.target.value
-                            setGroupFormData({ ...groupFormData, subjects: subs })
-                          }}
-                        />
-                        <input
-                          type="number"
-                          placeholder="Seats"
-                          style={{ padding: '6px 8px', fontSize: '0.85rem' }}
-                          value={sub.capacity}
-                          onChange={e => {
-                            const subs = [...groupFormData.subjects]
-                            subs[index].capacity = Number(e.target.value)
-                            setGroupFormData({ ...groupFormData, subjects: subs })
-                          }}
-                        />
-                        {groupFormData.subjects.length > 1 && (
-                          <button
-                            type="button"
-                            className="sm-icon-btn"
-                            style={{ color: '#dc2626', width: '28px', height: '28px' }}
-                            onClick={() => {
-                              const subs = groupFormData.subjects.filter((_, i) => i !== index)
-                              setGroupFormData({ ...groupFormData, subjects: subs })
-                            }}
-                          >
-                            <FiX />
-                          </button>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-                <div className="sm-modal-footer">
-                  <button type="button" className="sm-btn sm-btn--secondary" onClick={() => setGroupModalOpen(false)}>Cancel</button>
-                  <button type="submit" className="sm-btn sm-btn--primary">{editingGroupId ? 'Save Basket' : 'Create Basket'}</button>
-                </div>
-              </form>
-            </div>
-          </div>
-        )}
-
-        {/* Allocate Student Modal */}
-        {allocModalOpen && (
-          <div className="sm-modal-backdrop" onClick={() => setAllocModalOpen(false)}>
-            <div className="sm-modal" onClick={e => e.stopPropagation()}>
-              <form onSubmit={handleSaveAllocation}>
-                <div className="sm-modal-header">
-                  <h2>Allocate Student Elective Choice</h2>
-                  <button type="button" className="sm-icon-btn" onClick={() => setAllocModalOpen(false)}><FiX /></button>
-                </div>
-                <div className="sm-modal-body">
-                  <div className="sm-form-grid-2">
-                    <div className="sm-field">
-                      <label>Student Roll Number *</label>
-                      <input
-                        type="text"
-                        required
-                        placeholder="e.g. 23BTECHCSE045"
-                        value={allocFormData.rollNumber}
-                        onChange={e => setAllocFormData({ ...allocFormData, rollNumber: e.target.value })}
-                      />
-                    </div>
-                    <div className="sm-field">
-                      <label>Student Full Name *</label>
-                      <input
-                        type="text"
-                        required
-                        placeholder="e.g. Rahul Sharma"
-                        value={allocFormData.studentName}
-                        onChange={e => setAllocFormData({ ...allocFormData, studentName: e.target.value })}
-                      />
-                    </div>
-                  </div>
-
-                  <div className="sm-form-grid-2">
-                    <div className="sm-field">
-                      <label>Branch</label>
-                      <select
-                        value={allocFormData.branch}
-                        onChange={e => setAllocFormData({ ...allocFormData, branch: e.target.value })}
-                      >
-                        <option>CSE</option>
-                        <option>ECE</option>
-                        <option>EEE</option>
-                        <option>ME</option>
-                        <option>Civil</option>
-                      </select>
-                    </div>
-                    <div className="sm-field">
-                      <label>Semester</label>
-                      <select
-                        value={allocFormData.semester}
-                        onChange={e => setAllocFormData({ ...allocFormData, semester: e.target.value })}
-                      >
-                        {Array.from({ length: 8 }, (_, i) => `Semester ${i + 1}`).map(sem => (
-                          <option key={sem}>{sem}</option>
-                        ))}
-                      </select>
-                    </div>
-                  </div>
-
-                  <div className="sm-field">
-                    <label>Select Elective Basket *</label>
-                    <select
-                      value={allocFormData.groupCode}
-                      onChange={e => {
-                        const code = e.target.value
-                        const grp = groups.find(g => g.groupCode === code)
-                        setAllocFormData({
-                          ...allocFormData,
-                          groupCode: code,
-                          subjectCode: grp?.subjects?.[0]?.code || '',
-                        })
-                      }}
-                    >
-                      {groups.map(g => (
-                        <option key={g.id} value={g.groupCode}>{g.groupCode}: {g.groupName}</option>
-                      ))}
-                    </select>
-                  </div>
-
-                  <div className="sm-field">
-                    <label>Select Offered Subject *</label>
-                    <select
-                      value={allocFormData.subjectCode}
-                      onChange={e => setAllocFormData({ ...allocFormData, subjectCode: e.target.value })}
-                    >
-                      <option value="">-- Choose Subject --</option>
-                      {groups.find(g => g.groupCode === allocFormData.groupCode)?.subjects?.map(s => (
-                        <option key={s.code} value={s.code}>{s.code} - {s.name} ({s.faculty})</option>
-                      ))}
-                    </select>
-                  </div>
-                </div>
-                <div className="sm-modal-footer">
-                  <button type="button" className="sm-btn sm-btn--secondary" onClick={() => setAllocModalOpen(false)}>Cancel</button>
-                  <button type="submit" className="sm-btn sm-btn--primary">Confirm Allocation</button>
-                </div>
-              </form>
-            </div>
-          </div>
-        )}
-      </div>
-    </DashboardLayout>
-  )
+async function request(path, options = {}) {
+    const token = getAccessToken(); let response
+    try { response = await fetch(`${API_BASE_URL}${path}`, { ...options, headers: { 'Content-Type': 'application/json', 'ngrok-skip-browser-warning': 'true', ...(token ? { Authorization: `Bearer ${token}` } : {}), ...options.headers } }) } catch { throw new Error('Network error. Please check your connection and try again.') }
+    let body = null; try { body = await response.json() } catch { /* Empty successful responses are valid. */ }
+    if (!response.ok || body?.success === false) { const messages = { 401: 'Your session has expired. Please sign in again.', 403: 'You do not have permission to perform this action.', 404: path.includes('/allocations/report') ? 'No allocation report is available yet.' : path.includes('/profile/exam-results') ? 'No examination results are available.' : path.includes('/electives') ? 'No elective records are available yet.' : 'The requested information was not found.', 500: 'The server is temporarily unavailable.' }; const error = new Error(messages[response.status] || body?.message || 'The request could not be completed.'); error.status = response.status; throw error }
+    return body
 }
+const get = path => request(path).then(unwrap)
+const post = (path, payload) => request(path, { method: 'POST', body: JSON.stringify(payload) }).then(unwrap)
+const patch = (path, payload) => request(path, { method: 'PATCH', body: JSON.stringify(payload) }).then(unwrap)
+
+function Pagination({ page, pageCount, total, size, onChange }) { if (pageCount < 2) return total ? <p className="em-pagination-count">Showing 1-{Math.min(total, size)} of {total}</p> : null; return <div className="em-pagination"><span>Showing {(page - 1) * size + 1}-{Math.min(page * size, total)} of {total}</span><div><button type="button" onClick={() => onChange(page - 1)} disabled={page === 1}>Previous</button>{Array.from({ length: pageCount }, (_, index) => index + 1).map(number => <button type="button" key={number} className={number === page ? 'active' : ''} onClick={() => onChange(number)}>{number}</button>)}<button type="button" onClick={() => onChange(page + 1)} disabled={page === pageCount}>Next</button></div></div> }
+function Toolbar({ search, setSearch, filters, setFilters, options, values, placeholder }) {
+    const active = options.some(key => filters[key] !== 'All')
+    const clear = () => setFilters({ ...filters, ...Object.fromEntries(options.map(key => [key, 'All'])) })
+    return <FilterPanel active={active} onClear={clear} className="em-filter-panel"><div className="em-toolbar"><div className="em-search"><FiSearch /><input value={search} onChange={event => setSearch(event.target.value)} placeholder={placeholder} aria-label={placeholder} /></div><div className="em-filters">{options.map(key => <select key={key} value={filters[key]} onChange={event => setFilters({ ...filters, [key]: event.target.value })}><option value="All">All {key.replace(/([A-Z])/g, ' $1')}</option>{values(key).map(value => <option key={value}>{value}</option>)}</select>)}</div></div></FilterPanel>
+}
+function SelectionTable({ rows, approval = false, onApproval, emptyTitle = 'No elective selections found', search = '', className = '' }) { if (!rows.length) return <EmptyState title={approval ? 'No pending approvals' : emptyTitle} description={search ? 'Try a different search or filter.' : 'Records will appear here when they are available.'} />; return <div className={`sm-table-wrap ${className}`}><table className="em-table"><thead><tr><th>Student</th><th>Group</th><th>Subject</th><th>Credits</th><th>Selection Date</th><th>Approval</th><th>Allocation</th>{approval && <th>Actions</th>}</tr></thead><tbody>{rows.map(row => <tr key={rowId(row)}><td><strong>{text(row.studentName || row.fullName, row.rollNumber || row.studentId)}</strong><span className="em-cell-subtitle">{text(row.studentCode || row.studentId || row.rollNumber)}</span></td><td>{text(row.groupCode || row.electiveGroupCode)}<span className="em-cell-subtitle">{text(row.groupName || row.electiveGroupName)}</span></td><td><strong>{text(row.subjectCode)}</strong><span className="em-cell-subtitle">{text(row.subjectName)}</span></td><td>{text(row.credits, '-')}</td><td>{text(row.selectionDate || row.createdAt, '-')}</td><td><StatusBadge value={approvalStatus(row)} /></td><td><StatusBadge value={allocationStatus(row)} /></td>{approval && <td><div className="em-row-actions"><button type="button" className="sm-btn sm-btn--primary em-compact-btn" onClick={() => onApproval(row, 'Approved')}>Approve</button><button type="button" className="sm-btn sm-btn--danger em-compact-btn" onClick={() => onApproval(row, 'Rejected')}>Reject</button></div></td>}</tr>)}</tbody></table></div> }
+function ResultsTable({ rows, page, size, setPage }) { const pageRows = rows.slice((page - 1) * size, page * size); return !rows.length ? <EmptyState title="No examination results available" description="Academic results have not been published for this student." /> : <><div className="sm-table-wrap"><table className="em-table"><thead><tr><th>Examination</th><th>Semester</th><th>Subject</th><th>Maximum</th><th>Obtained</th><th>Percentage</th><th>Grade</th><th>Status</th></tr></thead><tbody>{pageRows.map((row, index) => <tr key={row.id || row.subjectCode || index}><td>{text(row.examinationName || row.examName)}</td><td>{text(row.semester)}</td><td><strong>{text(row.subjectCode)}</strong><span className="em-cell-subtitle">{text(row.subjectName)}</span></td><td>{text(row.maximumMarks || row.maxMarks, '-')}</td><td>{text(row.obtainedMarks || row.marksObtained, '-')}</td><td>{text(row.percentage, '-')}</td><td>{text(row.grade, '-')}</td><td><StatusBadge value={text(row.resultStatus || row.status, '-')} /></td></tr>)}</tbody></table></div><Pagination page={page} pageCount={Math.ceil(rows.length / size)} total={rows.length} size={size} onChange={setPage} /></> }
+function StudentCard({ profile, loading }) { if (loading) return <section className="em-student-card em-loading">Loading student profile...</section>; if (!profile) return null; const value = key => text(profile[key], key === 'semester' ? 'Semester information unavailable' : 'N/A'); return <section className="em-student-card"><div className="em-avatar">{String(profile.fullName || profile.studentName || 'S').split(' ').map(part => part[0]).join('').slice(0, 2).toUpperCase()}</div><div className="em-student-identity"><h2>{value('fullName')}</h2><p>{value('studentCode', profile.identifier || profile.id)}</p></div><dl>{[['Course', 'course'], ['Department', 'department'], ['Branch', 'branch'], ['Academic Year', 'academicYear'], ['Semester', 'semester'], ['Section', 'section'], ['Roll Number', 'rollNumber'], ['Registration Number', 'registrationNumber']].map(([label, key]) => <div key={key}><dt>{label}</dt><dd>{value(key)}</dd></div>)}</dl></section> }
+
+export default function ElectiveManagement() {
+    const [activeTab, setActiveTab] = useState('groups'); const [groups, setGroups] = useState([]); const [subjects, setSubjects] = useState([]); const [selections, setSelections] = useState([]); const [report, setReport] = useState([]); const [profile, setProfile] = useState(null); const [results, setResults] = useState([])
+    const [loading, setLoading] = useState(true); const [profileLoading, setProfileLoading] = useState(true); const [resultsLoading, setResultsLoading] = useState(false); const [error, setError] = useState(''); const [search, setSearch] = useState(''); const [filters, setFilters] = useState({ status: 'All', semester: 'All', branch: 'All', department: 'All', approvalStatus: 'All', allocationStatus: 'All' }); const [page, setPage] = useState(1); const [resultPage, setResultPage] = useState(1); const size = 10
+    const [groupModal, setGroupModal] = useState(false); const [subjectModal, setSubjectModal] = useState(null); const [groupForm, setGroupForm] = useState(blankGroup()); const [selectedSubjects, setSelectedSubjects] = useState([]); const [selectedGroupId, setSelectedGroupId] = useState(''); const [selectedSubjectId, setSelectedSubjectId] = useState(''); const [actionLoading, setActionLoading] = useState(false)
+    const studentId = profile?.id || profile?.studentId || ''
+    const loadCore = async () => { setLoading(true); setError(''); try { const [localGroups, localAllocations, localSubjects] = await Promise.all([subjectService.getElectiveGroups(), subjectService.getStudentAllocations(), subjectService.getSubjects()]); setGroups(localGroups.map(group => ({ ...group, electiveType: group.electiveType || group.type }))); setReport(localAllocations); setSubjects(localSubjects.filter(subject => subject.status === undefined || String(subject.status).toLowerCase() !== 'inactive')) } catch (requestError) { setError(requestError.message || 'Unable to load elective groups.'); showError(requestError.message || 'Unable to load elective groups.') } finally { setLoading(false) } }
+    const loadProfile = async () => { setProfileLoading(true); try { const current = await profileApi.getProfile(); setProfile(current); if (current?.id || current?.studentId) { setResultsLoading(true); const id = current.id || current.studentId; const [currentSelections, examResults] = await Promise.all([get(`/api/v1/students/${encodeURIComponent(id)}/electives`).catch(() => []), get(`/api/v1/students/${encodeURIComponent(id)}/profile/exam-results`).catch(() => [])]); setSelections(currentSelections); setResults(examResults) } } catch { setProfile(null); showError('Unable to load student profile.') } finally { setProfileLoading(false); setResultsLoading(false) } }
+    useEffect(() => { loadCore(); loadProfile() }, []); useEffect(() => { setPage(1) }, [search, filters, activeTab])
+    const groupValues = key => [...new Set(groups.map(row => row?.[key]).filter(Boolean))]; const selectedGroup = groups.find(row => String(row.id || row.groupId) === String(selectedGroupId)); const eligibleSubjects = selectedGroup?.subjects || []
+    const pending = report.filter(row => String(approvalStatus(row)).toLowerCase() === 'pending'); const approved = report.filter(row => String(approvalStatus(row)).toLowerCase() === 'approved'); const pageRows = rows => rows.slice((page - 1) * size, page * size)
+    const filteredGroups = useMemo(() => groups.filter(row => { const query = search.toLowerCase(); return (!query || [row.groupCode, row.groupName].some(value => String(value || '').toLowerCase().includes(query))) && (filters.status === 'All' || row.status === filters.status) && (filters.semester === 'All' || row.semester === filters.semester) && (filters.branch === 'All' || row.branch === filters.branch) && (filters.department === 'All' || row.department === filters.department) }), [groups, search, filters])
+    const filteredSelections = useMemo(() => selections.filter(row => { const query = search.toLowerCase(); return !query || [row.studentName, row.studentCode, row.rollNumber].some(value => String(value || '').toLowerCase().includes(query)) }), [selections, search])
+    const filteredReport = useMemo(() => report.filter(row => { const query = search.toLowerCase(); return (!query || [row.studentName, row.studentCode, row.subjectName, row.electiveGroupName, row.groupName].some(value => String(value || '').toLowerCase().includes(query))) && (filters.approvalStatus === 'All' || approvalStatus(row) === filters.approvalStatus) && (filters.allocationStatus === 'All' || allocationStatus(row) === filters.allocationStatus) }), [report, search, filters])
+    const reportGroups = new Set(report.map(row => row.groupCode || row.electiveGroupCode || row.groupName || row.electiveGroupName).filter(Boolean)).size
+    const kpis = { groups: groups.length, active: groups.filter(row => ['active', 'open'].includes(String(row.status).toLowerCase())).length, selections: report.length, pending: pending.length, approved: approved.length, allocated: report.filter(row => String(allocationStatus(row)).toLowerCase() === 'allocated').length }
+    const saveGroup = async event => { event.preventDefault(); setActionLoading(true); try { await post('/api/v1/electives/groups', { ...groupForm, credits: groupForm.credits === '' ? null : Number(groupForm.credits), minimumSelection: Number(groupForm.minimumSelection), maximumSelection: Number(groupForm.maximumSelection) }); showSuccess('Elective group created.'); setGroupModal(false); await loadCore() } catch (requestError) { showError(requestError.message || 'Unable to create elective group.') } finally { setActionLoading(false) } }
+    const addSubjects = async () => { if (!selectedSubjects.length) return showError('Select at least one subject.'); setActionLoading(true); try { await Promise.all(selectedSubjects.map(subject => post(`/api/v1/electives/groups/${encodeURIComponent(subjectModal.id || subjectModal.groupId)}/subjects`, { subjectId: subject.id || subject.subjectId, subjectCode: subject.subjectCode || subject.code }))); showSuccess('Subjects added to the elective group.'); setSubjectModal(null); await loadCore() } catch (requestError) { showError(requestError.message || 'Unable to add subjects.') } finally { setActionLoading(false) } }
+    const submitSelection = async event => { event.preventDefault(); if (!studentId || !selectedGroup || !selectedSubjectId) return showError('Student profile, group, and subject are required.'); const subject = eligibleSubjects.find(row => String(row.id || row.subjectId || row.code) === String(selectedSubjectId)); setActionLoading(true); try { await post(`/api/v1/students/${encodeURIComponent(studentId)}/electives`, { studentId, electiveGroupId: selectedGroup.id || selectedGroup.groupId, subjectId: subject.id || subject.subjectId, subjectCode: subject.subjectCode || subject.code }); showSuccess('Elective selection submitted.'); setSelectedSubjectId(''); setSelections(await get(`/api/v1/students/${encodeURIComponent(studentId)}/electives`)); await loadCore() } catch (requestError) { showError(requestError.message || 'Unable to complete elective selection.') } finally { setActionLoading(false) } }
+    const updateApproval = async (row, status) => { setActionLoading(true); try { await patch(`/api/v1/electives/selections/${encodeURIComponent(rowId(row))}/approval`, { approvalStatus: status, status }); showSuccess(`Selection ${status.toLowerCase()}.`); await loadCore() } catch (requestError) { showError(requestError.message || 'Unable to update approval.') } finally { setActionLoading(false) } }
+    const allocate = async () => { setActionLoading(true); try { await post('/api/v1/electives/allocations', { electiveGroupId: selectedGroupId || undefined }); showSuccess('Electives allocated successfully.'); await loadCore() } catch (requestError) { showError(requestError.message || 'Unable to allocate electives.') } finally { setActionLoading(false) } }
+    const openGroup = () => { setGroupForm(blankGroup()); setGroupModal(true) }
+
+    return <DashboardLayout><main className="em-screen"><header className="em-header"><div><h1>Elective Management</h1><p>Configure groups, review choices, and manage allocation.</p></div><div className="em-header-actions"><ExportMenu rows={filteredGroups} columns={groupExportColumns} title="Elective Group Directory" filename="elective-group-directory" scope="All matching elective groups" loading={loading || Boolean(error)} /><button type="button" className="sm-btn sm-btn--primary" onClick={openGroup}><FiPlus /> Create Group</button></div></header><div className="em-tabs">{tabs.map(tab => <button type="button" key={tab.id} className={`em-tab-btn ${activeTab === tab.id ? 'active' : ''}`} onClick={() => setActiveTab(tab.id)}>{tab.label}{tab.id === 'approval' && pending.length ? ` (${pending.length})` : ''}</button>)}</div><section className="em-kpi-grid">{[[FiLayers, kpis.groups, 'Total Elective Groups'], [FiAward, kpis.active, 'Active Groups'], [FiUsers, kpis.selections, 'Total Selections'], [FiCheckCircle, kpis.pending, 'Pending Approvals'], [FiCheck, kpis.approved, 'Approved Selections'], [FiCheckCircle, kpis.allocated, 'Allocated Students']].map(([Icon, value, label]) => <div className="em-kpi-card" key={label}><div className="sm-kpi-icon sm-kpi-icon--blue"><Icon /></div><div className="em-kpi-content"><small>{label}</small><strong>{value}</strong></div></div>)}</section>{error && <div className="em-alert" role="alert"><FiInfo /> {error}</div>}
+        {activeTab === 'groups' && <section className="sm-card"><Toolbar search={search} setSearch={setSearch} filters={filters} setFilters={setFilters} options={['status', 'semester', 'branch', 'department']} values={groupValues} placeholder="Search group code or name..." /><div className="sm-table-wrap">{loading ? <div className="em-loading">Loading elective groups...</div> : !filteredGroups.length ? <EmptyState title="No elective groups found" description="Create a group or adjust your filters." action="Create Group" onAction={openGroup} /> : <table className="em-table"><thead><tr><th>Group</th><th>Department / Branch</th><th>Academic Year</th><th>Semester</th><th>Type</th><th>Credits</th><th>Selection Window</th><th>Status</th><th>Actions</th></tr></thead><tbody>{pageRows(filteredGroups).map(group => <tr key={group.id || group.groupId}><td><strong>{text(group.groupCode)}</strong><span className="em-cell-subtitle">{text(group.groupName)}</span></td><td>{text(group.department)}<span className="em-cell-subtitle">{text(group.branch)}</span></td><td>{text(group.academicYear)}</td><td>{text(group.semester)}</td><td>{text(group.electiveType || group.type)}</td><td>{text(group.credits, '-')}</td><td>{text(group.selectionStartDate, '-')}<span className="em-cell-subtitle">to {text(group.selectionEndDate, '-')}</span></td><td><StatusBadge value={text(group.status)} /></td><td><button type="button" className="sm-btn sm-btn--secondary em-compact-btn" onClick={() => { setSubjectModal(group); setSelectedSubjects([]) }}><FiLayers /> Manage Subjects</button></td></tr>)}</tbody></table>}</div><Pagination page={page} pageCount={Math.ceil(filteredGroups.length / size)} total={filteredGroups.length} size={size} onChange={setPage} /></section>}
+        {activeTab === 'selection' && <><StudentCard profile={profile} loading={profileLoading} /><section className="em-workflow-grid"><div className="sm-card"><div className="sm-card-header"><h2>Student Elective Selection</h2></div>{profileLoading ? <div className="em-loading">Loading student profile...</div> : !studentId ? <EmptyState title="Student profile unavailable" description="A student profile is required for elective selection." /> : <form className="em-form-body" onSubmit={submitSelection}><div className="em-readonly-student"><strong>{text(profile.fullName || profile.studentName)}</strong><span>{text(profile.studentCode || profile.identifier || studentId)} · {text(profile.semester, 'Semester information unavailable')}</span></div><label className="sm-field">Elective Group<select value={selectedGroupId} onChange={event => { setSelectedGroupId(event.target.value); setSelectedSubjectId('') }} required><option value="">Select group</option>{groups.filter(group => ['open', 'active'].includes(String(group.status).toLowerCase())).map(group => <option key={group.id || group.groupId} value={group.id || group.groupId}>{group.groupCode} - {group.groupName}</option>)}</select></label><label className="sm-field">Available Subject<select value={selectedSubjectId} onChange={event => setSelectedSubjectId(event.target.value)} disabled={!selectedGroup} required><option value="">Select subject</option>{eligibleSubjects.map(subject => <option key={subject.id || subject.subjectId || subject.code} value={subject.id || subject.subjectId || subject.code}>{subject.subjectCode || subject.code} - {subject.subjectName || subject.name}</option>)}</select></label><button type="submit" className="sm-btn sm-btn--primary" disabled={actionLoading}><FiCheck /> Submit Selection</button></form>}</div><div className="sm-card"><div className="sm-card-header"><h2>Existing Selections</h2></div>{loading ? <div className="em-loading">Loading elective selections...</div> : <><SelectionTable rows={pageRows(filteredSelections)} search={search} /><Pagination page={page} pageCount={Math.ceil(filteredSelections.length / size)} total={filteredSelections.length} size={size} onChange={setPage} /></>}</div></section><section className="sm-card em-results-card"><div className="sm-card-header"><h2>Academic Results</h2></div>{resultsLoading ? <div className="em-loading">Loading examination results...</div> : <ResultsTable rows={results} page={resultPage} size={size} setPage={setResultPage} />}</section></>}
+        {activeTab === 'approval' && <section className="sm-card"><div className="sm-card-header"><h2>Faculty Approval</h2><span className="em-muted">{pending.length} pending</span></div><Toolbar search={search} setSearch={setSearch} filters={filters} setFilters={setFilters} options={['approvalStatus']} values={() => ['Pending', 'Approved', 'Rejected']} placeholder="Search student..." /><SelectionTable rows={pageRows(pending)} approval onApproval={updateApproval} search={search} /><Pagination page={page} pageCount={Math.ceil(pending.length / size)} total={pending.length} size={size} onChange={setPage} /></section>}
+        {activeTab === 'allocation' && <section className="sm-card"><div className="sm-card-header"><div><h2>Elective Allocation</h2><p className="em-muted">Review approved selections before running allocation.</p></div><button type="button" className="sm-btn sm-btn--primary" onClick={allocate} disabled={actionLoading || !approved.length}><FiCheck /> Allocate Electives</button></div><SelectionTable rows={approved} emptyTitle="No approved selections found" /></section>}
+        {activeTab === 'report' && <section className="sm-card em-report-card"><div className="em-report-heading"><div><span className="em-report-eyebrow">Allocation overview</span><h2>Allocation Report</h2><p>Track student choices, approvals, and final elective allocations.</p></div><ExportMenu rows={filteredReport} columns={reportExportColumns} title="Elective Allocation Report" filename="elective-allocation-report" scope="All matching allocation records" loading={loading || Boolean(error)} /></div><div className="em-report-summary"><span><small>Total records</small><strong>{report.length}</strong><em>All selections</em></span><span><small>Allocated</small><strong>{kpis.allocated}</strong><em>Finalized choices</em></span><span><small>Pending review</small><strong>{kpis.pending}</strong><em>Awaiting approval</em></span><span><small>Elective groups</small><strong>{reportGroups}</strong><em>Represented in report</em></span></div><Toolbar search={search} setSearch={setSearch} filters={filters} setFilters={setFilters} options={['approvalStatus', 'allocationStatus']} values={() => ['Pending', 'Approved', 'Rejected', 'Allocated']} placeholder="Search student, subject, or group..." /><SelectionTable rows={pageRows(filteredReport)} search={search} emptyTitle="No allocation records found" className="em-report-table" /><Pagination page={page} pageCount={Math.ceil(filteredReport.length / size)} total={filteredReport.length} size={size} onChange={setPage} /></section>}
+        {groupModal && <div className="sm-modal-backdrop" onClick={() => setGroupModal(false)}><div className="sm-modal" onClick={event => event.stopPropagation()}><form onSubmit={saveGroup}><div className="sm-modal-header"><h2>Create Elective Group</h2><button type="button" className="sm-icon-btn" onClick={() => setGroupModal(false)} aria-label="Close"><FiX /></button></div><div className="sm-modal-body"><div className="sm-form-grid-2">{[['groupCode', 'Group Code'], ['groupName', 'Group Name'], ['department', 'Department'], ['branch', 'Branch'], ['academicYear', 'Academic Year'], ['credits', 'Credits'], ['selectionStartDate', 'Selection Start Date'], ['selectionEndDate', 'Selection End Date']].map(([key, label]) => <label className="sm-field" key={key}><span>{label}{!['credits', 'department', 'branch'].includes(key) && <b className="em-required-star">*</b>}</span><input type={key.includes('Date') ? 'date' : key === 'credits' ? 'number' : 'text'} value={groupForm[key]} onChange={event => setGroupForm({ ...groupForm, [key]: event.target.value })} required={!['credits', 'department', 'branch'].includes(key)} /></label>)}<label className="sm-field"><span>Semester</span><input value={groupForm.semester} onChange={event => setGroupForm({ ...groupForm, semester: event.target.value })} /></label><label className="sm-field"><span>Elective Type</span><input value={groupForm.electiveType} onChange={event => setGroupForm({ ...groupForm, electiveType: event.target.value })} /></label><label className="sm-field"><span>Minimum Selection</span><input type="number" min="1" value={groupForm.minimumSelection} onChange={event => setGroupForm({ ...groupForm, minimumSelection: event.target.value })} /></label><label className="sm-field"><span>Maximum Selection</span><input type="number" min="1" value={groupForm.maximumSelection} onChange={event => setGroupForm({ ...groupForm, maximumSelection: event.target.value })} /></label></div></div><div className="sm-modal-footer"><button type="button" className="sm-btn sm-btn--secondary" onClick={() => setGroupModal(false)}>Cancel</button><button type="submit" className="sm-btn sm-btn--primary" disabled={actionLoading}>{actionLoading ? 'Creating...' : 'Create Group'}</button></div></form></div></div>}
+        {subjectModal && <div className="sm-modal-backdrop" onClick={() => setSubjectModal(null)}><div className="sm-modal" onClick={event => event.stopPropagation()}><div className="sm-modal-header"><h2>Manage Subjects: {subjectModal.groupCode}</h2><button type="button" className="sm-icon-btn" onClick={() => setSubjectModal(null)} aria-label="Close"><FiX /></button></div><div className="sm-modal-body"><p className="em-muted">Select subjects from the existing academic data.</p><div className="em-subject-picker">{subjects.length ? subjects.map(subject => { const subjectId = subject.id || subject.subjectId || subject.subjectCode; const selected = selectedSubjects.some(row => String(row.id || row.subjectId || row.subjectCode) === String(subjectId)); return <label key={subjectId} className={`em-subject-option ${selected ? 'selected' : ''}`}><input type="checkbox" checked={selected} onChange={() => setSelectedSubjects(current => selected ? current.filter(row => String(row.id || row.subjectId || row.subjectCode) !== String(subjectId)) : [...current, subject])} /><span><strong>{text(subject.subjectCode || subject.code)}</strong> {text(subject.subjectName || subject.name)}<small>{text(subject.credits, '-')} credits · {text(subject.department)} · {text(subject.semester)}</small></span></label> }) : <EmptyState title="No elective subjects available" description="No subjects were returned by the existing academic data source." />}</div></div><div className="sm-modal-footer"><button type="button" className="sm-btn sm-btn--secondary" onClick={() => setSubjectModal(null)}>Cancel</button><button type="button" className="sm-btn sm-btn--primary" onClick={addSubjects} disabled={actionLoading}>Add Selected Subjects ({selectedSubjects.length})</button></div></div></div>}
+    </main></DashboardLayout>
+}
+
+
+
