@@ -133,7 +133,8 @@ export default function App() {
               <Route path="/faculty/payroll" element={<Payroll />} />
 
               {/* Faculty / Operations backed modules */}
-              <Route path="/attendance/*" element={<Attendance />} />
+              {/* Retain the former URL as a safe bookmark redirect. */}
+              <Route path="/attendance/*" element={<Navigate to="/student-management/attendance" replace />} />
               <Route path="/marks/*" element={<Marks />} />
               <Route path="/results/*" element={<Results />} />
 
@@ -172,6 +173,7 @@ export default function App() {
               <Route path="/student-management/admissions/:id" element={<StudentAdmission />} />
               <Route path="/student-management/profiles" element={<StudentProfile />} />
               <Route path="/student-management/profiles/:id" element={<StudentProfile />} />
+              <Route path="/student-management/attendance/*" element={<Attendance />} />
               <Route path="/student-management/promotions" element={<StudentPromotion />} />
               <Route path="/fees/*" element={<Fees />} />
             </Route>
