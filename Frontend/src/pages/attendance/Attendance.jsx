@@ -192,7 +192,6 @@ export default function Attendance() {
   }, [activeFaculty, facultyAssignments, selectedTakeBranch, takeScope.branchId, takeScope.courseId])
 
   const filterBranches = useMemo(() => getBranchesForCourse(filterCourseId, true), [getBranchesForCourse, filterCourseId])
-  const shortageBranches = useMemo(() => getBranchesForCourse(shortageCourseId, true), [getBranchesForCourse, shortageCourseId])
 
   const takeSections = useMemo(() => {
     return getSectionsForScope({
@@ -369,26 +368,30 @@ export default function Attendance() {
     const branchId = profile.academic?.branchId || profile.branchId
     const branchName = String(profile.academic?.branch || profile.branch || '').trim().toLowerCase()
 
-    const selectedCourseObj = activeCourses.find(c => String(c.id) === String(shortageCourseId))
-    const selectedBranchObj = shortageBranches.find(b => String(b.id) === String(shortageBranchId))
+    const selectedCourseObj = activeCourses.find(c => String(c.id) === String(filterCourseId))
+    const selectedBranchObj = filterBranches.find(b => String(b.id) === String(filterBranchId))
 
-    const courseMatches = !shortageCourseId ||
-      String(courseId) === String(shortageCourseId) ||
+    const courseMatches = !filterCourseId ||
+      String(courseId) === String(filterCourseId) ||
       (selectedCourseObj && courseName === String(selectedCourseObj.name || '').trim().toLowerCase())
 
-    const branchMatches = !shortageBranchId ||
-      String(branchId) === String(shortageBranchId) ||
+    const branchMatches = !filterBranchId ||
+      String(branchId) === String(filterBranchId) ||
       (selectedBranchObj && branchName === String(selectedBranchObj.name || selectedBranchObj.branchName || '').trim().toLowerCase())
+
+    const name = String(profile.personal?.fullName || profile.name || '').toLowerCase()
+    const rollNumber = String(profile.academic?.rollNumber || profile.rollNumber || '').toLowerCase()
+    const queryMatches = !filterQuery.trim() ||
+      name.includes(filterQuery.trim().toLowerCase()) ||
+      rollNumber.includes(filterQuery.trim().toLowerCase())
 
     const matchingReport = studentAttendance.find(row => String(row.id) === String(profile.studentId || profile.id))
     const rate = matchingReport?.rate ?? Number(profile.attendanceRate)
-    return courseMatches && branchMatches && Number.isFinite(rate) && rate < 75
+    return courseMatches && branchMatches && queryMatches && Number.isFinite(rate) && rate < 75
   }).map(profile => {
     const report = studentAttendance.find(row => String(row.id) === String(profile.studentId || profile.id))
     return { ...profile, attendanceRate: report?.rate ?? Number(profile.attendanceRate), attendanceReport: report }
-  }), [allProfiles, shortageCourseId, shortageBranchId, shortageBranches, activeCourses, studentAttendance])
-
-  const hasShortageFilters = Boolean(shortageCourseId || shortageBranchId)
+  }), [allProfiles, filterCourseId, filterBranchId, filterBranches, filterQuery, activeCourses, studentAttendance])
 
   return (
     <DashboardLayout>
@@ -873,90 +876,34 @@ export default function Attendance() {
               <div className="erp-card-header">
                 <div>
                   <h2 className="erp-card-title">Attendance Shortage List (&lt; 75% Threshold)</h2>
-                  <p className="erp-card-subtitle">{shortageStudents.length} students require attendance intervention. Filter by course or branch to notify an affected student.</p>
+                  <p className="erp-card-subtitle">{shortageStudents.length} students require attendance intervention. Filter using the toolbar above to notify an affected student.</p>
                 </div>
                 <div className="attendance-shortage-actions">
-                  <button
-                    type="button"
-                    className={`attendance-filter-toggle${hasShortageFilters ? ' attendance-filter-toggle--active' : ''}`}
-                    aria-expanded={showShortageFilters}
-                    onClick={() => setShowShortageFilters(value => !value)}
-                  >
-                    <FiFilter aria-hidden="true" /> Filters
-                    {hasShortageFilters && <span className="attendance-filter-count" aria-label="Filters applied">{[shortageCourseId, shortageBranchId].filter(Boolean).length}</span>}
-                    {showShortageFilters ? <FiChevronUp aria-hidden="true" /> : <FiChevronDown aria-hidden="true" />}
-                  </button>
                   <ExportMenu
-                  rows={shortageStudents.map(p => ({
-                    studentId: p.studentId || p.id,
-                    name: p.personal?.fullName || p.name,
-                    rollNumber: p.academic?.rollNumber || p.rollNumber,
-                    course: p.academic?.course || 'B.Tech',
-                    branch: p.academic?.branch || 'CSE',
-                    semester: p.academic?.semester || 'Semester 1',
-                    attendancePercentage: `${p.attendanceRate || 68}%`,
-                    status: 'Shortage (Exam Ineligible)',
-                  }))}
-                  columns={[
-                    { key: 'rollNumber', label: 'Roll No' },
-                    { key: 'name', label: 'Student Name' },
-                    { key: 'course', label: 'Course' },
-                    { key: 'branch', label: 'Branch' },
-                    { key: 'semester', label: 'Semester' },
-                    { key: 'attendancePercentage', label: 'Attendance' },
-                    { key: 'status', label: 'Eligibility Status' },
-                  ]}
-                  title="Attendance Shortage"
-                  filename="attendance-shortage-list"
-                />
+                    rows={shortageStudents.map(p => ({
+                      studentId: p.studentId || p.id,
+                      name: p.personal?.fullName || p.name,
+                      rollNumber: p.academic?.rollNumber || p.rollNumber,
+                      course: p.academic?.course || 'B.Tech',
+                      branch: p.academic?.branch || 'CSE',
+                      semester: p.academic?.semester || 'Semester 1',
+                      attendancePercentage: `${p.attendanceRate || 68}%`,
+                      status: 'Shortage (Exam Ineligible)',
+                    }))}
+                    columns={[
+                      { key: 'rollNumber', label: 'Roll No' },
+                      { key: 'name', label: 'Student Name' },
+                      { key: 'course', label: 'Course' },
+                      { key: 'branch', label: 'Branch' },
+                      { key: 'semester', label: 'Semester' },
+                      { key: 'attendancePercentage', label: 'Attendance' },
+                      { key: 'status', label: 'Eligibility Status' },
+                    ]}
+                    title="Attendance Shortage"
+                    filename="attendance-shortage-list"
+                  />
                 </div>
               </div>
-
-              {showShortageFilters && (
-                <div className="attendance-register-filters" style={{ margin: '0 22px 16px', borderTop: 'none', paddingTop: '14px' }}>
-                  <div className="erp-form-group">
-                    <label>Course</label>
-                    <select
-                      className="erp-select"
-                      value={shortageCourseId}
-                      onChange={event => {
-                        setShortageCourseId(event.target.value)
-                        setShortageBranchId('')
-                      }}
-                    >
-                      <option value="">All Courses</option>
-                      {activeCourses.map(course => (
-                        <option key={course.id} value={course.id}>{course.name}</option>
-                      ))}
-                    </select>
-                  </div>
-                  <div className="erp-form-group">
-                    <label>Branch</label>
-                    <select
-                      className="erp-select"
-                      value={shortageBranchId}
-                      onChange={event => setShortageBranchId(event.target.value)}
-                    >
-                      <option value="">All Branches</option>
-                      {shortageBranches.map(branch => (
-                        <option key={branch.id} value={branch.id}>{branch.name || branch.branchName}</option>
-                      ))}
-                    </select>
-                  </div>
-                  {hasShortageFilters && (
-                    <button
-                      type="button"
-                      className="attendance-clear-filters"
-                      onClick={() => {
-                        setShortageCourseId('')
-                        setShortageBranchId('')
-                      }}
-                    >
-                      Clear Filters
-                    </button>
-                  )}
-                </div>
-              )}
 
               <div className="erp-table-responsive">
                 <table className="erp-table">
