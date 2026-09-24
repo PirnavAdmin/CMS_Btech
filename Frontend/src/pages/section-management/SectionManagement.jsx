@@ -15,6 +15,7 @@ import { showDeactivationBlocked } from '../../components/DeactivationBlockedDia
 import { academicYearApi, branchApi, courseApi, sectionAllocationApi, sectionApi, sectionAssignmentApi, studentProfilesApi, studentAdmissionApi } from '../../api/apiEndpoints'
 import { getSemesters } from '../../auth/collegeApi'
 import { getActiveAcademicYears, normalizeAcademicYear } from '../../utils/academicYearUtils'
+import { matchesSectionStudent, sectionStudentProfiles } from '../../utils/sectionStudents'
 import { branchTypeLabel } from '../../utils/semesterUtils'
 import eventBus, { ERP_EVENTS } from '../../services/eventBus'
 import facultyService, { normalizeFaculty } from '../../services/facultyService'
@@ -387,9 +388,9 @@ function AssignStudents({ section, faculty = [], assignments, allAssignments = [
     setSelectedIds([])
     Promise.allSettled([studentProfilesApi.getAll(), studentAdmissionApi.getAll()])
       .then(([profilesResult, admissionsResult]) => {
-        if (admissionsResult.status !== 'fulfilled') throw admissionsResult.reason
         const profiles = profilesResult.status === 'fulfilled' ? profilesResult.value : []
-        const admissions = admissionsResult.value
+        const admissions = admissionsResult.status === 'fulfilled' ? admissionsResult.value : []
+        if (profilesResult.status !== 'fulfilled' && admissionsResult.status !== 'fulfilled') throw profilesResult.reason || admissionsResult.reason || new Error('Unable to load student profiles.')
         if (active) setStudents(sectionStudentProfiles(profiles, admissions).filter(student => matchesSectionStudent(student, section)))
       })
       .catch((reason) => active && setError(apiError(reason, 'Unable to load admitted students.')))

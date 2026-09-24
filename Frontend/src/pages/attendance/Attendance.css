@@ -179,6 +179,8 @@
 .attendance-page .erp-form-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; padding: 20px 22px; }
 .attendance-page .erp-form-group { display: grid; gap: 7px; min-width: 0; }
 .attendance-page .erp-form-group label { color: var(--attendance-ink); font-size: .75rem; font-weight: 750; }
+.attendance-page .attendance-required-mark { color: #d92d20; }
+.attendance-page .attendance-academic-year { color: var(--attendance-ink); background: var(--surface, #fff); cursor: default; }
 .attendance-page .attendance-field-help { color: var(--attendance-muted); font-size: .72rem; line-height: 1.35; }
 .attendance-page .erp-input, .attendance-page .erp-select { width: 100%; height: 40px; min-width: 0; padding: 0 11px; border: 1px solid var(--attendance-line); border-radius: 8px; outline: none; color: var(--attendance-ink); background: var(--surface, #fff); font: inherit; font-size: .84rem; }
 .attendance-page .erp-input:focus, .attendance-page .erp-select:focus { border-color: var(--attendance-brand); box-shadow: 0 0 0 3px color-mix(in srgb, var(--attendance-brand) 16%, transparent); }

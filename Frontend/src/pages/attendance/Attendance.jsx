@@ -54,7 +54,7 @@ const ATTENDANCE_COLUMNS = [
 export default function Attendance() {
   const { pathname } = useLocation()
   const {
-    activeAcademicYears,
+    currentAcademicYear,
     activeDepartments,
     activeCourses,
     getBranchesForCourse,
@@ -97,6 +97,13 @@ export default function Attendance() {
     faculty: '',
     facultyId: '',
   })
+  const currentAcademicYearId = currentAcademicYear?.id ?? currentAcademicYear?.academicYearId ?? ''
+  useEffect(() => {
+    if (!takeModalOpen || !currentAcademicYearId) return
+    setTakeScope(current => current.academicYearId === String(currentAcademicYearId)
+      ? current
+      : { ...current, academicYearId: String(currentAcademicYearId) })
+  }, [takeModalOpen, currentAcademicYearId])
   const [markingStudents, setMarkingStudents] = useState([])
   const [loadingStudents, setLoadingStudents] = useState(false)
   const [savingSession, setSavingSession] = useState(false)
@@ -263,7 +270,7 @@ export default function Attendance() {
       const selectedBranch = takeBranches.find(b => String(b.id) === String(takeScope.branchId))
       const selectedSemester = takeSemesters.find(s => String(s.id) === String(takeScope.semesterId))
       const selectedSection = takeSections.find(sec => String(sec.id) === String(takeScope.sectionId))
-      const selectedYear = activeAcademicYears.find(y => String(y.id) === String(takeScope.academicYearId))
+      const selectedYear = currentAcademicYear
       const subjectAssignment = facultyAssignments.find(item => {
         const assignedFacultyId = item.facultyId ?? item.employeeProfileId ?? item.faculty?.facultyId ?? item.faculty?.id
         const assignedSubject = item.subjectName ?? item.subject?.subjectName ?? item.subject?.name ?? item.subject
@@ -646,21 +653,18 @@ export default function Attendance() {
               {/* Scope Selection Form */}
               <div className="erp-form-grid">
                 <div className="erp-form-group">
-                  <label>Academic Year *</label>
-                  <select
-                    className="erp-select"
-                    value={takeScope.academicYearId}
-                    onChange={(e) => setTakeScope(prev => ({ ...prev, academicYearId: e.target.value }))}
-                  >
-                    <option value="">Select Academic Year</option>
-                    {activeAcademicYears.map(y => (
-                      <option key={y.id} value={y.id}>{y.name}</option>
-                    ))}
-                  </select>
+                  <label>Academic Year <span className="attendance-required-mark">*</span></label>
+                  <input
+                    type="text"
+                    className="erp-input attendance-academic-year"
+                    value={currentAcademicYear?.name || currentAcademicYear?.academicYearName || ''}
+                    placeholder="No active academic year"
+                    readOnly
+                  />
                 </div>
 
                 <div className="erp-form-group">
-                  <label>Course *</label>
+                  <label>Course <span className="attendance-required-mark">*</span></label>
                   <select
                     className="erp-select"
                     value={takeScope.courseId}
@@ -685,7 +689,7 @@ export default function Attendance() {
                 </div>
 
                 <div className="erp-form-group">
-                  <label>Branch *</label>
+                  <label>Branch <span className="attendance-required-mark">*</span></label>
                   <select
                     className="erp-select"
                     value={takeScope.branchId}
@@ -711,7 +715,7 @@ export default function Attendance() {
                 </div>
 
                 <div className="erp-form-group">
-                  <label>Semester *</label>
+                  <label>Semester <span className="attendance-required-mark">*</span></label>
                   <select
                     className="erp-select"
                     value={takeScope.semesterId}
@@ -740,7 +744,7 @@ export default function Attendance() {
                 </div>
 
                 <div className="erp-form-group">
-                  <label>Session Date *</label>
+                  <label>Session Date <span className="attendance-required-mark">*</span></label>
                   <input
                     type="date"
                     className="erp-input"
@@ -750,7 +754,7 @@ export default function Attendance() {
                 </div>
 
                 <div className="erp-form-group">
-                  <label>Subject / Course Module *</label>
+                  <label>Subject / Course Module <span className="attendance-required-mark">*</span></label>
                   <input
                     type="text"
                     className="erp-input"
@@ -761,7 +765,7 @@ export default function Attendance() {
                 </div>
 
                 <div className="erp-form-group">
-                  <label>Faculty In-Charge *</label>
+                  <label>Faculty In-Charge <span className="attendance-required-mark">*</span></label>
                   <select
                     className="erp-select"
                     value={takeScope.facultyId || ''}
