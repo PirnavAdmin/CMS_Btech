@@ -264,6 +264,13 @@ export default function Attendance() {
       const selectedSemester = takeSemesters.find(s => String(s.id) === String(takeScope.semesterId))
       const selectedSection = takeSections.find(sec => String(sec.id) === String(takeScope.sectionId))
       const selectedYear = activeAcademicYears.find(y => String(y.id) === String(takeScope.academicYearId))
+      const subjectAssignment = facultyAssignments.find(item => {
+        const assignedFacultyId = item.facultyId ?? item.employeeProfileId ?? item.faculty?.facultyId ?? item.faculty?.id
+        const assignedSubject = item.subjectName ?? item.subject?.subjectName ?? item.subject?.name ?? item.subject
+        return String(assignedFacultyId ?? '') === String(takeScope.facultyId) && String(assignedSubject ?? '').trim().toLowerCase() === takeScope.subject.trim().toLowerCase()
+      })
+      const subjectId = subjectAssignment?.subjectId ?? subjectAssignment?.subject?.subjectId ?? subjectAssignment?.subject?.id
+      if (!subjectId) throw new Error('The selected subject is not linked to a subject ID. Choose a subject assigned to this faculty member, or ask the backend team to support subjectId lookup.')
 
       await attendanceService.recordAttendance({
         academicYearId: takeScope.academicYearId,
@@ -271,6 +278,7 @@ export default function Attendance() {
         branchId: takeScope.branchId,
         semesterId: takeScope.semesterId,
         sectionId: takeScope.sectionId,
+        subjectId,
         academicYear: selectedYear?.name || '',
         course: selectedCourse?.name || '',
         courseCode: selectedCourse?.courseCode ?? selectedCourse?.code ?? selectedCourse?.shortName ?? '',
