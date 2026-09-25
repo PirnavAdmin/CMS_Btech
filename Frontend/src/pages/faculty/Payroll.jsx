@@ -10,6 +10,7 @@ import facultyService from '../../services/facultyService'
 import { normalizePayroll } from '../../services/facultyContracts'
 import { newestFirst, rememberCreated } from '../../utils/newestFirst'
 import eventBus, { ERP_EVENTS } from '../../services/eventBus'
+import StatusBadge from '../../components/StatusBadge'
 import './Payroll.css'
 
 const LOCAL_PAYROLL_STATUS_KEY = 'pirnav-faculty-local-payroll-status-v1'
@@ -955,7 +956,7 @@ export default function Payroll() {
       <td>{money(row.grossSalary)}</td>
       <td>{money(row.deductions)}</td>
       <td>{money(row.netSalary)}</td>
-      {tab !== 'Salary Records' && <td><span className={`fp-status ${statusClass(row.status)}`}>{row.status}</span></td>}
+      {tab !== 'Salary Records' && <td><StatusBadge value={row.status} /></td>}
       <td>
   <div className="fp-actions">
     {tab !== 'Payslips' && (
@@ -1105,12 +1106,12 @@ export default function Payroll() {
   )
 })()}{notice && <div className="flm-toast">{notice}<button onClick={() => setNotice('')}><FiX /></button></div>}
 {payslipItem && <SalarySlipModal item={payslipItem} month={month} onClose={() => setPayslipItem(null)} />}
-{editingSalary && <SalaryConfigModal item={editingSalary} facultyList={facultyList} onClose={() => setEditingSalary(null)} onSave={handleSaveSalaryStructure} />}
+{editingSalary && <SalaryConfigModal item={editingSalary} facultyList={facultyList} activeCategory={filters.type || 'Teaching'} onClose={() => setEditingSalary(null)} onSave={handleSaveSalaryStructure} />}
 {hold && selected && <div className="fp-overlay"><form className="fp-dialog fp-hold" onSubmit={placeHold}><h2>Place Payroll on Hold</h2><p>{selected.fullName} · {monthLabel(month)}</p><label><span>Reason <b className="required-mark">*</b></span><textarea value={holdReason} onChange={event => setHoldReason(event.target.value)} required /></label><footer><button type="button" onClick={() => setHold(false)}>Cancel</button><button className="primary" type="submit" disabled={busy}>{busy ? 'Saving...' : 'Place on Hold'}</button></footer></form></div>}</main></DashboardLayout>
 }
 
 
-function SalaryConfigModal({ item, facultyList = [], onClose, onSave }) {
+function SalaryConfigModal({ item, facultyList = [], activeCategory = 'Teaching', onClose, onSave }) {
   const isNew = Boolean(item?.isNew)
   const [selectedFacultyId, setSelectedFacultyId] = useState(isNew ? '' : (item?.facultyId || item?.id || ''))
   const [activeFaculty, setActiveFaculty] = useState(isNew ? null : item)
@@ -1121,6 +1122,33 @@ function SalaryConfigModal({ item, facultyList = [], onClose, onSave }) {
   const [allowances, setAllowances] = useState(isNew ? '' : (item?.allowances ?? ''))
   const [pf, setPf] = useState(isNew ? '' : (item?.pf ?? ''))
   const [tax, setTax] = useState(isNew ? '' : (item?.tax ?? ''))
+
+  const getMemberCategory = (f) => {
+    const cat = String(f?.employeeCategory || f?.type || f?.category || '').trim().toLowerCase()
+    if (cat === 'non-teaching' || cat === 'nonteaching' || cat === 'staff') return 'Non-Teaching'
+    const desig = String(f?.designation || '').toLowerCase()
+    if (desig.includes('lab') || (desig.includes('assistant') && (desig.includes('admin') || desig.includes('librarian') || desig.includes('clerk')))) {
+      return 'Non-Teaching'
+    }
+    return 'Teaching'
+  }
+
+  const filteredFacultyList = useMemo(() => {
+    return facultyList.filter(f => getMemberCategory(f) === activeCategory)
+  }, [facultyList, activeCategory])
+
+  const employeeOptions = useMemo(() => {
+    return filteredFacultyList.map(f => {
+      const code = f.employeeId || (f.id ? `EMP${String(f.id).padStart(6, '0')}` : '')
+      const name = f.fullName || f.name || 'Unknown'
+      const dept = f.department || 'General'
+      const desig = f.designation || 'Faculty'
+      return {
+        value: String(f.id),
+        label: `${code} — ${name} (${dept}) — ${desig}`
+      }
+    })
+  }, [filteredFacultyList])
 
   const handleSelectFaculty = (facId) => {
     setSelectedFacultyId(facId)
@@ -1136,12 +1164,13 @@ function SalaryConfigModal({ item, facultyList = [], onClose, onSave }) {
         setPf(saved.pf ?? '')
         setTax(saved.tax ?? '')
       } else {
-        setBasic('')
-        setHra('')
-        setDa('')
-        setAllowances('')
-        setPf('')
-        setTax('')
+        const defaults = calculateDefaultSalaryBreakdown(found.designation, found.employeeCategory || activeCategory)
+        setBasic(defaults.basicSalary)
+        setHra(defaults.hra)
+        setDa(defaults.da)
+        setAllowances(defaults.allowances)
+        setPf(defaults.pf)
+        setTax(defaults.tax)
       }
     } else {
       setBasic('')
@@ -1201,9 +1230,9 @@ function SalaryConfigModal({ item, facultyList = [], onClose, onSave }) {
 
   const displayName = activeFaculty?.fullName || activeFaculty?.name || item?.fullName || 'New Employee'
   const displayEmpId = activeFaculty?.employeeId || (activeFaculty?.id ? `EMP${String(activeFaculty.id).padStart(6, '0')}` : '') || item?.employeeId || ''
-  const displayDesignation = activeFaculty?.designation || item?.designation || 'Faculty'
+  const displayDesignation = activeFaculty?.designation || item?.designation || (activeCategory === 'Non-Teaching' ? 'Staff' : 'Faculty')
   const displayDept = activeFaculty?.department || item?.department || 'General'
-  const displayType = activeFaculty?.employeeCategory || activeFaculty?.type || item?.type || 'Teaching'
+  const displayType = activeFaculty?.employeeCategory || activeFaculty?.type || item?.type || activeCategory
 
   return (
     <div className="fp-overlay">
@@ -1218,24 +1247,20 @@ function SalaryConfigModal({ item, facultyList = [], onClose, onSave }) {
         <form onSubmit={handleSubmit} style={{ marginTop: '16px' }}>
           {isNew && (
             <div style={{ marginBottom: '16px' }}>
-              <label className="fp-field">
-                <span>Select Employee <b className="required-mark">*</b></span>
-                <select
+              <div className="fp-field" style={{ display: 'grid', gap: '6px' }}>
+                <span style={{ fontSize: '13px', fontWeight: '700', color: 'var(--text-secondary)' }}>
+                  Select {activeCategory === 'Non-Teaching' ? 'Non-Teaching Staff' : 'Teaching Faculty'} <b className="required-mark" style={{ color: '#ef4444' }}>*</b>
+                </span>
+                <SearchableSelect
+                  label="Select Employee"
                   value={selectedFacultyId}
-                  onChange={e => handleSelectFaculty(e.target.value)}
+                  options={employeeOptions}
+                  placeholder={`-- Choose ${activeCategory === 'Non-Teaching' ? 'Staff Member' : 'Teaching Faculty'} --`}
+                  searchPlaceholder="Search by name, EMP ID, or department..."
+                  onChange={val => handleSelectFaculty(val)}
                   required
-                >
-                  <option value="">-- Choose Employee / Faculty --</option>
-                  {facultyList.map(f => {
-                    const code = f.employeeId || (f.id ? `EMP${String(f.id).padStart(6, '0')}` : '')
-                    return (
-                      <option key={f.id} value={f.id}>
-                        {code} — {f.fullName || f.name} ({f.department || 'General'}) — {f.designation || 'Faculty'}
-                      </option>
-                    )
-                  })}
-                </select>
-              </label>
+                />
+              </div>
             </div>
           )}
 

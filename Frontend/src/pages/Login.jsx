@@ -12,6 +12,18 @@ import { FiArrowLeft, FiBell, FiBookOpen, FiCalendar, FiFileText } from 'react-i
 import campusHero from '../assets/college-campus-hero.png'
 import './Login.css'
 
+const validateContact = (input) => {
+  const value = String(input || '').trim()
+  if (!value) return 'Please enter your email or mobile number.'
+  if (/^\d+$/.test(value)) {
+    if (value.length !== 10) return 'Mobile number must be exactly 10 digits.'
+    return ''
+  }
+  const emailRegex = /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z]{2,})+$/
+  if (!emailRegex.test(value)) return 'Please enter a valid email address or 10-digit mobile number.'
+  return ''
+}
+
 export default function Login() {
   const navigate = useNavigate()
   const [showPassword, setShowPassword] = useState(false)
@@ -56,26 +68,6 @@ export default function Login() {
     }
     return () => clearInterval(interval)
   }, [timer])
-
-  const validateContact = (input) => {
-    const value = input.trim()
-    if (!value) {
-      return 'Please enter your email or mobile number.'
-    }
-    if (/^\d+$/.test(value)) {
-      if (value.length !== 10) {
-        return 'Mobile number must be exactly 10 digits.'
-      }
-      return ''
-    }
-
-    const emailRegex = /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z]{2,})+$/
-    if (!emailRegex.test(value)) {
-      return 'Please enter a valid email address or 10-digit mobile number.'
-    }
-
-    return ''
-  }
 
   const updateValue = ({ target: { name, value } }) => {
     setValues((current) => ({ ...current, [name]: value }))

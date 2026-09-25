@@ -21,14 +21,16 @@
   flex-shrink: 0;
 }
 
-/* Active / Success / Admitted / Working */
+/* Active / Success / Admitted / Working / Paid */
 .erp-status-badge--active,
+.erp-status-badge--paid,
 .erp-status-badge--working {
   background: #dcfce7;
   color: #15803d;
   border-color: #86efac;
 }
 .erp-status-badge--active i,
+.erp-status-badge--paid i,
 .erp-status-badge--working i {
   background: #16a34a;
 }
@@ -47,25 +49,29 @@
   background: #dc2626;
 }
 
-/* Upcoming / Attention / Probation */
+/* Upcoming / Attention / Probation / Hold */
 .erp-status-badge--upcoming,
+.erp-status-badge--hold,
 .erp-status-badge--probation {
   background: #fef3c7;
   color: #b45309;
   border-color: #fcd34d;
 }
 .erp-status-badge--upcoming i,
+.erp-status-badge--hold i,
 .erp-status-badge--probation i {
   background: #d97706;
 }
 
-/* Completed / Information */
-.erp-status-badge--completed {
+/* Completed / Processed / Information */
+.erp-status-badge--completed,
+.erp-status-badge--processed {
   background: #e0f2fe;
   color: #0369a1;
   border-color: #7dd3fc;
 }
-.erp-status-badge--completed i {
+.erp-status-badge--completed i,
+.erp-status-badge--processed i {
   background: #0284c7;
 }
 
@@ -111,16 +117,24 @@
   background: #dc2626;
 }
 
-/* Draft / Correction Required */
-.erp-status-badge--draft,
-.erp-status-badge--correction-required {
-  background: #f5f3ff;
-  color: #6d28d9;
-  border-color: #ddd6fe;
+/* Draft */
+.erp-status-badge--draft {
+  background: #f1f5f9;
+  color: #475569;
+  border-color: #cbd5e1;
 }
-.erp-status-badge--draft i,
+.erp-status-badge--draft i {
+  background: #64748b;
+}
+
+/* Correction Required */
+.erp-status-badge--correction-required {
+  background: #fef2f2;
+  color: #b91c1c;
+  border-color: #fecaca;
+}
 .erp-status-badge--correction-required i {
-  background: #7c3aed;
+  background: #ef4444;
 }
 
 /* Dark Mode */

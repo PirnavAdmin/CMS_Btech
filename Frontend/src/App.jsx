@@ -114,12 +114,17 @@ function FormValidationGuard() {
         const value = String(control.value || '').trim()
         const label = control.closest('label')?.innerText || control.labels?.[0]?.innerText || ''
         const required = control.required || /\*/.test(label)
-        const isEmail = control.type === 'email' || /email/i.test(`${control.name} ${control.id} ${label}`)
+        const isIdentifier = /identifier|username|login|mobile.*id|id.*mobile|email.*mobile/i.test(`${control.name} ${control.id} ${label}`)
+        const isEmail = !isIdentifier && (control.type === 'email' || (/\bemail\b/i.test(`${control.name} ${control.id} ${label}`) && !/mobile|id|identifier|username/i.test(`${control.name} ${control.id} ${label}`)))
+        const mobilePattern = /^[6-9]\d{9}$/
+        const idPattern = /^[A-Za-z0-9][A-Za-z0-9._/-]{1,}$/
         const message = required && !value
           ? 'This field is required.'
           : value && isEmail && !emailPattern.test(value)
             ? 'Enter a valid email address.'
-            : ''
+            : value && isIdentifier && !(emailPattern.test(value) || mobilePattern.test(value) || idPattern.test(value))
+              ? 'Enter a valid email, mobile number or ID.'
+              : ''
         if (message) {
           control.setCustomValidity(message)
           firstInvalid ||= control

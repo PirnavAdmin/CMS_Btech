@@ -367,8 +367,16 @@
 :root[data-theme="dark"] .dashboard-hero-mark,
 :root[data-theme="dark"] .dashboard-kpis article,
 :root[data-theme="dark"] .dashboard-home .erp-link-card {
-  background: #1E2633;
-  border-color: #2E3A4D;
+  background: #141E2E;
+  border-color: #273549;
+}
+
+:root[data-theme="dark"] .dashboard-hero-mark:hover,
+:root[data-theme="dark"] .dashboard-kpis article:hover,
+:root[data-theme="dark"] .dashboard-home .erp-link-card:hover {
+  border-color: #8782BC;
+  background: #1A263A;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
 }
 
 :root[data-theme="dark"] .dashboard-hero h1,
@@ -378,33 +386,47 @@
   color: #F8FAFC;
 }
 
+:root[data-theme="dark"] .dashboard-hero-mark svg {
+  color: #B7B1DD;
+}
+
+:root[data-theme="dark"] .dashboard-kpis small,
+:root[data-theme="dark"] .dashboard-hero-mark small,
+:root[data-theme="dark"] .dashboard-home .erp-link-card small,
+:root[data-theme="dark"] .dashboard-hero p:last-child {
+  color: #94A3B8;
+}
+
 :root[data-theme="dark"] .dashboard-kpi-icon,
 :root[data-theme="dark"] .dashboard-home .erp-link-card__icon {
-  background: #16383B;
-  color: #8782BC;
+  background: rgba(135, 130, 188, 0.16);
+  color: #B7B1DD;
+  border: 1px solid rgba(135, 130, 188, 0.28);
 }
 
 :root[data-theme="dark"] .dashboard-side-panel {
-  background: #1E293B;
-  border-color: #334155;
+  background: #141E2E;
+  border-color: #273549;
   color: #F8FAFC;
 }
 
 :root[data-theme="dark"] .dashboard-flow span {
-  background: #0F172A;
-  border-color: #334155;
-  color: #F8FAFC;
+  background: #0B0F17;
+  border-color: #273549;
+  color: #E2E8F0;
+}
+
+:root[data-theme="dark"] .dashboard-flow span:hover {
+  background: rgba(135, 130, 188, 0.2);
+  border-color: #8782BC;
+  color: #FFFFFF;
 }
 
 :root[data-theme="dark"] .dashboard-outline-link {
-  border-color: #334155;
+  border-color: #273549;
+  color: #B7B1DD;
 }
 
-@media (max-width: 420px) {
-  .dashboard-side-panel {
-    padding: 18px 16px;
-  }
-  .dashboard-flow-step {
-    flex-basis: 100%;
-  }
+:root[data-theme="dark"] .dashboard-outline-link:hover {
+  color: #DFDCED;
 }
