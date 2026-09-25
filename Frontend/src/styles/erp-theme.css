@@ -547,8 +547,8 @@ html,body,#root{max-width:100%;overflow-x:hidden}
   }
 }
 /* Desktop sidebar collapse control. */
-.sidebar-collapse{display:grid;width:30px;height:30px;margin-left:auto;padding:0;place-items:center;border:1px solid rgba(255,255,255,.22);border-radius:7px;color:#E2E8F0;background:transparent;cursor:pointer}
-.sidebar-collapse:hover{border-color:#8782BC;color:#fff;background:rgba(255,255,255,.12)}
+.sidebar-collapse{display:grid;width:30px;height:30px;margin-left:auto;padding:0;place-items:center;border:1px solid #CBD5E1;border-radius:7px;color:#64748B;background:#FFFFFF;cursor:pointer;transition:background-color .18s ease,border-color .18s ease,color .18s ease,box-shadow .18s ease}
+.sidebar-collapse:hover,.sidebar-collapse:focus-visible{border-color:#756FB2;color:#514A8A;background:#EDEBF6;box-shadow:0 0 0 3px rgba(117,111,178,.16);outline:none}
 .sidebar-collapse svg{width:16px;height:16px}
 .sidebar.is-collapsed{width:72px;padding-inline:10px}
 .sidebar.is-collapsed .sidebar-brand{display:grid;justify-items:center;margin-inline:0;padding-inline:0}
