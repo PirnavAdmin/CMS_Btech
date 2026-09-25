@@ -21,44 +21,64 @@
   flex-shrink: 0;
 }
 
-/* Active / Success / Admitted */
-.erp-status-badge--active {
-  background: #eafaf1;
-  color: #127546;
-  border-color: #c2eed5;
+/* Active / Success / Admitted / Working */
+.erp-status-badge--active,
+.erp-status-badge--working {
+  background: #dcfce7;
+  color: #15803d;
+  border-color: #86efac;
 }
-.erp-status-badge--active i {
-  background: #199e5e;
-}
-
-/* Inactive / Archived / Deactive */
-.erp-status-badge--inactive {
-  background: #F5F3FD;
-  color: #475569;
-  border-color: #cbd5e1;
-}
-.erp-status-badge--inactive i {
-  background: #64748b;
+.erp-status-badge--active i,
+.erp-status-badge--working i {
+  background: #16a34a;
 }
 
-/* Upcoming / Attention */
-.erp-status-badge--upcoming {
-  background: #fff8eb;
-  color: #b46d0a;
-  border-color: #fde2b4;
+/* Inactive / Archived / Deactive / Relieved / Resigned */
+.erp-status-badge--inactive,
+.erp-status-badge--resigned,
+.erp-status-badge--relieved {
+  background: #fee2e2;
+  color: #b91c1c;
+  border-color: #fca5a5;
 }
-.erp-status-badge--upcoming i {
-  background: #8782BC;
+.erp-status-badge--inactive i,
+.erp-status-badge--resigned i,
+.erp-status-badge--relieved i {
+  background: #dc2626;
+}
+
+/* Upcoming / Attention / Probation */
+.erp-status-badge--upcoming,
+.erp-status-badge--probation {
+  background: #fef3c7;
+  color: #b45309;
+  border-color: #fcd34d;
+}
+.erp-status-badge--upcoming i,
+.erp-status-badge--probation i {
+  background: #d97706;
 }
 
 /* Completed / Information */
 .erp-status-badge--completed {
-  background: #eff8ff;
-  color: #8782BC;
-  border-color: #bee0f7;
+  background: #e0f2fe;
+  color: #0369a1;
+  border-color: #7dd3fc;
 }
 .erp-status-badge--completed i {
-  background: #8782BC;
+  background: #0284c7;
+}
+
+/* On Leave */
+.erp-status-badge--on-leave,
+.erp-status-badge--leave {
+  background: #e0f2fe;
+  color: #0369a1;
+  border-color: #7dd3fc;
+}
+.erp-status-badge--on-leave i,
+.erp-status-badge--leave i {
+  background: #0284c7;
 }
 
 /* Pending / Review */
@@ -73,19 +93,19 @@
 
 /* Approved / Verified */
 .erp-status-badge--approved {
-  background: #F5F3FD;
-  color: #756FB2;
-  border-color: #a7f3d0;
+  background: #dcfce7;
+  color: #15803d;
+  border-color: #86efac;
 }
 .erp-status-badge--approved i {
-  background: #059669;
+  background: #16a34a;
 }
 
 /* Rejected / Danger / Failed */
 .erp-status-badge--rejected {
-  background: #fef2f2;
+  background: #fee2e2;
   color: #b91c1c;
-  border-color: #fecaca;
+  border-color: #fca5a5;
 }
 .erp-status-badge--rejected i {
   background: #dc2626;

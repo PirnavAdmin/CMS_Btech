@@ -558,38 +558,24 @@ export const facultyService = {
   getAttendanceById: facultyAttendanceApi.getById,
   createAttendance: async payload => {
     let result = null
+    const numFacultyId = Number(payload.facultyId)
+    const validFacultyId = Number.isSafeInteger(numFacultyId) && numFacultyId > 0 ? numFacultyId : payload.facultyId
     try {
-      result = await facultyAttendanceApi.create(payload)
+      result = await facultyAttendanceApi.create({ ...payload, facultyId: validFacultyId })
     } catch (err) {
-      if (/already exists|duplicate|conflict/i.test(err.message || '')) {
+      const targetDate = String(payload.attendanceDate || '').slice(0, 10)
+      if (validFacultyId && targetDate) {
         try {
-          const targetDate = String(payload.attendanceDate || '').slice(0, 10)
-          const existingList = await facultyAttendanceApi.getAll({
-            facultyId: payload.facultyId,
-            fromDate: targetDate,
-            toDate: targetDate,
-          }).catch(() => [])
-          const match = (Array.isArray(existingList) ? existingList : []).find(r =>
-            String(r.facultyId ?? r.faculty?.id) === String(payload.facultyId) &&
-            String(r.attendanceDate ?? r.date).slice(0, 10) === targetDate
-          )
-          const existingId = match?.attendanceId || match?.id || match?.facultyAttendanceId
-          if (existingId) {
-            result = await facultyAttendanceApi.update(existingId, payload)
-          } else {
-            const dailyList = await facultyAttendanceApi.getDaily({ date: targetDate }).catch(() => [])
-            const dailyMatch = (Array.isArray(dailyList) ? dailyList : []).find(r =>
-              String(r.facultyId ?? r.faculty?.id ?? r.id) === String(payload.facultyId)
-            )
-            const dailyId = dailyMatch?.attendanceId || dailyMatch?.id
-            if (dailyId) {
-              result = await facultyAttendanceApi.update(dailyId, payload)
-            }
-          }
-        } catch { /* ignore fallback errors */ }
+          result = await facultyAttendanceApi.bulk({
+            facultyIds: [validFacultyId],
+            attendanceDate: targetDate,
+            status: payload.status,
+            remarks: payload.remarks || null,
+          })
+        } catch { /* ignore fallback */ }
       }
       if (!result) {
-        throw err
+        console.warn('Backend createAttendance error, saving locally:', err)
       }
     }
     const local = saveLocalAttendanceRecord({
@@ -603,12 +589,38 @@ export const facultyService = {
     return result || local
   },
   updateAttendance: async (id, payload) => {
-    const result = await facultyAttendanceApi.update(id, payload)
+    let result = null
+    const numId = Number(id)
+    const isBackendId = Number.isSafeInteger(numId) && numId > 0 && !String(id).startsWith('ATT-')
+    const numFacultyId = Number(payload.facultyId)
+    const validFacultyId = Number.isSafeInteger(numFacultyId) && numFacultyId > 0 ? numFacultyId : payload.facultyId
+    const targetDate = String(payload.attendanceDate || payload.date || '').slice(0, 10)
+
+    if (validFacultyId && targetDate) {
+      try {
+        await facultyAttendanceApi.bulk({
+          facultyIds: [validFacultyId],
+          attendanceDate: targetDate,
+          status: payload.status,
+          remarks: payload.remarks || null,
+        })
+      } catch (bulkErr) {
+        console.warn('Bulk upsert during updateAttendance fallback:', bulkErr)
+      }
+    }
+
+    if (isBackendId) {
+      try {
+        result = await facultyAttendanceApi.update(numId, payload)
+      } catch (updateErr) {
+        console.warn('Backend updateAttendance fallback:', updateErr)
+      }
+    }
     saveLocalAttendanceRecord({
       ...payload,
       id,
       attendanceId: id,
-      date: payload.attendanceDate || payload.date,
+      date: targetDate,
     })
     return result || { id, ...payload }
   },

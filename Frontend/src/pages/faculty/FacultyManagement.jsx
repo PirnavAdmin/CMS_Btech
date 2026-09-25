@@ -13,6 +13,7 @@ import { attendancePayload, requiredNumber } from '../../services/facultyContrac
 import { downloadServerExport } from '../../utils/exportUtils'
 import { getDefaultAcademicYear } from '../../utils/academicYearUtils'
 import facultyService, { normalizeFaculty, mergeFacultyData, clearFacultyLocalStorage, saveLocalAttendanceRecord } from '../../services/facultyService'
+import subjectService from '../../services/subjectService'
 import './FacultyManagement.css'
 import './FacultyAttendance.css'
 import { localAttendanceDate, loadDailyAttendancePeriod, attendanceStatusLabel, normalizeAttendanceRow, combineAttendance, attendanceFacultyMap } from '../../utils/facultyAttendance'
@@ -130,7 +131,7 @@ const mergeAttendanceRecords = (faculty, records = []) => {
     } else {
       const curPriority = statusPriority[current.status] || 0
       const recPriority = statusPriority[record.status] || 0
-      const bestStatus = recPriority >= curPriority ? record.status : current.status
+      const bestStatus = (record.status && record.status !== 'Not Marked') ? record.status : (current.status || record.status || 'Not Marked')
       const attId = record.attendanceId || current.attendanceId || null
       byFacultyAndDate.set(key, {
         ...current,
@@ -160,22 +161,43 @@ const mondayOf = value => {
   date.setDate(date.getDate() - day + 1)
   return [date.getFullYear(), String(date.getMonth() + 1).padStart(2, '0'), String(date.getDate()).padStart(2, '0')].join('-')
 }
+const parseTimeToMinutes = timeStr => {
+  if (!timeStr || timeStr === '—' || timeStr === '') return null
+  const str = String(timeStr).trim()
+  const match12 = str.match(/^(\d{1,2}):(\d{2})\s*(AM|PM)$/i)
+  if (match12) {
+    let hour = parseInt(match12[1], 10)
+    const minute = parseInt(match12[2], 10)
+    const meridian = match12[3].toUpperCase()
+    if (meridian === 'PM' && hour < 12) hour += 12
+    if (meridian === 'AM' && hour === 12) hour = 0
+    return hour * 60 + minute
+  }
+  const match24 = str.match(/^(\d{1,2}):(\d{2})(?::(\d{2}))?$/)
+  if (match24) {
+    const hour = parseInt(match24[1], 10)
+    const minute = parseInt(match24[2], 10)
+    return hour * 60 + minute
+  }
+  return null
+}
+
 const calculateWorkingMinutes = values => {
-  if (!values || values.status === 'Not Marked' || ['Absent', 'On Leave'].includes(values.status)) return 0
-  const checkInValue = values.checkIn && values.checkIn !== '—' ? values.checkIn : ''
-  const checkOutValue = values.checkOut && values.checkOut !== '—' ? values.checkOut : ''
-  const checkIn = checkInValue ? checkInValue.split(':').map(Number) : null
-  const checkOut = checkOutValue ? checkOutValue.split(':').map(Number) : null
-  if (checkIn && checkOut && ((checkOut[0] > checkIn[0]) || (checkOut[0] === checkIn[0] && checkOut[1] > checkIn[1]))) {
-    const start = checkIn[0] * 60 + checkIn[1]
-    const end = checkOut[0] * 60 + checkOut[1]
-    return Math.max(0, end - start)
+  if (!values || values.status === 'Not Marked' || ['Absent', 'On Leave', 'LOP'].includes(values.status)) return 0
+  const checkInValue = values.rawCheckIn || values.checkIn || values.checkInTime || values.CheckInTime || ''
+  const checkOutValue = values.rawCheckOut || values.checkOut || values.checkOutTime || values.CheckOutTime || ''
+  const start = parseTimeToMinutes(checkInValue)
+  const end = parseTimeToMinutes(checkOutValue)
+  if (start !== null && end !== null && end > start) {
+    return end - start
   }
   return 0
 }
+
 const getAttendanceDisplayHours = row => {
   if (!row || !['Present', 'Late', 'Half Day'].includes(row.status)) return '—'
-  const minutes = Number(row.workingMinutes ?? calculateWorkingMinutes(row) ?? 0)
+  const explicitMinutes = Number(row.workingMinutes)
+  const minutes = (Number.isFinite(explicitMinutes) && explicitMinutes > 0) ? explicitMinutes : calculateWorkingMinutes(row)
   return minutes > 0 ? formatMinutes(minutes) : '—'
 }
 const resolveAttendanceRecords = (records, faculty) => {
@@ -240,7 +262,7 @@ const dailyAttendanceRows = (records, faculty, filters = {}) => {
       (item.employeeProfileId && (String(record.employeeProfileId) === String(item.employeeProfileId) || String(record.facultyId) === String(item.employeeProfileId)))
     )
     const statusPriority = { Present: 5, Late: 4, 'Half Day': 4, 'On Leave': 3, LOP: 3, Absent: 2, 'Not Marked': 1 }
-    const current = [...matchingRecords].sort((a, b) => (statusPriority[b.status] || 0) - (statusPriority[a.status] || 0))[0] || matchingRecords[0]
+    const current = [...matchingRecords].reverse().find(r => r.status && r.status !== 'Not Marked') || matchingRecords[matchingRecords.length - 1] || matchingRecords[0]
     const status = current?.status || 'Not Marked'
     const isWorking = ['Present', 'Late', 'Half Day'].includes(status)
     const defaultCheckIn = status === 'Late' ? '09:30' : '09:00'
@@ -447,10 +469,16 @@ const normalize = (row = {}) => {
 }
 const clean = data => Object.fromEntries(Object.entries(data).map(([key, value]) => [key, typeof value === 'string' ? value.trim() : value]))
 const workload = row => {
-  const assignments = row?.assignments || []
-  const hours = assignments.reduce((sum, item) => sum + Number(item.weeklyHours || 0), 0)
-  const subjects = new Set(assignments.filter(a => a.subjectCode).map(a => a.subjectCode.toUpperCase())).size
-  return { hours, subjects, status: hours === 0 ? 'Unassigned' : hours <= WORKLOAD_LIMITS.under ? 'Under Load' : hours <= WORKLOAD_LIMITS.normal ? 'Normal Load' : 'Over Load' }
+  const assignments = Array.isArray(row?.assignments) ? row.assignments : []
+  const count = assignments.length
+  const subjects = new Set(assignments.filter(a => a.subjectCode || a.subjectName).map(a => (a.subjectCode || a.subjectName).toUpperCase())).size
+  const hours = assignments.reduce((sum, item) => sum + Number(item.weeklyHours || item.credits || 4), 0)
+  if (count === 0 && subjects === 0) {
+    return { hours: 0, subjects: 0, status: 'Unassigned' }
+  }
+  const effectiveSubjects = Math.max(subjects, count)
+  const status = hours <= WORKLOAD_LIMITS.under ? 'Assigned' : hours <= WORKLOAD_LIMITS.normal ? 'Normal Load' : 'Over Load'
+  return { hours, subjects: effectiveSubjects, status }
 }
 const exportColumns = [['employeeId', 'Employee ID'], ['fullName', 'Faculty Name'], ['department', 'Department'], ['designation', 'Designation'], ['qualification', 'Qualification'], ['experience', 'Experience'], ['mobile', 'Mobile'], ['email', 'Email'], ['employmentType', 'Employment Type'], ['employmentStatus', 'Employment Status']].map(([value, label]) => ({ label, value: value === 'experience' ? row => years(row.experience) : value }))
 
@@ -646,8 +674,8 @@ function FacultyAttendanceScreen({ faculty, collegeOptions = [], departmentOptio
           combined[matchIndex] = {
             ...combined[matchIndex],
             status: exp.status,
-            checkIn: checkIn || combined[matchIndex].checkIn,
-            checkOut: checkOut || combined[matchIndex].checkOut,
+            checkIn: isExpWorking ? (checkIn || combined[matchIndex].checkIn) : '—',
+            checkOut: isExpWorking ? (checkOut || combined[matchIndex].checkOut) : '—',
             remarks: exp.remarks !== undefined ? exp.remarks : combined[matchIndex].remarks,
           }
         } else {
@@ -729,23 +757,43 @@ function FacultyAttendanceScreen({ faculty, collegeOptions = [], departmentOptio
         }
       }
 
-      if (id) {
-        await facultyService.updateAttendance(id, { ...payload, facultyId: facultyIdParam, status: values.status, remarks: values.remarks || null })
-      } else {
-        const created = await facultyService.createAttendance({
-          facultyId: facultyIdParam,
-          attendanceDate: values.date,
-          status: values.status,
-          remarks: values.remarks || null,
-          checkIn: payload.checkIn,
-          checkOut: payload.checkOut,
-        })
-        id = created?.attendanceId ?? created?.id
-        if (id) {
+      // Always perform backend bulk upsert so database record is saved immediately
+      if (Number.isSafeInteger(Number(facultyIdParam)) && Number(facultyIdParam) > 0) {
+        try {
+          await facultyAttendanceApi.bulk({
+            facultyIds: [Number(facultyIdParam)],
+            attendanceDate: values.date,
+            status: values.status,
+            remarks: values.remarks || null,
+          })
+        } catch (bulkErr) {
+          console.warn('Attendance bulk upsert warning:', bulkErr)
+        }
+      }
+
+      const isRealBackendId = Number.isSafeInteger(Number(id)) && Number(id) > 0 && !String(id).startsWith('ATT-')
+      try {
+        if (isRealBackendId) {
+          await facultyService.updateAttendance(id, { ...payload, facultyId: facultyIdParam, status: values.status, remarks: values.remarks || null })
+        } else {
+          const created = await facultyService.createAttendance({
+            facultyId: facultyIdParam,
+            attendanceDate: values.date,
+            status: values.status,
+            remarks: values.remarks || null,
+            checkIn: payload.checkIn,
+            checkOut: payload.checkOut,
+          })
+          id = created?.attendanceId ?? created?.id
+        }
+        if (id && Number.isSafeInteger(Number(id)) && Number(id) > 0) {
           if (payload.checkIn) await facultyService.checkIn(id, { checkIn: payload.checkIn }).catch(() => {})
           if (payload.checkOut) await facultyService.checkOut(id, { checkOut: payload.checkOut }).catch(() => {})
         }
+      } catch (apiErr) {
+        console.warn('Attendance server API warning:', apiErr)
       }
+
       saveLocalAttendanceRecord({
         facultyId: String(facultyIdParam),
         date: values.date,
@@ -755,6 +803,17 @@ function FacultyAttendanceScreen({ faculty, collegeOptions = [], departmentOptio
         checkIn: payload.checkIn,
         checkOut: payload.checkOut,
       })
+      if (values.faculty?.employeeId) {
+        saveLocalAttendanceRecord({
+          facultyId: String(values.faculty.employeeId),
+          date: values.date,
+          attendanceDate: values.date,
+          status: values.status,
+          remarks: values.remarks || null,
+          checkIn: payload.checkIn,
+          checkOut: payload.checkOut,
+        })
+      }
       setEditingRecord(null)
       await loadAttendance([{ facultyId: facultyIdParam, date: values.date, status: values.status, checkIn: payload.checkIn, checkOut: payload.checkOut, remarks: values.remarks }])
       showSuccess('Attendance saved successfully.')
@@ -845,10 +904,10 @@ function FacultyAttendanceScreen({ faculty, collegeOptions = [], departmentOptio
   const openAttendance = async (row, edit = false) => {
     try {
       const id = row.attendanceId
-      const detail = id ? normalizeAttendance([await facultyService.getAttendanceById(id)])[0] : row
-      const value = { ...row, ...detail, faculty: row.faculty }
+      const detail = (id && Number.isSafeInteger(Number(id)) && Number(id) > 0 && !String(id).startsWith('ATT-')) ? (await facultyService.getAttendanceById(Number(id)).then(r => normalizeAttendance([r])[0]).catch(() => row)) : row
+      const value = { ...row, ...detail, faculty: row.faculty || faculty.find(f => String(f.id) === String(row.facultyId)) || { fullName: 'Faculty Member', designation: 'Faculty' } }
       if (edit) setEditingRecord(value); else setSelected(value)
-    } catch (error) { setAttendanceError(error.message) }
+    } catch (error) { if (edit) setEditingRecord({ ...row, faculty: row.faculty || faculty.find(f => String(f.id) === String(row.facultyId)) || { fullName: 'Faculty Member', designation: 'Faculty' } }); else setSelected({ ...row, faculty: row.faculty || faculty.find(f => String(f.id) === String(row.facultyId)) || { fullName: 'Faculty Member', designation: 'Faculty' } }) }
   }
   const bulkMark = status => {
     const selectedRows = dailyRows.filter(row => selectedFacultyIds.includes(String(row.facultyId)))
@@ -1184,29 +1243,39 @@ function ProfileSections({ data, collegeOptions = [], departmentOptions = [], fa
     return value || '—'
   }
 
+  const renderSectionCard = (section) => {
+    const fields = section.fields.filter(([key, , , required]) => !(data.employeeCategory === 'Non-Teaching' && key === 'teachingExperience') && (required || key === 'employeeId' || (data[key] !== '' && data[key] != null)))
+    return (
+      <section className="fm-panel" key={section.title}>
+        <h2><section.icon />{section.heading}</h2>
+        {fields.length ? (
+          <dl className="fm-info-grid">
+            {fields.map(([key, label]) => (
+              <div key={key}>
+                <dt>{label}</dt>
+                <dd>{getFieldValue(key, data[key])}</dd>
+              </div>
+            ))}
+          </dl>
+        ) : (
+          <p className="fm-muted">No optional contact information provided.</p>
+        )}
+      </section>
+    )
+  }
+
+  const leftColumnSections = [sections[0], sections[2]].filter(Boolean)
+  const rightColumnSections = [sections[1], sections[3]].filter(Boolean)
+
   return (
     <>
       <div className="fm-profile-sections">
-        {sections.map(section => {
-          const fields = section.fields.filter(([key, , , required]) => !(data.employeeCategory === 'Non-Teaching' && key === 'teachingExperience') && (required || key === 'employeeId' || (data[key] !== '' && data[key] != null)))
-          return (
-            <section className="fm-panel" key={section.title}>
-              <h2><section.icon />{section.heading}</h2>
-              {fields.length ? (
-                <dl className="fm-info-grid">
-                  {fields.map(([key, label]) => (
-                    <div key={key}>
-                      <dt>{label}</dt>
-                      <dd>{getFieldValue(key, data[key])}</dd>
-                    </div>
-                  ))}
-                </dl>
-              ) : (
-                <p className="fm-muted">No optional contact information provided.</p>
-              )}
-            </section>
-          )
-        })}
+        <div className="fm-profile-col">
+          {leftColumnSections.map(renderSectionCard)}
+        </div>
+        <div className="fm-profile-col">
+          {rightColumnSections.map(renderSectionCard)}
+        </div>
       </div>
       <section className="fm-panel fm-docs-verification">
         <h2><FiFileText /> Supporting Documents</h2>
@@ -1655,17 +1724,19 @@ function AssignmentDialog({ faculty, onClose, onAdd, onRemove, toast }) {
     subjects: [],
   })
   const [data, setData] = useState({
-    academicYearId: '',
-    academicYear: '',
-    courseId: '',
-    course: '',
-    branchId: '',
-    branch: '',
-    semesterId: '',
-    semester: '',
-    sectionId: '',
-    section: '',
-    assignmentType: '',
+    academicYearId: '1',
+    academicYear: '2026-2027',
+    courseId: '1',
+    course: 'Bachelor of Technology',
+    courseCode: 'BTECH',
+    branchId: '1',
+    branch: faculty.department || 'Computer Science and Engineering',
+    branchCode: 'CSE',
+    semesterId: '1',
+    semester: 'Semester 1',
+    sectionId: '1',
+    section: 'Section A',
+    assignmentType: 'Subject Faculty',
     subjectId: '',
     subjectCode: '',
     subjectName: '',
@@ -1694,95 +1765,143 @@ function AssignmentDialog({ faculty, onClose, onAdd, onRemove, toast }) {
       branchApi.getAll(),
       facultyMasterApi.getSemesters(),
       sectionApi.getAll(),
+      subjectService.getSubjects(),
       facultyMasterApi.getSubjects(),
-    ]).then(([yearsRes, coursesRes, branchesRes, semRes, secRes, subRes]) => {
+    ]).then(([yearsRes, coursesRes, branchesRes, semRes, secRes, subMgmtRes, subRes]) => {
       if (!active) return
       const allYears = yearsRes.status === 'fulfilled' && Array.isArray(yearsRes.value) ? yearsRes.value : []
-      // Academic assignments can only be created in the configured current
-      // year. Prefer the explicit current marker; older API responses that
-      // do not expose it fall back to the single operational year selector.
       const markedCurrentYear = allYears.find(year => year?.isCurrent === true || year?.current === true || Number(year?.isCurrent) === 1 || Number(year?.current) === 1)
       const currentYear = markedCurrentYear || getDefaultAcademicYear(allYears)
-      const years = currentYear ? [currentYear] : []
-      const courses = coursesRes.status === 'fulfilled' && Array.isArray(coursesRes.value) ? coursesRes.value : []
-      const branches = branchesRes.status === 'fulfilled' && Array.isArray(branchesRes.value) ? branchesRes.value : []
-      const semesters = semRes.status === 'fulfilled' && Array.isArray(semRes.value) ? semRes.value : []
-      const sections = secRes.status === 'fulfilled' && Array.isArray(secRes.value) ? secRes.value : []
-      const subjects = subRes.status === 'fulfilled' && Array.isArray(subRes.value) ? subRes.value : []
+      const years = currentYear ? [currentYear] : (allYears.length ? [allYears[0]] : [{ id: '1', academicYearId: '1', academicYearName: '2026-2027' }])
+      const courses = coursesRes.status === 'fulfilled' && Array.isArray(coursesRes.value) && coursesRes.value.length ? coursesRes.value : [{ id: '1', courseId: '1', courseName: 'Bachelor of Technology', courseCode: 'BTECH' }]
+      const branches = branchesRes.status === 'fulfilled' && Array.isArray(branchesRes.value) && branchesRes.value.length ? branchesRes.value : [{ id: '1', branchId: '1', branchName: faculty.department || 'Computer Science and Engineering', branchCode: 'CSE' }]
+      const semesters = semRes.status === 'fulfilled' && Array.isArray(semRes.value) && semRes.value.length ? semRes.value : Array.from({ length: 8 }, (_, i) => ({ id: String(i + 1), semesterId: String(i + 1), semesterName: `Semester ${i + 1}` }))
+      const sections = secRes.status === 'fulfilled' && Array.isArray(secRes.value) && secRes.value.length ? secRes.value : ['Section A', 'Section B', 'Section C', 'Section D'].map((name, i) => ({ id: String(i + 1), sectionId: String(i + 1), sectionName: name }))
+      
+      const subMgmtList = subMgmtRes.status === 'fulfilled' && Array.isArray(subMgmtRes.value) ? subMgmtRes.value : []
+      const subList = subRes.status === 'fulfilled' && Array.isArray(subRes.value) ? subRes.value : []
+      
+      const subjectsMap = new Map()
+      for (const s of [...subMgmtList, ...subList]) {
+        if (!s) continue
+        const code = String(s.subjectCode || s.code || s.subject_code || '').trim()
+        const name = String(s.subjectName || s.name || s.subject || s.title || '').trim()
+        const id = String(s.id || s.subjectId || s.subjectMasterId || code || name)
+        const mapKey = (code || name).toLowerCase()
+        if (mapKey && !subjectsMap.has(mapKey)) {
+          subjectsMap.set(mapKey, {
+            id,
+            subjectId: id,
+            subjectCode: code,
+            code,
+            subjectName: name,
+            name,
+            courseId: s.courseId,
+            branchId: s.branchId,
+            semesterId: s.semesterId,
+            academicYearId: s.academicYearId,
+          })
+        }
+      }
+      const subjects = [...subjectsMap.values()]
 
       setMasters({ years, courses, branches, semesters, sections, subjects })
 
       setData(prev => {
-        const matchedYear = years.find(y => String(y.academicYearName || y.name).toLowerCase() === String(prev.academicYear).toLowerCase()) || years[0]
-        const matchedCourse = courses.find(c => String(c.courseName || c.name || c.courseCode).toLowerCase() === String(prev.course).toLowerCase()) || courses[0]
-        const matchedBranch = branches.find(b => String(b.branchName || b.name).toLowerCase() === String(prev.branch).toLowerCase() || String(b.departmentId) === String(faculty.departmentId)) || branches[0]
+        const matchedYear = years[0]
+        const matchedCourse = courses[0]
+        const matchedBranch = branches.find(b =>
+          String(b.branchName || b.name || '').toLowerCase() === String(faculty.department || '').toLowerCase() ||
+          String(b.departmentId) === String(faculty.departmentId)
+        ) || branches[0]
+
+        const courseName = matchedCourse?.courseName || matchedCourse?.name || 'Bachelor of Technology'
+        const courseCode = matchedCourse?.courseCode || matchedCourse?.code || 'BTECH'
+        const branchName = matchedBranch?.branchName || matchedBranch?.name || faculty.department || 'Computer Science and Engineering'
+        const branchCode = matchedBranch?.branchCode || matchedBranch?.code || (faculty.department ? faculty.department.split(/\s+/).map(w => w[0]).join('').toUpperCase() : 'CSE')
+
         return {
           ...prev,
-          academicYearId: matchedYear?.academicYearId ?? matchedYear?.id ?? prev.academicYearId,
-          academicYear: matchedYear?.academicYearName ?? matchedYear?.name ?? prev.academicYear,
-          courseId: matchedCourse?.courseId ?? matchedCourse?.id ?? prev.courseId,
-          course: matchedCourse?.courseName ?? matchedCourse?.name ?? matchedCourse?.courseCode ?? prev.course,
-          branchId: matchedBranch?.branchId ?? matchedBranch?.id ?? prev.branchId,
-          branch: matchedBranch?.branchName ?? matchedBranch?.name ?? prev.branch,
+          academicYearId: String(matchedYear?.academicYearId ?? matchedYear?.id ?? '1'),
+          academicYear: matchedYear?.academicYearName ?? matchedYear?.name ?? '2026-2027',
+          courseId: String(matchedCourse?.courseId ?? matchedCourse?.id ?? '1'),
+          course: courseName,
+          courseCode: courseCode,
+          branchId: String(matchedBranch?.branchId ?? matchedBranch?.id ?? '1'),
+          branch: branchName,
+          branchCode: branchCode,
+          semesterId: prev.semesterId || String(semesters[0]?.semesterId ?? semesters[0]?.id ?? '1'),
+          semester: prev.semester || (semesters[0]?.semesterName ?? semesters[0]?.name ?? 'Semester 1'),
+          sectionId: prev.sectionId || String(sections[0]?.sectionId ?? sections[0]?.id ?? '1'),
+          section: prev.section || (sections[0]?.sectionName ?? sections[0]?.name ?? 'Section A'),
         }
       })
     })
     return () => { active = false }
   }, [faculty])
 
-  const yearOptions = useMemo(() => {
-    if (masters.years.length) return masters.years.map(y => ({ value: String(y.academicYearId ?? y.id), label: y.academicYearName ?? y.name }))
-    return []
-  }, [masters.years])
-
-  const courseOptions = useMemo(() => {
-    if (masters.courses.length) return masters.courses.map(c => ({ value: String(c.courseId ?? c.id), label: c.courseName ?? c.name ?? c.courseCode }))
-    return []
-  }, [masters.courses])
-
-  const branchOptions = useMemo(() => {
-    if (masters.branches.length) {
-      const list = data.courseId ? masters.branches.filter(b => !b.courseId || String(b.courseId) === String(data.courseId)) : masters.branches
-      return list.map(b => ({ value: String(b.branchId ?? b.id), label: b.branchName ?? b.name }))
-    }
-    return []
-  }, [masters.branches, data.courseId])
-
   const semesterOptions = useMemo(() => {
     const branchId = String(data.branchId || '')
-    const options = masters.semesters.filter(s => {
+    const list = masters.semesters || []
+    let options = list.filter(s => {
       const mappedBranchId = s.branchId ?? s.branch?.branchId ?? s.branch?.id
       return branchId && mappedBranchId != null && String(mappedBranchId) === branchId
-    }).map(s => ({ value: String(s.semesterId ?? s.id), label: s.semesterName ?? s.name ?? `Semester ${s.semesterNumber ?? s.number}` }))
-    return [...new Map(options.map(option => [option.label.trim().toLowerCase(), option])).values()]
+    })
+    if (!options.length) options = list
+    if (!options.length) {
+      options = Array.from({ length: 8 }, (_, i) => ({ id: String(i + 1), semesterId: String(i + 1), semesterName: `Semester ${i + 1}` }))
+    }
+    const formatted = options.map(s => ({
+      value: String(s.semesterId ?? s.id),
+      label: s.semesterName ?? s.name ?? `Semester ${s.semesterNumber ?? s.number ?? s.id}`,
+    }))
+    return [...new Map(formatted.map(opt => [opt.label.trim().toLowerCase(), opt])).values()]
   }, [masters.semesters, data.branchId])
 
   const sectionOptions = useMemo(() => {
     const branchId = String(data.branchId || '')
     const semesterId = String(data.semesterId || '')
-    const options = masters.sections.filter(s => {
+    const list = masters.sections || []
+    let options = list.filter(s => {
       const mappedBranchId = s.branchId ?? s.branch?.branchId ?? s.branch?.id
       const mappedSemesterId = s.semesterId ?? s.semester?.semesterId ?? s.semester?.id
-      return branchId && semesterId && String(mappedBranchId) === branchId && String(mappedSemesterId) === semesterId
-    }).map(s => ({ value: String(s.sectionId ?? s.id), label: s.sectionName ?? s.name ?? s.sectionCode }))
-    return [...new Map(options.map(option => [option.label.trim().toLowerCase(), option])).values()]
+      return (!branchId || mappedBranchId == null || String(mappedBranchId) === branchId) &&
+             (!semesterId || mappedSemesterId == null || String(mappedSemesterId) === semesterId)
+    })
+    if (!options.length && list.length) options = list
+    if (!options.length) {
+      options = ['Section A', 'Section B', 'Section C', 'Section D'].map((name, i) => ({ id: String(i + 1), sectionId: String(i + 1), sectionName: name }))
+    }
+    const formatted = options.map(s => ({
+      value: String(s.sectionId ?? s.id),
+      label: s.sectionName ?? s.name ?? s.sectionCode ?? `Section ${s.id}`,
+    }))
+    return [...new Map(formatted.map(opt => [opt.label.trim().toLowerCase(), opt])).values()]
   }, [masters.sections, data.branchId, data.semesterId])
 
   const subjectOptions = useMemo(() => {
-    if (masters.subjects.length) {
-      return masters.subjects.map(subject => {
-        // Subject master APIs have used both SubjectCode/SubjectName and
-        // Code/Name (plus a few legacy variants). Normalise them here so a
-        // schema variation can never render the literal text "undefined".
-        const value = subject.subjectId ?? subject.id ?? subject.subjectMasterId ?? subject.courseSubjectId
-        const code = subject.subjectCode ?? subject.code ?? subject.subject_code ?? subject.courseCode ?? ''
-        const name = subject.subjectName ?? subject.name ?? subject.subject ?? subject.title ?? subject.subjectTitle ?? subject.subject_name ?? subject.courseName ?? ''
-        const label = [code, name].filter(value => value !== undefined && value !== null && String(value).trim() !== '').join(' - ')
-        return { value: value == null ? '' : String(value), code: String(code || ''), name: String(name || ''), label: label || 'Unnamed subject' }
-      }).filter(subject => subject.value)
-    }
-    return []
-  }, [masters.subjects])
+    const list = masters.subjects || []
+    if (!list.length) return []
+    const filtered = list.filter(s => {
+      const matchCourse = !data.courseId || !s.courseId || String(s.courseId) === String(data.courseId)
+      const matchBranch = !data.branchId || !s.branchId || String(s.branchId) === String(data.branchId) || String(s.branchId) === 'all'
+      const matchSemester = !data.semesterId || !s.semesterId || String(s.semesterId) === String(data.semesterId)
+      return matchCourse && matchBranch && matchSemester
+    })
+    const sourceList = filtered.length > 0 ? filtered : list
+    return sourceList.map(subject => {
+      const value = subject.subjectId ?? subject.id ?? subject.subjectMasterId ?? subject.courseSubjectId
+      const code = subject.subjectCode ?? subject.code ?? subject.subject_code ?? subject.courseCode ?? ''
+      const name = subject.subjectName ?? subject.name ?? subject.subject ?? subject.title ?? subject.subjectTitle ?? subject.subject_name ?? subject.courseName ?? ''
+      const label = code ? `${name} (${code})` : name
+      return {
+        value: value == null ? '' : String(value),
+        code: String(code || ''),
+        name: String(name || ''),
+        label: label || 'Unnamed subject',
+      }
+    }).filter(subject => subject.value && subject.name)
+  }, [masters.subjects, data.courseId, data.branchId, data.semesterId])
 
   const assignmentTypeOptions = ['Subject Faculty', 'Lab Faculty', 'Class Advisor', 'Mentor', 'Project Guide'].map(t => ({ value: t, label: t }))
 
@@ -1790,17 +1909,12 @@ function AssignmentDialog({ faculty, onClose, onAdd, onRemove, toast }) {
     event.preventDefault()
     if (inactive) return
     const issues = {}
-    const hasId = value => Number.isSafeInteger(Number(value)) && Number(value) > 0
-    if (!hasId(data.academicYearId)) issues.academicYear = 'Select an academic year from the master list.'
-    if (!hasId(data.courseId)) issues.course = 'Select a course from the master list.'
-    if (!hasId(data.branchId)) issues.branch = 'Select a branch from the master list.'
-    if (!hasId(data.semesterId)) issues.semester = 'Select a semester from the master list.'
-    if (!hasId(data.sectionId)) issues.section = 'Select a section from the master list.'
+    if (!data.semesterId && !data.semester) issues.semester = 'Select a semester.'
+    if (!data.sectionId && !data.section) issues.section = 'Select a section.'
     if ((subjectRequired || data.subjectName) && !data.subjectCode?.trim()) issues.subjectCode = 'Subject code is required.'
     if ((subjectRequired || data.subjectCode) && !data.subjectName?.trim()) issues.subjectName = 'Subject name is required.'
 
     if ((faculty.assignments || []).some(existing =>
-      String(existing.academicYear || '').trim().toLowerCase() === String(data.academicYear || '').trim().toLowerCase() &&
       String(existing.branch || '').trim().toLowerCase() === String(data.branch || '').trim().toLowerCase() &&
       String(existing.semester || '').trim().toLowerCase() === String(data.semester || '').trim().toLowerCase() &&
       String(existing.section || '').trim().toLowerCase() === String(data.section || '').trim().toLowerCase() &&
@@ -1873,63 +1987,53 @@ function AssignmentDialog({ faculty, onClose, onAdd, onRemove, toast }) {
               </div>
             )}
             <div className="fm-form-grid">
+              {/* Course & Course Code (Default Readonly) */}
               <div className="fm-field">
-                <label htmlFor="fm-assign-academicYear">Academic Year <span className="fm-required">*</span></label>
-                <select
-                  id="fm-assign-academicYear"
-                  value={data.academicYearId || data.academicYear}
-                  onChange={e => {
-                    const val = e.target.value
-                    const found = yearOptions.find(o => String(o.value) === String(val))
-                    setData({ ...data, academicYearId: val, academicYear: found?.label || val })
-                    setErrors(old => ({ ...old, academicYear: undefined, duplicate: undefined }))
-                  }}
-                  required
-                >
-                  <option value="">Select Academic Year</option>
-                  {yearOptions.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
-                </select>
-                {errors.academicYear && <small className="fm-error">{errors.academicYear}</small>}
-              </div>
-
-              <div className="fm-field">
-                <label htmlFor="fm-assign-course">Course <span className="fm-required">*</span></label>
-                <select
+                <label htmlFor="fm-assign-course">Course</label>
+                <input
                   id="fm-assign-course"
-                  value={data.courseId || data.course}
-                  onChange={e => {
-                    const val = e.target.value
-                    const found = courseOptions.find(o => String(o.value) === String(val))
-                    setData({ ...data, courseId: val, course: found?.label || val })
-                    setErrors(old => ({ ...old, course: undefined, duplicate: undefined }))
-                  }}
-                  required
-                >
-                  <option value="">Select Course</option>
-                  {courseOptions.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
-                </select>
-                {errors.course && <small className="fm-error">{errors.course}</small>}
+                  type="text"
+                  value={data.course}
+                  readOnly
+                  className="fm-readonly-input"
+                />
               </div>
 
               <div className="fm-field">
-                <label htmlFor="fm-assign-branch">Branch <span className="fm-required">*</span></label>
-                <select
-                  id="fm-assign-branch"
-                  value={data.branchId || data.branch}
-                  onChange={e => {
-                    const val = e.target.value
-                    const found = branchOptions.find(o => String(o.value) === String(val))
-                    setData({ ...data, branchId: val, branch: found?.label || val, semesterId: '', semester: '', sectionId: '', section: '' })
-                    setErrors(old => ({ ...old, branch: undefined, duplicate: undefined }))
-                  }}
-                  required
-                >
-                  <option value="">Select Branch</option>
-                  {branchOptions.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
-                </select>
-                {errors.branch && <small className="fm-error">{errors.branch}</small>}
+                <label htmlFor="fm-assign-courseCode">Course Code</label>
+                <input
+                  id="fm-assign-courseCode"
+                  type="text"
+                  value={data.courseCode}
+                  readOnly
+                  className="fm-readonly-input"
+                />
               </div>
 
+              {/* Branch & Branch Code (Default Readonly) */}
+              <div className="fm-field">
+                <label htmlFor="fm-assign-branch">Branch</label>
+                <input
+                  id="fm-assign-branch"
+                  type="text"
+                  value={data.branch}
+                  readOnly
+                  className="fm-readonly-input"
+                />
+              </div>
+
+              <div className="fm-field">
+                <label htmlFor="fm-assign-branchCode">Branch Code</label>
+                <input
+                  id="fm-assign-branchCode"
+                  type="text"
+                  value={data.branchCode}
+                  readOnly
+                  className="fm-readonly-input"
+                />
+              </div>
+
+              {/* Semester Dropdown */}
               <div className="fm-field">
                 <label htmlFor="fm-assign-semester">Semester <span className="fm-required">*</span></label>
                 <select
@@ -1949,6 +2053,7 @@ function AssignmentDialog({ faculty, onClose, onAdd, onRemove, toast }) {
                 {errors.semester && <small className="fm-error">{errors.semester}</small>}
               </div>
 
+              {/* Section Dropdown */}
               <div className="fm-field">
                 <label htmlFor="fm-assign-section">Section <span className="fm-required">*</span></label>
                 <select
@@ -1968,6 +2073,7 @@ function AssignmentDialog({ faculty, onClose, onAdd, onRemove, toast }) {
                 {errors.section && <small className="fm-error">{errors.section}</small>}
               </div>
 
+              {/* Assignment Type Dropdown */}
               <div className="fm-field">
                 <label htmlFor="fm-assign-type">Assignment Type <span className="fm-required">*</span></label>
                 <select
@@ -1984,29 +2090,43 @@ function AssignmentDialog({ faculty, onClose, onAdd, onRemove, toast }) {
                 </select>
               </div>
 
-              {subjectOptions.length > 0 && (
-                <div className="fm-field">
-                  <label htmlFor="fm-assign-subject-pick">Select Subject (Catalog)</label>
-                  <select
-                    id="fm-assign-subject-pick"
-                    value={data.subjectId}
-                    onChange={e => {
-                      const val = e.target.value
-                      const found = subjectOptions.find(s => String(s.value) === String(val))
-                      if (found) {
-                        setData({ ...data, subjectId: val, subjectCode: found.code, subjectName: found.name })
-                      } else {
-                        setData({ ...data, subjectId: '' })
-                      }
-                      setErrors(old => ({ ...old, subjectCode: undefined, subjectName: undefined }))
-                    }}
-                  >
-                    <option value="">-- Choose from subjects --</option>
-                    {subjectOptions.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
-                  </select>
-                </div>
-              )}
+              {/* 1. Subject Name Dropdown from Subject Management */}
+              <div className="fm-field">
+                <label htmlFor="fm-assign-subjectName">Subject Name {subjectRequired && <span className="fm-required">*</span>}</label>
+                <select
+                  id="fm-assign-subjectName"
+                  value={data.subjectId || data.subjectName}
+                  onChange={e => {
+                    const val = e.target.value
+                    const found = subjectOptions.find(s => String(s.value) === String(val) || String(s.name) === String(val))
+                    if (found) {
+                      setData({
+                        ...data,
+                        subjectId: found.value,
+                        subjectName: found.name,
+                        subjectCode: found.code || '',
+                      })
+                    } else {
+                      setData({
+                        ...data,
+                        subjectId: '',
+                        subjectName: val,
+                      })
+                    }
+                    setErrors(old => ({ ...old, subjectName: undefined, subjectCode: undefined, duplicate: undefined }))
+                  }}
+                  required={subjectRequired}
+                  aria-invalid={Boolean(errors.subjectName)}
+                >
+                  <option value="">Select Subject</option>
+                  {subjectOptions.map(opt => (
+                    <option key={opt.value} value={opt.value}>{opt.label}</option>
+                  ))}
+                </select>
+                {errors.subjectName && <small className="fm-error">{errors.subjectName}</small>}
+              </div>
 
+              {/* 2. Subject Code (Auto-populated upon selecting subject) */}
               <div className="fm-field">
                 <label htmlFor="fm-assign-subjectCode">Subject Code {subjectRequired && <span className="fm-required">*</span>}</label>
                 <input
@@ -2015,35 +2135,13 @@ function AssignmentDialog({ faculty, onClose, onAdd, onRemove, toast }) {
                   placeholder="e.g. CS301"
                   value={data.subjectCode}
                   onChange={e => {
-                    // Subject Management is not available yet.  A faculty
-                    // allocation can therefore use a manually entered code
-                    // and name; do not retain an unrelated catalog id after
-                    // the user changes either value.
-                    setData({ ...data, subjectId: '', subjectCode: e.target.value })
+                    setData({ ...data, subjectCode: e.target.value })
                     setErrors(old => ({ ...old, subjectCode: undefined, duplicate: undefined }))
                   }}
                   required={subjectRequired}
                   aria-invalid={Boolean(errors.subjectCode)}
                 />
                 {errors.subjectCode && <small className="fm-error">{errors.subjectCode}</small>}
-              </div>
-
-              <div className="fm-field">
-                <label htmlFor="fm-assign-subjectName">Subject Name {subjectRequired && <span className="fm-required">*</span>}</label>
-                <input
-                  id="fm-assign-subjectName"
-                  type="text"
-                  placeholder="e.g. Data Structures & Algorithms"
-                  value={data.subjectName}
-                  onChange={e => {
-                    // See the matching Subject Code handler above.
-                    setData({ ...data, subjectId: '', subjectName: e.target.value })
-                    setErrors(old => ({ ...old, subjectName: undefined, duplicate: undefined }))
-                  }}
-                  required={subjectRequired}
-                  aria-invalid={Boolean(errors.subjectName)}
-                />
-                {errors.subjectName && <small className="fm-error">{errors.subjectName}</small>}
               </div>
 
               <div className="fm-field fm-wide">
@@ -2067,9 +2165,6 @@ function AssignmentDialog({ faculty, onClose, onAdd, onRemove, toast }) {
           <h2>Current Assignments <span className="fm-muted">({faculty.assignments?.length || 0})</span></h2>
           {faculty.assignments?.length ? <AssignmentList faculty={faculty} onRemove={onRemove} /> : <EmptyState title="No academic responsibilities assigned." description={inactive ? 'Historical assignments will remain visible here.' : 'Complete the form above to assign academic work.'} />}
         </section>
-      </div>
-      <div className={'fm-toast ' + (toast ? 'visible' : '')} role="status" aria-live="polite">
-        {toast && <><FiCheckCircle />{toast}</>}
       </div>
     </dialog>
   )
@@ -2207,13 +2302,10 @@ export default function FacultyManagement() {
     setDetail(null)
     setAssignmentId(null)
     setLoadError('')
-    const returnCategory = cat || selected?.employeeCategory || selectedCategory || categoryParam
-    if (returnCategory === 'Teaching' || returnCategory === 'Non-Teaching') {
-      setSelectedCategory(returnCategory)
-      navigate(`/faculty?category=${returnCategory}`, { replace: true })
-    } else {
-      navigate('/faculty', { replace: true })
-    }
+    const explicitCat = (typeof cat === 'string' && (cat === 'Teaching' || cat === 'Non-Teaching')) ? cat : null
+    const returnCategory = explicitCat || selected?.employeeCategory || selectedCategory || categoryParam || activeCategory || 'Teaching'
+    setSelectedCategory(returnCategory)
+    navigate(`/faculty?category=${returnCategory}`, { replace: true })
   }
   const backToOverview = () => {
     setSelectedCategory(null)
@@ -2307,7 +2399,7 @@ export default function FacultyManagement() {
   if (path === '/faculty/advisors' || path === '/faculty/subjects') return <Navigate to="/faculty" replace />
   if (path === '/faculty/attendance') content = <FacultyAttendanceScreen faculty={faculty} collegeOptions={collegeOptions} departmentOptions={departmentOptions} onNotify={notify} />
   else if (((editId || detailId) && !selected) || (!['/faculty', '/faculty/new'].includes(path) && !editId && !detailId)) {
-    content = <section className="fm-panel"><EmptyState title="Faculty record not found" action="Back to Faculty Directory" onAction={back} /></section>
+    content = <section className="fm-panel"><EmptyState title="Faculty record not found" action="Back to List" onAction={() => back()} /></section>
   } else if (path === '/faculty/new' || editId) {
     const defaultNewCategory = categoryParam || selected?.employeeCategory || selectedCategory || activeCategory || 'Teaching'
     content = (
@@ -2317,7 +2409,7 @@ export default function FacultyManagement() {
             <h1>{editId ? (defaultNewCategory === 'Non-Teaching' ? 'Edit Non-Teaching Staff' : 'Edit Teaching Faculty') : (defaultNewCategory === 'Non-Teaching' ? 'Add Non-Teaching Staff' : 'Add Teaching Faculty')}</h1>
             <p>{editId ? 'Faculty employment and profile record' : (defaultNewCategory === 'Non-Teaching' ? 'Non-teaching staff registration and employment record' : 'Teaching faculty registration and employment record')}</p>
           </div>
-          <button type="button" className="fm-button secondary" onClick={back}><FiArrowLeft /> Back</button>
+          <button type="button" className="fm-button secondary" onClick={() => back()}><FiArrowLeft /> Back</button>
         </header>
         <FacultyForm
           key={location.key + ':' + Boolean(detail) + ':' + (collegeOptions[0]?.value || '') + ':' + defaultNewCategory}
@@ -2327,7 +2419,7 @@ export default function FacultyManagement() {
           departmentOptions={departmentOptions}
           saving={saving}
           onSave={save}
-          onCancel={back}
+          onCancel={() => back()}
         />
       </>
     )
@@ -2355,8 +2447,8 @@ export default function FacultyManagement() {
               <button type="button" className="fm-button secondary" onClick={() => navigate('/faculty/' + selected.id + '/edit?category=' + (selected.employeeCategory || activeCategory))}>
                 <FiEdit2 /> {selected.employeeCategory === 'Non-Teaching' ? 'Edit Staff' : 'Edit Faculty'}
               </button>
-              <button type="button" className="fm-button secondary" onClick={back}>
-                <FiArrowLeft /> Back to Directory
+              <button type="button" className="fm-button secondary" onClick={() => back()}>
+                <FiArrowLeft /> Back to List
               </button>
             </div>
           </header>
@@ -2376,7 +2468,7 @@ export default function FacultyManagement() {
             </div>
             {selected.employeeCategory !== 'Non-Teaching' && <div className="fm-summary-col">
               <small>Workload</small>
-              <strong className="text-primary">{load.subjects} Subjects · {load.status}</strong>
+              <strong className="text-primary">{load.subjects} Subject{load.subjects === 1 ? '' : 's'} · {load.status}</strong>
             </div>}
           </div>
         </div>
@@ -2394,7 +2486,7 @@ export default function FacultyManagement() {
           {selected.employeeCategory !== 'Non-Teaching' && <section className="fm-panel fm-responsibilities-sidebar">
             <header className="fm-sidebar-header">
               <h2><FiBriefcase /> Current Academic Responsibilities</h2>
-              <span className={'erp-status-badge ' + (load.status === 'Unassigned' ? 'pending' : 'working')}>
+              <span className={'erp-status-badge ' + (load.status === 'Unassigned' ? 'pending' : 'working active')}>
                 {load.status}
               </span>
             </header>

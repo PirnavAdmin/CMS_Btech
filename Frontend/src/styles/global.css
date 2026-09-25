@@ -1508,23 +1508,23 @@ label > b,
 
 /* Lavender entity-view headers use dark text for accessible contrast. */
 :is(.cm-profile-view, .section-profile-page, .semester-management, .student-admission,
-  .student-profile, .course-management, .branch-management) :is(.cm-profile-banner,
-  .sa-profile-header, .sp-hero, .course-detail-hero, .branch-detail-hero) {
+  .student-profile, .course-management, .branch-management, .shared-view-dialog, .attendance-session-detail) :is(.cm-profile-banner,
+  .sa-profile-header, .sp-hero, .course-detail-hero, .branch-detail-hero, .view-modal-banner) {
   color: #30264F !important;
   background: linear-gradient(115deg, #F5F3FD, #DDD8F3) !important;
   border: 1px solid #C9C4E0 !important;
 }
 :is(.cm-profile-view, .section-profile-page, .semester-management, .student-admission,
-  .student-profile, .course-management, .branch-management) :is(.cm-profile-title,
+  .student-profile, .course-management, .branch-management, .shared-view-dialog, .attendance-session-detail) :is(.cm-profile-title,
   .cm-profile-subtitle, .sa-profile-header h1, .sa-profile-header p, .sp-identity h2,
   .sp-identity p, .course-detail-summary__main h2, .course-detail-summary__short,
-  .branch-detail-hero h2, .branch-detail-hero p) {
+  .branch-detail-hero h2, .branch-detail-hero p, .view-modal-title, .view-modal-subtitle) {
   color: #30264F !important;
 }
 /* Chips and metadata in the same light entity headers must not inherit white text. */
 :is(.cm-profile-view, .section-profile-page, .semester-management, .student-admission,
-  .student-profile, .course-management, .branch-management) :is(.cm-profile-banner,
-  .sa-profile-header, .sp-hero, .course-detail-hero, .branch-detail-hero) :is(span, strong, b, small, em) {
+  .student-profile, .course-management, .branch-management, .shared-view-dialog, .attendance-session-detail) :is(.cm-profile-banner,
+  .sa-profile-header, .sp-hero, .course-detail-hero, .branch-detail-hero, .view-modal-banner) :is(span, strong, b, small, em) {
   color: #30264F !important;
 }
 

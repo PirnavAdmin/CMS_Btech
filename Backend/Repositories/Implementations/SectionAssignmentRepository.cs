@@ -49,13 +49,39 @@ namespace BTech.Repositories.Implementations
             return result;
         }
 
-        public Task<ClassTeacherDto?> AssignClassTeacherAsync(long sectionId, long employeeProfileId, long updatedBy) =>
-            ExecuteSingleAsync(
-                "sp_Section_AssignClassTeacher",
-                MapClassTeacher,
-                ("p_section_id", sectionId),
-                ("p_employee_profile_id", employeeProfileId),
-                ("p_updated_by", updatedBy));
+        public async Task<ClassTeacherDto?> AssignClassTeacherAsync(long sectionId, long employeeProfileId, long updatedBy)
+        {
+            var connection = _context.Database.GetDbConnection();
+            var shouldClose = connection.State != ConnectionState.Open;
+            if (shouldClose)
+                await connection.OpenAsync();
+
+            try
+            {
+                await using var command = connection.CreateCommand();
+                command.CommandText = @"
+                    UPDATE sections
+                    SET class_teacher_employee_profile_id = @employee_profile_id,
+                        updated_at = UTC_TIMESTAMP(),
+                        updated_by = @updated_by
+                    WHERE section_id = @section_id
+                      AND deleted_at IS NULL;
+                ";
+                command.CommandType = CommandType.Text;
+                AddParameter(command, "@employee_profile_id", employeeProfileId);
+                AddParameter(command, "@updated_by", updatedBy);
+                AddParameter(command, "@section_id", sectionId);
+
+                await command.ExecuteNonQueryAsync();
+            }
+            finally
+            {
+                if (shouldClose)
+                    await connection.CloseAsync();
+            }
+
+            return await GetClassTeacherAsync(sectionId);
+        }
 
         public async Task<bool> RemoveClassTeacherAsync(long sectionId, long updatedBy)
         {

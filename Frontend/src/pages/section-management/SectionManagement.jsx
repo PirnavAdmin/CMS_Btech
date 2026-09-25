@@ -61,24 +61,51 @@ const normalizeAssignment = (item = {}) => ({ id: item.assignmentId ?? item.id ?
 const sameStudent = (assignment = {}, student = {}) => [assignment.studentId, assignment.enrollmentNo, assignment.studentCode, assignment.registrationNumber].filter(clean).some((value) => [student.id, student.code, student.studentCode, student.registrationNumber, student.rollNumber, student.admissionNumber].filter(clean).some((candidate) => String(candidate).split('/').map((part) => part.trim()).includes(String(value).trim())))
 const sectionLetter = (section) => String(section.name || '').match(/^Section\s+([A-Z]+)$/i)?.[1]?.toUpperCase() || String(section.code || '').match(/(?:^|-)([A-Z]+)$/i)?.[1]?.toUpperCase()
 const sameMapping = (left, right) => ['courseId', 'branchId', 'semesterId', 'academicYearId'].every((key) => clean(left?.[key]) && clean(right?.[key]) ? String(left[key]) === String(right[key]) : false)
-const teacherCandidatesForDepartment = (faculty = [], departmentId, departmentName = '') => faculty
-  .map((member) => normalizeFaculty(member))
-  .filter((member) => {
-    const memberDepartmentId = member.departmentId ?? member.department?.departmentId ?? member.department?.id
-    const facultyDepartmentName = String(member.departmentName ?? member.department ?? '').trim().toLowerCase()
-    const expectedDepartmentName = String(departmentName).trim().toLowerCase()
-    const matchesDepartment = memberDepartmentId !== '' && memberDepartmentId !== undefined && memberDepartmentId !== null
-      ? String(memberDepartmentId) === String(departmentId)
-      : Boolean(facultyDepartmentName && expectedDepartmentName && facultyDepartmentName === expectedDepartmentName)
-    const unavailable = ['inactive', 'resigned', 'retired'].includes(String(member.employmentStatus || member.status || '').trim().toLowerCase())
-    return matchesDepartment && !unavailable
-  })
-  .map((member) => ({
-    ...member,
-    employeeProfileId: member.employeeProfileId ?? member.facultyId ?? member.id,
-    employeeCode: member.employeeCode ?? member.employeeId,
-  }))
-  .filter((member) => clean(member.employeeProfileId) && clean(member.fullName))
+const normalizeBranchKey = (name = '') => {
+  const s = String(name || '').trim().toLowerCase().replace(/[^a-z0-9]/g, '')
+  if (/mech|mechanical/i.test(s)) return 'mech'
+  if (/cse|computerscience|computer/i.test(s)) return 'cse'
+  if (/ece|electronicsandcommunication|electronicscommunication/i.test(s)) return 'ece'
+  if (/eee|electricalandelectronics|electricalelectronics/i.test(s)) return 'eee'
+  if (/civil/i.test(s)) return 'civil'
+  if (/aiml|artificialintelligenceandmachinelearning/i.test(s)) return 'aiml'
+  if (/aids|artificialintelligenceanddatascience/i.test(s)) return 'aids'
+  if (/it|informationtechnology/i.test(s)) return 'it'
+  return s
+}
+
+const teacherCandidatesForBranch = (faculty = [], branchName = '', branchCode = '', branchId = '') => {
+  const targetKey = normalizeBranchKey(branchCode || branchName)
+  return faculty
+    .map((member) => normalizeFaculty(member))
+    .filter((member) => {
+      if (member.employeeCategory === 'Non-Teaching') return false
+      const unavailable = ['inactive', 'resigned', 'retired'].includes(String(member.employmentStatus || member.status || '').trim().toLowerCase())
+      if (unavailable) return false
+
+      if (!targetKey && !branchId) return true
+
+      const memberBranchKey = normalizeBranchKey(member.branchCode || member.branch || member.branchName || '')
+      const memberDeptKey = normalizeBranchKey(member.departmentName || member.department || '')
+      const memberSpecKey = normalizeBranchKey(member.specialization || '')
+
+      const matchesBranch = Boolean(
+        (member.branchId && branchId && String(member.branchId) === String(branchId)) ||
+        (memberBranchKey && memberBranchKey === targetKey) ||
+        (memberDeptKey && memberDeptKey === targetKey) ||
+        (memberSpecKey && (memberSpecKey === targetKey || memberSpecKey.includes(targetKey)))
+      )
+
+      return matchesBranch
+    })
+    .map((member) => ({
+      ...member,
+      employeeProfileId: member.employeeProfileId ?? member.facultyId ?? member.id,
+      employeeCode: member.employeeCode ?? member.employeeId,
+    }))
+    .filter((member) => clean(member.employeeProfileId) && clean(member.fullName))
+}
+const teacherCandidatesForDepartment = teacherCandidatesForBranch
 
 const makeLookups = (courses, branches, semesters, years) => ({ courseById: new Map(courses.map((item) => [String(item.id), item])), branchById: new Map(branches.map((item) => [String(item.id), item])), semesterById: new Map(semesters.map((item) => [String(item.id), item])), yearById: new Map(years.map((item) => [String(item.id), item])) })
 const normalizeSection = (item = {}, lookups = {}) => {
@@ -142,7 +169,23 @@ function SectionList() {
   const openAssign = async (section) => { try { const latest = (await sectionAssignmentApi.listBySection(section.id)).map((item) => normalizeAssignment({ ...item, sectionId: section.id })); setAssignments((current) => [...current.filter((item) => String(item.sectionId) !== String(section.id)), ...latest]); setAssigning({ ...section, currentStrength: latest.length }) } catch (requestError) { setToast(apiError(requestError, 'Unable to load section assignments.'), 'error') } }
   const assignStudent = async (student) => { const current = (await sectionAssignmentApi.listBySection(assigning.id)).map(normalizeAssignment); const latestSection = normalizeSection(responseRecord(await sectionApi.getById(assigning.id))); if (latestSection.status !== 'Active') throw new Error('Students can only be assigned to an active section.'); if (Math.max(current.length, latestSection.currentStrength) >= latestSection.capacity) throw new Error(`${assigning.name} is already at full capacity.`); if (current.some((item) => String(item.studentId) === String(student.studentId))) throw new Error('This student is already assigned to this section.'); await sectionAssignmentApi.assign(assigning.id, student); const latest = (await sectionAssignmentApi.listBySection(assigning.id)).map((item) => normalizeAssignment({ ...item, sectionId: assigning.id })); setAssignments([...assignments.filter((item) => String(item.sectionId) !== String(assigning.id)), ...latest]); setSections((rows) => rows.map((row) => String(row.id) === String(assigning.id) ? { ...row, currentStrength: latest.length } : row)); setSummaryData(null) }
   const removeAssignment = async (assignment) => { await sectionAssignmentApi.remove(assignment.sectionId, assignment.id); const latest = (await sectionAssignmentApi.listBySection(assignment.sectionId)).map((item) => normalizeAssignment({ ...item, sectionId: assignment.sectionId })); setAssignments((rows) => [...rows.filter((item) => String(item.sectionId) !== String(assignment.sectionId)), ...latest]); setSections((rows) => rows.map((row) => String(row.id) === String(assignment.sectionId) ? { ...row, currentStrength: latest.length } : row)); setSummaryData(null); setToast(`${assignment.studentName} removed from the section.`) }
-  const assignTeacher = async (teacher) => { if (!teacher?.employeeProfileId) throw new Error('Select a faculty candidate.'); await sectionAllocationApi.assignTeacher(assigning.id, teacher.employeeProfileId); const next = sections.map((item) => item.id === assigning.id ? { ...item, advisor: teacher.fullName, facultyAdvisorEmployeeProfileId: teacher.employeeProfileId } : item); setSections(next); setAssigning((current) => current ? { ...current, advisor: teacher.fullName, facultyAdvisorEmployeeProfileId: teacher.employeeProfileId } : current); setToast(`${teacher.fullName} assigned to ${assigning.name}.`) }
+  const assignTeacher = async (teacher) => {
+    if (!teacher?.employeeProfileId) throw new Error('Select a faculty candidate.')
+    try {
+      await sectionAllocationApi.assignTeacher(assigning.id, teacher.employeeProfileId)
+    } catch (assignError) {
+      // Fallback update section record directly
+      await sectionApi.update(assigning.id, {
+        ...assigning,
+        facultyAdvisorEmployeeProfileId: teacher.employeeProfileId,
+        advisor: teacher.fullName
+      })
+    }
+    const next = sections.map((item) => item.id === assigning.id ? { ...item, advisor: teacher.fullName, facultyAdvisorEmployeeProfileId: teacher.employeeProfileId } : item)
+    setSections(next)
+    setAssigning((current) => current ? { ...current, advisor: teacher.fullName, facultyAdvisorEmployeeProfileId: teacher.employeeProfileId } : current)
+    setToast(`${teacher.fullName} assigned to ${assigning.name}.`)
+  }
   const toggle = async (section) => {
     try {
       const rows = await sectionAssignmentApi.listBySection(section.id)
@@ -279,7 +322,7 @@ function SectionForm({ editMode = false }) {
   const semesters = masters.semesters.filter((item) => (!form.courseId || (!item.courseId || String(item.courseId) === String(form.courseId))) && (!form.branchId || (!item.branchId || String(item.branchId) === String(form.branchId))) && (!form.academicYearId || !item.academicYearId || String(item.academicYearId) === String(form.academicYearId)))
   const semester = semesters.find((item) => String(item.id) === String(form.semesterId))
   const assignedCount = Math.max(Number(form.currentStrength || 0), assignments.filter((item) => String(item.sectionId) === String(id)).length)
-  const teacherCandidates = useMemo(() => teacherCandidatesForDepartment(faculty, branch?.departmentId, branch?.departmentName), [faculty, branch?.departmentId, branch?.departmentName])
+  const teacherCandidates = useMemo(() => teacherCandidatesForBranch(faculty, branch?.name || form.branch, branch?.code || form.branchCode, branch?.id || form.branchId), [faculty, branch, form.branch, form.branchCode, form.branchId])
   const noActiveYear = !editMode && !selectedAcademicYearId && activeYears.length === 0
   const yearWarning = noActiveYear ? 'No active academic year is configured.' : ''
   const canOpenDetailsTab = Boolean(form.courseId && form.branchId && form.semesterId && form.academicYearId)
@@ -378,7 +421,15 @@ function AssignStudents({ section, faculty = [], assignments, allAssignments = [
   const available = Math.max(Number(section.capacity || 0) - assignedCount, 0)
   const isAssignedToCurrentSection = (student) => [...assignments, ...allAssignments].some((assignment) => String(assignment.sectionId) === String(section.id) && sameStudent(assignment, student))
 
-  useEffect(() => { setTeacherCandidates(teacherCandidatesForDepartment(faculty, section.departmentId, section.departmentName)) }, [faculty, section.departmentId, section.departmentName])
+  useEffect(() => {
+    const candidates = teacherCandidatesForBranch(faculty, section.branchName || section.branch, section.branchCode, section.branchId)
+    setTeacherCandidates(candidates)
+    if (section.facultyAdvisorEmployeeProfileId && candidates.some(c => String(c.employeeProfileId) === String(section.facultyAdvisorEmployeeProfileId))) {
+      setTeacher(String(section.facultyAdvisorEmployeeProfileId))
+    } else {
+      setTeacher('')
+    }
+  }, [faculty, section.branchName, section.branch, section.branchCode, section.branchId, section.facultyAdvisorEmployeeProfileId])
   useEffect(() => {
     if (mode !== 'student') return undefined
     let active = true
@@ -435,7 +486,26 @@ function AssignStudents({ section, faculty = [], assignments, allAssignments = [
     setSelectedIds(capacityLimitedSelectable.map(({ student }) => String(student.id)))
     if (selectableRows.length > available) setError(`Only ${available} seats are available in ${section.name}.`)
   }
-  const submitTeacher = async (event) => { event.preventDefault(); if (saving) return; setSaving(true); try { const candidate = teacherCandidates.find((item) => String(item.employeeProfileId) === String(teacher)); await assignTeacher(candidate); setTeacherError(''); setMode('') } catch (reason) { setTeacherError(reason.message || 'Unable to assign teacher.') } finally { setSaving(false) } }
+  const submitTeacher = async (event) => {
+    event.preventDefault()
+    if (saving) return
+    if (!teacher) {
+      setTeacherError('Please select a faculty advisor.')
+      return
+    }
+    setSaving(true)
+    try {
+      const candidate = teacherCandidates.find((item) => String(item.employeeProfileId) === String(teacher))
+      if (!candidate) throw new Error('Selected faculty advisor is not valid for this branch.')
+      await assignTeacher(candidate)
+      setTeacherError('')
+      setMode('')
+    } catch (reason) {
+      setTeacherError(reason.message || 'Unable to assign teacher.')
+    } finally {
+      setSaving(false)
+    }
+  }
   const submitSelected = async (event) => {
     event.preventDefault()
     if (saving) return

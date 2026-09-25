@@ -32,9 +32,11 @@ import TablePagination from '../../components/TablePagination'
 import ExportMenu from '../../components/ExportMenu'
 import ViewDialog from '../../components/ViewDialog'
 import { useAcademic } from '../../context/AcademicContext'
+import { facultyMasterApi } from '../../api/apiEndpoints'
 import attendanceService from '../../services/attendanceService'
 import studentService from '../../services/studentService'
 import facultyService from '../../services/facultyService'
+import subjectService from '../../services/subjectService'
 import './Attendance.css'
 
 const ATTENDANCE_COLUMNS = [
@@ -94,6 +96,8 @@ export default function Attendance() {
     sectionId: '',
     date: new Date().toISOString().slice(0, 10),
     subject: '',
+    subjectId: '',
+    subjectCode: '',
     faculty: '',
     facultyId: '',
   })
@@ -110,6 +114,8 @@ export default function Attendance() {
   const [activeFaculty, setActiveFaculty] = useState([])
   const [facultyAssignments, setFacultyAssignments] = useState([])
   const [loadingFaculty, setLoadingFaculty] = useState(false)
+  const [allSubjects, setAllSubjects] = useState([])
+  const [loadingSubjects, setLoadingSubjects] = useState(false)
 
   // Shortage list state
   const [allProfiles, setAllProfiles] = useState([])
@@ -144,23 +150,100 @@ export default function Attendance() {
 
   useEffect(() => {
     let mounted = true
-    const loadActiveFaculty = async () => {
+    const loadData = async () => {
       try {
         setLoadingFaculty(true)
-        const [faculty, assignments] = await Promise.all([
-          facultyService.list(),
-          facultyService.getSubjectAllocations(),
+        setLoadingSubjects(true)
+        const [faculty, assignments, backendSubjects, localSubjects] = await Promise.all([
+          facultyService.list().catch(() => []),
+          facultyService.getSubjectAllocations().catch(() => []),
+          facultyMasterApi.getSubjects().catch(() => []),
+          subjectService.getSubjects().catch(() => []),
         ])
         if (!mounted) return
         setActiveFaculty((faculty || []).filter(member => ['working', 'active'].includes(String(member.employmentStatus || member.status || '').trim().toLowerCase())))
         setFacultyAssignments(assignments || [])
+
+        // Merge backend subjects and local subjects, ensuring numeric integer IDs and complete names
+        const combinedSubjectMap = new Map()
+
+        const getSubName = (s) => s.subjectName || s.subject_name || s.name || s.title || s.subjectTitle || s.subject || ''
+        const getSubCode = (s) => s.subjectCode || s.subject_code || s.code || ''
+
+        // 1. First add backend database subjects (they carry numeric database subject_id)
+        ;(backendSubjects || []).forEach(sub => {
+          const id = Number(sub.subjectId ?? sub.subject_id ?? sub.id)
+          const name = getSubName(sub)
+          const code = getSubCode(sub)
+          if (name || (Number.isFinite(id) && id > 0)) {
+            const finalId = Number.isFinite(id) && id > 0 ? id : combinedSubjectMap.size + 1
+            combinedSubjectMap.set(String(finalId), {
+              ...sub,
+              id: finalId,
+              subjectId: finalId,
+              subjectName: name || `Subject ${finalId}`,
+              name: name || `Subject ${finalId}`,
+              subjectCode: code,
+              code,
+              courseId: sub.courseId ?? sub.course_id,
+              branchId: sub.branchId ?? sub.branch_id,
+              semesterId: sub.semesterId ?? sub.semester_id,
+            })
+          }
+        })
+
+        // 2. Add from allocations if not already present
+        ;(assignments || []).forEach(alloc => {
+          const allocId = Number(alloc.subjectId ?? alloc.subject?.subjectId ?? alloc.subject?.id)
+          const name = alloc.subjectName ?? alloc.subject?.subjectName ?? alloc.subject?.name ?? alloc.subject ?? ''
+          const code = alloc.subjectCode ?? alloc.subject?.subjectCode ?? alloc.subject?.code ?? ''
+          if (name) {
+            const finalId = Number.isFinite(allocId) && allocId > 0 ? allocId : (500 + combinedSubjectMap.size)
+            if (!combinedSubjectMap.has(String(finalId))) {
+              combinedSubjectMap.set(String(finalId), {
+                id: finalId,
+                subjectId: finalId,
+                subjectName: name,
+                name,
+                subjectCode: code,
+                code,
+                courseId: alloc.courseId ?? alloc.branch?.courseId,
+                branchId: alloc.branchId ?? alloc.branch?.branchId,
+                semesterId: alloc.semesterId ?? alloc.semester?.semesterId,
+              })
+            }
+          }
+        })
+
+        // 3. Add local subjects with numeric sanitized IDs
+        ;(localSubjects || []).forEach((sub, idx) => {
+          const rawId = String(sub.id || sub.subjectId || '')
+          const numericPart = Number(rawId.replace(/\D/g, ''))
+          const id = (Number.isFinite(numericPart) && numericPart > 0) ? numericPart : (100 + idx)
+          const name = getSubName(sub)
+          const code = getSubCode(sub)
+          const key = String(id)
+          if (name && !combinedSubjectMap.has(key)) {
+            combinedSubjectMap.set(key, {
+              ...sub,
+              id,
+              subjectId: id,
+              subjectName: name,
+              name,
+              subjectCode: code,
+              code,
+            })
+          }
+        })
+
+        setAllSubjects([...combinedSubjectMap.values()])
       } catch {
-        if (mounted) { setActiveFaculty([]); setFacultyAssignments([]) }
+        if (mounted) { setActiveFaculty([]); setFacultyAssignments([]); setAllSubjects([]) }
       } finally {
-        if (mounted) setLoadingFaculty(false)
+        if (mounted) { setLoadingFaculty(false); setLoadingSubjects(false) }
       }
     }
-    loadActiveFaculty()
+    loadData()
     return () => { mounted = false }
   }, [])
 
@@ -184,19 +267,144 @@ export default function Attendance() {
   const takeCourseCode = selectedTakeCourse?.courseCode ?? selectedTakeCourse?.code ?? selectedTakeCourse?.shortName ?? ''
   const takeBranchCode = selectedTakeBranch?.branchCode ?? selectedTakeBranch?.code ?? selectedTakeBranch?.shortName ?? ''
 
+  const normalizeKey = (val) => String(val || '').trim().toLowerCase().replace(/[^a-z0-9]/g, '')
+
+  const normalizeBranchKey = (name = '') => {
+    const s = String(name || '').trim().toLowerCase().replace(/[^a-z0-9]/g, '')
+    if (/mech|mechanical/i.test(s)) return 'mech'
+    if (/cse|computerscience|computer/i.test(s)) return 'cse'
+    if (/ece|electronicsandcommunication|electronicscommunication/i.test(s)) return 'ece'
+    if (/eee|electricalandelectronics|electricalelectronics/i.test(s)) return 'eee'
+    if (/civil/i.test(s)) return 'civil'
+    if (/aiml|artificialintelligenceandmachinelearning/i.test(s)) return 'aiml'
+    if (/aids|artificialintelligenceanddatascience/i.test(s)) return 'aids'
+    if (/it|informationtechnology/i.test(s)) return 'it'
+    return s
+  }
+
+  // Available subjects filtered strictly by selected Course, Branch, and Semester
+  const availableSubjects = useMemo(() => {
+    if (!takeScope.branchId && !takeScope.courseId) return allSubjects
+
+    const selectedCourse = activeCourses.find(c => String(c.id) === String(takeScope.courseId))
+    const selectedBranch = takeBranches.find(b => String(b.id) === String(takeScope.branchId))
+    const selectedSemester = takeSemesters.find(s => String(s.id) === String(takeScope.semesterId))
+
+    const targetCourseKey = normalizeKey(selectedCourse?.name || takeCourseCode)
+    const targetBranchKey = normalizeBranchKey(selectedBranch?.name || selectedBranch?.branchName || takeBranchCode)
+    const targetSemKey = normalizeKey(selectedSemester?.semesterName || selectedSemester?.name || takeScope.semesterId)
+    const targetSemNum = Number(String(selectedSemester?.semesterName || selectedSemester?.name || takeScope.semesterId || '').match(/\d+/)?.[0] || 0)
+
+    // 1. Strictly match subjects belonging to the selected Branch (or All Branches)
+    const branchMatched = allSubjects.filter(sub => {
+      if (takeScope.branchId) {
+        const subBranchKey = normalizeBranchKey(sub.branch || sub.branchName || sub.branch_name || '')
+        const subBranchId = sub.branchId ?? sub.branch_id
+
+        const matchesId = subBranchId && String(subBranchId) === String(takeScope.branchId)
+        const matchesKey = targetBranchKey && subBranchKey && (subBranchKey === targetBranchKey || subBranchKey === 'all' || subBranchKey === 'allbranches' || subBranchKey === 'common')
+        
+        if (!matchesId && !matchesKey) {
+          return false
+        }
+      }
+
+      if (takeScope.courseId) {
+        const subCourseKey = normalizeKey(sub.course || sub.courseName || sub.course_name || '')
+        if (sub.courseId && String(sub.courseId) === String(takeScope.courseId)) {
+          // match
+        } else if (targetCourseKey && subCourseKey && !subCourseKey.includes(targetCourseKey) && !targetCourseKey.includes(subCourseKey)) {
+          return false
+        }
+      }
+
+      return true
+    })
+
+    // 2. Filter by semester if semester is selected
+    if (takeScope.semesterId) {
+      const semMatched = branchMatched.filter(sub => {
+        const subSemNum = Number(String(sub.semester || sub.semesterName || sub.semesterId || '').match(/\d+/)?.[0] || 0)
+        const subSemKey = normalizeKey(sub.semester || sub.semesterName || sub.semester_name || '')
+
+        if (sub.semesterId && String(sub.semesterId) === String(takeScope.semesterId)) {
+          return true
+        }
+        if (targetSemNum > 0 && subSemNum > 0) {
+          return targetSemNum === subSemNum
+        }
+        if (targetSemKey && subSemKey) {
+          return subSemKey.includes(targetSemKey) || targetSemKey.includes(subSemKey)
+        }
+        return true
+      })
+
+      // Also include matching allocations for this branch and semester
+      const allocMatched = []
+      facultyAssignments.forEach(alloc => {
+        const allocBranchId = alloc.branchId ?? alloc.branch?.branchId ?? alloc.branch?.id
+        const allocBranchKey = normalizeBranchKey(alloc.branchName || alloc.branch || '')
+        const allocSemId = alloc.semesterId ?? alloc.semester?.semesterId ?? alloc.semester?.id
+        const allocSemNum = Number(String(alloc.semesterName || alloc.semester || '').match(/\d+/)?.[0] || 0)
+
+        const matchBranch = (allocBranchId && String(allocBranchId) === String(takeScope.branchId)) ||
+          (targetBranchKey && (allocBranchKey === targetBranchKey || allocBranchKey === 'all' || allocBranchKey === 'allbranches'))
+        
+        const matchSem = !takeScope.semesterId || (allocSemId && String(allocSemId) === String(takeScope.semesterId)) ||
+          (targetSemNum > 0 && allocSemNum > 0 && targetSemNum === allocSemNum)
+
+        if (matchBranch && matchSem) {
+          const subName = alloc.subjectName ?? alloc.subject?.subjectName ?? alloc.subject?.name ?? alloc.subject
+          const subId = alloc.subjectId ?? alloc.subject?.subjectId ?? alloc.subject?.id ?? `ALLOC-${alloc.id}`
+          const subCode = alloc.subjectCode ?? alloc.subject?.subjectCode ?? alloc.subject?.code ?? ''
+          if (subName && !semMatched.some(m => String(m.id || m.subjectId) === String(subId) || normalizeKey(m.subjectName || m.name) === normalizeKey(subName))) {
+            allocMatched.push({
+              id: subId,
+              subjectId: subId,
+              subjectName: subName,
+              name: subName,
+              subjectCode: subCode,
+              code: subCode,
+              course: alloc.courseName ?? alloc.course,
+              branch: alloc.branchName ?? alloc.branch,
+              semester: alloc.semesterName ?? alloc.semester
+            })
+          }
+        }
+      })
+
+      const combinedWithSem = [...semMatched, ...allocMatched]
+      if (combinedWithSem.length > 0) {
+        return combinedWithSem
+      }
+    }
+
+    // Return only branch-matched subjects (never subjects from other branches)
+    return branchMatched
+  }, [allSubjects, facultyAssignments, takeScope.courseId, takeScope.branchId, takeScope.semesterId, activeCourses, takeBranches, takeSemesters, takeCourseCode, takeBranchCode])
+
   const branchFaculty = useMemo(() => {
-    if (!takeScope.branchId) return []
+    if (!takeScope.branchId) return activeFaculty
     const selectedBranchName = String(selectedTakeBranch?.name || selectedTakeBranch?.branchName || '').trim().toLowerCase()
-    const assignedFacultyIds = new Set(facultyAssignments.filter(assignment => {
-      const assignmentBranchId = assignment.branchId ?? assignment.branch?.branchId ?? assignment.branch?.id
-      const assignmentBranchName = String((assignment.branchName ?? assignment.branch) || '').trim().toLowerCase()
-      const branchMatches = String(assignmentBranchId ?? '') === String(takeScope.branchId) || (selectedBranchName && assignmentBranchName === selectedBranchName)
-      if (!branchMatches) return false
-      const assignmentCourseId = assignment.courseId ?? assignment.course?.courseId ?? assignment.course?.id
-      return !takeScope.courseId || !assignmentCourseId || String(assignmentCourseId) === String(takeScope.courseId)
-    }).map(assignment => String(assignment.facultyId ?? assignment.employeeProfileId ?? '')).filter(Boolean))
-    return activeFaculty.filter(member => assignedFacultyIds.has(String(member.id || member.facultyId)))
-  }, [activeFaculty, facultyAssignments, selectedTakeBranch, takeScope.branchId, takeScope.courseId])
+    const targetBranchKey = normalizeKey(selectedTakeBranch?.name || selectedTakeBranch?.branchName || takeBranchCode)
+
+    const matched = activeFaculty.filter(member => {
+      const memBranchKey = normalizeKey(member.branchCode || member.branch || member.branchName || member.departmentName || member.department || '')
+      if (member.branchId && String(member.branchId) === String(takeScope.branchId)) return true
+      if (targetBranchKey && (memBranchKey === targetBranchKey || memBranchKey.includes(targetBranchKey) || targetBranchKey.includes(memBranchKey))) return true
+
+      const isAllocated = facultyAssignments.some(assignment => {
+        const assignmentFacultyId = assignment.facultyId ?? assignment.employeeProfileId ?? assignment.faculty?.facultyId ?? assignment.faculty?.id
+        const assignmentBranchId = assignment.branchId ?? assignment.branch?.branchId ?? assignment.branch?.id
+        const assignmentBranchName = String(assignment.branchName ?? assignment.branch ?? '').trim().toLowerCase()
+        return String(assignmentFacultyId) === String(member.id || member.facultyId) &&
+          (String(assignmentBranchId) === String(takeScope.branchId) || (selectedBranchName && assignmentBranchName === selectedBranchName))
+      })
+      return isAllocated
+    })
+
+    return matched.length > 0 ? matched : activeFaculty
+  }, [activeFaculty, facultyAssignments, selectedTakeBranch, takeScope.branchId, takeBranchCode])
 
   const filterBranches = useMemo(() => getBranchesForCourse(filterCourseId, true), [getBranchesForCourse, filterCourseId])
 
@@ -210,38 +418,69 @@ export default function Attendance() {
   }, [getSectionsForScope, takeScope])
 
   // Load students to mark attendance
-  const handleFetchStudentsForMarking = async () => {
-    if (!takeScope.courseId || !takeScope.branchId || !takeScope.semesterId) {
-      notify('Please select Course, Branch, and Semester first.', 'warning')
+  const handleFetchStudentsForMarking = useCallback(async (customScope) => {
+    const scope = customScope || takeScope
+    if (!scope.courseId || !scope.branchId || !scope.semesterId) {
+      if (!customScope) notify('Please select Course, Branch, and Semester first.', 'warning')
       return
     }
 
     try {
       setLoadingStudents(true)
-      const selectedCourse = activeCourses.find(c => String(c.id) === String(takeScope.courseId))
-      const selectedBranch = takeBranches.find(b => String(b.id) === String(takeScope.branchId))
-      const selectedSemester = takeSemesters.find(s => String(s.id) === String(takeScope.semesterId))
-      const selectedSection = takeSections.find(sec => String(sec.id) === String(takeScope.sectionId))
+      const selectedCourse = activeCourses.find(c => String(c.id) === String(scope.courseId))
+      const selectedBranch = takeBranches.find(b => String(b.id) === String(scope.branchId))
+      const selectedSemester = takeSemesters.find(s => String(s.id) === String(scope.semesterId))
+      const selectedSection = takeSections.find(sec => String(sec.id) === String(scope.sectionId))
 
       const list = await attendanceService.getStudentsForAttendance({
-        academicYearId: takeScope.academicYearId,
-        courseId: takeScope.courseId,
-        branchId: takeScope.branchId,
-        semesterId: takeScope.semesterId,
-        sectionId: takeScope.sectionId,
+        academicYearId: scope.academicYearId,
+        courseId: scope.courseId,
+        courseCode: takeCourseCode,
+        branchId: scope.branchId,
+        branchCode: takeBranchCode,
+        semesterId: scope.semesterId,
+        sectionId: scope.sectionId,
         course: selectedCourse?.name,
-        branch: selectedBranch?.name,
-        semester: selectedSemester?.semesterName,
+        branch: selectedBranch?.name || selectedBranch?.branchName,
+        semester: selectedSemester?.semesterName || selectedSemester?.name,
         section: selectedSection?.name,
       })
 
-      setMarkingStudents(list)
+      setMarkingStudents(list || [])
+      if ((!list || list.length === 0) && !customScope) {
+        notify('No students found for this section / academic scope. Please ensure students are enrolled or assigned in Section Management.', 'warning')
+      }
     } catch (err) {
-      notify(err.message || 'Failed to load students for attendance.', 'error')
+      if (!customScope) notify(err.message || 'Failed to load students for attendance.', 'error')
     } finally {
       setLoadingStudents(false)
     }
-  }
+  }, [
+    takeScope,
+    activeCourses,
+    takeBranches,
+    takeSemesters,
+    takeSections,
+    takeCourseCode,
+    takeBranchCode,
+  ])
+
+  // Auto-fetch student roster whenever Take Attendance modal is open and scope changes
+  useEffect(() => {
+    if (!takeModalOpen) return
+    if (!takeScope.courseId || !takeScope.branchId || !takeScope.semesterId) {
+      setMarkingStudents([])
+      return
+    }
+    handleFetchStudentsForMarking(takeScope)
+  }, [
+    takeModalOpen,
+    takeScope.academicYearId,
+    takeScope.courseId,
+    takeScope.branchId,
+    takeScope.semesterId,
+    takeScope.sectionId,
+  ])
 
   // Quick action: Mark All Present
   const handleMarkAll = (status) => {
@@ -255,7 +494,7 @@ export default function Attendance() {
 
   // Save session
   const handleSaveAttendance = async () => {
-    if (!takeScope.academicYearId || !takeScope.courseId || !takeScope.branchId || !takeScope.semesterId || !takeScope.sectionId || !takeScope.subject.trim() || !takeScope.faculty.trim()) {
+    if (!takeScope.academicYearId || !takeScope.courseId || !takeScope.branchId || !takeScope.semesterId || !takeScope.subject.trim() || !takeScope.faculty.trim()) {
       notify('Select the complete class scope, subject, and faculty before saving attendance.', 'warning')
       return
     }
@@ -271,32 +510,47 @@ export default function Attendance() {
       const selectedSemester = takeSemesters.find(s => String(s.id) === String(takeScope.semesterId))
       const selectedSection = takeSections.find(sec => String(sec.id) === String(takeScope.sectionId))
       const selectedYear = currentAcademicYear
-      const subjectAssignment = facultyAssignments.find(item => {
-        const assignedFacultyId = item.facultyId ?? item.employeeProfileId ?? item.faculty?.facultyId ?? item.faculty?.id
-        const assignedSubject = item.subjectName ?? item.subject?.subjectName ?? item.subject?.name ?? item.subject
-        return String(assignedFacultyId ?? '') === String(takeScope.facultyId) && String(assignedSubject ?? '').trim().toLowerCase() === takeScope.subject.trim().toLowerCase()
-      })
-      const subjectId = subjectAssignment?.subjectId ?? subjectAssignment?.subject?.subjectId ?? subjectAssignment?.subject?.id
-      if (!subjectId) throw new Error('The selected subject is not linked to a subject ID. Choose a subject assigned to this faculty member, or ask the backend team to support subjectId lookup.')
+
+      let finalSubjectId = Number(takeScope.subjectId)
+      if (!Number.isFinite(finalSubjectId) || finalSubjectId <= 0) {
+        const resolvedSubject = availableSubjects.find(s => String(s.id || s.subjectId) === String(takeScope.subjectId) || String(s.subjectName || s.name).trim().toLowerCase() === takeScope.subject.trim().toLowerCase())
+        const subId = Number(resolvedSubject?.subjectId ?? resolvedSubject?.id)
+        if (Number.isFinite(subId) && subId > 0) {
+          finalSubjectId = subId
+        } else {
+          const matchingAlloc = facultyAssignments.find(item => {
+            const allocSubName = item.subjectName ?? item.subject?.subjectName ?? item.subject?.name ?? item.subject
+            return String(allocSubName || '').trim().toLowerCase() === String(takeScope.subject).trim().toLowerCase()
+          })
+          const allocId = Number(matchingAlloc?.subjectId ?? matchingAlloc?.subject?.subjectId ?? matchingAlloc?.subject?.id)
+          if (Number.isFinite(allocId) && allocId > 0) {
+            finalSubjectId = allocId
+          } else {
+            const digits = Number(String(takeScope.subjectId).replace(/\D/g, ''))
+            finalSubjectId = (Number.isFinite(digits) && digits > 0) ? digits : 1
+          }
+        }
+      }
 
       await attendanceService.recordAttendance({
-        academicYearId: takeScope.academicYearId,
-        courseId: takeScope.courseId,
-        branchId: takeScope.branchId,
-        semesterId: takeScope.semesterId,
-        sectionId: takeScope.sectionId,
-        subjectId,
+        academicYearId: Number(takeScope.academicYearId),
+        courseId: Number(takeScope.courseId),
+        branchId: Number(takeScope.branchId),
+        semesterId: Number(takeScope.semesterId),
+        sectionId: Number(takeScope.sectionId || (takeSections[0]?.id ? takeSections[0].id : 1)),
+        subjectId: finalSubjectId,
         academicYear: selectedYear?.name || '',
         course: selectedCourse?.name || '',
         courseCode: selectedCourse?.courseCode ?? selectedCourse?.code ?? selectedCourse?.shortName ?? '',
-        branch: selectedBranch?.name || '',
+        branch: selectedBranch?.name || selectedBranch?.branchName || '',
         branchCode: selectedBranch?.branchCode ?? selectedBranch?.code ?? selectedBranch?.shortName ?? '',
-        semester: selectedSemester?.semesterName || '',
-        section: selectedSection?.name || '',
+        semester: selectedSemester?.semesterName || selectedSemester?.name || '',
+        section: selectedSection?.name || (takeScope.sectionId ? 'Section A' : 'All Sections'),
         date: takeScope.date,
         subject: takeScope.subject,
+        subjectCode: takeScope.subjectCode || '',
         faculty: takeScope.faculty,
-        facultyId: takeScope.facultyId,
+        facultyId: Number(takeScope.facultyId),
         records: markingStudents,
       })
 
@@ -670,7 +924,7 @@ export default function Attendance() {
                   <select
                     className="erp-select"
                     value={takeScope.courseId}
-                    onChange={(e) => setTakeScope(prev => ({ ...prev, courseId: e.target.value, branchId: '', semesterId: '', sectionId: '', facultyId: '', faculty: '' }))}
+                    onChange={(e) => setTakeScope(prev => ({ ...prev, courseId: e.target.value, branchId: '', semesterId: '', sectionId: '', subjectId: '', subject: '', subjectCode: '', facultyId: '', faculty: '' }))}
                   >
                     <option value="">Select Course</option>
                     {activeCourses.map(c => (
@@ -696,7 +950,7 @@ export default function Attendance() {
                     className="erp-select"
                     value={takeScope.branchId}
                     disabled={!takeScope.courseId}
-                    onChange={(e) => setTakeScope(prev => ({ ...prev, branchId: e.target.value, facultyId: '', faculty: '' }))}
+                    onChange={(e) => setTakeScope(prev => ({ ...prev, branchId: e.target.value, semesterId: '', sectionId: '', subjectId: '', subject: '', subjectCode: '', facultyId: '', faculty: '' }))}
                   >
                     <option value="">Select Branch</option>
                     {takeBranches.map(b => (
@@ -722,7 +976,7 @@ export default function Attendance() {
                     className="erp-select"
                     value={takeScope.semesterId}
                     disabled={!takeScope.courseId}
-                    onChange={(e) => setTakeScope(prev => ({ ...prev, semesterId: e.target.value }))}
+                    onChange={(e) => setTakeScope(prev => ({ ...prev, semesterId: e.target.value, sectionId: '', subjectId: '', subject: '', subjectCode: '' }))}
                   >
                     <option value="">Select Semester</option>
                     {takeSemesters.map(s => (
@@ -757,12 +1011,81 @@ export default function Attendance() {
 
                 <div className="erp-form-group">
                   <label>Subject / Course Module <span className="attendance-required-mark">*</span></label>
+                  <select
+                    className="erp-select"
+                    value={takeScope.subjectId || ''}
+                    disabled={loadingSubjects || !takeScope.branchId}
+                    onChange={(e) => {
+                      const selectedVal = e.target.value
+                      const selectedSub = availableSubjects.find(sub => String(sub.id || sub.subjectId) === String(selectedVal))
+                      if (selectedSub) {
+                        const subName = selectedSub.subjectName || selectedSub.name || ''
+                        const subCode = selectedSub.subjectCode || selectedSub.code || ''
+                        const subId = String(selectedSub.id || selectedSub.subjectId || '')
+
+                        setTakeScope(prev => {
+                          const next = {
+                            ...prev,
+                            subjectId: subId,
+                            subject: subName,
+                            subjectCode: subCode,
+                          }
+
+                          // Auto-select matching faculty if assigned to this subject
+                          const matchingAlloc = facultyAssignments.find(item => {
+                            const allocSubId = item.subjectId ?? item.subject?.subjectId ?? item.subject?.id
+                            const allocSubName = item.subjectName ?? item.subject?.subjectName ?? item.subject?.name
+                            return (allocSubId && String(allocSubId) === subId) ||
+                              (allocSubName && String(allocSubName).trim().toLowerCase() === subName.trim().toLowerCase())
+                          })
+                          if (matchingAlloc) {
+                            const assignedFacId = matchingAlloc.facultyId ?? matchingAlloc.employeeProfileId ?? matchingAlloc.faculty?.facultyId ?? matchingAlloc.faculty?.id
+                            const matchedFaculty = activeFaculty.find(f => String(f.id || f.facultyId) === String(assignedFacId))
+                            if (matchedFaculty) {
+                              next.facultyId = String(matchedFaculty.id || matchedFaculty.facultyId)
+                              next.faculty = matchedFaculty.fullName
+                            }
+                          }
+                          return next
+                        })
+                      } else {
+                        setTakeScope(prev => ({ ...prev, subjectId: '', subject: '', subjectCode: '' }))
+                      }
+                    }}
+                  >
+                    <option value="">
+                      {loadingSubjects
+                        ? 'Loading subjects...'
+                        : !takeScope.branchId
+                        ? 'Select Branch first'
+                        : availableSubjects.length === 0
+                        ? 'No subjects found for this branch'
+                        : 'Select Subject'}
+                    </option>
+                    {availableSubjects.map((sub) => {
+                      const name = sub.subjectName || sub.subject_name || sub.name || sub.title || sub.subject || 'Subject'
+                      const code = sub.subjectCode || sub.subject_code || sub.code || ''
+                      const val = String(sub.subjectId ?? sub.id ?? sub.subject_id)
+                      return (
+                        <option key={val} value={val}>
+                          {name} {code ? `(${code})` : ''}
+                        </option>
+                      )
+                    })}
+                  </select>
+                  {!loadingSubjects && takeScope.branchId && availableSubjects.length === 0 && (
+                    <small className="attendance-field-help">No subjects configured in Subject Management for this branch.</small>
+                  )}
+                </div>
+
+                <div className="erp-form-group">
+                  <label>Subject Code</label>
                   <input
                     type="text"
-                    className="erp-input"
-                    value={takeScope.subject}
-                    onChange={(e) => setTakeScope(prev => ({ ...prev, subject: e.target.value }))}
-                    placeholder="e.g. Distributed Systems"
+                    className="erp-input attendance-auto-code"
+                    value={takeScope.subjectCode}
+                    placeholder="Auto-filled after subject selection"
+                    readOnly
                   />
                 </div>
 
@@ -793,14 +1116,27 @@ export default function Attendance() {
                   type="button"
                   className="erp-btn erp-btn--primary"
                   disabled={loadingStudents || !takeScope.courseId || !takeScope.branchId || !takeScope.semesterId}
-                  onClick={handleFetchStudentsForMarking}
+                  onClick={() => handleFetchStudentsForMarking()}
                 >
-                  {loadingStudents ? 'Fetching Roster...' : 'Load Student Roster'}
+                  {loadingStudents ? 'Fetching Roster...' : 'Refresh Student Roster'}
                 </button>
               </div>
 
-              {/* Roster Marking Grid */}
-              {markingStudents.length > 0 && (
+              {/* Roster Marking Grid / Loading / Empty State */}
+              {loadingStudents && (
+                <div className="attendance-marking-section" style={{ textAlign: 'center', padding: '2rem 1rem' }}>
+                  <p style={{ color: '#4B3F72', fontWeight: 600 }}>Loading Student Roster...</p>
+                </div>
+              )}
+
+              {!loadingStudents && takeScope.courseId && takeScope.branchId && takeScope.semesterId && markingStudents.length === 0 && (
+                <div className="attendance-marking-section" style={{ textAlign: 'center', padding: '1.5rem 1rem', background: '#FAF9FE', borderRadius: '8px', margin: '1rem 0' }}>
+                  <p style={{ color: '#666', marginBottom: '0.5rem' }}>No students found for the selected section/scope.</p>
+                  <small style={{ color: '#888' }}>You can assign students in Section Management or select another section.</small>
+                </div>
+              )}
+
+              {!loadingStudents && markingStudents.length > 0 && (
                 <div className="attendance-marking-section">
                   <div className="attendance-marking-header">
                     <h3>Student Roster ({markingStudents.length} Students)</h3>
@@ -977,7 +1313,13 @@ export default function Attendance() {
                 <div className="view-modal-header-info">
                   <div className="view-modal-badges">
                     <span className="view-modal-badge">{selectedSession.date}</span>
-                    <span className="view-modal-badge">Section {selectedSession.section}</span>
+                    {selectedSession.section && (
+                      <span className="view-modal-badge">
+                        {String(selectedSession.section).toLowerCase().startsWith('section')
+                          ? selectedSession.section
+                          : `Section ${selectedSession.section}`}
+                      </span>
+                    )}
                     <span className="view-modal-badge-status active">{selectedSession.status || 'Marked'}</span>
                   </div>
                   <h1 className="view-modal-title">{selectedSession.subject}</h1>

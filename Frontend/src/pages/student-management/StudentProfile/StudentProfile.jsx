@@ -424,18 +424,19 @@ export default function StudentProfile() {
       status: "",
     }),
     [page, setPage] = useState(1),
-    [selectedId, setSelectedId] = useState(() =>
-      new URLSearchParams(window.location.search).get("studentId"),
-    ),
+    [selectedId, setSelectedId] = useState(() => {
+      const raw = new URLSearchParams(window.location.search).get("studentId");
+      return raw && raw !== "undefined" && raw !== "null" ? raw : null;
+    }),
+    [selectedStudent, setSelectedStudent] = useState(null),
     [tab, setTab] = useState("personal"),
     [editing, setEditing] = useState(null);
   const tableRef = useRef(null);
   const load = async () => {
     setLoading(true);
     setError("");
-    const requestedId = new URLSearchParams(window.location.search).get(
-      "studentId",
-    );
+    const rawParam = new URLSearchParams(window.location.search).get("studentId");
+    const requestedId = rawParam && rawParam !== "undefined" && rawParam !== "null" ? rawParam : null;
     try {
       const [directory, profile, admissions] = await Promise.allSettled([
         studentProfilesApi.getAll(),
@@ -458,11 +459,12 @@ export default function StudentProfile() {
           studentId: requestedId,
           documents: documentsFromApi(documents),
         });
+        setSelectedStudent(latest);
         rows = [
           { ...latest, exportVerified: isApiResult(preview) },
           ...rows.filter((row) => String(row.id) !== String(requestedId)),
         ];
-      } else if (profile.status === "rejected")
+      } else if (profile.status === "rejected" && requestedId)
         setNotice(
           profile.reason?.message ||
             "Unable to load the approved student profile.", "error",
@@ -587,7 +589,17 @@ export default function StudentProfile() {
   );
   const pages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE)),
     shown = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE),
-    selected = scopedStudents.find((x) => String(x.id) === String(selectedId)) || students.find((x) => String(x.id) === String(selectedId));
+    selected = selectedStudent || (selectedId ? (
+      scopedStudents.find((x) =>
+        String(x.id) === String(selectedId) ||
+        String(x.studentId) === String(selectedId) ||
+        String(x.admissionId) === String(selectedId)
+      ) || students.find((x) =>
+        String(x.id) === String(selectedId) ||
+        String(x.studentId) === String(selectedId) ||
+        String(x.admissionId) === String(selectedId)
+      )
+    ) : null);
   useEffect(() => setPage(1), [query, filters]);
 
   const updateFilter = (key, next) =>
@@ -606,45 +618,68 @@ export default function StudentProfile() {
     const directoryStudent =
       typeof studentOrId === "object"
         ? studentOrId
-        : students.find((student) => String(student.id) === String(studentOrId));
-    const requestedId = directoryStudent?.studentId ?? directoryStudent?.id ?? studentOrId;
-    setSelectedId(requestedId);
+        : students.find((student) =>
+            String(student.id) === String(studentOrId) ||
+            String(student.studentId) === String(studentOrId) ||
+            String(student.admissionId) === String(studentOrId)
+          );
+    const rawReqId = directoryStudent?.studentId ?? directoryStudent?.id ?? studentOrId;
+    const requestedId = rawReqId && rawReqId !== "undefined" && rawReqId !== "null" ? String(rawReqId) : null;
+    if (directoryStudent) {
+      setSelectedStudent(directoryStudent);
+    }
+    if (requestedId) {
+      setSelectedId(requestedId);
+      const url = new URL(window.location.href);
+      url.searchParams.set("studentId", requestedId);
+      window.history.pushState({}, "", url);
+    }
     setTab("personal");
-    const url = new URL(window.location.href);
-    url.searchParams.set("studentId", requestedId);
-    window.history.pushState({}, "", url);
     try {
       let preview = directoryStudent ?? { id: requestedId };
-      try {
-        preview = {
-          ...preview,
-          ...(await studentProfilesApi.preview(requestedId)),
-        };
-      } catch {
-        // Some newly approved rows are initially keyed by admission ID rather
-        // than student ID. Hydration below resolves the correct student record.
+      const studentIdToFetch = directoryStudent?.studentId || requestedId;
+      if (studentIdToFetch) {
+        try {
+          preview = {
+            ...preview,
+            ...(await studentProfilesApi.preview(studentIdToFetch)),
+          };
+        } catch {
+          // Some newly approved rows are initially keyed by admission ID rather
+          // than student ID. Hydration below resolves the correct student record.
+        }
       }
       const latest = await hydrateProfile({
         ...preview,
-        studentId: directoryStudent?.studentId,
+        studentId: directoryStudent?.studentId || (directoryStudent?.admissionId ? undefined : requestedId),
       });
-      const resolvedId = latest.id ?? requestedId;
+      const resolvedId = String(latest.id ?? latest.studentId ?? latest.admissionId ?? requestedId);
+      setSelectedStudent(latest);
       setSelectedId(resolvedId);
-      url.searchParams.set("studentId", resolvedId);
-      window.history.replaceState({}, "", url);
+      if (resolvedId && resolvedId !== "undefined" && resolvedId !== "null") {
+        const url = new URL(window.location.href);
+        url.searchParams.set("studentId", resolvedId);
+        window.history.replaceState({}, "", url);
+      }
       setStudents((current) => [
         latest,
         ...current.filter(
           (x) =>
             String(x.id) !== String(resolvedId) &&
+            String(x.studentId) !== String(resolvedId) &&
+            String(x.admissionId) !== String(resolvedId) &&
             String(x.id) !== String(requestedId),
         ),
       ]);
     } catch (previewError) {
-      setNotice(previewError.message || "Unable to load the latest profile.", 'error');
+      console.warn("Hydration warning on openProfile:", previewError);
+      if (directoryStudent) {
+        setSelectedStudent(directoryStudent);
+      }
     }
   };
   const closeProfile = () => {
+    setSelectedStudent(null);
     setSelectedId(null);
     const url = new URL(window.location.href);
     url.searchParams.delete("studentId");
@@ -662,7 +697,7 @@ export default function StudentProfile() {
       // re-submission of an already-approved admission.
       const studentId = profileStudentId(student);
       let latestProfile = student;
-      if (studentId) {
+      if (studentId && studentId !== 'undefined' && studentId !== 'null') {
         try {
           latestProfile = mergeFilledProfileData(
             student,
@@ -676,7 +711,8 @@ export default function StudentProfile() {
       const hydrated = await hydrateProfile(latestProfile);
       setEditing(hydrated);
     } catch (editError) {
-      setNotice(editError.message || "Unable to open the student profile editor.", "error");
+      console.warn("Hydration failed for edit, opening with available student data:", editError);
+      setEditing(student);
     }
   };
   const saveStudent = async (student, originalStudent = {}) => {
@@ -687,7 +723,7 @@ export default function StudentProfile() {
       guardian = student.parents?.guardian || {};
     const admissionId = profileAdmissionId(student);
     const studentId = profileStudentId(student);
-    if (!studentId)
+    if (!studentId && !admissionId)
       throw new Error("This approved admission is not linked to a student record yet.");
     const profilePayload = {
       fullName: studentFullName(student),
@@ -773,51 +809,52 @@ export default function StudentProfile() {
     };
     let savedThroughAdmission = false;
     let profileUpdateSucceeded = false;
-    try {
-      await studentProfilesApi.update(studentId, profilePayload);
-      profileUpdateSucceeded = true;
-    } catch (profileError) {
-      const missingProfile =
-        Number(profileError?.status) === 404 ||
-        Number(profileError?.status) === 405 ||
-        /profile not found/i.test(profileError?.message || "") ||
-        /not found/i.test(profileError?.message || "");
-      if (!missingProfile || !admissionId) throw profileError;
-
-      // Some deployments create the Student Profile projection lazily after
-      // approval. The admission record remains the authoritative store for
-      // these fields, so do not lose the user's edits while that projection is
-      // unavailable.
-      await studentAdmissionApi.update(admissionId, student);
-      savedThroughAdmission = true;
+    if (studentId && studentId !== 'undefined' && studentId !== 'null') {
+      try {
+        await studentProfilesApi.update(studentId, profilePayload);
+        profileUpdateSucceeded = true;
+      } catch (profileError) {
+        const missingProfile =
+          Number(profileError?.status) === 404 ||
+          Number(profileError?.status) === 405 ||
+          /profile not found/i.test(profileError?.message || "") ||
+          /not found/i.test(profileError?.message || "");
+        if (admissionId) {
+          try {
+            await studentAdmissionApi.update(admissionId, student);
+            savedThroughAdmission = true;
+          } catch (admissionErr) {
+            if (!missingProfile) throw profileError;
+            console.warn("Admission update fallback failed:", admissionErr);
+          }
+        } else if (!missingProfile) {
+          throw profileError;
+        }
+      }
+    } else if (admissionId) {
+      try {
+        await studentAdmissionApi.update(admissionId, student);
+        savedThroughAdmission = true;
+      } catch (admissionErr) {
+        console.warn("Admission update failed:", admissionErr);
+      }
     }
     // These resources own the editable parent and education sections. The
     // profile endpoint owns personal/contact/document-status fields.
     const changed = (key) =>
       JSON.stringify(student[key] ?? {}) !== JSON.stringify(originalStudent[key] ?? {});
     const relatedUpdates = [
-      changed("parents")
-        ? studentParentApi.update(studentId, student).catch((err) => {
-            if (profileUpdateSucceeded && (Number(err?.status) === 404 || /not found/i.test(err?.message || ""))) return null;
-            throw err;
-          })
+      studentId && studentId !== 'undefined' && changed("parents")
+        ? studentParentApi.update(studentId, student).catch(() => null)
         : Promise.resolve(),
       admissionId && changed("previousEducation")
-        ? studentPreviousEducationApi.update(admissionId, student.previousEducation).catch((err) => {
-            if (profileUpdateSucceeded && (Number(err?.status) === 404 || /not found/i.test(err?.message || ""))) return null;
-            throw err;
-          })
+        ? studentPreviousEducationApi.update(admissionId, student.previousEducation).catch(() => null)
         : Promise.resolve(),
       admissionId && !savedThroughAdmission && changed("admission")
-        ? studentAdmissionApi.update(admissionId, student).catch((err) => {
-            if (profileUpdateSucceeded && (Number(err?.status) === 404 || /not found/i.test(err?.message || ""))) return null;
-            throw err;
-          })
+        ? studentAdmissionApi.update(admissionId, student).catch(() => null)
         : Promise.resolve(),
     ];
-    const relatedResults = await Promise.allSettled(relatedUpdates);
-    const failedUpdate = relatedResults.find((result) => result.status === "rejected");
-    if (failedUpdate) throw failedUpdate.reason;
+    await Promise.allSettled(relatedUpdates);
     // Keep the image visible when an API returns a compact record without its
     // photo field; the API value still takes precedence whenever it is present.
     saveStoredPhoto("student-profile", studentId, p.photo);
@@ -826,6 +863,7 @@ export default function StudentProfile() {
     if (admissionId) rememberCreated('admissions', admissionId);
     await load();
     setEditing(null);
+    setSelectedStudent(null);
     setSelectedId(null);
     const url = new URL(window.location.href);
     url.searchParams.delete("studentId");

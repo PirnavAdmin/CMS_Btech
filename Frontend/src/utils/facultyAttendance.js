@@ -99,15 +99,13 @@ export const combineAttendance = (...collections) => {
       if (!previous) {
         rows.set(key, { ...row, date })
       } else {
-        const prevPriority = statusPriority[previous.status] || 0
-        const rowPriority = statusPriority[row.status] || 0
-        const bestStatus = rowPriority >= prevPriority ? row.status : previous.status
+        const nextStatus = (row.status && row.status !== 'Not Marked') ? row.status : (previous.status || row.status || 'Not Marked')
         const attId = row.attendanceId || previous.attendanceId || null
         rows.set(key, {
           ...previous,
           ...row,
           date,
-          status: bestStatus,
+          status: nextStatus,
           attendanceId: attId,
           id: attId || row.id || previous.id || '',
           checkIn: (row.checkIn && row.checkIn !== '—' && row.checkIn !== '') ? row.checkIn : previous.checkIn,

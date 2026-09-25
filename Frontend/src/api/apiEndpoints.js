@@ -347,7 +347,7 @@ const request = async (url, options = {}, retried = false, bypassDedupe = false)
       400: 'Please check the submitted information.',
       401: 'Your session has expired. Please sign in again.',
       403: "You don't have permission to update this profile.",
-      404: 'Profile not found.',
+      404: 'Record not found.',
       409: 'The email or mobile number is already in use.',
       422: 'Some submitted values are invalid.',
       500: 'Something went wrong while completing your request. Please try again.',

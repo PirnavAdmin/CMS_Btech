@@ -128,25 +128,25 @@
   align-items: center;
   gap: 18px;
   padding: 18px 22px;
-  background: linear-gradient(135deg, #0F172A 0%, #554F75 100%);
+  background: linear-gradient(115deg, #F5F3FD, #DDD8F3) !important;
+  border: 1px solid #C9C4E0 !important;
   border-radius: 12px;
-  color: #ffffff;
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.08);
+  color: #30264F !important;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
 }
 
 .view-modal-avatar {
   width: 58px;
   height: 58px;
-  border-radius: 50%;
-  object-fit: cover;
-  border: 2.5px solid rgba(255, 255, 255, 0.4);
-  background: rgba(255, 255, 255, 0.2);
+  border-radius: 14px;
+  border: 2px solid #C9C4E0;
+  background: #E8E4F8;
+  color: #5B4FB5;
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: 22px;
   font-weight: 700;
-  color: #ffffff;
   flex-shrink: 0;
 }
 
@@ -171,8 +171,9 @@
   font-size: 11px;
   font-weight: 700;
   letter-spacing: 0.02em;
-  background: rgba(255, 255, 255, 0.18);
-  color: #ffffff;
+  background: #E8E4F8;
+  color: #30264F !important;
+  border: 1px solid #C9C4E0;
 }
 
 .view-modal-badge-status {
@@ -185,30 +186,30 @@
 
 .view-modal-badge-status.active {
   background: #8782BC;
-  color: #ffffff;
+  color: #ffffff !important;
 }
 
 .view-modal-badge-status.inactive {
   background: #ef4444;
-  color: #ffffff;
+  color: #ffffff !important;
 }
 
 .view-modal-badge-status.warning {
   background: #8B82C7;
-  color: #ffffff;
+  color: #ffffff !important;
 }
 
 .view-modal-title {
   margin: 0 0 3px;
   font-size: 18px;
   font-weight: 700;
-  color: #ffffff !important;
+  color: #30264F !important;
 }
 
 .view-modal-subtitle {
   margin: 0;
   font-size: 12.5px;
-  color: rgba(255, 255, 255, 0.88) !important;
+  color: #554F75 !important;
 }
 
 /* Reusable 2-Column Info Cards Grid */
