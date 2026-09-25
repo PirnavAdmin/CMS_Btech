@@ -26,7 +26,7 @@
   pointer-events: auto;
   animation: global-toast-in 220ms cubic-bezier(0.16, 1, 0.3, 1) both;
 }
-.global-toast--success { --toast-accent: var(--color-success, #16805b); }
+.global-toast--success { --toast-accent: var(--color-success, #756FB2); }
 .global-toast--error { --toast-accent: var(--error-text, #b42318); }
 .global-toast--warning { --toast-accent: var(--color-warning, #ad6b0a); }
 .global-toast--info { --toast-accent: var(--erp-blue, #2476b4); }

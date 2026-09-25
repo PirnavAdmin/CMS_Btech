@@ -829,15 +829,15 @@ export default function DepartmentManagement() {
                       {selected.status}
                     </span>
                   </div>
-                  <h1 className="cm-profile-title"><span style={{ color: '#fff' }}>{selected.name}</span></h1>
+                  <h1 className="cm-profile-title"><span style={{ color: '#30264F' }}>{selected.name}</span></h1>
                   <p className="cm-profile-subtitle">
                     {selected.collegeName ? (
                       <>
-                        <span style={{ color: '#fff' }}>College: </span>
-                        <strong style={{ color: '#fff' }}>{selected.collegeName}</strong>
+                        <span style={{ color: '#30264F' }}>College: </span>
+                        <strong style={{ color: '#30264F' }}>{selected.collegeName}</strong>
                       </>
                     ) : (
-                      <span style={{ color: '#fff' }}>Academic Department</span>
+                      <span style={{ color: '#30264F' }}>Academic Department</span>
                     )}
                   </p>
                 </div>

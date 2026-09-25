@@ -48,11 +48,11 @@
 }
 
 .compact-summary__item--active strong {
-  color: var(--success, #15803d) !important;
+  color: var(--success, #756FB2) !important;
 }
 
 .compact-summary__item--warning strong {
-  color: #d97706 !important;
+  color: #8782BC !important;
 }
 
 .compact-summary__item--upcoming strong {

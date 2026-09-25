@@ -516,12 +516,12 @@ function CourseDetails() {
                   {course.status || 'Active'}
                 </span>
               </div>
-              <h1 className="cm-profile-title"><span style={{ color: '#fff' }}>{course.name || 'Course'}</span></h1>
+              <h1 className="cm-profile-title"><span style={{ color: '#30264F' }}>{course.name || 'Course'}</span></h1>
               <p className="cm-profile-subtitle">
-                <span style={{ color: '#fff' }}>Department: </span>
-                <strong style={{ color: '#fff' }}>{department?.name || course.department || '—'}</strong>
-                {duration && <span style={{ color: '#fff' }}> · {duration}</span>}
-                {course.semesters && <span style={{ color: '#fff' }}> · {course.semesters} Semesters</span>}
+                <span style={{ color: '#30264F' }}>Department: </span>
+                <strong style={{ color: '#30264F' }}>{department?.name || course.department || '—'}</strong>
+                {duration && <span style={{ color: '#30264F' }}> · {duration}</span>}
+                {course.semesters && <span style={{ color: '#30264F' }}> · {course.semesters} Semesters</span>}
               </p>
             </div>
           </div>

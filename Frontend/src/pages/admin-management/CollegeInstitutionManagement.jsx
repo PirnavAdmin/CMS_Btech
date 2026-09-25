@@ -122,7 +122,7 @@ function validateCollege(values) {
   }
   if (!values.email.trim()) {
     errors.email = 'Email is required.'
-  } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(values.email.trim())) {
+  } else if (!/^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z]{2,})+$/.test(values.email.trim())) {
     errors.email = 'Enter a valid email address.'
   }
   if (values.website.trim() && !isValidWebsite(normalizeWebsite(values.website))) {
@@ -138,7 +138,7 @@ function validateSettings(values) {
   if (!values.collegeCode.trim()) errors.collegeCode = 'College code is required.'
   if (!values.collegeEmail.trim()) {
     errors.collegeEmail = 'College email is required.'
-  } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(values.collegeEmail.trim())) {
+  } else if (!/^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z]{2,})+$/.test(values.collegeEmail.trim())) {
     errors.collegeEmail = 'Enter a valid email address.'
   }
   return errors
@@ -646,7 +646,9 @@ export default function CollegeInstitutionManagement({ initialView = 'list' }) {
             console.warn('Backend logo upload notice:', logoErr.message)
           }
         }
-        cacheCollegeLogo(activeId, formValues.logo, [formValues.code, formValues.name, formValues.collegeCode, formValues.collegeName])
+        // The server persists only a filename. Cache its logo endpoint so the
+        // sidebar can load the uploaded image after navigation/reload.
+        cacheCollegeLogo(activeId, getCollegeLogoUrl(activeId, ''), [formValues.code, formValues.name, formValues.collegeCode, formValues.collegeName])
         setBrokenLogoIds((current) => { const next = new Set(current); next.delete(activeId); return next })
       }
       const updated = mapCollege((response.data?.data ?? response.data) || { ...formValues, id: activeId })
@@ -1157,8 +1159,8 @@ export default function CollegeInstitutionManagement({ initialView = 'list' }) {
                       {activeCollege.status === 'active' ? 'Active' : 'Inactive'}
                     </span>
                   </div>
-                  <h1 className="cm-profile-title"><span style={{ color: '#fff' }}>{activeCollege.name}</span></h1>
-                  <p className="cm-profile-subtitle"><span style={{ color: '#fff' }}>Affiliated with </span><strong style={{ color: '#fff' }}>{activeCollege.university}</strong></p>
+                  <h1 className="cm-profile-title"><span>{activeCollege.name}</span></h1>
+                  <p className="cm-profile-subtitle"><span>Affiliated with </span><strong>{activeCollege.university}</strong></p>
                 </div>
               </div>
 

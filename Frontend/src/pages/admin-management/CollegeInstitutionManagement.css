@@ -22,7 +22,7 @@
 
 .management-page__heading p {
   margin: 0;
-  color: var(--text-muted, #5e7897);
+  color: var(--text-muted, #554F75);
   font-size: 0.94rem;
 }
 
@@ -72,7 +72,7 @@
 .compact-summary__item small {
   display: block;
   margin-top: 3px;
-  color: var(--text-muted, #5e7897);
+  color: var(--text-muted, #554F75);
   font-size: 0.62rem;
   font-weight: 700;
   letter-spacing: 0.08em;
@@ -110,7 +110,7 @@
 
 .cm-header p {
   margin: 0;
-  color: #5e7897;
+  color: #554F75;
   font-size: 0.95rem;
 }
 
@@ -217,7 +217,7 @@
   padding: 60px 20px;
   border: 1px dashed #c7d7e7;
   border-radius: 12px;
-  color: #5e7897;
+  color: #554F75;
 }
 
 /* Modal Backdrops & Cards (For Add/Edit Forms) */
@@ -435,7 +435,7 @@
 
 .cm-status-badge.active {
   background: #dcfce7;
-  color: #15803d;
+  color: #756FB2;
 }
 
 .cm-status-badge.inactive {
@@ -477,7 +477,7 @@
   border-top: none;
   border-radius: 0 0 12px 12px;
   font-size: 0.88rem;
-  color: #5e7897;
+  color: #554F75;
 }
 
 .cm-pagination-info span {
@@ -495,7 +495,7 @@
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  color: var(--text-muted, #5e7897);
+  color: var(--text-muted, #554F75);
   font-size: .8rem;
   font-weight: 650;
 }
@@ -687,23 +687,32 @@
 .college-management .cm-profile-banner .cm-profile-title,
 .college-management .cm-profile-banner .cm-profile-subtitle,
 .college-management .cm-profile-banner .cm-profile-subtitle strong {
-  color: #fff !important;
+  color: #0F172A !important;
 }
 
 :root:not([data-theme="dark"]) .college-management .cm-profile-banner .cm-profile-title,
 :root:not([data-theme="dark"]) .college-management .cm-profile-banner .cm-profile-subtitle,
 :root:not([data-theme="dark"]) .college-management .cm-profile-banner .cm-profile-subtitle strong {
-  color: #fff !important;
+  color: #0F172A !important;
 }
 
 .college-management .cm-profile-banner .cm-profile-header-info h1,
 .college-management .cm-profile-banner .cm-profile-header-info p,
 .college-management .cm-profile-banner .cm-profile-title > span,
 .college-management .cm-profile-banner .cm-profile-subtitle > span,
-.college-management .cm-profile-banner .cm-profile-header-info p strong,
-.college-management .cm-profile-banner .cm-badge-code,
+.college-management .cm-profile-banner .cm-profile-header-info p strong {
+  color: #0F172A !important;
+}
+
+.college-management .cm-profile-banner .cm-badge-code {
+  color: #0F172A !important;
+  background: #FFFFFF !important;
+  border: 1px solid #CBD5E1 !important;
+  font-weight: 700 !important;
+}
+
 .college-management .cm-profile-banner .cm-status-badge {
-  color: #fff !important;
+  color: #756FB2 !important;
 }
 
 /* Profile Grid & Section Cards */
@@ -776,7 +785,7 @@
 
 /* Keep profile labels and values clearly readable on the light details view. */
 :root:not([data-theme="dark"]) .college-management .cm-info-label {
-  color: #40566f;
+  color: #554F75;
 }
 
 :root:not([data-theme="dark"]) .college-management .cm-info-val {
@@ -855,7 +864,7 @@
   width: 100%;
   padding: 8px 0;
   font-size: 0.88rem;
-  color: #345778;
+  color: #554F75;
 }
 
 .cm-form-grid input:focus,
@@ -903,7 +912,7 @@
 .cm-toggle-row p {
   margin: 4px 0 0;
   font-size: 0.85rem;
-  color: #5e7897;
+  color: #554F75;
 }
 
 .cm-toggle-row input[type="checkbox"] {

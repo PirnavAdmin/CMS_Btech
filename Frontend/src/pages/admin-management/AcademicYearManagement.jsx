@@ -310,11 +310,11 @@ export default function AcademicYear() {
                       {selected.status}
                     </span>
                   </div>
-                  <h1 className="cm-profile-title"><span style={{ color: '#fff' }}>{selected.name}</span></h1>
+                  <h1 className="cm-profile-title"><span style={{ color: '#30264F' }}>{selected.name}</span></h1>
                   <p className="cm-profile-subtitle">
-                    <span style={{ color: '#fff' }}>Duration: </span>
-                    <strong style={{ color: '#fff' }}>{duration(selected.startDate, selected.endDate)} days</strong>
-                    <span style={{ color: '#fff' }}> ({formatDate(selected.startDate)} — {formatDate(selected.endDate)})</span>
+                    <span style={{ color: '#30264F' }}>Duration: </span>
+                    <strong style={{ color: '#30264F' }}>{duration(selected.startDate, selected.endDate)} days</strong>
+                    <span style={{ color: '#30264F' }}> ({formatDate(selected.startDate)} — {formatDate(selected.endDate)})</span>
                   </p>
                 </div>
               </div>

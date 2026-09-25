@@ -33,7 +33,7 @@
 
 /* Inactive / Archived / Deactive */
 .erp-status-badge--inactive {
-  background: #f1f5f9;
+  background: #F5F3FD;
   color: #475569;
   border-color: #cbd5e1;
 }
@@ -73,8 +73,8 @@
 
 /* Approved / Verified */
 .erp-status-badge--approved {
-  background: #ecfdf5;
-  color: #047857;
+  background: #F5F3FD;
+  color: #756FB2;
   border-color: #a7f3d0;
 }
 .erp-status-badge--approved i {
@@ -142,11 +142,11 @@
 
 :root[data-theme="dark"] .erp-status-badge--pending {
   background: rgba(161, 98, 7, 0.2);
-  color: #fbbf24;
+  color: #9D99CD;
   border-color: rgba(251, 191, 36, 0.35);
 }
 :root[data-theme="dark"] .erp-status-badge--pending i {
-  background: #fbbf24;
+  background: #9D99CD;
 }
 
 :root[data-theme="dark"] .erp-status-badge--approved {

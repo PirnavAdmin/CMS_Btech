@@ -145,8 +145,8 @@
   min-height: 23px;
   padding: 3px 9px;
   border-radius: 999px;
-  color: #087443;
-  background: #dff7ec;
+  color: #756FB2;
+  background: #EDEBF6;
   font-size: .68rem;
   font-weight: 800;
   line-height: 1;
@@ -163,7 +163,7 @@
 .details-status-badge.upcoming,
 .details-status-badge.pending {
   color: #9a5b00;
-  background: #fff2d6;
+  background: #EDEBF6;
 }
 
 :root[data-theme="dark"] .details-status-badge {

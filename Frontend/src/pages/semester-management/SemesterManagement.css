@@ -66,7 +66,7 @@
   border: 1px solid var(--sem-line);
   border-radius: 9px;
   background: var(--surface, #fff);
-  box-shadow: var(--shadow-sm, 0 4px 14px rgba(0, 77, 81, 0.05));
+  box-shadow: var(--shadow-sm, 0 4px 14px rgba(94, 89, 163, 0.05));
 }
 
 .compact-summary__item {
@@ -97,8 +97,8 @@
   text-transform: uppercase;
 }
 
-.compact-summary__item--active strong { color: #087443; }
-.compact-summary__item--upcoming strong { color: #a15c00; }
+.compact-summary__item--active strong { color: #756FB2; }
+.compact-summary__item--upcoming strong { color: #756FB2; }
 .compact-summary__item--completed strong { color: #64748b; }
 
 .semester-primary,
@@ -113,7 +113,7 @@
   border-radius: 8px;
   color: #fff;
   background: #0F172A;
-  box-shadow: 0 4px 12px rgba(0, 109, 114, 0.25);
+  box-shadow: 0 4px 12px rgba(94, 89, 163, 0.25);
   font-size: 0.82rem;
   font-weight: 800;
   text-decoration: none;
@@ -154,7 +154,7 @@
   border: 1px solid var(--sem-line);
   border-radius: 14px;
   background: var(--surface, #fff);
-  box-shadow: 0 10px 30px rgba(0, 77, 81, 0.07);
+  box-shadow: 0 10px 30px rgba(94, 89, 163, 0.07);
 }
 
 .semester-directory-card {
@@ -276,7 +276,7 @@
 
 .semester-table td {
   border-bottom: 1px solid var(--sem-line);
-  color: var(--text-secondary, #345778);
+  color: var(--text-secondary, #554F75);
   background: var(--surface, #fff);
   font-size: 0.78rem;
 }
@@ -312,10 +312,10 @@
   white-space: nowrap;
 }
 
-.semester-badge.status.active { color: #087443; background: #dff7ec; }
-.semester-badge.status.upcoming { color: #a15c00; background: #fff3d6; }
+.semester-badge.status.active { color: #756FB2; background: #EDEBF6; }
+.semester-badge.status.upcoming { color: #756FB2; background: #fff3d6; }
 .semester-badge.status.completed { color: #64748b; background: #eef2f6; }
-.semester-badge.status.inactive { color: #9b5710; background: #fff0d8; }
+.semester-badge.status.inactive { color: #9b5710; background: #EDEBF6; }
 
 .semester-row-actions {
   display: flex;
@@ -410,14 +410,14 @@
 
 .semester-workflow {
   display: grid;
-  grid-template-columns: minmax(0, 1.9fr) minmax(300px, 0.9fr);
+  grid-template-columns: minmax(0, 1fr) minmax(360px, 400px);
   align-items: start;
   gap: 16px;
 }
 
 .semester-workflow-main,
 .semester-live-preview {
-  padding: 18px;
+  padding: 14px;
 }
 
 .semester-stepper {
@@ -448,14 +448,14 @@
 }
 
 .semester-form-card {
-  padding: 20px;
+  padding: 16px;
   box-shadow: none;
 }
 
 .semester-form-card > header,
 .semester-live-preview > header {
-  margin-bottom: 16px;
-  padding-bottom: 12px;
+  margin-bottom: 12px;
+  padding-bottom: 10px;
   border-bottom: 1px solid var(--sem-line);
 }
 
@@ -476,17 +476,23 @@
   color: var(--sem-navy);
   font-size: 1.12rem;
 }
+.semester-form-card > header > p {
+  margin: 6px 0 0;
+  color: var(--sem-muted);
+  font-size: .8rem;
+  line-height: 1.45;
+}
 
 .semester-form-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 16px 18px;
+  gap: 12px 14px;
 }
 
 .semester-field {
   display: grid;
   align-content: start;
-  gap: 7px;
+  gap: 5px;
   color: var(--sem-text);
   font-size: 0.86rem;
   font-weight: 800;
@@ -496,7 +502,7 @@
 .semester-field select,
 .semester-field .searchable-select__trigger {
   width: 100%;
-  min-height: 43px;
+  min-height: 40px;
   border: 1px solid #c7d7e7;
   border-radius: 8px;
   color: var(--sem-text);
@@ -509,7 +515,7 @@
 }
 
 .semester-field input[readonly] {
-  color: var(--text-secondary, #345778);
+  color: var(--text-secondary, #554F75);
   background: var(--surface-soft, #f6f9fc);
 }
 
@@ -584,15 +590,52 @@
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 8px;
+  min-width: 0;
+}
+
+.semester-date-pair label {
+  display: grid;
+  gap: 5px;
+  color: var(--sem-muted);
+  font-size: .67rem;
+  font-weight: 800;
+  letter-spacing: .04em;
+  text-transform: uppercase;
 }
 
 .semester-date-pair input {
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
   min-height: 36px;
   padding: 0 8px;
   border: 1px solid #c7d7e7;
   border-radius: 7px;
   color: var(--sem-text);
   background: var(--surface, #fff);
+}
+
+/* Edit mode keeps the academic context in the preview and gives the schedule
+   form the visual priority of other edit screens. */
+.semester-generated-list--edit {
+  max-width: 720px;
+  margin: 4px auto 0;
+}
+.semester-generated-list--edit .semester-generated-item {
+  grid-template-columns: minmax(140px, .8fr) minmax(0, 1.4fr) auto;
+  padding: 18px;
+  border-color: #C9C4E0;
+  background: #F7F6FA;
+}
+.semester-generated-list--edit .semester-date-pair input {
+  min-height: 42px;
+  border-color: #C9C4E0;
+  background: #FFFFFF;
+}
+.semester-generated-list--edit .semester-date-pair input:focus {
+  border-color: #8782BC;
+  outline: 3px solid rgba(135, 130, 188, .18);
+  outline-offset: 1px;
 }
 
 .semester-live-preview {
@@ -638,10 +681,10 @@
   align-items: center;
   gap: 8px;
   padding: 11px 10px 11px 13px;
-  border: 1px solid #9ddbbb;
+  border: 1px solid #C9C4E0;
   border-radius: 9px;
-  color: #087443;
-  background: #effbf4;
+  color: #756FB2;
+  background: #F5F3FD;
   box-shadow: 0 14px 35px rgba(8, 52, 89, 0.18);
   font-size: 0.78rem;
   font-weight: 800;
@@ -736,14 +779,14 @@
 
 .semester-management .cm-status-badge {
   border-radius: 999px;
-  color: #087443;
-  background: #dff7ec;
+  color: #756FB2;
+  background: #EDEBF6;
   text-transform: uppercase;
 }
 
-.semester-management .cm-status-badge.upcoming { color: #a15c00; background: #fff3d6; }
+.semester-management .cm-status-badge.upcoming { color: #756FB2; background: #fff3d6; }
 .semester-management .cm-status-badge.completed { color: #64748b; background: #eef2f6; }
-.semester-management .cm-status-badge.inactive { color: #9b5710; background: #fff0d8; }
+.semester-management .cm-status-badge.inactive { color: #9b5710; background: #EDEBF6; }
 
 .semester-management .cm-profile-title {
   margin: 2px 0 0;
@@ -815,7 +858,7 @@
 }
 
 .semester-management .cm-info-label {
-  color: #40566f;
+  color: #554F75;
   font-size: 0.75rem;
   font-weight: 800;
   letter-spacing: 0.05em;
@@ -978,4 +1021,25 @@
   .semester-management .cm-info-row {
     border-right: 0;
   }
+}
+
+/* The live preview is a narrow sidebar: two readable columns work better
+   than the generic three-column entity grid. */
+.semester-management .semester-live-preview .cm-info-rows {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  border-color: #DFDCED;
+}
+.semester-management .semester-live-preview .cm-info-row {
+  min-height: 58px;
+  padding: 9px 10px;
+  border-color: #DFDCED;
+}
+.semester-management .semester-live-preview .cm-info-row:nth-child(3n) { border-right: 1px solid #DFDCED; }
+.semester-management .semester-live-preview .cm-info-row:nth-child(2n) { border-right: 0; }
+.semester-management .semester-live-preview .cm-info-label { color: #756FB2; font-size: .66rem; line-height: 1.25; }
+.semester-management .semester-live-preview .cm-info-val { color: #30264F; font-size: .84rem; line-height: 1.38; }
+@media (max-width: 1180px) {
+  .semester-management .semester-live-preview .cm-info-rows { grid-template-columns: 1fr; }
+  .semester-management .semester-live-preview .cm-info-row,
+  .semester-management .semester-live-preview .cm-info-row:nth-child(3n) { border-right: 0; }
 }

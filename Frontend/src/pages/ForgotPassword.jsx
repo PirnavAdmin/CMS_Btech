@@ -1,17 +1,27 @@
 import { showSuccess } from '../utils/toast'
 import useToastState from '../hooks/useToastState'
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { AuthRequestError, generateOtp, resendOtp, verifyOtp, resetPassword } from '../auth/authApi'
 import { FiArrowLeft, FiEye, FiEyeOff } from 'react-icons/fi'
 import './ForgotPassword.css'
 
 const isValidContact = (value, method) => method === 'email'
-  ? /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)
+  ? /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z]{2,})+$/.test(value)
   : /^[6-9]\d{9}$/.test(value)
 
 export default function ForgotPassword({ onBack }) {
   const [method, setMethod] = useState('email')
   const [contact, setContact] = useState('')
+  const [contactTouched, setContactTouched] = useState(false)
+  const contactErrorMsg = useMemo(() => {
+    const cleanContact = contact.trim()
+    if (!cleanContact) return ''
+    if (!isValidContact(cleanContact, method)) {
+      return method === 'email' ? 'Please enter a valid email ID.' : 'Please enter a valid 10-digit Indian mobile number starting with 6, 7, 8, or 9.'
+    }
+    return ''
+  }, [contact, method])
+  const activeContactError = (contactTouched || Boolean(contact.trim())) ? (contactErrorMsg || error) : error
   const [otp, setOtp] = useState('')
   const [step, setStep] = useState('contact')
   const [error, setError] = useToastState('', 'error')
@@ -115,7 +125,7 @@ export default function ForgotPassword({ onBack }) {
       <header><h2>Change password</h2><p>Create a new password for your account.</p></header>
       <label className="recovery-password" htmlFor="new-password"><span>New password</span><div className="recovery-password-input"><input id="new-password" type={visiblePasswords.password ? 'text' : 'password'} autoComplete="new-password" value={passwords.password} onChange={(event) => { setPasswords((current) => ({ ...current, password: event.target.value })); setError('') }} /><button type="button" className="recovery-password-toggle" aria-label={`${visiblePasswords.password ? 'Hide' : 'Show'} new password`} title={`${visiblePasswords.password ? 'Hide' : 'Show'} new password`} onClick={() => setVisiblePasswords((current) => ({ ...current, password: !current.password }))}>{visiblePasswords.password ? <FiEyeOff aria-hidden="true" /> : <FiEye aria-hidden="true" />}</button></div></label>
       <label className="recovery-password" htmlFor="confirm-password"><span>Confirm new password</span><div className="recovery-password-input"><input id="confirm-password" type={visiblePasswords.confirmPassword ? 'text' : 'password'} autoComplete="new-password" value={passwords.confirmPassword} onChange={(event) => { setPasswords((current) => ({ ...current, confirmPassword: event.target.value })); setError('') }} /><button type="button" className="recovery-password-toggle" aria-label={`${visiblePasswords.confirmPassword ? 'Hide' : 'Show'} confirm new password`} title={`${visiblePasswords.confirmPassword ? 'Hide' : 'Show'} confirm new password`} onClick={() => setVisiblePasswords((current) => ({ ...current, confirmPassword: !current.confirmPassword }))}>{visiblePasswords.confirmPassword ? <FiEyeOff aria-hidden="true" /> : <FiEye aria-hidden="true" />}</button></div></label>
-      {error && <p className="form-error" role="alert">{error}</p>}
+      {activeContactError && <p className="form-error" role="alert">{activeContactError}</p>}
       <button className="sign-in-button" type="submit" disabled={loading}>{loading ? 'Updating...' : 'Change Password'}</button>
       <button type="button" className="text-button back-to-login" onClick={onBack}>Cancel</button>
     </form>
@@ -136,7 +146,7 @@ export default function ForgotPassword({ onBack }) {
     <form className="login-form" onSubmit={requestOtp} noValidate>
       <header><h2>Forgot your password?</h2><p>Choose where you would like to receive your verification code.</p></header>
       <div className="recovery-tabs verification-method-tabs" role="tablist" aria-label="Verification method"><button type="button" role="tab" aria-selected={method === 'email'} className={method === 'email' ? 'active' : ''} onClick={() => switchMethod('email')}>Email</button><button type="button" role="tab" aria-selected={method === 'mobile'} className={method === 'mobile' ? 'active' : ''} onClick={() => switchMethod('mobile')}>Mobile</button></div>
-      <label htmlFor="recovery-contact"><span>{method === 'email' ? 'Email ID' : 'Mobile number'}</span><input id="recovery-contact" type="text" inputMode={method === 'email' ? 'email' : 'numeric'} autoComplete={method === 'email' ? 'email' : 'tel'} maxLength={method === 'mobile' ? 10 : undefined} placeholder={method === 'email' ? 'Enter email ID' : 'Enter mobile number'} value={contact} onChange={(event) => { setContact(method === 'mobile' ? event.target.value.replace(/\D/g, '') : event.target.value); setError('') }} aria-invalid={Boolean(error)} /></label>
+      <label htmlFor="recovery-contact"><span>{method === 'email' ? 'Email ID' : 'Mobile number'}</span><input id="recovery-contact" type="text" inputMode={method === 'email' ? 'email' : 'numeric'} autoComplete={method === 'email' ? 'email' : 'tel'} maxLength={method === 'mobile' ? 10 : undefined} placeholder={method === 'email' ? 'Enter email ID' : 'Enter mobile number'} value={contact} onBlur={() => setContactTouched(true)} onChange={(event) => { setContact(method === 'mobile' ? event.target.value.replace(/\D/g, '') : event.target.value); setContactTouched(true); setError('') }} aria-invalid={Boolean(activeContactError)} /></label>
       {error && <p className="form-error" role="alert">{error}</p>}
       <button className="sign-in-button" type="submit" disabled={loading}>{loading ? 'Sending...' : 'Send Verification Code'}</button>
       <button type="button" className="text-button back-to-login" onClick={onBack}><FiArrowLeft aria-hidden="true" /> Back to Sign In</button>

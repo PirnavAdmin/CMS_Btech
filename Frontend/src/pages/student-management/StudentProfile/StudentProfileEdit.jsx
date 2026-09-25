@@ -53,12 +53,135 @@ const studentName = (student) => studentFullName(student);
 const validMobile = (value) => /^[6-9]\d{9}$/.test(String(value || ""));
 const clean = (value) => String(value ?? "").trim();
 const validName = (value) => /^[A-Za-z][A-Za-z .'-]{1,79}$/.test(clean(value));
-const validEmail = (value) => /^\S+@\S+\.\S+$/.test(clean(value));
+const validEmail = (value) =>
+  /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z]{2,})+$/i.test(clean(value));
 const validYear = (value) =>
   /^\d{4}$/.test(clean(value)) &&
   Number(value) >= 1950 &&
   Number(value) <= new Date().getFullYear() + 1;
 const initialEditForm = (student) => normalizeCanonicalStudent(student);
+
+const validateProfileForm = (form, docErrors = {}) => {
+  const next = {
+    ...Object.fromEntries(
+      Object.entries(docErrors).filter(([key]) =>
+        key.startsWith("documentUploads."),
+      ),
+    ),
+  };
+  const p = form.personal || {};
+  const c = form.contact || {};
+  const father = form.parents?.father || {};
+  const mother = form.parents?.mother || {};
+  const guardian = form.parents?.guardian || {};
+  const tenth = form.previousEducation?.tenth || {};
+  const inter = form.previousEducation?.intermediate || {};
+  const admission = form.admission || {};
+
+  if (!validName(p.firstName))
+    next["personal.firstName"] =
+      "Enter a valid first name using letters only.";
+  if (clean(p.middleName) && !validName(p.middleName))
+    next["personal.middleName"] = "Enter a valid middle name.";
+  if (clean(p.lastName) && !validName(p.lastName))
+    next["personal.lastName"] = "Enter a valid last name.";
+  if (!p.dob) next["personal.dob"] = "Date of birth is required.";
+  else if (
+    Number.isNaN(new Date(`${p.dob}T00:00:00`).getTime()) ||
+    new Date(`${p.dob}T00:00:00`) > new Date()
+  )
+    next["personal.dob"] =
+      "Enter a valid date of birth that is not in the future.";
+  if (clean(p.nationality) && !/^[A-Za-z ]{2,50}$/.test(clean(p.nationality)))
+    next["personal.nationality"] = "Enter a valid nationality.";
+  if (
+    clean(p.aadhaar) &&
+    !/^\d{12}$/.test(clean(p.aadhaar).replace(/\s/g, ""))
+  )
+    next["personal.aadhaar"] =
+      "Aadhaar number must contain exactly 12 digits.";
+  if (!validMobile(c.mobile))
+    next["contact.mobile"] = "Enter a valid 10-digit Indian mobile number.";
+  if (clean(c.alternateMobile) && !validMobile(c.alternateMobile))
+    next["contact.alternateMobile"] =
+      "Enter a valid alternate mobile number.";
+  if (clean(c.alternateMobile) && clean(c.alternateMobile) === clean(c.mobile))
+    next["contact.alternateMobile"] =
+      "Alternate mobile number must be different from the student mobile number.";
+  if (clean(c.email) && !validEmail(c.email))
+    next["contact.email"] = "Enter a valid email address.";
+  if (clean(c.alternateEmail) && !validEmail(c.alternateEmail))
+    next["contact.alternateEmail"] = "Enter a valid alternate email address.";
+  if (clean(c.alternateEmail) && clean(c.alternateEmail).toLowerCase() === clean(c.email).toLowerCase())
+    next["contact.alternateEmail"] =
+      "Alternate email must be different from the student email.";
+  for (const prefix of ["currentAddress", "permanentAddress"]) {
+    const address = c[prefix] || {};
+    if (clean(address.pincode) && !/^\d{6}$/.test(clean(address.pincode)))
+      next[`contact.${prefix}.pincode`] =
+        "PIN code must contain exactly 6 digits.";
+    for (const key of ["town", "city", "district", "state", "country"])
+      if (
+        clean(address[key]) &&
+        !/^[A-Za-z][A-Za-z .'-]{1,79}$/.test(clean(address[key]))
+      )
+        next[`contact.${prefix}.${key}`] = `Enter a valid ${key}.`;
+  }
+  if (clean(father.name) && !validName(father.name))
+    next["parents.father.name"] = "Enter a valid father name.";
+  if (clean(father.mobile) && !validMobile(father.mobile))
+    next["parents.father.mobile"] = "Enter a valid father mobile number.";
+  if (clean(father.email) && !validEmail(father.email))
+    next["parents.father.email"] = "Enter a valid father email address.";
+  if (
+    clean(father.income) &&
+    (Number(father.income) < 0 || !Number.isFinite(Number(father.income)))
+  )
+    next["parents.father.income"] = "Annual income cannot be negative.";
+  if (clean(mother.name) && !validName(mother.name))
+    next["parents.mother.name"] = "Enter a valid mother name.";
+  if (clean(mother.mobile) && !validMobile(mother.mobile))
+    next["parents.mother.mobile"] = "Enter a valid mother mobile number.";
+  if (clean(mother.email) && !validEmail(mother.email))
+    next["parents.mother.email"] = "Enter a valid mother email address.";
+  if (clean(mother.income) && (Number(mother.income) < 0 || !Number.isFinite(Number(mother.income))))
+    next["parents.mother.income"] = "Annual income cannot be negative.";
+  if (clean(guardian.name) && !validName(guardian.name))
+    next["parents.guardian.name"] = "Enter a valid guardian name.";
+  if (clean(guardian.mobile) && !validMobile(guardian.mobile))
+    next["parents.guardian.mobile"] = "Enter a valid guardian mobile number.";
+  if (clean(guardian.email) && !validEmail(guardian.email))
+    next["parents.guardian.email"] = "Enter a valid guardian email address.";
+  if (clean(guardian.income) && (Number(guardian.income) < 0 || !Number.isFinite(Number(guardian.income))))
+    next["parents.guardian.income"] = "Annual income cannot be negative.";
+  if (guardian.relationship === "Other" && !clean(guardian.relationshipOther))
+    next["parents.guardian.relationshipOther"] =
+      "Specify the guardian relationship.";
+  for (const [prefix, row] of [
+    ["tenth", tenth],
+    ["intermediate", inter],
+  ]) {
+    if (clean(row.passingYear) && !validYear(row.passingYear))
+      next[`previousEducation.${prefix}.passingYear`] =
+        "Enter a valid four-digit passing year.";
+    if (clean(row.score)) {
+      const score = Number(row.score),
+        maximum = row.scoreType === "CGPA" ? 10 : 100;
+      if (!Number.isFinite(score) || score < 0 || score > maximum)
+        next[`previousEducation.${prefix}.score`] =
+          `${row.scoreType || "Percentage"} must be between 0 and ${maximum}.`;
+    }
+  }
+  if (form.academic?.admissionType === "Lateral Entry" && !clean(form.academic?.quota))
+    next["academic.quota"] = "Select the admission quota for lateral entry.";
+  if (form.academic?.admissionType === "Lateral Entry" && form.academic?.quota === "Other" && !clean(form.academic?.quotaOther))
+    next["academic.quotaOther"] = "Specify the admission quota.";
+  if (admission.hostel === "Yes" && !clean(admission.hostelPreference))
+    next["admission.hostelPreference"] = "Select a hostel preference.";
+  if (admission.transport === "Yes" && !clean(admission.transportRoute))
+    next["admission.transportRoute"] = "Enter the transportation route.";
+  return next;
+};
 
 export default function StudentProfileEdit({ student, onCancel, onSave }) {
   const tabs = [
@@ -73,6 +196,7 @@ export default function StudentProfileEdit({ student, onCancel, onSave }) {
   ];
   const [form, setForm] = useState(() => initialEditForm(student)),
     [errors, setErrors] = useToastState({}, 'error'),
+    [touched, setTouched] = useState({}),
     [saving, setSaving] = useState(false),
     [photoName, setPhotoName] = useState(""),
     [discard, setDiscard] = useState(false),
@@ -87,6 +211,8 @@ export default function StudentProfileEdit({ student, onCancel, onSave }) {
     [tabScrollWidth, setTabScrollWidth] = useState(0),
     original = useMemo(() => JSON.stringify(student), [student]),
     dirty = JSON.stringify(form) !== original;
+  const markTouched = (path) => setTouched((prev) => ({ ...prev, [path]: true }));
+  const liveErrors = useMemo(() => validateProfileForm(form, errors), [form, errors]);
   useEffect(() => {
     const nav = tabNavRef.current;
     if (!nav) return undefined;
@@ -311,6 +437,7 @@ export default function StudentProfileEdit({ student, onCancel, onSave }) {
         next.fees.totalFee = total;
         return next;
       });
+      markTouched(path);
       setErrors((current) => ({ ...current, [path]: "" }));
     },
     close = () => {
@@ -320,123 +447,7 @@ export default function StudentProfileEdit({ student, onCancel, onSave }) {
     };
   const submit = async (event) => {
     event.preventDefault();
-    const next = {
-        ...Object.fromEntries(
-          Object.entries(errors).filter(([key]) =>
-            key.startsWith("documentUploads."),
-          ),
-        ),
-      },
-      p = form.personal || {},
-      c = form.contact || {},
-      father = form.parents?.father || {},
-      mother = form.parents?.mother || {},
-      guardian = form.parents?.guardian || {},
-      tenth = form.previousEducation?.tenth || {},
-      inter = form.previousEducation?.intermediate || {},
-      admission = form.admission || {};
-    if (!validName(p.firstName))
-      next["personal.firstName"] =
-        "Enter a valid first name using letters only.";
-    if (clean(p.middleName) && !validName(p.middleName))
-      next["personal.middleName"] = "Enter a valid middle name.";
-    if (clean(p.lastName) && !validName(p.lastName))
-      next["personal.lastName"] = "Enter a valid last name.";
-    if (!p.dob) next["personal.dob"] = "Date of birth is required.";
-    else if (
-      Number.isNaN(new Date(`${p.dob}T00:00:00`).getTime()) ||
-      new Date(`${p.dob}T00:00:00`) > new Date()
-    )
-      next["personal.dob"] =
-        "Enter a valid date of birth that is not in the future.";
-    if (clean(p.nationality) && !/^[A-Za-z ]{2,50}$/.test(clean(p.nationality)))
-      next["personal.nationality"] = "Enter a valid nationality.";
-    if (
-      clean(p.aadhaar) &&
-      !/^\d{12}$/.test(clean(p.aadhaar).replace(/\s/g, ""))
-    )
-      next["personal.aadhaar"] =
-        "Aadhaar number must contain exactly 12 digits.";
-    if (!validMobile(c.mobile))
-      next["contact.mobile"] = "Enter a valid 10-digit Indian mobile number.";
-    if (clean(c.alternateMobile) && !validMobile(c.alternateMobile))
-      next["contact.alternateMobile"] =
-        "Enter a valid alternate mobile number.";
-    if (clean(c.alternateMobile) && clean(c.alternateMobile) === clean(c.mobile))
-      next["contact.alternateMobile"] =
-        "Alternate mobile number must be different from the student mobile number.";
-    if (clean(c.email) && !validEmail(c.email))
-      next["contact.email"] = "Enter a valid email address.";
-    if (clean(c.alternateEmail) && !validEmail(c.alternateEmail))
-      next["contact.alternateEmail"] = "Enter a valid alternate email address.";
-    if (clean(c.alternateEmail) && clean(c.alternateEmail).toLowerCase() === clean(c.email).toLowerCase())
-      next["contact.alternateEmail"] =
-        "Alternate email must be different from the student email.";
-    for (const prefix of ["currentAddress", "permanentAddress"]) {
-      const address = c[prefix] || {};
-      if (clean(address.pincode) && !/^\d{6}$/.test(clean(address.pincode)))
-        next[`contact.${prefix}.pincode`] =
-          "PIN code must contain exactly 6 digits.";
-      for (const key of ["town", "city", "district", "state", "country"])
-        if (
-          clean(address[key]) &&
-          !/^[A-Za-z][A-Za-z .'-]{1,79}$/.test(clean(address[key]))
-        )
-          next[`contact.${prefix}.${key}`] = `Enter a valid ${key}.`;
-    }
-    if (clean(father.name) && !validName(father.name))
-      next["parents.father.name"] = "Enter a valid father name.";
-    if (clean(father.mobile) && !validMobile(father.mobile))
-      next["parents.father.mobile"] = "Enter a valid father mobile number.";
-    if (clean(father.email) && !validEmail(father.email))
-      next["parents.father.email"] = "Enter a valid father email address.";
-    if (
-      clean(father.income) &&
-      (Number(father.income) < 0 || !Number.isFinite(Number(father.income)))
-    )
-      next["parents.father.income"] = "Annual income cannot be negative.";
-    if (clean(mother.name) && !validName(mother.name))
-      next["parents.mother.name"] = "Enter a valid mother name.";
-    if (clean(mother.mobile) && !validMobile(mother.mobile))
-      next["parents.mother.mobile"] = "Enter a valid mother mobile number.";
-    if (clean(mother.email) && !validEmail(mother.email))
-      next["parents.mother.email"] = "Enter a valid mother email address.";
-    if (clean(mother.income) && (Number(mother.income) < 0 || !Number.isFinite(Number(mother.income))))
-      next["parents.mother.income"] = "Annual income cannot be negative.";
-    if (clean(guardian.name) && !validName(guardian.name))
-      next["parents.guardian.name"] = "Enter a valid guardian name.";
-    if (clean(guardian.mobile) && !validMobile(guardian.mobile))
-      next["parents.guardian.mobile"] = "Enter a valid guardian mobile number.";
-    if (clean(guardian.email) && !validEmail(guardian.email))
-      next["parents.guardian.email"] = "Enter a valid guardian email address.";
-    if (clean(guardian.income) && (Number(guardian.income) < 0 || !Number.isFinite(Number(guardian.income))))
-      next["parents.guardian.income"] = "Annual income cannot be negative.";
-    if (guardian.relationship === "Other" && !clean(guardian.relationshipOther))
-      next["parents.guardian.relationshipOther"] =
-        "Specify the guardian relationship.";
-    for (const [prefix, row] of [
-      ["tenth", tenth],
-      ["intermediate", inter],
-    ]) {
-      if (clean(row.passingYear) && !validYear(row.passingYear))
-        next[`previousEducation.${prefix}.passingYear`] =
-          "Enter a valid four-digit passing year.";
-      if (clean(row.score)) {
-        const score = Number(row.score),
-          maximum = row.scoreType === "CGPA" ? 10 : 100;
-        if (!Number.isFinite(score) || score < 0 || score > maximum)
-          next[`previousEducation.${prefix}.score`] =
-            `${row.scoreType || "Percentage"} must be between 0 and ${maximum}.`;
-      }
-    }
-    if (form.academic?.admissionType === "Lateral Entry" && !clean(form.academic?.quota))
-      next["academic.quota"] = "Select the admission quota for lateral entry.";
-    if (form.academic?.admissionType === "Lateral Entry" && form.academic?.quota === "Other" && !clean(form.academic?.quotaOther))
-      next["academic.quotaOther"] = "Specify the admission quota.";
-    if (admission.hostel === "Yes" && !clean(admission.hostelPreference))
-      next["admission.hostelPreference"] = "Select a hostel preference.";
-    if (admission.transport === "Yes" && !clean(admission.transportRoute))
-      next["admission.transportRoute"] = "Enter the transportation route.";
+    const next = validateProfileForm(form, errors);
     setErrors(next);
     if (Object.keys(next).length) showWarning('Correct the highlighted fields before saving the profile.');
     if (Object.keys(next).length) {
@@ -489,7 +500,9 @@ export default function StudentProfileEdit({ student, onCancel, onSave }) {
   }) => {
     const current =
         path.split(".").reduce((value, key) => value?.[key], form) ?? "",
-      message = errors[path],
+      isTouched = Boolean(touched[path]),
+      hasValue = typeof current === "string" ? current.trim().length > 0 : Boolean(current),
+      message = (isTouched || hasValue) ? liveErrors[path] || errors[path] : errors[path],
       mobile = path.toLowerCase().includes("mobile"),
       numeric = /aadhaar|pincode|passingYear/.test(path),
       limit = mobile
@@ -507,6 +520,7 @@ export default function StudentProfileEdit({ student, onCancel, onSave }) {
       required,
       "aria-invalid": Boolean(message),
       "aria-describedby": message ? `${path}-error` : undefined,
+      onBlur: () => markTouched(path),
       onChange: onChange || ((event) => {
         const next =
           mobile || numeric

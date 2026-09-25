@@ -1,7 +1,7 @@
 import { resolveCollegeLogo } from '../utils/collegeLogo'
 import { getAccessToken } from './auth'
 const cleanUrl = (url) => (url || "").replace(/\/+$/, "");
-const DEFAULT_API_BASE_URL = "https://dreamless-fidgeting-astronaut.ngrok-free.dev";
+const DEFAULT_API_BASE_URL = "https://abreast-curling-tutor.ngrok-free.dev";
 
 const friendlyValidationMessage = (errors) => {
   if (!errors || typeof errors !== "object") return "";
@@ -237,7 +237,17 @@ export const getCollegeLogoEndpoint = collegeId => collegeId == null || collegeI
 export const getCollegeLogoUrl = (collegeId, logoValue, extraKeys = []) => {
   const cached = (collegeId ? readCachedCollegeLogo(collegeId) : "") ||
     extraKeys.map(k => readCachedCollegeLogo(k)).find(Boolean) || "";
-  return resolveCollegeLogo(logoValue || cached, collegesBaseUrl) || (collegeId ? getCollegeLogoEndpoint(collegeId) : '');
+  const source = String(logoValue || cached || '').trim().replace(/\\/g, '/');
+  // CollegeController stores uploads as a filename (for example
+  // "a1b2...png") in LogoPath. That file is deliberately not exposed as a
+  // public static asset; it must be read through /api/College/logo/{id}.
+  // Treating it as /a1b2...png was why the sidebar retained its placeholder.
+  const isStoredFileName = source &&
+    !/^(data:image\/|blob:|https?:\/\/|\/)/i.test(source) &&
+    !source.includes('/');
+  if (isStoredFileName && collegeId) return getCollegeLogoEndpoint(collegeId);
+
+  return resolveCollegeLogo(source, collegesBaseUrl) || (collegeId ? getCollegeLogoEndpoint(collegeId) : '');
 };
 
 export const isBackendCollegeLogo = value => {

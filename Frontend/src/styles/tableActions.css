@@ -214,7 +214,7 @@
 .table-action-btn.action-assign,
 .table-actions-group > :is(a, button).action-assign,
 .section-actions > .section-assign-action {
-  color: #b45309 !important;
+  color: #756FB2 !important;
   background: #EDEBF6 !important;
   border-color: #DFDCED !important;
 }
@@ -225,7 +225,7 @@
 .section-actions > .section-assign-action:hover:not(:disabled) {
   background: #DFDCED !important;
   border-color: #8782BC !important;
-  color: #92400e !important;
+  color: #554F75 !important;
 }
 
 /* 4. ACTIVATE / APPROVAL ACTION (Toggle / Check Icon -> Subtle Green) */
@@ -241,9 +241,9 @@
 .sa-icon-actions button.action-activate,
 .sa-icon-actions button[title*="Review"],
 .sa-icon-actions button[title*="Approve"] {
-  color: #15803d !important;
-  background: #e9f8ef !important;
-  border-color: #bbf7d0 !important;
+  color: #756FB2 !important;
+  background: #EDEBF6 !important;
+  border-color: #DDD8F3 !important;
 }
 .action-activate:hover:not(:disabled),
 .table-action-btn.action-activate:hover:not(:disabled),
@@ -258,8 +258,8 @@
 .sa-icon-actions button[title*="Review"]:hover:not(:disabled),
 .sa-icon-actions button[title*="Approve"]:hover:not(:disabled) {
   background: #dcfce7 !important;
-  border-color: #86efac !important;
-  color: #166534 !important;
+  border-color: #C9C4E0 !important;
+  color: #756FB2 !important;
 }
 
 /* 5. DEACTIVATE / DISCARD ACTION (Toggle / Discard Icon -> Subtle Red) */
@@ -308,7 +308,7 @@
 .page-content table :is(a, button)[title^="Delete"],
 .page-content table :is(a, button)[aria-label^="Delete"] { color:#b42318!important;background:#fee4e2!important;border-color:#fecdca!important; }
 .page-content table :is(a, button)[title^="Activate"],
-.page-content table :is(a, button)[aria-label^="Activate"] { color:#15803d!important;background:#e9f8ef!important;border-color:#bbf7d0!important; }
+.page-content table :is(a, button)[aria-label^="Activate"] { color:#756FB2!important;background:#EDEBF6!important;border-color:#DDD8F3!important; }
 
 /* ==========================================================================
    DARK THEME PALETTE FOR ACTION BUTTONS
@@ -384,7 +384,7 @@
 :root[data-theme="dark"] .table-action-btn.action-assign,
 :root[data-theme="dark"] .table-actions-group > :is(a, button).action-assign,
 :root[data-theme="dark"] .section-actions > .section-assign-action {
-  color: #fbbf24 !important;
+  color: #9D99CD !important;
   background: rgba(180, 83, 9, 0.25) !important;
   border-color: rgba(245, 158, 11, 0.4) !important;
 }
@@ -411,7 +411,7 @@
 :root[data-theme="dark"] .sa-icon-actions button.action-activate,
 :root[data-theme="dark"] .sa-icon-actions button[title*="Review"],
 :root[data-theme="dark"] .sa-icon-actions button[title*="Approve"] {
-  color: #4ade80 !important;
+  color: #9D99CD !important;
   background: rgba(21, 128, 61, 0.25) !important;
   border-color: rgba(34, 197, 94, 0.4) !important;
 }
@@ -429,7 +429,7 @@
 :root[data-theme="dark"] .sa-icon-actions button[title*="Approve"]:hover:not(:disabled) {
   background: rgba(21, 128, 61, 0.45) !important;
   border-color: rgba(74, 222, 128, 0.6) !important;
-  color: #86efac !important;
+  color: #C9C4E0 !important;
 }
 
 /* 5. DEACTIVATE / DISCARD ACTION (Dark) */
@@ -703,7 +703,7 @@ table.erp-table {
   min-width: 34px !important;
   min-height: 34px !important;
   border-radius: 8px !important;
-  background: var(--surface-soft, #f1f5f9) !important;
+  background: var(--surface-soft, #F5F3FD) !important;
   color: var(--brand, #8782BC) !important;
   font-weight: 700 !important;
   font-size: 13px !important;

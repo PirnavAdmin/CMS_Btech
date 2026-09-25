@@ -342,9 +342,9 @@ function SectionDetails() {
                   {section.code && <span className="cm-badge cm-badge-type">{section.code}</span>}
                   <span className={`cm-status-badge ${String(section.status).toLowerCase()}`}>{section.status}</span>
                 </div>
-                <h1 className="cm-profile-title"><span style={{ color: '#fff' }}>{section.name}</span></h1>
+                <h1 className="cm-profile-title"><span style={{ color: '#30264F' }}>{section.name}</span></h1>
                 <p className="cm-profile-subtitle">
-                  <span style={{ color: '#fff' }}>{[section.course, section.branchCode || section.branch, section.semester].filter(clean).join(' • ')}</span>
+                  <span style={{ color: '#30264F' }}>{[section.course, section.branchCode || section.branch, section.semester].filter(clean).join(' • ')}</span>
                 </p>
               </div>
             </div>

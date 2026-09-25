@@ -5,7 +5,7 @@ import { getUserRole } from '../auth/auth'
 import { ROLES } from '../auth/roles'
 import { useAcademic } from '../context/AcademicContext'
 import { collegeLogoValue } from '../utils/collegeLogo'
-import { cacheCollegeLogo, fetchCollegeLogo, getCollegeById, getCollegeLogoUrl, isBackendCollegeLogo, readCachedCollegeLogo, unwrapCollegeRecord } from '../auth/collegeApi'
+import { cacheCollegeLogo, fetchCollegeLogo, getCollegeById, getCollegeLogoUrl, getColleges, isBackendCollegeLogo, readCachedCollegeLogo, unwrapCollegeRecord } from '../auth/collegeApi'
 
 const academicLinks = [
   { label: 'Colleges', to: '/college-institution-management', icon: FiHome, tone: 'gold' },
@@ -33,10 +33,17 @@ export default function Sidebar({ open = false, onClose = () => {}, collapsed = 
   const userRole = getUserRole()
   const { pathname } = useLocation()
   const navigationRef = useRef(null)
-  const { selectedCollege } = useAcademic()
+  const { selectedCollege, selectedCollegeId, colleges = [] } = useAcademic()
 
   const collegeDisplayName = selectedCollege?.name || selectedCollege?.collegeName || 'Pirnav Engineering College'
-  const collegeId = selectedCollege?.id ?? selectedCollege?.collegeId
+  const matchingCollege = colleges.find(college => {
+    const name = String(college?.name || college?.collegeName || '').toLowerCase().replace(/[^a-z0-9]/g, '')
+    const current = String(collegeDisplayName).toLowerCase().replace(/[^a-z0-9]/g, '')
+    return name && current && (name === current || name.includes(current) || current.includes(name))
+  }) || (String(collegeDisplayName).toLowerCase().includes('btech') ? colleges.find(college => /btech.*college.*engineering/i.test(String(college?.name || college?.collegeName || ''))) : null)
+  const selectedCollegeHasId = Boolean(selectedCollege?.id ?? selectedCollege?.collegeId ?? selectedCollege?.CollegeId ?? selectedCollegeId)
+  const activeCollege = selectedCollegeHasId ? selectedCollege : (matchingCollege || selectedCollege)
+  const collegeId = activeCollege?.id ?? activeCollege?.collegeId ?? activeCollege?.CollegeId ?? selectedCollegeId
   const [collegeLogo, setCollegeLogo] = useState('')
 
   useEffect(() => {
@@ -46,20 +53,43 @@ export default function Sidebar({ open = false, onClose = () => {}, collapsed = 
       // The context list can omit logo fields. Load the selected college detail
       // once so the same uploaded asset used in College Management is available
       // in the persistent sidebar too.
-      let record = selectedCollege || {}
+      let record = activeCollege || {}
+      let targetCollegeId = collegeId
       let logoValue = collegeLogoValue(record)
         || readCachedCollegeLogo(collegeId)
         || readCachedCollegeLogo(record?.code || record?.collegeCode)
         || readCachedCollegeLogo(collegeDisplayName)
-      if (!logoValue && collegeId) {
+      if (!logoValue) {
         try {
-          const response = await getCollegeById(collegeId)
-          record = unwrapCollegeRecord(response?.data ?? response)
-          logoValue = collegeLogoValue(record)
-          if (logoValue) cacheCollegeLogo(collegeId, logoValue, [record.code, record.collegeCode, record.name, record.collegeName])
+          const response = await getColleges()
+          const raw = response?.data ?? response
+          const list = Array.isArray(raw) ? raw : raw?.colleges || raw?.items || raw?.records || raw?.data || []
+          const requested = String(collegeDisplayName).toLowerCase().replace(/[^a-z0-9]/g, '')
+          const listMatch = list.map(unwrapCollegeRecord).find(item => {
+            const name = String(item?.name || item?.collegeName || '').toLowerCase().replace(/[^a-z0-9]/g, '')
+            const code = String(item?.code || item?.collegeCode || '').toLowerCase()
+            return (name && requested && (name === requested || name.includes(requested) || requested.includes(name)))
+          })
+          if (listMatch) {
+            record = listMatch
+            targetCollegeId = record.id ?? record.collegeId ?? record.CollegeId ?? targetCollegeId
+            logoValue = collegeLogoValue(record)
+          }
         } catch { /* The logo endpoint below remains the fallback. */ }
       }
-      const logoUrl = getCollegeLogoUrl(collegeId, logoValue, [record?.code, record?.collegeCode, collegeDisplayName])
+      if (!logoValue && targetCollegeId) {
+        try {
+          const response = await getCollegeById(targetCollegeId)
+          record = unwrapCollegeRecord(response?.data ?? response)
+          targetCollegeId = record.id ?? record.collegeId ?? record.CollegeId ?? targetCollegeId
+          logoValue = collegeLogoValue(record)
+          if (logoValue) cacheCollegeLogo(targetCollegeId, logoValue, [record.code, record.collegeCode, record.name, record.collegeName])
+        } catch { /* The logo endpoint below remains the fallback. */ }
+      }
+      // Always prefer the current academic-context college and its uploaded
+      // asset. A fixed institution ID would show a stale logo after an admin
+      // changes the selected college or uploads a replacement.
+      const logoUrl = getCollegeLogoUrl(targetCollegeId, logoValue, [record?.code, record?.collegeCode, collegeDisplayName])
       if (!logoUrl) {
         if (active) setCollegeLogo('')
         return
@@ -85,7 +115,7 @@ export default function Sidebar({ open = false, onClose = () => {}, collapsed = 
       active = false
       if (objectUrl) URL.revokeObjectURL(objectUrl)
     }
-  }, [collegeId, collegeDisplayName, selectedCollege])
+  }, [collegeId, collegeDisplayName, activeCollege, colleges])
 
   useEffect(() => {
     const navigation = navigationRef.current

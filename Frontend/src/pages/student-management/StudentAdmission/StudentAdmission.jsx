@@ -196,7 +196,7 @@ const resolveFeeSummary = (data, summaryResponse, structureResponse) => {
   return defaultFeeSummary(data)
 }
 const normalizeEmail = value => text(value).toLowerCase()
-const validEmail = value => { const email = normalizeEmail(value); return /^[a-z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?(?:\.[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?)+$/i.test(email) && !email.includes('..') }
+const validEmail = value => { const email = normalizeEmail(value); return /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z]{2,})+$/i.test(email) && !email.includes('..') }
 const academicEndYear = data => Number(String(data.academic.academicYear || new Date().getFullYear()).slice(0,4)) || new Date().getFullYear()
 const validPassingYear = (value, data, level) => { if (!/^\d{4}$/.test(text(value))) return 'Enter a valid 4-digit passing year.'; const year=Number(value), limit=academicEndYear(data); if(year>limit)return 'Year of passing cannot be in the future.'; const birthYear=data.personal.dob?new Date(`${data.personal.dob}T00:00:00`).getFullYear():null; if(birthYear&&year<birthYear+(level==='tenth'?14:16))return 'Year of passing is not valid for the student date of birth.'; if(level==='intermediate'&&data.previousEducation.tenth.passingYear&&year<Number(data.previousEducation.tenth.passingYear))return 'Qualification year cannot be earlier than the 10th passing year.'; return '' }
 const validScore = item => { const value=text(item.score); if(!value)return ''; if(!/^\d+(\.\d{1,2})?$/.test(value))return `Enter a valid ${item.scoreType.toLowerCase()}.`; const number=Number(value), max=item.scoreType==='CGPA'?10:100; return number<0||number>max?`${item.scoreType} must be between 0 and ${max}.`:'' }
@@ -278,7 +278,7 @@ function Button({ primary = false, danger = false, children, ...props }) { retur
 function ConfirmDialog({ title, children, confirmLabel, tone = 'primary', icon: Icon = FiShield, onCancel, onConfirm, busy = false, error }) { return <div className="sa-overlay" onMouseDown={event => event.target === event.currentTarget && !busy && onCancel()}><section className="sa-dialog" role="dialog" aria-modal="true" aria-labelledby="sa-confirm-title"><button className="sa-dialog-close" disabled={busy} onClick={onCancel} aria-label="Close"><FiX /></button><div className={`sa-dialog-icon tone-${tone}`}><Icon /></div><h2 id="sa-confirm-title">{title}</h2><div className="sa-dialog-copy">{children}{error && <p role="alert" className="sa-decision-error">{error}</p>}</div><footer><Button disabled={busy} onClick={onCancel}>Cancel</Button><Button disabled={busy} primary={tone !== 'danger'} danger={tone === 'danger'} onClick={onConfirm}>{busy ? 'Saving...' : confirmLabel}</Button></footer></section></div> }
 function Section({ title, icon: Icon = FiFileText, hint, children, className = '' }) { const shownTitle = title === 'Application Information' ? 'Registration Details' : title; return <section className={`sa-form-section ${className}`}><header><span><Icon /></span><div><h2>{shownTitle}</h2>{hint && <p>{hint}</p>}</div></header><div className="sa-form-grid">{children}</div></section> }
 
-function Field({ data, path, label, update, options, type = 'text', readOnly = false, error, placeholder, disabled = false, required }) {
+function Field({ data, path, label, update, options, type = 'text', readOnly = false, error, placeholder, disabled = false, required, markTouched }) {
   const isRequired = required !== undefined ? required : (
     requiredPaths.has(path) ||
     (!data?.contact?.sameAddress && path.startsWith('contact.permanentAddress.') && ['line1','town','city','district','state','pincode'].includes(path.split('.').at(-1))) ||
@@ -293,13 +293,19 @@ function Field({ data, path, label, update, options, type = 'text', readOnly = f
   const numeric = /mobile|pincode|aadhaar|passingYear/i.test(path)
   const maxLength = /aadhaar$/i.test(path) ? 12 : /pincode/i.test(path) ? 6 : /mobile/i.test(path) ? 10 : /passingYear/i.test(path) ? 4 : undefined
   const id = `sa-${path.replaceAll('.', '-')}`
-  const change = event => update(path, numeric ? event.target.value.replace(/\D/g, '').slice(0, maxLength) : event.target.value)
-  const blur = () => { if (/email/i.test(path) && value !== text(value)) update(path, text(value)) }
+  const change = event => {
+    markTouched?.(path)
+    update(path, numeric ? event.target.value.replace(/\D/g, '').slice(0, maxLength) : event.target.value)
+  }
+  const blur = () => {
+    markTouched?.(path)
+    if (/email/i.test(path) && value !== text(value)) update(path, text(value))
+  }
   return (
     <label className={`sa-field ${error ? 'invalid' : ''}`} htmlFor={id}>
       <span>{shownLabel}{isRequired && <b> *</b>}</span>
       {options ? (
-        <select id={id} value={value} disabled={disabled || readOnly} onChange={change} aria-invalid={Boolean(error)} aria-describedby={error ? `${id}-error` : undefined}>
+        <select id={id} value={value} disabled={disabled || readOnly} onChange={change} onBlur={blur} aria-invalid={Boolean(error)} aria-describedby={error ? `${id}-error` : undefined}>
           <option value="">{placeholder || `Select ${shownLabel}`}</option>
           {options.map(option => <option key={option}>{option}</option>)}
         </select>
@@ -310,7 +316,7 @@ function Field({ data, path, label, update, options, type = 'text', readOnly = f
     </label>
   )
 }
-function AddressFields({ data, prefix, update, errors }) { return [['line1','Address Line 1'],['line2','Landmark (Optional)'],['town','Village / Town'],['city','City'],['district','District'],['state','State'],['country','Country'],['pincode','PIN Code']].map(([key,label]) => <Field key={key} data={data} path={`${prefix}.${key}`} label={label} update={update} error={errors[`${prefix}.${key}`]} />) }
+function AddressFields({ data, prefix, update, errors, markTouched }) { return [['line1','Address Line 1'],['line2','Landmark (Optional)'],['town','Village / Town'],['city','City'],['district','District'],['state','State'],['country','Country'],['pincode','PIN Code']].map(([key,label]) => <Field key={key} data={data} path={`${prefix}.${key}`} label={label} update={update} error={errors[`${prefix}.${key}`]} markTouched={markTouched} />) }
 function Breadcrumb({ tail }) { return <div className="sa-breadcrumb"><span>Student Management</span><FiChevronRight /><span>Admissions</span>{tail && <><FiChevronRight /><strong>{tail}</strong></>}</div> }
 
 function AdmissionFilters({ rows, query, setQuery, filters, setFilters }) {
@@ -1039,7 +1045,8 @@ function AdmissionForm() {
     return init;
   });
   const [recordIds, setRecordIds] = useState({ admissionId: validId, studentId: null, academicId: null })
-  const [step, setStep] = useState(0); const [errors, setErrors] = useToastState({}, 'error'); const [declared, setDeclared] = useState(false); const [, setToast] = useToastState(null, 'success'); const [pinStatus, setPinStatus] = useState({}); const [confirmSubmit, setConfirmSubmit] = useState(false); const [submitting, setSubmitting] = useState(false); const [savingStep, setSavingStep] = useState(false); const [feeState, setFeeState] = useState({ loading: false, loaded: false, error: '' })
+  const [step, setStep] = useState(0); const [errors, setErrors] = useToastState({}, 'error'); const [touched, setTouched] = useState({}); const [declared, setDeclared] = useState(false); const [, setToast] = useToastState(null, 'success'); const [pinStatus, setPinStatus] = useState({}); const [confirmSubmit, setConfirmSubmit] = useState(false); const [submitting, setSubmitting] = useState(false); const [savingStep, setSavingStep] = useState(false); const [feeState, setFeeState] = useState({ loading: false, loaded: false, error: '' })
+  const markTouched = (path) => setTouched(current => ({ ...current, [path]: true }))
   const [masters,setMasters]=useState({years:[],courses:[],branches:[],colleges:[],semesters:[]})
   const dataRef = useRef(data)
   useEffect(() => { dataRef.current = data }, [data])
@@ -1227,7 +1234,11 @@ function AdmissionForm() {
   }, [data.academic.admissionType, data.academic.quota, data.academic.quotaOther])
 
   const allErrors = validate(data)
-  const field = (path,label,options,type,readOnly,placeholder,disabled) => <Field {...{ data,path,label,options,type,readOnly,placeholder,disabled,update }} error={errors[path]} />
+  const getFieldError = (path) => errors[path] || (touched[path] ? allErrors[path] : (read(data, path) && allErrors[path] ? allErrors[path] : ''))
+  const field = (path,label,options,type,readOnly,placeholder,disabled) => <Field {...{ data,path,label,options,type,readOnly,placeholder,disabled,update,markTouched }} error={getFieldError(path)} />
+  const effectiveAddressErrors = Object.fromEntries(
+    Object.keys(allErrors).map(path => [path, getFieldError(path)])
+  )
   const academicOption=(item,idKeys,nameKeys)=>({id:idKeys.map(key=>read(item,key)).find(value=>value!=null&&value!==''),name:nameKeys.map(key=>read(item,key)).find(Boolean)||''})
   const yearOptions=masters.years.map(item=>academicOption(item,['academicYearId','id'],['academicYearName','name'])).filter(item=>item.id)
   const selectedCollegeId = data.admission.collegeId
@@ -1235,10 +1246,14 @@ function AdmissionForm() {
   const collegeCourseIds = new Set(courseOptions.map(item => String(item.id)))
   const branchOptions=masters.branches.map(item=>({...academicOption(item,['branchId','id'],['branchName','name','branchShortName','shortName']),code:item.branchCode??item.code??item.shortName??'',courseId:item.courseId??item.course?.courseId??item.course?.id,collegeId:item.collegeId??item.college?.collegeId??item.college?.id})).filter(item=>item.id&&(!selectedCollegeId||same(item.collegeId,selectedCollegeId)||collegeCourseIds.has(String(item.courseId)))&&(!data.academic.courseId||!item.courseId||same(item.courseId,data.academic.courseId)))
   const collegeOptions=masters.colleges.map(item=>({id:item.collegeId??item.id,name:item.collegeName??item.name??item.institutionName??''})).filter(item=>item.id&&item.name)
-  const masterField=(namePath,idPath,label,options,disabled=false,resets=[])=>{const id=`sa-${idPath.replaceAll('.','-')}`;return <label className={`sa-field ${errors[namePath]?'invalid':''}`} htmlFor={id}><span>{label}<b> *</b></span><select id={id} value={read(data,idPath)||''} disabled={disabled} onChange={event=>{const option=options.find(item=>same(item.id,event.target.value));setData(current=>{let next=setPath(current,idPath,event.target.value);next=setPath(next,namePath,option?.name||'');if(idPath==='academic.courseId')next=setPath(next,'academic.courseCode',option?.code||'');if(idPath==='academic.branchId')next=setPath(next,'academic.branchCode',option?.code||'');resets.forEach(([resetId,resetName])=>{next=setPath(next,resetId,'');next=setPath(next,resetName,'')});return next});setErrors(current=>({...current,[namePath]:''}))}}><option value="">{disabled?'Select Course first':`Select ${label}`}</option>{options.map(option=><option key={option.id} value={option.id}>{option.name}</option>)}</select>{errors[namePath]&&<small role="alert">{errors[namePath]}</small>}</label>}
+  const masterField=(namePath,idPath,label,options,disabled=false,resets=[])=>{
+    const id=`sa-${idPath.replaceAll('.','-')}`;
+    const masterError = errors[namePath] || ((touched[namePath] || touched[idPath] || read(data, idPath)) ? allErrors[namePath] : '');
+    return <label className={`sa-field ${masterError?'invalid':''}`} htmlFor={id}><span>{label}<b> *</b></span><select id={id} value={read(data,idPath)||''} disabled={disabled} onChange={event=>{markTouched(namePath);markTouched(idPath);const option=options.find(item=>same(item.id,event.target.value));setData(current=>{let next=setPath(current,idPath,event.target.value);next=setPath(next,namePath,option?.name||'');if(idPath==='academic.courseId')next=setPath(next,'academic.courseCode',option?.code||'');if(idPath==='academic.branchId')next=setPath(next,'academic.branchCode',option?.code||'');resets.forEach(([resetId,resetName])=>{next=setPath(next,resetId,'');next=setPath(next,resetName,'')});return next});setErrors(current=>({...current,[namePath]:''}))}} onBlur={() => { markTouched(namePath); markTouched(idPath) }}><option value="">{disabled?'Select Course first':`Select ${label}`}</option>{options.map(option=><option key={option.id} value={option.id}>{option.name}</option>)}</select>{masterError&&<small role="alert">{masterError}</small>}</label>
+  }
   const screens = [
     <Section key="identity" title="Student Identity" icon={FiUser} hint="Core identity and government identification details"><PhotoUpload data={data} update={update} notify={notify} />{field('personal.firstName','First Name')}{field('personal.middleName','Middle Name')}{field('personal.lastName','Last Name')}{field('personal.gender','Gender',['Female','Male','Non-binary'])}{field('personal.dob','Date of Birth',null,'date')}{field('personal.bloodGroup','Blood Group',['A+','A-','B+','B-','AB+','AB-','O+','O-'])}{field('personal.nationality','Nationality')}{field('personal.aadhaar','Aadhaar Number')}</Section>,
-    <><Section title="Contact Information" icon={FiPhone}>{field('contact.mobile','Student Mobile')}{field('contact.alternateMobile','Alternate Mobile')}{field('contact.email','Student Email',null,'email')}{field('contact.alternateEmail','Alternate Email',null,'email')}</Section><Section title="Current Address" icon={FiHome}><AddressFields data={data} prefix="contact.currentAddress" update={update} errors={errors} />{pinStatus.current && <p className={`sa-pincode-status ${pinStatus.current.includes('filled') ? 'success' : ''}`}>{pinStatus.current}</p>}</Section><Section title="Permanent Address" icon={FiHome}><label className="sa-check sa-span-all"><input type="checkbox" checked={data.contact.sameAddress} onChange={event => update('contact.sameAddress', event.target.checked)} /><span>Permanent address same as current address</span></label>{!data.contact.sameAddress && <><AddressFields data={data} prefix="contact.permanentAddress" update={update} errors={errors} />{pinStatus.permanent && <p className={`sa-pincode-status ${pinStatus.permanent.includes('filled') ? 'success' : ''}`}>{pinStatus.permanent}</p>}</>}</Section></>,
+    <><Section title="Contact Information" icon={FiPhone}>{field('contact.mobile','Student Mobile')}{field('contact.alternateMobile','Alternate Mobile')}{field('contact.email','Student Email',null,'email')}{field('contact.alternateEmail','Alternate Email',null,'email')}</Section><Section title="Current Address" icon={FiHome}><AddressFields data={data} prefix="contact.currentAddress" update={update} errors={effectiveAddressErrors} markTouched={markTouched} />{pinStatus.current && <p className={`sa-pincode-status ${pinStatus.current.includes('filled') ? 'success' : ''}`}>{pinStatus.current}</p>}</Section><Section title="Permanent Address" icon={FiHome}><label className="sa-check sa-span-all"><input type="checkbox" checked={data.contact.sameAddress} onChange={event => update('contact.sameAddress', event.target.checked)} /><span>Permanent address same as current address</span></label>{!data.contact.sameAddress && <><AddressFields data={data} prefix="contact.permanentAddress" update={update} errors={effectiveAddressErrors} markTouched={markTouched} />{pinStatus.permanent && <p className={`sa-pincode-status ${pinStatus.permanent.includes('filled') ? 'success' : ''}`}>{pinStatus.permanent}</p>}</>}</Section></>,
     <><Section title="Father Details" icon={FiUsers} hint="Optional parent or guardian contact information.">{field('parents.father.name','Father Name')}{field('parents.father.mobile','Father Mobile')}{field('parents.father.email','Father Email',null,'email')}{field('parents.father.occupation','Father Occupation')}{field('parents.father.qualification','Father Qualification')}{field('parents.father.income','Father Annual Income',null,'number')}</Section><Section title="Mother Details" icon={FiUsers}>{field('parents.mother.name','Mother Name')}{field('parents.mother.mobile','Mother Mobile')}{field('parents.mother.email','Mother Email',null,'email')}{field('parents.mother.occupation','Mother Occupation')}{field('parents.mother.qualification','Mother Qualification')}{field('parents.mother.income','Mother Annual Income',null,'number')}</Section><Section title="Guardian Details" icon={FiUsers}>{field('parents.guardian.name','Guardian Name')}{field('parents.guardian.relationship','Relationship',['Father','Mother','Guardian','Other'])}{data.parents.guardian.relationship === 'Other' && field('parents.guardian.relationshipOther','Specify Relationship')}{field('parents.guardian.mobile','Guardian Mobile')}{field('parents.guardian.email','Guardian Email',null,'email')}{field('parents.guardian.occupation','Guardian Occupation')}{field('parents.guardian.qualification','Guardian Qualification')}{field('parents.guardian.income','Guardian Annual Income',null,'number')}{field('parents.primaryContact','Primary Contact',['Father','Mother','Guardian'])}{field('parents.emergencyMobile','Emergency Contact Mobile')}</Section></>,
     <Section key="academic" title="Academic Enrollment" icon={FiBookOpen} hint="Review college and academic year, then select the available course and branch.">{field('academic.academicYear','Academic Year',null,'text',true)}{field('admission.college','Joining College',null,'text',true)}{field('academic.admissionType','Admission Type',ADMISSION_TYPES)}{data.academic.admissionType === 'Lateral Entry' && <>{field('academic.quota','Admission Quota',ADMISSION_QUOTAS)}{data.academic.quota === 'Other' && field('academic.quotaOther','Specify Admission Quota')}</>}{masterField('academic.course','academic.courseId','Course',courseOptions,!selectedCollegeId,[['academic.branchId','academic.branch']])}{field('academic.courseCode','Course Code',null,'text',true)}{masterField('academic.branch','academic.branchId','Branch',branchOptions,!data.academic.courseId)}{field('academic.branchCode','Branch Code',null,'text',true)}{field('academic.studentCategory','Student Category',['General','SC','ST','BC','EWS','Other'])}{field('academic.regulation','Regulation')}</Section>,
     <><Section title="10th / SSC" icon={FiBookOpen} hint="Enter only the essential school details.">{field('previousEducation.tenth.board','Board')}{field('previousEducation.tenth.institution','School Name')}{field('previousEducation.tenth.passingYear','Year of Passing')}{field('previousEducation.tenth.score','Percentage (0–100)',null,'number')}</Section><Section title="Intermediate / Diploma" icon={FiBookOpen} hint="Enter only the essential qualifying-education details.">{field('previousEducation.intermediate.board','Board / University')}{field('previousEducation.intermediate.institution','College Name')}{field('previousEducation.intermediate.passingYear','Year of Passing')}{field('previousEducation.intermediate.stream','Stream',['MPC','Other'])}{data.previousEducation.intermediate.stream === 'Other' && field('previousEducation.intermediate.streamOther','Specify Stream')}{field('previousEducation.intermediate.score','Percentage (0–100)',null,'number')}</Section></>,
@@ -1252,6 +1267,13 @@ function AdmissionForm() {
     if (savingStep) return
     const prefixes = [['personal.'],['contact.'],['parents.'],['academic.'],['previousEducation.'],['application.','admission.'],['fees.'],['documents.'],[]][step]
     const relevant = Object.fromEntries(Object.entries(allErrors).filter(([path]) => prefixes.some(prefix => path.startsWith(prefix))))
+    setTouched(current => {
+      const next = { ...current }
+      Object.keys(allErrors).forEach(path => {
+        if (prefixes.some(prefix => path.startsWith(prefix))) next[path] = true
+      })
+      return next
+    })
     setErrors(relevant)
     if (Object.keys(relevant).length) { notify('Correct the highlighted fields before continuing.', 'error'); focusFirst(); return }
     setSavingStep(true)
@@ -1598,9 +1620,9 @@ function StudentHeader({ data }) {
             {STATUS[normStat] || normStat}
           </span>
         </div>
-        <h1 className="cm-profile-title"><span style={{ color: '#fff' }}>{studentName(data)}</span></h1>
+        <h1 className="cm-profile-title"><span style={{ color: '#30264F' }}>{studentName(data)}</span></h1>
         <p className="cm-profile-subtitle">
-          <span style={{ color: '#fff' }}>{[display(data.academic?.course), display(data.academic?.branch), display(data.academic?.academicYear)].filter(Boolean).join(' · ')}</span>
+          <span style={{ color: '#30264F' }}>{[display(data.academic?.course), display(data.academic?.branch), display(data.academic?.academicYear)].filter(Boolean).join(' · ')}</span>
         </p>
       </div>
     </div>

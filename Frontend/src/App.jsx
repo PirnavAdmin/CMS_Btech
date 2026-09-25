@@ -62,7 +62,7 @@ class AppErrorBoundary extends Component {
             <h1 style={{ margin: '0 0 12px', color: '#0f172a' }}>Something went wrong</h1>
             <p style={{ margin: '0 0 12px', color: '#475569' }}>The app hit an unexpected error. Please reload the page or return home.</p>
             {this.state.error && (
-              <pre style={{ margin: '0 0 20px', padding: '10px', background: '#f1f5f9', color: '#dc2626', borderRadius: '8px', fontSize: '13px', textAlign: 'left', overflowX: 'auto', whiteSpace: 'pre-wrap' }}>
+              <pre style={{ margin: '0 0 20px', padding: '10px', background: '#F5F3FD', color: '#dc2626', borderRadius: '8px', fontSize: '13px', textAlign: 'left', overflowX: 'auto', whiteSpace: 'pre-wrap' }}>
                 {this.state.error.message || String(this.state.error)}
               </pre>
             )}
@@ -99,10 +99,54 @@ function TableOverflowTitles() {
   return null
 }
 
+/* Enforce consistent client-side checks even on older forms that use noValidate.
+   Server validation remains authoritative; this prevents avoidable bad submits. */
+function FormValidationGuard() {
+  useEffect(() => {
+    const emailPattern = /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z]{2,})+$/
+    const validate = (event) => {
+      const form = event.target
+      if (!(form instanceof HTMLFormElement) || form.noValidate === false && !form.querySelector('[required]')) return
+      const controls = Array.from(form.querySelectorAll('input, select, textarea')).filter((control) => !control.disabled && control.type !== 'hidden' && control.type !== 'button' && control.type !== 'submit')
+      let firstInvalid = null
+      for (const control of controls) {
+        control.setCustomValidity('')
+        const value = String(control.value || '').trim()
+        const label = control.closest('label')?.innerText || control.labels?.[0]?.innerText || ''
+        const required = control.required || /\*/.test(label)
+        const isEmail = control.type === 'email' || /email/i.test(`${control.name} ${control.id} ${label}`)
+        const message = required && !value
+          ? 'This field is required.'
+          : value && isEmail && !emailPattern.test(value)
+            ? 'Enter a valid email address.'
+            : ''
+        if (message) {
+          control.setCustomValidity(message)
+          firstInvalid ||= control
+        }
+      }
+      const requiredSelect = Array.from(form.querySelectorAll('.searchable-select[data-required="true"][data-empty="true"]')).find((node) => !node.classList.contains('is-disabled'))
+      if (requiredSelect) firstInvalid ||= requiredSelect.querySelector('button')
+      if (!firstInvalid) return
+      event.preventDefault()
+      event.stopPropagation()
+      if (firstInvalid instanceof HTMLInputElement || firstInvalid instanceof HTMLSelectElement || firstInvalid instanceof HTMLTextAreaElement) firstInvalid.reportValidity()
+      else {
+        firstInvalid.setAttribute('aria-invalid', 'true')
+        firstInvalid.focus()
+      }
+    }
+    document.addEventListener('submit', validate, true)
+    return () => document.removeEventListener('submit', validate, true)
+  }, [])
+  return null
+}
+
 export default function App() {
   return (
     <AppErrorBoundary>
       <TableOverflowTitles />
+      <FormValidationGuard />
       <Routes>
           {/* Public */}
           <Route path="/" element={<LandingPage />} />

@@ -327,7 +327,7 @@ const setPath = (data, path, value) => {
 const clean = (x) => String(x || "").trim(),
   validName = (x) => /^[A-Za-z][A-Za-z .'-]{1,79}$/.test(clean(x)),
   validMobile = (x) => /^[6-9]\d{9}$/.test(String(x || "").replace(/\s/g, "")),
-  validEmail = (x) => /^\S+@\S+\.\S+$/.test(clean(x));
+  validEmail = (x) => /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z]{2,})+$/i.test(clean(x));
 const validate = (x) => {
   const e = {},
     p = x.personal || {},
@@ -1397,9 +1397,9 @@ function Profile({ student, tab, setTab, back, edit, canEdit }) {
                 {status(student.status)}
               </span>
             </div>
-            <h1 className="cm-profile-title"><span style={{ color: '#fff' }}>{studentFullName(student) || "Unnamed student"}</span></h1>
+            <h1 className="cm-profile-title"><span style={{ color: '#30264F' }}>{studentFullName(student) || "Unnamed student"}</span></h1>
             <p className="cm-profile-subtitle">
-              <span style={{ color: '#fff' }}>{[formatDisplay(a.course), formatDisplay(a.branch)].filter((x) => x !== 'Not provided').join(' · ')}</span>
+              <span style={{ color: '#30264F' }}>{[formatDisplay(a.course), formatDisplay(a.branch)].filter((x) => x !== 'Not provided').join(' · ')}</span>
             </p>
           </div>
         </div>

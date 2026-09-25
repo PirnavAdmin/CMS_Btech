@@ -245,7 +245,7 @@ const initialCreditStructure = {
       name: 'Basic Science Courses',
       requiredCredits: 25,
       earnedRange: '24-26',
-      color: '#3b82f6',
+      color: '#8782BC',
     },
 
     {
@@ -261,7 +261,7 @@ const initialCreditStructure = {
       name: 'Humanities, Social Sciences & Management',
       requiredCredits: 12,
       earnedRange: '10-14',
-      color: '#10b981',
+      color: '#8782BC',
     },
 
     {
@@ -277,7 +277,7 @@ const initialCreditStructure = {
       name: 'Professional Elective Courses',
       requiredCredits: 18,
       earnedRange: '15-21',
-      color: '#f59e0b',
+      color: '#8782BC',
     },
 
     {

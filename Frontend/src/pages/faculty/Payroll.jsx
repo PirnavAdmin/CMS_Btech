@@ -278,7 +278,7 @@ const printSalarySlip = (item, month) => {
     .header { text-align: center; border-bottom: 2px solid #8782BC; padding-bottom: 12px; margin-bottom: 16px; }
     .college-title { font-size: 22px; font-weight: 800; color: #8782BC; margin: 0 0 4px; letter-spacing: 0.5px; }
     .college-sub { font-size: 11px; color: #475569; margin: 0 0 8px; }
-    .slip-badge { display: inline-block; padding: 4px 16px; background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 20px; font-size: 12px; font-weight: 800; color: #166534; text-transform: uppercase; }
+    .slip-badge { display: inline-block; padding: 4px 16px; background: #F5F3FD; border: 1px solid #DDD8F3; border-radius: 20px; font-size: 12px; font-weight: 800; color: #756FB2; text-transform: uppercase; }
     
     .info-table { width: 100%; border-collapse: collapse; margin-bottom: 16px; font-size: 12px; }
     .info-table td { padding: 6px 10px; border: 1px solid #cbd5e1; }
@@ -294,10 +294,10 @@ const printSalarySlip = (item, month) => {
     .salary-table .total-row { background: #f8fafc; font-weight: 800; }
     .salary-table .total-row td { border-top: 2px solid #8782BC; border-bottom: 2px solid #8782BC; padding: 9px 12px; }
     
-    .net-box { display: flex; justify-content: space-between; align-items: center; background: #ecfdf5; border: 2px solid #10b981; border-radius: 8px; padding: 14px 18px; margin-bottom: 24px; }
-    .net-title { font-size: 12px; font-weight: 800; color: #065f46; text-transform: uppercase; margin-bottom: 4px; }
-    .net-words { font-size: 13px; color: #047857; font-weight: 600; }
-    .net-amount { font-size: 24px; font-weight: 900; color: #047857; }
+    .net-box { display: flex; justify-content: space-between; align-items: center; background: #F5F3FD; border: 2px solid #8782BC; border-radius: 8px; padding: 14px 18px; margin-bottom: 24px; }
+    .net-title { font-size: 12px; font-weight: 800; color: #554F75; text-transform: uppercase; margin-bottom: 4px; }
+    .net-words { font-size: 13px; color: #756FB2; font-weight: 600; }
+    .net-amount { font-size: 24px; font-weight: 900; color: #756FB2; }
     
     .signatures { display: flex; justify-content: space-between; margin-top: 50px; font-size: 12px; color: #475569; }
     .sig-block { text-align: center; width: 28%; }
@@ -1331,7 +1331,7 @@ function SalarySlipModal({ item, month, onClose }) {
           <div style={{ textAlign: 'center', borderBottom: '2px solid #8782BC', paddingBottom: '12px', marginBottom: '14px' }}>
             <h1 style={{ margin: '0 0 3px', fontSize: '20px', fontWeight: '800', color: '#8782BC', letterSpacing: '0.04em' }}>PIRNAV ENGINEERING COLLEGE</h1>
             <p style={{ margin: '0 0 4px', fontSize: '11px', color: '#475569' }}>Approved by AICTE, Affiliated to JNTUH · Hyderabad, Telangana - 500075</p>
-            <div style={{ display: 'inline-block', marginTop: '4px', padding: '3px 14px', background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '20px', fontSize: '11px', fontWeight: '800', color: '#166534', textTransform: 'uppercase' }}>
+            <div style={{ display: 'inline-block', marginTop: '4px', padding: '3px 14px', background: '#F5F3FD', border: '1px solid #DDD8F3', borderRadius: '20px', fontSize: '11px', fontWeight: '800', color: '#756FB2', textTransform: 'uppercase' }}>
               SALARY SLIP — {monthLabel(month).toUpperCase()}
             </div>
           </div>
@@ -1344,7 +1344,7 @@ function SalarySlipModal({ item, month, onClose }) {
             <div><span style={{ color: '#64748b', fontWeight: '600' }}>Department:</span> <span style={{ color: '#0f172a', fontWeight: '600' }}>{item.department}</span></div>
             <div><span style={{ color: '#64748b', fontWeight: '600' }}>Faculty Category:</span> <span style={{ color: '#0f172a', fontWeight: '600' }}>{item.type}</span></div>
             <div><span style={{ color: '#64748b', fontWeight: '600' }}>Pay Month / Year:</span> <span style={{ color: '#0f172a', fontWeight: '600' }}>{monthLabel(month)}</span></div>
-            <div><span style={{ color: '#64748b', fontWeight: '600' }}>Working / Paid Days:</span> <strong style={{ color: '#0f172a' }}>{working} Days</strong> / <strong style={{ color: '#15803d' }}>{item.present != null ? item.present + (item.paidLeave || 0) : working} Days</strong></div>
+            <div><span style={{ color: '#64748b', fontWeight: '600' }}>Working / Paid Days:</span> <strong style={{ color: '#0f172a' }}>{working} Days</strong> / <strong style={{ color: '#756FB2' }}>{item.present != null ? item.present + (item.paidLeave || 0) : working} Days</strong></div>
             <div><span style={{ color: '#64748b', fontWeight: '600' }}>LOP Days / Daily Rate:</span> <strong style={{ color: lop > 0 ? '#b91c1c' : '#64748b' }}>{lop} Day{lop === 1 ? '' : 's'}</strong> ({money(perDayRate)}/day)</div>
           </div>
 
@@ -1359,19 +1359,19 @@ function SalarySlipModal({ item, month, onClose }) {
               </tr>
             </thead>
             <tbody>
-              <tr style={{ borderBottom: '1px solid #f1f5f9' }}>
+              <tr style={{ borderBottom: '1px solid #F5F3FD' }}>
                 <td style={{ padding: '7px 10px' }}>Basic Salary</td>
                 <td style={{ padding: '7px 10px', textAlign: 'right', fontWeight: '600' }}>{money(basic)}</td>
                 <td style={{ padding: '7px 10px', borderLeft: '1px solid #e2e8f0' }}>Provident Fund (PF)</td>
                 <td style={{ padding: '7px 10px', textAlign: 'right', fontWeight: '600', color: '#b91c1c' }}>{money(pf)}</td>
               </tr>
-              <tr style={{ borderBottom: '1px solid #f1f5f9' }}>
+              <tr style={{ borderBottom: '1px solid #F5F3FD' }}>
                 <td style={{ padding: '7px 10px' }}>House Rent Allowance (HRA)</td>
                 <td style={{ padding: '7px 10px', textAlign: 'right', fontWeight: '600' }}>{money(hra)}</td>
                 <td style={{ padding: '7px 10px', borderLeft: '1px solid #e2e8f0' }}>Professional Tax / TDS</td>
                 <td style={{ padding: '7px 10px', textAlign: 'right', fontWeight: '600', color: '#b91c1c' }}>{money(tax)}</td>
               </tr>
-              <tr style={{ borderBottom: '1px solid #f1f5f9' }}>
+              <tr style={{ borderBottom: '1px solid #F5F3FD' }}>
                 <td style={{ padding: '7px 10px' }}>Dearness Allowance (DA)</td>
                 <td style={{ padding: '7px 10px', textAlign: 'right', fontWeight: '600' }}>{money(da)}</td>
                 <td style={{ padding: '7px 10px', borderLeft: '1px solid #e2e8f0' }}>Loss of Pay ({lop} Day{lop === 1 ? '' : 's'} @ {money(perDayRate)}/day)</td>
@@ -1393,13 +1393,13 @@ function SalarySlipModal({ item, month, onClose }) {
           </table>
 
           {/* Net Pay Box */}
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#ecfdf5', padding: '12px 16px', border: '1px solid #a7f3d0', borderRadius: '8px', marginBottom: '16px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#F5F3FD', padding: '12px 16px', border: '1px solid #a7f3d0', borderRadius: '8px', marginBottom: '16px' }}>
             <div>
-              <span style={{ display: 'block', fontSize: '11px', fontWeight: '700', color: '#065f46', textTransform: 'uppercase', letterSpacing: '0.05em' }}>NET SALARY PAYABLE</span>
-              <strong style={{ fontSize: '11px', color: '#047857' }}>Amount in Words: {numberToWordsIndian(netPay)}</strong>
+              <span style={{ display: 'block', fontSize: '11px', fontWeight: '700', color: '#554F75', textTransform: 'uppercase', letterSpacing: '0.05em' }}>NET SALARY PAYABLE</span>
+              <strong style={{ fontSize: '11px', color: '#756FB2' }}>Amount in Words: {numberToWordsIndian(netPay)}</strong>
             </div>
             <div style={{ textAlign: 'right' }}>
-              <span style={{ fontSize: '22px', fontWeight: '900', color: '#047857' }}>{money(netPay)}</span>
+              <span style={{ fontSize: '22px', fontWeight: '900', color: '#756FB2' }}>{money(netPay)}</span>
             </div>
           </div>
 
