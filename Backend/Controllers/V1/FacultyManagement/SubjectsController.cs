@@ -461,14 +461,44 @@ LIMIT 1;";
             return BadRequest(new { success = false, message = "Invalid semester ID." });
 
         const string sql = @"
-SELECT s.*
+SELECT DISTINCT
+    s.subject_id AS subjectId,
+    s.subject_code AS subjectCode,
+    s.subject_name AS subjectName,
+    s.credits,
+    s.subject_type AS subjectType,
+    s.description,
+    s.status,
+    scb.course_id AS courseId,
+    c.course_code AS courseCode,
+    c.course_name AS courseName,
+    scb.branch_id AS branchId,
+    b.branch_code AS branchCode,
+    b.branch_name AS branchName,
+    COALESCE(ss.semester_id, sa.semester_id) AS semesterId,
+    sem.semester_number AS semesterNumber,
+    sem.semester_name AS semesterName
 FROM subjects s
+LEFT JOIN subject_course_branches scb ON scb.subject_id = s.subject_id AND scb.status = 1
+LEFT JOIN courses c ON c.course_id = scb.course_id
+LEFT JOIN branches b ON b.branch_id = scb.branch_id AND b.course_id = scb.course_id
+LEFT JOIN subject_semesters ss
+    ON ss.subject_id = s.subject_id
+   AND ss.course_id = scb.course_id
+   AND ss.branch_id = scb.branch_id
+   AND ss.status = 1
+LEFT JOIN subject_semester_assignments sa
+    ON sa.subject_id = s.subject_id
+   AND sa.status = 1
+   AND (@semesterId IS NULL OR sa.semester_id = @semesterId)
+LEFT JOIN semesters sem
+    ON sem.semester_id = COALESCE(sa.semester_id, ss.semester_id)
+   AND (sem.course_id = scb.course_id OR scb.course_id IS NULL)
+   AND (sem.branch_id = scb.branch_id OR scb.branch_id IS NULL)
 WHERE (@search IS NULL OR @search = ''
        OR s.subject_code LIKE CONCAT('%', @search, '%')
        OR s.subject_name LIKE CONCAT('%', @search, '%'))
-  AND (@semesterId IS NULL OR EXISTS
-      (SELECT 1 FROM subject_semester_assignments a
-       WHERE a.subject_id = s.subject_id AND a.semester_id = @semesterId AND a.status = 1))
+  AND (@semesterId IS NULL OR ss.semester_id = @semesterId OR sa.semester_id = @semesterId)
   AND (@status IS NULL OR s.status = @status)
 ORDER BY s.subject_name, s.subject_id;";
 

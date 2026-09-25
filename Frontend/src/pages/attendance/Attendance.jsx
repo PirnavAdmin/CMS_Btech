@@ -116,6 +116,7 @@ export default function Attendance() {
   const [loadingFaculty, setLoadingFaculty] = useState(false)
   const [allSubjects, setAllSubjects] = useState([])
   const [loadingSubjects, setLoadingSubjects] = useState(false)
+  const [attendanceSemesterCatalog, setAttendanceSemesterCatalog] = useState([])
 
   // Shortage list state
   const [allProfiles, setAllProfiles] = useState([])
@@ -158,29 +159,51 @@ export default function Attendance() {
       try {
         setLoadingFaculty(true)
         setLoadingSubjects(true)
-        const [faculty, assignments, backendSubjects, localSubjects] = await Promise.all([
+        const [faculty, assignments, backendSubjects, localSubjects, semesters] = await Promise.all([
           facultyService.list().catch(() => []),
           facultyService.getSubjectAllocations().catch(() => []),
           facultyMasterApi.getSubjects().catch(() => []),
           subjectService.getSubjects().catch(() => []),
+          facultyMasterApi.getSemesters().catch(() => []),
         ])
         if (!mounted) return
         setActiveFaculty((faculty || []).filter(member => ['working', 'active'].includes(String(member.employmentStatus || member.status || '').trim().toLowerCase())))
         setFacultyAssignments(assignments || [])
+        setAttendanceSemesterCatalog((semesters || []).map(semester => ({
+          ...semester,
+          id: semester.semesterId ?? semester.semester_id ?? semester.id ?? semester.semesterNumber ?? semester.semester_number,
+          semesterId: semester.semesterId ?? semester.semester_id ?? semester.id ?? semester.semesterNumber ?? semester.semester_number,
+          semesterNumber: semester.semesterNumber ?? semester.semester_number ?? String(semester.semesterName || semester.semester_name || semester.name || '').match(/\d+/)?.[0],
+          semesterName: semester.semesterName ?? semester.semester_name ?? semester.name ?? '',
+          courseId: semester.courseId ?? semester.course_id,
+          branchId: semester.branchId ?? semester.branch_id,
+        })).filter(semester => semester.id != null))
 
         // Merge backend subjects and local subjects, ensuring numeric integer IDs and complete names
         const combinedSubjectMap = new Map()
 
         const getSubName = (s) => s.subjectName || s.subject_name || s.name || s.title || s.subjectTitle || s.subject || ''
         const getSubCode = (s) => s.subjectCode || s.subject_code || s.code || ''
+        const getDatabaseId = (value) => {
+          const text = String(value ?? '').trim()
+          if (!/^\d+$/.test(text)) return 0
+          const id = Number(text)
+          return Number.isSafeInteger(id) && id > 0 ? id : 0
+        }
+        const isActiveRecord = (record) => {
+          const status = record?.status ?? record?.isActive ?? record?.active
+          return status === undefined || status === null || ![false, 0, '0', 'inactive', 'disabled'].includes(
+            typeof status === 'string' ? status.trim().toLowerCase() : status,
+          )
+        }
 
         // 1. First add backend database subjects (they carry numeric database subject_id)
         ;(backendSubjects || []).forEach(sub => {
-          const id = Number(sub.subjectId ?? sub.subject_id ?? sub.id)
+          const id = getDatabaseId(sub.subjectId ?? sub.subject_id ?? sub.id)
           const name = getSubName(sub)
           const code = getSubCode(sub)
-          if (name || (Number.isFinite(id) && id > 0)) {
-            const finalId = Number.isFinite(id) && id > 0 ? id : combinedSubjectMap.size + 1
+          if (name && id > 0 && isActiveRecord(sub)) {
+            const finalId = id
             combinedSubjectMap.set(String(finalId), {
               ...sub,
               id: finalId,
@@ -198,11 +221,11 @@ export default function Attendance() {
 
         // 2. Add from allocations if not already present
         ;(assignments || []).forEach(alloc => {
-          const allocId = Number(alloc.subjectId ?? alloc.subject?.subjectId ?? alloc.subject?.id)
+          const allocId = getDatabaseId(alloc.subjectId ?? alloc.subject?.subjectId ?? alloc.subject?.id)
           const name = alloc.subjectName ?? alloc.subject?.subjectName ?? alloc.subject?.name ?? alloc.subject ?? ''
           const code = alloc.subjectCode ?? alloc.subject?.subjectCode ?? alloc.subject?.code ?? ''
-          if (name) {
-            const finalId = Number.isFinite(allocId) && allocId > 0 ? allocId : (500 + combinedSubjectMap.size)
+          if (name && allocId > 0 && isActiveRecord(alloc) && isActiveRecord(alloc.subject || {})) {
+            const finalId = allocId
             if (!combinedSubjectMap.has(String(finalId))) {
               combinedSubjectMap.set(String(finalId), {
                 id: finalId,
@@ -220,14 +243,12 @@ export default function Attendance() {
         })
 
         // 3. Add local subjects with numeric sanitized IDs
-        ;(localSubjects || []).forEach((sub, idx) => {
-          const rawId = String(sub.id || sub.subjectId || '')
-          const numericPart = Number(rawId.replace(/\D/g, ''))
-          const id = (Number.isFinite(numericPart) && numericPart > 0) ? numericPart : (100 + idx)
+        ;(localSubjects || []).forEach(sub => {
+          const id = getDatabaseId(sub.subjectId ?? sub.subject_id ?? sub.id)
           const name = getSubName(sub)
           const code = getSubCode(sub)
           const key = String(id)
-          if (name && !combinedSubjectMap.has(key)) {
+          if (name && id > 0 && isActiveRecord(sub) && !combinedSubjectMap.has(key)) {
             combinedSubjectMap.set(key, {
               ...sub,
               id,
@@ -257,8 +278,65 @@ export default function Attendance() {
   }, [getBranchesForCourse, takeScope.courseId])
 
   const takeSemesters = useMemo(() => {
-    return getSemestersForCourse(takeScope.courseId, true)
-  }, [getSemestersForCourse, takeScope.courseId])
+    const source = attendanceSemesterCatalog.length ? attendanceSemesterCatalog : getSemestersForCourse(takeScope.courseId, true)
+    const filtered = source.filter(semester =>
+      (!semester.courseId || String(semester.courseId) === String(takeScope.courseId)) &&
+      (!takeScope.branchId || !semester.branchId || String(semester.branchId) === String(takeScope.branchId))
+    )
+    const unique = new Map()
+    filtered.forEach(semester => {
+      const id = semester.id ?? semester.semesterId
+      if (id != null && !unique.has(String(id))) unique.set(String(id), semester)
+    })
+    return Array.from(unique.values()).sort((a, b) => Number(a.semesterNumber || 0) - Number(b.semesterNumber || 0))
+  }, [attendanceSemesterCatalog, getSemestersForCourse, takeScope.courseId, takeScope.branchId])
+
+  // The subject endpoint supports semester assignment filtering. Load that
+  // authoritative list once the user has picked a semester, then attach the
+  // selected course/branch only when the endpoint omits those joined fields.
+  useEffect(() => {
+    if (!takeScope.semesterId || !takeScope.branchId) {
+      setLoadingSubjects(false)
+      return undefined
+    }
+    let active = true
+    const loadSemesterSubjects = async () => {
+      setLoadingSubjects(true)
+      try {
+        const subjects = await facultyMasterApi.getSubjects({ semesterId: takeScope.semesterId, status: 1 })
+        if (!active) return
+        const mapped = (subjects || []).flatMap(subject => {
+          const rawId = String(subject.subjectId ?? subject.subject_id ?? subject.id ?? '').trim()
+          if (!/^\d+$/.test(rawId) || Number(rawId) <= 0) return []
+          const name = subject.subjectName ?? subject.subject_name ?? subject.name ?? ''
+          if (!name) return []
+          return [{
+            ...subject,
+            id: Number(rawId),
+            subjectId: Number(rawId),
+            subjectName: name,
+            name,
+            subjectCode: subject.subjectCode ?? subject.subject_code ?? subject.code ?? '',
+            code: subject.subjectCode ?? subject.subject_code ?? subject.code ?? '',
+            courseId: subject.courseId ?? subject.course_id ?? takeScope.courseId,
+            branchId: subject.branchId ?? subject.branch_id ?? takeScope.branchId,
+            semesterId: subject.semesterId ?? subject.semester_id ?? takeScope.semesterId,
+          }]
+        })
+        setAllSubjects(current => {
+          const byId = new Map(current.map(subject => [String(getSubjectId(subject)), subject]))
+          mapped.forEach(subject => byId.set(String(subject.id), { ...byId.get(String(subject.id)), ...subject }))
+          return Array.from(byId.values())
+        })
+      } catch (error) {
+        console.warn('Unable to load subjects for the selected semester:', error)
+      } finally {
+        if (active) setLoadingSubjects(false)
+      }
+    }
+    loadSemesterSubjects()
+    return () => { active = false }
+  }, [takeScope.semesterId, takeScope.branchId, takeScope.courseId])
 
   const selectedTakeCourse = useMemo(
     () => activeCourses.find(course => String(course.id) === String(takeScope.courseId)),
@@ -387,6 +465,16 @@ export default function Attendance() {
     return branchMatched
   }, [allSubjects, facultyAssignments, takeScope.courseId, takeScope.branchId, takeScope.semesterId, activeCourses, takeBranches, takeSemesters, takeCourseCode, takeBranchCode])
 
+  useEffect(() => {
+    if (!takeScope.subjectId || loadingSubjects) return
+    const subjectStillAvailable = availableSubjects.some(subject =>
+      String(getSubjectId(subject) ?? '') === String(takeScope.subjectId)
+    )
+    if (!subjectStillAvailable) {
+      setTakeScope(current => ({ ...current, subjectId: '', subject: '', subjectCode: '' }))
+    }
+  }, [availableSubjects, loadingSubjects, takeScope.subjectId])
+
   const branchFaculty = useMemo(() => {
     if (!takeScope.branchId) return activeFaculty
     const selectedBranchName = String(selectedTakeBranch?.name || selectedTakeBranch?.branchName || '').trim().toLowerCase()
@@ -491,7 +579,11 @@ export default function Attendance() {
 
   // Save session
   const handleSaveAttendance = async () => {
-    if (!takeScope.academicYearId || !takeScope.courseId || !takeScope.branchId || !takeScope.semesterId || !takeScope.subject.trim() || !takeScope.faculty.trim()) {
+    if (!takeScope.academicYearId || !takeScope.courseId || !takeScope.branchId || !takeScope.semesterId || !takeScope.sectionId || !takeScope.subject.trim() || !takeScope.faculty.trim()) {
+      if (!takeScope.sectionId) {
+        notify('Select a section before saving attendance.', 'warning')
+        return
+      }
       notify('Select the complete class scope, subject, and faculty before saving attendance.', 'warning')
       return
     }
@@ -523,10 +615,15 @@ export default function Attendance() {
           if (Number.isFinite(allocId) && allocId > 0) {
             finalSubjectId = allocId
           } else {
-            const digits = Number(String(takeScope.subjectId).replace(/\D/g, ''))
-            finalSubjectId = (Number.isFinite(digits) && digits > 0) ? digits : 1
+            notify('This subject is not linked to an active subject record. Select a subject assigned to the chosen semester.', 'warning')
+            return
           }
         }
+      }
+
+      if (!Number.isSafeInteger(finalSubjectId) || finalSubjectId <= 0) {
+        notify('Select an active subject assigned to the chosen semester.', 'warning')
+        return
       }
 
       await attendanceService.recordAttendance({
@@ -534,7 +631,7 @@ export default function Attendance() {
         courseId: Number(takeScope.courseId),
         branchId: Number(takeScope.branchId),
         semesterId: Number(takeScope.semesterId),
-        sectionId: Number(takeScope.sectionId || (takeSections[0]?.id ? takeSections[0].id : 1)),
+        sectionId: Number(takeScope.sectionId),
         subjectId: finalSubjectId,
         academicYear: selectedYear?.name || '',
         course: selectedCourse?.name || '',
@@ -847,7 +944,18 @@ export default function Attendance() {
                                   type="button"
                                   className="erp-btn erp-btn--icon"
                                   title="View Session Details"
-                                  onClick={() => setSelectedSession(session)}
+                                  onClick={async () => {
+                                    setSelectedSession({ ...session, records: [], detailsLoading: true })
+                                    try {
+                                      const records = await attendanceService.getSessionStudents(session.id || session.sessionId)
+                                      setSelectedSession(current => current?.id === session.id
+                                        ? { ...current, records, totalStudents: records.length, detailsLoading: false }
+                                        : current)
+                                    } catch (error) {
+                                      setSelectedSession(current => current?.id === session.id ? { ...current, detailsLoading: false } : current)
+                                      notify(error.message || 'Unable to load students for this attendance session.', 'error')
+                                    }
+                                  }}
                                 >
                                   <FiEye />
                                 </button>
@@ -1320,7 +1428,7 @@ export default function Attendance() {
                     <span className="view-modal-badge-status active">{selectedSession.status || 'Marked'}</span>
                   </div>
                   <h1 className="view-modal-title">{selectedSession.subject}</h1>
-                  <p className="view-modal-subtitle">Faculty: {selectedSession.faculty} · Total Students: {selectedSession.totalStudents}</p>
+                  <p className="view-modal-subtitle">Faculty: {selectedSession.faculty} · Total Students: {selectedSession.detailsLoading ? 'Loading…' : selectedSession.records?.length ?? selectedSession.totalStudents}</p>
                 </div>
               </div>
 
@@ -1348,7 +1456,7 @@ export default function Attendance() {
               </div>
 
               <div className="erp-detail-section">
-                <h3 className="erp-detail-heading">Student Attendance Breakdown ({selectedSession.totalStudents} Students)</h3>
+                <h3 className="erp-detail-heading">Student Attendance Breakdown ({selectedSession.detailsLoading ? 'Loading…' : selectedSession.records?.length ?? selectedSession.totalStudents} Students)</h3>
                 <div className="erp-table-responsive">
                   <table className="erp-table">
                     <thead>
@@ -1360,7 +1468,11 @@ export default function Attendance() {
                       </tr>
                     </thead>
                     <tbody>
-                      {(selectedSession.records || []).map((r, idx) => (
+                      {selectedSession.detailsLoading ? (
+                        <tr><td colSpan="4">Loading student attendance…</td></tr>
+                      ) : (selectedSession.records || []).length === 0 ? (
+                        <tr><td colSpan="4">No student attendance records are available for this session.</td></tr>
+                      ) : (selectedSession.records || []).map((r, idx) => (
                         <tr key={r.studentId || idx}>
                           <td>{idx + 1}</td>
                           <td><strong>{r.rollNumber || r.studentId}</strong></td>

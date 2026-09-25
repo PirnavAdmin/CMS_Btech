@@ -26,6 +26,29 @@ class AttendanceService {
     }))
   }
 
+  async getSessionStudents(sessionId) {
+    const response = await studentAttendanceApi.getStudents(sessionId)
+    const students = Array.isArray(response?.students) ? response.students : Array.isArray(response) ? response : []
+    const statusLabels = {
+      PRESENT: 'Present',
+      ABSENT: 'Absent',
+      LATE: 'Late',
+      LEAVE: 'Excused',
+      EXCUSED: 'Excused',
+      UNMARKED: 'Unmarked',
+    }
+    return students.map(student => {
+      const rawStatus = String(student.attendanceStatus ?? student.status ?? 'UNMARKED').toUpperCase()
+      return {
+        ...student,
+        studentId: student.studentId ?? student.id,
+        rollNumber: student.studentCode ?? student.rollNumber ?? student.registrationNumber ?? '',
+        name: student.studentName ?? student.fullName ?? student.name ?? 'Student',
+        status: statusLabels[rawStatus] || rawStatus,
+      }
+    })
+  }
+
   async getStudentsForAttendance(scope) {
     const sectionId = scope?.sectionId
     const courseId = scope?.courseId
