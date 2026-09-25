@@ -1,12 +1,14 @@
 import { showSuccess, showError, showWarning } from '../utils/toast'
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { FiBookOpen, FiCheckCircle, FiShield, FiTrendingUp, FiX } from 'react-icons/fi'
 import { demoRoles, emptyDemo, normalizeDemo, validateDemo, submitDemoRequest } from '../api/demoRequest'
 import './RequestDemo.css'
 
 export default function RequestDemo({ onClose }) {
   const dialog = useRef(null), lock = useRef(false), mounted = useRef(true)
-  const [values, setValues] = useState(emptyDemo), [errors, setErrors] = useState({}), [busy, setBusy] = useState(false), [result, setResult] = useState(null), [failure, setFailure] = useState('')
+  const [values, setValues] = useState(emptyDemo), [errors, setErrors] = useState({}), [touched, setTouched] = useState({})
+  const markTouched = (name) => setTouched(prev => ({ ...prev, [name]: true }))
+  const liveErrors = useMemo(() => validateDemo(values), [values]), [busy, setBusy] = useState(false), [result, setResult] = useState(null), [failure, setFailure] = useState('')
   useEffect(() => {
     mounted.current = true
     const previous = document.activeElement, overflow = document.body.style.overflow
@@ -20,7 +22,26 @@ export default function RequestDemo({ onClose }) {
     setValues(v => ({ ...v, [name]: type === 'checkbox' ? checked : name === 'mobile' ? value.replace(/\D/g, '').slice(0, 10) : value }))
     setErrors(v => ({ ...v, [name]: undefined })); setFailure('')
   }
-  const field = (name, label, { required = false, options, ...props } = {}) => <label className="rd-field" key={name} htmlFor={`rd-${name}`}><span>{label}{required && <b> *</b>}</span>{options ? <select id={`rd-${name}`} name={name} value={values[name]} onChange={update} required={required} aria-invalid={Boolean(errors[name])} aria-describedby={errors[name] ? `rd-${name}-error` : undefined}><option value="">Select {label.toLowerCase()}</option>{options.map(x => <option key={x}>{x}</option>)}</select> : <input id={`rd-${name}`} name={name} value={values[name]} onChange={update} required={required} maxLength={120} aria-invalid={Boolean(errors[name])} aria-describedby={errors[name] ? `rd-${name}-error` : undefined} {...props} />}{errors[name] && <small id={`rd-${name}-error`} className="rd-error">{errors[name]}</small>}</label>
+  const field = (name, label, { required = false, options, ...props } = {}) => {
+    const isTouched = Boolean(touched[name])
+    const rawVal = typeof values[name] === 'string' ? values[name].trim() : values[name]
+    const hasVal = Boolean(rawVal)
+    const err = (isTouched || hasVal) ? (liveErrors[name] || errors[name]) : errors[name]
+    return (
+      <label className="rd-field" key={name} htmlFor={`rd-${name}`}>
+        <span>{label}{required && <b> *</b>}</span>
+        {options ? (
+          <select id={`rd-${name}`} name={name} value={values[name]} onBlur={() => markTouched(name)} onChange={e => { update(e); markTouched(name); }} required={required} aria-invalid={Boolean(err)} aria-describedby={err ? `rd-${name}-error` : undefined}>
+            <option value="">Select {label.toLowerCase()}</option>
+            {options.map(x => <option key={x}>{x}</option>)}
+          </select>
+        ) : (
+          <input id={`rd-${name}`} name={name} value={values[name]} onBlur={() => markTouched(name)} onChange={e => { update(e); markTouched(name); }} required={required} maxLength={120} aria-invalid={Boolean(err)} aria-describedby={err ? `rd-${name}-error` : undefined} {...props} />
+        )}
+        {err && <small id={`rd-${name}-error`} className="rd-error">{err}</small>}
+      </label>
+    )
+  }
   async function submit(e) {
     e.preventDefault()
     if (lock.current) return

@@ -1,6 +1,6 @@
 import { showSuccess, showWarning } from '../utils/toast'
 import useToastState from '../hooks/useToastState'
-import { useRef, useState } from 'react'
+import { useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { AuthRequestError, register } from '../auth/authApi'
 import { passwordRequirements, validateRegistration } from '../auth/registrationValidation'
@@ -15,6 +15,10 @@ export default function Register() {
   const formRef = useRef(null)
   const [values, setValues] = useState(initialValues)
   const [errors, setErrors] = useToastState({}, 'error')
+  const [touched, setTouched] = useState({})
+  const markTouched = (name) => setTouched(prev => ({ ...prev, [name]: true }))
+  const liveErrors = useMemo(() => validateRegistration(values), [values])
+  const getFieldError = (name) => (touched[name] || Boolean(typeof values[name] === 'string' ? values[name].trim() : values[name])) ? (liveErrors[name] || errors[name]) : errors[name]
   const [submitError, setSubmitError] = useToastState('', 'error')
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [isComplete, setIsComplete] = useState(false)
@@ -22,6 +26,7 @@ export default function Register() {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
 
   const updateValue = ({ target: { name, value, checked, type } }) => {
+    markTouched(name)
     if (submitLock.current) return
     const nextValues = { ...values, [name]: type === 'checkbox' ? checked : value }
     setValues(nextValues)
@@ -92,21 +97,21 @@ export default function Register() {
         ) : (
           <form ref={formRef} className="login-form register-form" onSubmit={handleSubmit} noValidate aria-busy={isSubmitting}>
             <header><h2 id="register-title">Request campus access</h2><p>Request access to Pirnav Engineering College.</p></header>
-            <label htmlFor="fullName"><span>Full Name</span><input id="fullName" name="fullName" type="text" value={values.fullName} onChange={updateValue} placeholder="Enter your full name" autoComplete="name" aria-invalid={Boolean(errors.fullName)} aria-describedby={errors.fullName ? 'fullName-error' : undefined} /></label>
-            {errors.fullName && <p id="fullName-error" className="field-error" role="alert">{errors.fullName}</p>}
-            <label htmlFor="email"><span>Email</span><input id="email" name="email" type="email" value={values.email} onChange={updateValue} placeholder="Enter your email address" autoComplete="email" aria-invalid={Boolean(errors.email)} aria-describedby={errors.email ? 'email-error' : undefined} /></label>
-            {errors.email && <p id="email-error" className="field-error" role="alert">{errors.email}</p>}
-            <label htmlFor="mobile"><span>Mobile Number</span><input id="mobile" name="mobile" type="tel" value={values.mobile} onChange={updateValue} placeholder="Enter your mobile number" autoComplete="tel" inputMode="numeric" maxLength="10" aria-invalid={Boolean(errors.mobile)} aria-describedby={errors.mobile ? 'mobile-error' : undefined} /></label>
-            {errors.mobile && <p id="mobile-error" className="field-error" role="alert">{errors.mobile}</p>}
-            <label htmlFor="register-password"><span>Password</span><span className="password-input"><input id="register-password" name="password" type={showPassword ? 'text' : 'password'} value={values.password} onChange={updateValue} placeholder="Create a password" autoComplete="new-password" aria-invalid={Boolean(errors.password)} aria-describedby={`password-requirements${errors.password ? ' password-error' : ''}`} /><button className="password-toggle" type="button" onClick={() => setShowPassword((visible) => !visible)} aria-label={showPassword ? 'Hide password' : 'Show password'} title={showPassword ? 'Hide password' : 'Show password'}>{showPassword ? <FiEyeOff aria-hidden="true" /> : <FiEye aria-hidden="true" />}</button></span></label>
-            {errors.password && <p id="password-error" className="field-error" role="alert">{errors.password}</p>}
+            <label htmlFor="fullName"><span>Full Name</span><input id="fullName" name="fullName" type="text" value={values.fullName} onBlur={() => markTouched('fullName')} onChange={updateValue} placeholder="Enter your full name" autoComplete="name" aria-invalid={Boolean(getFieldError('fullName'))} aria-describedby={getFieldError('fullName') ? 'fullName-error' : undefined} /></label>
+            {getFieldError('fullName') && <p id="fullName-error" className="field-error" role="alert">{getFieldError('fullName')}</p>}
+            <label htmlFor="email"><span>Email</span><input id="email" name="email" type="email" value={values.email} onBlur={() => markTouched('email')} onChange={updateValue} placeholder="Enter your email address" autoComplete="email" aria-invalid={Boolean(getFieldError('email'))} aria-describedby={getFieldError('email') ? 'email-error' : undefined} /></label>
+            {getFieldError('email') && <p id="email-error" className="field-error" role="alert">{getFieldError('email')}</p>}
+            <label htmlFor="mobile"><span>Mobile Number</span><input id="mobile" name="mobile" type="tel" value={values.mobile} onBlur={() => markTouched('mobile')} onChange={updateValue} placeholder="Enter your mobile number" autoComplete="tel" inputMode="numeric" maxLength="10" aria-invalid={Boolean(getFieldError('mobile'))} aria-describedby={getFieldError('mobile') ? 'mobile-error' : undefined} /></label>
+            {getFieldError('mobile') && <p id="mobile-error" className="field-error" role="alert">{getFieldError('mobile')}</p>}
+            <label htmlFor="register-password"><span>Password</span><span className="password-input"><input id="register-password" name="password" type={showPassword ? 'text' : 'password'} value={values.password} onBlur={() => markTouched('password')} onChange={updateValue} placeholder="Create a password" autoComplete="new-password" aria-invalid={Boolean(getFieldError('password'))} aria-describedby={`password-requirements${getFieldError('password') ? ' password-error' : ''}`} /><button className="password-toggle" type="button" onClick={() => setShowPassword((visible) => !visible)} aria-label={showPassword ? 'Hide password' : 'Show password'} title={showPassword ? 'Hide password' : 'Show password'}>{showPassword ? <FiEyeOff aria-hidden="true" /> : <FiEye aria-hidden="true" />}</button></span></label>
+            {getFieldError('password') && <p id="password-error" className="field-error" role="alert">{getFieldError('password')}</p>}
             <ul aria-live="polite" id="password-requirements" className="password-requirements" aria-label="Password requirements">
               {passwordRequirements.map(rule => <li key={rule.label} className={rule.test(values.password) ? 'met' : 'unmet'}><span aria-hidden="true">{rule.test(values.password) ? '✓' : '○'}</span><span>{rule.label}<span className="sr-only">{rule.test(values.password) ? ': met' : ': not met'}</span></span></li>)}
             </ul>
-            <label htmlFor="confirmPassword"><span>Confirm Password</span><span className="password-input"><input id="confirmPassword" name="confirmPassword" type={showConfirmPassword ? 'text' : 'password'} value={values.confirmPassword} onChange={updateValue} placeholder="Confirm your password" autoComplete="new-password" aria-invalid={Boolean(errors.confirmPassword)} aria-describedby={errors.confirmPassword ? 'confirmPassword-error' : undefined} /><button className="password-toggle" type="button" onClick={() => setShowConfirmPassword((visible) => !visible)} aria-label={showConfirmPassword ? 'Hide password' : 'Show password'} title={showConfirmPassword ? 'Hide password' : 'Show password'}>{showConfirmPassword ? <FiEyeOff aria-hidden="true" /> : <FiEye aria-hidden="true" />}</button></span></label>
-            {errors.confirmPassword && <p id="confirmPassword-error" className="field-error" role="alert">{errors.confirmPassword}</p>}
-            <label className="terms-option"><input name="terms" type="checkbox" checked={values.terms} onChange={updateValue} aria-invalid={Boolean(errors.terms)} aria-describedby={errors.terms ? 'terms-error' : undefined} /><span>I agree to the Terms &amp; Conditions</span></label>
-            {errors.terms && <p id="terms-error" className="field-error" role="alert">{errors.terms}</p>}
+            <label htmlFor="confirmPassword"><span>Confirm Password</span><span className="password-input"><input id="confirmPassword" name="confirmPassword" type={showConfirmPassword ? 'text' : 'password'} value={values.confirmPassword} onBlur={() => markTouched('confirmPassword')} onChange={updateValue} placeholder="Confirm your password" autoComplete="new-password" aria-invalid={Boolean(getFieldError('confirmPassword'))} aria-describedby={getFieldError('confirmPassword') ? 'confirmPassword-error' : undefined} /><button className="password-toggle" type="button" onClick={() => setShowConfirmPassword((visible) => !visible)} aria-label={showConfirmPassword ? 'Hide password' : 'Show password'} title={showConfirmPassword ? 'Hide password' : 'Show password'}>{showConfirmPassword ? <FiEyeOff aria-hidden="true" /> : <FiEye aria-hidden="true" />}</button></span></label>
+            {getFieldError('confirmPassword') && <p id="confirmPassword-error" className="field-error" role="alert">{getFieldError('confirmPassword')}</p>}
+            <label className="terms-option"><input name="terms" type="checkbox" checked={values.terms} onBlur={() => markTouched('terms')} onChange={updateValue} aria-invalid={Boolean(getFieldError('terms'))} aria-describedby={getFieldError('terms') ? 'terms-error' : undefined} /><span>I agree to the Terms &amp; Conditions</span></label>
+            {getFieldError('terms') && <p id="terms-error" className="field-error" role="alert">{getFieldError('terms')}</p>}
             {submitError && <p className="form-error" role="alert">{submitError}</p>}
             <button className="sign-in-button" type="submit" disabled={isSubmitting} aria-busy={isSubmitting}>{isSubmitting ? 'Submitting...' : 'Submit Access Request'}</button>
             <p className="account-link">Already have an account? <Link to="/login">Sign in</Link></p>

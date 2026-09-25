@@ -1,6 +1,6 @@
 import { showSuccess, showWarning } from '../utils/toast'
 import useToastState from '../hooks/useToastState'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { signIn } from '../auth/auth'
 import { sendOtp, verifyOtp } from '../auth/authApi'
@@ -18,6 +18,10 @@ export default function Login() {
   const [rememberMe, setRememberMe] = useState(() => localStorage.getItem('btech-remember-me') === 'true')
   const [values, setValues] = useState(() => ({ identifier: localStorage.getItem('btech-remember-me') === 'true' ? localStorage.getItem('btech-remembered-identifier') || '' : '', password: '' }))
   const [errors, setErrors] = useState({ identifier: '', password: '' })
+  const [touched, setTouched] = useState({})
+  const markTouched = (name) => setTouched(prev => ({ ...prev, [name]: true }))
+  const liveErrors = useMemo(() => validateLogin(values), [values])
+  const getFieldError = (name) => (touched[name] || Boolean(values[name])) ? (liveErrors[name] || errors[name]) : errors[name]
   const [submitError, setSubmitError] = useToastState('', 'error')
   const [isSubmitting, setIsSubmitting] = useState(false)
   const greeting = new Date().getHours() < 12 ? 'Good morning' : new Date().getHours() < 18 ? 'Good afternoon' : 'Good evening'
@@ -28,6 +32,9 @@ export default function Login() {
   const [viewMode, setViewMode] = useState('login')
   const [otpContact, setOtpContact] = useState('')
   const [contactError, setContactError] = useToastState('', 'error')
+  const [otpContactTouched, setOtpContactTouched] = useState(false)
+  const liveContactError = useMemo(() => validateContact(otpContact), [otpContact])
+  const getContactError = () => (otpContactTouched || Boolean(otpContact.trim())) ? (liveContactError || contactError) : contactError
   const [otp, setOtp] = useState('')
   const [otpError, setOtpError] = useToastState('', 'error')
   const [demoOtpHint, setDemoOtpHint] = useState('')
@@ -62,7 +69,7 @@ export default function Login() {
       return ''
     }
 
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+    const emailRegex = /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z]{2,})+$/
     if (!emailRegex.test(value)) {
       return 'Please enter a valid email address or 10-digit mobile number.'
     }
@@ -189,14 +196,15 @@ export default function Login() {
                 type="text"
                 name="identifier"
                 value={values.identifier}
-                onChange={updateValue}
+                onBlur={() => markTouched('identifier')}
+                onChange={(e) => { updateValue(e); markTouched('identifier'); }}
                 placeholder="Enter college email, mobile number or ID"
                 autoComplete="username"
-                aria-invalid={Boolean(errors.identifier)}
-                aria-describedby={errors.identifier ? 'identifier-error' : undefined}
+                aria-invalid={Boolean(getFieldError('identifier'))}
+                aria-describedby={getFieldError('identifier') ? 'identifier-error' : undefined}
               />
             </label>
-            {errors.identifier && <p id="identifier-error" className="field-error" role="alert">{errors.identifier}</p>}
+            {getFieldError('identifier') && <p id="identifier-error" className="field-error" role="alert">{getFieldError('identifier')}</p>}
 
             <label htmlFor="password">
               <span>Password</span>
@@ -206,11 +214,12 @@ export default function Login() {
                   type={showPassword ? 'text' : 'password'}
                   name="password"
                   value={values.password}
-                  onChange={updateValue}
+                  onBlur={() => markTouched('password')}
+                  onChange={(e) => { updateValue(e); markTouched('password'); }}
                   placeholder="Enter your password"
                   autoComplete="current-password"
-                  aria-invalid={Boolean(errors.password)}
-                  aria-describedby={errors.password ? 'password-error' : undefined}
+                  aria-invalid={Boolean(getFieldError('password'))}
+                  aria-describedby={getFieldError('password') ? 'password-error' : undefined}
                 />
                 <button
                   type="button"
@@ -235,7 +244,7 @@ export default function Login() {
                 </button>
               </span>
             </label>
-            {errors.password && <p id="password-error" className="field-error" role="alert">{errors.password}</p>}
+            {getFieldError('password') && <p id="password-error" className="field-error" role="alert">{getFieldError('password')}</p>}
 
             <div className="login-options">
               <label className="remember-me">
@@ -276,14 +285,18 @@ export default function Login() {
                 id="otp-contact"
                 type="text"
                 value={otpContact}
+                onBlur={() => setOtpContactTouched(true)}
                 onChange={(e) => {
                   setOtpContact(e.target.value)
+                  setOtpContactTouched(true)
                   setContactError('')
                 }}
                 placeholder="Enter email or 10-digit mobile number"
+                aria-invalid={Boolean(getContactError())}
+                aria-describedby={getContactError() ? 'otp-contact-error' : undefined}
               />
             </label>
-            {contactError && <p className="field-error" role="alert">{contactError}</p>}
+            {getContactError() && <p id="otp-contact-error" className="field-error" role="alert">{getContactError()}</p>}
             {otpError && <p className="form-error" role="alert">{otpError}</p>}
 
             <button className="sign-in-button" type="submit" disabled={isSubmitting}>
@@ -354,7 +367,7 @@ export default function Login() {
           <div className="login-form" style={{ textAlign: 'center' }}>
             <header>
               <h2>Verification Complete</h2>
-              <p style={{ color: '#16a34a', margin: '20px 0', fontSize: '1.1rem', fontWeight: 600 }}>
+              <p style={{ color: '#8782BC', margin: '20px 0', fontSize: '1.1rem', fontWeight: 600 }}>
                 Verified successfully
               </p>
             </header>

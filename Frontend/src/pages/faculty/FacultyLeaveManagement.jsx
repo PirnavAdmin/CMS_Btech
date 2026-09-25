@@ -393,7 +393,7 @@ function LeaveList({ tab, rows, leaveTypes, getBalance, onView, onEdit, onActiva
                 </Action>
               ) : (
                 <Action title="Activate leave type" onClick={() => onToggleType(row)}>
-                  <FiCheck style={{ color: '#16a34a' }} />
+                  <FiCheck style={{ color: '#8782BC' }} />
                 </Action>
               )}
             </Actions>

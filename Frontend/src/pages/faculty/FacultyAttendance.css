@@ -162,28 +162,272 @@
  border: 1px solid #CBD5E1;}
 
 .faculty-management .fm-attendance-screen {
-  --attendance-present-bg: color-mix(in srgb, var(--success, #15935b) 16%, var(--surface));
-  --attendance-present-text: var(--success, #087443);
-  --attendance-absent-bg: color-mix(in srgb, var(--danger, #d92d20) 14%, var(--surface));
-  --attendance-absent-text: var(--danger, #b42318);
-  --attendance-late-bg: color-mix(in srgb, var(--warning, #c88909) 17%, var(--surface));
-  --attendance-late-text: #9a6700;
-  --attendance-half-day-bg: color-mix(in srgb, #e87516 15%, var(--surface));
-  --attendance-half-day-text: #a04c06;
-  --attendance-leave-bg: color-mix(in srgb, var(--info, #8782BC) 15%, var(--surface));
-  --attendance-leave-text: var(--info, #8782BC);
-  --attendance-lop-bg: color-mix(in srgb, #9f1239 16%, var(--surface));
-  --attendance-lop-text: #9f1239;
-  --attendance-unmarked-bg: var(--surface-soft);
-  --attendance-unmarked-text: var(--text-muted);
+  --attendance-present-bg: #dcfce7;
+  --attendance-present-border: #86efac;
+  --attendance-present-text: #15803d;
+  --attendance-absent-bg: #fee2e2;
+  --attendance-absent-border: #fca5a5;
+  --attendance-absent-text: #b91c1c;
+  --attendance-late-bg: #fef3c7;
+  --attendance-late-border: #fcd34d;
+  --attendance-late-text: #b45309;
+  --attendance-half-day-bg: #ffedd5;
+  --attendance-half-day-border: #fdba74;
+  --attendance-half-day-text: #c2410c;
+  --attendance-leave-bg: #e0f2fe;
+  --attendance-leave-border: #7dd3fc;
+  --attendance-leave-text: #0369a1;
+  --attendance-lop-bg: #fce7f3;
+  --attendance-lop-border: #f472b6;
+  --attendance-lop-text: #be185d;
+  --attendance-unmarked-bg: #f1f5f9;
+  --attendance-unmarked-border: #cbd5e1;
+  --attendance-unmarked-text: #64748b;
 }
-.faculty-management .fm-report-legend { display: flex; flex-wrap: wrap; gap: 8px; padding: 2px 0 12px; color: var(--text-secondary); font-size: 11px; }
-.faculty-management .fm-report-direct-filters { grid-template-columns: repeat(5, minmax(150px, 1fr)); margin: 0 16px 12px; }
-.faculty-management .fm-report-legend > span { display: inline-flex; align-items: center; gap: 6px; min-height: 30px; padding: 0 8px 0 5px; border: 1px solid var(--border); border-radius: 7px; background: var(--surface); }
-.faculty-management .fm-report-legend > span small { font-size: 11px; font-weight: 650; }
-.faculty-management .fm-report-status { display: inline-grid !important; min-width: 30px; height: 30px; padding: 0 4px; place-items: center; border: 1px solid currentColor; border-radius: 6px; font-size: 10px; font-weight: 800; line-height: 1; white-space: nowrap; }
-.faculty-management .fm-report-status--present { color: var(--attendance-present-text) !important; background: var(--attendance-present-bg) !important; }.faculty-management .fm-report-status--absent { color: var(--attendance-absent-text) !important; background: var(--attendance-absent-bg) !important; }.faculty-management .fm-report-status--late { color: var(--attendance-late-text) !important; background: var(--attendance-late-bg) !important; }.faculty-management .fm-report-status--half-day { color: var(--attendance-half-day-text) !important; background: var(--attendance-half-day-bg) !important; }.faculty-management .fm-report-status--leave { color: var(--attendance-leave-text) !important; background: var(--attendance-leave-bg) !important; }.faculty-management .fm-report-status--lop { min-width: 36px; color: var(--attendance-lop-text) !important; background: var(--attendance-lop-bg) !important; }.faculty-management .fm-report-status--pending { color: var(--attendance-unmarked-text) !important; background: var(--attendance-unmarked-bg) !important; }
-.faculty-management .fm-attendance-matrix table { min-width: max-content; table-layout: auto; }.faculty-management .fm-attendance-matrix th { min-width: 38px; padding: 7px 5px; }.faculty-management .fm-attendance-matrix th span,.faculty-management .fm-attendance-matrix th b { display: block; font-size: 9px; line-height: 1.25; }.faculty-management .fm-attendance-matrix td { padding: 5px; }.faculty-management .fm-attendance-matrix th:first-child,.faculty-management .fm-attendance-matrix td:first-child { position: sticky; left: 0; z-index: 2; background: var(--erp-table-head-bg, var(--brand)); }.faculty-management .fm-attendance-matrix td:first-child { background: var(--surface); }.faculty-management .fm-matrix-faculty { position: sticky; left: 0; z-index: 1; min-width: 220px; background: var(--surface); text-align: left !important; }.faculty-management .fm-matrix-faculty strong,.faculty-management .fm-matrix-faculty small { display: block; }.faculty-management .fm-matrix-faculty small { margin-top: 3px; color: var(--text-muted); font-size: 10px; }.faculty-management .fm-report-total { font-weight: 800; }.faculty-management .fm-report-total--present { color: var(--attendance-present-text); }.faculty-management .fm-report-total--absent { color: var(--attendance-absent-text); }.faculty-management .fm-report-total--late { color: var(--attendance-late-text); }.faculty-management .fm-report-total--half-day { color: var(--attendance-half-day-text); }.faculty-management .fm-report-total--leave { color: var(--attendance-leave-text); }.faculty-management .fm-report-total--lop { color: var(--attendance-lop-text); }.faculty-management .fm-report-total--percentage { color: var(--brand); }
+
+.faculty-management .fm-report-legend {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 0 14px;
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+
+.faculty-management .fm-report-direct-filters {
+  grid-template-columns: repeat(5, minmax(150px, 1fr));
+  margin: 0 16px 12px;
+}
+
+.faculty-management .fm-report-legend > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 32px;
+  padding: 2px 10px 2px 4px;
+  border: 1px solid var(--border-strong, #cbd5e1);
+  border-radius: 8px;
+  background: var(--surface, #ffffff);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+}
+
+.faculty-management .fm-report-legend > span small {
+  font-size: 11.5px;
+  font-weight: 700;
+  color: var(--text-primary, #1e293b);
+}
+
+.faculty-management .fm-report-status {
+  display: inline-grid !important;
+  min-width: 28px;
+  height: 28px;
+  padding: 0 5px;
+  place-items: center;
+  border: 1.5px solid currentColor !important;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 800;
+  line-height: 1;
+  white-space: nowrap;
+  letter-spacing: 0.02em;
+}
+
+.faculty-management .fm-report-status--present {
+  color: #15803d !important;
+  background: #dcfce7 !important;
+  border-color: #86efac !important;
+}
+
+.faculty-management .fm-report-status--absent {
+  color: #b91c1c !important;
+  background: #fee2e2 !important;
+  border-color: #fca5a5 !important;
+}
+
+.faculty-management .fm-report-status--late {
+  color: #b45309 !important;
+  background: #fef3c7 !important;
+  border-color: #fcd34d !important;
+}
+
+.faculty-management .fm-report-status--half-day {
+  color: #c2410c !important;
+  background: #ffedd5 !important;
+  border-color: #fdba74 !important;
+}
+
+.faculty-management .fm-report-status--leave {
+  color: #0369a1 !important;
+  background: #e0f2fe !important;
+  border-color: #7dd3fc !important;
+}
+
+.faculty-management .fm-report-status--lop {
+  min-width: 34px;
+  color: #be185d !important;
+  background: #fce7f3 !important;
+  border-color: #f472b6 !important;
+}
+
+.faculty-management .fm-report-status--pending {
+  color: #64748b !important;
+  background: #f1f5f9 !important;
+  border-color: #cbd5e1 !important;
+}
+
+/* Matrix Table Styling & Column Contrast */
+.faculty-management .fm-attendance-matrix {
+  width: 100%;
+  overflow-x: auto;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+  position: relative;
+}
+
+.faculty-management .fm-attendance-matrix table {
+  width: max-content !important;
+  min-width: 100% !important;
+  table-layout: fixed !important;
+  border-collapse: separate !important;
+  border-spacing: 0 !important;
+}
+
+.faculty-management .fm-attendance-matrix thead th {
+  background: #2b2347 !important;
+  color: #ffffff !important;
+  padding: 8px 4px !important;
+  font-size: 11px !important;
+  font-weight: 700 !important;
+  text-align: center !important;
+  border-bottom: 2px solid #1e1735 !important;
+  border-right: 1px solid rgba(255, 255, 255, 0.15) !important;
+  white-space: nowrap !important;
+}
+
+.faculty-management .fm-attendance-matrix thead th span {
+  display: block;
+  font-size: 9px;
+  font-weight: 600;
+  color: #cbd5e1;
+  line-height: 1.2;
+}
+
+.faculty-management .fm-attendance-matrix thead th b {
+  display: block;
+  font-size: 10px;
+  font-weight: 800;
+  color: #ffffff;
+  line-height: 1.25;
+}
+
+.faculty-management .fm-attendance-matrix tbody td {
+  padding: 6px 4px !important;
+  text-align: center !important;
+  border-bottom: 1px solid var(--border) !important;
+  border-right: 1px solid var(--border-subtle, #f1f5f9) !important;
+  vertical-align: middle !important;
+  background: #ffffff;
+}
+
+/* Sticky first column: Faculty Code */
+.faculty-management .fm-attendance-matrix thead th:first-child {
+  position: sticky !important;
+  left: 0 !important;
+  z-index: 12 !important;
+  width: 130px !important;
+  min-width: 130px !important;
+  max-width: 130px !important;
+  background: #2b2347 !important;
+  color: #ffffff !important;
+  text-align: center !important;
+}
+
+.faculty-management .fm-attendance-matrix tbody td:first-child {
+  position: sticky !important;
+  left: 0 !important;
+  z-index: 8 !important;
+  width: 130px !important;
+  min-width: 130px !important;
+  max-width: 130px !important;
+  background: #ffffff !important;
+  font-weight: 650;
+  color: var(--brand, #4f46e5);
+  border-right: 1px solid var(--border) !important;
+  text-align: center !important;
+}
+
+/* Sticky second column: Faculty Name & Dept */
+.faculty-management .fm-attendance-matrix thead th:nth-child(2) {
+  position: sticky !important;
+  left: 130px !important;
+  z-index: 12 !important;
+  width: 220px !important;
+  min-width: 220px !important;
+  max-width: 220px !important;
+  background: #2b2347 !important;
+  color: #ffffff !important;
+  text-align: left !important;
+  padding-left: 12px !important;
+  border-right: 2px solid #cbd5e1 !important;
+}
+
+.faculty-management .fm-attendance-matrix tbody td:nth-child(2),
+.faculty-management .fm-attendance-matrix td.fm-matrix-faculty {
+  position: sticky !important;
+  left: 130px !important;
+  z-index: 8 !important;
+  width: 220px !important;
+  min-width: 220px !important;
+  max-width: 220px !important;
+  background: #ffffff !important;
+  text-align: left !important;
+  padding: 6px 12px !important;
+  border-right: 2px solid #cbd5e1 !important;
+}
+
+.faculty-management .fm-attendance-matrix tbody tr:hover td {
+  background-color: #f8fafc !important;
+}
+.faculty-management .fm-attendance-matrix tbody tr:hover td:first-child,
+.faculty-management .fm-attendance-matrix tbody tr:hover td:nth-child(2),
+.faculty-management .fm-attendance-matrix tbody tr:hover td.fm-matrix-faculty {
+  background-color: #f1f5f9 !important;
+}
+
+.faculty-management .fm-matrix-faculty strong {
+  display: block;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-primary, #0f172a);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.faculty-management .fm-matrix-faculty small {
+  display: block;
+  margin-top: 2px;
+  color: var(--text-muted, #64748b);
+  font-size: 11px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Totals styling */
+.faculty-management .fm-report-total {
+  font-weight: 800;
+  font-size: 11.5px;
+}
+.faculty-management .fm-report-total--present { color: #15803d; }
+.faculty-management .fm-report-total--absent { color: #b91c1c; }
+.faculty-management .fm-report-total--late { color: #b45309; }
+.faculty-management .fm-report-total--half-day { color: #c2410c; }
+.faculty-management .fm-report-total--leave { color: #0369a1; }
+.faculty-management .fm-report-total--lop { color: #be185d; }
+.faculty-management .fm-report-total--percentage { color: #4338ca; font-weight: 900; }
 
 .faculty-management .fm-attendance-screen .fm-attendance-table td.fm-attendance-code-cell { text-align: center !important; white-space: nowrap; }
 .faculty-management .fm-attendance-screen .fm-attendance-table td.fm-attendance-identity-cell { text-align: left !important; }

@@ -178,7 +178,7 @@
   gap: 6px;
   font-size: 13px;
   font-weight: 500;
-  color: var(--success, #16a34a);
+  color: var(--success, #8782BC);
 }
 
 .acs-active-summary-card {
@@ -211,7 +211,7 @@
   padding: 2px 8px;
   border-radius: 99px;
   background: rgba(22, 163, 74, 0.1);
-  color: #16a34a;
+  color: #8782BC;
   text-transform: uppercase;
 }
 

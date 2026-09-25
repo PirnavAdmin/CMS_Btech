@@ -37,11 +37,11 @@
   padding: 14px 18px;
   align-items: center;
   gap: 12px;
-  border: 1px solid #D4EBE9;
+  border: 1px solid #DFDCED;
   border-radius: 14px;
   color: var(--text-primary, #0F172A);
-  background: #F4FAF9;
-  box-shadow: var(--shadow-sm, 0 4px 14px rgba(0, 109, 114, 0.04));
+  background: #F7F6FA;
+  box-shadow: var(--shadow-sm, 0 4px 14px rgba(94, 89, 163, 0.04));
 }
 
 .dashboard-hero-mark svg {
@@ -84,17 +84,17 @@
   padding: 16px 18px;
   align-items: center;
   gap: 14px;
-  border: 1px solid #D4EBE9;
+  border: 1px solid #DFDCED;
   border-radius: 16px;
-  background: #F4FAF9;
-  box-shadow: var(--shadow-sm, 0 4px 14px rgba(0, 109, 114, 0.04));
+  background: #F7F6FA;
+  box-shadow: var(--shadow-sm, 0 4px 14px rgba(94, 89, 163, 0.04));
   transition: all 0.2s ease;
 }
 
 .dashboard-kpis article:hover {
   transform: translateY(-2px);
   border-color: #0F172A;
-  box-shadow: 0 8px 20px rgba(0, 109, 114, 0.1);
+  box-shadow: 0 8px 20px rgba(94, 89, 163, 0.1);
 }
 
 .dashboard-kpi-icon {
@@ -180,18 +180,18 @@
   gap: 12px;
   min-height: 80px;
   padding: 14px 16px;
-  border: 1px solid #D4EBE9;
+  border: 1px solid #DFDCED;
   border-radius: 14px;
   color: var(--text-primary, #0F172A);
   text-decoration: none;
-  background: #F4FAF9;
+  background: #F7F6FA;
   transition: all 0.18s ease;
 }
 
 .dashboard-home .erp-link-card:hover {
   border-color: #0F172A;
-  background: #E6F5F4;
-  box-shadow: 0 8px 20px rgba(0, 109, 114, 0.1);
+  background: #EDEBF6;
+  box-shadow: 0 8px 20px rgba(94, 89, 163, 0.1);
   transform: translateY(-2px);
 }
 

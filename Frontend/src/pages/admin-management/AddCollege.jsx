@@ -51,7 +51,7 @@ const draftKey = (editId) => `pirnav-college-draft-${editId || 'new'}`
 const draftProgress = (values) => Math.round(requiredDraftFields.filter((field) => String(values[field] || '').trim()).length / requiredDraftFields.length * 100)
 
 const phonePattern = /^[6-9]\d{9}$/
-const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+const emailPattern = /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z]{2,})+$/
 const codePattern = /^[A-Z0-9]{2,12}$/
 
 const getApiErrorMessage = (error) => {
@@ -107,7 +107,7 @@ function validate(values) {
 }
 
 function Field({ label, name, values, errors, touched, onChange, required, maxLength, ...props }) {
-  const error = touched[name] && errors[name]
+  const error = (touched?.[name] || Boolean(values?.[name])) && errors?.[name]
   return <label className="ac-field" htmlFor={`ac-${name}`}>
     <span>{label}{required && <b aria-hidden="true"> *</b>}</span>
     <input id={`ac-${name}`} name={name} value={values[name]} onChange={onChange} required={required} maxLength={maxLength} aria-invalid={Boolean(error)} aria-describedby={error ? `ac-${name}-error` : undefined} {...props} />
@@ -452,7 +452,9 @@ export default function AddCollege() {
             console.warn('Backend logo upload notice:', logoErr.message)
           }
         }
-        cacheCollegeLogo(collegeId, values.logo, [values.collegeCode, values.collegeName, college?.code, college?.name])
+        // Persist the authenticated API endpoint, not the temporary data URL.
+        // This keeps the sidebar logo working after a refresh or a new session.
+        cacheCollegeLogo(collegeId, getCollegeLogoUrl(collegeId, ''), [values.collegeCode, values.collegeName, college?.code, college?.name])
       } else if (editId && removeExistingLogo) {
         cacheCollegeLogo(collegeId, '', [values.collegeCode, values.collegeName])
       }
@@ -505,7 +507,7 @@ export default function AddCollege() {
       {section('College Information', 'Core identity and affiliation details.', <>
         <Field label="College Name" name="collegeName" values={values} errors={{ ...errors, ...(duplicateName ? { collegeName: 'A college with this name already exists.' } : {}) }} touched={touched} onChange={update} required maxLength={120} placeholder="e.g. Crescent Institute of Technology" />
         <Field label="College Code" name="collegeCode" values={values} errors={{ ...errors, ...(duplicateCode ? { collegeCode: 'This college code already exists.' } : {}) }} touched={touched} onChange={update} required maxLength={12} placeholder="e.g. CIT2026" />
-        <label className="ac-field" htmlFor="ac-collegeType"><span>College Type <b>*</b></span><select id="ac-collegeType" name="collegeType" value={values.collegeType} onChange={update} aria-invalid={Boolean(touched.collegeType && errors.collegeType)}><option value="">Select type</option>{TYPES.map((type) => <option key={type}>{type}</option>)}</select>{touched.collegeType && errors.collegeType && <small className="ac-error" role="alert">{errors.collegeType}</small>}</label>
+        <label className="ac-field" htmlFor="ac-collegeType"><span>College Type <b>*</b></span><select id="ac-collegeType" name="collegeType" value={values.collegeType} onChange={update} onBlur={() => setTouched((current) => ({ ...current, collegeType: true }))} aria-invalid={Boolean((touched.collegeType || Boolean(values.collegeType)) && errors.collegeType)}><option value="">Select type</option>{TYPES.map((type) => <option key={type}>{type}</option>)}</select>{(touched.collegeType || Boolean(values.collegeType)) && errors.collegeType && <small className="ac-error" role="alert">{errors.collegeType}</small>}</label>
         {values.collegeType === 'Other' && <Field label="Specify College Type" name="collegeTypeOther" values={values} errors={errors} touched={touched} onChange={update} required maxLength={60} placeholder="e.g. Community College" />}
         <Field label="University Name" name="universityName" values={values} errors={errors} touched={touched} onChange={update} required maxLength={120} placeholder="Affiliated university" readOnly={values.collegeType === 'Deemed University'} />
         <Field label="Start Date" name="startDate" type="date" values={values} errors={errors} touched={touched} onChange={update} />

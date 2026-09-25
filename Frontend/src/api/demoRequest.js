@@ -9,7 +9,7 @@ export function normalizeDemo(values) {
 export function validateDemo(v) {
   const errors = {}
   if (v.fullName.trim().length < 2 || !/^\p{L}[\p{L}\p{M} .?'-]*$/u.test(v.fullName.trim())) errors.fullName = 'Enter your full name (at least 2 characters).'
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v.email.trim())) errors.email = 'Enter a valid work or college email.'
+  if (!/^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z]{2,})+$/.test(v.email.trim())) errors.email = 'Enter a valid work or college email.'
   if (!/^[6-9]\d{9}$/.test(v.mobile.trim())) errors.mobile = 'Enter a 10-digit Indian mobile number starting with 6–9.'
   if (!v.institution.trim()) errors.institution = 'Enter your organization or college name.'
   if (!demoRoles.includes(v.role)) errors.role = 'Select your role.'

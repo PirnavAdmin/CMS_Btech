@@ -204,7 +204,7 @@
 .strength .level-1, .strength .level-2 { width: 40%; background: #ef4444; }
 .strength .level-3 { width: 60%; background: #8B82C7; }
 .strength .level-4 { width: 80%; background: #8782BC; }
-.strength .level-5 { width: 100%; background: #16a34a; }
+.strength .level-5 { width: 100%; background: #8782BC; }
 
 .strength ul {
   display: grid;
@@ -218,7 +218,7 @@
 }
 
 .strength li.met {
-  color: #16a34a;
+  color: #8782BC;
 }
 
 .notice {

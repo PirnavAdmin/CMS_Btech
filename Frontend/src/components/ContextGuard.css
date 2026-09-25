@@ -177,14 +177,14 @@
   font-weight: 600;
   border: none;
   cursor: pointer;
-  box-shadow: 0 4px 14px rgba(0, 109, 114, 0.25);
+  box-shadow: 0 4px 14px rgba(94, 89, 163, 0.25);
   transition: transform 0.12s ease, box-shadow 0.12s ease, background 0.12s ease;
 }
 
 .context-guard-btn:hover:not(:disabled) {
   background: #0F172A;
   color: #8782BC;
-  box-shadow: 0 6px 18px rgba(0, 109, 114, 0.35);
+  box-shadow: 0 6px 18px rgba(94, 89, 163, 0.35);
   transform: translateY(-1px);
 }
 

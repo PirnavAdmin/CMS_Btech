@@ -200,7 +200,7 @@
 }
 
 .promotion-review-drawer .pr-close-btn:hover {
-  background: var(--surface-soft, #f1f5f9);
+  background: var(--surface-soft, #F5F3FD);
   color: var(--text-primary, #0f172a);
   border-color: var(--border-strong, #cbd5e1);
 }
@@ -219,7 +219,7 @@
   align-items: center;
   gap: 18px;
   padding: 18px 22px;
-  background: linear-gradient(135deg, #0F172A 0%, #1e5a8a 100%);
+  background: linear-gradient(135deg, #0F172A 0%, #554F75 100%);
   border-radius: 12px;
   color: #ffffff;
   box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.08);
@@ -275,7 +275,7 @@
 }
 
 .promotion-review-drawer .pr-badge-status.active {
-  background: #10b981;
+  background: #8782BC;
   color: #ffffff;
 }
 
@@ -395,8 +395,8 @@
 }
 
 .promotion-review-drawer .pr-btn-eligible {
-  background: #10b981 !important;
-  border-color: #10b981 !important;
+  background: #8782BC !important;
+  border-color: #8782BC !important;
   color: #ffffff !important;
 }
 

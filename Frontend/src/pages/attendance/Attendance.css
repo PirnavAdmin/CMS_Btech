@@ -132,11 +132,11 @@
 /* Student Attendance owns these ERP primitives so the module remains complete
    even when shared styles are not loaded by a route or preview environment. */
 .attendance-page {
-  --attendance-line: var(--border, #dbe4eb);
-  --attendance-ink: var(--text-primary, #132a3e);
-  --attendance-muted: var(--text-muted, #6d8294);
-  --attendance-brand: var(--brand, #176fae);
-  --attendance-soft: var(--brand-soft, #eaf4fb);
+  --attendance-line: var(--border, #DFDCED);
+  --attendance-ink: var(--text-primary, #30264F);
+  --attendance-muted: var(--text-muted, #7E789F);
+  --attendance-brand: var(--brand, #8782BC);
+  --attendance-soft: var(--brand-soft, #EDEBF6);
   gap: 22px;
   color: var(--attendance-ink);
 }
@@ -164,7 +164,7 @@
 .attendance-page .erp-kpi-card { min-height: 106px; display: grid; align-content: space-between; padding: 17px 18px; border: 1px solid var(--attendance-line); border-radius: 13px; background: var(--surface, #fff); box-shadow: var(--shadow-sm, 0 2px 8px rgba(15,42,66,.06)); }
 .attendance-page .erp-kpi-label { color: var(--attendance-muted); font-size: .73rem; font-weight: 750; letter-spacing: .025em; text-transform: uppercase; }
 .attendance-page .erp-kpi-value { color: var(--attendance-ink); font-size: 1.65rem; font-weight: 800; letter-spacing: -.035em; }
-.attendance-page .erp-kpi-value--success { color: var(--success, #16805b); }
+.attendance-page .erp-kpi-value--success { color: var(--success, #756FB2); }
 .attendance-page .erp-kpi-value--warning { color: var(--warning, #ad6b0a); }
 
 .attendance-page .erp-filter-card { padding: 17px 20px; }
@@ -173,6 +173,8 @@
 .attendance-page .attendance-filter-toolbar > .erp-form-group { flex: 1 1 360px; max-width: 560px; }
 .attendance-page .attendance-register-actions { display: flex; align-items: center; gap: 12px; margin-left: auto; flex-shrink: 0; }
 .attendance-page .attendance-filter-toggle, .attendance-page .attendance-clear-filters { display: inline-flex; align-items: center; justify-content: center; gap: 7px; min-height: 40px; padding: 0 14px; border: 1px solid var(--attendance-line); border-radius: 8px; color: var(--attendance-ink); background: var(--surface, #fff); font: inherit; font-size: .8rem; font-weight: 750; cursor: pointer; white-space: nowrap; }
+.attendance-page :is(.attendance-filter-toggle, .attendance-clear-filters, .erp-btn):focus { outline: none; }
+.attendance-page :is(.attendance-filter-toggle, .attendance-clear-filters, .erp-btn):focus-visible { outline: 3px solid rgba(135, 130, 188, .28); outline-offset: 2px; }
 .attendance-page .attendance-filter-toggle:hover, .attendance-page .attendance-filter-toggle--active, .attendance-page .attendance-clear-filters:hover { border-color: var(--attendance-brand); color: var(--attendance-brand); background: var(--attendance-soft); }
 .attendance-page .attendance-filter-count { display: grid; width: 18px; height: 18px; place-items: center; border-radius: 50%; color: #fff; background: var(--attendance-brand); font-size: .67rem; line-height: 1; }
 .attendance-page .attendance-register-filters { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)) auto; align-items: end; gap: 14px; margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--attendance-line); }
@@ -194,11 +196,11 @@
 .attendance-page .erp-table-card { padding: 0; }
 .attendance-page .erp-table-responsive { width: 100%; overflow-x: auto; }
 .attendance-page .erp-table th { padding: 12px 14px; color: #FFFFFF; background: #8782BC; font-size: .68rem; font-weight: 800; letter-spacing: .055em; text-align: left; text-transform: uppercase; white-space: nowrap; }
-.attendance-page .erp-table td { padding: 13px 14px; border-bottom: 1px solid var(--attendance-line); color: var(--text-secondary, #425e75); font-size: .8rem; vertical-align: middle; }
+.attendance-page .erp-table td { padding: 13px 14px; border-bottom: 1px solid var(--attendance-line); color: var(--text-secondary, #554F75); font-size: .8rem; vertical-align: middle; }
 .attendance-page .erp-table tbody tr:last-child td { border-bottom: 0; }
 .attendance-page .erp-table tbody tr:hover td { background: var(--attendance-soft); }
 .attendance-page .erp-badge { display: inline-flex; padding: 4px 8px; border-radius: 999px; font-size: .72rem; font-weight: 750; }
-.attendance-page .erp-badge--neutral { color: var(--text-secondary, #425e75); background: var(--surface-soft, #f7fafc); }
+.attendance-page .erp-badge--neutral { color: var(--text-secondary, #554F75); background: var(--surface-soft, #F5F3FD); }
 .attendance-page .erp-loading-state { display: grid; min-height: 220px; place-items: center; gap: 8px; color: var(--attendance-muted); font-weight: 650; }
 
 .attendance-tabs { gap: 7px; padding: 5px; border: 1px solid var(--attendance-line); border-radius: 11px; background: var(--surface, #fff); }
@@ -208,7 +210,7 @@
 .attendance-marking-section { margin: 0 22px; padding: 20px 0 22px; }
 .attendance-marking-header h3 { margin: 0; color: var(--attendance-ink); font-size: .95rem; }
 .attendance-save-footer { margin-top: 20px; }
-.attendance-modal-backdrop { position: fixed; inset: 0; z-index: 100; display: grid; place-items: center; padding: 24px; background: rgba(8, 27, 44, .48); backdrop-filter: blur(4px); }
+.attendance-modal-backdrop { position: fixed; inset: 0; z-index: 100; display: grid; place-items: center; padding: 24px; background: rgba(48, 38, 79, .48); backdrop-filter: blur(4px); }
 .attendance-modal { width: min(1180px, 100%); max-height: min(820px, calc(100dvh - 48px)); overflow: auto; border-radius: 14px; animation: attendance-modal-enter .18s ease-out; }
 .attendance-modal .erp-card { min-height: 100%; }
 .attendance-modal-close { display: grid; width: 34px; height: 34px; flex: 0 0 34px; place-items: center; padding: 0; border: 1px solid var(--attendance-line); border-radius: 8px; color: var(--attendance-muted); background: var(--surface, #fff); font-size: 1.35rem; line-height: 1; }

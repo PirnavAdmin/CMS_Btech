@@ -50,10 +50,16 @@ export const normalizeFaculty = (source = {}) => {
     relationship: first(source, ['relationship', 'emergencyContactRelation', 'EmergencyContactRelation']),
     employeeCategory: (() => {
       const raw = first(source, ['employeeCategory', 'category', 'facultyType', 'EmployeeCategory', 'Category', 'FacultyType'], '')
-      if (raw) return /non/i.test(raw) ? 'Non-Teaching' : 'Teaching'
-      const des = String(first(source, ['designation', 'title', 'Designation', 'Title', 'designationName', 'DesignationName'], '')).trim().toLowerCase()
-      const nonTeachingRoles = ['librarian', 'assistant librarian', 'lab assistant', 'lab technician', 'system administrator', 'network administrator', 'network engineer', 'accountant', 'administrative officer', 'office assistant', 'junior assistant', 'attender', 'store keeper', 'technical assistant', 'clerk']
-      return nonTeachingRoles.includes(des) ? 'Non-Teaching' : 'Teaching'
+      if (raw) {
+        if (/non/i.test(raw) || /other/i.test(raw)) return 'Non-Teaching'
+        if (/teaching/i.test(raw)) return 'Teaching'
+      }
+      const des = String(first(source, ['designation', 'title', 'Designation', 'Title', 'designationName', 'DesignationName', 'role', 'Role'], '')).trim().toLowerCase()
+      const teachingRoles = ['professor', 'associate professor', 'assistant professor', 'senior lecturer', 'lecturer', 'visiting faculty', 'guest faculty', 'hod', 'dean']
+      if (teachingRoles.some(r => r === des)) return 'Teaching'
+      const nonTeachingRoles = ['librarian', 'assistant librarian', 'lab assistant', 'lab technician', 'system administrator', 'network administrator', 'network engineer', 'accountant', 'administrative officer', 'office assistant', 'junior assistant', 'attender', 'store keeper', 'technical assistant', 'clerk', 'warden', 'security guard', 'electrician', 'driver', 'plumber']
+      const isNonTeaching = nonTeachingRoles.includes(des) || /\b(librar|lab|system|network|account|administrat|office|junior assistant|store|technical assistant|clerk|attender|warden|security|driver|electrician|plumber|staff|non[-\s]?teaching)\b/i.test(des)
+      return isNonTeaching ? 'Non-Teaching' : 'Teaching'
     })(),
     assignments: list(source.assignments ?? source.subjectAllocations),
   }
@@ -326,7 +332,7 @@ const listFaculty = async (params, search = false) => {
         (item.employeeId && r.employeeId && String(r.employeeId).toLowerCase() === String(item.employeeId).toLowerCase())
       )
       if (idx >= 0) {
-        records[idx] = normalizeFaculty(mergeFacultyData(item, records[idx]))
+        records[idx] = normalizeFaculty(mergeFacultyData(records[idx], item))
       } else {
         records.unshift(normalizeFaculty(item))
       }
@@ -362,7 +368,7 @@ export const facultyService = {
   getById: async id => {
     try {
       const res = await facultyApi.getById(id)
-      if (res && (res.id || res.facultyId || res.fullName || res.facultyName)) return withFacultyPhoto(mergeFacultyData(getLocalFaculty().find(item => String(item.id) === String(id)), normalizeFaculty(res)))
+      if (res && (res.id || res.facultyId || res.fullName || res.facultyName)) return withFacultyPhoto(mergeFacultyData(normalizeFaculty(res), getLocalFaculty().find(item => String(item.id) === String(id))))
     } catch { /* fallback */ }
     try {
       const all = await listFaculty()

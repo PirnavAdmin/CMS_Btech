@@ -4,7 +4,7 @@
   --color-primary-soft: var(--brand-soft, #EDEBF6);
   --color-dark: #0F172A;
   --color-dark-hover: #0B1120;
-  --color-success: var(--success, #16A34A);
+  --color-success: var(--success, #8782BC);
   --color-warning: var(--warning, #8B82C7);
   --color-danger: var(--danger, #EF4444);
   --color-info: var(--info, #8B82C7);
@@ -33,10 +33,10 @@
   --primary-500: #8782BC;
   --primary-600: #8782BC;
   --primary-700: #756FB2;
-  --success-50: color-mix(in srgb, var(--success, #16A34A) 12%, var(--surface, #FFFFFF));
-  --success-500: var(--success, #16A34A);
-  --success-600: var(--success, #16A34A);
-  --success-700: var(--success, #16A34A);
+  --success-50: color-mix(in srgb, var(--success, #8782BC) 12%, var(--surface, #FFFFFF));
+  --success-500: var(--success, #8782BC);
+  --success-600: var(--success, #8782BC);
+  --success-700: var(--success, #8782BC);
   --warning-50: color-mix(in srgb, var(--warning, #8B82C7) 12%, var(--surface, #FFFFFF));
   --warning-500: var(--warning, #8B82C7);
   --warning-700: var(--warning, #8B82C7);
@@ -51,6 +51,9 @@
 *, *::before, *::after { box-sizing: border-box; }
 html, body, #root { min-height: 100%; }
 body { margin: 0; color: var(--text-main); background: var(--bg-page); font-family: inherit; line-height: 1.5; }
+
+/* Shared compact edit-form rhythm: prevents oversized field cards across modules. */
+:root { --edit-form-gap: 12px; --edit-field-gap: 5px; --edit-control-height: 40px; }
 
 /* Shared page shell and headings. */
 .erp-page, .page-content, .cm-page, .college-module, .department-management,
@@ -68,8 +71,8 @@ body { margin: 0; color: var(--text-main); background: var(--bg-page); font-fami
 .btn, .cm-button, .primary-button, .module-primary-action, .semester-primary, .section-primary,
 .ac-primary, .profile-button, .settings-button, .sa-primary, .p-primary {
   display: inline-flex; min-height: var(--button-height); align-items: center; justify-content: center;
-  gap: 7px; padding: 0 16px; border: 1px solid var(--color-dark); border-radius: var(--radius-control);
-  color: #FFFFFF; background: var(--color-dark); font: inherit; font-size: 13px; font-weight: 750;
+  gap: 7px; padding: 0 16px; border: 1px solid var(--color-primary); border-radius: var(--radius-control);
+  color: #FFFFFF; background: var(--color-primary); font: inherit; font-size: 13px; font-weight: 750;
   text-decoration: none; cursor: pointer; transition: color .16s ease, background-color .16s ease, border-color .16s ease, box-shadow .16s ease;
 }
 .btn:hover, .cm-button:hover, .primary-button:hover, .module-primary-action:hover, .semester-primary:hover,
@@ -91,9 +94,9 @@ button:disabled, input:disabled, select:disabled, textarea:disabled { cursor: no
 .form-control, .form-select, .page-content input:not([type="checkbox"]):not([type="radio"]):not([type="file"]),
 .page-content select { min-height: var(--control-height); height: var(--control-height); border-radius: var(--radius-control); }
 .form-control, .form-select { width: 100%; padding: 0 11px; border: 1px solid var(--border-strong-global); font: inherit; }
-.form-group, .form-field { display: grid; min-width: 0; gap: 6px; color: var(--text-secondary-global); font-size: 13px; font-weight: 700; }
+.form-group, .form-field { display: grid; min-width: 0; gap: var(--edit-field-gap); color: var(--text-secondary-global); font-size: 13px; font-weight: 700; }
 .form-label { color: var(--text-secondary-global); font-size: 13px; font-weight: 700; }
-.form-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-4) var(--space-5); }
+.form-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--edit-form-gap); }
 .form-row { display: flex; flex-wrap: wrap; gap: var(--space-3); }
 .form-helper { color: var(--text-muted-global); font-size: 12px; }
 .form-error, .field-error { color: var(--color-danger); font-size: 12px; font-weight: 650; }
@@ -132,7 +135,7 @@ button:disabled, input:disabled, select:disabled, textarea:disabled { cursor: no
 .table-actions > button, .table-actions > a, .action-group > button, .action-group > a { width: 32px; height: 32px; }
 .action-view, .action-btn.action-view { color: #0F172A; background: #EDEBF6; border-color: #DFDCED; font-weight: 700; }
 .action-edit, .action-btn.action-edit { color: #7c3aed; background: #f3e8ff; border-color: #dfccff; }
-.action-assign { color: #a15c00; background: #fff3d6; border-color: #fedf89; }
+.action-assign { color: #756FB2; background: #fff3d6; border-color: #fedf89; }
 .action-delete, .action-toggle, .action-btn.action-danger { color: var(--color-danger); background: #fee4e2; border-color: #fecdca; }
 
 /* Shared summaries, status, pagination, filters, dialogs and view surfaces. */
@@ -179,7 +182,7 @@ button:disabled, input:disabled, select:disabled, textarea:disabled { cursor: no
   --view-label: var(--text-muted, #6d8294);
   --view-value: var(--text-primary, #132a3e);
   --view-muted: var(--text-secondary, #425e75);
-  --view-success: var(--success, #16805b);
+  --view-success: var(--success, #756FB2);
   --view-warning: var(--warning, #ad6b0a);
   --view-danger: var(--danger, #c43d3d);
   --view-page-gap: 12px;
@@ -251,7 +254,7 @@ button:disabled, input:disabled, select:disabled, textarea:disabled { cursor: no
 .semester-management .cm-status-badge, .student-admission .sa-profile-header > .sa-badge,
 .student-profile .sp-hero > .sp-badge, .profile-page .profile-status {
   position: static; display: inline-flex; width: max-content; min-height: 24px; align-items: center; gap: 5px;
-  margin: 0; padding: 4px 9px; border: 0; border-radius: 999px; color: #087443; background: #dff7ec;
+  margin: 0; padding: 4px 9px; border: 0; border-radius: 999px; color: #756FB2; background: #EDEBF6;
   font-size: 11px; font-weight: 800; white-space: nowrap;
 }
 
@@ -1394,8 +1397,8 @@ button:disabled, input:disabled, select:disabled, textarea:disabled { cursor: no
   min-height: 24px;
   padding: 4px 9px;
   border-radius: 999px;
-  color: #087443;
-  background: #dff7ec;
+  color: #756FB2;
+  background: #EDEBF6;
   font-size: 11px;
   font-weight: 800;
 }
@@ -1501,5 +1504,27 @@ label > b,
   font-weight: 700 !important;
   margin-left: 2px;
   display: inline-block;
+}
+
+/* Lavender entity-view headers use dark text for accessible contrast. */
+:is(.cm-profile-view, .section-profile-page, .semester-management, .student-admission,
+  .student-profile, .course-management, .branch-management) :is(.cm-profile-banner,
+  .sa-profile-header, .sp-hero, .course-detail-hero, .branch-detail-hero) {
+  color: #30264F !important;
+  background: linear-gradient(115deg, #F5F3FD, #DDD8F3) !important;
+  border: 1px solid #C9C4E0 !important;
+}
+:is(.cm-profile-view, .section-profile-page, .semester-management, .student-admission,
+  .student-profile, .course-management, .branch-management) :is(.cm-profile-title,
+  .cm-profile-subtitle, .sa-profile-header h1, .sa-profile-header p, .sp-identity h2,
+  .sp-identity p, .course-detail-summary__main h2, .course-detail-summary__short,
+  .branch-detail-hero h2, .branch-detail-hero p) {
+  color: #30264F !important;
+}
+/* Chips and metadata in the same light entity headers must not inherit white text. */
+:is(.cm-profile-view, .section-profile-page, .semester-management, .student-admission,
+  .student-profile, .course-management, .branch-management) :is(.cm-profile-banner,
+  .sa-profile-header, .sp-hero, .course-detail-hero, .branch-detail-hero) :is(span, strong, b, small, em) {
+  color: #30264F !important;
 }
 

@@ -222,13 +222,14 @@ export default function SearchableSelect({
   ) : null
 
   return (
-    <div ref={wrapperRef} className={`searchable-select ${className} ${error ? 'has-error' : ''} ${disabled ? 'is-disabled' : ''}`}>
+    <div ref={wrapperRef} className={`searchable-select ${className} ${error ? 'has-error' : ''} ${disabled ? 'is-disabled' : ''}`} data-required={required ? 'true' : undefined} data-empty={!selectedOption ? 'true' : undefined}>
       <button
         ref={triggerRef}
         type="button"
         className="searchable-select__trigger"
         aria-haspopup="listbox"
         aria-expanded={open}
+        aria-required={required || undefined}
         aria-controls={id}
         aria-invalid={error}
         aria-label={label || placeholder}
