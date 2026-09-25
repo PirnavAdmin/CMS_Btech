@@ -1,4 +1,4 @@
-import { courseApi, branchApi, departmentApi } from '../api/apiEndpoints'
+import { courseApi, branchApi, departmentApi, facultyMasterApi } from '../api/apiEndpoints'
 
 /* =========================================================
    LOCAL STORAGE KEYS
@@ -634,6 +634,12 @@ export const subjectService = {
   ======================================================= */
 
   getSubjects: async (params = {}) => {
+    // Live consumers must not count the seeded local catalog.
+    if (params.liveOnly) {
+      const query = { ...params }
+      delete query.liveOnly
+      return facultyMasterApi.getSubjects(query)
+    }
     try {
       let list = getLocalData(
         LOCAL_SUBJECTS_KEY,
