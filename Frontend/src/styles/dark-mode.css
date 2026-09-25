@@ -187,18 +187,64 @@
 }
 
 :root[data-theme="dark"] .sidebar {
-  background: #0B0F17 !important;
-  border-right: 1px solid #1E293B !important;
+  background: #070A10 !important;
+  border-right: 1px solid #202A3A !important;
+}
+:root[data-theme="dark"] .sidebar-brand {
+  border-bottom-color: #202A3A !important;
+}
+:root[data-theme="dark"] .sidebar-brand__copy strong {
+  color: #F8FAFC !important;
+}
+:root[data-theme="dark"] .sidebar-brand__copy small,
+:root[data-theme="dark"] .sidebar-section-label,
+:root[data-theme="dark"] .sidebar nav>a,
+:root[data-theme="dark"] .sidebar-group summary,
+:root[data-theme="dark"] .sidebar nav>a svg,
+:root[data-theme="dark"] .sidebar-group summary>svg:first-child {
+  color: #AAB8CF !important;
 }
 :root[data-theme="dark"] .sidebar nav>a.active,
 :root[data-theme="dark"] .sidebar-link.active {
+  /* Match the shared table-header lavender in both colour modes. */
   background: #8782BC !important;
   color: #FFFFFF !important;
-  border-left: none !important;
+  font-weight: 750 !important;
+  border: 1px solid #9D99CD !important;
+  border-left: 1px solid #9D99CD !important;
+  border-radius: 10px !important;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.26) !important;
 }
 :root[data-theme="dark"] .sidebar nav>a.active svg,
 :root[data-theme="dark"] .sidebar-link.active svg {
   color: #FFFFFF !important;
+}
+
+/* The dark UI has one accent family: lavender.  Older feature styles used
+   emerald/teal to indicate positive states, which made dark screens feel like
+   two different themes.  Preserve the meaning through labels and icons while
+   rendering those accents with the shared lavender tokens. */
+:root[data-theme="dark"] .erp-status-badge--approved {
+  background: rgba(157, 153, 205, 0.20) !important;
+  color: #C7C2FF !important;
+  border-color: rgba(157, 153, 205, 0.42) !important;
+}
+:root[data-theme="dark"] .erp-status-badge--approved i {
+  background: #C7C2FF !important;
+}
+:root[data-theme="dark"] :is(
+  .fp-status.paid,
+  .fp-attendance-summary .present,
+  .faculty-management .fm-attendance-screen .fm-attendance-present,
+  .faculty-management .fm-report-total--present,
+  .sm-credit-badge
+) {
+  color: #C7C2FF !important;
+  border-color: rgba(157, 153, 205, 0.42) !important;
+  background-color: rgba(157, 153, 205, 0.18) !important;
+}
+:root[data-theme="dark"] .promotion-review-drawer .pr-btn-eligible:hover {
+  background: #756FB2 !important;
 }
 
 

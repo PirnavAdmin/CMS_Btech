@@ -728,25 +728,25 @@ button.btn-primary:hover,
 
 
 :root:not([data-theme="dark"]) .sidebar nav a.active {
-  background-color: #EDEBF6 !important;
-  color: #756FB2 !important;
+  background-color: #8782BC !important;
+  color: #FFFFFF !important;
   font-weight: 700 !important;
   border-left: none !important;
   border-radius: 10px !important;
   box-shadow: none !important;
 }
-:root:not([data-theme="dark"]) .sidebar nav a.active svg { color: #756FB2 !important; }
+:root:not([data-theme="dark"]) .sidebar nav a.active svg { color: #FFFFFF !important; }
 
 :root[data-theme="dark"] .sidebar nav a.active,
 :root[data-theme="dark"] .sidebar-link.active {
-  background-color: rgba(135, 130, 188, 0.22) !important;
-  color: #DFDCED !important;
-  font-weight: 700 !important;
-  border-left: 3px solid #8782BC !important;
-  border-radius: 8px !important;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25) !important;
+  background-color: #8782BC !important;
+  color: #FFFFFF !important;
+  font-weight: 750 !important;
+  border-left: none !important;
+  border-radius: 10px !important;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.18) !important;
 }
 :root[data-theme="dark"] .sidebar nav a.active svg,
 :root[data-theme="dark"] .sidebar-link.active svg {
-  color: #B7B1DD !important;
+  color: #FFFFFF !important;
 }

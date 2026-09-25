@@ -30,10 +30,12 @@
 html,body,#root{max-width:100%;overflow-x:hidden}
 :root[data-theme="dark"] {
   color-scheme: dark;
-  --app-bg: #0B0F17;
-  --surface: #1E293B;
-  --surface-soft: #141E2E;
-  --surface-raised: #283548;
+  /* Shared black canvas for every dark-mode route, not just the sidebar. */
+  --app-bg: #070A10;
+  --surface: #151B28;
+  --surface-soft: #101622;
+  --surface-raised: #20293A;
+  --surface-alt: #101622;
   --text-primary: #F8FAFC;
   --text-secondary: #CBD5E1;
   --text-muted: #94A3B8;
@@ -50,8 +52,8 @@ html,body,#root{max-width:100%;overflow-x:hidden}
   --info: #8782BC;
   --shadow-sm: 0 2px 10px rgba(0, 0, 0, 0.3);
   --shadow-md: 0 16px 36px rgba(0, 0, 0, 0.38);
-  --erp-bg: #0B0F17;
-  --erp-surface: #1E293B;
+  --erp-bg: #070A10;
+  --erp-surface: #151B28;
   --erp-text: #F8FAFC;
   --erp-muted: #94A3B8;
   --erp-border: #334155;
@@ -106,7 +108,7 @@ html,body,#root{max-width:100%;overflow-x:hidden}
 .sidebar nav>a svg,.sidebar-group summary>svg:first-child{flex:0 0 18px;width:18px;height:18px;color:#64748B!important}
 .sidebar nav>a:hover,.sidebar-group summary:hover{background:#F5F3FD!important;color:#30264F!important}
 .sidebar nav>a:hover svg,.sidebar-group summary:hover>svg:first-child{color:#756FB2!important}
-.sidebar nav>a.active, .sidebar-link.active { background: #EDEBF6 !important; color: #756FB2 !important; font-weight: 700 !important; border-left: none !important; border-radius: 10px !important; box-shadow: none !important; }
+.sidebar nav>a.active, .sidebar-link.active { background: #EDEBF6 !important; color: #756FB2 !important; font-weight: 750 !important; border-left: none !important; border-radius: 10px !important; box-shadow: 0 2px 10px rgba(0,0,0,0.18) !important; }
 .sidebar nav>a.active svg, .sidebar-link.active svg { color: #756FB2 !important; }
 .sidebar .sidebar-group summary::before{display:none;content:none}
 .sidebar-group__chevron{width:14px;height:14px;margin-left:auto;transition:transform .2s ease}
@@ -574,7 +576,8 @@ html,body,#root{max-width:100%;overflow-x:hidden}
   --focus-ring:0 0 0 3px color-mix(in srgb,var(--brand) 16%,transparent);
 }
 .app-breadcrumb a{color:var(--text-muted);text-decoration:none}.app-breadcrumb a:hover{color:var(--brand)}.app-breadcrumb span:not([aria-hidden]){color:var(--text-muted)}.app-breadcrumb strong{color:var(--text-primary)}
-.sidebar nav>a.active, .sidebar-link.active{background: #8782BC !important; color: #FFFFFF !important;border-left:none!important;border-radius:10px!important;box-shadow:0 4px 12px rgba(0,0,0,.14)!important}.sidebar nav>a.active svg, .sidebar-link.active svg{color:#FFFFFF!important}.sidebar nav>a:hover:not(.active),.sidebar-group summary:hover{background:rgba(255,255,255,.14)}
+.sidebar nav>a.active, .sidebar-link.active { background: #8782BC !important; color: #FFFFFF !important; font-weight: 750 !important; border-left: none !important; border-radius: 10px !important; box-shadow: 0 2px 10px rgba(0,0,0,0.18) !important; }.sidebar nav>a.active svg, .sidebar-link.active svg { color: #FFFFFF !important; }.sidebar nav>a:hover:not(.active), .sidebar-group summary:hover { background: #F5F3FD !important; color: #514A8A !important; }
+:root[data-theme="dark"] .sidebar nav>a:hover:not(.active), :root[data-theme="dark"] .sidebar-group summary:hover { background: rgba(255, 255, 255, 0.14) !important; color: #FFFFFF !important; }
 .page-content>:is(.erp-page,.dashboard-page,.college-module,.fs-page,.student-promotion,.student-admission,.student-profile,.profile-page,.settings-page,.college-management,.add-college,.department-management,.ay,.cm-page,.semester-management,.section-management){width:100%;max-width:none;min-width:0;box-sizing:border-box}
 .page-content :is(.erp-page-heading,.dashboard-welcome,.module-heading,.fs-header,.p-header,.sp-heading,.profile-heading,.settings-page>header,.management-page__heading,.cm-header,.semester-page-header,.section-page-header,.ay>header){margin-bottom:var(--page-gap)}
 .page-content :is(.erp-page-heading,.module-heading,.fs-header,.p-header,.sp-heading,.profile-heading,.management-page__heading,.cm-header,.semester-page-header,.section-page-header,.ay>header) h1{margin:2px 0 5px;color:var(--text-primary);font-size:clamp(1.65rem,2.4vw,2rem);font-weight:800;line-height:1.18;letter-spacing:-.025em}
@@ -1236,5 +1239,21 @@ html,body,#root{max-width:100%;overflow-x:hidden}
 :root:not([data-theme="dark"]) .fm-category-tab:not(.active):hover {
   background: rgba(135, 130, 188, 0.12) !important;
   color: #8782BC !important;
+}
+
+/* Shared list-table alignment: column headings are centered; record values
+   always begin from the left edge, including action controls. */
+.page-content table thead th {
+  text-align: center !important;
+  vertical-align: middle !important;
+}
+
+.page-content table tbody td {
+  text-align: left !important;
+  vertical-align: middle !important;
+}
+
+.page-content table tbody td :is(.erp-row-actions,.row-actions,.cm-actions,.cm-row-actions,.semester-row-actions,.section-actions,.course-actions,.branch-actions,.sa-icon-actions,.sa-row-actions,.table-actions,.action-group,.table-actions-group) {
+  justify-content: flex-start !important;
 }
 

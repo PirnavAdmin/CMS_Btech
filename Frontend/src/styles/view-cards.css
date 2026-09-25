@@ -105,6 +105,59 @@
     padding: 16px !important;
   }
 }
+
+/* One detail-view contract for College, Department, Course, Branch, Semester
+   and Section screens.  Legacy pages keep their data-specific markup, but
+   their read-only view surfaces now use the same layout as the College view. */
+:root body :is(.department-profile-view, .section-profile-page, .semester-management .cm-profile-view, .course-management .cm-profile-view, .branch-management .cm-profile-view) .cm-profile-grid {
+  display: grid !important;
+  grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  gap: 16px !important;
+  padding: 20px !important;
+  background: var(--surface, #fff) !important;
+}
+:root body :is(.department-profile-view, .section-profile-page, .semester-management .cm-profile-view, .course-management .cm-profile-view, .branch-management .cm-profile-view) .cm-info-card {
+  min-width: 0 !important;
+  margin: 0 !important;
+  padding: 20px !important;
+  border: 1px solid var(--border, #d7e4ee) !important;
+  border-radius: 14px !important;
+  background: var(--surface, #fff) !important;
+  box-shadow: var(--shadow-sm) !important;
+}
+:root body :is(.department-profile-view, .section-profile-page, .semester-management .cm-profile-view, .course-management .cm-profile-view, .branch-management .cm-profile-view) :is(.cm-info-card-header, .cm-info-card-header h2) {
+  color: var(--brand, #8782BC) !important;
+}
+:root body :is(.department-profile-view, .section-profile-page, .semester-management .cm-profile-view, .course-management .cm-profile-view, .branch-management .cm-profile-view) .cm-info-card-header {
+  margin-bottom: 16px !important;
+  padding-bottom: 14px !important;
+  border-bottom: 1px solid var(--border, #d7e4ee) !important;
+}
+:root body :is(.department-profile-view, .section-profile-page, .semester-management .cm-profile-view, .course-management .cm-profile-view, .branch-management .cm-profile-view) .cm-info-rows {
+  display: grid !important;
+  grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  gap: 20px 28px !important;
+  border: 0 !important;
+  background: transparent !important;
+}
+:root body :is(.department-profile-view, .section-profile-page, .semester-management .cm-profile-view, .course-management .cm-profile-view, .branch-management .cm-profile-view) .cm-info-row {
+  display: grid !important;
+  grid-template-columns: 1fr !important;
+  gap: 5px !important;
+  padding: 0 !important;
+  border: 0 !important;
+  background: transparent !important;
+}
+:root[data-theme="dark"] body :is(.department-profile-view, .section-profile-page, .semester-management .cm-profile-view, .course-management .cm-profile-view, .branch-management .cm-profile-view) :is(.cm-profile-grid, .cm-info-card) {
+  background: var(--surface) !important;
+  border-color: var(--border) !important;
+}
+@media (max-width: 760px) {
+  :root body :is(.department-profile-view, .section-profile-page, .semester-management .cm-profile-view, .course-management .cm-profile-view, .branch-management .cm-profile-view) :is(.cm-profile-grid, .cm-info-rows) {
+    grid-template-columns: 1fr !important;
+    padding: 14px !important;
+  }
+}
 @media (max-width: 480px) {
   :root body :is(.cm-info-card .cm-info-rows, .cm-profile-view .sa-detail-panel > dl, .fs-editor.details .fs-preview) {
     grid-template-columns: 1fr !important;

@@ -167,8 +167,8 @@
 }
 
 :root[data-theme="dark"] .details-status-badge {
-  color: #69d6aa;
-  background: #123c34;
+  color: #D9D6FF;
+  background: rgba(157, 153, 205, .22);
 }
 
 :root[data-theme="dark"] .details-status-badge.inactive,

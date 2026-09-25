@@ -67,7 +67,7 @@ class AcademicService {
       return cached.data
     }
     const data = await fetcher()
-    this._cache.set(key, { data, timestamp: now })
+    if (!data?.loadError) this._cache.set(key, { data, timestamp: now })
     return data
   }
 
@@ -113,7 +113,7 @@ class AcademicService {
         return mapped
       } catch (err) {
         console.warn('Fallback loading colleges:', err)
-        return []
+        return Object.assign([], { loadError: true })
       }
     })
     return activeOnly ? filterActiveOnly(data) : data
@@ -151,7 +151,7 @@ class AcademicService {
         })
       } catch (err) {
         console.warn('Fallback loading academic years:', err)
-        return []
+        return Object.assign([], { loadError: true })
       }
     })
     return activeOnly ? filterActiveOnly(data) : data
@@ -179,7 +179,7 @@ class AcademicService {
         }))
       } catch (err) {
         console.warn('Fallback loading departments:', err)
-        return []
+        return Object.assign([], { loadError: true })
       }
     })
     return activeOnly ? filterActiveOnly(data) : data
@@ -211,7 +211,7 @@ class AcademicService {
         }))
       } catch (err) {
         console.warn('Fallback loading courses:', err)
-        return []
+        return Object.assign([], { loadError: true })
       }
     })
     return activeOnly ? filterActiveOnly(data) : data
@@ -242,7 +242,7 @@ class AcademicService {
         }))
       } catch (err) {
         console.warn('Fallback loading branches:', err)
-        return []
+        return Object.assign([], { loadError: true })
       }
     })
     return activeOnly ? filterActiveOnly(data) : data
@@ -276,7 +276,7 @@ class AcademicService {
         }))
       } catch (err) {
         console.warn('Unable to load semesters:', err)
-        return []
+        return Object.assign([], { loadError: true })
       }
     })
     return activeOnly ? filterActiveOnly(data) : data
@@ -312,7 +312,7 @@ class AcademicService {
         }))
       } catch (err) {
         console.warn('Fallback loading sections:', err)
-        return []
+        return Object.assign([], { loadError: true })
       }
     })
     return activeOnly ? filterActiveOnly(data) : data

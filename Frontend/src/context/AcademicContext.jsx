@@ -52,6 +52,7 @@ export const AcademicProvider = ({ children }) => {
   const [semesters, setSemesters] = useState([])
   const [sections, setSections] = useState([])
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
 
   // Stored working context IDs
   const [selectedCollegeId, setSelectedCollegeId] = useState(() => readStoredContext().collegeId)
@@ -60,6 +61,7 @@ export const AcademicProvider = ({ children }) => {
   const loadHierarchy = useCallback(async () => {
     try {
       setLoading(true)
+      setError(null)
       const [cols, years, depts, crss, brns, sems, secs] = await Promise.all([
         academicService.getColleges(),
         academicService.getAcademicYears(),
@@ -70,6 +72,9 @@ export const AcademicProvider = ({ children }) => {
         academicService.getSections(),
       ])
 
+      if ([cols, years, depts, crss, brns, sems, secs].some(list => list?.loadError)) {
+        throw new Error('Academic configuration could not be loaded. Please retry.')
+      }
       const safeColleges = cols || []
       const safeYears = years || []
 
@@ -107,6 +112,7 @@ export const AcademicProvider = ({ children }) => {
         saveStoredContext(resolvedColId, resolvedYearId)
       }
     } catch (err) {
+      setError('Academic configuration could not be loaded. Please retry.')
       console.warn('Error loading academic hierarchy context:', err)
     } finally {
       setLoading(false)
@@ -238,6 +244,7 @@ export const AcademicProvider = ({ children }) => {
 
   const value = {
     loading,
+    error,
     isContextReady,
     // Colleges
     colleges,

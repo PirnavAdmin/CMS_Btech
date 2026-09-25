@@ -36,6 +36,8 @@ export const normalizeFaculty = (source = {}) => {
     mobile: first(source, ['mobile', 'phoneNumber', 'phone', 'mobileNumber', 'Mobile', 'PhoneNumber', 'Phone', 'MobileNumber'], ''),
     department: first(source, ['departmentName', 'department', 'DepartmentName', 'Department', 'deptName', 'DeptName'], ''),
     departmentId: first(source, ['departmentId', 'DepartmentId', 'department_id', 'deptId', 'DeptId'], ''),
+    branch: first(source, ['branchName', 'branch', 'BranchName', 'Branch', 'branchCode', 'BranchCode'], ''),
+    branchId: first(source, ['branchId', 'BranchId', 'branch_id'], ''),
     designation: first(source, ['designation', 'title', 'Designation', 'Title', 'designationName', 'DesignationName'], ''),
     qualification: first(source, ['qualification', 'highestQualification', 'Qualification'], ''),
     experience: first(source, ['experienceYears', 'experience', 'teachingExperience', 'ExperienceYears', 'Experience'], ''),

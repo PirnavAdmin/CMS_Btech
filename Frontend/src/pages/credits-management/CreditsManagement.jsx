@@ -341,19 +341,6 @@ function saveData(key, data) {
   localStorage.setItem(key, JSON.stringify(data))
 }
 
-function alignDemoAcademicYear(data, academicYear) {
-  if (!Array.isArray(data)) return data
-
-  return data.map((item) => {
-    const isDemoRecord = String(item.id || '').match(/^(STU|SUB|CR)-00\d$/)
-    const isLegacyDemoYear = item.academicYear === '2025-2026'
-
-    return isDemoRecord && isLegacyDemoYear
-      ? { ...item, academicYear }
-      : item
-  })
-}
-
 function normalizeAcademicYear(value) {
   return String(value || '').replace(/[–—]/g, '-').trim()
 }
@@ -1611,7 +1598,7 @@ function CreditsManagement() {
     )
   }
 
-  const handleResetDemoData = () => {
+  const handleRefreshData = () => {
     reloadCreditData().then(() => showNotice('success', 'Credit data refreshed from backend.')).catch(error => showNotice('error', error.message || 'Unable to refresh credit data.'))
   }
 
@@ -3318,16 +3305,15 @@ function CreditsManagement() {
 
             <div className="cm-danger-zone">
               <div>
-                <h3>Development Data</h3>
+                <h3>Data Refresh</h3>
                 <p>
-                  Reset the local demo data while developing the
-                  Credit Management module.
+                  Reload the latest Credit Management records from the API.
                 </p>
               </div>
 
               <button
                 className="cm-btn cm-btn-danger"
-                onClick={handleResetDemoData}
+                onClick={handleRefreshData}
               >
                 Refresh API Data
               </button>
