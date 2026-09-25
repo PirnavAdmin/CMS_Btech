@@ -720,14 +720,37 @@ function FacultyAttendanceScreen({ faculty, collegeOptions = [], departmentOptio
   const facultyOptions = useMemo(() => (tab === 'reports' ? reportFaculty : faculty).map(item => ({ value: String(item.id), label: getFacultyCode(item) + ' · ' + item.fullName })), [faculty, reportFaculty, tab, collegeOptions])
   const filters = tab === 'daily' ? dailyFilters : tab === 'register' ? registerFilters : currentReport
   const updateFilter = (key, value) => {
+    // Faculty category is a shared attendance scope, not a per-report filter.
+    // Without this, changing Daily → Weekly/Monthly reopened that report's
+    // untouched default (`Teaching`) filter and silently changed the roster.
+    if (key === 'facultyType') {
+      setDailyFilters(old => ({ ...old, facultyType: value, department: '', status: '', search: '' }))
+      setRegisterFilters(old => ({ ...old, facultyType: value, department: '', facultyId: '', status: '', search: '' }))
+      setReportFilters(old => Object.fromEntries(
+        Object.entries(old).map(([period, report]) => [period, {
+          ...report,
+          facultyType: value,
+          department: '',
+          facultyId: '',
+          status: '',
+          search: '',
+        }])
+      ))
+      setSelectedFacultyIds([])
+      setDailyPage(1)
+      setRegisterPage(1)
+      setReportPage(1)
+      return
+    }
     if (tab === 'daily') { setDailyFilters(old => ({ ...old, [key]: value })); setDailyPage(1) }
     else if (tab === 'register') { setRegisterFilters(old => ({ ...old, [key]: value })); setRegisterPage(1) }
     else setReportFilters(old => ({ ...old, [reportType]: { ...old[reportType], [key]: value, ...(key === 'facultyType' ? { department: '', facultyId: '' } : key === 'department' ? { facultyId: '' } : {}) } })); setReportPage(1)
   }
   const clearFilters = () => {
-    if (tab === 'daily') { setDailyFilters(defaultDaily()); setSelectedFacultyIds([]); setDailyPage(1) }
-    else if (tab === 'register') { setRegisterFilters(defaultRegister()); setRegisterPage(1) }
-    else { setReportFilters(old => ({ ...old, [reportType]: defaultReport() })); setReportPage(1) }
+    // Clear dates/searches but retain the category the user deliberately chose.
+    if (tab === 'daily') { setDailyFilters({ ...defaultDaily(), facultyType: dailyFilters.facultyType }); setSelectedFacultyIds([]); setDailyPage(1) }
+    else if (tab === 'register') { setRegisterFilters({ ...defaultRegister(), facultyType: registerFilters.facultyType }); setRegisterPage(1) }
+    else { setReportFilters(old => ({ ...old, [reportType]: { ...defaultReport(), facultyType: old[reportType].facultyType } })); setReportPage(1) }
   }
   const saveAttendance = async values => {
     if (attendanceLock.current) return

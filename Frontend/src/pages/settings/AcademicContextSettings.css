@@ -236,3 +236,32 @@
   font-weight: 600;
   color: var(--text-primary, #0f172a);
 }
+
+/* This page uses the legacy --surface-alt token for its preview.  Define the
+   complete dark treatment locally so no white panel leaks into Settings. */
+:root[data-theme="dark"] .academic-context-settings :is(.acs-card, .acs-active-summary-card) {
+  background: var(--surface) !important;
+  border-color: var(--border) !important;
+}
+:root[data-theme="dark"] .academic-context-settings .acs-preview-box {
+  background: var(--surface-soft) !important;
+  border-color: var(--border-strong) !important;
+}
+:root[data-theme="dark"] .academic-context-settings :is(.acs-card-header, .acs-summary-header) {
+  border-color: var(--border) !important;
+}
+:root[data-theme="dark"] .academic-context-settings :is(.acs-card-header h3, .acs-label, .acs-preview-entity strong, .acs-summary-header h4, .acs-summary-dl dd) {
+  color: var(--text-primary) !important;
+}
+:root[data-theme="dark"] .academic-context-settings :is(.acs-hint, .acs-preview-heading, .acs-preview-entity small, .acs-summary-dl dt, .acs-preview-divider) {
+  color: var(--text-muted) !important;
+}
+:root[data-theme="dark"] .academic-context-settings .acs-tag {
+  color: #D9D6FF !important;
+  border-color: rgba(157, 153, 205, .46) !important;
+  background: rgba(157, 153, 205, .16) !important;
+}
+:root[data-theme="dark"] .academic-context-settings .acs-active-indicator {
+  color: #D9D6FF !important;
+  background: rgba(157, 153, 205, .20) !important;
+}

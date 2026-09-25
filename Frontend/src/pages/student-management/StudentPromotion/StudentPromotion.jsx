@@ -401,10 +401,10 @@ export default function StudentPromotion() {
           creditsEarned: 24 * semNum,
           sgpa: '8.40',
           cgpa: '8.25',
-          eligibilityStatus: isEligible ? 'Eligible' : 'Ineligible',
-          eligibilityLabel: isEligible ? 'Eligible' : 'Ineligible',
-          status: isEligible ? 'Eligible' : 'Ineligible',
-          reason: isEligible ? 'Passed all semester modules' : 'Attendance or credits deficit',
+          eligibilityStatus: promotionService.getEligibilityOverride(p.studentId || p.id) || (isEligible ? 'Eligible' : 'Ineligible'),
+          eligibilityLabel: promotionService.getEligibilityOverride(p.studentId || p.id) || (isEligible ? 'Eligible' : 'Ineligible'),
+          status: promotionService.getEligibilityOverride(p.studentId || p.id) || (isEligible ? 'Eligible' : 'Ineligible'),
+          reason: promotionService.getEligibilityOverride(p.studentId || p.id) === 'INELIGIBLE' ? 'Manually marked ineligible for promotion.' : (isEligible ? 'Passed all semester modules' : 'Attendance or credits deficit'),
           academic: acad,
           personal: pers,
           photo: pers.photo || pers.photoUrl || p.photo || '',
@@ -412,8 +412,6 @@ export default function StudentPromotion() {
           academicYear: acad.academicYear || selectedYear?.name || '',
         }
       })
-
-      setStudents(newestFirst('student-profiles', promotionCandidates))
 
       // Load History with student profile enrichment
       const [hist, allProfiles] = await Promise.all([
@@ -471,6 +469,20 @@ export default function StudentPromotion() {
         }
       })
       setHistory(newestFirst('promotions', enrichedHist))
+
+      // Do not offer a student again when this source semester has already
+      // been promoted. A prior Semester 1 → 2 record does not block a valid
+      // Semester 2 → 3 promotion.
+      const selectedSemesterNo = Number(selectedSemesterNumber)
+      const historyStudentId = (row) => String(row.studentId ?? row.id ?? row.registrationNumber ?? row.rollNumber ?? '').trim()
+      const semesterNo = (value) => Number(String(value ?? '').replace(/\D/g, '')) || 0
+      const promotedFromScope = new Set(
+        enrichedHist
+          .filter((row) => /promoted|graduated/i.test(String(row.status || '')) && semesterNo(row.fromSemester || row.currentSemester) === selectedSemesterNo)
+          .map(historyStudentId)
+          .filter(Boolean)
+      )
+      setStudents(newestFirst('student-profiles', promotionCandidates.filter((student) => !promotedFromScope.has(historyStudentId(student)))))
     } catch (err) {
       showError(err.message || 'Unable to load promotion scope.')
       setStudents([])
@@ -518,6 +530,16 @@ export default function StudentPromotion() {
   const handleExecutePromotion = async () => {
     if (!confirmRows?.length || loading.promotion) return
 
+    // Re-resolve from current state: a row might have been marked ineligible
+    // after the confirmation dialog was opened.
+    const currentRows = confirmRows
+      .map((row) => students.find((student) => idOf(student) === idOf(row)) || row)
+    if (currentRows.some((row) => statusOf(row) !== 'eligible')) {
+      setConfirmRows(null)
+      setNotice('Ineligible students cannot be promoted. Review the selection and try again.', 'error')
+      return
+    }
+
     try {
       setLoading((x) => ({ ...x, promotion: true }))
 
@@ -528,7 +550,7 @@ export default function StudentPromotion() {
       const currentSemNum = Number(selectedSemesterNumber)
       const isDegreeCompletion = currentSemNum >= 8
 
-      await promotionService.promoteBulk(confirmRows, {
+      await promotionService.promoteBulk(currentRows, {
         branchId: selectedBranchId,
         currentAcademicYearId: selectedAcademicYearId,
         currentAcademicYear: selectedYear?.name || '2026-2027',
@@ -545,8 +567,8 @@ export default function StudentPromotion() {
 
       setNotice(
         isDegreeCompletion
-          ? `${confirmRows.length} student(s) successfully graduated with degree conferred!`
-          : `${confirmRows.length} student(s) successfully promoted to Semester ${currentSemNum + 1}!`
+          ? `${currentRows.length} student(s) successfully graduated with degree conferred!`
+          : `${currentRows.length} student(s) successfully promoted to Semester ${currentSemNum + 1}!`
       )
 
       setSelected([])
@@ -958,11 +980,23 @@ export default function StudentPromotion() {
           student={review}
           onClose={() => setReview(null)}
           canEdit={canPromote && !review.promotionDate}
-          onStatus={(status) => {
-            setStudents((prev) =>
-              prev.map((s) => (s.studentId === review.studentId ? { ...s, eligibilityStatus: status, status } : s))
-            )
-            setReview(null)
+          onStatus={async (status) => {
+            try {
+              const normalized = await promotionService.setEligibilityStatus(review.studentId || review.id, status)
+              setStudents((prev) => prev.map((s) => (
+                idOf(s) === idOf(review)
+                  ? { ...s, eligibilityStatus: normalized, eligibilityLabel: normalized, status: normalized,
+                    reason: normalized === 'INELIGIBLE' ? 'Manually marked ineligible for promotion.' : s.reason }
+                  : s
+              )))
+              if (normalized === 'INELIGIBLE') {
+                setSelected((prev) => prev.filter((id) => id !== idOf(review)))
+                setConfirmRows((prev) => prev?.filter((row) => idOf(row) !== idOf(review)) || null)
+              }
+              setReview(null)
+            } catch (err) {
+              setNotice(err.message || 'Could not update promotion eligibility.', 'error')
+            }
           }}
         />
       )}

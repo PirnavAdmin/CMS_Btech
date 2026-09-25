@@ -138,13 +138,13 @@
 }
 
 /* Dark Mode */
-:root[data-theme="dark"] .erp-status-badge--active {
-  background: rgba(18, 117, 70, 0.2);
-  color: #54c99a;
-  border-color: rgba(84, 201, 154, 0.35);
+:root[data-theme="dark"] :is(.erp-status-badge--active, .erp-status-badge--paid, .erp-status-badge--working) {
+  background: rgba(157, 153, 205, 0.20);
+  color: #D9D6FF;
+  border-color: rgba(157, 153, 205, 0.42);
 }
-:root[data-theme="dark"] .erp-status-badge--active i {
-  background: #54c99a;
+:root[data-theme="dark"] :is(.erp-status-badge--active, .erp-status-badge--paid, .erp-status-badge--working) i {
+  background: #C7C2FF;
 }
 
 :root[data-theme="dark"] .erp-status-badge--inactive {
@@ -184,12 +184,12 @@
 }
 
 :root[data-theme="dark"] .erp-status-badge--approved {
-  background: rgba(4, 120, 87, 0.2);
-  color: #34d399;
-  border-color: rgba(52, 211, 153, 0.35);
+  background: rgba(157, 153, 205, 0.20);
+  color: #D9D6FF;
+  border-color: rgba(157, 153, 205, 0.42);
 }
 :root[data-theme="dark"] .erp-status-badge--approved i {
-  background: #34d399;
+  background: #C7C2FF;
 }
 
 :root[data-theme="dark"] .erp-status-badge--rejected {

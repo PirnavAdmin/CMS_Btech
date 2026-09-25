@@ -412,8 +412,8 @@
 :root[data-theme="dark"] .sa-icon-actions button[title*="Review"],
 :root[data-theme="dark"] .sa-icon-actions button[title*="Approve"] {
   color: #9D99CD !important;
-  background: rgba(21, 128, 61, 0.25) !important;
-  border-color: rgba(34, 197, 94, 0.4) !important;
+  background: rgba(157, 153, 205, 0.22) !important;
+  border-color: rgba(157, 153, 205, 0.45) !important;
 }
 :root[data-theme="dark"] .action-activate:hover:not(:disabled),
 :root[data-theme="dark"] .table-action-btn.action-activate:hover:not(:disabled),
@@ -427,9 +427,9 @@
 :root[data-theme="dark"] .sa-icon-actions button.action-activate:hover:not(:disabled),
 :root[data-theme="dark"] .sa-icon-actions button[title*="Review"]:hover:not(:disabled),
 :root[data-theme="dark"] .sa-icon-actions button[title*="Approve"]:hover:not(:disabled) {
-  background: rgba(21, 128, 61, 0.45) !important;
-  border-color: rgba(74, 222, 128, 0.6) !important;
-  color: #C9C4E0 !important;
+  background: rgba(157, 153, 205, 0.36) !important;
+  border-color: rgba(199, 194, 255, 0.62) !important;
+  color: #F3F1FF !important;
 }
 
 /* 5. DEACTIVATE / DISCARD ACTION (Dark) */

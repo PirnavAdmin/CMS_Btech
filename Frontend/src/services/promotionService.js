@@ -3,8 +3,54 @@ import studentService from './studentService'
 import eventBus, { ERP_EVENTS } from './eventBus'
 
 const PROMOTION_HISTORY_KEY = 'pirnav-promotion-history-v1'
+const PROMOTION_ELIGIBILITY_KEY = 'pirnav-promotion-eligibility-v1'
+
+const eligibilityKey = (studentId) => String(studentId ?? '').trim()
+const explicitlyIneligible = (student) => ['ineligible', 'not eligible'].includes(
+  String(student?.eligibilityStatus ?? student?.status ?? '').trim().toLowerCase()
+)
+const semesterNumber = (value) => parseInt(String(value ?? '').replace(/\D/g, ''), 10) || 0
+const studentKey = (student) => String(
+  student?.studentId ?? student?.id ?? student?.registrationNumber ?? student?.rollNumber ?? ''
+).trim()
 
 class PromotionService {
+  getEligibilityOverrides() {
+    try {
+      const saved = JSON.parse(localStorage.getItem(PROMOTION_ELIGIBILITY_KEY) || '{}')
+      return saved && typeof saved === 'object' ? saved : {}
+    } catch {
+      return {}
+    }
+  }
+
+  getEligibilityOverride(studentId) {
+    return this.getEligibilityOverrides()[eligibilityKey(studentId)] || null
+  }
+
+  async setEligibilityStatus(studentId, eligibilityStatus) {
+    const id = eligibilityKey(studentId)
+    if (!id) throw new Error('A valid student is required to update promotion eligibility.')
+    const normalized = String(eligibilityStatus || '').trim().toUpperCase()
+    if (!['ELIGIBLE', 'INELIGIBLE'].includes(normalized)) throw new Error('Invalid promotion eligibility status.')
+
+    // Persist through the API when it is available, while retaining the local
+    // record for offline/demo mode so a reload cannot silently re-qualify them.
+    try {
+      await studentPromotionApi.updateEligibilityStatus(id, normalized)
+    } catch (err) {
+      console.warn('Eligibility status API unavailable; saving local override:', err)
+    }
+
+    try {
+      localStorage.setItem(PROMOTION_ELIGIBILITY_KEY, JSON.stringify({
+        ...this.getEligibilityOverrides(),
+        [id]: normalized,
+      }))
+    } catch { /* local persistence is a best-effort fallback */ }
+    return normalized
+  }
+
   getLocalHistory() {
     try {
       const raw = localStorage.getItem(PROMOTION_HISTORY_KEY)
@@ -157,8 +203,32 @@ class PromotionService {
       throw new Error('Select at least one valid student for promotion.')
     }
 
+    const ineligibleStudents = students.filter((student) => {
+      const studentId = student.studentId ?? student.id
+      return explicitlyIneligible(student) || this.getEligibilityOverride(studentId) === 'INELIGIBLE'
+    })
+    if (ineligibleStudents.length) {
+      throw new Error('Ineligible students cannot be promoted. Remove them from the promotion selection first.')
+    }
+
     const currentSemester = parseInt(String(promotionScope.currentSemester || promotionScope.currentSemesterId).replace(/\D/g, ''), 10) || 1
     const isDegreeCompletion = currentSemester >= 8
+
+    // A promotion is allowed only once for a student from a given semester.
+    // History comes from the backend when available and local storage in demo
+    // mode, so this also prevents repeat clicks after refresh.
+    const history = await this.getHistory()
+    const alreadyPromoted = students.filter((student) => {
+      const id = studentKey(student)
+      return history.some((entry) => {
+        const sameStudent = id && id === studentKey(entry)
+        const sameSourceSemester = semesterNumber(entry.fromSemester || entry.currentSemester) === currentSemester
+        return sameStudent && sameSourceSemester && /promoted|graduated/i.test(String(entry.status || ''))
+      })
+    })
+    if (alreadyPromoted.length) {
+      throw new Error('One or more selected students have already been promoted from this semester.')
+    }
 
     const studentIds = students
       .map((student) => student.studentId ?? student.id ?? student.rollNumber ?? student.registrationNumber)
@@ -173,6 +243,7 @@ class PromotionService {
     const targetAcademicYearId = promotionScope.targetAcademicYearId || currentAcademicYearId
 
     // Attempt backend atomic bulk promotion if endpoint is available
+    let bulkPromotionCompleted = false
     try {
       const numericIds = studentIds.map((id) => Number(id)).filter((id) => Number.isInteger(id) && id > 0)
       const numericBranchId = Number(branchId)
@@ -188,6 +259,7 @@ class PromotionService {
           eligibilityStatus: 'ELIGIBLE',
           remarks: promotionScope.remarks || 'Bulk batch promotion',
         })
+        bulkPromotionCompleted = true
       }
     } catch (err) {
       console.warn('Backend atomic bulk promotion unavailable, continuing with individual updates:', err)
@@ -213,7 +285,9 @@ class PromotionService {
         targetSection: promotionScope.targetSection,
         promotionDate: promotionScope.promotionDate || new Date().toISOString().slice(0, 10),
         remarks: promotionScope.remarks || 'Bulk batch promotion',
-        skipBackend: false,
+        // Atomic bulk promotion already wrote the backend record. Calling the
+        // individual endpoint again was creating duplicate promotions.
+        skipBackend: bulkPromotionCompleted,
       })
       results.push(res)
     }
