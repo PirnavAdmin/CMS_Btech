@@ -127,12 +127,20 @@ export default function Sidebar({ open = false, onClose = () => {}, collapsed = 
     sessionStorage.setItem('pirnav-sidebar-scroll', String(event.currentTarget.scrollTop))
   }
 
+  const brandNameLength = String(collegeDisplayName || '').trim().length
+  const brandStyle = (() => {
+    if (brandNameLength > 45) return { fontSize: '0.66rem', lineHeight: '1.14' }
+    if (brandNameLength > 32) return { fontSize: '0.72rem', lineHeight: '1.16' }
+    if (brandNameLength > 20) return { fontSize: '0.78rem', lineHeight: '1.18' }
+    return { fontSize: '0.86rem', lineHeight: '1.2' }
+  })()
+
   return <>
     <button className={`sidebar-scrim ${open ? 'is-visible' : ''}`} onClick={onClose} aria-label="Close navigation" tabIndex={open ? 0 : -1} />
     <aside className={`sidebar ${open ? 'is-open' : ''} ${collapsed ? 'is-collapsed' : ''}`} aria-label="Primary navigation">
       <div className="sidebar-brand">
         <span className="sidebar-brand__mark" aria-hidden="true">{collegeLogo ? <img src={collegeLogo} alt="" onError={() => setCollegeLogo('')} /> : <svg viewBox="0 0 32 32"><path d="M4 12 16 5l12 7H4Z"/><path d="M7 14v10M12 14v10M20 14v10M25 14v10"/><path d="M4 25h24M2.5 28h27"/></svg>}</span>
-        <span className="sidebar-brand__copy"><strong>{collegeDisplayName}</strong><small>Digital Campus</small></span>
+        <span className="sidebar-brand__copy"><strong title={collegeDisplayName} style={brandStyle}>{collegeDisplayName}</strong><small>Digital Campus</small></span>
         <button className="sidebar-collapse" onClick={onToggleCollapse} aria-label={collapsed ? 'Expand navigation' : 'Collapse navigation'} title={collapsed ? 'Expand navigation' : 'Collapse navigation'}>{collapsed ? <FiChevronRight /> : <FiChevronLeft />}</button>
         <button className="sidebar-close" onClick={onClose} aria-label="Close navigation"><FiX /></button>
       </div>
