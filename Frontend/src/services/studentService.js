@@ -296,7 +296,7 @@ class StudentService {
       // Course matching
       if (courseId || course || courseCode) {
         const studentCourseId = acad.courseId ? String(acad.courseId) : ''
-        const studentCourseNorm = normalizeAcademicTerm(acad.course)
+        const studentCourseNorm = normalizeAcademicTerm(acad.course || acad.courseName || acad.courseCode)
 
         if (courseId && studentCourseId && String(courseId) === studentCourseId) {
           // ID matched
@@ -314,7 +314,7 @@ class StudentService {
       // Branch matching
       if (branchId || branch || branchCode) {
         const studentBranchId = acad.branchId ? String(acad.branchId) : ''
-        const studentBranchNorm = normalizeAcademicTerm(acad.branch)
+        const studentBranchNorm = normalizeAcademicTerm(acad.branch || acad.branchName || acad.branchCode)
 
         if (branchId && studentBranchId && String(branchId) === studentBranchId) {
           // ID matched
@@ -330,7 +330,7 @@ class StudentService {
       }
 
       // Semester matching
-      const studentSemNum = parseNum(acad.semesterId) ?? parseNum(acad.semester)
+      const studentSemNum = parseNum(acad.semesterId) ?? parseNum(acad.semester || acad.semesterName)
       if (targetSemNum !== null && studentSemNum !== null) {
         if (targetSemNum !== studentSemNum) return false
       } else if (semester && acad.semester) {
@@ -340,8 +340,13 @@ class StudentService {
       }
 
       // Section matching
-      if (sectionId && acad.sectionId && String(acad.sectionId) !== String(sectionId)) return false
-      if (section && acad.section && String(acad.section).trim().toLowerCase() !== String(section).trim().toLowerCase()) return false
+      const studentSectionId = acad.sectionId ?? acad.section_id ?? acad.section?.id
+      const studentSection = acad.sectionName || acad.section_name || (typeof acad.section === 'string' ? acad.section : '') || acad.sectionCode
+      if (sectionId && studentSectionId && String(studentSectionId) !== String(sectionId)) return false
+      if (section && studentSection) {
+        const normalizeSection = value => String(value).trim().toLowerCase().replace(/^section\s*/, '').replace(/[^a-z0-9]/g, '')
+        if (normalizeSection(studentSection) !== normalizeSection(section)) return false
+      }
 
       return true
     })
