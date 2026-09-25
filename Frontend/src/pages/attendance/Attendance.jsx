@@ -122,6 +122,10 @@ export default function Attendance() {
 
   const notify = (msg, type = 'success') => setToast(msg, type)
 
+  // Keep the option value and selected-subject lookup on the same ID field.
+  // Subject APIs use different casing/names for this field across endpoints.
+  const getSubjectId = (subject) => subject?.subjectId ?? subject?.subject_id ?? subject?.id
+
   const loadSessions = useCallback(async () => {
     try {
       setLoading(true)
@@ -427,23 +431,18 @@ export default function Attendance() {
 
     try {
       setLoadingStudents(true)
-      const selectedCourse = activeCourses.find(c => String(c.id) === String(scope.courseId))
       const selectedBranch = takeBranches.find(b => String(b.id) === String(scope.branchId))
       const selectedSemester = takeSemesters.find(s => String(s.id) === String(scope.semesterId))
       const selectedSection = takeSections.find(sec => String(sec.id) === String(scope.sectionId))
 
       const list = await attendanceService.getStudentsForAttendance({
-        academicYearId: scope.academicYearId,
-        courseId: scope.courseId,
-        courseCode: takeCourseCode,
         branchId: scope.branchId,
         branchCode: takeBranchCode,
         semesterId: scope.semesterId,
         sectionId: scope.sectionId,
-        course: selectedCourse?.name,
         branch: selectedBranch?.name || selectedBranch?.branchName,
         semester: selectedSemester?.semesterName || selectedSemester?.name,
-        section: selectedSection?.name,
+        section: selectedSection?.name || selectedSection?.sectionName || selectedSection?.sectionCode,
       })
 
       setMarkingStudents(list || [])
@@ -457,11 +456,9 @@ export default function Attendance() {
     }
   }, [
     takeScope,
-    activeCourses,
     takeBranches,
     takeSemesters,
     takeSections,
-    takeCourseCode,
     takeBranchCode,
   ])
 
@@ -513,7 +510,7 @@ export default function Attendance() {
 
       let finalSubjectId = Number(takeScope.subjectId)
       if (!Number.isFinite(finalSubjectId) || finalSubjectId <= 0) {
-        const resolvedSubject = availableSubjects.find(s => String(s.id || s.subjectId) === String(takeScope.subjectId) || String(s.subjectName || s.name).trim().toLowerCase() === takeScope.subject.trim().toLowerCase())
+        const resolvedSubject = availableSubjects.find(s => String(getSubjectId(s) ?? '') === String(takeScope.subjectId) || String(s.subjectName || s.name).trim().toLowerCase() === takeScope.subject.trim().toLowerCase())
         const subId = Number(resolvedSubject?.subjectId ?? resolvedSubject?.id)
         if (Number.isFinite(subId) && subId > 0) {
           finalSubjectId = subId
@@ -724,7 +721,7 @@ export default function Attendance() {
                     className="erp-btn erp-btn--primary"
                     onClick={() => setTakeModalOpen(true)}
                   >
-                    <FiPlus /> Take Attendance
+                    <FiPlus /> Record Attendance
                   </button>
                 </div>
               </div>
@@ -800,8 +797,8 @@ export default function Attendance() {
                 <EmptyState
                   icon={FiCalendar}
                   title="No Attendance Sessions Found"
-                  subtitle="Start by recording daily class attendance using the 'Take Attendance' workspace."
-                  actionLabel="Take Attendance Now"
+                  subtitle="Start by recording daily class attendance using the attendance workspace."
+                  actionLabel="Record Attendance"
                   onAction={() => setTakeModalOpen(true)}
                 />
               ) : (
@@ -893,17 +890,17 @@ export default function Attendance() {
           </section>
         )}
 
-        {/* Take Attendance popup */}
+        {/* Record Attendance popup */}
         {takeModalOpen && (
           <div className="attendance-modal-backdrop" role="presentation" onMouseDown={() => setTakeModalOpen(false)}>
           <section className="attendance-content attendance-modal" role="dialog" aria-modal="true" aria-labelledby="take-attendance-title" onMouseDown={event => event.stopPropagation()}>
             <div className="erp-card">
               <div className="erp-card-header">
                 <div>
-                  <h2 className="erp-card-title" id="take-attendance-title">Take Student Attendance</h2>
+                  <h2 className="erp-card-title" id="take-attendance-title">Record Student Attendance</h2>
                   <p className="erp-card-subtitle">Select academic scope, load student roster, and mark session attendance.</p>
                 </div>
-                <button type="button" className="attendance-modal-close" onClick={() => setTakeModalOpen(false)} aria-label="Close take attendance">×</button>
+                <button type="button" className="attendance-modal-close" onClick={() => setTakeModalOpen(false)} aria-label="Close attendance recording">×</button>
               </div>
 
               {/* Scope Selection Form */}
@@ -1017,11 +1014,11 @@ export default function Attendance() {
                     disabled={loadingSubjects || !takeScope.branchId}
                     onChange={(e) => {
                       const selectedVal = e.target.value
-                      const selectedSub = availableSubjects.find(sub => String(sub.id || sub.subjectId) === String(selectedVal))
+                      const selectedSub = availableSubjects.find(sub => String(getSubjectId(sub) ?? '') === String(selectedVal))
                       if (selectedSub) {
                         const subName = selectedSub.subjectName || selectedSub.name || ''
                         const subCode = selectedSub.subjectCode || selectedSub.code || ''
-                        const subId = String(selectedSub.id || selectedSub.subjectId || '')
+                        const subId = String(getSubjectId(selectedSub) ?? '')
 
                         setTakeScope(prev => {
                           const next = {
@@ -1065,7 +1062,7 @@ export default function Attendance() {
                     {availableSubjects.map((sub) => {
                       const name = sub.subjectName || sub.subject_name || sub.name || sub.title || sub.subject || 'Subject'
                       const code = sub.subjectCode || sub.subject_code || sub.code || ''
-                      const val = String(sub.subjectId ?? sub.id ?? sub.subject_id)
+                      const val = String(getSubjectId(sub) ?? '')
                       return (
                         <option key={val} value={val}>
                           {name} {code ? `(${code})` : ''}
