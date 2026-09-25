@@ -429,6 +429,13 @@
 .faculty-management .fm-report-total--lop { color: #be185d; }
 .faculty-management .fm-report-total--percentage { color: #4338ca; font-weight: 900; }
 
+.faculty-management .fm-attendance-screen .fm-attendance-table td.fm-attendance-code-cell { text-align: center !important; white-space: nowrap; }
+.faculty-management .fm-attendance-screen .fm-attendance-table td.fm-attendance-identity-cell { text-align: left !important; }
+.faculty-management .fm-attendance-screen .fm-attendance-identity { width: 100%; justify-content: flex-start; text-align: left; }
+.faculty-management .fm-attendance-screen .fm-attendance-identity > div { flex: 1 1 auto; text-align: left; overflow-wrap: anywhere; }
+.faculty-management .fm-attendance-screen .fm-attendance-identity strong,
+.faculty-management .fm-attendance-screen .fm-attendance-identity small { text-align: left; }
+
 @media (max-width: 760px) {
   .faculty-management .fm-attendance-screen {
     grid-template-columns: 1fr;

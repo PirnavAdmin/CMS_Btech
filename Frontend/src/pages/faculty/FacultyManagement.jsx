@@ -1057,8 +1057,8 @@ function FacultyAttendanceScreen({ faculty, collegeOptions = [], departmentOptio
     <tbody>{(aggregated ? [] : visibleRows).map(row => <tr key={`${row.facultyId}:${row.date}`}>
       {tab === 'daily' && <td><input type="checkbox" aria-label={'Select ' + row.faculty.fullName} checked={selectedFacultyIds.includes(String(row.facultyId))} onChange={event => setSelectedFacultyIds(current => event.target.checked ? [...new Set([...current, String(row.facultyId)])] : current.filter(id => id !== String(row.facultyId)))} /></td>}
       {showDate && <td>{displayDate(row.date)}</td>}
-      <td><span className="fm-attendance-employee">{getFacultyCode(row.faculty)}</span></td>
-      <td><div className="fm-attendance-identity"><Avatar faculty={row.faculty} /><div><strong>{row.faculty.fullName}</strong><small>{row.faculty.designation || 'Faculty'}</small></div></div></td>
+      <td className="fm-attendance-code-cell"><span className="fm-attendance-employee">{getFacultyCode(row.faculty)}</span></td>
+      <td className="fm-attendance-identity-cell"><div className="fm-attendance-identity"><Avatar faculty={row.faculty} /><div><strong>{row.faculty.fullName}</strong><small>{row.faculty.designation || 'Faculty'}</small></div></div></td>
       <td className="fm-department-cell">{getFacultyDept(row.faculty)}</td><td>{attendanceBadge(row.status)}</td><td>{row.checkIn}</td><td>{row.checkOut}</td><td>{row.hours}</td>
       {showRemarks && <td className="fm-remarks-cell"><span className="fm-attendance-remarks" title={row.remarks}>{row.remarks}</span></td>}
       {showAction && <td className="fm-action-cell"><div className="fm-table-actions"><button className="fm-icon-button" type="button" title="View Attendance" aria-label={'View attendance record for ' + row.faculty.fullName + ' on ' + row.date} onClick={() => openAttendance(row)}><FiEye /></button><button className="fm-icon-button" type="button" title="Edit attendance" aria-label={'Edit attendance for ' + row.faculty.fullName + ' on ' + row.date} onClick={() => openAttendance(row, true)}><FiEdit2 /></button></div></td>}
@@ -1085,7 +1085,7 @@ function FacultyAttendanceScreen({ faculty, collegeOptions = [], departmentOptio
             <div className="fm-attendance-header-actions">{searchControl}{facultyCategoryControl}{filterControl}{contextualExport}</div>
           </header>
 
-          {showFilters && tab !== 'reports' && (
+          {showFilters && (
             <div id="faculty-attendance-filters-panel" className={'fm-attendance-filters' + (tab !== 'daily' ? ' fm-attendance-extended-filters' : '')}>
               {tab === 'daily' && dateControl('date', 'Date')}
               {tab === 'reports' && reportType === 'daily' && dateControl('date', 'Date')}
@@ -1101,7 +1101,7 @@ function FacultyAttendanceScreen({ faculty, collegeOptions = [], departmentOptio
               )}
               {selectControl('department', 'Department', attendanceDepartmentOptions, 'All Departments')}
               {tab !== 'daily' && selectControl('facultyId', 'Faculty', facultyOptions, 'All Faculty')}
-              {(!aggregated) && selectControl('status', 'Status', ATTENDANCE_STATUSES, 'All Statuses')}
+              {(tab === 'reports' || !aggregated) && selectControl('status', 'Status', ATTENDANCE_STATUSES, 'All Statuses')}
               <button className="fm-attendance-clear" type="button" onClick={clearFilters}>Clear Filters</button>
             </div>
           )}
@@ -1124,16 +1124,6 @@ function FacultyAttendanceScreen({ faculty, collegeOptions = [], departmentOptio
               ))}
             </div>
           )}
-          {tab === 'reports' && <div className="fm-attendance-filters fm-attendance-extended-filters fm-report-direct-filters">
-            {reportType === 'daily' && dateControl('date', 'Date')}
-            {reportType === 'weekly' && dateControl('weekStart', 'Week Start')}
-            {reportType === 'monthly' && <>{selectControl('month', 'Month', Array.from({ length: 12 }, (_, index) => ({ value: String(index + 1).padStart(2, '0'), label: new Date(2000, index, 1).toLocaleDateString('en-GB', { month: 'long' }) })), 'Select month')}<label className="fm-attendance-field"><span>Year</span><input type="number" min="1900" max="9999" value={filters.year} onChange={event => updateFilter('year', event.target.value)} /></label></>}
-            {selectControl('department', 'Department', attendanceDepartmentOptions, 'All Departments')}
-            {selectControl('facultyId', 'Faculty', facultyOptions, 'All Employees')}
-            {selectControl('status', 'Status', ATTENDANCE_STATUSES, 'All Statuses')}
-            <button className="fm-attendance-clear" type="button" onClick={clearFilters}>Clear Filters</button>
-          </div>}
-
           {rangeInvalid && <p className="fm-error" role="alert">From Date must be on or before To Date.</p>}
           {periodInvalid && <p className="fm-error" role="alert">Select a valid reporting period.</p>}
 
