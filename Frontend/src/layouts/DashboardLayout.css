@@ -87,8 +87,9 @@
   width: 34px;
   height: 34px;
   border-radius: 50%;
-  background: #0F172A;
-  color: #8782BC;
+  background: #EDEBF6;
+  color: #6366F1;
+  border: 1px solid #CBD5E1;
 }
 
 .account-avatar svg {

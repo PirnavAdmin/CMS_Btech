@@ -71,8 +71,9 @@
 .sidebar {
   width: 230px;
   min-height: 100vh;
-  background-color: var(--brand-navy);
-  color: var(--brand-text-light);
+  background-color: #ffffff;
+  color: #64748B;
+  border-right: 1px solid #E2E8F0;
   padding: 20px 0;
   display: flex;
   flex-direction: column;
@@ -81,7 +82,7 @@
 }
 
 .sidebar h2 {
-  color: var(--brand-text-light);
+  color: #0F172A;
   font-size: 1.2rem;
   font-weight: 700;
   padding: 0 20px 20px 20px;
@@ -95,7 +96,7 @@
 
 .sidebar nav a {
   padding: 10px 14px;
-  color: #FFFFFF;
+  color: #64748B;
   text-decoration: none;
   font-size: .88rem;
   font-weight: 600;
@@ -104,18 +105,19 @@
 }
 
 .sidebar nav a:hover {
-  background-color: rgba(255, 255, 255, 0.14);
-  color: #FFFFFF;
+  background-color: #F1F5F9;
+  color: #0F172A;
 }
 
 .sidebar nav a.active {
-  background-color: #8782BC !important; color: #FFFFFF !important;
-  font-weight: 800 !important;
+  background-color: #E0DEFF !important;
+  color: #4338CA !important;
+  font-weight: 700 !important;
   border-left: none !important;
   border-radius: 10px !important;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, .14) !important;
+  box-shadow: none !important;
 }
-.sidebar nav a.active svg { color: #FFFFFF !important; }
+.sidebar nav a.active svg { color: #4338CA !important; }
 
 /* Course Management collapsible group */
 .sidebar .sidebar-group {
@@ -441,12 +443,13 @@ button.btn-primary:hover,
   text-align: center !important;
   padding: 11px 16px !important;
   background: #8782BC !important;
-  color: #f4f9fc !important;
+  color: #FFFFFF !important;
   font-size: 11px !important;
   font-weight: 800 !important;
   letter-spacing: 0.055em;
   text-transform: uppercase;
-  border-color: #334155 !important;
+  border-bottom: 2px solid #756FB2 !important;
+  border-color: #756FB2 !important;
   box-sizing: border-box;
 }
 
@@ -558,6 +561,167 @@ button.btn-primary:hover,
   white-space: nowrap !important;
   width: auto !important;
   margin: 0 auto !important;
+}
+
+/* Category Segment Tabs & Filter Pill Active State */
+.flm-cat-btn.active,
+.fm-category-tab.active,
+.verification-method-tabs button.active,
+.fp-category-toggle button.active,
+.flm-category-toggle button.active {
+  background: #8782BC !important;
+  color: #FFFFFF !important;
+  box-shadow: 0 1px 4px rgba(135, 130, 188, 0.35) !important;
+}
+
+.flm-cat-btn:not(.active):hover,
+.fm-category-tab:not(.active):hover {
+  background: rgba(135, 130, 188, 0.12) !important;
+  color: #8782BC !important;
+}
+
+/* Shared compact faculty-type selector: Payroll, Leave and Attendance. */
+.faculty-payroll .fp-category-choice > div,
+.flm-page .flm-category-toggle,
+.faculty-management .fm-attendance-category-toggle {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 0 !important;
+  min-height: 42px !important;
+  padding: 3px !important;
+  border: 1px solid #C9C5E8 !important;
+  border-radius: 8px !important;
+  background: #FFFFFF !important;
+  box-sizing: border-box !important;
+}
+
+.faculty-payroll .fp-category-choice button,
+.flm-page .flm-category-toggle .flm-cat-btn,
+.faculty-management .fm-attendance-category-toggle .flm-cat-btn {
+  min-height: 34px !important;
+  margin: 0 !important;
+  padding: 0 10px !important;
+  border: 0 !important;
+  border-radius: 5px !important;
+  background: transparent !important;
+  color: #4E4A77 !important;
+  font-size: 11px !important;
+  font-weight: 600 !important;
+  line-height: 1 !important;
+  box-shadow: none !important;
+}
+
+.faculty-payroll .fp-category-choice button.active,
+.flm-page .flm-category-toggle .flm-cat-btn.active,
+.faculty-management .fm-attendance-category-toggle .flm-cat-btn.active {
+  border: 1px solid #8782BC !important;
+  background: #F0EEFA !important;
+  color: #5E59A3 !important;
+  font-weight: 700 !important;
+  box-shadow: none !important;
+}
+
+/* Shared bordered faculty type group for Payroll, Leave and Attendance. */
+:root:not([data-theme="dark"]) .faculty-payroll .fp-category-choice > div,
+:root:not([data-theme="dark"]) .flm-page .flm-category-toggle,
+:root:not([data-theme="dark"]) .faculty-management .fm-attendance-category-toggle {
+  display: inline-flex !important;
+  width: auto !important;
+  min-height: 42px !important;
+  padding: 4px !important;
+  gap: 4px !important;
+  border: 1px solid #C9C5E8 !important;
+  border-radius: 10px !important;
+  background: #FFFFFF !important;
+}
+
+:root:not([data-theme="dark"]) .faculty-payroll .fp-category-choice button,
+:root:not([data-theme="dark"]) .flm-page .flm-category-toggle .flm-cat-btn,
+:root:not([data-theme="dark"]) .faculty-management .fm-attendance-category-toggle .flm-cat-btn {
+  min-height: 32px !important;
+  padding: 0 12px !important;
+  border: 1px solid transparent !important;
+  border-radius: 6px !important;
+  background: #FFFFFF !important;
+  color: #4E4A77 !important;
+  font-size: 11px !important;
+  font-weight: 600 !important;
+}
+
+:root:not([data-theme="dark"]) .faculty-payroll .fp-category-choice button.active,
+:root:not([data-theme="dark"]) .flm-page .flm-category-toggle .flm-cat-btn.active,
+:root:not([data-theme="dark"]) .faculty-management .fm-attendance-category-toggle .flm-cat-btn.active {
+  border-color: #8782BC !important;
+  background: #F7F6FF !important;
+  color: #5E59A3 !important;
+  box-shadow: none !important;
+}
+
+/* Compact faculty-module summary strips. */
+.faculty-management .fm-attendance-screen > .faculty-header-summary .compact-summary {
+  padding: 3px 0 !important;
+  border-radius: 8px !important;
+}
+.faculty-management .fm-attendance-screen .compact-summary__item {
+  min-height: 44px !important;
+  padding: 4px 7px !important;
+  justify-content: center !important;
+  gap: 2px !important;
+}
+.faculty-management .fm-attendance-screen .compact-summary__item strong {
+  font-size: 16px !important;
+  line-height: 1 !important;
+}
+.faculty-management .fm-attendance-screen .compact-summary__item small {
+  font-size: 8px !important;
+  line-height: 1.15 !important;
+}
+.faculty-payroll .fp-summary,
+.flm-page .flm-summary {
+  width: 320px !important;
+  flex-basis: 320px !important;
+  border-radius: 9px !important;
+}
+.faculty-payroll .fp-summary > div,
+.flm-page .flm-summary > div {
+  min-height: 46px !important;
+  padding: 5px 4px !important;
+  gap: 2px !important;
+}
+.faculty-payroll .fp-summary strong,
+.flm-page .flm-summary strong { font-size: 15px !important; }
+.faculty-payroll .fp-summary small,
+.flm-page .flm-summary small { font-size: 7px !important; }
+
+/* Project-wide compact summary standard. */
+:root .compact-summary,
+:root .erp-summary,
+:root .department-heading-summary,
+:root .course-header-summary {
+  border-radius: 8px !important;
+  box-shadow: var(--shadow-sm) !important;
+}
+
+:root .compact-summary__item,
+:root .erp-summary-item {
+  min-width: 58px !important;
+  min-height: 42px !important;
+  padding: 4px 8px !important;
+  gap: 2px !important;
+}
+
+:root .compact-summary__item strong,
+:root .erp-summary-item strong {
+  font-size: 15px !important;
+  line-height: 1 !important;
+}
+
+:root .compact-summary__item small,
+:root .erp-summary-item small {
+  margin-top: 1px !important;
+  font-size: 8px !important;
+  line-height: 1.15 !important;
+  letter-spacing: .045em !important;
 }
 
 

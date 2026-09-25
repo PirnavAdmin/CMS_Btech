@@ -1,5 +1,5 @@
 /* ==========================================================================
-   Original Dashboard - Black/Slate & Yellow/Gold Theme
+   Original Dashboard - Modern Clean Light Theme
    ========================================================================== */
 
 .dashboard-home {
@@ -233,37 +233,41 @@
   display: flex;
   flex-direction: column;
   padding: 24px;
-  border: 1px solid #0F172A;
-  border-radius: 20px;
-  background: #0F172A;
-  color: #FFFFFF;
-  box-shadow: 0 8px 24px rgba(0, 109, 114, 0.12);
+  border: 1px solid var(--border, #E2E8F0);
+  border-radius: 16px;
+  background: var(--surface, #FFFFFF);
+  color: var(--text-primary, #0F172A);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04), 0 1px 2px rgba(0, 0, 0, 0.02);
 }
 
 .dashboard-side-panel .erp-eyebrow {
-  color: #DFDCED;
+  color: #8782BC;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
 }
 
 .dashboard-side-panel h2 {
-  margin: 6px 0 8px;
-  color: #FFFFFF;
-  font-size: 1.3rem;
+  margin: 4px 0 6px;
+  color: var(--text-primary, #0F172A);
+  font-size: 1.25rem;
   font-weight: 750;
 }
 
 .dashboard-side-panel > p:not(.erp-eyebrow) {
   margin: 0;
-  color: #CBD5E1;
+  color: var(--text-secondary, #64748B);
   font-size: 0.82rem;
-  line-height: 1.55;
+  line-height: 1.5;
 }
 
 .dashboard-flow {
   display: flex;
-  margin: 24px 0 20px;
+  margin: 20px 0 18px;
   align-items: center;
   flex-wrap: wrap;
-  gap: 6px;
+  gap: 8px;
 }
 
 .dashboard-flow-step {
@@ -271,26 +275,32 @@
   min-width: 0;
   flex: 1 1 110px;
   align-items: center;
-  gap: 5px;
+  gap: 6px;
 }
 
 .dashboard-flow span {
   min-width: 0;
   flex: 1;
-  padding: 8px 6px;
-  border: 1px solid rgba(255, 255, 255, 0.18);
+  padding: 9px 8px;
+  border: 1px solid var(--border, #E2E8F0);
   border-radius: 8px;
-  color: #FFFFFF;
-  background: rgba(255, 255, 255, 0.1);
-  font-size: 0.68rem;
-  font-weight: 750;
+  color: var(--text-primary, #0F172A);
+  background: var(--surface-soft, #F8FAFC);
+  font-size: 0.72rem;
+  font-weight: 700;
   text-align: center;
+  transition: all 0.15s ease;
+}
+
+.dashboard-flow span:hover {
+  border-color: #8782BC;
+  background: rgba(135, 130, 188, 0.08);
 }
 
 .dashboard-flow svg {
   width: 14px;
   flex: 0 0 14px;
-  color: #DFDCED;
+  color: #8782BC;
 }
 
 .dashboard-outline-link {
@@ -299,16 +309,17 @@
   padding: 12px 0 0;
   align-items: center;
   justify-content: space-between;
-  border-top: 1px solid rgba(255, 255, 255, 0.12);
-  color: #DFDCED;
-  font-size: 0.82rem;
-  font-weight: 750;
+  border-top: 1px solid var(--border, #E2E8F0);
+  color: #8782BC;
+  font-size: 0.84rem;
+  font-weight: 700;
   text-decoration: none;
-  transition: color 0.15s ease;
+  transition: color 0.15s ease, transform 0.15s ease;
 }
 
 .dashboard-outline-link:hover {
-  color: #FFFFFF;
+  color: #6a64a3;
+  transform: translateX(2px);
 }
 
 /* --------------------------------------------------------------------------
@@ -374,8 +385,19 @@
 }
 
 :root[data-theme="dark"] .dashboard-side-panel {
-  background: #00383B;
-  border-color: #0F172A;
+  background: #1E293B;
+  border-color: #334155;
+  color: #F8FAFC;
+}
+
+:root[data-theme="dark"] .dashboard-flow span {
+  background: #0F172A;
+  border-color: #334155;
+  color: #F8FAFC;
+}
+
+:root[data-theme="dark"] .dashboard-outline-link {
+  border-color: #334155;
 }
 
 @media (max-width: 420px) {

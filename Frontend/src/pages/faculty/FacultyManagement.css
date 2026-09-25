@@ -76,178 +76,243 @@
 
 .faculty-management .fm-category-hub-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(360px, 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 20px;
-  margin-top: 8px;
+  margin-top: 4px;
+  align-items: stretch;
+}
+
+.faculty-management.faculty-management--overview {
+  gap: 16px;
+}
+
+.faculty-management.faculty-management--overview > .faculty-page-header {
+  margin-bottom: 2px;
+}
+
+.faculty-management.faculty-management--overview > .faculty-page-header > div:first-child,
+.faculty-management.faculty-management--overview > .faculty-page-header > div > p:not(.fm-eyebrow) {
+  max-width: none;
 }
 
 .faculty-management .fm-hub-card {
-  position: relative;
-  background: var(--surface, #ffffff);
-  border: 1px solid var(--border, #e2e8f0);
-  border-radius: 14px;
-  padding: 24px;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.04);
-  cursor: pointer;
-  transition: transform 0.22s ease, box-shadow 0.22s ease, border-color 0.22s ease;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
+  background: var(--surface, #ffffff);
+  border: 1px solid var(--border, #e2e8f0);
+  border-radius: 14px;
+  padding: 22px 24px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04), 0 1px 2px rgba(0, 0, 0, 0.02);
+  transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.2s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.2s ease;
+  min-height: 250px;
 }
 
 .faculty-management .fm-hub-card:hover {
-  transform: translateY(-3px);
-  box-shadow: 0 10px 24px rgba(135, 130, 188, 0.15);
   border-color: var(--brand, #8782BC);
-}
-
-.faculty-management .fm-hub-card.non-teaching-card:hover {
-  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.12);
-  border-color: #0F172A;
+  box-shadow: 0 10px 28px rgba(135, 130, 188, 0.14), 0 2px 8px rgba(0, 0, 0, 0.04);
 }
 
 .faculty-management .fm-hub-card-header {
   display: flex;
   align-items: flex-start;
-  gap: 16px;
-  margin-bottom: 20px;
+  gap: 14px;
 }
 
-.faculty-management .fm-hub-icon-wrapper {
-  width: 54px;
-  height: 54px;
-  border-radius: 14px;
+.faculty-management .fm-hub-card-icon-wrap {
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 26px;
+  width: 44px;
+  height: 44px;
   flex-shrink: 0;
-  transition: transform 0.2s ease;
-}
-
-.faculty-management .fm-hub-card:hover .fm-hub-icon-wrapper {
-  transform: scale(1.08);
-}
-
-.faculty-management .fm-hub-icon-wrapper.teaching {
-  background: rgba(135, 130, 188, 0.15);
-  color: #8782BC;
-  border: 1px solid rgba(135, 130, 188, 0.3);
-}
-
-.faculty-management .fm-hub-icon-wrapper.non-teaching {
-  background: rgba(15, 23, 42, 0.08);
-  color: #0F172A;
-  border: 1px solid rgba(15, 23, 42, 0.18);
-}
-
-.faculty-management .fm-hub-header-text {
-  flex: 1;
-}
-
-.faculty-management .fm-hub-badge {
-  display: inline-block;
-  font-size: 10px;
-  font-weight: 800;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  padding: 3px 8px;
-  border-radius: 5px;
-  margin-bottom: 6px;
-}
-
-.faculty-management .fm-hub-badge.teaching {
-  background: rgba(135, 130, 188, 0.14);
-  color: #8782BC;
-}
-
-.faculty-management .fm-hub-badge.non-teaching {
-  background: rgba(105, 57, 37, 0.12);
-  color: #0F172A;
-}
-
-.faculty-management .fm-hub-header-text h2 {
-  font-size: 19px;
-  font-weight: 750;
-  color: var(--text-primary);
-  margin: 0 0 4px;
-}
-
-.faculty-management .fm-hub-header-text p {
-  font-size: 13px;
-  color: var(--text-secondary);
-  line-height: 1.4;
-  margin: 0;
-}
-
-.faculty-management .fm-hub-count-box {
-  background: var(--surface-soft, #f8fafc);
-  border: 1px solid var(--border, #e2e8f0);
   border-radius: 10px;
-  padding: 14px 18px;
-  margin-bottom: 18px;
-  display: flex;
-  align-items: baseline;
-  gap: 10px;
+  background: var(--brand-soft, rgba(135, 130, 188, 0.12));
+  color: var(--brand, #8782BC);
+  font-size: 22px;
 }
 
-.faculty-management .fm-hub-count-number {
+.faculty-management .fm-hub-card-meta {
+  flex: 1;
+  min-width: 0;
+}
+
+.faculty-management .fm-hub-card-meta h2 {
+  margin: 0 0 4px;
+  font-size: 17px;
+  font-weight: 700;
+  line-height: 1.3;
+}
+
+.faculty-management .fm-hub-card-meta h2 a {
+  color: var(--text-primary, #1e293b);
+  text-decoration: none;
+  transition: color 0.15s ease;
+}
+
+.faculty-management .fm-hub-card-meta h2 a:hover {
+  color: var(--brand, #8782BC);
+}
+
+.faculty-management .fm-hub-card-meta p {
+  margin: 0;
+  font-size: 12.5px;
+  color: var(--text-secondary, #64748b);
+  line-height: 1.4;
+}
+
+.faculty-management .fm-hub-card-total {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  text-align: right;
+  flex-shrink: 0;
+  padding-left: 12px;
+}
+
+.faculty-management .fm-hub-card-total strong {
   font-size: 28px;
   font-weight: 800;
-  color: var(--text-primary);
   line-height: 1;
+  color: var(--text-primary, #1e293b);
 }
 
-.faculty-management .fm-hub-count-label {
-  font-size: 13px;
+.faculty-management .fm-hub-card-total small {
+  font-size: 11px;
   font-weight: 600;
-  color: var(--text-secondary);
+  color: var(--text-muted, #94a3b8);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-top: 3px;
 }
 
+/* 4 status metric cards */
 .faculty-management .fm-hub-metrics-grid {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
   gap: 8px;
-  margin-bottom: 22px;
+  background: var(--surface-soft, #f8fafc);
+  border: 1px solid var(--border-light, #edf2f7);
+  border-radius: 10px;
+  padding: 12px 8px;
+  margin: 18px 0 14px;
 }
 
-.faculty-management .fm-hub-metric-tile {
-  background: var(--surface-soft, #f8fafc);
-  border: 1px solid var(--border, #eef2f6);
-  border-radius: 8px;
-  padding: 10px 8px;
-  text-align: center;
+.faculty-management .fm-hub-metric-col {
   display: flex;
   flex-direction: column;
-  gap: 3px;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 2px 4px;
+  position: relative;
 }
 
-.faculty-management .fm-hub-metric-tile .metric-val {
-  font-size: 16px;
+.faculty-management .fm-hub-metric-col:not(:last-child)::after {
+  content: "";
+  position: absolute;
+  right: 0;
+  top: 15%;
+  bottom: 15%;
+  width: 1px;
+  background: var(--border, #e2e8f0);
+}
+
+.faculty-management .fm-hub-metric-val {
+  font-size: 19px;
   font-weight: 750;
-  color: var(--text-primary);
+  line-height: 1.2;
+  color: var(--text-primary, #1e293b);
 }
 
-.faculty-management .fm-hub-metric-tile .metric-lbl {
+.faculty-management .fm-hub-metric-lbl {
   font-size: 11px;
-  font-weight: 600;
-  color: var(--text-muted);
+  font-weight: 550;
+  color: var(--text-secondary, #64748b);
+  margin-top: 3px;
+  white-space: nowrap;
 }
 
+.faculty-management .fm-hub-empty-hint {
+  font-size: 12px;
+  color: var(--text-muted, #94a3b8);
+  font-style: italic;
+  margin: 0 0 12px 0;
+  text-align: center;
+}
+
+/* Card Actions / Footer */
 .faculty-management .fm-hub-card-footer {
   display: flex;
   align-items: center;
-  gap: 10px;
-  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 12px;
   padding-top: 14px;
-  border-top: 1px solid var(--border, #eef2f6);
+  border-top: 1px solid var(--border-light, #f1f5f9);
+  margin-top: auto;
 }
 
-.faculty-management .fm-hub-card-footer .fm-button {
-  flex: 1;
-  min-width: 140px;
+.faculty-management .fm-hub-btn-primary {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
   font-size: 13px;
-  padding: 9px 14px;
+  font-weight: 650;
+  color: var(--brand, #8782BC);
+  text-decoration: none;
+  padding: 6px 0;
+  transition: all 0.15s ease;
+}
+
+.faculty-management .fm-hub-btn-primary:hover {
+  color: #6a64a3;
+  transform: translateX(3px);
+}
+
+.faculty-management .fm-hub-btn-secondary {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--text-secondary, #475569);
+  background: var(--surface-soft, #f1f5f9);
+  border: 1px solid var(--border, #e2e8f0);
+  border-radius: 7px;
+  padding: 6px 14px;
+  text-decoration: none;
+  transition: all 0.15s ease;
+}
+
+.faculty-management .fm-hub-btn-secondary:hover {
+  background: var(--brand-soft, rgba(135, 130, 188, 0.12));
+  color: var(--brand, #8782BC);
+  border-color: var(--brand, #8782BC);
+}
+
+@media (max-width: 900px) {
+  .faculty-management .fm-category-hub-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 480px) {
+  .faculty-management .fm-hub-metrics-grid {
+    grid-template-columns: repeat(2, 1fr);
+    row-gap: 10px;
+  }
+  .faculty-management .fm-hub-metric-col:not(:last-child)::after {
+    display: none;
+  }
+  .faculty-management .fm-hub-card-footer {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+  }
+  .faculty-management .fm-hub-btn-primary,
+  .faculty-management .fm-hub-btn-secondary {
+    justify-content: center;
+  }
 }
 
 /* Category Segment Tabs (Teaching Faculty vs Non-Teaching Staff) */
@@ -314,7 +379,43 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  gap: 16px;
+  gap: 20px;
+  flex-wrap: nowrap;
+  margin-bottom: 20px;
+}
+.faculty-management .faculty-page-header > div:first-child {
+  flex: 1 1 auto;
+  min-width: 0;
+  max-width: 520px;
+}
+.faculty-management .faculty-page-header h1 {
+  margin: 0;
+  font-size: 26px;
+  line-height: 1.2;
+}
+.faculty-management .fm-header-right {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  flex-shrink: 0;
+  margin-left: auto;
+  justify-content: flex-end;
+}
+.faculty-management .fm-directory-summary-stack {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 8px;
+}
+.faculty-management .fm-directory-summary-stack .compact-summary__item {
+  min-width: 54px;
+  padding: 5px 8px;
+}
+.faculty-management .fm-directory-summary-stack .compact-summary__item strong {
+  font-size: 1rem;
+}
+.faculty-management .fm-directory-summary-stack .compact-summary__item small {
+  font-size: .54rem;
 }
 .faculty-management .faculty-page-header > div > .fm-eyebrow {
   display: none;
@@ -322,14 +423,19 @@
 .faculty-management .faculty-page-header > div > p:not(.fm-eyebrow) {
   color: var(--text-secondary);
   font-size: 13px;
-  max-width: 650px;
+  max-width: 500px;
+  margin: 4px 0 0;
 }
 .faculty-management .fm-actions {
   display: flex;
   align-items: center;
   gap: 8px;
   flex-shrink: 0;
-  flex-wrap: wrap;
+}
+@media (max-width: 1100px) {
+  .faculty-management .faculty-page-header {
+    flex-wrap: wrap;
+  }
 }
 .faculty-management .fm-button, .faculty-management .fm-icon-button {
   display: inline-flex;
@@ -609,6 +715,7 @@
 
 /* Extra fields and contextual exports retain the existing attendance styling. */
 .faculty-management .fm-attendance-context-export { display: flex; align-items: center; gap: 10px; }
+.faculty-management .fm-attendance-category-toggle { display: flex; gap: 8px; padding: 10px 16px 2px; }
 .faculty-management .fm-attendance-context-export > span { color: var(--text-secondary); font-size: 12px; font-weight: 600; }
 .faculty-management .fm-attendance-panel > .fm-attendance-report-tabs { justify-self: start; }
 .faculty-management .fm-attendance-screen .fm-attendance-extended-filters { grid-template-columns: repeat(3, minmax(0, 1fr)); }
@@ -772,14 +879,14 @@
   height: 44px;
   padding: 10px 14px;
   color: #FFFFFF;
-  background: #0F172A;
+  background: #8782BC;
   text-align: left;
   font-size: 11px;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: .04em;
   white-space: nowrap;
-  border-bottom: 2px solid #8782BC;
+  border-bottom: 2px solid #756FB2;
 }
 .faculty-management .faculty-table-wrap th:first-child,
 .faculty-management .faculty-table-wrap td:first-child {
@@ -1548,7 +1655,7 @@
 .faculty-management > .faculty-page-header > .fm-actions { max-width: 520px; }
 .faculty-management > .faculty-page-header > .fm-actions > .fm-button { min-height: 38px; }
 .faculty-management > .faculty-directory > .fm-section-bar { padding: 12px 16px; }
-.faculty-management > .faculty-directory > .fm-section-bar > .fm-actions { display: none; }
+.faculty-management > .faculty-directory > .fm-section-bar > .fm-actions { display: flex; }
 .faculty-management > .faculty-directory > .filter-disclosure,
 .faculty-management > .faculty-directory > .filter-disclosure .filter-disclosure__bar {
   border: 0 !important;
@@ -1592,6 +1699,7 @@
   border-color: var(--brand) !important;
   box-shadow: 0 0 0 2px color-mix(in srgb, var(--brand) 18%, transparent) !important;
 }
+
 
 
 

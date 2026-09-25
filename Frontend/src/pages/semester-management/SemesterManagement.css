@@ -266,8 +266,8 @@
 }
 
 .semester-table th {
-  color: #fff;
-  background: var(--sem-navy);
+  color: #FFFFFF;
+  background: #8782BC;
   font-size: 0.65rem;
   font-weight: 850;
   letter-spacing: 0.075em;

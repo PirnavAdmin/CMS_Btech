@@ -547,14 +547,14 @@ table.erp-table {
   vertical-align: middle !important;
   text-align: center !important;
   padding: 10px 14px !important;
-  background: #0F172A !important;
-  color: #f4f9fc !important;
+  background: #8782BC !important;
+  color: #FFFFFF !important;
   font-size: 11px !important;
   font-weight: 800 !important;
   letter-spacing: 0.055em !important;
   text-transform: uppercase !important;
   white-space: nowrap !important;
-  border-bottom: 2px solid #8782BC !important;
+  border-bottom: 2px solid #756FB2 !important;
   border-top: none !important;
   box-sizing: border-box !important;
 }

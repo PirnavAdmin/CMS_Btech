@@ -443,22 +443,24 @@ export default function Attendance() {
                   {hasRegisterFilters && <span className="attendance-filter-count" aria-label="Filters applied">{[filterCourseId, filterBranchId, filterDate].filter(Boolean).length}</span>}
                   {showRegisterFilters ? <FiChevronUp aria-hidden="true" /> : <FiChevronDown aria-hidden="true" />}
                 </button>
-                <ExportMenu
-                  rows={filteredSessions.map(s => ({
-                    ...s,
-                    attendanceRate: `${Math.round(((s.presentCount || 0) / (s.totalStudents || 1)) * 100)}%`,
-                  }))}
-                  columns={ATTENDANCE_COLUMNS}
-                  title="Attendance Register"
-                  filename="attendance-register"
-                />
-                <button
-                  type="button"
-                  className="erp-btn erp-btn--primary"
-                  onClick={() => setTakeModalOpen(true)}
-                >
-                  <FiPlus /> Take Attendance
-                </button>
+                <div className="attendance-register-actions">
+                  <ExportMenu
+                    rows={filteredSessions.map(s => ({
+                      ...s,
+                      attendanceRate: `${Math.round(((s.presentCount || 0) / (s.totalStudents || 1)) * 100)}%`,
+                    }))}
+                    columns={ATTENDANCE_COLUMNS}
+                    title="Attendance Register"
+                    filename="attendance-register"
+                  />
+                  <button
+                    type="button"
+                    className="erp-btn erp-btn--primary"
+                    onClick={() => setTakeModalOpen(true)}
+                  >
+                    <FiPlus /> Take Attendance
+                  </button>
+                </div>
               </div>
               {showRegisterFilters && <div id="attendance-register-filters" className="attendance-register-filters">
                 <div className="erp-form-group">

@@ -16,12 +16,13 @@
   vertical-align: middle !important;
   text-align: center !important;
   padding: 11px 16px !important;
-  background: #0F172A !important;
-  color: #f4f9fc !important;
+  background: #8782BC !important;
+  color: #FFFFFF !important;
   font-size: 11px !important;
   font-weight: 800 !important;
   letter-spacing: 0.055em;
   text-transform: uppercase;
+  border-bottom: 2px solid #756FB2 !important;
   box-sizing: border-box;
 }
 

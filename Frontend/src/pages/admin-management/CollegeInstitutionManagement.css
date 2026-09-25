@@ -316,8 +316,8 @@
 }
 
 .cm-table th {
-  background: var(--brand-navy, #0f172a);
-  color: #fff;
+  background: #8782BC;
+  color: #FFFFFF;
   font-weight: 700;
   font-size: 0.82rem;
   text-transform: uppercase;

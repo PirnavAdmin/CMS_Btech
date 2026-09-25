@@ -157,11 +157,12 @@
 }
 
 .sm-table th {
-  background: #f8fafc;
+  background: #8782BC;
   padding: 12px 16px;
-  color: #475569;
-  font-weight: 600;
-  border-bottom: 1px solid #e2e8f0;
+  color: #FFFFFF;
+  font-weight: 800;
+  text-transform: uppercase;
+  border-bottom: 2px solid #756FB2;
   white-space: nowrap;
 }
 

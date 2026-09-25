@@ -97,31 +97,32 @@
 .flm-category-toggle {
   display: inline-flex;
   align-items: center;
-  background: var(--surface-soft, #f4f7f8);
-  border: 1px solid var(--flm-line);
+  background: transparent;
+  border: 1px solid var(--border-strong, #c9c5e8);
   border-radius: 8px;
   padding: 3px;
-  gap: 3px;
+  gap: 0;
 }
 .flm-cat-btn {
-  border: none;
+  min-height: 34px;
+  border: 0;
   background: transparent;
   color: var(--text-secondary);
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 600;
-  padding: 5px 12px;
-  border-radius: 6px;
+  padding: 0 10px;
+  border-radius: 5px;
   cursor: pointer;
   transition: all 0.15s ease;
 }
 .flm-cat-btn:hover {
-  color: var(--flm-navy, #0F172A);
-  background: rgba(0, 109, 114, 0.08);
+  color: var(--brand, #8782BC);
+  background: rgba(135, 130, 188, 0.12);
 }
 .flm-cat-btn.active {
-  background: var(--flm-navy, #0F172A);
-  color: #ffffff;
+  background: var(--brand-soft, #efedfb) !important;
+  color: var(--brand, #8782BC) !important;
   font-weight: 700;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  box-shadow: none;
 }
 

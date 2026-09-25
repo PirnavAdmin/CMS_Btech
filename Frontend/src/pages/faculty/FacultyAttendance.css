@@ -1,8 +1,9 @@
 /* Attendance-only layout and controls. Loaded after the shared faculty styles. */
 .faculty-management .fm-attendance-screen {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 440px);
-  gap: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  width: 100%;
   min-width: 0;
 }
 
@@ -12,13 +13,6 @@
   }
 }
 
-.faculty-management .fm-attendance-screen > .faculty-header-summary {
-  grid-column: 2;
-  grid-row: 1;
-  width: 100%;
-  min-height: 76px;
-  min-width: 0;
-}
 
 .faculty-management .fm-attendance-screen > .faculty-header-summary .compact-summary {
   display: grid;

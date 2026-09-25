@@ -405,6 +405,10 @@
 .faculty-payroll .fp-card > header > div:last-child { flex-wrap: wrap; max-width: 100%; }
 .faculty-payroll .fp-payroll-period { min-width: 0; }
 .faculty-payroll .fp-payroll-period input { width: 100%; min-width: 0; height: 40px; box-sizing: border-box; font-weight: 500; }
+.faculty-payroll .fp-category-choice { display: inline-flex; color: var(--text-muted); }
+.faculty-payroll .fp-category-choice > div { display: inline-flex; gap: 0; padding: 3px; border: 1px solid var(--border-strong, #c9c5e8); border-radius: 8px; background: transparent; }
+.faculty-payroll .fp-category-choice button { min-height: 34px; padding: 0 10px; border: 0; border-radius: 5px; background: transparent; color: var(--text-secondary); font: inherit; font-size: 11px; font-weight: 600; cursor: pointer; }
+.faculty-payroll .fp-category-choice button.active { background: var(--brand-soft, #efedfb); color: var(--brand, #8782BC); font-weight: 700; }
 @media (max-width: 640px) {
   .faculty-payroll .fp-search { max-width: none; }
   .faculty-payroll .fp-filter-fields { grid-template-columns: minmax(0, 1fr); }

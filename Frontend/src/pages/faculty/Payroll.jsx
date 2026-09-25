@@ -451,7 +451,7 @@ const monthLabel = value => value ? new Date(`${value}-01T00:00:00`).toLocaleDat
 const money = value => (value == null || isNaN(Number(value))) ? '—' : new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(Number(value))
 const statusClass = value => String(value || 'Draft').toLowerCase().replace(/\s+/g, '-')
 export default function Payroll() {
-  const [tab, setTab] = useState('Payroll Processing'), [month, setMonth] = useState(getDefaultPayrollMonth), [selectedIds, setSelectedIds] = useState([]), [query, setQuery] = useState(''), [filters, setFilters] = useState({ type: '', department: '', status: '' }), [page, setPage] = useState(1), [selected, setSelected] = useState(null), [hold, setHold] = useState(false), [holdReason, setHoldReason] = useState(''), [editingSalary, setEditingSalary] = useState(null), [payslipItem, setPayslipItem] = useState(null)
+  const [tab, setTab] = useState('Payroll Processing'), [month, setMonth] = useState(getDefaultPayrollMonth), [selectedIds, setSelectedIds] = useState([]), [query, setQuery] = useState(''), [filters, setFilters] = useState({ type: 'Teaching', department: '', status: '' }), [page, setPage] = useState(1), [selected, setSelected] = useState(null), [hold, setHold] = useState(false), [holdReason, setHoldReason] = useState(''), [editingSalary, setEditingSalary] = useState(null), [payslipItem, setPayslipItem] = useState(null)
   const [payroll, setPayroll] = useState([]), [facultyList, setFacultyList] = useState([]), [loading, setLoading] = useState(true), [error, setError] = useState(''), [busy, setBusy] = useState(false), [notice, setNotice] = useState('')
   const requestVersion = useRef(0), holdLock = useRef(false)
   const load = useCallback(async () => {
@@ -847,7 +847,7 @@ export default function Payroll() {
   }
   const totalPages = Math.max(1, Math.ceil(rows.length / PAGE_SIZE)), currentPage = Math.min(page, totalPages), visible = rows.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE)
   const updateFilter = (key, value) => { setFilters(current => ({ ...current, [key]: value })); setPage(1) }
-  const clear = () => { setQuery(''); setFilters({ type: '', department: '', status: '' }); setPage(1) }
+  const clear = () => { setQuery(''); setFilters({ type: 'Teaching', department: '', status: '' }); setPage(1) }
   const columns = [['employeeId', 'Employee ID'], ['fullName', 'Employee'], ['type', 'Type'], ['department', 'Department'], ['working', 'Working Days'], ['present', 'Present'], ['paidLeave', 'Paid Leave'], ['lop', 'LOP'], ['status', 'Status']].map(([value, label]) => ({ label, value }))
   const exportColumns = tab === 'Payroll Processing'
     ? [...columns, { label: 'Gross Salary', value: 'grossSalary' }, { label: 'Deductions', value: 'deductions' }, { label: 'Net Salary', value: 'netSalary' }]
@@ -858,6 +858,12 @@ export default function Payroll() {
   const title = tab === 'Payroll Processing' ? 'Payroll Processing' : tab
   const emptyText = tab === 'Payroll Processing' ? `No payroll records found for ${monthLabel(month)}.` : tab === 'Salary Records' ? 'No salary records found.' : 'No payslips found for the selected filters.'
   return <DashboardLayout><main className="faculty-payroll">{error && <p className="flm-error" role="alert">{error} <button onClick={load}>Retry</button></p>}<header className="fp-header"><div><p>HOME / FACULTY / PAYROLL</p><h1>Faculty Payroll</h1><span>Process faculty salaries using attendance, leave and payroll data.</span></div><div className="fp-summary">{[['Total Employees', rows.length], ['Processed', processed], ['On Hold', onHold], ['LOP Days', lop]].map(([label, value]) => <div key={label}><strong>{value}</strong><small>{label}</small></div>)}</div></header><section className="fp-card"><header><div><p>{title.toUpperCase()}</p><h2>{tab === 'Payroll Processing' ? monthLabel(month) : title}</h2></div><div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+          <div className="fp-category-choice" role="group" aria-label="Faculty type">
+            <div>
+              <button type="button" className={filters.type === 'Teaching' ? 'active' : ''} onClick={() => updateFilter('type', 'Teaching')}>Teaching Faculty</button>
+              <button type="button" className={filters.type === 'Non-Teaching' ? 'active' : ''} onClick={() => updateFilter('type', 'Non-Teaching')}>Non-Teaching Staff</button>
+            </div>
+          </div>
           {tab === 'Payroll Processing' && (
             <label className="fp-payroll-period">
               <span>Payroll Period</span>
@@ -874,11 +880,9 @@ export default function Payroll() {
               <FiPlus /> Add Salary Structure
             </button>
           )}
-          <ExportMenu rows={rows} columns={exportColumns} title={title} filename={`faculty-payroll-${month}`} loading={loading || Boolean(error)} scope="All filtered results" />
-        </div></header><nav>{['Payroll Processing', 'Salary Records', 'Payslips'].map(item => <button type="button" className={tab === item ? 'active' : ''} onClick={() => { setTab(item); setPage(1); setSelectedIds([]) }} key={item}>{item}</button>)}</nav><div className="fp-category-toggle" role="group" aria-label="Filter by Employee Category" style={{ padding: '10px 16px 2px', display: 'flex', gap: '8px' }}><button type="button" className={`flm-cat-btn ${!filters.type ? 'active' : ''}`} onClick={() => updateFilter('type', '')}>All Employees ({payroll.length})</button><button type="button" className={`flm-cat-btn ${filters.type === 'Teaching' ? 'active' : ''}`} onClick={() => updateFilter('type', 'Teaching')}>Teaching Faculty ({payroll.filter(p => (p.type || 'Teaching') !== 'Non-Teaching').length})</button><button type="button" className={`flm-cat-btn ${filters.type === 'Non-Teaching' ? 'active' : ''}`} onClick={() => updateFilter('type', 'Non-Teaching')}>Non-Teaching Staff ({payroll.filter(p => p.type === 'Non-Teaching').length})</button></div><FilterPanel className="fp-filter-panel" active={Boolean(query || Object.values(filters).some(Boolean))} onClear={clear} showClearWhenOpen>
+        </div></header><nav>{['Payroll Processing', 'Salary Records', 'Payslips'].map(item => <button type="button" className={tab === item ? 'active' : ''} onClick={() => { setTab(item); setPage(1); setSelectedIds([]) }} key={item}>{item}</button>)}</nav><FilterPanel className="fp-filter-panel" active={Boolean(query || filters.department || filters.status)} onClear={clear} hideClear actions={<ExportMenu rows={rows} columns={exportColumns} title={title} filename={`faculty-payroll-${month}`} loading={loading || Boolean(error)} scope="All filtered results" />}>
           <div className="fp-filter-fields">
             <label className="fp-search"><FiSearch aria-hidden="true" /><input value={query} onChange={event => { setQuery(event.target.value); setPage(1) }} aria-label="Search payroll employees" placeholder="Search employee..." /></label>
-            <div className="fp-filter-field"><span>Faculty Type</span><SearchableSelect label="Faculty Type" value={filters.type} options={[{ value: '', label: 'All Faculty' }, 'Teaching', 'Non-Teaching']} placeholder="All Faculty" onChange={value => updateFilter('type', value)} hideSearch /></div>
             <div className="fp-filter-field"><span>Department</span><SearchableSelect label="Department" value={filters.department} options={[{ value: '', label: 'All Departments' }, ...departments]} placeholder="All Departments" onChange={value => updateFilter('department', value)} /></div>
             {tab !== 'Payslips' && <div className="fp-filter-field"><span>Payroll Status</span><SearchableSelect label="Payroll Status" value={filters.status} options={[{ value: '', label: 'All Statuses' }, 'Draft', 'Processed', 'Paid', 'Hold']} placeholder="All Statuses" onChange={value => updateFilter('status', value)} hideSearch /></div>}
           </div>

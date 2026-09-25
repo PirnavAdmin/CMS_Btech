@@ -116,7 +116,7 @@ button:disabled, input:disabled, select:disabled, textarea:disabled { cursor: no
 .department-table-wrap table, .sa-table-wrap table, .module-table table { width: 100%; border-collapse: collapse; color: var(--text-secondary-global); background: var(--bg-surface); font-size: 13px; }
 .erp-table thead th, .cm-table thead th, .course-advanced-table thead th, .branch-table thead th, .semester-table thead th,
 .section-table thead th, .department-table-wrap th, .sa-table-wrap th, .module-table th {
-  height: 42px; padding: 10px 12px; border-bottom: 1px solid var(--border-color); color: #eef6fc; background: #0F172A;
+  height: 42px; padding: 10px 12px; border-bottom: 2px solid #756FB2; color: #FFFFFF; background: #8782BC;
   font-size: 11px; font-weight: 800; letter-spacing: .055em; text-align: center; text-transform: uppercase; vertical-align: middle; white-space: nowrap;
 }
 .erp-table tbody td, .cm-table tbody td, .course-advanced-table tbody td, .branch-table tbody td, .semester-table tbody td,

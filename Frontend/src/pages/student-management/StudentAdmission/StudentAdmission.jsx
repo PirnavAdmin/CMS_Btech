@@ -407,7 +407,7 @@ function AdmissionList() {
             <p>{shown.length} records</p>
           </div>
           <div className="directory-export-actions">
-            <ExportMenu rows={shown} columns={admissionColumns} title="Student Admissions" filename="student-admissions" loading={!exportReady} scope="Current filtered API results" />
+            <ExportMenu rows={shown} columns={admissionColumns} recordSections={admissionDetailSections} title="Student Admissions" filename="student-admissions" loading={!exportReady} scope="Current filtered API results" />
             <button className="cm-button" type="button" onClick={() => navigate('/student-management/admissions/new')}>
               <FiPlus /> New Admission
             </button>

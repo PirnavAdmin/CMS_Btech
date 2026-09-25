@@ -7,13 +7,30 @@ import { SCREEN_EXPORT_ENDPOINTS, screenExportsApi } from '../api/apiEndpoints'
 
 const screenAliases = { semesters: 'semester', 'course-structure': 'course-structures', 'fee-structures-academic': 'fee-structures', 'fee-structures-hostel': 'hostel-fees', 'fee-structures-transport': 'transport-fees', 'student-promotions': 'promotions', 'promotion-history': 'promotions' }
 
+const columnsFromSections = (rows, sectionsForRecord) => {
+  const definitions = new Map()
+  rows.forEach(row => sectionsForRecord(row).forEach(section => section.rows.forEach(([label]) => {
+    const key = `${section.title}\u0000${label}`
+    if (!definitions.has(key)) definitions.set(key, { section: section.title, label })
+  })))
+  return [...definitions.values()].map(({ section, label }) => ({
+    label: `${section} — ${label}`,
+    value: row => sectionsForRecord(row)
+      .find(item => item.title === section)?.rows
+      .find(([field]) => field === label)?.[1]
+  }))
+}
+
 export default function ExportMenu({ rows = [], columns, filename, title, loading = false, scope = 'Current filtered results', unavailable = '', screen, exportParams, mode = 'list', recordSections, reportType = '', onDownload }) {
   const [open, setOpen] = useState(false)
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
   const serverScreen = screen || (filename === 'faculty-roster' ? 'faculty' : screenAliases[filename]) || filename
   const single = mode === 'single'
-  const supportsServerExport = !single && (Boolean(onDownload) || Object.hasOwn(SCREEN_EXPORT_ENDPOINTS, serverScreen))
+  const exportColumns = !single && typeof recordSections === 'function'
+    ? columnsFromSections(rows, recordSections)
+    : columns
+  const supportsServerExport = !single && typeof recordSections !== 'function' && (Boolean(onDownload) || Object.hasOwn(SCREEN_EXPORT_ENDPOINTS, serverScreen))
   const reportLabel = reportType ? `${reportType[0].toUpperCase()}${reportType.slice(1)} Sheet` : ''
   const root = useRef(null), trigger = useRef(null), id = useId()
   const disabled = busy || loading || (!single && !rows.length && !supportsServerExport) || Boolean(unavailable)
@@ -23,9 +40,9 @@ export default function ExportMenu({ rows = [], columns, filename, title, loadin
     document.addEventListener('pointerdown', close)
     return () => document.removeEventListener('pointerdown', close)
   }, [open])
-  const run = async (action, message) => { setError(''); setOpen(false); setBusy(true); try { await action({ rows, columns, filename, title, scope }); showSuccess(message) } catch (reason) { setError(reason.message || 'Export failed. Please try again.'); showError(reason.message || 'Export failed. Please try again.') } finally { setBusy(false); trigger.current?.focus() } }
+  const run = async (action, message) => { setError(''); setOpen(false); setBusy(true); try { await action({ rows, columns: exportColumns, filename, title, scope }); showSuccess(message) } catch (reason) { setError(reason.message || 'Export failed. Please try again.'); showError(reason.message || 'Export failed. Please try again.') } finally { setBusy(false); trigger.current?.focus() } }
   const download = async () => downloadServerExport(await screenExportsApi.save(serverScreen, exportParams), filename)
-  const selectedSections = () => recordSections ? cleanRecordSections(recordSections) : readVisibleRecordSections(root.current?.closest('[data-export-record]'))
+  const selectedSections = () => Array.isArray(recordSections) ? cleanRecordSections(recordSections) : readVisibleRecordSections(root.current?.closest('[data-export-record]'))
   const downloadRecord = () => exportToCsv(singleRecordCsvOptions(selectedSections(), filename))
   const printRecord = () => printSingleRecord({ title, sections: selectedSections() })
   const csvLabel = reportLabel || 'CSV'

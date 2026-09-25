@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { Navigate, useLocation, useNavigate } from 'react-router-dom'
-import { FiAlertCircle, FiArrowLeft, FiBriefcase, FiCheckCircle, FiChevronDown, FiChevronUp, FiEdit2, FiEye, FiFilter, FiPlus, FiSearch, FiUser, FiUsers, FiClock, FiBookOpen, FiMapPin, FiX, FiTrash2, FiFileText } from 'react-icons/fi'
+import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom'
+import { FiAlertCircle, FiArrowLeft, FiArrowRight, FiBriefcase, FiCheckCircle, FiChevronDown, FiChevronUp, FiEdit2, FiEye, FiFilter, FiPlus, FiSearch, FiUser, FiUsers, FiClock, FiBookOpen, FiMapPin, FiX, FiTrash2, FiFileText } from 'react-icons/fi'
 import DashboardLayout from '../../layouts/DashboardLayout'
 import ExportMenu from '../../components/ExportMenu'
 import FilterPanel from '../../components/FilterPanel'
@@ -576,9 +576,9 @@ function FacultyAttendanceScreen({ faculty, collegeOptions = [], departmentOptio
   const [dailyPage, setDailyPage] = useState(1)
   const [registerPage, setRegisterPage] = useState(1)
   const [reportPage, setReportPage] = useState(1)
-  const defaultDaily = () => ({ date: today(), department: '', status: '', search: '' })
-  const defaultRegister = () => ({ from: '', to: today(), department: '', facultyId: '', status: '', search: '' })
-  const defaultReport = () => ({ date: today(), weekStart: mondayOf(today()), month: today().slice(5, 7), year: today().slice(0, 4), facultyType: '', department: '', facultyId: '', status: '', search: '' })
+  const defaultDaily = () => ({ date: today(), facultyType: 'Teaching', department: '', status: '', search: '' })
+  const defaultRegister = () => ({ from: '', to: today(), facultyType: 'Teaching', department: '', facultyId: '', status: '', search: '' })
+  const defaultReport = () => ({ date: today(), weekStart: mondayOf(today()), month: today().slice(5, 7), year: today().slice(0, 4), facultyType: 'Teaching', department: '', facultyId: '', status: '', search: '' })
   const [dailyFilters, setDailyFilters] = useState(defaultDaily)
   const [registerFilters, setRegisterFilters] = useState(defaultRegister)
   const [reportFilters, setReportFilters] = useState(() => ({ daily: defaultReport(), weekly: defaultReport(), monthly: defaultReport() }))
@@ -656,8 +656,9 @@ function FacultyAttendanceScreen({ faculty, collegeOptions = [], departmentOptio
 
   // Missing attendance is displayed as Not Marked; only API records are persisted.
   const resolvedRecords = useMemo(() => resolveAttendanceRecords(attendanceRecords, faculty), [attendanceRecords, faculty])
-  const dailyRows = useMemo(() => dailyAttendanceRows(serverDaily, faculty, dailyFilters), [serverDaily, faculty, dailyFilters])
-  const registerRows = useMemo(() => filterAttendanceRecords(resolvedRecords, registerFilters), [resolvedRecords, registerFilters])
+  const matchesFacultyType = (row, facultyType) => !facultyType || (row.faculty?.employeeCategory === 'Non-Teaching' ? 'Non-Teaching' : 'Teaching') === facultyType
+  const dailyRows = useMemo(() => dailyAttendanceRows(serverDaily, faculty, dailyFilters).filter(row => matchesFacultyType(row, dailyFilters.facultyType)), [serverDaily, faculty, dailyFilters])
+  const registerRows = useMemo(() => filterAttendanceRecords(resolvedRecords, registerFilters).filter(row => matchesFacultyType(row, registerFilters.facultyType)), [resolvedRecords, registerFilters])
   const period = useMemo(() => attendancePeriod(reportType, currentReport), [reportType, currentReport])
   const reportRecords = useMemo(() => period.from && period.to ? filterAttendanceRecords(reportType === 'daily' ? dailyAttendanceRows(resolvedRecords, faculty, { date: currentReport.date }) : resolvedRecords, { ...currentReport, ...period, status: reportType === 'daily' ? currentReport.status : '' }).filter(row => !currentReport.facultyType || (row.faculty.employeeCategory === 'Non-Teaching' ? 'Non-Teaching' : 'Teaching') === currentReport.facultyType) : [], [resolvedRecords, faculty, currentReport, period, reportType])
   const periodKey = reportType === 'monthly' ? period.from.slice(0, 7) : period.from === period.to ? period.from : period.from + '-to-' + period.to
@@ -876,7 +877,9 @@ function FacultyAttendanceScreen({ faculty, collegeOptions = [], departmentOptio
     { label: 'Late Today', value: todaySummary.Late || 0, tone: 'danger' },
     { label: 'On Leave Today', value: todaySummary['On Leave'] || 0, tone: 'upcoming' },
   ]
-  const searchControl = <div className="fm-attendance-search-row"><label className="fm-attendance-field fm-attendance-search-field"><span className="fm-attendance-input-label">Search</span><span className="fm-attendance-search"><FiSearch aria-hidden="true" /><input value={filters.search} onChange={event => updateFilter('search', event.target.value)} placeholder="Search attendance..." /></span></label>{tab !== 'reports' && <button type="button" className="fm-attendance-filter-toggle" aria-expanded={showFilters} aria-controls="faculty-attendance-filters-panel" onClick={() => setShowFilters(value => !value)}><FiFilter aria-hidden="true" /><span>Filters</span>{showFilters ? <FiChevronUp aria-hidden="true" /> : <FiChevronDown aria-hidden="true" />}</button>}</div>
+  const searchControl = <div className="fm-attendance-search-row"><label className="fm-attendance-field fm-attendance-search-field"><span className="fm-attendance-input-label">Search</span><span className="fm-attendance-search"><FiSearch aria-hidden="true" /><input value={filters.search} onChange={event => updateFilter('search', event.target.value)} placeholder="Search attendance..." /></span></label></div>
+  const facultyCategoryControl = <div className="fm-attendance-category-toggle flm-category-toggle" role="group" aria-label="Filter attendance by faculty type"><button type="button" className={`flm-cat-btn ${filters.facultyType === 'Teaching' ? 'active' : ''}`} onClick={() => updateFilter('facultyType', 'Teaching')}>Teaching Faculty ({faculty.filter(item => item.employeeCategory !== 'Non-Teaching').length})</button><button type="button" className={`flm-cat-btn ${filters.facultyType === 'Non-Teaching' ? 'active' : ''}`} onClick={() => updateFilter('facultyType', 'Non-Teaching')}>Non-Teaching Staff ({faculty.filter(item => item.employeeCategory === 'Non-Teaching').length})</button></div>
+  const filterControl = <button type="button" className="fm-attendance-filter-toggle" aria-expanded={showFilters} aria-controls="faculty-attendance-filters-panel" onClick={() => setShowFilters(value => !value)}><FiFilter aria-hidden="true" /><span>Filters</span>{showFilters ? <FiChevronUp aria-hidden="true" /> : <FiChevronDown aria-hidden="true" />}</button>
   const normalizeViewRemark = value => {
     const clean = String(value || '').trim()
     if (!clean || clean === '—') return '—'
@@ -996,13 +999,15 @@ function FacultyAttendanceScreen({ faculty, collegeOptions = [], departmentOptio
           <h1>Faculty Attendance</h1>
           <p>Manage daily faculty attendance, working hours, and administrative attendance reports.</p>
         </div>
+        <div className="fm-header-right">
+          <CompactSummary label="Faculty attendance summary" items={facultySummary} />
+        </div>
       </header>
-      <div className="faculty-header-summary"><CompactSummary label="Faculty attendance summary" items={facultySummary} /></div>
 
       <section className="fm-attendance-workspace">
         <div className="fm-attendance-panel">
           <header className="fm-attendance-directory-header">
-            <div className="fm-attendance-header-actions">{searchControl}{contextualExport}</div>
+            <div className="fm-attendance-header-actions">{searchControl}{facultyCategoryControl}{filterControl}{contextualExport}</div>
           </header>
 
           {showFilters && tab !== 'reports' && (
@@ -1034,6 +1039,7 @@ function FacultyAttendanceScreen({ faculty, collegeOptions = [], departmentOptio
             ))}
           </nav>
 
+
           {tab === 'reports' && (
             <div className="fm-attendance-report-tabs" aria-label="Report period">
               {['daily', 'weekly', 'monthly'].map(type => (
@@ -1047,7 +1053,6 @@ function FacultyAttendanceScreen({ faculty, collegeOptions = [], departmentOptio
             {reportType === 'daily' && dateControl('date', 'Date')}
             {reportType === 'weekly' && dateControl('weekStart', 'Week Start')}
             {reportType === 'monthly' && <>{selectControl('month', 'Month', Array.from({ length: 12 }, (_, index) => ({ value: String(index + 1).padStart(2, '0'), label: new Date(2000, index, 1).toLocaleDateString('en-GB', { month: 'long' }) })), 'Select month')}<label className="fm-attendance-field"><span>Year</span><input type="number" min="1900" max="9999" value={filters.year} onChange={event => updateFilter('year', event.target.value)} /></label></>}
-            {selectControl('facultyType', 'Faculty Type', ['Teaching', 'Non-Teaching'], 'All Faculty')}
             {selectControl('department', 'Department', attendanceDepartmentOptions, 'All Departments')}
             {selectControl('facultyId', 'Faculty', facultyOptions, 'All Employees')}
             {selectControl('status', 'Status', ATTENDANCE_STATUSES, 'All Statuses')}
@@ -1167,7 +1172,7 @@ function ProfileSections({ data, collegeOptions = [], departmentOptions = [], fa
     <>
       <div className="fm-profile-sections">
         {sections.map(section => {
-          const fields = section.fields.filter(([key, , , required]) => required || key === 'employeeId' || (data[key] !== '' && data[key] != null))
+          const fields = section.fields.filter(([key, , , required]) => !(data.employeeCategory === 'Non-Teaching' && key === 'teachingExperience') && (required || key === 'employeeId' || (data[key] !== '' && data[key] != null)))
           return (
             <section className="fm-panel" key={section.title}>
               <h2><section.icon />{section.heading}</h2>
@@ -1526,10 +1531,10 @@ function FacultyForm({ initial, faculty, onSave, onCancel, collegeOptions, depar
       <div className="fm-section-heading">
         <h2>
           {section ? <section.icon /> : isDocumentsStep ? <FiFileText /> : <FiCheckCircle />}
-          {section?.title || (isDocumentsStep ? 'Supporting Documents' : 'Faculty Profile Preview')}
+          {section?.title || (isDocumentsStep ? 'Supporting Documents' : data.employeeCategory === 'Non-Teaching' ? 'Staff Profile Preview' : 'Faculty Profile Preview')}
         </h2>
         <p>
-          {section?.description || (isDocumentsStep ? 'Mark submission status for essential faculty verification documents (optional).' : 'Review all details and documents below before saving this faculty record.')}
+          {section?.description?.replace('Faculty designation', 'Employee designation') || (isDocumentsStep ? 'Mark submission status for essential verification documents (optional).' : 'Review all details and documents below before saving this record.')}
         </p>
       </div>
       {step === 0 && (
@@ -1548,8 +1553,8 @@ function FacultyForm({ initial, faculty, onSave, onCancel, collegeOptions, depar
       )}
       {section ? (
         <div className="fm-form-grid">
-          {section.fields.map(field => (
-            <Field key={field[0]} field={field} data={data} errors={errors} update={update} collegeOptions={collegeOptions} departmentOptions={departmentOptions} />
+          {section.fields.filter(([key]) => !(data.employeeCategory === 'Non-Teaching' && key === 'teachingExperience')).map(field => (
+            <Field key={field[0]} field={field[0] === 'employeeCategory' && ['Teaching', 'Non-Teaching'].includes(initial.employeeCategory) ? [field[0], field[1], 'readonly', field[3]] : field} data={data} errors={errors} update={update} collegeOptions={collegeOptions} departmentOptions={departmentOptions} />
           ))}
         </div>
       ) : isDocumentsStep ? (
@@ -1584,7 +1589,7 @@ function FacultyForm({ initial, faculty, onSave, onCancel, collegeOptions, depar
             </button>
           )}
           <button type="submit" className="fm-button" disabled={photoBusy || saving}>
-            {isPreviewStep ? <><FiCheckCircle /> Save Faculty</> : 'Next'}
+            {isPreviewStep ? <><FiCheckCircle /> {data.employeeCategory === 'Non-Teaching' ? 'Save Staff' : 'Save Faculty'}</> : 'Next'}
           </button>
         </div>
       </footer>
@@ -2159,7 +2164,7 @@ export default function FacultyManagement() {
     }
   }, [location.search, path])
 
-  const teachingFaculty = useMemo(() => faculty.filter(f => (f.employeeCategory || 'Teaching') !== 'Non-Teaching'), [faculty])
+  const teachingFaculty = useMemo(() => faculty.filter(f => (f.employeeCategory || 'Teaching') === 'Teaching'), [faculty])
   const nonTeachingFaculty = useMemo(() => faculty.filter(f => f.employeeCategory === 'Non-Teaching'), [faculty])
   const activeCategory = selectedCategory || 'Teaching'
   const categoryFaculty = activeCategory === 'Non-Teaching' ? nonTeachingFaculty : teachingFaculty
@@ -2183,17 +2188,12 @@ export default function FacultyManagement() {
     setDetail(null)
     setAssignmentId(null)
     setLoadError('')
-    if (selectedCategory) {
-      navigate(`/faculty?category=${selectedCategory}`, { replace: true })
+    const returnCategory = selected?.employeeCategory || selectedCategory
+    if (returnCategory === 'Teaching' || returnCategory === 'Non-Teaching') {
+      navigate(`/faculty?category=${returnCategory}`, { replace: true })
     } else {
       navigate('/faculty', { replace: true })
     }
-  }
-  const goToCategory = (category) => {
-    setSelectedCategory(category)
-    setPage(1)
-    setFilters(f => ({ ...f, designation: '' }))
-    navigate(`/faculty?category=${category}`)
   }
   const backToOverview = () => {
     setSelectedCategory(null)
@@ -2280,12 +2280,12 @@ export default function FacultyManagement() {
   else if (((editId || detailId) && !selected) || (!['/faculty', '/faculty/new'].includes(path) && !editId && !detailId)) {
     content = <section className="fm-panel"><EmptyState title="Faculty record not found" action="Back to Faculty Directory" onAction={back} /></section>
   } else if (path === '/faculty/new' || editId) {
-    const defaultNewCategory = (new URLSearchParams(location.search).get('category') === 'Non-Teaching' || activeCategory === 'Non-Teaching') ? 'Non-Teaching' : 'Teaching'
+    const defaultNewCategory = selected?.employeeCategory || activeCategory
     content = (
       <>
         <header className="faculty-page-header">
           <div>
-            <h1>{editId ? 'Edit Faculty' : (defaultNewCategory === 'Non-Teaching' ? 'Add Non-Teaching Staff' : 'Add Teaching Faculty')}</h1>
+            <h1>{editId ? (defaultNewCategory === 'Non-Teaching' ? 'Edit Non-Teaching Staff' : 'Edit Teaching Faculty') : (defaultNewCategory === 'Non-Teaching' ? 'Add Non-Teaching Staff' : 'Add Teaching Faculty')}</h1>
             <p>{editId ? 'Faculty employment and profile record' : (defaultNewCategory === 'Non-Teaching' ? 'Non-teaching staff registration and employment record' : 'Teaching faculty registration and employment record')}</p>
           </div>
           <button type="button" className="fm-button secondary" onClick={back}><FiArrowLeft /> Back</button>
@@ -2308,7 +2308,7 @@ export default function FacultyManagement() {
     content = (
       <div className="fm-profile-view">
         <div className="fm-breadcrumb">
-          <span>HOME</span> / <span>FACULTY</span> / <strong>FACULTY MANAGEMENT</strong>
+          <Link to="/dashboard">Home</Link> / <Link to={'/faculty?category=' + (selected.employeeCategory || 'Teaching')}>{selected.employeeCategory === 'Non-Teaching' ? 'Non-Teaching Staff' : 'Teaching Faculty'}</Link> / <strong aria-current="page">Profile</strong>
         </div>
 
         <div className="fm-profile-hero-card">
@@ -2316,15 +2316,15 @@ export default function FacultyManagement() {
             <div className="fm-identity">
               <Avatar faculty={selected} large />
               <div>
-                <p className="fm-eyebrow">FACULTY PROFILE · {formatFacultyDisplayCode(selected, collegeOptions, faculty)}</p>
+                <p className="fm-eyebrow">{selected.employeeCategory === 'Non-Teaching' ? 'STAFF PROFILE' : 'FACULTY PROFILE'} · {formatFacultyDisplayCode(selected, collegeOptions, faculty)}</p>
                 <h1>{selected.fullName}</h1>
                 <p>{selected.designation} · {departmentName}</p>
                 <StatusBadge value={selected.employmentStatus} />
               </div>
             </div>
             <div className="fm-actions">
-              <button type="button" className="fm-button secondary" onClick={() => navigate('/faculty/' + selected.id + '/edit')}>
-                <FiEdit2 /> Edit Faculty
+              <button type="button" className="fm-button secondary" onClick={() => navigate('/faculty/' + selected.id + '/edit?category=' + (selected.employeeCategory || activeCategory))}>
+                <FiEdit2 /> {selected.employeeCategory === 'Non-Teaching' ? 'Edit Staff' : 'Edit Faculty'}
               </button>
               <button type="button" className="fm-button secondary" onClick={back}>
                 <FiArrowLeft /> Back to Directory
@@ -2345,14 +2345,14 @@ export default function FacultyManagement() {
               <small>Qualification</small>
               <strong className="text-danger">{selected.qualification || '—'}</strong>
             </div>
-            <div className="fm-summary-col">
+            {selected.employeeCategory !== 'Non-Teaching' && <div className="fm-summary-col">
               <small>Workload</small>
               <strong className="text-primary">{load.subjects} Subjects · {load.status}</strong>
-            </div>
+            </div>}
           </div>
         </div>
 
-        <div className="fm-profile-main-layout">
+        <div className="fm-profile-main-layout" style={selected.employeeCategory === 'Non-Teaching' ? { gridTemplateColumns: 'minmax(0, 1fr)' } : undefined}>
           <div className="fm-profile-content-col">
             <ProfileSections
               data={selected}
@@ -2362,7 +2362,7 @@ export default function FacultyManagement() {
             />
           </div>
 
-          <section className="fm-panel fm-responsibilities-sidebar">
+          {selected.employeeCategory !== 'Non-Teaching' && <section className="fm-panel fm-responsibilities-sidebar">
             <header className="fm-sidebar-header">
               <h2><FiBriefcase /> Current Academic Responsibilities</h2>
               <span className={'erp-status-badge ' + (load.status === 'Unassigned' ? 'pending' : 'working')}>
@@ -2381,20 +2381,12 @@ export default function FacultyManagement() {
                 <h3>No academic responsibilities assigned.</h3>
               </div>
             )}
-          </section>
+          </section>}
         </div>
       </div>
     )
   } else if (!selectedCategory) {
     // Overview Hub Cards view (when user visits /faculty without picking a category)
-    const overallSummary = [
-      { label: 'Total Personnel', value: faculty.length },
-      { label: 'Teaching Faculty', value: teachingFaculty.length, tone: 'active' },
-      { label: 'Non-Teaching Staff', value: nonTeachingFaculty.length, tone: 'neutral' },
-      { label: 'Active (Working)', value: faculty.filter(row => row.employmentStatus === 'Working').length, tone: 'success' },
-      { label: 'On Leave', value: faculty.filter(row => row.employmentStatus === 'On Leave').length, tone: 'danger' }
-    ]
-
     content = (
       <>
         <header className="faculty-page-header">
@@ -2403,115 +2395,92 @@ export default function FacultyManagement() {
             <h1>Faculty & Staff Management</h1>
             <p>Select a category below to access member directories, manage teaching workloads, staff assignments, and employment profiles.</p>
           </div>
-          <div className="fm-actions">
-            <ExportMenu
-              rows={faculty}
-              columns={exportColumns}
-              screen="faculty-all-roster"
-              filename="all-faculty-and-staff"
-              title="All Faculty and Staff Records"
-            />
-          </div>
         </header>
 
-        <div className="faculty-header-summary">
-          <CompactSummary label="Institutional Personnel Summary" items={overallSummary} />
-        </div>
-
         <div className="fm-category-hub-grid">
-          {/* Card 1: Teaching Faculty */}
-          <div className="fm-hub-card teaching-card" onClick={() => goToCategory('Teaching')}>
-            <div className="fm-hub-card-header">
-              <div className="fm-hub-icon-wrapper teaching">
-                <FiUsers />
-              </div>
-              <div className="fm-hub-header-text">
-                <span className="fm-hub-badge teaching">Academic Division</span>
-                <h2>Teaching Faculty</h2>
-                <p>Professors, Associate & Assistant Professors, Lecturers, Deans & HODs</p>
-              </div>
-            </div>
+          {[
+            {
+              category: 'Teaching',
+              title: 'Teaching Faculty',
+              description: 'Academic staff, professors, workload & subject allocations',
+              members: teachingFaculty,
+              icon: FiUsers,
+              contractLabel: 'Contract/Guest',
+              countLabel: 'Total Faculty',
+              viewLabel: 'View Teaching Directory',
+              addLabel: 'Add Teaching Faculty',
+              addPath: '/faculty/new?category=Teaching',
+            },
+            {
+              category: 'Non-Teaching',
+              title: 'Non-Teaching Staff',
+              description: 'Administrative officers, librarians, lab tech & campus staff',
+              members: nonTeachingFaculty,
+              icon: FiBriefcase,
+              contractLabel: 'Contract/Temp',
+              countLabel: 'Total Staff',
+              viewLabel: 'View Staff Directory',
+              addLabel: 'Add Non-Teaching Staff',
+              addPath: '/faculty/new?category=Non-Teaching',
+            },
+          ].map(({ category, title, description, members, icon: Icon, contractLabel, countLabel, viewLabel, addLabel, addPath }) => {
+            const workingCount = members.filter(member => member.employmentStatus === 'Working').length
+            const leaveCount = members.filter(member => member.employmentStatus === 'On Leave').length
+            const permanentCount = members.filter(member => member.employmentType === 'Permanent').length
+            const contractCount = members.filter(member => member.employmentType && member.employmentType !== 'Permanent').length
 
-            <div className="fm-hub-count-box">
-              <span className="fm-hub-count-number">{teachingFaculty.length}</span>
-              <span className="fm-hub-count-label">Teaching Faculty Members</span>
-            </div>
+            return (
+              <article className="fm-hub-card" key={category}>
+                <header className="fm-hub-card-header">
+                  <div className="fm-hub-card-icon-wrap" aria-hidden="true">
+                    <Icon className="fm-hub-card-icon" />
+                  </div>
+                  <div className="fm-hub-card-meta">
+                    <h2>
+                      <Link to={`/faculty?category=${category}`}>{title}</Link>
+                    </h2>
+                    <p>{description}</p>
+                  </div>
+                  <div className="fm-hub-card-total" aria-label={`${members.length} ${countLabel}`}>
+                    <strong>{members.length}</strong>
+                    <small>{countLabel}</small>
+                  </div>
+                </header>
 
-            <div className="fm-hub-metrics-grid">
-              <div className="fm-hub-metric-tile">
-                <span className="metric-val">{teachingFaculty.filter(f => f.employmentStatus === 'Working').length}</span>
-                <span className="metric-lbl">Working</span>
-              </div>
-              <div className="fm-hub-metric-tile">
-                <span className="metric-val">{teachingFaculty.filter(f => f.employmentStatus === 'On Leave').length}</span>
-                <span className="metric-lbl">On Leave</span>
-              </div>
-              <div className="fm-hub-metric-tile">
-                <span className="metric-val">{teachingFaculty.filter(f => f.employmentType === 'Permanent').length}</span>
-                <span className="metric-lbl">Permanent</span>
-              </div>
-              <div className="fm-hub-metric-tile">
-                <span className="metric-val">{teachingFaculty.filter(f => f.employmentType && f.employmentType !== 'Permanent').length}</span>
-                <span className="metric-lbl">Contract/Guest</span>
-              </div>
-            </div>
+                <div className="fm-hub-metrics-grid" role="region" aria-label={`${title} status breakdown`}>
+                  <div className="fm-hub-metric-col">
+                    <span className="fm-hub-metric-val">{workingCount}</span>
+                    <span className="fm-hub-metric-lbl">Working</span>
+                  </div>
+                  <div className="fm-hub-metric-col">
+                    <span className="fm-hub-metric-val">{leaveCount}</span>
+                    <span className="fm-hub-metric-lbl">On Leave</span>
+                  </div>
+                  <div className="fm-hub-metric-col">
+                    <span className="fm-hub-metric-val">{permanentCount}</span>
+                    <span className="fm-hub-metric-lbl">Permanent</span>
+                  </div>
+                  <div className="fm-hub-metric-col">
+                    <span className="fm-hub-metric-val">{contractCount}</span>
+                    <span className="fm-hub-metric-lbl">{contractLabel}</span>
+                  </div>
+                </div>
 
-            <div className="fm-hub-card-footer" onClick={e => e.stopPropagation()}>
-              <button type="button" className="fm-button" onClick={() => goToCategory('Teaching')}>
-                <FiUsers /> View Teaching Directory →
-              </button>
-              <button type="button" className="fm-button secondary" onClick={() => addFaculty('Teaching')}>
-                <FiPlus /> Add Teaching Faculty
-              </button>
-            </div>
-          </div>
+                {members.length === 0 && (
+                  <p className="fm-hub-empty-hint">No {category === 'Non-Teaching' ? 'staff' : 'faculty'} records created yet.</p>
+                )}
 
-          {/* Card 2: Non-Teaching Staff */}
-          <div className="fm-hub-card non-teaching-card" onClick={() => goToCategory('Non-Teaching')}>
-            <div className="fm-hub-card-header">
-              <div className="fm-hub-icon-wrapper non-teaching">
-                <FiBriefcase />
-              </div>
-              <div className="fm-hub-header-text">
-                <span className="fm-hub-badge non-teaching">Administrative & Support</span>
-                <h2>Non-Teaching Staff</h2>
-                <p>Librarians, Lab Assistants, System Admins, Accountants & Administrative Staff</p>
-              </div>
-            </div>
-
-            <div className="fm-hub-count-box">
-              <span className="fm-hub-count-number">{nonTeachingFaculty.length}</span>
-              <span className="fm-hub-count-label">Non-Teaching Staff Members</span>
-            </div>
-
-            <div className="fm-hub-metrics-grid">
-              <div className="fm-hub-metric-tile">
-                <span className="metric-val">{nonTeachingFaculty.filter(f => f.employmentStatus === 'Working').length}</span>
-                <span className="metric-lbl">Working</span>
-              </div>
-              <div className="fm-hub-metric-tile">
-                <span className="metric-val">{nonTeachingFaculty.filter(f => f.employmentStatus === 'On Leave').length}</span>
-                <span className="metric-lbl">On Leave</span>
-              </div>
-              <div className="fm-hub-metric-tile">
-                <span className="metric-val">{nonTeachingFaculty.filter(f => f.employmentType === 'Permanent').length}</span>
-                <span className="metric-lbl">Permanent</span>
-              </div>
-              <div className="fm-hub-metric-tile">
-                <span className="metric-val">{nonTeachingFaculty.filter(f => f.employmentType && f.employmentType !== 'Permanent').length}</span>
-                <span className="metric-lbl">Contract/Temp</span>
-              </div>
-            </div>
-
-            <div className="fm-hub-card-footer" onClick={e => e.stopPropagation()}>
-              <button type="button" className="fm-button" onClick={() => goToCategory('Non-Teaching')}>
-                <FiBriefcase /> View Staff Directory →
-              </button>
-              <button type="button" className="fm-button secondary" onClick={() => addFaculty('Non-Teaching')}>
-                <FiPlus /> Add Non-Teaching Staff
-              </button>
-            </div>
-          </div>
+                <footer className="fm-hub-card-footer">
+                  <Link className="fm-hub-btn-primary" to={`/faculty?category=${category}`}>
+                    {viewLabel} <FiArrowRight aria-hidden="true" />
+                  </Link>
+                  <Link className="fm-hub-btn-secondary" to={addPath}>
+                    <FiPlus aria-hidden="true" /> {addLabel}
+                  </Link>
+                </footer>
+              </article>
+            )
+          })}
         </div>
       </>
     )
@@ -2527,43 +2496,18 @@ export default function FacultyManagement() {
       <>
         <header className="faculty-page-header">
           <div>
-            <div className="fm-nav-back-row">
-              <button type="button" className="fm-back-to-hub-btn" onClick={backToOverview}>
-                <FiArrowLeft /> Back to Overview Cards
-              </button>
-            </div>
             <h1>{selectedCategory === 'Non-Teaching' ? 'Non-Teaching Staff Directory' : 'Teaching Faculty Directory'}</h1>
             <p>{selectedCategory === 'Non-Teaching' ? 'Manage administrative officers, librarians, lab technicians, accountants, and support staff.' : 'Manage professors, associate & assistant professors, lecturers, academic workload, and subject allocations.'}</p>
           </div>
-          <div className="fm-actions">{directoryActions}</div>
+          <div className="fm-header-right">
+            <div className="fm-directory-summary-stack">
+              <CompactSummary label={`${selectedCategory} summary`} items={summary} />
+              <button type="button" className="fm-back-to-hub-btn" onClick={backToOverview}>
+                <FiArrowLeft /> Back
+              </button>
+            </div>
+          </div>
         </header>
-
-        <div className="fm-directory-nav-row">
-          <div className="fm-category-tabs" role="tablist" aria-label="Faculty Categories">
-            <button
-              type="button"
-              role="tab"
-              aria-selected={selectedCategory === 'Teaching'}
-              className={`fm-category-tab ${selectedCategory === 'Teaching' ? 'active' : ''}`}
-              onClick={() => goToCategory('Teaching')}
-            >
-              <FiUsers /> Teaching Faculty <span className="fm-tab-badge">{teachingFaculty.length}</span>
-            </button>
-            <button
-              type="button"
-              role="tab"
-              aria-selected={selectedCategory === 'Non-Teaching'}
-              className={`fm-category-tab ${selectedCategory === 'Non-Teaching' ? 'active' : ''}`}
-              onClick={() => goToCategory('Non-Teaching')}
-            >
-              <FiBriefcase /> Non-Teaching Staff <span className="fm-tab-badge">{nonTeachingFaculty.length}</span>
-            </button>
-          </div>
-
-          <div className="faculty-header-summary">
-            <CompactSummary label={`${selectedCategory} summary`} items={summary} />
-          </div>
-        </div>
 
         <section className="faculty-directory">
           <header className="fm-section-bar">
@@ -2571,6 +2515,7 @@ export default function FacultyManagement() {
               <p className="fm-eyebrow">{selectedCategory === 'Non-Teaching' ? 'NON-TEACHING STAFF DIRECTORY' : 'TEACHING FACULTY DIRECTORY'}</p>
               <p className="fm-muted">{filtered.length} {selectedCategory === 'Non-Teaching' ? 'staff' : 'faculty'} records</p>
             </div>
+            <div className="fm-actions">{directoryActions}</div>
           </header>
           <FilterPanel active={active} onClear={clear}>
             <div className="faculty-filters">
@@ -2620,7 +2565,7 @@ export default function FacultyManagement() {
                         <td><StatusBadge value={item.employmentStatus} /></td>
                         <td>
                           <div className="fm-actions">
-                            <button type="button" className="fm-icon-button" title={`View ${selectedCategory === 'Non-Teaching' ? 'staff member' : 'faculty'}`} aria-label={'View: ' + item.fullName} onClick={() => navigate('/faculty/' + item.id)}>
+                            <button type="button" className="fm-icon-button" title={`View ${selectedCategory === 'Non-Teaching' ? 'staff member' : 'faculty'}`} aria-label={'View: ' + item.fullName} onClick={() => navigate('/faculty/' + item.id + '?category=' + activeCategory)}>
                               <FiEye />
                             </button>
                             {selectedCategory === 'Teaching' && (
@@ -2628,7 +2573,7 @@ export default function FacultyManagement() {
                                 <FiBriefcase />
                               </button>
                             )}
-                            <button type="button" className="fm-icon-button" title={`Edit ${selectedCategory === 'Non-Teaching' ? 'staff member' : 'faculty'}`} aria-label={'Edit: ' + item.fullName} onClick={() => navigate('/faculty/' + item.id + '/edit')}>
+                            <button type="button" className="fm-icon-button" title={`Edit ${selectedCategory === 'Non-Teaching' ? 'staff member' : 'faculty'}`} aria-label={'Edit: ' + item.fullName} onClick={() => navigate('/faculty/' + item.id + '/edit?category=' + activeCategory)}>
                               <FiEdit2 />
                             </button>
                           </div>
@@ -2654,7 +2599,20 @@ export default function FacultyManagement() {
   }
   return (
     <DashboardLayout>
-      <main className="faculty-management">
+      {path === '/faculty' && (
+        <nav className="app-breadcrumb" aria-label="Breadcrumb">
+          <Link to="/dashboard">Home</Link>
+          <span aria-hidden="true">/</span>
+          {selectedCategory ? (
+            <>
+              <Link to="/faculty">Faculty Directory</Link>
+              <span aria-hidden="true">/</span>
+              <strong aria-current="page">{selectedCategory === 'Non-Teaching' ? 'Non-Teaching Staff' : 'Teaching Faculty'}</strong>
+            </>
+          ) : <strong aria-current="page">Faculty Directory</strong>}
+        </nav>
+      )}
+      <main className={`faculty-management${path === '/faculty' && !selectedCategory ? ' faculty-management--overview' : ''}`}>
         {loadError && <p className="fm-error" role="alert">{loadError}</p>}
         {loadingFaculty ? <section className="fm-panel">Loading faculty records…</section> : content}
         {assignedFaculty && (

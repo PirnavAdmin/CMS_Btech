@@ -1,9 +1,11 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { NavLink, useLocation } from 'react-router-dom'
 import { FiAward, FiBarChart2, FiBook, FiBookOpen, FiBriefcase, FiCalendar, FiCheckCircle, FiCheckSquare, FiChevronLeft, FiChevronRight, FiCreditCard, FiEdit3, FiFileText, FiGitBranch, FiGrid, FiHome, FiLayers, FiSliders, FiTrendingUp, FiUser, FiUserPlus, FiUsers, FiX } from 'react-icons/fi'
 import { getUserRole } from '../auth/auth'
 import { ROLES } from '../auth/roles'
 import { useAcademic } from '../context/AcademicContext'
+import { collegeLogoValue } from '../utils/collegeLogo'
+import { cacheCollegeLogo, fetchCollegeLogo, getCollegeById, getCollegeLogoUrl, isBackendCollegeLogo, readCachedCollegeLogo, unwrapCollegeRecord } from '../auth/collegeApi'
 
 const academicLinks = [
   { label: 'Colleges', to: '/college-institution-management', icon: FiHome, tone: 'gold' },
@@ -34,6 +36,56 @@ export default function Sidebar({ open = false, onClose = () => {}, collapsed = 
   const { selectedCollege } = useAcademic()
 
   const collegeDisplayName = selectedCollege?.name || selectedCollege?.collegeName || 'Pirnav Engineering College'
+  const collegeId = selectedCollege?.id ?? selectedCollege?.collegeId
+  const [collegeLogo, setCollegeLogo] = useState('')
+
+  useEffect(() => {
+    let active = true
+    let objectUrl = ''
+    const loadLogo = async () => {
+      // The context list can omit logo fields. Load the selected college detail
+      // once so the same uploaded asset used in College Management is available
+      // in the persistent sidebar too.
+      let record = selectedCollege || {}
+      let logoValue = collegeLogoValue(record)
+        || readCachedCollegeLogo(collegeId)
+        || readCachedCollegeLogo(record?.code || record?.collegeCode)
+        || readCachedCollegeLogo(collegeDisplayName)
+      if (!logoValue && collegeId) {
+        try {
+          const response = await getCollegeById(collegeId)
+          record = unwrapCollegeRecord(response?.data ?? response)
+          logoValue = collegeLogoValue(record)
+          if (logoValue) cacheCollegeLogo(collegeId, logoValue, [record.code, record.collegeCode, record.name, record.collegeName])
+        } catch { /* The logo endpoint below remains the fallback. */ }
+      }
+      const logoUrl = getCollegeLogoUrl(collegeId, logoValue, [record?.code, record?.collegeCode, collegeDisplayName])
+      if (!logoUrl) {
+        if (active) setCollegeLogo('')
+        return
+      }
+      if (!isBackendCollegeLogo(logoUrl)) {
+        if (active) setCollegeLogo(logoUrl)
+        return
+      }
+      if (active) setCollegeLogo('')
+      try {
+        const blob = await fetchCollegeLogo(logoUrl)
+        objectUrl = URL.createObjectURL(blob)
+        if (active) setCollegeLogo(objectUrl)
+      } catch {
+        // Some deployments permit the browser to render the image endpoint but
+        // reject the authenticated blob request. Keep the direct image URL as
+        // a final fallback instead of reverting to the placeholder mark.
+        if (active) setCollegeLogo(logoUrl)
+      }
+    }
+    loadLogo()
+    return () => {
+      active = false
+      if (objectUrl) URL.revokeObjectURL(objectUrl)
+    }
+  }, [collegeId, collegeDisplayName, selectedCollege])
 
   useEffect(() => {
     const navigation = navigationRef.current
@@ -49,7 +101,7 @@ export default function Sidebar({ open = false, onClose = () => {}, collapsed = 
     <button className={`sidebar-scrim ${open ? 'is-visible' : ''}`} onClick={onClose} aria-label="Close navigation" tabIndex={open ? 0 : -1} />
     <aside className={`sidebar ${open ? 'is-open' : ''} ${collapsed ? 'is-collapsed' : ''}`} aria-label="Primary navigation">
       <div className="sidebar-brand">
-        <span className="sidebar-brand__mark" aria-hidden="true"><svg viewBox="0 0 32 32"><path d="M4 12 16 5l12 7H4Z"/><path d="M7 14v10M12 14v10M20 14v10M25 14v10"/><path d="M4 25h24M2.5 28h27"/></svg></span>
+        <span className="sidebar-brand__mark" aria-hidden="true">{collegeLogo ? <img src={collegeLogo} alt="" onError={() => setCollegeLogo('')} /> : <svg viewBox="0 0 32 32"><path d="M4 12 16 5l12 7H4Z"/><path d="M7 14v10M12 14v10M20 14v10M25 14v10"/><path d="M4 25h24M2.5 28h27"/></svg>}</span>
         <span className="sidebar-brand__copy"><strong>{collegeDisplayName}</strong><small>Digital Campus</small></span>
         <button className="sidebar-collapse" onClick={onToggleCollapse} aria-label={collapsed ? 'Expand navigation' : 'Collapse navigation'} title={collapsed ? 'Expand navigation' : 'Collapse navigation'}>{collapsed ? <FiChevronRight /> : <FiChevronLeft />}</button>
         <button className="sidebar-close" onClick={onClose} aria-label="Close navigation"><FiX /></button>
