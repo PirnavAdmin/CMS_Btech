@@ -54,7 +54,7 @@ const ATTENDANCE_COLUMNS = [
 export default function Attendance() {
   const { pathname } = useLocation()
   const {
-    activeAcademicYears,
+    currentAcademicYear,
     activeDepartments,
     activeCourses,
     getBranchesForCourse,
@@ -97,6 +97,13 @@ export default function Attendance() {
     faculty: '',
     facultyId: '',
   })
+  const currentAcademicYearId = currentAcademicYear?.id ?? currentAcademicYear?.academicYearId ?? ''
+  useEffect(() => {
+    if (!takeModalOpen || !currentAcademicYearId) return
+    setTakeScope(current => current.academicYearId === String(currentAcademicYearId)
+      ? current
+      : { ...current, academicYearId: String(currentAcademicYearId) })
+  }, [takeModalOpen, currentAcademicYearId])
   const [markingStudents, setMarkingStudents] = useState([])
   const [loadingStudents, setLoadingStudents] = useState(false)
   const [savingSession, setSavingSession] = useState(false)
@@ -263,7 +270,14 @@ export default function Attendance() {
       const selectedBranch = takeBranches.find(b => String(b.id) === String(takeScope.branchId))
       const selectedSemester = takeSemesters.find(s => String(s.id) === String(takeScope.semesterId))
       const selectedSection = takeSections.find(sec => String(sec.id) === String(takeScope.sectionId))
-      const selectedYear = activeAcademicYears.find(y => String(y.id) === String(takeScope.academicYearId))
+      const selectedYear = currentAcademicYear
+      const subjectAssignment = facultyAssignments.find(item => {
+        const assignedFacultyId = item.facultyId ?? item.employeeProfileId ?? item.faculty?.facultyId ?? item.faculty?.id
+        const assignedSubject = item.subjectName ?? item.subject?.subjectName ?? item.subject?.name ?? item.subject
+        return String(assignedFacultyId ?? '') === String(takeScope.facultyId) && String(assignedSubject ?? '').trim().toLowerCase() === takeScope.subject.trim().toLowerCase()
+      })
+      const subjectId = subjectAssignment?.subjectId ?? subjectAssignment?.subject?.subjectId ?? subjectAssignment?.subject?.id
+      if (!subjectId) throw new Error('The selected subject is not linked to a subject ID. Choose a subject assigned to this faculty member, or ask the backend team to support subjectId lookup.')
 
       await attendanceService.recordAttendance({
         academicYearId: takeScope.academicYearId,
@@ -271,6 +285,7 @@ export default function Attendance() {
         branchId: takeScope.branchId,
         semesterId: takeScope.semesterId,
         sectionId: takeScope.sectionId,
+        subjectId,
         academicYear: selectedYear?.name || '',
         course: selectedCourse?.name || '',
         courseCode: selectedCourse?.courseCode ?? selectedCourse?.code ?? selectedCourse?.shortName ?? '',
@@ -416,22 +431,19 @@ export default function Attendance() {
             {/* Filter Panel */}
             <div className="erp-card erp-filter-card">
               <div className="attendance-filter-toolbar">
-                <div className="erp-form-group">
-                  <label>Search Subject / Faculty</label>
-                  <div className="erp-input-icon-wrap">
-                    <FiSearch className="erp-input-icon" />
-                    <input
-                      type="text"
-                      className="erp-input"
-                      placeholder="Search..."
-                      value={filterQuery}
-                      onChange={(e) => {
-                        setFilterQuery(e.target.value)
-                        setCurrentPage(1)
-                      }}
-                    />
-                  </div>
-                </div>
+                <label className="course-search">
+                  <FiSearch />
+                  <input
+                    type="text"
+                    placeholder="Search by subject, faculty or student..."
+                    value={filterQuery}
+                    onChange={(e) => {
+                      setFilterQuery(e.target.value)
+                      setCurrentPage(1)
+                    }}
+                    aria-label="Search attendance"
+                  />
+                </label>
                 <button
                   type="button"
                   className={`attendance-filter-toggle${hasRegisterFilters ? ' attendance-filter-toggle--active' : ''}`}
@@ -623,7 +635,7 @@ export default function Attendance() {
               <article className="erp-card"><div className="erp-card-header"><div><h2 className="erp-card-title">Subject-wise Attendance</h2><p className="erp-card-subtitle">Attendance performance for every recorded subject.</p></div></div><ReportTable rows={subjectAttendance} empty="No subject sessions recorded yet." columns={[['Subject', row => row.subject], ['Sessions', row => row.sessions], ['Present / Total', row => `${row.present} / ${row.total}`], ['Attendance', row => <StatusBadge status={row.rate >= 75 ? 'Active' : 'Warning'} label={`${row.rate}%`} />]]} /></article>
               <article className="erp-card"><div className="erp-card-header"><div><h2 className="erp-card-title">Monthly Attendance</h2><p className="erp-card-subtitle">Monthly class attendance summary.</p></div></div><ReportTable rows={monthlyAttendance} empty="No monthly attendance data available." columns={[['Month', row => row.month], ['Sessions', row => row.sessions], ['Present / Total', row => `${row.present} / ${row.total}`], ['Attendance', row => <StatusBadge status={row.rate >= 75 ? 'Active' : 'Warning'} label={`${row.rate}%`} />]]} /></article>
             </div>
-            <article className="erp-card"><div className="erp-card-header"><div><h2 className="erp-card-title">Student Attendance Report</h2><p className="erp-card-subtitle">Student-wise attendance calculated from all recorded subject sessions.</p></div><ExportMenu rows={studentAttendance} columns={[{ key: 'rollNumber', label: 'Roll Number' }, { key: 'name', label: 'Student' }, { key: 'course', label: 'Course' }, { key: 'branch', label: 'Branch' }, { key: 'present', label: 'Present' }, { key: 'total', label: 'Total Classes' }, { key: 'rate', label: 'Attendance %' }]} title="Student Attendance Report" filename="student-attendance-report" /></div><ReportTable rows={studentAttendance} empty="No student attendance records available." columns={[['Roll Number', row => row.rollNumber], ['Student', row => row.name], ['Course / Branch', row => `${row.course} · ${row.branch}`], ['Present / Total', row => `${row.present} / ${row.total}`], ['Attendance', row => <StatusBadge status={row.rate >= 75 ? 'Active' : row.rate >= 65 ? 'Warning' : 'Danger'} label={`${row.rate}%`} />], ['Action', row => <button type="button" className="erp-btn erp-btn--secondary" onClick={() => setSelectedStudentReport(row)}><FiEye /> View</button>]]} /></article>
+            <article className="erp-card"><div className="erp-card-header"><div><h2 className="erp-card-title">Student Attendance Report</h2><p className="erp-card-subtitle">Student-wise attendance calculated from all recorded subject sessions.</p></div><ExportMenu rows={studentAttendance} columns={[{ key: 'rollNumber', label: 'Roll Number' }, { key: 'name', label: 'Student' }, { key: 'course', label: 'Course' }, { key: 'branch', label: 'Branch' }, { key: 'present', label: 'Present' }, { key: 'total', label: 'Total Classes' }, { key: 'rate', label: 'Attendance %' }]} title="Student Attendance Report" filename="student-attendance-report" /></div><ReportTable rows={studentAttendance} empty="No student attendance records available." columns={[['Roll Number', row => row.rollNumber], ['Student', row => row.name], ['Course / Branch', row => `${row.course} · ${row.branch}`], ['Present / Total', row => `${row.present} / ${row.total}`], ['Attendance', row => <StatusBadge status={row.rate >= 75 ? 'Active' : row.rate >= 65 ? 'Warning' : 'Danger'} label={`${row.rate}%`} />], ['Action', row => <button type="button" className="erp-btn erp-btn--icon" title="View Student Report" aria-label="View Student Report" onClick={() => setSelectedStudentReport(row)}><FiEye /></button>]]} /></article>
           </section>
         )}
 
@@ -643,21 +655,18 @@ export default function Attendance() {
               {/* Scope Selection Form */}
               <div className="erp-form-grid">
                 <div className="erp-form-group">
-                  <label>Academic Year *</label>
-                  <select
-                    className="erp-select"
-                    value={takeScope.academicYearId}
-                    onChange={(e) => setTakeScope(prev => ({ ...prev, academicYearId: e.target.value }))}
-                  >
-                    <option value="">Select Academic Year</option>
-                    {activeAcademicYears.map(y => (
-                      <option key={y.id} value={y.id}>{y.name}</option>
-                    ))}
-                  </select>
+                  <label>Academic Year <span className="attendance-required-mark">*</span></label>
+                  <input
+                    type="text"
+                    className="erp-input attendance-academic-year"
+                    value={currentAcademicYear?.name || currentAcademicYear?.academicYearName || ''}
+                    placeholder="No active academic year"
+                    readOnly
+                  />
                 </div>
 
                 <div className="erp-form-group">
-                  <label>Course *</label>
+                  <label>Course <span className="attendance-required-mark">*</span></label>
                   <select
                     className="erp-select"
                     value={takeScope.courseId}
@@ -682,7 +691,7 @@ export default function Attendance() {
                 </div>
 
                 <div className="erp-form-group">
-                  <label>Branch *</label>
+                  <label>Branch <span className="attendance-required-mark">*</span></label>
                   <select
                     className="erp-select"
                     value={takeScope.branchId}
@@ -708,7 +717,7 @@ export default function Attendance() {
                 </div>
 
                 <div className="erp-form-group">
-                  <label>Semester *</label>
+                  <label>Semester <span className="attendance-required-mark">*</span></label>
                   <select
                     className="erp-select"
                     value={takeScope.semesterId}
@@ -737,7 +746,7 @@ export default function Attendance() {
                 </div>
 
                 <div className="erp-form-group">
-                  <label>Session Date *</label>
+                  <label>Session Date <span className="attendance-required-mark">*</span></label>
                   <input
                     type="date"
                     className="erp-input"
@@ -747,7 +756,7 @@ export default function Attendance() {
                 </div>
 
                 <div className="erp-form-group">
-                  <label>Subject / Course Module *</label>
+                  <label>Subject / Course Module <span className="attendance-required-mark">*</span></label>
                   <input
                     type="text"
                     className="erp-input"
@@ -758,7 +767,7 @@ export default function Attendance() {
                 </div>
 
                 <div className="erp-form-group">
-                  <label>Faculty In-Charge *</label>
+                  <label>Faculty In-Charge <span className="attendance-required-mark">*</span></label>
                   <select
                     className="erp-select"
                     value={takeScope.facultyId || ''}
@@ -939,7 +948,7 @@ export default function Attendance() {
                             <td>{p.academic?.semester || 'Semester 1'}</td>
                             <td><strong className="text-danger">{rate}%</strong></td>
                             <td>{75 - rate}% required</td>
-                            <td><div className="attendance-shortage-status"><StatusBadge status={rate < 65 ? 'Danger' : 'Warning'} label={rate < 65 ? 'Critical' : 'Shortage'} /><button type="button" className="erp-btn erp-btn--secondary" onClick={() => setSelectedStudentReport(p.attendanceReport || { id: p.studentId || p.id, name: p.personal?.fullName || p.name, rollNumber: p.academic?.rollNumber || p.rollNumber, course: p.academic?.course || '-', branch: p.academic?.branch || '-', rate, present: 0, total: 0 })}><FiEye /> Details</button><button type="button" className="erp-btn erp-btn--secondary" onClick={() => notify(`Attendance shortage notification prepared for ${p.personal?.fullName || p.name || 'student'}.`, 'info')}><FiBell /> Notify</button></div></td>
+                            <td><div className="attendance-shortage-status"><StatusBadge status={rate < 65 ? 'Danger' : 'Warning'} label={rate < 65 ? 'Critical' : 'Shortage'} /><button type="button" className="erp-btn erp-btn--icon" title="View Details" aria-label="View Details" onClick={() => setSelectedStudentReport(p.attendanceReport || { id: p.studentId || p.id, name: p.personal?.fullName || p.name, rollNumber: p.academic?.rollNumber || p.rollNumber, course: p.academic?.course || '-', branch: p.academic?.branch || '-', rate, present: 0, total: 0 })}><FiEye /></button><button type="button" className="erp-btn erp-btn--secondary" onClick={() => notify(`Attendance shortage notification prepared for ${p.personal?.fullName || p.name || 'student'}.`, 'info')}><FiBell /> Notify</button></div></td>
                           </tr>
                         )
                       })

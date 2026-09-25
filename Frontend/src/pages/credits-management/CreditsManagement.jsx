@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import DashboardLayout from '../../layouts/DashboardLayout'
 import StatusBadge from '../../components/StatusBadge'
 import { useAcademic } from '../../context/AcademicContext'
+import { creditManagementApi, studentApi, facultyMasterApi, courseApi, branchApi } from '../../api/apiEndpoints'
 import './CreditsManagement.css'
 
 const STORAGE_KEYS = {
@@ -372,10 +373,6 @@ function createId(prefix) {
   return `${prefix}-${Date.now()}`
 }
 
-function calculateStatus(grade) {
-  return grade === 'F' ? 'Failed' : 'Completed'
-}
-
 const FALLBACK_ACADEMIC_YEAR = '2026-2027'
 
 function emptyFilters(academicYear = FALLBACK_ACADEMIC_YEAR) {
@@ -476,34 +473,23 @@ function CreditsManagement() {
         FALLBACK_ACADEMIC_YEAR
     )
 
-  const [students, setStudents] = useState(() =>
-    alignDemoAcademicYear(
-      getStoredData(STORAGE_KEYS.students, DEFAULT_STUDENTS),
-      activeAcademicYear
-    )
-  )
+  const [students, setStudents] = useState([])
 
-  const [subjects, setSubjects] = useState(() =>
-    alignDemoAcademicYear(
-      getStoredData(STORAGE_KEYS.subjects, DEFAULT_SUBJECTS),
-      activeAcademicYear
-    )
-  )
+  const [subjects, setSubjects] = useState([])
 
-  const [credits, setCredits] = useState(() =>
-    alignDemoAcademicYear(
-      getStoredData(STORAGE_KEYS.credits, DEFAULT_CREDITS),
-      activeAcademicYear
-    )
-  )
+  const [credits, setCredits] = useState([])
 
-  const [framework, setFramework] = useState(() =>
+  const [framework] = useState(() =>
     getStoredData(STORAGE_KEYS.framework, DEFAULT_FRAMEWORK)
   )
 
-  const [auditLogs, setAuditLogs] = useState(() =>
-    getStoredData(STORAGE_KEYS.audit, DEFAULT_AUDIT)
-  )
+  const [auditLogs, setAuditLogs] = useState([])
+  const [creditLoading, setCreditLoading] = useState(true)
+  const [masterCourses, setMasterCourses] = useState([])
+  const [masterBranches, setMasterBranches] = useState([])
+  const [masterSemesters, setMasterSemesters] = useState([])
+  const [creditDashboard, setCreditDashboard] = useState(null)
+  const [creditSummary, setCreditSummary] = useState(null)
 
   const [dashboardFilters, setDashboardFilters] = useState(emptyFilters())
   const [studentFilters, setStudentFilters] = useState(emptyFilters())
@@ -595,25 +581,51 @@ function CreditsManagement() {
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [])
 
+  const reloadCreditData = async () => {
+    setCreditLoading(true)
+    try {
+      const [studentRows, subjectRows, configurationRows, registrationRows, courseRows, branchRows, semesterRows, dashboard] = await Promise.all([
+        studentApi.getAll(), facultyMasterApi.getSubjects(), creditManagementApi.getConfigurations(),
+        creditManagementApi.getRegistrations({ status: 1 }), courseApi.getAll(), branchApi.getAll(), facultyMasterApi.getSemesters(), creditManagementApi.getDashboard().catch(() => null),
+      ])
+      const courseList = Array.isArray(courseRows) ? courseRows : []
+      const branchList = Array.isArray(branchRows) ? branchRows : []
+      const semesterList = Array.isArray(semesterRows) ? semesterRows : []
+      const configs = Array.isArray(configurationRows) ? configurationRows : []
+      const studentsLive = (studentRows || []).map(row => {
+        const academic = row.academic || row.academicInformation || {}
+        const personal = row.personal || {}
+        const courseId = row.courseId ?? academic.courseId
+        const branchId = row.branchId ?? academic.branchId
+        const semesterId = row.semesterId ?? academic.semesterId
+        const yearId = row.academicYearId ?? academic.academicYearId
+        return { ...row, id: String(row.studentId ?? row.id), name: row.fullName || row.studentName || personal.fullName || row.name || '', rollNo: row.studentCode || row.rollNumber || academic.rollNumber || '', courseId, branchId, semesterId, academicYearId: yearId, course: row.courseName || academic.courseName || academic.course || courseList.find(item => String(item.courseId ?? item.id) === String(courseId))?.courseName || '', branch: row.branchName || academic.branchName || academic.branch || branchList.find(item => String(item.branchId ?? item.id) === String(branchId))?.branchName || '', semester: row.semesterName || academic.semesterName || semesterList.find(item => String(item.semesterId ?? item.id) === String(semesterId))?.semesterName || '', academicYear: row.academicYearName || academic.academicYearName || activeAcademicYear, status: row.status ?? 'Active' }
+      }).filter(row => row.id && row.id !== 'undefined')
+      const subjectById = new Map((subjectRows || []).map(row => [String(row.subjectId ?? row.id), row]))
+      const configById = new Map(configs.map(row => [String(row.subjectId), row]))
+      const subjectsLive = [...subjectById.entries()].map(([id, row]) => {
+        const config = configById.get(id)
+        const subjectStatus = config?.status ?? row.status
+        const isActive = subjectStatus === undefined || subjectStatus === null || subjectStatus === true || Number(subjectStatus) === 1 || String(subjectStatus).toLowerCase() === 'active'
+        return { ...row, ...(config || {}), id, subjectId: id, code: row.subjectCode || row.code || config?.subjectCode || '', name: row.subjectName || row.name || config?.subjectName || '', credits: Number(config?.credits ?? row.credits ?? 0), courseId: config?.courseId ?? row.courseId, branchId: config?.branchId ?? row.branchId, semesterId: config?.semesterId ?? row.semesterId, configurationId: config?.creditConfigurationId, type: row.subjectType || row.type || 'Core', status: isActive ? 'Active' : 'Inactive', course: config?.courseName || row.courseName || '', branch: config?.branchName || row.branchName || '', semester: config?.semesterName || row.semesterName || '' }
+      })
+      const creditsLive = (registrationRows || []).map(row => {
+        const subject = subjectById.get(String(row.subjectId)) || {}
+        const student = studentsLive.find(item => String(item.id) === String(row.studentId)) || {}
+        const registrationStatus = String(row.registrationStatus || '').toUpperCase()
+        return { ...row, id: String(row.studentCreditRegistrationId ?? row.id), studentId: String(row.studentId), subjectId: String(row.subjectId), subjectCode: row.subjectCode || subject.subjectCode || subject.code || '', subjectName: row.subjectName || subject.subjectName || subject.name || '', credits: Number(row.registeredCredits || 0), semesterId: row.semesterId, semester: row.semesterName || semesterList.find(item => String(item.semesterId ?? item.id) === String(row.semesterId))?.semesterName || '', academicYearId: row.academicYearId, academicYear: row.academicYearName || activeAcademicYear, grade: row.grade || '', gradePoint: Number(row.gradePoints || 0), status: registrationStatus === 'COMPLETED' ? 'Completed' : registrationStatus === 'FAILED' ? 'Failed' : registrationStatus === 'DROPPED' ? 'Dropped' : 'Registered', type: subject.subjectType || subject.type || 'Core', attempt: Number(row.attempt || 1), studentName: row.studentName || student.name }
+      }).filter(row => row.id && row.id !== 'undefined')
+      setStudents(studentsLive); setSubjects(subjectsLive); setCredits(creditsLive)
+      setMasterCourses(courseList); setMasterBranches(branchList); setMasterSemesters(semesterList)
+      setCreditDashboard(dashboard)
+    } catch (error) { showNotice('error', error.message || 'Unable to load credit management data from the API.') }
+    finally { setCreditLoading(false) }
+  }
+  useEffect(() => { reloadCreditData() }, [])
   useEffect(() => {
-    saveData(STORAGE_KEYS.students, students)
-  }, [students])
-
-  useEffect(() => {
-    saveData(STORAGE_KEYS.subjects, subjects)
-  }, [subjects])
-
-  useEffect(() => {
-    saveData(STORAGE_KEYS.credits, credits)
-  }, [credits])
-
-  useEffect(() => {
-    saveData(STORAGE_KEYS.framework, framework)
-  }, [framework])
-
-  useEffect(() => {
-    saveData(STORAGE_KEYS.audit, auditLogs)
-  }, [auditLogs])
+    if (!selectedStudent?.id) { setCreditSummary(null); return }
+    creditManagementApi.getSummary({ studentId: Number(selectedStudent.id) }).then(setCreditSummary).catch(() => setCreditSummary(null))
+  }, [selectedStudentId, students])
 
   useEffect(() => {
     if (!notice.message) return
@@ -659,7 +671,7 @@ function CreditsManagement() {
     setAuditLogs((previous) => [entry, ...previous])
   }
 
-  const showNotice = (type, message) => {
+  function showNotice(type, message) {
     setNotice({ type, message })
   }
 
@@ -801,14 +813,16 @@ function CreditsManagement() {
   }, [credits, selectedStudentId])
 
   const selectedStudentSummary = useMemo(() => {
-    const total = selectedStudentCredits.reduce(
+    const localTotal = selectedStudentCredits.reduce(
       (sum, item) => sum + Number(item.credits || 0),
       0
     )
 
-    const completed = selectedStudentCredits
+    const localCompleted = selectedStudentCredits
       .filter((item) => item.status === 'Completed')
       .reduce((sum, item) => sum + Number(item.credits || 0), 0)
+    const total = Number(creditSummary?.registeredCredits ?? localTotal)
+    const completed = Number(creditSummary?.completedCredits ?? localCompleted)
 
     const failed = selectedStudentCredits
       .filter((item) => item.status === 'Failed')
@@ -853,7 +867,7 @@ function CreditsManagement() {
       shortage,
       graduationEligible,
     }
-  }, [selectedStudentCredits, framework])
+  }, [selectedStudentCredits, framework, creditSummary])
 
   const selectedStudentSemesterCredits = useMemo(() => {
     return SEMESTERS.map((semester) => {
@@ -1051,7 +1065,7 @@ function CreditsManagement() {
     setEditingCreditId(null)
   }
 
-  const handleCreditSubmit = (event) => {
+  const handleCreditSubmit = async (event) => {
     event.preventDefault()
 
     const student = students.find(
@@ -1122,28 +1136,30 @@ function CreditsManagement() {
       return
     }
 
-    const creditRecord = {
-      id: editingCreditId || createId('CR'),
-      studentId: student.id,
-      subjectId: subject.id,
-      subjectCode: subject.code,
-      subjectName: subject.name,
-      credits: Number(subject.credits),
-      semester: student.semester,
-      academicYear: student.academicYear,
-      grade: gradeInfo.grade,
-      gradePoint: gradeInfo.point,
-      status: calculateStatus(gradeInfo.grade),
-      type: subject.type,
-      attempt: Number(creditForm.attempt) || 1,
+    const semesterId = student.semesterId || subject.semesterId
+    if (!Number.isInteger(Number(student.id)) || !Number.isInteger(Number(subject.id)) || !Number.isInteger(Number(semesterId))) {
+      showNotice('error', 'Select a student, configured subject, and semester with valid backend IDs.')
+      return
+    }
+    if (!subject.configurationId) {
+      showNotice('error', 'This subject has no active credit configuration. Configure the existing subject before registering credits.')
+      return
+    }
+    try {
+      let registrationId = editingCreditId
+      if (!editingCreditId) {
+        const created = await creditManagementApi.createRegistration({ studentId: Number(student.id), subjectId: Number(subject.id), semesterId: Number(semesterId) })
+        registrationId = created.studentCreditRegistrationId || created.registrationId || created.id
+        if (!registrationId) throw new Error('Credit registration was created but the API response did not include its ID.')
+      }
+      await creditManagementApi.updateRegistration(registrationId, { registrationStatus: gradeInfo.grade === 'F' ? 'FAILED' : 'COMPLETED', grade: gradeInfo.grade, gradePoints: gradeInfo.point, isCompleted: true, status: 1 })
+      await reloadCreditData()
+    } catch (error) {
+      showNotice('error', error.message || 'Unable to save the credit registration.')
+      return
     }
 
     if (editingCreditId) {
-      setCredits((previous) =>
-        previous.map((item) =>
-          item.id === editingCreditId ? creditRecord : item
-        )
-      )
 
       addAudit(
         'Credit Updated',
@@ -1152,8 +1168,6 @@ function CreditsManagement() {
 
       showNotice('success', 'Credit record updated successfully.')
     } else {
-      setCredits((previous) => [...previous, creditRecord])
-
       addAudit(
         'Credit Registered',
         `${student.name} - ${subject.code} credit registered`
@@ -1166,27 +1180,12 @@ function CreditsManagement() {
     setSelectedStudentId(student.id)
   }
 
-  const handleDeleteCredit = (credit) => {
-    const student = students.find(
-      (item) => item.id === credit.studentId
-    )
-
-    const confirmed = window.confirm(
-      `Delete ${credit.subjectCode} credit for ${student?.name || 'student'}?`
-    )
-
-    if (!confirmed) return
-
-    setCredits((previous) =>
-      previous.filter((item) => item.id !== credit.id)
-    )
-
-    addAudit(
-      'Credit Deleted',
-      `${credit.subjectCode} credit removed from ${student?.name || credit.studentId}`
-    )
-
-    showNotice('success', 'Credit record deleted successfully.')
+  const handleDeleteCredit = async (credit) => {
+    try {
+      await creditManagementApi.updateRegistration(credit.id, { registrationStatus: 'DROPPED', grade: credit.grade || null, gradePoints: Number(credit.gradePoint || 0), isCompleted: false, status: 1 })
+      await reloadCreditData()
+      showNotice('success', 'Credit registration marked as dropped.')
+    } catch (error) { showNotice('error', error.message || 'Unable to drop this credit registration.') }
   }
 
   const openAddSubjectModal = () => {
@@ -1243,7 +1242,7 @@ function CreditsManagement() {
     setShowSubjectModal(true)
   }
 
-  const handleSubjectSubmit = (event) => {
+  const handleSubjectSubmit = async (event) => {
     event.preventDefault()
 
     const code = subjectForm.code.trim().toUpperCase()
@@ -1260,11 +1259,11 @@ function CreditsManagement() {
     }
 
     const duplicateCode = subjects.some((subject) => {
-      if (editingSubjectId && subject.id === editingSubjectId) {
+      if (editingSubjectId && String(subject.configurationId) === String(editingSubjectId)) {
         return false
       }
 
-      return subject.code.toUpperCase() === code
+      return subject.configurationId && String(subject.code).toUpperCase() === code
     })
 
     if (duplicateCode) {
@@ -1272,35 +1271,28 @@ function CreditsManagement() {
       return
     }
 
-    const subjectRecord = {
-      id: editingSubjectId || createId('SUB'),
-      code,
-      name,
-      shortName: subjectForm.shortName.trim(),
-      branch: subjectForm.branch,
-      course: subjectForm.course,
-      regulation: subjectForm.regulation,
-      semester: subjectForm.semester,
-      academicYear: subjectForm.academicYear,
-      type: subjectForm.type,
-      category: subjectForm.category.trim() || 'PCC',
-      lectureHours: Number(subjectForm.lectureHours) || 0,
-      tutorialHours: Number(subjectForm.tutorialHours) || 0,
-      practicalHours: Number(subjectForm.practicalHours) || 0,
-      credits: Number(subjectForm.credits),
-      internalMarks: Number(subjectForm.internalMarks) || 0,
-      externalMarks: Number(subjectForm.externalMarks) || 0,
-      totalMarks: Number(subjectForm.totalMarks) || 0,
-      status: subjectForm.status,
+    const masterSubject = subjects.find(subject => String(subject.code).toUpperCase() === code)
+    const masterCourse = masterCourses.find(item => String(item.courseName || item.name || item.courseCode || item.code).toLowerCase() === String(subjectForm.course).toLowerCase())
+    const masterBranch = masterBranches.find(item => String(item.branchName || item.name || item.branchCode || item.code).toLowerCase() === String(subjectForm.branch).toLowerCase())
+    const masterSemester = masterSemesters.find(item => String(item.semesterName || item.name || '').toLowerCase() === String(subjectForm.semester).toLowerCase() || String(item.semesterNumber) === String(subjectForm.semester).replace(/\D/g, ''))
+    const subjectId = masterSubject?.subjectId || masterSubject?.id
+    const courseId = masterSubject?.courseId || masterCourse?.courseId || masterCourse?.id
+    const branchId = masterSubject?.branchId || masterBranch?.branchId || masterBranch?.id
+    const semesterId = masterSubject?.semesterId || masterSemester?.semesterId || masterSemester?.id
+    if (!subjectId || !courseId || !branchId || !semesterId) {
+      showNotice('error', 'Credit configuration needs an existing backend subject, course, branch, and semester. Subject master creation is not available in the credits API.')
+      return
     }
-
+    const configPayload = { subjectId: Number(subjectId), courseId: Number(courseId), branchId: Number(branchId), semesterId: Number(semesterId), credits: Number(subjectForm.credits), minimumCredits: 0, maximumCredits: null, status: subjectForm.status === 'Active' ? 1 : 0 }
+    try {
+      if (editingSubjectId) await creditManagementApi.updateConfiguration(editingSubjectId, configPayload)
+      else await creditManagementApi.createConfiguration(configPayload)
+      await reloadCreditData()
+    } catch (error) {
+      showNotice('error', error.message || 'Unable to save credit configuration.')
+      return
+    }
     if (editingSubjectId) {
-      setSubjects((previous) =>
-        previous.map((subject) =>
-          subject.id === editingSubjectId ? subjectRecord : subject
-        )
-      )
-
       addAudit(
         'Subject Updated',
         `${code} subject credit configuration updated`
@@ -1308,8 +1300,6 @@ function CreditsManagement() {
 
       showNotice('success', 'Subject configuration updated successfully.')
     } else {
-      setSubjects((previous) => [...previous, subjectRecord])
-
       addAudit(
         'Subject Created',
         `${code} subject credit configuration created`
@@ -1322,7 +1312,7 @@ function CreditsManagement() {
     setEditingSubjectId(null)
   }
 
-  const handleDeleteSubject = (subject) => {
+  const handleDeleteSubject = async (subject) => {
     const used = credits.some(
       (credit) => credit.subjectId === subject.id
     )
@@ -1341,16 +1331,12 @@ function CreditsManagement() {
 
     if (!confirmed) return
 
-    setSubjects((previous) =>
-      previous.filter((item) => item.id !== subject.id)
-    )
-
-    addAudit(
-      'Subject Deleted',
-      `${subject.code} subject configuration deleted`
-    )
-
-    showNotice('success', 'Subject deleted successfully.')
+    if (!subject.configurationId) return showNotice('error', 'This subject has no credit configuration to deactivate.')
+    try {
+      await creditManagementApi.updateConfiguration(subject.configurationId, { subjectId: Number(subject.subjectId || subject.id), courseId: Number(subject.courseId), branchId: Number(subject.branchId), semesterId: Number(subject.semesterId), credits: Number(subject.credits), minimumCredits: 0, maximumCredits: null, status: 0 })
+      await reloadCreditData()
+      showNotice('success', 'Credit configuration marked inactive.')
+    } catch (error) { showNotice('error', error.message || 'Unable to deactivate this credit configuration.') }
   }
 
   const openFrameworkModal = () => {
@@ -1394,15 +1380,7 @@ function CreditsManagement() {
       return
     }
 
-    setFramework(nextFramework)
-
-    addAudit(
-      'Framework Updated',
-      'Academic credit framework rules updated'
-    )
-
-    showNotice('success', 'Credit framework updated successfully.')
-    setShowFrameworkModal(false)
+    showNotice('error', 'The backend does not expose an academic credit framework endpoint, so this configuration cannot be saved to the server.')
   }
 
   const runValidation = () => {
@@ -1634,22 +1612,7 @@ function CreditsManagement() {
   }
 
   const handleResetDemoData = () => {
-    const confirmed = window.confirm(
-      'Reset Credit Management data to the default demo data?'
-    )
-
-    if (!confirmed) return
-
-    setStudents(alignDemoAcademicYear(DEFAULT_STUDENTS, activeAcademicYear))
-    setSubjects(alignDemoAcademicYear(DEFAULT_SUBJECTS, activeAcademicYear))
-    setCredits(alignDemoAcademicYear(DEFAULT_CREDITS, activeAcademicYear))
-    setFramework(DEFAULT_FRAMEWORK)
-    setAuditLogs(DEFAULT_AUDIT)
-
-    setSelectedStudentId('')
-    setValidationResults([])
-
-    showNotice('success', 'Credit Management demo data reset successfully.')
+    reloadCreditData().then(() => showNotice('success', 'Credit data refreshed from backend.')).catch(error => showNotice('error', error.message || 'Unable to refresh credit data.'))
   }
 
   return (
@@ -1667,6 +1630,7 @@ function CreditsManagement() {
               Manage academic credits, subject mappings, student
               registrations, validation and graduation requirements.
             </p>
+            <small>{creditLoading ? 'Loading credit data...' : `Live API: ${creditDashboard?.totalRegistrations ?? credits.length} registrations · ${creditDashboard?.activeConfigurations ?? subjects.filter(subject => subject.configurationId).length} active configurations`}</small>
           </div>
 
           <div className="cm-header-actions">
@@ -3365,7 +3329,7 @@ function CreditsManagement() {
                 className="cm-btn cm-btn-danger"
                 onClick={handleResetDemoData}
               >
-                Reset Demo Data
+                Refresh API Data
               </button>
             </div>
           </section>

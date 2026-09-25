@@ -1,7 +1,7 @@
 import { resolveCollegeLogo } from '../utils/collegeLogo'
 import { getAccessToken } from './auth'
 const cleanUrl = (url) => (url || "").replace(/\/+$/, "");
-const DEFAULT_API_BASE_URL = "https://abreast-curling-tutor.ngrok-free.dev";
+const DEFAULT_API_BASE_URL = "https://dreamless-fidgeting-astronaut.ngrok-free.dev";
 
 const friendlyValidationMessage = (errors) => {
   if (!errors || typeof errors !== "object") return "";

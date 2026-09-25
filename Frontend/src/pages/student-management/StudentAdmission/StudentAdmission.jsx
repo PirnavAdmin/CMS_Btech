@@ -236,7 +236,6 @@ const validate = data => {
   const errors = {}
   REQUIRED.forEach(path => { if (!text(read(data, path))) errors[path] = 'This field is required.' })
   if (data.personal.dob && !validDob(data.personal.dob)) errors['personal.dob'] = 'Student must be at least 17 years old.'
-  if (data.parents.guardian.relationship === 'Other' && !text(data.parents.guardian.relationshipOther)) errors['parents.guardian.relationshipOther'] = 'Enter the relationship.'
   if (!data.contact.sameAddress) ['line1','town','city','district','state','pincode'].forEach(key => { if (!text(data.contact.permanentAddress[key])) errors[`contact.permanentAddress.${key}`] = 'This field is required.' })
   if (data.personal.aadhaar && !validAadhaar(data.personal.aadhaar)) errors['personal.aadhaar'] = 'Enter a valid 12-digit Aadhaar number.'
   ;['contact.mobile','contact.alternateMobile','parents.father.mobile','parents.mother.mobile','parents.guardian.mobile'].forEach(path => { if (read(data, path) && !/^[6-9]\d{9}$/.test(read(data, path))) errors[path] = 'Enter a valid 10-digit Indian mobile number starting with 6, 7, 8, or 9.' })
@@ -258,12 +257,14 @@ const validate = data => {
 }
 
 const duplicateAdmissionMessage = (rows, candidate, currentAdmissionId = '') => {
-  const normalize = value => String(value || '').trim().toLowerCase()
   const digits = value => String(value || '').replace(/\D/g, '')
-  const candidateId = String(currentAdmissionId || candidate.id || candidate.admissionId || '')
+  const candidateId = String(currentAdmissionId || candidate.admissionId || candidate.studentAdmissionId || '')
   const match = rows.map(admissionFromApi).find((row) => {
-    const rowId = String(row.id || row.admissionId || '')
-    if (candidateId && rowId === candidateId) return false
+    // Normalized admissions use `id` for the student profile when one exists;
+    // compare the admission-specific ID first so editing this same record does
+    // not report its Aadhaar/mobile as a duplicate of itself.
+    const rowAdmissionId = String(row.admissionId ?? row.studentAdmissionId ?? row.id ?? '')
+    if (candidateId && rowAdmissionId === candidateId) return false
     return (digits(candidate.personal?.aadhaar).length === 12 && digits(row.personal?.aadhaar) === digits(candidate.personal?.aadhaar))
       || (digits(candidate.contact?.mobile).length === 10 && digits(row.contact?.mobile) === digits(candidate.contact?.mobile))
   })
@@ -284,7 +285,6 @@ function Field({ data, path, label, update, options, type = 'text', readOnly = f
     (data?.academic?.admissionType === 'Lateral Entry' && path === 'academic.quota') ||
     (data?.academic?.admissionType === 'Lateral Entry' && data?.academic?.quota === 'Other' && path === 'academic.quotaOther') ||
     (data?.previousEducation?.intermediate?.stream === 'Other' && path === 'previousEducation.intermediate.streamOther') ||
-    (data?.parents?.guardian?.relationship === 'Other' && path === 'parents.guardian.relationshipOther') ||
     (data?.admission?.hostel === 'Yes' && ['admission.hostelPreference', 'admission.hostelRoomType'].includes(path)) ||
     (data?.admission?.transport === 'Yes' && path === 'admission.transportRoute')
   )
@@ -1045,25 +1045,32 @@ function AdmissionForm() {
   useEffect(() => { dataRef.current = data }, [data])
   useEffect(() => { if (!data.application.date) setData(current => ({ ...current, application: { ...current.application, date: new Date().toISOString().slice(0, 10) } })) }, [data.application.date])
   useEffect(() => {
-    if (!validId) {
-      setData(current => {
-        let changed = false;
-        let next = { ...current };
-        if (!next.admission?.collegeId && globalCollegeId) {
-          next = setPath(next, 'admission.collegeId', globalCollegeId);
-          next = setPath(next, 'admission.college', globalCollege?.name || globalCollege?.collegeName || '');
-          changed = true;
-        }
-        if (!next.academic?.academicYearId && globalAcademicYearId) {
-          next = setPath(next, 'academic.academicYearId', globalAcademicYearId);
-          next = setPath(next, 'academic.academicYear', globalAcademicYear?.name || globalAcademicYear?.academicYearName || '');
-          changed = true;
-        }
-        return changed ? next : current;
-      });
+    setData(current => {
+      let next = current;
+      if (!next.admission?.collegeId && globalCollegeId) {
+        next = setPath(next, 'admission.collegeId', globalCollegeId);
+        next = setPath(next, 'admission.college', globalCollege?.name || globalCollege?.collegeName || next.admission?.college || '');
+      }
+      if (!next.academic?.academicYearId && globalAcademicYearId) {
+        next = setPath(next, 'academic.academicYearId', globalAcademicYearId);
+        next = setPath(next, 'academic.academicYear', globalAcademicYear?.name || globalAcademicYear?.academicYearName || next.academic?.academicYear || '');
+      }
+      return next;
+    });
+  }, [validId, globalCollegeId, globalCollege, globalAcademicYearId, globalAcademicYear, data.admission.collegeId, data.academic.academicYearId]);
+  useEffect(() => {
+    if (!masters.colleges.length) return;
+    const college = masters.colleges.find(item =>
+      (data.admission.collegeId && same(item.collegeId ?? item.id, data.admission.collegeId)) ||
+      (data.admission.college && String(item.collegeName ?? item.name ?? item.institutionName ?? '').trim().toLowerCase() === String(data.admission.college).trim().toLowerCase())
+    );
+    if (!college) return;
+    const collegeId = college.collegeId ?? college.id;
+    const collegeName = college.collegeName ?? college.name ?? college.institutionName ?? '';
+    if ((!data.admission.collegeId && collegeId) || (!data.admission.college && collegeName)) {
+      setData(current => ({ ...current, admission: { ...current.admission, collegeId: current.admission.collegeId || collegeId, college: current.admission.college || collegeName } }));
     }
-  }, [validId, globalCollegeId, globalCollege, globalAcademicYearId, globalAcademicYear]);
-  useEffect(() => { if (data.admission.collegeId || !data.admission.college || !masters.colleges.length) return; const college = masters.colleges.find(item => String(item.collegeName ?? item.name ?? item.institutionName ?? '').trim().toLowerCase() === String(data.admission.college).trim().toLowerCase()); if (college) setData(current => ({ ...current, admission: { ...current.admission, collegeId: college.collegeId ?? college.id } })) }, [masters.colleges, data.admission.collegeId, data.admission.college])
+  }, [masters.colleges, data.admission.collegeId, data.admission.college]);
   useEffect(() => {
     if (data.admission.hostel !== 'Yes') return
     const preference = data.personal.gender === 'Male' ? 'Boys Hostel' : data.personal.gender === 'Female' ? 'Girls Hostel' : ''
@@ -1224,7 +1231,7 @@ function AdmissionForm() {
   const academicOption=(item,idKeys,nameKeys)=>({id:idKeys.map(key=>read(item,key)).find(value=>value!=null&&value!==''),name:nameKeys.map(key=>read(item,key)).find(Boolean)||''})
   const yearOptions=masters.years.map(item=>academicOption(item,['academicYearId','id'],['academicYearName','name'])).filter(item=>item.id)
   const selectedCollegeId = data.admission.collegeId
-  const courseOptions=masters.courses.map(item=>({...academicOption(item,['courseId','id'],['courseName','name']),code:item.courseCode??item.code??item.shortName??'',collegeId:item.collegeId??item.college?.collegeId??item.college?.id})).filter(item=>item.id&&(!selectedCollegeId||same(item.collegeId,selectedCollegeId)))
+  const courseOptions=masters.courses.map(item=>({...academicOption(item,['courseId','id'],['courseName','name']),code:item.courseCode??item.code??item.shortName??'',collegeId:item.collegeId??item.college?.collegeId??item.college?.id})).filter(item=>item.id&&(!selectedCollegeId||!item.collegeId||same(item.collegeId,selectedCollegeId)))
   const collegeCourseIds = new Set(courseOptions.map(item => String(item.id)))
   const branchOptions=masters.branches.map(item=>({...academicOption(item,['branchId','id'],['branchName','name','branchShortName','shortName']),code:item.branchCode??item.code??item.shortName??'',courseId:item.courseId??item.course?.courseId??item.course?.id,collegeId:item.collegeId??item.college?.collegeId??item.college?.id})).filter(item=>item.id&&(!selectedCollegeId||same(item.collegeId,selectedCollegeId)||collegeCourseIds.has(String(item.courseId)))&&(!data.academic.courseId||!item.courseId||same(item.courseId,data.academic.courseId)))
   const collegeOptions=masters.colleges.map(item=>({id:item.collegeId??item.id,name:item.collegeName??item.name??item.institutionName??''})).filter(item=>item.id&&item.name)
@@ -1232,6 +1239,7 @@ function AdmissionForm() {
   const screens = [
     <Section key="identity" title="Student Identity" icon={FiUser} hint="Core identity and government identification details"><PhotoUpload data={data} update={update} notify={notify} />{field('personal.firstName','First Name')}{field('personal.middleName','Middle Name')}{field('personal.lastName','Last Name')}{field('personal.gender','Gender',['Female','Male','Non-binary'])}{field('personal.dob','Date of Birth',null,'date')}{field('personal.bloodGroup','Blood Group',['A+','A-','B+','B-','AB+','AB-','O+','O-'])}{field('personal.nationality','Nationality')}{field('personal.aadhaar','Aadhaar Number')}</Section>,
     <><Section title="Contact Information" icon={FiPhone}>{field('contact.mobile','Student Mobile')}{field('contact.alternateMobile','Alternate Mobile')}{field('contact.email','Student Email',null,'email')}{field('contact.alternateEmail','Alternate Email',null,'email')}</Section><Section title="Current Address" icon={FiHome}><AddressFields data={data} prefix="contact.currentAddress" update={update} errors={errors} />{pinStatus.current && <p className={`sa-pincode-status ${pinStatus.current.includes('filled') ? 'success' : ''}`}>{pinStatus.current}</p>}</Section><Section title="Permanent Address" icon={FiHome}><label className="sa-check sa-span-all"><input type="checkbox" checked={data.contact.sameAddress} onChange={event => update('contact.sameAddress', event.target.checked)} /><span>Permanent address same as current address</span></label>{!data.contact.sameAddress && <><AddressFields data={data} prefix="contact.permanentAddress" update={update} errors={errors} />{pinStatus.permanent && <p className={`sa-pincode-status ${pinStatus.permanent.includes('filled') ? 'success' : ''}`}>{pinStatus.permanent}</p>}</>}</Section></>,
+    <><Section title="Father Details" icon={FiUsers} hint="Optional parent or guardian contact information.">{field('parents.father.name','Father Name')}{field('parents.father.mobile','Father Mobile')}{field('parents.father.email','Father Email',null,'email')}{field('parents.father.occupation','Father Occupation')}{field('parents.father.qualification','Father Qualification')}{field('parents.father.income','Father Annual Income',null,'number')}</Section><Section title="Mother Details" icon={FiUsers}>{field('parents.mother.name','Mother Name')}{field('parents.mother.mobile','Mother Mobile')}{field('parents.mother.email','Mother Email',null,'email')}{field('parents.mother.occupation','Mother Occupation')}{field('parents.mother.qualification','Mother Qualification')}{field('parents.mother.income','Mother Annual Income',null,'number')}</Section><Section title="Guardian Details" icon={FiUsers}>{field('parents.guardian.name','Guardian Name')}{field('parents.guardian.relationship','Relationship',['Father','Mother','Guardian','Other'])}{data.parents.guardian.relationship === 'Other' && field('parents.guardian.relationshipOther','Specify Relationship')}{field('parents.guardian.mobile','Guardian Mobile')}{field('parents.guardian.email','Guardian Email',null,'email')}{field('parents.guardian.occupation','Guardian Occupation')}{field('parents.guardian.qualification','Guardian Qualification')}{field('parents.guardian.income','Guardian Annual Income',null,'number')}{field('parents.primaryContact','Primary Contact',['Father','Mother','Guardian'])}{field('parents.emergencyMobile','Emergency Contact Mobile')}</Section></>,
     <Section key="academic" title="Academic Enrollment" icon={FiBookOpen} hint="Review college and academic year, then select the available course and branch.">{field('academic.academicYear','Academic Year',null,'text',true)}{field('admission.college','Joining College',null,'text',true)}{field('academic.admissionType','Admission Type',ADMISSION_TYPES)}{data.academic.admissionType === 'Lateral Entry' && <>{field('academic.quota','Admission Quota',ADMISSION_QUOTAS)}{data.academic.quota === 'Other' && field('academic.quotaOther','Specify Admission Quota')}</>}{masterField('academic.course','academic.courseId','Course',courseOptions,!selectedCollegeId,[['academic.branchId','academic.branch']])}{field('academic.courseCode','Course Code',null,'text',true)}{masterField('academic.branch','academic.branchId','Branch',branchOptions,!data.academic.courseId)}{field('academic.branchCode','Branch Code',null,'text',true)}{field('academic.studentCategory','Student Category',['General','SC','ST','BC','EWS','Other'])}{field('academic.regulation','Regulation')}</Section>,
     <><Section title="10th / SSC" icon={FiBookOpen} hint="Enter only the essential school details.">{field('previousEducation.tenth.board','Board')}{field('previousEducation.tenth.institution','School Name')}{field('previousEducation.tenth.passingYear','Year of Passing')}{field('previousEducation.tenth.score','Percentage (0–100)',null,'number')}</Section><Section title="Intermediate / Diploma" icon={FiBookOpen} hint="Enter only the essential qualifying-education details.">{field('previousEducation.intermediate.board','Board / University')}{field('previousEducation.intermediate.institution','College Name')}{field('previousEducation.intermediate.passingYear','Year of Passing')}{field('previousEducation.intermediate.stream','Stream',['MPC','Other'])}{data.previousEducation.intermediate.stream === 'Other' && field('previousEducation.intermediate.streamOther','Specify Stream')}{field('previousEducation.intermediate.score','Percentage (0–100)',null,'number')}</Section></>,
     <><Section title="Application Information" icon={FiFileText} hint="Registration details.">{field('application.number','Registration Number',null,'text',true)}{field('application.date','Registration Date',null,'date',false)}{field('admission.batch','Batch')}</Section><Section title="Student Services" icon={FiHome}>{field('admission.hostel','Hostel Required',['No','Yes'])}{data.admission.hostel === 'Yes' && <>{field('admission.hostelPreference','Hostel Preference',data.personal.gender === 'Male' ? ['Boys Hostel'] : data.personal.gender === 'Female' ? ['Girls Hostel'] : ['Boys Hostel','Girls Hostel'],undefined,data.personal.gender === 'Male' || data.personal.gender === 'Female')}{field('admission.hostelRoomType','Room Type / Beds',Object.keys(HOSTEL_FEES))}</>}{field('admission.transport','Transportation Required',['No','Yes'])}{data.admission.transport === 'Yes' && field('admission.transportRoute','Transport Route',Object.keys(TRANSPORT_FEES))}</Section></>,
@@ -1322,11 +1330,9 @@ function AdmissionForm() {
   const skipCurrentStep = () => {
     if (![2, 4, 7].includes(step)) return
     if (step === 2) {
-      // Parent/guardian information is optional. Remove any partially entered
-      // optional values so their format validation cannot block final submission.
       setData(current => ({ ...current, parents: empty().parents }))
       setErrors(current => Object.fromEntries(Object.entries(current).filter(([path]) => !path.startsWith('parents.'))))
-      notify('Parent / guardian details skipped.', 'info')
+      notify('Parent / Guardian details skipped.', 'info')
     } else if (step === 4) {
       // Previous education is optional. Clear partially entered values so this
       // step can be skipped without optional format validation blocking submit.
@@ -1366,7 +1372,7 @@ function AdmissionForm() {
       setSubmitting(false);
     }
   }
-  return <><Breadcrumb tail={id ? 'Edit Admission' : 'New Admission'} /><header className="sa-page-header sa-wizard-header"><div><h1>{id ? 'Edit Student Admission' : 'New Student Admission'}</h1><p>Registration Number <strong>{data.application.number}</strong></p></div><div><Badge value={data.status} /><Button onClick={() => navigate('/student-management/admissions')}>Cancel</Button></div></header><WizardStepper step={step} setStep={setStep} /><form className="sa-wizard-card" onSubmit={event => event.preventDefault()}><header className="sa-step-heading"><div><small>Step {step + 1} of {STEPS.length}</small><h2>{STEPS[step]}</h2></div><span>{Math.round(((step + 1) / STEPS.length) * 100)}% complete</span></header>{screens[step]}{step === STEPS.length - 1 && <label className="sa-declaration"><input type="checkbox" checked={declared} onChange={event => setDeclared(event.target.checked)} /><span><strong>Registration Declaration</strong>I confirm that the information entered above is correct.</span></label>}<footer className="sa-wizard-actions"><Button disabled={!step || submitting} onClick={() => setStep(current => current - 1)}><FiArrowLeft /> Previous</Button><span />{[2, 4].includes(step) && <Button disabled={submitting} onClick={skipCurrentStep}>Skip</Button>}{step < STEPS.length - 1 ? <Button primary onClick={nextStep}>Save & Continue <FiArrowRight /></Button> : <Button primary disabled={!declared || submitting} onClick={requestSubmit}>{submitting ? 'Submitting...' : 'Submit Application'}</Button>}</footer></form>{confirmSubmit && <ConfirmDialog icon={FiCheckCircle} title="Confirm Registration Submission" confirmLabel="Confirm & Submit" onCancel={() => setConfirmSubmit(false)} onConfirm={submit}><p>Please verify the student details below. Once submitted, the registration will be sent to the admissions team for review.</p><dl><div><dt>Student</dt><dd>{studentName(data)}</dd></div><div><dt>Registration Number</dt><dd>{data.application.number}</dd></div></dl></ConfirmDialog>}</>
+  return <><Breadcrumb tail={id ? 'Edit Admission' : 'New Admission'} /><header className="sa-page-header sa-wizard-header"><div><h1>{id ? 'Edit Student Admission' : 'New Student Admission'}</h1><p>Registration Number <strong>{data.application.number}</strong></p></div><div><Badge value={data.status} /><Button onClick={() => navigate('/student-management/admissions')}>Cancel</Button></div></header><WizardStepper step={step} setStep={setStep} /><form className="sa-wizard-card" onSubmit={event => event.preventDefault()}><header className="sa-step-heading"><div><small>Step {step + 1} of {STEPS.length}</small><h2>{STEPS[step]}</h2></div><span>{Math.round(((step + 1) / STEPS.length) * 100)}% complete</span></header>{screens[step]}{step === STEPS.length - 1 && <label className="sa-declaration"><input type="checkbox" checked={declared} onChange={event => setDeclared(event.target.checked)} /><span><strong>Registration Declaration</strong>I confirm that the information entered above is correct.</span></label>}<footer className="sa-wizard-actions"><Button disabled={!step || submitting} onClick={() => setStep(current => current - 1)}><FiArrowLeft /> Previous</Button><span />{[2, 4, 7].includes(step) && <Button disabled={submitting} onClick={skipCurrentStep}>Skip</Button>}{step < STEPS.length - 1 ? <Button primary onClick={nextStep}>Save & Continue <FiArrowRight /></Button> : <Button primary disabled={!declared || submitting} onClick={requestSubmit}>{submitting ? 'Submitting...' : 'Submit Application'}</Button>}</footer></form>{confirmSubmit && <ConfirmDialog icon={FiCheckCircle} title="Confirm Registration Submission" confirmLabel="Confirm & Submit" onCancel={() => setConfirmSubmit(false)} onConfirm={submit}><p>Please verify the student details below. Once submitted, the registration will be sent to the admissions team for review.</p><dl><div><dt>Student</dt><dd>{studentName(data)}</dd></div><div><dt>Registration Number</dt><dd>{data.application.number}</dd></div></dl></ConfirmDialog>}</>
 }
 
 function InfoGrid({ title, items }) {

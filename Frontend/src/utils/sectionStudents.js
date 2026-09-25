@@ -9,9 +9,28 @@ export function sectionStudentProfiles(profiles, admissions) {
   const normalizedAdmissions = admissions.filter(row => isApprovedAdmission(row.currentStatus ?? row.admissionStatus ?? row.applicationStatus ?? row.status)).map(normalizeCanonicalStudent)
   const approved = approvedStudentProfiles(profiles.map(row => normalizeCanonicalStudent({ ...row, studentId: row.studentId || row.header?.studentId || row.personalInformation?.studentId || row.id })), admissions)
   const profileByStudentId = new Map(approved.map(profile => [text(profile.studentId), profile]))
+  const admissionByStudentId = new Map(admissions.map(row => {
+    const canonical = normalizeCanonicalStudent(row)
+    return [text(canonical.studentId || row.studentId || row.student?.studentId || row.student?.id), row]
+  }).filter(([id]) => id))
+  // Student profiles can be created directly after enrollment and may not have
+  // an admission row. Include those real, academically mapped profiles while
+  // keeping drafts, rejected applications, and incomplete profiles out.
+  const standaloneProfiles = profiles.flatMap(row => {
+    const studentId = text(row.studentId || row.header?.studentId || row.personalInformation?.studentId || row.id)
+    if (!/^\d+$/.test(studentId)) return []
+    const relatedAdmission = admissionByStudentId.get(studentId)
+    if (relatedAdmission && !isApprovedAdmission(relatedAdmission.currentStatus ?? relatedAdmission.admissionStatus ?? relatedAdmission.applicationStatus ?? relatedAdmission.status)) return []
+    if (relatedAdmission) return []
+    const status = text(row.studentStatus ?? row.status ?? row.currentStatus ?? row.profileStatus).toUpperCase()
+    if (row.isActive === false || row.isDeleted === true || ['0', 'DRAFT', 'PENDING', 'REJECTED', 'INACTIVE', 'DELETED', 'WITHDRAWN'].includes(status)) return []
+    const canonical = normalizeCanonicalStudent({ ...row, studentId })
+    if (!text(canonical.academic.branchId || canonical.academic.branch)) return []
+    return [canonical]
+  })
   const seen = new Set()
   // Admissions are authoritative for eligibility and academic mapping. Profiles only enrich records not already represented by an admission.
-  const candidates = [...normalizedAdmissions, ...approved]
+  const candidates = [...normalizedAdmissions, ...approved, ...standaloneProfiles]
   return candidates.flatMap(profile => {
     // Admission IDs cannot be submitted as student IDs.
     const id = text(profile.studentId)

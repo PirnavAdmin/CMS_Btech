@@ -473,6 +473,11 @@
 .sm-error { color: #b91c1c; }
 .sm-modal--wide { max-width: 880px; }
 .sm-modal--details { max-width: 700px; }
+.sm-modal--confirm { max-width: 440px; padding: 26px; gap: 12px; }
+.sm-modal--confirm h2 { margin: 0; color: #0f172a; font-size: 1.2rem; }
+.sm-modal--confirm p { margin: 0; color: #64748b; line-height: 1.55; }
+.sm-confirm-icon { display: grid; width: 42px; height: 42px; place-items: center; border-radius: 50%; color: #b91c1c; background: #fee2e2; font-size: 1.2rem; }
+.sm-modal--confirm .sm-modal-footer { justify-content: flex-end; gap: 10px; margin: 4px -26px -26px; }
 .sm-modal-header p { margin: 4px 0 0; color: #64748b; font-size: .88rem; }
 .sm-modal-body section > h3, .sm-preview strong, .sm-details-section h3 { font-size: .78rem; letter-spacing: .08em; text-transform: uppercase; color: #475569; margin: 0 0 12px; }
 .sm-modal-body section { border-bottom: 1px solid #e2e8f0; padding-bottom: 18px; }

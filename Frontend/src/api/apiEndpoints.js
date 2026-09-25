@@ -10,7 +10,7 @@ if (typeof window !== 'undefined' && window.localStorage) {
 }
 
 const normalizeBaseUrl = (value = '') => value.trim().replace(/\/+$/, '')
-const DEFAULT_API_BASE_URL = 'https://abreast-curling-tutor.ngrok-free.dev'
+const DEFAULT_API_BASE_URL = 'https://dreamless-fidgeting-astronaut.ngrok-free.dev'
 
 export const API_BASE_URL = import.meta.env.DEV
   ? ''
@@ -193,9 +193,32 @@ export const API_ENDPOINTS = Object.freeze({
     export: endpoint('/api/v1/faculty-payroll/export'),
   }),
   studentAttendance: Object.freeze({
-    list: endpoint('/api/v1/attendance'),
-    create: endpoint('/api/v1/attendance'),
-    studentStats: (studentId) => endpoint(`/api/v1/attendance/students/${studentId}/summary`),
+    list: endpoint('/api/v1/student-attendance/sessions'),
+    create: endpoint('/api/v1/student-attendance/sessions'),
+    detail: (sessionId) => endpoint(`/api/v1/student-attendance/sessions/${sessionId}`),
+    students: (sessionId) => endpoint(`/api/v1/student-attendance/sessions/${sessionId}/students`),
+    mark: (sessionId) => endpoint(`/api/v1/student-attendance/sessions/${sessionId}/mark`),
+    status: (sessionId) => endpoint(`/api/v1/student-attendance/sessions/${sessionId}/status`),
+    daily: endpoint('/api/v1/student-attendance/reports/daily'),
+    subjectReport: endpoint('/api/v1/student-attendance/reports/subject'),
+    monthly: endpoint('/api/v1/student-attendance/reports/monthly'),
+  }),
+  credits: Object.freeze({
+    dashboard: endpoint('/api/v1/credits/dashboard'),
+    configurations: endpoint('/api/v1/credits/configurations'),
+    configuration: id => endpoint(`/api/v1/credits/configurations/${id}`),
+    registrations: endpoint('/api/v1/credits/registrations'),
+    registration: id => endpoint(`/api/v1/credits/registrations/${id}`),
+    summary: endpoint('/api/v1/credits/summary'),
+  }),
+  electives: Object.freeze({
+    groups: endpoint('/api/v1/electives/groups'),
+    groupSubjects: id => endpoint(`/api/v1/electives/groups/${id}/subjects`),
+    studentSelections: id => endpoint(`/api/v1/students/${id}/electives`),
+    approvals: endpoint('/api/v1/elective-approvals'),
+    approval: id => endpoint(`/api/v1/elective-approvals/${id}`),
+    allocations: endpoint('/api/v1/elective-allocations'),
+    allocation: id => endpoint(`/api/v1/elective-allocations/${id}`),
   }),
   results: Object.freeze({
     list: endpoint('/api/v1/results'),
@@ -1101,7 +1124,36 @@ export const studentPromotionApi = {
 export const studentAttendanceApi = {
   list: async (params) => listData(await request(withQuery(API_ENDPOINTS.studentAttendance.list, params))),
   create: async (payload) => normalizeRecord(await request(API_ENDPOINTS.studentAttendance.create, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) })),
-  getStudentStats: async (studentId) => normalizeRecord(await request(API_ENDPOINTS.studentAttendance.studentStats(requiredId(studentId, 'Student ID')))),
+  getById: async (sessionId, params) => normalizeRecord(await request(withQuery(API_ENDPOINTS.studentAttendance.detail(requiredId(sessionId, 'Session ID')), params))),
+  getStudents: async (sessionId, params) => normalizeRecord(await request(withQuery(API_ENDPOINTS.studentAttendance.students(requiredId(sessionId, 'Session ID')), params))),
+  mark: async (sessionId, payload, params) => normalizeRecord(await request(withQuery(API_ENDPOINTS.studentAttendance.mark(requiredId(sessionId, 'Session ID')), params), { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) })),
+  updateStatus: async (sessionId, payload, params) => normalizeRecord(await request(withQuery(API_ENDPOINTS.studentAttendance.status(requiredId(sessionId, 'Session ID')), params), { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) })),
+  getDailyReport: async (params) => normalizeRecord(await request(withQuery(API_ENDPOINTS.studentAttendance.daily, params))),
+  getSubjectReport: async (params) => normalizeRecord(await request(withQuery(API_ENDPOINTS.studentAttendance.subjectReport, params))),
+  getMonthlyReport: async (params) => normalizeRecord(await request(withQuery(API_ENDPOINTS.studentAttendance.monthly, params))),
+}
+export const creditManagementApi = {
+  getDashboard: async params => normalizeRecord(await request(withQuery(API_ENDPOINTS.credits.dashboard, params))),
+  getConfigurations: async params => listData(await request(withQuery(API_ENDPOINTS.credits.configurations, params))),
+  createConfiguration: async payload => normalizeRecord(await jsonRequest(API_ENDPOINTS.credits.configurations, 'POST', payload)),
+  updateConfiguration: async (id, payload) => normalizeRecord(await jsonRequest(API_ENDPOINTS.credits.configuration(requiredId(id, 'Configuration ID')), 'PUT', payload)),
+  getRegistrations: async params => listData(await request(withQuery(API_ENDPOINTS.credits.registrations, params))),
+  getRegistration: async id => normalizeRecord(await request(API_ENDPOINTS.credits.registration(requiredId(id, 'Registration ID')))),
+  createRegistration: async payload => normalizeRecord(await jsonRequest(API_ENDPOINTS.credits.registrations, 'POST', payload)),
+  updateRegistration: async (id, payload) => normalizeRecord(await jsonRequest(API_ENDPOINTS.credits.registration(requiredId(id, 'Registration ID')), 'PUT', payload)),
+  getSummary: async params => normalizeRecord(await request(withQuery(API_ENDPOINTS.credits.summary, params))),
+}
+export const electiveManagementApi = {
+  getGroups: async params => listData(await request(withQuery(API_ENDPOINTS.electives.groups, params))),
+  createGroup: async payload => normalizeRecord(await jsonRequest(API_ENDPOINTS.electives.groups, 'POST', payload)),
+  getGroupSubjects: async id => listData(await request(API_ENDPOINTS.electives.groupSubjects(requiredId(id, 'Elective group ID')))),
+  addGroupSubjects: async (id, subjectIds) => normalizeRecord(await jsonRequest(API_ENDPOINTS.electives.groupSubjects(requiredId(id, 'Elective group ID')), 'POST', { subjectIds })),
+  getStudentSelections: async id => listData(await request(API_ENDPOINTS.electives.studentSelections(requiredId(id, 'Student ID')))),
+  createStudentSelection: async (id, payload) => normalizeRecord(await jsonRequest(API_ENDPOINTS.electives.studentSelections(requiredId(id, 'Student ID')), 'POST', payload)),
+  getApprovals: async params => listData(await request(withQuery(API_ENDPOINTS.electives.approvals, params))),
+  updateApproval: async (id, payload) => normalizeRecord(await jsonRequest(API_ENDPOINTS.electives.approval(requiredId(id, 'Selection ID')), 'PUT', payload)),
+  getAllocations: async params => listData(await request(withQuery(API_ENDPOINTS.electives.allocations, params))),
+  createAllocation: async (id, payload = {}) => normalizeRecord(await jsonRequest(API_ENDPOINTS.electives.allocation(requiredId(id, 'Selection ID')), 'POST', payload)),
 }
 export const resultsApi = {
   list: async (params) => listData(await request(withQuery(API_ENDPOINTS.results.list, params))),

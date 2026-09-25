@@ -169,7 +169,7 @@
 
 .attendance-page .erp-filter-card { padding: 17px 20px; }
 .attendance-page .erp-filter-grid { display: grid; grid-template-columns: minmax(230px, 1.6fr) repeat(3, minmax(150px, .8fr)) auto; align-items: end; gap: 14px; }
-.attendance-page .attendance-filter-toolbar { display: flex; align-items: end; gap: 12px; }
+.attendance-page .attendance-filter-toolbar { display: flex; align-items: center; gap: 12px; }
 .attendance-page .attendance-filter-toolbar > .erp-form-group { flex: 1 1 360px; max-width: 560px; }
 .attendance-page .attendance-register-actions { display: flex; align-items: center; gap: 12px; margin-left: auto; flex-shrink: 0; }
 .attendance-page .attendance-filter-toggle, .attendance-page .attendance-clear-filters { display: inline-flex; align-items: center; justify-content: center; gap: 7px; min-height: 40px; padding: 0 14px; border: 1px solid var(--attendance-line); border-radius: 8px; color: var(--attendance-ink); background: var(--surface, #fff); font: inherit; font-size: .8rem; font-weight: 750; cursor: pointer; white-space: nowrap; }
@@ -180,6 +180,8 @@
 .attendance-page .erp-form-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; padding: 20px 22px; }
 .attendance-page .erp-form-group { display: grid; gap: 7px; min-width: 0; }
 .attendance-page .erp-form-group label { color: var(--attendance-ink); font-size: .75rem; font-weight: 750; }
+.attendance-page .attendance-required-mark { color: #d92d20; }
+.attendance-page .attendance-academic-year { color: var(--attendance-ink); background: var(--surface, #fff); cursor: default; }
 .attendance-page .attendance-field-help { color: var(--attendance-muted); font-size: .72rem; line-height: 1.35; }
 .attendance-page .erp-input, .attendance-page .erp-select { width: 100%; height: 40px; min-width: 0; padding: 0 11px; border: 1px solid var(--attendance-line); border-radius: 8px; outline: none; color: var(--attendance-ink); background: var(--surface, #fff); font: inherit; font-size: .84rem; }
 .attendance-page .erp-input:focus, .attendance-page .erp-select:focus { border-color: var(--attendance-brand); box-shadow: 0 0 0 3px color-mix(in srgb, var(--attendance-brand) 16%, transparent); }
