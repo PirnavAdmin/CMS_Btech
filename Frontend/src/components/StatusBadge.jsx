@@ -1,8 +1,8 @@
 import './StatusBadge.css'
 
-const normalizeStatusKey = (value) => {
-  if (value === null || value === undefined) return 'unknown'
-  const str = String(value).trim().toLowerCase().replace(/[_\s-]+/g, '-')
+const normalizeStatusKey = (val) => {
+  if (val === null || val === undefined) return 'unknown'
+  const str = String(val).trim().toLowerCase().replace(/[_\s-]+/g, '-')
   if (['1', 'true', 'active', 'admitted', 'success', 'successful', 'eligible', 'working', 'permanent', 'regular', 'confirmed'].includes(str)) return 'active'
   if (['paid'].includes(str)) return 'paid'
   if (['0', 'false', 'inactive', 'deactive', 'archived', 'ineligible', 'resigned', 'relieved', 'terminated', 'retired', 'unpaid'].includes(str)) return 'inactive'
@@ -20,11 +20,12 @@ const normalizeStatusKey = (value) => {
 
 export default function StatusBadge({
   value,
+  status,
   children,
   tone,
   className = '',
 }) {
-  const displayVal = children ?? value ?? ''
+  const displayVal = children ?? value ?? status ?? ''
   if (!displayVal && displayVal !== 0) return null
 
   const key = tone ? String(tone).toLowerCase() : normalizeStatusKey(displayVal)

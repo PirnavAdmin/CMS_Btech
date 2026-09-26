@@ -1,13 +1,13 @@
 :root {
-  --ss-border: var(--border, #d8e3ee);
+  --ss-border: var(--border, #CBD5E1);
   --ss-surface: var(--surface, #ffffff);
-  --ss-surface-soft: var(--surface-soft, #f6f9fc);
-  --ss-brand: var(--brand, #8782BC);
-  --ss-brand-soft: var(--brand-soft, #F9F8FD);
-  --ss-text: var(--text-primary, #143553);
-  --ss-text-muted: var(--text-muted, #637d94);
-  --ss-danger: var(--danger, #d94d4d);
-  --ss-shadow: 0 16px 36px rgba(15, 42, 66, 0.14);
+  --ss-surface-soft: var(--surface-soft, #F8FAFC);
+  --ss-brand: var(--brand, #4F46E5);
+  --ss-brand-soft: var(--brand-soft, #EEF2FF);
+  --ss-text: var(--text-primary, #0F172A);
+  --ss-text-muted: var(--text-muted, #64748B);
+  --ss-danger: var(--danger, #EF4444);
+  --ss-shadow: 0 12px 30px rgba(15, 23, 42, 0.12);
 }
 
 .searchable-select {

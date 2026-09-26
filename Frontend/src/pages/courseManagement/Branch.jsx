@@ -352,9 +352,6 @@ function Form() {
   const [branches, setBranches] = useState([])
   const [errors, setErrors] = useToastState({}, 'error')
   const [touched, setTouched] = useState({})
-  const markTouched = (key) => setTouched(prev => ({ ...prev, [key]: true }))
-  const liveErrors = useMemo(() => validateBranch(value, id || '', branches), [value, id, branches])
-  const getFieldError = (key) => (touched[key] || Boolean(String(value[key] || '').trim())) ? (liveErrors[key] || errors[key]) : errors[key]
   const [saving, setSaving] = useState(false)
   const [error, setError] = useToastState('', 'error')
   const [value, setValue] = useState(() => ({ ...blank, academicYearId: selectedAcademicYearId || '' }))
@@ -363,6 +360,10 @@ function Form() {
   const [mastersReady, setMastersReady] = useState(false)
   const hydratedRef = useRef(false)
   const courseDetailRequestsRef = useRef(new Set())
+
+  const markTouched = (key) => setTouched(prev => ({ ...prev, [key]: true }))
+  const liveErrors = useMemo(() => validateBranch(value, id || '', branches), [value, id, branches])
+  const getFieldError = (key) => (touched[key] || Boolean(String(value[key] || '').trim())) ? (liveErrors[key] || errors[key]) : errors[key]
 
   useEffect(() => {
     let alive = true

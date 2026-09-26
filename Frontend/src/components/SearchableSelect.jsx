@@ -76,19 +76,19 @@ export default function SearchableSelect({
       const viewportLeft = viewport?.offsetLeft || 0
       const viewportHeight = viewport?.height || window.innerHeight
       const viewportWidth = viewport?.width || window.innerWidth
-      const padding = 8, gap = 8
-      const below = Math.max(0, viewportTop + viewportHeight - rect.bottom - padding - gap)
-      const above = Math.max(0, rect.top - viewportTop - padding - gap)
-      const desiredHeight = Math.min(280, (menuRef.current?.querySelector('.searchable-select__search')?.offsetHeight || 50) + (menuRef.current?.querySelector('.searchable-select__options')?.scrollHeight || 40) + 2)
-      const flip = placement !== 'bottom' && below < desiredHeight && above > below
-      const maxHeight = Math.min(280, flip ? above : below)
-      const width = Math.min(rect.width, viewportWidth - padding * 2)
+      const padding = 8, gap = 4;
+      const below = Math.max(0, viewportTop + viewportHeight - rect.bottom - padding - gap);
+      const above = Math.max(0, rect.top - viewportTop - padding - gap);
+      const flip = placement === 'top' || (placement !== 'bottom' && below < 130 && above > below);
+      const maxHeight = Math.min(240, flip ? above : below);
+      const width = Math.min(Math.max(rect.width, 280), viewportWidth - padding * 2);
       setMenuStyle({
-        top: flip ? undefined : rect.bottom + gap,
-        bottom: flip ? window.innerHeight - rect.top + gap : undefined,
+        top: flip ? undefined : Math.round(rect.bottom + gap),
+        bottom: flip ? Math.round(window.innerHeight - rect.top + gap) : undefined,
         left: Math.max(viewportLeft + padding, Math.min(rect.left, viewportLeft + viewportWidth - width - padding)),
-        width, maxHeight,
-      })
+        width,
+        maxHeight,
+      });
     }
     const onScroll = event => {
       if (!menuRef.current?.contains(event.target)) position()
