@@ -336,12 +336,362 @@
   .attendance-table th,
   .payroll-table th,
   .faculty-table th,
-  .fees-table th
+  .fees-table th,
+  .rooms-table th,
+  .rbac-data-table th
 ) {
   background: #8782BC !important;
   color: #FFFFFF !important;
   border-color: #756FB2 !important;
   border-bottom: 2px solid #6E68A8 !important;
   font-weight: 800 !important;
+}
+
+/* ==========================================================================
+   Universal Pagination, Action Buttons, and Menus in Dark Mode
+   ========================================================================== */
+:root[data-theme="dark"] :is(
+  .pagination-btn,
+  .cm-page-btn,
+  .semester-pagination button,
+  .section-pagination button,
+  .table-pagination button,
+  .table-pagination-btn,
+  .rooms-page-btn,
+  .pagination button,
+  [class*="-pagination"] button
+) {
+  background: #151B28 !important;
+  color: #F8FAFC !important;
+  border: 1px solid #334155 !important;
+}
+
+:root[data-theme="dark"] :is(
+  .pagination-btn,
+  .cm-page-btn,
+  .semester-pagination button,
+  .section-pagination button,
+  .table-pagination button,
+  .table-pagination-btn,
+  .rooms-page-btn,
+  .pagination button,
+  [class*="-pagination"] button
+):hover:not(:disabled) {
+  background: #20293A !important;
+  color: #FFFFFF !important;
+  border-color: #8782BC !important;
+}
+
+:root[data-theme="dark"] :is(
+  .table-action-btn,
+  .cm-actions > :is(a, button),
+  .erp-row-actions > :is(a, button),
+  .course-actions > :is(a, button),
+  .branch-actions > :is(a, button),
+  .semester-row-actions > :is(a, button),
+  .section-actions > :is(a, button),
+  .sa-icon-actions > :is(a, button),
+  .table-actions-cell > :is(a, button),
+  .module-row-actions > :is(a, button),
+  .row-actions > :is(a, button),
+  .action-btn,
+  .btn-action,
+  .rooms-action-btn
+) {
+  background: #151B28 !important;
+  border-color: #334155 !important;
+  color: #CBD5E1 !important;
+}
+
+:root[data-theme="dark"] :is(
+  .table-action-btn,
+  .cm-actions > :is(a, button),
+  .erp-row-actions > :is(a, button),
+  .course-actions > :is(a, button),
+  .branch-actions > :is(a, button),
+  .semester-row-actions > :is(a, button),
+  .section-actions > :is(a, button),
+  .sa-icon-actions > :is(a, button),
+  .table-actions-cell > :is(a, button),
+  .module-row-actions > :is(a, button),
+  .row-actions > :is(a, button),
+  .action-btn,
+  .btn-action,
+  .rooms-action-btn
+):hover:not(:disabled) {
+  background: #20293A !important;
+  color: #F8FAFC !important;
+  border-color: #8782BC !important;
+}
+
+:root[data-theme="dark"] :is(
+  .export-menu,
+  .export-dropdown,
+  .dropdown-menu,
+  .export-popover,
+  .context-menu,
+  .action-popover,
+  .table-menu
+) {
+  background: #151B28 !important;
+  border: 1px solid #334155 !important;
+  color: #F8FAFC !important;
+  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.5) !important;
+}
+
+:root[data-theme="dark"] :is(
+  .export-menu,
+  .export-dropdown,
+  .dropdown-menu,
+  .export-popover,
+  .context-menu,
+  .action-popover,
+  .table-menu
+) :is(button, a, .export-option, .dropdown-item) {
+  color: #CBD5E1 !important;
+  background: transparent !important;
+}
+
+:root[data-theme="dark"] :is(
+  .export-menu,
+  .export-dropdown,
+  .dropdown-menu,
+  .export-popover,
+  .context-menu,
+  .action-popover,
+  .table-menu
+) :is(button, a, .export-option, .dropdown-item):hover {
+  background: rgba(135, 130, 188, 0.22) !important;
+  color: #FFFFFF !important;
+}
+
+/* Common Modal and Dialog Overlays in Dark Mode */
+:root[data-theme="dark"] :is(
+  .modal-overlay,
+  .dialog-backdrop,
+  .rooms-modal-backdrop,
+  .sp-modal-overlay,
+  .sa-modal-overlay,
+  .cm-modal-overlay
+) {
+  background: rgba(3, 6, 12, 0.78) !important;
+  backdrop-filter: blur(4px) !important;
+}
+
+:root[data-theme="dark"] :is(
+  .modal-card,
+  .dialog-content,
+  .sp-modal-content,
+  .sa-modal-content,
+  .view-dialog-content
+) {
+  background: #151B28 !important;
+  border: 1px solid #334155 !important;
+  color: #F8FAFC !important;
+  box-shadow: 0 20px 48px rgba(0, 0, 0, 0.6) !important;
+}
+
+:root[data-theme="dark"] :is(
+  .modal-header,
+  .dialog-header,
+  .sp-modal-header,
+  .sa-modal-header,
+  .view-dialog-header
+) {
+  background: #101622 !important;
+  border-bottom: 1px solid #334155 !important;
+  color: #F8FAFC !important;
+}
+
+:root[data-theme="dark"] :is(
+  .modal-footer,
+  .dialog-footer,
+  .sp-modal-footer,
+  .sa-modal-footer,
+  .view-dialog-footer
+) {
+  background: #101622 !important;
+  border-top: 1px solid #334155 !important;
+}
+
+/* Universal Full Lavender Active Tabs in Dark Mode */
+:root[data-theme="dark"] .page-content :is(
+  .erp-tabs-bar,
+  .flm-tabs,
+  .fp-card nav,
+  .faculty-payroll nav,
+  .rbac-tabs-list,
+  .module-tabs,
+  .verification-method-tabs,
+  .profile-tabs,
+  .sm-tabs,
+  .em-tabs,
+  .cm-tabs,
+  .fs-tabs,
+  .fs-editor>nav,
+  .fs-domain-tabs,
+  .student-tabs,
+  .sa-tabs,
+  .sp-tabs,
+  .results-tabs,
+  .marks-tabs,
+  .timetable-tabs,
+  .tt-tabs,
+  .ac-tabs,
+  .fm-attendance-tabs,
+  [class*="-tabs-bar"],
+  [class*="-tabs-list"]
+) {
+  background: #151B28 !important;
+  border-bottom: 1px solid #334155 !important;
+}
+
+:root[data-theme="dark"] .page-content :is(
+  .erp-tabs-bar button,
+  .erp-tab-btn,
+  .flm-tabs button,
+  .fp-card nav button,
+  .faculty-payroll nav button,
+  .rbac-tab-btn,
+  .module-tabs a,
+  .module-tabs button,
+  .verification-method-tabs button,
+  .profile-tabs button,
+  .profile-tab-btn,
+  .sm-tab-btn,
+  .em-tab-btn,
+  .cm-tab-btn,
+  .em-tabs button,
+  .cm-tabs button,
+  .fs-tabs button,
+  .fs-editor>nav button,
+  .fs-domain-tabs button,
+  .student-tabs button,
+  .sa-tabs button,
+  .sp-tabs button,
+  .fs-tab-btn,
+  .fee-tab-btn,
+  .results-tab-btn,
+  .marks-tab-btn,
+  .timetable-tab-btn,
+  .tt-tab-btn,
+  .ac-tabs button,
+  .fm-attendance-tabs button,
+  .flm-cat-btn,
+  .fm-category-tab
+) {
+  color: #94A3B8 !important;
+}
+
+:root[data-theme="dark"] .page-content :is(
+  .erp-tabs-bar button,
+  .erp-tab-btn,
+  .flm-tabs button,
+  .fp-card nav button,
+  .faculty-payroll nav button,
+  .rbac-tab-btn,
+  .module-tabs a,
+  .module-tabs button,
+  .verification-method-tabs button,
+  .profile-tabs button,
+  .profile-tab-btn,
+  .sm-tab-btn,
+  .em-tab-btn,
+  .cm-tab-btn,
+  .em-tabs button,
+  .cm-tabs button,
+  .fs-tabs button,
+  .fs-editor>nav button,
+  .fs-domain-tabs button,
+  .student-tabs button,
+  .sa-tabs button,
+  .sp-tabs button,
+  .fs-tab-btn,
+  .fee-tab-btn,
+  .results-tab-btn,
+  .marks-tab-btn,
+  .timetable-tab-btn,
+  .tt-tab-btn,
+  .ac-tabs button,
+  .fm-attendance-tabs button,
+  .flm-cat-btn,
+  .fm-category-tab
+):hover:not(.active):not(.is-active) {
+  background: #20293A !important;
+  color: #F8FAFC !important;
+  border-color: #334155 !important;
+}
+
+:root[data-theme="dark"] .page-content :is(
+  .erp-tabs-bar button.active,
+  .erp-tab-btn.active,
+  .flm-tabs button.active,
+  .fp-card nav button.active,
+  .faculty-payroll nav button.active,
+  .rbac-tab-btn.is-active,
+  .rbac-tab-btn.active,
+  .module-tabs a.active,
+  .module-tabs button.active,
+  .verification-method-tabs button.active,
+  .profile-tabs button.active,
+  .profile-tab-btn.active,
+  .sm-tab-btn.active,
+  .em-tab-btn.active,
+  .cm-tab-btn.active,
+  .em-tabs button.active,
+  .cm-tabs button.active,
+  .fs-tabs button.active,
+  .fs-editor>nav button.active,
+  .fs-domain-tabs button.active,
+  .student-tabs button.active,
+  .sa-tabs button.active,
+  .sp-tabs button.active,
+  .fs-tab-btn.active,
+  .fee-tab-btn.active,
+  .results-tab-btn.active,
+  .marks-tab-btn.active,
+  .timetable-tab-btn.active,
+  .tt-tab-btn.active,
+  .ac-tabs button.active,
+  .fm-attendance-tabs button.active,
+  .flm-cat-btn.active,
+  .fm-category-tab.active
+) {
+  background: #8782BC !important;
+  color: #FFFFFF !important;
+  border: 1px solid #756FB2 !important;
+  border-radius: 8px !important;
+  font-weight: 750 !important;
+  box-shadow: 0 2px 8px rgba(117, 111, 178, 0.35) !important;
+}
+
+:root[data-theme="dark"] .page-content :is(
+  .erp-tabs-bar button.active,
+  .erp-tab-btn.active,
+  .flm-tabs button.active,
+  .fp-card nav button.active,
+  .faculty-payroll nav button.active,
+  .rbac-tab-btn.is-active,
+  .rbac-tab-btn.active,
+  .module-tabs a.active,
+  .module-tabs button.active,
+  .profile-tabs button.active,
+  .profile-tab-btn.active,
+  .sm-tab-btn.active,
+  .em-tab-btn.active,
+  .cm-tab-btn.active,
+  .em-tabs button.active,
+  .cm-tabs button.active,
+  .fs-tabs button.active,
+  .fs-editor>nav button.active,
+  .student-tabs button.active,
+  .sa-tabs button.active,
+  .sp-tabs button.active,
+  .results-tab-btn.active,
+  .marks-tab-btn.active,
+  .fm-attendance-tabs button.active
+) :is(span, i, b, .rbac-tab-count, .fm-tab-badge, [class*="-badge"], [class*="-count"]) {
+  background: rgba(255, 255, 255, 0.25) !important;
+  color: #FFFFFF !important;
 }
 

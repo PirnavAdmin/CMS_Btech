@@ -1896,17 +1896,18 @@ function AssignmentDialog({ faculty, onClose, onAdd, onRemove, toast }) {
       facultyMasterApi.getSubjects(),
     ]).then(([yearsRes, coursesRes, branchesRes, semRes, secRes, subMgmtRes, subRes]) => {
       if (!active) return
-      const allYears = yearsRes.status === 'fulfilled' && Array.isArray(yearsRes.value) ? yearsRes.value : []
+      const isEntryActive = row => row && row.status !== 'Inactive' && row.status !== 0 && row.status !== false && row.isActive !== false
+      const allYears = yearsRes.status === 'fulfilled' && Array.isArray(yearsRes.value) ? yearsRes.value.filter(isEntryActive) : []
       const markedCurrentYear = allYears.find(year => year?.isCurrent === true || year?.current === true || Number(year?.isCurrent) === 1 || Number(year?.current) === 1)
       const currentYear = markedCurrentYear || getDefaultAcademicYear(allYears)
       const years = currentYear ? [currentYear] : (allYears.length ? [allYears[0]] : [{ id: '1', academicYearId: '1', academicYearName: '2026-2027' }])
-      const courses = coursesRes.status === 'fulfilled' && Array.isArray(coursesRes.value) && coursesRes.value.length ? coursesRes.value : [{ id: '1', courseId: '1', courseName: 'Bachelor of Technology', courseCode: 'BTECH' }]
-      const branches = branchesRes.status === 'fulfilled' && Array.isArray(branchesRes.value) && branchesRes.value.length ? branchesRes.value : [{ id: '1', branchId: '1', branchName: faculty.department || 'Computer Science and Engineering', branchCode: 'CSE' }]
-      const semesters = semRes.status === 'fulfilled' && Array.isArray(semRes.value) && semRes.value.length ? semRes.value : Array.from({ length: 8 }, (_, i) => ({ id: String(i + 1), semesterId: String(i + 1), semesterName: `Semester ${i + 1}` }))
-      const sections = secRes.status === 'fulfilled' && Array.isArray(secRes.value) && secRes.value.length ? secRes.value : ['Section A', 'Section B', 'Section C', 'Section D'].map((name, i) => ({ id: String(i + 1), sectionId: String(i + 1), sectionName: name }))
+      const courses = coursesRes.status === 'fulfilled' && Array.isArray(coursesRes.value) ? coursesRes.value.filter(isEntryActive) : [{ id: '1', courseId: '1', courseName: 'Bachelor of Technology', courseCode: 'BTECH' }]
+      const branches = branchesRes.status === 'fulfilled' && Array.isArray(branchesRes.value) ? branchesRes.value.filter(isEntryActive) : [{ id: '1', branchId: '1', branchName: faculty.department || 'Computer Science and Engineering', branchCode: 'CSE' }]
+      const semesters = semRes.status === 'fulfilled' && Array.isArray(semRes.value) ? semRes.value.filter(isEntryActive) : Array.from({ length: 8 }, (_, i) => ({ id: String(i + 1), semesterId: String(i + 1), semesterName: `Semester ${i + 1}` }))
+      const sections = secRes.status === 'fulfilled' && Array.isArray(secRes.value) ? secRes.value.filter(isEntryActive) : ['Section A', 'Section B', 'Section C', 'Section D'].map((name, i) => ({ id: String(i + 1), sectionId: String(i + 1), sectionName: name }))
       
-      const subMgmtList = subMgmtRes.status === 'fulfilled' && Array.isArray(subMgmtRes.value) ? subMgmtRes.value : []
-      const subList = subRes.status === 'fulfilled' && Array.isArray(subRes.value) ? subRes.value : []
+      const subMgmtList = subMgmtRes.status === 'fulfilled' && Array.isArray(subMgmtRes.value) ? subMgmtRes.value.filter(isEntryActive) : []
+      const subList = subRes.status === 'fulfilled' && Array.isArray(subRes.value) ? subRes.value.filter(isEntryActive) : []
       
       const subjectsMap = new Map()
       for (const s of [...subMgmtList, ...subList]) {
@@ -2343,12 +2344,13 @@ export default function FacultyManagement() {
       departmentApi.getAll().catch(() => [])
     ]).then(([colleges, departments]) => {
       if (!active) return
-      setCollegeOptions((colleges || []).map(row => ({
+      const isEntryActive = row => row && row.status !== 'Inactive' && row.status !== 0 && row.status !== false && row.isActive !== false
+      setCollegeOptions((colleges || []).filter(isEntryActive).map(row => ({
         value: String(row.collegeId ?? row.CollegeId ?? row.id ?? row.Id ?? ''),
         label: row.collegeName ?? row.CollegeName ?? row.name ?? row.Name ?? '',
         code: row.collegeCode ?? row.CollegeCode ?? row.code ?? row.Code ?? '',
       })))
-      setDepartmentOptions((departments || []).map(row => ({
+      setDepartmentOptions((departments || []).filter(isEntryActive).map(row => ({
         value: String(row.departmentId ?? row.DepartmentId ?? row.id ?? row.Id ?? ''),
         label: row.departmentName ?? row.DepartmentName ?? row.name ?? row.Name ?? '',
       })))

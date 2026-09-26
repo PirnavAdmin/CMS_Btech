@@ -6,17 +6,22 @@ import './SearchableSelect.css'
 const normalize = (option, getOptionLabel, getOptionValue) => {
   if (typeof option === 'string' || typeof option === 'number') {
     const value = String(option)
-    return { value, label: value, code: '', raw: option }
+    return { value, label: value, code: '', subLabel: '', fullLabel: value, raw: option }
   }
 
   const rawValue = getOptionValue(option)
   const label = getOptionLabel(option)
   const code = option?.code || option?.shortCode || option?.shortName || option?.departmentCode || option?.courseCode || option?.branchCode || option?.academicYearCode || ''
+  const subLabel = option?.subLabel || option?.subtitle || ''
+  const resolvedLabel = label == null || String(label).trim() === '' ? String(option?.name || option?.label || '') : String(label)
+  const fullLabel = option?.fullLabel || (resolvedLabel ? (code ? `${resolvedLabel} — ${code}` : resolvedLabel) : '')
 
   return {
     value: rawValue == null ? '' : String(rawValue),
-    label: label == null || String(label).trim() === '' ? String(option?.name || option?.label || '') : String(label),
+    label: resolvedLabel,
     code: code == null ? '' : String(code),
+    subLabel: String(subLabel || ''),
+    fullLabel: String(fullLabel || resolvedLabel),
     raw: option,
   }
 }
@@ -35,6 +40,7 @@ export default function SearchableSelect({
   error = false,
   required = false,
   className = '',
+  menuClassName = '',
   noOptionsMessage = 'No matching options found.',
   getOptionLabel = (option) => typeof option === 'string' || typeof option === 'number' ? String(option) : option?.label || option?.name || option?.title || '',
   getOptionValue = (option) => typeof option === 'string' || typeof option === 'number' ? String(option) : option?.value ?? option?.id ?? option?.code ?? option?.name ?? option?.label ?? '',
@@ -62,7 +68,7 @@ export default function SearchableSelect({
     const needle = query.trim().toLowerCase()
     if (!needle) return normalizedOptions
     return normalizedOptions.filter((option) => {
-      const haystack = `${option.label} ${option.code}`.toLowerCase()
+      const haystack = `${option.label} ${option.code} ${option.subLabel} ${option.fullLabel}`.toLowerCase()
       return haystack.includes(needle)
     })
   }, [normalizedOptions, query])
@@ -155,7 +161,9 @@ export default function SearchableSelect({
     triggerRef.current?.focus({ preventScroll: true })
   }
 
-  const triggerLabel = selectedOption ? selectedOption.label : placeholder
+  const triggerLabel = selectedOption
+    ? (selectedOption.fullLabel || (selectedOption.code ? `${selectedOption.label} — ${selectedOption.code}` : selectedOption.label))
+    : placeholder
 
   const handleKeyDown = (event) => {
     if (disabled) return
@@ -171,7 +179,7 @@ export default function SearchableSelect({
   }
 
   const menu = open && !disabled ? createPortal(
-    <div ref={menuRef} id={id} className="searchable-select__menu" onKeyDown={(event) => {
+    <div ref={menuRef} id={id} className={`searchable-select__menu ${menuClassName}`} onKeyDown={(event) => {
       if (!['ArrowDown', 'ArrowUp', 'Home', 'End'].includes(event.key)) return
       if (event.target === inputRef.current && ['Home', 'End'].includes(event.key)) return
       event.preventDefault()
@@ -208,8 +216,13 @@ export default function SearchableSelect({
                 tabIndex={-1}
                 onClick={() => handleSelect(option)}
               >
-                <span className="searchable-select__option-label">{option.label}</span>
-                {option.code && <span className="searchable-select__option-code">{option.code}</span>}
+                <div className="searchable-select__option-content">
+                  <div className="searchable-select__option-top">
+                    <span className="searchable-select__option-label">{option.label}</span>
+                    {option.code && <span className="searchable-select__option-code">{option.code}</span>}
+                  </div>
+                  {option.subLabel && <div className="searchable-select__option-sub">{option.subLabel}</div>}
+                </div>
               </button>
             )
           })

@@ -24,16 +24,27 @@ import eventBus, { ERP_EVENTS } from './eventBus'
 // Helper to determine active status across varied schemas
 export const isRecordActive = (record) => {
   if (!record) return false
-  if (record.status !== undefined) {
-    if (typeof record.status === 'boolean') return record.status
-    if (typeof record.status === 'number') return record.status === 1
-    const s = String(record.status).trim().toLowerCase()
-    return s === 'active' || s === '1' || s === 'true' || s === 'current'
+  const rawStatus = record.status ?? record.courseStatus ?? record.departmentStatus ?? record.academicYearStatus ?? record.state
+  if (rawStatus !== undefined && rawStatus !== null && rawStatus !== '') {
+    if (typeof rawStatus === 'boolean') return rawStatus
+    if (typeof rawStatus === 'number') return rawStatus === 1
+    const s = String(rawStatus).trim().toLowerCase()
+    if (s === 'inactive' || s === '0' || s === 'false' || s === 'deactive' || s === 'deactivated' || s === 'disabled' || s === 'archived') return false
+    if (s === 'active' || s === '1' || s === 'true' || s === 'current') return true
   }
-  if (record.isActive !== undefined) {
-    return Boolean(record.isActive)
+  if (record.isActive !== undefined && record.isActive !== null) {
+    if (typeof record.isActive === 'boolean') return record.isActive
+    if (typeof record.isActive === 'number') return record.isActive === 1
+    const s = String(record.isActive).trim().toLowerCase()
+    return s === 'true' || s === '1' || s === 'active'
   }
-  if (record.isCurrent !== undefined) {
+  if (record.is_active !== undefined && record.is_active !== null) {
+    if (typeof record.is_active === 'boolean') return record.is_active
+    if (typeof record.is_active === 'number') return record.is_active === 1
+    const s = String(record.is_active).trim().toLowerCase()
+    return s === 'true' || s === '1' || s === 'active'
+  }
+  if (record.isCurrent !== undefined && record.isCurrent !== null) {
     return Boolean(record.isCurrent)
   }
   // Default to true if not specified
@@ -72,7 +83,7 @@ class AcademicService {
   }
 
   // Colleges
-  async getColleges(activeOnly = false) {
+  async getColleges(activeOnly = true) {
     const data = await this._fetchCached('colleges', async () => {
       try {
         const res = await getColleges()
@@ -120,7 +131,7 @@ class AcademicService {
   }
 
   // Academic Years
-  async getAcademicYears(activeOnly = false) {
+  async getAcademicYears(activeOnly = true) {
     const data = await this._fetchCached('academicYears', async () => {
       try {
         const list = await academicYearApi.getAll()
@@ -158,7 +169,7 @@ class AcademicService {
   }
 
   // Departments
-  async getDepartments(activeOnly = false) {
+  async getDepartments(activeOnly = true) {
     const data = await this._fetchCached('departments', async () => {
       try {
         let list = []
@@ -186,7 +197,7 @@ class AcademicService {
   }
 
   // Courses
-  async getCourses(params = {}, activeOnly = false) {
+  async getCourses(params = {}, activeOnly = true) {
     const cacheKey = `courses:${JSON.stringify(params)}`
     const data = await this._fetchCached(cacheKey, async () => {
       try {
@@ -218,7 +229,7 @@ class AcademicService {
   }
 
   // Branches (Optionally filtered by courseId)
-  async getBranches(courseId = null, activeOnly = false) {
+  async getBranches(courseId = null, activeOnly = true) {
     const cacheKey = `branches:${courseId || 'all'}`
     const data = await this._fetchCached(cacheKey, async () => {
       try {
@@ -249,7 +260,7 @@ class AcademicService {
   }
 
   // Semesters / Course Structure (Optionally filtered by courseId)
-  async getSemesters(courseId = null, activeOnly = false) {
+  async getSemesters(courseId = null, activeOnly = true) {
     const cacheKey = `semesters:${courseId || 'all'}`
     const data = await this._fetchCached(cacheKey, async () => {
       try {
@@ -283,7 +294,7 @@ class AcademicService {
   }
 
   // Sections (Optionally filtered by params: { courseId, branchId, semesterId, academicYearId })
-  async getSections(params = {}, activeOnly = false) {
+  async getSections(params = {}, activeOnly = true) {
     const cacheKey = `sections:${JSON.stringify(params)}`
     const data = await this._fetchCached(cacheKey, async () => {
       try {

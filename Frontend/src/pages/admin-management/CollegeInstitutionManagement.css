@@ -1,5 +1,5 @@
 .college-management .cm-pagination{justify-content:flex-end}
-@scope (.college-management) {
+
 .college-management {
   padding: 0;
   color: var(--brand-navy, #0f172a);
@@ -260,14 +260,15 @@
 
 /* Table Styling */
 .cm-table-wrap {
-  overflow-x: auto;
+  overflow-x: hidden;
   border: 1px solid #e3e7ee;
   border-radius: 12px 12px 0 0;
+  width: 100%;
 }
 
 .cm-table {
   width: 100%;
-  min-width: 860px;
+  min-width: 0;
   table-layout: fixed;
   border-collapse: collapse;
   font-size: 0.9rem;
@@ -276,37 +277,107 @@
 .cm-table th,
 .cm-table td {
   padding: 12px 14px;
-  text-align: center;
   vertical-align: middle;
   border-bottom: 1px solid #eef1f5;
   white-space: nowrap;
-}
-
-.college-management .cm-table thead th,
-.college-management .cm-table tbody td {
-  text-align: center !important;
-  vertical-align: middle !important;
+  box-sizing: border-box;
 }
 
 .cm-table td {
   color: #1a1a1a;
 }
 
-.cm-table th:nth-child(1),
-.cm-table td:nth-child(1) { width: 76px; }
-.cm-table th:nth-child(2),
-.cm-table td:nth-child(2) { width: 230px; }
-.cm-table th:nth-child(3),
-.cm-table td:nth-child(3) { width: 92px; }
-.cm-table th:nth-child(4),
-.cm-table td:nth-child(4) { width: 140px; }
-.cm-table td:nth-child(2),
-.cm-table td:nth-child(5),
-.cm-table td:nth-child(6) {
-  overflow-wrap: anywhere;
-  white-space: normal;
-  line-height: 1.35;
+.cm-table th {
+  background: #8782BC !important;
+  color: #FFFFFF !important;
+  font-weight: 700 !important;
+  font-size: 0.82rem !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.04em !important;
 }
+
+/* Explicit Header & Data Alignment and Proportions */
+/* Explicit Header & Data Alignment and Proportions (All Center-Aligned) */
+.college-management .cm-table th,
+.college-management .cm-table td {
+  box-sizing: border-box !important;
+  vertical-align: middle !important;
+  text-align: center !important;
+}
+
+/* 1. LOGO: Strictly centered */
+.college-management .cm-table :is(th, td).col-logo,
+.cm-table :is(th, td).col-logo {
+  width: 70px !important;
+  min-width: 70px !important;
+  max-width: 70px !important;
+  text-align: center !important;
+  padding: 10px 4px !important;
+}
+
+/* 2. COLLEGE NAME: Centered, proportional 30% width */
+.college-management .cm-table :is(th, td).col-name,
+.cm-table :is(th, td).col-name {
+  width: 30% !important;
+  text-align: center !important;
+  padding: 10px 14px !important;
+}
+
+.college-management .cm-table td.col-name .cm-college-name,
+.college-management .cm-table td.col-name .table-cell-truncate,
+.cm-table td.col-name .cm-college-name,
+.cm-table td.col-name .table-cell-truncate {
+  text-align: center !important;
+  margin: 0 auto !important;
+  display: block !important;
+}
+
+/* 3. CODE: Strictly centered, 120px width */
+.college-management .cm-table :is(th, td).col-code,
+.cm-table :is(th, td).col-code {
+  width: 120px !important;
+  min-width: 120px !important;
+  max-width: 120px !important;
+  text-align: center !important;
+  padding: 10px 8px !important;
+  font-weight: 600;
+}
+
+/* 4. TYPE: Centered, 24% width */
+.college-management .cm-table :is(th, td).col-type,
+.cm-table :is(th, td).col-type {
+  width: 24% !important;
+  text-align: center !important;
+  padding: 10px 14px !important;
+}
+
+.college-management .cm-table td.col-type .table-cell-truncate,
+.cm-table td.col-type .table-cell-truncate {
+  text-align: center !important;
+  margin: 0 auto !important;
+  display: block !important;
+}
+
+/* 5. STATUS: Strictly centered, 130px width */
+.college-management .cm-table :is(th, td).col-status,
+.cm-table :is(th, td).col-status {
+  width: 130px !important;
+  min-width: 130px !important;
+  max-width: 130px !important;
+  text-align: center !important;
+  padding: 10px 8px !important;
+}
+
+/* 6. ACTIONS: Strictly centered, 110px width */
+.college-management .cm-table :is(th, td).col-actions,
+.cm-table :is(th, td).col-actions {
+  width: 110px !important;
+  min-width: 110px !important;
+  max-width: 110px !important;
+  text-align: center !important;
+  padding: 10px 6px !important;
+}
+
 .cm-college-name {
   display: block;
   max-width: 100%;
@@ -315,27 +386,41 @@
   white-space: nowrap;
 }
 
-.cm-table th {
-  background: #8782BC;
-  color: #FFFFFF;
-  font-weight: 700;
-  font-size: 0.82rem;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-}
-
-.college-management .cm-table th {
+/* College Name Clickable Button/Link (Centered, shifts right on hover) */
+.cm-name-link {
+  display: inline-block;
+  max-width: 100%;
+  background: none;
+  border: none;
+  padding: 0;
+  margin: 0 auto;
+  font: inherit;
+  font-weight: 600;
+  color: #0F172A;
   text-align: center !important;
+  cursor: pointer;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  transition: transform 0.2s ease, color 0.15s ease;
 }
 
-.college-management .cm-table-heading {
-  display: block;
-  width: 100%;
-  text-align: center;
+.cm-name-link:hover {
+  color: #756FB2 !important;
+  transform: translateX(6px) !important;
+  text-decoration: none !important;
 }
 
-.cm-table tbody tr:hover {
-  background: #fbfdff;
+:root[data-theme="dark"] .cm-name-link {
+  color: #F8FAFC;
+}
+
+:root[data-theme="dark"] .cm-name-link:hover {
+  color: #A39DDC;
+}
+
+.cm-table tbody tr:hover td {
+  background-color: transparent !important;
 }
 
 .cm-logo-thumb {
@@ -580,217 +665,236 @@
   display: flex;
   flex-direction: column;
   gap: 16px;
+  width: 100%;
 }
 
 .cm-profile-top-bar {
   display: flex;
   justify-content: flex-end;
   align-items: center;
+  gap: 10px;
+  margin-bottom: 2px;
+  width: 100%;
 }
 
 .cm-profile-card {
   border: 1px solid #e2e8f0;
-  border-radius: 16px;
-  background: var(--surface, #fff);
+  border-radius: 14px;
+  background: #ffffff;
   overflow: hidden;
-  box-shadow: 0 4px 16px rgba(15, 23, 42, 0.04);
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.04);
+  width: 100%;
 }
 
-/* Header Banner matching dark blue CMS sidebar palette */
+/* Header Banner matching Student Admission palette */
 .cm-profile-banner {
-  display: flex;
-  align-items: center;
-  gap: 20px;
-  padding: 26px 30px;
-  background: linear-gradient(135deg, #0F172A 0%, #0F172A 100%);
-  color: #fff;
+  position: relative !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 20px !important;
+  padding: 22px 28px !important;
+  background: linear-gradient(135deg, #7169A8 0%, #7E76B7 50%, #8D85C6 100%) !important;
+  color: #fff !important;
+  border-radius: 0 !important;
+  overflow: hidden !important;
+  border: 0 !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.18) !important;
+  box-shadow: none !important;
+}
+
+.cm-profile-banner::after {
+  position: absolute !important;
+  right: -40px !important;
+  bottom: -80px !important;
+  width: 250px !important;
+  height: 250px !important;
+  border: 40px solid rgba(255, 255, 255, 0.08) !important;
+  border-radius: 50% !important;
+  content: "" !important;
+  pointer-events: none !important;
 }
 
 .cm-profile-avatar-wrap {
-  flex-shrink: 0;
-}
-
-.cm-profile-logo {
-  width: 72px;
-  height: 72px;
-  border-radius: 14px;
-  object-fit: cover;
-  border: 2px solid rgba(255, 255, 255, 0.85);
-  background: #fff;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  flex-shrink: 0 !important;
+  position: relative !important;
+  z-index: 2 !important;
 }
 
 .cm-profile-placeholder {
-  display: grid;
-  place-items: center;
-  width: 72px;
-  height: 72px;
-  border-radius: 14px;
-  background: var(--brand-blue, #8782BC);
-  color: #fff;
-  font-size: 2rem;
-  font-weight: 800;
-  border: 2px solid rgba(255, 255, 255, 0.3);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  display: grid !important;
+  place-items: center !important;
+  width: 68px !important;
+  height: 68px !important;
+  border-radius: 14px !important;
+  background: linear-gradient(135deg, #ECC15D 0%, #DF9E27 100%) !important;
+  color: #1E173D !important;
+  font-size: 1.45rem !important;
+  font-weight: 850 !important;
+  border: 2px solid rgba(255, 255, 255, 0.5) !important;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.16) !important;
 }
 
 .cm-profile-header-info {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 4px !important;
+  position: relative !important;
+  z-index: 2 !important;
+  flex: 1 1 auto !important;
 }
 
 .cm-profile-badges {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  flex-wrap: wrap;
+  display: flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+  flex-wrap: wrap !important;
+  margin-bottom: 2px !important;
 }
 
 .cm-badge {
-  padding: 4px 10px;
-  border-radius: 6px;
-  font-size: 0.78rem;
-  font-weight: 700;
-  letter-spacing: 0.03em;
-}
-
-.cm-badge-code {
-  background: rgba(255, 255, 255, 0.18);
-  color: #fff;
-  border: 1px solid rgba(255, 255, 255, 0.2);
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 5px !important;
+  padding: 3px 10px !important;
+  border-radius: 999px !important;
+  background: rgba(255, 255, 255, 0.2) !important;
+  border: 1px solid rgba(255, 255, 255, 0.35) !important;
+  color: #FFFFFF !important;
+  font-size: 0.72rem !important;
+  font-weight: 750 !important;
+  letter-spacing: 0.04em !important;
+  text-transform: uppercase !important;
 }
 
 .cm-badge-type {
-  background: var(--surface, #fff);
-  color: #0F172A;
+  background: rgba(255, 255, 255, 0.2) !important;
+  color: #FFFFFF !important;
+  border: 1px solid rgba(255, 255, 255, 0.35) !important;
+}
+
+.cm-status-badge {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 6px !important;
+  padding: 3px 12px !important;
+  border: 1px solid rgba(255, 255, 255, 0.8) !important;
+  border-radius: 999px !important;
+  color: #5D54A4 !important;
+  background: #FFFFFF !important;
+  font-size: 0.74rem !important;
+  font-weight: 800 !important;
+  text-transform: uppercase !important;
 }
 
 .cm-profile-title {
-  margin: 2px 0 0;
-  font-size: 1.55rem;
-  font-weight: 700;
-  color: #fff;
-  line-height: 1.25;
+  margin: 0 !important;
+  font-size: 1.45rem !important;
+  font-weight: 750 !important;
+  color: #FFFFFF !important;
+  line-height: 1.25 !important;
+  letter-spacing: -0.015em !important;
 }
 
 .cm-profile-subtitle {
-  margin: 0;
-  font-size: 0.92rem;
-  color: #fff;
+  margin: 2px 0 0 !important;
+  font-size: 0.86rem !important;
+  color: rgba(255, 255, 255, 0.9) !important;
+  font-weight: 500 !important;
 }
 
 .cm-profile-subtitle strong {
-  color: #ffffff;
-}
-
-.college-management .cm-profile-banner .cm-profile-title,
-.college-management .cm-profile-banner .cm-profile-subtitle,
-.college-management .cm-profile-banner .cm-profile-subtitle strong {
-  color: #0F172A !important;
-}
-
-:root:not([data-theme="dark"]) .college-management .cm-profile-banner .cm-profile-title,
-:root:not([data-theme="dark"]) .college-management .cm-profile-banner .cm-profile-subtitle,
-:root:not([data-theme="dark"]) .college-management .cm-profile-banner .cm-profile-subtitle strong {
-  color: #0F172A !important;
-}
-
-.college-management .cm-profile-banner .cm-profile-header-info h1,
-.college-management .cm-profile-banner .cm-profile-header-info p,
-.college-management .cm-profile-banner .cm-profile-title > span,
-.college-management .cm-profile-banner .cm-profile-subtitle > span,
-.college-management .cm-profile-banner .cm-profile-header-info p strong {
-  color: #0F172A !important;
-}
-
-.college-management .cm-profile-banner .cm-badge-code {
-  color: #0F172A !important;
-  background: #FFFFFF !important;
-  border: 1px solid #CBD5E1 !important;
-  font-weight: 700 !important;
-}
-
-.college-management .cm-profile-banner .cm-status-badge {
-  color: #756FB2 !important;
+  color: #FFFFFF !important;
+  font-weight: 750 !important;
 }
 
 /* Profile Grid & Section Cards */
 .cm-profile-grid {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr);
-  gap: 16px;
-  padding: 24px 30px;
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 16px !important;
+  padding: 20px !important;
+  background: transparent !important;
+  width: 100% !important;
+  box-sizing: border-box !important;
 }
 
 .cm-info-card {
-  border: 1px solid #e2e8f0;
-  border-radius: 12px;
-  padding: 22px;
-  background: #f8fafc;
+  border: 1px solid #e2e8f0 !important;
+  border-radius: 12px !important;
+  padding: 0 !important;
+  background: #ffffff !important;
+  box-shadow: 0 1px 4px rgba(15, 23, 42, 0.04) !important;
+  overflow: hidden !important;
+  width: 100% !important;
+  box-sizing: border-box !important;
 }
 
 .cm-info-card-header {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-bottom: 18px;
-  padding-bottom: 12px;
-  border-bottom: 1px solid #e2e8f0;
-  color: var(--brand-blue, #8782BC);
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  gap: 10px !important;
+  margin: 0 !important;
+  padding: 12px 18px !important;
+  border-bottom: 1px solid #e2e8f0 !important;
+  border-left: 4px solid #7169A8 !important;
+  background: #F8FAFC !important;
+  color: #7169A8 !important;
+  box-sizing: border-box !important;
 }
 
 .cm-info-card-header h2 {
-  margin: 0;
-  font-size: 1.05rem;
-  font-weight: 700;
-  color: var(--brand-navy, #0f172a);
+  margin: 0 !important;
+  font-size: 0.95rem !important;
+  font-weight: 750 !important;
+  color: #0F172A !important;
 }
 
 .cm-info-rows {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 0;
-  overflow: hidden;
-  border: 1px solid #e2e8f0;
-  border-radius: 8px;
+  display: grid !important;
+  grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+  gap: 12px !important;
+  padding: 18px !important;
+  border: 0 !important;
+  background: transparent !important;
+  box-sizing: border-box !important;
+  width: 100% !important;
 }
 
 .cm-info-row {
-  display: grid;
-  min-height: 72px;
-  padding: 12px 14px;
-  align-content: center;
-  gap: 4px;
-  border-right: 1px solid #e2e8f0;
-  border-bottom: 1px solid #e2e8f0;
+  display: flex !important;
+  flex-direction: column !important;
+  justify-content: center !important;
+  gap: 4px !important;
+  padding: 12px 18px !important;
+  background: #F8FAFC !important;
+  border: 1px solid #E2E8F0 !important;
+  border-radius: 10px !important;
+  min-width: 0 !important;
+  box-sizing: border-box !important;
 }
 
-.cm-info-row:nth-child(3n) { border-right: 0; }
-
 .cm-info-label {
-  font-size: 0.75rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  color: #64748b;
+  color: #64748B !important;
+  font-size: 0.72rem !important;
+  font-weight: 750 !important;
+  letter-spacing: 0.04em !important;
+  text-transform: uppercase !important;
+  margin: 0 0 2px 0 !important;
+  display: block !important;
+  text-align: left !important;
 }
 
 .cm-info-val {
-  font-size: 0.95rem;
-  font-weight: 600;
-  color: #0F172A;
-  line-height: 1.45;
-}
-
-/* Keep profile labels and values clearly readable on the light details view. */
-:root:not([data-theme="dark"]) .college-management .cm-info-label {
-  color: #554F75;
-}
-
-:root:not([data-theme="dark"]) .college-management .cm-info-val {
-  color: #0F172A;
-  font-weight: 700;
+  color: #0F172A !important;
+  font-size: 0.9rem !important;
+  font-weight: 700 !important;
+  line-height: 1.4 !important;
+  overflow-wrap: anywhere !important;
+  word-break: break-word !important;
+  margin: 0 !important;
+  display: block !important;
+  text-align: left !important;
 }
 
 .cm-link {
@@ -954,12 +1058,11 @@
   }
   .cm-profile-grid {
     grid-template-columns: 1fr;
-    padding: 20px;
   }
-  .cm-info-rows { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .cm-info-row:nth-child(3n) { border-right: 1px solid #e2e8f0; }
-  .cm-info-row:nth-child(2n) { border-right: 0; }
+  .cm-info-rows { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; }
   .cm-form-grid {
+
+
     grid-template-columns: 1fr;
   }
   .cm-form-grid .cm-span-2 {
@@ -980,7 +1083,6 @@
     gap: 12px;
     align-items: center;
   }
-}
 }
 
 /* Keep the settings directory readable across its nine data columns. */
@@ -1100,11 +1202,85 @@
 :root[data-theme="light"] .college-management .cm-toolbar select option { color: #173b5c; background: #fff; }
 @media(max-width:760px){.college-management .cm-toolbar{flex-direction:column!important}.college-management .cm-toolbar .cm-search,.college-management .cm-toolbar select{width:100%!important;max-width:none!important;flex:auto!important}}
 @media (max-width: 520px) {
-  .cm-info-rows { grid-template-columns: 1fr; }
-  .cm-info-row,
-  .cm-info-row:nth-child(2n),
-  .cm-info-row:nth-child(3n) { border-right: 0; }
+  .cm-info-rows { grid-template-columns: 1fr !important; }
 }
+
 
 .cm-college-status-notice{position:fixed;right:20px;bottom:20px;z-index:1250;display:flex;align-items:center;gap:14px;max-width:calc(100vw - 40px);padding:14px 18px;border:1px solid var(--border);border-radius:var(--radius-md);background:var(--surface);color:var(--text-primary);box-shadow:var(--shadow-md)}
 .cm-college-status-notice button{display:grid;place-items:center;border:0;background:transparent;color:inherit;padding:6px}
+
+/* Keep header and body alignment identical despite shared table overrides. */
+#root .college-management .cm-table :is(th, td):is(.col-logo, .col-code, .col-status, .col-actions) {
+  text-align: center !important;
+}
+#root .college-management .cm-table :is(th, td):is(.col-name, .col-type) {
+  text-align: center !important;
+}
+#root .college-management .cm-table :is(th, td).col-name {
+  padding-inline: 14px !important;
+}
+#root .college-management .cm-table :is(th, td).col-type {
+  padding-inline: 12px !important;
+}
+#root .college-management .cm-table td.col-name .cm-name-link,
+#root .college-management .cm-table td.col-type .table-cell-truncate {
+  text-align: center !important;
+  margin-inline: auto !important;
+}
+#root .college-management .cm-table td.col-logo > * {
+  margin-inline: auto !important;
+}
+#root .college-management .cm-table td.col-actions .cm-actions {
+  justify-content: center !important;
+  margin-inline: auto;
+}
+
+#root .college-management .cm-table .cm-name-link {
+  width: fit-content;
+  max-width: 100%;
+  min-height: 0;
+  height: auto;
+  padding: 4px 0;
+  border: 0;
+  border-radius: 3px;
+  background: transparent;
+  box-shadow: none;
+  color: var(--text-primary, #0f172a);
+  font: inherit;
+  font-weight: 600;
+  line-height: 1.5;
+  text-decoration: none;
+  transform: none;
+  cursor: pointer;
+  transition: color .18s ease, transform .18s ease;
+}
+#root .college-management .cm-table .cm-name-link:hover {
+  color: #8782BC;
+  background: transparent;
+  box-shadow: none;
+  text-decoration: none;
+  transform: translateX(6px);
+}
+#root .college-management .cm-table .cm-name-link:focus-visible {
+  outline: 2px solid #8782bc;
+  outline-offset: 4px;
+}
+
+/* Keep college names plain, including shared button hover/active states. */
+#root .college-management .cm-table .cm-name-link,
+#root .college-management .cm-table .cm-name-link:is(:hover, :focus, :active) {
+  background: transparent !important;
+  box-shadow: none !important;
+}
+#root .college-management .cm-table tbody tr:hover,
+#root .college-management .cm-table tbody tr:hover > td {
+  background: var(--surface, #fff) !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #root .college-management .cm-table .cm-name-link,
+  #root .college-management .cm-table .cm-name-link:hover {
+    transition: none;
+    transform: none;
+  }
+}

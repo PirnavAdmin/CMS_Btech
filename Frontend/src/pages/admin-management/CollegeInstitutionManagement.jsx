@@ -899,30 +899,38 @@ export default function CollegeInstitutionManagement({ initialView = 'list' }) {
                   <table className="cm-table">
                     <thead>
                       <tr>
-                        <th className="table-center" style={{ width: '60px' }}>Logo</th>
-                        <th style={{ minWidth: '220px', maxWidth: '300px' }}>College Name</th>
-                        <th className="table-center" style={{ width: '120px' }}>Code</th>
-                        <th style={{ minWidth: '130px', maxWidth: '170px' }}>Type</th>
-                        <th style={{ minWidth: '120px', maxWidth: '160px' }}>City</th>
-                        <th style={{ minWidth: '130px', maxWidth: '160px' }}>Contact</th>
-                        <th className="table-center" style={{ width: '120px' }}>Status</th>
-                        <th className="table-center" style={{ width: '140px' }}>Actions</th>
+                        <th className="col-logo table-center" style={{ width: '70px', minWidth: '70px', maxWidth: '70px' }}>Logo</th>
+                        <th className="col-name table-left" style={{ width: '32%' }}>College Name</th>
+                        <th className="col-code table-center" style={{ width: '120px' }}>Code</th>
+                        <th className="col-type table-left" style={{ width: '24%' }}>Type</th>
+                        <th className="col-status table-center" style={{ width: '130px' }}>Status</th>
+                        <th className="col-actions table-center" style={{ width: '110px', minWidth: '110px', maxWidth: '110px' }}>Actions</th>
                       </tr>
                     </thead>
                     <tbody>
-                      {collegeDraft?.values && <tr className="cm-draft-row">
-                        <td className="table-center" style={{ width: '60px' }}><span className="cm-draft-row__mark">D</span></td>
-                        <td style={{ minWidth: '220px', maxWidth: '300px' }}><span className="table-cell-truncate cm-college-name" title={collegeDraft.values.collegeName || 'New college draft'}>{collegeDraft.values.collegeName || 'New college draft'}</span><small className="cm-draft-row__label">Draft saved</small></td>
-                        <td className="table-center" style={{ width: '120px' }}>{collegeDraft.values.collegeCode || '—'}</td>
-                        <td style={{ minWidth: '130px', maxWidth: '170px' }}><span className="table-cell-truncate" title={collegeDraft.values.institutionType || '—'}>{collegeDraft.values.institutionType || '—'}</span></td>
-                        <td style={{ minWidth: '120px', maxWidth: '160px' }}><span className="table-cell-truncate" title={collegeDraft.values.city || '—'}>{collegeDraft.values.city || '—'}</span></td>
-                        <td style={{ minWidth: '130px', maxWidth: '160px' }}><span className="table-cell-truncate" title={collegeDraft.values.contactNumber || '—'}>{collegeDraft.values.contactNumber || '—'}</span></td>
-                        <td className="table-center" style={{ width: '120px' }}><StatusBadge tone="pending">Pending</StatusBadge></td>
-                        <td className="table-center" style={{ width: '140px' }}><div className="cm-actions table-actions-group"><button type="button" className="table-action-btn action-edit cm-action-icon-btn cm-edit-action" title="Resume draft" aria-label="Resume draft" onClick={() => navigate('/college-institution-management/add')}><EditIcon /></button><button type="button" className="table-action-btn action-deactivate cm-action-icon-btn cm-danger cm-discard-action" title="Discard draft" aria-label="Discard draft" onClick={() => { localStorage.removeItem(NEW_COLLEGE_DRAFT_KEY); setCollegeDraft(null) }}><FiTrash2 aria-hidden="true" /></button></div></td>
-                      </tr>}
+                      {collegeDraft?.values && (
+                        <tr className="cm-draft-row">
+                          <td className="col-logo table-center"><span className="cm-draft-row__mark">D</span></td>
+                          <td className="col-name table-left">
+                            <button
+                              type="button"
+                              className="cm-name-link table-cell-truncate cm-college-name"
+                              onClick={() => navigate('/college-institution-management/add')}
+                              title="Resume draft"
+                            >
+                              {collegeDraft.values.collegeName || 'New college draft'}
+                            </button>
+                            <small className="cm-draft-row__label">Draft saved</small>
+                          </td>
+                          <td className="col-code table-center"><code>{collegeDraft.values.collegeCode || '—'}</code></td>
+                          <td className="col-type table-left"><span className="table-cell-truncate" style={{ textAlign: 'left', margin: 0 }} title={collegeDraft.values.institutionType || '—'}>{collegeDraft.values.institutionType || '—'}</span></td>
+                          <td className="col-status table-center"><StatusBadge tone="pending">Pending</StatusBadge></td>
+                          <td className="col-actions table-center"><div className="cm-actions table-actions-group"><button type="button" className="table-action-btn action-edit cm-action-icon-btn cm-edit-action" title="Resume draft" aria-label="Resume draft" onClick={() => navigate('/college-institution-management/add')}><EditIcon /></button><button type="button" className="table-action-btn action-deactivate cm-action-icon-btn cm-danger cm-discard-action" title="Discard draft" aria-label="Discard draft" onClick={() => { localStorage.removeItem(NEW_COLLEGE_DRAFT_KEY); setCollegeDraft(null) }}><FiTrash2 aria-hidden="true" /></button></div></td>
+                        </tr>
+                      )}
                       {displayedColleges.map((college) => (
                         <tr key={college.id}>
-                          <td className="table-center" style={{ width: '60px' }}>
+                          <td className="col-logo table-center">
                             <CollegeLogoImage
                               src={college.logo}
                               fallbackSrc={getCollegeLogoEndpoint(college.id)}
@@ -932,25 +940,24 @@ export default function CollegeInstitutionManagement({ initialView = 'list' }) {
                               onError={() => markLogoBroken(college.id)}
                             />
                           </td>
-                          <td style={{ minWidth: '220px', maxWidth: '300px' }}><span className="table-cell-truncate cm-college-name" title={college.name}>{college.name}</span></td>
-                          <td className="table-center" style={{ width: '120px' }}>{college.code}</td>
-                          <td style={{ minWidth: '130px', maxWidth: '170px' }}><span className="table-cell-truncate" title={college.type}>{college.type}</span></td>
-                          <td style={{ minWidth: '120px', maxWidth: '160px' }}><span className="table-cell-truncate" title={college.city}>{college.city}</span></td>
-                          <td style={{ minWidth: '130px', maxWidth: '160px' }}><span className="table-cell-truncate" title={college.contact}>{college.contact}</span></td>
-                          <td className="table-center" style={{ width: '120px' }}>
+                          <td className="col-name table-left">
+                            <button
+                              type="button"
+                              className="cm-name-link table-cell-truncate cm-college-name"
+                              onClick={() => openDetails(college)}
+                              title={college.name}
+                              aria-label={`View details for ${college.name}`}
+                            >
+                              {college.name}
+                            </button>
+                          </td>
+                          <td className="col-code table-center"><code>{college.code}</code></td>
+                          <td className="col-type table-left"><span className="table-cell-truncate" style={{ textAlign: 'left', margin: 0 }} title={college.type}>{college.type}</span></td>
+                          <td className="col-status table-center">
                             <StatusBadge value={college.status === 'active' ? 'Active' : 'Inactive'} />
                           </td>
-                          <td className="table-center" style={{ width: '140px' }}>
+                          <td className="col-actions table-center">
                             <div className="cm-actions table-actions-group">
-                              <button
-                                type="button"
-                                className="table-action-btn action-view cm-action-icon-btn cm-view-action"
-                                title={`View Details for ${college.name}`}
-                                aria-label={`View Details for ${college.name}`}
-                                onClick={() => openDetails(college)}
-                              >
-                                <EyeIcon />
-                              </button>
                               <button
                                 type="button"
                                 className="table-action-btn action-edit cm-action-icon-btn cm-edit-action"

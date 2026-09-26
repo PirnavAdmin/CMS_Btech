@@ -1,226 +1,566 @@
-/* Reference: College view screenshot. Keep after legacy module styles. */
-:root body :is(.cm-profile-grid, .shared-view-dialog .erp-detail-grid) {
+/* ==========================================================================
+   UNIFIED VIEW CONTENT STYLING (EXACT STUDENT ADMISSION GOLD STANDARD)
+   Applied across ALL entity detail & profile view screens in the application
+   ========================================================================== */
+
+/* 1. Root Profile View Container */
+:root body :is(
+  .cm-profile-view,
+  .department-profile-view,
+  .section-profile-page,
+  .ay-details-view,
+  .course-management .cm-profile-view,
+  .branch-management .cm-profile-view,
+  .college-management .cm-profile-view,
+  .student-profile .cm-profile-view
+) {
+  display: flex !important;
+  flex-direction: column !important;
+  width: 100% !important;
+  max-width: 100% !important;
+  gap: 16px !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  box-sizing: border-box !important;
+}
+
+/* 2. Top Action Bar with Export & Back button */
+:root body :is(
+  .cm-profile-top-bar,
+  .department-profile-topbar,
+  .section-profile-top-bar,
+  .ay-details-view .cm-profile-top-bar,
+  .college-management .cm-profile-top-bar,
+  .student-admission .cm-profile-top-bar,
+  .student-profile .cm-profile-top-bar
+) {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: flex-end !important;
+  gap: 10px !important;
+  margin: 0 0 2px 0 !important;
+  width: 100% !important;
+  min-height: 38px !important;
+  box-sizing: border-box !important;
+}
+
+:root body :is(.cm-profile-top-bar, .department-profile-topbar) :is(.cm-secondary-btn, .cm-button.secondary, button:not(.export-trigger)) {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 6px !important;
+  padding: 8px 16px !important;
+  background: var(--surface, #FFFFFF) !important;
+  border: 1px solid var(--border, #CBD5E1) !important;
+  border-radius: 8px !important;
+  color: var(--text-primary, #1E293B) !important;
+  font-size: 0.85rem !important;
+  font-weight: 650 !important;
+  cursor: pointer !important;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.05) !important;
+  text-decoration: none !important;
+  transition: all 0.15s ease !important;
+}
+
+:root body :is(.cm-profile-top-bar, .department-profile-topbar) :is(.cm-secondary-btn, .cm-button.secondary, button:not(.export-trigger)):hover {
+  background: var(--surface-soft, #F8FAFC) !important;
+  border-color: var(--brand, #756FB2) !important;
+  color: var(--brand, #756FB2) !important;
+}
+
+/* 3. Main Enclosing Card */
+:root body :is(
+  .cm-profile-card,
+  .section-profile-page .cm-profile-card,
+  .department-profile-view .cm-profile-card,
+  .semester-management .cm-profile-card,
+  .section-management .cm-profile-card,
+  .college-management .cm-profile-card,
+  .course-management .cm-profile-card,
+  .branch-management .cm-profile-card,
+  .student-admission .cm-profile-card,
+  .student-profile .cm-profile-card
+) {
+  display: flex !important;
+  flex-direction: column !important;
+  width: 100% !important;
+  border: 1px solid var(--border, #E2E8F0) !important;
+  border-radius: 14px !important;
+  background: var(--surface, #FFFFFF) !important;
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.04) !important;
+  overflow: hidden !important;
+  box-sizing: border-box !important;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+/* 4. Hero Banner (Lavender-Purple Theme) */
+:root body :is(
+  .cm-profile-banner,
+  .sa-profile-header,
+  .sp-hero,
+  .course-detail-hero,
+  .branch-detail-hero
+) {
+  display: flex !important;
+  align-items: center !important;
+  gap: 20px !important;
+  padding: 22px 28px !important;
+  background: linear-gradient(135deg, #7169A8 0%, #7E76B7 50%, #8D85C6 100%) !important;
+  border: 0 !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.18) !important;
+  border-radius: 0 !important;
+  color: #FFFFFF !important;
+  position: relative !important;
+  overflow: hidden !important;
+  min-height: 100px !important;
+  height: auto !important;
+  max-height: none !important;
+  box-sizing: border-box !important;
+  width: 100% !important;
+  box-shadow: none !important;
+}
+
+:root body :is(.cm-profile-banner, .sa-profile-header, .sp-hero)::after {
+
+  content: "" !important;
+  position: absolute !important;
+  right: -40px !important;
+  bottom: -80px !important;
+  width: 250px !important;
+  height: 250px !important;
+  border: 40px solid rgba(255, 255, 255, 0.08) !important;
+  border-radius: 50% !important;
+  pointer-events: none !important;
+}
+
+/* 5. Avatar / Logo Wrap */
+:root body :is(
+  .cm-profile-avatar-wrap,
+  .sa-profile-avatar,
+  .sp-avatar,
+  .course-detail-avatar
+) {
+  flex-shrink: 0 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  position: relative !important;
+  z-index: 2 !important;
+}
+
+:root body :is(.cm-profile-avatar-wrap, .sa-profile-avatar, .sp-avatar) :is(.cm-profile-logo, .cm-profile-placeholder, .cm-logo-emblem, img) {
+  width: 68px !important;
+  height: 68px !important;
+  min-width: 68px !important;
+  max-width: 68px !important;
+  border-radius: 14px !important;
+  border: 2px solid rgba(255, 255, 255, 0.5) !important;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.16) !important;
+  object-fit: cover !important;
+  box-sizing: border-box !important;
+}
+
+:root body :is(.cm-profile-avatar-wrap, .sa-profile-avatar, .sp-avatar) :is(.cm-profile-placeholder, .cm-logo-emblem, div.cm-profile-logo) {
+  background: linear-gradient(135deg, #ECC15D 0%, #DF9E27 100%) !important;
+  color: #1E173D !important;
+  font-size: 1.45rem !important;
+  font-weight: 850 !important;
   display: grid !important;
-  grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
-  align-items: stretch;
+  place-items: center !important;
+}
+
+:root body :is(.cm-profile-avatar-wrap, .sa-profile-avatar, .sp-avatar) :is(.cm-logo-emblem svg, .cm-emblem-icon, svg) {
+  stroke: #1E173D !important;
+  color: #1E173D !important;
+  width: 28px !important;
+  height: 28px !important;
+}
+
+:root body :is(.cm-profile-avatar-wrap, .sa-profile-avatar, .sp-avatar) .cm-emblem-code {
+  color: #1E173D !important;
+  font-weight: 850 !important;
+  font-size: 0.85rem !important;
+}
+
+/* 6. Profile Header Info & Badges */
+:root body :is(
+  .cm-profile-header-info,
+  .sa-profile-header > div:nth-child(2),
+  .sp-identity
+) {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 4px !important;
+  position: relative !important;
+  z-index: 2 !important;
+  min-width: 0 !important;
+  flex: 1 1 auto !important;
+}
+
+:root body :is(.cm-profile-badges, .sa-badge-row) {
+  display: flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+  flex-wrap: wrap !important;
+  margin-bottom: 2px !important;
+}
+
+:root body :is(.cm-badge, .cm-badge-code, .cm-badge-type) {
+  display: inline-flex !important;
+  align-items: center !important;
+  padding: 3px 10px !important;
+  border-radius: 999px !important;
+  background: rgba(255, 255, 255, 0.2) !important;
+  border: 1px solid rgba(255, 255, 255, 0.35) !important;
+  color: #FFFFFF !important;
+  font-size: 0.72rem !important;
+  font-weight: 750 !important;
+  letter-spacing: 0.04em !important;
+  text-transform: uppercase !important;
+}
+
+:root body :is(.cm-profile-banner, .sa-profile-header) :is(.cm-status-badge, .sa-status-badge, .status-badge) {
+  position: static !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  padding: 3px 12px !important;
+  border-radius: 999px !important;
+  background: #FFFFFF !important;
+  color: #5D54A4 !important;
+  border: 1px solid rgba(255, 255, 255, 0.8) !important;
+  font-size: 0.74rem !important;
+  font-weight: 800 !important;
+  text-transform: uppercase !important;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08) !important;
+}
+
+:root body :is(.cm-profile-title, .sa-profile-header h1, .sp-identity h2) {
+  margin: 0 !important;
+  font-size: 1.45rem !important;
+  font-weight: 750 !important;
+  color: #FFFFFF !important;
+  line-height: 1.25 !important;
+  letter-spacing: -0.015em !important;
+}
+
+:root body :is(.cm-profile-subtitle, .sa-profile-header p, .sp-identity p) {
+  margin: 2px 0 0 !important;
+  font-size: 0.86rem !important;
+  color: rgba(255, 255, 255, 0.9) !important;
+  font-weight: 500 !important;
+  line-height: 1.4 !important;
+}
+
+:root body :is(.cm-profile-subtitle, .sa-profile-header p, .sp-identity p) strong {
+  color: #FFFFFF !important;
+  font-weight: 750 !important;
+}
+
+/* 7. Profile Information Cards Container */
+:root body :is(
+  .cm-profile-grid,
+  .sa-detail-card,
+  .sa-detail-grid-layout,
+  .shared-view-dialog .erp-detail-grid,
+  .department-profile-view .cm-profile-grid,
+  .section-profile-page .cm-profile-grid,
+  .semester-management .cm-profile-grid,
+  .course-management .cm-profile-grid,
+  .branch-management .cm-profile-grid,
+  .college-management .cm-profile-grid,
+  .student-profile .sp-panel-grid,
+  .student-profile .sp-profile-cards-container
+) {
+  display: flex !important;
+  flex-direction: column !important;
   gap: 16px !important;
   padding: 20px !important;
-  background: var(--surface, #fff);
+  background: transparent !important;
+  width: 100% !important;
+  box-sizing: border-box !important;
 }
-:root body :is(.cm-profile-grid, .shared-view-dialog .erp-detail-grid) > .cm-info-card {
-  grid-column: auto !important;
-  min-width: 0;
+
+/* 8. Information Card / Panel Component */
+:root body :is(
+  .cm-info-card,
+  .sa-detail-panel,
+  .sa-detail-panel.sa-modern-panel,
+  .sp-panel,
+  .sp-profile-panel,
+  .shared-view-dialog .erp-detail-grid > .cm-info-card,
+  .department-profile-view .cm-info-card,
+  .section-profile-page .cm-info-card,
+  .semester-management .cm-info-card,
+  .course-management .cm-info-card,
+  .branch-management .cm-info-card,
+  .college-management .cm-info-card
+) {
+  min-width: 0 !important;
+  width: 100% !important;
   margin: 0 !important;
-  padding: 20px !important;
-  border: 1px solid var(--border, #d7e4ee) !important;
-  border-radius: 14px !important;
-  background: var(--surface, #fff) !important;
-  box-shadow: 0 3px 10px rgb(15 42 66 / 6%) !important;
-  transition: border-color 180ms ease, box-shadow 180ms ease, transform 180ms ease;
-}
-/* Override legacy sibling separators without joining adjacent cards. */
-:root body :is(.cm-profile-grid, .shared-view-dialog .erp-detail-grid) > .cm-info-card + .cm-info-card {
-  margin-top: 0 !important;
-  padding-top: 20px !important;
-  border-top: 1px solid var(--border, #d7e4ee) !important;
-}
-:root body .cm-info-card-header {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  margin: 0 0 16px !important;
-  padding: 0 0 14px !important;
-  border-bottom: 1px solid var(--border, #d7e4ee) !important;
-  color: var(--brand, #8782BC);
-  background: transparent;
-}
-:root body .cm-info-card-header h2 {
-  margin: 0;
-  color: var(--brand, #8782BC) !important;
-  font-size: 1rem !important;
-  font-weight: 750;
-  line-height: 1.35;
-}
-:root body .cm-info-card-header svg {
-  width: 20px;
-  height: 20px;
-  flex-shrink: 0;
-}
-:root body :is(.cm-info-card .cm-info-rows, .fs-editor.details .fs-preview) {
-  display: grid !important;
-  grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
-  gap: 20px 28px !important;
-  margin: 0;
   padding: 0 !important;
+  border: 1px solid var(--border, #E2E8F0) !important;
+  border-radius: 12px !important;
+  background: var(--surface, #FFFFFF) !important;
+  box-shadow: 0 1px 4px rgba(15, 23, 42, 0.04) !important;
+  overflow: hidden !important;
+  box-sizing: border-box !important;
+  transition: border-color 180ms ease, box-shadow 180ms ease !important;
+}
+
+/* 9. Card Header with Left Accent, Icon Box, Title, and Items Count Badge */
+:root body :is(
+  .cm-info-card-header,
+  .sa-panel-header,
+  .sp-panel-header,
+  .department-profile-view .cm-info-card-header,
+  .section-profile-page .cm-info-card-header,
+  .semester-management .cm-info-card-header,
+  .course-management .cm-info-card-header,
+  .branch-management .cm-info-card-header,
+  .college-management .cm-info-card-header
+) {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  gap: 10px !important;
+  margin: 0 !important;
+  padding: 12px 18px !important;
+  border-bottom: 1px solid var(--border, #E2E8F0) !important;
+  border-left: 4px solid var(--brand, #7169A8) !important;
+  background: var(--surface-soft, #F8FAFC) !important;
+  color: var(--brand, #7169A8) !important;
+  box-sizing: border-box !important;
+}
+
+:root body :is(.sa-panel-title-wrap, .cm-panel-title-wrap) {
+  display: flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+}
+
+:root body :is(.sa-panel-icon, .cm-panel-icon) {
+  display: grid !important;
+  place-items: center !important;
+  width: 26px !important;
+  height: 26px !important;
+  border-radius: 6px !important;
+  background: var(--brand-soft, #EDEBF6) !important;
+  color: var(--brand, #7169A8) !important;
+  font-size: 14px !important;
+}
+
+:root body :is(.cm-info-card-header, .sa-panel-header, .sp-panel-header) :is(h2, .sa-panel-header h2) {
+  margin: 0 !important;
+  color: var(--text-primary, #0F172A) !important;
+  font-size: 0.95rem !important;
+  font-weight: 750 !important;
+  line-height: 1.35 !important;
+}
+
+:root body :is(.sa-card-count-badge, .cm-card-count-badge) {
+  display: inline-flex !important;
+  align-items: center !important;
+  padding: 3px 9px !important;
+  border-radius: 999px !important;
+  font-size: 0.72rem !important;
+  font-weight: 750 !important;
+  background: var(--brand-soft, #EDEBF6) !important;
+  color: var(--brand, #7169A8) !important;
+}
+
+/* 10. Card Grid Body (3-Column Pill Layout) */
+:root body :is(
+  .cm-info-rows,
+  .sa-detail-kv-grid,
+  .sa-card-kv-grid,
+  .sp-info-grid,
+  .sp-panel-grid,
+  .fs-editor.details .fs-preview,
+  .department-profile-view .cm-info-rows,
+  .section-profile-page .cm-info-rows,
+  .semester-management .cm-info-rows,
+  .course-management .cm-info-rows,
+  .branch-management .cm-info-rows,
+  .college-management .cm-info-rows
+) {
+  display: grid !important;
+  grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+  gap: 12px !important;
+  margin: 0 !important;
+  padding: 18px !important;
   border: 0 !important;
   background: transparent !important;
+  box-sizing: border-box !important;
+  width: 100% !important;
 }
-:root body :is(.cm-profile-grid, .shared-view-dialog, .fs-editor.details)
-:is(.cm-info-row, .fs-preview > div) {
-  display: grid !important;
-  grid-template-columns: 1fr !important;
-  align-content: start;
-  align-items: start;
-  min-width: 0;
-  gap: 5px !important;
+
+/* 11. Individual Pill Cell */
+:root body :is(
+  .cm-info-row,
+  .sa-kv-cell,
+  .sp-info-item,
+  .sp-panel-item,
+  .fs-preview > div,
+  .department-profile-view .cm-info-row,
+  .section-profile-page .cm-info-row,
+  .semester-management .cm-info-row,
+  .course-management .cm-info-row,
+  .branch-management .cm-info-row,
+  .college-management .cm-info-row
+) {
+  display: flex !important;
+  flex-direction: column !important;
+  justify-content: center !important;
+  gap: 4px !important;
+  padding: 12px 18px !important;
+  background: var(--surface-soft, #F8FAFC) !important;
+  border: 1px solid var(--border, #E2E8F0) !important;
+  border-radius: 10px !important;
+  min-width: 0 !important;
+  box-sizing: border-box !important;
+}
+
+:root body :is(.sa-kv-cell.sa-kv-full, .cm-info-row.cm-span-full) {
+  grid-column: 1 / -1 !important;
+}
+
+/* 12. Pill Label */
+:root body :is(
+  .cm-info-label,
+  .sa-kv-label,
+  .sp-info-item dt,
+  .sp-panel-label,
+  .fs-editor.details .fs-preview dt,
+  .department-profile-view .cm-info-label,
+  .section-profile-page .cm-info-label,
+  .semester-management .cm-info-label,
+  .course-management .cm-info-label,
+  .branch-management .cm-info-label,
+  .college-management .cm-info-label
+) {
+  margin: 0 0 2px 0 !important;
   padding: 0 !important;
-  border: 0 !important;
-  background: transparent !important;
-}
-:root body :is(.cm-info-card .cm-info-label, .fs-editor.details .fs-preview dt) {
-  margin: 0;
-  color: var(--text-muted, #71869c) !important;
-  font-size: .76rem !important;
-  font-weight: 650 !important;
-  letter-spacing: 0;
-  text-transform: none;
-}
-:root body :is(.cm-info-card .cm-info-val, .fs-editor.details .fs-preview dd) {
-  min-width: 0;
-  margin: 0;
-  color: var(--text-primary, #102c46) !important;
-  font-size: .86rem !important;
-  font-weight: 700 !important;
-  line-height: 1.5;
+  color: var(--text-muted, #64748B) !important;
+  font-size: 0.72rem !important;
+  font-weight: 750 !important;
+  letter-spacing: 0.04em !important;
+  text-transform: uppercase !important;
   text-align: left !important;
-  overflow-wrap: anywhere;
+  display: block !important;
+  width: 100% !important;
 }
-.shared-view-dialog__body { padding: 0; }
-:root body .fs-editor.details .fs-preview {
-  padding: 20px !important;
-  border: 1px solid var(--border, #d7e4ee) !important;
-  border-radius: 14px;
-  box-shadow: 0 3px 10px rgb(15 42 66 / 6%);
+
+/* 13. Pill Value */
+:root body :is(
+  .cm-info-val,
+  .sa-kv-val,
+  .sa-kv-value,
+  .sp-info-item dd,
+  .sp-panel-val,
+  .fs-editor.details .fs-preview dd,
+  .department-profile-view .cm-info-val,
+  .section-profile-page .cm-info-val,
+  .semester-management .cm-info-val,
+  .course-management .cm-info-val,
+  .branch-management .cm-info-val,
+  .college-management .cm-info-val
+) {
+  min-width: 0 !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  color: var(--text-primary, #0F172A) !important;
+  font-size: 0.9rem !important;
+  font-weight: 700 !important;
+  line-height: 1.4 !important;
+  text-align: left !important;
+  overflow-wrap: anywhere !important;
+  word-break: break-word !important;
+  display: block !important;
+  width: 100% !important;
 }
-@media (hover: hover) {
-  :root body :is(.cm-profile-grid, .shared-view-dialog .erp-detail-grid) > .cm-info-card:hover {
-    border-color: var(--brand, #8782BC) !important;
-    box-shadow: 0 6px 18px rgb(15 70 110 / 12%) !important;
-    transform: translateY(-2px);
-  }
-}
-@media (max-width: 760px) {
-  :root body :is(.cm-profile-grid, .shared-view-dialog .erp-detail-grid) {
-    grid-template-columns: 1fr !important;
-    padding: 16px !important;
+
+/* Responsive Grid Rules */
+@media (max-width: 900px) {
+  :root body :is(
+    .cm-info-rows,
+    .sa-detail-kv-grid,
+    .sa-card-kv-grid,
+    .sp-info-grid,
+    .sp-panel-grid,
+    .fs-editor.details .fs-preview,
+    .department-profile-view .cm-info-rows,
+    .section-profile-page .cm-info-rows,
+    .semester-management .cm-info-rows,
+    .course-management .cm-info-rows,
+    .branch-management .cm-info-rows,
+    .college-management .cm-info-rows
+  ) {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
   }
 }
 
-/* One detail-view contract for College, Department, Course, Branch, Semester
-   and Section screens.  Legacy pages keep their data-specific markup, but
-   their read-only view surfaces now use the same layout as the College view. */
-:root body :is(.department-profile-view, .section-profile-page, .semester-management .cm-profile-view, .course-management .cm-profile-view, .branch-management .cm-profile-view) .cm-profile-grid {
-  display: grid !important;
-  grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
-  gap: 16px !important;
-  padding: 20px !important;
-  background: var(--surface, #fff) !important;
+@media (max-width: 600px) {
+  :root body :is(
+    .cm-info-rows,
+    .sa-detail-kv-grid,
+    .sa-card-kv-grid,
+    .sp-info-grid,
+    .sp-panel-grid,
+    .fs-editor.details .fs-preview,
+    .department-profile-view .cm-info-rows,
+    .section-profile-page .cm-info-rows,
+    .semester-management .cm-info-rows,
+    .course-management .cm-info-rows,
+    .branch-management .cm-info-rows,
+    .college-management .cm-info-rows
+  ) {
+    grid-template-columns: 1fr !important;
+  }
+  
+  :root body :is(.cm-profile-banner, .sa-profile-header, .sp-hero) {
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    padding: 16px !important;
+  }
+
 }
-:root body :is(.department-profile-view, .section-profile-page, .semester-management .cm-profile-view, .course-management .cm-profile-view, .branch-management .cm-profile-view) .cm-info-card {
-  min-width: 0 !important;
-  margin: 0 !important;
-  padding: 20px !important;
-  border: 1px solid var(--border, #d7e4ee) !important;
-  border-radius: 14px !important;
-  background: var(--surface, #fff) !important;
-  box-shadow: var(--shadow-sm) !important;
-}
-:root body :is(.department-profile-view, .section-profile-page, .semester-management .cm-profile-view, .course-management .cm-profile-view, .branch-management .cm-profile-view) :is(.cm-info-card-header, .cm-info-card-header h2) {
-  color: var(--brand, #8782BC) !important;
-}
-:root body :is(.department-profile-view, .section-profile-page, .semester-management .cm-profile-view, .course-management .cm-profile-view, .branch-management .cm-profile-view) .cm-info-card-header {
-  margin-bottom: 16px !important;
-  padding-bottom: 14px !important;
-  border-bottom: 1px solid var(--border, #d7e4ee) !important;
-}
-:root body :is(.department-profile-view, .section-profile-page, .semester-management .cm-profile-view, .course-management .cm-profile-view, .branch-management .cm-profile-view) .cm-info-rows {
-  display: grid !important;
-  grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
-  gap: 20px 28px !important;
-  border: 0 !important;
-  background: transparent !important;
-}
-:root body :is(.department-profile-view, .section-profile-page, .semester-management .cm-profile-view, .course-management .cm-profile-view, .branch-management .cm-profile-view) .cm-info-row {
-  display: grid !important;
-  grid-template-columns: 1fr !important;
-  gap: 5px !important;
-  padding: 0 !important;
-  border: 0 !important;
-  background: transparent !important;
-}
-:root[data-theme="dark"] body :is(.department-profile-view, .section-profile-page, .semester-management .cm-profile-view, .course-management .cm-profile-view, .branch-management .cm-profile-view) :is(.cm-profile-grid, .cm-info-card) {
+
+/* Dark Mode Overrides */
+:root[data-theme="dark"] body :is(
+  .cm-profile-card,
+  .department-profile-view .cm-profile-card,
+  .section-profile-page .cm-profile-card,
+  .semester-management .cm-profile-card,
+  .course-management .cm-profile-card,
+  .branch-management .cm-profile-card,
+  .college-management .cm-profile-card,
+  .cm-info-card,
+  .sa-detail-panel,
+  .sa-detail-panel.sa-modern-panel,
+  .sp-panel,
+  .sp-profile-panel
+) {
   background: var(--surface) !important;
   border-color: var(--border) !important;
 }
-@media (max-width: 760px) {
-  :root body :is(.department-profile-view, .section-profile-page, .semester-management .cm-profile-view, .course-management .cm-profile-view, .branch-management .cm-profile-view) :is(.cm-profile-grid, .cm-info-rows) {
-    grid-template-columns: 1fr !important;
-    padding: 14px !important;
-  }
-}
-@media (max-width: 480px) {
-  :root body :is(.cm-info-card .cm-info-rows, .fs-editor.details .fs-preview) {
-    grid-template-columns: 1fr !important;
-    gap: 16px !important;
-  }
-}
-@media (prefers-reduced-motion: reduce) {
-  :root body .cm-info-card {
-    transition: none !important;
-    transform: none !important;
-  }
+
+:root[data-theme="dark"] body :is(
+  .cm-info-card-header,
+  .sa-panel-header,
+  .sp-panel-header
+) {
+  background: var(--surface) !important;
+  border-color: var(--border) !important;
 }
 
-/* Compact read-only contract used by every management View/Preview. These
-   selectors deliberately exclude editable fields and wizard step content. */
-:root body :is(.cm-profile-grid, .shared-view-dialog .erp-detail-grid) {
-  gap: 10px !important;
-  padding: 12px !important;
-}
-:root body :is(.cm-profile-grid, .shared-view-dialog .erp-detail-grid) > .cm-info-card {
-  padding: 12px !important;
-  border-radius: 10px !important;
-}
-:root body :is(.cm-profile-grid, .shared-view-dialog .erp-detail-grid) > .cm-info-card + .cm-info-card {
-  padding-top: 12px !important;
-}
-:root body .cm-info-card-header {
-  gap: 7px;
-  margin-bottom: 9px !important;
-  padding-bottom: 8px !important;
-}
-:root body .cm-info-card-header svg { width: 17px; height: 17px; }
-:root body :is(.cm-info-card .cm-info-rows, .fs-editor.details .fs-preview) {
-  gap: 10px 16px !important;
-}
-:root body .fs-editor.details .fs-preview { padding: 12px !important; border-radius: 10px; }
-
-/* Course, Branch and Semester side previews. */
-:root body :is(.course-preview, .branch-preview, .branch-course-preview, .semester-live-preview) { padding: 12px !important; }
-:root body :is(.course-preview, .branch-preview, .branch-course-preview) > div { margin-top: 8px; }
-:root body :is(.course-preview, .branch-preview, .branch-course-preview) section { padding-block: 8px !important; }
-:root body :is(.course-preview, .branch-preview, .branch-course-preview) :is(h2, h3) { margin-bottom: 6px !important; }
-:root body :is(.course-preview, .branch-preview, .branch-course-preview) :is(dl, .branch-preview-section) { gap: 6px !important; }
-:root body .semester-live-preview :is(.cm-info-rows, .semester-preview-list) { gap: 6px !important; }
-:root body .semester-preview-list > div { padding-block: 7px !important; }
-
-/* Student view and preview drawers. */
-:root body .student-admission .sa-preview { padding: 8px; }
-:root body .student-admission .sa-preview > .sa-full-review { padding-top: 8px; }
-:root body .student-admission .sa-preview-header { gap: 10px; padding: 11px 12px; }
-:root body .student-admission .sa-preview-header dl div { padding: 7px 8px; }
-:root body .student-profile .sp-preview-header { padding: 16px 48px 12px 18px; }
-:root body .student-profile .sp-preview-identity { gap: 10px; margin-top: 8px; }
-:root body .student-profile .sp-preview-ids { gap: 10px; margin-top: 10px; }
-:root body .student-profile .sp-preview-body { padding: 12px 18px; }
-:root body .student-profile .sp-summary-card { gap: 10px; margin-bottom: 12px; padding: 10px; }
-:root body .student-profile .sp-preview-section { margin-bottom: 12px; }
-:root body .student-profile .sp-preview-facts div { min-height: 48px; padding: 8px 9px; }
-:root body .student-profile .sp-preview-actions { gap: 6px; padding: 10px 18px; }
-
-@media (max-width: 760px) {
-  :root body :is(.cm-profile-grid, .shared-view-dialog .erp-detail-grid) { gap: 8px !important; padding: 10px !important; }
-  :root body :is(.cm-info-card .cm-info-rows, .fs-editor.details .fs-preview) { gap: 8px !important; }
-  :root body .student-profile .sp-preview-body { padding: 10px 14px; }
-  :root body .student-profile .sp-preview-actions { padding: 9px 14px; }
+:root[data-theme="dark"] body :is(
+  .cm-info-row,
+  .sa-kv-cell,
+  .sp-info-item,
+  .sp-panel-item,
+  .fs-preview > div
+) {
+  background: var(--surface-soft) !important;
+  border-color: var(--border) !important;
 }

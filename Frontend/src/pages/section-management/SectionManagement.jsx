@@ -19,6 +19,7 @@ import { matchesSectionStudent, sectionStudentProfiles } from '../../utils/secti
 import { branchTypeLabel } from '../../utils/semesterUtils'
 import eventBus, { ERP_EVENTS } from '../../services/eventBus'
 import facultyService, { normalizeFaculty } from '../../services/facultyService'
+import roomService from '../../services/roomService'
 import { useAcademic } from '../../context/AcademicContext'
 import './SectionManagement.css'
 import '../../styles/directory-search.css'
@@ -137,8 +138,8 @@ const Header = ({ title, text, children }) => <header className="section-page-he
 const Status = ({ value }) => <span className={`section-status ${String(value || '').toLowerCase()}`}>{value}</span>
 const ReadOnly = ({ value, placeholder = 'Resolved after selection' }) => <input value={value || ''} placeholder={placeholder} readOnly />
 const Field = ({ label, error, children }) => <label className={`section-field ${error ? 'invalid' : ''}`}><span>{label.endsWith(' *') ? <>{label.slice(0, -2)} <b className="section-required">*</b></> : label}</span>{children}{error && <small role="alert">{error}</small>}</label>
-function InfoRows({ rows }) { const visible = rows.filter(([, value]) => clean(value)); if (!visible.length) return null; return <div className="cm-info-rows">{visible.map(([label, value]) => <div className="cm-info-row" key={label}><span className="cm-info-label">{label}</span><span className="cm-info-val">{value}</span></div>)}</div> }
-function InfoCard({ icon: Icon, title, rows }) { const visible = rows.filter(([, value]) => clean(value)); if (!visible.length) return null; return <section className="cm-info-card"><div className="cm-info-card-header"><Icon /><h2>{title}</h2></div><InfoRows rows={visible} /></section> }
+function InfoRows({ rows }) { const visible = rows.filter(([, value]) => clean(value)); if (!visible.length) return null; return <div className="cm-info-rows sa-detail-kv-grid erp-view-grid">{visible.map(([label, value]) => <div className="cm-info-row sa-kv-cell erp-view-field" key={label}><span className="cm-info-label sa-kv-label erp-view-label">{label}</span><strong className="cm-info-val sa-kv-val erp-view-value">{value}</strong></div>)}</div> }
+function InfoCard({ icon: Icon, title, rows }) { const visible = rows.filter(([, value]) => clean(value)); if (!visible.length) return null; return <section className="cm-info-card sa-detail-panel sa-modern-panel erp-view-section"><div className="cm-info-card-header sa-panel-header"><div className="sa-panel-title-wrap">{Icon && <span className="sa-panel-icon"><Icon aria-hidden="true" /></span>}<h2>{title}</h2></div><span className="sa-card-count-badge">{visible.length} items</span></div><InfoRows rows={visible} /></section> }
 function Empty({ icon: Icon, title, action }) { return <div className="section-empty"><Icon /><h3>{title}</h3>{action}</div> }
 
 function SectionList() {
@@ -232,13 +233,13 @@ function SectionList() {
             <table className="section-table">
               <thead>
                 <tr>
-                  <th style={{ minWidth: '150px' }}>Section</th>
-                  <th style={{ minWidth: '150px' }}>Course</th>
-                  <th style={{ minWidth: '150px' }}>Branch</th>
+                  <th className="table-center" style={{ minWidth: '150px' }}>Section</th>
+                  <th className="table-center" style={{ minWidth: '150px' }}>Course</th>
+                  <th className="table-center" style={{ minWidth: '150px' }}>Branch</th>
                   <th className="table-center" style={{ width: '100px' }}>Semester</th>
                   <th className="table-center" style={{ width: '130px' }}>Academic Year</th>
                   <th className="table-center" style={{ width: '150px' }}>Strength / Capacity</th>
-                  <th style={{ minWidth: '170px', maxWidth: '220px' }}>Faculty Advisor</th>
+                  <th className="table-center" style={{ minWidth: '170px', maxWidth: '220px' }}>Faculty Advisor</th>
                   <th className="table-center" style={{ width: '120px' }}>Status</th>
                   <th className="table-center" style={{ width: '170px' }}>Actions</th>
                 </tr>
@@ -248,19 +249,21 @@ function SectionList() {
                   const assigned = Math.max(count(section.id), Number(section.currentStrength || 0))
                   return (
                     <tr key={section.id}>
-                      <td style={{ minWidth: '150px' }}>
+                      <td className="table-center" style={{ minWidth: '150px' }}>
                         <div className="table-primary-cell">
-                          <strong className="section-name" title={section.name}>{section.name}</strong>
+                          <Link to={`/section-management/${section.id}`} className="section-name-link table-cell-truncate" title={`Click to view details for ${section.name}`}>
+                            {section.name}
+                          </Link>
                           <small>{section.code}</small>
                         </div>
                       </td>
-                      <td style={{ minWidth: '150px' }}>
+                      <td className="table-center" style={{ minWidth: '150px' }}>
                         <div className="table-primary-cell">
                           <strong title={section.course}>{section.course}</strong>
                           {section.courseCode && <small title={section.courseCode}>{section.courseCode}</small>}
                         </div>
                       </td>
-                      <td style={{ minWidth: '150px' }}>
+                      <td className="table-center" style={{ minWidth: '150px' }}>
                         <div className="table-primary-cell">
                           <strong title={section.branch}>{section.branch}</strong>
                           {section.branchCode && <small title={section.branchCode}>{section.branchCode}</small>}
@@ -272,7 +275,7 @@ function SectionList() {
                         <strong>{assigned} / {section.capacity}</strong>
                         <small>{Math.max(Number(section.capacity || 0) - assigned, 0)} seats available</small>
                       </td>
-                      <td style={{ minWidth: '170px', maxWidth: '220px' }}>
+                      <td className="table-center" style={{ minWidth: '170px', maxWidth: '220px' }}>
                         {section.advisor ? (
                           <strong className="table-cell-truncate" title={section.advisor}>{section.advisor}</strong>
                         ) : (
@@ -282,7 +285,6 @@ function SectionList() {
                       <td className="table-center" style={{ width: '120px' }}><StatusBadge value={section.status} /></td>
                       <td className="table-center" style={{ width: '170px' }}>
                         <div className="section-actions table-actions-group">
-                          <Link className="table-action-btn action-view" title={`View details for ${section.name}`} aria-label={`View details for ${section.name}`} to={`/section-management/${section.id}`}><FiEye /></Link>
                           <Link className="table-action-btn action-edit" title={`Edit ${section.name}`} aria-label={`Edit ${section.name}`} to={`/section-management/${section.id}/edit`}><FiEdit2 /></Link>
                           <button type="button" className="table-action-btn action-assign section-assign-action" title={`Assign Students / Faculty to ${section.name}`} aria-label={`Assign Students to ${section.name}`} onClick={() => openAssign(section)}><FiUserPlus /></button>
                           <button type="button" className={`table-action-btn ${section.status === 'Active' ? 'action-deactivate' : 'action-activate'}`} title={section.status === 'Active' ? `Deactivate ${section.name}` : `Activate ${section.name}`} aria-label={section.status === 'Active' ? `Deactivate ${section.name}` : `Activate ${section.name}`} onClick={() => toggle(section)}>{section.status === 'Active' ? <FiToggleRight /> : <FiToggleLeft />}</button>
@@ -308,18 +310,22 @@ function SectionList() {
 function SectionForm({ editMode = false }) {
   const { id } = useParams(), navigate = useNavigate()
   const { selectedCollegeId, selectedCollege, activeDepartments, selectedAcademicYearId, selectedAcademicYear } = useAcademic()
+  const [form, setForm] = useState(emptyForm)
+  const [loading, setLoading] = useState(true)
+  const [saving, setSaving] = useState(false)
+  const [errors, setErrors] = useState({})
+  const [notice, setNotice] = useState('')
   const [masters, setMasters] = useState({ courses: [], branches: [], years: [], semesters: [] }), [sections, setSections] = useState([]), [assignments, setAssignments] = useState([]), [faculty, setFaculty] = useState([])
   const semesterRequest = useRef(0)
   const legacy = useRef({})
   const [formTab, setFormTab] = useState(editMode ? 'details' : 'mapping')
-  const [form, setForm] = useState(emptyForm), [errors, setErrors] = useToastState({}, 'error'), [loading, setLoading] = useState(true), [saving, setSaving] = useState(false), [, setNotice] = useToastState('', 'success')
-  const scopedCourses = masters.courses
+  const scopedCourses = useMemo(() => (masters.courses || []).filter(item => (item.status !== 'Inactive' && item.status !== 0 && item.status !== false && item.isActive !== false) || (editMode && String(item.id) === String(form.courseId))), [masters.courses, editMode, form.courseId])
   const course = scopedCourses.find((item) => String(item.id) === String(form.courseId))
-  const branches = masters.branches.filter((item) => String(item.courseId) === String(form.courseId))
+  const branches = useMemo(() => (masters.branches || []).filter((item) => String(item.courseId) === String(form.courseId) && ((item.status !== 'Inactive' && item.status !== 0 && item.status !== false && item.isActive !== false) || (editMode && String(item.id) === String(form.branchId)))), [masters.branches, form.courseId, editMode, form.branchId])
   const branch = branches.find((item) => String(item.id) === String(form.branchId))
   const activeYears = useMemo(() => getActiveAcademicYears(masters.years), [masters.years])
   const activeYear = editMode ? masters.years.find((item) => String(item.id) === String(form.academicYearId)) : (masters.years.find(y => String(y.id) === String(selectedAcademicYearId)) || selectedAcademicYear || activeYears.find((item) => String(item.id) === String(form.academicYearId)) || activeYears[0])
-  const semesters = masters.semesters.filter((item) => (!form.courseId || (!item.courseId || String(item.courseId) === String(form.courseId))) && (!form.branchId || (!item.branchId || String(item.branchId) === String(form.branchId))) && (!form.academicYearId || !item.academicYearId || String(item.academicYearId) === String(form.academicYearId)))
+  const semesters = useMemo(() => (masters.semesters || []).filter((item) => (!form.courseId || (!item.courseId || String(item.courseId) === String(form.courseId))) && (!form.branchId || (!item.branchId || String(item.branchId) === String(form.branchId))) && (!form.academicYearId || !item.academicYearId || String(item.academicYearId) === String(form.academicYearId)) && ((item.status !== 'Inactive' && item.status !== 0 && item.status !== false && item.isActive !== false) || (editMode && String(item.id) === String(form.semesterId)))), [masters.semesters, form.courseId, form.branchId, form.academicYearId, editMode, form.semesterId])
   const semester = semesters.find((item) => String(item.id) === String(form.semesterId))
   const assignedCount = Math.max(Number(form.currentStrength || 0), assignments.filter((item) => String(item.sectionId) === String(id)).length)
   const teacherCandidates = useMemo(() => teacherCandidatesForBranch(faculty, branch?.name || form.branch, branch?.code || form.branchCode, branch?.id || form.branchId), [faculty, branch, form.branch, form.branchCode, form.branchId])
@@ -350,7 +356,7 @@ function SectionForm({ editMode = false }) {
   const setSemester = (semesterId) => { const selectedSemester = masters.semesters.find((item) => String(item.id) === String(semesterId)); const suggestion = editMode ? {} : suggestSection(semesterId); setForm((current) => ({ ...current, semesterId, semester: selectedSemester?.name || '', academicYearId: selectedSemester?.academicYearId || current.academicYearId || selectedAcademicYearId || activeYear?.id, academicYear: selectedSemester?.academicYearName || activeYear?.name || current.academicYear, ...suggestion })); setErrors((current) => ({ ...current, semesterId: '', name: '', code: '' })) }
   const setField = (key, value) => { setForm((current) => ({ ...current, [key]: key === 'code' ? value.toUpperCase() : value })); setErrors((current) => ({ ...current, [key]: '' })) }
   const validate = () => { const next = {}; ['courseId', 'branchId', 'semesterId', 'name', 'code', 'status'].forEach((key) => { if (!String(form[key] || '').trim()) next[key] = 'Required.' }); if (!form.academicYearId && !selectedAcademicYearId) next.academicYearId = yearWarning || 'An academic year is required.'; if (!editMode && !semester) next.semesterId = 'Select a configured semester.'; if (!Number.isInteger(Number(form.capacity)) || Number(form.capacity) < 1 || Number(form.capacity) > 120) next.capacity = 'Capacity must be a whole number from 1 to 120.'; if (editMode && Number(form.capacity) < assignedCount) next.capacity = `Capacity cannot be below the ${assignedCount} assigned students.`; if (!/^[A-Z0-9]+(?:-[A-Z0-9]+)*$/.test(String(form.code || '').trim().toUpperCase())) next.code = 'Use uppercase letters, numbers, and single hyphens only.'; const mapping = { ...form, academicYearId: form.academicYearId || selectedAcademicYearId || activeYear?.id }; if (sections.some((item) => String(item.id) !== String(id) && sameMapping(item, mapping) && item.name.trim().toLowerCase() === form.name.trim().toLowerCase())) next.name = 'This section already exists for this academic mapping.'; if (sections.some((item) => String(item.id) !== String(id) && sameMapping(item, mapping) && item.code.trim().toLowerCase() === form.code.trim().toLowerCase())) next.code = 'This section code already exists for this academic mapping.'; setErrors(next); if (Object.keys(next).length) showWarning('Correct the highlighted fields before saving the section.'); return !Object.keys(next).length }
-  const submit = async (event) => { event.preventDefault(); if (saving || !validate()) return; setSaving(true); try { const mappedBranch = !editMode && (!branch?.collegeId || !branch?.departmentId) ? normalizeBranch(responseRecord(await branchApi.getById(form.branchId))) : branch; const mappedCourse = !editMode && (!mappedBranch?.collegeId || !mappedBranch?.departmentId) ? normalizeCourse(responseRecord(await courseApi.getById(form.courseId))) : course; const departmentName = String(mappedBranch?.departmentName || mappedCourse?.departmentName || '').trim().toLowerCase(); const matchedDepartment = activeDepartments.find((item) => String(item.departmentName || item.name || '').trim().toLowerCase() === departmentName); const payload = { ...form, collegeId: mappedBranch?.collegeId || mappedCourse?.collegeId || selectedCollegeId || selectedCollege?.collegeId || selectedCollege?.id || form.collegeId, departmentId: mappedBranch?.departmentId || mappedCourse?.departmentId || matchedDepartment?.departmentId || matchedDepartment?.id || form.departmentId, academicYearId: form.academicYearId || selectedAcademicYearId || activeYear?.id, academicYear: activeYear?.name || form.academicYear, ...legacy.current, capacity: Number(form.capacity) }; if (editMode) { const currentStudents = await sectionAssignmentApi.listBySection(id); if (payload.capacity < currentStudents.length) throw new Error('Capacity cannot be below the current assigned student count.'); const capacityCheck = await sectionApi.validateCapacity(id, payload.capacity); if (capacityCheck === false || capacityCheck?.isValid === false) throw new Error(capacityCheck?.message || 'The requested capacity is not allowed.'); await sectionApi.update(id, payload); await sectionApi.updateStatus(id, payload.status) } else { const created = await sectionApi.create(payload); rememberCreated('sections', created); if (payload.status === 'Inactive') await sectionApi.updateStatus(created.id, payload.status) }; eventBus.emit(ERP_EVENTS.ACADEMIC_UPDATED, { form }); setNotice(`Section ${editMode ? 'updated' : 'created'} successfully.`); setTimeout(() => navigate('/section-management'), 700) } catch (error) { setErrors((current) => ({ ...current, form: apiError(error, 'Unable to save section.') })) } finally { setSaving(false) } }
+  const submit = async (event) => { event.preventDefault(); if (saving || !validate()) return; setSaving(true); try { const mappedBranch = !editMode && (!branch?.collegeId || !branch?.departmentId) ? normalizeBranch(responseRecord(await branchApi.getById(form.branchId))) : branch; const mappedCourse = !editMode && (!mappedBranch?.collegeId || !mappedBranch?.departmentId) ? normalizeCourse(responseRecord(await courseApi.getById(form.courseId))) : course; const departmentName = String(mappedBranch?.departmentName || mappedCourse?.departmentName || '').trim().toLowerCase(); const matchedDepartment = activeDepartments.find((item) => String(item.departmentName || item.name || '').trim().toLowerCase() === departmentName); const payload = { ...form, collegeId: mappedBranch?.collegeId || mappedCourse?.collegeId || selectedCollegeId || selectedCollege?.collegeId || selectedCollege?.id || form.collegeId, departmentId: mappedBranch?.departmentId || mappedCourse?.departmentId || matchedDepartment?.departmentId || matchedDepartment?.id || form.departmentId, academicYearId: form.academicYearId || selectedAcademicYearId || activeYear?.id, academicYear: activeYear?.name || form.academicYear, ...legacy.current, capacity: Number(form.capacity) }; if (editMode) { const currentStudents = await sectionAssignmentApi.listBySection(id); if (payload.status === 'Inactive' && currentStudents.length > 0) throw new Error(`Cannot deactivate section "${payload.name}". ${currentStudents.length} student${currentStudents.length === 1 ? '' : 's'} are currently enrolled. Transfer or unassign students first.`); if (payload.capacity < currentStudents.length) throw new Error('Capacity cannot be below the current assigned student count.'); const capacityCheck = await sectionApi.validateCapacity(id, payload.capacity); if (capacityCheck === false || capacityCheck?.isValid === false) throw new Error(capacityCheck?.message || 'The requested capacity is not allowed.'); await sectionApi.update(id, payload); await sectionApi.updateStatus(id, payload.status) } else { const created = await sectionApi.create(payload); rememberCreated('sections', created); if (payload.status === 'Inactive') await sectionApi.updateStatus(created.id, payload.status) }; if (payload.room) { roomService.allocateRoom(payload.room, payload.name || 'Section') }; eventBus.emit(ERP_EVENTS.ACADEMIC_UPDATED, { form }); setNotice(`Section ${editMode ? 'updated' : 'created'} successfully.`); setTimeout(() => navigate('/section-management'), 700) } catch (error) { setErrors((current) => ({ ...current, form: apiError(error, 'Unable to save section.') })) } finally { setSaving(false) } }
   if (loading) return <Page><Empty icon={FiClock} title="Loading section form..." /></Page>
   const selectedTeacher = teacherCandidates.find((item) => String(item.employeeProfileId) === String(form.facultyAdvisorEmployeeProfileId))
   const selectedCourseObj = scopedCourses.find((item) => String(item.id) === String(form.courseId))
@@ -437,9 +443,6 @@ function SectionForm({ editMode = false }) {
                   <Field label="Faculty Advisor" error={errors.facultyAdvisorEmployeeProfileId}>
                     <SearchableSelect label="Faculty Advisor" value={form.facultyAdvisorEmployeeProfileId} options={teacherCandidates.map((item) => ({ id: item.employeeProfileId, value: item.employeeProfileId, name: item.fullName, code: [item.employeeCode, item.designation].filter(clean).join(' / ') }))} onChange={(value) => { const teacher = teacherCandidates.find((item) => String(item.employeeProfileId) === String(value)); setForm((current) => ({ ...current, facultyAdvisorEmployeeProfileId: value, advisor: teacher?.fullName || '' })) }} placeholder="Select Faculty Advisor" searchPlaceholder="Search faculty..." noOptionsMessage="No faculty candidates found." />
                   </Field>
-                  <Field label="Room / Classroom">
-                    <input value={form.room} onChange={(event) => setField('room', event.target.value)} placeholder="CSE-101" />
-                  </Field>
                   <Field label="Status *" error={errors.status}>
                     <select value={form.status} onChange={(event) => setField('status', event.target.value)}>
                       <option value="" disabled>Select Status</option>
@@ -514,7 +517,6 @@ function SectionForm({ editMode = false }) {
                     ['Section Code', form.code],
                     ['Capacity', form.capacity ? `${form.capacity} Students` : ''],
                     ['Faculty Advisor', selectedTeacher?.fullName || form.advisor],
-                    ['Classroom / Room', form.room],
                     ['Status', form.name || form.code ? form.status || 'Active' : ''],
                   ],
                 },
@@ -582,9 +584,9 @@ function SectionDetails() {
                   {section.code && <span className="cm-badge cm-badge-type">{section.code}</span>}
                   <span className={`cm-status-badge ${String(section.status).toLowerCase()}`}>{section.status}</span>
                 </div>
-                <h1 className="cm-profile-title"><span style={{ color: '#30264F' }}>{section.name}</span></h1>
+                <h1 className="cm-profile-title">{section.name}</h1>
                 <p className="cm-profile-subtitle">
-                  <span style={{ color: '#30264F' }}>{[section.course, section.branchCode || section.branch, section.semester].filter(clean).join(' • ')}</span>
+                  {[section.course, section.branchCode || section.branch, section.semester].filter(clean).join(' • ')}
                 </p>
               </div>
             </div>

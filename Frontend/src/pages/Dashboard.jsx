@@ -13,7 +13,6 @@ import {
   FiClock,
   FiExternalLink,
   FiGrid,
-  FiHome,
   FiLayers,
   FiPieChart,
   FiPlus,
@@ -514,7 +513,6 @@ export default function Dashboard() {
     ).slice(0, 4)
   }, [departments, courses, branches, searchQuery])
 
-  const collegeName = selectedCollege?.name || selectedCollege?.collegeName || 'Engineering & Technology Institute'
   const yearName = selectedAcademicYear?.academicYearName || selectedAcademicYear?.name || 'Active Session 2026-27'
   const roleName = role ? `${role.charAt(0).toUpperCase()}${role.slice(1)}` : 'Administrator'
 
@@ -554,12 +552,6 @@ export default function Dashboard() {
                   <h2>Welcome to {roleName} Control Hub</h2>
                   <p>Unified institutional operations, student lifecycle & academic delivery.</p>
                 </div>
-              </div>
-
-              <div className="ym-context-capsule" title="Active Institutional Context">
-                <FiHome />
-                <strong>{collegeName}</strong>
-                <em>• {yearName}</em>
               </div>
 
               {/* Real Academic Summary Chips */}

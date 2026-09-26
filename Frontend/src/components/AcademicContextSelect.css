@@ -1,0 +1,318 @@
+.workspace-context-select { min-width: 0; width: 100%; }
+.workspace-context-select label { display: grid; gap: 6px; min-width: 0; }
+.workspace-context-select label > span { color: var(--ui-muted); font-size: 11px; font-weight: 600; }
+.workspace-context-select select { width: 100%; min-width: 0; height: 38px; padding: 0 28px 0 10px; border: 1px solid var(--ui-border); border-radius: 7px; background: var(--ui-surface); color: var(--ui-text); font: inherit; font-size: 12px; text-overflow: ellipsis; cursor: pointer; }
+.workspace-context-select select:disabled { cursor: not-allowed; opacity: .65; }
+.workspace-context-select small { display: block; margin-top: 6px; color: var(--ui-muted); font-size: 11px; }
+.workspace-context-select__error { margin-top: 6px; color: var(--ui-danger); font-size: 11px; }
+.workspace-context-select__error button { padding: 3px 6px; margin-left: 4px; border: 0; background: transparent; color: inherit; text-decoration: underline; cursor: pointer; }
+
+#root .sidebar-context { display: none; padding: 8px 0; border-bottom: 1px solid var(--ui-border); flex-shrink: 0; }
+#root .sidebar.is-collapsed .sidebar-context { display: block; }
+#root .sidebar-context-expand { display: none; }
+#root .sidebar.is-collapsed .sidebar-context .workspace-context-select { display: none; }
+#root .sidebar.is-collapsed .sidebar-context-expand { display: grid; place-items: center; width: 36px; height: 36px; border: 1px solid var(--ui-border); border-radius: 7px; background: var(--ui-surface); color: var(--ui-accent); cursor: pointer; }
+#root .header-academic-year__details .workspace-context-select { margin-bottom: 14px; }
+
+/* ==========================================================================
+   Sidebar Brand Header (Single Clean Row)
+   ========================================================================== */
+#root .sidebar:not(.is-collapsed) .sidebar-brand {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 12px 14px;
+  margin: 0;
+  border-bottom: 1px solid #E2E8F0 !important;
+  background: #FFFFFF;
+  min-height: 64px;
+  box-sizing: border-box;
+}
+
+#root .sidebar-brand__mark {
+  flex: 0 0 38px;
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  background: #EDEBF6 !important;
+  border: 1px solid #DDD8F0 !important;
+  display: grid;
+  place-items: center;
+  color: #756FB2 !important;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+}
+
+#root .sidebar-brand__mark img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  padding: 2px;
+  border-radius: 8px;
+}
+
+#root .sidebar-brand__copy {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 2px;
+}
+
+#root .sidebar-brand__subtitle {
+  font-size: 10px;
+  font-weight: 750;
+  color: #756FB2;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  line-height: 1.1;
+  padding-left: 2px;
+}
+
+/* On Desktop: Show ONLY Collapse (<) button, hide Close (X) */
+#root .sidebar-brand .sidebar-close {
+  display: none !important;
+}
+
+#root .sidebar-brand .sidebar-collapse {
+  flex: 0 0 28px;
+  width: 28px;
+  height: 28px;
+  margin: 0;
+  border: 1px solid #CBD5E1;
+  border-radius: 7px;
+  background: #FFFFFF;
+  color: #64748B;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+#root .sidebar-brand .sidebar-collapse:hover {
+  background: #F1F5F9;
+  color: #0F172A;
+  border-color: #94A3B8;
+}
+
+/* On Mobile/Drawer: Show ONLY Close (X) button, hide Collapse (<) */
+@media (max-width: 900px) {
+  #root .sidebar-brand .sidebar-collapse {
+    display: none !important;
+  }
+  #root .sidebar-brand .sidebar-close {
+    display: grid !important;
+    flex: 0 0 28px;
+    width: 28px;
+    height: 28px;
+    margin: 0;
+    border: 1px solid #CBD5E1;
+    border-radius: 7px;
+    background: #FFFFFF;
+    color: #64748B;
+    place-items: center;
+    cursor: pointer;
+    transition: all 0.15s ease;
+  }
+  #root .sidebar-brand .sidebar-close:hover {
+    background: #FEE2E2;
+    color: #DC2626;
+    border-color: #FCA5A5;
+  }
+  #root .sidebar.is-collapsed .sidebar-context { display: none; }
+  #root .sidebar.is-collapsed .sidebar-brand__copy { display: flex; }
+  #root .sidebar.is-open .sidebar-context .workspace-context-select { display: block; }
+  #root .sidebar.is-open .sidebar-context-expand { display: none; }
+}
+
+#root .sidebar.is-collapsed .sidebar-brand__copy {
+  display: none;
+}
+
+/* Institutional College Selector Trigger (Seamless inline style with full text wrapping) */
+#root .sidebar .workspace-context-select .searchable-select__trigger {
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 4px;
+  min-height: auto;
+  padding: 2px 4px;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  background: transparent;
+  color: #0F172A;
+  font-size: 13.5px;
+  font-weight: 800;
+  line-height: 1.25;
+  text-align: left;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  box-shadow: none;
+  width: 100%;
+}
+
+#root .sidebar .workspace-context-select .searchable-select__trigger:hover,
+#root .sidebar .workspace-context-select .searchable-select__trigger[aria-expanded="true"] {
+  background: #F4F3FB;
+  border-color: #DDD8F3;
+}
+
+#root .sidebar .workspace-context-select .searchable-select__trigger-text {
+  font-size: 13px;
+  font-weight: 800;
+  color: #0F172A;
+  white-space: normal;
+  word-break: break-word;
+  line-height: 1.25;
+  letter-spacing: -0.01em;
+}
+
+#root .sidebar .workspace-context-select .searchable-select__caret {
+  flex-shrink: 0;
+  color: #756FB2;
+  font-size: 12px;
+  margin-left: 2px;
+  transition: transform 0.15s ease;
+}
+
+#root .sidebar .workspace-context-select .searchable-select__trigger[aria-expanded="true"] .searchable-select__caret {
+  transform: rotate(180deg);
+}
+
+/* Searchable Select Menu */
+.workspace-context-menu.searchable-select__menu {
+  box-sizing: border-box;
+  padding: 6px;
+  border: 1px solid #CBD5E1;
+  border-radius: 10px;
+  background: #FFFFFF;
+  box-shadow: 0 12px 32px rgba(15, 23, 42, 0.15);
+}
+
+.workspace-context-menu .searchable-select__search {
+  flex-shrink: 0;
+  margin: 2px 2px 6px;
+  padding: 8px 10px;
+  border: 1px solid #CBD5E1;
+  border-radius: 7px;
+  background: #F8FAFC;
+}
+
+.workspace-context-menu .searchable-select__search input {
+  min-width: 0;
+  font-size: 12px;
+  line-height: 1.5;
+  color: #0F172A;
+}
+
+.workspace-context-menu .searchable-select__option {
+  border-radius: 6px;
+  padding: 9px 12px;
+  font-size: 12px;
+  color: #334155;
+  cursor: pointer;
+  transition: all 0.12s ease;
+}
+
+.workspace-context-menu .searchable-select__option.is-active,
+.workspace-context-menu .searchable-select__option:hover,
+.workspace-context-menu .searchable-select__option:focus-visible {
+  background: #EDEBF6;
+  color: #585199;
+  font-weight: 700;
+}
+
+.workspace-context-menu .searchable-select__option-label {
+  white-space: normal;
+  overflow-wrap: anywhere;
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+#root .header-academic-year__status {
+  background: #EDEBF6;
+  color: #585199;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+/* ==========================================================================
+   Dark Theme Overrides for Sidebar Institutional Selector & Popovers
+   ========================================================================== */
+:root[data-theme="dark"] #root .sidebar:not(.is-collapsed) .sidebar-brand {
+  background: #070A10 !important;
+  border-bottom: 1px solid #202A3A !important;
+}
+
+:root[data-theme="dark"] #root .sidebar-brand__mark {
+  background: rgba(135, 130, 188, 0.18) !important;
+  border: 1px solid rgba(135, 130, 188, 0.35) !important;
+  color: #C7C2FF !important;
+}
+
+:root[data-theme="dark"] #root .sidebar-brand__subtitle {
+  color: #9D99CD !important;
+}
+
+:root[data-theme="dark"] #root .sidebar-brand .sidebar-collapse {
+  background: #151B28 !important;
+  border-color: #334155 !important;
+  color: #CBD5E1 !important;
+}
+
+:root[data-theme="dark"] #root .sidebar-brand .sidebar-collapse:hover {
+  background: #20293A !important;
+  border-color: #475569 !important;
+  color: #F8FAFC !important;
+}
+
+:root[data-theme="dark"] #root .sidebar .workspace-context-select .searchable-select__trigger {
+  color: #F8FAFC !important;
+}
+
+:root[data-theme="dark"] #root .sidebar .workspace-context-select .searchable-select__trigger:hover,
+:root[data-theme="dark"] #root .sidebar .workspace-context-select .searchable-select__trigger[aria-expanded="true"] {
+  background: #151B28 !important;
+  border-color: #334155 !important;
+}
+
+:root[data-theme="dark"] #root .sidebar .workspace-context-select .searchable-select__trigger-text {
+  color: #F8FAFC !important;
+}
+
+:root[data-theme="dark"] #root .sidebar .workspace-context-select .searchable-select__caret {
+  color: #9D99CD !important;
+}
+
+:root[data-theme="dark"] .workspace-context-menu.searchable-select__menu {
+  background: #151B28 !important;
+  border-color: #334155 !important;
+  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.5) !important;
+}
+
+:root[data-theme="dark"] .workspace-context-menu .searchable-select__search {
+  background: #101622 !important;
+  border-color: #334155 !important;
+}
+
+:root[data-theme="dark"] .workspace-context-menu .searchable-select__search input {
+  color: #F8FAFC !important;
+}
+
+:root[data-theme="dark"] .workspace-context-menu .searchable-select__option {
+  color: #CBD5E1 !important;
+}
+
+:root[data-theme="dark"] .workspace-context-menu .searchable-select__option.is-active,
+:root[data-theme="dark"] .workspace-context-menu .searchable-select__option:hover,
+:root[data-theme="dark"] .workspace-context-menu .searchable-select__option:focus-visible {
+  background: rgba(135, 130, 188, 0.22) !important;
+  color: #FFFFFF !important;
+}
+
+:root[data-theme="dark"] #root .header-academic-year__status {
+  background: rgba(135, 130, 188, 0.2) !important;
+  color: #C7C2FF !important;
+}

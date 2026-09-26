@@ -6,10 +6,51 @@
 .ac-back { padding: 0; margin-bottom: 14px; border: 0; background: transparent; color: var(--brand, #756FB2); font-weight: 700; cursor: pointer; }
 .ac-progress { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; padding: 10px 14px; margin-bottom: 14px; border: 1px solid #dce6f0; border-radius: 10px; background: #FAF9FD; color: #456784; font-size: .82rem; font-weight: 700; }
 .ac-progress i { color: #9bb0c4; font-style: normal; }
-.ac-tabs { display: flex; justify-content: flex-start; align-items: center; overflow-x: auto; gap: 6px; margin-bottom: 14px; padding: 4px; border: 1px solid #dce6f0; border-radius: 10px; background: #FAF9FD; }
-.ac-tabs button { display: flex; align-items: center; justify-content: center; gap: 6px; min-height: 36px; padding: 6px 12px; border: 1px solid transparent; border-radius: 8px; background: transparent; color: #5b748c; font-size: .78rem; font-weight: 750; cursor: pointer; white-space: nowrap; }
-.ac-tabs button { flex: 0 0 auto; }
-.ac-tabs button span { display: grid; place-items: center; width: 20px; height: 20px; border-radius: 50%; background: #EDEBF6; color: #756FB2; font-size: .68rem; font-weight: 800; }
+.ac-tabs {
+  display: flex !important;
+  flex-wrap: nowrap !important;
+  justify-content: flex-start;
+  align-items: center;
+  overflow-x: auto !important;
+  overflow-y: hidden !important;
+  scroll-behavior: smooth;
+  gap: 8px;
+  margin-bottom: 14px;
+  padding: 6px 8px;
+  border: 1px solid #dce6f0;
+  border-radius: 10px;
+  background: #FAF9FD;
+  width: 100%;
+  box-sizing: border-box;
+  scrollbar-width: thin;
+  -webkit-overflow-scrolling: touch;
+}
+.ac-tabs::-webkit-scrollbar {
+  height: 4px;
+}
+.ac-tabs::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 4px;
+}
+.ac-tabs button {
+  display: inline-flex !important;
+  flex: 0 0 auto !important;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 38px;
+  padding: 6px 14px;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  background: transparent;
+  color: #5b748c;
+  font-size: .82rem;
+  font-weight: 750;
+  cursor: pointer;
+  white-space: nowrap !important;
+  transition: all 0.2s ease;
+}
+.ac-tabs button span { display: grid; place-items: center; width: 22px; height: 22px; border-radius: 50%; background: #EDEBF6; color: #756FB2; font-size: .72rem; font-weight: 800; flex-shrink: 0; }
 .ac-tabs button:hover { background: #EDEBF6; color: var(--brand-navy, #0F172A); }
 .ac-tabs button:disabled { opacity: .48; cursor: not-allowed; background: transparent; color: #7890a6; }
 .ac-tabs button:disabled:hover { background: transparent; color: #7890a6; }

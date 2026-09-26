@@ -13,6 +13,16 @@ export default function ForgotPassword({ onBack }) {
   const [method, setMethod] = useState('email')
   const [contact, setContact] = useState('')
   const [contactTouched, setContactTouched] = useState(false)
+  const [error, setError] = useToastState('', 'error')
+  const [otp, setOtp] = useState('')
+  const [step, setStep] = useState('contact')
+  const [loading, setLoading] = useState(false)
+  const [demoOtp, setDemoOtp] = useState('')
+  const [timer, setTimer] = useState(0)
+  const [passwords, setPasswords] = useState({ password: '', confirmPassword: '' })
+  const [visiblePasswords, setVisiblePasswords] = useState({ password: false, confirmPassword: false })
+  const otpRefs = useRef([])
+
   const contactErrorMsg = useMemo(() => {
     const cleanContact = contact.trim()
     if (!cleanContact) return ''
@@ -22,15 +32,6 @@ export default function ForgotPassword({ onBack }) {
     return ''
   }, [contact, method])
   const activeContactError = (contactTouched || Boolean(contact.trim())) ? (contactErrorMsg || error) : error
-  const [otp, setOtp] = useState('')
-  const [step, setStep] = useState('contact')
-  const [error, setError] = useToastState('', 'error')
-  const [loading, setLoading] = useState(false)
-  const [demoOtp, setDemoOtp] = useState('')
-  const [timer, setTimer] = useState(0)
-  const [passwords, setPasswords] = useState({ password: '', confirmPassword: '' })
-  const [visiblePasswords, setVisiblePasswords] = useState({ password: false, confirmPassword: false })
-  const otpRefs = useRef([])
 
   useEffect(() => {
     if (!timer) return undefined
@@ -52,9 +53,32 @@ export default function ForgotPassword({ onBack }) {
     setLoading(true)
     setError('')
     try {
-      await (step === 'otp' ? resendOtp : generateOtp)({ contact: cleanContact, purpose: 'PASSWORD_RESET' })
-      setDemoOtp('')
-      setStep('otp'); showSuccess('Verification code sent successfully.')
+      let res
+      try {
+        res = await (step === 'otp' ? resendOtp : generateOtp)({ contact: cleanContact, purpose: 'PASSWORD_RESET' })
+      } catch (err) {
+        if (method === 'email') {
+          const fbRes = await fetch('/api/v1/auth/forgot-password', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'ngrok-skip-browser-warning': 'true' },
+            body: JSON.stringify({ identifier: cleanContact })
+          })
+          const fbData = await fbRes.json().catch(() => ({}))
+          if (fbRes.ok && (fbData?.success || fbData?.data?.success)) {
+            res = {
+              success: true,
+              message: fbData?.message || fbData?.data?.message || 'Verification code sent successfully.',
+              otp: fbData?.data?.otp || fbData?.otp || ''
+            }
+          } else {
+            throw err
+          }
+        } else {
+          throw err
+        }
+      }
+      setDemoOtp(res?.otp || '')
+      setStep('otp'); showSuccess(res?.message || 'Verification code sent successfully.')
       setTimer(60)
     } catch (requestError) {
       setError(requestError instanceof AuthRequestError ? requestError.message : 'Unable to send the verification code.')
@@ -133,11 +157,29 @@ export default function ForgotPassword({ onBack }) {
 
   if (step === 'otp') return (
     <form className="login-form" onSubmit={validateOtp} noValidate>
-      <header><h2>Verification code</h2><p>Enter the 6-digit code for <strong>{contact.trim()}</strong>.</p>{demoOtp && <p className="demo-otp">Verification code: {demoOtp}</p>}</header>
+      <header><h2>Verification code</h2><p>Enter the 6-digit code sent to <strong>{contact.trim()}</strong>.</p></header>
       <fieldset className="otp-fieldset compact-otp-fieldset"><legend>Verification code</legend><div className="otp-boxes compact-otp-boxes" onPaste={(event) => { const pasted = event.clipboardData.getData('text').replace(/\D/g, '').slice(0, 6); if (pasted) { event.preventDefault(); setOtp(pasted); otpRefs.current[Math.min(pasted.length, 6) - 1]?.focus() } }}>{Array.from({ length: 6 }, (_, index) => <input key={index} ref={(element) => { otpRefs.current[index] = element }} type="text" inputMode="numeric" autoComplete={index === 0 ? 'one-time-code' : 'off'} maxLength={1} value={otp[index] || ''} onChange={(event) => updateOtp(index, event.target.value)} onKeyDown={(event) => { if (event.key === 'Backspace' && !otp[index] && index > 0) otpRefs.current[index - 1]?.focus() }} aria-label={`OTP digit ${index + 1}`} aria-invalid={Boolean(error)} />)}</div></fieldset>
       {error && <p className="form-error" role="alert">{error}</p>}
       <button className="sign-in-button" type="submit" disabled={loading}>{loading ? 'Verifying...' : 'Verify OTP'}</button>
-      <div className="recovery-actions clean-recovery-actions">{timer > 0 ? <span className="resend-countdown">Resend OTP in {timer}s</span> : <button type="button" className="text-button resend-button" disabled={loading} onClick={requestOtp}>Resend OTP</button>}<button type="button" className="text-button" onClick={() => { setStep('contact'); setOtp(''); setError('') }}>Change contact</button><button type="button" className="text-button" onClick={onBack}>Cancel</button></div>
+      <div className="recovery-actions clean-recovery-actions">
+        <div className="recovery-actions-left">
+          {timer > 0 ? (
+            <span className="resend-countdown">Resend OTP in {timer}s</span>
+          ) : (
+            <button type="button" className="text-button resend-button" disabled={loading} onClick={requestOtp}>
+              Resend OTP
+            </button>
+          )}
+        </div>
+        <div className="recovery-actions-right">
+          <button type="button" className="text-button change-contact-btn" onClick={() => { setStep('contact'); setOtp(''); setError('') }}>
+            Change contact
+          </button>
+          <button type="button" className="text-button cancel-btn" onClick={onBack}>
+            Cancel
+          </button>
+        </div>
+      </div>
     </form>
   )
 

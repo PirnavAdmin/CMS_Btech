@@ -305,9 +305,9 @@ function SemesterList() {
             <table className="semester-table">
               <thead>
                 <tr>
-                  <th style={{ minWidth: '160px' }}>Semester</th>
-                  <th style={{ minWidth: '160px' }}>Course</th>
-                  <th style={{ minWidth: '160px' }}>Branch</th>
+                  <th className="table-center" style={{ minWidth: '160px' }}>Semester</th>
+                  <th className="table-center" style={{ minWidth: '160px' }}>Course</th>
+                  <th className="table-center" style={{ minWidth: '160px' }}>Branch</th>
                   <th className="table-center" style={{ width: '130px' }}>Academic Year</th>
                   <th className="table-center" style={{ width: '120px' }}>Start Date</th>
                   <th className="table-center" style={{ width: '120px' }}>End Date</th>
@@ -318,21 +318,23 @@ function SemesterList() {
               <tbody>
                 {visible.map((item) => (
                   <tr key={item.id || `${item.branchId}-${item.semesterNumber}`}>
-                    <td style={{ minWidth: '160px' }}>
+                    <td className="table-center" style={{ minWidth: '160px' }}>
                       <div className="table-primary-cell">
-                        <strong title={item.semesterName}>{item.semesterName}</strong>
+                        <Link to={`/semester-management/${item.id}`} className="semester-name-link table-cell-truncate" title={`Click to view details for ${item.semesterName}`}>
+                          {item.semesterName}
+                        </Link>
                         {item.semesterName && item.semesterNumber && String(item.semesterName).trim().toLowerCase() !== `semester ${item.semesterNumber}`.toLowerCase() ? (
                           <small>Semester {item.semesterNumber}</small>
                         ) : null}
                       </div>
                     </td>
-                    <td style={{ minWidth: '160px' }}>
+                    <td className="table-center" style={{ minWidth: '160px' }}>
                       <div className="table-primary-cell">
                         <strong title={item.courseName}>{item.courseName}</strong>
                         {item.courseCode && <small title={item.courseCode}>{item.courseCode}</small>}
                       </div>
                     </td>
-                    <td style={{ minWidth: '160px' }}>
+                    <td className="table-center" style={{ minWidth: '160px' }}>
                       <div className="table-primary-cell">
                         <strong title={item.branchName}>{item.branchName}</strong>
                         {item.branchCode && <small title={item.branchCode}>{item.branchCode}</small>}
@@ -345,7 +347,6 @@ function SemesterList() {
                     <td className="table-center" style={{ width: '120px' }}><StatusBadge value={item.status} /></td>
                     <td className="table-center" style={{ width: '130px' }}>
                       <div className="semester-row-actions table-actions-group">
-                        <Link className="table-action-btn action-view" title={`View ${item.semesterName}`} aria-label={`View ${item.semesterName}`} to={`/semester-management/${item.id}`}><FiEye /></Link>
                         <Link className="table-action-btn action-edit" title={`Edit ${item.semesterName}`} aria-label={`Edit ${item.semesterName}`} to={`/semester-management/${item.id}/edit`}><FiEdit2 /></Link>
                       </div>
                     </td>
@@ -383,12 +384,13 @@ function SemesterForm({ editMode = false }) {
   const [editingSemester, setEditingSemester] = useState(null)
 
   const college = colleges.find((item) => String(item.id) === String(form.collegeId)) || (editingSemester?.collegeName ? { id: editingSemester.collegeId, name: editingSemester.collegeName } : null)
-  const collegeCourses = courses.filter((item) => String(item.collegeId) === String(form.collegeId))
+  const activeOnlyCourses = courses.filter((item) => item.status !== 'Inactive' && item.status !== 0 && item.status !== false && item.isActive !== false)
+  const collegeCourses = activeOnlyCourses.filter((item) => String(item.collegeId) === String(form.collegeId))
   // Older course records may not yet carry collegeId. In that case, keep the
   // selected college and still show the courses already available in the system.
-  const availableCourses = collegeCourses.length ? collegeCourses : courses
+  const availableCourses = collegeCourses.length ? collegeCourses : activeOnlyCourses
   const course = availableCourses.find((item) => String(item.id || item.courseId) === String(form.courseId)) || courses.find((item) => String(item.id || item.courseId) === String(form.courseId))
-  const availableBranches = branches.filter((item) => String(item.courseId) === String(form.courseId))
+  const availableBranches = branches.filter((item) => String(item.courseId) === String(form.courseId) && item.status !== 'Inactive' && item.status !== 0 && item.status !== false && item.isActive !== false)
   const branch = availableBranches.find((item) => String(item.id || item.branchId) === String(form.branchId))
   const activeYears = useMemo(() => getActiveAcademicYears(academicYears), [academicYears])
   const activeYear = editMode ? academicYears.find((item) => String(item.id) === String(form.academicYearId)) : activeYears[0]
@@ -815,9 +817,9 @@ function SemesterProfile({ item }) {
             {item.courseCode && <span className="cm-badge cm-badge-type">{item.courseCode}</span>}
             <span className={`cm-status-badge ${String(item.status).toLowerCase()}`}>{item.status}</span>
           </div>
-          <h1 className="cm-profile-title"><span style={{ color: '#30264F' }}>{item.semesterName}</span></h1>
+          <h1 className="cm-profile-title">{item.semesterName}</h1>
           <p className="cm-profile-subtitle">
-            <span style={{ color: '#30264F' }}>{[item.courseName, item.branchCode || item.branchName, item.academicYearName].filter(clean).join(' • ')}</span>
+            {[item.courseName, item.branchCode || item.branchName, item.academicYearName].filter(clean).join(' • ')}
           </p>
         </div>
       </div>
@@ -834,7 +836,18 @@ function SemesterProfile({ item }) {
 function InfoCard({ icon: Icon, title, rows }) {
   const visibleRows = rows.filter(([, value]) => clean(value))
   if (!visibleRows.length) return null
-  return <section className="cm-info-card"><div className="cm-info-card-header"><Icon /><h2>{title}</h2></div><InfoRows rows={visibleRows} /></section>
+  return (
+    <section className="cm-info-card sa-detail-panel sa-modern-panel erp-view-section">
+      <div className="cm-info-card-header sa-panel-header">
+        <div className="sa-panel-title-wrap">
+          {Icon && <span className="sa-panel-icon"><Icon aria-hidden="true" /></span>}
+          <h2>{title}</h2>
+        </div>
+        <span className="sa-card-count-badge">{visibleRows.length} items</span>
+      </div>
+      <InfoRows rows={visibleRows} />
+    </section>
+  )
 }
 
 function Empty({ icon: Icon, title, action }) {

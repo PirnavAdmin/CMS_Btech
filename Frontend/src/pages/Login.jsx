@@ -247,7 +247,6 @@ export default function Login() {
                 type="button"
                 className="forgot-password-link"
                 onClick={() => setViewMode('forgot-password')}
-                style={{ background: 'none', border: 'none', color: 'inherit', font: 'inherit', cursor: 'pointer', padding: 0, textDecoration: 'underline' }}
               >
                 Forgot Password?
               </button>
@@ -311,7 +310,6 @@ export default function Login() {
             <header>
               <h2>OTP Verification</h2>
               <p>Enter the 6-digit code sent to <strong>{otpContact}</strong></p>
-              {demoOtpHint && <p style={{ color: '#8782BC', fontSize: '0.85rem', fontWeight: 600, marginTop: '4px' }}>{demoOtpHint}</p>}
             </header>
 
             <label htmlFor="otp-code">

@@ -48,7 +48,7 @@
 .ay>header .eyebrow,.ay>header>div>p:last-child,.ay .modal>.eyebrow{display:none!important}
 .ay>header{display:flex;align-items:flex-start;justify-content:space-between;gap:20px}.ay>header h1,.ay>header p{margin:0}.ay>header h1{font-size:28px;line-height:1.2;letter-spacing:-.025em}.ay>header>div>p:last-child{margin-top:6px;color:var(--text-muted);font-size:13px}.ay .eyebrow{margin:0 0 5px;color:var(--brand);font-size:11px;font-weight:850;letter-spacing:.12em;text-transform:uppercase}.ay .headerActions{display:flex;flex-wrap:wrap;gap:8px}
 .ay .ay-btn{min-height:38px;padding:0 13px;border:1px solid var(--border-strong);border-radius:var(--radius-sm,8px);color:var(--text-secondary);background:var(--surface);font:750 12px inherit;cursor:pointer}.ay .ay-btn:hover{border-color:var(--brand);color:var(--brand);background:var(--brand-soft)}.ay .ay-btn.solid{border-color:var(--brand);color:#fff;background:var(--brand)}.ay .ay-btn.red{border-color:var(--danger);color:#fff;background:var(--danger)}
-.ay .local{display:none}.ay .hero{display:grid;padding:22px 24px;grid-template-columns:1.5fr .8fr;align-items:center;gap:20px;border:1px solid var(--border, #E2E8F0);border-radius:12px;color:var(--text-primary, #0F172A);background:var(--surface, #FFFFFF);box-shadow:0 1px 3px rgba(0, 0, 0, 0.04), 0 1px 2px rgba(0, 0, 0, 0.02)}.ay .hero h2{margin:0;color:var(--text-primary, #0F172A);font-size:30px}.ay .hero p{margin:0;color:var(--text-secondary, #64748B)}.ay .hero .eyebrow{color:#756FB2}.ay .hero .badge{margin-top:10px}.ay .metrics{display:flex;justify-content:flex-end;gap:24px}.ay .metrics p{padding-left:18px;border-left:1px solid var(--border, #E2E8F0);color:var(--text-secondary, #64748B);font-size:11px}.ay .metrics b{display:block;margin-bottom:2px;color:var(--text-primary, #0F172A);font-size:22px}.ay .bar{grid-column:1/-1;height:6px;overflow:hidden;border-radius:99px;background:var(--surface-soft, #EEF2F6)}.ay .bar span{display:block;height:100%;border-radius:inherit;background:#756FB2}
+.ay .local{display:none}
 .ay .kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}.ay .kpis article{display:grid;grid-template-columns:38px minmax(0,1fr);column-gap:11px;padding:14px 16px;border:1px solid var(--border);border-radius:99px;background:var(--surface);box-shadow:var(--shadow-sm)}.ay .kpis article::before{display:grid;width:38px;height:38px;grid-row:1/3;place-items:center;border-radius:9px;color:#0F172A;background:#EDEBF6;content:'▣';font-size:19px;font-weight:700}.ay .kpis article:nth-child(2)::before{color:#756FB2;background:#EDEBF6;content:'✓'}.ay .kpis article:nth-child(3)::before{color:#756FB2;background:#fff3d6;content:'◷'}.ay .kpis article:nth-child(4)::before{color:#64748b;background:#eef2f6;content:'▤'}.ay .kpis span,.ay .kpis small{display:block;color:var(--text-muted);font-size:11px}.ay .kpis b{display:block;margin-top:5px;color:var(--brand);font-size:22px}.ay .kpis small{display:none}
 .ay>.grid:not(.bottom),.ay>.grid.bottom{display:none}.ay .panel{padding:18px;border:1px solid var(--border);border-radius:10px;background:var(--surface);box-shadow:var(--shadow-sm)}.ay .panel.wide{padding:0;overflow:hidden}.ay .panel.wide>.eyebrow,.ay .panel.wide>h2{margin-inline:18px}.ay .panel.wide>.eyebrow{margin-top:16px}.ay .panel h2{margin:0;color:var(--text-primary);font-size:16px}
 .ay .tools{display:flex;padding:13px 18px;align-items:center;justify-content:space-between;gap:12px;border-block:1px solid var(--border);background:var(--surface-soft)}.ay .tools input{width:min(100%,300px);height:38px;box-sizing:border-box;padding:0 11px;border:1px solid var(--border-strong);border-radius:7px;color:var(--text-primary);background:var(--surface);font-size:13px}.ay .filters,.ay .ay-actions{display:flex;flex-wrap:wrap;gap:5px}.ay .filters button{min-height:32px;padding:0 10px;border-color:transparent;background:transparent}.ay .filters button.selected{border-color:var(--brand);color:#fff;background:var(--brand)}
@@ -90,64 +90,176 @@
 .ay .table .badge{justify-content:center;margin-inline:auto}
 .ay .table .ay-actions{width:100%;justify-content:center}
 
-/* Compact active-year summary, retaining dates and progress. */
-.ay .hero{padding:12px 16px;gap:10px 20px;border-color:#DCD8F2;background:linear-gradient(135deg,#FAF9FF 0%,#F1EFFB 100%);box-shadow:var(--shadow-sm)}
-.ay .hero h2{font-size:21px;line-height:1.25}
-.ay .hero p{font-size:12px;line-height:1.5}
-.ay .hero .eyebrow{font-size:10px;margin-bottom:2px}
-.ay .hero .badge{margin-top:5px}
-.ay .hero .metrics{gap:16px}
-.ay .hero .metrics b{font-size:18px}
-.ay .hero .bar{height:6px;border:1px solid #D5D0EC;background:#E4E0F4}
-@media(max-width:600px){.ay .hero{grid-template-columns:minmax(0,1fr);padding:12px}.ay .hero .metrics{justify-content:flex-start}.ay .hero .metrics p{padding-left:10px}}
-
-/* Compact active-year summary only; the empty-state hero keeps its existing layout. */
-.ay .hero:has(.metrics) {
-	grid-template-columns: minmax(0, 1fr) auto;
-	grid-template-rows: 1fr auto;
-	min-height: 0;
-	padding: 16px 20px 12px;
-	align-items: center;
-	gap: 8px 28px;
+/* Compact active-year summary with lavender-purple hero styling. */
+.ay .hero {
+  position: relative !important;
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) auto !important;
+  grid-template-rows: 1fr auto !important;
+  align-items: center !important;
+  gap: 12px 28px !important;
+  padding: 22px 28px 18px !important;
+  border: 1px solid rgba(255, 255, 255, 0.16) !important;
+  border-radius: 14px !important;
+  color: #FFFFFF !important;
+  background: linear-gradient(135deg, #665C9E 0%, #756FB2 60%, #837DBB 100%) !important;
+  box-shadow: 0 8px 24px rgba(103, 94, 158, 0.22) !important;
+  overflow: hidden !important;
 }
-.ay .hero:has(.metrics) > div:first-child { min-width: 0; }
-.ay .hero:has(.metrics) h2 { margin-top: 1px; font-size: clamp(1.35rem, 2.2vw, 1.8rem); line-height: 1.15; }
-.ay .hero:has(.metrics) > div:first-child > p:not(.eyebrow) { margin-top: 3px; white-space: nowrap; }
-.ay .hero:has(.metrics) .badge { margin-top: 6px; padding: 4px 7px; font-size: 9px; }
-.ay .hero:has(.metrics) .metrics { display: flex; min-width: 235px; justify-content: flex-end; gap: 22px; }
-.ay .hero:has(.metrics) .metrics p { min-width: 92px; padding-left: 14px; }
-.ay .hero:has(.metrics) .metrics b { margin-bottom: 1px; font-size: 20px; line-height: 1.1; }
-.ay .hero:has(.metrics) .bar { grid-column: 1 / -1; height: 5px; }
+
+.ay .hero::after {
+  position: absolute !important;
+  right: -40px !important;
+  bottom: -80px !important;
+  width: 250px !important;
+  height: 250px !important;
+  border: 40px solid rgba(255, 255, 255, 0.08) !important;
+  border-radius: 50% !important;
+  content: "" !important;
+  pointer-events: none !important;
+}
+
+.ay .hero > div:first-child {
+  position: relative !important;
+  z-index: 1 !important;
+  min-width: 0 !important;
+}
+
+.ay .hero .eyebrow {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 5px !important;
+  padding: 3px 9px !important;
+  border-radius: 6px !important;
+  background: rgba(255, 255, 255, 0.16) !important;
+  border: 1px solid rgba(255, 255, 255, 0.3) !important;
+  color: #FFFFFF !important;
+  font-size: 0.68rem !important;
+  font-weight: 800 !important;
+  letter-spacing: 0.08em !important;
+  text-transform: uppercase !important;
+  margin: 0 0 6px 0 !important;
+}
+
+.ay .hero h2 {
+  margin: 0 !important;
+  color: #FFFFFF !important;
+  font-size: 1.65rem !important;
+  font-weight: 850 !important;
+  letter-spacing: -0.015em !important;
+  line-height: 1.2 !important;
+}
+
+.ay .hero p:not(.eyebrow) {
+  margin: 4px 0 0 !important;
+  color: rgba(255, 255, 255, 0.88) !important;
+  font-size: 0.86rem !important;
+}
+
+.ay .hero .badge,
+.ay .hero .badge.ACTIVE {
+  margin-top: 8px !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 6px !important;
+  padding: 3px 10px !important;
+  border: 1px solid rgba(255, 255, 255, 0.8) !important;
+  border-radius: 999px !important;
+  color: #635BA2 !important;
+  background: #FFFFFF !important;
+  font-size: 0.74rem !important;
+  font-weight: 800 !important;
+  text-transform: uppercase !important;
+}
+
+.ay .hero .badge.ACTIVE::before {
+  content: "" !important;
+  display: inline-block !important;
+  width: 7px !important;
+  height: 7px !important;
+  border-radius: 50% !important;
+  background: #10B981 !important;
+  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.25) !important;
+}
+
+.ay .hero .metrics {
+  position: relative !important;
+  z-index: 1 !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 0 !important;
+  padding: 10px 4px !important;
+  background: rgba(36, 28, 70, 0.42) !important;
+  border: 1px solid rgba(255, 255, 255, 0.18) !important;
+  border-radius: 10px !important;
+  backdrop-filter: blur(4px) !important;
+  box-sizing: border-box !important;
+}
+
+.ay .hero .metrics p {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 3px !important;
+  padding: 0 18px !important;
+  border: 0 !important;
+  border-left: 1px solid rgba(255, 255, 255, 0.18) !important;
+  color: rgba(235, 240, 255, 0.75) !important;
+  font-size: 0.68rem !important;
+  font-weight: 750 !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.04em !important;
+  margin: 0 !important;
+  min-width: 95px !important;
+}
+
+.ay .hero .metrics p:first-child {
+  border-left: 0 !important;
+}
+
+.ay .hero .metrics b {
+  display: block !important;
+  color: #FFFFFF !important;
+  font-size: 1.35rem !important;
+  font-weight: 850 !important;
+  margin: 0 !important;
+  line-height: 1.1 !important;
+}
+
+.ay .hero .bar {
+  grid-column: 1 / -1 !important;
+  height: 6px !important;
+  overflow: hidden !important;
+  border-radius: 99px !important;
+  background: rgba(36, 28, 70, 0.42) !important;
+  border: 1px solid rgba(255, 255, 255, 0.16) !important;
+  position: relative !important;
+  z-index: 1 !important;
+  margin-top: 4px !important;
+}
+
+.ay .hero .bar span {
+  display: block !important;
+  height: 100% !important;
+  border-radius: inherit !important;
+  background: linear-gradient(90deg, #ECC15D, #DF9E27) !important;
+  box-shadow: 0 0 8px rgba(236, 193, 93, 0.4) !important;
+}
+
 @media (max-width: 700px) {
-	.ay .hero:has(.metrics) { grid-template-columns: 1fr; grid-template-rows: auto auto auto; padding: 14px 16px 11px; gap: 9px; }
-	.ay .hero:has(.metrics) > div:first-child > p:not(.eyebrow) { white-space: normal; }
-	.ay .hero:has(.metrics) .metrics { min-width: 0; justify-content: flex-start; }
-.ay .hero:has(.metrics) .bar { grid-column: 1; }
+  .ay .hero {
+    grid-template-columns: 1fr !important;
+    grid-template-rows: auto auto auto !important;
+    padding: 16px 18px 14px !important;
+    gap: 12px !important;
+  }
+  .ay .hero .metrics {
+    width: 100% !important;
+  }
+  .ay .hero .bar {
+    grid-column: 1 !important;
+  }
 }
 
-/* The compact hero is declared later than the original dark rule above, so it
-   must explicitly restore its dark surface.  Without this, white hero text is
-   rendered on the compact light-lavender background in dark mode. */
-:root[data-theme="dark"] .ay .hero,
-:root[data-theme="dark"] .ay .hero:has(.metrics) {
-  border-color: rgba(157, 153, 205, 0.48) !important;
-  background: linear-gradient(135deg, #1B2435 0%, #25243D 100%) !important;
-  box-shadow: 0 8px 22px rgba(0, 0, 0, 0.24) !important;
-}
-:root[data-theme="dark"] .ay .hero :is(h2, p, b) {
-  color: #F8FAFC !important;
-}
-:root[data-theme="dark"] .ay .hero .eyebrow {
-  color: #C7C2FF !important;
-}
-:root[data-theme="dark"] .ay .hero .metrics p {
-  border-left-color: rgba(199, 194, 255, 0.36) !important;
-  color: #CBD5E1 !important;
-}
-:root[data-theme="dark"] .ay .hero .bar {
-  border-color: rgba(157, 153, 205, 0.38) !important;
-  background: rgba(157, 153, 205, 0.18) !important;
-}
-:root[data-theme="dark"] .ay .hero .bar span {
-  background: #9D99CD !important;
+:root[data-theme="dark"] .ay .hero {
+  border-color: rgba(255, 255, 255, 0.16) !important;
 }

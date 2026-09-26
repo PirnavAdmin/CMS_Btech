@@ -14,11 +14,14 @@ import StatusConfirmDialog from '../../components/StatusConfirmDialog'
 import StatusBadge from '../../components/StatusBadge'
 import CompactSummary from '../../components/CompactSummary'
 import InfoCard from '../../components/InfoCard'
-import { branchApi, courseApi, courseStructureApi, departmentApi, studentApi } from '../../api/apiEndpoints'
+import { branchApi, courseApi, courseStructureApi, departmentApi, sectionApi, studentApi } from '../../api/apiEndpoints'
 import { getCourseById, createCourse, updateCourse, updateCourseStatus, getSemesters, getCourseSemesterMappings, createCourseSemesterMapping, updateCourseSemesterMapping, updateCourseSemesterMappingStatus } from '../../auth/collegeApi'
 import { useAcademic } from '../../context/AcademicContext'
 import { normalize } from './Branch'
 import { showDeactivationBlocked } from '../../components/DeactivationBlockedDialog'
+import facultyService from '../../services/facultyService'
+import eventBus, { ERP_EVENTS } from '../../services/eventBus'
+import academicService, { isRecordActive } from '../../services/academicService'
 import './Course.css'
 
 const blank = { name: '', code: '', shortName: '', type: '', durationValue: '', semesters: '', description: '', departmentId: '', departmentCode: '', branchId: '', branchCode: '', collegeId: '', status: '', startDate: '', endDate: '' }
@@ -56,7 +59,7 @@ const dedupeDepartmentOptions = (rows) => {
   for (const raw of rows) {
     const item = mapDepartmentOption(raw)
     const name = item.name
-    if (item.id == null || !name) continue
+    if (item.id == null || !name || item.status === 'Inactive') continue
     const key = String(item.id)
     if (!map.has(key)) map.set(key, { ...item, name })
   }
@@ -173,24 +176,100 @@ function CourseList() {
   const hasFilters = Boolean(query || statusFilter)
   const clearFilters = () => { setQuery(''); setStatusFilter(''); setCurrentPage(1) }
   const studentCourseId = student => student.courseId ?? student.course?.id ?? student.academic?.courseId ?? student.academicInformation?.courseId ?? null
-  const checkCourseImpact = async course => {
-    const students = await studentApi.getAll({ CourseId: Number(course.id) })
-    return { state: 'known', count: students.length }
+  const checkCourseImpact = async (course) => {
+    const targetCourseId = String(course.id ?? course.courseId ?? '').trim()
+    const targetCourseName = String(course.name ?? course.courseName ?? '').trim().toLowerCase()
+    const targetCourseCode = String(course.code ?? course.courseCode ?? '').trim().toLowerCase()
+
+    try {
+      const [allStudents, allBranches, allFaculty, allSections] = await Promise.all([
+        studentApi.getAll().catch(() => []),
+        branchApi.getAll().catch(() => []),
+        facultyService.list().catch(() => []),
+        sectionApi.getAll().catch(() => []),
+      ])
+
+      // 1. Enrolled Students linked to this course
+      const courseStudents = (allStudents || []).filter((s) => {
+        const sCourseId = String(s.courseId ?? s.course?.id ?? s.academic?.courseId ?? s.academicInformation?.courseId ?? '').trim()
+        const sCourseName = String(s.courseName ?? s.course?.name ?? s.course ?? '').trim().toLowerCase()
+        const sCourseCode = String(s.courseCode ?? s.course?.code ?? '').trim().toLowerCase()
+        return (
+          (targetCourseId && sCourseId === targetCourseId) ||
+          (targetCourseName && sCourseName === targetCourseName) ||
+          (targetCourseCode && sCourseCode === targetCourseCode)
+        )
+      })
+
+      // 2. Active Branches under this course
+      const courseBranches = (allBranches || []).filter((b) => {
+        const bCourseId = String(b.courseId ?? b.course?.id ?? '').trim()
+        const bStatus = String(b.status ?? '').trim().toLowerCase()
+        const isActive = b.status !== false && b.status !== 0 && bStatus !== 'inactive' && b.isActive !== false
+        return isActive && targetCourseId && bCourseId === targetCourseId
+      })
+
+      // 3. Faculty members assigned to this course
+      const courseFaculty = (allFaculty || []).filter((f) => {
+        const fCourseId = String(f.courseId ?? f.course?.id ?? '').trim()
+        const assignments = f.assignments || []
+        const hasAssignment = assignments.some((a) => {
+          const aCourseId = String(a.courseId ?? a.course?.id ?? '').trim()
+          return targetCourseId && aCourseId === targetCourseId
+        })
+        const fStatus = String(f.employmentStatus || f.status || '').trim().toLowerCase()
+        const isActive = !['inactive', 'resigned', 'retired', 'terminated'].includes(fStatus)
+        return isActive && (hasAssignment || (targetCourseId && fCourseId === targetCourseId))
+      })
+
+      // 4. Active Sections configured under this course
+      const courseSections = (allSections || []).filter((sec) => {
+        const secCourseId = String(sec.courseId ?? sec.course?.id ?? '').trim()
+        const secStatus = String(sec.status ?? '').trim().toLowerCase()
+        const isActive = sec.status !== false && sec.status !== 0 && secStatus !== 'inactive' && sec.isActive !== false
+        return isActive && targetCourseId && secCourseId === targetCourseId
+      })
+
+      return {
+        studentCount: courseStudents.length,
+        branchCount: courseBranches.length,
+        facultyCount: courseFaculty.length,
+        sectionCount: courseSections.length,
+        totalCount: courseStudents.length + courseBranches.length + courseFaculty.length + courseSections.length,
+      }
+    } catch {
+      return { studentCount: 0, branchCount: 0, facultyCount: 0, sectionCount: 0, totalCount: 0 }
+    }
   }
-  const toggleStatus = async course => {
+
+  const toggleStatus = async (course) => {
     setStatusError(''); setStatusNotice('')
     if (course.status !== 'Active') { setPendingStatus({ course, nextStatus: 'Active' }); return }
     setImpactChecking(true); setCourseImpact(null)
     try {
       const impact = await checkCourseImpact(course)
       setCourseImpact(impact)
-      if (impact.count > 0) {
-        showDeactivationBlocked(`Cannot deactivate ${course.name}. ${impact.count} student${impact.count === 1 ? '' : 's'} are associated with this course.`)
+      if (impact.totalCount > 0) {
+        const parts = []
+        if (impact.branchCount > 0) parts.push(`${impact.branchCount} active ${impact.branchCount === 1 ? 'branch' : 'branches'}`)
+        if (impact.studentCount > 0) parts.push(`${impact.studentCount} enrolled ${impact.studentCount === 1 ? 'student' : 'students'}`)
+        if (impact.facultyCount > 0) parts.push(`${impact.facultyCount} assigned faculty ${impact.facultyCount === 1 ? 'member' : 'members'}`)
+        if (impact.sectionCount > 0) parts.push(`${impact.sectionCount} active ${impact.sectionCount === 1 ? 'section' : 'sections'}`)
+
+        showDeactivationBlocked({
+          message: `Cannot deactivate ${course.name}. ${parts.join(', ')} are associated with this course.`,
+          name: course.name,
+          entity: 'course',
+          branchCount: impact.branchCount,
+          studentCount: impact.studentCount,
+          facultyCount: impact.facultyCount,
+          sectionCount: impact.sectionCount,
+        })
         return
       }
       setPendingStatus({ course, nextStatus: 'Inactive' })
     } catch (error) {
-      showDeactivationBlocked(apiError(error, 'Unable to verify associated students. The course was not deactivated.'))
+      showDeactivationBlocked(apiError(error, 'Unable to verify associated records. The course was not deactivated.'))
     } finally { setImpactChecking(false); setStatusNotice('') }
   }
 
@@ -198,15 +277,25 @@ function CourseList() {
     if (!pendingStatus || statusLock.current) return
     statusLock.current = true
     const { course, nextStatus } = pendingStatus
-    if (nextStatus === 'Inactive' && courseImpact?.state === 'known' && courseImpact.count > 0) {
+    if (nextStatus === 'Inactive' && courseImpact?.totalCount > 0) {
       setPendingStatus(null)
-      showDeactivationBlocked(`Cannot deactivate ${course.name}. ${courseImpact.count} student${courseImpact.count === 1 ? '' : 's'} are associated with this course.`)
+      showDeactivationBlocked({
+        message: `Cannot deactivate ${course.name}. Associated active records must be reassigned first.`,
+        name: course.name,
+        entity: 'course',
+        branchCount: courseImpact.branchCount,
+        studentCount: courseImpact.studentCount,
+        facultyCount: courseImpact.facultyCount,
+        sectionCount: courseImpact.sectionCount,
+      })
       return
     }
     setIsStatusSaving(true); setStatusError('')
     try {
       const response = await updateCourseStatus(course.id, nextStatus === 'Active' ? 1 : 0)
       if (response?.data?.success === false) throw new Error('Course status could not be updated.')
+      eventBus.emit(ERP_EVENTS.ACADEMIC_UPDATED, { courseId: course.id, status: nextStatus })
+      academicService.clearCache?.()
       setStatusNotice(nextStatus === 'Active' ? 'Course activated successfully.' : 'Course deactivated successfully.')
       await load()
       setPendingStatus(null)
@@ -239,8 +328,8 @@ function CourseList() {
             <div className="course-table-scroll">
               <table className="course-advanced-table">
                 <thead>
-                  <tr>
-                    <th style={{ minWidth: '240px' }}>Course</th>
+                    <tr>
+                    <th className="table-center" style={{ minWidth: '240px' }}>Course</th>
                     <th className="table-center" style={{ width: '130px' }}>Duration</th>
                     <th className="table-center" style={{ width: '130px' }}>Semesters</th>
                     <th className="table-center" style={{ width: '120px' }}>Status</th>
@@ -254,9 +343,11 @@ function CourseList() {
                     const secondaryText = `${c.code || ''}${c.shortName ? ` • ${c.shortName}` : ''}`.trim()
                     return (
                       <tr key={c.id}>
-                        <td style={{ minWidth: '240px' }}>
+                        <td className="table-center" style={{ minWidth: '240px' }}>
                           <div className="table-primary-cell">
-                            <strong title={c.name}>{c.name}</strong>
+                            <Link to={`/courses/${c.id}`} className="course-name-link table-cell-truncate" title={`Click to view details for ${c.name}`}>
+                              {c.name}
+                            </Link>
                             {secondaryText && <small title={secondaryText}>{secondaryText}</small>}
                           </div>
                         </td>
@@ -265,7 +356,6 @@ function CourseList() {
                         <td className="table-center" style={{ width: '120px' }}><StatusBadge value={c.status || 'Active'} /></td>
                         <td className="table-center" style={{ width: '140px' }}>
                           <div className="course-actions table-actions-group">
-                            <Link className="table-action-btn action-view" title={`View ${c.name}`} aria-label={`View ${c.name}`} to={`/courses/${c.id}`}><FiEye /></Link>
                             <Link className="table-action-btn action-edit" title={`Edit ${c.name}`} aria-label={`Edit ${c.name}`} to={`/courses/${c.id}/edit`}><FiEdit2 /></Link>
                             <button type="button" className={`table-action-btn ${(c.status || 'Active') === 'Active' ? 'action-deactivate' : 'action-activate'}`} title={(c.status || 'Active') === 'Active' ? `Deactivate ${c.name}` : `Activate ${c.name}`} aria-label={(c.status || 'Active') === 'Active' ? `Deactivate ${c.name}` : `Activate ${c.name}`} onClick={() => toggleStatus(c)}>{(c.status || 'Active') === 'Active' ? <FiToggleRight /> : <FiToggleLeft />}</button>
                           </div>
@@ -579,12 +669,12 @@ function CourseDetails() {
                   {course.status || 'Active'}
                 </span>
               </div>
-              <h1 className="cm-profile-title"><span style={{ color: '#30264F' }}>{course.name || 'Course'}</span></h1>
+              <h1 className="cm-profile-title">{course.name || 'Course'}</h1>
               <p className="cm-profile-subtitle">
-                <span style={{ color: '#30264F' }}>Department: </span>
-                <strong style={{ color: '#30264F' }}>{department?.name || course.department || '—'}</strong>
-                {duration && <span style={{ color: '#30264F' }}> · {duration}</span>}
-                {course.semesters && <span style={{ color: '#30264F' }}> · {course.semesters} Semesters</span>}
+                <span>Department: </span>
+                <strong>{department?.name || course.department || '—'}</strong>
+                {duration && <span> · {duration}</span>}
+                {course.semesters && <span> · {course.semesters} Semesters</span>}
               </p>
             </div>
           </div>

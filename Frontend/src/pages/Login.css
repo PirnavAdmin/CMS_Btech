@@ -215,26 +215,31 @@
   gap: 9px;
 }
 
-.login-public-actions .login-home-link {
+.login-public-actions .login-home-link,
+.register-public-actions a {
   position: static;
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  padding: 6px 14px;
+  padding: 7px 16px;
   border-radius: 8px;
-  color: #0F172A;
-  border: 1px solid #cbd5e1;
-  background: #ffffff;
-  font-size: 0.82rem;
-  font-weight: 600;
+  color: #FFFFFF !important;
+  border: 1px solid #756FB2 !important;
+  background: #8782BC !important;
+  font-size: 0.84rem;
+  font-weight: 750;
   text-decoration: none;
+  box-shadow: 0 2px 8px rgba(117, 111, 178, 0.3) !important;
   transition: all 0.15s ease;
 }
 
-.login-public-actions .login-home-link:hover {
-  background: #0F172A;
-  color: #8782BC;
-  border-color: #0F172A;
+.login-public-actions .login-home-link:hover,
+.register-public-actions a:hover {
+  background: #756FB2 !important;
+  color: #FFFFFF !important;
+  border-color: #655E9F !important;
+  box-shadow: 0 4px 12px rgba(117, 111, 178, 0.4) !important;
+  transform: translateY(-1px);
 }
 
 .public-theme-toggle {
@@ -369,19 +374,25 @@
 .pirnav-login .remember-me input {
   width: 16px;
   height: 16px;
-  accent-color: #0F172A;
+  accent-color: #8782BC;
   cursor: pointer;
 }
 
 .pirnav-login .forgot-password-link {
-  color: #0F172A !important;
-  font-weight: 600;
-  text-decoration: underline;
+  background: transparent;
+  border: none;
+  padding: 0;
+  color: #756FB2 !important;
+  font-size: 0.82rem;
+  font-weight: 750;
+  text-decoration: none !important;
   cursor: pointer;
+  transition: all 0.15s ease;
 }
 
 .pirnav-login .forgot-password-link:hover {
-  color: #8782BC !important;
+  color: #585199 !important;
+  text-decoration: underline !important;
 }
 
 .pirnav-login .sign-in-button {
@@ -524,13 +535,22 @@
   color: #f8fafc;
 }
 :root[data-theme="dark"] .login-public-actions .login-home-link {
-  background: #0F172A;
-  border-color: #334155;
-  color: #8782BC;
+  background: #8782BC !important;
+  border-color: #756FB2 !important;
+  color: #FFFFFF !important;
+  box-shadow: 0 2px 8px rgba(117, 111, 178, 0.35) !important;
+}
+:root[data-theme="dark"] .login-public-actions .login-home-link:hover {
+  background: #756FB2 !important;
+  border-color: #655E9F !important;
+  color: #FFFFFF !important;
 }
 :root[data-theme="dark"] .pirnav-login .remember-me {
   color: #cbd5e1;
 }
 :root[data-theme="dark"] .pirnav-login .forgot-password-link {
-  color: #8782BC !important;
+  color: #C7C2FF !important;
+}
+:root[data-theme="dark"] .pirnav-login .forgot-password-link:hover {
+  color: #FFFFFF !important;
 }

@@ -163,7 +163,23 @@ html,body,#root{max-width:100%;overflow-x:hidden}
 
 /* Unified data-table and pagination presentation across every management page. */
 .page-content :is(.cm-table,.course-advanced-table,.branch-table,.department-table-wrap table,.semester-table,.section-table,.ay .table table,.sa-table-wrap table){width:100%;border-collapse:collapse;background:var(--surface)}
-.page-content :is(.cm-table,.course-advanced-table,.branch-table,.department-table-wrap table,.semester-table,.section-table,.ay .table table,.sa-table-wrap table) thead th{position:sticky;top:0;z-index:2;height:42px;padding:10px 12px!important;border-color:#756FB2!important;border-bottom:2px solid #756FB2!important;color:#FFFFFF!important;background:#8782BC!important;font-size:.68rem!important;font-weight:800!important;letter-spacing:.055em;text-align:left;text-transform:uppercase}
+.page-content :is(table, thead, .cm-table, .course-advanced-table, .branch-table, .department-table-wrap table, .semester-table, .section-table, .ay .table table, .sa-table-wrap table, .sm-table, .em-table, .marks-table, .attendance-table, .payroll-table, .faculty-table, .fees-table, .rooms-table, .rbac-data-table, .flm-table, .fp-table, [class*="-table"]) thead th,
+.page-content :is(table, thead, .cm-table, .course-advanced-table, .branch-table, .department-table-wrap table, .semester-table, .section-table, .ay .table table, .sa-table-wrap table, .sm-table, .em-table, .marks-table, .attendance-table, .payroll-table, .faculty-table, .fees-table, .rooms-table, .rbac-data-table, .flm-table, .fp-table, [class*="-table"]) th {
+  position:sticky;
+  top:0;
+  z-index:2;
+  height:42px;
+  padding:10px 14px!important;
+  border-color:#756FB2!important;
+  border-bottom:2px solid #756FB2!important;
+  color:#FFFFFF!important;
+  background:#8782BC!important;
+  font-size:.68rem!important;
+  font-weight:800!important;
+  letter-spacing:.055em;
+  text-align:left;
+  text-transform:uppercase
+}
 .page-content :is(.cm-table,.course-advanced-table,.branch-table,.department-table-wrap table,.semester-table,.section-table,.ay .table table,.sa-table-wrap table) tbody td{padding:11px 12px;border-bottom:1px solid var(--border);color:var(--text-secondary);background:var(--surface);font-size:.78rem}
 .page-content :is(.cm-table,.course-advanced-table,.branch-table,.department-table-wrap table,.semester-table,.section-table,.ay .table table,.sa-table-wrap table) tbody tr:hover td{background:var(--surface-soft)}
 .page-content :is(.table-pagination,.course-pagination,.department-pagination,.cm-pagination,.semester-pagination,.section-pagination){display:flex!important;min-height:52px;box-sizing:border-box;align-items:center!important;justify-content:flex-end!important;gap:10px!important;padding:10px 16px!important;border-top:1px solid var(--border)!important;background:var(--surface-soft)!important}
@@ -313,7 +329,7 @@ html,body,#root{max-width:100%;overflow-x:hidden}
   border-color:#756FB2!important;border-bottom:2px solid #756FB2!important;
   color:#FFFFFF!important;background:#8782BC!important;
   font-size:11px!important;font-weight:800!important;line-height:1.25!important;
-  letter-spacing:.055em!important;text-align:left!important;text-transform:uppercase!important;
+  letter-spacing:.055em!important;text-transform:uppercase!important;
   vertical-align:middle!important;white-space:nowrap;
 }
 
@@ -405,28 +421,130 @@ html,body,#root{max-width:100%;overflow-x:hidden}
   gap:5px;
   white-space:nowrap;
 }
-.page-content .erp-row-actions .erp-action-btn{
-  display:inline-flex;
-  width:32px;
-  min-width:32px;
-  height:32px;
-  min-height:32px;
-  padding:0;
-  align-items:center;
-  justify-content:center;
-  border:1px solid var(--border)!important;
-  border-radius:6px!important;
-  color:var(--brand)!important;
-  background:var(--surface)!important;
-  cursor:pointer;
+/* Universal Table Row Actions Buttons & Semantic Pastel Background Colors */
+.page-content .erp-row-actions .erp-action-btn,
+.table-action-btn,
+.erp-action-btn,
+.rooms-icon-btn,
+.sm-icon-btn {
+  display: inline-flex !important;
+  width: 34px !important;
+  min-width: 34px !important;
+  height: 34px !important;
+  min-height: 34px !important;
+  padding: 0 !important;
+  align-items: center !important;
+  justify-content: center !important;
+  border-radius: 8px !important;
+  cursor: pointer !important;
+  transition: all 0.15s ease-in-out !important;
 }
-.page-content .erp-row-actions .erp-action-btn svg{width:16px;height:16px}
-.page-content .erp-row-actions .erp-action-btn:has(>.module-action-icon--view){color:#0F172A!important;background:#EDEBF6!important;border-color:#DFDCED!important;font-weight:700;}
-.page-content .erp-row-actions .erp-action-btn:has(>.module-action-icon--edit){color:#7c3aed!important;background:#f3e8ff!important;border-color:#dfccff!important}
-.page-content .erp-row-actions .erp-action-btn:nth-child(3):not(.erp-action-btn--success):not(.erp-action-btn--danger){color:#756FB2!important;background:#fff3d6!important;border-color:#fedf89!important}
-.page-content .erp-row-actions .erp-action-btn--success{color:#756FB2!important;background:#EDEBF6!important;border-color:#DDD8F3!important}
-.page-content .erp-row-actions .erp-action-btn--danger{color:#b42318!important;background:#fee4e2!important;border-color:#fecdca!important}
-.page-content .erp-row-actions .erp-action-btn:hover:not(:disabled){filter:brightness(.97)}
+
+.page-content .erp-row-actions .erp-action-btn svg,
+.table-action-btn svg,
+.erp-action-btn svg,
+.rooms-icon-btn svg,
+.sm-icon-btn svg {
+  width: 16px !important;
+  height: 16px !important;
+  color: inherit !important;
+  stroke: currentColor !important;
+}
+
+/* 1. EDIT ACTION - Lavender Purple Tint */
+.action-edit,
+.cm-edit-action,
+.is-edit,
+.erp-action-btn.action-edit,
+.table-action-btn.action-edit,
+:is(.table-actions-group, .erp-row-actions, .cm-actions, .course-actions, .branch-actions, .semester-row-actions, .section-actions, .rooms-row-actions, .sm-row-actions, .sa-icon-actions, .table-actions-cell) > :is(a, button).action-edit {
+  color: #756FB2 !important;
+  background: #EDEBF6 !important;
+  border: 1px solid #DDD8F3 !important;
+}
+.action-edit:hover:not(:disabled),
+.cm-edit-action:hover:not(:disabled),
+.is-edit:hover:not(:disabled),
+.erp-action-btn.action-edit:hover:not(:disabled),
+.table-action-btn.action-edit:hover:not(:disabled) {
+  background: #DDD8F3 !important;
+  border-color: #756FB2 !important;
+  color: #554F75 !important;
+}
+
+/* 2. ASSIGN ACTION - Warm Amber / Yellow Tint */
+.action-assign,
+.section-assign-action,
+.hod-assign-btn,
+.erp-action-btn.action-assign,
+.table-action-btn.action-assign,
+:is(.table-actions-group, .erp-row-actions, .cm-actions, .course-actions, .branch-actions, .semester-row-actions, .section-actions, .rooms-row-actions, .sm-row-actions, .sa-icon-actions, .table-actions-cell) > :is(a, button).action-assign {
+  color: #D97706 !important;
+  background: #FEF3C7 !important;
+  border: 1px solid #FDE68A !important;
+}
+.action-assign:hover:not(:disabled),
+.section-assign-action:hover:not(:disabled),
+.hod-assign-btn:hover:not(:disabled),
+.erp-action-btn.action-assign:hover:not(:disabled),
+.table-action-btn.action-assign:hover:not(:disabled) {
+  background: #FDE68A !important;
+  border-color: #F59E0B !important;
+  color: #B45309 !important;
+}
+
+/* 3. DEACTIVATE / DELETE ACTION - Soft Red / Coral Tint */
+.action-deactivate,
+.action-delete,
+.is-delete,
+.cm-discard-action,
+.cm-danger,
+.erp-action-btn--danger,
+.danger,
+.erp-action-btn.action-deactivate,
+.table-action-btn.action-deactivate,
+:is(.table-actions-group, .erp-row-actions, .cm-actions, .course-actions, .branch-actions, .semester-row-actions, .section-actions, .rooms-row-actions, .sm-row-actions, .sa-icon-actions, .table-actions-cell) > :is(a, button).action-deactivate {
+  color: #B91C1C !important;
+  background: #FEE2E2 !important;
+  border: 1px solid #FECACA !important;
+}
+.action-deactivate:hover:not(:disabled),
+.action-delete:hover:not(:disabled),
+.is-delete:hover:not(:disabled),
+.cm-discard-action:hover:not(:disabled),
+.cm-danger:hover:not(:disabled),
+.erp-action-btn--danger:hover:not(:disabled),
+.danger:hover:not(:disabled),
+.erp-action-btn.action-deactivate:hover:not(:disabled),
+.table-action-btn.action-deactivate:hover:not(:disabled) {
+  background: #FECACA !important;
+  border-color: #EF4444 !important;
+  color: #991B1B !important;
+}
+
+/* 4. ACTIVATE / SUCCESS ACTION - Soft Lavender / Purple Tint */
+.action-activate,
+.cm-success,
+.erp-action-btn--success,
+.success,
+.erp-action-btn.action-activate,
+.table-action-btn.action-activate,
+:is(.table-actions-group, .erp-row-actions, .cm-actions, .course-actions, .branch-actions, .semester-row-actions, .section-actions, .rooms-row-actions, .sm-row-actions, .sa-icon-actions, .table-actions-cell) > :is(a, button).action-activate {
+  color: #756FB2 !important;
+  background: #EDEBF6 !important;
+  border: 1px solid #DDD8F3 !important;
+}
+.action-activate:hover:not(:disabled),
+.cm-success:hover:not(:disabled),
+.erp-action-btn--success:hover:not(:disabled),
+.success:hover:not(:disabled),
+.erp-action-btn.action-activate:hover:not(:disabled),
+.table-action-btn.action-activate:hover:not(:disabled) {
+  background: #DDD8F3 !important;
+  border-color: #756FB2 !important;
+  color: #554F75 !important;
+}
+
 .page-content .erp-row-actions .erp-action-btn:focus-visible{outline:2px solid currentColor;outline-offset:2px}
 .page-content .erp-row-actions .erp-action-btn:disabled{cursor:not-allowed;opacity:.55}
 
@@ -1182,6 +1300,7 @@ html,body,#root{max-width:100%;overflow-x:hidden}
 :root:not([data-theme="dark"]) table thead th,
 :root:not([data-theme="dark"]) .page-content thead th,
 :root:not([data-theme="dark"]) .page-content table thead th,
+:root:not([data-theme="dark"]) .page-content table th,
 :root:not([data-theme="dark"]) .cm-table thead th,
 :root:not([data-theme="dark"]) .cm-table th,
 :root:not([data-theme="dark"]) .course-advanced-table thead th,
@@ -1216,15 +1335,25 @@ html,body,#root{max-width:100%;overflow-x:hidden}
 :root:not([data-theme="dark"]) .sm-table thead th,
 :root:not([data-theme="dark"]) .sm-table th,
 :root:not([data-theme="dark"]) .em-table thead th,
-:root:not([data-theme="dark"]) .em-table th {
-  background: #F8FAFC !important;
-  color: #475569 !important;
-  border-bottom: 1px solid #E2E8F0 !important;
-  font-size: 0.72rem !important;
-  font-weight: 750 !important;
+:root:not([data-theme="dark"]) .em-table th,
+:root:not([data-theme="dark"]) .rooms-table th,
+:root:not([data-theme="dark"]) .rbac-data-table th,
+:root:not([data-theme="dark"]) .flm-table th,
+:root:not([data-theme="dark"]) .fp-table th,
+:root:not([data-theme="dark"]) .marks-table th,
+:root:not([data-theme="dark"]) .attendance-table th,
+:root:not([data-theme="dark"]) .payroll-table th,
+:root:not([data-theme="dark"]) .faculty-table th,
+:root:not([data-theme="dark"]) .fees-table th {
+  background: #8782BC !important;
+  color: #FFFFFF !important;
+  border-bottom: 2px solid #756FB2 !important;
+  font-size: 11px !important;
+  font-weight: 800 !important;
   text-transform: uppercase !important;
-  letter-spacing: 0.05em !important;
+  letter-spacing: 0.055em !important;
   vertical-align: middle !important;
+  padding: 10px 14px !important;
 }
 
 /* Universal Filter Buttons / Category Tabs Active State */
@@ -1244,20 +1373,189 @@ html,body,#root{max-width:100%;overflow-x:hidden}
   color: #756FB2 !important;
 }
 
-/* Shared list-table alignment: column headings are centered; record values
-   always begin from the left edge, including action controls. */
-.page-content table thead th {
+/* Shared list-table alignment */
+.page-content table thead th,
+.page-content table th {
+  vertical-align: middle !important;
+  background: #8782BC !important;
+  color: #FFFFFF !important;
+  border-bottom: 2px solid #756FB2 !important;
+}
+
+.page-content table tbody td,
+.page-content table td {
+  vertical-align: middle !important;
+}
+
+/* Explicit Guaranteed Center Alignments across ALL management tables */
+th.table-center,
+td.table-center,
+th.col-logo,
+td.col-logo,
+th.col-name,
+td.col-name,
+th.col-code,
+td.col-code,
+th.col-hod,
+td.col-hod,
+th.col-type,
+td.col-type,
+th.col-status,
+td.col-status,
+th.col-actions,
+td.col-actions,
+.department-management table :is(th, td),
+.college-management table :is(th, td),
+.department-table-wrap table :is(th, td),
+.department-management .erp-table :is(th, td),
+.course-advanced-table :is(th, td),
+.branch-table :is(th, td),
+.semester-table :is(th, td),
+.section-table :is(th, td),
+.rooms-table :is(th, td),
+.sm-table :is(th, td) {
   text-align: center !important;
   vertical-align: middle !important;
 }
 
-.page-content table tbody td {
-  text-align: left !important;
-  vertical-align: middle !important;
+/* Universal Table Row Hover Transparency (No background change on row hover) */
+.page-content table tbody tr:hover td,
+.page-content table tbody tr:hover,
+.erp-table tbody tr:hover td,
+.erp-table tbody tr:hover,
+.cm-table tbody tr:hover td,
+.cm-table tbody tr:hover,
+.department-table-wrap tbody tr:hover td,
+.department-table-wrap tbody tr:hover,
+.course-advanced-table tbody tr:hover td,
+.course-advanced-table tbody tr:hover,
+.branch-table tbody tr:hover td,
+.branch-table tbody tr:hover,
+.semester-table tbody tr:hover td,
+.semester-table tbody tr:hover,
+.section-table tbody tr:hover td,
+.section-table tbody tr:hover,
+.rooms-table tbody tr:hover td,
+.rooms-table tbody tr:hover,
+.sm-table tbody tr:hover td,
+.sm-table tbody tr:hover {
+  background-color: transparent !important;
 }
 
-.page-content table tbody td :is(.erp-row-actions,.row-actions,.cm-actions,.cm-row-actions,.semester-row-actions,.section-actions,.course-actions,.branch-actions,.sa-icon-actions,.sa-row-actions,.table-actions,.action-group,.table-actions-group) {
-  justify-content: flex-start !important;
+/* Universal Table Name / Identity Links (Centered, shifts right on hover, NO background pill, NO underline) */
+.erp-table td button:not(.table-action-btn):not(.erp-action-btn),
+.cm-table td button:not(.table-action-btn):not(.cm-actions button),
+.course-advanced-table td :is(a, button):not(.table-action-btn):not(.course-actions *),
+.branch-table td :is(a, button):not(.table-action-btn):not(.branch-actions *),
+.semester-table td :is(a, button):not(.table-action-btn):not(.semester-row-actions *),
+.section-table td :is(a, button):not(.table-action-btn):not(.section-actions *),
+.rooms-table td :is(a, button):not(.table-action-btn):not(.rooms-row-actions *):not(.rooms-allocate-action-btn):not(.rooms-deallocate-link),
+.sm-table td :is(a, button):not(.table-action-btn):not(.sm-row-actions *),
+.table-name-link,
+.cm-name-link,
+.dept-name-link,
+.ay-name-link,
+.course-name-link,
+.branch-name-link,
+.semester-name-link,
+.section-name-link,
+.room-name-link,
+.subject-name-link {
+  display: inline-block !important;
+  width: auto !important;
+  height: auto !important;
+  min-width: 0 !important;
+  min-height: 0 !important;
+  max-width: 100% !important;
+  padding: 0 !important;
+  margin: 0 auto !important;
+  border: none !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  font: inherit !important;
+  font-size: 13.5px !important;
+  font-weight: 700 !important;
+  color: #0F172A !important;
+  text-align: center !important;
+  cursor: pointer !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
+  text-decoration: none !important;
+  transition: transform 0.2s ease, color 0.15s ease !important;
+}
+
+.erp-table td button:not(.table-action-btn):not(.erp-action-btn):hover,
+.cm-table td button:not(.table-action-btn):not(.cm-actions button):hover,
+.course-advanced-table td :is(a, button):not(.table-action-btn):not(.course-actions *):hover,
+.branch-table td :is(a, button):not(.table-action-btn):not(.branch-actions *):hover,
+.semester-table td :is(a, button):not(.table-action-btn):not(.semester-row-actions *):hover,
+.section-table td :is(a, button):not(.table-action-btn):not(.section-actions *):hover,
+.rooms-table td :is(a, button):not(.table-action-btn):not(.rooms-row-actions *):not(.rooms-allocate-action-btn):not(.rooms-deallocate-link):hover,
+.sm-table td :is(a, button):not(.table-action-btn):not(.sm-row-actions *):hover,
+.table-name-link:hover,
+.cm-name-link:hover,
+.dept-name-link:hover,
+.ay-name-link:hover,
+.course-name-link:hover,
+.branch-name-link:hover,
+.semester-name-link:hover,
+.section-name-link:hover,
+.room-name-link:hover,
+.subject-name-link:hover {
+  color: #756FB2 !important;
+  transform: translateX(6px) !important;
+  text-decoration: none !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  border: none !important;
+}
+
+:root[data-theme="dark"] .table-name-link,
+:root[data-theme="dark"] .cm-name-link,
+:root[data-theme="dark"] .dept-name-link,
+:root[data-theme="dark"] .ay-name-link,
+:root[data-theme="dark"] .course-name-link,
+:root[data-theme="dark"] .branch-name-link,
+:root[data-theme="dark"] .semester-name-link,
+:root[data-theme="dark"] .section-name-link,
+:root[data-theme="dark"] .room-name-link,
+:root[data-theme="dark"] .subject-name-link {
+  color: #F8FAFC !important;
+}
+
+:root[data-theme="dark"] .table-name-link:hover,
+:root[data-theme="dark"] .cm-name-link:hover,
+:root[data-theme="dark"] .dept-name-link:hover,
+:root[data-theme="dark"] .ay-name-link:hover,
+:root[data-theme="dark"] .course-name-link:hover,
+:root[data-theme="dark"] .branch-name-link:hover,
+:root[data-theme="dark"] .semester-name-link:hover,
+:root[data-theme="dark"] .section-name-link:hover,
+:root[data-theme="dark"] .room-name-link:hover,
+:root[data-theme="dark"] .subject-name-link:hover {
+  color: #A39DDC !important;
+}
+
+/* Ensure flex primary cells in tables are centered */
+.table-primary-cell,
+.rooms-identity-cell {
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: center !important;
+  text-align: center !important;
+  margin: 0 auto !important;
+}
+
+.table-primary-cell strong,
+.table-primary-cell small,
+.table-primary-cell span,
+.rooms-identity-cell span,
+.rooms-identity-cell strong,
+.rooms-identity-cell small {
+  text-align: center !important;
 }
 
 /* ==========================================================================
@@ -1473,13 +1771,14 @@ html,body,#root{max-width:100%;overflow-x:hidden}
 .semester-form-layout,
 .dept-form-layout {
   display: grid;
-  grid-template-columns: minmax(0, 1.4fr) minmax(300px, 0.9fr);
-  gap: 14px;
+  grid-template-columns: minmax(0, 1.35fr) minmax(320px, 0.85fr);
+  gap: 16px;
   align-items: stretch;
-  height: calc(100vh - 140px);
-  max-height: 520px;
-  min-height: 400px;
+  width: 100%;
+  max-width: 100%;
+  min-height: 0;
 }
+
 
 .erp-card-main,
 .college-form-main,
@@ -1584,10 +1883,11 @@ html,body,#root{max-width:100%;overflow-x:hidden}
 .sa-stepper button.active,
 .fm-stepper li.active,
 .sp-edit-tabs button.active {
-  border-color: #DDD8F0;
-  background: #FFFFFF;
-  color: #756FB2;
-  box-shadow: 0 2px 6px rgba(117, 111, 178, 0.12);
+  border-color: #756FB2 !important;
+  background: #8782BC !important;
+  color: #FFFFFF !important;
+  font-weight: 750 !important;
+  box-shadow: 0 2px 8px rgba(117, 111, 178, 0.28) !important;
 }
 
 .erp-tabs-bar button.active span,
@@ -1595,8 +1895,8 @@ html,body,#root{max-width:100%;overflow-x:hidden}
 .sa-stepper button.active i,
 .fm-stepper li.active span,
 .sp-edit-tabs button.active i {
-  background: #756FB2;
-  color: #FFFFFF;
+  background: rgba(255, 255, 255, 0.25) !important;
+  color: #FFFFFF !important;
 }
 
 .erp-tabs-bar button.completed,
@@ -1675,6 +1975,212 @@ html,body,#root{max-width:100%;overflow-x:hidden}
   border-top: 1px solid var(--border, #E2E8F0);
   background: var(--surface-soft, #FAF9FD);
   flex-shrink: 0;
+}
+
+/* ==========================================================================
+   PROJECT-WIDE UNIVERSAL FULL LAVENDER TABS & TABLES SYSTEM
+   Consistent pill buttons, #8782BC solid active state, crisp white text
+   ========================================================================== */
+.page-content :is(
+  .erp-tabs-bar,
+  .flm-tabs,
+  .fp-card nav,
+  .faculty-payroll nav,
+  .rbac-tabs-list,
+  .module-tabs,
+  .verification-method-tabs,
+  .profile-tabs,
+  .sm-tabs,
+  .em-tabs,
+  .cm-tabs,
+  .fs-tabs,
+  .fs-editor>nav,
+  .fs-domain-tabs,
+  .student-tabs,
+  .sa-tabs,
+  .sp-tabs,
+  .results-tabs,
+  .marks-tabs,
+  .timetable-tabs,
+  .tt-tabs,
+  .ac-tabs,
+  .fm-attendance-tabs,
+  [class*="-tabs-bar"],
+  [class*="-tabs-list"]
+) {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px;
+  background: var(--surface);
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  scrollbar-width: thin;
+}
+
+.page-content :is(
+  .erp-tabs-bar button,
+  .erp-tab-btn,
+  .flm-tabs button,
+  .fp-card nav button,
+  .faculty-payroll nav button,
+  .rbac-tab-btn,
+  .module-tabs a,
+  .module-tabs button,
+  .verification-method-tabs button,
+  .profile-tabs button,
+  .profile-tab-btn,
+  .sm-tab-btn,
+  .em-tab-btn,
+  .cm-tab-btn,
+  .em-tabs button,
+  .cm-tabs button,
+  .fs-tabs button,
+  .fs-editor>nav button,
+  .fs-domain-tabs button,
+  .student-tabs button,
+  .sa-tabs button,
+  .sp-tabs button,
+  .fs-tab-btn,
+  .fee-tab-btn,
+  .results-tab-btn,
+  .marks-tab-btn,
+  .timetable-tab-btn,
+  .tt-tab-btn,
+  .ac-tabs button,
+  .fm-attendance-tabs button,
+  .flm-cat-btn,
+  .fm-category-tab
+) {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 36px;
+  padding: 6px 16px;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text-secondary, #475569);
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+  text-decoration: none;
+  transition: all 0.15s ease;
+  box-shadow: none;
+}
+
+.page-content :is(
+  .erp-tabs-bar button,
+  .erp-tab-btn,
+  .flm-tabs button,
+  .fp-card nav button,
+  .faculty-payroll nav button,
+  .rbac-tab-btn,
+  .module-tabs a,
+  .module-tabs button,
+  .verification-method-tabs button,
+  .profile-tabs button,
+  .profile-tab-btn,
+  .sm-tab-btn,
+  .em-tab-btn,
+  .cm-tab-btn,
+  .em-tabs button,
+  .cm-tabs button,
+  .fs-tabs button,
+  .fs-editor>nav button,
+  .fs-domain-tabs button,
+  .student-tabs button,
+  .sa-tabs button,
+  .sp-tabs button,
+  .fs-tab-btn,
+  .fee-tab-btn,
+  .results-tab-btn,
+  .marks-tab-btn,
+  .timetable-tab-btn,
+  .tt-tab-btn,
+  .ac-tabs button,
+  .fm-attendance-tabs button,
+  .flm-cat-btn,
+  .fm-category-tab
+):hover:not(.active):not(.is-active) {
+  background: #EDEBF6 !important;
+  color: #756FB2 !important;
+  border-color: #DDD8F3 !important;
+}
+
+.page-content :is(
+  .erp-tabs-bar button.active,
+  .erp-tab-btn.active,
+  .flm-tabs button.active,
+  .fp-card nav button.active,
+  .faculty-payroll nav button.active,
+  .rbac-tab-btn.is-active,
+  .rbac-tab-btn.active,
+  .module-tabs a.active,
+  .module-tabs button.active,
+  .verification-method-tabs button.active,
+  .profile-tabs button.active,
+  .profile-tab-btn.active,
+  .sm-tab-btn.active,
+  .em-tab-btn.active,
+  .cm-tab-btn.active,
+  .em-tabs button.active,
+  .cm-tabs button.active,
+  .fs-tabs button.active,
+  .fs-editor>nav button.active,
+  .fs-domain-tabs button.active,
+  .student-tabs button.active,
+  .sa-tabs button.active,
+  .sp-tabs button.active,
+  .fs-tab-btn.active,
+  .fee-tab-btn.active,
+  .results-tab-btn.active,
+  .marks-tab-btn.active,
+  .timetable-tab-btn.active,
+  .tt-tab-btn.active,
+  .ac-tabs button.active,
+  .fm-attendance-tabs button.active,
+  .flm-cat-btn.active,
+  .fm-category-tab.active
+) {
+  background: #8782BC !important;
+  color: #FFFFFF !important;
+  border: 1px solid #756FB2 !important;
+  border-radius: 8px !important;
+  font-weight: 750 !important;
+  box-shadow: 0 2px 8px rgba(117, 111, 178, 0.28) !important;
+}
+
+.page-content :is(
+  .erp-tabs-bar button.active,
+  .erp-tab-btn.active,
+  .flm-tabs button.active,
+  .fp-card nav button.active,
+  .faculty-payroll nav button.active,
+  .rbac-tab-btn.is-active,
+  .rbac-tab-btn.active,
+  .module-tabs a.active,
+  .module-tabs button.active,
+  .profile-tabs button.active,
+  .profile-tab-btn.active,
+  .sm-tab-btn.active,
+  .em-tab-btn.active,
+  .cm-tab-btn.active,
+  .em-tabs button.active,
+  .cm-tabs button.active,
+  .fs-tabs button.active,
+  .fs-editor>nav button.active,
+  .student-tabs button.active,
+  .sa-tabs button.active,
+  .sp-tabs button.active,
+  .results-tab-btn.active,
+  .marks-tab-btn.active,
+  .fm-attendance-tabs button.active
+) :is(span, i, b, .rbac-tab-count, .fm-tab-badge, [class*="-badge"], [class*="-count"]) {
+  background: rgba(255, 255, 255, 0.25) !important;
+  color: #FFFFFF !important;
 }
 
 

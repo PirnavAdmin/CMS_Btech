@@ -189,15 +189,15 @@ export default function SubjectManagement() {
               <table className="sm-table">
                 <thead>
                   <tr>
-                    <th>Subject Code</th>
-                    <th>Subject Name</th>
-                    <th>Academic Mapping</th>
-                    <th>Academic Level</th>
-                    <th>Semester</th>
-                    <th>Type</th>
-                    <th>Credits</th>
-                    <th>Status</th>
-                    <th>Actions</th>
+                    <th className="table-center">Subject Code</th>
+                    <th className="table-center">Subject Name</th>
+                    <th className="table-center">Academic Mapping</th>
+                    <th className="table-center">Academic Level</th>
+                    <th className="table-center">Semester</th>
+                    <th className="table-center">Type</th>
+                    <th className="table-center">Credits</th>
+                    <th className="table-center">Status</th>
+                    <th className="table-center">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -205,17 +205,33 @@ export default function SubjectManagement() {
                     const m = mapping(s);
                     return (
                       <tr key={s.id}>
-                        <td><span className="sm-code-badge">{s.subjectCode}</span></td>
-                        <td><strong>{s.subjectName}</strong>{s.shortName && <small>{s.shortName}</small>}</td>
-                        <td>{m.course}<small>• {m.branch}</small></td>
-                        <td>{getAcademicLevelFromSemester({ semester: m.semester }) || '—'}</td>
-                        <td>{m.semester}</td>
-                        <td>{s.subjectType && <span className={`sm-type-tag ${/lab|practical/i.test(s.subjectType) ? 'sm-type-tag--lab' : 'sm-type-tag--theory'}`}>{s.subjectType}</span>}</td>
-                        <td><span className="sm-credit-badge">{s.credits}</span></td>
-                        <td><StatusBadge value={s.status} /></td>
-                        <td>
+                        <td className="table-center"><span className="sm-code-badge">{s.subjectCode}</span></td>
+                        <td className="table-center">
+                          <div className="table-primary-cell">
+                            <button
+                              type="button"
+                              className="subject-name-link table-cell-truncate"
+                              onClick={() => setViewing(s)}
+                              title={`Click to view details for ${s.subjectName}`}
+                            >
+                              {s.subjectName}
+                            </button>
+                            {s.shortName && <small>{s.shortName}</small>}
+                          </div>
+                        </td>
+                        <td className="table-center">
+                          <div className="table-primary-cell">
+                            <span>{m.course}</span>
+                            <small>• {m.branch}</small>
+                          </div>
+                        </td>
+                        <td className="table-center">{getAcademicLevelFromSemester({ semester: m.semester }) || '—'}</td>
+                        <td className="table-center">{m.semester}</td>
+                        <td className="table-center">{s.subjectType && <span className={`sm-type-tag ${/lab|practical/i.test(s.subjectType) ? 'sm-type-tag--lab' : 'sm-type-tag--theory'}`}>{s.subjectType}</span>}</td>
+                        <td className="table-center"><span className="sm-credit-badge">{s.credits}</span></td>
+                        <td className="table-center"><StatusBadge value={s.status} /></td>
+                        <td className="table-center">
                           <div className="sm-row-actions">
-                            <button className="sm-icon-btn" title="View" onClick={() => setViewing(s)}><FiEye /></button>
                             <button className="sm-icon-btn" title="Edit" onClick={() => openEdit(s)}><FiEdit2 /></button>
                             <TableActionButton type={String(s.status).toLowerCase() === 'active' ? 'deactivate' : 'activate'} ariaLabel={`${String(s.status).toLowerCase() === 'active' ? 'Deactivate' : 'Activate'} ${s.subjectCode}`} onClick={() => updateStatus(s)} />
                           </div>

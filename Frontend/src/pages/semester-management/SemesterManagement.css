@@ -852,6 +852,19 @@
   flex: 1;
   min-height: 0;
   gap: 8px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  padding-right: 2px;
+}
+
+.preview-body-container::-webkit-scrollbar {
+  width: 4px;
+}
+
+.preview-body-container::-webkit-scrollbar-thumb {
+  background: #CBD5E1;
+  border-radius: 4px;
 }
 
 .preview-hero {
@@ -942,8 +955,7 @@
 .preview-cohort-timeline {
   display: flex;
   flex-direction: column;
-  flex: 1;
-  min-height: 0;
+  flex-shrink: 0;
   gap: 6px;
 }
 
@@ -979,8 +991,6 @@
   background: #ffffff;
   display: flex;
   flex-direction: column;
-  flex: 1;
-  min-height: 0;
 }
 
 .timeline-table-head {
@@ -1006,20 +1016,8 @@
 .timeline-table-body {
   display: flex;
   flex-direction: column;
-  flex: 1;
-  min-height: 0;
-  overflow-y: auto;
-  overscroll-behavior: contain;
-  scrollbar-width: thin;
-}
-
-.timeline-table-body::-webkit-scrollbar {
-  width: 4px;
-}
-
-.timeline-table-body::-webkit-scrollbar-thumb {
-  background: #CBD5E1;
-  border-radius: 4px;
+  height: auto;
+  overflow: visible;
 }
 
 .timeline-row {
@@ -1178,7 +1176,7 @@
   align-items: center;
   gap: 20px;
   padding: 26px 30px;
-  background: linear-gradient(135deg, #0F172A 0%, #0F172A 100%);
+  background: linear-gradient(135deg, #665C9E 0%, #756FB2 60%, #837DBB 100%);
   color: #fff;
 }
 
@@ -1191,11 +1189,13 @@
   width: 72px;
   height: 72px;
   place-items: center;
-  border: 2px solid rgba(255, 255, 255, 0.3);
+  border: 2px solid rgba(255, 255, 255, 0.5);
   border-radius: 14px;
-  color: #fff;
-  background: var(--brand-blue, #8782BC);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  color: #1E173D;
+  background: linear-gradient(135deg, #ECC15D 0%, #DF9E27 100%);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.16);
+  font-size: 1.4rem;
+  font-weight: 850;
 }
 
 .semester-management .cm-profile-placeholder svg {
@@ -1296,45 +1296,7 @@
   font-weight: 700;
 }
 
-.semester-management .cm-info-rows {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 0;
-  overflow: hidden;
-  border: 1px solid #e2e8f0;
-  border-radius: 8px;
-  background: var(--surface, #fff);
-}
 
-.semester-management .cm-info-row {
-  display: grid;
-  min-height: 72px;
-  align-content: center;
-  gap: 4px;
-  padding: 12px 14px;
-  border-right: 1px solid #e2e8f0;
-  border-bottom: 1px solid #e2e8f0;
-}
-
-.semester-management .cm-info-row:nth-child(3n) {
-  border-right: 0;
-}
-
-.semester-management .cm-info-label {
-  color: #554F75;
-  font-size: 0.75rem;
-  font-weight: 800;
-  letter-spacing: 0.05em;
-  text-transform: uppercase;
-}
-
-.semester-management .cm-info-val {
-  color: #0F172A;
-  font-size: 0.95rem;
-  font-weight: 700;
-  line-height: 1.45;
-  overflow-wrap: anywhere;
-}
 
 .semester-profile-page {
   width: min(1120px, 100%);
@@ -1429,62 +1391,8 @@
     flex-direction: column;
   }
 
-  .semester-management .cm-profile-banner {
-    align-items: flex-start;
-    padding: 20px;
-  }
-
-  .semester-management .cm-profile-placeholder {
-    width: 56px;
-    height: 56px;
-  }
-
-  .semester-management .cm-profile-grid {
-    padding: 16px;
-  }
-
-  .semester-management .cm-info-card {
-    padding: 16px;
-  }
-
-  .semester-management .cm-info-rows {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
-  .semester-management .cm-info-row:nth-child(3n) {
-    border-right: 1px solid #e2e8f0;
-  }
-
-  .semester-management .cm-info-row:nth-child(2n) {
-    border-right: 0;
-  }
 }
 
-@media (max-width: 480px) {
-  .semester-page-header h1 {
-    font-size: 1.65rem;
-  }
-
-  .semester-stepper {
-    flex-direction: column;
-  }
-
-  .semester-workflow-actions {
-    flex-direction: column-reverse;
-  }
-
-  .semester-management .cm-profile-banner {
-    flex-direction: column;
-  }
-
-  .semester-management .cm-info-rows {
-    grid-template-columns: 1fr;
-  }
-
-  .semester-management .cm-info-row {
-    border-right: 0;
-  }
-}
 
 /* The live preview is a narrow sidebar: two readable columns work better
    than the generic three-column entity grid. */

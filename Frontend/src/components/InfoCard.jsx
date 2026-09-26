@@ -48,23 +48,26 @@ export default function InfoCard({
   }
 
   return (
-    <section className={`cm-info-card erp-view-section ${className}`}>
+    <section className={`cm-info-card sa-detail-panel sa-modern-panel erp-view-section ${className}`}>
       {(Icon || title) && (
-        <div className="cm-info-card-header">
-          {Icon && <Icon aria-hidden="true" />}
-          {title && <h2>{title}</h2>}
+        <div className="cm-info-card-header sa-panel-header">
+          <div className="sa-panel-title-wrap">
+            {Icon && <span className="sa-panel-icon"><Icon aria-hidden="true" /></span>}
+            {title && <h2>{title}</h2>}
+          </div>
+          {visibleRows.length > 0 && <span className="sa-card-count-badge">{visibleRows.length} items</span>}
         </div>
       )}
 
       {visibleRows.length > 0 && (
-        <div className="cm-info-rows erp-view-grid">
+        <div className="cm-info-rows sa-detail-kv-grid erp-view-grid">
           {visibleRows.map((item, idx) => {
             const label = Array.isArray(item) ? item[0] : item.label
             const val = Array.isArray(item) ? item[1] : item.value
             return (
-              <div className="cm-info-row erp-view-field" key={label || idx}>
-                <span className="cm-info-label erp-view-label">{label}</span>
-                <span className="cm-info-val erp-view-value"><DetailsValue label={label} value={val} /></span>
+              <div className="cm-info-row sa-kv-cell erp-view-field" key={label || idx}>
+                <span className="cm-info-label sa-kv-label erp-view-label">{label}</span>
+                <strong className="cm-info-val sa-kv-val erp-view-value"><DetailsValue label={label} value={val} /></strong>
               </div>
             )
           })}

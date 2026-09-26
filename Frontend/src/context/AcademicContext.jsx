@@ -63,13 +63,13 @@ export const AcademicProvider = ({ children }) => {
       setLoading(true)
       setError(null)
       const [cols, years, depts, crss, brns, sems, secs] = await Promise.all([
-        academicService.getColleges(),
-        academicService.getAcademicYears(),
-        academicService.getDepartments(),
-        academicService.getCourses(),
-        academicService.getBranches(),
-        academicService.getSemesters(),
-        academicService.getSections(),
+        academicService.getColleges(false),
+        academicService.getAcademicYears(false),
+        academicService.getDepartments(false),
+        academicService.getCourses({}, false),
+        academicService.getBranches(null, false),
+        academicService.getSemesters(null, false),
+        academicService.getSections({}, false),
       ])
 
       if ([cols, years, depts, crss, brns, sems, secs].some(list => list?.loadError)) {

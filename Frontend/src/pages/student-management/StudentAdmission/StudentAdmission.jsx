@@ -1516,21 +1516,33 @@ function AdmissionForm() {
     return clean.split(/\s+/).filter(w => !['and', '&', 'of', 'in'].includes(w.toLowerCase())).map(w => w[0]).join('').toUpperCase()
   }
 
+  const isItemActive = (item) => {
+    if (!item) return false
+    if (item.status !== undefined) {
+      if (typeof item.status === 'boolean') return item.status
+      if (typeof item.status === 'number') return item.status === 1
+      const s = String(item.status).trim().toLowerCase()
+      return s === 'active' || s === '1' || s === 'true' || s === 'current'
+    }
+    if (item.isActive !== undefined) return Boolean(item.isActive)
+    return true
+  }
+
   const academicOption=(item,idKeys,nameKeys)=>({id:idKeys.map(key=>read(item,key)).find(value=>value!=null&&value!==''),name:nameKeys.map(key=>read(item,key)).find(Boolean)||''})
-  const yearOptions=masters.years.map(item=>academicOption(item,['academicYearId','id'],['academicYearName','name'])).filter(item=>item.id)
+  const yearOptions=masters.years.filter(isItemActive).map(item=>academicOption(item,['academicYearId','id'],['academicYearName','name'])).filter(item=>item.id)
   const selectedCollegeId = data.admission.collegeId
-  const courseOptions=masters.courses.map(item=>{
+  const courseOptions=masters.courses.filter(isItemActive).map(item=>{
     const opt = academicOption(item,['courseId','id'],['courseName','name'])
     const code = item.courseCode || item.code || item.shortName || item.courseShortName || courseCodeFallback(opt.name)
     return { ...opt, code, collegeId:item.collegeId??item.college?.collegeId??item.college?.id }
   }).filter(item=>item.id&&(!selectedCollegeId||!item.collegeId||same(item.collegeId,selectedCollegeId)))
   const collegeCourseIds = new Set(courseOptions.map(item => String(item.id)))
-  const branchOptions=masters.branches.map(item=>{
+  const branchOptions=masters.branches.filter(isItemActive).map(item=>{
     const opt = academicOption(item,['branchId','id'],['branchName','name','branchShortName','shortName'])
     const code = item.branchCode || item.code || item.shortName || item.branchShortName || branchCodeFallback(opt.name)
     return { ...opt, code, courseId:item.courseId??item.course?.courseId??item.course?.id, collegeId:item.collegeId??item.college?.collegeId??item.college?.id }
   }).filter(item=>item.id&&(!selectedCollegeId||same(item.collegeId,selectedCollegeId)||collegeCourseIds.has(String(item.courseId)))&&(!data.academic.courseId||!item.courseId||same(item.courseId,data.academic.courseId)))
-  const collegeOptions=masters.colleges.map(item=>({id:item.collegeId??item.id,name:item.collegeName??item.name??item.institutionName??''})).filter(item=>item.id&&item.name)
+  const collegeOptions=masters.colleges.filter(isItemActive).map(item=>({id:item.collegeId??item.id,name:item.collegeName??item.name??item.institutionName??''})).filter(item=>item.id&&item.name)
 
   useEffect(() => {
     const targetCourse = courseOptions.find(c => same(c.id, data.academic.courseId) || same(c.name, data.academic.course))
@@ -2437,9 +2449,9 @@ function StudentHeader({ data }) {
             {STATUS[normStat] || normStat}
           </span>
         </div>
-        <h1 className="cm-profile-title"><span style={{ color: '#30264F' }}>{studentName(data)}</span></h1>
+        <h1 className="cm-profile-title"><span>{studentName(data)}</span></h1>
         <p className="cm-profile-subtitle">
-          <span style={{ color: '#30264F' }}>{[display(data.academic?.course), display(data.academic?.branch), display(data.academic?.academicYear)].filter(Boolean).join(' · ')}</span>
+          <span>{[display(data.academic?.course), display(data.academic?.branch), display(data.academic?.academicYear)].filter(Boolean).join(' · ')}</span>
         </p>
       </div>
     </div>

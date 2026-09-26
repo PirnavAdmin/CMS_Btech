@@ -310,11 +310,11 @@ export default function AcademicYear() {
                       {selected.status}
                     </span>
                   </div>
-                  <h1 className="cm-profile-title"><span style={{ color: '#30264F' }}>{selected.name}</span></h1>
+                  <h1 className="cm-profile-title">{selected.name}</h1>
                   <p className="cm-profile-subtitle">
-                    <span style={{ color: '#30264F' }}>Duration: </span>
-                    <strong style={{ color: '#30264F' }}>{duration(selected.startDate, selected.endDate)} days</strong>
-                    <span style={{ color: '#30264F' }}> ({formatDate(selected.startDate)} — {formatDate(selected.endDate)})</span>
+                    <span>Duration: </span>
+                    <strong>{duration(selected.startDate, selected.endDate)} days</strong>
+                    <span> ({formatDate(selected.startDate)} — {formatDate(selected.endDate)})</span>
                   </p>
                 </div>
               </div>
@@ -448,7 +448,7 @@ export default function AcademicYear() {
                 <table className="erp-table">
                   <thead>
                     <tr>
-                      <th style={{ minWidth: '180px' }}>Academic Year</th>
+                      <th className="table-center" style={{ minWidth: '180px' }}>Academic Year</th>
                       <th className="table-center" style={{ width: '130px' }}>Start Date</th>
                       <th className="table-center" style={{ width: '130px' }}>End Date</th>
                       <th className="table-center" style={{ width: '120px' }}>Status</th>
@@ -460,8 +460,15 @@ export default function AcademicYear() {
                   <tbody>
                     {pageRows.map((x) => (
                       <tr key={x.id}>
-                        <td style={{ minWidth: '180px' }}>
-                          <strong className="table-cell-truncate" title={x.name}>{x.name}</strong>
+                        <td className="table-center" style={{ minWidth: '180px' }}>
+                          <button
+                            type="button"
+                            className="ay-name-link table-cell-truncate"
+                            title={`Click to view details for ${x.name || 'Academic Year'}`}
+                            onClick={() => openView(x)}
+                          >
+                            {x.name}
+                          </button>
                         </td>
                         <td className="table-center" style={{ width: '130px' }}>{formatDate(x.startDate)}</td>
                         <td className="table-center" style={{ width: '130px' }}>{formatDate(x.endDate)}</td>
@@ -472,15 +479,6 @@ export default function AcademicYear() {
                         <td className="table-center" style={{ width: '140px' }}>{x.autoActivate ? 'Enabled' : 'Manual'}</td>
                         <td className="table-center" style={{ width: '140px' }}>
                           <div className="erp-row-actions table-actions-group">
-                            <button
-                              type="button"
-                              className="table-action-btn action-view erp-action-btn"
-                              title={`View ${x.name || 'Academic Year'}`}
-                              aria-label={`View ${x.name || 'Academic Year'}`}
-                              onClick={() => openView(x)}
-                            >
-                              <FiEye />
-                            </button>
                             <button
                               type="button"
                               className="table-action-btn action-edit erp-action-btn"

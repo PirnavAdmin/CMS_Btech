@@ -19,6 +19,7 @@ import { branchTypeLabel } from '../../utils/semesterUtils'
 import ViewDialog from '../../components/ViewDialog'
 import { showDeactivationBlocked } from '../../components/DeactivationBlockedDialog'
 import { useAcademic } from '../../context/AcademicContext'
+import { isRecordActive } from '../../services/academicService'
 import { getOperationalAcademicYearOptions } from '../../utils/academicYearUtils'
 import './Branch.css'
 
@@ -55,27 +56,30 @@ const content = (value) => {
 
 const toLower = (value) => String(value ?? '').trim().toLowerCase()
 
-const courseMap = (record = {}) => ({
-  id: normalizeId(record.id ?? record.courseId),
-  name: content(record.courseName ?? record.name ?? ''),
-  code: content(record.courseCode ?? record.code ?? record.shortName ?? ''),
-  shortName: content(record.courseShortName ?? record.shortName ?? record.courseCode ?? record.code ?? ''),
-  type: content(record.courseType ?? record.type ?? ''),
-  departmentId: normalizeId(record.departmentId ?? record.department?.departmentId ?? record.department?.id ?? ''),
-  departmentName: content(record.departmentName ?? record.department?.departmentName ?? record.department?.name ?? ''),
-  durationValue: normalizeId(record.durationYears ?? record.durationValue ?? record.duration ?? ''),
-  academicPattern: content(record.academicSystem ?? record.academicPattern ?? record.pattern ?? ''),
-  totalSemesters: normalizeId(record.totalSemesters ?? record.semesters ?? record.semesterCount ?? record.numberOfSemesters ?? ''),
-  status: content(record.status ?? record.courseStatus ?? ''),
-})
+const courseMap = (record = {}) => {
+  const active = isRecordActive(record)
+  return {
+    id: normalizeId(record.id ?? record.courseId),
+    name: content(record.courseName ?? record.name ?? ''),
+    code: content(record.courseCode ?? record.code ?? record.shortName ?? ''),
+    shortName: content(record.courseShortName ?? record.shortName ?? record.courseCode ?? record.code ?? ''),
+    type: content(record.courseType ?? record.type ?? ''),
+    departmentId: normalizeId(record.departmentId ?? record.department?.departmentId ?? record.department?.id ?? ''),
+    departmentName: content(record.departmentName ?? record.department?.departmentName ?? record.department?.name ?? ''),
+    durationValue: normalizeId(record.durationYears ?? record.durationValue ?? record.duration ?? ''),
+    academicPattern: content(record.academicSystem ?? record.academicPattern ?? record.pattern ?? ''),
+    totalSemesters: normalizeId(record.totalSemesters ?? record.semesters ?? record.semesterCount ?? record.numberOfSemesters ?? ''),
+    status: active ? 'Active' : 'Inactive',
+    isActive: active,
+  }
+}
 
 const academicYearMap = (record = {}) => {
-  const rawStatus = record.status ?? record.academicYearStatus ?? record.state ?? ''
-  const status = record.isActive === true || Number(rawStatus) === 1 || toLower(rawStatus) === 'active' ? 'Active' : content(rawStatus)
+  const active = isRecordActive(record)
   return {
     id: normalizeId(record.academicYearId ?? record.id ?? record.yearId ?? ''),
     name: content(record.academicYearName ?? record.name ?? record.academicYear ?? ''),
-    status,
+    status: active ? 'Active' : 'Inactive',
   }
 }
 
@@ -219,7 +223,12 @@ function List() {
         const students = await studentApi.getAll({ BranchId: Number(branch.id) })
         studentCount = students.length
         if (studentCount > 0) {
-          showDeactivationBlocked(`Cannot deactivate ${branch.branchName}. ${studentCount} student${studentCount === 1 ? '' : 's'} are associated with this branch.`)
+          showDeactivationBlocked({
+            message: `Cannot deactivate ${branch.branchName}. ${studentCount} enrolled student${studentCount === 1 ? '' : 's'} are associated with this branch.`,
+            name: branch.branchName,
+            entity: 'branch',
+            studentCount,
+          })
           return
         }
       } catch (requestError) {
@@ -235,7 +244,12 @@ function List() {
     const { branch, nextStatus, studentCount } = pendingStatus
     if (nextStatus === 'Inactive' && studentCount > 0) {
       setPendingStatus(null)
-      showDeactivationBlocked(`Cannot deactivate ${branch.branchName}. ${studentCount} student${studentCount === 1 ? '' : 's'} are associated with this branch.`)
+      showDeactivationBlocked({
+        message: `Cannot deactivate ${branch.branchName}. ${studentCount} enrolled student${studentCount === 1 ? '' : 's'} are associated with this branch.`,
+        name: branch.branchName,
+        entity: 'branch',
+        studentCount,
+      })
       return
     }
     setPendingStatus(null)
@@ -260,7 +274,7 @@ function List() {
     <FilterPanel active={hasFilters} onClear={clearFilters}>
       <section className="cm-panel branch-filter-toolbar">
         <label className="branch-search"><FiSearch /><input aria-label="Search branches" value={filters.query} onChange={(event) => setFilter('query', event.target.value)} placeholder="Search branch name, code or course" /></label>
-        <SearchableSelect label="Course" value={filters.courseId} options={courses.map((course) => ({ id: course.id, name: course.name, code: course.code }))} onChange={(value) => setFilter('courseId', value)} placeholder="Select Course" searchPlaceholder="Search course..." noOptionsMessage="No courses found." />
+        <SearchableSelect label="Course" value={filters.courseId} options={courses.filter(course => course.status === 'Active').map((course) => ({ id: course.id, name: course.name, code: course.code }))} onChange={(value) => setFilter('courseId', value)} placeholder="Select Course" searchPlaceholder="Search course..." noOptionsMessage="No courses found." />
         <select value={filters.branchType} onChange={(event) => setFilter('branchType', event.target.value)}><option value="">Type</option><option value="Core">Core</option><option value="Specialization">Specialization</option></select>
         <select value={filters.status} onChange={(event) => setFilter('status', event.target.value)}><option value="">Status</option><option value="Active">Active</option><option value="Inactive">Deactive</option></select>
         {hasFilters && <button className="branch-clear" onClick={clearFilters}><FiFilter /> Clear</button>}
@@ -273,9 +287,9 @@ function List() {
         <table className="branch-table">
           <thead>
             <tr>
-              <th style={{ minWidth: '220px' }}>Branch</th>
+              <th className="table-center" style={{ minWidth: '220px' }}>Branch</th>
               <th className="table-center" style={{ width: '110px' }}>Code</th>
-              <th style={{ minWidth: '160px', maxWidth: '220px' }}>Course</th>
+              <th className="table-center" style={{ minWidth: '160px', maxWidth: '220px' }}>Course</th>
               <th className="table-center" style={{ width: '130px' }}>Type</th>
               <th className="table-center" style={{ width: '110px' }}>Duration</th>
               <th className="table-center" style={{ width: '110px' }}>Semesters</th>
@@ -290,14 +304,16 @@ function List() {
               const courseDisplayName = course?.name || branch.courseName || ''
               return (
                 <tr key={branch.id}>
-                  <td style={{ minWidth: '220px' }}>
+                  <td className="table-center" style={{ minWidth: '220px' }}>
                     <div className="table-primary-cell">
-                      <strong title={branch.branchName}>{branch.branchName}</strong>
+                      <Link to={`/branches/${branch.id}`} className="branch-name-link table-cell-truncate" title={`Click to view details for ${branch.branchName}`}>
+                        {branch.branchName}
+                      </Link>
                       {branch.shortName && <small title={branch.shortName}>{branch.shortName}</small>}
                     </div>
                   </td>
                   <td className="table-center" style={{ width: '110px' }}>{branch.branchCode}</td>
-                  <td style={{ minWidth: '160px', maxWidth: '220px' }}><span className="table-cell-truncate" title={courseDisplayName}>{courseDisplayName || '—'}</span></td>
+                  <td className="table-center" style={{ minWidth: '160px', maxWidth: '220px' }}><span className="table-cell-truncate" title={courseDisplayName}>{courseDisplayName || '—'}</span></td>
                   <td className="table-center" style={{ width: '130px' }}>{typeOf(branch)}</td>
                   <td className="table-center" style={{ width: '110px' }}>{course?.durationValue ? `${course.durationValue} Years` : ''}</td>
                   <td className="table-center" style={{ width: '110px' }}>{course?.totalSemesters || ''}</td>
@@ -305,7 +321,6 @@ function List() {
                   <td className="table-center" style={{ width: '120px' }}><StatusBadge value={branch.status} /></td>
                   <td className="table-center" style={{ width: '140px' }}>
                     <div className="branch-actions table-actions-group">
-                      <Link className="table-action-btn action-view" aria-label={`View ${branch.branchName}`} title={`View ${branch.branchName}`} to={`/branches/${branch.id}`}><FiEye /></Link>
                       <Link className="table-action-btn action-edit" aria-label={`Edit ${branch.branchName}`} title={`Edit ${branch.branchName}`} to={`/branches/${branch.id}/edit`}><FiEdit2 /></Link>
                       <button type="button" title={branch.status === 'Active' ? `Deactivate ${branch.branchName}` : `Activate ${branch.branchName}`} aria-label={branch.status === 'Active' ? `Deactivate ${branch.branchName}` : `Activate ${branch.branchName}`} className={`table-action-btn ${branch.status === 'Active' ? 'action-deactivate' : 'action-activate'}`} onClick={() => onToggleStatus(branch)}>{branch.status === 'Active' ? <FiToggleRight /> : <FiToggleLeft />}</button>
                     </div>
@@ -372,7 +387,9 @@ function Form() {
       const courseRows = courseResult.status === 'fulfilled' ? (courseResult.value || []) : []
       const yearRows = yearResult.status === 'fulfilled' ? (yearResult.value || []) : []
       const branchRows = branchResult.status === 'fulfilled' ? (branchResult.value || []) : []
-      const allCourses = courseRows.map(courseMap).filter((course) => course.id && course.name)
+      const allCourses = (courseRows || [])
+        .map(courseMap)
+        .filter((course) => course.id && course.name)
       const activeYears = getOperationalAcademicYearOptions(yearRows || []).map((year) => ({ ...year, status: 'Active' }))
       setCourses(allCourses)
       setYears(activeYears)
@@ -540,7 +557,7 @@ function Form() {
       <section className="cm-panel branch-form">
         <nav className="branch-steps"><button type="button" className={step === 0 ? 'active' : ''} onClick={() => setStep(0)}><b>1</b>Branch Details</button><button type="button" className={step === 1 ? 'active' : ''} onClick={nextStep}><b>2</b>Branch Configuration</button></nav>
         {step === 0 && <section className="branch-step-content">
-          <div className="cm-form-grid"><Field label="Course Name *" error={getFieldError('courseId')}><SearchableSelect label="Course Name" value={value.courseId} options={courses.map((course) => ({ id: course.id, name: course.name, code: course.code }))} onChange={selectCourse} placeholder="Select Course" searchPlaceholder="Search course name or code..." noOptionsMessage="No courses found." error={Boolean(errors.courseId)} /></Field><Field label="Course Code"><input value={selectedCourse?.code || value.courseCode || ''} readOnly /></Field></div>
+          <div className="cm-form-grid"><Field label="Course Name *" error={getFieldError('courseId')}><SearchableSelect label="Course Name" value={value.courseId} options={courses.filter(course => course.status === 'Active' || (id && String(course.id) === String(value.courseId))).map((course) => ({ id: course.id, name: course.name, code: course.code }))} onChange={selectCourse} placeholder="Select Course" searchPlaceholder="Search course name or code..." noOptionsMessage="No courses found." error={Boolean(errors.courseId)} /></Field><Field label="Course Code"><input value={selectedCourse?.code || value.courseCode || ''} readOnly /></Field></div>
           {!value.courseId && <p className="branch-structure-empty">Select a course to load its academic structure.</p>}
           <div className="cm-form-grid"><Field label="Branch Name *" error={getFieldError('branchName')}><input value={value.branchName} onChange={(event) => update('branchName', event.target.value)} placeholder="Enter branch name" /></Field><Field label="Branch Code *" error={getFieldError('branchCode')}><input value={value.branchCode} onChange={(event) => update('branchCode', event.target.value)} placeholder="e.g. CSE" /></Field></div>
           <div className="cm-form-grid"><Field label="Branch Type *"><select value={value.branchType} onChange={(event) => update('branchType', event.target.value)}><option value="">Select Branch Type</option><option value="Core">Core</option><option value="Specialization">Specialization</option></select></Field>{value.branchType === 'Specialization' && <Field label="Specialization *" error={getFieldError('specialization')}><input value={value.specialization} onChange={(event) => update('specialization', event.target.value)} placeholder="e.g. Artificial Intelligence" /></Field>}<Field label="Short Name"><input value={value.shortName} onChange={(event) => update('shortName', event.target.value)} placeholder="Optional short name" /></Field></div>
@@ -688,11 +705,11 @@ function Details() {
                   {branch.status || 'Active'}
                 </span>
               </div>
-              <h1 className="cm-profile-title"><span style={{ color: '#30264F' }}>{branch.branchName}</span></h1>
+              <h1 className="cm-profile-title">{branch.branchName}</h1>
               <p className="cm-profile-subtitle">
-                <span style={{ color: '#30264F' }}>Course: </span>
-                <strong style={{ color: '#30264F' }}>{branch.courseName || branch.courseCode || '—'}</strong>
-                {branch.specialization && <span style={{ color: '#30264F' }}> · Specialization: {branch.specialization}</span>}
+                <span>Course: </span>
+                <strong>{branch.courseName || branch.courseCode || '—'}</strong>
+                {branch.specialization && <span> · Specialization: {branch.specialization}</span>}
               </p>
             </div>
           </div>

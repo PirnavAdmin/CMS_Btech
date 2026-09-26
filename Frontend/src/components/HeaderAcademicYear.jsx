@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
-import { Link } from 'react-router-dom'
-import { FiCalendar, FiSliders, FiArrowRight } from 'react-icons/fi'
+import { FiCalendar, FiChevronDown } from 'react-icons/fi'
+import AcademicContextSelect from './AcademicContextSelect'
 import { calculateAcademicYearProgress } from '../utils/headerAcademicYear'
 import { useAcademic } from '../context/AcademicContext'
 import './HeaderAcademicYear.css'
@@ -10,7 +10,6 @@ export default function HeaderAcademicYear() {
     selectedAcademicYear,
     currentAcademicYear,
     academicYears = [],
-    selectedCollege,
     isHistoricalYear,
     loading,
   } = useAcademic()
@@ -24,7 +23,7 @@ export default function HeaderAcademicYear() {
     }, 60000)
 
     const close = (event) => {
-      if (root.current && !root.current.contains(event.target)) {
+      if (root.current && !root.current.contains(event.target) && !event.target.closest('.workspace-context-menu--year')) {
         root.current.open = false
       }
     }
@@ -70,22 +69,19 @@ export default function HeaderAcademicYear() {
             </div>
           )}
         </div>
+        <FiChevronDown aria-hidden="true" />
       </summary>
 
       <div className="header-academic-year__details">
         <div className="header-academic-year__pop-header">
-          <strong>Global Academic Context</strong>
-          <small>Configured via Settings</small>
+          <strong>Change academic year</strong>
         </div>
+        <AcademicContextSelect kind="year" compact />
 
         {year ? (
           <dl>
-            <dt>College</dt>
-            <dd>{selectedCollege?.name || selectedCollege?.collegeName || 'Default Institution'}</dd>
-            <dt>Academic Year</dt>
-            <dd>{label}</dd>
             <dt>Status</dt>
-            <dd>{isHistoricalYear ? 'Historical (Archive)' : 'Active'}</dd>
+            <dd><span className="header-academic-year__status">{isHistoricalYear ? 'Historical' : 'Active'}</span></dd>
             <dt>Start Date</dt>
             <dd>{dateLabel(year.startDate)}</dd>
             <dt>End Date</dt>
@@ -94,19 +90,9 @@ export default function HeaderAcademicYear() {
             <dd>{progress === null ? 'Unavailable — check year dates' : `${progress}%`}</dd>
           </dl>
         ) : (
-          <p>{loading ? 'Loading academic year context...' : 'No academic year configured. Configure in Settings.'}</p>
+          <p>{loading ? 'Loading academic years...' : 'Select an academic year above.'}</p>
         )}
 
-        <div className="header-academic-year__footer">
-          <Link
-            to="/settings?tab=context"
-            onClick={() => {
-              if (root.current) root.current.open = false
-            }}
-          >
-            <FiSliders aria-hidden="true" /> Change Context in Settings <FiArrowRight aria-hidden="true" />
-          </Link>
-        </div>
       </div>
     </details>
   )

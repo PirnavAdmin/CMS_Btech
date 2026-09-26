@@ -52,10 +52,10 @@
   padding: 0 !important;
   margin: 0 !important;
   border-radius: 8px !important;
-  border: 1px solid var(--border, #e2e8f0) !important;
+  border: 1px solid var(--border, #DDD8F3);
   box-sizing: border-box !important;
-  background: var(--surface, #ffffff) !important;
-  color: var(--text-primary, #0f172a) !important;
+  background: var(--surface, #EDEBF6);
+  color: var(--brand, #756FB2);
   font-size: 14px !important;
   line-height: 1 !important;
   cursor: pointer !important;
@@ -144,91 +144,63 @@
    SEMANTIC ACTION COLORS (LIGHT THEME)
    ========================================================================== */
 
-/* 1. VIEW ACTION (Eye Icon -> Subtle Gold / Dark Slate) */
+/* 1. VIEW ACTION (Eye Icon -> Subtle Lavender) */
 .action-view,
 .cm-view-action,
 .table-action-btn.action-view,
-.table-actions-group > :is(a, button).action-view,
-.table-actions-group > :is(a, button):first-child:not(.action-edit):not(.action-deactivate):not(.action-activate):not(.action-assign),
-.course-actions > a:first-child,
-.branch-actions > a:first-child,
-.semester-row-actions > a:first-child,
-.section-actions > a:first-child,
-.sa-icon-actions > button:first-child,
-.table-actions-cell > button:first-child {
-  color: #8782BC !important;
+.table-actions-group > :is(a, button).action-view {
+  color: #756FB2 !important;
   background: #EDEBF6 !important;
-  border-color: #DFDCED !important;
+  border-color: #DDD8F3 !important;
 }
 .action-view:hover:not(:disabled),
 .cm-view-action:hover:not(:disabled),
 .table-action-btn.action-view:hover:not(:disabled),
-.table-actions-group > :is(a, button).action-view:hover:not(:disabled),
-.table-actions-group > :is(a, button):first-child:not(.action-edit):not(.action-deactivate):not(.action-activate):not(.action-assign):hover:not(:disabled),
-.course-actions > a:first-child:hover:not(:disabled),
-.branch-actions > a:first-child:hover:not(:disabled),
-.semester-row-actions > a:first-child:hover:not(:disabled),
-.section-actions > a:first-child:hover:not(:disabled),
-.sa-icon-actions > button:first-child:hover:not(:disabled),
-.table-actions-cell > button:first-child:hover:not(:disabled) {
-  background: #EDEBF6 !important;
-  border-color: #DFDCED !important;
-  color: #8782BC !important;
+.table-actions-group > :is(a, button).action-view:hover:not(:disabled) {
+  background: #DDD8F3 !important;
+  border-color: #756FB2 !important;
+  color: #554F75 !important;
 }
 
-/* 2. EDIT ACTION (Pencil Icon -> Subtle Purple) */
+/* 2. EDIT ACTION (Pencil Icon -> Subtle Lavender / Purple) */
 .action-edit,
 .cm-edit-action,
 .table-action-btn.action-edit,
-.table-actions-group > :is(a, button).action-edit,
-.table-actions-group > :is(a, button):nth-child(2):not(.action-view):not(.action-deactivate):not(.action-activate):not(.action-assign),
-.course-actions > a:nth-child(2),
-.branch-actions > a:nth-child(2),
-.semester-row-actions > a:nth-child(2),
-.section-actions > a:nth-child(2),
-.sa-icon-actions > button.action-edit,
-.table-actions-cell > button:nth-child(2) {
-  color: #7c3aed !important;
-  background: #f3e8ff !important;
-  border-color: #dfccff !important;
+.table-actions-group > :is(a, button).action-edit {
+  color: #756FB2 !important;
+  background: #EDEBF6 !important;
+  border-color: #DDD8F3 !important;
 }
 .action-edit:hover:not(:disabled),
 .cm-edit-action:hover:not(:disabled),
 .table-action-btn.action-edit:hover:not(:disabled),
-.table-actions-group > :is(a, button).action-edit:hover:not(:disabled),
-.table-actions-group > :is(a, button):nth-child(2):not(.action-view):not(.action-deactivate):not(.action-activate):not(.action-assign):hover:not(:disabled),
-.course-actions > a:nth-child(2):hover:not(:disabled),
-.branch-actions > a:nth-child(2):hover:not(:disabled),
-.semester-row-actions > a:nth-child(2):hover:not(:disabled),
-.section-actions > a:nth-child(2):hover:not(:disabled),
-.sa-icon-actions > button.action-edit:hover:not(:disabled),
-.table-actions-cell > button:nth-child(2):hover:not(:disabled) {
-  background: #ede9fe !important;
-  border-color: #c4b5fd !important;
-  color: #6d28d9 !important;
+.table-actions-group > :is(a, button).action-edit:hover:not(:disabled) {
+  background: #DDD8F3 !important;
+  border-color: #756FB2 !important;
+  color: #554F75 !important;
 }
 
-/* 3. ASSIGN ACTION (User Plus Icon -> Subtle Amber) */
+/* 3. ASSIGN ACTION (User Plus Icon -> Subtle Amber / Warm Yellow) */
 .action-assign,
 .section-assign-action,
 .table-action-btn.action-assign,
 .table-actions-group > :is(a, button).action-assign,
 .section-actions > .section-assign-action {
-  color: #756FB2 !important;
-  background: #EDEBF6 !important;
-  border-color: #DFDCED !important;
+  color: #D97706 !important;
+  background: #FEF3C7 !important;
+  border-color: #FDE68A !important;
 }
 .action-assign:hover:not(:disabled),
 .section-assign-action:hover:not(:disabled),
 .table-action-btn.action-assign:hover:not(:disabled),
 .table-actions-group > :is(a, button).action-assign:hover:not(:disabled),
 .section-actions > .section-assign-action:hover:not(:disabled) {
-  background: #DFDCED !important;
-  border-color: #8782BC !important;
-  color: #554F75 !important;
+  background: #FDE68A !important;
+  border-color: #F59E0B !important;
+  color: #B45309 !important;
 }
 
-/* 4. ACTIVATE / APPROVAL ACTION (Toggle / Check Icon -> Subtle Green) */
+/* 4. ACTIVATE / APPROVAL ACTION (Toggle / Check Icon -> Subtle Lavender) */
 .action-activate,
 .table-action-btn.action-activate,
 .table-action-btn.cm-success,
@@ -237,10 +209,7 @@
 .table-actions-group > :is(a, button).action-activate,
 .table-actions-group > :is(a, button).cm-success,
 .table-actions-group > :is(a, button).erp-action-btn--success,
-.table-actions-group > :is(a, button).success,
-.sa-icon-actions button.action-activate,
-.sa-icon-actions button[title*="Review"],
-.sa-icon-actions button[title*="Approve"] {
+.table-actions-group > :is(a, button).success {
   color: #756FB2 !important;
   background: #EDEBF6 !important;
   border-color: #DDD8F3 !important;
@@ -253,16 +222,13 @@
 .table-actions-group > :is(a, button).action-activate:hover:not(:disabled),
 .table-actions-group > :is(a, button).cm-success:hover:not(:disabled),
 .table-actions-group > :is(a, button).erp-action-btn--success:hover:not(:disabled),
-.table-actions-group > :is(a, button).success:hover:not(:disabled),
-.sa-icon-actions button.action-activate:hover:not(:disabled),
-.sa-icon-actions button[title*="Review"]:hover:not(:disabled),
-.sa-icon-actions button[title*="Approve"]:hover:not(:disabled) {
-  background: #dcfce7 !important;
-  border-color: #C9C4E0 !important;
-  color: #756FB2 !important;
+.table-actions-group > :is(a, button).success:hover:not(:disabled) {
+  background: #DDD8F3 !important;
+  border-color: #756FB2 !important;
+  color: #554F75 !important;
 }
 
-/* 5. DEACTIVATE / DISCARD ACTION (Toggle / Discard Icon -> Subtle Red) */
+/* 5. DEACTIVATE / DISCARD ACTION (Toggle / Discard Icon -> Subtle Red / Coral) */
 .action-deactivate,
 .cm-discard-action,
 .table-action-btn.action-deactivate,
@@ -276,9 +242,9 @@
 .table-actions-group > :is(a, button).erp-action-btn--danger,
 .table-actions-group > :is(a, button).danger,
 .cm-actions .cm-discard-action {
-  color: #b42318 !important;
-  background: #fee4e2 !important;
-  border-color: #fecdca !important;
+  color: #B91C1C !important;
+  background: #FEE2E2 !important;
+  border-color: #FECACA !important;
 }
 .action-deactivate:hover:not(:disabled),
 .cm-discard-action:hover:not(:disabled),
@@ -291,24 +257,37 @@
 .table-actions-group > :is(a, button).cm-danger:hover:not(:disabled),
 .table-actions-group > :is(a, button).cm-discard-action:hover:not(:disabled),
 .table-actions-group > :is(a, button).erp-action-btn--danger:hover:not(:disabled),
-.table-actions-group > :is(a, button).danger:hover:not(:disabled),
-.cm-actions .cm-discard-action:hover:not(:disabled) {
-  background: #fee2e2 !important;
-  border-color: #fca5a5 !important;
-  color: #991b1b !important;
+.table-actions-group > :is(a, button).danger:hover:not(:disabled) {
+  background: #FECACA !important;
+  border-color: #EF4444 !important;
 }
 
-/* Apply the same action palette even in legacy tables that omit action classes. */
-.page-content table :is(a, button)[title^="View"],
-.page-content table :is(a, button)[aria-label^="View"] { color: #8782BC !important;background:#EDEBF6!important;border-color:#DFDCED!important;font-weight:700; }
-.page-content table :is(a, button)[title^="Edit"],
-.page-content table :is(a, button)[aria-label^="Edit"] { color:#7c3aed!important;background:#f3e8ff!important;border-color:#dfccff!important; }
-.page-content table :is(a, button)[title^="Deactivate"],
-.page-content table :is(a, button)[aria-label^="Deactivate"],
-.page-content table :is(a, button)[title^="Delete"],
-.page-content table :is(a, button)[aria-label^="Delete"] { color:#b42318!important;background:#fee4e2!important;border-color:#fecdca!important; }
-.page-content table :is(a, button)[title^="Activate"],
-.page-content table :is(a, button)[aria-label^="Activate"] { color:#756FB2!important;background:#EDEBF6!important;border-color:#DDD8F3!important; }
+/* Apply the action palette only inside action button containers */
+:is(.table-actions-group, .erp-row-actions, .cm-actions, .course-actions, .branch-actions, .semester-row-actions, .section-actions, .rooms-row-actions, .sm-row-actions, .sa-icon-actions, .table-actions-cell) > :is(a, button).action-view {
+  color: #756FB2 !important;
+  background: #EDEBF6 !important;
+  border-color: #DDD8F3 !important;
+}
+:is(.table-actions-group, .erp-row-actions, .cm-actions, .course-actions, .branch-actions, .semester-row-actions, .section-actions, .rooms-row-actions, .sm-row-actions, .sa-icon-actions, .table-actions-cell) > :is(a, button).action-edit {
+  color: #756FB2 !important;
+  background: #EDEBF6 !important;
+  border-color: #DDD8F3 !important;
+}
+:is(.table-actions-group, .erp-row-actions, .cm-actions, .course-actions, .branch-actions, .semester-row-actions, .section-actions, .rooms-row-actions, .sm-row-actions, .sa-icon-actions, .table-actions-cell) > :is(a, button).action-assign {
+  color: #D97706 !important;
+  background: #FEF3C7 !important;
+  border-color: #FDE68A !important;
+}
+:is(.table-actions-group, .erp-row-actions, .cm-actions, .course-actions, .branch-actions, .semester-row-actions, .section-actions, .rooms-row-actions, .sm-row-actions, .sa-icon-actions, .table-actions-cell) > :is(a, button).action-deactivate {
+  color: #B91C1C !important;
+  background: #FEE2E2 !important;
+  border-color: #FECACA !important;
+}
+:is(.table-actions-group, .erp-row-actions, .cm-actions, .course-actions, .branch-actions, .semester-row-actions, .section-actions, .rooms-row-actions, .sm-row-actions, .sa-icon-actions, .table-actions-cell) > :is(a, button).action-activate {
+  color: #756FB2 !important;
+  background: #EDEBF6 !important;
+  border-color: #DDD8F3 !important;
+}
 
 /* ==========================================================================
    DARK THEME PALETTE FOR ACTION BUTTONS
@@ -523,29 +502,25 @@ table.erp-table {
   margin: 0 !important;
 }
 
-/* 3. Header Cells (th) - Uniform Vertical & Horizontal Center Alignment */
-.cm-table thead th,
+/* 3. Header Cells (th) - Uniform Vertical & Horizontal Alignment */
 .course-advanced-table thead th,
 .branch-table thead th,
 .semester-table thead th,
 .section-table thead th,
 .sa-table-wrap table thead th,
 .sp-directory-table thead th,
-.erp-table thead th,
-.department-table-wrap table thead th,
 .p-history-table thead th,
 .p-candidate-table thead th,
 .academic-table thead th,
 .promotion-table thead th,
 .faculty-table-wrap th,
 .faculty-table-wrap table thead th,
-.faculty-directory table thead th,
-.page-content table thead th {
+.faculty-directory table thead th {
   height: 44px !important;
   min-height: 44px !important;
   max-height: 44px !important;
   vertical-align: middle !important;
-  text-align: center !important;
+  text-align: left !important;
   padding: 10px 14px !important;
   background: #8782BC !important;
   color: #FFFFFF !important;
@@ -559,8 +534,7 @@ table.erp-table {
   box-sizing: border-box !important;
 }
 
-/* 4. Body Data Cells (td) - Uniform Height, Vertical Middle & Horizontal Center */
-.cm-table tbody td,
+/* 4. Body Data Cells (td) - Uniform Height, Vertical Middle */
 .course-advanced-table tbody td,
 .branch-table tbody td,
 .semester-table tbody td,
@@ -572,11 +546,9 @@ table.erp-table {
 .p-history-table tbody td,
 .p-candidate-table tbody td,
 .academic-table tbody td,
-.promotion-table tbody td,
-.page-content table tbody td {
+.promotion-table tbody td {
   height: 52px !important;
   vertical-align: middle !important;
-  text-align: center !important;
   padding: 10px 14px !important;
   border-bottom: 1px solid var(--border, #e2e8f0) !important;
   border-top: none !important;
@@ -587,16 +559,51 @@ table.erp-table {
   box-sizing: border-box !important;
 }
 
+/* Explicit Centered Header & Cell Overrides - Guaranteed Center */
+th.table-center,
+td.table-center,
+th.col-logo,
+td.col-logo,
+th.col-status,
+td.col-status,
+th.col-actions,
+td.col-actions,
+th.col-code,
+td.col-code,
+.col-logo,
+.col-status,
+.col-actions,
+.table-center,
+.text-center {
+  text-align: center !important;
+  vertical-align: middle !important;
+}
+
+/* Explicit Left Header & Cell Overrides - Guaranteed Left */
+th.table-left,
+td.table-left,
+th.col-name,
+td.col-name,
+th.col-type,
+td.col-type,
+th.col-hod,
+td.col-hod,
+.col-name,
+.col-type,
+.col-hod,
+.table-left,
+.text-left {
+  text-align: left !important;
+  vertical-align: middle !important;
+}
+
 /* 5. Universal Center Alignment Classes */
-.cm-table :is(th, td),
 .course-advanced-table :is(th, td),
 .branch-table :is(th, td),
 .semester-table :is(th, td),
 .section-table :is(th, td),
 .sa-table-wrap table :is(th, td),
 .sp-directory-table :is(th, td),
-.erp-table :is(th, td),
-.department-table-wrap table :is(th, td),
 .p-history-table :is(th, td),
 .p-candidate-table :is(th, td),
 .table-center,
@@ -609,11 +616,9 @@ table.erp-table {
 .table-cell-truncate,
 .table-truncate,
 .truncate,
-.cm-college-name,
 .section-name,
 .course-name,
-.branch-name,
-.dept-name {
+.branch-name {
   display: block !important;
   width: 100% !important;
   max-width: 100% !important;

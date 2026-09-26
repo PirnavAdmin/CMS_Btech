@@ -16,6 +16,8 @@ import CollegeInstitutionManagement from './pages/admin-management/CollegeInstit
 import AddCollege from './pages/admin-management/AddCollege'
 import AcademicYearManagement from './pages/admin-management/AcademicYearManagement'
 import DepartmentManagement from './pages/admin-management/DepartmentManagement'
+import RolesAndDesignations from './pages/admin-management/RolesAndDesignations'
+import RoomsManagement from './pages/admin-management/RoomsManagement'
 import SemesterManagement from './pages/semester-management/SemesterManagement'
 import SectionManagement from './pages/section-management/SectionManagement'
 import MyProfile from './pages/profile/MyProfile'
@@ -70,7 +72,7 @@ class AppErrorBoundary extends Component {
                 {compStack ? `\n\nComponent Stack:\n${compStack}` : ''}
               </pre>
             )}
-            <button type="button" onClick={() => this.setState({ hasError: false, error: null, info: null })} style={{ border: 'none', background: '#8782BC', color: '#fff', borderRadius: '10px', padding: '10px 16px', cursor: 'pointer', fontWeight: 700, marginRight: '8px' }}>
+            <button type="button" onClick={() => window.location.reload()} style={{ border: 'none', background: '#8782BC', color: '#fff', borderRadius: '10px', padding: '10px 16px', cursor: 'pointer', fontWeight: 700, marginRight: '8px' }}>
               Try again
             </button>
             <button type="button" onClick={() => window.location.href = '/'} style={{ border: 'none', background: '#475569', color: '#fff', borderRadius: '10px', padding: '10px 16px', cursor: 'pointer', fontWeight: 700 }}>
@@ -216,6 +218,9 @@ export default function App() {
               <Route path="/section-management/add" element={<SectionManagement mode="form" />} />
               <Route path="/section-management/:id/edit" element={<SectionManagement mode="edit" />} />
               <Route path="/section-management/:id" element={<SectionManagement mode="details" />} />
+              <Route path="/rooms-management" element={<RoomsManagement />} />
+              <Route path="/rooms" element={<RoomsManagement />} />
+              <Route path="/roles-designations" element={<RolesAndDesignations />} />
               <Route path="/subject-management" element={<SubjectManagement />} />
               <Route path="/credits-management" element={<CreditsManagement />} />
               <Route path="/timetable" element={<TimetableManagement />} />
@@ -231,6 +236,8 @@ export default function App() {
               <Route path="/student-management/attendance/*" element={<Attendance />} />
               <Route path="/student-management/promotions" element={<StudentPromotion />} />
               <Route path="/fees/*" element={<Fees />} />
+              <Route path="/roles-designations" element={<RolesAndDesignations />} />
+              <Route path="/roles-permissions" element={<RolesAndDesignations />} />
             </Route>
           </Route>
 

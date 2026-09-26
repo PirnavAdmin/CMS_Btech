@@ -28,16 +28,6 @@ const TAB_FIELDS = {
   administration: ['principalName', 'principalEmail', 'principalContact'],
   accreditation: ['accreditationBody', 'accreditationStatus', 'accreditationGrade', 'accreditationNumber', 'validFrom', 'validUntil'],
 }
-// A Skip action is only meaningful when a whole wizard step is optional.
-// Keep this separate from TAB_FIELDS because TAB_FIELDS is also used for
-// touched/error handling and therefore contains both required and optional inputs.
-const REQUIRED_TAB_FIELDS = {
-  college: ['collegeName', 'collegeCode', 'collegeType', 'universityName'],
-  address: ['addressLine1', 'city', 'state', 'pincode'],
-  contact: ['contactNumber', 'email'],
-  administration: ['principalName', 'principalEmail', 'principalContact'],
-  accreditation: [],
-}
 const initialValues = {
   collegeName: '', collegeCode: '', collegeType: '', collegeTypeOther: '', universityName: '', logo: '', logoName: '',
   addressLine1: '', addressLine2: '', area: '', district: '', city: '', state: '', pincode: '', country: 'India',
@@ -368,12 +358,17 @@ export default function AddCollege() {
 
   useEffect(() => {
     if (tabsNavRef.current) {
-      const activeButton = tabsNavRef.current.querySelector('button.active')
+      const navContainer = tabsNavRef.current
+      const activeButton = navContainer.querySelector('button.active')
       if (activeButton) {
-        activeButton.scrollIntoView({
+        const offsetLeft = activeButton.offsetLeft
+        const buttonWidth = activeButton.offsetWidth
+        const containerWidth = navContainer.clientWidth
+        const targetScrollLeft = offsetLeft - (containerWidth / 2) + (buttonWidth / 2)
+
+        navContainer.scrollTo({
+          left: Math.max(0, targetScrollLeft),
           behavior: 'smooth',
-          block: 'nearest',
-          inline: 'center',
         })
       }
     }
@@ -397,25 +392,6 @@ export default function AddCollege() {
       setNotice('')
       window.scrollTo({ top: 0, behavior: 'smooth' })
     }
-  }
-
-  const canSkipTab = (tabId) => (REQUIRED_TAB_FIELDS[tabId] || []).length === 0
-  const skipCurrentTab = () => {
-    if (!canSkipTab(activeTab)) return
-
-    // Skipping means omitting this optional section. Clearing its values also
-    // prevents a partially entered optional value (for example, invalid dates)
-    // from blocking Preview & Submit later.
-    const fields = TAB_FIELDS[activeTab] || []
-    setValues((current) => fields.reduce((next, field) => ({ ...next, [field]: initialValues[field] }), current))
-    setTouched((current) => fields.reduce((next, field) => ({ ...next, [field]: false }), { ...current }))
-    setDirty(true)
-    const currentIndex = FORM_TABS.findIndex((tab) => tab.id === activeTab)
-    const nextIndex = currentIndex + 1
-    setHighestUnlockedTab((current) => Math.max(current, nextIndex))
-    setActiveTab(FORM_TABS[nextIndex].id)
-    setNotice('Optional section skipped.')
-    window.scrollTo({ top: 0, behavior: 'smooth' })
   }
 
   const submit = async () => {
@@ -613,11 +589,6 @@ export default function AddCollege() {
           {FORM_TABS.findIndex((tab) => tab.id === activeTab) > 0 && (
             <button type="button" className="ac-secondary" onClick={goPrevious}>
               ← Previous
-            </button>
-          )}
-          {canSkipTab(activeTab) && (
-            <button type="button" className="ac-secondary" onClick={skipCurrentTab}>
-              Skip
             </button>
           )}
           {activeTab !== 'accreditation' ? (

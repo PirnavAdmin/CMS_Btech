@@ -7,6 +7,13 @@ export default defineConfig(({ mode }) => {
   const baseUrl = (env.VITE_API_BASE_URL || 'https://abreast-curling-tutor.ngrok-free.dev').trim().replace(/\/+$/, '')
   return {
   plugins: [react()],
+  resolve: {
+    dedupe: ['react', 'react-dom'],
+  },
+  optimizeDeps: {
+    // Prepare the React runtime together before serving the first page.
+    include: ['react', 'react-dom', 'react-dom/client', 'react/jsx-runtime', 'react/jsx-dev-runtime'],
+  },
   server: {
     proxy: {
       '/postal-lookup': {

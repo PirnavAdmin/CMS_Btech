@@ -23,13 +23,25 @@ const isJunkName = (name) => {
   return false
 }
 
+const isRecordActive = (record) => {
+  if (!record) return false
+  if (record.status !== undefined) {
+    if (typeof record.status === 'boolean') return record.status
+    if (typeof record.status === 'number') return record.status === 1
+    const s = String(record.status).trim().toLowerCase()
+    return s === 'active' || s === '1' || s === 'true' || s === 'current'
+  }
+  if (record.isActive !== undefined) return Boolean(record.isActive)
+  return true
+}
+
 const norm=(rows,ids,names)=>{
   const map = new Map()
   for (const x of rows||[]) {
     const id = ids.map(k=>x[k]).find(v=>v!=null)
     const nameStr = names.map(k=>x[k]).find(Boolean)
     const cleanName = String(nameStr||'').trim()
-    if (!id || !cleanName || isJunkName(cleanName)) continue
+    if (!id || !cleanName || isJunkName(cleanName) || !isRecordActive(x)) continue
     const key = cleanName.toLowerCase()
     if (!map.has(key)) {
       map.set(key, { ...x, id, name: cleanName })
@@ -38,7 +50,7 @@ const norm=(rows,ids,names)=>{
   return Array.from(map.values())
 }, same=(a,b)=>String(a??'')===String(b??''), required=v=>String(v??'').trim()?'':'Required'
 const responseList=response=>{let current=response;for(let depth=0;depth<5&&current&&typeof current==='object';depth+=1){if(Array.isArray(current))return current;const records=current.items??current.content??current.results??current.records;if(Array.isArray(records))return records;current=current.data}return[]}
-const normSemesters=response=>responseList(response).map(x=>{const number=Number(x.semesterNumber??x.semester?.semesterNumber??x.number);return{...x,id:x.semesterId??x.courseStructureId??x.structureId??x.semester?.semesterId??x.semester?.id??x.id,name:x.semesterName??x.semester?.semesterName??x.semester?.name??x.name??(number?`Semester ${number}`:''),courseId:x.courseId??x.course?.courseId??x.course?.id??'',branchId:x.branchId??x.branch?.branchId??x.branch?.id??'',academicYearId:x.academicYearId??x.academicYear?.academicYearId??x.academicYear?.id??x.yearId??'',semesterNumber:number,status:Number(x.status)===0?'Inactive':'Active'}}).filter(x=>x.id&&x.name)
+const normSemesters=response=>responseList(response).map(x=>{const number=Number(x.semesterNumber??x.semester?.semesterNumber??x.number);return{...x,id:x.semesterId??x.courseStructureId??x.structureId??x.semester?.semesterId??x.semester?.id??x.id,name:x.semesterName??x.semester?.semesterName??x.semester?.name??x.name??(number?`Semester ${number}`:''),courseId:x.courseId??x.course?.courseId??x.course?.id??'',branchId:x.branchId??x.branch?.branchId??x.branch?.id??'',academicYearId:x.academicYearId??x.academicYear?.academicYearId??x.academicYear?.id??x.yearId??'',semesterNumber:number,status:Number(x.status)===0||x.status==='Inactive'?'Inactive':'Active'}}).filter(x=>x.id&&x.name&&x.status!=='Inactive')
 const payable=f=>{const t=componentTotals(f.feeComponents);return t.mandatory+(f.paymentPlan.includeRefundable?t.refundable:0)}
 
 export default function FeeStructure(){

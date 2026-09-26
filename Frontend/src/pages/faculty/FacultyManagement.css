@@ -878,19 +878,20 @@
 .faculty-management .faculty-table-wrap th {
   height: 44px;
   padding: 10px 14px;
-  color: #FFFFFF;
-  background: #2b2347;
-  text-align: left;
-  font-size: 11px;
-  font-weight: 700;
+  color: #FFFFFF !important;
+  background: #8782BC !important;
+  text-align: left !important;
+  font-size: 11px !important;
+  font-weight: 800 !important;
   text-transform: uppercase;
   letter-spacing: .04em;
   white-space: nowrap;
-  border-bottom: 2px solid #1e1735;
+  border-bottom: 2px solid #756FB2 !important;
+  vertical-align: middle !important;
 }
 .faculty-management .faculty-table-wrap th:first-child,
 .faculty-management .faculty-table-wrap td:first-child {
-  text-align: center;
+  text-align: left !important;
   padding-left: 16px;
 }
 /* Keep directory headings and college names readable over global truncation. */
@@ -904,7 +905,7 @@
 }
 .faculty-management .faculty-table-wrap th:last-child,
 .faculty-management .faculty-table-wrap td:last-child {
-  text-align: center;
+  text-align: center !important;
   padding-right: 16px;
 }
 .faculty-management .faculty-table-wrap td {

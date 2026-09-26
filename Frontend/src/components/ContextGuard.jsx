@@ -149,7 +149,7 @@ export default function ContextGuard({ children }) {
 
           <div className="context-guard-hint">
             <FiCheckCircle />
-            <span>You can switch working context anytime from <strong>Settings &rarr; Global Academic Context</strong>.</span>
+            <span>Change your college from the <strong>dropdown at the top of the sidebar</strong> and your year from the <strong>academic year menu in the header</strong>.</span>
           </div>
 
           <button

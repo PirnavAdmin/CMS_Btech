@@ -870,6 +870,29 @@ export default function StudentProfile() {
     window.history.replaceState({}, "", url);
     setNotice("Student profile updated successfully.");
   };
+  const studentSummaryItems = useMemo(() => {
+    const total = scopedStudents.length;
+    const approved = scopedStudents.filter((s) => {
+      const st = String(status(s.status) || s.status || s.academic?.status || "").toLowerCase();
+      return st === "approved" || st === "active" || isApprovedAdmission(s);
+    }).length;
+    const maleCount = scopedStudents.filter((s) => {
+      const g = String(s.personal?.gender || s.gender || "").trim().toLowerCase();
+      return g === "male" || g === "m";
+    }).length;
+    const femaleCount = scopedStudents.filter((s) => {
+      const g = String(s.personal?.gender || s.gender || "").trim().toLowerCase();
+      return g === "female" || g === "f";
+    }).length;
+
+    return [
+      { label: "TOTAL", value: total },
+      { label: "APPROVED", value: approved, tone: "active" },
+      { label: "MALE", value: maleCount, tone: "default" },
+      { label: "FEMALE", value: femaleCount, tone: "default" },
+    ];
+  }, [scopedStudents]);
+
   const body = selected ? (
     <Profile
       student={selected}
@@ -890,12 +913,8 @@ export default function StudentProfile() {
         </div>
         <div className="cm-row-actions">
           <CompactSummary
-            label="Student summary"
-            items={[
-              { label: 'Total', value: scopedStudents.length },
-              { label: 'Active', value: scopedStudents.filter(s => status(s.status) === 'Active' || status(s.status) === 'Approved').length, tone: 'active' },
-              { label: 'Inactive', value: scopedStudents.filter(s => status(s.status) === 'Inactive').length, tone: 'inactive' },
-            ]}
+            label="Student profile summary"
+            items={studentSummaryItems}
           />
         </div>
       </header>
@@ -1435,9 +1454,9 @@ function Profile({ student, tab, setTab, back, edit, canEdit }) {
                 {status(student.status)}
               </span>
             </div>
-            <h1 className="cm-profile-title"><span style={{ color: '#30264F' }}>{studentFullName(student) || "Unnamed student"}</span></h1>
+            <h1 className="cm-profile-title">{studentFullName(student) || "Unnamed student"}</h1>
             <p className="cm-profile-subtitle">
-              <span style={{ color: '#30264F' }}>{[formatDisplay(a.course), formatDisplay(a.branch)].filter((x) => x !== 'Not provided').join(' · ')}</span>
+              {[formatDisplay(a.course), formatDisplay(a.branch)].filter((x) => x !== 'Not provided').join(' · ')}
             </p>
           </div>
         </div>
