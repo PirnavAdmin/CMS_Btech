@@ -237,15 +237,15 @@
   transition: background 0.15s ease, opacity 0.15s ease;
 }
 
-.sm-btn--primary { background: #8782BC;
+.sm-btn--primary { background: #756FB2;
   color: #ffffff;
 }
 
-.sm-btn--primary:hover { background: #756FB2;
+.sm-btn--primary:hover { background: #655E9F;
 }
 
 .sm-btn--secondary {
-  background: #F5F3FD;
+  background: var(--surface, #ffffff);
   color: #334155;
   border: 1px solid #cbd5e1;
 }
@@ -361,42 +361,50 @@
 .sm-field input,
 .sm-field select,
 .sm-field textarea {
-  padding: 9px 12px;
+  height: 38px;
+  min-height: 38px;
+  padding: 0 11px;
   border-radius: 8px;
   border: 1px solid #cbd5e1;
-  font-size: 0.9rem;
+  font-size: 0.82rem;
   color: #0F172A;
   outline: none;
+}
+.sm-field textarea {
+  height: 60px;
+  min-height: 60px;
+  padding: 6px 11px;
 }
 
 .sm-field input:focus,
 .sm-field select:focus,
 .sm-field textarea:focus {
-  border-color: #0F172A;
-  box-shadow: 0 0 0 3px rgba(94, 89, 163, 0.15);
+  border-color: #756FB2;
+  box-shadow: 0 0 0 3px rgba(117, 111, 178, 0.15);
 }
 
 .sm-modal-footer {
-  padding: 16px 24px;
+  padding: 12px 20px;
   border-top: 1px solid #e2e8f0;
   display: flex;
   justify-content: flex-end;
-  gap: 12px;
+  gap: 10px;
   background: #f8fafc;
   border-bottom-left-radius: 16px;
   border-bottom-right-radius: 16px;
 }
 .sm-required { color: #dc2626; }
 .sm-active-year-field {
-  min-height: 40px;
+  min-height: 38px;
+  height: 38px;
   display: flex;
   align-items: center;
-  padding: 0 12px;
+  padding: 0 11px;
   border: 1px solid #cbd5e1;
   border-radius: 8px;
   background: #f8fafc;
   color: #334155;
-  font-size: .9rem;
+  font-size: .82rem;
   font-weight: 600;
 }
 

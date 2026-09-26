@@ -19,6 +19,14 @@ class ERPEventBus {
     }
   }
 
+  on(event, callback) {
+    return this.subscribe(event, callback)
+  }
+
+  off(event, callback) {
+    return this.unsubscribe(event, callback)
+  }
+
   unsubscribe(event, callback) {
     const listeners = this.events.get(event)
     if (listeners) {

@@ -476,7 +476,7 @@
 }
 
 .stepper-node:hover:not(:disabled) {
-  background: #EEF2FF;
+  background: #EDEBF6;
 }
 
 .stepper-node:disabled {
@@ -500,9 +500,9 @@
 }
 
 .stepper-node.is-active .stepper-badge {
-  background: #4F46E5;
+  background: #756FB2;
   color: #FFFFFF;
-  box-shadow: 0 2px 6px rgba(79, 70, 229, 0.3);
+  box-shadow: 0 2px 6px rgba(117, 111, 178, 0.3);
 }
 
 .stepper-node.is-complete .stepper-badge {
@@ -524,7 +524,7 @@
 }
 
 .stepper-node.is-active .stepper-step-lbl {
-  color: #4F46E5;
+  color: #756FB2;
 }
 
 .stepper-title {
@@ -548,7 +548,7 @@
 }
 
 .stepper-line.is-active {
-  background: #4F46E5;
+  background: #756FB2;
 }
 
 /* ==========================================================================
@@ -645,8 +645,8 @@
 
 .semester-field input:focus,
 .semester-field select:focus {
-  border-color: #4F46E5;
-  box-shadow: 0 0 0 2px rgba(79, 70, 229, 0.12);
+  border-color: #756FB2;
+  box-shadow: 0 0 0 2px rgba(117, 111, 178, 0.12);
 }
 
 .semester-field input[readonly],
@@ -764,8 +764,8 @@
 }
 
 .semester-date-input:focus {
-  border-color: #4F46E5;
-  box-shadow: 0 0 0 2px rgba(79, 70, 229, 0.12);
+  border-color: #756FB2;
+  box-shadow: 0 0 0 2px rgba(117, 111, 178, 0.12);
 }
 
 .semester-workflow-actions {
@@ -819,8 +819,8 @@
   gap: 5px;
   padding: 2px 7px;
   border-radius: 999px;
-  background: #EEF2FF;
-  color: #4F46E5;
+  background: #EDEBF6;
+  color: #756FB2;
   font-size: 0.62rem;
   font-weight: 800;
   letter-spacing: 0.06em;
@@ -869,7 +869,7 @@
   width: 36px;
   height: 36px;
   border-radius: 8px;
-  background: #4F46E5;
+  background: #756FB2;
   color: #ffffff;
   display: flex;
   align-items: center;
@@ -966,8 +966,8 @@
 .timeline-count-tag {
   font-size: 0.62rem;
   font-weight: 750;
-  color: #4F46E5;
-  background: #EEF2FF;
+  color: #756FB2;
+  background: #EDEBF6;
   padding: 1px 6px;
   border-radius: 999px;
 }
@@ -1050,8 +1050,8 @@
   width: 20px;
   height: 20px;
   border-radius: 4px;
-  background: #EEF2FF;
-  color: #4F46E5;
+  background: #EDEBF6;
+  color: #756FB2;
   font-size: 0.64rem;
   font-weight: 800;
   flex-shrink: 0;

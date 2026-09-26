@@ -852,8 +852,10 @@ const studentAdmissionPayload = (form = {}) => {
 
   return compact({
     registrationNumber: form.registrationNumber ?? application.registrationNumber ?? application.number ?? form.number,
+    registrationNo: form.registrationNo ?? form.registrationNumber ?? application.registrationNumber ?? application.number ?? form.number,
     registrationDate: form.registrationDate ?? application.registrationDate ?? application.date,
     admissionNumber: form.admissionNumber ?? application.admissionNumber,
+    admissionNo: form.admissionNo ?? form.admissionNumber ?? application.admissionNumber,
     admissionDate: form.admissionDate ?? application.admissionDate,
     firstName: form.firstName ?? personal.firstName,
     middleName: form.middleName ?? personal.middleName,
@@ -865,13 +867,16 @@ const studentAdmissionPayload = (form = {}) => {
     // contract field so an image upload cannot trigger model validation on
     // deployments that reject unknown JSON properties.
     photo: form.photo ?? personal.photo ?? personal.photoUrl,
+    studentPhoto: form.studentPhoto ?? form.photo ?? personal.photo ?? personal.photoUrl,
     dateOfBirth: form.dateOfBirth ?? form.dob ?? personal.dob ?? personal.dateOfBirth,
     bloodGroup: form.bloodGroup ?? personal.bloodGroup,
     nationality: form.nationality ?? personal.nationality,
     aadhaarNumber: form.aadhaarNumber ?? form.aadhaar ?? personal.aadhaar ?? personal.aadhaarNumber,
     mobile: form.mobile ?? contact.mobile,
+    mobileNumber: form.mobileNumber ?? form.mobile ?? contact.mobile,
     alternateMobile: form.alternateMobile ?? contact.alternateMobile,
     email: form.email ?? contact.email,
+    studentEmail: form.studentEmail ?? form.email ?? contact.email,
     alternateEmail: form.alternateEmail ?? contact.alternateEmail,
     sameAddress: form.sameAddress ?? contact.sameAddress,
     currentAddress,
@@ -902,6 +907,7 @@ const studentAdmissionPayload = (form = {}) => {
     country: form.country ?? currentAddress?.country ?? 'India',
     pincode: form.pincode ?? currentAddress?.pincode ?? currentAddress?.postalCode,
     admissionType: form.admissionType ?? academic.admissionType,
+    admissionQuota: form.admissionQuota ?? form.quota ?? academic.quota,
     academicYearId: nullableNumericId(form.academicYearId ?? academic.academicYearId),
     departmentId: nullableNumericId(form.departmentId ?? academic.departmentId),
     courseId: nullableNumericId(form.courseId ?? academic.courseId),
@@ -960,6 +966,7 @@ const studentAdmissionPayload = (form = {}) => {
     paymentPlan: form.paymentPlan ?? fees.paymentPlan,
     paymentStatus: form.paymentStatus ?? fees.paymentStatus,
     documentStatuses: form.documentStatuses ?? (form.documents ? Object.fromEntries(Object.entries(form.documents).filter(([, value]) => value && !Array.isArray(value)).map(([key, value]) => [key, typeof value === 'object' ? value.status ?? '' : value])) : undefined),
+    formData: form,
   })
 }
 
@@ -1162,19 +1169,46 @@ export const resultsApi = {
 }
 
 export async function lookupIndianPincode(pincode) {
-  let response
-  try {
-    const base = import.meta.env.DEV ? '/postal-lookup' : 'https://api.postalpincode.in'
-    response = await fetch(`${base}/pincode/${encodeURIComponent(pincode)}`)
-  } catch {
-    throw new Error('PIN-code lookup is unavailable. Enter the address manually.')
+  const digits = String(pincode || '').replace(/\D/g, '').trim()
+  if (!/^\d{6}$/.test(digits)) throw new Error('Enter a valid 6-digit PIN code.')
+
+  const urls = [
+    `/postal-lookup/pincode/${digits}`,
+    `https://api.postalpincode.in/pincode/${digits}`,
+    `https://api.zippopotam.us/in/${digits}`,
+  ]
+
+  for (const url of urls) {
+    try {
+      const response = await fetch(url)
+      if (!response.ok) continue
+      const data = await response.json()
+      if (Array.isArray(data) && data[0]?.Status === 'Success' && Array.isArray(data[0]?.PostOffice) && data[0].PostOffice.length > 0) {
+        const primary = data[0].PostOffice[0]
+        return {
+          town: primary.Name || '',
+          city: primary.Block && primary.Block !== 'NA' ? primary.Block : (primary.District || primary.Name || ''),
+          district: primary.District || '',
+          state: primary.State || '',
+          country: 'India',
+        }
+      }
+      if (data && Array.isArray(data.places) && data.places.length > 0) {
+        const place = data.places[0]
+        return {
+          town: place['place name'] || '',
+          city: place['place name'] || '',
+          district: place.state || '',
+          state: place.state || '',
+          country: 'India',
+        }
+      }
+    } catch {
+      // try next url
+    }
   }
-  if (!response.ok) throw new Error('Unable to verify this PIN code.')
-  const [result] = await response.json()
-  const offices = result?.PostOffice
-  if (result?.Status !== 'Success' || !offices?.length) throw new Error('No Indian postal location was found for this PIN code.')
-  const primary = offices[0]
-  return { town: primary.Name || '', city: primary.Block || primary.District || primary.Name || '', district: primary.District || '', state: primary.State || '' }
+
+  throw new Error('No Indian postal location found for this PIN code.')
 }
 
 export default API_ENDPOINTS

@@ -6,3 +6,1063 @@
 .student-admission .sa-table-wrap::-webkit-scrollbar-thumb:hover{background:var(--admissions-scroll-hover)}
 :root[data-theme="dark"] .student-admission .sa-table-wrap{--admissions-scroll-thumb:#64748b;--admissions-scroll-hover:#94a3b8}
 .student-admission .sa-table-wrap:focus-visible{outline:2px solid var(--brand);outline-offset:-2px}
+
+/* Live Preview Section Header & Edit Button */
+.preview-section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  margin-bottom: 6px;
+}
+
+.preview-edit-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 2px 7px;
+  border: 1px solid var(--border, #E2E8F0);
+  border-radius: 5px;
+  background: var(--surface, #FFFFFF);
+  color: var(--brand, #756FB2);
+  font-size: 0.68rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  line-height: 1.2;
+}
+
+.preview-edit-btn:hover {
+  background: var(--brand-soft, #EDEBF6);
+  border-color: var(--brand, #756FB2);
+  color: var(--brand, #756FB2);
+  transform: translateY(-1px);
+}
+
+/* Clean scroll body with clearly visible scrollbar */
+.student-admission .erp-form-scroll-body {
+  display: flex !important;
+  flex-direction: column !important;
+  flex: 1 !important;
+  min-height: 0 !important;
+  overflow-y: auto !important;
+  scrollbar-width: thin !important;
+  scrollbar-color: #94a3b8 #f1f5f9 !important;
+  padding: 14px 18px 24px !important;
+  box-sizing: border-box !important;
+}
+
+.student-admission .erp-form-scroll-body::-webkit-scrollbar {
+  width: 7px !important;
+  display: block !important;
+}
+
+.student-admission .erp-form-scroll-body::-webkit-scrollbar-track {
+  background: #f1f5f9 !important;
+  border-radius: 6px !important;
+}
+
+.student-admission .erp-form-scroll-body::-webkit-scrollbar-thumb {
+  background: #94a3b8 !important;
+  border-radius: 6px !important;
+}
+
+.student-admission .erp-form-scroll-body::-webkit-scrollbar-thumb:hover {
+  background: #64748b !important;
+}
+
+/* Documents upload section layout */
+.student-admission .sa-documents {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 10px !important;
+  flex-shrink: 0 !important;
+  width: 100% !important;
+  margin: 0 0 14px 0 !important;
+}
+
+.student-admission .sa-document-grid {
+  display: grid !important;
+  grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  gap: 8px !important;
+  width: 100% !important;
+  box-sizing: border-box !important;
+}
+
+.student-admission .sa-document-item {
+  display: grid !important;
+  grid-template-columns: 28px 1fr auto !important;
+  align-items: center !important;
+  gap: 8px !important;
+  min-height: 46px !important;
+  padding: 6px 10px !important;
+  border: 1px solid var(--border, #CBD5E1) !important;
+  border-radius: 8px !important;
+  background: var(--surface, #FFFFFF) !important;
+  box-sizing: border-box !important;
+}
+
+.student-admission .sa-document-icon {
+  width: 28px !important;
+  height: 28px !important;
+  font-size: 14px !important;
+}
+
+.student-admission .sa-document-actions select {
+  height: 32px !important;
+  padding: 0 8px !important;
+  font-size: 11px !important;
+}
+
+/* Declaration Box */
+.sa-declaration {
+  display: flex !important;
+  align-items: flex-start !important;
+  gap: 12px !important;
+  margin: 16px 0 0 0 !important;
+  padding: 14px 16px !important;
+  background: var(--brand-soft, #EDEBF6) !important;
+  border: 1px solid color-mix(in srgb, var(--brand, #756FB2) 30%, var(--border, #E2E8F0)) !important;
+  border-radius: 10px !important;
+  cursor: pointer !important;
+  flex-shrink: 0 !important;
+  width: 100% !important;
+  box-sizing: border-box !important;
+}
+
+.sa-declaration input[type="checkbox"] {
+  width: 18px !important;
+  height: 18px !important;
+  margin-top: 2px !important;
+  accent-color: var(--brand, #756FB2) !important;
+  cursor: pointer !important;
+  flex-shrink: 0 !important;
+}
+
+.sa-declaration span {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 2px !important;
+  font-size: 0.82rem !important;
+  color: var(--text-primary, #0F172A) !important;
+  line-height: 1.4 !important;
+}
+
+.sa-declaration strong {
+  font-size: 0.88rem !important;
+  font-weight: 750 !important;
+  color: var(--brand, #756FB2) !important;
+}
+
+/* ==========================================================================
+   Admission Review & Approval Workspace (Modern Clean ERP Layout)
+   ========================================================================== */
+.student-admission .sa-approval-page {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 16px !important;
+  width: 100% !important;
+  box-sizing: border-box !important;
+}
+
+.student-admission .sa-approval-top-bar {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  gap: 16px !important;
+  width: 100% !important;
+  box-sizing: border-box !important;
+  margin-bottom: 6px !important;
+}
+
+.student-admission .sa-approval-top-actions {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: flex-end !important;
+  gap: 10px !important;
+  margin-left: auto !important;
+  flex-shrink: 0 !important;
+}
+
+.student-admission .sa-btn-back-top {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 6px !important;
+  padding: 7px 14px !important;
+  font-size: 0.82rem !important;
+  font-weight: 650 !important;
+  border-radius: 8px !important;
+  cursor: pointer !important;
+  white-space: nowrap !important;
+}
+
+/* Single Unified Top Hero Banner Card */
+.student-admission .sa-unified-hero-card {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  gap: 20px !important;
+  flex-wrap: wrap !important;
+  padding: 18px 24px !important;
+  background: var(--surface, #FFFFFF) !important;
+  border: 1px solid var(--border, #E2E8F0) !important;
+  border-radius: 14px !important;
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.04) !important;
+  box-sizing: border-box !important;
+}
+
+.student-admission .sa-hero-left {
+  display: flex !important;
+  align-items: center !important;
+  gap: 16px !important;
+  flex: 1 !important;
+  min-width: 280px !important;
+}
+
+.student-admission .sa-hero-avatar {
+  display: grid !important;
+  width: 58px !important;
+  height: 58px !important;
+  border-radius: 50% !important;
+  overflow: hidden !important;
+  place-items: center !important;
+  background: var(--brand-soft, #EDEBF6) !important;
+  color: var(--brand, #756FB2) !important;
+  font-size: 1.25rem !important;
+  font-weight: 750 !important;
+  border: 2px solid var(--brand-soft, #EDEBF6) !important;
+  flex-shrink: 0 !important;
+}
+
+.student-admission .sa-hero-avatar img {
+  width: 100% !important;
+  height: 100% !important;
+  object-fit: cover !important;
+}
+
+.student-admission .sa-hero-info {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 4px !important;
+  flex: 1 !important;
+  min-width: 0 !important;
+}
+
+.student-admission .sa-hero-badge-row {
+  display: flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+  flex-wrap: wrap !important;
+}
+
+.student-admission .sa-hero-officer-pill {
+  font-size: 0.68rem !important;
+  font-weight: 800 !important;
+  color: var(--brand, #756FB2) !important;
+  background: var(--brand-soft, #EDEBF6) !important;
+  padding: 3px 8px !important;
+  border-radius: 6px !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.05em !important;
+}
+
+.student-admission .sa-hero-title {
+  margin: 2px 0 0 !important;
+  font-size: 1.35rem !important;
+  font-weight: 750 !important;
+  color: var(--text-primary, #0F172A) !important;
+  line-height: 1.25 !important;
+}
+
+.student-admission .sa-hero-subtitle {
+  margin: 0 !important;
+  font-size: 0.84rem !important;
+  color: var(--text-muted, #64748B) !important;
+  font-weight: 550 !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+  flex-wrap: wrap !important;
+}
+
+.student-admission .sa-hero-subtitle strong {
+  color: var(--text-primary, #0F172A) !important;
+  font-weight: 700 !important;
+}
+
+.student-admission .sa-hero-stats {
+  display: flex !important;
+  align-items: center !important;
+  gap: 10px !important;
+  flex-wrap: wrap !important;
+}
+
+.student-admission .sa-hero-stat-pill {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 3px !important;
+  padding: 10px 16px !important;
+  background: var(--surface-soft, #F8FAFC) !important;
+  border: 1px solid var(--border, #E2E8F0) !important;
+  border-radius: 10px !important;
+  min-width: 130px !important;
+  box-sizing: border-box !important;
+}
+
+.student-admission .sa-stat-label {
+  font-size: 0.67rem !important;
+  font-weight: 750 !important;
+  color: var(--text-muted, #64748B) !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.04em !important;
+}
+
+.student-admission .sa-stat-val {
+  font-size: 0.88rem !important;
+  font-weight: 700 !important;
+  color: var(--text-primary, #0F172A) !important;
+  white-space: nowrap !important;
+}
+
+/* Workspace Wrapper */
+.student-admission .sa-review-workspace {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 16px !important;
+  width: 100% !important;
+  box-sizing: border-box !important;
+}
+
+.student-admission .sa-review-content-wrap {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 16px !important;
+  width: 100% !important;
+}
+
+/* Clean 2-Column Stack Layout (Zero Vertical Gaps) */
+.student-admission .sa-review-columns,
+.student-admission .sa-review-grid {
+  display: grid !important;
+  grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  gap: 16px !important;
+  align-items: start !important;
+  width: 100% !important;
+  box-sizing: border-box !important;
+}
+
+.student-admission .sa-review-col {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 16px !important;
+  width: 100% !important;
+  min-width: 0 !important;
+}
+
+@media (max-width: 900px) {
+  .student-admission .sa-review-columns,
+  .student-admission .sa-review-grid {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+/* Modern ERP Review Card */
+.student-admission .sa-review-card {
+  display: flex !important;
+  flex-direction: column !important;
+  width: 100% !important;
+  border: 1px solid var(--border, #E2E8F0) !important;
+  border-radius: 12px !important;
+  background: var(--surface, #FFFFFF) !important;
+  box-shadow: 0 1px 4px rgba(15, 23, 42, 0.04) !important;
+  overflow: hidden !important;
+  margin: 0 !important;
+  box-sizing: border-box !important;
+}
+
+.student-admission .sa-review-card-header {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  padding: 12px 16px !important;
+  background: var(--surface-soft, #F8FAFC) !important;
+  border-bottom: 1px solid var(--border, #E2E8F0) !important;
+  border-left: 4px solid var(--brand, #756FB2) !important;
+}
+
+.student-admission .sa-card-header-title {
+  display: flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+}
+
+.student-admission .sa-card-header-icon {
+  display: grid !important;
+  place-items: center !important;
+  width: 24px !important;
+  height: 24px !important;
+  border-radius: 6px !important;
+  background: var(--brand-soft, #EDEBF6) !important;
+  color: var(--brand, #756FB2) !important;
+  font-size: 13px !important;
+}
+
+.student-admission .sa-review-card-header h3 {
+  margin: 0 !important;
+  font-size: 0.92rem !important;
+  font-weight: 750 !important;
+  color: var(--text-primary, #0F172A) !important;
+}
+
+.student-admission .sa-card-count-badge {
+  font-size: 0.68rem !important;
+  font-weight: 700 !important;
+  color: var(--brand, #756FB2) !important;
+  background: var(--brand-soft, #EDEBF6) !important;
+  padding: 2px 7px !important;
+  border-radius: 10px !important;
+}
+
+.student-admission .sa-card-edit-btn {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 4px !important;
+  padding: 3px 9px !important;
+  border: 1px solid var(--border, #CBD5E1) !important;
+  border-radius: 6px !important;
+  background: var(--surface, #FFFFFF) !important;
+  color: var(--brand, #756FB2) !important;
+  font-size: 0.72rem !important;
+  font-weight: 700 !important;
+  cursor: pointer !important;
+  transition: all 0.15s ease !important;
+}
+
+.student-admission .sa-card-edit-btn:hover {
+  background: var(--brand-soft, #EDEBF6) !important;
+  border-color: var(--brand, #756FB2) !important;
+}
+
+/* Key-Value Pill Subgrid inside Review Cards */
+.student-admission .sa-card-kv-grid {
+  display: grid !important;
+  grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  gap: 8px !important;
+  padding: 12px 14px !important;
+  width: 100% !important;
+  box-sizing: border-box !important;
+}
+
+.student-admission .sa-kv-cell {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 3px !important;
+  padding: 8px 12px !important;
+  background: var(--surface-soft, #F8FAFC) !important;
+  border: 1px solid color-mix(in srgb, var(--border, #E2E8F0) 60%, transparent) !important;
+  border-radius: 8px !important;
+  min-width: 0 !important;
+  box-sizing: border-box !important;
+}
+
+.student-admission .sa-kv-cell.sa-kv-full {
+  grid-column: 1 / -1 !important;
+}
+
+.student-admission .sa-kv-label {
+  color: var(--text-muted, #64748B) !important;
+  font-size: 0.67rem !important;
+  font-weight: 700 !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.035em !important;
+  line-height: 1.2 !important;
+}
+
+.student-admission .sa-kv-val {
+  color: var(--text-primary, #0F172A) !important;
+  font-size: 0.85rem !important;
+  font-weight: 650 !important;
+  line-height: 1.35 !important;
+  overflow-wrap: break-word !important;
+  word-break: break-word !important;
+}
+
+/* Supporting Documents Card in Review View */
+.student-admission .sa-document-review-card {
+  width: 100% !important;
+  border: 1px solid var(--border, #E2E8F0) !important;
+  border-radius: 12px !important;
+  background: var(--surface, #FFFFFF) !important;
+  box-shadow: 0 1px 4px rgba(15, 23, 42, 0.04) !important;
+  overflow: hidden !important;
+  box-sizing: border-box !important;
+}
+
+.student-admission .sa-doc-review-grid {
+  display: grid !important;
+  grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  gap: 10px !important;
+  padding: 14px 16px !important;
+  box-sizing: border-box !important;
+}
+
+@media (max-width: 760px) {
+  .student-admission .sa-doc-review-grid {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+.student-admission .sa-doc-review-item {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  gap: 12px !important;
+  padding: 10px 14px !important;
+  border: 1px solid var(--border, #E2E8F0) !important;
+  border-radius: 9px !important;
+  background: var(--surface-soft, #F8FAFC) !important;
+  box-sizing: border-box !important;
+}
+
+.student-admission .sa-doc-item-icon {
+  display: grid !important;
+  place-items: center !important;
+  width: 30px !important;
+  height: 30px !important;
+  border-radius: 7px !important;
+  background: var(--brand-soft, #EDEBF6) !important;
+  color: var(--brand, #756FB2) !important;
+  font-size: 15px !important;
+  flex-shrink: 0 !important;
+}
+
+.student-admission .sa-doc-item-info {
+  display: flex !important;
+  flex-direction: column !important;
+  justify-content: center !important;
+  flex: 1 !important;
+  min-width: 0 !important;
+}
+
+.student-admission .sa-doc-item-name {
+  font-size: 0.83rem !important;
+  font-weight: 700 !important;
+  color: var(--text-primary, #0F172A) !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+}
+
+.student-admission .sa-doc-item-status-action {
+  display: flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+  margin-left: auto !important;
+  flex-shrink: 0 !important;
+}
+
+.student-admission .sa-document-preview-button {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 4px !important;
+  padding: 4px 10px !important;
+  border: 1px solid var(--border, #CBD5E1) !important;
+  border-radius: 6px !important;
+  background: var(--surface, #FFFFFF) !important;
+  color: var(--brand, #756FB2) !important;
+  font-size: 0.74rem !important;
+  font-weight: 700 !important;
+  cursor: pointer !important;
+  transition: all 0.15s ease !important;
+}
+
+.student-admission .sa-document-preview-button:hover {
+  background: var(--brand-soft, #EDEBF6) !important;
+  border-color: var(--brand, #756FB2) !important;
+}
+
+/* Badge Enhancements */
+.student-admission .sa-badge {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 5px !important;
+  padding: 3px 9px !important;
+  border-radius: 6px !important;
+  font-size: 0.73rem !important;
+  font-weight: 700 !important;
+  white-space: nowrap !important;
+}
+
+.student-admission .sa-badge.status-submitted {
+  background: #DCFCE7 !important;
+  color: #15803D !important;
+  border: 1px solid #86EFAC !important;
+}
+
+.student-admission .sa-badge.status-pending {
+  background: #FEF3C7 !important;
+  color: #B45309 !important;
+  border: 1px solid #FCD34D !important;
+}
+
+.student-admission .sa-badge.status-not-submitted {
+  background: #F1F5F9 !important;
+  color: #64748B !important;
+  border: 1px solid #CBD5E1 !important;
+}
+
+.student-admission .sa-badge.status-approved {
+  background: #E0F2FE !important;
+  color: #0369A1 !important;
+  border: 1px solid #7DD3FC !important;
+}
+
+.student-admission .sa-badge.status-rejected {
+  background: #FEE2E2 !important;
+  color: #B91C1C !important;
+  border: 1px solid #FCA5A5 !important;
+}
+
+/* Approval Decision Panel */
+.student-admission .sa-approval {
+  margin-top: 18px !important;
+  border: 1px solid var(--border, #CBD5E1) !important;
+  border-radius: 12px !important;
+  background: var(--surface, #FFFFFF) !important;
+  box-shadow: 0 2px 6px rgba(15, 23, 42, 0.06) !important;
+  padding: 20px !important;
+  box-sizing: border-box !important;
+}
+
+.student-admission .sa-approval > header {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  margin-bottom: 16px !important;
+  padding-bottom: 12px !important;
+  border-bottom: 1px solid var(--border, #E2E8F0) !important;
+}
+
+.student-admission .sa-approval > header h2 {
+  margin: 0 !important;
+  font-size: 1.1rem !important;
+  font-weight: 750 !important;
+  color: var(--text-primary, #0F172A) !important;
+}
+
+.student-admission .sa-approval > header p {
+  margin: 3px 0 0 !important;
+  color: var(--text-muted, #64748B) !important;
+  font-size: 0.82rem !important;
+}
+
+.student-admission .sa-review-confirm {
+  display: flex !important;
+  align-items: center !important;
+  gap: 10px !important;
+  padding: 12px 16px !important;
+  background: var(--surface-soft, #F8FAFC) !important;
+  border: 1px solid var(--border, #E2E8F0) !important;
+  border-radius: 8px !important;
+  font-size: 0.85rem !important;
+  font-weight: 600 !important;
+  color: var(--text-primary, #0F172A) !important;
+  cursor: pointer !important;
+  margin-bottom: 14px !important;
+}
+
+.student-admission .sa-review-confirm input[type="checkbox"] {
+  width: 18px !important;
+  height: 18px !important;
+  accent-color: var(--brand, #756FB2) !important;
+  cursor: pointer !important;
+}
+
+.student-admission .sa-remarks {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 6px !important;
+  margin-bottom: 16px !important;
+}
+
+.student-admission .sa-remarks span {
+  font-size: 0.82rem !important;
+  font-weight: 700 !important;
+  color: var(--text-primary, #0F172A) !important;
+}
+
+.student-admission .sa-remarks textarea {
+  width: 100% !important;
+  min-height: 80px !important;
+  padding: 10px 14px !important;
+  border: 1px solid var(--border, #CBD5E1) !important;
+  border-radius: 8px !important;
+  font-family: inherit !important;
+  font-size: 0.85rem !important;
+  outline: none !important;
+  resize: vertical !important;
+  box-sizing: border-box !important;
+}
+
+.student-admission .sa-approval footer {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: flex-end !important;
+  gap: 10px !important;
+  padding-top: 14px !important;
+  border-top: 1px solid var(--border, #E2E8F0) !important;
+}
+
+/* ==========================================================================
+   Admission Details View Page (Full-Width Modern ERP Layout)
+   ========================================================================== */
+.student-admission .cm-profile-view {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 16px !important;
+  width: 100% !important;
+  box-sizing: border-box !important;
+}
+
+.student-admission .cm-profile-top-bar {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: flex-end !important;
+  gap: 10px !important;
+  margin-bottom: 2px !important;
+  width: 100% !important;
+  box-sizing: border-box !important;
+}
+
+.student-admission .cm-profile-card {
+  display: flex !important;
+  flex-direction: column !important;
+  width: 100% !important;
+  border: 1px solid var(--border, #E2E8F0) !important;
+  border-radius: 14px !important;
+  background: var(--surface, #FFFFFF) !important;
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.04) !important;
+  overflow: hidden !important;
+  box-sizing: border-box !important;
+}
+
+.student-admission .sa-tabs {
+  display: flex !important;
+  align-items: center !important;
+  gap: 6px !important;
+  padding: 8px 16px !important;
+  background: var(--surface-soft, #F8FAFC) !important;
+  border-bottom: 1px solid var(--border, #E2E8F0) !important;
+  border-top: 1px solid var(--border, #E2E8F0) !important;
+  overflow-x: auto !important;
+  width: 100% !important;
+  box-sizing: border-box !important;
+}
+
+.student-admission .sa-tabs button {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 6px !important;
+  padding: 8px 15px !important;
+  border: 1px solid transparent !important;
+  border-radius: 8px !important;
+  color: var(--text-muted, #64748B) !important;
+  background: transparent !important;
+  font-size: 0.82rem !important;
+  font-weight: 650 !important;
+  cursor: pointer !important;
+  white-space: nowrap !important;
+  transition: all 0.15s ease !important;
+}
+
+.student-admission .sa-tabs button:hover {
+  color: var(--brand, #756FB2) !important;
+  background: var(--brand-soft, #EDEBF6) !important;
+}
+
+.student-admission .sa-tabs button.active {
+  color: var(--brand, #756FB2) !important;
+  background: var(--surface, #FFFFFF) !important;
+  border-color: var(--border, #CBD5E1) !important;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.06) !important;
+  font-weight: 750 !important;
+}
+
+.student-admission .sa-detail-card {
+  width: 100% !important;
+  padding: 20px !important;
+  box-sizing: border-box !important;
+  border: none !important;
+  box-shadow: none !important;
+  background: transparent !important;
+}
+
+.student-admission .sa-detail-grid-layout {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 16px !important;
+  width: 100% !important;
+}
+
+.student-admission .sa-detail-panel.sa-modern-panel {
+  width: 100% !important;
+  border: 1px solid var(--border, #E2E8F0) !important;
+  border-radius: 12px !important;
+  background: var(--surface, #FFFFFF) !important;
+  box-shadow: 0 1px 4px rgba(15, 23, 42, 0.04) !important;
+  overflow: hidden !important;
+  margin-bottom: 16px !important;
+  box-sizing: border-box !important;
+}
+
+.student-admission .sa-detail-panel.sa-modern-panel:last-child {
+  margin-bottom: 0 !important;
+}
+
+.student-admission .sa-panel-header {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  padding: 12px 18px !important;
+  background: var(--surface-soft, #F8FAFC) !important;
+  border-bottom: 1px solid var(--border, #E2E8F0) !important;
+  border-left: 4px solid var(--brand, #756FB2) !important;
+}
+
+.student-admission .sa-panel-title-wrap {
+  display: flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+}
+
+.student-admission .sa-panel-icon {
+  display: grid !important;
+  place-items: center !important;
+  width: 26px !important;
+  height: 26px !important;
+  border-radius: 6px !important;
+  background: var(--brand-soft, #EDEBF6) !important;
+  color: var(--brand, #756FB2) !important;
+  font-size: 14px !important;
+}
+
+.student-admission .sa-panel-header h2 {
+  margin: 0 !important;
+  font-size: 0.95rem !important;
+  font-weight: 750 !important;
+  color: var(--text-primary, #0F172A) !important;
+}
+
+.student-admission .sa-card-count-badge {
+  display: inline-flex !important;
+  align-items: center !important;
+  padding: 3px 9px !important;
+  border-radius: 999px !important;
+  font-size: 0.72rem !important;
+  font-weight: 750 !important;
+  background: var(--brand-soft, #EDEBF6) !important;
+  color: var(--brand, #756FB2) !important;
+}
+
+.student-admission .sa-detail-kv-grid {
+  display: grid !important;
+  grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+  gap: 10px !important;
+  padding: 16px !important;
+  width: 100% !important;
+  box-sizing: border-box !important;
+}
+
+.student-admission .sa-kv-cell {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 4px !important;
+  padding: 10px 14px !important;
+  background: var(--surface-soft, #F8FAFC) !important;
+  border: 1px solid var(--border, #E2E8F0) !important;
+  border-radius: 8px !important;
+  min-width: 0 !important;
+}
+
+.student-admission .sa-kv-cell.sa-kv-full {
+  grid-column: 1 / -1 !important;
+}
+
+.student-admission .sa-kv-label {
+  color: var(--text-muted, #64748B) !important;
+  font-size: 0.72rem !important;
+  font-weight: 750 !important;
+  letter-spacing: 0.03em !important;
+  text-transform: uppercase !important;
+}
+
+.student-admission .sa-kv-val {
+  color: var(--text-primary, #0F172A) !important;
+  font-size: 0.88rem !important;
+  font-weight: 700 !important;
+  overflow-wrap: anywhere !important;
+}
+
+@media (max-width: 900px) {
+  .student-admission .sa-detail-kv-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+}
+
+@media (max-width: 600px) {
+  .student-admission .sa-detail-kv-grid {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+:root body .student-admission .cm-profile-view,
+:root body .student-admission .cm-profile-view .cm-profile-card,
+:root body .student-admission .cm-profile-view .sa-detail-card,
+:root body .student-admission .sa-detail-card {
+  display: flex !important;
+  flex-direction: column !important;
+  width: 100% !important;
+  max-width: 100% !important;
+  box-sizing: border-box !important;
+}
+
+:root body .student-admission .cm-profile-view .cm-profile-card {
+  padding: 0 !important;
+  border: 1px solid var(--border, #E2E8F0) !important;
+  border-radius: 14px !important;
+  background: var(--surface, #FFFFFF) !important;
+  box-shadow: 0 1px 6px rgba(15, 23, 42, 0.05) !important;
+  overflow: hidden !important;
+}
+
+:root body .student-admission .cm-profile-view .sa-detail-card > .sa-detail-panel,
+:root body .student-admission .cm-profile-view .sa-detail-panel,
+:root body .student-admission .sa-detail-panel.sa-modern-panel,
+:root body .student-admission .sa-detail-grid-layout {
+  grid-column: 1 / -1 !important;
+  width: 100% !important;
+  max-width: 100% !important;
+  box-sizing: border-box !important;
+  display: flex !important;
+  flex-direction: column !important;
+}
+
+/* Modern Clean Activity Timeline */
+.student-admission .sa-timeline-wrap {
+  padding: 24px 28px !important;
+  box-sizing: border-box !important;
+  background: var(--surface, #FFFFFF) !important;
+}
+
+.student-admission .sa-timeline-empty {
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 8px !important;
+  padding: 30px !important;
+  color: var(--text-muted, #64748B) !important;
+  font-size: 0.86rem !important;
+}
+
+.student-admission .sa-timeline-empty svg {
+  width: 32px !important;
+  height: 32px !important;
+  color: var(--text-muted, #94A3B8) !important;
+}
+
+.student-admission .sa-timeline-list {
+  position: relative !important;
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 20px !important;
+  padding-left: 28px !important;
+  box-sizing: border-box !important;
+}
+
+.student-admission .sa-timeline-list::before {
+  content: "" !important;
+  position: absolute !important;
+  top: 12px !important;
+  bottom: 12px !important;
+  left: 9px !important;
+  width: 2px !important;
+  background: color-mix(in srgb, var(--brand, #756FB2) 30%, var(--border, #CBD5E1)) !important;
+}
+
+.student-admission .sa-timeline-item {
+  position: relative !important;
+  display: flex !important;
+  align-items: flex-start !important;
+  gap: 14px !important;
+}
+
+.student-admission .sa-timeline-dot {
+  position: absolute !important;
+  left: -28px !important;
+  top: 2px !important;
+  display: grid !important;
+  place-items: center !important;
+  width: 20px !important;
+  height: 20px !important;
+  border-radius: 50% !important;
+  background: var(--surface, #FFFFFF) !important;
+  border: 2px solid var(--border-strong, #94A3B8) !important;
+  color: var(--text-muted, #64748B) !important;
+  font-size: 11px !important;
+  z-index: 1 !important;
+}
+
+.student-admission .sa-timeline-item.is-latest .sa-timeline-dot {
+  border-color: var(--success, #10B981) !important;
+  background: var(--success, #10B981) !important;
+  color: #FFFFFF !important;
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--success, #10B981) 20%, transparent) !important;
+}
+
+.student-admission .sa-timeline-body {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 6px !important;
+  width: 100% !important;
+  padding: 12px 18px !important;
+  border: 1px solid var(--border, #E2E8F0) !important;
+  border-radius: 10px !important;
+  background: var(--surface-soft, #F8FAFC) !important;
+  box-sizing: border-box !important;
+}
+
+.student-admission .sa-timeline-row {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  gap: 12px !important;
+  flex-wrap: wrap !important;
+}
+
+.student-admission .sa-timeline-event {
+  font-size: 0.88rem !important;
+  font-weight: 750 !important;
+  color: var(--text-primary, #0F172A) !important;
+}
+
+.student-admission .sa-timeline-date {
+  display: inline-flex !important;
+  align-items: center !important;
+  padding: 3px 9px !important;
+  border-radius: 6px !important;
+  background: var(--surface, #FFFFFF) !important;
+  border: 1px solid var(--border, #E2E8F0) !important;
+  font-size: 0.74rem !important;
+  font-weight: 600 !important;
+  color: var(--text-muted, #64748B) !important;
+}
+
+.student-admission .sa-timeline-note {
+  font-size: 0.8rem !important;
+  color: var(--text-secondary, #475569) !important;
+  background: var(--surface, #FFFFFF) !important;
+  padding: 8px 12px !important;
+  border-radius: 6px !important;
+  border-left: 3px solid var(--brand, #756FB2) !important;
+}

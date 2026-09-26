@@ -549,25 +549,77 @@ function Form() {
         </section>}
         {step === 1 && <section className="branch-step-content"><h2>Branch Configuration</h2><div className="branch-structure-summary"><h3>Course Structure</h3>{courseStructureLoading ? <p>Loading course structure...</p> : <><div><span>Duration</span><strong>{selectedCourse?.durationValue ? `${selectedCourse.durationValue} Years` : ''}</strong></div><div><span>Total Semesters</span><strong>{selectedCourse?.totalSemesters || ''}</strong></div></>}</div><div className="cm-form-grid"><Field label="Approved Intake *" error={getFieldError('intakeCapacity')}><input type="number" min="1" value={value.intakeCapacity} onChange={(event) => update('intakeCapacity', event.target.value)} placeholder="Enter approved intake" /></Field><Field label="Status *" error={getFieldError('status')}><select value={value.status} onChange={(event) => update('status', event.target.value)}><option value="" disabled>Select Status</option><option value="Active">Active</option><option value="Inactive">Inactive</option></select></Field></div><div className="branch-form-actions"><button type="button" className="cm-button secondary" onClick={() => setStep(0)}>Back</button><button type="submit" className="cm-button" disabled={saving || courseStructureLoading}>{saving ? 'Saving…' : id ? 'Update Branch' : 'Create Branch'}</button></div></section>}
       </section>
-      <aside className="cm-panel course-preview branch-course-preview" aria-label="Branch preview"><span>Live Preview</span><div>
-        <h2>{value.branchName.trim() || 'Branch Preview'}</h2>
-        {[
-          ['Basic Information', [
-            ['Branch Name', value.branchName],
-            ...(value.shortName.trim() ? [['Short Name', value.shortName]] : []),
-            ...(value.branchCode.trim() ? [['Branch Code', value.branchCode]] : []),
-            ...(value.branchType ? [['Branch Type', value.branchType]] : []),
-            ...(selectedCourse?.name ? [['Course', selectedCourse.name]] : []),
-            ...(selectedCourse?.code ? [['Course Code', selectedCourse.code]] : []),
-          ]],
-          ['Academic Structure', [
-            ...(selectedCourse?.durationValue ? [['Duration', `${selectedCourse.durationValue} Years`]] : []),
-            ...(selectedCourse?.totalSemesters ? [['Total Semesters', selectedCourse.totalSemesters]] : []),
-          ]],
-        ].filter(([, fields]) => fields.some(([, text]) => String(text || '').trim())).map(([title, fields]) => <section key={title}><h3>{title}</h3><dl>{fields.filter(([, text]) => String(text || '').trim()).map(([label, text]) => <div key={label}><dt>{label}</dt><dd>{String(text).trim()}</dd></div>)}</dl></section>)}
-        {value.academicYearId && <section><h3>Academic Year</h3><dl><div><dt>Active Academic Year</dt><dd>{years.find((year) => String(year.id) === String(value.academicYearId))?.name || ''}</dd></div></dl></section>}
-        {(value.intakeCapacity || value.status) && <section><h3>Branch Configuration</h3><dl>{value.intakeCapacity && <div><dt>Approved Intake</dt><dd>{value.intakeCapacity}</dd></div>}{value.status && <div><dt>Status</dt><dd>{value.status}</dd></div>}</dl></section>}
-      </div></aside>
+      <aside className="cm-panel course-preview branch-course-preview" aria-label="Branch preview">
+        <header className="preview-top-bar">
+          <span className="preview-live-tag">
+            <span className="live-dot" /> LIVE PREVIEW
+          </span>
+          <span className="preview-sync-hint">Real-time sync</span>
+        </header>
+        <div className="preview-body-container">
+          {(() => {
+            const sections = [
+              {
+                title: 'Branch Details',
+                fields: [
+                  ['Branch Name', value.branchName],
+                  ['Branch Code', value.branchCode],
+                  ['Course', selectedCourse?.name],
+                  ['Branch Type', value.branchType || 'Core'],
+                  ['Specialization', value.specialization],
+                  ['Short Name', value.shortName],
+                  ['Pattern', selectedCourse?.academicPattern || 'Semester System'],
+                  ['Approved Intake', value.intakeCapacity ? String(value.intakeCapacity) : ''],
+                  ['Start Date', value.startDate],
+                  ['End Date', value.endDate],
+                  ['Status', value.status || 'Active'],
+                ],
+              },
+            ].map((sec) => ({
+              ...sec,
+              fields: sec.fields.filter(([, val]) => val !== null && val !== undefined && String(val).trim() !== '' && String(val).trim() !== '—'),
+            })).filter((sec) => sec.fields.length > 0)
+
+            if (sections.length === 0) {
+              return (
+                <div className="preview-empty-hint">
+                  <span>Enter details in the form to preview here in real time.</span>
+                </div>
+              )
+            }
+
+            return (
+              <>
+                <div className="preview-hero">
+                  <div className="preview-hero-badge">
+                    {value.branchCode ? value.branchCode.slice(0, 4).toUpperCase() : 'BRANCH'}
+                  </div>
+                  <div className="preview-hero-details">
+                    <h3 className="preview-course-title">{value.branchName.trim() || 'Branch Preview'}</h3>
+                    <p className="preview-course-meta">
+                      {selectedCourse?.name || ''}
+                      {value.branchType ? ` • ${value.branchType}` : ''}
+                    </p>
+                  </div>
+                </div>
+                {sections.map((sec) => (
+                  <div key={sec.title} className="preview-section-group">
+                    <span className="preview-section-title">{sec.title}</span>
+                    <div className="preview-kv-grid">
+                      {sec.fields.map(([label, text]) => (
+                        <div key={label} className="preview-kv-item">
+                          <span className="kv-label">{label}</span>
+                          <strong className="kv-val" title={String(text).trim()}>{String(text).trim()}</strong>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </>
+            )
+          })()}
+        </div>
+      </aside>
     </form>
   </Page>
 }

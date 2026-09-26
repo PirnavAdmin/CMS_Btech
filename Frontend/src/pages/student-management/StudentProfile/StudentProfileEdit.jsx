@@ -701,8 +701,9 @@ export default function StudentProfileEdit({ student, onCancel, onSave }) {
     showInfo('Document selected. Save the profile to upload it.');
   };
   return (
-    <div className="sp-edit-page">
-      <section className="sp-edit-dialog sp-edit-inline" aria-labelledby="edit-student-title">
+    <div className="sp-edit-page erp-two-column-layout">
+      <div className="erp-card-main">
+        <section className="sp-edit-dialog sp-edit-inline" aria-labelledby="edit-student-title" style={{ border: 'none', boxShadow: 'none', padding: 0 }}>
         <header>
           <div>
             <span>
@@ -719,7 +720,7 @@ export default function StudentProfileEdit({ student, onCancel, onSave }) {
         </header>
         <nav
           ref={tabNavRef}
-          className="sp-edit-tabs"
+          className="erp-tabs-bar ac-tabs sp-edit-tabs"
           onScroll={(event) => {
             if (bottomScrollRef.current) bottomScrollRef.current.scrollLeft = event.currentTarget.scrollLeft;
           }}
@@ -733,7 +734,7 @@ export default function StudentProfileEdit({ student, onCancel, onSave }) {
               onClick={() => setTab(id)}
               aria-current={tab === id ? "step" : undefined}
             >
-              <i>{index + 1}</i>
+              <span>{index + 1}</span>
               {label}
             </button>
           ))}
@@ -1482,5 +1483,149 @@ export default function StudentProfileEdit({ student, onCancel, onSave }) {
         )}
       </section>
     </div>
-  );
+
+    <aside className="preview-card" aria-label="Student Profile Live Preview">
+      <header className="preview-top-bar">
+        <span className="preview-live-tag">
+          <span className="live-dot" /> LIVE PREVIEW
+        </span>
+        <span className="preview-sync-hint">Real-time sync</span>
+      </header>
+
+      <div className="preview-body-container">
+        {(() => {
+          const fullName = studentName(form)
+          const curAddr = formatAddress(form.contact?.currentAddress)
+          const permAddr = formatAddress(form.contact?.permanentAddress)
+          const tenth = form.previousEducation?.tenth || {}
+          const inter = form.previousEducation?.intermediate || {}
+          const fees = form.fees || {}
+
+          const sections = [
+            {
+              title: 'Personal Information',
+              fields: [
+                ['Student Name', fullName],
+                ['Gender', form.personal?.gender],
+                ['Date of Birth', form.personal?.dob],
+                ['Blood Group', form.personal?.bloodGroup],
+                ['Aadhaar Number', form.personal?.aadhaar],
+                ['Nationality', form.personal?.nationality],
+              ],
+            },
+            {
+              title: 'Contact & Address',
+              fields: [
+                ['Mobile Number', form.contact?.mobile],
+                ['Alternate Mobile', form.contact?.alternateMobile],
+                ['Email Address', form.contact?.email],
+                ['Alternate Email', form.contact?.alternateEmail],
+                ['Current Address', curAddr],
+                ['Permanent Address', permAddr || (form.contact?.sameAddress ? curAddr : '')],
+              ],
+            },
+            {
+              title: 'Parent / Guardian',
+              fields: [
+                ['Father Name', form.parents?.father?.name],
+                ['Father Mobile', form.parents?.father?.mobile],
+                ['Mother Name', form.parents?.mother?.name],
+                ['Mother Mobile', form.parents?.mother?.mobile],
+                ['Guardian Name', form.parents?.guardian?.name],
+                ['Guardian Mobile', form.parents?.guardian?.mobile],
+              ],
+            },
+            {
+              title: 'Academic Enrollment',
+              fields: [
+                ['Academic Year', form.academic?.academicYear],
+                ['Course', form.academic?.course],
+                ['Branch', form.academic?.branch],
+                ['Semester', form.academic?.semester],
+                ['Admission Type', form.academic?.admissionType],
+                ['Quota', form.academic?.quota === 'Other' ? form.academic?.quotaOther : form.academic?.quota],
+                ['Student Category', form.academic?.studentCategory],
+                ['Regulation', form.academic?.regulation],
+              ],
+            },
+            {
+              title: 'Previous Education',
+              fields: [
+                ['10th Board', tenth.board],
+                ['10th School', tenth.institution],
+                ['10th Score', tenth.score ? `${tenth.score} (${tenth.scoreType || '%'})` : ''],
+                ['Inter / Diploma Board', inter.board],
+                ['Inter / Diploma College', inter.institution],
+                ['Stream', inter.stream === 'Other' ? inter.streamOther : inter.stream],
+                ['Inter / Diploma Score', inter.score ? `${inter.score} (${inter.scoreType || '%'})` : ''],
+              ],
+            },
+            {
+              title: 'Services & Fees',
+              fields: [
+                ['Hostel Required', form.admission?.hostel === 'Yes' ? 'Yes' : ''],
+                ['Hostel Room Type', form.admission?.hostel === 'Yes' ? form.admission?.hostelRoomType : ''],
+                ['Transport Required', form.admission?.transport === 'Yes' ? 'Yes' : ''],
+                ['Transport Route', form.admission?.transport === 'Yes' ? form.admission?.transportRoute : ''],
+                ['Scholarship', form.admission?.scholarship === 'Yes' ? (form.admission?.scholarshipType || 'Yes') : ''],
+                ['Estimated Total Fee', fees.totalFee ? formatMoney(fees.totalFee) : ''],
+                ['Payment Status', fees.paymentStatus],
+                ['Payment Plan', fees.paymentPlan],
+              ],
+            },
+            {
+              title: 'Supporting Documents',
+              fields: Object.entries(form.documents || {})
+                .filter(([, val]) => val === 'Submitted' || val?.status === 'Submitted' || val?.uploaded || val?.file)
+                .map(([key]) => [key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase()), 'Submitted']),
+            },
+          ].map(sec => ({
+            ...sec,
+            fields: sec.fields.filter(([, val]) => val !== null && val !== undefined && String(val).trim() !== '' && String(val).trim() !== '—' && String(val).trim() !== 'N/A'),
+          })).filter(sec => sec.fields.length > 0)
+
+          if (sections.length === 0) {
+            return (
+              <div className="preview-empty-hint">
+                <span>Enter details in the form to preview here in real time.</span>
+              </div>
+            )
+          }
+
+          const photoSrc = form.personal?.photo ? apiAssetUrl(form.personal.photo) : (form.personal?.photoUrl ? apiAssetUrl(form.personal.photoUrl) : '')
+          const initials = studentInitials(form)
+
+          return (
+            <>
+              <div className="preview-hero" style={{ marginBottom: '14px' }}>
+                <div className="preview-hero-badge" style={{ width: '48px', height: '48px', borderRadius: '50%', overflow: 'hidden', display: 'grid', placeItems: 'center', background: '#e2e8f0', fontSize: '1rem', fontWeight: 600 }}>
+                  {photoSrc ? <img src={photoSrc} alt="Student" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : initials || <FiUser />}
+                </div>
+                <div className="preview-hero-details">
+                  <h3 className="preview-course-title" style={{ margin: 0 }}>{fullName || 'Student Profile Preview'}</h3>
+                  <p className="preview-course-meta" style={{ margin: '2px 0 0', color: '#64748B', fontSize: '0.78rem' }}>
+                    {[form.academic?.registrationNumber || form.studentId, form.academic?.course, form.academic?.branch, form.academic?.status || 'Active'].filter(Boolean).join(' • ')}
+                  </p>
+                </div>
+              </div>
+              {sections.map(sec => (
+                <div key={sec.title} className="preview-section-group" style={{ marginBottom: '12px' }}>
+                  <span className="preview-section-title">{sec.title}</span>
+                  <div className="preview-kv-grid">
+                    {sec.fields.map(([label, textVal]) => (
+                      <div key={label} className="preview-kv-item">
+                        <span className="kv-label">{label}</span>
+                        <strong className="kv-val" title={String(textVal).trim()}>{String(textVal).trim()}</strong>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </>
+          )
+        })()}
+      </div>
+    </aside>
+  </div>
+);
 }

@@ -540,7 +540,72 @@ function ViewDialog({ item, leaveTypes, policies, getBalance, onClose }) {
   )
 }
 
-function TypeDialog({ item = {}, onClose, onSave }) { const [data, setData] = useState({ name: item.name || '', code: item.code || '', payCategory: item.payCategory || 'Paid Leave', description: item.description || '', status: item.status || 'Active' }); const [error, setError] = useState(''); const save = async () => { setError(''); await onSave({ ...item, ...data }) }; return <Modal title={item.id ? 'Edit Leave Type' : 'Add Leave Type'} onClose={onClose}><Form><Input label="Leave Type Name *" value={data.name} onChange={value => setData({ ...data, name: value })} /><Input label="Leave Code *" value={data.code} onChange={value => setData({ ...data, code: value })} /><Select label="Pay Category" value={data.payCategory} values={['Paid Leave', 'Unpaid Leave']} onChange={value => setData({ ...data, payCategory: value })} /><Select label="Status" value={data.status} values={['Active', 'Inactive']} onChange={value => setData({ ...data, status: value })} /><label>Description<textarea value={data.description} onChange={event => setData({ ...data, description: event.target.value })} /></label></Form>{error && <p className="flm-error">{error}</p>}<Footer><button onClick={onClose}>Cancel</button><button className="approve-action" onClick={save}>Save Leave Type</button></Footer></Modal> }
+function TypeDialog({ item = {}, onClose, onSave }) {
+  const [data, setData] = useState({ name: item.name || '', code: item.code || '', payCategory: item.payCategory || 'Paid Leave', description: item.description || '', status: item.status || 'Active' });
+  const [error, setError] = useState('');
+  const save = async () => { setError(''); await onSave({ ...item, ...data }) };
+  return (
+    <Modal title={item.id ? 'Edit Leave Type' : 'Add Leave Type'} onClose={onClose}>
+      <Form>
+        <Input label="Leave Type Name *" value={data.name} onChange={value => setData({ ...data, name: value })} />
+        <Input label="Leave Code *" value={data.code} onChange={value => setData({ ...data, code: value })} />
+        <Select label="Pay Category" value={data.payCategory} values={['Paid Leave', 'Unpaid Leave']} onChange={value => setData({ ...data, payCategory: value })} />
+        <Select label="Status" value={data.status} values={['Active', 'Inactive']} onChange={value => setData({ ...data, status: value })} />
+        <label>Description<textarea value={data.description} onChange={event => setData({ ...data, description: event.target.value })} /></label>
+        <aside className="sm-preview" aria-label="Leave Type Live Preview" style={{ marginTop: '12px' }}>
+          <header className="preview-top-bar" style={{ marginBottom: '8px' }}>
+            <span className="preview-live-tag"><span className="live-dot" /> LIVE PREVIEW</span>
+            <span className="preview-sync-hint">Real-time sync</span>
+          </header>
+          {(() => {
+            const sections = [
+              {
+                title: 'Leave Type Summary',
+                fields: [
+                  ['Leave Type', data.name],
+                  ['Code', data.code],
+                  ['Pay Category', data.payCategory],
+                  ['Status', data.status],
+                  ['Description', data.description],
+                ],
+              },
+            ].map(sec => ({
+              ...sec,
+              fields: sec.fields.filter(([, val]) => val !== null && val !== undefined && String(val).trim() !== '' && String(val).trim() !== '—'),
+            })).filter(sec => sec.fields.length > 0)
+
+            if (sections.length === 0) {
+              return (
+                <div className="preview-empty-hint">
+                  <span>Enter details in the form to preview here in real time.</span>
+                </div>
+              )
+            }
+
+            return sections.map(sec => (
+              <div key={sec.title} className="preview-section-group">
+                <span className="preview-section-title">{sec.title}</span>
+                <div className="preview-kv-grid">
+                  {sec.fields.map(([label, text]) => (
+                    <div key={label} className="preview-kv-item" style={label === 'Description' ? { gridColumn: 'span 2' } : {}}>
+                      <span className="kv-label">{label}</span>
+                      <strong className="kv-val" title={String(text).trim()}>{String(text).trim()}</strong>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))
+          })()}
+        </aside>
+      </Form>
+      {error && <p className="flm-error">{error}</p>}
+      <Footer>
+        <button onClick={onClose}>Cancel</button>
+        <button className="approve-action" onClick={save}>Save Leave Type</button>
+      </Footer>
+    </Modal>
+  );
+}
 
 function ToggleTypeDialog({ item, onClose, onConfirm }) {
   const isDeactivating = item.status === 'Active'
@@ -800,6 +865,57 @@ function RequestLeaveDialog({ faculty, leaveTypes, policies, onClose, onSave }) 
           <span>Reason <b className="required-mark">*</b></span>
           <textarea value={data.reason} onChange={e => setData({ ...data, reason: e.target.value })} placeholder="Reason for leave request..." />
         </label>
+        <aside className="sm-preview" aria-label="Leave Request Live Preview" style={{ marginTop: '12px' }}>
+          <header className="preview-top-bar" style={{ marginBottom: '8px' }}>
+            <span className="preview-live-tag"><span className="live-dot" /> LIVE PREVIEW</span>
+            <span className="preview-sync-hint">Real-time sync</span>
+          </header>
+          {(() => {
+            const facultyName = selectedFaculty?.fullName || selectedFaculty?.name
+            const typeName = leaveTypes.find(t => String(t.id) === String(data.leaveTypeId))?.name
+            const policyName = policies.find(p => String(p.id) === String(data.policyId))?.name
+            const period = [data.fromDate, data.toDate].filter(Boolean).join(' to ')
+
+            const sections = [
+              {
+                title: 'Leave Request Summary',
+                fields: [
+                  ['Faculty Member', facultyName],
+                  ['Leave Type', typeName],
+                  ['Policy', policyName],
+                  ['Leave Period', period],
+                  ['Total Days', data.days ? `${data.days} Days` : ''],
+                  ['Reason', data.reason],
+                ],
+              },
+            ].map(sec => ({
+              ...sec,
+              fields: sec.fields.filter(([, val]) => val !== null && val !== undefined && String(val).trim() !== '' && String(val).trim() !== '—'),
+            })).filter(sec => sec.fields.length > 0)
+
+            if (sections.length === 0) {
+              return (
+                <div className="preview-empty-hint">
+                  <span>Enter details in the form to preview here in real time.</span>
+                </div>
+              )
+            }
+
+            return sections.map(sec => (
+              <div key={sec.title} className="preview-section-group">
+                <span className="preview-section-title">{sec.title}</span>
+                <div className="preview-kv-grid">
+                  {sec.fields.map(([label, text]) => (
+                    <div key={label} className="preview-kv-item" style={label === 'Reason' ? { gridColumn: 'span 2' } : {}}>
+                      <span className="kv-label">{label}</span>
+                      <strong className="kv-val" title={String(text).trim()}>{String(text).trim()}</strong>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))
+          })()}
+        </aside>
       </Form>
       {error && <p className="flm-error">{error}</p>}
       <Footer>

@@ -2,8 +2,8 @@
   --ss-border: var(--border, #CBD5E1);
   --ss-surface: var(--surface, #ffffff);
   --ss-surface-soft: var(--surface-soft, #F8FAFC);
-  --ss-brand: var(--brand, #4F46E5);
-  --ss-brand-soft: var(--brand-soft, #EEF2FF);
+  --ss-brand: var(--brand, #756FB2);
+  --ss-brand-soft: var(--brand-soft, #EDEBF6);
   --ss-text: var(--text-primary, #0F172A);
   --ss-text-muted: var(--text-muted, #64748B);
   --ss-danger: var(--danger, #EF4444);

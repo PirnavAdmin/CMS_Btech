@@ -1621,80 +1621,194 @@ function FacultyForm({ initial, faculty, onSave, onCancel, collegeOptions, depar
   const isStepOptional = (section && !section.fields.some(([, , , required]) => required)) || isDocumentsStep
 
   return (
-    <form className={'fm-panel fm-form' + (isPreviewStep ? ' fm-form--preview' : '')} ref={formRef} onSubmit={next} noValidate>
-      <ol className="fm-stepper">
-        {stepTitles.map((title, index) => (
-          <li key={title} className={step === index ? 'active' : step > index ? 'complete' : ''} aria-current={step === index ? 'step' : undefined}>
-            <span>{step > index ? <FiCheckCircle /> : index + 1}</span>{title}
-          </li>
-        ))}
-      </ol>
-      <div className="fm-section-heading">
-        <h2>
-          {section ? <section.icon /> : isDocumentsStep ? <FiFileText /> : <FiCheckCircle />}
-          {section?.title || (isDocumentsStep ? 'Supporting Documents' : data.employeeCategory === 'Non-Teaching' ? 'Staff Profile Preview' : 'Faculty Profile Preview')}
-        </h2>
-        <p>
-          {section?.description?.replace('Faculty designation', 'Employee designation') || (isDocumentsStep ? 'Mark submission status for essential verification documents (optional).' : 'Review all details and documents below before saving this record.')}
-        </p>
-      </div>
-      {step === 0 && (
-        <div className="fm-photo-picker">
-          <Avatar faculty={data} large />
-          <div>
-            <span className="fm-photo-label">Profile Photo</span>
-            <label className="fm-photo-button" htmlFor="fm-photo">
-              {data.photo ? 'Change Photo' : 'Choose Photo'}
-              <input id="fm-photo" type="file" accept="image/*" onChange={photo} />
-            </label>
-            <small className="fm-muted">JPG, PNG or WebP · Maximum 3 MB</small>
-            {errors.photo && <small className="fm-error" role="alert">{errors.photo}</small>}
+    <div className="erp-two-column-layout">
+      <div className="erp-card-main">
+        <form className={'fm-panel fm-form' + (isPreviewStep ? ' fm-form--preview' : '')} ref={formRef} onSubmit={next} noValidate style={{ border: 'none', boxShadow: 'none', padding: 0 }}>
+          <nav className="erp-tabs-bar ac-tabs fm-stepper" aria-label="Faculty form steps">
+            {stepTitles.map((title, index) => (
+              <button
+                key={title}
+                type="button"
+                className={step === index ? 'active' : ''}
+                onClick={() => setStep(index)}
+                aria-current={step === index ? 'step' : undefined}
+              >
+                <span>{index + 1}</span>{title}
+              </button>
+            ))}
+          </nav>
+          <div className="fm-section-heading">
+            <h2>
+              {section ? <section.icon /> : isDocumentsStep ? <FiFileText /> : <FiCheckCircle />}
+              {section?.title || (isDocumentsStep ? 'Supporting Documents' : data.employeeCategory === 'Non-Teaching' ? 'Staff Profile Preview' : 'Faculty Profile Preview')}
+            </h2>
+            <p>
+              {section?.description?.replace('Faculty designation', 'Employee designation') || (isDocumentsStep ? 'Mark submission status for essential verification documents (optional).' : 'Review all details and documents below before saving this record.')}
+            </p>
           </div>
-        </div>
-      )}
-      {section ? (
-        <div className="fm-form-grid">
-          {section.fields.filter(([key]) => !(data.employeeCategory === 'Non-Teaching' && key === 'teachingExperience')).map(field => (
-            <Field key={field[0]} field={field[0] === 'employeeCategory' && ['Teaching', 'Non-Teaching'].includes(initial.employeeCategory) ? [field[0], field[1], 'readonly', field[3]] : field} data={data} errors={errors} update={update} collegeOptions={collegeOptions} departmentOptions={departmentOptions} touched={touched} liveErrors={liveErrors} markTouched={markTouched} />
-          ))}
-        </div>
-      ) : isDocumentsStep ? (
-        <FacultyDocumentsForm
-          documents={data.documents || {}}
-          onChange={(docKey, docVal) => update('documents', { ...(data.documents || {}), [docKey]: docVal })}
-        />
-      ) : (
-        <>
-          <div className="fm-identity">
-            <Avatar faculty={data} large />
-            <div>
-              <h2>{data.fullName}</h2>
-              <p>{formatFacultyDisplayCode(data, collegeOptions, faculty)} · {data.designation}</p>
+          <div className="erp-form-scroll-body">
+            {step === 0 && (
+              <div className="fm-photo-picker">
+                <Avatar faculty={data} large />
+                <div>
+                  <span className="fm-photo-label">Profile Photo</span>
+                  <label className="fm-photo-button" htmlFor="fm-photo">
+                    {data.photo ? 'Change Photo' : 'Choose Photo'}
+                    <input id="fm-photo" type="file" accept="image/*" onChange={photo} />
+                  </label>
+                  <small className="fm-muted">JPG, PNG or WebP · Maximum 3 MB</small>
+                  {errors.photo && <small className="fm-error" role="alert">{errors.photo}</small>}
+                </div>
+              </div>
+            )}
+            {section ? (
+              <div className="fm-form-grid">
+                {section.fields.filter(([key]) => !(data.employeeCategory === 'Non-Teaching' && key === 'teachingExperience')).map(field => (
+                  <Field key={field[0]} field={field[0] === 'employeeCategory' && ['Teaching', 'Non-Teaching'].includes(initial.employeeCategory) ? [field[0], field[1], 'readonly', field[3]] : field} data={data} errors={errors} update={update} collegeOptions={collegeOptions} departmentOptions={departmentOptions} touched={touched} liveErrors={liveErrors} markTouched={markTouched} />
+                ))}
+              </div>
+            ) : isDocumentsStep ? (
+              <FacultyDocumentsForm
+                documents={data.documents || {}}
+                onChange={(docKey, docVal) => update('documents', { ...(data.documents || {}), [docKey]: docVal })}
+              />
+            ) : (
+              <>
+                <div className="fm-identity">
+                  <Avatar faculty={data} large />
+                  <div>
+                    <h2>{data.fullName}</h2>
+                    <p>{formatFacultyDisplayCode(data, collegeOptions, faculty)} · {data.designation}</p>
+                  </div>
+                </div>
+                <ProfileSections data={data} collegeOptions={collegeOptions} departmentOptions={departmentOptions} faculty={faculty} />
+              </>
+            )}
+          </div>
+          <footer className="fm-form-footer">
+            <button type="button" className="fm-button secondary" onClick={onCancel}>Cancel</button>
+            <span className="fm-muted">Step {step + 1} of {totalSteps}</span>
+            <div className="fm-actions">
+              {step > 0 && (
+                <button type="button" className="fm-button secondary" onClick={() => { setErrors({}); setStep(step - 1) }}>
+                  Previous
+                </button>
+              )}
+              {isStepOptional && !isPreviewStep && (
+                <button type="button" className="fm-button secondary" onClick={skipStep}>
+                  Skip
+                </button>
+              )}
+              <button type="submit" className="fm-button" disabled={photoBusy || saving}>
+                {isPreviewStep ? <><FiCheckCircle /> {data.employeeCategory === 'Non-Teaching' ? 'Save Staff' : 'Save Faculty'}</> : 'Next'}
+              </button>
             </div>
-          </div>
-          <ProfileSections data={data} collegeOptions={collegeOptions} departmentOptions={departmentOptions} faculty={faculty} />
-        </>
-      )}
-      <footer className="fm-form-footer">
-        <button type="button" className="fm-button secondary" onClick={onCancel}>Cancel</button>
-        <span className="fm-muted">Step {step + 1} of {totalSteps}</span>
-        <div className="fm-actions">
-          {step > 0 && (
-            <button type="button" className="fm-button secondary" onClick={() => { setErrors({}); setStep(step - 1) }}>
-              Previous
-            </button>
-          )}
-          {isStepOptional && !isPreviewStep && (
-            <button type="button" className="fm-button secondary" onClick={skipStep}>
-              Skip
-            </button>
-          )}
-          <button type="submit" className="fm-button" disabled={photoBusy || saving}>
-            {isPreviewStep ? <><FiCheckCircle /> {data.employeeCategory === 'Non-Teaching' ? 'Save Staff' : 'Save Faculty'}</> : 'Next'}
-          </button>
+          </footer>
+        </form>
+      </div>
+
+      <aside className="preview-card" aria-label="Faculty Live Preview">
+        <header className="preview-top-bar">
+          <span className="preview-live-tag">
+            <span className="live-dot" /> LIVE PREVIEW
+          </span>
+          <span className="preview-sync-hint">Real-time sync</span>
+        </header>
+
+        <div className="preview-body-container">
+          {(() => {
+            const selectedCollege = collegeOptions.find(c => String(c.value ?? c.id) === String(data.collegeId))
+            const collegeName = selectedCollege?.label || selectedCollege?.name || data.college || ''
+            const selectedDept = departmentOptions.find(d => String(d.value ?? d.id ?? d.name) === String(data.department))
+            const deptName = selectedDept?.label || selectedDept?.name || data.department || ''
+
+            const sections = [
+              {
+                title: 'Personal Details',
+                fields: [
+                  ['Full Name', data.fullName],
+                  ['Gender', data.gender],
+                  ['Date of Birth', data.dateOfBirth],
+                  ['Blood Group', data.bloodGroup],
+                  ['Aadhaar Number', data.aadhaarNumber],
+                ],
+              },
+              {
+                title: 'Employment Details',
+                fields: [
+                  ['Employee ID', data.employeeId],
+                  ['Category', data.employeeCategory === 'Other' ? data.employeeCategoryOther : data.employeeCategory],
+                  ['Designation', data.designation],
+                  ['Department', deptName],
+                  ['College / Campus', collegeName],
+                  ['Date of Joining', data.dateOfJoining],
+                  ['Employment Type', data.employmentType],
+                  ['Work Shift', data.shiftTiming],
+                  ['Teaching Experience', data.teachingExperience ? `${data.teachingExperience} Years` : ''],
+                  ['Total Experience', data.totalExperience ? `${data.totalExperience} Years` : ''],
+                  ['Status', data.status || 'Active'],
+                ],
+              },
+              {
+                title: 'Contact Details',
+                fields: [
+                  ['Official Email', data.officialEmail],
+                  ['Personal Email', data.personalEmail],
+                  ['Phone / Mobile', data.mobileNumber || data.phone],
+                  ['Emergency Contact', data.emergencyContact],
+                  ['Current Address', data.currentAddress],
+                  ['Permanent Address', data.permanentAddress],
+                ],
+              },
+              {
+                title: 'Documents',
+                fields: Object.entries(data.documents || {})
+                  .filter(([, val]) => val === 'Submitted' || val?.status === 'Submitted' || val?.uploaded)
+                  .map(([key]) => [key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase()), 'Submitted']),
+              },
+            ].map(sec => ({
+              ...sec,
+              fields: sec.fields.filter(([, val]) => val !== null && val !== undefined && String(val).trim() !== '' && String(val).trim() !== '—'),
+            })).filter(sec => sec.fields.length > 0)
+
+            if (sections.length === 0) {
+              return (
+                <div className="preview-empty-hint">
+                  <span>Enter details in the form to preview here in real time.</span>
+                </div>
+              )
+            }
+
+            return (
+              <>
+                <div className="preview-hero" style={{ marginBottom: '14px' }}>
+                  <Avatar faculty={data} large />
+                  <div className="preview-hero-details">
+                    <h3 className="preview-course-title" style={{ margin: 0 }}>{data.fullName || 'Faculty Preview'}</h3>
+                    <p className="preview-course-meta" style={{ margin: '2px 0 0', color: '#64748B', fontSize: '0.78rem' }}>
+                      {[data.employeeId, data.designation, deptName, data.status || 'Active'].filter(Boolean).join(' • ')}
+                    </p>
+                  </div>
+                </div>
+                {sections.map(sec => (
+                  <div key={sec.title} className="preview-section-group" style={{ marginBottom: '12px' }}>
+                    <span className="preview-section-title">{sec.title}</span>
+                    <div className="preview-kv-grid">
+                      {sec.fields.map(([label, text]) => (
+                        <div key={label} className="preview-kv-item">
+                          <span className="kv-label">{label}</span>
+                          <strong className="kv-val" title={String(text).trim()}>{String(text).trim()}</strong>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </>
+            )
+          })()}
         </div>
-      </footer>
-    </form>
+      </aside>
+    </div>
   )
 }
 function AssignmentList({ faculty, onRemove }) {

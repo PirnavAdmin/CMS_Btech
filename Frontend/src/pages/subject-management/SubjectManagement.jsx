@@ -83,13 +83,398 @@ export default function SubjectManagement() {
   const columns = [{ label: 'Subject Code', value: 'subjectCode' }, { label: 'Subject Name', value: 'subjectName' }, { label: 'Academic Year', value: s => mapping(s).year }, { label: 'Course', value: s => mapping(s).course }, { label: 'Branch', value: s => mapping(s).branch }, { label: 'Academic Level', value: s => getAcademicLevelFromSemester(s) }, { label: 'Semester', value: s => mapping(s).semester }, { label: 'Subject Type', value: 'subjectType' }, { label: 'Credits', value: 'credits' }, { label: 'Status', value: 'status' }]
   const activeFilterText = [filters.academicYearId && entityName(masters.years, filters.academicYearId), filters.courseId && entityName(masters.courses, filters.courseId), filters.branchId && entityName(masters.branches, filters.branchId), filters.level, filters.semesterId && entityName(masters.semesters, filters.semesterId)].filter(Boolean)
   const detailSections = s => { const m = mapping(s); return [{ title: 'Subject Information', rows: [['Subject Code', s.subjectCode], ['Subject Name', s.subjectName], ['Type', s.subjectType], ['Credits', s.credits], ['Status', s.status]] }, { title: 'Academic Mapping', rows: [['Academic Year', m.year], ['Course', m.course], ['Branch', m.branch], ['Academic Level', getAcademicLevelFromSemester({ semester: m.semester })], ['Semester', m.semester]] }, { title: 'Academic Configuration', rows: [['Lecture Hours', s.lectureHours], ['Tutorial Hours', s.tutorialHours], ['Practical Hours', s.practicalHours], ['Internal Marks', s.internalMarks], ['External Marks', s.externalMarks]].filter(([, v]) => v !== '' && v != null) }].filter(x => x.rows.length) }
-  const open = editorOpen
-  return <DashboardLayout><main className="sm-screen"><header className="sm-header"><div><h1>Subject Management</h1><p>Configure and manage subjects across academic programs and semesters.</p></div><div className="sm-actions"><ExportMenu rows={records} columns={columns} filename="subject-directory" title="Subject Directory" scope="All matching subjects" /><button className="sm-btn sm-btn--primary" onClick={openAdd}><FiPlus /> Add Subject</button></div></header><section className="sm-kpi-grid">{[[FiBookOpen, 'Total Subjects', kpis.total, 'blue'], [FiCheckCircle, 'Active Subjects', kpis.active, 'green'], [FiFileText, 'Theory Subjects', kpis.theory, 'purple'], [FiLayers, 'Practical / Lab', kpis.lab, 'amber'], [FiBookOpen, 'Total Credits', kpis.credits, 'cyan']].map(([Icon, label, value, color]) => <div className="sm-kpi-card" key={label}><div className={`sm-kpi-icon sm-kpi-icon--${color}`}><Icon /></div><div className="sm-kpi-content"><small>{label}</small><strong>{value}</strong></div></div>)}</section><section className="sm-card"><div className="sm-directory-title"><div><h2>Subject Directory</h2><p>{loading ? 'Loading subjects…' : `${records.length} subjects found`}</p></div>{activeFilterText.length > 0 && <div className="sm-filter-context">{activeFilterText.join(' / ')} <button onClick={() => setFilters({ search: '', academicYearId: '', courseId: '', branchId: '', level: '', semesterId: '', subjectType: '', status: '' })}><FiRotateCcw /> Clear filters</button></div>}</div><FilterPanel active={Boolean(filters.search || activeFilterText.length || filters.subjectType || filters.status)} onClear={() => setFilters({ search: '', academicYearId: '', courseId: '', branchId: '', level: '', semesterId: '', subjectType: '', status: '' })} className="sm-filter-panel"><div className="sm-filter-grid"><label className="sm-search-wrap"><FiSearch aria-hidden="true" /><input aria-label="Search subjects" value={filters.search} onChange={e => changeFilter('search', e.target.value)} placeholder="Search subject code or name" /></label><Select label="Academic Year" value={filters.academicYearId} options={masters.years} onChange={v => changeFilter('academicYearId', v)} /><Select label="Course" value={filters.courseId} options={scopedCourses} onChange={v => changeFilter('courseId', v)} /><Select label="Branch" value={filters.branchId} options={branches(filters.courseId)} onChange={v => changeFilter('branchId', v)} disabled={!filters.courseId} /><Select label="Academic Level" value={filters.level} options={levels(filterSemesters)} onChange={v => changeFilter('level', v)} disabled={!filters.branchId} /><Select label="Semester" value={filters.semesterId} options={getSemestersForAcademicLevel(filterSemesters, filters.level)} onChange={v => changeFilter('semesterId', v)} disabled={!filters.level} semester /><Select label="Subject Type" value={filters.subjectType} options={types} onChange={v => changeFilter('subjectType', v)} /><Select label="Status" value={filters.status} options={['Active', 'Inactive']} onChange={v => changeFilter('status', v)} /></div></FilterPanel><div className="sm-table-wrap">{loading ? <div className="sm-loading">Loading subject directory…</div> : loadError ? <div className="sm-error">{loadError}<button className="sm-btn sm-btn--secondary" onClick={loadSubjects}>Retry</button></div> : !records.length ? <EmptyState title={filters.search ? `No subjects found for “${filters.search}”.` : activeFilterText.length ? 'No subjects match the selected academic filters.' : 'No subjects configured'} description={activeFilterText.length ? 'Clear filters or choose another academic mapping.' : 'No subjects have been configured yet.'} action="Add Subject" onAction={openAdd} /> : <table className="sm-table"><thead><tr><th>Subject Code</th><th>Subject Name</th><th>Academic Mapping</th><th>Academic Level</th><th>Semester</th><th>Type</th><th>Credits</th><th>Status</th><th>Actions</th></tr></thead><tbody>{paginatedRecords.map(s => { const m = mapping(s); return <tr key={s.id}><td><span className="sm-code-badge">{s.subjectCode}</span></td><td><strong>{s.subjectName}</strong>{s.shortName && <small>{s.shortName}</small>}</td><td>{m.course}<small>• {m.branch}</small></td><td>{getAcademicLevelFromSemester({ semester: m.semester }) || '—'}</td><td>{m.semester}</td><td>{s.subjectType && <span className={`sm-type-tag ${/lab|practical/i.test(s.subjectType) ? 'sm-type-tag--lab' : 'sm-type-tag--theory'}`}>{s.subjectType}</span>}</td><td><span className="sm-credit-badge">{s.credits}</span></td><td><StatusBadge value={s.status} /></td><td><div className="sm-row-actions"><button className="sm-icon-btn" title="View" onClick={() => setViewing(s)}><FiEye /></button><button className="sm-icon-btn" title="Edit" onClick={() => openEdit(s)}><FiEdit2 /></button><TableActionButton type={String(s.status).toLowerCase() === 'active' ? 'deactivate' : 'activate'} ariaLabel={`${String(s.status).toLowerCase() === 'active' ? 'Deactivate' : 'Activate'} ${s.subjectCode}`} onClick={() => updateStatus(s)} /></div></td></tr> })}</tbody></table>}</div>{!loading && !loadError && records.length > 0 && <TablePagination currentPage={currentPage} totalPages={totalPages} onPageChange={setPage} />}</section>{open && <Editor form={form} editing={editing} masters={{ ...masters, courses: scopedCourses }} branches={branches(form.courseId)} semesters={formSemesters} levels={ACADEMIC_LEVELS} typeOptions={types} formLevel={formLevel} change={changeForm} close={closeEditor} save={save} saving={saving} />}{confirmingSubject && <StatusConfirmation subject={confirmingSubject} saving={statusSaving} close={() => setConfirmingSubject(null)} confirm={() => persistStatus(confirmingSubject, 'Inactive')} />}{viewing && <Details subject={viewing} sections={detailSections(viewing)} close={() => setViewing(null)} edit={() => openEdit(viewing)} />}</main></DashboardLayout>
+  if (open) {
+    return (
+      <DashboardLayout>
+        <main className="sm-screen">
+          <header className="sm-header">
+            <div>
+              <button type="button" className="cm-button secondary erp-btn erp-btn--secondary" onClick={closeEditor} style={{ marginBottom: '10px' }}>
+                <FiRotateCcw /> Back to Subject Directory
+              </button>
+              <h1>{editing ? `Edit ${editing.subjectCode}` : 'Add Subject'}</h1>
+              <p>Map the subject to a valid academic program and semester.</p>
+            </div>
+          </header>
+          <Editor
+            form={form}
+            editing={editing}
+            masters={{ ...masters, courses: scopedCourses }}
+            branches={branches(form.courseId)}
+            semesters={formSemesters}
+            levels={ACADEMIC_LEVELS}
+            typeOptions={types}
+            formLevel={formLevel}
+            change={changeForm}
+            close={closeEditor}
+            save={save}
+            saving={saving}
+          />
+        </main>
+      </DashboardLayout>
+    )
+  }
+
+  return (
+    <DashboardLayout>
+      <main className="sm-screen">
+        <header className="sm-header">
+          <div>
+            <h1>Subject Management</h1>
+            <p>Configure and manage subjects across academic programs and semesters.</p>
+          </div>
+          <div className="sm-actions">
+            <ExportMenu rows={records} columns={columns} filename="subject-directory" title="Subject Directory" scope="All matching subjects" />
+            <button className="sm-btn sm-btn--primary" onClick={openAdd}><FiPlus /> Add Subject</button>
+          </div>
+        </header>
+        <section className="sm-kpi-grid">
+          {[[FiBookOpen, 'Total Subjects', kpis.total, 'blue'], [FiCheckCircle, 'Active Subjects', kpis.active, 'green'], [FiFileText, 'Theory Subjects', kpis.theory, 'purple'], [FiLayers, 'Practical / Lab', kpis.lab, 'amber'], [FiBookOpen, 'Total Credits', kpis.credits, 'cyan']].map(([Icon, label, value, color]) => (
+            <div className="sm-kpi-card" key={label}>
+              <div className={`sm-kpi-icon sm-kpi-icon--${color}`}><Icon /></div>
+              <div className="sm-kpi-content"><small>{label}</small><strong>{value}</strong></div>
+            </div>
+          ))}
+        </section>
+        <section className="sm-card">
+          <div className="sm-directory-title">
+            <div>
+              <h2>Subject Directory</h2>
+              <p>{loading ? 'Loading subjects…' : `${records.length} subjects found`}</p>
+            </div>
+            {activeFilterText.length > 0 && (
+              <div className="sm-filter-context">
+                {activeFilterText.join(' / ')}{' '}
+                <button onClick={() => setFilters({ search: '', academicYearId: '', courseId: '', branchId: '', level: '', semesterId: '', subjectType: '', status: '' })}>
+                  <FiRotateCcw /> Clear filters
+                </button>
+              </div>
+            )}
+          </div>
+          <FilterPanel
+            active={Boolean(filters.search || activeFilterText.length || filters.subjectType || filters.status)}
+            onClear={() => setFilters({ search: '', academicYearId: '', courseId: '', branchId: '', level: '', semesterId: '', subjectType: '', status: '' })}
+            className="sm-filter-panel"
+          >
+            <div className="sm-filter-grid">
+              <label className="sm-search-wrap">
+                <FiSearch aria-hidden="true" />
+                <input aria-label="Search subjects" value={filters.search} onChange={e => changeFilter('search', e.target.value)} placeholder="Search subject code or name" />
+              </label>
+              <Select label="Academic Year" value={filters.academicYearId} options={masters.years} onChange={v => changeFilter('academicYearId', v)} />
+              <Select label="Course" value={filters.courseId} options={scopedCourses} onChange={v => changeFilter('courseId', v)} />
+              <Select label="Branch" value={filters.branchId} options={branches(filters.courseId)} onChange={v => changeFilter('branchId', v)} disabled={!filters.courseId} />
+              <Select label="Academic Level" value={filters.level} options={levels(filterSemesters)} onChange={v => changeFilter('level', v)} disabled={!filters.branchId} />
+              <Select label="Semester" value={filters.semesterId} options={getSemestersForAcademicLevel(filterSemesters, filters.level)} onChange={v => changeFilter('semesterId', v)} disabled={!filters.level} semester />
+              <Select label="Subject Type" value={filters.subjectType} options={types} onChange={v => changeFilter('subjectType', v)} />
+              <Select label="Status" value={filters.status} options={['Active', 'Inactive']} onChange={v => changeFilter('status', v)} />
+            </div>
+          </FilterPanel>
+          <div className="sm-table-wrap">
+            {loading ? (
+              <div className="sm-loading">Loading subject directory…</div>
+            ) : loadError ? (
+              <div className="sm-error">
+                {loadError}
+                <button className="sm-btn sm-btn--secondary" onClick={loadSubjects}>Retry</button>
+              </div>
+            ) : !records.length ? (
+              <EmptyState
+                title={filters.search ? `No subjects found for “${filters.search}”.` : activeFilterText.length ? 'No subjects match the selected academic filters.' : 'No subjects configured'}
+                description={activeFilterText.length ? 'Clear filters or choose another academic mapping.' : 'No subjects have been configured yet.'}
+                action="Add Subject"
+                onAction={openAdd}
+              />
+            ) : (
+              <table className="sm-table">
+                <thead>
+                  <tr>
+                    <th>Subject Code</th>
+                    <th>Subject Name</th>
+                    <th>Academic Mapping</th>
+                    <th>Academic Level</th>
+                    <th>Semester</th>
+                    <th>Type</th>
+                    <th>Credits</th>
+                    <th>Status</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {paginatedRecords.map(s => {
+                    const m = mapping(s);
+                    return (
+                      <tr key={s.id}>
+                        <td><span className="sm-code-badge">{s.subjectCode}</span></td>
+                        <td><strong>{s.subjectName}</strong>{s.shortName && <small>{s.shortName}</small>}</td>
+                        <td>{m.course}<small>• {m.branch}</small></td>
+                        <td>{getAcademicLevelFromSemester({ semester: m.semester }) || '—'}</td>
+                        <td>{m.semester}</td>
+                        <td>{s.subjectType && <span className={`sm-type-tag ${/lab|practical/i.test(s.subjectType) ? 'sm-type-tag--lab' : 'sm-type-tag--theory'}`}>{s.subjectType}</span>}</td>
+                        <td><span className="sm-credit-badge">{s.credits}</span></td>
+                        <td><StatusBadge value={s.status} /></td>
+                        <td>
+                          <div className="sm-row-actions">
+                            <button className="sm-icon-btn" title="View" onClick={() => setViewing(s)}><FiEye /></button>
+                            <button className="sm-icon-btn" title="Edit" onClick={() => openEdit(s)}><FiEdit2 /></button>
+                            <TableActionButton type={String(s.status).toLowerCase() === 'active' ? 'deactivate' : 'activate'} ariaLabel={`${String(s.status).toLowerCase() === 'active' ? 'Deactivate' : 'Activate'} ${s.subjectCode}`} onClick={() => updateStatus(s)} />
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            )}
+          </div>
+          {!loading && !loadError && records.length > 0 && <TablePagination currentPage={currentPage} totalPages={totalPages} onPageChange={setPage} />}
+        </section>
+        {confirmingSubject && <StatusConfirmation subject={confirmingSubject} saving={statusSaving} close={() => setConfirmingSubject(null)} confirm={() => persistStatus(confirmingSubject, 'Inactive')} />}
+        {viewing && <Details subject={viewing} sections={detailSections(viewing)} close={() => setViewing(null)} edit={() => openEdit(viewing)} />}
+      </main>
+    </DashboardLayout>
+  );
 }
 function Select({ label, value, options, onChange, disabled, semester = false, hideSearch = false }) { return <SearchableSelect placement="bottom" hideSearch={hideSearch} label={label} value={value} options={options} onChange={onChange} placeholder={label} disabled={disabled} getOptionLabel={semester ? s => s.semesterName || s.name || `Semester ${semNo(s)}` : undefined} /> }
 function Field({ label, children }) { return <div className="sm-field"><label>{label}</label>{children}</div> }
 function Input({ label, value, change, type = 'text' }) { return <Field label={label}><input type={type} min={type === 'number' ? '0' : undefined} value={value ?? ''} onChange={e => change(e.target.value)} /></Field> }
 function StatusConfirmation({ subject, saving, close, confirm }) { return <div className="sm-modal-backdrop" onMouseDown={saving ? undefined : close}><section className="sm-modal sm-modal--confirm" role="alertdialog" aria-modal="true" aria-labelledby="sm-status-confirm-title" onMouseDown={event => event.stopPropagation()}><div className="sm-confirm-icon"><FiAlertTriangle /></div><h2 id="sm-status-confirm-title">Deactivate Subject?</h2><p><strong>{subject.subjectName} ({subject.subjectCode})</strong> will be marked inactive and will no longer be available for new academic use. Continue?</p><div className="sm-modal-footer"><button type="button" className="sm-btn sm-btn--secondary" disabled={saving} onClick={close}>Cancel</button><button type="button" className="sm-btn sm-btn--danger" disabled={saving} onClick={confirm}>{saving ? 'Deactivating…' : 'Confirm Deactivate'}</button></div></section></div> }
 
-function Editor({ form, editing, masters, branches, semesters, levels, typeOptions, formLevel: initialLevel, change: updateForm, close, save, saving }) { const [formLevel, setFormLevel] = useState(initialLevel); const change = (field, value) => { if (field === 'courseId' || field === 'branchId') setFormLevel(''); updateForm(field, value) }; const selectedCourse = masters.courses.find(course => key(course.id) === key(form.courseId)); const selectedBranch = branches.find(branch => key(branch.id) === key(form.branchId)); const selected = semesters.find(s => key(s.id) === key(form.semesterId)); const selectLevel = v => { setFormLevel(v); const first = getSemestersForAcademicLevel(semesters, v)[0]; change('semesterId', first ? key(first.id) : '') }; return <div className="sm-modal-backdrop" onMouseDown={close}><div className="sm-modal sm-modal--wide" onMouseDown={e => e.stopPropagation()}><form onSubmit={save}><div className="sm-modal-header"><div><h2>{editing ? `Edit ${editing.subjectCode}` : 'Add Subject'}</h2><p>Map the subject to a valid academic program and semester.</p></div><button type="button" className="sm-icon-btn" onClick={close}><FiX /></button></div><div className="sm-modal-body"><section><h3>Academic Mapping</h3><div className="sm-form-grid-2"><Field label={<>Course <span className="sm-required">*</span></>}><Select label="Course" value={form.courseId} options={masters.courses} onChange={v => change('courseId', v)} /></Field><Field label="Course Code"><div className="sm-active-year-field">{selectedCourse?.code || 'Auto-filled'}</div></Field><Field label={<>Branch <span className="sm-required">*</span></>}><Select label="Branch" value={form.branchId} options={branches} onChange={v => change('branchId', v)} disabled={!form.courseId} /></Field><Field label="Branch Code"><div className="sm-active-year-field">{selectedBranch?.code || 'Auto-filled'}</div></Field><Field label={<>Academic Level <span className="sm-required">*</span></>}><Select label="Academic Level" value={formLevel} options={levels} onChange={selectLevel} disabled={!form.branchId} /></Field><Field label={<>Semester <span className="sm-required">*</span></>}><Select label="Semester" hideSearch value={form.semesterId} options={getSemestersForAcademicLevel(semesters, formLevel)} onChange={v => change('semesterId', v)} disabled={!form.branchId || !formLevel} semester /></Field></div></section><section><h3>Subject Information</h3><div className="sm-form-grid-2"><Input label={<>Subject Name <span className="sm-required">*</span></>} value={form.subjectName} change={v => change('subjectName', v)} /><Input label={<>Subject Code <span className="sm-required">*</span></>} value={form.subjectCode} change={v => change('subjectCode', v)} /><Field label="Subject Type"><Select label="Subject Type" value={form.subjectType} options={typeOptions} onChange={v => change('subjectType', v)} disabled={!typeOptions.length} /></Field><Input label="Credits" type="number" value={form.credits} change={v => change('credits', v)} /><Input label="Short Name" value={form.shortName} change={v => change('shortName', v)} /><Field label="Status"><Select label="Status" value={form.status} options={['Active', 'Inactive']} onChange={v => change('status', v)} /></Field></div></section><section><h3>Academic Configuration</h3><div className="sm-form-grid-3"><Input label="Lecture Hours" type="number" value={form.lectureHours} change={v => change('lectureHours', v)} /><Input label="Tutorial Hours" type="number" value={form.tutorialHours} change={v => change('tutorialHours', v)} /><Input label="Practical Hours" type="number" value={form.practicalHours} change={v => change('practicalHours', v)} /><Input label="Internal Marks" type="number" value={form.internalMarks} change={v => change('internalMarks', v)} /><Input label="External Marks" type="number" value={form.externalMarks} change={v => change('externalMarks', v)} /></div></section><aside className="sm-preview"><strong>Academic Mapping Preview</strong><p>{entityName(masters.years, form.academicYearId, 'Academic Year')}</p><p>{selectedCourse ? `${selectedCourse.name}${selectedCourse.code ? ` (${selectedCourse.code})` : ''}` : 'Course'} → {selectedBranch ? `${selectedBranch.name}${selectedBranch.code ? ` (${selectedBranch.code})` : ''}` : 'Branch'}</p><p>{formLevel || 'Academic Level'} → {selected?.semesterName || selected?.name || 'Semester'}</p><hr /><b>{form.subjectCode || 'Subject Code'}</b><p>{form.subjectName || 'Subject Name'}</p><small>{form.subjectType || 'Type'} {form.credits !== '' && `• ${form.credits} Credits`}</small></aside></div><div className="sm-modal-footer"><button type="button" className="sm-btn sm-btn--secondary" onClick={close}>Cancel</button><button disabled={saving} className="sm-btn sm-btn--primary">{saving ? 'Saving…' : editing ? 'Update Subject' : 'Create Subject'}</button></div></form></div></div> }
+function Editor({ form, editing, masters, branches, semesters, levels, typeOptions, formLevel: initialLevel, change: updateForm, close, save, saving }) {
+  const [formLevel, setFormLevel] = useState(initialLevel);
+  const [activeTab, setActiveTab] = useState('mapping');
+  const change = (field, value) => {
+    if (field === 'courseId' || field === 'branchId') setFormLevel('');
+    updateForm(field, value);
+  };
+  const selectedCourse = masters.courses.find(course => key(course.id) === key(form.courseId));
+  const selectedBranch = branches.find(branch => key(branch.id) === key(form.branchId));
+  const selected = semesters.find(s => key(s.id) === key(form.semesterId));
+  const selectLevel = v => {
+    setFormLevel(v);
+    const first = getSemestersForAcademicLevel(semesters, v)[0];
+    change('semesterId', first ? key(first.id) : '');
+  };
+
+  const tabs = [
+    { id: 'mapping', label: '1. Academic Mapping' },
+    { id: 'info', label: '2. Subject Details' },
+    { id: 'config', label: '3. Hours & Marks' },
+  ];
+  const stepIndex = tabs.findIndex(t => t.id === activeTab);
+
+  return (
+    <div className="erp-two-column-layout">
+      <div className="erp-card-main">
+        <div className="erp-tabs-bar">
+          {tabs.map((t, idx) => (
+            <button
+              key={t.id}
+              type="button"
+              className={`erp-tab-btn ${activeTab === t.id ? 'active' : ''}`}
+              onClick={() => setActiveTab(t.id)}
+            >
+              <span>{idx + 1}</span> {t.label.replace(/^\d+\.\s*/, '')}
+            </button>
+          ))}
+        </div>
+
+        <form className="erp-form-scroll-body" onSubmit={save}>
+          {activeTab === 'mapping' && (
+            <section>
+              <h3 style={{ margin: '0 0 16px', fontSize: '1.05rem', color: 'var(--erp-text-main, #0f172a)' }}>Academic Mapping</h3>
+              <div className="sm-form-grid-2">
+                <Field label={<>Course <span className="sm-required">*</span></>}>
+                  <Select label="Course" value={form.courseId} options={masters.courses} onChange={v => change('courseId', v)} />
+                </Field>
+                <Field label="Course Code">
+                  <div className="sm-active-year-field" style={{ minHeight: '38px', display: 'flex', alignItems: 'center', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '6px', padding: '0 12px', fontSize: '0.88rem', color: '#64748b' }}>
+                    {selectedCourse?.code || 'Auto-filled'}
+                  </div>
+                </Field>
+                <Field label={<>Branch <span className="sm-required">*</span></>}>
+                  <Select label="Branch" value={form.branchId} options={branches} onChange={v => change('branchId', v)} disabled={!form.courseId} />
+                </Field>
+                <Field label="Branch Code">
+                  <div className="sm-active-year-field" style={{ minHeight: '38px', display: 'flex', alignItems: 'center', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '6px', padding: '0 12px', fontSize: '0.88rem', color: '#64748b' }}>
+                    {selectedBranch?.code || 'Auto-filled'}
+                  </div>
+                </Field>
+                <Field label={<>Academic Level <span className="sm-required">*</span></>}>
+                  <Select label="Academic Level" value={formLevel} options={levels} onChange={selectLevel} disabled={!form.branchId} />
+                </Field>
+                <Field label={<>Semester <span className="sm-required">*</span></>}>
+                  <Select label="Semester" hideSearch value={form.semesterId} options={getSemestersForAcademicLevel(semesters, formLevel)} onChange={v => change('semesterId', v)} disabled={!form.branchId || !formLevel} semester />
+                </Field>
+              </div>
+            </section>
+          )}
+
+          {activeTab === 'info' && (
+            <section>
+              <h3 style={{ margin: '0 0 16px', fontSize: '1.05rem', color: 'var(--erp-text-main, #0f172a)' }}>Subject Information</h3>
+              <div className="sm-form-grid-2">
+                <Input label={<>Subject Name <span className="sm-required">*</span></>} value={form.subjectName} change={v => change('subjectName', v)} />
+                <Input label={<>Subject Code <span className="sm-required">*</span></>} value={form.subjectCode} change={v => change('subjectCode', v)} />
+                <Field label="Subject Type">
+                  <Select label="Subject Type" value={form.subjectType} options={typeOptions} onChange={v => change('subjectType', v)} disabled={!typeOptions.length} />
+                </Field>
+                <Input label="Credits" type="number" value={form.credits} change={v => change('credits', v)} />
+                <Input label="Short Name" value={form.shortName} change={v => change('shortName', v)} />
+                <Field label="Status">
+                  <Select label="Status" value={form.status} options={['Active', 'Inactive']} onChange={v => change('status', v)} />
+                </Field>
+              </div>
+            </section>
+          )}
+
+          {activeTab === 'config' && (
+            <section>
+              <h3 style={{ margin: '0 0 16px', fontSize: '1.05rem', color: 'var(--erp-text-main, #0f172a)' }}>Hours & Marks Configuration</h3>
+              <div className="sm-form-grid-3">
+                <Input label="Lecture Hours" type="number" value={form.lectureHours} change={v => change('lectureHours', v)} />
+                <Input label="Tutorial Hours" type="number" value={form.tutorialHours} change={v => change('tutorialHours', v)} />
+                <Input label="Practical Hours" type="number" value={form.practicalHours} change={v => change('practicalHours', v)} />
+                <Input label="Internal Marks" type="number" value={form.internalMarks} change={v => change('internalMarks', v)} />
+                <Input label="External Marks" type="number" value={form.externalMarks} change={v => change('externalMarks', v)} />
+              </div>
+            </section>
+          )}
+
+          <div className="erp-actions-bar" style={{ marginTop: 'auto', paddingTop: '16px', borderTop: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            {stepIndex > 0 ? (
+              <button
+                type="button"
+                className="cm-button secondary erp-btn erp-btn--secondary"
+                onClick={() => setActiveTab(tabs[stepIndex - 1].id)}
+              >
+                &larr; Previous
+              </button>
+            ) : (
+              <button
+                type="button"
+                className="cm-button secondary erp-btn erp-btn--secondary"
+                onClick={close}
+              >
+                Cancel
+              </button>
+            )}
+
+            <div style={{ display: 'flex', gap: '8px' }}>
+              {stepIndex < tabs.length - 1 ? (
+                <button
+                  type="button"
+                  className="cm-button erp-btn erp-btn--primary"
+                  onClick={() => setActiveTab(tabs[stepIndex + 1].id)}
+                >
+                  Continue &rarr;
+                </button>
+              ) : (
+                <button
+                  type="submit"
+                  disabled={saving}
+                  className="cm-button erp-btn erp-btn--primary"
+                >
+                  {saving ? 'Saving…' : editing ? 'Update Subject' : 'Create Subject'}
+                </button>
+              )}
+            </div>
+          </div>
+        </form>
+      </div>
+
+      <aside className="preview-card" aria-label="Subject live preview">
+        <header className="preview-top-bar">
+          <span className="preview-live-tag">
+            <span className="live-dot" /> LIVE PREVIEW
+          </span>
+          <span className="preview-sync-hint">Real-time sync</span>
+        </header>
+
+        <div className="preview-body-container">
+          {(() => {
+            const yearName = entityName(masters.years, form.academicYearId, '')
+            const courseName = selectedCourse ? `${selectedCourse.name}${selectedCourse.code ? ` (${selectedCourse.code})` : ''}` : ''
+            const branchName = selectedBranch ? `${selectedBranch.name}${selectedBranch.code ? ` (${selectedBranch.code})` : ''}` : ''
+            const semName = [formLevel, selected?.semesterName || selected?.name].filter(Boolean).join(' - ')
+
+            const sections = [
+              {
+                title: 'Academic Mapping',
+                fields: [
+                  ['Academic Year', yearName],
+                  ['Course', courseName],
+                  ['Branch', branchName],
+                  ['Level & Semester', semName],
+                ],
+              },
+              {
+                title: 'Subject Details',
+                fields: [
+                  ['Subject Code', form.subjectCode],
+                  ['Subject Name', form.subjectName],
+                  ['Short Name', form.shortName],
+                  ['Subject Type', form.subjectType],
+                  ['Credits', form.credits !== '' ? `${form.credits} Credits` : ''],
+                  ['Status', form.status || 'Active'],
+                ],
+              },
+              {
+                title: 'Hours & Marks Configuration',
+                fields: [
+                  ['Lecture Hours', form.lectureHours !== '' && form.lectureHours != null ? `${form.lectureHours} hrs` : ''],
+                  ['Tutorial Hours', form.tutorialHours !== '' && form.tutorialHours != null ? `${form.tutorialHours} hrs` : ''],
+                  ['Practical Hours', form.practicalHours !== '' && form.practicalHours != null ? `${form.practicalHours} hrs` : ''],
+                  ['Internal Marks', form.internalMarks !== '' && form.internalMarks != null ? String(form.internalMarks) : ''],
+                  ['External Marks', form.externalMarks !== '' && form.externalMarks != null ? String(form.externalMarks) : ''],
+                ],
+              },
+            ].map(sec => ({
+              ...sec,
+              fields: sec.fields.filter(([, val]) => val !== null && val !== undefined && String(val).trim() !== '' && String(val).trim() !== '—'),
+            })).filter(sec => sec.fields.length > 0)
+
+            if (sections.length === 0) {
+              return (
+                <div className="preview-empty-hint">
+                  <span>Enter details in the form to preview here in real time.</span>
+                </div>
+              )
+            }
+
+            return (
+              <>
+                <div className="preview-hero" style={{ marginBottom: '14px' }}>
+                  <div className="preview-hero-badge">
+                    {form.subjectCode ? form.subjectCode.slice(0, 4).toUpperCase() : 'SUB'}
+                  </div>
+                  <div className="preview-hero-details">
+                    <h3 className="preview-course-title" style={{ margin: 0 }}>{form.subjectName || 'Subject Preview'}</h3>
+                    <p className="preview-course-meta" style={{ margin: '2px 0 0', color: '#64748B', fontSize: '0.78rem' }}>
+                      {[form.subjectCode, form.subjectType, form.credits !== '' && `${form.credits} Credits`, form.status || 'Active'].filter(Boolean).join(' • ')}
+                    </p>
+                  </div>
+                </div>
+                {sections.map(sec => (
+                  <div key={sec.title} className="preview-section-group" style={{ marginBottom: '12px' }}>
+                    <span className="preview-section-title">{sec.title}</span>
+                    <div className="preview-kv-grid">
+                      {sec.fields.map(([label, text]) => (
+                        <div key={label} className="preview-kv-item">
+                          <span className="kv-label">{label}</span>
+                          <strong className="kv-val" title={String(text).trim()}>{String(text).trim()}</strong>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </>
+            )
+          })()}
+        </div>
+      </aside>
+    </div>
+  );
+}
+
 function Details({ subject, sections, close, edit }) { return <div className="sm-modal-backdrop" onMouseDown={close}><div className="sm-modal sm-modal--details" onMouseDown={e => e.stopPropagation()}><div className="sm-modal-header"><div><span className="sm-code-badge">{subject.subjectCode}</span><h2>{subject.subjectName}</h2><StatusBadge value={subject.status} /></div><button className="sm-icon-btn" onClick={close}><FiX /></button></div><div className="sm-modal-body">{sections.map(section => <section className="sm-details-section" key={section.title}><h3>{section.title}</h3>{section.rows.map(([label, value]) => <div key={label}><span>{label}</span><strong>{value}</strong></div>)}</section>)}</div><div className="sm-modal-footer"><ExportMenu mode="single" title={`${subject.subjectCode} — Subject Details`} filename={`subject-${subject.subjectCode}`} recordSections={sections} /><button className="sm-btn sm-btn--primary" onClick={edit}>Edit Subject</button></div></div></div> }

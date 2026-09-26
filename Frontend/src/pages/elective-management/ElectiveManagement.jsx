@@ -86,15 +86,384 @@ export default function ElectiveManagement() {
     const allocate = async () => { setActionLoading(true); try { const pendingAllocations = approved.filter(row => String(allocationStatus(row)).toLowerCase() !== 'allocated'); const results = await Promise.allSettled(pendingAllocations.map(row => electiveManagementApi.createAllocation(rowId(row), { selectionId: Number(rowId(row)) }))); const failed = results.filter(result => result.status === 'rejected'); if (failed.length) throw new Error(`${failed.length} of ${pendingAllocations.length} approved selections could not be allocated. ${failed[0].reason?.message || ''}`); showSuccess('Electives allocated successfully.'); await loadCore() } catch (requestError) { showError(requestError.message || 'Unable to allocate electives.') } finally { setActionLoading(false) } }
     const openGroup = () => { setGroupForm({ ...blankGroup(), academicYear: activeAcademicYear }); setGroupModal(true) }
 
-    return <DashboardLayout><main className="em-screen"><header className="em-header"><div><h1>Elective Management</h1><p>Configure groups, review choices, and manage allocation.</p></div><div className="em-header-actions"><ExportMenu rows={filteredGroups} columns={groupExportColumns} title="Elective Group Directory" filename="elective-group-directory" scope="All matching elective groups" loading={loading || Boolean(error)} /><button type="button" className="sm-btn sm-btn--primary" onClick={openGroup}><FiPlus /> Create Group</button></div></header><div className="em-tabs">{tabs.map(tab => <button type="button" key={tab.id} className={`em-tab-btn ${activeTab === tab.id ? 'active' : ''}`} onClick={() => setActiveTab(tab.id)}>{tab.label}{tab.id === 'approval' && pending.length ? ` (${pending.length})` : ''}</button>)}</div><section className="em-kpi-grid">{[[FiLayers, kpis.groups, 'Total Elective Groups'], [FiAward, kpis.active, 'Active Groups'], [FiUsers, kpis.selections, 'Total Selections'], [FiCheckCircle, kpis.pending, 'Pending Approvals'], [FiCheck, kpis.approved, 'Approved Selections'], [FiCheckCircle, kpis.allocated, 'Allocated Students']].map(([Icon, value, label]) => <div className="em-kpi-card" key={label}><div className="sm-kpi-icon sm-kpi-icon--blue"><Icon /></div><div className="em-kpi-content"><small>{label}</small><strong>{value}</strong></div></div>)}</section>{error && <div className="em-alert" role="alert"><FiInfo /> {error}</div>}
-        {activeTab === 'groups' && <section className="sm-card"><Toolbar search={search} setSearch={setSearch} filters={filters} setFilters={setFilters} options={['status', 'semester', 'branch', 'department']} values={groupValues} placeholder="Search group code or name..." showFilters={false} /><div className="sm-table-wrap">{loading ? <div className="em-loading">Loading elective groups...</div> : !filteredGroups.length ? <EmptyState title="No elective groups found" description="Create a group or adjust your filters." action="Create Group" onAction={openGroup} /> : <table className="em-table"><thead><tr><th>Group</th><th>Department / Branch</th><th>Academic Year</th><th>Semester</th><th>Type</th><th>Credits</th><th>Selection Window</th><th>Status</th><th>Actions</th></tr></thead><tbody>{pageRows(filteredGroups).map(group => <tr key={group.id || group.groupId}><td><strong>{text(group.groupCode)}</strong><span className="em-cell-subtitle">{text(group.groupName)}</span></td><td>{text(group.department)}<span className="em-cell-subtitle">{text(group.branch)}</span></td><td>{text(group.academicYear)}</td><td>{text(group.semester)}</td><td>{text(group.electiveType || group.type)}</td><td>{text(group.credits, '-')}</td><td>{text(group.selectionStartDate, '-')}<span className="em-cell-subtitle">to {text(group.selectionEndDate, '-')}</span></td><td><StatusBadge value={text(group.status)} /></td><td><button type="button" className="sm-btn sm-btn--secondary em-compact-btn" onClick={() => { setSubjectModal(group); setSelectedSubjects([]) }}><FiLayers /> Manage Subjects</button></td></tr>)}</tbody></table>}</div><Pagination page={page} pageCount={Math.ceil(filteredGroups.length / size)} total={filteredGroups.length} size={size} onChange={setPage} /></section>}
-        {activeTab === 'selection' && <><StudentCard profile={profile} loading={profileLoading} /><section className="em-workflow-grid"><div className="sm-card"><div className="sm-card-header"><h2>Student Elective Selection</h2></div>{profileLoading ? <div className="em-loading">Loading student profile...</div> : !studentId ? <EmptyState title="Student profile unavailable" description="A student profile is required for elective selection." /> : <form className="em-form-body" onSubmit={submitSelection}><div className="em-readonly-student"><strong>{text(profile.fullName || profile.studentName)}</strong><span>{text(profile.studentCode || profile.identifier || studentId)} · {text(profile.semester, 'Semester information unavailable')}</span></div><label className="sm-field">Elective Group<select value={selectedGroupId} onChange={event => { setSelectedGroupId(event.target.value); setSelectedSubjectId('') }} required><option value="">Select group</option>{groups.filter(group => ['open', 'active'].includes(String(group.status).toLowerCase())).map(group => <option key={group.id || group.groupId} value={group.id || group.groupId}>{group.groupCode} - {group.groupName}</option>)}</select></label><label className="sm-field">Available Subject<select value={selectedSubjectId} onChange={event => setSelectedSubjectId(event.target.value)} disabled={!selectedGroup} required><option value="">Select subject</option>{eligibleSubjects.map(subject => <option key={subject.id || subject.subjectId || subject.code} value={subject.id || subject.subjectId || subject.code}>{subject.subjectCode || subject.code} - {subject.subjectName || subject.name}</option>)}</select></label><button type="submit" className="sm-btn sm-btn--primary" disabled={actionLoading}><FiCheck /> Submit Selection</button></form>}</div><div className="sm-card"><div className="sm-card-header"><h2>Existing Selections</h2></div>{loading ? <div className="em-loading">Loading elective selections...</div> : <><SelectionTable rows={pageRows(filteredSelections)} search={search} /><Pagination page={page} pageCount={Math.ceil(filteredSelections.length / size)} total={filteredSelections.length} size={size} onChange={setPage} /></>}</div></section><section className="sm-card em-results-card"><div className="sm-card-header"><h2>Academic Results</h2></div>{resultsLoading ? <div className="em-loading">Loading examination results...</div> : <ResultsTable rows={results} page={resultPage} size={size} setPage={setResultPage} />}</section></>}
-        {activeTab === 'approval' && <section className="sm-card"><div className="sm-card-header"><h2>Faculty Approval</h2><span className="em-muted">{pending.length} pending</span></div><Toolbar search={search} setSearch={setSearch} filters={filters} setFilters={setFilters} options={['approvalStatus']} values={() => ['Pending', 'Approved', 'Rejected']} placeholder="Search student..." /><SelectionTable rows={pageRows(pending)} approval onApproval={updateApproval} search={search} /><Pagination page={page} pageCount={Math.ceil(pending.length / size)} total={pending.length} size={size} onChange={setPage} /></section>}
-        {activeTab === 'allocation' && <section className="sm-card"><div className="sm-card-header"><div><h2>Elective Allocation</h2><p className="em-muted">Review approved selections before running allocation.</p></div><button type="button" className="sm-btn sm-btn--primary" onClick={allocate} disabled={actionLoading || !approved.length}><FiCheck /> Allocate Electives</button></div><SelectionTable rows={approved} emptyTitle="No approved selections found" /></section>}
-        {activeTab === 'report' && <section className="sm-card em-report-card"><div className="em-report-heading"><div><span className="em-report-eyebrow">Allocation overview</span><h2>Allocation Report</h2><p>Track student choices, approvals, and final elective allocations.</p></div><ExportMenu rows={filteredReport} columns={reportExportColumns} title="Elective Allocation Report" filename="elective-allocation-report" scope="All matching allocation records" loading={loading || Boolean(error)} /></div><div className="em-report-summary"><span><small>Total records</small><strong>{report.length}</strong><em>All selections</em></span><span><small>Allocated</small><strong>{kpis.allocated}</strong><em>Finalized choices</em></span><span><small>Pending review</small><strong>{kpis.pending}</strong><em>Awaiting approval</em></span><span><small>Elective groups</small><strong>{reportGroups}</strong><em>Represented in report</em></span></div><Toolbar search={search} setSearch={setSearch} filters={filters} setFilters={setFilters} options={['approvalStatus', 'allocationStatus']} values={() => ['Pending', 'Approved', 'Rejected', 'Allocated']} placeholder="Search student, subject, or group..." /><SelectionTable rows={pageRows(filteredReport)} search={search} emptyTitle="No allocation records found" className="em-report-table" /><Pagination page={page} pageCount={Math.ceil(filteredReport.length / size)} total={filteredReport.length} size={size} onChange={setPage} /></section>}
-        {groupModal && <div className="sm-modal-backdrop" onClick={() => setGroupModal(false)}><div className="sm-modal" onClick={event => event.stopPropagation()}><form onSubmit={saveGroup}><div className="sm-modal-header"><h2>Create Elective Group</h2><button type="button" className="sm-icon-btn" onClick={() => setGroupModal(false)} aria-label="Close"><FiX /></button></div><div className="sm-modal-body"><div className="sm-form-grid-2">{[['groupCode', 'Elective Code'], ['groupName', 'Elective Name'], ['academicYear', 'Academic Year'], ['credits', 'Credits'], ['selectionStartDate', 'Selection Start Date'], ['selectionEndDate', 'Selection End Date']].map(([key, label]) => <label className="sm-field" key={key}><span>{label}{!['credits'].includes(key) && <b className="em-required-star">*</b>}</span><input type={key.includes('Date') ? 'date' : key === 'credits' ? 'number' : 'text'} value={groupForm[key]} onChange={event => setGroupForm({ ...groupForm, [key]: event.target.value })} required={key !== 'credits'} /></label>)}<label className="sm-field"><span>Course</span><SearchableSelect label="Course" value={groupForm.course} options={courseOptions(courses)} onChange={value => setGroupForm({ ...groupForm, course: value, branch: '' })} placeholder={mastersLoading ? 'Loading courses...' : 'Select course'} searchPlaceholder="Search course..." noOptionsMessage="No courses found." disabled={mastersLoading} /></label><label className="sm-field"><span>Branch</span><SearchableSelect label="Branch" value={groupForm.branch} options={branchOptions(branches, groupForm.course)} onChange={value => setGroupForm({ ...groupForm, branch: value })} placeholder={!groupForm.course ? 'Select a course first' : mastersLoading ? 'Loading branches...' : 'Select branch'} searchPlaceholder="Search branch or department..." noOptionsMessage="No branches are present." disabled={mastersLoading || !groupForm.course} /></label><label className="sm-field"><span>Semester</span><input value={groupForm.semester} onChange={event => setGroupForm({ ...groupForm, semester: event.target.value })} /></label><label className="sm-field"><span>Elective Type</span><input value={groupForm.electiveType} onChange={event => setGroupForm({ ...groupForm, electiveType: event.target.value })} /></label><label className="sm-field"><span>Minimum Selection</span><input type="number" min="1" value={groupForm.minimumSelection} onChange={event => setGroupForm({ ...groupForm, minimumSelection: event.target.value })} /></label><label className="sm-field"><span>Maximum Selection</span><input type="number" min="1" value={groupForm.maximumSelection} onChange={event => setGroupForm({ ...groupForm, maximumSelection: event.target.value })} /></label></div></div><div className="sm-modal-footer"><button type="button" className="sm-btn sm-btn--secondary" onClick={() => setGroupModal(false)}>Cancel</button><button type="submit" className="sm-btn sm-btn--primary" disabled={actionLoading}>{actionLoading ? 'Creating...' : 'Create Group'}</button></div></form></div></div>}
-        {subjectModal && <div className="sm-modal-backdrop" onClick={() => setSubjectModal(null)}><div className="sm-modal" onClick={event => event.stopPropagation()}><div className="sm-modal-header"><h2>Manage Subjects: {subjectModal.groupCode}</h2><button type="button" className="sm-icon-btn" onClick={() => setSubjectModal(null)} aria-label="Close"><FiX /></button></div><div className="sm-modal-body"><p className="em-muted">Select subjects from the existing academic data.</p><div className="em-subject-picker">{subjects.length ? subjects.map(subject => { const subjectId = subject.id || subject.subjectId || subject.subjectCode; const selected = selectedSubjects.some(row => String(row.id || row.subjectId || row.subjectCode) === String(subjectId)); return <label key={subjectId} className={`em-subject-option ${selected ? 'selected' : ''}`}><input type="checkbox" checked={selected} onChange={() => setSelectedSubjects(current => selected ? current.filter(row => String(row.id || row.subjectId || row.subjectCode) !== String(subjectId)) : [...current, subject])} /><span><strong>{text(subject.subjectCode || subject.code)}</strong> {text(subject.subjectName || subject.name)}<small>{text(subject.credits, '-')} credits · {text(subject.department)} · {text(subject.semester)}</small></span></label> }) : <EmptyState title="No elective subjects available" description="No subjects were returned by the existing academic data source." />}</div></div><div className="sm-modal-footer"><button type="button" className="sm-btn sm-btn--secondary" onClick={() => setSubjectModal(null)}>Cancel</button><button type="button" className="sm-btn sm-btn--primary" onClick={addSubjects} disabled={actionLoading}>Add Selected Subjects ({selectedSubjects.length})</button></div></div></div>}
-    </main></DashboardLayout>
+    if (groupModal) {
+      return (
+        <DashboardLayout>
+          <main className="em-screen">
+            <header className="em-header">
+              <div>
+                <button type="button" className="cm-button secondary erp-btn erp-btn--secondary" onClick={() => setGroupModal(false)} style={{ marginBottom: '10px' }}>
+                  &larr; Back to Elective Groups
+                </button>
+                <h1>Create Elective Group</h1>
+                <p>Configure elective group parameters, academic mapping, and selection window.</p>
+              </div>
+            </header>
+
+            <div className="erp-two-column-layout">
+              <div className="erp-card-main">
+                <form className="erp-form-scroll-body" onSubmit={saveGroup}>
+                  <div className="sm-form-grid-2">
+                    {[['groupCode', 'Elective Code'], ['groupName', 'Elective Name'], ['academicYear', 'Academic Year'], ['credits', 'Credits'], ['selectionStartDate', 'Selection Start Date'], ['selectionEndDate', 'Selection End Date']].map(([key, label]) => (
+                      <label className="sm-field" key={key}>
+                        <span>{label}{!['credits'].includes(key) && <b className="em-required-star">*</b>}</span>
+                        <input
+                          type={key.includes('Date') ? 'date' : key === 'credits' ? 'number' : 'text'}
+                          value={groupForm[key]}
+                          onChange={event => setGroupForm({ ...groupForm, [key]: event.target.value })}
+                          required={key !== 'credits'}
+                        />
+                      </label>
+                    ))}
+                    <label className="sm-field">
+                      <span>Course</span>
+                      <SearchableSelect
+                        label="Course"
+                        value={groupForm.course}
+                        options={courseOptions(courses)}
+                        onChange={value => setGroupForm({ ...groupForm, course: value, branch: '' })}
+                        placeholder={mastersLoading ? 'Loading courses...' : 'Select course'}
+                        searchPlaceholder="Search course..."
+                        noOptionsMessage="No courses found."
+                        disabled={mastersLoading}
+                      />
+                    </label>
+                    <label className="sm-field">
+                      <span>Branch</span>
+                      <SearchableSelect
+                        label="Branch"
+                        value={groupForm.branch}
+                        options={branchOptions(branches, groupForm.course)}
+                        onChange={value => setGroupForm({ ...groupForm, branch: value })}
+                        placeholder={!groupForm.course ? 'Select a course first' : mastersLoading ? 'Loading branches...' : 'Select branch'}
+                        searchPlaceholder="Search branch or department..."
+                        noOptionsMessage="No branches are present."
+                        disabled={mastersLoading || !groupForm.course}
+                      />
+                    </label>
+                    <label className="sm-field">
+                      <span>Semester</span>
+                      <input value={groupForm.semester} onChange={event => setGroupForm({ ...groupForm, semester: event.target.value })} />
+                    </label>
+                    <label className="sm-field">
+                      <span>Elective Type</span>
+                      <input value={groupForm.electiveType} onChange={event => setGroupForm({ ...groupForm, electiveType: event.target.value })} />
+                    </label>
+                    <label className="sm-field">
+                      <span>Minimum Selection</span>
+                      <input type="number" min="1" value={groupForm.minimumSelection} onChange={event => setGroupForm({ ...groupForm, minimumSelection: event.target.value })} />
+                    </label>
+                    <label className="sm-field">
+                      <span>Maximum Selection</span>
+                      <input type="number" min="1" value={groupForm.maximumSelection} onChange={event => setGroupForm({ ...groupForm, maximumSelection: event.target.value })} />
+                    </label>
+                  </div>
+
+                  <div className="erp-actions-bar" style={{ marginTop: 'auto', paddingTop: '16px', borderTop: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <button type="button" className="cm-button secondary erp-btn erp-btn--secondary" onClick={() => setGroupModal(false)}>
+                      Cancel
+                    </button>
+                    <button type="submit" className="cm-button erp-btn erp-btn--primary" disabled={actionLoading}>
+                      {actionLoading ? 'Creating...' : 'Create Group'}
+                    </button>
+                  </div>
+                </form>
+              </div>
+
+              <aside className="preview-card" aria-label="Elective Live Preview">
+                <header className="preview-top-bar">
+                  <span className="preview-live-tag">
+                    <span className="live-dot" /> LIVE PREVIEW
+                  </span>
+                  <span className="preview-sync-hint">Real-time sync</span>
+                </header>
+
+                <div className="preview-body-container">
+                  {(() => {
+                    const sections = [
+                      {
+                        title: 'Elective Details',
+                        fields: [
+                          ['Group Code', groupForm.groupCode],
+                          ['Group Name', groupForm.groupName],
+                          ['Academic Year', groupForm.academicYear],
+                          ['Semester', groupForm.semester],
+                          ['Elective Type', groupForm.electiveType],
+                          ['Credits', groupForm.credits],
+                          ['Min / Max Picks', groupForm.minimumSelection && groupForm.maximumSelection ? `${groupForm.minimumSelection} to ${groupForm.maximumSelection}` : ''],
+                          ['Window', [groupForm.selectionStartDate, groupForm.selectionEndDate].filter(Boolean).join(' to ')],
+                        ],
+                      },
+                    ].map(sec => ({
+                      ...sec,
+                      fields: sec.fields.filter(([, val]) => val !== null && val !== undefined && String(val).trim() !== '' && String(val).trim() !== '—'),
+                    })).filter(sec => sec.fields.length > 0)
+
+                    if (sections.length === 0) {
+                      return (
+                        <div className="preview-empty-hint">
+                          <span>Enter details in the form to preview here in real time.</span>
+                        </div>
+                      )
+                    }
+
+                    return (
+                      <>
+                        <div className="preview-hero" style={{ marginBottom: '12px' }}>
+                          <div className="preview-hero-badge">{groupForm.groupCode ? groupForm.groupCode.slice(0, 4).toUpperCase() : 'ELEC'}</div>
+                          <div className="preview-hero-details">
+                            <h3 className="preview-course-title" style={{ margin: 0 }}>{groupForm.groupName || 'Elective Group Preview'}</h3>
+                            <p className="preview-course-meta" style={{ margin: '2px 0 0', color: '#64748B', fontSize: '0.78rem' }}>{[groupForm.groupCode, groupForm.electiveType, groupForm.credits && `${groupForm.credits} Credits`].filter(Boolean).join(' • ')}</p>
+                          </div>
+                        </div>
+                        {sections.map(sec => (
+                          <div key={sec.title} className="preview-section-group" style={{ marginBottom: '10px' }}>
+                            <span className="preview-section-title">{sec.title}</span>
+                            <div className="preview-kv-grid">
+                              {sec.fields.map(([label, textVal]) => (
+                                <div key={label} className="preview-kv-item">
+                                  <span className="kv-label">{label}</span>
+                                  <strong className="kv-val" title={String(textVal).trim()}>{String(textVal).trim()}</strong>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        ))}
+                      </>
+                    )
+                  })()}
+                </div>
+              </aside>
+            </div>
+          </main>
+        </DashboardLayout>
+      )
+    }
+
+    return (
+      <DashboardLayout>
+        <main className="em-screen">
+          <header className="em-header">
+            <div>
+              <h1>Elective Management</h1>
+              <p>Configure groups, review choices, and manage allocation.</p>
+            </div>
+            <div className="em-header-actions">
+              <ExportMenu rows={filteredGroups} columns={groupExportColumns} title="Elective Group Directory" filename="elective-group-directory" scope="All matching elective groups" loading={loading || Boolean(error)} />
+              <button type="button" className="sm-btn sm-btn--primary" onClick={openGroup}><FiPlus /> Create Group</button>
+            </div>
+          </header>
+          <div className="em-tabs">
+            {tabs.map(tab => (
+              <button type="button" key={tab.id} className={`em-tab-btn ${activeTab === tab.id ? 'active' : ''}`} onClick={() => setActiveTab(tab.id)}>
+                {tab.label}{tab.id === 'approval' && pending.length ? ` (${pending.length})` : ''}
+              </button>
+            ))}
+          </div>
+          <section className="em-kpi-grid">
+            {[[FiLayers, kpis.groups, 'Total Elective Groups'], [FiAward, kpis.active, 'Active Groups'], [FiUsers, kpis.selections, 'Total Selections'], [FiCheckCircle, kpis.pending, 'Pending Approvals'], [FiCheck, kpis.approved, 'Approved Selections'], [FiCheckCircle, kpis.allocated, 'Allocated Students']].map(([Icon, value, label]) => (
+              <div className="em-kpi-card" key={label}>
+                <div className="sm-kpi-icon sm-kpi-icon--blue"><Icon /></div>
+                <div className="em-kpi-content"><small>{label}</small><strong>{value}</strong></div>
+              </div>
+            ))}
+          </section>
+          {error && <div className="em-alert" role="alert"><FiInfo /> {error}</div>}
+          {activeTab === 'groups' && (
+            <section className="sm-card">
+              <Toolbar search={search} setSearch={setSearch} filters={filters} setFilters={setFilters} options={['status', 'semester', 'branch', 'department']} values={groupValues} placeholder="Search group code or name..." showFilters={false} />
+              <div className="sm-table-wrap">
+                {loading ? (
+                  <div className="em-loading">Loading elective groups...</div>
+                ) : !filteredGroups.length ? (
+                  <EmptyState title="No elective groups found" description="Create a group or adjust your filters." action="Create Group" onAction={openGroup} />
+                ) : (
+                  <table className="em-table">
+                    <thead>
+                      <tr>
+                        <th>Group</th>
+                        <th>Department / Branch</th>
+                        <th>Academic Year</th>
+                        <th>Semester</th>
+                        <th>Type</th>
+                        <th>Credits</th>
+                        <th>Selection Window</th>
+                        <th>Status</th>
+                        <th>Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {pageRows(filteredGroups).map(group => (
+                        <tr key={group.id || group.groupId}>
+                          <td><strong>{text(group.groupCode)}</strong><span className="em-cell-subtitle">{text(group.groupName)}</span></td>
+                          <td>{text(group.department)}<span className="em-cell-subtitle">{text(group.branch)}</span></td>
+                          <td>{text(group.academicYear)}</td>
+                          <td>{text(group.semester)}</td>
+                          <td>{text(group.electiveType || group.type)}</td>
+                          <td>{text(group.credits, '-')}</td>
+                          <td>{text(group.selectionStartDate, '-')}<span className="em-cell-subtitle">to {text(group.selectionEndDate, '-')}</span></td>
+                          <td><StatusBadge value={text(group.status)} /></td>
+                          <td>
+                            <button type="button" className="sm-btn sm-btn--secondary em-compact-btn" onClick={() => { setSubjectModal(group); setSelectedSubjects([]) }}>
+                              <FiLayers /> Manage Subjects
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                )}
+              </div>
+              <Pagination page={page} pageCount={Math.ceil(filteredGroups.length / size)} total={filteredGroups.length} size={size} onChange={setPage} />
+            </section>
+          )}
+          {activeTab === 'selection' && (
+            <>
+              <StudentCard profile={profile} loading={profileLoading} />
+              <section className="em-workflow-grid">
+                <div className="sm-card">
+                  <div className="sm-card-header"><h2>Student Elective Selection</h2></div>
+                  {profileLoading ? (
+                    <div className="em-loading">Loading student profile...</div>
+                  ) : !studentId ? (
+                    <EmptyState title="Student profile unavailable" description="A student profile is required for elective selection." />
+                  ) : (
+                    <form className="em-form-body" onSubmit={submitSelection}>
+                      <div className="em-readonly-student">
+                        <strong>{text(profile.fullName || profile.studentName)}</strong>
+                        <span>{text(profile.studentCode || profile.identifier || studentId)} · {text(profile.semester, 'Semester information unavailable')}</span>
+                      </div>
+                      <label className="sm-field">
+                        Elective Group
+                        <select value={selectedGroupId} onChange={event => { setSelectedGroupId(event.target.value); setSelectedSubjectId('') }} required>
+                          <option value="">Select group</option>
+                          {groups.filter(group => ['open', 'active'].includes(String(group.status).toLowerCase())).map(group => (
+                            <option key={group.id || group.groupId} value={group.id || group.groupId}>{group.groupCode} - {group.groupName}</option>
+                          ))}
+                        </select>
+                      </label>
+                      <label className="sm-field">
+                        Available Subject
+                        <select value={selectedSubjectId} onChange={event => setSelectedSubjectId(event.target.value)} disabled={!selectedGroup} required>
+                          <option value="">Select subject</option>
+                          {eligibleSubjects.map(subject => (
+                            <option key={subject.id || subject.subjectId || subject.code} value={subject.id || subject.subjectId || subject.code}>
+                              {subject.subjectCode || subject.code} - {subject.subjectName || subject.name}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+                      <button type="submit" className="sm-btn sm-btn--primary" disabled={actionLoading}><FiCheck /> Submit Selection</button>
+                    </form>
+                  )}
+                </div>
+                <div className="sm-card">
+                  <div className="sm-card-header"><h2>Existing Selections</h2></div>
+                  {loading ? (
+                    <div className="em-loading">Loading elective selections...</div>
+                  ) : (
+                    <>
+                      <SelectionTable rows={pageRows(filteredSelections)} search={search} />
+                      <Pagination page={page} pageCount={Math.ceil(filteredSelections.length / size)} total={filteredSelections.length} size={size} onChange={setPage} />
+                    </>
+                  )}
+                </div>
+              </section>
+              <section className="sm-card em-results-card">
+                <div className="sm-card-header"><h2>Academic Results</h2></div>
+                {resultsLoading ? <div className="em-loading">Loading examination results...</div> : <ResultsTable rows={results} page={resultPage} size={size} setPage={setResultPage} />}
+              </section>
+            </>
+          )}
+          {activeTab === 'approval' && (
+            <section className="sm-card">
+              <div className="sm-card-header">
+                <h2>Faculty Approval</h2>
+                <span className="em-muted">{pending.length} pending</span>
+              </div>
+              <Toolbar search={search} setSearch={setSearch} filters={filters} setFilters={setFilters} options={['approvalStatus']} values={() => ['Pending', 'Approved', 'Rejected']} placeholder="Search student..." />
+              <SelectionTable rows={pageRows(pending)} approval onApproval={updateApproval} search={search} />
+              <Pagination page={page} pageCount={Math.ceil(pending.length / size)} total={pending.length} size={size} onChange={setPage} />
+            </section>
+          )}
+          {activeTab === 'allocation' && (
+            <section className="sm-card">
+              <div className="sm-card-header">
+                <div>
+                  <h2>Elective Allocation</h2>
+                  <p className="em-muted">Review approved selections before running allocation.</p>
+                </div>
+                <button type="button" className="sm-btn sm-btn--primary" onClick={allocate} disabled={actionLoading || !approved.length}><FiCheck /> Allocate Electives</button>
+              </div>
+              <SelectionTable rows={approved} emptyTitle="No approved selections found" />
+            </section>
+          )}
+          {activeTab === 'report' && (
+            <section className="sm-card em-report-card">
+              <div className="em-report-heading">
+                <div>
+                  <span className="em-report-eyebrow">Allocation overview</span>
+                  <h2>Allocation Report</h2>
+                  <p>Track student choices, approvals, and final elective allocations.</p>
+                </div>
+                <ExportMenu rows={filteredReport} columns={reportExportColumns} title="Elective Allocation Report" filename="elective-allocation-report" scope="All matching allocation records" loading={loading || Boolean(error)} />
+              </div>
+              <div className="em-report-summary">
+                <span><small>Total records</small><strong>{report.length}</strong><em>All selections</em></span>
+                <span><small>Allocated</small><strong>{kpis.allocated}</strong><em>Finalized choices</em></span>
+                <span><small>Pending review</small><strong>{kpis.pending}</strong><em>Awaiting approval</em></span>
+                <span><small>Elective groups</small><strong>{reportGroups}</strong><em>Represented in report</em></span>
+              </div>
+              <Toolbar search={search} setSearch={setSearch} filters={filters} setFilters={setFilters} options={['approvalStatus', 'allocationStatus']} values={() => ['Pending', 'Approved', 'Rejected', 'Allocated']} placeholder="Search student, subject, or group..." />
+              <SelectionTable rows={pageRows(filteredReport)} search={search} emptyTitle="No allocation records found" className="em-report-table" />
+              <Pagination page={page} pageCount={Math.ceil(filteredReport.length / size)} total={filteredReport.length} size={size} onChange={setPage} />
+            </section>
+          )}
+          {subjectModal && (
+            <div className="sm-modal-backdrop" onClick={() => setSubjectModal(null)}>
+              <div className="sm-modal" onClick={event => event.stopPropagation()}>
+                <div className="sm-modal-header">
+                  <h2>Manage Subjects: {subjectModal.groupCode}</h2>
+                  <button type="button" className="sm-icon-btn" onClick={() => setSubjectModal(null)} aria-label="Close"><FiX /></button>
+                </div>
+                <div className="sm-modal-body">
+                  <p className="em-muted">Select subjects from the existing academic data.</p>
+                  <div className="em-subject-picker">
+                    {subjects.length ? (
+                      subjects.map(subject => {
+                        const subjectId = subject.id || subject.subjectId || subject.subjectCode;
+                        const selected = selectedSubjects.some(row => String(row.id || row.subjectId || row.subjectCode) === String(subjectId));
+                        return (
+                          <label key={subjectId} className={`em-subject-option ${selected ? 'selected' : ''}`}>
+                            <input
+                              type="checkbox"
+                              checked={selected}
+                              onChange={() => setSelectedSubjects(current => selected ? current.filter(row => String(row.id || row.subjectId || row.subjectCode) !== String(subjectId)) : [...current, subject])}
+                            />
+                            <span>
+                              <strong>{text(subject.subjectCode || subject.code)}</strong> {text(subject.subjectName || subject.name)}
+                              <small>{text(subject.credits, '-')} credits · {text(subject.department)} · {text(subject.semester)}</small>
+                            </span>
+                          </label>
+                        );
+                      })
+                    ) : (
+                      <EmptyState title="No elective subjects available" description="No subjects were returned by the existing academic data source." />
+                    )}
+                  </div>
+                </div>
+                <div className="sm-modal-footer">
+                  <button type="button" className="sm-btn sm-btn--secondary" onClick={() => setSubjectModal(null)}>Cancel</button>
+                  <button type="button" className="sm-btn sm-btn--primary" onClick={addSubjects} disabled={actionLoading}>
+                    Add Selected Subjects ({selectedSubjects.length})
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+        </main>
+      </DashboardLayout>
+    );
 }
 
 

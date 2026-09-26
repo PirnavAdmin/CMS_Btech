@@ -630,8 +630,29 @@ function SemesterForm({ editMode = false }) {
   </Page>
 }
 
-function SemesterPreview({ college, course, branch, activeYear, coursePeriod, plan, dates = {} }) {
-  const hasContext = Boolean(college || course || branch)
+function SemesterPreview({ college, course, branch, activeYear, coursePeriod, plan = [], dates = {} }) {
+  const sections = [
+    {
+      title: 'Academic Structure',
+      fields: [
+        ['College', college?.name],
+        ['Academic Year', activeYear?.name],
+        ['Course', course ? `${course.code ? course.code + ' - ' : ''}${course.name}` : ''],
+        ['Branch', branch ? `${branch.code ? branch.code + ' - ' : ''}${branch.name || branch.branchName}` : ''],
+        ['Branch Type', branch?.branchType],
+        ['Cohort', coursePeriod],
+        ['Pattern', course?.academicPattern],
+        ['Duration', course?.durationYears ? `${course.durationYears} Years` : ''],
+        ['Total Semesters', course?.totalSemesters ? `${course.totalSemesters} Semesters` : ''],
+      ],
+    },
+  ].map((sec) => ({
+    ...sec,
+    fields: sec.fields.filter(([, val]) => val !== null && val !== undefined && String(val).trim() !== '' && String(val).trim() !== '—'),
+  })).filter((sec) => sec.fields.length > 0)
+
+  const hasAnyData = sections.length > 0 || plan.length > 0
+
   return (
     <aside className="semester-live-preview" aria-label="Semester Structure Live Preview">
       <header className="preview-top-bar">
@@ -641,43 +662,42 @@ function SemesterPreview({ college, course, branch, activeYear, coursePeriod, pl
         <span className="preview-sync-hint">Real-time sync</span>
       </header>
 
-      {hasContext ? (
+      {!hasAnyData ? (
+        <div className="preview-empty-hint">
+          <span>Enter details in the form to preview here in real time.</span>
+        </div>
+      ) : (
         <div className="preview-body-container">
-          <div className="preview-hero">
-            <div className="preview-hero-badge">
-              {course?.code ? course.code.slice(0, 4).toUpperCase() : 'BTECH'}
+          {course && (
+            <div className="preview-hero">
+              <div className="preview-hero-badge">
+                {course?.code ? course.code.slice(0, 4).toUpperCase() : 'BTECH'}
+              </div>
+              <div className="preview-hero-details">
+                <h3 className="preview-course-title">
+                  {course?.name || 'Selected Course'}
+                </h3>
+                <p className="preview-course-meta">
+                  {coursePeriod ? `${coursePeriod} Cohort` : ''}
+                  {course?.durationYears ? ` • ${course.durationYears} Years (${course.totalSemesters || 8} Sems)` : ''}
+                </p>
+              </div>
             </div>
-            <div className="preview-hero-details">
-              <h3 className="preview-course-title">
-                {course?.name || 'Selected Course'}
-              </h3>
-              <p className="preview-course-meta">
-                {coursePeriod ? `${coursePeriod} Cohort` : ''}
-                {course?.durationYears ? ` • ${course.durationYears} Years (${course.totalSemesters || 8} Sems)` : ''}
-              </p>
-            </div>
-          </div>
+          )}
 
-          <div className="preview-kv-grid">
-            <div className="preview-kv-item">
-              <span className="kv-label">College</span>
-              <strong className="kv-val">{college?.name || '—'}</strong>
+          {sections.map((sec) => (
+            <div key={sec.title} className="preview-section-group">
+              <span className="preview-section-title">{sec.title}</span>
+              <div className="preview-kv-grid">
+                {sec.fields.map(([label, text]) => (
+                  <div key={label} className="preview-kv-item">
+                    <span className="kv-label">{label}</span>
+                    <strong className="kv-val" title={String(text).trim()}>{String(text).trim()}</strong>
+                  </div>
+                ))}
+              </div>
             </div>
-            <div className="preview-kv-item">
-              <span className="kv-label">Academic Year</span>
-              <strong className="kv-val">{activeYear?.name || '—'}</strong>
-            </div>
-            <div className="preview-kv-item">
-              <span className="kv-label">Branch</span>
-              <strong className="kv-val">
-                {branch ? `${branch.code ? branch.code + ' - ' : ''}${branch.name || branch.branchName}` : 'Select branch'}
-              </strong>
-            </div>
-            <div className="preview-kv-item">
-              <span className="kv-label">Pattern</span>
-              <strong className="kv-val">{course?.academicPattern || 'Semester System'}</strong>
-            </div>
-          </div>
+          ))}
 
           {plan.length > 0 && (
             <div className="preview-cohort-timeline">
@@ -724,11 +744,6 @@ function SemesterPreview({ college, course, branch, activeYear, coursePeriod, pl
               </div>
             </div>
           )}
-        </div>
-      ) : (
-        <div className="preview-empty-state">
-          <FiLayers className="preview-empty-icon" />
-          <p>Select a Course and Branch from the left form to preview the semester breakdown.</p>
         </div>
       )}
     </aside>

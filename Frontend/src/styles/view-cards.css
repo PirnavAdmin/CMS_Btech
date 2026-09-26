@@ -1,5 +1,5 @@
 /* Reference: College view screenshot. Keep after legacy module styles. */
-:root body :is(.cm-profile-grid, .shared-view-dialog .erp-detail-grid, .cm-profile-view .sa-detail-card) {
+:root body :is(.cm-profile-grid, .shared-view-dialog .erp-detail-grid) {
   display: grid !important;
   grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
   align-items: stretch;
@@ -7,7 +7,7 @@
   padding: 20px !important;
   background: var(--surface, #fff);
 }
-:root body :is(.cm-profile-grid, .shared-view-dialog .erp-detail-grid, .cm-profile-view .sa-detail-card) > :is(.cm-info-card, .sa-detail-panel) {
+:root body :is(.cm-profile-grid, .shared-view-dialog .erp-detail-grid) > .cm-info-card {
   grid-column: auto !important;
   min-width: 0;
   margin: 0 !important;
@@ -19,12 +19,12 @@
   transition: border-color 180ms ease, box-shadow 180ms ease, transform 180ms ease;
 }
 /* Override legacy sibling separators without joining adjacent cards. */
-:root body :is(.cm-profile-grid, .shared-view-dialog .erp-detail-grid, .cm-profile-view .sa-detail-card) > :is(.cm-info-card, .sa-detail-panel) + :is(.cm-info-card, .sa-detail-panel) {
+:root body :is(.cm-profile-grid, .shared-view-dialog .erp-detail-grid) > .cm-info-card + .cm-info-card {
   margin-top: 0 !important;
   padding-top: 20px !important;
   border-top: 1px solid var(--border, #d7e4ee) !important;
 }
-:root body :is(.cm-info-card-header, .cm-profile-view .sa-detail-panel > header) {
+:root body .cm-info-card-header {
   display: flex;
   align-items: center;
   gap: 10px;
@@ -34,19 +34,19 @@
   color: var(--brand, #8782BC);
   background: transparent;
 }
-:root body :is(.cm-info-card-header, .cm-profile-view .sa-detail-panel > header) h2 {
+:root body .cm-info-card-header h2 {
   margin: 0;
   color: var(--brand, #8782BC) !important;
   font-size: 1rem !important;
   font-weight: 750;
   line-height: 1.35;
 }
-:root body :is(.cm-info-card-header, .cm-profile-view .sa-detail-panel > header) svg {
+:root body .cm-info-card-header svg {
   width: 20px;
   height: 20px;
   flex-shrink: 0;
 }
-:root body :is(.cm-info-card .cm-info-rows, .cm-profile-view .sa-detail-panel > dl, .fs-editor.details .fs-preview) {
+:root body :is(.cm-info-card .cm-info-rows, .fs-editor.details .fs-preview) {
   display: grid !important;
   grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
   gap: 20px 28px !important;
@@ -55,8 +55,8 @@
   border: 0 !important;
   background: transparent !important;
 }
-:root body :is(.cm-profile-grid, .shared-view-dialog, .cm-profile-view .sa-detail-card, .fs-editor.details)
-:is(.cm-info-row, .sa-detail-panel > dl > div, .fs-preview > div) {
+:root body :is(.cm-profile-grid, .shared-view-dialog, .fs-editor.details)
+:is(.cm-info-row, .fs-preview > div) {
   display: grid !important;
   grid-template-columns: 1fr !important;
   align-content: start;
@@ -67,7 +67,7 @@
   border: 0 !important;
   background: transparent !important;
 }
-:root body :is(.cm-info-card .cm-info-label, .cm-profile-view .sa-detail-panel dt, .fs-editor.details .fs-preview dt) {
+:root body :is(.cm-info-card .cm-info-label, .fs-editor.details .fs-preview dt) {
   margin: 0;
   color: var(--text-muted, #71869c) !important;
   font-size: .76rem !important;
@@ -75,7 +75,7 @@
   letter-spacing: 0;
   text-transform: none;
 }
-:root body :is(.cm-info-card .cm-info-val, .cm-profile-view .sa-detail-panel dd, .fs-editor.details .fs-preview dd) {
+:root body :is(.cm-info-card .cm-info-val, .fs-editor.details .fs-preview dd) {
   min-width: 0;
   margin: 0;
   color: var(--text-primary, #102c46) !important;
@@ -93,14 +93,14 @@
   box-shadow: 0 3px 10px rgb(15 42 66 / 6%);
 }
 @media (hover: hover) {
-  :root body :is(.cm-profile-grid, .shared-view-dialog .erp-detail-grid, .cm-profile-view .sa-detail-card) > :is(.cm-info-card, .sa-detail-panel):hover {
+  :root body :is(.cm-profile-grid, .shared-view-dialog .erp-detail-grid) > .cm-info-card:hover {
     border-color: var(--brand, #8782BC) !important;
     box-shadow: 0 6px 18px rgb(15 70 110 / 12%) !important;
     transform: translateY(-2px);
   }
 }
 @media (max-width: 760px) {
-  :root body :is(.cm-profile-grid, .shared-view-dialog .erp-detail-grid, .cm-profile-view .sa-detail-card) {
+  :root body :is(.cm-profile-grid, .shared-view-dialog .erp-detail-grid) {
     grid-template-columns: 1fr !important;
     padding: 16px !important;
   }
@@ -159,13 +159,13 @@
   }
 }
 @media (max-width: 480px) {
-  :root body :is(.cm-info-card .cm-info-rows, .cm-profile-view .sa-detail-panel > dl, .fs-editor.details .fs-preview) {
+  :root body :is(.cm-info-card .cm-info-rows, .fs-editor.details .fs-preview) {
     grid-template-columns: 1fr !important;
     gap: 16px !important;
   }
 }
 @media (prefers-reduced-motion: reduce) {
-  :root body :is(.cm-info-card, .sa-detail-panel) {
+  :root body .cm-info-card {
     transition: none !important;
     transform: none !important;
   }
@@ -173,24 +173,24 @@
 
 /* Compact read-only contract used by every management View/Preview. These
    selectors deliberately exclude editable fields and wizard step content. */
-:root body :is(.cm-profile-grid, .shared-view-dialog .erp-detail-grid, .cm-profile-view .sa-detail-card) {
+:root body :is(.cm-profile-grid, .shared-view-dialog .erp-detail-grid) {
   gap: 10px !important;
   padding: 12px !important;
 }
-:root body :is(.cm-profile-grid, .shared-view-dialog .erp-detail-grid, .cm-profile-view .sa-detail-card) > :is(.cm-info-card, .sa-detail-panel) {
+:root body :is(.cm-profile-grid, .shared-view-dialog .erp-detail-grid) > .cm-info-card {
   padding: 12px !important;
   border-radius: 10px !important;
 }
-:root body :is(.cm-profile-grid, .shared-view-dialog .erp-detail-grid, .cm-profile-view .sa-detail-card) > :is(.cm-info-card, .sa-detail-panel) + :is(.cm-info-card, .sa-detail-panel) {
+:root body :is(.cm-profile-grid, .shared-view-dialog .erp-detail-grid) > .cm-info-card + .cm-info-card {
   padding-top: 12px !important;
 }
-:root body :is(.cm-info-card-header, .cm-profile-view .sa-detail-panel > header) {
+:root body .cm-info-card-header {
   gap: 7px;
   margin-bottom: 9px !important;
   padding-bottom: 8px !important;
 }
-:root body :is(.cm-info-card-header, .cm-profile-view .sa-detail-panel > header) svg { width: 17px; height: 17px; }
-:root body :is(.cm-info-card .cm-info-rows, .cm-profile-view .sa-detail-panel > dl, .fs-editor.details .fs-preview) {
+:root body .cm-info-card-header svg { width: 17px; height: 17px; }
+:root body :is(.cm-info-card .cm-info-rows, .fs-editor.details .fs-preview) {
   gap: 10px 16px !important;
 }
 :root body .fs-editor.details .fs-preview { padding: 12px !important; border-radius: 10px; }
@@ -209,8 +209,6 @@
 :root body .student-admission .sa-preview > .sa-full-review { padding-top: 8px; }
 :root body .student-admission .sa-preview-header { gap: 10px; padding: 11px 12px; }
 :root body .student-admission .sa-preview-header dl div { padding: 7px 8px; }
-:root body .student-admission :is(.sa-detail-card, .sa-review-section) { padding: 12px; }
-:root body .student-admission :is(.sa-detail-card .sa-detail-panel + .sa-detail-panel, .sa-review-section + .sa-review-section) { margin-top: 10px; padding-top: 10px; }
 :root body .student-profile .sp-preview-header { padding: 16px 48px 12px 18px; }
 :root body .student-profile .sp-preview-identity { gap: 10px; margin-top: 8px; }
 :root body .student-profile .sp-preview-ids { gap: 10px; margin-top: 10px; }
@@ -221,8 +219,8 @@
 :root body .student-profile .sp-preview-actions { gap: 6px; padding: 10px 18px; }
 
 @media (max-width: 760px) {
-  :root body :is(.cm-profile-grid, .shared-view-dialog .erp-detail-grid, .cm-profile-view .sa-detail-card) { gap: 8px !important; padding: 10px !important; }
-  :root body :is(.cm-info-card .cm-info-rows, .cm-profile-view .sa-detail-panel > dl, .fs-editor.details .fs-preview) { gap: 8px !important; }
+  :root body :is(.cm-profile-grid, .shared-view-dialog .erp-detail-grid) { gap: 8px !important; padding: 10px !important; }
+  :root body :is(.cm-info-card .cm-info-rows, .fs-editor.details .fs-preview) { gap: 8px !important; }
   :root body .student-profile .sp-preview-body { padding: 10px 14px; }
   :root body .student-profile .sp-preview-actions { padding: 9px 14px; }
 }

@@ -32,11 +32,11 @@
     gap: 8px;
 }
 
-.em-header-actions .sm-btn--primary { background: #8782BC;
+.em-header-actions .sm-btn--primary { background: #756FB2;
     color: #ffffff;
 }
 
-.em-header-actions .sm-btn--primary:hover { background: #756FB2;
+.em-header-actions .sm-btn--primary:hover { background: #655E9F;
 }
 
 .em-tabs {

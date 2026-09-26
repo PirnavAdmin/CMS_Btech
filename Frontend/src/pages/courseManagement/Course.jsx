@@ -396,29 +396,92 @@ function CourseForm() {
     {error && <p className="cm-error" role="alert">{error} <button type="button" className="cm-button secondary" disabled={isSaving} onClick={load}>Reload options</button></p>}
     <div className="course-form-layout">
       <section className="cm-panel course-form">
-        <section><h2>Course Identity</h2><div className="cm-form-grid">
-          <Field label="Course Name *" error={errors.name || (value.name ? live.name : '')}><input value={value.name} required onChange={e => update('name', e.target.value)} /></Field>
-          <Field label="Course Code *" error={errors.code || (value.code ? live.code : '')}><input value={value.code} required minLength={2} maxLength={20} aria-invalid={Boolean(errors.code || live.code)} onChange={e => update('code', e.target.value)} onBlur={() => setErrors(current => ({ ...current, code: live.code || '' }))} placeholder="e.g. BTECH-02 (2?20 characters)" /></Field>
-          <Field label="Short Name (Optional)"><input value={value.shortName} onChange={e => update('shortName', e.target.value)} placeholder="e.g. B.Tech" /></Field>
-        </div></section>
-        <section><h2>Academic Structure</h2><div className="cm-form-grid">
-          <Field label="Duration *" error={errors.durationValue}><select value={value.durationValue} onChange={e => update('durationValue', e.target.value ? Number(e.target.value) : '')}><option value="">Select Duration</option><option value="3">3 Years</option><option value="4">4 Years</option></select></Field>
-          <Field label="Academic Pattern"><input value="Semester" readOnly /></Field>
-          <Field label="Total Semesters"><input value={value.semesters || ''} placeholder="Calculated from duration" readOnly /></Field>
-          <Field label="Start Date"><input type="date" value={value.startDate || ''} onChange={e => update('startDate', e.target.value)} /></Field>
-          <Field label="End Date"><input type="date" value={value.endDate || ''} onChange={e => update('endDate', e.target.value)} /></Field>
-          <Field label="Status *" error={errors.status}><select required value={value.status} onChange={e => update('status', e.target.value)}><option value="">Select Status</option><option value="Active">Active</option><option value="Inactive">Inactive</option></select></Field>
-        </div></section>
+        <div className="course-form-scroll">
+          <section><h2>Course Identity</h2><div className="cm-form-grid">
+            <Field label="Course Name *" error={errors.name || (value.name ? live.name : '')}><input value={value.name} required onChange={e => update('name', e.target.value)} /></Field>
+            <Field label="Course Code *" error={errors.code || (value.code ? live.code : '')}><input value={value.code} required minLength={2} maxLength={20} aria-invalid={Boolean(errors.code || live.code)} onChange={e => update('code', e.target.value)} onBlur={() => setErrors(current => ({ ...current, code: live.code || '' }))} placeholder="e.g. BTECH-02 (2?20 characters)" /></Field>
+            <Field label="Short Name (Optional)"><input value={value.shortName} onChange={e => update('shortName', e.target.value)} placeholder="e.g. B.Tech" /></Field>
+          </div></section>
+          <section><h2>Academic Structure</h2><div className="cm-form-grid">
+            <Field label="Duration *" error={errors.durationValue}><select value={value.durationValue} onChange={e => update('durationValue', e.target.value ? Number(e.target.value) : '')}><option value="">Select Duration</option><option value="3">3 Years</option><option value="4">4 Years</option></select></Field>
+            <Field label="Academic Pattern"><input value="Semester" readOnly /></Field>
+            <Field label="Total Semesters"><input value={value.semesters || ''} placeholder="Calculated from duration" readOnly /></Field>
+            <Field label="Start Date"><input type="date" value={value.startDate || ''} onChange={e => update('startDate', e.target.value)} /></Field>
+            <Field label="End Date"><input type="date" value={value.endDate || ''} onChange={e => update('endDate', e.target.value)} /></Field>
+            <Field label="Status *" error={errors.status}><select required value={value.status} onChange={e => update('status', e.target.value)}><option value="">Select Status</option><option value="Active">Active</option><option value="Inactive">Inactive</option></select></Field>
+          </div></section>
+        </div>
         <footer><button type="button" className="cm-button" disabled={isSaving || saved} onClick={submit}>{isSaving ? 'Saving...' : id ? 'Save Changes' : 'Create Course'}</button></footer>
       </section>
-      <aside className="course-preview" aria-label="Course preview"><span>Live Preview</span><div>
-        <h2>{value.name.trim() || 'Course Preview'}</h2>
-        {[
-          ['Basic Information', [['Course Name', value.name], ...(value.shortName.trim() ? [['Short Name', value.shortName]] : []), ['Course Code', value.code]]],
-          ['Academic Structure', [['Duration', value.durationValue ? value.durationValue + ' Years' : ''], ['Total Semesters', value.semesters]]],
-        ].map(([title, fields]) => <section key={title}><h3>{title}</h3><dl>{fields.map(([label, text]) => <div key={label}><dt>{label}</dt><dd>{typeof text === 'string' ? text.trim() || 'Not provided' : typeof text === 'number' ? text : 'Not provided'}</dd></div>)}</dl></section>)}
-        <h3>Status</h3>{value.status ? <Badge value={value.status} /> : 'Not provided'}
-      </div></aside>
+      <aside className="course-preview" aria-label="Course preview">
+        <header className="preview-top-bar">
+          <span className="preview-live-tag">
+            <span className="live-dot" /> LIVE PREVIEW
+          </span>
+          <span className="preview-sync-hint">Real-time sync</span>
+        </header>
+        <div className="preview-body-container">
+          {(() => {
+            const sections = [
+              {
+                title: 'Course Overview',
+                fields: [
+                  ['Course Name', value.name],
+                  ['Course Code', value.code],
+                  ['Short Name', value.shortName],
+                  ['Duration', value.durationValue ? `${value.durationValue} Years` : ''],
+                  ['Total Semesters', value.semesters ? `${value.semesters} Semesters` : ''],
+                  ['Pattern', 'Semester System'],
+                  ['Start Date', value.startDate],
+                  ['End Date', value.endDate],
+                  ['Status', value.status || 'Active'],
+                ],
+              },
+            ].map((sec) => ({
+              ...sec,
+              fields: sec.fields.filter(([, val]) => val !== null && val !== undefined && String(val).trim() !== '' && String(val).trim() !== '—'),
+            })).filter((sec) => sec.fields.length > 0)
+
+            if (sections.length === 0) {
+              return (
+                <div className="preview-empty-hint">
+                  <span>Enter details in the form to preview here in real time.</span>
+                </div>
+              )
+            }
+
+            return (
+              <>
+                <div className="preview-hero">
+                  <div className="preview-hero-badge">
+                    {value.code ? value.code.slice(0, 4).toUpperCase() : 'BTECH'}
+                  </div>
+                  <div className="preview-hero-details">
+                    <h3 className="preview-course-title">{value.name.trim() || 'Course Preview'}</h3>
+                    <p className="preview-course-meta">
+                      {value.durationValue ? `${value.durationValue} Years` : ''}
+                      {value.semesters ? ` • ${value.semesters} Semesters` : ''}
+                    </p>
+                  </div>
+                </div>
+                {sections.map((sec) => (
+                  <div key={sec.title} className="preview-section-group">
+                    <span className="preview-section-title">{sec.title}</span>
+                    <div className="preview-kv-grid">
+                      {sec.fields.map(([label, text]) => (
+                        <div key={label} className="preview-kv-item">
+                          <span className="kv-label">{label}</span>
+                          <strong className="kv-val" title={String(text).trim()}>{String(text).trim()}</strong>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </>
+            )
+          })()}
+        </div>
+      </aside>
     </div>
   </Page>
 }

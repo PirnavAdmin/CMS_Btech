@@ -507,13 +507,14 @@ export const normalizeCanonicalStudent = (source = {}) => {
   const raw = source.data && typeof source.data === 'object' && !Array.isArray(source.data) ? { ...source, ...source.data } : source
   const header = raw.header ?? {}
   const summary = raw.summary ?? {}
-  const personalRaw = raw.personalInformation ?? raw.personal ?? {}
-  const contactRaw = raw.contactInformation ?? raw.contact ?? {}
-  const parentRaw = raw.parentGuardianInformation ?? raw.parentDetails ?? raw.parents ?? {}
-  const academicRaw = raw.academicInformation ?? raw.academicDetails ?? raw.academic ?? {}
-  const previousRaw = raw.previousEducationDetails ?? raw.previousEducation ?? {}
-  const admissionRaw = raw.admissionDetails ?? raw.admission ?? {}
-  const feeRaw = raw.feeSummary ?? raw.feeDetails ?? raw.fees ?? {}
+  const formDataObj = typeof raw.formData === 'string' ? (() => { try { return JSON.parse(raw.formData) } catch { return {} } })() : (raw.formData && typeof raw.formData === 'object' ? raw.formData : {})
+  const personalRaw = { ...(formDataObj.personal || {}), ...(raw.personalInformation ?? raw.personal ?? {}) }
+  const contactRaw = { ...(formDataObj.contact || {}), ...(raw.contactInformation ?? raw.contact ?? {}) }
+  const parentRaw = { ...(formDataObj.parents || {}), ...(raw.parentGuardianInformation ?? raw.parentDetails ?? raw.parents ?? {}) }
+  const academicRaw = { ...(formDataObj.academic || {}), ...(raw.academicInformation ?? raw.academicDetails ?? raw.academic ?? {}) }
+  const previousRaw = { ...(formDataObj.previousEducation || {}), ...(raw.previousEducationDetails ?? raw.previousEducation ?? {}) }
+  const admissionRaw = { ...(formDataObj.admission || {}), ...(raw.admissionDetails ?? raw.admission ?? {}) }
+  const feeRaw = { ...(formDataObj.fees || {}), ...(raw.feeSummary ?? raw.feeDetails ?? raw.fees ?? {}) }
 
   const admissionId = String(firstFilled(raw.admissionId, raw.studentAdmissionId, raw.application?.admissionId, admissionRaw.admissionId, raw.id, base.id))
   const studentId = String(firstFilled(raw.studentId, raw.student?.studentId, raw.student?.id, header.studentId, personalRaw.studentId, ''))
@@ -563,11 +564,19 @@ export const normalizeCanonicalStudent = (source = {}) => {
     pincode: firstFilled(raw.permanentPincode, raw.permanentPostalCode, raw.permanentZip, raw.permanentAddress?.pincode, contactRaw.permanentAddress?.pincode),
   }
 
-  const currentAddressCandidate = [contactRaw.currentAddress, raw.currentAddress, personalRaw.currentAddress, personalRaw.address, raw.address, flatCurrent].find((addr) => formatAddress(normalizeAddressObj(addr)))
-  const currentAddress = normalizeAddressObj(currentAddressCandidate || flatCurrent || base.contact.currentAddress)
+  const currentAddressObj = normalizeAddressObj(contactRaw.currentAddress || raw.currentAddress || personalRaw.currentAddress || personalRaw.address || raw.address)
+  const currentAddress = {
+    ...base.contact.currentAddress,
+    ...flatCurrent,
+    ...Object.fromEntries(Object.entries(currentAddressObj).filter(([, v]) => v !== '' && v !== null && v !== undefined)),
+  }
 
-  const permanentAddressCandidate = [contactRaw.permanentAddress, raw.permanentAddress, personalRaw.permanentAddress, flatPermanent].find((addr) => formatAddress(normalizeAddressObj(addr)))
-  const permanentAddress = normalizeAddressObj(permanentAddressCandidate || flatPermanent)
+  const permanentAddressObj = normalizeAddressObj(contactRaw.permanentAddress || raw.permanentAddress || personalRaw.permanentAddress)
+  const permanentAddress = {
+    ...base.contact.permanentAddress,
+    ...flatPermanent,
+    ...Object.fromEntries(Object.entries(permanentAddressObj).filter(([, v]) => v !== '' && v !== null && v !== undefined)),
+  }
 
   const hasPerm = Boolean(formatAddress(permanentAddress))
   const sameAddress = contactRaw.sameAddress !== undefined ? Boolean(contactRaw.sameAddress) : raw.sameAddress !== undefined ? Boolean(raw.sameAddress) : !hasPerm
@@ -675,12 +684,20 @@ export const normalizeCanonicalStudent = (source = {}) => {
   const feeStructureId = firstFilled(feeRaw.feeStructureId, feeRaw.structureId, raw.feeStructureId, 'FS-STANDARD')
 
   // Documents
-  const rawDocs = raw.documents || {}
-  const docStatuses = raw.documentStatuses || {}
+  let rawDocs = { ...(formDataObj.documents || {}), ...(raw.documents || {}) }
+  let docStatuses = { ...(formDataObj.documentStatuses || {}), ...(raw.documentStatuses || {}) }
+  if (typeof raw.documentStatuses === 'string') {
+    try { docStatuses = { ...docStatuses, ...JSON.parse(raw.documentStatuses) } } catch {}
+  }
+  if (typeof raw.documents === 'string') {
+    try { rawDocs = { ...rawDocs, ...JSON.parse(raw.documents) } } catch {}
+  }
   const mappedDocs = { ...base.documents }
   DOCUMENTS_CONFIG.forEach(([key]) => {
-    if (rawDocs[key]) mappedDocs[key] = typeof rawDocs[key] === 'object' ? { ...rawDocs[key] } : { status: rawDocs[key] }
-    else if (docStatuses[key]) mappedDocs[key] = { status: docStatuses[key] }
+    const val = rawDocs[key] ?? docStatuses[key]
+    if (val !== undefined && val !== null && val !== '') {
+      mappedDocs[key] = typeof val === 'object' ? { ...val } : { status: String(val) }
+    }
   })
   if (Array.isArray(rawDocs.otherCertificates)) mappedDocs.otherCertificates = [...rawDocs.otherCertificates]
 
@@ -716,7 +733,7 @@ export const normalizeCanonicalStudent = (source = {}) => {
       photoUrl: photo,
     },
     contact: {
-      mobile: tenDigitMobile(firstFilled(contactRaw.mobile, contactRaw.studentMobile, raw.mobile, raw.studentMobile, personalRaw.mobile, personalRaw.studentMobile, '')),
+      mobile: tenDigitMobile(firstFilled(contactRaw.mobile, contactRaw.studentMobile, raw.mobile, raw.mobileNumber, raw.studentMobile, personalRaw.mobile, personalRaw.studentMobile, '')),
       alternateMobile: tenDigitMobile(firstFilled(contactRaw.alternateMobile, raw.alternateMobile, '')),
       email: firstFilled(contactRaw.email, contactRaw.studentEmail, raw.email, raw.studentEmail, personalRaw.email, personalRaw.studentEmail, '') ?? '',
       alternateEmail: firstFilled(contactRaw.alternateEmail, raw.alternateEmail, '') ?? '',

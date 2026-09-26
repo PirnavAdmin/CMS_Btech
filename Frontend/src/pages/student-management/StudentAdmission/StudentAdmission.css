@@ -4,41 +4,348 @@
 @media(max-width:760px){.sa-page-header,.sa-profile-header{align-items:stretch;flex-direction:column}.sa-page-header>button{width:100%}.sa-stats{grid-template-columns:repeat(2,1fr)}.sa-toolbar{align-items:stretch;flex-wrap:wrap}.sa-search{min-width:100%}.sa-filter-grid,.sa-form-grid,.sa-review,.sa-info-grid,.sa-approval dl{grid-template-columns:1fr 1fr}.sa-stepper{display:flex;overflow-x:auto}.sa-stepper button{min-width:110px}.sa-wizard-actions{flex-wrap:wrap}.sa-wizard-actions>span{display:none}.sa-wizard-actions button{flex:1}.sa-pagination{align-items:flex-start;flex-direction:column}.sa-profile-header>.sa-badge{margin-left:0;align-self:flex-start}.sa-profile-actions{flex-wrap:wrap}.sa-progress{align-items:flex-start;overflow-x:auto}.sa-progress h2{min-width:120px}.sa-approval>footer{flex-direction:column}.sa-approval>footer button{width:100%}}
 @media(max-width:520px){.sa-stats,.sa-filter-grid,.sa-form-grid,.sa-review,.sa-info-grid,.sa-approval dl{grid-template-columns:1fr}.sa-stats article{min-height:70px}.sa-form-section{margin:14px}.sa-step-heading{padding:14px}.sa-wizard-actions{flex-direction:column}.sa-wizard-actions button{width:100%}.sa-review{padding:14px}.sa-profile-actions{display:grid}.sa-profile-actions button{width:100%}.sa-toast{right:12px;left:12px}.sa-page-header h1{font-size:24px}}
 
-/* Compact admission wizard: card tabs stay on one line and move with the active step. */
-.student-admission nav.sa-stepper{display:flex!important;gap:8px;margin-bottom:14px;padding:4px;border:0;background:transparent;overflow-x:auto;overflow-y:hidden;scrollbar-width:none;-ms-overflow-style:none;scroll-behavior:smooth}
-.student-admission nav.sa-stepper::-webkit-scrollbar{display:none}
-.student-admission nav.sa-stepper button{display:flex;min-width:148px;height:58px;flex:0 0 148px;align-items:center;justify-content:flex-start;gap:8px;padding:8px 10px;border:1px solid var(--border)!important;border-radius:9px;background:var(--surface);box-shadow:var(--shadow-sm);white-space:nowrap}
-.student-admission nav.sa-stepper button>span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.student-admission nav.sa-stepper button>span small{display:block;margin-bottom:2px}
-.student-admission nav.sa-stepper button.active{border-color:var(--brand)!important;background:var(--brand-soft)}
+.student-admission nav.sa-stepper {
+  display: none;
+}
 
-/* Keep the photo compact while the remaining identity fields use the available space. */
-.student-admission .sa-form-section{margin:14px 18px;padding-bottom:14px}
-.student-admission .sa-form-grid{gap:9px 12px}
-.student-admission .sa-form-grid:has(>.sa-photo-upload){grid-template-columns:minmax(235px,.8fr) repeat(3,minmax(0,1fr))}
-.student-admission .sa-photo-upload{display:flex;grid-row:span 3;min-height:0;align-self:stretch;align-items:flex-start;gap:12px;padding:12px;border:1px dashed var(--border-strong);border-radius:9px;background:var(--surface-soft)}
-.student-admission .sa-photo-preview{display:grid;width:90px;height:112px;flex:0 0 90px;place-items:center;overflow:hidden;border:1px solid var(--border);border-radius:8px;background:var(--surface)}
-.student-admission .sa-photo-preview img,.student-admission .sa-profile-avatar img{width:100%;height:100%;object-fit:cover}
-.student-admission .sa-photo-upload>div:last-child{display:grid;align-content:start;gap:6px;min-width:0}
-.student-admission .sa-photo-upload span{font-size:10px;line-height:1.4}
-.student-admission .sa-photo-button,.student-admission .sa-photo-remove{display:inline-flex;align-items:center;gap:5px;width:max-content;padding:6px 8px;border:1px solid var(--border);border-radius:6px;color:var(--brand);background:var(--surface);font-size:10px;font-weight:750;white-space:nowrap;cursor:pointer}
-.student-admission .sa-photo-remove{padding:3px 0;border:0;color:var(--danger);background:transparent}
-.student-admission .sa-photo-button input,.student-admission .sa-document-actions input{position:absolute;width:1px;height:1px;overflow:hidden;opacity:0}
-.student-admission .sa-search{min-width:0;max-width:520px}
-.student-admission .sa-search input{min-width:0;text-overflow:ellipsis;white-space:nowrap;overflow:hidden}
-.student-admission .sa-filter-actions{display:flex;align-items:center;gap:8px;margin-left:auto}
-.student-admission .sa-documents{margin:14px;overflow:hidden}
-.student-admission .sa-document-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;padding:14px}
-.student-admission .sa-document-grid article{display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:10px;min-height:80px;padding:11px;border:1px solid var(--border);border-radius:8px;background:var(--surface)}
-.student-admission .sa-document-grid article.uploaded{border-color:color-mix(in srgb,var(--success) 35%,var(--border))}.student-admission .sa-document-grid article.invalid{border-color:var(--danger)}
-.student-admission .sa-document-icon{display:grid;width:36px;height:36px;place-items:center;border-radius:7px;color:var(--brand);background:var(--brand-soft)}
-.student-admission .sa-document-copy{display:grid;min-width:0;gap:3px}.student-admission .sa-document-copy span,.student-admission .sa-document-copy small{overflow:hidden;color:var(--text-muted);font-size:10px;text-overflow:ellipsis;white-space:nowrap}.student-admission .sa-document-copy .error{color:var(--danger);white-space:normal}
-.student-admission .sa-document-copy strong b{color:var(--danger);font-size:12px}
-.student-admission .sa-document-actions{display:flex;align-items:center;gap:5px}.student-admission .sa-document-actions :is(a,label,button){display:inline-flex;min-height:30px;align-items:center;gap:4px;padding:0 7px;border:1px solid var(--border);border-radius:6px;color:var(--brand);background:var(--surface);font-size:9px;font-weight:750;text-decoration:none;cursor:pointer}
-.student-admission .sa-full-review{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:11px;padding:14px}.student-admission .sa-review-section{overflow:hidden;border:1px solid var(--border);border-radius:9px;background:var(--surface)}.student-admission .sa-review-section>header{display:flex;align-items:center;justify-content:space-between;padding:10px 12px;border-bottom:1px solid var(--border);background:var(--surface-soft)}.student-admission .sa-review-section h2{margin:0;font-size:13px}.student-admission .sa-review-section header button{display:flex;align-items:center;gap:4px;border:0;color:var(--brand);background:transparent}.student-admission .sa-review-section dl{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));margin:0}.student-admission .sa-review-section dl div{padding:10px 12px;border-right:1px solid var(--border);border-bottom:1px solid var(--border)}.student-admission .sa-review-section dt{color:var(--text-muted);font-size:9px;font-weight:800;text-transform:uppercase}.student-admission .sa-review-section dd{margin:3px 0 0;font-weight:650;overflow-wrap:anywhere}.student-admission .sa-document-review .sa-review-section{grid-column:1/-1}
-@media(max-width:900px){.student-admission .sa-form-grid:has(>.sa-photo-upload){grid-template-columns:repeat(2,minmax(0,1fr))}.student-admission .sa-photo-upload{grid-column:1/-1;grid-row:auto}}
-@media(max-width:760px){.student-admission .sa-document-grid,.student-admission .sa-full-review{grid-template-columns:1fr}}
-@media(max-width:520px){.student-admission .sa-form-grid:has(>.sa-photo-upload){grid-template-columns:1fr}.student-admission .sa-photo-upload{grid-column:auto}.student-admission .sa-document-grid article{grid-template-columns:auto 1fr}.student-admission .sa-document-actions{grid-column:1/-1;justify-content:flex-end}}
+/* Standard 2-column grid and clean section styling matching AddCollege */
+.student-admission .sa-form-section {
+  margin: 0;
+  padding: 14px 18px;
+  border: 0;
+  border-bottom: 1px solid var(--border, #E2E8F0);
+  background: transparent;
+}
+.student-admission .sa-form-section:last-of-type {
+  border-bottom: 0;
+}
+.student-admission .sa-form-section > header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 14px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--border, #E2E8F0);
+}
+.student-admission .sa-form-section h2 {
+  margin: 0 0 2px;
+  font-size: 0.95rem;
+  font-weight: 750;
+  color: var(--text-primary, #0F172A);
+}
+.student-admission .sa-form-section p {
+  margin: 0;
+  font-size: 0.78rem;
+  color: var(--text-muted, #64748B);
+}
+
+.student-admission .sa-form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px 18px;
+}
+
+.student-admission .sa-field {
+  position: relative;
+  display: grid;
+  align-content: start;
+  gap: 5px;
+  color: #263b50;
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+.student-admission .sa-field b {
+  color: #c43224;
+}
+.student-admission .sa-field input,
+.student-admission .sa-field select,
+.student-admission .sa-field textarea {
+  width: 100%;
+  height: 38px;
+  padding: 0 11px;
+  border: 1px solid #CBD5E1;
+  border-radius: 8px;
+  outline: none;
+  background: var(--surface, #FFFFFF);
+  color: #172b3f;
+  font: inherit;
+  font-size: 0.82rem;
+  font-weight: 400 !important;
+  box-sizing: border-box;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+.student-admission .sa-field input:focus,
+.student-admission .sa-field select:focus,
+.student-admission .sa-field textarea:focus {
+  border-color: var(--brand, #756FB2);
+  box-shadow: 0 0 0 3px rgba(117, 111, 178, 0.13);
+}
+.student-admission .sa-field.invalid input,
+.student-admission .sa-field.invalid select {
+  border-color: #d23d32;
+}
+.student-admission .sa-field small {
+  color: #d23d32;
+  font-size: 0.72rem;
+  font-weight: 600;
+  margin-top: 2px;
+}
+
+/* Photo Upload Banner */
+.student-admission .sa-photo-upload {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 12px 16px;
+  border: 1.5px dashed #aabdd0;
+  border-radius: 10px;
+  background: var(--surface-soft, #FAF9FD);
+  margin-bottom: 4px;
+}
+.student-admission .sa-photo-preview {
+  display: grid;
+  place-items: center;
+  width: 64px;
+  height: 64px;
+  flex: 0 0 64px;
+  overflow: hidden;
+  border: 1px solid #CBD5E1;
+  border-radius: 8px;
+  background: #FFFFFF;
+}
+.student-admission .sa-photo-preview img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.student-admission .sa-photo-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+.student-admission .sa-photo-meta strong {
+  font-size: 0.84rem;
+  color: var(--text-primary, #0F172A);
+}
+.student-admission .sa-photo-meta span {
+  font-size: 0.74rem;
+  color: var(--text-muted, #64748B);
+}
+.student-admission .sa-photo-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 4px;
+}
+.student-admission .sa-photo-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 10px;
+  border: 1px solid #DDD8F0;
+  border-radius: 6px;
+  background: #FFFFFF;
+  color: var(--brand, #756FB2);
+  font-size: 0.76rem;
+  font-weight: 750;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.student-admission .sa-photo-button:hover {
+  border-color: var(--brand, #756FB2);
+  background: #EDEBF6;
+}
+.student-admission .sa-photo-remove {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 5px 8px;
+  border: 0;
+  background: transparent;
+  color: var(--danger, #EF4444);
+  font-size: 0.76rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+.student-admission .sa-photo-remove:hover {
+  background: #FEE2E2;
+  border-radius: 6px;
+}
+.student-admission .sa-photo-button input,
+.student-admission .sa-document-actions input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  opacity: 0;
+}
+
+/* Document Status Cards */
+.student-admission .sa-documents {
+  margin: 0;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+}
+.student-admission .sa-documents-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 18px 10px;
+  border-bottom: 1px solid var(--border, #E2E8F0);
+}
+.student-admission .sa-documents-header h2 {
+  margin: 0 0 2px;
+  font-size: 0.95rem;
+  font-weight: 750;
+  color: var(--text-primary, #0F172A);
+}
+.student-admission .sa-documents-header p {
+  margin: 0;
+  font-size: 0.78rem;
+  color: var(--text-muted, #64748B);
+}
+.student-admission .sa-doc-counter {
+  display: inline-flex;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: var(--brand-soft, #EDEBF6);
+  color: var(--brand, #756FB2);
+  font-size: 0.72rem;
+  font-weight: 800;
+}
+
+.student-admission .sa-wizard-card {
+  display: flex !important;
+  flex-direction: column !important;
+  flex: 1 !important;
+  min-height: 0 !important;
+  overflow: hidden !important;
+  border: none !important;
+  box-shadow: none !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  background: transparent !important;
+}
+
+.student-admission .sa-step-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 18px;
+  border-bottom: 1px solid var(--border, #E2E8F0);
+  background: var(--surface-soft, #FAF9FD);
+  flex-shrink: 0;
+}
+
+.student-admission .sa-document-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  padding: 4px 0;
+}
+
+.student-admission .sa-document-item {
+  display: grid;
+  grid-template-columns: 32px 1fr auto;
+  align-items: center;
+  gap: 10px;
+  min-height: 54px;
+  padding: 8px 12px;
+  border: 1px solid var(--border, #CBD5E1);
+  border-radius: 9px;
+  background: var(--surface, #FFFFFF);
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+  transition: all 0.15s ease;
+}
+.student-admission .sa-document-item.uploaded {
+  border-color: #86EFAC;
+  background: #F0FDF4;
+}
+.student-admission .sa-document-item.pending {
+  border-color: #FDE68A;
+  background: #FFFBEB;
+}
+
+.student-admission .sa-document-icon {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  flex: 0 0 32px;
+  border-radius: 7px;
+  background: #EDEBF6;
+  color: var(--brand, #756FB2);
+  font-size: 1rem;
+}
+.student-admission .sa-document-item.uploaded .sa-document-icon {
+  background: #DCFCE7;
+  color: #16A34A;
+}
+.student-admission .sa-document-item.pending .sa-document-icon {
+  background: #FEF3C7;
+  color: #D97706;
+}
+
+.student-admission .sa-document-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.student-admission .sa-document-copy strong {
+  font-size: 0.79rem;
+  font-weight: 750;
+  color: var(--text-primary, #0F172A);
+  white-space: normal;
+  line-height: 1.25;
+  word-break: normal;
+  overflow-wrap: break-word;
+  hyphens: none;
+}
+.student-admission .sa-doc-status-tag {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--text-muted, #64748B);
+}
+.student-admission .sa-doc-status-tag.status-submitted {
+  color: #16A34A;
+  font-weight: 700;
+}
+.student-admission .sa-doc-status-tag.status-pending {
+  color: #D97706;
+  font-weight: 700;
+}
+
+.student-admission .sa-document-actions {
+  flex: 0 0 auto;
+}
+.student-admission .sa-document-actions select {
+  width: 112px;
+  height: 32px;
+  padding: 0 8px;
+  border: 1px solid #CBD5E1;
+  border-radius: 7px;
+  background: #FAF9FD;
+  color: var(--text-primary, #0F172A);
+  font-size: 0.76rem;
+  font-weight: 600;
+  cursor: pointer;
+  outline: none;
+}
+.student-admission .sa-document-actions select:focus {
+  border-color: var(--brand, #756FB2);
+  box-shadow: 0 0 0 3px rgba(117, 111, 178, 0.13);
+}
+
+@media(max-width:760px) {
+  .student-admission .sa-form-grid,
+  .student-admission .sa-document-grid {
+    grid-template-columns: 1fr;
+  }
+}
 
 .sa-fee-structure-view{padding:14px}.sa-applicant-fees,.sa-payment-plan{max-width:760px;margin:0 auto;border:1px solid var(--border);border-radius:10px;background:var(--surface);overflow:hidden}.sa-applicant-fees>header{display:flex;align-items:center;gap:9px;padding:13px 15px;border-bottom:1px solid var(--border);background:var(--surface-soft)}.sa-applicant-fees>header>svg{color:var(--brand);font-size:20px}.sa-applicant-fees h2,.sa-applicant-fees p,.sa-payment-plan h3,.sa-payment-plan p{margin:0}.sa-applicant-fees h2{font-size:15px}.sa-applicant-fees p,.sa-payment-plan p{margin-top:3px;color:var(--text-muted);font-size:10px}.sa-applicant-fees dl{margin:0;padding:8px 15px}.sa-applicant-fees dl div{display:flex;align-items:center;justify-content:space-between;gap:15px;padding:10px 0;border-bottom:1px solid var(--border)}.sa-applicant-fees dl div:last-child{border-bottom:0}.sa-applicant-fees dt{color:var(--text-secondary)}.sa-applicant-fees dd{margin:0;font-weight:800}.sa-scholarship-note{display:flex;gap:8px;margin:0 15px 12px;padding:10px;border:1px solid color-mix(in srgb,var(--brand) 25%,var(--border));border-radius:7px;background:var(--brand-soft)}.sa-scholarship-note span{display:grid;gap:2px;font-size:10px}.sa-fee-estimates{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--border)}.sa-fee-estimates>div{display:grid;gap:3px;padding:13px 15px;color:var(--brand);background:var(--brand-soft)}.sa-fee-estimates strong{font-size:18px}.sa-fee-estimates small{grid-column:1/-1;padding:9px 15px;color:var(--text-muted);background:var(--surface-soft)}.sa-payment-plan{margin-top:14px;padding:14px 15px;overflow:visible}.sa-payment-plan.invalid{border-color:var(--danger)}.sa-payment-plan h3 b{color:var(--danger)}.sa-payment-plan>div:not(.sa-term-breakdown){display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-top:11px}.sa-payment-plan>div>label{display:flex;align-items:center;gap:9px;padding:11px;border:1px solid var(--border);border-radius:7px;background:var(--surface-soft);cursor:pointer}.sa-payment-plan>div>label.selected{border-color:var(--brand);background:var(--brand-soft)}.sa-payment-plan input{width:17px;height:17px;accent-color:var(--brand)}.sa-payment-plan label span{display:grid;gap:2px}.sa-payment-plan label small,.sa-payment-plan>small{color:var(--text-muted);font-size:10px}.sa-payment-plan>small{display:block;margin-top:7px;color:var(--danger)}.sa-term-breakdown{margin-top:11px;border:1px solid var(--border);border-radius:8px;overflow:hidden}.sa-term-breakdown>header{display:flex;justify-content:space-between;padding:9px 11px;background:var(--brand-soft)}.sa-term-breakdown dl{display:grid;grid-template-columns:repeat(2,1fr);margin:0}.sa-term-breakdown dl div{display:grid;grid-template-columns:1fr auto;gap:3px 10px;padding:11px;border-right:1px solid var(--border)}.sa-term-breakdown dd{margin:0;color:var(--brand);font-size:14px;font-weight:850}.sa-term-breakdown dl small{grid-column:1/-1;color:var(--text-muted)}.sa-term-breakdown>p{margin:0;padding:9px 11px;border-top:1px solid var(--border);color:var(--text-muted)}
 .sa-term-breakdown dl:has(>div:only-child){grid-template-columns:1fr}.sa-term-breakdown dl>div:only-child{border-right:0}
@@ -48,26 +355,188 @@
 .student-admission .sa-other-certificates{margin:0 14px 14px;border:1px solid var(--border);border-radius:9px;overflow:hidden}.student-admission .sa-other-certificates>header{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:11px 13px;background:var(--surface-soft)}.student-admission .sa-other-certificates h3,.student-admission .sa-other-certificates p{margin:0}.student-admission .sa-other-certificates h3{font-size:13px}.student-admission .sa-other-certificates header p{margin-top:2px;color:var(--text-muted);font-size:10px}.student-admission .sa-other-certificates header label{display:inline-flex;align-items:center;gap:5px;padding:7px 9px;border:1px solid var(--border);border-radius:6px;color:var(--brand);background:var(--surface);font-size:10px;font-weight:750;cursor:pointer}.student-admission .sa-other-certificates header input{position:absolute;width:1px;height:1px;overflow:hidden;opacity:0}.student-admission .sa-other-certificates>div{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;padding:12px}.student-admission .sa-other-certificates article{display:flex;align-items:center;gap:8px;padding:9px;border:1px solid var(--border);border-radius:7px}.student-admission .sa-other-certificates article>svg{color:var(--brand)}.student-admission .sa-other-certificates article span{display:grid;min-width:0;flex:1}.student-admission .sa-other-certificates article strong{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.student-admission .sa-other-certificates article small{color:var(--text-muted)}.student-admission .sa-other-certificates article a{color:var(--brand);font-size:10px;font-weight:750}.student-admission .sa-other-certificates article button{display:grid;width:28px;height:28px;place-items:center;border:1px solid var(--border);border-radius:6px;color:var(--danger);background:var(--surface)}.student-admission .sa-other-empty{padding:13px;color:var(--text-muted);font-size:10px}
 @media(max-width:760px){.student-admission .sa-other-certificates>div{grid-template-columns:1fr}.student-admission .sa-other-certificates>header{align-items:flex-start;flex-direction:column}}
 
-/* Compact review cards without equal-height row gaps. */
-.student-admission .sa-full-review{display:block;columns:2;column-gap:10px;padding:10px}
-.student-admission .sa-full-review .sa-review-section{display:inline-block;width:100%;margin:0 0 10px;break-inside:avoid;vertical-align:top}
-.student-admission .sa-review-section>header{padding:8px 10px}
-.student-admission .sa-review-section dl div{padding:7px 10px}
-.student-admission .sa-review-section dd{margin-top:2px;line-height:1.35}
-.student-admission .sa-document-review{padding-top:0}
-@media(max-width:760px){.student-admission .sa-full-review{columns:1}}
+/* Modern 2-Column Review Grid */
+.student-admission .sa-full-review {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+  padding: 0;
+  width: 100%;
+  box-sizing: border-box;
+}
 
-.student-admission .sa-preview{padding:10px;background:linear-gradient(180deg,var(--surface-soft),var(--surface) 180px)}
-.student-admission .sa-preview>.sa-full-review{padding:10px 0 0}
-.student-admission .sa-preview-header{display:grid;grid-template-columns:auto minmax(220px,1fr) auto;align-items:center;gap:14px;padding:14px 16px;border:1px solid var(--border);border-radius:11px;background:var(--surface);box-shadow:var(--shadow-sm)}
-.student-admission .sa-preview-photo{display:grid;width:64px;height:64px;place-items:center;overflow:hidden;border:2px solid var(--brand-soft);border-radius:50%;color:var(--brand);background:var(--brand-soft);font-size:23px}
-.student-admission .sa-preview-photo img{width:100%;height:100%;object-fit:cover}
-.student-admission .sa-preview-identity>span{color:var(--brand);font-size:9px;font-weight:850;letter-spacing:.08em;text-transform:uppercase}.student-admission .sa-preview-identity h2{margin:3px 0;font-size:19px}.student-admission .sa-preview-identity p{margin:0;color:var(--text-muted);font-size:11px}
-.student-admission .sa-preview-header dl{display:grid;grid-template-columns:repeat(3,minmax(100px,1fr));margin:0;border:1px solid var(--border);border-radius:8px;overflow:hidden}.student-admission .sa-preview-header dl div{padding:9px 11px;border-right:1px solid var(--border)}.student-admission .sa-preview-header dl div:last-child{border-right:0}.student-admission .sa-preview-header dt{color:var(--text-muted);font-size:8px;font-weight:800;text-transform:uppercase}.student-admission .sa-preview-header dd{margin:3px 0 0;font-size:10px;font-weight:750;white-space:nowrap}
-.student-admission .sa-preview .sa-review-section{box-shadow:0 1px 2px color-mix(in srgb,var(--text-primary) 7%,transparent)}
-.student-admission .sa-preview .sa-review-section>header{border-left:3px solid var(--brand)}
-@media(max-width:900px){.student-admission .sa-preview-header{grid-template-columns:auto 1fr}.student-admission .sa-preview-header dl{grid-column:1/-1}}
-@media(max-width:520px){.student-admission .sa-preview-header{grid-template-columns:auto 1fr;padding:12px}.student-admission .sa-preview-header dl{grid-template-columns:1fr}.student-admission .sa-preview-header dl div{border-right:0;border-bottom:1px solid var(--border)}.student-admission .sa-preview-header dl div:last-child{border-bottom:0}}
+@media(max-width: 900px) {
+  .student-admission .sa-full-review {
+    grid-template-columns: 1fr;
+  }
+}
+
+.student-admission .sa-review-section {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--border, #CBD5E1);
+  border-radius: 11px;
+  background: var(--surface, #FFFFFF);
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04);
+  overflow: hidden;
+  margin: 0;
+  box-sizing: border-box;
+}
+
+.student-admission .sa-review-section > header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 11px 16px;
+  background: var(--surface-soft, #F8FAFC);
+  border-bottom: 1px solid var(--border, #CBD5E1);
+  border-left: 4px solid var(--brand, #756FB2);
+}
+
+.student-admission .sa-review-section > header h2 {
+  margin: 0;
+  font-size: 0.92rem;
+  font-weight: 750;
+  color: var(--text-primary, #0F172A);
+}
+
+.student-admission .sa-review-section dl {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0;
+  margin: 0;
+  padding: 2px 0;
+  width: 100%;
+}
+
+.student-admission .sa-review-section dl div {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 10px 16px;
+  border-bottom: 1px solid #F1F5F9;
+  box-sizing: border-box;
+  min-width: 0;
+}
+
+.student-admission .sa-review-section dl div:nth-child(odd) {
+  border-right: 1px solid #F1F5F9;
+}
+
+.student-admission .sa-review-section dt {
+  color: var(--text-muted, #64748B);
+  font-size: 0.69rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.035em;
+  line-height: 1.2;
+}
+
+.student-admission .sa-review-section dd {
+  margin: 0;
+  color: var(--text-primary, #0F172A);
+  font-size: 0.85rem;
+  font-weight: 650;
+  line-height: 1.4;
+  overflow-wrap: break-word;
+  word-break: break-word;
+}
+
+.student-admission .sa-preview-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 16px;
+  padding: 16px 20px;
+  background: var(--surface, #FFFFFF);
+  border: 1px solid var(--border, #CBD5E1);
+  border-radius: 12px;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.05);
+}
+
+.student-admission .sa-preview-photo {
+  display: grid;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  overflow: hidden;
+  place-items: center;
+  background: var(--brand-soft, #EDEBF6);
+  color: var(--brand, #756FB2);
+  border: 2px solid var(--brand-soft, #EDEBF6);
+  flex-shrink: 0;
+}
+
+.student-admission .sa-preview-photo img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.student-admission .sa-preview-identity {
+  flex: 1;
+  min-width: 220px;
+}
+
+.student-admission .sa-preview-identity > span {
+  font-size: 0.72rem;
+  font-weight: 800;
+  color: var(--brand, #756FB2);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.student-admission .sa-preview-identity h2 {
+  margin: 2px 0 3px;
+  font-size: 1.25rem;
+  font-weight: 750;
+  color: var(--text-primary, #0F172A);
+}
+
+.student-admission .sa-preview-identity p {
+  margin: 0;
+  font-size: 0.82rem;
+  color: var(--text-muted, #64748B);
+  font-weight: 550;
+}
+
+.student-admission .sa-preview-header dl {
+  display: flex;
+  gap: 0;
+  border: 1px solid var(--border, #CBD5E1);
+  border-radius: 8px;
+  overflow: hidden;
+  background: var(--surface-soft, #F8FAFC);
+  margin: 0;
+}
+
+.student-admission .sa-preview-header dl div {
+  padding: 8px 14px;
+  border-right: 1px solid var(--border, #CBD5E1);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.student-admission .sa-preview-header dl div:last-child {
+  border-right: none;
+}
+
+.student-admission .sa-preview-header dt {
+  font-size: 0.68rem;
+  font-weight: 750;
+  color: var(--text-muted, #64748B);
+  text-transform: uppercase;
+}
+
+.student-admission .sa-preview-header dd {
+  margin: 0;
+  font-size: 0.84rem;
+  font-weight: 700;
+  color: var(--text-primary, #0F172A);
+  white-space: nowrap;
+}
 
 .student-admission .sa-student>i,.student-admission .sa-profile-avatar{overflow:hidden}
 .student-admission .sa-student>i img,.student-admission .sa-profile-avatar img{width:100%;height:100%;object-fit:cover}

@@ -657,94 +657,161 @@ export default function DepartmentManagement() {
               </button>
             </PageHeader>
 
-            <section className="erp-directory-card department-form-card-container">
-              <form onSubmit={save}>
-                <div className="department-form-grid">
-                  <label>
-                    <span>
-                      Department Name <b className="required-mark">*</b>
-                    </span>
-                    <input
-                      value={form.name}
-                      onChange={(e) => setForm({ ...form, name: e.target.value })}
-                      placeholder="e.g. Computer Science & Engineering"
-                      required
-                    />
-                  </label>
+            <div className="erp-two-column-layout">
+              <section className="erp-card-main">
+                <form onSubmit={save} style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+                  <div className="erp-form-scroll-body">
+                    <div className="department-form-grid">
+                      <label>
+                        <span>
+                          Department Name <b className="required-mark">*</b>
+                        </span>
+                        <input
+                          value={form.name}
+                          onChange={(e) => setForm({ ...form, name: e.target.value.replace(/[0-9]/g, '') })}
+                          placeholder="e.g. Computer Science & Engineering"
+                          required
+                        />
+                      </label>
 
-                  <label>
-                    <span>
-                      Department Code <b className="required-mark">*</b>
-                    </span>
-                    <input
-                      value={form.code}
-                      onChange={(e) => setForm({ ...form, code: e.target.value })}
-                      placeholder="e.g. CSE"
-                      required
-                    />
-                  </label>
+                      <label>
+                        <span>
+                          Department Code <b className="required-mark">*</b>
+                        </span>
+                        <input
+                          value={form.code}
+                          onChange={(e) => setForm({ ...form, code: e.target.value.toUpperCase() })}
+                          placeholder="e.g. CSE"
+                          required
+                        />
+                      </label>
 
-                  <label>
-                    <span>
-                      Status <b className="required-mark">*</b>
-                    </span>
-                    <select
-                      required
-                      value={form.status}
-                      onChange={(e) => setForm({ ...form, status: e.target.value })}
-                    >
-                      <option value="">Select Status</option>
-                      <option value="Active">Active</option>
-                      <option value="Inactive">Inactive</option>
-                    </select>
-                  </label>
+                      <label>
+                        <span>
+                          Status <b className="required-mark">*</b>
+                        </span>
+                        <select
+                          required
+                          value={form.status}
+                          onChange={(e) => setForm({ ...form, status: e.target.value })}
+                        >
+                          <option value="">Select Status</option>
+                          <option value="Active">Active</option>
+                          <option value="Inactive">Inactive</option>
+                        </select>
+                      </label>
 
-                  <label>
-                    <span>Start Date</span>
-                    <input
-                      type="date"
-                      value={form.startDate || ''}
-                      onChange={(e) => setForm({ ...form, startDate: e.target.value })}
-                    />
-                  </label>
+                      <label>
+                        <span>Start Date</span>
+                        <input
+                          type="date"
+                          value={form.startDate || ''}
+                          onChange={(e) => setForm({ ...form, startDate: e.target.value })}
+                        />
+                      </label>
 
-                  <label>
-                    <span>End Date</span>
-                    <input
-                      type="date"
-                      value={form.endDate || ''}
-                      onChange={(e) => setForm({ ...form, endDate: e.target.value })}
-                    />
-                  </label>
+                      <label>
+                        <span>End Date</span>
+                        <input
+                          type="date"
+                          value={form.endDate || ''}
+                          onChange={(e) => setForm({ ...form, endDate: e.target.value })}
+                        />
+                      </label>
 
-                  <label className="full-width">
-                    <span>Description</span>
-                    <textarea
-                      value={form.description}
-                      onChange={(e) => setForm({ ...form, description: e.target.value })}
-                      placeholder="Describe this organizational department..."
-                      rows={2}
-                    />
-                  </label>
+                      <label className="full-width">
+                        <span>Description</span>
+                        <textarea
+                          value={form.description}
+                          onChange={(e) => setForm({ ...form, description: e.target.value })}
+                          placeholder="Describe this organizational department..."
+                          rows={2}
+                        />
+                      </label>
+                    </div>
+
+                    {isDetailsLoading && <p className="department-no-results">Loading department details...</p>}
+                    {error && (
+                      <p className="department-error" role="alert" style={{ marginTop: '10px' }}>
+                        {error}
+                      </p>
+                    )}
+                  </div>
+
+                  <div className="erp-actions-bar">
+                    <button type="button" className="erp-btn erp-btn--secondary" onClick={closeToList} disabled={isSaving}>
+                      Cancel
+                    </button>
+                    <button type="submit" className="erp-btn erp-btn--primary" disabled={isSaving}>
+                      {isSaving ? 'Saving...' : form.id ? 'Save Changes' : 'Create Department'}
+                    </button>
+                  </div>
+                </form>
+              </section>
+
+              <aside className="college-live-preview" aria-label="Department preview">
+                <header className="preview-top-bar">
+                  <span className="preview-live-tag">
+                    <span className="live-dot" /> LIVE PREVIEW
+                  </span>
+                  <span className="preview-sync-hint">Real-time sync</span>
+                </header>
+                <div className="preview-body-container">
+                  <div className="preview-hero">
+                    <div className="preview-hero-badge">
+                      {form.code ? form.code.slice(0, 4).toUpperCase() : (form.name ? form.name.slice(0, 4).toUpperCase() : 'DEPT')}
+                    </div>
+                    <div className="preview-hero-details">
+                      <h3 className="preview-course-title">{form.name.trim() || 'Department Preview'}</h3>
+                      <p className="preview-course-meta">
+                        {[form.code, form.status || (form.name ? 'Active' : '')].filter(Boolean).join(' • ') || 'Department details'}
+                      </p>
+                    </div>
+                  </div>
+
+                  {(() => {
+                    const sections = [
+                      {
+                        title: 'Department Details',
+                        fields: [
+                          ['Department Name', form.name],
+                          ['Department Code', form.code],
+                          ['Status', form.name || form.code ? form.status || 'Active' : ''],
+                          ['Start Date', form.startDate],
+                          ['End Date', form.endDate],
+                          ['Description', form.description],
+                        ],
+                      },
+                    ].map((sec) => ({
+                      ...sec,
+                      fields: sec.fields.filter(([, val]) => val !== null && val !== undefined && String(val).trim() !== '' && String(val).trim() !== '—'),
+                    })).filter((sec) => sec.fields.length > 0)
+
+                    if (sections.length === 0) {
+                      return (
+                        <div className="preview-empty-hint">
+                          <span>Enter details in the form to preview here in real time.</span>
+                        </div>
+                      )
+                    }
+
+                    return sections.map((sec) => (
+                      <div key={sec.title} className="preview-section-group">
+                        <span className="preview-section-title">{sec.title}</span>
+                        <div className="preview-kv-grid">
+                          {sec.fields.map(([label, text]) => (
+                            <div key={label} className="preview-kv-item" style={label === 'Description' ? { gridColumn: 'span 2' } : {}}>
+                              <span className="kv-label">{label}</span>
+                              <strong className="kv-val" title={String(text).trim()}>{String(text).trim()}</strong>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    ))
+                  })()}
                 </div>
-
-                {isDetailsLoading && <p className="department-no-results">Loading department details...</p>}
-                {error && (
-                  <p className="department-error" role="alert" style={{ marginTop: '10px' }}>
-                    {error}
-                  </p>
-                )}
-
-                <div className="erp-form-actions">
-                  <button type="button" className="erp-btn erp-btn--secondary" onClick={closeToList} disabled={isSaving}>
-                    Cancel
-                  </button>
-                  <button type="submit" className="erp-btn erp-btn--primary" disabled={isSaving}>
-                    {isSaving ? 'Saving...' : form.id ? 'Save Changes' : 'Create Department'}
-                  </button>
-                </div>
-              </form>
-            </section>
+              </aside>
+            </div>
           </div>
         )}
 

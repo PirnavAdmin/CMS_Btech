@@ -352,7 +352,204 @@ function SectionForm({ editMode = false }) {
   const validate = () => { const next = {}; ['courseId', 'branchId', 'semesterId', 'name', 'code', 'status'].forEach((key) => { if (!String(form[key] || '').trim()) next[key] = 'Required.' }); if (!form.academicYearId && !selectedAcademicYearId) next.academicYearId = yearWarning || 'An academic year is required.'; if (!editMode && !semester) next.semesterId = 'Select a configured semester.'; if (!Number.isInteger(Number(form.capacity)) || Number(form.capacity) < 1 || Number(form.capacity) > 120) next.capacity = 'Capacity must be a whole number from 1 to 120.'; if (editMode && Number(form.capacity) < assignedCount) next.capacity = `Capacity cannot be below the ${assignedCount} assigned students.`; if (!/^[A-Z0-9]+(?:-[A-Z0-9]+)*$/.test(String(form.code || '').trim().toUpperCase())) next.code = 'Use uppercase letters, numbers, and single hyphens only.'; const mapping = { ...form, academicYearId: form.academicYearId || selectedAcademicYearId || activeYear?.id }; if (sections.some((item) => String(item.id) !== String(id) && sameMapping(item, mapping) && item.name.trim().toLowerCase() === form.name.trim().toLowerCase())) next.name = 'This section already exists for this academic mapping.'; if (sections.some((item) => String(item.id) !== String(id) && sameMapping(item, mapping) && item.code.trim().toLowerCase() === form.code.trim().toLowerCase())) next.code = 'This section code already exists for this academic mapping.'; setErrors(next); if (Object.keys(next).length) showWarning('Correct the highlighted fields before saving the section.'); return !Object.keys(next).length }
   const submit = async (event) => { event.preventDefault(); if (saving || !validate()) return; setSaving(true); try { const mappedBranch = !editMode && (!branch?.collegeId || !branch?.departmentId) ? normalizeBranch(responseRecord(await branchApi.getById(form.branchId))) : branch; const mappedCourse = !editMode && (!mappedBranch?.collegeId || !mappedBranch?.departmentId) ? normalizeCourse(responseRecord(await courseApi.getById(form.courseId))) : course; const departmentName = String(mappedBranch?.departmentName || mappedCourse?.departmentName || '').trim().toLowerCase(); const matchedDepartment = activeDepartments.find((item) => String(item.departmentName || item.name || '').trim().toLowerCase() === departmentName); const payload = { ...form, collegeId: mappedBranch?.collegeId || mappedCourse?.collegeId || selectedCollegeId || selectedCollege?.collegeId || selectedCollege?.id || form.collegeId, departmentId: mappedBranch?.departmentId || mappedCourse?.departmentId || matchedDepartment?.departmentId || matchedDepartment?.id || form.departmentId, academicYearId: form.academicYearId || selectedAcademicYearId || activeYear?.id, academicYear: activeYear?.name || form.academicYear, ...legacy.current, capacity: Number(form.capacity) }; if (editMode) { const currentStudents = await sectionAssignmentApi.listBySection(id); if (payload.capacity < currentStudents.length) throw new Error('Capacity cannot be below the current assigned student count.'); const capacityCheck = await sectionApi.validateCapacity(id, payload.capacity); if (capacityCheck === false || capacityCheck?.isValid === false) throw new Error(capacityCheck?.message || 'The requested capacity is not allowed.'); await sectionApi.update(id, payload); await sectionApi.updateStatus(id, payload.status) } else { const created = await sectionApi.create(payload); rememberCreated('sections', created); if (payload.status === 'Inactive') await sectionApi.updateStatus(created.id, payload.status) }; eventBus.emit(ERP_EVENTS.ACADEMIC_UPDATED, { form }); setNotice(`Section ${editMode ? 'updated' : 'created'} successfully.`); setTimeout(() => navigate('/section-management'), 700) } catch (error) { setErrors((current) => ({ ...current, form: apiError(error, 'Unable to save section.') })) } finally { setSaving(false) } }
   if (loading) return <Page><Empty icon={FiClock} title="Loading section form..." /></Page>
-  return <Page><Header title={editMode ? 'Edit Section' : 'Add Section'} text={editMode ? 'Update section capacity, advisor, room, and status.' : 'Create a section for the selected academic mapping.'}><Link className="section-primary secondary" to="/section-management"><FiArrowLeft /> Back</Link></Header><form className={`section-form-page section-form-page--${formTab}`} onSubmit={submit} noValidate>{errors.form && <div className="section-form-error" role="alert">{errors.form}</div>}{yearWarning && <div className="section-form-warning" role="alert">{yearWarning}</div>}<div className="section-form-tabs" role="tablist" aria-label="Section form tabs"><button type="button" role="tab" aria-selected={formTab === 'mapping'} className={formTab === 'mapping' ? 'active' : ''} onClick={() => setFormTab('mapping')}>Academic Mapping</button><button type="button" role="tab" aria-selected={formTab === 'details'} className={formTab === 'details' ? 'active' : ''} disabled={!canOpenDetailsTab} onClick={() => setFormTab('details')}>Section Details</button></div><section className="section-form-card section-form-card--mapping"><header><span>Academic Mapping</span><h2>Course, Branch, Semester</h2></header><div className="section-form-grid"><Field label="Course *" error={errors.courseId}><SearchableSelect label="Course" value={form.courseId} options={scopedCourses.map((item) => ({ id: item.id, value: item.id, name: item.name, code: item.code }))} onChange={setCourse} disabled={editMode} placeholder="Select Course" searchPlaceholder="Search course name or code..." /></Field><Field label="Course Code"><ReadOnly value={course?.code || form.courseCode} placeholder="Resolved from selected course" /></Field><Field label="Branch *" error={errors.branchId}><SearchableSelect label="Branch" value={form.branchId} options={branches.map((item) => ({ id: item.id, value: item.id, name: item.name, code: item.code }))} onChange={setBranch} disabled={editMode || !form.courseId} placeholder={form.courseId ? 'Select Branch' : 'Select Course first'} searchPlaceholder="Search branch name or code..." /></Field><Field label="Branch Code"><ReadOnly value={branch?.code || form.branchCode} placeholder="Resolved from selected branch" /></Field><Field label="Semester *" error={errors.semesterId}><SearchableSelect label="Semester" value={form.semesterId} options={(editMode && !semesters.some((item) => String(item.id) === String(form.semesterId)) && form.semesterId ? [...semesters, { id: form.semesterId, name: form.semester }] : semesters).map((item) => ({ id: item.id, value: item.id, name: item.name, code: item.academicYearName }))} onChange={setSemester} disabled={editMode || !form.branchId} placeholder={form.branchId ? 'Select Semester' : 'Select Branch first'} searchPlaceholder="Search semester..." noOptionsMessage="No configured semesters found." /></Field></div></section><section className="section-form-card section-form-card--details"><header><span>Section Information</span><h2>Capacity, Faculty Advisor, and Room</h2></header><div className="section-form-grid"><Field label="Section Name *" error={errors.name}><input value={form.name} onChange={(event) => setField('name', event.target.value)} placeholder="Section A" /></Field><Field label="Section Code *" error={errors.code}><input value={form.code} onChange={(event) => setField('code', event.target.value)} placeholder="CSE-S1-A" /></Field><Field label="Capacity *" error={errors.capacity}><input type="number" min="1" max="120" value={form.capacity} onChange={(event) => setField('capacity', event.target.value)} /></Field><Field label="Faculty Advisor" error={errors.facultyAdvisorEmployeeProfileId}><SearchableSelect label="Faculty Advisor" value={form.facultyAdvisorEmployeeProfileId} options={teacherCandidates.map((item) => ({ id: item.employeeProfileId, value: item.employeeProfileId, name: item.fullName, code: [item.employeeCode, item.designation].filter(clean).join(' / ') }))} onChange={(value) => { const teacher = teacherCandidates.find((item) => String(item.employeeProfileId) === String(value)); setForm((current) => ({ ...current, facultyAdvisorEmployeeProfileId: value, advisor: teacher?.fullName || '' })) }} placeholder="Select Faculty Advisor" searchPlaceholder="Search faculty..." noOptionsMessage="No faculty candidates found." />{!teacherCandidates.length && <small>No faculty candidates are available to assign.</small>}</Field><Field label="Room / Classroom"><input value={form.room} onChange={(event) => setField('room', event.target.value)} placeholder="CSE-101" /></Field><Field label="Status *" error={errors.status}><select value={form.status} onChange={(event) => setField('status', event.target.value)}><option value="" disabled>Select Status</option><option value="Active">Active</option><option value="Inactive">Inactive</option></select></Field></div></section><footer className="section-form-actions">{formTab === 'mapping' ? <><Link className="section-primary secondary" to="/section-management">Cancel</Link><button type="button" className="section-primary" disabled={!canOpenDetailsTab} onClick={() => setFormTab('details')}>Next</button></> : <><button type="button" className="section-primary secondary" onClick={() => setFormTab('mapping')}>Back</button><button className="section-primary" disabled={saving}>{saving ? 'Saving...' : editMode ? 'Save Changes' : 'Create Section'}</button></>}</footer></form></Page>
+  const selectedTeacher = teacherCandidates.find((item) => String(item.employeeProfileId) === String(form.facultyAdvisorEmployeeProfileId))
+  const selectedCourseObj = scopedCourses.find((item) => String(item.id) === String(form.courseId))
+  const selectedBranchObj = branches.find((item) => String(item.id) === String(form.branchId))
+  const selectedSemesterObj = semesters.find((item) => String(item.id) === String(form.semesterId))
+
+  return (
+    <Page>
+      <Header title={editMode ? 'Edit Section' : 'Add Section'} text={editMode ? 'Update section capacity, advisor, room, and status.' : 'Create a section for the selected academic mapping.'}>
+        <Link className="section-primary secondary" to="/section-management"><FiArrowLeft /> Back</Link>
+      </Header>
+      
+      <div className="erp-two-column-layout">
+        <form className="erp-card-main section-form-card-unified" onSubmit={submit} noValidate>
+          {errors.form && <div className="section-form-error" role="alert">{errors.form}</div>}
+          {yearWarning && <div className="section-form-warning" role="alert">{yearWarning}</div>}
+          
+          <div className="erp-tabs-bar" role="tablist" aria-label="Section form tabs">
+            <button
+              type="button"
+              role="tab"
+              aria-selected={formTab === 'mapping'}
+              className={`erp-tab-btn ${formTab === 'mapping' ? 'active' : ''}`}
+              onClick={() => setFormTab('mapping')}
+            >
+              1. Academic Mapping
+            </button>
+            <button
+              type="button"
+              role="tab"
+              aria-selected={formTab === 'details'}
+              className={`erp-tab-btn ${formTab === 'details' ? 'active' : ''}`}
+              disabled={!canOpenDetailsTab}
+              onClick={() => setFormTab('details')}
+            >
+              2. Section Details
+            </button>
+          </div>
+
+          <div className="erp-form-scroll-body">
+            {formTab === 'mapping' ? (
+              <section className="section-step-content">
+                <header className="step-content-heading">
+                  <h3>Academic Mapping</h3>
+                  <p>Select Course, Branch, and Semester for this section.</p>
+                </header>
+                <div className="semester-form-grid">
+                  <Field label="Course *" error={errors.courseId}>
+                    <SearchableSelect label="Course" value={form.courseId} options={scopedCourses.map((item) => ({ id: item.id, value: item.id, name: item.name, code: item.code }))} onChange={setCourse} disabled={editMode} placeholder="Select Course" searchPlaceholder="Search course name or code..." />
+                  </Field>
+                  <Field label="Course Code">
+                    <ReadOnly value={course?.code || form.courseCode} placeholder="Resolved from selected course" />
+                  </Field>
+                  <Field label="Branch *" error={errors.branchId}>
+                    <SearchableSelect label="Branch" value={form.branchId} options={branches.map((item) => ({ id: item.id, value: item.id, name: item.name, code: item.code }))} onChange={setBranch} disabled={editMode || !form.courseId} placeholder={form.courseId ? 'Select Branch' : 'Select Course first'} searchPlaceholder="Search branch name or code..." />
+                  </Field>
+                  <Field label="Branch Code">
+                    <ReadOnly value={branch?.code || form.branchCode} placeholder="Resolved from selected branch" />
+                  </Field>
+                  <Field label="Semester *" error={errors.semesterId}>
+                    <SearchableSelect label="Semester" value={form.semesterId} options={(editMode && !semesters.some((item) => String(item.id) === String(form.semesterId)) && form.semesterId ? [...semesters, { id: form.semesterId, name: form.semester }] : semesters).map((item) => ({ id: item.id, value: item.id, name: item.name, code: item.academicYearName }))} onChange={setSemester} disabled={editMode || !form.branchId} placeholder={form.branchId ? 'Select Semester' : 'Select Branch first'} searchPlaceholder="Search semester..." noOptionsMessage="No configured semesters found." />
+                  </Field>
+                  <Field label="Academic Year">
+                    <ReadOnly value={activeYear?.name || form.academicYear} placeholder="Resolved from active year" />
+                  </Field>
+                </div>
+              </section>
+            ) : (
+              <section className="section-step-content">
+                <header className="step-content-heading">
+                  <h3>Section Information</h3>
+                  <p>Specify section name, code, capacity, and classroom details.</p>
+                </header>
+                <div className="semester-form-grid">
+                  <Field label="Section Name *" error={errors.name}>
+                    <input value={form.name} onChange={(event) => setField('name', event.target.value)} placeholder="Section A" />
+                  </Field>
+                  <Field label="Section Code *" error={errors.code}>
+                    <input value={form.code} onChange={(event) => setField('code', event.target.value)} placeholder="CSE-S1-A" />
+                  </Field>
+                  <Field label="Capacity *" error={errors.capacity}>
+                    <input type="number" min="1" max="120" value={form.capacity} onChange={(event) => setField('capacity', event.target.value)} />
+                  </Field>
+                  <Field label="Faculty Advisor" error={errors.facultyAdvisorEmployeeProfileId}>
+                    <SearchableSelect label="Faculty Advisor" value={form.facultyAdvisorEmployeeProfileId} options={teacherCandidates.map((item) => ({ id: item.employeeProfileId, value: item.employeeProfileId, name: item.fullName, code: [item.employeeCode, item.designation].filter(clean).join(' / ') }))} onChange={(value) => { const teacher = teacherCandidates.find((item) => String(item.employeeProfileId) === String(value)); setForm((current) => ({ ...current, facultyAdvisorEmployeeProfileId: value, advisor: teacher?.fullName || '' })) }} placeholder="Select Faculty Advisor" searchPlaceholder="Search faculty..." noOptionsMessage="No faculty candidates found." />
+                  </Field>
+                  <Field label="Room / Classroom">
+                    <input value={form.room} onChange={(event) => setField('room', event.target.value)} placeholder="CSE-101" />
+                  </Field>
+                  <Field label="Status *" error={errors.status}>
+                    <select value={form.status} onChange={(event) => setField('status', event.target.value)}>
+                      <option value="" disabled>Select Status</option>
+                      <option value="Active">Active</option>
+                      <option value="Inactive">Inactive</option>
+                    </select>
+                  </Field>
+                </div>
+              </section>
+            )}
+          </div>
+
+          <footer className="erp-actions-bar">
+            {formTab === 'mapping' ? (
+              <>
+                <Link className="cm-button secondary" to="/section-management">Cancel</Link>
+                <button type="button" className="cm-button" disabled={!canOpenDetailsTab} onClick={() => setFormTab('details')}>
+                  Next →
+                </button>
+              </>
+            ) : (
+              <>
+                <button type="button" className="cm-button secondary" onClick={() => setFormTab('mapping')}>
+                  ← Previous
+                </button>
+                <button type="submit" className="cm-button" disabled={saving}>
+                  {saving ? 'Saving...' : editMode ? 'Save Changes' : 'Create Section'}
+                </button>
+              </>
+            )}
+          </footer>
+        </form>
+
+        <aside className="college-live-preview" aria-label="Section Live Preview">
+          <header className="preview-top-bar">
+            <span className="preview-live-tag">
+              <span className="live-dot" /> LIVE PREVIEW
+            </span>
+            <span className="preview-sync-hint">Real-time sync</span>
+          </header>
+
+          <div className="preview-body-container">
+            <div className="preview-hero">
+              <div className="preview-hero-badge">
+                {form.code ? form.code.slice(0, 4).toUpperCase() : (form.name ? form.name.slice(0, 4).toUpperCase() : 'SEC')}
+              </div>
+              <div className="preview-hero-details">
+                <h3 className="preview-course-title">
+                  {form.name ? form.name.trim() : 'Section Preview'}
+                </h3>
+                <p className="preview-course-meta">
+                  {[form.code, selectedCourseObj?.name, form.capacity && `${form.capacity} Students`].filter(Boolean).join(' • ') || 'Academic details'}
+                </p>
+              </div>
+            </div>
+
+            {(() => {
+              const sections = [
+                {
+                  title: 'Academic Mapping',
+                  fields: [
+                    ['Course', selectedCourseObj?.name],
+                    ['Branch', selectedBranchObj?.name],
+                    ['Semester', selectedSemesterObj?.name || form.semester],
+                    ['Academic Year', form.courseId ? activeYear?.name : ''],
+                  ],
+                },
+                {
+                  title: 'Section Details',
+                  fields: [
+                    ['Section Name', form.name],
+                    ['Section Code', form.code],
+                    ['Capacity', form.capacity ? `${form.capacity} Students` : ''],
+                    ['Faculty Advisor', selectedTeacher?.fullName || form.advisor],
+                    ['Classroom / Room', form.room],
+                    ['Status', form.name || form.code ? form.status || 'Active' : ''],
+                  ],
+                },
+              ].map((sec) => ({
+                ...sec,
+                fields: sec.fields.filter(([, val]) => val !== null && val !== undefined && String(val).trim() !== '' && String(val).trim() !== '—'),
+              })).filter((sec) => sec.fields.length > 0)
+
+              if (sections.length === 0) {
+                return (
+                  <div className="preview-empty-hint">
+                    <span>Enter details in the form to preview here in real time.</span>
+                  </div>
+                )
+              }
+
+              return sections.map((sec) => (
+                <div key={sec.title} className="preview-section-group">
+                  <span className="preview-section-title">{sec.title}</span>
+                  <div className="preview-kv-grid">
+                    {sec.fields.map(([label, text]) => (
+                      <div key={label} className="preview-kv-item">
+                        <span className="kv-label">{label}</span>
+                        <strong className="kv-val" title={String(text).trim()}>{String(text).trim()}</strong>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))
+            })()}
+          </div>
+        </aside>
+      </div>
+    </Page>
+  )
 }
 
 function SectionDetails() {

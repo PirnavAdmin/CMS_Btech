@@ -3,6 +3,7 @@ import { rememberCreated } from '../../utils/newestFirst'
 import useToastState from '../../hooks/useToastState'
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
+import { FiCheck } from 'react-icons/fi'
 import DashboardLayout from '../../layouts/DashboardLayout'
 import SearchableSelect from '../../components/SearchableSelect'
 import { cacheCollegeLogo, createCollege, fetchCollegeLogo, getCollegeById, getCollegeLogoUrl, getColleges, isBackendCollegeLogo, isValidWebsite, normalizeWebsite, readCachedCollegeLogo, readCollegeExtendedDetails, unwrapCollegeRecord, updateCollege, uploadCollegeLogo, WEBSITE_VALIDATION_MESSAGE } from '../../auth/collegeApi'
@@ -19,7 +20,6 @@ const FORM_TABS = [
   { id: 'contact', label: 'Contact Information' },
   { id: 'administration', label: 'Administration' },
   { id: 'accreditation', label: 'Accreditation Details' },
-  { id: 'preview', label: 'Preview & Submit' },
 ]
 const TAB_FIELDS = {
   college: ['collegeName', 'collegeCode', 'collegeType', 'collegeTypeOther', 'universityName'],
@@ -43,7 +43,7 @@ const initialValues = {
   addressLine1: '', addressLine2: '', area: '', district: '', city: '', state: '', pincode: '', country: 'India',
   contactNumber: '', alternateContactNumber: '', email: '', website: '',
   principalName: '', principalEmail: '', principalContact: '',
-  accreditationBody: '', accreditationStatus: 'Not Accredited', accreditationGrade: '',
+  accreditationBody: '', accreditationStatus: '', accreditationGrade: '',
   accreditationNumber: '', validFrom: '', validUntil: '', startDate: '', endDate: '',
 }
 const requiredDraftFields = ['collegeName', 'collegeCode', 'collegeType', 'universityName', 'addressLine1', 'city', 'state', 'pincode', 'contactNumber', 'email', 'principalName']
@@ -51,8 +51,11 @@ const draftKey = (editId) => `pirnav-college-draft-${editId || 'new'}`
 const draftProgress = (values) => Math.round(requiredDraftFields.filter((field) => String(values[field] || '').trim()).length / requiredDraftFields.length * 100)
 
 const phonePattern = /^[6-9]\d{9}$/
+const contactPattern = /^(?:[6-9]\d{9}|0[1-9]\d{7,9}|[1-9]\d{7,10})$/
 const emailPattern = /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z]{2,})+$/
 const codePattern = /^[A-Z0-9]{2,12}$/
+const personNamePattern = /^[a-zA-Z\s.'-]+$/
+const institutionNamePattern = /^[a-zA-Z\s.,&'()-]+$/
 
 const getApiErrorMessage = (error) => {
   const data = error?.response?.data
@@ -80,22 +83,32 @@ function validate(values) {
   const errors = {}
   const name = values.collegeName.trim()
   if (!name) errors.collegeName = 'College name is required.'
+  else if (/\d/.test(name) || !institutionNamePattern.test(name)) errors.collegeName = 'College name cannot contain numbers.'
   else if (name.length < 3 || name.length > 120) errors.collegeName = 'Use between 3 and 120 characters.'
   if (!values.collegeCode) errors.collegeCode = 'College code is required.'
   else if (!codePattern.test(values.collegeCode)) errors.collegeCode = 'Use 2–12 uppercase letters and numbers only.'
   if (!values.collegeType) errors.collegeType = 'Select a college type.'
   else if (values.collegeType === 'Other' && !values.collegeTypeOther.trim()) errors.collegeTypeOther = 'Enter the college type.'
-  if (!values.universityName.trim()) errors.universityName = 'University name is required.'
+  const university = values.universityName.trim()
+  if (!university) errors.universityName = 'University name is required.'
+  else if (/\d/.test(university) || !institutionNamePattern.test(university)) errors.universityName = 'University name cannot contain numbers.'
+  else if (university.length < 3 || university.length > 120) errors.universityName = 'Use between 3 and 120 characters.'
   if (!values.addressLine1.trim()) errors.addressLine1 = 'Address line 1 is required.'
   if (!values.city.trim()) errors.city = 'City is required.'
+  else if (!personNamePattern.test(values.city.trim())) errors.city = 'City can only contain letters and spaces.'
   if (!values.state.trim()) errors.state = 'State is required.'
+  else if (!personNamePattern.test(values.state.trim())) errors.state = 'State can only contain letters and spaces.'
   if (!/^[1-9]\d{5}$/.test(values.pincode.trim())) errors.pincode = 'Enter a valid 6-digit Indian pincode (cannot start with 0).'
-  if (!values.contactNumber) errors.contactNumber = 'Official contact number is required.'
-  else if (!phonePattern.test(values.contactNumber)) errors.contactNumber = 'Enter a valid 10-digit Indian mobile number.'
-  if (values.alternateContactNumber && !phonePattern.test(values.alternateContactNumber)) errors.alternateContactNumber = 'Enter a valid 10-digit Indian mobile number.'
+  const cleanContact = String(values.contactNumber || '').replace(/\D/g, '')
+  if (!cleanContact) errors.contactNumber = 'Official contact number is required.'
+  else if (!contactPattern.test(cleanContact)) errors.contactNumber = 'Enter a valid 10-digit mobile number or landline number with STD code.'
+  const cleanAltContact = String(values.alternateContactNumber || '').replace(/\D/g, '')
+  if (values.alternateContactNumber && !contactPattern.test(cleanAltContact)) errors.alternateContactNumber = 'Enter a valid 10-digit mobile number or landline number with STD code.'
   if (!values.email.trim()) errors.email = 'Official email is required.'
   else if (!emailPattern.test(values.email.trim())) errors.email = 'Enter a valid email address.'
   if (!values.principalName.trim()) errors.principalName = 'Principal name is required.'
+  else if (!personNamePattern.test(values.principalName.trim())) errors.principalName = 'Principal name can only contain letters, spaces, and dots.'
+  else if (values.principalName.trim().length < 2) errors.principalName = 'Principal name must be at least 2 characters.'
   const website = normalizeWebsite(values.website)
   if (values.website.trim() && !isValidWebsite(website)) errors.website = WEBSITE_VALIDATION_MESSAGE
   if (!values.principalEmail.trim()) errors.principalEmail = 'Principal email is required.'
@@ -129,6 +142,7 @@ export default function AddCollege() {
   const editId = searchParams.get('edit')
   const fileRef = useRef(null)
   const logoObjectUrlRef = useRef('')
+  const tabsNavRef = useRef(null)
   const [storedValues, setValues] = useState(initialValues)
   const values = storedValues.collegeType === 'Deemed University'
     ? { ...storedValues, universityName: storedValues.collegeName }
@@ -226,7 +240,7 @@ export default function AddCollege() {
       // Backend logo URLs need an authorization header, which an <img> element
       // cannot send. They are fetched below and displayed as a blob URL.
       const resolvedLogo = logoUrl && !isBackendCollegeLogo(logoUrl) ? logoUrl : ''
-      const loadedValues = { ...initialValues, collegeName: record.name ?? record.collegeName ?? record.CollegeName ?? '', collegeCode: record.code ?? record.collegeCode ?? record.CollegeCode ?? '', collegeType: rawType && !isKnownType ? 'Other' : rawType, collegeTypeOther: rawType && !isKnownType ? rawType : '', universityName: record.university ?? record.universityName ?? record.UniversityName ?? '', addressLine1: record.addressLine1 ?? addressRecord.addressLine1 ?? addressParts[0] ?? '', addressLine2: record.addressLine2 ?? addressRecord.addressLine2 ?? addressParts.slice(1).join(', '), area: record.area ?? addressRecord.area ?? extended.area ?? '', district: record.district ?? addressRecord.district ?? extended.district ?? '', city: record.city ?? addressRecord.city ?? record.City ?? '', state: record.state ?? addressRecord.state ?? record.State ?? '', pincode: String(record.pincode ?? addressRecord.pincode ?? record.Pincode ?? ''), country: record.country ?? addressRecord.country ?? 'India', contactNumber: String(record.contact ?? record.contactNumber ?? record.phoneNumber ?? record.mobile ?? record.phone ?? contactRecord.contactNumber ?? contactRecord.phoneNumber ?? contactRecord.mobile ?? contactRecord.phone ?? record.Contact ?? ''), alternateContactNumber: String(record.alternateContact ?? record.alternateContactNumber ?? record.alternatePhoneNumber ?? contactRecord.alternateContactNumber ?? extended.alternateContactNumber ?? ''), email: record.email ?? record.collegeEmail ?? contactRecord.email ?? record.Email ?? '', website: record.website ?? record.Website ?? contactRecord.website ?? contactRecord.Website ?? '', principalName: record.principal ?? record.principalName ?? principalRecord.principalName ?? record.PrincipalName ?? '', principalEmail: record.principalEmail ?? principalRecord.principalEmail ?? extended.principalEmail ?? '', principalContact: String(record.principalContact ?? record.principalPhone ?? principalRecord.principalContact ?? extended.principalContact ?? ''), accreditationBody: record.accreditationBody ?? accreditationRecord.body ?? accreditationRecord.accreditationBody ?? extended.accreditationBody ?? '', accreditationStatus: record.accreditationStatus ?? accreditationRecord.status ?? 'Not Accredited', accreditationGrade: record.accreditationGrade ?? accreditationRecord.grade ?? extended.accreditationGrade ?? '', accreditationNumber: record.accreditationNumber ?? accreditationRecord.number ?? extended.accreditationNumber ?? '', validFrom: dateInputValue(record.validFrom ?? record.accreditationValidFrom ?? accreditationRecord.validFrom ?? extended.validFrom), validUntil: dateInputValue(record.validUntil ?? record.accreditationValidUntil ?? accreditationRecord.validUntil ?? extended.validUntil), logo: resolvedLogo, logoName: record.logoName ?? extended.logoName ?? '' }
+      const loadedValues = { ...initialValues, collegeName: record.name ?? record.collegeName ?? record.CollegeName ?? '', collegeCode: record.code ?? record.collegeCode ?? record.CollegeCode ?? '', collegeType: rawType && !isKnownType ? 'Other' : rawType, collegeTypeOther: rawType && !isKnownType ? rawType : '', universityName: record.university ?? record.universityName ?? record.UniversityName ?? '', addressLine1: record.addressLine1 ?? addressRecord.addressLine1 ?? addressParts[0] ?? '', addressLine2: record.addressLine2 ?? addressRecord.addressLine2 ?? addressParts.slice(1).join(', '), area: record.area ?? addressRecord.area ?? extended.area ?? '', district: record.district ?? addressRecord.district ?? extended.district ?? '', city: record.city ?? addressRecord.city ?? record.City ?? '', state: record.state ?? addressRecord.state ?? record.State ?? '', pincode: String(record.pincode ?? addressRecord.pincode ?? record.Pincode ?? ''), country: record.country ?? addressRecord.country ?? 'India', contactNumber: String(record.contact ?? record.contactNumber ?? record.phoneNumber ?? record.mobile ?? record.phone ?? contactRecord.contactNumber ?? contactRecord.phoneNumber ?? contactRecord.mobile ?? contactRecord.phone ?? record.Contact ?? ''), alternateContactNumber: String(record.alternateContact ?? record.alternateContactNumber ?? record.alternatePhoneNumber ?? contactRecord.alternateContactNumber ?? extended.alternateContactNumber ?? ''), email: record.email ?? record.collegeEmail ?? contactRecord.email ?? record.Email ?? '', website: record.website ?? record.Website ?? contactRecord.website ?? contactRecord.Website ?? '', principalName: record.principal ?? record.principalName ?? principalRecord.principalName ?? record.PrincipalName ?? '', principalEmail: record.principalEmail ?? principalRecord.principalEmail ?? extended.principalEmail ?? '', principalContact: String(record.principalContact ?? record.principalPhone ?? principalRecord.principalContact ?? extended.principalContact ?? ''), accreditationBody: record.accreditationBody ?? accreditationRecord.body ?? accreditationRecord.accreditationBody ?? extended.accreditationBody ?? '', accreditationStatus: record.accreditationStatus ?? accreditationRecord.status ?? '', accreditationGrade: record.accreditationGrade ?? accreditationRecord.grade ?? extended.accreditationGrade ?? '', accreditationNumber: record.accreditationNumber ?? accreditationRecord.number ?? extended.accreditationNumber ?? '', validFrom: dateInputValue(record.validFrom ?? record.accreditationValidFrom ?? accreditationRecord.validFrom ?? extended.validFrom), validUntil: dateInputValue(record.validUntil ?? record.accreditationValidUntil ?? accreditationRecord.validUntil ?? extended.validUntil), logo: resolvedLogo, logoName: record.logoName ?? extended.logoName ?? '' }
       setValues(loadedValues)
       originalEditValues.current = loadedValues
       if (logoUrl && isBackendCollegeLogo(logoUrl)) {
@@ -299,7 +313,10 @@ export default function AddCollege() {
   const update = ({ target: { name, value } }) => {
     let next = value
     if (name === 'collegeCode') next = value.toUpperCase().replace(/[^A-Z0-9]/g, '')
-    if (['pincode', 'contactNumber', 'alternateContactNumber', 'principalContact'].includes(name)) next = value.replace(/\D/g, '')
+    if (['pincode', 'principalContact'].includes(name)) next = value.replace(/\D/g, '').slice(0, name === 'pincode' ? 6 : 10)
+    if (['contactNumber', 'alternateContactNumber'].includes(name)) next = value.replace(/\D/g, '').slice(0, 12)
+    if (['principalName', 'city', 'state', 'district'].includes(name)) next = value.replace(/[^a-zA-Z\s.'-]/g, '')
+    if (['collegeName', 'universityName'].includes(name)) next = value.replace(/[0-9]/g, '')
     setValues((current) => name === 'pincode' ? { ...current, pincode: next, area: '', district: '', city: '', state: '' } : { ...current, [name]: next })
     if (name === 'pincode') { setPostOffices([]); setPincodeStatus('') }
     setTouched((current) => ({ ...current, [name]: true }))
@@ -338,25 +355,29 @@ export default function AddCollege() {
   const saveDraft = () => { localStorage.setItem(draftKey(editId), JSON.stringify({ values, activeTab, progress: draftProgress(values), savedAt: new Date().toISOString() })) }
   const requestLeave = () => { if (dirty) { saveDraft(); setNotice(`Draft saved · ${progress}% complete.`); setDialog('leave'); return } navigate('/college-institution-management') }
   const showTab = (tabId) => {
-    if (tabId === 'preview' && !isValid) {
-      const targetTab = firstInvalidTab || 'college'
-      setTouched((current) => (TAB_FIELDS[targetTab] || []).reduce((next, field) => ({ ...next, [field]: true }), current))
-      setActiveTab(targetTab)
-      setNotice(invalidMessage, 'warning')
-      return
-    }
     setActiveTab(tabId)
     window.scrollTo({ top: 0, left: 0, behavior: 'auto' })
   }
 
-  useEffect(() => {
-    if (activeTab === 'preview' && !isValid) {
-      const targetTab = firstInvalidTab || 'college'
-      setTouched((current) => (TAB_FIELDS[targetTab] || []).reduce((next, field) => ({ ...next, [field]: true }), current))
-      setActiveTab(targetTab)
-      setNotice(invalidMessage, 'warning')
+  const goPrevious = () => {
+    const currentIndex = FORM_TABS.findIndex((tab) => tab.id === activeTab)
+    if (currentIndex > 0) {
+      showTab(FORM_TABS[currentIndex - 1].id)
     }
-  }, [activeTab, firstInvalidTab, invalidMessage, isValid, setNotice])
+  }
+
+  useEffect(() => {
+    if (tabsNavRef.current) {
+      const activeButton = tabsNavRef.current.querySelector('button.active')
+      if (activeButton) {
+        activeButton.scrollIntoView({
+          behavior: 'smooth',
+          block: 'nearest',
+          inline: 'center',
+        })
+      }
+    }
+  }, [activeTab])
   const saveAndNext = () => {
     const fields = TAB_FIELDS[activeTab]
     setTouched((current) => fields.reduce((next, field) => ({ ...next, [field]: true }), { ...current }))
@@ -370,13 +391,15 @@ export default function AddCollege() {
     }
     const currentIndex = FORM_TABS.findIndex((tab) => tab.id === activeTab)
     const nextIndex = currentIndex + 1
-    setHighestUnlockedTab((current) => Math.max(current, nextIndex))
-    setActiveTab(FORM_TABS[nextIndex].id)
-    setNotice('')
-    window.scrollTo({ top: 0, behavior: 'smooth' })
+    if (nextIndex < FORM_TABS.length) {
+      setHighestUnlockedTab((current) => Math.max(current, nextIndex))
+      setActiveTab(FORM_TABS[nextIndex].id)
+      setNotice('')
+      window.scrollTo({ top: 0, behavior: 'smooth' })
+    }
   }
 
-  const canSkipTab = (tabId) => tabId !== 'preview' && (REQUIRED_TAB_FIELDS[tabId] || []).length === 0
+  const canSkipTab = (tabId) => (REQUIRED_TAB_FIELDS[tabId] || []).length === 0
   const skipCurrentTab = () => {
     if (!canSkipTab(activeTab)) return
 
@@ -498,84 +521,230 @@ export default function AddCollege() {
 
   return <DashboardLayout><main className="add-college">
     <header className="ac-page-header"><div><h1>{editId ? 'Edit College' : 'Add College'}</h1><p>{editId ? 'Update the college information below.' : 'Create and configure a new college in the college management system.'}</p><span className="ac-draft-progress">Draft progress: <b>{progress}%</b></span></div><button className="ac-back" type="button" onClick={requestLeave}>College list →</button></header>
-    <nav className="ac-tabs" aria-label="College form sections" role="tablist">
-      {FORM_TABS.map((tab, index) => <button key={tab.id} type="button" role="tab" aria-selected={activeTab === tab.id} aria-disabled={index > highestUnlockedTab} disabled={index > highestUnlockedTab} className={activeTab === tab.id ? 'active' : ''} onClick={() => showTab(tab.id)}><span>{index + 1}</span>{tab.label}</button>)}
-    </nav>
     {loadingCollege && <div className="ac-notice" role="status">Loading college details...</div>}
-    <form onSubmit={(event) => event.preventDefault()} noValidate>
-      {activeTab === 'college' && <>
-      {section('College Information', 'Core identity and affiliation details.', <>
-        <Field label="College Name" name="collegeName" values={values} errors={{ ...errors, ...(duplicateName ? { collegeName: 'A college with this name already exists.' } : {}) }} touched={touched} onChange={update} required maxLength={120} placeholder="e.g. Crescent Institute of Technology" />
-        <Field label="College Code" name="collegeCode" values={values} errors={{ ...errors, ...(duplicateCode ? { collegeCode: 'This college code already exists.' } : {}) }} touched={touched} onChange={update} required maxLength={12} placeholder="e.g. CIT2026" />
-        <label className="ac-field" htmlFor="ac-collegeType"><span>College Type <b>*</b></span><select id="ac-collegeType" name="collegeType" value={values.collegeType} onChange={update} onBlur={() => setTouched((current) => ({ ...current, collegeType: true }))} aria-invalid={Boolean((touched.collegeType || Boolean(values.collegeType)) && errors.collegeType)}><option value="">Select type</option>{TYPES.map((type) => <option key={type}>{type}</option>)}</select>{(touched.collegeType || Boolean(values.collegeType)) && errors.collegeType && <small className="ac-error" role="alert">{errors.collegeType}</small>}</label>
-        {values.collegeType === 'Other' && <Field label="Specify College Type" name="collegeTypeOther" values={values} errors={errors} touched={touched} onChange={update} required maxLength={60} placeholder="e.g. Community College" />}
-        <Field label="University Name" name="universityName" values={values} errors={errors} touched={touched} onChange={update} required maxLength={120} placeholder="Affiliated university" readOnly={values.collegeType === 'Deemed University'} />
-        <Field label="Start Date" name="startDate" type="date" values={values} errors={errors} touched={touched} onChange={update} />
-        <Field label="End Date" name="endDate" type="date" values={values} errors={errors} touched={touched} onChange={update} />
-        <div className="ac-upload ac-span-2" onDragOver={(e) => e.preventDefault()} onDrop={(e) => { e.preventDefault(); selectLogo(e.dataTransfer.files[0]) }}>
-          <input ref={fileRef} type="file" accept=".png,.jpg,.jpeg,.webp" onChange={(e) => selectLogo(e.target.files?.[0])} hidden />
-          {values.logo ? (
-            <div className="ac-logo-preview">
-              <img src={values.logo} alt="College logo preview" onError={() => setValues((v) => ({ ...v, logo: '' }))} />
-              <div>
-                <strong>{values.logoName || (logoFile ? logoFile.name : 'College logo')}</strong>
-                <div style={{ display: 'flex', gap: '10px', marginTop: '4px' }}>
-                  <button type="button" className="ac-change-btn" onClick={() => fileRef.current?.click()}>Change image</button>
-                  <button type="button" onClick={() => { setLogoFile(null); setRemoveExistingLogo(Boolean(editId)); setValues((v) => ({ ...v, logo: '', logoName: '' })); if (fileRef.current) fileRef.current.value = ''; setDirty(true) }}>Remove image</button>
+    <div className="college-form-layout">
+      <form className="college-form-main" onSubmit={(event) => event.preventDefault()} noValidate>
+        <nav ref={tabsNavRef} className="ac-tabs erp-tabs-bar" aria-label="College form sections" role="tablist">
+          {FORM_TABS.map((tab, index) => {
+            const isCompleted = index < highestUnlockedTab
+            const isActive = activeTab === tab.id
+            return (
+              <button
+                key={tab.id}
+                type="button"
+                role="tab"
+                aria-selected={isActive}
+                aria-disabled={index > highestUnlockedTab}
+                disabled={index > highestUnlockedTab}
+                className={isActive ? 'active' : isCompleted ? 'completed' : ''}
+                onClick={() => showTab(tab.id)}
+              >
+                <span>{isCompleted ? <FiCheck /> : index + 1}</span>
+                {tab.label}
+              </button>
+            )
+          })}
+        </nav>
+        {activeTab === 'college' && <>
+        {section('College Information', 'Core identity and affiliation details.', <>
+          <Field label="College Name" name="collegeName" values={values} errors={{ ...errors, ...(duplicateName ? { collegeName: 'A college with this name already exists.' } : {}) }} touched={touched} onChange={update} required maxLength={120} placeholder="e.g. Crescent Institute of Technology" />
+          <Field label="College Code" name="collegeCode" values={values} errors={{ ...errors, ...(duplicateCode ? { collegeCode: 'This college code already exists.' } : {}) }} touched={touched} onChange={update} required maxLength={12} placeholder="e.g. CIT2026" />
+          <label className="ac-field" htmlFor="ac-collegeType"><span>College Type <b>*</b></span><select id="ac-collegeType" name="collegeType" value={values.collegeType} onChange={update} onBlur={() => setTouched((current) => ({ ...current, collegeType: true }))} aria-invalid={Boolean((touched.collegeType || Boolean(values.collegeType)) && errors.collegeType)}><option value="">Select type</option>{TYPES.map((type) => <option key={type}>{type}</option>)}</select>{(touched.collegeType || Boolean(values.collegeType)) && errors.collegeType && <small className="ac-error" role="alert">{errors.collegeType}</small>}</label>
+          {values.collegeType === 'Other' && <Field label="Specify College Type" name="collegeTypeOther" values={values} errors={errors} touched={touched} onChange={update} required maxLength={60} placeholder="e.g. Community College" />}
+          <Field label="University Name" name="universityName" values={values} errors={errors} touched={touched} onChange={update} required maxLength={120} placeholder="Affiliated university" readOnly={values.collegeType === 'Deemed University'} />
+          <Field label="Start Date" name="startDate" type="date" values={values} errors={errors} touched={touched} onChange={update} />
+          <Field label="End Date" name="endDate" type="date" values={values} errors={errors} touched={touched} onChange={update} />
+          <div className="ac-upload ac-span-2" onDragOver={(e) => e.preventDefault()} onDrop={(e) => { e.preventDefault(); selectLogo(e.dataTransfer.files[0]) }}>
+            <input ref={fileRef} type="file" accept=".png,.jpg,.jpeg,.webp" onChange={(e) => selectLogo(e.target.files?.[0])} hidden />
+            {values.logo ? (
+              <div className="ac-logo-preview">
+                <img src={values.logo} alt="College logo preview" onError={() => setValues((v) => ({ ...v, logo: '' }))} />
+                <div>
+                  <strong>{values.logoName || (logoFile ? logoFile.name : 'College logo')}</strong>
+                  <div style={{ display: 'flex', gap: '10px', marginTop: '4px' }}>
+                    <button type="button" className="ac-change-btn" onClick={() => fileRef.current?.click()}>Change image</button>
+                    <button type="button" onClick={() => { setLogoFile(null); setRemoveExistingLogo(Boolean(editId)); setValues((v) => ({ ...v, logo: '', logoName: '' })); if (fileRef.current) fileRef.current.value = ''; setDirty(true) }}>Remove image</button>
+                  </div>
                 </div>
               </div>
-            </div>
-          ) : (
-            <button type="button" className="ac-upload-button" onClick={() => fileRef.current?.click()}>
-              <strong>Upload college logo</strong>
-              <span>Click or drag and drop PNG, JPG, JPEG, or WEBP · Max 2 MB</span>
+            ) : (
+              <button type="button" className="ac-upload-button" onClick={() => fileRef.current?.click()}>
+                <strong>Upload college logo</strong>
+                <span>Click or drag and drop PNG, JPG, JPEG, or WEBP · Max 2 MB</span>
+              </button>
+            )}
+            {logoError && <small className="ac-error" role="alert">{logoError}</small>}
+          </div>
+        </>)}
+        </>}
+        {activeTab === 'address' && <>
+        {section('Address', 'Official postal address of the college.', <>
+          <Field label="Address Line 1" name="addressLine1" values={values} errors={errors} touched={touched} onChange={update} required maxLength={150} placeholder="Building, street, locality" />
+          <Field label="Land Mark" name="addressLine2" values={values} errors={errors} touched={touched} onChange={update} maxLength={150} placeholder="Landmark or area (optional)" />
+          <Field label="City" name="city" values={values} errors={errors} touched={touched} onChange={update} required maxLength={60} />
+          <Field label="State" name="state" values={values} errors={errors} touched={touched} onChange={update} required maxLength={60} />
+          <Field label="Pincode" name="pincode" values={values} errors={errors} touched={touched} onChange={update} required maxLength={6} inputMode="numeric" />
+          <Field label="Country" name="country" values={values} errors={errors} touched={touched} onChange={update} readOnly />
+          <label className="ac-field" htmlFor="ac-area"><span>Area / Post Office</span><SearchableSelect label="Area / Post Office" value={values.area} options={postOffices.map((office) => ({ id: office.Name, name: office.Name, code: office.BranchType || '' }))} onChange={(value) => update({ target: { name: 'area', value } })} placeholder={postOffices.length ? 'Select area' : 'Enter pincode first'} searchPlaceholder="Search area..." noOptionsMessage="No area found." disabled={!postOffices.length} /></label>
+          <Field label="District" name="district" values={values} errors={errors} touched={touched} onChange={update} maxLength={60} />
+          {pincodeStatus && <p className="ac-lookup-status ac-span-2" role="status">{pincodeStatus}</p>}
+        </>)}
+        </>}
+        {activeTab === 'contact' && section('Contact Information', 'Public college contact channels.', <>
+          <Field label="Official Contact Number" name="contactNumber" values={values} errors={{ ...errors, ...(duplicateContact ? { contactNumber: 'This contact number already exists.' } : {}) }} touched={touched} onChange={update} required maxLength={12} inputMode="tel" placeholder="Mobile or Landline with STD code" />
+          <Field label="Alternate Contact Number" name="alternateContactNumber" values={values} errors={errors} touched={touched} onChange={update} maxLength={12} inputMode="tel" placeholder="Optional alternate mobile or landline" />
+          <Field label="Official Email" name="email" type="email" values={values} errors={{ ...errors, ...(duplicateEmail ? { email: 'This college email already exists.' } : {}) }} touched={touched} onChange={update} required maxLength={120} placeholder="office@college.edu" />
+          <Field label="Website" name="website" type="url" values={values} errors={errors} touched={touched} onChange={update} onBlur={normalizeWebsiteField} maxLength={160} placeholder="https://college.edu" />
+        </>)}
+        {activeTab === 'administration' && section('Administration', 'Principal or institutional head details.', <>
+          <Field label="Principal Name" name="principalName" values={values} errors={errors} touched={touched} onChange={update} required maxLength={100} />
+          <Field label="Principal Email" name="principalEmail" type="email" values={values} errors={errors} touched={touched} onChange={update} required maxLength={120} />
+          <Field label="Principal Contact Number" name="principalContact" values={values} errors={errors} touched={touched} onChange={update} required maxLength={10} inputMode="tel" />
+        </>)}
+        {activeTab === 'accreditation' && section('Accreditation Details', 'Current accreditation standing and validity.', <>
+          <label className="ac-field" htmlFor="ac-accreditationStatus"><span>Accreditation Status</span><select id="ac-accreditationStatus" name="accreditationStatus" value={values.accreditationStatus} onChange={update}><option value="">Select Accreditation Status</option>{ACCREDITATION_STATUSES.map((status) => <option key={status}>{status}</option>)}</select></label>
+          <Field label="Accreditation Grade" name="accreditationGrade" values={values} errors={errors} touched={touched} onChange={update} maxLength={20} placeholder="e.g. A+" />
+          <Field label="Accreditation Number" name="accreditationNumber" values={values} errors={errors} touched={touched} onChange={update} maxLength={50} />
+          <Field label="Valid From" name="validFrom" type="date" values={values} errors={errors} touched={touched} onChange={update} />
+          <Field label="Valid Until" name="validUntil" type="date" values={values} errors={errors} touched={touched} onChange={update} />
+          {values.accreditationStatus === 'Accredited' && <p className="ac-hint ac-span-2">Complete the accreditation grade, number, and validity dates for a comprehensive record.</p>}
+        </>)}
+        <footer className="ac-actions ac-next-actions">
+          {FORM_TABS.findIndex((tab) => tab.id === activeTab) > 0 && (
+            <button type="button" className="ac-secondary" onClick={goPrevious}>
+              ← Previous
             </button>
           )}
-          {logoError && <small className="ac-error" role="alert">{logoError}</small>}
+          {canSkipTab(activeTab) && (
+            <button type="button" className="ac-secondary" onClick={skipCurrentTab}>
+              Skip
+            </button>
+          )}
+          {activeTab !== 'accreditation' ? (
+            <button type="button" className="ac-primary" onClick={saveAndNext}>
+              Save &amp; Next →
+            </button>
+          ) : (
+            <button
+              type="button"
+              className="ac-primary"
+              onClick={submit}
+              disabled={!isValid || submitting || loadingCollege || saved}
+            >
+              {submitting ? 'Saving...' : saved ? 'Saved. Redirecting...' : editId ? 'Save Changes' : 'Submit College'}
+            </button>
+          )}
+        </footer>
+      </form>
+
+      <aside className="college-live-preview" aria-label="College live preview">
+        <header className="preview-top-bar">
+          <span className="preview-live-tag">
+            <span className="live-dot" /> LIVE PREVIEW
+          </span>
+          <span className="preview-sync-hint">Real-time sync</span>
+        </header>
+        <div className="preview-body-container">
+          <div className="preview-hero">
+            {values.logo ? (
+              <img src={values.logo} alt="College Logo" className="college-preview-logo" />
+            ) : (
+              <div className="preview-hero-badge">
+                {values.collegeCode ? values.collegeCode.slice(0, 4).toUpperCase() : (values.collegeName ? values.collegeName.slice(0, 4).toUpperCase() : 'COL')}
+              </div>
+            )}
+            <div className="preview-hero-details">
+              <h3 className="preview-course-title">{values.collegeName.trim() || 'College Preview'}</h3>
+              <p className="preview-course-meta">{[values.collegeCode, values.collegeType === 'Other' ? values.collegeTypeOther : values.collegeType, values.universityName].filter(Boolean).join(' • ') || 'Affiliation & type details'}</p>
+            </div>
+          </div>
+
+          {(() => {
+            const collegeTypeDisplay = values.collegeType === 'Other' ? values.collegeTypeOther : values.collegeType
+            const hasAddressInput = [values.addressLine1, values.addressLine2, values.area, values.district, values.city, values.state, values.pincode].some((v) => String(v || '').trim())
+            const sections = [
+              {
+                title: 'College Information',
+                fields: [
+                  ['College Name', values.collegeName],
+                  ['College Code', values.collegeCode],
+                  ['College Type', collegeTypeDisplay],
+                  ['University', values.universityName],
+                  ['Start Date', values.startDate],
+                  ['End Date', values.endDate],
+                ],
+              },
+              {
+                title: 'Address & Location',
+                fields: [
+                  ['Address Line 1', values.addressLine1],
+                  ['Landmark', values.addressLine2],
+                  ['Area / Post Office', values.area],
+                  ['District', values.district],
+                  ['City', values.city],
+                  ['State', values.state],
+                  ['Pincode', values.pincode],
+                  ['Country', hasAddressInput ? values.country : ''],
+                ],
+              },
+              {
+                title: 'Contact Information',
+                fields: [
+                  ['Official Contact', values.contactNumber],
+                  ['Alternate Contact', values.alternateContactNumber],
+                  ['Official Email', values.email],
+                  ['Website', values.website],
+                ],
+              },
+              {
+                title: 'Administration',
+                fields: [
+                  ['Principal Name', values.principalName],
+                  ['Principal Email', values.principalEmail],
+                  ['Principal Contact', values.principalContact],
+                ],
+              },
+              {
+                title: 'Accreditation Details',
+                fields: [
+                  ['Accreditation Status', values.accreditationStatus],
+                  ['Accreditation Body', values.accreditationBody],
+                  ['Accreditation Grade', values.accreditationGrade],
+                  ['Accreditation Number', values.accreditationNumber],
+                  ['Valid From', values.validFrom],
+                  ['Valid Until', values.validUntil],
+                ],
+              },
+            ].map((sec) => ({
+              ...sec,
+              fields: sec.fields.filter(([, val]) => val !== null && val !== undefined && String(val).trim() !== ''),
+            })).filter((sec) => sec.fields.length > 0)
+
+            if (sections.length === 0) {
+              return (
+                <div className="preview-empty-hint">
+                  <span>Enter details in the form to preview here in real time.</span>
+                </div>
+              )
+            }
+
+            return sections.map((sec) => (
+              <div key={sec.title} className="preview-section-group">
+                <span className="preview-section-title">{sec.title}</span>
+                <div className="preview-kv-grid">
+                  {sec.fields.map(([label, text]) => (
+                    <div key={label} className="preview-kv-item">
+                      <span className="kv-label">{label}</span>
+                      <strong className="kv-val" title={String(text).trim()}>{String(text).trim()}</strong>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))
+          })()}
         </div>
-      </>)}
-      </>}
-      {activeTab === 'address' && <>
-      {section('Address', 'Official postal address of the college.', <>
-        <Field label="Address Line 1" name="addressLine1" values={values} errors={errors} touched={touched} onChange={update} required maxLength={150} placeholder="Building, street, locality" />
-        <Field label="Land Mark" name="addressLine2" values={values} errors={errors} touched={touched} onChange={update} maxLength={150} placeholder="Landmark or area (optional)" />
-        <Field label="City" name="city" values={values} errors={errors} touched={touched} onChange={update} required maxLength={60} />
-        <Field label="State" name="state" values={values} errors={errors} touched={touched} onChange={update} required maxLength={60} />
-        <Field label="Pincode" name="pincode" values={values} errors={errors} touched={touched} onChange={update} required maxLength={6} inputMode="numeric" />
-        <Field label="Country" name="country" values={values} errors={errors} touched={touched} onChange={update} readOnly />
-        <label className="ac-field" htmlFor="ac-area"><span>Area / Post Office</span><SearchableSelect label="Area / Post Office" value={values.area} options={postOffices.map((office) => ({ id: office.Name, name: office.Name, code: office.BranchType || '' }))} onChange={(value) => update({ target: { name: 'area', value } })} placeholder={postOffices.length ? 'Select area' : 'Enter pincode first'} searchPlaceholder="Search area..." noOptionsMessage="No area found." disabled={!postOffices.length} /></label>
-        <Field label="District" name="district" values={values} errors={errors} touched={touched} onChange={update} maxLength={60} />
-        {pincodeStatus && <p className="ac-lookup-status ac-span-2" role="status">{pincodeStatus}</p>}
-      </>)}
-      </>}
-      {activeTab === 'contact' && section('Contact Information', 'Public college contact channels.', <>
-        <Field label="Official Contact Number" name="contactNumber" values={values} errors={{ ...errors, ...(duplicateContact ? { contactNumber: 'This contact number already exists.' } : {}) }} touched={touched} onChange={update} required maxLength={10} inputMode="tel" placeholder="10-digit mobile number" />
-        <Field label="Alternate Contact Number" name="alternateContactNumber" values={values} errors={errors} touched={touched} onChange={update} maxLength={10} inputMode="tel" />
-        <Field label="Official Email" name="email" type="email" values={values} errors={{ ...errors, ...(duplicateEmail ? { email: 'This college email already exists.' } : {}) }} touched={touched} onChange={update} required maxLength={120} placeholder="office@college.edu" />
-        <Field label="Website" name="website" type="url" values={values} errors={errors} touched={touched} onChange={update} onBlur={normalizeWebsiteField} maxLength={160} placeholder="https://college.edu" />
-      </>)}
-      {activeTab === 'administration' && section('Administration', 'Principal or institutional head details.', <>
-        <Field label="Principal Name" name="principalName" values={values} errors={errors} touched={touched} onChange={update} required maxLength={100} />
-        <Field label="Principal Email" name="principalEmail" type="email" values={values} errors={errors} touched={touched} onChange={update} required maxLength={120} />
-        <Field label="Principal Contact Number" name="principalContact" values={values} errors={errors} touched={touched} onChange={update} required maxLength={10} inputMode="tel" />
-      </>)}
-      {activeTab === 'accreditation' && section('Accreditation Details', 'Current accreditation standing and validity.', <>
-        <label className="ac-field" htmlFor="ac-accreditationStatus"><span>Accreditation Status</span><select id="ac-accreditationStatus" name="accreditationStatus" value={values.accreditationStatus} onChange={update}><option value="">Select Accreditation Status</option>{ACCREDITATION_STATUSES.map((status) => <option key={status}>{status}</option>)}</select></label>
-        <Field label="Accreditation Grade" name="accreditationGrade" values={values} errors={errors} touched={touched} onChange={update} maxLength={20} placeholder="e.g. A+" />
-        <Field label="Accreditation Number" name="accreditationNumber" values={values} errors={errors} touched={touched} onChange={update} maxLength={50} />
-        <Field label="Valid From" name="validFrom" type="date" values={values} errors={errors} touched={touched} onChange={update} />
-        <Field label="Valid Until" name="validUntil" type="date" values={values} errors={errors} touched={touched} onChange={update} />
-        {values.accreditationStatus === 'Accredited' && <p className="ac-hint ac-span-2">Complete the accreditation grade, number, and validity dates for a comprehensive record.</p>}
-      </>)}
-      {activeTab === 'preview' && <section className="ac-preview ac-final-preview"><h2>Preview &amp; Submit</h2><p>Review all college fields before submitting.</p>{values.logo && <img src={values.logo} alt="College logo preview" />}<dl>{Object.entries({ 'College Name': values.collegeName, 'College Code': values.collegeCode, 'College Type': values.collegeType === 'Other' ? values.collegeTypeOther : values.collegeType, 'University Name': values.universityName, 'Logo File Name': values.logoName, 'Address Line 1': values.addressLine1, 'Address Line 2': values.addressLine2, Area: values.area, District: values.district, City: values.city, State: values.state, Country: values.country, Pincode: values.pincode, 'Contact Number': values.contactNumber, 'Alternate Contact Number': values.alternateContactNumber, 'Official Email': values.email, Website: values.website, 'Principal Name': values.principalName, 'Principal Email': values.principalEmail, 'Principal Contact Number': values.principalContact, 'Accreditation Status': values.accreditationStatus, 'Accreditation Body': values.accreditationBody, 'Accreditation Grade': values.accreditationGrade, 'Accreditation Number': values.accreditationNumber, 'Valid From': values.validFrom, 'Valid Until': values.validUntil }).filter(([, value]) => hasValue(value)).map(([label, value]) => <div key={label}><dt>{label}</dt><dd>{value}</dd></div>)}</dl></section>}
-      {activeTab !== 'accreditation' && activeTab !== 'preview' ? (
-        <footer className="ac-actions ac-next-actions">{canSkipTab(activeTab) && <button type="button" className="ac-secondary" onClick={skipCurrentTab}>Skip</button>}<button type="button" className="ac-primary" onClick={saveAndNext}>Save &amp; Next →</button></footer>
-      ) : activeTab === 'accreditation' ? (
-        <footer className="ac-actions"><button type="button" className="ac-secondary" onClick={() => showTab('college')}>Start Over</button>{canSkipTab(activeTab) && <button type="button" className="ac-secondary" onClick={skipCurrentTab}>Skip</button>}<button type="button" className="ac-primary" onClick={() => showTab('preview')}>Next: Preview</button></footer>
-      ) : (
-        <footer className="ac-actions"><button type="button" className="ac-secondary" onClick={() => showTab('accreditation')}>← Previous</button><button type="button" className="ac-primary" onClick={submit} disabled={!isValid || submitting || loadingCollege || saved}>{submitting ? 'Saving...' : saved ? 'Saved. Redirecting...' : editId ? 'Save Changes' : 'Submit College'}</button></footer>
-      )}
-    </form>
+      </aside>
+    </div>
 
     {dialog === 'reset' && <Dialog title="Reset College Form?" onClose={() => setDialog(null)} actions={<><button className="ac-secondary" onClick={() => setDialog(null)}>Cancel</button><button className="ac-danger-btn" onClick={reset}>Reset</button></>}><p>All entered information will be cleared.</p></Dialog>}
     {dialog === 'leave' && <Dialog title="Unsaved Changes" onClose={() => setDialog(null)} actions={<><button className="ac-secondary" onClick={() => setDialog(null)}>Stay</button><button className="ac-danger-btn" onClick={() => navigate('/college-institution-management')}>Leave</button></>}><p>You have unsaved college information. Leave without saving?</p></Dialog>}

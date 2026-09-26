@@ -1125,51 +1125,7 @@
   }
 }
 
-/* Stepper */
-.faculty-management .fm-stepper {
-  list-style: none;
-  display: grid;
-  grid-auto-flow: column;
-  grid-auto-columns: minmax(max-content, 1fr);
-  overflow-x: auto;
-  padding: 0 0 16px;
-  margin: 0;
-  gap: 8px;
-  border-bottom: 1px solid var(--border);
-}
-.faculty-management .fm-stepper li {
-  display: flex;
-  align-items: center;
-  white-space: nowrap;
-  gap: 8px;
-  color: var(--text-muted);
-  font-size: 12px;
-  font-weight: 600;
-}
-.faculty-management .fm-stepper li > span {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 28px;
-  height: 28px;
-  flex-shrink: 0;
-  border: 1px solid var(--border-strong);
-  border-radius: 50%;
-  font-size: 12px;
-}
-.faculty-management .fm-stepper li.active {
-  color: var(--brand);
-}
-.faculty-management .fm-stepper li.active > span {
-  background: var(--brand);
-  border-color: var(--brand);
-  color: var(--fm-on-brand);
-}
-.faculty-management .fm-stepper li.complete > span {
-  background: var(--brand-soft);
-  color: var(--brand);
-  border-color: var(--brand);
-}
+/* Stepper cleaned up to use erp-tabs-bar / ac-tabs */
 
 /* Breadcrumb */
 .faculty-management .fm-breadcrumb {
@@ -1606,14 +1562,7 @@
   .faculty-management .fm-form-grid, .faculty-management .fm-profile-sections, .faculty-management .fm-info-grid, .faculty-management .faculty-filters {
     grid-template-columns: 1fr;
   }
-  .faculty-management .fm-stepper {
-    display: flex;
-    overflow-x: auto;
-    padding-bottom: 12px;
-  }
-  .faculty-management .fm-stepper li {
-    min-width: 130px;
-  }
+
   .faculty-management .fm-form-footer {
     flex-wrap: wrap;
   }
