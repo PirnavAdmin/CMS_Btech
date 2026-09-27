@@ -35,6 +35,10 @@ BEGIN
 
         eg.min_selections AS MinSelections,
         eg.max_selections AS MaxSelections,
+        eg.elective_type AS ElectiveType,
+        eg.credits AS Credits,
+        eg.selection_start_date AS SelectionStartDate,
+        eg.selection_end_date AS SelectionEndDate,
 
         (
             SELECT COUNT(*)

@@ -98,6 +98,26 @@ namespace BTech.Controllers.V1
             });
         }
 
+        [HttpPut("groups/{groupId:long}")]
+        public async Task<IActionResult> UpdateGroup(
+            long groupId,
+            [FromBody] CreateElectiveGroupDto request)
+        {
+            await _electiveGroupService.UpdateAsync(
+                GetCollegeIdFromToken(),
+                groupId,
+                request);
+
+            return NoContent();
+        }
+
+        [HttpDelete("groups/{groupId:long}")]
+        public async Task<IActionResult> DeleteGroup(long groupId)
+        {
+            await _electiveGroupService.DeleteAsync(GetCollegeIdFromToken(), groupId);
+            return NoContent();
+        }
+
         // ============================================================
         // JWT CLAIM HELPERS
         // ============================================================

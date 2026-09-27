@@ -25,7 +25,17 @@ This .NET 8 Web API merges the supplied Backend/Uday, Vikas, and Suresh modules 
    `Database/IntegrationUpdates/CMS_BTECH_INTEGRATION_UPDATE_20260903.sql`.
    For a new local database, run
    `Database/CompleteDatabase/CMS_BTECH_COMPLETE_UPDATED.sql` instead.
-4. Keep credentials out of `appsettings*.json`. Configure local secrets:
+4. Set up the Elective Management database objects after the base database is ready. In MySQL Workbench, select `cms_btech` and run these scripts in order:
+
+   1. `Database/Elective_Group_CRUD_Migration_20260927.sql`
+   2. `Database/Sql/Stored Procedures/Electives/sp_elective_group_create.sql`
+   3. `Database/Sql/Stored Procedures/Electives/sp_elective_group_update.sql`
+   4. `Database/Sql/Stored Procedures/Electives/sp_elective_group_list.sql`
+   5. `Database/Sql/Stored Procedures/Electives/sp_elective_group_delete.sql`
+
+   The migration adds `elective_type` and `credits` (plus the selection date fields) to `elective_groups`. The create/update/list procedures persist and return these values. Run the migration once per database; it is not applied automatically when the API starts. Existing groups keep `NULL` values until Type and Credits are saved for them.
+   To persist the Elective Type field in Subject Management, also run `Database/Subject_Elective_Type_Migration_20260927.sql` once against `cms_btech`.
+5. Keep credentials out of `appsettings*.json`. Configure local secrets:
 
    ```powershell
    dotnet user-secrets set "ConnectionStrings:DefaultConnection" "server=localhost;port=3306;database=cms_btech;user=root;password=YOUR_PASSWORD;"
@@ -36,7 +46,7 @@ This .NET 8 Web API merges the supplied Backend/Uday, Vikas, and Suresh modules 
    ```
 
    The checked-in development JWT key is for local testing only. Replace it before deployment.
-5. From this folder run:
+6. From this folder run:
 
    ```powershell
    dotnet restore
@@ -44,7 +54,7 @@ This .NET 8 Web API merges the supplied Backend/Uday, Vikas, and Suresh modules 
    dotnet run
    ```
 
-6. Open `http://localhost:5084/swagger` (or the URL printed by `dotnet run`).
+7. Open `http://localhost:5084/swagger` (or the URL printed by `dotnet run`).
 
 ## Verification
 
