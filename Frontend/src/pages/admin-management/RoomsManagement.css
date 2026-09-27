@@ -1366,3 +1366,93 @@
   background: rgba(239, 68, 68, 0.18) !important;
   color: #F87171 !important;
 }
+
+/* Compact directory: predictable column widths and aligned content groups. */
+#root .rooms-table { table-layout: fixed; min-width: 980px; width: 100%; }
+#root .rooms-table :is(th, td) { box-sizing: border-box; text-align: center !important; padding: 10px 8px !important; vertical-align: middle; white-space: normal; }
+#root .rooms-table th {
+  min-width: 0 !important;
+  height: auto;
+  line-height: 1.4;
+  white-space: nowrap !important;
+  text-overflow: clip !important;
+  overflow: visible !important;
+  font-size: 11px !important;
+  letter-spacing: 0.04em !important;
+}
+#root .rooms-table th:nth-child(1) { width: 23% !important; }
+#root .rooms-table th:nth-child(2) { width: 13% !important; }
+#root .rooms-table th:nth-child(3) { width: 17% !important; }
+#root .rooms-table th:nth-child(4) { width: 11% !important; }
+#root .rooms-table th:nth-child(5) { width: 18% !important; }
+#root .rooms-table th:nth-child(6) { width: 9% !important; }
+#root .rooms-table th:nth-child(7) { width: 9% !important; }
+#root .rooms-table .rooms-identity-cell { display: block; min-width: 0; }
+#root .rooms-table .rooms-icon-box { display: none; }
+#root .rooms-table .rooms-identity-info { min-width: 0; gap: 3px; align-items: center; }
+#root .rooms-table .rooms-title-row { display: flex; flex-direction: column; align-items: center; gap: 3px; }
+#root .rooms-table .room-name-link { max-width: 100%; min-height: 0; height: auto; padding: 0; border: 0; background: transparent !important; box-shadow: none !important; white-space: normal; overflow-wrap: anywhere; text-align: center; font-size: 12.5px; font-weight: 600; line-height: 1.35; text-decoration: none; cursor: pointer; transition: color .18s, transform .18s; }
+#root .rooms-table .room-name-link:hover { color: #8782bc; transform: translateX(3px); }
+#root .rooms-table .room-dept-text { white-space: normal; line-height: 1.3; font-size: 11px; }
+#root .rooms-table :is(.rooms-building-row, .rooms-floor-row, .rooms-allocated-top, .rooms-row-actions) { justify-content: center !important; }
+#root .rooms-table :is(.rooms-loc-icon, .rooms-floor-icon) { display: none; }
+#root .rooms-table .rooms-allocated-wrapper { flex-direction: column; gap: 4px; }
+#root .rooms-table .rooms-allocated-meta { white-space: normal; max-width: 100%; line-height: 1.3; font-size: 10.5px; }
+#root .rooms-table .room-type-tag { white-space: normal; justify-content: center; font-size: 10.5px; padding: 3px 8px; }
+#root .rooms-table .rooms-capacity-badge { padding: 3px 7px; font-size: 11px; gap: 4px; }
+#root .rooms-table .rooms-allocated-badge { padding: 2px 7px; font-size: 11px; }
+#root .rooms-table :is(.rooms-allocate-action-btn, .rooms-deallocate-link) { min-height: 28px; height: auto; padding: 4px 8px; font-size: 10.5px; line-height: 1.3; }
+#root .rooms-table tbody tr:hover > td { background: var(--surface, #fff) !important; }
+#root .rooms-table .room-name-link:focus-visible { outline: 2px solid #8782bc; outline-offset: 3px; }
+@media (prefers-reduced-motion: reduce) { #root .rooms-table .room-name-link:hover { transform: none; transition: none; } }
+
+/* Truncate room identity text within its column; keep full text in tooltips. */
+#root .rooms-table .rooms-identity-info,
+#root .rooms-table .rooms-title-row {
+  width: 100%;
+  min-width: 0;
+}
+#root .rooms-table .room-name-link,
+#root .rooms-table .room-dept-text {
+  display: block;
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+/* Dense room directory; retain scrolling only on narrow screens. */
+#root .rooms-table { min-width: 820px; }
+#root .rooms-table :is(th, td) { padding: 8px 6px !important; }
+#root .rooms-table th {
+  font-size: 10px !important;
+  letter-spacing: .02em !important;
+  white-space: normal !important;
+  line-height: 1.3;
+}
+#root .rooms-table td { height: auto; font-size: 11px !important; }
+#root .rooms-table .room-name-link { font-size: 11.5px; }
+#root .rooms-table .rooms-building-row span { font-size: 11px; font-weight: 600; line-height: 1.35; }
+#root .rooms-table :is(.room-dept-text, .floor-badge, .rooms-allocated-meta) { font-size: 10px; }
+#root .rooms-table :is(.room-code-badge, .room-type-tag, .rooms-capacity-badge, .rooms-allocated-badge) { font-size: 10px; padding: 2px 5px; }
+#root .rooms-table :is(.rooms-allocate-action-btn, .rooms-deallocate-link) {
+  min-height: 26px;
+  padding: 4px 6px;
+  font-size: 10px;
+  gap: 4px;
+  max-width: 100%;
+}
+#root .rooms-table .rooms-row-actions { gap: 5px; flex-wrap: nowrap; }
+#root .rooms-table .rooms-icon-btn {
+  width: 28px !important;
+  height: 28px !important;
+  min-width: 28px !important;
+  min-height: 28px !important;
+  padding: 5px !important;
+  border-radius: 7px;
+  flex: 0 0 28px;
+}
+#root .rooms-table .rooms-icon-btn svg { width: 15px; height: 15px; }
+#root .rooms-table :is(.status-badge, .status-pill) { font-size: 10px !important; padding: 3px 7px !important; min-width: 0; }

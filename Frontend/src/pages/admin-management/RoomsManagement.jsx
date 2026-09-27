@@ -528,13 +528,13 @@ export default function RoomsManagement() {
             <table className="rooms-table">
               <thead>
                 <tr>
-                  <th className="table-center" style={{ minWidth: '220px' }}>Room Identity & Name</th>
-                  <th className="table-center" style={{ minWidth: '140px' }}>Room Type</th>
-                  <th className="table-center" style={{ minWidth: '170px' }}>Building & Floor</th>
-                  <th className="table-center" style={{ minWidth: '90px' }}>Capacity</th>
-                  <th className="table-center" style={{ minWidth: '240px' }}>Section Allocation & Details</th>
-                  <th className="table-center" style={{ minWidth: '110px' }}>Status</th>
-                  <th className="table-center" style={{ width: '130px' }}>Actions</th>
+                  <th className="table-center" style={{ minWidth: '200px' }}>Room</th>
+                  <th className="table-center" style={{ minWidth: '130px' }}>Room Type</th>
+                  <th className="table-center" style={{ minWidth: '160px' }}>Building & Floor</th>
+                  <th className="table-center" style={{ minWidth: '105px' }}>Capacity</th>
+                  <th className="table-center" style={{ minWidth: '220px' }}>Section Allocation</th>
+                  <th className="table-center" style={{ minWidth: '100px' }}>Status</th>
+                  <th className="table-center" style={{ width: '110px' }}>Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -569,12 +569,13 @@ export default function RoomsManagement() {
                                   type="button"
                                   className="room-name-link table-cell-truncate"
                                   onClick={() => setViewingRoom(room)}
-                                  title={`Click to view details for ${room.roomName}`}
+                                  title={room.roomName}
+                                  aria-label={`View details for ${room.roomName}`}
                                 >
                                   {room.roomName}
                                 </button>
                               </div>
-                              <small className="room-dept-text">{room.department || 'General / Shared'}</small>
+                              <small className="room-dept-text" title={room.department || 'General / Shared'}>{room.department || 'General / Shared'}</small>
                             </div>
                           </div>
                         </td>
