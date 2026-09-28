@@ -2,7 +2,7 @@ export const idOf = (record, kind) => String(record?.[`${kind}Id`] ?? record?.id
 export const relationId = (record, kind) => String(record?.[`${kind}Id`] ?? record?.[kind]?.id ?? record?.[kind]?.[`${kind}Id`] ?? '')
 export const classificationOf = subject => {
   const value = String(subject?.electiveType ?? '').trim().toLowerCase().replace(/[_\s]/g, '-')
-  return value === 'elective' ? 'Elective' : value === 'non-elective' ? 'Non-Elective' : ''
+  return value === 'elective' ? 'Elective' : value === 'non-elective' ? 'Non-Elective' : value === 'core-subject' ? 'Core Subject' : ''
 }
 export const departmentOfBranch = (branch, courses = []) => relationId(branch, 'department') || relationId(courses.find(course => idOf(course, 'course') === relationId(branch, 'course')), 'department')
 export const isElectiveSubject = subject => classificationOf(subject) === 'Elective' && !['0', 'false', 'inactive'].includes(String(subject.status).toLowerCase())
