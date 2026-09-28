@@ -1239,3 +1239,35 @@ label > b,
   background-color: transparent !important;
   color: var(--text-primary) !important;
 }
+
+/* AddCollege Live Preview & Draft Progress Dark Mode Fixes */
+:root[data-theme="dark"] .college-live-preview {
+  background-color: var(--surface) !important;
+  border-color: var(--border-strong) !important;
+}
+
+:root[data-theme="dark"] .preview-hero,
+:root[data-theme="dark"] .preview-kv-item {
+  background-color: var(--surface-soft) !important;
+  border-color: var(--border-strong) !important;
+}
+
+:root[data-theme="dark"] .preview-kv-item .kv-label {
+  color: var(--text-muted) !important;
+}
+
+:root[data-theme="dark"] .preview-kv-item .kv-val,
+:root[data-theme="dark"] .preview-section-title,
+:root[data-theme="dark"] .preview-course-title,
+:root[data-theme="dark"] .preview-course-meta {
+  color: var(--text-primary) !important;
+}
+
+:root[data-theme="dark"] .ac-draft-progress {
+  background-color: var(--surface-soft) !important;
+  border-color: var(--border-strong) !important;
+  color: var(--text-primary) !important;
+}
+:root[data-theme="dark"] .ac-draft-progress b {
+  color: var(--text-primary) !important;
+}
