@@ -9,7 +9,7 @@ export default function AcademicContextSelect({ kind, compact = false }) {
   const [error, setError] = useState('')
   const isCollege = kind === 'college'
   const label = isCollege ? 'College' : 'Academic year'
-  const items = isCollege ? (context.activeColleges || []) : (context.activeAcademicYears || [])
+  const items = isCollege ? (context.activeColleges || []) : (context.academicYears || [])
   const value = isCollege ? context.selectedCollegeId : context.selectedAcademicYearId
   const idOf = item => String(item.id ?? (isCollege ? item.collegeId : item.academicYearId))
   const nameOf = item => item.name || item.collegeName || item.academicYearName || label

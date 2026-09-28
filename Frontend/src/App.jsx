@@ -27,6 +27,7 @@ import StudentProfile from './pages/student-management/StudentProfile/StudentPro
 import StudentPromotion from './pages/student-management/StudentPromotion/StudentPromotion'
 import Fees from './pages/fees/FeeStructure'
 import Attendance from './pages/attendance/Attendance'
+import AttendanceSessionDetails from './pages/attendance/AttendanceSessionDetails'
 import Marks from './pages/marks/Marks'
 import Results from './pages/results/Results'
 import FacultyManagement from './pages/faculty/FacultyManagement'
@@ -91,12 +92,18 @@ function TableOverflowTitles() {
   useEffect(() => {
     const actionSelector = '.erp-row-actions,.row-actions,.cm-actions,.cm-row-actions,.semester-row-actions,.section-actions,.course-actions,.branch-actions,.sa-icon-actions,.sa-row-actions'
     const showFullValue = (event) => {
-      const cell = event.target.closest('td, th')
-      if (!cell || cell.querySelector(actionSelector)) return
+      const target = event.target.closest('td, th, .cm-info-val, .sa-kv-val, .sa-kv-value, .erp-view-value, .kv-val, .sp-panel-val, .meta-val, .cm-info-row, .sa-kv-cell, .preview-kv-item, .table-cell-truncate, .rbac-profile-subtitle, .detail-item strong')
+      if (!target) return
+      if (target.hasAttribute('data-no-overflow-tooltip')) {
+        target.title = ''
+        return
+      }
+      if (target.querySelector(actionSelector)) return
 
-      const children = Array.from(cell.children)
-      const isTruncated = cell.scrollWidth > cell.clientWidth || children.some((child) => child.scrollWidth > child.clientWidth)
-      if (isTruncated && !cell.title) cell.title = cell.innerText.replace(/\s+/g, ' ').trim()
+      const isTruncated = target.scrollWidth > target.clientWidth || (target.children.length > 0 && Array.from(target.children).some((child) => child.scrollWidth > child.clientWidth))
+      if (isTruncated && !target.title) {
+        target.title = target.innerText.replace(/\s+/g, ' ').trim()
+      }
     }
     document.addEventListener('mouseover', showFullValue)
     return () => document.removeEventListener('mouseover', showFullValue)
@@ -219,7 +226,11 @@ export default function App() {
               <Route path="/section-management/:id/edit" element={<SectionManagement mode="edit" />} />
               <Route path="/section-management/:id" element={<SectionManagement mode="details" />} />
               <Route path="/rooms-management" element={<RoomsManagement />} />
+              <Route path="/rooms-management/add" element={<RoomsManagement key="room-add" formMode />} />
+              <Route path="/rooms-management/:roomId/edit" element={<RoomsManagement key="room-edit" formMode />} />
+              <Route path="/rooms-management/:roomId" element={<RoomsManagement key="room-view" viewMode />} />
               <Route path="/rooms" element={<RoomsManagement />} />
+              <Route path="/rooms/:roomId" element={<RoomsManagement key="room-view-alias" viewMode />} />
               <Route path="/roles-designations" element={<RolesAndDesignations />} />
               <Route path="/subject-management" element={<SubjectManagement />} />
               <Route path="/credits-management" element={<CreditsManagement />} />
@@ -233,6 +244,7 @@ export default function App() {
               <Route path="/student-management/admissions/:id" element={<StudentAdmission />} />
               <Route path="/student-management/profiles" element={<StudentProfile />} />
               <Route path="/student-management/profiles/:id" element={<StudentProfile />} />
+              <Route path="/student-management/attendance/sessions/:sessionId" element={<AttendanceSessionDetails />} />
               <Route path="/student-management/attendance/*" element={<Attendance />} />
               <Route path="/student-management/promotions" element={<StudentPromotion />} />
               <Route path="/fees/*" element={<Fees />} />

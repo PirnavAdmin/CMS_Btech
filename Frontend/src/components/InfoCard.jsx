@@ -1,4 +1,5 @@
 import './InfoCard.css'
+import StatusBadge from './StatusBadge'
 
 const isCleanValue = (val) => {
   if (val === null || val === undefined) return false
@@ -15,13 +16,12 @@ const isCleanValue = (val) => {
   return true
 }
 
-const isStatusLabel = (label = '') => /status|state|eligibility/i.test(String(label))
+const isStatusLabel = (label = '') => /\b(status|eligibility)\b/i.test(String(label))
 
 function DetailsValue({ label, value }) {
   if (value === null || value === undefined) return '—'
   if (typeof value === 'string' && isStatusLabel(label)) {
-    const statusClass = value.trim().toLowerCase().replace(/\s+/g, '-')
-    return <span className={`details-status-badge ${statusClass}`}>{value}</span>
+    return <StatusBadge value={value} />
   }
   return value
 }

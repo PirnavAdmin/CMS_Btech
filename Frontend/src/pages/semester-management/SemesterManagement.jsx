@@ -89,6 +89,38 @@ const makeLookups = (courses, branches, years, colleges = []) => ({
   collegeById: new Map(colleges.map((item) => [String(item.id), item])),
 })
 
+const SEMESTER_DATES_KEY = 'semester_dates_cache'
+
+const readCachedSemesterDates = (id, key) => {
+  try {
+    const raw = localStorage.getItem(SEMESTER_DATES_KEY)
+    if (!raw) return {}
+    const parsed = JSON.parse(raw)
+    const lookupKey = [id, key].filter(Boolean).map(String).find((candidate) => parsed[candidate])
+    return lookupKey ? (parsed[lookupKey] || {}) : {}
+  } catch {
+    return {}
+  }
+}
+
+const cacheSemesterDates = (id, key, dates) => {
+  if (!dates || (!dates.startDate && !dates.endDate)) return
+  try {
+    const raw = localStorage.getItem(SEMESTER_DATES_KEY)
+    const parsed = raw ? JSON.parse(raw) : {}
+    const keys = [id, key].filter(Boolean).map(String)
+    keys.forEach((k) => {
+      parsed[k] = {
+        startDate: dates.startDate || parsed[k]?.startDate || '',
+        endDate: dates.endDate || parsed[k]?.endDate || '',
+      }
+    })
+    localStorage.setItem(SEMESTER_DATES_KEY, JSON.stringify(parsed))
+  } catch {
+    // Ignore storage errors
+  }
+}
+
 const mapSemester = (record = {}, lookups = {}) => {
   const semesterNumber = Number(record.semesterNumber ?? 0)
   const branchId = (record.branchId ?? record.branchID ?? record.BranchId ?? record.BranchID) || record.branch?.branchId || record.branch?.id || ''
@@ -99,10 +131,22 @@ const mapSemester = (record = {}, lookups = {}) => {
   const college = lookups.collegeById?.get(String(collegeId))
   const academicYearId = record.academicYearId ?? record.academicYear?.academicYearId ?? record.academicYear?.id ?? record.yearId ?? ''
   const academicYear = lookups.yearById?.get(String(academicYearId))
+  const id = record.semesterId ?? record.structureId ?? record.id
+  const semesterKey = `${branchId || courseId}_sem${semesterNumber}`
+  const cachedDates = readCachedSemesterDates(id, semesterKey)
+  const rawStartDate = record.startDate ?? record.StartDate ?? record.start_date ?? record.fromDate ?? record.FromDate ?? cachedDates.startDate ?? ''
+  const rawEndDate = record.endDate ?? record.EndDate ?? record.end_date ?? record.toDate ?? record.ToDate ?? cachedDates.endDate ?? ''
+  const startDate = rawStartDate ? String(rawStartDate).slice(0, 10) : ''
+  const endDate = rawEndDate ? String(rawEndDate).slice(0, 10) : ''
+
+  if (startDate || endDate) {
+    cacheSemesterDates(id, semesterKey, { startDate, endDate })
+  }
+
   const mapped = {
     ...record,
     backendStatus: record.backendStatus ?? record.status,
-    id: record.semesterId ?? record.structureId ?? record.id,
+    id,
     courseId,
     courseName: record.courseName ?? record.course?.courseName ?? record.course?.name ?? course?.name ?? '',
     courseCode: record.courseCode ?? record.course?.courseCode ?? course?.code ?? '',
@@ -117,8 +161,8 @@ const mapSemester = (record = {}, lookups = {}) => {
     yearNumber: Number(record.yearNumber ?? yearNumberForSemester(semesterNumber)),
     semesterNumber,
     semesterName: record.semesterName || `Semester ${semesterNumber}`,
-    startDate: record.startDate ?? '',
-    endDate: record.endDate ?? '',
+    startDate,
+    endDate,
     courseDuration: course?.durationYears || record.courseDuration || '',
     academicPattern: course?.academicPattern || record.academicPattern || '',
     totalSemesters: course?.totalSemesters || record.totalSemesters || '',
@@ -296,7 +340,6 @@ function SemesterList() {
             <option value="">Select Status</option>
             {['Active', 'Upcoming', 'Completed'].map((item) => <option key={item} value={item}>{item}</option>)}
           </select>
-          {hasFilters && <button className="semester-clear" onClick={clearFilters}><FiFilter /> Clear</button>}
         </div>
       </FilterPanel>
       {loading ? <Empty icon={FiClock} title="Loading semesters..." /> : error ? <Empty icon={FiLayers} title={error} action={<button className="semester-primary" onClick={load}>Retry</button>} /> : visible.length ? (
@@ -471,7 +514,10 @@ function SemesterForm({ editMode = false }) {
     try {
       if (editMode) {
         const row = { ...form, ...(selectedPlanRow || {}), startDate: dates[form.semesterNumber]?.startDate ?? form.startDate, endDate: dates[form.semesterNumber]?.endDate ?? form.endDate }
-        await updateSemester(id, { collegeId: Number(college?.id || editingSemester?.collegeId) || undefined, courseId: Number(form.courseId), branchId: Number(form.branchId), academicYearId: Number(form.academicYearId || row.academicYearId), semesterName: form.semesterName, semesterNumber: Number(form.semesterNumber), yearNumber: yearNumberForSemester(form.semesterNumber), startDate: row.startDate || null, endDate: row.endDate || null, status: [0, 1].includes(Number(editingSemester.backendStatus)) ? Number(editingSemester.backendStatus) : semesterPayloadStatus(deriveLifecycleStatus(row)), createdBy: 1 })
+        const cleanStart = row.startDate ? String(row.startDate).slice(0, 10) : ''
+        const cleanEnd = row.endDate ? String(row.endDate).slice(0, 10) : ''
+        cacheSemesterDates(id, `${form.branchId || form.courseId}_sem${form.semesterNumber}`, { startDate: cleanStart, endDate: cleanEnd })
+        await updateSemester(id, { collegeId: Number(college?.id || editingSemester?.collegeId) || undefined, courseId: Number(form.courseId), branchId: Number(form.branchId), academicYearId: Number(form.academicYearId || row.academicYearId), semesterName: form.semesterName, semesterNumber: Number(form.semesterNumber), yearNumber: yearNumberForSemester(form.semesterNumber), startDate: cleanStart || null, endDate: cleanEnd || null, StartDate: cleanStart || null, EndDate: cleanEnd || null, status: [0, 1].includes(Number(editingSemester.backendStatus)) ? Number(editingSemester.backendStatus) : semesterPayloadStatus(deriveLifecycleStatus(row)), createdBy: 1 })
         setNotice('Semester updated successfully.')
       } else {
         const freshRows = responseList(await getSemesters()).map((item) => mapSemester(item, makeLookups(courses, branches, academicYears, colleges)))
@@ -479,7 +525,16 @@ function SemesterForm({ editMode = false }) {
         if (freshRows.some((item) => sameCohort(item, plan[0]))) throw new Error(`Semester structure already exists for ${course.name} - ${branch.code || branch.name} - ${coursePeriod}.`)
         const missing = plan.filter((row) => !freshRows.some((item) => sameCohort(item, row) && Number(item.semesterNumber) === Number(row.semesterNumber)))
         if (!missing.length) { setNotice('Semester structure is already saved.', 'info'); return }
-        const results = await Promise.allSettled(missing.map((item) => createSemester({ collegeId: Number(college?.id || item.collegeId) || undefined, courseId: Number(item.courseId), branchId: Number(item.branchId), academicYearId: Number(item.academicYearId), semesterName: item.semesterName, semesterNumber: Number(item.semesterNumber), yearNumber: Number(item.yearNumber), startDate: item.startDate || null, endDate: item.endDate || null, status: semesterPayloadStatus(item.status), createdBy: 1 })))
+        missing.forEach((item) => {
+          const cleanStart = item.startDate ? String(item.startDate).slice(0, 10) : ''
+          const cleanEnd = item.endDate ? String(item.endDate).slice(0, 10) : ''
+          cacheSemesterDates(item.id, `${item.branchId || item.courseId}_sem${item.semesterNumber}`, { startDate: cleanStart, endDate: cleanEnd })
+        })
+        const results = await Promise.allSettled(missing.map((item) => {
+          const cleanStart = item.startDate ? String(item.startDate).slice(0, 10) : ''
+          const cleanEnd = item.endDate ? String(item.endDate).slice(0, 10) : ''
+          return createSemester({ collegeId: Number(college?.id || item.collegeId) || undefined, courseId: Number(item.courseId), branchId: Number(item.branchId), academicYearId: Number(item.academicYearId), semesterName: item.semesterName, semesterNumber: Number(item.semesterNumber), yearNumber: Number(item.yearNumber), startDate: cleanStart || null, endDate: cleanEnd || null, StartDate: cleanStart || null, EndDate: cleanEnd || null, status: semesterPayloadStatus(item.status), createdBy: 1 })
+        }))
         results.filter(result => result.status === 'fulfilled').forEach(result => rememberCreated('semesters', result.value))
         const created = results.filter((result) => result.status === 'fulfilled').length
         if (!created) throw results.find((result) => result.status === 'rejected')?.reason || new Error('Unable to generate semester structure.')

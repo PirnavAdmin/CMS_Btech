@@ -403,11 +403,11 @@ html,body,#root{max-width:100%;overflow-x:hidden}
 }
 
 /* Shared icon palette follows the College directory across all modules. */
-.page-content .module-action-icon--view{color:#0F172A!important}
-.page-content .module-action-icon--edit{color:#7c3aed!important}
+.page-content .module-action-icon--view{color:#756FB2!important}
+.page-content .module-action-icon--edit{color:#756FB2!important}
 .page-content .module-action-icon--danger{color:#b42318!important}
-.page-content :is(button,a):has(>.module-action-icon--view){color:#0F172A!important;background:#EDEBF6!important;border-color:#DFDCED!important;font-weight:700;}
-.page-content :is(button,a):has(>.module-action-icon--edit){color:#7c3aed!important;background:#f3e8ff!important;border-color:#dfccff!important}
+.page-content :is(button,a):has(>.module-action-icon--view){color:#756FB2!important;background:#EDEBF6!important;border-color:#DDD8F3!important;font-weight:700;}
+.page-content :is(button,a):has(>.module-action-icon--edit){color:#756FB2!important;background:#EDEBF6!important;border-color:#DDD8F3!important}
 .page-content :is(button,a):has(>.module-action-icon--danger){color:#b42318!important;background:#fee4e2!important;border-color:#fecdca!important}
 .page-content .ay .ay-actions :is(.primary,.current-action){color:#756FB2!important;background:#EDEBF6!important;border-color:#DDD8F3!important}
 .page-content .ay .ay-actions :is(.danger,.archived-action){color:#b42318!important;background:#fee4e2!important;border-color:#fecdca!important}
@@ -574,11 +574,11 @@ html,body,#root{max-width:100%;overflow-x:hidden}
 }
 
 /* Preserve semantic colors for the Branch directory row actions. */
-.page-content .branch-actions a:first-child{color:#0F172A!important;background:#EDEBF6!important;border-color:#DFDCED!important;font-weight:700;}.page-content .branch-actions a:nth-child(2){color:#7c3aed!important;background:#f3e8ff!important;border-color:#dfccff!important}.page-content .branch-actions .branch-status-action.danger{color:#b42318!important;background:#fee4e2!important;border-color:#fecdca!important}.page-content .branch-actions .branch-status-action.success{color:#756FB2!important;background:#EDEBF6!important;border-color:#DDD8F3!important}
-.page-content .cm-actions .cm-view-action{color:#0F172A!important;background:#EDEBF6!important;border-color:#DFDCED!important;font-weight:700;}.page-content .cm-actions .cm-edit-action{color:#7c3aed!important;background:#f3e8ff!important;border-color:#dfccff!important}.page-content .cm-actions .cm-status-action.cm-danger{color:#b42318!important;background:#fee4e2!important;border-color:#fecdca!important}.page-content .cm-actions .cm-status-action.cm-success{color:#756FB2!important;background:#EDEBF6!important;border-color:#DDD8F3!important}
+.page-content .branch-actions a:first-child{color:#756FB2!important;background:#EDEBF6!important;border-color:#DDD8F3!important;font-weight:700;}.page-content .branch-actions a:nth-child(2){color:#756FB2!important;background:#EDEBF6!important;border-color:#DDD8F3!important}.page-content .branch-actions .branch-status-action.danger{color:#b42318!important;background:#fee4e2!important;border-color:#fecdca!important}.page-content .branch-actions .branch-status-action.success{color:#756FB2!important;background:#EDEBF6!important;border-color:#DDD8F3!important}
+.page-content .cm-actions .cm-view-action{color:#756FB2!important;background:#EDEBF6!important;border-color:#DDD8F3!important;font-weight:700;}.page-content .cm-actions .cm-edit-action{color:#756FB2!important;background:#EDEBF6!important;border-color:#DDD8F3!important}.page-content .cm-actions .cm-status-action.cm-danger{color:#b42318!important;background:#fee4e2!important;border-color:#fecdca!important}.page-content .cm-actions .cm-status-action.cm-success{color:#756FB2!important;background:#EDEBF6!important;border-color:#DDD8F3!important}
 
 /* Shared management-directory action colors: view, edit, assign, deactivate, activate. */
-.page-content :is(.course-actions,.semester-row-actions,.section-actions,.row-actions)>:first-child{color:#0F172A!important;background:#EDEBF6!important;border-color:#DFDCED!important;font-weight:700;}.page-content :is(.course-actions,.semester-row-actions,.section-actions,.row-actions)>:nth-child(2){color:#7c3aed!important;background:#f3e8ff!important;border-color:#dfccff!important}.page-content :is(.section-actions,.row-actions)>:nth-child(3):not(.status-action):not(.section-status-action){color:#756FB2!important;background:#fff3d6!important;border-color:#fedf89!important}.page-content :is(.course-actions,.section-actions,.row-actions) :is(.course-status-action,.section-status-action,.status-action).danger{color:#b42318!important;background:#fee4e2!important;border-color:#fecdca!important}.page-content :is(.course-actions,.section-actions,.row-actions) :is(.course-status-action,.section-status-action,.status-action).success{color:#756FB2!important;background:#EDEBF6!important;border-color:#DDD8F3!important}
+.page-content :is(.course-actions,.semester-row-actions,.section-actions,.row-actions)>:first-child{color:#756FB2!important;background:#EDEBF6!important;border-color:#DDD8F3!important;font-weight:700;}.page-content :is(.course-actions,.semester-row-actions,.section-actions,.row-actions)>:nth-child(2){color:#756FB2!important;background:#EDEBF6!important;border-color:#DDD8F3!important}.page-content :is(.section-actions,.row-actions)>:nth-child(3):not(.status-action):not(.section-status-action){color:#756FB2!important;background:#EDEBF6!important;border-color:#DDD8F3!important}.page-content :is(.course-actions,.section-actions,.row-actions) :is(.course-status-action,.section-status-action,.status-action).danger{color:#b42318!important;background:#fee4e2!important;border-color:#fecdca!important}.page-content :is(.course-actions,.section-actions,.row-actions) :is(.course-status-action,.section-status-action,.status-action).success{color:#756FB2!important;background:#EDEBF6!important;border-color:#DDD8F3!important}
 
 :root[data-theme="dark"] .page-content table thead th{
   border-color:#28445c!important;background:#0F172A!important;color:#eef6fc!important;
@@ -1658,8 +1658,11 @@ td.col-actions,
 }
 
 .preview-hero-badge {
-  width: 36px;
+  min-width: 36px;
+  width: auto;
+  max-width: 60px;
   height: 36px;
+  padding: 0 6px;
   border-radius: 8px;
   background: #756FB2;
   color: #ffffff;
@@ -1668,13 +1671,18 @@ td.col-actions,
   justify-content: center;
   font-weight: 850;
   font-size: 0.7rem;
-  letter-spacing: 0.03em;
+  letter-spacing: 0.02em;
   flex-shrink: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  box-sizing: border-box;
 }
 
 .preview-hero-details {
   min-width: 0;
   flex: 1;
+  overflow: hidden;
 }
 
 .preview-course-title {
@@ -1771,12 +1779,94 @@ td.col-actions,
 .semester-form-layout,
 .dept-form-layout {
   display: grid;
-  grid-template-columns: minmax(0, 1.35fr) minmax(320px, 0.85fr);
+  grid-template-columns: minmax(0, 1.35fr) minmax(300px, 0.85fr);
   gap: 16px;
   align-items: stretch;
   width: 100%;
   max-width: 100%;
-  min-height: 0;
+  min-width: 0;
+  box-sizing: border-box;
+}
+
+/* Universal Anti-Overlap and Overflow Containment for all Forms & Grids */
+:is(
+  .cm-form-grid,
+  .semester-form-grid,
+  .section-form-grid,
+  .sm-form-grid-2,
+  .sm-form-grid-3,
+  .course-form-grid,
+  .branch-form-grid,
+  .erp-form-grid,
+  .dept-form-grid
+) {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  gap: 12px 16px;
+  width: 100% !important;
+  max-width: 100% !important;
+  min-width: 0 !important;
+  box-sizing: border-box !important;
+}
+
+:is(
+  .cm-field,
+  .section-field,
+  .semester-field,
+  .sm-field,
+  .erp-field,
+  .form-field
+) {
+  display: flex !important;
+  flex-direction: column !important;
+  width: 100% !important;
+  max-width: 100% !important;
+  min-width: 0 !important;
+  box-sizing: border-box !important;
+  overflow: visible;
+}
+
+:is(
+  .cm-field,
+  .section-field,
+  .semester-field,
+  .sm-field,
+  .erp-field,
+  .form-field
+) > span:first-child {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+:is(
+  .cm-field,
+  .section-field,
+  .semester-field,
+  .sm-field,
+  .erp-field,
+  .form-field
+) :is(input, select, textarea, .searchable-select, .searchable-select__trigger) {
+  width: 100% !important;
+  max-width: 100% !important;
+  min-width: 0 !important;
+  box-sizing: border-box !important;
+}
+
+:is(
+  .cm-field,
+  .section-field,
+  .semester-field,
+  .sm-field,
+  .erp-field,
+  .form-field
+) input[readonly] {
+  text-overflow: ellipsis !important;
+  overflow: hidden !important;
+  white-space: nowrap !important;
 }
 
 

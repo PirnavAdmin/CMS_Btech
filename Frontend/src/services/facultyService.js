@@ -24,13 +24,25 @@ export const normalizeFaculty = (source = {}) => {
   const id = String(first(source, ['facultyId', 'id', 'employeeProfileId', 'FacultyId', 'Id', 'EmployeeProfileId'], ''))
   const facultyId = first(source, ['facultyId', 'id', 'employeeProfileId', 'FacultyId', 'Id', 'EmployeeProfileId'], '')
 
+  const rawDob = first(source, ['dob', 'dateOfBirth', 'DateOfBirth', 'DOB'])
+  const dob = rawDob && String(rawDob) !== 'undefined' ? String(rawDob).slice(0, 10) : ''
+  const rawJoining = first(source, ['joiningDate', 'dateOfJoining', 'DateOfJoining', 'JoiningDate'])
+  const joiningDate = rawJoining && String(rawJoining) !== 'undefined' ? String(rawJoining).slice(0, 10) : ''
+
+  const isHexUUID = str => !str || /^[0-9a-f]{8}-?[0-9a-f]{4}-?[0-9a-f]{4}-?[0-9a-f]{4}-?[0-9a-f]{12}$/i.test(String(str).trim()) || /^[0-9a-f]{32}$/i.test(String(str).trim())
+
+  const rawEmpId = first(source, ['employeeId', 'employeeCode', 'EmployeeId', 'EmployeeCode'])
+  const validEmployeeId = (rawEmpId && !isHexUUID(rawEmpId))
+    ? rawEmpId
+    : (id && !isHexUUID(id) && String(id).match(/^\d+$/) ? `FAC-${String(id).padStart(3, '0')}` : facultyEmployeeCode(id))
+
   return {
     ...source,
     id,
     facultyId,
     collegeId: first(source, ['collegeId', 'college_id', 'CollegeId', 'collId', 'CollId'], ''),
-    facultyCode: first(source, ['facultyCode', 'faculty_code', 'FacultyCode'], /^FAC\d+$/i.test(source.employeeId || '') ? source.employeeId : ''),
-    employeeId: facultyEmployeeCode(first(source, ['facultyId', 'id', 'employeeProfileId', 'FacultyId', 'Id', 'EmployeeProfileId'], '')),
+    facultyCode: isHexUUID(source.facultyCode) ? '' : (source.facultyCode || ''),
+    employeeId: validEmployeeId,
     fullName: first(source, ['fullName', 'facultyName', 'name', 'FullName', 'FacultyName', 'userName', 'username'], [source.firstName, source.lastName].filter(Boolean).join(' ')),
     email: first(source, ['email', 'officialEmail', 'workEmail', 'Email', 'OfficialEmail'], ''),
     mobile: first(source, ['mobile', 'phoneNumber', 'phone', 'mobileNumber', 'Mobile', 'PhoneNumber', 'Phone', 'MobileNumber'], ''),
@@ -40,16 +52,30 @@ export const normalizeFaculty = (source = {}) => {
     branchId: first(source, ['branchId', 'BranchId', 'branch_id'], ''),
     designation: first(source, ['designation', 'title', 'Designation', 'Title', 'designationName', 'DesignationName'], ''),
     qualification: first(source, ['qualification', 'highestQualification', 'Qualification'], ''),
+    qualificationOther: first(source, ['qualificationOther', 'QualificationOther'], ''),
+    specialization: first(source, ['specialization', 'Specialization'], ''),
+    university: first(source, ['university', 'institution', 'University', 'Institution'], ''),
+    passingYear: first(source, ['passingYear', 'yearOfPassing', 'PassingYear', 'YearOfPassing'], ''),
     experience: first(source, ['experienceYears', 'experience', 'teachingExperience', 'ExperienceYears', 'Experience'], ''),
+    teachingExperience: first(source, ['teachingExperience', 'TeachingExperience'], ''),
+    industryExperience: first(source, ['industryExperience', 'IndustryExperience'], ''),
     employmentType: first(source, ['employmentType', 'appointmentType', 'EmploymentType'], ''),
     employmentStatus: first(source, ['employmentStatus', 'statusName', 'EmploymentStatus', 'StatusName'], typeof source.status === 'string' ? source.status : source.status === 0 ? 'Inactive' : 'Working'),
     gender: first(source, ['gender', 'genderName', 'sex', 'Gender'], ''),
-    dob: String(first(source, ['dob', 'dateOfBirth', 'DateOfBirth', 'DOB'])).slice(0, 10),
-    joiningDate: String(first(source, ['joiningDate', 'dateOfJoining', 'DateOfJoining', 'JoiningDate'])).slice(0, 10),
+    dob,
+    joiningDate,
     photo: facultyPhoto(source),
-    emergencyName: first(source, ['emergencyName', 'emergencyContactName', 'EmergencyContactName']),
-    emergencyMobile: first(source, ['emergencyMobile', 'emergencyContactNumber', 'EmergencyContactNumber']),
-    relationship: first(source, ['relationship', 'emergencyContactRelation', 'EmergencyContactRelation']),
+    address: first(source, ['address', 'Address', 'currentAddress', 'CurrentAddress', 'permanentAddress', 'PermanentAddress'], ''),
+    city: first(source, ['city', 'City', 'currentCity', 'permanentCity'], ''),
+    state: first(source, ['state', 'State', 'currentState', 'permanentState'], ''),
+    pincode: first(source, ['pincode', 'Pincode', 'pinCode', 'zipCode', 'postalCode'], ''),
+    alternateMobile: first(source, ['alternateMobile', 'altMobile', 'AlternateMobile', 'AltMobile'], ''),
+    personalEmail: first(source, ['personalEmail', 'PersonalEmail'], ''),
+    emergencyName: first(source, ['emergencyName', 'emergencyContactName', 'EmergencyContactName'], ''),
+    emergencyMobile: first(source, ['emergencyMobile', 'emergencyContactNumber', 'EmergencyContactNumber'], ''),
+    relationship: first(source, ['relationship', 'emergencyContactRelation', 'EmergencyContactRelation'], ''),
+    employeeCategoryOther: first(source, ['employeeCategoryOther', 'EmployeeCategoryOther'], ''),
+    documents: source.documents || {},
     employeeCategory: (() => {
       const raw = first(source, ['employeeCategory', 'category', 'facultyType', 'EmployeeCategory', 'Category', 'FacultyType'], '')
       if (raw) {
@@ -146,8 +172,8 @@ export const saveLocalAttendanceRecord = (record) => {
 // in employeeId; normalize before comparing and never match unscoped codes.
 const sameFaculty = (left, right) => {
   const a = normalizeFaculty(left); const b = normalizeFaculty(right)
-  if (a.id && b.id && a.id === b.id) return true
-  if (a.employeeId && b.employeeId) return false
+  if (a.id && b.id && String(a.id) === String(b.id)) return true
+  if (a.employeeId && b.employeeId && String(a.employeeId).toLowerCase() === String(b.employeeId).toLowerCase()) return true
   return Boolean(a.collegeId && b.collegeId && String(a.collegeId) === String(b.collegeId)
     && a.facultyCode && a.facultyCode === b.facultyCode)
 }
@@ -160,6 +186,10 @@ const getLocalFaculty = () => {
         const num = String(item.employeeId || '10').replace(/\D/g, '') || '10'
         return { ...item, id: num, facultyId: num }
       }
+      if (typeof item.employeeId === 'string' && item.employeeId.match(/\d{5,}$/)) {
+        const cleanEmpId = item.employeeId.replace(/\d{5,}$/, '').replace(/-+$/, '')
+        return { ...item, employeeId: cleanEmpId }
+      }
       return item
     })
   } catch {
@@ -170,7 +200,7 @@ const getLocalFaculty = () => {
 const saveLocalFaculty = (record) => {
   try {
     const list = getLocalFaculty()
-    const index = list.findIndex(item => sameFaculty(item, record))
+    const index = list.findIndex(item => String(item.id) === String(record.id) || String(item.facultyId) === String(record.id) || (record.employeeId && item.employeeId && String(item.employeeId).toLowerCase() === String(record.employeeId).toLowerCase()) || sameFaculty(item, record))
     if (index >= 0) {
       list[index] = { ...list[index], ...record }
     } else {
@@ -183,7 +213,7 @@ const saveLocalFaculty = (record) => {
 const getLocalProfile = (id) => {
   try {
     const profiles = JSON.parse(localStorage.getItem(LOCAL_PROFILE_KEY)) || {}
-    return profiles[id] || null
+    return profiles[String(id)] || profiles[id] || null
   } catch {
     return null
   }
@@ -192,7 +222,7 @@ const getLocalProfile = (id) => {
 const saveLocalProfile = (id, profile) => {
   try {
     const profiles = JSON.parse(localStorage.getItem(LOCAL_PROFILE_KEY)) || {}
-    profiles[id] = { ...(profiles[id] || {}), ...profile }
+    profiles[String(id)] = { ...(profiles[String(id)] || {}), ...profile }
     localStorage.setItem(LOCAL_PROFILE_KEY, JSON.stringify(profiles))
   } catch { /* ignore */ }
 }
@@ -368,26 +398,32 @@ export const facultyService = {
   list: params => listFaculty(params),
   search: params => listFaculty(params, true),
   getById: async id => {
+    const local = getLocalFaculty().find(item => String(item.id) === String(id) || String(item.facultyId) === String(id) || (item.employeeId && String(item.employeeId) === String(id)))
     try {
       const res = await facultyApi.getById(id)
-      if (res && (res.id || res.facultyId || res.fullName || res.facultyName)) return withFacultyPhoto(mergeFacultyData(normalizeFaculty(res), getLocalFaculty().find(item => String(item.id) === String(id))))
+      if (res && (res.id || res.facultyId || res.fullName || res.facultyName)) return withFacultyPhoto(mergeFacultyData(local, normalizeFaculty(res), local))
     } catch { /* fallback */ }
     try {
       const all = await listFaculty()
       const matched = all.find(item => String(item.id) === String(id) || String(item.facultyId) === String(id) || String(item.employeeId) === String(id))
-      if (matched) return normalizeFaculty(matched)
+      if (matched) return normalizeFaculty(mergeFacultyData(matched, local))
     } catch { /* fallback */ }
-    const local = getLocalFaculty().find(item => String(item.id) === String(id) || String(item.employeeId) === String(id))
     if (local) return normalizeFaculty(local)
     return normalizeFaculty({ id: String(id), facultyId: String(id) })
   },
   create: async payload => {
     const created = await facultyApi.create(facultyCreatePayload(payload))
     if (!created?.id && !created?.facultyId) throw new Error('The server did not return the saved faculty record.')
-    // Only the server response owns identifiers; form/cache values must never
-    // masquerade as an identifier allocated by the database.
-    const details = Object.fromEntries(Object.entries(payload).filter(([key]) => !['facultyCode', 'faculty_code', 'employeeId', 'employee_id', 'employeeCode', 'employeeNumber'].includes(key)))
-    const result = normalizeFaculty(mergeFacultyData(details, created))
+    const isHexUUID = str => !str || /^[0-9a-f]{8}-?[0-9a-f]{4}-?[0-9a-f]{4}-?[0-9a-f]{4}-?[0-9a-f]{12}$/i.test(String(str).trim()) || /^[0-9a-f]{32}$/i.test(String(str).trim())
+    const empId = payload.employeeId && !isHexUUID(payload.employeeId) ? payload.employeeId : (created.employeeId && !isHexUUID(created.employeeId) ? created.employeeId : '')
+    const result = normalizeFaculty({
+      ...mergeFacultyData(payload, created),
+      ...payload,
+      id: String(created.id || created.facultyId),
+      facultyId: String(created.id || created.facultyId),
+      employeeId: empId,
+      employeeCategory: payload.employeeCategory || 'Teaching',
+    })
     saveLocalFaculty(result)
     return result
   },
@@ -398,7 +434,7 @@ export const facultyService = {
     } catch (err) {
       console.warn('Backend faculty update error, saving to local store:', err)
     }
-    const updated = normalizeFaculty({ ...mergeFacultyData(payload, response), id: String(id), facultyId: String(id) })
+    const updated = normalizeFaculty({ ...mergeFacultyData(payload, response), ...payload, id: String(id), facultyId: String(id) })
     saveLocalFaculty(updated)
     return updated
   },

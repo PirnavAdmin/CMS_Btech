@@ -17,6 +17,7 @@ import CompactSummary from '../../components/CompactSummary'
 import {
   createCollegeSettings,
   cacheCollegeLogo,
+  cacheCollegeDates,
   fetchCollegeLogo,
   isBackendCollegeLogo,
   getCollegeLogoUrl,
@@ -28,6 +29,7 @@ import {
   normalizeWebsite,
   readCollegeExtendedDetails,
   readCachedCollegeLogo,
+  readCachedCollegeDates,
   unwrapCollegeRecord,
   searchColleges,
   updateCollege,
@@ -251,12 +253,20 @@ const mapCollege = (record) => {
   const administration = record.administration ?? record.principalDetails ?? {}
   const accreditation = record.accreditationDetails && typeof record.accreditationDetails === 'object' ? record.accreditationDetails : {}
   const extended = readCollegeExtendedDetails(record)
+  const cachedDates = (id ? readCachedCollegeDates(id) : null) || (code ? readCachedCollegeDates(code) : null) || (name ? readCachedCollegeDates(name) : null) || (record.collegeName ? readCachedCollegeDates(record.collegeName) : null) || (record.collegeCode ? readCachedCollegeDates(record.collegeCode) : null) || {}
+  const startDate = record.startDate ?? record.StartDate ?? record.start_date ?? extended.startDate ?? cachedDates?.startDate ?? ''
+  const endDate = record.endDate ?? record.EndDate ?? record.end_date ?? extended.endDate ?? cachedDates?.endDate ?? ''
+  if (startDate || endDate) {
+    cacheCollegeDates(id, { startDate, endDate }, [code, name, record.collegeCode, record.collegeName])
+  }
   return ({
   id,
   name: record.name ?? record.collegeName ?? record.CollegeName ?? '',
   code: record.code ?? record.collegeCode ?? record.CollegeCode ?? '',
   type: record.type ?? record.collegeType ?? record.CollegeType ?? record.institutionType ?? COLLEGE_TYPES[0],
   university: record.university ?? record.universityName ?? record.UniversityName ?? '',
+  startDate,
+  endDate,
   address: record.address ?? record.addressLine1 ?? record.Address ?? '',
   addressLine1: record.addressLine1 ?? address.addressLine1 ?? record.address ?? '',
   addressLine2: record.addressLine2 ?? address.addressLine2 ?? '',
@@ -847,7 +857,7 @@ export default function CollegeInstitutionManagement({ initialView = 'list' }) {
               </header>
 
               <FilterPanel active={Boolean(searchTerm || typeFilter || statusFilter)} onClear={() => { setSearchTerm(''); setTypeFilter(''); setStatusFilter(''); setCurrentPage(1); loadColleges('') }}>
-                <section className="cm-panel course-toolbar">
+                <div className="course-toolbar">
                   <label className="course-search">
                     <FiSearch />
                     <input
@@ -867,12 +877,7 @@ export default function CollegeInstitutionManagement({ initialView = 'list' }) {
                     <option value="active">Active</option>
                     <option value="inactive">Inactive</option>
                   </select>
-                  {Boolean(searchTerm || typeFilter || statusFilter) && (
-                    <button className="course-clear" onClick={() => { setSearchTerm(''); setTypeFilter(''); setStatusFilter(''); setCurrentPage(1); loadColleges('') }}>
-                      <FiFilter /> Clear Filters
-                    </button>
-                  )}
-                </section>
+                </div>
               </FilterPanel>
 
             {isCollegesLoading ? (
@@ -1181,6 +1186,8 @@ export default function CollegeInstitutionManagement({ initialView = 'list' }) {
                     { label: 'College Code', value: activeCollege.code },
                     { label: 'College Type', value: activeCollege.type },
                     { label: 'University Name', value: activeCollege.university },
+                    { label: 'Start Date', value: activeCollege.startDate },
+                    { label: 'End Date', value: activeCollege.endDate },
                     { label: 'College Status', value: activeCollege.status === 'active' ? 'Active' : 'Inactive' },
                   ]}
                 />

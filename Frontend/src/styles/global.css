@@ -377,6 +377,11 @@ button:disabled, input:disabled, select:disabled, textarea:disabled { cursor: no
   white-space: nowrap !important;
 }
 
+:is(.cm-profile-view, .section-management, .semester-management, .student-admission, .student-profile, .profile-page) :is(.cm-status-badge, .sa-badge, .sp-badge, .profile-status):is(.inactive, .rejected, .ineligible, .deactive, .archived, [class*="inactive"]) {
+  color: #dc2626 !important;
+  background: #FFFFFF !important;
+}
+
 .cm-profile-view .cm-profile-card, .section-profile-page .cm-profile-card,
 .student-admission .sa-detail-card, .student-profile .sp-panel,
 .course-management:has(.course-detail-hero) .course-detail-sections,
@@ -737,8 +742,52 @@ button:disabled, input:disabled, select:disabled, textarea:disabled { cursor: no
 .profile-page .profile-address-card dt { display: none; }
 .profile-page .profile-address-card dd { margin: 0; color: var(--text-main); font-size: 14px; line-height: 1.45; overflow-wrap: anywhere; }
 
-.details-status-badge, .cm-status-badge, .section-status, .status-pill, .sa-badge, .sp-badge {
-  border-radius: 999px;
+/* Unified status badges with indicator dots across all tables, cards, and views */
+:is(.details-status-badge, .cm-status-badge, .section-status, .status-pill, .sa-badge, .sp-badge, .pr-badge-status):not(.erp-status-badge) {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 6px !important;
+  height: 24px !important;
+  padding: 0 9px !important;
+  border-radius: 999px !important;
+  font-size: 0.72rem !important;
+  font-weight: 750 !important;
+  line-height: 1 !important;
+  letter-spacing: 0.02em !important;
+  white-space: nowrap !important;
+  border: 1px solid transparent !important;
+  text-transform: capitalize !important;
+}
+
+:is(.details-status-badge, .cm-status-badge, .section-status, .status-pill, .sa-badge, .sp-badge, .pr-badge-status):not(.erp-status-badge)::before {
+  content: '';
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+  flex-shrink: 0;
+}
+
+/* Active / Available / Approved / Admitted / Working */
+:is(.details-status-badge, .cm-status-badge, .section-status, .status-pill, .sa-badge, .sp-badge, .pr-badge-status):is(.active, .available, .approved, .verified, .admitted, .working, .paid, .regular, .confirmed, [class*="active"]) {
+  background: #dcfce7 !important;
+  color: #15803d !important;
+  border-color: #86efac !important;
+}
+
+/* Inactive / Unavailable / Rejected / Failed / Ineligible / Terminated / Resigned / Deactive */
+:is(.details-status-badge, .cm-status-badge, .section-status, .status-pill, .sa-badge, .sp-badge, .pr-badge-status):is(.inactive, .unavailable, .rejected, .failed, .ineligible, .terminated, .resigned, .relieved, .archived, .deactive, [class*="inactive"]) {
+  background: #fee2e2 !important;
+  color: #b91c1c !important;
+  border-color: #fca5a5 !important;
+}
+
+/* Warning / Pending / Upcoming / Probation / Hold / Review / Draft */
+:is(.details-status-badge, .cm-status-badge, .section-status, .status-pill, .sa-badge, .sp-badge, .pr-badge-status):is(.warning, .pending, .upcoming, .probation, .hold, .on-hold, .draft, .under-review, .submitted, [class*="warning"], [class*="pending"]) {
+  background: #fef3c7 !important;
+  color: #b45309 !important;
+  border-color: #fcd34d !important;
 }
 
 
@@ -1017,3 +1066,38 @@ label > b,
   display: inline-block;
 }
 
+
+/* Student names open the same details previously shown by the View action. */
+#root .page-content table .student-name-link {
+  display: block;
+  max-width: 100%;
+  min-width: 0;
+  min-height: 0;
+  height: auto;
+  padding: 0;
+  border: 0;
+  background: transparent !important;
+  box-shadow: none !important;
+  color: var(--text-primary, #0f172a);
+  font: inherit;
+  font-weight: 600;
+  text-align: inherit;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  text-decoration: none;
+  cursor: pointer;
+  transition: color .18s ease, transform .18s ease;
+}
+#root .page-content table .student-name-link:hover {
+  color: #8782bc;
+  transform: translateX(3px);
+  text-decoration: none;
+}
+#root .page-content table .student-name-link:focus-visible {
+  outline: 2px solid #8782bc;
+  outline-offset: 3px;
+}
+@media (prefers-reduced-motion: reduce) {
+  #root .page-content table .student-name-link:hover { transform: none; transition: none; }
+}

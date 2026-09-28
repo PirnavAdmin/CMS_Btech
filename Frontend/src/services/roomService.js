@@ -1,4 +1,5 @@
 import eventBus, { ERP_EVENTS } from './eventBus'
+import { roomApi } from '../api/apiEndpoints'
 
 const STORAGE_KEY_ROOMS = 'pirnav_academic_rooms'
 
@@ -46,97 +47,113 @@ export const ROOM_FACILITIES = [
   'CCTV Surveillance',
 ]
 
-const DEFAULT_ROOMS = [
-  {
-    id: 'ROOM-101',
-    roomNumber: 'LH-101',
-    roomName: 'Lecture Hall 101',
-    buildingBlock: 'Main Academic Block',
-    floor: '1st Floor',
-    roomType: 'Lecture Hall',
-    capacity: 70,
-    facilities: ['Projector & Screen', 'Smart Digital Board', 'High-Speed Wi-Fi', 'Audio & Microphone System'],
-    department: 'General / Shared',
-    status: 'Available',
-    assignedSection: '',
-    description: 'Primary lecture room with multimedia projector and amphitheater tiered seating.',
-    createdAt: new Date().toISOString(),
-  },
-  {
-    id: 'ROOM-102',
-    roomNumber: 'LH-102',
-    roomName: 'Lecture Hall 102',
-    buildingBlock: 'Main Academic Block',
-    floor: '1st Floor',
-    roomType: 'Lecture Hall',
-    capacity: 70,
-    facilities: ['Projector & Screen', 'High-Speed Wi-Fi'],
-    department: 'General / Shared',
-    status: 'Available',
-    assignedSection: '',
-    description: 'Standard tiered classroom suitable for first-year and core branch classes.',
-    createdAt: new Date().toISOString(),
-  },
-  {
-    id: 'ROOM-201',
-    roomNumber: 'CSE-LAB-1',
-    roomName: 'Advanced Computing & AI Lab',
-    buildingBlock: 'Science & Technology Block',
-    floor: '2nd Floor',
-    roomType: 'Computer Lab',
-    capacity: 65,
-    facilities: ['Computer Workstations', 'LAN Network Ports', 'Air Conditioned (AC)', 'Projector & Screen', 'High-Speed Wi-Fi'],
-    department: 'Computer Science and Engineering',
-    status: 'Available',
-    assignedSection: '',
-    description: 'Equipped with 65 high-end developer workstations and gigabit network switches.',
-    createdAt: new Date().toISOString(),
-  },
-  {
-    id: 'ROOM-202',
-    roomNumber: 'ECE-LAB-1',
-    roomName: 'Digital Signal Processing & VLSI Lab',
-    buildingBlock: 'Science & Technology Block',
-    floor: '2nd Floor',
-    roomType: 'Electronics Lab',
-    capacity: 60,
-    facilities: ['LAN Network Ports', 'Air Conditioned (AC)', 'Power Backup / UPS'],
-    department: 'Electronics and Communication Engineering',
-    status: 'Available',
-    assignedSection: '',
-    description: 'Equipped with FPGA development boards, oscilloscopes, and VLSI test benches.',
-    createdAt: new Date().toISOString(),
-  },
-  {
-    id: 'ROOM-301',
-    roomNumber: 'SEM-HALL-A',
-    roomName: 'Auditorium & Seminar Hall A',
-    buildingBlock: 'Central Administration Block',
-    floor: '3rd Floor',
-    roomType: 'Seminar Hall',
-    capacity: 160,
-    facilities: ['Projector & Screen', 'Smart Digital Board', 'Air Conditioned (AC)', 'Audio & Microphone System', 'High-Speed Wi-Fi'],
-    department: 'General / Shared',
-    status: 'Available',
-    assignedSection: '',
-    description: 'Executive conference and guest lecture hall with acoustic wall panelling.',
-    createdAt: new Date().toISOString(),
-  },
-]
+const DEFAULT_ROOMS = []
+
+
+export const normalizeRoom = (r) => {
+  if (!r || typeof r !== 'object') return null
+  const rawId = r.classroomId ?? r.ClassroomId ?? r.ClassRoomId ?? r.id ?? r.Id ?? r.roomId ?? r.RoomId ?? ''
+  const isNumericId = Number.isInteger(Number(rawId)) && Number(rawId) > 0
+  const classroomId = isNumericId ? Number(rawId) : rawId
+  const roomNumber = r.roomNumber ?? r.RoomNumber ?? r.roomCode ?? r.RoomCode ?? r.code ?? r.Code ?? ''
+  const roomName = r.roomName ?? r.RoomName ?? r.name ?? r.Name ?? roomNumber
+  const buildingBlock = r.buildingBlock ?? r.BuildingBlock ?? r.building ?? r.Building ?? r.block ?? r.Block ?? 'Main Academic Block'
+  const floor = r.floor ?? r.Floor ?? r.floorLevel ?? r.FloorLevel ?? 'Ground Floor'
+  const roomType = r.roomType ?? r.RoomType ?? r.type ?? r.Type ?? 'Lecture Hall'
+  const capacity = Number(r.capacity ?? r.Capacity ?? r.seatingCapacity ?? r.SeatingCapacity ?? 60) || 60
+  let facilities = r.facilities ?? r.Facilities ?? r.amenities ?? r.Amenities ?? []
+  if (typeof facilities === 'string') {
+    facilities = facilities.split(',').map(s => s.trim()).filter(Boolean)
+  }
+  const department = r.department ?? r.Department ?? r.departmentName ?? r.DepartmentName ?? 'General / Shared'
+  const assignedSection = r.assignedSection ?? r.AssignedSection ?? r.sectionName ?? r.SectionName ?? r.section ?? r.Section ?? ''
+  const sectionId = r.sectionId ?? r.SectionId ?? null
+  let status = r.status ?? r.Status ?? (assignedSection ? 'Allocated' : 'Available')
+  if (typeof status === 'number' || typeof status === 'boolean') {
+    status = status === 1 || status === true ? (assignedSection ? 'Allocated' : 'Available') : 'Inactive'
+  }
+  const description = r.description ?? r.Description ?? r.notes ?? r.Notes ?? r.remarks ?? r.Remarks ?? ''
+  const createdAt = r.createdAt ?? r.CreatedAt ?? r.created_at ?? new Date().toISOString()
+  const updatedAt = r.updatedAt ?? r.UpdatedAt ?? r.updated_at ?? new Date().toISOString()
+
+  return {
+    id: String(classroomId || roomNumber),
+    classroomId: classroomId || roomNumber,
+    sectionId: sectionId ? Number(sectionId) : null,
+    roomNumber,
+    roomName,
+    buildingBlock,
+    floor,
+    roomType,
+    capacity,
+    facilities: Array.isArray(facilities) ? facilities : [],
+    department,
+    status,
+    assignedSection,
+    description,
+    createdAt,
+    updatedAt,
+  }
+}
+
+const roomPayload = (data) => ({
+  roomNumber: String(data.roomNumber || data.code || '').trim().toUpperCase(),
+  roomName: String(data.roomName || data.name || '').trim(),
+  buildingBlock: data.buildingBlock || data.building || 'Main Academic Block',
+  floor: data.floor || 'Ground Floor',
+  roomType: data.roomType || 'Lecture Hall',
+  capacity: Number(data.capacity) || 60,
+  facilities: Array.isArray(data.facilities) ? data.facilities : typeof data.facilities === 'string' ? data.facilities.split(',').map(s => s.trim()).filter(Boolean) : [],
+  department: data.department || 'General / Shared',
+  status: data.status || 'Available',
+  assignedSection: data.assignedSection || null,
+  description: data.description || null,
+})
 
 class RoomService {
-  getRooms() {
+  getStoredRooms() {
     try {
       const stored = localStorage.getItem(STORAGE_KEY_ROOMS)
       if (stored) {
         const parsed = JSON.parse(stored)
-        if (Array.isArray(parsed) && parsed.length > 0) return parsed
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          return parsed.map(normalizeRoom).filter(Boolean)
+        }
       }
     } catch (e) {
       console.error('Error reading rooms from storage', e)
     }
     this.saveRooms(DEFAULT_ROOMS)
-    return DEFAULT_ROOMS
+    return DEFAULT_ROOMS.map(normalizeRoom)
+  }
+
+  async getRooms(params) {
+    try {
+      const apiRooms = await roomApi.getAll(params)
+      if (Array.isArray(apiRooms) && apiRooms.length > 0) {
+        const normalized = apiRooms.map(normalizeRoom).filter(Boolean)
+        this.saveRooms(normalized)
+        return normalized
+      }
+    } catch (err) {
+      console.warn('Backend rooms API unavailable, using cached rooms:', err?.message || err)
+    }
+    return this.getStoredRooms()
+  }
+
+  async getOptions() {
+    try {
+      const options = await roomApi.getOptions()
+      if (options && typeof options === 'object') return options
+    } catch (err) {
+      console.warn('Backend room options API unavailable, using default options:', err?.message || err)
+    }
+    return {
+      buildingBlocks: BUILDING_BLOCKS,
+      roomTypes: ROOM_TYPES,
+      floors: FLOORS,
+      facilities: ROOM_FACILITIES,
+    }
   }
 
   saveRooms(rooms) {
@@ -150,66 +167,106 @@ class RoomService {
     }
   }
 
-  getRoomById(id) {
-    const rooms = this.getRooms()
+  async getRoomById(id) {
+    try {
+      const res = await roomApi.getById(id)
+      if (res) return normalizeRoom(res)
+    } catch (err) {
+      console.warn(`Backend room ${id} detail failed, falling back to local:`, err?.message || err)
+    }
+    const rooms = this.getStoredRooms()
     return rooms.find((r) => String(r.id) === String(id) || String(r.roomNumber) === String(id)) || null
   }
 
-  createRoom(data) {
-    const rooms = this.getRooms()
-    const id = data.id || `ROOM-${String(Date.now()).slice(-4)}`
-    const newRoom = {
-      id,
-      roomNumber: data.roomNumber ? data.roomNumber.trim().toUpperCase() : `RM-${id}`,
-      roomName: data.roomName ? data.roomName.trim() : 'New Room',
-      buildingBlock: data.buildingBlock || BUILDING_BLOCKS[0],
-      floor: data.floor || FLOORS[0],
-      roomType: data.roomType || ROOM_TYPES[0],
-      capacity: Number(data.capacity) || 60,
-      facilities: Array.isArray(data.facilities) ? data.facilities : [],
-      department: data.department || 'General / Shared',
-      status: data.status || 'Available',
-      assignedSection: data.assignedSection || '',
-      description: data.description || '',
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
+  async createRoom(data) {
+    const payload = roomPayload(data)
+    let createdRoom = null
+    try {
+      const apiRes = await roomApi.create(payload)
+      if (apiRes) createdRoom = normalizeRoom(apiRes)
+    } catch (err) {
+      console.warn('Backend create room API failed or fallback:', err?.message || err)
     }
-    const updated = [newRoom, ...rooms]
+
+    if (!createdRoom) {
+      const id = data.id || `ROOM-${String(Date.now()).slice(-4)}`
+      createdRoom = normalizeRoom({
+        ...payload,
+        id,
+        classroomId: id,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      })
+    }
+
+    const rooms = this.getStoredRooms()
+    const updated = [createdRoom, ...rooms.filter(r => r.id !== createdRoom.id && r.roomNumber !== createdRoom.roomNumber)]
     this.saveRooms(updated)
-    return newRoom
+    return createdRoom
   }
 
-  updateRoom(id, data) {
-    const rooms = this.getRooms()
-    const index = rooms.findIndex((r) => String(r.id) === String(id))
-    if (index === -1) throw new Error('Room not found.')
-
-    const updatedRoom = {
-      ...rooms[index],
-      ...data,
-      roomNumber: data.roomNumber ? data.roomNumber.trim().toUpperCase() : rooms[index].roomNumber,
-      capacity: Number(data.capacity) || rooms[index].capacity,
-      facilities: Array.isArray(data.facilities) ? data.facilities : rooms[index].facilities,
-      updatedAt: new Date().toISOString(),
+  async updateRoom(id, data) {
+    const payload = roomPayload(data)
+    let updatedRoom = null
+    try {
+      const apiRes = await roomApi.update(id, payload)
+      if (apiRes) updatedRoom = normalizeRoom(apiRes)
+    } catch (err) {
+      console.warn(`Backend update room ${id} failed or fallback:`, err?.message || err)
     }
-    rooms[index] = updatedRoom
+
+    const rooms = this.getStoredRooms()
+    const index = rooms.findIndex((r) => String(r.id) === String(id) || String(r.roomNumber) === String(id))
+
+    if (!updatedRoom) {
+      if (index === -1) throw new Error('Room not found.')
+      updatedRoom = normalizeRoom({
+        ...rooms[index],
+        ...payload,
+        updatedAt: new Date().toISOString(),
+      })
+    }
+
+    if (index !== -1) {
+      rooms[index] = updatedRoom
+    } else {
+      rooms.unshift(updatedRoom)
+    }
     this.saveRooms(rooms)
     return updatedRoom
   }
 
-  deleteRoom(id) {
-    const rooms = this.getRooms()
-    const filtered = rooms.filter((r) => String(r.id) !== String(id))
+  async deleteRoom(id) {
+    try {
+      await roomApi.delete(id)
+    } catch (err) {
+      console.warn(`Backend delete room ${id} failed or fallback:`, err?.message || err)
+    }
+    const rooms = this.getStoredRooms()
+    const filtered = rooms.filter((r) => String(r.id) !== String(id) && String(r.classroomId) !== String(id) && String(r.roomNumber) !== String(id))
     this.saveRooms(filtered)
     return true
   }
 
-  allocateRoom(roomId, sectionName) {
-    const rooms = this.getRooms()
-    const index = rooms.findIndex((r) => String(r.id) === String(roomId) || String(r.roomNumber) === String(roomId))
+  async allocateRoom(roomId, sectionName, sectionId) {
+    try {
+      if (sectionName && sectionName.trim()) {
+        const payload = sectionId ? { sectionId: Number(sectionId), sectionName: sectionName.trim() } : { sectionName: sectionName.trim() }
+        await roomApi.allocate(roomId, payload)
+      } else {
+        await roomApi.deallocate(roomId)
+      }
+    } catch (err) {
+      console.warn(`Backend allocate room ${roomId} failed or fallback:`, err?.message || err)
+    }
+
+    const rooms = this.getStoredRooms()
+    const index = rooms.findIndex((r) => String(r.id) === String(roomId) || String(r.roomNumber) === String(roomId) || String(r.classroomId) === String(roomId))
     if (index !== -1) {
       rooms[index].assignedSection = sectionName || ''
+      rooms[index].sectionId = sectionId ? Number(sectionId) : null
       rooms[index].status = sectionName ? 'Allocated' : 'Available'
+      rooms[index].updatedAt = new Date().toISOString()
       this.saveRooms(rooms)
     }
   }
@@ -217,3 +274,4 @@ class RoomService {
 
 const roomService = new RoomService()
 export default roomService
+

@@ -1,4 +1,5 @@
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, useCallback } from 'react'
+import { useNavigate, useParams } from 'react-router-dom'
 import {
   FiGrid,
   FiPlus,
@@ -54,7 +55,46 @@ const roomExportColumns = [
   { label: 'Remarks / Notes', value: (r) => r.description || '' },
 ]
 
-export default function RoomsManagement() {
+const clean = (value) => value !== null && value !== undefined && !['', 'null', 'undefined', 'not provided', 'not set', '?'].includes(String(value).trim().toLowerCase())
+
+function InfoRows({ rows }) {
+  const visible = rows.filter(([, value]) => clean(value))
+  if (!visible.length) return null
+  return (
+    <div className="cm-info-rows sa-detail-kv-grid erp-view-grid">
+      {visible.map(([label, value]) => (
+        <div className="cm-info-row sa-kv-cell erp-view-field" key={label}>
+          <span className="cm-info-label sa-kv-label erp-view-label">{label}</span>
+          <strong className="cm-info-val sa-kv-val erp-view-value">{value}</strong>
+        </div>
+      ))}
+    </div>
+  )
+}
+
+function InfoCard({ icon: Icon, title, rows, children }) {
+  const visible = rows ? rows.filter(([, value]) => clean(value)) : []
+  return (
+    <section className="cm-info-card sa-detail-panel sa-modern-panel erp-view-section">
+      <div className="cm-info-card-header sa-panel-header">
+        <div className="sa-panel-title-wrap">
+          {Icon && <span className="sa-panel-icon"><Icon aria-hidden="true" /></span>}
+          <h2>{title}</h2>
+        </div>
+        {visible.length > 0 && <span className="sa-card-count-badge">{visible.length} items</span>}
+      </div>
+      {rows && <InfoRows rows={visible} />}
+      {children}
+    </section>
+  )
+}
+
+export default function RoomsManagement({ formMode = false, viewMode = false }) {
+  const navigate = useNavigate()
+  const { roomId } = useParams()
+  const [roomsLoaded, setRoomsLoaded] = useState(false)
+  const [saving, setSaving] = useState(false)
+  const closeForm = () => navigate('/rooms-management')
   const [rooms, setRooms] = useState([])
   const [sections, setSections] = useState([])
   const [assignments, setAssignments] = useState([])
@@ -65,18 +105,23 @@ export default function RoomsManagement() {
   const [currentPage, setCurrentPage] = useState(1)
 
   // Modals state
-  const [isFormOpen, setIsFormOpen] = useState(false)
   const [editingRoom, setEditingRoom] = useState(null)
   const [viewingRoom, setViewingRoom] = useState(null)
   const [allocatingRoom, setAllocatingRoom] = useState(null)
-  const [selectedSectionName, setSelectedSectionName] = useState('')
+  const [selectedSectionId, setSelectedSectionId] = useState('')
   const [deletingRoom, setDeletingRoom] = useState(null)
   const [deallocatingRoom, setDeallocatingRoom] = useState(null)
 
   // Load Rooms, Sections, and Student Assignments
-  const loadRooms = () => {
-    const list = roomService.getRooms()
-    setRooms(list)
+  const loadRooms = async () => {
+    try {
+      const list = await roomService.getRooms()
+      setRooms(Array.isArray(list) ? list : [])
+    } catch {
+      setRooms(roomService.getStoredRooms())
+    } finally {
+      setRoomsLoaded(true)
+    }
   }
 
   const loadData = async () => {
@@ -218,67 +263,90 @@ export default function RoomsManagement() {
   }, [rooms])
 
   // Helper to generate section dropdown options without allowing double-allocation
+  // Helper to generate section dropdown options without allowing double-allocation
   const getSectionDropdownOptions = (currentRoomId) => {
     // Collect sections already assigned to other rooms
     const otherAllocatedMap = new Map()
     rooms.forEach((r) => {
       if (r.id !== currentRoomId && r.assignedSection) {
         otherAllocatedMap.set(r.assignedSection.trim().toLowerCase(), r.roomNumber)
+        if (r.sectionId) {
+          otherAllocatedMap.set(String(r.sectionId), r.roomNumber)
+        }
       }
     })
 
     return sections
       .filter((s) => s.status !== 'Inactive' && s.status !== 0 && s.status !== false && s.isActive !== false)
       .map((s) => {
-      const name = s.sectionName || s.name || `Section ${s.id}`
-      const code = s.sectionCode || s.code || ''
-      const branch = s.branchName || s.branch || ''
-      const course = s.courseName || s.course || ''
-      const sem = s.semesterName || s.semester || (s.semesterNumber ? `Sem ${s.semesterNumber}` : '')
-      const count = sectionStudentCountMap.get(name) || sectionStudentCountMap.get(String(s.id)) || 0
-      const allocatedRoomNum = otherAllocatedMap.get(name.trim().toLowerCase())
+        const secId = s.sectionId ?? s.id
+        const name = s.sectionName || s.name || `Section ${secId}`
+        const code = s.sectionCode || s.code || ''
+        const branch = s.branchName || s.branch || ''
+        const course = s.courseName || s.course || ''
+        const sem = s.semesterName || s.semester || (s.semesterNumber ? `Sem ${s.semesterNumber}` : '')
+        const count = sectionStudentCountMap.get(name) || sectionStudentCountMap.get(String(secId)) || 0
+        const allocatedRoomNum = otherAllocatedMap.get(name.trim().toLowerCase()) || (secId ? otherAllocatedMap.get(String(secId)) : null)
 
-      const details = [course, branch, sem].filter(Boolean).join(' • ')
-      const isAlreadyAllocated = Boolean(allocatedRoomNum)
+        const details = [course, branch, sem].filter(Boolean).join(' • ')
+        const isAlreadyAllocated = Boolean(allocatedRoomNum)
 
-      return {
-        id: name,
-        value: name,
-        name: isAlreadyAllocated
-          ? `${name} ${code ? `(${code})` : ''} — ${details} [${count} Students] (Already Allocated to ${allocatedRoomNum})`
-          : `${name} ${code ? `(${code})` : ''} — ${details} [${count} Students]`,
-        code: details || 'Section',
-        disabled: isAlreadyAllocated,
-      }
-    })
+        return {
+          id: String(secId || name),
+          value: String(secId || name),
+          name: isAlreadyAllocated
+            ? `${name} ${code ? `(${code})` : ''} — ${details} [${count} Students] (Already Allocated to ${allocatedRoomNum})`
+            : `${name} ${code ? `(${code})` : ''} — ${details} [${count} Students]`,
+          code: details || 'Section',
+          disabled: isAlreadyAllocated,
+        }
+      })
   }
 
   // Form Handlers
-  const handleOpenCreate = () => {
+  const handleOpenCreate = () => navigate('/rooms-management/add')
+  const initializeCreate = useCallback(() => {
     setEditingRoom({
       id: '',
       roomNumber: '',
       roomName: '',
-      buildingBlock: BUILDING_BLOCKS[0] || 'Main Academic Block',
-      floor: FLOORS[0] || 'Ground Floor',
-      roomType: ROOM_TYPES[0] || 'Theory Classroom',
-      capacity: 60,
-      facilities: ['Projector & Screen', 'High-Speed WiFi', 'Audio Amplification'],
+      buildingBlock: '',
+      floor: '',
+      roomType: '',
+      capacity: '',
+      facilities: [],
       department: 'General / Shared',
-      status: 'Available',
+      status: '',
       assignedSection: '',
+      sectionId: null,
       description: '',
     })
-    setIsFormOpen(true)
-  }
+  }, [])
 
-  const handleOpenEdit = (room) => {
+  const handleOpenEdit = (room) => navigate(`/rooms-management/${room.id}/edit`)
+  const initializeEdit = useCallback((room) => {
+    const foundSec = sections.find((s) => {
+      const sId = s.sectionId ?? s.id
+      if (room.sectionId && String(sId) === String(room.sectionId)) return true
+      const sName = String(s.sectionName || s.name || '').trim().toLowerCase()
+      const rName = String(room.assignedSection || '').trim().toLowerCase()
+      return sName && rName && sName === rName
+    })
     setEditingRoom({
       ...room,
+      sectionId: foundSec ? (foundSec.sectionId ?? foundSec.id) : (room.sectionId || null),
       facilities: Array.isArray(room.facilities) ? [...room.facilities] : [],
     })
-    setIsFormOpen(true)
-  }
+  }, [sections])
+
+  useEffect(() => {
+    if (!formMode || editingRoom) return
+    if (!roomId) initializeCreate()
+    else if (roomsLoaded) {
+      const room = rooms.find(item => String(item.id) === String(roomId))
+      if (room) initializeEdit(room)
+    }
+  }, [formMode, roomId, roomsLoaded, rooms, editingRoom, initializeCreate, initializeEdit])
 
   const handleToggleFacility = (facility) => {
     setEditingRoom((prev) => {
@@ -292,8 +360,9 @@ export default function RoomsManagement() {
     })
   }
 
-  const handleSaveRoom = (e) => {
+  const handleSaveRoom = async (e) => {
     e.preventDefault()
+    if (saving) return
     if (!editingRoom.roomNumber?.trim()) return showError('Please enter a room number or code.')
     if (!editingRoom.roomName?.trim()) return showError('Please enter a room display name.')
     if (!editingRoom.buildingBlock) return showError('Please select a building block.')
@@ -304,7 +373,10 @@ export default function RoomsManagement() {
     // Rule 1: Prevent double allocation of the same section to multiple rooms
     if (editingRoom.assignedSection) {
       const conflictRoom = rooms.find(
-        (r) => r.id !== editingRoom.id && r.assignedSection?.trim().toLowerCase() === editingRoom.assignedSection?.trim().toLowerCase()
+        (r) => r.id !== editingRoom.id && (
+          (r.sectionId && editingRoom.sectionId && Number(r.sectionId) === Number(editingRoom.sectionId)) ||
+          (r.assignedSection?.trim().toLowerCase() === editingRoom.assignedSection?.trim().toLowerCase())
+        )
       )
       if (conflictRoom) {
         return showError(
@@ -323,24 +395,39 @@ export default function RoomsManagement() {
       }
     }
 
+    setSaving(true)
     try {
+      let savedRoom = null
       if (editingRoom.id) {
-        roomService.updateRoom(editingRoom.id, editingRoom)
-        showSuccess(`Room "${editingRoom.roomNumber}" updated successfully.`)
+        savedRoom = await roomService.updateRoom(editingRoom.id, editingRoom)
       } else {
-        roomService.createRoom(editingRoom)
-        showSuccess(`Room "${editingRoom.roomNumber}" created successfully.`)
+        savedRoom = await roomService.createRoom(editingRoom)
       }
-      setIsFormOpen(false)
-      setEditingRoom(null)
-      loadRooms()
+
+      const targetRoomId = savedRoom?.classroomId || savedRoom?.id || editingRoom.id
+      if (editingRoom.sectionId) {
+        const secId = Number(editingRoom.sectionId)
+        if (secId > 0) {
+          try {
+            await roomService.allocateRoom(targetRoomId, editingRoom.assignedSection, secId)
+          } catch (allocErr) {
+            console.warn('Room saved, but section allocation API fallback:', allocErr)
+          }
+        }
+      }
+
+      showSuccess(`Room "${editingRoom.roomNumber}" saved successfully.`)
+      await loadRooms()
+      closeForm()
     } catch (err) {
       showError(err.message || 'Failed to save room.')
+    } finally {
+      setSaving(false)
     }
   }
 
   // Delete Room via Modal
-  const handleConfirmDeleteRoom = () => {
+  const handleConfirmDeleteRoom = async () => {
     if (!deletingRoom) return
     if (deletingRoom.assignedSection && deletingRoom.assignedSection.trim()) {
       const studentCount = sectionStudentCountMap.get(deletingRoom.assignedSection) || 0
@@ -349,10 +436,11 @@ export default function RoomsManagement() {
       )
     }
     try {
-      roomService.deleteRoom(deletingRoom.id)
+      const targetRoomId = deletingRoom.classroomId || deletingRoom.id
+      await roomService.deleteRoom(targetRoomId)
       showSuccess(`Room "${deletingRoom.roomNumber} - ${deletingRoom.roomName}" deleted successfully.`)
       setDeletingRoom(null)
-      loadRooms()
+      await loadRooms()
     } catch (err) {
       showError(err.message || 'Failed to delete room.')
     }
@@ -361,47 +449,75 @@ export default function RoomsManagement() {
   // Quick Allocation Handlers
   const handleOpenAllocate = (room) => {
     setAllocatingRoom(room)
-    setSelectedSectionName(room.assignedSection || '')
+    const foundSec = sections.find((s) => {
+      const sId = s.sectionId ?? s.id
+      if (room.sectionId && String(sId) === String(room.sectionId)) return true
+      const sName = String(s.sectionName || s.name || '').trim().toLowerCase()
+      const rName = String(room.assignedSection || '').trim().toLowerCase()
+      return sName && rName && sName === rName
+    })
+    const secIdVal = foundSec ? (foundSec.sectionId ?? foundSec.id) : (room.sectionId || '')
+    setSelectedSectionId(secIdVal ? String(secIdVal) : '')
   }
 
-  const handleSaveAllocation = (e) => {
+  const handleSaveAllocation = async (e) => {
     e.preventDefault()
     if (!allocatingRoom) return
 
-    // Rule: Prevent double allocation of the same section to multiple rooms
-    if (selectedSectionName) {
-      const conflictRoom = rooms.find(
-        (r) => r.id !== allocatingRoom.id && r.assignedSection?.trim().toLowerCase() === selectedSectionName.trim().toLowerCase()
-      )
-      if (conflictRoom) {
-        return showError(
-          `Section "${selectedSectionName}" is already allocated to Room "${conflictRoom.roomNumber} (${conflictRoom.roomName})". Please choose an unallocated section.`
-        )
+    const targetRoomId = allocatingRoom.classroomId || allocatingRoom.id
+
+    if (!selectedSectionId) {
+      try {
+        await roomService.allocateRoom(targetRoomId, '', null)
+        showSuccess(`Room "${allocatingRoom.roomNumber}" is now unallocated and available.`)
+        setAllocatingRoom(null)
+        await loadRooms()
+      } catch (err) {
+        showError(err.message || 'Failed to update section allocation.')
       }
+      return
+    }
+
+    const secObj = sections.find((s) => String(s.sectionId ?? s.id) === String(selectedSectionId) || String(s.sectionName || s.name) === String(selectedSectionId))
+    const secId = Number(secObj?.sectionId ?? secObj?.id ?? selectedSectionId)
+    const secName = secObj?.sectionName || secObj?.name || `Section ${secId}`
+
+    if (!secId || isNaN(secId) || secId <= 0) {
+      return showError('A valid section ID is required.')
+    }
+
+    // Rule: Prevent double allocation of the same section to multiple rooms
+    const conflictRoom = rooms.find(
+      (r) => r.id !== allocatingRoom.id && (
+        (r.sectionId && Number(r.sectionId) === secId) ||
+        (r.assignedSection?.trim().toLowerCase() === secName.trim().toLowerCase())
+      )
+    )
+    if (conflictRoom) {
+      return showError(
+        `Section "${secName}" is already allocated to Room "${conflictRoom.roomNumber} (${conflictRoom.roomName})". Please choose an unallocated section.`
+      )
     }
 
     try {
-      roomService.allocateRoom(allocatingRoom.id, selectedSectionName)
-      showSuccess(
-        selectedSectionName
-          ? `Room "${allocatingRoom.roomNumber}" allocated to "${selectedSectionName}".`
-          : `Room "${allocatingRoom.roomNumber}" is now unallocated and available.`
-      )
+      await roomService.allocateRoom(targetRoomId, secName, secId)
+      showSuccess(`Room "${allocatingRoom.roomNumber}" allocated to "${secName}".`)
       setAllocatingRoom(null)
-      loadRooms()
+      await loadRooms()
     } catch (err) {
       showError(err.message || 'Failed to update section allocation.')
     }
   }
 
   // Deallocate Room via Modal
-  const handleConfirmDeallocate = () => {
+  const handleConfirmDeallocate = async () => {
     if (!deallocatingRoom) return
     try {
-      roomService.allocateRoom(deallocatingRoom.id, '')
+      const targetRoomId = deallocatingRoom.classroomId || deallocatingRoom.id
+      await roomService.allocateRoom(targetRoomId, '', null)
       showSuccess(`Room "${deallocatingRoom.roomNumber}" is now unallocated and available.`)
       setDeallocatingRoom(null)
-      loadRooms()
+      await loadRooms()
     } catch (err) {
       showError(err.message || 'Failed to free room.')
     }
@@ -422,6 +538,733 @@ export default function RoomsManagement() {
     if (t.includes('seminar') || t.includes('auditorium')) return FiBookmark
     return FiHome
   }
+
+  const isDetailsView = viewMode || (Boolean(roomId) && !formMode)
+  const targetRoom = isDetailsView
+    ? (rooms.find((r) => String(r.id) === String(roomId) || String(r.classroomId) === String(roomId)) || viewingRoom)
+    : viewingRoom
+
+  if (isDetailsView) {
+    const RoomIcon = getRoomIcon(targetRoom?.roomType)
+    const assignedStudentsCount = targetRoom?.assignedSection ? (sectionStudentCountMap.get(targetRoom.assignedSection) || 0) : 0
+    const sectionMeta = targetRoom?.assignedSection ? sectionMetaMap.get(targetRoom.assignedSection.toLowerCase()) : null
+
+    return (
+      <DashboardLayout>
+        <div className="rooms-page cm-profile-view" data-export-record>
+          {/* Top Actions Bar */}
+          <div className="cm-profile-top-bar">
+            {targetRoom && (
+              <ExportMenu
+                mode="single"
+                title={`Room Details - ${targetRoom.roomNumber}`}
+                filename={`room_${targetRoom.roomNumber}`}
+                rows={[targetRoom]}
+                columns={roomExportColumns}
+              />
+            )}
+            <button
+              type="button"
+              className="cm-button secondary"
+              onClick={() => navigate('/rooms-management')}
+            >
+              &larr; Back to Rooms Directory
+            </button>
+            {targetRoom && (
+              <button
+                type="button"
+                className="rooms-submit-btn"
+                onClick={() => handleOpenEdit(targetRoom)}
+              >
+                <FiEdit2 /> Edit Room
+              </button>
+            )}
+          </div>
+
+          {!targetRoom ? (
+            <div className="erp-directory-card" style={{ padding: '40px' }}>
+              <EmptyState
+                icon={FiGrid}
+                title={roomsLoaded ? 'Room Not Found' : 'Loading Room Details...'}
+                description={roomsLoaded ? 'The requested classroom record does not exist in the spatial directory.' : 'Retrieving classroom information from campus directory...'}
+              />
+            </div>
+          ) : (
+            <article className="cm-profile-card">
+              {/* Hero Banner with Lavender Palette & Gold Emblem */}
+              <div className="cm-profile-banner">
+                <div className="cm-profile-avatar-wrap">
+                  <div className="cm-profile-placeholder">
+                    <RoomIcon />
+                  </div>
+                </div>
+                <div className="cm-profile-header-info">
+                  <div className="cm-profile-badges">
+                    <span className="cm-badge cm-badge-code">ROOM {targetRoom.roomNumber}</span>
+                    <span className="cm-badge cm-badge-type">{targetRoom.roomType}</span>
+                    <StatusBadge status={targetRoom.status} />
+                  </div>
+                  <h1 className="cm-profile-title">{targetRoom.roomNumber} - {targetRoom.roomName}</h1>
+                  <p className="cm-profile-subtitle">
+                    {[targetRoom.buildingBlock, targetRoom.floor, targetRoom.department || 'General / Shared Campus Facility'].filter(Boolean).join(' • ')}
+                  </p>
+                </div>
+              </div>
+
+              {/* Metric Summary Cards Bar */}
+              <div className="rooms-detail-summary-bar">
+                <div className="rooms-detail-metric-card">
+                  <div className="metric-icon-box is-lavender">
+                    <FiUsers />
+                  </div>
+                  <div>
+                    <span className="metric-label">SEATING CAPACITY</span>
+                    <strong className="metric-val">{targetRoom.capacity} Students</strong>
+                  </div>
+                </div>
+                <div className="rooms-detail-metric-card">
+                  <div className="metric-icon-box is-amber">
+                    <FiLink />
+                  </div>
+                  <div>
+                    <span className="metric-label">ALLOCATED SECTION</span>
+                    <strong className="metric-val">{targetRoom.assignedSection || 'None (Available)'}</strong>
+                  </div>
+                </div>
+                <div className="rooms-detail-metric-card">
+                  <div className="metric-icon-box is-emerald">
+                    <FiCheckCircle />
+                  </div>
+                  <div>
+                    <span className="metric-label">ENROLLED STUDENTS</span>
+                    <strong className="metric-val">{assignedStudentsCount} Enrolled</strong>
+                  </div>
+                </div>
+                <div className="rooms-detail-metric-card">
+                  <div className="metric-icon-box is-indigo">
+                    <FiLayers />
+                  </div>
+                  <div>
+                    <span className="metric-label">FACILITIES EQUIPPED</span>
+                    <strong className="metric-val">{targetRoom.facilities?.length || 0} Amenities</strong>
+                  </div>
+                </div>
+              </div>
+
+              {/* Information Panels Grid */}
+              <div className="cm-profile-grid" style={{ padding: '24px' }}>
+                {/* 1. Spatial & Location Details */}
+                <InfoCard
+                  icon={FiHome}
+                  title="Spatial & Location Details"
+                  rows={[
+                    ['Room Code / Number', targetRoom.roomNumber],
+                    ['Display Name', targetRoom.roomName],
+                    ['Room Classification', targetRoom.roomType],
+                    ['Building Block', targetRoom.buildingBlock],
+                    ['Floor Level', targetRoom.floor],
+                    ['Managing Department', targetRoom.department || 'General / Shared'],
+                    ['Seating Capacity', `${targetRoom.capacity} Seats`],
+                    ['Operational Status', targetRoom.status],
+                  ]}
+                />
+
+                {/* 2. Academic Section Allocation */}
+                <section className="cm-info-card sa-detail-panel sa-modern-panel erp-view-section">
+                  <div className="cm-info-card-header sa-panel-header">
+                    <div className="sa-panel-title-wrap">
+                      <span className="sa-panel-icon"><FiLink aria-hidden="true" /></span>
+                      <h2>Academic Section Allocation</h2>
+                    </div>
+                    <span className="sa-card-count-badge">
+                      {targetRoom.assignedSection ? 'Allocated' : 'Unallocated'}
+                    </span>
+                  </div>
+
+                  <div className="cm-info-rows sa-detail-kv-grid erp-view-grid">
+                    <div className="cm-info-row sa-kv-cell erp-view-field">
+                      <span className="cm-info-label sa-kv-label erp-view-label">Assigned Section</span>
+                      <strong className="cm-info-val sa-kv-val erp-view-value">
+                        {targetRoom.assignedSection ? (
+                          <span className="rooms-allocated-badge" style={{ fontSize: '13px', padding: '4px 10px' }}>
+                            <FiCheckCircle /> {targetRoom.assignedSection}
+                          </span>
+                        ) : (
+                          <span style={{ color: '#64748B' }}>None (Available for allocation)</span>
+                        )}
+                      </strong>
+                    </div>
+
+                    {sectionMeta?.metaStr && (
+                      <div className="cm-info-row sa-kv-cell erp-view-field">
+                        <span className="cm-info-label sa-kv-label erp-view-label">Academic Program Mapping</span>
+                        <strong className="cm-info-val sa-kv-val erp-view-value">{sectionMeta.metaStr}</strong>
+                      </div>
+                    )}
+
+                    <div className="cm-info-row sa-kv-cell erp-view-field">
+                      <span className="cm-info-label sa-kv-label erp-view-label">Active Enrolled Students</span>
+                      <strong className="cm-info-val sa-kv-val erp-view-value">
+                        {assignedStudentsCount > 0 ? (
+                          <span className="rooms-student-count-chip" style={{ fontSize: '12px', padding: '3px 10px' }}>
+                            <FiUsers /> {assignedStudentsCount} Enrolled Students
+                          </span>
+                        ) : (
+                          '0 Students'
+                        )}
+                      </strong>
+                    </div>
+
+                    <div className="cm-info-row sa-kv-cell erp-view-field">
+                      <span className="cm-info-label sa-kv-label erp-view-label">Allocation Actions</span>
+                      <div className="cm-info-val sa-kv-val erp-view-value" style={{ marginTop: '4px' }}>
+                        {targetRoom.assignedSection ? (
+                          <button
+                            type="button"
+                            className="rooms-deallocate-link"
+                            onClick={() => setDeallocatingRoom(targetRoom)}
+                            style={{ fontSize: '12px', padding: '6px 14px', borderRadius: '8px' }}
+                          >
+                            <FiUnlock /> Free / Deallocate Room
+                          </button>
+                        ) : (
+                          <button
+                            type="button"
+                            className="rooms-allocate-action-btn"
+                            onClick={() => handleOpenAllocate(targetRoom)}
+                            style={{ fontSize: '12px', padding: '6px 14px', borderRadius: '8px' }}
+                          >
+                            <FiLink /> Allocate Class Section
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </section>
+
+                {/* 3. Equipped Facilities & Amenities */}
+                <section className="cm-info-card sa-detail-panel sa-modern-panel erp-view-section" style={{ gridColumn: '1 / -1' }}>
+                  <div className="cm-info-card-header sa-panel-header">
+                    <div className="sa-panel-title-wrap">
+                      <span className="sa-panel-icon"><FiCheckCircle aria-hidden="true" /></span>
+                      <h2>Equipped Facilities & Amenities</h2>
+                    </div>
+                    <span className="sa-card-count-badge">
+                      {targetRoom.facilities?.length || 0} Equipped
+                    </span>
+                  </div>
+
+                  <div style={{ padding: '16px 20px' }}>
+                    {targetRoom.facilities && targetRoom.facilities.length > 0 ? (
+                      <div className="facility-tags-list" style={{ gap: '10px' }}>
+                        {targetRoom.facilities.map((f) => (
+                          <span key={f} className="facility-tag-item" style={{ fontSize: '13px', padding: '6px 14px', borderRadius: '8px' }}>
+                            <FiCheckCircle /> {f}
+                          </span>
+                        ))}
+                      </div>
+                    ) : (
+                      <p style={{ margin: 0, color: '#64748B', fontSize: '13px' }}>
+                        No specific facilities or special equipment tagged for this classroom.
+                      </p>
+                    )}
+                  </div>
+                </section>
+
+                {/* 4. Description & Remarks */}
+                {targetRoom.description && (
+                  <section className="cm-info-card sa-detail-panel sa-modern-panel erp-view-section" style={{ gridColumn: '1 / -1' }}>
+                    <div className="cm-info-card-header sa-panel-header">
+                      <div className="sa-panel-title-wrap">
+                        <span className="sa-panel-icon"><FiInfo aria-hidden="true" /></span>
+                        <h2>Room Remarks & Equipment Notes</h2>
+                      </div>
+                    </div>
+                    <div style={{ padding: '16px 20px' }}>
+                      <p style={{ margin: 0, fontSize: '13.5px', color: '#334155', lineHeight: 1.6, background: '#F8FAFC', padding: '12px 16px', borderRadius: '10px', border: '1px solid #E2E8F0' }}>
+                        {targetRoom.description}
+                      </p>
+                    </div>
+                  </section>
+                )}
+              </div>
+            </article>
+          )}
+
+          {/* Quick Allocate Modal */}
+          {allocatingRoom && (
+            <div className="rooms-modal-backdrop" onClick={() => setAllocatingRoom(null)}>
+              <div className="rooms-modal-card rooms-allocate-modal" onClick={(e) => e.stopPropagation()}>
+                <div className="rooms-modal-header">
+                  <div className="rooms-modal-header-icon">
+                    <FiLink />
+                  </div>
+                  <div>
+                    <h3 className="rooms-modal-title">Allocate Section to Room</h3>
+                    <p className="rooms-modal-subtitle">
+                      Assign {allocatingRoom.roomNumber} ({allocatingRoom.roomName}) to a B.Tech class section.
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    className="rooms-modal-close"
+                    onClick={() => setAllocatingRoom(null)}
+                  >
+                    <FiX />
+                  </button>
+                </div>
+
+                <form onSubmit={handleSaveAllocation}>
+                  <div className="rooms-modal-body">
+                    <div className="rooms-room-preview-box">
+                      <div className="rooms-preview-left">
+                        <span className="room-code-badge">{allocatingRoom.roomNumber}</span>
+                        <strong>{allocatingRoom.roomName}</strong>
+                      </div>
+                      <div className="room-preview-meta">
+                        <span>{allocatingRoom.buildingBlock} • {allocatingRoom.floor}</span>
+                        <span><FiUsers /> Capacity: {allocatingRoom.capacity} Seats</span>
+                      </div>
+                    </div>
+
+                    <div className="rooms-form-group" style={{ marginTop: '16px' }}>
+                      <label>Select Section to Allocate</label>
+                      <SearchableSelect
+                        label="Section"
+                        value={selectedSectionId}
+                        options={[
+                          { id: '', value: '', name: '— None (Leave Available / Unallocated) —', code: 'Free Room' },
+                          ...getSectionDropdownOptions(allocatingRoom.id),
+                        ]}
+                        onChange={(value) => setSelectedSectionId(value)}
+                        placeholder="Select an unallocated class section..."
+                        searchPlaceholder="Search section, course, or branch..."
+                        noOptionsMessage="No matching sections available."
+                      />
+                    </div>
+                  </div>
+
+                  <div className="rooms-modal-footer">
+                    <button
+                      type="button"
+                      className="rooms-cancel-btn"
+                      onClick={() => setAllocatingRoom(null)}
+                    >
+                      Cancel
+                    </button>
+                    <button type="submit" className="rooms-submit-btn">
+                      <FiCheck /> Confirm Allocation
+                    </button>
+                  </div>
+                </form>
+              </div>
+            </div>
+          )}
+
+          {/* Delete confirmation modal */}
+          {deletingRoom && (() => {
+            const studentCount = deletingRoom.assignedSection ? (sectionStudentCountMap.get(deletingRoom.assignedSection) || 0) : 0
+            const hasAssignedSection = Boolean(deletingRoom.assignedSection && deletingRoom.assignedSection.trim())
+            const isBlocked = hasAssignedSection
+            return (
+              <div className="rooms-modal-backdrop" onClick={() => setDeletingRoom(null)}>
+                <div className="rooms-modal-card rooms-confirm-modal" onClick={(e) => e.stopPropagation()}>
+                  <div className="rooms-modal-header delete-header">
+                    <div className="rooms-modal-header-icon delete-icon">
+                      <FiTrash2 />
+                    </div>
+                    <div>
+                      <h3 className="rooms-modal-title">{isBlocked ? 'Deletion Blocked' : 'Delete Room Confirmation'}</h3>
+                      <p className="rooms-modal-subtitle">
+                        Campus spatial directory deletion governance.
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      className="rooms-modal-close"
+                      onClick={() => setDeletingRoom(null)}
+                    >
+                      <FiX />
+                    </button>
+                  </div>
+
+                  <div className="rooms-modal-body">
+                    <div className="rooms-confirm-box">
+                      <div className="rooms-confirm-room-info">
+                        <span className="room-code-badge">{deletingRoom.roomNumber}</span>
+                        <div>
+                          <strong>{deletingRoom.roomName}</strong>
+                          <p>{deletingRoom.buildingBlock} • {deletingRoom.floor} • {deletingRoom.roomType}</p>
+                        </div>
+                      </div>
+
+                      {deletingRoom.assignedSection && (
+                        <div className="rooms-confirm-section-tag">
+                          <span>Allocated Section:</span>
+                          <strong>
+                            <FiCheckCircle /> {deletingRoom.assignedSection}
+                            {studentCount > 0 ? (
+                              <span className="rooms-student-count-chip">
+                                <FiUsers /> {studentCount} Enrolled
+                              </span>
+                            ) : (
+                              <span style={{ fontSize: '11.5px', color: '#64748B', fontWeight: 600, marginLeft: '6px' }}>
+                                (Assigned Section)
+                              </span>
+                            )}
+                          </strong>
+                        </div>
+                      )}
+                    </div>
+
+                    {isBlocked ? (
+                      <div className="rooms-confirm-blocked-banner">
+                        <div className="rooms-blocked-icon-box">
+                          <FiSlash className="blocked-icon" />
+                        </div>
+                        <div className="rooms-blocked-text-content">
+                          <strong>Deletion Blocked by Academic Governance</strong>
+                          <p>
+                            Room <strong>"{deletingRoom.roomName}"</strong> is currently allocated to Section <strong>"{deletingRoom.assignedSection}"</strong>{studentCount > 0 ? ` with ${studentCount} active enrolled student${studentCount === 1 ? '' : 's'}` : ''}.
+                            You cannot delete this room while a section is allocated. Please deallocate or transfer the section to another room first.
+                          </p>
+                        </div>
+                      </div>
+                    ) : (
+                      <p className="rooms-confirm-text">
+                        Are you sure you want to permanently delete room <strong>"{deletingRoom.roomName}"</strong> ({deletingRoom.roomNumber})? This action cannot be undone.
+                      </p>
+                    )}
+                  </div>
+
+                  <div className="rooms-modal-footer">
+                    <button
+                      type="button"
+                      className="rooms-cancel-btn"
+                      onClick={() => setDeletingRoom(null)}
+                    >
+                      {isBlocked ? 'Close' : 'Cancel'}
+                    </button>
+                    {isBlocked ? (
+                      <button
+                        type="button"
+                        className="rooms-submit-btn"
+                        onClick={() => {
+                          const target = deletingRoom
+                          setDeletingRoom(null)
+                          handleOpenDeallocate(target)
+                        }}
+                      >
+                        <FiUnlock /> Deallocate Section First
+                      </button>
+                    ) : (
+                      <button
+                        type="button"
+                        className="rooms-submit-btn is-delete-confirm"
+                        title="Delete Room"
+                        onClick={async () => {
+                          await handleConfirmDeleteRoom()
+                          navigate('/rooms-management')
+                        }}
+                      >
+                        <FiTrash2 /> Confirm & Delete Room
+                      </button>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )
+          })()}
+
+          {/* Deallocate confirmation modal */}
+          {deallocatingRoom && (() => {
+            const studentCount = deallocatingRoom.assignedSection ? (sectionStudentCountMap.get(deallocatingRoom.assignedSection) || 0) : 0
+            return (
+              <div className="rooms-modal-backdrop" onClick={() => setDeallocatingRoom(null)}>
+                <div className="rooms-modal-card rooms-confirm-modal" onClick={(e) => e.stopPropagation()}>
+                  <div className="rooms-modal-header">
+                    <div className="rooms-modal-header-icon">
+                      <FiUnlock />
+                    </div>
+                    <div>
+                      <h3 className="rooms-modal-title">Free / Deallocate Room</h3>
+                      <p className="rooms-modal-subtitle">
+                        Release the assigned class section from this room.
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      className="rooms-modal-close"
+                      onClick={() => setDeallocatingRoom(null)}
+                    >
+                      <FiX />
+                    </button>
+                  </div>
+
+                  <div className="rooms-modal-body">
+                    <div className="rooms-confirm-box">
+                      <div className="rooms-confirm-room-info">
+                        <span className="room-code-badge">{deallocatingRoom.roomNumber}</span>
+                        <div>
+                          <strong>{deallocatingRoom.roomName}</strong>
+                          <p>{deallocatingRoom.buildingBlock} • {deallocatingRoom.floor}</p>
+                        </div>
+                      </div>
+                      <div className="rooms-confirm-section-tag">
+                        <span>Currently Assigned to:</span>
+                        <strong>
+                          <FiCheckCircle /> {deallocatingRoom.assignedSection}
+                          {studentCount > 0 && (
+                            <span className="rooms-student-count-chip">
+                              <FiUsers /> {studentCount} Students
+                            </span>
+                          )}
+                        </strong>
+                      </div>
+                    </div>
+
+                    {studentCount > 0 && (
+                      <div className="rooms-confirm-warning" style={{ marginTop: '12px' }}>
+                        <FiAlertTriangle />
+                        <span>
+                          Notice: <strong>{studentCount} students</strong> are currently taking classes in this section. Freeing the room will leave this section without a designated classroom until a new room is allocated.
+                        </span>
+                      </div>
+                    )}
+
+                    <p className="rooms-confirm-text">
+                      Are you sure you want to free room <strong>{deallocatingRoom.roomNumber}</strong> from <strong>{deallocatingRoom.assignedSection}</strong>? The room status will return to Available.
+                    </p>
+                  </div>
+
+                  <div className="rooms-modal-footer">
+                    <button
+                      type="button"
+                      className="rooms-cancel-btn"
+                      onClick={() => setDeallocatingRoom(null)}
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="button"
+                      className="rooms-submit-btn"
+                      onClick={handleConfirmDeallocate}
+                    >
+                      <FiUnlock /> Confirm & Free Room
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )
+          })()}
+        </div>
+      </DashboardLayout>
+    )
+  }
+
+  if (formMode) return (
+    <DashboardLayout>
+      <div className="rooms-page rooms-form-page">
+        <PageHeader title={roomId ? 'Edit Room / Classroom' : 'Add New Room / Classroom'} subtitle="Configure room identification, location, capacity, facilities, and section allocation." />
+        <div><button type="button" className="rooms-cancel-btn" onClick={closeForm}>Back to Rooms</button></div>
+        {!editingRoom ? <EmptyState title={roomsLoaded ? 'Room not found' : 'Loading room...'} /> : (
+          <div className="rooms-form-layout">
+            <section className="rooms-editor-panel" aria-label="Room details">
+              <form onSubmit={handleSaveRoom}>
+                <div className="rooms-modal-body">
+                  <div className="rooms-form-grid">
+                    {/* Room Number */}
+                    <div className="rooms-form-group">
+                      <label>
+                        Room Code / Number <span className="req-mark">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        className="rooms-input"
+                        placeholder="e.g. LH-101, CSE-LAB-1"
+                        value={editingRoom.roomNumber}
+                        onChange={(e) => setEditingRoom({ ...editingRoom, roomNumber: e.target.value })}
+                        required
+                      />
+                    </div>
+
+                    {/* Room Name */}
+                    <div className="rooms-form-group">
+                      <label>
+                        Room Display Name <span className="req-mark">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        className="rooms-input"
+                        placeholder="e.g. Lecture Hall 101"
+                        value={editingRoom.roomName}
+                        onChange={(e) => setEditingRoom({ ...editingRoom, roomName: e.target.value })}
+                        required
+                      />
+                    </div>
+
+                    {/* Building Block */}
+                    <div className="rooms-form-group">
+                      <label>
+                        Building Block <span className="req-mark">*</span>
+                      </label>
+                      <select
+                        className="rooms-select"
+                        value={editingRoom.buildingBlock}
+                        onChange={(e) => setEditingRoom({ ...editingRoom, buildingBlock: e.target.value })}
+                        required
+                      >
+                        <option value="" disabled>Select Building Block</option>
+                        {BUILDING_BLOCKS.map((b) => (
+                          <option key={b} value={b}>{b}</option>
+                        ))}
+                      </select>
+                    </div>
+
+                    {/* Floor */}
+                    <div className="rooms-form-group">
+                      <label>
+                        Floor <span className="req-mark">*</span>
+                      </label>
+                      <select
+                        className="rooms-select"
+                        value={editingRoom.floor}
+                        onChange={(e) => setEditingRoom({ ...editingRoom, floor: e.target.value })}
+                        required
+                      >
+                        <option value="" disabled>Select Floor</option>
+                        {FLOORS.map((f) => (
+                          <option key={f} value={f}>{f}</option>
+                        ))}
+                      </select>
+                    </div>
+
+                    {/* Room Type */}
+                    <div className="rooms-form-group">
+                      <label>
+                        Room Type <span className="req-mark">*</span>
+                      </label>
+                      <select
+                        className="rooms-select"
+                        value={editingRoom.roomType}
+                        onChange={(e) => setEditingRoom({ ...editingRoom, roomType: e.target.value })}
+                        required
+                      >
+                        <option value="" disabled>Select Room Type</option>
+                        {ROOM_TYPES.map((t) => (
+                          <option key={t} value={t}>{t}</option>
+                        ))}
+                      </select>
+                    </div>
+
+                    {/* Seating Capacity */}
+                    <div className="rooms-form-group">
+                      <label>
+                        Seating Capacity <span className="req-mark">*</span>
+                      </label>
+                      <input
+                        type="number"
+                        min="1"
+                        max="500"
+                        className="rooms-input"
+                        placeholder="e.g. 60"
+                        value={editingRoom.capacity}
+                        onChange={(e) => setEditingRoom({ ...editingRoom, capacity: Number(e.target.value) || '' })}
+                        required
+                      />
+                    </div>
+
+                    {/* Availability Status */}
+                    <div className="rooms-form-group">
+                      <label>
+                        Availability Status <span className="req-mark">*</span>
+                      </label>
+                      <select
+                        className="rooms-select"
+                        value={editingRoom.status}
+                        onChange={(e) => setEditingRoom({ ...editingRoom, status: e.target.value })}
+                        required
+                      >
+                        <option value="" disabled>Select Availability Status</option>
+                        <option value="Available">Available</option>
+                        <option value="Allocated">Allocated</option>
+                        <option value="Maintenance">Maintenance</option>
+                        <option value="Inactive">Inactive</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  {/* Facilities & Amenities */}
+                  <div className="rooms-form-group" style={{ marginTop: '14px' }}>
+                    <label>Available Facilities & Equipment</label>
+                    <div className="rooms-facilities-picker">
+                      {ROOM_FACILITIES.map((facility) => {
+                        const isSelected = editingRoom.facilities?.includes(facility)
+                        return (
+                          <button
+                            type="button"
+                            key={facility}
+                            className={`facility-chip-btn ${isSelected ? 'is-selected' : ''}`}
+                            onClick={() => handleToggleFacility(facility)}
+                          >
+                            {isSelected ? <FiCheck /> : <FiPlus />} {facility}
+                          </button>
+                        )
+                      })}
+                    </div>
+                  </div>
+
+                  {/* Description / Notes */}
+                  <div className="rooms-form-group" style={{ marginTop: '12px' }}>
+                    <label>Room Notes / Remarks</label>
+                    <textarea
+                      className="rooms-textarea"
+                      rows={2}
+                      placeholder="Special audio-visual equipment, teaching amenities, or layout notes..."
+                      value={editingRoom.description || ''}
+                      onChange={(e) => setEditingRoom({ ...editingRoom, description: e.target.value })}
+                    />
+                  </div>
+                </div>
+
+                <div className="rooms-modal-footer">
+                  <button
+                    type="button"
+                    className="rooms-cancel-btn"
+                    onClick={() => closeForm()}
+                  >
+                    Cancel
+                  </button>
+                  <button type="submit" className="rooms-submit-btn" disabled={saving}>
+                    <FiCheck /> {saving ? 'Saving...' : editingRoom.id ? 'Save Changes' : 'Create Room'}
+                  </button>
+                </div>
+              </form>
+            </section>
+            <aside className="rooms-live-preview" aria-label="Room live preview">
+              <header><span className="rooms-preview-dot" /> LIVE PREVIEW</header>
+              <div className="rooms-preview-content">
+                <div className="rooms-preview-icon"><FiGrid /></div>
+                <h2>{editingRoom.roomName?.trim() || 'Room Preview'}</h2>
+                <p>{editingRoom.roomNumber?.trim() || 'Room code'} &middot; {editingRoom.roomType || 'Room type'}</p>
+                {editingRoom.status && <StatusBadge status={editingRoom.status} />}
+                <dl>{[
+                  ['Building Block', editingRoom.buildingBlock],
+                  ['Floor', editingRoom.floor],
+                  ['Seating Capacity', editingRoom.capacity ? editingRoom.capacity + ' seats' : ''],
+                  ['Allocated Section', editingRoom.assignedSection],
+                ].map(([label, value]) => <div key={label}><dt>{label}</dt><dd>{value || '—'}</dd></div>)}</dl>
+                <h3>Facilities & Equipment</h3>
+                <div className="rooms-preview-facilities">{editingRoom.facilities?.length ? editingRoom.facilities.map(item => <span key={item}><FiCheck /> {item}</span>) : <p>No facilities selected</p>}</div>
+                <h3>Remarks / Notes</h3>
+                <p className="rooms-preview-notes">{editingRoom.description || 'No remarks added'}</p>
+              </div>
+            </aside>
+          </div>
+        )}
+      </div>
+    </DashboardLayout>
+  )
 
   return (
     <DashboardLayout>
@@ -568,7 +1411,7 @@ export default function RoomsManagement() {
                                 <button
                                   type="button"
                                   className="room-name-link table-cell-truncate"
-                                  onClick={() => setViewingRoom(room)}
+                                  onClick={() => navigate(`/rooms-management/${room.id}`)}
                                   title={room.roomName}
                                   aria-label={`View details for ${room.roomName}`}
                                 >
@@ -609,12 +1452,12 @@ export default function RoomsManagement() {
                         </td>
 
                         {/* Section Allocation & Details (Course, Branch, Semester, Students) */}
-                        <td className="table-center">
+                        <td className="table-center" data-no-overflow-tooltip title="">
                           {room.assignedSection ? (
                             <div className="rooms-allocated-wrapper">
-                              <div className="rooms-allocated-card">
+                              <div className="rooms-allocated-details">
                                 <div className="rooms-allocated-top">
-                                  <span className="rooms-allocated-badge" title={`Allocated to ${room.assignedSection}`}>
+                                  <span className="rooms-allocated-badge">
                                     <FiCheckCircle /> {room.assignedSection}
                                   </span>
                                   {assignedStudentsCount > 0 && (
@@ -624,7 +1467,7 @@ export default function RoomsManagement() {
                                   )}
                                 </div>
                                 {sectionMeta?.metaStr && (
-                                  <small className="rooms-allocated-meta" title={sectionMeta.fullTitle || sectionMeta.metaStr}>
+                                  <small className="rooms-allocated-meta">
                                     {sectionMeta.metaStr}
                                   </small>
                                 )}
@@ -734,12 +1577,12 @@ export default function RoomsManagement() {
                     <label>Select Section to Allocate</label>
                     <SearchableSelect
                       label="Section"
-                      value={selectedSectionName}
+                      value={selectedSectionId}
                       options={[
                         { id: '', value: '', name: '— None (Leave Available / Unallocated) —', code: 'Free Room' },
                         ...getSectionDropdownOptions(allocatingRoom.id),
                       ]}
-                      onChange={(value) => setSelectedSectionName(value)}
+                      onChange={(value) => setSelectedSectionId(value)}
                       placeholder="Select an unallocated class section..."
                       searchPlaceholder="Search section, course, or branch..."
                       noOptionsMessage="No matching sections available."
@@ -767,365 +1610,7 @@ export default function RoomsManagement() {
         {/* ============================================================== */}
         {/* CREATE / EDIT ROOM MODAL */}
         {/* ============================================================== */}
-        {isFormOpen && editingRoom && (
-          <div className="rooms-modal-backdrop" onClick={() => setIsFormOpen(false)}>
-            <div className="rooms-modal-card" onClick={(e) => e.stopPropagation()}>
-              <div className="rooms-modal-header">
-                <div className="rooms-modal-header-icon">
-                  <FiGrid />
-                </div>
-                <div>
-                  <h3 className="rooms-modal-title">
-                    {editingRoom.id ? 'Edit Room / Classroom' : 'Add New Room / Classroom'}
-                  </h3>
-                  <p className="rooms-modal-subtitle">
-                    Configure room identification, building location, seating capacity, equipment, and section allocation.
-                  </p>
-                </div>
-                <button
-                  type="button"
-                  className="rooms-modal-close"
-                  onClick={() => setIsFormOpen(false)}
-                >
-                  <FiX />
-                </button>
-              </div>
 
-              <form onSubmit={handleSaveRoom}>
-                <div className="rooms-modal-body">
-                  <div className="rooms-form-grid">
-                    {/* Room Number */}
-                    <div className="rooms-form-group">
-                      <label>
-                        Room Code / Number <span className="req-mark">*</span>
-                      </label>
-                      <input
-                        type="text"
-                        className="rooms-input"
-                        placeholder="e.g. LH-101, CSE-LAB-1"
-                        value={editingRoom.roomNumber}
-                        onChange={(e) => setEditingRoom({ ...editingRoom, roomNumber: e.target.value })}
-                        required
-                      />
-                    </div>
-
-                    {/* Room Name */}
-                    <div className="rooms-form-group">
-                      <label>
-                        Room Display Name <span className="req-mark">*</span>
-                      </label>
-                      <input
-                        type="text"
-                        className="rooms-input"
-                        placeholder="e.g. Lecture Hall 101"
-                        value={editingRoom.roomName}
-                        onChange={(e) => setEditingRoom({ ...editingRoom, roomName: e.target.value })}
-                        required
-                      />
-                    </div>
-
-                    {/* Building Block */}
-                    <div className="rooms-form-group">
-                      <label>
-                        Building Block <span className="req-mark">*</span>
-                      </label>
-                      <select
-                        className="rooms-select"
-                        value={editingRoom.buildingBlock}
-                        onChange={(e) => setEditingRoom({ ...editingRoom, buildingBlock: e.target.value })}
-                        required
-                      >
-                        <option value="" disabled>Select Building Block</option>
-                        {BUILDING_BLOCKS.map((b) => (
-                          <option key={b} value={b}>{b}</option>
-                        ))}
-                      </select>
-                    </div>
-
-                    {/* Floor */}
-                    <div className="rooms-form-group">
-                      <label>
-                        Floor <span className="req-mark">*</span>
-                      </label>
-                      <select
-                        className="rooms-select"
-                        value={editingRoom.floor}
-                        onChange={(e) => setEditingRoom({ ...editingRoom, floor: e.target.value })}
-                        required
-                      >
-                        <option value="" disabled>Select Floor</option>
-                        {FLOORS.map((f) => (
-                          <option key={f} value={f}>{f}</option>
-                        ))}
-                      </select>
-                    </div>
-
-                    {/* Room Type */}
-                    <div className="rooms-form-group">
-                      <label>
-                        Room Type <span className="req-mark">*</span>
-                      </label>
-                      <select
-                        className="rooms-select"
-                        value={editingRoom.roomType}
-                        onChange={(e) => setEditingRoom({ ...editingRoom, roomType: e.target.value })}
-                        required
-                      >
-                        <option value="" disabled>Select Room Type</option>
-                        {ROOM_TYPES.map((t) => (
-                          <option key={t} value={t}>{t}</option>
-                        ))}
-                      </select>
-                    </div>
-
-                    {/* Seating Capacity */}
-                    <div className="rooms-form-group">
-                      <label>
-                        Seating Capacity <span className="req-mark">*</span>
-                      </label>
-                      <input
-                        type="number"
-                        min="1"
-                        max="500"
-                        className="rooms-input"
-                        placeholder="e.g. 60"
-                        value={editingRoom.capacity}
-                        onChange={(e) => setEditingRoom({ ...editingRoom, capacity: Number(e.target.value) || '' })}
-                        required
-                      />
-                    </div>
-
-                    {/* Availability Status */}
-                    <div className="rooms-form-group">
-                      <label>
-                        Availability Status <span className="req-mark">*</span>
-                      </label>
-                      <select
-                        className="rooms-select"
-                        value={editingRoom.status}
-                        onChange={(e) => setEditingRoom({ ...editingRoom, status: e.target.value })}
-                        required
-                      >
-                        <option value="Available">Available</option>
-                        <option value="Allocated">Allocated</option>
-                        <option value="Maintenance">Maintenance</option>
-                        <option value="Inactive">Inactive</option>
-                      </select>
-                    </div>
-
-                    {/* Section Allocation (Filtered to prevent double allocations) */}
-                    <div className="rooms-form-group">
-                      <label>Allocated Section (Optional)</label>
-                      <select
-                        className="rooms-select"
-                        value={editingRoom.assignedSection || ''}
-                        onChange={(e) => {
-                          const val = e.target.value
-                          setEditingRoom({
-                            ...editingRoom,
-                            assignedSection: val,
-                            status: val ? 'Allocated' : (editingRoom.status === 'Allocated' ? 'Available' : editingRoom.status),
-                          })
-                        }}
-                      >
-                        <option value="">None (Available / Unallocated)</option>
-                        {sections.map((s) => {
-                          const name = s.sectionName || s.name || `Section ${s.id}`
-                          const course = s.courseName || s.course || ''
-                          const branch = s.branchName || s.branch || ''
-                          const sem = s.semesterName || s.semester || ''
-                          const count = sectionStudentCountMap.get(name) || sectionStudentCountMap.get(String(s.id)) || 0
-
-                          // Check if allocated to other room
-                          const otherAllocatedRoom = rooms.find(
-                            (r) => r.id !== editingRoom.id && r.assignedSection?.trim().toLowerCase() === name.trim().toLowerCase()
-                          )
-
-                          const details = [course, branch, sem].filter(Boolean).join(' • ')
-
-                          return (
-                            <option
-                              key={s.id || name}
-                              value={name}
-                              disabled={Boolean(otherAllocatedRoom)}
-                            >
-                              {name} {details ? `(${details})` : ''} {count > 0 ? `[${count} Students]` : ''} {otherAllocatedRoom ? `(Allocated to ${otherAllocatedRoom.roomNumber})` : ''}
-                            </option>
-                          )
-                        })}
-                      </select>
-                    </div>
-                  </div>
-
-                  {/* Facilities & Amenities */}
-                  <div className="rooms-form-group" style={{ marginTop: '14px' }}>
-                    <label>Available Facilities & Equipment</label>
-                    <div className="rooms-facilities-picker">
-                      {ROOM_FACILITIES.map((facility) => {
-                        const isSelected = editingRoom.facilities?.includes(facility)
-                        return (
-                          <button
-                            type="button"
-                            key={facility}
-                            className={`facility-chip-btn ${isSelected ? 'is-selected' : ''}`}
-                            onClick={() => handleToggleFacility(facility)}
-                          >
-                            {isSelected ? <FiCheck /> : <FiPlus />} {facility}
-                          </button>
-                        )
-                      })}
-                    </div>
-                  </div>
-
-                  {/* Description / Notes */}
-                  <div className="rooms-form-group" style={{ marginTop: '12px' }}>
-                    <label>Room Notes / Remarks</label>
-                    <textarea
-                      className="rooms-textarea"
-                      rows={2}
-                      placeholder="Special audio-visual equipment, teaching amenities, or layout notes..."
-                      value={editingRoom.description || ''}
-                      onChange={(e) => setEditingRoom({ ...editingRoom, description: e.target.value })}
-                    />
-                  </div>
-                </div>
-
-                <div className="rooms-modal-footer">
-                  <button
-                    type="button"
-                    className="rooms-cancel-btn"
-                    onClick={() => setIsFormOpen(false)}
-                  >
-                    Cancel
-                  </button>
-                  <button type="submit" className="rooms-submit-btn">
-                    <FiCheck /> {editingRoom.id ? 'Save Changes' : 'Create Room'}
-                  </button>
-                </div>
-              </form>
-            </div>
-          </div>
-        )}
-
-        {/* ============================================================== */}
-        {/* VIEW ROOM DETAILS MODAL */}
-        {/* ============================================================== */}
-        {viewingRoom && (
-          <div className="rooms-modal-backdrop" onClick={() => setViewingRoom(null)}>
-            <div className="rooms-modal-card rooms-view-modal" onClick={(e) => e.stopPropagation()}>
-              <div className="rooms-modal-header">
-                <div className="rooms-modal-header-icon">
-                  <FiInfo />
-                </div>
-                <div>
-                  <h3 className="rooms-modal-title">{viewingRoom.roomNumber} - {viewingRoom.roomName}</h3>
-                  <p className="rooms-modal-subtitle">
-                    {viewingRoom.buildingBlock} • {viewingRoom.floor}
-                  </p>
-                </div>
-                <button
-                  type="button"
-                  className="rooms-modal-close"
-                  onClick={() => setViewingRoom(null)}
-                >
-                  <FiX />
-                </button>
-              </div>
-
-              <div className="rooms-modal-body">
-                <div className="room-details-grid">
-                  <div className="detail-item">
-                    <span>Room Number</span>
-                    <strong>{viewingRoom.roomNumber}</strong>
-                  </div>
-                  <div className="detail-item">
-                    <span>Room Type</span>
-                    <strong>{viewingRoom.roomType}</strong>
-                  </div>
-                  <div className="detail-item">
-                    <span>Building Block</span>
-                    <strong>{viewingRoom.buildingBlock}</strong>
-                  </div>
-                  <div className="detail-item">
-                    <span>Floor Level</span>
-                    <strong>{viewingRoom.floor}</strong>
-                  </div>
-                  <div className="detail-item">
-                    <span>Seating Capacity</span>
-                    <strong>{viewingRoom.capacity} Students</strong>
-                  </div>
-                  <div className="detail-item">
-                    <span>Current Status</span>
-                    <strong><StatusBadge status={viewingRoom.status} /></strong>
-                  </div>
-                  <div className="detail-item" style={{ gridColumn: '1 / -1' }}>
-                    <span>Allocated Section & Details</span>
-                    <strong>
-                      {viewingRoom.assignedSection ? (
-                        <>
-                          {viewingRoom.assignedSection}
-                          {sectionMetaMap.get(viewingRoom.assignedSection.toLowerCase())?.metaStr && (
-                            <span style={{ color: '#64748B', fontWeight: 600, marginLeft: '8px' }}>
-                              ({sectionMetaMap.get(viewingRoom.assignedSection.toLowerCase()).metaStr})
-                            </span>
-                          )}
-                          {sectionStudentCountMap.get(viewingRoom.assignedSection) > 0 && (
-                            <span className="rooms-student-count-chip" style={{ marginLeft: '8px' }}>
-                              <FiUsers /> {sectionStudentCountMap.get(viewingRoom.assignedSection)} Enrolled Students
-                            </span>
-                          )}
-                        </>
-                      ) : (
-                        'None (Available for allocation)'
-                      )}
-                    </strong>
-                  </div>
-                </div>
-
-                {viewingRoom.facilities && viewingRoom.facilities.length > 0 && (
-                  <div className="room-details-facilities">
-                    <span>Equipped Facilities</span>
-                    <div className="facility-tags-list">
-                      {viewingRoom.facilities.map((f) => (
-                        <span key={f} className="facility-tag-item">
-                          <FiCheckCircle /> {f}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {viewingRoom.description && (
-                  <div className="room-details-description">
-                    <span>Remarks & Description</span>
-                    <p>{viewingRoom.description}</p>
-                  </div>
-                )}
-              </div>
-
-              <div className="rooms-modal-footer">
-                <button
-                  type="button"
-                  className="rooms-cancel-btn"
-                  onClick={() => setViewingRoom(null)}
-                >
-                  Close
-                </button>
-                <button
-                  type="button"
-                  className="rooms-submit-btn"
-                  onClick={() => {
-                    const r = viewingRoom
-                    setViewingRoom(null)
-                    handleOpenEdit(r)
-                  }}
-                >
-                  <FiEdit2 /> Edit Room
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
 
         {/* ============================================================== */}
         {/* DELETE CONFIRMATION MODAL POPUP */}
@@ -1139,7 +1624,7 @@ export default function RoomsManagement() {
               <div className="rooms-modal-card rooms-confirm-modal" onClick={(e) => e.stopPropagation()}>
                 <div className="rooms-modal-header delete-header">
                   <div className="rooms-modal-header-icon delete-icon">
-                    <FiAlertTriangle />
+                    <FiTrash2 />
                   </div>
                   <div>
                     <h3 className="rooms-modal-title">{isBlocked ? 'Deletion Blocked' : 'Delete Room Confirmation'}</h3>
@@ -1187,8 +1672,10 @@ export default function RoomsManagement() {
 
                   {isBlocked ? (
                     <div className="rooms-confirm-blocked-banner">
-                      <FiSlash className="blocked-icon" />
-                      <div>
+                      <div className="rooms-blocked-icon-box">
+                        <FiSlash className="blocked-icon" />
+                      </div>
+                      <div className="rooms-blocked-text-content">
                         <strong>Deletion Blocked by Academic Governance</strong>
                         <p>
                           Room <strong>"{deletingRoom.roomName}"</strong> is currently allocated to Section <strong>"{deletingRoom.assignedSection}"</strong>{studentCount > 0 ? ` with ${studentCount} active enrolled student${studentCount === 1 ? '' : 's'}` : ''}.
@@ -1198,7 +1685,7 @@ export default function RoomsManagement() {
                     </div>
                   ) : (
                     <p className="rooms-confirm-text">
-                      Are you sure you want to permanently delete this room record? This action cannot be undone.
+                      Are you sure you want to permanently delete room <strong>"{deletingRoom.roomName}"</strong> ({deletingRoom.roomNumber})? This action cannot be undone.
                     </p>
                   )}
                 </div>
@@ -1214,23 +1701,23 @@ export default function RoomsManagement() {
                   {isBlocked ? (
                     <button
                       type="button"
-                      className="rooms-save-btn"
+                      className="rooms-submit-btn"
                       onClick={() => {
                         const target = deletingRoom
                         setDeletingRoom(null)
                         handleOpenDeallocate(target)
                       }}
                     >
-                      Deallocate Section First
+                      <FiUnlock /> Deallocate Section First
                     </button>
                   ) : (
                     <button
                       type="button"
-                      className="rooms-delete-btn"
+                      className="rooms-submit-btn is-delete-confirm"
                       title="Delete Room"
                       onClick={handleConfirmDeleteRoom}
                     >
-                      <FiTrash2 /> Delete Room
+                      <FiTrash2 /> Confirm & Delete Room
                     </button>
                   )}
                 </div>
@@ -1248,7 +1735,7 @@ export default function RoomsManagement() {
             <div className="rooms-modal-backdrop" onClick={() => setDeallocatingRoom(null)}>
               <div className="rooms-modal-card rooms-confirm-modal" onClick={(e) => e.stopPropagation()}>
                 <div className="rooms-modal-header">
-                  <div className="rooms-modal-header-icon" style={{ background: '#FEF3C7', color: '#D97706' }}>
+                  <div className="rooms-modal-header-icon">
                     <FiUnlock />
                   </div>
                   <div>
@@ -1313,7 +1800,6 @@ export default function RoomsManagement() {
                   <button
                     type="button"
                     className="rooms-submit-btn"
-                    style={{ background: '#D97706', borderColor: '#D97706' }}
                     onClick={handleConfirmDeallocate}
                   >
                     <FiUnlock /> Confirm & Free Room
