@@ -771,6 +771,32 @@
   color: #0F172A;
 }
 
+.rooms-form-back-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 0 16px;
+  color: var(--text-primary, #0F172A);
+  font: inherit;
+  font-weight: 700;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.rooms-form-back-btn svg {
+  display: block;
+  width: 18px;
+  height: 18px;
+  flex: 0 0 18px;
+}
+
+.rooms-form-back-btn:focus-visible {
+  outline: 3px solid color-mix(in srgb, var(--brand, #756FB2) 28%, transparent);
+  outline-offset: 2px;
+}
+
 .rooms-submit-btn {
   display: inline-flex;
   align-items: center;
