@@ -1479,3 +1479,22 @@ label > b,
     color: var(--text-primary) !important;
     background-color: transparent !important;
 }
+
+/* PROJECT WIDE FIX FOR DOUBLE BOX SEARCH BARS IN DARK MODE */
+:root[data-theme="dark"] .page-content :is(
+    .fp-search, .flm-search, .fm-search, .cm-search, 
+    .course-search, .branch-search, .department-search, 
+    .semester-search, .section-search, .sa-search, 
+    .sp-search, .fs-search, .filter-disclosure__search
+) > input,
+:root[data-theme="dark"] .page-content :is(
+    .fp-search, .flm-search, .fm-search, .cm-search, 
+    .course-search, .branch-search, .department-search, 
+    .semester-search, .section-search, .sa-search, 
+    .sp-search, .fs-search, .filter-disclosure__search
+) input {
+    background-color: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+    color: var(--text-primary) !important;
+}
