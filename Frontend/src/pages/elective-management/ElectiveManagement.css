@@ -185,6 +185,26 @@
     flex-wrap: wrap;
 }
 
+.em-subject-filter-panel .filter-disclosure__bar {
+    gap: 12px;
+}
+
+.em-subject-filter-panel .filter-disclosure__search {
+    flex: 1 1 360px;
+    max-width: none;
+}
+
+.em-subject-filter-panel .em-search {
+    width: min(260px, 100%);
+}
+
+.em-subject-toolbar-actions {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    flex: 0 0 auto;
+}
+
 .em-subject-filter-panel .em-filters {
     flex-basis: 100%;
     display: grid;
