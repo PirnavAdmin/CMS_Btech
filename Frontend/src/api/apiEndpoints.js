@@ -1,4 +1,5 @@
 import { markApiResult } from '../utils/exportProvenance'
+import { readSubjectPages } from '../utils/subjectApiData'
 import { getAccessToken, getAuthStorage, getRefreshToken, signOut } from '../auth/auth'
 
 if (typeof window !== 'undefined' && window.localStorage) {
@@ -340,6 +341,7 @@ const request = async (url, options = {}, retried = false, bypassDedupe = false)
     if (response.status >= 500) {
       const error = new Error('Something went wrong while completing your request. Please try again.')
       error.status = response.status
+      error.backendMessage = validationMessage(body)
       error.correlationId = typeof body?.correlationId === 'string' ? body.correlationId : undefined
       throw error
     }
@@ -1263,6 +1265,21 @@ export const facultyMasterApi = {
   getSemesters: async () => listData(await request(endpoint('/api/semester'))),
   getColleges: async () => listData(await request(endpoint('/api/v1/colleges'))),
   getSubjects: async params => listData(await request(withQuery(endpoint('/api/v1/subjects'), params))),
+}
+
+// Subject CRUD routes are implemented by Backend/Controllers/V1/FacultyManagement/SubjectsController.cs.
+export const subjectApi = {
+  list: async params => {
+    try {
+      return await readSubjectPages(page => request(withQuery(endpoint('/api/v1/subjects'), { ...params, ...page })))
+    } catch (error) {
+      if (error.backendMessage) error.message = error.backendMessage
+      throw error
+    }
+  },
+  getById: async id => dataResponse(await request(endpoint(`/api/v1/subjects/${requiredId(id, 'Subject ID')}`))),
+  create: async payload => dataResponse(await jsonRequest(endpoint('/api/v1/subjects'), 'POST', payload)),
+  update: async (id, payload) => dataResponse(await jsonRequest(endpoint(`/api/v1/subjects/${requiredId(id, 'Subject ID')}`), 'PUT', payload)),
 }
 
 // Verified against the deployed Swagger TimetableEntries contract (2026-09-23).

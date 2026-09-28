@@ -13,10 +13,11 @@ import subjectService from '../../services/subjectService'
 import academicService from '../../services/academicService'
 import { showError, showSuccess } from '../../utils/toast'
 import { useAcademic } from '../../context/AcademicContext'
+import { departmentOfBranch, enrichSubject, idOf, relationId } from '../../utils/subjectDirectory'
 import './SubjectManagement.css'
 
 const ELECTIVE_TYPES = ['Elective', 'Non-Elective']
-const blank = () => ({ academicYearId: '', courseId: '', branchId: '', semesterId: '', subjectCode: '', subjectName: '', subjectType: '', electiveType: '', credits: '', status: 'Active', lectureHours: '', tutorialHours: '', practicalHours: '', internalMarks: '', externalMarks: '' })
+const blank = () => ({ academicYearId: '', departmentId: '', courseId: '', branchId: '', semesterId: '', subjectCode: '', subjectName: '', subjectType: '', electiveType: '', credits: '', status: 'Active', lectureHours: '', tutorialHours: '', practicalHours: '', internalMarks: '', externalMarks: '' })
 const key = v => String(v ?? '')
 const semNo = s => Number(s?.semesterNumber ?? String(s?.semesterName ?? s?.semester ?? s?.name ?? s?.id ?? '').match(/\d+/)?.[0] ?? 0)
 const ACADEMIC_LEVELS = ['1st Year', '2nd Year', '3rd Year', '4th Year']
@@ -30,16 +31,16 @@ export default function SubjectManagement() {
   const { selectedCollegeId, selectedAcademicYearId, selectedAcademicYear } = useAcademic()
   const [subjects, setSubjects] = useState([]), [loading, setLoading] = useState(true), [loadError, setLoadError] = useState('')
   const [page, setPage] = useState(1)
-  const [masters, setMasters] = useState({ years: [], courses: [], branches: [], semesters: [] })
+  const [masters, setMasters] = useState({ years: [], departments: [], courses: [], branches: [], semesters: [] })
   const [filters, updateFilters] = useState({ search: '', academicYearId: '', courseId: '', branchId: '', level: '', semesterId: '', subjectType: '', status: '' })
   const [form, setForm] = useState(blank), [editing, setEditing] = useState(null), [editorOpen, setEditorOpen] = useState(false), [viewing, setViewing] = useState(null), [saving, setSaving] = useState(false), [recentId, setRecentId] = useState('')
   const [returnToElectives, setReturnToElectives] = useState(false)
   const [confirmingSubject, setConfirmingSubject] = useState(null), [statusSaving, setStatusSaving] = useState(false), [deletingSubject, setDeletingSubject] = useState(null), [deleteSaving, setDeleteSaving] = useState(false)
   const setFilters = next => { setPage(1); updateFilters(next) }
-  const loadSubjects = async () => { setLoading(true); setLoadError(''); try { setSubjects(await subjectService.getSubjects()) } catch (e) { setLoadError(e.message || 'Unable to load subjects.') } finally { setLoading(false) } }
+  const loadSubjects = async () => { setLoading(true); setLoadError(''); try { setSubjects(await subjectService.getSubjects({ liveOnly: true })) } catch (e) { setLoadError(e.message || 'Unable to load subjects.') } finally { setLoading(false) } }
   useEffect(() => { loadSubjects() }, [])
-  useEffect(() => { let active = true; Promise.all([academicService.getAcademicYears(), academicService.getCourses(), academicService.getBranches(), academicService.getSemesters()]).then(([years, courses, branches, semesters]) => active && setMasters({ years, courses, branches, semesters })).catch(() => active && showError('Academic mapping options could not be loaded.')); return () => { active = false } }, [])
-  const scopedCourses = masters.courses
+  useEffect(() => { let active = true; Promise.all([academicService.getAcademicYears(), academicService.getCourses(), academicService.getBranches(), academicService.getSemesters(), academicService.getDepartments()]).then(([years, courses, branches, semesters, departments]) => active && setMasters({ years, courses, branches, semesters, departments })).catch(() => active && showError('Academic mapping options could not be loaded.')); return () => { active = false } }, [])
+  const scopedCourses = masters.courses.filter(course => !form.departmentId || relationId(course, 'department') === String(form.departmentId) || masters.branches.some(branch => relationId(branch, 'course') === idOf(course, 'course') && departmentOfBranch(branch, masters.courses) === String(form.departmentId)))
   const branches = courseId => masters.branches.filter(b => (!courseId || key(b.courseId) === key(courseId)))
   const semesters = (courseId, branchId) => masters.semesters.filter(s => (!courseId || !s.courseId || key(s.courseId) === key(courseId)) && (!branchId || !s.branchId || key(s.branchId) === key(branchId)))
   const filterSemesters = semesters(filters.courseId, filters.branchId), formSemesters = semesters(form.courseId, form.branchId)
@@ -64,11 +65,11 @@ export default function SubjectManagement() {
   const paginatedRecords = records.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE)
   const kpis = useMemo(() => ({ total: records.length, active: records.filter(s => String(s.status).toLowerCase() === 'active').length, theory: records.filter(s => /theory/i.test(s.subjectType)).length, lab: records.filter(s => /lab|practical/i.test(s.subjectType)).length, credits: records.reduce((n, s) => n + Number(s.credits || 0), 0) }), [records])
   const changeFilter = (field, value) => setFilters(old => field === 'courseId' ? { ...old, courseId: value, branchId: '', level: '', semesterId: '' } : field === 'branchId' ? { ...old, branchId: value, level: '', semesterId: '' } : field === 'level' ? { ...old, level: value, semesterId: '' } : { ...old, [field]: value })
-  const changeForm = (field, value) => setForm(old => field === 'courseId' ? { ...old, courseId: value, branchId: '', semesterId: '' } : field === 'branchId' ? { ...old, branchId: value, semesterId: '' } : { ...old, [field]: value })
+  const changeForm = (field, value) => setForm(old => field === 'departmentId' ? { ...old, departmentId: value, courseId: '', branchId: '', semesterId: '' } : field === 'courseId' ? { ...old, courseId: value, branchId: '', semesterId: '' } : field === 'branchId' ? { ...old, branchId: value, semesterId: '' } : { ...old, [field]: value })
   const formLevel = getAcademicLevelFromSemester(formSemesters.find(s => key(s.id) === key(form.semesterId)) || { semester: form.semester })
   const openAdd = () => { const activeYear = masters.years.find(year => year.isCurrent || String(year.status).toLowerCase() === 'active' || String(year.status).toLowerCase() === 'current'); setEditing(null); setForm({ ...blank(), academicYearId: selectedAcademicYearId || (activeYear ? key(activeYear.id) : '') }); setEditorOpen(true) }
   const closeEditor = () => { setEditing(null); setForm(blank()); setEditorOpen(false); if (returnToElectives) { setReturnToElectives(false); navigate('/elective-management') } }
-  const openEdit = s => { setViewing(null); setEditing(s); setForm({ ...blank(), ...s, academicYearId: key(s.academicYearId), courseId: key(s.courseId), branchId: key(s.branchId), semesterId: key(s.semesterId) }); setEditorOpen(true) }
+  const openEdit = s => { setViewing(null); setEditing(s); setForm({ ...blank(), ...s, departmentId: enrichSubject(s, masters).departmentId, academicYearId: key(s.academicYearId), courseId: key(s.courseId), branchId: key(s.branchId), semesterId: key(s.semesterId) }); setEditorOpen(true) }
   useEffect(() => {
     const request = location.state?.subjectAction
     if (!request || !subjects.length) return
@@ -79,7 +80,7 @@ export default function SubjectManagement() {
     else setViewing(subject)
     navigate(location.pathname, { replace: true, state: null })
   }, [location.state, location.pathname, subjects, navigate, openEdit])
-  const save = async e => { e.preventDefault(); if (!form.subjectCode.trim() || !form.subjectName.trim() || !form.academicYearId || !form.courseId || !form.branchId || !form.semesterId) return showError('Complete the academic mapping, subject code, and subject name.'); if (!ELECTIVE_TYPES.includes(form.electiveType)) return showError('Select Elective Type.'); const selectedCourse = masters.courses.find(course => key(course.id) === key(form.courseId)); const selectedBranch = branches(form.courseId).find(branch => key(branch.id) === key(form.branchId)); if (!selectedCourse || !selectedBranch) return showError('Select a valid course and a branch belonging to that course.'); const numericFields = [['Credits', form.credits], ['Lecture hours', form.lectureHours], ['Tutorial hours', form.tutorialHours], ['Practical hours', form.practicalHours], ['Internal marks', form.internalMarks], ['External marks', form.externalMarks]]; if (numericFields.some(([, value]) => value !== '' && (!Number.isFinite(Number(value)) || Number(value) < 0))) return showError('Credits, hours, and marks must be non-negative numbers.'); if (subjects.some(s => key(s.id) !== key(editing?.id) && s.subjectCode?.toLowerCase() === form.subjectCode.trim().toLowerCase())) return showError('Subject code already exists.'); const semester = formSemesters.find(s => key(s.id) === key(form.semesterId)); if (!semester) return showError('Select a valid semester for this course and branch.'); const payload = { ...form, credits: Number(form.credits || 0), semester: semester.semesterName || semester.name || `Semester ${semNo(semester)}`, academicYear: entityName(masters.years, form.academicYearId), course: entityName(masters.courses, form.courseId), branch: entityName(masters.branches, form.branchId) }; setSaving(true); try { if (editing) { await subjectService.updateSubject(editing.id, payload); showSuccess('Subject updated successfully') } else { const created = await subjectService.createSubject(payload); setRecentId(created?.id || ''); setPage(1); showSuccess('Subject created successfully') } closeEditor(); await loadSubjects() } catch (err) { showError(err.message || 'Failed to save subject.') } finally { setSaving(false) } }
+  const save = async e => { e.preventDefault(); const requiredFields = [['Academic Year', form.academicYearId], ['Course', form.courseId], ['Branch', form.branchId], ['Semester', form.semesterId], ['Subject Code', form.subjectCode], ['Subject Name', form.subjectName]]; const missingFields = requiredFields.filter(([, value]) => !String(value ?? '').trim()).map(([label]) => label); if (missingFields.length) return showError(`Please complete: ${missingFields.join(', ')}.`); if (!ELECTIVE_TYPES.includes(form.electiveType)) return showError('Select Elective Type.'); const selectedCourse = masters.courses.find(course => key(course.id) === key(form.courseId)); const selectedBranch = branches(form.courseId).find(branch => key(branch.id) === key(form.branchId)); if (!selectedCourse || !selectedBranch) return showError('Select a valid course and a branch belonging to that course.'); const numericFields = [['Credits', form.credits], ['Lecture hours', form.lectureHours], ['Tutorial hours', form.tutorialHours], ['Practical hours', form.practicalHours], ['Internal marks', form.internalMarks], ['External marks', form.externalMarks]]; if (numericFields.some(([, value]) => value !== '' && (!Number.isFinite(Number(value)) || Number(value) < 0))) return showError('Credits, hours, and marks must be non-negative numbers.'); if (subjects.some(s => key(s.id) !== key(editing?.id) && s.subjectCode?.toLowerCase() === form.subjectCode.trim().toLowerCase())) return showError('Subject code already exists.'); const semester = formSemesters.find(s => key(s.id) === key(form.semesterId)); if (!semester) return showError('Select a valid semester for this course and branch.'); const payload = { ...form, credits: Number(form.credits || 0), semester: semester.semesterName || semester.name || `Semester ${semNo(semester)}`, academicYear: entityName(masters.years, form.academicYearId), course: entityName(masters.courses, form.courseId), branch: entityName(masters.branches, form.branchId) }; setSaving(true); try { if (editing) { await subjectService.updateSubject(editing.id, payload); showSuccess('Subject updated successfully') } else { const created = await subjectService.createSubject(payload); setRecentId(created?.id || ''); setPage(1); showSuccess('Subject created successfully') } closeEditor(); await loadSubjects() } catch (err) { showError(err.message || 'Failed to save subject.') } finally { setSaving(false) } }
   const updateStatus = async s => {
     const status = String(s.status).toLowerCase() === 'active' ? 'Inactive' : 'Active'
     if (status === 'Inactive') { setConfirmingSubject(s); return }
@@ -110,24 +111,26 @@ export default function SubjectManagement() {
   const columns = [{ label: 'Subject Code', value: 'subjectCode' }, { label: 'Subject Name', value: 'subjectName' }, { label: 'Academic Year', value: s => mapping(s).year }, { label: 'Course', value: s => mapping(s).course }, { label: 'Branch', value: s => mapping(s).branch }, { label: 'Academic Level', value: s => getAcademicLevelFromSemester(s) }, { label: 'Semester', value: s => mapping(s).semester }, { label: 'Subject Type', value: 'subjectType' }, { label: 'Credits', value: 'credits' }, { label: 'Status', value: 'status' }]
   const activeFilterText = [filters.academicYearId && entityName(masters.years, filters.academicYearId), filters.courseId && entityName(masters.courses, filters.courseId), filters.branchId && entityName(masters.branches, filters.branchId), filters.level, filters.semesterId && entityName(masters.semesters, filters.semesterId)].filter(Boolean)
   const detailSections = s => { const m = mapping(s); return [{ title: 'Subject Information', rows: [['Subject Code', s.subjectCode], ['Subject Name', s.subjectName], ['Subject Type', s.subjectType], ['Elective Type', s.electiveType], ['Credits', s.credits], ['Status', s.status]] }, { title: 'Academic Mapping', rows: [['Academic Year', m.year], ['Course', m.course], ['Branch', m.branch], ['Academic Level', getAcademicLevelFromSemester({ semester: m.semester })], ['Semester', m.semester]] }, { title: 'Academic Configuration', rows: [['Lecture Hours', s.lectureHours], ['Tutorial Hours', s.tutorialHours], ['Practical Hours', s.practicalHours], ['Internal Marks', s.internalMarks], ['External Marks', s.externalMarks]].filter(([, v]) => v !== '' && v != null) }].filter(x => x.rows.length) }
-  if (open) {
+  if (editorOpen) {
     return (
       <DashboardLayout>
         <main className="sm-screen">
           <header className="sm-header">
             <div>
+              <h1>{editing ? `Edit ${editing.subjectCode}` : 'Add Subject'}</h1>
+              <p>Map the subject to a valid academic program and semester.</p>
+            </div>
+            <div className="sm-editor-action">
               <button type="button" className="cm-button secondary erp-btn erp-btn--secondary" onClick={closeEditor} style={{ marginBottom: '10px' }}>
                 <FiRotateCcw /> Back to Subject Directory
               </button>
-              <h1>{editing ? `Edit ${editing.subjectCode}` : 'Add Subject'}</h1>
-              <p>Map the subject to a valid academic program and semester.</p>
             </div>
           </header>
           <Editor
             form={form}
             editing={editing}
             masters={{ ...masters, courses: scopedCourses }}
-            branches={branches(form.courseId)}
+            branches={branches(form.courseId).filter(branch => !form.departmentId || departmentOfBranch(branch, masters.courses) === String(form.departmentId))}
             semesters={formSemesters}
             levels={ACADEMIC_LEVELS}
             typeOptions={types}
@@ -293,7 +296,7 @@ function Editor({ form, editing, masters, branches, semesters, levels, typeOptio
   const [formLevel, setFormLevel] = useState(initialLevel);
   const [activeTab, setActiveTab] = useState('mapping');
   const change = (field, value) => {
-    if (field === 'courseId' || field === 'branchId') setFormLevel('');
+    if (field === 'departmentId' || field === 'courseId' || field === 'branchId') setFormLevel('');
     updateForm(field, value);
   };
   const selectedCourse = masters.courses.find(course => key(course.id) === key(form.courseId));
@@ -333,6 +336,13 @@ function Editor({ form, editing, masters, branches, semesters, levels, typeOptio
             <section>
               <h3 style={{ margin: '0 0 16px', fontSize: '1.05rem', color: 'var(--erp-text-main, #0f172a)' }}>Academic Mapping</h3>
               <div className="sm-form-grid-2">
+                <Field label={<>Academic Year <span className="sm-required">*</span></>}>
+                  <Select label="Academic Year" value={form.academicYearId} options={masters.years} onChange={v => change('academicYearId', v)} />
+                  {!masters.years.length && <small>Academic years are unavailable. Check Academic Year setup and reopen this form.</small>}
+                </Field>
+                <Field label="Department">
+                  <Select label="Department" value={form.departmentId} options={masters.departments} onChange={v => change('departmentId', v)} />
+                </Field>
                 <Field label={<>Course <span className="sm-required">*</span></>}>
                   <Select label="Course" value={form.courseId} options={masters.courses} onChange={v => change('courseId', v)} />
                 </Field>

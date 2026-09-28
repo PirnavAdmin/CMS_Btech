@@ -1,4 +1,5 @@
-import { courseApi, branchApi, departmentApi, facultyMasterApi } from '../api/apiEndpoints'
+import { courseApi, branchApi, departmentApi, facultyMasterApi, subjectApi } from '../api/apiEndpoints'
+import { mapApiSubject, subjectApiPayload } from '../utils/subjectApiData'
 
 /* =========================================================
    LOCAL STORAGE KEYS
@@ -638,7 +639,7 @@ export const subjectService = {
     if (params.liveOnly) {
       const query = { ...params }
       delete query.liveOnly
-      return facultyMasterApi.getSubjects(query)
+      return (await subjectApi.list(query)).map(mapApiSubject)
     }
     try {
       let list = getLocalData(
@@ -712,51 +713,7 @@ export const subjectService = {
   ======================================================= */
 
   createSubject: async payload => {
-    const list = getLocalData(
-      LOCAL_SUBJECTS_KEY,
-      initialSubjects
-    )
-
-    const duplicate = list.some(
-      item =>
-        normalize(item.subjectCode) ===
-        normalize(payload.subjectCode)
-    )
-
-    if (duplicate) {
-      throw new Error(
-        `Subject code "${payload.subjectCode}" already exists.`
-      )
-    }
-
-    const newSubject = {
-      ...payload,
-
-      id: `SUB-${Date.now().toString().slice(-4)}`,
-
-      credits: Number(payload.credits || 0),
-
-      lectureHours: Number(payload.lectureHours || 0),
-
-      tutorialHours: Number(payload.tutorialHours || 0),
-
-      practicalHours: Number(payload.practicalHours || 0),
-
-      totalMarks:
-        Number(payload.internalMarks || 0) +
-        Number(payload.externalMarks || 0),
-
-      status: payload.status || 'Active',
-    }
-
-    list.unshift(newSubject)
-
-    saveLocalData(
-      LOCAL_SUBJECTS_KEY,
-      list
-    )
-
-    return newSubject
+    return mapApiSubject(await subjectApi.create(subjectApiPayload(payload)))
   },
 
 
@@ -765,81 +722,7 @@ export const subjectService = {
   ======================================================= */
 
   updateSubject: async (id, payload) => {
-    const list = getLocalData(
-      LOCAL_SUBJECTS_KEY,
-      initialSubjects
-    )
-
-    const index = list.findIndex(
-      item =>
-        String(item.id) === String(id) ||
-        String(item.subjectCode) === String(id)
-    )
-
-    if (index >= 0) {
-
-      const duplicate = list.some(
-        (item, itemIndex) =>
-          itemIndex !== index &&
-          normalize(item.subjectCode) ===
-            normalize(
-              payload.subjectCode ??
-                list[index].subjectCode
-            )
-      )
-
-      if (duplicate) {
-        throw new Error(
-          `Subject code "${payload.subjectCode}" already exists.`
-        )
-      }
-
-      list[index] = {
-        ...list[index],
-        ...payload,
-
-        id: list[index].id,
-
-        credits: Number(
-          payload.credits ??
-          list[index].credits
-        ),
-
-        lectureHours: Number(
-          payload.lectureHours ??
-          list[index].lectureHours
-        ),
-
-        tutorialHours: Number(
-          payload.tutorialHours ??
-          list[index].tutorialHours
-        ),
-
-        practicalHours: Number(
-          payload.practicalHours ??
-          list[index].practicalHours
-        ),
-
-        totalMarks:
-          Number(
-            payload.internalMarks ??
-            list[index].internalMarks
-          ) +
-          Number(
-            payload.externalMarks ??
-            list[index].externalMarks
-          ),
-      }
-
-      saveLocalData(
-        LOCAL_SUBJECTS_KEY,
-        list
-      )
-
-      return list[index]
-    }
-
-    return payload
+    return mapApiSubject(await subjectApi.update(id, subjectApiPayload(payload)))
   },
 
 
