@@ -530,7 +530,7 @@ function ViewDialog({ item, leaveTypes, policies, getBalance, onClose, onDecisio
           <LeaveInfo title="LEAVE PERIOD" columns={3} rows={[['From', dateLabel(item.from)], ['To', dateLabel(item.to)], ['Duration', `${item.days} Days`]]} />
           <div className="preview-section-group">
             <span className="preview-section-title">REMARKS</span>
-            <p className="fm-view-reason" style={{ margin: 0, padding: '12px 14px', background: 'var(--surface-soft, #F8FAFC)', border: '1px solid var(--border, #E2E8F0)', borderRadius: '8px', fontSize: '14px', color: 'var(--text-primary, #334155)' }}>{item.reason}</p>
+            <p className="fm-view-reason" style={{ margin: 0, padding: '10px 12px', background: 'var(--surface-soft, #F8FAFC)', border: '1px solid var(--border, #E2E8F0)', borderRadius: '8px', fontSize: '14px', color: 'var(--text-primary, #334155)' }}>{item.reason}</p>
           </div>
           {item.decisionDate && <LeaveInfo title="DECISION DETAILS" columns={2} rows={[['Decision Date', dateLabel(item.decisionDate)], ...(item.rejectionReason ? [['Rejection Reason', item.rejectionReason]] : [])]} />}
           {item.status === 'Pending' && onDecision && (
@@ -983,35 +983,44 @@ function BalanceTable({ employee, policy, leaveTypes, getBalance }) {
 }
 function View({ title, children, onClose }) {
   return (
-    <SharedViewDialog
-      title={title}
-      subtitle="Faculty Leave Management & Records"
-      icon={FiBriefcase}
-      onClose={onClose}
-      hideFooter={true}
-      maxWidth="760px"
-    >
-      <div className="flm-view-body" style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-        {children}
-      </div>
-    </SharedViewDialog>
+    <div className="flm-overlay" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
+      <section className="fm-attendance-detail flm-config-dialog" role="dialog" aria-modal="true" style={{ maxWidth: '860px', width: '100%', overflowY: 'auto', maxHeight: 'calc(100dvh - 48px)', padding: '24px', borderRadius: '16px', background: 'var(--surface, #fff)' }} onClick={e => e.stopPropagation()}>
+        <div className="fm-attendance-detail-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', borderBottom: '1px solid #E2E8F0', paddingBottom: '12px', marginBottom: '16px' }}>
+          <div>
+            <p className="flm-eyebrow" style={{ margin: '0 0 2px 0', color: '#756FB2', fontSize: '11px', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.1em' }}>LEAVE DETAILS</p>
+            <h2 style={{ margin: 0, fontSize: '18px', fontWeight: 700, color: 'var(--text-primary)' }}>{title}</h2>
+          </div>
+          <button className="flm-close" style={{ position: 'static', margin: 0, right: 'auto', top: 'auto', display: 'flex', alignItems: 'center', justifyContent: 'center' }} aria-label="Close" onClick={onClose}><FiX size={18} /></button>
+        </div>
+        <div className="flm-view-body" style={{ display: 'flex', flexDirection: 'column' }}>
+          {children}
+        </div>
+      </section>
+    </div>
   )
 }
 
 function Identity({ employee, status }) {
   return (
-    <div className="view-modal-banner" style={{ padding: '8px 12px', gap: '10px', marginBottom: '0' }}>
-      <div className="view-modal-avatar">
-        {initials(employee?.fullName)}
-      </div>
-      <div className="view-modal-header-info">
-        <div className="view-modal-badges">
-          {employee?.employeeId && <span className="view-modal-badge">{employee.employeeId}</span>}
-          {typeOf(employee) && <span className="view-modal-badge">{typeOf(employee)}</span>}
-          {status && <span className={`view-modal-badge-status ${status === 'Approved' ? 'active' : status === 'Pending' ? 'warning' : 'inactive'}`}>{status}</span>}
+    <div className="cm-profile-banner fm-attendance-identity-hero">
+      <div className="cm-profile-avatar-wrap">
+        <div className="fm-avatar fm-avatar-large">
+          {initials(employee?.fullName)}
         </div>
-        <h1 className="view-modal-title">{employee?.fullName}</h1>
-        <p className="view-modal-subtitle">{employee?.designation || 'Faculty'} Ã‚Â· {branchOf(employee)}</p>
+      </div>
+      <div className="cm-profile-header-info">
+        <div className="cm-profile-badges">
+          {employee?.employeeId && <span className="cm-badge">{employee.employeeId}</span>}
+          {typeOf(employee) && <span className="cm-badge">{typeOf(employee)}</span>}
+        </div>
+        <h2 className="cm-profile-title">{employee?.fullName}</h2>
+        <p className="cm-profile-subtitle">{employee?.designation || 'Faculty'} • {branchOf(employee)}</p>
+      </div>
+      <div className="fm-attendance-detail-status">
+        <span className={`flm-status ${statusClass(status)}`} style={{ background: '#fff', color: status === 'Approved' ? '#16a34a' : status === 'Pending' ? '#d97706' : '#dc2626', display: 'flex', alignItems: 'center', gap: '6px', padding: '6px 12px', borderRadius: '99px', fontWeight: 'bold' }}>
+          <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: 'currentColor' }}></span>
+          {status}
+        </span>
       </div>
     </div>
   )
@@ -1053,6 +1062,7 @@ function LeaveInfo({ title, columns = 4, rows }) {
     </div>
   )
 }
+
 
 
 

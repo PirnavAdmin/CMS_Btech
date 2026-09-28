@@ -246,7 +246,7 @@
   .flm-count { padding: 12px 16px; }
   .flm-filter-panel { margin: 16px 16px 0; }
   .flm-page .flm-search { flex-basis: 100%; }
-  .flm-overlay { padding: 12px; }
+  .flm-overlay { padding: 10px; }
   .flm-config-dialog { padding: 18px; }
   .flm-config-form, .flm-info-grid { grid-template-columns: minmax(0, 1fr); }
 }
@@ -303,12 +303,12 @@
 
 .flm-page .cm-profile-banner.fm-attendance-identity-hero {
   border-radius: 12px !important;
-  padding: 16px 20px !important;
+  padding: 12px 16px !important;
   min-height: auto !important;
   position: relative !important;
   overflow: hidden !important;
   margin-top: 16px;
-  margin-bottom: 24px;
+  margin-bottom: 16px;
 }
 .flm-page .cm-profile-avatar-wrap { flex-shrink: 0 !important; display: flex !important; align-items: center !important; position: relative !important; z-index: 2 !important; }
 .flm-page .fm-avatar-large { width: 58px !important; height: 58px !important; min-width: 58px !important; place-items: center !important; overflow: hidden !important; border-radius: 12px !important; background: #EAB308 !important; color: #111827 !important; font-size: 24px !important; font-weight: 800 !important; display: grid !important; }
@@ -319,9 +319,10 @@
 .flm-page .cm-profile-subtitle { margin: 2px 0 0 0 !important; color: rgba(255, 255, 255, 0.9) !important; font-size: 0.82rem !important; font-weight: 500 !important; }
 .flm-page .fm-attendance-detail-status { position: relative !important; z-index: 2 !important; margin-left: auto !important; flex-shrink: 0 !important; }
 
-.flm-page .preview-section-group { margin-bottom: 20px; }
+.flm-page .preview-section-group { margin-bottom: 12px; }
 .flm-page .preview-section-title { display: block; margin-bottom: 8px; color: var(--brand, #756FB2); font-size: 11px; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase; }
 .flm-page .preview-kv-grid { display: grid; gap: 12px; }
-.flm-page .preview-kv-item { background: #fff; border: 1px solid #E2E8F0; border-radius: 8px; padding: 12px; display: flex; flex-direction: column; gap: 4px; }
+.flm-page .preview-kv-item { background: #fff; border: 1px solid #E2E8F0; border-radius: 8px; padding: 10px; display: flex; flex-direction: column; gap: 4px; }
 .flm-page .kv-label { font-size: 11px; color: #64748B; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; }
 .flm-page .kv-val { font-size: 15px; color: #1E293B; font-weight: 700; }
+
