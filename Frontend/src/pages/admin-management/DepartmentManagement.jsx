@@ -1,4 +1,4 @@
-import { newestFirst, rememberCreated } from '../../utils/newestFirst'
+﻿import { newestFirst, rememberCreated } from '../../utils/newestFirst'
 import { showSuccess } from '../../utils/toast'
 import useToastState from '../../hooks/useToastState'
 import { useEffect, useMemo, useState } from 'react';
@@ -757,10 +757,10 @@ export default function DepartmentManagement() {
                               </button>
                             </td>
                             <td className="col-code table-center">
-                              <code>{item.code || '—'}</code>
+                              <code>{item.code || 'â€”'}</code>
                             </td>
                             <td className="col-hod table-center">
-                              <span className="table-cell-truncate" title={item.hod || 'Unassigned'}>{item.hod || '—'}</span>
+                              <span className="table-cell-truncate" title={item.hod || 'Unassigned'}>{item.hod || 'â€”'}</span>
                             </td>
                             <td className="col-status table-center">
                               <StatusBadge value={item.status} />
@@ -787,7 +787,7 @@ export default function DepartmentManagement() {
                                 </button>
                                 <button
                                   type="button"
-                                  className={`table-action-btn ${item.status === 'Active' ? 'action-deactivate erp-action-btn--danger' : 'action-activate erp-action-btn--success'}`}
+                                  className={`table-action-btn ${item.status === 'Active' ? 'action-activate erp-action-btn--success' : 'action-deactivate erp-action-btn--danger'}`}
                                   title={item.status === 'Active' ? `Deactivate ${item.name}` : `Activate ${item.name}`}
                                   aria-label={item.status === 'Active' ? `Deactivate ${item.name}` : `Activate ${item.name}`}
                                   onClick={() => toggleStatus(item)}
@@ -957,7 +957,7 @@ export default function DepartmentManagement() {
                     <div className="preview-hero-details">
                       <h3 className="preview-course-title">{form.name.trim() || 'Department Preview'}</h3>
                       <p className="preview-course-meta">
-                        {[form.code, form.status || (form.name ? 'Active' : '')].filter(Boolean).join(' • ') || 'Department details'}
+                        {[form.code, form.status || (form.name ? 'Active' : '')].filter(Boolean).join(' â€¢ ') || 'Department details'}
                       </p>
                     </div>
                   </div>
@@ -977,7 +977,7 @@ export default function DepartmentManagement() {
                       },
                     ].map((sec) => ({
                       ...sec,
-                      fields: sec.fields.filter(([, val]) => val !== null && val !== undefined && String(val).trim() !== '' && String(val).trim() !== '—'),
+                      fields: sec.fields.filter(([, val]) => val !== null && val !== undefined && String(val).trim() !== '' && String(val).trim() !== 'â€”'),
                     })).filter((sec) => sec.fields.length > 0)
 
                     if (sections.length === 0) {
@@ -1064,13 +1064,13 @@ export default function DepartmentManagement() {
                       value={form.hodUserId ? String(form.hodUserId) : ''}
                       options={hodCandidates.map((member) => {
                         const code = member.employeeId ? `[${member.employeeId}]` : '';
-                        const subLabel = [member.designation, member.department].filter(Boolean).join(' • ');
+                        const subLabel = [member.designation, member.department].filter(Boolean).join(' â€¢ ');
                         const fullLabel = [
                           member.fullName,
                           code,
                           member.designation,
                           member.department ? `(${member.department})` : ''
-                        ].filter(Boolean).join(' — ');
+                        ].filter(Boolean).join(' â€” ');
 
                         return {
                           value: String(member.hodId),
@@ -1183,7 +1183,7 @@ export default function DepartmentManagement() {
                 </div>
                 <div className="cm-profile-header-info">
                   <div className="cm-profile-badges">
-                    <span className="cm-badge cm-badge-code">Code: {selected.code || '—'}</span>
+                    <span className="cm-badge cm-badge-code">Code: {selected.code || 'â€”'}</span>
                     <span className="cm-badge cm-badge-type">Department</span>
                     <span className={`cm-status-badge ${String(selected.status).toLowerCase()}`}>
                       {selected.status}
@@ -1252,3 +1252,4 @@ export default function DepartmentManagement() {
     </DashboardLayout>
   );
 }
+
