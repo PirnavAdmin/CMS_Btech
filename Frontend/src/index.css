@@ -1277,3 +1277,14 @@ label > b,
   color: var(--brand-blue, #A39DDC) !important;
   border: 1px solid var(--border-strong) !important;
 }
+
+/* Dark Mode Form Secondary Buttons Fix */
+:root[data-theme="dark"] .page-content :is(.erp-btn--secondary, .secondary-button, .cm-secondary-btn, .cm-button.secondary, .semester-primary.secondary, .section-primary.secondary, .section-back-button, .p-secondary, .profile-button.secondary, .ac-secondary) {
+  color: var(--text-primary) !important;
+  background: var(--surface-raised) !important;
+  border-color: var(--border-strong) !important;
+}
+:root[data-theme="dark"] .page-content :is(.erp-btn--secondary, .secondary-button, .cm-secondary-btn, .cm-button.secondary, .semester-primary.secondary, .section-primary.secondary, .section-back-button, .p-secondary, .profile-button.secondary, .ac-secondary):hover:not(:disabled) {
+  background: var(--surface-soft) !important;
+  color: var(--text-primary) !important;
+}
