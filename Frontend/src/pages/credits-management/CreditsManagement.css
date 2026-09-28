@@ -1179,14 +1179,53 @@
    TOOLBAR
 ========================= */
 
-.cm-toolbar {
-  display: grid;
-  grid-template-columns: minmax(250px, 1fr) 220px;
+.cm-subject-toolbar {
+  display: flex;
+  flex-wrap: wrap;
   gap: 12px;
-  padding: 16px;
-  background: var(--bg-surface);
-  border: 1px solid var(--border-color);
-  border-radius: 11px;
+}
+
+.cm-subject-search {
+  width: min(360px, 100%);
+}
+
+.cm-subject-search input {
+  width: 100%;
+  min-height: 42px;
+  padding: 9px 12px;
+  border: 1px solid var(--border, #cbd5e1);
+  border-radius: 8px;
+  color: var(--text-primary, #0f172a);
+  background: var(--surface, #fff);
+  font: inherit;
+}
+
+.cm-subject-filter-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.cm-academic-filter {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 6px;
+  color: var(--text-primary, #0f172a);
+  font-size: 13px;
+  font-weight: 650;
+}
+
+@media (max-width: 760px) {
+  .cm-subject-filter-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 480px) {
+  .cm-subject-filter-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
 }
 
 /* =========================
