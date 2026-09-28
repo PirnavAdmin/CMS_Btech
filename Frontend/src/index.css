@@ -1214,8 +1214,28 @@ label > b,
   background-color: #334155 !important;
   border-color: #475569 !important;
 }
-:root[data-theme="dark"] .page-content :is(table td, table th) :is(a, button, span, strong, div, p) {
+:root[data-theme="dark"] .page-content :is(table td, table th) :is(a, button, span:not([class*="badge"]), strong, div:not([class*="badge"]), p) {
   color: #F8FAFC !important;
 }
 
 
+
+
+/* Filter Panel Dark Mode overrides */
+:root[data-theme="dark"] .filter-disclosure,
+:root[data-theme="dark"] .filter-disclosure__bar,
+:root[data-theme="dark"] .filter-disclosure__content {
+  background-color: var(--surface) !important;
+  border-color: var(--border-strong) !important;
+}
+
+:root[data-theme="dark"] .filter-disclosure__search > * {
+  background-color: var(--surface-soft) !important;
+  color: var(--text-primary) !important;
+  border-color: var(--border-strong) !important;
+}
+
+:root[data-theme="dark"] .filter-disclosure__search :is(input, select) {
+  background-color: transparent !important;
+  color: var(--text-primary) !important;
+}
