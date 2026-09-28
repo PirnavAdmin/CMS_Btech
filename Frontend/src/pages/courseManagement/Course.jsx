@@ -481,7 +481,7 @@ function CourseForm() {
     const matchesDepartment = !value.departmentId || !branchDepartmentId || String(branchDepartmentId) === String(value.departmentId)
     return matchesDepartment
   })
-  return <Page><Header title={id ? 'Edit B.Tech Course' : 'Add B.Tech Course'} text="Create a focused B.Tech undergraduate course."><Link className="cm-button secondary" to="/courses"><FiArrowLeft /> Cancel</Link></Header>
+  return <Page><Header title={id ? 'Edit B.Tech Course' : 'Add B.Tech Course'} text="Create a focused B.Tech undergraduate course."><Link className="cm-button secondary" to="/courses"><FiArrowLeft /> Back</Link></Header>
 
     {error && <p className="cm-error" role="alert">{error} <button type="button" className="cm-button secondary" disabled={isSaving} onClick={load}>Reload options</button></p>}
     <div className="course-form-layout">

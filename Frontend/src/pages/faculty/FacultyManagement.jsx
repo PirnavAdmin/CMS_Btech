@@ -2528,7 +2528,7 @@ export default function FacultyManagement() {
   if (path === '/faculty/advisors' || path === '/faculty/subjects') return <Navigate to="/faculty" replace />
   if (path === '/faculty/attendance') content = <FacultyAttendanceScreen faculty={faculty} collegeOptions={collegeOptions} departmentOptions={departmentOptions} onNotify={notify} />
   else if (((editId || detailId) && !selected) || (!['/faculty', '/faculty/new'].includes(path) && !editId && !detailId)) {
-    content = <section className="fm-panel"><EmptyState title="Faculty record not found" action="Back to List" onAction={() => back()} /></section>
+    content = <section className="fm-panel"><EmptyState title="Faculty record not found" action={<button type="button" className="fm-button secondary" onClick={() => back()}><FiArrowLeft /> Back</button>} /></section>
   } else if (path === '/faculty/new' || editId) {
     const defaultNewCategory = categoryParam || selected?.employeeCategory || selectedCategory || activeCategory || 'Teaching'
     content = (
@@ -2577,7 +2577,7 @@ export default function FacultyManagement() {
                 <FiEdit2 /> {selected.employeeCategory === 'Non-Teaching' ? 'Edit Staff' : 'Edit Faculty'}
               </button>
               <button type="button" className="fm-button secondary" onClick={() => back()}>
-                <FiArrowLeft /> Back to List
+                <FiArrowLeft /> Back
               </button>
             </div>
           </header>

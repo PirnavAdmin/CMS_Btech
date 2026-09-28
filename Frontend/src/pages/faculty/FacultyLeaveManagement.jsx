@@ -642,7 +642,7 @@ function PolicyDialog({ item = {}, leaveTypes, academicYears, onClose, onSave })
   const [data, setData] = useState({
     name: item.name || '',
     academicYear: item.academicYear || '',
-    applicableTo: item.applicableTo || 'Teaching',
+    applicableTo: item.applicableTo || '',
     from: item.from || '',
     to: item.to || '',
     departments: item.departments || [],
@@ -665,7 +665,7 @@ function PolicyDialog({ item = {}, leaveTypes, academicYears, onClose, onSave })
             {academicYears.map(year => <option key={year} value={year}>{year}</option>)}
           </select>
         </label>
-        <Select label="Applicable To" value={data.applicableTo} values={['Teaching', 'Non-Teaching', 'Both']} onChange={value => setData({ ...data, applicableTo: value })} />
+        <Select label="Applicable To" value={data.applicableTo} placeholder="Select applicable to" values={['Teaching', 'Non-Teaching', 'Both']} onChange={value => setData({ ...data, applicableTo: value })} />
         <Input label="Effective From *" type="date" value={data.from} onChange={value => setData({ ...data, from: value })} />
         <Input label="Effective To *" type="date" value={data.to} onChange={value => setData({ ...data, to: value })} />
       </Form>
@@ -762,7 +762,7 @@ function PolicyDialog({ item = {}, leaveTypes, academicYears, onClose, onSave })
       </div>
       <Footer>
         <button onClick={onClose}>Cancel</button>
-        <button className="approve-action" disabled={!data.name || !data.academicYear || !data.from || !data.to || data.from > data.to || !data.entitlements.length} onClick={() => onSave({ ...item, ...data })}>
+        <button className="approve-action" disabled={!data.name || !data.academicYear || !data.applicableTo || !data.from || !data.to || data.from > data.to || !data.entitlements.length} onClick={() => onSave({ ...item, ...data })}>
           {item.id ? 'Save Changes' : 'Create Policy'}
         </button>
       </Footer>
@@ -1038,7 +1038,7 @@ const renderFlmLabel = label => {
   return label
 }
 function FilterSelect({ label, value, values, onChange }) { const displayLabel = label === 'Department' ? 'Branch' : label; const plural = displayLabel === 'Branch' ? 'Branches' : `${displayLabel}s`; return <label className="flm-filter-field"><span>{displayLabel}</span><select value={value} onChange={event => onChange(event.target.value)}><option value="">All {plural}</option>{values.map(item => <option key={item}>{item}</option>)}</select></label> }
-function Select({ label, value, values, onChange }) { return <label><span>{renderFlmLabel(label)}</span><select value={value} onChange={event => onChange(event.target.value)}>{values.map(item => <option key={item}>{item}</option>)}</select></label> }
+function Select({ label, value, values, onChange, placeholder }) { return <label><span>{renderFlmLabel(label)}</span><select value={value} onChange={event => onChange(event.target.value)}>{placeholder && <option value="">{placeholder}</option>}{values.map(item => <option key={item}>{item}</option>)}</select></label> }
 function Modal({ title, children, onClose }) { return <div className="flm-overlay"><section className="flm-decision-dialog flm-config-dialog" role="dialog" aria-modal="true"><button className="flm-close" aria-label="Close" onClick={onClose}><FiX /></button><p className="flm-eyebrow">FACULTY LEAVE</p><h2>{title}</h2>{children}</section></div> }
 function Form({ children }) { return <div className="flm-config-form">{children}</div> }
 function Input({ label, type = 'text', value, onChange }) { return <label><span>{renderFlmLabel(label)}</span><input type={type} value={value} onChange={event => onChange(event.target.value)} /></label> }

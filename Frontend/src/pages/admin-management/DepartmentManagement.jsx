@@ -809,7 +809,7 @@ export default function DepartmentManagement() {
               subtitle="Enter the department information, code, college association, and status."
             >
               <button type="button" className="erp-btn erp-btn--secondary" onClick={closeToList}>
-                <FiArrowLeft /> Back to List
+                <FiArrowLeft /> Back
               </button>
             </PageHeader>
 

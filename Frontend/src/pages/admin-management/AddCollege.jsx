@@ -3,7 +3,7 @@ import { rememberCreated } from '../../utils/newestFirst'
 import useToastState from '../../hooks/useToastState'
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
-import { FiCheck } from 'react-icons/fi'
+import { FiCheck ,FiArrowLeft} from 'react-icons/fi'
 import DashboardLayout from '../../layouts/DashboardLayout'
 import SearchableSelect from '../../components/SearchableSelect'
 import { cacheCollegeLogo, createCollege, fetchCollegeLogo, getCollegeById, getCollegeLogoUrl, getColleges, isBackendCollegeLogo, isValidWebsite, normalizeWebsite, readCachedCollegeLogo, readCollegeExtendedDetails, unwrapCollegeRecord, updateCollege, uploadCollegeLogo, WEBSITE_VALIDATION_MESSAGE } from '../../auth/collegeApi'
@@ -496,7 +496,7 @@ export default function AddCollege() {
   const section = (title, subtitle, content) => <section className="ac-section"><header><h2>{title}</h2><p>{subtitle}</p></header><div className="ac-grid">{content}</div></section>
 
   return <DashboardLayout><main className="add-college">
-    <header className="ac-page-header"><div><h1>{editId ? 'Edit College' : 'Add College'}</h1><p>{editId ? 'Update the college information below.' : 'Create and configure a new college in the college management system.'}</p><span className="ac-draft-progress">Draft progress: <b>{progress}%</b></span></div><button className="ac-back" type="button" onClick={requestLeave}>College list →</button></header>
+    <header className="ac-page-header"><div><h1>{editId ? 'Edit College' : 'Add College'}</h1><p>{editId ? 'Update the college information below.' : 'Create and configure a new college in the college management system.'}</p><span className="ac-draft-progress">Draft progress: <b>{progress}%</b></span></div><button className="ac-back" type="button" onClick={requestLeave}><FiArrowLeft /> Back  </button></header>
     {loadingCollege && <div className="ac-notice" role="status">Loading college details...</div>}
     <div className="college-form-layout">
       <form className="college-form-main" onSubmit={(event) => event.preventDefault()} noValidate>
