@@ -139,7 +139,7 @@
   flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
-  gap: 16px;
+  gap: 12px;
   padding: 18px 20px;
   border-bottom: 1px solid var(--flm-line);
 }
@@ -216,24 +216,24 @@
 .flm-config-dialog { padding: 24px; }
 .flm-config-dialog h2 { margin: 0 40px 20px 0; font-size: 20px; }
 .flm-close { position: absolute; right: 18px; top: 18px; display: grid; place-items: center; width: 32px; height: 32px; border: 1px solid var(--flm-line); border-radius: 8px; background: var(--surface); color: var(--text-secondary); cursor: pointer; }
-.flm-config-form { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+.flm-config-form { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
 .flm-config-form > :is(aside, section, div, label:has(textarea)) { grid-column: 1 / -1; }
 .flm-config-dialog label { display: flex; flex-direction: column; gap: 6px; color: var(--text-secondary); font-weight: 600; }
 .flm-page :is(.flm-config-dialog, .flm-filter-panel) :is(input:not([type="checkbox"]), select, textarea) { min-width: 0; min-height: 40px; padding: 9px 12px; border: 1px solid var(--flm-line); border-radius: 8px; background: var(--surface); color: var(--text-primary); font: inherit; }
 .flm-config-dialog textarea { min-height: 90px; resize: vertical; }
-.flm-config-dialog footer { display: flex; justify-content: flex-end; gap: 10px; margin-top: 24px; padding-top: 16px; border-top: 1px solid var(--flm-line); }
+.flm-config-dialog footer { display: flex; justify-content: flex-end; gap: 10px; margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--flm-line); }
 .flm-config-dialog footer button { min-height: 40px; padding: 8px 16px; border: 1px solid var(--flm-line); border-radius: 8px; background: var(--surface); color: var(--text-secondary); font: inherit; font-weight: 600; cursor: pointer; }
 .flm-config-dialog footer .approve-action { background: var(--flm-blue); border-color: var(--flm-blue); color: #fff; }
 .flm-config-dialog footer .reject-action { background: #b42332; border-color: #b42332; color: #fff; }
-.flm-info-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+.flm-info-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
 .flm-info-grid--3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 .flm-info-grid small, .flm-info-grid strong { display: block; overflow-wrap: anywhere; }
 .flm-info-grid small { color: var(--text-muted); margin-bottom: 4px; }
-.flm-view-section h3 { margin: 0 0 12px; font-size: 14px; }
+.flm-view-section h3 { margin: 0 0 6px; font-size: 14px; }
 .flm-view-section { min-width: 0; overflow-x: auto; }
 .flm-dialog-table { width: 100%; border-collapse: collapse; }
 .flm-dialog-table :is(th, td) { padding: 10px 12px; border-bottom: 1px solid var(--flm-line); text-align: left; }
-.flm-toast { position: fixed; bottom: 24px; right: 24px; z-index: 1300; display: flex; align-items: center; gap: 16px; max-width: calc(100vw - 48px); padding: 14px 18px; border: 1px solid var(--flm-line); border-radius: 10px; background: var(--surface); box-shadow: var(--shadow-sm); }
+.flm-toast { position: fixed; bottom: 24px; right: 24px; z-index: 1300; display: flex; align-items: center; gap: 12px; max-width: calc(100vw - 48px); padding: 14px 18px; border: 1px solid var(--flm-line); border-radius: 10px; background: var(--surface); box-shadow: var(--shadow-sm); }
 .flm-toast button { display: grid; place-items: center; border: 0; background: transparent; color: inherit; cursor: pointer; }
 @media (max-width: 1000px) {
   .flm-page .flm-header { grid-template-columns: minmax(0, 1fr); }
@@ -284,9 +284,11 @@
 }
 
 
-.flm-view-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 24px; padding-top: 16px; border-top: 1px solid var(--flm-line); }
+.flm-view-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--flm-line); }
 .flm-view-actions button { min-height: 40px; padding: 8px 16px; border: 1px solid var(--flm-line); border-radius: 8px; background: var(--surface); color: var(--text-secondary); font: inherit; font-weight: 600; cursor: pointer; }
 .flm-view-actions .approve-action { background: var(--flm-blue); border-color: var(--flm-blue); color: #fff; }
 .flm-view-actions .reject-action { background: #b42332; border-color: #b42332; color: #fff; }
+
+
 
 

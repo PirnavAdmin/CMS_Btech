@@ -989,8 +989,9 @@ function View({ title, children, onClose }) {
       icon={FiBriefcase}
       onClose={onClose}
       hideFooter={true}
+      maxWidth="760px"
     >
-      <div className="flm-view-body" style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+      <div className="flm-view-body" style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
         {children}
       </div>
     </SharedViewDialog>
@@ -999,7 +1000,7 @@ function View({ title, children, onClose }) {
 
 function Identity({ employee, status }) {
   return (
-    <div className="view-modal-banner">
+    <div className="view-modal-banner" style={{ padding: '12px 18px', gap: '14px', marginBottom: '4px' }}>
       <div className="view-modal-avatar">
         {initials(employee?.fullName)}
       </div>
