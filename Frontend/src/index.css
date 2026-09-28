@@ -1352,3 +1352,35 @@ label > b,
     border-color: var(--brand-blue, #8782BC) !important;
     color: var(--text-primary) !important;
 }
+
+/* Dark Mode Fixes for Subject Type Tags */
+:root[data-theme="dark"] .sm-type-tag {
+    color: #F8FAFC !important;
+}
+:root[data-theme="dark"] .sm-type-tag--theory {
+    background-color: rgba(117, 111, 178, 0.3) !important;
+    border: 1px solid rgba(117, 111, 178, 0.5) !important;
+}
+:root[data-theme="dark"] .sm-type-tag--lab {
+    background-color: rgba(190, 24, 93, 0.3) !important;
+    border: 1px solid rgba(190, 24, 93, 0.5) !important;
+}
+:root[data-theme="dark"] .sm-type-tag--pe {
+    background-color: rgba(0, 131, 143, 0.3) !important;
+    border: 1px solid rgba(0, 131, 143, 0.5) !important;
+}
+:root[data-theme="dark"] .sm-type-tag--oe {
+    background-color: rgba(117, 111, 178, 0.3) !important;
+    border: 1px solid rgba(117, 111, 178, 0.5) !important;
+}
+:root[data-theme="dark"] .sm-type-tag--mc {
+    background-color: rgba(71, 85, 105, 0.3) !important;
+    border: 1px solid rgba(71, 85, 105, 0.5) !important;
+}
+
+/* Dark Mode Fixes for Subject Credit Badges */
+:root[data-theme="dark"] .sm-credit-badge {
+    background-color: var(--surface-soft) !important;
+    color: var(--text-primary) !important;
+    border: 1px solid var(--border-strong) !important;
+}
