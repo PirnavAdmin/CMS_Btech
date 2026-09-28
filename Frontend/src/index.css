@@ -1161,7 +1161,7 @@ label > b,
   color: #F8FAFC !important;
 }
 
-:root[data-theme="dark"] .page-content :is(p, span, div, label, dt, dd, li) {
+:root[data-theme="dark"] :where(.page-content) :where(p, span, div, label, dt, dd, li) {
   color: inherit;
 }
 
@@ -1214,9 +1214,7 @@ label > b,
   background-color: #334155 !important;
   border-color: #475569 !important;
 }
-:root[data-theme="dark"] .page-content :is(table td, table th) :is(a, button, span:not([class*="badge"]), strong, div:not([class*="badge"]), p) {
-  color: #F8FAFC !important;
-}
+/* Cells supply the default text colour; badges, links and actions own theirs. */
 
 
 
@@ -1336,4 +1334,21 @@ label > b,
   background-color: rgba(220, 38, 38, 0.3) !important;
   border-color: rgba(248, 113, 113, 0.5) !important;
   color: #fca5a5 !important;
+}
+
+/* Elective Management Segmented Toggle Dark Mode Fix */
+:root[data-theme="dark"] .em-type-filter--segmented {
+    background-color: var(--surface) !important;
+    border-color: var(--border-strong) !important;
+}
+:root[data-theme="dark"] .em-type-filter--segmented button {
+    color: var(--text-muted);
+}
+:root[data-theme="dark"] .em-type-filter--segmented button:hover:not(.active) {
+    color: var(--text-primary);
+}
+:root[data-theme="dark"] .em-type-filter--segmented button.active {
+    background-color: var(--surface-soft) !important;
+    border-color: var(--brand-blue, #8782BC) !important;
+    color: var(--text-primary) !important;
 }
