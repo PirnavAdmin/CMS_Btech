@@ -39,7 +39,6 @@ export default function TimetableWorkspace({ scope, sources, entries, table, val
     <div className="tt-workspace-toolbar"><div className="tt-actions">
       <button className="tt-button tt-primary" disabled={busy || readOnly || !canGenerate || frequencyDirty || Boolean(errors.length)} onClick={() => table.entries.length ? setConfirmation('replace') : run()}><FiZap />Auto Generate</button>
       <button className="tt-button" disabled={busy || readOnly || !validScope} onClick={() => add({})}><FiPlus />Add Class</button>
-      <button className="tt-button" disabled={busy || readOnly || !canGenerate || frequencyDirty || Boolean(errors.length)} onClick={() => run()}>Generate Missing</button>
       <button className="tt-button" disabled={busy || frequencyDirty} onClick={check}><FiCheckCircle />Validate</button>
       {readOnly ? <button className="tt-button" disabled={busy} onClick={reopen}>Move to Draft</button> : <button className="tt-button" disabled={busy || blocked} onClick={() => setConfirmation('publish')}>Publish</button>}
     </div></div>
@@ -55,7 +54,7 @@ export default function TimetableWorkspace({ scope, sources, entries, table, val
       {error && <p className="tt-error" role="alert">{error}</p>}
     </WorkspaceDrawer>}
     {confirmation && <WorkspaceDrawer modal title={confirmation === 'publish' ? 'Publish Timetable' : 'Replace the existing draft?'} subtitle={summary} busy={busy} close={() => setConfirmation('')} footer={<><button className="tt-button" disabled={busy} onClick={() => setConfirmation('')}>Cancel</button><button className={`tt-button ${confirmation === 'publish' ? 'tt-primary' : 'tt-danger'}`} disabled={busy || (confirmation === 'publish' && blocked)} onClick={confirmAction}>{confirmation === 'publish' ? 'Confirm Publish' : 'Replace Draft & Regenerate'}</button></>}>
-      <div className="tt-dialog-body">{confirmation === 'publish' ? <><p>{teachingPeriods(config.periods).length} teaching periods/day | {table.entries.length} scheduled classes</p><p>{conflicts.length} conflicts | {blocking.length} unresolved items</p>{warnings.length > 0 && <p>{warnings.length} subjects have no weekly frequency. Only their scheduled classes can be validated.</p>}<p>The same records will feed Faculty, Student and Classroom views from the backend. Final validation runs before publication.</p></> : <p>This replaces generated draft entries. Manual classes are retained by the backend. Generate Missing preserves your work. Review any issues returned by the backend before publishing.</p>}</div>
+      <div className="tt-dialog-body">{confirmation === 'publish' ? <><p>{teachingPeriods(config.periods).length} teaching periods/day | {table.entries.length} scheduled classes</p><p>{conflicts.length} conflicts | {blocking.length} unresolved items</p>{warnings.length > 0 && <p>{warnings.length} subjects have no weekly frequency. Only their scheduled classes can be validated.</p>}<p>The same records will feed Faculty, Student and Classroom views from the backend. Final validation runs before publication.</p></> : <p>This replaces generated draft entries. Manual classes are retained by the backend. Review any issues returned by the backend before publishing.</p>}</div>
     </WorkspaceDrawer>}
   </section>
 }

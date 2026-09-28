@@ -4,7 +4,7 @@ import DashboardLayout from '../../layouts/DashboardLayout'
 import InfoCard from '../../components/InfoCard'
 import StatusBadge from '../../components/StatusBadge'
 import attendanceService from '../../services/attendanceService'
-import { FiCalendar } from 'react-icons/fi'
+import { FiCalendar, FiArrowLeft } from 'react-icons/fi'
 import './Attendance.css'
 
 export default function AttendanceSessionDetails() {
@@ -31,8 +31,10 @@ export default function AttendanceSessionDetails() {
 
   return <DashboardLayout>
     <section className="attendance-content">
-      <Link className="erp-btn erp-btn--secondary" to="/student-management/attendance">Back to Attendance</Link>
-      <h1>Session Details</h1>
+      <header className="attendance-session-details-header">
+        <h1>Session Details</h1>
+        <Link className="erp-btn erp-btn--secondary attendance-session-back" to="/student-management/attendance"><FiArrowLeft aria-hidden="true" />Back</Link>
+      </header>
       {loading ? <p role="status">Loading session details...</p> : error ? <div role="alert"><p>{error}</p><button type="button" className="erp-btn erp-btn--secondary" onClick={() => setRetry(value => value + 1)}>Retry</button></div> : session && <>
         <InfoCard icon={FiCalendar} title={session.subject || 'Attendance session'} items={[
           { label: 'Date', value: session.date }, { label: 'Faculty', value: session.faculty },

@@ -642,9 +642,6 @@ export default function ElectiveManagement() {
             <h1>Elective Management</h1>
             <p>Review subjects and their elective classification.</p>
           </div>
-          <div className="em-header-actions">
-            <ExportMenu rows={electiveTableRows} columns={electiveTableExportColumns} title="Elective Subject Directory" filename="elective-subject-directory" scope="All matching subject records" loading={directoryLoading || Boolean(directoryError) || mastersLoading || Boolean(mastersError)} />
-          </div>
         </header>
         <div className="em-tabs">
           {tabs.map(tab => (
@@ -668,7 +665,16 @@ export default function ElectiveManagement() {
               className="em-subject-filter-panel"
               active={hasAcademicFilter(filters) || filters.status !== 'All'}
               hideClear
-              leadingActions={<div className="em-type-filter em-type-filter--segmented" role="group" aria-label="Elective type">{['Elective', 'Non-Elective'].map(type => <button key={type} type="button" className={filters.electiveType === type ? 'active' : ''} aria-pressed={filters.electiveType === type} onClick={() => setFilters(old => ({ ...old, electiveType: type }))}>{type}</button>)}</div>}
+              leadingActions={(
+                <div className="em-subject-toolbar-actions">
+                  <div className="em-type-filter em-type-filter--segmented" role="group" aria-label="Elective type">
+                    {['Elective', 'Non-Elective'].map(type => (
+                      <button key={type} type="button" className={filters.electiveType === type ? 'active' : ''} aria-pressed={filters.electiveType === type} onClick={() => setFilters(old => ({ ...old, electiveType: type }))}>{type}</button>
+                    ))}
+                  </div>
+                  <ExportMenu rows={electiveTableRows} columns={electiveTableExportColumns} title="Elective Subject Directory" filename="elective-subject-directory" scope="All matching subject records" loading={directoryLoading || Boolean(directoryError) || mastersLoading || Boolean(mastersError)} />
+                </div>
+              )}
             >
               <div className="em-toolbar">
                 <div className="em-search"><FiSearch /><input aria-label="Search subjects" placeholder="Search subject code or name..." value={search} onChange={event => setSearch(event.target.value)} /></div>

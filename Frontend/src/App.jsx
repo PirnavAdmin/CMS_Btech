@@ -1,5 +1,5 @@
 import { Component, useEffect } from 'react'
-import { Navigate, Outlet, Route, Routes } from 'react-router-dom'
+import { Navigate, Route, Routes } from 'react-router-dom'
 import ProtectedRoute from './components/ProtectedRoute'
 import { ROLES } from './auth/roles'
 
@@ -175,16 +175,17 @@ export default function App() {
           {/* Dashboard - All Roles */}
           <Route
             element={
-              <ProtectedRoute
-                allowedRoles={[
-                  ROLES.ADMIN,
-                  ROLES.FACULTY,
-                  ROLES.STUDENT,
-                ]}
-              />
+              <AcademicProvider>
+                <ProtectedRoute
+                  allowedRoles={[
+                    ROLES.ADMIN,
+                    ROLES.FACULTY,
+                    ROLES.STUDENT,
+                  ]}
+                />
+              </AcademicProvider>
             }
           >
-            <Route element={<AcademicProvider><Outlet /></AcademicProvider>}>
               <Route path="/dashboard" element={<Dashboard />} />
               <Route path="/my-profile" element={<MyProfile />} />
               <Route path="/settings" element={<Settings />} />
@@ -250,7 +251,6 @@ export default function App() {
               <Route path="/fees/*" element={<Fees />} />
               <Route path="/roles-designations" element={<RolesAndDesignations />} />
               <Route path="/roles-permissions" element={<RolesAndDesignations />} />
-            </Route>
           </Route>
 
           {/* Faculty & Student */}

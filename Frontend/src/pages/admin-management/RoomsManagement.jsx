@@ -23,6 +23,7 @@ import {
   FiMapPin,
   FiAlertTriangle,
   FiSlash,
+  FiArrowLeft
 } from 'react-icons/fi'
 import DashboardLayout from '../../layouts/DashboardLayout'
 import PageHeader from '../../components/PageHeader'
@@ -568,7 +569,7 @@ export default function RoomsManagement({ formMode = false, viewMode = false }) 
               className="cm-button secondary"
               onClick={() => navigate('/rooms-management')}
             >
-              &larr; Back to Rooms Directory
+              &larr; Back 
             </button>
             {targetRoom && (
               <button
@@ -1065,8 +1066,9 @@ export default function RoomsManagement({ formMode = false, viewMode = false }) 
   if (formMode) return (
     <DashboardLayout>
       <div className="rooms-page rooms-form-page">
-        <PageHeader title={roomId ? 'Edit Room / Classroom' : 'Add New Room / Classroom'} subtitle="Configure room identification, location, capacity, facilities, and section allocation." />
-        <div><button type="button" className="rooms-cancel-btn" onClick={closeForm}>Back to Rooms</button></div>
+        <PageHeader title={roomId ? 'Edit Room / Classroom' : 'Add New Room / Classroom'} subtitle="Configure room identification, location, capacity, facilities, and section allocation.">
+          <button type="button" className="rooms-cancel-btn rooms-form-back-btn" onClick={closeForm}><FiArrowLeft aria-hidden="true" />Back</button>
+        </PageHeader>
         {!editingRoom ? <EmptyState title={roomsLoaded ? 'Room not found' : 'Loading room...'} /> : (
           <div className="rooms-form-layout">
             <section className="rooms-editor-panel" aria-label="Room details">

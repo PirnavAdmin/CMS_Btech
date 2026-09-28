@@ -1143,7 +1143,7 @@ export default function CollegeInstitutionManagement({ initialView = 'list' }) {
             <div className="cm-profile-top-bar">
           <ExportMenu mode="single" title="College Details" filename={`college_${activeCollege.code || activeCollege.id}`} loading={isCollegeDetailsLoading || Boolean(collegeError)} />
               <button type="button" className="cm-secondary-btn" onClick={backToList}>
-                &larr; Back to Colleges List
+                &larr; Back 
               </button>
             </div>
 
