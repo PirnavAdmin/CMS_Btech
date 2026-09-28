@@ -16,7 +16,7 @@ import { useAcademic } from '../../context/AcademicContext'
 import { departmentOfBranch, enrichSubject, idOf, relationId } from '../../utils/subjectDirectory'
 import './SubjectManagement.css'
 
-const ELECTIVE_TYPES = ['Elective', 'Non-Elective']
+const ELECTIVE_TYPES = ['Elective', 'Non-Elective', 'Core Subject']
 const blank = () => ({ academicYearId: '', departmentId: '', courseId: '', branchId: '', semesterId: '', subjectCode: '', subjectName: '', subjectType: '', electiveType: '', credits: '', status: 'Active', lectureHours: '', tutorialHours: '', practicalHours: '', internalMarks: '', externalMarks: '' })
 const key = v => String(v ?? '')
 const semNo = s => Number(s?.semesterNumber ?? String(s?.semesterName ?? s?.semester ?? s?.name ?? s?.id ?? '').match(/\d+/)?.[0] ?? 0)

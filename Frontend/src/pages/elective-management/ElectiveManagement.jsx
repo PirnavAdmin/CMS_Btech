@@ -651,7 +651,7 @@ export default function ElectiveManagement() {
         </section>
         {error && <div className="em-alert" role="alert"><FiInfo /> {error}</div>}
         {activeTab === 'subjects' && (
-          <section className="sm-card">
+          <section className="sm-card em-subject-directory-card">
             <FilterPanel
               className="em-subject-filter-panel"
               active={hasAcademicFilter(filters) || filters.status !== 'All'}
