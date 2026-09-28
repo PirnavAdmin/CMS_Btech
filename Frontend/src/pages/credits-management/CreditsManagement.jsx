@@ -4,6 +4,8 @@ import StatusBadge from '../../components/StatusBadge'
 import FilterPanel from '../../components/FilterPanel'
 import SearchableSelect from '../../components/SearchableSelect'
 import ExportMenu from '../../components/ExportMenu'
+import CompactSummary from '../../components/CompactSummary'
+import { FiRotateCcw } from 'react-icons/fi'
 import { useAcademic } from '../../context/AcademicContext'
 import { creditManagementApi, studentApi } from '../../api/apiEndpoints'
 import subjectService from '../../services/subjectService'
@@ -1989,19 +1991,18 @@ function CreditsManagement() {
 
         {activeTab === 'subjects' && (
           <section className="cm-content">
-            <div className="cm-section-heading">
+            <div className="cm-section-heading cm-subject-section-heading">
               <div>
                 <h2>Subject Credits</h2>
                 <p>Subject credits and academic mapping are synced from Subject Management.</p>
               </div>
-              <div className="cm-header-actions">
-                <ExportMenu
-                  rows={academicSelectionReady ? filteredSubjects : []}
-                  columns={subjectCreditExportColumns}
-                  title="Subject Credits"
-                  filename="subject-credits"
-                  scope="Matching subject credits"
-                  loading={creditLoading || Boolean(subjectApiError)}
+              <div className="cm-subject-heading-summary">
+                <CompactSummary
+                  label="Subject credit summary"
+                  items={[
+                    { label: 'Total Subjects', value: academicSelectionReady ? contextSubjects.length : '—' },
+                    { label: 'Total Credits', value: academicSelectionReady ? contextSubjects.reduce((total, subject) => total + (subject.credits == null || subject.credits === '' ? 0 : Number(subject.credits)), 0) : '—', tone: 'active' },
+                  ]}
                 />
               </div>
             </div>
@@ -2010,12 +2011,22 @@ function CreditsManagement() {
               className="cm-subject-filter-panel"
               active={Object.values(subjectFilters).some(Boolean)}
               onClear={() => setSubjectFilters({ academicYearId: '', departmentId: '', courseId: '', branchId: '', level: '', semesterId: '' })}
+              hideClear
+              actions={(
+                <ExportMenu
+                  rows={academicSelectionReady ? filteredSubjects : []}
+                  columns={subjectCreditExportColumns}
+                  title="Subject Credits"
+                  filename="subject-credits"
+                  scope="Matching subject credits"
+                  loading={creditLoading || Boolean(subjectApiError)}
+                />
+              )}
             >
-              <div className="cm-subject-toolbar">
-                <div className="cm-subject-search">
-                  <input aria-label="Search subject code or name" placeholder="Search subject code or name..." value={subjectSearch} onChange={event => setSubjectSearch(event.target.value)} />
-                </div>
-                <div className="cm-subject-filter-grid">
+              <div className="cm-subject-search">
+                <input aria-label="Search subject code or name" placeholder="Search subject code or name..." value={subjectSearch} onChange={event => setSubjectSearch(event.target.value)} />
+              </div>
+              <div className="cm-subject-filter-grid">
                   {[
                     ['academicYearId', 'Academic Year', []],
                     ['departmentId', 'Department', ['academicYearId']],
@@ -2038,15 +2049,18 @@ function CreditsManagement() {
                       />
                     </label>
                   ))}
-                </div>
+                  {Object.values(subjectFilters).some(Boolean) && (
+                    <button
+                      type="button"
+                      className="filter-disclosure__clear-btn cm-subject-clear-btn"
+                      onClick={() => setSubjectFilters({ academicYearId: '', departmentId: '', courseId: '', branchId: '', level: '', semesterId: '' })}
+                    >
+                      <FiRotateCcw aria-hidden="true" /> Clear Filters
+                    </button>
+                  )}
               </div>
             </FilterPanel>
 
-            <div className="cm-card" style={{ marginBottom: 16, display: 'flex', gap: 24, padding: 16 }}>
-              <strong>Total Subjects: {academicSelectionReady ? contextSubjects.length : '—'}</strong>
-              <strong>Total Credits: {academicSelectionReady ? contextSubjects.reduce((total, subject) => total + (subject.credits == null || subject.credits === '' ? 0 : Number(subject.credits)), 0) : '—'}</strong>
-              <button className="cm-btn cm-btn-secondary" onClick={reloadCreditData}>Refresh Subjects</button>
-            </div>
             {subjectApiError && <div role="alert">{subjectApiError}<button className="cm-btn cm-btn-light" onClick={reloadCreditData}>Retry</button></div>}
 
             <div className="cm-card">
