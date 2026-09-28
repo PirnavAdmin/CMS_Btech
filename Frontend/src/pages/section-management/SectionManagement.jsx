@@ -1,4 +1,4 @@
-﻿import { newestFirst, rememberCreated } from '../../utils/newestFirst'
+import { newestFirst, rememberCreated } from '../../utils/newestFirst'
 import { showError, showSuccess, showWarning } from '../../utils/toast'
 import useToastState from '../../hooks/useToastState'
 import ExportMenu, { PrintDetailsButton } from '../../components/ExportMenu'
@@ -286,7 +286,7 @@ function SectionList() {
                         <div className="section-actions table-actions-group">
                           <Link className="table-action-btn action-edit" title={`Edit ${section.name}`} aria-label={`Edit ${section.name}`} to={`/section-management/${section.id}/edit`}><FiEdit2 /></Link>
                           <button type="button" className="table-action-btn action-assign section-assign-action" title={`Assign Students / Faculty to ${section.name}`} aria-label={`Assign Students to ${section.name}`} onClick={() => openAssign(section)}><FiUserPlus /></button>
-                          <button type="button" className={`table-action-btn ${section.status === 'Active' ? 'action-activate erp-action-btn--success' : 'action-deactivate erp-action-btn--danger'}`} title={section.status === 'Active' ? `Deactivate ${section.name}` : `Activate ${section.name}`} aria-label={section.status === 'Active' ? `Deactivate ${section.name}` : `Activate ${section.name}`} onClick={() => toggle(section)}>{section.status === 'Active' ? <FiToggleRight /> : <FiToggleLeft />}</button>
+                          <button type="button" className={`table-action-btn ${section.status === 'Active' ? 'action-activate erp-action-btn--success' : 'action-deactivate erp-action-btn--danger'}`} title={section.status === 'Active' ? `Deactivate ${section.name}` : `Activate ${section.name}`} aria-label={section.status === 'Active' ? `Deactivate ${section.name}` : `Activate ${section.name}`} onClick={() => toggle(section)}>{section.status === 'Active' ? <FiToggleRight data-status="active" /> : <FiToggleLeft data-status="inactive" />}</button>
                         </div>
                       </td>
                     </tr>

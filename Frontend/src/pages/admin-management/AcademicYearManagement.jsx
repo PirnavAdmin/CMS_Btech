@@ -1,4 +1,4 @@
-﻿import { newestFirst, rememberCreated } from '../../utils/newestFirst'
+import { newestFirst, rememberCreated } from '../../utils/newestFirst'
 import { showWarning } from '../../utils/toast'
 import useToastState from '../../hooks/useToastState'
 import { useEffect, useMemo, useState } from 'react';
@@ -591,7 +591,7 @@ export default function AcademicYear() {
                                 aria-label={`Activate ${x.name || 'Academic Year'}`}
                                 onClick={() => requestStatusChange(x, 'ACTIVE')}
                               >
-                                <FiToggleLeft />
+                                <FiToggleLeft data-status="inactive" />
                               </button>
                             )}
                             {(x.status === 'ACTIVE' || (isPastYear(x) && x.status !== 'ARCHIVED')) && (
@@ -602,7 +602,7 @@ export default function AcademicYear() {
                                 aria-label={`Deactivate ${x.name || 'Academic Year'}`}
                                 onClick={() => requestStatusChange(x, 'ARCHIVED')}
                               >
-                                <FiToggleRight />
+                                <FiToggleRight data-status="active" />
                               </button>
                             )}
                           </div>

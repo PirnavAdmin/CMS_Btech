@@ -1,3 +1,47 @@
+/* Toggle colours describe the current record state, not the next action.
+   Scope to marked toggle icons so delete/approve actions retain their colours. */
+#root button:has(> svg[data-status="active"]) {
+  color: #15803d !important;
+  background: #dcfce7 !important;
+  border-color: #86efac !important;
+}
+#root button:has(> svg[data-status="active"]):hover:not(:disabled) {
+  color: #166534 !important;
+  background: #bbf7d0 !important;
+  border-color: #22c55e !important;
+}
+#root button:has(> svg[data-status="inactive"]) {
+  color: #b91c1c !important;
+  background: #fee2e2 !important;
+  border-color: #fca5a5 !important;
+}
+#root button:has(> svg[data-status="inactive"]):hover:not(:disabled) {
+  color: #991b1b !important;
+  background: #fecaca !important;
+  border-color: #ef4444 !important;
+}
+:root[data-theme="dark"] #root button:has(> svg[data-status="active"]) {
+  color: #86efac !important;
+  background: #173d32 !important;
+  border-color: #39865a !important;
+}
+:root[data-theme="dark"] #root button:has(> svg[data-status="active"]):hover:not(:disabled) {
+  color: #bbf7d0 !important;
+  background: #20503e !important;
+  border-color: #4ade80 !important;
+}
+:root[data-theme="dark"] #root button:has(> svg[data-status="inactive"]) {
+  color: #fda4af !important;
+  background: #482630 !important;
+  border-color: #a14a59 !important;
+}
+:root[data-theme="dark"] #root button:has(> svg[data-status="inactive"]):hover:not(:disabled) {
+  color: #fecdd3 !important;
+  background: #60303c !important;
+  border-color: #fb7185 !important;
+}
+#root button > svg[data-status] { color: inherit !important; }
+
 :root {
   --color-primary: var(--brand, #8782BC);
   --color-primary-hover: var(--brand-hover, #756FB2);

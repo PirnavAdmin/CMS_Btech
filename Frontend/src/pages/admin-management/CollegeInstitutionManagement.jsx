@@ -1,4 +1,4 @@
-﻿import { collegeLogoValue } from '../../utils/collegeLogo'
+import { collegeLogoValue } from '../../utils/collegeLogo'
 import { newestFirst, rememberCreated } from '../../utils/newestFirst'
 import { showSuccess } from '../../utils/toast'
 import useToastState from '../../hooks/useToastState'
@@ -979,7 +979,7 @@ export default function CollegeInstitutionManagement({ initialView = 'list' }) {
                                 aria-label={college.status === 'active' ? `Deactivate ${college.name}` : `Activate ${college.name}`}
                                 onClick={() => toggleStatus(college)}
                               >
-                                {college.status === 'active' ? <FiToggleRight /> : <FiToggleLeft />}
+                                {college.status === 'active' ? <FiToggleRight data-status="active" /> : <FiToggleLeft data-status="inactive" />}
                               </button>
                             </div>
                           </td>

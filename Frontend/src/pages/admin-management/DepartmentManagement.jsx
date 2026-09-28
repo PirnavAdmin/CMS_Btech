@@ -1,4 +1,4 @@
-﻿import { newestFirst, rememberCreated } from '../../utils/newestFirst'
+import { newestFirst, rememberCreated } from '../../utils/newestFirst'
 import { showSuccess } from '../../utils/toast'
 import useToastState from '../../hooks/useToastState'
 import { useEffect, useMemo, useState } from 'react';
@@ -793,9 +793,9 @@ export default function DepartmentManagement() {
                                   onClick={() => toggleStatus(item)}
                                 >
                                   {item.status === 'Active' ? (
-                                    <FiToggleRight />
+                                    <FiToggleRight data-status="active" />
                                   ) : (
-                                    <FiToggleLeft />
+                                    <FiToggleLeft data-status="inactive" />
                                   )}
                                 </button>
                               </div>
