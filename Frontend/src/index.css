@@ -1,4 +1,4 @@
-@import './styles/tableActions.css';
+﻿@import './styles/tableActions.css';
 :root { font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; color: #0F172A; background: #fff; }
 * { box-sizing: border-box; } body { margin: 0; } button, input { font: inherit; } button { cursor: pointer; }
 .admin-login { min-height: 100vh; display: grid; grid-template-columns: minmax(450px, 52.3%) 1fr; background: #fff; }
@@ -362,7 +362,7 @@ input[type="password"]::-ms-clear {
 }
 
 .sidebar .sidebar-group summary::before {
-  content: "▸ ";
+  content: "â–¸ ";
   display: inline-block;
   transition: transform .15s ease;
 }
@@ -1124,3 +1124,98 @@ label > b,
   border-color: #273549 !important;
   color: #F8FAFC !important;
 }
+
+/* DARK MODE FORCE FIXES */
+:root[data-theme="dark"] {
+  --text-primary: #F8FAFC !important;
+  --text-secondary: #CBD5E1 !important;
+  --text-muted: #94A3B8 !important;
+  --surface: #141E2E !important;
+  --surface-soft: #1E293B !important;
+  --surface-raised: #1E293B !important;
+  --border: #273549 !important;
+  --border-strong: #334155 !important;
+  --app-bg: #0B0F17 !important;
+}
+
+:root[data-theme="dark"] body, 
+:root[data-theme="dark"] #root,
+:root[data-theme="dark"] .dashboard-layout,
+:root[data-theme="dark"] .page-content,
+:root[data-theme="dark"] .profile-page {
+  background-color: var(--app-bg) !important;
+  color: #F8FAFC !important;
+}
+
+:root[data-theme="dark"] .page-content :is(
+  .profile-preview-section, .profile-edit-dialog, .profile-overview,
+  .dashboard-card, .erp-card, .module-card, .settings-card,
+  article, section, .panel, .card, [class*="-card"], [class*="-panel"]
+):not(.cm-profile-banner):not(.sa-profile-header):not(.sp-hero):not(.course-detail-hero):not(.branch-detail-hero) {
+  background-color: var(--surface) !important;
+  border-color: var(--border) !important;
+  color: #F8FAFC !important;
+}
+
+:root[data-theme="dark"] .page-content :is(h1, h2, h3, h4, h5, h6, strong, b) {
+  color: #F8FAFC !important;
+}
+
+:root[data-theme="dark"] .page-content :is(p, span, div, label, dt, dd, li) {
+  color: inherit;
+}
+
+:root[data-theme="dark"] .page-content :is(small, .text-muted, [class*="-muted"], caption) {
+  color: var(--text-muted) !important;
+}
+
+:root[data-theme="dark"] .page-content :is(table, thead, tbody, tr, th, td) {
+  border-color: var(--border) !important;
+}
+
+:root[data-theme="dark"] .page-content :is(table td, table tbody tr) {
+  background-color: var(--surface) !important;
+  color: #F8FAFC !important;
+}
+
+:root[data-theme="dark"] .page-content :is(table tr:hover td, table tbody tr:hover) {
+  background-color: var(--surface-soft) !important;
+}
+
+:root[data-theme="dark"] .page-content thead th,
+:root[data-theme="dark"] table thead th,
+:root[data-theme="dark"] table th {
+  background: #8782BC !important;
+  color: #FFFFFF !important;
+  border-bottom: 2px solid #756FB2 !important;
+}
+
+:root[data-theme="dark"] input,
+:root[data-theme="dark"] select,
+:root[data-theme="dark"] textarea {
+  background-color: var(--surface-soft) !important;
+  color: #F8FAFC !important;
+  border-color: var(--border-strong) !important;
+}
+
+:root[data-theme="dark"] input::placeholder,
+:root[data-theme="dark"] textarea::placeholder {
+  color: var(--text-muted) !important;
+}
+
+:root[data-theme="dark"] .profile-page .profile-overview {
+  background: linear-gradient(115deg, #1E293B, #0F172A) !important;
+  border: 1px solid var(--border) !important;
+}
+:root[data-theme="dark"] .profile-page .profile-overview * {
+  color: #F8FAFC !important;
+}
+:root[data-theme="dark"] .profile-page .profile-overview .profile-avatar {
+  background-color: #334155 !important;
+  border-color: #475569 !important;
+}
+:root[data-theme="dark"] .page-content :is(table td, table th) :is(a, button, span, strong, div, p) {
+  color: #F8FAFC !important;
+}
+
+

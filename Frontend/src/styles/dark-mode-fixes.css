@@ -86,3 +86,6 @@
   background-color: #334155 !important;
   border-color: #475569 !important;
 }
+:root[data-theme="dark"] .page-content :is(table td, table th) :is(a, button, span, strong, div, p) {
+  color: var(--text-primary) !important;
+}
