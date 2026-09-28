@@ -284,6 +284,7 @@ function StatusConfirmation({ subject, saving, close, confirm }) { return <div c
 function Editor({ form, editing, masters, branches, semesters, levels, typeOptions, formLevel: initialLevel, change: updateForm, close, save, saving }) {
   const [formLevel, setFormLevel] = useState(initialLevel);
   const [activeTab, setActiveTab] = useState('mapping');
+  const [mappingError, setMappingError] = useState('');
   const change = (field, value) => {
     if (field === 'departmentId' || field === 'courseId' || field === 'branchId') setFormLevel('');
     updateForm(field, value);
@@ -303,6 +304,20 @@ function Editor({ form, editing, masters, branches, semesters, levels, typeOptio
     { id: 'config', label: '3. Hours & Marks' },
   ];
   const stepIndex = tabs.findIndex(t => t.id === activeTab);
+  const validateMapping = () => {
+    const hasValue = value => value !== '' && value !== null && value !== undefined;
+    const missing = !hasValue(form.academicYearId) || !hasValue(form.courseId) || !hasValue(form.branchId) || !hasValue(formLevel) || !hasValue(form.semesterId);
+    if (missing) {
+      setMappingError('Please complete Academic Year, Course, Branch, Academic Level, and Semester before continuing.');
+      return false;
+    }
+    setMappingError('');
+    return true;
+  };
+  const goToTab = tabId => {
+    if (activeTab === 'mapping' && tabId !== 'mapping' && !validateMapping()) return;
+    setActiveTab(tabId);
+  };
 
   return (
     <div className="erp-two-column-layout">
@@ -313,7 +328,7 @@ function Editor({ form, editing, masters, branches, semesters, levels, typeOptio
               key={t.id}
               type="button"
               className={`erp-tab-btn ${activeTab === t.id ? 'active' : ''}`}
-              onClick={() => setActiveTab(t.id)}
+              onClick={() => goToTab(t.id)}
             >
               <span>{idx + 1}</span> {t.label.replace(/^\d+\.\s*/, '')}
             </button>
@@ -324,6 +339,7 @@ function Editor({ form, editing, masters, branches, semesters, levels, typeOptio
           {activeTab === 'mapping' && (
             <section>
               <h3 style={{ margin: '0 0 16px', fontSize: '1.05rem', color: 'var(--erp-text-main, #0f172a)' }}>Academic Mapping</h3>
+              {mappingError && <p role="alert" style={{ margin: '0 0 12px', color: '#b42318', fontSize: '.85rem' }}>{mappingError}</p>}
               <div className="sm-form-grid-2">
                 <Field label={<>Academic Year <span className="sm-required">*</span></>}>
                   <Select label="Academic Year" value={form.academicYearId} options={masters.years} onChange={v => change('academicYearId', v)} />
@@ -396,7 +412,7 @@ function Editor({ form, editing, masters, branches, semesters, levels, typeOptio
               <button
                 type="button"
                 className="cm-button secondary erp-btn erp-btn--secondary"
-                onClick={() => setActiveTab(tabs[stepIndex - 1].id)}
+                onClick={() => goToTab(tabs[stepIndex - 1].id)}
               >
                 &larr; Previous
               </button>
@@ -415,7 +431,7 @@ function Editor({ form, editing, masters, branches, semesters, levels, typeOptio
                 <button
                   type="button"
                   className="cm-button erp-btn erp-btn--primary"
-                  onClick={() => setActiveTab(tabs[stepIndex + 1].id)}
+                  onClick={() => goToTab(tabs[stepIndex + 1].id)}
                 >
                   Continue &rarr;
                 </button>
