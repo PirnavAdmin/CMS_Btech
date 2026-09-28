@@ -283,3 +283,8 @@
   box-shadow: none;
 }
 
+
+.flm-view-dialog footer { display: flex; justify-content: flex-end; gap: 10px; margin-top: 24px; padding-top: 16px; border-top: 1px solid var(--flm-line); }
+.flm-view-dialog footer button { min-height: 40px; padding: 8px 16px; border: 1px solid var(--flm-line); border-radius: 8px; background: var(--surface); color: var(--text-secondary); font: inherit; font-weight: 600; cursor: pointer; }
+.flm-view-dialog footer .approve-action { background: var(--flm-blue); border-color: var(--flm-blue); color: #fff; }
+.flm-view-dialog footer .reject-action { background: #b42332; border-color: #b42332; color: #fff; }
