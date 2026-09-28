@@ -201,6 +201,12 @@
     text-transform: capitalize;
 }
 
+.em-subject-filter-panel .em-clear-subject-filters {
+    align-self: end;
+    min-height: 40px;
+    white-space: nowrap;
+}
+
 .em-toolbar {
     display: flex;
     align-items: center;
@@ -275,6 +281,25 @@
     border-color: #756fb2;
     background: #f3f1fa;
     color: #514b91;
+}
+
+.em-type-filter--segmented {
+    flex: 0 0 auto;
+    padding: 4px;
+    border: 1px solid #cbd5e1;
+    border-radius: 14px;
+    background: #fff;
+}
+
+.em-type-filter--segmented button {
+    min-height: 44px;
+    border-color: transparent;
+    background: transparent;
+}
+
+.em-type-filter--segmented button.active {
+    border-color: #9a93d4;
+    background: #f7f5ff;
 }
 
 .em-filter-panel .filter-disclosure__content .em-filters {

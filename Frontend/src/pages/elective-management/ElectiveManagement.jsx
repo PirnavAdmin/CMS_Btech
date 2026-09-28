@@ -217,7 +217,11 @@ export default function ElectiveManagement() {
     { label: 'Credits', value: 'credits' },
     { label: 'Status', value: 'status' },
   ]
-  const directoryFilterOptions = key => academicFilterOptions(key, filters, { departments, courses, branches, semesters, years: academicYears })
+  const directoryFilterOptions = key => {
+    const activeYear = selectHeaderAcademicYear(academicYears).year
+    const years = key === 'academicYear' ? (activeYear ? [activeYear] : []) : academicYears
+    return academicFilterOptions(key, filters, { departments, courses, branches, semesters, years })
+  }
   const filteredSelections = useMemo(() => selections.filter(row => { const query = search.toLowerCase(); return !query || [row.studentName, row.studentCode, row.rollNumber].some(value => String(value || '').toLowerCase().includes(query)) }), [selections, search])
   const filteredReport = useMemo(() => report.filter(row => { const query = search.toLowerCase(); return (!query || [row.studentName, row.studentCode, row.subjectName, row.electiveGroupName, row.groupName].some(value => String(value || '').toLowerCase().includes(query))) && (filters.approvalStatus === 'All' || approvalStatus(row) === filters.approvalStatus) && (filters.allocationStatus === 'All' || allocationStatus(row) === filters.allocationStatus) }), [report, search, filters])
   const reportGroups = new Set(report.map(row => row.groupCode || row.electiveGroupCode || row.groupName || row.electiveGroupName).filter(Boolean)).size
@@ -574,12 +578,35 @@ export default function ElectiveManagement() {
         {error && <div className="em-alert" role="alert"><FiInfo /> {error}</div>}
         {activeTab === 'subjects' && (
           <section className="sm-card">
-            <FilterPanel className="em-subject-filter-panel" active={hasAcademicFilter(filters)} onClear={() => setFilters(old => ({ ...old, department: 'All', course: 'All', branch: 'All', semester: 'All', academicYear: 'All', level: 'All', status: 'All' }))}>
+            <FilterPanel
+              className="em-subject-filter-panel"
+              active={hasAcademicFilter(filters) || filters.status !== 'All'}
+              hideClear
+              leadingActions={<div className="em-type-filter em-type-filter--segmented" role="group" aria-label="Elective type">{['Elective', 'Non-Elective'].map(type => <button key={type} type="button" className={filters.electiveType === type ? 'active' : ''} aria-pressed={filters.electiveType === type} onClick={() => setFilters(old => ({ ...old, electiveType: type }))}>{type}</button>)}</div>}
+            >
               <div className="em-toolbar">
                 <div className="em-search"><FiSearch /><input aria-label="Search subjects" placeholder="Search subject code or name..." value={search} onChange={event => setSearch(event.target.value)} /></div>
-                <button type="button" className="sm-btn sm-btn--secondary" onClick={() => { loadDirectory(); loadMasters() }}>Refresh</button>
-                <div className="em-type-filter" role="group" aria-label="Elective type">{['Elective', 'Non-Elective'].map(type => <button key={type} type="button" className={filters.electiveType === type ? 'active' : ''} aria-pressed={filters.electiveType === type} onClick={() => setFilters(old => ({ ...old, electiveType: type }))}>{type}</button>)}</div>
-                <div className="em-filters">{['department', 'course', 'branch', 'semester', 'academicYear', 'level', 'status'].map(key => <label key={key}>{key.replace(/([A-Z])/g, ' $1')}<select aria-label={key} value={filters[key]} onChange={event => setFilters(old => changeAcademicFilter(old, key, event.target.value))}><option value="All">All</option>{directoryFilterOptions(key).map(option => <option key={option.id} value={option.id}>{option.name}</option>)}</select></label>)}</div>
+                <div className="em-filters">
+                  {['course', 'department', 'branch', 'semester', 'academicYear', 'level', 'status'].map(key => {
+                    const labels = { course: 'Course', department: 'Department', branch: 'Branch', semester: 'Semester', academicYear: 'Academic Year', level: 'Level', status: 'Status' }
+                    const label = labels[key]
+                    return (
+                      <label key={key}>
+                        <span>{label}</span>
+                        <SearchableSelect
+                          label={`Select ${label}`}
+                          value={filters[key]}
+                          options={[{ value: 'All', label: `Select ${label}` }, ...directoryFilterOptions(key)]}
+                          onChange={value => setFilters(old => changeAcademicFilter(old, key, value))}
+                          placeholder={`Select ${label}`}
+                          searchPlaceholder={`Search ${label.toLowerCase()}...`}
+                          noOptionsMessage={`No ${label.toLowerCase()} options found.`}
+                        />
+                      </label>
+                    )
+                  })}
+                  {(hasAcademicFilter(filters) || filters.status !== 'All') && <button type="button" className="sm-btn sm-btn--secondary em-clear-subject-filters" onClick={() => setFilters(old => ({ ...old, department: 'All', course: 'All', branch: 'All', semester: 'All', academicYear: 'All', level: 'All', status: 'All' }))}>Clear Filters</button>}
+                </div>
               </div>
             </FilterPanel>
             <div className="sm-table-wrap">
