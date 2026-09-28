@@ -1408,3 +1408,74 @@ label > b,
 :root[data-theme="dark"] .faculty-payroll .fp-search > input {
     color: var(--text-primary) !important;
 }
+
+/* Comprehensive Action Button Fixes for Dark Mode */
+:root[data-theme="dark"] .page-content :is(.action-view, .action-edit, .action-print, .action-download, .action-assign, .flm-actions button) {
+    background-color: transparent !important;
+}
+:root[data-theme="dark"] .page-content .action-view {
+    color: #38bdf8 !important;
+    border-color: rgba(56, 189, 248, 0.35) !important;
+}
+:root[data-theme="dark"] .page-content .action-view:hover:not(:disabled) {
+    background-color: rgba(56, 189, 248, 0.15) !important;
+    color: #7dd3fc !important;
+    border-color: rgba(56, 189, 248, 0.6) !important;
+}
+
+:root[data-theme="dark"] .page-content .action-edit {
+    color: #818cf8 !important;
+    border-color: rgba(129, 140, 248, 0.35) !important;
+}
+:root[data-theme="dark"] .page-content .action-edit:hover:not(:disabled) {
+    background-color: rgba(129, 140, 248, 0.15) !important;
+    color: #a5b4fc !important;
+    border-color: rgba(129, 140, 248, 0.6) !important;
+}
+
+:root[data-theme="dark"] .page-content .action-print {
+    color: #2dd4bf !important;
+    border-color: rgba(45, 212, 191, 0.35) !important;
+}
+:root[data-theme="dark"] .page-content .action-print:hover:not(:disabled) {
+    background-color: rgba(45, 212, 191, 0.15) !important;
+    color: #5eead4 !important;
+    border-color: rgba(45, 212, 191, 0.6) !important;
+}
+
+:root[data-theme="dark"] .page-content .action-assign {
+    color: #f472b6 !important;
+    border-color: rgba(244, 114, 182, 0.35) !important;
+}
+:root[data-theme="dark"] .page-content .action-assign:hover:not(:disabled) {
+    background-color: rgba(244, 114, 182, 0.15) !important;
+    color: #f9a8d4 !important;
+    border-color: rgba(244, 114, 182, 0.6) !important;
+}
+
+/* Fix for flm-category-toggle & fm-category-toggle (Faculty & Leave Management) */
+:root[data-theme="dark"] :is(.flm-category-toggle, .fm-attendance-category-toggle) {
+    background-color: var(--surface) !important;
+    border-color: var(--border-strong) !important;
+}
+:root[data-theme="dark"] :is(.flm-category-toggle, .fm-attendance-category-toggle) button {
+    color: var(--text-muted) !important;
+}
+:root[data-theme="dark"] :is(.flm-category-toggle, .fm-attendance-category-toggle) button:hover:not(.active) {
+    color: var(--text-primary) !important;
+}
+:root[data-theme="dark"] :is(.flm-category-toggle, .fm-attendance-category-toggle) button.active {
+    background-color: var(--surface-soft) !important;
+    color: var(--text-primary) !important;
+    border: 1px solid var(--border-strong) !important;
+}
+
+/* Ensure Search Inputs are visible */
+:root[data-theme="dark"] .page-content :is(.flm-search, .fm-search) {
+    background-color: var(--surface) !important;
+    border-color: var(--border-strong) !important;
+}
+:root[data-theme="dark"] .page-content :is(.flm-search, .fm-search) input {
+    color: var(--text-primary) !important;
+    background-color: transparent !important;
+}
