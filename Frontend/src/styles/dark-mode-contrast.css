@@ -1,0 +1,139 @@
+/* Final semantic theme layer. Always pair foreground and background colours.
+   Explicit component names avoid recolouring status panels or badge wrappers. */
+:root[data-theme="dark"] {
+  --table-name-hover: #c7c2ff;
+  --status-neutral-bg: #253247;
+  --status-neutral-text: #d5dfed;
+  --status-positive-bg: #173d32;
+  --status-positive-text: #86efac;
+  --status-warning-bg: #44341b;
+  --status-warning-text: #fde68a;
+  --status-negative-bg: #482630;
+  --status-negative-text: #fda4af;
+  --status-info-bg: #193b50;
+  --status-info-text: #7dd3fc;
+}
+
+:root[data-theme="dark"] #root :is(
+  .erp-status-badge, .semester-badge.status, .cm-status, .cm-status-badge,
+  .section-status, .status-pill, .status-badge, .department-detail-status,
+  .fm-status-pill, .flm-status, .fp-status, .view-modal-badge-status, .ay .badge
+) {
+  --badge-bg: var(--status-neutral-bg);
+  --badge-text: var(--status-neutral-text);
+  background: var(--badge-bg) !important;
+  color: var(--badge-text) !important;
+  border-color: color-mix(in srgb, var(--badge-text) 40%, var(--badge-bg)) !important;
+}
+
+:root[data-theme="dark"] #root :is(
+  .erp-status-badge--active, .erp-status-badge--available,
+  .erp-status-badge--approved, .erp-status-badge--paid, .erp-status-badge--working,
+  :is(.semester-badge.status, .cm-status, .cm-status-badge, .section-status,
+      .status-pill, .status-badge, .department-detail-status, .fm-status-pill,
+      .flm-status, .fp-status, .view-modal-badge-status, .ay .badge):is(.active, .ACTIVE, .approved, .paid, .working)
+) {
+  --badge-bg: var(--status-positive-bg);
+  --badge-text: var(--status-positive-text);
+}
+
+:root[data-theme="dark"] #root :is(
+  .erp-status-badge--warning, .erp-status-badge--upcoming,
+  .erp-status-badge--pending, .erp-status-badge--hold, .erp-status-badge--probation,
+  :is(.semester-badge.status, .cm-status-badge, .status-badge, .fm-status-pill,
+      .flm-status, .fp-status, .view-modal-badge-status, .ay .badge):is(.upcoming, .UPCOMING, .pending, .hold, .probation, .CLOSING)
+) {
+  --badge-bg: var(--status-warning-bg);
+  --badge-text: var(--status-warning-text);
+}
+
+:root[data-theme="dark"] #root :is(
+  .erp-status-badge--inactive, .erp-status-badge--unavailable,
+  .erp-status-badge--resigned, .erp-status-badge--relieved,
+  .erp-status-badge--rejected, .erp-status-badge--correction-required,
+  :is(.semester-badge.status, .cm-status, .cm-status-badge, .section-status,
+      .status-pill, .status-badge, .department-detail-status, .fm-status-pill,
+      .flm-status, .fp-status, .view-modal-badge-status, .ay .badge):is(.inactive, .rejected, .resigned, .retired, .deactive, .ineligible)
+) {
+  --badge-bg: var(--status-negative-bg);
+  --badge-text: var(--status-negative-text);
+}
+
+:root[data-theme="dark"] #root :is(
+  .erp-status-badge--processed, .erp-status-badge--completed,
+  .erp-status-badge--on-leave, .erp-status-badge--leave,
+  :is(.semester-badge.status, .cm-status-badge, .fm-status-pill, .fp-status,
+      .view-modal-badge-status, .status-badge):is(.completed, .processed, .on-leave)
+) {
+  --badge-bg: var(--status-info-bg);
+  --badge-text: var(--status-info-text);
+}
+
+:root[data-theme="dark"] #root .erp-status-badge i {
+  background: currentColor !important;
+}
+
+/* White header text needs a deeper lavender than the light-theme accent. */
+:root[data-theme="dark"] #root table th,
+:root[data-theme="dark"] #root table th :is(span, strong, small, button) {
+  background-color: #69639d !important;
+  color: #ffffff !important;
+}
+
+/* Nested labels must keep their badge's colour, including profile banners. */
+:root[data-theme="dark"] #root :is(.erp-status-badge, .cm-status-badge,
+  .semester-badge.status, .fm-status-pill, .flm-status, .fp-status)
+  :is(span, strong, small) {
+  color: inherit !important;
+}
+
+:root[data-theme="dark"] #root :is(
+  .erp-badge, .sm-code-badge, .sm-ltp-pill, .sm-credit-badge, .cm-cat-code,
+  .room-code-badge, .floor-badge, .rooms-capacity-badge, .rooms-allocated-badge,
+  .rbac-tag, .rbac-dept-pill, .rbac-code-badge, .rbac-role-preview-pill,
+  .rbac-role-pill-assigned, .rbac-scope-pill, .rbac-matrix-stats-badge,
+  .fm-doc-summary-pill, .hod-current-pill, .hod-selected-status-pill,
+  .results-badge-info, .acs-badge, .timeline-cell-sem .sem-badge
+) {
+  background: #29324b !important;
+  color: #ddd9ff !important;
+  border-color: #595779 !important;
+}
+
+:root[data-theme="dark"] #root :is(.timeline-cell-dates .date-badge,
+  .sm-status-action, .sm-filter-context button) {
+  color: var(--text-secondary) !important;
+}
+
+/* Portalled dialogs and dropdowns are outside .page-content. */
+:root[data-theme="dark"] :is([role="dialog"], .searchable-select__menu) {
+  background-color: var(--surface) !important;
+  color: var(--text-primary);
+  border-color: var(--border-strong) !important;
+}
+:root[data-theme="dark"] [role="dialog"] :is(h1, h2, h3, legend) {
+  color: var(--text-primary);
+}
+:root[data-theme="dark"] [role="dialog"] :is(label, dt) {
+  color: var(--text-secondary);
+}
+:root[data-theme="dark"] :is(input, select, textarea):disabled {
+  color: var(--text-muted) !important;
+  -webkit-text-fill-color: var(--text-muted);
+  opacity: 1;
+}
+:root[data-theme="dark"] input:is([type="checkbox"], [type="radio"]) {
+  accent-color: #a7a0e0;
+}
+:root[data-theme="dark"] :is(input, textarea)::placeholder {
+  color: var(--text-muted) !important;
+  opacity: 1;
+}
+:root[data-theme="dark"] :is(button, a, input, select, textarea, summary):focus-visible {
+  outline: 2px solid #c4b5fd;
+  outline-offset: 3px;
+}
+:root[data-theme="dark"] #root .sidebar :is(a, button, [role="button"]):not(.active):hover {
+  background: #29324b !important;
+  color: #ede9fe !important;
+}

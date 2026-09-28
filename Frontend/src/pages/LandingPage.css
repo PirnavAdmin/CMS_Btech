@@ -592,3 +592,13 @@
 .lp-page .lp-brand > i { background: #30264F; color: #C9C4FF; box-shadow: 0 4px 14px rgba(94, 89, 163, .24); }
 :root[data-theme="light"] .lp-page .lp-nav { border-color: #DFDCED; background: rgba(255, 255, 255, .96); }
 :root[data-theme="dark"] .lp-page :is(.lp-overview, .lp-workflow, .lp-about) { background: #211B39; }
+
+/* Brand children have explicit light-mode colors, so override them directly. */
+:root[data-theme="dark"] .lp-page .lp-brand strong { color: #f1f5f9; }
+:root[data-theme="dark"] .lp-page .lp-brand small { color: #b8c4d6; }
+:root[data-theme="dark"] .lp-public .lp-nav a[aria-current="location"] { color: #c4b5fd !important; }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .lp-page .lp-brand strong { color: #f1f5f9; }
+  :root:not([data-theme="light"]) .lp-page .lp-brand small { color: #b8c4d6; }
+  :root:not([data-theme="light"]) .lp-public .lp-nav a[aria-current="location"] { color: #c4b5fd !important; }
+}

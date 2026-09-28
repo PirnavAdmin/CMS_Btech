@@ -1,7 +1,8 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+﻿import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { FiBriefcase, FiCheck, FiChevronDown, FiChevronUp, FiEdit2, FiEye, FiFilter, FiPlus, FiPower, FiSearch, FiSlash, FiX } from 'react-icons/fi'
 import DashboardLayout from '../../layouts/DashboardLayout'
 import ExportMenu from '../../components/ExportMenu'
+import SharedViewDialog from '../../components/ViewDialog'
 import TablePagination from '../../components/TablePagination'
 import { academicYearApi, facultyLeaveApi } from '../../api/apiEndpoints'
 import facultyService, { normalizeFaculty } from '../../services/facultyService'
@@ -15,9 +16,9 @@ const PAGE_SIZE = 5
 const TABS = ['Leave Requests', 'Leave History', 'Leave Balances', 'Leave Types', 'Leave Policies']
 const today = () => { const date = new Date(); return [date.getFullYear(), String(date.getMonth() + 1).padStart(2, '0'), String(date.getDate()).padStart(2, '0')].join('-') }
 const typeOf = employee => employee?.employeeCategory === 'Non-Teaching' ? 'Non-Teaching' : 'Teaching'
-const branchOf = employee => employee?.branch || employee?.branchName || employee?.department || '—'
+const branchOf = employee => employee?.branch || employee?.branchName || employee?.department || 'Ã¢â‚¬â€'
 const statusClass = value => String(value || '').toLowerCase().replace(/\s+/g, '-')
-const dateLabel = value => value ? new Date(`${String(value).slice(0, 10)}T00:00:00`).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : '—'
+const dateLabel = value => value ? new Date(`${String(value).slice(0, 10)}T00:00:00`).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : 'Ã¢â‚¬â€'
 const range = (from, to) => !from || !to ? '?' : from === to ? dateLabel(from) : `${new Date(`${from}T00:00:00`).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' })} - ${dateLabel(to)}`
 const initials = value => String(value || 'Employee').replace(/^(Dr|Prof|Mr|Ms|Mrs)\.\s*/i, '').split(' ').filter(Boolean).slice(0, 2).map(word => word[0]).join('').toUpperCase()
 const genderRestrictedLeave = type => {
@@ -251,7 +252,7 @@ export default function FacultyLeaveManagement() {
   const pages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE))
   const currentPage = Math.min(page, pages)
   const visible = filtered.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE)
-  const branches = [...new Set(faculty.map(branchOf).filter(value => value && value !== '—'))]
+  const branches = [...new Set(faculty.map(branchOf).filter(value => value && value !== 'Ã¢â‚¬â€'))]
   const departments = branches
   const summary = [['Total Requests', requests.length], ['Pending', requests.filter(item => item.status === 'Pending').length], ['Approved', requests.filter(item => item.status === 'Approved').length], ['On Leave', requests.filter(item => item.status === 'Approved' && item.from <= today() && item.to >= today()).length]]
   const title = tab.toUpperCase()
@@ -382,7 +383,7 @@ export default function FacultyLeaveManagement() {
     }
     setDialog({ kind: 'view', item })
   }
-  return <DashboardLayout><main className="flm-page">{loadError && <p className="flm-error" role="alert">{loadError} <button onClick={() => reload().catch(() => {})}>Retry</button></p>}{loading && <p role="status">Loading leave records...</p>}<header className="flm-header"><div><h1>Faculty Leave Management</h1><span>Configure leave policies, manage employee balances and process faculty and staff leave requests.</span></div><div className="flm-summary">{summary.map(([label, value]) => <div key={label}><strong>{value}</strong><small>{label}</small></div>)}</div></header><section className="flm-card"><header className="flm-card-header"><div><p>{title}</p><h2>{description}</h2></div><div className="flm-header-actions">{['Leave Requests', 'Leave History', 'Leave Balances'].includes(tab) && <div className="flm-category-toggle" role="group" aria-label="Filter by Faculty Type"><button type="button" className={`flm-cat-btn ${filters.type === 'Teaching' ? 'active' : ''}`} onClick={() => changeFilter('type', 'Teaching')}>Teaching Faculty</button><button type="button" className={`flm-cat-btn ${filters.type === 'Non-Teaching' ? 'active' : ''}`} onClick={() => changeFilter('type', 'Non-Teaching')}>Non-Teaching Staff</button></div>}<button className="flm-filter-toggle" onClick={() => setShowFilters(value => !value)}><FiFilter /> Filters {showFilters ? <FiChevronUp /> : <FiChevronDown />}</button><ExportMenu rows={filtered} columns={exportColumns} screen="faculty-leave-local" filename={`faculty-leave-${tab.toLowerCase().replace(/\s+/g, '-')}`} title={tab} scope="All filtered results" />{tab === 'Leave Types' && <button className="flm-primary" onClick={() => setDialog({ kind: 'type' })}><FiPlus /> Add Leave Type</button>}{tab === 'Leave Policies' && <button className="flm-primary" onClick={() => setDialog({ kind: 'policy' })}><FiPlus /> Create Leave Policy</button>}</div></header><nav className="flm-tabs">{TABS.map(value => <button key={value} className={tab === value ? 'active' : ''} onClick={() => switchTab(value)}>{value}</button>)}</nav><div className="flm-toolbar"><label className="flm-search"><FiSearch /><input value={query} onChange={event => { setQuery(event.target.value); setPage(1) }} placeholder={tab === 'Leave Types' ? 'Search leave type or code...' : tab === 'Leave Policies' ? 'Search leave policy...' : tab === 'Leave Balances' ? 'Search employee...' : 'Search request, employee or leave type...'} /></label></div>{showFilters && <div className="flm-filter-panel">{['Leave Requests', 'Leave History', 'Leave Balances'].includes(tab) && <><FilterSelect label="Faculty Type" value={filters.type} values={['Teaching', 'Non-Teaching']} onChange={value => changeFilter('type', value)} /><FilterSelect label="Department" value={filters.department} values={departments} onChange={value => changeFilter('department', value)} /></>}{['Leave History', 'Leave Types', 'Leave Policies'].includes(tab) && <FilterSelect label="Status" value={filters.status} values={tab === 'Leave Types' ? ['Active', 'Inactive'] : tab === 'Leave Policies' ? ['Draft', 'Active', 'Inactive', 'Expired'] : ['Approved', 'Rejected', 'Cancelled']} onChange={value => changeFilter('status', value)} />}<button className="flm-clear" onClick={() => { setQuery(''); setFilters({ type: 'Teaching', department: '', status: '' }); setPage(1) }}>Clear Filters</button></div>}<p className="flm-count">Showing {filtered.length ? (currentPage - 1) * PAGE_SIZE + 1 : 0}-{Math.min(currentPage * PAGE_SIZE, filtered.length)} of {filtered.length} records</p><LeaveList tab={tab} rows={visible} leaveTypes={leaveTypes} getBalance={getBalance} onView={viewRecord} onEdit={item => {
+  return <DashboardLayout><main className="flm-page">{loadError && <p className="flm-error" role="alert">{loadError} <button onClick={() => reload().catch(() => {})}>Retry</button></p>}{loading && <p role="status">Loading leave records...</p>}<header className="flm-header"><div><h1>Faculty Leave Management</h1><span>Configure leave policies, manage employee balances and process faculty and staff leave requests.</span></div><div className="flm-summary">{summary.map(([label, value]) => <div key={label}><strong>{value}</strong><small>{label}</small></div>)}</div></header><section className="flm-card"><header className="flm-card-header"><div><p>{title}</p><h2>{description}</h2></div><div className="flm-header-actions">{['Leave Requests', 'Leave History', 'Leave Balances'].includes(tab) && <div className="flm-category-toggle" role="group" aria-label="Filter by Faculty Type"><button type="button" className={`flm-cat-btn ${filters.type === 'Teaching' ? 'active' : ''}`} onClick={() => changeFilter('type', 'Teaching')}>Teaching Faculty</button><button type="button" className={`flm-cat-btn ${filters.type === 'Non-Teaching' ? 'active' : ''}`} onClick={() => changeFilter('type', 'Non-Teaching')}>Non-Teaching Staff</button></div>}<button type="button" className="flm-filter-toggle" aria-expanded={showFilters} aria-controls="faculty-leave-filters" onClick={() => setShowFilters(value => !value)}><FiFilter /> Filters {showFilters ? <FiChevronUp /> : <FiChevronDown />}</button><ExportMenu rows={filtered} columns={exportColumns} screen="faculty-leave-local" filename={`faculty-leave-${tab.toLowerCase().replace(/\s+/g, '-')}`} title={tab} scope="All filtered results" />{tab === 'Leave Types' && <button className="flm-primary" onClick={() => setDialog({ kind: 'type' })}><FiPlus /> Add Leave Type</button>}{tab === 'Leave Policies' && <button className="flm-primary" onClick={() => setDialog({ kind: 'policy' })}><FiPlus /> Create Leave Policy</button>}</div></header><nav className="flm-tabs" aria-label="Leave management sections">{TABS.map(value => <button key={value} className={tab === value ? 'active' : ''} aria-current={tab === value ? 'page' : undefined} onClick={() => switchTab(value)}>{value}</button>)}</nav><div className="flm-toolbar"><label className="flm-search"><FiSearch /><input aria-label="Search leave records" value={query} onChange={event => { setQuery(event.target.value); setPage(1) }} placeholder={tab === 'Leave Types' ? 'Search leave type or code...' : tab === 'Leave Policies' ? 'Search leave policy...' : tab === 'Leave Balances' ? 'Search employee...' : 'Search request, employee or leave type...'} /></label></div>{showFilters && <div id="faculty-leave-filters" className="flm-filter-panel">{['Leave Requests', 'Leave History', 'Leave Balances'].includes(tab) && <><FilterSelect label="Faculty Type" value={filters.type} values={['Teaching', 'Non-Teaching']} onChange={value => changeFilter('type', value)} /><FilterSelect label="Department" value={filters.department} values={departments} onChange={value => changeFilter('department', value)} /></>}{['Leave History', 'Leave Types', 'Leave Policies'].includes(tab) && <FilterSelect label="Status" value={filters.status} values={tab === 'Leave Types' ? ['Active', 'Inactive'] : tab === 'Leave Policies' ? ['Draft', 'Active', 'Inactive', 'Expired'] : ['Approved', 'Rejected', 'Cancelled']} onChange={value => changeFilter('status', value)} />}<button className="flm-clear" onClick={() => { setQuery(''); setFilters({ type: 'Teaching', department: '', status: '' }); setPage(1) }}>Clear Filters</button></div>}<p className="flm-count">Showing {filtered.length ? (currentPage - 1) * PAGE_SIZE + 1 : 0}-{Math.min(currentPage * PAGE_SIZE, filtered.length)} of {filtered.length} records</p><LeaveList tab={tab} rows={visible} leaveTypes={leaveTypes} getBalance={getBalance} onView={viewRecord} onEdit={item => {
     if (tab === 'Leave Policies') {
       const local = getLocalPolicies()[String(item.id)]
       setDialog({ kind: 'policy', item: { ...item, ...(local || {}), entitlements: (local?.entitlements && local.entitlements.length > 0) ? local.entitlements : (item.entitlements || []) } })
@@ -403,7 +404,7 @@ function LeaveList({ tab, rows, leaveTypes, getBalance, onView, onEdit, onActiva
           <td>{row.code}</td>
           <td>{row.category || 'Regular'}</td>
           <td>{row.payCategory}</td>
-          <td>{row.description || '—'}</td>
+          <td>{row.description || 'Ã¢â‚¬â€'}</td>
           <td><Status value={row.status} /></td>
           <td>
             <Actions>
@@ -428,13 +429,13 @@ function LeaveList({ tab, rows, leaveTypes, getBalance, onView, onEdit, onActiva
   if (tab === 'Leave Balances') return <DataTable headers={['Employee ID', 'Employee', 'Faculty Type', 'Department', 'Applicable Policy', 'Entitled', 'Used', 'Pending', 'Available', 'Action']}>{rows.map(({ employee, policy }) => {
     if (!employee) return null
     const { totals } = getBalance(employee, policy)
-    return <tr key={employee.id}><td>{employee.employeeId || employee.id}</td><td><Employee employee={employee} /></td><td>{typeOf(employee)}</td><td>{employee.department || '—'}</td><td>{policy ? policy.name : <span className="flm-unassigned">Not Assigned</span>}</td>{['entitled', 'used', 'pending', 'available'].map(key => <td key={key}>{totals[key] ?? 0}</td>)}<td><Actions><Action title="View leave balance" onClick={() => onView({ employee, policy })}><FiEye /></Action></Actions></td></tr>
+    return <tr key={employee.id}><td>{employee.employeeId || employee.id}</td><td><Employee employee={employee} /></td><td>{typeOf(employee)}</td><td>{employee.department || 'Ã¢â‚¬â€'}</td><td>{policy ? policy.name : <span className="flm-unassigned">Not Assigned</span>}</td>{['entitled', 'used', 'pending', 'available'].map(key => <td key={key}>{totals[key] ?? 0}</td>)}<td><Actions><Action title="View leave balance" onClick={() => onView({ employee, policy })}><FiEye /></Action></Actions></td></tr>
   })}</DataTable>
-  return <DataTable headers={['Request ID', 'Employee', 'Faculty Type', 'Department', 'Leave Type', 'Duration', 'Days', 'Applied On', 'Status', 'Action']}>{rows.map(row => <tr key={row.id}><td>{row.id}</td><td><Employee employee={row.employee || {}} /></td><td>{typeOf(row.employee)}</td><td>{row.employee?.department || '—'}</td><td>{leaveTypes.find(type => type.id === row.typeId)?.name || row.leaveTypeName || 'Unavailable'}</td><td>{range(row.from, row.to)}</td><td>{row.days ?? 1}</td><td>{dateLabel(row.applied)}</td><td><Status value={row.status} /></td><td><Actions><Action title="View request" onClick={() => onView(row)}><FiEye /></Action>{row.status === 'Pending' && <><Action title="Approve request" onClick={() => onDecision(row, 'Approved')}><FiCheck /></Action><Action title="Reject request" onClick={() => onDecision(row, 'Rejected')}><FiX /></Action></>}</Actions></td></tr>)}</DataTable>
+  return <DataTable headers={['Request ID', 'Employee', 'Faculty Type', 'Department', 'Leave Type', 'Duration', 'Days', 'Applied On', 'Status', 'Action']}>{rows.map(row => <tr key={row.id}><td>{row.id}</td><td><Employee employee={row.employee || {}} /></td><td>{typeOf(row.employee)}</td><td>{row.employee?.department || 'Ã¢â‚¬â€'}</td><td>{leaveTypes.find(type => type.id === row.typeId)?.name || row.leaveTypeName || 'Unavailable'}</td><td>{range(row.from, row.to)}</td><td>{row.days ?? 1}</td><td>{dateLabel(row.applied)}</td><td><Status value={row.status} /></td><td><Actions><Action title="View request" onClick={() => onView(row)}><FiEye /></Action></Actions></td></tr>)}</DataTable>
 }
 
 function LeaveDialog({ dialog, faculty, leaveTypes, policies, academicYears, getBalance, onClose, onSaveType, onToggleType, onSavePolicy, onActivate, onDecision, onSaveRequest }) {
-  if (dialog.kind === 'view') return <ViewDialog item={dialog.item} leaveTypes={leaveTypes} policies={policies} getBalance={getBalance} onClose={onClose} />
+  if (dialog.kind === 'view') return <ViewDialog item={dialog.item} leaveTypes={leaveTypes} policies={policies} getBalance={getBalance} onClose={onClose} onDecision={onDecision} />
   if (dialog.kind === 'type') return <TypeDialog item={dialog.item} onClose={onClose} onSave={onSaveType} />
   if (dialog.kind === 'toggleType') return <ToggleTypeDialog item={dialog.item} onClose={onClose} onConfirm={onToggleType} />
   if (dialog.kind === 'policy') return <PolicyDialog item={dialog.item} leaveTypes={leaveTypes} academicYears={academicYears} onClose={onClose} onSave={onSavePolicy} />
@@ -443,7 +444,7 @@ function LeaveDialog({ dialog, faculty, leaveTypes, policies, academicYears, get
   return <DecisionDialog request={dialog.item} status={dialog.status} onClose={onClose} onSave={onDecision} />
 }
 
-function ViewDialog({ item, leaveTypes, policies, getBalance, onClose }) {
+function ViewDialog({ item, leaveTypes, policies, getBalance, onClose, onDecision }) {
   const isBalance = item.employee && Object.hasOwn(item, 'policy')
   const isPolicy = Array.isArray(item.entitlements) || item.leaveTypes !== undefined || Object.hasOwn(item, 'applicableTo')
   const isType = Object.hasOwn(item, 'payCategory')
@@ -492,7 +493,7 @@ function ViewDialog({ item, leaveTypes, policies, getBalance, onClose }) {
                         code: type.code,
                         payCategory: type.payCategory,
                         entitlement: 12,
-                        maxDays: '—',
+                        maxDays: 'Ã¢â‚¬â€',
                         carryForward: false,
                         documentRequired: false
                       }))
@@ -504,10 +505,10 @@ function ViewDialog({ item, leaveTypes, policies, getBalance, onClose }) {
                     return (
                       <tr key={rule.typeId || rule.name}>
                         <td>{leaveType?.name || rule.name || 'Unavailable'}</td>
-                        <td>{leaveType?.code || rule.code || '—'}</td>
+                        <td>{leaveType?.code || rule.code || 'Ã¢â‚¬â€'}</td>
                         <td>{leaveType?.payCategory || rule.payCategory || 'Paid Leave'}</td>
                         <td>{rule.entitlement ?? 12}</td>
-                        <td>{rule.maxDays != null && rule.maxDays !== '' ? rule.maxDays : '—'}</td>
+                        <td>{rule.maxDays != null && rule.maxDays !== '' ? rule.maxDays : 'Ã¢â‚¬â€'}</td>
                         <td>{rule.carryForward ? 'Yes' : 'No'}</td>
                         <td>{rule.documentRequired ? 'Yes' : 'No'}</td>
                       </tr>
@@ -525,13 +526,19 @@ function ViewDialog({ item, leaveTypes, policies, getBalance, onClose }) {
         </>
       ) : (
         <>
-          <Info title="Request Information" rows={[['Request ID', item.id], ['Leave Type', leaveTypes.find(type => type.id === item.typeId)?.name || item.leaveTypeName || 'Unavailable'], ['Applied On', dateLabel(item.applied)], ['Policy', policies.find(policy => policy.id === item.policyId)?.name || 'Not Assigned']]} />
-          <Info title="Leave Period" columns={3} rows={[['From', dateLabel(item.from)], ['To', dateLabel(item.to)], ['Duration', `${item.days} Days`]]} />
-          <section className="flm-view-section">
-            <h3>Reason</h3>
-            <p className="flm-view-reason">{item.reason}</p>
-          </section>
-          {item.decisionDate && <Info title="Decision Details" rows={[['Decision Date', dateLabel(item.decisionDate)], ...(item.rejectionReason ? [['Rejection Reason', item.rejectionReason]] : [])]} />}
+                    <LeaveInfo title="REQUEST INFORMATION" rows={[['Request ID', item.id], ['Leave Type', leaveTypes.find(type => type.id === item.typeId)?.name || item.leaveTypeName || 'Unavailable'], ['Applied On', dateLabel(item.applied)], ['Policy', policies.find(policy => policy.id === item.policyId)?.name || 'Not Assigned']]} />
+          <LeaveInfo title="LEAVE PERIOD" columns={3} rows={[['From', dateLabel(item.from)], ['To', dateLabel(item.to)], ['Duration', `${item.days} Days`]]} />
+          <div className="preview-section-group">
+            <span className="preview-section-title">REMARKS</span>
+            <p className="fm-view-reason" style={{ margin: 0, padding: '10px 12px', background: 'var(--surface-soft, #F8FAFC)', border: '1px solid var(--border, #E2E8F0)', borderRadius: '8px', fontSize: '14px', color: 'var(--text-primary, #334155)' }}>{item.reason}</p>
+          </div>
+          {item.decisionDate && <LeaveInfo title="DECISION DETAILS" columns={2} rows={[['Decision Date', dateLabel(item.decisionDate)], ...(item.rejectionReason ? [['Rejection Reason', item.rejectionReason]] : [])]} />}
+          {item.status === 'Pending' && onDecision && (
+            <footer className="flm-view-actions">
+              <button type="button" className="reject-action" onClick={() => { onClose(); onDecision(item, 'Rejected'); }}>Reject Request</button>
+              <button type="button" className="approve-action" onClick={() => { onClose(); onDecision(item, 'Approved'); }}>Approve Request</button>
+            </footer>
+          )}
         </>
       )}
     </View>
@@ -569,7 +576,7 @@ function TypeDialog({ item = {}, onClose, onSave }) {
               },
             ].map(sec => ({
               ...sec,
-              fields: sec.fields.filter(([, val]) => val !== null && val !== undefined && String(val).trim() !== '' && String(val).trim() !== '—'),
+              fields: sec.fields.filter(([, val]) => val !== null && val !== undefined && String(val).trim() !== '' && String(val).trim() !== 'Ã¢â‚¬â€'),
             })).filter(sec => sec.fields.length > 0)
 
             if (sections.length === 0) {
@@ -705,7 +712,7 @@ function PolicyDialog({ item = {}, leaveTypes, academicYears, onClose, onSave })
                           entitlements: data.entitlements.map(value => String(value.typeId) === String(type.id) ? { ...value, entitlement: event.target.value === '' ? '' : Number(event.target.value) } : value)
                         })}
                       />
-                    ) : <span style={{ color: 'var(--text-muted)' }}>—</span>}
+                    ) : <span style={{ color: 'var(--text-muted)' }}>Ã¢â‚¬â€</span>}
                   </td>
                   <td>
                     {isEnabled ? (
@@ -720,7 +727,7 @@ function PolicyDialog({ item = {}, leaveTypes, academicYears, onClose, onSave })
                           entitlements: data.entitlements.map(value => String(value.typeId) === String(type.id) ? { ...value, maxDays: event.target.value === '' ? '' : Number(event.target.value) } : value)
                         })}
                       />
-                    ) : <span style={{ color: 'var(--text-muted)' }}>—</span>}
+                    ) : <span style={{ color: 'var(--text-muted)' }}>Ã¢â‚¬â€</span>}
                   </td>
                   <td>
                     {isEnabled ? (
@@ -888,7 +895,7 @@ function RequestLeaveDialog({ faculty, leaveTypes, policies, onClose, onSave }) 
               },
             ].map(sec => ({
               ...sec,
-              fields: sec.fields.filter(([, val]) => val !== null && val !== undefined && String(val).trim() !== '' && String(val).trim() !== '—'),
+              fields: sec.fields.filter(([, val]) => val !== null && val !== undefined && String(val).trim() !== '' && String(val).trim() !== 'Ã¢â‚¬â€'),
             })).filter(sec => sec.fields.length > 0)
 
             if (sections.length === 0) {
@@ -961,7 +968,7 @@ function BalanceTable({ employee, policy, leaveTypes, getBalance }) {
             const available = totals?.available ?? Math.max(0, Number(entitled) - Number(used) - Number(pending))
             return (
               <tr key={rule.typeId}>
-                <td>{typeName} ({typeInfo?.code || '—'})</td>
+                <td>{typeName} ({typeInfo?.code || 'Ã¢â‚¬â€'})</td>
                 <td>{entitled}</td>
                 <td>{used}</td>
                 <td>{pending}</td>
@@ -977,24 +984,15 @@ function BalanceTable({ employee, policy, leaveTypes, getBalance }) {
 function View({ title, children, onClose }) {
   return (
     <div className="flm-overlay" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
-      <section className="flm-view-dialog shared-view-dialog" role="dialog" aria-modal="true" style={{ maxWidth: '860px' }}>
-        <header className="shared-view-dialog__header">
-          <div className="shared-view-dialog__heading">
-            <div className="shared-view-dialog__icon-badge">
-              <FiBriefcase />
-            </div>
-            <div>
-              <h2 className="shared-view-dialog__title">{title}</h2>
-              <p className="shared-view-dialog__subtitle">Faculty Leave Management & Records</p>
-            </div>
+      <section className="fm-attendance-detail flm-config-dialog" role="dialog" aria-modal="true" style={{ maxWidth: '860px', width: '100%', overflowY: 'auto', maxHeight: 'calc(100dvh - 48px)', padding: '24px', borderRadius: '16px', background: 'var(--surface, #fff)' }} onClick={e => e.stopPropagation()}>
+        <div className="fm-attendance-detail-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', borderBottom: '1px solid #E2E8F0', paddingBottom: '12px', marginBottom: '16px' }}>
+          <div>
+            <p className="flm-eyebrow" style={{ margin: '0 0 2px 0', color: '#756FB2', fontSize: '11px', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.1em' }}>LEAVE DETAILS</p>
+            <h2 style={{ margin: 0, fontSize: '18px', fontWeight: 700, color: 'var(--text-primary)' }}>{title}</h2>
           </div>
-          <div className="shared-view-dialog__actions">
-            <button type="button" className="shared-view-dialog__close-btn" aria-label="Close" title="Close" onClick={onClose}>
-              <FiX size={18} />
-            </button>
-          </div>
-        </header>
-        <div className="shared-view-dialog__body flm-view-body" style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+          <button className="flm-close" style={{ position: 'static', margin: 0, right: 'auto', top: 'auto', display: 'flex', alignItems: 'center', justifyContent: 'center' }} aria-label="Close" onClick={onClose}><FiX size={18} /></button>
+        </div>
+        <div className="flm-view-body" style={{ display: 'flex', flexDirection: 'column' }}>
           {children}
         </div>
       </section>
@@ -1004,18 +1002,25 @@ function View({ title, children, onClose }) {
 
 function Identity({ employee, status }) {
   return (
-    <div className="view-modal-banner">
-      <div className="view-modal-avatar">
-        {initials(employee?.fullName)}
-      </div>
-      <div className="view-modal-header-info">
-        <div className="view-modal-badges">
-          {employee?.employeeId && <span className="view-modal-badge">{employee.employeeId}</span>}
-          {typeOf(employee) && <span className="view-modal-badge">{typeOf(employee)}</span>}
-          {status && <span className={`view-modal-badge-status ${status === 'Approved' ? 'active' : status === 'Pending' ? 'warning' : 'inactive'}`}>{status}</span>}
+    <div className="cm-profile-banner fm-attendance-identity-hero">
+      <div className="cm-profile-avatar-wrap">
+        <div className="fm-avatar fm-avatar-large">
+          {initials(employee?.fullName)}
         </div>
-        <h1 className="view-modal-title">{employee?.fullName}</h1>
-        <p className="view-modal-subtitle">{employee?.designation || 'Faculty'} · {branchOf(employee)}</p>
+      </div>
+      <div className="cm-profile-header-info">
+        <div className="cm-profile-badges">
+          {employee?.employeeId && <span className="cm-badge">{employee.employeeId}</span>}
+          {typeOf(employee) && <span className="cm-badge">{typeOf(employee)}</span>}
+        </div>
+        <h2 className="cm-profile-title">{employee?.fullName}</h2>
+        <p className="cm-profile-subtitle">{employee?.designation || 'Faculty'} • {branchOf(employee)}</p>
+      </div>
+      <div className="fm-attendance-detail-status">
+        <span className={`flm-status ${statusClass(status)}`} style={{ background: '#fff', color: status === 'Approved' ? '#16a34a' : status === 'Pending' ? '#d97706' : '#dc2626', display: 'flex', alignItems: 'center', gap: '6px', padding: '6px 12px', borderRadius: '99px', fontWeight: 'bold' }}>
+          <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: 'currentColor' }}></span>
+          {status}
+        </span>
       </div>
     </div>
   )
@@ -1041,3 +1046,29 @@ function Modal({ title, children, onClose }) { return <div className="flm-overla
 function Form({ children }) { return <div className="flm-config-form">{children}</div> }
 function Input({ label, type = 'text', value, onChange }) { return <label><span>{renderFlmLabel(label)}</span><input type={type} value={value} onChange={event => onChange(event.target.value)} /></label> }
 function Footer({ children }) { return <footer>{children}</footer> }
+function LeaveInfo({ title, columns = 4, rows }) {
+  return (
+    <div className="preview-section-group">
+      <span className="preview-section-title">{title}</span>
+      <div className="preview-kv-grid" style={{ gridTemplateColumns: "repeat(" + columns + ", minmax(0, 1fr))" }}>
+
+        {rows.map(([label, value]) => (
+          <div className="preview-kv-item" key={label}>
+            <span className="kv-label">{label}</span>
+            <strong className="kv-val">{value}</strong>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+
+
+
+
+
+
+
+
+

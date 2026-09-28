@@ -29,7 +29,7 @@ public abstract class SubjectWriteRequestBase
     public string? SubjectType { get; set; }
 
     [StringLength(20)]
-    [RegularExpression("^(Elective|Non-Elective)$", ErrorMessage = "Elective type must be Elective or Non-Elective.")]
+    [RegularExpression("^(Elective|Non-Elective|Core Subject)$", ErrorMessage = "Elective type must be Elective, Non-Elective, or Core Subject.")]
     public string? ElectiveType { get; set; }
 
     [StringLength(1000)]

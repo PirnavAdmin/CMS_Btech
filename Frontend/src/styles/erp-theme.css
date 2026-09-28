@@ -1476,7 +1476,7 @@ td.col-actions,
   font: inherit !important;
   font-size: 13.5px !important;
   font-weight: 700 !important;
-  color: #0F172A !important;
+  color: var(--text-primary, #0F172A) !important;
   text-align: center !important;
   cursor: pointer !important;
   overflow: hidden !important;
@@ -1504,7 +1504,7 @@ td.col-actions,
 .section-name-link:hover,
 .room-name-link:hover,
 .subject-name-link:hover {
-  color: #756FB2 !important;
+  color: var(--table-name-hover, #756FB2) !important;
   transform: translateX(6px) !important;
   text-decoration: none !important;
   background: transparent !important;
@@ -2272,5 +2272,4 @@ td.col-actions,
   background: rgba(255, 255, 255, 0.25) !important;
   color: #FFFFFF !important;
 }
-
 
