@@ -1,4 +1,4 @@
-.erp-status-badge {
+﻿.erp-status-badge {
   display: inline-flex;
   align-items: center;
   gap: 6px;
@@ -162,12 +162,12 @@
   background: #94a3b8;
 }
 
-:root[data-theme="dark"] .erp-status-badge--upcoming {
+:root[data-theme="dark"] :is(.erp-status-badge--warning, .erp-status-badge--upcoming, .erp-status-badge--probation, .erp-status-badge--hold) {
   background: rgba(180, 109, 10, 0.2);
   color: #8B82C7;
   border-color: rgba(245, 158, 11, 0.35);
 }
-:root[data-theme="dark"] .erp-status-badge--upcoming i {
+:root[data-theme="dark"] :is(.erp-status-badge--warning, .erp-status-badge--upcoming, .erp-status-badge--probation, .erp-status-badge--hold) i {
   background: #8B82C7;
 }
 
@@ -217,3 +217,4 @@
 :root[data-theme="dark"] .erp-status-badge--correction-required i {
   background: #a78bfa;
 }
+

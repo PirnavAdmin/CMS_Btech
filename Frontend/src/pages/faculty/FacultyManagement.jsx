@@ -2948,6 +2948,59 @@ export default function FacultyManagement() {
               title={selected.employeeCategory === 'Non-Teaching' ? 'Staff Profile' : 'Faculty Profile'}
               filename={`faculty_${displayCode || selected.id}`}
               recordSections={exportSections}
+      <div className="fm-profile-view">
+        <div className="fm-breadcrumb">
+          <Link to="/dashboard">Home</Link> / <Link to={'/faculty?category=' + (selected.employeeCategory || 'Teaching')}>{selected.employeeCategory === 'Non-Teaching' ? 'Non-Teaching Staff' : 'Teaching Faculty'}</Link> / <strong aria-current="page">Profile</strong>
+        </div>
+
+        <div className="fm-profile-hero-card">
+          <header className="fm-panel fm-profile-header">
+            <div className="fm-identity">
+              <Avatar faculty={selected} large />
+              <div>
+                <p className="fm-eyebrow">{selected.employeeCategory === 'Non-Teaching' ? 'STAFF PROFILE' : 'FACULTY PROFILE'} · {formatFacultyDisplayCode(selected, collegeOptions, faculty)}</p>
+                <h1>{selected.fullName}</h1>
+                <p>{selected.designation} · {departmentName}</p>
+                <StatusBadge value={selected.employmentStatus} />
+              </div>
+            </div>
+            <div className="fm-actions">
+              <button type="button" className="fm-button secondary" onClick={() => navigate('/faculty/' + selected.id + '/edit?category=' + (selected.employeeCategory || activeCategory))}>
+                <FiEdit2 /> {selected.employeeCategory === 'Non-Teaching' ? 'Edit Staff' : 'Edit Faculty'}
+              </button>
+              <button type="button" className="fm-button secondary" onClick={() => back()}>
+                <FiArrowLeft /> Back
+              </button>
+            </div>
+          </header>
+
+          <div className="fm-profile-summary-strip">
+            <div className="fm-summary-col">
+              <small>Total Experience</small>
+              <strong>{years(selected.experience)}</strong>
+            </div>
+            <div className="fm-summary-col">
+              <small>Employment Type</small>
+              <strong className="text-success">{selected.employmentType || '—'}</strong>
+            </div>
+            <div className="fm-summary-col">
+              <small>Qualification</small>
+              <strong className="text-danger">{selected.qualification || '—'}</strong>
+            </div>
+            {selected.employeeCategory !== 'Non-Teaching' && <div className="fm-summary-col">
+              <small>Workload</small>
+              <strong className="text-primary">{load.subjects} Subject{load.subjects === 1 ? '' : 's'} · {load.status}</strong>
+            </div>}
+          </div>
+        </div>
+
+        <div className="fm-profile-main-layout" style={selected.employeeCategory === 'Non-Teaching' ? { gridTemplateColumns: 'minmax(0, 1fr)' } : undefined}>
+          <div className="fm-profile-content-col">
+            <ProfileSections
+              data={selected}
+              collegeOptions={collegeOptions}
+              departmentOptions={departmentOptions}
+              faculty={faculty}
             />
             <button
               type="button"

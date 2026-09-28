@@ -452,7 +452,7 @@ export default function CollegeInstitutionManagement({ initialView = 'list' }) {
   const [statusFilter, setStatusFilter] = useState('')
   const [collegeDraft, setCollegeDraft] = useState(readNewCollegeDraft)
 
-  // College Settings state — real list from the backend
+  // College Settings state â€” real list from the backend
   const [settingsList, setSettingsList] = useState([])
   const [isSettingsLoading, setIsSettingsLoading] = useState(false)
   const [settingsListError, setSettingsListError] = useToastState('', 'error')
@@ -728,7 +728,7 @@ export default function CollegeInstitutionManagement({ initialView = 'list' }) {
     }
   }
 
-  // ── College Settings: list ──
+  // â”€â”€ College Settings: list â”€â”€
   const fetchSettingsList = async () => {
     setIsSettingsLoading(true)
     setSettingsListError('')
@@ -825,7 +825,7 @@ export default function CollegeInstitutionManagement({ initialView = 'list' }) {
                 label="College status summary"
                 items={summaryCards.map(({ label, value, tone }) => ({
                   label,
-                  value: collegeSummary.loading || value === null ? '—' : Number(value).toLocaleString('en-IN'),
+                  value: collegeSummary.loading || value === null ? 'â€”' : Number(value).toLocaleString('en-IN'),
                   tone,
                 }))}
               />
@@ -927,8 +927,8 @@ export default function CollegeInstitutionManagement({ initialView = 'list' }) {
                             </button>
                             <small className="cm-draft-row__label">Draft saved</small>
                           </td>
-                          <td className="col-code table-center"><code>{collegeDraft.values.collegeCode || '—'}</code></td>
-                          <td className="col-type table-left"><span className="table-cell-truncate" style={{ textAlign: 'left', margin: 0 }} title={collegeDraft.values.institutionType || '—'}>{collegeDraft.values.institutionType || '—'}</span></td>
+                          <td className="col-code table-center"><code>{collegeDraft.values.collegeCode || 'â€”'}</code></td>
+                          <td className="col-type table-left"><span className="table-cell-truncate" style={{ textAlign: 'left', margin: 0 }} title={collegeDraft.values.institutionType || 'â€”'}>{collegeDraft.values.institutionType || 'â€”'}</span></td>
                           <td className="col-status table-center"><StatusBadge tone="pending">Pending</StatusBadge></td>
                           <td className="col-actions table-center"><div className="cm-actions table-actions-group"><button type="button" className="table-action-btn action-edit cm-action-icon-btn cm-edit-action" title="Resume draft" aria-label="Resume draft" onClick={() => navigate('/college-institution-management/add')}><EditIcon /></button><button type="button" className="table-action-btn action-deactivate cm-action-icon-btn cm-danger cm-discard-action" title="Discard draft" aria-label="Discard draft" onClick={() => { localStorage.removeItem(NEW_COLLEGE_DRAFT_KEY); setCollegeDraft(null) }}><FiTrash2 aria-hidden="true" /></button></div></td>
                         </tr>
@@ -974,12 +974,12 @@ export default function CollegeInstitutionManagement({ initialView = 'list' }) {
                               </button>
                               <button
                                 type="button"
-                                className={`table-action-btn cm-action-icon-btn cm-status-action ${college.status === 'active' ? 'action-deactivate cm-danger' : 'action-activate cm-success'}`}
+                                className={`table-action-btn cm-action-icon-btn cm-status-action ${college.status === 'active' ? 'action-activate cm-success' : 'action-deactivate cm-danger'}`}
                                 title={college.status === 'active' ? `Deactivate ${college.name}` : `Activate ${college.name}`}
                                 aria-label={college.status === 'active' ? `Deactivate ${college.name}` : `Activate ${college.name}`}
                                 onClick={() => toggleStatus(college)}
                               >
-                                {college.status === 'active' ? <FiToggleRight /> : <FiToggleLeft />}
+                                {college.status === 'active' ? <FiToggleRight data-status="active" /> : <FiToggleLeft data-status="inactive" />}
                               </button>
                             </div>
                           </td>
@@ -1245,7 +1245,7 @@ export default function CollegeInstitutionManagement({ initialView = 'list' }) {
           </div>
         )}
 
-        {/* COLLEGE SETTINGS — LIST VIEW, backed by /api/college-settings */}
+        {/* COLLEGE SETTINGS â€” LIST VIEW, backed by /api/college-settings */}
         {viewMode === 'settings' && (
           <div className="cm-settings">
             <header className="cm-header">
@@ -1337,7 +1337,7 @@ export default function CollegeInstitutionManagement({ initialView = 'list' }) {
           </div>
         )}
 
-        {/* COLLEGE SETTINGS — ADD / EDIT FORM MODAL */}
+        {/* COLLEGE SETTINGS â€” ADD / EDIT FORM MODAL */}
         {viewMode === 'settings-form' && (
           <>
             <button type="button" className="cm-modal-backdrop" aria-label="Close form dialog" onClick={backToSettingsList} />
@@ -1472,3 +1472,4 @@ export default function CollegeInstitutionManagement({ initialView = 'list' }) {
     </DashboardLayout>
   )
 }
+

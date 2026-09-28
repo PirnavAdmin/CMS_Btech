@@ -59,9 +59,9 @@ const isPastYear = (x) => {
   return now() > end;
 };
 const formatDate = (x) => {
-  if (!x) return '—';
+  if (!x) return 'â€”';
   const parsed = d(x);
-  return isNaN(parsed.getTime()) ? '—' : parsed.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+  return isNaN(parsed.getTime()) ? 'â€”' : parsed.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
 };
 const days = (x) => Math.ceil((d(x) - now()) / DAY);
 const duration = (a, b) => {
@@ -421,7 +421,7 @@ export default function AcademicYear() {
                   <p className="cm-profile-subtitle">
                     <span>Duration: </span>
                     <strong>{duration(selected.startDate, selected.endDate)} days</strong>
-                    <span> ({formatDate(selected.startDate)} — {formatDate(selected.endDate)})</span>
+                    <span> ({formatDate(selected.startDate)} â€” {formatDate(selected.endDate)})</span>
                   </p>
                 </div>
               </div>
@@ -458,7 +458,7 @@ export default function AcademicYear() {
                   <p className="eyebrow">Active Academic Context</p>
                   <h2>{active.name}</h2>
                   <p>
-                    {formatDate(active.startDate)} — {formatDate(active.endDate)}
+                    {formatDate(active.startDate)} â€” {formatDate(active.endDate)}
                   </p>
                   <StatusBadge status="ACTIVE" />
                 </div>
@@ -586,23 +586,23 @@ export default function AcademicYear() {
                             {x.status === 'UPCOMING' && (
                               <button
                                 type="button"
-                                className="table-action-btn action-activate erp-action-btn erp-action-btn--success"
+                                className="table-action-btn action-activate erp-action-btn erp-action-btn--danger"
                                 title={`Activate ${x.name || 'Academic Year'}`}
                                 aria-label={`Activate ${x.name || 'Academic Year'}`}
                                 onClick={() => requestStatusChange(x, 'ACTIVE')}
                               >
-                                <FiToggleLeft />
+                                <FiToggleLeft data-status="inactive" />
                               </button>
                             )}
                             {(x.status === 'ACTIVE' || (isPastYear(x) && x.status !== 'ARCHIVED')) && (
                               <button
                                 type="button"
-                                className="table-action-btn action-deactivate erp-action-btn erp-action-btn--danger"
+                                className="table-action-btn action-deactivate erp-action-btn erp-action-btn--success"
                                 title={`Deactivate ${x.name || 'Academic Year'}`}
                                 aria-label={`Deactivate ${x.name || 'Academic Year'}`}
                                 onClick={() => requestStatusChange(x, 'ARCHIVED')}
                               >
-                                <FiToggleRight />
+                                <FiToggleRight data-status="active" />
                               </button>
                             )}
                           </div>
@@ -632,7 +632,7 @@ export default function AcademicYear() {
           <div className="backdrop" onMouseDown={(e) => e.target === e.currentTarget && close()}>
             <section className="modal" role="dialog" aria-modal="true" aria-labelledby="form-title">
               <button type="button" className="x" aria-label="Close dialog" onClick={close}>
-                ×
+                Ã—
               </button>
               <h2 id="form-title">{modal === 'add' ? 'Add Academic Year' : 'Edit Academic Year'}</h2>
               <form onSubmit={save} noValidate>
@@ -717,7 +717,7 @@ export default function AcademicYear() {
           <div className="backdrop" onMouseDown={(e) => e.target === e.currentTarget && close()}>
             <section className="modal" role="dialog" aria-modal="true" aria-labelledby="gen-title">
               <button type="button" className="x" aria-label="Close dialog" onClick={close}>
-                ×
+                Ã—
               </button>
               <h2 id="gen-title">Generate Next Academic Year</h2>
               <p style={{ marginTop: '12px', color: 'var(--text-secondary)' }}>
@@ -756,3 +756,4 @@ export default function AcademicYear() {
     </DashboardLayout>
   );
 }
+
