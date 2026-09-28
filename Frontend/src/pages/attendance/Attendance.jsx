@@ -933,10 +933,10 @@ export default function Attendance() {
                                 <span className="text-danger font-semibold">{session.absentCount} A</span>
                               </td>
                               <td>
-                                <StatusBadge
-                                  status={rate >= 75 ? 'Active' : 'Warning'}
-                                  label={`${rate}%`}
-                                />
+                                <span className={`erp-status-badge erp-status-badge--${rate >= 75 ? 'active' : 'pending'}`}>
+                                  <i aria-hidden="true" />
+                                  {`${rate}%`}
+                                </span>
                               </td>
                               <td>{session.faculty}</td>
                               <td>
