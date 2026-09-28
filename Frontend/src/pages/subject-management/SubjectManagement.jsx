@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
-import { FiAlertTriangle, FiPlus, FiRotateCcw, FiSearch, FiTrash2, FiX } from 'react-icons/fi'
+import { FiAlertTriangle, FiPlus, FiRotateCcw, FiSearch, FiX , FiArrowLeft} from 'react-icons/fi'
 import DashboardLayout from '../../layouts/DashboardLayout'
 import EmptyState from '../../components/EmptyState'
 import ExportMenu from '../../components/ExportMenu'
@@ -35,7 +35,7 @@ export default function SubjectManagement() {
   const [filters, updateFilters] = useState({ search: '', academicYearId: '', courseId: '', branchId: '', level: '', semesterId: '', subjectType: '', status: '' })
   const [form, setForm] = useState(blank), [editing, setEditing] = useState(null), [editorOpen, setEditorOpen] = useState(false), [viewing, setViewing] = useState(null), [saving, setSaving] = useState(false), [recentId, setRecentId] = useState('')
   const [returnToElectives, setReturnToElectives] = useState(false)
-  const [confirmingSubject, setConfirmingSubject] = useState(null), [statusSaving, setStatusSaving] = useState(false), [deletingSubject, setDeletingSubject] = useState(null), [deleteSaving, setDeleteSaving] = useState(false)
+  const [confirmingSubject, setConfirmingSubject] = useState(null), [statusSaving, setStatusSaving] = useState(false)
   const setFilters = next => { setPage(1); updateFilters(next) }
   const loadSubjects = async () => { setLoading(true); setLoadError(''); try { setSubjects(await subjectService.getSubjects({ liveOnly: true })) } catch (e) { setLoadError(e.message || 'Unable to load subjects.') } finally { setLoading(false) } }
   useEffect(() => { loadSubjects() }, [])
@@ -96,18 +96,6 @@ export default function SubjectManagement() {
     } catch (err) { showError(err.message || 'Unable to update status.') }
     finally { setStatusSaving(false) }
   }
-  const removeSubject = async () => {
-    if (!deletingSubject) return
-    setDeleteSaving(true)
-    try {
-      await subjectService.deleteSubject(deletingSubject.id)
-      showSuccess('Subject deleted successfully.')
-      if (key(recentId) === key(deletingSubject.id)) setRecentId('')
-      setDeletingSubject(null)
-      await loadSubjects()
-    } catch (err) { showError(err.message || 'Unable to delete subject.') }
-    finally { setDeleteSaving(false) }
-  }
   const columns = [{ label: 'Subject Code', value: 'subjectCode' }, { label: 'Subject Name', value: 'subjectName' }, { label: 'Academic Year', value: s => mapping(s).year }, { label: 'Course', value: s => mapping(s).course }, { label: 'Branch', value: s => mapping(s).branch }, { label: 'Academic Level', value: s => getAcademicLevelFromSemester(s) }, { label: 'Semester', value: s => mapping(s).semester }, { label: 'Subject Type', value: 'subjectType' }, { label: 'Credits', value: 'credits' }, { label: 'Status', value: 'status' }]
   const activeFilterText = [filters.academicYearId && entityName(masters.years, filters.academicYearId), filters.courseId && entityName(masters.courses, filters.courseId), filters.branchId && entityName(masters.branches, filters.branchId), filters.level, filters.semesterId && entityName(masters.semesters, filters.semesterId)].filter(Boolean)
   const detailSections = s => { const m = mapping(s); return [{ title: 'Subject Information', rows: [['Subject Code', s.subjectCode], ['Subject Name', s.subjectName], ['Subject Type', s.subjectType], ['Elective Type', s.electiveType], ['Credits', s.credits], ['Status', s.status]] }, { title: 'Academic Mapping', rows: [['Academic Year', m.year], ['Course', m.course], ['Branch', m.branch], ['Academic Level', getAcademicLevelFromSemester({ semester: m.semester })], ['Semester', m.semester]] }, { title: 'Academic Configuration', rows: [['Lecture Hours', s.lectureHours], ['Tutorial Hours', s.tutorialHours], ['Practical Hours', s.practicalHours], ['Internal Marks', s.internalMarks], ['External Marks', s.externalMarks]].filter(([, v]) => v !== '' && v != null) }].filter(x => x.rows.length) }
@@ -122,7 +110,7 @@ export default function SubjectManagement() {
             </div>
             <div className="sm-editor-action">
               <button type="button" className="cm-button secondary erp-btn erp-btn--secondary" onClick={closeEditor} style={{ marginBottom: '10px' }}>
-                <FiRotateCcw /> Back to Subject Directory
+                <FiArrowLeft /> Back  
               </button>
             </div>
           </header>
@@ -270,7 +258,6 @@ export default function SubjectManagement() {
                           <div className="sm-row-actions">
                             <TableActionButton type="view" ariaLabel={`View ${s.subjectCode}`} onClick={() => setViewing(s)} />
                             <TableActionButton type="edit" ariaLabel={`Edit ${s.subjectCode}`} onClick={() => openEdit(s)} />
-                            <TableActionButton type="delete" icon={FiTrash2} ariaLabel={`Delete ${s.subjectCode}`} onClick={() => setDeletingSubject(s)} />
                             <TableActionButton type={String(s.status).toLowerCase() === 'active' ? 'deactivate' : 'activate'} ariaLabel={`${String(s.status).toLowerCase() === 'active' ? 'Deactivate' : 'Activate'} ${s.subjectCode}`} onClick={() => updateStatus(s)} />
                           </div>
                         </td>
@@ -284,7 +271,6 @@ export default function SubjectManagement() {
           {!loading && !loadError && records.length > 0 && <TablePagination currentPage={currentPage} totalPages={totalPages} onPageChange={setPage} />}
         </section>
         {confirmingSubject && <StatusConfirmation subject={confirmingSubject} saving={statusSaving} close={() => setConfirmingSubject(null)} confirm={() => persistStatus(confirmingSubject, 'Inactive')} />}
-        {deletingSubject && <DeleteConfirmation subject={deletingSubject} saving={deleteSaving} close={() => setDeletingSubject(null)} confirm={removeSubject} />}
         {viewing && <Details subject={viewing} sections={detailSections(viewing)} close={() => { setViewing(null); if (returnToElectives) { setReturnToElectives(false); navigate('/elective-management') } }} edit={() => openEdit(viewing)} />}
       </main>
     </DashboardLayout>
@@ -294,7 +280,6 @@ function Select({ label, value, options, onChange, disabled, semester = false, h
 function Field({ label, children }) { return <div className="sm-field"><label>{label}</label>{children}</div> }
 function Input({ label, value, change, type = 'text' }) { return <Field label={label}><input type={type} min={type === 'number' ? '0' : undefined} value={value ?? ''} onChange={e => change(e.target.value)} /></Field> }
 function StatusConfirmation({ subject, saving, close, confirm }) { return <div className="sm-modal-backdrop" onMouseDown={saving ? undefined : close}><section className="sm-modal sm-modal--confirm" role="alertdialog" aria-modal="true" aria-labelledby="sm-status-confirm-title" onMouseDown={event => event.stopPropagation()}><div className="sm-confirm-icon"><FiAlertTriangle /></div><h2 id="sm-status-confirm-title">Deactivate Subject?</h2><p><strong>{subject.subjectName} ({subject.subjectCode})</strong> will be marked inactive and will no longer be available for new academic use. Continue?</p><div className="sm-modal-footer"><button type="button" className="sm-btn sm-btn--secondary" disabled={saving} onClick={close}>Cancel</button><button type="button" className="sm-btn sm-btn--danger" disabled={saving} onClick={confirm}>{saving ? 'Deactivating…' : 'Confirm Deactivate'}</button></div></section></div> }
-function DeleteConfirmation({ subject, saving, close, confirm }) { return <div className="sm-modal-backdrop" onMouseDown={saving ? undefined : close}><section className="sm-modal sm-modal--confirm" role="alertdialog" aria-modal="true" aria-labelledby="sm-delete-confirm-title" onMouseDown={event => event.stopPropagation()}><div className="sm-confirm-icon"><FiAlertTriangle /></div><h2 id="sm-delete-confirm-title">Delete Subject?</h2><p><strong>{subject.subjectName} ({subject.subjectCode})</strong> will be permanently removed from the subject directory. Continue?</p><div className="sm-modal-footer"><button type="button" className="sm-btn sm-btn--secondary" disabled={saving} onClick={close}>Cancel</button><button type="button" className="sm-btn sm-btn--danger" disabled={saving} onClick={confirm}>{saving ? 'Deleting…' : 'Confirm Delete'}</button></div></section></div> }
 
 function Editor({ form, editing, masters, branches, semesters, levels, typeOptions, formLevel: initialLevel, change: updateForm, close, save, saving }) {
   const [formLevel, setFormLevel] = useState(initialLevel);
