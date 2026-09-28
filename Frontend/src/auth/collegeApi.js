@@ -232,6 +232,84 @@ export const cacheCollegeLogo = (identifier, logo, extraKeys = []) => {
   } catch { /* storage fallback */ }
 };
 
+// Persistent college dates helper across IDs, codes, and college names
+const collegeDatesCacheKey = (key) => `pirnav-college-dates-${String(key || '').trim().toLowerCase().replace(/\s+/g, '-')}`;
+const DATES_MAP_KEY = 'pirnav_college_dates_map';
+
+const getDatesMap = () => {
+  try {
+    const raw = localStorage.getItem(DATES_MAP_KEY);
+    return raw ? JSON.parse(raw) : {};
+  } catch {
+    return {};
+  }
+};
+
+const setDatesMap = (map) => {
+  try {
+    localStorage.setItem(DATES_MAP_KEY, JSON.stringify(map));
+  } catch {}
+};
+
+export const readCachedCollegeDates = (identifier) => {
+  try {
+    if (!identifier) return null;
+    const key = String(identifier).trim();
+    const cleanKey = key.toLowerCase().replace(/\s+/g, '-');
+    const direct = localStorage.getItem(collegeDatesCacheKey(key)) ||
+      localStorage.getItem(`pirnav-college-dates-${key}`) ||
+      localStorage.getItem(`pirnav-college-dates-${cleanKey}`);
+    if (direct) {
+      try {
+        const parsed = JSON.parse(direct);
+        if (parsed && typeof parsed === 'object') return parsed;
+      } catch {}
+    }
+
+    const map = getDatesMap();
+    const mapVal = map[key] || map[cleanKey] || map[key.toLowerCase()] || map[key.toUpperCase()];
+    if (mapVal && typeof mapVal === 'object') return mapVal;
+    return null;
+  } catch {
+    return null;
+  }
+};
+
+export const cacheCollegeDates = (identifier, dates = {}, extraKeys = []) => {
+  try {
+    if (!identifier && !extraKeys.length) return;
+    const allKeys = [identifier, ...extraKeys]
+      .filter(k => k != null && String(k).trim() !== '')
+      .map(k => String(k).trim());
+
+    const map = getDatesMap();
+    const dateObj = {
+      startDate: dates?.startDate ? String(dates.startDate).slice(0, 10) : '',
+      endDate: dates?.endDate ? String(dates.endDate).slice(0, 10) : '',
+    };
+    const hasAny = Boolean(dateObj.startDate || dateObj.endDate);
+
+    allKeys.forEach((key) => {
+      const cleanKey = key.toLowerCase().replace(/\s+/g, '-');
+      if (hasAny) {
+        localStorage.setItem(collegeDatesCacheKey(key), JSON.stringify(dateObj));
+        localStorage.setItem(collegeDatesCacheKey(cleanKey), JSON.stringify(dateObj));
+        map[key] = dateObj;
+        map[cleanKey] = dateObj;
+        map[key.toLowerCase()] = dateObj;
+      } else {
+        localStorage.removeItem(collegeDatesCacheKey(key));
+        localStorage.removeItem(collegeDatesCacheKey(cleanKey));
+        localStorage.removeItem(`pirnav-college-dates-${key}`);
+        delete map[key];
+        delete map[cleanKey];
+        delete map[key.toLowerCase()];
+      }
+    });
+    setDatesMap(map);
+  } catch { /* storage fallback */ }
+};
+
 export const getCollegeLogoEndpoint = collegeId => collegeId == null || collegeId === '' ? '' : `${collegesBaseUrl}/api/College/logo/${encodeURIComponent(collegeId)}`;
 
 export const getCollegeLogoUrl = (collegeId, logoValue, extraKeys = []) => {
@@ -289,6 +367,8 @@ export const buildCollegePayload = (college = {}) => {
   const principalName = value("principalName", college.principal);
   const principalEmail = value("principalEmail");
   const principalContact = value("principalContact");
+  const startDate = value("startDate", college.StartDate || college.start_date);
+  const endDate = value("endDate", college.EndDate || college.end_date);
   const logo = college.logo ?? college.logoUrl ?? "";
   const website = normalizeWebsite(college.website ?? college.Website);
   const accreditationSummary = value("accreditation", college.accreditationDetails);
@@ -322,6 +402,8 @@ export const buildCollegePayload = (college = {}) => {
     // Website is optional. Omit it when empty so the backend URL validator
     // receives either a valid fully-qualified URL or no Website value at all.
     ...(website ? { Website: website } : {}),
+    ...(startDate ? { startDate, StartDate: startDate, start_date: startDate } : {}),
+    ...(endDate ? { endDate, EndDate: endDate, end_date: endDate } : {}),
     ...(college.clearLogo ? { logo: null, logoPath: null } : { logo }),
     logoName: value("logoName"),
     principal: principalName,

@@ -607,10 +607,237 @@
 .faculty-management .fm-attendance-report-tabs button.active { color: var(--brand); background: var(--brand-soft); }
 .faculty-management .fm-attendance-report-filters { grid-template-columns: minmax(190px, 300px) minmax(240px, 360px); }
 .faculty-management .fm-attendance-register .fm-empty { padding: 32px 16px; }
-.faculty-management .fm-modal-backdrop{position:fixed;inset:0;z-index:100;display:grid;place-items:center;padding:18px;background:rgba(9,30,55,.42);backdrop-filter:blur(2px)}.faculty-management .fm-attendance-detail{width:min(100%,680px);max-width:680px;display:grid;gap:16px;padding:18px 18px 16px;border:1px solid var(--border);border-radius:12px;background:var(--surface);box-shadow:var(--shadow-md)}.faculty-management .fm-attendance-detail-header{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;padding-bottom:10px;border-bottom:1px solid var(--border)}.faculty-management .fm-attendance-detail-header .fm-eyebrow{margin:0;color:var(--brand);font-size:10px;font-weight:800;letter-spacing:.12em}.faculty-management .fm-detail-close{display:grid;place-items:center;width:36px;height:36px;border:1px solid var(--border);border-radius:8px;background:var(--surface);color:var(--text-secondary);cursor:pointer;transition:all .15s ease}.faculty-management .fm-detail-close:hover,.faculty-management .fm-detail-close:focus-visible{background:var(--brand-soft);border-color:var(--brand);color:var(--brand);outline:none}.faculty-management .fm-attendance-identity-row{display:flex;align-items:flex-start;gap:12px;padding-top:2px}.faculty-management .fm-attendance-detail-avatar{display:grid;place-items:center;width:46px;height:46px;border-radius:12px;background:var(--brand-soft);color:var(--brand);font-size:15px;font-weight:800;letter-spacing:.04em;flex-shrink:0}.faculty-management .fm-attendance-detail-identity{flex:1;min-width:0}.faculty-management .fm-attendance-detail-identity h2{margin:0;color:var(--text-primary);font-size:20px;line-height:1.25}.faculty-management .fm-attendance-detail-identity p{margin:3px 0 0;color:var(--text-secondary);font-size:12px}.faculty-management .fm-attendance-detail-status{display:flex;align-items:center;justify-content:flex-end;flex-shrink:0;padding-top:4px}.faculty-management .fm-attendance-summary-block{display:grid;gap:12px}.faculty-management .fm-attendance-summary-block h3{margin:0;color:var(--text-primary);font-size:12px;font-weight:800;letter-spacing:.08em;text-transform:uppercase}.faculty-management .fm-attendance-summary-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px 18px;padding-top:2px}.faculty-management .fm-attendance-summary-grid > div{display:grid;gap:6px;min-width:0;padding:10px 12px;border:1px solid var(--border);border-radius:10px;background:var(--surface-soft)}.faculty-management .fm-attendance-summary-grid span{color:var(--text-muted);font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase}.faculty-management .fm-attendance-summary-grid strong{color:var(--text-primary);font-size:14px;line-height:1.35;font-weight:700;word-break:break-word}.faculty-management .fm-attendance-summary-wide{grid-column:1 / -1}.faculty-management .fm-attendance-row-actions{display:flex;justify-content:center;gap:4px}.faculty-management .fm-attendance-row-actions .fm-icon-button{width:30px;min-height:30px;padding:6px}
-.faculty-management .fm-attendance-summary-block{display:grid;gap:12px}.faculty-management .fm-attendance-summary-block h3{margin:0;color:var(--text-primary);font-size:13px;font-weight:700;letter-spacing:.08em;text-transform:uppercase}.faculty-management .fm-attendance-summary-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}.faculty-management .fm-attendance-summary-grid > div{display:grid;gap:6px;padding:10px 12px;border:1px solid var(--border);border-radius:8px;background:var(--surface-soft)}.faculty-management .fm-attendance-summary-grid > div span{color:var(--text-muted);font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase}.faculty-management .fm-attendance-summary-grid > div strong{color:var(--text-primary);font-size:13px;line-height:1.4;font-weight:700}.faculty-management .fm-attendance-summary-grid .fm-attendance-summary-wide{grid-column:1 / -1}.faculty-management .fm-attendance-summary-grid .fm-attendance-summary-wide strong{display:block;white-space:normal;word-break:break-word}.faculty-management .fm-attendance-editor{width:min(100%,560px);display:grid;gap:16px;padding:20px;border:1px solid var(--border);border-radius:12px;background:var(--surface);box-shadow:var(--shadow-md)}.faculty-management .fm-attendance-editor header{display:flex;justify-content:space-between;gap:12px}.faculty-management .fm-attendance-editor h2{margin:0}.faculty-management .fm-attendance-editor header p{color:var(--text-muted);font-size:12px}.faculty-management .fm-attendance-editor .fm-form-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.faculty-management .fm-attendance-editor label{display:grid;gap:5px;color:var(--text-secondary);font-size:12px;font-weight:700}.faculty-management .fm-attendance-editor input,.faculty-management .fm-attendance-editor select,.faculty-management .fm-attendance-editor textarea{width:100%;min-height:40px;padding:8px 10px;border:1px solid var(--border-strong);border-radius:7px;background:var(--surface);color:var(--text-primary);font:inherit}.faculty-management .fm-attendance-editor .fm-wide{grid-column:1/-1}.faculty-management .fm-attendance-editor footer{display:flex;justify-content:flex-end;gap:8px;border-top:1px solid var(--border);padding-top:14px}
-@media (max-width: 720px) {.faculty-management .fm-attendance-detail{width:min(100%, 100%);max-height:88vh;overflow-y:auto}.faculty-management .fm-attendance-summary-grid{grid-template-columns:1fr 1fr}.faculty-management .fm-attendance-identity-row{gap:10px}.faculty-management .fm-attendance-detail-identity h2{font-size:18px}} 
-@media (max-width: 500px) {.faculty-management .fm-attendance-summary-grid{grid-template-columns:1fr}.faculty-management .fm-attendance-identity-row{flex-wrap:wrap}.faculty-management .fm-attendance-detail-status{width:100%;justify-content:flex-start;padding-top:0}}
+.faculty-management .fm-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: grid;
+  place-items: center;
+  padding: 18px;
+  background: rgba(9, 30, 55, 0.45);
+  backdrop-filter: blur(4px);
+}
+.faculty-management .fm-attendance-detail {
+  width: min(100%, 640px);
+  max-width: 640px;
+  display: grid;
+  gap: 16px;
+  padding: 20px 22px 18px;
+  border: 1px solid var(--border, #CBD5E1);
+  border-radius: 14px;
+  background: var(--surface, #FFFFFF);
+  box-shadow: 0 20px 50px rgba(15, 23, 42, 0.18);
+  box-sizing: border-box;
+}
+.faculty-management .fm-attendance-detail-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--border, #E2E8F0);
+}
+.faculty-management .fm-attendance-detail-header .fm-eyebrow {
+  margin: 0 0 2px 0;
+  color: var(--brand, #756FB2);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+}
+.faculty-management .fm-detail-close {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border: 1px solid var(--border, #E2E8F0);
+  border-radius: 8px;
+  background: var(--surface, #FFFFFF);
+  color: var(--text-secondary, #64748B);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.faculty-management .fm-detail-close:hover,
+.faculty-management .fm-detail-close:focus-visible {
+  background: var(--brand-soft, #EDEBF6);
+  border-color: var(--brand, #756FB2);
+  color: var(--brand, #756FB2);
+  outline: none;
+}
+.faculty-management .fm-attendance-detail .cm-profile-banner.fm-attendance-identity-hero {
+  border-radius: 12px !important;
+  padding: 16px 20px !important;
+  min-height: auto !important;
+  gap: 16px !important;
+  margin: 0 !important;
+  width: 100% !important;
+  box-sizing: border-box !important;
+  background: linear-gradient(135deg, #7169A8 0%, #7E76B7 50%, #8D85C6 100%) !important;
+  display: flex !important;
+  align-items: center !important;
+  position: relative !important;
+  overflow: hidden !important;
+}
+.faculty-management .fm-attendance-detail .cm-profile-banner .cm-profile-avatar-wrap {
+  flex-shrink: 0 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  position: relative !important;
+  z-index: 2 !important;
+}
+.faculty-management .fm-attendance-detail .cm-profile-banner .fm-avatar.fm-avatar-large {
+  width: 58px !important;
+  height: 58px !important;
+  min-width: 58px !important;
+  border-radius: 14px !important;
+  background: linear-gradient(135deg, #ECC15D 0%, #DF9E27 100%) !important;
+  color: #1E173D !important;
+  font-size: 1.3rem !important;
+  font-weight: 850 !important;
+  border: 2px solid rgba(255, 255, 255, 0.6) !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.16) !important;
+  display: grid !important;
+  place-items: center !important;
+  overflow: hidden !important;
+}
+.faculty-management .fm-attendance-detail .cm-profile-banner .fm-avatar.fm-avatar-large img {
+  width: 100% !important;
+  height: 100% !important;
+  object-fit: cover !important;
+  border-radius: 12px !important;
+}
+.faculty-management .fm-attendance-detail .cm-profile-banner .cm-profile-header-info {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 3px !important;
+  position: relative !important;
+  z-index: 2 !important;
+  min-width: 0 !important;
+  flex: 1 1 auto !important;
+}
+.faculty-management .fm-attendance-detail .cm-profile-banner .cm-profile-badges {
+  display: flex !important;
+  align-items: center !important;
+  gap: 6px !important;
+  margin-bottom: 2px !important;
+}
+.faculty-management .fm-attendance-detail .cm-profile-banner .cm-badge {
+  display: inline-flex !important;
+  align-items: center !important;
+  padding: 3px 10px !important;
+  border-radius: 999px !important;
+  background: rgba(255, 255, 255, 0.22) !important;
+  border: 1px solid rgba(255, 255, 255, 0.4) !important;
+  color: #FFFFFF !important;
+  font-size: 0.72rem !important;
+  font-weight: 750 !important;
+  letter-spacing: 0.04em !important;
+  text-transform: uppercase !important;
+}
+.faculty-management .fm-attendance-detail .cm-profile-banner .cm-profile-title {
+  margin: 0 !important;
+  color: #FFFFFF !important;
+  font-size: 1.25rem !important;
+  font-weight: 750 !important;
+  line-height: 1.25 !important;
+}
+.faculty-management .fm-attendance-detail .cm-profile-banner .cm-profile-subtitle {
+  margin: 2px 0 0 0 !important;
+  color: rgba(255, 255, 255, 0.9) !important;
+  font-size: 0.82rem !important;
+  font-weight: 500 !important;
+}
+.faculty-management .fm-attendance-detail .cm-profile-banner .fm-attendance-detail-status {
+  position: relative !important;
+  z-index: 2 !important;
+  margin-left: auto !important;
+  flex-shrink: 0 !important;
+}
+.faculty-management .fm-attendance-detail .cm-profile-banner .fm-attendance-detail-status .erp-status-badge {
+  background: #FFFFFF !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15) !important;
+  border: 1px solid rgba(255, 255, 255, 0.9) !important;
+}
+.faculty-management .fm-attendance-summary-block {
+  display: grid;
+  gap: 10px;
+}
+.faculty-management .fm-attendance-editor {
+  width: min(100%, 560px);
+  display: grid;
+  gap: 16px;
+  padding: 20px;
+  border: 1px solid var(--border, #CBD5E1);
+  border-radius: 14px;
+  background: var(--surface, #FFFFFF);
+  box-shadow: 0 20px 50px rgba(15, 23, 42, 0.18);
+}
+.faculty-management .fm-attendance-editor header {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+.faculty-management .fm-attendance-editor h2 {
+  margin: 0;
+}
+.faculty-management .fm-attendance-editor header p {
+  color: var(--text-muted);
+  font-size: 12px;
+}
+.faculty-management .fm-attendance-editor .fm-form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+.faculty-management .fm-attendance-editor label {
+  display: grid;
+  gap: 5px;
+  color: var(--text-secondary);
+  font-size: 12px;
+  font-weight: 700;
+}
+.faculty-management .fm-attendance-editor input,
+.faculty-management .fm-attendance-editor select,
+.faculty-management .fm-attendance-editor textarea {
+  width: 100%;
+  min-height: 40px;
+  padding: 8px 10px;
+  border: 1px solid var(--border-strong);
+  border-radius: 7px;
+  background: var(--surface);
+  color: var(--text-primary);
+  font: inherit;
+}
+.faculty-management .fm-attendance-editor .fm-wide {
+  grid-column: 1 / -1;
+}
+.faculty-management .fm-attendance-editor footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  border-top: 1px solid var(--border);
+  padding-top: 14px;
+}
+@media (max-width: 720px) {
+  .faculty-management .fm-attendance-detail {
+    width: min(100%, 100%);
+    max-height: 88vh;
+    overflow-y: auto;
+  }
+  .faculty-management .fm-attendance-identity-row {
+    gap: 10px;
+  }
+}
+@media (max-width: 500px) {
+  .faculty-management .fm-attendance-identity-row {
+    flex-wrap: wrap;
+  }
+  .faculty-management .fm-attendance-detail-status {
+    width: 100%;
+    justify-content: flex-start;
+    padding-top: 0;
+  }
+}
 
 
 /* Override the global directory truncation and spacing rules only here. */
@@ -939,6 +1166,28 @@
   gap: 10px;
   white-space: nowrap;
 }
+.faculty-management .faculty-table-wrap .fm-identity > div {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+.faculty-management .faculty-table-wrap .student-name-link {
+  display: inline-block;
+  text-align: left;
+  background: transparent;
+  border: none;
+  padding: 0;
+  margin: 0;
+  font-weight: 650;
+  font-size: 13px;
+  color: var(--text-primary, #0f172a);
+  cursor: pointer;
+  transition: color 0.15s ease;
+}
+.faculty-management .faculty-table-wrap .student-name-link:hover {
+  color: var(--brand, #8782bc);
+  text-decoration: none;
+}
 .faculty-management .fm-department {
   white-space: nowrap;
 }
@@ -1007,103 +1256,306 @@
   margin-bottom: 5px;
 }
 
-/* Forms */
+/* Forms & Stepper Layout - Equal Height Two-Column Cards with Scroll */
+.faculty-management .erp-two-column-layout {
+  display: grid !important;
+  grid-template-columns: minmax(0, 1.3fr) minmax(320px, 0.9fr) !important;
+  gap: 16px !important;
+  align-items: stretch !important;
+  width: 100% !important;
+  height: clamp(380px, calc(100vh - 250px), 430px) !important;
+  box-sizing: border-box !important;
+}
+
+.faculty-management .erp-card-main {
+  display: flex !important;
+  flex-direction: column !important;
+  height: 100% !important;
+  min-height: 0 !important;
+  max-height: 100% !important;
+  overflow: hidden !important;
+  background: var(--surface, #FFFFFF) !important;
+  border: 1px solid var(--border, #E2E8F0) !important;
+  border-radius: 12px !important;
+  padding: 0 !important;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04) !important;
+  box-sizing: border-box !important;
+}
+
 .faculty-management .fm-form {
-  display: grid;
-  gap: 16px;
+  display: flex !important;
+  flex-direction: column !important;
+  height: 100% !important;
+  min-height: 0 !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  box-sizing: border-box !important;
 }
-.faculty-management .fm-form-grid {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 16px;
+
+.faculty-management .erp-card-main .fm-section-heading {
+  padding: 10px 16px 2px !important;
+  flex-shrink: 0 !important;
 }
-.faculty-management .fm-field {
-  display: flex;
-  flex-direction: column;
+
+.faculty-management .erp-form-scroll-body {
+  flex: 1 1 auto !important;
+  min-height: 0 !important;
+  overflow-y: auto !important;
+  scrollbar-width: thin !important;
+  padding: 8px 16px !important;
+  margin: 0 !important;
+  box-sizing: border-box !important;
+}
+
+.faculty-management .erp-form-scroll-body::-webkit-scrollbar {
+  width: 4px !important;
+}
+
+.faculty-management .erp-form-scroll-body::-webkit-scrollbar-thumb {
+  background: #CBD5E1 !important;
+  border-radius: 4px !important;
+}
+
+.faculty-management .fm-form-footer {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  margin-top: auto !important;
+  flex-shrink: 0 !important;
+  padding: 10px 16px !important;
+  border-top: 1px solid var(--border, #E2E8F0) !important;
+  background: var(--surface-soft, #FAF9FD) !important;
+  border-radius: 0 0 12px 12px !important;
+  box-sizing: border-box !important;
+}
+
+.faculty-management .preview-card {
+  display: flex !important;
+  flex-direction: column !important;
+  height: 100% !important;
+  min-height: 0 !important;
+  max-height: 100% !important;
+  overflow: hidden !important;
+  background: var(--surface, #FFFFFF) !important;
+  border: 1px solid var(--border, #E2E8F0) !important;
+  border-radius: 12px !important;
+  padding: 12px 14px !important;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04) !important;
+  box-sizing: border-box !important;
+}
+
+.faculty-management .preview-top-bar {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  padding-bottom: 8px !important;
+  border-bottom: 1px solid var(--border, #E2E8F0) !important;
+  margin-bottom: 8px !important;
+  flex-shrink: 0 !important;
+}
+
+.faculty-management .preview-body-container {
+  display: flex !important;
+  flex-direction: column !important;
+  flex: 1 1 auto !important;
+  min-height: 0 !important;
+  overflow-y: auto !important;
+  scrollbar-width: thin !important;
+  padding-right: 4px !important;
+  gap: 8px !important;
+}
+
+.faculty-management .preview-body-container::-webkit-scrollbar {
+  width: 4px !important;
+}
+
+.faculty-management .preview-body-container::-webkit-scrollbar-thumb {
+  background: #CBD5E1 !important;
+  border-radius: 4px !important;
+}
+
+.faculty-management .preview-body-container::-webkit-scrollbar {
+  width: 4px !important;
+}
+
+.faculty-management .preview-body-container::-webkit-scrollbar-thumb {
+  background: #CBD5E1 !important;
+  border-radius: 4px !important;
+}
+
+.faculty-management .erp-tabs-bar.ac-tabs.fm-stepper {
+  display: flex !important;
+  align-items: center !important;
+  gap: 5px !important;
+  overflow-x: auto !important;
+  scrollbar-width: none !important;
+  -ms-overflow-style: none !important;
+  padding-bottom: 6px !important;
+  margin-bottom: 2px !important;
+  border-bottom: 1px solid var(--border, #E2E8F0) !important;
+}
+
+.faculty-management .erp-tabs-bar.ac-tabs.fm-stepper::-webkit-scrollbar {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
+}
+
+.faculty-management .erp-tabs-bar.ac-tabs.fm-stepper button {
+  display: inline-flex;
+  align-items: center;
   gap: 6px;
+  padding: 4px 11px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+  border: 1px solid var(--border, #E2E8F0);
+  background: var(--surface-soft, #F8FAFC);
+  color: var(--text-secondary, #475569);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.15s ease;
+}
+
+.faculty-management .erp-tabs-bar.ac-tabs.fm-stepper button span {
+  display: grid;
+  place-items: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  font-size: 10px;
+  font-weight: 800;
+  background: #E2E8F0;
+  color: #475569;
+}
+
+.faculty-management .erp-tabs-bar.ac-tabs.fm-stepper button:hover {
+  background: #EDEBF6;
+  border-color: #DDD8F3;
+  color: #5B5496;
+}
+
+.faculty-management .erp-tabs-bar.ac-tabs.fm-stepper button.active {
+  background: #756FB2 !important;
+  color: #FFFFFF !important;
+  border-color: #756FB2 !important;
+  box-shadow: 0 1px 4px rgba(117, 111, 178, 0.25);
+}
+
+.faculty-management .erp-tabs-bar.ac-tabs.fm-stepper button.active span {
+  background: #FFFFFF !important;
+  color: #756FB2 !important;
+}
+
+/* Section Heading */
+.faculty-management .fm-section-heading {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 12px;
+  border-radius: 8px;
+  background: #F8FAFC;
+  border: 1px solid #E2E8F0;
+  margin-bottom: 2px;
+}
+
+.faculty-management .fm-section-heading-icon {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  flex: 0 0 28px;
+  border-radius: 6px;
+  background: #EDEBF6;
+  color: #756FB2;
+  font-size: 14px;
+  border: 1px solid #DDD8F3;
+}
+
+.faculty-management .fm-section-heading-text {
   min-width: 0;
 }
-.faculty-management .fm-field label, .faculty-management .fm-photo-picker label {
-  color: var(--text-secondary);
-  font-size: 12px;
-  font-weight: 650;
-}
-.faculty-management .fm-required {
-  color: var(--danger, #c53c49);
-  font-weight: 800;
-}
-.faculty-management .fm-field input, .faculty-management .fm-field select, .faculty-management .fm-field textarea {
-  width: 100%;
-  height: 42px;
-  padding: 9px 11px;
-  border: 1px solid var(--border-strong);
-  border-radius: 7px;
-  background: var(--surface);
-  color: var(--text-primary);
-  font: inherit;
+
+.faculty-management .fm-section-heading-text h2 {
   font-size: 13px;
-  color-scheme: inherit;
+  font-weight: 800;
+  color: var(--text-primary, #0F172A);
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  line-height: 1.2;
 }
-.faculty-management .fm-field textarea {
-  min-height: 76px;
-  resize: vertical;
+
+.faculty-management .fm-section-heading-text p {
+  color: var(--text-muted, #64748B);
+  font-size: 11px;
+  margin: 1px 0 0 0;
+  line-height: 1.2;
 }
-.faculty-management .fm-field input[readonly] {
-  background: var(--brand-soft);
-  color: var(--text-secondary);
-}
-.faculty-management .fm-wide {
-  grid-column: 1 / -1;
-}
-.faculty-management .fm-section-heading h2 {
-  margin-bottom: 5px;
-}
-.faculty-management .fm-section-heading p {
-  color: var(--text-muted);
-  font-size: 12px;
-}
+
+/* Photo Picker */
 .faculty-management .fm-photo-picker {
   display: flex;
-  width: fit-content;
-  max-width: 100%;
   align-items: center;
   gap: 12px;
-  padding: 10px;
-  border: 1px dashed var(--border-strong);
+  padding: 8px 14px;
+  border: 1px dashed #DDD8F3;
   border-radius: 8px;
+  background: #FAF9FD;
+  margin-bottom: 8px;
+  width: 100%;
 }
+
+.faculty-management .fm-photo-picker .fm-avatar-large {
+  width: 40px;
+  height: 40px;
+  flex: 0 0 40px;
+  border-radius: 50%;
+  font-size: 13px;
+  font-weight: 800;
+  background: #EDEBF6;
+  color: #756FB2;
+  border: 1px solid #DDD8F3;
+}
+
 .faculty-management .fm-photo-picker > div {
-  display: grid;
-  gap: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
   min-width: 0;
 }
+
 .faculty-management .fm-photo-label {
-  color: var(--text-secondary);
-  font-size: 12px;
-  font-weight: 650;
+  color: var(--text-primary, #0F172A);
+  font-size: 11.5px;
+  font-weight: 750;
+  line-height: 1.2;
 }
+
 .faculty-management .fm-photo-button {
   display: inline-flex;
-  width: max-content;
-  min-height: 34px;
   align-items: center;
   justify-content: center;
+  width: max-content;
+  height: 26px;
   padding: 0 11px;
-  border: 1px solid var(--border-strong);
-  border-radius: 7px;
-  color: var(--brand);
-  background: var(--surface);
-  font-size: 12px;
-  font-weight: 750;
+  border: 1px solid #756FB2;
+  border-radius: 5px;
+  color: #FFFFFF;
+  background: #756FB2;
+  font-size: 11px;
+  font-weight: 700;
   cursor: pointer;
-  transition: border-color .18s ease, background .18s ease, color .18s ease;
+  transition: all 0.15s ease;
+  margin-top: 1px;
 }
-.faculty-management .fm-photo-button:hover,
-.faculty-management .fm-photo-button:focus-within {
-  border-color: var(--brand);
-  color: var(--brand);
-  background: var(--brand-soft);
+
+.faculty-management .fm-photo-button:hover {
+  background: #5B5496;
+  border-color: #5B5496;
 }
+
 .faculty-management .fm-photo-button input {
   position: absolute;
   width: 1px;
@@ -1111,22 +1563,106 @@
   overflow: hidden;
   opacity: 0;
 }
+
+.faculty-management .fm-photo-picker .fm-muted {
+  font-size: 10.5px;
+  color: #64748B;
+}
+
+/* Form Grid */
+.faculty-management .fm-form-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px 14px;
+}
+
+@media (max-width: 960px) {
+  .faculty-management .fm-form-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 600px) {
+  .faculty-management .fm-form-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Form Field */
+.faculty-management .fm-field {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.faculty-management .fm-field label {
+  color: var(--text-secondary, #334155);
+  font-size: 11.5px;
+  font-weight: 750;
+  margin-bottom: 1px;
+}
+
+.faculty-management .fm-required {
+  color: #EF4444;
+  font-weight: 800;
+}
+
+.faculty-management .fm-field input,
+.faculty-management .fm-field select,
+.faculty-management .fm-field textarea {
+  width: 100%;
+  height: 35px;
+  padding: 0 10px;
+  border: 1px solid var(--border-strong, #CBD5E1);
+  border-radius: 6px;
+  background: var(--surface, #FFFFFF);
+  color: var(--text-primary, #0F172A);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 500;
+  outline: none;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.faculty-management .fm-field textarea {
+  height: auto;
+  min-height: 56px;
+  padding: 6px 10px;
+  resize: vertical;
+}
+
+.faculty-management .fm-field input:focus,
+.faculty-management .fm-field select:focus,
+.faculty-management .fm-field textarea:focus {
+  border-color: #756FB2 !important;
+  box-shadow: 0 0 0 2px rgba(117, 111, 178, 0.15) !important;
+}
+
+.faculty-management .fm-field input[readonly],
+.faculty-management .fm-readonly-code-input {
+  background: #F8FAFC !important;
+  border: 1px solid #CBD5E1 !important;
+  color: #334155 !important;
+  font-weight: 750 !important;
+  letter-spacing: 0.02em !important;
+  padding: 0 10px !important;
+  cursor: default !important;
+}
+
+.faculty-management .fm-wide {
+  grid-column: 1 / -1;
+}
+
 .faculty-management .fm-form-footer {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
-  border-top: 1px solid var(--border);
-  padding-top: 16px;
+  gap: 10px;
+  border-top: 1px solid var(--border, #E2E8F0);
+  padding-top: 10px;
+  margin-top: 4px;
 }
-
-@media (max-width: 520px) {
-  .faculty-management .fm-photo-picker {
-    width: 100%;
-  }
-}
-
-/* Stepper cleaned up to use erp-tabs-bar / ac-tabs */
 
 /* Breadcrumb */
 .faculty-management .fm-breadcrumb {
@@ -1142,92 +1678,361 @@
 }
 
 /* Preview and faculty profile */
-.faculty-management .fm-profile-view {
-  display: grid;
-  gap: 8px;
+/* StudentProfile gold standard styles adapted for faculty */
+.faculty-management .cm-profile-view {
+  display: flex !important;
+  flex-direction: column !important;
+  width: 100% !important;
+  max-width: 100% !important;
+  gap: 16px !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  box-sizing: border-box !important;
 }
-.faculty-management .fm-profile-view .fm-panel {
-  padding: 12px;
+
+.faculty-management .cm-profile-top-bar {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  gap: 10px !important;
+  margin: 0 0 2px 0 !important;
+  width: 100% !important;
+  min-height: 38px !important;
+  box-sizing: border-box !important;
 }
-.faculty-management .fm-profile-view .fm-panel > h2 {
-  margin-bottom: 9px;
+
+.faculty-management .sp-profile-top-actions {
+  display: flex !important;
+  align-items: center !important;
+  gap: 10px !important;
 }
-.faculty-management .fm-profile-view .fm-info-grid {
-  gap: 7px 10px;
+
+.faculty-management .cm-profile-top-bar :is(.erp-btn--primary, .cm-primary-btn, button.erp-btn--primary),
+.faculty-management .sp-profile-top-actions :is(.erp-btn--primary, .cm-primary-btn, button.erp-btn--primary) {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 7px !important;
+  padding: 8px 16px !important;
+  background: var(--brand, #8782BC) !important;
+  border: 1px solid var(--brand, #8782BC) !important;
+  border-radius: 8px !important;
+  color: #FFFFFF !important;
+  font-size: 0.85rem !important;
+  font-weight: 700 !important;
+  cursor: pointer !important;
+  box-shadow: 0 2px 6px rgba(135, 130, 188, 0.3) !important;
+  text-decoration: none !important;
+  transition: all 0.15s ease !important;
 }
-.faculty-management .fm-profile-view .fm-document-grid {
-  gap: 8px;
-  margin-top: 2px;
+
+.faculty-management .cm-profile-top-bar :is(.erp-btn--primary, .cm-primary-btn, button.erp-btn--primary):hover,
+.faculty-management .sp-profile-top-actions :is(.erp-btn--primary, .cm-primary-btn, button.erp-btn--primary):hover {
+  background: #6c66a4 !important;
+  border-color: #6c66a4 !important;
+  color: #FFFFFF !important;
+  box-shadow: 0 4px 12px rgba(135, 130, 188, 0.4) !important;
 }
-.faculty-management .fm-profile-view .fm-document-card {
-  gap: 8px;
-  padding: 9px 10px;
+
+.faculty-management .sp-profile-edit-icon,
+.faculty-management .cm-profile-top-bar .erp-btn--primary svg,
+.faculty-management .sp-profile-top-actions .erp-btn--primary svg {
+  width: 15px !important;
+  height: 15px !important;
+  color: #FFFFFF !important;
+  stroke: #FFFFFF !important;
+  display: inline-block !important;
+  vertical-align: middle !important;
 }
-.faculty-management .fm-profile-hero-card {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  width: 100%;
+
+.faculty-management .cm-profile-card {
+  display: flex !important;
+  flex-direction: column !important;
+  width: 100% !important;
+  border: 1px solid var(--border, #E2E8F0) !important;
+  border-radius: 14px !important;
+  background: var(--surface, #FFFFFF) !important;
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.04) !important;
+  overflow: hidden !important;
+  box-sizing: border-box !important;
+  margin: 0 !important;
+  padding: 0 !important;
 }
-.faculty-management .fm-profile-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 12px;
-  padding: 12px 16px;
-  border-top: 3px solid var(--brand);
+
+.faculty-management .cm-profile-banner {
+  display: flex !important;
+  align-items: center !important;
+  gap: 20px !important;
+  padding: 22px 28px !important;
+  background: linear-gradient(135deg, #7169A8 0%, #7E76B7 50%, #8D85C6 100%) !important;
+  border: 0 !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.18) !important;
+  border-radius: 0 !important;
+  color: #FFFFFF !important;
+  position: relative !important;
+  overflow: hidden !important;
+  min-height: 100px !important;
+  box-sizing: border-box !important;
+  width: 100% !important;
 }
-.faculty-management .fm-profile-header .erp-status-badge {
-  margin-top: 4px;
+
+.faculty-management .cm-profile-avatar-wrap {
+  flex-shrink: 0 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
 }
-.faculty-management .fm-profile-summary-strip {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  background: var(--surface);
-  box-shadow: var(--shadow-sm);
-  overflow: hidden;
-  width: 100%;
+
+.faculty-management .cm-profile-logo {
+  width: 64px !important;
+  height: 64px !important;
+  border-radius: 50% !important;
+  object-fit: cover !important;
+  border: 3px solid #FFFFFF !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15) !important;
+  background: #FFFFFF !important;
 }
-.faculty-management .fm-profile-summary-strip .fm-summary-col {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: 9px 12px;
-  text-align: center;
-  border-right: 1px solid var(--border);
-  gap: 4px;
+
+.faculty-management .cm-profile-placeholder {
+  width: 64px !important;
+  height: 64px !important;
+  border-radius: 50% !important;
+  background: rgba(255, 255, 255, 0.25) !important;
+  border: 3px solid #FFFFFF !important;
+  color: #FFFFFF !important;
+  font-size: 20px !important;
+  font-weight: 800 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15) !important;
 }
-.faculty-management .fm-profile-summary-strip .fm-summary-col:last-child {
-  border-right: 0;
+
+.faculty-management .cm-profile-header-info {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 4px !important;
+  min-width: 0 !important;
 }
-.faculty-management .fm-profile-summary-strip small {
-  font-size: 11px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  color: var(--text-muted);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  max-width: 100%;
+
+.faculty-management .cm-profile-badges {
+  display: flex !important;
+  align-items: center !important;
+  flex-wrap: wrap !important;
+  gap: 8px !important;
+  margin-bottom: 2px !important;
 }
-.faculty-management .fm-profile-summary-strip strong {
-  font-size: 16px;
-  font-weight: 750;
-  color: var(--text-primary);
-  line-height: 1.2;
+
+.faculty-management .cm-badge {
+  display: inline-flex !important;
+  align-items: center !important;
+  padding: 3px 10px !important;
+  font-size: 11px !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.04em !important;
+  border-radius: 20px !important;
+  background: rgba(255, 255, 255, 0.22) !important;
+  color: #FFFFFF !important;
+  backdrop-filter: blur(4px) !important;
 }
-.faculty-management .fm-profile-summary-strip .text-success {
-  color: var(--success, #756FB2);
+
+.faculty-management .cm-status-badge {
+  display: inline-flex !important;
+  align-items: center !important;
+  padding: 3px 10px !important;
+  font-size: 11px !important;
+  font-weight: 750 !important;
+  border-radius: 20px !important;
+  background: #FFFFFF !important;
+  color: #756FB2 !important;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1) !important;
 }
-.faculty-management .fm-profile-summary-strip .text-danger {
-  color: var(--danger, #b42318);
+
+.faculty-management .cm-status-badge::before {
+  content: "" !important;
+  display: inline-block !important;
+  width: 6px !important;
+  height: 6px !important;
+  border-radius: 50% !important;
+  background: #16A34A !important;
+  margin-right: 5px !important;
 }
-.faculty-management .fm-profile-summary-strip .text-primary {
-  color: var(--brand, #8782BC);
+
+.faculty-management .cm-profile-title {
+  margin: 0 !important;
+  color: #FFFFFF !important;
+  font-size: 22px !important;
+  font-weight: 800 !important;
+  letter-spacing: -0.01em !important;
+  line-height: 1.25 !important;
+}
+
+.faculty-management .cm-profile-subtitle {
+  margin: 0 !important;
+  color: rgba(255, 255, 255, 0.88) !important;
+  font-size: 13px !important;
+  font-weight: 500 !important;
+}
+
+.faculty-management .cm-profile-card > .sp-tabs {
+  display: flex !important;
+  flex-wrap: nowrap !important;
+  align-items: center !important;
+  gap: 8px !important;
+  width: 100% !important;
+  min-width: 0 !important;
+  height: auto !important;
+  margin: 0 !important;
+  padding: 10px 16px !important;
+  box-sizing: border-box !important;
+  overflow-x: auto !important;
+  overflow-y: hidden !important;
+  border: 0 !important;
+  border-bottom: 1px solid var(--border, #E2E8F0) !important;
+  border-radius: 0 !important;
+  background: var(--surface-soft, #F8FAFC) !important;
+}
+
+.faculty-management .cm-profile-card > .sp-tabs button {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 6px !important;
+  flex: 0 0 auto !important;
+  min-width: max-content !important;
+  min-height: 38px !important;
+  height: auto !important;
+  padding: 8px 16px !important;
+  white-space: nowrap !important;
+  text-align: center !important;
+  border: 1px solid transparent !important;
+  border-radius: 8px !important;
+  cursor: pointer !important;
+  font-size: 13px !important;
+  font-weight: 650 !important;
+  color: var(--text-secondary, #64748B) !important;
+  background: transparent !important;
+  transition: all 0.15s ease !important;
+}
+
+.faculty-management .cm-profile-card > .sp-tabs button svg {
+  width: 16px !important;
+  height: 16px !important;
+}
+
+.faculty-management .cm-profile-card > .sp-tabs button.active {
+  color: var(--brand, #756FB2) !important;
+  background: var(--surface, #FFFFFF) !important;
+  border-color: var(--border, #E2E8F0) !important;
+  box-shadow: inset 0 -3px var(--brand, #756FB2), 0 1px 3px rgba(0, 0, 0, 0.05) !important;
+  font-weight: 800 !important;
+}
+
+.faculty-management .cm-profile-card > .sp-tabs button:hover:not(.active) {
+  color: var(--brand, #756FB2) !important;
+  background: rgba(255, 255, 255, 0.6) !important;
+}
+
+.faculty-management .sp-profile-cards-container {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 14px !important;
+  width: 100% !important;
+  padding: 18px 20px !important;
+  box-sizing: border-box !important;
+}
+
+.faculty-management .sp-profile-panel {
+  border: 1px solid var(--border, #E2E8F0) !important;
+  border-radius: 10px !important;
+  background: var(--surface, #FFFFFF) !important;
+  overflow: hidden !important;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.03) !important;
+  width: 100% !important;
+  box-sizing: border-box !important;
+}
+
+.faculty-management .sp-panel-header {
+  display: flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+  margin: 0 !important;
+  padding: 9px 14px !important;
+  border-bottom: 1px solid var(--border, #E2E8F0) !important;
+  border-left: 3.5px solid var(--brand, #756FB2) !important;
+  background: var(--surface-soft, #F8FAFC) !important;
+  color: var(--brand, #756FB2) !important;
+}
+
+.faculty-management .sp-panel-header svg {
+  width: 16px !important;
+  height: 16px !important;
+  color: var(--brand, #756FB2) !important;
+}
+
+.faculty-management .sp-panel-header h2 {
+  margin: 0 !important;
+  color: var(--text-primary, #0F172A) !important;
+  font-size: 0.88rem !important;
+  font-weight: 750 !important;
+}
+
+.faculty-management .sp-panel-grid {
+  display: grid !important;
+  grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+  gap: 8px 10px !important;
+  width: 100% !important;
+  margin: 0 !important;
+  padding: 10px 14px !important;
+  box-sizing: border-box !important;
+  background: transparent !important;
+}
+
+.faculty-management .sp-panel-item {
+  display: flex !important;
+  flex-direction: column !important;
+  justify-content: center !important;
+  gap: 2px !important;
+  padding: 7px 11px !important;
+  background: var(--surface-soft, #F8FAFC) !important;
+  border: 1px solid var(--border, #E2E8F0) !important;
+  border-radius: 7px !important;
+  min-width: 0 !important;
+  box-sizing: border-box !important;
+}
+
+.faculty-management .sp-panel-label {
+  color: var(--text-muted, #64748B) !important;
+  font-size: 0.63rem !important;
+  font-weight: 800 !important;
+  letter-spacing: 0.04em !important;
+  text-transform: uppercase !important;
+}
+
+.faculty-management .sp-panel-val {
+  margin: 0 !important;
+  color: var(--text-primary, #0F172A) !important;
+  font-size: 0.82rem !important;
+  font-weight: 700 !important;
+  line-height: 1.35 !important;
+  overflow-wrap: anywhere !important;
+  word-break: break-word !important;
+}
+
+@media (max-width: 1180px) {
+  .faculty-management .sp-panel-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+  }
+}
+
+@media (max-width: 768px) {
+  .faculty-management .sp-panel-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+}
+
+@media (max-width: 600px) {
+  .faculty-management .sp-panel-grid {
+    grid-template-columns: 1fr !important;
+  }
 }
 
 .faculty-management .fm-profile-main-layout {
@@ -1683,18 +2488,19 @@
 .faculty-management .fm-document-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 12px;
+  gap: 10px;
   margin-top: 6px;
 }
 .faculty-management .fm-document-card {
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 12px 14px;
+  gap: 10px;
+  padding: 10px 12px;
   border: 1px solid var(--border);
   border-radius: 9px;
   background: var(--surface);
   box-shadow: var(--shadow-sm);
+  min-width: 0;
 }
 .faculty-management .fm-document-card.submitted {
   border-color: color-mix(in srgb, var(--success) 40%, var(--border));
@@ -1703,13 +2509,13 @@
 .faculty-management .fm-document-icon {
   display: grid;
   place-items: center;
-  width: 36px;
-  height: 36px;
+  width: 32px;
+  height: 32px;
   flex-shrink: 0;
   border-radius: 8px;
   background: var(--surface-soft);
   color: var(--brand);
-  font-size: 16px;
+  font-size: 15px;
 }
 .faculty-management .fm-document-card.submitted .fm-document-icon {
   color: var(--success);
@@ -1718,21 +2524,23 @@
 .faculty-management .fm-document-info {
   display: flex;
   flex-direction: column;
-  gap: 3px;
-  flex: 1;
+  gap: 2px;
+  flex: 1 1 auto;
   min-width: 0;
 }
 .faculty-management .fm-document-info strong {
-  font-size: 12.5px;
+  font-size: 11.5px;
+  font-weight: 700;
   color: var(--text-primary);
   white-space: normal;
-  line-height: 1.35;
-  word-break: break-word;
+  line-height: 1.25;
+  overflow-wrap: break-word;
+  word-break: normal;
 }
 .faculty-management .fm-doc-status {
   display: inline-flex;
   align-items: center;
-  font-size: 11px;
+  font-size: 10.5px;
   font-weight: 700;
 }
 .faculty-management .fm-doc-status.active {
@@ -1741,14 +2549,17 @@
 .faculty-management .fm-doc-status.muted {
   color: var(--text-muted);
 }
+.faculty-management .fm-document-actions {
+  flex-shrink: 0;
+}
 .faculty-management .fm-document-actions select {
-  height: 34px;
-  padding: 0 8px;
+  height: 30px;
+  padding: 0 6px;
   border: 1px solid var(--border);
   border-radius: 6px;
   background: var(--surface);
   color: var(--text-primary);
-  font-size: 12px;
+  font-size: 11px;
 }
 
 /* Preview is read-only, so it can be denser than the data-entry steps. */

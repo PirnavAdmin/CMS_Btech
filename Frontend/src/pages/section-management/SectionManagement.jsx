@@ -224,7 +224,6 @@ function SectionList() {
           <Select label="semester" value={filters.semester} change={changeFilter} first="All Semesters" values={semesters} />
           <Select label="academicYear" value={filters.academicYear} change={changeFilter} first="All Years" values={years} />
           <Select label="status" value={filters.status} change={changeFilter} first="All Status" values={['Active', 'Inactive']} />
-          {hasFilters && <button className="section-clear" onClick={clearFilters}><FiFilter /> Clear</button>}
         </div>
       </FilterPanel>
       {loading ? <Empty icon={FiClock} title="Loading sections..." /> : error ? <Empty icon={FiLayers} title={error} action={<button className="section-primary" onClick={load}>Retry</button>} /> : visible.length ? (
@@ -487,7 +486,7 @@ function SectionForm({ editMode = false }) {
           <div className="preview-body-container">
             <div className="preview-hero">
               <div className="preview-hero-badge">
-                {form.code ? form.code.slice(0, 4).toUpperCase() : (form.name ? form.name.slice(0, 4).toUpperCase() : 'SEC')}
+                {form.code ? form.code.replace(/[^a-zA-Z0-9]/g, '').slice(0, 4).toUpperCase() : (form.name ? form.name.replace(/[^a-zA-Z0-9]/g, '').slice(0, 4).toUpperCase() : 'SEC')}
               </div>
               <div className="preview-hero-details">
                 <h3 className="preview-course-title">

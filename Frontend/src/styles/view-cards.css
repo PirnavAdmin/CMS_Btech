@@ -44,7 +44,7 @@
   box-sizing: border-box !important;
 }
 
-:root body :is(.cm-profile-top-bar, .department-profile-topbar) :is(.cm-secondary-btn, .cm-button.secondary, button:not(.export-trigger)) {
+:root body :is(.cm-profile-top-bar, .department-profile-topbar) :is(.cm-secondary-btn, .cm-button.secondary, button:not(.export-trigger):not(.erp-btn--primary):not(.cm-primary-btn):not(.fm-primary-btn)) {
   display: inline-flex !important;
   align-items: center !important;
   gap: 6px !important;
@@ -61,10 +61,42 @@
   transition: all 0.15s ease !important;
 }
 
-:root body :is(.cm-profile-top-bar, .department-profile-topbar) :is(.cm-secondary-btn, .cm-button.secondary, button:not(.export-trigger)):hover {
+:root body :is(.cm-profile-top-bar, .department-profile-topbar) :is(.cm-secondary-btn, .cm-button.secondary, button:not(.export-trigger):not(.erp-btn--primary):not(.cm-primary-btn):not(.fm-primary-btn)):hover {
   background: var(--surface-soft, #F8FAFC) !important;
   border-color: var(--brand, #756FB2) !important;
   color: var(--brand, #756FB2) !important;
+}
+
+:root body :is(.cm-profile-top-bar, .department-profile-topbar) :is(.erp-btn--primary, .cm-primary-btn, .fm-primary-btn, button.erp-btn--primary) {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 7px !important;
+  padding: 8px 16px !important;
+  background: var(--brand, #8782BC) !important;
+  border: 1px solid var(--brand, #8782BC) !important;
+  border-radius: 8px !important;
+  color: #FFFFFF !important;
+  font-size: 0.85rem !important;
+  font-weight: 700 !important;
+  cursor: pointer !important;
+  box-shadow: 0 2px 6px rgba(135, 130, 188, 0.3) !important;
+  text-decoration: none !important;
+  transition: all 0.15s ease !important;
+}
+
+:root body :is(.cm-profile-top-bar, .department-profile-topbar) :is(.erp-btn--primary, .cm-primary-btn, .fm-primary-btn, button.erp-btn--primary) :is(svg, i, .sp-profile-edit-icon) {
+  color: #FFFFFF !important;
+  stroke: #FFFFFF !important;
+  font-size: 14px !important;
+  display: inline-block !important;
+  vertical-align: middle !important;
+}
+
+:root body :is(.cm-profile-top-bar, .department-profile-topbar) :is(.erp-btn--primary, .cm-primary-btn, .fm-primary-btn, button.erp-btn--primary):hover {
+  background: #6c66a4 !important;
+  border-color: #6c66a4 !important;
+  color: #FFFFFF !important;
+  box-shadow: 0 4px 12px rgba(135, 130, 188, 0.4) !important;
 }
 
 /* 3. Main Enclosing Card */
@@ -232,6 +264,15 @@
   font-weight: 800 !important;
   text-transform: uppercase !important;
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08) !important;
+}
+
+:root body :is(.cm-profile-banner, .sa-profile-header) :is(.cm-status-badge, .sa-status-badge, .status-badge):is(.inactive, .rejected, .ineligible, .deactive, .archived, .cancelled, .unpaid, [class*="inactive"]) {
+  color: #dc2626 !important;
+  background: #FFFFFF !important;
+}
+
+:root body :is(.cm-status-badge, .sa-status-badge, .status-badge, .sp-badge, .details-status-badge):is(.inactive, .rejected, .ineligible, .deactive, .archived, .cancelled, .unpaid, [class*="inactive"]) {
+  color: #dc2626 !important;
 }
 
 :root body :is(.cm-profile-title, .sa-profile-header h1, .sp-identity h2) {
@@ -493,6 +534,7 @@
   .cm-info-val,
   .sa-kv-val,
   .sa-kv-value,
+  .erp-view-value,
   .sp-info-item dd,
   .sp-panel-val,
   .fs-editor.details .fs-preview dd,
@@ -501,9 +543,12 @@
   .semester-management .cm-info-val,
   .course-management .cm-info-val,
   .branch-management .cm-info-val,
-  .college-management .cm-info-val
+  .college-management .cm-info-val,
+  .preview-kv-item .kv-val,
+  .meta-val
 ) {
   min-width: 0 !important;
+  max-width: 100% !important;
   margin: 0 !important;
   padding: 0 !important;
   color: var(--text-primary, #0F172A) !important;
@@ -511,8 +556,9 @@
   font-weight: 700 !important;
   line-height: 1.35 !important;
   text-align: left !important;
-  overflow-wrap: anywhere !important;
-  word-break: break-word !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
   display: block !important;
   width: 100% !important;
 }

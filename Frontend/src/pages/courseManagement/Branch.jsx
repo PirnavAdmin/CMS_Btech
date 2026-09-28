@@ -83,15 +83,59 @@ const academicYearMap = (record = {}) => {
   }
 }
 
+const BRANCH_DATES_KEY = 'branch_dates_cache'
+
+const readCachedBranchDates = (id, code) => {
+  try {
+    const raw = localStorage.getItem(BRANCH_DATES_KEY)
+    if (!raw) return {}
+    const parsed = JSON.parse(raw)
+    const key = [id, code].filter(Boolean).map(String).find((candidate) => parsed[candidate])
+    return key ? (parsed[key] || {}) : {}
+  } catch {
+    return {}
+  }
+}
+
+const cacheBranchDates = (id, code, dates) => {
+  if (!dates || (!dates.startDate && !dates.endDate)) return
+  try {
+    const raw = localStorage.getItem(BRANCH_DATES_KEY)
+    const parsed = raw ? JSON.parse(raw) : {}
+    const keys = [id, code].filter(Boolean).map(String)
+    keys.forEach((k) => {
+      parsed[k] = {
+        startDate: dates.startDate || parsed[k]?.startDate || '',
+        endDate: dates.endDate || parsed[k]?.endDate || '',
+      }
+    })
+    localStorage.setItem(BRANCH_DATES_KEY, JSON.stringify(parsed))
+  } catch {
+    // Ignore storage errors
+  }
+}
+
 export const normalize = (input = {}) => {
   const b = input?.branch ?? input?.branchDetails ?? input?.item ?? input?.result ?? input?.record ?? input?.data ?? input
+  const id = normalizeId(b.branchId ?? b.id)
+  const branchCode = content(b.branchCode ?? b.code ?? '')
+  const cachedDates = readCachedBranchDates(id, branchCode)
+  const rawStartDate = b.startDate ?? b.StartDate ?? b.start_date ?? b.fromDate ?? cachedDates.startDate ?? ''
+  const rawEndDate = b.endDate ?? b.EndDate ?? b.end_date ?? b.toDate ?? cachedDates.endDate ?? ''
+  const startDate = rawStartDate ? String(rawStartDate).slice(0, 10) : ''
+  const endDate = rawEndDate ? String(rawEndDate).slice(0, 10) : ''
+
+  if (startDate || endDate) {
+    cacheBranchDates(id, branchCode, { startDate, endDate })
+  }
+
   return {
-    id: normalizeId(b.branchId ?? b.id),
+    id,
     courseId: normalizeId(b.courseId ?? b.course?.id ?? ''),
     courseName: content(b.courseName ?? b.course?.name ?? b.course?.courseName ?? ''),
     courseCode: content(b.courseCode ?? b.course?.code ?? b.courseShortName ?? b.course?.courseCode ?? ''),
     branchName: content(b.branchName ?? b.name ?? ''),
-    branchCode: content(b.branchCode ?? b.code ?? ''),
+    branchCode,
     branchType: branchTypeLabel(b),
     specialization: content(b.specialization ?? ''),
     shortName: content(b.shortName ?? b.branchShortName ?? ''),
@@ -105,6 +149,8 @@ export const normalize = (input = {}) => {
     departmentId: normalizeId(b.departmentId ?? b.department?.departmentId ?? b.department?.id ?? ''),
     departmentName: content(b.departmentName ?? b.department?.departmentName ?? b.department?.name ?? ''),
     description: content(b.description ?? ''),
+    startDate,
+    endDate,
   }
 }
 
@@ -272,13 +318,12 @@ function List() {
     <section className="cm-panel branch-directory-card">
       <header className="branch-directory-heading"><div><span className="cm-eyebrow">Branch Directory</span><p>{rows.length} records</p></div><div className="directory-export-actions"><ExportMenu rows={rows.map(branch => ({ ...branch, courseName: courseById.get(String(branch.courseId))?.name || branch.courseName }))} columns={branchColumns} title="Branches" filename="branches" loading={loading || Boolean(error)} /><Link className="cm-button" to="/branches/add"><FiPlus /> Add Branch</Link></div></header>
     <FilterPanel active={hasFilters} onClear={clearFilters}>
-      <section className="cm-panel branch-filter-toolbar">
+      <div className="branch-filter-toolbar">
         <label className="branch-search"><FiSearch /><input aria-label="Search branches" value={filters.query} onChange={(event) => setFilter('query', event.target.value)} placeholder="Search branch name, code or course" /></label>
         <SearchableSelect label="Course" value={filters.courseId} options={courses.filter(course => course.status === 'Active').map((course) => ({ id: course.id, name: course.name, code: course.code }))} onChange={(value) => setFilter('courseId', value)} placeholder="Select Course" searchPlaceholder="Search course..." noOptionsMessage="No courses found." />
         <select value={filters.branchType} onChange={(event) => setFilter('branchType', event.target.value)}><option value="">Type</option><option value="Core">Core</option><option value="Specialization">Specialization</option></select>
         <select value={filters.status} onChange={(event) => setFilter('status', event.target.value)}><option value="">Status</option><option value="Active">Active</option><option value="Inactive">Deactive</option></select>
-        {hasFilters && <button className="branch-clear" onClick={clearFilters}><FiFilter /> Clear</button>}
-      </section>
+      </div>
     </FilterPanel>
 
     {loading ? <div className="branch-empty">Loading branches…</div> : rows.length ? <>
@@ -514,6 +559,10 @@ function Form() {
       totalSemesters: selectedCourse?.totalSemesters || '',
       startingAcademicYearId: academicYear?.id || effectiveYearId || '',
       startingAcademicYearName: academicYear?.name || value.startingAcademicYearName || '',
+      startDate: value.startDate ? value.startDate.slice(0, 10) : null,
+      endDate: value.endDate ? value.endDate.slice(0, 10) : null,
+      StartDate: value.startDate ? value.startDate.slice(0, 10) : null,
+      EndDate: value.endDate ? value.endDate.slice(0, 10) : null,
       status: value.status,
     }
 
@@ -527,7 +576,13 @@ function Form() {
     setSaving(true)
     setError('')
     try {
-      const result = await (id ? branchApi.update(id, payload) : branchApi.create(payload)); if (!id) rememberCreated('branches', result); showSuccess(`Branch ${id ? 'updated' : 'created'} successfully.`)
+      const result = await (id ? branchApi.update(id, payload) : branchApi.create(payload))
+      cacheBranchDates(result?.branchId || result?.id || id, payload.branchCode, {
+        startDate: value.startDate ? value.startDate.slice(0, 10) : '',
+        endDate: value.endDate ? value.endDate.slice(0, 10) : '',
+      })
+      if (!id) rememberCreated('branches', result)
+      showSuccess(`Branch ${id ? 'updated' : 'created'} successfully.`)
       navigate('/branches')
     } catch (requestError) {
       setError(requestError?.message || 'Unable to save branch.')
@@ -609,7 +664,7 @@ function Form() {
               <>
                 <div className="preview-hero">
                   <div className="preview-hero-badge">
-                    {value.branchCode ? value.branchCode.slice(0, 4).toUpperCase() : 'BRANCH'}
+                    {value.branchCode ? value.branchCode.slice(0, 4).toUpperCase() : 'BR'}
                   </div>
                   <div className="preview-hero-details">
                     <h3 className="preview-course-title">{value.branchName.trim() || 'Branch Preview'}</h3>
@@ -738,6 +793,8 @@ function Details() {
                 { label: 'Total Semesters', value: branch.totalSemesters },
                 { label: 'Approved Intake', value: branch.intakeCapacity },
                 { label: 'Academic Year', value: branch.startingAcademicYearName },
+                { label: 'Start Date', value: branch.startDate },
+                { label: 'End Date', value: branch.endDate },
               ]}
             />
           </div>

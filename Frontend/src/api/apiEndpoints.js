@@ -238,6 +238,22 @@ export const API_ENDPOINTS = Object.freeze({
     student: endpoint('/api/v1/authorization-test/student'),
     adminFaculty: endpoint('/api/v1/authorization-test/admin-faculty'),
   }),
+  roles: Object.freeze({
+    list: endpoint('/api/roles'),
+    create: endpoint('/api/roles'),
+    detail: (id) => endpoint(`/api/roles/${id}`),
+    update: (id) => endpoint(`/api/roles/${id}`),
+    delete: (id) => endpoint(`/api/roles/${id}`),
+  }),
+  rooms: Object.freeze({
+    list: endpoint('/api/v1/rooms'),
+    create: endpoint('/api/v1/rooms'),
+    options: endpoint('/api/v1/rooms/options'),
+    detail: (classroomId) => endpoint(`/api/v1/rooms/${classroomId}`),
+    update: (classroomId) => endpoint(`/api/v1/rooms/${classroomId}`),
+    delete: (classroomId) => endpoint(`/api/v1/rooms/${classroomId}`),
+    allocation: (classroomId) => endpoint(`/api/v1/rooms/${classroomId}/allocation`),
+  }),
 })
 
 const readBody = async (response) => {
@@ -248,7 +264,7 @@ const listResponse = (response) => {
   let current = response
   for (let depth = 0; depth < 5 && current && typeof current === 'object'; depth += 1) {
     if (Array.isArray(current)) return current
-    const list = current.items ?? current.content ?? current.results ?? current.records ?? current.academicYears ?? current.years ?? current.rows
+    const list = current.items ?? current.content ?? current.results ?? current.records ?? current.academicYears ?? current.years ?? current.rows ?? current.roles ?? (Array.isArray(current.data) ? current.data : undefined)
     if (Array.isArray(list)) return list
     current = current.data
   }
@@ -533,11 +549,26 @@ export const profileApi = {
   },
 }
 
-const academicYearPayload = (year) => ({
-  academicYearName: String(year.name || year.academicYearName || '').trim(),
-  startDate: year.startDate,
-  endDate: year.endDate,
-})
+const academicYearPayload = (year) => {
+  const name = String(year.name || year.academicYearName || year.AcademicYearName || '').trim()
+  const rawStart = year.startDate ?? year.StartDate ?? year.start_date ?? year.fromDate ?? year.FromDate ?? ''
+  const rawEnd = year.endDate ?? year.EndDate ?? year.end_date ?? year.toDate ?? year.ToDate ?? ''
+  const normalize = (val) => {
+    if (!val) return ''
+    const str = String(val).trim()
+    const match = str.match(/^(\d{4}-\d{2}-\d{2})/)
+    if (match) return match[1]
+    const dmy = str.match(/^(\d{2})[-/](\d{2})[-/](\d{4})/)
+    if (dmy) return `${dmy[3]}-${dmy[2]}-${dmy[1]}`
+    const d = new Date(str)
+    return isNaN(d.getTime()) ? str.slice(0, 10) : d.toISOString().slice(0, 10)
+  }
+  return {
+    academicYearName: name,
+    startDate: normalize(rawStart),
+    endDate: normalize(rawEnd),
+  }
+}
 
 export const academicYearApi = {
   getAll: async () => {
@@ -1285,3 +1316,69 @@ export const timetableManagementApi = {
   put: async (path, payload) => dataResponse(await jsonRequest(timetableManagementUrl(path), 'PUT', payload)),
   remove: async path => dataResponse(await request(timetableManagementUrl(path), { method: 'DELETE' })),
 }
+
+const isNumericId = (val) => Number.isInteger(Number(val)) && Number(val) > 0
+
+const rolePayload = (role) => {
+  if (!role || typeof role !== 'object') return {}
+  const isBoolStatus = role.status === 'Active' || role.status === true || role.status === 1 || role.isActive === true
+  return {
+    name: String(role.name || role.roleName || '').trim(),
+    roleName: String(role.name || role.roleName || '').trim(),
+    code: String(role.code || role.roleCode || '').trim().toUpperCase(),
+    roleCode: String(role.code || role.roleCode || '').trim().toUpperCase(),
+    category: role.category || 'Academic',
+    level: role.level || 'Level 4 (Academic Staff)',
+    description: String(role.description || '').trim(),
+    status: isBoolStatus,
+    isActive: isBoolStatus,
+    permissions: typeof role.permissions === 'object' ? JSON.stringify(role.permissions) : role.permissions || '{}',
+  }
+}
+
+export const roleApi = {
+  getAll: async (params) => listData(await request(withQuery(API_ENDPOINTS.roles.list, params))),
+  getById: async (id) => isNumericId(id) ? (await request(API_ENDPOINTS.roles.detail(id)))?.data : null,
+  create: async (payload) => (await jsonRequest(API_ENDPOINTS.roles.create, 'POST', rolePayload(payload)))?.data,
+  update: async (id, payload) => {
+    if (isNumericId(id)) {
+      return (await jsonRequest(API_ENDPOINTS.roles.update(id), 'PUT', rolePayload(payload)))?.data
+    }
+    return (await jsonRequest(API_ENDPOINTS.roles.create, 'POST', rolePayload(payload)))?.data
+  },
+  delete: async (id) => {
+    if (isNumericId(id)) {
+      return request(API_ENDPOINTS.roles.delete(id), { method: 'DELETE' })
+    }
+    return true
+  },
+}
+export const rolesApi = roleApi
+
+export const roomApi = {
+  getAll: async (params) => listData(await request(withQuery(API_ENDPOINTS.rooms.list, params))),
+  getOptions: async () => (await request(API_ENDPOINTS.rooms.options))?.data,
+  getById: async (classroomId) => (await request(API_ENDPOINTS.rooms.detail(requiredId(classroomId, 'Room ID'))))?.data,
+  create: async (payload) => (await jsonRequest(API_ENDPOINTS.rooms.create, 'POST', payload))?.data,
+  update: async (classroomId, payload) => (await jsonRequest(API_ENDPOINTS.rooms.update(requiredId(classroomId, 'Room ID')), 'PUT', payload))?.data,
+  allocate: async (classroomId, payload) => {
+    let body = {}
+    if (typeof payload === 'number') {
+      body = { sectionId: Number(payload) }
+    } else if (typeof payload === 'object' && payload !== null) {
+      const secId = Number(payload.sectionId ?? payload.id)
+      body = {
+        sectionId: Number.isInteger(secId) && secId > 0 ? secId : Number(payload.sectionId),
+        ...(payload.sectionName ? { sectionName: payload.sectionName } : {}),
+      }
+    } else if (typeof payload === 'string' && !isNaN(Number(payload)) && Number(payload) > 0) {
+      body = { sectionId: Number(payload) }
+    } else {
+      body = payload
+    }
+    return (await jsonRequest(API_ENDPOINTS.rooms.allocation(requiredId(classroomId, 'Room ID')), 'PUT', body))?.data
+  },
+  deallocate: async (classroomId) => request(API_ENDPOINTS.rooms.allocation(requiredId(classroomId, 'Room ID')), { method: 'DELETE' }),
+}
+export const roomsApi = roomApi
+

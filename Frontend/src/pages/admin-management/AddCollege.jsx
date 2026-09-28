@@ -6,7 +6,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom'
 import { FiCheck } from 'react-icons/fi'
 import DashboardLayout from '../../layouts/DashboardLayout'
 import SearchableSelect from '../../components/SearchableSelect'
-import { cacheCollegeLogo, createCollege, fetchCollegeLogo, getCollegeById, getCollegeLogoUrl, getColleges, isBackendCollegeLogo, isValidWebsite, normalizeWebsite, readCachedCollegeLogo, readCollegeExtendedDetails, unwrapCollegeRecord, updateCollege, uploadCollegeLogo, WEBSITE_VALIDATION_MESSAGE } from '../../auth/collegeApi'
+import { cacheCollegeLogo, cacheCollegeDates, createCollege, fetchCollegeLogo, getCollegeById, getCollegeLogoUrl, getColleges, isBackendCollegeLogo, isValidWebsite, normalizeWebsite, readCachedCollegeLogo, readCachedCollegeDates, readCollegeExtendedDetails, unwrapCollegeRecord, updateCollege, uploadCollegeLogo, WEBSITE_VALIDATION_MESSAGE } from '../../auth/collegeApi'
 import './AddCollege.css'
 
 const hasValue = (value) => value !== null && value !== undefined && String(value).trim() !== ''
@@ -22,7 +22,7 @@ const FORM_TABS = [
   { id: 'accreditation', label: 'Accreditation Details' },
 ]
 const TAB_FIELDS = {
-  college: ['collegeName', 'collegeCode', 'collegeType', 'collegeTypeOther', 'universityName'],
+  college: ['collegeName', 'collegeCode', 'collegeType', 'collegeTypeOther', 'universityName', 'startDate', 'endDate'],
   address: ['addressLine1', 'addressLine2', 'area', 'district', 'city', 'state', 'pincode', 'country'],
   contact: ['contactNumber', 'alternateContactNumber', 'email', 'website'],
   administration: ['principalName', 'principalEmail', 'principalContact'],
@@ -230,7 +230,14 @@ export default function AddCollege() {
       // Backend logo URLs need an authorization header, which an <img> element
       // cannot send. They are fetched below and displayed as a blob URL.
       const resolvedLogo = logoUrl && !isBackendCollegeLogo(logoUrl) ? logoUrl : ''
-      const loadedValues = { ...initialValues, collegeName: record.name ?? record.collegeName ?? record.CollegeName ?? '', collegeCode: record.code ?? record.collegeCode ?? record.CollegeCode ?? '', collegeType: rawType && !isKnownType ? 'Other' : rawType, collegeTypeOther: rawType && !isKnownType ? rawType : '', universityName: record.university ?? record.universityName ?? record.UniversityName ?? '', addressLine1: record.addressLine1 ?? addressRecord.addressLine1 ?? addressParts[0] ?? '', addressLine2: record.addressLine2 ?? addressRecord.addressLine2 ?? addressParts.slice(1).join(', '), area: record.area ?? addressRecord.area ?? extended.area ?? '', district: record.district ?? addressRecord.district ?? extended.district ?? '', city: record.city ?? addressRecord.city ?? record.City ?? '', state: record.state ?? addressRecord.state ?? record.State ?? '', pincode: String(record.pincode ?? addressRecord.pincode ?? record.Pincode ?? ''), country: record.country ?? addressRecord.country ?? 'India', contactNumber: String(record.contact ?? record.contactNumber ?? record.phoneNumber ?? record.mobile ?? record.phone ?? contactRecord.contactNumber ?? contactRecord.phoneNumber ?? contactRecord.mobile ?? contactRecord.phone ?? record.Contact ?? ''), alternateContactNumber: String(record.alternateContact ?? record.alternateContactNumber ?? record.alternatePhoneNumber ?? contactRecord.alternateContactNumber ?? extended.alternateContactNumber ?? ''), email: record.email ?? record.collegeEmail ?? contactRecord.email ?? record.Email ?? '', website: record.website ?? record.Website ?? contactRecord.website ?? contactRecord.Website ?? '', principalName: record.principal ?? record.principalName ?? principalRecord.principalName ?? record.PrincipalName ?? '', principalEmail: record.principalEmail ?? principalRecord.principalEmail ?? extended.principalEmail ?? '', principalContact: String(record.principalContact ?? record.principalPhone ?? principalRecord.principalContact ?? extended.principalContact ?? ''), accreditationBody: record.accreditationBody ?? accreditationRecord.body ?? accreditationRecord.accreditationBody ?? extended.accreditationBody ?? '', accreditationStatus: record.accreditationStatus ?? accreditationRecord.status ?? '', accreditationGrade: record.accreditationGrade ?? accreditationRecord.grade ?? extended.accreditationGrade ?? '', accreditationNumber: record.accreditationNumber ?? accreditationRecord.number ?? extended.accreditationNumber ?? '', validFrom: dateInputValue(record.validFrom ?? record.accreditationValidFrom ?? accreditationRecord.validFrom ?? extended.validFrom), validUntil: dateInputValue(record.validUntil ?? record.accreditationValidUntil ?? accreditationRecord.validUntil ?? extended.validUntil), logo: resolvedLogo, logoName: record.logoName ?? extended.logoName ?? '' }
+      const cachedDates = readCachedCollegeDates(editId) ||
+        (record.code ? readCachedCollegeDates(record.code) : null) ||
+        (record.collegeCode ? readCachedCollegeDates(record.collegeCode) : null) ||
+        (record.name ? readCachedCollegeDates(record.name) : null) ||
+        (record.collegeName ? readCachedCollegeDates(record.collegeName) : null) || {}
+      const loadedStartDate = dateInputValue(record.startDate ?? record.StartDate ?? record.start_date ?? extended.startDate ?? cachedDates?.startDate)
+      const loadedEndDate = dateInputValue(record.endDate ?? record.EndDate ?? record.end_date ?? extended.endDate ?? cachedDates?.endDate)
+      const loadedValues = { ...initialValues, collegeName: record.name ?? record.collegeName ?? record.CollegeName ?? '', collegeCode: record.code ?? record.collegeCode ?? record.CollegeCode ?? '', collegeType: rawType && !isKnownType ? 'Other' : rawType, collegeTypeOther: rawType && !isKnownType ? rawType : '', universityName: record.university ?? record.universityName ?? record.UniversityName ?? '', startDate: loadedStartDate, endDate: loadedEndDate, addressLine1: record.addressLine1 ?? addressRecord.addressLine1 ?? addressParts[0] ?? '', addressLine2: record.addressLine2 ?? addressRecord.addressLine2 ?? addressParts.slice(1).join(', '), area: record.area ?? addressRecord.area ?? extended.area ?? '', district: record.district ?? addressRecord.district ?? extended.district ?? '', city: record.city ?? addressRecord.city ?? record.City ?? '', state: record.state ?? addressRecord.state ?? record.State ?? '', pincode: String(record.pincode ?? addressRecord.pincode ?? record.Pincode ?? ''), country: record.country ?? addressRecord.country ?? 'India', contactNumber: String(record.contact ?? record.contactNumber ?? record.phoneNumber ?? record.mobile ?? record.phone ?? contactRecord.contactNumber ?? contactRecord.phoneNumber ?? contactRecord.mobile ?? contactRecord.phone ?? record.Contact ?? ''), alternateContactNumber: String(record.alternateContact ?? record.alternateContactNumber ?? record.alternatePhoneNumber ?? contactRecord.alternateContactNumber ?? extended.alternateContactNumber ?? ''), email: record.email ?? record.collegeEmail ?? contactRecord.email ?? record.Email ?? '', website: record.website ?? record.Website ?? contactRecord.website ?? contactRecord.Website ?? '', principalName: record.principal ?? record.principalName ?? principalRecord.principalName ?? record.PrincipalName ?? '', principalEmail: record.principalEmail ?? principalRecord.principalEmail ?? extended.principalEmail ?? '', principalContact: String(record.principalContact ?? record.principalPhone ?? principalRecord.principalContact ?? extended.principalContact ?? ''), accreditationBody: record.accreditationBody ?? accreditationRecord.body ?? accreditationRecord.accreditationBody ?? extended.accreditationBody ?? '', accreditationStatus: record.accreditationStatus ?? accreditationRecord.status ?? '', accreditationGrade: record.accreditationGrade ?? accreditationRecord.grade ?? extended.accreditationGrade ?? '', accreditationNumber: record.accreditationNumber ?? accreditationRecord.number ?? extended.accreditationNumber ?? '', validFrom: dateInputValue(record.validFrom ?? record.accreditationValidFrom ?? accreditationRecord.validFrom ?? extended.validFrom), validUntil: dateInputValue(record.validUntil ?? record.accreditationValidUntil ?? accreditationRecord.validUntil ?? extended.validUntil), logo: resolvedLogo, logoName: record.logoName ?? extended.logoName ?? '' }
       setValues(loadedValues)
       originalEditValues.current = loadedValues
       if (logoUrl && isBackendCollegeLogo(logoUrl)) {
@@ -427,6 +434,8 @@ export default function AddCollege() {
         accreditation: [values.accreditationBody, values.accreditationGrade, values.accreditationNumber].filter(Boolean).join(' · '),
         accreditationStatus: values.accreditationStatus, accreditationBody: values.accreditationBody.trim(),
         accreditationGrade: values.accreditationGrade.trim(), accreditationNumber: values.accreditationNumber.trim(),
+        startDate: values.startDate ? values.startDate.trim() : '',
+        endDate: values.endDate ? values.endDate.trim() : '',
         ...(website ? { Website: website } : {}),
         ...(values.alternateContactNumber ? { alternateContactNumber: values.alternateContactNumber } : {}),
         ...(values.principalEmail.trim() ? { principalEmail: values.principalEmail.trim() } : {}),
@@ -442,6 +451,11 @@ export default function AddCollege() {
         setPendingLogoCollegeId(collegeId)
       } else if (editId) {
         await updateCollege(editId, college)
+      }
+      if (values.startDate || values.endDate) {
+        cacheCollegeDates(collegeId, { startDate: values.startDate, endDate: values.endDate }, [values.collegeCode, values.collegeName, college?.code, college?.name])
+      } else if (editId) {
+        cacheCollegeDates(collegeId, { startDate: '', endDate: '' }, [values.collegeCode, values.collegeName])
       }
       if (values.logo) {
         if (logoFile) {

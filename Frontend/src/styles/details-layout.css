@@ -2,46 +2,72 @@
 .details-status-badge {
   display: inline-flex;
   align-items: center;
-  min-height: 23px;
-  padding: 3px 9px;
+  gap: 6px;
+  height: 24px;
+  padding: 0 9px;
   border-radius: 999px;
-  color: #756FB2;
-  background: #EDEBF6;
-  font-size: .68rem;
-  font-weight: 800;
+  color: #15803d;
+  background: #dcfce7;
+  border: 1px solid #86efac;
+  font-size: 0.72rem;
+  font-weight: 750;
   line-height: 1;
-  text-transform: uppercase;
+  text-transform: capitalize;
+  white-space: nowrap;
+}
+
+.details-status-badge::before {
+  content: '';
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+  flex-shrink: 0;
 }
 
 .details-status-badge.inactive,
 .details-status-badge.ineligible,
-.details-status-badge.rejected {
-  color: #a33a2b;
-  background: #fde8e5;
+.details-status-badge.rejected,
+.details-status-badge.failed,
+.details-status-badge.unavailable {
+  color: #b91c1c;
+  background: #fee2e2;
+  border-color: #fca5a5;
 }
 
+.details-status-badge.warning,
 .details-status-badge.upcoming,
-.details-status-badge.pending {
-  color: #9a5b00;
-  background: #EDEBF6;
+.details-status-badge.pending,
+.details-status-badge.hold {
+  color: #b45309;
+  background: #fef3c7;
+  border-color: #fcd34d;
 }
 
 :root[data-theme="dark"] .details-status-badge {
-  color: #D9D6FF;
-  background: rgba(157, 153, 205, .22);
+  color: #86efac;
+  background: rgba(34, 197, 94, 0.15);
+  border-color: rgba(34, 197, 94, 0.3);
 }
 
 :root[data-theme="dark"] .details-status-badge.inactive,
 :root[data-theme="dark"] .details-status-badge.ineligible,
-:root[data-theme="dark"] .details-status-badge.rejected {
-  color: #ffaaa0;
-  background: #482622;
+:root[data-theme="dark"] .details-status-badge.rejected,
+:root[data-theme="dark"] .details-status-badge.failed,
+:root[data-theme="dark"] .details-status-badge.unavailable {
+  color: #fca5a5;
+  background: rgba(239, 68, 68, 0.15);
+  border-color: rgba(239, 68, 68, 0.3);
 }
 
+:root[data-theme="dark"] .details-status-badge.warning,
 :root[data-theme="dark"] .details-status-badge.upcoming,
-:root[data-theme="dark"] .details-status-badge.pending {
-  color: #efbd6f;
-  background: #3a2c18;
+:root[data-theme="dark"] .details-status-badge.pending,
+:root[data-theme="dark"] .details-status-badge.hold {
+  color: #fcd34d;
+  background: rgba(245, 158, 11, 0.15);
+  border-color: rgba(245, 158, 11, 0.3);
 }
 
 /* All details and profile view layouts are cleanly managed by view-cards.css */

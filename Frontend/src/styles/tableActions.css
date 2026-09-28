@@ -162,22 +162,39 @@
   color: #554F75 !important;
 }
 
-/* 2. EDIT ACTION (Pencil Icon -> Subtle Lavender / Purple) */
+/* 2. EDIT ACTION (Pencil Icon -> Lavender Theme) */
 .action-edit,
 .cm-edit-action,
 .table-action-btn.action-edit,
-.table-actions-group > :is(a, button).action-edit {
+.table-actions-group > :is(a, button).action-edit,
+:is(.table-actions-group, .erp-row-actions, .cm-actions, .course-actions, .branch-actions, .semester-row-actions, .section-actions, .rooms-row-actions, .sm-row-actions, .sa-icon-actions, .table-actions-cell) > :is(a, button):is(.action-edit, .cm-edit-action, [title*="Edit"], [aria-label*="Edit"]) {
   color: #756FB2 !important;
   background: #EDEBF6 !important;
   border-color: #DDD8F3 !important;
 }
+
+.action-edit svg,
+.cm-edit-action svg,
+.table-action-btn.action-edit svg,
+.table-actions-group > :is(a, button).action-edit svg,
+:is(.table-actions-group, .erp-row-actions, .cm-actions, .course-actions, .branch-actions, .semester-row-actions, .section-actions, .rooms-row-actions, .sm-row-actions, .sa-icon-actions, .table-actions-cell) > :is(a, button):is(.action-edit, .cm-edit-action, [title*="Edit"], [aria-label*="Edit"]) svg {
+  color: #756FB2 !important;
+  stroke: #756FB2 !important;
+}
+
 .action-edit:hover:not(:disabled),
 .cm-edit-action:hover:not(:disabled),
 .table-action-btn.action-edit:hover:not(:disabled),
-.table-actions-group > :is(a, button).action-edit:hover:not(:disabled) {
+.table-actions-group > :is(a, button).action-edit:hover:not(:disabled),
+:is(.table-actions-group, .erp-row-actions, .cm-actions, .course-actions, .branch-actions, .semester-row-actions, .section-actions, .rooms-row-actions, .sm-row-actions, .sa-icon-actions, .table-actions-cell) > :is(a, button):is(.action-edit, .cm-edit-action, [title*="Edit"], [aria-label*="Edit"]):hover:not(:disabled) {
   background: #DDD8F3 !important;
   border-color: #756FB2 !important;
   color: #554F75 !important;
+}
+
+:is(.table-actions-group, .erp-row-actions, .cm-actions, .course-actions, .branch-actions, .semester-row-actions, .section-actions, .rooms-row-actions, .sm-row-actions, .sa-icon-actions, .table-actions-cell) > :is(a, button):is(.action-edit, .cm-edit-action, [title*="Edit"], [aria-label*="Edit"]):hover:not(:disabled) svg {
+  color: #554F75 !important;
+  stroke: #554F75 !important;
 }
 
 /* 3. ASSIGN ACTION (User Plus Icon -> Subtle Amber / Warm Yellow) */

@@ -91,14 +91,16 @@
 
 .cm-info-val {
   min-width: 0;
+  max-width: 100%;
   margin: 0;
   color: var(--text-primary, #0F172A);
   font-size: 0.9rem;
   font-weight: 700;
   line-height: 1.4;
   text-align: left;
-  overflow-wrap: anywhere;
-  word-break: break-word;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
   display: block;
 }
 

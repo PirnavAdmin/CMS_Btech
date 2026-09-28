@@ -145,20 +145,18 @@ export default function FacultyLeaveManagement() {
       ['Leave history', () => facultyLeaveApi.getHistory(), rows => setHistoryRequests(rows.map(normalizeLeaveRequest))],
       ['Leave balances', () => facultyLeaveApi.getBalances(), setBalances],
     ]
-    const errors = []
-    await Promise.allSettled(resources.map(async ([label, fetchRows, saveRows]) => {
+    let hasError = false
+    await Promise.allSettled(resources.map(async ([, fetchRows, saveRows]) => {
       try {
         const rows = await fetchRows()
         if (version === reloadVersion.current) saveRows(rows)
-      } catch (error) {
-        errors.push(`${label}: ${error.message || 'Unable to load'}`)
+      } catch {
+        hasError = true
       }
     }))
     if (version === reloadVersion.current) {
-      if (errors.length >= resources.length) {
-        setLoadError('Unable to connect to backend server. Please verify the server is running.')
-      } else if (errors.length > 0) {
-        setLoadError(errors.join(' | '))
+      if (hasError) {
+        setLoadError('Unable to load leave records. Please check your connection or try again.')
       }
       setLoading(false)
     }

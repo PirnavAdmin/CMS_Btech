@@ -13,7 +13,6 @@ import {
   FiChevronLeft,
   FiChevronRight,
   FiEdit2,
-  FiEye,
   FiFileText,
   FiFilter,
   FiRefreshCw,
@@ -1020,7 +1019,7 @@ export default function StudentProfile() {
                     return (
                       <tr
                         key={student.id}
-                        onClick={() => openProfile(student)}
+                        
                       >
                         <td>
                           <div className="sp-student">
@@ -1032,9 +1031,9 @@ export default function StudentProfile() {
                               )}
                             </i>
                             <div className="table-cell-group" style={{ minWidth: 0 }}>
-                              <strong className="table-cell-truncate" title={studentFullName(student) || "Unnamed student"}>
+                              <button type="button" className="student-name-link table-cell-truncate" title={studentFullName(student) || "Unnamed student"} aria-label={`View profile for ${studentFullName(student) || "Unnamed student"}`} onClick={() => openProfile(student)}>
                                 {studentFullName(student) || "Unnamed student"}
-                              </strong>
+                              </button>
                               <small className="table-cell-truncate" title={`Admission No: ${formatDisplay(app.admissionNumber)}`}>
                                 Admission No: {formatDisplay(app.admissionNumber)}
                               </small>
@@ -1064,18 +1063,6 @@ export default function StudentProfile() {
                         </td>
                         <td className="table-center">
                           <div className="table-actions-cell table-actions-group">
-                            <button
-                              type="button"
-                              className="table-action-btn action-view"
-                              aria-label="View student profile"
-                              title="View student profile"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                openProfile(student);
-                              }}
-                            >
-                              <FiEye aria-hidden="true" />
-                            </button>
                             {canEdit && (
                               <button
                                 type="button"

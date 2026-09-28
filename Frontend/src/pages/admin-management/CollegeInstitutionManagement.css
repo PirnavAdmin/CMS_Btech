@@ -786,6 +786,12 @@
   text-transform: uppercase !important;
 }
 
+.cm-status-badge.inactive,
+.cm-status-badge:is(.inactive, .rejected, .ineligible, .deactive, .archived, [class*="inactive"]) {
+  color: #dc2626 !important;
+  background: #FFFFFF !important;
+}
+
 .cm-profile-title {
   margin: 0 !important;
   font-size: 1.45rem !important;
@@ -890,8 +896,10 @@
   font-size: 0.9rem !important;
   font-weight: 700 !important;
   line-height: 1.4 !important;
-  overflow-wrap: anywhere !important;
-  word-break: break-word !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  max-width: 100% !important;
   margin: 0 !important;
   display: block !important;
   text-align: left !important;
@@ -1189,18 +1197,18 @@
 }
 
 /* Keep list filters grouped immediately beside the search field. */
-.college-management .cm-toolbar{display:flex!important;justify-content:flex-start!important;gap:12px!important}
-.college-management .cm-toolbar .cm-search{width:420px!important;max-width:420px!important;flex:0 1 420px!important}
-.college-management .cm-toolbar select{width:190px!important;min-width:190px!important;flex:0 0 190px!important}
+.college-management :is(.cm-toolbar, .course-toolbar) { display: flex !important; flex-wrap: wrap !important; align-items: center !important; justify-content: flex-start !important; gap: 12px !important; }
+.college-management :is(.cm-toolbar, .course-toolbar) :is(.cm-search, .course-search) { width: 420px !important; max-width: 420px !important; flex: 0 1 420px !important; }
+.college-management :is(.cm-toolbar, .course-toolbar) select { width: 220px !important; min-width: 180px !important; max-width: 260px !important; flex: 0 1 220px !important; }
 .college-management .filter-disclosure,
 .college-management .filter-disclosure__bar,
 .college-management .filter-disclosure__content { background: var(--surface, #fff); }
-.college-management .filter-disclosure .cm-toolbar {
+.college-management .filter-disclosure :is(.cm-toolbar, .course-toolbar) {
   background: transparent !important;
 }
-:root[data-theme="light"] .college-management .cm-toolbar select,
-:root[data-theme="light"] .college-management .cm-toolbar select option { color: #173b5c; background: #fff; }
-@media(max-width:760px){.college-management .cm-toolbar{flex-direction:column!important}.college-management .cm-toolbar .cm-search,.college-management .cm-toolbar select{width:100%!important;max-width:none!important;flex:auto!important}}
+:root[data-theme="light"] .college-management :is(.cm-toolbar, .course-toolbar) select,
+:root[data-theme="light"] .college-management :is(.cm-toolbar, .course-toolbar) select option { color: #173b5c; background: #fff; }
+@media(max-width:760px){.college-management :is(.cm-toolbar, .course-toolbar) { flex-direction: column !important; align-items: stretch !important; } .college-management :is(.cm-toolbar, .course-toolbar) :is(.cm-search, .course-search), .college-management :is(.cm-toolbar, .course-toolbar) select { width: 100% !important; max-width: none !important; flex: auto !important; }}
 @media (max-width: 520px) {
   .cm-info-rows { grid-template-columns: 1fr !important; }
 }

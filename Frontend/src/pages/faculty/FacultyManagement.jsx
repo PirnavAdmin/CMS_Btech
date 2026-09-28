@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom'
-import { FiAlertCircle, FiArrowLeft, FiArrowRight, FiBriefcase, FiCheckCircle, FiChevronDown, FiChevronUp, FiEdit2, FiEye, FiFilter, FiPlus, FiSearch, FiUser, FiUsers, FiClock, FiBookOpen, FiMapPin, FiX, FiTrash2, FiFileText } from 'react-icons/fi'
+import { FiAlertCircle, FiArrowLeft, FiArrowRight, FiBriefcase, FiCheckCircle, FiChevronDown, FiChevronUp, FiEdit2, FiEye, FiFilter, FiPlus, FiSearch, FiUser, FiUsers, FiClock, FiBookOpen, FiMapPin, FiX, FiTrash2, FiFileText, FiShield, FiLock } from 'react-icons/fi'
 import DashboardLayout from '../../layouts/DashboardLayout'
 import ExportMenu from '../../components/ExportMenu'
 import FilterPanel from '../../components/FilterPanel'
@@ -12,7 +12,7 @@ import { academicYearApi, branchApi, courseApi, departmentApi, facultyMasterApi,
 import { attendancePayload, requiredNumber } from '../../services/facultyContracts'
 import { downloadServerExport } from '../../utils/exportUtils'
 import { getDefaultAcademicYear } from '../../utils/academicYearUtils'
-import facultyService, { normalizeFaculty, mergeFacultyData, clearFacultyLocalStorage, saveLocalAttendanceRecord } from '../../services/facultyService'
+import facultyService, { normalizeFaculty, mergeFacultyData, resolveFacultyPhoto, clearFacultyLocalStorage, saveLocalAttendanceRecord } from '../../services/facultyService'
 import subjectService from '../../services/subjectService'
 import './FacultyManagement.css'
 import './FacultyAttendance.css'
@@ -26,7 +26,42 @@ export const teachingDesignations = ['Professor', 'Associate Professor', 'Assist
 export const nonTeachingDesignations = ['Librarian', 'Assistant Librarian', 'Lab Assistant', 'Lab Technician', 'System Administrator', 'Network Administrator', 'Accountant', 'Administrative Officer', 'Office Assistant', 'Junior Assistant', 'Store Keeper', 'Technical Assistant', 'Clerk', 'Attender']
 const designations = [...teachingDesignations, ...nonTeachingDesignations]
 const employmentTypes = ['Permanent', 'Contract', 'Visiting', 'Guest']
-// employeeCategory is a UI-only value in the current API.  Always derive it
+
+export const getStoredDesignations = () => {
+  try {
+    const saved = localStorage.getItem('pirnav_erp_rbac_designations_clean_v1')
+    if (saved) {
+      const parsed = JSON.parse(saved)
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        return parsed
+      }
+    }
+  } catch { /* ignore */ }
+  return []
+}
+
+export const getDesignationOptions = (category) => {
+  const stored = getStoredDesignations()
+  const customTeaching = stored
+    .filter(d => d.status !== 'Inactive' && (d.category === 'Teaching' || d.category === 'Academic' || !d.category))
+    .map(d => d.title || d.name)
+    .filter(Boolean)
+  const customNonTeaching = stored
+    .filter(d => d.status !== 'Inactive' && (d.category === 'Non-Teaching' || d.category === 'Administrative' || d.category === 'Technical' || d.category === 'Other'))
+    .map(d => d.title || d.name)
+    .filter(Boolean)
+
+  if (category === 'Teaching') {
+    return [...new Set([...customTeaching, ...teachingDesignations])]
+  }
+  if (category === 'Non-Teaching') {
+    return [...new Set([...customNonTeaching, ...nonTeachingDesignations])]
+  }
+  const allStored = stored.filter(d => d.status !== 'Inactive').map(d => d.title || d.name).filter(Boolean)
+  return [...new Set([...allStored, ...teachingDesignations, ...nonTeachingDesignations])]
+}
+
+// employeeCategory is a UI-only value in the current API. Always derive it
 // from persisted data as well, so a non-teaching staff member never moves to
 // the teaching directory after the page reloads.
 const employeeCategoryOf = (row = {}) => {
@@ -34,9 +69,18 @@ const employeeCategoryOf = (row = {}) => {
   if (/non[-\s]?teaching/.test(raw) || raw === 'others' || raw === 'other') return 'Non-Teaching'
   if (raw === 'teaching') return 'Teaching'
   const designation = String(row.designation ?? row.Designation ?? row.designationName ?? row.DesignationName ?? row.role ?? '').trim().toLowerCase()
-  const isTeaching = teachingDesignations.some(value => value.toLowerCase() === designation)
+
+  const stored = getStoredDesignations()
+  const matchedStored = stored.find(d => (d.title || d.name || '').trim().toLowerCase() === designation)
+  if (matchedStored) {
+    const cat = matchedStored.category
+    if (cat === 'Teaching' || cat === 'Academic') return 'Teaching'
+    if (cat === 'Non-Teaching' || cat === 'Administrative' || cat === 'Technical') return 'Non-Teaching'
+  }
+
+  const isTeaching = getDesignationOptions('Teaching').some(value => value.toLowerCase() === designation)
   if (isTeaching) return 'Teaching'
-  const exactNonTeaching = nonTeachingDesignations.some(value => value.toLowerCase() === designation)
+  const exactNonTeaching = getDesignationOptions('Non-Teaching').some(value => value.toLowerCase() === designation)
   if (exactNonTeaching) return 'Non-Teaching'
   return /\b(librar|lab|system|network|account|administrat|office|junior assistant|store|technical assistant|clerk|attender|warden|security|driver|electrician|plumber|staff|non[-\s]?teaching)\b/i.test(designation)
     ? 'Non-Teaching'
@@ -431,7 +475,7 @@ const attendanceFilename = (prefix, period, department) => {
 }
 const sections = [
   { title: 'Personal Details', heading: 'Personal Information', icon: FiUser, description: 'Identity, photograph and primary contact information.', fields: [
-    ['collegeId', 'College Name', 'college', true], ['employeeId', 'Faculty ID', 'readonly'], ['fullName', 'Faculty Full Name', 'text', true],
+    ['employeeId', 'Faculty ID', 'readonly'], ['fullName', 'Faculty Full Name', 'text', true],
     ['gender', 'Gender', ['Male', 'Female', 'Other'], true], ['dob', 'Date of Birth', 'date', true],
     ['mobile', 'Mobile Number', 'tel', true], ['email', 'Email', 'email', true],
   ] },
@@ -463,9 +507,58 @@ const FACULTY_DOCUMENTS = [
 ]
 const experienceKeys = ['experience', 'teachingExperience', 'industryExperience']
 const years = value => value === '' || value == null ? '—' : (parseFloat(value) || 0) + ' Years'
+const isHexUUID = val => typeof val === 'string' && /^[0-9a-f]{32}$/i.test(val.trim())
 const normalize = (row = {}) => {
   const safeRow = row && typeof row === 'object' ? row : {}
-  return { ...Object.fromEntries(sections.flatMap(s => s.fields.map(([key]) => [key, '']))), employeeCategoryOther: safeRow.employeeCategoryOther || '', qualificationOther: safeRow.qualificationOther || '', employmentStatus: 'Working', documents: safeRow.documents || {}, photo: '', assignments: [], ...safeRow, employeeCategory: employeeCategoryOf(safeRow), employmentStatus: safeRow.employmentStatus || 'Working', documents: safeRow.documents || {}, assignments: Array.isArray(safeRow.assignments) ? safeRow.assignments : [], collegeName: safeRow.collegeName || '', experience: safeRow.experience == null ? '' : String(parseFloat(safeRow.experience) || 0) }
+  const rawDob = safeRow.dob || safeRow.dateOfBirth || safeRow.DateOfBirth || safeRow.DOB
+  const dob = rawDob && String(rawDob) !== 'undefined' ? String(rawDob).slice(0, 10) : ''
+  const rawJoining = safeRow.joiningDate || safeRow.dateOfJoining || safeRow.DateOfJoining || safeRow.JoiningDate
+  const joiningDate = rawJoining && String(rawJoining) !== 'undefined' ? String(rawJoining).slice(0, 10) : ''
+
+  const validEmployeeId = (!isHexUUID(safeRow.employeeId) && safeRow.employeeId) ||
+                          (!isHexUUID(safeRow.facultyCode) && safeRow.facultyCode) ||
+                          (!isHexUUID(safeRow.employeeCode) && safeRow.employeeCode) || ''
+
+  return {
+    ...Object.fromEntries(sections.flatMap(s => s.fields.map(([key]) => [key, '']))),
+    collegeId: safeRow.collegeId ?? safeRow.college_id ?? '1',
+    employeeCategoryOther: safeRow.employeeCategoryOther || safeRow.EmployeeCategoryOther || '',
+    qualificationOther: safeRow.qualificationOther || safeRow.QualificationOther || '',
+    employmentStatus: safeRow.employmentStatus || safeRow.statusName || (safeRow.status === 0 ? 'Inactive' : 'Working'),
+    documents: safeRow.documents || {},
+    assignments: Array.isArray(safeRow.assignments) ? safeRow.assignments : [],
+    ...safeRow,
+    photo: resolveFacultyPhoto(safeRow.photo || safeRow.profilePhotoUrl || safeRow.photoUrl || safeRow.profile_photo_url || safeRow.profilePhoto || safeRow.profile_photo || safeRow.avatar || safeRow.avatarUrl || safeRow.image || safeRow.imageUrl || safeRow.Photo || safeRow.PhotoUrl || safeRow.ProfilePhoto || ''),
+    profilePhotoUrl: resolveFacultyPhoto(safeRow.profilePhotoUrl || safeRow.photo || safeRow.photoUrl || safeRow.profile_photo_url || safeRow.profilePhoto || safeRow.profile_photo || safeRow.avatar || safeRow.avatarUrl || safeRow.image || safeRow.imageUrl || safeRow.Photo || safeRow.PhotoUrl || safeRow.ProfilePhoto || ''),
+    employeeId: validEmployeeId,
+    fullName: safeRow.fullName || safeRow.facultyName || safeRow.name || '',
+    departmentId: safeRow.departmentId || safeRow.deptId || safeRow.department_id || '',
+    department: safeRow.department || safeRow.departmentName || '',
+    designation: safeRow.designation || safeRow.title || '',
+    dob,
+    joiningDate,
+    mobile: safeRow.mobile || safeRow.phoneNumber || safeRow.phone || safeRow.mobileNumber || '',
+    email: safeRow.email || safeRow.officialEmail || safeRow.workEmail || '',
+    gender: safeRow.gender || safeRow.genderName || safeRow.sex || '',
+    qualification: safeRow.qualification || safeRow.highestQualification || '',
+    employeeCategory: employeeCategoryOf(safeRow),
+    experience: safeRow.experience == null ? (safeRow.experienceYears == null ? '' : String(parseFloat(safeRow.experienceYears) || 0)) : String(parseFloat(safeRow.experience) || 0),
+    teachingExperience: safeRow.teachingExperience == null ? '' : String(parseFloat(safeRow.teachingExperience) || 0),
+    industryExperience: safeRow.industryExperience == null ? '' : String(parseFloat(safeRow.industryExperience) || 0),
+    specialization: safeRow.specialization || '',
+    university: safeRow.university || safeRow.institution || '',
+    passingYear: safeRow.passingYear || safeRow.yearOfPassing || '',
+    address: safeRow.address || safeRow.permanentAddress || safeRow.currentAddress || '',
+    city: safeRow.city || safeRow.currentCity || '',
+    state: safeRow.state || safeRow.currentState || '',
+    pincode: safeRow.pincode || safeRow.pinCode || safeRow.zipCode || '',
+    alternateMobile: safeRow.alternateMobile || safeRow.altMobile || '',
+    personalEmail: safeRow.personalEmail || '',
+    emergencyName: safeRow.emergencyName || safeRow.emergencyContactName || '',
+    emergencyMobile: safeRow.emergencyMobile || safeRow.emergencyContactNumber || '',
+    relationship: safeRow.relationship || safeRow.emergencyContactRelation || '',
+    collegeName: safeRow.collegeName || '',
+  }
 }
 const clean = data => Object.fromEntries(Object.entries(data).map(([key, value]) => [key, typeof value === 'string' ? value.trim() : value]))
 const workload = row => {
@@ -489,10 +582,10 @@ function validateFaculty(data, rows) {
     if (data[key] && Array.isArray(type) && !type.includes(data[key])) errors[key] = 'Select a valid ' + label.toLowerCase() + '.'
   }))
   if (['Others', 'Other'].includes(data.employeeCategory) && !String(data.employeeCategoryOther || '').trim()) errors.employeeCategoryOther = 'Specify the employee category.'
-  if (!data.employeeId || rows.some(row => row.id !== data.id && String(row.collegeId ?? row.college_id ?? '') === String(data.collegeId ?? '') && (row.employeeId || row.facultyCode) === data.employeeId)) errors.employeeId = 'Faculty Code must be unique for this college.'
+  if (!data.employeeId) errors.employeeId = 'Faculty Code is required.'
   if (!data.fullName?.trim()) errors.fullName = 'Faculty full name is required.'
   else if (data.fullName.trim().length < 2 || !/^[\p{L}\p{M} .?'-]+$/u.test(data.fullName.trim())) errors.fullName = 'Enter a valid name using letters (at least 2 characters).'
-  for (const key of ['collegeId', 'departmentId']) if (!Number.isSafeInteger(Number(data[key])) || Number(data[key]) <= 0) errors[key] = 'Select a valid ' + (key === 'collegeId' ? 'college.' : 'department.')
+  if (data.departmentId && (!Number.isSafeInteger(Number(data.departmentId)) || Number(data.departmentId) <= 0)) errors.departmentId = 'Select a valid department.'
   for (const key of ['email', 'personalEmail']) if (data[key] && !/^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z]{2,})+$/.test(data[key].trim())) errors[key] = 'Enter a valid email address.'
   if (rows.some(row => row.id !== data.id && String(row.email || '').trim().toLowerCase() === data.email?.trim().toLowerCase())) errors.email = 'A faculty member with this email already exists.'
   for (const key of ['mobile', 'alternateMobile', 'emergencyMobile']) {
@@ -511,9 +604,22 @@ function validateFaculty(data, rows) {
 }
 
 function Avatar({ faculty, large = false }) {
-  const [failedPhoto, setFailedPhoto] = useState('')
-  const initials = (faculty.fullName || '').replace(/^(dr|prof|mr|mrs|ms)\.?\s+/i, '').split(/\s+/).filter(Boolean).map(part => part[0]).filter((_, i, all) => i === 0 || i === all.length - 1).join('').slice(0, 2) || 'FM'
-  return <span className={'fm-avatar ' + (large ? 'fm-avatar-large' : '')}>{faculty.photo && failedPhoto !== faculty.photo ? <img onError={() => setFailedPhoto(faculty.photo)} src={faculty.photo} alt={(faculty.fullName || 'Faculty') + ' profile'} /> : initials}</span>
+  if (!faculty) return <span className={'fm-avatar ' + (large ? 'fm-avatar-large' : '')}>FM</span>
+  const rawPhoto = faculty.photo || faculty.profilePhotoUrl || faculty.photoUrl || faculty.profile_photo_url || faculty.profilePhoto || faculty.profile_photo || faculty.avatar || faculty.avatarUrl || faculty.image || faculty.imageUrl || faculty.Photo || faculty.PhotoUrl || faculty.ProfilePhoto || ''
+  const photoSrc = resolveFacultyPhoto(rawPhoto)
+  const [failedSrc, setFailedSrc] = useState('')
+  const name = faculty.fullName || faculty.name || faculty.facultyName || ''
+  const initials = name.replace(/^(dr|prof|mr|mrs|ms)\.?\s+/i, '').split(/\s+/).filter(Boolean).map(part => part[0]).filter((_, i, all) => i === 0 || i === all.length - 1).join('').slice(0, 2).toUpperCase() || 'FM'
+
+  return (
+    <span className={'fm-avatar ' + (large ? 'fm-avatar-large' : '')}>
+      {photoSrc && failedSrc !== photoSrc ? (
+        <img onError={() => setFailedSrc(photoSrc)} src={photoSrc} alt={(name || 'Faculty') + ' profile'} />
+      ) : (
+        initials
+      )}
+    </span>
+  )
 }
 function EmptyState({ title, description, action, onAction }) {
   return <div className="fm-empty"><FiUsers aria-hidden="true" /><h3>{title}</h3>{description && <p>{description}</p>}{action && <button type="button" className="fm-button secondary" onClick={onAction}>{action}</button>}</div>
@@ -928,9 +1034,33 @@ function FacultyAttendanceScreen({ faculty, collegeOptions = [], departmentOptio
     try {
       const id = row.attendanceId
       const detail = (id && Number.isSafeInteger(Number(id)) && Number(id) > 0 && !String(id).startsWith('ATT-')) ? (await facultyService.getAttendanceById(Number(id)).then(r => normalizeAttendance([r])[0]).catch(() => row)) : row
-      const value = { ...row, ...detail, faculty: row.faculty || faculty.find(f => String(f.id) === String(row.facultyId)) || { fullName: 'Faculty Member', designation: 'Faculty' } }
+      const targetId = String(row.facultyId || row.faculty?.id || row.faculty?.facultyId || '')
+      const matchedFac = (faculty || []).find(f =>
+        (targetId && String(f.id) === targetId) ||
+        (targetId && String(f.facultyId) === targetId) ||
+        (f.employeeId && (row.employeeId === f.employeeId || row.facultyCode === f.employeeId || row.faculty?.employeeId === f.employeeId)) ||
+        (f.facultyCode && (row.facultyCode === f.facultyCode || row.employeeId === f.facultyCode || row.faculty?.facultyCode === f.facultyCode))
+      ) || row.faculty || { fullName: 'Faculty Member', designation: 'Faculty' }
+      const facultyObj = {
+        ...matchedFac,
+        ...(row.faculty || {}),
+        photo: resolveFacultyPhoto(matchedFac?.photo || matchedFac?.profilePhotoUrl || row.faculty?.photo || row.faculty?.profilePhotoUrl || ''),
+        profilePhotoUrl: resolveFacultyPhoto(matchedFac?.profilePhotoUrl || matchedFac?.photo || row.faculty?.profilePhotoUrl || row.faculty?.photo || ''),
+      }
+      const value = { ...row, ...detail, faculty: facultyObj }
       if (edit) setEditingRecord(value); else setSelected(value)
-    } catch (error) { if (edit) setEditingRecord({ ...row, faculty: row.faculty || faculty.find(f => String(f.id) === String(row.facultyId)) || { fullName: 'Faculty Member', designation: 'Faculty' } }); else setSelected({ ...row, faculty: row.faculty || faculty.find(f => String(f.id) === String(row.facultyId)) || { fullName: 'Faculty Member', designation: 'Faculty' } }) }
+    } catch (error) {
+      const targetId = String(row.facultyId || row.faculty?.id || row.faculty?.facultyId || '')
+      const matchedFac = (faculty || []).find(f => (targetId && String(f.id) === targetId) || (targetId && String(f.facultyId) === targetId)) || row.faculty || { fullName: 'Faculty Member', designation: 'Faculty' }
+      const facultyObj = {
+        ...matchedFac,
+        ...(row.faculty || {}),
+        photo: resolveFacultyPhoto(matchedFac?.photo || matchedFac?.profilePhotoUrl || row.faculty?.photo || row.faculty?.profilePhotoUrl || ''),
+        profilePhotoUrl: resolveFacultyPhoto(matchedFac?.profilePhotoUrl || matchedFac?.photo || row.faculty?.profilePhotoUrl || row.faculty?.photo || ''),
+      }
+      const value = { ...row, faculty: facultyObj }
+      if (edit) setEditingRecord(value); else setSelected(value)
+    }
   }
   const bulkMark = status => {
     const selectedRows = dailyRows.filter(row => selectedFacultyIds.includes(String(row.facultyId)))
@@ -1081,13 +1211,28 @@ function FacultyAttendanceScreen({ faculty, collegeOptions = [], departmentOptio
       {tab === 'daily' && <td><input type="checkbox" aria-label={'Select ' + row.faculty.fullName} checked={selectedFacultyIds.includes(String(row.facultyId))} onChange={event => setSelectedFacultyIds(current => event.target.checked ? [...new Set([...current, String(row.facultyId)])] : current.filter(id => id !== String(row.facultyId)))} /></td>}
       {showDate && <td>{displayDate(row.date)}</td>}
       <td className="fm-attendance-code-cell"><span className="fm-attendance-employee">{getFacultyCode(row.faculty)}</span></td>
-      <td className="fm-attendance-identity-cell"><div className="fm-attendance-identity"><Avatar faculty={row.faculty} /><div><strong>{row.faculty.fullName}</strong><small>{row.faculty.designation || 'Faculty'}</small></div></div></td>
+      <td className="fm-attendance-identity-cell">
+        <div className="fm-attendance-identity">
+          <Avatar faculty={row.faculty} />
+          <div>
+            <button
+              type="button"
+              className="student-name-link"
+              title={'View attendance for ' + row.faculty.fullName}
+              onClick={() => openAttendance(row)}
+            >
+              {row.faculty.fullName}
+            </button>
+            <small>{row.faculty.designation || 'Faculty'}</small>
+          </div>
+        </div>
+      </td>
       <td className="fm-department-cell">{getFacultyDept(row.faculty)}</td><td>{attendanceBadge(row.status)}</td><td>{row.checkIn}</td><td>{row.checkOut}</td><td>{row.hours}</td>
       {showRemarks && <td className="fm-remarks-cell"><span className="fm-attendance-remarks" title={row.remarks}>{row.remarks}</span></td>}
-      {showAction && <td className="fm-action-cell"><div className="fm-table-actions"><button className="fm-icon-button" type="button" title="View Attendance" aria-label={'View attendance record for ' + row.faculty.fullName + ' on ' + row.date} onClick={() => openAttendance(row)}><FiEye /></button><button className="fm-icon-button" type="button" title="Edit attendance" aria-label={'Edit attendance for ' + row.faculty.fullName + ' on ' + row.date} onClick={() => openAttendance(row, true)}><FiEdit2 /></button></div></td>}
+      {showAction && <td className="fm-action-cell"><div className="fm-table-actions"><button className="fm-icon-button" type="button" title="Edit attendance" aria-label={'Edit attendance for ' + row.faculty.fullName + ' on ' + row.date} onClick={() => openAttendance(row, true)}><FiEdit2 /></button></div></td>}
     </tr>)}</tbody>
   </table></div>
-  const aggregatedTable = reportType === 'daily' ? <div className="fm-attendance-table fm-attendance-aggregate-table"><table><thead><tr>{['Faculty Code', 'Faculty', 'Department', 'Days With Data', 'Present', 'Absent', 'Late', 'Half Day', 'On Leave', 'Total Hours', 'Attendance %'].map(label => <th scope="col" key={label}>{label}</th>)}</tr></thead><tbody>{visibleReportRows.map(row => <tr key={row.facultyId}><td><span className="fm-attendance-employee">{getFacultyCode(row.faculty)}</span></td><td><strong>{row.faculty.fullName}</strong></td><td>{getFacultyDept(row.faculty)}</td><td>{row.total}</td>{['Present', 'Absent', 'Late', 'Half Day', 'On Leave'].map(status => <td key={status}>{row[status]}</td>)}<td>{row.hours}</td><td>{row.percentage}</td></tr>)}</tbody></table></div> : <><div className="fm-report-legend" aria-label="Attendance status legend">{Object.entries(statusMeta).map(([status, [code, tone]]) => <span key={status}>{statusCell({ status, date: period.from, checkIn: '—', checkOut: '—', hours: '—' })}<small>{attendanceStatusLabel(status)}</small></span>)}</div><div className="fm-attendance-table fm-attendance-matrix"><table><colgroup><col style={{ width: '130px', minWidth: '130px' }} /><col style={{ width: '220px', minWidth: '220px' }} />{matrixDates.map(date => <col key={date} style={{ width: '42px', minWidth: '42px' }} />)}{['P', 'A', 'L', 'HD', 'OL', 'LOP'].map(label => <col key={label} style={{ width: '40px', minWidth: '40px' }} />)}<col style={{ width: '55px', minWidth: '55px' }} /></colgroup><thead><tr><th>Faculty Code</th><th>Faculty</th>{matrixDates.map(date => <th key={date}><span>{new Date(date + 'T00:00:00').toLocaleDateString('en-GB', { weekday: 'short' }).toUpperCase()}</span><b>{new Date(date + 'T00:00:00').toLocaleDateString('en-GB', { day: '2-digit', month: 'short' }).toUpperCase()}</b></th>)}{['P', 'A', 'L', 'HD', 'OL', 'LOP', '%'].map(label => <th key={label}>{label}</th>)}</tr></thead><tbody>{visibleMatrixRows.map(({ member, cells, totals }) => <tr key={member.id}><td>{getFacultyCode(member)}</td><td className="fm-matrix-faculty"><strong>{member.fullName}</strong><small>{getFacultyDept(member)}</small></td>{cells.map(cell => <td key={cell.date}>{statusCell(cell)}</td>)}{[['Present', 'present'], ['Absent', 'absent'], ['Late', 'late'], ['Half Day', 'half-day'], ['On Leave', 'leave'], ['LOP', 'lop']].map(([status, tone]) => <td className={`fm-report-total fm-report-total--${tone}`} key={status}>{totals[status]}</td>)}<td className="fm-report-total fm-report-total--percentage">{totals.percentage}</td></tr>)}</tbody></table></div></>
+  const aggregatedTable = reportType === 'daily' ? <div className="fm-attendance-table fm-attendance-aggregate-table"><table><thead><tr>{['Faculty Code', 'Faculty', 'Department', 'Days With Data', 'Present', 'Absent', 'Late', 'Half Day', 'On Leave', 'Total Hours', 'Attendance %'].map(label => <th scope="col" key={label}>{label}</th>)}</tr></thead><tbody>{visibleReportRows.map(row => <tr key={row.facultyId}><td><span className="fm-attendance-employee">{getFacultyCode(row.faculty)}</span></td><td><button type="button" className="student-name-link" title={row.faculty.fullName} onClick={() => openAttendance(row)}>{row.faculty.fullName}</button></td><td>{getFacultyDept(row.faculty)}</td><td>{row.total}</td>{['Present', 'Absent', 'Late', 'Half Day', 'On Leave'].map(status => <td key={status}>{row[status]}</td>)}<td>{row.hours}</td><td>{row.percentage}</td></tr>)}</tbody></table></div> : <><div className="fm-report-legend" aria-label="Attendance status legend">{Object.entries(statusMeta).map(([status, [code, tone]]) => <span key={status}>{statusCell({ status, date: period.from, checkIn: '—', checkOut: '—', hours: '—' })}<small>{attendanceStatusLabel(status)}</small></span>)}</div><div className="fm-attendance-table fm-attendance-matrix"><table><colgroup><col style={{ width: '130px', minWidth: '130px' }} /><col style={{ width: '220px', minWidth: '220px' }} />{matrixDates.map(date => <col key={date} style={{ width: '42px', minWidth: '42px' }} />)}{['P', 'A', 'L', 'HD', 'OL', 'LOP'].map(label => <col key={label} style={{ width: '40px', minWidth: '40px' }} />)}<col style={{ width: '55px', minWidth: '55px' }} /></colgroup><thead><tr><th>Faculty Code</th><th>Faculty</th>{matrixDates.map(date => <th key={date}><span>{new Date(date + 'T00:00:00').toLocaleDateString('en-GB', { weekday: 'short' }).toUpperCase()}</span><b>{new Date(date + 'T00:00:00').toLocaleDateString('en-GB', { day: '2-digit', month: 'short' }).toUpperCase()}</b></th>)}{['P', 'A', 'L', 'HD', 'OL', 'LOP', '%'].map(label => <th key={label}>{label}</th>)}</tr></thead><tbody>{visibleMatrixRows.map(({ member, cells, totals }) => <tr key={member.id}><td>{getFacultyCode(member)}</td><td className="fm-matrix-faculty"><button type="button" className="student-name-link" title={member.fullName} onClick={() => openAttendance({ faculty: member, facultyId: member.id, date: matrixDates[0] || today() })}>{member.fullName}</button><small>{getFacultyDept(member)}</small></td>{cells.map(cell => <td key={cell.date}>{statusCell(cell)}</td>)}{[['Present', 'present'], ['Absent', 'absent'], ['Late', 'late'], ['Half Day', 'half-day'], ['On Leave', 'leave'], ['LOP', 'lop']].map(([status, tone]) => <td className={`fm-report-total fm-report-total--${tone}`} key={status}>{totals[status]}</td>)}<td className="fm-report-total fm-report-total--percentage">{totals.percentage}</td></tr>)}</tbody></table></div></>
   const noSource = tab !== 'daily' && !attendanceRecords.length
   const empty = <EmptyState title={noSource ? 'No attendance records are available yet.' : 'No attendance records match the selected filters.'} description={noSource ? 'Daily Attendance shows missing records as Not Marked; these are not saved historical records.' : undefined} action={noSource ? 'Go to Daily Attendance' : 'Clear Filters'} onAction={noSource ? () => setTab('daily') : clearFilters} />
   return (
@@ -1174,33 +1319,71 @@ function FacultyAttendanceScreen({ faculty, collegeOptions = [], departmentOptio
       </section>
 
       {tab !== 'reports' && selected && (
-        <div className="fm-modal-backdrop">
-          <section className="fm-attendance-detail" role="dialog" aria-modal="true" aria-label="Attendance details">
+        <div className="fm-modal-backdrop" role="presentation" onClick={() => setSelected(null)}>
+          <section className="fm-attendance-detail" role="dialog" aria-modal="true" aria-label="Attendance details" onClick={e => e.stopPropagation()}>
             <div className="fm-attendance-detail-header">
-              <div><p className="fm-eyebrow">ATTENDANCE DETAILS</p></div>
+              <div>
+                <p className="fm-eyebrow">ATTENDANCE DETAILS</p>
+                <h2 style={{ margin: 0, fontSize: '18px', fontWeight: 700, color: 'var(--text-primary)' }}>Session Attendance Record</h2>
+              </div>
               <button className="fm-detail-close" type="button" aria-label="Close attendance details" onClick={() => setSelected(null)}><FiX /></button>
             </div>
 
-            <div className="fm-attendance-identity-row">
-              <span className="fm-attendance-detail-avatar">{(selected.faculty.fullName || 'FM').split(' ').filter(Boolean).slice(0, 2).map(part => part[0]).join('').toUpperCase().slice(0, 2) || 'FM'}</span>
-              <div className="fm-attendance-detail-identity">
-                <h2>{selected.faculty.fullName}</h2>
-                <p>{getFacultyCode(selected.faculty)}</p>
-                <p>{selected.faculty.designation || 'Faculty'}</p>
-                <p>{getFacultyDept(selected.faculty)}</p>
+            <div className="cm-profile-banner fm-attendance-identity-hero">
+              <div className="cm-profile-avatar-wrap">
+                <Avatar
+                  faculty={{
+                    ...(faculty.find(f => String(f.id) === String(selected.facultyId || selected.faculty?.id || selected.faculty?.facultyId) || (f.employeeId && (selected.employeeId === f.employeeId || selected.faculty?.employeeId === f.employeeId))) || {}),
+                    ...(selected.faculty || {}),
+                    photo: resolveFacultyPhoto(selected.faculty?.photo || selected.faculty?.profilePhotoUrl || selected.photo || (faculty.find(f => String(f.id) === String(selected.facultyId || selected.faculty?.id))?.photo) || '')
+                  }}
+                  large
+                />
+              </div>
+              <div className="cm-profile-header-info">
+                <div className="cm-profile-badges">
+                  <span className="cm-badge cm-badge-code">{getFacultyCode(selected.faculty)}</span>
+                  {selected.faculty.employeeCategory && <span className="cm-badge cm-badge-type">{selected.faculty.employeeCategory}</span>}
+                </div>
+                <h2 className="cm-profile-title">{selected.faculty.fullName}</h2>
+                <p className="cm-profile-subtitle">
+                  {[selected.faculty.designation, getFacultyDept(selected.faculty)].filter(Boolean).join(' · ')}
+                </p>
               </div>
               <div className="fm-attendance-detail-status">{attendanceBadge(selected.status)}</div>
             </div>
 
             <div className="fm-attendance-summary-block">
-              <h3>Attendance Summary</h3>
-              <div className="fm-attendance-summary-grid">
-                <div><span>Date</span><strong>{displayDate(selected.date)}</strong></div>
-                <div><span>Check In</span><strong>{['Present', 'Late', 'Half Day'].includes(selected.status) ? formatTimeView(selected.checkIn) : '—'}</strong></div>
-                <div><span>Check Out</span><strong>{['Present', 'Late', 'Half Day'].includes(selected.status) ? formatTimeView(selected.checkOut) : '—'}</strong></div>
-                <div><span>Working Hours</span><strong>{['Present', 'Late', 'Half Day'].includes(selected.status) ? (selected.hours || '—') : '—'}</strong></div>
-                <div className="fm-attendance-summary-wide"><span>Remarks</span><strong>{normalizeViewRemark(selected.remarks)}</strong></div>
+              <div className="preview-section-group">
+                <span className="preview-section-title">Attendance Summary</span>
+                <div className="preview-kv-grid" style={{ gridTemplateColumns: 'repeat(4, minmax(0, 1fr))' }}>
+                  <div className="preview-kv-item">
+                    <span className="kv-label">Date</span>
+                    <strong className="kv-val">{displayDate(selected.date)}</strong>
+                  </div>
+                  <div className="preview-kv-item">
+                    <span className="kv-label">Check In</span>
+                    <strong className="kv-val">{['Present', 'Late', 'Half Day'].includes(selected.status) ? formatTimeView(selected.checkIn) : '—'}</strong>
+                  </div>
+                  <div className="preview-kv-item">
+                    <span className="kv-label">Check Out</span>
+                    <strong className="kv-val">{['Present', 'Late', 'Half Day'].includes(selected.status) ? formatTimeView(selected.checkOut) : '—'}</strong>
+                  </div>
+                  <div className="preview-kv-item">
+                    <span className="kv-label">Working Hours</span>
+                    <strong className="kv-val">{['Present', 'Late', 'Half Day'].includes(selected.status) ? (selected.hours || '—') : '—'}</strong>
+                  </div>
+                </div>
               </div>
+
+              {normalizeViewRemark(selected.remarks) !== '—' && (
+                <div className="preview-section-group" style={{ marginTop: '8px' }}>
+                  <span className="preview-section-title">Remarks</span>
+                  <p className="fm-view-reason" style={{ margin: 0, padding: '10px 14px', background: 'var(--surface-soft, #F8FAFC)', border: '1px solid var(--border, #E2E8F0)', borderRadius: '8px', fontSize: '13px', color: 'var(--text-primary, #334155)' }}>
+                    {normalizeViewRemark(selected.remarks)}
+                  </p>
+                </div>
+              )}
             </div>
           </section>
         </div>
@@ -1237,27 +1420,67 @@ function ProfileSections({ data, collegeOptions = [], departmentOptions = [], fa
       return formatFacultyDisplayCode(data, collegeOptions, faculty)
     }
     if (key === 'collegeName' || key === 'collegeId') {
-      const match = collegeOptions.find(c => String(c.value) === String(value))
-      return match ? match.label : value || '—'
+      const match = collegeOptions.find(c => String(c.value) === String(value || data.collegeId))
+      return match ? match.label : (data.collegeName || value || '—')
     }
     if (key === 'department' || key === 'departmentId') {
-      const match = departmentOptions.find(d => String(d.value) === String(value))
-      return match ? match.label : value || '—'
+      const match = departmentOptions.find(d => String(d.value) === String(value || data.departmentId || data.department))
+      return match ? match.label : (data.departmentName || data.department || value || '—')
     }
-    if (key === 'employeeCategory' && ['Others', 'Other'].includes(data.employeeCategory)) {
-      return data.employeeCategoryOther ? `Other (${data.employeeCategoryOther})` : 'Other'
+    if (key === 'gender') {
+      return data.gender || data.sex || data.genderName || '—'
     }
-    if (key === 'qualification' && data.qualification === 'Other') {
-      return data.qualificationOther ? `Other (${data.qualificationOther})` : 'Other'
+    if (key === 'dob') {
+      const rawDob = data.dob || data.dateOfBirth || data.DateOfBirth
+      return (rawDob && String(rawDob) !== 'undefined') ? String(rawDob).slice(0, 10) : '—'
+    }
+    if (key === 'joiningDate') {
+      const rawJoin = data.joiningDate || data.dateOfJoining || data.DateOfJoining
+      return (rawJoin && String(rawJoin) !== 'undefined') ? String(rawJoin).slice(0, 10) : '—'
+    }
+    if (key === 'mobile') {
+      return data.mobile || data.phoneNumber || data.phone || data.mobileNumber || '—'
+    }
+    if (key === 'email') {
+      return data.email || data.officialEmail || data.workEmail || '—'
+    }
+    if (key === 'employeeCategory') {
+      if (['Others', 'Other'].includes(data.employeeCategory)) {
+        return data.employeeCategoryOther ? `Other (${data.employeeCategoryOther})` : 'Other'
+      }
+      return data.employeeCategory || 'Teaching'
+    }
+    if (key === 'qualification') {
+      if (data.qualification === 'Other') {
+        return data.qualificationOther ? `Other (${data.qualificationOther})` : 'Other'
+      }
+      return data.qualification || '—'
+    }
+    if (key === 'emergencyName') {
+      return data.emergencyName || data.emergencyContactName || '—'
+    }
+    if (key === 'emergencyMobile') {
+      return data.emergencyMobile || data.emergencyContactNumber || '—'
+    }
+    if (key === 'relationship') {
+      return data.relationship || data.emergencyContactRelation || '—'
+    }
+    if (key === 'address') {
+      return data.address || data.permanentAddress || data.currentAddress || '—'
     }
     if (experienceKeys.includes(key)) {
-      return years(value)
+      const val = value ?? data[key]
+      return val === '' || val == null ? '—' : years(val)
     }
-    return value || '—'
+    return value || data[key] || '—'
   }
 
   const renderSectionCard = (section) => {
-    const fields = section.fields.filter(([key, , , required]) => !(data.employeeCategory === 'Non-Teaching' && key === 'teachingExperience') && (required || key === 'employeeId' || (data[key] !== '' && data[key] != null)))
+    const fields = section.fields.filter(([key, , , required]) => {
+      if (data.employeeCategory === 'Non-Teaching' && key === 'teachingExperience') return false
+      const val = getFieldValue(key, data[key])
+      return required || key === 'employeeId' || (val !== '' && val !== '—' && val !== null && val !== undefined)
+    })
     return (
       <section className="fm-panel" key={section.title}>
         <h2><section.icon />{section.heading}</h2>
@@ -1271,7 +1494,7 @@ function ProfileSections({ data, collegeOptions = [], departmentOptions = [], fa
             ))}
           </dl>
         ) : (
-          <p className="fm-muted">No optional contact information provided.</p>
+          <p className="fm-muted">No {section.heading.toLowerCase()} provided.</p>
         )}
       </section>
     )
@@ -1366,7 +1589,27 @@ function FacultyDocumentsForm({ documents = {}, onChange }) {
 function Field({ field, data, errors, update, native = false, collegeOptions = [], departmentOptions = [], touched = {}, liveErrors = {}, markTouched }) {
   const [key, label, type, required] = field
   const id = 'fm-' + key
+  const isNonTeaching = data.employeeCategory === 'Non-Teaching'
+  const displayLabel = key === 'employeeId' ? (isNonTeaching ? 'Staff ID' : 'Faculty ID') : (key === 'fullName' ? (isNonTeaching ? 'Staff Full Name' : 'Faculty Full Name') : label)
   const props = { id, value: data[key] ?? '', onChange: event => update(key, event.target.value), 'aria-invalid': Boolean(errors[key]), 'aria-describedby': errors[key] ? id + '-error' : undefined, required: Boolean(required) }
+
+  if (key === 'employeeId') {
+    return (
+      <div className="fm-field">
+        <label htmlFor={id}>{displayLabel} <span className="fm-required" aria-hidden="true">*</span></label>
+        <input
+          {...props}
+          type="text"
+          readOnly
+          value={data[key] || ''}
+          placeholder="Auto-generated ID"
+          className="fm-readonly-code-input"
+        />
+        {errors[key] && <small id={id + '-error'} className="fm-error">{errors[key]}</small>}
+      </div>
+    )
+  }
+
   if (['mobile', 'alternateMobile', 'emergencyMobile'].includes(key)) {
     props.maxLength = 10
     props.pattern = '[6-9][0-9]{9}'
@@ -1379,8 +1622,6 @@ function Field({ field, data, errors, update, native = false, collegeOptions = [
   if (experienceKeys.includes(key)) {
     props.onChange = event => {
       const value = event.target.value
-      // Keep the controlled value non-negative even when a negative value is
-      // pasted. A single decimal place matches the field's 0.5 step.
       if (/^\d*(?:\.\d{0,1})?$/.test(value)) update(key, value)
     }
     props.onKeyDown = event => {
@@ -1389,10 +1630,10 @@ function Field({ field, data, errors, update, native = false, collegeOptions = [
   }
   return (
     <>
-      <div className={'fm-field ' + (type === 'textarea' ? 'fm-wide' : '') + (key === 'gender' ? ' fm-gender' : '')}><label htmlFor={Array.isArray(type) && !native ? undefined : id}>{label}{required && <span className="fm-required" aria-hidden="true"> *</span>}</label>
-        {type === 'college' || type === 'department' ? <SearchableSelect placement="bottom" label={label} value={data[key] || ''} options={type === 'college' ? collegeOptions : departmentOptions} onChange={value => update(key, value)} required={required} error={Boolean(errors[key])} placeholder={'Select ' + label.toLowerCase()} /> : Array.isArray(type) ? (() => {
-          const effectiveOptions = key === 'designation' ? (data.employeeCategory === 'Non-Teaching' ? nonTeachingDesignations : teachingDesignations) : type
-          return native ? <select {...props}><option value="">Select {label.toLowerCase()}</option>{effectiveOptions.map(value => <option key={value}>{value}</option>)}</select> : <SearchableSelect placement="bottom" label={label} value={data[key] || ''} options={effectiveOptions} onChange={value => update(key, value)} required={required} error={Boolean(errors[key])} placeholder={'Select ' + label.toLowerCase()} hideSearch={key === 'gender'} />
+      <div className={'fm-field ' + (type === 'textarea' ? 'fm-wide' : '') + (key === 'gender' ? ' fm-gender' : '')}><label htmlFor={Array.isArray(type) && !native ? undefined : id}>{displayLabel}{required && <span className="fm-required" aria-hidden="true"> *</span>}</label>
+        {type === 'college' || type === 'department' ? <SearchableSelect placement="bottom" label={displayLabel} value={data[key] || ''} options={type === 'college' ? collegeOptions : departmentOptions} onChange={value => update(key, value)} required={required} error={Boolean(errors[key])} placeholder={'Select ' + displayLabel.toLowerCase()} /> : Array.isArray(type) ? (() => {
+          const effectiveOptions = key === 'designation' ? getDesignationOptions(data.employeeCategory) : type
+          return native ? <select {...props}><option value="">Select {displayLabel.toLowerCase()}</option>{effectiveOptions.map(value => <option key={value}>{value}</option>)}</select> : <SearchableSelect placement="bottom" label={displayLabel} value={data[key] || ''} options={effectiveOptions} onChange={value => update(key, value)} required={required} error={Boolean(errors[key])} placeholder={'Select ' + displayLabel.toLowerCase()} hideSearch={key === 'gender'} />
         })() : type === 'textarea' ? <textarea {...props} rows={2} /> : <input {...props} type={type === 'readonly' ? 'text' : type} readOnly={type === 'readonly'} max={type === 'date' ? today() : key === 'passingYear' ? new Date().getFullYear() : key === 'weeklyHours' ? 60 : type === 'number' ? 80 : undefined} min={key === 'passingYear' ? 1950 : type === 'number' ? 0 : undefined} step={key === 'passingYear' ? 1 : type === 'number' ? 0.5 : undefined} inputMode={type === 'tel' || key === 'pincode' ? 'numeric' : undefined} />}
         {errors[key] && <small id={id + '-error'} className="fm-error">{errors[key]}</small>}
       </div>
@@ -1431,103 +1672,127 @@ function Field({ field, data, errors, update, native = false, collegeOptions = [
   )
 }
 
-const getCollegePrefix = (collegeId, collegeOptions = []) => {
-  const selectedCollege = (collegeOptions || []).find(c => String(c.value) === String(collegeId) || String(c.id) === String(collegeId) || String(c.label) === String(collegeId))
-  if (!selectedCollege) return 'FAC'
+const getCollegePrefix = (collegeId, collegeOptions = [], isNonTeaching = false) => {
+  const selectedCollege = (collegeOptions || []).find(c => String(c.value) === String(collegeId) || String(c.id) === String(collegeId) || String(c.label) === String(collegeId)) || collegeOptions[0]
+  const roleCode = isNonTeaching ? 'NTS' : 'FAC'
 
-  let raw = String(selectedCollege.code || selectedCollege.collegeCode || selectedCollege.CollegeCode || '').trim()
+  let raw = String(selectedCollege?.code || selectedCollege?.collegeCode || selectedCollege?.CollegeCode || '').trim()
   let collegeCode = raw.toUpperCase().replace(/[^A-Z0-9]/g, '')
   const alphaMatch = collegeCode.match(/^([A-Z]{2,})\d+$/)
   if (alphaMatch) {
     collegeCode = alphaMatch[1]
   }
 
-  if (!collegeCode && selectedCollege.label) {
+  if (!collegeCode && selectedCollege?.label) {
     const cleanLabel = selectedCollege.label.replace(/college|institute|engineering|technology|university/gi, '').trim()
     const targetLabel = cleanLabel || selectedCollege.label
     const words = targetLabel.trim().split(/[\s-]+/).filter(Boolean)
     collegeCode = (words.length > 1 ? words.map(w => w[0]).join('') : words[0]?.slice(0, 5) || '').toUpperCase().replace(/[^A-Z0-9]/g, '')
   }
 
-  if (!collegeCode) return 'FAC'
-  if (collegeCode.endsWith('FAC')) return `${collegeCode}-`
-  return `${collegeCode}-FAC`
+  if (!collegeCode) {
+    collegeCode = 'BTECH'
+  }
+
+  if (collegeCode.endsWith(roleCode)) return `${collegeCode}-`
+  return `${collegeCode}-${roleCode}-`
 }
 
 export const formatFacultyDisplayCode = (item, collegeOptions = [], allFaculty = []) => {
   if (!item) return '—'
 
-  const collegeId = item.collegeId ?? item.college_id ?? (collegeOptions.length === 1 ? collegeOptions[0].value : '')
-  const prefix = collegeId ? getCollegePrefix(collegeId, collegeOptions) : 'FAC'
+  const isNonTeaching = employeeCategoryOf(item) === 'Non-Teaching'
+  const collegeId = item.collegeId ?? item.college_id ?? (collegeOptions.length > 0 ? collegeOptions[0].value : '')
+  const prefix = getCollegePrefix(collegeId, collegeOptions, isNonTeaching)
+
+  const isHexUUID = str => !str || /^[0-9a-f]{8}-?[0-9a-f]{4}-?[0-9a-f]{4}-?[0-9a-f]{4}-?[0-9a-f]{12}$/i.test(String(str).trim()) || /^[0-9a-f]{32}$/i.test(String(str).trim())
+
+  const explicitCode = String(item.employeeId || item.facultyCode || '').trim()
+  if (explicitCode && !isHexUUID(explicitCode)) {
+    if (explicitCode.includes('-')) {
+      const parts = explicitCode.toUpperCase().split('-')
+      if (parts.length === 2 && ['FAC', 'NTS', 'STF'].includes(parts[0])) {
+        return `${prefix}${parts[1].padStart(3, '0')}`
+      }
+      return explicitCode.toUpperCase()
+    }
+    const numMatch = explicitCode.match(/(\d{1,4})$/)
+    if (numMatch) {
+      const num = parseInt(numMatch[1], 10)
+      if (Number.isFinite(num) && num < 10000) {
+        return `${prefix}${String(num).padStart(3, '0')}`
+      }
+    }
+    return explicitCode.toUpperCase()
+  }
+
+  const rawId = String(item.id || item.facultyId || '').trim()
+  if (rawId && !isHexUUID(rawId)) {
+    const numMatch = rawId.match(/(\d{1,4})$/)
+    if (numMatch) {
+      const num = parseInt(numMatch[1], 10)
+      if (Number.isFinite(num) && num < 10000) {
+        return `${prefix}${String(num).padStart(3, '0')}`
+      }
+    }
+  }
 
   if (collegeId && Array.isArray(allFaculty) && allFaculty.length > 0) {
-    const sameCollegeFaculty = allFaculty
+    const sameCollegeCategory = allFaculty
       .filter(f => {
-        const cId = f.collegeId ?? f.college_id ?? (collegeOptions.length === 1 ? collegeOptions[0].value : '')
-        return String(cId || '') === String(collegeId || '')
+        const cId = f.collegeId ?? f.college_id ?? (collegeOptions.length > 0 ? collegeOptions[0].value : '')
+        return String(cId || '') === String(collegeId || '') && employeeCategoryOf(f) === (isNonTeaching ? 'Non-Teaching' : 'Teaching')
       })
-      .sort((a, b) => {
-        const idA = Number(a.id || a.facultyId || 0)
-        const idB = Number(b.id || b.facultyId || 0)
-        if (Number.isFinite(idA) && Number.isFinite(idB) && idA > 0 && idB > 0) return idA - idB
-        return String(a.joiningDate || a.id || '').localeCompare(String(b.joiningDate || b.id || ''))
-      })
-
-    const index = sameCollegeFaculty.findIndex(f => String(f.id || f.facultyId) === String(item.id || item.facultyId))
+    const index = sameCollegeCategory.findIndex(f => String(f.id || f.facultyId) === String(item.id || item.facultyId))
     if (index >= 0) {
       return `${prefix}${String(index + 1).padStart(3, '0')}`
     }
   }
 
-  const explicitCode = String(item.facultyCode || '').trim()
-  if (explicitCode && !/^[0-9a-f]{8}-[0-9a-f]{4}/i.test(explicitCode) && !/^[0-9a-f]{32}$/i.test(explicitCode)) {
-    const numMatch = explicitCode.match(/(\d+)$/)
-    if (numMatch) {
-      return `${prefix}${numMatch[1].padStart(3, '0')}`
-    }
-    return explicitCode.toUpperCase()
-  }
-
-  const numMatch = String(item.id || item.employeeId || '').match(/(\d+)$/)
-  if (numMatch) {
-    return `${prefix}${numMatch[1].padStart(3, '0')}`
-  }
   return `${prefix}001`
 }
 
-const getNextFacultyCode = (list = [], collegeId, collegeOptions = []) => {
-  const prefix = getCollegePrefix(collegeId, collegeOptions)
-  const collegeList = collegeId
-    ? (list || []).filter(item => {
-        const cId = item?.collegeId ?? item?.college_id ?? (collegeOptions.length === 1 ? collegeOptions[0].value : '')
-        return String(cId || '') === String(collegeId || '')
-      })
-    : (list || [])
+const getNextFacultyCode = (list = [], collegeId, collegeOptions = [], isNonTeaching = false) => {
+  const effectiveCollegeId = collegeId || collegeOptions[0]?.value || '1'
+  const prefix = getCollegePrefix(effectiveCollegeId, collegeOptions, isNonTeaching)
+  const categoryList = (list || []).filter(item => {
+    const cId = item?.collegeId ?? item?.college_id ?? (collegeOptions[0]?.value || '1')
+    return String(cId || '') === String(effectiveCollegeId || '') && employeeCategoryOf(item) === (isNonTeaching ? 'Non-Teaching' : 'Teaching')
+  })
 
   let max = 0
-  const prefixEscaped = prefix.replace(/[-/\\^$*+?.()|[\]{}]/g, '\\$&')
-  const regex = new RegExp(`(?:${prefixEscaped}|FAC)-?(\\d+)`, 'i')
+  const isHexUUID = str => !str || /^[0-9a-f]{8}-?[0-9a-f]{4}-?[0-9a-f]{4}-?[0-9a-f]{4}-?[0-9a-f]{12}$/i.test(String(str).trim()) || /^[0-9a-f]{32}$/i.test(String(str).trim())
 
-  for (const item of collegeList) {
-    const raw = String(item?.facultyCode || item?.faculty_code || '').trim()
-    if (raw) {
-      const match = raw.match(regex) || raw.match(/FAC-?(\d+)/i)
+  for (const item of categoryList) {
+    const raw = String(item?.facultyCode || item?.faculty_code || item?.employeeId || '').trim()
+    if (raw && !isHexUUID(raw)) {
+      const match = raw.match(/(?:FAC|NTS|STF)[-_]?(\d{1,4})$/i) || raw.match(/(\d{1,4})$/)
       if (match) {
         const val = parseInt(match[1], 10)
-        if (Number.isFinite(val) && val > max) max = val
+        if (Number.isFinite(val) && val > 0 && val < 10000 && val > max) max = val
       }
     }
   }
 
-  const nextSeq = Math.max(max, collegeList.length) + 1
+  const nextSeq = Math.max(max, categoryList.length) + 1
   return `${prefix}${String(nextSeq).padStart(3, '0')}`
 }
 
-function FacultyForm({ initial, faculty, onSave, onCancel, collegeOptions, departmentOptions, saving }) {
+function FacultyForm({ initial, faculty, onSave, onCancel, collegeOptions = [], departmentOptions = [], saving }) {
+  const defaultCollegeId = initial?.collegeId || collegeOptions[0]?.value || '1'
+  const isInitialNonTeaching = (initial?.employeeCategory || initial?.employee_category) === 'Non-Teaching'
   const [data, setData] = useState(() => {
     const base = normalize(initial)
-    if (!base.employeeId && base.collegeId) {
-      base.employeeId = getNextFacultyCode(faculty, base.collegeId, collegeOptions)
+    base.collegeId = base.collegeId || defaultCollegeId
+    if (isInitialNonTeaching) {
+      base.employeeCategory = 'Non-Teaching'
+    }
+    const isNT = base.employeeCategory === 'Non-Teaching'
+    const isHex = val => !val || /^[0-9a-f]{8}-?[0-9a-f]{4}-?[0-9a-f]{4}-?[0-9a-f]{4}-?[0-9a-f]{12}$/i.test(String(val).trim()) || /^[0-9a-f]{32}$/i.test(String(val).trim())
+    const isLegacyOrShort = String(base.employeeId).startsWith('STF-') || String(base.employeeId).startsWith('FAC-') || String(base.employeeId).startsWith('NTS-')
+    const isBadCode = isHex(base.employeeId) || isLegacyOrShort || String(base.employeeId).length > 20 || (isNT && String(base.employeeId).includes('-FAC-')) || (!isNT && (String(base.employeeId).includes('-NTS-') || String(base.employeeId).includes('-STF-')))
+    if (!base.employeeId || isBadCode) {
+      base.employeeId = getNextFacultyCode(faculty, base.collegeId, collegeOptions, isNT)
     }
     return base
   })
@@ -1543,26 +1808,29 @@ function FacultyForm({ initial, faculty, onSave, onCancel, collegeOptions, depar
 
   useEffect(() => {
     if (!initial?.id) {
-      const activeCollegeId = data.collegeId || ''
-      if (activeCollegeId) {
-        const newCode = getNextFacultyCode(faculty, activeCollegeId, collegeOptions)
-        const expectedPrefix = getCollegePrefix(activeCollegeId, collegeOptions)
-        if (newCode && (!data.employeeId || data.employeeId === 'FAC001' || !data.employeeId.startsWith(expectedPrefix))) {
-          setData(old => ({
-            ...old,
-            employeeId: newCode,
-          }))
-        }
+      const activeCollegeId = data.collegeId || collegeOptions[0]?.value || '1'
+      const isNT = data.employeeCategory === 'Non-Teaching'
+      const newCode = getNextFacultyCode(faculty, activeCollegeId, collegeOptions, isNT)
+      const isHex = val => !val || /^[0-9a-f]{8}-?[0-9a-f]{4}-?[0-9a-f]{4}-?[0-9a-f]{4}-?[0-9a-f]{12}$/i.test(String(val).trim()) || /^[0-9a-f]{32}$/i.test(String(val).trim())
+      const isLegacyOrShort = String(data.employeeId).startsWith('STF-') || String(data.employeeId).startsWith('FAC-') || String(data.employeeId).startsWith('NTS-')
+      const isBadCode = isHex(data.employeeId) || isLegacyOrShort || String(data.employeeId).length > 20 || (isNT && String(data.employeeId).includes('-FAC-')) || (!isNT && (String(data.employeeId).includes('-NTS-') || String(data.employeeId).includes('-STF-')))
+      if (newCode && (!data.employeeId || isBadCode || data.employeeId === 'FAC001' || !data.employeeId.includes('-'))) {
+        setData(old => ({
+          ...old,
+          collegeId: activeCollegeId,
+          employeeId: newCode,
+        }))
       }
     }
-  }, [collegeOptions, data.collegeId, faculty, initial?.id])
+  }, [collegeOptions, data.collegeId, data.employeeCategory, faculty, initial?.id])
 
   const update = (key, value) => {
     setData(old => {
-      const colId = typeof value === 'object' && value !== null ? (value.value ?? value.id ?? '') : String(value ?? '')
+      const colId = key === 'collegeId' ? (typeof value === 'object' && value !== null ? (value.value ?? value.id ?? '') : String(value ?? '')) : (old.collegeId || defaultCollegeId)
       const nextData = { ...old, [key]: value }
-      if (key === 'collegeId' && !initial?.id) {
-        nextData.employeeId = getNextFacultyCode(faculty, colId, collegeOptions)
+      const isNT = nextData.employeeCategory === 'Non-Teaching'
+      if ((key === 'collegeId' || key === 'employeeCategory') && !initial?.id) {
+        nextData.employeeId = getNextFacultyCode(faculty, colId, collegeOptions, isNT)
       }
       return nextData
     })
@@ -1570,7 +1838,7 @@ function FacultyForm({ initial, faculty, onSave, onCancel, collegeOptions, depar
   }
   const focusError = () => requestAnimationFrame(() => formRef.current?.querySelector('[aria-invalid="true"]')?.focus())
 
-  const stepTitles = [...sections.map(s => s.title), 'Documents', 'Preview']
+  const stepTitles = [...sections.map(s => s.title), 'Documents']
   const totalSteps = stepTitles.length
 
   const next = event => {
@@ -1582,10 +1850,8 @@ function FacultyForm({ initial, faculty, onSave, onCancel, collegeOptions, depar
       setErrors(currentErrors)
       if (Object.keys(currentErrors).length) { focusError(); return }
       setStep(step + 1)
-    } else if (step === sections.length) {
-      setErrors({})
-      setStep(step + 1)
     } else {
+      // Final Documents Step -> Save
       setErrors(checked)
       if (Object.keys(checked).length) {
         setStep(checked.employeeCategoryOther ? 1 : Math.max(0, sections.findIndex(section => section.fields.some(([key]) => checked[key]))))
@@ -1597,8 +1863,20 @@ function FacultyForm({ initial, faculty, onSave, onCancel, collegeOptions, depar
   }
 
   const skipStep = () => {
-    setErrors({})
-    setStep(step + 1)
+    if (step === totalSteps - 1) {
+      // If skipping final optional documents step, validate and save
+      const checked = validateFaculty(clean(data), faculty)
+      setErrors(checked)
+      if (Object.keys(checked).length) {
+        setStep(checked.employeeCategoryOther ? 1 : Math.max(0, sections.findIndex(section => section.fields.some(([key]) => checked[key]))))
+        focusError()
+        return
+      }
+      onSave(clean(data))
+    } else {
+      setErrors({})
+      setStep(step + 1)
+    }
   }
 
   const photo = event => {
@@ -1617,13 +1895,13 @@ function FacultyForm({ initial, faculty, onSave, onCancel, collegeOptions, depar
 
   const section = step < sections.length ? sections[step] : null
   const isDocumentsStep = step === sections.length
-  const isPreviewStep = step === totalSteps - 1
+  const isFinalStep = step === totalSteps - 1
   const isStepOptional = (section && !section.fields.some(([, , , required]) => required)) || isDocumentsStep
 
   return (
     <div className="erp-two-column-layout">
       <div className="erp-card-main">
-        <form className={'fm-panel fm-form' + (isPreviewStep ? ' fm-form--preview' : '')} ref={formRef} onSubmit={next} noValidate style={{ border: 'none', boxShadow: 'none', padding: 0 }}>
+        <form className="fm-panel fm-form" ref={formRef} onSubmit={next} noValidate style={{ border: 'none', boxShadow: 'none', padding: 0 }}>
           <nav className="erp-tabs-bar ac-tabs fm-stepper" aria-label="Faculty form steps">
             {stepTitles.map((title, index) => (
               <button
@@ -1638,13 +1916,17 @@ function FacultyForm({ initial, faculty, onSave, onCancel, collegeOptions, depar
             ))}
           </nav>
           <div className="fm-section-heading">
-            <h2>
-              {section ? <section.icon /> : isDocumentsStep ? <FiFileText /> : <FiCheckCircle />}
-              {section?.title || (isDocumentsStep ? 'Supporting Documents' : data.employeeCategory === 'Non-Teaching' ? 'Staff Profile Preview' : 'Faculty Profile Preview')}
-            </h2>
-            <p>
-              {section?.description?.replace('Faculty designation', 'Employee designation') || (isDocumentsStep ? 'Mark submission status for essential verification documents (optional).' : 'Review all details and documents below before saving this record.')}
-            </p>
+            <div className="fm-section-heading-icon">
+              {section ? <section.icon /> : <FiFileText />}
+            </div>
+            <div className="fm-section-heading-text">
+              <h2>
+                {section?.title || 'Supporting Documents'}
+              </h2>
+              <p>
+                {section?.description?.replace('Faculty designation', 'Employee designation') || 'Mark submission status for essential verification documents (optional).'}
+              </p>
+            </div>
           </div>
           <div className="erp-form-scroll-body">
             {step === 0 && (
@@ -1667,22 +1949,11 @@ function FacultyForm({ initial, faculty, onSave, onCancel, collegeOptions, depar
                   <Field key={field[0]} field={field[0] === 'employeeCategory' && ['Teaching', 'Non-Teaching'].includes(initial.employeeCategory) ? [field[0], field[1], 'readonly', field[3]] : field} data={data} errors={errors} update={update} collegeOptions={collegeOptions} departmentOptions={departmentOptions} touched={touched} liveErrors={liveErrors} markTouched={markTouched} />
                 ))}
               </div>
-            ) : isDocumentsStep ? (
+            ) : (
               <FacultyDocumentsForm
                 documents={data.documents || {}}
                 onChange={(docKey, docVal) => update('documents', { ...(data.documents || {}), [docKey]: docVal })}
               />
-            ) : (
-              <>
-                <div className="fm-identity">
-                  <Avatar faculty={data} large />
-                  <div>
-                    <h2>{data.fullName}</h2>
-                    <p>{formatFacultyDisplayCode(data, collegeOptions, faculty)} · {data.designation}</p>
-                  </div>
-                </div>
-                <ProfileSections data={data} collegeOptions={collegeOptions} departmentOptions={departmentOptions} faculty={faculty} />
-              </>
             )}
           </div>
           <footer className="fm-form-footer">
@@ -1694,13 +1965,13 @@ function FacultyForm({ initial, faculty, onSave, onCancel, collegeOptions, depar
                   Previous
                 </button>
               )}
-              {isStepOptional && !isPreviewStep && (
+              {isStepOptional && !isFinalStep && (
                 <button type="button" className="fm-button secondary" onClick={skipStep}>
                   Skip
                 </button>
               )}
               <button type="submit" className="fm-button" disabled={photoBusy || saving}>
-                {isPreviewStep ? <><FiCheckCircle /> {data.employeeCategory === 'Non-Teaching' ? 'Save Staff' : 'Save Faculty'}</> : 'Next'}
+                {isFinalStep ? <><FiCheckCircle /> {data.employeeCategory === 'Non-Teaching' ? 'Save Staff' : 'Save Faculty'}</> : 'Next'}
               </button>
             </div>
           </footer>
@@ -1718,60 +1989,75 @@ function FacultyForm({ initial, faculty, onSave, onCancel, collegeOptions, depar
         <div className="preview-body-container">
           {(() => {
             const selectedCollege = collegeOptions.find(c => String(c.value ?? c.id) === String(data.collegeId))
-            const collegeName = selectedCollege?.label || selectedCollege?.name || data.college || ''
-            const selectedDept = departmentOptions.find(d => String(d.value ?? d.id ?? d.name) === String(data.department))
-            const deptName = selectedDept?.label || selectedDept?.name || data.department || ''
+            const collegeName = selectedCollege?.label || selectedCollege?.name || data.collegeName || ''
+            const selectedDept = departmentOptions.find(d => String(d.value ?? d.id) === String(data.departmentId || data.department))
+            const deptName = selectedDept?.label || selectedDept?.name || data.department || data.departmentName || ''
 
-            const sections = [
+            const isNT = data.employeeCategory === 'Non-Teaching'
+            const idLabel = isNT ? 'Staff ID' : 'Faculty ID'
+            const previewHeroTitle = data.fullName || (isNT ? 'Staff Preview' : 'Faculty Preview')
+
+            const qualDisplay = data.qualification === 'Other' && data.qualificationOther ? `Other (${data.qualificationOther})` : data.qualification
+            const catDisplay = ['Other', 'Others'].includes(data.employeeCategory) ? (data.employeeCategoryOther ? `Other (${data.employeeCategoryOther})` : 'Other') : (data.employeeCategory || 'Teaching')
+
+            const previewSections = [
               {
                 title: 'Personal Details',
                 fields: [
-                  ['Full Name', data.fullName],
+                  [isNT ? 'Staff Full Name' : 'Full Name', data.fullName],
                   ['Gender', data.gender],
-                  ['Date of Birth', data.dateOfBirth],
-                  ['Blood Group', data.bloodGroup],
-                  ['Aadhaar Number', data.aadhaarNumber],
+                  ['Date of Birth', data.dob || data.dateOfBirth],
+                  ['Mobile Number', data.mobile || data.phoneNumber],
+                  ['Email', data.email || data.officialEmail],
                 ],
               },
               {
                 title: 'Employment Details',
                 fields: [
-                  ['Employee ID', data.employeeId],
-                  ['Category', data.employeeCategory === 'Other' ? data.employeeCategoryOther : data.employeeCategory],
+                  [idLabel, data.employeeId || formatFacultyDisplayCode(data, collegeOptions, faculty)],
+                  ['Category', catDisplay],
                   ['Designation', data.designation],
                   ['Department', deptName],
                   ['College / Campus', collegeName],
-                  ['Date of Joining', data.dateOfJoining],
+                  ['Date of Joining', data.joiningDate || data.dateOfJoining],
                   ['Employment Type', data.employmentType],
-                  ['Work Shift', data.shiftTiming],
-                  ['Teaching Experience', data.teachingExperience ? `${data.teachingExperience} Years` : ''],
-                  ['Total Experience', data.totalExperience ? `${data.totalExperience} Years` : ''],
-                  ['Status', data.status || 'Active'],
+                  ['Teaching Experience', !isNT && Number(data.teachingExperience) > 0 ? `${data.teachingExperience} Years` : ''],
+                  ['Total Experience', Number(data.experience) > 0 ? `${data.experience} Years` : ''],
+                  ['Status', data.employmentStatus],
+                ],
+              },
+              {
+                title: 'Academic Details',
+                fields: [
+                  ['Highest Qualification', qualDisplay],
+                  ['Specialization', data.specialization],
+                  ['University / Institution', data.university],
+                  ['Year of Passing', data.passingYear],
+                  ['Teaching Experience', !isNT && Number(data.teachingExperience) > 0 ? `${data.teachingExperience} Years` : ''],
+                  ['Industry Experience', Number(data.industryExperience) > 0 ? `${data.industryExperience} Years` : ''],
                 ],
               },
               {
                 title: 'Contact Details',
                 fields: [
-                  ['Official Email', data.officialEmail],
+                  ['Alternate Mobile', data.alternateMobile],
                   ['Personal Email', data.personalEmail],
-                  ['Phone / Mobile', data.mobileNumber || data.phone],
-                  ['Emergency Contact', data.emergencyContact],
-                  ['Current Address', data.currentAddress],
-                  ['Permanent Address', data.permanentAddress],
+                  ['Address', [data.address, data.city, data.state, data.pincode].filter(Boolean).join(', ') || data.address],
+                  ['Emergency Contact', [data.emergencyName, data.relationship, data.emergencyMobile].filter(Boolean).join(' · ') || data.emergencyMobile],
                 ],
               },
               {
                 title: 'Documents',
                 fields: Object.entries(data.documents || {})
                   .filter(([, val]) => val === 'Submitted' || val?.status === 'Submitted' || val?.uploaded)
-                  .map(([key]) => [key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase()), 'Submitted']),
+                  .map(([key]) => [FACULTY_DOCUMENTS.find(([dKey]) => dKey === key)?.[1] || key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase()), 'Submitted']),
               },
             ].map(sec => ({
               ...sec,
-              fields: sec.fields.filter(([, val]) => val !== null && val !== undefined && String(val).trim() !== '' && String(val).trim() !== '—'),
+              fields: sec.fields.filter(([, val]) => val !== null && val !== undefined && String(val).trim() !== '' && String(val).trim() !== '—' && String(val).trim() !== '0 Years' && String(val).trim() !== '0'),
             })).filter(sec => sec.fields.length > 0)
 
-            if (sections.length === 0) {
+            if (previewSections.length === 0) {
               return (
                 <div className="preview-empty-hint">
                   <span>Enter details in the form to preview here in real time.</span>
@@ -1784,13 +2070,13 @@ function FacultyForm({ initial, faculty, onSave, onCancel, collegeOptions, depar
                 <div className="preview-hero" style={{ marginBottom: '14px' }}>
                   <Avatar faculty={data} large />
                   <div className="preview-hero-details">
-                    <h3 className="preview-course-title" style={{ margin: 0 }}>{data.fullName || 'Faculty Preview'}</h3>
+                    <h3 className="preview-course-title" style={{ margin: 0 }}>{previewHeroTitle}</h3>
                     <p className="preview-course-meta" style={{ margin: '2px 0 0', color: '#64748B', fontSize: '0.78rem' }}>
-                      {[data.employeeId, data.designation, deptName, data.status || 'Active'].filter(Boolean).join(' • ')}
+                      {[data.employeeId, data.designation, deptName, data.employmentStatus || 'Working'].filter(Boolean).join(' • ')}
                     </p>
                   </div>
                 </div>
-                {sections.map(sec => (
+                {previewSections.map(sec => (
                   <div key={sec.title} className="preview-section-group" style={{ marginBottom: '12px' }}>
                     <span className="preview-section-title">{sec.title}</span>
                     <div className="preview-kv-grid">
@@ -2298,6 +2584,35 @@ function AssignmentDialog({ faculty, onClose, onAdd, onRemove, toast }) {
   )
 }
 
+const FACULTY_TABS = [
+  ['personal', 'Personal & Contact', FiUser],
+  ['employment', 'Employment', FiBriefcase],
+  ['academic', 'Academic', FiBookOpen],
+  ['responsibilities', 'Workload & Responsibilities', FiCheckCircle],
+  ['documents', 'Documents', FiFileText],
+]
+
+function ProfileCard({ title, icon: Icon, rows = [] }) {
+  return (
+    <section className="sp-profile-panel">
+      {(Icon || title) && (
+        <header className="sp-panel-header">
+          {Icon && <Icon aria-hidden="true" />}
+          {title && <h2>{title}</h2>}
+        </header>
+      )}
+      <dl className="sp-panel-grid">
+        {rows.map(([label, val], idx) => (
+          <div className="sp-panel-item" key={label || idx}>
+            <dt className="sp-panel-label">{label}</dt>
+            <dd className="sp-panel-val">{val && String(val).trim() !== '' && String(val).trim() !== '—' ? String(val) : 'Not provided'}</dd>
+          </div>
+        ))}
+      </dl>
+    </section>
+  )
+}
+
 export default function FacultyManagement() {
   const location = useLocation()
   const navigate = useNavigate()
@@ -2306,6 +2621,7 @@ export default function FacultyManagement() {
   const [query, setQuery] = useState('')
   const [filters, setFilters] = useState({ department: '', designation: '', employmentType: '', employmentStatus: '' })
   const [page, setPage] = useState(1)
+  const [profileTab, setProfileTab] = useState('personal')
   const [assignmentId, setAssignmentId] = useState(null)
   const [collegeOptions, setCollegeOptions] = useState([])
   const [departmentOptions, setDepartmentOptions] = useState([])
@@ -2378,11 +2694,14 @@ export default function FacultyManagement() {
       .then(([member, profile, work, allocations]) => {
         if (active) {
           const safeMember = member && typeof member === 'object' ? member : {}
-          const matchedListed = faculty.find(f => String(f.id) === String(targetId))
+          const matchedListed = faculty.find(f => String(f.id) === String(targetId) || String(f.facultyId) === String(targetId) || String(f.employeeId) === String(targetId))
           const existingAssignments = (allocations && allocations.length) ? allocations : (matchedListed?.assignments || safeMember.assignments || [])
+          const merged = mergeFacultyData(matchedListed, safeMember, profile)
           setDetail(normalize({
-            ...safeMember,
-            ...normalizeFaculty({ ...mergeFacultyData(matchedListed, safeMember, profile), facultyId: safeMember.id || targetId }),
+            ...merged,
+            ...normalizeFaculty({ ...merged, facultyId: safeMember.id || targetId }),
+            id: String(targetId),
+            facultyId: String(targetId),
             profileExists: Boolean(profile),
             apiWorkload: work,
             assignments: existingAssignments
@@ -2411,12 +2730,12 @@ export default function FacultyManagement() {
   const nonTeachingFaculty = useMemo(() => faculty.filter(f => employeeCategoryOf(f) === 'Non-Teaching'), [faculty])
   const activeCategory = selectedCategory || 'Teaching'
   const categoryFaculty = activeCategory === 'Non-Teaching' ? nonTeachingFaculty : teachingFaculty
-  const currentDesignations = activeCategory === 'Non-Teaching' ? nonTeachingDesignations : teachingDesignations
+  const currentDesignations = useMemo(() => getDesignationOptions(activeCategory), [activeCategory])
 
-  const listed = faculty.find(item => item.id === targetId)
+  const listed = faculty.find(item => String(item.id) === String(targetId) || String(item.facultyId) === String(targetId) || String(item.employeeId) === String(targetId))
   // The directory route must never render an old detail record. This can occur
   // while navigation is settling after a profile or edit screen is closed.
-  const selected = targetId ? (detail?.id === targetId ? { ...listed, ...detail, assignments: listed?.assignments || detail?.assignments || [] } : listed) : null
+  const selected = targetId ? (detail && String(detail.id) === String(targetId) ? { ...listed, ...detail, assignments: (detail?.assignments && detail.assignments.length) ? detail.assignments : (listed?.assignments || []) } : (listed ? { ...listed, ...detail } : detail)) : null
   const assignedFaculty = faculty.find(item => item.id === assignmentId)
   const departments = [...new Set(departmentOptions.map(item => item.label).filter(Boolean))]
   const filtered = useMemo(() => categoryFaculty.filter(item => {
@@ -2458,12 +2777,18 @@ export default function FacultyManagement() {
       const targetCat = data.employeeCategory || employeeCategoryOf(data) || employeeCategoryOf(refreshed) || 'Teaching'
       const normalizedRecord = normalize({
         ...mergeFacultyData(refreshed, data),
+        ...data,
         id: savedId,
         facultyId: savedId,
-        facultyCode: data.employeeId || refreshed.facultyCode,
+        employeeId: data.employeeId || refreshed.employeeId || refreshed.facultyCode,
         employeeCategory: targetCat
       })
-      setFaculty(rows => data.id ? rows.map(row => row.id === data.id ? { ...row, ...normalizedRecord, assignments: row.assignments } : row) : [normalizedRecord, ...rows.filter(r => r.id !== savedId && r.employeeId !== normalizedRecord.employeeId)])
+      setFaculty(rows => data.id
+        ? rows.map(row => (String(row.id) === String(data.id) || String(row.facultyId) === String(data.id) || (data.employeeId && row.employeeId && String(row.employeeId).toLowerCase() === String(data.employeeId).toLowerCase()))
+            ? { ...row, ...normalizedRecord, assignments: row.assignments || normalizedRecord.assignments }
+            : row)
+        : [normalizedRecord, ...rows.filter(r => String(r.id) !== String(savedId) && String(r.employeeId).toLowerCase() !== String(normalizedRecord.employeeId).toLowerCase())]
+      )
       notify(data.id ? (targetCat === 'Non-Teaching' ? 'Staff updated successfully' : 'Faculty updated successfully') : (targetCat === 'Non-Teaching' ? 'Staff created successfully' : 'Faculty created successfully'))
       clear()
       back(targetCat)
@@ -2555,83 +2880,259 @@ export default function FacultyManagement() {
   } else if (selected) {
     const load = workload(selected)
     const departmentName = departmentOptions.find(d => String(d.value) === String(selected.departmentId || selected.department))?.label || selected.department || '—'
+    const displayCode = formatFacultyDisplayCode(selected, collegeOptions, faculty)
+    const collegeName = collegeOptions.find(c => String(c.value) === String(selected.collegeId))?.label || selected.collegeName || ''
+
+    const exportSections = [
+      {
+        title: 'Personal Information',
+        rows: [
+          [selected.employeeCategory === 'Non-Teaching' ? 'Staff Full Name' : 'Faculty Full Name', selected.fullName],
+          ['Gender', selected.gender],
+          ['Date of Birth', selected.dob],
+          ['Blood Group', selected.bloodGroup],
+          ['Aadhaar Number', selected.aadhaarNumber],
+        ]
+      },
+      {
+        title: 'Employment Details',
+        rows: [
+          [selected.employeeCategory === 'Non-Teaching' ? 'Staff ID' : 'Faculty ID', displayCode],
+          ['Employee Category', selected.employeeCategory === 'Other' || selected.employeeCategory === 'Others' ? (selected.employeeCategoryOther ? `Other (${selected.employeeCategoryOther})` : 'Other') : (selected.employeeCategory || 'Teaching')],
+          ['Designation', selected.designation],
+          ['Department', departmentName],
+          ['Employment Type', selected.employmentType],
+          ['Date of Joining', selected.joiningDate],
+          ['Total Experience', years(selected.experience)],
+          ['Employment Status', selected.employmentStatus || 'Working'],
+        ]
+      },
+      {
+        title: 'Academic Details',
+        rows: [
+          ['Highest Qualification', selected.qualification === 'Other' && selected.qualificationOther ? `Other (${selected.qualificationOther})` : selected.qualification],
+          ['Specialization', selected.specialization],
+          ['University / Institution', selected.university],
+          ['Year of Passing', selected.passingYear],
+          ['Teaching Experience', selected.employeeCategory !== 'Non-Teaching' && selected.teachingExperience ? `${selected.teachingExperience} Years` : '—'],
+          ['Industry Experience', selected.industryExperience ? `${selected.industryExperience} Years` : '—'],
+        ]
+      },
+      {
+        title: 'Contact Details',
+        rows: [
+          ['Mobile Number', selected.mobile],
+          ['Alternate Mobile', selected.alternateMobile],
+          ['Official Email', selected.email],
+          ['Personal Email', selected.personalEmail],
+          ['Address', selected.address],
+          ['City', selected.city],
+          ['State', selected.state],
+          ['Pincode', selected.pincode],
+          ['Emergency Contact Name', selected.emergencyName],
+          ['Relationship', selected.relationship],
+          ['Emergency Contact Number', selected.emergencyMobile],
+        ]
+      }
+    ]
+
     content = (
-      <div className="fm-profile-view">
-        <div className="fm-breadcrumb">
-          <Link to="/dashboard">Home</Link> / <Link to={'/faculty?category=' + (selected.employeeCategory || 'Teaching')}>{selected.employeeCategory === 'Non-Teaching' ? 'Non-Teaching Staff' : 'Teaching Faculty'}</Link> / <strong aria-current="page">Profile</strong>
-        </div>
-
-        <div className="fm-profile-hero-card">
-          <header className="fm-panel fm-profile-header">
-            <div className="fm-identity">
-              <Avatar faculty={selected} large />
-              <div>
-                <p className="fm-eyebrow">{selected.employeeCategory === 'Non-Teaching' ? 'STAFF PROFILE' : 'FACULTY PROFILE'} · {formatFacultyDisplayCode(selected, collegeOptions, faculty)}</p>
-                <h1>{selected.fullName}</h1>
-                <p>{selected.designation} · {departmentName}</p>
-                <StatusBadge value={selected.employmentStatus} />
-              </div>
-            </div>
-            <div className="fm-actions">
-              <button type="button" className="fm-button secondary" onClick={() => navigate('/faculty/' + selected.id + '/edit?category=' + (selected.employeeCategory || activeCategory))}>
-                <FiEdit2 /> {selected.employeeCategory === 'Non-Teaching' ? 'Edit Staff' : 'Edit Faculty'}
-              </button>
-              <button type="button" className="fm-button secondary" onClick={() => back()}>
-                <FiArrowLeft /> Back to List
-              </button>
-            </div>
-          </header>
-
-          <div className="fm-profile-summary-strip">
-            <div className="fm-summary-col">
-              <small>Total Experience</small>
-              <strong>{years(selected.experience)}</strong>
-            </div>
-            <div className="fm-summary-col">
-              <small>Employment Type</small>
-              <strong className="text-success">{selected.employmentType || '—'}</strong>
-            </div>
-            <div className="fm-summary-col">
-              <small>Qualification</small>
-              <strong className="text-danger">{selected.qualification || '—'}</strong>
-            </div>
-            {selected.employeeCategory !== 'Non-Teaching' && <div className="fm-summary-col">
-              <small>Workload</small>
-              <strong className="text-primary">{load.subjects} Subject{load.subjects === 1 ? '' : 's'} · {load.status}</strong>
-            </div>}
-          </div>
-        </div>
-
-        <div className="fm-profile-main-layout" style={selected.employeeCategory === 'Non-Teaching' ? { gridTemplateColumns: 'minmax(0, 1fr)' } : undefined}>
-          <div className="fm-profile-content-col">
-            <ProfileSections
-              data={selected}
-              collegeOptions={collegeOptions}
-              departmentOptions={departmentOptions}
-              faculty={faculty}
+      <div className="cm-profile-view" data-export-record>
+        <div className="cm-profile-top-bar">
+          <button type="button" className="cm-button secondary erp-btn erp-btn--secondary" onClick={() => back()}>
+            &larr; Back to {selected.employeeCategory === 'Non-Teaching' ? 'Staff Directory' : 'Faculty Directory'}
+          </button>
+          <div className="sp-profile-top-actions">
+            <ExportMenu
+              mode="single"
+              title={selected.employeeCategory === 'Non-Teaching' ? 'Staff Profile' : 'Faculty Profile'}
+              filename={`faculty_${displayCode || selected.id}`}
+              recordSections={exportSections}
             />
+            <button
+              type="button"
+              className="cm-button erp-btn erp-btn--primary"
+              onClick={() => navigate('/faculty/' + selected.id + '/edit?category=' + (selected.employeeCategory || activeCategory))}
+              title={`Edit ${selected.employeeCategory === 'Non-Teaching' ? 'Staff' : 'Faculty'}`}
+            >
+              <FiEdit2 className="sp-profile-edit-icon" aria-hidden="true" /> {selected.employeeCategory === 'Non-Teaching' ? 'Edit Staff' : 'Edit Faculty'}
+            </button>
+          </div>
+        </div>
+
+        <div className="cm-profile-card">
+          <div className="cm-profile-banner">
+            <div className="cm-profile-avatar-wrap">
+              {selected.photo ? (
+                <img src={selected.photo} alt={selected.fullName} className="cm-profile-logo" />
+              ) : (
+                <div className="cm-profile-placeholder">
+                  {(selected.fullName || '').split(' ').map(p => p[0]).slice(0, 2).join('') || (selected.employeeCategory === 'Non-Teaching' ? 'STF' : 'FAC')}
+                </div>
+              )}
+            </div>
+            <div className="cm-profile-header-info">
+              <div className="cm-profile-badges">
+                {displayCode && <span className="cm-badge cm-badge-code">{selected.employeeCategory === 'Non-Teaching' ? `STAFF: ${displayCode}` : `FAC: ${displayCode}`}</span>}
+                {selected.employeeCategory && <span className="cm-badge cm-badge-type">{selected.employeeCategory}</span>}
+                <span className={'cm-status-badge ' + (selected.employmentStatus === 'Working' ? 'active' : 'pending')}>
+                  {selected.employmentStatus || 'Working'}
+                </span>
+              </div>
+              <h1 className="cm-profile-title">{selected.fullName || (selected.employeeCategory === 'Non-Teaching' ? 'Staff Member' : 'Faculty Member')}</h1>
+              <p className="cm-profile-subtitle">
+                {[selected.designation, departmentName, collegeName].filter(Boolean).join(' · ')}
+              </p>
+            </div>
           </div>
 
-          {selected.employeeCategory !== 'Non-Teaching' && <section className="fm-panel fm-responsibilities-sidebar">
-            <header className="fm-sidebar-header">
-              <h2><FiBriefcase /> Current Academic Responsibilities</h2>
-              <span className={'erp-status-badge ' + (load.status === 'Unassigned' ? 'pending' : 'working active')}>
-                {load.status}
-              </span>
-            </header>
-            {selected.assignments?.length ? (
-              <div className="fm-sidebar-assignments">
-                <AssignmentList faculty={selected} onRemove={removeAssignment} />
-              </div>
-            ) : (
-              <div className="fm-sidebar-empty">
-                <div className="fm-sidebar-empty-icon">
-                  <FiUsers />
-                </div>
-                <h3>No academic responsibilities assigned.</h3>
-              </div>
+          <nav className="sp-tabs" aria-label="Faculty profile sections">
+            {FACULTY_TABS.filter(([tabId]) => !(tabId === 'responsibilities' && selected.employeeCategory === 'Non-Teaching')).map(([id, label, Icon]) => (
+              <button
+                key={id}
+                type="button"
+                aria-current={profileTab === id ? 'page' : undefined}
+                className={profileTab === id ? 'active' : ''}
+                onClick={() => setProfileTab(id)}
+              >
+                <Icon />
+                {label}
+              </button>
+            ))}
+          </nav>
+
+          <div className="sp-profile-cards-container">
+            {profileTab === 'personal' && (
+              <>
+                <ProfileCard
+                  title="Personal Information"
+                  icon={FiUser}
+                  rows={[
+                    ['Faculty Full Name', selected.fullName],
+                    ['Gender', selected.gender],
+                    ['Date of Birth', selected.dob],
+                    ['Blood Group', selected.bloodGroup],
+                    ['Aadhaar Number', selected.aadhaarNumber],
+                  ]}
+                />
+                <ProfileCard
+                  title="Contact & Communication"
+                  icon={FiUser}
+                  rows={[
+                    ['Mobile Number', selected.mobile],
+                    ['Alternate Mobile', selected.alternateMobile],
+                    ['Official Email', selected.email],
+                    ['Personal Email', selected.personalEmail],
+                  ]}
+                />
+                <ProfileCard
+                  title="Address Details"
+                  icon={FiMapPin}
+                  rows={[
+                    ['Address', selected.address],
+                    ['City', selected.city],
+                    ['State', selected.state],
+                    ['Pincode', selected.pincode],
+                  ]}
+                />
+                <ProfileCard
+                  title="Emergency Contact"
+                  icon={FiUsers}
+                  rows={[
+                    ['Emergency Contact Name', selected.emergencyName],
+                    ['Relationship', selected.relationship],
+                    ['Emergency Contact Number', selected.emergencyMobile],
+                  ]}
+                />
+              </>
             )}
-          </section>}
+
+            {profileTab === 'employment' && (
+              <>
+                <ProfileCard
+                  title="Employment Details"
+                  icon={FiBriefcase}
+                  rows={[
+                    ['Faculty ID', displayCode],
+                    ['Employee Category', selected.employeeCategory === 'Other' || selected.employeeCategory === 'Others' ? (selected.employeeCategoryOther ? `Other (${selected.employeeCategoryOther})` : 'Other') : (selected.employeeCategory || 'Teaching')],
+                    ['Designation', selected.designation],
+                    ['Department', departmentName],
+                    ['Employment Type', selected.employmentType],
+                    ['Date of Joining', selected.joiningDate],
+                    ['Total Experience', years(selected.experience)],
+                    ['Employment Status', selected.employmentStatus || 'Working'],
+                  ]}
+                />
+              </>
+            )}
+
+            {profileTab === 'academic' && (
+              <>
+                <ProfileCard
+                  title="Academic Qualifications"
+                  icon={FiBookOpen}
+                  rows={[
+                    ['Highest Qualification', selected.qualification === 'Other' && selected.qualificationOther ? `Other (${selected.qualificationOther})` : selected.qualification],
+                    ['Specialization', selected.specialization],
+                    ['University / Institution', selected.university],
+                    ['Year of Passing', selected.passingYear],
+                    ['Teaching Experience', selected.teachingExperience ? `${selected.teachingExperience} Years` : '—'],
+                    ['Industry Experience', selected.industryExperience ? `${selected.industryExperience} Years` : '—'],
+                  ]}
+                />
+              </>
+            )}
+
+            {profileTab === 'responsibilities' && selected.employeeCategory !== 'Non-Teaching' && (
+              <>
+                <ProfileCard
+                  title="Workload Summary"
+                  icon={FiCheckCircle}
+                  rows={[
+                    ['Total Subjects Assigned', `${load.subjects} Subject${load.subjects === 1 ? '' : 's'}`],
+                    ['Total Weekly Hours', `${load.hours || 0} Hours`],
+                    ['Workload Status', load.status],
+                  ]}
+                />
+                <section className="sp-profile-panel">
+                  <header className="sp-panel-header">
+                    <FiBriefcase aria-hidden="true" />
+                    <h2>Assigned Subjects & Workload</h2>
+                  </header>
+                  <div style={{ padding: '14px 18px' }}>
+                    {selected.assignments?.length ? (
+                      <AssignmentList faculty={selected} onRemove={removeAssignment} />
+                    ) : (
+                      <p className="fm-muted" style={{ margin: '8px 0' }}>No academic responsibilities assigned yet.</p>
+                    )}
+                  </div>
+                </section>
+              </>
+            )}
+
+            {profileTab === 'documents' && (
+              <section className="sp-profile-panel">
+                <header className="sp-panel-header">
+                  <FiFileText aria-hidden="true" />
+                  <h2>Supporting Documents & Verification</h2>
+                </header>
+                <dl className="sp-panel-grid">
+                  {FACULTY_DOCUMENTS.map(([key, label]) => {
+                    const doc = selected.documents?.[key]
+                    const statusVal = typeof doc === 'string' ? doc : (doc?.status || (doc?.uploaded ? 'Submitted' : 'Not Submitted'))
+                    return (
+                      <div className="sp-panel-item" key={key}>
+                        <dt className="sp-panel-label">{label}</dt>
+                        <dd className="sp-panel-val" style={{ color: statusVal === 'Submitted' ? '#16a34a' : 'inherit' }}>
+                          {statusVal}
+                        </dd>
+                      </div>
+                    )
+                  })}
+                </dl>
+              </section>
+            )}
+          </div>
         </div>
       </div>
     )
@@ -2791,7 +3292,7 @@ export default function FacultyManagement() {
                   <thead>
                     <tr>
                       {['Employee ID', 'Name', 'Department', 'Designation', 'Experience', 'Employment Type', 'Status', 'Actions'].map(label => (
-                        <th scope="col" key={label}>{label}</th>
+                        <th scope="col" key={label} className={['Status', 'Actions'].includes(label) ? 'table-center' : ''}>{label}</th>
                       ))}
                     </tr>
                   </thead>
@@ -2803,7 +3304,15 @@ export default function FacultyManagement() {
                           <div className="fm-identity">
                             <Avatar faculty={item} />
                             <div>
-                              <strong title={item.fullName}>{item.fullName}</strong>
+                              <button
+                                type="button"
+                                className="student-name-link table-cell-truncate"
+                                title={item.fullName}
+                                aria-label={`View details for ${item.fullName}`}
+                                onClick={() => navigate('/faculty/' + item.id + '?category=' + activeCategory)}
+                              >
+                                {item.fullName}
+                              </button>
                               <small title={item.email}>{item.email}</small>
                             </div>
                           </div>
@@ -2812,19 +3321,28 @@ export default function FacultyManagement() {
                         <td>{item.designation || '—'}</td>
                         <td>{years(item.experience)}</td>
                         <td>{item.employmentType || '—'}</td>
-                        <td><StatusBadge value={item.employmentStatus} /></td>
-                        <td>
-                          <div className="fm-actions">
-                            <button type="button" className="fm-icon-button" title={`View ${selectedCategory === 'Non-Teaching' ? 'staff member' : 'faculty'}`} aria-label={'View: ' + item.fullName} onClick={() => navigate('/faculty/' + item.id + '?category=' + activeCategory)}>
-                              <FiEye />
-                            </button>
+                        <td className="table-center"><StatusBadge value={item.employmentStatus} /></td>
+                        <td className="table-center">
+                          <div className="table-actions-cell table-actions-group">
                             {selectedCategory === 'Teaching' && (
-                              <button type="button" className="fm-icon-button" title="Assign Academic Work" aria-label={'Assign academic work: ' + item.fullName} onClick={() => setAssignmentId(item.id)}>
-                                <FiBriefcase />
+                              <button
+                                type="button"
+                                className="table-action-btn action-assign"
+                                title="Assign Academic Work"
+                                aria-label={'Assign academic work: ' + item.fullName}
+                                onClick={() => setAssignmentId(item.id)}
+                              >
+                                <FiBriefcase aria-hidden="true" />
                               </button>
                             )}
-                            <button type="button" className="fm-icon-button" title={`Edit ${selectedCategory === 'Non-Teaching' ? 'staff member' : 'faculty'}`} aria-label={'Edit: ' + item.fullName} onClick={() => navigate('/faculty/' + item.id + '/edit?category=' + activeCategory)}>
-                              <FiEdit2 />
+                            <button
+                              type="button"
+                              className="table-action-btn action-edit"
+                              title={`Edit ${selectedCategory === 'Non-Teaching' ? 'staff member' : 'faculty'}`}
+                              aria-label={'Edit: ' + item.fullName}
+                              onClick={() => navigate('/faculty/' + item.id + '/edit?category=' + activeCategory)}
+                            >
+                              <FiEdit2 aria-hidden="true" />
                             </button>
                           </div>
                         </td>
