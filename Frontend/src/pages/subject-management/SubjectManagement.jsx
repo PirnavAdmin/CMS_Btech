@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
-import { FiAlertTriangle, FiBookOpen, FiCheckCircle, FiFileText, FiLayers, FiPlus, FiRotateCcw, FiSearch, FiTrash2, FiX } from 'react-icons/fi'
+import { FiAlertTriangle, FiPlus, FiRotateCcw, FiSearch, FiTrash2, FiX } from 'react-icons/fi'
 import DashboardLayout from '../../layouts/DashboardLayout'
 import EmptyState from '../../components/EmptyState'
 import ExportMenu from '../../components/ExportMenu'
@@ -153,33 +153,37 @@ export default function SubjectManagement() {
             <h1>Subject Management</h1>
             <p>Configure and manage subjects across academic programs and semesters.</p>
           </div>
-          <div className="sm-actions">
-            <ExportMenu rows={records} columns={columns} filename="subject-directory" title="Subject Directory" scope="All matching subjects" />
-            <button className="sm-btn sm-btn--primary" onClick={openAdd}><FiPlus /> Add Subject</button>
+          <div className="sm-header-side">
+            <section className="sm-summary-strip" aria-label="Subject summary">
+              {[["Total Subjects", kpis.total, 'total'], ["Active Subjects", kpis.active, 'active'], ["Theory Subjects", kpis.theory, 'theory'], ["Practical / Lab", kpis.lab, 'lab'], ["Total Credits", kpis.credits, 'credits']].map(([label, value, tone]) => (
+                <div className={`sm-summary-item sm-summary-item--${tone}`} key={label}>
+                  <strong>{value}</strong>
+                  <span>{label}</span>
+                </div>
+              ))}
+            </section>
           </div>
         </header>
-        <section className="sm-kpi-grid">
-          {[[FiBookOpen, 'Total Subjects', kpis.total, 'blue'], [FiCheckCircle, 'Active Subjects', kpis.active, 'green'], [FiFileText, 'Theory Subjects', kpis.theory, 'purple'], [FiLayers, 'Practical / Lab', kpis.lab, 'amber'], [FiBookOpen, 'Total Credits', kpis.credits, 'cyan']].map(([Icon, label, value, color]) => (
-            <div className="sm-kpi-card" key={label}>
-              <div className={`sm-kpi-icon sm-kpi-icon--${color}`}><Icon /></div>
-              <div className="sm-kpi-content"><small>{label}</small><strong>{value}</strong></div>
-            </div>
-          ))}
-        </section>
         <section className="sm-card">
           <div className="sm-directory-title">
             <div>
               <h2>Subject Directory</h2>
               <p>{loading ? 'Loading subjects…' : `${records.length} subjects found`}</p>
             </div>
-            {activeFilterText.length > 0 && (
-              <div className="sm-filter-context">
-                {activeFilterText.join(' / ')}{' '}
-                <button onClick={() => setFilters({ search: '', academicYearId: '', courseId: '', branchId: '', level: '', semesterId: '', subjectType: '', status: '' })}>
-                  <FiRotateCcw /> Clear filters
-                </button>
+            <div className="sm-directory-tools">
+              {activeFilterText.length > 0 && (
+                <div className="sm-filter-context">
+                  {activeFilterText.join(' / ')}{' '}
+                  <button onClick={() => setFilters({ search: '', academicYearId: '', courseId: '', branchId: '', level: '', semesterId: '', subjectType: '', status: '' })}>
+                    <FiRotateCcw /> Clear filters
+                  </button>
+                </div>
+              )}
+              <div className="sm-actions">
+                <ExportMenu rows={records} columns={columns} filename="subject-directory" title="Subject Directory" scope="All matching subjects" />
+                <button className="sm-btn sm-btn--primary" onClick={openAdd}><FiPlus /> Add Subject</button>
               </div>
-            )}
+            </div>
           </div>
           <FilterPanel
             active={Boolean(filters.search || activeFilterText.length || filters.subjectType || filters.status)}
