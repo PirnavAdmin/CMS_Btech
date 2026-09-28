@@ -1271,3 +1271,9 @@ label > b,
 :root[data-theme="dark"] .ac-draft-progress b {
   color: var(--text-primary) !important;
 }
+
+:root[data-theme="dark"] .preview-live-tag {
+  background-color: var(--surface-soft) !important;
+  color: var(--brand-blue, #A39DDC) !important;
+  border: 1px solid var(--border-strong) !important;
+}
