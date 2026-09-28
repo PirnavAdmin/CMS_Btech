@@ -879,8 +879,11 @@
 }
 
 .preview-hero-badge {
-  width: 36px;
+  min-width: 36px;
+  width: auto;
+  max-width: 60px;
   height: 36px;
+  padding: 0 6px;
   border-radius: 8px;
   background: #756FB2;
   color: #ffffff;
@@ -889,8 +892,12 @@
   justify-content: center;
   font-weight: 850;
   font-size: 0.7rem;
-  letter-spacing: 0.03em;
+  letter-spacing: 0.02em;
   flex-shrink: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  box-sizing: border-box;
 }
 
 .preview-hero-details {

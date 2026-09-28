@@ -519,8 +519,8 @@ export default function Dashboard() {
   // End-to-End Connected Academic Setup Workflow Pipeline
   const setupFlowSteps = [
     { title: 'Academic Year', count: selectedAcademicYear ? `${yearName.split(' ')[0]}` : 'Configure', route: '/academic-year-management', icon: FiCalendar, isConfigured: Boolean(selectedAcademicYear), color: '#8782BC' },
-    { title: 'Departments', count: `${departments.length} Units`, route: '/department-management', icon: FiGrid, isConfigured: departments.length > 0, color: '#0284C7' },
     { title: 'Courses', count: `${scopedCourses.length} Programs`, route: '/courses', icon: FiLayers, isConfigured: scopedCourses.length > 0, color: '#0D9488' },
+    { title: 'Departments', count: `${departments.length} Units`, route: '/department-management', icon: FiGrid, isConfigured: departments.length > 0, color: '#0284C7' },
     { title: 'Branches', count: `${scopedBranches.length} Streams`, route: '/branches', icon: FiBriefcase, isConfigured: scopedBranches.length > 0, color: '#F59E0B' },
     { title: 'Semesters', count: `${semesters.length} Terms`, route: '/semester-management', icon: FiClock, isConfigured: semesters.length > 0, color: '#8782BC' },
     { title: 'Sections', count: `${scopedSections.length} Batches`, route: '/section-management', icon: FiUsers, isConfigured: scopedSections.length > 0, color: '#0284C7' },

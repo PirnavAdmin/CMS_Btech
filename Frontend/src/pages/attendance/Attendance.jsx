@@ -2,7 +2,7 @@ import { newestFirst } from '../../utils/newestFirst'
 import { showError } from '../../utils/toast'
 import useToastState from '../../hooks/useToastState'
 import React, { useState, useEffect, useMemo, useCallback } from 'react'
-import { useLocation } from 'react-router-dom'
+import { useLocation, useNavigate } from 'react-router-dom'
 import {
   FiCalendar,
   FiCheckCircle,
@@ -55,6 +55,7 @@ const ATTENDANCE_COLUMNS = [
 
 export default function Attendance() {
   const { pathname } = useLocation()
+  const navigate = useNavigate()
   const {
     currentAcademicYear,
     activeDepartments,
@@ -70,7 +71,6 @@ export default function Attendance() {
   const [sessions, setSessions] = useState([])
   const [loading, setLoading] = useState(false)
   const [, setToast] = useToastState('', 'success')
-  const [selectedSession, setSelectedSession] = useState(null)
   const [selectedStudentReport, setSelectedStudentReport] = useState(null)
   const [shortageDepartmentId, setShortageDepartmentId] = useState('')
   const [shortageCourseId, setShortageCourseId] = useState('')
@@ -933,10 +933,10 @@ export default function Attendance() {
                                 <span className="text-danger font-semibold">{session.absentCount} A</span>
                               </td>
                               <td>
-                                <StatusBadge
-                                  status={rate >= 75 ? 'Active' : 'Warning'}
-                                  label={`${rate}%`}
-                                />
+                                <span className={`erp-status-badge erp-status-badge--${rate >= 75 ? 'active' : 'pending'}`}>
+                                  <i aria-hidden="true" />
+                                  {`${rate}%`}
+                                </span>
                               </td>
                               <td>{session.faculty}</td>
                               <td>
@@ -944,18 +944,8 @@ export default function Attendance() {
                                   type="button"
                                   className="erp-btn erp-btn--icon"
                                   title="View Session Details"
-                                  onClick={async () => {
-                                    setSelectedSession({ ...session, records: [], detailsLoading: true })
-                                    try {
-                                      const records = await attendanceService.getSessionStudents(session.id || session.sessionId)
-                                      setSelectedSession(current => current?.id === session.id
-                                        ? { ...current, records, totalStudents: records.length, detailsLoading: false }
-                                        : current)
-                                    } catch (error) {
-                                      setSelectedSession(current => current?.id === session.id ? { ...current, detailsLoading: false } : current)
-                                      notify(error.message || 'Unable to load students for this attendance session.', 'error')
-                                    }
-                                  }}
+                                  aria-label="View session details"
+                                  onClick={() => navigate(`/student-management/attendance/sessions/${encodeURIComponent(session.id || session.sessionId)}`)}
                                 >
                                   <FiEye />
                                 </button>
@@ -991,10 +981,10 @@ export default function Attendance() {
               <small>Required attendance <b>75%</b></small>
             </div>
             <div className={`attendance-report-grid report-view-${reportView}`}>
-              <article className="erp-card"><div className="erp-card-header"><div><h2 className="erp-card-title">Subject-wise Attendance</h2><p className="erp-card-subtitle">Attendance performance for every recorded subject.</p></div></div><ReportTable rows={subjectAttendance} empty="No subject sessions recorded yet." columns={[['Subject', row => row.subject], ['Sessions', row => row.sessions], ['Present / Total', row => `${row.present} / ${row.total}`], ['Attendance', row => <StatusBadge status={row.rate >= 75 ? 'Active' : 'Warning'} label={`${row.rate}%`} />]]} /></article>
-              <article className="erp-card"><div className="erp-card-header"><div><h2 className="erp-card-title">Monthly Attendance</h2><p className="erp-card-subtitle">Monthly class attendance summary.</p></div></div><ReportTable rows={monthlyAttendance} empty="No monthly attendance data available." columns={[['Month', row => row.month], ['Sessions', row => row.sessions], ['Present / Total', row => `${row.present} / ${row.total}`], ['Attendance', row => <StatusBadge status={row.rate >= 75 ? 'Active' : 'Warning'} label={`${row.rate}%`} />]]} /></article>
+              <article className="erp-card"><div className="erp-card-header"><div><h2 className="erp-card-title">Subject-wise Attendance</h2><p className="erp-card-subtitle">Attendance performance for every recorded subject.</p></div></div><ReportTable rows={subjectAttendance} empty="No subject sessions recorded yet." columns={[['Subject', row => row.subject], ['Sessions', row => row.sessions], ['Present / Total', row => `${row.present} / ${row.total}`], ['Attendance', row => <AttendanceRateBadge rate={row.rate} />]]} /></article>
+              <article className="erp-card"><div className="erp-card-header"><div><h2 className="erp-card-title">Monthly Attendance</h2><p className="erp-card-subtitle">Monthly class attendance summary.</p></div></div><ReportTable rows={monthlyAttendance} empty="No monthly attendance data available." columns={[['Month', row => row.month], ['Sessions', row => row.sessions], ['Present / Total', row => `${row.present} / ${row.total}`], ['Attendance', row => <AttendanceRateBadge rate={row.rate} />]]} /></article>
             </div>
-            <article className="erp-card"><div className="erp-card-header"><div><h2 className="erp-card-title">Student Attendance Report</h2><p className="erp-card-subtitle">Student-wise attendance calculated from all recorded subject sessions.</p></div><ExportMenu rows={studentAttendance} columns={[{ key: 'rollNumber', label: 'Roll Number' }, { key: 'name', label: 'Student' }, { key: 'course', label: 'Course' }, { key: 'branch', label: 'Branch' }, { key: 'present', label: 'Present' }, { key: 'total', label: 'Total Classes' }, { key: 'rate', label: 'Attendance %' }]} title="Student Attendance Report" filename="student-attendance-report" /></div><ReportTable rows={studentAttendance} empty="No student attendance records available." columns={[['Roll Number', row => row.rollNumber], ['Student', row => row.name], ['Course / Branch', row => `${row.course} · ${row.branch}`], ['Present / Total', row => `${row.present} / ${row.total}`], ['Attendance', row => <StatusBadge status={row.rate >= 75 ? 'Active' : row.rate >= 65 ? 'Warning' : 'Danger'} label={`${row.rate}%`} />], ['Action', row => <button type="button" className="erp-btn erp-btn--icon" title="View Student Report" aria-label="View Student Report" onClick={() => setSelectedStudentReport(row)}><FiEye /></button>]]} /></article>
+            <article className="erp-card"><div className="erp-card-header"><div><h2 className="erp-card-title">Student Attendance Report</h2><p className="erp-card-subtitle">Student-wise attendance calculated from all recorded subject sessions.</p></div><ExportMenu rows={studentAttendance} columns={[{ key: 'rollNumber', label: 'Roll Number' }, { key: 'name', label: 'Student' }, { key: 'course', label: 'Course' }, { key: 'branch', label: 'Branch' }, { key: 'present', label: 'Present' }, { key: 'total', label: 'Total Classes' }, { key: 'rate', label: 'Attendance %' }]} title="Student Attendance Report" filename="student-attendance-report" /></div><ReportTable rows={studentAttendance} empty="No student attendance records available." columns={[['Roll Number', row => row.rollNumber], ['Student', row => row.name], ['Course / Branch', row => `${row.course} · ${row.branch}`], ['Present / Total', row => `${row.present} / ${row.total}`], ['Attendance', row => <AttendanceRateBadge rate={row.rate} criticalThreshold={65} />], ['Action', row => <button type="button" className="erp-btn erp-btn--icon" title="View Student Report" aria-label="View Student Report" onClick={() => setSelectedStudentReport(row)}><FiEye /></button>]]} /></article>
           </section>
         )}
 
@@ -1387,7 +1377,7 @@ export default function Attendance() {
                             <td>{p.personal?.fullName || p.name}</td>
                             <td>{p.academic?.course || 'B.Tech'} · {p.academic?.branch || 'CSE'}</td>
                             <td>{p.academic?.semester || 'Semester 1'}</td>
-                            <td><strong className="text-danger">{rate}%</strong></td>
+                            <td><AttendanceRateBadge rate={rate} criticalThreshold={65} /></td>
                             <td>{75 - rate}% required</td>
                             <td><div className="attendance-shortage-status"><StatusBadge status={rate < 65 ? 'Danger' : 'Warning'} label={rate < 65 ? 'Critical' : 'Shortage'} /><button type="button" className="erp-btn erp-btn--icon" title="View Details" aria-label="View Details" onClick={() => setSelectedStudentReport(p.attendanceReport || { id: p.studentId || p.id, name: p.personal?.fullName || p.name, rollNumber: p.academic?.rollNumber || p.rollNumber, course: p.academic?.course || '-', branch: p.academic?.branch || '-', rate, present: 0, total: 0 })}><FiEye /></button><button type="button" className="erp-btn erp-btn--secondary" onClick={() => notify(`Attendance shortage notification prepared for ${p.personal?.fullName || p.name || 'student'}.`, 'info')}><FiBell /> Notify</button></div></td>
                           </tr>
@@ -1402,96 +1392,6 @@ export default function Attendance() {
         )}
 
         {/* View Details Dialog */}
-        {selectedSession && (
-          <ViewDialog
-            exportFilename={`attendance_${selectedSession.id || selectedSession.subject}_${selectedSession.date}`}
-            title={`Session Details: ${selectedSession.subject}`}
-            subtitle={`${selectedSession.course || 'B.Tech'} · ${selectedSession.branch || 'CSE'} · Semester ${selectedSession.semester || '1'}`}
-            icon={FiCalendar}
-            onClose={() => setSelectedSession(null)}
-          >
-            <div className="attendance-session-detail" style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-              <div className="view-modal-banner">
-                <div className="view-modal-avatar">
-                  <FiCalendar />
-                </div>
-                <div className="view-modal-header-info">
-                  <div className="view-modal-badges">
-                    <span className="view-modal-badge">{selectedSession.date}</span>
-                    {selectedSession.section && (
-                      <span className="view-modal-badge">
-                        {String(selectedSession.section).toLowerCase().startsWith('section')
-                          ? selectedSession.section
-                          : `Section ${selectedSession.section}`}
-                      </span>
-                    )}
-                    <span className="view-modal-badge-status active">{selectedSession.status || 'Marked'}</span>
-                  </div>
-                  <h1 className="view-modal-title">{selectedSession.subject}</h1>
-                  <p className="view-modal-subtitle">Faculty: {selectedSession.faculty} · Total Students: {selectedSession.detailsLoading ? 'Loading…' : selectedSession.records?.length ?? selectedSession.totalStudents}</p>
-                </div>
-              </div>
-
-              <div className="view-modal-grid">
-                <InfoCard
-                  icon={FiCalendar}
-                  title="Session Information"
-                  items={[
-                    { label: 'Date', value: selectedSession.date },
-                    { label: 'Subject', value: selectedSession.subject },
-                    { label: 'Faculty', value: selectedSession.faculty },
-                    { label: 'Academic Year', value: selectedSession.academicYear },
-                  ]}
-                />
-                <InfoCard
-                  icon={FiLayers}
-                  title="Academic Scope"
-                  items={[
-                    { label: 'Course', value: selectedSession.course },
-                    { label: 'Branch', value: selectedSession.branch },
-                    { label: 'Semester', value: selectedSession.semester },
-                    { label: 'Section', value: selectedSession.section },
-                  ]}
-                />
-              </div>
-
-              <div className="erp-detail-section">
-                <h3 className="erp-detail-heading">Student Attendance Breakdown ({selectedSession.detailsLoading ? 'Loading…' : selectedSession.records?.length ?? selectedSession.totalStudents} Students)</h3>
-                <div className="erp-table-responsive">
-                  <table className="erp-table">
-                    <thead>
-                      <tr>
-                        <th>#</th>
-                        <th>Roll No</th>
-                        <th>Student Name</th>
-                        <th>Status</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {selectedSession.detailsLoading ? (
-                        <tr><td colSpan="4">Loading student attendance…</td></tr>
-                      ) : (selectedSession.records || []).length === 0 ? (
-                        <tr><td colSpan="4">No student attendance records are available for this session.</td></tr>
-                      ) : (selectedSession.records || []).map((r, idx) => (
-                        <tr key={r.studentId || idx}>
-                          <td>{idx + 1}</td>
-                          <td><strong>{r.rollNumber || r.studentId}</strong></td>
-                          <td>{r.name}</td>
-                          <td>
-                            <StatusBadge
-                              status={r.status === 'Present' ? 'Active' : r.status === 'Late' ? 'Warning' : 'Danger'}
-                              label={r.status}
-                            />
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            </div>
-          </ViewDialog>
-        )}
         {selectedStudentReport && (
           <ViewDialog
             title={`Student Attendance: ${selectedStudentReport.name || 'Student'}`}
@@ -1508,6 +1408,12 @@ export default function Attendance() {
       </div>
     </DashboardLayout>
   )
+}
+
+function AttendanceRateBadge({ rate, criticalThreshold = null }) {
+  const percentage = Number(rate) || 0
+  const tone = percentage >= 75 ? 'active' : criticalThreshold !== null && percentage < criticalThreshold ? 'rejected' : 'pending'
+  return <span className={`erp-status-badge erp-status-badge--${tone}`}><i aria-hidden="true" />{`${percentage}%`}</span>
 }
 
 function ReportTable({ rows, columns, empty }) {

@@ -42,6 +42,7 @@ main.student-profile .sp-directory-table th:nth-child(1),main.student-profile .s
 main.student-profile .sp-directory-table th:nth-child(2),main.student-profile .sp-directory-table td:nth-child(2){width:22%!important}
 main.student-profile .sp-directory-table th:nth-child(3),main.student-profile .sp-directory-table td:nth-child(3){width:22%!important}
 main.student-profile .sp-directory-table th:nth-child(4),main.student-profile .sp-directory-table td:nth-child(4){width:16%!important}
+main.student-profile .sp-directory-table td:nth-child(4){text-align:center!important}
 main.student-profile .sp-directory-table th:nth-child(5),main.student-profile .sp-directory-table td:nth-child(5){width:9%!important}
 main.student-profile .sp-directory-table th:nth-child(6),main.student-profile .sp-directory-table td:nth-child(6){width:8%!important}
 main.student-profile .sp-directory-table td:last-child>div{display:flex;gap:5px;flex-wrap:nowrap;min-width:0}

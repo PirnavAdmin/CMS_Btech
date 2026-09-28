@@ -21,8 +21,22 @@ const DAY = 864e5;
 const states = ['UPCOMING', 'ACTIVE', 'ARCHIVED'];
 const blank = { name: '', startDate: '', endDate: '', autoActivate: false };
 
+const normalizeDate = (val) => {
+  if (!val) return '';
+  const str = String(val).trim();
+  const ymd = str.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (ymd) return `${ymd[1]}-${ymd[2]}-${ymd[3]}`;
+  const dmy = str.match(/^(\d{2})[-/](\d{2})[-/](\d{4})/);
+  if (dmy) return `${dmy[3]}-${dmy[2]}-${dmy[1]}`;
+  const d = new Date(str);
+  if (!isNaN(d.getTime())) return d.toISOString().slice(0, 10);
+  return str.slice(0, 10);
+};
+
 const d = (x) => {
-  let z = new Date(`${x}T00:00:00`);
+  const norm = normalizeDate(x);
+  if (!norm) return new Date(NaN);
+  let z = new Date(`${norm}T00:00:00`);
   z.setHours(0, 0, 0, 0);
   return z;
 };
@@ -31,13 +45,43 @@ const now = () => {
   z.setHours(0, 0, 0, 0);
   return z;
 };
-const isPresentYear = (x) => x?.startDate && x?.endDate && now() >= d(x.startDate) && now() <= d(x.endDate);
-const isPastYear = (x) => x?.endDate && now() > d(x.endDate);
-const formatDate = (x) => (x ? d(x).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '—');
+const isPresentYear = (x) => {
+  if (!x?.startDate || !x?.endDate) return false;
+  const start = d(x.startDate);
+  const end = d(x.endDate);
+  if (isNaN(start.getTime()) || isNaN(end.getTime())) return false;
+  return now() >= start && now() <= end;
+};
+const isPastYear = (x) => {
+  if (!x?.endDate) return false;
+  const end = d(x.endDate);
+  if (isNaN(end.getTime())) return false;
+  return now() > end;
+};
+const formatDate = (x) => {
+  if (!x) return '—';
+  const parsed = d(x);
+  return isNaN(parsed.getTime()) ? '—' : parsed.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+};
 const days = (x) => Math.ceil((d(x) - now()) / DAY);
-const duration = (a, b) => Math.round((d(b) - d(a)) / DAY) + 1;
-const progress = (a, b) => Math.max(0, Math.min(100, Math.round(((now() - d(a)) * 100) / (d(b) - d(a)))));
-const autoStatus = (a, b) => (now() < d(a) ? 'UPCOMING' : now() > d(b) ? 'ARCHIVED' : 'ACTIVE');
+const duration = (a, b) => {
+  const start = d(a);
+  const end = d(b);
+  if (isNaN(start.getTime()) || isNaN(end.getTime())) return 0;
+  return Math.round((end - start) / DAY) + 1;
+};
+const progress = (a, b) => {
+  const start = d(a);
+  const end = d(b);
+  if (isNaN(start.getTime()) || isNaN(end.getTime()) || end <= start) return 0;
+  return Math.max(0, Math.min(100, Math.round(((now() - start) * 100) / (end - start))));
+};
+const autoStatus = (a, b) => {
+  const start = d(a);
+  const end = d(b);
+  if (isNaN(start.getTime()) || isNaN(end.getTime())) return 'UPCOMING';
+  return now() < start ? 'UPCOMING' : now() > end ? 'ARCHIVED' : 'ACTIVE';
+};
 const nextCycle = (year) => {
   if (!year) return null;
   const start = d(year.endDate);
@@ -54,20 +98,62 @@ const nextCycle = (year) => {
   };
 };
 
+const ACADEMIC_YEAR_DATES_KEY = 'academic_year_dates_cache';
+
+const readCachedYearDates = (id, name) => {
+  try {
+    const raw = localStorage.getItem(ACADEMIC_YEAR_DATES_KEY);
+    if (!raw) return {};
+    const parsed = JSON.parse(raw);
+    const key = [id, name].filter(Boolean).map(String).find((candidate) => parsed[candidate]);
+    return key ? (parsed[key] || {}) : {};
+  } catch {
+    return {};
+  }
+};
+
+const cacheYearDates = (id, name, dates) => {
+  if (!dates || (!dates.startDate && !dates.endDate)) return;
+  try {
+    const raw = localStorage.getItem(ACADEMIC_YEAR_DATES_KEY);
+    const parsed = raw ? JSON.parse(raw) : {};
+    const keys = [id, name].filter(Boolean).map(String);
+    keys.forEach((k) => {
+      parsed[k] = {
+        startDate: dates.startDate || parsed[k]?.startDate || '',
+        endDate: dates.endDate || parsed[k]?.endDate || '',
+      };
+    });
+    localStorage.setItem(ACADEMIC_YEAR_DATES_KEY, JSON.stringify(parsed));
+  } catch {
+    // Ignore storage errors
+  }
+};
+
 const mapYear = (x) => {
-  const startDate = String(x.startDate ?? '').slice(0, 10);
-  const endDate = String(x.endDate ?? '').slice(0, 10);
+  if (!x) return blank;
+  const id = String(x.academicYearId ?? x.AcademicYearId ?? x.id ?? '');
+  const name = String(x.academicYearName ?? x.AcademicYearName ?? x.name ?? '').trim();
+  const cachedDates = readCachedYearDates(id, name);
+  const rawStart = x.startDate ?? x.StartDate ?? x.start_date ?? x.fromDate ?? x.FromDate ?? x.academicYearStartDate ?? x.AcademicYearStartDate ?? cachedDates.startDate ?? '';
+  const rawEnd = x.endDate ?? x.EndDate ?? x.end_date ?? x.toDate ?? x.ToDate ?? x.academicYearEndDate ?? x.AcademicYearEndDate ?? cachedDates.endDate ?? '';
+  const startDate = normalizeDate(rawStart);
+  const endDate = normalizeDate(rawEnd);
+
+  if (startDate || endDate) {
+    cacheYearDates(id, name, { startDate, endDate });
+  }
 
   return {
-    id: String(x.academicYearId ?? x.id),
-    name: x.academicYearName ?? x.name ?? '',
+    id,
+    name,
     startDate,
     endDate,
     status:
-      x.isActive || Number(x.status) === 1
+      x.isActive || x.IsActive || Number(x.status ?? x.Status) === 1
         ? 'ACTIVE'
         : autoStatus(startDate, endDate),
-    autoActivate: false,
+    autoActivate: Boolean(x.autoActivate ?? x.AutoActivate ?? false),
   };
 };
 
@@ -152,8 +238,14 @@ export default function AcademicYear() {
       setNotice('Present academic year cannot be edited directly.', 'error');
       return;
     }
-    setSelected(x);
-    setForm({ ...x });
+    const item = mapYear(x);
+    setSelected(item);
+    setForm({
+      name: item.name,
+      startDate: item.startDate,
+      endDate: item.endDate,
+      autoActivate: item.autoActivate || false,
+    });
     setErrors({});
     setModal('edit');
   };
@@ -188,13 +280,26 @@ export default function AcademicYear() {
     if (!validate() || saving) return;
     setSaving(true);
     try {
-      const data = selected ? await academicYearApi.update(selected.id, form) : await academicYearApi.create(form);
+      const payload = {
+        name: form.name.trim(),
+        academicYearName: form.name.trim(),
+        startDate: form.startDate,
+        endDate: form.endDate,
+        StartDate: form.startDate,
+        EndDate: form.endDate,
+        autoActivate: form.autoActivate,
+      };
+      const data = selected ? await academicYearApi.update(selected.id, payload) : await academicYearApi.create(payload);
+      const targetId = data?.academicYearId ?? data?.id ?? selected?.id;
+      cacheYearDates(targetId, payload.name, { startDate: form.startDate, endDate: form.endDate });
       const item = data
         ? mapYear(data)
         : {
             ...form,
             id: selected?.id || Date.now().toString(),
             name: form.name.trim(),
+            startDate: form.startDate,
+            endDate: form.endDate,
             status: autoStatus(form.startDate, form.endDate),
           };
       if (!selected) { rememberCreated('academic-years', item); setSearch(''); setFilter('ALL'); setPage(1); }
@@ -253,7 +358,9 @@ export default function AcademicYear() {
     } else {
       setSaving(true);
       try {
-        rememberCreated('academic-years', await academicYearApi.create(item));
+        const genResult = await academicYearApi.create(item);
+        cacheYearDates(genResult?.academicYearId ?? genResult?.id, item.name, { startDate: item.startDate, endDate: item.endDate });
+        rememberCreated('academic-years', genResult);
         setSearch(''); setFilter('ALL'); setPage(1);
         setNotice(`${item.name} was generated successfully.`, 'success');
         await loadYears();
@@ -405,7 +512,7 @@ export default function AcademicYear() {
                   setPage(1);
                 }}
               >
-                <section className="cm-panel course-toolbar">
+                <div className="course-toolbar">
                   <label className="course-search">
                     <FiSearch />
                     <input
@@ -428,20 +535,7 @@ export default function AcademicYear() {
                       </button>
                     ))}
                   </div>
-                  {Boolean(search || filter !== 'ALL') && (
-                    <button
-                      className="course-clear"
-                      type="button"
-                      onClick={() => {
-                        setSearch('');
-                        setFilter('ALL');
-                        setPage(1);
-                      }}
-                    >
-                      Clear Filters
-                    </button>
-                  )}
-                </section>
+                </div>
               </FilterPanel>
 
               <div className="erp-table-responsive">

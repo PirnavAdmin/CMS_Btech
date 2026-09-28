@@ -58,12 +58,44 @@ const empty = {
 };
 
 const HOD_NAMES_KEY = 'btech-department-hod-names';
+const DEPT_DATES_KEY = 'pirnav-department-dates-map';
+
 const savedHodNames = () => {
   try {
     return JSON.parse(localStorage.getItem(HOD_NAMES_KEY) || '{}');
   } catch {
     return {};
   }
+};
+
+const readCachedDeptDates = (id, code) => {
+  try {
+    const raw = localStorage.getItem(DEPT_DATES_KEY);
+    const map = raw ? JSON.parse(raw) : {};
+    const keyId = String(id || '').trim().toLowerCase();
+    const keyCode = String(code || '').trim().toLowerCase();
+    return map[keyId] || map[keyCode] || null;
+  } catch {
+    return null;
+  }
+};
+
+const cacheDeptDates = (id, code, dates) => {
+  try {
+    const raw = localStorage.getItem(DEPT_DATES_KEY);
+    const map = raw ? JSON.parse(raw) : {};
+    const dateObj = {
+      startDate: dates?.startDate ? String(dates.startDate).slice(0, 10) : '',
+      endDate: dates?.endDate ? String(dates.endDate).slice(0, 10) : '',
+    };
+    const hasDates = Boolean(dateObj.startDate || dateObj.endDate);
+    const keys = [String(id || '').trim().toLowerCase(), String(code || '').trim().toLowerCase()].filter(Boolean);
+    keys.forEach((k) => {
+      if (hasDates) map[k] = dateObj;
+      else delete map[k];
+    });
+    localStorage.setItem(DEPT_DATES_KEY, JSON.stringify(map));
+  } catch {}
 };
 
 const apiError = (error, fallback) => {
@@ -77,7 +109,7 @@ const apiError = (error, fallback) => {
       data = raw;
     }
   }
-  if (status >= 500) return 'Unable to save the department right now. Please check your entries and try again.';
+  if (status >= 500) return fallback || 'Unable to load departments right now. Please try again.';
   if (status === 401) return 'Your session has expired. Please sign in again.';
   if (status === 403) return "You don't have permission to manage departments.";
   if (data?.errors && typeof data.errors === 'object') {
@@ -150,6 +182,13 @@ const mapDepartment = (record, facultyList = []) => {
   const hodName = resolveHodName(record, facultyList);
   const collegeId = record.collegeId ?? '';
   const collegeName = record.collegeName ?? record.college?.name ?? '';
+  const cachedDates = readCachedDeptDates(departmentId, record.departmentCode ?? record.code ?? record.name) || {};
+  const startDate = String(record.startDate ?? record.StartDate ?? record.start_date ?? cachedDates.startDate ?? '').slice(0, 10);
+  const endDate = String(record.endDate ?? record.EndDate ?? record.end_date ?? cachedDates.endDate ?? '').slice(0, 10);
+  if (startDate || endDate) {
+    cacheDeptDates(departmentId, record.departmentCode ?? record.code ?? record.name, { startDate, endDate });
+  }
+
   return {
     id: departmentId,
     name: record.departmentName ?? record.name ?? '',
@@ -160,6 +199,8 @@ const mapDepartment = (record, facultyList = []) => {
     hodUserId,
     hodName,
     description: record.description ?? '',
+    startDate,
+    endDate,
     hod: hodName || 'Not assigned',
     status: active ? 'Active' : inactive ? 'Inactive' : 'Active',
   };
@@ -171,6 +212,12 @@ const payloadFor = (value) => ({
   ...((value.collegeNumericId ?? value.collegeId) !== '' ? { collegeId: Number(value.collegeNumericId ?? value.collegeId) } : {}),
   ...(value.hodUserId !== '' ? { hodUserId: Number(value.hodUserId) } : {}),
   description: value.description.trim() || null,
+  startDate: value.startDate ? value.startDate.slice(0, 10) : null,
+  endDate: value.endDate ? value.endDate.slice(0, 10) : null,
+  StartDate: value.startDate ? value.startDate.slice(0, 10) : null,
+  EndDate: value.endDate ? value.endDate.slice(0, 10) : null,
+  start_date: value.startDate ? value.startDate.slice(0, 10) : null,
+  end_date: value.endDate ? value.endDate.slice(0, 10) : null,
 });
 
 export default function DepartmentManagement() {
@@ -204,7 +251,7 @@ export default function DepartmentManagement() {
       setItems(mapped);
     } catch (requestError) {
       setItems([]);
-      setError(apiError(requestError, 'Unable to load departments. Please try again.'));
+      setError(apiError(requestError, 'Unable to load departments right now. Please try again.'));
     } finally {
       setIsLoading(false);
     }
@@ -509,6 +556,9 @@ export default function DepartmentManagement() {
       const result = recordFrom(response);
       if (!form.id) { rememberCreated('departments', result); setQuery(''); setStatusFilter(''); setCurrentPage(1); }
       const id = result?.id ?? result?.departmentId ?? form.id;
+      if (id) {
+        cacheDeptDates(id, form.code, { startDate: form.startDate, endDate: form.endDate });
+      }
       if (form.status === 'Inactive' && id) await updateDepartmentStatus(id, 0);
       showSuccess(`Department ${form.id ? 'updated' : 'created'} successfully.`);
       await loadDepartments('');
@@ -627,7 +677,7 @@ export default function DepartmentManagement() {
                   setCurrentPage(1);
                 }}
               >
-                <section className="cm-panel course-toolbar">
+                <div className="course-toolbar">
                   <label className="course-search">
                     <FiSearch />
                     <input
@@ -652,20 +702,7 @@ export default function DepartmentManagement() {
                     <option value="Active">Active</option>
                     <option value="Inactive">Inactive</option>
                   </select>
-                  {Boolean(query || statusFilter) && (
-                    <button
-                      className="course-clear"
-                      type="button"
-                      onClick={() => {
-                        setQuery('');
-                        setStatusFilter('');
-                        setCurrentPage(1);
-                      }}
-                    >
-                      Clear Filters
-                    </button>
-                  )}
-                </section>
+                </div>
               </FilterPanel>
 
               {isLoading ? (
@@ -1175,6 +1212,8 @@ export default function DepartmentManagement() {
                     { label: 'Department Name', value: selected.name },
                     { label: 'Department Code', value: selected.code },
                     { label: 'College', value: selected.collegeName || selected.collegeId },
+                    { label: 'Start Date', value: selected.startDate },
+                    { label: 'End Date', value: selected.endDate },
                     { label: 'Status', value: selected.status },
                     { label: 'Description', value: selected.description },
                   ]}

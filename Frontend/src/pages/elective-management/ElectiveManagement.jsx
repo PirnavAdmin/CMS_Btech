@@ -80,6 +80,38 @@ function SelectionTable({ rows, approval = false, onApproval, emptyTitle = 'No e
 function ResultsTable({ rows, page, size, setPage }) { const pageRows = rows.slice((page - 1) * size, page * size); return !rows.length ? <EmptyState title="No examination results available" description="Academic results have not been published for this student." /> : <><div className="sm-table-wrap"><table className="em-table"><thead><tr><th>Examination</th><th>Semester</th><th>Subject</th><th>Maximum</th><th>Obtained</th><th>Percentage</th><th>Grade</th><th>Status</th></tr></thead><tbody>{pageRows.map((row, index) => <tr key={row.id || row.subjectCode || index}><td>{text(row.examinationName || row.examName)}</td><td>{text(row.semester)}</td><td><strong>{text(row.subjectCode)}</strong><span className="em-cell-subtitle">{text(row.subjectName)}</span></td><td>{text(row.maximumMarks || row.maxMarks, '-')}</td><td>{text(row.obtainedMarks || row.marksObtained, '-')}</td><td>{text(row.percentage, '-')}</td><td>{text(row.grade, '-')}</td><td><StatusBadge value={text(row.resultStatus || row.status, '-')} /></td></tr>)}</tbody></table></div><Pagination page={page} pageCount={Math.ceil(rows.length / size)} total={rows.length} size={size} onChange={setPage} /></> }
 function StudentCard({ profile, loading }) { if (loading) return <section className="em-student-card em-loading">Loading student profile...</section>; if (!profile) return null; const value = key => text(profile[key], key === 'semester' ? 'Semester information unavailable' : 'N/A'); return <section className="em-student-card"><div className="em-avatar">{String(profile.fullName || profile.studentName || 'S').split(' ').map(part => part[0]).join('').slice(0, 2).toUpperCase()}</div><div className="em-student-identity"><h2>{value('fullName')}</h2><p>{value('studentCode', profile.identifier || profile.id)}</p></div><dl>{[['Course', 'course'], ['Department', 'department'], ['Branch', 'branch'], ['Academic Year', 'academicYear'], ['Semester', 'semester'], ['Section', 'section'], ['Roll Number', 'rollNumber'], ['Registration Number', 'registrationNumber']].map(([label, key]) => <div key={key}><dt>{label}</dt><dd>{value(key)}</dd></div>)}</dl></section> }
 
+const ELECTIVE_DATES_KEY = 'elective_dates_cache'
+
+const readCachedElectiveDates = (id, code) => {
+  try {
+    const raw = localStorage.getItem(ELECTIVE_DATES_KEY)
+    if (!raw) return {}
+    const parsed = JSON.parse(raw)
+    const key = [id, code].filter(Boolean).map(String).find((candidate) => parsed[candidate])
+    return key ? (parsed[key] || {}) : {}
+  } catch {
+    return {}
+  }
+}
+
+const cacheElectiveDates = (id, code, dates) => {
+  if (!dates || (!dates.startDate && !dates.endDate)) return
+  try {
+    const raw = localStorage.getItem(ELECTIVE_DATES_KEY)
+    const parsed = raw ? JSON.parse(raw) : {}
+    const keys = [id, code].filter(Boolean).map(String)
+    keys.forEach((k) => {
+      parsed[k] = {
+        startDate: dates.startDate || parsed[k]?.startDate || '',
+        endDate: dates.endDate || parsed[k]?.endDate || '',
+      }
+    })
+    localStorage.setItem(ELECTIVE_DATES_KEY, JSON.stringify(parsed))
+  } catch {
+    // Ignore storage errors
+  }
+}
+
 export default function ElectiveManagement() {
   const navigate = useNavigate()
   const [activeTab, setActiveTab] = useState('subjects'); const [groups, setGroups] = useState([]); const [directorySubjects, setDirectorySubjects] = useState([]); const [workflowSubjects, setWorkflowSubjects] = useState([]); const [selections, setSelections] = useState([]); const [report, setReport] = useState([]); const [profile, setProfile] = useState(null); const [results, setResults] = useState([])
@@ -101,6 +133,13 @@ export default function ElectiveManagement() {
 
       const groupsWithSubjects = await Promise.all(rawGroups.map(async group => {
         const id = electiveGroupIdOf(group)
+        const groupCode = group.groupCode ?? group.code ?? ''
+        const cachedDates = readCachedElectiveDates(id, groupCode)
+        const rawStart = group.selectionStartDate ?? group.SelectionStartDate ?? group.startDate ?? group.StartDate ?? cachedDates.startDate ?? ''
+        const rawEnd = group.selectionEndDate ?? group.SelectionEndDate ?? group.endDate ?? group.EndDate ?? cachedDates.endDate ?? ''
+        const selectionStartDate = rawStart ? String(rawStart).slice(0, 10) : ''
+        const selectionEndDate = rawEnd ? String(rawEnd).slice(0, 10) : ''
+        cacheElectiveDates(id, groupCode, { startDate: selectionStartDate, endDate: selectionEndDate })
         let groupSubjects = []
 
         try {
@@ -120,6 +159,7 @@ export default function ElectiveManagement() {
           ...group,
           id,
           groupId: id,
+          groupCode,
           courseId: group.courseId ?? '',
           branchId: group.branchId ?? '',
           academicYear: group.academicYearName || group.academicYear || '',
@@ -128,8 +168,8 @@ export default function ElectiveManagement() {
           credits: firstValue(creditsOf(group), preserved.credits),
           minimumSelection: group.minSelections ?? group.minimumSelection ?? 1,
           maximumSelection: group.maxSelections ?? group.maximumSelection ?? 1,
-          selectionStartDate: group.selectionStartDate || '',
-          selectionEndDate: group.selectionEndDate || '',
+          selectionStartDate,
+          selectionEndDate,
           status: Number(group.status) === 1 ? 'Open' : 'Inactive',
           subjects: groupSubjects.map(item => ({
             ...item,
@@ -319,8 +359,13 @@ export default function ElectiveManagement() {
           electiveGroupIdOf(created) ||
           electiveGroupIdOf(created?.data) ||
           electiveGroupIdOf(created?.data?.data)
+        showSuccess('Elective group created.')
       }
 
+      cacheElectiveDates(savedGroupId, payload.groupCode, {
+        startDate: groupForm.selectionStartDate,
+        endDate: groupForm.selectionEndDate,
+      })
       setGroupModal(false)
       setEditingGroup(null)
 

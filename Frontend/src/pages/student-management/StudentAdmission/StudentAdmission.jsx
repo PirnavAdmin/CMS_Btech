@@ -7,7 +7,7 @@ import { admissionColumns } from '../../../utils/exportColumns'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   FiAlertCircle, FiArrowLeft, FiArrowRight, FiBookOpen, FiCamera, FiCheck, FiCheckCircle,
-  FiChevronRight, FiClock, FiCreditCard, FiEdit2, FiEye, FiFileText, FiGrid,
+  FiChevronRight, FiClock, FiCreditCard, FiEdit2, FiFileText, FiGrid,
   FiHome, FiInbox, FiPhone, FiPlus, FiSave, FiSearch, FiShield,
   FiTrash2, FiUploadCloud, FiUser, FiUsers, FiX,
 } from 'react-icons/fi'
@@ -549,7 +549,7 @@ function AdmissionList() {
                         <div className="sa-student">
                           <i>{item.personal.photo ? <img src={item.personal.photo} alt={sName} /> : sName.split(' ').map(part => part[0]).slice(0, 2).join('')}</i>
                           <span>
-                            <strong title={sName}>{sName}</strong>
+                            <button type="button" className="student-name-link" title={sName} aria-label={`View details for ${sName}`} onClick={() => { const targetId = item.admissionId || item.id || item.studentAdmissionId; if (targetId) navigate(`/student-management/admissions/${targetId}`) }}>{sName}</button>
                             <small title={sContact}>{sContact}</small>
                           </span>
                         </div>
@@ -566,17 +566,6 @@ function AdmissionList() {
                       <td className="table-center" style={{ width: '140px' }}><span className="sa-updated">{dateTime(item.updatedAt || item.createdAt)}</span></td>
                       <td className="table-center" style={{ width: '160px', minWidth: '160px' }}>
                         <div className="sa-icon-actions table-actions-group">
-                          <button
-                            className="table-action-btn action-view"
-                            title="View Details"
-                            aria-label="View details"
-                            onClick={() => {
-                              const targetId = item.admissionId || item.id || item.studentAdmissionId
-                              if (targetId) navigate(`/student-management/admissions/${targetId}`)
-                            }}
-                          >
-                            <FiEye />
-                          </button>
                           {isEditable && (
                             <button
                               className="table-action-btn action-edit"

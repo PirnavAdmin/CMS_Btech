@@ -66,6 +66,38 @@ const dedupeDepartmentOptions = (rows) => {
   return Array.from(map.values())
 }
 
+const COURSE_DATES_KEY = 'pirnav-course-dates-map'
+
+const readCachedCourseDates = (id, code) => {
+  try {
+    const raw = localStorage.getItem(COURSE_DATES_KEY)
+    const map = raw ? JSON.parse(raw) : {}
+    const keyId = String(id || '').trim().toLowerCase()
+    const keyCode = String(code || '').trim().toLowerCase()
+    return map[keyId] || map[keyCode] || null
+  } catch {
+    return null
+  }
+}
+
+const cacheCourseDates = (id, code, dates) => {
+  try {
+    const raw = localStorage.getItem(COURSE_DATES_KEY)
+    const map = raw ? JSON.parse(raw) : {}
+    const dateObj = {
+      startDate: dates?.startDate ? String(dates.startDate).slice(0, 10) : '',
+      endDate: dates?.endDate ? String(dates.endDate).slice(0, 10) : '',
+    }
+    const hasDates = Boolean(dateObj.startDate || dateObj.endDate)
+    const keys = [String(id || '').trim().toLowerCase(), String(code || '').trim().toLowerCase()].filter(Boolean)
+    keys.forEach((k) => {
+      if (hasDates) map[k] = dateObj
+      else delete map[k]
+    })
+    localStorage.setItem(COURSE_DATES_KEY, JSON.stringify(map))
+  } catch {}
+}
+
 const mapCourse = (record) => {
   const status = record.status ?? record.courseStatus ?? (record.isActive === true ? 1 : record.isActive === false ? 0 : '')
   const active = status === true || Number(status) === 1 || String(status).toLowerCase() === 'active'
@@ -74,6 +106,13 @@ const mapCourse = (record) => {
   const explicitSemesterCount = Number(record.totalSemesters ?? record.semesters ?? record.semesterCount ?? record.numberOfSemesters ?? 0)
   const derivedSemesterCount = academicPattern === 'semester' && durationYears > 0 ? durationYears * 2 : 0
   const semesterCount = explicitSemesterCount > 0 ? explicitSemesterCount : derivedSemesterCount
+  const cachedDates = readCachedCourseDates(record.id ?? record.courseId, record.courseCode ?? record.code ?? record.name) || {}
+  const startDate = String(record.startDate ?? record.StartDate ?? record.start_date ?? cachedDates.startDate ?? '').slice(0, 10)
+  const endDate = String(record.endDate ?? record.EndDate ?? record.end_date ?? cachedDates.endDate ?? '').slice(0, 10)
+  if (startDate || endDate) {
+    cacheCourseDates(record.id ?? record.courseId, record.courseCode ?? record.code ?? record.name, { startDate, endDate })
+  }
+
   return {
     id: record.id ?? record.courseId,
     name: record.courseName ?? record.name ?? '',
@@ -94,6 +133,8 @@ const mapCourse = (record) => {
     academicSystem: record.academicSystem ?? record.academicPattern ?? '',
     eligibility: record.eligibility ?? '',
     description: record.description ?? '',
+    startDate,
+    endDate,
     status: status === '' ? '' : active ? 'Active' : 'Inactive',
   }
 }
@@ -106,6 +147,12 @@ const payloadFor = (value) => ({
   durationYears: Number(value.durationValue),
   totalSemesters: Number(value.semesters),
   description: value.description || '',
+  startDate: value.startDate ? value.startDate.slice(0, 10) : null,
+  endDate: value.endDate ? value.endDate.slice(0, 10) : null,
+  StartDate: value.startDate ? value.startDate.slice(0, 10) : null,
+  EndDate: value.endDate ? value.endDate.slice(0, 10) : null,
+  start_date: value.startDate ? value.startDate.slice(0, 10) : null,
+  end_date: value.endDate ? value.endDate.slice(0, 10) : null,
 })
 
 const validateBasic = (v, courses = [], editingId = null) => {
@@ -314,11 +361,12 @@ function CourseList() {
 
     <section className="cm-panel course-directory">
       <header className="course-directory-heading"><div><span className="cm-eyebrow">Course Directory</span><p>{rows.length} records</p></div><div className="directory-export-actions"><ExportMenu rows={rows} columns={courseColumns} title="Courses" filename="courses" loading={isLoading || Boolean(error)} /><Link className="cm-button" to="/courses/add"><FiPlus /> Add Course</Link></div></header>
-      <FilterPanel active={hasFilters} onClear={clearFilters}><section className="cm-panel course-toolbar">
-        <label className="course-search"><FiSearch /><input aria-label="Search courses" value={query} onChange={e => { setQuery(e.target.value); setCurrentPage(1) }} placeholder="Search course name or code" /></label>
-        <select aria-label="Status" value={statusFilter} onChange={e => { setStatusFilter(e.target.value); setCurrentPage(1) }}><option value="">Select Status</option><option value="Active">Active</option><option value="Inactive">Inactive</option></select>
-        {hasFilters && <button className="course-clear" onClick={clearFilters}><FiFilter /> Clear Filters</button>}
-      </section></FilterPanel>
+      <FilterPanel active={hasFilters} onClear={clearFilters}>
+        <div className="course-toolbar">
+          <label className="course-search"><FiSearch /><input aria-label="Search courses" value={query} onChange={e => { setQuery(e.target.value); setCurrentPage(1) }} placeholder="Search course name or code" /></label>
+          <select aria-label="Status" value={statusFilter} onChange={e => { setStatusFilter(e.target.value); setCurrentPage(1) }}><option value="">Select Status</option><option value="Active">Active</option><option value="Inactive">Inactive</option></select>
+        </div>
+      </FilterPanel>
       {isLoading ? <div className="course-empty"><strong>Loading courses...</strong></div>
         : error ? <div className="course-empty"><strong>{error}</strong><button className="cm-button" onClick={load}>Retry</button></div>
         : !courses.length ? <div className="course-empty"><strong>No courses have been added yet.</strong><Link className="cm-button" to="/courses/add">+ Add Course</Link></div>
@@ -456,6 +504,7 @@ function CourseForm() {
       if (!courseId) { setSaved(true); throw new Error('Course saved, but its ID was not returned. Check the course list before making further changes.') }
       if (!targetId) rememberCreated('courses', courseId)
       setPersistedId(courseId)
+      cacheCourseDates(courseId, value.code, { startDate: value.startDate, endDate: value.endDate })
       const statusResponse = await updateCourseStatus(courseId, value.status === 'Active' ? 1 : 0)
       if (statusResponse?.data?.success === false) throw new Error('Course saved, but its status could not be updated. Please retry.')
       setSaved(true)
@@ -635,7 +684,7 @@ function CourseDetails() {
   useEffect(() => { load() }, [id])
 
   if (isLoading) return <Page><div className="cm-empty">Loading course...</div></Page>
-  if (error || !course) return <Page><div className="course-empty"><strong>{error || 'Course not found.'}</strong><Link className="cm-button" to="/courses">Back to Courses</Link></div></Page>
+  if (error || !course) return <Page><div className="course-empty"><strong>{error || 'Course not found.'}</strong><Link className="cm-button" to="/courses">Back</Link></div></Page>
 
   const department = departments.find(x => String(x.id) === String(course.departmentId))
   const valueText = value => value === null || value === undefined || String(value).trim() === '' ? '' : String(value)
@@ -649,7 +698,7 @@ function CourseDetails() {
         <div className="cm-profile-top-bar">
           <ExportMenu mode="single" title="Course Details" filename={`course_${course.code || course.id}`} />
           <Link className="cm-button secondary" to="/courses">
-            &larr; Back to Courses List
+            &larr; Back
           </Link>
         </div>
 
@@ -690,6 +739,8 @@ function CourseDetails() {
                 { label: 'Short Name', value: course.shortName },
                 { label: 'Course Type', value: course.type },
                 { label: 'College', value: course.college },
+                { label: 'Start Date', value: course.startDate },
+                { label: 'End Date', value: course.endDate },
                 { label: 'Status', value: course.status || 'Active' },
               ]}
             />
@@ -747,7 +798,7 @@ export function CourseStructure() {
   const edit = (row) => { setEditing(row.structureId); setForm({ semesterId: row.semesterId, yearNumber: row.yearNumber, semesterNumber: row.semesterNumber, semesterName: row.semesterName || `Semester ${row.semesterNumber}` }); setSemester(Number(row.semesterNumber)) }
   const toggleStatus = async (row) => { try { await updateCourseSemesterMappingStatus(row.structureId, Number(row.status) === 0 ? 1 : 0); setRows(current => current.map(x => x.structureId === row.structureId ? { ...x, status: Number(x.status) === 0 ? 1 : 0 } : x)); showSuccess('Semester mapping status updated successfully.') } catch (e) { setError(e.message || 'Unable to update mapping status.') } }
 
-  return <Page><ExportMenu rows={visible} columns={structureColumns} title="Course Structure" filename="course-structure" loading={loading || Boolean(error)} /><Header title="Course Structure" text={`${course.name} / ${branch.name}`}><Link className="cm-button secondary" to={`/branches/${branchId}`}><FiArrowLeft /> Back to Branch</Link></Header>
+  return <Page><ExportMenu rows={visible} columns={structureColumns} title="Course Structure" filename="course-structure" loading={loading || Boolean(error)} /><Header title="Course Structure" text={`${course.name} / ${branch.name}`}><Link className="cm-button secondary" to={`/branches/${branchId}`}><FiArrowLeft /> Back</Link></Header>
     {error && <p className="cm-error" role="alert">{error}</p>}
     <div className="cm-semesters">{semesterOptions.map(option => <button className={`cm-semester ${semester === Number(option.semesterNumber) ? 'active' : ''}`} onClick={() => changeSemester(Number(option.semesterNumber))} key={option.semesterId}>{option.semesterName}</button>)}</div>
     <section className="cm-panel cm-form-grid">
