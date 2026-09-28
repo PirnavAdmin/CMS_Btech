@@ -93,6 +93,10 @@ namespace BTech.Repositories
                 p_academic_year_id = request.AcademicYearId,
                 p_min_selections = request.MinSelections,
                 p_max_selections = request.MaxSelections,
+                p_elective_type = request.ElectiveType,
+                p_credits = request.Credits,
+                p_selection_start_date = request.SelectionStartDate,
+                p_selection_end_date = request.SelectionEndDate,
                 p_created_by = createdBy
             };
 
@@ -107,6 +111,48 @@ namespace BTech.Repositories
                 commandType: CommandType.StoredProcedure);
 
             return result;
+        }
+
+        public async Task UpdateAsync(
+            long collegeId,
+            long electiveGroupId,
+            CreateElectiveGroupDto request)
+        {
+            await using var connection = CreateConnection();
+            await connection.OpenAsync();
+
+            await connection.ExecuteAsync(
+                "sp_elective_group_update",
+                new
+                {
+                    p_college_id = collegeId,
+                    p_elective_group_id = electiveGroupId,
+                    p_group_code = request.GroupCode,
+                    p_group_name = request.GroupName,
+                    p_description = request.Description,
+                    p_course_id = request.CourseId,
+                    p_branch_id = request.BranchId,
+                    p_semester_id = request.SemesterId,
+                    p_academic_year_id = request.AcademicYearId,
+                    p_min_selections = request.MinSelections,
+                    p_max_selections = request.MaxSelections,
+                    p_elective_type = request.ElectiveType,
+                    p_credits = request.Credits,
+                    p_selection_start_date = request.SelectionStartDate,
+                    p_selection_end_date = request.SelectionEndDate
+                },
+                commandType: CommandType.StoredProcedure);
+        }
+
+        public async Task DeleteAsync(long collegeId, long electiveGroupId)
+        {
+            await using var connection = CreateConnection();
+            await connection.OpenAsync();
+
+            await connection.ExecuteAsync(
+                "sp_elective_group_delete",
+                new { p_college_id = collegeId, p_elective_group_id = electiveGroupId },
+                commandType: CommandType.StoredProcedure);
         }
 
         // ============================================================

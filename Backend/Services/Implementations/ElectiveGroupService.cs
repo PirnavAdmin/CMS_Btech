@@ -90,8 +90,16 @@ namespace BTech.Services
                     "Maximum selections cannot be less than minimum selections.");
             }
 
+            if (request.SelectionStartDate.HasValue && request.SelectionEndDate.HasValue &&
+                request.SelectionEndDate < request.SelectionStartDate)
+            {
+                throw new ArgumentException(
+                    "Selection end date cannot be before the start date.");
+            }
+
             request.GroupCode = request.GroupCode.Trim();
             request.GroupName = request.GroupName.Trim();
+            request.ElectiveType = request.ElectiveType.Trim();
 
             if (!string.IsNullOrWhiteSpace(request.Description))
             {
@@ -102,6 +110,54 @@ namespace BTech.Services
                 collegeId,
                 request,
                 createdBy);
+        }
+
+        public async Task UpdateAsync(
+            long collegeId,
+            long electiveGroupId,
+            CreateElectiveGroupDto request)
+        {
+            if (collegeId <= 0 || electiveGroupId <= 0)
+            {
+                throw new ArgumentException("Elective group, college, and user information are required.");
+            }
+
+            if (request == null || string.IsNullOrWhiteSpace(request.GroupCode) ||
+                string.IsNullOrWhiteSpace(request.GroupName) || string.IsNullOrWhiteSpace(request.ElectiveType))
+            {
+                throw new ArgumentException("Group code, group name, and elective type are required.");
+            }
+
+            if (request.CourseId <= 0 || request.BranchId <= 0 || request.SemesterId <= 0 || request.AcademicYearId <= 0)
+            {
+                throw new ArgumentException("Course, branch, semester, and academic year are required.");
+            }
+
+            if (request.MinSelections <= 0 || request.MaxSelections < request.MinSelections)
+            {
+                throw new ArgumentException("Selection limits are invalid.");
+            }
+
+            if (request.SelectionStartDate.HasValue && request.SelectionEndDate.HasValue && request.SelectionEndDate < request.SelectionStartDate)
+            {
+                throw new ArgumentException("Selection end date cannot be before the start date.");
+            }
+
+            request.GroupCode = request.GroupCode.Trim();
+            request.GroupName = request.GroupName.Trim();
+            request.ElectiveType = request.ElectiveType.Trim();
+
+            await _repository.UpdateAsync(collegeId, electiveGroupId, request);
+        }
+
+        public async Task DeleteAsync(long collegeId, long electiveGroupId)
+        {
+            if (collegeId <= 0 || electiveGroupId <= 0)
+            {
+                throw new ArgumentException("College and elective group information are required.");
+            }
+
+            await _repository.DeleteAsync(collegeId, electiveGroupId);
         }
 
         public async Task<IEnumerable<ElectiveGroupSubjectResponseDto>> GetSubjectsAsync(

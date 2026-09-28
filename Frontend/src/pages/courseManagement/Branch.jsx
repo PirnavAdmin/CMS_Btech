@@ -605,7 +605,7 @@ function Form() {
 
   return <Page>
     <Header title={id ? 'Edit B.Tech Branch' : 'Add B.Tech Branch'} text="Select a course and let the system resolve the structure details automatically.">
-      <Link className="cm-button secondary" to="/branches"><FiArrowLeft /> Cancel</Link>
+      <Link className="cm-button secondary" to="/branches"><FiArrowLeft /> Back</Link>
     </Header>
     <Notice>{error}</Notice>
     <form onSubmit={submit} className="branch-form-layout">

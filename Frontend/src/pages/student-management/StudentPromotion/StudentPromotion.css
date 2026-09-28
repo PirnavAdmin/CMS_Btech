@@ -109,6 +109,39 @@
   border-bottom: 1px solid var(--border);
 }
 
+.p-filters .erp-input-icon-wrap {
+  position: relative;
+  width: min(560px, 100%);
+}
+
+.p-filters .erp-input-icon {
+  position: absolute;
+  top: 50%;
+  left: 14px;
+  width: 18px;
+  height: 18px;
+  color: var(--text-muted, #64748b);
+  transform: translateY(-50%);
+  pointer-events: none;
+}
+
+.p-filters .erp-input {
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 48px;
+  padding: 0 14px 0 42px;
+  border: 1px solid var(--border-strong, #cbd5e1);
+  border-radius: 8px;
+  background: var(--surface, #fff);
+  color: var(--text-primary, #0f172a);
+  font: inherit;
+}
+
+/* Keep the placeholder clear of the absolutely positioned search icon. */
+.p-filters .erp-input-icon-wrap > input.erp-input {
+  padding-left: 48px !important;
+}
+
 .p-overlay {
   position: fixed;
   z-index: 1000;

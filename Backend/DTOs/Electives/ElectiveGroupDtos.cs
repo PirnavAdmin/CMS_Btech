@@ -36,6 +36,17 @@ namespace BTech.DTOs.Electives
 
         [Range(1, int.MaxValue)]
         public int MaxSelections { get; set; } = 1;
+
+        [Required]
+        [StringLength(50)]
+        public string ElectiveType { get; set; } = string.Empty;
+
+        [Range(typeof(decimal), "0", "9999.99")]
+        public decimal? Credits { get; set; }
+
+        public DateTime? SelectionStartDate { get; set; }
+
+        public DateTime? SelectionEndDate { get; set; }
     }
 
     public class ElectiveGroupResponseDto
@@ -69,6 +80,14 @@ namespace BTech.DTOs.Electives
         public int MinSelections { get; set; }
 
         public int MaxSelections { get; set; }
+
+        public string? ElectiveType { get; set; }
+
+        public decimal? Credits { get; set; }
+
+        public DateTime? SelectionStartDate { get; set; }
+
+        public DateTime? SelectionEndDate { get; set; }
 
         public int SubjectCount { get; set; }
 

@@ -1397,7 +1397,7 @@ function Profile({ student, tab, setTab, back, edit, canEdit }) {
     <div className="cm-profile-view" data-export-record>
       <div className="cm-profile-top-bar">
         <button type="button" className="cm-button secondary erp-btn erp-btn--secondary" onClick={back}>
-          &larr; Back to Student Directory
+          &larr; Back
         </button>
         <div className="sp-profile-top-actions">
           <ExportMenu

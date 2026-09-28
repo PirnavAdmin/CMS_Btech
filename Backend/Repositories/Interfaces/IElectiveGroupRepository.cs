@@ -13,6 +13,13 @@ namespace BTech.Repositories.Interfaces
             CreateElectiveGroupDto request,
             long createdBy);
 
+        Task UpdateAsync(
+            long collegeId,
+            long electiveGroupId,
+            CreateElectiveGroupDto request);
+
+        Task DeleteAsync(long collegeId, long electiveGroupId);
+
         Task<IEnumerable<ElectiveGroupSubjectResponseDto>> GetSubjectsAsync(
             long collegeId,
             long electiveGroupId);

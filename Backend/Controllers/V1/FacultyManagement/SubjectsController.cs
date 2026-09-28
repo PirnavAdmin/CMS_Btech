@@ -30,9 +30,7 @@ public class SubjectsController : ControllerBase
         if (subjectId <= 0) return BadRequest(new { success = false, message = "Invalid subject ID." });
         await using var connection = Connection();
         await connection.OpenAsync();
-        var row = await connection.QueryFirstOrDefaultAsync(
-            "SELECT * FROM subjects WHERE subject_id = @subjectId LIMIT 1",
-            new { subjectId });
+        var row = await GetSubjectWithAcademicContextAsync(connection, subjectId);
         return row == null
             ? NotFound(new { success = false, message = "Subject not found." })
             : Ok(new { success = true, message = "Subject retrieved successfully.", data = row });
@@ -100,11 +98,11 @@ public class SubjectsController : ControllerBase
                 @"INSERT INTO subjects
                     (subject_code, subject_name, status,
                      created_at, created_by, updated_at, updated_by,
-                     credits, subject_type, description)
+                     credits, subject_type, elective_type, description)
                   VALUES
                     (@subjectCode, @subjectName, @status,
                      CURRENT_TIMESTAMP, @userId, CURRENT_TIMESTAMP, @userId,
-                     @credits, @subjectType, @description);",
+                     @credits, @subjectType, @electiveType, @description);",
                 new
                 {
                     subjectCode = request.NormalizedSubjectCode,
@@ -113,6 +111,7 @@ public class SubjectsController : ControllerBase
                     userId,
                     credits = request.Credits,
                     subjectType = request.NormalizedSubjectType,
+                    electiveType = request.ElectiveType?.Trim(),
                     description = request.NormalizedDescription
                 },
                 transaction);
@@ -253,6 +252,7 @@ public class SubjectsController : ControllerBase
                       status = @status,
                       credits = @credits,
                       subject_type = @subjectType,
+                      elective_type = @electiveType,
                       description = @description,
                       updated_at = CURRENT_TIMESTAMP,
                       updated_by = @userId
@@ -265,6 +265,7 @@ public class SubjectsController : ControllerBase
                     status = request.Status,
                     credits = request.Credits,
                     subjectType = request.NormalizedSubjectType,
+                    electiveType = request.ElectiveType?.Trim(),
                     description = request.NormalizedDescription,
                     userId
                 },
@@ -412,6 +413,7 @@ SELECT
     s.subject_name AS subjectName,
     s.credits,
     s.subject_type AS subjectType,
+    s.elective_type AS electiveType,
     s.description,
     s.status,
     scb.course_id AS courseId,
@@ -467,6 +469,7 @@ SELECT DISTINCT
     s.subject_name AS subjectName,
     s.credits,
     s.subject_type AS subjectType,
+    s.elective_type AS electiveType,
     s.description,
     s.status,
     scb.course_id AS courseId,

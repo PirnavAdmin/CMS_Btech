@@ -530,7 +530,7 @@ function CourseForm() {
     const matchesDepartment = !value.departmentId || !branchDepartmentId || String(branchDepartmentId) === String(value.departmentId)
     return matchesDepartment
   })
-  return <Page><Header title={id ? 'Edit B.Tech Course' : 'Add B.Tech Course'} text="Create a focused B.Tech undergraduate course."><Link className="cm-button secondary" to="/courses"><FiArrowLeft /> Cancel</Link></Header>
+  return <Page><Header title={id ? 'Edit B.Tech Course' : 'Add B.Tech Course'} text="Create a focused B.Tech undergraduate course."><Link className="cm-button secondary" to="/courses"><FiArrowLeft /> Back</Link></Header>
 
     {error && <p className="cm-error" role="alert">{error} <button type="button" className="cm-button secondary" disabled={isSaving} onClick={load}>Reload options</button></p>}
     <div className="course-form-layout">
@@ -684,7 +684,7 @@ function CourseDetails() {
   useEffect(() => { load() }, [id])
 
   if (isLoading) return <Page><div className="cm-empty">Loading course...</div></Page>
-  if (error || !course) return <Page><div className="course-empty"><strong>{error || 'Course not found.'}</strong><Link className="cm-button" to="/courses">Back to Courses</Link></div></Page>
+  if (error || !course) return <Page><div className="course-empty"><strong>{error || 'Course not found.'}</strong><Link className="cm-button" to="/courses">Back</Link></div></Page>
 
   const department = departments.find(x => String(x.id) === String(course.departmentId))
   const valueText = value => value === null || value === undefined || String(value).trim() === '' ? '' : String(value)
@@ -698,7 +698,7 @@ function CourseDetails() {
         <div className="cm-profile-top-bar">
           <ExportMenu mode="single" title="Course Details" filename={`course_${course.code || course.id}`} />
           <Link className="cm-button secondary" to="/courses">
-            &larr; Back to Courses List
+            &larr; Back
           </Link>
         </div>
 
@@ -798,7 +798,7 @@ export function CourseStructure() {
   const edit = (row) => { setEditing(row.structureId); setForm({ semesterId: row.semesterId, yearNumber: row.yearNumber, semesterNumber: row.semesterNumber, semesterName: row.semesterName || `Semester ${row.semesterNumber}` }); setSemester(Number(row.semesterNumber)) }
   const toggleStatus = async (row) => { try { await updateCourseSemesterMappingStatus(row.structureId, Number(row.status) === 0 ? 1 : 0); setRows(current => current.map(x => x.structureId === row.structureId ? { ...x, status: Number(x.status) === 0 ? 1 : 0 } : x)); showSuccess('Semester mapping status updated successfully.') } catch (e) { setError(e.message || 'Unable to update mapping status.') } }
 
-  return <Page><ExportMenu rows={visible} columns={structureColumns} title="Course Structure" filename="course-structure" loading={loading || Boolean(error)} /><Header title="Course Structure" text={`${course.name} / ${branch.name}`}><Link className="cm-button secondary" to={`/branches/${branchId}`}><FiArrowLeft /> Back to Branch</Link></Header>
+  return <Page><ExportMenu rows={visible} columns={structureColumns} title="Course Structure" filename="course-structure" loading={loading || Boolean(error)} /><Header title="Course Structure" text={`${course.name} / ${branch.name}`}><Link className="cm-button secondary" to={`/branches/${branchId}`}><FiArrowLeft /> Back</Link></Header>
     {error && <p className="cm-error" role="alert">{error}</p>}
     <div className="cm-semesters">{semesterOptions.map(option => <button className={`cm-semester ${semester === Number(option.semesterNumber) ? 'active' : ''}`} onClick={() => changeSemester(Number(option.semesterNumber))} key={option.semesterId}>{option.semesterName}</button>)}</div>
     <section className="cm-panel cm-form-grid">

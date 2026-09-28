@@ -6,7 +6,7 @@ import ExportMenu, { PrintDetailsButton } from '../../components/ExportMenu'
 import { collegeColumns, collegeSettingsColumns } from '../../utils/exportColumns'
 import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { FiAlertCircle, FiEye as EyeIcon, FiEdit2 as EditIcon, FiHome, FiPlus as Plus, FiToggleLeft, FiToggleRight, FiSearch, FiFilter, FiTrash2 } from 'react-icons/fi'
+import { FiAlertCircle, FiArrowLeft, FiEye as EyeIcon, FiEdit2 as EditIcon, FiHome, FiPlus as Plus, FiToggleLeft, FiToggleRight, FiSearch, FiFilter, FiTrash2 } from 'react-icons/fi'
 import DashboardLayout from '../../layouts/DashboardLayout'
 import FilterPanel from '../../components/FilterPanel'
 import TablePagination, { PAGE_SIZE } from '../../components/TablePagination'
@@ -1026,7 +1026,7 @@ export default function CollegeInstitutionManagement({ initialView = 'list' }) {
                   <p>Fill in the college's details below.</p>
                 </div>
                 <button type="button" className="cm-secondary-btn" onClick={backToList}>
-                  &larr; Back to list
+                  <FiArrowLeft /> Back
                 </button>
               </header>
 
@@ -1258,7 +1258,7 @@ export default function CollegeInstitutionManagement({ initialView = 'list' }) {
                   + Add Settings
                 </button>
                 <button type="button" className="cm-secondary-btn" onClick={backToList}>
-                  &larr; Back to list
+                  <FiArrowLeft /> Back
                 </button>
               </div>
             </header>
@@ -1348,7 +1348,7 @@ export default function CollegeInstitutionManagement({ initialView = 'list' }) {
                   <p>Fill in the settings details below.</p>
                 </div>
                 <button type="button" className="cm-secondary-btn" onClick={backToSettingsList}>
-                  &larr; Back to list
+                  <FiArrowLeft /> Back
                 </button>
               </header>
 

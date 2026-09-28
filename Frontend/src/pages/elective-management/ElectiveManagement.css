@@ -5,6 +5,15 @@
     color: #0f172a;
 }
 
+.em-screen--group-table .em-tabs,
+.em-screen--group-table .em-kpi-grid {
+    display: none !important;
+}
+
+.em-screen--group-table .em-header-actions {
+    justify-content: flex-end;
+}
+
 .em-header {
     display: flex;
     align-items: flex-start;
@@ -32,11 +41,13 @@
     gap: 8px;
 }
 
-.em-header-actions .sm-btn--primary { background: #756FB2;
+.em-header-actions .sm-btn--primary {
+    background: #756FB2;
     color: #ffffff;
 }
 
-.em-header-actions .sm-btn--primary:hover { background: #655E9F;
+.em-header-actions .sm-btn--primary:hover {
+    background: #655E9F;
 }
 
 .em-tabs {
@@ -170,6 +181,32 @@
     margin: 4px 0 0;
 }
 
+.em-subject-filter-panel .em-toolbar {
+    flex-wrap: wrap;
+}
+
+.em-subject-filter-panel .em-filters {
+    flex-basis: 100%;
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    width: 100%;
+    justify-content: stretch;
+}
+
+.em-subject-filter-panel .em-filters label {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    min-width: 0;
+    text-transform: capitalize;
+}
+
+.em-subject-filter-panel .em-clear-subject-filters {
+    align-self: end;
+    min-height: 40px;
+    white-space: nowrap;
+}
+
 .em-toolbar {
     display: flex;
     align-items: center;
@@ -220,17 +257,65 @@
     min-width: 130px;
 }
 
+.em-type-filter {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    white-space: nowrap;
+}
+
+.em-type-filter button {
+    min-height: 40px;
+    padding: 0 12px;
+    border: 1px solid #cbd5e1;
+    border-radius: 8px;
+    background: #fff;
+    color: #334155;
+    font: inherit;
+    font-size: .82rem;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.em-type-filter button.active {
+    border-color: #756fb2;
+    background: #f3f1fa;
+    color: #514b91;
+}
+
+.em-type-filter--segmented {
+    flex: 0 0 auto;
+    padding: 4px;
+    border: 1px solid #cbd5e1;
+    border-radius: 14px;
+    background: #fff;
+}
+
+.em-type-filter--segmented button {
+    min-height: 44px;
+    border-color: transparent;
+    background: transparent;
+}
+
+.em-type-filter--segmented button.active {
+    border-color: #9a93d4;
+    background: #f7f5ff;
+}
+
 .em-filter-panel .filter-disclosure__content .em-filters {
-    display: flex;
-    flex-wrap: nowrap;
-    justify-content: flex-start;
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    width: 100%;
+    justify-content: stretch;
     gap: 8px;
-    overflow-x: auto;
     padding-bottom: 2px;
 }
 
 .em-filter-panel .filter-disclosure__content .em-filters select {
-    flex: 0 0 150px;
+    width: 100%;
+    min-width: 0;
+    height: 60px;
+    box-sizing: border-box;
 }
 
 .em-table {
@@ -299,6 +384,134 @@
 .em-compact-btn {
     padding: 6px 9px;
     font-size: .75rem;
+}
+
+.em-group-table {
+    min-width: 1500px;
+}
+
+.em-screen--group-table .em-group-table th,
+.em-screen--group-table .em-group-table td {
+    text-align: center;
+    vertical-align: middle;
+}
+
+.em-group-actions {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+    min-width: 0;
+}
+
+.em-icon-action {
+    display: inline-grid;
+    width: 32px;
+    height: 32px;
+    flex: 0 0 32px;
+    place-items: center;
+    border: 1px solid #dbe2ea;
+    border-radius: 6px;
+    background: #fff;
+    color: #475569;
+    cursor: pointer;
+}
+
+.em-icon-action:hover {
+    border-color: #8782bc;
+    color: #635da0;
+    background: #f5f3fd;
+}
+
+.em-icon-action--danger:hover {
+    border-color: #fecaca;
+    color: #b91c1c;
+    background: #fff7f7;
+}
+
+.em-group-details {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 1px;
+    padding: 0;
+    background: #e2e8f0;
+}
+
+.em-group-details>div {
+    display: grid;
+    gap: 4px;
+    min-width: 0;
+    padding: 12px 16px;
+    background: #fff;
+}
+
+.em-group-details span {
+    color: #64748b;
+    font-size: .72rem;
+    font-weight: 700;
+    text-transform: uppercase;
+}
+
+.em-group-details strong {
+    overflow-wrap: anywhere;
+    color: #0f172a;
+    font-size: .88rem;
+}
+
+.em-subject-edit-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 16px;
+}
+
+.em-subject-edit-grid label {
+    display: grid;
+    gap: 6px;
+    color: #475569;
+    font-size: .85rem;
+    font-weight: 600;
+}
+
+.em-subject-edit-grid input,
+.em-subject-edit-grid select,
+.em-subject-edit-grid textarea {
+    width: 100%;
+    min-width: 0;
+    min-height: 40px;
+    padding: 9px 11px;
+    border: 1px solid #cbd5e1;
+    border-radius: 8px;
+    color: #0f172a;
+    font: inherit;
+    font-weight: 400;
+}
+
+.em-subject-edit-grid textarea {
+    resize: vertical;
+}
+
+.em-subject-edit-description {
+    grid-column: 1 / -1;
+}
+
+@media (max-width: 640px) {
+    .em-type-filter {
+        flex: 1 1 auto;
+    }
+
+    .em-type-filter button { flex: 1; }
+
+    .em-group-details {
+        grid-template-columns: 1fr;
+    }
+
+    .em-subject-edit-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .em-subject-edit-description {
+        grid-column: auto;
+    }
 }
 
 .sm-btn--danger {
@@ -649,9 +862,14 @@
 
 .em-pagination button:hover:not(:disabled),
 .em-pagination button.active {
-    border-color: #0F172A;
-    background: #0F172A;
+    border-color: #756FB2;
+    background: #756FB2;
     color: #ffffff;
+}
+
+.em-pagination button:hover:not(:disabled) {
+    border-color: #655E9F;
+    background: #655E9F;
 }
 
 .em-pagination button:disabled {
@@ -687,6 +905,10 @@
         justify-content: flex-start;
     }
 
+    .em-filter-panel .filter-disclosure__content .em-filters {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
     .em-workflow-grid {
         grid-template-columns: 1fr;
     }
@@ -695,6 +917,10 @@
 @media (max-width: 640px) {
     .em-screen {
         padding: 16px;
+    }
+
+    .em-filter-panel .filter-disclosure__content .em-filters {
+        grid-template-columns: 1fr;
     }
 
     .em-header {
@@ -758,7 +984,9 @@
     .em-report-heading .export-button {
         width: 100%;
         justify-content: center;
-     color: #0F172A; border: 1px solid #CBD5E1;}
+        color: #0F172A;
+        border: 1px solid #CBD5E1;
+    }
 
     .em-report-summary span {
         min-height: 84px;
@@ -807,3 +1035,4 @@
         flex-wrap: wrap;
     }
 }
+

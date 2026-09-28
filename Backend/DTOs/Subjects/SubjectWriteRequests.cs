@@ -28,6 +28,10 @@ public abstract class SubjectWriteRequestBase
     [StringLength(50)]
     public string? SubjectType { get; set; }
 
+    [StringLength(20)]
+    [RegularExpression("^(Elective|Non-Elective)$", ErrorMessage = "Elective type must be Elective or Non-Elective.")]
+    public string? ElectiveType { get; set; }
+
     [StringLength(1000)]
     public string? Description { get; set; }
 
