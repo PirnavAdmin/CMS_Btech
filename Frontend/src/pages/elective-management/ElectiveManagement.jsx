@@ -86,7 +86,7 @@ export default function ElectiveManagement() {
   const [departments, setDepartments] = useState([]); const [directoryLoading, setDirectoryLoading] = useState(true); const [directoryError, setDirectoryError] = useState(''); const [mastersError, setMastersError] = useState('');
   const [courses, setCourses] = useState([]); const [branches, setBranches] = useState([]); const [academicYears, setAcademicYears] = useState([]); const [semesters, setSemesters] = useState([]); const [activeAcademicYear, setActiveAcademicYear] = useState(''); const [mastersLoading, setMastersLoading] = useState(true)
   const [loading, setLoading] = useState(true); const [profileLoading, setProfileLoading] = useState(true); const [resultsLoading, setResultsLoading] = useState(false); const [error, setError] = useState(''); const [search, setSearch] = useState(''); const [filters, setFilters] = useState({ status: 'All', semester: 'All', branch: 'All', department: 'All', course: 'All', academicYear: 'All', level: 'All', electiveType: 'Elective', approvalStatus: 'All', allocationStatus: 'All' }); const [page, setPage] = useState(1); const [resultPage, setResultPage] = useState(1); const size = 10
-  const [groupModal, setGroupModal] = useState(false); const [editingGroup, setEditingGroup] = useState(null); const [viewingGroup, setViewingGroup] = useState(null); const [deletingGroup, setDeletingGroup] = useState(null); const [subjectModal, setSubjectModal] = useState(null); const [groupForm, setGroupForm] = useState(blankGroup()); const [selectedSubjects, setSelectedSubjects] = useState([]); const [selectedGroupId, setSelectedGroupId] = useState(''); const [selectedSubjectId, setSelectedSubjectId] = useState(''); const [actionLoading, setActionLoading] = useState(false); const [groupFieldOverrides, setGroupFieldOverrides] = useState({})
+  const [groupModal, setGroupModal] = useState(false); const [editingGroup, setEditingGroup] = useState(null); const [viewingGroup, setViewingGroup] = useState(null); const [viewingSubject, setViewingSubject] = useState(null); const [editingSubject, setEditingSubject] = useState(null); const [subjectEditForm, setSubjectEditForm] = useState(null); const [deletingGroup, setDeletingGroup] = useState(null); const [subjectModal, setSubjectModal] = useState(null); const [groupForm, setGroupForm] = useState(blankGroup()); const [selectedSubjects, setSelectedSubjects] = useState([]); const [selectedGroupId, setSelectedGroupId] = useState(''); const [selectedSubjectId, setSelectedSubjectId] = useState(''); const [actionLoading, setActionLoading] = useState(false); const [groupFieldOverrides, setGroupFieldOverrides] = useState({})
   const studentId = profile?.id || profile?.studentId || ''
   const loadMasters = async () => { setMastersLoading(true); setMastersError(''); try { const [courseRows, branchRows, yearRows, semesterRows, departmentRows] = await Promise.all([courseApi.getAll(), branchApi.getAll(), academicYearApi.getAll(), facultyMasterApi.getSemesters(), departmentApi.getAll()]); setDepartments(unwrap(departmentRows)); const years = unwrap(yearRows); setCourses(unwrap(courseRows)); setBranches(unwrap(branchRows)); setAcademicYears(years); setSemesters(unwrap(semesterRows)); const selected = selectHeaderAcademicYear(years).year; setActiveAcademicYear(selected?.academicYearName || selected?.name || '') } catch (err) { setMastersError(err.message || 'Unable to load academic filters.'); } finally { setMastersLoading(false) } }
   const loadCore = async (preservedGroupValues = {}) => {
@@ -341,6 +341,38 @@ export default function ElectiveManagement() {
     }
   }
   const addSubjects = async () => { const subjectIds = selectedSubjects.map(subject => Number(subject.subjectId || subject.id)).filter(id => Number.isInteger(id) && id > 0); if (directoryLoading || directoryError || selectedSubjects.some(selected => !subjects.some(subject => String(subject.id) === String(selected.subjectId ?? selected.id)))) return showError('Refresh and select only eligible elective subjects.'); if (!subjectIds.length) return showError('Select subjects with valid backend IDs.'); setActionLoading(true); try { await electiveManagementApi.addGroupSubjects(subjectModal.electiveGroupId || subjectModal.id || subjectModal.groupId, subjectIds); showSuccess('Subjects added to the elective group.'); setSubjectModal(null); await loadCore() } catch (requestError) { showError(requestError.message || 'Unable to add subjects.') } finally { setActionLoading(false) } }
+  const openSubjectEdit = subject => {
+    setEditingSubject(subject)
+    setSubjectEditForm({
+      subjectCode: subject.subjectCode || subject.code || '',
+      subjectName: subject.subjectName || subject.name || '',
+      courseId: subject.courseId || '',
+      branchId: subject.branchId || '',
+      semesterId: subject.semesterId || '',
+      academicYearId: subject.academicYearId || '',
+      credits: subject.credits ?? '',
+      subjectType: subject.subjectType || '',
+      electiveType: subject.electiveType || 'Elective',
+      description: subject.description || '',
+      status: subject.status || 'Active',
+    })
+  }
+  const saveSubjectEdit = async event => {
+    event.preventDefault()
+    if (!editingSubject || !subjectEditForm) return
+    setActionLoading(true)
+    try {
+      await subjectService.updateSubject(editingSubject.id, subjectEditForm)
+      showSuccess('Subject updated successfully.')
+      setEditingSubject(null)
+      setSubjectEditForm(null)
+      await Promise.all([loadCore(), loadDirectory()])
+    } catch (requestError) {
+      showError(requestError.message || 'Unable to update subject.')
+    } finally {
+      setActionLoading(false)
+    }
+  }
   const submitSelection = async event => { event.preventDefault(); if (!studentId || !selectedGroup || !selectedSubjectId) return showError('Student profile, group, and subject are required.'); const subject = eligibleSubjects.find(row => String(row.id || row.subjectId) === String(selectedSubjectId)); if (!subject || directoryLoading || directoryError) return showError('Select an available elective subject.'); setActionLoading(true); try { await electiveManagementApi.createStudentSelection(studentId, { electiveGroupId: Number(selectedGroup.electiveGroupId || selectedGroup.id), subjectId: Number(subject.subjectId || subject.id), academicYearId: Number(selectedGroup.academicYearId), semesterId: Number(selectedGroup.semesterId) }); showSuccess('Elective selection submitted.'); setSelectedSubjectId(''); setSelections(await electiveManagementApi.getStudentSelections(studentId)); await loadCore() } catch (requestError) { showError(requestError.message || 'Unable to complete elective selection.') } finally { setActionLoading(false) } }
   const updateApproval = async (row, status) => { if (status === 'Approved' && (directoryLoading || directoryError || !electiveIds.has(String(row.subjectId)))) return showError('Only current elective subjects can be approved.'); setActionLoading(true); try { await electiveManagementApi.updateApproval(rowId(row), { approvalStatus: status.toUpperCase() }); showSuccess(`Selection ${status.toLowerCase()}.`); await loadCore() } catch (requestError) { showError(requestError.message || 'Unable to update approval.') } finally { setActionLoading(false) } }
   const allocate = async () => { if (directoryLoading || directoryError || approved.some(row => String(allocationStatus(row)).toLowerCase() !== 'allocated' && !electiveIds.has(String(row.subjectId)))) return showError('Only current elective subjects can be allocated. Refresh and review approved selections.'); setActionLoading(true); try { const pendingAllocations = approved.filter(row => String(allocationStatus(row)).toLowerCase() !== 'allocated'); const results = await Promise.allSettled(pendingAllocations.map(row => electiveManagementApi.createAllocation(rowId(row), { selectionId: Number(rowId(row)) }))); const failed = results.filter(result => result.status === 'rejected'); if (failed.length) throw new Error(`${failed.length} of ${pendingAllocations.length} approved selections could not be allocated. ${failed[0].reason?.message || ''}`); showSuccess('Electives allocated successfully.'); await loadCore() } catch (requestError) { showError(requestError.message || 'Unable to allocate electives.') } finally { setActionLoading(false) } }
@@ -650,8 +682,8 @@ export default function ElectiveManagement() {
                         <td><StatusBadge value={text(group.status)} /></td>
                         <td>
                           <div className="em-group-actions">
-                            <button type="button" className="em-icon-action" title="View subject" aria-label={`View ${group.subjectCode}`} onClick={() => navigate('/subject-management', { state: { subjectAction: { id: group.id, mode: 'view' } } })}><FiEye /></button>
-                            <button type="button" className="em-icon-action" title="Edit subject" aria-label={`Edit ${group.subjectCode}`} onClick={() => navigate('/subject-management', { state: { subjectAction: { id: group.id, mode: 'edit' } } })}><FiEdit2 /></button>
+                            <button type="button" className="em-icon-action" title="View subject" aria-label={`View ${group.subjectCode}`} onClick={() => setViewingSubject(group)}><FiEye /></button>
+                            <button type="button" className="em-icon-action" title="Edit subject" aria-label={`Edit ${group.subjectCode}`} onClick={() => openSubjectEdit(group)}><FiEdit2 /></button>
                           </div>
                         </td>
                       </tr>
@@ -771,6 +803,53 @@ export default function ElectiveManagement() {
             <SelectionTable rows={pageRows(filteredReport)} search={search} emptyTitle="No allocation records found" className="em-report-table" />
             <Pagination page={page} pageCount={Math.ceil(filteredReport.length / size)} total={filteredReport.length} size={size} onChange={setPage} />
           </section>
+        )}
+        {viewingSubject && (
+          <div className="sm-modal-backdrop" onClick={() => setViewingSubject(null)}>
+            <section className="sm-modal" role="dialog" aria-modal="true" aria-labelledby="em-subject-view-title" onClick={event => event.stopPropagation()}>
+              <header className="sm-modal-header"><h2 id="em-subject-view-title">Subject Details</h2><button type="button" className="sm-icon-btn" onClick={() => setViewingSubject(null)} aria-label="Close"><FiX /></button></header>
+              <div className="sm-modal-body em-group-details">
+                {[
+                  ['Subject Code', viewingSubject.subjectCode || viewingSubject.code],
+                  ['Subject Name', viewingSubject.subjectName || viewingSubject.name],
+                  ['Department', viewingSubject.department || viewingSubject.departmentName],
+                  ['Course', viewingSubject.course || viewingSubject.courseName],
+                  ['Course Code', viewingSubject.courseCode],
+                  ['Branch', viewingSubject.branchName || viewingSubject.branch],
+                  ['Branch Code', viewingSubject.branchCode],
+                  ['Academic Year', viewingSubject.academicYearName || viewingSubject.academicYear],
+                  ['Academic Level', viewingSubject.level || viewingSubject.academicLevel],
+                  ['Semester', viewingSubject.semesterName || viewingSubject.semester],
+                  ['Elective Type', electiveTypeOf(viewingSubject)],
+                  ['Subject Type', viewingSubject.subjectType || viewingSubject.type],
+                  ['Credits', creditsOf(viewingSubject)],
+                  ['Status', viewingSubject.status],
+                ].map(([label, value]) => <div key={label}><span>{label}</span><strong>{text(value, '-')}</strong></div>)}
+              </div>
+              <footer className="sm-modal-footer"><button type="button" className="sm-btn sm-btn--secondary" onClick={() => setViewingSubject(null)}>Close</button></footer>
+            </section>
+          </div>
+        )}
+        {editingSubject && subjectEditForm && (
+          <div className="sm-modal-backdrop" onClick={actionLoading ? undefined : () => { setEditingSubject(null); setSubjectEditForm(null) }}>
+            <section className="sm-modal" role="dialog" aria-modal="true" aria-labelledby="em-subject-edit-title" onClick={event => event.stopPropagation()}>
+              <header className="sm-modal-header"><h2 id="em-subject-edit-title">Edit Subject</h2><button type="button" className="sm-icon-btn" disabled={actionLoading} onClick={() => { setEditingSubject(null); setSubjectEditForm(null) }} aria-label="Close"><FiX /></button></header>
+              <form onSubmit={saveSubjectEdit}>
+                <div className="sm-modal-body">
+                  <div className="em-subject-edit-grid">
+                    <label>Subject Code<input required value={subjectEditForm.subjectCode} onChange={event => setSubjectEditForm({ ...subjectEditForm, subjectCode: event.target.value })} /></label>
+                    <label>Subject Name<input required value={subjectEditForm.subjectName} onChange={event => setSubjectEditForm({ ...subjectEditForm, subjectName: event.target.value })} /></label>
+                    <label>Credits<input type="number" min="0" step="0.5" value={subjectEditForm.credits} onChange={event => setSubjectEditForm({ ...subjectEditForm, credits: event.target.value })} /></label>
+                    <label>Subject Type<input value={subjectEditForm.subjectType} onChange={event => setSubjectEditForm({ ...subjectEditForm, subjectType: event.target.value })} /></label>
+                    <label>Elective Type<select value={subjectEditForm.electiveType} onChange={event => setSubjectEditForm({ ...subjectEditForm, electiveType: event.target.value })}><option value="Elective">Elective</option><option value="Non-Elective">Non-Elective</option></select></label>
+                    <label>Status<select value={subjectEditForm.status} onChange={event => setSubjectEditForm({ ...subjectEditForm, status: event.target.value })}><option value="Active">Active</option><option value="Inactive">Inactive</option></select></label>
+                    <label className="em-subject-edit-description">Description<textarea rows="3" value={subjectEditForm.description} onChange={event => setSubjectEditForm({ ...subjectEditForm, description: event.target.value })} /></label>
+                  </div>
+                </div>
+                <footer className="sm-modal-footer"><button type="button" className="sm-btn sm-btn--secondary" disabled={actionLoading} onClick={() => { setEditingSubject(null); setSubjectEditForm(null) }}>Cancel</button><button type="submit" className="sm-btn sm-btn--primary" disabled={actionLoading}>{actionLoading ? 'Saving...' : 'Save Changes'}</button></footer>
+              </form>
+            </section>
+          </div>
         )}
         {viewingGroup && (
           <div className="sm-modal-backdrop" onClick={() => setViewingGroup(null)}>

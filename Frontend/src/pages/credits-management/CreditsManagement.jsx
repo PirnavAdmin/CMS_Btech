@@ -1,8 +1,14 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import DashboardLayout from '../../layouts/DashboardLayout'
 import StatusBadge from '../../components/StatusBadge'
+import FilterPanel from '../../components/FilterPanel'
+import SearchableSelect from '../../components/SearchableSelect'
+import ExportMenu from '../../components/ExportMenu'
 import { useAcademic } from '../../context/AcademicContext'
-import { creditManagementApi, studentApi, facultyMasterApi, courseApi, branchApi } from '../../api/apiEndpoints'
+import { creditManagementApi, studentApi } from '../../api/apiEndpoints'
+import subjectService from '../../services/subjectService'
+import academicService from '../../services/academicService'
+import { enrichSubject, idOf } from '../../utils/subjectDirectory'
 import './CreditsManagement.css'
 
 const STORAGE_KEYS = {
@@ -449,7 +455,7 @@ function EmptyState({ title, message }) {
 
 function CreditsManagement() {
   const { activeAcademicYears, currentAcademicYear } = useAcademic()
-  const [activeTab, setActiveTab] = useState('dashboard')
+  const activeTab = 'subjects'
 
   const activeAcademicYear =
     normalizeAcademicYear(
@@ -475,6 +481,10 @@ function CreditsManagement() {
   const [masterCourses, setMasterCourses] = useState([])
   const [masterBranches, setMasterBranches] = useState([])
   const [masterSemesters, setMasterSemesters] = useState([])
+  const [masterYears, setMasterYears] = useState([])
+  const [masterDepartments, setMasterDepartments] = useState([])
+  const [subjectFilters, setSubjectFilters] = useState({ academicYearId: '', departmentId: '', courseId: '', branchId: '', level: '', semesterId: '' })
+  const [subjectApiError, setSubjectApiError] = useState('')
   const [creditDashboard, setCreditDashboard] = useState(null)
   const [creditSummary, setCreditSummary] = useState(null)
 
@@ -485,7 +495,6 @@ function CreditsManagement() {
   const [selectedStudentId, setSelectedStudentId] = useState('')
 
   const [subjectSearch, setSubjectSearch] = useState('')
-  const [subjectTypeFilter, setSubjectTypeFilter] = useState('All Types')
 
   const [showCreditModal, setShowCreditModal] = useState(false)
   const [showSubjectModal, setShowSubjectModal] = useState(false)
@@ -571,14 +580,19 @@ function CreditsManagement() {
   const reloadCreditData = async () => {
     setCreditLoading(true)
     try {
-      const [studentRows, subjectRows, configurationRows, registrationRows, courseRows, branchRows, semesterRows, dashboard] = await Promise.all([
-        studentApi.getAll(), facultyMasterApi.getSubjects(), creditManagementApi.getConfigurations(),
-        creditManagementApi.getRegistrations({ status: 1 }), courseApi.getAll(), branchApi.getAll(), facultyMasterApi.getSemesters(), creditManagementApi.getDashboard().catch(() => null),
+      const subjectRowsPromise = subjectService.getSubjects({ liveOnly: true })
+        .then(rows => { setSubjectApiError(''); return rows })
+        .catch(error => { setSubjectApiError(error.message || 'Unable to load subjects from the Subject API.'); return [] })
+      const [studentRows, subjectRows, registrationRows, courseRows, branchRows, semesterRows, yearRows, departmentRows, dashboard] = await Promise.all([
+        studentApi.getAll(), subjectRowsPromise,
+        creditManagementApi.getRegistrations({ status: 1 }), academicService.getCourses(), academicService.getBranches(), academicService.getSemesters(),
+        academicService.getAcademicYears(), academicService.getDepartments(), creditManagementApi.getDashboard().catch(() => null),
       ])
       const courseList = Array.isArray(courseRows) ? courseRows : []
       const branchList = Array.isArray(branchRows) ? branchRows : []
       const semesterList = Array.isArray(semesterRows) ? semesterRows : []
-      const configs = Array.isArray(configurationRows) ? configurationRows : []
+      const yearList = Array.isArray(yearRows) ? yearRows : []
+      const departmentList = Array.isArray(departmentRows) ? departmentRows : []
       const studentsLive = (studentRows || []).map(row => {
         const academic = row.academic || row.academicInformation || {}
         const personal = row.personal || {}
@@ -589,12 +603,11 @@ function CreditsManagement() {
         return { ...row, id: String(row.studentId ?? row.id), name: row.fullName || row.studentName || personal.fullName || row.name || '', rollNo: row.studentCode || row.rollNumber || academic.rollNumber || '', courseId, branchId, semesterId, academicYearId: yearId, course: row.courseName || academic.courseName || academic.course || courseList.find(item => String(item.courseId ?? item.id) === String(courseId))?.courseName || '', branch: row.branchName || academic.branchName || academic.branch || branchList.find(item => String(item.branchId ?? item.id) === String(branchId))?.branchName || '', semester: row.semesterName || academic.semesterName || semesterList.find(item => String(item.semesterId ?? item.id) === String(semesterId))?.semesterName || '', academicYear: row.academicYearName || academic.academicYearName || activeAcademicYear, status: row.status ?? 'Active' }
       }).filter(row => row.id && row.id !== 'undefined')
       const subjectById = new Map((subjectRows || []).map(row => [String(row.subjectId ?? row.id), row]))
-      const configById = new Map(configs.map(row => [String(row.subjectId), row]))
       const subjectsLive = [...subjectById.entries()].map(([id, row]) => {
-        const config = configById.get(id)
-        const subjectStatus = config?.status ?? row.status
+        const subjectStatus = row.status
         const isActive = subjectStatus === undefined || subjectStatus === null || subjectStatus === true || Number(subjectStatus) === 1 || String(subjectStatus).toLowerCase() === 'active'
-        return { ...row, ...(config || {}), id, subjectId: id, code: row.subjectCode || row.code || config?.subjectCode || '', name: row.subjectName || row.name || config?.subjectName || '', credits: Number(config?.credits ?? row.credits ?? 0), courseId: config?.courseId ?? row.courseId, branchId: config?.branchId ?? row.branchId, semesterId: config?.semesterId ?? row.semesterId, configurationId: config?.creditConfigurationId, type: row.subjectType || row.type || 'Core', status: isActive ? 'Active' : 'Inactive', course: config?.courseName || row.courseName || '', branch: config?.branchName || row.branchName || '', semester: config?.semesterName || row.semesterName || '' }
+        const enriched = enrichSubject(row, { courses: courseList, branches: branchList, semesters: semesterList, years: yearList, departments: departmentList })
+        return { ...enriched, id, subjectId: id, code: row.subjectCode || row.code || '', name: row.subjectName || row.name || '', credits: row.credits ?? null, type: row.subjectType || row.type || '', status: isActive ? 'Active' : 'Inactive', shortName: row.shortName || '' }
       })
       const creditsLive = (registrationRows || []).map(row => {
         const subject = subjectById.get(String(row.subjectId)) || {}
@@ -603,7 +616,7 @@ function CreditsManagement() {
         return { ...row, id: String(row.studentCreditRegistrationId ?? row.id), studentId: String(row.studentId), subjectId: String(row.subjectId), subjectCode: row.subjectCode || subject.subjectCode || subject.code || '', subjectName: row.subjectName || subject.subjectName || subject.name || '', credits: Number(row.registeredCredits || 0), semesterId: row.semesterId, semester: row.semesterName || semesterList.find(item => String(item.semesterId ?? item.id) === String(row.semesterId))?.semesterName || '', academicYearId: row.academicYearId, academicYear: row.academicYearName || activeAcademicYear, grade: row.grade || '', gradePoint: Number(row.gradePoints || 0), status: registrationStatus === 'COMPLETED' ? 'Completed' : registrationStatus === 'FAILED' ? 'Failed' : registrationStatus === 'DROPPED' ? 'Dropped' : 'Registered', type: subject.subjectType || subject.type || 'Core', attempt: Number(row.attempt || 1), studentName: row.studentName || student.name }
       }).filter(row => row.id && row.id !== 'undefined')
       setStudents(studentsLive); setSubjects(subjectsLive); setCredits(creditsLive)
-      setMasterCourses(courseList); setMasterBranches(branchList); setMasterSemesters(semesterList)
+      setMasterCourses(courseList); setMasterBranches(branchList); setMasterSemesters(semesterList); setMasterYears(yearList); setMasterDepartments(departmentList)
       setCreditDashboard(dashboard)
     } catch (error) { showNotice('error', error.message || 'Unable to load credit management data from the API.') }
     finally { setCreditLoading(false) }
@@ -892,23 +905,66 @@ function CreditsManagement() {
     })
   }, [selectedStudentCredits])
 
+  const subjectContexts = useMemo(() => subjects.map(subject => enrichSubject(subject, {
+    courses: masterCourses, branches: masterBranches, semesters: masterSemesters,
+    years: masterYears, departments: masterDepartments,
+  })), [subjects, masterCourses, masterBranches, masterSemesters, masterYears, masterDepartments])
+  const contextSubjects = useMemo(() => subjectContexts.filter(subject =>
+    Object.entries(subjectFilters).every(([key, value]) => !value || String(subject[key] ?? '') === String(value))
+  ), [subjectContexts, subjectFilters])
   const filteredSubjects = useMemo(() => {
-    return subjects.filter((subject) => {
-      const query = subjectSearch.trim().toLowerCase()
-
-      const matchSearch =
-        !query ||
-        subject.code.toLowerCase().includes(query) ||
-        subject.name.toLowerCase().includes(query) ||
-        subject.shortName.toLowerCase().includes(query)
-
-      const matchType =
-        subjectTypeFilter === 'All Types' ||
-        subject.type === subjectTypeFilter
-
-      return matchSearch && matchType
+    const query = subjectSearch.trim().toLowerCase()
+    return contextSubjects.filter(subject => !query || `${subject.subjectCode || ''} ${subject.subjectName || ''}`.toLowerCase().includes(query))
+  }, [contextSubjects, subjectSearch])
+  const subjectCreditExportColumns = [
+    { label: 'Subject Code', value: subject => subject.subjectCode || subject.code || '' },
+    { label: 'Subject Name', value: subject => subject.subjectName || subject.name || '' },
+    { label: 'Academic Year', value: subject => subject.academicYearName || '' },
+    { label: 'Department', value: subject => subject.department || '' },
+    { label: 'Course', value: subject => subject.course || '' },
+    { label: 'Branch', value: subject => subject.branchName || '' },
+    { label: 'Academic Level', value: subject => subject.level || '' },
+    { label: 'Semester', value: subject => subject.semesterName || '' },
+    { label: 'Credits', value: subject => subject.credits == null || subject.credits === '' ? 'Not Configured' : subject.credits },
+  ]
+  const academicSelectionReady = Object.values(subjectFilters).every(Boolean)
+  const subjectFilterOptions = (field, parentFields) => {
+    const candidates = subjectContexts.filter(subject => parentFields.every(key => !subjectFilters[key] || String(subject[key] ?? '') === String(subjectFilters[key])))
+    let values = [...new Set(candidates.map(subject => field === 'level' ? subject.level : String(subject[field] ?? '')).filter(Boolean))]
+    const masters = field === 'academicYearId' ? masterYears : field === 'departmentId' ? masterDepartments : field === 'courseId' ? masterCourses : field === 'branchId' ? masterBranches : field === 'semesterId' ? masterSemesters : []
+    if (field === 'semesterId') values = values.filter(value => {
+      const item = masters.find(master => idOf(master, 'semester') === String(value))
+      if (!item) return false
+      const label = String(item.semesterName || item.name || '')
+      const number = Number(item.semesterNumber ?? item.semesterNo ?? label.match(/semester\s*(\d+)/i)?.[1] ?? 0)
+      return !/^\s*\d{4}\s*[-/]\s*\d{2,4}\s*$/.test(label) || number > 0
     })
-  }, [subjects, subjectSearch, subjectTypeFilter])
+    return values.map(value => {
+      const row = masters.find(item => idOf(item, field.replace(/Id$/, '')) === String(value))
+      if (field === 'level') return { value, label: value }
+      if (field === 'semesterId') {
+        const number = Number(row?.semesterNumber ?? row?.semesterNo ?? String(row?.semesterName ?? row?.name ?? '').match(/semester\s*(\d+)/i)?.[1] ?? 0)
+        const sourceLabel = String(row?.semesterName || row?.name || '')
+        const isAcademicYear = /^\s*\d{4}\s*[-/]\s*\d{2,4}\s*$/.test(sourceLabel)
+        const label = isAcademicYear || !sourceLabel
+          ? (number > 0 ? `Semester ${number}` : /^\d+$/.test(String(value)) ? `Semester ${value}` : 'Semester')
+          : (/^\d+$/.test(sourceLabel.trim()) ? `Semester ${sourceLabel.trim()}` : sourceLabel)
+        return { value, label }
+      }
+      const label = field === 'academicYearId'
+        ? row?.academicYearName || row?.name
+        : field === 'departmentId'
+          ? row?.departmentName || row?.name
+          : field === 'courseId'
+            ? row?.courseName || row?.name
+            : row?.branchName || row?.name
+      return { value, label: label || value }
+    })
+  }
+  const updateSubjectFilter = (field, value) => {
+    const childFields = { academicYearId: ['departmentId', 'courseId', 'branchId', 'level', 'semesterId'], departmentId: ['courseId', 'branchId', 'level', 'semesterId'], courseId: ['branchId', 'level', 'semesterId'], branchId: ['level', 'semesterId'], level: ['semesterId'] }
+    setSubjectFilters(previous => ({ ...previous, ...Object.fromEntries((childFields[field] || []).map(child => [child, ''])), [field]: value }))
+  }
 
   const duplicateRecords = useMemo(() => {
     const map = new Map()
@@ -1605,38 +1661,6 @@ function CreditsManagement() {
   return (
     <DashboardLayout>
       <div className="cm-page">
-        <header className="cm-header">
-          <div>
-            <div className="cm-breadcrumb">
-              Administration <span>/</span> Academic Management
-            </div>
-
-            <h1>Credit Management</h1>
-
-            <p>
-              Manage academic credits, subject mappings, student
-              registrations, validation and graduation requirements.
-            </p>
-            <small>{creditLoading ? 'Loading credit data...' : `Live API: ${creditDashboard?.totalRegistrations ?? credits.length} registrations · ${creditDashboard?.activeConfigurations ?? subjects.filter(subject => subject.configurationId).length} active configurations`}</small>
-          </div>
-
-          <div className="cm-header-actions">
-            <button
-              className="cm-btn cm-btn-primary"
-              onClick={openAddCreditModal}
-            >
-              + Add Credit
-            </button>
-
-            <button
-              className="cm-btn cm-btn-secondary"
-              onClick={runValidation}
-            >
-              Validate Credits
-            </button>
-          </div>
-        </header>
-
         {notice.message && (
           <div className={`cm-alert cm-alert-${notice.type}`}>
             <span>
@@ -1656,367 +1680,6 @@ function CreditsManagement() {
               ×
             </button>
           </div>
-        )}
-
-        <nav className="cm-tabs">
-          <button
-            className={activeTab === 'dashboard' ? 'active' : ''}
-            onClick={() => setActiveTab('dashboard')}
-          >
-            Dashboard
-          </button>
-
-          <button
-            className={activeTab === 'students' ? 'active' : ''}
-            onClick={() => setActiveTab('students')}
-          >
-            Student Credits
-          </button>
-
-          <button
-            className={activeTab === 'subjects' ? 'active' : ''}
-            onClick={() => setActiveTab('subjects')}
-          >
-            Subject Configuration
-          </button>
-
-          <button
-            className={activeTab === 'framework' ? 'active' : ''}
-            onClick={() => setActiveTab('framework')}
-          >
-            Credit Framework
-          </button>
-
-          <button
-            className={activeTab === 'validation' ? 'active' : ''}
-            onClick={() => setActiveTab('validation')}
-          >
-            Validation
-            {duplicateRecords.length > 0 && (
-              <span className="cm-tab-badge">
-                {duplicateRecords.length}
-              </span>
-            )}
-          </button>
-
-          <button
-            className={activeTab === 'reports' ? 'active' : ''}
-            onClick={() => setActiveTab('reports')}
-          >
-            Reports
-          </button>
-
-          <button
-            className={activeTab === 'audit' ? 'active' : ''}
-            onClick={() => setActiveTab('audit')}
-          >
-            Audit History
-          </button>
-        </nav>
-
-        {activeTab === 'dashboard' && (
-          <section className="cm-content">
-            <div className="cm-section-heading">
-              <div>
-                <h2>Credit Dashboard</h2>
-                <p>
-                  Monitor credit registration and academic credit status.
-                </p>
-              </div>
-            </div>
-
-            <div className="cm-filter-panel">
-              <div className="cm-filter-panel-header">
-                <div className="cm-filter-title">
-                  <FilterIcon className="cm-filter-title-icon" />
-                  Dashboard Filters
-                </div>
-
-                <div
-                  className="cm-filter-menu-wrap"
-                  ref={dashboardFilterMenuRef}
-                >
-                  <button
-                    type="button"
-                    className="cm-btn cm-btn-light cm-filter-trigger"
-                    onClick={() => {
-                      setShowDashboardFilterMenu((previous) => !previous)
-                      setDashboardFilterDraft(dashboardFilters)
-                    }}
-                  >
-                    <FilterIcon className="cm-filter-trigger-icon" />
-                    <span>Filters</span>
-                    <span className="cm-filter-trigger-caret" aria-hidden="true">
-                      ▾
-                    </span>
-                  </button>
-
-                  {showDashboardFilterMenu && (
-                    <div className="cm-filter-popover">
-                      <div className="cm-filter-popover-grid">
-                        <FilterSelect
-                          label="Batch"
-                          value={dashboardFilterDraft.batch}
-                          onChange={(value) =>
-                            updateDashboardFilterDraft('batch', value)
-                          }
-                          options={['All Batches', ...BATCHES]}
-                        />
-
-                        <FilterSelect
-                          label="Academic Year"
-                          value={dashboardFilterDraft.academicYear}
-                          onChange={(value) =>
-                            updateDashboardFilterDraft('academicYear', value)
-                          }
-                          options={[
-                            'All Academic Years',
-                            ...ACADEMIC_YEARS,
-                          ]}
-                        />
-
-                        <FilterSelect
-                          label="Semester"
-                          value={dashboardFilterDraft.semester}
-                          onChange={(value) =>
-                            updateDashboardFilterDraft('semester', value)
-                          }
-                          options={['All Semesters', ...SEMESTERS]}
-                        />
-
-                        <FilterSelect
-                          label="Branch"
-                          value={dashboardFilterDraft.branch}
-                          onChange={(value) =>
-                            updateDashboardFilterDraft('branch', value)
-                          }
-                          options={['All Branches', ...BRANCHES]}
-                        />
-
-                        <FilterSelect
-                          label="Student Year"
-                          value={dashboardFilterDraft.year}
-                          onChange={(value) =>
-                            updateDashboardFilterDraft('year', value)
-                          }
-                          options={['All Years', ...STUDENT_YEARS]}
-                        />
-
-                        <FilterSelect
-                          label="Course"
-                          value={dashboardFilterDraft.course}
-                          onChange={(value) =>
-                            updateDashboardFilterDraft('course', value)
-                          }
-                          options={['All Courses', ...COURSES]}
-                        />
-                      </div>
-
-                      <div className="cm-filter-popover-actions">
-                        <button
-                          type="button"
-                          className="cm-btn cm-btn-light"
-                          onClick={resetDashboardFilterDraft}
-                        >
-                          Reset
-                        </button>
-
-                        <button
-                          type="button"
-                          className="cm-btn cm-btn-primary"
-                          onClick={applyDashboardFilters}
-                        >
-                          Apply Filters
-                        </button>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-
-            <div className="cm-stat-grid">
-              <StatCard
-                title="Students"
-                value={dashboardStats.students}
-                subtitle="Students matching filters"
-                icon="◎"
-              />
-
-              <StatCard
-                title="Registered Students"
-                value={dashboardStats.studentsWithCredits}
-                subtitle="Students with credits"
-                icon="✓"
-              />
-
-              <StatCard
-                title="Total Credits"
-                value={dashboardStats.totalCredits}
-                subtitle="Registered credits"
-                icon="▣"
-              />
-
-              <StatCard
-                title="Completed Credits"
-                value={dashboardStats.completedCredits}
-                subtitle="Successfully completed"
-                icon="◉"
-              />
-
-              <StatCard
-                title="Failed Credits"
-                value={dashboardStats.failedCredits}
-                subtitle="Backlog / failed"
-                icon="!"
-              />
-
-              <StatCard
-                title="Pending Students"
-                value={dashboardStats.pendingStudents}
-                subtitle="No credit records"
-                icon="◌"
-              />
-            </div>
-
-            <div className="cm-two-column">
-              <div className="cm-card">
-                <div className="cm-card-header">
-                  <div>
-                    <h3>Recent Credit Records</h3>
-                    <p>Latest student credit registrations.</p>
-                  </div>
-
-                  <button
-                    className="cm-link-btn"
-                    onClick={() => setActiveTab('students')}
-                  >
-                    View All
-                  </button>
-                </div>
-
-                <div className="cm-table-wrap">
-                  <table className="cm-table">
-                    <thead>
-                      <tr>
-                        <th>Student</th>
-                        <th>Subject</th>
-                        <th>Credits</th>
-                        <th>Grade</th>
-                        <th>Status</th>
-                      </tr>
-                    </thead>
-
-                    <tbody>
-                      {dashboardFilteredCredits
-                        .slice(-8)
-                        .reverse()
-                        .map((credit) => {
-                          const student = students.find(
-                            (item) => item.id === credit.studentId
-                          )
-
-                          return (
-                            <tr key={credit.id}>
-                              <td>
-                                <strong>
-                                  {student?.name || credit.studentId}
-                                </strong>
-                                <small>
-                                  {student?.rollNo || '-'}
-                                </small>
-                              </td>
-
-                              <td>
-                                <strong>{credit.subjectCode}</strong>
-                                <small>{credit.subjectName}</small>
-                              </td>
-
-                              <td>
-                                <span className="cm-credit-number">
-                                  {credit.credits}
-                                </span>
-                              </td>
-
-                              <td>
-                                <span className="cm-grade">
-                                  {credit.grade}
-                                </span>
-                              </td>
-
-                              <td>
-                                <StatusBadge
-                                  status={credit.status}
-                                />
-                              </td>
-                            </tr>
-                          )
-                        })}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-
-              <div className="cm-card">
-                <div className="cm-card-header">
-                  <div>
-                    <h3>Credit Health</h3>
-                    <p>Current academic credit indicators.</p>
-                  </div>
-                </div>
-
-                <div className="cm-health-list">
-                  <div className="cm-health-row">
-                    <span>Completed</span>
-                    <strong>
-                      {dashboardStats.completedCredits}
-                    </strong>
-                  </div>
-
-                  <div className="cm-health-row">
-                    <span>Failed / Backlog</span>
-                    <strong className="cm-danger-text">
-                      {dashboardStats.failedCredits}
-                    </strong>
-                  </div>
-
-                  <div className="cm-health-row">
-                    <span>Program Requirement</span>
-                    <strong>
-                      {framework.totalProgramCredits}
-                    </strong>
-                  </div>
-
-                  <div className="cm-health-row">
-                    <span>Maximum Semester Credits</span>
-                    <strong>
-                      {framework.maxSemesterCredits}
-                    </strong>
-                  </div>
-
-                  <div className="cm-health-row">
-                    <span>Duplicate Records</span>
-                    <strong
-                      className={
-                        duplicateRecords.length
-                          ? 'cm-danger-text'
-                          : 'cm-success-text'
-                      }
-                    >
-                      {duplicateRecords.length}
-                    </strong>
-                  </div>
-                </div>
-
-                <button
-                  className="cm-full-btn"
-                  onClick={() => setActiveTab('validation')}
-                >
-                  Open Validation Center
-                </button>
-              </div>
-            </div>
-          </section>
         )}
 
         {activeTab === 'students' && (
@@ -2557,52 +2220,63 @@ function CreditsManagement() {
           <section className="cm-content">
             <div className="cm-section-heading">
               <div>
-                <h2>Subject Credit Configuration</h2>
-                <p>
-                  Configure subject credits, mappings, categories and
-                  academic requirements.
-                </p>
+                <h2>Subject Credits</h2>
+                <p>Subject credits and academic mapping are synced from Subject Management.</p>
               </div>
-
-              <button
-                className="cm-btn cm-btn-primary"
-                onClick={openAddSubjectModal}
-              >
-                + Add Subject
-              </button>
-            </div>
-
-            <div className="cm-toolbar">
-              <div className="cm-search-field">
-                <label>Search Subject</label>
-
-                <input
-                  type="text"
-                  placeholder="Search code, name or short name..."
-                  value={subjectSearch}
-                  onChange={(e) =>
-                    setSubjectSearch(e.target.value)
-                  }
+              <div className="cm-header-actions">
+                <ExportMenu
+                  rows={academicSelectionReady ? filteredSubjects : []}
+                  columns={subjectCreditExportColumns}
+                  title="Subject Credits"
+                  filename="subject-credits"
+                  scope="Matching subject credits"
+                  loading={creditLoading || Boolean(subjectApiError)}
                 />
               </div>
-
-              <div className="cm-search-field">
-                <label>Subject Type</label>
-
-                <select
-                  value={subjectTypeFilter}
-                  onChange={(e) =>
-                    setSubjectTypeFilter(e.target.value)
-                  }
-                >
-                  <option>All Types</option>
-
-                  {SUBJECT_TYPES.map((type) => (
-                    <option key={type}>{type}</option>
-                  ))}
-                </select>
-              </div>
             </div>
+
+            <FilterPanel
+              className="cm-subject-filter-panel"
+              active={Object.values(subjectFilters).some(Boolean)}
+              onClear={() => setSubjectFilters({ academicYearId: '', departmentId: '', courseId: '', branchId: '', level: '', semesterId: '' })}
+            >
+              <div className="cm-subject-toolbar">
+                <div className="cm-subject-search">
+                  <input aria-label="Search subject code or name" placeholder="Search subject code or name..." value={subjectSearch} onChange={event => setSubjectSearch(event.target.value)} />
+                </div>
+                <div className="cm-subject-filter-grid">
+                  {[
+                    ['academicYearId', 'Academic Year', []],
+                    ['departmentId', 'Department', ['academicYearId']],
+                    ['courseId', 'Course', ['academicYearId', 'departmentId']],
+                    ['branchId', 'Branch', ['academicYearId', 'departmentId', 'courseId']],
+                    ['level', 'Academic Level', ['academicYearId', 'departmentId', 'courseId', 'branchId']],
+                    ['semesterId', 'Semester', ['academicYearId', 'departmentId', 'courseId', 'branchId', 'level']],
+                  ].map(([field, label, parents]) => (
+                    <label className="cm-academic-filter" key={field}>
+                      <span>{label}</span>
+                      <SearchableSelect
+                        label={`Select ${label}`}
+                        value={subjectFilters[field]}
+                        options={subjectFilterOptions(field, parents)}
+                        onChange={value => updateSubjectFilter(field, value)}
+                        placeholder={`Select ${label}`}
+                        searchPlaceholder={`Search ${label.toLowerCase()}...`}
+                        noOptionsMessage={`No ${label.toLowerCase()} options found.`}
+                        disabled={parents.some(parent => !subjectFilters[parent])}
+                      />
+                    </label>
+                  ))}
+                </div>
+              </div>
+            </FilterPanel>
+
+            <div className="cm-card" style={{ marginBottom: 16, display: 'flex', gap: 24, padding: 16 }}>
+              <strong>Total Subjects: {academicSelectionReady ? contextSubjects.length : '—'}</strong>
+              <strong>Total Credits: {academicSelectionReady ? contextSubjects.reduce((total, subject) => total + (subject.credits == null || subject.credits === '' ? 0 : Number(subject.credits)), 0) : '—'}</strong>
+              <button className="cm-btn cm-btn-secondary" onClick={reloadCreditData}>Refresh Subjects</button>
+            </div>
+            {subjectApiError && <div role="alert">{subjectApiError}<button className="cm-btn cm-btn-light" onClick={reloadCreditData}>Retry</button></div>}
 
             <div className="cm-card">
               <div className="cm-table-wrap cm-subject-table-wrap">
@@ -2610,28 +2284,24 @@ function CreditsManagement() {
                   <thead>
                     <tr>
                       <th>Subject</th>
-                      <th>Course</th>
-                      <th>Branch</th>
-                      <th>Regulation</th>
-                      <th>Semester</th>
-                      <th>Academic Year</th>
-                      <th>Type</th>
-                      <th>Category</th>
-                      <th>Hours</th>
+                      <th>Academic Mapping</th>
                       <th>Credits</th>
-                      <th>Marks</th>
-                      <th>Status</th>
-                      <th>Actions</th>
                     </tr>
                   </thead>
 
                   <tbody>
-                    {filteredSubjects.length === 0 ? (
+                    {creditLoading ? (
+                      <tr><td colSpan="3">Loading subjects and credits…</td></tr>
+                    ) : subjectApiError ? (
+                      <tr><td colSpan="3">Subject data could not be loaded. Retry to fetch the latest Subject Management data.</td></tr>
+                    ) : !academicSelectionReady ? (
+                      <tr><td colSpan="3">Select academic filters to view subject credits.</td></tr>
+                    ) : filteredSubjects.length === 0 ? (
                       <tr>
-                        <td colSpan="13">
+                        <td colSpan="3">
                           <EmptyState
                             title="No Subjects Found"
-                            message="No subject configuration matches your search."
+                            message="No subjects found for the selected academic configuration."
                           />
                         </td>
                       </tr>
@@ -2643,69 +2313,14 @@ function CreditsManagement() {
                             <small>{subject.name}</small>
                           </td>
 
-                          <td>{subject.course}</td>
-
-                          <td>{subject.branch}</td>
-
-                          <td>{subject.regulation || 'R22'}</td>
-
-                          <td>{subject.semester}</td>
-
-                          <td>{subject.academicYear}</td>
-
-                          <td>
-                            <span className="cm-type-badge">
-                              {subject.type}
-                            </span>
-                          </td>
-
-                          <td>{subject.category}</td>
-
-                          <td>
-                            {subject.lectureHours ?? 0} /{' '}
-                            {subject.tutorialHours ?? 0} /{' '}
-                            {subject.practicalHours ?? 0}
-                          </td>
+                          <td>{[subject.academicYearName, subject.department, subject.course, subject.branchName, subject.level, subject.semesterName].filter(Boolean).join(' · ')}</td>
 
                           <td>
                             <span className="cm-credit-number">
-                              {subject.credits}
+                              {subject.credits == null || subject.credits === '' ? 'Not Configured' : `${subject.credits} Credits`}
                             </span>
                           </td>
 
-                          <td>
-                            {subject.internalMarks ?? 40} /{' '}
-                            {subject.externalMarks ?? 60} /{' '}
-                            {subject.totalMarks ?? subject.maxMarks ?? 100}
-                          </td>
-
-                          <td>
-                            <StatusBadge status={subject.status} />
-                          </td>
-
-                          <td>
-                            <div className="cm-action-group">
-                              <button
-                                className="cm-icon-btn"
-                                onClick={() =>
-                                  openEditSubjectModal(subject)
-                                }
-                                title="Edit subject"
-                              >
-                                ✎
-                              </button>
-
-                              <button
-                                className="cm-icon-btn cm-icon-danger"
-                                onClick={() =>
-                                  handleDeleteSubject(subject)
-                                }
-                                title="Delete subject"
-                              >
-                                ×
-                              </button>
-                            </div>
-                          </td>
                         </tr>
                       ))
                     )}
