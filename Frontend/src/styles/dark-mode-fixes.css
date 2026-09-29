@@ -1,0 +1,89 @@
+﻿:root[data-theme="dark"] {
+  --text-primary: #F8FAFC !important;
+  --text-secondary: #CBD5E1 !important;
+  --text-muted: #94A3B8 !important;
+  --surface: #141E2E !important;
+  --surface-soft: #1E293B !important;
+  --surface-raised: #1E293B !important;
+  --border: #273549 !important;
+  --border-strong: #334155 !important;
+  --app-bg: #0B0F17 !important;
+}
+
+:root[data-theme="dark"] body, 
+:root[data-theme="dark"] #root,
+:root[data-theme="dark"] .dashboard-layout,
+:root[data-theme="dark"] .page-content,
+:root[data-theme="dark"] .profile-page {
+  background-color: var(--app-bg) !important;
+  color: var(--text-primary) !important;
+}
+
+:root[data-theme="dark"] .page-content :is(
+  .profile-preview-section, .profile-edit-dialog, .profile-overview,
+  .dashboard-card, .erp-card, .module-card, .settings-card,
+  article, section, .panel, .card, [class*="-card"], [class*="-panel"]
+):not(.cm-profile-banner):not(.sa-profile-header):not(.sp-hero):not(.course-detail-hero):not(.branch-detail-hero) {
+  background-color: var(--surface) !important;
+  border-color: var(--border) !important;
+  color: var(--text-primary) !important;
+}
+
+:root[data-theme="dark"] .page-content :is(h1, h2, h3, h4, h5, h6, strong, b) {
+  color: var(--text-primary) !important;
+}
+
+:root[data-theme="dark"] :where(.page-content) :where(p, span, div, label, dt, dd, li) {
+  color: inherit;
+}
+
+:root[data-theme="dark"] .page-content :is(small, .text-muted, [class*="-muted"], caption) {
+  color: var(--text-muted) !important;
+}
+
+:root[data-theme="dark"] .page-content :is(table, thead, tbody, tr, th, td) {
+  border-color: var(--border) !important;
+}
+
+:root[data-theme="dark"] .page-content :is(table td, table tbody tr) {
+  background-color: var(--surface) !important;
+  color: var(--text-primary) !important;
+}
+
+:root[data-theme="dark"] .page-content :is(table tr:hover td, table tbody tr:hover) {
+  background-color: var(--surface-soft) !important;
+}
+
+:root[data-theme="dark"] .page-content thead th,
+:root[data-theme="dark"] table thead th,
+:root[data-theme="dark"] table th {
+  background: #8782BC !important;
+  color: #FFFFFF !important;
+  border-bottom: 2px solid #756FB2 !important;
+}
+
+:root[data-theme="dark"] input,
+:root[data-theme="dark"] select,
+:root[data-theme="dark"] textarea {
+  background-color: var(--surface-soft) !important;
+  color: var(--text-primary) !important;
+  border-color: var(--border-strong) !important;
+}
+
+:root[data-theme="dark"] input::placeholder,
+:root[data-theme="dark"] textarea::placeholder {
+  color: var(--text-muted) !important;
+}
+
+:root[data-theme="dark"] .profile-page .profile-overview {
+  background: linear-gradient(115deg, #1E293B, #0F172A) !important;
+  border: 1px solid var(--border) !important;
+}
+:root[data-theme="dark"] .profile-page .profile-overview * {
+  color: #F8FAFC !important;
+}
+:root[data-theme="dark"] .profile-page .profile-overview .profile-avatar {
+  background-color: #334155 !important;
+  border-color: #475569 !important;
+}
+/* Inherit cell text without overriding semantic badge and action colours. */

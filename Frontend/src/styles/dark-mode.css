@@ -1,5 +1,6 @@
 /* Shared dark-mode contrast for directory tools, record banners and dialogs. */
 :root[data-theme="dark"] {
+  color-scheme: dark;
   --text-on-accent: #FFFFFF;
   --hero-dark: #0F172A;
   --hero-blue: #1E293B;
@@ -25,7 +26,7 @@
 .section-primary, .ac-primary, .settings-button, .sa-primary, .p-primary, .password-modal__primary, .ay-btn.solid, [class*="-primary-btn"]):not(.secondary):not(.danger):not(.btn-secondary):not(.btn-danger):not(.btn-ghost),
 :root[data-theme="dark"] .logout-confirmation__confirm {
   color: #FFFFFF !important;
-  background: #8782BC !important;
+  background: #69639D !important;
   border-color: #8782BC !important;
 }
 :root[data-theme="dark"] :is(.btn, .cm-button, .primary-button, .module-primary-action, .semester-primary,
@@ -114,7 +115,7 @@
 :root[data-theme="dark"] .page-content :is(table, .cm-table, .course-advanced-table, .branch-table, .department-table-wrap table, .semester-table, .section-table, .ay .table table, .sa-table-wrap table, .sm-table, .em-table) thead th,
 :root[data-theme="dark"] .page-content :is(table, .cm-table, .course-advanced-table, .branch-table, .department-table-wrap table, .semester-table, .section-table, .ay .table table, .sa-table-wrap table, .sm-table, .em-table) th {
   color: #FFFFFF !important;
-  background: #8782BC !important;
+  background: #69639D !important;
   border-bottom: 2px solid #756FB2 !important;
 }
 :root[data-theme="dark"] .page-content tbody tr:hover > :is(th, td) {
@@ -207,7 +208,7 @@
 :root[data-theme="dark"] .sidebar nav>a.active,
 :root[data-theme="dark"] .sidebar-link.active {
   /* Match the shared table-header lavender in both colour modes. */
-  background: #8782BC !important;
+  background: #69639D !important;
   color: #FFFFFF !important;
   font-weight: 750 !important;
   border: 1px solid #9D99CD !important;
@@ -268,7 +269,7 @@
   color: var(--text-primary) !important;
 }
 :root[data-theme="dark"] :is(.sm-btn--primary, .em-header-actions .sm-btn--primary) {
-  background: #8782BC !important;
+  background: #69639D !important;
   color: #FFFFFF !important;
   border-color: #8782BC !important;
 }
@@ -340,7 +341,7 @@
   .rooms-table th,
   .rbac-data-table th
 ) {
-  background: #8782BC !important;
+  background: #69639D !important;
   color: #FFFFFF !important;
   border-color: #756FB2 !important;
   border-bottom: 2px solid #6E68A8 !important;
@@ -657,7 +658,7 @@
   .flm-cat-btn.active,
   .fm-category-tab.active
 ) {
-  background: #8782BC !important;
+  background: #69639D !important;
   color: #FFFFFF !important;
   border: 1px solid #756FB2 !important;
   border-radius: 8px !important;

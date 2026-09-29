@@ -1268,6 +1268,29 @@ export default function RolesAndDesignations() {
 
   // Paginated Slices
   const activeDataset = activeTab === 'roles' ? filteredRoles : activeTab === 'designations' ? filteredDesignations : staffAssignmentRows
+  const exportColumns = activeTab === 'roles' ? [
+    { label: 'System Access Role', value: 'name' },
+    { label: 'Description', value: 'description' },
+    { label: 'Role Code', value: 'code' },
+    { label: 'Category', value: 'category' },
+    { label: 'Hierarchy Level', value: 'level' },
+    { label: 'Status', value: 'status' },
+  ] : activeTab === 'designations' ? [
+    { label: 'Designation', value: 'title' },
+    { label: 'Code', value: 'code' },
+    { label: 'Category', value: 'category' },
+    { label: 'Level', value: 'level' },
+    { label: 'Department', value: row => row.department || 'All Departments' },
+    { label: 'Status', value: 'status' },
+  ] : [
+    { label: 'Staff Name', value: 'fullName' },
+    { label: 'Email', value: 'email' },
+    { label: 'Employee ID', value: 'employeeId' },
+    { label: 'Department', value: 'department' },
+    { label: 'Designation', value: row => row.currentDesignation?.title || 'Not Assigned' },
+    { label: 'Role', value: row => row.currentRole?.name || 'Not Assigned' },
+    { label: 'Scope', value: row => row.isExplicitlyAssigned ? row.scope : 'Default Scope' },
+  ]
   const totalItems = activeDataset.length
   const totalPages = Math.ceil(totalItems / pageSize) || 1
   const paginatedData = useMemo(() => {
@@ -1385,12 +1408,13 @@ export default function RolesAndDesignations() {
               <FiSearch aria-hidden="true" />
               <input
                 type="search"
+                aria-label={activeTab === 'roles' ? 'Search system roles' : activeTab === 'designations' ? 'Search designations' : 'Search staff'}
                 placeholder={activeTab === 'roles' ? 'Search system roles by name, code, description...' : activeTab === 'designations' ? 'Search designations by title, code...' : 'Search staff by name, employee ID, department...'}
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
               />
               {query && (
-                <button type="button" className="rbac-clear-search" onClick={() => setQuery('')}>
+                <button type="button" className="rbac-clear-search" aria-label="Clear search" onClick={() => setQuery('')}>
                   <FiX />
                 </button>
               )}
@@ -1421,7 +1445,8 @@ export default function RolesAndDesignations() {
 
             <div className="rbac-toolbar-right">
               <ExportMenu
-                data={activeTab === 'roles' ? filteredRoles : activeTab === 'designations' ? filteredDesignations : staffAssignmentRows}
+                rows={activeDataset}
+                columns={exportColumns}
                 filename={`export_${activeTab}_${new Date().toISOString().slice(0, 10)}`}
                 title={`${activeTab.toUpperCase()} Directory`}
               />

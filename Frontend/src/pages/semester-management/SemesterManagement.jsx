@@ -342,7 +342,7 @@ function SemesterList() {
           </select>
         </div>
       </FilterPanel>
-      {loading ? <Empty icon={FiClock} title="Loading semesters..." /> : error ? <Empty icon={FiLayers} title={error} action={<button className="semester-primary" onClick={load}>Retry</button>} /> : visible.length ? (
+      {loading ? <Empty icon={FiClock} title="Loading semesters..." /> : error ? <Empty icon={FiLayers} title={error} action={<button className="semester-primary" onClick={load}>Retry</button>} isError /> : visible.length ? (
         <>
           <div className="semester-table-wrapper">
             <table className="semester-table">
@@ -905,8 +905,8 @@ function InfoCard({ icon: Icon, title, rows }) {
   )
 }
 
-function Empty({ icon: Icon, title, action }) {
-  return <div className="semester-empty-state"><Icon /><h3>{title}</h3>{action}</div>
+function Empty({ icon: Icon, title, action, isError = false }) {
+  return <div className="semester-empty-state" role={isError ? 'alert' : undefined} data-message-tone={isError ? 'error' : undefined}><Icon /><h3>{title}</h3>{action}</div>
 }
 
 function Pagination({ page, pageCount, setPage }) {

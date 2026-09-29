@@ -1,3 +1,47 @@
+/* Toggle colours describe the current record state, not the next action.
+   Scope to marked toggle icons so delete/approve actions retain their colours. */
+#root button:has(> svg[data-status="active"]) {
+  color: #15803d !important;
+  background: #dcfce7 !important;
+  border-color: #86efac !important;
+}
+#root button:has(> svg[data-status="active"]):hover:not(:disabled) {
+  color: #166534 !important;
+  background: #bbf7d0 !important;
+  border-color: #22c55e !important;
+}
+#root button:has(> svg[data-status="inactive"]) {
+  color: #b91c1c !important;
+  background: #fee2e2 !important;
+  border-color: #fca5a5 !important;
+}
+#root button:has(> svg[data-status="inactive"]):hover:not(:disabled) {
+  color: #991b1b !important;
+  background: #fecaca !important;
+  border-color: #ef4444 !important;
+}
+:root[data-theme="dark"] #root button:has(> svg[data-status="active"]) {
+  color: #86efac !important;
+  background: #173d32 !important;
+  border-color: #39865a !important;
+}
+:root[data-theme="dark"] #root button:has(> svg[data-status="active"]):hover:not(:disabled) {
+  color: #bbf7d0 !important;
+  background: #20503e !important;
+  border-color: #4ade80 !important;
+}
+:root[data-theme="dark"] #root button:has(> svg[data-status="inactive"]) {
+  color: #fda4af !important;
+  background: #482630 !important;
+  border-color: #a14a59 !important;
+}
+:root[data-theme="dark"] #root button:has(> svg[data-status="inactive"]):hover:not(:disabled) {
+  color: #fecdd3 !important;
+  background: #60303c !important;
+  border-color: #fb7185 !important;
+}
+#root button > svg[data-status] { color: inherit !important; }
+
 :root {
   --color-primary: var(--brand, #8782BC);
   --color-primary-hover: var(--brand-hover, #756FB2);
@@ -1100,4 +1144,159 @@ label > b,
 }
 @media (prefers-reduced-motion: reduce) {
   #root .page-content table .student-name-link:hover { transform: none; transition: none; }
+}
+:root {
+  --screen-error-border: #fecaca;
+  --screen-error-text: #b42318;
+  --screen-error-bg: #fff7f6;
+}
+
+/* Normalize screen-level alerts across modules; compact field errors are excluded. */
+#root :is(div, section, aside, p)[role="alert"]:not(.cm-field-error):not(.field-error):not(.field-error-text):not(.validation-error):not(.sp-form-error):not(.fm-lop-confirm):not(.fm-reset-confirm) {
+  box-sizing: border-box;
+  border: 1px solid var(--screen-error-border) !important;
+  border-left: 4px solid var(--screen-error-text) !important;
+  border-radius: 9px !important;
+  background: var(--screen-error-bg) !important;
+  color: var(--screen-error-text) !important;
+  padding: 10px 14px;
+  overflow-wrap: anywhere;
+}
+
+#root :is(div, section, aside, p)[role="alert"]:not(.cm-field-error):not(.field-error):not(.field-error-text):not(.validation-error):not(.sp-form-error):not(.fm-lop-confirm):not(.fm-reset-confirm):not(.page-error-notice) > button {
+  box-sizing: border-box;
+  min-height: 36px;
+  padding: 7px 14px;
+  border: 1px solid var(--screen-error-border) !important;
+  border-radius: 7px;
+  background: var(--surface, #fff) !important;
+  color: var(--screen-error-text) !important;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+#root .sp-state[data-message-tone="error"] {
+  min-height: 150px !important;
+  padding: 20px !important;
+}
+#root .sp-state[data-message-tone="error"] > svg { color: var(--screen-error-text) !important; }
+
+/* Consistent presentation for page-level request failures. Field errors keep their compact inline style. */
+#root :is(.sm-error, .tt-error, .em-alert, .flm-error, .fm-error, .branch-api-error, .course-api-error, .cm-summary-error, .hod-error-banner, .rbac-load-error-strip) {
+  box-sizing: border-box;
+  border: 1px solid var(--screen-error-border) !important;
+  border-radius: 9px !important;
+  color: var(--screen-error-text) !important;
+  background: var(--screen-error-bg) !important;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+
+#root :is(.sm-error, .tt-error, .em-alert, .flm-error, .fm-error, .branch-api-error, .course-api-error, .cm-summary-error, .hod-error-banner, .rbac-load-error-strip) > button {
+  width: auto !important;
+  min-width: max-content;
+  flex: 0 0 auto;
+}
+
+#root .sm-error {
+  display: flex !important;
+  width: min(640px, calc(100% - 48px));
+  min-height: 0 !important;
+  margin: 32px auto !important;
+  padding: 20px !important;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 14px !important;
+  text-align: center;
+}
+
+#root .sm-error > button {
+  min-height: 38px;
+  padding: 8px 18px;
+}
+
+/* Keep retryable request errors consistent in the course page and workspace selector. */
+#root :is(.course-empty--error, .workspace-context-select__error, .cm-empty--error, .cm-summary-error, .department-no-results--error) {
+  box-sizing: border-box;
+  border: 1px solid var(--screen-error-border) !important;
+  border-left: 4px solid var(--screen-error-text) !important;
+  border-radius: 9px !important;
+  background: var(--screen-error-bg) !important;
+  color: var(--screen-error-text) !important;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+
+#root .course-empty--error {
+  display: flex;
+  min-height: 120px !important;
+  margin: 16px !important;
+  padding: 20px !important;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+#root .cm-empty--error {
+  display: flex;
+  min-height: 120px !important;
+  margin: 16px !important;
+  padding: 20px !important;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+#root .department-no-results--error {
+  display: flex;
+  min-height: 120px !important;
+  margin: 16px !important;
+  padding: 20px !important;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+#root .cm-empty--error > p { margin: 0; color: inherit !important; }
+#root .department-no-results--error > p { margin: 0; color: inherit !important; }
+#root .cm-summary-error { margin: 0 0 16px !important; padding: 12px 16px !important; }
+#root .course-empty--error > strong { color: inherit !important; }
+#root :is(.course-empty--error, .cm-empty--error) > :is(.cm-button, .cm-secondary-btn),
+#root .workspace-context-select__error > button {
+  display: inline-flex;
+  width: auto !important;
+  min-width: max-content;
+  min-height: 36px;
+  padding: 7px 14px;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--screen-error-border) !important;
+  border-radius: 7px;
+  background: var(--surface, #fff) !important;
+  color: var(--screen-error-text) !important;
+  font: inherit;
+  font-weight: 700;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+#root .workspace-context-select__error {
+  display: flex;
+  margin-top: 8px !important;
+  padding: 8px !important;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 6px;
+  font-size: 11px;
+}
+
+:root[data-theme="dark"] {
+  --screen-error-border: color-mix(in srgb, var(--danger, #ef6b6b) 45%, var(--border));
+  --screen-error-text: #ffb4ad;
+  --screen-error-bg: color-mix(in srgb, var(--danger, #ef6b6b) 12%, var(--surface));
 }

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+﻿import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { FiAward, FiCheck, FiCheckCircle, FiEdit2, FiEye, FiInfo, FiLayers, FiPlus, FiSearch, FiTrash2, FiUsers, FiX } from 'react-icons/fi'
 import DashboardLayout from '../../layouts/DashboardLayout'
@@ -12,6 +12,7 @@ import { getAccessToken } from '../../auth/auth'
 import { selectHeaderAcademicYear } from '../../utils/headerAcademicYear'
 import { showError, showSuccess } from '../../utils/toast'
 import subjectService from '../../services/subjectService'
+import { createApiUnavailableError, notifyApiUnavailable } from '../../api/apiFailureNotice'
 import { academicFilterOptions, changeAcademicFilter, enrichSubject, eligibleForGroup, hasAcademicFilter, isElectiveSubject, matchesSubject, subjectQuery } from '../../utils/subjectDirectory'
 import './ElectiveManagement.css'
 
@@ -61,8 +62,9 @@ const reportExportColumns = [
 
 async function request(path, options = {}) {
   const token = getAccessToken(); let response
-  try { response = await fetch(`${API_BASE_URL}${path}`, { ...options, headers: { 'Content-Type': 'application/json', 'ngrok-skip-browser-warning': 'true', ...(token ? { Authorization: `Bearer ${token}` } : {}), ...options.headers } }) } catch { throw new Error('Network error. Please check your connection and try again.') }
+  try { response = await fetch(`${API_BASE_URL}${path}`, { ...options, headers: { 'Content-Type': 'application/json', 'ngrok-skip-browser-warning': 'true', ...(token ? { Authorization: `Bearer ${token}` } : {}), ...options.headers } }) } catch { throw createApiUnavailableError() }
   let body = null; try { body = await response.json() } catch { /* Empty successful responses are valid. */ }
+  if (response.status >= 500) notifyApiUnavailable({ status: response.status })
   if (!response.ok || body?.success === false) { const messages = { 401: 'Your session has expired. Please sign in again.', 403: 'You do not have permission to perform this action.', 404: path.includes('/allocations/report') ? 'No allocation report is available yet.' : path.includes('/profile/exam-results') ? 'No examination results are available.' : path.includes('/electives') ? 'No elective records are available yet.' : 'The requested information was not found.', 500: 'The server is temporarily unavailable.' }; const error = new Error(messages[response.status] || body?.message || 'The request could not be completed.'); error.status = response.status; throw error }
   return body
 }
@@ -133,13 +135,6 @@ export default function ElectiveManagement() {
 
       const groupsWithSubjects = await Promise.all(rawGroups.map(async group => {
         const id = electiveGroupIdOf(group)
-        const groupCode = group.groupCode ?? group.code ?? ''
-        const cachedDates = readCachedElectiveDates(id, groupCode)
-        const rawStart = group.selectionStartDate ?? group.SelectionStartDate ?? group.startDate ?? group.StartDate ?? cachedDates.startDate ?? ''
-        const rawEnd = group.selectionEndDate ?? group.SelectionEndDate ?? group.endDate ?? group.EndDate ?? cachedDates.endDate ?? ''
-        const selectionStartDate = rawStart ? String(rawStart).slice(0, 10) : ''
-        const selectionEndDate = rawEnd ? String(rawEnd).slice(0, 10) : ''
-        cacheElectiveDates(id, groupCode, { startDate: selectionStartDate, endDate: selectionEndDate })
         let groupSubjects = []
 
         try {
@@ -159,7 +154,6 @@ export default function ElectiveManagement() {
           ...group,
           id,
           groupId: id,
-          groupCode,
           courseId: group.courseId ?? '',
           branchId: group.branchId ?? '',
           academicYear: group.academicYearName || group.academicYear || '',
@@ -168,8 +162,8 @@ export default function ElectiveManagement() {
           credits: firstValue(creditsOf(group), preserved.credits),
           minimumSelection: group.minSelections ?? group.minimumSelection ?? 1,
           maximumSelection: group.maxSelections ?? group.maximumSelection ?? 1,
-          selectionStartDate,
-          selectionEndDate,
+          selectionStartDate: group.selectionStartDate || '',
+          selectionEndDate: group.selectionEndDate || '',
           status: Number(group.status) === 1 ? 'Open' : 'Inactive',
           subjects: groupSubjects.map(item => ({
             ...item,
@@ -359,13 +353,8 @@ export default function ElectiveManagement() {
           electiveGroupIdOf(created) ||
           electiveGroupIdOf(created?.data) ||
           electiveGroupIdOf(created?.data?.data)
-        showSuccess('Elective group created.')
       }
 
-      cacheElectiveDates(savedGroupId, payload.groupCode, {
-        startDate: groupForm.selectionStartDate,
-        endDate: groupForm.selectionEndDate,
-      })
       setGroupModal(false)
       setEditingGroup(null)
 
@@ -581,7 +570,7 @@ export default function ElectiveManagement() {
                     },
                   ].map(sec => ({
                     ...sec,
-                    fields: sec.fields.filter(([, val]) => val !== null && val !== undefined && String(val).trim() !== '' && String(val).trim() !== '—'),
+                    fields: sec.fields.filter(([, val]) => val !== null && val !== undefined && String(val).trim() !== '' && String(val).trim() !== 'â€”'),
                   })).filter(sec => sec.fields.length > 0)
 
                   if (sections.length === 0) {
@@ -598,7 +587,7 @@ export default function ElectiveManagement() {
                         <div className="preview-hero-badge">{groupForm.groupCode ? groupForm.groupCode.slice(0, 4).toUpperCase() : 'ELEC'}</div>
                         <div className="preview-hero-details">
                           <h3 className="preview-course-title" style={{ margin: 0 }}>{groupForm.groupName || 'Elective Group Preview'}</h3>
-                          <p className="preview-course-meta" style={{ margin: '2px 0 0', color: '#64748B', fontSize: '0.78rem' }}>{[groupForm.groupCode, groupForm.electiveType, groupForm.credits && `${groupForm.credits} Credits`].filter(Boolean).join(' • ')}</p>
+                          <p className="preview-course-meta" style={{ margin: '2px 0 0', color: '#64748B', fontSize: '0.78rem' }}>{[groupForm.groupCode, groupForm.electiveType, groupForm.credits && `${groupForm.credits} Credits`].filter(Boolean).join(' â€¢ ')}</p>
                         </div>
                       </div>
                       {sections.map(sec => (
@@ -651,7 +640,7 @@ export default function ElectiveManagement() {
         </section>
         {error && <div className="em-alert" role="alert"><FiInfo /> {error}</div>}
         {activeTab === 'subjects' && (
-          <section className="sm-card">
+          <section className="sm-card em-subject-directory-card">
             <FilterPanel
               className="em-subject-filter-panel"
               active={hasAcademicFilter(filters) || filters.status !== 'All'}
@@ -767,7 +756,7 @@ export default function ElectiveManagement() {
                   <form className="em-form-body" onSubmit={submitSelection}>
                     <div className="em-readonly-student">
                       <strong>{text(profile.fullName || profile.studentName)}</strong>
-                      <span>{text(profile.studentCode || profile.identifier || studentId)} · {text(profile.semester, 'Semester information unavailable')}</span>
+                      <span>{text(profile.studentCode || profile.identifier || studentId)} Â· {text(profile.semester, 'Semester information unavailable')}</span>
                     </div>
                     <label className="sm-field">
                       Elective Group
@@ -945,7 +934,7 @@ export default function ElectiveManagement() {
                           />
                           <span>
                             <strong>{text(subject.subjectCode || subject.code)}</strong> {text(subject.subjectName || subject.name)}
-                            <small>{text(subject.credits, '-')} credits · {text(subject.department)} · {text(subject.semester)}</small>
+                            <small>{text(subject.credits, '-')} credits Â· {text(subject.department)} Â· {text(subject.semester)}</small>
                           </span>
                         </label>
                       );

@@ -1,6 +1,7 @@
 import { markApiResult } from '../utils/exportProvenance'
 import { readSubjectPages } from '../utils/subjectApiData'
 import { getAccessToken, getAuthStorage, getRefreshToken, signOut } from '../auth/auth'
+import { createApiUnavailableError, notifyApiUnavailable } from './apiFailureNotice'
 
 if (typeof window !== 'undefined' && window.localStorage) {
   try {
@@ -294,11 +295,17 @@ const refreshAccessToken = async () => {
   }
 
   refreshRequestInFlight = (async () => {
-    const response = await fetch(API_ENDPOINTS.auth.refresh, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'ngrok-skip-browser-warning': 'true' },
-      body: JSON.stringify({ refreshToken }),
-    })
+    let response
+    try {
+      response = await fetch(API_ENDPOINTS.auth.refresh, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'ngrok-skip-browser-warning': 'true' },
+        body: JSON.stringify({ refreshToken }),
+      })
+    } catch {
+      throw createApiUnavailableError()
+    }
+    if (response.status >= 500) notifyApiUnavailable({ status: response.status })
 
     const body = await readBody(response)
     if (!response.ok || !body?.data?.accessToken) {
@@ -339,7 +346,7 @@ const request = async (url, options = {}, retried = false, bypassDedupe = false)
       headers: { 'ngrok-skip-browser-warning': 'true', ...options.headers, ...(token ? { Authorization: `Bearer ${token}` } : {}) },
     })
   } catch {
-    throw new Error('We’re having trouble connecting right now. Please try again shortly.')
+    throw createApiUnavailableError()
   }
   if (response.status === 401 && !retried && url !== API_ENDPOINTS.auth.refresh) {
     await refreshAccessToken()
@@ -355,7 +362,8 @@ const request = async (url, options = {}, retried = false, bypassDedupe = false)
       console.error('API request failed', { url, method: options.method || 'GET', status: response.status })
     }
     if (response.status >= 500) {
-      const error = new Error('Something went wrong while completing your request. Please try again.')
+      notifyApiUnavailable({ status: response.status })
+      const error = new Error('The server encountered an error while handling this request. Please try again shortly.')
       error.status = response.status
       error.backendMessage = validationMessage(body)
       error.correlationId = typeof body?.correlationId === 'string' ? body.correlationId : undefined
@@ -392,9 +400,13 @@ const blobRequest = async (url, options = {}, retried = false) => {
   const token = getAccessToken()
   let response
   try { response = await fetch(url, { ...options, headers: { 'ngrok-skip-browser-warning': 'true', ...options.headers, ...(token ? { Authorization: `Bearer ${token}` } : {}) } }) }
-  catch { throw new Error('We’re having trouble connecting right now. Please try again shortly.') }
+  catch { throw createApiUnavailableError() }
   if (response.status === 401 && !retried && url !== API_ENDPOINTS.auth.refresh) { await refreshAccessToken(); return blobRequest(url, options, true) }
-  if (!response.ok) { const body = await readBody(response); throw new AuthRequestError(validationMessage(body) || 'The download request could not be completed.', response.status) }
+  if (!response.ok) {
+    const body = await readBody(response)
+    if (response.status >= 500) notifyApiUnavailable({ status: response.status })
+    throw new AuthRequestError(response.status >= 500 ? 'The server could not prepare this download. Please try again shortly.' : validationMessage(body) || 'The download request could not be completed.', response.status)
+  }
   return { blob: await response.blob(), contentDisposition: response.headers.get('content-disposition') || '', contentType: response.headers.get('content-type') || '' }
 }
 
@@ -459,10 +471,12 @@ export async function login({ identifier, password, rememberMe = false }) {
       body: JSON.stringify({ loginId: identifier, password, rememberMe: Boolean(rememberMe) }),
     })
   } catch {
+    notifyApiUnavailable()
     throw new AuthRequestError('We’re having trouble signing you in right now. Please try again shortly.')
   }
   const body = await readBody(response)
   if (!response.ok || body?.success === false) {
+    if (response.status >= 500) notifyApiUnavailable({ status: response.status })
     const message = response.status === 401
       ? 'The email, mobile number, or password is incorrect.'
       : response.status === 429

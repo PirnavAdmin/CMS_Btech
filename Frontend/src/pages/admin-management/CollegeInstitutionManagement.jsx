@@ -452,7 +452,7 @@ export default function CollegeInstitutionManagement({ initialView = 'list' }) {
   const [statusFilter, setStatusFilter] = useState('')
   const [collegeDraft, setCollegeDraft] = useState(readNewCollegeDraft)
 
-  // College Settings state — real list from the backend
+  // College Settings state â€” real list from the backend
   const [settingsList, setSettingsList] = useState([])
   const [isSettingsLoading, setIsSettingsLoading] = useState(false)
   const [settingsListError, setSettingsListError] = useToastState('', 'error')
@@ -728,7 +728,7 @@ export default function CollegeInstitutionManagement({ initialView = 'list' }) {
     }
   }
 
-  // ── College Settings: list ──
+  // â”€â”€ College Settings: list â”€â”€
   const fetchSettingsList = async () => {
     setIsSettingsLoading(true)
     setSettingsListError('')
@@ -831,7 +831,7 @@ export default function CollegeInstitutionManagement({ initialView = 'list' }) {
               />
             </header>
 
-            {collegeSummary.error && (
+            {collegeSummary.error && !collegeError && (
               <p className="cm-summary-error" role="alert">{collegeSummary.error}</p>
             )}
 
@@ -885,8 +885,8 @@ export default function CollegeInstitutionManagement({ initialView = 'list' }) {
                 <p>Loading colleges...</p>
               </div>
             ) : collegeError ? (
-              <div className="cm-empty">
-                <p className="cm-field-error" role="alert">{collegeError}</p>
+              <div className="cm-empty cm-empty--error" role="alert">
+                <p>{collegeError}</p>
                 <button type="button" className="cm-secondary-btn" onClick={() => loadColleges(searchTerm)}>
                   Retry
                 </button>
@@ -974,12 +974,12 @@ export default function CollegeInstitutionManagement({ initialView = 'list' }) {
                               </button>
                               <button
                                 type="button"
-                                className={`table-action-btn cm-action-icon-btn cm-status-action ${college.status === 'active' ? 'action-deactivate cm-danger' : 'action-activate cm-success'}`}
+                                className={`table-action-btn cm-action-icon-btn cm-status-action ${college.status === 'active' ? 'action-activate cm-success' : 'action-deactivate cm-danger'}`}
                                 title={college.status === 'active' ? `Deactivate ${college.name}` : `Activate ${college.name}`}
                                 aria-label={college.status === 'active' ? `Deactivate ${college.name}` : `Activate ${college.name}`}
                                 onClick={() => toggleStatus(college)}
                               >
-                                {college.status === 'active' ? <FiToggleRight /> : <FiToggleLeft />}
+                                {college.status === 'active' ? <FiToggleRight data-status="active" /> : <FiToggleLeft data-status="inactive" />}
                               </button>
                             </div>
                           </td>
@@ -1245,7 +1245,7 @@ export default function CollegeInstitutionManagement({ initialView = 'list' }) {
           </div>
         )}
 
-        {/* COLLEGE SETTINGS — LIST VIEW, backed by /api/college-settings */}
+        {/* COLLEGE SETTINGS â€” LIST VIEW, backed by /api/college-settings */}
         {viewMode === 'settings' && (
           <div className="cm-settings">
             <header className="cm-header">
@@ -1266,8 +1266,8 @@ export default function CollegeInstitutionManagement({ initialView = 'list' }) {
             {isSettingsLoading && <p>Loading college settings...</p>}
 
             {!isSettingsLoading && settingsListError && (
-              <div className="cm-empty">
-                <p className="cm-field-error">{settingsListError}</p>
+              <div className="cm-empty cm-empty--error" role="alert">
+                <p>{settingsListError}</p>
                 <button type="button" className="cm-secondary-btn" onClick={fetchSettingsList}>
                   Retry
                 </button>
@@ -1337,7 +1337,7 @@ export default function CollegeInstitutionManagement({ initialView = 'list' }) {
           </div>
         )}
 
-        {/* COLLEGE SETTINGS — ADD / EDIT FORM MODAL */}
+        {/* COLLEGE SETTINGS â€” ADD / EDIT FORM MODAL */}
         {viewMode === 'settings-form' && (
           <>
             <button type="button" className="cm-modal-backdrop" aria-label="Close form dialog" onClick={backToSettingsList} />
@@ -1472,3 +1472,4 @@ export default function CollegeInstitutionManagement({ initialView = 'list' }) {
     </DashboardLayout>
   )
 }
+

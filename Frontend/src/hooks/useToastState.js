@@ -1,9 +1,8 @@
 import { useCallback, useRef, useState } from 'react'
 import { showToast } from '../utils/toast'
 
-// Preserve useful inline errors and existing form state, while the global host
-// owns all popup rendering and timing. Setters run from UI handlers, not effects
-// watching rendered messages, so navigation and StrictMode do not replay toasts.
+// Preserve the local form/page state and publish feedback through the shared
+// notification store. The UI host decides where each notification is shown.
 export default function useToastState(initial, defaultType = 'info') {
   const [value, setValue] = useState(initial)
   const current = useRef(value)

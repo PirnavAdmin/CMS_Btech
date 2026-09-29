@@ -1,3 +1,5 @@
+import { notifyApiUnavailable } from './apiFailureNotice'
+
 export const demoModules = ['College Management', 'Academic Years', 'Courses', 'Departments', 'Branches', 'Semesters', 'Sections', 'Student Admission', 'Student Profile', 'Student Promotion', 'Attendance', 'Examinations', 'Results']
 export const demoRoles = ['College Administrator', 'Principal', 'Director', 'Registrar', 'HOD', 'Faculty', 'IT Administrator', 'Management', 'Other']
 export const demoTimes = ['10:00 AM – 11:00 AM', '11:00 AM – 12:00 PM', '2:00 PM – 3:00 PM', '3:00 PM – 4:00 PM', '4:00 PM – 5:00 PM']
@@ -41,6 +43,7 @@ export async function submitDemoRequest(request) {
         agreeToContact: values.consent,
       }),
     })
+    if (response.status >= 500) notifyApiUnavailable({ status: response.status })
     const text = await response.text()
     let body = null
     try { body = text ? JSON.parse(text) : null } catch { /* Reject unexpected proxy or HTML responses below. */ }
@@ -54,10 +57,13 @@ export async function submitDemoRequest(request) {
     return { success: true, reference: data?.reference || data?.requestId || data?.id }
   } catch (error) {
     if (error.name === 'AbortError') throw new Error('The request timed out. Please try again shortly.')
-    if (error instanceof TypeError) throw new Error('Unable to connect. Please check your connection and try again.')
+    if (error instanceof TypeError) {
+      notifyApiUnavailable()
+      throw new Error('Unable to connect to the server. Check that the backend is running and try again.')
+    }
     throw error
   } finally {
     clearTimeout(timeout)
   }
 }
-const demoRequestUrl = `${import.meta.env.DEV ? '' : (import.meta.env.VITE_API_BASE_URL || 'https://abreast-curling-tutor.ngrok-free.dev').trim().replace(/\/+$/, '')}/api/v1/demo-requests`
+const demoRequestUrl = `${import.meta.env.DEV ? '' : (import.meta.env.VITE_API_BASE_URL || 'https://clarity-math-delouse.ngrok-free.dev').trim().replace(/\/+$/, '')}/api/v1/demo-requests`

@@ -1,12 +1,14 @@
 import useToastState from '../hooks/useToastState'
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
-import { FiLock, FiLogOut, FiMenu, FiMoon, FiSearch, FiSun, FiUser } from 'react-icons/fi'
+import { FiAlertCircle, FiLock, FiLogOut, FiMenu, FiMoon, FiSearch, FiSun, FiUser, FiX } from 'react-icons/fi'
 import { getUserRole, signOut } from '../auth/auth'
 import { changePassword, profileApi } from '../api/apiEndpoints'
 import Sidebar from '../components/Sidebar'
 import HeaderAcademicYear from '../components/HeaderAcademicYear'
 import DeactivationBlockedDialog from '../components/DeactivationBlockedDialog'
+import { API_FAILURE_EVENT } from '../api/apiFailureNotice'
+import { dismissToast, getToasts, subscribeToToasts } from '../utils/toast'
 import './DashboardLayout.css'
 import './AccountMenu.css'
 
@@ -23,6 +25,70 @@ const requirements = (password) => [
   ['One number', /\d/.test(password)],
   ['One special character', /[^A-Za-z0-9]/.test(password)],
 ]
+
+function PageErrorNotices({ pathname }) {
+  const toasts = useSyncExternalStore(subscribeToToasts, getToasts, getToasts)
+  const [duplicates, setDuplicates] = useState([])
+  const [apiFailure, setApiFailure] = useState(null)
+  const [hasInlineError, setHasInlineError] = useState(false)
+  const errors = toasts.filter((toast) => toast.type === 'error')
+  const apiFailureTimer = useRef(null)
+
+  useEffect(() => {
+    const onApiFailure = (event) => {
+      const failure = { ...event.detail, id: `${Date.now()}-${Math.random()}` }
+      setApiFailure(failure)
+      window.clearTimeout(apiFailureTimer.current)
+      apiFailureTimer.current = window.setTimeout(() => setApiFailure(null), 6000)
+    }
+    window.addEventListener(API_FAILURE_EVENT, onApiFailure)
+    return () => {
+      window.removeEventListener(API_FAILURE_EVENT, onApiFailure)
+      window.clearTimeout(apiFailureTimer.current)
+    }
+  }, [])
+
+  useEffect(() => { setApiFailure(null) }, [pathname])
+
+  useEffect(() => {
+    const checkAlerts = () => {
+      const existingAlerts = Array.from(document.querySelectorAll([
+        '[role="alert"]:not(.page-error-notice):not(.fm-lop-confirm):not(.fm-reset-confirm)',
+        '[data-message-tone="error"]',
+        '.sm-error', '.tt-error', '.em-alert', '.flm-error', '.fm-error',
+        '.branch-api-error', '.course-api-error', '.cm-summary-error',
+        '.hod-error-banner', '.rbac-load-error-strip', '.department-error',
+        '.cm-empty--error', '.course-empty--error', '.workspace-context-select__error',
+      ].join(',')))
+        .filter((element) => element.getClientRects().length > 0)
+      const messages = existingAlerts.map((element) => (element.textContent || '').replace(/\s+/g, ' ').trim().toLowerCase())
+      const nextDuplicates = toasts.filter((toast) => toast.type === 'error' && messages.some((message) => message.includes(toast.message.toLowerCase()))).map((toast) => toast.id)
+      setDuplicates((current) => current.length === nextDuplicates.length && current.every((id, index) => id === nextDuplicates[index]) ? current : nextDuplicates)
+      setHasInlineError((current) => current === (existingAlerts.length > 0) ? current : existingAlerts.length > 0)
+    }
+    checkAlerts()
+    const observer = new MutationObserver(checkAlerts)
+    observer.observe(document.getElementById('root') || document.body, { childList: true, subtree: true })
+    return () => observer.disconnect()
+  }, [toasts, apiFailure])
+
+  const visibleErrors = errors.filter((toast) => !duplicates.includes(toast.id))
+  const showApiFailure = apiFailure && !hasInlineError && !errors.length
+  if (!visibleErrors.length && !showApiFailure) return null
+
+  return <aside className="page-error-notices" aria-label="Page errors" data-no-print>
+    {visibleErrors.map((toast) => <div className="page-error-notice" key={toast.id} role="alert">
+      <FiAlertCircle aria-hidden="true" />
+      <span>{toast.message}</span>
+      <button type="button" aria-label="Dismiss error" onClick={() => dismissToast(toast.id)}><FiX aria-hidden="true" /></button>
+    </div>)}
+    {showApiFailure && <div className="page-error-notice" key={apiFailure.id} role="alert">
+      <FiAlertCircle aria-hidden="true" />
+      <span>{apiFailure.message}</span>
+      <button type="button" aria-label="Dismiss error" onClick={() => setApiFailure(null)}><FiX aria-hidden="true" /></button>
+    </div>}
+  </aside>
+}
 
 export default function DashboardLayout({ children }) {
   const navigate = useNavigate()
@@ -310,7 +376,7 @@ export default function DashboardLayout({ children }) {
           </div>
         </header>
 
-        <section className="page-content">{!(pathname === '/faculty' || pathname.startsWith('/faculty/')) && <nav className="app-breadcrumb" aria-label="Breadcrumb"><Link to="/dashboard">Home</Link><span aria-hidden="true">/</span><span>{breadcrumbSection}</span>{pageName !== breadcrumbSection && <><span aria-hidden="true">/</span><strong>{pageName}</strong></>}</nav>}{children}</section>
+        <section className="page-content"><PageErrorNotices pathname={pathname} />{!(pathname === '/faculty' || pathname.startsWith('/faculty/')) && <nav className="app-breadcrumb" aria-label="Breadcrumb"><Link to="/dashboard">Home</Link><span aria-hidden="true">/</span><span>{breadcrumbSection}</span>{pageName !== breadcrumbSection && <><span aria-hidden="true">/</span><strong>{pageName}</strong></>}</nav>}{children}</section>
         <DeactivationBlockedDialog />
 
         {/* Logout Confirmation Modal */}
