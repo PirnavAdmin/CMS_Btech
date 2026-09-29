@@ -78,6 +78,32 @@ test('publishes only a valid scope locally and reset restores initial demo state
   }
 })
 
+test('published edits can be staged without changing storage until validated and saved', () => {
+  const previous = globalThis.localStorage
+  const records = new Map()
+  globalThis.localStorage = { getItem: key => records.get(key) ?? null, setItem: (key, value) => records.set(key, value), removeItem: key => records.delete(key) }
+  try {
+    const draft = timetableDemoService.generateAll(initialTimetableDemoState(), scope)
+    const published = timetableDemoService.publish(draft, scope)
+    assert.equal(published.validation.valid, true)
+    const storedBeforeEdit = records.get('pirnav_timetable_demo')
+    const entry = published.state.schedules['sec-cse-a'].entries[0]
+
+    const staged = timetableDemoService.saveEntry(published.state, { ...entry, generated: false }, { persist: false })
+    assert.equal(staged.validation.valid, true)
+    assert.equal(records.get('pirnav_timetable_demo'), storedBeforeEdit)
+    assert.equal(staged.state.schedules['sec-cse-a'].publicationStatus, 'DRAFT')
+
+    const saved = timetableDemoService.publish(staged.state, scope)
+    assert.equal(saved.validation.valid, true)
+    assert.equal(saved.state.schedules['sec-cse-a'].publicationStatus, 'PUBLISHED')
+    assert.notEqual(records.get('pirnav_timetable_demo'), storedBeforeEdit)
+  } finally {
+    if (previous === undefined) delete globalThis.localStorage
+    else globalThis.localStorage = previous
+  }
+})
+
 test('fixture data connects CSE semester three to three sections and six subjects', () => {
   assert.equal(demoAcademicData.sections.filter(row => row.branchId === scope.branchId && row.semesterId === scope.semesterId).length, 3)
   assert.equal(demoAcademicData.subjects.filter(row => row.branchId === scope.branchId && row.semesterId === scope.semesterId).length, 6)
