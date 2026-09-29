@@ -1,3 +1,5 @@
+import useCollegeState from '../../hooks/useCollegeState'
+import { collegeStorageKey } from '../../utils/collegeScope.js'
 import { useState, useEffect, useMemo, Fragment } from 'react'
 import DashboardLayout from '../../layouts/DashboardLayout'
 import PageHeader from '../../components/PageHeader'
@@ -502,7 +504,7 @@ export default function RolesAndDesignations() {
   // Real data state
   const [roles, setRoles] = useState(() => {
     try {
-      const saved = localStorage.getItem(STORAGE_KEY_ROLES)
+      const saved = localStorage.getItem(collegeStorageKey(STORAGE_KEY_ROLES))
       const parsed = saved ? JSON.parse(saved) : []
       return Array.isArray(parsed) && parsed.length >= DEFAULT_SYSTEM_ROLES.length ? parsed : DEFAULT_SYSTEM_ROLES
     } catch {
@@ -512,7 +514,7 @@ export default function RolesAndDesignations() {
 
   const [designations, setDesignations] = useState(() => {
     try {
-      const saved = localStorage.getItem(STORAGE_KEY_DESIGNATIONS)
+      const saved = localStorage.getItem(collegeStorageKey(STORAGE_KEY_DESIGNATIONS))
       const parsed = saved ? JSON.parse(saved) : []
       return Array.isArray(parsed) && parsed.length >= DEFAULT_DESIGNATIONS.length ? parsed : DEFAULT_DESIGNATIONS
     } catch {
@@ -522,26 +524,19 @@ export default function RolesAndDesignations() {
 
   const [assignments, setAssignments] = useState(() => {
     try {
-      const saved = localStorage.getItem(STORAGE_KEY_ASSIGNMENTS)
+      const saved = localStorage.getItem(collegeStorageKey(STORAGE_KEY_ASSIGNMENTS))
       const parsed = saved ? JSON.parse(saved) : null
       if (parsed && typeof parsed === 'object' && Object.keys(parsed).length > 0) {
         return parsed
       }
-      return {
-        '1': { roleId: '3', designationId: '1', scope: 'Department: Computer Science & Engineering', scopeType: 'Department', scopeDepartmentName: 'Computer Science & Engineering' },
-        '2': { roleId: '4', designationId: '2', scope: 'Department: Electronics & Communication', scopeType: 'Department', scopeDepartmentName: 'Electronics & Communication' },
-        '3': { roleId: '4', designationId: '3', scope: 'Department: Mechanical Engineering', scopeType: 'Department', scopeDepartmentName: 'Mechanical Engineering' },
-        '4': { roleId: '4', designationId: '4', scope: 'Department: Information Technology', scopeType: 'Department', scopeDepartmentName: 'Information Technology' },
-        '5': { roleId: '4', designationId: '5', scope: 'Department: Computer Science & Engineering', scopeType: 'Department', scopeDepartmentName: 'Computer Science & Engineering' },
-        '6': { roleId: '1', designationId: '6', scope: 'Institution-wide', scopeType: 'Institution-wide' },
-      }
+      return {}
     } catch {
       return {}
     }
   })
 
-  const [facultyList, setFacultyList] = useState(DEFAULT_STAFF_MEMBERS)
-  const [departments, setDepartments] = useState(DEFAULT_DEPARTMENTS)
+  const [facultyList, setFacultyList] = useCollegeState([])
+  const [departments, setDepartments] = useCollegeState([])
   const [isLoadingFaculty, setIsLoadingFaculty] = useState(false)
   const [rolesLoadError, setRolesLoadError] = useState('')
 
@@ -579,15 +574,15 @@ export default function RolesAndDesignations() {
 
   // Sync to LocalStorage
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEY_ROLES, JSON.stringify(roles))
+    localStorage.setItem(collegeStorageKey(STORAGE_KEY_ROLES), JSON.stringify(roles))
   }, [roles])
 
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEY_DESIGNATIONS, JSON.stringify(designations))
+    localStorage.setItem(collegeStorageKey(STORAGE_KEY_DESIGNATIONS), JSON.stringify(designations))
   }, [designations])
 
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEY_ASSIGNMENTS, JSON.stringify(assignments))
+    localStorage.setItem(collegeStorageKey(STORAGE_KEY_ASSIGNMENTS), JSON.stringify(assignments))
   }, [assignments])
 
   // Load real live faculty, departments, and roles from backend
@@ -1852,7 +1847,7 @@ export default function RolesAndDesignations() {
                     <option value="">-- Choose Standard Role Preset (e.g. HOD, Faculty, Exam Controller) --</option>
                     {STANDARD_ROLE_TEMPLATES.map((tmpl) => (
                       <option key={tmpl.code} value={tmpl.name}>
-                        {tmpl.name} ({tmpl.code}) • {tmpl.category} • {tmpl.level}
+                        {tmpl.name} ({tmpl.code}) | {tmpl.category} | {tmpl.level}
                       </option>
                     ))}
                   </select>
@@ -1884,7 +1879,7 @@ export default function RolesAndDesignations() {
                         <span className={`rbac-code-badge-hint ${isRoleCodeCustomized ? 'is-custom' : 'is-auto'}`}>
                           {isRoleCodeCustomized ? (
                             <>
-                              Manual Edit Active •{' '}
+                              Manual Edit Active |{' '}
                               <button type="button" onClick={handleResetRoleCodeToAuto}>
                                 Reset to Auto
                               </button>
@@ -2048,7 +2043,7 @@ export default function RolesAndDesignations() {
                       <span className={`rbac-code-badge-hint ${isDesCodeCustomized ? 'is-custom' : 'is-auto'}`}>
                         {isDesCodeCustomized ? (
                           <>
-                            Manual Edit Active •{' '}
+                            Manual Edit Active |{' '}
                             <button type="button" onClick={handleResetDesCodeToAuto}>
                               Reset to Auto
                             </button>
@@ -2395,7 +2390,7 @@ export default function RolesAndDesignations() {
                 </div>
                 <div>
                   <strong>{assigningStaff.fullName}</strong>
-                  <p>{assigningStaff.email || 'No email registered'} • Emp ID: {assigningStaff.employeeId || 'N/A'}</p>
+                  <p>{assigningStaff.email || 'No email registered'} | Emp ID: {assigningStaff.employeeId || 'N/A'}</p>
                   <small>Department: {assigningStaff.department || 'Not Assigned'}</small>
                 </div>
               </div>
@@ -2422,7 +2417,7 @@ export default function RolesAndDesignations() {
                       <option value="">Select Official Designation</option>
                       {designations.map((d) => (
                         <option key={d.id} value={d.id}>
-                          {d.title} ({d.category} • {d.level})
+                          {d.title} ({d.category} | {d.level})
                         </option>
                       ))}
                     </select>
@@ -2445,7 +2440,7 @@ export default function RolesAndDesignations() {
                       <option value="">Select System Access Role</option>
                       {roles.map((r) => (
                         <option key={r.id} value={r.id}>
-                          {r.name} ({r.category} • {r.code})
+                          {r.name} ({r.category} | {r.code})
                         </option>
                       ))}
                     </select>
@@ -2566,7 +2561,7 @@ export default function RolesAndDesignations() {
                 <div className="rbac-delete-target-card">
                   <div className="rbac-delete-target-info">
                     <strong>{deletingRole.name}</strong>
-                    <span>{deletingRole.category} • {deletingRole.level}</span>
+                    <span>{deletingRole.category} | {deletingRole.level}</span>
                   </div>
                   <span className="rbac-delete-code-tag">{deletingRole.code}</span>
                 </div>
@@ -2634,7 +2629,7 @@ export default function RolesAndDesignations() {
                 <div className="rbac-delete-target-card">
                   <div className="rbac-delete-target-info">
                     <strong>{deletingDesignation.title}</strong>
-                    <span>{deletingDesignation.category} • {deletingDesignation.level}</span>
+                    <span>{deletingDesignation.category} | {deletingDesignation.level}</span>
                   </div>
                   <span className="rbac-delete-code-tag">{deletingDesignation.code}</span>
                 </div>

@@ -178,10 +178,13 @@ const Field = ({ label, error, wide, children }) => <label className={`cm-field 
 const Badge = ({ value }) => <span className={`course-badge ${String(value).toLowerCase()}`}><i />{value}</span>
 
 function CourseList() {
-  const { selectedCollegeId, selectedCollege } = useAcademic()
-  const [courses, setCourses] = useState([])
-  const [departments, setDepartments] = useState([])
-  const [branches, setBranches] = useState([])
+  const { scopeRecords, selectedCollegeId, selectedCollege } = useAcademic()
+  const [allCourses, setCourses] = useState([])
+  const courses = scopeRecords(allCourses)
+  const [allDepartments, setDepartments] = useState([])
+  const departments = scopeRecords(allDepartments)
+  const [allBranches, setBranches] = useState([])
+  const branches = scopeRecords(allBranches)
   const [query, setQuery] = useState('')
   const [statusFilter, setStatusFilter] = useState('')
   const [isLoading, setIsLoading] = useState(true)
@@ -212,7 +215,7 @@ function CourseList() {
   }
   useEffect(() => { load() }, [])
 
-  const scopedCourses = courses
+  const scopedCourses = scopeRecords(courses)
 
   const departmentName = (c) => departments.find(d => String(d.id) === String(c.departmentId))?.name || c.department || ''
   const rows = useMemo(() => scopedCourses.filter(c => `${c.name} ${c.code}`.toLowerCase().includes(query.trim().toLowerCase()) && (!statusFilter || c.status === statusFilter)), [scopedCourses, query, statusFilter])
@@ -429,13 +432,15 @@ function CourseList() {
 }
 
 function CourseForm() {
-  const { selectedCollegeId } = useAcademic()
+  const { scopeRecords, selectedCollegeId } = useAcademic()
   const saveLock = useRef(false)
   const [persistedId, setPersistedId] = useState(null)
   const [existingCourses, setExistingCourses] = useState([])
   const { id } = useParams(), navigate = useNavigate()
-  const [departments, setDepartments] = useState([])
-  const [branches, setBranches] = useState([])
+  const [allDepartments, setDepartments] = useState([])
+  const departments = scopeRecords(allDepartments)
+  const [allBranches, setBranches] = useState([])
+  const branches = scopeRecords(allBranches)
   const [value, setValue] = useState(() => ({ ...blank, collegeId: selectedCollegeId || '' }))
   const [errors, setErrors] = useToastState({}, 'error')
   const [codeEdited, setCodeEdited] = useState(false)
@@ -626,10 +631,13 @@ function CourseForm() {
 }
 
 function CourseDetails() {
+  const { scopeRecords } = useAcademic()
   const { id } = useParams()
   const [course, setCourse] = useState(null)
-  const [departments, setDepartments] = useState([])
-  const [branches, setBranches] = useState([])
+  const [allDepartments, setDepartments] = useState([])
+  const departments = scopeRecords(allDepartments)
+  const [allBranches, setBranches] = useState([])
+  const branches = scopeRecords(allBranches)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useToastState('', 'error')
 
@@ -722,8 +730,8 @@ function CourseDetails() {
               <p className="cm-profile-subtitle">
                 <span>Department: </span>
                 <strong>{department?.name || course.department || 'â€”'}</strong>
-                {duration && <span> Â· {duration}</span>}
-                {course.semesters && <span> Â· {course.semesters} Semesters</span>}
+                {duration && <span> Â| {duration}</span>}
+                {course.semesters && <span> Â| {course.semesters} Semesters</span>}
               </p>
             </div>
           </div>

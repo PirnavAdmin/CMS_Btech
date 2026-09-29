@@ -126,7 +126,7 @@ export const allocationPayload = (row, updating = false) => {
     ...(updating ? { periodsPerWeek: Number(row.weeklyHours) || 0, status: row.status !== false } : {}),
   }
 }
-export const attendanceTime = (date, value) => !value || value === '—' ? null : value.includes('T') ? value : `${date}T${value.length === 5 ? `${value}:00` : value}`
+export const attendanceTime = (date, value) => !value || value === '-' ? null : value.includes('T') ? value : `${date}T${value.length === 5 ? `${value}:00` : value}`
 export const attendancePayload = row => ({ attendanceDate: row.date, status: row.status, checkIn: attendanceTime(row.date, row.checkIn), checkOut: attendanceTime(row.date, row.checkOut), remarks: row.remarks || null })
 const leaveStatus = (value, fallback = '') => {
   if (value === true || value === 1) return 'Active'

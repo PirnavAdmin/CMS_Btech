@@ -72,7 +72,7 @@ export const firstPhoto = (...values) => {
   for (const item of values) {
     if (typeof item === 'string' && item.trim()) {
       const lower = item.trim().toLowerCase()
-      if (!['null', 'undefined', 'n/a', '—', '[object object]'].includes(lower)) {
+      if (!['null', 'undefined', 'n/a', '-', '[object object]'].includes(lower)) {
         return apiAssetUrl(item.trim())
       }
     }
@@ -95,7 +95,7 @@ export const normalizeAddressObj = (addr) => {
   if (!addr) return blankAddress()
   if (typeof addr === 'string') {
     const trimmed = addr.trim()
-    if (/^\s*\[object Object\]\s*$/i.test(trimmed) || ['null', 'undefined', 'n/a', '—'].includes(trimmed.toLowerCase())) return blankAddress()
+    if (/^\s*\[object Object\]\s*$/i.test(trimmed) || ['null', 'undefined', 'n/a', '-'].includes(trimmed.toLowerCase())) return blankAddress()
     return { line1: trimmed, line2: '', town: '', city: '', district: '', state: '', country: 'India', pincode: '' }
   }
   if (typeof addr === 'object' && addr !== null) {
@@ -132,11 +132,11 @@ export const formatAddress = (item) => {
   if (!item) return ''
   if (typeof item === 'string') {
     const str = item.trim()
-    if (/^\s*\[object Object\]\s*$/i.test(str) || ['null', 'undefined', 'n/a', '—'].includes(str.toLowerCase())) return ''
+    if (/^\s*\[object Object\]\s*$/i.test(str) || ['null', 'undefined', 'n/a', '-'].includes(str.toLowerCase())) return ''
     return str
   }
   if (typeof item === 'object' && item !== null) {
-    const clean = (val) => (typeof val === 'string' && !/^\s*\[object Object\]\s*$/i.test(val) && !['null', 'undefined', 'n/a', '—'].includes(val.trim().toLowerCase()) ? val.trim() : typeof val === 'number' ? String(val) : '')
+    const clean = (val) => (typeof val === 'string' && !/^\s*\[object Object\]\s*$/i.test(val) && !['null', 'undefined', 'n/a', '-'].includes(val.trim().toLowerCase()) ? val.trim() : typeof val === 'number' ? String(val) : '')
     const parts = [
       item.line1,
       item.addressLine1,
@@ -892,11 +892,11 @@ export const studentInitials = (student) => {
 export const studentQuotaDisplay = (student) => {
   const a = student?.academic || {}
   if (a.quota === 'Other' && a.quotaOther) return a.quotaOther
-  return a.quota || '—'
+  return a.quota || '-'
 }
 
 export const formatDisplay = (value) => {
-  if (value === null || value === undefined || String(value).trim() === '' || String(value).trim() === '—') return 'Not provided'
+  if (value === null || value === undefined || String(value).trim() === '' || String(value).trim() === '-') return 'Not provided'
   return String(value).trim()
 }
 
@@ -904,7 +904,7 @@ export const formatMoney = (value) =>
   new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(Number(value || 0))
 
 export const formatDateTime = (value) =>
-  value ? new Date(value).toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' }) : '—'
+  value ? new Date(value).toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' }) : '-'
 
 /**
  * Required fields metadata for single source of truth

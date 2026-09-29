@@ -99,7 +99,7 @@ export function FacultyDocuments({ facultyId }) {
                   <div className="fm-doc-icon-badge"><FiFileText /></div>
                   <div>
                     <strong>{docName}</strong>
-                    <p className="fm-muted">{docType} {row.uploadedOn ? `· ${new Date(row.uploadedOn).toLocaleDateString()}` : ''}</p>
+                    <p className="fm-muted">{docType} {row.uploadedOn ? `| ${new Date(row.uploadedOn).toLocaleDateString()}` : ''}</p>
                   </div>
                 </div>
                 <div className="fm-doc-trailing">
@@ -197,7 +197,7 @@ export function FacultyStatus({ faculty, onChanged }) {
               <li className="fm-status-history-item" key={row.statusHistoryId ?? row.id ?? index}>
                 <span className={`fm-status-pill ${String(row.status ?? row.newStatus).toLowerCase()}`}>{row.status ?? row.newStatus}</span>
                 <span className="fm-history-reason">{row.reason || 'No remarks recorded'}</span>
-                <small className="fm-history-date"><FiClock /> {row.changedAt ?? row.createdAt ? new Date(row.changedAt ?? row.createdAt).toLocaleString('en-GB') : '—'}</small>
+                <small className="fm-history-date"><FiClock /> {row.changedAt ?? row.createdAt ? new Date(row.changedAt ?? row.createdAt).toLocaleString('en-GB') : '-'}</small>
               </li>
             ))}
           </ul>
@@ -273,7 +273,7 @@ export function ApiAssignmentDialog({ faculty, onClose, onChanged }) {
         <header>
           <div>
             <p className="fm-eyebrow">ACADEMIC RESPONSIBILITIES</p>
-            <h2 id="fm-assignment-modal-title">{faculty.fullName} — Subject Allocations</h2>
+            <h2 id="fm-assignment-modal-title">{faculty.fullName} - Subject Allocations</h2>
           </div>
           <button type="button" className="fm-icon-button" onClick={onClose} disabled={busy} aria-label="Close dialog"><FiX /></button>
         </header>
@@ -342,7 +342,7 @@ export function ApiAssignmentDialog({ faculty, onClose, onChanged }) {
                 <article key={row.id} className="fm-assignment-card">
                   <div>
                     <strong>{row.subjectName || row.assignmentType}</strong>
-                    <p>{row.course || 'B.Tech'} · {row.branch || faculty.department} · {row.semester} · {row.section}</p>
+                    <p>{row.course || 'B.Tech'} | {row.branch || faculty.department} | {row.semester} | {row.section}</p>
                     <p className="fm-muted">{row.assignmentType}</p>
                   </div>
                   <div className="fm-assignment-end">

@@ -1,4 +1,6 @@
 import { collegeLogoValue } from '../../utils/collegeLogo'
+import { normalizeCollegeImpact, countCollegeFaculty } from '../../utils/collegeImpact'
+import { facultyApi } from '../../api/apiEndpoints'
 import { newestFirst, rememberCreated } from '../../utils/newestFirst'
 import { showSuccess } from '../../utils/toast'
 import useToastState from '../../hooks/useToastState'
@@ -12,6 +14,7 @@ import FilterPanel from '../../components/FilterPanel'
 import TablePagination, { PAGE_SIZE } from '../../components/TablePagination'
 import StatusConfirmDialog from '../../components/StatusConfirmDialog'
 import StatusBadge from '../../components/StatusBadge'
+import eventBus, { ERP_EVENTS } from '../../services/eventBus'
 import InfoCard from '../../components/InfoCard'
 import CompactSummary from '../../components/CompactSummary'
 import {
@@ -23,6 +26,7 @@ import {
   getCollegeLogoUrl,
   getCollegeLogoEndpoint,
   getCollegeById,
+  getCollegeDeactivationImpact,
   getCollegeSettings,
   getColleges,
   isValidWebsite,
@@ -38,7 +42,6 @@ import {
   uploadCollegeLogo,
   WEBSITE_VALIDATION_MESSAGE,
 } from '../../auth/collegeApi'
-import { studentApi } from '../../api/apiEndpoints'
 import { showDeactivationBlocked } from '../../components/DeactivationBlockedDialog'
 import './CollegeInstitutionManagement.css'
 
@@ -674,12 +677,20 @@ export default function CollegeInstitutionManagement({ initialView = 'list' }) {
 
   const loadCollegeImpact = async (collegeId) => {
     try {
-      const students = await studentApi.getAll({ CollegeId: Number(collegeId) })
-      return students.length
+      const response = await getCollegeDeactivationImpact(collegeId)
+      const impact = response.data?.data
+      const facultyCount = impact && impact.facultyCount == null
+        ? await countCollegeFaculty(facultyApi.getAll, collegeId)
+        : undefined
+      return normalizeCollegeImpact(impact, facultyCount)
     } catch (error) {
-      throw new Error(getApiErrorMessage(error, 'Unable to verify associated students. The college was not deactivated.'))
+      throw new Error(getApiErrorMessage(error, 'Unable to verify associated data. The college was not deactivated. Please retry.'))
     }
   }
+
+  const showCollegeBlocked = (college, impact) => showDeactivationBlocked({
+    entity: 'college', name: college.name, ...impact,
+  })
 
   const toggleStatus = async (college) => {
     if (statusLock.current) return
@@ -689,14 +700,14 @@ export default function CollegeInstitutionManagement({ initialView = 'list' }) {
     setCollegeImpact(null)
     if (nextStatus === 'inactive') {
       try {
-        const count = await loadCollegeImpact(college.id)
-        if (count > 0) {
-          showDeactivationBlocked(`Cannot deactivate ${college.name}. ${count} student${count === 1 ? '' : 's'} are associated with this college.`)
+        const impact = await loadCollegeImpact(college.id)
+        if (impact.totalCount > 0) {
+          showCollegeBlocked(college, impact)
           return
         }
-        setCollegeImpact({ state: 'known', count })
+        setCollegeImpact(impact)
       } catch (error) {
-        showDeactivationBlocked(error.message)
+        setStatusError(`${college.name}: ${error.message}`)
         return
       }
     }
@@ -706,9 +717,10 @@ export default function CollegeInstitutionManagement({ initialView = 'list' }) {
     if (!pendingStatus || statusLock.current) return
     statusLock.current = true
     const { college, nextStatus } = pendingStatus
-    if (nextStatus === 'inactive' && collegeImpact?.state === 'known' && collegeImpact.count > 0) {
+    if (nextStatus === 'inactive' && collegeImpact?.totalCount > 0) {
       setPendingStatus(null)
-      showDeactivationBlocked(`Cannot deactivate ${college.name}. ${collegeImpact.count} student${collegeImpact.count === 1 ? '' : 's'} are associated with this college.`)
+      showCollegeBlocked(college, collegeImpact)
+      statusLock.current = false
       return
     }
     setIsStatusSaving(true)
@@ -716,11 +728,17 @@ export default function CollegeInstitutionManagement({ initialView = 'list' }) {
     try {
       const response = await updateCollegeStatus(college.id, nextStatus === 'active' ? 1 : 0)
       if (response.data?.success === false) throw new Error('College status could not be updated. Please try again.')
+      eventBus.emit(ERP_EVENTS.ACADEMIC_UPDATED)
       setPendingStatus(null)
       setCollegeImpact(null)
       setStatusNotice(nextStatus === 'active' ? 'College activated successfully.' : 'College deactivated successfully.')
       await Promise.all([loadColleges(searchTerm), refreshCollegeSummary()])
     } catch (error) {
+      if (error.response?.data?.impact) {
+        setPendingStatus(null)
+        showCollegeBlocked(college, error.response.data.impact)
+        return
+      }
       setStatusError(getApiErrorMessage(error, 'Unable to update college status. Please try again.'))
     } finally {
       statusLock.current = false
@@ -1464,11 +1482,11 @@ export default function CollegeInstitutionManagement({ initialView = 'list' }) {
         details={[
           ['College', pendingStatus.college.name],
           ['Current Status', pendingStatus.college.status === 'active' ? 'Active' : 'Inactive'],
-          ...(pendingStatus.nextStatus === 'inactive' ? [['Associated Students', `${collegeImpact?.count ?? 0} student${collegeImpact?.count === 1 ? '' : 's'}`], ['Impact', collegeImpact?.count > 0 ? 'Students are associated with this college. Deactivation will be checked when you continue.' : 'No students are associated with this college, so it can be deactivated.']] : []),
+          ...(pendingStatus.nextStatus === 'inactive' ? [['Students', collegeImpact?.studentCount], ['Faculty', collegeImpact?.facultyCount], ['Departments', collegeImpact?.departmentCount], ['Courses', collegeImpact?.courseCount], ['Sections', collegeImpact?.sectionCount], ['Admissions', collegeImpact?.admissionCount]] : []),
         ]}
         description={pendingStatus.nextStatus === 'active'
           ? 'This college will become active again for operations permitted for active colleges.'
-          : 'No students are associated with this college. It will be marked inactive.'} />}
+          : 'No associated records were found in the dependency check. This college will be marked inactive.'} />}
     </DashboardLayout>
   )
 }

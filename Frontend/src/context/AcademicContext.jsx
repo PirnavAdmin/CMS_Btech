@@ -2,6 +2,7 @@ import React, { createContext, useContext, useState, useEffect, useCallback, use
 import academicService, { filterActiveOnly } from '../services/academicService'
 import eventBus, { ERP_EVENTS } from '../services/eventBus'
 import { getActiveAcademicYears } from '../utils/academicYearUtils'
+import { createCollegeScope } from '../utils/collegeScope'
 
 const CONTEXT_STORAGE_KEY = 'pirnav_academic_context'
 
@@ -39,6 +40,10 @@ const saveStoredContext = (collegeId, academicYearId) => {
     }
     localStorage.setItem(CONTEXT_STORAGE_KEY, JSON.stringify(payload))
     if (collegeId) localStorage.setItem('pirnav-selected-college-id', String(collegeId))
+    else {
+      localStorage.removeItem('pirnav-selected-college-id')
+      localStorage.removeItem('selected_college_id')
+    }
     if (academicYearId) localStorage.setItem('pirnav-selected-academic-year-id', String(academicYearId))
   } catch {}
 }
@@ -88,11 +93,12 @@ export const AcademicProvider = ({ children }) => {
 
       // Validate or resolve default College
       const stored = readStoredContext()
+      const availableColleges = filterActiveOnly(safeColleges)
       let resolvedColId = ''
-      if (stored.collegeId && safeColleges.some(c => String(c.id ?? c.collegeId) === String(stored.collegeId))) {
+      if (stored.collegeId && availableColleges.some(c => String(c.id ?? c.collegeId) === String(stored.collegeId))) {
         resolvedColId = String(stored.collegeId)
       } else {
-        const defaultCol = safeColleges.find(c => String(c.status).toLowerCase() === 'active' || c.isActive) || safeColleges[0]
+        const defaultCol = availableColleges[0]
         resolvedColId = defaultCol ? String(defaultCol.id ?? defaultCol.collegeId) : ''
       }
       setSelectedCollegeId(resolvedColId)
@@ -108,9 +114,7 @@ export const AcademicProvider = ({ children }) => {
       setSelectedAcademicYearId(resolvedYearId)
 
       // Persist validated context
-      if (resolvedColId || resolvedYearId) {
-        saveStoredContext(resolvedColId, resolvedYearId)
-      }
+      saveStoredContext(resolvedColId, resolvedYearId)
     } catch (err) {
       setError('Academic configuration could not be loaded. Please retry.')
       console.warn('Error loading academic hierarchy context:', err)
@@ -127,21 +131,30 @@ export const AcademicProvider = ({ children }) => {
     return () => unsubscribe()
   }, [loadHierarchy])
 
+  const scopeRecords = useMemo(() => {
+    const hierarchy = { departments, courses, branches, semesters, sections }
+    const filter = createCollegeScope(selectedCollegeId, hierarchy)
+    return (rows, related) => related
+      ? createCollegeScope(selectedCollegeId, { ...hierarchy, ...related })(rows)
+      : filter(rows)
+  }, [selectedCollegeId, departments, courses, branches, semesters, sections])
+
   // Active items helpers
   const activeColleges = filterActiveOnly(colleges)
   const activeAcademicYears = getActiveAcademicYears(academicYears)
-  const activeDepartments = filterActiveOnly(departments)
-  const activeCourses = filterActiveOnly(courses)
-  const activeBranches = filterActiveOnly(branches)
-  const activeSemesters = filterActiveOnly(semesters)
-  const activeSections = filterActiveOnly(sections)
+  const activeDepartments = filterActiveOnly(scopeRecords(departments))
+  const activeCourses = filterActiveOnly(scopeRecords(courses))
+  const activeBranches = filterActiveOnly(scopeRecords(branches))
+  const activeSemesters = filterActiveOnly(scopeRecords(semesters))
+  const activeSections = filterActiveOnly(scopeRecords(sections))
 
   const currentAcademicYear = useMemo(() => {
     return academicYears.find(y => y.isCurrent) || activeAcademicYears[0] || academicYears[0] || null
   }, [academicYears, activeAcademicYears])
 
   const selectedCollege = useMemo(() => {
-    return colleges.find(c => String(c.id ?? c.collegeId) === String(selectedCollegeId)) || colleges[0] || null
+    const availableColleges = filterActiveOnly(colleges)
+    return availableColleges.find(c => String(c.id ?? c.collegeId) === String(selectedCollegeId)) || availableColleges[0] || null
   }, [colleges, selectedCollegeId])
 
   const selectedAcademicYear = useMemo(() => {
@@ -193,19 +206,19 @@ export const AcademicProvider = ({ children }) => {
 
   // Context-scoped Cascading helpers
   const getCoursesForDepartment = useCallback((departmentId, activeOnly = true) => {
-    const list = activeOnly ? activeCourses : courses
+    const list = activeOnly ? activeCourses : scopeRecords(courses)
     if (!departmentId) return list
     return list.filter(c => String(c.departmentId) === String(departmentId))
-  }, [courses, activeCourses])
+  }, [scopeRecords, courses, activeCourses])
 
   const getBranchesForCourse = useCallback((courseId, activeOnly = true) => {
-    const list = activeOnly ? activeBranches : branches
+    const list = activeOnly ? activeBranches : scopeRecords(branches)
     if (!courseId) return list
     return list.filter(b => String(b.courseId) === String(courseId))
-  }, [branches, activeBranches])
+  }, [scopeRecords, branches, activeBranches])
 
   const getSemestersForCourse = useCallback((courseId, activeOnly = true) => {
-    const list = activeOnly ? activeSemesters : semesters
+    const list = activeOnly ? activeSemesters : scopeRecords(semesters)
     const filtered = !courseId ? list : list.filter(s => !s.courseId || String(s.courseId) === String(courseId))
     const map = new Map()
     filtered.forEach(s => {
@@ -222,10 +235,10 @@ export const AcademicProvider = ({ children }) => {
       }
     })
     return Array.from(map.values()).sort((a, b) => (Number(a.semesterNumber) || 0) - (Number(b.semesterNumber) || 0))
-  }, [semesters, activeSemesters])
+  }, [scopeRecords, semesters, activeSemesters])
 
   const getSectionsForScope = useCallback((scope = {}, activeOnly = true) => {
-    const list = activeOnly ? activeSections : sections
+    const list = activeOnly ? activeSections : scopeRecords(sections)
     return list.filter(sec => {
       const secYearId = String(sec.academicYearId ?? sec.academicYear ?? '')
       const targetYearId = String(scope.academicYearId || selectedAcademicYearId || '')
@@ -236,13 +249,14 @@ export const AcademicProvider = ({ children }) => {
       if (scope.semesterId && String(sec.semesterId) !== String(scope.semesterId)) return false
       return true
     })
-  }, [sections, activeSections, selectedAcademicYearId])
+  }, [scopeRecords, sections, activeSections, selectedAcademicYearId])
 
   const resolveNames = useCallback((ids) => {
     return academicService.resolveHierarchyNames(ids)
   }, [])
 
   const value = {
+    scopeRecords,
     loading,
     error,
     isContextReady,
@@ -277,15 +291,15 @@ export const AcademicProvider = ({ children }) => {
       }
     },
     // Hierarchy Entities
-    departments,
+    departments: scopeRecords(departments),
     activeDepartments,
-    courses,
+    courses: scopeRecords(courses),
     activeCourses,
-    branches,
+    branches: scopeRecords(branches),
     activeBranches,
-    semesters,
+    semesters: scopeRecords(semesters),
     activeSemesters,
-    sections,
+    sections: scopeRecords(sections),
     activeSections,
     // Helpers
     getCoursesForDepartment,

@@ -240,11 +240,13 @@ function useLifecycleClock() {
 }
 
 function SemesterList() {
-  const { selectedCollegeId, selectedAcademicYearId, selectedAcademicYear } = useAcademic()
+  const { scopeRecords, selectedCollegeId, selectedAcademicYearId, selectedAcademicYear } = useAcademic()
   const now = useLifecycleClock()
   const [rows, setRows] = useState([])
-  const [courses, setCourses] = useState([])
-  const [branches, setBranches] = useState([])
+  const [allCourses, setCourses] = useState([])
+  const courses = scopeRecords(allCourses)
+  const [allBranches, setBranches] = useState([])
+  const branches = scopeRecords(allBranches)
   const [years, setYears] = useState([])
   const [query, setQuery] = useState('')
   const [filters, setFilters] = useState({ courseId: '', branchId: '', academicYearId: '', status: '' })
@@ -272,7 +274,7 @@ function SemesterList() {
 
   const normYear = (y) => String(y || '').replace(/[^0-9]/g, '')
   const scopedRows = useMemo(() => {
-    return rows.filter((semester) => {
+    return scopeRecords(rows).filter((semester) => {
       if (selectedCollegeId) {
         const colId = semester.collegeId ?? semester.college?.collegeId ?? ''
         if (colId && String(colId) !== String(selectedCollegeId)) return false
@@ -289,7 +291,7 @@ function SemesterList() {
       }
       return true
     })
-  }, [rows, selectedCollegeId, selectedAcademicYearId, selectedAcademicYear])
+  }, [rows, scopeRecords, selectedCollegeId, selectedAcademicYearId, selectedAcademicYear])
 
   const lifecycleRows = useMemo(() => scopedRows.map((item) => ({ ...item, status: deriveLifecycleStatus(item, 'Upcoming', now) })), [scopedRows, now])
   const filteredBranches = branches.filter((item) => !filters.courseId || String(item.courseId) === String(filters.courseId))
@@ -408,12 +410,14 @@ function SemesterList() {
 }
 
 function SemesterForm({ editMode = false }) {
-  const { selectedCollegeId, selectedAcademicYearId } = useAcademic()
+  const { scopeRecords, selectedCollegeId, selectedAcademicYearId } = useAcademic()
   useLifecycleClock()
   const { id } = useParams()
   const navigate = useNavigate()
-  const [courses, setCourses] = useState([])
-  const [branches, setBranches] = useState([])
+  const [allCourses, setCourses] = useState([])
+  const courses = scopeRecords(allCourses)
+  const [allBranches, setBranches] = useState([])
+  const branches = scopeRecords(allBranches)
   const [colleges, setColleges] = useState([])
   const [academicYears, setAcademicYears] = useState([])
   const [existingRows, setExistingRows] = useState([])
@@ -705,7 +709,7 @@ function SemesterPreview({ college, course, branch, activeYear, coursePeriod, pl
     },
   ].map((sec) => ({
     ...sec,
-    fields: sec.fields.filter(([, val]) => val !== null && val !== undefined && String(val).trim() !== '' && String(val).trim() !== '—'),
+    fields: sec.fields.filter(([, val]) => val !== null && val !== undefined && String(val).trim() !== '' && String(val).trim() !== '-'),
   })).filter((sec) => sec.fields.length > 0)
 
   const hasAnyData = sections.length > 0 || plan.length > 0
@@ -736,7 +740,7 @@ function SemesterPreview({ college, course, branch, activeYear, coursePeriod, pl
                 </h3>
                 <p className="preview-course-meta">
                   {coursePeriod ? `${coursePeriod} Cohort` : ''}
-                  {course?.durationYears ? ` • ${course.durationYears} Years (${course.totalSemesters || 8} Sems)` : ''}
+                  {course?.durationYears ? ` | ${course.durationYears} Years (${course.totalSemesters || 8} Sems)` : ''}
                 </p>
               </div>
             </div>
@@ -874,7 +878,7 @@ function SemesterProfile({ item }) {
           </div>
           <h1 className="cm-profile-title">{item.semesterName}</h1>
           <p className="cm-profile-subtitle">
-            {[item.courseName, item.branchCode || item.branchName, item.academicYearName].filter(clean).join(' • ')}
+            {[item.courseName, item.branchCode || item.branchName, item.academicYearName].filter(clean).join(' | ')}
           </p>
         </div>
       </div>

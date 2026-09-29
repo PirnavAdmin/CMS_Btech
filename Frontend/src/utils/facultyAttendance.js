@@ -67,7 +67,7 @@ export const normalizeAttendanceRow = (row, { daily = false, date = '' } = {}) =
   const hasExplicitFacultyId = Boolean(row.facultyId ?? row.FacultyId ?? row.faculty?.facultyId ?? row.faculty?.FacultyId ?? row.faculty?.id ?? row.faculty?.Id ?? row.employeeProfileId ?? row.EmployeeProfileId ?? row.facultyProfileId ?? row.FacultyProfileId ?? row.employeeProfile?.id ?? row.employeeProfile?.Id)
   const attendanceId = row.attendanceId ?? row.AttendanceId ?? row.facultyAttendanceId ?? row.FacultyAttendanceId ?? (hasExplicitFacultyId && row.id && String(row.id) !== String(rawFacultyId) ? (row.id ?? row.Id) : null) ?? (!daily ? (row.id ?? row.Id) : null)
   const time = value => {
-    if (!value || value === '—') return ''
+    if (!value || value === '-') return ''
     const str = String(value).trim()
     return str.includes('T') ? str.split('T')[1].slice(0, 5) : str.length >= 5 ? str.slice(0, 5) : str
   }
@@ -83,7 +83,7 @@ export const normalizeAttendanceRow = (row, { daily = false, date = '' } = {}) =
     status: statuses[statusText.toLowerCase().replace(/[\s_-]/g, '')] || statusText,
     checkIn: time(row.checkIn ?? row.CheckIn ?? row.checkInTime ?? row.CheckInTime),
     checkOut: time(row.checkOut ?? row.CheckOut ?? row.checkOutTime ?? row.CheckOutTime),
-    remarks: remarks || '—',
+    remarks: remarks || '-',
     synthetic: !attendanceId,
   }
 }
@@ -108,9 +108,9 @@ export const combineAttendance = (...collections) => {
           status: nextStatus,
           attendanceId: attId,
           id: attId || row.id || previous.id || '',
-          checkIn: (row.checkIn && row.checkIn !== '—' && row.checkIn !== '') ? row.checkIn : previous.checkIn,
-          checkOut: (row.checkOut && row.checkOut !== '—' && row.checkOut !== '') ? row.checkOut : previous.checkOut,
-          remarks: (row.remarks && row.remarks !== '—' && row.remarks !== '') ? row.remarks : previous.remarks,
+          checkIn: (row.checkIn && row.checkIn !== '-' && row.checkIn !== '') ? row.checkIn : previous.checkIn,
+          checkOut: (row.checkOut && row.checkOut !== '-' && row.checkOut !== '') ? row.checkOut : previous.checkOut,
+          remarks: (row.remarks && row.remarks !== '-' && row.remarks !== '') ? row.remarks : previous.remarks,
           synthetic: !attId,
         })
       }

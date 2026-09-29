@@ -24,8 +24,8 @@ export function automaticPeriods(settings, previous = []) {
   const start = timeMinutes(settings.startTime), end = timeMinutes(settings.endTime)
   const duration = Number(settings.duration), shortBreak = Number(settings.breakDuration), lunch = Number(settings.lunchDuration)
   if (start == null || end == null || start >= end) errors.push('College end time must be later than its start time.')
-  if (!Number.isInteger(duration) || duration < 1 || duration > 720) errors.push('Period duration must be 1–720 minutes.')
-  if (![shortBreak, lunch].every(value => Number.isInteger(value) && value >= 0 && value <= 240)) errors.push('Break and lunch durations must be 0–240 minutes.')
+  if (!Number.isInteger(duration) || duration < 1 || duration > 720) errors.push('Period duration must be 1-720 minutes.')
+  if (![shortBreak, lunch].every(value => Number.isInteger(value) && value >= 0 && value <= 240)) errors.push('Break and lunch durations must be 0-240 minutes.')
   if (![settings.breakAfter, settings.lunchAfter].every(value => Number.isInteger(Number(value)) && Number(value) > 0)) errors.push('Break and lunch placement must follow a positive teaching period number.')
   if (errors.length) return { periods, errors, unusedMinutes: 0 }
   let cursor = start, count = 0

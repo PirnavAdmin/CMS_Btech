@@ -1,3 +1,4 @@
+import { collegeRequest } from '../utils/collegeRequest.js'
 import { markApiResult } from '../utils/exportProvenance'
 import { readSubjectPages } from '../utils/subjectApiData'
 import { getAccessToken, getAuthStorage, getRefreshToken, signOut } from '../auth/auth'
@@ -323,6 +324,7 @@ const refreshAccessToken = async () => {
 
 const pendingGetRequests = new Map()
 const request = async (url, options = {}, retried = false, bypassDedupe = false) => {
+  if (!retried && !bypassDedupe) ({ url, options } = collegeRequest(url, options))
   const method = String(options.method || 'GET').toUpperCase()
   if (method === 'GET' && !bypassDedupe) {
     const key = `${method}:${url}`

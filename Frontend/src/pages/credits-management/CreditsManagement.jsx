@@ -1,3 +1,5 @@
+import { collegeStorageKey } from '../../utils/collegeScope.js'
+import useCollegeState from '../../hooks/useCollegeState'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import DashboardLayout from '../../layouts/DashboardLayout'
 import StatusBadge from '../../components/StatusBadge'
@@ -104,7 +106,7 @@ const DEFAULT_AUDIT = []
 
 function getStoredData(key, fallback) {
   try {
-    const value = localStorage.getItem(key)
+    const value = localStorage.getItem(collegeStorageKey(key))
 
     if (!value) {
       return fallback
@@ -117,11 +119,11 @@ function getStoredData(key, fallback) {
 }
 
 function saveData(key, data) {
-  localStorage.setItem(key, JSON.stringify(data))
+  localStorage.setItem(collegeStorageKey(key), JSON.stringify(data))
 }
 
 function normalizeAcademicYear(value) {
-  return String(value || '').replace(/[–—]/g, '-').trim()
+  return String(value || '').replace(/[--]/g, '-').trim()
 }
 
 function getStudentYear(semester) {
@@ -239,23 +241,23 @@ function CreditsManagement() {
         FALLBACK_ACADEMIC_YEAR
     )
 
-  const [students, setStudents] = useState([])
+  const [students, setStudents] = useCollegeState([])
 
-  const [subjects, setSubjects] = useState([])
+  const [subjects, setSubjects] = useCollegeState([])
 
-  const [credits, setCredits] = useState([])
+  const [credits, setCredits] = useCollegeState([], { students, subjects })
 
   const [framework] = useState(() =>
     getStoredData(STORAGE_KEYS.framework, DEFAULT_FRAMEWORK)
   )
 
-  const [auditLogs, setAuditLogs] = useState([])
+  const [auditLogs, setAuditLogs] = useCollegeState([])
   const [creditLoading, setCreditLoading] = useState(true)
-  const [masterCourses, setMasterCourses] = useState([])
-  const [masterBranches, setMasterBranches] = useState([])
-  const [masterSemesters, setMasterSemesters] = useState([])
+  const [masterCourses, setMasterCourses] = useCollegeState([])
+  const [masterBranches, setMasterBranches] = useCollegeState([])
+  const [masterSemesters, setMasterSemesters] = useCollegeState([])
   const [masterYears, setMasterYears] = useState([])
-  const [masterDepartments, setMasterDepartments] = useState([])
+  const [masterDepartments, setMasterDepartments] = useCollegeState([])
   const [subjectFilters, setSubjectFilters] = useState({ academicYearId: '', departmentId: '', courseId: '', branchId: '', level: '', semesterId: '' })
   const [subjectApiError, setSubjectApiError] = useState('')
   const [creditDashboard, setCreditDashboard] = useState(null)
@@ -1625,7 +1627,7 @@ function CreditsManagement() {
                         key={student.id}
                         value={student.id}
                       >
-                        {student.name} — {student.rollNo}
+                        {student.name} - {student.rollNo}
                       </option>
                     ))}
                   </select>
@@ -2000,8 +2002,8 @@ function CreditsManagement() {
                 <CompactSummary
                   label="Subject credit summary"
                   items={[
-                    { label: 'Total Subjects', value: academicSelectionReady ? contextSubjects.length : '—' },
-                    { label: 'Total Credits', value: academicSelectionReady ? contextSubjects.reduce((total, subject) => total + (subject.credits == null || subject.credits === '' ? 0 : Number(subject.credits)), 0) : '—', tone: 'active' },
+                    { label: 'Total Subjects', value: academicSelectionReady ? contextSubjects.length : '-' },
+                    { label: 'Total Credits', value: academicSelectionReady ? contextSubjects.reduce((total, subject) => total + (subject.credits == null || subject.credits === '' ? 0 : Number(subject.credits)), 0) : '-', tone: 'active' },
                   ]}
                 />
               </div>
@@ -2098,7 +2100,7 @@ function CreditsManagement() {
                             <small>{subject.name}</small>
                           </td>
 
-                          <td>{[subject.academicYearName, subject.department, subject.course, subject.branchName, subject.level, subject.semesterName].filter(Boolean).join(' · ')}</td>
+                          <td>{[subject.academicYearName, subject.department, subject.course, subject.branchName, subject.level, subject.semesterName].filter(Boolean).join(' | ')}</td>
 
                           <td>
                             <span className="cm-credit-number">
@@ -2316,8 +2318,8 @@ function CreditsManagement() {
                             </strong>
 
                             <span>
-                              {credit.subjectCode} ·{' '}
-                              {credit.semester} ·{' '}
+                              {credit.subjectCode} |{' '}
+                              {credit.semester} |{' '}
                               {credit.academicYear}
                             </span>
                           </div>
@@ -2379,7 +2381,7 @@ function CreditsManagement() {
                               </strong>
 
                               <span>
-                                {credit.subjectCode} ·{' '}
+                                {credit.subjectCode} |{' '}
                                 {credit.credits} Credits
                               </span>
                             </div>
@@ -2769,7 +2771,7 @@ function CreditsManagement() {
                           key={student.id}
                           value={student.id}
                         >
-                          {student.name} — {student.rollNo} —{' '}
+                          {student.name} - {student.rollNo} -{' '}
                           {student.branch}
                         </option>
                       ))}
@@ -2798,7 +2800,7 @@ function CreditsManagement() {
                           key={subject.id}
                           value={subject.id}
                         >
-                          {subject.code} — {subject.name} —{' '}
+                          {subject.code} - {subject.name} -{' '}
                           {subject.credits} Credits
                         </option>
                       ))}
@@ -2822,7 +2824,7 @@ function CreditsManagement() {
                           key={grade.grade}
                           value={grade.grade}
                         >
-                          {grade.grade} — {grade.point} Point
+                          {grade.grade} - {grade.point} Point
                         </option>
                       ))}
                     </select>

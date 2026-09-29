@@ -30,7 +30,7 @@ export default function LandingPage() {
   <div className="lp-footer-top">
     <div className="lp-footer-brand">
       <Brand />
-      <p className="lp-footer-tagline">Pirnav Engineering College — Digital Campus &amp; Academic Management System</p>
+      <p className="lp-footer-tagline">Pirnav Engineering College - Digital Campus &amp; Academic Management System</p>
       <div className="lp-footer-badge">Developed &amp; Engineered by <strong>Pirnav</strong></div>
     </div>
     <div className="lp-footer-info">

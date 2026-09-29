@@ -14,7 +14,7 @@ const normalize = (option, getOptionLabel, getOptionValue) => {
   const code = option?.code || option?.shortCode || option?.shortName || option?.departmentCode || option?.courseCode || option?.branchCode || option?.academicYearCode || ''
   const subLabel = option?.subLabel || option?.subtitle || ''
   const resolvedLabel = label == null || String(label).trim() === '' ? String(option?.name || option?.label || '') : String(label)
-  const fullLabel = option?.fullLabel || (resolvedLabel ? (code ? `${resolvedLabel} — ${code}` : resolvedLabel) : '')
+  const fullLabel = option?.fullLabel || (resolvedLabel ? (code ? `${resolvedLabel} - ${code}` : resolvedLabel) : '')
 
   return {
     value: rawValue == null ? '' : String(rawValue),
@@ -162,7 +162,7 @@ export default function SearchableSelect({
   }
 
   const triggerLabel = selectedOption
-    ? (selectedOption.fullLabel || (selectedOption.code ? `${selectedOption.label} — ${selectedOption.code}` : selectedOption.label))
+    ? (selectedOption.fullLabel || (selectedOption.code ? `${selectedOption.label} - ${selectedOption.code}` : selectedOption.label))
     : placeholder
 
   const handleKeyDown = (event) => {

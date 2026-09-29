@@ -1,3 +1,4 @@
+import { useAcademic } from '../../context/AcademicContext'
 import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import DashboardLayout from '../../layouts/DashboardLayout'
@@ -9,6 +10,7 @@ import './Attendance.css'
 
 export default function AttendanceSessionDetails() {
   const { sessionId } = useParams()
+  const { scopeRecords } = useAcademic()
   const [session, setSession] = useState(null)
   const [records, setRecords] = useState([])
   const [loading, setLoading] = useState(true)
@@ -20,14 +22,14 @@ export default function AttendanceSessionDetails() {
     setError('')
     Promise.all([attendanceService.getSessions(), attendanceService.getSessionStudents(sessionId)])
       .then(([sessions, students]) => {
-        const found = sessions.find(item => String(item.id) === sessionId)
+        const found = scopeRecords(sessions).find(item => String(item.id) === sessionId)
         if (!found) throw new Error('Attendance session not found.')
         if (active) { setSession(found); setRecords(students) }
       })
       .catch(cause => { if (active) setError(cause.message || 'Unable to load session details.') })
       .finally(() => { if (active) setLoading(false) })
     return () => { active = false }
-  }, [sessionId, retry])
+  }, [sessionId, retry, scopeRecords])
 
   return <DashboardLayout>
     <section className="attendance-content">

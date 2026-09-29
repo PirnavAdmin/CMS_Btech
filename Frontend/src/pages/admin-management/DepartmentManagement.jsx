@@ -221,7 +221,7 @@ const payloadFor = (value) => ({
 });
 
 export default function DepartmentManagement() {
-  const { selectedCollegeId, selectedCollege } = useAcademic();
+  const { scopeRecords, selectedCollegeId, selectedCollege } = useAcademic();
   const [items, setItems] = useState([]);
   const [allDepartments, setAllDepartments] = useState([]);
   const [screen, setScreen] = useState('list'); // 'list' | 'form' | 'assign-hod' | 'details'
@@ -276,27 +276,8 @@ export default function DepartmentManagement() {
       .catch(() => setColleges([]));
   }, []);
 
-  const scopedItems = useMemo(() => {
-    if (!selectedCollegeId) return items;
-    return items.filter(item => {
-      const itemColId = item.collegeNumericId ?? item.collegeId ?? '';
-      const itemColName = item.collegeName ?? '';
-      const matchById = itemColId && String(itemColId) === String(selectedCollegeId);
-      const matchByName = selectedCollege?.name && itemColName && itemColName.trim().toLowerCase() === selectedCollege.name.trim().toLowerCase();
-      return Boolean(matchById || matchByName);
-    });
-  }, [items, selectedCollegeId, selectedCollege]);
-
-  const scopedAllDepartments = useMemo(() => {
-    if (!selectedCollegeId) return allDepartments;
-    return allDepartments.filter(item => {
-      const itemColId = item.collegeNumericId ?? item.collegeId ?? '';
-      const itemColName = item.collegeName ?? '';
-      const matchById = itemColId && String(itemColId) === String(selectedCollegeId);
-      const matchByName = selectedCollege?.name && itemColName && itemColName.trim().toLowerCase() === selectedCollege.name.trim().toLowerCase();
-      return Boolean(matchById || matchByName);
-    });
-  }, [allDepartments, selectedCollegeId, selectedCollege]);
+  const scopedItems = useMemo(() => scopeRecords(items), [items, scopeRecords]);
+  const scopedAllDepartments = useMemo(() => scopeRecords(allDepartments), [allDepartments, scopeRecords]);
 
   const visible = useMemo(
     () =>

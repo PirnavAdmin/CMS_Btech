@@ -14,7 +14,7 @@ const columnsFromSections = (rows, sectionsForRecord) => {
     if (!definitions.has(key)) definitions.set(key, { section: section.title, label })
   })))
   return [...definitions.values()].map(({ section, label }) => ({
-    label: `${section} — ${label}`,
+    label: `${section} - ${label}`,
     value: row => sectionsForRecord(row)
       .find(item => item.title === section)?.rows
       .find(([field]) => field === label)?.[1]

@@ -658,7 +658,7 @@ export default function StudentProfileEdit({ student, onCancel, onSave }) {
                 ...status,
                 [key]:
                   error.message ||
-                  "PIN code not found — enter the address manually",
+                  "PIN code not found - enter the address manually",
               }));
           }
         }),
@@ -707,7 +707,7 @@ export default function StudentProfileEdit({ student, onCancel, onSave }) {
         <header>
           <div>
             <span>
-              Student management · Step {stepIndex + 1} of {tabs.length}
+              Student management | Step {stepIndex + 1} of {tabs.length}
             </span>
             <h2>Edit Student Profile</h2>
             <p>
@@ -758,7 +758,7 @@ export default function StudentProfileEdit({ student, onCancel, onSave }) {
                   reader.onload = () => update('personal.photo', reader.result)
                   reader.readAsDataURL(file)
                 }} />
-                <label className="sp-photo-picker" htmlFor="student-profile-photo"><strong>Choose photo</strong><small>{photoName || 'JPG, PNG or WEBP · Max 5 MB'}</small></label>
+                <label className="sp-photo-picker" htmlFor="student-profile-photo"><strong>Choose photo</strong><small>{photoName || 'JPG, PNG or WEBP | Max 5 MB'}</small></label>
                 {form.personal?.photo && <img src={form.personal.photo} alt="Profile preview" />}
               </div>
               {fields([
@@ -1366,7 +1366,7 @@ export default function StudentProfileEdit({ student, onCancel, onSave }) {
                         </span>
                         {selected && (
                           <small>
-                            Ready to upload · {Math.ceil(selected.size / 1024)}{" "}
+                            Ready to upload | {Math.ceil(selected.size / 1024)}{" "}
                             KB
                           </small>
                         )}
@@ -1581,7 +1581,7 @@ export default function StudentProfileEdit({ student, onCancel, onSave }) {
             },
           ].map(sec => ({
             ...sec,
-            fields: sec.fields.filter(([, val]) => val !== null && val !== undefined && String(val).trim() !== '' && String(val).trim() !== '—' && String(val).trim() !== 'N/A'),
+            fields: sec.fields.filter(([, val]) => val !== null && val !== undefined && String(val).trim() !== '' && String(val).trim() !== '-' && String(val).trim() !== 'N/A'),
           })).filter(sec => sec.fields.length > 0)
 
           if (sections.length === 0) {
@@ -1604,7 +1604,7 @@ export default function StudentProfileEdit({ student, onCancel, onSave }) {
                 <div className="preview-hero-details">
                   <h3 className="preview-course-title" style={{ margin: 0 }}>{fullName || 'Student Profile Preview'}</h3>
                   <p className="preview-course-meta" style={{ margin: '2px 0 0', color: '#64748B', fontSize: '0.78rem' }}>
-                    {[form.academic?.registrationNumber || form.studentId, form.academic?.course, form.academic?.branch, form.academic?.status || 'Active'].filter(Boolean).join(' • ')}
+                    {[form.academic?.registrationNumber || form.studentId, form.academic?.course, form.academic?.branch, form.academic?.status || 'Active'].filter(Boolean).join(' | ')}
                   </p>
                 </div>
               </div>

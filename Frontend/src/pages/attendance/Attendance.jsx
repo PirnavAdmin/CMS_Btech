@@ -1,3 +1,4 @@
+import useCollegeState from '../../hooks/useCollegeState'
 import { newestFirst } from '../../utils/newestFirst'
 import { showError } from '../../utils/toast'
 import useToastState from '../../hooks/useToastState'
@@ -68,7 +69,7 @@ export default function Attendance() {
   const [activeTab, setActiveTab] = useState('register') // 'register' | 'shortage'
   const [reportView, setReportView] = useState('subject')
   const [takeModalOpen, setTakeModalOpen] = useState(pathname.endsWith('/take'))
-  const [sessions, setSessions] = useState([])
+  const [sessions, setSessions] = useCollegeState([])
   const [loading, setLoading] = useState(false)
   const [, setToast] = useToastState('', 'success')
   const [selectedStudentReport, setSelectedStudentReport] = useState(null)
@@ -111,15 +112,15 @@ export default function Attendance() {
   const [markingStudents, setMarkingStudents] = useState([])
   const [loadingStudents, setLoadingStudents] = useState(false)
   const [savingSession, setSavingSession] = useState(false)
-  const [activeFaculty, setActiveFaculty] = useState([])
-  const [facultyAssignments, setFacultyAssignments] = useState([])
+  const [activeFaculty, setActiveFaculty] = useCollegeState([])
+  const [facultyAssignments, setFacultyAssignments] = useCollegeState([])
   const [loadingFaculty, setLoadingFaculty] = useState(false)
-  const [allSubjects, setAllSubjects] = useState([])
+  const [allSubjects, setAllSubjects] = useCollegeState([])
   const [loadingSubjects, setLoadingSubjects] = useState(false)
-  const [attendanceSemesterCatalog, setAttendanceSemesterCatalog] = useState([])
+  const [attendanceSemesterCatalog, setAttendanceSemesterCatalog] = useCollegeState([])
 
   // Shortage list state
-  const [allProfiles, setAllProfiles] = useState([])
+  const [allProfiles, setAllProfiles] = useCollegeState([])
 
   const notify = (msg, type = 'success') => setToast(msg, type)
 
@@ -925,7 +926,7 @@ export default function Attendance() {
                             <tr key={session.sessionId}>
                               <td><strong>{session.date}</strong></td>
                               <td><strong>{session.subject}</strong></td>
-                              <td>{session.course} · {session.branch} · {session.semester}</td>
+                              <td>{session.course} | {session.branch} | {session.semester}</td>
                               <td><span className="erp-badge erp-badge--neutral">{session.section}</span></td>
                               <td>{session.totalStudents}</td>
                               <td>
@@ -984,7 +985,7 @@ export default function Attendance() {
               <article className="erp-card"><div className="erp-card-header"><div><h2 className="erp-card-title">Subject-wise Attendance</h2><p className="erp-card-subtitle">Attendance performance for every recorded subject.</p></div></div><ReportTable rows={subjectAttendance} empty="No subject sessions recorded yet." columns={[['Subject', row => row.subject], ['Sessions', row => row.sessions], ['Present / Total', row => `${row.present} / ${row.total}`], ['Attendance', row => <AttendanceRateBadge rate={row.rate} />]]} /></article>
               <article className="erp-card"><div className="erp-card-header"><div><h2 className="erp-card-title">Monthly Attendance</h2><p className="erp-card-subtitle">Monthly class attendance summary.</p></div></div><ReportTable rows={monthlyAttendance} empty="No monthly attendance data available." columns={[['Month', row => row.month], ['Sessions', row => row.sessions], ['Present / Total', row => `${row.present} / ${row.total}`], ['Attendance', row => <AttendanceRateBadge rate={row.rate} />]]} /></article>
             </div>
-            <article className="erp-card"><div className="erp-card-header"><div><h2 className="erp-card-title">Student Attendance Report</h2><p className="erp-card-subtitle">Student-wise attendance calculated from all recorded subject sessions.</p></div><ExportMenu rows={studentAttendance} columns={[{ key: 'rollNumber', label: 'Roll Number' }, { key: 'name', label: 'Student' }, { key: 'course', label: 'Course' }, { key: 'branch', label: 'Branch' }, { key: 'present', label: 'Present' }, { key: 'total', label: 'Total Classes' }, { key: 'rate', label: 'Attendance %' }]} title="Student Attendance Report" filename="student-attendance-report" /></div><ReportTable rows={studentAttendance} empty="No student attendance records available." columns={[['Roll Number', row => row.rollNumber], ['Student', row => row.name], ['Course / Branch', row => `${row.course} · ${row.branch}`], ['Present / Total', row => `${row.present} / ${row.total}`], ['Attendance', row => <AttendanceRateBadge rate={row.rate} criticalThreshold={65} />], ['Action', row => <button type="button" className="erp-btn erp-btn--icon" title="View Student Report" aria-label="View Student Report" onClick={() => setSelectedStudentReport(row)}><FiEye /></button>]]} /></article>
+            <article className="erp-card"><div className="erp-card-header"><div><h2 className="erp-card-title">Student Attendance Report</h2><p className="erp-card-subtitle">Student-wise attendance calculated from all recorded subject sessions.</p></div><ExportMenu rows={studentAttendance} columns={[{ key: 'rollNumber', label: 'Roll Number' }, { key: 'name', label: 'Student' }, { key: 'course', label: 'Course' }, { key: 'branch', label: 'Branch' }, { key: 'present', label: 'Present' }, { key: 'total', label: 'Total Classes' }, { key: 'rate', label: 'Attendance %' }]} title="Student Attendance Report" filename="student-attendance-report" /></div><ReportTable rows={studentAttendance} empty="No student attendance records available." columns={[['Roll Number', row => row.rollNumber], ['Student', row => row.name], ['Course / Branch', row => `${row.course} | ${row.branch}`], ['Present / Total', row => `${row.present} / ${row.total}`], ['Attendance', row => <AttendanceRateBadge rate={row.rate} criticalThreshold={65} />], ['Action', row => <button type="button" className="erp-btn erp-btn--icon" title="View Student Report" aria-label="View Student Report" onClick={() => setSelectedStudentReport(row)}><FiEye /></button>]]} /></article>
           </section>
         )}
 
@@ -1198,7 +1199,7 @@ export default function Attendance() {
                     <option value="">{loadingFaculty ? 'Loading active faculty...' : !takeScope.branchId ? 'Select Branch first' : 'Select Faculty In-Charge'}</option>
                     {branchFaculty.map(member => (
                       <option key={member.id || member.facultyId} value={member.id || member.facultyId}>
-                        {[member.fullName, member.employeeId || member.facultyCode, member.designation].filter(Boolean).join(' · ')}
+                        {[member.fullName, member.employeeId || member.facultyCode, member.designation].filter(Boolean).join(' | ')}
                       </option>
                     ))}
                   </select>
@@ -1375,7 +1376,7 @@ export default function Attendance() {
                           <tr key={p.studentId || p.id}>
                             <td><strong>{p.academic?.rollNumber || p.rollNumber || p.id}</strong></td>
                             <td>{p.personal?.fullName || p.name}</td>
-                            <td>{p.academic?.course || 'B.Tech'} · {p.academic?.branch || 'CSE'}</td>
+                            <td>{p.academic?.course || 'B.Tech'} | {p.academic?.branch || 'CSE'}</td>
                             <td>{p.academic?.semester || 'Semester 1'}</td>
                             <td><AttendanceRateBadge rate={rate} criticalThreshold={65} /></td>
                             <td>{75 - rate}% required</td>
@@ -1395,7 +1396,7 @@ export default function Attendance() {
         {selectedStudentReport && (
           <ViewDialog
             title={`Student Attendance: ${selectedStudentReport.name || 'Student'}`}
-            subtitle={`${selectedStudentReport.rollNumber || selectedStudentReport.id} · ${selectedStudentReport.course || '-'} / ${selectedStudentReport.branch || '-'}`}
+            subtitle={`${selectedStudentReport.rollNumber || selectedStudentReport.id} | ${selectedStudentReport.course || '-'} / ${selectedStudentReport.branch || '-'}`}
             icon={FiUsers}
             onClose={() => setSelectedStudentReport(null)}
           >

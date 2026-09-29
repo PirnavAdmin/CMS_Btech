@@ -76,7 +76,7 @@ function validate(values) {
   else if (/\d/.test(name) || !institutionNamePattern.test(name)) errors.collegeName = 'College name cannot contain numbers.'
   else if (name.length < 3 || name.length > 120) errors.collegeName = 'Use between 3 and 120 characters.'
   if (!values.collegeCode) errors.collegeCode = 'College code is required.'
-  else if (!codePattern.test(values.collegeCode)) errors.collegeCode = 'Use 2–12 uppercase letters and numbers only.'
+  else if (!codePattern.test(values.collegeCode)) errors.collegeCode = 'Use 2-12 uppercase letters and numbers only.'
   if (!values.collegeType) errors.collegeType = 'Select a college type.'
   else if (values.collegeType === 'Other' && !values.collegeTypeOther.trim()) errors.collegeTypeOther = 'Enter the college type.'
   const university = values.universityName.trim()
@@ -350,7 +350,7 @@ export default function AddCollege() {
   const touchAll = () => setTouched(Object.keys(initialValues).reduce((all, key) => ({ ...all, [key]: true }), {}))
   const reset = () => { setValues(initialValues); setLogoFile(null); setRemoveExistingLogo(false); setPendingLogoCollegeId(null); setTouched({}); setLogoError(''); setDirty(false); setActiveTab('college'); setHighestUnlockedTab(0); setDialog(null); setNotice('Form reset successfully.') }
   const saveDraft = () => { localStorage.setItem(draftKey(editId), JSON.stringify({ values, activeTab, progress: draftProgress(values), savedAt: new Date().toISOString() })) }
-  const requestLeave = () => { if (dirty) { saveDraft(); setNotice(`Draft saved · ${progress}% complete.`); setDialog('leave'); return } navigate('/college-institution-management') }
+  const requestLeave = () => { if (dirty) { saveDraft(); setNotice(`Draft saved | ${progress}% complete.`); setDialog('leave'); return } navigate('/college-institution-management') }
   const showTab = (tabId) => {
     setActiveTab(tabId)
     window.scrollTo({ top: 0, left: 0, behavior: 'auto' })
@@ -431,7 +431,7 @@ export default function AddCollege() {
         area: values.area.trim(), district: values.district.trim(), country: values.country.trim(),
         city: values.city.trim(), state: values.state.trim(), pincode: values.pincode.trim(), contact: values.contactNumber,
         email: values.email.trim(), logo: values.logo || '', clearLogo: Boolean(editId && removeExistingLogo && !logoFile), logoName: values.logoName, principal: values.principalName.trim(),
-        accreditation: [values.accreditationBody, values.accreditationGrade, values.accreditationNumber].filter(Boolean).join(' · '),
+        accreditation: [values.accreditationBody, values.accreditationGrade, values.accreditationNumber].filter(Boolean).join(' | '),
         accreditationStatus: values.accreditationStatus, accreditationBody: values.accreditationBody.trim(),
         accreditationGrade: values.accreditationGrade.trim(), accreditationNumber: values.accreditationNumber.trim(),
         startDate: values.startDate ? values.startDate.trim() : '',
@@ -560,7 +560,7 @@ export default function AddCollege() {
             ) : (
               <button type="button" className="ac-upload-button" onClick={() => fileRef.current?.click()}>
                 <strong>Upload college logo</strong>
-                <span>Click or drag and drop PNG, JPG, JPEG, or WEBP · Max 2 MB</span>
+                <span>Click or drag and drop PNG, JPG, JPEG, or WEBP | Max 2 MB</span>
               </button>
             )}
             {logoError && <small className="ac-error" role="alert">{logoError}</small>}
@@ -640,7 +640,7 @@ export default function AddCollege() {
             )}
             <div className="preview-hero-details">
               <h3 className="preview-course-title">{values.collegeName.trim() || 'College Preview'}</h3>
-              <p className="preview-course-meta">{[values.collegeCode, values.collegeType === 'Other' ? values.collegeTypeOther : values.collegeType, values.universityName].filter(Boolean).join(' • ') || 'Affiliation & type details'}</p>
+              <p className="preview-course-meta">{[values.collegeCode, values.collegeType === 'Other' ? values.collegeTypeOther : values.collegeType, values.universityName].filter(Boolean).join(' | ') || 'Affiliation & type details'}</p>
             </div>
           </div>
 

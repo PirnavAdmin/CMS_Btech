@@ -1,3 +1,4 @@
+import useCollegeState from '../../hooks/useCollegeState'
 import { useState, useEffect, useMemo, useCallback } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import {
@@ -96,9 +97,9 @@ export default function RoomsManagement({ formMode = false, viewMode = false }) 
   const [roomsLoaded, setRoomsLoaded] = useState(false)
   const [saving, setSaving] = useState(false)
   const closeForm = () => navigate('/rooms-management')
-  const [rooms, setRooms] = useState([])
-  const [sections, setSections] = useState([])
-  const [assignments, setAssignments] = useState([])
+  const [rooms, setRooms] = useCollegeState([])
+  const [sections, setSections] = useCollegeState([])
+  const [assignments, setAssignments] = useCollegeState([])
   const [query, setQuery] = useState('')
   const [typeFilter, setTypeFilter] = useState('')
   const [blockFilter, setBlockFilter] = useState('')
@@ -179,7 +180,7 @@ export default function RoomsManagement({ formMode = false, viewMode = false }) 
         const rawBranch = s.branchCode || s.branchName || s.branch || ''
         const sem = s.semesterName || s.semester || (s.semesterNumber ? `Sem ${s.semesterNumber}` : '')
 
-        // Clean compact display (e.g. B.Tech • ECE • Sem 1)
+        // Clean compact display (e.g. B.Tech | ECE | Sem 1)
         const compactCourse = /bachelor of technology/i.test(rawCourse) ? 'B.Tech' : rawCourse
         let compactBranch = rawBranch
         if (/electronics and communication/i.test(rawBranch)) compactBranch = 'ECE'
@@ -190,8 +191,8 @@ export default function RoomsManagement({ formMode = false, viewMode = false }) 
         else if (/information technology/i.test(rawBranch)) compactBranch = 'IT'
         else if (/artificial intelligence/i.test(rawBranch)) compactBranch = 'AI&ML'
 
-        const metaStr = [compactCourse, compactBranch, sem].filter(Boolean).join(' • ')
-        const fullTitle = [s.courseName || rawCourse, s.branchName || rawBranch, sem].filter(Boolean).join(' • ')
+        const metaStr = [compactCourse, compactBranch, sem].filter(Boolean).join(' | ')
+        const fullTitle = [s.courseName || rawCourse, s.branchName || rawBranch, sem].filter(Boolean).join(' | ')
 
         const info = {
           id,
@@ -289,15 +290,15 @@ export default function RoomsManagement({ formMode = false, viewMode = false }) 
         const count = sectionStudentCountMap.get(name) || sectionStudentCountMap.get(String(secId)) || 0
         const allocatedRoomNum = otherAllocatedMap.get(name.trim().toLowerCase()) || (secId ? otherAllocatedMap.get(String(secId)) : null)
 
-        const details = [course, branch, sem].filter(Boolean).join(' • ')
+        const details = [course, branch, sem].filter(Boolean).join(' | ')
         const isAlreadyAllocated = Boolean(allocatedRoomNum)
 
         return {
           id: String(secId || name),
           value: String(secId || name),
           name: isAlreadyAllocated
-            ? `${name} ${code ? `(${code})` : ''} — ${details} [${count} Students] (Already Allocated to ${allocatedRoomNum})`
-            : `${name} ${code ? `(${code})` : ''} — ${details} [${count} Students]`,
+            ? `${name} ${code ? `(${code})` : ''} - ${details} [${count} Students] (Already Allocated to ${allocatedRoomNum})`
+            : `${name} ${code ? `(${code})` : ''} - ${details} [${count} Students]`,
           code: details || 'Section',
           disabled: isAlreadyAllocated,
         }
@@ -607,7 +608,7 @@ export default function RoomsManagement({ formMode = false, viewMode = false }) 
                   </div>
                   <h1 className="cm-profile-title">{targetRoom.roomNumber} - {targetRoom.roomName}</h1>
                   <p className="cm-profile-subtitle">
-                    {[targetRoom.buildingBlock, targetRoom.floor, targetRoom.department || 'General / Shared Campus Facility'].filter(Boolean).join(' • ')}
+                    {[targetRoom.buildingBlock, targetRoom.floor, targetRoom.department || 'General / Shared Campus Facility'].filter(Boolean).join(' | ')}
                   </p>
                 </div>
               </div>
@@ -823,7 +824,7 @@ export default function RoomsManagement({ formMode = false, viewMode = false }) 
                         <strong>{allocatingRoom.roomName}</strong>
                       </div>
                       <div className="room-preview-meta">
-                        <span>{allocatingRoom.buildingBlock} • {allocatingRoom.floor}</span>
+                        <span>{allocatingRoom.buildingBlock} | {allocatingRoom.floor}</span>
                         <span><FiUsers /> Capacity: {allocatingRoom.capacity} Seats</span>
                       </div>
                     </div>
@@ -834,7 +835,7 @@ export default function RoomsManagement({ formMode = false, viewMode = false }) 
                         label="Section"
                         value={selectedSectionId}
                         options={[
-                          { id: '', value: '', name: '— None (Leave Available / Unallocated) —', code: 'Free Room' },
+                          { id: '', value: '', name: '- None (Leave Available / Unallocated) -', code: 'Free Room' },
                           ...getSectionDropdownOptions(allocatingRoom.id),
                         ]}
                         onChange={(value) => setSelectedSectionId(value)}
@@ -895,7 +896,7 @@ export default function RoomsManagement({ formMode = false, viewMode = false }) 
                         <span className="room-code-badge">{deletingRoom.roomNumber}</span>
                         <div>
                           <strong>{deletingRoom.roomName}</strong>
-                          <p>{deletingRoom.buildingBlock} • {deletingRoom.floor} • {deletingRoom.roomType}</p>
+                          <p>{deletingRoom.buildingBlock} | {deletingRoom.floor} | {deletingRoom.roomType}</p>
                         </div>
                       </div>
 
@@ -1008,7 +1009,7 @@ export default function RoomsManagement({ formMode = false, viewMode = false }) 
                         <span className="room-code-badge">{deallocatingRoom.roomNumber}</span>
                         <div>
                           <strong>{deallocatingRoom.roomName}</strong>
-                          <p>{deallocatingRoom.buildingBlock} • {deallocatingRoom.floor}</p>
+                          <p>{deallocatingRoom.buildingBlock} | {deallocatingRoom.floor}</p>
                         </div>
                       </div>
                       <div className="rooms-confirm-section-tag">
@@ -1255,7 +1256,7 @@ export default function RoomsManagement({ formMode = false, viewMode = false }) 
                   ['Floor', editingRoom.floor],
                   ['Seating Capacity', editingRoom.capacity ? editingRoom.capacity + ' seats' : ''],
                   ['Allocated Section', editingRoom.assignedSection],
-                ].map(([label, value]) => <div key={label}><dt>{label}</dt><dd>{value || '—'}</dd></div>)}</dl>
+                ].map(([label, value]) => <div key={label}><dt>{label}</dt><dd>{value || '-'}</dd></div>)}</dl>
                 <h3>Facilities & Equipment</h3>
                 <div className="rooms-preview-facilities">{editingRoom.facilities?.length ? editingRoom.facilities.map(item => <span key={item}><FiCheck /> {item}</span>) : <p>No facilities selected</p>}</div>
                 <h3>Remarks / Notes</h3>
@@ -1570,7 +1571,7 @@ export default function RoomsManagement({ formMode = false, viewMode = false }) 
                       <strong>{allocatingRoom.roomName}</strong>
                     </div>
                     <div className="room-preview-meta">
-                      <span>{allocatingRoom.buildingBlock} • {allocatingRoom.floor}</span>
+                      <span>{allocatingRoom.buildingBlock} | {allocatingRoom.floor}</span>
                       <span><FiUsers /> Capacity: {allocatingRoom.capacity} Seats</span>
                     </div>
                   </div>
@@ -1581,7 +1582,7 @@ export default function RoomsManagement({ formMode = false, viewMode = false }) 
                       label="Section"
                       value={selectedSectionId}
                       options={[
-                        { id: '', value: '', name: '— None (Leave Available / Unallocated) —', code: 'Free Room' },
+                        { id: '', value: '', name: '- None (Leave Available / Unallocated) -', code: 'Free Room' },
                         ...getSectionDropdownOptions(allocatingRoom.id),
                       ]}
                       onChange={(value) => setSelectedSectionId(value)}
@@ -1649,7 +1650,7 @@ export default function RoomsManagement({ formMode = false, viewMode = false }) 
                       <span className="room-code-badge">{deletingRoom.roomNumber}</span>
                       <div>
                         <strong>{deletingRoom.roomName}</strong>
-                        <p>{deletingRoom.buildingBlock} • {deletingRoom.floor} • {deletingRoom.roomType}</p>
+                        <p>{deletingRoom.buildingBlock} | {deletingRoom.floor} | {deletingRoom.roomType}</p>
                       </div>
                     </div>
 
@@ -1761,7 +1762,7 @@ export default function RoomsManagement({ formMode = false, viewMode = false }) 
                       <span className="room-code-badge">{deallocatingRoom.roomNumber}</span>
                       <div>
                         <strong>{deallocatingRoom.roomName}</strong>
-                        <p>{deallocatingRoom.buildingBlock} • {deallocatingRoom.floor}</p>
+                        <p>{deallocatingRoom.buildingBlock} | {deallocatingRoom.floor}</p>
                       </div>
                     </div>
                     <div className="rooms-confirm-section-tag">

@@ -1,3 +1,4 @@
+import { collegeStorageKey } from '../utils/collegeScope.js'
 import { academicYearApi, courseApi, branchApi, sectionApi, facultyApi, facultyMasterApi, facultySubjectAllocationApi, studentProfilesApi, studentAdmissionApi, timetableEntryApi } from '../api/apiEndpoints'
 import { sectionStudentProfiles } from '../utils/sectionStudents'
 import { getAuthStorage } from '../auth/auth'
@@ -49,7 +50,7 @@ export const timetableService = {
 const localKey = () => {
   const user = getAuthStorage()?.getItem('btech-user-id')
   if (!user) throw new Error('Sign in with a valid user identity to access local timetables.')
-  return `pirnav-timetables-v1:${encodeURIComponent(user)}`
+  return collegeStorageKey(`pirnav-timetables-v1:${encodeURIComponent(user)}`)
 }
 const readLocal = () => {
   const records = JSON.parse(localStorage.getItem(localKey()) || '[]')

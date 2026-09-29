@@ -1,3 +1,4 @@
+import useCollegeState from '../../../hooks/useCollegeState'
 import { newestFirst, rememberCreated } from '../../../utils/newestFirst'
 import useToastState from '../../../hooks/useToastState'
 import { isApiResult } from '../../../utils/exportProvenance'
@@ -411,7 +412,7 @@ export default function StudentProfile() {
   // source of truth for save authorization.
   const canEdit = true;
   const { selectedCollegeId, selectedCollege, selectedAcademicYearId, selectedAcademicYear } = useAcademic();
-  const [students, setStudents] = useState([]),
+  const [students, setStudents] = useCollegeState([]),
     [loading, setLoading] = useState(true),
     [error, setError] = useToastState("", 'error'),
     [, setNotice] = useToastState("", 'success'),
@@ -1042,12 +1043,12 @@ export default function StudentProfile() {
                         </td>
                         <td>
                           <div className="table-cell-group" style={{ minWidth: 0, display: "flex", flexDirection: "column", gap: "2px" }}>
-                            <strong className="table-cell-truncate" style={{ margin: 0, lineHeight: 1.3 }} title={`${formatDisplay(shortLabel(a.course))} · ${formatDisplay(shortLabel(a.branch))}`}>
-                              {formatDisplay(shortLabel(a.course))} ·{" "}
+                            <strong className="table-cell-truncate" style={{ margin: 0, lineHeight: 1.3 }} title={`${formatDisplay(shortLabel(a.course))} | ${formatDisplay(shortLabel(a.branch))}`}>
+                              {formatDisplay(shortLabel(a.course))} |{" "}
                               {formatDisplay(shortLabel(a.branch))}
                             </strong>
-                            <small className="table-cell-truncate" style={{ margin: 0, lineHeight: 1.3 }} title={`${formatDisplay(shortLabel(a.department))} · ${formatDisplay(a.academicYear)}`}>
-                              {formatDisplay(shortLabel(a.department))} ·{" "}
+                            <small className="table-cell-truncate" style={{ margin: 0, lineHeight: 1.3 }} title={`${formatDisplay(shortLabel(a.department))} | ${formatDisplay(a.academicYear)}`}>
+                              {formatDisplay(shortLabel(a.department))} |{" "}
                               {formatDisplay(a.academicYear)}
                             </small>
                           </div>
@@ -1443,7 +1444,7 @@ function Profile({ student, tab, setTab, back, edit, canEdit }) {
             </div>
             <h1 className="cm-profile-title">{studentFullName(student) || "Unnamed student"}</h1>
             <p className="cm-profile-subtitle">
-              {[formatDisplay(a.course), formatDisplay(a.branch)].filter((x) => x !== 'Not provided').join(' · ')}
+              {[formatDisplay(a.course), formatDisplay(a.branch)].filter((x) => x !== 'Not provided').join(' | ')}
             </p>
           </div>
         </div>

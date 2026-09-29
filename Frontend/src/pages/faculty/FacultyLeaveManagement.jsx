@@ -1,3 +1,5 @@
+import { collegeStorageKey, selectedCollegeId } from '../../utils/collegeScope.js'
+import useCollegeState from '../../hooks/useCollegeState'
 ﻿import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { FiBriefcase, FiCheck, FiChevronDown, FiChevronUp, FiEdit2, FiEye, FiFilter, FiPlus, FiPower, FiSearch, FiSlash, FiX } from 'react-icons/fi'
 import DashboardLayout from '../../layouts/DashboardLayout'
@@ -50,57 +52,57 @@ const LOCAL_LEAVE_POLICIES_KEY = 'pirnav-faculty-local-leave-policies-v1'
 const LOCAL_LEAVE_TYPES_KEY = 'pirnav-faculty-local-leave-types-v1'
 
 const getLocalDecisions = () => {
-  try { return JSON.parse(localStorage.getItem(LOCAL_LEAVE_DECISIONS_KEY)) || {} } catch { return {} }
+  try { return JSON.parse(localStorage.getItem(collegeStorageKey(LOCAL_LEAVE_DECISIONS_KEY))) || {} } catch { return {} }
 }
 const saveLocalDecision = (requestId, status, reason = '') => {
   try {
     const decisions = getLocalDecisions()
     decisions[String(requestId)] = { status, reason, decidedAt: new Date().toISOString() }
-    localStorage.setItem(LOCAL_LEAVE_DECISIONS_KEY, JSON.stringify(decisions))
+    localStorage.setItem(collegeStorageKey(LOCAL_LEAVE_DECISIONS_KEY), JSON.stringify(decisions))
   } catch { /* ignore */ }
 }
 
 const getLocalPolicies = () => {
-  try { return JSON.parse(localStorage.getItem(LOCAL_LEAVE_POLICIES_KEY)) || {} } catch { return {} }
+  try { return JSON.parse(localStorage.getItem(collegeStorageKey(LOCAL_LEAVE_POLICIES_KEY))) || {} } catch { return {} }
 }
 const saveLocalPolicy = (policy) => {
   try {
     const policies = getLocalPolicies()
     const id = String(policy.id || policy.policyId || '')
     if (id) {
-      policies[id] = { ...policy, id }
-      localStorage.setItem(LOCAL_LEAVE_POLICIES_KEY, JSON.stringify(policies))
+      policies[id] = { ...policy, id, collegeId: selectedCollegeId() }
+      localStorage.setItem(collegeStorageKey(LOCAL_LEAVE_POLICIES_KEY), JSON.stringify(policies))
     }
   } catch { /* ignore */ }
 }
 
 const getLocalTypes = () => {
-  try { return JSON.parse(localStorage.getItem(LOCAL_LEAVE_TYPES_KEY)) || {} } catch { return {} }
+  try { return JSON.parse(localStorage.getItem(collegeStorageKey(LOCAL_LEAVE_TYPES_KEY))) || {} } catch { return {} }
 }
 const saveLocalType = (type) => {
   try {
     const types = getLocalTypes()
     const id = String(type.id || type.leaveTypeId || '')
     if (id) {
-      types[id] = { ...type, id }
-      localStorage.setItem(LOCAL_LEAVE_TYPES_KEY, JSON.stringify(types))
+      types[id] = { ...type, id, collegeId: selectedCollegeId() }
+      localStorage.setItem(collegeStorageKey(LOCAL_LEAVE_TYPES_KEY), JSON.stringify(types))
     }
   } catch { /* ignore */ }
 }
 
 
 export default function FacultyLeaveManagement() {
-  const [faculty, setFaculty] = useState([])
-  const [balances, setBalances] = useState([])
+  const [faculty, setFaculty] = useCollegeState([])
+  const [balances, setBalances] = useCollegeState([], { faculty })
   const [loading, setLoading] = useState(true)
   const [loadError, setLoadError] = useState('')
   const [busy, setBusy] = useState(false)
   const mutationLock = useRef(false)
   const [tab, setTab] = useState(TABS[0])
-  const [leaveTypes, setLeaveTypes] = useState([])
-  const [policies, setPolicies] = useState([])
-  const [pendingRequests, setPendingRequests] = useState([])
-  const [historyRequests, setHistoryRequests] = useState([])
+  const [leaveTypes, setLeaveTypes] = useCollegeState([])
+  const [policies, setPolicies] = useCollegeState([])
+  const [pendingRequests, setPendingRequests] = useCollegeState([], { faculty })
+  const [historyRequests, setHistoryRequests] = useCollegeState([], { faculty })
   const reloadVersion = useRef(0)
   const requests = useMemo(() => {
     const decisions = getLocalDecisions()
@@ -1014,7 +1016,7 @@ function Identity({ employee, status }) {
           {typeOf(employee) && <span className="cm-badge">{typeOf(employee)}</span>}
         </div>
         <h2 className="cm-profile-title">{employee?.fullName}</h2>
-        <p className="cm-profile-subtitle">{employee?.designation || 'Faculty'} • {branchOf(employee)}</p>
+        <p className="cm-profile-subtitle">{employee?.designation || 'Faculty'} | {branchOf(employee)}</p>
       </div>
       <div className="fm-attendance-detail-status">
         <span className={`flm-status ${statusClass(status)}`} style={{ background: '#fff', color: status === 'Approved' ? '#16a34a' : status === 'Pending' ? '#d97706' : '#dc2626', display: 'flex', alignItems: 'center', gap: '6px', padding: '6px 12px', borderRadius: '99px', fontWeight: 'bold' }}>

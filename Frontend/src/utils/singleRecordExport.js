@@ -1,7 +1,7 @@
 import { exportValue } from './exportUtils'
 
 const excludedLabel = /password|token|secret|aadhaar|aadhar|passport|bank account|internal id/i
-const missing = /^(?:-|—|n\/a|null|undefined|not provided|not available|not uploaded)$/i
+const missing = /^(?:-|-|n\/a|null|undefined|not provided|not available|not uploaded)$/i
 const text = element => element?.textContent?.replace(/\s+/g, ' ').trim() || ''
 
 // Only labelled display values or explicitly supplied UI sections are eligible.

@@ -21,6 +21,8 @@ export default function DeactivationBlockedDialog() {
       branchCount: event.detail?.branchCount,
       sectionCount: event.detail?.sectionCount,
       courseCount: event.detail?.courseCount,
+      departmentCount: event.detail?.departmentCount,
+      admissionCount: event.detail?.admissionCount,
       name: event.detail?.name,
       entity: event.detail?.entity,
       reason: event.detail?.reason,
@@ -30,7 +32,7 @@ export default function DeactivationBlockedDialog() {
   }, [])
 
   if (!details) return null
-  const { message, facultyCount, studentCount, branchCount, sectionCount, courseCount } = details
+  const { message, facultyCount, studentCount, branchCount, sectionCount, courseCount, departmentCount, admissionCount } = details
   const parsedCount = Number(message.match(/(\d+)\s+students?\b/i)?.[1])
   const count = Number.isFinite(Number(details.count)) ? Number(details.count) : Number.isFinite(parsedCount) ? parsedCount : undefined
   const name = details.name || message.match(/cannot deactivate\s+(.+?)\./i)?.[1] || 'This item'
@@ -39,9 +41,11 @@ export default function DeactivationBlockedDialog() {
   const close = () => setDetails(null)
 
   const statItems = [
+    Number(admissionCount) > 0 && { label: 'Admissions', count: admissionCount, unit: admissionCount === 1 ? 'admission' : 'admissions' },
+    Number(departmentCount) > 0 && { label: 'Departments', count: departmentCount, unit: departmentCount === 1 ? 'department' : 'departments' },
     Number(branchCount) > 0 && { label: 'Active Branches', count: branchCount, unit: branchCount === 1 ? 'branch' : 'branches' },
-    Number(studentCount) > 0 && { label: 'Enrolled Students', count: studentCount, unit: studentCount === 1 ? 'student' : 'students' },
-    Number(facultyCount) > 0 && { label: 'Assigned Faculty', count: facultyCount, unit: facultyCount === 1 ? 'member' : 'members' },
+    Number(studentCount) > 0 && { label: 'Students', count: studentCount, unit: studentCount === 1 ? 'student' : 'students' },
+    Number(facultyCount) > 0 && { label: 'Faculty', count: facultyCount, unit: facultyCount === 1 ? 'faculty member' : 'faculty members' },
     Number(sectionCount) > 0 && { label: 'Active Sections', count: sectionCount, unit: sectionCount === 1 ? 'section' : 'sections' },
     Number(courseCount) > 0 && { label: 'Associated Courses', count: courseCount, unit: courseCount === 1 ? 'course' : 'courses' },
   ].filter(Boolean)
@@ -61,6 +65,7 @@ export default function DeactivationBlockedDialog() {
       <span className="deactivation-blocked-icon"><FiAlertTriangle /></span>
       <h2 id="deactivation-blocked-title">{entityLabel} cannot be deactivated</h2>
       <p><strong>{name}</strong> {summaryText}</p>
+      {!hasSpecificCounts && <p>{message}</p>}
 
       {hasSpecificCounts ? (
         <div className="deactivation-blocked-stats-grid" style={{ display: 'grid', gridTemplateColumns: statItems.length > 1 ? 'repeat(auto-fit, minmax(130px, 1fr))' : '1fr', gap: '12px', margin: '0 0 16px' }}>

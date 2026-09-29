@@ -1,3 +1,5 @@
+import { useAcademic } from '../../context/AcademicContext'
+import useCollegeState from '../../hooks/useCollegeState'
 ﻿import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom'
 import { FiAlertCircle, FiArrowLeft, FiArrowRight, FiBriefcase, FiCheckCircle, FiChevronDown, FiChevronUp, FiEdit2, FiEye, FiFilter, FiPlus, FiSearch, FiUser, FiUsers, FiClock, FiBookOpen, FiMapPin, FiX, FiTrash2, FiFileText, FiShield, FiLock } from 'react-icons/fi'
@@ -694,7 +696,7 @@ function AttendanceEditor({ record, collegeOptions = [], departmentOptions = [],
       date: record.date,
     })
   }
-  return <div className="fm-modal-backdrop"><form className="fm-attendance-editor" onSubmit={save}><header><div><p className="fm-eyebrow">{record.status === 'Not Marked' ? 'MARK ATTENDANCE' : 'EDIT ATTENDANCE'}</p><h2>{record.faculty.fullName}</h2><p>{displayCode} Â· {departmentName}</p></div><button className="fm-icon-button" type="button" aria-label="Close attendance editor" onClick={onClose}><FiX /></button></header><div className="fm-form-grid"><label>Status<select value={data.status} onChange={event => {
+  return <div className="fm-modal-backdrop"><form className="fm-attendance-editor" onSubmit={save}><header><div><p className="fm-eyebrow">{record.status === 'Not Marked' ? 'MARK ATTENDANCE' : 'EDIT ATTENDANCE'}</p><h2>{record.faculty.fullName}</h2><p>{displayCode} Â| {departmentName}</p></div><button className="fm-icon-button" type="button" aria-label="Close attendance editor" onClick={onClose}><FiX /></button></header><div className="fm-form-grid"><label>Status<select value={data.status} onChange={event => {
     const status = event.target.value
     const isWorking = ['Present', 'Late', 'Half Day'].includes(status)
     const defIn = status === 'Late' ? '09:30' : '09:00'
@@ -718,9 +720,9 @@ function FacultyAttendanceScreen({ faculty, collegeOptions = [], departmentOptio
   const [bulkConfirmation, setBulkConfirmation] = useState(null)
   const [bulkRemarks, setBulkRemarks] = useState('')
   const [selectedFacultyIds, setSelectedFacultyIds] = useState([])
-  const [attendanceRecords, setAttendanceRecords] = useState([])
-  const [todayRecords, setTodayRecords] = useState([])
-  const [serverDaily, setServerDaily] = useState([]), [serverReport, setServerReport] = useState([])
+  const [attendanceRecords, setAttendanceRecords] = useCollegeState([], { faculty })
+  const [todayRecords, setTodayRecords] = useCollegeState([], { faculty })
+  const [serverDaily, setServerDaily] = useCollegeState([], { faculty }), [serverReport, setServerReport] = useCollegeState([], { faculty })
   const [attendanceBusy, setAttendanceBusy] = useState(false), [attendanceError, setAttendanceError] = useState('')
   const attendanceLock = useRef(false), attendanceVersion = useRef(0)
   const [dailyPage, setDailyPage] = useState(1)
@@ -823,7 +825,7 @@ function FacultyAttendanceScreen({ faculty, collegeOptions = [], departmentOptio
     }
     return [...new Set((tab === 'reports' ? faculty.filter(item => !currentReport.facultyType || employeeCategoryOf(item) === currentReport.facultyType) : faculty).map(item => getFacultyDept(item)).filter(Boolean))]
   }, [faculty, tab, currentReport.facultyType, departmentOptions])
-  const facultyOptions = useMemo(() => (tab === 'reports' ? reportFaculty : faculty).map(item => ({ value: String(item.id), label: getFacultyCode(item) + ' Â· ' + item.fullName })), [faculty, reportFaculty, tab, collegeOptions])
+  const facultyOptions = useMemo(() => (tab === 'reports' ? reportFaculty : faculty).map(item => ({ value: String(item.id), label: getFacultyCode(item) + ' Â| ' + item.fullName })), [faculty, reportFaculty, tab, collegeOptions])
   const filters = tab === 'daily' ? dailyFilters : tab === 'register' ? registerFilters : currentReport
   const updateFilter = (key, value) => {
     // Faculty category is a shared attendance scope, not a per-report filter.
@@ -1089,7 +1091,7 @@ function FacultyAttendanceScreen({ faculty, collegeOptions = [], departmentOptio
   const filename = attendanceFilename(tab === 'daily' ? '' : tab === 'register' ? 'register' : reportType === 'daily' ? 'daily-report' : reportType, exportPeriod, filters.department)
   const displayDate = value => value ? new Date(value + 'T00:00:00').toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : 'All dates'
   const rangeLabel = tab === 'daily' ? displayDate(dailyFilters.date) : tab === 'register' ? displayDate(registerFilters.from) + ' â€“ ' + (registerFilters.to ? displayDate(registerFilters.to) : 'Latest') : period.from && period.to ? displayDate(period.from) + (period.from === period.to ? '' : ' â€“ ' + displayDate(period.to)) : 'Select a valid period'
-  const exportScope = ['All filtered results', rangeLabel, filters.department, faculty.find(item => String(item.id) === filters.facultyId)?.fullName, (!aggregated && filters.status), filters.search && 'Search: ' + filters.search, tab === 'reports' && ATTENDANCE_PERCENTAGE_NOTE].filter(Boolean).join(' Â· ')
+  const exportScope = ['All filtered results', rangeLabel, filters.department, faculty.find(item => String(item.id) === filters.facultyId)?.fullName, (!aggregated && filters.status), filters.search && 'Search: ' + filters.search, tab === 'reports' && ATTENDANCE_PERCENTAGE_NOTE].filter(Boolean).join(' Â| ')
   const contextualExport = <ExportMenu rows={exportRows} columns={columns} filename={filename} title={exportTitle} scope={exportScope} loading={attendanceBusy} unavailable={rangeInvalid || periodInvalid ? 'Select a valid date range.' : ''} onDownload={async () => {
     const params = tab === 'daily' ? { fromDate: dailyFilters.date, toDate: dailyFilters.date } : tab === 'register' ? { facultyId: registerFilters.facultyId, fromDate: registerFilters.from, toDate: registerFilters.to } : { facultyId: currentReport.facultyId, fromDate: period.from, toDate: period.to }
     downloadServerExport(await facultyService.exportAttendance(params), filename)
@@ -1347,7 +1349,7 @@ function FacultyAttendanceScreen({ faculty, collegeOptions = [], departmentOptio
                 </div>
                 <h2 className="cm-profile-title">{selected.faculty.fullName}</h2>
                 <p className="cm-profile-subtitle">
-                  {[selected.faculty.designation, getFacultyDept(selected.faculty)].filter(Boolean).join(' Â· ')}
+                  {[selected.faculty.designation, getFacultyDept(selected.faculty)].filter(Boolean).join(' Â| ')}
                 </p>
               </div>
               <div className="fm-attendance-detail-status">{attendanceBadge(selected.status)}</div>
@@ -1938,7 +1940,7 @@ function FacultyForm({ initial, faculty, onSave, onCancel, collegeOptions = [], 
                     {data.photo ? 'Change Photo' : 'Choose Photo'}
                     <input id="fm-photo" type="file" accept="image/*" onChange={photo} />
                   </label>
-                  <small className="fm-muted">JPG, PNG or WebP Â· Maximum 3 MB</small>
+                  <small className="fm-muted">JPG, PNG or WebP Â| Maximum 3 MB</small>
                   {errors.photo && <small className="fm-error" role="alert">{errors.photo}</small>}
                 </div>
               </div>
@@ -2043,7 +2045,7 @@ function FacultyForm({ initial, faculty, onSave, onCancel, collegeOptions = [], 
                   ['Alternate Mobile', data.alternateMobile],
                   ['Personal Email', data.personalEmail],
                   ['Address', [data.address, data.city, data.state, data.pincode].filter(Boolean).join(', ') || data.address],
-                  ['Emergency Contact', [data.emergencyName, data.relationship, data.emergencyMobile].filter(Boolean).join(' Â· ') || data.emergencyMobile],
+                  ['Emergency Contact', [data.emergencyName, data.relationship, data.emergencyMobile].filter(Boolean).join(' Â| ') || data.emergencyMobile],
                 ],
               },
               {
@@ -2104,9 +2106,9 @@ function AssignmentList({ faculty, onRemove }) {
       {(faculty?.assignments || []).map(item => (
         <article key={item.id} className="fm-assignment-card">
           <div>
-            <strong>{item.subjectCode ? item.subjectCode + ' Â· ' + item.subjectName : item.assignmentType}</strong>
-            <p>{item.academicYear} Â· {item.course} Â· {item.branch}</p>
-            <p>{item.semester} Â· {item.section} Â· {item.assignmentType}</p>
+            <strong>{item.subjectCode ? item.subjectCode + ' Â| ' + item.subjectName : item.assignmentType}</strong>
+            <p>{item.academicYear} Â| {item.course} Â| {item.branch}</p>
+            <p>{item.semester} Â| {item.section} Â| {item.assignmentType}</p>
           </div>
           <div className="fm-assignment-end">
             {onRemove && (pending === item.id ? (
@@ -2378,7 +2380,7 @@ function AssignmentDialog({ faculty, onClose, onAdd, onRemove, toast }) {
           <Avatar faculty={faculty} />
           <div>
             <strong>{faculty.fullName}</strong>
-            <p>{faculty.employeeId} Â· {faculty.department} Â· {faculty.designation}</p>
+            <p>{faculty.employeeId} Â| {faculty.department} Â| {faculty.designation}</p>
           </div>
           <StatusBadge value={faculty.employmentStatus} />
         </div>
@@ -2614,9 +2616,10 @@ function ProfileCard({ title, icon: Icon, rows = [] }) {
 }
 
 export default function FacultyManagement() {
+  const { scopeRecords, selectedCollegeId } = useAcademic()
   const location = useLocation()
   const navigate = useNavigate()
-  const [faculty, setFaculty] = useState([])
+  const [faculty, setFaculty] = useCollegeState([])
   const [loadingFaculty, setLoadingFaculty] = useState(true)
   const [query, setQuery] = useState('')
   const [filters, setFilters] = useState({ department: '', designation: '', employmentType: '', employmentStatus: '' })
@@ -2661,14 +2664,15 @@ export default function FacultyManagement() {
     ]).then(([colleges, departments]) => {
       if (!active) return
       const isEntryActive = row => row && row.status !== 'Inactive' && row.status !== 0 && row.status !== false && row.isActive !== false
-      setCollegeOptions((colleges || []).filter(isEntryActive).map(row => ({
+      setCollegeOptions((colleges || []).filter(row => String(row.collegeId ?? row.CollegeId ?? row.id) === String(selectedCollegeId)).filter(isEntryActive).map(row => ({
         value: String(row.collegeId ?? row.CollegeId ?? row.id ?? row.Id ?? ''),
         label: row.collegeName ?? row.CollegeName ?? row.name ?? row.Name ?? '',
         code: row.collegeCode ?? row.CollegeCode ?? row.code ?? row.Code ?? '',
       })))
-      setDepartmentOptions((departments || []).filter(isEntryActive).map(row => ({
+      setDepartmentOptions(scopeRecords(departments).filter(isEntryActive).map(row => ({
         value: String(row.departmentId ?? row.DepartmentId ?? row.id ?? row.Id ?? ''),
         label: row.departmentName ?? row.DepartmentName ?? row.name ?? row.Name ?? '',
+        collegeId: row.collegeId ?? row.CollegeId,
       })))
     }).catch(() => {})
     return () => { active = false }
@@ -2697,6 +2701,7 @@ export default function FacultyManagement() {
           const matchedListed = faculty.find(f => String(f.id) === String(targetId) || String(f.facultyId) === String(targetId) || String(f.employeeId) === String(targetId))
           const existingAssignments = (allocations && allocations.length) ? allocations : (matchedListed?.assignments || safeMember.assignments || [])
           const merged = mergeFacultyData(matchedListed, safeMember, profile)
+          if (!scopeRecords([merged]).length) { setDetail(null); return }
           setDetail(normalize({
             ...merged,
             ...normalizeFaculty({ ...merged, facultyId: safeMember.id || targetId }),
@@ -2710,7 +2715,7 @@ export default function FacultyManagement() {
       })
       .catch(() => {})
     return () => { active = false }
-  }, [targetId, faculty])
+  }, [targetId, faculty, scopeRecords])
   const queryParams = new URLSearchParams(location.search)
   const categoryParam = queryParams.get('category')
   const [selectedCategory, setSelectedCategory] = useState(
@@ -2981,7 +2986,7 @@ export default function FacultyManagement() {
               </div>
               <h1 className="cm-profile-title">{selected.fullName || (selected.employeeCategory === 'Non-Teaching' ? 'Staff Member' : 'Faculty Member')}</h1>
               <p className="cm-profile-subtitle">
-                {[selected.designation, departmentName, collegeName].filter(Boolean).join(' Â· ')}
+                {[selected.designation, departmentName, collegeName].filter(Boolean).join(' Â| ')}
               </p>
             </div>
           </div>
