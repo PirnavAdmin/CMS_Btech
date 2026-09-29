@@ -740,7 +740,7 @@ function Details() {
         <div className="cm-profile-top-bar">
           <ExportMenu mode="single" title="Branch Details" filename={`branch_${branch.branchCode || branch.id}`} />
           <Link className="cm-button secondary" to="/branches">
-            &larr; Back to Branches List
+            &larr; Back 
           </Link>
         </div>
 

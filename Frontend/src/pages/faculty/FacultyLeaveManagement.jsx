@@ -493,7 +493,7 @@ function ViewDialog({ item, leaveTypes, policies, getBalance, onClose, onDecisio
                         code: type.code,
                         payCategory: type.payCategory,
                         entitlement: 12,
-                        maxDays: 'Ã¢â‚¬â€',
+                        maxDays: '—',
                         carryForward: false,
                         documentRequired: false
                       }))
@@ -505,10 +505,10 @@ function ViewDialog({ item, leaveTypes, policies, getBalance, onClose, onDecisio
                     return (
                       <tr key={rule.typeId || rule.name}>
                         <td>{leaveType?.name || rule.name || 'Unavailable'}</td>
-                        <td>{leaveType?.code || rule.code || 'Ã¢â‚¬â€'}</td>
+                        <td>{leaveType?.code || rule.code || '—'}</td>
                         <td>{leaveType?.payCategory || rule.payCategory || 'Paid Leave'}</td>
                         <td>{rule.entitlement ?? 12}</td>
-                        <td>{rule.maxDays != null && rule.maxDays !== '' ? rule.maxDays : 'Ã¢â‚¬â€'}</td>
+                        <td>{rule.maxDays != null && rule.maxDays !== '' ? rule.maxDays : '—'}</td>
                         <td>{rule.carryForward ? 'Yes' : 'No'}</td>
                         <td>{rule.documentRequired ? 'Yes' : 'No'}</td>
                       </tr>
@@ -712,7 +712,7 @@ function PolicyDialog({ item = {}, leaveTypes, academicYears, onClose, onSave })
                           entitlements: data.entitlements.map(value => String(value.typeId) === String(type.id) ? { ...value, entitlement: event.target.value === '' ? '' : Number(event.target.value) } : value)
                         })}
                       />
-                    ) : <span style={{ color: 'var(--text-muted)' }}>Ã¢â‚¬â€</span>}
+                    ) : <span style={{ color: 'var(--text-muted)' }}>—</span>}
                   </td>
                   <td>
                     {isEnabled ? (

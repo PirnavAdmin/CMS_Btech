@@ -558,7 +558,7 @@ function SectionDetails() {
   const [section, setSection] = useState(null), [assignments, setAssignments] = useState([]), [loading, setLoading] = useState(true), [error, setError] = useToastState('', 'error')
   useEffect(() => { let alive = true; const load = async () => { setLoading(true); try { const sources = await loadSources(); const base = sources.sections.find((item) => String(item.id) === String(id)) || {}; const detail = normalizeSection({ ...base, ...responseRecord(await sectionApi.getById(id)) }, makeLookups(sources.courses, sources.branches, sources.semesters, sources.years)); const rows = await sectionAssignmentApi.listBySection(id).catch(() => []); if (alive) { setSection(detail); setAssignments(rows.map((item) => normalizeAssignment({ ...item, sectionId: id }))) } } catch (requestError) { if (alive) setError(apiError(requestError, 'Unable to load section details.')) } finally { if (alive) setLoading(false) } }; load(); return () => { alive = false } }, [id, setError])
   if (loading) return <Page><Empty icon={FiClock} title="Loading section details..." /></Page>
-  if (error || !section) return <Page><div className="cm-profile-view" data-export-record><div className="cm-profile-top-bar"><Link className="cm-button secondary" to="/section-management">&larr; Back to Sections List</Link></div><Empty icon={FiLayers} title={error || 'Section not found.'} /></div></Page>
+  if (error || !section) return <Page><div className="cm-profile-view" data-export-record><div className="cm-profile-top-bar"><Link className="cm-button secondary" to="/section-management">&larr; Back </Link></div><Empty icon={FiLayers} title={error || 'Section not found.'} /></div></Page>
   const assigned = Math.max(assignments.length, Number(section.currentStrength || 0)), available = Math.max(Number(section.capacity || 0) - assigned, 0)
   return (
     <Page>
@@ -566,7 +566,7 @@ function SectionDetails() {
         <div className="cm-profile-top-bar">
           <ExportMenu mode="single" title="Section Details" filename={`section_${section.code || section.id}_${section.academicYear || ""}`} />
           <Link className="cm-button secondary" to="/section-management">
-            &larr; Back to Sections List
+            &larr; Back 
           </Link>
         </div>
         <article className="section-profile-page">
