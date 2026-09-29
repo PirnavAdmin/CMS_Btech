@@ -30,7 +30,7 @@ import {
 import { getUserRole } from '../auth/auth'
 import { ROLES } from '../auth/roles'
 import DashboardLayout from '../layouts/DashboardLayout'
-import { studentAdmissionApi, facultyApi } from '../api/apiEndpoints'
+import { studentAdmissionApi, facultyApi, profileApi } from '../api/apiEndpoints'
 import subjectService from '../services/subjectService'
 import { useAcademic } from '../context/AcademicContext'
 import './Dashboard.css'
@@ -58,6 +58,9 @@ export default function Dashboard() {
   const [loadingStats, setLoadingStats] = useState(true)
   const [lastUpdated, setLastUpdated] = useState(null)
   const [refreshVersion, setRefreshVersion] = useState(0)
+  const [userName, setUserName] = useState(() =>
+    localStorage.getItem('btech-user-name') || sessionStorage.getItem('btech-user-name') || ''
+  )
 
   // Interactive timeframe states for charts (Day / Week / Month / Branch)
   const [inflowTimeframe, setInflowTimeframe] = useState('Month')
@@ -106,6 +109,16 @@ export default function Dashboard() {
       window.clearInterval(interval)
     }
   }, [role, selectedCollegeId, selectedAcademicYearId, refreshVersion])
+
+  useEffect(() => {
+    let active = true
+    profileApi.getProfile()
+      .then((profile) => {
+        if (active && profile.fullName) setUserName(profile.fullName)
+      })
+      .catch(() => {})
+    return () => { active = false }
+  }, [])
 
   // Context-filtered Real Admissions
   const scopedAdmissions = useMemo(() => {
@@ -549,43 +562,42 @@ export default function Dashboard() {
               <div className="ym-welcome-greeting">
                 <span className="ym-wave-hand">👋</span>
                 <div>
-                  <h2>Welcome to {roleName} Control Hub</h2>
+                  <h2>Welcome back, {userName || 'there'} 👋</h2>
                   <p>Unified institutional operations, student lifecycle & academic delivery.</p>
                 </div>
               </div>
 
-              {/* Real Academic Summary Chips */}
-              <div className="ym-summary-chips">
-                <span className="ym-chip chip-blue" onClick={() => navigate('/department-management')}>
-                  <FiGrid /> {departments.length} Depts
-                </span>
-                <span className="ym-chip chip-cyan" onClick={() => navigate('/branches')}>
-                  <FiLayers /> {scopedBranches.length} Branches
-                </span>
-                <span className="ym-chip chip-purple" onClick={() => navigate('/faculty')}>
-                  <FiUsers /> {faculty.length} Faculty
-                </span>
-                <span className="ym-chip chip-emerald" onClick={() => navigate('/subject-management')}>
-                  <FiBookOpen /> {subjects.length} Subjects
-                </span>
+              {/* Live campus overview */}
+              <div className="ym-summary-chips ym-hero-stats">
+                <button type="button" className="ym-hero-stat" onClick={() => navigate('/student-management/admissions')}>
+                  <span className="ym-hero-stat-icon is-purple"><FiUserPlus /></span><span><strong>{scopedAdmissions.length}</strong><small>Admissions</small></span>
+                </button>
+                <button type="button" className="ym-hero-stat" onClick={() => navigate('/student-management/profiles')}>
+                  <span className="ym-hero-stat-icon is-blue"><FiUsers /></span><span><strong>{approvedAdmissions.length}</strong><small>Total Students</small></span>
+                </button>
+                <button type="button" className="ym-hero-stat" onClick={() => navigate('/branches')}>
+                  <span className="ym-hero-stat-icon is-teal"><FiLayers /></span><span><strong>{scopedBranches.length}</strong><small>Active Branches</small></span>
+                </button>
+                <button type="button" className="ym-hero-stat" onClick={() => navigate('/faculty')}>
+                  <span className="ym-hero-stat-icon is-violet"><FiBriefcase /></span><span><strong>{faculty.length}</strong><small>Faculty</small></span>
+                </button>
               </div>
             </div>
 
-            {/* Mascot Visual */}
+            {/* Campus illustration */}
             <div className="ym-welcome-visual" aria-hidden="true">
-              <div className="ym-avatar-character">
-                <div className="ym-character-head">
-                  <div className="ym-character-hair" />
-                  <div className="ym-character-face">
-                    <span className="ym-eye left" />
-                    <span className="ym-eye right" />
-                    <span className="ym-smile" />
-                  </div>
-                </div>
-                <div className="ym-character-body">
-                  <div className="ym-character-hand" />
-                </div>
-              </div>
+              <svg className="ym-campus-art" viewBox="0 0 300 220" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <circle cx="228" cy="55" r="27" fill="#FDE68A" fillOpacity=".9" />
+                <path d="M24 191H279" stroke="white" strokeOpacity=".5" strokeWidth="4" strokeLinecap="round" />
+                <path d="M54 103 146 49l93 54v83H54v-83Z" fill="#fff" fillOpacity=".94" />
+                <path d="m41 105 105-65 107 65H41Z" fill="#C4B5FD" />
+                <path d="M126 82h39v104h-39z" fill="#818CF8" />
+                <path d="M75 115h27v25H75zm0 42h27v25H75zm113-42h27v25h-27zm0 42h27v25h-27z" fill="#BAE6FD" />
+                <path d="M139 59h14V30h-14z" fill="#fff" fillOpacity=".92" />
+                <path d="M146 26v-8m-8 4h16" stroke="#FDE68A" strokeWidth="3" strokeLinecap="round" />
+                <path d="M26 188c14-22 22-24 34 0m175 0c13-27 24-26 39 0" stroke="#5EEAD4" strokeWidth="7" strokeLinecap="round" />
+                <path d="M18 190h263" stroke="#fff" strokeOpacity=".35" strokeWidth="8" strokeLinecap="round" />
+              </svg>
             </div>
           </div>
 
