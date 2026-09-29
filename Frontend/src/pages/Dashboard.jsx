@@ -30,8 +30,9 @@ import {
 import { getUserRole } from '../auth/auth'
 import { ROLES } from '../auth/roles'
 import DashboardLayout from '../layouts/DashboardLayout'
-import { studentAdmissionApi, facultyApi, profileApi } from '../api/apiEndpoints'
+import { studentAdmissionApi, studentProfilesApi, profileApi } from '../api/apiEndpoints'
 import subjectService from '../services/subjectService'
+import facultyService from '../services/facultyService'
 import { useAcademic } from '../context/AcademicContext'
 import './Dashboard.css'
 
@@ -53,6 +54,7 @@ export default function Dashboard() {
   } = useAcademic()
 
   const [admissions, setAdmissions] = useState([])
+  const [students, setStudents] = useState([])
   const [faculty, setFaculty] = useState([])
   const [subjects, setSubjects] = useState([])
   const [loadingStats, setLoadingStats] = useState(true)
@@ -76,21 +78,18 @@ export default function Dashboard() {
 
   useEffect(() => {
     let active = true
-    if (role !== ROLES.ADMIN) {
-      setLoadingStats(false)
-      return
-    }
-
     const loadDashboard = () => {
       setLoadingStats(true)
       return Promise.allSettled([
         studentAdmissionApi.getAll(),
-        facultyApi.getAll(),
+        studentProfilesApi.getAll(),
+        facultyService.list(),
         subjectService.getSubjects(),
       ])
-        .then(([admRes, facRes, subRes]) => {
+        .then(([admRes, studentRes, facRes, subRes]) => {
           if (!active) return
           if (admRes.status === 'fulfilled' && Array.isArray(admRes.value)) setAdmissions(admRes.value)
+          if (studentRes.status === 'fulfilled' && Array.isArray(studentRes.value)) setStudents(studentRes.value)
           if (facRes.status === 'fulfilled' && Array.isArray(facRes.value)) setFaculty(facRes.value)
           if (subRes.status === 'fulfilled' && Array.isArray(subRes.value)) setSubjects(subRes.value)
           setLastUpdated(new Date())
@@ -108,7 +107,7 @@ export default function Dashboard() {
       active = false
       window.clearInterval(interval)
     }
-  }, [role, selectedCollegeId, selectedAcademicYearId, refreshVersion])
+  }, [selectedCollegeId, selectedAcademicYearId, refreshVersion])
 
   useEffect(() => {
     let active = true
@@ -143,6 +142,17 @@ export default function Dashboard() {
     })
   }, [admissions, selectedCollegeId, selectedAcademicYearId, selectedAcademicYear])
 
+  const scopedStudents = useMemo(() => students.filter((item) => {
+    const collegeId = item.collegeId ?? item.admission?.collegeId ?? item.academic?.collegeId
+    const yearId = item.academicYearId ?? item.academic?.academicYearId
+    const yearName = item.academicYear ?? item.academic?.academicYear
+    const matchesCollege = !selectedCollegeId || !collegeId || String(collegeId) === String(selectedCollegeId)
+    const matchesYear = !selectedAcademicYearId || (!yearId && !yearName) ||
+      (yearId && String(yearId) === String(selectedAcademicYearId)) ||
+      (selectedAcademicYear?.name && yearName && yearName.trim().toLowerCase() === selectedAcademicYear.name.trim().toLowerCase())
+    return matchesCollege && matchesYear
+  }), [students, selectedCollegeId, selectedAcademicYearId, selectedAcademicYear])
+
   const approvedAdmissions = useMemo(() => {
     return scopedAdmissions.filter((item) => {
       const s = String(item.status || item.currentStatus || '').toUpperCase()
@@ -166,6 +176,9 @@ export default function Dashboard() {
   const scopedBranches = branches.filter(
     (b) => !selectedCollegeId || !b.collegeId || String(b.collegeId) === String(selectedCollegeId)
   )
+  const activeBranchesCount = scopedBranches.filter((branch) =>
+    branch.isActive !== false && !['INACTIVE', 'DISABLED', 'ARCHIVED'].includes(String(branch.status || '').toUpperCase())
+  ).length
   const scopedCourses = courses.filter(
     (c) => !selectedCollegeId || !c.collegeId || String(c.collegeId) === String(selectedCollegeId)
   )
@@ -573,10 +586,10 @@ export default function Dashboard() {
                   <span className="ym-hero-stat-icon is-purple"><FiUserPlus /></span><span><strong>{scopedAdmissions.length}</strong><small>Admissions</small></span>
                 </button>
                 <button type="button" className="ym-hero-stat" onClick={() => navigate('/student-management/profiles')}>
-                  <span className="ym-hero-stat-icon is-blue"><FiUsers /></span><span><strong>{approvedAdmissions.length}</strong><small>Total Students</small></span>
+                  <span className="ym-hero-stat-icon is-blue"><FiUsers /></span><span><strong>{scopedStudents.length}</strong><small>Total Students</small></span>
                 </button>
                 <button type="button" className="ym-hero-stat" onClick={() => navigate('/branches')}>
-                  <span className="ym-hero-stat-icon is-teal"><FiLayers /></span><span><strong>{scopedBranches.length}</strong><small>Active Branches</small></span>
+                  <span className="ym-hero-stat-icon is-teal"><FiLayers /></span><span><strong>{activeBranchesCount}</strong><small>Active Branches</small></span>
                 </button>
                 <button type="button" className="ym-hero-stat" onClick={() => navigate('/faculty')}>
                   <span className="ym-hero-stat-icon is-violet"><FiBriefcase /></span><span><strong>{faculty.length}</strong><small>Faculty</small></span>
@@ -587,16 +600,18 @@ export default function Dashboard() {
             {/* Campus illustration */}
             <div className="ym-welcome-visual" aria-hidden="true">
               <svg className="ym-campus-art" viewBox="0 0 300 220" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <circle cx="228" cy="55" r="27" fill="#FDE68A" fillOpacity=".9" />
-                <path d="M24 191H279" stroke="white" strokeOpacity=".5" strokeWidth="4" strokeLinecap="round" />
-                <path d="M54 103 146 49l93 54v83H54v-83Z" fill="#fff" fillOpacity=".94" />
-                <path d="m41 105 105-65 107 65H41Z" fill="#C4B5FD" />
-                <path d="M126 82h39v104h-39z" fill="#818CF8" />
-                <path d="M75 115h27v25H75zm0 42h27v25H75zm113-42h27v25h-27zm0 42h27v25h-27z" fill="#BAE6FD" />
-                <path d="M139 59h14V30h-14z" fill="#fff" fillOpacity=".92" />
-                <path d="M146 26v-8m-8 4h16" stroke="#FDE68A" strokeWidth="3" strokeLinecap="round" />
-                <path d="M26 188c14-22 22-24 34 0m175 0c13-27 24-26 39 0" stroke="#5EEAD4" strokeWidth="7" strokeLinecap="round" />
-                <path d="M18 190h263" stroke="#fff" strokeOpacity=".35" strokeWidth="8" strokeLinecap="round" />
+                <circle cx="239" cy="48" r="25" fill="#FDE68A" fillOpacity=".9" />
+                <path d="M21 190H280" stroke="white" strokeOpacity=".48" strokeWidth="5" strokeLinecap="round" />
+                <path d="M32 115 83 81l52 34v70H32v-70Z" fill="#DDD6FE" />
+                <path d="M25 116 83 76l58 40H25Z" fill="#A78BFA" />
+                <path d="M45 128h17v18H45zm29 0h17v18H74zm-29 31h17v20H45zm29 0h17v20H74z" fill="#BAE6FD" />
+                <path d="M126 104 190 57l70 47v81H126v-81Z" fill="#fff" fillOpacity=".96" />
+                <path d="m116 105 74-57 80 57H116Z" fill="#C4B5FD" />
+                <path d="M174 85h33v100h-33z" fill="#818CF8" />
+                <path d="M141 119h19v21h-19zm81 0h20v21h-20zm-81 38h19v22h-19zm81 0h20v22h-20z" fill="#BAE6FD" />
+                <path d="M185 63h11V31h-11zM190 29v-9m-8 4h16" stroke="#fff" strokeWidth="3" strokeLinecap="round" />
+                <path d="M20 188c10-23 22-23 32 0m205 0c10-27 22-28 34 0" stroke="#5EEAD4" strokeWidth="7" strokeLinecap="round" />
+                <path d="M14 193h272" stroke="#fff" strokeOpacity=".35" strokeWidth="7" strokeLinecap="round" />
               </svg>
             </div>
           </div>
@@ -835,15 +850,15 @@ export default function Dashboard() {
               <table className="ym-data-table">
                 <thead>
                   <tr>
-                    <th>Candidate Name</th>
-                    <th>Application ID</th>
-                    <th style={{ textAlign: 'right' }}>Status</th>
+                    <th className="ym-admissions-name-col">Candidate Name</th>
+                    <th className="ym-admissions-id-col">Application ID</th>
+                    <th className="ym-admissions-status-col">Status</th>
                   </tr>
                 </thead>
                 <tbody>
                   {recentAdmissionsList.map((item) => (
                     <tr key={item.id}>
-                      <td>
+                      <td className="ym-admissions-name-col">
                         <div className="ym-candidate-cell">
                           <div className="ym-candidate-avatar">
                             <FiUser />
@@ -854,10 +869,10 @@ export default function Dashboard() {
                           </div>
                         </div>
                       </td>
-                      <td>
+                      <td className="ym-admissions-id-col">
                         <span className="ym-fee-tag">{item.appNo}</span>
                       </td>
-                      <td style={{ textAlign: 'right' }}>
+                      <td className="ym-admissions-status-col">
                         <span className={`ym-status-badge ${item.isApproved ? 'approved' : 'pending'}`}>
                           {item.status}
                         </span>

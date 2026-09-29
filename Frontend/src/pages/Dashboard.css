@@ -774,6 +774,16 @@
   color: var(--text-primary, #282342);
 }
 
+/* Keep recent admissions columns aligned inside the dashboard card. */
+.ym-table-card .ym-table-responsive { overflow-x: hidden; }
+.ym-table-card .ym-data-table { table-layout: fixed; }
+.ym-table-card .ym-admissions-name-col { width: 52%; text-align: left; }
+.ym-table-card .ym-admissions-id-col { width: 25%; text-align: center; white-space: nowrap; }
+.ym-table-card .ym-admissions-status-col { width: 23%; text-align: center; white-space: nowrap; }
+.ym-table-card .ym-candidate-info { min-width: 0; text-align: left; }
+.ym-table-card .ym-candidate-info strong,
+.ym-table-card .ym-candidate-info small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
 .ym-status-badge {
   display: inline-block;
   padding: 3px 8px;
@@ -1151,6 +1161,14 @@
 .ym-hero-stat small { font-size: .68rem; color: rgba(255,255,255,.79); white-space: nowrap; }
 .ym-hero-stat-icon { display: grid; flex: 0 0 34px; width: 34px; height: 34px; place-items: center; border-radius: 11px; color: #fff; background: rgba(255,255,255,.18); }
 .ym-hero-stat-icon svg { width: 17px; height: 17px; }
+/* Keep the welcome panel and its white KPI text visible despite the later
+   generic .ym-card surface rule. */
+.ym-card.ym-welcome-card { color: #fff; background: linear-gradient(116deg, #5144bf 0%, #655bd7 46%, #398bd5 100%); }
+.ym-card.ym-welcome-card .ym-welcome-greeting h2 { color: #fff; }
+.ym-card.ym-welcome-card .ym-welcome-greeting p { color: rgba(255,255,255,.88); }
+.ym-card.ym-welcome-card .ym-hero-stat { color: #fff; background: rgba(255,255,255,.13); }
+.ym-card.ym-welcome-card .ym-hero-stat strong { color: #fff; }
+.ym-card.ym-welcome-card .ym-hero-stat small { color: #fff; }
 .ym-grid-row-2 { grid-template-columns: minmax(0, 1.05fr) minmax(260px, .85fr) minmax(0, 1.05fr); }
 .ym-card { border: 1px solid var(--ym-line); border-radius: 20px; padding: 23px; background: #fff; box-shadow: 0 5px 22px rgba(31, 42, 83, .045); transition: transform .22s ease, box-shadow .22s ease, border-color .22s ease; }
 .ym-card:hover { transform: translateY(-2px); border-color: #d9def0; box-shadow: 0 12px 30px rgba(31, 42, 83, .085); }
