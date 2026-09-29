@@ -2019,7 +2019,7 @@ function AdmissionForm() {
                     <div className="preview-hero-details">
                       <h3 className="preview-course-title" style={{ margin: 0 }}>{fullName || 'Student Admission Preview'}</h3>
                       <p className="preview-course-meta" style={{ margin: '2px 0 0', color: '#64748B', fontSize: '0.78rem' }}>
-                        {[data.application?.number, data.academic?.course, data.academic?.branch, data.status || 'Draft'].filter(Boolean).join(' | ')}
+                        {[data.application?.number, data.academic?.course, data.academic?.branch, data.status || 'Draft'].filter(Boolean).join(' - ')}
                       </p>
                     </div>
                   </div>
@@ -2441,7 +2441,7 @@ function StudentHeader({ data }) {
         </div>
         <h1 className="cm-profile-title"><span>{studentName(data)}</span></h1>
         <p className="cm-profile-subtitle">
-          <span>{[display(data.academic?.course), display(data.academic?.branch), display(data.academic?.academicYear)].filter(Boolean).join(' | ')}</span>
+          <span>{[display(data.academic?.course), display(data.academic?.branch), display(data.academic?.academicYear)].filter(Boolean).join(' - ')}</span>
         </p>
       </div>
     </div>
@@ -2527,7 +2527,7 @@ function AdmissionDetails({ approval = false }) {
               <p className="sa-hero-subtitle">
                 <span>Reg No: <strong>{data.application?.registrationNumber || data.application?.number || '-'}</strong></span>
                 {data.application?.admissionNumber && <span>Adm No: <strong>{data.application.admissionNumber}</strong></span>}
-                <span>{[display(data.academic?.course), display(data.academic?.branch)].filter(Boolean).join(' | ')}</span>
+                <span>{[display(data.academic?.course), display(data.academic?.branch)].filter(Boolean).join(' - ')}</span>
                 {data.admission?.batch && <span>Batch: <strong>{data.admission.batch}</strong></span>}
               </p>
             </div>

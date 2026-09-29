@@ -1199,7 +1199,7 @@ export default function Attendance() {
                     <option value="">{loadingFaculty ? 'Loading active faculty...' : !takeScope.branchId ? 'Select Branch first' : 'Select Faculty In-Charge'}</option>
                     {branchFaculty.map(member => (
                       <option key={member.id || member.facultyId} value={member.id || member.facultyId}>
-                        {[member.fullName, member.employeeId || member.facultyCode, member.designation].filter(Boolean).join(' | ')}
+                        {[member.fullName, member.employeeId || member.facultyCode, member.designation].filter(Boolean).join(' - ')}
                       </option>
                     ))}
                   </select>

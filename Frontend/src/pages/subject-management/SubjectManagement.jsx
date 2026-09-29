@@ -518,7 +518,7 @@ function Editor({ form, editing, masters, branches, semesters, levels, typeOptio
                   <div className="preview-hero-details">
                     <h3 className="preview-course-title" style={{ margin: 0 }}>{form.subjectName || 'Subject Preview'}</h3>
                     <p className="preview-course-meta" style={{ margin: '2px 0 0', color: '#64748B', fontSize: '0.78rem' }}>
-                      {[form.subjectCode, form.subjectType, form.credits !== '' && `${form.credits} Credits`, form.status || 'Active'].filter(Boolean).join(' | ')}
+                      {[form.subjectCode, form.subjectType, form.credits !== '' && `${form.credits} Credits`, form.status || 'Active'].filter(Boolean).join(' - ')}
                     </p>
                   </div>
                 </div>

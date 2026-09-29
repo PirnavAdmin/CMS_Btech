@@ -431,7 +431,7 @@ export default function AddCollege() {
         area: values.area.trim(), district: values.district.trim(), country: values.country.trim(),
         city: values.city.trim(), state: values.state.trim(), pincode: values.pincode.trim(), contact: values.contactNumber,
         email: values.email.trim(), logo: values.logo || '', clearLogo: Boolean(editId && removeExistingLogo && !logoFile), logoName: values.logoName, principal: values.principalName.trim(),
-        accreditation: [values.accreditationBody, values.accreditationGrade, values.accreditationNumber].filter(Boolean).join(' | '),
+        accreditation: [values.accreditationBody, values.accreditationGrade, values.accreditationNumber].filter(Boolean).join(' - '),
         accreditationStatus: values.accreditationStatus, accreditationBody: values.accreditationBody.trim(),
         accreditationGrade: values.accreditationGrade.trim(), accreditationNumber: values.accreditationNumber.trim(),
         startDate: values.startDate ? values.startDate.trim() : '',
@@ -640,7 +640,7 @@ export default function AddCollege() {
             )}
             <div className="preview-hero-details">
               <h3 className="preview-course-title">{values.collegeName.trim() || 'College Preview'}</h3>
-              <p className="preview-course-meta">{[values.collegeCode, values.collegeType === 'Other' ? values.collegeTypeOther : values.collegeType, values.universityName].filter(Boolean).join(' | ') || 'Affiliation & type details'}</p>
+              <p className="preview-course-meta">{[values.collegeCode, values.collegeType === 'Other' ? values.collegeTypeOther : values.collegeType, values.universityName].filter(Boolean).join(' - ') || 'Affiliation & type details'}</p>
             </div>
           </div>
 

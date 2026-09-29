@@ -111,7 +111,7 @@ function ReviewDrawer({ student, onClose, onStatus, canEdit }) {
     semText,
   ]
     .filter(Boolean)
-    .join(' | ')
+    .join(' - ')
 
   const isEligible = statusOf(student) === 'eligible' || statusOf(student) === 'promoted'
 

@@ -180,7 +180,7 @@ export default function RoomsManagement({ formMode = false, viewMode = false }) 
         const rawBranch = s.branchCode || s.branchName || s.branch || ''
         const sem = s.semesterName || s.semester || (s.semesterNumber ? `Sem ${s.semesterNumber}` : '')
 
-        // Clean compact display (e.g. B.Tech | ECE | Sem 1)
+        // Clean compact display (e.g. B.Tech - ECE - Sem 1)
         const compactCourse = /bachelor of technology/i.test(rawCourse) ? 'B.Tech' : rawCourse
         let compactBranch = rawBranch
         if (/electronics and communication/i.test(rawBranch)) compactBranch = 'ECE'
@@ -191,8 +191,8 @@ export default function RoomsManagement({ formMode = false, viewMode = false }) 
         else if (/information technology/i.test(rawBranch)) compactBranch = 'IT'
         else if (/artificial intelligence/i.test(rawBranch)) compactBranch = 'AI&ML'
 
-        const metaStr = [compactCourse, compactBranch, sem].filter(Boolean).join(' | ')
-        const fullTitle = [s.courseName || rawCourse, s.branchName || rawBranch, sem].filter(Boolean).join(' | ')
+        const metaStr = [compactCourse, compactBranch, sem].filter(Boolean).join(' - ')
+        const fullTitle = [s.courseName || rawCourse, s.branchName || rawBranch, sem].filter(Boolean).join(' - ')
 
         const info = {
           id,
@@ -290,7 +290,7 @@ export default function RoomsManagement({ formMode = false, viewMode = false }) 
         const count = sectionStudentCountMap.get(name) || sectionStudentCountMap.get(String(secId)) || 0
         const allocatedRoomNum = otherAllocatedMap.get(name.trim().toLowerCase()) || (secId ? otherAllocatedMap.get(String(secId)) : null)
 
-        const details = [course, branch, sem].filter(Boolean).join(' | ')
+        const details = [course, branch, sem].filter(Boolean).join(' - ')
         const isAlreadyAllocated = Boolean(allocatedRoomNum)
 
         return {
@@ -608,7 +608,7 @@ export default function RoomsManagement({ formMode = false, viewMode = false }) 
                   </div>
                   <h1 className="cm-profile-title">{targetRoom.roomNumber} - {targetRoom.roomName}</h1>
                   <p className="cm-profile-subtitle">
-                    {[targetRoom.buildingBlock, targetRoom.floor, targetRoom.department || 'General / Shared Campus Facility'].filter(Boolean).join(' | ')}
+                    {[targetRoom.buildingBlock, targetRoom.floor, targetRoom.department || 'General / Shared Campus Facility'].filter(Boolean).join(' - ')}
                   </p>
                 </div>
               </div>

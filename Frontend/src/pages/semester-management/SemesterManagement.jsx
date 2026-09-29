@@ -878,7 +878,7 @@ function SemesterProfile({ item }) {
           </div>
           <h1 className="cm-profile-title">{item.semesterName}</h1>
           <p className="cm-profile-subtitle">
-            {[item.courseName, item.branchCode || item.branchName, item.academicYearName].filter(clean).join(' | ')}
+            {[item.courseName, item.branchCode || item.branchName, item.academicYearName].filter(clean).join(' - ')}
           </p>
         </div>
       </div>

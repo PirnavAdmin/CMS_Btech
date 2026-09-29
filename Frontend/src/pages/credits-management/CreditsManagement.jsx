@@ -2100,7 +2100,7 @@ function CreditsManagement() {
                             <small>{subject.name}</small>
                           </td>
 
-                          <td>{[subject.academicYearName, subject.department, subject.course, subject.branchName, subject.level, subject.semesterName].filter(Boolean).join(' | ')}</td>
+                          <td>{[subject.academicYearName, subject.department, subject.course, subject.branchName, subject.level, subject.semesterName].filter(Boolean).join(' - ')}</td>
 
                           <td>
                             <span className="cm-credit-number">

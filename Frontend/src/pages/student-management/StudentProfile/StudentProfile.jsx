@@ -1444,7 +1444,7 @@ function Profile({ student, tab, setTab, back, edit, canEdit }) {
             </div>
             <h1 className="cm-profile-title">{studentFullName(student) || "Unnamed student"}</h1>
             <p className="cm-profile-subtitle">
-              {[formatDisplay(a.course), formatDisplay(a.branch)].filter((x) => x !== 'Not provided').join(' | ')}
+              {[formatDisplay(a.course), formatDisplay(a.branch)].filter((x) => x !== 'Not provided').join(' - ')}
             </p>
           </div>
         </div>
