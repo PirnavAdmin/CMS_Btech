@@ -8,8 +8,10 @@ const icons = { success: FiCheckCircle, error: FiAlertCircle, warning: FiAlertTr
 
 export default function ToastProvider({ children }) {
   const toasts = useSyncExternalStore(subscribeToToasts, getToasts, getToasts)
+  // Errors are rendered inside the active screen by DashboardLayout so they
+  // never cover the header or compete with a screen's own inline error.
   return <>{children}{createPortal(<aside className="global-toasts" aria-label="Notifications" data-no-print>
-    {toasts.map(toast => {
+    {toasts.filter(toast => toast.type !== 'error').map(toast => {
       const Icon = icons[toast.type]
       return <div key={toast.id} className={`global-toast global-toast--${toast.type}`}>
         <Icon aria-hidden="true" />

@@ -1,7 +1,8 @@
 import { resolveCollegeLogo } from '../utils/collegeLogo'
 import { getAccessToken } from './auth'
+import { createApiUnavailableError, notifyApiUnavailable } from '../api/apiFailureNotice'
 const cleanUrl = (url) => (url || "").replace(/\/+$/, "");
-const DEFAULT_API_BASE_URL = "https://clarity-math-delouse.ngrok-free.dev";
+const DEFAULT_API_BASE_URL = "https://abreast-curling-tutor.ngrok-free.dev";
 
 const friendlyValidationMessage = (errors) => {
   if (!errors || typeof errors !== "object") return "";
@@ -62,11 +63,12 @@ const createClient = (baseUrl, prefix) => {
         },
       });
     } catch {
-      throw new Error("This service is temporarily unavailable. Please try again later.");
+      throw createApiUnavailableError();
     }
     const contentType = response.headers.get("content-type") || "";
     const data = contentType.includes("application/json") ? await response.json() : await response.text();
     if (!response.ok) {
+      if (response.status >= 500) notifyApiUnavailable({ status: response.status });
       const error = new Error(getErrorMessage(data, response.status));
       error.response = { data, status: response.status };
       throw error;

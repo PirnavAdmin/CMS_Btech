@@ -2,6 +2,7 @@ import { showSuccess } from '../utils/toast'
 import useToastState from '../hooks/useToastState'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { AuthRequestError, generateOtp, resendOtp, verifyOtp, resetPassword } from '../auth/authApi'
+import { notifyApiUnavailable } from '../api/apiFailureNotice'
 import { FiArrowLeft, FiEye, FiEyeOff } from 'react-icons/fi'
 import './ForgotPassword.css'
 
@@ -63,6 +64,7 @@ export default function ForgotPassword({ onBack }) {
             headers: { 'Content-Type': 'application/json', 'ngrok-skip-browser-warning': 'true' },
             body: JSON.stringify({ identifier: cleanContact })
           })
+          if (fbRes.status >= 500) notifyApiUnavailable({ status: fbRes.status })
           const fbData = await fbRes.json().catch(() => ({}))
           if (fbRes.ok && (fbData?.success || fbData?.data?.success)) {
             res = {
