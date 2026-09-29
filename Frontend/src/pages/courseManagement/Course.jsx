@@ -391,7 +391,7 @@ function CourseList() {
                   {pageRows.map(c => {
                     const semesterText = Number(c.semesters) > 0 ? `${Number(c.semesters)} Semesters` : 'Not available'
                     const durationText = c.durationValue ? `${c.durationValue} ${c.durationUnit || 'Years'}`.trim() : 'Not available'
-                    const secondaryText = `${c.code || ''}${c.shortName ? ` â€¢ ${c.shortName}` : ''}`.trim()
+                      const secondaryText = `${c.code || ''}${c.shortName ? ` - ${c.shortName}` : ''}`.trim()
                     return (
                       <tr key={c.id}>
                         <td className="table-center" style={{ minWidth: '240px' }}>
@@ -816,7 +816,7 @@ export function CourseStructure() {
       <button className="cm-button" disabled={saving} onClick={submit}>{saving ? 'Savingâ€¦' : editing ? 'Update Structure' : 'Add Structure'}</button>
       {editing && <button className="cm-button secondary" onClick={() => setEditing(null)}>Cancel</button>}
     </section>
-    <section className="cm-panel cm-table-wrap"><table className="cm-table"><thead><tr><th>Year</th><th>Semester</th><th>Name</th><th>Status</th><th>Action</th></tr></thead><tbody>{pageRows.map(x => <tr key={x.structureId}><td>{x.yearNumber}</td><td>{x.semesterNumber}</td><td>{x.semesterName}</td><td>{Number(x.status) === 0 ? 'Deactive' : 'Active'}</td><td><button className="cm-button" onClick={() => edit(x)}><FiEdit2 className="module-action-icon module-action-icon--edit" /> Edit</button></td></tr>)}</tbody></table>{loading ? <div className="cm-empty">Loading structuresâ€¦</div> : !visible.length ? <div className="cm-empty">No structure configured for Semester {semester}.</div> : <TablePagination page={currentPage} totalPages={totalPages} onPageChange={setPage} />}</section>
+    <section className="cm-panel cm-table-wrap"><table className="cm-table"><thead><tr><th>Year</th><th>Semester</th><th>Name</th><th>Status</th><th>Action</th></tr></thead><tbody>{pageRows.map(x => <tr key={x.structureId}><td>{x.yearNumber}</td><td>{x.semesterNumber}</td><td>{x.semesterName}</td><td>{Number(x.status) === 0 ? 'Deactive' : 'Active'}</td><td><button className="cm-button" onClick={() => edit(x)}><FiEdit2 className="module-action-icon module-action-icon--edit" /> Edit</button></td></tr>)}</tbody></table>{loading ? <div className="cm-empty">Loading structures...</div> : !visible.length ? <div className="cm-empty">No structure configured for Semester {semester}.</div> : <TablePagination page={currentPage} totalPages={totalPages} onPageChange={setPage} />}</section>
   </Page>
 }
 
