@@ -450,18 +450,22 @@ function CourseForm() {
   const [isSaving, setIsSaving] = useState(false)
   const [error, setError] = useToastState('', 'error')
   const hydrationRef = useRef(false)
+  const loadRequestRef = useRef(0)
 
   const load = async () => {
+    const requestId = ++loadRequestRef.current
     setIsLoading(true); setError('')
     try {
       const [departmentRows, branchRows, courseRows] = await Promise.all([departmentApi.getAll(), branchApi.getAll(), courseApi.getAll()])
       const normalizedDepartments = dedupeDepartmentOptions(departmentRows)
       const normalizedBranches = branchRows.map(normalize)
-      setExistingCourses(courseRows.map(mapCourse))
+      if (requestId !== loadRequestRef.current) return
+      setExistingCourses(scopeRecords(courseRows, { departments: normalizedDepartments, branches: normalizedBranches }).map(mapCourse))
       setDepartments(normalizedDepartments)
       setBranches(normalizedBranches)
       if (id) {
         const courseRes = await getCourseById(id)
+        if (requestId !== loadRequestRef.current) return
         const detail = mapCourse(recordFrom(courseRes))
         const departmentId = normalizeId(detail.departmentId ?? detail.department?.departmentId ?? detail.department?.id)
         const branchId = normalizeId(detail.branchId ?? detail.branch?.branchId ?? detail.branch?.id)
@@ -480,15 +484,21 @@ function CourseForm() {
         setCodeEdited(true)
       }
     } catch (requestError) {
-      setError(apiError(requestError, 'Unable to load course details. Please try again.'))
+      if (requestId === loadRequestRef.current) setError(apiError(requestError, 'Unable to load course details. Please try again.'))
     } finally {
-      setIsLoading(false)
+      if (requestId === loadRequestRef.current) setIsLoading(false)
     }
   }
-  useEffect(() => { load() }, [id])
+  useEffect(() => { load() }, [id, selectedCollegeId, scopeRecords])
+  useEffect(() => {
+    if (id) return
+    setValue({ ...blank, collegeId: selectedCollegeId || '' })
+    setCodeEdited(false)
+    setErrors({})
+  }, [id, selectedCollegeId])
 
   const live = validateBasic(value, existingCourses, persistedId ?? id)
-  const update = (key, next) => { setValue(v => { const n = { ...v, [key]: next }; if (key === 'durationValue') n.semesters = next ? Number(next) * 2 : ''; if (key === 'name' && !codeEdited) n.code = codeFor(next); if (key === 'code') { n.code = next.toUpperCase(); setCodeEdited(true) } if (key === 'departmentId') { const department = departments.find(x => String(x.id) === String(next)); n.collegeId = department?.collegeId ?? ''; n.departmentCode = department?.code || ''; if (!hydrationRef.current) { const previousBranchIsStillValid = n.branchId && branches.some(branch => String(branch.departmentId ?? branch.department?.departmentId ?? branch.department?.id ?? '') === String(next) && String(branch.id ?? branch.branchId) === String(n.branchId)); if (!previousBranchIsStillValid) { n.branchId = ''; n.branchCode = '' } } } if (key === 'branchId') n.branchCode = branches.find(x => String(x.id) === String(next))?.code || ''; return n }); setErrors(e => ({ ...e, [key]: '', ...(key === 'departmentId' ? { branchId: '' } : {}) })) }
+  const update = (key, next) => { setValue(v => { const n = { ...v, [key]: next }; if (key === 'durationValue') n.semesters = next ? Number(next) * 2 : ''; if (key === 'name' && !codeEdited) n.code = codeFor(next); if (key === 'code') { n.code = next.toUpperCase(); setCodeEdited(true) } if (key === 'departmentId') { const department = departments.find(x => String(x.id) === String(next)); n.collegeId = department?.collegeId ?? selectedCollegeId ?? ''; n.departmentCode = department?.code || ''; if (!hydrationRef.current) { const previousBranchIsStillValid = n.branchId && branches.some(branch => String(branch.departmentId ?? branch.department?.departmentId ?? branch.department?.id ?? '') === String(next) && String(branch.id ?? branch.branchId) === String(n.branchId)); if (!previousBranchIsStillValid) { n.branchId = ''; n.branchCode = '' } } } if (key === 'branchId') n.branchCode = branches.find(x => String(x.id) === String(next))?.code || ''; return n }); setErrors(e => ({ ...e, [key]: '', ...(key === 'departmentId' ? { branchId: '' } : {}) })) }
 
   const submit = async () => {
     if (saveLock.current || saved) return
@@ -497,11 +507,12 @@ function CourseForm() {
     saveLock.current = true
     setIsSaving(true); setError('')
     try {
-      const latestCourses = (await courseApi.getAll()).map(mapCourse)
+      const latestCourseRows = await courseApi.getAll()
+      const latestCourses = scopeRecords(latestCourseRows, { departments: allDepartments, branches: allBranches }).map(mapCourse)
       setExistingCourses(latestCourses)
       const latestErrors = validateBasic(value, latestCourses, persistedId ?? id)
       if (Object.keys(latestErrors).length) { setErrors(latestErrors); return }
-      const payload = payloadFor(value)
+      const payload = payloadFor({ ...value, collegeId: value.collegeId || selectedCollegeId || '' })
       const targetId = persistedId ?? id
       const response = targetId ? await updateCourse(targetId, payload) : await createCourse(payload)
       if (response?.data?.success === false) throw new Error('Course could not be saved.')

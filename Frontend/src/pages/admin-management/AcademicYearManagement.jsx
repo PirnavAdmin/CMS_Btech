@@ -15,7 +15,7 @@ import InfoCard from '../../components/InfoCard';
 import { academicYearApi, studentApi } from '../../api/apiEndpoints';
 import eventBus, { ERP_EVENTS } from '../../services/eventBus';
 import { showDeactivationBlocked } from '../../components/DeactivationBlockedDialog';
-import { FiEye, FiEdit2, FiToggleLeft, FiToggleRight, FiPlus, FiCalendar, FiClock, FiSearch } from 'react-icons/fi';
+import { FiEye, FiEdit2, FiToggleLeft, FiToggleRight, FiPlus, FiCalendar, FiClock, FiSearch, FiX } from 'react-icons/fi';
 import './AcademicYearManagement.css';
 
 const DAY = 864e5;
@@ -633,7 +633,7 @@ export default function AcademicYear() {
           <div className="backdrop" onMouseDown={(e) => e.target === e.currentTarget && close()}>
             <section className="modal" role="dialog" aria-modal="true" aria-labelledby="form-title">
               <button type="button" className="x" aria-label="Close dialog" onClick={close}>
-                Ã-
+                <FiX aria-hidden="true" />
               </button>
               <h2 id="form-title">{modal === 'add' ? 'Add Academic Year' : 'Edit Academic Year'}</h2>
               <form onSubmit={save} noValidate>
@@ -718,7 +718,7 @@ export default function AcademicYear() {
           <div className="backdrop" onMouseDown={(e) => e.target === e.currentTarget && close()}>
             <section className="modal" role="dialog" aria-modal="true" aria-labelledby="gen-title">
               <button type="button" className="x" aria-label="Close dialog" onClick={close}>
-                Ã-
+                <FiX aria-hidden="true" />
               </button>
               <h2 id="gen-title">Generate Next Academic Year</h2>
               <p style={{ marginTop: '12px', color: 'var(--text-secondary)' }}>
