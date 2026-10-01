@@ -588,12 +588,14 @@ function TypeDialog({ item = {}, onClose, onSave, page = false }) {
   };
   return (
     <Modal title={item.id ? 'Edit Leave Type' : 'Add Leave Type'} onClose={onClose} page={page}>
-      <Form>
-        <Input label="Leave Type Name *" value={data.name} onChange={value => setData({ ...data, name: value })} />
-        <Input label="Leave Code *" value={data.code} onChange={value => setData({ ...data, code: value })} />
-        <Select label="Pay Category *" value={data.payCategory} values={['Paid Leave', 'Unpaid Leave']} placeholder="Select pay category" onChange={value => setData({ ...data, payCategory: value })} />
-        <Select label="Status *" value={data.status} values={['Active', 'Inactive']} placeholder="Select status" onChange={value => setData({ ...data, status: value })} />
-        <label>Description<textarea value={data.description} onChange={event => setData({ ...data, description: event.target.value })} /></label>
+      <div className={page ? 'flm-type-layout' : 'flm-type-modal-layout'}>
+        <Form>
+          <Input label="Leave Type Name *" value={data.name} onChange={value => setData({ ...data, name: value })} />
+          <Input label="Leave Code *" value={data.code} onChange={value => setData({ ...data, code: value })} />
+          <Select label="Pay Category *" value={data.payCategory} values={['Paid Leave', 'Unpaid Leave']} placeholder="Select pay category" onChange={value => setData({ ...data, payCategory: value })} />
+          <Select label="Status *" value={data.status} values={['Active', 'Inactive']} placeholder="Select status" onChange={value => setData({ ...data, status: value })} />
+          <label>Description<textarea value={data.description} onChange={event => setData({ ...data, description: event.target.value })} /></label>
+        </Form>
         <aside className="sm-preview" aria-label="Leave Type Live Preview" style={{ marginTop: '12px' }}>
           <header className="preview-top-bar" style={{ marginBottom: '8px' }}>
             <span className="preview-live-tag"><span className="live-dot" /> LIVE PREVIEW</span>
@@ -639,7 +641,7 @@ function TypeDialog({ item = {}, onClose, onSave, page = false }) {
             ))
           })()}
         </aside>
-      </Form>
+      </div>
       {error && <p className="flm-error">{error}</p>}
       <Footer>
         <button onClick={onClose}>Cancel</button>
