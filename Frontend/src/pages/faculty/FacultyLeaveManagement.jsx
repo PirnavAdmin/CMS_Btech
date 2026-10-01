@@ -121,6 +121,7 @@ export default function FacultyLeaveManagement() {
   const [page, setPage] = useState(1)
   const [dialog, setDialog] = useState(null)
   const [notice, setNotice] = useState('')
+  const [noticeIsError, setNoticeIsError] = useState(false)
   const [academicYears, setAcademicYears] = useState([])
 
   const reload = useCallback(async () => {
@@ -176,23 +177,23 @@ export default function FacultyLeaveManagement() {
         from: String(row.startDate || '').slice(0, 10),
         to: String(row.endDate || '').slice(0, 10),
       })).filter(year => year.name))
-    }).catch(error => { if (active) setNotice(error.message) })
+    }).catch(error => { if (active) { setNotice(error.message); setNoticeIsError(true) } })
     return () => { active = false }
   }, [])
   useEffect(() => {
-    if (!notice) return
+    if (!notice || noticeIsError) return
     const timer = setTimeout(() => setNotice(''), 2000)
     return () => clearTimeout(timer)
-  }, [notice])
+  }, [notice, noticeIsError])
   const mutate = async (action, message, module) => {
     if (mutationLock.current) return
     mutationLock.current = true; setBusy(true)
     try {
       const saved = await action()
       if (module) { rememberCreated(module, saved); setPage(1); setQuery(''); setFilters({ type: '', department: '', status: '' }) }
-      setDialog(null); setNotice(message)
+      setDialog(null); setNotice(message); setNoticeIsError(false)
       await reload().catch(() => {})
-    } catch (error) { setNotice(error.message || 'Could not save the change.') }
+    } catch (error) { setNotice(error.message || 'Could not save the change.'); setNoticeIsError(true) }
     finally { mutationLock.current = false; setBusy(false) }
   }
   const getApplicablePolicy = (employee, targetDate = today()) => {
@@ -276,7 +277,7 @@ export default function FacultyLeaveManagement() {
   const changeFilter = (key, value) => { setFilters(current => ({ ...current, [key]: value })); setPage(1) }
   const saveType = value => {
     const payload = { name: value.name.trim(), code: value.code.trim().toUpperCase(), category: value.category || 'Regular', payCategory: value.payCategory, description: value.description, status: value.status }
-    if (!payload.name || !payload.code || !payload.payCategory || !payload.status) { setNotice('Leave Type Name, Leave Code, Pay Category, and Status are required.'); return }
+    if (!payload.name || !payload.code || !payload.payCategory || !payload.status) { setNotice('Leave Type Name, Leave Code, Pay Category, and Status are required.'); setNoticeIsError(true); return }
     const updatedType = { ...value, ...payload, id: String(value.id || `lt-${Date.now()}`) }
     saveLocalType(updatedType)
     setLeaveTypes(prev => {
@@ -370,6 +371,7 @@ export default function FacultyLeaveManagement() {
     const leaveType = leaveTypes.find(item => String(item.id) === String(req.leaveTypeId))
     if (!employee || !leaveType || !eligibleLeaveTypes([leaveType], employee).length) {
       setNotice('This leave type is not available for the selected employee.')
+      setNoticeIsError(true)
       return
     }
     return mutate(async () => {
@@ -407,7 +409,9 @@ export default function FacultyLeaveManagement() {
           <fieldset disabled={busy} className="flm-type-page-fieldset">
             <TypeDialog page item={dialog.item} onClose={() => setDialog(null)} onSave={saveType} />
           </fieldset>
-          {notice && <div className="flm-toast">{notice}<button type="button" onClick={() => setNotice('')}><FiX /></button></div>}
+          {notice && (noticeIsError
+            ? <p className="flm-error" role="alert">{notice}<button type="button" aria-label="Dismiss error" onClick={() => { setNotice(''); setNoticeIsError(false) }}><FiX /></button></p>
+            : <div className="flm-toast">{notice}<button type="button" onClick={() => setNotice('')}><FiX /></button></div>)}
         </main>
       </DashboardLayout>
     )
@@ -420,7 +424,7 @@ export default function FacultyLeaveManagement() {
       const local = getLocalTypes()[String(item.id)]
       setDialog({ kind: 'type', item: { ...item, ...(local || {}) } })
     }
-  }} onActivate={item => setDialog({ kind: 'activate', item })} onDecision={(item, status) => setDialog({ kind: 'decision', item, status })} onToggleType={item => setDialog({ kind: 'toggleType', item })} />{filtered.length > PAGE_SIZE && <TablePagination currentPage={currentPage} totalPages={pages} onPageChange={setPage} />}</section>{dialog && <fieldset disabled={busy} style={{ border: 0, padding: 0, margin: 0 }}><LeaveDialog dialog={dialog} faculty={faculty} leaveTypes={leaveTypes} policies={policies} requests={requests} academicYears={academicYears} getBalance={getBalance} onClose={() => setDialog(null)} onSaveType={saveType} onToggleType={toggleType} onSavePolicy={savePolicy} onActivate={activatePolicy} onDecision={decideRequest} onSaveRequest={saveRequest} /></fieldset>}{notice && <div className="flm-toast">{notice}<button onClick={() => setNotice('')}><FiX /></button></div>}</main></DashboardLayout>
+  }} onActivate={item => setDialog({ kind: 'activate', item })} onDecision={(item, status) => setDialog({ kind: 'decision', item, status })} onToggleType={item => setDialog({ kind: 'toggleType', item })} />{filtered.length > PAGE_SIZE && <TablePagination currentPage={currentPage} totalPages={pages} onPageChange={setPage} />}</section>{dialog && <fieldset disabled={busy} style={{ border: 0, padding: 0, margin: 0 }}><LeaveDialog dialog={dialog} faculty={faculty} leaveTypes={leaveTypes} policies={policies} requests={requests} academicYears={academicYears} getBalance={getBalance} onClose={() => setDialog(null)} onSaveType={saveType} onToggleType={toggleType} onSavePolicy={savePolicy} onActivate={activatePolicy} onDecision={decideRequest} onSaveRequest={saveRequest} /></fieldset>}{notice && (noticeIsError ? <p className="flm-error" role="alert">{notice}<button type="button" aria-label="Dismiss error" onClick={() => { setNotice(''); setNoticeIsError(false) }}><FiX /></button></p> : <div className="flm-toast">{notice}<button onClick={() => setNotice('')}><FiX /></button></div>)}</main></DashboardLayout>
 }
 
 function LeaveList({ onCreate, tab, rows, leaveTypes, getBalance, onView, onEdit, onActivate, onDecision, onToggleType }) {
@@ -589,7 +593,7 @@ function TypeDialog({ item = {}, onClose, onSave, page = false }) {
   return (
     <Modal title={item.id ? 'Edit Leave Type' : 'Add Leave Type'} onClose={onClose} page={page}>
       <div className={page ? 'flm-type-layout' : 'flm-type-modal-layout'}>
-        <Form>
+        <Form className={page ? 'flm-config-form flm-type-form-card' : undefined}>
           <Input label="Leave Type Name *" value={data.name} onChange={value => setData({ ...data, name: value })} />
           <Input label="Leave Code *" value={data.code} onChange={value => setData({ ...data, code: value })} />
           <Select label="Pay Category *" value={data.payCategory} values={['Paid Leave', 'Unpaid Leave']} placeholder="Select pay category" onChange={value => setData({ ...data, payCategory: value })} />
@@ -1098,7 +1102,7 @@ function Modal({ title, children, onClose, page = false }) {
   if (page) return <section className="flm-card flm-type-page-card"><header className="flm-card-header"><div><p>LEAVE TYPE CONFIGURATION</p><h2>{title}</h2></div><button type="button" className="flm-filter-toggle" onClick={onClose}>Back to Leave Types</button></header><div className="flm-type-page-content">{children}</div></section>
   return <div className="flm-overlay"><section className="flm-decision-dialog flm-config-dialog" role="dialog" aria-modal="true"><button className="flm-close" aria-label="Close" onClick={onClose}><FiX /></button><p className="flm-eyebrow">FACULTY LEAVE</p><h2>{title}</h2>{children}</section></div>
 }
-function Form({ children }) { return <div className="flm-config-form">{children}</div> }
+function Form({ children, className }) { return <div className={className || 'flm-config-form'}>{children}</div> }
 function Input({ label, type = 'text', value, onChange }) { return <label><span>{renderFlmLabel(label)}</span><input type={type} value={value} onChange={event => onChange(event.target.value)} /></label> }
 function Footer({ children }) { return <footer>{children}</footer> }
 function LeaveInfo({ title, columns = 4, rows }) {
