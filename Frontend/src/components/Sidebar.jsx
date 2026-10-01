@@ -172,7 +172,7 @@ export default function Sidebar({ open = false, onClose = () => {}, collapsed = 
           <p className="sidebar-section-label">Settings & Access</p>
           <Item to="/roles-designations" icon={FiShield} tone="purple" onNavigate={onClose}>Roles & Designations</Item>
         </>}
-        {[ROLES.FACULTY, ROLES.STUDENT].includes(userRole) && <><p className="sidebar-section-label">Academics</p><Item to="/my-subjects" icon={FiBookOpen} tone="blue" onNavigate={onClose}>My Subjects</Item>{userRole===ROLES.FACULTY&&<><Item to="/student-management/attendance/take" icon={FiCheckSquare} tone="green" onNavigate={onClose}>Record Attendance</Item><Item to="/marks/entry" icon={FiEdit3} tone="orange" onNavigate={onClose}>Enter Marks</Item></>}</>}
+        {[ROLES.FACULTY, ROLES.STUDENT].includes(userRole) && <><p className="sidebar-section-label">Academics</p><Item to="/my-subjects" icon={FiBookOpen} tone="blue" onNavigate={onClose}>My Subjects</Item>{userRole===ROLES.FACULTY&&<><Item to="/timetable" icon={FiCalendar} tone="orange" onNavigate={onClose}>My Timetable</Item><Item to="/student-management/attendance/take" icon={FiCheckSquare} tone="green" onNavigate={onClose}>Record Attendance</Item><Item to="/marks/entry" icon={FiEdit3} tone="orange" onNavigate={onClose}>Enter Marks</Item></>}</>}
       </nav>
     </aside>
   </>

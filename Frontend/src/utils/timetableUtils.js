@@ -1,7 +1,7 @@
 export const DAYS = ['MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY', 'SATURDAY']
 export const key = value => String(value ?? '').trim()
 export const same = (a, b) => Boolean(key(a) && key(b) && key(a) === key(b))
-export const active = row => ![false, 0, '0', 'false', 'inactive'].includes(typeof row?.status === 'string' ? row.status.toLowerCase() : row?.status)
+export const active = row => ![row?.status, row?.isActive, row?.active].some(value => [false, 0, '0', 'false', 'inactive', 'archived'].includes(typeof value === 'string' ? value.toLowerCase() : value))
 export const academicFields = ['academicYearId', 'courseId', 'branchId', 'semesterId']
 export const matchesScope = (row, scope, fields = academicFields) => fields.every(field => !key(scope[field]) || same(row[field], scope[field]))
 export const completeScope = scope => [...academicFields, 'sectionId'].every(field => key(scope[field]))

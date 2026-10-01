@@ -64,7 +64,7 @@ export function suitableRoom(subject, room) {
 }
 
 export function subjectRequirements(sources, scope, overrides = {}) {
-  return eligibleSubjects(sources.subjects, scope).map(subject => {
+  return eligibleSubjects(sources.subjects, scope).filter(subject => overrides[key(subject.id)]?.selected !== false).map(subject => {
     const allocations = sources.allocations.filter(row => active(row) && same(row.subjectId, subject.id) && matchesScope(row, scope, ['branchId', 'semesterId']) && ['academicYearId', 'courseId', 'sectionId'].every(field => !row[field] || same(row[field], scope[field])))
     const counts = [...new Set(allocations.map(row => Number(row.periodsPerWeek)).filter(value => Number.isInteger(value) && value > 0))]
     const explicit = overrides[key(subject.id)] || {}
@@ -101,6 +101,7 @@ export function entryPlanningErrors(row, config, sources, scope, allEntries = []
   const room = roomOptions(sources, allEntries).find(item => item.roomId && row.roomId ? same(item.roomId, row.roomId) : roomKey(item) === roomKey(row))
   if (!room || !config.rooms.includes(room.value)) errors.push('Choose a room selected in the planning settings.')
   const requirement = subjectRequirements(sources, scope, config.requirements).find(item => same(item.subject.id, row.subjectId))
+  if (!requirement) errors.push('Select a subject included in this timetable.')
   if (requirement && periods.length !== requirement.blockSize) errors.push('Class duration must match the configured consecutive periods per session.')
   if (requirement && room && !suitableRoom(requirement.subject, room)) errors.push('Subject type requires a suitable classroom or lab.')
   return errors
@@ -139,7 +140,7 @@ export function generateTimetable({ scope, sources, config, existing = [], occup
     const blocks = periodSessions(config.periods, item.blockSize)
     for (let count = 0; count + item.blockSize <= missing; count += item.blockSize) {
       let chosen = null
-      const balancedDays = [...days].sort((a, b) => entries.filter(row => row.dayOfWeek === a).length - entries.filter(row => row.dayOfWeek === b).length || WEEKDAYS.indexOf(a) - WEEKDAYS.indexOf(b))
+      const balancedDays = [...days].sort((a, b) => entries.filter(row => row.dayOfWeek === a && same(row.subjectId, item.subject.id)).length - entries.filter(row => row.dayOfWeek === b && same(row.subjectId, item.subject.id)).length || entries.filter(row => row.dayOfWeek === a).length - entries.filter(row => row.dayOfWeek === b).length || WEEKDAYS.indexOf(a) - WEEKDAYS.indexOf(b))
       for (const dayOfWeek of balancedDays) {
         for (const block of blocks) {
           for (const faculty of item.faculty) {

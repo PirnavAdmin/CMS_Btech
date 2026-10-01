@@ -19,6 +19,22 @@ export function periodSetupErrors(periods = []) {
 
 // Proposed local times only: no institutional period API exists in the inspected contract.
 export const DEFAULT_PERIOD_SETUP = Object.freeze({ startTime: '09:00', endTime: '16:00', duration: 60, breakDuration: 15, lunchDuration: 45, breakAfter: 2, lunchAfter: 4 })
+export const DAILY_PERIOD_SETUP = Object.freeze({ startTime: '09:00', periodsPerDay: 7, duration: 50, breakDuration: 20, lunchDuration: 50, breakAfter: 2, lunchAfter: 4 })
+export function dailyPeriods(settings, previous = []) {
+  const count = Number(settings.periodsPerDay), duration = Number(settings.duration)
+  const start = timeMinutes(settings.startTime)
+  const errors = []
+  if (!Number.isInteger(count) || count < 1 || count > 24) errors.push('Periods per day must be between 1 and 24.')
+  if (start == null || !Number.isInteger(start)) errors.push('Enter a valid college start time.')
+  for (const kind of ['break', 'lunch']) {
+    if (Number(settings[`${kind}Duration`]) > 0 && (!Number.isInteger(Number(settings[`${kind}After`])) || Number(settings[`${kind}After`]) < 1 || Number(settings[`${kind}After`]) >= count)) errors.push(`${kind} must be placed between teaching periods.`)
+  }
+  const end = start + count * duration + Number(settings.breakDuration) + Number(settings.lunchDuration)
+  if (!Number.isFinite(end) || end >= 1440) errors.push('The college day must end before midnight.')
+  if (errors.length) return { periods: [], errors, endTime: '' }
+  const result = automaticPeriods({ ...settings, endTime: clockTime(end) }, previous)
+  return { ...result, endTime: result.errors.length ? '' : clockTime(end) }
+}
 export function automaticPeriods(settings, previous = []) {
   const errors = [], periods = []
   const start = timeMinutes(settings.startTime), end = timeMinutes(settings.endTime)
