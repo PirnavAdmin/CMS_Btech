@@ -7,27 +7,6 @@
 .workspace-context-select__error { margin-top: 6px; color: var(--ui-danger); font-size: 11px; }
 .workspace-context-select__error button { padding: 3px 6px; margin-left: 4px; border: 0; background: transparent; color: inherit; text-decoration: underline; cursor: pointer; }
 
-#root .sidebar-brand .workspace-context-select__retry {
-  display: inline-block;
-  width: auto;
-  min-height: 0;
-  margin: 2px 0 0;
-  padding: 2px 0;
-  border: 0;
-  background: transparent;
-  color: var(--ui-danger);
-  font: inherit;
-  font-size: 11px;
-  font-weight: 600;
-  text-decoration: underline;
-  cursor: pointer;
-}
-
-#root .sidebar-brand .workspace-context-select__retry:disabled {
-  opacity: .6;
-  cursor: wait;
-}
-
 /* The brand header needs an inline error, without the full-page alert card. */
 #root .sidebar-brand .workspace-context-select__error {
   display: flex;
@@ -42,6 +21,11 @@
   background: transparent !important;
   font-size: 10px;
   line-height: 1.4;
+}
+
+#root .sidebar-brand .workspace-context-select__error > span {
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 
 #root .sidebar-brand .workspace-context-select__error > button {

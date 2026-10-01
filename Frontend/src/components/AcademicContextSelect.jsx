@@ -51,9 +51,10 @@ export default function AcademicContextSelect({ kind, compact = false }) {
         {items.map(item => <option key={idOf(item)} value={idOf(item)}>{nameOf(item)}</option>)}
       </select>
     </label>}
-    {(error || context.error) && (compact && isCollege
-      ? <button className="workspace-context-select__retry" type="button" aria-label="Retry loading colleges" disabled={context.loading} onClick={() => { setError(''); context.refreshHierarchy() }}>Retry</button>
-      : <div className="workspace-context-select__error" role="alert">{error || 'Unable to load options.'}<button type="button" disabled={context.loading} onClick={() => { setError(''); context.refreshHierarchy() }}>Retry</button></div>)}
+    {(error || context.error) && <div className="workspace-context-select__error" role="alert">
+      <span>{error || 'Unable to load options.'}</span>
+      <button type="button" disabled={context.loading} onClick={() => { setError(''); context.refreshHierarchy() }}>Retry</button>
+    </div>}
     {!context.loading && !context.error && !items.length && <small>No {isCollege ? 'colleges' : 'academic years'} available.</small>}
     {applying && <small role="status">Updating...</small>}
   </div>
