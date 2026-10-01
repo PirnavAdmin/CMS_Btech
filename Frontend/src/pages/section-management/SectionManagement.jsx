@@ -140,7 +140,7 @@ const ReadOnly = ({ value, placeholder = 'Resolved after selection' }) => <input
 const Field = ({ label, error, children }) => <label className={`section-field ${error ? 'invalid' : ''}`}><span>{label.endsWith(' *') ? <>{label.slice(0, -2)} <b className="section-required">*</b></> : label}</span>{children}{error && <small role="alert">{error}</small>}</label>
 function InfoRows({ rows }) { const visible = rows.filter(([, value]) => clean(value)); if (!visible.length) return null; return <div className="cm-info-rows sa-detail-kv-grid erp-view-grid">{visible.map(([label, value]) => <div className="cm-info-row sa-kv-cell erp-view-field" key={label}><span className="cm-info-label sa-kv-label erp-view-label">{label}</span><strong className="cm-info-val sa-kv-val erp-view-value">{value}</strong></div>)}</div> }
 function InfoCard({ icon: Icon, title, rows }) { const visible = rows.filter(([, value]) => clean(value)); if (!visible.length) return null; return <section className="cm-info-card sa-detail-panel sa-modern-panel erp-view-section"><div className="cm-info-card-header sa-panel-header"><div className="sa-panel-title-wrap">{Icon && <span className="sa-panel-icon"><Icon aria-hidden="true" /></span>}<h2>{title}</h2></div><span className="sa-card-count-badge">{visible.length} items</span></div><InfoRows rows={visible} /></section> }
-function Empty({ icon: Icon, title, action }) { return <div className="section-empty"><Icon /><h3>{title}</h3>{action}</div> }
+function Empty({ icon: Icon, title, action, isError = false }) { return <div className="section-empty" role={isError ? 'alert' : undefined} data-message-tone={isError ? 'error' : undefined}><Icon /><h3>{title}</h3>{action}</div> }
 
 function SectionList() {
   const { scopeRecords, selectedCollegeId, selectedAcademicYearId } = useAcademic()
@@ -226,7 +226,7 @@ function SectionList() {
           <Select label="status" value={filters.status} change={changeFilter} first="All Status" values={['Active', 'Inactive']} />
         </div>
       </FilterPanel>
-      {loading ? <Empty icon={FiClock} title="Loading sections..." /> : error ? <Empty icon={FiLayers} title={error} action={<button className="section-primary" onClick={load}>Retry</button>} /> : visible.length ? (
+      {loading ? <Empty icon={FiClock} title="Loading sections..." /> : error ? <Empty icon={FiLayers} title={error} action={<button className="section-primary" onClick={load}>Retry</button>} isError /> : visible.length ? (
         <>
           <div className="section-table-wrap">
             <table className="section-table">
@@ -558,7 +558,7 @@ function SectionDetails() {
   const [section, setSection] = useState(null), [assignments, setAssignments] = useState([]), [loading, setLoading] = useState(true), [error, setError] = useToastState('', 'error')
   useEffect(() => { let alive = true; const load = async () => { setLoading(true); try { const sources = await loadSources(); const base = sources.sections.find((item) => String(item.id) === String(id)) || {}; const detail = normalizeSection({ ...base, ...responseRecord(await sectionApi.getById(id)) }, makeLookups(sources.courses, sources.branches, sources.semesters, sources.years)); const rows = await sectionAssignmentApi.listBySection(id).catch(() => []); if (alive) { setSection(detail); setAssignments(rows.map((item) => normalizeAssignment({ ...item, sectionId: id }))) } } catch (requestError) { if (alive) setError(apiError(requestError, 'Unable to load section details.')) } finally { if (alive) setLoading(false) } }; load(); return () => { alive = false } }, [id, setError])
   if (loading) return <Page><Empty icon={FiClock} title="Loading section details..." /></Page>
-  if (error || !section) return <Page><div className="cm-profile-view" data-export-record><div className="cm-profile-top-bar"><Link className="cm-button secondary" to="/section-management">&larr; Back to Sections List</Link></div><Empty icon={FiLayers} title={error || 'Section not found.'} /></div></Page>
+  if (error || !section) return <Page><div className="cm-profile-view" data-export-record><div className="cm-profile-top-bar"><Link className="cm-button secondary" to="/section-management">&larr; Back </Link></div><Empty icon={FiLayers} title={error || 'Section not found.'} /></div></Page>
   const assigned = Math.max(assignments.length, Number(section.currentStrength || 0)), available = Math.max(Number(section.capacity || 0) - assigned, 0)
   return (
     <Page>
@@ -566,7 +566,7 @@ function SectionDetails() {
         <div className="cm-profile-top-bar">
           <ExportMenu mode="single" title="Section Details" filename={`section_${section.code || section.id}_${section.academicYear || ""}`} />
           <Link className="cm-button secondary" to="/section-management">
-            &larr; Back to Sections List
+            &larr; Back 
           </Link>
         </div>
         <article className="section-profile-page">

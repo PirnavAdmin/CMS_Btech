@@ -1,5 +1,18 @@
 import { getAccessToken } from './auth'
 import { ROLES } from './roles'
+import { notifyApiUnavailable } from '../api/apiFailureNotice'
+
+const fetchWithApiNotice = async (...args) => {
+  let response
+  try {
+    response = await Reflect.apply(globalThis['fetch'], globalThis, args)
+  } catch (error) {
+    notifyApiUnavailable()
+    throw error
+  }
+  if (response.status >= 500) notifyApiUnavailable({ status: response.status })
+  return response
+}
 
 export class AuthRequestError extends Error {
   constructor(message = 'Invalid login credentials. Please check your details and try again.') {
@@ -8,7 +21,7 @@ export class AuthRequestError extends Error {
   }
 }
 
-const DEFAULT_API_BASE_URL = 'https://clarity-math-delouse.ngrok-free.dev'
+const DEFAULT_API_BASE_URL = 'https://dreamless-fidgeting-astronaut.ngrok-free.dev'
 const authEndpoint = import.meta.env.VITE_AUTH_API_URL || (import.meta.env.DEV ? '/api/v1/auth/login' : `${DEFAULT_API_BASE_URL}/api/v1/auth/login`)
 const registrationBaseUrl = String(import.meta.env.DEV ? '' : (import.meta.env.VITE_API_BASE_URL || DEFAULT_API_BASE_URL)).replace(/\/+$/, '')
 const registrationEndpoint = import.meta.env.VITE_REGISTRATION_API_URL || (registrationBaseUrl ? `${registrationBaseUrl}/api/v1/access-requests` : import.meta.env.DEV ? '/api/v1/access-requests' : '')
@@ -63,7 +76,7 @@ const otpRequest = async (path, payload) => {
   const accessToken = otpAuthToken || localStorage.getItem('btech-access-token')
   let response
   try {
-    response = await fetch(resolveOtpUrl(path), {
+    response = await fetchWithApiNotice(resolveOtpUrl(path), {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -95,16 +108,23 @@ export async function login({ identifier, password }, fallbackRole = ROLES.ADMIN
 
   let response
   try {
-    response = await fetch(authEndpoint, {
+    response = await fetchWithApiNotice(authEndpoint, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'ngrok-skip-browser-warning': 'true' },
       body: JSON.stringify({ loginId: identifier, identifier, username: identifier, password })
     })
   } catch {
+    notifyApiUnavailable()
     throw new AuthRequestError('Unable to sign in right now. Please try again.')
   }
 
-  if (!response.ok) throw new AuthRequestError()
+  if (!response.ok) {
+    if (response.status >= 500) {
+      notifyApiUnavailable({ status: response.status })
+      throw new AuthRequestError('The sign-in service is temporarily unavailable. Please try again shortly.')
+    }
+    throw new AuthRequestError()
+  }
 
   try {
     const session = await response.json()
@@ -146,7 +166,7 @@ export async function resetPassword({ contact, otp, password }) {
   }
 
   try {
-    const response = await fetch(resolveOtpUrl('/api/otp/reset-password'), {
+    const response = await fetchWithApiNotice(resolveOtpUrl('/api/otp/reset-password'), {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -182,7 +202,7 @@ export async function register({ fullName, email, mobile, password, confirmPassw
 
   let response
   try {
-    response = await fetch(registrationEndpoint, {
+    response = await fetchWithApiNotice(registrationEndpoint, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -232,11 +252,11 @@ const accessRequestAdminCall = async (path, method = 'GET') => {
       },
       ...(requestMethod !== 'GET' ? { body: JSON.stringify({}) } : {}),
     })
-    response = await fetch(accessRequestUrl(path), requestOptions(method))
+    response = await fetchWithApiNotice(accessRequestUrl(path), requestOptions(method))
     if ((response.status === 405 || response.status === 415) && method === 'POST') {
-      response = await fetch(accessRequestUrl(path), requestOptions('PUT'))
+      response = await fetchWithApiNotice(accessRequestUrl(path), requestOptions('PUT'))
       if (response.status === 405 || response.status === 415) {
-        response = await fetch(accessRequestUrl(path), requestOptions('PATCH'))
+        response = await fetchWithApiNotice(accessRequestUrl(path), requestOptions('PATCH'))
       }
     }
   } catch {

@@ -689,8 +689,8 @@ export default function DepartmentManagement() {
               {isLoading ? (
                 <p className="department-no-results">Loading departments...</p>
               ) : error ? (
-                <div className="department-no-results">
-                  <p className="department-error" role="alert">
+                <div className="department-no-results department-no-results--error" role="alert">
+                  <p className="department-error">
                     {error}
                   </p>
                   <button type="button" className="erp-btn erp-btn--secondary" onClick={() => loadDepartments(query)}>

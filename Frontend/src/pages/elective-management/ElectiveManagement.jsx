@@ -14,6 +14,7 @@ import { getAccessToken } from '../../auth/auth'
 import { selectHeaderAcademicYear } from '../../utils/headerAcademicYear'
 import { showError, showSuccess } from '../../utils/toast'
 import subjectService from '../../services/subjectService'
+import { createApiUnavailableError, notifyApiUnavailable } from '../../api/apiFailureNotice'
 import { academicFilterOptions, changeAcademicFilter, enrichSubject, eligibleForGroup, hasAcademicFilter, isElectiveSubject, matchesSubject, subjectQuery } from '../../utils/subjectDirectory'
 import './ElectiveManagement.css'
 
@@ -63,8 +64,9 @@ const reportExportColumns = [
 
 async function request(path, options = {}) {
   const token = getAccessToken(); let response
-  try { response = await fetch(`${API_BASE_URL}${path}`, { ...options, headers: { 'Content-Type': 'application/json', 'ngrok-skip-browser-warning': 'true', ...(token ? { Authorization: `Bearer ${token}` } : {}), ...options.headers } }) } catch { throw new Error('Network error. Please check your connection and try again.') }
+  try { response = await fetch(`${API_BASE_URL}${path}`, { ...options, headers: { 'Content-Type': 'application/json', 'ngrok-skip-browser-warning': 'true', ...(token ? { Authorization: `Bearer ${token}` } : {}), ...options.headers } }) } catch { throw createApiUnavailableError() }
   let body = null; try { body = await response.json() } catch { /* Empty successful responses are valid. */ }
+  if (response.status >= 500) notifyApiUnavailable({ status: response.status })
   if (!response.ok || body?.success === false) { const messages = { 401: 'Your session has expired. Please sign in again.', 403: 'You do not have permission to perform this action.', 404: path.includes('/allocations/report') ? 'No allocation report is available yet.' : path.includes('/profile/exam-results') ? 'No examination results are available.' : path.includes('/electives') ? 'No elective records are available yet.' : 'The requested information was not found.', 500: 'The server is temporarily unavailable.' }; const error = new Error(messages[response.status] || body?.message || 'The request could not be completed.'); error.status = response.status; throw error }
   return body
 }

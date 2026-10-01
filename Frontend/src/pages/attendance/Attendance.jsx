@@ -793,17 +793,6 @@ export default function Attendance() {
                     aria-label="Search attendance"
                   />
                 </label>
-                <button
-                  type="button"
-                  className={`attendance-filter-toggle${hasRegisterFilters ? ' attendance-filter-toggle--active' : ''}`}
-                  aria-expanded={showRegisterFilters}
-                  aria-controls="attendance-register-filters"
-                  onClick={() => setShowRegisterFilters(value => !value)}
-                >
-                  <FiFilter aria-hidden="true" /> Filters
-                  {hasRegisterFilters && <span className="attendance-filter-count" aria-label="Filters applied">{[filterCourseId, filterBranchId, filterDate].filter(Boolean).length}</span>}
-                  {showRegisterFilters ? <FiChevronUp aria-hidden="true" /> : <FiChevronDown aria-hidden="true" />}
-                </button>
                 <div className="attendance-register-actions">
                   <ExportMenu
                     rows={filteredSessions.map(s => ({
@@ -814,6 +803,17 @@ export default function Attendance() {
                     title="Attendance Register"
                     filename="attendance-register"
                   />
+                  <button
+                    type="button"
+                    className={`attendance-filter-toggle${hasRegisterFilters ? ' attendance-filter-toggle--active' : ''}`}
+                    aria-expanded={showRegisterFilters}
+                    aria-controls="attendance-register-filters"
+                    onClick={() => setShowRegisterFilters(value => !value)}
+                  >
+                    <FiFilter aria-hidden="true" /> Filters
+                    {hasRegisterFilters && <span className="attendance-filter-count" aria-label="Filters applied">{[filterCourseId, filterBranchId, filterDate].filter(Boolean).length}</span>}
+                    {showRegisterFilters ? <FiChevronUp aria-hidden="true" /> : <FiChevronDown aria-hidden="true" />}
+                  </button>
                   <button
                     type="button"
                     className="erp-btn erp-btn--primary"

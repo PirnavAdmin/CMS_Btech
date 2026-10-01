@@ -843,13 +843,13 @@ export default function CollegeInstitutionManagement({ initialView = 'list' }) {
                 label="College status summary"
                 items={summaryCards.map(({ label, value, tone }) => ({
                   label,
-                  value: collegeSummary.loading || value === null ? 'â€”' : Number(value).toLocaleString('en-IN'),
+                  value: collegeSummary.loading || value === null ? '—' : Number(value).toLocaleString('en-IN'),
                   tone,
                 }))}
               />
             </header>
 
-            {collegeSummary.error && (
+            {collegeSummary.error && !collegeError && (
               <p className="cm-summary-error" role="alert">{collegeSummary.error}</p>
             )}
 
@@ -903,8 +903,8 @@ export default function CollegeInstitutionManagement({ initialView = 'list' }) {
                 <p>Loading colleges...</p>
               </div>
             ) : collegeError ? (
-              <div className="cm-empty">
-                <p className="cm-field-error" role="alert">{collegeError}</p>
+              <div className="cm-empty cm-empty--error" role="alert">
+                <p>{collegeError}</p>
                 <button type="button" className="cm-secondary-btn" onClick={() => loadColleges(searchTerm)}>
                   Retry
                 </button>
@@ -945,8 +945,8 @@ export default function CollegeInstitutionManagement({ initialView = 'list' }) {
                             </button>
                             <small className="cm-draft-row__label">Draft saved</small>
                           </td>
-                          <td className="col-code table-center"><code>{collegeDraft.values.collegeCode || 'â€”'}</code></td>
-                          <td className="col-type table-left"><span className="table-cell-truncate" style={{ textAlign: 'left', margin: 0 }} title={collegeDraft.values.institutionType || 'â€”'}>{collegeDraft.values.institutionType || 'â€”'}</span></td>
+                          <td className="col-code table-center"><code>{collegeDraft.values.collegeCode || '—'}</code></td>
+                          <td className="col-type table-left"><span className="table-cell-truncate" style={{ textAlign: 'left', margin: 0 }} title={collegeDraft.values.institutionType || '—'}>{collegeDraft.values.institutionType || '—'}</span></td>
                           <td className="col-status table-center"><StatusBadge tone="pending">Pending</StatusBadge></td>
                           <td className="col-actions table-center"><div className="cm-actions table-actions-group"><button type="button" className="table-action-btn action-edit cm-action-icon-btn cm-edit-action" title="Resume draft" aria-label="Resume draft" onClick={() => navigate('/college-institution-management/add')}><EditIcon /></button><button type="button" className="table-action-btn action-deactivate cm-action-icon-btn cm-danger cm-discard-action" title="Discard draft" aria-label="Discard draft" onClick={() => { localStorage.removeItem(NEW_COLLEGE_DRAFT_KEY); setCollegeDraft(null) }}><FiTrash2 aria-hidden="true" /></button></div></td>
                         </tr>
@@ -1284,8 +1284,8 @@ export default function CollegeInstitutionManagement({ initialView = 'list' }) {
             {isSettingsLoading && <p>Loading college settings...</p>}
 
             {!isSettingsLoading && settingsListError && (
-              <div className="cm-empty">
-                <p className="cm-field-error">{settingsListError}</p>
+              <div className="cm-empty cm-empty--error" role="alert">
+                <p>{settingsListError}</p>
                 <button type="button" className="cm-secondary-btn" onClick={fetchSettingsList}>
                   Retry
                 </button>

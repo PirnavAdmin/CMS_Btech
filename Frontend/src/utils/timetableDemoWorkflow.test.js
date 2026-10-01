@@ -1,3 +1,4 @@
+import { collegeStorageKey } from './collegeScope.js'
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { demoAcademicData, defaultDemoSettings } from '../services/timetableMockData.js'
@@ -72,6 +73,32 @@ test('publishes only a valid scope locally and reset restores initial demo state
     const reset = timetableDemoService.reset()
     assert.deepEqual(reset.schedules, {})
     assert.equal(timetableDemoService.load().schedules['sec-cse-a'], undefined)
+  } finally {
+    if (previous === undefined) delete globalThis.localStorage
+    else globalThis.localStorage = previous
+  }
+})
+
+test('published edits can be staged without changing storage until validated and saved', () => {
+  const previous = globalThis.localStorage
+  const records = new Map()
+  globalThis.localStorage = { getItem: key => records.get(key) ?? null, setItem: (key, value) => records.set(key, value), removeItem: key => records.delete(key) }
+  try {
+    const draft = timetableDemoService.generateAll(initialTimetableDemoState(), scope)
+    const published = timetableDemoService.publish(draft, scope)
+    assert.equal(published.validation.valid, true)
+    const storedBeforeEdit = records.get(collegeStorageKey('pirnav_timetable_demo'))
+    const entry = published.state.schedules['sec-cse-a'].entries[0]
+
+    const staged = timetableDemoService.saveEntry(published.state, { ...entry, generated: false }, { persist: false })
+    assert.equal(staged.validation.valid, true)
+    assert.equal(records.get(collegeStorageKey('pirnav_timetable_demo')), storedBeforeEdit)
+    assert.equal(staged.state.schedules['sec-cse-a'].publicationStatus, 'DRAFT')
+
+    const saved = timetableDemoService.publish(staged.state, scope)
+    assert.equal(saved.validation.valid, true)
+    assert.equal(saved.state.schedules['sec-cse-a'].publicationStatus, 'PUBLISHED')
+    assert.notEqual(records.get(collegeStorageKey('pirnav_timetable_demo')), storedBeforeEdit)
   } finally {
     if (previous === undefined) delete globalThis.localStorage
     else globalThis.localStorage = previous

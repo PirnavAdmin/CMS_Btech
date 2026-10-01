@@ -100,7 +100,7 @@ const formatMinutes = minutes => {
   return `${hours}h ${mins}m`
 }
 export const formatTimeView = value => {
-  if (!value || value === 'â€”' || value === '') return 'â€”'
+  if (!value || value === '—' || value === '') return '—'
   const str = String(value).trim()
   if (/^(1[0-2]|0?[1-9]):[0-5][0-9]\s*(AM|PM)$/i.test(str)) return str
   const [hourText, minuteText] = str.split(':')
@@ -154,8 +154,8 @@ const mergeAttendanceRecords = (faculty, records = []) => {
     const isWorking = ['Present', 'Late', 'Half Day'].includes(status)
     const defIn = status === 'Late' ? '09:30' : isWorking ? '09:00' : ''
     const defOut = status === 'Half Day' ? '13:00' : isWorking ? '17:00' : ''
-    const checkIn = (record.checkIn && record.checkIn !== 'â€”' && record.checkIn !== '') ? record.checkIn : (record.CheckIn || record.checkInTime || record.CheckInTime || (isWorking ? defIn : 'â€”'))
-    const checkOut = (record.checkOut && record.checkOut !== 'â€”' && record.checkOut !== '') ? record.checkOut : (record.CheckOut || record.checkOutTime || record.CheckOutTime || (isWorking ? defOut : 'â€”'))
+    const checkIn = (record.checkIn && record.checkIn !== '—' && record.checkIn !== '') ? record.checkIn : (record.CheckIn || record.checkInTime || record.CheckInTime || (isWorking ? defIn : '—'))
+    const checkOut = (record.checkOut && record.checkOut !== '—' && record.checkOut !== '') ? record.checkOut : (record.CheckOut || record.checkOutTime || record.CheckOutTime || (isWorking ? defOut : '—'))
     return {
       ...record,
       facultyId: matchedCanonicalId,
@@ -163,7 +163,7 @@ const mergeAttendanceRecords = (faculty, records = []) => {
       status,
       checkIn,
       checkOut,
-      remarks: record.remarks || record.Remarks || 'â€”',
+      remarks: record.remarks || record.Remarks || '—',
       source: record.source || 'Manual',
     }
   })
@@ -185,9 +185,9 @@ const mergeAttendanceRecords = (faculty, records = []) => {
         attendanceId: attId,
         id: attId || record.id || current.id || '',
         status: bestStatus,
-        checkIn: (record.checkIn && record.checkIn !== 'â€”' && record.checkIn !== '') ? record.checkIn : current.checkIn,
-        checkOut: (record.checkOut && record.checkOut !== 'â€”' && record.checkOut !== '') ? record.checkOut : current.checkOut,
-        remarks: (record.remarks && record.remarks !== 'â€”' && record.remarks !== '') ? record.remarks : current.remarks,
+        checkIn: (record.checkIn && record.checkIn !== '—' && record.checkIn !== '') ? record.checkIn : current.checkIn,
+        checkOut: (record.checkOut && record.checkOut !== '—' && record.checkOut !== '') ? record.checkOut : current.checkOut,
+        remarks: (record.remarks && record.remarks !== '—' && record.remarks !== '') ? record.remarks : current.remarks,
       })
     }
   }
@@ -208,7 +208,7 @@ const mondayOf = value => {
   return [date.getFullYear(), String(date.getMonth() + 1).padStart(2, '0'), String(date.getDate()).padStart(2, '0')].join('-')
 }
 const parseTimeToMinutes = timeStr => {
-  if (!timeStr || timeStr === 'â€”' || timeStr === '') return null
+  if (!timeStr || timeStr === '—' || timeStr === '') return null
   const str = String(timeStr).trim()
   const match12 = str.match(/^(\d{1,2}):(\d{2})\s*(AM|PM)$/i)
   if (match12) {
@@ -241,10 +241,10 @@ const calculateWorkingMinutes = values => {
 }
 
 const getAttendanceDisplayHours = row => {
-  if (!row || !['Present', 'Late', 'Half Day'].includes(row.status)) return 'â€”'
+  if (!row || !['Present', 'Late', 'Half Day'].includes(row.status)) return '—'
   const explicitMinutes = Number(row.workingMinutes)
   const minutes = (Number.isFinite(explicitMinutes) && explicitMinutes > 0) ? explicitMinutes : calculateWorkingMinutes(row)
-  return minutes > 0 ? formatMinutes(minutes) : 'â€”'
+  return minutes > 0 ? formatMinutes(minutes) : '—'
 }
 const resolveAttendanceRecords = (records, faculty) => {
   const facultyMap = new Map((faculty || []).map(item => [String(item.id), item]))
@@ -266,8 +266,8 @@ const resolveAttendanceRecords = (records, faculty) => {
     const isWorking = ['Present', 'Late', 'Half Day'].includes(status)
     const defaultCheckIn = status === 'Late' ? '09:30' : '09:00'
     const defaultCheckOut = status === 'Half Day' ? '13:00' : '17:00'
-    const checkIn = isWorking ? (record.checkIn && record.checkIn !== 'â€”' && record.checkIn !== '' ? record.checkIn : defaultCheckIn) : 'â€”'
-    const checkOut = isWorking ? (record.checkOut && record.checkOut !== 'â€”' && record.checkOut !== '' ? record.checkOut : defaultCheckOut) : 'â€”'
+    const checkIn = isWorking ? (record.checkIn && record.checkIn !== '—' && record.checkIn !== '' ? record.checkIn : defaultCheckIn) : '—'
+    const checkOut = isWorking ? (record.checkOut && record.checkOut !== '—' && record.checkOut !== '' ? record.checkOut : defaultCheckOut) : '—'
     const workingMinutes = typeof record.workingMinutes === 'number' && record.workingMinutes > 0 ? record.workingMinutes : calculateWorkingMinutes({ ...record, status, checkIn, checkOut })
     const hours = getAttendanceDisplayHours({ ...record, status, workingMinutes, checkIn, checkOut })
     return {
@@ -281,7 +281,7 @@ const resolveAttendanceRecords = (records, faculty) => {
       checkOut: formatTimeView(checkOut),
       rawCheckIn: checkIn,
       rawCheckOut: checkOut,
-      remarks: record.remarks || 'â€”',
+      remarks: record.remarks || '—',
       source: record.source || 'Manual',
       synthetic: false,
     }
@@ -313,8 +313,8 @@ const dailyAttendanceRows = (records, faculty, filters = {}) => {
     const isWorking = ['Present', 'Late', 'Half Day'].includes(status)
     const defaultCheckIn = status === 'Late' ? '09:30' : '09:00'
     const defaultCheckOut = status === 'Half Day' ? '13:00' : '17:00'
-    const rawCheckIn = isWorking ? (current?.rawCheckIn || (current?.checkIn && current.checkIn !== 'â€”' && current.checkIn !== '' ? current.checkIn : defaultCheckIn)) : 'â€”'
-    const rawCheckOut = isWorking ? (current?.rawCheckOut || (current?.checkOut && current.checkOut !== 'â€”' && current.checkOut !== '' ? current.checkOut : defaultCheckOut)) : 'â€”'
+    const rawCheckIn = isWorking ? (current?.rawCheckIn || (current?.checkIn && current.checkIn !== '—' && current.checkIn !== '' ? current.checkIn : defaultCheckIn)) : '—'
+    const rawCheckOut = isWorking ? (current?.rawCheckOut || (current?.checkOut && current.checkOut !== '—' && current.checkOut !== '' ? current.checkOut : defaultCheckOut)) : '—'
     const workingMinutes = current?.workingMinutes ?? calculateWorkingMinutes({ ...current, status, checkIn: rawCheckIn, checkOut: rawCheckOut })
     const hours = getAttendanceDisplayHours({ ...current, status, workingMinutes, checkIn: rawCheckIn, checkOut: rawCheckOut })
     const row = {
@@ -328,7 +328,7 @@ const dailyAttendanceRows = (records, faculty, filters = {}) => {
       checkOut: formatTimeView(rawCheckOut),
       rawCheckIn,
       rawCheckOut,
-      remarks: current?.remarks || 'â€”',
+      remarks: current?.remarks || '—',
       hours,
       synthetic: !current?.attendanceId,
       source: current?.source || 'Manual',
@@ -437,10 +437,10 @@ const attendanceExportRows = (rows, aggregated = false) => {
     faculty: row.faculty?.fullName || row.facultyName || '',
     department: row.faculty?.department || '',
     status: row.status || 'Not Marked',
-    checkIn: row.checkIn || 'â€”',
-    checkOut: row.checkOut || 'â€”',
+    checkIn: row.checkIn || '—',
+    checkOut: row.checkOut || '—',
     workingHours: row.hours || '0h',
-    remarks: row.remarks || 'â€”',
+    remarks: row.remarks || '—',
     source: row.source || 'Manual',
   }))
 }
@@ -450,10 +450,10 @@ const attendanceExportColumns = dailyMode => [
   { label: 'Faculty', value: row => row.faculty || '' },
   { label: 'Department', value: row => row.department || '' },
   { label: 'Status', value: row => row.status || 'Not Marked' },
-  { label: 'Check In', value: row => row.checkIn || 'â€”' },
-  { label: 'Check Out', value: row => row.checkOut || 'â€”' },
+  { label: 'Check In', value: row => row.checkIn || '—' },
+  { label: 'Check Out', value: row => row.checkOut || '—' },
   { label: 'Working Hours', value: row => row.workingHours || row.hours || '0h' },
-  { label: 'Remarks', value: row => row.remarks || 'â€”' },
+  { label: 'Remarks', value: row => row.remarks || '—' },
   ...(dailyMode ? [{ label: 'Source', value: row => row.source || 'Manual' }] : []),
 ]
 const aggregateExportColumns = reportType => [
@@ -508,7 +508,7 @@ const FACULTY_DOCUMENTS = [
   ['joiningReport', 'Joining Report / Appointment Order'],
 ]
 const experienceKeys = ['experience', 'teachingExperience', 'industryExperience']
-const years = value => value === '' || value == null ? 'â€”' : (parseFloat(value) || 0) + ' Years'
+const years = value => value === '' || value == null ? '—' : (parseFloat(value) || 0) + ' Years'
 const isHexUUID = val => typeof val === 'string' && /^[0-9a-f]{32}$/i.test(val.trim())
 const normalize = (row = {}) => {
   const safeRow = row && typeof row === 'object' ? row : {}
@@ -650,29 +650,29 @@ function AttendanceTimeField({ label, value, disabled, onChange }) {
     if (nextPeriod === 'PM') numericHour += 12
     onChange(`${String(numericHour).padStart(2, '0')}:${nextMinute}`)
   }
-  return <div className="fm-attendance-time-field"><span>{label}</span><span className="fm-attendance-time-controls">{disabled ? <span className="fm-attendance-disabled-value">â€”</span> : <><select aria-label={`${label} hour`} value={parts.hour} onChange={event => update('hour', event.target.value)}><option value="">HH</option>{Array.from({ length: 12 }, (_, index) => { const item = String(index + 1).padStart(2, '0'); return <option key={item} value={item}>{item}</option> })}</select><span>:</span><select aria-label={`${label} minute`} value={parts.minute} onChange={event => update('minute', event.target.value)}><option value="">MM</option>{Array.from({ length: 60 }, (_, index) => { const item = String(index).padStart(2, '0'); return <option key={item} value={item}>{item}</option> })}</select><select aria-label={`${label} period`} value={parts.period} onChange={event => update('period', event.target.value)}><option value="">AM/PM</option><option value="AM">AM</option><option value="PM">PM</option></select></>}</span></div>
+  return <div className="fm-attendance-time-field"><span>{label}</span><span className="fm-attendance-time-controls">{disabled ? <span className="fm-attendance-disabled-value">—</span> : <><select aria-label={`${label} hour`} value={parts.hour} onChange={event => update('hour', event.target.value)}><option value="">HH</option>{Array.from({ length: 12 }, (_, index) => { const item = String(index + 1).padStart(2, '0'); return <option key={item} value={item}>{item}</option> })}</select><span>:</span><select aria-label={`${label} minute`} value={parts.minute} onChange={event => update('minute', event.target.value)}><option value="">MM</option>{Array.from({ length: 60 }, (_, index) => { const item = String(index).padStart(2, '0'); return <option key={item} value={item}>{item}</option> })}</select><select aria-label={`${label} period`} value={parts.period} onChange={event => update('period', event.target.value)}><option value="">AM/PM</option><option value="AM">AM</option><option value="PM">PM</option></select></>}</span></div>
 }
 function AttendanceEditor({ record, collegeOptions = [], departmentOptions = [], allFaculty = [], onClose, onSave, onReset }) {
   const initialStatus = record.status === 'Not Marked' ? 'Present' : record.status
   const isInitialWorking = ['Present', 'Late', 'Half Day'].includes(initialStatus)
   const defaultInitialCheckIn = initialStatus === 'Late' ? '09:30' : '09:00'
   const defaultInitialCheckOut = initialStatus === 'Half Day' ? '13:00' : '17:00'
-  const initialCheckIn = record.rawCheckIn || (record.checkIn && record.checkIn !== 'â€”' ? record.checkIn : '') || (isInitialWorking ? defaultInitialCheckIn : '')
-  const initialCheckOut = record.rawCheckOut || (record.checkOut && record.checkOut !== 'â€”' ? record.checkOut : '') || (isInitialWorking ? defaultInitialCheckOut : '')
+  const initialCheckIn = record.rawCheckIn || (record.checkIn && record.checkIn !== '—' ? record.checkIn : '') || (isInitialWorking ? defaultInitialCheckIn : '')
+  const initialCheckOut = record.rawCheckOut || (record.checkOut && record.checkOut !== '—' ? record.checkOut : '') || (isInitialWorking ? defaultInitialCheckOut : '')
 
   const [data, setData] = useState({
     status: initialStatus,
     checkIn: initialCheckIn,
     checkOut: initialCheckOut,
-    remarks: record.remarks === 'â€”' ? '' : record.remarks,
+    remarks: record.remarks === '—' ? '' : record.remarks,
   })
   const [error, setError] = useState('')
   const [confirmReset, setConfirmReset] = useState(false)
   const [confirmLop, setConfirmLop] = useState(false)
   const isLop = data.status === 'LOP'
   const isNonWorkingStatus = ['Absent', 'On Leave', 'LOP'].includes(data.status)
-  const displayCode = formatFacultyDisplayCode(record.faculty, collegeOptions, allFaculty) || record.faculty.employeeId || 'â€”'
-  const departmentName = departmentOptions.find(d => String(d.value) === String(record.faculty.departmentId || record.faculty.department))?.label || record.faculty.department || record.faculty.departmentName || 'â€”'
+  const displayCode = formatFacultyDisplayCode(record.faculty, collegeOptions, allFaculty) || record.faculty.employeeId || '—'
+  const departmentName = departmentOptions.find(d => String(d.value) === String(record.faculty.departmentId || record.faculty.department))?.label || record.faculty.department || record.faculty.departmentName || '—'
   const save = event => {
     event.preventDefault()
     if (['On Leave', 'LOP'].includes(data.status) && !confirmLop) return setConfirmLop(true)
@@ -736,15 +736,15 @@ function FacultyAttendanceScreen({ faculty, collegeOptions = [], departmentOptio
   const [reportFilters, setReportFilters] = useState(() => ({ daily: defaultReport(), weekly: defaultReport(), monthly: defaultReport() }))
   const currentReport = reportFilters[reportType]
   const getFacultyDept = f => {
-    if (!f) return 'â€”'
+    if (!f) return '—'
     const match = departmentOptions.find(d => String(d.value) === String(f.departmentId || f.department))
-    return match ? match.label : f.department || f.departmentName || 'â€”'
+    return match ? match.label : f.department || f.departmentName || '—'
   }
   const getFacultyCode = f => {
-    if (!f) return 'â€”'
+    if (!f) return '—'
     const code = formatFacultyDisplayCode(f, collegeOptions, faculty)
-    if (code && code !== 'â€”') return code
-    return f.employeeId || f.facultyCode || (f.id ? `FAC-${f.id}` : 'â€”')
+    if (code && code !== '—') return code
+    return f.employeeId || f.facultyCode || (f.id ? `FAC-${f.id}` : '—')
   }
   const normalizeAttendance = useCallback((rows, options) => mergeAttendanceRecords(faculty, rows.map(row => normalizeAttendanceRow(row, options))), [faculty])
   const loadAttendance = useCallback(async (expectedRecords = []) => {
@@ -782,8 +782,8 @@ function FacultyAttendanceScreen({ faculty, collegeOptions = [], departmentOptio
           combined[matchIndex] = {
             ...combined[matchIndex],
             status: exp.status,
-            checkIn: isExpWorking ? (checkIn || combined[matchIndex].checkIn) : 'â€”',
-            checkOut: isExpWorking ? (checkOut || combined[matchIndex].checkOut) : 'â€”',
+            checkIn: isExpWorking ? (checkIn || combined[matchIndex].checkIn) : '—',
+            checkOut: isExpWorking ? (checkOut || combined[matchIndex].checkOut) : '—',
             remarks: exp.remarks !== undefined ? exp.remarks : combined[matchIndex].remarks,
           }
         } else {
@@ -793,7 +793,7 @@ function FacultyAttendanceScreen({ faculty, collegeOptions = [], departmentOptio
             status: exp.status,
             checkIn,
             checkOut,
-            remarks: exp.remarks || 'â€”',
+            remarks: exp.remarks || '—',
             source: 'Manual',
           })
         }
@@ -1019,7 +1019,7 @@ function FacultyAttendanceScreen({ faculty, collegeOptions = [], departmentOptio
         status,
         checkIn: defCheckIn,
         checkOut: defCheckOut,
-        remarks: remarks || 'â€”',
+        remarks: remarks || '—',
       })))
       setSelectedFacultyIds([])
       const msg = `${selectedRows.length} attendance record${selectedRows.length > 1 ? 's' : ''} saved.`
@@ -1112,9 +1112,9 @@ function FacultyAttendanceScreen({ faculty, collegeOptions = [], departmentOptio
   const filterControl = <button type="button" className="fm-attendance-filter-toggle" aria-expanded={showFilters} aria-controls="faculty-attendance-filters-panel" onClick={() => setShowFilters(value => !value)}><FiFilter aria-hidden="true" /><span>Filters</span>{showFilters ? <FiChevronUp aria-hidden="true" /> : <FiChevronDown aria-hidden="true" />}</button>
   const normalizeViewRemark = value => {
     const clean = String(value || '').trim()
-    if (!clean || clean === 'â€”') return 'â€”'
+    if (!clean || clean === '—') return '—'
     const blocked = ['Bulk marked', 'Bulk marked Present', 'Bulk marked Absent', 'Bulk marked On Leave', 'Bulk mark', 'Bulk update', 'Manual bulk', 'Generated record']
-    return blocked.includes(clean) ? 'â€”' : clean
+    return blocked.includes(clean) ? '—' : clean
   }
   const dailyPageCount = Math.max(1, Math.ceil(dailyRows.length / PAGE_SIZE))
   const currentDailyPage = Math.min(dailyPage, dailyPageCount)
@@ -1122,7 +1122,7 @@ function FacultyAttendanceScreen({ faculty, collegeOptions = [], departmentOptio
   const currentPage = Math.min(registerPage, pageCount)
   const visibleRows = tab === 'register' ? registerRows.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE) : tab === 'daily' ? dailyRows.slice((currentDailyPage - 1) * PAGE_SIZE, currentDailyPage * PAGE_SIZE) : reportType === 'daily' ? reportRows.slice((reportPage - 1) * PAGE_SIZE, reportPage * PAGE_SIZE) : resultRows
   const statusMeta = {
-    Present: ['P', 'present'], Absent: ['A', 'absent'], Late: ['L', 'late'], 'Half Day': ['HD', 'half-day'], 'On Leave': ['OL', 'leave'], LOP: ['LOP', 'lop'], 'Not Marked': ['â€”', 'pending'],
+    Present: ['P', 'present'], Absent: ['A', 'absent'], Late: ['L', 'late'], 'Half Day': ['HD', 'half-day'], 'On Leave': ['OL', 'leave'], LOP: ['LOP', 'lop'], 'Not Marked': ['—', 'pending'],
   }
   const matrixDates = useMemo(() => {
     if (reportType === 'daily' || !period.from || !period.to) return []
@@ -1145,7 +1145,7 @@ function FacultyAttendanceScreen({ faculty, collegeOptions = [], departmentOptio
          (member.facultyCode && (record.facultyCode === member.facultyCode || String(record.facultyId) === String(member.facultyCode))) ||
          (member.employeeProfileId && (String(record.employeeProfileId) === String(member.employeeProfileId) || String(record.facultyId) === String(member.employeeProfileId)))
         ) && normalizeAttendanceDate(record.date) === date
-      ) || { faculty: member, facultyId: member.id, date, status: 'Not Marked', checkIn: 'â€”', checkOut: 'â€”', hours: 'â€”' })
+      ) || { faculty: member, facultyId: member.id, date, status: 'Not Marked', checkIn: '—', checkOut: '—', hours: '—' })
       const totals = summarizeAttendance(cells)
       return { member, cells, totals }
     }).filter(row => !currentReport.status || row.cells.some(cell => cell.status === currentReport.status))
@@ -1157,7 +1157,7 @@ function FacultyAttendanceScreen({ faculty, collegeOptions = [], departmentOptio
   const visibleMatrixRows = matrixRows.slice((currentReportPage - 1) * PAGE_SIZE, currentReportPage * PAGE_SIZE)
   const statusCell = cell => {
     const [code, tone] = statusMeta[cell.status] || statusMeta['Not Marked']
-    const detail = [displayDate(cell.date), cell.status === 'LOP' ? 'Loss of Pay' : cell.status, ...(['Present', 'Late', 'Half Day'].includes(cell.status) ? [`Check In: ${formatTimeView(cell.checkIn)}`, `Check Out: ${formatTimeView(cell.checkOut)}`, `Working Hours: ${cell.hours || 'â€”'}`] : [])].join('\n')
+    const detail = [displayDate(cell.date), cell.status === 'LOP' ? 'Loss of Pay' : cell.status, ...(['Present', 'Late', 'Half Day'].includes(cell.status) ? [`Check In: ${formatTimeView(cell.checkIn)}`, `Check Out: ${formatTimeView(cell.checkOut)}`, `Working Hours: ${cell.hours || '—'}`] : [])].join('\n')
     return <span className={`fm-report-status fm-report-status--${tone}`} title={detail} aria-label={detail}>{code}</span>
   }
   const allDailySelected = dailyRows.length > 0 && dailyRows.every(row => selectedFacultyIds.includes(String(row.facultyId)))
@@ -1234,7 +1234,7 @@ function FacultyAttendanceScreen({ faculty, collegeOptions = [], departmentOptio
       {showAction && <td className="fm-action-cell"><div className="fm-table-actions"><button className="fm-icon-button" type="button" title="Edit attendance" aria-label={'Edit attendance for ' + row.faculty.fullName + ' on ' + row.date} onClick={() => openAttendance(row, true)}><FiEdit2 /></button></div></td>}
     </tr>)}</tbody>
   </table></div>
-  const aggregatedTable = reportType === 'daily' ? <div className="fm-attendance-table fm-attendance-aggregate-table"><table><thead><tr>{['Faculty Code', 'Faculty', 'Department', 'Days With Data', 'Present', 'Absent', 'Late', 'Half Day', 'On Leave', 'Total Hours', 'Attendance %'].map(label => <th scope="col" key={label}>{label}</th>)}</tr></thead><tbody>{visibleReportRows.map(row => <tr key={row.facultyId}><td><span className="fm-attendance-employee">{getFacultyCode(row.faculty)}</span></td><td><button type="button" className="student-name-link" title={row.faculty.fullName} onClick={() => openAttendance(row)}>{row.faculty.fullName}</button></td><td>{getFacultyDept(row.faculty)}</td><td>{row.total}</td>{['Present', 'Absent', 'Late', 'Half Day', 'On Leave'].map(status => <td key={status}>{row[status]}</td>)}<td>{row.hours}</td><td>{row.percentage}</td></tr>)}</tbody></table></div> : <><div className="fm-report-legend" aria-label="Attendance status legend">{Object.entries(statusMeta).map(([status, [code, tone]]) => <span key={status}>{statusCell({ status, date: period.from, checkIn: 'â€”', checkOut: 'â€”', hours: 'â€”' })}<small>{attendanceStatusLabel(status)}</small></span>)}</div><div className="fm-attendance-table fm-attendance-matrix"><table><colgroup><col style={{ width: '130px', minWidth: '130px' }} /><col style={{ width: '220px', minWidth: '220px' }} />{matrixDates.map(date => <col key={date} style={{ width: '42px', minWidth: '42px' }} />)}{['P', 'A', 'L', 'HD', 'OL', 'LOP'].map(label => <col key={label} style={{ width: '40px', minWidth: '40px' }} />)}<col style={{ width: '55px', minWidth: '55px' }} /></colgroup><thead><tr><th>Faculty Code</th><th>Faculty</th>{matrixDates.map(date => <th key={date}><span>{new Date(date + 'T00:00:00').toLocaleDateString('en-GB', { weekday: 'short' }).toUpperCase()}</span><b>{new Date(date + 'T00:00:00').toLocaleDateString('en-GB', { day: '2-digit', month: 'short' }).toUpperCase()}</b></th>)}{['P', 'A', 'L', 'HD', 'OL', 'LOP', '%'].map(label => <th key={label}>{label}</th>)}</tr></thead><tbody>{visibleMatrixRows.map(({ member, cells, totals }) => <tr key={member.id}><td>{getFacultyCode(member)}</td><td className="fm-matrix-faculty"><button type="button" className="student-name-link" title={member.fullName} onClick={() => openAttendance({ faculty: member, facultyId: member.id, date: matrixDates[0] || today() })}>{member.fullName}</button><small>{getFacultyDept(member)}</small></td>{cells.map(cell => <td key={cell.date}>{statusCell(cell)}</td>)}{[['Present', 'present'], ['Absent', 'absent'], ['Late', 'late'], ['Half Day', 'half-day'], ['On Leave', 'leave'], ['LOP', 'lop']].map(([status, tone]) => <td className={`fm-report-total fm-report-total--${tone}`} key={status}>{totals[status]}</td>)}<td className="fm-report-total fm-report-total--percentage">{totals.percentage}</td></tr>)}</tbody></table></div></>
+  const aggregatedTable = reportType === 'daily' ? <div className="fm-attendance-table fm-attendance-aggregate-table"><table><thead><tr>{['Faculty Code', 'Faculty', 'Department', 'Days With Data', 'Present', 'Absent', 'Late', 'Half Day', 'On Leave', 'Total Hours', 'Attendance %'].map(label => <th scope="col" key={label}>{label}</th>)}</tr></thead><tbody>{visibleReportRows.map(row => <tr key={row.facultyId}><td><span className="fm-attendance-employee">{getFacultyCode(row.faculty)}</span></td><td><button type="button" className="student-name-link" title={row.faculty.fullName} onClick={() => openAttendance(row)}>{row.faculty.fullName}</button></td><td>{getFacultyDept(row.faculty)}</td><td>{row.total}</td>{['Present', 'Absent', 'Late', 'Half Day', 'On Leave'].map(status => <td key={status}>{row[status]}</td>)}<td>{row.hours}</td><td>{row.percentage}</td></tr>)}</tbody></table></div> : <><div className="fm-report-legend" aria-label="Attendance status legend">{Object.entries(statusMeta).map(([status, [code, tone]]) => <span key={status}>{statusCell({ status, date: period.from, checkIn: '—', checkOut: '—', hours: '—' })}<small>{attendanceStatusLabel(status)}</small></span>)}</div><div className="fm-attendance-table fm-attendance-matrix"><table><colgroup><col style={{ width: '130px', minWidth: '130px' }} /><col style={{ width: '220px', minWidth: '220px' }} />{matrixDates.map(date => <col key={date} style={{ width: '42px', minWidth: '42px' }} />)}{['P', 'A', 'L', 'HD', 'OL', 'LOP'].map(label => <col key={label} style={{ width: '40px', minWidth: '40px' }} />)}<col style={{ width: '55px', minWidth: '55px' }} /></colgroup><thead><tr><th>Faculty Code</th><th>Faculty</th>{matrixDates.map(date => <th key={date}><span>{new Date(date + 'T00:00:00').toLocaleDateString('en-GB', { weekday: 'short' }).toUpperCase()}</span><b>{new Date(date + 'T00:00:00').toLocaleDateString('en-GB', { day: '2-digit', month: 'short' }).toUpperCase()}</b></th>)}{['P', 'A', 'L', 'HD', 'OL', 'LOP', '%'].map(label => <th key={label}>{label}</th>)}</tr></thead><tbody>{visibleMatrixRows.map(({ member, cells, totals }) => <tr key={member.id}><td>{getFacultyCode(member)}</td><td className="fm-matrix-faculty"><button type="button" className="student-name-link" title={member.fullName} onClick={() => openAttendance({ faculty: member, facultyId: member.id, date: matrixDates[0] || today() })}>{member.fullName}</button><small>{getFacultyDept(member)}</small></td>{cells.map(cell => <td key={cell.date}>{statusCell(cell)}</td>)}{[['Present', 'present'], ['Absent', 'absent'], ['Late', 'late'], ['Half Day', 'half-day'], ['On Leave', 'leave'], ['LOP', 'lop']].map(([status, tone]) => <td className={`fm-report-total fm-report-total--${tone}`} key={status}>{totals[status]}</td>)}<td className="fm-report-total fm-report-total--percentage">{totals.percentage}</td></tr>)}</tbody></table></div></>
   const noSource = tab !== 'daily' && !attendanceRecords.length
   const empty = <EmptyState title={noSource ? 'No attendance records are available yet.' : 'No attendance records match the selected filters.'} description={noSource ? 'Daily Attendance shows missing records as Not Marked; these are not saved historical records.' : undefined} action={noSource ? 'Go to Daily Attendance' : 'Clear Filters'} onAction={noSource ? () => setTab('daily') : clearFilters} />
   return (
@@ -1365,20 +1365,20 @@ function FacultyAttendanceScreen({ faculty, collegeOptions = [], departmentOptio
                   </div>
                   <div className="preview-kv-item">
                     <span className="kv-label">Check In</span>
-                    <strong className="kv-val">{['Present', 'Late', 'Half Day'].includes(selected.status) ? formatTimeView(selected.checkIn) : 'â€”'}</strong>
+                    <strong className="kv-val">{['Present', 'Late', 'Half Day'].includes(selected.status) ? formatTimeView(selected.checkIn) : '—'}</strong>
                   </div>
                   <div className="preview-kv-item">
                     <span className="kv-label">Check Out</span>
-                    <strong className="kv-val">{['Present', 'Late', 'Half Day'].includes(selected.status) ? formatTimeView(selected.checkOut) : 'â€”'}</strong>
+                    <strong className="kv-val">{['Present', 'Late', 'Half Day'].includes(selected.status) ? formatTimeView(selected.checkOut) : '—'}</strong>
                   </div>
                   <div className="preview-kv-item">
                     <span className="kv-label">Working Hours</span>
-                    <strong className="kv-val">{['Present', 'Late', 'Half Day'].includes(selected.status) ? (selected.hours || 'â€”') : 'â€”'}</strong>
+                    <strong className="kv-val">{['Present', 'Late', 'Half Day'].includes(selected.status) ? (selected.hours || '—') : '—'}</strong>
                   </div>
                 </div>
               </div>
 
-              {normalizeViewRemark(selected.remarks) !== 'â€”' && (
+              {normalizeViewRemark(selected.remarks) !== '—' && (
                 <div className="preview-section-group" style={{ marginTop: '8px' }}>
                   <span className="preview-section-title">Remarks</span>
                   <p className="fm-view-reason" style={{ margin: 0, padding: '10px 14px', background: 'var(--surface-soft, #F8FAFC)', border: '1px solid var(--border, #E2E8F0)', borderRadius: '8px', fontSize: '13px', color: 'var(--text-primary, #334155)' }}>
@@ -1423,28 +1423,28 @@ function ProfileSections({ data, collegeOptions = [], departmentOptions = [], fa
     }
     if (key === 'collegeName' || key === 'collegeId') {
       const match = collegeOptions.find(c => String(c.value) === String(value || data.collegeId))
-      return match ? match.label : (data.collegeName || value || 'â€”')
+      return match ? match.label : (data.collegeName || value || '—')
     }
     if (key === 'department' || key === 'departmentId') {
       const match = departmentOptions.find(d => String(d.value) === String(value || data.departmentId || data.department))
-      return match ? match.label : (data.departmentName || data.department || value || 'â€”')
+      return match ? match.label : (data.departmentName || data.department || value || '—')
     }
     if (key === 'gender') {
-      return data.gender || data.sex || data.genderName || 'â€”'
+      return data.gender || data.sex || data.genderName || '—'
     }
     if (key === 'dob') {
       const rawDob = data.dob || data.dateOfBirth || data.DateOfBirth
-      return (rawDob && String(rawDob) !== 'undefined') ? String(rawDob).slice(0, 10) : 'â€”'
+      return (rawDob && String(rawDob) !== 'undefined') ? String(rawDob).slice(0, 10) : '—'
     }
     if (key === 'joiningDate') {
       const rawJoin = data.joiningDate || data.dateOfJoining || data.DateOfJoining
-      return (rawJoin && String(rawJoin) !== 'undefined') ? String(rawJoin).slice(0, 10) : 'â€”'
+      return (rawJoin && String(rawJoin) !== 'undefined') ? String(rawJoin).slice(0, 10) : '—'
     }
     if (key === 'mobile') {
-      return data.mobile || data.phoneNumber || data.phone || data.mobileNumber || 'â€”'
+      return data.mobile || data.phoneNumber || data.phone || data.mobileNumber || '—'
     }
     if (key === 'email') {
-      return data.email || data.officialEmail || data.workEmail || 'â€”'
+      return data.email || data.officialEmail || data.workEmail || '—'
     }
     if (key === 'employeeCategory') {
       if (['Others', 'Other'].includes(data.employeeCategory)) {
@@ -1456,32 +1456,32 @@ function ProfileSections({ data, collegeOptions = [], departmentOptions = [], fa
       if (data.qualification === 'Other') {
         return data.qualificationOther ? `Other (${data.qualificationOther})` : 'Other'
       }
-      return data.qualification || 'â€”'
+      return data.qualification || '—'
     }
     if (key === 'emergencyName') {
-      return data.emergencyName || data.emergencyContactName || 'â€”'
+      return data.emergencyName || data.emergencyContactName || '—'
     }
     if (key === 'emergencyMobile') {
-      return data.emergencyMobile || data.emergencyContactNumber || 'â€”'
+      return data.emergencyMobile || data.emergencyContactNumber || '—'
     }
     if (key === 'relationship') {
-      return data.relationship || data.emergencyContactRelation || 'â€”'
+      return data.relationship || data.emergencyContactRelation || '—'
     }
     if (key === 'address') {
-      return data.address || data.permanentAddress || data.currentAddress || 'â€”'
+      return data.address || data.permanentAddress || data.currentAddress || '—'
     }
     if (experienceKeys.includes(key)) {
       const val = value ?? data[key]
-      return val === '' || val == null ? 'â€”' : years(val)
+      return val === '' || val == null ? '—' : years(val)
     }
-    return value || data[key] || 'â€”'
+    return value || data[key] || '—'
   }
 
   const renderSectionCard = (section) => {
     const fields = section.fields.filter(([key, , , required]) => {
       if (data.employeeCategory === 'Non-Teaching' && key === 'teachingExperience') return false
       const val = getFieldValue(key, data[key])
-      return required || key === 'employeeId' || (val !== '' && val !== 'â€”' && val !== null && val !== undefined)
+      return required || key === 'employeeId' || (val !== '' && val !== '—' && val !== null && val !== undefined)
     })
     return (
       <section className="fm-panel" key={section.title}>
@@ -1701,7 +1701,7 @@ const getCollegePrefix = (collegeId, collegeOptions = [], isNonTeaching = false)
 }
 
 export const formatFacultyDisplayCode = (item, collegeOptions = [], allFaculty = []) => {
-  if (!item) return 'â€”'
+  if (!item) return '—'
 
   const isNonTeaching = employeeCategoryOf(item) === 'Non-Teaching'
   const collegeId = item.collegeId ?? item.college_id ?? (collegeOptions.length > 0 ? collegeOptions[0].value : '')
@@ -2056,7 +2056,7 @@ function FacultyForm({ initial, faculty, onSave, onCancel, collegeOptions = [], 
               },
             ].map(sec => ({
               ...sec,
-              fields: sec.fields.filter(([, val]) => val !== null && val !== undefined && String(val).trim() !== '' && String(val).trim() !== 'â€”' && String(val).trim() !== '0 Years' && String(val).trim() !== '0'),
+              fields: sec.fields.filter(([, val]) => val !== null && val !== undefined && String(val).trim() !== '' && String(val).trim() !== '—' && String(val).trim() !== '0 Years' && String(val).trim() !== '0'),
             })).filter(sec => sec.fields.length > 0)
 
             if (previewSections.length === 0) {
@@ -2607,7 +2607,7 @@ function ProfileCard({ title, icon: Icon, rows = [] }) {
         {rows.map(([label, val], idx) => (
           <div className="sp-panel-item" key={label || idx}>
             <dt className="sp-panel-label">{label}</dt>
-            <dd className="sp-panel-val">{val && String(val).trim() !== '' && String(val).trim() !== 'â€”' ? String(val) : 'Not provided'}</dd>
+            <dd className="sp-panel-val">{val && String(val).trim() !== '' && String(val).trim() !== '—' ? String(val) : 'Not provided'}</dd>
           </div>
         ))}
       </dl>
@@ -2884,7 +2884,7 @@ export default function FacultyManagement() {
     )
   } else if (selected) {
     const load = workload(selected)
-    const departmentName = departmentOptions.find(d => String(d.value) === String(selected.departmentId || selected.department))?.label || selected.department || 'â€”'
+    const departmentName = departmentOptions.find(d => String(d.value) === String(selected.departmentId || selected.department))?.label || selected.department || '—'
     const displayCode = formatFacultyDisplayCode(selected, collegeOptions, faculty)
     const collegeName = collegeOptions.find(c => String(c.value) === String(selected.collegeId))?.label || selected.collegeName || ''
 
@@ -2919,8 +2919,8 @@ export default function FacultyManagement() {
           ['Specialization', selected.specialization],
           ['University / Institution', selected.university],
           ['Year of Passing', selected.passingYear],
-          ['Teaching Experience', selected.employeeCategory !== 'Non-Teaching' && selected.teachingExperience ? `${selected.teachingExperience} Years` : 'â€”'],
-          ['Industry Experience', selected.industryExperience ? `${selected.industryExperience} Years` : 'â€”'],
+          ['Teaching Experience', selected.employeeCategory !== 'Non-Teaching' && selected.teachingExperience ? `${selected.teachingExperience} Years` : '—'],
+          ['Industry Experience', selected.industryExperience ? `${selected.industryExperience} Years` : '—'],
         ]
       },
       {
@@ -3081,8 +3081,8 @@ export default function FacultyManagement() {
                     ['Specialization', selected.specialization],
                     ['University / Institution', selected.university],
                     ['Year of Passing', selected.passingYear],
-                    ['Teaching Experience', selected.teachingExperience ? `${selected.teachingExperience} Years` : 'â€”'],
-                    ['Industry Experience', selected.industryExperience ? `${selected.industryExperience} Years` : 'â€”'],
+                    ['Teaching Experience', selected.teachingExperience ? `${selected.teachingExperience} Years` : '—'],
+                    ['Industry Experience', selected.industryExperience ? `${selected.industryExperience} Years` : '—'],
                   ]}
                 />
               </>
@@ -3322,10 +3322,10 @@ export default function FacultyManagement() {
                             </div>
                           </div>
                         </td>
-                        <td className="fm-department">{departmentOptions.find(d => String(d.value) === String(item.departmentId || item.department))?.label || item.department || 'â€”'}</td>
-                        <td>{item.designation || 'â€”'}</td>
+                        <td className="fm-department">{departmentOptions.find(d => String(d.value) === String(item.departmentId || item.department))?.label || item.department || '—'}</td>
+                        <td>{item.designation || '—'}</td>
                         <td>{years(item.experience)}</td>
-                        <td>{item.employmentType || 'â€”'}</td>
+                        <td>{item.employmentType || '—'}</td>
                         <td className="table-center"><StatusBadge value={item.employmentStatus} /></td>
                         <td className="table-center">
                           <div className="table-actions-cell table-actions-group">

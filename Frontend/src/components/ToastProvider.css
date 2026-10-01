@@ -54,6 +54,43 @@
   from { opacity: 0; transform: translateY(-12px) scale(0.96); }
   to { opacity: 1; transform: translateY(0) scale(1); }
 }
+.page-error-notices {
+  display: grid;
+  gap: 10px;
+  margin: 0 0 18px;
+}
+.page-error-notice {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+  padding: 13px 16px;
+  border: 1px solid var(--screen-error-border, #f0b4ae);
+  border-left: 4px solid var(--screen-error-text, #c5221f);
+  border-radius: 12px;
+  background: var(--screen-error-bg, #fff8f7);
+  color: var(--screen-error-text, #b42318);
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.5;
+}
+.page-error-notice > svg { flex: 0 0 auto; font-size: 19px; }
+.page-error-notice > span { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+.page-error-notice > button {
+  display: grid;
+  place-items: center;
+  flex: 0 0 30px;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+}
+.page-error-notice > button:hover { background: rgba(181, 35, 24, 0.08); }
+.page-error-notice > button:focus-visible { outline: 2px solid currentColor; outline-offset: 2px; }
 @media (max-width: 560px) {
   .global-toasts { top: 12px; right: 12px; width: min(380px, calc(100vw - 24px)); }
 }

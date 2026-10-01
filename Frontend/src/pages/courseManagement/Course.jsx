@@ -371,7 +371,7 @@ function CourseList() {
         </div>
       </FilterPanel>
       {isLoading ? <div className="course-empty"><strong>Loading courses...</strong></div>
-        : error ? <div className="course-empty"><strong>{error}</strong><button className="cm-button" onClick={load}>Retry</button></div>
+        : error ? <div className="course-empty course-empty--error" role="alert"><strong>{error}</strong><button className="cm-button" onClick={load}>Retry</button></div>
         : !courses.length ? <div className="course-empty"><strong>No courses have been added yet.</strong><Link className="cm-button" to="/courses/add">+ Add Course</Link></div>
         : rows.length ? (
           <>
@@ -692,7 +692,7 @@ function CourseDetails() {
   useEffect(() => { load() }, [id])
 
   if (isLoading) return <Page><div className="cm-empty">Loading course...</div></Page>
-  if (error || !course) return <Page><div className="course-empty"><strong>{error || 'Course not found.'}</strong><Link className="cm-button" to="/courses">Back</Link></div></Page>
+  if (error || !course) return <Page><div className="course-empty course-empty--error" role="alert"><strong>{error || 'Course not found.'}</strong><Link className="cm-button" to="/courses">Back</Link></div></Page>
 
   const department = departments.find(x => String(x.id) === String(course.departmentId))
   const valueText = value => value === null || value === undefined || String(value).trim() === '' ? '' : String(value)

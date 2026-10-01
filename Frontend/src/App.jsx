@@ -60,19 +60,12 @@ class AppErrorBoundary extends Component {
 
   render() {
     if (this.state.hasError) {
-      const errorMsg = this.state.error?.stack || this.state.error?.message || String(this.state.error)
-      const compStack = this.state.info?.componentStack || ''
       return (
         <main style={{ minHeight: '100vh', display: 'grid', placeItems: 'center', padding: '24px', fontFamily: 'system-ui, sans-serif' }}>
           <div style={{ maxWidth: '700px', width: '100%', textAlign: 'center', background: '#fff', borderRadius: '16px', padding: '32px 24px', boxShadow: '0 12px 32px rgba(15, 23, 42, 0.12)' }}>
             <h1 style={{ margin: '0 0 12px', color: '#0f172a' }}>Something went wrong</h1>
             <p style={{ margin: '0 0 12px', color: '#475569' }}>The app hit an unexpected error. Please reload the page or return home.</p>
-            {this.state.error && (
-              <pre style={{ margin: '0 0 20px', padding: '12px', background: '#F5F3FD', color: '#dc2626', borderRadius: '8px', fontSize: '12px', textAlign: 'left', overflowX: 'auto', whiteSpace: 'pre-wrap', maxHeight: '300px' }}>
-                {errorMsg}
-                {compStack ? `\n\nComponent Stack:\n${compStack}` : ''}
-              </pre>
-            )}
+            <p style={{ margin: '0 0 20px', color: '#64748b', fontSize: '13px' }}>Please retry. If the problem continues, contact your administrator. Technical details were saved for support.</p>
             <button type="button" onClick={() => window.location.reload()} style={{ border: 'none', background: '#8782BC', color: '#fff', borderRadius: '10px', padding: '10px 16px', cursor: 'pointer', fontWeight: 700, marginRight: '8px' }}>
               Try again
             </button>

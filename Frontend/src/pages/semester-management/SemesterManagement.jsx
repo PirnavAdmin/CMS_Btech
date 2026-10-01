@@ -344,7 +344,7 @@ function SemesterList() {
           </select>
         </div>
       </FilterPanel>
-      {loading ? <Empty icon={FiClock} title="Loading semesters..." /> : error ? <Empty icon={FiLayers} title={error} action={<button className="semester-primary" onClick={load}>Retry</button>} /> : visible.length ? (
+      {loading ? <Empty icon={FiClock} title="Loading semesters..." /> : error ? <Empty icon={FiLayers} title={error} action={<button className="semester-primary" onClick={load}>Retry</button>} isError /> : visible.length ? (
         <>
           <div className="semester-table-wrapper">
             <table className="semester-table">
@@ -842,7 +842,7 @@ function SemesterDetailsPage() {
   }, [id, setError])
 
   if (loading) return <Page><Empty icon={FiClock} title="Loading semester details..." /></Page>
-  if (error || !item) return <Page><div className="cm-profile-view" data-export-record><div className="cm-profile-top-bar"><Link className="cm-button secondary" to="/semester-management">&larr; Back to Semesters List</Link></div><Empty icon={FiLayers} title={error || 'Semester not found.'} /></div></Page>
+  if (error || !item) return <Page><div className="cm-profile-view" data-export-record><div className="cm-profile-top-bar"><Link className="cm-button secondary" to="/semester-management">&larr; Back </Link></div><Empty icon={FiLayers} title={error || 'Semester not found.'} /></div></Page>
   const semesterItem = { ...item, status: deriveLifecycleStatus(item, 'Upcoming', now) }
   return (
     <Page>
@@ -850,7 +850,7 @@ function SemesterDetailsPage() {
         <div className="cm-profile-top-bar">
           <ExportMenu mode="single" title="Semester Details" filename={`semester_${item.semesterName || item.id}_${item.academicYearName || ""}`} />
           <Link className="cm-button secondary" to="/semester-management">
-            &larr; Back to Semesters List
+            &larr; Back 
           </Link>
         </div>
         <SemesterProfile item={semesterItem} />
@@ -909,8 +909,8 @@ function InfoCard({ icon: Icon, title, rows }) {
   )
 }
 
-function Empty({ icon: Icon, title, action }) {
-  return <div className="semester-empty-state"><Icon /><h3>{title}</h3>{action}</div>
+function Empty({ icon: Icon, title, action, isError = false }) {
+  return <div className="semester-empty-state" role={isError ? 'alert' : undefined} data-message-tone={isError ? 'error' : undefined}><Icon /><h3>{title}</h3>{action}</div>
 }
 
 function Pagination({ page, pageCount, setPage }) {

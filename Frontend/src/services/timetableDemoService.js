@@ -42,20 +42,25 @@ export const timetableDemoService = {
     return initialTimetableDemoState()
   },
   generateAll(state, scope) { return this.save(generateDemoTimetables(state, scope)) },
-  generateMissing(state, scope) { return this.save(generateDemoTimetables(state, scope, { missingOnly: true })) },
-  saveEntry(state, entry) {
+  generateMissing(state, scope, { persist = true } = {}) {
+    const nextState = generateDemoTimetables(state, scope, { missingOnly: true })
+    return persist ? this.save(nextState) : nextState
+  },
+  saveEntry(state, entry, { persist = true } = {}) {
     const validation = validateDemoEntry(state, entry, entry.id)
     if (!validation.valid) return { state, validation }
     const schedules = { ...state.schedules }, current = schedules[entry.sectionId] || { sectionId: entry.sectionId, entries: [], publicationStatus: 'DRAFT' }
     const saved = { ...entry, ...demoEntryTimes(state.settings, entry.periodIndex, entry.duration || 1), generated: false }
     schedules[entry.sectionId] = { ...current, publicationStatus: 'DRAFT', entries: entry.id ? current.entries.map(row => row.id === entry.id ? saved : row) : [...current.entries, saved] }
-    return { state: this.save({ ...state, schedules }), validation }
+    const nextState = { ...state, schedules }
+    return { state: persist ? this.save(nextState) : nextState, validation }
   },
-  removeEntry(state, sectionId, entryId) {
+  removeEntry(state, sectionId, entryId, { persist = true } = {}) {
     const schedules = { ...state.schedules }, current = schedules[sectionId]
     if (!current) return state
     schedules[sectionId] = { ...current, publicationStatus: 'DRAFT', entries: current.entries.filter(row => row.id !== entryId) }
-    return this.save({ ...state, schedules })
+    const nextState = { ...state, schedules }
+    return persist ? this.save(nextState) : nextState
   },
   validate(state, scope) { return validateDemoSchedules(state, scope) },
   publish(state, scope) {

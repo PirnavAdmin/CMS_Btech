@@ -197,8 +197,8 @@ export default function SubjectManagement() {
             {loading ? (
               <div className="sm-loading">Loading subject directory…</div>
             ) : loadError ? (
-              <div className="sm-error">
-                {loadError}
+              <div className="sm-error" role="alert">
+                <span>{loadError}</span>
                 <button className="sm-btn sm-btn--secondary" onClick={loadSubjects}>Retry</button>
               </div>
             ) : !records.length ? (
