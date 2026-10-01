@@ -1,3 +1,4 @@
+import { GENERIC_ERROR_MESSAGE } from '../../utils/userError.js'
 import { collegeLogoValue } from '../../utils/collegeLogo'
 import { rememberCreated } from '../../utils/newestFirst'
 import useToastState from '../../hooks/useToastState'
@@ -65,7 +66,7 @@ const getApiErrorMessage = (error) => {
 
   const technicalMessage = /<!doctype|<html|ngrok|err_ngrok|failed to fetch|networkerror|https?:\/\//i.test(String(error?.message || ''))
   return technicalMessage || error?.response?.status >= 500
-    ? 'College service is temporarily unavailable. Please try again later.'
+    ? GENERIC_ERROR_MESSAGE
     : error?.message || 'The college could not be saved. Please try again.'
 }
 
@@ -639,8 +640,10 @@ export default function AddCollege() {
               </div>
             )}
             <div className="preview-hero-details">
-              <h3 className="preview-course-title">{values.collegeName.trim() || 'College Preview'}</h3>
-              <p className="preview-course-meta">{[values.collegeCode, values.collegeType === 'Other' ? values.collegeTypeOther : values.collegeType, values.universityName].filter(Boolean).join(' - ') || 'Affiliation & type details'}</p>
+              {values.collegeName.trim() && <h3 className="preview-course-title">{values.collegeName.trim()}</h3>}
+              {([values.collegeCode, values.collegeType === 'Other' ? values.collegeTypeOther : values.collegeType, values.universityName].some((value) => String(value || '').trim())) && (
+                <p className="preview-course-meta">{[values.collegeCode, values.collegeType === 'Other' ? values.collegeTypeOther : values.collegeType, values.universityName].filter((value) => String(value || '').trim()).join(' - ')}</p>
+              )}
             </div>
           </div>
 
@@ -705,13 +708,7 @@ export default function AddCollege() {
               fields: sec.fields.filter(([, val]) => val !== null && val !== undefined && String(val).trim() !== ''),
             })).filter((sec) => sec.fields.length > 0)
 
-            if (sections.length === 0) {
-              return (
-                <div className="preview-empty-hint">
-                  <span>Enter details in the form to preview here in real time.</span>
-                </div>
-              )
-            }
+            if (sections.length === 0) return null
 
             return sections.map((sec) => (
               <div key={sec.title} className="preview-section-group">

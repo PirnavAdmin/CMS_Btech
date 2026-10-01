@@ -1,3 +1,4 @@
+import DirectoryEmptyState from '../../../components/DirectoryEmptyState'
 import useCollegeState from '../../../hooks/useCollegeState'
 import { newestFirst, rememberCreated } from '../../../utils/newestFirst'
 import useToastState from '../../../hooks/useToastState'
@@ -366,6 +367,7 @@ const validate = (x) => {
   return e;
 };
 function State({ error, onRetry }) {
+  if (!error) return <DirectoryEmptyState title="No student admissions found." actionLabel="New Admission" to="/student-management/admissions/new" />;
   return (
     <section className="sp-state" data-message-tone={error ? 'error' : undefined} role={error ? 'alert' : undefined}>
       <FiAlertCircle />
@@ -1087,23 +1089,7 @@ export default function StudentProfile() {
               </table>
             </div>
             {!shown.length && (
-              <Empty title="No students match your search or filters.">
-                <button
-                  className="sp-text-button"
-                  onClick={() => {
-                    setQuery("");
-                    setFilters({
-                      department: "",
-                      course: "",
-                      branch: "",
-                      academicYear: "",
-                      status: "",
-                    });
-                  }}
-                >
-                  Clear filters
-                </button>
-              </Empty>
+              <DirectoryEmptyState title="No students found." actionLabel="New Admission" to="/student-management/admissions/new" />
             )}
             <footer className="sp-pagination">
               <span>

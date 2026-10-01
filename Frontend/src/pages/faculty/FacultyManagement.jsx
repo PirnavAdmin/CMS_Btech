@@ -3361,9 +3361,9 @@ export default function FacultyManagement() {
           ) : (
             <EmptyState
               title={categoryFaculty.length ? `No ${selectedCategory === 'Non-Teaching' ? 'staff' : 'faculty'} found` : `No ${selectedCategory === 'Non-Teaching' ? 'non-teaching staff' : 'teaching faculty'} records available`}
-              description={categoryFaculty.length ? 'Try changing your search or filters.' : `Add ${selectedCategory === 'Non-Teaching' ? 'staff members' : 'faculty members'} to start managing records.`}
-              action={categoryFaculty.length ? 'Clear Filters' : (selectedCategory === 'Non-Teaching' ? 'Add Non-Teaching Staff' : 'Add Teaching Faculty')}
-              onAction={categoryFaculty.length ? clear : () => addFaculty(selectedCategory)}
+              description={`Add ${selectedCategory === 'Non-Teaching' ? 'staff members' : 'faculty members'} to start managing records.`}
+              action={selectedCategory === 'Non-Teaching' ? 'Add Non-Teaching Staff' : 'Add Teaching Faculty'}
+              onAction={() => addFaculty(selectedCategory)}
             />
           )}
         </section>

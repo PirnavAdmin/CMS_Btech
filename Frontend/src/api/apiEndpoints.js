@@ -1,3 +1,4 @@
+import { GENERIC_ERROR_MESSAGE, userErrorMessage } from '../utils/userError.js'
 import { collegeRequest } from '../utils/collegeRequest.js'
 import { markApiResult } from '../utils/exportProvenance'
 import { readSubjectPages } from '../utils/subjectApiData'
@@ -41,7 +42,7 @@ export const SCREEN_EXPORT_ENDPOINTS = Object.freeze(Object.fromEntries([
 
 export class AuthRequestError extends Error {
   constructor(message, status = 0) {
-    super(message)
+    super(userErrorMessage(message, status))
     this.name = 'AuthRequestError'
     this.status = status
   }
@@ -365,7 +366,7 @@ const request = async (url, options = {}, retried = false, bypassDedupe = false)
     }
     if (response.status >= 500) {
       notifyApiUnavailable({ status: response.status })
-      const error = new Error('The server encountered an error while handling this request. Please try again shortly.')
+      const error = new Error(GENERIC_ERROR_MESSAGE)
       error.status = response.status
       error.backendMessage = validationMessage(body)
       error.correlationId = typeof body?.correlationId === 'string' ? body.correlationId : undefined
@@ -378,9 +379,9 @@ const request = async (url, options = {}, retried = false, bypassDedupe = false)
       404: 'Record not found.',
       409: 'The email or mobile number is already in use.',
       422: 'Some submitted values are invalid.',
-      500: 'Something went wrong while completing your request. Please try again.',
+      500: GENERIC_ERROR_MESSAGE,
     }[response.status] || 'The request could not be completed.'
-    const error = new Error(validationMessage(body) || fallback)
+    const error = new Error(userErrorMessage(validationMessage(body) || fallback, response.status))
     error.status = response.status
     throw error
   }
@@ -407,7 +408,7 @@ const blobRequest = async (url, options = {}, retried = false) => {
   if (!response.ok) {
     const body = await readBody(response)
     if (response.status >= 500) notifyApiUnavailable({ status: response.status })
-    throw new AuthRequestError(response.status >= 500 ? 'The server could not prepare this download. Please try again shortly.' : validationMessage(body) || 'The download request could not be completed.', response.status)
+    throw new AuthRequestError(response.status >= 500 ? GENERIC_ERROR_MESSAGE : validationMessage(body) || 'The download request could not be completed.', response.status)
   }
   return { blob: await response.blob(), contentDisposition: response.headers.get('content-disposition') || '', contentType: response.headers.get('content-type') || '' }
 }
@@ -440,9 +441,9 @@ async function readExportFile(url) {
   if (/json|text\/html/i.test(result.contentType)) {
     let body
     try { body = JSON.parse(await result.blob.text()) } catch { /* Unexpected gateway page. */ }
-    throw new Error(validationMessage(body) || 'The server did not return an export file.')
+    throw new Error(validationMessage(body) || GENERIC_ERROR_MESSAGE)
   }
-  if (!result.blob.size) throw new Error('The server returned an empty export file.')
+  if (!result.blob.size) throw new Error(GENERIC_ERROR_MESSAGE)
   return result
 }
 
@@ -1117,7 +1118,7 @@ export const studentAdmissionStatusApi = {
       res = normalizeAdmission(await request(approving ? API_ENDPOINTS.studentAdmissions.approve(reqId) : API_ENDPOINTS.studentAdmissions.status(reqId), { method: approving ? 'PUT' : 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(approving ? { remarks: payload.remarks } : body) }))
     } catch (error) {
       if (error.status >= 500) {
-        error.message = `The admission server failed to update this application (HTTP ${error.status}). The decision could not be confirmed.${error.correlationId ? ` Reference: ${error.correlationId}.` : ''} Refresh to check its status and contact the administrator before retrying.`
+        error.message = GENERIC_ERROR_MESSAGE
       }
       throw error
     }
@@ -1125,7 +1126,7 @@ export const studentAdmissionStatusApi = {
     try {
       latest = await studentAdmissionStatusApi.get(reqId)
     } catch (error) {
-      error.message = `The server accepted the admission decision, but the updated status could not be loaded. Refresh to verify before retrying. ${error.message}`
+      error.message = GENERIC_ERROR_MESSAGE
       throw error
     }
     if (String(latest.status || '').trim().replaceAll(' ', '_').toUpperCase() !== newStatus) {
@@ -1320,7 +1321,7 @@ export const subjectApi = {
     try {
       return await readSubjectPages(page => request(withQuery(endpoint('/api/v1/subjects'), { ...params, ...page })))
     } catch (error) {
-      if (error.backendMessage) error.message = error.backendMessage
+      if (error.backendMessage) error.message = userErrorMessage(error.backendMessage, error.status)
       throw error
     }
   },

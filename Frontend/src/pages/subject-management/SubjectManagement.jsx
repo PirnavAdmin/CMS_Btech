@@ -203,8 +203,8 @@ export default function SubjectManagement() {
               </div>
             ) : !records.length ? (
               <EmptyState
-                title={filters.search ? `No subjects found for “${filters.search}”.` : activeFilterText.length ? 'No subjects match the selected academic filters.' : 'No subjects configured'}
-                description={activeFilterText.length ? 'Clear filters or choose another academic mapping.' : 'No subjects have been configured yet.'}
+                title="No subjects found."
+                description="Add a subject to get started."
                 action="Add Subject"
                 onAction={openAdd}
               />

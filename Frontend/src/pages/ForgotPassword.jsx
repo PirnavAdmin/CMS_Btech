@@ -1,3 +1,4 @@
+import { GENERIC_ERROR_MESSAGE } from '../utils/userError.js'
 import { showSuccess } from '../utils/toast'
 import useToastState from '../hooks/useToastState'
 import { useEffect, useMemo, useRef, useState } from 'react'
@@ -64,7 +65,7 @@ export default function ForgotPassword({ onBack }) {
             headers: { 'Content-Type': 'application/json', 'ngrok-skip-browser-warning': 'true' },
             body: JSON.stringify({ identifier: cleanContact })
           })
-          if (fbRes.status >= 500) notifyApiUnavailable({ status: fbRes.status })
+          if (fbRes.status >= 500) { notifyApiUnavailable({ status: fbRes.status }); throw new Error(GENERIC_ERROR_MESSAGE) }
           const fbData = await fbRes.json().catch(() => ({}))
           if (fbRes.ok && (fbData?.success || fbData?.data?.success)) {
             res = {

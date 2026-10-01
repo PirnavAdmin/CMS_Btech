@@ -1,3 +1,5 @@
+import { GENERIC_ERROR_MESSAGE } from '../../utils/userError.js'
+import DirectoryEmptyState from '../../components/DirectoryEmptyState'
 import { newestFirst, rememberCreated } from '../../utils/newestFirst'
 import { showSuccess } from '../../utils/toast'
 import useToastState from '../../hooks/useToastState'
@@ -109,7 +111,7 @@ const apiError = (error, fallback) => {
       data = raw;
     }
   }
-  if (status >= 500) return fallback || 'Unable to load departments right now. Please try again.';
+  if (status >= 500) return GENERIC_ERROR_MESSAGE;
   if (status === 401) return 'Your session has expired. Please sign in again.';
   if (status === 403) return "You don't have permission to manage departments.";
   if (data?.errors && typeof data.errors === 'object') {
@@ -180,7 +182,8 @@ const mapDepartment = (record, facultyList = []) => {
   const hodUserId = record.hodUserId ?? record.hodId ?? '';
   const departmentId = record.id ?? record.departmentId;
   const hodName = resolveHodName(record, facultyList);
-  const collegeId = record.collegeId ?? '';
+  // Faculty enrichment maps these rows again; preserve their original owner ID.
+  const collegeId = record.collegeNumericId ?? record.collegeId ?? '';
   const collegeName = record.collegeName ?? record.college?.name ?? '';
   const cachedDates = readCachedDeptDates(departmentId, record.departmentCode ?? record.code ?? record.name) || {};
   const startDate = String(record.startDate ?? record.StartDate ?? record.start_date ?? cachedDates.startDate ?? '').slice(0, 10);
@@ -193,7 +196,7 @@ const mapDepartment = (record, facultyList = []) => {
     id: departmentId,
     name: record.departmentName ?? record.name ?? '',
     code: record.departmentCode ?? record.code ?? '',
-    collegeId: collegeName || collegeId,
+    collegeId,
     collegeNumericId: collegeId,
     collegeName,
     hodUserId,
@@ -787,7 +790,7 @@ export default function DepartmentManagement() {
                     </table>
                   </div>
                   {!visible.length && (
-                    <p className="department-no-results">No departments match your search.</p>
+                    <DirectoryEmptyState title="No departments found." actionLabel="Add Department" onAction={() => { setForm(empty); setScreen('form'); }} />
                   )}
                   {!!visible.length && (
                     <div className="erp-table-pagination-wrap">

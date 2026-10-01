@@ -1,3 +1,4 @@
+import { GENERIC_ERROR_MESSAGE } from '../utils/userError.js'
 import { notifyApiUnavailable } from './apiFailureNotice'
 
 export const demoModules = ['College Management', 'Academic Years', 'Courses', 'Departments', 'Branches', 'Semesters', 'Sections', 'Student Admission', 'Student Profile', 'Student Promotion', 'Attendance', 'Examinations', 'Results']
@@ -43,7 +44,7 @@ export async function submitDemoRequest(request) {
         agreeToContact: values.consent,
       }),
     })
-    if (response.status >= 500) notifyApiUnavailable({ status: response.status })
+    if (response.status >= 500) { notifyApiUnavailable({ status: response.status }); throw new Error(GENERIC_ERROR_MESSAGE) }
     const text = await response.text()
     let body = null
     try { body = text ? JSON.parse(text) : null } catch { /* Reject unexpected proxy or HTML responses below. */ }
@@ -59,7 +60,7 @@ export async function submitDemoRequest(request) {
     if (error.name === 'AbortError') throw new Error('The request timed out. Please try again shortly.')
     if (error instanceof TypeError) {
       notifyApiUnavailable()
-      throw new Error('Unable to connect to the server. Check that the backend is running and try again.')
+      throw new Error(GENERIC_ERROR_MESSAGE)
     }
     throw error
   } finally {

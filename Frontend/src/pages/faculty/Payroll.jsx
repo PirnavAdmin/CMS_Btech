@@ -1,3 +1,4 @@
+import DirectoryEmptyState from '../../components/DirectoryEmptyState'
 import { collegeStorageKey } from '../../utils/collegeScope.js'
 import useCollegeState from '../../hooks/useCollegeState'
 import FilterPanel from '../../components/FilterPanel'
@@ -1014,7 +1015,7 @@ export default function Payroll() {
       </>
     )}
   </div>
-</td></tr>)}</tbody></table> : <p className="fp-empty">{emptyText}</p>}</div>{rows.length > PAGE_SIZE && <TablePagination currentPage={currentPage} totalPages={totalPages} onPageChange={setPage} />}</section>{selected && (() => {
+</td></tr>)}</tbody></table> : tab === 'Salary Records' && !loading && !error ? <DirectoryEmptyState title="No salary records found." actionLabel="Add Salary Structure" onAction={() => setEditingSalary({ isNew: true })} /> : <p className="fp-empty">{emptyText}</p>}</div>{rows.length > PAGE_SIZE && <TablePagination currentPage={currentPage} totalPages={totalPages} onPageChange={setPage} />}</section>{selected && (() => {
   const full = getFullBreakdownForRow(selected)
   const basic = full.basicSalary
   const hra = full.hra

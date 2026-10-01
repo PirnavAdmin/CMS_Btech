@@ -1,3 +1,4 @@
+import DirectoryEmptyState from '../../components/DirectoryEmptyState'
 import { newestFirst, rememberCreated } from '../../utils/newestFirst'
 import { showSuccess } from '../../utils/toast'
 import useToastState from '../../hooks/useToastState'
@@ -424,7 +425,7 @@ function CourseList() {
             </div>
           </>
         ) : (
-          <div className="course-empty"><strong>No courses match your filters.</strong><button className="cm-button" onClick={clearFilters}>Clear Filters</button></div>
+          <DirectoryEmptyState title="No courses found." actionLabel="Add Course" to="/courses/add" />
         )}
     </section>
     {pendingStatus && <StatusConfirmDialog entity="Course" name={`${pendingStatus.course.name} (${pendingStatus.course.code})`} nextStatus={pendingStatus.nextStatus} onCancel={() => { if (!isStatusSaving) { setPendingStatus(null); setCourseImpact(null) } }} onConfirm={confirmStatusChange} busy={isStatusSaving || impactChecking} blocked={Boolean(pendingStatus.blocked)} error={statusError} details={pendingStatus.nextStatus === 'Inactive' && courseImpact?.state === 'known' ? [['Associated Students', `${courseImpact.count} student${courseImpact.count === 1 ? '' : 's'}`]] : []} description={pendingStatus.blocked ? 'Deactivate is unavailable until all associated students are moved or removed from this course.' : pendingStatus.nextStatus === 'Active' ? 'This course will be marked active.' : 'No students are currently associated with this course. This course will be marked inactive for operations that exclude inactive courses.'} confirmLabel={pendingStatus.nextStatus === 'Inactive' ? 'Deactivate Course' : 'Activate Course'} />}

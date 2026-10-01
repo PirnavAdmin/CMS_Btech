@@ -379,7 +379,11 @@ function List() {
         </table>
       </div>
       <TablePagination currentPage={currentPage} totalPages={totalPages} onPageChange={setPage} />
-    </> : <div className="branch-empty">No branches match the current filters.</div> }
+    </> : !error && <div className="branch-empty">
+      <strong>No branches found.</strong>
+      <span>Add a branch to get started.</span>
+      <Link className="cm-button" to="/branches/add">Add Branch</Link>
+    </div> }
     </section>
   </Page>
 }

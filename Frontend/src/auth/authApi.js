@@ -1,3 +1,4 @@
+import { GENERIC_ERROR_MESSAGE, userErrorMessage } from '../utils/userError.js'
 import { getAccessToken } from './auth'
 import { ROLES } from './roles'
 import { notifyApiUnavailable } from '../api/apiFailureNotice'
@@ -16,7 +17,7 @@ const fetchWithApiNotice = async (...args) => {
 
 export class AuthRequestError extends Error {
   constructor(message = 'Invalid login credentials. Please check your details and try again.') {
-    super(message)
+    super(userErrorMessage(message))
     this.name = 'AuthRequestError'
   }
 }
@@ -70,7 +71,7 @@ const otpPayload = ({ contact, otp, purpose = 'LOGIN' }) => {
 
 const otpRequest = async (path, payload) => {
   if (!hasOtpRoute) {
-    throw new AuthRequestError('Verification is temporarily unavailable. Please try again later.')
+    throw new AuthRequestError(GENERIC_ERROR_MESSAGE)
   }
 
   const accessToken = otpAuthToken || localStorage.getItem('btech-access-token')
@@ -91,9 +92,9 @@ const otpRequest = async (path, payload) => {
   const data = await readResponseBody(response)
   if (!response.ok || data?.success === false) {
     const fallback = response.status >= 500
-      ? 'Verification is temporarily unavailable. Please try again later.'
+      ? GENERIC_ERROR_MESSAGE
       : response.status === 404
-      ? 'Verification is temporarily unavailable. Please try again later.'
+      ? GENERIC_ERROR_MESSAGE
       : 'The OTP request could not be completed.'
     throw new AuthRequestError(response.status >= 500 ? fallback : data?.message || fallback)
   }
@@ -115,13 +116,13 @@ export async function login({ identifier, password }, fallbackRole = ROLES.ADMIN
     })
   } catch {
     notifyApiUnavailable()
-    throw new AuthRequestError('Unable to sign in right now. Please try again.')
+    throw new AuthRequestError(GENERIC_ERROR_MESSAGE)
   }
 
   if (!response.ok) {
     if (response.status >= 500) {
       notifyApiUnavailable({ status: response.status })
-      throw new AuthRequestError('The sign-in service is temporarily unavailable. Please try again shortly.')
+      throw new AuthRequestError(GENERIC_ERROR_MESSAGE)
     }
     throw new AuthRequestError()
   }
@@ -131,7 +132,7 @@ export async function login({ identifier, password }, fallbackRole = ROLES.ADMIN
     if (!session?.user?.role) throw new Error('Malformed authentication response')
     return session
   } catch {
-    throw new AuthRequestError('Unable to sign in right now. Please try again.')
+    throw new AuthRequestError(GENERIC_ERROR_MESSAGE)
   }
 }
 
@@ -197,7 +198,7 @@ export async function resetPassword({ contact, otp, password }) {
 // Set VITE_REGISTRATION_API_URL when the pending-registration endpoint is available.
 export async function register({ fullName, email, mobile, password, confirmPassword, agreeToTerms }) {
   if (!registrationEndpoint) {
-    throw new AuthRequestError('Registration is temporarily unavailable. Please try again later.')
+    throw new AuthRequestError(GENERIC_ERROR_MESSAGE)
   }
 
   let response
@@ -212,7 +213,7 @@ export async function register({ fullName, email, mobile, password, confirmPassw
       body: JSON.stringify({ fullName, email, mobile, password, confirmPassword, agreeToTerms: Boolean(agreeToTerms) }),
     })
   } catch {
-    throw new AuthRequestError('Unable to submit your request right now. Please try again.')
+    throw new AuthRequestError(GENERIC_ERROR_MESSAGE)
   }
 
   const result = await readResponseBody(response)
@@ -223,7 +224,7 @@ export async function register({ fullName, email, mobile, password, confirmPassw
     const fallback = response.status === 409
       ? 'An access request already exists for this email or mobile number.'
       : response.status >= 500
-        ? 'Registration is temporarily unavailable. Please try again later.'
+        ? GENERIC_ERROR_MESSAGE
         : 'Unable to submit your request. Please review your details and try again.'
     const message = validationMessage || result?.message
     const safeMessage = typeof message === 'string' && message.length <= 300 && !/stack\s*trace|exception|\bat\s+\S+\(/i.test(message)

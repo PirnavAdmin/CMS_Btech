@@ -1,3 +1,4 @@
+import DirectoryEmptyState from '../../components/DirectoryEmptyState'
 import { newestFirst, rememberCreated } from '../../utils/newestFirst'
 import useToastState from '../../hooks/useToastState'
 import ExportMenu, { PrintDetailsButton } from '../../components/ExportMenu'
@@ -403,7 +404,7 @@ function SemesterList() {
           <Pagination page={currentPage} pageCount={pageCount} setPage={setPage} />
         </>
       ) : (
-        <Empty icon={FiLayers} title="No semesters match the current filters." />
+        <DirectoryEmptyState title="No semesters found." actionLabel="Add Semester Structure" to="/semester-management/add" />
       )}
     </section>
   </Page>

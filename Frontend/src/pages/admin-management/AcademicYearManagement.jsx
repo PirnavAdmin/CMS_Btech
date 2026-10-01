@@ -1,3 +1,4 @@
+import DirectoryEmptyState from '../../components/DirectoryEmptyState'
 import { newestFirst, rememberCreated } from '../../utils/newestFirst'
 import { showWarning } from '../../utils/toast'
 import useToastState from '../../hooks/useToastState'
@@ -612,7 +613,7 @@ export default function AcademicYear() {
                     {!shown.length && (
                       <tr>
                         <td colSpan="7" style={{ textAlign: 'center', padding: '32px' }}>
-                          No academic years match your search or filter.
+                          <DirectoryEmptyState title="No academic years found." actionLabel="Add Academic Year" onAction={openAdd} />
                         </td>
                       </tr>
                     )}

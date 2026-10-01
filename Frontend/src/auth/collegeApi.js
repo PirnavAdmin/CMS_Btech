@@ -1,3 +1,4 @@
+import { GENERIC_ERROR_MESSAGE, userErrorMessage } from '../utils/userError.js'
 import { resolveCollegeLogo } from '../utils/collegeLogo'
 import { getAccessToken } from './auth'
 import { createApiUnavailableError, notifyApiUnavailable } from '../api/apiFailureNotice'
@@ -14,7 +15,7 @@ const friendlyValidationMessage = (errors) => {
 };
 
 const getErrorMessage = (data, status) => {
-  if (status >= 500) return "Something went wrong while completing your request. Please try again.";
+  if (status >= 500) return GENERIC_ERROR_MESSAGE;
   if (typeof data === "string") {
     const message = data.trim();
     try {
@@ -69,8 +70,8 @@ const createClient = (baseUrl, prefix) => {
     const data = contentType.includes("application/json") ? await response.json() : await response.text();
     if (!response.ok) {
       if (response.status >= 500) notifyApiUnavailable({ status: response.status });
-      const error = new Error(getErrorMessage(data, response.status));
-      error.response = { data, status: response.status };
+      const error = new Error(userErrorMessage(getErrorMessage(data, response.status), response.status));
+      error.response = { data: response.status >= 500 ? { message: GENERIC_ERROR_MESSAGE } : data, status: response.status };
       throw error;
     }
     return { data, status: response.status, headers: response.headers };
