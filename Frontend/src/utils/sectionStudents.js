@@ -47,19 +47,55 @@ export function sectionStudentProfiles(profiles, admissions) {
   })
 }
 
+const normalizeBranchKey = (name = '') => {
+  const s = String(name || '').trim().toLowerCase().replace(/[^a-z0-9]/g, '')
+  if (/mech|mechanical/i.test(s)) return 'mech'
+  if (/cse|computerscience|computer/i.test(s)) return 'cse'
+  if (/ece|electronicsandcommunication|electronicscommunication/i.test(s)) return 'ece'
+  if (/eee|electricalandelectronics|electricalelectronics/i.test(s)) return 'eee'
+  if (/civil/i.test(s)) return 'civil'
+  if (/aiml|artificialintelligenceandmachinelearning/i.test(s)) return 'aiml'
+  if (/aids|artificialintelligenceanddatascience/i.test(s)) return 'aids'
+  if (/it|informationtechnology/i.test(s)) return 'it'
+  return s
+}
+
+const normSemNum = value => String(value || '').match(/\d+/)?.[0] || ''
+const normYearStr = value => String(value || '').replace(/[^0-9]/g, '').slice(0, 4)
+
 export function matchesSectionStudent(student, section) {
-  // IDs are authoritative; labels are used only when an ID is absent.
+  // IDs are authoritative; labels/normalized keys are used only when an ID is absent.
   const matches = key => {
     const studentId = text(student[`${key}Id`])
     const targetId = text(key === 'section' ? section.id : section[`${key}Id`])
     if (studentId && targetId) return studentId === targetId
+
+    if (key === 'branch') {
+      const sBranch = normalizeBranchKey(student.branch || student.branchName || student.branchCode)
+      const tBranch = normalizeBranchKey(section.branch || section.branchName || section.branchCode)
+      if (sBranch && tBranch) return sBranch === tBranch || sBranch.includes(tBranch) || tBranch.includes(sBranch)
+    }
+    if (key === 'semester') {
+      const sSem = normSemNum(student.semester || student.semesterName || student.semesterId)
+      const tSem = normSemNum(section.semester || section.semesterName || section.semesterId || section.semesterNumber)
+      if (sSem && tSem) return sSem === tSem
+    }
+    if (key === 'academicYear') {
+      const sYear = normYearStr(student.academicYear || student.academicYearName)
+      const tYear = normYearStr(section.academicYear || section.academicYearName)
+      if (sYear && tYear) return sYear === tYear
+    }
+
     const normalize = key === 'section' ? sectionLabel : label
-    const studentName = normalize(student[key])
-    const targetName = normalize(key === 'section' ? section.name : section[key])
-    return studentName && targetName ? studentName === targetName : null
+    const studentName = normalize(student[key] || student[`${key}Name`])
+    const targetName = normalize(key === 'section' ? section.name : section[key] || section[`${key}Name`])
+    if (studentName && targetName) return studentName === targetName
+    return null
   }
   if (matches('branch') !== true) return false
   if (['course', 'semester', 'academicYear'].some(key => matches(key) === false)) return false
   if (text(student.sectionId) || text(student.section)) return matches('section') === true
   return true
 }
+
+

@@ -687,10 +687,12 @@ function CreditsManagement() {
   const contextSubjects = useMemo(() => subjectContexts.filter(subject =>
     Object.entries(subjectFilters).every(([key, value]) => !value || String(subject[key] ?? '') === String(value))
   ), [subjectContexts, subjectFilters])
+  const subjectFiltersReady = Boolean(subjectFilters.academicYearId && subjectFilters.courseId && subjectFilters.branchId && subjectFilters.semesterId)
   const filteredSubjects = useMemo(() => {
+    if (!subjectFiltersReady) return []
     const query = subjectSearch.trim().toLowerCase()
     return contextSubjects.filter(subject => !query || `${subject.subjectCode || ''} ${subject.subjectName || ''}`.toLowerCase().includes(query))
-  }, [contextSubjects, subjectSearch])
+  }, [contextSubjects, subjectSearch, subjectFiltersReady])
   const subjectCreditExportColumns = [
     { label: 'Subject Code', value: subject => subject.subjectCode || subject.code || '' },
     { label: 'Subject Name', value: subject => subject.subjectName || subject.name || '' },
@@ -2039,7 +2041,7 @@ function CreditsManagement() {
                   title="Subject Credits"
                   filename="subject-credits"
                   scope="Matching subject credits"
-                  loading={creditLoading || Boolean(subjectApiError)}
+                  loading={creditLoading || Boolean(subjectApiError) || !subjectFiltersReady}
                 />
               )}
             >
@@ -2095,6 +2097,15 @@ function CreditsManagement() {
                       <tr><td colSpan="3">Loading subjects and credits...</td></tr>
                     ) : subjectApiError ? (
                       <tr><td colSpan="3"><div className="cm-empty cm-empty--error" role="alert"><p>{subjectApiError}</p><button type="button" className="cm-btn cm-btn-light" onClick={reloadCreditData}>Retry</button></div></td></tr>
+                    ) : !subjectFiltersReady ? (
+                      <tr>
+                        <td colSpan="3">
+                          <EmptyState
+                            title="Select Academic Filters"
+                            message="Choose an academic year, course, branch, and semester to view subject credits."
+                          />
+                        </td>
+                      </tr>
                     ) : filteredSubjects.length === 0 ? (
                       <tr>
                         <td colSpan="3">

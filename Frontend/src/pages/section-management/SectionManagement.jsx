@@ -12,12 +12,14 @@ import SearchableSelect from '../../components/SearchableSelect'
 import CompactSummary from '../../components/CompactSummary'
 import StatusBadge from '../../components/StatusBadge'
 import { showDeactivationBlocked } from '../../components/DeactivationBlockedDialog'
-import { academicYearApi, branchApi, courseApi, sectionAllocationApi, sectionApi, sectionAssignmentApi } from '../../api/apiEndpoints'
+import { academicYearApi, branchApi, courseApi, sectionAllocationApi, sectionApi, sectionAssignmentApi, studentAdmissionApi, studentProfilesApi, studentApi } from '../../api/apiEndpoints'
 import { getSemesters } from '../../auth/collegeApi'
 import { getActiveAcademicYears, normalizeAcademicYear } from '../../utils/academicYearUtils'
 import { branchTypeLabel } from '../../utils/semesterUtils'
 import eventBus, { ERP_EVENTS } from '../../services/eventBus'
 import facultyService, { normalizeFaculty } from '../../services/facultyService'
+import studentService from '../../services/studentService'
+import { sectionStudentProfiles, matchesSectionStudent } from '../../utils/sectionStudents'
 import roomService from '../../services/roomService'
 import { useAcademic } from '../../context/AcademicContext'
 import './SectionManagement.css'
@@ -102,9 +104,10 @@ const teacherCandidatesForBranch = (faculty = [], branchName = '', branchCode = 
     })
     .map((member) => ({
       ...member,
-      employeeProfileId: member.employeeProfileId ?? member.EmployeeProfileId ?? member.employee_profile_id ?? '',
+      employeeProfileId: member.employeeProfileId ?? member.EmployeeProfileId ?? member.employee_profile_id ?? member.facultyId ?? member.id ?? member.userId ?? '',
       fullName: member.fullName || member.FullName || member.name || '',
-      employeeCode: member.employeeCode ?? member.EmployeeCode ?? member.employeeId,
+      employeeCode: member.employeeCode ?? member.EmployeeCode ?? member.employeeId ?? member.facultyCode ?? '',
+      designation: member.designation || member.Designation || member.designationName || member.title || '',
     }))
     .filter((member) => clean(member.employeeProfileId) && clean(member.fullName))
 }
