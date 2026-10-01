@@ -1995,7 +1995,7 @@ export default function RolesAndDesignations() {
                     Cancel
                   </button>
                   <button type="submit" className="sa-primary" disabled={isSavingRole}>
-                    <FiCheck /> {isSavingRole ? 'Saving Role…' : 'Save Role Profile'}
+                    <FiCheck /> {isSavingRole ? 'Saving Role...' : 'Save Role Profile'}
                   </button>
                 </footer>
               </form>
@@ -2359,7 +2359,7 @@ export default function RolesAndDesignations() {
                     Cancel
                   </button>
                   <button type="button" className="sa-primary rbac-btn-save-matrix" disabled={isSavingPerms} onClick={handleSavePermissions}>
-                    <FiCheck /> {isSavingPerms ? 'Saving Matrix…' : 'Save & Apply Permission Matrix'}
+                    <FiCheck /> {isSavingPerms ? 'Saving Matrix...' : 'Save & Apply Permission Matrix'}
                   </button>
                 </div>
               </footer>

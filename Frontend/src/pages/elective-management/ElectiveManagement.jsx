@@ -574,7 +574,7 @@ export default function ElectiveManagement() {
                     },
                   ].map(sec => ({
                     ...sec,
-                    fields: sec.fields.filter(([, val]) => val !== null && val !== undefined && String(val).trim() !== '' && String(val).trim() !== 'â€”'),
+                    fields: sec.fields.filter(([, val]) => val !== null && val !== undefined && String(val).trim() !== '' && String(val).trim() !== '-'),
                   })).filter(sec => sec.fields.length > 0)
 
                   if (sections.length === 0) {
@@ -591,7 +591,7 @@ export default function ElectiveManagement() {
                         <div className="preview-hero-badge">{groupForm.groupCode ? groupForm.groupCode.slice(0, 4).toUpperCase() : 'ELEC'}</div>
                         <div className="preview-hero-details">
                           <h3 className="preview-course-title" style={{ margin: 0 }}>{groupForm.groupName || 'Elective Group Preview'}</h3>
-                          <p className="preview-course-meta" style={{ margin: '2px 0 0', color: '#64748B', fontSize: '0.78rem' }}>{[groupForm.groupCode, groupForm.electiveType, groupForm.credits && `${groupForm.credits} Credits`].filter(Boolean).join(' â€¢ ')}</p>
+                          <p className="preview-course-meta" style={{ margin: '2px 0 0', color: '#64748B', fontSize: '0.78rem' }}>{[groupForm.groupCode, groupForm.electiveType, groupForm.credits && `${groupForm.credits} Credits`].filter(Boolean).join('   ')}</p>
                         </div>
                       </div>
                       {sections.map(sec => (

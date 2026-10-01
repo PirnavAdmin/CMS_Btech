@@ -60,9 +60,9 @@ const isPastYear = (x) => {
   return now() > end;
 };
 const formatDate = (x) => {
-  if (!x) return 'â€”';
+  if (!x) return '-';
   const parsed = d(x);
-  return isNaN(parsed.getTime()) ? 'â€”' : parsed.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+  return isNaN(parsed.getTime()) ? '-' : parsed.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
 };
 const days = (x) => Math.ceil((d(x) - now()) / DAY);
 const duration = (a, b) => {
@@ -422,7 +422,7 @@ export default function AcademicYear() {
                   <p className="cm-profile-subtitle">
                     <span>Duration: </span>
                     <strong>{duration(selected.startDate, selected.endDate)} days</strong>
-                    <span> ({formatDate(selected.startDate)} â€” {formatDate(selected.endDate)})</span>
+                    <span> ({formatDate(selected.startDate)} - {formatDate(selected.endDate)})</span>
                   </p>
                 </div>
               </div>
@@ -459,7 +459,7 @@ export default function AcademicYear() {
                   <p className="eyebrow">Active Academic Context</p>
                   <h2>{active.name}</h2>
                   <p>
-                    {formatDate(active.startDate)} â€” {formatDate(active.endDate)}
+                    {formatDate(active.startDate)} - {formatDate(active.endDate)}
                   </p>
                   <StatusBadge status="ACTIVE" />
                 </div>

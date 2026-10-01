@@ -619,7 +619,7 @@ function CourseForm() {
               },
             ].map((sec) => ({
               ...sec,
-              fields: sec.fields.filter(([, val]) => val !== null && val !== undefined && String(val).trim() !== '' && String(val).trim() !== 'â€”'),
+              fields: sec.fields.filter(([, val]) => val !== null && val !== undefined && String(val).trim() !== '' && String(val).trim() !== '-'),
             })).filter((sec) => sec.fields.length > 0)
 
             if (sections.length === 0) {
@@ -640,7 +640,7 @@ function CourseForm() {
                     <h3 className="preview-course-title">{value.name.trim() || 'Course Preview'}</h3>
                     <p className="preview-course-meta">
                       {value.durationValue ? `${value.durationValue} Years` : ''}
-                      {value.semesters ? ` â€¢ ${value.semesters} Semesters` : ''}
+                      {value.semesters ? `   ${value.semesters} Semesters` : ''}
                     </p>
                   </div>
                 </div>
@@ -756,7 +756,7 @@ function CourseDetails() {
             </div>
             <div className="cm-profile-header-info">
               <div className="cm-profile-badges">
-                <span className="cm-badge cm-badge-code">Code: {course.code || 'â€”'}</span>
+                <span className="cm-badge cm-badge-code">Code: {course.code || '-'}</span>
                 <span className="cm-badge cm-badge-type">{course.type || 'Undergraduate'}</span>
                 <span className={`cm-status-badge ${String(course.status || 'Active').toLowerCase()}`}>
                   {course.status || 'Active'}
@@ -765,7 +765,7 @@ function CourseDetails() {
               <h1 className="cm-profile-title">{course.name || 'Course'}</h1>
               <p className="cm-profile-subtitle">
                 <span>Department: </span>
-                <strong>{department?.name || course.department || 'â€”'}</strong>
+                <strong>{department?.name || course.department || '-'}</strong>
                 {duration && <span> Â| {duration}</span>}
                 {course.semesters && <span> Â| {course.semesters} Semesters</span>}
               </p>
@@ -849,7 +849,7 @@ export function CourseStructure() {
       <Field label="Year"><input type="number" min="1" max="4" value={form.yearNumber} onChange={e => setForm({ ...form, yearNumber: e.target.value })} /></Field>
       <Field label="Semester"><select value={form.semesterId} onChange={e => { const option = semesterOptions.find(x => String(x.semesterId) === e.target.value); const number = Number(option?.semesterNumber || form.semesterNumber); setForm({ ...form, semesterId: e.target.value, semesterNumber: number, semesterName: option?.semesterName || form.semesterName, yearNumber: Math.ceil(number / 2) }); setSemester(number) }}><option value="">Select semester</option>{semesterOptions.map(x => <option key={x.semesterId} value={x.semesterId}>{x.semesterName || `Semester ${x.semesterNumber}`}</option>)}</select></Field>
       <Field label="Semester Name"><input value={form.semesterName} readOnly /></Field>
-      <button className="cm-button" disabled={saving} onClick={submit}>{saving ? 'Savingâ€¦' : editing ? 'Update Structure' : 'Add Structure'}</button>
+      <button className="cm-button" disabled={saving} onClick={submit}>{saving ? 'Saving...' : editing ? 'Update Structure' : 'Add Structure'}</button>
       {editing && <button className="cm-button secondary" onClick={() => setEditing(null)}>Cancel</button>}
     </section>
     <section className="cm-panel cm-table-wrap"><table className="cm-table"><thead><tr><th>Year</th><th>Semester</th><th>Name</th><th>Status</th><th>Action</th></tr></thead><tbody>{pageRows.map(x => <tr key={x.structureId}><td>{x.yearNumber}</td><td>{x.semesterNumber}</td><td>{x.semesterName}</td><td>{Number(x.status) === 0 ? 'Deactive' : 'Active'}</td><td><button className="cm-button" onClick={() => edit(x)}><FiEdit2 className="module-action-icon module-action-icon--edit" /> Edit</button></td></tr>)}</tbody></table>{loading ? <div className="cm-empty">Loading structures...</div> : !visible.length ? <div className="cm-empty">No structure configured for Semester {semester}.</div> : <TablePagination page={currentPage} totalPages={totalPages} onPageChange={setPage} />}</section>

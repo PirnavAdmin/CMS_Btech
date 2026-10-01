@@ -20,9 +20,9 @@ const PAGE_SIZE = 5
 const TABS = ['Leave Requests', 'Leave History', 'Leave Balances', 'Leave Types', 'Leave Policies']
 const today = () => { const date = new Date(); return [date.getFullYear(), String(date.getMonth() + 1).padStart(2, '0'), String(date.getDate()).padStart(2, '0')].join('-') }
 const typeOf = employee => employee?.employeeCategory === 'Non-Teaching' ? 'Non-Teaching' : 'Teaching'
-const branchOf = employee => employee?.branch || employee?.branchName || employee?.department || 'Ã¢â‚¬â€'
+const branchOf = employee => employee?.branch || employee?.branchName || employee?.department || '-'
 const statusClass = value => String(value || '').toLowerCase().replace(/\s+/g, '-')
-const dateLabel = value => value ? new Date(`${String(value).slice(0, 10)}T00:00:00`).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : 'Ã¢â‚¬â€'
+const dateLabel = value => value ? new Date(`${String(value).slice(0, 10)}T00:00:00`).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : '-'
 const range = (from, to) => !from || !to ? '?' : from === to ? dateLabel(from) : `${new Date(`${from}T00:00:00`).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' })} - ${dateLabel(to)}`
 const initials = value => String(value || 'Employee').replace(/^(Dr|Prof|Mr|Ms|Mrs)\.\s*/i, '').split(' ').filter(Boolean).slice(0, 2).map(word => word[0]).join('').toUpperCase()
 const genderRestrictedLeave = type => {
@@ -268,7 +268,7 @@ export default function FacultyLeaveManagement() {
   const pages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE))
   const currentPage = Math.min(page, pages)
   const visible = filtered.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE)
-  const branches = [...new Set(faculty.map(branchOf).filter(value => value && value !== 'Ã¢â‚¬â€'))]
+  const branches = [...new Set(faculty.map(branchOf).filter(value => value && value !== '-'))]
   const departments = branches
   const summary = [['Total Requests', requests.length], ['Pending', requests.filter(item => item.status === 'Pending').length], ['Approved', requests.filter(item => item.status === 'Approved').length], ['On Leave', requests.filter(item => item.status === 'Approved' && item.from <= today() && item.to >= today()).length]]
   const title = tab.toUpperCase()
@@ -442,7 +442,7 @@ function LeaveList({ onCreate, tab, rows, leaveTypes, getBalance, onView, onEdit
           <td>{row.code}</td>
           <td>{row.category || 'Regular'}</td>
           <td>{row.payCategory}</td>
-          <td>{row.description || 'Ã¢â‚¬â€'}</td>
+          <td>{row.description || '-'}</td>
           <td><Status value={row.status} /></td>
           <td>
             <Actions>
@@ -467,9 +467,9 @@ function LeaveList({ onCreate, tab, rows, leaveTypes, getBalance, onView, onEdit
   if (tab === 'Leave Balances') return <DataTable headers={['Employee ID', 'Employee', 'Faculty Type', 'Department', 'Applicable Policy', 'Entitled', 'Used', 'Pending', 'Available', 'Action']}>{rows.map(({ employee, policy }) => {
     if (!employee) return null
     const { totals } = getBalance(employee, policy)
-    return <tr key={employee.id}><td>{employee.employeeId || employee.id}</td><td><Employee employee={employee} /></td><td>{typeOf(employee)}</td><td>{employee.department || 'Ã¢â‚¬â€'}</td><td>{policy ? policy.name : <span className="flm-unassigned">Not Assigned</span>}</td>{['entitled', 'used', 'pending', 'available'].map(key => <td key={key}>{totals[key] ?? 0}</td>)}<td><Actions><Action title="View leave balance" onClick={() => onView({ employee, policy })}><FiEye /></Action></Actions></td></tr>
+    return <tr key={employee.id}><td>{employee.employeeId || employee.id}</td><td><Employee employee={employee} /></td><td>{typeOf(employee)}</td><td>{employee.department || '-'}</td><td>{policy ? policy.name : <span className="flm-unassigned">Not Assigned</span>}</td>{['entitled', 'used', 'pending', 'available'].map(key => <td key={key}>{totals[key] ?? 0}</td>)}<td><Actions><Action title="View leave balance" onClick={() => onView({ employee, policy })}><FiEye /></Action></Actions></td></tr>
   })}</DataTable>
-  return <DataTable headers={['Request ID', 'Employee', 'Faculty Type', 'Department', 'Leave Type', 'Duration', 'Days', 'Applied On', 'Status', 'Action']}>{rows.map(row => <tr key={row.id}><td>{row.id}</td><td><Employee employee={row.employee || {}} /></td><td>{typeOf(row.employee)}</td><td>{row.employee?.department || 'Ã¢â‚¬â€'}</td><td>{leaveTypes.find(type => type.id === row.typeId)?.name || row.leaveTypeName || 'Unavailable'}</td><td>{range(row.from, row.to)}</td><td>{row.days ?? 1}</td><td>{dateLabel(row.applied)}</td><td><Status value={row.status} /></td><td><Actions><Action title="View request" onClick={() => onView(row)}><FiEye /></Action></Actions></td></tr>)}</DataTable>
+  return <DataTable headers={['Request ID', 'Employee', 'Faculty Type', 'Department', 'Leave Type', 'Duration', 'Days', 'Applied On', 'Status', 'Action']}>{rows.map(row => <tr key={row.id}><td>{row.id}</td><td><Employee employee={row.employee || {}} /></td><td>{typeOf(row.employee)}</td><td>{row.employee?.department || '-'}</td><td>{leaveTypes.find(type => type.id === row.typeId)?.name || row.leaveTypeName || 'Unavailable'}</td><td>{range(row.from, row.to)}</td><td>{row.days ?? 1}</td><td>{dateLabel(row.applied)}</td><td><Status value={row.status} /></td><td><Actions><Action title="View request" onClick={() => onView(row)}><FiEye /></Action></Actions></td></tr>)}</DataTable>
 }
 
 function LeaveDialog({ dialog, faculty, leaveTypes, policies, academicYears, getBalance, onClose, onSaveType, onToggleType, onSavePolicy, onActivate, onDecision, onSaveRequest }) {
@@ -627,7 +627,7 @@ function TypeDialog({ item = {}, onClose, onSave, page = false }) {
               },
             ].map(sec => ({
               ...sec,
-              fields: sec.fields.filter(([, val]) => val !== null && val !== undefined && String(val).trim() !== '' && String(val).trim() !== 'Ã¢â‚¬â€'),
+              fields: sec.fields.filter(([, val]) => val !== null && val !== undefined && String(val).trim() !== '' && String(val).trim() !== '-'),
             })).filter(sec => sec.fields.length > 0)
 
             if (sections.length === 0) {
@@ -787,7 +787,7 @@ function PolicyDialog({ item = {}, leaveTypes, academicYears, onClose, onSave })
                           entitlements: data.entitlements.map(value => String(value.typeId) === String(type.id) ? { ...value, maxDays: event.target.value === '' ? '' : Number(event.target.value) } : value)
                         })}
                       />
-                    ) : <span style={{ color: 'var(--text-muted)' }}>Ã¢â‚¬â€</span>}
+                    ) : <span style={{ color: 'var(--text-muted)' }}>-</span>}
                   </td>
                   <td>
                     {isEnabled ? (
@@ -955,7 +955,7 @@ function RequestLeaveDialog({ faculty, leaveTypes, policies, onClose, onSave }) 
               },
             ].map(sec => ({
               ...sec,
-              fields: sec.fields.filter(([, val]) => val !== null && val !== undefined && String(val).trim() !== '' && String(val).trim() !== 'Ã¢â‚¬â€'),
+              fields: sec.fields.filter(([, val]) => val !== null && val !== undefined && String(val).trim() !== '' && String(val).trim() !== '-'),
             })).filter(sec => sec.fields.length > 0)
 
             if (sections.length === 0) {
@@ -1028,7 +1028,7 @@ function BalanceTable({ employee, policy, leaveTypes, getBalance }) {
             const available = totals?.available ?? Math.max(0, Number(entitled) - Number(used) - Number(pending))
             return (
               <tr key={rule.typeId}>
-                <td>{typeName} ({typeInfo?.code || 'Ã¢â‚¬â€'})</td>
+                <td>{typeName} ({typeInfo?.code || '-'})</td>
                 <td>{entitled}</td>
                 <td>{used}</td>
                 <td>{pending}</td>

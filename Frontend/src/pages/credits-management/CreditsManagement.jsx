@@ -2076,7 +2076,7 @@ function CreditsManagement() {
 
                   <tbody>
                     {creditLoading ? (
-                      <tr><td colSpan="3">Loading subjects and credits…</td></tr>
+                      <tr><td colSpan="3">Loading subjects and credits...</td></tr>
                     ) : subjectApiError ? (
                       <tr><td colSpan="3"><div className="cm-empty cm-empty--error" role="alert"><p>{subjectApiError}</p><button type="button" className="cm-btn cm-btn-light" onClick={reloadCreditData}>Retry</button></div></td></tr>
                     ) : !academicSelectionReady ? (
