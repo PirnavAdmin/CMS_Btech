@@ -496,6 +496,37 @@
     font-size: .88rem;
 }
 
+.em-subject-profile .cm-profile-top-bar {
+    justify-content: flex-end;
+}
+
+.em-subject-profile .cm-profile-banner {
+    min-height: 180px;
+}
+
+.em-subject-profile .cm-info-rows {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+@media (max-width: 1100px) {
+    .em-subject-profile .cm-info-rows {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 600px) {
+    .em-subject-profile .cm-info-rows {
+        grid-template-columns: 1fr;
+    }
+}
+
+.em-subject-view-details {
+    width: 100%;
+    overflow: hidden;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+}
+
 .em-subject-edit-grid {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));

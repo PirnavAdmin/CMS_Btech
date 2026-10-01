@@ -188,6 +188,7 @@ export const API_ENDPOINTS = Object.freeze({
     policies: endpoint('/api/v1/faculty-leave/policies'),
     policy: id => endpoint('/api/v1/faculty-leave/policies/' + id),
     activate: id => endpoint('/api/v1/faculty-leave/policies/' + id + '/activate'),
+    deactivate: id => endpoint('/api/v1/faculty-leave/policies/' + id + '/deactivate'),
   }),
   facultyPayroll: Object.freeze({
     list: endpoint('/api/v1/faculty-payroll'),
@@ -710,6 +711,7 @@ export const sectionAssignmentApi = {
     return listResponse(response)
   },
   assign: async (sectionId, assignment) => request(API_ENDPOINTS.sections.assignStudents(sectionId), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ studentIds: [Number(assignment.studentId)] }) }),
+  assignMany: async (sectionId, studentIds) => request(API_ENDPOINTS.sections.assignStudents(sectionId), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ studentIds: [...new Set(studentIds.map(Number))] }) }),
   remove: async (sectionId, assignmentId) => {
     await request(API_ENDPOINTS.sections.student(sectionId, assignmentId), { method: 'DELETE' })
   },
@@ -1319,6 +1321,7 @@ export const facultyLeaveApi = {
   createPolicy: async payload => normalizeRecord(await jsonRequest(API_ENDPOINTS.facultyLeave.policies, 'POST', payload)),
   updatePolicy: async (id, payload) => normalizeRecord(await jsonRequest(API_ENDPOINTS.facultyLeave.policy(requiredId(id, 'Policy ID')), 'PUT', payload)),
   activatePolicy: async id => request(API_ENDPOINTS.facultyLeave.activate(requiredId(id, 'Policy ID')), { method: 'POST' }),
+  deactivatePolicy: async id => request(API_ENDPOINTS.facultyLeave.deactivate(requiredId(id, 'Policy ID')), { method: 'POST' }),
 }
 export const facultyPayrollApi = {
   getAll: async params => listData(await request(withQuery(API_ENDPOINTS.facultyPayroll.list, params))),

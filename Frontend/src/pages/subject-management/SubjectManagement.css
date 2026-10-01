@@ -7,6 +7,15 @@
   margin: 0;
 }
 
+.sm-profile-view { gap:12px; }
+.sm-profile-view .cm-profile-card { overflow:hidden; border:1px solid var(--border,#e2e8f0); border-radius:16px; background:var(--surface,#fff); }
+.sm-profile-view .cm-profile-banner { min-height:180px; }
+.sm-profile-view .cm-profile-avatar-wrap { flex:0 0 100px; width:100px; height:100px; }
+.sm-profile-view .cm-profile-placeholder { font-size:34px; }
+.sm-profile-sections { display:flex; flex-direction:column; gap:16px; padding:20px 24px; }
+.sm-detail-loading { padding:24px; color:var(--text-muted,#64748b); }
+@media(max-width:600px) { .sm-profile-sections { padding:14px; } .sm-profile-view .cm-profile-banner { align-items:flex-start; } }
+
 .sm-header {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(0, 440px);

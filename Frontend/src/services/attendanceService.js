@@ -51,157 +51,43 @@ class AttendanceService {
 
   async getStudentsForAttendance(scope) {
     const sectionId = scope?.sectionId
-    const courseId = scope?.courseId
-    const courseCode = scope?.courseCode
-    const courseName = scope?.course
-    const branchId = scope?.branchId
-    const branchCode = scope?.branchCode
-    const branchName = scope?.branch
-    const semesterId = scope?.semesterId
-    const semesterName = scope?.semester
+    if (!sectionId) return []
 
-    // 1. If a sectionId is provided, load the assigned students for that section from section assignments
-    if (sectionId) {
-      try {
-        const assigned = await sectionAssignmentApi.listBySection(sectionId)
-        if (Array.isArray(assigned) && assigned.length > 0) {
-          const profiles = await studentService.getAllProfiles().catch(() => [])
-          const profileMap = new Map(profiles.map(p => [String(p.studentId || p.id), p]))
+    // Attendance must use the roster assigned to this exact section. Broad
+    // branch/profile fallbacks can mix students from another college when
+    // academic profile metadata is incomplete.
+    const assigned = await sectionAssignmentApi.listBySection(sectionId)
+    if (!Array.isArray(assigned) || assigned.length === 0) return []
 
-          return assigned.map((item) => {
-            const studentId = item.studentId ?? item.id
-            const profile = profileMap.get(String(studentId)) || {}
-            const personal = profile.personal || {}
-            const academic = profile.academic || {}
-            const name = item.fullName || item.studentName || personal.fullName || profile.name || item.name || 'Student'
-            const rollNumber = item.studentCode || item.rollNumber || item.enrollmentNo || academic.rollNumber || profile.rollNumber || ''
-            const registrationNumber = item.registrationNumber || profile.registrationNumber || rollNumber
+    const profiles = await studentService.getAllProfiles().catch(() => [])
+    const profileMap = new Map(profiles.map(profile => [
+      String(profile.studentId ?? profile.id ?? profile.student_id ?? ''),
+      profile,
+    ]))
+    const selectedCollegeId = String(scope?.collegeId ?? '')
+    const collegeIdOf = item => item?.collegeId ?? item?.CollegeId ?? item?.college_id ??
+      item?.academic?.collegeId ?? item?.academic?.college_id ??
+      item?.admission?.collegeId ?? item?.admission?.college_id ?? ''
 
-            return {
-              studentId,
-              id: studentId,
-              name,
-              rollNumber,
-              registrationNumber,
-              status: 'Present',
-            }
-          })
-        }
-      } catch (err) {
-        console.warn('Unable to load students directly by sectionId, falling back to scope lookup:', err)
-      }
+    return assigned.flatMap(item => {
+      const studentId = item.studentId ?? item.StudentId ?? item.id
+      const profile = profileMap.get(String(studentId ?? '')) || {}
+      const studentCollegeId = String(collegeIdOf(profile) || collegeIdOf(item) || '')
+      if (selectedCollegeId && studentCollegeId && studentCollegeId !== selectedCollegeId) return []
 
-      // 1b. Check all section assignments list if listBySection didn't find them
-      try {
-        const allAssigned = await sectionAssignmentApi.list().catch(() => [])
-        const matchedAssigned = allAssigned.filter(item => String(item.sectionId) === String(sectionId))
-        if (matchedAssigned.length > 0) {
-          const profiles = await studentService.getAllProfiles().catch(() => [])
-          const profileMap = new Map(profiles.map(p => [String(p.studentId || p.id), p]))
-
-          return matchedAssigned.map((item) => {
-            const studentId = item.studentId ?? item.id
-            const profile = profileMap.get(String(studentId)) || {}
-            const personal = profile.personal || {}
-            const academic = profile.academic || {}
-            const name = item.fullName || item.studentName || personal.fullName || profile.name || item.name || 'Student'
-            const rollNumber = item.studentCode || item.rollNumber || item.enrollmentNo || academic.rollNumber || profile.rollNumber || ''
-            const registrationNumber = item.registrationNumber || profile.registrationNumber || rollNumber
-
-            return {
-              studentId,
-              id: studentId,
-              name,
-              rollNumber,
-              registrationNumber,
-              status: 'Present',
-            }
-          })
-        }
-      } catch (err) {
-        console.warn('Unable to load all assignments fallback:', err)
-      }
-    }
-
-    // 2. Query students matching the academic scope from studentService
-    try {
-      const students = await studentService.getStudentsByScope({ ...scope, forceRefresh: true })
-      if (students && students.length > 0) {
-        return students.map((student) => {
-          const personal = student.personal || {}
-          const academic = student.academic || {}
-          return {
-            studentId: student.studentId || student.id,
-            id: student.studentId || student.id,
-            name: personal.fullName || student.name || student.studentName || 'Student',
-            rollNumber: academic.rollNumber || student.rollNumber || student.registrationNumber || '',
-            registrationNumber: student.registrationNumber || academic.rollNumber || '',
-            status: 'Present',
-          }
-        })
-      }
-    } catch (err) {
-      console.warn('studentService.getStudentsByScope failed:', err)
-    }
-
-    // 3. Fallback: if student profiles lack section assignment metadata, load all branch/semester students
-    if (sectionId || scope.section) {
-      const branchStudents = await studentService.getStudentsByScope({
-        ...scope,
-        sectionId: undefined,
-        section: undefined,
-        forceRefresh: true,
-      })
-      if (branchStudents && branchStudents.length > 0) {
-        return branchStudents.map((student) => {
-          const personal = student.personal || {}
-          const academic = student.academic || {}
-          return {
-            studentId: student.studentId || student.id,
-            id: student.studentId || student.id,
-            name: personal.fullName || student.name || student.studentName || 'Student',
-            rollNumber: academic.rollNumber || student.rollNumber || student.registrationNumber || '',
-            registrationNumber: student.registrationNumber || academic.rollNumber || '',
-            status: 'Present',
-          }
-        })
-      }
-    }
-
-    // 4. Final fallback: direct profile fetch and branch/sem match
-    try {
-      const allProfiles = await studentService.getAllProfiles({ forceRefresh: true }).catch(() => [])
-      const targetBranchKey = clean(branchCode || branchName || branchId).toLowerCase().replace(/[^a-z0-9]/g, '')
-      const targetSemDigits = String(semesterName || semesterId || '').match(/\d+/)?.[0] || ''
-
-      const matched = allProfiles.filter(p => {
-        const pBranch = clean(p.academic?.branch || p.academic?.branchCode || p.branch || '').toLowerCase().replace(/[^a-z0-9]/g, '')
-        const pSemDigits = String(p.academic?.semester || p.academic?.semesterId || p.semester || '').match(/\d+/)?.[0] || ''
-
-        const branchMatch = !targetBranchKey || !pBranch || pBranch.includes(targetBranchKey) || targetBranchKey.includes(pBranch)
-        const semMatch = !targetSemDigits || !pSemDigits || pSemDigits === targetSemDigits
-        return branchMatch && semMatch
-      })
-
-      if (matched.length > 0) {
-        return matched.map(student => {
-          const personal = student.personal || {}
-          const academic = student.academic || {}
-          return {
-            studentId: student.studentId || student.id,
-            id: student.studentId || student.id,
-            name: personal.fullName || student.name || student.studentName || 'Student',
-            rollNumber: academic.rollNumber || student.rollNumber || student.registrationNumber || '',
-            registrationNumber: student.registrationNumber || academic.rollNumber || '',
-            status: 'Present',
-          }
-        })
-      }
-    } catch (err) {
-      console.warn('Final profile fallback failed:', err)
-    }
-
-    return []
+      const personal = profile.personal || {}
+      const academic = profile.academic || {}
+      const name = item.fullName || item.FullName || item.studentName || personal.fullName || profile.name || item.name || 'Student'
+      const rollNumber = item.studentCode || item.StudentCode || item.rollNumber || item.enrollmentNo || academic.rollNumber || profile.rollNumber || ''
+      return [{
+        studentId,
+        id: studentId,
+        name,
+        rollNumber,
+        registrationNumber: item.registrationNumber || profile.registrationNumber || rollNumber,
+        status: 'Present',
+      }]
+    })
   }
 
   async recordAttendance(session) {

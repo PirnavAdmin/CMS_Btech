@@ -1163,7 +1163,7 @@
 .ym-hero-stat-icon svg { width: 17px; height: 17px; }
 /* Keep the welcome panel and its white KPI text visible despite the later
    generic .ym-card surface rule. */
-.ym-card.ym-welcome-card { color: #fff; background: linear-gradient(116deg, #5144bf 0%, #655bd7 46%, #398bd5 100%); }
+.ym-card.ym-welcome-card { color: #fff; background: linear-gradient(116deg, #7169A8 0%, #7E76B7 48%, #958CCB 100%); }
 .ym-card.ym-welcome-card .ym-welcome-greeting h2 { color: #fff; }
 .ym-card.ym-welcome-card .ym-welcome-greeting p { color: rgba(255,255,255,.88); }
 .ym-card.ym-welcome-card .ym-hero-stat { color: #fff; background: rgba(255,255,255,.13); }

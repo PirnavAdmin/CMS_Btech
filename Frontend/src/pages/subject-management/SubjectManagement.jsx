@@ -1,12 +1,13 @@
 import { useEffect, useMemo, useState } from 'react'
-import { useLocation, useNavigate } from 'react-router-dom'
-import { FiAlertTriangle, FiPlus, FiRotateCcw, FiSearch, FiX , FiArrowLeft} from 'react-icons/fi'
+import { useLocation, useNavigate, useParams } from 'react-router-dom'
+import { FiAlertTriangle, FiPlus, FiRotateCcw, FiSearch, FiX, FiArrowLeft, FiBookOpen } from 'react-icons/fi'
 import DashboardLayout from '../../layouts/DashboardLayout'
 import EmptyState from '../../components/EmptyState'
 import ExportMenu from '../../components/ExportMenu'
 import FilterPanel from '../../components/FilterPanel'
 import SearchableSelect from '../../components/SearchableSelect'
 import StatusBadge from '../../components/StatusBadge'
+import InfoCard from '../../components/InfoCard'
 import TableActionButton from '../../components/TableActionButton'
 import TablePagination, { PAGE_SIZE } from '../../components/TablePagination'
 import subjectService from '../../services/subjectService'
@@ -34,7 +35,7 @@ export default function SubjectManagement() {
   const [allMasters, setMasters] = useState({ years: [], courses: [], branches: [], semesters: [] })
   const masters = { ...allMasters, ...Object.fromEntries(['courses', 'branches', 'semesters'].map(type => [type, scopeRecords(allMasters[type])])) }
   const [filters, updateFilters] = useState({ search: '', academicYearId: '', courseId: '', branchId: '', level: '', semesterId: '', subjectType: '', status: '' })
-  const [form, setForm] = useState(blank), [editing, setEditing] = useState(null), [editorOpen, setEditorOpen] = useState(false), [viewing, setViewing] = useState(null), [saving, setSaving] = useState(false), [recentId, setRecentId] = useState('')
+  const [form, setForm] = useState(blank), [editing, setEditing] = useState(null), [editorOpen, setEditorOpen] = useState(false), [saving, setSaving] = useState(false), [recentId, setRecentId] = useState('')
   const [returnToElectives, setReturnToElectives] = useState(false)
   const [confirmingSubject, setConfirmingSubject] = useState(null), [statusSaving, setStatusSaving] = useState(false)
   const setFilters = next => { setPage(1); updateFilters(next) }
@@ -70,15 +71,13 @@ export default function SubjectManagement() {
   const formLevel = getAcademicLevelFromSemester(formSemesters.find(s => key(s.id) === key(form.semesterId)) || { semester: form.semester })
   const openAdd = () => { const activeYear = masters.years.find(year => year.isCurrent || String(year.status).toLowerCase() === 'active' || String(year.status).toLowerCase() === 'current'); setEditing(null); setForm({ ...blank(), academicYearId: selectedAcademicYearId || (activeYear ? key(activeYear.id) : '') }); setEditorOpen(true) }
   const closeEditor = () => { setEditing(null); setForm(blank()); setEditorOpen(false); if (returnToElectives) { setReturnToElectives(false); navigate('/elective-management') } }
-  const openEdit = s => { setViewing(null); setEditing(s); setForm({ ...blank(), ...s, departmentId: enrichSubject(s, masters).departmentId, academicYearId: key(s.academicYearId), courseId: key(s.courseId), branchId: key(s.branchId), semesterId: key(s.semesterId) }); setEditorOpen(true) }
+  const openEdit = s => { setEditing(s); setForm({ ...blank(), ...s, departmentId: enrichSubject(s, masters).departmentId, academicYearId: key(s.academicYearId), courseId: key(s.courseId), branchId: key(s.branchId), semesterId: key(s.semesterId) }); setEditorOpen(true) }
   useEffect(() => {
     const request = location.state?.subjectAction
     if (!request || !subjects.length) return
-    setReturnToElectives(true)
     const subject = subjects.find(item => key(item.id) === key(request.id) || key(item.subjectCode) === key(request.id))
     if (!subject) return
     if (request.mode === 'edit') openEdit(subject)
-    else setViewing(subject)
     navigate(location.pathname, { replace: true, state: null })
   }, [location.state, location.pathname, subjects, navigate, openEdit])
   const save = async e => { e.preventDefault(); const requiredFields = [['Academic Year', form.academicYearId], ['Course', form.courseId], ['Branch', form.branchId], ['Semester', form.semesterId], ['Subject Code', form.subjectCode], ['Subject Name', form.subjectName]]; const missingFields = requiredFields.filter(([, value]) => !String(value ?? '').trim()).map(([label]) => label); if (missingFields.length) return showError(`Please complete: ${missingFields.join(', ')}.`); if (!ELECTIVE_TYPES.includes(form.electiveType)) return showError('Select Elective Type.'); const selectedCourse = masters.courses.find(course => key(course.id) === key(form.courseId)); const selectedBranch = branches(form.courseId).find(branch => key(branch.id) === key(form.branchId)); if (!selectedCourse || !selectedBranch) return showError('Select a valid course and a branch belonging to that course.'); const numericFields = [['Credits', form.credits], ['Lecture hours', form.lectureHours], ['Tutorial hours', form.tutorialHours], ['Practical hours', form.practicalHours], ['Internal marks', form.internalMarks], ['External marks', form.externalMarks]]; if (numericFields.some(([, value]) => value !== '' && (!Number.isFinite(Number(value)) || Number(value) < 0))) return showError('Credits, hours, and marks must be non-negative numbers.'); if (subjects.some(s => key(s.id) !== key(editing?.id) && s.subjectCode?.toLowerCase() === form.subjectCode.trim().toLowerCase())) return showError('Subject code already exists.'); const semester = formSemesters.find(s => key(s.id) === key(form.semesterId)); if (!semester) return showError('Select a valid semester for this course and branch.'); const payload = { ...form, credits: Number(form.credits || 0), semester: semester.semesterName || semester.name || `Semester ${semNo(semester)}`, academicYear: entityName(masters.years, form.academicYearId), course: entityName(masters.courses, form.courseId), branch: entityName(masters.branches, form.branchId) }; setSaving(true); try { if (editing) { await subjectService.updateSubject(editing.id, payload); showSuccess('Subject updated successfully') } else { const created = await subjectService.createSubject(payload); setRecentId(created?.id || ''); setPage(1); showSuccess('Subject created successfully') } closeEditor(); await loadSubjects() } catch (err) { showError(err.message || 'Failed to save subject.') } finally { setSaving(false) } }
@@ -235,7 +234,7 @@ export default function SubjectManagement() {
                             <button
                               type="button"
                               className="subject-name-link table-cell-truncate"
-                              onClick={() => setViewing(s)}
+                              onClick={() => navigate(`/subject-management/${s.id}`, { state: { returnTo: location.pathname } })}
                               title={`Click to view details for ${s.subjectName}`}
                             >
                               {s.subjectName}
@@ -257,7 +256,7 @@ export default function SubjectManagement() {
                         <td className="table-center"><StatusBadge value={s.status} /></td>
                         <td className="table-center">
                           <div className="sm-row-actions">
-                            <TableActionButton type="view" ariaLabel={`View ${s.subjectCode}`} onClick={() => setViewing(s)} />
+                            <TableActionButton type="view" ariaLabel={`View ${s.subjectCode}`} onClick={() => navigate(`/subject-management/${s.id}`, { state: { returnTo: location.pathname } })} />
                             <TableActionButton type="edit" ariaLabel={`Edit ${s.subjectCode}`} onClick={() => openEdit(s)} />
                             <TableActionButton type={String(s.status).toLowerCase() === 'active' ? 'deactivate' : 'activate'} ariaLabel={`${String(s.status).toLowerCase() === 'active' ? 'Deactivate' : 'Activate'} ${s.subjectCode}`} onClick={() => updateStatus(s)} />
                           </div>
@@ -272,10 +271,37 @@ export default function SubjectManagement() {
           {!loading && !loadError && records.length > 0 && <TablePagination currentPage={currentPage} totalPages={totalPages} onPageChange={setPage} />}
         </section>
         {confirmingSubject && <StatusConfirmation subject={confirmingSubject} saving={statusSaving} close={() => setConfirmingSubject(null)} confirm={() => persistStatus(confirmingSubject, 'Inactive')} />}
-        {viewing && <Details subject={viewing} sections={detailSections(viewing)} close={() => { setViewing(null); if (returnToElectives) { setReturnToElectives(false); navigate('/elective-management') } }} edit={() => openEdit(viewing)} />}
       </main>
     </DashboardLayout>
   );
+}
+
+export function SubjectDetailsPage() {
+  const { id } = useParams()
+  const location = useLocation()
+  const navigate = useNavigate()
+  const [subject, setSubject] = useState(null)
+  const [masters, setMasters] = useState({ years: [], courses: [], branches: [], semesters: [] })
+  const [loading, setLoading] = useState(true)
+  const returnTo = location.state?.returnTo || '/subject-management'
+  useEffect(() => {
+    let active = true
+    Promise.all([subjectService.getSubjects({ liveOnly: true }), academicService.getAcademicYears(), academicService.getCourses(), academicService.getBranches(), academicService.getSemesters()])
+      .then(([subjects, years, courses, branches, semesters]) => {
+        if (!active) return
+        const found = subjects.find(item => key(item.id) === key(id))
+        if (!found) { navigate('/subject-management', { replace: true }); return }
+        setSubject(found)
+        setMasters({ years, courses, branches, semesters })
+      })
+      .catch(error => showError(error.message || 'Unable to load subject details.'))
+      .finally(() => active && setLoading(false))
+    return () => { active = false }
+  }, [id, navigate])
+  const mapping = s => ({ year: entityName(masters.years, s.academicYearId, s.academicYear), course: entityName(masters.courses, s.courseId, s.course), branch: entityName(masters.branches, s.branchId, s.branch), semester: entityName(masters.semesters, s.semesterId, s.semester) })
+  const sections = subject ? (() => { const m = mapping(subject); return [{ title: 'Subject Information', rows: [['Subject Code', subject.subjectCode], ['Subject Name', subject.subjectName], ['Subject Type', subject.subjectType], ['Elective Type', subject.electiveType], ['Credits', subject.credits], ['Status', subject.status]] }, { title: 'Academic Mapping', rows: [['Academic Year', m.year], ['Course', m.course], ['Branch', m.branch], ['Academic Level', getAcademicLevelFromSemester({ semester: m.semester })], ['Semester', m.semester]] }, { title: 'Academic Configuration', rows: [['Lecture Hours', subject.lectureHours], ['Tutorial Hours', subject.tutorialHours], ['Practical Hours', subject.practicalHours], ['Internal Marks', subject.internalMarks], ['External Marks', subject.externalMarks]].filter(([, value]) => value !== '' && value != null) }].filter(section => section.rows.length) })() : []
+  const edit = () => navigate('/subject-management', { state: { subjectAction: { mode: 'edit', id: subject.id } } })
+  return <DashboardLayout><main className="sm-screen"><div className="cm-profile-view sm-profile-view"><div className="cm-profile-top-bar"><button type="button" className="cm-button secondary erp-btn erp-btn--secondary" onClick={() => navigate(returnTo)}><FiArrowLeft /> Back to Subjects</button><div className="sp-profile-top-actions"><ExportMenu mode="single" title={`${subject?.subjectCode || 'Subject'} - Subject Details`} filename={`subject-${subject?.subjectCode || id}`} recordSections={sections} /><button type="button" className="cm-button erp-btn erp-btn--primary" disabled={!subject} onClick={edit}>Edit Subject</button></div></div>{loading ? <p className="sm-detail-loading">Loading subject details…</p> : subject && <article className="cm-profile-card"><div className="cm-profile-banner"><div className="cm-profile-avatar-wrap"><div className="cm-profile-placeholder"><FiBookOpen /></div></div><div className="cm-profile-header-info"><div className="cm-profile-badges"><span className="cm-badge cm-badge-code">SUB: {subject.subjectCode}</span><span className="cm-badge cm-badge-type">{subject.subjectType || 'SUBJECT'}</span><span className={`cm-status-badge ${String(subject.status).toLowerCase() === 'active' ? 'active' : 'pending'}`}>{subject.status}</span></div><h1 className="cm-profile-title">{subject.subjectName}</h1><p className="cm-profile-subtitle">{[mapping(subject).course, mapping(subject).branch, mapping(subject).semester].filter(Boolean).join(' | ')}</p></div></div><div className="cm-profile-grid sm-profile-sections">{sections.map(section => <InfoCard key={section.title} title={section.title} icon={FiBookOpen} rows={section.rows} />)}</div></article>}</div></main></DashboardLayout>
 }
 function Select({ label, value, options, onChange, disabled, semester = false, hideSearch = false, placeholder = label }) { return <SearchableSelect placement="bottom" hideSearch={hideSearch} label={label} value={value} options={options} onChange={onChange} placeholder={placeholder} disabled={disabled} getOptionLabel={semester ? s => s.semesterName || s.name || `Semester ${semNo(s)}` : undefined} /> }
 function Field({ label, children }) { return <div className="sm-field"><label>{label}</label>{children}</div> }

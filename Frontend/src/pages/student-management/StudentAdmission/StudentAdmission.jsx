@@ -1082,14 +1082,14 @@ function CoreReview({ data, edit }) {
             ['10th School Name', data.previousEducation?.tenth?.institution, true],
             ['10th Roll Number', data.previousEducation?.tenth?.rollNumber, true],
             ['10th Passing Year', data.previousEducation?.tenth?.passingYear, true],
-            ['10th Score Type', data.previousEducation?.tenth?.scoreType, true],
+            ['10th Score Type', data.previousEducation?.tenth?.score ? data.previousEducation?.tenth?.scoreType : '', true],
             ['10th Score', data.previousEducation?.tenth?.score, true],
-            ['Qualification', data.previousEducation?.intermediate?.qualification, true],
+            ['Qualification', data.previousEducation?.intermediate?.qualification === 'Intermediate / 12th' ? '' : data.previousEducation?.intermediate?.qualification, true],
             ['Board / University', data.previousEducation?.intermediate?.board, true],
             ['College Name', data.previousEducation?.intermediate?.institution, true],
             ['Passing Year', data.previousEducation?.intermediate?.passingYear, true],
             ['Stream', data.previousEducation?.intermediate?.stream === 'Other' ? data.previousEducation?.intermediate?.streamOther : data.previousEducation?.intermediate?.stream, true],
-            ['Score Type', data.previousEducation?.intermediate?.scoreType, true],
+            ['Score Type', data.previousEducation?.intermediate?.score ? data.previousEducation?.intermediate?.scoreType : '', true],
             ['Score', data.previousEducation?.intermediate?.score, true],
           ]}
         />
@@ -1898,6 +1898,44 @@ function AdmissionForm() {
               const tenth = data.previousEducation?.tenth || {}
               const inter = data.previousEducation?.intermediate || {}
               const fees = data.fees || {}
+              const feeSummary = normalizeFeeSummary(fees)
+              const feeComponents = feeSummary.components.filter(item => Number(item.amount || 0) > 0)
+              const feeComponentTotal = pattern => feeComponents
+                .filter(item => pattern.test(String(item.name || '')))
+                .reduce((total, item) => total + Number(item.amount || 0), 0)
+              const feeValue = (keys, componentPattern, fallback = 0) => {
+                for (const key of keys) {
+                  const value = Number(fees[key] ?? feeSummary[key])
+                  if (value > 0) return value
+                }
+                return feeComponentTotal(componentPattern) || fallback
+              }
+              const previewTuition = feeValue(['tuitionFee', 'tuitionAmount', 'academicFee'], /tuition|academic/i, 50000)
+              const previewAdmission = feeValue(['admissionFee', 'admissionAmount', 'registrationFee', 'oneTimeFee'], /admission|registration/i, 4000)
+              const previewHostel = data.admission?.hostel === 'Yes'
+                ? feeValue(['hostelFee', 'hostelAmount'], /hostel/i, HOSTEL_FEES[data.admission?.hostelRoomType] || 0)
+                : 0
+              const previewTransport = data.admission?.transport === 'Yes'
+                ? feeValue(['transportFee', 'transportationFee', 'transportAmount'], /transport/i, TRANSPORT_FEES[data.admission?.transportRoute] || 0)
+                : 0
+              const previewScholarship = feeValue(['scholarshipAmount', 'discountAmount', 'concessionAmount'], /scholarship|discount|concession/i, 0)
+              const previewTotal = feeValue(['totalFee', 'firstYearTotal', 'grandTotal', 'netPayable', 'payableAmount'], /$^/, Math.max(0, previewTuition + previewAdmission + previewHostel + previewTransport - previewScholarship))
+              const hasTuitionComponent = feeComponents.some(item => /tuition|academic/i.test(String(item.name || '')))
+              const hasAdmissionComponent = feeComponents.some(item => /admission|registration/i.test(String(item.name || '')))
+              const feeStructureFields = [
+                ['Structure Name', fees.structureName || fees.feeStructureName || fees.name],
+                ['Structure Code', fees.structureCode || fees.feeStructureCode || fees.code],
+                ['Academic Year', fees.academicYearName || fees.academicYear],
+                ['Fee Period', fees.feePeriod || fees.period],
+                ...(!feeComponents.length || !hasTuitionComponent ? [['Tuition Fee (per year)', money(previewTuition)]] : []),
+                ...(!feeComponents.length || !hasAdmissionComponent ? [['Admission Fee (one-time)', money(previewAdmission)]] : []),
+                ...feeComponents.map(item => [item.name || 'Fee Component', money(item.amount)]),
+                ...(data.admission?.hostel === 'Yes' && !feeComponents.some(item => /hostel/i.test(String(item.name || ''))) ? [['Hostel Fee (per year)', money(previewHostel)]] : []),
+                ...(data.admission?.transport === 'Yes' && !feeComponents.some(item => /transport/i.test(String(item.name || ''))) ? [['Transportation Fee (per year)', money(previewTransport)]] : []),
+                ...(previewScholarship > 0 && !feeComponents.some(item => /scholarship|discount|concession/i.test(String(item.name || ''))) ? [['Scholarship / Discount', `− ${money(previewScholarship)}`]] : []),
+                ['Total Estimated Fee', money(previewTotal)],
+                ['Payment Plan', fees.paymentPlan || feeSummary.paymentPlan],
+              ]
 
               const sections = [
                 {
@@ -2001,15 +2039,7 @@ function AdmissionForm() {
                 },
                 {
                   title: 'Fee Structure',
-                  fields: [
-                    ['Tuition Fee', (fees.tuitionFee || data.fees?.tuitionFee) ? money(fees.tuitionFee || data.fees?.tuitionFee) : ''],
-                    ['Admission Fee', (fees.admissionFee !== undefined && fees.admissionFee !== '') ? money(fees.admissionFee) : (data.fees?.admissionFee !== undefined && data.fees?.admissionFee !== '' ? money(data.fees.admissionFee) : '')],
-                    ['Hostel Fee', fees.hostelFee ? money(fees.hostelFee) : (data.fees?.hostelFee ? money(data.fees.hostelFee) : '')],
-                    ['Transport Fee', fees.transportFee ? money(fees.transportFee) : (data.fees?.transportFee ? money(data.fees.transportFee) : '')],
-                    ['Scholarship', fees.scholarshipAmount ? `− ${money(fees.scholarshipAmount)}` : (data.fees?.scholarshipAmount ? `− ${money(data.fees.scholarshipAmount)}` : '')],
-                    ['Total Estimated Fee', fees.totalFee ? money(fees.totalFee) : (data.fees?.totalFee ? money(data.fees.totalFee) : '')],
-                    ['Payment Plan', fees.paymentPlan || data.fees?.paymentPlan],
-                  ],
+                  fields: feeStructureFields,
                 },
                 {
                   title: 'Documents',
@@ -2356,7 +2386,7 @@ function DetailContent({ data, tab }) {
             ['School', data.previousEducation?.tenth?.institution],
             ['Roll Number', data.previousEducation?.tenth?.rollNumber],
             ['Passing Year', data.previousEducation?.tenth?.passingYear],
-            ['Score Type', data.previousEducation?.tenth?.scoreType],
+            ['Score Type', data.previousEducation?.tenth?.score ? data.previousEducation?.tenth?.scoreType : ''],
             ['Score', data.previousEducation?.tenth?.score],
           ]}
         />
@@ -2364,13 +2394,13 @@ function DetailContent({ data, tab }) {
           title="Intermediate / Diploma"
           icon={FiFileText}
           items={[
-            ['Qualification', data.previousEducation?.intermediate?.qualification],
+            ['Qualification', data.previousEducation?.intermediate?.qualification === 'Intermediate / 12th' ? '' : data.previousEducation?.intermediate?.qualification],
             ['Board / University', data.previousEducation?.intermediate?.board],
             ['College', data.previousEducation?.intermediate?.institution],
             ['Roll Number', data.previousEducation?.intermediate?.rollNumber],
             ['Passing Year', data.previousEducation?.intermediate?.passingYear],
             ['Stream', data.previousEducation?.intermediate?.stream === 'Other' ? data.previousEducation?.intermediate?.streamOther : data.previousEducation?.intermediate?.stream],
-            ['Score Type', data.previousEducation?.intermediate?.scoreType],
+            ['Score Type', data.previousEducation?.intermediate?.score ? data.previousEducation?.intermediate?.scoreType : ''],
             ['Score', data.previousEducation?.intermediate?.score],
           ]}
         />

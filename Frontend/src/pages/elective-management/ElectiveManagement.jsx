@@ -4,11 +4,12 @@ import { collegeStorageKey } from '../../utils/collegeScope.js'
 import useCollegeState from '../../hooks/useCollegeState'
 ﻿import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { FiAward, FiCheck, FiCheckCircle, FiEdit2, FiEye, FiInfo, FiLayers, FiPlus, FiSearch, FiTrash2, FiUsers, FiX } from 'react-icons/fi'
+import { FiAward, FiArrowLeft, FiBookOpen, FiCheck, FiCheckCircle, FiEdit2, FiEye, FiInfo, FiLayers, FiPlus, FiSearch, FiTrash2, FiUsers, FiX } from 'react-icons/fi'
 import DashboardLayout from '../../layouts/DashboardLayout'
 import StatusBadge from '../../components/StatusBadge'
 import EmptyState from '../../components/EmptyState'
 import ExportMenu from '../../components/ExportMenu'
+import InfoCard from '../../components/InfoCard'
 import FilterPanel from '../../components/FilterPanel'
 import SearchableSelect from '../../components/SearchableSelect'
 import { API_BASE_URL, departmentApi, academicYearApi, branchApi, courseApi, facultyMasterApi, profileApi, electiveManagementApi } from '../../api/apiEndpoints'
@@ -444,6 +445,87 @@ export default function ElectiveManagement() {
     finally { setActionLoading(false) }
   }
 
+  if (viewingSubject) {
+    const subject = viewingSubject
+    const subjectCode = subject.subjectCode || subject.code
+    const subjectName = subject.subjectName || subject.name
+    const subjectStatus = subject.status || 'Active'
+    const subjectSections = [
+      {
+        title: 'Subject Information',
+        rows: [
+          ['Subject Code', subjectCode],
+          ['Subject Name', subjectName],
+          ['Subject Type', subject.subjectType || subject.type],
+          ['Elective Type', electiveTypeOf(subject)],
+          ['Credits', creditsOf(subject)],
+          ['Status', subjectStatus],
+        ],
+      },
+      {
+        title: 'Academic Mapping',
+        rows: [
+          ['Academic Year', subject.academicYearName || subject.academicYear],
+          ['Course', subject.courseName || subject.course],
+          ['Course Code', subject.courseCode],
+          ['Department', subject.departmentName || subject.department],
+          ['Branch', subject.branchName || subject.branch],
+          ['Branch Code', subject.branchCode],
+          ['Academic Level', subject.level || subject.academicLevel],
+          ['Semester', subject.semesterName || subject.semester],
+        ],
+      },
+    ]
+    const subjectSubtitle = [subject.courseName || subject.course, subject.branchName || subject.branch, subject.academicYearName || subject.academicYear]
+      .filter(Boolean)
+      .join(' · ')
+
+    return (
+      <DashboardLayout>
+        <main className="sm-screen">
+          <div className="cm-profile-view sm-profile-view em-subject-profile">
+            <div className="cm-profile-top-bar">
+              <div className="sp-profile-top-actions">
+                <ExportMenu
+                  mode="single"
+                  title={`${subjectCode || 'Subject'} - Subject Details`}
+                  filename={`subject-${subjectCode || 'details'}`}
+                  recordSections={subjectSections}
+                />
+                <button type="button" className="cm-button secondary erp-btn erp-btn--secondary" onClick={() => setViewingSubject(null)}>
+                  <FiArrowLeft /> Back
+                </button>
+              </div>
+            </div>
+            <article className="cm-profile-card">
+              <div className="cm-profile-banner">
+                <div className="cm-profile-avatar-wrap">
+                  <div className="cm-profile-placeholder"><FiBookOpen /></div>
+                </div>
+                <div className="cm-profile-header-info">
+                  <div className="cm-profile-badges">
+                    <span className="cm-badge cm-badge-code">SUB: {text(subjectCode, 'SUBJECT')}</span>
+                    <span className="cm-badge cm-badge-type">{text(electiveTypeOf(subject) || subject.subjectType || subject.type, 'SUBJECT')}</span>
+                    <span className={`cm-status-badge ${String(subjectStatus).toLowerCase() === 'active' ? 'active' : 'pending'}`}>
+                      {subjectStatus}
+                    </span>
+                  </div>
+                  <h1 className="cm-profile-title">{text(subjectName, 'Subject Details')}</h1>
+                  <p className="cm-profile-subtitle">{subjectSubtitle || 'Subject information and academic mapping'}</p>
+                </div>
+              </div>
+              <div className="cm-profile-grid sm-profile-sections">
+                {subjectSections.map(section => (
+                  <InfoCard key={section.title} title={section.title} icon={FiBookOpen} rows={section.rows} />
+                ))}
+              </div>
+            </article>
+          </div>
+        </main>
+      </DashboardLayout>
+    )
+  }
+
   if (groupModal) {
     return (
       <DashboardLayout>
@@ -846,10 +928,15 @@ export default function ElectiveManagement() {
           </section>
         )}
         {viewingSubject && (
-          <div className="sm-modal-backdrop" onClick={() => setViewingSubject(null)}>
-            <section className="sm-modal" role="dialog" aria-modal="true" aria-labelledby="em-subject-view-title" onClick={event => event.stopPropagation()}>
-              <header className="sm-modal-header"><h2 id="em-subject-view-title">Subject Details</h2><button type="button" className="sm-icon-btn" onClick={() => setViewingSubject(null)} aria-label="Close"><FiX /></button></header>
-              <div className="sm-modal-body em-group-details">
+          <SharedViewDialog
+            title="Subject Details"
+            subtitle={[viewingSubject.subjectCode || viewingSubject.code, viewingSubject.subjectName || viewingSubject.name].filter(Boolean).join(' · ')}
+            icon={FiBookOpen}
+            onClose={() => setViewingSubject(null)}
+            hideFooter
+            maxWidth="900px"
+          >
+              <div className="view-modal-fields em-subject-view-details">
                 {[
                   ['Subject Code', viewingSubject.subjectCode || viewingSubject.code],
                   ['Subject Name', viewingSubject.subjectName || viewingSubject.name],
@@ -865,11 +952,14 @@ export default function ElectiveManagement() {
                   ['Subject Type', viewingSubject.subjectType || viewingSubject.type],
                   ['Credits', creditsOf(viewingSubject)],
                   ['Status', viewingSubject.status],
-                ].map(([label, value]) => <div key={label}><span>{label}</span><strong>{text(value, '-')}</strong></div>)}
+                ].map(([label, value]) => (
+                  <div className="view-modal-field em-subject-view-field" key={label}>
+                    <span className="view-modal-label">{label}</span>
+                    <strong className="view-modal-value">{text(value, '-')}</strong>
+                  </div>
+                ))}
               </div>
-              <footer className="sm-modal-footer"><button type="button" className="sm-btn sm-btn--secondary" onClick={() => setViewingSubject(null)}>Close</button></footer>
-            </section>
-          </div>
+          </SharedViewDialog>
         )}
         {editingSubject && subjectEditForm && (
           <div className="sm-modal-backdrop" onClick={actionLoading ? undefined : () => { setEditingSubject(null); setSubjectEditForm(null) }}>

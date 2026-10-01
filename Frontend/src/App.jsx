@@ -33,7 +33,7 @@ import Results from './pages/results/Results'
 import FacultyManagement from './pages/faculty/FacultyManagement'
 import FacultyLeaveManagement from './pages/faculty/FacultyLeaveManagement'
 import Payroll from './pages/faculty/Payroll'
-import SubjectManagement from './pages/subject-management/SubjectManagement'
+import SubjectManagement, { SubjectDetailsPage } from './pages/subject-management/SubjectManagement'
 import CreditsManagement from './pages/credits-management/CreditsManagement'
 import TimetableManagement from './pages/timetable/TimetableManagement'
 import ElectiveManagement from './pages/elective-management/ElectiveManagement'
@@ -227,6 +227,7 @@ export default function App() {
               <Route path="/rooms/:roomId" element={<RoomsManagement key="room-view-alias" viewMode />} />
               <Route path="/roles-designations" element={<RolesAndDesignations />} />
               <Route path="/subject-management" element={<SubjectManagement />} />
+              <Route path="/subject-management/:id" element={<SubjectDetailsPage />} />
               <Route path="/credits-management" element={<CreditsManagement />} />
               <Route path="/timetable" element={<TimetableManagement />} />
               <Route path="/elective-management" element={<ElectiveManagement />} />

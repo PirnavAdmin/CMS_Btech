@@ -10,6 +10,7 @@ import StatusBadge from '../../components/StatusBadge'
 import TablePagination from '../../components/TablePagination'
 import SearchableSelect from '../../components/SearchableSelect'
 import CompactSummary from '../../components/CompactSummary'
+import InfoCard from '../../components/InfoCard'
 import { academicYearApi, branchApi, courseApi, departmentApi, facultyMasterApi, sectionApi } from '../../api/apiEndpoints'
 import { attendancePayload, requiredNumber } from '../../services/facultyContracts'
 import { downloadServerExport } from '../../utils/exportUtils'
@@ -2604,24 +2605,7 @@ const FACULTY_TABS = [
 ]
 
 function ProfileCard({ title, icon: Icon, rows = [] }) {
-  return (
-    <section className="sp-profile-panel">
-      {(Icon || title) && (
-        <header className="sp-panel-header">
-          {Icon && <Icon aria-hidden="true" />}
-          {title && <h2>{title}</h2>}
-        </header>
-      )}
-      <dl className="sp-panel-grid">
-        {rows.map(([label, val], idx) => (
-          <div className="sp-panel-item" key={label || idx}>
-            <dt className="sp-panel-label">{label}</dt>
-            <dd className="sp-panel-val">{val && String(val).trim() !== '' && String(val).trim() !== '—' ? String(val) : 'Not provided'}</dd>
-          </div>
-        ))}
-      </dl>
-    </section>
-  )
+  return <InfoCard title={title} icon={Icon} rows={rows} />
 }
 
 export default function FacultyManagement() {
@@ -3007,23 +2991,8 @@ export default function FacultyManagement() {
             </div>
           </div>
 
-          <nav className="sp-tabs" aria-label="Faculty profile sections">
-            {FACULTY_TABS.filter(([tabId]) => !(tabId === 'responsibilities' && selected.employeeCategory === 'Non-Teaching')).map(([id, label, Icon]) => (
-              <button
-                key={id}
-                type="button"
-                aria-current={profileTab === id ? 'page' : undefined}
-                className={profileTab === id ? 'active' : ''}
-                onClick={() => setProfileTab(id)}
-              >
-                <Icon />
-                {label}
-              </button>
-            ))}
-          </nav>
-
           <div className="sp-profile-cards-container">
-            {profileTab === 'personal' && (
+            {(
               <>
                 <ProfileCard
                   title="Personal Information"
@@ -3068,7 +3037,7 @@ export default function FacultyManagement() {
               </>
             )}
 
-            {profileTab === 'employment' && (
+            {(
               <>
                 <ProfileCard
                   title="Employment Details"
@@ -3087,7 +3056,7 @@ export default function FacultyManagement() {
               </>
             )}
 
-            {profileTab === 'academic' && (
+            {(
               <>
                 <ProfileCard
                   title="Academic Qualifications"
@@ -3104,7 +3073,7 @@ export default function FacultyManagement() {
               </>
             )}
 
-            {profileTab === 'responsibilities' && selected.employeeCategory !== 'Non-Teaching' && (
+            {selected.employeeCategory !== 'Non-Teaching' && (
               <>
                 <ProfileCard
                   title="Workload Summary"
@@ -3131,7 +3100,7 @@ export default function FacultyManagement() {
               </>
             )}
 
-            {profileTab === 'documents' && (
+            {(
               <section className="sp-profile-panel">
                 <header className="sp-panel-header">
                   <FiFileText aria-hidden="true" />

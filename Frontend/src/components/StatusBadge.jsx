@@ -3,7 +3,7 @@ import './StatusBadge.css'
 const normalizeStatusKey = (val) => {
   if (val === null || val === undefined) return 'unknown'
   const str = String(val).trim().toLowerCase().replace(/[_\s-]+/g, '-')
-  if (['1', 'true', 'active', 'admitted', 'success', 'successful', 'eligible', 'working', 'permanent', 'regular', 'confirmed', 'available', 'present', 'passed', 'pass', 'open', 'enabled'].includes(str)) return 'active'
+  if (['1', 'true', 'active', 'admitted', 'success', 'successful', 'eligible', 'working', 'permanent', 'regular', 'confirmed', 'available', 'present', 'passed', 'pass', 'open', 'enabled', 'allocated'].includes(str)) return 'active'
   if (['paid'].includes(str)) return 'paid'
   if (['0', 'false', 'inactive', 'deactive', 'archived', 'ineligible', 'resigned', 'relieved', 'terminated', 'retired', 'unpaid', 'unavailable', 'rejected', 'failed', 'fail', 'expired', 'shortage', 'suspended', 'absent', 'closed', 'disabled'].includes(str)) return 'inactive'
   if (['warning', 'upcoming', 'probation', 'on-probation', 'notice-period', 'contract'].includes(str)) return 'warning'
