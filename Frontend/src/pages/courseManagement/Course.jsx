@@ -171,6 +171,26 @@ const validateBasic = (v, courses = [], editingId = null) => {
   return e
 }
 
+const coursesForCollege = (rows, collegeId, collegeName, departments = []) => {
+  const targetId = normalizeId(collegeId)
+  const targetName = String(collegeName || '').trim().toLowerCase()
+  const departmentIds = new Set(departments
+    .filter(department => String(department.collegeId ?? department.collegeNumericId ?? '') === targetId)
+    .map(department => normalizeId(department.id ?? department.departmentId))
+    .filter(Boolean))
+
+  return rows.filter(course => {
+    const ownCollegeId = normalizeId(course.collegeId ?? course.collegeNumericId ?? course.CollegeId ?? course.college?.collegeId ?? course.college?.id)
+    if (ownCollegeId) return ownCollegeId === targetId
+
+    const departmentId = normalizeId(course.departmentId ?? course.DepartmentId ?? course.department?.departmentId ?? course.department?.id)
+    if (departmentId) return departmentIds.has(departmentId)
+
+    const ownCollegeName = String(course.collegeName ?? course.CollegeName ?? course.college?.name ?? course.college ?? '').trim().toLowerCase()
+    return Boolean(targetName && ownCollegeName && ownCollegeName === targetName)
+  })
+}
+
 const codeFor = name => { const known = { 'computer science and engineering': 'CSE', 'electronics and communication engineering': 'ECE', 'electrical and electronics engineering': 'EEE', 'mechanical engineering': 'ME', 'civil engineering': 'CE', 'artificial intelligence and data science': 'AI-DS' }, clean = name.trim().toLowerCase(); return known[clean] || name.split(/\s+/).filter(x => x && !['and', '&', 'of', 'the'].includes(x.toLowerCase())).map(x => x[0]).join('').slice(0, 10).toUpperCase() }
 
 const Page = ({ children }) => <DashboardLayout><main className="cm-page course-management">{children}</main></DashboardLayout>
@@ -433,7 +453,7 @@ function CourseList() {
 }
 
 function CourseForm() {
-  const { scopeRecords, selectedCollegeId } = useAcademic()
+  const { scopeRecords, selectedCollegeId, selectedCollege } = useAcademic()
   const saveLock = useRef(false)
   const [persistedId, setPersistedId] = useState(null)
   const [existingCourses, setExistingCourses] = useState([])
@@ -460,7 +480,7 @@ function CourseForm() {
       const normalizedDepartments = dedupeDepartmentOptions(departmentRows)
       const normalizedBranches = branchRows.map(normalize)
       if (requestId !== loadRequestRef.current) return
-      setExistingCourses(scopeRecords(courseRows, { departments: normalizedDepartments, branches: normalizedBranches }).map(mapCourse))
+      setExistingCourses(coursesForCollege(courseRows, selectedCollegeId || selectedCollege?.collegeId || selectedCollege?.id, selectedCollege?.name || selectedCollege?.collegeName, normalizedDepartments).map(mapCourse))
       setDepartments(normalizedDepartments)
       setBranches(normalizedBranches)
       if (id) {
@@ -508,11 +528,11 @@ function CourseForm() {
     setIsSaving(true); setError('')
     try {
       const latestCourseRows = await courseApi.getAll()
-      const latestCourses = scopeRecords(latestCourseRows, { departments: allDepartments, branches: allBranches }).map(mapCourse)
+      const latestCourses = coursesForCollege(latestCourseRows, selectedCollegeId || selectedCollege?.collegeId || selectedCollege?.id, selectedCollege?.name || selectedCollege?.collegeName, allDepartments).map(mapCourse)
       setExistingCourses(latestCourses)
       const latestErrors = validateBasic(value, latestCourses, persistedId ?? id)
       if (Object.keys(latestErrors).length) { setErrors(latestErrors); return }
-      const payload = payloadFor({ ...value, collegeId: value.collegeId || selectedCollegeId || '' })
+      const payload = payloadFor({ ...value, collegeId: value.collegeId || selectedCollegeId || selectedCollege?.collegeId || selectedCollege?.id || '' })
       const targetId = persistedId ?? id
       const response = targetId ? await updateCourse(targetId, payload) : await createCourse(payload)
       if (response?.data?.success === false) throw new Error('Course could not be saved.')
