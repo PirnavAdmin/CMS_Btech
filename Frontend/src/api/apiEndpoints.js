@@ -110,6 +110,7 @@ export const API_ENDPOINTS = Object.freeze({
     summary: endpoint('/api/v1/sections/summary'),
     classTeacher: (id) => endpoint(`/api/v1/sections/${id}/class-teacher`),
     classTeacherCandidates: (id) => endpoint(`/api/v1/sections/${id}/class-teacher-candidates`),
+    studentCandidates: (id) => endpoint(`/api/v1/sections/${id}/student-candidates`),
     capacity: (id) => endpoint(`/api/v1/sections/${id}/capacity`),
     students: (id) => endpoint(`/api/v1/sections/${id}/students`),
     assignStudents: (id) => endpoint(`/api/v1/sections/${id}/students/assign`),
@@ -713,6 +714,7 @@ export const sectionAssignmentApi = {
     await request(API_ENDPOINTS.sections.student(sectionId, assignmentId), { method: 'DELETE' })
   },
   listBySection: async (sectionId) => listResponse(await request(API_ENDPOINTS.sections.students(sectionId))),
+  getStudentCandidates: async (sectionId, search = '') => listResponse(await request(withQuery(API_ENDPOINTS.sections.studentCandidates(sectionId), { search }))),
 }
 
 export const sectionAllocationApi = {

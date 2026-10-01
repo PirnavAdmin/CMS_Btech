@@ -120,10 +120,10 @@ const cacheElectiveDates = (id, code, dates) => {
 
 export default function ElectiveManagement() {
   const navigate = useNavigate()
-  const [activeTab, setActiveTab] = useState('subjects'); const [groups, setGroups] = useCollegeState([]); const [directorySubjects, setDirectorySubjects] = useCollegeState([]); const [workflowSubjects, setWorkflowSubjects] = useCollegeState([]); const [selections, setSelections] = useCollegeState([], { groups, subjects: directorySubjects }); const [report, setReport] = useCollegeState([], { groups, subjects: directorySubjects }); const [profile, setProfile] = useState(null); const [results, setResults] = useState([])
+  const [activeTab, setActiveTab] = useState('subjects'); const [groups, setGroups] = useCollegeState([]); const [workflowSubjects, setWorkflowSubjects] = useCollegeState([]); const [selections, setSelections] = useCollegeState([], { groups, subjects: workflowSubjects }); const [report, setReport] = useCollegeState([], { groups, subjects: workflowSubjects }); const [profile, setProfile] = useState(null); const [results, setResults] = useState([])
   const [departments, setDepartments] = useCollegeState([]); const [directoryLoading, setDirectoryLoading] = useState(true); const [directoryError, setDirectoryError] = useState(''); const [mastersError, setMastersError] = useState('');
   const [courses, setCourses] = useCollegeState([]); const [branches, setBranches] = useCollegeState([]); const [academicYears, setAcademicYears] = useState([]); const [semesters, setSemesters] = useCollegeState([]); const [activeAcademicYear, setActiveAcademicYear] = useState(''); const [mastersLoading, setMastersLoading] = useState(true)
-  const [loading, setLoading] = useState(true); const [profileLoading, setProfileLoading] = useState(true); const [resultsLoading, setResultsLoading] = useState(false); const [error, setError] = useState(''); const [search, setSearch] = useState(''); const [filters, setFilters] = useState({ status: 'All', semester: 'All', branch: 'All', department: 'All', course: 'All', academicYear: 'All', level: 'All', electiveType: 'Elective', approvalStatus: 'All', allocationStatus: 'All' }); const [page, setPage] = useState(1); const [resultPage, setResultPage] = useState(1); const size = 10
+  const [loading, setLoading] = useState(true); const [profileLoading, setProfileLoading] = useState(true); const [resultsLoading, setResultsLoading] = useState(false); const [error, setError] = useState(''); const [search, setSearch] = useState(''); const [filters, setFilters] = useState({ status: 'All', semester: 'All', branch: 'All', course: 'All', academicYear: 'All', level: 'All', electiveType: 'Elective', approvalStatus: 'All', allocationStatus: 'All' }); const [page, setPage] = useState(1); const [resultPage, setResultPage] = useState(1); const size = 10
   const [groupModal, setGroupModal] = useState(false); const [editingGroup, setEditingGroup] = useState(null); const [viewingGroup, setViewingGroup] = useState(null); const [viewingSubject, setViewingSubject] = useState(null); const [editingSubject, setEditingSubject] = useState(null); const [subjectEditForm, setSubjectEditForm] = useState(null); const [deletingGroup, setDeletingGroup] = useState(null); const [subjectModal, setSubjectModal] = useState(null); const [groupForm, setGroupForm] = useState(blankGroup()); const [selectedSubjects, setSelectedSubjects] = useState([]); const [selectedGroupId, setSelectedGroupId] = useState(''); const [selectedSubjectId, setSelectedSubjectId] = useState(''); const [actionLoading, setActionLoading] = useState(false); const [groupFieldOverrides, setGroupFieldOverrides] = useState({})
   const studentId = profile?.id || profile?.studentId || ''
   const loadMasters = async () => { setMastersLoading(true); setMastersError(''); try { const [courseRows, branchRows, yearRows, semesterRows, departmentRows] = await Promise.all([courseApi.getAll(), branchApi.getAll(), academicYearApi.getAll(), facultyMasterApi.getSemesters(), departmentApi.getAll()]); setDepartments(unwrap(departmentRows)); const years = unwrap(yearRows); setCourses(unwrap(courseRows)); setBranches(unwrap(branchRows)); setAcademicYears(years); setSemesters(unwrap(semesterRows)); const selected = selectHeaderAcademicYear(years).year; setActiveAcademicYear(selected?.academicYearName || selected?.name || '') } catch (err) { setMastersError(err.message || 'Unable to load academic filters.'); } finally { setMastersLoading(false) } }
@@ -197,21 +197,21 @@ export default function ElectiveManagement() {
     }
   }
   const loadProfile = async () => { setProfileLoading(true); try { const current = await profileApi.getProfile(); setProfile(current); if (current?.id || current?.studentId) { setResultsLoading(true); const id = current.id || current.studentId; const [currentSelections, examResults] = await Promise.all([electiveManagementApi.getStudentSelections(id).catch(() => []), get(`/api/v1/students/${encodeURIComponent(id)}/profile/exam-results`).catch(() => [])]); setSelections(currentSelections); setResults(examResults) } } catch { setProfile(null); showError('Unable to load student profile.') } finally { setProfileLoading(false); setResultsLoading(false) } }
-  const directoryRequest = useRef(0)
-  const directoryQuery = JSON.stringify(subjectQuery(filters, search))
   const loadDirectory = useCallback(async () => {
-    const requestId = ++directoryRequest.current
-    setDirectoryLoading(true); setDirectoryError('')
+    setDirectoryLoading(true)
+    setDirectoryError('')
     try {
-      const [matching, all] = await Promise.all([subjectService.getSubjects({ liveOnly: true, ...JSON.parse(directoryQuery) }), subjectService.getSubjects({ liveOnly: true })])
-      if (requestId !== directoryRequest.current) return
-      setDirectorySubjects(matching); setWorkflowSubjects(all)
+      const all = await subjectService.getSubjects({ liveOnly: true })
+      setWorkflowSubjects(all)
+    } catch (err) {
+      setDirectoryError(err.message || 'Unable to load subjects.')
+      setWorkflowSubjects([])
+    } finally {
+      setDirectoryLoading(false)
     }
-    catch (err) { if (requestId === directoryRequest.current) { setDirectoryError(err.message || 'Unable to load subjects.'); setDirectorySubjects([]); setWorkflowSubjects([]) } }
-    finally { if (requestId === directoryRequest.current) setDirectoryLoading(false) }
-  }, [directoryQuery])
+  }, [])
   useEffect(() => { loadCore(); loadProfile(); loadMasters() }, [])
-  useEffect(() => { loadDirectory(); return () => { directoryRequest.current += 1 } }, [loadDirectory])
+  useEffect(() => { loadDirectory() }, [loadDirectory])
   useEffect(() => {
     const refresh = () => { if (document.visibilityState === 'visible') loadDirectory() }
     window.addEventListener('focus', refresh)
@@ -219,7 +219,6 @@ export default function ElectiveManagement() {
     return () => { window.removeEventListener('focus', refresh); document.removeEventListener('visibilitychange', refresh) }
   }, [loadDirectory])
   useEffect(() => { setPage(1) }, [search, filters, activeTab])
-  const subjectRows = useMemo(() => directorySubjects.map(subject => enrichSubject(subject, { courses, branches, semesters, years: academicYears, departments })), [directorySubjects, courses, branches, semesters, academicYears, departments])
   const workflowRows = useMemo(() => workflowSubjects.map(subject => enrichSubject(subject, { courses, branches, semesters, years: academicYears, departments })), [workflowSubjects, courses, branches, semesters, academicYears, departments])
   const subjects = workflowRows.filter(subject => eligibleForGroup(subject, subjectModal) && !(subjectModal?.subjects || []).some(linked => String(linked.subjectId ?? linked.id) === String(subject.id)))
   const electiveIds = new Set(workflowRows.filter(isElectiveSubject).map(subject => String(subject.id)))
@@ -240,7 +239,7 @@ export default function ElectiveManagement() {
   const selectedGroup = groups.find(row => String(row.id || row.groupId) === String(selectedGroupId)); const eligibleSubjects = workflowRows.filter(subject => eligibleForGroup(subject, selectedGroup) && (selectedGroup?.subjects || []).some(linked => String(linked.subjectId ?? linked.id) === String(subject.id)))
   const pending = report.filter(row => String(approvalStatus(row)).toLowerCase() === 'pending'); const approved = report.filter(row => String(approvalStatus(row)).toLowerCase() === 'approved'); const pageRows = rows => rows.slice((page - 1) * size, page * size)
   const filteredGroups = useMemo(() => displayGroups.filter(row => !search.trim() || [row.groupCode, row.groupName].some(value => String(value || '').toLowerCase().includes(search.trim().toLowerCase()))), [displayGroups, search])
-  const electiveTableRows = useMemo(() => subjectRows.filter(subject => matchesSubject(subject, filters, search)), [subjectRows, filters, search])
+  const electiveTableRows = useMemo(() => workflowRows.filter(subject => matchesSubject(subject, filters, search)), [workflowRows, filters, search])
   const electiveTablePageSize = 5
   const electiveTablePageRows = electiveTableRows.slice((page - 1) * electiveTablePageSize, page * electiveTablePageSize)
   const electiveTableExportColumns = [
@@ -663,8 +662,8 @@ export default function ElectiveManagement() {
               <div className="em-toolbar">
                 <div className="em-search"><FiSearch /><input aria-label="Search subjects" placeholder="Search subject code or name..." value={search} onChange={event => setSearch(event.target.value)} /></div>
                 <div className="em-filters">
-                  {['course', 'department', 'branch', 'semester', 'academicYear', 'level', 'status'].map(key => {
-                    const labels = { course: 'Course', department: 'Department', branch: 'Branch', semester: 'Semester', academicYear: 'Academic Year', level: 'Level', status: 'Status' }
+                  {['course', 'branch', 'semester', 'academicYear', 'level', 'status'].map(key => {
+                    const labels = { course: 'Course', branch: 'Branch', semester: 'Semester', academicYear: 'Academic Year', level: 'Level', status: 'Status' }
                     const label = labels[key]
                     return (
                       <label key={key}>
@@ -681,7 +680,7 @@ export default function ElectiveManagement() {
                       </label>
                     )
                   })}
-                  {(hasAcademicFilter(filters) || filters.status !== 'All') && <button type="button" className="sm-btn sm-btn--secondary em-clear-subject-filters" onClick={() => setFilters(old => ({ ...old, department: 'All', course: 'All', branch: 'All', semester: 'All', academicYear: 'All', level: 'All', status: 'All' }))}>Clear Filters</button>}
+                  {(hasAcademicFilter(filters) || filters.status !== 'All') && <button type="button" className="sm-btn sm-btn--secondary em-clear-subject-filters" onClick={() => setFilters(old => ({ ...old, course: 'All', branch: 'All', semester: 'All', academicYear: 'All', level: 'All', status: 'All' }))}>Clear Filters</button>}
                 </div>
               </div>
             </FilterPanel>
@@ -690,10 +689,8 @@ export default function ElectiveManagement() {
                 <div className="em-loading">Loading subjects...</div>
               ) : directoryError || mastersError ? (
                 <div className="em-alert" role="alert">{directoryError || mastersError}<button type="button" onClick={() => { loadDirectory(); loadMasters() }}>Retry</button></div>
-              ) : !hasAcademicFilter(filters) ? (
-                <EmptyState title="Select academic filters" description="Select a Department, Course, Branch or Semester to view matching subjects." />
               ) : !electiveTableRows.length ? (
-                <EmptyState title={`No ${filters.electiveType === 'Non-Elective' ? 'non-elective' : 'elective'} subjects found for the selected Department, Branch and Semester.`} description="Check the academic filters and the classification saved in Subject Management." />
+                <EmptyState title={`No ${filters.electiveType === 'Non-Elective' ? 'non-elective' : 'elective'} subjects found.`} description="Check the academic filters and the classification saved in Subject Management." />
               ) : (
                 <table className="em-table em-group-table">
                   <thead>
@@ -736,7 +733,7 @@ export default function ElectiveManagement() {
                 </table>
               )}
             </div>
-            {!directoryLoading && !directoryError && !mastersError && hasAcademicFilter(filters) && <Pagination page={page} pageCount={Math.ceil(electiveTableRows.length / electiveTablePageSize)} total={electiveTableRows.length} size={electiveTablePageSize} onChange={setPage} />}
+            {!directoryLoading && !directoryError && !mastersError && electiveTableRows.length > 0 && <Pagination page={page} pageCount={Math.ceil(electiveTableRows.length / electiveTablePageSize)} total={electiveTableRows.length} size={electiveTablePageSize} onChange={setPage} />}
           </section>
         )}
         {activeTab === 'groups' && (

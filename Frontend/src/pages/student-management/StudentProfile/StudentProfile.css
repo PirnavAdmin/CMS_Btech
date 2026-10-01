@@ -76,6 +76,18 @@ main.student-profile .sp-directory-table thead th:last-child::after{content:none
 .student-profile .sp-edit-inline .sp-edit-tabs{scrollbar-width:none;overflow-x:auto}
 .student-profile .sp-edit-inline .sp-edit-tabs::-webkit-scrollbar{display:none}
 .student-profile .sp-edit-inline .sp-edit-progress{position:relative!important;top:auto!important;margin-bottom:0!important}
+
+/* Keep the profile wizard actions reachable inside the fixed-height card. */
+.student-profile .sp-edit-page .erp-card-main{display:flex!important;flex-direction:column!important;min-height:0!important}
+.student-profile .sp-edit-page .sp-edit-inline{display:flex;flex:1 1 auto;flex-direction:column;height:100%;min-height:0;overflow:hidden}
+.student-profile .sp-edit-page .sp-edit-inline form{display:flex;flex:1 1 auto;flex-direction:column;min-height:0;overflow-y:auto;overflow-x:hidden;padding:8px 16px 0}
+.student-profile .sp-edit-page .sp-edit-inline form>footer{position:sticky;bottom:0;z-index:3;flex-shrink:0;align-items:center;margin-top:auto;padding:10px 0;background:var(--surface-raised);border-top:1px solid var(--border)}
+
+@media(max-width:900px){
+  .student-profile .sp-edit-page .sp-edit-inline{height:auto;overflow:visible}
+  .student-profile .sp-edit-page .sp-edit-inline form{overflow:visible}
+  .student-profile .sp-edit-page .sp-edit-inline form>footer{position:sticky;bottom:0;padding:10px 0}
+}
  /* Keep all profile navigation visible when the workspace narrows. */
 .student-profile .cm-profile-view > .cm-profile-top-bar {
   display: flex;

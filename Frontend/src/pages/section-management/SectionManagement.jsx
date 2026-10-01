@@ -12,10 +12,9 @@ import SearchableSelect from '../../components/SearchableSelect'
 import CompactSummary from '../../components/CompactSummary'
 import StatusBadge from '../../components/StatusBadge'
 import { showDeactivationBlocked } from '../../components/DeactivationBlockedDialog'
-import { academicYearApi, branchApi, courseApi, sectionAllocationApi, sectionApi, sectionAssignmentApi, studentProfilesApi, studentAdmissionApi } from '../../api/apiEndpoints'
+import { academicYearApi, branchApi, courseApi, sectionAllocationApi, sectionApi, sectionAssignmentApi } from '../../api/apiEndpoints'
 import { getSemesters } from '../../auth/collegeApi'
 import { getActiveAcademicYears, normalizeAcademicYear } from '../../utils/academicYearUtils'
-import { matchesSectionStudent, sectionStudentProfiles } from '../../utils/sectionStudents'
 import { branchTypeLabel } from '../../utils/semesterUtils'
 import eventBus, { ERP_EVENTS } from '../../services/eventBus'
 import facultyService, { normalizeFaculty } from '../../services/facultyService'
@@ -73,8 +72,9 @@ const normalizeBranchKey = (name = '') => {
   return s
 }
 
-const teacherCandidatesForBranch = (faculty = [], branchName = '', branchCode = '', branchId = '') => {
+const teacherCandidatesForBranch = (faculty = [], branchName = '', branchCode = '', branchId = '', departmentName = '', departmentId = '') => {
   const targetKey = normalizeBranchKey(branchCode || branchName)
+  const departmentKey = normalizeBranchKey(departmentName)
   return faculty
     .map((member) => normalizeFaculty(member))
     .filter((member) => {
@@ -82,16 +82,19 @@ const teacherCandidatesForBranch = (faculty = [], branchName = '', branchCode = 
       const unavailable = ['inactive', 'resigned', 'retired'].includes(String(member.employmentStatus || member.status || '').trim().toLowerCase())
       if (unavailable) return false
 
-      if (!targetKey && !branchId) return true
+      if (!targetKey && !branchId && !departmentKey && !departmentId) return true
 
       const memberBranchKey = normalizeBranchKey(member.branchCode || member.branch || member.branchName || '')
       const memberDeptKey = normalizeBranchKey(member.departmentName || member.department || '')
       const memberSpecKey = normalizeBranchKey(member.specialization || '')
+      const memberDepartmentId = member.departmentId || member.DepartmentId || member.department_id || ''
 
       const matchesBranch = Boolean(
         (member.branchId && branchId && String(member.branchId) === String(branchId)) ||
         (memberBranchKey && memberBranchKey === targetKey) ||
         (memberDeptKey && memberDeptKey === targetKey) ||
+        (memberDepartmentId && departmentId && String(memberDepartmentId) === String(departmentId)) ||
+        (memberDeptKey && departmentKey && memberDeptKey === departmentKey) ||
         (memberSpecKey && (memberSpecKey === targetKey || memberSpecKey.includes(targetKey)))
       )
 
@@ -99,8 +102,9 @@ const teacherCandidatesForBranch = (faculty = [], branchName = '', branchCode = 
     })
     .map((member) => ({
       ...member,
-      employeeProfileId: member.employeeProfileId ?? member.facultyId ?? member.id,
-      employeeCode: member.employeeCode ?? member.employeeId,
+      employeeProfileId: member.employeeProfileId ?? member.EmployeeProfileId ?? member.employee_profile_id ?? '',
+      fullName: member.fullName || member.FullName || member.name || '',
+      employeeCode: member.employeeCode ?? member.EmployeeCode ?? member.employeeId,
     }))
     .filter((member) => clean(member.employeeProfileId) && clean(member.fullName))
 }
@@ -652,6 +656,7 @@ function AssignStudents({ section, faculty = [], assignments, allAssignments = [
   const [studentsLoading, setStudentsLoading] = useState(false)
   const [teacher, setTeacher] = useState(String(section.facultyAdvisorEmployeeProfileId || ''))
   const [teacherCandidates, setTeacherCandidates] = useState([])
+  const [teacherLoading, setTeacherLoading] = useState(false)
   const [error, setError] = useToastState('', 'error')
   const [teacherError, setTeacherError] = useToastState('', 'error')
   const [saving, setSaving] = useState(false)
@@ -660,14 +665,21 @@ function AssignStudents({ section, faculty = [], assignments, allAssignments = [
   const isAssignedToCurrentSection = (student) => [...assignments, ...allAssignments].some((assignment) => String(assignment.sectionId) === String(section.id) && sameStudent(assignment, student))
 
   useEffect(() => {
-    const candidates = teacherCandidatesForBranch(faculty, section.branchName || section.branch, section.branchCode, section.branchId)
-    setTeacherCandidates(candidates)
-    if (section.facultyAdvisorEmployeeProfileId && candidates.some(c => String(c.employeeProfileId) === String(section.facultyAdvisorEmployeeProfileId))) {
-      setTeacher(String(section.facultyAdvisorEmployeeProfileId))
-    } else {
-      setTeacher('')
-    }
-  }, [faculty, section.branchName, section.branch, section.branchCode, section.branchId, section.facultyAdvisorEmployeeProfileId])
+    if (mode !== 'teacher') return undefined
+    let active = true
+    setTeacherLoading(true)
+    setTeacherError('')
+    sectionAllocationApi.getTeacherCandidates(section.id)
+      .then((rows) => {
+        if (!active) return
+        const candidates = teacherCandidatesForBranch(rows, section.branchName || section.branch, section.branchCode, section.branchId, section.departmentName, section.departmentId)
+        setTeacherCandidates(candidates)
+        setTeacher(section.facultyAdvisorEmployeeProfileId && candidates.some((candidate) => String(candidate.employeeProfileId) === String(section.facultyAdvisorEmployeeProfileId)) ? String(section.facultyAdvisorEmployeeProfileId) : '')
+      })
+      .catch((reason) => { if (active) { setTeacherCandidates([]); setTeacher(''); setTeacherError(apiError(reason, 'Unable to load faculty candidates.')) } })
+      .finally(() => { if (active) setTeacherLoading(false) })
+    return () => { active = false }
+  }, [mode, section.id, section.branchName, section.branch, section.branchCode, section.branchId, section.departmentName, section.departmentId, section.facultyAdvisorEmployeeProfileId, setTeacherError])
   useEffect(() => {
     if (mode !== 'student') return undefined
     let active = true
@@ -675,17 +687,19 @@ function AssignStudents({ section, faculty = [], assignments, allAssignments = [
     setStudentsLoading(true)
     setStudents([])
     setSelectedIds([])
-    Promise.allSettled([studentProfilesApi.getAll(), studentAdmissionApi.getAll()])
-      .then(([profilesResult, admissionsResult]) => {
-        const profiles = profilesResult.status === 'fulfilled' ? profilesResult.value : []
-        const admissions = admissionsResult.status === 'fulfilled' ? admissionsResult.value : []
-        if (profilesResult.status !== 'fulfilled' && admissionsResult.status !== 'fulfilled') throw profilesResult.reason || admissionsResult.reason || new Error('Unable to load student profiles.')
-        if (active) setStudents(sectionStudentProfiles(profiles, admissions).filter(student => matchesSectionStudent(student, section)))
+    sectionAssignmentApi.getStudentCandidates(section.id)
+      .then((rows) => {
+        if (active) setStudents(rows.map((item) => {
+          const id = item.studentId ?? item.StudentId ?? item.id ?? item.Id
+          const name = item.fullName ?? item.FullName ?? item.studentName ?? item.name ?? ''
+          const code = item.studentCode ?? item.StudentCode ?? item.code ?? item.enrollmentNo ?? ''
+          return { ...item, id: String(id ?? ''), studentId: String(id ?? ''), name, code, studentCode: code, enrollmentNo: code, registrationNumber: code, rollNumber: item.rollNumber ?? code }
+        }).filter((student) => clean(student.id) && clean(student.name)))
       })
-      .catch((reason) => active && setError(apiError(reason, 'Unable to load admitted students.')))
+      .catch((reason) => active && setError(apiError(reason, 'Unable to load eligible students for this section.')))
       .finally(() => { if (active) setStudentsLoading(false) })
     return () => { active = false }
-  }, [mode, section, setError])
+  }, [mode, section.id, setError])
 
   const sectionById = useMemo(() => new Map(sections.map((item) => [String(item.id), item])), [sections])
   const crossAssignmentFor = (student) => allAssignments.find((assignment) => {
@@ -762,7 +776,7 @@ function AssignStudents({ section, faculty = [], assignments, allAssignments = [
     setError(failed ? `${success} students assigned successfully. ${failed} could not be assigned. ${[...failureMessages].join(' ')}` : '', success ? 'warning' : 'error'); if (!failed) showSuccess(`${success} students assigned successfully.`)
   }
 
-  return <div className="section-overlay centered" onMouseDown={(event) => event.target === event.currentTarget && close()}><section className="section-assignment-panel" role="dialog" aria-modal="true" aria-label="Assign teacher or student"><header><div><p>Section Allocation</p><h2>{section.name}</h2><span>{[section.branchCode || section.branch, section.semester, section.academicYear].filter(clean).join(' ')}</span></div><button type="button" aria-label="Close section allocation" onClick={close}><FiX /></button></header><div className="section-capacity"><strong>{assignedCount} / {section.capacity}</strong><span>{available} seats available</span><i><b style={{ width: `${Math.min(100, assignedCount * 100 / Math.max(Number(section.capacity || 1), 1))}%` }} /></i></div>{!mode && <div className="section-assignment-chooser"><button type="button" onClick={() => setMode('teacher')}><FiCheckCircle /><span><strong>Assign Teacher</strong><small>{section.advisor || 'No teacher assigned'}</small></span></button><button type="button" onClick={() => setMode('student')}><FiUserPlus /><span><strong>Students / Allocations</strong><small>{assignedCount} students assigned</small></span></button></div>}{mode === 'teacher' && <form className="section-assignment-form section-teacher-form" onSubmit={submitTeacher}><div className="section-assignment-form-head"><h3>Assign teacher</h3></div><div><label>Teacher / Faculty Advisor<SearchableSelect label="Faculty Advisor" value={teacher} onChange={setTeacher} options={teacherCandidates.map((item) => ({ value: item.employeeProfileId, name: item.fullName, code: [item.employeeCode, item.designation].filter(clean).join(' / ') }))} placeholder="Select faculty advisor" searchPlaceholder="Search faculty name or employee code..." /></label><button className="section-primary" disabled={saving}><FiCheckCircle /> {saving ? 'Saving...' : 'Save Teacher'}</button></div>{teacherError && <p className="section-assignment-error" role="alert">{teacherError}</p>}</form>}{mode === 'student' && <div className="section-student-allocation"><div className="section-assignment-form-head"><h3>Students / Allocations</h3><span>{selectedStudents.length} selected</span></div>{section.status !== 'Active' && <p className="section-assignment-error" role="alert">Students can only be assigned to an active section.</p>}<label className="section-student-search"><FiSearch aria-hidden="true" /><input type="search" aria-label="Search students" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search students..." /></label><label className="section-select-all"><input type="checkbox" checked={allVisibleSelected} disabled={!available || !selectableRows.length || section.status !== 'Active'} onChange={toggleAll} /> Select All Eligible</label><div className="section-eligible-list">{visibleStudents.length ? visibleStudents.map(({ student, crossAssignment }) => { const otherSection = crossAssignment ? sectionById.get(String(crossAssignment.sectionId)) : null; const disabled = Boolean(crossAssignment) || section.status !== 'Active'; return <label className={`section-student-row ${disabled ? 'disabled' : ''}`} key={student.id}><input type="checkbox" checked={selectedIds.includes(String(student.id))} disabled={disabled} onChange={() => toggleStudent(student.id)} /><span><strong>{student.name}</strong><small>{student.code || 'Student record'}</small></span><em>{crossAssignment ? `Already assigned to ${otherSection?.name || 'another section'}` : 'Unassigned'}</em></label> }) : <p className="section-assignment-empty">{studentsLoading ? 'Loading student profiles...' : error ? 'Unable to load student profiles. Please reopen this panel to retry.' : 'No matching unassigned student profiles found for this branch and section.'}</p>}</div><footer className="section-student-actions"><span>Selected: {selectedStudents.length}</span><button className="section-primary" disabled={saving || !selectedStudents.length || section.status !== 'Active'} onClick={submitSelected}><FiUserPlus /> {saving ? 'Assigning...' : 'Assign Selected Students'}</button></footer>{error && <p className="section-assignment-error" role="alert">{error}</p>}<div className="section-assigned-list"><h3>Assigned Students <span>{assignments.length}</span></h3>{assignments.length ? assignments.map((assignment) => <article key={`${assignment.sectionId}-${assignment.studentId}-${assignment.id}`}><div><strong>{assignment.studentName}</strong><span>{assignment.enrollmentNo}</span></div><button title="Remove student" onClick={() => remove(assignment).catch(showError)}><FiTrash2 className="module-action-icon module-action-icon--danger" /> Remove</button></article>) : <p>No students have been assigned yet.</p>}</div></div>}{mode && <footer><button type="button" className="section-back-button" onClick={() => { setMode(''); setError(''); setSelectedIds([]) }}>Back</button></footer>}</section></div>
+  return <div className="section-overlay centered" onMouseDown={(event) => event.target === event.currentTarget && close()}><section className="section-assignment-panel" role="dialog" aria-modal="true" aria-label="Assign teacher or student"><header><div><p>Section Allocation</p><h2>{section.name}</h2><span>{[section.branchCode || section.branch, section.semester, section.academicYear].filter(clean).join(' ')}</span></div><button type="button" aria-label="Close section allocation" onClick={close}><FiX /></button></header><div className="section-capacity"><strong>{assignedCount} / {section.capacity}</strong><span>{available} seats available</span><i><b style={{ width: `${Math.min(100, assignedCount * 100 / Math.max(Number(section.capacity || 1), 1))}%` }} /></i></div>{!mode && <div className="section-assignment-chooser"><button type="button" onClick={() => setMode('teacher')}><FiCheckCircle /><span><strong>Assign Teacher</strong><small>{section.advisor || 'No teacher assigned'}</small></span></button><button type="button" onClick={() => setMode('student')}><FiUserPlus /><span><strong>Students / Allocations</strong><small>{assignedCount} students assigned</small></span></button></div>}{mode === 'teacher' && <form className="section-assignment-form section-teacher-form" onSubmit={submitTeacher}><div className="section-assignment-form-head"><h3>Assign teacher</h3></div><div><label>Teacher / Faculty Advisor<SearchableSelect label="Faculty Advisor" value={teacher} onChange={setTeacher} loading={teacherLoading} noOptionsMessage={teacherError ? 'Unable to load faculty candidates.' : 'No active faculty candidates found for this section.'} options={teacherCandidates.map((item) => ({ value: item.employeeProfileId, name: item.fullName, code: [item.employeeCode, item.designation].filter(clean).join(' / ') }))} placeholder="Select faculty advisor" searchPlaceholder="Search faculty name or employee code..." /></label><button className="section-primary" disabled={saving || teacherLoading}><FiCheckCircle /> {saving ? 'Saving...' : 'Save Teacher'}</button></div>{teacherError && <p className="section-assignment-error" role="alert">{teacherError}</p>}</form>}{mode === 'student' && <div className="section-student-allocation"><div className="section-assignment-form-head"><h3>Students / Allocations</h3><span>{selectedStudents.length} selected</span></div>{section.status !== 'Active' && <p className="section-assignment-error" role="alert">Students can only be assigned to an active section.</p>}<label className="section-student-search"><FiSearch aria-hidden="true" /><input type="search" aria-label="Search students" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search students..." /></label><label className="section-select-all"><input type="checkbox" checked={allVisibleSelected} disabled={!available || !selectableRows.length || section.status !== 'Active'} onChange={toggleAll} /> Select All Eligible</label><div className="section-eligible-list">{visibleStudents.length ? visibleStudents.map(({ student, crossAssignment }) => { const otherSection = crossAssignment ? sectionById.get(String(crossAssignment.sectionId)) : null; const disabled = Boolean(crossAssignment) || section.status !== 'Active'; return <label className={`section-student-row ${disabled ? 'disabled' : ''}`} key={student.id}><input type="checkbox" checked={selectedIds.includes(String(student.id))} disabled={disabled} onChange={() => toggleStudent(student.id)} /><span><strong>{student.name}</strong><small>{student.code || 'Student record'}</small></span><em>{crossAssignment ? `Already assigned to ${otherSection?.name || 'another section'}` : 'Unassigned'}</em></label> }) : <p className="section-assignment-empty">{studentsLoading ? 'Loading students...' : error ? 'Unable to load students for this section. Please retry.' : 'No eligible unassigned students found for this section.'}</p>}</div><footer className="section-student-actions"><span>Selected: {selectedStudents.length}</span><button className="section-primary" disabled={saving || !selectedStudents.length || section.status !== 'Active'} onClick={submitSelected}><FiUserPlus /> {saving ? 'Assigning...' : 'Assign Selected Students'}</button></footer>{error && <p className="section-assignment-error" role="alert">{error}</p>}<div className="section-assigned-list"><h3>Assigned Students <span>{assignments.length}</span></h3>{assignments.length ? assignments.map((assignment) => <article key={`${assignment.sectionId}-${assignment.studentId}-${assignment.id}`}><div><strong>{assignment.studentName}</strong><span>{assignment.enrollmentNo}</span></div><button title="Remove student" onClick={() => remove(assignment).catch(showError)}><FiTrash2 className="module-action-icon module-action-icon--danger" /> Remove</button></article>) : <p>No students have been assigned yet.</p>}</div></div>}{mode && <footer><button type="button" className="section-back-button" onClick={() => { setMode(''); setError(''); setSelectedIds([]) }}>Back</button></footer>}</section></div>
 }
 function Confirm({ action, close, confirm }) { const activate = action.nextStatus === 'Active'; return <div className="section-overlay centered"><section className="section-confirm" role="alertdialog" aria-modal="true"><i>!</i><h2>{activate ? 'Activate' : 'Deactivate'} Section?</h2><p><strong>{action.row.name} ({action.row.code})</strong> {activate ? 'will become available for student allocations.' : `${action.assigned} students are currently assigned to this section. Deactivating this section will prevent new allocations. Existing allocations are not removed by this action.`}</p><footer><button onClick={close}>Cancel</button><button className={activate ? 'section-primary' : 'section-danger'} onClick={confirm}>{activate ? 'Activate' : 'Confirm Deactivate'}</button></footer></section></div> }
 

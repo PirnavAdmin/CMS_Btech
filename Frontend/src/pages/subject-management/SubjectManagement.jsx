@@ -13,7 +13,7 @@ import subjectService from '../../services/subjectService'
 import academicService from '../../services/academicService'
 import { showError, showSuccess } from '../../utils/toast'
 import { useAcademic } from '../../context/AcademicContext'
-import { departmentOfBranch, enrichSubject, idOf, relationId } from '../../utils/subjectDirectory'
+import { enrichSubject } from '../../utils/subjectDirectory'
 import './SubjectManagement.css'
 
 const ELECTIVE_TYPES = ['Elective', 'Non-Elective', 'Core Subject']
@@ -31,8 +31,8 @@ export default function SubjectManagement() {
   const { scopeRecords, selectedCollegeId, selectedAcademicYearId, selectedAcademicYear } = useAcademic()
   const [subjects, setSubjects] = useState([]), [loading, setLoading] = useState(true), [loadError, setLoadError] = useState('')
   const [page, setPage] = useState(1)
-  const [allMasters, setMasters] = useState({ years: [], departments: [], courses: [], branches: [], semesters: [] })
-  const masters = { ...allMasters, ...Object.fromEntries(['departments', 'courses', 'branches', 'semesters'].map(type => [type, scopeRecords(allMasters[type])])) }
+  const [allMasters, setMasters] = useState({ years: [], courses: [], branches: [], semesters: [] })
+  const masters = { ...allMasters, ...Object.fromEntries(['courses', 'branches', 'semesters'].map(type => [type, scopeRecords(allMasters[type])])) }
   const [filters, updateFilters] = useState({ search: '', academicYearId: '', courseId: '', branchId: '', level: '', semesterId: '', subjectType: '', status: '' })
   const [form, setForm] = useState(blank), [editing, setEditing] = useState(null), [editorOpen, setEditorOpen] = useState(false), [viewing, setViewing] = useState(null), [saving, setSaving] = useState(false), [recentId, setRecentId] = useState('')
   const [returnToElectives, setReturnToElectives] = useState(false)
@@ -40,8 +40,8 @@ export default function SubjectManagement() {
   const setFilters = next => { setPage(1); updateFilters(next) }
   const loadSubjects = async () => { setLoading(true); setLoadError(''); try { setSubjects(await subjectService.getSubjects({ liveOnly: true })) } catch (e) { setLoadError(e.message || 'Unable to load subjects.') } finally { setLoading(false) } }
   useEffect(() => { loadSubjects() }, [])
-  useEffect(() => { let active = true; Promise.all([academicService.getAcademicYears(), academicService.getCourses(), academicService.getBranches(), academicService.getSemesters(), academicService.getDepartments()]).then(([years, courses, branches, semesters, departments]) => active && setMasters({ years, courses, branches, semesters, departments })).catch(() => active && showError('Academic mapping options could not be loaded.')); return () => { active = false } }, [])
-  const scopedCourses = scopeRecords(masters.courses).filter(course => !form.departmentId || relationId(course, 'department') === String(form.departmentId) || masters.branches.some(branch => relationId(branch, 'course') === idOf(course, 'course') && departmentOfBranch(branch, masters.courses) === String(form.departmentId)))
+  useEffect(() => { let active = true; Promise.all([academicService.getAcademicYears(), academicService.getCourses(), academicService.getBranches(), academicService.getSemesters()]).then(([years, courses, branches, semesters]) => active && setMasters({ years, courses, branches, semesters })).catch(() => active && showError('Academic mapping options could not be loaded.')); return () => { active = false } }, [])
+  const scopedCourses = scopeRecords(masters.courses)
   const branches = courseId => scopeRecords(masters.branches).filter(b => (!courseId || key(b.courseId) === key(courseId)))
   const semesters = (courseId, branchId) => scopeRecords(masters.semesters).filter(s => (!courseId || !s.courseId || key(s.courseId) === key(courseId)) && (!branchId || !s.branchId || key(s.branchId) === key(branchId)))
   const filterSemesters = semesters(filters.courseId, filters.branchId), formSemesters = semesters(form.courseId, form.branchId)
@@ -66,7 +66,7 @@ export default function SubjectManagement() {
   const paginatedRecords = records.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE)
   const kpis = useMemo(() => ({ total: records.length, active: records.filter(s => String(s.status).toLowerCase() === 'active').length, theory: records.filter(s => /theory/i.test(s.subjectType)).length, lab: records.filter(s => /lab|practical/i.test(s.subjectType)).length, credits: records.reduce((n, s) => n + Number(s.credits || 0), 0) }), [records])
   const changeFilter = (field, value) => setFilters(old => field === 'courseId' ? { ...old, courseId: value, branchId: '', level: '', semesterId: '' } : field === 'branchId' ? { ...old, branchId: value, level: '', semesterId: '' } : field === 'level' ? { ...old, level: value, semesterId: '' } : { ...old, [field]: value })
-  const changeForm = (field, value) => setForm(old => field === 'departmentId' ? { ...old, departmentId: value, courseId: '', branchId: '', semesterId: '' } : field === 'courseId' ? { ...old, courseId: value, branchId: '', semesterId: '' } : field === 'branchId' ? { ...old, branchId: value, semesterId: '' } : { ...old, [field]: value })
+  const changeForm = (field, value) => setForm(old => field === 'courseId' ? { ...old, courseId: value, branchId: '', semesterId: '' } : field === 'branchId' ? { ...old, branchId: value, semesterId: '' } : { ...old, [field]: value })
   const formLevel = getAcademicLevelFromSemester(formSemesters.find(s => key(s.id) === key(form.semesterId)) || { semester: form.semester })
   const openAdd = () => { const activeYear = masters.years.find(year => year.isCurrent || String(year.status).toLowerCase() === 'active' || String(year.status).toLowerCase() === 'current'); setEditing(null); setForm({ ...blank(), academicYearId: selectedAcademicYearId || (activeYear ? key(activeYear.id) : '') }); setEditorOpen(true) }
   const closeEditor = () => { setEditing(null); setForm(blank()); setEditorOpen(false); if (returnToElectives) { setReturnToElectives(false); navigate('/elective-management') } }
@@ -115,11 +115,11 @@ export default function SubjectManagement() {
               </button>
             </div>
           </header>
-          <Editor
+      <Editor
             form={form}
             editing={editing}
             masters={{ ...masters, courses: scopedCourses }}
-            branches={branches(form.courseId).filter(branch => !form.departmentId || departmentOfBranch(branch, masters.courses) === String(form.departmentId))}
+            branches={branches(form.courseId)}
             semesters={formSemesters}
             levels={ACADEMIC_LEVELS}
             typeOptions={types}
@@ -287,7 +287,7 @@ function Editor({ form, editing, masters, branches, semesters, levels, typeOptio
   const [activeTab, setActiveTab] = useState('mapping');
   const [mappingError, setMappingError] = useState('');
   const change = (field, value) => {
-    if (field === 'departmentId' || field === 'courseId' || field === 'branchId') setFormLevel('');
+    if (field === 'courseId' || field === 'branchId') setFormLevel('');
     updateForm(field, value);
   };
   const selectedCourse = masters.courses.find(course => key(course.id) === key(form.courseId));
@@ -321,7 +321,7 @@ function Editor({ form, editing, masters, branches, semesters, levels, typeOptio
   };
 
   return (
-    <div className="erp-two-column-layout">
+    <div className="erp-two-column-layout sm-editor-layout">
       <div className="erp-card-main">
         <div className="erp-tabs-bar">
           {tabs.map((t, idx) => (
@@ -345,9 +345,6 @@ function Editor({ form, editing, masters, branches, semesters, levels, typeOptio
                 <Field label={<>Academic Year <span className="sm-required">*</span></>}>
                   <Select label="Academic Year" value={form.academicYearId} options={masters.years} onChange={v => change('academicYearId', v)} />
                   {!masters.years.length && <small>Academic years are unavailable. Check Academic Year setup and reopen this form.</small>}
-                </Field>
-                <Field label="Department">
-                  <Select label="Department" value={form.departmentId} options={masters.departments} onChange={v => change('departmentId', v)} />
                 </Field>
                 <Field label={<>Course <span className="sm-required">*</span></>}>
                   <Select label="Course" value={form.courseId} options={masters.courses} onChange={v => change('courseId', v)} />

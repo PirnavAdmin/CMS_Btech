@@ -340,7 +340,7 @@ export default function StudentProfileEdit({ student, onCancel, onSave }) {
     window.setTimeout(
       () =>
         document
-          .querySelector(".sp-edit-dialog")
+          .querySelector(".sp-edit-inline form")
           ?.scrollTo({ top: 0, behavior: "smooth" }),
       0,
     );

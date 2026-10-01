@@ -14,6 +14,7 @@ import { normalizePayroll } from '../../services/facultyContracts'
 import { newestFirst, rememberCreated } from '../../utils/newestFirst'
 import eventBus, { ERP_EVENTS } from '../../services/eventBus'
 import StatusBadge from '../../components/StatusBadge'
+import { useAcademic } from '../../context/AcademicContext'
 import './Payroll.css'
 
 const LOCAL_PAYROLL_STATUS_KEY = 'pirnav-faculty-local-payroll-status-v1'
@@ -63,6 +64,12 @@ const saveLocalPayrollStatus = (item, status, reason = '', currentMonth = '') =>
 const getLocalSalaryStructures = () => {
   try { return JSON.parse(localStorage.getItem(collegeStorageKey(LOCAL_SALARY_STRUCTURE_KEY))) || {} } catch { return {} }
 }
+const getSavedSalaryStructure = (structures, faculty, payrollRow = {}) =>
+  structures[String(payrollRow.facultyId || '')] ||
+  structures[String(faculty.facultyId || '')] ||
+  structures[String(faculty.id || '')] ||
+  structures[String(faculty.employeeId || '')] ||
+  null
 
 const saveLocalSalaryStructure = (item, salaryData) => {
   try {
@@ -455,6 +462,7 @@ const monthLabel = value => value ? new Date(`${value}-01T00:00:00`).toLocaleDat
 const money = value => (value == null || isNaN(Number(value))) ? '-' : new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(Number(value))
 const statusClass = value => String(value || 'Draft').toLowerCase().replace(/\s+/g, '-')
 export default function Payroll() {
+  const { scopeRecords } = useAcademic()
   const [tab, setTab] = useState('Payroll Processing'), [month, setMonth] = useState(getDefaultPayrollMonth), [selectedIds, setSelectedIds] = useState([]), [query, setQuery] = useState(''), [filters, setFilters] = useState({ type: 'Teaching', department: '', status: '' }), [page, setPage] = useState(1), [selected, setSelected] = useState(null), [hold, setHold] = useState(false), [holdReason, setHoldReason] = useState(''), [editingSalary, setEditingSalary] = useState(null), [payslipItem, setPayslipItem] = useState(null)
   const [facultyList, setFacultyList] = useCollegeState([]), [payroll, setPayroll] = useCollegeState([], { faculty: facultyList }), [loading, setLoading] = useState(true), [error, setError] = useState(''), [busy, setBusy] = useState(false), [notice, setNotice] = useState('')
   const requestVersion = useRef(0), holdLock = useRef(false)
@@ -472,13 +480,14 @@ export default function Payroll() {
         facultyLeaveApi.getTypes().catch(() => [])
       ])
       const data = payrollRes.status === 'fulfilled' && Array.isArray(payrollRes.value) ? payrollRes.value : []
-      const faculty = facultyRes.status === 'fulfilled' && Array.isArray(facultyRes.value) ? facultyRes.value : []
+      const facultyRows = facultyRes.status === 'fulfilled' && Array.isArray(facultyRes.value) ? facultyRes.value : []
+      const faculty = scopeRecords(facultyRows)
       const remoteAttendance = attendanceRes.status === 'fulfilled' && Array.isArray(attendanceRes.value) ? attendanceRes.value : []
       const remotePending = leaveRequestsRes.status === 'fulfilled' && Array.isArray(leaveRequestsRes.value) ? leaveRequestsRes.value : []
       const remoteHistory = leaveHistoryRes.status === 'fulfilled' && Array.isArray(leaveHistoryRes.value) ? leaveHistoryRes.value : []
       const remoteTypes = leaveTypesRes.status === 'fulfilled' && Array.isArray(leaveTypesRes.value) ? leaveTypesRes.value : []
 
-      setFacultyList(faculty)
+      setFacultyList(facultyRows)
 
       const localStatuses = getLocalPayrollStatuses()
       const localSalaries = getLocalSalaryStructures()
@@ -507,14 +516,17 @@ export default function Payroll() {
 
       let combined = []
       if (data.length > 0) {
-        combined = data.map((row, index) => {
+        combined = data.map((row) => {
           const fac = faculty.find(f => 
             (row.facultyId && (String(f.id) === String(row.facultyId) || String(f.facultyId) === String(row.facultyId))) ||
+            (row.employeeId && String(f.employeeId || '').toLowerCase().trim() === String(row.employeeId).toLowerCase().trim()) ||
             (row.fullName && (String(f.fullName || f.name).toLowerCase().trim() === String(row.fullName).toLowerCase().trim())) ||
-            (row.facultyName && (String(f.fullName || f.name).toLowerCase().trim() === String(row.facultyName).toLowerCase().trim()))
-          ) || faculty[index] || {}
+            (row.facultyName && (String(f.fullName || f.name).toLowerCase().trim() === String(row.facultyName).toLowerCase().trim())) ||
+            (tab === 'Payroll Processing' && row.id && (String(f.id) === String(row.id) || String(f.facultyId) === String(row.id)))
+          )
+          if (!fac) return null
 
-          const resolvedFacultyId = row.facultyId || fac.facultyId || fac.id
+          const resolvedFacultyId = row.facultyId || fac.facultyId || fac.id || row.id
           const resolvedEmpId = row.employeeId || fac.employeeId || (resolvedFacultyId ? `EMP${String(resolvedFacultyId).padStart(6, '0')}` : '') || (fac.id ? `EMP${String(fac.id).padStart(6, '0')}` : '')
           const statusOverride = localStatuses[`${month}_${resolvedFacultyId}`]?.status ||
             localStatuses[`${month}_${resolvedEmpId}`]?.status ||
@@ -530,9 +542,9 @@ export default function Payroll() {
             allTypes
           )
 
-          const savedSalary = localSalaries[String(resolvedFacultyId)] || localSalaries[String(resolvedEmpId)] || localSalaries[String(row.id)]
-          const fallbackSalary = calculateDefaultSalaryBreakdown(row.designation || fac.designation, row.type || fac.employeeCategory)
-          const salaryStruct = savedSalary || fallbackSalary
+          const savedSalary = getSavedSalaryStructure(localSalaries, fac, row)
+          if (!savedSalary) return null
+          const salaryStruct = savedSalary
 
           const workingDays = row.workingDays || row.working || attMetrics.working
           const lopDays = (row.lopDays != null && row.lopDays !== 0) ? row.lopDays : attMetrics.lop
@@ -566,9 +578,11 @@ export default function Payroll() {
             deductions: figures.deductions,
             netSalary: figures.netSalary
           })
-        })
+        }).filter(Boolean)
       } else if (faculty.length > 0) {
         combined = faculty.map(fac => {
+          const savedSalary = getSavedSalaryStructure(localSalaries, fac)
+          if (!savedSalary) return null
           const statusOverride = localStatuses[`${month}_${fac.id}`]?.status ||
             localStatuses[`pr-${fac.id}-${month}`]?.status ||
             localStatuses[String(fac.id)]?.status
@@ -582,9 +596,7 @@ export default function Payroll() {
             allTypes
           )
 
-          const savedSalary = localSalaries[String(fac.id)] || localSalaries[String(fac.employeeId)]
-          const fallbackSalary = calculateDefaultSalaryBreakdown(fac.designation, fac.employeeCategory)
-          const salaryStruct = savedSalary || fallbackSalary
+          const salaryStruct = savedSalary
 
           const figures = calculateEmployeePayrollFigures(salaryStruct, attMetrics.working, attMetrics.lop)
 
@@ -615,13 +627,13 @@ export default function Payroll() {
             deductions: figures.deductions,
             netSalary: figures.netSalary
           })
-        })
+        }).filter(Boolean)
       }
 
       if (version === requestVersion.current) setPayroll(newestFirst('payroll', combined))
     } catch (reason) { if (version === requestVersion.current) { setPayroll([]); setError(reason.message) } }
     finally { if (version === requestVersion.current) setLoading(false) }
-  }, [month, tab])
+  }, [month, tab, scopeRecords, setFacultyList, setPayroll])
   useEffect(() => { load(); return () => { requestVersion.current++ } }, [load])
   useEffect(() => {
     const unsubLeave = eventBus.subscribe(ERP_EVENTS.LEAVE_UPDATED, () => {
@@ -1109,7 +1121,7 @@ export default function Payroll() {
   )
 })()}{notice && <div className="flm-toast">{notice}<button onClick={() => setNotice('')}><FiX /></button></div>}
 {payslipItem && <SalarySlipModal item={payslipItem} month={month} onClose={() => setPayslipItem(null)} />}
-{editingSalary && <SalaryConfigModal item={editingSalary} facultyList={facultyList} activeCategory={filters.type || 'Teaching'} onClose={() => setEditingSalary(null)} onSave={handleSaveSalaryStructure} />}
+{editingSalary && <SalaryConfigModal key={editingSalary.isNew ? 'new-salary-structure' : `salary-${editingSalary.id || editingSalary.facultyId}`} item={editingSalary} facultyList={facultyList} activeCategory={filters.type || 'Teaching'} onClose={() => setEditingSalary(null)} onSave={handleSaveSalaryStructure} />}
 {hold && selected && <div className="fp-overlay"><form className="fp-dialog fp-hold" onSubmit={placeHold}><h2>Place Payroll on Hold</h2><p>{selected.fullName} | {monthLabel(month)}</p><label><span>Reason <b className="required-mark">*</b></span><textarea value={holdReason} onChange={event => setHoldReason(event.target.value)} required /></label><footer><button type="button" onClick={() => setHold(false)}>Cancel</button><button className="primary" type="submit" disabled={busy}>{busy ? 'Saving...' : 'Place on Hold'}</button></footer></form></div>}</main></DashboardLayout>
 }
 
@@ -1125,6 +1137,18 @@ function SalaryConfigModal({ item, facultyList = [], activeCategory = 'Teaching'
   const [allowances, setAllowances] = useState(isNew ? '' : (item?.allowances ?? ''))
   const [pf, setPf] = useState(isNew ? '' : (item?.pf ?? ''))
   const [tax, setTax] = useState(isNew ? '' : (item?.tax ?? ''))
+
+  useEffect(() => {
+    if (!isNew) return
+    setSelectedFacultyId('')
+    setActiveFaculty(null)
+    setBasic('')
+    setHra('')
+    setDa('')
+    setAllowances('')
+    setPf('')
+    setTax('')
+  }, [isNew])
 
   const getMemberCategory = (f) => {
     const cat = String(f?.employeeCategory || f?.type || f?.category || '').trim().toLowerCase()
@@ -1157,32 +1181,12 @@ function SalaryConfigModal({ item, facultyList = [], activeCategory = 'Teaching'
     setSelectedFacultyId(facId)
     const found = facultyList.find(f => String(f.id) === String(facId)) || null
     setActiveFaculty(found)
-    if (found) {
-      const saved = getLocalSalaryStructures()[String(found.id)] || getLocalSalaryStructures()[String(found.employeeId)]
-      if (saved) {
-        setBasic(saved.basicSalary ?? '')
-        setHra(saved.hra ?? '')
-        setDa(saved.da ?? '')
-        setAllowances(saved.allowances ?? '')
-        setPf(saved.pf ?? '')
-        setTax(saved.tax ?? '')
-      } else {
-        const defaults = calculateDefaultSalaryBreakdown(found.designation, found.employeeCategory || activeCategory)
-        setBasic(defaults.basicSalary)
-        setHra(defaults.hra)
-        setDa(defaults.da)
-        setAllowances(defaults.allowances)
-        setPf(defaults.pf)
-        setTax(defaults.tax)
-      }
-    } else {
-      setBasic('')
-      setHra('')
-      setDa('')
-      setAllowances('')
-      setPf('')
-      setTax('')
-    }
+    setBasic('')
+    setHra('')
+    setDa('')
+    setAllowances('')
+    setPf('')
+    setTax('')
   }
 
   const numBasic = Number(basic) || 0
@@ -1197,18 +1201,7 @@ function SalaryConfigModal({ item, facultyList = [], activeCategory = 'Teaching'
   const net = Math.max(0, gross - deductions)
 
   const handleBasicChange = val => {
-    if (val === '') {
-      setBasic('')
-      setHra('')
-      setDa('')
-      setPf('')
-      return
-    }
-    const b = Number(val) || 0
-    setBasic(b)
-    setHra(Math.round(b * 0.40))
-    setDa(Math.round(b * 0.20))
-    setPf(Math.round(b * 0.12))
+    setBasic(val === '' ? '' : Number(val))
   }
 
   const handleSubmit = e => {
@@ -1247,7 +1240,7 @@ function SalaryConfigModal({ item, facultyList = [], activeCategory = 'Teaching'
           <span>{displayEmpId} | {displayDesignation} | {displayDept} ({displayType})</span>
         )}
 
-        <form onSubmit={handleSubmit} style={{ marginTop: '16px' }}>
+        <form onSubmit={handleSubmit} autoComplete="off" style={{ marginTop: '16px' }}>
           {isNew && (
             <div style={{ marginBottom: '16px' }}>
               <div className="fp-field" style={{ display: 'grid', gap: '6px' }}>
@@ -1271,19 +1264,19 @@ function SalaryConfigModal({ item, facultyList = [], activeCategory = 'Teaching'
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
             <label className="fp-field">
               <span>Basic Salary (₹) <b className="required-mark">*</b></span>
-              <input type="number" min="0" value={basic} onChange={e => handleBasicChange(e.target.value)} required />
+              <input type="number" min="0" autoComplete="new-password" value={basic} onChange={e => handleBasicChange(e.target.value)} required />
             </label>
             <label className="fp-field">
               <span>HRA (House Rent) (₹)</span>
-              <input type="number" min="0" value={hra} onChange={e => setHra(e.target.value === '' ? '' : Number(e.target.value))} />
+              <input type="number" min="0" autoComplete="new-password" value={hra} onChange={e => setHra(e.target.value === '' ? '' : Number(e.target.value))} />
             </label>
             <label className="fp-field">
               <span>DA (Dearness Allowance) (₹)</span>
-              <input type="number" min="0" value={da} onChange={e => setDa(e.target.value === '' ? '' : Number(e.target.value))} />
+              <input type="number" min="0" autoComplete="new-password" value={da} onChange={e => setDa(e.target.value === '' ? '' : Number(e.target.value))} />
             </label>
             <label className="fp-field">
               <span>Special / Other Allowances (₹)</span>
-              <input type="number" min="0" value={allowances} onChange={e => setAllowances(e.target.value === '' ? '' : Number(e.target.value))} />
+              <input type="number" min="0" autoComplete="new-password" value={allowances} onChange={e => setAllowances(e.target.value === '' ? '' : Number(e.target.value))} />
             </label>
           </div>
 
@@ -1291,11 +1284,11 @@ function SalaryConfigModal({ item, facultyList = [], activeCategory = 'Teaching'
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
             <label className="fp-field">
               <span>Provident Fund (PF) (₹)</span>
-              <input type="number" min="0" value={pf} onChange={e => setPf(e.target.value === '' ? '' : Number(e.target.value))} />
+              <input type="number" min="0" autoComplete="new-password" value={pf} onChange={e => setPf(e.target.value === '' ? '' : Number(e.target.value))} />
             </label>
             <label className="fp-field">
               <span>Professional Tax / TDS (₹)</span>
-              <input type="number" min="0" value={tax} onChange={e => setTax(e.target.value === '' ? '' : Number(e.target.value))} />
+              <input type="number" min="0" autoComplete="new-password" value={tax} onChange={e => setTax(e.target.value === '' ? '' : Number(e.target.value))} />
             </label>
           </div>
 

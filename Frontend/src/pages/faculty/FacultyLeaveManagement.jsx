@@ -67,11 +67,12 @@ const saveLocalDecision = (requestId, status, reason = '') => {
 const getLocalPolicies = () => {
   try { return JSON.parse(localStorage.getItem(collegeStorageKey(LOCAL_LEAVE_POLICIES_KEY))) || {} } catch { return {} }
 }
-const saveLocalPolicy = (policy) => {
+const saveLocalPolicy = (policy, previousId = '') => {
   try {
     const policies = getLocalPolicies()
     const id = String(policy.id || policy.policyId || '')
     if (id) {
+      if (previousId && String(previousId) !== id) delete policies[String(previousId)]
       policies[id] = { ...policy, id, collegeId: selectedCollegeId() }
       localStorage.setItem(collegeStorageKey(LOCAL_LEAVE_POLICIES_KEY), JSON.stringify(policies))
     }
@@ -311,6 +312,7 @@ export default function FacultyLeaveManagement() {
     const updatedPolicy = {
       ...policy,
       id: String(policy.id || `lp-${Date.now()}`),
+      collegeId: selectedCollegeId(),
       name: policy.name.trim(),
       academicYear: policy.academicYear,
       applicableTo: policy.applicableTo,
@@ -324,7 +326,15 @@ export default function FacultyLeaveManagement() {
       const exists = prev.some(p => String(p.id) === String(updatedPolicy.id))
       return exists ? prev.map(p => String(p.id) === String(updatedPolicy.id) ? { ...p, ...updatedPolicy } : p) : [updatedPolicy, ...prev]
     })
-    return mutate(() => policy.id ? facultyLeaveApi.updatePolicy(policy.id, leavePolicyPayload(updatedPolicy)) : facultyLeaveApi.createPolicy(leavePolicyPayload(updatedPolicy)), 'Leave policy saved.', policy.id ? null : 'leave-policies')
+    return mutate(async () => {
+      const saved = policy.id
+        ? await facultyLeaveApi.updatePolicy(policy.id, leavePolicyPayload(updatedPolicy))
+        : await facultyLeaveApi.createPolicy(leavePolicyPayload(updatedPolicy))
+      const savedId = String(saved?.policyId ?? saved?.id ?? updatedPolicy.id)
+      const savedStatus = saved?.status ?? updatedPolicy.status
+      saveLocalPolicy({ ...updatedPolicy, ...saved, id: savedId, status: savedStatus, collegeId: selectedCollegeId() }, updatedPolicy.id)
+      return saved
+    }, 'Leave policy saved.', policy.id ? null : 'leave-policies')
   }
   const activatePolicy = policy => {
     const updatedPolicy = { ...policy, status: 'Active' }
@@ -682,16 +692,7 @@ function ToggleTypeDialog({ item, onClose, onConfirm }) {
 
 function PolicyDialog({ item = {}, leaveTypes, academicYears, onClose, onSave }) {
   const activeYear = academicYears.find(year => year.name === item.academicYear) || academicYears[0]
-  const initialEntitlements = (item.entitlements && item.entitlements.length > 0)
-    ? item.entitlements.map(e => ({ ...e, typeId: String(e.typeId || e.leaveTypeId || '') }))
-    : leaveTypes.filter(type => type.status === 'Active').map(type => ({
-        typeId: type.id,
-        entitlement: '',
-        maxDays: '',
-        carryForward: false,
-        maxCarryForward: '',
-        documentRequired: false
-      }))
+  const initialEntitlements = (item.entitlements || []).map(e => ({ ...e, typeId: String(e.typeId || e.leaveTypeId || '') }))
   const [data, setData] = useState({
     name: item.name || '',
     academicYear: activeYear?.name || '',
@@ -995,7 +996,7 @@ function ActivationDialog({ policy, onClose, onActivate }) { const [error, setEr
 function DecisionDialog({ request, status, onClose, onSave }) { const [reason, setReason] = useState(''); const reject = status === 'Rejected'; return <Modal title={reject ? 'Reject Leave Request' : 'Approve Leave Request?'} onClose={onClose}>{reject && <label><span>Reason for Rejection <b className="required-mark">*</b></span><textarea value={reason} onChange={event => setReason(event.target.value)} /></label>}<Footer><button onClick={onClose}>Cancel</button><button className={reject ? 'reject-action' : 'approve-action'} disabled={reject && reason.trim().length < 3} onClick={() => onSave(request, status, reason)}>Confirm</button></Footer></Modal> }
 function BalanceTable({ employee, policy, leaveTypes, getBalance }) {
   const balance = getBalance(employee, policy)
-  const rules = leaveBalanceRules(balance, policy, leaveTypes).filter(rule => {
+  const rules = leaveBalanceRules(balance, policy).filter(rule => {
     const leaveType = leaveTypes.find(type => String(type.id) === String(rule.typeId)) || rule
     return !genderRestrictedLeave(leaveType) || String(employee?.gender || '').trim().toLowerCase() === genderRestrictedLeave(leaveType)
   })
