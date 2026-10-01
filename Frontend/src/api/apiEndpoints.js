@@ -817,7 +817,20 @@ export const facultyApi = {
   getAll: async (params) => listData(await request(withQuery(API_ENDPOINTS.faculty.list, params))),
   search: async (params) => listData(await request(withQuery(API_ENDPOINTS.faculty.search, params))),
   getById: async (facultyId) => normalizeRecord(await request(API_ENDPOINTS.faculty.detail(requiredId(facultyId, 'Faculty ID')))),
-  create: async (payload) => normalizeRecord(await jsonRequest(API_ENDPOINTS.faculty.create, 'POST', payload)),
+  create: async (payload, collegeId = payload?.collegeId) => {
+    const resolvedCollegeId = Number(collegeId)
+    if (!Number.isSafeInteger(resolvedCollegeId) || resolvedCollegeId <= 0) throw new Error('College is required. Select a valid college.')
+    const body = { ...payload, collegeId: resolvedCollegeId }
+    const url = withQuery(API_ENDPOINTS.faculty.create, { collegeId: resolvedCollegeId })
+    console.log('Faculty Create Query collegeId:', resolvedCollegeId)
+    console.log('Faculty Create Body collegeId:', body.collegeId)
+    console.log('Faculty Create Payload:', body)
+    return normalizeRecord(await request(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    }, false, true))
+  },
   update: async (facultyId, payload) => normalizeRecord(await jsonRequest(API_ENDPOINTS.faculty.update(requiredId(facultyId, 'Faculty ID')), 'PUT', payload)),
   getWorkload: async (facultyId, params) => normalizeRecord(await request(withQuery(API_ENDPOINTS.faculty.workload(requiredId(facultyId, 'Faculty ID')), params))),
   uploadProfilePhoto: async (facultyId, file, metadata = {}) => {

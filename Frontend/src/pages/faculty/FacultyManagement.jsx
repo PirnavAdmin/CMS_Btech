@@ -523,7 +523,7 @@ const normalize = (row = {}) => {
 
   return {
     ...Object.fromEntries(sections.flatMap(s => s.fields.map(([key]) => [key, '']))),
-    collegeId: safeRow.collegeId ?? safeRow.college_id ?? '1',
+    collegeId: safeRow.collegeId ?? safeRow.college_id ?? '',
     employeeCategoryOther: safeRow.employeeCategoryOther || safeRow.EmployeeCategoryOther || '',
     qualificationOther: safeRow.qualificationOther || safeRow.QualificationOther || '',
     employmentStatus: safeRow.employmentStatus || safeRow.statusName || (safeRow.status === 0 ? 'Inactive' : 'Working'),
@@ -1755,10 +1755,10 @@ export const formatFacultyDisplayCode = (item, collegeOptions = [], allFaculty =
 }
 
 const getNextFacultyCode = (list = [], collegeId, collegeOptions = [], isNonTeaching = false) => {
-  const effectiveCollegeId = collegeId || collegeOptions[0]?.value || '1'
+  const effectiveCollegeId = collegeId || collegeOptions[0]?.value || ''
   const prefix = getCollegePrefix(effectiveCollegeId, collegeOptions, isNonTeaching)
   const categoryList = (list || []).filter(item => {
-    const cId = item?.collegeId ?? item?.college_id ?? (collegeOptions[0]?.value || '1')
+    const cId = item?.collegeId ?? item?.college_id ?? (collegeOptions[0]?.value || '')
     return String(cId || '') === String(effectiveCollegeId || '') && employeeCategoryOf(item) === (isNonTeaching ? 'Non-Teaching' : 'Teaching')
   })
 
@@ -1780,8 +1780,8 @@ const getNextFacultyCode = (list = [], collegeId, collegeOptions = [], isNonTeac
   return `${prefix}${String(nextSeq).padStart(3, '0')}`
 }
 
-function FacultyForm({ initial, faculty, onSave, onCancel, collegeOptions = [], departmentOptions = [], saving }) {
-  const defaultCollegeId = initial?.collegeId || collegeOptions[0]?.value || '1'
+function FacultyForm({ initial, faculty, onSave, onCancel, collegeOptions = [], departmentOptions = [], selectedCollegeId = '', saving }) {
+  const defaultCollegeId = initial?.collegeId || selectedCollegeId || collegeOptions[0]?.value || ''
   const isInitialNonTeaching = (initial?.employeeCategory || initial?.employee_category) === 'Non-Teaching'
   const [data, setData] = useState(() => {
     const base = normalize(initial)
@@ -1810,7 +1810,7 @@ function FacultyForm({ initial, faculty, onSave, onCancel, collegeOptions = [], 
 
   useEffect(() => {
     if (!initial?.id) {
-      const activeCollegeId = data.collegeId || collegeOptions[0]?.value || '1'
+      const activeCollegeId = selectedCollegeId || collegeOptions[0]?.value || data.collegeId || ''
       const isNT = data.employeeCategory === 'Non-Teaching'
       const newCode = getNextFacultyCode(faculty, activeCollegeId, collegeOptions, isNT)
       const isHex = val => !val || /^[0-9a-f]{8}-?[0-9a-f]{4}-?[0-9a-f]{4}-?[0-9a-f]{4}-?[0-9a-f]{12}$/i.test(String(val).trim()) || /^[0-9a-f]{32}$/i.test(String(val).trim())
@@ -1824,7 +1824,7 @@ function FacultyForm({ initial, faculty, onSave, onCancel, collegeOptions = [], 
         }))
       }
     }
-  }, [collegeOptions, data.collegeId, data.employeeCategory, faculty, initial?.id])
+  }, [collegeOptions, data.collegeId, data.employeeCategory, faculty, initial?.id, selectedCollegeId])
 
   const update = (key, value) => {
     setData(old => {
@@ -2685,7 +2685,7 @@ export default function FacultyManagement() {
       })))
     }).catch(() => {})
     return () => { active = false }
-  }, [])
+  }, [scopeRecords, selectedCollegeId])
   const notify = useCallback(message => {
     clearTimeout(toastTimer.current)
     setToast(message)
@@ -2778,20 +2778,26 @@ export default function FacultyManagement() {
   const addFaculty = (category = activeCategory) => navigate(`/faculty/new?category=${category}`)
   const save = async data => {
     if (saveLock.current) return
+    const collegeId = data.id ? undefined : Number(selectedCollegeId)
+    if (!data.id && (!Number.isSafeInteger(collegeId) || collegeId <= 0)) {
+      setLoadError('Select an active college before creating faculty.')
+      return
+    }
+    const facultyData = data.id ? data : { ...data, collegeId }
     saveLock.current = true; setSaving(true); setLoadError('')
     let savedId = data.id
     try {
-      const saved = data.id ? await facultyService.update(data.id, data) : await facultyService.create(data)
+      const saved = data.id ? await facultyService.update(data.id, facultyData) : await facultyService.create(facultyData, collegeId)
       savedId = String(saved?.id || saved?.facultyId || data.id || '')
       if (!savedId) throw new Error('Faculty saved, but the server did not return its ID. Reload the directory before retrying.')
-      if (data.profileExists) await facultyService.updateProfile(savedId, data).catch(() => {})
-      else await facultyService.createProfile(savedId, data).catch(() => {})
+      if (data.profileExists) await facultyService.updateProfile(savedId, facultyData).catch(() => {})
+      else await facultyService.createProfile(savedId, facultyData).catch(() => {})
       if (data.photoFile) await facultyService.uploadProfilePhoto(savedId, data.photoFile)
       const refreshed = await facultyService.getById(savedId).catch(() => saved)
       const targetCat = data.employeeCategory || employeeCategoryOf(data) || employeeCategoryOf(refreshed) || 'Teaching'
       const normalizedRecord = normalize({
-        ...mergeFacultyData(refreshed, data),
-        ...data,
+        ...mergeFacultyData(refreshed, facultyData),
+        ...facultyData,
         id: savedId,
         facultyId: savedId,
         employeeId: data.employeeId || refreshed.employeeId || refreshed.facultyCode,
@@ -2880,11 +2886,12 @@ export default function FacultyManagement() {
           <button type="button" className="fm-button secondary" onClick={() => back()}><FiArrowLeft /> Back</button>
         </header>
         <FacultyForm
-          key={location.key + ':' + Boolean(detail) + ':' + (collegeOptions[0]?.value || '') + ':' + defaultNewCategory}
+          key={location.key + ':' + Boolean(detail) + ':' + selectedCollegeId + ':' + defaultNewCategory}
           initial={selected || { employmentStatus: 'Working', employeeCategory: defaultNewCategory }}
           faculty={faculty}
           collegeOptions={collegeOptions}
           departmentOptions={departmentOptions}
+          selectedCollegeId={selectedCollegeId}
           saving={saving}
           onSave={save}
           onCancel={() => back()}

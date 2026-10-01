@@ -1259,11 +1259,14 @@
 /* Forms & Stepper Layout - Equal Height Two-Column Cards with Scroll */
 .faculty-management .erp-two-column-layout {
   display: grid !important;
-  grid-template-columns: minmax(0, 1.3fr) minmax(320px, 0.9fr) !important;
+  grid-template-columns: minmax(0, 1.3fr) minmax(0, 0.9fr) !important;
+  grid-template-rows: minmax(0, 1fr) !important;
   gap: 16px !important;
   align-items: stretch !important;
   width: 100% !important;
+  min-width: 0 !important;
   height: clamp(380px, calc(100vh - 250px), 430px) !important;
+  min-height: 0 !important;
   box-sizing: border-box !important;
 }
 
@@ -1280,6 +1283,7 @@
   padding: 0 !important;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04) !important;
   box-sizing: border-box !important;
+  min-width: 0 !important;
 }
 
 .faculty-management .fm-form {
@@ -1301,6 +1305,9 @@
   flex: 1 1 auto !important;
   min-height: 0 !important;
   overflow-y: auto !important;
+  overflow-x: hidden !important;
+  min-width: 0 !important;
+  width: 100% !important;
   scrollbar-width: thin !important;
   padding: 8px 16px !important;
   margin: 0 !important;
@@ -1578,6 +1585,8 @@
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 10px 14px;
+  min-width: 0;
+  max-width: 100%;
 }
 
 @media (max-width: 960px) {
