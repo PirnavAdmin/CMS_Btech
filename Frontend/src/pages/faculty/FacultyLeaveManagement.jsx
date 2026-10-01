@@ -2,7 +2,7 @@ import DirectoryEmptyState from '../../components/DirectoryEmptyState'
 import { collegeStorageKey, selectedCollegeId } from '../../utils/collegeScope.js'
 import useCollegeState from '../../hooks/useCollegeState'
 ﻿import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { FiBriefcase, FiCheck, FiChevronDown, FiChevronUp, FiEdit2, FiEye, FiFilter, FiPlus, FiPower, FiSearch, FiSlash, FiX } from 'react-icons/fi'
+import { FiArrowLeft, FiBriefcase, FiCheck, FiChevronDown, FiChevronUp, FiEdit2, FiEye, FiFilter, FiPlus, FiPower, FiSearch, FiSlash, FiX } from 'react-icons/fi'
 import DashboardLayout from '../../layouts/DashboardLayout'
 import ExportMenu from '../../components/ExportMenu'
 import SharedViewDialog from '../../components/ViewDialog'
@@ -12,6 +12,7 @@ import facultyService, { normalizeFaculty } from '../../services/facultyService'
 import { normalizeLeaveType, normalizeLeavePolicy, normalizeLeaveRequest, leavePolicyPayload } from '../../services/facultyContracts'
 import { newestFirst, rememberCreated } from '../../utils/newestFirst'
 import { employeeLeaveBalances, leaveBalanceRules } from '../../utils/facultyLeaveBalances'
+import { showError } from '../../utils/toast'
 import eventBus, { ERP_EVENTS } from '../../services/eventBus'
 import './FacultyLeaveManagement.css'
 
@@ -121,7 +122,6 @@ export default function FacultyLeaveManagement() {
   const [page, setPage] = useState(1)
   const [dialog, setDialog] = useState(null)
   const [notice, setNotice] = useState('')
-  const [noticeIsError, setNoticeIsError] = useState(false)
   const [academicYears, setAcademicYears] = useState([])
 
   const reload = useCallback(async () => {
@@ -177,23 +177,23 @@ export default function FacultyLeaveManagement() {
         from: String(row.startDate || '').slice(0, 10),
         to: String(row.endDate || '').slice(0, 10),
       })).filter(year => year.name))
-    }).catch(error => { if (active) { setNotice(error.message); setNoticeIsError(true) } })
+    }).catch(error => { if (active) showError(error) })
     return () => { active = false }
   }, [])
   useEffect(() => {
-    if (!notice || noticeIsError) return
+    if (!notice) return
     const timer = setTimeout(() => setNotice(''), 2000)
     return () => clearTimeout(timer)
-  }, [notice, noticeIsError])
+  }, [notice])
   const mutate = async (action, message, module) => {
     if (mutationLock.current) return
     mutationLock.current = true; setBusy(true)
     try {
       const saved = await action()
       if (module) { rememberCreated(module, saved); setPage(1); setQuery(''); setFilters({ type: '', department: '', status: '' }) }
-      setDialog(null); setNotice(message); setNoticeIsError(false)
+      setDialog(null); setNotice(message)
       await reload().catch(() => {})
-    } catch (error) { setNotice(error.message || 'Could not save the change.'); setNoticeIsError(true) }
+    } catch (error) { showError(error) }
     finally { mutationLock.current = false; setBusy(false) }
   }
   const getApplicablePolicy = (employee, targetDate = today()) => {
@@ -277,7 +277,7 @@ export default function FacultyLeaveManagement() {
   const changeFilter = (key, value) => { setFilters(current => ({ ...current, [key]: value })); setPage(1) }
   const saveType = value => {
     const payload = { name: value.name.trim(), code: value.code.trim().toUpperCase(), category: value.category || 'Regular', payCategory: value.payCategory, description: value.description, status: value.status }
-    if (!payload.name || !payload.code || !payload.payCategory || !payload.status) { setNotice('Leave Type Name, Leave Code, Pay Category, and Status are required.'); setNoticeIsError(true); return }
+    if (!payload.name || !payload.code || !payload.payCategory || !payload.status) { showError('Leave Type Name, Leave Code, Pay Category, and Status are required.'); return }
     const updatedType = { ...value, ...payload, id: String(value.id || `lt-${Date.now()}`) }
     saveLocalType(updatedType)
     setLeaveTypes(prev => {
@@ -370,8 +370,7 @@ export default function FacultyLeaveManagement() {
     const employee = faculty.find(item => String(item.id) === String(req.facultyId))
     const leaveType = leaveTypes.find(item => String(item.id) === String(req.leaveTypeId))
     if (!employee || !leaveType || !eligibleLeaveTypes([leaveType], employee).length) {
-      setNotice('This leave type is not available for the selected employee.')
-      setNoticeIsError(true)
+      showError('This leave type is not available for the selected employee.')
       return
     }
     return mutate(async () => {
@@ -406,12 +405,17 @@ export default function FacultyLeaveManagement() {
       <DashboardLayout>
         <main className="flm-page">
           {loadError && <p className="flm-error" role="alert">{loadError} <button type="button" onClick={() => reload().catch(() => {})}>Retry</button></p>}
+          <header className="flm-type-page-header">
+            <div>
+              <h1>{dialog.item?.id ? 'Edit Leave Type' : 'Add Leave Type'}</h1>
+              <p>Leave type configuration and eligibility details.</p>
+            </div>
+            <button type="button" className="flm-filter-toggle" onClick={() => setDialog(null)}><FiArrowLeft /> Back</button>
+          </header>
           <fieldset disabled={busy} className="flm-type-page-fieldset">
             <TypeDialog page item={dialog.item} onClose={() => setDialog(null)} onSave={saveType} />
           </fieldset>
-          {notice && (noticeIsError
-            ? <p className="flm-error" role="alert">{notice}<button type="button" aria-label="Dismiss error" onClick={() => { setNotice(''); setNoticeIsError(false) }}><FiX /></button></p>
-            : <div className="flm-toast">{notice}<button type="button" onClick={() => setNotice('')}><FiX /></button></div>)}
+          {notice && <div className="flm-toast">{notice}<button type="button" onClick={() => setNotice('')}><FiX /></button></div>}
         </main>
       </DashboardLayout>
     )
@@ -424,7 +428,7 @@ export default function FacultyLeaveManagement() {
       const local = getLocalTypes()[String(item.id)]
       setDialog({ kind: 'type', item: { ...item, ...(local || {}) } })
     }
-  }} onActivate={item => setDialog({ kind: 'activate', item })} onDecision={(item, status) => setDialog({ kind: 'decision', item, status })} onToggleType={item => setDialog({ kind: 'toggleType', item })} />{filtered.length > PAGE_SIZE && <TablePagination currentPage={currentPage} totalPages={pages} onPageChange={setPage} />}</section>{dialog && <fieldset disabled={busy} style={{ border: 0, padding: 0, margin: 0 }}><LeaveDialog dialog={dialog} faculty={faculty} leaveTypes={leaveTypes} policies={policies} requests={requests} academicYears={academicYears} getBalance={getBalance} onClose={() => setDialog(null)} onSaveType={saveType} onToggleType={toggleType} onSavePolicy={savePolicy} onActivate={activatePolicy} onDecision={decideRequest} onSaveRequest={saveRequest} /></fieldset>}{notice && (noticeIsError ? <p className="flm-error" role="alert">{notice}<button type="button" aria-label="Dismiss error" onClick={() => { setNotice(''); setNoticeIsError(false) }}><FiX /></button></p> : <div className="flm-toast">{notice}<button onClick={() => setNotice('')}><FiX /></button></div>)}</main></DashboardLayout>
+  }} onActivate={item => setDialog({ kind: 'activate', item })} onDecision={(item, status) => setDialog({ kind: 'decision', item, status })} onToggleType={item => setDialog({ kind: 'toggleType', item })} />{filtered.length > PAGE_SIZE && <TablePagination currentPage={currentPage} totalPages={pages} onPageChange={setPage} />}</section>{dialog && <fieldset disabled={busy} style={{ border: 0, padding: 0, margin: 0 }}><LeaveDialog dialog={dialog} faculty={faculty} leaveTypes={leaveTypes} policies={policies} requests={requests} academicYears={academicYears} getBalance={getBalance} onClose={() => setDialog(null)} onSaveType={saveType} onToggleType={toggleType} onSavePolicy={savePolicy} onActivate={activatePolicy} onDecision={decideRequest} onSaveRequest={saveRequest} /></fieldset>}{notice && <div className="flm-toast">{notice}<button onClick={() => setNotice('')}><FiX /></button></div>}</main></DashboardLayout>
 }
 
 function LeaveList({ onCreate, tab, rows, leaveTypes, getBalance, onView, onEdit, onActivate, onDecision, onToggleType }) {
@@ -599,6 +603,10 @@ function TypeDialog({ item = {}, onClose, onSave, page = false }) {
           <Select label="Pay Category *" value={data.payCategory} values={['Paid Leave', 'Unpaid Leave']} placeholder="Select pay category" onChange={value => setData({ ...data, payCategory: value })} />
           <Select label="Status *" value={data.status} values={['Active', 'Inactive']} placeholder="Select status" onChange={value => setData({ ...data, status: value })} />
           <label>Description<textarea value={data.description} onChange={event => setData({ ...data, description: event.target.value })} /></label>
+          <Footer>
+            <button type="button" onClick={onClose}>Cancel</button>
+            <button type="button" className="approve-action" onClick={save}>Save Leave Type</button>
+          </Footer>
         </Form>
         <aside className="sm-preview" aria-label="Leave Type Live Preview" style={{ marginTop: '12px' }}>
           <header className="preview-top-bar" style={{ marginBottom: '8px' }}>
@@ -647,10 +655,6 @@ function TypeDialog({ item = {}, onClose, onSave, page = false }) {
         </aside>
       </div>
       {error && <p className="flm-error">{error}</p>}
-      <Footer>
-        <button onClick={onClose}>Cancel</button>
-        <button className="approve-action" onClick={save}>Save Leave Type</button>
-      </Footer>
     </Modal>
   );
 }
@@ -1099,7 +1103,7 @@ const renderFlmLabel = label => {
 function FilterSelect({ label, value, values, onChange }) { const displayLabel = label === 'Department' ? 'Branch' : label; const plural = displayLabel === 'Branch' ? 'Branches' : `${displayLabel}s`; return <label className="flm-filter-field"><span>{displayLabel}</span><select value={value} onChange={event => onChange(event.target.value)}><option value="">All {plural}</option>{values.map(item => <option key={item}>{item}</option>)}</select></label> }
 function Select({ label, value, values, onChange, placeholder }) { return <label><span>{renderFlmLabel(label)}</span><select value={value} onChange={event => onChange(event.target.value)}>{placeholder && <option value="">{placeholder}</option>}{values.map(item => <option key={item}>{item}</option>)}</select></label> }
 function Modal({ title, children, onClose, page = false }) {
-  if (page) return <section className="flm-card flm-type-page-card"><header className="flm-card-header"><div><p>LEAVE TYPE CONFIGURATION</p><h2>{title}</h2></div><button type="button" className="flm-filter-toggle" onClick={onClose}>Back to Leave Types</button></header><div className="flm-type-page-content">{children}</div></section>
+  if (page) return <div className="flm-type-page-content">{children}</div>
   return <div className="flm-overlay"><section className="flm-decision-dialog flm-config-dialog" role="dialog" aria-modal="true"><button className="flm-close" aria-label="Close" onClick={onClose}><FiX /></button><p className="flm-eyebrow">FACULTY LEAVE</p><h2>{title}</h2>{children}</section></div>
 }
 function Form({ children, className }) { return <div className={className || 'flm-config-form'}>{children}</div> }

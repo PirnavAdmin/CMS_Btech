@@ -226,19 +226,21 @@
 .flm-config-dialog footer .approve-action { background: var(--flm-blue); border-color: var(--flm-blue); color: #fff; }
 .flm-config-dialog footer .reject-action { background: #b42332; border-color: #b42332; color: #fff; }
 .flm-type-page-fieldset { min-width: 0; border: 0; padding: 0; margin: 0; }
-.flm-type-page-card { overflow: hidden; }
-.flm-type-page-card .flm-type-page-content { padding: 20px; }
+.flm-type-page-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; margin: 2px 2px 4px; }
+.flm-type-page-header h1 { margin: 0; color: var(--text-primary); font-size: 26px; line-height: 1.2; }
+.flm-type-page-header p { margin: 5px 0 0; color: var(--text-secondary); font-size: 13px; }
+.flm-type-page-content { width: 100%; min-width: 0; }
 .flm-type-layout { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: stretch; gap: 20px; }
-.flm-type-layout .flm-config-form { align-content: start; }
-.flm-type-layout .flm-type-form-card { min-height: 300px; align-content: start; padding: 16px; border: 1px solid var(--flm-line); border-radius: 12px; background: var(--surface, #fff); box-shadow: var(--shadow-sm, 0 1px 3px rgba(15, 23, 42, .05)); }
+.flm-type-layout .flm-type-form-card { min-height: 300px; align-content: space-between; padding: 16px; border: 1px solid var(--flm-line); border-radius: 12px; background: var(--surface, #fff); box-shadow: var(--shadow-sm, 0 1px 3px rgba(15, 23, 42, .05)); }
+.flm-type-form-card > footer { grid-column: 1 / -1; }
 .flm-type-layout .sm-preview { min-height: 300px; height: 100%; margin: 0 !important; }
 .flm-type-modal-layout .sm-preview { margin-top: 12px; }
-.flm-page .flm-type-page-card .flm-config-form > label { display: flex; flex-direction: column; gap: 6px; color: var(--text-secondary); font-weight: 600; }
-.flm-page .flm-type-page-card :is(input:not([type="checkbox"]), select, textarea) { min-width: 0; min-height: 40px; padding: 9px 12px; border: 1px solid var(--flm-line); border-radius: 8px; background: var(--surface); color: var(--text-primary); font: inherit; }
-.flm-page .flm-type-page-card textarea { min-height: 90px; resize: vertical; }
-.flm-type-page-card footer { display: flex; justify-content: flex-end; gap: 10px; margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--flm-line); }
-.flm-type-page-card footer button { min-height: 40px; padding: 8px 16px; border: 1px solid var(--flm-line); border-radius: 8px; background: var(--surface); color: var(--text-secondary); font: inherit; font-weight: 600; cursor: pointer; }
-.flm-type-page-card footer .approve-action { background: var(--flm-blue); border-color: var(--flm-blue); color: #fff; }
+.flm-page .flm-type-form-card > label { display: flex; flex-direction: column; gap: 6px; color: var(--text-secondary); font-weight: 600; }
+.flm-page .flm-type-form-card :is(input:not([type="checkbox"]), select, textarea) { min-width: 0; min-height: 40px; padding: 9px 12px; border: 1px solid var(--flm-line); border-radius: 8px; background: var(--surface); color: var(--text-primary); font: inherit; }
+.flm-page .flm-type-form-card textarea { min-height: 90px; resize: vertical; }
+.flm-type-form-card footer { display: flex; justify-content: flex-end; gap: 10px; margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--flm-line); }
+.flm-type-form-card footer button { min-height: 40px; padding: 8px 16px; border: 1px solid var(--flm-line); border-radius: 8px; background: var(--surface); color: var(--text-secondary); font: inherit; font-weight: 600; cursor: pointer; }
+.flm-type-form-card footer .approve-action { background: var(--flm-blue); border-color: var(--flm-blue); color: #fff; }
 .flm-info-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
 .flm-info-grid--3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 .flm-info-grid small, .flm-info-grid strong { display: block; overflow-wrap: anywhere; }
@@ -268,6 +270,11 @@
   .flm-type-layout { grid-template-columns: minmax(0, 1fr); }
   .flm-type-layout .flm-type-form-card,
   .flm-type-layout .sm-preview { min-height: 240px; }
+}
+@media (max-width: 600px) {
+  .flm-type-page-header { align-items: flex-start; }
+  .flm-type-page-header h1 { font-size: 23px; }
+  .flm-type-layout .flm-type-form-card { grid-template-columns: minmax(0, 1fr); }
 }
 
 .flm-category-toggle {
