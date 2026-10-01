@@ -171,7 +171,7 @@ const validateBasic = (v, courses = [], editingId = null) => {
   return e
 }
 
-const coursesForCollege = (rows, collegeId, collegeName, departments = []) => {
+const coursesForCollege = (rows, collegeId, collegeName, departments = [], responseIsCollegeScoped = false) => {
   const targetId = normalizeId(collegeId)
   const targetName = String(collegeName || '').trim().toLowerCase()
   const departmentIds = new Set(departments
@@ -187,7 +187,8 @@ const coursesForCollege = (rows, collegeId, collegeName, departments = []) => {
     if (departmentId) return departmentIds.has(departmentId)
 
     const ownCollegeName = String(course.collegeName ?? course.CollegeName ?? course.college?.name ?? course.college ?? '').trim().toLowerCase()
-    return Boolean(targetName && ownCollegeName && ownCollegeName === targetName)
+    if (targetName && ownCollegeName) return ownCollegeName === targetName
+    return responseIsCollegeScoped
   })
 }
 
@@ -474,13 +475,14 @@ function CourseForm() {
 
   const load = async () => {
     const requestId = ++loadRequestRef.current
+    const collegeId = normalizeId(selectedCollegeId || selectedCollege?.collegeId || selectedCollege?.id)
     setIsLoading(true); setError('')
     try {
-      const [departmentRows, branchRows, courseRows] = await Promise.all([departmentApi.getAll(), branchApi.getAll(), courseApi.getAll()])
+      const [departmentRows, branchRows, courseRows] = await Promise.all([departmentApi.getAll(), branchApi.getAll(), courseApi.getAll({ collegeId })])
       const normalizedDepartments = dedupeDepartmentOptions(departmentRows)
       const normalizedBranches = branchRows.map(normalize)
       if (requestId !== loadRequestRef.current) return
-      setExistingCourses(coursesForCollege(courseRows, selectedCollegeId || selectedCollege?.collegeId || selectedCollege?.id, selectedCollege?.name || selectedCollege?.collegeName, normalizedDepartments).map(mapCourse))
+      setExistingCourses(coursesForCollege(courseRows, collegeId, selectedCollege?.name || selectedCollege?.collegeName, normalizedDepartments, true).map(mapCourse))
       setDepartments(normalizedDepartments)
       setBranches(normalizedBranches)
       if (id) {
@@ -512,6 +514,7 @@ function CourseForm() {
   useEffect(() => { load() }, [id, selectedCollegeId, scopeRecords])
   useEffect(() => {
     if (id) return
+    setExistingCourses([])
     setValue({ ...blank, collegeId: selectedCollegeId || '' })
     setCodeEdited(false)
     setErrors({})
@@ -527,8 +530,9 @@ function CourseForm() {
     saveLock.current = true
     setIsSaving(true); setError('')
     try {
-      const latestCourseRows = await courseApi.getAll()
-      const latestCourses = coursesForCollege(latestCourseRows, selectedCollegeId || selectedCollege?.collegeId || selectedCollege?.id, selectedCollege?.name || selectedCollege?.collegeName, allDepartments).map(mapCourse)
+      const collegeId = normalizeId(selectedCollegeId || selectedCollege?.collegeId || selectedCollege?.id)
+      const latestCourseRows = await courseApi.getAll({ collegeId })
+      const latestCourses = coursesForCollege(latestCourseRows, collegeId, selectedCollege?.name || selectedCollege?.collegeName, allDepartments, true).map(mapCourse)
       setExistingCourses(latestCourses)
       const latestErrors = validateBasic(value, latestCourses, persistedId ?? id)
       if (Object.keys(latestErrors).length) { setErrors(latestErrors); return }

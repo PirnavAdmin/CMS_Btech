@@ -308,15 +308,19 @@ export default function DepartmentManagement() {
   };
 
   useEffect(() => {
-    facultyService.list()
+    let active = true;
+    setFaculty([]);
+    facultyService.list({ collegeId: selectedCollegeId })
       .then((records) => {
+        if (!active) return;
         const normalized = records.map(normalizeFaculty);
         setFaculty(normalized);
         setItems((current) => current.map((item) => mapDepartment(item, normalized)));
         setAllDepartments((current) => current.map((item) => mapDepartment(item, normalized)));
       })
-      .catch(() => setFaculty([]));
-  }, []);
+      .catch(() => { if (active) setFaculty([]); });
+    return () => { active = false; };
+  }, [selectedCollegeId]);
 
   const loadDetail = async (item, nextScreen) => {
     setScreen(nextScreen);
@@ -349,16 +353,36 @@ export default function DepartmentManagement() {
   const hodCandidates = useMemo(() => {
     if (!faculty || !faculty.length) return [];
 
+    const targetCollegeId = String(form.collegeNumericId ?? form.collegeId ?? selectedCollegeId ?? selectedCollege?.collegeId ?? selectedCollege?.id ?? '').trim();
+    if (!targetCollegeId) return [];
+
+    const collegeDepartments = scopedAllDepartments.filter((department) =>
+      String(department.collegeNumericId ?? department.collegeId ?? '') === targetCollegeId
+    );
+    const collegeDepartmentIds = new Set(collegeDepartments.map((department) =>
+      String(department.id ?? department.departmentId ?? '').trim()
+    ).filter(Boolean));
+    const collegeDepartmentNames = collegeDepartments.map((department) =>
+      String(department.name ?? department.departmentName ?? '').trim().toLowerCase()
+    ).filter(Boolean);
+
     const activeFaculty = faculty.filter((member) => {
       const status = String(member.employmentStatus || member.status || '').trim().toLowerCase();
-      return !['inactive', 'resigned', 'retired', 'terminated'].includes(status);
+      if (['inactive', 'resigned', 'retired', 'terminated'].includes(status)) return false;
+
+      const memberCollegeId = String(member.collegeNumericId ?? member.collegeId ?? member.college?.collegeId ?? member.college?.id ?? '').trim();
+      if (memberCollegeId) return memberCollegeId === targetCollegeId;
+
+      const memberDeptId = String(member.departmentId ?? member.department?.departmentId ?? member.department?.id ?? '').trim();
+      if (memberDeptId) return collegeDepartmentIds.has(memberDeptId);
+
+      const memberDeptName = String(member.departmentName ?? member.department?.departmentName ?? member.department?.name ?? member.department ?? '').trim().toLowerCase();
+      return Boolean(memberDeptName && collegeDepartmentNames.some((name) => name === memberDeptName || memberDeptName.includes(name) || name.includes(memberDeptName)));
     });
 
     const targetDeptId = form.id !== undefined && form.id !== null ? String(form.id).trim() : '';
     const targetDeptName = String(form.name ?? '').trim().toLowerCase();
     const targetDeptCode = String(form.code ?? '').trim().toLowerCase();
-    const targetCollegeId = String(form.collegeNumericId ?? form.collegeId ?? selectedCollegeId ?? '').trim();
-
     const directMatches = activeFaculty.filter((member) => {
       const memberDeptId = String(member.departmentId ?? member.department?.departmentId ?? member.department?.id ?? '').trim();
       const memberDeptName = String(member.departmentName ?? member.department ?? '').trim().toLowerCase();
@@ -378,17 +402,7 @@ export default function DepartmentManagement() {
       return matchId || matchName || matchCode;
     });
 
-    let candidateList = directMatches.length > 0 ? directMatches : activeFaculty;
-
-    if (directMatches.length === 0 && targetCollegeId) {
-      const collegeMatches = activeFaculty.filter((member) => {
-        const memberCollegeId = String(member.collegeId ?? member.college?.id ?? '').trim();
-        return !memberCollegeId || memberCollegeId === targetCollegeId;
-      });
-      if (collegeMatches.length > 0) {
-        candidateList = collegeMatches;
-      }
-    }
+    const candidateList = directMatches.length > 0 ? directMatches : activeFaculty;
 
     return candidateList
       .map((member) => ({
@@ -396,7 +410,7 @@ export default function DepartmentManagement() {
         hodId: member.userId ?? member.employeeProfileId ?? member.facultyId ?? member.id,
       }))
       .filter((member) => member.hodId !== undefined && member.hodId !== null && member.hodId !== '');
-  }, [faculty, form.id, form.name, form.code, form.collegeNumericId, form.collegeId, selectedCollegeId]);
+  }, [faculty, form.id, form.name, form.code, form.collegeNumericId, form.collegeId, selectedCollegeId, selectedCollege, scopedAllDepartments]);
 
   const toggleStatus = async (item) => {
     setError('');
