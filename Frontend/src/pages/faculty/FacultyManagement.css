@@ -1374,6 +1374,10 @@
   border-radius: 4px !important;
 }
 
+.faculty-management .preview-kv-item .kv-val.is-pending {
+  color: #C2410C !important;
+}
+
 .faculty-management .preview-body-container::-webkit-scrollbar {
   width: 4px !important;
 }

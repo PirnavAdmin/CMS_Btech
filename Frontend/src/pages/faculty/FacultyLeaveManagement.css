@@ -225,6 +225,15 @@
 .flm-config-dialog footer button { min-height: 36px; padding: 6px 16px; border: 1px solid var(--flm-line); border-radius: 8px; background: var(--surface); color: var(--text-secondary); font: inherit; font-weight: 600; cursor: pointer; }
 .flm-config-dialog footer .approve-action { background: var(--flm-blue); border-color: var(--flm-blue); color: #fff; }
 .flm-config-dialog footer .reject-action { background: #b42332; border-color: #b42332; color: #fff; }
+.flm-type-page-fieldset { min-width: 0; border: 0; padding: 0; margin: 0; }
+.flm-type-page-card { overflow: hidden; }
+.flm-type-page-card .flm-type-page-content { padding: 20px; }
+.flm-page .flm-type-page-card .flm-config-form > label { display: flex; flex-direction: column; gap: 6px; color: var(--text-secondary); font-weight: 600; }
+.flm-page .flm-type-page-card :is(input:not([type="checkbox"]), select, textarea) { min-width: 0; min-height: 40px; padding: 9px 12px; border: 1px solid var(--flm-line); border-radius: 8px; background: var(--surface); color: var(--text-primary); font: inherit; }
+.flm-page .flm-type-page-card textarea { min-height: 90px; resize: vertical; }
+.flm-type-page-card footer { display: flex; justify-content: flex-end; gap: 10px; margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--flm-line); }
+.flm-type-page-card footer button { min-height: 40px; padding: 8px 16px; border: 1px solid var(--flm-line); border-radius: 8px; background: var(--surface); color: var(--text-secondary); font: inherit; font-weight: 600; cursor: pointer; }
+.flm-type-page-card footer .approve-action { background: var(--flm-blue); border-color: var(--flm-blue); color: #fff; }
 .flm-info-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
 .flm-info-grid--3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 .flm-info-grid small, .flm-info-grid strong { display: block; overflow-wrap: anywhere; }

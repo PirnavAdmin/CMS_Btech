@@ -2050,9 +2050,15 @@ function FacultyForm({ initial, faculty, onSave, onCancel, collegeOptions = [], 
               },
               {
                 title: 'Documents',
-                fields: Object.entries(data.documents || {})
-                  .filter(([, val]) => val === 'Submitted' || val?.status === 'Submitted' || val?.uploaded)
-                  .map(([key]) => [FACULTY_DOCUMENTS.find(([dKey]) => dKey === key)?.[1] || key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase()), 'Submitted']),
+                fields: FACULTY_DOCUMENTS.flatMap(([key, label]) => {
+                  const doc = data.documents?.[key]
+                  const status = typeof doc === 'string'
+                    ? doc
+                    : doc?.status || (doc?.uploaded ? 'Submitted' : '')
+                  return status === 'Submitted' || status === 'Pending'
+                    ? [[label, status, 'document']]
+                    : []
+                }),
               },
             ].map(sec => ({
               ...sec,
@@ -2074,7 +2080,7 @@ function FacultyForm({ initial, faculty, onSave, onCancel, collegeOptions = [], 
                   <div className="preview-hero-details">
                     <h3 className="preview-course-title" style={{ margin: 0 }}>{previewHeroTitle}</h3>
                     <p className="preview-course-meta" style={{ margin: '2px 0 0', color: '#64748B', fontSize: '0.78rem' }}>
-                      {[data.employeeId, data.designation, deptName, data.employmentStatus || 'Working'].filter(Boolean).join(' â€¢ ')}
+                      {[data.employeeId, data.designation, deptName, data.employmentStatus || 'Working'].filter(Boolean).join(' \u00B7 ')}
                     </p>
                   </div>
                 </div>
@@ -2082,10 +2088,13 @@ function FacultyForm({ initial, faculty, onSave, onCancel, collegeOptions = [], 
                   <div key={sec.title} className="preview-section-group" style={{ marginBottom: '12px' }}>
                     <span className="preview-section-title">{sec.title}</span>
                     <div className="preview-kv-grid">
-                      {sec.fields.map(([label, text]) => (
+                      {sec.fields.map(([label, text, valueType]) => (
                         <div key={label} className="preview-kv-item">
                           <span className="kv-label">{label}</span>
-                          <strong className="kv-val" title={String(text).trim()}>{String(text).trim()}</strong>
+                          <strong
+                            className={`kv-val${valueType === 'document' && text === 'Pending' ? ' is-pending' : ''}`}
+                            title={String(text).trim()}
+                          >{String(text).trim()}</strong>
                         </div>
                       ))}
                     </div>
