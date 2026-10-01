@@ -207,25 +207,10 @@ export default function StudentProfileEdit({ student, onCancel, onSave }) {
     [branches, setBranches] = useState([]),
     [academicYears, setAcademicYears] = useState([]),
     tabNavRef = useRef(null),
-    bottomScrollRef = useRef(null),
-    [tabScrollWidth, setTabScrollWidth] = useState(0),
     original = useMemo(() => JSON.stringify(student), [student]),
     dirty = JSON.stringify(form) !== original;
   const markTouched = (path) => setTouched((prev) => ({ ...prev, [path]: true }));
   const liveErrors = useMemo(() => validateProfileForm(form, errors), [form, errors]);
-  useEffect(() => {
-    const nav = tabNavRef.current;
-    if (!nav) return undefined;
-    const updateWidth = () => setTabScrollWidth(nav.scrollWidth);
-    updateWidth();
-    const observer = typeof ResizeObserver !== "undefined" ? new ResizeObserver(updateWidth) : null;
-    observer?.observe(nav);
-    window.addEventListener("resize", updateWidth);
-    return () => {
-      observer?.disconnect();
-      window.removeEventListener("resize", updateWidth);
-    };
-  }, []);
   useEffect(() => {
     let active = true;
     Promise.all([
@@ -721,9 +706,6 @@ export default function StudentProfileEdit({ student, onCancel, onSave }) {
         <nav
           ref={tabNavRef}
           className="erp-tabs-bar ac-tabs sp-edit-tabs"
-          onScroll={(event) => {
-            if (bottomScrollRef.current) bottomScrollRef.current.scrollLeft = event.currentTarget.scrollLeft;
-          }}
           aria-label="Student profile edit sections"
         >
           {tabs.map(([id, label], index) => (
@@ -1452,16 +1434,6 @@ export default function StudentProfileEdit({ student, onCancel, onSave }) {
             )}
           </footer>
         </form>
-        <div
-          ref={bottomScrollRef}
-          className="sp-edit-tabs-scroll-bottom"
-          aria-label="Scroll edit sections"
-          onScroll={(event) => {
-            if (tabNavRef.current) tabNavRef.current.scrollLeft = event.currentTarget.scrollLeft;
-          }}
-        >
-          <div style={{ width: `${Math.max(tabScrollWidth, 1)}px` }} />
-        </div>
         {discard && (
           <div className="sp-confirm">
             <div>

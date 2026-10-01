@@ -75,8 +75,6 @@ main.student-profile .sp-directory-table thead th:last-child::after{content:none
 .student-profile .sp-edit-inline .sp-close{top:18px;right:18px}
 .student-profile .sp-edit-inline .sp-edit-tabs{scrollbar-width:none;overflow-x:auto}
 .student-profile .sp-edit-inline .sp-edit-tabs::-webkit-scrollbar{display:none}
-.student-profile .sp-edit-tabs-scroll-bottom{display:block;overflow-x:auto;overflow-y:hidden;height:14px;margin:0 24px 4px;border-top:1px solid var(--border);scrollbar-width:thin;scrollbar-color:var(--brand) var(--surface-soft)}
-.student-profile .sp-edit-tabs-scroll-bottom>div{height:1px;min-width:100%}
 .student-profile .sp-edit-inline .sp-edit-progress{position:relative!important;top:auto!important;margin-bottom:0!important}
  /* Keep all profile navigation visible when the workspace narrows. */
 .student-profile .cm-profile-view > .cm-profile-top-bar {
@@ -323,29 +321,51 @@ main.student-profile .sp-directory-table thead th:last-child::after{content:none
 /* Equal-height two-column layout */
 .student-profile .erp-two-column-layout {
   display: grid !important;
-  grid-template-columns: minmax(0, 1.4fr) minmax(300px, 0.95fr) !important;
+  grid-template-columns: minmax(0, 1.4fr) minmax(0, 0.95fr) !important;
+  grid-template-rows: minmax(0, 1fr) !important;
   gap: 16px !important;
   align-items: stretch !important;
   width: 100% !important;
   max-width: 100% !important;
+  min-width: 0 !important;
+  height: clamp(380px, calc(100vh - 145px), 520px) !important;
+  min-height: 0 !important;
   box-sizing: border-box !important;
 }
 
 /* Form card — no horizontal scroll */
 .student-profile .erp-card-main {
+  height: 100% !important;
+  min-width: 0 !important;
   overflow-x: hidden !important;
 }
 
 /* Form scroll body — no horizontal scroll */
 .student-profile .erp-form-scroll-body {
   overflow-x: hidden !important;
+  min-width: 0 !important;
+  width: 100% !important;
 }
 
 /* Preview card — same fixed height as form card */
 .student-profile .preview-card {
-  height: calc(100vh - 145px) !important;
-  min-height: 520px !important;
+  height: 100% !important;
+  min-height: 0 !important;
+  min-width: 0 !important;
   overflow: hidden !important;
+}
+
+@media (max-width: 900px) {
+  .student-profile .sp-edit-page.erp-two-column-layout {
+    grid-template-rows: auto !important;
+    height: auto !important;
+  }
+  .student-profile .sp-edit-page .erp-card-main {
+    height: auto !important;
+  }
+  .student-profile .sp-edit-page .preview-card {
+    height: 420px !important;
+  }
 }
 
 /* Preview scroll body — always-visible scrollbar */
