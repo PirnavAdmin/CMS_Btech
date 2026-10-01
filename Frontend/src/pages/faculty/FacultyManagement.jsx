@@ -814,7 +814,7 @@ function FacultyAttendanceScreen({ faculty, collegeOptions = [], departmentOptio
   const period = useMemo(() => attendancePeriod(reportType, currentReport), [reportType, currentReport])
   const reportRecords = useMemo(() => period.from && period.to ? filterAttendanceRecords(reportType === 'daily' ? dailyAttendanceRows(resolvedRecords, faculty, { date: currentReport.date }) : resolvedRecords, { ...currentReport, ...period, status: reportType === 'daily' ? currentReport.status : '' }).filter(row => !currentReport.facultyType || employeeCategoryOf(row.faculty) === currentReport.facultyType) : [], [resolvedRecords, faculty, currentReport, period, reportType])
   const periodKey = reportType === 'monthly' ? period.from.slice(0, 7) : period.from === period.to ? period.from : period.from + '-to-' + period.to
-  const periodLabel = reportType === 'monthly' ? period.from.slice(0, 7) : period.from === period.to ? period.from : period.from + ' â€“ ' + period.to
+  const periodLabel = reportType === 'monthly' ? period.from.slice(0, 7) : period.from === period.to ? period.from : period.from + ' - ' + period.to
   const reportRows = useMemo(() => reportType === 'daily' ? reportRecords : serverReport.map(row => ({ ...row, facultyId: String(row.facultyId), faculty: faculty.find(member => String(member.id) === String(row.facultyId)) || normalizeFaculty(row), totalDays: row.totalDays ?? row.workingDays ?? 0, present: row.present ?? row.presentDays ?? 0, absent: row.absent ?? row.absentDays ?? 0, late: row.late ?? row.lateDays ?? 0, halfDay: row.halfDay ?? row.halfDays ?? 0, onLeave: row.onLeave ?? row.leaveDays ?? 0, lop: row.lop ?? row.lopDays ?? 0, period: periodLabel })), [reportRecords, reportType, serverReport, faculty, periodLabel])
   const dailySummary = useMemo(() => summarizeAttendance(dailyRows), [dailyRows])
   const reportSummary = useMemo(() => summarizeAttendance(reportRecords), [reportRecords])
@@ -829,7 +829,7 @@ function FacultyAttendanceScreen({ faculty, collegeOptions = [], departmentOptio
   const filters = tab === 'daily' ? dailyFilters : tab === 'register' ? registerFilters : currentReport
   const updateFilter = (key, value) => {
     // Faculty category is a shared attendance scope, not a per-report filter.
-    // Without this, changing Daily â†’ Weekly/Monthly reopened that report's
+    // Without this, changing Daily to Weekly/Monthly reopened that report's
     // untouched default (`Teaching`) filter and silently changed the roster.
     if (key === 'facultyType') {
       setDailyFilters(old => ({ ...old, facultyType: value, department: '', status: '', search: '' }))
@@ -1090,7 +1090,7 @@ function FacultyAttendanceScreen({ faculty, collegeOptions = [], departmentOptio
   const exportPeriod = tab === 'daily' ? dailyFilters.date : tab === 'register' ? (registerFilters.from || 'all-dates') + '-to-' + (registerFilters.to || 'latest') : periodKey
   const filename = attendanceFilename(tab === 'daily' ? '' : tab === 'register' ? 'register' : reportType === 'daily' ? 'daily-report' : reportType, exportPeriod, filters.department)
   const displayDate = value => value ? new Date(value + 'T00:00:00').toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : 'All dates'
-  const rangeLabel = tab === 'daily' ? displayDate(dailyFilters.date) : tab === 'register' ? displayDate(registerFilters.from) + ' â€“ ' + (registerFilters.to ? displayDate(registerFilters.to) : 'Latest') : period.from && period.to ? displayDate(period.from) + (period.from === period.to ? '' : ' â€“ ' + displayDate(period.to)) : 'Select a valid period'
+  const rangeLabel = tab === 'daily' ? displayDate(dailyFilters.date) : tab === 'register' ? displayDate(registerFilters.from) + ' - ' + (registerFilters.to ? displayDate(registerFilters.to) : 'Latest') : period.from && period.to ? displayDate(period.from) + (period.from === period.to ? '' : ' - ' + displayDate(period.to)) : 'Select a valid period'
   const exportScope = ['All filtered results', rangeLabel, filters.department, faculty.find(item => String(item.id) === filters.facultyId)?.fullName, (!aggregated && filters.status), filters.search && 'Search: ' + filters.search, tab === 'reports' && ATTENDANCE_PERCENTAGE_NOTE].filter(Boolean).join(' Â| ')
   const contextualExport = <ExportMenu rows={exportRows} columns={columns} filename={filename} title={exportTitle} scope={exportScope} loading={attendanceBusy} unavailable={rangeInvalid || periodInvalid ? 'Select a valid date range.' : ''} onDownload={async () => {
     const params = tab === 'daily' ? { fromDate: dailyFilters.date, toDate: dailyFilters.date } : tab === 'register' ? { facultyId: registerFilters.facultyId, fromDate: registerFilters.from, toDate: registerFilters.to } : { facultyId: currentReport.facultyId, fromDate: period.from, toDate: period.to }
@@ -3396,7 +3396,7 @@ export default function FacultyManagement() {
       )}
       <main className={`faculty-management${path === '/faculty' && !selectedCategory ? ' faculty-management--overview' : ''}`}>
         {loadError && <p className="fm-error" role="alert">{loadError}</p>}
-        {loadingFaculty ? <section className="fm-panel">Loading faculty recordsâ€¦</section> : content}
+        {loadingFaculty ? <section className="fm-panel">Loading faculty records...</section> : content}
         {assignedFaculty && (
           <AssignmentDialog
             faculty={assignedFaculty}

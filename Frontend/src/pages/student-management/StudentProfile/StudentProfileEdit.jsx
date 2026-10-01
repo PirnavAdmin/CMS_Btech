@@ -1,4 +1,4 @@
-import { showInfo, showWarning } from '../../../utils/toast'
+﻿import { showInfo, showWarning } from '../../../utils/toast'
 import useToastState from '../../../hooks/useToastState'
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
@@ -1613,9 +1613,9 @@ export default function StudentProfileEdit({ student, onCancel, onSave }) {
                   <span className="preview-section-title">{sec.title}</span>
                   <div className="preview-kv-grid">
                     {sec.fields.map(([label, textVal]) => (
-                      <div key={label} className="preview-kv-item">
+                      <div key={label} className={`preview-kv-item${label.toLowerCase().includes('address') ? ' preview-kv-item--full' : ''}`}>
                         <span className="kv-label">{label}</span>
-                        <strong className="kv-val" title={String(textVal).trim()}>{String(textVal).trim()}</strong>
+                        <strong className={`kv-val${label.toLowerCase().includes('address') ? ' kv-val--wrap' : ''}`} title={String(textVal).trim()}>{String(textVal).trim()}</strong>
                       </div>
                     ))}
                   </div>

@@ -175,7 +175,7 @@ export default function TimetableManagement() {
   </div>
 
   if (error) return <DashboardLayout><main className="tt-page"><div className="tt-error" role="alert">{error}<button className="tt-button" onClick={reset}>Reset Demo Data</button></div></main></DashboardLayout>
-  if (!state) return <DashboardLayout><main className="tt-page"><div className="tt-loading" role="status">Loading timetable demo…</div></main></DashboardLayout>
+  if (!state) return <DashboardLayout><main className="tt-page"><div className="tt-loading" role="status">Loading timetable demo...</div></main></DashboardLayout>
 
   return <DashboardLayout><main className={`tt-page tt-demo-page ${tab === 'dashboard' ? 'tt-dashboard-mode' : ''}`}>
     <header className="tt-page-header"><div><span className="tt-eyebrow">Academic scheduling</span><h1>Timetable Management</h1><p>Configure, generate, review and publish section schedules. Frontend demo workflow - saved in this browser.</p></div></header>

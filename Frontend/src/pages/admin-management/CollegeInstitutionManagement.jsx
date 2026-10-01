@@ -455,7 +455,7 @@ export default function CollegeInstitutionManagement({ initialView = 'list' }) {
   const [statusFilter, setStatusFilter] = useState('')
   const [collegeDraft, setCollegeDraft] = useState(readNewCollegeDraft)
 
-  // College Settings state â€” real list from the backend
+  // College Settings state - real list from the backend
   const [settingsList, setSettingsList] = useState([])
   const [isSettingsLoading, setIsSettingsLoading] = useState(false)
   const [settingsListError, setSettingsListError] = useToastState('', 'error')
@@ -746,7 +746,7 @@ export default function CollegeInstitutionManagement({ initialView = 'list' }) {
     }
   }
 
-  // â”€â”€ College Settings: list â”€â”€
+  // -- College Settings: list --
   const fetchSettingsList = async () => {
     setIsSettingsLoading(true)
     setSettingsListError('')
@@ -1263,7 +1263,7 @@ export default function CollegeInstitutionManagement({ initialView = 'list' }) {
           </div>
         )}
 
-        {/* COLLEGE SETTINGS â€” LIST VIEW, backed by /api/college-settings */}
+        {/* COLLEGE SETTINGS - LIST VIEW, backed by /api/college-settings */}
         {viewMode === 'settings' && (
           <div className="cm-settings">
             <header className="cm-header">
@@ -1355,7 +1355,7 @@ export default function CollegeInstitutionManagement({ initialView = 'list' }) {
           </div>
         )}
 
-        {/* COLLEGE SETTINGS â€” ADD / EDIT FORM MODAL */}
+        {/* COLLEGE SETTINGS - ADD / EDIT FORM MODAL */}
         {viewMode === 'settings-form' && (
           <>
             <button type="button" className="cm-modal-backdrop" aria-label="Close form dialog" onClick={backToSettingsList} />

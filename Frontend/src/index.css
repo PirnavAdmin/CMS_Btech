@@ -362,7 +362,7 @@ input[type="password"]::-ms-clear {
 }
 
 .sidebar .sidebar-group summary::before {
-  content: "â-¸ ";
+  content: "\25B8 ";
   display: inline-block;
   transition: transform .15s ease;
 }

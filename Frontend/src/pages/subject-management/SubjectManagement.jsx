@@ -157,7 +157,7 @@ export default function SubjectManagement() {
           <div className="sm-directory-title">
             <div>
               <h2>Subject Directory</h2>
-              <p>{loading ? 'Loading subjects…' : `${records.length} subjects found`}</p>
+              <p>{loading ? 'Loading subjects...' : `${records.length} subjects found`}</p>
             </div>
             <div className="sm-directory-tools">
               {activeFilterText.length > 0 && (
@@ -195,7 +195,7 @@ export default function SubjectManagement() {
           </FilterPanel>
           <div className="sm-table-wrap">
             {loading ? (
-              <div className="sm-loading">Loading subject directory…</div>
+              <div className="sm-loading">Loading subject directory...</div>
             ) : loadError ? (
               <div className="sm-error" role="alert">
                 <span>{loadError}</span>
@@ -442,7 +442,7 @@ function Editor({ form, editing, masters, branches, semesters, levels, typeOptio
                   disabled={saving}
                   className="cm-button erp-btn erp-btn--primary"
                 >
-                  {saving ? 'Saving…' : editing ? 'Update Subject' : 'Create Subject'}
+                  {saving ? 'Saving...' : editing ? 'Update Subject' : 'Create Subject'}
                 </button>
               )}
             </div>

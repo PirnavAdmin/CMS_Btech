@@ -755,10 +755,10 @@ export default function DepartmentManagement() {
                               </button>
                             </td>
                             <td className="col-code table-center">
-                              <code>{item.code || 'â€”'}</code>
+                              <code>{item.code || '-'}</code>
                             </td>
                             <td className="col-hod table-center">
-                              <span className="table-cell-truncate" title={item.hod || 'Unassigned'}>{item.hod || 'â€”'}</span>
+                              <span className="table-cell-truncate" title={item.hod || 'Unassigned'}>{item.hod || '-'}</span>
                             </td>
                             <td className="col-status table-center">
                               <StatusBadge value={item.status} />
@@ -955,7 +955,7 @@ export default function DepartmentManagement() {
                     <div className="preview-hero-details">
                       <h3 className="preview-course-title">{form.name.trim() || 'Department Preview'}</h3>
                       <p className="preview-course-meta">
-                        {[form.code, form.status || (form.name ? 'Active' : '')].filter(Boolean).join(' â€¢ ') || 'Department details'}
+                        {[form.code, form.status || (form.name ? 'Active' : '')].filter(Boolean).join('   ') || 'Department details'}
                       </p>
                     </div>
                   </div>
@@ -975,7 +975,7 @@ export default function DepartmentManagement() {
                       },
                     ].map((sec) => ({
                       ...sec,
-                      fields: sec.fields.filter(([, val]) => val !== null && val !== undefined && String(val).trim() !== '' && String(val).trim() !== 'â€”'),
+                      fields: sec.fields.filter(([, val]) => val !== null && val !== undefined && String(val).trim() !== '' && String(val).trim() !== '-'),
                     })).filter((sec) => sec.fields.length > 0)
 
                     if (sections.length === 0) {
@@ -1062,13 +1062,13 @@ export default function DepartmentManagement() {
                       value={form.hodUserId ? String(form.hodUserId) : ''}
                       options={hodCandidates.map((member) => {
                         const code = member.employeeId ? `[${member.employeeId}]` : '';
-                        const subLabel = [member.designation, member.department].filter(Boolean).join(' â€¢ ');
+                        const subLabel = [member.designation, member.department].filter(Boolean).join('   ');
                         const fullLabel = [
                           member.fullName,
                           code,
                           member.designation,
                           member.department ? `(${member.department})` : ''
-                        ].filter(Boolean).join(' â€” ');
+                        ].filter(Boolean).join(' - ');
 
                         return {
                           value: String(member.hodId),
@@ -1181,7 +1181,7 @@ export default function DepartmentManagement() {
                 </div>
                 <div className="cm-profile-header-info">
                   <div className="cm-profile-badges">
-                    <span className="cm-badge cm-badge-code">Code: {selected.code || 'â€”'}</span>
+                    <span className="cm-badge cm-badge-code">Code: {selected.code || '-'}</span>
                     <span className="cm-badge cm-badge-type">Department</span>
                     <span className={`cm-status-badge ${String(selected.status).toLowerCase()}`}>
                       {selected.status}

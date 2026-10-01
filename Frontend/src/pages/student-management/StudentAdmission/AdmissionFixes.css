@@ -46,6 +46,7 @@
   flex: 1 !important;
   min-height: 0 !important;
   overflow-y: auto !important;
+  overflow-x: hidden !important;
   scrollbar-width: thin !important;
   scrollbar-color: #94a3b8 #f1f5f9 !important;
   padding: 14px 18px 24px !important;
@@ -1136,6 +1137,7 @@
   height: calc(100vh - 145px) !important;
   min-height: 520px !important;
   overflow: hidden !important;
+  overflow-x: hidden !important;
   border: 1px solid var(--border, #E2E8F0) !important;
   border-radius: 12px !important;
   background: var(--surface, #FFFFFF) !important;
@@ -1174,30 +1176,31 @@
   flex: 1 !important;
   min-height: 0 !important;
   gap: 10px !important;
-  overflow-y: auto !important;
+  overflow-y: scroll !important;
   overscroll-behavior: contain !important;
   scrollbar-width: thin !important;
-  scrollbar-color: #CBD5E1 transparent !important;
+  scrollbar-color: #94A3B8 #F1F5F9 !important;
   padding-right: 4px !important;
   box-sizing: border-box !important;
 }
 
 .student-admission .preview-body-container::-webkit-scrollbar {
-  width: 6px !important;
+  width: 7px !important;
   display: block !important;
 }
 
 .student-admission .preview-body-container::-webkit-scrollbar-track {
-  background: transparent !important;
+  background: #F1F5F9 !important;
+  border-radius: 4px !important;
 }
 
 .student-admission .preview-body-container::-webkit-scrollbar-thumb {
-  background: #CBD5E1 !important;
+  background: #94A3B8 !important;
   border-radius: 4px !important;
 }
 
 .student-admission .preview-body-container::-webkit-scrollbar-thumb:hover {
-  background: #94A3B8 !important;
+  background: #64748B !important;
 }
 
 @media (max-width: 1024px) {
@@ -1209,4 +1212,24 @@
     height: auto !important;
     max-height: none !important;
   }
+}
+
+/* Address fields in Live Preview — show full text, keep 2-card layout, no truncation */
+:root body .kv-val--wrap {
+  white-space: normal !important;
+  overflow: visible !important;
+  text-overflow: unset !important;
+  word-break: break-word !important;
+  line-height: 1.5 !important;
+}
+
+/* Tab Next/Previous navigation footer */
+.student-admission .sa-tab-nav-footer {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  padding: 16px 20px !important;
+  margin-top: 8px !important;
+  border-top: 1px solid var(--border, #E2E8F0) !important;
+  background: var(--surface-soft, #F8FAFC) !important;
 }
