@@ -9,35 +9,45 @@
 
 /* The brand header needs an inline error, without the full-page alert card. */
 #root .sidebar-brand .workspace-context-select__error {
-  display: flex;
-  align-items: baseline;
+  display: flex !important;
+  width: max-content;
+  margin: 5px 0 0 !important;
+  align-items: center;
   justify-content: flex-start;
-  flex-wrap: wrap;
-  gap: 0 6px;
-  margin-top: 2px !important;
   padding: 0 !important;
   border: 0 !important;
   border-radius: 0 !important;
   background: transparent !important;
+  color: #FFFFFF !important;
   font-size: 10px;
-  line-height: 1.4;
-}
-
-#root .sidebar-brand .workspace-context-select__error > span {
-  min-width: 0;
-  overflow-wrap: anywhere;
+  line-height: 1.2;
 }
 
 #root .sidebar-brand .workspace-context-select__error > button {
-  min-height: 0;
+  display: inline-flex !important;
+  min-height: 0 !important;
+  width: auto !important;
+  height: auto !important;
   margin: 0;
-  padding: 2px 0;
+  padding: 0 !important;
+  appearance: none !important;
   border: 0 !important;
-  border-radius: 2px;
+  border-radius: 0 !important;
   background: transparent !important;
-  font-size: inherit;
-  line-height: inherit;
-  text-decoration: underline;
+  color: #A9D3F7 !important;
+  font-size: 11px !important;
+  font-weight: 600 !important;
+  line-height: 1.2 !important;
+  text-decoration: none !important;
+  box-shadow: none !important;
+  outline: 0;
+  cursor: pointer;
+}
+
+#root .sidebar-brand .workspace-context-select__error > button:hover:not(:disabled) {
+  background: transparent !important;
+  color: #FFFFFF !important;
+  text-decoration: underline !important;
   text-underline-offset: 2px;
 }
 
@@ -62,73 +72,80 @@
    Sidebar Brand Header (Single Clean Row)
    ========================================================================== */
 #root .sidebar:not(.is-collapsed) .sidebar-brand {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) 36px;
-  grid-template-rows: auto auto;
+  display: flex;
   align-items: center;
-  justify-items: stretch;
-  gap: 5px 8px;
-  padding: 12px 14px 10px;
+  gap: 10px;
+  padding: 12px 16px 10px 11px;
   margin: 0;
   border-bottom: 1px solid #E2E8F0 !important;
   background: #FFFFFF;
-  min-height: 116px;
+  min-height: 0;
   box-sizing: border-box;
 }
 
 #root .sidebar-brand__mark {
-  grid-column: 1;
-  grid-row: 1;
-  justify-self: center;
-  flex: 0 0 48px;
-  width: 48px;
-  height: 48px;
-  border-radius: 10px;
-  background: #EDEBF6 !important;
-  border: 1px solid #DDD8F0 !important;
+  flex: 0 0 72px;
+  width: 72px;
+  height: 72px;
+  border-radius: 14px;
+  background: linear-gradient(145deg, #F5F2FF 0%, #EEE9FF 55%, #E7E0FF 100%) !important;
+  border: 1px solid rgba(124, 106, 196, 0.16) !important;
   display: grid;
   place-items: center;
   color: #756FB2 !important;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+  box-shadow: 0 4px 12px rgba(91, 74, 160, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.8);
 }
 
 #root .sidebar-brand__mark img {
-  width: 100%;
-  height: 100%;
+  width: 58px;
+  height: 58px;
+  display: block;
   object-fit: contain;
-  padding: 2px;
-  border-radius: 8px;
+  border-radius: inherit;
 }
 
 #root .sidebar-brand__copy {
-  grid-column: 1 / -1;
-  grid-row: 2;
-  flex: initial;
+  flex: 1 1 auto;
   min-width: 0;
   display: flex;
   flex-direction: column;
-  align-items: center;
+  align-items: flex-start;
   justify-content: center;
-  gap: 3px;
+  gap: 6px;
+}
+
+#root .sidebar-brand__copy strong {
+  display: block;
+  width: 100%;
+  max-width: 100%;
+  overflow: visible;
+  color: #0F172A;
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 1.2;
+  letter-spacing: -0.2px;
+  white-space: normal;
+  text-overflow: clip;
+  overflow-wrap: break-word;
+  word-break: normal;
 }
 
 #root .sidebar-brand .sidebar-collapse,
 #root .sidebar-brand .sidebar-close {
-  grid-column: 2;
-  grid-row: 1;
-  justify-self: end;
-  align-self: start;
+  flex: 0 0 34px;
+  width: 34px;
+  height: 34px;
 }
 
 #root .sidebar-brand__subtitle {
-  font-size: 10px;
-  font-weight: 750;
+  font-size: 11px;
+  font-weight: 700;
   color: #756FB2;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.8px;
   text-transform: uppercase;
-  line-height: 1.1;
+  line-height: 1.2;
   padding: 0;
-  text-align: center;
+  text-align: left;
 }
 
 /* On Desktop: Show ONLY Collapse (<) button, hide Close (X) */
@@ -137,12 +154,12 @@
 }
 
 #root .sidebar-brand .sidebar-collapse {
-  flex: 0 0 28px;
-  width: 28px;
-  height: 28px;
+  flex: 0 0 34px;
+  width: 34px;
+  height: 34px;
   margin: 0;
   border: 1px solid #CBD5E1;
-  border-radius: 7px;
+  border-radius: 9px;
   background: #FFFFFF;
   color: #64748B;
   display: grid;
@@ -164,12 +181,12 @@
   }
   #root .sidebar-brand .sidebar-close {
     display: grid !important;
-    flex: 0 0 28px;
-    width: 28px;
-    height: 28px;
+    flex: 0 0 34px;
+    width: 34px;
+    height: 34px;
     margin: 0;
     border: 1px solid #CBD5E1;
-    border-radius: 7px;
+    border-radius: 9px;
     background: #FFFFFF;
     color: #64748B;
     place-items: center;
@@ -194,10 +211,13 @@
 /* Institutional College Selector Trigger (Seamless inline style with full text wrapping) */
 #root .sidebar .workspace-context-select .searchable-select__trigger {
   box-sizing: border-box;
-  display: inline-flex;
+  display: flex;
+  width: auto;
+  max-width: 100%;
+  min-width: 0;
   align-items: center;
-  justify-content: center;
-  gap: 3px;
+  justify-content: flex-start;
+  gap: 2px;
   min-height: auto;
   padding: 2px 4px;
   border: 1px solid transparent;
@@ -211,7 +231,6 @@
   cursor: pointer;
   transition: all 0.15s ease;
   box-shadow: none;
-  width: 100%;
 }
 
 #root .sidebar .workspace-context-select .searchable-select__trigger:hover,
@@ -221,17 +240,17 @@
 }
 
 #root .sidebar .workspace-context-select .searchable-select__trigger-text {
-  display: -webkit-box;
+  display: block;
+  flex: 1 1 auto;
   min-width: 0;
-  max-width: 100%;
-  overflow: hidden;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;
+  max-width: none;
+  overflow: visible;
+  text-overflow: clip;
   font-size: 12px;
   font-weight: 800;
   color: #0F172A;
   white-space: normal;
-  overflow-wrap: anywhere;
+  overflow-wrap: break-word;
   word-break: normal;
   line-height: 1.2;
   letter-spacing: -0.01em;
@@ -239,10 +258,10 @@
 }
 
 #root .sidebar .workspace-context-select .searchable-select__caret {
-  flex-shrink: 0;
+  flex: 0 0 auto;
   color: #756FB2;
   font-size: 12px;
-  margin-left: 2px;
+  margin-left: 0;
   transition: transform 0.15s ease;
 }
 
