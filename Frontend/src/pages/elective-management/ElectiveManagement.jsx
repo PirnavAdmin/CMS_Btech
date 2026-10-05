@@ -126,6 +126,8 @@ export default function ElectiveManagement() {
   const [courses, setCourses] = useCollegeState([]); const [branches, setBranches] = useCollegeState([]); const [academicYears, setAcademicYears] = useState([]); const [semesters, setSemesters] = useCollegeState([]); const [activeAcademicYear, setActiveAcademicYear] = useState(''); const [mastersLoading, setMastersLoading] = useState(true)
   const [loading, setLoading] = useState(true); const [profileLoading, setProfileLoading] = useState(true); const [resultsLoading, setResultsLoading] = useState(false); const [error, setError] = useState(''); const [search, setSearch] = useState(''); const [filters, setFilters] = useState({ status: 'All', semester: 'All', branch: 'All', course: 'All', academicYear: 'All', level: 'All', electiveType: 'Elective', approvalStatus: 'All', allocationStatus: 'All' }); const [page, setPage] = useState(1); const [resultPage, setResultPage] = useState(1); const size = 10
   const [groupModal, setGroupModal] = useState(false); const [editingGroup, setEditingGroup] = useState(null); const [viewingGroup, setViewingGroup] = useState(null); const [viewingSubject, setViewingSubject] = useState(null); const [editingSubject, setEditingSubject] = useState(null); const [subjectEditForm, setSubjectEditForm] = useState(null); const [deletingGroup, setDeletingGroup] = useState(null); const [subjectModal, setSubjectModal] = useState(null); const [groupForm, setGroupForm] = useState(blankGroup()); const [selectedSubjects, setSelectedSubjects] = useState([]); const [selectedGroupId, setSelectedGroupId] = useState(''); const [selectedSubjectId, setSelectedSubjectId] = useState(''); const [actionLoading, setActionLoading] = useState(false); const [groupFieldOverrides, setGroupFieldOverrides] = useState({})
+  const electiveTableWrapRef = useRef(null)
+  const [electiveTableScroll, setElectiveTableScroll] = useState({ max: 0, value: 0, thumb: 44 })
   const studentId = profile?.id || profile?.studentId || ''
   const loadMasters = async () => { setMastersLoading(true); setMastersError(''); try { const [courseRows, branchRows, yearRows, semesterRows, departmentRows] = await Promise.all([courseApi.getAll(), branchApi.getAll(), academicYearApi.getAll(), facultyMasterApi.getSemesters(), departmentApi.getAll()]); setDepartments(unwrap(departmentRows)); const years = unwrap(yearRows); setCourses(unwrap(courseRows)); setBranches(unwrap(branchRows)); setAcademicYears(years); setSemesters(unwrap(semesterRows)); const selected = selectHeaderAcademicYear(years).year; setActiveAcademicYear(selected?.academicYearName || selected?.name || '') } catch (err) { setMastersError(err.message || 'Unable to load academic filters.'); } finally { setMastersLoading(false) } }
   const loadCore = async (preservedGroupValues = {}) => {
@@ -241,6 +243,26 @@ export default function ElectiveManagement() {
   const filteredGroups = useMemo(() => displayGroups.filter(row => !search.trim() || [row.groupCode, row.groupName].some(value => String(value || '').toLowerCase().includes(search.trim().toLowerCase()))), [displayGroups, search])
   const hasSubjectFilter = hasAcademicFilter(filters) || filters.status !== 'All' || Boolean(search.trim())
   const electiveTableRows = useMemo(() => hasSubjectFilter ? workflowRows.filter(subject => isElectiveSubject(subject) && matchesSubject(subject, filters, search)) : [], [workflowRows, filters, search, hasSubjectFilter])
+  useEffect(() => {
+    const wrapper = electiveTableWrapRef.current
+    if (!wrapper) return undefined
+    const update = () => {
+      const max = Math.max(0, wrapper.scrollWidth - wrapper.clientWidth)
+      const next = { max, value: wrapper.scrollLeft, thumb: Math.max(44, wrapper.clientWidth * wrapper.clientWidth / Math.max(wrapper.scrollWidth, 1)) }
+      setElectiveTableScroll(current => current.max === next.max && current.value === next.value && current.thumb === next.thumb ? current : next)
+    }
+    update()
+    wrapper.addEventListener('scroll', update, { passive: true })
+    const observer = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(update)
+    observer?.observe(wrapper)
+    if (wrapper.firstElementChild) observer?.observe(wrapper.firstElementChild)
+    window.addEventListener('resize', update)
+    return () => {
+      wrapper.removeEventListener('scroll', update)
+      observer?.disconnect()
+      window.removeEventListener('resize', update)
+    }
+  }, [activeTab, electiveTableRows.length, directoryLoading, mastersLoading])
   const electiveTablePageSize = 5
   const electiveTablePageRows = electiveTableRows.slice((page - 1) * electiveTablePageSize, page * electiveTablePageSize)
   const electiveTableExportColumns = [
@@ -760,7 +782,7 @@ export default function ElectiveManagement() {
                 </div>
               </div>
             </FilterPanel>
-            <div className="sm-table-wrap">
+            <div className="sm-table-wrap" ref={electiveTableWrapRef}>
               {directoryLoading || mastersLoading ? (
                 <div className="em-loading">Loading subjects...</div>
               ) : directoryError || mastersError ? (
@@ -778,7 +800,6 @@ export default function ElectiveManagement() {
                       <th>Semester</th>
                       <th>Subject Name</th>
                       <th>Subject Code</th>
-                      <th>Elective Type</th>
                       <th>Credits</th>
                       <th>Status</th>
                       <th>Actions</th>
@@ -794,7 +815,6 @@ export default function ElectiveManagement() {
                         <td>{text(group.semesterName)}</td>
                         <td>{text(group.subjectName, '-')}</td>
                         <td>{text(group.subjectCode, '-')}</td>
-                        <td>{text(electiveTypeOf(group), 'Not set')}</td>
                         <td>{text(creditsOf(group), '-')}</td>
                         <td><StatusBadge value={text(group.status)} /></td>
                         <td>
@@ -809,6 +829,16 @@ export default function ElectiveManagement() {
                 </table>
               )}
             </div>
+            {!directoryLoading && !mastersLoading && !directoryError && !mastersError && electiveTableRows.length > 0 && electiveTableScroll.max > 0 && <input
+              className="em-table-scroll-control"
+              type="range"
+              min="0"
+              max={electiveTableScroll.max}
+              value={Math.min(electiveTableScroll.value, electiveTableScroll.max)}
+              aria-label="Scroll elective subject table horizontally"
+              style={{ '--em-scroll-thumb': `${electiveTableScroll.thumb}px` }}
+              onChange={event => { if (electiveTableWrapRef.current) electiveTableWrapRef.current.scrollLeft = Number(event.target.value) }}
+            />}
             {!directoryLoading && !directoryError && !mastersError && electiveTableRows.length > 0 && <Pagination page={page} pageCount={Math.ceil(electiveTableRows.length / electiveTablePageSize)} total={electiveTableRows.length} size={electiveTablePageSize} onChange={setPage} />}
           </section>
         )}
