@@ -153,6 +153,20 @@ export const subjectService = {
     }
   },
 
+  searchSubjects: async params => (await subjectApi.search(params)).map(mapApiSubject),
+
+  getSubject: async id => mapApiSubject(await subjectApi.getById(id)),
+
+  getSubjectSummary: params => subjectApi.summary(params),
+
+  getSubjectLookups: () => subjectApi.lookups(),
+
+  getSubjectDependencies: id => subjectApi.dependencies(id),
+
+  exportSubjects: params => subjectApi.export(params),
+
+  downloadSubjects: params => subjectApi.download(params),
+
 
   /* =======================================================
      CREATE SUBJECT
@@ -171,12 +185,18 @@ export const subjectService = {
     return mapApiSubject(await subjectApi.update(id, subjectApiPayload(payload)))
   },
 
+  updateSubjectStatus: async (id, status) => {
+    await subjectApi.updateStatus(id, status)
+    return { id, status }
+  },
+
 
   /* =======================================================
      DELETE SUBJECT
   ======================================================= */
 
   deleteSubject: async id => {
+    if (id !== undefined && id !== null) return subjectApi.remove(id)
     const list = getLocalData(
       LOCAL_SUBJECTS_KEY,
       initialSubjects

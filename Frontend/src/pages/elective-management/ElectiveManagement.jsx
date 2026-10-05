@@ -192,12 +192,11 @@ export default function ElectiveManagement() {
       setReport(combined)
     } catch (requestError) {
       setError(requestError.message || 'Unable to load elective groups.')
-      showError(requestError.message || 'Unable to load elective groups.')
     } finally {
       setLoading(false)
     }
   }
-  const loadProfile = async () => { setProfileLoading(true); try { const current = await profileApi.getProfile(); setProfile(current); if (current?.id || current?.studentId) { setResultsLoading(true); const id = current.id || current.studentId; const [currentSelections, examResults] = await Promise.all([electiveManagementApi.getStudentSelections(id).catch(() => []), get(`/api/v1/students/${encodeURIComponent(id)}/profile/exam-results`).catch(() => [])]); setSelections(currentSelections); setResults(examResults) } } catch { setProfile(null); showError('Unable to load student profile.') } finally { setProfileLoading(false); setResultsLoading(false) } }
+  const loadProfile = async () => { setProfileLoading(true); try { const current = await profileApi.getProfile(); setProfile(current); if (current?.id || current?.studentId) { setResultsLoading(true); const id = current.id || current.studentId; const [currentSelections, examResults] = await Promise.all([electiveManagementApi.getStudentSelections(id).catch(() => []), get(`/api/v1/students/${encodeURIComponent(id)}/profile/exam-results`).catch(() => [])]); setSelections(currentSelections); setResults(examResults) } } catch { setProfile(null) } finally { setProfileLoading(false); setResultsLoading(false) } }
   const loadDirectory = useCallback(async () => {
     setDirectoryLoading(true)
     setDirectoryError('')
@@ -240,7 +239,8 @@ export default function ElectiveManagement() {
   const selectedGroup = groups.find(row => String(row.id || row.groupId) === String(selectedGroupId)); const eligibleSubjects = workflowRows.filter(subject => eligibleForGroup(subject, selectedGroup) && (selectedGroup?.subjects || []).some(linked => String(linked.subjectId ?? linked.id) === String(subject.id)))
   const pending = report.filter(row => String(approvalStatus(row)).toLowerCase() === 'pending'); const approved = report.filter(row => String(approvalStatus(row)).toLowerCase() === 'approved'); const pageRows = rows => rows.slice((page - 1) * size, page * size)
   const filteredGroups = useMemo(() => displayGroups.filter(row => !search.trim() || [row.groupCode, row.groupName].some(value => String(value || '').toLowerCase().includes(search.trim().toLowerCase()))), [displayGroups, search])
-  const electiveTableRows = useMemo(() => workflowRows.filter(subject => matchesSubject(subject, filters, search)), [workflowRows, filters, search])
+  const hasSubjectFilter = hasAcademicFilter(filters) || filters.status !== 'All' || Boolean(search.trim())
+  const electiveTableRows = useMemo(() => hasSubjectFilter ? workflowRows.filter(subject => isElectiveSubject(subject) && matchesSubject(subject, filters, search)) : [], [workflowRows, filters, search, hasSubjectFilter])
   const electiveTablePageSize = 5
   const electiveTablePageRows = electiveTableRows.slice((page - 1) * electiveTablePageSize, page * electiveTablePageSize)
   const electiveTableExportColumns = [
@@ -723,7 +723,6 @@ export default function ElectiveManagement() {
             </div>
           ))}
         </section>
-        {error && <div className="em-alert" role="alert"><FiInfo /> {error}</div>}
         {activeTab === 'subjects' && (
           <section className="sm-card em-subject-directory-card">
             <FilterPanel
@@ -732,14 +731,10 @@ export default function ElectiveManagement() {
               hideClear
               leadingActions={(
                 <div className="em-subject-toolbar-actions">
-                  <div className="em-type-filter em-type-filter--segmented" role="group" aria-label="Elective type">
-                    {['Elective', 'Non-Elective'].map(type => (
-                      <button key={type} type="button" className={filters.electiveType === type ? 'active' : ''} aria-pressed={filters.electiveType === type} onClick={() => setFilters(old => ({ ...old, electiveType: type }))}>{type}</button>
-                    ))}
-                  </div>
                   <ExportMenu rows={electiveTableRows} columns={electiveTableExportColumns} title="Elective Subject Directory" filename="elective-subject-directory" scope="All matching subject records" loading={directoryLoading || Boolean(directoryError) || mastersLoading || Boolean(mastersError)} />
                 </div>
               )}
+              actions={(hasAcademicFilter(filters) || filters.status !== 'All') && <button type="button" className="sm-btn sm-btn--secondary em-clear-subject-filters" onClick={() => setFilters(old => ({ ...old, course: 'All', branch: 'All', semester: 'All', academicYear: 'All', level: 'All', status: 'All' }))}>Clear Filters</button>}
             >
               <div className="em-toolbar">
                 <div className="em-search"><FiSearch /><input aria-label="Search subjects" placeholder="Search subject code or name..." value={search} onChange={event => setSearch(event.target.value)} /></div>
@@ -762,7 +757,6 @@ export default function ElectiveManagement() {
                       </label>
                     )
                   })}
-                  {(hasAcademicFilter(filters) || filters.status !== 'All') && <button type="button" className="sm-btn sm-btn--secondary em-clear-subject-filters" onClick={() => setFilters(old => ({ ...old, course: 'All', branch: 'All', semester: 'All', academicYear: 'All', level: 'All', status: 'All' }))}>Clear Filters</button>}
                 </div>
               </div>
             </FilterPanel>
@@ -772,7 +766,7 @@ export default function ElectiveManagement() {
               ) : directoryError || mastersError ? (
                 <div className="em-alert" role="alert">{directoryError || mastersError}<button type="button" onClick={() => { loadDirectory(); loadMasters() }}>Retry</button></div>
               ) : !electiveTableRows.length ? (
-                <EmptyState title={`No ${filters.electiveType === 'Non-Elective' ? 'non-elective' : 'elective'} subjects found.`} description="Check the academic filters and the classification saved in Subject Management." />
+                <EmptyState title={hasSubjectFilter ? 'No elective subjects found.' : 'Choose filters to view elective subjects.'} description={hasSubjectFilter ? 'Try different filters or search terms.' : 'Subjects appear here after you select an academic filter or search.'} />
               ) : (
                 <table className="em-table em-group-table">
                   <thead>

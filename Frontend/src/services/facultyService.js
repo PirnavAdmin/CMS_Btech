@@ -230,13 +230,13 @@ const saveLocalProfile = (id, profile) => {
 
 // Attendance fallback rows do not contain profile photos. Recover the photo
 // from the profile store/API while retaining the faculty record's identity.
-const withFacultyPhoto = async row => {
+const withFacultyPhoto = async (row, requestOptions) => {
   const member = normalizeFaculty(row)
   if (member.photo || !member.id) return member
   const cachedPhoto = normalizeFaculty(getLocalProfile(member.id)).photo
   if (cachedPhoto) return { ...member, photo: cachedPhoto }
   try {
-    const profile = await facultyProfileApi.get(member.id)
+    const profile = await facultyProfileApi.get(member.id, requestOptions)
     const photo = normalizeFaculty(profile).photo
     if (photo) return { ...member, photo }
   } catch { /* A missing profile must not hide the faculty row. */ }
@@ -271,11 +271,11 @@ const removeLocalAllocation = (id) => {
   } catch { /* ignore */ }
 }
 
-const listFaculty = async (params, search = false) => {
+const listFaculty = async (params, search = false, requestOptions) => {
   const records = []; let page = 1
   try {
     while (true) {
-      const rows = await (search ? facultyApi.search : facultyApi.getAll)({ ...params, PageNumber: page, PageSize: 100 })
+      const rows = await (search ? facultyApi.search : facultyApi.getAll)({ ...params, PageNumber: page, PageSize: 100 }, requestOptions)
       const validRows = rows.filter(row => row && typeof row === 'object')
       const fresh = validRows.filter(row => !records.some(existing => String(existing.facultyId ?? existing.id) === String(row.facultyId ?? row.id)))
       records.push(...fresh)
@@ -290,7 +290,7 @@ const listFaculty = async (params, search = false) => {
   // harvest active faculty records from live attendance, balances, and payroll endpoints:
   if (!records.length) {
     try {
-      const dailyRows = await facultyAttendanceApi.getDaily({ date: new Date().toISOString().slice(0, 10) })
+      const dailyRows = await facultyAttendanceApi.getDaily({ date: new Date().toISOString().slice(0, 10) }, requestOptions)
       const dailyList = Array.isArray(dailyRows) ? dailyRows : (dailyRows?.rows || [])
       for (const row of dailyList) {
         if (row && (row.facultyId || row.id) && !records.some(r => String(r.facultyId ?? r.id) === String(row.facultyId ?? row.id))) {
@@ -312,7 +312,7 @@ const listFaculty = async (params, search = false) => {
 
   if (!records.length) {
     try {
-      const balances = await facultyLeaveApi.getBalances()
+      const balances = await facultyLeaveApi.getBalances(undefined, requestOptions)
       const balList = Array.isArray(balances) ? balances : []
       for (const row of balList) {
         if (row && (row.facultyId || row.id) && !records.some(r => String(r.facultyId ?? r.id) === String(row.facultyId ?? row.id))) {
@@ -334,7 +334,7 @@ const listFaculty = async (params, search = false) => {
 
   if (!records.length) {
     try {
-      const payroll = await facultyPayrollApi.getAll()
+      const payroll = await facultyPayrollApi.getAll(undefined, requestOptions)
       const payList = Array.isArray(payroll) ? payroll : []
       for (const row of payList) {
         if (row?.facultyId && !records.some(r => String(r.facultyId ?? r.id) === String(row.facultyId))) {
@@ -376,7 +376,7 @@ const listFaculty = async (params, search = false) => {
   const enriched = []
   // Bound requests when the backend list omits photos for many faculty.
   for (let index = 0; index < members.length; index += 4) {
-    enriched.push(...await Promise.all(members.slice(index, index + 4).map(withFacultyPhoto)))
+    enriched.push(...await Promise.all(members.slice(index, index + 4).map(member => withFacultyPhoto(member, requestOptions))))
   }
   return newestFirst('faculty', enriched)
 }
@@ -396,8 +396,8 @@ export const clearFacultyLocalStorage = () => {
 }
 
 export const facultyService = {
-  list: params => listFaculty(params),
-  search: params => listFaculty(params, true),
+  list: (params, requestOptions) => listFaculty(params, false, requestOptions),
+  search: (params, requestOptions) => listFaculty(params, true, requestOptions),
   getById: async id => {
     const local = getLocalFaculty().find(item => String(item.id) === String(id) || String(item.facultyId) === String(id) || (item.employeeId && String(item.employeeId) === String(id)))
     try {
