@@ -101,8 +101,12 @@ export default function FacultyLeaveManagement() {
   const [busy, setBusy] = useState(false)
   const mutationLock = useRef(false)
   const [tab, setTab] = useState(TABS[0])
-  const [leaveTypes, setLeaveTypes] = useCollegeState([])
-  const [policies, setPolicies] = useCollegeState([])
+  // The current leave-type and leave-policy endpoints return shared master
+  // records without a collegeId, so they cannot pass useCollegeState's owner
+  // filter. Keep them as the direct backend lists; employee-owned data below
+  // remains college scoped.
+  const [leaveTypes, setLeaveTypes] = useState([])
+  const [policies, setPolicies] = useState([])
   const [pendingRequests, setPendingRequests] = useCollegeState([], { faculty })
   const [historyRequests, setHistoryRequests] = useCollegeState([], { faculty })
   const reloadVersion = useRef(0)
@@ -127,14 +131,15 @@ export default function FacultyLeaveManagement() {
   const reload = useCallback(async () => {
     const version = ++reloadVersion.current
     setLoading(true)
+    const optionalFetchOptions = { suppressApiFailureNotice: true }
     const resources = [
-      ['Faculty', () => facultyService.list(), setFaculty],
-      ['Leave types', () => facultyLeaveApi.getTypes(), rows => {
+      ['Faculty', () => facultyService.list(undefined, optionalFetchOptions), setFaculty],
+      ['Leave types', () => facultyLeaveApi.getTypes(undefined, optionalFetchOptions), rows => {
         const localTypes = getLocalTypes()
         const normalized = rows.map(normalizeLeaveType).map(r => ({ ...r, ...(localTypes[String(r.id)] || {}) }))
         setLeaveTypes(newestFirst('leave-types', normalized))
       }],
-      ['Leave policies', () => facultyLeaveApi.getPolicies(), rows => {
+      ['Leave policies', () => facultyLeaveApi.getPolicies(undefined, optionalFetchOptions), rows => {
         const localPolicies = getLocalPolicies()
         const normalized = rows.map(normalizeLeavePolicy).map(r => {
           const local = localPolicies[String(r.id)]
@@ -147,14 +152,21 @@ export default function FacultyLeaveManagement() {
         setPolicies(newestFirst('leave-policies', normalized))
       }],
       ['Leave requests', () => facultyLeaveApi.getRequests(), rows => setPendingRequests(rows.map(normalizeLeaveRequest))],
-      ['Leave history', () => facultyLeaveApi.getHistory(), rows => setHistoryRequests(rows.map(normalizeLeaveRequest))],
-      ['Leave balances', () => facultyLeaveApi.getBalances(), setBalances],
+      ['Leave history', () => facultyLeaveApi.getHistory(undefined, optionalFetchOptions), rows => setHistoryRequests(rows.map(normalizeLeaveRequest))],
+      ['Leave balances', () => facultyLeaveApi.getBalances(undefined, optionalFetchOptions), setBalances],
     ]
-    await Promise.allSettled(resources.map(async ([, fetchRows, saveRows]) => {
+    await Promise.allSettled(resources.map(async ([name, fetchRows, saveRows]) => {
       try {
         const rows = await fetchRows()
-        if (version === reloadVersion.current) saveRows(rows)
-      } catch { /* Other leave resources can still load and remain usable. */ }
+        if (version === reloadVersion.current) {
+          saveRows(rows)
+        }
+      } catch (error) {
+        if (version === reloadVersion.current) {
+          const message = error?.message || 'Could not load this list.'
+          if (name === 'Leave types' || name === 'Leave policies') setNotice(`Unable to load ${name.toLowerCase()}: ${message}`)
+        }
+      }
     }))
     if (version === reloadVersion.current) {
       setLoading(false)
@@ -257,7 +269,8 @@ export default function FacultyLeaveManagement() {
   const filtered = leaveRows.filter(item => {
     const employee = item.employee?.fullName ? item.employee : item.employee || item
     const text = `${item.id || ''} ${item.name || ''} ${item.code || ''} ${employee?.fullName || ''} ${employee?.employeeId || ''} ${branchOf(employee)}`.toLowerCase()
-    return (!query || text.includes(query.toLowerCase())) && (!filters.type || typeOf(employee) === filters.type) && (!filters.department || branchOf(employee) === filters.department) && (!filters.status || item.status === filters.status)
+    const usesFacultyFilters = ['Leave Requests', 'Leave History', 'Leave Balances'].includes(tab)
+    return (!query || text.includes(query.toLowerCase())) && (!usesFacultyFilters || !filters.type || typeOf(employee) === filters.type) && (!usesFacultyFilters || !filters.department || branchOf(employee) === filters.department) && (!filters.status || item.status === filters.status)
   })
   const pages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE))
   const currentPage = Math.min(page, pages)
