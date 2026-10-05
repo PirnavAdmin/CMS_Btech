@@ -21,9 +21,7 @@ const editablePlanning = planning => {
   if (!planning?.calendar) return planning
   const startDate = String(planning.calendar.startDate || '').slice(0, 10)
   const endDate = String(planning.calendar.endDate || '').slice(0, 10)
-  return startDate && endDate && startDate >= endDate
-    ? { ...planning, calendar: { ...planning.calendar, startDate, endDate: '' } }
-    : planning
+  return { ...planning, calendar: { ...planning.calendar, startDate, endDate } }
 }
 export default function TimetableBuilder({ sources, entries, tables, initial, busy, enabled, refresh, faculty, generate, saveSetup, save, remove, validate, publish, reopen }) {
   const [scope, setScope] = useState(initial || Object.fromEntries(hierarchy.map(field => [field, ''])))

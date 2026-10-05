@@ -15,9 +15,11 @@ import academicService from '../../services/academicService'
 import { showError, showSuccess } from '../../utils/toast'
 import { useAcademic } from '../../context/AcademicContext'
 import { enrichSubject } from '../../utils/subjectDirectory'
+import { downloadServerExport } from '../../utils/exportUtils'
 import './SubjectManagement.css'
 
-const ELECTIVE_TYPES = ['Elective', 'Non-Elective', 'Core Subject']
+const ELECTIVE_TYPES = ['Elective', 'Core Subject']
+const formatSubjectType = value => String(value ?? '').trim().toLowerCase().replace(/\b\w/g, character => character.toUpperCase())
 const blank = () => ({ academicYearId: '', departmentId: '', courseId: '', branchId: '', semesterId: '', subjectCode: '', subjectName: '', subjectType: '', electiveType: '', credits: '', status: 'Active', lectureHours: '', tutorialHours: '', practicalHours: '', internalMarks: '', externalMarks: '' })
 const key = v => String(v ?? '')
 const semNo = s => Number(s?.semesterNumber ?? String(s?.semesterName ?? s?.semester ?? s?.name ?? s?.id ?? '').match(/\d+/)?.[0] ?? 0)
@@ -47,7 +49,7 @@ export default function SubjectManagement() {
   const semesters = (courseId, branchId) => scopeRecords(masters.semesters).filter(s => (!courseId || !s.courseId || key(s.courseId) === key(courseId)) && (!branchId || !s.branchId || key(s.branchId) === key(branchId)))
   const filterSemesters = semesters(filters.courseId, filters.branchId), formSemesters = semesters(form.courseId, form.branchId)
   const levels = list => [...new Set(list.map(getAcademicLevelFromSemester).filter(Boolean))]
-  const types = useMemo(() => [...new Set(subjects.map(s => s.subjectType).filter(Boolean))], [subjects])
+  const types = useMemo(() => [...new Set([...subjects.map(s => s.subjectType).filter(Boolean), 'Practical'])].map(value => ({ value, label: formatSubjectType(value) })), [subjects])
   const mapping = s => ({ year: entityName(masters.years, s.academicYearId, s.academicYear), course: entityName(masters.courses, s.courseId, s.course), branch: entityName(masters.branches, s.branchId, s.branch), semester: entityName(masters.semesters, s.semesterId, s.semester) })
 
   const scopedSubjects = useMemo(() => {
@@ -89,16 +91,16 @@ export default function SubjectManagement() {
   const persistStatus = async (subject, status) => {
     setStatusSaving(true)
     try {
-      await subjectService.updateSubject(subject.id, { ...subject, status })
+      await subjectService.updateSubjectStatus(subject.id, status)
       showSuccess(`Subject ${status.toLowerCase()}d successfully`)
       setConfirmingSubject(null)
       await loadSubjects()
     } catch (err) { showError(err.message || 'Unable to update status.') }
     finally { setStatusSaving(false) }
   }
-  const columns = [{ label: 'Subject Code', value: 'subjectCode' }, { label: 'Subject Name', value: 'subjectName' }, { label: 'Academic Year', value: s => mapping(s).year }, { label: 'Course', value: s => mapping(s).course }, { label: 'Branch', value: s => mapping(s).branch }, { label: 'Academic Level', value: s => getAcademicLevelFromSemester(s) }, { label: 'Semester', value: s => mapping(s).semester }, { label: 'Subject Type', value: 'subjectType' }, { label: 'Credits', value: 'credits' }, { label: 'Status', value: 'status' }]
+  const columns = [{ label: 'Subject Code', value: 'subjectCode' }, { label: 'Subject Name', value: 'subjectName' }, { label: 'Academic Year', value: s => mapping(s).year }, { label: 'Course', value: s => mapping(s).course }, { label: 'Branch', value: s => mapping(s).branch }, { label: 'Academic Level', value: s => getAcademicLevelFromSemester(s) }, { label: 'Semester', value: s => mapping(s).semester }, { label: 'Subject Type', value: s => formatSubjectType(s.subjectType) }, { label: 'Credits', value: 'credits' }, { label: 'Status', value: 'status' }]
   const activeFilterText = [filters.academicYearId && entityName(masters.years, filters.academicYearId), filters.courseId && entityName(masters.courses, filters.courseId), filters.branchId && entityName(masters.branches, filters.branchId), filters.level, filters.semesterId && entityName(masters.semesters, filters.semesterId)].filter(Boolean)
-  const detailSections = s => { const m = mapping(s); return [{ title: 'Subject Information', rows: [['Subject Code', s.subjectCode], ['Subject Name', s.subjectName], ['Subject Type', s.subjectType], ['Elective Type', s.electiveType], ['Credits', s.credits], ['Status', s.status]] }, { title: 'Academic Mapping', rows: [['Academic Year', m.year], ['Course', m.course], ['Branch', m.branch], ['Academic Level', getAcademicLevelFromSemester({ semester: m.semester })], ['Semester', m.semester]] }, { title: 'Academic Configuration', rows: [['Lecture Hours', s.lectureHours], ['Tutorial Hours', s.tutorialHours], ['Practical Hours', s.practicalHours], ['Internal Marks', s.internalMarks], ['External Marks', s.externalMarks]].filter(([, v]) => v !== '' && v != null) }].filter(x => x.rows.length) }
+  const detailSections = s => { const m = mapping(s); return [{ title: 'Subject Information', rows: [['Subject Code', s.subjectCode], ['Subject Name', s.subjectName], ['Subject Type', formatSubjectType(s.subjectType)], ['Elective Type', s.electiveType], ['Credits', s.credits], ['Status', s.status]] }, { title: 'Academic Mapping', rows: [['Academic Year', m.year], ['Course', m.course], ['Branch', m.branch], ['Academic Level', getAcademicLevelFromSemester({ semester: m.semester })], ['Semester', m.semester]] }, { title: 'Academic Configuration', rows: [['Lecture Hours', s.lectureHours], ['Tutorial Hours', s.tutorialHours], ['Practical Hours', s.practicalHours], ['Internal Marks', s.internalMarks], ['External Marks', s.externalMarks]].filter(([, v]) => v !== '' && v != null) }].filter(x => x.rows.length) }
   if (editorOpen) {
     return (
       <DashboardLayout>
@@ -168,7 +170,7 @@ export default function SubjectManagement() {
                 </div>
               )}
               <div className="sm-actions">
-                <ExportMenu rows={records} columns={columns} filename="subject-directory" title="Subject Directory" scope="All matching subjects" />
+                <ExportMenu rows={records} columns={columns} filename="subject-directory" title="Subject Directory" scope="All matching subjects" onDownload={async () => downloadServerExport(await subjectService.exportSubjects({ search: filters.search, academicYearId: filters.academicYearId, courseId: filters.courseId, branchId: filters.branchId, semesterId: filters.semesterId, subjectType: filters.subjectType, status: filters.status }), 'subject-directory')} />
                 <button className="sm-btn sm-btn--primary" onClick={openAdd}><FiPlus /> Add Subject</button>
               </div>
             </div>
@@ -251,7 +253,7 @@ export default function SubjectManagement() {
                         </td>
                         <td className="table-center">{getAcademicLevelFromSemester({ semester: m.semester }) || '-'}</td>
                         <td className="table-center">{m.semester}</td>
-                        <td className="table-center">{s.subjectType && <span className={`sm-type-tag ${/lab|practical/i.test(s.subjectType) ? 'sm-type-tag--lab' : 'sm-type-tag--theory'}`}>{s.subjectType}</span>}</td>
+                        <td className="table-center">{s.subjectType && <span className={`sm-type-tag ${/lab|practical/i.test(s.subjectType) ? 'sm-type-tag--lab' : 'sm-type-tag--theory'}`}>{formatSubjectType(s.subjectType)}</span>}</td>
                         <td className="table-center"><span className="sm-credit-badge">{s.credits}</span></td>
                         <td className="table-center"><div className="table-primary-cell"><span>L/T/P: {[s.lectureHours ?? 0, s.tutorialHours ?? 0, s.practicalHours ?? 0].join(' / ')}</span><small>Internal / External: {[s.internalMarks ?? 0, s.externalMarks ?? 0].join(' / ')}</small></div></td>
                         <td className="table-center"><StatusBadge value={s.status} /></td>
@@ -287,10 +289,9 @@ export function SubjectDetailsPage() {
   const returnTo = location.state?.returnTo || '/subject-management'
   useEffect(() => {
     let active = true
-    Promise.all([subjectService.getSubjects({ liveOnly: true }), academicService.getAcademicYears(), academicService.getCourses(), academicService.getBranches(), academicService.getSemesters()])
-      .then(([subjects, years, courses, branches, semesters]) => {
+    Promise.all([subjectService.getSubject(id), academicService.getAcademicYears(), academicService.getCourses(), academicService.getBranches(), academicService.getSemesters()])
+      .then(([found, years, courses, branches, semesters]) => {
         if (!active) return
-        const found = subjects.find(item => key(item.id) === key(id))
         if (!found) { navigate('/subject-management', { replace: true }); return }
         setSubject(found)
         setMasters({ years, courses, branches, semesters })
@@ -300,9 +301,9 @@ export function SubjectDetailsPage() {
     return () => { active = false }
   }, [id, navigate])
   const mapping = s => ({ year: entityName(masters.years, s.academicYearId, s.academicYear), course: entityName(masters.courses, s.courseId, s.course), branch: entityName(masters.branches, s.branchId, s.branch), semester: entityName(masters.semesters, s.semesterId, s.semester) })
-  const sections = subject ? (() => { const m = mapping(subject); return [{ title: 'Subject Information', rows: [['Subject Code', subject.subjectCode], ['Subject Name', subject.subjectName], ['Subject Type', subject.subjectType], ['Elective Type', subject.electiveType], ['Credits', subject.credits], ['Status', subject.status]] }, { title: 'Academic Mapping', rows: [['Academic Year', m.year], ['Course', m.course], ['Branch', m.branch], ['Academic Level', getAcademicLevelFromSemester({ semester: m.semester })], ['Semester', m.semester]] }, { title: 'Academic Configuration', rows: [['Lecture Hours', subject.lectureHours], ['Tutorial Hours', subject.tutorialHours], ['Practical Hours', subject.practicalHours], ['Internal Marks', subject.internalMarks], ['External Marks', subject.externalMarks]].filter(([, value]) => value !== '' && value != null) }].filter(section => section.rows.length) })() : []
+  const sections = subject ? (() => { const m = mapping(subject); return [{ title: 'Subject Information', rows: [['Subject Code', subject.subjectCode], ['Subject Name', subject.subjectName], ['Subject Type', formatSubjectType(subject.subjectType)], ['Elective Type', subject.electiveType], ['Credits', subject.credits], ['Status', subject.status]] }, { title: 'Academic Mapping', rows: [['Academic Year', m.year], ['Course', m.course], ['Branch', m.branch], ['Academic Level', getAcademicLevelFromSemester({ semester: m.semester })], ['Semester', m.semester]] }, { title: 'Academic Configuration', rows: [['Lecture Hours', subject.lectureHours], ['Tutorial Hours', subject.tutorialHours], ['Practical Hours', subject.practicalHours], ['Internal Marks', subject.internalMarks], ['External Marks', subject.externalMarks]].filter(([, value]) => value !== '' && value != null) }].filter(section => section.rows.length) })() : []
   const edit = () => navigate('/subject-management', { state: { subjectAction: { mode: 'edit', id: subject.id } } })
-  return <DashboardLayout><main className="sm-screen"><div className="cm-profile-view sm-profile-view"><div className="cm-profile-top-bar"><button type="button" className="cm-button secondary erp-btn erp-btn--secondary" onClick={() => navigate(returnTo)}><FiArrowLeft /> Back </button><div className="sp-profile-top-actions"><ExportMenu mode="single" title={`${subject?.subjectCode || 'Subject'} - Subject Details`} filename={`subject-${subject?.subjectCode || id}`} recordSections={sections} /><button type="button" className="cm-button erp-btn erp-btn--primary" disabled={!subject} onClick={edit}>Edit Subject</button></div></div>{loading ? <p className="sm-detail-loading">Loading subject details…</p> : subject && <article className="cm-profile-card"><div className="cm-profile-banner"><div className="cm-profile-avatar-wrap"><div className="cm-profile-placeholder"><FiBookOpen /></div></div><div className="cm-profile-header-info"><div className="cm-profile-badges"><span className="cm-badge cm-badge-code">SUB: {subject.subjectCode}</span><span className="cm-badge cm-badge-type">{subject.subjectType || 'SUBJECT'}</span><span className={`cm-status-badge ${String(subject.status).toLowerCase() === 'active' ? 'active' : 'pending'}`}>{subject.status}</span></div><h1 className="cm-profile-title">{subject.subjectName}</h1><p className="cm-profile-subtitle">{[mapping(subject).course, mapping(subject).branch, mapping(subject).semester].filter(Boolean).join(' | ')}</p></div></div><div className="cm-profile-grid sm-profile-sections">{sections.map(section => <InfoCard key={section.title} title={section.title} icon={FiBookOpen} rows={section.rows} />)}</div></article>}</div></main></DashboardLayout>
+  return <DashboardLayout><main className="sm-screen"><div className="cm-profile-view sm-profile-view"><div className="cm-profile-top-bar"><button type="button" className="cm-button secondary erp-btn erp-btn--secondary" onClick={() => navigate(returnTo)}><FiArrowLeft /> Back to Subjects</button><div className="sp-profile-top-actions"><ExportMenu mode="single" title={`${subject?.subjectCode || 'Subject'} - Subject Details`} filename={`subject-${subject?.subjectCode || id}`} recordSections={sections} /><button type="button" className="cm-button erp-btn erp-btn--primary" disabled={!subject} onClick={edit}>Edit Subject</button></div></div>{loading ? <p className="sm-detail-loading">Loading subject details…</p> : subject && <article className="cm-profile-card"><div className="cm-profile-banner"><div className="cm-profile-avatar-wrap"><div className="cm-profile-placeholder"><FiBookOpen /></div></div><div className="cm-profile-header-info"><div className="cm-profile-badges"><span className="cm-badge cm-badge-code">SUB: {subject.subjectCode}</span><span className="cm-badge cm-badge-type">{subject.subjectType || 'SUBJECT'}</span><span className={`cm-status-badge ${String(subject.status).toLowerCase() === 'active' ? 'active' : 'pending'}`}>{subject.status}</span></div><h1 className="cm-profile-title">{subject.subjectName}</h1><p className="cm-profile-subtitle">{[mapping(subject).course, mapping(subject).branch, mapping(subject).semester].filter(Boolean).join(' | ')}</p></div></div><div className="cm-profile-grid sm-profile-sections">{sections.map(section => <InfoCard key={section.title} title={section.title} icon={FiBookOpen} rows={section.rows} />)}</div></article>}</div></main></DashboardLayout>
 }
 function Select({ label, value, options, onChange, disabled, semester = false, hideSearch = false, placeholder = label }) { return <SearchableSelect placement="bottom" hideSearch={hideSearch} label={label} value={value} options={options} onChange={onChange} placeholder={placeholder} disabled={disabled} getOptionLabel={semester ? s => s.semesterName || s.name || `Semester ${semNo(s)}` : undefined} /> }
 function Field({ label, children }) { return <div className="sm-field"><label>{label}</label>{children}</div> }
@@ -505,7 +506,7 @@ function Editor({ form, editing, masters, branches, semesters, levels, typeOptio
                   ['Subject Code', form.subjectCode],
                   ['Subject Name', form.subjectName],
                   ['Elective Type', form.electiveType],
-                  ['Subject Type', form.subjectType],
+                  ['Subject Type', formatSubjectType(form.subjectType)],
                   ['Credits', form.credits !== '' ? `${form.credits} Credits` : ''],
                   ['Status', form.status || 'Active'],
                 ],
@@ -542,7 +543,7 @@ function Editor({ form, editing, masters, branches, semesters, levels, typeOptio
                   <div className="preview-hero-details">
                     <h3 className="preview-course-title" style={{ margin: 0 }}>{form.subjectName || 'Subject Preview'}</h3>
                     <p className="preview-course-meta" style={{ margin: '2px 0 0', color: '#64748B', fontSize: '0.78rem' }}>
-                      {[form.subjectCode, form.subjectType, form.credits !== '' && `${form.credits} Credits`, form.status || 'Active'].filter(Boolean).join(' - ')}
+                      {[form.subjectCode, formatSubjectType(form.subjectType), form.credits !== '' && `${form.credits} Credits`, form.status || 'Active'].filter(Boolean).join(' - ')}
                     </p>
                   </div>
                 </div>

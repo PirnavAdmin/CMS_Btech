@@ -1,5 +1,6 @@
 import { DAYS, key, same, active, matchesScope, eligibleSubjects, eligibleFaculty, validTime, timeMinutes, overlaps, conflictsFor, roomKey } from './timetableUtils.js'
 import { isTeachingPeriod, teachingPeriods, periodSetupErrors, periodSessions } from './timetablePeriods.js'
+import { semesterPeriod, semesterPlanning } from './timetableSemester.js'
 
 export const WEEKDAYS = [...DAYS, 'SUNDAY']
 export const dateKey = value => key(value).slice(0, 10)
@@ -8,11 +9,8 @@ const validDate = value => /^\d{4}-\d{2}-\d{2}$/.test(value || '') && !Number.is
 export const weekday = date => ['SUNDAY', ...DAYS][new Date(`${date}T12:00:00Z`).getUTCDay()]
 
 export function calendarBounds(sources, scope) {
-  const year = sources.years.find(row => same(row.id, scope.academicYearId))
-  const semester = sources.semesters.find(row => same(row.id, scope.semesterId))
-  const starts = [year?.startDate, semester?.startDate].map(dateKey).filter(validDate).sort()
-  const ends = [year?.endDate, semester?.endDate].map(dateKey).filter(validDate).sort()
-  return { startDate: starts.at(-1) || '', endDate: ends[0] || '' }
+  const { startDate, endDate } = semesterPeriod(sources, scope)
+  return { startDate, endDate }
 }
 
 // Explicit local exceptions are used until the backend supplies a calendar.
@@ -75,14 +73,12 @@ export function subjectRequirements(sources, scope, overrides = {}) {
 }
 
 export function planningErrors(config, sources, scope, entries = []) {
+  config = semesterPlanning(config, sources, scope)
   const errors = [], calendar = config?.calendar, periods = config?.periods || []
-  const bounds = calendarBounds(sources, scope)
+  const period = semesterPeriod(sources, scope)
+  errors.push(...period.errors)
   if (!calendar?.reviewed) errors.push('Review the working calendar and confirm holidays before generation or publication.')
-  if (!validDate(calendar?.startDate) || !validDate(calendar?.endDate)) errors.push('Enter a valid timetable start and end date.')
-  else if (calendar.startDate >= calendar.endDate) errors.push('End date must be later than start date.')
-  else if (bounds.startDate && bounds.endDate && bounds.startDate >= bounds.endDate) errors.push('The selected academic year and semester do not allow a valid date range. Update their date ranges before continuing.')
-  else {
-    if ((bounds.startDate && calendar.startDate < bounds.startDate) || (bounds.endDate && calendar.endDate > bounds.endDate)) errors.push('Timetable dates must stay within the academic year and semester dates.')
+  if (period.valid) {
     if (!calendarDays(calendar).length) errors.push('No working dates exist in the reviewed calendar (maximum range: two years).')
   }
   if (!calendar?.workingDays?.length || calendar.workingDays.some(day => !WEEKDAYS.includes(day))) errors.push('Select valid working weekdays.')
@@ -95,6 +91,7 @@ export function planningErrors(config, sources, scope, entries = []) {
 
 export function entryPlanningErrors(row, config, sources, scope, allEntries = []) {
   if (!config) return [] // Legacy manual drafts are still readable; publish requires a reviewed plan.
+  config = semesterPlanning(config, sources, scope)
   const errors = [], days = new Set(calendarDays(config.calendar).map(weekday))
   if (!days.has(row.dayOfWeek)) errors.push('This day has no working dates in the selected calendar.')
   const periods = teachingPeriods(config.periods).filter(period => timeMinutes(period.startTime) >= timeMinutes(row.startTime) && timeMinutes(period.endTime) <= timeMinutes(row.endTime)).sort((a, b) => timeMinutes(a.startTime) - timeMinutes(b.startTime))
@@ -130,6 +127,7 @@ export function schedulingIssues(sources, scope, config, scheduled) {
 // Deterministic constrained-first placement, preserving every existing manual row.
 // Exhaustion is reported, never interpreted as proof that no solution can exist.
 export function generateTimetable({ scope, sources, config, existing = [], occupied = [], references = occupied, makeId = () => crypto.randomUUID() }) {
+  config = semesterPlanning(config, sources, scope, true)
   const errors = planningErrors(config, sources, scope, references)
   if (errors.length) return { entries: existing, added: 0, issues: errors.map(reason => ({ subjectId: '', subjectName: 'Planning settings', reason })) }
   const entries = [...existing], rooms = roomOptions(sources, references).filter(row => config.rooms.includes(row.value))

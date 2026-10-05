@@ -1211,6 +1211,22 @@
 .ym-action-body strong { color: var(--ym-ink); font-size: .78rem; }
 .ym-action-body small { color: var(--ym-muted); }
 .ym-grid-row-1 .ym-chart-card, .ym-grid-row-1 .ym-donut-card { min-height: 300px; }
+
+/* Compact the five requested dashboard cards while preserving their contents. */
+.ym-card.ym-card--donut1,
+.ym-card.ym-card--bars,
+.ym-card.ym-card--velocity,
+.ym-grid-row-3 > .ym-table-card {
+  padding: 15px 18px;
+}
+.ym-grid-row-1 .ym-card.ym-card--donut1 { min-height: 240px; }
+.ym-card.ym-card--bars .ym-bar-chart-layout { height: 118px; }
+.ym-grid-row-2,
+.ym-grid-row-3 { row-gap: 14px; }
+.ym-dashboard-wrapper { gap: 16px; }
+.ym-grid-row-3 > .ym-table-card .ym-data-table thead th { padding-block: 7px; }
+.ym-grid-row-3 > .ym-table-card .ym-data-table tbody td { padding-block: 8px; }
+
 @media (max-width: 1200px) {
   .ym-grid-row-1 { grid-template-columns: 1fr 1fr; }
   .ym-welcome-card { grid-column: 1 / -1; }

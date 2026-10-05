@@ -1,4 +1,4 @@
-﻿namespace BTech.DTOs
+﻿namespace BTech.DTOs.TimetableManagement
 {
     public class CreateTimetableEntryRequest
     {
