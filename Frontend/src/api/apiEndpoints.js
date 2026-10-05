@@ -198,6 +198,17 @@ export const API_ENDPOINTS = Object.freeze({
     hold: id => endpoint('/api/v1/faculty-payroll/' + id + '/hold'),
     export: endpoint('/api/v1/faculty-payroll/export'),
   }),
+  subjectManagementSubjects: Object.freeze({
+    list: endpoint('/api/v1/subject-management/subjects'),
+    search: endpoint('/api/v1/subject-management/subjects/search'),
+    detail: id => endpoint(`/api/v1/subject-management/subjects/${id}`),
+    status: id => endpoint(`/api/v1/subject-management/subjects/${id}/status`),
+    dependencies: id => endpoint(`/api/v1/subject-management/subjects/${id}/dependencies`),
+    lookups: endpoint('/api/v1/subject-management/subjects/lookups'),
+    summary: endpoint('/api/v1/subject-management/subjects/summary'),
+    export: endpoint('/api/v1/subject-management/subjects/export'),
+    download: endpoint('/api/v1/subject-management/subjects/download'),
+  }),
   studentAttendance: Object.freeze({
     list: endpoint('/api/v1/student-attendance/sessions'),
     create: endpoint('/api/v1/student-attendance/sessions'),
@@ -1342,15 +1353,23 @@ export const facultyMasterApi = {
 export const subjectApi = {
   list: async params => {
     try {
-      return await readSubjectPages(page => request(withQuery(endpoint('/api/v1/subjects'), { ...params, ...page })))
+      return await readSubjectPages(page => request(withQuery(API_ENDPOINTS.subjectManagementSubjects.list, { ...params, ...page })))
     } catch (error) {
       if (error.backendMessage) error.message = userErrorMessage(error.backendMessage, error.status)
       throw error
     }
   },
-  getById: async id => dataResponse(await request(endpoint(`/api/v1/subjects/${requiredId(id, 'Subject ID')}`))),
-  create: async payload => dataResponse(await jsonRequest(endpoint('/api/v1/subjects'), 'POST', payload)),
-  update: async (id, payload) => dataResponse(await jsonRequest(endpoint(`/api/v1/subjects/${requiredId(id, 'Subject ID')}`), 'PUT', payload)),
+  search: async params => listData(await request(withQuery(API_ENDPOINTS.subjectManagementSubjects.search, params))),
+  getById: async id => dataResponse(await request(API_ENDPOINTS.subjectManagementSubjects.detail(requiredId(id, 'Subject ID')))),
+  create: async payload => dataResponse(await jsonRequest(API_ENDPOINTS.subjectManagementSubjects.list, 'POST', payload)),
+  update: async (id, payload) => dataResponse(await jsonRequest(API_ENDPOINTS.subjectManagementSubjects.detail(requiredId(id, 'Subject ID')), 'PUT', payload)),
+  remove: async id => request(API_ENDPOINTS.subjectManagementSubjects.detail(requiredId(id, 'Subject ID')), { method: 'DELETE' }),
+  updateStatus: async (id, status) => dataResponse(await jsonRequest(API_ENDPOINTS.subjectManagementSubjects.status(requiredId(id, 'Subject ID')), 'PATCH', { status: status === 'Inactive' ? 0 : 1 })),
+  dependencies: async id => dataResponse(await request(API_ENDPOINTS.subjectManagementSubjects.dependencies(requiredId(id, 'Subject ID')))),
+  lookups: async () => dataResponse(await request(API_ENDPOINTS.subjectManagementSubjects.lookups)),
+  summary: async params => dataResponse(await request(withQuery(API_ENDPOINTS.subjectManagementSubjects.summary, params))),
+  export: params => blobRequest(withQuery(API_ENDPOINTS.subjectManagementSubjects.export, params)),
+  download: params => blobRequest(withQuery(API_ENDPOINTS.subjectManagementSubjects.download, params)),
 }
 
 // Verified against the deployed Swagger TimetableEntries contract (2026-09-23).
