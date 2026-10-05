@@ -26,14 +26,14 @@
 .section-primary, .ac-primary, .settings-button, .sa-primary, .p-primary, .password-modal__primary, .ay-btn.solid, [class*="-primary-btn"]):not(.secondary):not(.danger):not(.btn-secondary):not(.btn-danger):not(.btn-ghost),
 :root[data-theme="dark"] .logout-confirmation__confirm {
   color: #FFFFFF !important;
-  background: #69639D !important;
-  border-color: #8782BC !important;
+  background: #1769C2 !important;
+  border-color: #1769C2 !important;
 }
 :root[data-theme="dark"] :is(.btn, .cm-button, .primary-button, .module-primary-action, .semester-primary,
 .section-primary, .ac-primary, .settings-button, .sa-primary, .p-primary, .password-modal__primary, .ay-btn.solid, [class*="-primary-btn"]):not(.secondary):not(.danger):not(.btn-secondary):not(.btn-danger):not(.btn-ghost):hover,
 :root[data-theme="dark"] .logout-confirmation__confirm:hover {
-  background: #756FB2 !important;
-  border-color: #756FB2 !important;
+  background: #125AA8 !important;
+  border-color: #125AA8 !important;
 }
 :root[data-theme="dark"] :is(.section-assignment-panel, .section-form-card, .compact-summary,
 .department-profile-card, .department-details__grid > div, .department-profile-card .department-details__identity,
@@ -115,8 +115,8 @@
 :root[data-theme="dark"] .page-content :is(table, .cm-table, .course-advanced-table, .branch-table, .department-table-wrap table, .semester-table, .section-table, .ay .table table, .sa-table-wrap table, .sm-table, .em-table) thead th,
 :root[data-theme="dark"] .page-content :is(table, .cm-table, .course-advanced-table, .branch-table, .department-table-wrap table, .semester-table, .section-table, .ay .table table, .sa-table-wrap table, .sm-table, .em-table) th {
   color: #FFFFFF !important;
-  background: #69639D !important;
-  border-bottom: 2px solid #756FB2 !important;
+  background: #1769C2 !important;
+  border-bottom: 2px solid #125AA8 !important;
 }
 :root[data-theme="dark"] .page-content tbody tr:hover > :is(th, td) {
   background: var(--surface-soft) !important;
@@ -183,7 +183,7 @@
   .filters button
 ):hover:not(:disabled) {
   background: #273549 !important;
-  color: #8782BC !important;
+  color: #1769C2 !important;
   border-color: #0F172A !important;
 }
 
@@ -208,11 +208,11 @@
 :root[data-theme="dark"] .sidebar nav>a.active,
 :root[data-theme="dark"] .sidebar-link.active {
   /* Match the shared table-header lavender in both colour modes. */
-  background: #69639D !important;
+  background: #1769C2 !important;
   color: #FFFFFF !important;
   font-weight: 750 !important;
-  border: 1px solid #9D99CD !important;
-  border-left: 1px solid #9D99CD !important;
+  border: 1px solid #A9D3F7 !important;
+  border-left: 1px solid #A9D3F7 !important;
   border-radius: 10px !important;
   box-shadow: 0 2px 12px rgba(0, 0, 0, 0.26) !important;
 }
@@ -226,12 +226,12 @@
    two different themes.  Preserve the meaning through labels and icons while
    rendering those accents with the shared lavender tokens. */
 :root[data-theme="dark"] .erp-status-badge--approved {
-  background: rgba(157, 153, 205, 0.20) !important;
-  color: #C7C2FF !important;
-  border-color: rgba(157, 153, 205, 0.42) !important;
+  background: rgba(43, 120, 197, 0.20) !important;
+  color: #A9D3F7 !important;
+  border-color: rgba(43, 120, 197, 0.42) !important;
 }
 :root[data-theme="dark"] .erp-status-badge--approved i {
-  background: #C7C2FF !important;
+  background: #A9D3F7 !important;
 }
 :root[data-theme="dark"] :is(
   .fp-status.paid,
@@ -240,12 +240,12 @@
   .faculty-management .fm-report-total--present,
   .sm-credit-badge
 ) {
-  color: #C7C2FF !important;
-  border-color: rgba(157, 153, 205, 0.42) !important;
-  background-color: rgba(157, 153, 205, 0.18) !important;
+  color: #A9D3F7 !important;
+  border-color: rgba(43, 120, 197, 0.42) !important;
+  background-color: rgba(43, 120, 197, 0.18) !important;
 }
 :root[data-theme="dark"] .promotion-review-drawer .pr-btn-eligible:hover {
-  background: #756FB2 !important;
+  background: #125AA8 !important;
 }
 
 
@@ -269,13 +269,13 @@
   color: var(--text-primary) !important;
 }
 :root[data-theme="dark"] :is(.sm-btn--primary, .em-header-actions .sm-btn--primary) {
-  background: #69639D !important;
+  background: #1769C2 !important;
   color: #FFFFFF !important;
-  border-color: #8782BC !important;
+  border-color: #1769C2 !important;
 }
 :root[data-theme="dark"] :is(.sm-btn--primary, .em-header-actions .sm-btn--primary):hover {
-  background: #756FB2 !important;
-  border-color: #756FB2 !important;
+  background: #125AA8 !important;
+  border-color: #125AA8 !important;
 }
 :root[data-theme="dark"] :is(.sm-btn--secondary, .sm-icon-btn, .em-tab-btn:not(.active), .cm-tab-btn:not(.active)) {
   background: var(--surface-raised) !important;
@@ -283,8 +283,8 @@
   border-color: var(--border) !important;
 }
 :root[data-theme="dark"] :is(.em-tab-btn.active, .cm-tab-btn.active) {
-  color: #8782BC !important;
-  border-bottom-color: #8782BC !important;
+  color: #1769C2 !important;
+  border-bottom-color: #1769C2 !important;
 }
 :root[data-theme="dark"] :is(.sm-table td, .em-table td, .cm-table td) {
   background: var(--surface) !important;
@@ -341,10 +341,10 @@
   .rooms-table th,
   .rbac-data-table th
 ) {
-  background: #69639D !important;
+  background: #1769C2 !important;
   color: #FFFFFF !important;
-  border-color: #756FB2 !important;
-  border-bottom: 2px solid #6E68A8 !important;
+  border-color: #125AA8 !important;
+  border-bottom: 2px solid #2B78C5 !important;
   font-weight: 800 !important;
 }
 
@@ -380,7 +380,7 @@
 ):hover:not(:disabled) {
   background: #20293A !important;
   color: #FFFFFF !important;
-  border-color: #8782BC !important;
+  border-color: #1769C2 !important;
 }
 
 :root[data-theme="dark"] :is(
@@ -422,7 +422,7 @@
 ):hover:not(:disabled) {
   background: #20293A !important;
   color: #F8FAFC !important;
-  border-color: #8782BC !important;
+  border-color: #1769C2 !important;
 }
 
 :root[data-theme="dark"] :is(
@@ -462,7 +462,7 @@
   .action-popover,
   .table-menu
 ) :is(button, a, .export-option, .dropdown-item):hover {
-  background: rgba(135, 130, 188, 0.22) !important;
+  background: rgba(23, 105, 194, 0.22) !important;
   color: #FFFFFF !important;
 }
 
@@ -658,12 +658,12 @@
   .flm-cat-btn.active,
   .fm-category-tab.active
 ) {
-  background: #69639D !important;
+  background: #1769C2 !important;
   color: #FFFFFF !important;
-  border: 1px solid #756FB2 !important;
+  border: 1px solid #125AA8 !important;
   border-radius: 8px !important;
   font-weight: 750 !important;
-  box-shadow: 0 2px 8px rgba(117, 111, 178, 0.35) !important;
+  box-shadow: 0 2px 8px rgba(18, 90, 168, 0.35) !important;
 }
 
 :root[data-theme="dark"] .page-content :is(

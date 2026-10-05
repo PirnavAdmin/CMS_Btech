@@ -52,10 +52,10 @@
   padding: 0 !important;
   margin: 0 !important;
   border-radius: 8px !important;
-  border: 1px solid var(--border, #DDD8F3);
+  border: 1px solid var(--border, #D8E4F2);
   box-sizing: border-box !important;
-  background: var(--surface, #EDEBF6);
-  color: var(--brand, #756FB2);
+  background: var(--surface, #EAF3FF);
+  color: var(--brand, #125AA8);
   font-size: 14px !important;
   line-height: 1 !important;
   cursor: pointer !important;
@@ -149,16 +149,16 @@
 .cm-view-action,
 .table-action-btn.action-view,
 .table-actions-group > :is(a, button).action-view {
-  color: #756FB2 !important;
-  background: #EDEBF6 !important;
-  border-color: #DDD8F3 !important;
+  color: #125AA8 !important;
+  background: #EAF3FF !important;
+  border-color: #D8E4F2 !important;
 }
 .action-view:hover:not(:disabled),
 .cm-view-action:hover:not(:disabled),
 .table-action-btn.action-view:hover:not(:disabled),
 .table-actions-group > :is(a, button).action-view:hover:not(:disabled) {
-  background: #DDD8F3 !important;
-  border-color: #756FB2 !important;
+  background: #D8E4F2 !important;
+  border-color: #125AA8 !important;
   color: #554F75 !important;
 }
 
@@ -168,9 +168,9 @@
 .table-action-btn.action-edit,
 .table-actions-group > :is(a, button).action-edit,
 :is(.table-actions-group, .erp-row-actions, .cm-actions, .course-actions, .branch-actions, .semester-row-actions, .section-actions, .rooms-row-actions, .sm-row-actions, .sa-icon-actions, .table-actions-cell) > :is(a, button):is(.action-edit, .cm-edit-action, [title*="Edit"], [aria-label*="Edit"]) {
-  color: #756FB2 !important;
-  background: #EDEBF6 !important;
-  border-color: #DDD8F3 !important;
+  color: #125AA8 !important;
+  background: #EAF3FF !important;
+  border-color: #D8E4F2 !important;
 }
 
 .action-edit svg,
@@ -178,8 +178,8 @@
 .table-action-btn.action-edit svg,
 .table-actions-group > :is(a, button).action-edit svg,
 :is(.table-actions-group, .erp-row-actions, .cm-actions, .course-actions, .branch-actions, .semester-row-actions, .section-actions, .rooms-row-actions, .sm-row-actions, .sa-icon-actions, .table-actions-cell) > :is(a, button):is(.action-edit, .cm-edit-action, [title*="Edit"], [aria-label*="Edit"]) svg {
-  color: #756FB2 !important;
-  stroke: #756FB2 !important;
+  color: #125AA8 !important;
+  stroke: #125AA8 !important;
 }
 
 .action-edit:hover:not(:disabled),
@@ -187,8 +187,8 @@
 .table-action-btn.action-edit:hover:not(:disabled),
 .table-actions-group > :is(a, button).action-edit:hover:not(:disabled),
 :is(.table-actions-group, .erp-row-actions, .cm-actions, .course-actions, .branch-actions, .semester-row-actions, .section-actions, .rooms-row-actions, .sm-row-actions, .sa-icon-actions, .table-actions-cell) > :is(a, button):is(.action-edit, .cm-edit-action, [title*="Edit"], [aria-label*="Edit"]):hover:not(:disabled) {
-  background: #DDD8F3 !important;
-  border-color: #756FB2 !important;
+  background: #D8E4F2 !important;
+  border-color: #125AA8 !important;
   color: #554F75 !important;
 }
 
@@ -227,9 +227,9 @@
 .table-actions-group > :is(a, button).cm-success,
 .table-actions-group > :is(a, button).erp-action-btn--success,
 .table-actions-group > :is(a, button).success {
-  color: #756FB2 !important;
-  background: #EDEBF6 !important;
-  border-color: #DDD8F3 !important;
+  color: #125AA8 !important;
+  background: #EAF3FF !important;
+  border-color: #D8E4F2 !important;
 }
 .action-activate:hover:not(:disabled),
 .table-action-btn.action-activate:hover:not(:disabled),
@@ -240,8 +240,8 @@
 .table-actions-group > :is(a, button).cm-success:hover:not(:disabled),
 .table-actions-group > :is(a, button).erp-action-btn--success:hover:not(:disabled),
 .table-actions-group > :is(a, button).success:hover:not(:disabled) {
-  background: #DDD8F3 !important;
-  border-color: #756FB2 !important;
+  background: #D8E4F2 !important;
+  border-color: #125AA8 !important;
   color: #554F75 !important;
 }
 
@@ -281,14 +281,14 @@
 
 /* Apply the action palette only inside action button containers */
 :is(.table-actions-group, .erp-row-actions, .cm-actions, .course-actions, .branch-actions, .semester-row-actions, .section-actions, .rooms-row-actions, .sm-row-actions, .sa-icon-actions, .table-actions-cell) > :is(a, button).action-view {
-  color: #756FB2 !important;
-  background: #EDEBF6 !important;
-  border-color: #DDD8F3 !important;
+  color: #125AA8 !important;
+  background: #EAF3FF !important;
+  border-color: #D8E4F2 !important;
 }
 :is(.table-actions-group, .erp-row-actions, .cm-actions, .course-actions, .branch-actions, .semester-row-actions, .section-actions, .rooms-row-actions, .sm-row-actions, .sa-icon-actions, .table-actions-cell) > :is(a, button).action-edit {
-  color: #756FB2 !important;
-  background: #EDEBF6 !important;
-  border-color: #DDD8F3 !important;
+  color: #125AA8 !important;
+  background: #EAF3FF !important;
+  border-color: #D8E4F2 !important;
 }
 :is(.table-actions-group, .erp-row-actions, .cm-actions, .course-actions, .branch-actions, .semester-row-actions, .section-actions, .rooms-row-actions, .sm-row-actions, .sa-icon-actions, .table-actions-cell) > :is(a, button).action-assign {
   color: #D97706 !important;
@@ -301,9 +301,9 @@
   border-color: #FECACA !important;
 }
 :is(.table-actions-group, .erp-row-actions, .cm-actions, .course-actions, .branch-actions, .semester-row-actions, .section-actions, .rooms-row-actions, .sm-row-actions, .sa-icon-actions, .table-actions-cell) > :is(a, button).action-activate {
-  color: #756FB2 !important;
-  background: #EDEBF6 !important;
-  border-color: #DDD8F3 !important;
+  color: #125AA8 !important;
+  background: #EAF3FF !important;
+  border-color: #D8E4F2 !important;
 }
 
 /* ==========================================================================
@@ -322,8 +322,8 @@
 :root[data-theme="dark"] .section-actions > a:first-child,
 :root[data-theme="dark"] .sa-icon-actions > button:first-child,
 :root[data-theme="dark"] .table-actions-cell > button:first-child {
-  color: #8B82C7 !important;
-  background: rgba(183, 177, 221, 0.25) !important;
+  color: #1769C2 !important;
+  background: rgba(43, 120, 197, 0.25) !important;
   border-color: rgba(245, 158, 11, 0.4) !important;
 }
 :root[data-theme="dark"] .action-view:hover:not(:disabled),
@@ -337,9 +337,9 @@
 :root[data-theme="dark"] .section-actions > a:first-child:hover:not(:disabled),
 :root[data-theme="dark"] .sa-icon-actions > button:first-child:hover:not(:disabled),
 :root[data-theme="dark"] .table-actions-cell > button:first-child:hover:not(:disabled) {
-  background: rgba(183, 177, 221, 0.45) !important;
+  background: rgba(43, 120, 197, 0.45) !important;
   border-color: rgba(96, 165, 250, 0.6) !important;
-  color: #DFDCED !important;
+  color: #D8E4F2 !important;
 }
 
 /* 2. EDIT ACTION (Dark) */
@@ -354,7 +354,7 @@
 :root[data-theme="dark"] .section-actions > a:nth-child(2),
 :root[data-theme="dark"] .sa-icon-actions > button.action-edit,
 :root[data-theme="dark"] .table-actions-cell > button:nth-child(2) {
-  color: #c084fc !important;
+  color: #A9D3F7 !important;
   background: rgba(126, 34, 206, 0.25) !important;
   border-color: rgba(168, 85, 247, 0.4) !important;
 }
@@ -371,7 +371,7 @@
 :root[data-theme="dark"] .table-actions-cell > button:nth-child(2):hover:not(:disabled) {
   background: rgba(126, 34, 206, 0.45) !important;
   border-color: rgba(192, 132, 252, 0.6) !important;
-  color: #e9d5ff !important;
+  color: #D8E4F2 !important;
 }
 
 /* 3. ASSIGN ACTION (Dark) */
@@ -380,7 +380,7 @@
 :root[data-theme="dark"] .table-action-btn.action-assign,
 :root[data-theme="dark"] .table-actions-group > :is(a, button).action-assign,
 :root[data-theme="dark"] .section-actions > .section-assign-action {
-  color: #9D99CD !important;
+  color: #A9D3F7 !important;
   background: rgba(180, 83, 9, 0.25) !important;
   border-color: rgba(245, 158, 11, 0.4) !important;
 }
@@ -391,7 +391,7 @@
 :root[data-theme="dark"] .section-actions > .section-assign-action:hover:not(:disabled) {
   background: rgba(180, 83, 9, 0.45) !important;
   border-color: rgba(251, 191, 36, 0.6) !important;
-  color: #DFDCED !important;
+  color: #D8E4F2 !important;
 }
 
 /* 4. ACTIVATE / APPROVAL ACTION (Dark) */
@@ -407,9 +407,9 @@
 :root[data-theme="dark"] .sa-icon-actions button.action-activate,
 :root[data-theme="dark"] .sa-icon-actions button[title*="Review"],
 :root[data-theme="dark"] .sa-icon-actions button[title*="Approve"] {
-  color: #9D99CD !important;
-  background: rgba(157, 153, 205, 0.22) !important;
-  border-color: rgba(157, 153, 205, 0.45) !important;
+  color: #A9D3F7 !important;
+  background: rgba(43, 120, 197, 0.22) !important;
+  border-color: rgba(43, 120, 197, 0.45) !important;
 }
 :root[data-theme="dark"] .action-activate:hover:not(:disabled),
 :root[data-theme="dark"] .table-action-btn.action-activate:hover:not(:disabled),
@@ -423,7 +423,7 @@
 :root[data-theme="dark"] .sa-icon-actions button.action-activate:hover:not(:disabled),
 :root[data-theme="dark"] .sa-icon-actions button[title*="Review"]:hover:not(:disabled),
 :root[data-theme="dark"] .sa-icon-actions button[title*="Approve"]:hover:not(:disabled) {
-  background: rgba(157, 153, 205, 0.36) !important;
+  background: rgba(43, 120, 197, 0.36) !important;
   border-color: rgba(199, 194, 255, 0.62) !important;
   color: #F3F1FF !important;
 }
@@ -539,14 +539,14 @@ table.erp-table {
   vertical-align: middle !important;
   text-align: left !important;
   padding: 10px 14px !important;
-  background: #8782BC !important;
+  background: #1769C2 !important;
   color: #FFFFFF !important;
   font-size: 11px !important;
   font-weight: 800 !important;
   letter-spacing: 0.055em !important;
   text-transform: uppercase !important;
   white-space: nowrap !important;
-  border-bottom: 2px solid #756FB2 !important;
+  border-bottom: 2px solid #125AA8 !important;
   border-top: none !important;
   box-sizing: border-box !important;
 }
@@ -725,8 +725,8 @@ td.col-hod,
   min-width: 34px !important;
   min-height: 34px !important;
   border-radius: 8px !important;
-  background: var(--surface-soft, #F5F3FD) !important;
-  color: var(--brand, #8782BC) !important;
+  background: var(--surface-soft, #EAF3FF) !important;
+  color: var(--brand, #1769C2) !important;
   font-weight: 700 !important;
   font-size: 13px !important;
   border: 1px solid var(--border, #e2e8f0) !important;

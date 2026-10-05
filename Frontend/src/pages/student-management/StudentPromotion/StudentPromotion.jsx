@@ -225,7 +225,7 @@ function ReviewDrawer({ student, onClose, onStatus, canEdit }) {
                 </div>
                 <div className="pr-field">
                   <span className="pr-label">Next Semester</span>
-                  <span className="pr-value" style={{ color: 'var(--brand, #8782BC)', fontWeight: 700 }}>
+                  <span className="pr-value" style={{ color: 'var(--brand, #1769C2)', fontWeight: 700 }}>
                     {formatSemesterLabel(student?.toSemester || student?.nextSemester || student?.targetSemester)}
                   </span>
                 </div>

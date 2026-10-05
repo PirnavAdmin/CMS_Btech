@@ -249,7 +249,7 @@
 .filter-disclosure__content :is(.course-clear, .branch-clear, .cm-clear-btn):hover {
   border-color: #AFCBE7 !important;
   color: #1769C2 !important;
-  background: var(--brand-soft, #F3F1FA) !important;
+  background: var(--brand-soft, #EAF3FF) !important;
 }
 
 @media (max-width: 640px) {

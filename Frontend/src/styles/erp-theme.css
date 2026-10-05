@@ -65,8 +65,8 @@ html,body,#root{max-width:100%;overflow-x:hidden}
   --erp-muted: #94A3B8;
   --erp-border: #334155;
   --erp-navy: #F8FAFC;
-  --erp-blue: #6366F1;
-  --erp-blue-soft: rgba(99, 102, 241, 0.18);
+  --erp-blue: #1769C2;
+  --erp-blue-soft: rgba(23, 105, 194, 0.18);
   --scrollbar-track: transparent;
   --scrollbar-thumb: #334155;
   --scrollbar-thumb-hover: #475569;
@@ -124,7 +124,7 @@ html,body,#root{max-width:100%;overflow-x:hidden}
 .sidebar .sidebar-group div{gap:1px;margin:2px 0 4px 18px;padding-left:14px;border-left:1px solid #E2E8F0}
 .sidebar .sidebar-group div a{padding:8px 12px;border:0;border-radius:6px;font-size:.8rem;color:#64748B}
 .sidebar .sidebar-group div a:hover{color:#0F172A;background:#F1F5F9}
-.sidebar .sidebar-group div a.active{color:#1769C2;background:#EDEBF6}
+.sidebar .sidebar-group div a.active{color:#1769C2;background:#EAF3FF}
 .sidebar-scrim{display:none}
 .sidebar-link--blue svg,.sidebar-link--cyan svg,.sidebar-link--green svg,.sidebar-link--purple svg,.sidebar-link--orange svg,.sidebar-link--pink svg,.sidebar-link--gold svg{color:#64748B!important}.sidebar nav>a:hover:not(.active) svg{color:#0F172A!important}
 
@@ -134,7 +134,7 @@ html,body,#root{max-width:100%;overflow-x:hidden}
 .page-content :is(p,small),.page-content :is(.cm-header p,.semester-page-header>div>p:last-child,.section-page-header>div>p:last-child){color:var(--text-muted)}
 .page-content :is(input,select,textarea){border-color:var(--border-strong);background:var(--surface);color:var(--text-primary)}
 .page-content :is(input,select,textarea):focus{border-color:var(--brand);outline:0;box-shadow:0 0 0 3px rgba(43,120,197,.08)}
-.page-content :is(button,a):focus-visible{outline:3px solid rgba(79, 70, 229, 0.25);outline-offset:2px}
+.page-content :is(button,a):focus-visible{outline:3px solid rgba(43, 120, 197, 0.25);outline-offset:2px}
 
 :root[data-theme="dark"] .account-menu summary{border-color:var(--border)!important;background:var(--surface)!important}:root[data-theme="dark"] .account-menu summary strong,:root[data-theme="dark"] .account-menu__panel button{color:var(--text-primary)}:root[data-theme="dark"] .account-menu summary small{color:var(--text-muted)}
 :root[data-theme="dark"] :is(.account-menu__panel,.logout-confirmation,.password-modal){border:1px solid var(--border);background:var(--surface-raised);color:var(--text-primary)}:root[data-theme="dark"] .account-menu__panel button:hover,:root[data-theme="dark"] .password-modal__strength{background:var(--surface-soft)}
@@ -193,7 +193,7 @@ html,body,#root{max-width:100%;overflow-x:hidden}
 .page-content :is(.table-pagination,.course-pagination,.department-pagination,.cm-pagination,.semester-pagination,.section-pagination){display:flex!important;min-height:52px;box-sizing:border-box;align-items:center!important;justify-content:flex-end!important;gap:10px!important;padding:10px 16px!important;border-top:1px solid var(--border)!important;background:var(--surface-soft)!important}
 .page-content :is(.course-pagination,.department-pagination,.cm-pagination) :is(.pagination-controls,.cm-pagination-controls){display:flex;align-items:center;justify-content:flex-end;gap:10px}
 .page-content :is(.pagination-btn,.cm-page-btn,.semester-pagination button,.section-pagination button){min-width:84px!important;height:34px!important;padding:0 13px!important;border:1px solid #CBD5E1!important;border-radius:8px!important;color:#0F172A!important;background:var(--surface)!important;font-size:.78rem!important;font-weight:750!important}
-.page-content :is(.pagination-btn,.cm-page-btn,.semester-pagination button,.section-pagination button):hover:not(:disabled){color:#0F172A!important;background:#EDEBF6!important;border-color:#195A99!important}
+.page-content :is(.pagination-btn,.cm-page-btn,.semester-pagination button,.section-pagination button):hover:not(:disabled){color:#0F172A!important;background:#EAF3FF!important;border-color:#195A99!important}
 .page-content :is(.pagination-btn,.cm-page-btn,.semester-pagination button,.section-pagination button):disabled{cursor:not-allowed!important;opacity:.42!important}
 .page-content :is(.pagination-status,.cm-page-indicator,.semester-pagination>p,.section-pagination>p){min-width:100px;margin:0!important;color:var(--text-secondary)!important;font-size:.78rem!important;font-weight:750!important;text-align:center}
 .page-content :is(.semester-pagination,.section-pagination)>p{display:block!important;order:2}.page-content :is(.semester-pagination,.section-pagination)>div{display:contents!important}.page-content :is(.semester-pagination,.section-pagination)>div>button:first-child{order:1}.page-content :is(.semester-pagination,.section-pagination)>div>button:last-child{order:3}.page-content :is(.semester-pagination,.section-pagination)>div>button:not(:first-child):not(:last-child){display:none!important}
@@ -240,9 +240,9 @@ html,body,#root{max-width:100%;overflow-x:hidden}
 .page-content .cm-header .cm-button:not(.secondary):hover{border-color:#0F172A!important;background:#0F172A!important;color:#fff!important}
 
 /* Dark palette contract - override legacy per-page light variables and hardcoded surfaces. */
-:root[data-theme="dark"] .semester-management{--sem-navy:#0F172A;--sem-blue:#9D99CD;--sem-text:#edf4fa;--sem-muted:#91a5b7;--sem-line:#29394d}
-:root[data-theme="dark"] .section-management{--sm-navy:#edf4fa;--sm-blue:#9D99CD;--sm-text:#edf4fa;--sm-muted:#91a5b7;--sm-line:#29394d;--sm-soft:#183650}
-:root[data-theme="dark"] .profile-page{--navy:#edf4fa;--blue:#9D99CD;--ink:#edf4fa;--muted:#91a5b7;--line:#29394d}
+:root[data-theme="dark"] .semester-management{--sem-navy:#0F172A;--sem-blue:#A9D3F7;--sem-text:#edf4fa;--sem-muted:#91a5b7;--sem-line:#29394d}
+:root[data-theme="dark"] .section-management{--sm-navy:#edf4fa;--sm-blue:#A9D3F7;--sm-text:#edf4fa;--sm-muted:#91a5b7;--sm-line:#29394d;--sm-soft:#183650}
+:root[data-theme="dark"] .profile-page{--navy:#edf4fa;--blue:#A9D3F7;--ink:#edf4fa;--muted:#91a5b7;--line:#29394d}
 :root[data-theme="dark"] .page-content :is(.college-management,.add-college,.department-management,.ay,.cm-page,.semester-management,.section-management,.profile-page,.settings-page,.sm-screen,.em-screen,.cm-screen,.subject-management,.elective-management,.credits-management){color:var(--text-primary)!important}
 :root[data-theme="dark"] .page-content :is(.cm-panel,.management-card,.semester-stat-card,.semester-directory-card,.section-stat-card,.section-table-card,.ay .kpis article,.ay .panel,.ac-section,.profile-content-card,.settings-card,.department-heading-stat){border-color:var(--border)!important;background:var(--surface)!important;color:var(--text-primary)!important;box-shadow:var(--shadow-sm)!important}
 :root[data-theme="dark"] .page-content :is(.cm-filters,.semester-filters,.section-filter-bar,.department-controls--toolbar,.ay .tools,.profile-section-heading,.profile-tabs,.profile-actions,.profile-subsection,.ac-tabs,.ac-actions){border-color:var(--border)!important;background:var(--surface-soft)!important}
@@ -414,12 +414,12 @@ html,body,#root{max-width:100%;overflow-x:hidden}
 .page-content .module-action-icon--view{color:#1769C2!important}
 .page-content .module-action-icon--edit{color:#1769C2!important}
 .page-content .module-action-icon--danger{color:#b42318!important}
-.page-content :is(button,a):has(>.module-action-icon--view){color:#1769C2!important;background:#EDEBF6!important;border-color:#DDD8F3!important;font-weight:700;}
-.page-content :is(button,a):has(>.module-action-icon--edit){color:#1769C2!important;background:#EDEBF6!important;border-color:#DDD8F3!important}
+.page-content :is(button,a):has(>.module-action-icon--view){color:#1769C2!important;background:#EAF3FF!important;border-color:#D8E4F2!important;font-weight:700;}
+.page-content :is(button,a):has(>.module-action-icon--edit){color:#1769C2!important;background:#EAF3FF!important;border-color:#D8E4F2!important}
 .page-content :is(button,a):has(>.module-action-icon--danger){color:#b42318!important;background:#fee4e2!important;border-color:#fecdca!important}
-.page-content .ay .ay-actions :is(.primary,.current-action){color:#1769C2!important;background:#EDEBF6!important;border-color:#DDD8F3!important}
+.page-content .ay .ay-actions :is(.primary,.current-action){color:#1769C2!important;background:#EAF3FF!important;border-color:#D8E4F2!important}
 .page-content .ay .ay-actions :is(.danger,.archived-action){color:#b42318!important;background:#fee4e2!important;border-color:#fecdca!important}
-.page-content .sa-icon-actions button[aria-label="Review application"]{color:#1769C2!important;background:#EDEBF6!important;border-color:#DDD8F3!important}
+.page-content .sa-icon-actions button[aria-label="Review application"]{color:#1769C2!important;background:#EAF3FF!important;border-color:#D8E4F2!important}
 
 /* Keep Academic Years and Departments action buttons identical to the other directories. */
 .page-content .erp-row-actions{
@@ -468,14 +468,14 @@ html,body,#root{max-width:100%;overflow-x:hidden}
 :is(.table-actions-group, .erp-row-actions, .cm-actions, .course-actions, .branch-actions, .semester-row-actions, .section-actions, .rooms-row-actions, .sm-row-actions, .sa-icon-actions, .table-actions-cell) > :is(a, button).action-edit {
   color: #1769C2 !important;
   background: #EAF3FF !important;
-  border: 1px solid #DDD8F3 !important;
+  border: 1px solid #D8E4F2 !important;
 }
 .action-edit:hover:not(:disabled),
 .cm-edit-action:hover:not(:disabled),
 .is-edit:hover:not(:disabled),
 .erp-action-btn.action-edit:hover:not(:disabled),
 .table-action-btn.action-edit:hover:not(:disabled) {
-  background: #DDD8F3 !important;
+  background: #D8E4F2 !important;
   border-color: #1769C2 !important;
   color: #554F75 !important;
 }
@@ -539,8 +539,8 @@ html,body,#root{max-width:100%;overflow-x:hidden}
 .table-action-btn.action-activate,
 :is(.table-actions-group, .erp-row-actions, .cm-actions, .course-actions, .branch-actions, .semester-row-actions, .section-actions, .rooms-row-actions, .sm-row-actions, .sa-icon-actions, .table-actions-cell) > :is(a, button).action-activate {
   color: #1769C2 !important;
-  background: #EDEBF6 !important;
-  border: 1px solid #DDD8F3 !important;
+  background: #EAF3FF !important;
+  border: 1px solid #D8E4F2 !important;
 }
 .action-activate:hover:not(:disabled),
 .cm-success:hover:not(:disabled),
@@ -548,7 +548,7 @@ html,body,#root{max-width:100%;overflow-x:hidden}
 .success:hover:not(:disabled),
 .erp-action-btn.action-activate:hover:not(:disabled),
 .table-action-btn.action-activate:hover:not(:disabled) {
-  background: #DDD8F3 !important;
+  background: #D8E4F2 !important;
   border-color: #1769C2 !important;
   color: #554F75 !important;
 }
@@ -582,11 +582,11 @@ html,body,#root{max-width:100%;overflow-x:hidden}
 }
 
 /* Preserve semantic colors for the Branch directory row actions. */
-.page-content .branch-actions a:first-child{color:#1769C2!important;background:#EDEBF6!important;border-color:#DDD8F3!important;font-weight:700;}.page-content .branch-actions a:nth-child(2){color:#1769C2!important;background:#EDEBF6!important;border-color:#DDD8F3!important}.page-content .branch-actions .branch-status-action.danger{color:#b42318!important;background:#fee4e2!important;border-color:#fecdca!important}.page-content .branch-actions .branch-status-action.success{color:#1769C2!important;background:#EDEBF6!important;border-color:#DDD8F3!important}
-.page-content .cm-actions .cm-view-action{color:#1769C2!important;background:#EDEBF6!important;border-color:#DDD8F3!important;font-weight:700;}.page-content .cm-actions .cm-edit-action{color:#1769C2!important;background:#EDEBF6!important;border-color:#DDD8F3!important}.page-content .cm-actions .cm-status-action.cm-danger{color:#b42318!important;background:#fee4e2!important;border-color:#fecdca!important}.page-content .cm-actions .cm-status-action.cm-success{color:#1769C2!important;background:#EDEBF6!important;border-color:#DDD8F3!important}
+.page-content .branch-actions a:first-child{color:#1769C2!important;background:#EAF3FF!important;border-color:#D8E4F2!important;font-weight:700;}.page-content .branch-actions a:nth-child(2){color:#1769C2!important;background:#EAF3FF!important;border-color:#D8E4F2!important}.page-content .branch-actions .branch-status-action.danger{color:#b42318!important;background:#fee4e2!important;border-color:#fecdca!important}.page-content .branch-actions .branch-status-action.success{color:#1769C2!important;background:#EAF3FF!important;border-color:#D8E4F2!important}
+.page-content .cm-actions .cm-view-action{color:#1769C2!important;background:#EAF3FF!important;border-color:#D8E4F2!important;font-weight:700;}.page-content .cm-actions .cm-edit-action{color:#1769C2!important;background:#EAF3FF!important;border-color:#D8E4F2!important}.page-content .cm-actions .cm-status-action.cm-danger{color:#b42318!important;background:#fee4e2!important;border-color:#fecdca!important}.page-content .cm-actions .cm-status-action.cm-success{color:#1769C2!important;background:#EAF3FF!important;border-color:#D8E4F2!important}
 
 /* Shared management-directory action colors: view, edit, assign, deactivate, activate. */
-.page-content :is(.course-actions,.semester-row-actions,.section-actions,.row-actions)>:first-child{color:#1769C2!important;background:#EDEBF6!important;border-color:#DDD8F3!important;font-weight:700;}.page-content :is(.course-actions,.semester-row-actions,.section-actions,.row-actions)>:nth-child(2){color:#1769C2!important;background:#EDEBF6!important;border-color:#DDD8F3!important}.page-content :is(.section-actions,.row-actions)>:nth-child(3):not(.status-action):not(.section-status-action){color:#1769C2!important;background:#EDEBF6!important;border-color:#DDD8F3!important}.page-content :is(.course-actions,.section-actions,.row-actions) :is(.course-status-action,.section-status-action,.status-action).danger{color:#b42318!important;background:#fee4e2!important;border-color:#fecdca!important}.page-content :is(.course-actions,.section-actions,.row-actions) :is(.course-status-action,.section-status-action,.status-action).success{color:#1769C2!important;background:#EDEBF6!important;border-color:#DDD8F3!important}
+.page-content :is(.course-actions,.semester-row-actions,.section-actions,.row-actions)>:first-child{color:#1769C2!important;background:#EAF3FF!important;border-color:#D8E4F2!important;font-weight:700;}.page-content :is(.course-actions,.semester-row-actions,.section-actions,.row-actions)>:nth-child(2){color:#1769C2!important;background:#EAF3FF!important;border-color:#D8E4F2!important}.page-content :is(.section-actions,.row-actions)>:nth-child(3):not(.status-action):not(.section-status-action){color:#1769C2!important;background:#EAF3FF!important;border-color:#D8E4F2!important}.page-content :is(.course-actions,.section-actions,.row-actions) :is(.course-status-action,.section-status-action,.status-action).danger{color:#b42318!important;background:#fee4e2!important;border-color:#fecdca!important}.page-content :is(.course-actions,.section-actions,.row-actions) :is(.course-status-action,.section-status-action,.status-action).success{color:#1769C2!important;background:#EAF3FF!important;border-color:#D8E4F2!important}
 
 :root[data-theme="dark"] .page-content table thead th{
   border-color:#28445c!important;background:#0F172A!important;color:#eef6fc!important;
@@ -676,7 +676,7 @@ html,body,#root{max-width:100%;overflow-x:hidden}
 }
 /* Desktop sidebar collapse control. */
 .sidebar-collapse{flex-shrink:0;display:grid;width:28px;height:28px;margin-left:auto;padding:0;place-items:center;border:1px solid #CBD5E1;border-radius:7px;color:#64748B;background:#FFFFFF;cursor:pointer;transition:background-color .18s ease,border-color .18s ease,color .18s ease,box-shadow .18s ease}
-.sidebar-collapse:hover,.sidebar-collapse:focus-visible{border-color:#1769C2;color:#514A8A;background:#EDEBF6;box-shadow:0 0 0 3px rgba(117,111,178,.16);outline:none}
+.sidebar-collapse:hover,.sidebar-collapse:focus-visible{border-color:#1769C2;color:#125AA8;background:#EAF3FF;box-shadow:0 0 0 3px rgba(18, 90, 168,.16);outline:none}
 .sidebar-collapse svg{width:16px;height:16px}
 .sidebar.is-collapsed{width:72px;padding-inline:10px}
 .sidebar.is-collapsed .sidebar-brand{display:grid;justify-items:center;margin-inline:0;padding-inline:0}
@@ -773,7 +773,7 @@ html,body,#root{max-width:100%;overflow-x:hidden}
   white-space: nowrap;
   transition: background-color .15s ease, border-color .15s ease, color .15s ease, box-shadow .15s ease;
 }
-.export-button:hover:not(:disabled) { border-color: #0F172A; background: #EDEBF6; color: #0F172A; }
+.export-button:hover:not(:disabled) { border-color: #0F172A; background: #EAF3FF; color: #0F172A; }
 .export-button:focus-visible {
   outline: 2px solid var(--brand, #195A99);
   outline-offset: 2px;
@@ -828,7 +828,7 @@ html,body,#root{max-width:100%;overflow-x:hidden}
   transition: background-color .12s ease, color .12s ease;
 }
 .export-options button:hover {
-  background: var(--brand-soft, #F9F8FD);
+  background: var(--brand-soft, #EAF3FF);
   color: var(--brand, #195A99);
 }
 .export-options button svg {
@@ -924,7 +924,7 @@ html,body,#root{max-width:100%;overflow-x:hidden}
   text-decoration: none;
   cursor: pointer;
   white-space: nowrap;
-  box-shadow: 0 4px 12px rgba(94, 89, 163, 0.25);
+  box-shadow: 0 4px 12px rgba(16, 42, 76, 0.25);
   transition: background-color 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease, transform 0.1s ease;
 }
 
@@ -933,7 +933,7 @@ html,body,#root{max-width:100%;overflow-x:hidden}
   background: #1769C2 !important;
   border-color: #1769C2 !important;
   color: #fff !important;
-  box-shadow: 0 4px 14px rgba(135, 130, 188, 0.35);
+  box-shadow: 0 4px 14px rgba(23, 105, 194, 0.35);
 }
 
 .erp-btn--secondary,
@@ -942,7 +942,7 @@ html,body,#root{max-width:100%;overflow-x:hidden}
 .erp-btn--secondary:hover:not(:disabled),
 .page-content :is(.secondary-button, .cm-secondary-btn, .cm-button.secondary, .semester-primary.secondary, .section-primary.secondary, .section-back-button, .p-secondary, .profile-button.secondary):hover:not(:disabled) {
   border-color: var(--brand, #195A99) !important;
-  background: var(--brand-soft, #F9F8FD) !important;
+  background: var(--brand-soft, #EAF3FF) !important;
   color: var(--brand, #195A99) !important;
 }
 
@@ -981,7 +981,7 @@ html,body,#root{max-width:100%;overflow-x:hidden}
 
 .page-content :is(.row-actions, .cm-actions, .course-actions, .branch-actions, .semester-row-actions, .section-actions, .sa-icon-actions, .sp-actions, .ay-actions) :is(button, a):hover:not(:disabled) {
   border-color: var(--brand, #195A99);
-  background: var(--brand-soft, #F9F8FD);
+  background: var(--brand-soft, #EAF3FF);
   color: var(--brand, #195A99);
 }
 
@@ -1193,10 +1193,10 @@ html,body,#root{max-width:100%;overflow-x:hidden}
   .module-primary-action,
   .solid:not(.secondary)
 ):hover:not(:disabled) {
-  background: #655E9F !important;
-  border-color: #655E9F !important;
+  background: #125AA8 !important;
+  border-color: #125AA8 !important;
   color: #FFFFFF !important;
-  box-shadow: 0 4px 12px rgba(117, 111, 178, 0.25) !important;
+  box-shadow: 0 4px 12px rgba(18, 90, 168, 0.25) !important;
   transform: translateY(-1px) !important;
 }
 
@@ -1374,7 +1374,7 @@ html,body,#root{max-width:100%;overflow-x:hidden}
 :root:not([data-theme="dark"]) .flm-category-toggle button.active {
   background: #1769C2 !important;
   color: #FFFFFF !important;
-  box-shadow: 0 1px 3px rgba(117, 111, 178, 0.3) !important;
+  box-shadow: 0 1px 3px rgba(18, 90, 168, 0.3) !important;
 }
 
 :root:not([data-theme="dark"]) .flm-cat-btn:not(.active):hover,
@@ -1678,7 +1678,7 @@ td.col-actions,
 :root[data-theme="dark"] .section-name-link:hover,
 :root[data-theme="dark"] .room-name-link:hover,
 :root[data-theme="dark"] .subject-name-link:hover {
-  color: #A39DDC !important;
+  color: #A9D3F7 !important;
 }
 
 /* Ensure flex primary cells in tables are centered */
@@ -1909,7 +1909,7 @@ td.col-actions,
   font-weight: 500;
   border: 1px dashed var(--border, #E2E8F0);
   border-radius: 8px;
-  background: var(--surface-soft, #FAF9FD);
+  background: var(--surface-soft, #EAF3FF);
   margin-top: 6px;
 }
 
@@ -2048,7 +2048,7 @@ td.col-actions,
   border: 0;
   border-bottom: 1px solid var(--border, #E2E8F0);
   border-radius: 12px 12px 0 0;
-  background: var(--surface-soft, #FAF9FD);
+  background: var(--surface-soft, #EAF3FF);
   flex-shrink: 0;
   scrollbar-width: none;
   -ms-overflow-style: none;
@@ -2107,7 +2107,7 @@ td.col-actions,
 .sa-stepper button:hover,
 .fm-stepper li:hover,
 .sp-edit-tabs button:hover {
-  background: #EDEBF6;
+  background: #EAF3FF;
   color: #0F172A;
 }
 
@@ -2120,7 +2120,7 @@ td.col-actions,
   background: #195A99 !important;
   color: #FFFFFF !important;
   font-weight: 750 !important;
-  box-shadow: 0 2px 8px rgba(117, 111, 178, 0.28) !important;
+  box-shadow: 0 2px 8px rgba(18, 90, 168, 0.28) !important;
 }
 
 .erp-tabs-bar button.active span,
@@ -2206,7 +2206,7 @@ td.col-actions,
   margin-top: auto;
   padding: 10px 16px;
   border-top: 1px solid var(--border, #E2E8F0);
-  background: var(--surface-soft, #FAF9FD);
+  background: var(--surface-soft, #EAF3FF);
   flex-shrink: 0;
 }
 
@@ -2340,7 +2340,7 @@ td.col-actions,
 ):hover:not(.active):not(.is-active) {
   background: #EAF3FF !important;
   color: #1769C2 !important;
-  border-color: #DDD8F3 !important;
+  border-color: #D8E4F2 !important;
 }
 
 .page-content :is(
@@ -2383,7 +2383,7 @@ td.col-actions,
   border: 1px solid #1769C2 !important;
   border-radius: 8px !important;
   font-weight: 750 !important;
-  box-shadow: 0 2px 8px rgba(117, 111, 178, 0.28) !important;
+  box-shadow: 0 2px 8px rgba(18, 90, 168, 0.28) !important;
 }
 
 .page-content :is(

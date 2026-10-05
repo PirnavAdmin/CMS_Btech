@@ -69,7 +69,7 @@
   border: 1px solid var(--sem-line);
   border-radius: 9px;
   background: var(--surface, #fff);
-  box-shadow: var(--shadow-sm, 0 4px 14px rgba(94, 89, 163, 0.05));
+  box-shadow: var(--shadow-sm, 0 4px 14px rgba(16, 42, 76, 0.05));
 }
 
 .compact-summary__item {
@@ -116,7 +116,7 @@
   border-radius: 8px;
   color: #fff;
   background: #102A4C;
-  box-shadow: 0 4px 12px rgba(94, 89, 163, 0.25);
+  box-shadow: 0 4px 12px rgba(16, 42, 76, 0.25);
   font-size: 0.82rem;
   font-weight: 800;
   text-decoration: none;
@@ -156,7 +156,7 @@
   border: 1px solid var(--sem-line);
   border-radius: 14px;
   background: var(--surface, #fff);
-  box-shadow: 0 10px 30px rgba(94, 89, 163, 0.07);
+  box-shadow: 0 10px 30px rgba(16, 42, 76, 0.07);
 }
 
 .semester-directory-card {
@@ -179,7 +179,7 @@
   place-items: center;
   border-radius: 8px;
   color: var(--sem-blue);
-  background: #F3F1FA;
+  background: #EAF3FF;
 }
 
 .semester-directory-heading h2,
@@ -512,7 +512,7 @@
 .stepper-node.is-active .stepper-badge {
   background: #1769C2;
   color: #FFFFFF;
-  box-shadow: 0 2px 6px rgba(117, 111, 178, 0.3);
+  box-shadow: 0 2px 6px rgba(18, 90, 168, 0.3);
 }
 
 .stepper-node.is-complete .stepper-badge {
@@ -656,7 +656,7 @@
 .semester-field input:focus,
 .semester-field select:focus {
   border-color: #1769C2;
-  box-shadow: 0 0 0 2px rgba(117, 111, 178, 0.12);
+  box-shadow: 0 0 0 2px rgba(18, 90, 168, 0.12);
 }
 
 .semester-field input[readonly],
@@ -775,7 +775,7 @@
 
 .semester-date-input:focus {
   border-color: #1769C2;
-  box-shadow: 0 0 0 2px rgba(117, 111, 178, 0.12);
+  box-shadow: 0 0 0 2px rgba(18, 90, 168, 0.12);
 }
 
 .semester-workflow-actions {
@@ -1159,7 +1159,7 @@
   align-items: center;
   gap: 8px;
   padding: 11px 10px 11px 13px;
-  border: 1px solid #C9C4E0;
+  border: 1px solid #D8E4F2;
   border-radius: 9px;
   color: #1769C2;
   background: #EEF5FD;
@@ -1208,7 +1208,7 @@
   place-items: center;
   border: 2px solid rgba(255, 255, 255, 0.5);
   border-radius: 14px;
-  color: #1E173D;
+  color: #123F73;
   background: linear-gradient(135deg, #ECC15D 0%, #DF9E27 100%);
   box-shadow: 0 4px 14px rgba(0, 0, 0, 0.16);
   font-size: 1.4rem;
@@ -1415,14 +1415,14 @@
    than the generic three-column entity grid. */
 .semester-management .semester-live-preview .cm-info-rows {
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  border-color: #DFDCED;
+  border-color: #D8E4F2;
 }
 .semester-management .semester-live-preview .cm-info-row {
   min-height: 58px;
   padding: 9px 10px;
-  border-color: #DFDCED;
+  border-color: #D8E4F2;
 }
-.semester-management .semester-live-preview .cm-info-row:nth-child(3n) { border-right: 1px solid #DFDCED; }
+.semester-management .semester-live-preview .cm-info-row:nth-child(3n) { border-right: 1px solid #D8E4F2; }
 .semester-management .semester-live-preview .cm-info-row:nth-child(2n) { border-right: 0; }
 .semester-management .semester-live-preview .cm-info-label { color: #1769C2; font-size: .66rem; line-height: 1.25; }
 .semester-management .semester-live-preview .cm-info-val { color: #30264F; font-size: .84rem; line-height: 1.38; }

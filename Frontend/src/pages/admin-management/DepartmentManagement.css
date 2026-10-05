@@ -32,14 +32,14 @@
 .department-management .erp-table thead th {
   height: 44px !important;
   padding: 10px 14px !important;
-  background: #8782BC !important;
+  background: #1769C2 !important;
   color: #FFFFFF !important;
   font-size: 11px !important;
   font-weight: 800 !important;
   letter-spacing: 0.055em !important;
   text-transform: uppercase !important;
   text-align: center !important;
-  border-bottom: 2px solid #756FB2 !important;
+  border-bottom: 2px solid #125AA8 !important;
   border-top: none !important;
 }
 
@@ -81,7 +81,7 @@
 }
 
 .dept-name-link:hover {
-  color: #756FB2 !important;
+  color: #125AA8 !important;
   transform: translateX(6px) !important;
   text-decoration: none !important;
 }
@@ -91,7 +91,7 @@
 }
 
 :root[data-theme="dark"] .dept-name-link:hover {
-  color: #A39DDC;
+  color: #A9D3F7;
 }
 
 /* Column Rules (All Center-Aligned) */
@@ -141,8 +141,8 @@
   display: inline-flex;
   padding: 3px 6px;
   border-radius: 5px;
-  color: var(--brand, #756FB2);
-  background: var(--brand-soft, #EDEBF6);
+  color: var(--brand, #125AA8);
+  background: var(--brand-soft, #EAF3FF);
   font: 800 11px ui-monospace, SFMono-Regular, Consolas, monospace;
 }
 .erp-form-page{display:flex;flex-direction:column;gap:12px;width:100%;max-width:100%;margin:0}
@@ -219,9 +219,9 @@
   height: 44px;
   flex-shrink: 0;
   border-radius: 12px;
-  background: linear-gradient(135deg, #F4F3FB 0%, #EDEBF6 100%);
-  color: var(--brand, #756FB2);
-  border: 1px solid #DDD8F3;
+  background: linear-gradient(135deg, #EAF3FF 0%, #EAF3FF 100%);
+  color: var(--brand, #125AA8);
+  border: 1px solid #D8E4F2;
   font-size: 20px;
 }
 
@@ -236,7 +236,7 @@
   font-size: 11px;
   font-weight: 800;
   letter-spacing: 0.08em;
-  color: var(--brand, #756FB2);
+  color: var(--brand, #125AA8);
   text-transform: uppercase;
   margin-bottom: 3px;
 }
@@ -273,9 +273,9 @@
 }
 
 .hod-modal-close-btn:hover {
-  border-color: var(--brand, #756FB2);
-  color: var(--brand, #756FB2);
-  background: #F4F3FB;
+  border-color: var(--brand, #125AA8);
+  color: var(--brand, #125AA8);
+  background: #EAF3FF;
 }
 
 .hod-modal-close-btn:disabled {
@@ -289,7 +289,7 @@
   align-items: center;
   gap: 14px;
   padding: 14px 16px;
-  background: linear-gradient(135deg, #F8FAFC 0%, #F4F3FB 100%);
+  background: linear-gradient(135deg, #F8FAFC 0%, #EAF3FF 100%);
   border: 1px solid #E2E8F0;
   border-radius: 12px;
   text-align: left;
@@ -303,12 +303,12 @@
   height: 42px;
   flex-shrink: 0;
   border-radius: 10px;
-  background: #756FB2;
+  background: #125AA8;
   color: #ffffff;
   font-size: 13px;
   font-weight: 800;
   letter-spacing: 0.04em;
-  box-shadow: 0 4px 10px rgba(117, 111, 178, 0.3);
+  box-shadow: 0 4px 10px rgba(18, 90, 168, 0.3);
 }
 
 .hod-dept-details {
@@ -337,10 +337,10 @@
   display: inline-flex;
   align-items: center;
   padding: 2px 7px;
-  background: #EDEBF6;
-  border: 1px solid #DDD8F3;
+  background: #EAF3FF;
+  border: 1px solid #D8E4F2;
   border-radius: 6px;
-  color: #5B5496;
+  color: #125AA8;
   font-size: 11px;
   font-weight: 750;
 }
@@ -409,11 +409,11 @@
 .hod-candidate-count-badge {
   font-size: 11.5px;
   font-weight: 600;
-  color: #5B5496;
-  background: #F4F3FB;
+  color: #125AA8;
+  background: #EAF3FF;
   padding: 3px 8px;
   border-radius: 99px;
-  border: 1px solid #DDD8F3;
+  border: 1px solid #D8E4F2;
 }
 
 .hod-select-container {
@@ -432,12 +432,12 @@
 }
 
 .hod-select-container .searchable-select__trigger:hover {
-  border-color: var(--brand, #756FB2);
+  border-color: var(--brand, #125AA8);
 }
 
 .hod-select-container .searchable-select__trigger:focus-visible {
-  border-color: var(--brand, #756FB2);
-  box-shadow: 0 0 0 3.5px rgba(117, 111, 178, 0.2);
+  border-color: var(--brand, #125AA8);
+  box-shadow: 0 0 0 3.5px rgba(18, 90, 168, 0.2);
 }
 
 .hod-field-hint {
@@ -466,8 +466,8 @@
   align-items: flex-start;
   gap: 14px;
   padding: 14px 16px;
-  background: linear-gradient(135deg, #F8FAFC 0%, #F5F3FD 100%);
-  border: 1px solid #DDD8F3;
+  background: linear-gradient(135deg, #F8FAFC 0%, #EAF3FF 100%);
+  border: 1px solid #D8E4F2;
   border-radius: 12px;
   text-align: left;
   animation: hodPreviewSlide 0.2s ease-out;
@@ -492,12 +492,12 @@
   height: 44px;
   flex-shrink: 0;
   border-radius: 12px;
-  background: linear-gradient(135deg, #756FB2 0%, #5B5496 100%);
+  background: linear-gradient(135deg, #125AA8 0%, #125AA8 100%);
   color: #ffffff;
   font-size: 14px;
   font-weight: 800;
   letter-spacing: 0.04em;
-  box-shadow: 0 4px 12px rgba(117, 111, 178, 0.35);
+  box-shadow: 0 4px 12px rgba(18, 90, 168, 0.35);
 }
 
 .hod-selected-info {
@@ -525,11 +525,11 @@
 .hod-selected-empid {
   font-size: 11.5px;
   font-weight: 750;
-  color: #5B5496;
-  background: #EDEBF6;
+  color: #125AA8;
+  background: #EAF3FF;
   padding: 2px 7px;
   border-radius: 5px;
-  border: 1px solid #DDD8F3;
+  border: 1px solid #D8E4F2;
 }
 
 .hod-selected-status-pill {
@@ -611,15 +611,15 @@
 }
 
 .hod-btn--submit {
-  background: linear-gradient(135deg, #756FB2 0%, #635DA1 100%);
-  border: 1px solid #5B5496;
+  background: linear-gradient(135deg, #125AA8 0%, #125AA8 100%);
+  border: 1px solid #125AA8;
   color: #ffffff;
-  box-shadow: 0 4px 12px rgba(117, 111, 178, 0.35);
+  box-shadow: 0 4px 12px rgba(18, 90, 168, 0.35);
 }
 
 .hod-btn--submit:hover:not(:disabled) {
   background: linear-gradient(135deg, #6862A6 0%, #565095 100%);
-  box-shadow: 0 6px 16px rgba(117, 111, 178, 0.45);
+  box-shadow: 0 6px 16px rgba(18, 90, 168, 0.45);
   transform: translateY(-1px);
 }
 
@@ -639,7 +639,7 @@
 #root .department-table-wrap .erp-table :is(th, td) { text-align: center !important; padding-inline: 12px !important; }
 #root .department-table-wrap .erp-row-actions { justify-content: center !important; }
 #root .department-table-wrap .dept-name-link { display: block; width: fit-content; max-width: 100%; margin-inline: auto !important; padding: 4px 0; min-height: 0; height: auto; border: 0; background: transparent !important; box-shadow: none !important; text-align: center !important; text-decoration: none; cursor: pointer; transition: color .18s, transform .18s; }
-#root .department-table-wrap .dept-name-link:hover { color: #8782bc; text-decoration: none; transform: translateX(3px); }
-#root .department-table-wrap .dept-name-link:focus-visible { outline: 2px solid #8782bc; outline-offset: 3px; }
+#root .department-table-wrap .dept-name-link:hover { color: #1769C2; text-decoration: none; transform: translateX(3px); }
+#root .department-table-wrap .dept-name-link:focus-visible { outline: 2px solid #1769C2; outline-offset: 3px; }
 #root .department-table-wrap tbody tr:hover > td { background: var(--surface, #fff) !important; }
 @media (prefers-reduced-motion: reduce) { #root .department-table-wrap .dept-name-link:hover { transform: none; transition: none; } }

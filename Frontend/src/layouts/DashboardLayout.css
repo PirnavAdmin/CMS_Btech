@@ -26,9 +26,9 @@
 }
 
 .notification-btn:hover {
-  border-color: var(--brand, #8782BC);
-  color: #8782BC;
-  background: #F9F8FD;
+  border-color: var(--brand, #1769C2);
+  color: #1769C2;
+  background: #EAF3FF;
 }
 
 .notification-btn svg {
@@ -77,8 +77,8 @@
 }
 
 .account-menu summary:hover {
-  border-color: var(--brand, #8782BC);
-  background: #F9F8FD;
+  border-color: var(--brand, #1769C2);
+  background: #EAF3FF;
 }
 
 .account-avatar {
@@ -87,8 +87,8 @@
   width: 34px;
   height: 34px;
   border-radius: 50%;
-  background: #EDEBF6;
-  color: #6366F1;
+  background: #EAF3FF;
+  color: #1769C2;
   border: 1px solid #CBD5E1;
 }
 
@@ -141,7 +141,7 @@
   padding: 6px;
   border-radius: 12px;
   background: var(--surface, #fff);
-  box-shadow: 0 10px 30px rgba(94, 89, 163, 0.15);
+  box-shadow: 0 10px 30px rgba(16, 42, 76, 0.15);
   display: flex;
   flex-direction: column;
   gap: 2px;
@@ -198,7 +198,7 @@
   display: grid;
   place-items: center;
   padding: 16px;
-  background: rgba(94, 89, 163, 0.42);
+  background: rgba(16, 42, 76, 0.42);
   backdrop-filter: blur(4px);
   animation: password-fade 0.18s ease;
 }
@@ -213,7 +213,7 @@
   padding: 32px;
   border-radius: 20px;
   background: var(--surface, #fff);
-  box-shadow: 0 24px 70px rgba(94, 89, 163, 0.28);
+  box-shadow: 0 24px 70px rgba(16, 42, 76, 0.28);
   animation: password-pop 0.2s ease;
 }
 
@@ -312,7 +312,7 @@
   padding: 28px 32px;
   border-radius: 20px;
   background: var(--surface, #fff);
-  box-shadow: 0 24px 70px rgba(94, 89, 163, 0.3);
+  box-shadow: 0 24px 70px rgba(16, 42, 76, 0.3);
   animation: password-pop 0.2s ease;
 }
 
@@ -326,7 +326,7 @@
 .password-modal__eyebrow,
 .password-modal__success p {
   margin: 0 0 5px;
-  color: #8782BC;
+  color: #1769C2;
   text-transform: uppercase;
   font-size: 0.72rem;
   font-weight: 800;
@@ -408,7 +408,7 @@
   transform: translateY(-50%);
   border: 0;
   background: transparent;
-  color: #8782BC;
+  color: #1769C2;
   font-size: 0.8rem;
   font-weight: 800;
   cursor: pointer;
@@ -441,7 +441,7 @@
 }
 
 .password-modal__strength strong {
-  color: #8782BC;
+  color: #1769C2;
 }
 
 .password-modal__strength i {
@@ -456,8 +456,8 @@
 .password-modal__strength .level-0 { width: 0; }
 .password-modal__strength .level-1,
 .password-modal__strength .level-2 { width: 40%; background: #d92d20; }
-.password-modal__strength .level-3 { width: 60%; background: #8782BC; }
-.password-modal__strength .level-4 { width: 80%; background: #8782BC; }
+.password-modal__strength .level-3 { width: 60%; background: #1769C2; }
+.password-modal__strength .level-4 { width: 80%; background: #1769C2; }
 .password-modal__strength .level-5 { width: 100%; background: #16803c; }
 
 .password-modal__strength ul {
@@ -494,7 +494,7 @@
   border: 1px solid #c7d7e7;
   border-radius: 10px;
   background: var(--surface, #fff);
-  color: #8782BC;
+  color: #1769C2;
   font: 700 0.85rem inherit;
   cursor: pointer;
   transition: all 0.15s ease;
@@ -505,8 +505,8 @@
 }
 
 .password-modal__primary {
-  border-color: #8782BC !important;
-  background: #8782BC !important;
+  border-color: #1769C2 !important;
+  background: #1769C2 !important;
   color: #ffffff !important;
 }
 

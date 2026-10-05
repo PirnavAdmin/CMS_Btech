@@ -47,13 +47,13 @@
 }
 
 .settings-tab:hover {
-  color: var(--brand, #8782BC);
+  color: var(--brand, #1769C2);
   background: var(--brand-subtle, rgba(37, 99, 235, 0.05));
 }
 
 .settings-tab.active {
-  color: var(--brand, #8782BC);
-  border-bottom-color: var(--brand, #8782BC);
+  color: var(--brand, #1769C2);
+  border-bottom-color: var(--brand, #1769C2);
   font-weight: 700;
   background: var(--brand-subtle, rgba(37, 99, 235, 0.08));
 }
@@ -97,7 +97,7 @@
   padding: 0 20px;
   border: 0;
   border-radius: 8px;
-  background: var(--brand, #8782BC);
+  background: var(--brand, #1769C2);
   color: #fff;
   font: 700 0.88rem inherit;
   cursor: pointer;
@@ -105,7 +105,7 @@
 }
 
 .settings-button:hover:not(:disabled) {
-  background: var(--brand-hover, #8782BC);
+  background: var(--brand-hover, #1769C2);
 }
 
 .settings-button:disabled {
@@ -153,7 +153,7 @@
 }
 
 .settings-field input:focus {
-  border-color: var(--brand, #8782BC);
+  border-color: var(--brand, #1769C2);
   outline: 0;
   box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.15);
 }
@@ -165,7 +165,7 @@
   transform: translateY(-50%);
   border: 0;
   background: transparent;
-  color: var(--brand, #8782BC);
+  color: var(--brand, #1769C2);
   font-weight: 800;
   cursor: pointer;
 }
@@ -188,7 +188,7 @@
 }
 
 .strength > div b {
-  color: var(--brand, #8782BC);
+  color: var(--brand, #1769C2);
 }
 
 .strength > i {
@@ -197,14 +197,14 @@
   width: calc(var(--level, 0) * 20%);
   margin: 10px 0;
   border-radius: 9px;
-  background: var(--brand, #8782BC);
+  background: var(--brand, #1769C2);
 }
 
 .strength .level-0 { width: 0; }
 .strength .level-1, .strength .level-2 { width: 40%; background: #ef4444; }
-.strength .level-3 { width: 60%; background: #8B82C7; }
-.strength .level-4 { width: 80%; background: #8782BC; }
-.strength .level-5 { width: 100%; background: #8782BC; }
+.strength .level-3 { width: 60%; background: #1769C2; }
+.strength .level-4 { width: 80%; background: #1769C2; }
+.strength .level-5 { width: 100%; background: #1769C2; }
 
 .strength ul {
   display: grid;
@@ -218,7 +218,7 @@
 }
 
 .strength li.met {
-  color: #8782BC;
+  color: #1769C2;
 }
 
 .notice {

@@ -16,13 +16,13 @@
   vertical-align: middle !important;
   text-align: center !important;
   padding: 11px 16px !important;
-  background: #8782BC !important;
+  background: #1769C2 !important;
   color: #FFFFFF !important;
   font-size: 11px !important;
   font-weight: 800 !important;
   letter-spacing: 0.055em;
   text-transform: uppercase;
-  border-bottom: 2px solid #756FB2 !important;
+  border-bottom: 2px solid #125AA8 !important;
   box-sizing: border-box;
 }
 
@@ -70,8 +70,8 @@
 }
 
 .p-tabs button.active {
-  border-bottom: 2px solid var(--brand, #8782BC);
-  color: var(--brand, #8782BC);
+  border-bottom: 2px solid var(--brand, #1769C2);
+  color: var(--brand, #1769C2);
 }
 
 .p-panel {
@@ -191,7 +191,7 @@
   height: 38px;
   border-radius: 9px;
   background: rgba(2, 132, 199, 0.1);
-  color: var(--brand, #8782BC);
+  color: var(--brand, #1769C2);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -233,7 +233,7 @@
 }
 
 .promotion-review-drawer .pr-close-btn:hover {
-  background: var(--surface-soft, #F5F3FD);
+  background: var(--surface-soft, #EAF3FF);
   color: var(--text-primary, #0f172a);
   border-color: var(--border-strong, #cbd5e1);
 }
@@ -266,14 +266,14 @@
 }
 :root:not([data-theme="dark"]) .promotion-review-drawer :is(.pr-modal-header, .pr-modal-footer) {
   background: #FFFFFF !important;
-  border-color: #DFDCED !important;
+  border-color: #D8E4F2 !important;
 }
 :root:not([data-theme="dark"]) .promotion-review-drawer .pr-modal-body {
-  background: #FAF9FF !important;
+  background: #EAF3FF !important;
 }
 :root:not([data-theme="dark"]) .promotion-review-drawer .pr-banner {
-  border: 1px solid #C9C4E0 !important;
-  background: linear-gradient(115deg, #F5F3FD 0%, #DDD8F3 100%) !important;
+  border: 1px solid #D8E4F2 !important;
+  background: linear-gradient(115deg, #EAF3FF 0%, #D8E4F2 100%) !important;
   color: #282342 !important;
   box-shadow: none !important;
 }
@@ -282,28 +282,28 @@
 }
 :root:not([data-theme="dark"]) .promotion-review-drawer .pr-avatar {
   border-color: #AAA4D6 !important;
-  background: #EDEBF6 !important;
-  color: #514A8A !important;
+  background: #EAF3FF !important;
+  color: #125AA8 !important;
 }
 :root:not([data-theme="dark"]) .promotion-review-drawer .pr-badge {
-  border: 1px solid #C9C4E0 !important;
+  border: 1px solid #D8E4F2 !important;
   background: #FFFFFF !important;
-  color: #514A8A !important;
+  color: #125AA8 !important;
 }
 :root:not([data-theme="dark"]) .promotion-review-drawer .pr-card {
-  border-color: #DFDCED !important;
+  border-color: #D8E4F2 !important;
   background: #FFFFFF !important;
   box-shadow: 0 3px 10px rgba(48, 38, 79, .06) !important;
 }
 :root:not([data-theme="dark"]) .promotion-review-drawer .pr-card-header {
-  border-color: #DFDCED !important;
-  color: #8782BC !important;
+  border-color: #D8E4F2 !important;
+  color: #1769C2 !important;
 }
 :root:not([data-theme="dark"]) .promotion-review-drawer .pr-card-header h3 {
-  color: #514A8A !important;
+  color: #125AA8 !important;
 }
 :root:not([data-theme="dark"]) .promotion-review-drawer .pr-label {
-  color: #7E789F !important;
+  color: #125AA8 !important;
 }
 :root:not([data-theme="dark"]) .promotion-review-drawer .pr-value {
   color: #282342 !important;
@@ -359,7 +359,7 @@
 }
 
 .promotion-review-drawer .pr-badge-status.active {
-  background: #8782BC;
+  background: #1769C2;
   color: #ffffff;
 }
 
@@ -408,7 +408,7 @@
   padding-bottom: 10px;
   margin-bottom: 12px;
   border-bottom: 1px solid var(--border, #e2e8f0);
-  color: var(--brand, #8782BC);
+  color: var(--brand, #1769C2);
   font-size: 14px;
   font-weight: 700;
 }
@@ -479,8 +479,8 @@
 }
 
 .promotion-review-drawer .pr-btn-eligible {
-  background: #8782BC !important;
-  border-color: #8782BC !important;
+  background: #1769C2 !important;
+  border-color: #1769C2 !important;
   color: #ffffff !important;
 }
 
@@ -510,7 +510,7 @@
 }
 :root[data-theme="dark"] .promotion-review-drawer .pr-card-header {
   border-color: #334155 !important;
-  color: #C7C2FF !important;
+  color: #A9D3F7 !important;
 }
 :root[data-theme="dark"] .promotion-review-drawer :is(.pr-modal-title, .pr-card-header h3, .pr-value) {
   color: #F8FAFC !important;
@@ -519,24 +519,24 @@
   color: #AAB8CF !important;
 }
 :root[data-theme="dark"] .promotion-review-drawer .pr-modal-icon-badge {
-  color: #C7C2FF !important;
-  background: rgba(157, 153, 205, .18) !important;
+  color: #A9D3F7 !important;
+  background: rgba(43, 120, 197, .18) !important;
 }
 :root[data-theme="dark"] .promotion-review-drawer .pr-close-btn {
-  color: #D9D6FF !important;
+  color: #A9D3F7 !important;
   border-color: #475569 !important;
   background: #20293A !important;
 }
 :root[data-theme="dark"] .promotion-review-drawer .pr-close-btn:hover {
   color: #FFFFFF !important;
-  border-color: #9D99CD !important;
-  background: rgba(157, 153, 205, .24) !important;
+  border-color: #A9D3F7 !important;
+  background: rgba(43, 120, 197, .24) !important;
 }
 :root[data-theme="dark"] .promotion-review-drawer .pr-banner {
   background: linear-gradient(135deg, #101622 0%, #403D67 100%) !important;
 }
 :root[data-theme="dark"] .promotion-review-drawer .pr-btn-eligible:hover {
-  background: #756FB2 !important;
+  background: #125AA8 !important;
 }
 
 /* Confirmation Modal */
@@ -560,7 +560,7 @@
   height: 52px;
   border-radius: 50%;
   background: rgba(2, 132, 199, 0.1);
-  color: var(--brand, #8782BC);
+  color: var(--brand, #1769C2);
   display: flex;
   align-items: center;
   justify-content: center;

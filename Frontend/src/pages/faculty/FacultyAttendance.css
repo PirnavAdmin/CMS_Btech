@@ -353,7 +353,7 @@
   max-width: 130px !important;
   background: #ffffff !important;
   font-weight: 650;
-  color: var(--brand, #4f46e5);
+  color: var(--brand, #1769C2);
   border-right: 1px solid var(--border) !important;
   text-align: center !important;
 }
@@ -427,7 +427,7 @@
 .faculty-management .fm-report-total--half-day { color: #c2410c; }
 .faculty-management .fm-report-total--leave { color: #0369a1; }
 .faculty-management .fm-report-total--lop { color: #be185d; }
-.faculty-management .fm-report-total--percentage { color: #4338ca; font-weight: 900; }
+.faculty-management .fm-report-total--percentage { color: #125AA8; font-weight: 900; }
 
 .faculty-management .fm-attendance-screen .fm-attendance-table td.fm-attendance-code-cell { text-align: center !important; white-space: nowrap; }
 .faculty-management .fm-attendance-screen .fm-attendance-table td.fm-attendance-identity-cell { text-align: center !important; }
