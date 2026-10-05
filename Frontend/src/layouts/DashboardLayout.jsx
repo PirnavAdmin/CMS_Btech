@@ -36,10 +36,13 @@ function PageErrorNotices({ pathname }) {
 
   useEffect(() => {
     const onApiFailure = (event) => {
+      if (apiFailureTimer.current) return
       const failure = { ...event.detail, id: `${Date.now()}-${Math.random()}` }
       setApiFailure(failure)
-      window.clearTimeout(apiFailureTimer.current)
-      apiFailureTimer.current = window.setTimeout(() => setApiFailure(null), 6000)
+      apiFailureTimer.current = window.setTimeout(() => {
+        setApiFailure(null)
+        apiFailureTimer.current = null
+      }, 2000)
     }
     window.addEventListener(API_FAILURE_EVENT, onApiFailure)
     return () => {
@@ -48,7 +51,11 @@ function PageErrorNotices({ pathname }) {
     }
   }, [])
 
-  useEffect(() => { setApiFailure(null) }, [pathname])
+  useEffect(() => {
+    setApiFailure(null)
+    window.clearTimeout(apiFailureTimer.current)
+    apiFailureTimer.current = null
+  }, [pathname])
 
   useEffect(() => {
     const checkAlerts = () => {
@@ -72,7 +79,7 @@ function PageErrorNotices({ pathname }) {
     return () => observer.disconnect()
   }, [toasts, apiFailure])
 
-  const visibleErrors = errors.filter((toast) => !duplicates.includes(toast.id))
+  const visibleErrors = hasInlineError ? [] : errors.filter((toast) => !duplicates.includes(toast.id))
   const showApiFailure = apiFailure && !hasInlineError && !errors.length
   if (!visibleErrors.length && !showApiFailure) return null
 

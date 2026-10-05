@@ -15,12 +15,12 @@ export function notifyApiUnavailable(error = {}) {
   window.dispatchEvent(new CustomEvent(API_FAILURE_EVENT, { detail }))
 }
 
-export function createApiUnavailableError(status = 0) {
+export function createApiUnavailableError(status = 0, shouldNotify = true) {
   const error = new Error(GENERIC_ERROR_MESSAGE)
   error.name = 'ApiUnavailableError'
   error.status = status || undefined
   error.code = status >= 500 ? 'API_SERVER_ERROR' : 'API_CONNECTION_ERROR'
   error.retryable = true
-  notifyApiUnavailable(error)
+  if (shouldNotify) notifyApiUnavailable(error)
   return error
 }

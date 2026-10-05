@@ -2427,7 +2427,7 @@ export default function RolesAndDesignations() {
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                       <label style={{ margin: 0 }}>System Access Role (Permissions) <b>*</b></label>
                       {recommendedRoleForSelectedDes && (
-                        <span style={{ fontSize: '11px', color: '#756FB2', fontWeight: 600 }}>
+                        <span style={{ fontSize: '11px', color: '#125AA8', fontWeight: 600 }}>
                           Recommended: {recommendedRoleForSelectedDes.name}
                         </span>
                       )}

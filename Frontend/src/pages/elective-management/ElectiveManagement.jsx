@@ -192,12 +192,11 @@ export default function ElectiveManagement() {
       setReport(combined)
     } catch (requestError) {
       setError(requestError.message || 'Unable to load elective groups.')
-      showError(requestError.message || 'Unable to load elective groups.')
     } finally {
       setLoading(false)
     }
   }
-  const loadProfile = async () => { setProfileLoading(true); try { const current = await profileApi.getProfile(); setProfile(current); if (current?.id || current?.studentId) { setResultsLoading(true); const id = current.id || current.studentId; const [currentSelections, examResults] = await Promise.all([electiveManagementApi.getStudentSelections(id).catch(() => []), get(`/api/v1/students/${encodeURIComponent(id)}/profile/exam-results`).catch(() => [])]); setSelections(currentSelections); setResults(examResults) } } catch { setProfile(null); showError('Unable to load student profile.') } finally { setProfileLoading(false); setResultsLoading(false) } }
+  const loadProfile = async () => { setProfileLoading(true); try { const current = await profileApi.getProfile(); setProfile(current); if (current?.id || current?.studentId) { setResultsLoading(true); const id = current.id || current.studentId; const [currentSelections, examResults] = await Promise.all([electiveManagementApi.getStudentSelections(id).catch(() => []), get(`/api/v1/students/${encodeURIComponent(id)}/profile/exam-results`).catch(() => [])]); setSelections(currentSelections); setResults(examResults) } } catch { setProfile(null) } finally { setProfileLoading(false); setResultsLoading(false) } }
   const loadDirectory = useCallback(async () => {
     setDirectoryLoading(true)
     setDirectoryError('')
@@ -723,7 +722,6 @@ export default function ElectiveManagement() {
             </div>
           ))}
         </section>
-        {error && <div className="em-alert" role="alert"><FiInfo /> {error}</div>}
         {activeTab === 'subjects' && (
           <section className="sm-card em-subject-directory-card">
             <FilterPanel

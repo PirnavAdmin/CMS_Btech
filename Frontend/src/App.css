@@ -2,11 +2,11 @@
    THEME VARIABLES
    ============================ */
 :root {
-  --brand-navy: #0F172A;
-  --brand-navy-dark: #0F172A;
-  --brand-navy-light: #8782BC;
-  --brand-blue: #8782BC;
-  --brand-blue-hover: #0F172A;
+  --brand-navy: #123F73;
+  --brand-navy-dark: #0F3A6A;
+  --brand-navy-light: #174F88;
+  --brand-blue: #1769C2;
+  --brand-blue-hover: #125AA8;
   --brand-text-light: #FFFFFF;
   --brand-text-muted: #94A3B8;
 }
@@ -105,19 +105,19 @@
 }
 
 .sidebar nav a:hover {
-  background-color: #F5F3FD;
+  background-color: #EEF5FD;
   color: #0F172A;
 }
 
 .sidebar nav a.active {
-  background-color: #EDEBF6 !important;
-  color: #756FB2 !important;
+  background-color: #EAF3FF !important;
+  color: #1769C2 !important;
   font-weight: 700 !important;
   border-left: none !important;
   border-radius: 10px !important;
   box-shadow: none !important;
 }
-.sidebar nav a.active svg { color: #756FB2 !important; }
+.sidebar nav a.active svg { color: #1769C2 !important; }
 
 /* Course Management collapsible group */
 .sidebar .sidebar-group {
@@ -230,8 +230,8 @@ button.btn-primary:hover,
   align-items: center !important;
   gap: 20px !important;
   padding: 26px 30px !important;
-  border-bottom: 1px solid #C9C5E8 !important;
-  background: linear-gradient(135deg, #F5F3FD 0%, #DDD8F3 100%) !important;
+  border-bottom: 1px solid #D8E4F2 !important;
+  background: linear-gradient(135deg, #EAF3FF 0%, #DCEBFC 100%) !important;
   color: #262348 !important;
 }
 
@@ -248,11 +248,11 @@ button.btn-primary:hover,
   height: 72px !important;
   border-radius: 14px !important;
   background: #FFFFFF !important;
-  color: var(--brand-blue, #8782BC) !important;
+  color: var(--brand-blue, #1769C2) !important;
   font-size: 1.8rem !important;
   font-weight: 800 !important;
   border: 2px solid #BDB7E1 !important;
-  box-shadow: 0 4px 12px rgba(94, 89, 163, 0.16) !important;
+  box-shadow: 0 4px 12px rgba(16, 42, 76, 0.16) !important;
   object-fit: cover !important;
 }
 
@@ -288,7 +288,7 @@ button.btn-primary:hover,
 
 .cm-badge-code {
   background: #E5E1F6;
-  color: #4E4A77;
+  color: #125AA8;
   border: 1px solid #BDB7E1;
 }
 
@@ -306,8 +306,8 @@ button.btn-primary:hover,
   font-weight: 800;
   letter-spacing: 0.03em;
   text-transform: uppercase;
-  background: #EDEBF6;
-  color: #756FB2;
+  background: #EAF3FF;
+  color: #1769C2;
 }
 
 .cm-status-badge.inactive,
@@ -318,8 +318,8 @@ button.btn-primary:hover,
 }
 
 .cm-status-badge.active {
-  background: #EDEBF6;
-  color: #756FB2;
+  background: #EAF3FF;
+  color: #1769C2;
 }
 
 .cm-profile-title {
@@ -361,7 +361,7 @@ button.btn-primary:hover,
   margin-bottom: 18px;
   padding-bottom: 12px;
   border-bottom: 1px solid var(--border, #e2e8f0);
-  color: var(--brand-blue, #8782BC);
+  color: var(--brand-blue, #1769C2);
 }
 
 .cm-info-card-header h2 {
@@ -443,14 +443,14 @@ button.btn-primary:hover,
   vertical-align: middle !important;
   text-align: center !important;
   padding: 11px 16px !important;
-  background: #8782BC !important;
+  background: transparent !important;
   color: #FFFFFF !important;
   font-size: 11px !important;
   font-weight: 800 !important;
   letter-spacing: 0.055em;
   text-transform: uppercase;
-  border-bottom: 2px solid #756FB2 !important;
-  border-color: #756FB2 !important;
+  border-bottom: 1px solid rgba(16,42,76,.12) !important;
+  border-color: rgba(255,255,255,.10) !important;
   box-sizing: border-box;
 }
 
@@ -570,15 +570,15 @@ button.btn-primary:hover,
 .verification-method-tabs button.active,
 .fp-category-toggle button.active,
 .flm-category-toggle button.active {
-  background: #8782BC !important;
+  background: #195A99 !important;
   color: #FFFFFF !important;
-  box-shadow: 0 1px 4px rgba(135, 130, 188, 0.35) !important;
+  box-shadow: 0 1px 4px rgba(23, 105, 194, 0.35) !important;
 }
 
 .flm-cat-btn:not(.active):hover,
 .fm-category-tab:not(.active):hover {
-  background: rgba(135, 130, 188, 0.12) !important;
-  color: #8782BC !important;
+  background: rgba(23, 105, 194, 0.12) !important;
+  color: #1769C2 !important;
 }
 
 /* Shared compact faculty-type selector: Payroll, Leave and Attendance. */
@@ -590,7 +590,7 @@ button.btn-primary:hover,
   gap: 0 !important;
   min-height: 42px !important;
   padding: 3px !important;
-  border: 1px solid #C9C5E8 !important;
+  border: 1px solid #D8E4F2 !important;
   border-radius: 8px !important;
   background: #FFFFFF !important;
   box-sizing: border-box !important;
@@ -605,7 +605,7 @@ button.btn-primary:hover,
   border: 0 !important;
   border-radius: 5px !important;
   background: transparent !important;
-  color: #4E4A77 !important;
+  color: #125AA8 !important;
   font-size: 11px !important;
   font-weight: 600 !important;
   line-height: 1 !important;
@@ -615,9 +615,9 @@ button.btn-primary:hover,
 .faculty-payroll .fp-category-choice button.active,
 .flm-page .flm-category-toggle .flm-cat-btn.active,
 .faculty-management .fm-attendance-category-toggle .flm-cat-btn.active {
-  border: 1px solid #8782BC !important;
-  background: #F0EEFA !important;
-  color: #5E59A3 !important;
+  border: 1px solid #1769C2 !important;
+  background: #EFF6FD !important;
+  color: #125AA8 !important;
   font-weight: 700 !important;
   box-shadow: none !important;
 }
@@ -631,7 +631,7 @@ button.btn-primary:hover,
   min-height: 42px !important;
   padding: 4px !important;
   gap: 4px !important;
-  border: 1px solid #C9C5E8 !important;
+  border: 1px solid #D8E4F2 !important;
   border-radius: 10px !important;
   background: #FFFFFF !important;
 }
@@ -644,7 +644,7 @@ button.btn-primary:hover,
   border: 1px solid transparent !important;
   border-radius: 6px !important;
   background: #FFFFFF !important;
-  color: #4E4A77 !important;
+  color: #125AA8 !important;
   font-size: 11px !important;
   font-weight: 600 !important;
 }
@@ -652,9 +652,9 @@ button.btn-primary:hover,
 :root:not([data-theme="dark"]) .faculty-payroll .fp-category-choice button.active,
 :root:not([data-theme="dark"]) .flm-page .flm-category-toggle .flm-cat-btn.active,
 :root:not([data-theme="dark"]) .faculty-management .fm-attendance-category-toggle .flm-cat-btn.active {
-  border-color: #8782BC !important;
+  border-color: #1769C2 !important;
   background: #F7F6FF !important;
-  color: #5E59A3 !important;
+  color: #125AA8 !important;
   box-shadow: none !important;
 }
 
@@ -728,21 +728,21 @@ button.btn-primary:hover,
 
 
 :root:not([data-theme="dark"]) .sidebar nav a.active {
-  background-color: #8782BC !important;
+  background: linear-gradient(90deg,rgba(61,145,226,.38),rgba(45,121,197,.24)) !important;
   color: #FFFFFF !important;
   font-weight: 700 !important;
-  border-left: none !important;
+  border-left: 3px solid #72C4FF !important;
   border-radius: 10px !important;
-  box-shadow: none !important;
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,.05) !important;
 }
 :root:not([data-theme="dark"]) .sidebar nav a.active svg { color: #FFFFFF !important; }
 
 :root[data-theme="dark"] .sidebar nav a.active,
 :root[data-theme="dark"] .sidebar-link.active {
-  background-color: #8782BC !important;
+  background: linear-gradient(90deg,rgba(61,145,226,.38),rgba(45,121,197,.24)) !important;
   color: #FFFFFF !important;
   font-weight: 750 !important;
-  border-left: none !important;
+  border-left: 3px solid #72C4FF !important;
   border-radius: 10px !important;
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.18) !important;
 }

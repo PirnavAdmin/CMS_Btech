@@ -307,10 +307,10 @@ function CollegeEmblemBadge({ name, code, className = 'cm-logo-thumb' }) {
   const palettes = [
     { bg1: '#0F172A', bg2: '#0F172A', accent: '#f2bc35', text: '#ffffff' },
     { bg1: '#064e3b', bg2: '#059669', accent: '#34d399', text: '#ffffff' },
-    { bg1: '#4c1d95', bg2: '#7c3aed', accent: '#c4b5fd', text: '#ffffff' },
+    { bg1: '#123F73', bg2: '#1769C2', accent: '#A9D3F7', text: '#ffffff' },
     { bg1: '#831843', bg2: '#db2777', accent: '#fbcfe8', text: '#ffffff' },
-    { bg1: '#0F172A', bg2: '#8782BC', accent: '#DDD8F0', text: '#ffffff' },
-    { bg1: '#78350f', bg2: '#8782BC', accent: '#DDD8F0', text: '#ffffff' },
+    { bg1: '#0F172A', bg2: '#1769C2', accent: '#C7DFFF', text: '#ffffff' },
+    { bg1: '#78350f', bg2: '#1769C2', accent: '#C7DFFF', text: '#ffffff' },
   ]
   const palette = palettes[seed % palettes.length]
 
@@ -1170,28 +1170,28 @@ export default function CollegeInstitutionManagement({ initialView = 'list' }) {
 
             <div className="cm-profile-card">
               {/* Header Profile Banner */}
-              <div className="cm-profile-banner">
-                <div className="cm-profile-avatar-wrap">
-                  <CollegeLogoImage
-                    src={activeCollege.logo}
-                    fallbackSrc={getCollegeLogoEndpoint(activeCollege.id)}
-                    alt={activeCollege.name}
-                    code={activeCollege.code}
-                    className="cm-profile-logo"
-                    onError={() => markLogoBroken(activeCollege.id)}
-                  />
-                </div>
-                <div className="cm-profile-header-info">
-                  <div className="cm-profile-badges">
-                    <span className="cm-badge cm-badge-code">Code: {activeCollege.code}</span>
-                    <span className="cm-badge cm-badge-type">{activeCollege.type}</span>
-                    <span className={`cm-status-badge ${activeCollege.status}`}>
-                      {activeCollege.status === 'active' ? 'Active' : 'Inactive'}
-                    </span>
+              <div className="cm-profile-banner cm-profile-banner--account">
+                <div className="cm-account-identity">
+                  <div className="cm-profile-avatar-wrap">
+                    <CollegeLogoImage
+                      src={activeCollege.logo}
+                      fallbackSrc={getCollegeLogoEndpoint(activeCollege.id)}
+                      alt={activeCollege.name}
+                      code={activeCollege.code}
+                      className="cm-profile-logo"
+                      onError={() => markLogoBroken(activeCollege.id)}
+                    />
                   </div>
-                  <h1 className="cm-profile-title"><span>{activeCollege.name}</span></h1>
-                  <p className="cm-profile-subtitle"><span>Affiliated with </span><strong>{activeCollege.university}</strong></p>
+                  <div className="cm-profile-header-info">
+                    <h1 className="cm-profile-title"><span>{activeCollege.name}</span></h1>
+                    <p className="cm-profile-subtitle"><span>Affiliated with </span><strong>{activeCollege.university}</strong></p>
+                  </div>
                 </div>
+                <dl className="cm-account-facts">
+                  <div><dt>College Code</dt><dd>{activeCollege.code || '—'}</dd></div>
+                  <div><dt>College Type</dt><dd>{activeCollege.type || '—'}</dd></div>
+                  <div><dt>Account Status</dt><dd><span className={`cm-account-status ${activeCollege.status === 'active' ? 'is-active' : 'is-inactive'}`}><i />{activeCollege.status === 'active' ? 'Active' : 'Inactive'}</span></dd></div>
+                </dl>
               </div>
 
               {/* Profile Information Cards Grid */}

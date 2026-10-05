@@ -1209,7 +1209,7 @@ function FacultyAttendanceScreen({ faculty, collegeOptions = [], departmentOptio
       <col className="fm-col-remarks" style={{ width: '150px' }} />
       <col className="fm-col-action" style={{ width: '80px' }} />
     </colgroup> : (showDate ? <colgroup>{[10, 8, 20, 17, 10, 7, 7, 8, 7, 6].map((width, index) => <col key={index} style={{ width: width + '%' }} />)}</colgroup> : showAction ? <colgroup>{[8, 23, 19, 11, 7, 7, 9, 9, 7].map((width, index) => <col key={index} style={{ width: width + '%' }} />)}</colgroup> : <colgroup>{[9, 22, 19, 11, 9, 9, 9, 12].map((width, index) => <col key={index} style={{ width: width + '%' }} />)}</colgroup>)}
-    <thead><tr>{[...(tab === 'daily' ? [<th scope="col" key="select-header"><input type="checkbox" aria-label="Select all daily attendance rows" checked={allDailySelected} onChange={toggleSelectAllDaily} /></th>] : []), ...(showDate ? ['Date'] : []), 'Faculty Code', 'Faculty', 'Department', 'Status', 'Check In', 'Check Out', 'Working Hours', ...(showRemarks ? ['Remarks'] : []), ...(showAction ? ['Action'] : [])].map((label, index) => typeof label === 'string' ? <th scope="col" key={label}>{label}</th> : label)}</tr></thead>
+    <thead><tr>{[...(tab === 'daily' ? [<th scope="col" key="select-header"><input type="checkbox" aria-label="Select all daily attendance rows" checked={allDailySelected} onChange={toggleSelectAllDaily} /></th>] : []), ...(showDate ? ['Date'] : []), 'Faculty Code', 'Faculty', 'Department', 'Status', 'Check In', 'Check Out', 'Working Hours', ...(showRemarks ? ['Remarks'] : []), ...(showAction ? ['Action'] : [])].map((label, index) => typeof label === 'string' ? <th scope="col" key={label} className={label === 'Faculty' ? 'fm-attendance-faculty-heading' : ''}>{label}</th> : label)}</tr></thead>
     <tbody>{(aggregated ? [] : visibleRows).map(row => <tr key={`${row.facultyId}:${row.date}`}>
       {tab === 'daily' && <td><input type="checkbox" aria-label={'Select ' + row.faculty.fullName} checked={selectedFacultyIds.includes(String(row.facultyId))} onChange={event => setSelectedFacultyIds(current => event.target.checked ? [...new Set([...current, String(row.facultyId)])] : current.filter(id => id !== String(row.facultyId)))} /></td>}
       {showDate && <td>{displayDate(row.date)}</td>}
@@ -2945,7 +2945,7 @@ export default function FacultyManagement() {
       <div className="cm-profile-view" data-export-record>
         <div className="cm-profile-top-bar">
           <button type="button" className="cm-button secondary erp-btn erp-btn--secondary" onClick={() => back()}>
-            &larr; Back to {selected.employeeCategory === 'Non-Teaching' ? 'Staff Directory' : 'Faculty Directory'}
+            <FiArrowLeft aria-hidden="true" /> Back
           </button>
           <div className="sp-profile-top-actions">
             <ExportMenu

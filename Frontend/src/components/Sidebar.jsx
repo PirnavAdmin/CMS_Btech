@@ -5,6 +5,7 @@ import { getUserRole } from '../auth/auth'
 import { ROLES } from '../auth/roles'
 import { useAcademic } from '../context/AcademicContext'
 import AcademicContextSelect from './AcademicContextSelect'
+import './Sidebar.css'
 import { collegeLogoValue } from '../utils/collegeLogo'
 import { cacheCollegeLogo, fetchCollegeLogo, getCollegeById, getCollegeLogoUrl, getColleges, isBackendCollegeLogo, readCachedCollegeLogo, unwrapCollegeRecord } from '../auth/collegeApi'
 

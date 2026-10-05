@@ -41,7 +41,7 @@
   height: 38px;
   border-radius: 9px;
   background: rgba(2, 132, 199, 0.1);
-  color: var(--brand, #8782BC);
+  color: var(--brand, #1769C2);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -90,7 +90,7 @@
 }
 
 .shared-view-dialog__close-btn:hover {
-  background: var(--surface-soft, #F5F3FD);
+  background: var(--surface-soft, #EAF3FF);
   color: var(--text-primary, #0f172a);
   border-color: var(--border-strong, #cbd5e1);
 }
@@ -128,10 +128,10 @@
   align-items: center;
   gap: 18px;
   padding: 18px 22px;
-  background: linear-gradient(115deg, #F5F3FD, #DDD8F3) !important;
-  border: 1px solid #C9C4E0 !important;
+  background: linear-gradient(115deg, #EAF3FF, #D8E4F2) !important;
+  border: 1px solid #D8E4F2 !important;
   border-radius: 12px;
-  color: #30264F !important;
+  color: #123F73 !important;
   box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
 }
 
@@ -139,9 +139,9 @@
   width: 58px;
   height: 58px;
   border-radius: 14px;
-  border: 2px solid #C9C4E0;
-  background: #E8E4F8;
-  color: #5B4FB5;
+  border: 2px solid #D8E4F2;
+  background: #EAF3FF;
+  color: #1769C2;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -171,9 +171,9 @@
   font-size: 11px;
   font-weight: 700;
   letter-spacing: 0.02em;
-  background: #E8E4F8;
-  color: #30264F !important;
-  border: 1px solid #C9C4E0;
+  background: #EAF3FF;
+  color: #123F73 !important;
+  border: 1px solid #D8E4F2;
 }
 
 .view-modal-badge-status {
@@ -185,7 +185,7 @@
 }
 
 .view-modal-badge-status.active {
-  background: #8782BC;
+  background: #1769C2;
   color: #ffffff !important;
 }
 
@@ -195,7 +195,7 @@
 }
 
 .view-modal-badge-status.warning {
-  background: #8B82C7;
+  background: #1769C2;
   color: #ffffff !important;
 }
 
@@ -203,13 +203,13 @@
   margin: 0 0 3px;
   font-size: 18px;
   font-weight: 700;
-  color: #30264F !important;
+  color: #123F73 !important;
 }
 
 .view-modal-subtitle {
   margin: 0;
   font-size: 12.5px;
-  color: #554F75 !important;
+  color: #64748B !important;
 }
 
 /* Reusable 2-Column Info Cards Grid */
@@ -240,7 +240,7 @@
   padding-bottom: 10px;
   margin-bottom: 12px;
   border-bottom: 1px solid var(--border, #e2e8f0);
-  color: var(--brand, #8782BC);
+  color: var(--brand, #1769C2);
   font-size: 14px;
   font-weight: 700;
 }

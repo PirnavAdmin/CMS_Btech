@@ -63,8 +63,8 @@
 
 :root body :is(.cm-profile-top-bar, .department-profile-topbar) :is(.cm-secondary-btn, .cm-button.secondary, button:not(.export-trigger):not(.erp-btn--primary):not(.cm-primary-btn):not(.fm-primary-btn)):hover {
   background: var(--surface-soft, #F8FAFC) !important;
-  border-color: var(--brand, #756FB2) !important;
-  color: var(--brand, #756FB2) !important;
+  border-color: var(--brand, #125AA8) !important;
+  color: var(--brand, #125AA8) !important;
 }
 
 :root body :is(.cm-profile-top-bar, .department-profile-topbar) :is(.erp-btn--primary, .cm-primary-btn, .fm-primary-btn, button.erp-btn--primary) {
@@ -72,14 +72,14 @@
   align-items: center !important;
   gap: 7px !important;
   padding: 8px 16px !important;
-  background: var(--brand, #8782BC) !important;
-  border: 1px solid var(--brand, #8782BC) !important;
+  background: var(--brand, #1769C2) !important;
+  border: 1px solid var(--brand, #1769C2) !important;
   border-radius: 8px !important;
   color: #FFFFFF !important;
   font-size: 0.85rem !important;
   font-weight: 700 !important;
   cursor: pointer !important;
-  box-shadow: 0 2px 6px rgba(135, 130, 188, 0.3) !important;
+  box-shadow: 0 2px 6px rgba(23, 105, 194, 0.3) !important;
   text-decoration: none !important;
   transition: all 0.15s ease !important;
 }
@@ -93,10 +93,10 @@
 }
 
 :root body :is(.cm-profile-top-bar, .department-profile-topbar) :is(.erp-btn--primary, .cm-primary-btn, .fm-primary-btn, button.erp-btn--primary):hover {
-  background: #6c66a4 !important;
-  border-color: #6c66a4 !important;
+  background: #125AA8 !important;
+  border-color: #125AA8 !important;
   color: #FFFFFF !important;
-  box-shadow: 0 4px 12px rgba(135, 130, 188, 0.4) !important;
+  box-shadow: 0 4px 12px rgba(23, 105, 194, 0.4) !important;
 }
 
 /* 3. Main Enclosing Card */
@@ -125,7 +125,7 @@
   padding: 0 !important;
 }
 
-/* 4. Hero Banner (Lavender-Purple Theme) */
+/* 4. Shared blue hero banner for entity detail and profile views */
 :root body :is(
   .cm-profile-banner,
   .sa-profile-header,
@@ -137,7 +137,7 @@
   align-items: center !important;
   gap: 20px !important;
   padding: 22px 28px !important;
-  background: linear-gradient(135deg, #7169A8 0%, #7E76B7 50%, #8D85C6 100%) !important;
+  background: linear-gradient(116deg, #1769C2 0%, #2B78C5 58%, #3C8DDA 100%) !important;
   border: 0 !important;
   border-bottom: 1px solid rgba(255, 255, 255, 0.18) !important;
   border-radius: 0 !important;
@@ -163,6 +163,130 @@
   border: 40px solid rgba(255, 255, 255, 0.08) !important;
   border-radius: 50% !important;
   pointer-events: none !important;
+}
+
+/* Match the college detail hero to the My Profile identity + facts layout. */
+:root body .college-management .cm-profile-banner--account {
+  display: grid !important;
+  grid-template-columns: minmax(280px, 1fr) minmax(390px, 1.2fr) !important;
+  align-items: center !important;
+  gap: 28px !important;
+  min-height: 154px !important;
+  padding: 24px 34px !important;
+}
+
+:root[data-theme="dark"] body .college-management .cm-profile-banner--account {
+  background: linear-gradient(116deg, #1769C2 0%, #2B78C5 58%, #3C8DDA 100%) !important;
+  border-color: transparent !important;
+  color: #FFFFFF !important;
+}
+
+:root body .college-management .cm-profile-banner--account::after {
+  right: -40px !important;
+  bottom: -90px !important;
+  border-color: rgba(255, 255, 255, .08) !important;
+}
+
+:root body .college-management .cm-account-identity {
+  position: relative !important;
+  z-index: 1 !important;
+  display: flex !important;
+  min-width: 0 !important;
+  align-items: center !important;
+  gap: 18px !important;
+}
+
+:root body .college-management .cm-account-identity .cm-profile-header-info {
+  min-width: 0 !important;
+}
+
+:root body .college-management .cm-account-identity .cm-profile-title {
+  overflow-wrap: anywhere !important;
+}
+
+:root body .college-management .cm-account-facts {
+  position: relative !important;
+  z-index: 1 !important;
+  display: grid !important;
+  grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+  min-width: 0 !important;
+  margin: 0 !important;
+  padding: 15px 8px !important;
+  border: 1px solid rgba(255, 255, 255, .2) !important;
+  border-radius: 12px !important;
+  background: rgba(8, 47, 82, .68) !important;
+  backdrop-filter: blur(4px);
+}
+
+:root body .college-management .cm-account-facts > div {
+  min-width: 0 !important;
+  padding: 0 15px !important;
+  border-left: 1px solid rgba(255, 255, 255, .2) !important;
+}
+
+:root body .college-management .cm-account-facts > div:first-child {
+  border-left: 0 !important;
+}
+
+:root body .college-management .cm-account-facts dt {
+  margin: 0 0 7px !important;
+  color: #DCEBFA !important;
+  font-size: .68rem !important;
+  font-weight: 750 !important;
+  letter-spacing: .06em !important;
+  text-transform: uppercase !important;
+}
+
+:root body .college-management .cm-account-facts dd {
+  margin: 0 !important;
+  overflow-wrap: anywhere !important;
+  color: #FFFFFF !important;
+  font-size: .88rem !important;
+  font-weight: 750 !important;
+}
+
+:root body .college-management .cm-account-status {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 7px !important;
+  padding: 4px 10px !important;
+  border: 1px solid rgba(169, 211, 247, .4) !important;
+  border-radius: 999px !important;
+  color: #C7DFFF !important;
+  background: #123F73 !important;
+  font-size: .78rem !important;
+  font-weight: 800 !important;
+  white-space: nowrap !important;
+}
+
+:root body .college-management .cm-account-status i {
+  width: 8px !important;
+  height: 8px !important;
+  border-radius: 50% !important;
+  background: #10B981 !important;
+  box-shadow: 0 0 0 3px rgba(16, 185, 129, .22) !important;
+}
+
+:root body .college-management .cm-account-status.is-inactive i {
+  background: #FCA5A5 !important;
+  box-shadow: 0 0 0 3px rgba(248, 113, 113, .2) !important;
+}
+
+@media (max-width: 900px) {
+  :root body .college-management .cm-profile-banner--account {
+    grid-template-columns: 1fr !important;
+    gap: 18px !important;
+  }
+}
+
+@media (max-width: 600px) {
+  :root body .college-management .cm-profile-banner--account {
+    padding: 18px !important;
+  }
+
+  :root body .college-management .cm-account-facts > div {
+    padding-inline: 9px !important;
+  }
 }
 
 /* 5. Avatar / Logo Wrap */
@@ -194,7 +318,7 @@
 
 :root body :is(.cm-profile-avatar-wrap, .sa-profile-avatar, .sp-avatar) :is(.cm-profile-placeholder, .cm-logo-emblem, div.cm-profile-logo) {
   background: linear-gradient(135deg, #ECC15D 0%, #DF9E27 100%) !important;
-  color: #1E173D !important;
+  color: #123F73 !important;
   font-size: 1.45rem !important;
   font-weight: 850 !important;
   display: grid !important;
@@ -202,14 +326,14 @@
 }
 
 :root body :is(.cm-profile-avatar-wrap, .sa-profile-avatar, .sp-avatar) :is(.cm-logo-emblem svg, .cm-emblem-icon, svg) {
-  stroke: #1E173D !important;
-  color: #1E173D !important;
+  stroke: #123F73 !important;
+  color: #123F73 !important;
   width: 28px !important;
   height: 28px !important;
 }
 
 :root body :is(.cm-profile-avatar-wrap, .sa-profile-avatar, .sp-avatar) .cm-emblem-code {
-  color: #1E173D !important;
+  color: #123F73 !important;
   font-weight: 850 !important;
   font-size: 0.85rem !important;
 }
@@ -258,7 +382,7 @@
   padding: 3px 12px !important;
   border-radius: 999px !important;
   background: #FFFFFF !important;
-  color: #5D54A4 !important;
+  color: #125AA8 !important;
   border: 1px solid rgba(255, 255, 255, 0.8) !important;
   font-size: 0.74rem !important;
   font-weight: 800 !important;
@@ -271,8 +395,90 @@
   background: #FFFFFF !important;
 }
 
+/* Keep status meaning clear in profile/detail view headers. */
+:root body :is(.cm-profile-banner, .sa-profile-header) :is(.cm-status-badge, .sa-status-badge, .status-badge).active {
+  color: #15803d !important;
+  background: #dcfce7 !important;
+  border-color: #86efac !important;
+}
+
+:root body :is(.cm-profile-banner, .sa-profile-header) :is(.cm-status-badge, .sa-status-badge, .status-badge):is(.inactive, .deactive) {
+  color: #b91c1c !important;
+  background: #fee2e2 !important;
+  border-color: #fca5a5 !important;
+}
+
 :root body :is(.cm-status-badge, .sa-status-badge, .status-badge, .sp-badge, .details-status-badge):is(.inactive, .rejected, .ineligible, .deactive, .archived, .cancelled, .unpaid, [class*="inactive"]) {
   color: #dc2626 !important;
+}
+
+/* Use the same blue detail-banner treatment inside shared view dialogs. */
+:root body .view-modal-banner {
+  position: relative !important;
+  display: flex !important;
+  width: 100% !important;
+  box-sizing: border-box !important;
+  align-items: center !important;
+  gap: 20px !important;
+  min-height: 100px !important;
+  padding: 22px 28px !important;
+  border: 0 !important;
+  border-bottom: 1px solid rgba(255, 255, 255, .18) !important;
+  border-radius: 0 !important;
+  color: #FFFFFF !important;
+  background: linear-gradient(116deg, #1769C2 0%, #2B78C5 58%, #3C8DDA 100%) !important;
+  box-shadow: none !important;
+  overflow: hidden !important;
+}
+:root body .view-modal-banner::after {
+  position: absolute !important;
+  right: -40px !important;
+  bottom: -80px !important;
+  width: 250px !important;
+  height: 250px !important;
+  border: 40px solid rgba(255, 255, 255, .08) !important;
+  border-radius: 50% !important;
+  content: "" !important;
+  pointer-events: none !important;
+}
+:root body .view-modal-banner .view-modal-avatar {
+  position: relative !important;
+  z-index: 1 !important;
+  flex: 0 0 68px !important;
+  width: 68px !important;
+  height: 68px !important;
+  border: 2px solid rgba(255, 255, 255, .5) !important;
+  border-radius: 14px !important;
+  color: #123F73 !important;
+  background: linear-gradient(135deg, #ECC15D 0%, #DF9E27 100%) !important;
+}
+:root body .view-modal-banner .view-modal-header-info {
+  position: relative !important;
+  z-index: 1 !important;
+  min-width: 0 !important;
+  flex: 1 1 auto !important;
+}
+:root body .view-modal-banner .view-modal-badge {
+  border: 1px solid rgba(255, 255, 255, .35) !important;
+  border-radius: 999px !important;
+  color: #FFFFFF !important;
+  background: rgba(255, 255, 255, .2) !important;
+}
+:root body .view-modal-banner .view-modal-badge-status.active {
+  border-color: rgba(169, 211, 247, .55) !important;
+  color: #C7DFFF !important;
+  background: #123F73 !important;
+}
+:root body .view-modal-banner .view-modal-title {
+  position: relative !important;
+  z-index: 1 !important;
+  margin: 0 !important;
+  color: #FFFFFF !important;
+}
+:root body .view-modal-banner .view-modal-subtitle {
+  position: relative !important;
+  z-index: 1 !important;
+  color: rgba(255, 255, 255, .9) !important;
 }
 
 :root body :is(.cm-profile-title, .sa-profile-header h1, .sp-identity h2) {
@@ -367,9 +573,9 @@
   margin: 0 !important;
   padding: 9px 14px !important;
   border-bottom: 1px solid var(--border, #E2E8F0) !important;
-  border-left: 3.5px solid var(--brand, #756FB2) !important;
+  border-left: 3.5px solid var(--brand, #125AA8) !important;
   background: var(--surface-soft, #F8FAFC) !important;
-  color: var(--brand, #756FB2) !important;
+  color: var(--brand, #125AA8) !important;
   box-sizing: border-box !important;
 }
 
@@ -385,8 +591,8 @@
   width: 24px !important;
   height: 24px !important;
   border-radius: 5px !important;
-  background: var(--brand-soft, #EDEBF6) !important;
-  color: var(--brand, #756FB2) !important;
+  background: var(--brand-soft, #EAF3FF) !important;
+  color: var(--brand, #125AA8) !important;
   font-size: 13px !important;
 }
 
@@ -405,8 +611,8 @@
   border-radius: 999px !important;
   font-size: 0.68rem !important;
   font-weight: 750 !important;
-  background: var(--brand-soft, #EDEBF6) !important;
-  color: var(--brand, #756FB2) !important;
+  background: var(--brand-soft, #EAF3FF) !important;
+  color: var(--brand, #125AA8) !important;
 }
 
 /* 10. Card Grid Body (4-Column Compact Grid) */

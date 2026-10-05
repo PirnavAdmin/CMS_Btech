@@ -1167,7 +1167,7 @@ export default function DepartmentManagement() {
             <div className="cm-profile-top-bar">
           <ExportMenu mode="single" title="Department Details" filename={`department_${selected.code || selected.id}`} />
               <button type="button" className="cm-secondary-btn erp-btn erp-btn--secondary" onClick={closeToList}>
-                &larr; Back to Departments List
+                &larr; Back 
               </button>
             </div>
 

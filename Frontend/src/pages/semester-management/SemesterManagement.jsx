@@ -318,7 +318,7 @@ function SemesterList() {
         </div>
         <div className="directory-export-actions">
           <ExportMenu rows={filtered} columns={semesterColumns} title="Semesters" filename="semesters" loading={loading || Boolean(error)} />
-          <Link className="cm-button" to="/semester-management/add"><FiPlus /> Add Semester Structure</Link>
+          <Link className="cm-button" to="/semester-management/add"><FiPlus /> Add Semester</Link>
         </div>
       </header>
       <FilterPanel active={hasFilters} onClear={clearFilters}>

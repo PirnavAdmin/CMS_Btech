@@ -932,12 +932,14 @@ export default function StudentProfile() {
                   {filtered.length} records
                 </p>
               </div>
-              <div className="directory-export-actions">
-                <ExportMenu rows={filtered.filter(row => row.exportVerified)} columns={profileColumns} title="Student Profiles" filename="student-profiles" loading={loading || Boolean(error)} scope="Current filtered API results (offline records excluded)" />
-              </div>
             </header>
             <FilterPanel
               active={Boolean(query || Object.values(filters).some(Boolean))}
+              leadingActions={
+                <div className="directory-export-actions">
+                  <ExportMenu rows={filtered.filter(row => row.exportVerified)} columns={profileColumns} title="Student Profiles" filename="student-profiles" loading={loading || Boolean(error)} scope="Current filtered API results (offline records excluded)" />
+                </div>
+              }
               onClear={() => {
                 setQuery("");
                 setFilters({
@@ -1007,11 +1009,11 @@ export default function StudentProfile() {
               <table className="sp-directory-table" ref={tableRef}>
                 <thead>
                   <tr>
-                    <th style={{ minWidth: "220px" }}>Student</th>
-                    <th style={{ minWidth: "240px" }}>Academic details</th>
-                    <th style={{ minWidth: "180px" }}>Contact</th>
-                    <th className="table-center" style={{ minWidth: "120px", width: "120px" }}>Status</th>
-                    <th className="table-center" style={{ minWidth: "130px", width: "130px" }}>Actions</th>
+                    <th style={{ minWidth: "190px" }}>Student</th>
+                    <th style={{ minWidth: "200px" }}>Academic details</th>
+                    <th style={{ minWidth: "160px" }}>Contact</th>
+                    <th className="table-center" style={{ minWidth: "110px", width: "110px" }}>Status</th>
+                    <th className="table-center" style={{ minWidth: "100px", width: "100px" }}>Actions</th>
                   </tr>
                 </thead>
                 <tbody>
