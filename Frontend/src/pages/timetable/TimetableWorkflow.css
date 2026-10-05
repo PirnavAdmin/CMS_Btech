@@ -1,0 +1,46 @@
+.tt-workflow { min-width: 0; }
+.tt-clean-builder { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+.tt-clean-step, .tt-clean-workspace { padding: 20px; min-width: 0; }
+.tt-clean-step h2, .tt-clean-workspace h2 { font-size: 1.15rem; margin: 0 0 12px; }
+.tt-clean-step p { margin: 10px 0; }
+.tt-clean-step footer { margin-top: 20px; }
+.tt-clean-step .tt-form-grid { margin-bottom: 18px; }
+.tt-clean-builder .tt-stepper { overflow-x: auto; flex-shrink: 0; }
+.tt-clean-builder .tt-stepper button { white-space: nowrap; }
+.tt-dashboard-stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+.tt-dashboard-stats .tt-card { padding: 16px; display: flex; gap: 8px; flex-direction: column; }
+.tt-dashboard-stats strong { font-size: 1.5rem; }
+.tt-adapter-note { font-size: .8rem; color: var(--text-muted); margin: 0; }
+.tt-recent-tables { display: grid; gap: 8px; }
+.tt-recent-table, .tt-issue { text-align: left; display: flex; flex-direction: column; gap: 7px; padding: 14px; border: 1px solid var(--border); border-radius: 9px; background: var(--surface); color: var(--text-primary); cursor: pointer; width: 100%; }
+.tt-recent-table:hover, .tt-issue:hover { border-color: var(--brand); }
+.tt-section-tabs { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 16px; }
+.tt-section-tabs button { display: flex; flex-direction: column; white-space: nowrap; align-items: flex-start; }
+.tt-section-tabs small { font-size: .7rem; }
+.tt-section-tabs .tt-primary small { color: inherit; }
+.tt-workflow .tt-week tbody th small { color: inherit; opacity: .9; }
+.tt-clean-workspace .tt-card-heading { flex-wrap: wrap; gap: 12px; margin-bottom: 16px; }
+.tt-coverage-scroll { overflow-x: auto; }
+.tt-coverage { min-width: 600px; width: 100%; border-collapse: collapse; }
+.tt-coverage th, .tt-coverage td { padding: 12px; border-bottom: 1px solid var(--border); text-align: left; vertical-align: top; }
+.tt-coverage input[type=number] { width: 60px; color: var(--text-primary); background: var(--surface); border: 1px solid var(--border); border-radius: 5px; padding: 6px; }
+.tt-weekly-requirement { display: flex; gap: 5px; align-items: center; margin: 7px 0; white-space: nowrap; }
+.tt-weekly-requirement .tt-button { padding: 5px 8px; }
+.tt-more-actions { position: relative; padding: 8px; }
+.tt-more-actions summary { cursor: pointer; }
+.tt-more-actions[open] > button { position: absolute; right: 0; z-index: 4; white-space: nowrap; background: var(--surface); box-shadow: 0 3px 12px #0003; }
+.tt-class-details { display: flex; flex-direction: column; gap: 4px; width: 100%; border: 0; padding: 0; background: transparent; color: inherit; text-align: left; cursor: pointer; }
+.tt-faculty-link { border: 0; padding: 4px 0 0; background: transparent; color: var(--brand); font-size: .75rem; cursor: pointer; text-align: left; text-decoration: underline; }
+.tt-highlight { outline: 3px solid var(--brand); outline-offset: -2px; }
+.tt-grid-container { min-width: 0; width: 100%; }
+.tt-clean-workspace .tt-grid-scroll { max-height: none; }
+.tt-faculty-agenda { display: grid; gap: 10px; }
+.tt-issue { margin-bottom: 10px; }
+.tt-issue span { white-space: normal; }
+@media (max-width: 900px) { .tt-clean-step .tt-period-layout { grid-template-columns: 1fr; } }
+@media (max-width: 600px) {
+  .tt-clean-step, .tt-clean-workspace { padding: 12px; }
+  .tt-dashboard-stats { grid-template-columns: repeat(2, 1fr); }
+  .tt-clean-workspace .tt-actions { gap: 6px; }
+  .tt-clean-workspace .tt-actions .tt-button { font-size: .75rem; padding: 7px; }
+}
