@@ -315,6 +315,16 @@
   white-space: nowrap;
 }
 
+.semester-badge.status::before {
+  content: "";
+  flex: 0 0 7px;
+  width: 7px;
+  height: 7px;
+  margin-right: 6px;
+  border-radius: 50%;
+  background: currentColor;
+}
+
 .semester-badge.status.active { color: #065F46; background: #ECFDF5; border: 1px solid #A7F3D0; }
 .semester-badge.status.upcoming { color: #92400E; background: #FFFBEB; border: 1px solid #FDE68A; }
 .semester-badge.status.completed { color: #334155; background: #F1F5F9; border: 1px solid #CBD5E1; }
