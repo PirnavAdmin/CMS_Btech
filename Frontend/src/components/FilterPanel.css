@@ -1,9 +1,9 @@
 .filter-disclosure {
   margin: 12px 0;
-  border: 1px solid #CBD5E1 !important;
+  border: 1px solid #D4E3F3 !important;
   border-radius: var(--radius-md, 10px) !important;
-  background: #F4F7FB !important;
-  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04) !important;
+  background: #EEF5FD !important;
+  box-shadow: 0 1px 3px rgba(16,42,76,.035) !important;
   overflow: hidden;
   transition: border-color 0.2s ease, box-shadow 0.2s ease;
 }
@@ -15,7 +15,7 @@
   padding: 8px 12px;
   align-items: center;
   gap: 10px;
-  background: #F4F7FB !important;
+  background: #EEF5FD !important;
 }
 
 .filter-disclosure__search {
@@ -43,16 +43,16 @@
   padding: 0 12px !important;
   box-sizing: border-box !important;
   background: #FFFFFF !important;
-  border: 1px solid #CBD5E1 !important;
+  border: 1px solid #CFDEEF !important;
   border-radius: 8px !important;
-  color: #64748B !important;
+  color: #526A86 !important;
   box-shadow: none !important;
   margin: 0 !important;
 }
 
 .filter-disclosure__search :is(label, .course-search, .branch-search, .semester-search, .section-search, .faculty-search, .sm-search-wrap, .sa-search, .em-search) svg {
   flex-shrink: 0 !important;
-  color: #64748B !important;
+  color: #426A95 !important;
   font-size: 15px !important;
 }
 
@@ -62,7 +62,7 @@
   background: transparent !important;
   outline: none !important;
   font-size: 13px !important;
-  color: #0F172A !important;
+  color: #102A4C !important;
   padding: 0 !important;
   margin: 0 !important;
   box-shadow: none !important;
@@ -77,9 +77,9 @@
   padding: 0 14px;
   align-items: center;
   justify-content: center;
-  border: 1px solid #CBD5E1;
+  border: 1px solid #CFDEEF;
   border-radius: 8px;
-  color: #0F172A;
+  color: #17375E;
   background: #FFFFFF !important;
   font: inherit;
   font-size: 0.8rem;
@@ -102,9 +102,9 @@
 
 .filter-disclosure__toggle:hover,
 .filter-disclosure__clear:hover {
-  border-color: var(--brand, #756FB2);
-  color: var(--brand, #756FB2);
-  background: var(--brand-soft, #F3F1FA) !important;
+  border-color: #AFCBE7;
+  color: #1769C2;
+  background: #EFF6FD !important;
 }
 
 .filter-disclosure__toggle i {
@@ -125,8 +125,8 @@
 
 .filter-disclosure__content {
   padding: 10px 12px;
-  border-top: 1px solid #CBD5E1;
-  background: #F4F7FB !important;
+  border-top: 1px solid #D4E3F3;
+  background: #EEF5FD !important;
 }
 
 .filter-disclosure__content-inner {
@@ -200,7 +200,7 @@
   font-weight: 500 !important;
   border: 1px solid var(--border-strong, #CBD5E1) !important;
   border-radius: 7px !important;
-  background: var(--surface, #FFFFFF) !important;
+  background: #FFFFFF !important;
   color: var(--text-primary, #0F172A) !important;
   outline: none !important;
   margin: 0 !important;
@@ -211,8 +211,8 @@
 }
 
 .filter-disclosure__content :is(input:not([type="checkbox"]):not([type="radio"]), select, .searchable-select__trigger):focus {
-  border-color: var(--brand, #756FB2) !important;
-  box-shadow: 0 0 0 3px rgba(117, 111, 178, 0.15) !important;
+  border-color: #4C91D4 !important;
+  box-shadow: 0 0 0 3px rgba(43,120,197,.08) !important;
 }
 
 /* Clear button placed next to filter fields */
@@ -247,8 +247,8 @@
 
 .filter-disclosure__clear-btn:hover,
 .filter-disclosure__content :is(.course-clear, .branch-clear, .cm-clear-btn):hover {
-  border-color: var(--brand, #756FB2) !important;
-  color: var(--brand, #756FB2) !important;
+  border-color: #AFCBE7 !important;
+  color: #1769C2 !important;
   background: var(--brand-soft, #F3F1FA) !important;
 }
 

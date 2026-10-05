@@ -1,11 +1,11 @@
 .semester-management {
-  --sem-navy: var(--brand-navy, #0F172A);
-  --sem-blue: #0F172A;
-  --sem-blue-hover: #0F172A;
-  --sem-text: var(--text-primary, #0F172A);
-  --sem-muted: var(--text-muted, #64748B);
-  --sem-line: var(--border, #d7e4ee);
-  --sem-soft: var(--surface-soft, #F9F8FD);
+  --sem-navy: var(--brand-navy, #102A4C);
+  --sem-blue: #1769C2;
+  --sem-blue-hover: #125AA8;
+  --sem-text: var(--text-primary, #102A4C);
+  --sem-muted: var(--text-muted, #71849A);
+  --sem-line: var(--border, #D8E4F2);
+  --sem-soft: var(--surface-soft, #F7FAFE);
   display: grid;
   width: 100%;
   gap: 10px;
@@ -86,7 +86,7 @@
 }
 
 .compact-summary__item strong {
-  color: var(--text-primary, #0F172A);
+  color: var(--text-primary, #102A4C);
   font-size: 1.05rem;
   line-height: 1.1;
 }
@@ -100,8 +100,8 @@
   text-transform: uppercase;
 }
 
-.compact-summary__item--active strong { color: #756FB2; }
-.compact-summary__item--upcoming strong { color: #756FB2; }
+.compact-summary__item--active strong { color: #1769C2; }
+.compact-summary__item--upcoming strong { color: #1769C2; }
 .compact-summary__item--completed strong { color: #64748b; }
 
 .semester-primary,
@@ -115,7 +115,7 @@
   border: 0;
   border-radius: 8px;
   color: #fff;
-  background: #0F172A;
+  background: #102A4C;
   box-shadow: 0 4px 12px rgba(94, 89, 163, 0.25);
   font-size: 0.82rem;
   font-weight: 800;
@@ -294,7 +294,7 @@
 }
 
 .semester-table td > strong {
-  color: var(--text-primary, #0F172A);
+  color: var(--text-primary, #102A4C);
   font-size: 0.84rem;
 }
 
@@ -381,7 +381,7 @@
 
 .semester-pagination button.active {
   color: #fff;
-  background: #0F172A;
+  background: #102A4C;
 }
 
 .semester-pagination button:disabled {
@@ -402,7 +402,7 @@
 .semester-empty-state svg {
   width: 34px;
   height: 34px;
-  color: #8782BC;
+  color: #1769C2;
 }
 
 .semester-empty-state h3 {
@@ -476,7 +476,7 @@
 }
 
 .stepper-node:hover:not(:disabled) {
-  background: #EDEBF6;
+  background: #EAF3FF;
 }
 
 .stepper-node:disabled {
@@ -500,7 +500,7 @@
 }
 
 .stepper-node.is-active .stepper-badge {
-  background: #756FB2;
+  background: #1769C2;
   color: #FFFFFF;
   box-shadow: 0 2px 6px rgba(117, 111, 178, 0.3);
 }
@@ -524,7 +524,7 @@
 }
 
 .stepper-node.is-active .stepper-step-lbl {
-  color: #756FB2;
+  color: #1769C2;
 }
 
 .stepper-title {
@@ -534,7 +534,7 @@
 }
 
 .stepper-node.is-active .stepper-title {
-  color: #0F172A;
+  color: #102A4C;
   font-weight: 800;
 }
 
@@ -548,7 +548,7 @@
 }
 
 .stepper-line.is-active {
-  background: #756FB2;
+  background: #1769C2;
 }
 
 /* ==========================================================================
@@ -576,7 +576,7 @@
   margin: 0 0 2px 0;
   font-size: 1.1rem;
   font-weight: 800;
-  color: #0F172A;
+  color: #102A4C;
   letter-spacing: -0.015em;
 }
 
@@ -632,7 +632,7 @@
   border: 1px solid #CBD5E1;
   border-radius: 8px;
   background: #FFFFFF;
-  color: #0F172A;
+  color: #102A4C;
   font-size: 0.84rem;
   font-weight: 500;
   display: flex;
@@ -645,7 +645,7 @@
 
 .semester-field input:focus,
 .semester-field select:focus {
-  border-color: #756FB2;
+  border-color: #1769C2;
   box-shadow: 0 0 0 2px rgba(117, 111, 178, 0.12);
 }
 
@@ -740,7 +740,7 @@
 .semester-schedule-row .sem-name {
   font-size: 0.8rem;
   font-weight: 750;
-  color: #0F172A;
+  color: #102A4C;
 }
 
 .semester-schedule-row .sem-year {
@@ -764,7 +764,7 @@
 }
 
 .semester-date-input:focus {
-  border-color: #756FB2;
+  border-color: #1769C2;
   box-shadow: 0 0 0 2px rgba(117, 111, 178, 0.12);
 }
 
@@ -819,8 +819,8 @@
   gap: 5px;
   padding: 2px 7px;
   border-radius: 999px;
-  background: #EDEBF6;
-  color: #756FB2;
+  background: #EAF3FF;
+  color: #1769C2;
   font-size: 0.62rem;
   font-weight: 800;
   letter-spacing: 0.06em;
@@ -885,7 +885,7 @@
   height: 36px;
   padding: 0 6px;
   border-radius: 8px;
-  background: #756FB2;
+  background: #1769C2;
   color: #ffffff;
   display: flex;
   align-items: center;
@@ -909,7 +909,7 @@
   margin: 0;
   font-size: 0.86rem;
   font-weight: 800;
-  color: #0F172A;
+  color: #102A4C;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -953,7 +953,7 @@
 .preview-kv-item .kv-val {
   font-size: 0.76rem;
   font-weight: 750;
-  color: #0F172A;
+  color: #102A4C;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -985,8 +985,8 @@
 .timeline-count-tag {
   font-size: 0.62rem;
   font-weight: 750;
-  color: #756FB2;
-  background: #EDEBF6;
+  color: #1769C2;
+  background: #EAF3FF;
   padding: 1px 6px;
   border-radius: 999px;
 }
@@ -1055,8 +1055,8 @@
   width: 20px;
   height: 20px;
   border-radius: 4px;
-  background: #EDEBF6;
-  color: #756FB2;
+  background: #EAF3FF;
+  color: #1769C2;
   font-size: 0.64rem;
   font-weight: 800;
   flex-shrink: 0;
@@ -1071,7 +1071,7 @@
 .timeline-cell-sem .sem-text-col strong {
   font-size: 0.72rem;
   font-weight: 750;
-  color: #0F172A;
+  color: #102A4C;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -1151,8 +1151,8 @@
   padding: 11px 10px 11px 13px;
   border: 1px solid #C9C4E0;
   border-radius: 9px;
-  color: #756FB2;
-  background: #F5F3FD;
+  color: #1769C2;
+  background: #EEF5FD;
   box-shadow: 0 14px 35px rgba(8, 52, 89, 0.18);
   font-size: 0.78rem;
   font-weight: 800;
@@ -1183,7 +1183,7 @@
   align-items: center;
   gap: 20px;
   padding: 26px 30px;
-  background: linear-gradient(135deg, #665C9E 0%, #756FB2 60%, #837DBB 100%);
+  background: linear-gradient(135deg, #1769C2 0%, #195A99 60%, #123F73 100%);
   color: #fff;
 }
 
@@ -1243,20 +1243,20 @@
 }
 
 .semester-management .cm-badge-type {
-  color: #0F172A;
+  color: #102A4C;
   background: var(--surface, #fff);
 }
 
 .semester-management .cm-status-badge {
   border-radius: 999px;
-  color: #756FB2;
-  background: #EDEBF6;
+  color: #1769C2;
+  background: #EAF3FF;
   text-transform: uppercase;
 }
 
-.semester-management .cm-status-badge.upcoming { color: #756FB2; background: #fff3d6; }
+.semester-management .cm-status-badge.upcoming { color: #1769C2; background: #fff3d6; }
 .semester-management .cm-status-badge.completed { color: #64748b; background: #eef2f6; }
-.semester-management .cm-status-badge.inactive { color: #9b5710; background: #EDEBF6; }
+.semester-management .cm-status-badge.inactive { color: #9b5710; background: #EAF3FF; }
 
 .semester-management .cm-profile-title {
   margin: 2px 0 0;
@@ -1293,7 +1293,7 @@
   margin-bottom: 18px;
   padding-bottom: 12px;
   border-bottom: 1px solid #e2e8f0;
-  color: var(--brand-blue, #8782BC);
+  color: var(--brand-blue, #1769C2);
 }
 
 .semester-management .cm-info-card-header h2 {
@@ -1414,7 +1414,7 @@
 }
 .semester-management .semester-live-preview .cm-info-row:nth-child(3n) { border-right: 1px solid #DFDCED; }
 .semester-management .semester-live-preview .cm-info-row:nth-child(2n) { border-right: 0; }
-.semester-management .semester-live-preview .cm-info-label { color: #756FB2; font-size: .66rem; line-height: 1.25; }
+.semester-management .semester-live-preview .cm-info-label { color: #1769C2; font-size: .66rem; line-height: 1.25; }
 .semester-management .semester-live-preview .cm-info-val { color: #30264F; font-size: .84rem; line-height: 1.38; }
 @media (max-width: 1180px) {
   .semester-management .semester-live-preview .cm-info-rows { grid-template-columns: 1fr; }
