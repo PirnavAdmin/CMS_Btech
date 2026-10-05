@@ -932,12 +932,14 @@ export default function StudentProfile() {
                   {filtered.length} records
                 </p>
               </div>
-              <div className="directory-export-actions">
-                <ExportMenu rows={filtered.filter(row => row.exportVerified)} columns={profileColumns} title="Student Profiles" filename="student-profiles" loading={loading || Boolean(error)} scope="Current filtered API results (offline records excluded)" />
-              </div>
             </header>
             <FilterPanel
               active={Boolean(query || Object.values(filters).some(Boolean))}
+              leadingActions={
+                <div className="directory-export-actions">
+                  <ExportMenu rows={filtered.filter(row => row.exportVerified)} columns={profileColumns} title="Student Profiles" filename="student-profiles" loading={loading || Boolean(error)} scope="Current filtered API results (offline records excluded)" />
+                </div>
+              }
               onClear={() => {
                 setQuery("");
                 setFilters({

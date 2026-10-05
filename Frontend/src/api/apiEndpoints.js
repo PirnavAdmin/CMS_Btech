@@ -14,7 +14,7 @@ if (typeof window !== 'undefined' && window.localStorage) {
 }
 
 const normalizeBaseUrl = (value = '') => value.trim().replace(/\/+$/, '')
-const DEFAULT_API_BASE_URL = 'https://clarity-math-delouse.ngrok-free.dev'
+const DEFAULT_API_BASE_URL = 'https://abreast-curling-tutor.ngrok-free.dev'
 
 export const API_BASE_URL = import.meta.env.DEV
   ? ''
@@ -333,13 +333,18 @@ const refreshAccessToken = async () => {
 }
 
 const pendingGetRequests = new Map()
-const request = async (url, options = {}, retried = false, bypassDedupe = false) => {
+const request = async (url, options = {}, retried = false, bypassDedupe = false, suppressApiFailureNotice = false) => {
+  suppressApiFailureNotice = suppressApiFailureNotice || options.suppressApiFailureNotice === true
+  if (options.suppressApiFailureNotice !== undefined) {
+    options = { ...options }
+    delete options.suppressApiFailureNotice
+  }
   if (!retried && !bypassDedupe) ({ url, options } = collegeRequest(url, options))
   const method = String(options.method || 'GET').toUpperCase()
   if (method === 'GET' && !bypassDedupe) {
     const key = `${method}:${url}`
     if (pendingGetRequests.has(key)) return pendingGetRequests.get(key)
-    const pending = request(url, options, retried, true).finally(() => pendingGetRequests.delete(key))
+    const pending = request(url, options, retried, true, suppressApiFailureNotice).finally(() => pendingGetRequests.delete(key))
     pendingGetRequests.set(key, pending)
     return pending
   }
@@ -351,11 +356,11 @@ const request = async (url, options = {}, retried = false, bypassDedupe = false)
       headers: { 'ngrok-skip-browser-warning': 'true', ...options.headers, ...(token ? { Authorization: `Bearer ${token}` } : {}) },
     })
   } catch {
-    throw createApiUnavailableError()
+    throw createApiUnavailableError(0, !suppressApiFailureNotice)
   }
   if (response.status === 401 && !retried && url !== API_ENDPOINTS.auth.refresh) {
     await refreshAccessToken()
-    return request(url, options, true, true)
+    return request(url, options, true, true, suppressApiFailureNotice)
   }
   const body = await readBody(response)
   if (!response.ok || body?.success === false) {
@@ -367,7 +372,7 @@ const request = async (url, options = {}, retried = false, bypassDedupe = false)
       console.error('API request failed', { url, method: options.method || 'GET', status: response.status })
     }
     if (response.status >= 500) {
-      notifyApiUnavailable({ status: response.status })
+      if (!suppressApiFailureNotice) notifyApiUnavailable({ status: response.status })
       const error = new Error(GENERIC_ERROR_MESSAGE)
       error.status = response.status
       error.backendMessage = validationMessage(body)
@@ -592,8 +597,8 @@ const academicYearPayload = (year) => {
 }
 
 export const academicYearApi = {
-  getAll: async () => {
-    const response = await request(API_ENDPOINTS.academicYears.list)
+  getAll: async (options = {}) => {
+    const response = await request(API_ENDPOINTS.academicYears.list, options)
     return listResponse(response)
   },
   getById: async (id) => {

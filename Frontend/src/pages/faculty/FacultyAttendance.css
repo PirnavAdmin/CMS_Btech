@@ -430,8 +430,10 @@
 .faculty-management .fm-report-total--percentage { color: #4338ca; font-weight: 900; }
 
 .faculty-management .fm-attendance-screen .fm-attendance-table td.fm-attendance-code-cell { text-align: center !important; white-space: nowrap; }
-.faculty-management .fm-attendance-screen .fm-attendance-table td.fm-attendance-identity-cell { text-align: left !important; }
-.faculty-management .fm-attendance-screen .fm-attendance-identity { width: 100%; justify-content: flex-start; text-align: left; }
+.faculty-management .fm-attendance-screen .fm-attendance-table td.fm-attendance-identity-cell { text-align: center !important; }
+.faculty-management .fm-attendance-screen .fm-attendance-identity { position: static !important; left: auto !important; width: min(100%, 270px) !important; max-width: 270px; margin-inline: auto !important; transform: none !important; justify-content: flex-start; text-align: left; }
+.faculty-management .fm-attendance-screen .fm-attendance-table th.fm-attendance-faculty-heading { text-align: center !important; }
+.faculty-management .fm-attendance-screen .fm-attendance-table td.fm-department-cell { text-align: center !important; }
 .faculty-management .fm-attendance-screen .fm-attendance-identity > div { flex: 1 1 auto; text-align: left; overflow-wrap: anywhere; }
 .faculty-management .fm-attendance-screen .fm-attendance-identity strong,
 .faculty-management .fm-attendance-screen .fm-attendance-identity small { text-align: left; }

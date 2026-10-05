@@ -39,7 +39,7 @@ function PageErrorNotices({ pathname }) {
       const failure = { ...event.detail, id: `${Date.now()}-${Math.random()}` }
       setApiFailure(failure)
       window.clearTimeout(apiFailureTimer.current)
-      apiFailureTimer.current = window.setTimeout(() => setApiFailure(null), 6000)
+      apiFailureTimer.current = window.setTimeout(() => setApiFailure(null), 2000)
     }
     window.addEventListener(API_FAILURE_EVENT, onApiFailure)
     return () => {
