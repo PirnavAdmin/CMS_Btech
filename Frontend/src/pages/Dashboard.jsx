@@ -598,22 +598,9 @@ export default function Dashboard() {
               </div>
             </div>
 
-            {/* Campus illustration */}
+            {/* University campus illustration */}
             <div className="ym-welcome-visual" aria-hidden="true">
-              <svg className="ym-campus-art" viewBox="0 0 300 220" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <circle cx="239" cy="48" r="25" fill="#FDE68A" fillOpacity=".9" />
-                <path d="M21 190H280" stroke="white" strokeOpacity=".48" strokeWidth="5" strokeLinecap="round" />
-                <path d="M32 115 83 81l52 34v70H32v-70Z" fill="#DDD6FE" />
-                <path d="M25 116 83 76l58 40H25Z" fill="#A78BFA" />
-                <path d="M45 128h17v18H45zm29 0h17v18H74zm-29 31h17v20H45zm29 0h17v20H74z" fill="#BAE6FD" />
-                <path d="M126 104 190 57l70 47v81H126v-81Z" fill="#fff" fillOpacity=".96" />
-                <path d="m116 105 74-57 80 57H116Z" fill="#C4B5FD" />
-                <path d="M174 85h33v100h-33z" fill="#818CF8" />
-                <path d="M141 119h19v21h-19zm81 0h20v21h-20zm-81 38h19v22h-19zm81 0h20v22h-20z" fill="#BAE6FD" />
-                <path d="M185 63h11V31h-11zM190 29v-9m-8 4h16" stroke="#fff" strokeWidth="3" strokeLinecap="round" />
-                <path d="M20 188c10-23 22-23 32 0m205 0c10-27 22-28 34 0" stroke="#5EEAD4" strokeWidth="7" strokeLinecap="round" />
-                <path d="M14 193h272" stroke="#fff" strokeOpacity=".35" strokeWidth="7" strokeLinecap="round" />
-              </svg>
+              <img className="ym-campus-art" src="/university-campus.svg" alt="" />
             </div>
           </div>
 
