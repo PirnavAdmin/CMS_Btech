@@ -1464,13 +1464,13 @@ label > b,
   .search-control, .module-search, .course-search, .branch-search,
   .department-search, .semester-search, .section-search, .sa-search,
   .searchable-select__trigger, select, textarea,
-  input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="range"]):not([type="color"])
+  input:not(.sm-search-input):not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="range"]):not([type="color"])
 ):not([aria-invalid="true"]) {
   background: var(--input-background) !important;
   border-color: var(--border) !important;
   color: var(--text-primary);
 }
-:root:not([data-theme="dark"]) #root :is(.page-content, .dashboard-header) :is(input, select, textarea, .searchable-select__trigger):focus-visible {
+:root:not([data-theme="dark"]) #root :is(.page-content, .dashboard-header) :is(input:not(.sm-search-input), select, textarea, .searchable-select__trigger):focus-visible {
   border-color: #4C91D4 !important;
   box-shadow: var(--focus-ring) !important;
 }
@@ -1551,4 +1551,107 @@ label > b,
   background: #EAF3FF !important;
   color: #1769C2 !important;
   border-color: #CFDEEF !important;
+}
+
+/* One compact search size across route-level and filter-panel search controls. */
+:root[data-theme] #root .page-content .filter-disclosure .filter-disclosure__bar {
+  min-height: 44px !important;
+  padding: 5px 10px !important;
+}
+:root[data-theme] #root .page-content .filter-disclosure .filter-disclosure__bar .filter-disclosure__search :is(
+  label, .search-control, .module-search, .course-search, .branch-search,
+  .department-search, .semester-search, .section-search, .faculty-search,
+  .sm-search-wrap, .sa-search, .em-search, .sp-search, .fs-search,
+  .fp-search, .flm-search, .fm-search
+) {
+  width: min(100%, 480px) !important;
+  max-width: 480px !important;
+  height: 34px !important;
+  min-height: 34px !important;
+  box-sizing: border-box !important;
+  padding-right: 9px !important;
+  padding-left: 9px !important;
+}
+:root[data-theme] #root .page-content .filter-disclosure .filter-disclosure__bar .filter-disclosure__search :is(
+  label, .search-control, .module-search, .course-search, .branch-search,
+  .department-search, .semester-search, .section-search, .faculty-search,
+  .sm-search-wrap, .sa-search, .em-search, .sp-search, .fs-search,
+  .fp-search, .flm-search, .fm-search
+) > svg {
+  width: 15px !important;
+  height: 15px !important;
+  flex-basis: 15px !important;
+}
+:root[data-theme] #root .page-content .filter-disclosure .filter-disclosure__bar .filter-disclosure__search :is(
+  label, .search-control, .module-search, .course-search, .branch-search,
+  .department-search, .semester-search, .section-search, .faculty-search,
+  .sm-search-wrap, .sa-search, .em-search, .sp-search, .fs-search,
+  .fp-search, .flm-search, .fm-search
+) > input {
+  height: 30px !important;
+  min-height: 0 !important;
+  font-size: 12px !important;
+}
+:root[data-theme] #root .page-content :is(
+  .search-control, .module-search, .cm-search, .course-search, .branch-search,
+  .department-search, .semester-search, .section-search, .sa-search, .sp-search,
+  .fs-search, .sm-search-wrap, .em-search, .rooms-search,
+  .attendance-search-control, .fm-attendance-search, .fp-search, .flm-search,
+  .fm-search, .section-student-search, .cm-subject-search
+) {
+  width: min(100%, 480px) !important;
+  max-width: 480px !important;
+  height: 34px !important;
+  min-height: 34px !important;
+  box-sizing: border-box !important;
+  padding-right: 9px !important;
+  padding-left: 9px !important;
+}
+:root[data-theme] #root .page-content :is(
+  .search-control, .module-search, .cm-search, .course-search, .branch-search,
+  .department-search, .semester-search, .section-search, .sa-search, .sp-search,
+  .fs-search, .sm-search-wrap, .em-search, .rooms-search,
+  .attendance-search-control, .fm-attendance-search, .fp-search, .flm-search,
+  .fm-search, .section-student-search, .cm-subject-search
+) > svg {
+  width: 15px !important;
+  height: 15px !important;
+  flex-basis: 15px !important;
+}
+:root[data-theme] #root .page-content :is(
+  .search-control, .module-search, .cm-search, .course-search, .branch-search,
+  .department-search, .semester-search, .section-search, .sa-search, .sp-search,
+  .fs-search, .sm-search-wrap, .em-search, .rooms-search,
+  .attendance-search-control, .fm-attendance-search, .fp-search, .flm-search,
+  .fm-search, .section-student-search, .cm-subject-search
+) > input {
+  height: 30px !important;
+  min-height: 0 !important;
+  font-size: 12px !important;
+}
+:root[data-theme] #root .page-content :is(
+  .cm-filters .cm-field:first-child > input,
+  .ay .tools > input
+) {
+  width: min(100%, 480px) !important;
+  max-width: 480px !important;
+  height: 34px !important;
+  min-height: 34px !important;
+  box-sizing: border-box !important;
+  font-size: 12px !important;
+}
+:root[data-theme] #root .dashboard-header .global-search {
+  height: 34px !important;
+  min-height: 34px !important;
+  padding-right: 9px !important;
+  padding-left: 9px !important;
+}
+:root[data-theme] #root .dashboard-header .global-search > svg {
+  width: 15px !important;
+  height: 15px !important;
+  flex-basis: 15px !important;
+}
+:root[data-theme] #root .dashboard-header .global-search > input {
+  height: 30px !important;
+  font-size: 12px !important;
 }
