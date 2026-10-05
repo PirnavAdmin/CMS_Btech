@@ -15,7 +15,7 @@ function setup() {
   const storage = new Map(), backend = []
   let fail = false, quota = false, facultyActive = true
   const api = rows => ({ getAll: async () => rows })
-  const context = vm.createContext({ ...utils, ...planner, ...periods, crypto: { randomUUID }, navigator: {}, getAuthStorage: () => ({ getItem: () => 'test-user' }),
+  const context = vm.createContext({ ...utils, ...planner, ...periods, crypto: { randomUUID }, navigator: {}, collegeStorageKey: key => key, getAuthStorage: () => ({ getItem: () => 'test-user' }),
     localStorage: { getItem: key => storage.get(key) ?? null, setItem: (key, value) => { if (quota) throw new Error('Storage full'); storage.set(key, value) } },
     academicYearApi: api([{ id: 1, startDate: '2026-01-01', endDate: '2026-12-31' }]), courseApi: api([{ id: 2 }]), branchApi: api([{ id: 3, courseId: 2 }]), sectionApi: api([{ ...scope, sectionId: 5, room: 'Room 1' }]),
     facultyApi: { getAll: async () => [{ facultyId: 7, status: facultyActive }] },

@@ -343,7 +343,7 @@ export default function Login() {
                 type="button"
                 disabled={timer > 0 || isSubmitting}
                 onClick={handleSendCode}
-                style={{ background: 'none', border: 'none', color: timer > 0 ? '#9ca3af' : '#8782BC', cursor: timer > 0 ? 'not-allowed' : 'pointer', fontSize: '0.9rem' }}
+                style={{ background: 'none', border: 'none', color: timer > 0 ? '#9ca3af' : '#1769C2', cursor: timer > 0 ? 'not-allowed' : 'pointer', fontSize: '0.9rem' }}
               >
                 {timer > 0 ? `Resend OTP in ${timer}s` : 'Resend OTP'}
               </button>
@@ -362,7 +362,7 @@ export default function Login() {
           <div className="login-form" style={{ textAlign: 'center' }}>
             <header>
               <h2>Verification Complete</h2>
-              <p style={{ color: '#8782BC', margin: '20px 0', fontSize: '1.1rem', fontWeight: 600 }}>
+              <p style={{ color: '#1769C2', margin: '20px 0', fontSize: '1.1rem', fontWeight: 600 }}>
                 Verified successfully
               </p>
             </header>

@@ -8,6 +8,7 @@ import App from './App.jsx'
 import ToastProvider from './components/ToastProvider.jsx'
 import './styles/dark-mode.css'
 import './styles/dark-mode-contrast.css'
+import './styles/view-status-colors.css'
 
 
 createRoot(document.getElementById('root')).render(

@@ -436,7 +436,7 @@ export default function Dashboard() {
 
     const entries = Object.entries(map).sort((a, b) => b[1] - a[1])
     if (entries.length > 0) {
-      const distinctColors = ['#0284C7', '#8782BC', '#38BDF8', '#0D9488', '#F59E0B']
+      const distinctColors = ['#0284C7', '#1769C2', '#38BDF8', '#0D9488', '#F59E0B']
       return entries.slice(0, 4).map(([label, val], idx) => ({
         label,
         value: val,
@@ -446,7 +446,7 @@ export default function Dashboard() {
 
     // If no admissions yet, show branches from academic context
     if (branches.length > 0) {
-      const distinctColors = ['#0284C7', '#8782BC', '#38BDF8', '#0D9488']
+      const distinctColors = ['#0284C7', '#1769C2', '#38BDF8', '#0D9488']
       return branches.slice(0, 3).map((b, idx) => ({
         label: b.branchCode || b.code || b.name || `Branch ${idx + 1}`,
         value: Number(b.intakeCapacity || b.intake || 60),
@@ -456,7 +456,7 @@ export default function Dashboard() {
 
     return [
       { label: 'CSE', value: 0, color: '#0284C7' },
-      { label: 'ECE', value: 0, color: '#8782BC' },
+      { label: 'ECE', value: 0, color: '#1769C2' },
       { label: 'IT', value: 0, color: '#38BDF8' },
     ]
   }, [scopedAdmissions, branches])
@@ -513,7 +513,7 @@ export default function Dashboard() {
           const deptCourses = courses.filter((c) => String(c.departmentId) === String(deptId))
           const deptBranches = branches.filter((b) => String(b.departmentId) === String(deptId))
           const deptIntake = deptBranches.reduce((acc, b) => acc + Number(b.intakeCapacity || b.intake || 60), 0)
-          const deptIcons = ['#8782BC', '#0284C7', '#0D9488', '#F59E0B']
+          const deptIcons = ['#1769C2', '#0284C7', '#0D9488', '#F59E0B']
 
           return {
             id: deptId || idx,
@@ -526,7 +526,7 @@ export default function Dashboard() {
           }
         })
       : [
-          { id: 1, name: 'Computer Science & Engineering', code: 'CSE', coursesCount: 2, branchesCount: 4, intake: '240 Seats', color: '#8782BC' },
+          { id: 1, name: 'Computer Science & Engineering', code: 'CSE', coursesCount: 2, branchesCount: 4, intake: '240 Seats', color: '#1769C2' },
           { id: 2, name: 'Electronics & Communication', code: 'ECE', coursesCount: 1, branchesCount: 2, intake: '120 Seats', color: '#0284C7' },
           { id: 3, name: 'Mechanical & Automation', code: 'MECH', coursesCount: 1, branchesCount: 2, intake: '120 Seats', color: '#0D9488' },
           { id: 4, name: 'Civil & Structural Engineering', code: 'CIVIL', coursesCount: 1, branchesCount: 1, intake: '60 Seats', color: '#F59E0B' },
@@ -545,11 +545,11 @@ export default function Dashboard() {
 
   // End-to-End Connected Academic Setup Workflow Pipeline
   const setupFlowSteps = [
-    { title: 'Academic Year', count: selectedAcademicYear ? `${yearName.split(' ')[0]}` : 'Configure', route: '/academic-year-management', icon: FiCalendar, isConfigured: Boolean(selectedAcademicYear), color: '#8782BC' },
+    { title: 'Academic Year', count: selectedAcademicYear ? `${yearName.split(' ')[0]}` : 'Configure', route: '/academic-year-management', icon: FiCalendar, isConfigured: Boolean(selectedAcademicYear), color: '#1769C2' },
     { title: 'Courses', count: `${scopedCourses.length} Programs`, route: '/courses', icon: FiLayers, isConfigured: scopedCourses.length > 0, color: '#0D9488' },
     { title: 'Departments', count: `${departments.length} Units`, route: '/department-management', icon: FiGrid, isConfigured: departments.length > 0, color: '#0284C7' },
     { title: 'Branches', count: `${scopedBranches.length} Streams`, route: '/branches', icon: FiBriefcase, isConfigured: scopedBranches.length > 0, color: '#F59E0B' },
-    { title: 'Semesters', count: `${semesters.length} Terms`, route: '/semester-management', icon: FiClock, isConfigured: semesters.length > 0, color: '#8782BC' },
+    { title: 'Semesters', count: `${semesters.length} Terms`, route: '/semester-management', icon: FiClock, isConfigured: semesters.length > 0, color: '#1769C2' },
     { title: 'Sections', count: `${scopedSections.length} Batches`, route: '/section-management', icon: FiUsers, isConfigured: scopedSections.length > 0, color: '#0284C7' },
     { title: 'Subjects', count: `${subjects.length} Syllabi`, route: '/subject-management', icon: FiBookOpen, isConfigured: subjects.length > 0, color: '#0D9488' },
     { title: 'Admissions', count: `${scopedAdmissions.length} Enrolled`, route: '/student-management/admissions', icon: FiUserCheck, isConfigured: scopedAdmissions.length > 0, color: '#10B981' },
@@ -574,9 +574,8 @@ export default function Dashboard() {
           <div className="ym-card ym-welcome-card">
             <div className="ym-welcome-text">
               <div className="ym-welcome-greeting">
-                <span className="ym-wave-hand">👋</span>
                 <div>
-                  <h2>Welcome back, {userName || 'there'} 👋</h2>
+                  <h2>Welcome back, {userName || 'there'}</h2>
                   <p>Unified institutional operations, student lifecycle & academic delivery.</p>
                 </div>
               </div>
@@ -598,22 +597,9 @@ export default function Dashboard() {
               </div>
             </div>
 
-            {/* Campus illustration */}
+            {/* University campus illustration */}
             <div className="ym-welcome-visual" aria-hidden="true">
-              <svg className="ym-campus-art" viewBox="0 0 300 220" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <circle cx="239" cy="48" r="25" fill="#FDE68A" fillOpacity=".9" />
-                <path d="M21 190H280" stroke="white" strokeOpacity=".48" strokeWidth="5" strokeLinecap="round" />
-                <path d="M32 115 83 81l52 34v70H32v-70Z" fill="#DDD6FE" />
-                <path d="M25 116 83 76l58 40H25Z" fill="#A78BFA" />
-                <path d="M45 128h17v18H45zm29 0h17v18H74zm-29 31h17v20H45zm29 0h17v20H74z" fill="#BAE6FD" />
-                <path d="M126 104 190 57l70 47v81H126v-81Z" fill="#fff" fillOpacity=".96" />
-                <path d="m116 105 74-57 80 57H116Z" fill="#C4B5FD" />
-                <path d="M174 85h33v100h-33z" fill="#818CF8" />
-                <path d="M141 119h19v21h-19zm81 0h20v21h-20zm-81 38h19v22h-19zm81 0h20v22h-20z" fill="#BAE6FD" />
-                <path d="M185 63h11V31h-11zM190 29v-9m-8 4h16" stroke="#fff" strokeWidth="3" strokeLinecap="round" />
-                <path d="M20 188c10-23 22-23 32 0m205 0c10-27 22-28 34 0" stroke="#5EEAD4" strokeWidth="7" strokeLinecap="round" />
-                <path d="M14 193h272" stroke="#fff" strokeOpacity=".35" strokeWidth="7" strokeLinecap="round" />
-              </svg>
+              <img className="ym-campus-art" src="/university-campus.svg" alt="" />
             </div>
           </div>
 
@@ -642,7 +628,7 @@ export default function Dashboard() {
             <ExplicitWaveChart
               labels={inflowTrendData.labels}
               points={inflowTrendData.points}
-              color="#8782BC"
+              color="#1769C2"
               gradientId="ymWaveGradIndigo"
               unit="Students"
             />
@@ -988,7 +974,7 @@ export default function Dashboard() {
             {role === ROLES.ADMIN ? (
               <>
                 <Link to="/student-management/admissions/new" className="ym-action-item">
-                  <div className="ym-action-icon" style={{ backgroundColor: 'rgba(99, 102, 241, 0.12)', color: '#6366F1' }}><FiUserPlus /></div>
+                  <div className="ym-action-icon" style={{ backgroundColor: 'rgba(23, 105, 194, 0.12)', color: '#1769C2' }}><FiUserPlus /></div>
                   <div className="ym-action-body">
                     <strong>New Student Admission</strong>
                     <small>Enroll new candidate</small>
@@ -1033,7 +1019,7 @@ export default function Dashboard() {
                 </Link>
 
                 <Link to="/timetable" className="ym-action-item">
-                  <div className="ym-action-icon" style={{ backgroundColor: 'rgba(135, 130, 188, 0.18)', color: '#8782BC' }}><FiCalendar /></div>
+                  <div className="ym-action-icon" style={{ backgroundColor: 'rgba(23, 105, 194, 0.12)', color: '#1769C2' }}><FiCalendar /></div>
                   <div className="ym-action-body">
                     <strong>Timetable Matrix</strong>
                     <small>Schedule classes & rooms</small>
@@ -1061,7 +1047,7 @@ export default function Dashboard() {
 /* =========================================================================
    EXPLICIT WAVE CHART WITH VISIBLE X-AXIS, Y-AXIS GRID & POINT LABELS
    ========================================================================= */
-function ExplicitWaveChart({ labels = [], points = [], color = '#8782BC', gradientId = 'grad', unit = '' }) {
+function ExplicitWaveChart({ labels = [], points = [], color = '#1769C2', gradientId = 'grad', unit = '' }) {
   const [hoveredIdx, setHoveredIdx] = useState(null)
 
   const width = 300
@@ -1151,7 +1137,7 @@ function ExplicitWaveChart({ labels = [], points = [], color = '#8782BC', gradie
               y1={paddingTop}
               x2={width - paddingRight}
               y2={paddingTop}
-              stroke="var(--border, #DFDCED)"
+              stroke="var(--border, #D8E4F2)"
               strokeDasharray="3 3"
               strokeWidth="0.8"
             />
@@ -1160,7 +1146,7 @@ function ExplicitWaveChart({ labels = [], points = [], color = '#8782BC', gradie
               y1={height - paddingBottom}
               x2={width - paddingRight}
               y2={height - paddingBottom}
-              stroke="var(--border, #DFDCED)"
+              stroke="var(--border, #D8E4F2)"
               strokeWidth="1"
             />
 

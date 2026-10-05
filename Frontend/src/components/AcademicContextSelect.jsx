@@ -52,8 +52,7 @@ export default function AcademicContextSelect({ kind, compact = false }) {
       </select>
     </label>}
     {(error || context.error) && <div className="workspace-context-select__error" role="alert">
-      <span>{error || 'Unable to load options.'}</span>
-      <button type="button" disabled={context.loading} onClick={() => { setError(''); context.refreshHierarchy() }}>Retry</button>
+      <button className="workspace-context-select__retry" type="button" disabled={context.loading} onClick={() => { setError(''); context.refreshHierarchy() }}>Retry</button>
     </div>}
     {!context.loading && !context.error && !items.length && <small>No {isCollege ? 'colleges' : 'academic years'} available.</small>}
     {applying && <small role="status">Updating...</small>}

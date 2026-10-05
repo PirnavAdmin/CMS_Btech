@@ -1346,14 +1346,14 @@ export default function RoomsManagement({ formMode = false, viewMode = false }) 
                 className="rooms-add-btn"
                 onClick={handleOpenCreate}
               >
-                <FiPlus /> Add Room / Classroom
+                <FiPlus /> Add Classroom
               </button>
             </div>
           </div>
 
           {/* Controls Toolbar */}
           <div className="course-toolbar rooms-toolbar">
-            <div className="sa-search rooms-search">
+            <div className="rooms-search">
               <FiSearch aria-hidden="true" />
               <input
                 type="search"

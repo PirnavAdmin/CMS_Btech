@@ -14,7 +14,7 @@ if (typeof window !== 'undefined' && window.localStorage) {
 }
 
 const normalizeBaseUrl = (value = '') => value.trim().replace(/\/+$/, '')
-const DEFAULT_API_BASE_URL = 'https://dreamless-fidgeting-astronaut.ngrok-free.dev'
+const DEFAULT_API_BASE_URL = 'https://abreast-curling-tutor.ngrok-free.dev'
 
 export const API_BASE_URL = import.meta.env.DEV
   ? ''
@@ -344,13 +344,18 @@ const refreshAccessToken = async () => {
 }
 
 const pendingGetRequests = new Map()
-const request = async (url, options = {}, retried = false, bypassDedupe = false) => {
+const request = async (url, options = {}, retried = false, bypassDedupe = false, suppressApiFailureNotice = false) => {
+  suppressApiFailureNotice = suppressApiFailureNotice || options.suppressApiFailureNotice === true
+  if (options.suppressApiFailureNotice !== undefined) {
+    options = { ...options }
+    delete options.suppressApiFailureNotice
+  }
   if (!retried && !bypassDedupe) ({ url, options } = collegeRequest(url, options))
   const method = String(options.method || 'GET').toUpperCase()
   if (method === 'GET' && !bypassDedupe) {
     const key = `${method}:${url}`
     if (pendingGetRequests.has(key)) return pendingGetRequests.get(key)
-    const pending = request(url, options, retried, true).finally(() => pendingGetRequests.delete(key))
+    const pending = request(url, options, retried, true, suppressApiFailureNotice).finally(() => pendingGetRequests.delete(key))
     pendingGetRequests.set(key, pending)
     return pending
   }
@@ -362,11 +367,11 @@ const request = async (url, options = {}, retried = false, bypassDedupe = false)
       headers: { 'ngrok-skip-browser-warning': 'true', ...options.headers, ...(token ? { Authorization: `Bearer ${token}` } : {}) },
     })
   } catch {
-    throw createApiUnavailableError()
+    throw createApiUnavailableError(0, !suppressApiFailureNotice)
   }
   if (response.status === 401 && !retried && url !== API_ENDPOINTS.auth.refresh) {
     await refreshAccessToken()
-    return request(url, options, true, true)
+    return request(url, options, true, true, suppressApiFailureNotice)
   }
   const body = await readBody(response)
   if (!response.ok || body?.success === false) {
@@ -378,7 +383,7 @@ const request = async (url, options = {}, retried = false, bypassDedupe = false)
       console.error('API request failed', { url, method: options.method || 'GET', status: response.status })
     }
     if (response.status >= 500) {
-      notifyApiUnavailable({ status: response.status })
+      if (!suppressApiFailureNotice) notifyApiUnavailable({ status: response.status })
       const error = new Error(GENERIC_ERROR_MESSAGE)
       error.status = response.status
       error.backendMessage = validationMessage(body)
@@ -603,8 +608,8 @@ const academicYearPayload = (year) => {
 }
 
 export const academicYearApi = {
-  getAll: async () => {
-    const response = await request(API_ENDPOINTS.academicYears.list)
+  getAll: async (options = {}) => {
+    const response = await request(API_ENDPOINTS.academicYears.list, options)
     return listResponse(response)
   },
   getById: async (id) => {
@@ -833,8 +838,8 @@ const jsonRequest = (url, method, payload) => request(url, {
 const multipartRequest = (url, form) => request(url, { method: 'POST', body: form })
 
 export const facultyApi = {
-  getAll: async (params) => listData(await request(withQuery(API_ENDPOINTS.faculty.list, params))),
-  search: async (params) => listData(await request(withQuery(API_ENDPOINTS.faculty.search, params))),
+  getAll: async (params, requestOptions) => listData(await request(withQuery(API_ENDPOINTS.faculty.list, params), requestOptions)),
+  search: async (params, requestOptions) => listData(await request(withQuery(API_ENDPOINTS.faculty.search, params), requestOptions)),
   getById: async (facultyId) => normalizeRecord(await request(API_ENDPOINTS.faculty.detail(requiredId(facultyId, 'Faculty ID')))),
   create: async (payload, collegeId = payload?.collegeId) => {
     const resolvedCollegeId = Number(collegeId)
@@ -868,7 +873,7 @@ export const facultyProfileApi = {
   // The faculty master record may exist before its optional extended profile.
   // The current API returns 409 for that state in some deployments; treat it
   // like a normal missing profile while keeping all other failures visible.
-  get: async (facultyId) => normalizeRecord(await request(API_ENDPOINTS.facultyProfiles.detail(requiredId(facultyId, 'Faculty ID')), { silentStatuses: [404, 409] })),
+  get: async (facultyId, requestOptions = {}) => normalizeRecord(await request(API_ENDPOINTS.facultyProfiles.detail(requiredId(facultyId, 'Faculty ID')), { silentStatuses: [404, 409], ...requestOptions })),
   create: async (facultyId, payload) => normalizeRecord(await jsonRequest(API_ENDPOINTS.facultyProfiles.create(requiredId(facultyId, 'Faculty ID')), 'POST', payload)),
   update: async (facultyId, payload) => normalizeRecord(await jsonRequest(API_ENDPOINTS.facultyProfiles.update(requiredId(facultyId, 'Faculty ID')), 'PUT', payload)),
 }
@@ -893,7 +898,7 @@ export const facultySubjectAllocationApi = {
 }
 
 export const facultyAttendanceApi = {
-  getDaily: async params => listData(await request(withQuery(API_ENDPOINTS.facultyAttendance.daily, params))),
+  getDaily: async (params, requestOptions) => listData(await request(withQuery(API_ENDPOINTS.facultyAttendance.daily, params), requestOptions)),
   bulk: async payload => normalizeRecord(await jsonRequest(API_ENDPOINTS.facultyAttendance.bulk, 'POST', payload)),
   getWeekly: async params => listData(await request(withQuery(API_ENDPOINTS.facultyAttendance.weekly, params))),
   getMonthly: async params => listData(await request(withQuery(API_ENDPOINTS.facultyAttendance.monthly, params))),
@@ -1300,34 +1305,32 @@ export default API_ENDPOINTS
 
 // Leave endpoints may wrap their collection by resource name. Do not turn
 // an unrecognized response (including an HTML tunnel page) into "no records".
-const leaveList = async (url, params, keys) => {
-  let current = await request(withQuery(url, params))
-  if (Array.isArray(current)) return current
-  if (current == null) return []
+const leaveList = async (url, params, keys, requestOptions) => {
+  let current = await request(withQuery(url, params), requestOptions)
+  const collectionKeys = new Set([...keys, 'items', 'content', 'results', 'records', 'rows', 'data', 'value', '$values'].map(key => key.toLowerCase()))
   for (let depth = 0; depth < 6; depth += 1) {
     if (Array.isArray(current)) return current
     if (!current || typeof current !== 'object') break
-    const key = [...keys, 'items', 'content', 'results', 'records', 'rows', 'data'].find(name => current[name] != null)
-    if (!key) break
-    current = current[key]
-    if (Array.isArray(current)) return current
-    if (current == null) return []
+    const entry = Object.entries(current).find(([name, value]) => collectionKeys.has(name.toLowerCase()) && value != null)
+    if (!entry) break
+    current = entry[1]
   }
-  return Array.isArray(current) ? current : []
+  if (Array.isArray(current)) return current
+  throw new Error('The leave service returned an unexpected response.')
 }
 
 export const facultyLeaveApi = {
-  getRequests: async params => leaveList(API_ENDPOINTS.facultyLeave.requests, params, ['requests', 'leaveRequests']),
+  getRequests: async (params, requestOptions) => leaveList(API_ENDPOINTS.facultyLeave.requests, params, ['requests', 'leaveRequests'], requestOptions),
   createRequest: async payload => normalizeRecord(await jsonRequest(API_ENDPOINTS.facultyLeave.requests, 'POST', payload)),
   getRequest: async id => normalizeRecord(await request(API_ENDPOINTS.facultyLeave.request(requiredId(id, 'Request ID')))),
   approve: async id => request(API_ENDPOINTS.facultyLeave.approve(requiredId(id, 'Request ID')), { method: 'PUT' }),
   reject: async (id, rejectionReason) => jsonRequest(API_ENDPOINTS.facultyLeave.reject(requiredId(id, 'Request ID')), 'PUT', { rejectionReason }),
-  getHistory: async params => leaveList(API_ENDPOINTS.facultyLeave.history, params, ['history', 'leaveHistory', 'requests', 'leaveRequests']),
-  getBalances: async params => leaveList(API_ENDPOINTS.facultyLeave.balances, params, ['balances', 'leaveBalances']),
-  getTypes: async params => leaveList(API_ENDPOINTS.facultyLeave.types, params, ['types', 'leaveTypes']),
+  getHistory: async (params, requestOptions) => leaveList(API_ENDPOINTS.facultyLeave.history, params, ['history', 'leaveHistory', 'requests', 'leaveRequests'], requestOptions),
+  getBalances: async (params, requestOptions) => leaveList(API_ENDPOINTS.facultyLeave.balances, params, ['balances', 'leaveBalances'], requestOptions),
+  getTypes: async (params, requestOptions) => leaveList(API_ENDPOINTS.facultyLeave.types, params, ['types', 'leaveTypes'], requestOptions),
   createType: async payload => normalizeRecord(await jsonRequest(API_ENDPOINTS.facultyLeave.types, 'POST', payload)),
   updateType: async (id, payload) => normalizeRecord(await jsonRequest(API_ENDPOINTS.facultyLeave.type(requiredId(id, 'Leave type ID')), 'PUT', payload)),
-  getPolicies: async params => leaveList(API_ENDPOINTS.facultyLeave.policies, params, ['policies', 'leavePolicies']),
+  getPolicies: async (params, requestOptions) => leaveList(API_ENDPOINTS.facultyLeave.policies, params, ['policies', 'leavePolicies'], requestOptions),
   getPolicy: async id => normalizeRecord(await request(API_ENDPOINTS.facultyLeave.policy(requiredId(id, 'Policy ID')))),
   createPolicy: async payload => normalizeRecord(await jsonRequest(API_ENDPOINTS.facultyLeave.policies, 'POST', payload)),
   updatePolicy: async (id, payload) => normalizeRecord(await jsonRequest(API_ENDPOINTS.facultyLeave.policy(requiredId(id, 'Policy ID')), 'PUT', payload)),
@@ -1335,7 +1338,7 @@ export const facultyLeaveApi = {
   deactivatePolicy: async id => request(API_ENDPOINTS.facultyLeave.deactivate(requiredId(id, 'Policy ID')), { method: 'POST' }),
 }
 export const facultyPayrollApi = {
-  getAll: async params => listData(await request(withQuery(API_ENDPOINTS.facultyPayroll.list, params))),
+  getAll: async (params, requestOptions) => listData(await request(withQuery(API_ENDPOINTS.facultyPayroll.list, params), requestOptions)),
   getById: async id => normalizeRecord(await request(API_ENDPOINTS.facultyPayroll.detail(requiredId(id, 'Payroll ID')))),
   getSalaryRecords: async params => listData(await request(withQuery(API_ENDPOINTS.facultyPayroll.salaries, params))),
   getPayslips: async params => listData(await request(withQuery(API_ENDPOINTS.facultyPayroll.payslips, params))),

@@ -1,4 +1,4 @@
-﻿:root[data-theme="dark"] {
+:root[data-theme="dark"] {
   --text-primary: #F8FAFC !important;
   --text-secondary: #CBD5E1 !important;
   --text-muted: #94A3B8 !important;
@@ -57,9 +57,9 @@
 :root[data-theme="dark"] .page-content thead th,
 :root[data-theme="dark"] table thead th,
 :root[data-theme="dark"] table th {
-  background: #8782BC !important;
+  background: #1769C2 !important;
   color: #FFFFFF !important;
-  border-bottom: 2px solid #756FB2 !important;
+  border-bottom: 2px solid #125AA8 !important;
 }
 
 :root[data-theme="dark"] input,

@@ -137,6 +137,12 @@ function getStudentYear(semester) {
   return ''
 }
 
+function getSemesterNumber(semester) {
+  const configured = Number(semester.semesterNumber ?? semester.semesterNo)
+  if (Number.isInteger(configured) && configured > 0) return configured
+  return Number(String(semester.semesterName || semester.name || '').match(/semester\s*(\d+)/i)?.[1] || 0)
+}
+
 function createId(prefix) {
   return `${prefix}-${Date.now()}`
 }
@@ -354,10 +360,12 @@ function CreditsManagement() {
 
   const reloadCreditData = async () => {
     setCreditLoading(true)
+    let subjectLoadError = ''
+    let subjectRowsPromise = Promise.resolve([])
     try {
-      const subjectRowsPromise = subjectService.getSubjects({ liveOnly: true })
+      subjectRowsPromise = subjectService.getSubjects({ liveOnly: true })
         .then(rows => { setSubjectApiError(''); return rows })
-        .catch(error => { setSubjectApiError(error.message || 'Unable to load subjects from the Subject API.'); return [] })
+        .catch(error => { subjectLoadError = error.message || 'Unable to load subjects from the Subject API.'; setSubjectApiError(subjectLoadError); return [] })
       const [studentRows, subjectRows, registrationRows, courseRows, branchRows, semesterRows, yearRows, departmentRows, dashboard] = await Promise.all([
         studentApi.getAll(), subjectRowsPromise,
         creditManagementApi.getRegistrations({ status: 1 }), academicService.getCourses(), academicService.getBranches(), academicService.getSemesters(),
@@ -393,7 +401,12 @@ function CreditsManagement() {
       setStudents(studentsLive); setSubjects(subjectsLive); setCredits(creditsLive)
       setMasterCourses(courseList); setMasterBranches(branchList); setMasterSemesters(semesterList); setMasterYears(yearList); setMasterDepartments(departmentList)
       setCreditDashboard(dashboard)
-    } catch (error) { showNotice('error', error.message || 'Unable to load credit management data from the API.') }
+    } catch (error) {
+      // The subject table already shows its own retry state; don't repeat the same
+      // backend failure in the page-level alert when that request also failed.
+      await subjectRowsPromise
+      if (!subjectLoadError || activeTab !== 'subjects') showNotice('error', error.message || 'Unable to load credit management data from the API.')
+    }
     finally { setCreditLoading(false) }
   }
   useEffect(() => { reloadCreditData() }, [])
@@ -736,8 +749,11 @@ function CreditsManagement() {
       if (subjectFilters.branchId) {
         filtered = filtered.filter(s => !s.branchId || String(s.branchId) === String(subjectFilters.branchId))
       }
+      if (subjectFilters.level) {
+        filtered = filtered.filter(semester => getStudentYear(String(getSemesterNumber(semester))) === subjectFilters.level)
+      }
       return filtered.map(semester => {
-        const number = Number(semester.semesterNumber ?? semester.semesterNo ?? String(semester.semesterName || semester.name || '').match(/semester\s*(\d+)/i)?.[1] ?? 0)
+        const number = getSemesterNumber(semester)
         const name = semester.semesterName || semester.name
         const label = name && !/^\s*\d{4}\s*[-/]\s*\d{2,4}\s*$/.test(name)
           ? name
@@ -755,7 +771,7 @@ function CreditsManagement() {
       academicYearId: [],
       courseId: ['branchId', 'semesterId'],
       branchId: ['semesterId'],
-      level: [],
+      level: ['semesterId'],
       semesterId: [],
     }
     setSubjectFilters(previous => ({ ...previous, ...Object.fromEntries((childFields[field] || []).map(child => [child, ''])), [field]: value }))
