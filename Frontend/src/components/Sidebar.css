@@ -330,3 +330,20 @@
   background: rgba(255,255,255,.38);
 }
 
+/* Give sidebar navigation icons a soft blue glow against the navy rail. */
+:root #root .sidebar .sidebar-navigation > a svg {
+  color: #8DD7FF !important;
+  filter: drop-shadow(0 0 5px rgba(91, 190, 255, .62));
+  transition: color .15s ease, filter .15s ease;
+}
+
+:root #root .sidebar .sidebar-navigation > a:hover svg {
+  color: #FFFFFF !important;
+  filter: drop-shadow(0 0 7px rgba(141, 215, 255, .9));
+}
+
+:root #root .sidebar .sidebar-navigation > a.active svg {
+  color: #FFFFFF !important;
+  filter: drop-shadow(0 0 6px rgba(141, 215, 255, .82));
+}
+

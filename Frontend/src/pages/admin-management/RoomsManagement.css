@@ -106,43 +106,87 @@
    ========================================== */
 .rooms-toolbar {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: flex-start;
   flex-wrap: wrap;
-  gap: 12px;
-  padding: 12px 18px;
-  background: var(--surface-soft, #F8FAFC);
+  gap: 10px;
+  padding: 14px 18px;
+  background: #EEF5FD;
   border-bottom: 1px solid var(--border, #E2E8F0);
+}
+
+:root:not([data-theme="dark"]) #root .page-content .rooms-page .rooms-toolbar {
+  background: #EEF5FD !important;
+  border-color: #D4E3F3 !important;
 }
 
 .rooms-search {
   display: flex;
   align-items: center;
-  gap: 8px;
-  height: 38px;
-  padding: 0 12px;
-  border: 1px solid var(--border, #CBD5E1);
-  border-radius: 8px;
+  gap: 28px;
+  width: 100%;
+  height: 64px;
+  padding: 0 20px;
+  border: 1px solid #CFDEEF;
+  border-radius: 14px;
   background: var(--surface, #FFFFFF);
   color: var(--text-primary, #0F172A);
-  min-width: 260px;
-  max-width: 380px;
-  flex: 1;
+  min-width: 0;
+  max-width: none;
+  flex: 0 0 auto;
 }
 
 .rooms-search svg {
-  color: var(--text-muted, #94A3B8);
-  font-size: 15px;
+  width: 20px;
+  height: 20px;
+  color: #426A95;
+  font-size: 20px;
   flex-shrink: 0;
 }
 
 .rooms-search input {
   width: 100%;
-  border: none;
-  outline: none;
-  background: transparent;
-  font-size: 13px;
+  min-width: 0;
+  height: 100%;
+  padding: 0;
+  border: 0 !important;
+  border-radius: 0 !important;
+  outline: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  font-size: 17px !important;
+  font-weight: 600 !important;
   color: var(--text-primary, #0F172A);
+}
+
+.rooms-search input::placeholder {
+  color: #8192A8 !important;
+  opacity: 1 !important;
+  font-weight: 600 !important;
+}
+
+:root:not([data-theme="dark"]) #root .page-content .rooms-search > input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="range"]):not([type="color"]),
+:root[data-theme="dark"] #root .page-content .rooms-search > input {
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+.page-content .rooms-search > input:focus,
+.page-content .rooms-search > input:focus-visible {
+  border: 0 !important;
+  outline: 0 !important;
+  box-shadow: none !important;
+}
+
+:root:not([data-theme="dark"]) #root .page-content .rooms-search > input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="range"]):not([type="color"]):is(:focus, :focus-visible),
+:root[data-theme="dark"] #root .page-content .rooms-search > input:is(:focus, :focus-visible) {
+  border: 0 !important;
+  outline: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
 }
 
 .rooms-clear-search {
@@ -163,6 +207,7 @@
   display: flex;
   align-items: center;
   gap: 10px;
+  width: 100%;
   flex-wrap: wrap;
 }
 
@@ -183,6 +228,12 @@
 .rooms-search:focus-within {
   border-color: #125AA8;
   box-shadow: 0 0 0 3px rgba(18, 90, 168, 0.15);
+}
+
+/* Keep the focused room search to one visible outline. */
+.page-content .rooms-search:focus-within {
+  border-color: #CFDEEF;
+  box-shadow: none;
 }
 
 .rooms-clear-btn {
@@ -1674,4 +1725,3 @@
     grid-template-columns: 1fr;
   }
 }
-

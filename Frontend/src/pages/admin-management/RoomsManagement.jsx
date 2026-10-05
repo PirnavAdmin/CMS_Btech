@@ -1353,7 +1353,7 @@ export default function RoomsManagement({ formMode = false, viewMode = false }) 
 
           {/* Controls Toolbar */}
           <div className="course-toolbar rooms-toolbar">
-            <div className="sa-search rooms-search">
+            <div className="rooms-search">
               <FiSearch aria-hidden="true" />
               <input
                 type="search"
