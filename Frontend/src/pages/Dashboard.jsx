@@ -574,9 +574,8 @@ export default function Dashboard() {
           <div className="ym-card ym-welcome-card">
             <div className="ym-welcome-text">
               <div className="ym-welcome-greeting">
-                <span className="ym-wave-hand">ðŸ‘‹</span>
                 <div>
-                  <h2>Welcome back, {userName || 'there'} ðŸ‘‹</h2>
+                  <h2>Welcome back, {userName || 'there'}</h2>
                   <p>Unified institutional operations, student lifecycle & academic delivery.</p>
                 </div>
               </div>
