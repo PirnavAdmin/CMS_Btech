@@ -14,6 +14,25 @@
   --status-info-text: #7dd3fc;
 }
 
+/* Let the page underneath stay recognizable when any modal, drawer, or dialog opens. */
+:root[data-theme="dark"] :is(
+  [class*="-backdrop"], [class*="modal-overlay"],
+  [class*="dialog-backdrop"], [class*="dialog-overlay"],
+  [class*="confirm-backdrop"], [class*="confirm-overlay"],
+  [class*="drawer-overlay"], [class*="-overlay"], .backdrop
+):not(.context-guard-overlay):not(.loading-overlay) {
+  background: rgba(3, 8, 16, .4) !important;
+  -webkit-backdrop-filter: blur(3px) saturate(.9) !important;
+  backdrop-filter: blur(3px) saturate(.9) !important;
+}
+
+:root[data-theme="dark"] dialog::backdrop,
+:root[data-theme="dark"] .shared-view-dialog::backdrop {
+  background: rgba(3, 8, 16, .4) !important;
+  -webkit-backdrop-filter: blur(3px) saturate(.9) !important;
+  backdrop-filter: blur(3px) saturate(.9) !important;
+}
+
 :root[data-theme="dark"] #root :is(
   .erp-status-badge, .semester-badge.status, .cm-status, .cm-status-badge,
   .section-status, .status-pill, .status-badge, .department-detail-status,
@@ -105,10 +124,63 @@
   color: var(--text-secondary) !important;
 }
 
+/* Preserve the popup layout while giving its cards and badges dark-theme surfaces. */
+:root[data-theme="dark"] #root .department-modal-backdrop .hod-dept-card,
+:root[data-theme="dark"] #root .department-modal-backdrop .hod-selected-preview-card {
+  border-color: #334155 !important;
+  background: linear-gradient(135deg, #1e293b 0%, #172538 100%) !important;
+  color: #e2e8f0 !important;
+}
+
+:root[data-theme="dark"] #root .department-modal-backdrop .hod-dept-card :is(.hod-dept-name, .hod-dept-meta-row, .hod-dept-meta-row strong),
+:root[data-theme="dark"] #root .department-modal-backdrop .hod-selected-preview-card :is(.hod-selected-name, .meta-val) {
+  color: #f1f5f9 !important;
+}
+
+:root[data-theme="dark"] #root .department-modal-backdrop :is(.hod-dept-code-tag, .hod-selected-empid, .hod-candidate-count-badge) {
+  border-color: #36516c !important;
+  background: #19344d !important;
+  color: #bfdbfe !important;
+}
+
+:root[data-theme="dark"] #root .department-modal-backdrop .hod-selected-meta-grid {
+  border-color: #334155 !important;
+}
+
+:root[data-theme="dark"] #root .department-modal-backdrop .hod-selected-status-pill {
+  background: #173d32 !important;
+  color: #86efac !important;
+}
+
+:root[data-theme="dark"] #root .department-modal-backdrop .hod-current-pill {
+  border-color: #61404b !important;
+  background: #382630 !important;
+  color: #fda4af !important;
+}
+
+:root[data-theme="dark"] #root .department-modal-backdrop .hod-current-pill strong,
+:root[data-theme="dark"] #root .department-modal-backdrop .hod-dept-meta-row strong {
+  color: #f1f5f9 !important;
+}
+
+:root[data-theme="dark"] #root .department-modal-backdrop :is(.hod-dept-meta-row, .hod-selected-meta-item .meta-label) {
+  color: #cbd5e1 !important;
+}
+
+:root[data-theme="dark"] #root .department-modal-backdrop .hod-modal-header-icon {
+  border-color: #d8e4f2 !important;
+  background: #eaf3ff !important;
+  color: #125aa8 !important;
+}
+
+:root[data-theme="dark"] #root .department-modal-backdrop :is(.hod-dept-avatar, .hod-selected-avatar) {
+  color: #ffffff !important;
+}
+
 /* Portalled dialogs and dropdowns are outside .page-content. */
 :root[data-theme="dark"] :is([role="dialog"], .searchable-select__menu) {
-  background-color: var(--surface) !important;
-  color: var(--text-primary);
+  background: var(--surface-raised) !important;
+  color: var(--text-primary) !important;
   border-color: var(--border-strong) !important;
 }
 :root[data-theme="dark"] [role="dialog"] :is(h1, h2, h3, legend) {
