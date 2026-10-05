@@ -330,20 +330,38 @@
   background: rgba(255,255,255,.38);
 }
 
-/* Give sidebar navigation icons a soft blue glow against the navy rail. */
+/* Keep each navigation icon's assigned tone visible on the navy sidebar. */
+:root #root .sidebar .sidebar-navigation > a.sidebar-link--blue:is(.active, :hover, :not(.active)) svg {
+  color: #60A5FA !important;
+  filter: drop-shadow(0 0 5px rgba(96, 165, 250, .48));
+}
+:root #root .sidebar .sidebar-navigation > a.sidebar-link--cyan:is(.active, :hover, :not(.active)) svg {
+  color: #22D3EE !important;
+  filter: drop-shadow(0 0 5px rgba(34, 211, 238, .45));
+}
+:root #root .sidebar .sidebar-navigation > a.sidebar-link--green:is(.active, :hover, :not(.active)) svg {
+  color: #4ADE80 !important;
+  filter: drop-shadow(0 0 5px rgba(74, 222, 128, .45));
+}
+:root #root .sidebar .sidebar-navigation > a.sidebar-link--purple:is(.active, :hover, :not(.active)) svg {
+  color: #C4B5FD !important;
+  filter: drop-shadow(0 0 5px rgba(196, 181, 253, .45));
+}
+:root #root .sidebar .sidebar-navigation > a.sidebar-link--orange:is(.active, :hover, :not(.active)) svg {
+  color: #FDBA74 !important;
+  filter: drop-shadow(0 0 5px rgba(253, 186, 116, .45));
+}
+:root #root .sidebar .sidebar-navigation > a.sidebar-link--pink:is(.active, :hover, :not(.active)) svg {
+  color: #F9A8D4 !important;
+  filter: drop-shadow(0 0 5px rgba(249, 168, 212, .45));
+}
+:root #root .sidebar .sidebar-navigation > a.sidebar-link--gold:is(.active, :hover, :not(.active)) svg {
+  color: #FACC15 !important;
+  filter: drop-shadow(0 0 5px rgba(250, 204, 21, .45));
+}
 :root #root .sidebar .sidebar-navigation > a svg {
-  color: #8DD7FF !important;
-  filter: drop-shadow(0 0 5px rgba(91, 190, 255, .62));
   transition: color .15s ease, filter .15s ease;
 }
-
 :root #root .sidebar .sidebar-navigation > a:hover svg {
-  color: #FFFFFF !important;
-  filter: drop-shadow(0 0 7px rgba(141, 215, 255, .9));
+  filter: brightness(1.18) drop-shadow(0 0 7px currentColor);
 }
-
-:root #root .sidebar .sidebar-navigation > a.active svg {
-  color: #FFFFFF !important;
-  filter: drop-shadow(0 0 6px rgba(141, 215, 255, .82));
-}
-
