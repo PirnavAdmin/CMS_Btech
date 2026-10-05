@@ -78,7 +78,9 @@ export function planningErrors(config, sources, scope, entries = []) {
   const errors = [], calendar = config?.calendar, periods = config?.periods || []
   const bounds = calendarBounds(sources, scope)
   if (!calendar?.reviewed) errors.push('Review the working calendar and confirm holidays before generation or publication.')
-  if (!validDate(calendar?.startDate) || !validDate(calendar?.endDate) || calendar.startDate > calendar.endDate) errors.push('Enter a valid timetable start and end date.')
+  if (!validDate(calendar?.startDate) || !validDate(calendar?.endDate)) errors.push('Enter a valid timetable start and end date.')
+  else if (calendar.startDate >= calendar.endDate) errors.push('End date must be later than start date.')
+  else if (bounds.startDate && bounds.endDate && bounds.startDate >= bounds.endDate) errors.push('The selected academic year and semester do not allow a valid date range. Update their date ranges before continuing.')
   else {
     if ((bounds.startDate && calendar.startDate < bounds.startDate) || (bounds.endDate && calendar.endDate > bounds.endDate)) errors.push('Timetable dates must stay within the academic year and semester dates.')
     if (!calendarDays(calendar).length) errors.push('No working dates exist in the reviewed calendar (maximum range: two years).')

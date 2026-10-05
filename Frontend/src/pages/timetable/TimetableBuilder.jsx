@@ -9,13 +9,28 @@ import { same, matchesScope } from '../../utils/timetableUtils'
 import { contextOptions, changeContext, hierarchy, scopeSections } from '../../services/timetable/timetableDomain'
 
 const labels = ['Academic Year', 'Department', 'Course', 'Branch', 'Academic Level', 'Semester']
+const initialPlanning = (sources, scope, entries) => ({
+  automatic: { ...DAILY_PERIOD_SETUP },
+  periods: dailyPeriods(DAILY_PERIOD_SETUP).periods,
+  calendar: { ...calendarBounds(sources, scope), startDate: '', endDate: '', workingDays: ['MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY', 'SATURDAY'], reviewed: true, holidays: [] },
+  rooms: roomOptions(sources, entries).map(row => row.value),
+  requirements: {},
+})
+const editablePlanning = planning => {
+  if (!planning?.calendar) return planning
+  const startDate = String(planning.calendar.startDate || '').slice(0, 10)
+  const endDate = String(planning.calendar.endDate || '').slice(0, 10)
+  return startDate && endDate && startDate >= endDate
+    ? { ...planning, calendar: { ...planning.calendar, startDate, endDate: '' } }
+    : planning
+}
 export default function TimetableBuilder({ sources, entries, tables, initial, busy, enabled, refresh, faculty, generate, saveSetup, save, remove, validate, publish, reopen }) {
   const [scope, setScope] = useState(initial || Object.fromEntries(hierarchy.map(field => [field, ''])))
   const [origin, setOrigin] = useState(initial?.origin || 'local')
   const [step, setStep] = useState(initial ? 4 : 1)
   const [selected, setSelected] = useState(initial ? [String(initial.sectionId)] : [])
   const [activeSection, setActiveSection] = useState(initial?.sectionId || '')
-  const [config, setConfig] = useState(initial?.planning || null)
+  const [config, setConfig] = useState(editablePlanning(initial?.planning) || null)
   const options = contextOptions(sources, scope), sections = scopeSections(sources, scope)
   const currentTables = tables.filter(table => (table.origin || 'local') === origin && matchesScope(table, scope) && selected.some(id => same(id, table.sectionId)))
   const table = currentTables.find(row => same(row.sectionId, activeSection)) || currentTables[0]
@@ -27,8 +42,13 @@ export default function TimetableBuilder({ sources, entries, tables, initial, bu
   }
   const setup = () => {
     const existing = tables.find(table => matchesScope(table, scope) && selected.some(id => same(id, table.sectionId)))
-    if (existing) { setOrigin(existing.origin || 'local'); setConfig(existing.planning); setActiveSection(existing.sectionId); setStep(4); return }
-    setConfig({ automatic: { ...DAILY_PERIOD_SETUP }, periods: dailyPeriods(DAILY_PERIOD_SETUP).periods, calendar: { ...calendarBounds(sources, scope), workingDays: ['MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY', 'SATURDAY'], reviewed: true, holidays: [] }, rooms: roomOptions(sources, entries).map(row => row.value), requirements: {} })
+    if (existing) {
+      const existingOrigin = existing.origin || 'local'
+      setOrigin(existingOrigin); setConfig(editablePlanning(existing.planning) || initialPlanning(sources, scope, entries)); setActiveSection(existing.sectionId)
+      setStep(existingOrigin === 'local' && existing.publicationStatus === 'draft' ? 2 : 4)
+      return
+    }
+    setConfig(initialPlanning(sources, scope, entries))
     setStep(2)
   }
   const errors = config ? [...planningErrors(config, sources, { ...scope, sectionId: selected[0] }, entries), ...(config.automaticErrors || [])] : []

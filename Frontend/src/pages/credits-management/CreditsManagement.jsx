@@ -137,6 +137,12 @@ function getStudentYear(semester) {
   return ''
 }
 
+function getSemesterNumber(semester) {
+  const configured = Number(semester.semesterNumber ?? semester.semesterNo)
+  if (Number.isInteger(configured) && configured > 0) return configured
+  return Number(String(semester.semesterName || semester.name || '').match(/semester\s*(\d+)/i)?.[1] || 0)
+}
+
 function createId(prefix) {
   return `${prefix}-${Date.now()}`
 }
@@ -736,8 +742,11 @@ function CreditsManagement() {
       if (subjectFilters.branchId) {
         filtered = filtered.filter(s => !s.branchId || String(s.branchId) === String(subjectFilters.branchId))
       }
+      if (subjectFilters.level) {
+        filtered = filtered.filter(semester => getStudentYear(String(getSemesterNumber(semester))) === subjectFilters.level)
+      }
       return filtered.map(semester => {
-        const number = Number(semester.semesterNumber ?? semester.semesterNo ?? String(semester.semesterName || semester.name || '').match(/semester\s*(\d+)/i)?.[1] ?? 0)
+        const number = getSemesterNumber(semester)
         const name = semester.semesterName || semester.name
         const label = name && !/^\s*\d{4}\s*[-/]\s*\d{2,4}\s*$/.test(name)
           ? name
@@ -755,7 +764,7 @@ function CreditsManagement() {
       academicYearId: [],
       courseId: ['branchId', 'semesterId'],
       branchId: ['semesterId'],
-      level: [],
+      level: ['semesterId'],
       semesterId: [],
     }
     setSubjectFilters(previous => ({ ...previous, ...Object.fromEntries((childFields[field] || []).map(child => [child, ''])), [field]: value }))
