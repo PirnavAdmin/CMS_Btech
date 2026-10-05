@@ -784,7 +784,7 @@ export default function Attendance() {
             {/* Filter Panel */}
             <div className="erp-card erp-filter-card">
               <div className="attendance-filter-toolbar">
-                <label className="course-search">
+                <label className="attendance-search-control">
                   <FiSearch />
                   <input
                     type="text"

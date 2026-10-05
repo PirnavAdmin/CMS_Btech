@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import { FiAlertTriangle, FiPlus, FiRotateCcw, FiSearch, FiX, FiArrowLeft, FiBookOpen } from 'react-icons/fi'
 import DashboardLayout from '../../layouts/DashboardLayout'
@@ -31,6 +31,8 @@ export default function SubjectManagement() {
   const navigate = useNavigate()
   const { scopeRecords, selectedCollegeId, selectedAcademicYearId, selectedAcademicYear } = useAcademic()
   const [subjects, setSubjects] = useState([]), [loading, setLoading] = useState(true), [loadError, setLoadError] = useState('')
+  const tableWrapRef = useRef(null)
+  const [tableScroll, setTableScroll] = useState({ max: 0, value: 0, thumb: 44 })
   const [page, setPage] = useState(1)
   const [allMasters, setMasters] = useState({ years: [], courses: [], branches: [], semesters: [] })
   const masters = { ...allMasters, ...Object.fromEntries(['courses', 'branches', 'semesters'].map(type => [type, scopeRecords(allMasters[type])])) }
@@ -65,6 +67,26 @@ export default function SubjectManagement() {
   const totalPages = Math.max(1, Math.ceil(records.length / PAGE_SIZE))
   const currentPage = Math.min(page, totalPages)
   const paginatedRecords = records.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE)
+  useEffect(() => {
+    const wrapper = tableWrapRef.current
+    if (!wrapper) return undefined
+    const update = () => {
+      const max = Math.max(0, wrapper.scrollWidth - wrapper.clientWidth)
+      const next = { max, value: wrapper.scrollLeft, thumb: Math.max(44, wrapper.clientWidth * wrapper.clientWidth / Math.max(wrapper.scrollWidth, 1)) }
+      setTableScroll(current => current.max === next.max && current.value === next.value && current.thumb === next.thumb ? current : next)
+    }
+    update()
+    wrapper.addEventListener('scroll', update, { passive: true })
+    const observer = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(update)
+    observer?.observe(wrapper)
+    if (wrapper.firstElementChild) observer?.observe(wrapper.firstElementChild)
+    window.addEventListener('resize', update)
+    return () => {
+      wrapper.removeEventListener('scroll', update)
+      observer?.disconnect()
+      window.removeEventListener('resize', update)
+    }
+  }, [loading, loadError, records.length, currentPage])
   const kpis = useMemo(() => ({ total: records.length, active: records.filter(s => String(s.status).toLowerCase() === 'active').length, theory: records.filter(s => /theory/i.test(s.subjectType)).length, lab: records.filter(s => /lab|practical/i.test(s.subjectType)).length, credits: records.reduce((n, s) => n + Number(s.credits || 0), 0) }), [records])
   const changeFilter = (field, value) => setFilters(old => field === 'courseId' ? { ...old, courseId: value, branchId: '', level: '', semesterId: '' } : field === 'branchId' ? { ...old, branchId: value, level: '', semesterId: '' } : field === 'level' ? { ...old, level: value, semesterId: '' } : { ...old, [field]: value })
   const changeForm = (field, value) => setForm(old => field === 'courseId' ? { ...old, courseId: value, branchId: '', semesterId: '' } : field === 'branchId' ? { ...old, branchId: value, semesterId: '' } : { ...old, [field]: value })
@@ -192,7 +214,7 @@ export default function SubjectManagement() {
               <Select label="Status" value={filters.status} options={['Active', 'Inactive']} onChange={v => changeFilter('status', v)} />
             </div>
           </FilterPanel>
-          <div className="sm-table-wrap">
+          <div className="sm-table-wrap" ref={tableWrapRef}>
             {loading ? (
               <div className="sm-loading">Loading subject directory...</div>
             ) : loadError ? (
@@ -209,6 +231,7 @@ export default function SubjectManagement() {
               />
             ) : (
               <table className="sm-table">
+                <colgroup>{[145, 240, 320, 150, 150, 125, 100, 260, 140, 160].map((width, index) => <col key={index} style={{ width: `${width}px` }} />)}</colgroup>
                 <thead>
                   <tr>
                     <th className="table-center">Subject Code</th>
@@ -268,6 +291,16 @@ export default function SubjectManagement() {
               </table>
             )}
           </div>
+          {!loading && !loadError && tableScroll.max > 0 && <input
+            className="sm-table-scroll-control"
+            type="range"
+            min="0"
+            max={tableScroll.max}
+            value={Math.min(tableScroll.value, tableScroll.max)}
+            aria-label="Scroll subject table horizontally"
+            style={{ '--sm-scroll-thumb': `${tableScroll.thumb}px` }}
+            onChange={event => { if (tableWrapRef.current) tableWrapRef.current.scrollLeft = Number(event.target.value) }}
+          />}
           {!loading && !loadError && records.length > 0 && <TablePagination currentPage={currentPage} totalPages={totalPages} onPageChange={setPage} />}
         </section>
         {confirmingSubject && <StatusConfirmation subject={confirmingSubject} saving={statusSaving} close={() => setConfirmingSubject(null)} confirm={() => persistStatus(confirmingSubject, 'Inactive')} />}
@@ -301,7 +334,7 @@ export function SubjectDetailsPage() {
   const mapping = s => ({ year: entityName(masters.years, s.academicYearId, s.academicYear), course: entityName(masters.courses, s.courseId, s.course), branch: entityName(masters.branches, s.branchId, s.branch), semester: entityName(masters.semesters, s.semesterId, s.semester) })
   const sections = subject ? (() => { const m = mapping(subject); return [{ title: 'Subject Information', rows: [['Subject Code', subject.subjectCode], ['Subject Name', subject.subjectName], ['Subject Type', subject.subjectType], ['Elective Type', subject.electiveType], ['Credits', subject.credits], ['Status', subject.status]] }, { title: 'Academic Mapping', rows: [['Academic Year', m.year], ['Course', m.course], ['Branch', m.branch], ['Academic Level', getAcademicLevelFromSemester({ semester: m.semester })], ['Semester', m.semester]] }, { title: 'Academic Configuration', rows: [['Lecture Hours', subject.lectureHours], ['Tutorial Hours', subject.tutorialHours], ['Practical Hours', subject.practicalHours], ['Internal Marks', subject.internalMarks], ['External Marks', subject.externalMarks]].filter(([, value]) => value !== '' && value != null) }].filter(section => section.rows.length) })() : []
   const edit = () => navigate('/subject-management', { state: { subjectAction: { mode: 'edit', id: subject.id } } })
-  return <DashboardLayout><main className="sm-screen"><div className="cm-profile-view sm-profile-view"><div className="cm-profile-top-bar"><button type="button" className="cm-button secondary erp-btn erp-btn--secondary" onClick={() => navigate(returnTo)}><FiArrowLeft /> Back to Subjects</button><div className="sp-profile-top-actions"><ExportMenu mode="single" title={`${subject?.subjectCode || 'Subject'} - Subject Details`} filename={`subject-${subject?.subjectCode || id}`} recordSections={sections} /><button type="button" className="cm-button erp-btn erp-btn--primary" disabled={!subject} onClick={edit}>Edit Subject</button></div></div>{loading ? <p className="sm-detail-loading">Loading subject details…</p> : subject && <article className="cm-profile-card"><div className="cm-profile-banner"><div className="cm-profile-avatar-wrap"><div className="cm-profile-placeholder"><FiBookOpen /></div></div><div className="cm-profile-header-info"><div className="cm-profile-badges"><span className="cm-badge cm-badge-code">SUB: {subject.subjectCode}</span><span className="cm-badge cm-badge-type">{subject.subjectType || 'SUBJECT'}</span><span className={`cm-status-badge ${String(subject.status).toLowerCase() === 'active' ? 'active' : 'pending'}`}>{subject.status}</span></div><h1 className="cm-profile-title">{subject.subjectName}</h1><p className="cm-profile-subtitle">{[mapping(subject).course, mapping(subject).branch, mapping(subject).semester].filter(Boolean).join(' | ')}</p></div></div><div className="cm-profile-grid sm-profile-sections">{sections.map(section => <InfoCard key={section.title} title={section.title} icon={FiBookOpen} rows={section.rows} />)}</div></article>}</div></main></DashboardLayout>
+  return <DashboardLayout><main className="sm-screen"><div className="cm-profile-view sm-profile-view"><div className="cm-profile-top-bar"><button type="button" className="cm-button secondary erp-btn erp-btn--secondary" onClick={() => navigate(returnTo)}><FiArrowLeft /> Back </button><div className="sp-profile-top-actions"><ExportMenu mode="single" title={`${subject?.subjectCode || 'Subject'} - Subject Details`} filename={`subject-${subject?.subjectCode || id}`} recordSections={sections} /><button type="button" className="cm-button erp-btn erp-btn--primary" disabled={!subject} onClick={edit}>Edit Subject</button></div></div>{loading ? <p className="sm-detail-loading">Loading subject details…</p> : subject && <article className="cm-profile-card"><div className="cm-profile-banner"><div className="cm-profile-avatar-wrap"><div className="cm-profile-placeholder"><FiBookOpen /></div></div><div className="cm-profile-header-info"><div className="cm-profile-badges"><span className="cm-badge cm-badge-code">SUB: {subject.subjectCode}</span><span className="cm-badge cm-badge-type">{subject.subjectType || 'SUBJECT'}</span><span className={`cm-status-badge ${String(subject.status).toLowerCase() === 'active' ? 'active' : 'pending'}`}>{subject.status}</span></div><h1 className="cm-profile-title">{subject.subjectName}</h1><p className="cm-profile-subtitle">{[mapping(subject).course, mapping(subject).branch, mapping(subject).semester].filter(Boolean).join(' | ')}</p></div></div><div className="cm-profile-grid sm-profile-sections">{sections.map(section => <InfoCard key={section.title} title={section.title} icon={FiBookOpen} rows={section.rows} />)}</div></article>}</div></main></DashboardLayout>
 }
 function Select({ label, value, options, onChange, disabled, semester = false, hideSearch = false, placeholder = label }) { return <SearchableSelect placement="bottom" hideSearch={hideSearch} label={label} value={value} options={options} onChange={onChange} placeholder={placeholder} disabled={disabled} getOptionLabel={semester ? s => s.semesterName || s.name || `Semester ${semNo(s)}` : undefined} /> }
 function Field({ label, children }) { return <div className="sm-field"><label>{label}</label>{children}</div> }
