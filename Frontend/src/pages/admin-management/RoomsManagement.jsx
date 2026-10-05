@@ -1346,7 +1346,7 @@ export default function RoomsManagement({ formMode = false, viewMode = false }) 
                 className="rooms-add-btn"
                 onClick={handleOpenCreate}
               >
-                <FiPlus /> Add Room / Classroom
+                <FiPlus /> Add Classroom
               </button>
             </div>
           </div>

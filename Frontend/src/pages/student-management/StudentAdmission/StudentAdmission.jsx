@@ -54,6 +54,7 @@ const STEPS = ['Basic Information', 'Contact & Address', 'Parent / Guardian', 'A
 const STEP_ICONS = [FiUser, FiPhone, FiUsers, FiBookOpen, FiFileText, FiHome, FiInbox, FiUploadCloud]
 const STATUS = { DRAFT: 'Draft', PENDING: 'Pending', SUBMITTED: 'Submitted', APPLICATION_SUBMITTED: 'Submitted', UNDER_REVIEW: 'Under Review', VERIFIED: 'Verified', APPROVED: 'Approved', CORRECTION_REQUIRED: 'Correction Required', REJECTED: 'Rejected' }
 const normalizeStatus = raw => normalizeAdmissionStatus(raw)
+const formatFeeStatus = value => String(value || 'Pending').trim().toLowerCase().replace(/[_-]+/g, ' ').replace(/\b\w/g, character => character.toUpperCase())
 // Activation is owned by the backend. Only surface an email confirmation when
 // the approval response explicitly supplies one; never infer delivery.
 const approvalNotice = result => {
@@ -567,7 +568,7 @@ function AdmissionList() {
                         </div>
                       </td>
                       <td style={{ minWidth: '130px', maxWidth: '160px' }}><span className="table-cell-truncate" title={display(item.academic.admissionType)}>{display(item.academic.admissionType)}</span></td>
-                      <td className="table-center" style={{ width: '120px' }}><StatusBadge value={feeStat} /></td>
+                      <td className="table-center" style={{ width: '120px' }}><StatusBadge value={formatFeeStatus(feeStat)} /></td>
                       <td className="table-center" style={{ width: '140px' }}><StatusBadge value={STATUS[normStat] || normStat} /></td>
                       <td className="table-center" style={{ width: '140px' }}><span className="sa-updated">{dateTime(item.updatedAt || item.createdAt)}</span></td>
                       <td className="table-center" style={{ width: '160px', minWidth: '160px' }}>

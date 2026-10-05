@@ -400,7 +400,7 @@ export default function AcademicYear() {
             <div className="cm-profile-top-bar">
           <ExportMenu mode="single" title="Academic Year Details" filename={`academic-year_${selected.name || selected.id}`} />
               <button type="button" className="erp-btn erp-btn--secondary" onClick={close}>
-                &larr; Back to Academic Years List
+                &larr; Back 
               </button>
             </div>
 

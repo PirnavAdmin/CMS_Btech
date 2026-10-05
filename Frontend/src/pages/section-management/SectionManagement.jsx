@@ -12,7 +12,7 @@ import SearchableSelect from '../../components/SearchableSelect'
 import CompactSummary from '../../components/CompactSummary'
 import StatusBadge from '../../components/StatusBadge'
 import { showDeactivationBlocked } from '../../components/DeactivationBlockedDialog'
-import { academicYearApi, branchApi, courseApi, sectionAllocationApi, sectionApi, sectionAssignmentApi, studentAdmissionApi, studentProfilesApi, studentApi } from '../../api/apiEndpoints'
+import { academicYearApi, branchApi, courseApi, sectionAllocationApi, sectionApi, sectionAssignmentApi, studentAdmissionApi, studentProfilesApi } from '../../api/apiEndpoints'
 import { getSemesters } from '../../auth/collegeApi'
 import { getActiveAcademicYears, normalizeAcademicYear } from '../../utils/academicYearUtils'
 import { branchTypeLabel } from '../../utils/semesterUtils'
@@ -702,16 +702,20 @@ function AssignStudents({ section, faculty = [], assignments, allAssignments = [
     setStudentsLoading(true)
     setStudents([])
     setSelectedIds([])
-    sectionAssignmentApi.getStudentCandidates(section.id)
-      .then((rows) => {
-        if (active) setStudents(rows.map((item) => {
-          const id = item.studentId ?? item.StudentId ?? item.id ?? item.Id
-          const name = item.fullName ?? item.FullName ?? item.studentName ?? item.name ?? ''
-          const code = item.studentCode ?? item.StudentCode ?? item.code ?? item.enrollmentNo ?? ''
-          return { ...item, id: String(id ?? ''), studentId: String(id ?? ''), name, code, studentCode: code, enrollmentNo: code, registrationNumber: code, rollNumber: item.rollNumber ?? code }
-        }).filter((student) => clean(student.id) && clean(student.name)))
+    Promise.all([studentProfilesApi.getAll(), studentAdmissionApi.getAll()])
+      .then(([profiles, admissions]) => {
+        if (!active) return
+        const candidates = sectionStudentProfiles(responseList(profiles), responseList(admissions))
+          .filter((student) => matchesSectionStudent(student, section))
+          .map((item) => {
+            const id = item.studentId ?? item.id
+            const code = item.code ?? item.enrollmentNo ?? item.rollNumber ?? item.registrationNumber ?? item.admissionNumber ?? ''
+            return { ...item, id: String(id ?? ''), studentId: String(id ?? ''), name: item.name || item.fullName || '', code, studentCode: code, enrollmentNo: item.enrollmentNo || code, registrationNumber: item.registrationNumber || code, rollNumber: item.rollNumber || code }
+          })
+          .filter((student) => clean(student.id) && clean(student.name))
+        setStudents(candidates)
       })
-      .catch((reason) => active && setError(apiError(reason, 'Unable to load eligible students for this section.')))
+      .catch((reason) => active && setError(apiError(reason, 'Unable to load student profiles for this section.')))
       .finally(() => { if (active) setStudentsLoading(false) })
     return () => { active = false }
   }, [mode, section.id, setError])

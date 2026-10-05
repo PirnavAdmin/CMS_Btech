@@ -10,6 +10,12 @@
   color: var(--text-primary, #0F172A);
 }
 
+/* Keep the room status badge beside the room number and type in the profile header. */
+#root .rooms-page .cm-profile-badges > :is(.cm-badge, .erp-status-badge) {
+  flex: 0 0 auto !important;
+  margin-left: 0 !important;
+}
+
 /* ==========================================
    Directory Card & Header
    ========================================== */
