@@ -68,7 +68,8 @@ export function createDraftAdapter({ storage, loadLive, authorize, locks, makeId
       if (!expected.length) throw new Error('Select timetables to publish.')
       const occupied = decorateEntries([...backend, ...tableEntries(tables)], sources)
       const issues = selectedTables(tables, expected).flatMap(table => validateTable(table, sources, occupied))
-      if (issues.length) throw new Error(issues.map(item => item.reason).join('\n'))
+      const blocking = issues.filter(item => item.blocking !== false)
+      if (blocking.length) throw new Error(blocking.map(item => item.reason).join('\n'))
       return tables.map(table => expected.some(item => same(item.id, table.id)) ? { ...table, publicationStatus: 'published', revision: table.revision + 1, publishedAt: new Date().toISOString() } : table)
     }),
     reopen: table => transaction([table], tables => tables.map(item => same(item.id, table.id) ? { ...item, publicationStatus: 'draft', revision: item.revision + 1 } : item)),

@@ -54,16 +54,16 @@ export default function TimetableManagement() {
     }).catch(reason => { if (!cancelled) { setError(reason.message); showToast(reason.message, 'error') } }).finally(() => { if (!cancelled) setLoading(false) })
     return () => { cancelled = true }
   }, [role])
-  const mutate = async action => {
+  const mutate = async (action, successMessage = 'Timetable saved.') => {
     setBusy(true); setError('')
-    try { const result = await action(); await refresh(); showToast('Timetable saved.', 'success'); return result || true }
+    try { const result = await action(); await refresh(); showToast(successMessage, 'success'); return result || true }
     catch (reason) { setError(reason.message); showToast(reason.message, 'error'); throw reason }
     finally { setBusy(false) }
   }
-  const run = async action => { try { return await mutate(action) } catch { return null } }
+  const run = async (action, successMessage) => { try { return await mutate(action, successMessage) } catch { return null } }
   const validate = async tables => {
     setBusy(true); setError('')
-    try { const issues = await workflowAdapter().validate(tables); showToast(issues.length ? `${issues.length} items need attention.` : 'Validation passed.', issues.length ? 'warning' : 'success'); return issues }
+    try { const issues = await workflowAdapter().validate(tables); const blocking = issues.filter(issue => issue.blocking !== false).length; showToast(blocking ? `Validation found ${blocking} blocking issue(s).` : issues.length ? `Validation passed with ${issues.length} warning(s).` : 'Validation passed.', blocking ? 'warning' : issues.length ? 'warning' : 'success'); return issues }
     catch (reason) { setError(reason.message); showToast(reason.message, 'error'); return null }
     finally { setBusy(false) }
   }
@@ -79,9 +79,9 @@ export default function TimetableManagement() {
     {error && <p className="tt-error" role="alert">{error}</p>}
     {loading ? <p role="status">Loading academic data and timetables...</p> : data && <>
       {admin && !draftCapabilityEnabled && <p className="tt-notice">Timetable setup and publication are awaiting backend APIs. Existing backend entries remain available.</p>}
-      {admin && draftCapabilityEnabled && <p className="tt-adapter-note">Development timetable drafts are stored in this browser. Academic records and allocations use the backend.</p>}
-      {admin && tab === 'dashboard' && <TimetableDashboard tables={tables} sources={sources} entries={entries} today={today.length} open={open} />}
-      {admin && tab === 'builder' && <TimetableBuilder key={builderKey} sources={sources} entries={entries} tables={tables} initial={initial} busy={busy} enabled={draftCapabilityEnabled} refresh={refresh} faculty={setFacultyDrawer} generate={args => run(() => workflowAdapter().generate(args))} saveSetup={(tables, config) => run(() => workflowAdapter().saveSetup(tables, config))} save={(table, form) => mutate(() => table.origin === 'backend' ? saveBackendEntry(table, form) : workflowAdapter().saveEntry(table, form))} remove={(table, id) => mutate(() => table.origin === 'backend' ? timetableService.remove(id) : workflowAdapter().removeEntry(table, id))} validate={validate} publish={expected => run(() => workflowAdapter().publish(expected))} reopen={table => run(() => workflowAdapter().reopen(table))} />}
+      {admin && draftCapabilityEnabled && <p className="tt-adapter-note"><strong>Mock Mode:</strong> timetable drafts and publication state are stored only in this browser. Academic records and allocations use the backend; this is not institution-wide publication.</p>}
+      {admin && tab === 'dashboard' && <TimetableDashboard tables={tables} sources={sources} entries={entries} today={today} open={open} />}
+      {admin && tab === 'builder' && <TimetableBuilder key={builderKey} sources={sources} entries={entries} tables={tables} initial={initial} busy={busy} enabled={draftCapabilityEnabled} refresh={refresh} faculty={setFacultyDrawer} generate={args => run(() => workflowAdapter().generate(args))} saveSetup={(tables, config) => run(() => workflowAdapter().saveSetup(tables, config))} save={(table, form) => mutate(() => table.origin === 'backend' ? saveBackendEntry(table, form) : workflowAdapter().saveEntry(table, form))} remove={(table, id) => mutate(() => table.origin === 'backend' ? timetableService.remove(id) : workflowAdapter().removeEntry(table, id))} validate={validate} publish={expected => run(() => workflowAdapter().publish(expected), 'Mock Mode: timetable published in this browser only.')} reopen={table => run(() => workflowAdapter().reopen(table))} />}
       {tab === 'faculty' && <section className="tt-card">{admin && <div className="tt-clean-step"><TimetableSelect label="Faculty" value={facultyId} options={sources.faculty} onChange={setFacultyId} /></div>}{facultyError && <p className="tt-error" role="alert">{facultyError}</p>}{facultyId ? <FacultyTimetable key={facultyId} facultyId={facultyId} sources={sources} entries={entries} tables={tables} /> : !facultyError && <p className="tt-clean-step">Select a faculty member to view published classes.</p>}</section>}
       {facultyDrawer && <WorkspaceDrawer title="Faculty schedule" close={() => setFacultyDrawer('')}><FacultyTimetable facultyId={facultyDrawer} sources={sources} entries={entries} tables={tables} /></WorkspaceDrawer>}
     </>}
