@@ -23,15 +23,16 @@ const semNo = s => Number(s?.semesterNumber ?? String(s?.semesterName ?? s?.seme
 const ACADEMIC_LEVELS = ['1st Year', '2nd Year', '3rd Year', '4th Year']
 export const getAcademicLevelFromSemester = s => { const n = semNo(s); const year = Math.ceil(n / 2); return n > 0 ? `${year}${year === 1 ? 'st' : year === 2 ? 'nd' : year === 3 ? 'rd' : 'th'} Year` : '' }
 export const getSemestersForAcademicLevel = (list, level) => list.filter(s => getAcademicLevelFromSemester(s) === level)
-const entityName = (list, value, fallback = '') => list.find(x => key(x.id) === key(value))?.name || fallback || '—'
+const entityName = (list, value, fallback = '') => list.find(x => key(x.id) === key(value))?.name || fallback || '-'
 
 export default function SubjectManagement() {
   const location = useLocation()
   const navigate = useNavigate()
-  const { selectedCollegeId, selectedAcademicYearId, selectedAcademicYear } = useAcademic()
+  const { scopeRecords, selectedCollegeId, selectedAcademicYearId, selectedAcademicYear } = useAcademic()
   const [subjects, setSubjects] = useState([]), [loading, setLoading] = useState(true), [loadError, setLoadError] = useState('')
   const [page, setPage] = useState(1)
-  const [masters, setMasters] = useState({ years: [], departments: [], courses: [], branches: [], semesters: [] })
+  const [allMasters, setMasters] = useState({ years: [], departments: [], courses: [], branches: [], semesters: [] })
+  const masters = { ...allMasters, ...Object.fromEntries(['departments', 'courses', 'branches', 'semesters'].map(type => [type, scopeRecords(allMasters[type])])) }
   const [filters, updateFilters] = useState({ search: '', academicYearId: '', courseId: '', branchId: '', level: '', semesterId: '', subjectType: '', status: '' })
   const [form, setForm] = useState(blank), [editing, setEditing] = useState(null), [editorOpen, setEditorOpen] = useState(false), [viewing, setViewing] = useState(null), [saving, setSaving] = useState(false), [recentId, setRecentId] = useState('')
   const [returnToElectives, setReturnToElectives] = useState(false)
@@ -40,16 +41,16 @@ export default function SubjectManagement() {
   const loadSubjects = async () => { setLoading(true); setLoadError(''); try { setSubjects(await subjectService.getSubjects({ liveOnly: true })) } catch (e) { setLoadError(e.message || 'Unable to load subjects.') } finally { setLoading(false) } }
   useEffect(() => { loadSubjects() }, [])
   useEffect(() => { let active = true; Promise.all([academicService.getAcademicYears(), academicService.getCourses(), academicService.getBranches(), academicService.getSemesters(), academicService.getDepartments()]).then(([years, courses, branches, semesters, departments]) => active && setMasters({ years, courses, branches, semesters, departments })).catch(() => active && showError('Academic mapping options could not be loaded.')); return () => { active = false } }, [])
-  const scopedCourses = masters.courses.filter(course => !form.departmentId || relationId(course, 'department') === String(form.departmentId) || masters.branches.some(branch => relationId(branch, 'course') === idOf(course, 'course') && departmentOfBranch(branch, masters.courses) === String(form.departmentId)))
-  const branches = courseId => masters.branches.filter(b => (!courseId || key(b.courseId) === key(courseId)))
-  const semesters = (courseId, branchId) => masters.semesters.filter(s => (!courseId || !s.courseId || key(s.courseId) === key(courseId)) && (!branchId || !s.branchId || key(s.branchId) === key(branchId)))
+  const scopedCourses = scopeRecords(masters.courses).filter(course => !form.departmentId || relationId(course, 'department') === String(form.departmentId) || masters.branches.some(branch => relationId(branch, 'course') === idOf(course, 'course') && departmentOfBranch(branch, masters.courses) === String(form.departmentId)))
+  const branches = courseId => scopeRecords(masters.branches).filter(b => (!courseId || key(b.courseId) === key(courseId)))
+  const semesters = (courseId, branchId) => scopeRecords(masters.semesters).filter(s => (!courseId || !s.courseId || key(s.courseId) === key(courseId)) && (!branchId || !s.branchId || key(s.branchId) === key(branchId)))
   const filterSemesters = semesters(filters.courseId, filters.branchId), formSemesters = semesters(form.courseId, form.branchId)
   const levels = list => [...new Set(list.map(getAcademicLevelFromSemester).filter(Boolean))]
   const types = useMemo(() => [...new Set(subjects.map(s => s.subjectType).filter(Boolean))], [subjects])
   const mapping = s => ({ year: entityName(masters.years, s.academicYearId, s.academicYear), course: entityName(masters.courses, s.courseId, s.course), branch: entityName(masters.branches, s.branchId, s.branch), semester: entityName(masters.semesters, s.semesterId, s.semester) })
 
   const scopedSubjects = useMemo(() => {
-    return subjects.filter((s) => {
+    return scopeRecords(subjects).filter((s) => {
       const matchesYear = !selectedAcademicYearId || !s.academicYearId || key(s.academicYearId) === key(selectedAcademicYearId)
       const course = masters.courses.find(c => key(c.id) === key(s.courseId))
       const branch = masters.branches.find(b => key(b.id) === key(s.branchId))
@@ -57,7 +58,7 @@ export default function SubjectManagement() {
       const matchesCollege = !selectedCollegeId || !itemCollegeId || key(itemCollegeId) === key(selectedCollegeId)
       return matchesYear && matchesCollege
     })
-  }, [subjects, selectedAcademicYearId, selectedCollegeId, masters.courses, masters.branches])
+  }, [subjects, scopeRecords, selectedAcademicYearId, selectedCollegeId, masters.courses, masters.branches])
 
   const records = useMemo(() => scopedSubjects.filter(s => { const q = filters.search.trim().toLowerCase(), n = semNo(s); return (!q || `${s.subjectCode} ${s.subjectName}`.toLowerCase().includes(q)) && (!filters.academicYearId || key(s.academicYearId) === key(filters.academicYearId)) && (!filters.courseId || key(s.courseId) === key(filters.courseId)) && (!filters.branchId || key(s.branchId) === key(filters.branchId)) && (!filters.semesterId || key(s.semesterId) === key(filters.semesterId)) && (!filters.level || getAcademicLevelFromSemester({ semesterNumber: n }) === filters.level) && (!filters.subjectType || s.subjectType === filters.subjectType) && (!filters.status || s.status === filters.status) }).sort((left, right) => key(left.id) === key(recentId) ? -1 : key(right.id) === key(recentId) ? 1 : 0), [scopedSubjects, filters, recentId])
   const totalPages = Math.max(1, Math.ceil(records.length / PAGE_SIZE))
@@ -202,8 +203,8 @@ export default function SubjectManagement() {
               </div>
             ) : !records.length ? (
               <EmptyState
-                title={filters.search ? `No subjects found for “${filters.search}”.` : activeFilterText.length ? 'No subjects match the selected academic filters.' : 'No subjects configured'}
-                description={activeFilterText.length ? 'Clear filters or choose another academic mapping.' : 'No subjects have been configured yet.'}
+                title="No subjects found."
+                description="Add a subject to get started."
                 action="Add Subject"
                 onAction={openAdd}
               />
@@ -244,11 +245,11 @@ export default function SubjectManagement() {
                         <td className="table-center">
                           <div className="table-primary-cell">
                             <span>{m.course}</span>
-                            <small>• {m.branch}</small>
+                            <small>| {m.branch}</small>
                             <small>{m.year}</small>
                           </div>
                         </td>
-                        <td className="table-center">{getAcademicLevelFromSemester({ semester: m.semester }) || '—'}</td>
+                        <td className="table-center">{getAcademicLevelFromSemester({ semester: m.semester }) || '-'}</td>
                         <td className="table-center">{m.semester}</td>
                         <td className="table-center">{s.subjectType && <span className={`sm-type-tag ${/lab|practical/i.test(s.subjectType) ? 'sm-type-tag--lab' : 'sm-type-tag--theory'}`}>{s.subjectType}</span>}</td>
                         <td className="table-center"><span className="sm-credit-badge">{s.credits}</span></td>
@@ -497,7 +498,7 @@ function Editor({ form, editing, masters, branches, semesters, levels, typeOptio
               },
             ].map(sec => ({
               ...sec,
-              fields: sec.fields.filter(([, val]) => val !== null && val !== undefined && String(val).trim() !== '' && String(val).trim() !== '—'),
+              fields: sec.fields.filter(([, val]) => val !== null && val !== undefined && String(val).trim() !== '' && String(val).trim() !== '-'),
             })).filter(sec => sec.fields.length > 0)
 
             if (sections.length === 0) {
@@ -517,7 +518,7 @@ function Editor({ form, editing, masters, branches, semesters, levels, typeOptio
                   <div className="preview-hero-details">
                     <h3 className="preview-course-title" style={{ margin: 0 }}>{form.subjectName || 'Subject Preview'}</h3>
                     <p className="preview-course-meta" style={{ margin: '2px 0 0', color: '#64748B', fontSize: '0.78rem' }}>
-                      {[form.subjectCode, form.subjectType, form.credits !== '' && `${form.credits} Credits`, form.status || 'Active'].filter(Boolean).join(' • ')}
+                      {[form.subjectCode, form.subjectType, form.credits !== '' && `${form.credits} Credits`, form.status || 'Active'].filter(Boolean).join(' - ')}
                     </p>
                   </div>
                 </div>
@@ -543,4 +544,4 @@ function Editor({ form, editing, masters, branches, semesters, levels, typeOptio
   );
 }
 
-function Details({ subject, sections, close, edit }) { return <div className="sm-modal-backdrop" onMouseDown={close}><div className="sm-modal sm-modal--details" onMouseDown={e => e.stopPropagation()}><div className="sm-modal-header"><div><span className="sm-code-badge">{subject.subjectCode}</span><h2>{subject.subjectName}</h2><StatusBadge value={subject.status} /></div><button className="sm-icon-btn" onClick={close}><FiX /></button></div><div className="sm-modal-body">{sections.map(section => <section className="sm-details-section" key={section.title}><h3>{section.title}</h3>{section.rows.map(([label, value]) => <div key={label}><span>{label}</span><strong>{value}</strong></div>)}</section>)}</div><div className="sm-modal-footer"><ExportMenu mode="single" title={`${subject.subjectCode} — Subject Details`} filename={`subject-${subject.subjectCode}`} recordSections={sections} /><button className="sm-btn sm-btn--primary" onClick={edit}>Edit Subject</button></div></div></div> }
+function Details({ subject, sections, close, edit }) { return <div className="sm-modal-backdrop" onMouseDown={close}><div className="sm-modal sm-modal--details" onMouseDown={e => e.stopPropagation()}><div className="sm-modal-header"><div><span className="sm-code-badge">{subject.subjectCode}</span><h2>{subject.subjectName}</h2><StatusBadge value={subject.status} /></div><button className="sm-icon-btn" onClick={close}><FiX /></button></div><div className="sm-modal-body">{sections.map(section => <section className="sm-details-section" key={section.title}><h3>{section.title}</h3>{section.rows.map(([label, value]) => <div key={label}><span>{label}</span><strong>{value}</strong></div>)}</section>)}</div><div className="sm-modal-footer"><ExportMenu mode="single" title={`${subject.subjectCode} - Subject Details`} filename={`subject-${subject.subjectCode}`} recordSections={sections} /><button className="sm-btn sm-btn--primary" onClick={edit}>Edit Subject</button></div></div></div> }

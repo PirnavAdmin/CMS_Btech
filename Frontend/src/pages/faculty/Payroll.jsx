@@ -1,3 +1,6 @@
+import DirectoryEmptyState from '../../components/DirectoryEmptyState'
+import { collegeStorageKey } from '../../utils/collegeScope.js'
+import useCollegeState from '../../hooks/useCollegeState'
 import FilterPanel from '../../components/FilterPanel'
 import SearchableSelect from '../../components/SearchableSelect'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
@@ -20,19 +23,19 @@ const LOCAL_LEAVE_DECISIONS_KEY = 'pirnav-faculty-local-leave-decisions-v1'
 const LOCAL_LEAVE_TYPES_KEY = 'pirnav-faculty-local-leave-types-v1'
 
 const getLocalPayrollStatuses = () => {
-  try { return JSON.parse(localStorage.getItem(LOCAL_PAYROLL_STATUS_KEY)) || {} } catch { return {} }
+  try { return JSON.parse(localStorage.getItem(collegeStorageKey(LOCAL_PAYROLL_STATUS_KEY))) || {} } catch { return {} }
 }
 
 const getLocalAttendanceList = () => {
-  try { return JSON.parse(localStorage.getItem(LOCAL_ATTENDANCE_KEY)) || [] } catch { return [] }
+  try { return JSON.parse(localStorage.getItem(collegeStorageKey(LOCAL_ATTENDANCE_KEY))) || [] } catch { return [] }
 }
 
 const getLocalLeaveDecisions = () => {
-  try { return JSON.parse(localStorage.getItem(LOCAL_LEAVE_DECISIONS_KEY)) || {} } catch { return {} }
+  try { return JSON.parse(localStorage.getItem(collegeStorageKey(LOCAL_LEAVE_DECISIONS_KEY))) || {} } catch { return {} }
 }
 
 const getLocalLeaveTypes = () => {
-  try { return JSON.parse(localStorage.getItem(LOCAL_LEAVE_TYPES_KEY)) || {} } catch { return {} }
+  try { return JSON.parse(localStorage.getItem(collegeStorageKey(LOCAL_LEAVE_TYPES_KEY))) || {} } catch { return {} }
 }
 
 const saveLocalPayrollStatus = (item, status, reason = '', currentMonth = '') => {
@@ -53,12 +56,12 @@ const saveLocalPayrollStatus = (item, status, reason = '', currentMonth = '') =>
       data[empId] = entry
       data[`${m}_${empId}`] = entry
     }
-    localStorage.setItem(LOCAL_PAYROLL_STATUS_KEY, JSON.stringify(data))
+    localStorage.setItem(collegeStorageKey(LOCAL_PAYROLL_STATUS_KEY), JSON.stringify(data))
   } catch {}
 }
 
 const getLocalSalaryStructures = () => {
-  try { return JSON.parse(localStorage.getItem(LOCAL_SALARY_STRUCTURE_KEY)) || {} } catch { return {} }
+  try { return JSON.parse(localStorage.getItem(collegeStorageKey(LOCAL_SALARY_STRUCTURE_KEY))) || {} } catch { return {} }
 }
 
 const saveLocalSalaryStructure = (item, salaryData) => {
@@ -70,7 +73,7 @@ const saveLocalSalaryStructure = (item, salaryData) => {
     if (facId) data[facId] = entry
     if (empId) data[empId] = entry
     if (item.id) data[String(item.id)] = entry
-    localStorage.setItem(LOCAL_SALARY_STRUCTURE_KEY, JSON.stringify(data))
+    localStorage.setItem(collegeStorageKey(LOCAL_SALARY_STRUCTURE_KEY), JSON.stringify(data))
   } catch {}
 }
 
@@ -311,8 +314,8 @@ const printSalarySlip = (item, month) => {
   <div class="payslip-wrapper">
     <div class="header">
       <div class="college-title">PIRNAV ENGINEERING COLLEGE</div>
-      <div class="college-sub">Approved by AICTE, Affiliated to JNTUH · Hyderabad, Telangana - 500075</div>
-      <div class="slip-badge">MONTHLY SALARY SLIP — ${mLabel.toUpperCase()}</div>
+      <div class="college-sub">Approved by AICTE, Affiliated to JNTUH | Hyderabad, Telangana - 500075</div>
+      <div class="slip-badge">MONTHLY SALARY SLIP - ${mLabel.toUpperCase()}</div>
     </div>
     
     <table class="info-table">
@@ -373,8 +376,8 @@ const printSalarySlip = (item, month) => {
         <tr>
           <td>Special Allowances</td>
           <td class="num">${money(allowances)}</td>
-          <td>—</td>
-          <td class="num" style="color:#94a3b8;">—</td>
+          <td>-</td>
+          <td class="num" style="color:#94a3b8;">-</td>
         </tr>
         <tr class="total-row">
           <td style="color:#8782BC;">TOTAL GROSS EARNINGS</td>
@@ -449,11 +452,11 @@ const getDefaultPayrollMonth = () => {
   return `${y}-${m}`
 }
 const monthLabel = value => value ? new Date(`${value}-01T00:00:00`).toLocaleDateString('en-GB', { month: 'long', year: 'numeric' }) : 'Select payroll month'
-const money = value => (value == null || isNaN(Number(value))) ? '—' : new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(Number(value))
+const money = value => (value == null || isNaN(Number(value))) ? '-' : new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(Number(value))
 const statusClass = value => String(value || 'Draft').toLowerCase().replace(/\s+/g, '-')
 export default function Payroll() {
   const [tab, setTab] = useState('Payroll Processing'), [month, setMonth] = useState(getDefaultPayrollMonth), [selectedIds, setSelectedIds] = useState([]), [query, setQuery] = useState(''), [filters, setFilters] = useState({ type: 'Teaching', department: '', status: '' }), [page, setPage] = useState(1), [selected, setSelected] = useState(null), [hold, setHold] = useState(false), [holdReason, setHoldReason] = useState(''), [editingSalary, setEditingSalary] = useState(null), [payslipItem, setPayslipItem] = useState(null)
-  const [payroll, setPayroll] = useState([]), [facultyList, setFacultyList] = useState([]), [loading, setLoading] = useState(true), [error, setError] = useState(''), [busy, setBusy] = useState(false), [notice, setNotice] = useState('')
+  const [facultyList, setFacultyList] = useCollegeState([]), [payroll, setPayroll] = useCollegeState([], { faculty: facultyList }), [loading, setLoading] = useState(true), [error, setError] = useState(''), [busy, setBusy] = useState(false), [notice, setNotice] = useState('')
   const requestVersion = useRef(0), holdLock = useRef(false)
   const load = useCallback(async () => {
     const version = ++requestVersion.current
@@ -1012,7 +1015,7 @@ export default function Payroll() {
       </>
     )}
   </div>
-</td></tr>)}</tbody></table> : <p className="fp-empty">{emptyText}</p>}</div>{rows.length > PAGE_SIZE && <TablePagination currentPage={currentPage} totalPages={totalPages} onPageChange={setPage} />}</section>{selected && (() => {
+</td></tr>)}</tbody></table> : tab === 'Salary Records' && !loading && !error ? <DirectoryEmptyState title="No salary records found." actionLabel="Add Salary Structure" onAction={() => setEditingSalary({ isNew: true })} /> : <p className="fp-empty">{emptyText}</p>}</div>{rows.length > PAGE_SIZE && <TablePagination currentPage={currentPage} totalPages={totalPages} onPageChange={setPage} />}</section>{selected && (() => {
   const full = getFullBreakdownForRow(selected)
   const basic = full.basicSalary
   const hra = full.hra
@@ -1031,7 +1034,7 @@ export default function Payroll() {
         <button className="fp-close" type="button" aria-label="Close payroll details" onClick={() => setSelected(null)}><FiX /></button>
         <p>{tab === 'Salary Records' ? 'SALARY STRUCTURE DETAILS' : 'PAYROLL DETAILS'}</p>
         <h2>{selected.fullName}</h2>
-        <span>{selected.employeeId} · {selected.designation} · {selected.department} · {selected.type}</span>
+        <span>{selected.employeeId} | {selected.designation} | {selected.department} | {selected.type}</span>
         {tab !== 'Salary Records' && <b className={`fp-status ${statusClass(selected.status)}`}>{selected.status}</b>}
 
         {tab !== 'Salary Records' && (
@@ -1107,7 +1110,7 @@ export default function Payroll() {
 })()}{notice && <div className="flm-toast">{notice}<button onClick={() => setNotice('')}><FiX /></button></div>}
 {payslipItem && <SalarySlipModal item={payslipItem} month={month} onClose={() => setPayslipItem(null)} />}
 {editingSalary && <SalaryConfigModal item={editingSalary} facultyList={facultyList} activeCategory={filters.type || 'Teaching'} onClose={() => setEditingSalary(null)} onSave={handleSaveSalaryStructure} />}
-{hold && selected && <div className="fp-overlay"><form className="fp-dialog fp-hold" onSubmit={placeHold}><h2>Place Payroll on Hold</h2><p>{selected.fullName} · {monthLabel(month)}</p><label><span>Reason <b className="required-mark">*</b></span><textarea value={holdReason} onChange={event => setHoldReason(event.target.value)} required /></label><footer><button type="button" onClick={() => setHold(false)}>Cancel</button><button className="primary" type="submit" disabled={busy}>{busy ? 'Saving...' : 'Place on Hold'}</button></footer></form></div>}</main></DashboardLayout>
+{hold && selected && <div className="fp-overlay"><form className="fp-dialog fp-hold" onSubmit={placeHold}><h2>Place Payroll on Hold</h2><p>{selected.fullName} | {monthLabel(month)}</p><label><span>Reason <b className="required-mark">*</b></span><textarea value={holdReason} onChange={event => setHoldReason(event.target.value)} required /></label><footer><button type="button" onClick={() => setHold(false)}>Cancel</button><button className="primary" type="submit" disabled={busy}>{busy ? 'Saving...' : 'Place on Hold'}</button></footer></form></div>}</main></DashboardLayout>
 }
 
 
@@ -1145,7 +1148,7 @@ function SalaryConfigModal({ item, facultyList = [], activeCategory = 'Teaching'
       const desig = f.designation || 'Faculty'
       return {
         value: String(f.id),
-        label: `${code} — ${name} (${dept}) — ${desig}`
+        label: `${code} - ${name} (${dept}) - ${desig}`
       }
     })
   }, [filteredFacultyList])
@@ -1241,7 +1244,7 @@ function SalaryConfigModal({ item, facultyList = [], activeCategory = 'Teaching'
         <p>{isNew ? 'DEFINE EMPLOYEE SALARY STRUCTURE' : 'FACULTY SALARY CONFIGURATION'}</p>
         <h2>{displayName}</h2>
         {Boolean(displayEmpId || displayDesignation) && (
-          <span>{displayEmpId} · {displayDesignation} · {displayDept} ({displayType})</span>
+          <span>{displayEmpId} | {displayDesignation} | {displayDept} ({displayType})</span>
         )}
 
         <form onSubmit={handleSubmit} style={{ marginTop: '16px' }}>
@@ -1355,9 +1358,9 @@ function SalarySlipModal({ item, month, onClose }) {
           {/* Header */}
           <div style={{ textAlign: 'center', borderBottom: '2px solid #8782BC', paddingBottom: '12px', marginBottom: '14px' }}>
             <h1 style={{ margin: '0 0 3px', fontSize: '20px', fontWeight: '800', color: '#8782BC', letterSpacing: '0.04em' }}>PIRNAV ENGINEERING COLLEGE</h1>
-            <p style={{ margin: '0 0 4px', fontSize: '11px', color: '#475569' }}>Approved by AICTE, Affiliated to JNTUH · Hyderabad, Telangana - 500075</p>
+            <p style={{ margin: '0 0 4px', fontSize: '11px', color: '#475569' }}>Approved by AICTE, Affiliated to JNTUH | Hyderabad, Telangana - 500075</p>
             <div style={{ display: 'inline-block', marginTop: '4px', padding: '3px 14px', background: '#F5F3FD', border: '1px solid #DDD8F3', borderRadius: '20px', fontSize: '11px', fontWeight: '800', color: '#756FB2', textTransform: 'uppercase' }}>
-              SALARY SLIP — {monthLabel(month).toUpperCase()}
+              SALARY SLIP - {monthLabel(month).toUpperCase()}
             </div>
           </div>
 
@@ -1405,8 +1408,8 @@ function SalarySlipModal({ item, month, onClose }) {
               <tr style={{ borderBottom: '1px solid #cbd5e1' }}>
                 <td style={{ padding: '7px 10px' }}>Special / Other Allowances</td>
                 <td style={{ padding: '7px 10px', textAlign: 'right', fontWeight: '600' }}>{money(allowances)}</td>
-                <td style={{ padding: '7px 10px', borderLeft: '1px solid #e2e8f0' }}>—</td>
-                <td style={{ padding: '7px 10px', textAlign: 'right', color: '#64748b' }}>—</td>
+                <td style={{ padding: '7px 10px', borderLeft: '1px solid #e2e8f0' }}>-</td>
+                <td style={{ padding: '7px 10px', textAlign: 'right', color: '#64748b' }}>-</td>
               </tr>
               <tr style={{ background: '#f8fafc', fontWeight: '800', borderBottom: '2px solid #cbd5e1' }}>
                 <td style={{ padding: '8px 10px', color: '#8782BC' }}>TOTAL GROSS EARNINGS</td>

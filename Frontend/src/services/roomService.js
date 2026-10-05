@@ -1,3 +1,4 @@
+import { selectedCollegeId, collegeStorageKey, createCollegeScope } from '../utils/collegeScope.js'
 import eventBus, { ERP_EVENTS } from './eventBus'
 import { roomApi } from '../api/apiEndpoints'
 
@@ -77,6 +78,8 @@ export const normalizeRoom = (r) => {
   const updatedAt = r.updatedAt ?? r.UpdatedAt ?? r.updated_at ?? new Date().toISOString()
 
   return {
+    collegeId: r.collegeId ?? r.CollegeId ?? r.college_id ?? null,
+    departmentId: r.departmentId ?? r.DepartmentId ?? null,
     id: String(classroomId || roomNumber),
     classroomId: classroomId || roomNumber,
     sectionId: sectionId ? Number(sectionId) : null,
@@ -96,7 +99,9 @@ export const normalizeRoom = (r) => {
   }
 }
 
-const roomPayload = (data) => ({
+const roomPayload = (data, collegeId = selectedCollegeId()) => ({
+  collegeId,
+  departmentId: data.departmentId || null,
   roomNumber: String(data.roomNumber || data.code || '').trim().toUpperCase(),
   roomName: String(data.roomName || data.name || '').trim(),
   buildingBlock: data.buildingBlock || data.building || 'Main Academic Block',
@@ -111,34 +116,41 @@ const roomPayload = (data) => ({
 })
 
 class RoomService {
-  getStoredRooms() {
+  getStoredRooms(collegeId = selectedCollegeId()) {
     try {
-      const stored = localStorage.getItem(STORAGE_KEY_ROOMS)
+      const stored = localStorage.getItem(collegeStorageKey(STORAGE_KEY_ROOMS, collegeId))
       if (stored) {
         const parsed = JSON.parse(stored)
         if (Array.isArray(parsed) && parsed.length > 0) {
-          return parsed.map(normalizeRoom).filter(Boolean)
+          return createCollegeScope(collegeId)(parsed.map(normalizeRoom).filter(Boolean))
         }
       }
     } catch (e) {
       console.error('Error reading rooms from storage', e)
     }
-    this.saveRooms(DEFAULT_ROOMS)
+    this.saveRooms(DEFAULT_ROOMS, collegeId)
     return DEFAULT_ROOMS.map(normalizeRoom)
   }
 
-  async getRooms(params) {
+  async getRooms(params = {}) {
+    const collegeId = selectedCollegeId()
+    if (!collegeId) return []
     try {
-      const apiRooms = await roomApi.getAll(params)
-      if (Array.isArray(apiRooms) && apiRooms.length > 0) {
-        const normalized = apiRooms.map(normalizeRoom).filter(Boolean)
-        this.saveRooms(normalized)
-        return normalized
-      }
+      const apiRooms = await roomApi.getAll({ ...params, collegeId })
+      if (!Array.isArray(apiRooms)) throw new Error('Invalid rooms response.')
+      const cached = this.getStoredRooms(collegeId)
+      const normalized = apiRooms.map(normalizeRoom).filter(Boolean).map(room => {
+        // Preserve ownership confirmed when this college created the room.
+        const known = cached.find(item => item.id === room.id)
+        return room.collegeId || !known ? room : { ...room, collegeId: known.collegeId }
+      })
+      const scoped = createCollegeScope(collegeId)(normalized)
+      this.saveRooms(scoped, collegeId)
+      return scoped
     } catch (err) {
-      console.warn('Backend rooms API unavailable, using cached rooms:', err?.message || err)
+      console.warn('Backend rooms API unavailable, using this college cache:', err?.message || err)
+      return this.getStoredRooms(collegeId)
     }
-    return this.getStoredRooms()
   }
 
   async getOptions() {
@@ -156,9 +168,9 @@ class RoomService {
     }
   }
 
-  saveRooms(rooms) {
+  saveRooms(rooms, collegeId = selectedCollegeId()) {
     try {
-      localStorage.setItem(STORAGE_KEY_ROOMS, JSON.stringify(rooms))
+      localStorage.setItem(collegeStorageKey(STORAGE_KEY_ROOMS, collegeId), JSON.stringify(createCollegeScope(collegeId)(rooms)))
       if (eventBus && ERP_EVENTS) {
         eventBus.emit(ERP_EVENTS.DATA_CHANGED, { entity: 'rooms', count: rooms.length })
       }
@@ -168,22 +180,28 @@ class RoomService {
   }
 
   async getRoomById(id) {
+    const collegeId = selectedCollegeId()
     try {
       const res = await roomApi.getById(id)
-      if (res) return normalizeRoom(res)
+      if (res) {
+        const room = normalizeRoom(res)
+        const known = this.getStoredRooms(collegeId).find(item => item.id === room.id)
+        return createCollegeScope(collegeId)([{ ...room, collegeId: room.collegeId || known?.collegeId }])[0] || null
+      }
     } catch (err) {
       console.warn(`Backend room ${id} detail failed, falling back to local:`, err?.message || err)
     }
-    const rooms = this.getStoredRooms()
+    const rooms = this.getStoredRooms(collegeId)
     return rooms.find((r) => String(r.id) === String(id) || String(r.roomNumber) === String(id)) || null
   }
 
   async createRoom(data) {
-    const payload = roomPayload(data)
+    const collegeId = selectedCollegeId()
+    const payload = roomPayload(data, collegeId)
     let createdRoom = null
     try {
       const apiRes = await roomApi.create(payload)
-      if (apiRes) createdRoom = normalizeRoom(apiRes)
+      if (apiRes) createdRoom = normalizeRoom({ ...payload, ...apiRes, collegeId })
     } catch (err) {
       console.warn('Backend create room API failed or fallback:', err?.message || err)
     }
@@ -199,23 +217,24 @@ class RoomService {
       })
     }
 
-    const rooms = this.getStoredRooms()
+    const rooms = this.getStoredRooms(collegeId)
     const updated = [createdRoom, ...rooms.filter(r => r.id !== createdRoom.id && r.roomNumber !== createdRoom.roomNumber)]
-    this.saveRooms(updated)
+    this.saveRooms(updated, collegeId)
     return createdRoom
   }
 
   async updateRoom(id, data) {
-    const payload = roomPayload(data)
+    const collegeId = selectedCollegeId()
+    const payload = roomPayload(data, collegeId)
     let updatedRoom = null
     try {
       const apiRes = await roomApi.update(id, payload)
-      if (apiRes) updatedRoom = normalizeRoom(apiRes)
+      if (apiRes) updatedRoom = normalizeRoom({ ...payload, ...apiRes, collegeId })
     } catch (err) {
       console.warn(`Backend update room ${id} failed or fallback:`, err?.message || err)
     }
 
-    const rooms = this.getStoredRooms()
+    const rooms = this.getStoredRooms(collegeId)
     const index = rooms.findIndex((r) => String(r.id) === String(id) || String(r.roomNumber) === String(id))
 
     if (!updatedRoom) {
@@ -232,23 +251,25 @@ class RoomService {
     } else {
       rooms.unshift(updatedRoom)
     }
-    this.saveRooms(rooms)
+    this.saveRooms(rooms, collegeId)
     return updatedRoom
   }
 
   async deleteRoom(id) {
+    const collegeId = selectedCollegeId()
     try {
       await roomApi.delete(id)
     } catch (err) {
       console.warn(`Backend delete room ${id} failed or fallback:`, err?.message || err)
     }
-    const rooms = this.getStoredRooms()
+    const rooms = this.getStoredRooms(collegeId)
     const filtered = rooms.filter((r) => String(r.id) !== String(id) && String(r.classroomId) !== String(id) && String(r.roomNumber) !== String(id))
-    this.saveRooms(filtered)
+    this.saveRooms(filtered, collegeId)
     return true
   }
 
   async allocateRoom(roomId, sectionName, sectionId) {
+    const collegeId = selectedCollegeId()
     try {
       if (sectionName && sectionName.trim()) {
         const payload = sectionId ? { sectionId: Number(sectionId), sectionName: sectionName.trim() } : { sectionName: sectionName.trim() }
@@ -260,14 +281,14 @@ class RoomService {
       console.warn(`Backend allocate room ${roomId} failed or fallback:`, err?.message || err)
     }
 
-    const rooms = this.getStoredRooms()
+    const rooms = this.getStoredRooms(collegeId)
     const index = rooms.findIndex((r) => String(r.id) === String(roomId) || String(r.roomNumber) === String(roomId) || String(r.classroomId) === String(roomId))
     if (index !== -1) {
       rooms[index].assignedSection = sectionName || ''
       rooms[index].sectionId = sectionId ? Number(sectionId) : null
       rooms[index].status = sectionName ? 'Allocated' : 'Available'
       rooms[index].updatedAt = new Date().toISOString()
-      this.saveRooms(rooms)
+      this.saveRooms(rooms, collegeId)
     }
   }
 }

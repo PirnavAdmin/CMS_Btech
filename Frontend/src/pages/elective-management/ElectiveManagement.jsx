@@ -1,3 +1,7 @@
+import { GENERIC_ERROR_MESSAGE } from '../../utils/userError.js'
+import DirectoryEmptyState from '../../components/DirectoryEmptyState'
+import { collegeStorageKey } from '../../utils/collegeScope.js'
+import useCollegeState from '../../hooks/useCollegeState'
 ﻿import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { FiAward, FiCheck, FiCheckCircle, FiEdit2, FiEye, FiInfo, FiLayers, FiPlus, FiSearch, FiTrash2, FiUsers, FiX } from 'react-icons/fi'
@@ -65,7 +69,7 @@ async function request(path, options = {}) {
   try { response = await fetch(`${API_BASE_URL}${path}`, { ...options, headers: { 'Content-Type': 'application/json', 'ngrok-skip-browser-warning': 'true', ...(token ? { Authorization: `Bearer ${token}` } : {}), ...options.headers } }) } catch { throw createApiUnavailableError() }
   let body = null; try { body = await response.json() } catch { /* Empty successful responses are valid. */ }
   if (response.status >= 500) notifyApiUnavailable({ status: response.status })
-  if (!response.ok || body?.success === false) { const messages = { 401: 'Your session has expired. Please sign in again.', 403: 'You do not have permission to perform this action.', 404: path.includes('/allocations/report') ? 'No allocation report is available yet.' : path.includes('/profile/exam-results') ? 'No examination results are available.' : path.includes('/electives') ? 'No elective records are available yet.' : 'The requested information was not found.', 500: 'The server is temporarily unavailable.' }; const error = new Error(messages[response.status] || body?.message || 'The request could not be completed.'); error.status = response.status; throw error }
+  if (!response.ok || body?.success === false) { const messages = { 401: 'Your session has expired. Please sign in again.', 403: 'You do not have permission to perform this action.', 404: path.includes('/allocations/report') ? 'No allocation report is available yet.' : path.includes('/profile/exam-results') ? 'No examination results are available.' : path.includes('/electives') ? 'No elective records are available yet.' : 'The requested information was not found.', 500: GENERIC_ERROR_MESSAGE }; const error = new Error(response.status >= 500 ? GENERIC_ERROR_MESSAGE : messages[response.status] || body?.message || 'The request could not be completed.'); error.status = response.status; throw error }
   return body
 }
 const get = path => request(path).then(unwrap)
@@ -86,7 +90,7 @@ const ELECTIVE_DATES_KEY = 'elective_dates_cache'
 
 const readCachedElectiveDates = (id, code) => {
   try {
-    const raw = localStorage.getItem(ELECTIVE_DATES_KEY)
+    const raw = localStorage.getItem(collegeStorageKey(ELECTIVE_DATES_KEY))
     if (!raw) return {}
     const parsed = JSON.parse(raw)
     const key = [id, code].filter(Boolean).map(String).find((candidate) => parsed[candidate])
@@ -99,7 +103,7 @@ const readCachedElectiveDates = (id, code) => {
 const cacheElectiveDates = (id, code, dates) => {
   if (!dates || (!dates.startDate && !dates.endDate)) return
   try {
-    const raw = localStorage.getItem(ELECTIVE_DATES_KEY)
+    const raw = localStorage.getItem(collegeStorageKey(ELECTIVE_DATES_KEY))
     const parsed = raw ? JSON.parse(raw) : {}
     const keys = [id, code].filter(Boolean).map(String)
     keys.forEach((k) => {
@@ -108,7 +112,7 @@ const cacheElectiveDates = (id, code, dates) => {
         endDate: dates.endDate || parsed[k]?.endDate || '',
       }
     })
-    localStorage.setItem(ELECTIVE_DATES_KEY, JSON.stringify(parsed))
+    localStorage.setItem(collegeStorageKey(ELECTIVE_DATES_KEY), JSON.stringify(parsed))
   } catch {
     // Ignore storage errors
   }
@@ -116,9 +120,9 @@ const cacheElectiveDates = (id, code, dates) => {
 
 export default function ElectiveManagement() {
   const navigate = useNavigate()
-  const [activeTab, setActiveTab] = useState('subjects'); const [groups, setGroups] = useState([]); const [directorySubjects, setDirectorySubjects] = useState([]); const [workflowSubjects, setWorkflowSubjects] = useState([]); const [selections, setSelections] = useState([]); const [report, setReport] = useState([]); const [profile, setProfile] = useState(null); const [results, setResults] = useState([])
-  const [departments, setDepartments] = useState([]); const [directoryLoading, setDirectoryLoading] = useState(true); const [directoryError, setDirectoryError] = useState(''); const [mastersError, setMastersError] = useState('');
-  const [courses, setCourses] = useState([]); const [branches, setBranches] = useState([]); const [academicYears, setAcademicYears] = useState([]); const [semesters, setSemesters] = useState([]); const [activeAcademicYear, setActiveAcademicYear] = useState(''); const [mastersLoading, setMastersLoading] = useState(true)
+  const [activeTab, setActiveTab] = useState('subjects'); const [groups, setGroups] = useCollegeState([]); const [directorySubjects, setDirectorySubjects] = useCollegeState([]); const [workflowSubjects, setWorkflowSubjects] = useCollegeState([]); const [selections, setSelections] = useCollegeState([], { groups, subjects: directorySubjects }); const [report, setReport] = useCollegeState([], { groups, subjects: directorySubjects }); const [profile, setProfile] = useState(null); const [results, setResults] = useState([])
+  const [departments, setDepartments] = useCollegeState([]); const [directoryLoading, setDirectoryLoading] = useState(true); const [directoryError, setDirectoryError] = useState(''); const [mastersError, setMastersError] = useState('');
+  const [courses, setCourses] = useCollegeState([]); const [branches, setBranches] = useCollegeState([]); const [academicYears, setAcademicYears] = useState([]); const [semesters, setSemesters] = useCollegeState([]); const [activeAcademicYear, setActiveAcademicYear] = useState(''); const [mastersLoading, setMastersLoading] = useState(true)
   const [loading, setLoading] = useState(true); const [profileLoading, setProfileLoading] = useState(true); const [resultsLoading, setResultsLoading] = useState(false); const [error, setError] = useState(''); const [search, setSearch] = useState(''); const [filters, setFilters] = useState({ status: 'All', semester: 'All', branch: 'All', department: 'All', course: 'All', academicYear: 'All', level: 'All', electiveType: 'Elective', approvalStatus: 'All', allocationStatus: 'All' }); const [page, setPage] = useState(1); const [resultPage, setResultPage] = useState(1); const size = 10
   const [groupModal, setGroupModal] = useState(false); const [editingGroup, setEditingGroup] = useState(null); const [viewingGroup, setViewingGroup] = useState(null); const [viewingSubject, setViewingSubject] = useState(null); const [editingSubject, setEditingSubject] = useState(null); const [subjectEditForm, setSubjectEditForm] = useState(null); const [deletingGroup, setDeletingGroup] = useState(null); const [subjectModal, setSubjectModal] = useState(null); const [groupForm, setGroupForm] = useState(blankGroup()); const [selectedSubjects, setSelectedSubjects] = useState([]); const [selectedGroupId, setSelectedGroupId] = useState(''); const [selectedSubjectId, setSelectedSubjectId] = useState(''); const [actionLoading, setActionLoading] = useState(false); const [groupFieldOverrides, setGroupFieldOverrides] = useState({})
   const studentId = profile?.id || profile?.studentId || ''
@@ -738,7 +742,7 @@ export default function ElectiveManagement() {
         {activeTab === 'groups' && (
           <section className="sm-card">
             <div className="em-toolbar"><div className="em-search"><FiSearch /><input aria-label="Search elective groups" placeholder="Search elective groups..." value={search} onChange={event => setSearch(event.target.value)} /></div><button type="button" className="sm-btn sm-btn--primary" onClick={() => openGroup()}><FiPlus /> Create Elective Group</button><button type="button" className="sm-btn sm-btn--secondary" onClick={() => { loadCore(); loadDirectory() }}>Refresh</button></div>
-            {loading ? <div className="em-loading">Loading elective groups...</div> : error ? <div role="alert">{error}<button type="button" onClick={() => loadCore()}>Retry</button></div> : !filteredGroups.length ? <EmptyState title="No elective groups found" description="Create a group and link existing elective subjects." /> : <div className="sm-table-wrap"><table className="em-table"><thead><tr><th>Group</th><th>Course</th><th>Branch</th><th>Semester</th><th>Status</th><th>Actions</th></tr></thead><tbody>{pageRows(filteredGroups).map(group => <tr key={group.id}><td>{group.groupCode}<span className="em-cell-subtitle">{group.groupName}</span></td><td>{group.course}</td><td>{group.branch}</td><td>{group.semester}</td><td><StatusBadge value={group.status} /></td><td><div className="em-row-actions"><button type="button" onClick={() => setViewingGroup(group)}>View</button><button type="button" onClick={() => openGroup(group)}>Edit</button><button type="button" onClick={() => { setSubjectModal(group); setSelectedSubjects([]); loadDirectory() }}>Link Subjects</button><button type="button" onClick={() => setDeletingGroup(group)}><FiTrash2 /> Delete</button></div></td></tr>)}</tbody></table></div>}
+            {loading ? <div className="em-loading">Loading elective groups...</div> : error ? <div role="alert">{error}<button type="button" onClick={() => loadCore()}>Retry</button></div> : !filteredGroups.length ? <DirectoryEmptyState title="No elective groups found." actionLabel="Create Elective Group" onAction={() => openGroup()} /> : <div className="sm-table-wrap"><table className="em-table"><thead><tr><th>Group</th><th>Course</th><th>Branch</th><th>Semester</th><th>Status</th><th>Actions</th></tr></thead><tbody>{pageRows(filteredGroups).map(group => <tr key={group.id}><td>{group.groupCode}<span className="em-cell-subtitle">{group.groupName}</span></td><td>{group.course}</td><td>{group.branch}</td><td>{group.semester}</td><td><StatusBadge value={group.status} /></td><td><div className="em-row-actions"><button type="button" onClick={() => setViewingGroup(group)}>View</button><button type="button" onClick={() => openGroup(group)}>Edit</button><button type="button" onClick={() => { setSubjectModal(group); setSelectedSubjects([]); loadDirectory() }}>Link Subjects</button><button type="button" onClick={() => setDeletingGroup(group)}><FiTrash2 /> Delete</button></div></td></tr>)}</tbody></table></div>}
             <Pagination page={page} pageCount={Math.ceil(filteredGroups.length / size)} total={filteredGroups.length} size={size} onChange={setPage} />
           </section>
         )}
@@ -756,7 +760,7 @@ export default function ElectiveManagement() {
                   <form className="em-form-body" onSubmit={submitSelection}>
                     <div className="em-readonly-student">
                       <strong>{text(profile.fullName || profile.studentName)}</strong>
-                      <span>{text(profile.studentCode || profile.identifier || studentId)} Â· {text(profile.semester, 'Semester information unavailable')}</span>
+                      <span>{text(profile.studentCode || profile.identifier || studentId)} Â| {text(profile.semester, 'Semester information unavailable')}</span>
                     </div>
                     <label className="sm-field">
                       Elective Group
@@ -934,7 +938,7 @@ export default function ElectiveManagement() {
                           />
                           <span>
                             <strong>{text(subject.subjectCode || subject.code)}</strong> {text(subject.subjectName || subject.name)}
-                            <small>{text(subject.credits, '-')} credits Â· {text(subject.department)} Â· {text(subject.semester)}</small>
+                            <small>{text(subject.credits, '-')} credits Â| {text(subject.department)} Â| {text(subject.semester)}</small>
                           </span>
                         </label>
                       );

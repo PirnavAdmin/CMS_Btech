@@ -1,3 +1,4 @@
+import useCollegeState from '../../hooks/useCollegeState'
 import { newestFirst } from '../../utils/newestFirst'
 import { showError } from '../../utils/toast'
 import useToastState from '../../hooks/useToastState'
@@ -54,7 +55,7 @@ export default function Results() {
   } = useAcademic()
 
   const [activeTab, setActiveTab] = useState('directory') // 'directory' | 'entry' | 'transcripts'
-  const [resultSheets, setResultSheets] = useState([])
+  const [resultSheets, setResultSheets] = useCollegeState([])
   const [loading, setLoading] = useState(false)
   const [, setToast] = useToastState('', 'success')
   const [selectedSheet, setSelectedSheet] = useState(null)
@@ -89,7 +90,7 @@ export default function Results() {
   // Transcripts State
   const [selectedStudentId, setSelectedStudentId] = useState('')
   const [studentTranscript, setStudentTranscript] = useState(null)
-  const [allProfiles, setAllProfiles] = useState([])
+  const [allProfiles, setAllProfiles] = useCollegeState([])
 
   const notify = (msg, type = 'success') => setToast(msg, type)
 
@@ -442,7 +443,7 @@ export default function Results() {
                               <td><strong>{sheet.subjectCode}</strong></td>
                               <td><strong>{sheet.subjectName}</strong></td>
                               <td>{sheet.examType}</td>
-                              <td>{sheet.course} · {sheet.branch} · {sheet.semester}</td>
+                              <td>{sheet.course} | {sheet.branch} | {sheet.semester}</td>
                               <td><span className="erp-badge erp-badge--neutral">{sheet.section}</span></td>
                               <td>{sheet.totalStudents}</td>
                               <td>
@@ -681,8 +682,8 @@ export default function Results() {
                               />
                             </td>
                             <td><strong>{s.totalMarks || 0}</strong></td>
-                            <td><span className={`results-grade results-grade--${(s.grade || 'F').toLowerCase()}`}>{s.grade || '—'}</span></td>
-                            <td>{s.gradePoint !== undefined ? s.gradePoint : '—'}</td>
+                            <td><span className={`results-grade results-grade--${(s.grade || 'F').toLowerCase()}`}>{s.grade || '-'}</span></td>
+                            <td>{s.gradePoint !== undefined ? s.gradePoint : '-'}</td>
                             <td>
                               <StatusBadge
                                 status={s.status === 'Passed' ? 'Active' : 'Danger'}
@@ -809,7 +810,7 @@ export default function Results() {
           <ViewDialog
             exportFilename={`result_${selectedSheet.id || selectedSheet.subjectCode}`}
             title={`Result Sheet: ${selectedSheet.subjectName}`}
-            subtitle={`${selectedSheet.course || 'B.Tech'} · ${selectedSheet.branch || 'CSE'} · Semester ${selectedSheet.semester || '1'}`}
+            subtitle={`${selectedSheet.course || 'B.Tech'} | ${selectedSheet.branch || 'CSE'} | Semester ${selectedSheet.semester || '1'}`}
             icon={FiBookOpen}
             onClose={() => setSelectedSheet(null)}
           >
@@ -825,7 +826,7 @@ export default function Results() {
                     <span className="view-modal-badge-status active">{selectedSheet.status || 'Published'}</span>
                   </div>
                   <h1 className="view-modal-title">{selectedSheet.subjectName}</h1>
-                  <p className="view-modal-subtitle">Credits: {selectedSheet.credits} · Section {selectedSheet.section} · Total: {selectedSheet.totalStudents} Students</p>
+                  <p className="view-modal-subtitle">Credits: {selectedSheet.credits} | Section {selectedSheet.section} | Total: {selectedSheet.totalStudents} Students</p>
                 </div>
               </div>
 

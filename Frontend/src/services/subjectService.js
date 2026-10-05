@@ -1,3 +1,4 @@
+import { collegeStorageKey } from '../utils/collegeScope.js'
 import { courseApi, branchApi, departmentApi, facultyMasterApi, subjectApi } from '../api/apiEndpoints'
 import { mapApiSubject, subjectApiPayload } from '../utils/subjectApiData'
 
@@ -35,13 +36,13 @@ const initialStudentAllocations = []
 
 const getLocalData = (key, fallback) => {
   try {
-    const stored = localStorage.getItem(key)
+    const stored = localStorage.getItem(collegeStorageKey(key))
 
     if (stored) {
       return JSON.parse(stored)
     }
 
-    localStorage.setItem(key, JSON.stringify(fallback))
+    localStorage.setItem(collegeStorageKey(key), JSON.stringify(fallback))
 
     return fallback
   } catch {
@@ -51,7 +52,7 @@ const getLocalData = (key, fallback) => {
 
 
 const saveLocalData = (key, data) => {
-  localStorage.setItem(key, JSON.stringify(data))
+  localStorage.setItem(collegeStorageKey(key), JSON.stringify(data))
   return data
 }
 

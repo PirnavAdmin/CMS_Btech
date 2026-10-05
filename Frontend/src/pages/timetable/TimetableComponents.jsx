@@ -1,4 +1,4 @@
-import { useState } from 'react'
+﻿import { useState } from 'react'
 import { availableSlots } from '../../services/timetable/timetableDomain'
 import WorkspaceDrawer from './WorkspaceDrawer'
 import SearchableSelect from '../../components/SearchableSelect'

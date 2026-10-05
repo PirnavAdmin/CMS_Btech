@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+﻿import { useEffect, useRef, useState } from 'react'
 import { FiPlus } from 'react-icons/fi'
 import EmptyState from '../../components/EmptyState'
 import { DAYS, overlaps, timeMinutes } from '../../utils/timetableUtils'

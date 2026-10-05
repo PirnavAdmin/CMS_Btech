@@ -3,9 +3,9 @@ const INDIAN_MOBILE_PATTERN = /^[6-9]\d{9}$/
 
 export const passwordRequirements = [
   { label: 'At least 8 characters', test: value => value.length >= 8 },
-  { label: 'One uppercase English letter (A–Z)', test: value => /[A-Z]/.test(value) },
-  { label: 'One lowercase English letter (a–z)', test: value => /[a-z]/.test(value) },
-  { label: 'One number (0–9)', test: value => /[0-9]/.test(value) },
+  { label: 'One uppercase English letter (A-Z)', test: value => /[A-Z]/.test(value) },
+  { label: 'One lowercase English letter (a-z)', test: value => /[a-z]/.test(value) },
+  { label: 'One number (0-9)', test: value => /[0-9]/.test(value) },
   { label: 'One special character', test: value => /[^\p{L}\p{N}\s]/u.test(value) },
 ]
 

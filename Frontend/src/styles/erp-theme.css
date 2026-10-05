@@ -216,7 +216,7 @@ html,body,#root{max-width:100%;overflow-x:hidden}
 .page-content :is(.row-actions,.cm-actions,.cm-row-actions,.semester-row-actions,.section-actions) button{transition:border-color .18s ease,background-color .18s ease,color .18s ease}
 @media(max-width:760px){.page-content :is(.cm-header,.management-page__heading,.semester-page-header,.section-page-header,.ac-page-header,.profile-heading){gap:14px}.page-content :is(.cm-header>button,.management-page__heading>button,.semester-page-header>button,.section-page-header>button){width:100%}}
 
-/* Typography contract — loaded after every routed module stylesheet. */
+/* Typography contract - loaded after every routed module stylesheet. */
 .page-content{font-size:14px;line-height:1.5}
 .page-content :is(h1,h2,h3,p){font-family:inherit}
 .page-content :is(.college-management,.add-college,.department-management,.ay,.cm-page,.semester-management,.section-management,.profile-page,.settings-page,.sm-screen,.em-screen,.cm-screen,.subject-management,.elective-management,.credits-management)>header h1,
@@ -231,7 +231,7 @@ html,body,#root{max-width:100%;overflow-x:hidden}
 .page-content .cm-header .cm-button:not(.secondary){border-color:#0F172A!important;background:#0F172A!important;color:#fff!important}
 .page-content .cm-header .cm-button:not(.secondary):hover{border-color:#0F172A!important;background:#0F172A!important;color:#fff!important}
 
-/* Dark palette contract — override legacy per-page light variables and hardcoded surfaces. */
+/* Dark palette contract - override legacy per-page light variables and hardcoded surfaces. */
 :root[data-theme="dark"] .semester-management{--sem-navy:#0F172A;--sem-blue:#9D99CD;--sem-text:#edf4fa;--sem-muted:#91a5b7;--sem-line:#29394d}
 :root[data-theme="dark"] .section-management{--sm-navy:#edf4fa;--sm-blue:#9D99CD;--sm-text:#edf4fa;--sm-muted:#91a5b7;--sm-line:#29394d;--sm-soft:#183650}
 :root[data-theme="dark"] .profile-page{--navy:#edf4fa;--blue:#9D99CD;--ink:#edf4fa;--muted:#91a5b7;--line:#29394d}
@@ -347,7 +347,7 @@ html,body,#root{max-width:100%;overflow-x:hidden}
 .page-content table tbody tr:focus-within td{background:var(--brand-soft)!important}
 .page-content table td strong{color:var(--text-primary)}
 .page-content table td small{color:var(--text-muted)}
-.page-content table td:empty::after{content:"—";color:var(--text-muted)}
+.page-content table td:empty::after{content:"-";color:var(--text-muted)}
 
 /* Directory/card headings immediately above data tools. */
 .page-content :is(

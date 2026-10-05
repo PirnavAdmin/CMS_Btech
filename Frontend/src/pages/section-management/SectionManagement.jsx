@@ -143,7 +143,7 @@ function InfoCard({ icon: Icon, title, rows }) { const visible = rows.filter(([,
 function Empty({ icon: Icon, title, action, isError = false }) { return <div className="section-empty" role={isError ? 'alert' : undefined} data-message-tone={isError ? 'error' : undefined}><Icon /><h3>{title}</h3>{action}</div> }
 
 function SectionList() {
-  const { selectedCollegeId, selectedAcademicYearId } = useAcademic()
+  const { scopeRecords, selectedCollegeId, selectedAcademicYearId } = useAcademic()
   const [sections, setSections] = useState([]), [assignments, setAssignments] = useState([]), [summaryData, setSummaryData] = useState(null), [faculty, setFaculty] = useState([])
   const [filters, setFilters] = useState({ query: '', course: '', branch: '', semester: '', status: '', academicYear: '' }), [page, setPage] = useState(1), [loading, setLoading] = useState(true), [error, setError] = useToastState('', 'error'), [, setToast] = useToastState('', 'success'), [assigning, setAssigning] = useState(null), [confirmAction, setConfirmAction] = useState(null)
   const load = useCallback(async () => { setLoading(true); setError(''); try { const data = await loadSources(); setSections(newestFirst('sections', data.sections)); setAssignments(data.assignments); setSummaryData(data.summary); setFaculty(data.faculty) } catch (requestError) { setError(apiError(requestError, 'Unable to load sections.')) } finally { setLoading(false) } }, [setError])
@@ -151,12 +151,12 @@ function SectionList() {
   const count = (sectionId) => assignments.filter((item) => String(item.sectionId) === String(sectionId)).length
 
   const scopedSections = useMemo(() => {
-    return sections.filter((item) => {
+    return scopeRecords(sections).filter((item) => {
       const matchesCollege = !selectedCollegeId || !item.collegeId || String(item.collegeId) === String(selectedCollegeId)
       const matchesYear = !selectedAcademicYearId || !item.academicYearId || String(item.academicYearId) === String(selectedAcademicYearId)
       return matchesCollege && matchesYear
     })
-  }, [sections, selectedCollegeId, selectedAcademicYearId])
+  }, [sections, scopeRecords, selectedCollegeId, selectedAcademicYearId])
 
   const courses = [...new Set(scopedSections.map((item) => item.course).filter(Boolean))]
   const branches = [...new Set(scopedSections.filter((item) => !filters.course || item.course === filters.course).map((item) => item.branch).filter(Boolean))]
@@ -164,7 +164,7 @@ function SectionList() {
   const years = [...new Set(scopedSections.map((item) => item.academicYear).filter(Boolean))]
   const filtered = useMemo(() => scopedSections.filter((item) => `${item.name} ${item.code} ${item.course} ${item.courseCode} ${item.branch} ${item.branchCode} ${item.semester} ${item.academicYear} ${item.advisor}`.toLowerCase().includes(filters.query.toLowerCase().trim()) && (!filters.course || item.course === filters.course) && (!filters.branch || item.branch === filters.branch) && (!filters.semester || item.semester === filters.semester) && (!filters.academicYear || item.academicYear === filters.academicYear) && (!filters.status || item.status === filters.status)), [scopedSections, filters])
   const pageCount = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE)), currentPage = Math.min(page, pageCount), visible = filtered.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE)
-  const summary = { total: summaryData?.totalSections ?? summaryData?.total ?? scopedSections.length, active: summaryData?.activeSections ?? summaryData?.active ?? scopedSections.filter((item) => item.status === 'Active').length, inactive: scopedSections.filter((item) => item.status === 'Inactive').length, students: summaryData?.currentStudents ?? summaryData?.totalStudents ?? scopedSections.reduce((sum, item) => sum + Math.max(Number(item.currentStrength || 0), count(item.id)), 0) }
+  const summary = { total: scopedSections.length, active: scopedSections.filter((item) => item.status === 'Active').length, inactive: scopedSections.filter((item) => item.status === 'Inactive').length, students: scopedSections.reduce((sum, item) => sum + Math.max(Number(item.currentStrength || 0), count(item.id)), 0) }
   const changeFilter = (key, value) => { setFilters((current) => ({ ...current, [key]: value, ...(key === 'course' ? { branch: '' } : {}) })); setPage(1) }
   const clearFilters = () => { setFilters({ query: '', course: '', branch: '', semester: '', status: '', academicYear: '' }); setPage(1) }
   const openAssign = async (section) => { try { const latest = (await sectionAssignmentApi.listBySection(section.id)).map((item) => normalizeAssignment({ ...item, sectionId: section.id })); setAssignments((current) => [...current.filter((item) => String(item.sectionId) !== String(section.id)), ...latest]); setAssigning({ ...section, currentStrength: latest.length }) } catch (requestError) { setToast(apiError(requestError, 'Unable to load section assignments.'), 'error') } }
@@ -308,7 +308,7 @@ function SectionList() {
 
 function SectionForm({ editMode = false }) {
   const { id } = useParams(), navigate = useNavigate()
-  const { selectedCollegeId, selectedCollege, activeDepartments, selectedAcademicYearId, selectedAcademicYear } = useAcademic()
+  const { scopeRecords, selectedCollegeId, selectedCollege, activeDepartments, selectedAcademicYearId, selectedAcademicYear } = useAcademic()
   const [form, setForm] = useState(emptyForm)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
@@ -318,13 +318,13 @@ function SectionForm({ editMode = false }) {
   const semesterRequest = useRef(0)
   const legacy = useRef({})
   const [formTab, setFormTab] = useState(editMode ? 'details' : 'mapping')
-  const scopedCourses = useMemo(() => (masters.courses || []).filter(item => (item.status !== 'Inactive' && item.status !== 0 && item.status !== false && item.isActive !== false) || (editMode && String(item.id) === String(form.courseId))), [masters.courses, editMode, form.courseId])
+  const scopedCourses = useMemo(() => scopeRecords(masters.courses).filter(item => (item.status !== 'Inactive' && item.status !== 0 && item.status !== false && item.isActive !== false) || (editMode && String(item.id) === String(form.courseId))), [scopeRecords, masters.courses, editMode, form.courseId])
   const course = scopedCourses.find((item) => String(item.id) === String(form.courseId))
-  const branches = useMemo(() => (masters.branches || []).filter((item) => String(item.courseId) === String(form.courseId) && ((item.status !== 'Inactive' && item.status !== 0 && item.status !== false && item.isActive !== false) || (editMode && String(item.id) === String(form.branchId)))), [masters.branches, form.courseId, editMode, form.branchId])
+  const branches = useMemo(() => scopeRecords(masters.branches).filter((item) => String(item.courseId) === String(form.courseId) && ((item.status !== 'Inactive' && item.status !== 0 && item.status !== false && item.isActive !== false) || (editMode && String(item.id) === String(form.branchId)))), [scopeRecords, masters.branches, form.courseId, editMode, form.branchId])
   const branch = branches.find((item) => String(item.id) === String(form.branchId))
   const activeYears = useMemo(() => getActiveAcademicYears(masters.years), [masters.years])
   const activeYear = editMode ? masters.years.find((item) => String(item.id) === String(form.academicYearId)) : (masters.years.find(y => String(y.id) === String(selectedAcademicYearId)) || selectedAcademicYear || activeYears.find((item) => String(item.id) === String(form.academicYearId)) || activeYears[0])
-  const semesters = useMemo(() => (masters.semesters || []).filter((item) => (!form.courseId || (!item.courseId || String(item.courseId) === String(form.courseId))) && (!form.branchId || (!item.branchId || String(item.branchId) === String(form.branchId))) && (!form.academicYearId || !item.academicYearId || String(item.academicYearId) === String(form.academicYearId)) && ((item.status !== 'Inactive' && item.status !== 0 && item.status !== false && item.isActive !== false) || (editMode && String(item.id) === String(form.semesterId)))), [masters.semesters, form.courseId, form.branchId, form.academicYearId, editMode, form.semesterId])
+  const semesters = useMemo(() => scopeRecords(masters.semesters).filter((item) => (!form.courseId || (!item.courseId || String(item.courseId) === String(form.courseId))) && (!form.branchId || (!item.branchId || String(item.branchId) === String(form.branchId))) && (!form.academicYearId || !item.academicYearId || String(item.academicYearId) === String(form.academicYearId)) && ((item.status !== 'Inactive' && item.status !== 0 && item.status !== false && item.isActive !== false) || (editMode && String(item.id) === String(form.semesterId)))), [scopeRecords, masters.semesters, form.courseId, form.branchId, form.academicYearId, editMode, form.semesterId])
   const semester = semesters.find((item) => String(item.id) === String(form.semesterId))
   const assignedCount = Math.max(Number(form.currentStrength || 0), assignments.filter((item) => String(item.sectionId) === String(id)).length)
   const teacherCandidates = useMemo(() => teacherCandidatesForBranch(faculty, branch?.name || form.branch, branch?.code || form.branchCode, branch?.id || form.branchId), [faculty, branch, form.branch, form.branchCode, form.branchId])

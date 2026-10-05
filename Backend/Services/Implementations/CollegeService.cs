@@ -6,17 +6,32 @@ using BTech.DTOs.College;
 using BTech.Models;
 using BTech.Repositories.Interfaces;
 using BTech.Services.Interfaces;
+using BTech.Data;
+using Microsoft.EntityFrameworkCore;
 
 namespace BTech.Services.Implementations
 {
     public class CollegeService : ICollegeService
     {
         private readonly ICollegeRepository _collegeRepository;
+        private readonly ApplicationDbContext _context;
 
         public CollegeService(
-            ICollegeRepository collegeRepository)
+            ICollegeRepository collegeRepository, ApplicationDbContext context)
         {
             _collegeRepository = collegeRepository;
+            _context = context;
+        }
+
+        public async Task<CollegeDeactivationImpactDto> GetDeactivationImpactAsync(long collegeId)
+        {
+            return new CollegeDeactivationImpactDto
+            {
+                StudentCount = await _context.Students.CountAsync(x => x.CollegeId == collegeId && x.DeletedAt == null),
+                FacultyCount = await _context.Faculties.CountAsync(x => x.CollegeId == collegeId && x.DeletedAt == null),
+                DepartmentCount = await _context.Departments.CountAsync(x => x.CollegeId == collegeId && x.DeletedAt == null),
+                CourseCount = await _context.Courses.CountAsync(x => x.CollegeId == collegeId && x.DeletedAt == null),
+            };
         }
 
         // =====================================================
@@ -396,6 +411,11 @@ namespace BTech.Services.Implementations
                 UpdateCollegeStatusDto dto,
                 long? userId = null)
         {
+            if (dto.Status == 0)
+            {
+                var impact = await GetDeactivationImpactAsync(collegeId);
+                if (impact.TotalCount > 0) throw new CollegeDeactivationBlockedException(impact);
+            }
             var college =
                 await _collegeRepository.UpdateStatusAsync(
                     collegeId,

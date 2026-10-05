@@ -1528,28 +1528,34 @@
 
 /* Dedicated room editor with a live summary beside the form. */
 .rooms-form-page { display: flex; flex-direction: column; gap: 16px; }
-.rooms-form-layout { display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 24px; align-items: start; }
+.rooms-form-layout { display: grid; grid-template-columns: minmax(0, 1.45fr) minmax(340px, .85fr); gap: 18px; align-items: stretch; height: min(720px, calc(100vh - 220px)); min-height: 480px; }
 .rooms-editor-panel, .rooms-live-preview { min-width: 0; border: 1px solid var(--border, #e2e8f0); border-radius: 14px; background: var(--surface, #fff); overflow: hidden; }
-.rooms-editor-panel .rooms-modal-body { max-height: none; overflow: visible; padding: 24px; }
+.rooms-editor-panel { display: flex; min-height: 0; flex-direction: column; }
+.rooms-editor-panel form { display: flex; min-height: 0; flex: 1; flex-direction: column; }
+.rooms-editor-panel .rooms-modal-body { min-height: 0; max-height: none; flex: 1; overflow-y: auto; padding: 24px; }
 .rooms-editor-panel .rooms-modal-footer { position: static; background: var(--surface-soft, #f8fafc); }
-.rooms-live-preview { position: sticky; top: 20px; }
+.rooms-live-preview { position: sticky; top: 20px; display: flex; min-height: 0; flex-direction: column; }
 .rooms-live-preview > header { display: flex; align-items: center; gap: 8px; padding: 16px 20px; border-bottom: 1px solid var(--border, #e2e8f0); color: var(--brand, #756fb2); font-size: 11px; font-weight: 800; letter-spacing: .08em; }
 .rooms-preview-dot { width: 7px; height: 7px; border-radius: 50%; background: #10b981; }
-.rooms-preview-content { padding: 24px 20px; overflow-wrap: anywhere; }
+.rooms-preview-content { min-height: 0; flex: 1; padding: 20px; overflow-y: auto; overflow-wrap: anywhere; scrollbar-width: thin; }
+.rooms-preview-identity { display: flex; align-items: center; gap: 12px; }
+.rooms-preview-identity > div:last-child { min-width: 0; }
 .rooms-preview-icon { display: grid; place-items: center; width: 48px; height: 48px; border-radius: 12px; background: #edebf6; color: #756fb2; font-size: 24px; }
-.rooms-preview-content h2 { margin: 16px 0 6px; font-size: 20px; color: var(--text-primary); }
-.rooms-preview-content p { margin: 0 0 14px; font-size: 12px; color: var(--text-muted, #64748b); line-height: 1.6; }
-.rooms-preview-content dl { margin: 20px 0; }
-.rooms-preview-content dl > div { display: flex; justify-content: space-between; gap: 16px; padding: 12px 0; border-bottom: 1px solid var(--border, #e2e8f0); font-size: 12px; }
+.rooms-preview-content h2 { margin: 0 0 5px; font-size: 20px; color: var(--text-primary); }
+.rooms-preview-content p { margin: 0; font-size: 12px; color: var(--text-muted, #64748b); line-height: 1.6; }
+.rooms-preview-status { margin-top: 12px; }
+.rooms-preview-content dl:empty { display: none; }
+.rooms-preview-content dl { margin: 14px 0 0; }
+.rooms-preview-content dl > div { display: flex; justify-content: space-between; gap: 16px; padding: 9px 0; border-bottom: 1px solid var(--border, #e2e8f0); font-size: 12px; }
 .rooms-preview-content dt { color: var(--text-muted, #64748b); }
 .rooms-preview-content dd { margin: 0; font-weight: 700; text-align: right; }
-.rooms-preview-content h3 { margin: 20px 0 10px; font-size: 12px; }
+.rooms-preview-content h3 { margin: 14px 0 8px; font-size: 12px; }
 .rooms-preview-facilities { display: flex; flex-wrap: wrap; gap: 6px; }
 .rooms-preview-facilities > span { display: inline-flex; align-items: center; gap: 5px; padding: 5px 8px; border-radius: 6px; background: var(--surface-soft, #f5f3fd); font-size: 11px; }
 .rooms-preview-notes { white-space: pre-wrap; }
 .rooms-editor-panel .rooms-submit-btn:disabled { opacity: .6; cursor: wait; }
-@media (max-width: 1100px) { .rooms-form-layout { grid-template-columns: minmax(0, 1fr) 290px; gap: 16px; } }
-@media (max-width: 900px) { .rooms-form-layout { grid-template-columns: 1fr; } .rooms-live-preview { position: static; } }
+@media (max-width: 1100px) and (min-width: 901px) { .rooms-form-layout { grid-template-columns: minmax(0, 1.2fr) minmax(300px, .8fr); gap: 14px; } }
+@media (max-width: 900px) { .rooms-form-layout { grid-template-columns: 1fr; height: auto; min-height: 0; } .rooms-editor-panel { min-height: 620px; } .rooms-editor-panel .rooms-modal-body { flex: 1; } .rooms-live-preview { position: static; min-height: 420px; max-height: 520px; } }
 @media (max-width: 600px) { .rooms-editor-panel .rooms-form-grid { grid-template-columns: 1fr; } .rooms-editor-panel .rooms-modal-body { padding: 16px; } }
 
 /* ==========================================

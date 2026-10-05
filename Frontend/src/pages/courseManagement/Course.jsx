@@ -1,3 +1,4 @@
+import DirectoryEmptyState from '../../components/DirectoryEmptyState'
 import { newestFirst, rememberCreated } from '../../utils/newestFirst'
 import { showSuccess } from '../../utils/toast'
 import useToastState from '../../hooks/useToastState'
@@ -178,10 +179,13 @@ const Field = ({ label, error, wide, children }) => <label className={`cm-field 
 const Badge = ({ value }) => <span className={`course-badge ${String(value).toLowerCase()}`}><i />{value}</span>
 
 function CourseList() {
-  const { selectedCollegeId, selectedCollege } = useAcademic()
-  const [courses, setCourses] = useState([])
-  const [departments, setDepartments] = useState([])
-  const [branches, setBranches] = useState([])
+  const { scopeRecords, selectedCollegeId, selectedCollege } = useAcademic()
+  const [allCourses, setCourses] = useState([])
+  const courses = scopeRecords(allCourses)
+  const [allDepartments, setDepartments] = useState([])
+  const departments = scopeRecords(allDepartments)
+  const [allBranches, setBranches] = useState([])
+  const branches = scopeRecords(allBranches)
   const [query, setQuery] = useState('')
   const [statusFilter, setStatusFilter] = useState('')
   const [isLoading, setIsLoading] = useState(true)
@@ -212,7 +216,7 @@ function CourseList() {
   }
   useEffect(() => { load() }, [])
 
-  const scopedCourses = courses
+  const scopedCourses = scopeRecords(courses)
 
   const departmentName = (c) => departments.find(d => String(d.id) === String(c.departmentId))?.name || c.department || ''
   const rows = useMemo(() => scopedCourses.filter(c => `${c.name} ${c.code}`.toLowerCase().includes(query.trim().toLowerCase()) && (!statusFilter || c.status === statusFilter)), [scopedCourses, query, statusFilter])
@@ -388,7 +392,7 @@ function CourseList() {
                   {pageRows.map(c => {
                     const semesterText = Number(c.semesters) > 0 ? `${Number(c.semesters)} Semesters` : 'Not available'
                     const durationText = c.durationValue ? `${c.durationValue} ${c.durationUnit || 'Years'}`.trim() : 'Not available'
-                    const secondaryText = `${c.code || ''}${c.shortName ? ` â€¢ ${c.shortName}` : ''}`.trim()
+                      const secondaryText = `${c.code || ''}${c.shortName ? ` - ${c.shortName}` : ''}`.trim()
                     return (
                       <tr key={c.id}>
                         <td className="table-center" style={{ minWidth: '240px' }}>
@@ -421,7 +425,7 @@ function CourseList() {
             </div>
           </>
         ) : (
-          <div className="course-empty"><strong>No courses match your filters.</strong><button className="cm-button" onClick={clearFilters}>Clear Filters</button></div>
+          <DirectoryEmptyState title="No courses found." actionLabel="Add Course" to="/courses/add" />
         )}
     </section>
     {pendingStatus && <StatusConfirmDialog entity="Course" name={`${pendingStatus.course.name} (${pendingStatus.course.code})`} nextStatus={pendingStatus.nextStatus} onCancel={() => { if (!isStatusSaving) { setPendingStatus(null); setCourseImpact(null) } }} onConfirm={confirmStatusChange} busy={isStatusSaving || impactChecking} blocked={Boolean(pendingStatus.blocked)} error={statusError} details={pendingStatus.nextStatus === 'Inactive' && courseImpact?.state === 'known' ? [['Associated Students', `${courseImpact.count} student${courseImpact.count === 1 ? '' : 's'}`]] : []} description={pendingStatus.blocked ? 'Deactivate is unavailable until all associated students are moved or removed from this course.' : pendingStatus.nextStatus === 'Active' ? 'This course will be marked active.' : 'No students are currently associated with this course. This course will be marked inactive for operations that exclude inactive courses.'} confirmLabel={pendingStatus.nextStatus === 'Inactive' ? 'Deactivate Course' : 'Activate Course'} />}
@@ -429,13 +433,15 @@ function CourseList() {
 }
 
 function CourseForm() {
-  const { selectedCollegeId } = useAcademic()
+  const { scopeRecords, selectedCollegeId } = useAcademic()
   const saveLock = useRef(false)
   const [persistedId, setPersistedId] = useState(null)
   const [existingCourses, setExistingCourses] = useState([])
   const { id } = useParams(), navigate = useNavigate()
-  const [departments, setDepartments] = useState([])
-  const [branches, setBranches] = useState([])
+  const [allDepartments, setDepartments] = useState([])
+  const departments = scopeRecords(allDepartments)
+  const [allBranches, setBranches] = useState([])
+  const branches = scopeRecords(allBranches)
   const [value, setValue] = useState(() => ({ ...blank, collegeId: selectedCollegeId || '' }))
   const [errors, setErrors] = useToastState({}, 'error')
   const [codeEdited, setCodeEdited] = useState(false)
@@ -626,10 +632,13 @@ function CourseForm() {
 }
 
 function CourseDetails() {
+  const { scopeRecords } = useAcademic()
   const { id } = useParams()
   const [course, setCourse] = useState(null)
-  const [departments, setDepartments] = useState([])
-  const [branches, setBranches] = useState([])
+  const [allDepartments, setDepartments] = useState([])
+  const departments = scopeRecords(allDepartments)
+  const [allBranches, setBranches] = useState([])
+  const branches = scopeRecords(allBranches)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useToastState('', 'error')
 
@@ -722,8 +731,8 @@ function CourseDetails() {
               <p className="cm-profile-subtitle">
                 <span>Department: </span>
                 <strong>{department?.name || course.department || 'â€”'}</strong>
-                {duration && <span> Â· {duration}</span>}
-                {course.semesters && <span> Â· {course.semesters} Semesters</span>}
+                {duration && <span> Â| {duration}</span>}
+                {course.semesters && <span> Â| {course.semesters} Semesters</span>}
               </p>
             </div>
           </div>
@@ -808,7 +817,7 @@ export function CourseStructure() {
       <button className="cm-button" disabled={saving} onClick={submit}>{saving ? 'Savingâ€¦' : editing ? 'Update Structure' : 'Add Structure'}</button>
       {editing && <button className="cm-button secondary" onClick={() => setEditing(null)}>Cancel</button>}
     </section>
-    <section className="cm-panel cm-table-wrap"><table className="cm-table"><thead><tr><th>Year</th><th>Semester</th><th>Name</th><th>Status</th><th>Action</th></tr></thead><tbody>{pageRows.map(x => <tr key={x.structureId}><td>{x.yearNumber}</td><td>{x.semesterNumber}</td><td>{x.semesterName}</td><td>{Number(x.status) === 0 ? 'Deactive' : 'Active'}</td><td><button className="cm-button" onClick={() => edit(x)}><FiEdit2 className="module-action-icon module-action-icon--edit" /> Edit</button></td></tr>)}</tbody></table>{loading ? <div className="cm-empty">Loading structuresâ€¦</div> : !visible.length ? <div className="cm-empty">No structure configured for Semester {semester}.</div> : <TablePagination page={currentPage} totalPages={totalPages} onPageChange={setPage} />}</section>
+    <section className="cm-panel cm-table-wrap"><table className="cm-table"><thead><tr><th>Year</th><th>Semester</th><th>Name</th><th>Status</th><th>Action</th></tr></thead><tbody>{pageRows.map(x => <tr key={x.structureId}><td>{x.yearNumber}</td><td>{x.semesterNumber}</td><td>{x.semesterName}</td><td>{Number(x.status) === 0 ? 'Deactive' : 'Active'}</td><td><button className="cm-button" onClick={() => edit(x)}><FiEdit2 className="module-action-icon module-action-icon--edit" /> Edit</button></td></tr>)}</tbody></table>{loading ? <div className="cm-empty">Loading structures...</div> : !visible.length ? <div className="cm-empty">No structure configured for Semester {semester}.</div> : <TablePagination page={currentPage} totalPages={totalPages} onPageChange={setPage} />}</section>
   </Page>
 }
 

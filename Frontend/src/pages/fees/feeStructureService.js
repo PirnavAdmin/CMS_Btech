@@ -1,10 +1,11 @@
+import { collegeStorageKey, selectedCollegeId } from '../../utils/collegeScope.js'
 const ACADEMIC_KEY = 'pirnav-fee-structures-v3'
 const LEGACY_KEY = 'pirnav-fee-structures-v2'
 const HOSTEL_KEY = 'pirnav-hostel-fee-structures-v1'
 const TRANSPORT_KEY = 'pirnav-transport-fee-structures-v1'
 
-const parse = key => { try { return JSON.parse(localStorage.getItem(key)) || [] } catch { return [] } }
-const write = (key, rows, event) => { localStorage.setItem(key, JSON.stringify(rows)); window.dispatchEvent(new Event(event)); return rows }
+const parse = key => { try { return JSON.parse(localStorage.getItem(collegeStorageKey(key))) || [] } catch { return [] } }
+const write = (key, rows, event) => { localStorage.setItem(collegeStorageKey(key), JSON.stringify(rows.map(row => ({ ...row, collegeId: selectedCollegeId() })))); window.dispatchEvent(new Event(event)); return rows }
 const number = value => Number(value) || 0
 export const money = value => new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(number(value))
 export const uid = prefix => `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`
@@ -12,7 +13,7 @@ export const feeComponent = () => ({ id: uid('FC'), feeHeadId: '', name: '', cat
 export const componentTotals = items => (items || []).reduce((a, x) => { const n = number(x.amount); if (x.refundable === 'Refundable') a.refundable += n; else if (x.requirement === 'Optional') a.optional += n; else a.mandatory += n; a.total += n; return a }, { mandatory: 0, optional: 0, refundable: 0, total: 0 })
 
 const codePart = value => { const words = String(value || '').match(/[A-Za-z0-9]+/g) || []; return (words.length > 1 ? words.map(x => x[0]).join('') : words[0] || '').slice(0, 7).toUpperCase() }
-export const structureName = s => [s.courseName, s.branchName, s.feePeriod === 'Per Semester' ? s.semesterName : s.yearOfStudy, s.quota, s.academicYearName].filter(Boolean).join(' – ')
+export const structureName = s => [s.courseName, s.branchName, s.feePeriod === 'Per Semester' ? s.semesterName : s.yearOfStudy, s.quota, s.academicYearName].filter(Boolean).join(' - ')
 export const structureCode = s => ['FS', codePart(s.courseName), codePart(s.branchName), s.feePeriod === 'Per Semester' ? codePart(s.semesterName) : codePart(s.yearOfStudy), codePart(s.quota), String(s.academicYearName || '').replace(/\D/g, '').slice(-4), `V${s.version || 1}`].filter(Boolean).join('-')
 export const blankAcademic = () => ({ id: '', name: '', code: '', version: 1, academicYearId: '', academicYearName: '', departmentId: '', departmentName: '', courseId: '', courseName: '', branchId: '', branchName: '', feePeriod: 'Per Semester', yearOfStudy: '', semesterId: '', semesterName: '', admissionType: 'Regular', quota: 'Convener', studentCategory: '', effectiveFrom: '', effectiveTo: '', feeComponents: [feeComponent()], paymentPlan: { mode: 'Full Payment', allocationMode: 'Amount', dueDate: '', includeRefundable: false, installments: [] }, fineRules: { type: 'No Fine', gracePeriod: '', value: '', maximumFine: '', applicableComponentIds: [] }, concessionPolicy: { allowed: false, eligibleComponentIds: [] }, status: 'Draft', assignedCount: 0 })
 const normalizeComponent = x => ({ ...feeComponent(), ...x, category: x.category === 'Academic Fees' ? 'Academic' : x.category })
@@ -42,7 +43,7 @@ export const periodsOverlap = (a, b) => dateValue(a.effectiveFrom, -Infinity) <=
 export const findConflict = (rows, candidate) => rows.find(x => x.id !== candidate.id && x.status === 'Active' && candidate.status === 'Active' && applicabilityKey(x) === applicabilityKey(candidate) && periodsOverlap(x, candidate))
 export const matchesStructure = (s, a, onDate = new Date().toISOString().slice(0, 10)) => s.status === 'Active' && same(s.academicYearName, a.academicYear) && same(s.departmentName, a.department) && same(s.courseName, a.course) && same(s.branchName, a.branch) && same(s.admissionType, a.entryType || a.admissionType) && (s.quota === 'Other' ? a.quota === 'Other' : same(s.quota, a.quota)) && (!s.studentCategory || same(s.studentCategory, a.studentCategory)) && (s.feePeriod === 'Per Semester' ? same(s.semesterName, a.semester) : same(s.yearOfStudy, a.yearOfStudy)) && dateValue(s.effectiveFrom, -Infinity) <= dateValue(onDate, Infinity) && dateValue(s.effectiveTo, Infinity) >= dateValue(onDate, -Infinity)
 export const saveAcademic = (rows, value, createVersion = false) => {
-  const nextValue = normalizeAcademic({ ...value, id: createVersion || !value.id ? uid('FS') : value.id, version: createVersion ? number(value.version) + 1 : number(value.version) || 1, updatedAt: new Date().toISOString() })
+  const nextValue = normalizeAcademic({ ...value, collegeId: selectedCollegeId(), id: createVersion || !value.id ? uid('FS') : value.id, version: createVersion ? number(value.version) + 1 : number(value.version) || 1, updatedAt: new Date().toISOString() })
   nextValue.name = structureName(nextValue); nextValue.code = structureCode(nextValue)
   const conflict = findConflict(rows, nextValue); if (conflict) return { error: `Active effective period overlaps ${conflict.code}.` }
   const next = [nextValue, ...rows.filter(x => x.id !== nextValue.id)]

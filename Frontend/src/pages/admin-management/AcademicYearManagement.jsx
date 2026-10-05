@@ -1,3 +1,4 @@
+import DirectoryEmptyState from '../../components/DirectoryEmptyState'
 import { newestFirst, rememberCreated } from '../../utils/newestFirst'
 import { showWarning } from '../../utils/toast'
 import useToastState from '../../hooks/useToastState'
@@ -612,7 +613,7 @@ export default function AcademicYear() {
                     {!shown.length && (
                       <tr>
                         <td colSpan="7" style={{ textAlign: 'center', padding: '32px' }}>
-                          No academic years match your search or filter.
+                          <DirectoryEmptyState title="No academic years found." actionLabel="Add Academic Year" onAction={openAdd} />
                         </td>
                       </tr>
                     )}
@@ -632,7 +633,7 @@ export default function AcademicYear() {
           <div className="backdrop" onMouseDown={(e) => e.target === e.currentTarget && close()}>
             <section className="modal" role="dialog" aria-modal="true" aria-labelledby="form-title">
               <button type="button" className="x" aria-label="Close dialog" onClick={close}>
-                Ã—
+                Ã-
               </button>
               <h2 id="form-title">{modal === 'add' ? 'Add Academic Year' : 'Edit Academic Year'}</h2>
               <form onSubmit={save} noValidate>
@@ -717,7 +718,7 @@ export default function AcademicYear() {
           <div className="backdrop" onMouseDown={(e) => e.target === e.currentTarget && close()}>
             <section className="modal" role="dialog" aria-modal="true" aria-labelledby="gen-title">
               <button type="button" className="x" aria-label="Close dialog" onClick={close}>
-                Ã—
+                Ã-
               </button>
               <h2 id="gen-title">Generate Next Academic Year</h2>
               <p style={{ marginTop: '12px', color: 'var(--text-secondary)' }}>

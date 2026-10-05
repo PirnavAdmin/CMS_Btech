@@ -1,3 +1,4 @@
+import { collegeStorageKey } from '../utils/collegeScope.js'
 import { facultyCreatePayload, facultyUpdatePayload, facultyProfilePayload, normalizeAllocation, allocationPayload, facultyEmployeeCode } from './facultyContracts'
 import { newestFirst } from '../utils/newestFirst'
 import { API_BASE_URL, facultyApi, facultyAttendanceApi, facultyDocumentApi, facultyLeaveApi, facultyPayrollApi, facultyProfileApi, facultySubjectAllocationApi } from '../api/apiEndpoints'
@@ -131,7 +132,7 @@ const getAttendanceDate = row => {
 
 const getLocalAttendance = () => {
   try {
-    return JSON.parse(localStorage.getItem(LOCAL_ATTENDANCE_KEY)) || []
+    return JSON.parse(localStorage.getItem(collegeStorageKey(LOCAL_ATTENDANCE_KEY))) || []
   } catch {
     return []
   }
@@ -161,7 +162,7 @@ export const saveLocalAttendanceRecord = (record) => {
     } else {
       list.push(normalized)
     }
-    localStorage.setItem(LOCAL_ATTENDANCE_KEY, JSON.stringify(list))
+    localStorage.setItem(collegeStorageKey(LOCAL_ATTENDANCE_KEY), JSON.stringify(list))
     return normalized
   } catch {
     return record
@@ -180,7 +181,7 @@ const sameFaculty = (left, right) => {
 
 const getLocalFaculty = () => {
   try {
-    const list = JSON.parse(localStorage.getItem(LOCAL_FACULTY_KEY)) || []
+    const list = JSON.parse(localStorage.getItem(collegeStorageKey(LOCAL_FACULTY_KEY))) || []
     return list.map(item => {
       if (String(item.id).startsWith('FAC-LOC-')) {
         const num = String(item.employeeId || '10').replace(/\D/g, '') || '10'
@@ -206,13 +207,13 @@ const saveLocalFaculty = (record) => {
     } else {
       list.unshift(record)
     }
-    localStorage.setItem(LOCAL_FACULTY_KEY, JSON.stringify(list))
+    localStorage.setItem(collegeStorageKey(LOCAL_FACULTY_KEY), JSON.stringify(list))
   } catch { /* ignore */ }
 }
 
 const getLocalProfile = (id) => {
   try {
-    const profiles = JSON.parse(localStorage.getItem(LOCAL_PROFILE_KEY)) || {}
+    const profiles = JSON.parse(localStorage.getItem(collegeStorageKey(LOCAL_PROFILE_KEY))) || {}
     return profiles[String(id)] || profiles[id] || null
   } catch {
     return null
@@ -221,9 +222,9 @@ const getLocalProfile = (id) => {
 
 const saveLocalProfile = (id, profile) => {
   try {
-    const profiles = JSON.parse(localStorage.getItem(LOCAL_PROFILE_KEY)) || {}
+    const profiles = JSON.parse(localStorage.getItem(collegeStorageKey(LOCAL_PROFILE_KEY))) || {}
     profiles[String(id)] = { ...(profiles[String(id)] || {}), ...profile }
-    localStorage.setItem(LOCAL_PROFILE_KEY, JSON.stringify(profiles))
+    localStorage.setItem(collegeStorageKey(LOCAL_PROFILE_KEY), JSON.stringify(profiles))
   } catch { /* ignore */ }
 }
 
@@ -244,7 +245,7 @@ const withFacultyPhoto = async row => {
 
 const getLocalAllocations = () => {
   try {
-    return JSON.parse(localStorage.getItem(LOCAL_ALLOCATIONS_KEY)) || []
+    return JSON.parse(localStorage.getItem(collegeStorageKey(LOCAL_ALLOCATIONS_KEY))) || []
   } catch {
     return []
   }
@@ -259,14 +260,14 @@ const saveLocalAllocation = (allocation) => {
     } else {
       list.push(allocation)
     }
-    localStorage.setItem(LOCAL_ALLOCATIONS_KEY, JSON.stringify(list))
+    localStorage.setItem(collegeStorageKey(LOCAL_ALLOCATIONS_KEY), JSON.stringify(list))
   } catch { /* ignore */ }
 }
 
 const removeLocalAllocation = (id) => {
   try {
     const list = getLocalAllocations().filter(item => String(item.id) !== String(id))
-    localStorage.setItem(LOCAL_ALLOCATIONS_KEY, JSON.stringify(list))
+    localStorage.setItem(collegeStorageKey(LOCAL_ALLOCATIONS_KEY), JSON.stringify(list))
   } catch { /* ignore */ }
 }
 
@@ -382,15 +383,15 @@ const listFaculty = async (params, search = false) => {
 
 export const clearFacultyLocalStorage = () => {
   try {
-    localStorage.removeItem(LOCAL_FACULTY_KEY)
-    localStorage.removeItem(LOCAL_PROFILE_KEY)
-    localStorage.removeItem(LOCAL_ALLOCATIONS_KEY)
-    localStorage.removeItem(LOCAL_ATTENDANCE_KEY)
-    localStorage.removeItem('pirnav-faculty-local-payroll-status-v1')
-    localStorage.removeItem('pirnav-faculty-local-salary-structures-v1')
-    localStorage.removeItem('pirnav-faculty-local-leave-decisions-v1')
-    localStorage.removeItem('pirnav-faculty-local-leave-policies-v1')
-    localStorage.removeItem('pirnav-faculty-local-leave-types-v1')
+    localStorage.removeItem(collegeStorageKey(LOCAL_FACULTY_KEY))
+    localStorage.removeItem(collegeStorageKey(LOCAL_PROFILE_KEY))
+    localStorage.removeItem(collegeStorageKey(LOCAL_ALLOCATIONS_KEY))
+    localStorage.removeItem(collegeStorageKey(LOCAL_ATTENDANCE_KEY))
+    localStorage.removeItem(collegeStorageKey('pirnav-faculty-local-payroll-status-v1'))
+    localStorage.removeItem(collegeStorageKey('pirnav-faculty-local-salary-structures-v1'))
+    localStorage.removeItem(collegeStorageKey('pirnav-faculty-local-leave-decisions-v1'))
+    localStorage.removeItem(collegeStorageKey('pirnav-faculty-local-leave-policies-v1'))
+    localStorage.removeItem(collegeStorageKey('pirnav-faculty-local-leave-types-v1'))
   } catch { /* ignore */ }
 }
 
@@ -672,7 +673,7 @@ export const facultyService = {
     const item = list.find(r => String(r.id) === String(id) || String(r.attendanceId) === String(id))
     if (item) {
       item.checkIn = timeVal
-      localStorage.setItem(LOCAL_ATTENDANCE_KEY, JSON.stringify(list))
+      localStorage.setItem(collegeStorageKey(LOCAL_ATTENDANCE_KEY), JSON.stringify(list))
     }
     return result || { success: true }
   },
@@ -686,7 +687,7 @@ export const facultyService = {
     const item = list.find(r => String(r.id) === String(id) || String(r.attendanceId) === String(id))
     if (item) {
       item.checkOut = timeVal
-      localStorage.setItem(LOCAL_ATTENDANCE_KEY, JSON.stringify(list))
+      localStorage.setItem(collegeStorageKey(LOCAL_ATTENDANCE_KEY), JSON.stringify(list))
     }
     return result || { success: true }
   },

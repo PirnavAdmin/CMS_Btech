@@ -1,3 +1,4 @@
+import { userErrorMessage } from '../utils/userError.js'
 import { useCallback, useRef, useState } from 'react'
 import { showToast } from '../utils/toast'
 
@@ -7,7 +8,8 @@ export default function useToastState(initial, defaultType = 'info') {
   const [value, setValue] = useState(initial)
   const current = useRef(value)
   const setFeedback = useCallback((next, type = defaultType) => {
-    const resolved = typeof next === 'function' ? next(current.current) : next
+    const raw = typeof next === 'function' ? next(current.current) : next
+    const resolved = type === 'error' && typeof raw === 'string' ? userErrorMessage(raw) : raw
     const previousMessage = current.current?.message || current.current?.form
     current.current = resolved
     setValue(resolved)

@@ -1,3 +1,4 @@
+import { userErrorMessage } from './userError.js'
 export const TOAST_DURATION = 2000
 const types = new Set(['success', 'error', 'warning', 'info'])
 let nextId = 0
@@ -17,7 +18,7 @@ export function dismissToast(id) {
 }
 
 export function showToast(value, type = 'info') {
-  const message = String(value?.response?.data?.message || value?.message || value || '').trim()
+  const message = type === 'error' ? userErrorMessage(value) : String(value?.message || value?.response?.data?.message || value || '').trim()
   if (!message) return undefined
   const tone = types.has(type) ? type : 'info'
   const existing = snapshot.find(toast => toast.message === message && toast.type === tone)

@@ -1,3 +1,4 @@
+import { GENERIC_ERROR_MESSAGE } from '../utils/userError.js'
 export const API_FAILURE_EVENT = 'app:api-failure'
 
 export function notifyApiUnavailable(error = {}) {
@@ -7,9 +8,7 @@ export function notifyApiUnavailable(error = {}) {
   const detail = {
     kind: status >= 500 ? 'server' : 'connection',
     status,
-    message: status >= 500
-      ? 'The backend server is having trouble. Please retry in a moment.'
-      : 'Unable to connect to the backend server. Check that it is running and try again.',
+    message: GENERIC_ERROR_MESSAGE,
     occurredAt: Date.now(),
   }
 
@@ -17,9 +16,7 @@ export function notifyApiUnavailable(error = {}) {
 }
 
 export function createApiUnavailableError(status = 0) {
-  const error = new Error(status >= 500
-    ? 'The server is temporarily unavailable. Please try again shortly.'
-    : 'Unable to connect to the server. Check that the backend is running and try again.')
+  const error = new Error(GENERIC_ERROR_MESSAGE)
   error.name = 'ApiUnavailableError'
   error.status = status || undefined
   error.code = status >= 500 ? 'API_SERVER_ERROR' : 'API_CONNECTION_ERROR'

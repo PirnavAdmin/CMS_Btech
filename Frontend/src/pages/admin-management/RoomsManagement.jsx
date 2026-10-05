@@ -1,3 +1,4 @@
+import useCollegeState from '../../hooks/useCollegeState'
 import { useState, useEffect, useMemo, useCallback } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import {
@@ -96,9 +97,9 @@ export default function RoomsManagement({ formMode = false, viewMode = false }) 
   const [roomsLoaded, setRoomsLoaded] = useState(false)
   const [saving, setSaving] = useState(false)
   const closeForm = () => navigate('/rooms-management')
-  const [rooms, setRooms] = useState([])
-  const [sections, setSections] = useState([])
-  const [assignments, setAssignments] = useState([])
+  const [rooms, setRooms] = useCollegeState([])
+  const [sections, setSections] = useCollegeState([])
+  const [assignments, setAssignments] = useCollegeState([])
   const [query, setQuery] = useState('')
   const [typeFilter, setTypeFilter] = useState('')
   const [blockFilter, setBlockFilter] = useState('')
@@ -107,6 +108,8 @@ export default function RoomsManagement({ formMode = false, viewMode = false }) 
 
   // Modals state
   const [editingRoom, setEditingRoom] = useState(null)
+  const [customRoomType, setCustomRoomType] = useState(false)
+  const [customBuildingBlock, setCustomBuildingBlock] = useState(false)
   const [viewingRoom, setViewingRoom] = useState(null)
   const [allocatingRoom, setAllocatingRoom] = useState(null)
   const [selectedSectionId, setSelectedSectionId] = useState('')
@@ -179,7 +182,7 @@ export default function RoomsManagement({ formMode = false, viewMode = false }) 
         const rawBranch = s.branchCode || s.branchName || s.branch || ''
         const sem = s.semesterName || s.semester || (s.semesterNumber ? `Sem ${s.semesterNumber}` : '')
 
-        // Clean compact display (e.g. B.Tech • ECE • Sem 1)
+        // Clean compact display (e.g. B.Tech - ECE - Sem 1)
         const compactCourse = /bachelor of technology/i.test(rawCourse) ? 'B.Tech' : rawCourse
         let compactBranch = rawBranch
         if (/electronics and communication/i.test(rawBranch)) compactBranch = 'ECE'
@@ -190,8 +193,8 @@ export default function RoomsManagement({ formMode = false, viewMode = false }) 
         else if (/information technology/i.test(rawBranch)) compactBranch = 'IT'
         else if (/artificial intelligence/i.test(rawBranch)) compactBranch = 'AI&ML'
 
-        const metaStr = [compactCourse, compactBranch, sem].filter(Boolean).join(' • ')
-        const fullTitle = [s.courseName || rawCourse, s.branchName || rawBranch, sem].filter(Boolean).join(' • ')
+        const metaStr = [compactCourse, compactBranch, sem].filter(Boolean).join(' - ')
+        const fullTitle = [s.courseName || rawCourse, s.branchName || rawBranch, sem].filter(Boolean).join(' - ')
 
         const info = {
           id,
@@ -289,15 +292,15 @@ export default function RoomsManagement({ formMode = false, viewMode = false }) 
         const count = sectionStudentCountMap.get(name) || sectionStudentCountMap.get(String(secId)) || 0
         const allocatedRoomNum = otherAllocatedMap.get(name.trim().toLowerCase()) || (secId ? otherAllocatedMap.get(String(secId)) : null)
 
-        const details = [course, branch, sem].filter(Boolean).join(' • ')
+        const details = [course, branch, sem].filter(Boolean).join(' - ')
         const isAlreadyAllocated = Boolean(allocatedRoomNum)
 
         return {
           id: String(secId || name),
           value: String(secId || name),
           name: isAlreadyAllocated
-            ? `${name} ${code ? `(${code})` : ''} — ${details} [${count} Students] (Already Allocated to ${allocatedRoomNum})`
-            : `${name} ${code ? `(${code})` : ''} — ${details} [${count} Students]`,
+            ? `${name} ${code ? `(${code})` : ''} - ${details} [${count} Students] (Already Allocated to ${allocatedRoomNum})`
+            : `${name} ${code ? `(${code})` : ''} - ${details} [${count} Students]`,
           code: details || 'Section',
           disabled: isAlreadyAllocated,
         }
@@ -307,6 +310,8 @@ export default function RoomsManagement({ formMode = false, viewMode = false }) 
   // Form Handlers
   const handleOpenCreate = () => navigate('/rooms-management/add')
   const initializeCreate = useCallback(() => {
+    setCustomBuildingBlock(false)
+    setCustomRoomType(false)
     setEditingRoom({
       id: '',
       roomNumber: '',
@@ -326,6 +331,8 @@ export default function RoomsManagement({ formMode = false, viewMode = false }) 
 
   const handleOpenEdit = (room) => navigate(`/rooms-management/${room.id}/edit`)
   const initializeEdit = useCallback((room) => {
+    setCustomBuildingBlock(Boolean(room.buildingBlock && !BUILDING_BLOCKS.includes(room.buildingBlock)))
+    setCustomRoomType(Boolean(room.roomType && !ROOM_TYPES.includes(room.roomType)))
     const foundSec = sections.find((s) => {
       const sId = s.sectionId ?? s.id
       if (room.sectionId && String(sId) === String(room.sectionId)) return true
@@ -366,9 +373,9 @@ export default function RoomsManagement({ formMode = false, viewMode = false }) 
     if (saving) return
     if (!editingRoom.roomNumber?.trim()) return showError('Please enter a room number or code.')
     if (!editingRoom.roomName?.trim()) return showError('Please enter a room display name.')
-    if (!editingRoom.buildingBlock) return showError('Please select a building block.')
+    if (!editingRoom.buildingBlock?.trim()) return showError(customBuildingBlock ? 'Please enter the building block.' : 'Please select a building block.')
     if (!editingRoom.floor) return showError('Please select a floor.')
-    if (!editingRoom.roomType) return showError('Please select a room type.')
+    if (!editingRoom.roomType?.trim()) return showError(customRoomType ? 'Please enter the room type.' : 'Please select a room type.')
     if (!editingRoom.status) return showError('Please select room availability status.')
 
     // Rule 1: Prevent double allocation of the same section to multiple rooms
@@ -607,7 +614,7 @@ export default function RoomsManagement({ formMode = false, viewMode = false }) 
                   </div>
                   <h1 className="cm-profile-title">{targetRoom.roomNumber} - {targetRoom.roomName}</h1>
                   <p className="cm-profile-subtitle">
-                    {[targetRoom.buildingBlock, targetRoom.floor, targetRoom.department || 'General / Shared Campus Facility'].filter(Boolean).join(' • ')}
+                    {[targetRoom.buildingBlock, targetRoom.floor, targetRoom.department || 'General / Shared Campus Facility'].filter(Boolean).join(' - ')}
                   </p>
                 </div>
               </div>
@@ -823,7 +830,7 @@ export default function RoomsManagement({ formMode = false, viewMode = false }) 
                         <strong>{allocatingRoom.roomName}</strong>
                       </div>
                       <div className="room-preview-meta">
-                        <span>{allocatingRoom.buildingBlock} • {allocatingRoom.floor}</span>
+                        <span>{allocatingRoom.buildingBlock} | {allocatingRoom.floor}</span>
                         <span><FiUsers /> Capacity: {allocatingRoom.capacity} Seats</span>
                       </div>
                     </div>
@@ -834,7 +841,7 @@ export default function RoomsManagement({ formMode = false, viewMode = false }) 
                         label="Section"
                         value={selectedSectionId}
                         options={[
-                          { id: '', value: '', name: '— None (Leave Available / Unallocated) —', code: 'Free Room' },
+                          { id: '', value: '', name: '- None (Leave Available / Unallocated) -', code: 'Free Room' },
                           ...getSectionDropdownOptions(allocatingRoom.id),
                         ]}
                         onChange={(value) => setSelectedSectionId(value)}
@@ -895,7 +902,7 @@ export default function RoomsManagement({ formMode = false, viewMode = false }) 
                         <span className="room-code-badge">{deletingRoom.roomNumber}</span>
                         <div>
                           <strong>{deletingRoom.roomName}</strong>
-                          <p>{deletingRoom.buildingBlock} • {deletingRoom.floor} • {deletingRoom.roomType}</p>
+                          <p>{deletingRoom.buildingBlock} | {deletingRoom.floor} | {deletingRoom.roomType}</p>
                         </div>
                       </div>
 
@@ -1008,7 +1015,7 @@ export default function RoomsManagement({ formMode = false, viewMode = false }) 
                         <span className="room-code-badge">{deallocatingRoom.roomNumber}</span>
                         <div>
                           <strong>{deallocatingRoom.roomName}</strong>
-                          <p>{deallocatingRoom.buildingBlock} • {deallocatingRoom.floor}</p>
+                          <p>{deallocatingRoom.buildingBlock} | {deallocatingRoom.floor}</p>
                         </div>
                       </div>
                       <div className="rooms-confirm-section-tag">
@@ -1110,18 +1117,35 @@ export default function RoomsManagement({ formMode = false, viewMode = false }) 
                       <label>
                         Building Block <span className="req-mark">*</span>
                       </label>
-                      <select
-                        className="rooms-select"
+                      <SearchableSelect
+                        label="Building Block"
+                        value={customBuildingBlock ? '__other__' : editingRoom.buildingBlock}
+                        options={[...BUILDING_BLOCKS, { value: '__other__', label: 'Others' }]}
+                        placeholder="Select Building Block"
+                        searchPlaceholder="Search building blocks..."
+                        noOptionsMessage="No matching building blocks. Clear the search and select Others to enter a custom block."
+                        onChange={(value) => {
+                          const other = value === '__other__'
+                          setCustomBuildingBlock(other)
+                          setEditingRoom({ ...editingRoom, buildingBlock: other ? '' : value })
+                        }}
+                        required
+                      />
+                    </div>
+
+                    {customBuildingBlock && <div className="rooms-form-group">
+                      <label htmlFor="other-building-block">Other Building Block <span className="req-mark">*</span></label>
+                      <input
+                        id="other-building-block"
+                        className="rooms-input"
+                        type="text"
                         value={editingRoom.buildingBlock}
                         onChange={(e) => setEditingRoom({ ...editingRoom, buildingBlock: e.target.value })}
+                        onBlur={() => setEditingRoom((room) => ({ ...room, buildingBlock: room.buildingBlock.trim() }))}
+                        placeholder="Enter building block"
                         required
-                      >
-                        <option value="" disabled>Select Building Block</option>
-                        {BUILDING_BLOCKS.map((b) => (
-                          <option key={b} value={b}>{b}</option>
-                        ))}
-                      </select>
-                    </div>
+                      />
+                    </div>}
 
                     {/* Floor */}
                     <div className="rooms-form-group">
@@ -1146,18 +1170,35 @@ export default function RoomsManagement({ formMode = false, viewMode = false }) 
                       <label>
                         Room Type <span className="req-mark">*</span>
                       </label>
-                      <select
-                        className="rooms-select"
+                      <SearchableSelect
+                        label="Room Type"
+                        value={customRoomType ? '__other__' : editingRoom.roomType}
+                        options={[...ROOM_TYPES, { value: '__other__', label: 'Others' }]}
+                        placeholder="Select Room Type"
+                        searchPlaceholder="Search room types..."
+                        noOptionsMessage="No matching room types. Select Others to enter a custom type."
+                        onChange={(value) => {
+                          const other = value === '__other__'
+                          setCustomRoomType(other)
+                          setEditingRoom({ ...editingRoom, roomType: other ? '' : value })
+                        }}
+                        required
+                      />
+                    </div>
+
+                    {customRoomType && <div className="rooms-form-group">
+                      <label htmlFor="other-room-type">Other Room Type <span className="req-mark">*</span></label>
+                      <input
+                        id="other-room-type"
+                        className="rooms-input"
+                        type="text"
                         value={editingRoom.roomType}
                         onChange={(e) => setEditingRoom({ ...editingRoom, roomType: e.target.value })}
+                        onBlur={() => setEditingRoom((room) => ({ ...room, roomType: room.roomType.trim() }))}
+                        placeholder="Enter room type"
                         required
-                      >
-                        <option value="" disabled>Select Room Type</option>
-                        {ROOM_TYPES.map((t) => (
-                          <option key={t} value={t}>{t}</option>
-                        ))}
-                      </select>
-                    </div>
+                      />
+                    </div>}
 
                     {/* Seating Capacity */}
                     <div className="rooms-form-group">
@@ -1246,20 +1287,22 @@ export default function RoomsManagement({ formMode = false, viewMode = false }) 
             <aside className="rooms-live-preview" aria-label="Room live preview">
               <header><span className="rooms-preview-dot" /> LIVE PREVIEW</header>
               <div className="rooms-preview-content">
-                <div className="rooms-preview-icon"><FiGrid /></div>
-                <h2>{editingRoom.roomName?.trim() || 'Room Preview'}</h2>
-                <p>{editingRoom.roomNumber?.trim() || 'Room code'} &middot; {editingRoom.roomType || 'Room type'}</p>
-                {editingRoom.status && <StatusBadge status={editingRoom.status} />}
+                <div className="rooms-preview-identity">
+                  {(editingRoom.roomName?.trim() || editingRoom.roomNumber?.trim() || editingRoom.roomType) && <div className="rooms-preview-icon"><FiGrid /></div>}
+                  <div>
+                    {editingRoom.roomName?.trim() && <h2>{editingRoom.roomName.trim()}</h2>}
+                    {[editingRoom.roomNumber, editingRoom.roomType].some(value => String(value || '').trim()) && <p>{[editingRoom.roomNumber, editingRoom.roomType].filter(value => String(value || '').trim()).join(' · ')}</p>}
+                  </div>
+                </div>
+                {editingRoom.status && <div className="rooms-preview-status"><StatusBadge status={editingRoom.status} /></div>}
                 <dl>{[
                   ['Building Block', editingRoom.buildingBlock],
                   ['Floor', editingRoom.floor],
                   ['Seating Capacity', editingRoom.capacity ? editingRoom.capacity + ' seats' : ''],
                   ['Allocated Section', editingRoom.assignedSection],
-                ].map(([label, value]) => <div key={label}><dt>{label}</dt><dd>{value || '—'}</dd></div>)}</dl>
-                <h3>Facilities & Equipment</h3>
-                <div className="rooms-preview-facilities">{editingRoom.facilities?.length ? editingRoom.facilities.map(item => <span key={item}><FiCheck /> {item}</span>) : <p>No facilities selected</p>}</div>
-                <h3>Remarks / Notes</h3>
-                <p className="rooms-preview-notes">{editingRoom.description || 'No remarks added'}</p>
+                ].filter(([, value]) => String(value || '').trim()).map(([label, value]) => <div key={label}><dt>{label}</dt><dd>{value}</dd></div>)}</dl>
+                {editingRoom.facilities?.length > 0 && <><h3>Facilities & Equipment</h3><div className="rooms-preview-facilities">{editingRoom.facilities.map(item => <span key={item}><FiCheck /> {item}</span>)}</div></>}
+                {editingRoom.description?.trim() && <><h3>Remarks / Notes</h3><p className="rooms-preview-notes">{editingRoom.description}</p></>}
               </div>
             </aside>
           </div>
@@ -1389,7 +1432,9 @@ export default function RoomsManagement({ formMode = false, viewMode = false }) 
                       <EmptyState
                         icon={FiGrid}
                         title="No rooms found"
-                        description="No rooms match your search or filter criteria. Create a new classroom or reset filters."
+                        description="Add a room or classroom to get started."
+                        action="Add Room / Classroom"
+                        onAction={handleOpenCreate}
                       />
                     </td>
                   </tr>
@@ -1570,7 +1615,7 @@ export default function RoomsManagement({ formMode = false, viewMode = false }) 
                       <strong>{allocatingRoom.roomName}</strong>
                     </div>
                     <div className="room-preview-meta">
-                      <span>{allocatingRoom.buildingBlock} • {allocatingRoom.floor}</span>
+                      <span>{allocatingRoom.buildingBlock} | {allocatingRoom.floor}</span>
                       <span><FiUsers /> Capacity: {allocatingRoom.capacity} Seats</span>
                     </div>
                   </div>
@@ -1581,7 +1626,7 @@ export default function RoomsManagement({ formMode = false, viewMode = false }) 
                       label="Section"
                       value={selectedSectionId}
                       options={[
-                        { id: '', value: '', name: '— None (Leave Available / Unallocated) —', code: 'Free Room' },
+                        { id: '', value: '', name: '- None (Leave Available / Unallocated) -', code: 'Free Room' },
                         ...getSectionDropdownOptions(allocatingRoom.id),
                       ]}
                       onChange={(value) => setSelectedSectionId(value)}
@@ -1649,7 +1694,7 @@ export default function RoomsManagement({ formMode = false, viewMode = false }) 
                       <span className="room-code-badge">{deletingRoom.roomNumber}</span>
                       <div>
                         <strong>{deletingRoom.roomName}</strong>
-                        <p>{deletingRoom.buildingBlock} • {deletingRoom.floor} • {deletingRoom.roomType}</p>
+                        <p>{deletingRoom.buildingBlock} | {deletingRoom.floor} | {deletingRoom.roomType}</p>
                       </div>
                     </div>
 
@@ -1761,7 +1806,7 @@ export default function RoomsManagement({ formMode = false, viewMode = false }) 
                       <span className="room-code-badge">{deallocatingRoom.roomNumber}</span>
                       <div>
                         <strong>{deallocatingRoom.roomName}</strong>
-                        <p>{deallocatingRoom.buildingBlock} • {deallocatingRoom.floor}</p>
+                        <p>{deallocatingRoom.buildingBlock} | {deallocatingRoom.floor}</p>
                       </div>
                     </div>
                     <div className="rooms-confirm-section-tag">

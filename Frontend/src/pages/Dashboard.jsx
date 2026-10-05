@@ -1,3 +1,4 @@
+import useCollegeState from '../hooks/useCollegeState'
 import { useEffect, useState, useMemo } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import {
@@ -53,10 +54,10 @@ export default function Dashboard() {
     sections,
   } = useAcademic()
 
-  const [admissions, setAdmissions] = useState([])
-  const [students, setStudents] = useState([])
-  const [faculty, setFaculty] = useState([])
-  const [subjects, setSubjects] = useState([])
+  const [admissions, setAdmissions] = useCollegeState([])
+  const [students, setStudents] = useCollegeState([])
+  const [faculty, setFaculty] = useCollegeState([])
+  const [subjects, setSubjects] = useCollegeState([])
   const [loadingStats, setLoadingStats] = useState(true)
   const [lastUpdated, setLastUpdated] = useState(null)
   const [refreshVersion, setRefreshVersion] = useState(0)
@@ -349,7 +350,7 @@ export default function Dashboard() {
     return {
       labels: months,
       points: counts,
-      subtext: `${approvedAdmissions.length} Approved • ${pendingAdmissions.length} In Review`,
+      subtext: `${approvedAdmissions.length} Approved | ${pendingAdmissions.length} In Review`,
     }
   }, [inflowTimeframe, scopedAdmissions, approvedAdmissions.length, pendingAdmissions.length])
 
@@ -387,7 +388,7 @@ export default function Dashboard() {
       return {
         labels: weeks,
         points,
-        subtext: `${subjects.length} Syllabi • ${scopedSections.length} Active Batches`,
+        subtext: `${subjects.length} Syllabi | ${scopedSections.length} Active Batches`,
       }
     }
 
@@ -889,7 +890,7 @@ export default function Dashboard() {
             <div className="ym-card-header">
               <div>
                 <h3 className="ym-card-title">Academic Units & Capacities</h3>
-                <span className="ym-card-subtitle">{departments.length} Departments • {scopedCourses.length} Degree Programs</span>
+                <span className="ym-card-subtitle">{departments.length} Departments | {scopedCourses.length} Degree Programs</span>
               </div>
               <Link to="/department-management" className="ym-card-link">
                 Manage <FiArrowRight />

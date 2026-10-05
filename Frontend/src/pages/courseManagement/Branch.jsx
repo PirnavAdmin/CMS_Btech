@@ -185,11 +185,13 @@ const Field = ({ label, error, children, wide = false }) => {
 }
 
 function List() {
-  const { selectedCollegeId, selectedAcademicYearId } = useAcademic()
+  const { scopeRecords, selectedCollegeId, selectedAcademicYearId } = useAcademic()
   const [params] = useSearchParams()
   const [pendingStatus, setPendingStatus] = useState(null)
-  const [courses, setCourses] = useState([])
-  const [branches, setBranches] = useState([])
+  const [allCourses, setCourses] = useState([])
+  const courses = scopeRecords(allCourses)
+  const [allBranches, setBranches] = useState([])
+  const branches = scopeRecords(allBranches)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useToastState('', 'error')
   const [page, setPage] = useState(1)
@@ -236,7 +238,7 @@ function List() {
 
   const courseById = useMemo(() => new Map(courses.map((course) => [String(course.id), course])), [courses])
 
-  const scopedBranches = branches
+  const scopedBranches = scopeRecords(branches)
 
   const rows = useMemo(() => {
     const needle = filters.query.trim().toLowerCase()
@@ -377,7 +379,11 @@ function List() {
         </table>
       </div>
       <TablePagination currentPage={currentPage} totalPages={totalPages} onPageChange={setPage} />
-    </> : <div className="branch-empty">No branches match the current filters.</div> }
+    </> : !error && <div className="branch-empty">
+      <strong>No branches found.</strong>
+      <span>Add a branch to get started.</span>
+      <Link className="cm-button" to="/branches/add">Add Branch</Link>
+    </div> }
     </section>
   </Page>
 }
@@ -403,13 +409,15 @@ const validateBranch = (value, branchId, existingRows) => {
 }
 
 function Form() {
-  const { selectedAcademicYearId } = useAcademic()
+  const { scopeRecords, selectedAcademicYearId } = useAcademic()
   const { id } = useParams()
   const [params] = useSearchParams()
   const navigate = useNavigate()
-  const [courses, setCourses] = useState([])
+  const [allCourses, setCourses] = useState([])
+  const courses = scopeRecords(allCourses)
   const [years, setYears] = useState([])
-  const [branches, setBranches] = useState([])
+  const [allBranches, setBranches] = useState([])
+  const branches = scopeRecords(allBranches)
   const [errors, setErrors] = useToastState({}, 'error')
   const [touched, setTouched] = useState({})
   const [saving, setSaving] = useState(false)
@@ -764,7 +772,7 @@ function Details() {
               <p className="cm-profile-subtitle">
                 <span>Course: </span>
                 <strong>{branch.courseName || branch.courseCode || 'â€”'}</strong>
-                {branch.specialization && <span> Â· Specialization: {branch.specialization}</span>}
+                {branch.specialization && <span> Â| Specialization: {branch.specialization}</span>}
               </p>
             </div>
           </div>

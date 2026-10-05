@@ -38,8 +38,8 @@ export default function HeaderAcademicYear() {
   const year = selectedAcademicYear || currentAcademicYear || academicYears[0] || null
   const label = year ? (year.academicYearName || year.name || 'Unnamed academic year') : (loading ? 'Loading...' : 'Not Configured')
   const progress = year ? calculateAcademicYearProgress(year.startDate, year.endDate, now) : null
-  const shortLabel = label.replace(/(\d{4})\s*[-–]\s*\d{2}(\d{2})/, '$1–$2')
-  const dateLabel = (value) => (value ? String(value).slice(0, 10) : '—')
+  const shortLabel = label.replace(/(\d{4})\s*[--]\s*\d{2}(\d{2})/, '$1-$2')
+  const dateLabel = (value) => (value ? String(value).slice(0, 10) : '-')
 
   return (
     <details
@@ -87,7 +87,7 @@ export default function HeaderAcademicYear() {
             <dt>End Date</dt>
             <dd>{dateLabel(year.endDate)}</dd>
             <dt>Cycle Progress</dt>
-            <dd>{progress === null ? 'Unavailable — check year dates' : `${progress}%`}</dd>
+            <dd>{progress === null ? 'Unavailable - check year dates' : `${progress}%`}</dd>
           </dl>
         ) : (
           <p>{loading ? 'Loading academic years...' : 'Select an academic year above.'}</p>

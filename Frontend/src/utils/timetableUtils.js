@@ -31,7 +31,7 @@ export function conflictsFor(candidate, entries) {
     if (sameRoom(row, candidate)) resources.push('Classroom')
     if (!resources.length) continue
     if (!validTime(row)) { conflicts.push({ id: row.id, resources, message: `${resources.join(' / ')} conflict cannot be checked: an existing ${row.dayOfWeek} entry has missing or invalid period times.` }); continue }
-    if (overlaps(candidate, row)) conflicts.push({ id: row.id, resources, message: `${resources.join(' / ')} conflict on ${row.dayOfWeek}: ${row.startTime}–${row.endTime}${row.classroom ? `, ${row.classroom}` : ''}. ${row.facultyName || `Faculty ${row.facultyId || 'unavailable'}`} · ${row.sectionName || `Section ${row.sectionId || 'unavailable'}`} · ${row.subjectName || `Subject ${row.subjectId || 'unavailable'}`}${row.timetableName ? ` · ${row.timetableName}` : ''}.` })
+    if (overlaps(candidate, row)) conflicts.push({ id: row.id, resources, message: `${resources.join(' / ')} conflict on ${row.dayOfWeek}: ${row.startTime}-${row.endTime}${row.classroom ? `, ${row.classroom}` : ''}. ${row.facultyName || `Faculty ${row.facultyId || 'unavailable'}`} | ${row.sectionName || `Section ${row.sectionId || 'unavailable'}`} | ${row.subjectName || `Subject ${row.subjectId || 'unavailable'}`}${row.timetableName ? ` | ${row.timetableName}` : ''}.` })
   }
   return conflicts
 }
@@ -58,7 +58,7 @@ export function existingTimetables(entries, scope) {
 }
 export function existingSlots(entries, timetableId) {
   const rows = entries.filter(row => same(row.timetableId, timetableId) && row.timetableSlotId && validTime(row))
-  return [...new Map(rows.map(row => [key(row.timetableSlotId), { id: row.timetableSlotId, name: `${row.slotName || 'Period'} · ${row.startTime.slice(0, 5)}–${row.endTime.slice(0, 5)}`, startTime: row.startTime, endTime: row.endTime }])).values()].sort((a, b) => timeMinutes(a.startTime) - timeMinutes(b.startTime))
+  return [...new Map(rows.map(row => [key(row.timetableSlotId), { id: row.timetableSlotId, name: `${row.slotName || 'Period'} | ${row.startTime.slice(0, 5)}-${row.endTime.slice(0, 5)}`, startTime: row.startTime, endTime: row.endTime }])).values()].sort((a, b) => timeMinutes(a.startTime) - timeMinutes(b.startTime))
 }
 export function entryPayload(row, updating = false) {
   const result = {}

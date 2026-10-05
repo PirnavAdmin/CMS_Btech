@@ -48,7 +48,7 @@ const escapeHtml = value => exportValue(value).replace(/[&<>"']/g, char => ({ '&
 
 export function reportHtml({ title, scope, rows, columns }) {
   if (!rows.length) throw new Error('No records available to print.')
-  return `<h1>${escapeHtml(title)}</h1><p>${escapeHtml(scope)} · ${rows.length} records</p><table><thead><tr>${columns.map(c => `<th>${escapeHtml(c.label)}</th>`).join('')}</tr></thead><tbody>${reportRows(rows, columns).map(row => `<tr>${row.map(cell => `<td>${escapeHtml(cell)}</td>`).join('')}</tr>`).join('')}</tbody></table>`
+  return `<h1>${escapeHtml(title)}</h1><p>${escapeHtml(scope)} | ${rows.length} records</p><table><thead><tr>${columns.map(c => `<th>${escapeHtml(c.label)}</th>`).join('')}</tr></thead><tbody>${reportRows(rows, columns).map(row => `<tr>${row.map(cell => `<td>${escapeHtml(cell)}</td>`).join('')}</tr>`).join('')}</tbody></table>`
 }
 
 function printDocument(title, html) {
@@ -80,7 +80,7 @@ export function printEntityDetails({ title, element }) {
   if (!element) throw new Error('Details are not available to print.')
   const clone = element.cloneNode(true)
   clone.querySelectorAll('script,style,link,iframe,object,embed,button,input,select,textarea,nav,footer,[data-no-print],.export-control,.print-control').forEach(node => node.remove())
-  const emptyValues = new Set(['', '—', '-', 'n/a', 'not provided', 'not available', 'null', 'undefined'])
+  const emptyValues = new Set(['', '-', '-', 'n/a', 'not provided', 'not available', 'null', 'undefined'])
   clone.querySelectorAll('.erp-view-field,.cm-info-row,.profile-detail,.detail-grid > div,dl > div').forEach(field => {
     const valueNode = field.querySelector('.erp-view-value,.cm-info-val,.profile-detail strong,dd') || field.lastElementChild
     const value = valueNode?.textContent?.replace(/\s+/g, ' ').trim().toLowerCase() || ''

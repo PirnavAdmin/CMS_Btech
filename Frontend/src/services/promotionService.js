@@ -1,3 +1,4 @@
+import { collegeStorageKey } from '../utils/collegeScope.js'
 import { studentPromotionApi } from '../api/apiEndpoints'
 import studentService from './studentService'
 import eventBus, { ERP_EVENTS } from './eventBus'
@@ -17,7 +18,7 @@ const studentKey = (student) => String(
 class PromotionService {
   getEligibilityOverrides() {
     try {
-      const saved = JSON.parse(localStorage.getItem(PROMOTION_ELIGIBILITY_KEY) || '{}')
+      const saved = JSON.parse(localStorage.getItem(collegeStorageKey(PROMOTION_ELIGIBILITY_KEY)) || '{}')
       return saved && typeof saved === 'object' ? saved : {}
     } catch {
       return {}
@@ -43,7 +44,7 @@ class PromotionService {
     }
 
     try {
-      localStorage.setItem(PROMOTION_ELIGIBILITY_KEY, JSON.stringify({
+      localStorage.setItem(collegeStorageKey(PROMOTION_ELIGIBILITY_KEY), JSON.stringify({
         ...this.getEligibilityOverrides(),
         [id]: normalized,
       }))
@@ -53,7 +54,7 @@ class PromotionService {
 
   getLocalHistory() {
     try {
-      const raw = localStorage.getItem(PROMOTION_HISTORY_KEY)
+      const raw = localStorage.getItem(collegeStorageKey(PROMOTION_HISTORY_KEY))
       return raw ? JSON.parse(raw) : []
     } catch {
       return []
@@ -64,7 +65,7 @@ class PromotionService {
     try {
       const existing = this.getLocalHistory()
       const updated = [entry, ...existing.filter((h) => (h.promotionId || h.id) !== (entry.promotionId || entry.id))]
-      localStorage.setItem(PROMOTION_HISTORY_KEY, JSON.stringify(updated))
+      localStorage.setItem(collegeStorageKey(PROMOTION_HISTORY_KEY), JSON.stringify(updated))
     } catch { /* storage fallback */ }
   }
 

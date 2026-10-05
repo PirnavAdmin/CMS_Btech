@@ -5,7 +5,7 @@ const isCleanValue = (val) => {
   if (val === null || val === undefined) return false
   if (typeof val === 'string') {
     const trimmed = val.trim()
-    if (trimmed === '' || trimmed === '—' || trimmed === '-' || trimmed.toLowerCase() === 'not provided' || trimmed.toLowerCase() === 'n/a' || trimmed.toLowerCase() === 'null' || trimmed.toLowerCase() === 'undefined') {
+    if (trimmed === '' || trimmed === '-' || trimmed === '-' || trimmed.toLowerCase() === 'not provided' || trimmed.toLowerCase() === 'n/a' || trimmed.toLowerCase() === 'null' || trimmed.toLowerCase() === 'undefined') {
       return false
     }
     return true
@@ -19,7 +19,7 @@ const isCleanValue = (val) => {
 const isStatusLabel = (label = '') => /\b(status|eligibility)\b/i.test(String(label))
 
 function DetailsValue({ label, value }) {
-  if (value === null || value === undefined) return '—'
+  if (value === null || value === undefined) return '-'
   if (typeof value === 'string' && isStatusLabel(label)) {
     return <StatusBadge value={value} />
   }

@@ -1,4 +1,4 @@
-import { dailyPeriods, DAILY_PERIOD_SETUP } from '../../utils/timetablePeriods'
+﻿import { dailyPeriods, DAILY_PERIOD_SETUP } from '../../utils/timetablePeriods'
 import { calendarBounds, roomOptions, WEEKDAYS } from '../../utils/timetablePlanner'
 
 export default function PeriodSetupStep({ config, setConfig, sources, scope, entries, busy, errors, back, continueSetup }) {

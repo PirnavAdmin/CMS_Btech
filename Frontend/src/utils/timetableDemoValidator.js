@@ -68,7 +68,7 @@ export function validateDemoSchedules(state, scope) {
   const errors = validateDemoSettings(state.settings), rows = sections.flatMap(section => state.schedules[section.id]?.entries || [])
   rows.forEach(row => {
     const validation = validateDemoEntry(state, row, row.id)
-    errors.push(...validation.errors.map(message => `${sectionName(row.sectionId)} · ${message}`))
+    errors.push(...validation.errors.map(message => `${sectionName(row.sectionId)} | ${message}`))
   })
   const selected = Object.entries(state.subjectConfig || {}).filter(([, value]) => value.selected)
   const unscheduled = state.unscheduled.filter(item => {
@@ -79,11 +79,11 @@ export function validateDemoSchedules(state, scope) {
   })
   const missing = sections.flatMap(section => selected.filter(([subjectId]) => subjectFor(subjectId)?.branchId === scope.branchId && subjectFor(subjectId)?.semesterId === scope.semesterId).map(([subjectId, config]) => {
     const count = (state.schedules[section.id]?.entries || []).filter(row => row.subjectId === subjectId).reduce((sum, row) => sum + demoEntryPeriodIndices(row).length, 0)
-    if (count < Number(config.periodsPerWeek)) return `${section.name} · ${subjectFor(subjectId).name}: ${count}/${config.periodsPerWeek} periods scheduled`
-    if (count > Number(config.periodsPerWeek)) return `${section.name} · ${subjectFor(subjectId).name}: ${count}/${config.periodsPerWeek} periods scheduled (over requirement)`
+    if (count < Number(config.periodsPerWeek)) return `${section.name} | ${subjectFor(subjectId).name}: ${count}/${config.periodsPerWeek} periods scheduled`
+    if (count > Number(config.periodsPerWeek)) return `${section.name} | ${subjectFor(subjectId).name}: ${count}/${config.periodsPerWeek} periods scheduled (over requirement)`
     return ''
   }).filter(Boolean))
-  errors.push(...unscheduled.map(item => `${sectionName(item.sectionId)} · ${subjectFor(item.subjectId)?.name || 'Subject'}: ${item.remaining} unscheduled. ${item.reason}`))
+  errors.push(...unscheduled.map(item => `${sectionName(item.sectionId)} | ${subjectFor(item.subjectId)?.name || 'Subject'}: ${item.remaining} unscheduled. ${item.reason}`))
   errors.push(...missing)
   return { valid: errors.length === 0, errors: [...new Set(errors)], checks: ['Section availability', 'Faculty across all sections', 'Room across all sections', 'Working days', 'Break and lunch boundaries', 'Lab blocks', 'Weekly subject requirements'] }
 }

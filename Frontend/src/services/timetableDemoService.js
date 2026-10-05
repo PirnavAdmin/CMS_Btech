@@ -1,3 +1,4 @@
+import { collegeStorageKey } from '../utils/collegeScope.js'
 import { demoAcademicData, defaultDemoSettings } from './timetableMockData.js'
 import { demoEntryTimes, generateDemoTimetables } from '../utils/timetableDemoGenerator.js'
 import { validateDemoEntry, validateDemoSchedules } from '../utils/timetableDemoValidator.js'
@@ -15,7 +16,7 @@ export const initialTimetableDemoState = () => ({
 export const timetableDemoService = {
   load() {
     if (typeof localStorage === 'undefined') return initialTimetableDemoState()
-    const raw = localStorage.getItem(STORAGE_KEY)
+    const raw = localStorage.getItem(collegeStorageKey(STORAGE_KEY))
     if (!raw) return initialTimetableDemoState()
     try {
       const saved = JSON.parse(raw)
@@ -33,11 +34,11 @@ export const timetableDemoService = {
     }
   },
   save(state) {
-    if (typeof localStorage !== 'undefined') localStorage.setItem(STORAGE_KEY, JSON.stringify(state))
+    if (typeof localStorage !== 'undefined') localStorage.setItem(collegeStorageKey(STORAGE_KEY), JSON.stringify(state))
     return state
   },
   reset() {
-    if (typeof localStorage !== 'undefined') localStorage.removeItem(STORAGE_KEY)
+    if (typeof localStorage !== 'undefined') localStorage.removeItem(collegeStorageKey(STORAGE_KEY))
     return initialTimetableDemoState()
   },
   generateAll(state, scope) { return this.save(generateDemoTimetables(state, scope)) },

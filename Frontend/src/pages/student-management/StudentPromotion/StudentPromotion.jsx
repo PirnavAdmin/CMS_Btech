@@ -1,3 +1,4 @@
+import useCollegeState from '../../../hooks/useCollegeState'
 import { newestFirst } from '../../../utils/newestFirst'
 import { promotionDetailSections } from '../../../utils/recordDetailSections'
 import { showError } from '../../../utils/toast'
@@ -37,7 +38,7 @@ import './StudentPromotionSearch.css'
 import './StudentPromotionScope.css'
 
 const formatSemesterLabel = (val) => {
-  if (val === undefined || val === null || val === '') return '—'
+  if (val === undefined || val === null || val === '') return '-'
   const str = String(val).trim()
   if (/^sem(ester)?/i.test(str) || /^grad/i.test(str)) return str
   if (/^\d+$/.test(str)) return `Semester ${str}`
@@ -110,7 +111,7 @@ function ReviewDrawer({ student, onClose, onStatus, canEdit }) {
     semText,
   ]
     .filter(Boolean)
-    .join(' · ')
+    .join(' - ')
 
   const isEligible = statusOf(student) === 'eligible' || statusOf(student) === 'promoted'
 
@@ -179,11 +180,11 @@ function ReviewDrawer({ student, onClose, onStatus, canEdit }) {
                 </div>
                 <div className="pr-field">
                   <span className="pr-label">Roll Number</span>
-                  <span className="pr-value">{rollNo || '—'}</span>
+                  <span className="pr-value">{rollNo || '-'}</span>
                 </div>
                 <div className="pr-field">
                   <span className="pr-label">Registration Number</span>
-                  <span className="pr-value">{regNo || '—'}</span>
+                  <span className="pr-value">{regNo || '-'}</span>
                 </div>
                 <div className="pr-field">
                   <span className="pr-label">Course</span>
@@ -296,8 +297,8 @@ export default function StudentPromotion() {
   } = useAcademic()
 
   const [tab, setTab] = useState('promotion') // 'promotion' | 'history'
-  const [students, setStudents] = useState([])
-  const [history, setHistory] = useState([])
+  const [students, setStudents] = useCollegeState([])
+  const [history, setHistory] = useCollegeState([])
   const [dashboard, setDashboard] = useState({})
 
   // Promotion Scope
@@ -830,13 +831,13 @@ export default function StudentPromotion() {
                                 <div style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{nameOf(x)}</div>
                               </td>
                               <td style={{ minWidth: '130px' }}>
-                                <div>{x.rollNumber || x.registrationNumber || '—'}</div>
+                                <div>{x.rollNumber || x.registrationNumber || '-'}</div>
                                 {x.registrationNumber && x.rollNumber && x.registrationNumber !== x.rollNumber && (
                                   <div className="text-muted" style={{ fontSize: '11px', marginTop: '2px' }}>{x.registrationNumber}</div>
                                 )}
                               </td>
                               <td style={{ minWidth: '150px' }}>
-                                <div>{x.course} · {x.branch}</div>
+                                <div>{x.course} | {x.branch}</div>
                                 <div className="text-muted" style={{ fontSize: '11px', marginTop: '2px' }}>Section {x.section || 'A'}</div>
                               </td>
                               <td style={{ minWidth: '170px' }}>
@@ -929,14 +930,14 @@ export default function StudentPromotion() {
                         <td style={{ minWidth: '170px' }}>
                           <div style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{nameOf(h) || h.studentName || 'Student'}</div>
                         </td>
-                        <td style={{ minWidth: '140px' }}>{h.rollNumber || h.registrationNumber || '—'}</td>
+                        <td style={{ minWidth: '140px' }}>{h.rollNumber || h.registrationNumber || '-'}</td>
                         <td style={{ minWidth: '170px' }}>
                           <span style={{ fontWeight: 600 }}>{formatSemesterLabel(h.fromSemester)}</span>{' '}
                           <span style={{ color: 'var(--text-muted)' }}>→</span>{' '}
                           <span className="text-success font-semibold">{formatSemesterLabel(h.toSemester)}</span>
                         </td>
                         <td className="table-center" style={{ width: '120px' }}>
-                          {h.promotionDate ? new Date(h.promotionDate).toLocaleDateString('en-IN') : '—'}
+                          {h.promotionDate ? new Date(h.promotionDate).toLocaleDateString('en-IN') : '-'}
                         </td>
                         <td className="table-center" style={{ width: '120px' }}>
                           <StatusBadge

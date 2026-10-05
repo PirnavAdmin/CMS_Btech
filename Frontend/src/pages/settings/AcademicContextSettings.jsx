@@ -169,7 +169,7 @@ export default function AcademicContextSettings() {
                 <strong>{draftCollege?.name || draftCollege?.collegeName || 'No College Selected'}</strong>
                 {draftCollege?.code && <span className="acs-tag">{draftCollege.code}</span>}
               </div>
-              <div className="acs-preview-divider">•</div>
+              <div className="acs-preview-divider">|</div>
               <div className="acs-preview-entity">
                 <small>Academic Year</small>
                 <strong>{draftAcademicYear?.name || draftAcademicYear?.academicYearName || 'No Year Selected'}</strong>
@@ -207,7 +207,7 @@ export default function AcademicContextSettings() {
             </div>
             <div>
               <dt>College Code</dt>
-              <dd>{selectedCollege?.code || selectedCollege?.collegeCode || '—'}</dd>
+              <dd>{selectedCollege?.code || selectedCollege?.collegeCode || '-'}</dd>
             </div>
             <div>
               <dt>Academic Year</dt>
