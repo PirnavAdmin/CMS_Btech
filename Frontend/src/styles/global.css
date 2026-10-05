@@ -45,7 +45,7 @@
 :root {
   --color-primary: var(--brand, #1769C2);
   --color-primary-hover: var(--brand-hover, #125AA8);
-  --color-primary-soft: var(--brand-soft, #EDEBF6);
+  --color-primary-soft: var(--brand-soft, #EAF3FF);
   --color-dark: #0F172A;
   --color-dark-hover: #0B1120;
   --color-success: var(--success, #16A34A);
@@ -73,7 +73,7 @@
   --button-height: 38px;
   --focus-ring: 0 0 0 3px color-mix(in srgb, var(--color-primary) 24%, transparent);
   /* Compatibility aliases for the operational screens still using the older token names. */
-  --primary-50: var(--brand-soft, #EDEBF6);
+  --primary-50: var(--brand-soft, #EAF3FF);
   --primary-500: #1769C2;
   --primary-600: #1769C2;
   --primary-700: #125AA8;
@@ -121,7 +121,7 @@ body { margin: 0; color: var(--text-main); background: var(--bg-page); font-fami
 }
 .btn:hover, .cm-button:hover, .primary-button:hover, .module-primary-action:hover, .semester-primary:hover,
 .section-primary:hover, .ac-primary:hover, .profile-button:hover, .settings-button:hover, .sa-primary:hover, .p-primary:hover {
-  border-color: var(--color-primary-hover); color: #0F172A; background: var(--color-primary); box-shadow: 0 4px 12px rgba(183, 177, 221, .25);
+  border-color: var(--color-primary-hover); color: #0F172A; background: var(--color-primary); box-shadow: 0 4px 12px rgba(43, 120, 197, .25);
 }
 .btn-secondary, .cm-button.secondary, .secondary-button, .cm-secondary-btn, .semester-primary.secondary,
 .section-primary.secondary, .ac-secondary, .profile-button.secondary { border-color: var(--border-strong-global); color: var(--text-main); background: var(--bg-surface); }
@@ -177,9 +177,9 @@ button:disabled, input:disabled, select:disabled, textarea:disabled { cursor: no
 .table-actions, .action-group, .table-actions-group, .cm-actions, .row-actions, .course-actions, .branch-actions,
 .semester-row-actions, .section-actions, .sa-icon-actions { display: inline-flex; align-items: center; justify-content: center; gap: 6px; white-space: nowrap; }
 .table-actions > button, .table-actions > a, .action-group > button, .action-group > a { width: 32px; height: 32px; }
-.action-view, .action-btn.action-view { color: #0F172A; background: #EDEBF6; border-color: #DFDCED; font-weight: 700; }
-.action-edit, .action-btn.action-edit { color: #7c3aed; background: #f3e8ff; border-color: #dfccff; }
-.action-assign { color: #756FB2; background: #fff3d6; border-color: #fedf89; }
+.action-view, .action-btn.action-view { color: #0F172A; background: #EAF3FF; border-color: #D8E4F2; font-weight: 700; }
+.action-edit, .action-btn.action-edit { color: #1769C2; background: #EAF3FF; border-color: #D8E4F2; }
+.action-assign { color: #125AA8; background: #fff3d6; border-color: #fedf89; }
 .action-delete, .action-toggle, .action-btn.action-danger { color: var(--color-danger); background: #fee4e2; border-color: #fecdca; }
 
 /* Shared summaries, status, pagination, filters, dialogs and view surfaces. */
@@ -218,7 +218,7 @@ button:disabled, input:disabled, select:disabled, textarea:disabled { cursor: no
 :root {
   --view-primary: #1769C2;
   --view-primary-dark: var(--brand-hover, #1769C2);
-  --view-accent: var(--brand-soft, #F9F8FD);
+  --view-accent: var(--brand-soft, #EAF3FF);
   --view-surface: var(--surface, #fff);
   --view-surface-muted: var(--surface-soft, #f7fafc);
   --view-border: var(--border, #dbe4eb);
@@ -278,7 +278,7 @@ button:disabled, input:disabled, select:disabled, textarea:disabled { cursor: no
   overflow: hidden !important;
   border-radius: 14px !important;
   background: linear-gradient(135deg, #1769C2 0%, #195A99 60%, #123F73 100%) !important;
-  box-shadow: 0 8px 24px rgba(103, 94, 158, 0.22) !important;
+  box-shadow: 0 8px 24px rgba(16, 42, 76, 0.22) !important;
   border: 1px solid rgba(255, 255, 255, 0.16) !important;
   color: #FFFFFF !important;
 }
@@ -326,7 +326,7 @@ button:disabled, input:disabled, select:disabled, textarea:disabled { cursor: no
   height: 68px !important;
   border-radius: 14px !important;
   background: linear-gradient(135deg, #ECC15D 0%, #DF9E27 100%) !important;
-  color: #1E173D !important;
+  color: #123F73 !important;
   font-size: 1.4rem !important;
   font-weight: 850 !important;
   border: 2px solid rgba(255, 255, 255, 0.5) !important;
@@ -681,7 +681,7 @@ button:disabled, input:disabled, select:disabled, textarea:disabled { cursor: no
   padding: 22px 28px !important;
   border-radius: 14px !important;
   background: linear-gradient(135deg, #1769C2 0%, #195A99 60%, #123F73 100%) !important;
-  box-shadow: 0 8px 24px rgba(103, 94, 158, 0.22) !important;
+  box-shadow: 0 8px 24px rgba(16, 42, 76, 0.22) !important;
 }
 
 /* Standard View Grid is fully managed by view-cards.css */
@@ -947,7 +947,7 @@ button:disabled, input:disabled, select:disabled, textarea:disabled { cursor: no
   border-radius: 14px;
   color: #fff;
   background: linear-gradient(135deg, #1769C2 0%, #195A99 60%, #123F73 100%) !important;
-  box-shadow: 0 8px 24px rgba(103, 94, 158, 0.22) !important;
+  box-shadow: 0 8px 24px rgba(16, 42, 76, 0.22) !important;
 }
 
 .cm-profile-view .cm-profile-avatar-wrap,
@@ -1134,12 +1134,12 @@ label > b,
   transition: color .18s ease, transform .18s ease;
 }
 #root .page-content table .student-name-link:hover {
-  color: #8782bc;
+  color: #1769C2;
   transform: translateX(3px);
   text-decoration: none;
 }
 #root .page-content table .student-name-link:focus-visible {
-  outline: 2px solid #8782bc;
+  outline: 2px solid #1769C2;
   outline-offset: 3px;
 }
 @media (prefers-reduced-motion: reduce) {

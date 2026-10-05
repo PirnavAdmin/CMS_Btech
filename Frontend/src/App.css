@@ -230,7 +230,7 @@ button.btn-primary:hover,
   align-items: center !important;
   gap: 20px !important;
   padding: 26px 30px !important;
-  border-bottom: 1px solid #C9C5E8 !important;
+  border-bottom: 1px solid #D8E4F2 !important;
   background: linear-gradient(135deg, #EAF3FF 0%, #DCEBFC 100%) !important;
   color: #262348 !important;
 }
@@ -252,7 +252,7 @@ button.btn-primary:hover,
   font-size: 1.8rem !important;
   font-weight: 800 !important;
   border: 2px solid #BDB7E1 !important;
-  box-shadow: 0 4px 12px rgba(94, 89, 163, 0.16) !important;
+  box-shadow: 0 4px 12px rgba(16, 42, 76, 0.16) !important;
   object-fit: cover !important;
 }
 
@@ -288,7 +288,7 @@ button.btn-primary:hover,
 
 .cm-badge-code {
   background: #E5E1F6;
-  color: #4E4A77;
+  color: #125AA8;
   border: 1px solid #BDB7E1;
 }
 
@@ -572,12 +572,12 @@ button.btn-primary:hover,
 .flm-category-toggle button.active {
   background: #195A99 !important;
   color: #FFFFFF !important;
-  box-shadow: 0 1px 4px rgba(135, 130, 188, 0.35) !important;
+  box-shadow: 0 1px 4px rgba(23, 105, 194, 0.35) !important;
 }
 
 .flm-cat-btn:not(.active):hover,
 .fm-category-tab:not(.active):hover {
-  background: rgba(135, 130, 188, 0.12) !important;
+  background: rgba(23, 105, 194, 0.12) !important;
   color: #1769C2 !important;
 }
 
@@ -590,7 +590,7 @@ button.btn-primary:hover,
   gap: 0 !important;
   min-height: 42px !important;
   padding: 3px !important;
-  border: 1px solid #C9C5E8 !important;
+  border: 1px solid #D8E4F2 !important;
   border-radius: 8px !important;
   background: #FFFFFF !important;
   box-sizing: border-box !important;
@@ -605,7 +605,7 @@ button.btn-primary:hover,
   border: 0 !important;
   border-radius: 5px !important;
   background: transparent !important;
-  color: #4E4A77 !important;
+  color: #125AA8 !important;
   font-size: 11px !important;
   font-weight: 600 !important;
   line-height: 1 !important;
@@ -617,7 +617,7 @@ button.btn-primary:hover,
 .faculty-management .fm-attendance-category-toggle .flm-cat-btn.active {
   border: 1px solid #1769C2 !important;
   background: #EFF6FD !important;
-  color: #5E59A3 !important;
+  color: #125AA8 !important;
   font-weight: 700 !important;
   box-shadow: none !important;
 }
@@ -631,7 +631,7 @@ button.btn-primary:hover,
   min-height: 42px !important;
   padding: 4px !important;
   gap: 4px !important;
-  border: 1px solid #C9C5E8 !important;
+  border: 1px solid #D8E4F2 !important;
   border-radius: 10px !important;
   background: #FFFFFF !important;
 }
@@ -644,7 +644,7 @@ button.btn-primary:hover,
   border: 1px solid transparent !important;
   border-radius: 6px !important;
   background: #FFFFFF !important;
-  color: #4E4A77 !important;
+  color: #125AA8 !important;
   font-size: 11px !important;
   font-weight: 600 !important;
 }
@@ -654,7 +654,7 @@ button.btn-primary:hover,
 :root:not([data-theme="dark"]) .faculty-management .fm-attendance-category-toggle .flm-cat-btn.active {
   border-color: #1769C2 !important;
   background: #F7F6FF !important;
-  color: #5E59A3 !important;
+  color: #125AA8 !important;
   box-shadow: none !important;
 }
 

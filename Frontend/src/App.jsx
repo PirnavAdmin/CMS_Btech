@@ -66,7 +66,7 @@ class AppErrorBoundary extends Component {
             <h1 style={{ margin: '0 0 12px', color: '#0f172a' }}>Something went wrong</h1>
             <p style={{ margin: '0 0 12px', color: '#475569' }}>The app hit an unexpected error. Please reload the page or return home.</p>
             <p style={{ margin: '0 0 20px', color: '#64748b', fontSize: '13px' }}>Please retry. If the problem continues, contact your administrator. Technical details were saved for support.</p>
-            <button type="button" onClick={() => window.location.reload()} style={{ border: 'none', background: '#8782BC', color: '#fff', borderRadius: '10px', padding: '10px 16px', cursor: 'pointer', fontWeight: 700, marginRight: '8px' }}>
+            <button type="button" onClick={() => window.location.reload()} style={{ border: 'none', background: '#1769C2', color: '#fff', borderRadius: '10px', padding: '10px 16px', cursor: 'pointer', fontWeight: 700, marginRight: '8px' }}>
               Try again
             </button>
             <button type="button" onClick={() => window.location.href = '/'} style={{ border: 'none', background: '#475569', color: '#fff', borderRadius: '10px', padding: '10px 16px', cursor: 'pointer', fontWeight: 700 }}>

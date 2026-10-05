@@ -245,15 +245,15 @@ main.student-profile .sp-directory-table thead th:last-child::after{content:none
   margin: 0 !important;
   padding: 9px 14px !important;
   border-bottom: 1px solid var(--border, #E2E8F0) !important;
-  border-left: 3.5px solid var(--brand, #756FB2) !important;
+  border-left: 3.5px solid var(--brand, #125AA8) !important;
   background: var(--surface-soft, #F8FAFC) !important;
-  color: var(--brand, #756FB2) !important;
+  color: var(--brand, #125AA8) !important;
 }
 
 .student-profile .sp-panel-header svg {
   width: 16px !important;
   height: 16px !important;
-  color: var(--brand, #756FB2) !important;
+  color: var(--brand, #125AA8) !important;
 }
 
 .student-profile .sp-panel-header h2 {

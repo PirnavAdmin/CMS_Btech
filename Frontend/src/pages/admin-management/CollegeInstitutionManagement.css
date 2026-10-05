@@ -416,7 +416,7 @@
 }
 
 :root[data-theme="dark"] .cm-name-link:hover {
-  color: #A39DDC;
+  color: #A9D3F7;
 }
 
 .cm-table tbody tr:hover td {
@@ -527,10 +527,10 @@
   background: #fee2e2;
   color: #b91c1c;
 }
-.cm-status-badge.draft { background: #F3F1FA; color: #1769C2; }
-.cm-draft-row { background: #FAF9FD; }
+.cm-status-badge.draft { background: #EAF3FF; color: #1769C2; }
+.cm-draft-row { background: #EAF3FF; }
 .cm-draft-row td { border-bottom-color: #cfe2f0; }
-.cm-draft-row__mark { display: grid; width: 36px; height: 36px; place-items: center; border: 1px dashed #1769C2; border-radius: 8px; color: #1769C2; background: #F3F1FA; font-size: .78rem; font-weight: 850; }
+.cm-draft-row__mark { display: grid; width: 36px; height: 36px; place-items: center; border: 1px dashed #1769C2; border-radius: 8px; color: #1769C2; background: #EAF3FF; font-size: .78rem; font-weight: 850; }
 .cm-draft-row__label { display: block; margin-top: 3px; color: #1769C2; font-size: .68rem; font-weight: 750; }
 
 /* Actions Column: Square icon-only buttons side-by-side */
@@ -693,7 +693,7 @@
   align-items: center !important;
   gap: 20px !important;
   padding: 22px 28px !important;
-  background: linear-gradient(135deg, #7169A8 0%, #7E76B7 50%, #8D85C6 100%) !important;
+  background: linear-gradient(135deg, #125AA8 0%, #1769C2 50%, #2B78C5 100%) !important;
   color: #fff !important;
   border-radius: 0 !important;
   overflow: hidden !important;
@@ -727,7 +727,7 @@
   height: 68px !important;
   border-radius: 14px !important;
   background: linear-gradient(135deg, #ECC15D 0%, #DF9E27 100%) !important;
-  color: #1E173D !important;
+  color: #123F73 !important;
   font-size: 1.45rem !important;
   font-weight: 850 !important;
   border: 2px solid rgba(255, 255, 255, 0.5) !important;
@@ -843,9 +843,9 @@
   margin: 0 !important;
   padding: 12px 18px !important;
   border-bottom: 1px solid #e2e8f0 !important;
-  border-left: 4px solid #7169A8 !important;
+  border-left: 4px solid #125AA8 !important;
   background: #F8FAFC !important;
-  color: #7169A8 !important;
+  color: #125AA8 !important;
   box-sizing: border-box !important;
 }
 
@@ -1270,7 +1270,7 @@
   transform: translateX(6px);
 }
 #root .college-management .cm-table .cm-name-link:focus-visible {
-  outline: 2px solid #8782bc;
+  outline: 2px solid #1769C2;
   outline-offset: 4px;
 }
 

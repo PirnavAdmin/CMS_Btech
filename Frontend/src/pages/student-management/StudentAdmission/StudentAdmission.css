@@ -77,8 +77,8 @@
 .student-admission .sa-field input:focus,
 .student-admission .sa-field select:focus,
 .student-admission .sa-field textarea:focus {
-  border-color: var(--brand, #756FB2);
-  box-shadow: 0 0 0 3px rgba(117, 111, 178, 0.13);
+  border-color: var(--brand, #125AA8);
+  box-shadow: 0 0 0 3px rgba(18, 90, 168, 0.13);
 }
 .student-admission .sa-field.invalid input,
 .student-admission .sa-field.invalid select {
@@ -100,7 +100,7 @@
   padding: 12px 16px;
   border: 1.5px dashed #aabdd0;
   border-radius: 10px;
-  background: var(--surface-soft, #FAF9FD);
+  background: var(--surface-soft, #EAF3FF);
   margin-bottom: 4px;
 }
 .student-admission .sa-photo-preview {
@@ -144,18 +144,18 @@
   align-items: center;
   gap: 5px;
   padding: 5px 10px;
-  border: 1px solid #DDD8F0;
+  border: 1px solid #C7DFFF;
   border-radius: 6px;
   background: #FFFFFF;
-  color: var(--brand, #756FB2);
+  color: var(--brand, #125AA8);
   font-size: 0.76rem;
   font-weight: 750;
   cursor: pointer;
   transition: all 0.15s ease;
 }
 .student-admission .sa-photo-button:hover {
-  border-color: var(--brand, #756FB2);
-  background: #EDEBF6;
+  border-color: var(--brand, #125AA8);
+  background: #EAF3FF;
 }
 .student-admission .sa-photo-remove {
   display: inline-flex;
@@ -211,8 +211,8 @@
   display: inline-flex;
   padding: 4px 10px;
   border-radius: 999px;
-  background: var(--brand-soft, #EDEBF6);
-  color: var(--brand, #756FB2);
+  background: var(--brand-soft, #EAF3FF);
+  color: var(--brand, #125AA8);
   font-size: 0.72rem;
   font-weight: 800;
 }
@@ -236,7 +236,7 @@
   justify-content: space-between;
   padding: 12px 18px;
   border-bottom: 1px solid var(--border, #E2E8F0);
-  background: var(--surface-soft, #FAF9FD);
+  background: var(--surface-soft, #EAF3FF);
   flex-shrink: 0;
 }
 
@@ -276,8 +276,8 @@
   height: 32px;
   flex: 0 0 32px;
   border-radius: 7px;
-  background: #EDEBF6;
-  color: var(--brand, #756FB2);
+  background: #EAF3FF;
+  color: var(--brand, #125AA8);
   font-size: 1rem;
 }
 .student-admission .sa-document-item.uploaded .sa-document-icon {
@@ -328,7 +328,7 @@
   padding: 0 8px;
   border: 1px solid #CBD5E1;
   border-radius: 7px;
-  background: #FAF9FD;
+  background: #EAF3FF;
   color: var(--text-primary, #0F172A);
   font-size: 0.76rem;
   font-weight: 600;
@@ -336,8 +336,8 @@
   outline: none;
 }
 .student-admission .sa-document-actions select:focus {
-  border-color: var(--brand, #756FB2);
-  box-shadow: 0 0 0 3px rgba(117, 111, 178, 0.13);
+  border-color: var(--brand, #125AA8);
+  box-shadow: 0 0 0 3px rgba(18, 90, 168, 0.13);
 }
 
 @media(max-width:760px) {
@@ -390,7 +390,7 @@
   padding: 11px 16px;
   background: var(--surface-soft, #F8FAFC);
   border-bottom: 1px solid var(--border, #CBD5E1);
-  border-left: 4px solid var(--brand, #756FB2);
+  border-left: 4px solid var(--brand, #125AA8);
 }
 
 .student-admission .sa-review-section > header h2 {
@@ -462,9 +462,9 @@
   border-radius: 50%;
   overflow: hidden;
   place-items: center;
-  background: var(--brand-soft, #EDEBF6);
-  color: var(--brand, #756FB2);
-  border: 2px solid var(--brand-soft, #EDEBF6);
+  background: var(--brand-soft, #EAF3FF);
+  color: var(--brand, #125AA8);
+  border: 2px solid var(--brand-soft, #EAF3FF);
   flex-shrink: 0;
 }
 
@@ -482,7 +482,7 @@
 .student-admission .sa-preview-identity > span {
   font-size: 0.72rem;
   font-weight: 800;
-  color: var(--brand, #756FB2);
+  color: var(--brand, #125AA8);
   letter-spacing: 0.06em;
   text-transform: uppercase;
 }

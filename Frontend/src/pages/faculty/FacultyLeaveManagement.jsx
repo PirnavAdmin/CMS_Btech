@@ -465,7 +465,7 @@ function LeaveList({ onCreate, tab, rows, leaveTypes, getBalance, onView, onEdit
                 </Action>
               ) : (
                 <Action title="Activate leave type" onClick={() => onToggleType(row)}>
-                  <FiCheck style={{ color: '#8782BC' }} />
+                  <FiCheck style={{ color: '#1769C2' }} />
                 </Action>
               )}
             </Actions>
@@ -1049,7 +1049,7 @@ function View({ title, children, onClose }) {
       <section className="fm-attendance-detail flm-config-dialog" role="dialog" aria-modal="true" style={{ maxWidth: '860px', width: '100%', overflowY: 'auto', maxHeight: 'calc(100dvh - 48px)', padding: '24px', borderRadius: '16px', background: 'var(--surface, #fff)' }} onClick={e => e.stopPropagation()}>
         <div className="fm-attendance-detail-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', borderBottom: '1px solid #E2E8F0', paddingBottom: '12px', marginBottom: '16px' }}>
           <div>
-            <p className="flm-eyebrow" style={{ margin: '0 0 2px 0', color: '#756FB2', fontSize: '11px', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.1em' }}>LEAVE DETAILS</p>
+            <p className="flm-eyebrow" style={{ margin: '0 0 2px 0', color: '#125AA8', fontSize: '11px', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.1em' }}>LEAVE DETAILS</p>
             <h2 style={{ margin: 0, fontSize: '18px', fontWeight: 700, color: 'var(--text-primary)' }}>{title}</h2>
           </div>
           <button className="flm-close" style={{ position: 'static', margin: 0, right: 'auto', top: 'auto', display: 'flex', alignItems: 'center', justifyContent: 'center' }} aria-label="Close" onClick={onClose}><FiX size={18} /></button>

@@ -55,7 +55,7 @@
   color: #0f172a;
 }
 
-.cm-tab-btn.active { color: #8782BC; border-bottom-color: #8782BC;
+.cm-tab-btn.active { color: #1769C2; border-bottom-color: #1769C2;
 }
 
 .cm-kpi-grid {
@@ -92,7 +92,7 @@
 .cm-kpi-card p {
   margin: 6px 0 0 0;
   font-size: 0.82rem;
-  color: #8782BC;
+  color: #1769C2;
   font-weight: 500;
 }
 
@@ -832,9 +832,9 @@
 
 .cm-table th {
   padding: 12px 15px;
-  border-bottom: 2px solid #756FB2;
+  border-bottom: 2px solid #125AA8;
   color: #FFFFFF;
-  background: #8782BC;
+  background: #1769C2;
   text-align: left;
   white-space: nowrap;
   font-size: 10px;

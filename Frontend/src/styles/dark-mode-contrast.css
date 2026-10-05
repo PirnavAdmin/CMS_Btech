@@ -1,7 +1,7 @@
 /* Final semantic theme layer. Always pair foreground and background colours.
    Explicit component names avoid recolouring status panels or badge wrappers. */
 :root[data-theme="dark"] {
-  --table-name-hover: #c7c2ff;
+  --table-name-hover: #A9D3F7;
   --status-neutral-bg: #253247;
   --status-neutral-text: #d5dfed;
   --status-positive-bg: #173d32;
@@ -76,7 +76,7 @@
 /* White header text needs a deeper lavender than the light-theme accent. */
 :root[data-theme="dark"] #root table th,
 :root[data-theme="dark"] #root table th :is(span, strong, small, button) {
-  background-color: #69639d !important;
+  background-color: #1769C2 !important;
   color: #ffffff !important;
 }
 
@@ -130,7 +130,7 @@
   opacity: 1;
 }
 :root[data-theme="dark"] :is(button, a, input, select, textarea, summary):focus-visible {
-  outline: 2px solid #c4b5fd;
+  outline: 2px solid #A9D3F7;
   outline-offset: 3px;
 }
 :root[data-theme="dark"] #root .sidebar :is(a, button, [role="button"]):not(.active):hover {

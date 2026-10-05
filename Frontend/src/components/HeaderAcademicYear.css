@@ -24,18 +24,18 @@
 
 .header-academic-year[open] > summary {
   border-color: var(--brand);
-  box-shadow: 0 0 0 3px rgba(135, 130, 188, .12);
+  box-shadow: 0 0 0 3px rgba(23, 105, 194, .12);
 }
 
 .header-academic-year > summary:focus-visible {
-  outline: 2px solid var(--brand, #8782bc);
+  outline: 2px solid var(--brand, #1769C2);
   outline-offset: 3px;
 }
 
 .header-academic-year > summary > svg:last-child {
   padding: 3px;
   border-radius: 5px;
-  background: rgba(135, 130, 188, .12);
+  background: rgba(23, 105, 194, .12);
   transition: transform .15s ease;
 }
 
@@ -44,7 +44,7 @@
 }
 
 .header-academic-year.is-historical > summary {
-  border-color: #8B82C7;
+  border-color: #1769C2;
   background: rgba(245, 158, 11, 0.05);
 }
 
@@ -59,7 +59,7 @@
 }
 
 .header-academic-year.is-historical > summary > svg {
-  color: #8782BC;
+  color: #1769C2;
 }
 
 .header-academic-year__content {
@@ -112,7 +112,7 @@
 }
 
 .header-academic-year.is-historical .header-academic-year__progress i {
-  background: #8B82C7;
+  background: #1769C2;
 }
 
 .header-academic-year__progress b {
@@ -192,21 +192,21 @@
 }
 
 #root .header-academic-year__details .workspace-context-select .searchable-select__caret {
-  color: #756FB2 !important;
+  color: #125AA8 !important;
 }
 
 #root .header-academic-year__details .workspace-context-select .searchable-select__trigger:hover,
 #root .header-academic-year__details .workspace-context-select .searchable-select__trigger[aria-expanded="true"] {
   background: #FFFFFF !important;
-  border-color: #756FB2 !important;
-  box-shadow: 0 2px 8px rgba(117, 111, 178, 0.15) !important;
+  border-color: #125AA8 !important;
+  box-shadow: 0 2px 8px rgba(18, 90, 168, 0.15) !important;
 }
 
 .header-academic-year__status {
   display: inline-block;
   padding: 3px 8px;
   border-radius: 20px;
-  background: rgba(135, 130, 188, .12);
+  background: rgba(23, 105, 194, .12);
   color: var(--text-primary);
   font-size: 11px;
 }
@@ -315,14 +315,14 @@
 }
 
 :root[data-theme="dark"] #root .header-academic-year__details .workspace-context-select .searchable-select__caret {
-  color: #9D99CD !important;
+  color: #A9D3F7 !important;
 }
 
 :root[data-theme="dark"] #root .header-academic-year__details .workspace-context-select .searchable-select__trigger:hover,
 :root[data-theme="dark"] #root .header-academic-year__details .workspace-context-select .searchable-select__trigger[aria-expanded="true"] {
   background: #1E293B !important;
-  border-color: #756FB2 !important;
-  box-shadow: 0 2px 8px rgba(117, 111, 178, 0.25) !important;
+  border-color: #125AA8 !important;
+  box-shadow: 0 2px 8px rgba(18, 90, 168, 0.25) !important;
 }
 
 :root[data-theme="dark"] .header-academic-year__footer {
@@ -330,5 +330,5 @@
 }
 
 :root[data-theme="dark"] .header-academic-year__footer a {
-  color: #8782BC !important;
+  color: #1769C2 !important;
 }

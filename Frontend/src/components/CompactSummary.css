@@ -48,15 +48,15 @@
 }
 
 .compact-summary__item--active strong {
-  color: var(--success, #756FB2) !important;
+  color: var(--success, #125AA8) !important;
 }
 
 .compact-summary__item--warning strong {
-  color: #8782BC !important;
+  color: #1769C2 !important;
 }
 
 .compact-summary__item--upcoming strong {
-  color: var(--brand, #8782BC) !important;
+  color: var(--brand, #1769C2) !important;
 }
 
 .compact-summary__item--inactive strong {
@@ -68,7 +68,7 @@
 }
 
 .compact-summary__item--completed strong {
-  color: #8782BC !important;
+  color: #1769C2 !important;
 }
 
 .compact-summary__item--danger strong {

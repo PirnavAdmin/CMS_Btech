@@ -89,11 +89,11 @@
   height: 72px;
   border-radius: 14px;
   background: linear-gradient(145deg, #F5F2FF 0%, #EEE9FF 55%, #E7E0FF 100%) !important;
-  border: 1px solid rgba(124, 106, 196, 0.16) !important;
+  border: 1px solid rgba(43, 120, 197, 0.16) !important;
   display: grid;
   place-items: center;
-  color: #756FB2 !important;
-  box-shadow: 0 4px 12px rgba(91, 74, 160, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.8);
+  color: #125AA8 !important;
+  box-shadow: 0 4px 12px rgba(16, 42, 76, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.8);
 }
 
 #root .sidebar-brand__mark img {
@@ -140,7 +140,7 @@
 #root .sidebar-brand__subtitle {
   font-size: 11px;
   font-weight: 700;
-  color: #756FB2;
+  color: #125AA8;
   letter-spacing: 0.8px;
   text-transform: uppercase;
   line-height: 1.2;
@@ -235,8 +235,8 @@
 
 #root .sidebar .workspace-context-select .searchable-select__trigger:hover,
 #root .sidebar .workspace-context-select .searchable-select__trigger[aria-expanded="true"] {
-  background: #F4F3FB;
-  border-color: #DDD8F3;
+  background: #EAF3FF;
+  border-color: #D8E4F2;
 }
 
 #root .sidebar .workspace-context-select .searchable-select__trigger-text {
@@ -259,7 +259,7 @@
 
 #root .sidebar .workspace-context-select .searchable-select__caret {
   flex: 0 0 auto;
-  color: #756FB2;
+  color: #125AA8;
   font-size: 12px;
   margin-left: 0;
   transition: transform 0.15s ease;
@@ -307,8 +307,8 @@
 .workspace-context-menu .searchable-select__option.is-active,
 .workspace-context-menu .searchable-select__option:hover,
 .workspace-context-menu .searchable-select__option:focus-visible {
-  background: #EDEBF6;
-  color: #585199;
+  background: #EAF3FF;
+  color: #125AA8;
   font-weight: 700;
 }
 
@@ -320,8 +320,8 @@
 }
 
 #root .header-academic-year__status {
-  background: #EDEBF6;
-  color: #585199;
+  background: #EAF3FF;
+  color: #125AA8;
   font-size: 11px;
   font-weight: 700;
 }
@@ -335,13 +335,13 @@
 }
 
 :root[data-theme="dark"] #root .sidebar-brand__mark {
-  background: rgba(135, 130, 188, 0.18) !important;
-  border: 1px solid rgba(135, 130, 188, 0.35) !important;
-  color: #C7C2FF !important;
+  background: rgba(23, 105, 194, 0.22) !important;
+  border: 1px solid rgba(143, 197, 244, 0.38) !important;
+  color: #A9D3F7 !important;
 }
 
 :root[data-theme="dark"] #root .sidebar-brand__subtitle {
-  color: #9D99CD !important;
+  color: #A9D3F7 !important;
 }
 
 :root[data-theme="dark"] #root .sidebar-brand .sidebar-collapse {
@@ -371,7 +371,7 @@
 }
 
 :root[data-theme="dark"] #root .sidebar .workspace-context-select .searchable-select__caret {
-  color: #9D99CD !important;
+  color: #A9D3F7 !important;
 }
 
 :root[data-theme="dark"] .workspace-context-menu.searchable-select__menu {
@@ -396,11 +396,11 @@
 :root[data-theme="dark"] .workspace-context-menu .searchable-select__option.is-active,
 :root[data-theme="dark"] .workspace-context-menu .searchable-select__option:hover,
 :root[data-theme="dark"] .workspace-context-menu .searchable-select__option:focus-visible {
-  background: rgba(135, 130, 188, 0.22) !important;
+  background: rgba(23, 105, 194, 0.22) !important;
   color: #FFFFFF !important;
 }
 
 :root[data-theme="dark"] #root .header-academic-year__status {
-  background: rgba(135, 130, 188, 0.2) !important;
-  color: #C7C2FF !important;
+  background: rgba(23, 105, 194, 0.2) !important;
+  color: #A9D3F7 !important;
 }
