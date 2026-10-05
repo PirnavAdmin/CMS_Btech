@@ -412,8 +412,10 @@ export const facultyService = {
     if (local) return normalizeFaculty(local)
     return normalizeFaculty({ id: String(id), facultyId: String(id) })
   },
-  create: async payload => {
-    const created = await facultyApi.create(facultyCreatePayload(payload))
+  create: async (payload, collegeId = payload.collegeId) => {
+    const createCollegeId = Number(collegeId)
+    const createData = { ...payload, collegeId: createCollegeId }
+    const created = await facultyApi.create(facultyCreatePayload(createData), createCollegeId)
     if (!created?.id && !created?.facultyId) throw new Error('The server did not return the saved faculty record.')
     const isHexUUID = str => !str || /^[0-9a-f]{8}-?[0-9a-f]{4}-?[0-9a-f]{4}-?[0-9a-f]{4}-?[0-9a-f]{12}$/i.test(String(str).trim()) || /^[0-9a-f]{32}$/i.test(String(str).trim())
     const empId = payload.employeeId && !isHexUUID(payload.employeeId) ? payload.employeeId : (created.employeeId && !isHexUUID(created.employeeId) ? created.employeeId : '')

@@ -12,21 +12,21 @@ import SearchableSelect from '../../components/SearchableSelect'
 import CompactSummary from '../../components/CompactSummary'
 import StatusBadge from '../../components/StatusBadge'
 import { showDeactivationBlocked } from '../../components/DeactivationBlockedDialog'
-import { academicYearApi, branchApi, courseApi, sectionAllocationApi, sectionApi, sectionAssignmentApi, studentProfilesApi, studentAdmissionApi } from '../../api/apiEndpoints'
+import { academicYearApi, branchApi, courseApi, sectionAllocationApi, sectionApi, sectionAssignmentApi, studentAdmissionApi, studentProfilesApi, studentApi } from '../../api/apiEndpoints'
 import { getSemesters } from '../../auth/collegeApi'
 import { getActiveAcademicYears, normalizeAcademicYear } from '../../utils/academicYearUtils'
-import { matchesSectionStudent, sectionStudentProfiles } from '../../utils/sectionStudents'
 import { branchTypeLabel } from '../../utils/semesterUtils'
 import eventBus, { ERP_EVENTS } from '../../services/eventBus'
 import facultyService, { normalizeFaculty } from '../../services/facultyService'
+import studentService from '../../services/studentService'
+import { sectionStudentProfiles, matchesSectionStudent } from '../../utils/sectionStudents'
 import roomService from '../../services/roomService'
 import { useAcademic } from '../../context/AcademicContext'
 import './SectionManagement.css'
 import '../../styles/directory-search.css'
 
 const PAGE_SIZE = 5
-const sectionLabel = (index) => { let label = ''; for (let n = index + 1; n > 0; n = Math.floor((n - 1) / 26)) label = String.fromCharCode(65 + (n - 1) % 26) + label; return label }
-const emptyForm = { name: '', code: '', courseId: '', branchId: '', semesterId: '', academicYearId: '', capacity: 60, facultyAdvisorEmployeeProfileId: '', advisor: '', room: '', status: '', startDate: '', endDate: '' }
+const emptyForm = { name: '', code: '', courseId: '', branchId: '', semesterId: '', academicYearId: '', capacity: '', facultyAdvisorEmployeeProfileId: '', advisor: '', room: '', status: '', startDate: '', endDate: '' }
 const clean = (value) => value !== null && value !== undefined && !['', 'null', 'undefined', 'not provided', 'not set', '?'].includes(String(value).trim().toLowerCase())
 const idOf = (item = {}, ...keys) => keys.map((key) => item?.[key]).find((value) => clean(value)) ?? ''
 const sem = (value) => /^\d+$/.test(String(value)) ? `Semester ${value}` : String(value || '')
@@ -60,7 +60,6 @@ const normalizeSemester = (item = {}) => {
 }
 const normalizeAssignment = (item = {}) => ({ id: item.assignmentId ?? item.id ?? item.studentId, sectionId: item.sectionId ?? item.section_id ?? '', studentId: item.studentId ?? item.student_id ?? item.student?.studentId ?? item.student?.id ?? item.enrollmentNo ?? '', studentName: item.studentName ?? item.fullName ?? item.student_name ?? item.student?.fullName ?? item.student?.name ?? item.name ?? '', enrollmentNo: item.enrollmentNo ?? item.studentCode ?? item.registrationNumber ?? item.rollNumber ?? item.studentId ?? '' })
 const sameStudent = (assignment = {}, student = {}) => [assignment.studentId, assignment.enrollmentNo, assignment.studentCode, assignment.registrationNumber].filter(clean).some((value) => [student.id, student.code, student.studentCode, student.registrationNumber, student.rollNumber, student.admissionNumber].filter(clean).some((candidate) => String(candidate).split('/').map((part) => part.trim()).includes(String(value).trim())))
-const sectionLetter = (section) => String(section.name || '').match(/^Section\s+([A-Z]+)$/i)?.[1]?.toUpperCase() || String(section.code || '').match(/(?:^|-)([A-Z]+)$/i)?.[1]?.toUpperCase()
 const sameMapping = (left, right) => ['courseId', 'branchId', 'semesterId', 'academicYearId'].every((key) => clean(left?.[key]) && clean(right?.[key]) ? String(left[key]) === String(right[key]) : false)
 const normalizeBranchKey = (name = '') => {
   const s = String(name || '').trim().toLowerCase().replace(/[^a-z0-9]/g, '')
@@ -75,8 +74,9 @@ const normalizeBranchKey = (name = '') => {
   return s
 }
 
-const teacherCandidatesForBranch = (faculty = [], branchName = '', branchCode = '', branchId = '') => {
+const teacherCandidatesForBranch = (faculty = [], branchName = '', branchCode = '', branchId = '', departmentName = '', departmentId = '') => {
   const targetKey = normalizeBranchKey(branchCode || branchName)
+  const departmentKey = normalizeBranchKey(departmentName)
   return faculty
     .map((member) => normalizeFaculty(member))
     .filter((member) => {
@@ -84,25 +84,38 @@ const teacherCandidatesForBranch = (faculty = [], branchName = '', branchCode = 
       const unavailable = ['inactive', 'resigned', 'retired'].includes(String(member.employmentStatus || member.status || '').trim().toLowerCase())
       if (unavailable) return false
 
-      if (!targetKey && !branchId) return true
+      if (!targetKey && !branchId && !departmentKey && !departmentId) return true
 
       const memberBranchKey = normalizeBranchKey(member.branchCode || member.branch || member.branchName || '')
       const memberDeptKey = normalizeBranchKey(member.departmentName || member.department || '')
       const memberSpecKey = normalizeBranchKey(member.specialization || '')
+      const memberDepartmentId = member.departmentId || member.DepartmentId || member.department_id || ''
 
       const matchesBranch = Boolean(
         (member.branchId && branchId && String(member.branchId) === String(branchId)) ||
         (memberBranchKey && memberBranchKey === targetKey) ||
         (memberDeptKey && memberDeptKey === targetKey) ||
+        (memberDepartmentId && departmentId && String(memberDepartmentId) === String(departmentId)) ||
+        (memberDeptKey && departmentKey && memberDeptKey === departmentKey) ||
         (memberSpecKey && (memberSpecKey === targetKey || memberSpecKey.includes(targetKey)))
       )
 
-      return matchesBranch
+      // The class-teacher candidates endpoint is already scoped to the
+      // section's college. Its DTO only includes DepartmentName (not branch
+      // metadata), so don't discard valid college faculty when that name
+      // cannot be matched to the section's branch code.
+      const hasBranchMetadata = Boolean(member.branchId || member.branchCode || member.branchName || member.branch)
+      const hasDepartmentId = Boolean(memberDepartmentId && departmentId)
+      return matchesBranch || (!hasBranchMetadata && !hasDepartmentId)
     })
     .map((member) => ({
       ...member,
-      employeeProfileId: member.employeeProfileId ?? member.facultyId ?? member.id,
-      employeeCode: member.employeeCode ?? member.employeeId,
+      // Assignment APIs require employee_profiles.employee_profile_id.
+      // FacultyId/UserId are different keys and must never be substituted.
+      employeeProfileId: member.employeeProfileId ?? member.EmployeeProfileId ?? member.employee_profile_id ?? '',
+      fullName: member.fullName || member.FullName || member.name || '',
+      employeeCode: member.employeeCode ?? member.EmployeeCode ?? member.employeeId ?? member.facultyCode ?? '',
+      designation: member.designation || member.Designation || member.designationName || member.title || '',
     }))
     .filter((member) => clean(member.employeeProfileId) && clean(member.fullName))
 }
@@ -168,20 +181,24 @@ function SectionList() {
   const changeFilter = (key, value) => { setFilters((current) => ({ ...current, [key]: value, ...(key === 'course' ? { branch: '' } : {}) })); setPage(1) }
   const clearFilters = () => { setFilters({ query: '', course: '', branch: '', semester: '', status: '', academicYear: '' }); setPage(1) }
   const openAssign = async (section) => { try { const latest = (await sectionAssignmentApi.listBySection(section.id)).map((item) => normalizeAssignment({ ...item, sectionId: section.id })); setAssignments((current) => [...current.filter((item) => String(item.sectionId) !== String(section.id)), ...latest]); setAssigning({ ...section, currentStrength: latest.length }) } catch (requestError) { setToast(apiError(requestError, 'Unable to load section assignments.'), 'error') } }
-  const assignStudent = async (student) => { const current = (await sectionAssignmentApi.listBySection(assigning.id)).map(normalizeAssignment); const latestSection = normalizeSection(responseRecord(await sectionApi.getById(assigning.id))); if (latestSection.status !== 'Active') throw new Error('Students can only be assigned to an active section.'); if (Math.max(current.length, latestSection.currentStrength) >= latestSection.capacity) throw new Error(`${assigning.name} is already at full capacity.`); if (current.some((item) => String(item.studentId) === String(student.studentId))) throw new Error('This student is already assigned to this section.'); await sectionAssignmentApi.assign(assigning.id, student); const latest = (await sectionAssignmentApi.listBySection(assigning.id)).map((item) => normalizeAssignment({ ...item, sectionId: assigning.id })); setAssignments([...assignments.filter((item) => String(item.sectionId) !== String(assigning.id)), ...latest]); setSections((rows) => rows.map((row) => String(row.id) === String(assigning.id) ? { ...row, currentStrength: latest.length } : row)); setSummaryData(null) }
+  const assignStudents = async (studentIds) => {
+    const current = (await sectionAssignmentApi.listBySection(assigning.id)).map(normalizeAssignment)
+    const latestSection = normalizeSection(responseRecord(await sectionApi.getById(assigning.id)))
+    if (latestSection.status !== 'Active') throw new Error('Students can only be assigned to an active section.')
+    const ids = [...new Set(studentIds.map(String))]
+    if (!ids.length || ids.some((studentId) => !/^\d+$/.test(studentId))) throw new Error('Select valid students before assigning them.')
+    if (ids.some((studentId) => current.some((item) => String(item.studentId) === studentId))) throw new Error('One or more students are already assigned to this section. Refresh the section and try again.')
+    if (Math.max(current.length, latestSection.currentStrength) + ids.length > latestSection.capacity) throw new Error(`Only ${Math.max(latestSection.capacity - current.length, 0)} seats are available in ${assigning.name}.`)
+    await sectionAssignmentApi.assignMany(assigning.id, ids)
+    const latest = (await sectionAssignmentApi.listBySection(assigning.id)).map((item) => normalizeAssignment({ ...item, sectionId: assigning.id }))
+    setAssignments((rows) => [...rows.filter((item) => String(item.sectionId) !== String(assigning.id)), ...latest])
+    setSections((rows) => rows.map((row) => String(row.id) === String(assigning.id) ? { ...row, currentStrength: latest.length } : row))
+    setSummaryData(null)
+  }
   const removeAssignment = async (assignment) => { await sectionAssignmentApi.remove(assignment.sectionId, assignment.id); const latest = (await sectionAssignmentApi.listBySection(assignment.sectionId)).map((item) => normalizeAssignment({ ...item, sectionId: assignment.sectionId })); setAssignments((rows) => [...rows.filter((item) => String(item.sectionId) !== String(assignment.sectionId)), ...latest]); setSections((rows) => rows.map((row) => String(row.id) === String(assignment.sectionId) ? { ...row, currentStrength: latest.length } : row)); setSummaryData(null); setToast(`${assignment.studentName} removed from the section.`) }
   const assignTeacher = async (teacher) => {
     if (!teacher?.employeeProfileId) throw new Error('Select a faculty candidate.')
-    try {
-      await sectionAllocationApi.assignTeacher(assigning.id, teacher.employeeProfileId)
-    } catch (assignError) {
-      // Fallback update section record directly
-      await sectionApi.update(assigning.id, {
-        ...assigning,
-        facultyAdvisorEmployeeProfileId: teacher.employeeProfileId,
-        advisor: teacher.fullName
-      })
-    }
+    await sectionAllocationApi.assignTeacher(assigning.id, teacher.employeeProfileId)
     const next = sections.map((item) => item.id === assigning.id ? { ...item, advisor: teacher.fullName, facultyAdvisorEmployeeProfileId: teacher.employeeProfileId } : item)
     setSections(next)
     setAssigning((current) => current ? { ...current, advisor: teacher.fullName, facultyAdvisorEmployeeProfileId: teacher.employeeProfileId } : current)
@@ -301,14 +318,14 @@ function SectionList() {
         <Empty icon={FiUsers} title="No sections configured" action={<Link className="cm-button" to="/section-management/add">Add Section</Link>} />
       )}
     </section>
-    {assigning && <AssignStudents section={assigning} faculty={faculty} assignments={assignments.filter((item) => String(item.sectionId) === String(assigning.id))} allAssignments={assignments} sections={sections} assign={assignStudent} assignTeacher={assignTeacher} remove={removeAssignment} close={() => setAssigning(null)} />}
+    {assigning && <AssignStudents section={assigning} faculty={faculty} assignments={assignments.filter((item) => String(item.sectionId) === String(assigning.id))} allAssignments={assignments} sections={sections} assignMany={assignStudents} assignTeacher={assignTeacher} remove={removeAssignment} close={() => setAssigning(null)} />}
     {confirmAction && <Confirm action={confirmAction} close={() => setConfirmAction(null)} confirm={confirm} />}
   </Page>
 }
 
 function SectionForm({ editMode = false }) {
   const { id } = useParams(), navigate = useNavigate()
-  const { scopeRecords, selectedCollegeId, selectedCollege, activeDepartments, selectedAcademicYearId, selectedAcademicYear } = useAcademic()
+  const { scopeRecords, selectedCollegeId, selectedCollege, selectedAcademicYearId, selectedAcademicYear } = useAcademic()
   const [form, setForm] = useState(emptyForm)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
@@ -347,15 +364,57 @@ function SectionForm({ editMode = false }) {
       if (request === semesterRequest.current) setMasters((current) => ({ ...current, semesters: scopedSemesters }))
     } catch (error) { if (request === semesterRequest.current) setErrors((current) => ({ ...current, semesterId: apiError(error, 'Unable to load semesters.') })) }
   }, [setErrors])
-  const load = useCallback(async () => { setLoading(true); try { const data = await loadSources(); setMasters({ courses: data.courses, branches: data.branches, years: data.years, semesters: [] }); setSections(newestFirst('sections', data.sections)); setAssignments(data.assignments); setFaculty(data.faculty); if (editMode && id) { const detail = normalizeSection({ ...(data.sections.find((item) => String(item.id) === String(id)) || {}), ...responseRecord(await sectionApi.getById(id)) }, makeLookups(data.courses, data.branches, [], data.years)); legacy.current = { sectionType: detail.sectionType ?? detail.type, shift: detail.shift }; const editable = { ...detail }; delete editable.type; delete editable.sectionType; delete editable.shift; setForm({ ...emptyForm, ...editable, courseId: String(detail.courseId || ''), branchId: String(detail.branchId || ''), semesterId: String(detail.semesterId || ''), academicYearId: String(detail.academicYearId || ''), facultyAdvisorEmployeeProfileId: detail.facultyAdvisorEmployeeProfileId || '' }); setFormTab('details'); await fetchSemesters(detail.branchId, detail.academicYearId, detail.courseId) } else { const initialYearId = selectedAcademicYearId || (getActiveAcademicYears(data.years)[0]?.id) || ''; setForm(() => ({ ...emptyForm, academicYearId: initialYearId, collegeId: selectedCollegeId || '', status: 'Active' })); setFormTab('mapping') } } catch (error) { setErrors({ form: apiError(error, 'Unable to load section form.') }) } finally { setLoading(false) } }, [id, editMode, fetchSemesters, selectedAcademicYearId, selectedCollegeId, setErrors])
+  const load = useCallback(async () => { setLoading(true); setErrors({}); try { const data = await loadSources(); setMasters({ courses: data.courses, branches: data.branches, years: data.years, semesters: [] }); setSections(newestFirst('sections', data.sections)); setAssignments(data.assignments); setFaculty(data.faculty); if (editMode && id) { const detail = normalizeSection({ ...(data.sections.find((item) => String(item.id) === String(id)) || {}), ...responseRecord(await sectionApi.getById(id)) }, makeLookups(data.courses, data.branches, [], data.years)); legacy.current = { sectionType: detail.sectionType ?? detail.type, shift: detail.shift }; const editable = { ...detail }; delete editable.type; delete editable.sectionType; delete editable.shift; setForm({ ...emptyForm, ...editable, courseId: String(detail.courseId || ''), branchId: String(detail.branchId || ''), semesterId: String(detail.semesterId || ''), academicYearId: String(detail.academicYearId || ''), facultyAdvisorEmployeeProfileId: detail.facultyAdvisorEmployeeProfileId || '' }); setFormTab('details'); await fetchSemesters(detail.branchId, detail.academicYearId, detail.courseId) } else { const initialYearId = selectedAcademicYearId || (getActiveAcademicYears(data.years)[0]?.id) || ''; setForm(() => ({ ...emptyForm, academicYearId: initialYearId, collegeId: selectedCollegeId || '' })); setErrors({}); setFormTab('mapping') } } catch (error) { setErrors({ form: apiError(error, 'Unable to load section form.') }) } finally { setLoading(false) } }, [id, editMode, fetchSemesters, selectedAcademicYearId, selectedCollegeId, setErrors])
   useEffect(() => { load() }, [load])
+  const prevCollegeIdRef = useRef(selectedCollegeId)
+  useEffect(() => {
+    if (editMode) return
+    const prev = prevCollegeIdRef.current
+    prevCollegeIdRef.current = selectedCollegeId
+    if (!prev || prev === selectedCollegeId) return
+    // College changed — immediately wipe mapping fields so stale IDs from the
+    // old college are not submitted or shown while the async load() is pending.
+    semesterRequest.current += 1
+    setForm((current) => ({ ...emptyForm, academicYearId: current.academicYearId, collegeId: selectedCollegeId || '' }))
+    setMasters((current) => ({ ...current, semesters: [] }))
+    setErrors({})
+    setFormTab('mapping')
+  }, [selectedCollegeId, editMode])
   const setCourse = async (courseId) => { semesterRequest.current += 1; const selectedCourse = scopedCourses.find((item) => String(item.id) === String(courseId)); setForm((current) => ({ ...current, courseId, course: selectedCourse?.name || '', courseCode: selectedCourse?.code || '', branchId: '', branch: '', branchCode: '', semesterId: '', semester: '', name: '', code: '' })); setMasters((current) => ({ ...current, semesters: [] })); setErrors({}) }
   const setBranch = async (branchId) => { const selectedBranch = masters.branches.find((item) => String(item.id) === String(branchId)); const yearId = form.academicYearId || selectedAcademicYearId || activeYear?.id; setForm((current) => ({ ...current, branchId, branch: selectedBranch?.name || '', branchCode: selectedBranch?.code || '', semesterId: '', semester: '', name: '', code: '', academicYearId: yearId })); setErrors({}); await fetchSemesters(branchId, yearId, form.courseId) }
-  const suggestSection = (semesterId) => { const selectedSemester = masters.semesters.find((item) => String(item.id) === String(semesterId)); const draft = { ...form, semesterId, semester: selectedSemester?.name || '', academicYear: activeYear?.name || form.academicYear }; const used = new Set(sections.filter((item) => sameMapping(item, draft) && String(item.id) !== String(id)).map(sectionLetter).filter(Boolean)); let index = 0; while (used.has(sectionLabel(index))) index += 1; const letter = sectionLabel(index); const prefix = branch?.code || form.branchCode || branch?.name || ''; const semesterNumber = selectedSemester?.number || String(selectedSemester?.name || '').match(/\d+/)?.[0] || ''; return letter ? { name: `Section ${letter}`, code: [prefix, semesterNumber ? `S${semesterNumber}` : '', letter].filter(Boolean).join('-').toUpperCase() } : {} }
-  const setSemester = (semesterId) => { const selectedSemester = masters.semesters.find((item) => String(item.id) === String(semesterId)); const suggestion = editMode ? {} : suggestSection(semesterId); setForm((current) => ({ ...current, semesterId, semester: selectedSemester?.name || '', academicYearId: selectedSemester?.academicYearId || current.academicYearId || selectedAcademicYearId || activeYear?.id, academicYear: selectedSemester?.academicYearName || activeYear?.name || current.academicYear, ...suggestion })); setErrors((current) => ({ ...current, semesterId: '', name: '', code: '' })) }
+  const setSemester = (semesterId) => {
+    const selectedSemester = masters.semesters.find((item) => String(item.id) === String(semesterId))
+    setForm((current) => {
+      const next = { ...current, semesterId, semester: selectedSemester?.name || '', academicYearId: selectedSemester?.academicYearId || current.academicYearId || selectedAcademicYearId || activeYear?.id, academicYear: selectedSemester?.academicYearName || activeYear?.name || current.academicYear }
+      if (editMode) return next
+      if (!selectedSemester) return { ...next, name: '', code: '' }
+      const existing = sections.filter((item) => sameMapping(item, next))
+      const labelNumber = (label) => [...label.toUpperCase()].reduce((value, letter) => value * 26 + letter.charCodeAt(0) - 64, 0)
+      const labelFor = (number) => {
+        let label = ''
+        for (let n = number; n > 0; n = Math.floor((n - 1) / 26)) label = String.fromCharCode(65 + (n - 1) % 26) + label
+        return label
+      }
+      let number = existing.reduce((highest, item) => {
+        const nameLabel = String(item.name || '').trim().match(/^Section\s+([A-Z]+)$/i)?.[1]
+        const codeLabel = String(item.code || '').trim().match(/-([A-Z]+)$/i)?.[1]
+        return Math.max(highest, nameLabel ? labelNumber(nameLabel) : 0, codeLabel ? labelNumber(codeLabel) : 0)
+      }, 0) + 1
+      const prefix = String(branch?.code || current.branchCode || branch?.name || '').trim().toUpperCase().replace(/[^A-Z0-9]+/g, '-').replace(/^-|-$/g, '')
+      const semesterNumber = selectedSemester.number || String(selectedSemester.name || '').match(/\d+/)?.[0] || ''
+      let name, code
+      do {
+        const letter = labelFor(number++)
+        name = 'Section ' + letter
+        code = [prefix, semesterNumber ? 'S' + semesterNumber : '', letter].filter(Boolean).join('-')
+      } while (existing.some((item) => String(item.name || '').trim().toLowerCase() === name.toLowerCase() || String(item.code || '').trim().toUpperCase() === code))
+      return { ...next, name, code }
+    })
+    setErrors((current) => ({ ...current, semesterId: '', name: '', code: '' }))
+  }
   const setField = (key, value) => { setForm((current) => ({ ...current, [key]: key === 'code' ? value.toUpperCase() : value })); setErrors((current) => ({ ...current, [key]: '' })) }
   const validate = () => { const next = {}; ['courseId', 'branchId', 'semesterId', 'name', 'code', 'status'].forEach((key) => { if (!String(form[key] || '').trim()) next[key] = 'Required.' }); if (!form.academicYearId && !selectedAcademicYearId) next.academicYearId = yearWarning || 'An academic year is required.'; if (!editMode && !semester) next.semesterId = 'Select a configured semester.'; if (!Number.isInteger(Number(form.capacity)) || Number(form.capacity) < 1 || Number(form.capacity) > 120) next.capacity = 'Capacity must be a whole number from 1 to 120.'; if (editMode && Number(form.capacity) < assignedCount) next.capacity = `Capacity cannot be below the ${assignedCount} assigned students.`; if (!/^[A-Z0-9]+(?:-[A-Z0-9]+)*$/.test(String(form.code || '').trim().toUpperCase())) next.code = 'Use uppercase letters, numbers, and single hyphens only.'; const mapping = { ...form, academicYearId: form.academicYearId || selectedAcademicYearId || activeYear?.id }; if (sections.some((item) => String(item.id) !== String(id) && sameMapping(item, mapping) && item.name.trim().toLowerCase() === form.name.trim().toLowerCase())) next.name = 'This section already exists for this academic mapping.'; if (sections.some((item) => String(item.id) !== String(id) && sameMapping(item, mapping) && item.code.trim().toLowerCase() === form.code.trim().toLowerCase())) next.code = 'This section code already exists for this academic mapping.'; setErrors(next); if (Object.keys(next).length) showWarning('Correct the highlighted fields before saving the section.'); return !Object.keys(next).length }
-  const submit = async (event) => { event.preventDefault(); if (saving || !validate()) return; setSaving(true); try { const mappedBranch = !editMode && (!branch?.collegeId || !branch?.departmentId) ? normalizeBranch(responseRecord(await branchApi.getById(form.branchId))) : branch; const mappedCourse = !editMode && (!mappedBranch?.collegeId || !mappedBranch?.departmentId) ? normalizeCourse(responseRecord(await courseApi.getById(form.courseId))) : course; const departmentName = String(mappedBranch?.departmentName || mappedCourse?.departmentName || '').trim().toLowerCase(); const matchedDepartment = activeDepartments.find((item) => String(item.departmentName || item.name || '').trim().toLowerCase() === departmentName); const payload = { ...form, collegeId: mappedBranch?.collegeId || mappedCourse?.collegeId || selectedCollegeId || selectedCollege?.collegeId || selectedCollege?.id || form.collegeId, departmentId: mappedBranch?.departmentId || mappedCourse?.departmentId || matchedDepartment?.departmentId || matchedDepartment?.id || form.departmentId, academicYearId: form.academicYearId || selectedAcademicYearId || activeYear?.id, academicYear: activeYear?.name || form.academicYear, ...legacy.current, capacity: Number(form.capacity) }; if (editMode) { const currentStudents = await sectionAssignmentApi.listBySection(id); if (payload.status === 'Inactive' && currentStudents.length > 0) throw new Error(`Cannot deactivate section "${payload.name}". ${currentStudents.length} student${currentStudents.length === 1 ? '' : 's'} are currently enrolled. Transfer or unassign students first.`); if (payload.capacity < currentStudents.length) throw new Error('Capacity cannot be below the current assigned student count.'); const capacityCheck = await sectionApi.validateCapacity(id, payload.capacity); if (capacityCheck === false || capacityCheck?.isValid === false) throw new Error(capacityCheck?.message || 'The requested capacity is not allowed.'); await sectionApi.update(id, payload); await sectionApi.updateStatus(id, payload.status) } else { const created = await sectionApi.create(payload); rememberCreated('sections', created); if (payload.status === 'Inactive') await sectionApi.updateStatus(created.id, payload.status) }; if (payload.room) { roomService.allocateRoom(payload.room, payload.name || 'Section') }; eventBus.emit(ERP_EVENTS.ACADEMIC_UPDATED, { form }); setNotice(`Section ${editMode ? 'updated' : 'created'} successfully.`); setTimeout(() => navigate('/section-management'), 700) } catch (error) { setErrors((current) => ({ ...current, form: apiError(error, 'Unable to save section.') })) } finally { setSaving(false) } }
+  const submit = async (event) => { event.preventDefault(); if (saving || !validate()) return; setSaving(true); try { const payload = { ...form, collegeId: branch?.collegeId || course?.collegeId || selectedCollegeId || selectedCollege?.collegeId || selectedCollege?.id || form.collegeId, departmentId: branch?.departmentId || course?.departmentId || form.departmentId || null, academicYearId: form.academicYearId || selectedAcademicYearId || activeYear?.id, academicYear: activeYear?.name || form.academicYear, ...legacy.current, capacity: Number(form.capacity) }; if (editMode) { const currentStudents = await sectionAssignmentApi.listBySection(id); if (payload.status === 'Inactive' && currentStudents.length > 0) throw new Error(`Cannot deactivate section "${payload.name}". ${currentStudents.length} student${currentStudents.length === 1 ? '' : 's'} are currently enrolled. Transfer or unassign students first.`); if (payload.capacity < currentStudents.length) throw new Error('Capacity cannot be below the current assigned student count.'); const capacityCheck = await sectionApi.validateCapacity(id, payload.capacity); if (capacityCheck === false || capacityCheck?.isValid === false) throw new Error(capacityCheck?.message || 'The requested capacity is not allowed.'); await sectionApi.update(id, payload); await sectionApi.updateStatus(id, payload.status) } else { const created = await sectionApi.create(payload); rememberCreated('sections', created); if (payload.status === 'Inactive') await sectionApi.updateStatus(created.id, payload.status) }; if (payload.room) { roomService.allocateRoom(payload.room, payload.name || 'Section') }; eventBus.emit(ERP_EVENTS.ACADEMIC_UPDATED, { form }); setNotice(`Section ${editMode ? 'updated' : 'created'} successfully.`); setTimeout(() => navigate('/section-management'), 700) } catch (error) { setErrors((current) => ({ ...current, form: apiError(error, 'Unable to save section.') })) } finally { setSaving(false) } }
   if (loading) return <Page><Empty icon={FiClock} title="Loading section form..." /></Page>
   const selectedTeacher = teacherCandidates.find((item) => String(item.employeeProfileId) === String(form.facultyAdvisorEmployeeProfileId))
   const selectedCourseObj = scopedCourses.find((item) => String(item.id) === String(form.courseId))
@@ -431,13 +490,13 @@ function SectionForm({ editMode = false }) {
                 </header>
                 <div className="semester-form-grid">
                   <Field label="Section Name *" error={errors.name}>
-                    <input value={form.name} onChange={(event) => setField('name', event.target.value)} placeholder="Section A" />
+                    <input value={form.name} onChange={(event) => setField('name', event.target.value)} placeholder="Enter section name" />
                   </Field>
                   <Field label="Section Code *" error={errors.code}>
-                    <input value={form.code} onChange={(event) => setField('code', event.target.value)} placeholder="CSE-S1-A" />
+                    <input value={form.code} onChange={(event) => setField('code', event.target.value)} placeholder="Enter section code" />
                   </Field>
                   <Field label="Capacity *" error={errors.capacity}>
-                    <input type="number" min="1" max="120" value={form.capacity} onChange={(event) => setField('capacity', event.target.value)} />
+                    <input type="number" min="1" max="120" placeholder="Enter capacity" value={form.capacity} onChange={(event) => setField('capacity', event.target.value)} />
                   </Field>
                   <Field label="Faculty Advisor" error={errors.facultyAdvisorEmployeeProfileId}>
                     <SearchableSelect label="Faculty Advisor" value={form.facultyAdvisorEmployeeProfileId} options={teacherCandidates.map((item) => ({ id: item.employeeProfileId, value: item.employeeProfileId, name: item.fullName, code: [item.employeeCode, item.designation].filter(clean).join(' / ') }))} onChange={(value) => { const teacher = teacherCandidates.find((item) => String(item.employeeProfileId) === String(value)); setForm((current) => ({ ...current, facultyAdvisorEmployeeProfileId: value, advisor: teacher?.fullName || '' })) }} placeholder="Select Faculty Advisor" searchPlaceholder="Search faculty..." noOptionsMessage="No faculty candidates found." />
@@ -459,13 +518,13 @@ function SectionForm({ editMode = false }) {
               <>
                 <Link className="cm-button secondary" to="/section-management">Cancel</Link>
                 <button type="button" className="cm-button" disabled={!canOpenDetailsTab} onClick={() => setFormTab('details')}>
-                  Next â†’
+                  Next →
                 </button>
               </>
             ) : (
               <>
                 <button type="button" className="cm-button secondary" onClick={() => setFormTab('mapping')}>
-                  â† Previous
+                  ← Previous
                 </button>
                 <button type="submit" className="cm-button" disabled={saving}>
                   {saving ? 'Saving...' : editMode ? 'Save Changes' : 'Create Section'}
@@ -493,7 +552,7 @@ function SectionForm({ editMode = false }) {
                   {form.name ? form.name.trim() : 'Section Preview'}
                 </h3>
                 <p className="preview-course-meta">
-                  {[form.code, selectedCourseObj?.name, form.capacity && `${form.capacity} Students`].filter(Boolean).join(' â€¢ ') || 'Academic details'}
+                  {[form.code, selectedCourseObj?.name, form.capacity && `${form.capacity} Students`].filter(Boolean).join(' ') || 'Academic details'}
                 </p>
               </div>
             </div>
@@ -516,12 +575,12 @@ function SectionForm({ editMode = false }) {
                     ['Section Code', form.code],
                     ['Capacity', form.capacity ? `${form.capacity} Students` : ''],
                     ['Faculty Advisor', selectedTeacher?.fullName || form.advisor],
-                    ['Status', form.name || form.code ? form.status || 'Active' : ''],
+                    ['Status', form.status],
                   ],
                 },
               ].map((sec) => ({
                 ...sec,
-                fields: sec.fields.filter(([, val]) => val !== null && val !== undefined && String(val).trim() !== '' && String(val).trim() !== 'â€”'),
+                fields: sec.fields.filter(([, val]) => val !== null && val !== undefined && String(val).trim() !== '' && String(val).trim() !== '-'),
               })).filter((sec) => sec.fields.length > 0)
 
               if (sections.length === 0) {
@@ -585,7 +644,7 @@ function SectionDetails() {
                 </div>
                 <h1 className="cm-profile-title">{section.name}</h1>
                 <p className="cm-profile-subtitle">
-                  {[section.course, section.branchCode || section.branch, section.semester].filter(clean).join(' â€¢ ')}
+                  {[section.course, section.branchCode || section.branch, section.semester].filter(clean).join(' ')}
                 </p>
               </div>
             </div>
@@ -604,7 +663,7 @@ function SectionDetails() {
 function Select({ label, value, change, first, values }) { return <SearchableSelect label={'Filter by ' + label} value={value} onChange={(next) => change(label, next)} placeholder={first} options={[{ value: '', name: first }, ...values.map((item) => ({ value: item, name: item }))]} searchPlaceholder={'Search ' + label + '...'} /> }
 function Pagination({ page, pageCount, setPage }) { return <footer className="section-pagination"><p>Page {page} of {pageCount}</p><div><button disabled={page <= 1} onClick={() => setPage((value) => Math.max(1, value - 1))}>Previous</button><button className="active">{page}</button><button disabled={page >= pageCount} onClick={() => setPage((value) => Math.min(pageCount, value + 1))}>Next</button></div></footer> }
 
-function AssignStudents({ section, faculty = [], assignments, allAssignments = [], sections = [], assign, assignTeacher, remove, close }) {
+function AssignStudents({ section, faculty = [], assignments, allAssignments = [], sections = [], assignMany, assignTeacher, remove, close }) {
   const [mode, setMode] = useState('')
   const [query, setQuery] = useState('')
   const [selectedIds, setSelectedIds] = useState([])
@@ -612,6 +671,7 @@ function AssignStudents({ section, faculty = [], assignments, allAssignments = [
   const [studentsLoading, setStudentsLoading] = useState(false)
   const [teacher, setTeacher] = useState(String(section.facultyAdvisorEmployeeProfileId || ''))
   const [teacherCandidates, setTeacherCandidates] = useState([])
+  const [teacherLoading, setTeacherLoading] = useState(false)
   const [error, setError] = useToastState('', 'error')
   const [teacherError, setTeacherError] = useToastState('', 'error')
   const [saving, setSaving] = useState(false)
@@ -620,14 +680,21 @@ function AssignStudents({ section, faculty = [], assignments, allAssignments = [
   const isAssignedToCurrentSection = (student) => [...assignments, ...allAssignments].some((assignment) => String(assignment.sectionId) === String(section.id) && sameStudent(assignment, student))
 
   useEffect(() => {
-    const candidates = teacherCandidatesForBranch(faculty, section.branchName || section.branch, section.branchCode, section.branchId)
-    setTeacherCandidates(candidates)
-    if (section.facultyAdvisorEmployeeProfileId && candidates.some(c => String(c.employeeProfileId) === String(section.facultyAdvisorEmployeeProfileId))) {
-      setTeacher(String(section.facultyAdvisorEmployeeProfileId))
-    } else {
-      setTeacher('')
-    }
-  }, [faculty, section.branchName, section.branch, section.branchCode, section.branchId, section.facultyAdvisorEmployeeProfileId])
+    if (mode !== 'teacher') return undefined
+    let active = true
+    setTeacherLoading(true)
+    setTeacherError('')
+    sectionAllocationApi.getTeacherCandidates(section.id)
+      .then((rows) => {
+        if (!active) return
+        const candidates = teacherCandidatesForBranch(rows.length ? rows : faculty, section.branchName || section.branch, section.branchCode, section.branchId, section.departmentName, section.departmentId)
+        setTeacherCandidates(candidates)
+        setTeacher(section.facultyAdvisorEmployeeProfileId && candidates.some((candidate) => String(candidate.employeeProfileId) === String(section.facultyAdvisorEmployeeProfileId)) ? String(section.facultyAdvisorEmployeeProfileId) : '')
+      })
+      .catch((reason) => { if (active) { const candidates = teacherCandidatesForBranch(faculty, section.branchName || section.branch, section.branchCode, section.branchId, section.departmentName, section.departmentId); setTeacherCandidates(candidates); setTeacher(''); setTeacherError(candidates.length ? '' : apiError(reason, 'Unable to load faculty candidates.')) } })
+      .finally(() => { if (active) setTeacherLoading(false) })
+    return () => { active = false }
+  }, [mode, section.id, section.branchName, section.branch, section.branchCode, section.branchId, section.departmentName, section.departmentId, section.facultyAdvisorEmployeeProfileId, faculty, setTeacherError])
   useEffect(() => {
     if (mode !== 'student') return undefined
     let active = true
@@ -635,17 +702,19 @@ function AssignStudents({ section, faculty = [], assignments, allAssignments = [
     setStudentsLoading(true)
     setStudents([])
     setSelectedIds([])
-    Promise.allSettled([studentProfilesApi.getAll(), studentAdmissionApi.getAll()])
-      .then(([profilesResult, admissionsResult]) => {
-        const profiles = profilesResult.status === 'fulfilled' ? profilesResult.value : []
-        const admissions = admissionsResult.status === 'fulfilled' ? admissionsResult.value : []
-        if (profilesResult.status !== 'fulfilled' && admissionsResult.status !== 'fulfilled') throw profilesResult.reason || admissionsResult.reason || new Error('Unable to load student profiles.')
-        if (active) setStudents(sectionStudentProfiles(profiles, admissions).filter(student => matchesSectionStudent(student, section)))
+    sectionAssignmentApi.getStudentCandidates(section.id)
+      .then((rows) => {
+        if (active) setStudents(rows.map((item) => {
+          const id = item.studentId ?? item.StudentId ?? item.id ?? item.Id
+          const name = item.fullName ?? item.FullName ?? item.studentName ?? item.name ?? ''
+          const code = item.studentCode ?? item.StudentCode ?? item.code ?? item.enrollmentNo ?? ''
+          return { ...item, id: String(id ?? ''), studentId: String(id ?? ''), name, code, studentCode: code, enrollmentNo: code, registrationNumber: code, rollNumber: item.rollNumber ?? code }
+        }).filter((student) => clean(student.id) && clean(student.name)))
       })
-      .catch((reason) => active && setError(apiError(reason, 'Unable to load admitted students.')))
+      .catch((reason) => active && setError(apiError(reason, 'Unable to load eligible students for this section.')))
       .finally(() => { if (active) setStudentsLoading(false) })
     return () => { active = false }
-  }, [mode, section, setError])
+  }, [mode, section.id, setError])
 
   const sectionById = useMemo(() => new Map(sections.map((item) => [String(item.id), item])), [sections])
   const crossAssignmentFor = (student) => allAssignments.find((assignment) => {
@@ -711,18 +780,19 @@ function AssignStudents({ section, faculty = [], assignments, allAssignments = [
     if (!selectedStudents.length) return setError('Select at least one eligible student.')
     if (selectedStudents.length > available) return setError(`Only ${available} seats are available in ${section.name}.`)
     setSaving(true)
-    let success = 0, failed = 0
-    const failureMessages = new Set()
-    for (const student of selectedStudents) {
-      try { await assign({ studentId: student.id, enrollmentNo: student.enrollmentNo, studentName: student.name }); success += 1 }
-      catch (reason) { failed += 1; failureMessages.add(reason.message || 'Unable to assign student.') }
+    try {
+      await assignMany(selectedStudents.map((student) => student.id))
+      setSelectedIds([])
+      setError('')
+      showSuccess(`${selectedStudents.length} students assigned successfully.`)
+    } catch (reason) {
+      setError(apiError(reason, 'Unable to assign selected students. No students were assigned.'))
+    } finally {
+      setSaving(false)
     }
-    setSaving(false)
-    setSelectedIds([])
-    setError(failed ? `${success} students assigned successfully. ${failed} could not be assigned. ${[...failureMessages].join(' ')}` : '', success ? 'warning' : 'error'); if (!failed) showSuccess(`${success} students assigned successfully.`)
   }
 
-  return <div className="section-overlay centered" onMouseDown={(event) => event.target === event.currentTarget && close()}><section className="section-assignment-panel" role="dialog" aria-modal="true" aria-label="Assign teacher or student"><header><div><p>Section Allocation</p><h2>{section.name}</h2><span>{[section.branchCode || section.branch, section.semester, section.academicYear].filter(clean).join(' ï¿½ ')}</span></div><button type="button" aria-label="Close section allocation" onClick={close}><FiX /></button></header><div className="section-capacity"><strong>{assignedCount} / {section.capacity}</strong><span>{available} seats available</span><i><b style={{ width: `${Math.min(100, assignedCount * 100 / Math.max(Number(section.capacity || 1), 1))}%` }} /></i></div>{!mode && <div className="section-assignment-chooser"><button type="button" onClick={() => setMode('teacher')}><FiCheckCircle /><span><strong>Assign Teacher</strong><small>{section.advisor || 'No teacher assigned'}</small></span></button><button type="button" onClick={() => setMode('student')}><FiUserPlus /><span><strong>Students / Allocations</strong><small>{assignedCount} students assigned</small></span></button></div>}{mode === 'teacher' && <form className="section-assignment-form section-teacher-form" onSubmit={submitTeacher}><div className="section-assignment-form-head"><h3>Assign teacher</h3></div><div><label>Teacher / Faculty Advisor<SearchableSelect label="Faculty Advisor" value={teacher} onChange={setTeacher} options={teacherCandidates.map((item) => ({ value: item.employeeProfileId, name: item.fullName, code: [item.employeeCode, item.designation].filter(clean).join(' / ') }))} placeholder="Select faculty advisor" searchPlaceholder="Search faculty name or employee code..." /></label><button className="section-primary" disabled={saving}><FiCheckCircle /> {saving ? 'Saving...' : 'Save Teacher'}</button></div>{teacherError && <p className="section-assignment-error" role="alert">{teacherError}</p>}</form>}{mode === 'student' && <div className="section-student-allocation"><div className="section-assignment-form-head"><h3>Students / Allocations</h3><span>{selectedStudents.length} selected</span></div>{section.status !== 'Active' && <p className="section-assignment-error" role="alert">Students can only be assigned to an active section.</p>}<label className="section-student-search"><FiSearch aria-hidden="true" /><input type="search" aria-label="Search students" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search students..." /></label><label className="section-select-all"><input type="checkbox" checked={allVisibleSelected} disabled={!available || !selectableRows.length || section.status !== 'Active'} onChange={toggleAll} /> Select All Eligible</label><div className="section-eligible-list">{visibleStudents.length ? visibleStudents.map(({ student, crossAssignment }) => { const otherSection = crossAssignment ? sectionById.get(String(crossAssignment.sectionId)) : null; const disabled = Boolean(crossAssignment) || section.status !== 'Active'; return <label className={`section-student-row ${disabled ? 'disabled' : ''}`} key={student.id}><input type="checkbox" checked={selectedIds.includes(String(student.id))} disabled={disabled} onChange={() => toggleStudent(student.id)} /><span><strong>{student.name}</strong><small>{student.code || 'Student record'}</small></span><em>{crossAssignment ? `Already assigned to ${otherSection?.name || 'another section'}` : 'Unassigned'}</em></label> }) : <p className="section-assignment-empty">{studentsLoading ? 'Loading student profiles...' : error ? 'Unable to load student profiles. Please reopen this panel to retry.' : 'No matching unassigned student profiles found for this branch and section.'}</p>}</div><footer className="section-student-actions"><span>Selected: {selectedStudents.length}</span><button className="section-primary" disabled={saving || !selectedStudents.length || section.status !== 'Active'} onClick={submitSelected}><FiUserPlus /> {saving ? 'Assigning...' : 'Assign Selected Students'}</button></footer>{error && <p className="section-assignment-error" role="alert">{error}</p>}<div className="section-assigned-list"><h3>Assigned Students <span>{assignments.length}</span></h3>{assignments.length ? assignments.map((assignment) => <article key={`${assignment.sectionId}-${assignment.studentId}-${assignment.id}`}><div><strong>{assignment.studentName}</strong><span>{assignment.enrollmentNo}</span></div><button title="Remove student" onClick={() => remove(assignment).catch(showError)}><FiTrash2 className="module-action-icon module-action-icon--danger" /> Remove</button></article>) : <p>No students have been assigned yet.</p>}</div></div>}{mode && <footer><button type="button" className="section-back-button" onClick={() => { setMode(''); setError(''); setSelectedIds([]) }}>Back</button></footer>}</section></div>
+  return <div className="section-overlay centered" onMouseDown={(event) => event.target === event.currentTarget && close()}><section className="section-assignment-panel" role="dialog" aria-modal="true" aria-label="Assign teacher or student"><header><div><p>Section Allocation</p><h2>{section.name}</h2><span>{[section.branchCode || section.branch, section.semester, section.academicYear].filter(clean).join(' ')}</span></div><button type="button" aria-label="Close section allocation" onClick={close}><FiX /></button></header><div className="section-capacity"><strong>{assignedCount} / {section.capacity}</strong><span>{available} seats available</span><i><b style={{ width: `${Math.min(100, assignedCount * 100 / Math.max(Number(section.capacity || 1), 1))}%` }} /></i></div>{!mode && <div className="section-assignment-chooser"><button type="button" onClick={() => setMode('teacher')}><FiCheckCircle /><span><strong>Assign Teacher</strong><small>{section.advisor || 'No teacher assigned'}</small></span></button><button type="button" onClick={() => setMode('student')}><FiUserPlus /><span><strong>Students / Allocations</strong><small>{assignedCount} students assigned</small></span></button></div>}{mode === 'teacher' && <form className="section-assignment-form section-teacher-form" onSubmit={submitTeacher}><div className="section-assignment-form-head"><h3>Assign teacher</h3></div><div><label>Teacher / Faculty Advisor<SearchableSelect label="Faculty Advisor" value={teacher} onChange={setTeacher} loading={teacherLoading} noOptionsMessage={teacherError ? 'Unable to load faculty candidates.' : 'No active faculty candidates found for this section.'} options={teacherCandidates.map((item) => ({ value: item.employeeProfileId, name: item.fullName, code: [item.employeeCode, item.designation].filter(clean).join(' / ') }))} placeholder="Select faculty advisor" searchPlaceholder="Search faculty name or employee code..." /></label><button className="section-primary" disabled={saving || teacherLoading}><FiCheckCircle /> {saving ? 'Saving...' : 'Save Teacher'}</button></div>{teacherError && <p className="section-assignment-error" role="alert">{teacherError}</p>}</form>}{mode === 'student' && <div className="section-student-allocation"><div className="section-assignment-form-head"><h3>Students / Allocations</h3><span>{selectedStudents.length} selected</span></div>{section.status !== 'Active' && <p className="section-assignment-error" role="alert">Students can only be assigned to an active section.</p>}<label className="section-student-search"><FiSearch aria-hidden="true" /><input type="search" aria-label="Search students" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search students..." /></label><label className="section-select-all"><input type="checkbox" checked={allVisibleSelected} disabled={!available || !selectableRows.length || section.status !== 'Active'} onChange={toggleAll} /> Select All Eligible</label><div className="section-eligible-list">{visibleStudents.length ? visibleStudents.map(({ student, crossAssignment }) => { const otherSection = crossAssignment ? sectionById.get(String(crossAssignment.sectionId)) : null; const disabled = Boolean(crossAssignment) || section.status !== 'Active'; return <label className={`section-student-row ${disabled ? 'disabled' : ''}`} key={student.id}><input type="checkbox" checked={selectedIds.includes(String(student.id))} disabled={disabled} onChange={() => toggleStudent(student.id)} /><span><strong>{student.name}</strong><small>{student.code || 'Student record'}</small></span><em>{crossAssignment ? `Already assigned to ${otherSection?.name || 'another section'}` : 'Unassigned'}</em></label> }) : <p className="section-assignment-empty">{studentsLoading ? 'Loading students...' : error ? 'Unable to load students for this section. Please retry.' : 'No eligible unassigned students found for this section.'}</p>}</div><footer className="section-student-actions"><span>Selected: {selectedStudents.length}</span><button className="section-primary" disabled={saving || !selectedStudents.length || section.status !== 'Active'} onClick={submitSelected}><FiUserPlus /> {saving ? 'Assigning...' : 'Assign Selected Students'}</button></footer>{error && <p className="section-assignment-error" role="alert">{error}</p>}<div className="section-assigned-list"><h3>Assigned Students <span>{assignments.length}</span></h3>{assignments.length ? assignments.map((assignment) => <article key={`${assignment.sectionId}-${assignment.studentId}-${assignment.id}`}><div><strong>{assignment.studentName}</strong><span>{assignment.enrollmentNo}</span></div><button title="Remove student" onClick={() => remove(assignment).catch(showError)}><FiTrash2 className="module-action-icon module-action-icon--danger" /> Remove</button></article>) : <p>No students have been assigned yet.</p>}</div></div>}{mode && <footer><button type="button" className="section-back-button" onClick={() => { setMode(''); setError(''); setSelectedIds([]) }}>Back</button></footer>}</section></div>
 }
 function Confirm({ action, close, confirm }) { const activate = action.nextStatus === 'Active'; return <div className="section-overlay centered"><section className="section-confirm" role="alertdialog" aria-modal="true"><i>!</i><h2>{activate ? 'Activate' : 'Deactivate'} Section?</h2><p><strong>{action.row.name} ({action.row.code})</strong> {activate ? 'will become available for student allocations.' : `${action.assigned} students are currently assigned to this section. Deactivating this section will prevent new allocations. Existing allocations are not removed by this action.`}</p><footer><button onClick={close}>Cancel</button><button className={activate ? 'section-primary' : 'section-danger'} onClick={confirm}>{activate ? 'Activate' : 'Confirm Deactivate'}</button></footer></section></div> }
 

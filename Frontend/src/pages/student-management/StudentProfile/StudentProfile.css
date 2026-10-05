@@ -75,9 +75,19 @@ main.student-profile .sp-directory-table thead th:last-child::after{content:none
 .student-profile .sp-edit-inline .sp-close{top:18px;right:18px}
 .student-profile .sp-edit-inline .sp-edit-tabs{scrollbar-width:none;overflow-x:auto}
 .student-profile .sp-edit-inline .sp-edit-tabs::-webkit-scrollbar{display:none}
-.student-profile .sp-edit-tabs-scroll-bottom{display:block;overflow-x:auto;overflow-y:hidden;height:14px;margin:0 24px 4px;border-top:1px solid var(--border);scrollbar-width:thin;scrollbar-color:var(--brand) var(--surface-soft)}
-.student-profile .sp-edit-tabs-scroll-bottom>div{height:1px;min-width:100%}
 .student-profile .sp-edit-inline .sp-edit-progress{position:relative!important;top:auto!important;margin-bottom:0!important}
+
+/* Keep the profile wizard actions reachable inside the fixed-height card. */
+.student-profile .sp-edit-page .erp-card-main{display:flex!important;flex-direction:column!important;min-height:0!important}
+.student-profile .sp-edit-page .sp-edit-inline{display:flex;flex:1 1 auto;flex-direction:column;height:100%;min-height:0;overflow:hidden}
+.student-profile .sp-edit-page .sp-edit-inline form{display:flex;flex:1 1 auto;flex-direction:column;min-height:0;overflow-y:auto;overflow-x:hidden;padding:8px 16px 0}
+.student-profile .sp-edit-page .sp-edit-inline form>footer{position:sticky;bottom:0;z-index:3;flex-shrink:0;align-items:center;margin-top:auto;padding:10px 0;background:var(--surface-raised);border-top:1px solid var(--border)}
+
+@media(max-width:900px){
+  .student-profile .sp-edit-page .sp-edit-inline{height:auto;overflow:visible}
+  .student-profile .sp-edit-page .sp-edit-inline form{overflow:visible}
+  .student-profile .sp-edit-page .sp-edit-inline form>footer{position:sticky;bottom:0;padding:10px 0}
+}
  /* Keep all profile navigation visible when the workspace narrows. */
 .student-profile .cm-profile-view > .cm-profile-top-bar {
   display: flex;
@@ -317,3 +327,95 @@ main.student-profile .sp-directory-table thead th:last-child::after{content:none
   }
 }
 
+
+/* ===== Student Profile Edit — Two-Column Layout Fixes ===== */
+
+/* Equal-height two-column layout */
+.student-profile .erp-two-column-layout {
+  display: grid !important;
+  grid-template-columns: minmax(0, 1.4fr) minmax(0, 0.95fr) !important;
+  grid-template-rows: minmax(0, 1fr) !important;
+  gap: 16px !important;
+  align-items: stretch !important;
+  width: 100% !important;
+  max-width: 100% !important;
+  min-width: 0 !important;
+  height: clamp(380px, calc(100vh - 145px), 520px) !important;
+  min-height: 0 !important;
+  box-sizing: border-box !important;
+}
+
+/* Form card — no horizontal scroll */
+.student-profile .erp-card-main {
+  height: 100% !important;
+  min-width: 0 !important;
+  overflow-x: hidden !important;
+}
+
+/* Form scroll body — no horizontal scroll */
+.student-profile .erp-form-scroll-body {
+  overflow-x: hidden !important;
+  min-width: 0 !important;
+  width: 100% !important;
+}
+
+/* Preview card — same fixed height as form card */
+.student-profile .preview-card {
+  height: 100% !important;
+  min-height: 0 !important;
+  min-width: 0 !important;
+  overflow: hidden !important;
+}
+
+@media (max-width: 900px) {
+  .student-profile .sp-edit-page.erp-two-column-layout {
+    grid-template-rows: auto !important;
+    height: auto !important;
+  }
+  .student-profile .sp-edit-page .erp-card-main {
+    height: auto !important;
+  }
+  .student-profile .sp-edit-page .preview-card {
+    height: 420px !important;
+  }
+}
+
+/* Preview scroll body — always-visible scrollbar */
+.student-profile .preview-body-container {
+  overflow-y: scroll !important;
+  scrollbar-width: thin !important;
+  scrollbar-color: #94A3B8 #F1F5F9 !important;
+}
+
+.student-profile .preview-body-container::-webkit-scrollbar {
+  width: 7px !important;
+  display: block !important;
+}
+
+.student-profile .preview-body-container::-webkit-scrollbar-track {
+  background: #F1F5F9 !important;
+  border-radius: 4px !important;
+}
+
+.student-profile .preview-body-container::-webkit-scrollbar-thumb {
+  background: #94A3B8 !important;
+  border-radius: 4px !important;
+}
+
+.student-profile .preview-body-container::-webkit-scrollbar-thumb:hover {
+  background: #64748B !important;
+}
+
+/* Address fields — full width, no truncation */
+.student-profile .preview-kv-item--full {
+  grid-column: 1 / -1 !important;
+}
+
+.student-profile .kv-val--wrap,
+.student-profile .preview-kv-item--full .kv-val {
+  white-space: normal !important;
+  overflow: visible !important;
+  text-overflow: unset !important;
+  word-break: break-word !important;
+  line-height: 1.5 !important;
+}

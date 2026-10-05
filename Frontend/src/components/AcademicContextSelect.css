@@ -7,27 +7,6 @@
 .workspace-context-select__error { margin-top: 6px; color: var(--ui-danger); font-size: 11px; }
 .workspace-context-select__error button { padding: 3px 6px; margin-left: 4px; border: 0; background: transparent; color: inherit; text-decoration: underline; cursor: pointer; }
 
-#root .sidebar-brand .workspace-context-select__retry {
-  display: inline-block;
-  width: auto;
-  min-height: 0;
-  margin: 2px 0 0;
-  padding: 2px 0;
-  border: 0;
-  background: transparent;
-  color: var(--ui-danger);
-  font: inherit;
-  font-size: 11px;
-  font-weight: 600;
-  text-decoration: underline;
-  cursor: pointer;
-}
-
-#root .sidebar-brand .workspace-context-select__retry:disabled {
-  opacity: .6;
-  cursor: wait;
-}
-
 /* The brand header needs an inline error, without the full-page alert card. */
 #root .sidebar-brand .workspace-context-select__error {
   display: flex;
@@ -42,6 +21,11 @@
   background: transparent !important;
   font-size: 10px;
   line-height: 1.4;
+}
+
+#root .sidebar-brand .workspace-context-select__error > span {
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 
 #root .sidebar-brand .workspace-context-select__error > button {
@@ -78,22 +62,27 @@
    Sidebar Brand Header (Single Clean Row)
    ========================================================================== */
 #root .sidebar:not(.is-collapsed) .sidebar-brand {
-  display: flex;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 36px;
+  grid-template-rows: auto auto;
   align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-  padding: 12px 14px;
+  justify-items: stretch;
+  gap: 5px 8px;
+  padding: 12px 14px 10px;
   margin: 0;
   border-bottom: 1px solid #E2E8F0 !important;
   background: #FFFFFF;
-  min-height: 64px;
+  min-height: 116px;
   box-sizing: border-box;
 }
 
 #root .sidebar-brand__mark {
-  flex: 0 0 38px;
-  width: 38px;
-  height: 38px;
+  grid-column: 1;
+  grid-row: 1;
+  justify-self: center;
+  flex: 0 0 48px;
+  width: 48px;
+  height: 48px;
   border-radius: 10px;
   background: #EDEBF6 !important;
   border: 1px solid #DDD8F0 !important;
@@ -112,12 +101,23 @@
 }
 
 #root .sidebar-brand__copy {
-  flex: 1 1 auto;
+  grid-column: 1 / -1;
+  grid-row: 2;
+  flex: initial;
   min-width: 0;
   display: flex;
   flex-direction: column;
+  align-items: center;
   justify-content: center;
-  gap: 2px;
+  gap: 3px;
+}
+
+#root .sidebar-brand .sidebar-collapse,
+#root .sidebar-brand .sidebar-close {
+  grid-column: 2;
+  grid-row: 1;
+  justify-self: end;
+  align-self: start;
 }
 
 #root .sidebar-brand__subtitle {
@@ -127,7 +127,8 @@
   letter-spacing: 0.05em;
   text-transform: uppercase;
   line-height: 1.1;
-  padding-left: 2px;
+  padding: 0;
+  text-align: center;
 }
 
 /* On Desktop: Show ONLY Collapse (<) button, hide Close (X) */
@@ -195,8 +196,8 @@
   box-sizing: border-box;
   display: inline-flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 4px;
+  justify-content: center;
+  gap: 3px;
   min-height: auto;
   padding: 2px 4px;
   border: 1px solid transparent;
@@ -220,13 +221,21 @@
 }
 
 #root .sidebar .workspace-context-select .searchable-select__trigger-text {
-  font-size: 13px;
+  display: -webkit-box;
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  font-size: 12px;
   font-weight: 800;
   color: #0F172A;
   white-space: normal;
-  word-break: break-word;
-  line-height: 1.25;
+  overflow-wrap: anywhere;
+  word-break: normal;
+  line-height: 1.2;
   letter-spacing: -0.01em;
+  text-align: center;
 }
 
 #root .sidebar .workspace-context-select .searchable-select__caret {

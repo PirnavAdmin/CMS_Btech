@@ -171,6 +171,27 @@ const validateBasic = (v, courses = [], editingId = null) => {
   return e
 }
 
+const coursesForCollege = (rows, collegeId, collegeName, departments = [], responseIsCollegeScoped = false) => {
+  const targetId = normalizeId(collegeId)
+  const targetName = String(collegeName || '').trim().toLowerCase()
+  const departmentIds = new Set(departments
+    .filter(department => String(department.collegeId ?? department.collegeNumericId ?? '') === targetId)
+    .map(department => normalizeId(department.id ?? department.departmentId))
+    .filter(Boolean))
+
+  return rows.filter(course => {
+    const ownCollegeId = normalizeId(course.collegeId ?? course.collegeNumericId ?? course.CollegeId ?? course.college?.collegeId ?? course.college?.id)
+    if (ownCollegeId) return ownCollegeId === targetId
+
+    const departmentId = normalizeId(course.departmentId ?? course.DepartmentId ?? course.department?.departmentId ?? course.department?.id)
+    if (departmentId) return departmentIds.has(departmentId)
+
+    const ownCollegeName = String(course.collegeName ?? course.CollegeName ?? course.college?.name ?? course.college ?? '').trim().toLowerCase()
+    if (targetName && ownCollegeName) return ownCollegeName === targetName
+    return responseIsCollegeScoped
+  })
+}
+
 const codeFor = name => { const known = { 'computer science and engineering': 'CSE', 'electronics and communication engineering': 'ECE', 'electrical and electronics engineering': 'EEE', 'mechanical engineering': 'ME', 'civil engineering': 'CE', 'artificial intelligence and data science': 'AI-DS' }, clean = name.trim().toLowerCase(); return known[clean] || name.split(/\s+/).filter(x => x && !['and', '&', 'of', 'the'].includes(x.toLowerCase())).map(x => x[0]).join('').slice(0, 10).toUpperCase() }
 
 const Page = ({ children }) => <DashboardLayout><main className="cm-page course-management">{children}</main></DashboardLayout>
@@ -433,7 +454,7 @@ function CourseList() {
 }
 
 function CourseForm() {
-  const { scopeRecords, selectedCollegeId } = useAcademic()
+  const { scopeRecords, selectedCollegeId, selectedCollege } = useAcademic()
   const saveLock = useRef(false)
   const [persistedId, setPersistedId] = useState(null)
   const [existingCourses, setExistingCourses] = useState([])
@@ -450,18 +471,23 @@ function CourseForm() {
   const [isSaving, setIsSaving] = useState(false)
   const [error, setError] = useToastState('', 'error')
   const hydrationRef = useRef(false)
+  const loadRequestRef = useRef(0)
 
   const load = async () => {
+    const requestId = ++loadRequestRef.current
+    const collegeId = normalizeId(selectedCollegeId || selectedCollege?.collegeId || selectedCollege?.id)
     setIsLoading(true); setError('')
     try {
-      const [departmentRows, branchRows, courseRows] = await Promise.all([departmentApi.getAll(), branchApi.getAll(), courseApi.getAll()])
+      const [departmentRows, branchRows, courseRows] = await Promise.all([departmentApi.getAll(), branchApi.getAll(), courseApi.getAll({ collegeId })])
       const normalizedDepartments = dedupeDepartmentOptions(departmentRows)
       const normalizedBranches = branchRows.map(normalize)
-      setExistingCourses(courseRows.map(mapCourse))
+      if (requestId !== loadRequestRef.current) return
+      setExistingCourses(coursesForCollege(courseRows, collegeId, selectedCollege?.name || selectedCollege?.collegeName, normalizedDepartments, true).map(mapCourse))
       setDepartments(normalizedDepartments)
       setBranches(normalizedBranches)
       if (id) {
         const courseRes = await getCourseById(id)
+        if (requestId !== loadRequestRef.current) return
         const detail = mapCourse(recordFrom(courseRes))
         const departmentId = normalizeId(detail.departmentId ?? detail.department?.departmentId ?? detail.department?.id)
         const branchId = normalizeId(detail.branchId ?? detail.branch?.branchId ?? detail.branch?.id)
@@ -480,15 +506,22 @@ function CourseForm() {
         setCodeEdited(true)
       }
     } catch (requestError) {
-      setError(apiError(requestError, 'Unable to load course details. Please try again.'))
+      if (requestId === loadRequestRef.current) setError(apiError(requestError, 'Unable to load course details. Please try again.'))
     } finally {
-      setIsLoading(false)
+      if (requestId === loadRequestRef.current) setIsLoading(false)
     }
   }
-  useEffect(() => { load() }, [id])
+  useEffect(() => { load() }, [id, selectedCollegeId, scopeRecords])
+  useEffect(() => {
+    if (id) return
+    setExistingCourses([])
+    setValue({ ...blank, collegeId: selectedCollegeId || '' })
+    setCodeEdited(false)
+    setErrors({})
+  }, [id, selectedCollegeId])
 
   const live = validateBasic(value, existingCourses, persistedId ?? id)
-  const update = (key, next) => { setValue(v => { const n = { ...v, [key]: next }; if (key === 'durationValue') n.semesters = next ? Number(next) * 2 : ''; if (key === 'name' && !codeEdited) n.code = codeFor(next); if (key === 'code') { n.code = next.toUpperCase(); setCodeEdited(true) } if (key === 'departmentId') { const department = departments.find(x => String(x.id) === String(next)); n.collegeId = department?.collegeId ?? ''; n.departmentCode = department?.code || ''; if (!hydrationRef.current) { const previousBranchIsStillValid = n.branchId && branches.some(branch => String(branch.departmentId ?? branch.department?.departmentId ?? branch.department?.id ?? '') === String(next) && String(branch.id ?? branch.branchId) === String(n.branchId)); if (!previousBranchIsStillValid) { n.branchId = ''; n.branchCode = '' } } } if (key === 'branchId') n.branchCode = branches.find(x => String(x.id) === String(next))?.code || ''; return n }); setErrors(e => ({ ...e, [key]: '', ...(key === 'departmentId' ? { branchId: '' } : {}) })) }
+  const update = (key, next) => { setValue(v => { const n = { ...v, [key]: next }; if (key === 'durationValue') n.semesters = next ? Number(next) * 2 : ''; if (key === 'name' && !codeEdited) n.code = codeFor(next); if (key === 'code') { n.code = next.toUpperCase(); setCodeEdited(true) } if (key === 'departmentId') { const department = departments.find(x => String(x.id) === String(next)); n.collegeId = department?.collegeId ?? selectedCollegeId ?? ''; n.departmentCode = department?.code || ''; if (!hydrationRef.current) { const previousBranchIsStillValid = n.branchId && branches.some(branch => String(branch.departmentId ?? branch.department?.departmentId ?? branch.department?.id ?? '') === String(next) && String(branch.id ?? branch.branchId) === String(n.branchId)); if (!previousBranchIsStillValid) { n.branchId = ''; n.branchCode = '' } } } if (key === 'branchId') n.branchCode = branches.find(x => String(x.id) === String(next))?.code || ''; return n }); setErrors(e => ({ ...e, [key]: '', ...(key === 'departmentId' ? { branchId: '' } : {}) })) }
 
   const submit = async () => {
     if (saveLock.current || saved) return
@@ -497,11 +530,13 @@ function CourseForm() {
     saveLock.current = true
     setIsSaving(true); setError('')
     try {
-      const latestCourses = (await courseApi.getAll()).map(mapCourse)
+      const collegeId = normalizeId(selectedCollegeId || selectedCollege?.collegeId || selectedCollege?.id)
+      const latestCourseRows = await courseApi.getAll({ collegeId })
+      const latestCourses = coursesForCollege(latestCourseRows, collegeId, selectedCollege?.name || selectedCollege?.collegeName, allDepartments, true).map(mapCourse)
       setExistingCourses(latestCourses)
       const latestErrors = validateBasic(value, latestCourses, persistedId ?? id)
       if (Object.keys(latestErrors).length) { setErrors(latestErrors); return }
-      const payload = payloadFor(value)
+      const payload = payloadFor({ ...value, collegeId: value.collegeId || selectedCollegeId || selectedCollege?.collegeId || selectedCollege?.id || '' })
       const targetId = persistedId ?? id
       const response = targetId ? await updateCourse(targetId, payload) : await createCourse(payload)
       if (response?.data?.success === false) throw new Error('Course could not be saved.')
@@ -584,7 +619,7 @@ function CourseForm() {
               },
             ].map((sec) => ({
               ...sec,
-              fields: sec.fields.filter(([, val]) => val !== null && val !== undefined && String(val).trim() !== '' && String(val).trim() !== 'â€”'),
+              fields: sec.fields.filter(([, val]) => val !== null && val !== undefined && String(val).trim() !== '' && String(val).trim() !== '-'),
             })).filter((sec) => sec.fields.length > 0)
 
             if (sections.length === 0) {
@@ -605,7 +640,7 @@ function CourseForm() {
                     <h3 className="preview-course-title">{value.name.trim() || 'Course Preview'}</h3>
                     <p className="preview-course-meta">
                       {value.durationValue ? `${value.durationValue} Years` : ''}
-                      {value.semesters ? ` â€¢ ${value.semesters} Semesters` : ''}
+                      {value.semesters ? `   ${value.semesters} Semesters` : ''}
                     </p>
                   </div>
                 </div>
@@ -721,7 +756,7 @@ function CourseDetails() {
             </div>
             <div className="cm-profile-header-info">
               <div className="cm-profile-badges">
-                <span className="cm-badge cm-badge-code">Code: {course.code || 'â€”'}</span>
+                <span className="cm-badge cm-badge-code">Code: {course.code || '-'}</span>
                 <span className="cm-badge cm-badge-type">{course.type || 'Undergraduate'}</span>
                 <span className={`cm-status-badge ${String(course.status || 'Active').toLowerCase()}`}>
                   {course.status || 'Active'}
@@ -730,7 +765,7 @@ function CourseDetails() {
               <h1 className="cm-profile-title">{course.name || 'Course'}</h1>
               <p className="cm-profile-subtitle">
                 <span>Department: </span>
-                <strong>{department?.name || course.department || 'â€”'}</strong>
+                <strong>{department?.name || course.department || '-'}</strong>
                 {duration && <span> Â| {duration}</span>}
                 {course.semesters && <span> Â| {course.semesters} Semesters</span>}
               </p>
@@ -814,7 +849,7 @@ export function CourseStructure() {
       <Field label="Year"><input type="number" min="1" max="4" value={form.yearNumber} onChange={e => setForm({ ...form, yearNumber: e.target.value })} /></Field>
       <Field label="Semester"><select value={form.semesterId} onChange={e => { const option = semesterOptions.find(x => String(x.semesterId) === e.target.value); const number = Number(option?.semesterNumber || form.semesterNumber); setForm({ ...form, semesterId: e.target.value, semesterNumber: number, semesterName: option?.semesterName || form.semesterName, yearNumber: Math.ceil(number / 2) }); setSemester(number) }}><option value="">Select semester</option>{semesterOptions.map(x => <option key={x.semesterId} value={x.semesterId}>{x.semesterName || `Semester ${x.semesterNumber}`}</option>)}</select></Field>
       <Field label="Semester Name"><input value={form.semesterName} readOnly /></Field>
-      <button className="cm-button" disabled={saving} onClick={submit}>{saving ? 'Savingâ€¦' : editing ? 'Update Structure' : 'Add Structure'}</button>
+      <button className="cm-button" disabled={saving} onClick={submit}>{saving ? 'Saving...' : editing ? 'Update Structure' : 'Add Structure'}</button>
       {editing && <button className="cm-button secondary" onClick={() => setEditing(null)}>Cancel</button>}
     </section>
     <section className="cm-panel cm-table-wrap"><table className="cm-table"><thead><tr><th>Year</th><th>Semester</th><th>Name</th><th>Status</th><th>Action</th></tr></thead><tbody>{pageRows.map(x => <tr key={x.structureId}><td>{x.yearNumber}</td><td>{x.semesterNumber}</td><td>{x.semesterName}</td><td>{Number(x.status) === 0 ? 'Deactive' : 'Active'}</td><td><button className="cm-button" onClick={() => edit(x)}><FiEdit2 className="module-action-icon module-action-icon--edit" /> Edit</button></td></tr>)}</tbody></table>{loading ? <div className="cm-empty">Loading structures...</div> : !visible.length ? <div className="cm-empty">No structure configured for Semester {semester}.</div> : <TablePagination page={currentPage} totalPages={totalPages} onPageChange={setPage} />}</section>

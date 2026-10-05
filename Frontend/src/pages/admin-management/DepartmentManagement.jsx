@@ -308,15 +308,19 @@ export default function DepartmentManagement() {
   };
 
   useEffect(() => {
-    facultyService.list()
+    let active = true;
+    setFaculty([]);
+    facultyService.list({ collegeId: selectedCollegeId })
       .then((records) => {
+        if (!active) return;
         const normalized = records.map(normalizeFaculty);
         setFaculty(normalized);
         setItems((current) => current.map((item) => mapDepartment(item, normalized)));
         setAllDepartments((current) => current.map((item) => mapDepartment(item, normalized)));
       })
-      .catch(() => setFaculty([]));
-  }, []);
+      .catch(() => { if (active) setFaculty([]); });
+    return () => { active = false; };
+  }, [selectedCollegeId]);
 
   const loadDetail = async (item, nextScreen) => {
     setScreen(nextScreen);
@@ -349,16 +353,36 @@ export default function DepartmentManagement() {
   const hodCandidates = useMemo(() => {
     if (!faculty || !faculty.length) return [];
 
+    const targetCollegeId = String(form.collegeNumericId ?? form.collegeId ?? selectedCollegeId ?? selectedCollege?.collegeId ?? selectedCollege?.id ?? '').trim();
+    if (!targetCollegeId) return [];
+
+    const collegeDepartments = scopedAllDepartments.filter((department) =>
+      String(department.collegeNumericId ?? department.collegeId ?? '') === targetCollegeId
+    );
+    const collegeDepartmentIds = new Set(collegeDepartments.map((department) =>
+      String(department.id ?? department.departmentId ?? '').trim()
+    ).filter(Boolean));
+    const collegeDepartmentNames = collegeDepartments.map((department) =>
+      String(department.name ?? department.departmentName ?? '').trim().toLowerCase()
+    ).filter(Boolean);
+
     const activeFaculty = faculty.filter((member) => {
       const status = String(member.employmentStatus || member.status || '').trim().toLowerCase();
-      return !['inactive', 'resigned', 'retired', 'terminated'].includes(status);
+      if (['inactive', 'resigned', 'retired', 'terminated'].includes(status)) return false;
+
+      const memberCollegeId = String(member.collegeNumericId ?? member.collegeId ?? member.college?.collegeId ?? member.college?.id ?? '').trim();
+      if (memberCollegeId) return memberCollegeId === targetCollegeId;
+
+      const memberDeptId = String(member.departmentId ?? member.department?.departmentId ?? member.department?.id ?? '').trim();
+      if (memberDeptId) return collegeDepartmentIds.has(memberDeptId);
+
+      const memberDeptName = String(member.departmentName ?? member.department?.departmentName ?? member.department?.name ?? member.department ?? '').trim().toLowerCase();
+      return Boolean(memberDeptName && collegeDepartmentNames.some((name) => name === memberDeptName || memberDeptName.includes(name) || name.includes(memberDeptName)));
     });
 
     const targetDeptId = form.id !== undefined && form.id !== null ? String(form.id).trim() : '';
     const targetDeptName = String(form.name ?? '').trim().toLowerCase();
     const targetDeptCode = String(form.code ?? '').trim().toLowerCase();
-    const targetCollegeId = String(form.collegeNumericId ?? form.collegeId ?? selectedCollegeId ?? '').trim();
-
     const directMatches = activeFaculty.filter((member) => {
       const memberDeptId = String(member.departmentId ?? member.department?.departmentId ?? member.department?.id ?? '').trim();
       const memberDeptName = String(member.departmentName ?? member.department ?? '').trim().toLowerCase();
@@ -378,17 +402,7 @@ export default function DepartmentManagement() {
       return matchId || matchName || matchCode;
     });
 
-    let candidateList = directMatches.length > 0 ? directMatches : activeFaculty;
-
-    if (directMatches.length === 0 && targetCollegeId) {
-      const collegeMatches = activeFaculty.filter((member) => {
-        const memberCollegeId = String(member.collegeId ?? member.college?.id ?? '').trim();
-        return !memberCollegeId || memberCollegeId === targetCollegeId;
-      });
-      if (collegeMatches.length > 0) {
-        candidateList = collegeMatches;
-      }
-    }
+    const candidateList = directMatches.length > 0 ? directMatches : activeFaculty;
 
     return candidateList
       .map((member) => ({
@@ -396,7 +410,7 @@ export default function DepartmentManagement() {
         hodId: member.userId ?? member.employeeProfileId ?? member.facultyId ?? member.id,
       }))
       .filter((member) => member.hodId !== undefined && member.hodId !== null && member.hodId !== '');
-  }, [faculty, form.id, form.name, form.code, form.collegeNumericId, form.collegeId, selectedCollegeId]);
+  }, [faculty, form.id, form.name, form.code, form.collegeNumericId, form.collegeId, selectedCollegeId, selectedCollege, scopedAllDepartments]);
 
   const toggleStatus = async (item) => {
     setError('');
@@ -741,10 +755,10 @@ export default function DepartmentManagement() {
                               </button>
                             </td>
                             <td className="col-code table-center">
-                              <code>{item.code || 'â€”'}</code>
+                              <code>{item.code || '-'}</code>
                             </td>
                             <td className="col-hod table-center">
-                              <span className="table-cell-truncate" title={item.hod || 'Unassigned'}>{item.hod || 'â€”'}</span>
+                              <span className="table-cell-truncate" title={item.hod || 'Unassigned'}>{item.hod || '-'}</span>
                             </td>
                             <td className="col-status table-center">
                               <StatusBadge value={item.status} />
@@ -941,7 +955,7 @@ export default function DepartmentManagement() {
                     <div className="preview-hero-details">
                       <h3 className="preview-course-title">{form.name.trim() || 'Department Preview'}</h3>
                       <p className="preview-course-meta">
-                        {[form.code, form.status || (form.name ? 'Active' : '')].filter(Boolean).join(' â€¢ ') || 'Department details'}
+                        {[form.code, form.status || (form.name ? 'Active' : '')].filter(Boolean).join('   ') || 'Department details'}
                       </p>
                     </div>
                   </div>
@@ -961,7 +975,7 @@ export default function DepartmentManagement() {
                       },
                     ].map((sec) => ({
                       ...sec,
-                      fields: sec.fields.filter(([, val]) => val !== null && val !== undefined && String(val).trim() !== '' && String(val).trim() !== 'â€”'),
+                      fields: sec.fields.filter(([, val]) => val !== null && val !== undefined && String(val).trim() !== '' && String(val).trim() !== '-'),
                     })).filter((sec) => sec.fields.length > 0)
 
                     if (sections.length === 0) {
@@ -1048,13 +1062,13 @@ export default function DepartmentManagement() {
                       value={form.hodUserId ? String(form.hodUserId) : ''}
                       options={hodCandidates.map((member) => {
                         const code = member.employeeId ? `[${member.employeeId}]` : '';
-                        const subLabel = [member.designation, member.department].filter(Boolean).join(' â€¢ ');
+                        const subLabel = [member.designation, member.department].filter(Boolean).join('   ');
                         const fullLabel = [
                           member.fullName,
                           code,
                           member.designation,
                           member.department ? `(${member.department})` : ''
-                        ].filter(Boolean).join(' â€” ');
+                        ].filter(Boolean).join(' - ');
 
                         return {
                           value: String(member.hodId),
@@ -1167,7 +1181,7 @@ export default function DepartmentManagement() {
                 </div>
                 <div className="cm-profile-header-info">
                   <div className="cm-profile-badges">
-                    <span className="cm-badge cm-badge-code">Code: {selected.code || 'â€”'}</span>
+                    <span className="cm-badge cm-badge-code">Code: {selected.code || '-'}</span>
                     <span className="cm-badge cm-badge-type">Department</span>
                     <span className={`cm-status-badge ${String(selected.status).toLowerCase()}`}>
                       {selected.status}

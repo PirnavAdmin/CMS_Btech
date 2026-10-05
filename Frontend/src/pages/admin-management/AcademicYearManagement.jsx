@@ -15,7 +15,7 @@ import InfoCard from '../../components/InfoCard';
 import { academicYearApi, studentApi } from '../../api/apiEndpoints';
 import eventBus, { ERP_EVENTS } from '../../services/eventBus';
 import { showDeactivationBlocked } from '../../components/DeactivationBlockedDialog';
-import { FiEye, FiEdit2, FiToggleLeft, FiToggleRight, FiPlus, FiCalendar, FiClock, FiSearch } from 'react-icons/fi';
+import { FiEye, FiEdit2, FiToggleLeft, FiToggleRight, FiPlus, FiCalendar, FiClock, FiSearch, FiX } from 'react-icons/fi';
 import './AcademicYearManagement.css';
 
 const DAY = 864e5;
@@ -60,9 +60,9 @@ const isPastYear = (x) => {
   return now() > end;
 };
 const formatDate = (x) => {
-  if (!x) return 'â€”';
+  if (!x) return '-';
   const parsed = d(x);
-  return isNaN(parsed.getTime()) ? 'â€”' : parsed.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+  return isNaN(parsed.getTime()) ? '-' : parsed.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
 };
 const days = (x) => Math.ceil((d(x) - now()) / DAY);
 const duration = (a, b) => {
@@ -422,7 +422,7 @@ export default function AcademicYear() {
                   <p className="cm-profile-subtitle">
                     <span>Duration: </span>
                     <strong>{duration(selected.startDate, selected.endDate)} days</strong>
-                    <span> ({formatDate(selected.startDate)} â€” {formatDate(selected.endDate)})</span>
+                    <span> ({formatDate(selected.startDate)} - {formatDate(selected.endDate)})</span>
                   </p>
                 </div>
               </div>
@@ -459,7 +459,7 @@ export default function AcademicYear() {
                   <p className="eyebrow">Active Academic Context</p>
                   <h2>{active.name}</h2>
                   <p>
-                    {formatDate(active.startDate)} â€” {formatDate(active.endDate)}
+                    {formatDate(active.startDate)} - {formatDate(active.endDate)}
                   </p>
                   <StatusBadge status="ACTIVE" />
                 </div>
@@ -633,7 +633,7 @@ export default function AcademicYear() {
           <div className="backdrop" onMouseDown={(e) => e.target === e.currentTarget && close()}>
             <section className="modal" role="dialog" aria-modal="true" aria-labelledby="form-title">
               <button type="button" className="x" aria-label="Close dialog" onClick={close}>
-                Ã-
+                <FiX aria-hidden="true" />
               </button>
               <h2 id="form-title">{modal === 'add' ? 'Add Academic Year' : 'Edit Academic Year'}</h2>
               <form onSubmit={save} noValidate>
@@ -718,7 +718,7 @@ export default function AcademicYear() {
           <div className="backdrop" onMouseDown={(e) => e.target === e.currentTarget && close()}>
             <section className="modal" role="dialog" aria-modal="true" aria-labelledby="gen-title">
               <button type="button" className="x" aria-label="Close dialog" onClick={close}>
-                Ã-
+                <FiX aria-hidden="true" />
               </button>
               <h2 id="gen-title">Generate Next Academic Year</h2>
               <p style={{ marginTop: '12px', color: 'var(--text-secondary)' }}>

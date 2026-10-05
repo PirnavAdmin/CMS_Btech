@@ -117,7 +117,10 @@ namespace BTech.Services.Implementations
                     Gender = NormalizeGender(dto.Gender),
                     DateOfBirth = dto.DateOfBirth.Date,
                     BloodGroup = Clean(dto.BloodGroup),
-                    StudentPhoto = Clean(dto.StudentPhoto),
+                    // Inline uploads are preserved in FormData (LONGTEXT); the
+                    // legacy photo column/procedure accepts only a 500-character URL.
+                    StudentPhoto = dto.StudentPhoto?.StartsWith("data:", StringComparison.OrdinalIgnoreCase) == true
+                        ? null : Clean(dto.StudentPhoto),
                     Email = Clean(dto.Email),
                     StudentEmail = Clean(dto.StudentEmail),
                     MobileNumber = Clean(dto.MobileNumber),
@@ -218,6 +221,7 @@ namespace BTech.Services.Implementations
 
         private static StudentAdmissionResponseDto Map(StudentAdmission x)
         {
+            var formData = ParseFormData(x.FrontendFormDataJson);
             return new StudentAdmissionResponseDto
             {
                 AdmissionId = x.AdmissionId,
@@ -240,7 +244,10 @@ namespace BTech.Services.Implementations
                 Gender = x.Gender,
                 DateOfBirth = x.DateOfBirth,
                 BloodGroup = x.BloodGroup,
-                StudentPhoto = x.StudentPhoto,
+                StudentPhoto = JsonText(formData ?? default, "personal", "photo")
+                    ?? JsonText(formData ?? default, "studentPhoto")
+                    ?? JsonText(formData ?? default, "photo")
+                    ?? x.StudentPhoto,
                 Email = x.Email,
                 StudentEmail = x.StudentEmail,
                 MobileNumber = x.MobileNumber,
@@ -335,7 +342,7 @@ namespace BTech.Services.Implementations
                 CreatedAt = x.CreatedAt,
                 UpdatedBy = x.UpdatedBy,
                 UpdatedAt = x.UpdatedAt,
-                FormData = ParseFormData(x.FrontendFormDataJson)
+                FormData = formData
             };
         }
 

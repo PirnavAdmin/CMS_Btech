@@ -29,7 +29,7 @@ const blank = {
   branchName: '',
   branchCode: '',
   shortName: '',
-  branchType: 'Core',
+  branchType: '',
   specialization: '',
   intakeCapacity: '',
   status: '',
@@ -64,6 +64,7 @@ const courseMap = (record = {}) => {
     code: content(record.courseCode ?? record.code ?? record.shortName ?? ''),
     shortName: content(record.courseShortName ?? record.shortName ?? record.courseCode ?? record.code ?? ''),
     type: content(record.courseType ?? record.type ?? ''),
+    collegeId: normalizeId(record.collegeId ?? record.college?.collegeId ?? record.college?.id ?? record.collegeNumericId ?? ''),
     departmentId: normalizeId(record.departmentId ?? record.department?.departmentId ?? record.department?.id ?? ''),
     departmentName: content(record.departmentName ?? record.department?.departmentName ?? record.department?.name ?? ''),
     durationValue: normalizeId(record.durationYears ?? record.durationValue ?? record.duration ?? ''),
@@ -328,7 +329,7 @@ function List() {
       </div>
     </FilterPanel>
 
-    {loading ? <div className="branch-empty">Loading branchesâ€¦</div> : rows.length ? <>
+    {loading ? <div className="branch-empty">Loading branches...</div> : rows.length ? <>
       <div className="branch-results">Showing <strong>{rows.length}</strong> branches</div>
       <div className="branch-table-scroll">
         <table className="branch-table">
@@ -360,7 +361,7 @@ function List() {
                     </div>
                   </td>
                   <td className="table-center" style={{ width: '110px' }}>{branch.branchCode}</td>
-                  <td className="table-center" style={{ minWidth: '160px', maxWidth: '220px' }}><span className="table-cell-truncate" title={courseDisplayName}>{courseDisplayName || 'â€”'}</span></td>
+                  <td className="table-center" style={{ minWidth: '160px', maxWidth: '220px' }}><span className="table-cell-truncate" title={courseDisplayName}>{courseDisplayName || '-'}</span></td>
                   <td className="table-center" style={{ width: '130px' }}>{typeOf(branch)}</td>
                   <td className="table-center" style={{ width: '110px' }}>{course?.durationValue ? `${course.durationValue} Years` : ''}</td>
                   <td className="table-center" style={{ width: '110px' }}>{course?.totalSemesters || ''}</td>
@@ -400,6 +401,7 @@ const validateBranch = (value, branchId, existingRows) => {
   else if (existingRows.some((row) => String(row.id) !== String(branchId) && String(row.branchCode || '').trim().toUpperCase() === code)) errors.branchCode = 'Branch code already exists.'
   else if (existingRows.some((row) => String(row.id) !== String(branchId) && String(row.courseId) === String(value.courseId) && String(row.branchName || '').trim().toLowerCase() === name.toLowerCase())) errors.branchName = 'This branch name already exists for the selected course.'
 
+  if (!value.branchType) errors.branchType = 'Branch type is required.'
   if (value.branchType === 'Specialization' && !String(value.specialization || '').trim()) errors.specialization = 'Specialization is required.'
   if (!Number.isInteger(Number(value.intakeCapacity)) || Number(value.intakeCapacity) < 1) errors.intakeCapacity = 'Approved intake must be a positive whole number.'
   if (!value.status) errors.status = 'Status is required.'
@@ -603,9 +605,15 @@ function Form() {
 
   const nextStep = () => {
     const selectedCourse = courses.find((course) => String(course.id) === String(value.courseId))
+    const nextErrors = {}
     if (!selectedCourse) {
-      setErrors((current) => ({ ...current, courseId: 'Course is required.' }))
-      setError('Course is required.')
+      nextErrors.courseId = 'Course is required.'
+    }
+    if (!value.branchType) nextErrors.branchType = 'Branch type is required.'
+    if (Object.keys(nextErrors).length) {
+      setErrors((current) => ({ ...current, ...nextErrors }))
+      setTouched((current) => ({ ...current, ...Object.fromEntries(Object.keys(nextErrors).map((key) => [key, true])) }))
+      setError(Object.values(nextErrors)[0])
       return
     }
     setStep(1)
@@ -623,11 +631,11 @@ function Form() {
           <div className="cm-form-grid"><Field label="Course Name *" error={getFieldError('courseId')}><SearchableSelect label="Course Name" value={value.courseId} options={courses.filter(course => course.status === 'Active' || (id && String(course.id) === String(value.courseId))).map((course) => ({ id: course.id, name: course.name, code: course.code }))} onChange={selectCourse} placeholder="Select Course" searchPlaceholder="Search course name or code..." noOptionsMessage="No courses found." error={Boolean(errors.courseId)} /></Field><Field label="Course Code"><input value={selectedCourse?.code || value.courseCode || ''} readOnly /></Field></div>
           {!value.courseId && <p className="branch-structure-empty">Select a course to load its academic structure.</p>}
           <div className="cm-form-grid"><Field label="Branch Name *" error={getFieldError('branchName')}><input value={value.branchName} onChange={(event) => update('branchName', event.target.value)} placeholder="Enter branch name" /></Field><Field label="Branch Code *" error={getFieldError('branchCode')}><input value={value.branchCode} onChange={(event) => update('branchCode', event.target.value)} placeholder="e.g. CSE" /></Field></div>
-          <div className="cm-form-grid"><Field label="Branch Type *"><select value={value.branchType} onChange={(event) => update('branchType', event.target.value)}><option value="">Select Branch Type</option><option value="Core">Core</option><option value="Specialization">Specialization</option></select></Field>{value.branchType === 'Specialization' && <Field label="Specialization *" error={getFieldError('specialization')}><input value={value.specialization} onChange={(event) => update('specialization', event.target.value)} placeholder="e.g. Artificial Intelligence" /></Field>}<Field label="Short Name"><input value={value.shortName} onChange={(event) => update('shortName', event.target.value)} placeholder="Optional short name" /></Field></div>
+          <div className="cm-form-grid"><Field label="Branch Type *" error={getFieldError('branchType')}><select value={value.branchType} onChange={(event) => update('branchType', event.target.value)}><option value="">Select Branch Type</option><option value="Core">Core</option><option value="Specialization">Specialization</option></select></Field>{value.branchType === 'Specialization' && <Field label="Specialization *" error={getFieldError('specialization')}><input value={value.specialization} onChange={(event) => update('specialization', event.target.value)} placeholder="e.g. Artificial Intelligence" /></Field>}<Field label="Short Name"><input value={value.shortName} onChange={(event) => update('shortName', event.target.value)} placeholder="Optional short name" /></Field></div>
           <div className="cm-form-grid"><Field label="Start Date"><input type="date" value={value.startDate || ''} onChange={(event) => update('startDate', event.target.value)} /></Field><Field label="End Date"><input type="date" value={value.endDate || ''} onChange={(event) => update('endDate', event.target.value)} /></Field></div>
           <div className="branch-form-actions"><span aria-hidden="true" /><button type="button" className="cm-button" onClick={nextStep}>Next</button></div>
         </section>}
-        {step === 1 && <section className="branch-step-content"><h2>Branch Configuration</h2><div className="branch-structure-summary"><h3>Course Structure</h3>{courseStructureLoading ? <p>Loading course structure...</p> : <><div><span>Duration</span><strong>{selectedCourse?.durationValue ? `${selectedCourse.durationValue} Years` : ''}</strong></div><div><span>Total Semesters</span><strong>{selectedCourse?.totalSemesters || ''}</strong></div></>}</div><div className="cm-form-grid"><Field label="Approved Intake *" error={getFieldError('intakeCapacity')}><input type="number" min="1" value={value.intakeCapacity} onChange={(event) => update('intakeCapacity', event.target.value)} placeholder="Enter approved intake" /></Field><Field label="Status *" error={getFieldError('status')}><select value={value.status} onChange={(event) => update('status', event.target.value)}><option value="" disabled>Select Status</option><option value="Active">Active</option><option value="Inactive">Inactive</option></select></Field></div><div className="branch-form-actions"><button type="button" className="cm-button secondary" onClick={() => setStep(0)}>Back</button><button type="submit" className="cm-button" disabled={saving || courseStructureLoading}>{saving ? 'Savingâ€¦' : id ? 'Update Branch' : 'Create Branch'}</button></div></section>}
+        {step === 1 && <section className="branch-step-content"><h2>Branch Configuration</h2><div className="branch-structure-summary"><h3>Course Structure</h3>{courseStructureLoading ? <p>Loading course structure...</p> : <><div><span>Duration</span><strong>{selectedCourse?.durationValue ? `${selectedCourse.durationValue} Years` : ''}</strong></div><div><span>Total Semesters</span><strong>{selectedCourse?.totalSemesters || ''}</strong></div></>}</div><div className="cm-form-grid"><Field label="Approved Intake *" error={getFieldError('intakeCapacity')}><input type="number" min="1" value={value.intakeCapacity} onChange={(event) => update('intakeCapacity', event.target.value)} placeholder="Enter approved intake" /></Field><Field label="Status *" error={getFieldError('status')}><select value={value.status} onChange={(event) => update('status', event.target.value)}><option value="" disabled>Select Status</option><option value="Active">Active</option><option value="Inactive">Inactive</option></select></Field></div><div className="branch-form-actions"><button type="button" className="cm-button secondary" onClick={() => setStep(0)}>Back</button><button type="submit" className="cm-button" disabled={saving || courseStructureLoading}>{saving ? 'Saving...' : id ? 'Update Branch' : 'Create Branch'}</button></div></section>}
       </section>
       <aside className="cm-panel course-preview branch-course-preview" aria-label="Branch preview">
         <header className="preview-top-bar">
@@ -645,7 +653,7 @@ function Form() {
                   ['Branch Name', value.branchName],
                   ['Branch Code', value.branchCode],
                   ['Course', selectedCourse?.name],
-                  ['Branch Type', value.branchType || 'Core'],
+                  ['Branch Type', value.branchType],
                   ['Specialization', value.specialization],
                   ['Short Name', value.shortName],
                   ['Pattern', selectedCourse?.academicPattern || 'Semester System'],
@@ -657,7 +665,7 @@ function Form() {
               },
             ].map((sec) => ({
               ...sec,
-              fields: sec.fields.filter(([, val]) => val !== null && val !== undefined && String(val).trim() !== '' && String(val).trim() !== 'â€”'),
+              fields: sec.fields.filter(([, val]) => val !== null && val !== undefined && String(val).trim() !== '' && String(val).trim() !== '-'),
             })).filter((sec) => sec.fields.length > 0)
 
             if (sections.length === 0) {
@@ -678,7 +686,7 @@ function Form() {
                     <h3 className="preview-course-title">{value.branchName.trim() || 'Branch Preview'}</h3>
                     <p className="preview-course-meta">
                       {selectedCourse?.name || ''}
-                      {value.branchType ? ` â€¢ ${value.branchType}` : ''}
+                      {value.branchType ? ` \u00B7 ${value.branchType}` : ''}
                     </p>
                   </div>
                 </div>
@@ -725,7 +733,7 @@ function Details() {
   }, [id, setError])
 
   if (error) return <Page><Notice>{error}</Notice></Page>
-  if (!branch) return <Page><div className="branch-empty">Loading branch detailsâ€¦</div></Page>
+  if (!branch) return <Page><div className="branch-empty">Loading branch details...</div></Page>
 
   const fields = [
     ['Course Name', branch.courseName],
@@ -762,7 +770,7 @@ function Details() {
             </div>
             <div className="cm-profile-header-info">
               <div className="cm-profile-badges">
-                <span className="cm-badge cm-badge-code">Code: {branch.branchCode || 'â€”'}</span>
+                <span className="cm-badge cm-badge-code">Code: {branch.branchCode || '-'}</span>
                 <span className="cm-badge cm-badge-type">{typeOf(branch)}</span>
                 <span className={`cm-status-badge ${String(branch.status || 'Active').toLowerCase()}`}>
                   {branch.status || 'Active'}
@@ -771,7 +779,7 @@ function Details() {
               <h1 className="cm-profile-title">{branch.branchName}</h1>
               <p className="cm-profile-subtitle">
                 <span>Course: </span>
-                <strong>{branch.courseName || branch.courseCode || 'â€”'}</strong>
+                <strong>{branch.courseName || branch.courseCode || '-'}</strong>
                 {branch.specialization && <span> Â| Specialization: {branch.specialization}</span>}
               </p>
             </div>

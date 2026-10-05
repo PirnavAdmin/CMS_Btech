@@ -142,7 +142,23 @@ class RoomService {
       const normalized = apiRooms.map(normalizeRoom).filter(Boolean).map(room => {
         // Preserve ownership confirmed when this college created the room.
         const known = cached.find(item => item.id === room.id)
-        return room.collegeId || !known ? room : { ...room, collegeId: known.collegeId }
+        if (!known) return room
+
+        const apiHasAllocation = Boolean(room.assignedSection || room.sectionId)
+        const cachedHasAllocation = Boolean(known.assignedSection || known.sectionId)
+        const mergedRoom = !apiHasAllocation && cachedHasAllocation
+          ? {
+              ...room,
+              assignedSection: known.assignedSection,
+              sectionId: known.sectionId,
+              status: 'Allocated',
+              updatedAt: known.updatedAt || room.updatedAt,
+            }
+          : room
+
+        return mergedRoom.collegeId || !known.collegeId
+          ? mergedRoom
+          : { ...mergedRoom, collegeId: known.collegeId }
       })
       const scoped = createCollegeScope(collegeId)(normalized)
       this.saveRooms(scoped, collegeId)

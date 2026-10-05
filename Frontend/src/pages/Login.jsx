@@ -31,9 +31,13 @@ export default function Login() {
   const [values, setValues] = useState(() => ({ identifier: localStorage.getItem('btech-remember-me') === 'true' ? localStorage.getItem('btech-remembered-identifier') || '' : '', password: '' }))
   const [errors, setErrors] = useState({ identifier: '', password: '' })
   const [touched, setTouched] = useState({})
+  const [loginSubmitted, setLoginSubmitted] = useState(false)
   const markTouched = (name) => setTouched(prev => ({ ...prev, [name]: true }))
   const liveErrors = useMemo(() => validateLogin(values), [values])
-  const getFieldError = (name) => (touched[name] || Boolean(values[name])) ? (liveErrors[name] || errors[name]) : errors[name]
+  const getFieldError = (name) => {
+    if (name === 'password') return loginSubmitted ? liveErrors.password : ''
+    return (touched[name] || Boolean(values[name])) ? (liveErrors[name] || errors[name]) : errors[name]
+  }
   const [submitError, setSubmitError] = useToastState('', 'error')
   const [isSubmitting, setIsSubmitting] = useState(false)
   const greeting = new Date().getHours() < 12 ? 'Good morning' : new Date().getHours() < 18 ? 'Good afternoon' : 'Good evening'
@@ -89,6 +93,7 @@ export default function Login() {
     event.preventDefault()
     if (isSubmitting) return
 
+    setLoginSubmitted(true)
     const nextErrors = validateLogin(values)
     setErrors(nextErrors)
     if (nextErrors.identifier || nextErrors.password) { showWarning('Enter your login ID and password.'); return }

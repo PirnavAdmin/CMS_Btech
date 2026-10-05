@@ -110,6 +110,7 @@ export const API_ENDPOINTS = Object.freeze({
     summary: endpoint('/api/v1/sections/summary'),
     classTeacher: (id) => endpoint(`/api/v1/sections/${id}/class-teacher`),
     classTeacherCandidates: (id) => endpoint(`/api/v1/sections/${id}/class-teacher-candidates`),
+    studentCandidates: (id) => endpoint(`/api/v1/sections/${id}/student-candidates`),
     capacity: (id) => endpoint(`/api/v1/sections/${id}/capacity`),
     students: (id) => endpoint(`/api/v1/sections/${id}/students`),
     assignStudents: (id) => endpoint(`/api/v1/sections/${id}/students/assign`),
@@ -187,6 +188,7 @@ export const API_ENDPOINTS = Object.freeze({
     policies: endpoint('/api/v1/faculty-leave/policies'),
     policy: id => endpoint('/api/v1/faculty-leave/policies/' + id),
     activate: id => endpoint('/api/v1/faculty-leave/policies/' + id + '/activate'),
+    deactivate: id => endpoint('/api/v1/faculty-leave/policies/' + id + '/deactivate'),
   }),
   facultyPayroll: Object.freeze({
     list: endpoint('/api/v1/faculty-payroll'),
@@ -709,10 +711,12 @@ export const sectionAssignmentApi = {
     return listResponse(response)
   },
   assign: async (sectionId, assignment) => request(API_ENDPOINTS.sections.assignStudents(sectionId), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ studentIds: [Number(assignment.studentId)] }) }),
+  assignMany: async (sectionId, studentIds) => request(API_ENDPOINTS.sections.assignStudents(sectionId), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ studentIds: [...new Set(studentIds.map(Number))] }) }),
   remove: async (sectionId, assignmentId) => {
     await request(API_ENDPOINTS.sections.student(sectionId, assignmentId), { method: 'DELETE' })
   },
   listBySection: async (sectionId) => listResponse(await request(API_ENDPOINTS.sections.students(sectionId))),
+  getStudentCandidates: async (sectionId, search = '') => listResponse(await request(withQuery(API_ENDPOINTS.sections.studentCandidates(sectionId), { search }))),
 }
 
 export const sectionAllocationApi = {
@@ -767,9 +771,13 @@ export const sectionApi = {
       const selectedYear = yearRows.find((year) => String(year.academicYearName ?? year.name ?? '').trim().toLowerCase() === String(section.academicYear).trim().toLowerCase())
       academicYearId = Number(selectedYear?.academicYearId ?? selectedYear?.id ?? 0)
     }
-    const ids = { collegeId: Number(section.collegeId), academicYearId, departmentId: Number(section.departmentId), courseId: Number(section.courseId), branchId: Number(section.branchId), semesterId: Number(section.semesterId) }
-    if (Object.values(ids).some((value) => !Number.isInteger(value) || value <= 0)) throw new Error('Select a valid college, academic year, department, course, branch, and semester.')
-    const response = await request(API_ENDPOINTS.sections.create, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...sectionPayload(section), ...ids }) })
+    const ids = { collegeId: Number(section.collegeId), academicYearId, courseId: Number(section.courseId), branchId: Number(section.branchId), semesterId: Number(section.semesterId) }
+    const requiredIds = ['collegeId', 'academicYearId', 'courseId', 'branchId', 'semesterId']
+    const missing = requiredIds.filter((key) => !Number.isInteger(ids[key]) || ids[key] <= 0)
+    if (missing.length) throw new Error('Select a valid college, academic year, course, branch, and semester.')
+    const deptId = Number(section.departmentId)
+    const sectionBody = { ...sectionPayload(section), ...ids, departmentId: Number.isInteger(deptId) && deptId > 0 ? deptId : null }
+    const response = await request(API_ENDPOINTS.sections.create, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(sectionBody) })
     const id = response?.data?.sectionId ?? response?.sectionId
     return { ...section, ...(response?.data || {}), id: id || response?.data?.id || section.id }
   },
@@ -817,7 +825,20 @@ export const facultyApi = {
   getAll: async (params) => listData(await request(withQuery(API_ENDPOINTS.faculty.list, params))),
   search: async (params) => listData(await request(withQuery(API_ENDPOINTS.faculty.search, params))),
   getById: async (facultyId) => normalizeRecord(await request(API_ENDPOINTS.faculty.detail(requiredId(facultyId, 'Faculty ID')))),
-  create: async (payload) => normalizeRecord(await jsonRequest(API_ENDPOINTS.faculty.create, 'POST', payload)),
+  create: async (payload, collegeId = payload?.collegeId) => {
+    const resolvedCollegeId = Number(collegeId)
+    if (!Number.isSafeInteger(resolvedCollegeId) || resolvedCollegeId <= 0) throw new Error('College is required. Select a valid college.')
+    const body = { ...payload, collegeId: resolvedCollegeId }
+    const url = withQuery(API_ENDPOINTS.faculty.create, { collegeId: resolvedCollegeId })
+    console.log('Faculty Create Query collegeId:', resolvedCollegeId)
+    console.log('Faculty Create Body collegeId:', body.collegeId)
+    console.log('Faculty Create Payload:', body)
+    return normalizeRecord(await request(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    }, false, true))
+  },
   update: async (facultyId, payload) => normalizeRecord(await jsonRequest(API_ENDPOINTS.faculty.update(requiredId(facultyId, 'Faculty ID')), 'PUT', payload)),
   getWorkload: async (facultyId, params) => normalizeRecord(await request(withQuery(API_ENDPOINTS.faculty.workload(requiredId(facultyId, 'Faculty ID')), params))),
   uploadProfilePhoto: async (facultyId, file, metadata = {}) => {
@@ -899,6 +920,11 @@ const studentAdmissionPayload = (form = {}) => {
   const fees = form.fees ?? {}
   const previous = form.previousEducation ?? {}
   const application = form.application ?? {}
+  const photo = form.studentPhoto ?? form.photo ?? personal.photo ?? personal.photoUrl
+  // Deployed admission procedures accept a URL (VARCHAR(500)), not base64.
+  // Preserve inline uploads in formData. Send an explicit empty legacy field:
+  // null/omission lets older services hydrate it back from personal.photo.
+  const legacyPhoto = /^data:/i.test(String(photo ?? '').trim()) ? '' : photo
 
   return compact({
     registrationNumber: form.registrationNumber ?? application.registrationNumber ?? application.number ?? form.number,
@@ -912,12 +938,8 @@ const studentAdmissionPayload = (form = {}) => {
     lastName: form.lastName ?? personal.lastName,
     fullName: form.fullName ?? personal.fullName,
     gender: form.gender ?? personal.gender,
-    // Student-admissions Swagger accepts `photo` (not the legacy
-    // `profilePhoto` field). Keep the selected data URL in that one
-    // contract field so an image upload cannot trigger model validation on
-    // deployments that reject unknown JSON properties.
-    photo: form.photo ?? personal.photo ?? personal.photoUrl,
-    studentPhoto: form.studentPhoto ?? form.photo ?? personal.photo ?? personal.photoUrl,
+    photo: legacyPhoto,
+    studentPhoto: legacyPhoto,
     dateOfBirth: form.dateOfBirth ?? form.dob ?? personal.dob ?? personal.dateOfBirth,
     bloodGroup: form.bloodGroup ?? personal.bloodGroup,
     nationality: form.nationality ?? personal.nationality,
@@ -1299,6 +1321,7 @@ export const facultyLeaveApi = {
   createPolicy: async payload => normalizeRecord(await jsonRequest(API_ENDPOINTS.facultyLeave.policies, 'POST', payload)),
   updatePolicy: async (id, payload) => normalizeRecord(await jsonRequest(API_ENDPOINTS.facultyLeave.policy(requiredId(id, 'Policy ID')), 'PUT', payload)),
   activatePolicy: async id => request(API_ENDPOINTS.facultyLeave.activate(requiredId(id, 'Policy ID')), { method: 'POST' }),
+  deactivatePolicy: async id => request(API_ENDPOINTS.facultyLeave.deactivate(requiredId(id, 'Policy ID')), { method: 'POST' }),
 }
 export const facultyPayrollApi = {
   getAll: async params => listData(await request(withQuery(API_ENDPOINTS.facultyPayroll.list, params))),

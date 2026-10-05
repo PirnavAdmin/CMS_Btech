@@ -42,7 +42,7 @@ export function ScheduleDialog({ initial, table, sources, entries, save, remove,
         {form.id && mode !== 'move' && <button type="button" className="tt-button" onClick={() => setMode('move')}>Move class</button>}
         {planErrors.length > 0 && <div className="tt-planning-help">{planErrors.map(message => <p key={message}>{message}</p>)}</div>}
         {error && <p className="tt-error" role="alert">{error}</p>}
-      </div><footer>{form.id && <button type="button" className="tt-button tt-danger" disabled={busy} onClick={() => confirmRemove ? execute(() => remove(form.id)) : setConfirmRemove(true)}>{confirmRemove ? 'Confirm removal' : 'Remove class'}</button>}<button type="button" className="tt-button" disabled={busy} onClick={close}>Cancel</button><button className="tt-button tt-primary" disabled={busy || Boolean(conflicts.length) || Boolean(planErrors.length) || !form.subjectId || !form.facultyId}>{busy ? 'Saving…' : 'Save Draft Entry'}</button></footer>
+      </div><footer>{form.id && <button type="button" className="tt-button tt-danger" disabled={busy} onClick={() => confirmRemove ? execute(() => remove(form.id)) : setConfirmRemove(true)}>{confirmRemove ? 'Confirm removal' : 'Remove class'}</button>}<button type="button" className="tt-button" disabled={busy} onClick={close}>Cancel</button><button className="tt-button tt-primary" disabled={busy || Boolean(conflicts.length) || Boolean(planErrors.length) || !form.subjectId || !form.facultyId}>{busy ? 'Saving...' : 'Save Draft Entry'}</button></footer>
     </form>}
   </WorkspaceDrawer>
 }

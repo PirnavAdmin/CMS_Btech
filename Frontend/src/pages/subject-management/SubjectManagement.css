@@ -7,6 +7,15 @@
   margin: 0;
 }
 
+.sm-profile-view { gap:12px; }
+.sm-profile-view .cm-profile-card { overflow:hidden; border:1px solid var(--border,#e2e8f0); border-radius:16px; background:var(--surface,#fff); }
+.sm-profile-view .cm-profile-banner { min-height:180px; }
+.sm-profile-view .cm-profile-avatar-wrap { flex:0 0 100px; width:100px; height:100px; }
+.sm-profile-view .cm-profile-placeholder { font-size:34px; }
+.sm-profile-sections { display:flex; flex-direction:column; gap:16px; padding:20px 24px; }
+.sm-detail-loading { padding:24px; color:var(--text-muted,#64748b); }
+@media(max-width:600px) { .sm-profile-sections { padding:14px; } .sm-profile-view .cm-profile-banner { align-items:flex-start; } }
+
 .sm-header {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(0, 440px);
@@ -543,6 +552,46 @@
 .sm-error { color: #b91c1c; }
 .sm-modal--wide { max-width: 880px; }
 .sm-modal--details { max-width: 700px; }
+.sm-modal--details {
+  width: min(700px, 100%);
+  height: min(640px, calc(100dvh - 48px));
+  max-height: calc(100dvh - 48px);
+  overflow: hidden;
+}
+.sm-modal--details .sm-modal-header {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  flex: 0 0 auto;
+  align-items: flex-start;
+  gap: 16px;
+  padding: 18px 20px;
+  background: #fff;
+}
+.sm-modal--details .sm-modal-header > div:first-child {
+  display: grid;
+  justify-items: start;
+  gap: 8px;
+  min-width: 0;
+}
+.sm-modal--details .sm-modal-header h2 {
+  overflow-wrap: anywhere;
+}
+.sm-modal--details .sm-modal-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 18px 20px;
+  scrollbar-width: thin;
+}
+.sm-modal--details .sm-modal-footer {
+  position: sticky;
+  bottom: 0;
+  z-index: 2;
+  flex: 0 0 auto;
+  background: #fff;
+}
 .sm-modal--confirm { max-width: 440px; padding: 26px; gap: 12px; }
 .sm-modal--confirm h2 { margin: 0; color: #0f172a; font-size: 1.2rem; }
 .sm-modal--confirm p { margin: 0; color: #64748b; line-height: 1.55; }
@@ -557,3 +606,69 @@
 .sm-details-section h3 { grid-column: 1 / -1; }.sm-details-section > div { padding: 10px 12px; border: 1px solid #e2e8f0; margin: -1px 0 0 -1px; }.sm-details-section span { display: block; color: #64748b; font-size: .78rem; margin-bottom: 3px; }.sm-details-section strong { color: #0F172A; font-size: .9rem; }
 @media (max-width: 1050px) { .sm-header { grid-template-columns: minmax(0, 1fr); }.sm-header-side { max-width: 520px; justify-self: end; }.sm-summary-strip { max-width: 520px; }.sm-filter-grid { grid-template-columns: repeat(3, minmax(160px, 1fr)); } }
 @media (max-width: 700px) { .sm-editor-action { margin-left: 0; text-align: left; }.sm-header-side, .sm-actions { width: 100%; }.sm-header-side { align-items: stretch; }.sm-actions > * { flex: 1; }.sm-directory-tools { width: 100%; flex-direction: column; align-items: stretch; }.sm-summary-strip { grid-template-columns: repeat(2, minmax(0, 1fr)); max-width: none; }.sm-summary-item:last-child { grid-column: 1 / -1; }.sm-filter-grid { grid-template-columns: 1fr; }.sm-form-grid-2, .sm-form-grid-3, .sm-details-section { grid-template-columns: 1fr; }.sm-modal-backdrop { padding: 8px; }.sm-modal-body, .sm-modal-header, .sm-modal-footer { padding-left: 16px; padding-right: 16px; } }
+
+@media (max-width: 700px) {
+  .sm-modal--details {
+    height: calc(100dvh - 16px);
+    max-height: calc(100dvh - 16px);
+  }
+  .sm-modal--details .sm-modal-header,
+  .sm-modal--details .sm-modal-body {
+    padding-right: 16px;
+    padding-left: 16px;
+  }
+}
+
+.sm-editor-layout {
+  height: min(480px, calc(100dvh - 180px));
+  min-height: 330px;
+  align-items: stretch;
+}
+
+.sm-editor-layout > .erp-card-main,
+.sm-editor-layout > .preview-card {
+  height: 100%;
+  min-height: 0;
+}
+
+.sm-editor-layout .erp-form-scroll-body {
+  padding: 12px 14px;
+}
+
+.sm-editor-layout .erp-form-scroll-body section > h3 {
+  margin-bottom: 10px !important;
+  font-size: .96rem !important;
+}
+
+.sm-editor-layout .sm-form-grid-2 {
+  gap: 10px 12px;
+}
+
+.sm-editor-layout > .preview-card {
+  padding: 10px 12px;
+}
+
+.sm-editor-layout .preview-body-container {
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+}
+
+.sm-editor-layout .preview-body-container::-webkit-scrollbar {
+  width: 4px;
+}
+
+@media (max-width: 900px) {
+  .sm-editor-layout {
+    height: auto;
+    min-height: 0;
+  }
+
+  .sm-editor-layout > .erp-card-main {
+    min-height: 330px;
+  }
+
+  .sm-editor-layout > .preview-card {
+    height: 330px;
+  }
+}

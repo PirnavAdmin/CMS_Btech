@@ -59,6 +59,7 @@ export default function Attendance() {
   const navigate = useNavigate()
   const {
     currentAcademicYear,
+    selectedCollegeId,
     activeDepartments,
     activeCourses,
     getBranchesForCourse,
@@ -513,8 +514,8 @@ export default function Attendance() {
   // Load students to mark attendance
   const handleFetchStudentsForMarking = useCallback(async (customScope) => {
     const scope = customScope || takeScope
-    if (!scope.courseId || !scope.branchId || !scope.semesterId) {
-      if (!customScope) notify('Please select Course, Branch, and Semester first.', 'warning')
+    if (!scope.courseId || !scope.branchId || !scope.semesterId || !scope.sectionId) {
+      if (!customScope) notify('Please select Course, Branch, Semester, and Section first.', 'warning')
       return
     }
 
@@ -525,6 +526,7 @@ export default function Attendance() {
       const selectedSection = takeSections.find(sec => String(sec.id) === String(scope.sectionId))
 
       const list = await attendanceService.getStudentsForAttendance({
+        collegeId: selectedCollegeId,
         branchId: scope.branchId,
         branchCode: takeBranchCode,
         semesterId: scope.semesterId,
@@ -545,6 +547,7 @@ export default function Attendance() {
     }
   }, [
     takeScope,
+    selectedCollegeId,
     takeBranches,
     takeSemesters,
     takeSections,
@@ -554,7 +557,7 @@ export default function Attendance() {
   // Auto-fetch student roster whenever Take Attendance modal is open and scope changes
   useEffect(() => {
     if (!takeModalOpen) return
-    if (!takeScope.courseId || !takeScope.branchId || !takeScope.semesterId) {
+    if (!takeScope.courseId || !takeScope.branchId || !takeScope.semesterId || !takeScope.sectionId) {
       setMarkingStudents([])
       return
     }
@@ -628,6 +631,7 @@ export default function Attendance() {
       }
 
       await attendanceService.recordAttendance({
+        collegeId: Number(selectedCollegeId),
         academicYearId: Number(takeScope.academicYearId),
         courseId: Number(takeScope.courseId),
         branchId: Number(takeScope.branchId),
@@ -990,7 +994,7 @@ export default function Attendance() {
         )}
 
         {/* Record Attendance popup */}
-        {takeModalOpen && (
+    {takeModalOpen && (
           <div className="attendance-modal-backdrop" role="presentation" onMouseDown={() => setTakeModalOpen(false)}>
           <section className="attendance-content attendance-modal" role="dialog" aria-modal="true" aria-labelledby="take-attendance-title" onMouseDown={event => event.stopPropagation()}>
             <div className="erp-card">
@@ -1082,13 +1086,13 @@ export default function Attendance() {
                 </div>
 
                 <div className="erp-form-group">
-                  <label>Section</label>
+                  <label>Section <span className="attendance-required-mark">*</span></label>
                   <select
                     className="erp-select"
                     value={takeScope.sectionId}
                     onChange={(e) => setTakeScope(prev => ({ ...prev, sectionId: e.target.value }))}
                   >
-                    <option value="">All Sections / Unspecified</option>
+                    <option value="">Select Section</option>
                     {takeSections.map(sec => (
                       <option key={sec.id} value={sec.id}>{sec.name}</option>
                     ))}
@@ -1211,7 +1215,7 @@ export default function Attendance() {
                 <button
                   type="button"
                   className="erp-btn erp-btn--primary"
-                  disabled={loadingStudents || !takeScope.courseId || !takeScope.branchId || !takeScope.semesterId}
+                  disabled={loadingStudents || !takeScope.courseId || !takeScope.branchId || !takeScope.semesterId || !takeScope.sectionId}
                   onClick={() => handleFetchStudentsForMarking()}
                 >
                   {loadingStudents ? 'Fetching Roster...' : 'Refresh Student Roster'}
@@ -1225,7 +1229,7 @@ export default function Attendance() {
                 </div>
               )}
 
-              {!loadingStudents && takeScope.courseId && takeScope.branchId && takeScope.semesterId && markingStudents.length === 0 && (
+              {!loadingStudents && takeScope.courseId && takeScope.branchId && takeScope.semesterId && takeScope.sectionId && markingStudents.length === 0 && (
                 <div className="attendance-marking-section" style={{ textAlign: 'center', padding: '1.5rem 1rem', background: '#FAF9FE', borderRadius: '8px', margin: '1rem 0' }}>
                   <p style={{ color: '#666', marginBottom: '0.5rem' }}>No students found for the selected section/scope.</p>
                   <small style={{ color: '#888' }}>You can assign students in Section Management or select another section.</small>

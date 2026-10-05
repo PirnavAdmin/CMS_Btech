@@ -1,4 +1,5 @@
-import useCollegeState from '../../../hooks/useCollegeState'
+﻿import useCollegeState from '../../../hooks/useCollegeState'
+import { admissionPreview } from '../../../utils/admissionPreview'
 import { newestFirst, rememberCreated } from '../../../utils/newestFirst'
 import { admissionDetailSections } from '../../../utils/recordDetailSections'
 import useToastState from '../../../hooks/useToastState'
@@ -70,6 +71,10 @@ const DETAIL_TABS = [
   ['overview', 'Overview', FiGrid], ['personal', 'Personal & Contact', FiUser],
   ['academic', 'Academic', FiBookOpen], ['education', 'Previous Education', FiFileText],
   ['services', 'Admission & Services', FiHome], ['fees', 'Fees', FiInbox], ['documents', 'Documents', FiFileText], ['activity', 'Activity', FiClock],
+]
+const DETAIL_TABS_APPROVAL = [
+  ...DETAIL_TABS,
+  ['decision', 'Decision', FiCheckCircle],
 ]
 const DOCUMENTS = DOCUMENTS_CONFIG
 const ADMISSION_TYPES = ['Regular / Counselling','Management','Spot Admission','Lateral Entry','Transfer','Direct Admission','Re-Admission','International Admission']
@@ -1077,14 +1082,14 @@ function CoreReview({ data, edit }) {
             ['10th School Name', data.previousEducation?.tenth?.institution, true],
             ['10th Roll Number', data.previousEducation?.tenth?.rollNumber, true],
             ['10th Passing Year', data.previousEducation?.tenth?.passingYear, true],
-            ['10th Score Type', data.previousEducation?.tenth?.scoreType, true],
+            ['10th Score Type', data.previousEducation?.tenth?.score ? data.previousEducation?.tenth?.scoreType : '', true],
             ['10th Score', data.previousEducation?.tenth?.score, true],
-            ['Qualification', data.previousEducation?.intermediate?.qualification, true],
+            ['Qualification', data.previousEducation?.intermediate?.qualification === 'Intermediate / 12th' ? '' : data.previousEducation?.intermediate?.qualification, true],
             ['Board / University', data.previousEducation?.intermediate?.board, true],
             ['College Name', data.previousEducation?.intermediate?.institution, true],
             ['Passing Year', data.previousEducation?.intermediate?.passingYear, true],
             ['Stream', data.previousEducation?.intermediate?.stream === 'Other' ? data.previousEducation?.intermediate?.streamOther : data.previousEducation?.intermediate?.stream, true],
-            ['Score Type', data.previousEducation?.intermediate?.scoreType, true],
+            ['Score Type', data.previousEducation?.intermediate?.score ? data.previousEducation?.intermediate?.scoreType : '', true],
             ['Score', data.previousEducation?.intermediate?.score, true],
           ]}
         />
@@ -1208,10 +1213,17 @@ function PreviewHeader({ data }) {
 
 function AdmissionForm() {
   const { id } = useParams(); const navigate = useNavigate(); const validId = (id && id !== 'undefined' && id !== 'null') ? id : null;
+  const location = useLocation()
+  const resume = location.state?.admissionWizard
+  const initialStep = same(resume?.admissionId, validId) && Number.isInteger(resume?.step)
+    ? Math.max(0, Math.min(resume.step, STEPS.length - 1)) : 0
+  const locallySavedAdmission = useRef(null)
+  const [saveError, setSaveError] = useState('')
   const { selectedCollegeId: globalCollegeId, selectedCollege: globalCollege, selectedAcademicYearId: globalAcademicYearId, selectedAcademicYear: globalAcademicYear } = useAcademic();
   const [data, setData] = useState(() => {
     const init = empty();
     if (!validId) {
+      init.previewEditedFields = {};
       if (globalCollegeId) {
         init.admission.collegeId = globalCollegeId;
         init.admission.college = globalCollege?.name || globalCollege?.collegeName || '';
@@ -1224,7 +1236,7 @@ function AdmissionForm() {
     return init;
   });
   const [recordIds, setRecordIds] = useState({ admissionId: validId, studentId: null, academicId: null })
-  const [step, setStep] = useState(0); const [errors, setErrors] = useToastState({}, 'error'); const [touched, setTouched] = useState({}); const [declared, setDeclared] = useState(false); const [, setToast] = useToastState(null, 'success'); const [pinStatus, setPinStatus] = useState({}); const [confirmSubmit, setConfirmSubmit] = useState(false); const [confirmCancel, setConfirmCancel] = useState(false); const [submitting, setSubmitting] = useState(false); const [savingDraft, setSavingDraft] = useState(false); const [savingStep, setSavingStep] = useState(false); const [feeState, setFeeState] = useState({ loading: false, loaded: false, error: '' })
+  const [step, setStep] = useState(initialStep); const [errors, setErrors] = useToastState({}, 'error'); const [touched, setTouched] = useState({}); const [declared, setDeclared] = useState(false); const [, setToast] = useToastState(null, 'success'); const [pinStatus, setPinStatus] = useState({}); const [confirmSubmit, setConfirmSubmit] = useState(false); const [confirmCancel, setConfirmCancel] = useState(false); const [submitting, setSubmitting] = useState(false); const [savingDraft, setSavingDraft] = useState(false); const [savingStep, setSavingStep] = useState(false); const [feeState, setFeeState] = useState({ loading: false, loaded: false, error: '' })
   const markTouched = (path) => setTouched(current => ({ ...current, [path]: true }))
   const [masters,setMasters]=useState({years:[],courses:[],branches:[],colleges:[],semesters:[]})
   const dataRef = useRef(data)
@@ -1298,7 +1310,7 @@ function AdmissionForm() {
   useEffect(() => { const n=Number(String(data.academic.semester).match(/\d+/)?.[0]||0), year=n?`${Math.ceil(n/2)}${['th','st','nd','rd'][Math.ceil(n/2)]||'th'} Year`:''; if(data.academic.yearOfStudy!==year)queueMicrotask(()=>setData(current=>({...current,academic:{...current.academic,yearOfStudy:year}}))) }, [data.academic.semester,data.academic.yearOfStudy])
   useEffect(() => { queueMicrotask(()=>setData(current => { let next=current; for(const key of ['tenth','intermediate']){const item=current.previousEducation[key],max=item.scoreType==='CGPA'?10:100;if(text(item.score)&&Number(item.score)>max)next=setPath(next,`previousEducation.${key}.score`,'')}return next })) }, [data.previousEducation.tenth.scoreType,data.previousEducation.intermediate.scoreType])
   useEffect(() => {
-    if (!validId) return
+    if (!validId || same(locallySavedAdmission.current, validId)) return
     let active = true
     studentAdmissionApi.getById(validId).then(async row => {
       const loadedIds = idsFromApi(row, validId), admissionId = loadedIds.admissionId, studentId = loadedIds.studentId
@@ -1343,7 +1355,7 @@ function AdmissionForm() {
           })
         : baseLoaded
 
-      setData(finalLoaded)
+      setData({ ...finalLoaded, previewEditedFields: localDraft?.previewEditedFields ?? row.formData?.previewEditedFields })
       setRecordIds(loadedIds)
     }).catch(error => notify(error.message || 'Unable to load this admission.', 'error'))
     return () => { active = false }
@@ -1351,6 +1363,7 @@ function AdmissionForm() {
   const update = (path, value) => {
     setData(current => {
       let next = setPath(current, path, value);
+      if (current.previewEditedFields) next.previewEditedFields = { ...current.previewEditedFields, [path]: true };
       if (path === 'personal.gender') {
         if (next.admission.hostel === 'Yes') {
           next.admission.hostelPreference = (value === 'Male' ? 'Boys Hostel' : value === 'Female' ? 'Girls Hostel' : next.admission.hostelPreference || 'Boys Hostel');
@@ -1557,7 +1570,7 @@ function AdmissionForm() {
   const masterField=(namePath,idPath,label,options,disabled=false,resets=[])=>{
     const id=`sa-${idPath.replaceAll('.','-')}`;
     const masterError = errors[namePath] || ((touched[namePath] || touched[idPath] || read(data, idPath)) ? allErrors[namePath] : '');
-    return <label className={`sa-field ${masterError?'invalid':''}`} htmlFor={id}><span>{label}<b> *</b></span><select id={id} value={read(data,idPath)||''} disabled={disabled} onChange={event=>{markTouched(namePath);markTouched(idPath);const option=options.find(item=>same(item.id,event.target.value));setData(current=>{let next=setPath(current,idPath,event.target.value);next=setPath(next,namePath,option?.name||'');if(idPath==='academic.courseId')next=setPath(next,'academic.courseCode',option?.code||courseCodeFallback(option?.name));if(idPath==='academic.branchId')next=setPath(next,'academic.branchCode',option?.code||branchCodeFallback(option?.name));resets.forEach(([resetId,resetName])=>{next=setPath(next,resetId,'');next=setPath(next,resetName,'')});return next});setErrors(current=>({...current,[namePath]:''}))}} onBlur={() => { markTouched(namePath); markTouched(idPath) }}><option value="">{disabled?'Select Course first':`Select ${label}`}</option>{options.map(option=><option key={option.id} value={option.id}>{option.name}</option>)}</select>{masterError&&<small role="alert">{masterError}</small>}</label>
+    return <label className={`sa-field ${masterError?'invalid':''}`} htmlFor={id}><span>{label}<b> *</b></span><select id={id} value={read(data,idPath)||''} disabled={disabled} onChange={event=>{markTouched(namePath);markTouched(idPath);const option=options.find(item=>same(item.id,event.target.value));setData(current=>{let next=setPath(current,idPath,event.target.value);if(current.previewEditedFields)next.previewEditedFields={...current.previewEditedFields,[idPath]:true,[namePath]:true};next=setPath(next,namePath,option?.name||'');if(idPath==='academic.courseId')next=setPath(next,'academic.courseCode',option?.code||courseCodeFallback(option?.name));if(idPath==='academic.branchId')next=setPath(next,'academic.branchCode',option?.code||branchCodeFallback(option?.name));resets.forEach(([resetId,resetName])=>{next=setPath(next,resetId,'');next=setPath(next,resetName,'')});return next});setErrors(current=>({...current,[namePath]:''}))}} onBlur={() => { markTouched(namePath); markTouched(idPath) }}><option value="">{disabled?'Select Course first':`Select ${label}`}</option>{options.map(option=><option key={option.id} value={option.id}>{option.name}</option>)}</select>{masterError&&<small role="alert">{masterError}</small>}</label>
   }
   const screens = [
     <Section key="identity" title="Student Identity" icon={FiUser} hint="Core identity and government identification details"><PhotoUpload data={data} update={update} notify={notify} />{field('personal.firstName','First Name')}{field('personal.middleName','Middle Name')}{field('personal.lastName','Last Name')}{field('personal.gender','Gender',['Female','Male','Non-binary'])}{field('personal.dob','Date of Birth',null,'date')}{field('personal.bloodGroup','Blood Group',['A+','A-','B+','B-','AB+','AB-','O+','O-'])}{field('personal.nationality','Nationality')}{field('personal.aadhaar','Aadhaar Number')}</Section>,
@@ -1572,6 +1585,7 @@ function AdmissionForm() {
   const focusFirst = () => window.setTimeout(() => document.querySelector('.student-admission .sa-field.invalid :is(input,select)')?.focus({ preventScroll: false }), 0)
   const nextStep = async () => {
     if (savingStep) return
+    setSaveError('')
     const prefixes = [['personal.'],['contact.'],['parents.'],['academic.'],['previousEducation.'],['application.','admission.'],['fees.'],['documents.'],[]][step]
     const relevant = Object.fromEntries(Object.entries(allErrors).filter(([path]) => prefixes.some(prefix => path.startsWith(prefix))))
     setTouched(current => {
@@ -1594,7 +1608,6 @@ function AdmissionForm() {
         ids = idsFromApi(result)
         if (!ids.admissionId) throw new Error('The admission was created but no admission ID was returned.')
         setRecordIds(ids)
-        navigate(`/student-management/admissions/${ids.admissionId}/edit`, { replace: true })
       } else if ([0, 1, 5].includes(step)) result = await studentAdmissionApi.update(ids.admissionId, data)
       else if (step === 2) {
         result = ids.studentId
@@ -1643,9 +1656,23 @@ function AdmissionForm() {
         setRecordIds(current => ({ admissionId: returnedIds.admissionId ?? current.admissionId, studentId: returnedIds.studentId ?? current.studentId, academicId: returnedIds.academicId ?? current.academicId }))
       }
       notify(step === 7 && !ids.studentId ? 'Documents are ready to upload when the admission is submitted.' : 'Admission step saved successfully.', step === 7 && !ids.studentId ? 'info' : 'success')
-      setStep(current => current + 1)
+      const next = Math.min(step + 1, STEPS.length - 1)
+      setStep(next)
+      if (!recordIds.admissionId) {
+        // Navigate only after saving the draft and preserve progress if the
+        // new -> edit route transition remounts the form.
+        locallySavedAdmission.current = ids.admissionId
+        navigate(`/student-management/admissions/${ids.admissionId}/edit`, {
+          replace: true,
+          state: { admissionWizard: { admissionId: ids.admissionId, step: next } },
+        })
+      }
       window.scrollTo({ top: 0, behavior: 'smooth' })
-    } catch (error) { notify(error.message || 'Unable to save this step.', 'error') }
+    } catch (error) {
+      const message = error.message || 'Unable to save this step.'
+      setSaveError(message)
+      notify(message, 'error')
+    }
     finally { setSavingStep(false) }
   }
   const requestSubmit = () => {
@@ -1836,14 +1863,15 @@ function AdmissionForm() {
               )}
             </div>
             <footer className="sa-wizard-actions erp-actions-bar">
-              <Button disabled={!step || submitting} onClick={() => setStep(current => current - 1)}>
+              {saveError && <p role="alert" className="error">{saveError}</p>}
+              <Button disabled={!step || submitting || savingStep} onClick={() => setStep(current => current - 1)}>
                 <FiArrowLeft /> Previous
               </Button>
               <span />
               {[2, 4].includes(step) && <Button disabled={submitting} onClick={skipCurrentStep}>Skip</Button>}
               {step < STEPS.length - 1 ? (
-                <Button primary onClick={nextStep}>
-                  Save & Continue <FiArrowRight />
+                <Button primary onClick={nextStep} disabled={savingStep}>
+                  {savingStep ? 'Saving...' : 'Save & Continue'} <FiArrowRight />
                 </Button>
               ) : (
                 <Button primary disabled={!declared || submitting} onClick={requestSubmit}>
@@ -1863,13 +1891,51 @@ function AdmissionForm() {
           </header>
 
           <div className="preview-body-container">
-            {(() => {
+            {((data) => {
               const fullName = studentName(data)
               const curAddr = formatAddress(data.contact?.currentAddress)
               const permAddr = formatAddress(data.contact?.permanentAddress)
               const tenth = data.previousEducation?.tenth || {}
               const inter = data.previousEducation?.intermediate || {}
               const fees = data.fees || {}
+              const feeSummary = normalizeFeeSummary(fees)
+              const feeComponents = feeSummary.components.filter(item => Number(item.amount || 0) > 0)
+              const feeComponentTotal = pattern => feeComponents
+                .filter(item => pattern.test(String(item.name || '')))
+                .reduce((total, item) => total + Number(item.amount || 0), 0)
+              const feeValue = (keys, componentPattern, fallback = 0) => {
+                for (const key of keys) {
+                  const value = Number(fees[key] ?? feeSummary[key])
+                  if (value > 0) return value
+                }
+                return feeComponentTotal(componentPattern) || fallback
+              }
+              const previewTuition = feeValue(['tuitionFee', 'tuitionAmount', 'academicFee'], /tuition|academic/i, 50000)
+              const previewAdmission = feeValue(['admissionFee', 'admissionAmount', 'registrationFee', 'oneTimeFee'], /admission|registration/i, 4000)
+              const previewHostel = data.admission?.hostel === 'Yes'
+                ? feeValue(['hostelFee', 'hostelAmount'], /hostel/i, HOSTEL_FEES[data.admission?.hostelRoomType] || 0)
+                : 0
+              const previewTransport = data.admission?.transport === 'Yes'
+                ? feeValue(['transportFee', 'transportationFee', 'transportAmount'], /transport/i, TRANSPORT_FEES[data.admission?.transportRoute] || 0)
+                : 0
+              const previewScholarship = feeValue(['scholarshipAmount', 'discountAmount', 'concessionAmount'], /scholarship|discount|concession/i, 0)
+              const previewTotal = feeValue(['totalFee', 'firstYearTotal', 'grandTotal', 'netPayable', 'payableAmount'], /$^/, Math.max(0, previewTuition + previewAdmission + previewHostel + previewTransport - previewScholarship))
+              const hasTuitionComponent = feeComponents.some(item => /tuition|academic/i.test(String(item.name || '')))
+              const hasAdmissionComponent = feeComponents.some(item => /admission|registration/i.test(String(item.name || '')))
+              const feeStructureFields = [
+                ['Structure Name', fees.structureName || fees.feeStructureName || fees.name],
+                ['Structure Code', fees.structureCode || fees.feeStructureCode || fees.code],
+                ['Academic Year', fees.academicYearName || fees.academicYear],
+                ['Fee Period', fees.feePeriod || fees.period],
+                ...(!feeComponents.length || !hasTuitionComponent ? [['Tuition Fee (per year)', money(previewTuition)]] : []),
+                ...(!feeComponents.length || !hasAdmissionComponent ? [['Admission Fee (one-time)', money(previewAdmission)]] : []),
+                ...feeComponents.map(item => [item.name || 'Fee Component', money(item.amount)]),
+                ...(data.admission?.hostel === 'Yes' && !feeComponents.some(item => /hostel/i.test(String(item.name || ''))) ? [['Hostel Fee (per year)', money(previewHostel)]] : []),
+                ...(data.admission?.transport === 'Yes' && !feeComponents.some(item => /transport/i.test(String(item.name || ''))) ? [['Transportation Fee (per year)', money(previewTransport)]] : []),
+                ...(previewScholarship > 0 && !feeComponents.some(item => /scholarship|discount|concession/i.test(String(item.name || ''))) ? [['Scholarship / Discount', `− ${money(previewScholarship)}`]] : []),
+                ['Total Estimated Fee', money(previewTotal)],
+                ['Payment Plan', fees.paymentPlan || feeSummary.paymentPlan],
+              ]
 
               const sections = [
                 {
@@ -1973,15 +2039,7 @@ function AdmissionForm() {
                 },
                 {
                   title: 'Fee Structure',
-                  fields: [
-                    ['Tuition Fee', (fees.tuitionFee || data.fees?.tuitionFee) ? money(fees.tuitionFee || data.fees?.tuitionFee) : ''],
-                    ['Admission Fee', (fees.admissionFee !== undefined && fees.admissionFee !== '') ? money(fees.admissionFee) : (data.fees?.admissionFee !== undefined && data.fees?.admissionFee !== '' ? money(data.fees.admissionFee) : '')],
-                    ['Hostel Fee', fees.hostelFee ? money(fees.hostelFee) : (data.fees?.hostelFee ? money(data.fees.hostelFee) : '')],
-                    ['Transport Fee', fees.transportFee ? money(fees.transportFee) : (data.fees?.transportFee ? money(data.fees.transportFee) : '')],
-                    ['Scholarship', fees.scholarshipAmount ? `− ${money(fees.scholarshipAmount)}` : (data.fees?.scholarshipAmount ? `− ${money(data.fees.scholarshipAmount)}` : '')],
-                    ['Total Estimated Fee', fees.totalFee ? money(fees.totalFee) : (data.fees?.totalFee ? money(data.fees.totalFee) : '')],
-                    ['Payment Plan', fees.paymentPlan || data.fees?.paymentPlan],
-                  ],
+                  fields: feeStructureFields,
                 },
                 {
                   title: 'Documents',
@@ -2057,7 +2115,7 @@ function AdmissionForm() {
                           {sec.fields.map(([label, textVal]) => (
                             <div key={label} className="preview-kv-item">
                               <span className="kv-label">{label}</span>
-                              <strong className="kv-val" title={String(textVal).trim()}>{String(textVal).trim()}</strong>
+                              <strong className={`kv-val${label.toLowerCase().includes('address') ? ' kv-val--wrap' : ''}`} title={String(textVal).trim()}>{String(textVal).trim()}</strong>
                             </div>
                           ))}
                         </div>
@@ -2066,7 +2124,7 @@ function AdmissionForm() {
                   })()}
                 </>
               )
-            })()}
+            })(admissionPreview(data, empty()))}
           </div>
         </aside>
       </div>
@@ -2328,7 +2386,7 @@ function DetailContent({ data, tab }) {
             ['School', data.previousEducation?.tenth?.institution],
             ['Roll Number', data.previousEducation?.tenth?.rollNumber],
             ['Passing Year', data.previousEducation?.tenth?.passingYear],
-            ['Score Type', data.previousEducation?.tenth?.scoreType],
+            ['Score Type', data.previousEducation?.tenth?.score ? data.previousEducation?.tenth?.scoreType : ''],
             ['Score', data.previousEducation?.tenth?.score],
           ]}
         />
@@ -2336,13 +2394,13 @@ function DetailContent({ data, tab }) {
           title="Intermediate / Diploma"
           icon={FiFileText}
           items={[
-            ['Qualification', data.previousEducation?.intermediate?.qualification],
+            ['Qualification', data.previousEducation?.intermediate?.qualification === 'Intermediate / 12th' ? '' : data.previousEducation?.intermediate?.qualification],
             ['Board / University', data.previousEducation?.intermediate?.board],
             ['College', data.previousEducation?.intermediate?.institution],
             ['Roll Number', data.previousEducation?.intermediate?.rollNumber],
             ['Passing Year', data.previousEducation?.intermediate?.passingYear],
             ['Stream', data.previousEducation?.intermediate?.stream === 'Other' ? data.previousEducation?.intermediate?.streamOther : data.previousEducation?.intermediate?.stream],
-            ['Score Type', data.previousEducation?.intermediate?.scoreType],
+            ['Score Type', data.previousEducation?.intermediate?.score ? data.previousEducation?.intermediate?.scoreType : ''],
             ['Score', data.previousEducation?.intermediate?.score],
           ]}
         />
@@ -2492,108 +2550,103 @@ function AdmissionDetails({ approval = false }) {
     const studentId = idsFromApi(data, id).studentId
 
     return (
-      <div className="sa-approval-page" data-export-record>
-        <div className="sa-approval-top-bar">
-          <Breadcrumb tail="Admission Review" />
-          <div className="sa-approval-top-actions">
-            <ExportMenu
-              mode="single"
-              title="Student Admission"
-              filename={`admission_${data.application?.admissionNumber || data.application?.number || id}`}
-              recordSections={admissionDetailSections(data)}
-            />
-            <button
-              type="button"
-              className="erp-btn erp-btn--secondary sa-btn-back-top"
-              onClick={() => navigate('/student-management/admissions')}
-            >
-              <FiArrowLeft /> Back
-            </button>
-          </div>
+      <div className="cm-profile-view" data-export-record>
+        <Breadcrumb tail="Admission Review" />
+        <div className="cm-profile-top-bar">
+          <ExportMenu
+            mode="single"
+            title="Student Admission"
+            filename={`admission_${data.application?.admissionNumber || data.application?.number || id}`}
+            recordSections={admissionDetailSections(data)}
+          />
+          <button
+            type="button"
+            className="cm-button secondary erp-btn erp-btn--secondary"
+            onClick={() => navigate('/student-management/admissions')}
+          >
+            <FiArrowLeft /> Back
+          </button>
         </div>
 
-        {/* SINGLE UNIFIED HERO BANNER CARD */}
-        <section className="sa-unified-hero-card">
-          <div className="sa-hero-left">
-            <div className="sa-hero-avatar">
-              {photoSrc ? <img src={photoSrc} alt={studentName(data)} /> : <span>{initials || <FiUser />}</span>}
-            </div>
-            <div className="sa-hero-info">
-              <div className="sa-hero-badge-row">
-                <span className="sa-hero-officer-pill">Admission Officer Workspace</span>
-                <Badge value={data.status} />
+        <div className="cm-profile-card">
+          <StudentHeader data={data} />
+          <nav className="sa-tabs">
+            {DETAIL_TABS_APPROVAL.map(([value, label, Icon]) => (
+              <button key={value} className={tab === value ? 'active' : ''} onClick={() => setTab(value)}>
+                <Icon /> {label}
+              </button>
+            ))}
+          </nav>
+
+          <section className="sa-detail-card">
+            {tab === 'decision' ? (
+              <div className="sa-detail-grid-layout">
+                <section className="sa-approval">
+                  <header>
+                    <div>
+                      <h2>Review Decision</h2>
+                      <p>Complete the application review before recording a workflow decision.</p>
+                    </div>
+                    <Badge value={data.status} />
+                  </header>
+                  <label className="sa-review-confirm">
+                    <input type="checkbox" checked={reviewed} onChange={event => setReviewed(event.target.checked)} />
+                    <span>I have reviewed all admission sections and supporting information.</span>
+                  </label>
+                  <label className="sa-remarks">
+                    <span>Admission Officer Remarks</span>
+                    <textarea
+                      maxLength="500"
+                      value={remarks}
+                      onChange={event => setRemarks(event.target.value)}
+                      placeholder="Add verification, correction or decision remarks..."
+                    />
+                    <small>{remarks.length}/500</small>
+                  </label>
+                  <footer>
+                    {['SUBMITTED', 'PENDING', 'UNDER_REVIEW', 'VERIFIED'].includes(data.status) && (
+                      <Button danger disabled={!reviewed || savingStatus || !remarks.trim()} onClick={() => transition('REJECTED')}>
+                        Reject
+                      </Button>
+                    )}
+                    {['SUBMITTED', 'PENDING', 'UNDER_REVIEW', 'VERIFIED'].includes(data.status) && (
+                      <Button primary disabled={!reviewed || savingStatus} onClick={() => { setToast(null); setConfirmApproval(true) }}>
+                        Approve Admission
+                      </Button>
+                    )}
+                    {data.status === 'APPROVED' && (
+                      <span className="sa-approved-note">
+                        <FiCheckCircle /> Admission approved as {data.application.admissionNumber}
+                      </span>
+                    )}
+                  </footer>
+                </section>
               </div>
-              <h1 className="sa-hero-title">{studentName(data)}</h1>
-              <p className="sa-hero-subtitle">
-                <span>Reg No: <strong>{data.application?.registrationNumber || data.application?.number || '-'}</strong></span>
-                {data.application?.admissionNumber && <span>Adm No: <strong>{data.application.admissionNumber}</strong></span>}
-                <span>{[display(data.academic?.course), display(data.academic?.branch)].filter(Boolean).join(' - ')}</span>
-                {data.admission?.batch && <span>Batch: <strong>{data.admission.batch}</strong></span>}
-              </p>
-            </div>
-          </div>
-          <div className="sa-hero-stats">
-            <div className="sa-hero-stat-pill">
-              <span className="sa-stat-label">Academic Year</span>
-              <strong className="sa-stat-val">{display(data.academic?.academicYear)}</strong>
-            </div>
-            <div className="sa-hero-stat-pill">
-              <span className="sa-stat-label">Payment Preference</span>
-              <strong className="sa-stat-val">{display(data.fees?.paymentPlan || 'Standard')}</strong>
-            </div>
-            <div className="sa-hero-stat-pill">
-              <span className="sa-stat-label">Document Status</span>
-              <strong className="sa-stat-val">{markedDocs}/{DOCUMENTS.length} Marked</strong>
-            </div>
-          </div>
-        </section>
-
-        {/* DETAILS REVIEW WORKSPACE */}
-        <section className="sa-review-workspace">
-          <FullReview data={data} studentId={studentId} />
-        </section>
-
-        {/* APPROVAL DECISION CARD */}
-        <section className="sa-approval">
-          <header>
-            <div>
-              <h2>Review Decision</h2>
-              <p>Complete the application review before recording a workflow decision.</p>
-            </div>
-            <Badge value={data.status} />
-          </header>
-          <label className="sa-review-confirm">
-            <input type="checkbox" checked={reviewed} onChange={event => setReviewed(event.target.checked)} />
-            <span>I have reviewed all admission sections and supporting information.</span>
-          </label>
-          <label className="sa-remarks">
-            <span>Admission Officer Remarks</span>
-            <textarea
-              maxLength="500"
-              value={remarks}
-              onChange={event => setRemarks(event.target.value)}
-              placeholder="Add verification, correction or decision remarks..."
-            />
-            <small>{remarks.length}/500</small>
-          </label>
-          <footer>
-            {['SUBMITTED', 'PENDING', 'UNDER_REVIEW', 'VERIFIED'].includes(data.status) && (
-              <Button danger disabled={!reviewed || savingStatus || !remarks.trim()} onClick={() => transition('REJECTED')}>
-                Reject
-              </Button>
+            ) : (
+              <DetailContent data={data} tab={tab} />
             )}
-            {['SUBMITTED', 'PENDING', 'UNDER_REVIEW', 'VERIFIED'].includes(data.status) && (
-              <Button primary disabled={!reviewed || savingStatus} onClick={() => { setToast(null); setConfirmApproval(true) }}>
-                Approve Admission
-              </Button>
-            )}
-            {data.status === 'APPROVED' && (
-              <span className="sa-approved-note">
-                <FiCheckCircle /> Admission approved as {data.application.admissionNumber}
-              </span>
-            )}
-          </footer>
-        </section>
+            {(() => {
+              const tabs = DETAIL_TABS_APPROVAL.map(([v]) => v)
+              const idx = tabs.indexOf(tab)
+              const prevTab = idx > 0 ? tabs[idx - 1] : null
+              const nextTab = idx < tabs.length - 1 ? tabs[idx + 1] : null
+              return (
+                <div className="sa-tab-nav-footer">
+                  {prevTab ? (
+                    <button type="button" className="cm-button secondary" onClick={() => setTab(prevTab)}>
+                      &larr; Previous
+                    </button>
+                  ) : <span />}
+                  {nextTab && (
+                    <button type="button" className="cm-button" onClick={() => setTab(nextTab)}>
+                      Next &rarr;
+                    </button>
+                  )}
+                </div>
+              )
+            })()}
+          </section>
+        </div>
 
         {confirmApproval && (
           <ConfirmDialog

@@ -544,7 +544,7 @@
   .course-management .cm-info-val,
   .branch-management .cm-info-val,
   .college-management .cm-info-val,
-  .preview-kv-item .kv-val,
+  .preview-kv-item .kv-val:not(.kv-val--wrap),
   .meta-val
 ) {
   min-width: 0 !important;

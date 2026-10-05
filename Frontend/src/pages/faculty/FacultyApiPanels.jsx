@@ -326,12 +326,12 @@ export function ApiAssignmentDialog({ faculty, onClose, onChanged }) {
             </div>
             <div className="fm-assignment-submit" style={{ marginTop: '12px' }}>
               <button type="submit" className="fm-button" disabled={busy}>
-                <FiPlus /> {busy ? 'Saving…' : editing ? 'Update Assignment' : 'Add Allocation'}
+                <FiPlus /> {busy ? 'Saving...' : editing ? 'Update Assignment' : 'Add Allocation'}
               </button>
             </div>
           </form>
         ) : !error && (
-          <p className="fm-muted">Loading academic options…</p>
+          <p className="fm-muted">Loading academic options...</p>
         )}
 
         <div className="fm-current-assignments" style={{ marginTop: '18px' }}>
