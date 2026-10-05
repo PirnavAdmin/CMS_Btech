@@ -6,7 +6,7 @@ import { join } from 'node:path'
 import { tmpdir } from 'node:os'
 import { createServer } from 'vite'
 import { fileURLToPath } from 'node:url'
-const server = process.env.TIMETABLE_TEST_URL ? null : await createServer({ root: fileURLToPath(new URL('../', import.meta.url)), server: { host: '127.0.0.1', port: 5183, strictPort: true } })
+const server = process.env.TIMETABLE_TEST_URL ? null : await createServer({ root: fileURLToPath(new URL('../', import.meta.url)), define: { 'import.meta.env.VITE_TIMETABLE_DRAFT_ADAPTER': JSON.stringify('true') }, server: { host: '127.0.0.1', port: 5183, strictPort: true } })
 await server?.listen()
 const browser = await chromium.launch({ channel: 'msedge', headless: true })
 const context = await browser.newContext({ viewport: { width: 1440, height: 1000 } })

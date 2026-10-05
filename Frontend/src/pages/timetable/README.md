@@ -1,5 +1,7 @@
 # Timetable implementation report
 
+Current integration status: see `Frontend/TIMETABLE_INTEGRATION_STATUS.md`. Mock mode now requires **both** development mode and explicit `VITE_TIMETABLE_DRAFT_ADAPTER=true`; the historical enablement description below is superseded.
+
 The active `/timetable` route uses real academic records and section-specific faculty allocations. The former hardcoded demo page is disconnected. No database, schema or migration changes were made.
 
 1. **Files:** Reworked `TimetableManagement`, `TimetableBuilder`, `PeriodSetupStep`, `TimetableWorkspace`, `TimetableGrid`, and `TimetableComponents`. Added `TimetableDashboard`, `SubjectCoverage`, `FacultyTimetable`, `TimetableWorkflow.css`; `services/timetable/timetableDomain.js`, `timetableDraftAdapter.js`, `timetableWorkflowService.js`, and domain tests. Updated period/planner/active-record utilities, timetable route/Sidebar permissions, profile faculty ID normalization, and `tests/timetable.e2e.mjs`. Existing layout, drawer, searchable select, auth, HTTP client and toast infrastructure are reused. Unused legacy demo helpers remain disconnected.

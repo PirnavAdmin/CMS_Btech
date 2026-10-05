@@ -25,7 +25,8 @@ function setup(failPath = '') {
     if (path.includes('/views/')) return []
     return {}
   }]))
-  const context = vm.createContext({ ...utils, ...periods, api, timetableService: {} })
+  const lifecycle = Object.fromEntries([['generate', 'generate'], ['generateMissing', 'generate-missing'], ['regenerate', 'regenerate']].map(([name, suffix]) => [name, ({ timetableId }, payload) => api.post(`/timetables/${timetableId}/${suffix}`, payload)]))
+  const context = vm.createContext({ ...utils, ...periods, api, lifecycle, timetableService: {} })
   vm.runInContext(`${source}\nthis.service = backendTimetableService; this.normalize = normalizeTimetable`, context)
   return { ...context, calls }
 }
@@ -63,7 +64,9 @@ test('generation preserves endpoint semantics and validation displays server rea
   await service.generate(scope, 'CSE A', { rooms: ['id:5'] }, { tableId: 8 })
   await service.generate(scope, 'CSE A', { rooms: ['id:5'] }, { tableId: 8, replace: true })
   assert(calls.some(row => row.path.endsWith('/generate-missing') && row.payload.classroomIds[0] === 5))
-  assert(calls.some(row => row.path.endsWith('/generate') && row.payload.replaceGenerated === true))
+  assert(calls.some(row => row.path.endsWith('/regenerate') && row.payload.replaceGenerated === true))
+  await service.generate(scope, 'CSE A', { rooms: ['id:5'] }, { tableId: 8, initial: true })
+  assert(calls.some(row => row.path.endsWith('/generate') && row.payload.replaceGenerated === false))
   const result = await service.validate(8)
   assert.equal(result.valid, false); assert.match(result.message, /Weekly frequency missing/)
   await service.publish(8); await service.reopen(8); await service.view('faculty', 4, { academicYearId: 2 })

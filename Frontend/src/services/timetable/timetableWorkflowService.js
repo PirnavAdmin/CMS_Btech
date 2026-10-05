@@ -5,7 +5,7 @@ import { same, active, conflictsFor, existingSlots } from '../../utils/timetable
 import { createDraftAdapter, DRAFT_STORAGE_KEY } from './timetableDraftAdapter'
 import { decorateEntries, tableEntries } from './timetableDomain'
 
-export const draftCapabilityEnabled = import.meta.env.DEV || import.meta.env.VITE_TIMETABLE_DRAFT_ADAPTER === 'true'
+export const draftCapabilityEnabled = import.meta.env.DEV && import.meta.env.VITE_TIMETABLE_DRAFT_ADAPTER === 'true'
 export async function loadLive() {
   const [sources, departments, backend, subjects] = await Promise.all([timetableService.getSources(), departmentApi.getAll(), timetableService.list(), subjectApi.list()])
   return { sources: { ...sources, subjects: subjects.map(row => ({ ...row, id: row.subjectId ?? row.id, name: row.subjectName ?? row.name })), departments: departments.map(row => ({ ...row, id: row.departmentId ?? row.id, name: row.departmentName ?? row.name })), allocations: sources.allocations.filter(row => active(row) && row.sectionId && (!row.allocationType || row.allocationType.toUpperCase() === 'TEACHING')) }, backend }
@@ -39,7 +39,7 @@ export async function saveBackendEntry(table, form) {
 }
 let adapter
 export function workflowAdapter() {
-  if (!draftCapabilityEnabled) throw new Error('Timetable setup and publication APIs are unavailable. The temporary draft adapter is enabled only in development or by explicit deployment configuration.')
+  if (!draftCapabilityEnabled) throw new Error('The timetable lifecycle contract has not been verified. Mock Mode requires development mode and explicit VITE_TIMETABLE_DRAFT_ADAPTER=true configuration.')
   adapter ||= createDraftAdapter({ storage: localStorage, locks: navigator.locks, loadLive, authorize: () => { if (getUserRole() !== 'admin') throw new Error('Administrator access is required.') } })
   return adapter
 }

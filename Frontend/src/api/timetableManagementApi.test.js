@@ -1,9 +1,20 @@
 import { readFile } from 'node:fs/promises'
 import test from 'node:test'
 import assert from 'node:assert/strict'
+import { userErrorMessage, GENERIC_ERROR_MESSAGE } from '../utils/userError.js'
 
 const source = (await readFile(new URL('./apiEndpoints.js', import.meta.url), 'utf8')).replace(/^import .*$/gm, '').replaceAll('import.meta.env', '({ DEV: false, VITE_API_BASE_URL: "https://example.test" })')
-const { timetableManagementApi: api } = await import(`data:text/javascript;base64,${Buffer.from(`const getAccessToken = () => 'test-token';\n${source}`).toString('base64')}`)
+// Isolate the API boundary while retaining its real HTTP/error implementation.
+const dependencies = `const getAccessToken = () => 'test-token';
+const collegeRequest = (url, options) => ({ url, options });
+const GENERIC_ERROR_MESSAGE = ${JSON.stringify(GENERIC_ERROR_MESSAGE)};
+const userErrorMessage = ${userErrorMessage.toString()};
+const notifyApiUnavailable = () => {};
+const createApiUnavailableError = () => new Error(GENERIC_ERROR_MESSAGE);
+const getRefreshToken = () => null;
+const signOut = () => {};
+`
+const { timetableManagementApi: api } = await import(`data:text/javascript;base64,${Buffer.from(`${dependencies}\n${source}`).toString('base64')}`)
 
 test('timetable API uses configured base, bearer token, query and documented HTTP methods', async () => {
   const previous = globalThis.fetch

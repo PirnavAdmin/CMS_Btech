@@ -1,4 +1,5 @@
 import { timetableManagementApi as api } from '../api/apiEndpoints'
+import { timetableLifecycleApi as lifecycle } from '../api/timetableLifecycleApi'
 import { timetableService } from './timetableService'
 import { same, normalizeEntry, timeMinutes } from '../utils/timetableUtils'
 import { periodType, isTeachingPeriod } from '../utils/timetablePeriods'
@@ -100,7 +101,8 @@ export const backendTimetableService = {
   },
   async generate(scope, name, config, options = {}) {
     const tableId = id(options.tableId)
-    const result = await api.post(`${path(tableId)}/${options.replace ? 'generate' : 'generate-missing'}`, {
+    const operation = options.replace ? 'regenerate' : options.initial ? 'generate' : 'generateMissing'
+    const result = await lifecycle[operation]({ timetableId: tableId }, {
       replaceGenerated: Boolean(options.replace), classroomIds: config.rooms.map(value => id(value.replace(/^id:/, ''))) })
     const table = await this.detail(tableId)
     return { ...table, added: result?.added ?? result?.generatedCount ?? 0, issues: result?.issues || [] }
@@ -120,5 +122,14 @@ export const backendTimetableService = {
   },
   publish: tableId => api.post(`${path(tableId)}/publish`),
   reopen: tableId => api.post(`${path(tableId)}/reopen`),
+  // Preserve opaque responses until authenticated examples establish their shape.
+  status: tableId => lifecycle.status({ timetableId: tableId }),
+  validateGlobal: tableId => lifecycle.validateGlobal({ timetableId: tableId }),
+  roomAvailability: (tableId, timetableSlotId, dayOfWeek) => lifecycle.roomAvailability({ timetableId: tableId, timetableSlotId, dayOfWeek }),
+  async moveEntry(tableId, entryId, { dayOfWeek, timetableSlotId, classroomId }) {
+    await lifecycle.moveEntry({ timetableId: tableId, entryId }, { dayOfWeek, timetableSlotId: id(timetableSlotId), ...(classroomId == null ? {} : { classroomId: id(classroomId) }) })
+    return this.detail(tableId)
+  },
+  occurrences: query => lifecycle.occurrences(query),
   view: (kind, recordId, query) => api.get(`/views/${kind}/${id(recordId)}`, query).then(rows),
 }
