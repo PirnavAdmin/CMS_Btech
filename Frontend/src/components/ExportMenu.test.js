@@ -4,26 +4,29 @@ import { readFileSync, readdirSync } from 'node:fs'
 import { createElement } from 'react'
 import { transformWithOxc } from 'vite'
 import { toCsv } from '../utils/exportUtils.js'
+import { yearColumns } from '../utils/exportColumns.js'
 
-// Exercise the actual JSX handlers with isolated hooks and a mocked server.
+// Exercise the actual JSX handlers with isolated hooks and local row data.
 const source = readFileSync(new URL('./ExportMenu.jsx', import.meta.url), 'utf8')
-const apiSource = readFileSync(new URL('../api/apiEndpoints.js', import.meta.url), 'utf8')
-const screens = [...apiSource.match(/SCREEN_EXPORT_ENDPOINTS = Object.freeze\(Object.fromEntries\(\[([\s\S]*?)\]\.map/)[1].matchAll(/'([^']+)'/g)].map(match => match[1])
 const { code } = await transformWithOxc(source.replace(/^import .*$/gm, '').replace('export default function', 'function').replace('export function', 'function'), 'ExportMenu.jsx', { jsx: { runtime: 'classic' } })
-const bindings = ['React', 'useEffect', 'useId', 'useRef', 'useState', 'FiChevronDown', 'FiDownload', 'FiPrinter', 'downloadServerExport', 'exportToCsv', 'printEntityDetails', 'printResults', 'SCREEN_EXPORT_ENDPOINTS', 'screenExportsApi', 'showSuccess', 'showError']
+const bindings = ['React', 'useEffect', 'useId', 'useRef', 'useState', 'FiChevronDown', 'FiDownload', 'FiPrinter', 'exportToCsv', 'printEntityDetails', 'printResults', 'printSingleRecord', 'cleanRecordSections', 'readVisibleRecordSections', 'singleRecordCsvOptions', 'showSuccess', 'showError']
 const factory = new Function(...bindings, `${code}; return ExportMenu`)
 const columns = [{ label: 'Record ID', value: 'id' }]
 const records = Array.from({ length: 13 }, (_, index) => ({ id: index + 1 }))
 
-function harness(props, serverRows = records, printError = null) {
+function harness(props, printError = null) {
   const calls = [], downloads = [], prints = [], successes = [], errors = []
   let stateIndex = 0
   const noop = () => {}
   const Component = factory({ createElement }, noop, () => 'export', () => ({ current: null }), value => [stateIndex++ === 0 ? true : value, noop], noop, noop, noop,
-    (file, filename) => downloads.push({ csv: file.csv, filename }),
-    options => downloads.push({ csv: toCsv(options.rows, options.columns), filename: options.filename }), noop,
-    options => { if (printError) throw printError; prints.push(options) }, Object.fromEntries(screens.map(screen => [screen, {}])),
-    { save: async (screen, params) => { calls.push({ screen, params }); if (serverRows instanceof Error) throw serverRows; return { csv: toCsv(serverRows, columns) } } }, message => successes.push(message), message => errors.push(message))
+    options => downloads.push({ csv: toCsv(options.rows, options.columns), filename: options.filename }),
+    noop,
+    options => { if (printError) throw printError; prints.push(options) },
+    noop,
+    sections => sections,
+    () => [],
+    (sections, filename) => ({ rows: sections, columns: [], filename }),
+    message => successes.push(message), message => errors.push(message))
   const tree = Component({ columns, title: props.filename, ...props })
   const buttons = []
   function visit(node) {
@@ -45,7 +48,7 @@ const filenames = [...new Set(pages.flatMap(page => [...page.matchAll(/<ExportMe
 filenames.push('fee-structures-hostel', 'fee-structures-transport')
 
 for (const filename of filenames) {
-  test(`${filename}: single CSV action, all 13 records, filtered export, unchanged print`, async () => {
+  test(`${filename}: CSV uses mapped rows and columns, filtered export, unchanged print`, async () => {
     const full = harness({ filename, rows: records })
     assert.deepEqual(full.labels, ['Export', 'Download CSV', 'Print / Save as PDF'])
     await full.csv.props.onClick()
@@ -55,41 +58,51 @@ for (const filename of filenames) {
     assert.equal(full.downloads[0].csv.split('\r\n').length - 1, 13)
     assert.equal(full.downloads[0].filename, filename)
     assert.equal(full.downloads[0].csv.split('\r\n')[0], '\uFEFF"Record ID"')
-    if (full.calls.length) {
-      const paginated = harness({ filename, rows: records.slice(0, 10) })
-      await paginated.csv.props.onClick()
-      assert.equal(paginated.downloads[0].csv.split('\r\n').length - 1, 13)
-      assert.equal(paginated.calls.length, 1)
-    }
+    assert.deepEqual(full.calls, [])
+    const paginated = harness({ filename, rows: records.slice(0, 10) })
+    await paginated.csv.props.onClick()
+    assert.equal(paginated.downloads[0].csv.split('\r\n').length - 1, 10)
+    assert.deepEqual(paginated.calls, [])
     const params = { search: 'matching records' }
-    const filtered = harness({ filename, rows: records.slice(0, 5), exportParams: params }, records.slice(0, 5))
+    const filtered = harness({ filename, rows: records.slice(0, 5), exportParams: params })
     await filtered.csv.props.onClick()
     assert.equal(filtered.downloads[0].csv.split('\r\n').length - 1, 5)
-    if (filtered.calls.length) assert.equal(filtered.calls[0].params, params)
     await filtered.pdf.props.onClick()
     assert.equal(filtered.prints[0].rows.length, 5)
     assert.match(filtered.successes.at(-1), /Print preview opened/)
   })
 }
 
-test('server export remains available without loaded table rows', async () => {
+test('screen list exports are disabled when there are no mapped rows', async () => {
   const menu = harness({ filename: 'colleges', rows: [] })
-  assert.equal(menu.csv.props.disabled, false)
-  await menu.csv.props.onClick()
-  assert.equal(menu.downloads[0].csv.split('\r\n').length - 1, 13)
-  assert.equal(menu.pdf.props.disabled, true)
+  assert.equal(menu.buttons[0].props.disabled, true)
+  assert.deepEqual(menu.labels, ['Export'])
 })
 
-test('failed CSV export reports the backend error once and never reports success', async () => {
-  const menu = harness({ filename: 'colleges', rows: records }, new Error('Export access denied'))
+test('list export is disabled when user-facing columns are missing', async () => {
+  const menu = harness({ filename: 'academic-years', rows: records, columns: [] })
+  assert.equal(menu.buttons[0].props.disabled, true)
+  assert.deepEqual(menu.labels, ['Export'])
+})
+
+test('custom download action remains supported and reports failures', async () => {
+  const menu = harness({ filename: 'custom-report', rows: records, onDownload: async () => { throw new Error('Export access denied') } })
   await menu.csv.props.onClick()
   assert.deepEqual(menu.errors, ['Export access denied'])
   assert.deepEqual(menu.successes, [])
   assert.equal(menu.downloads.length, 0)
 })
 
+test('academic-year CSV contains only user-facing mapped fields', async () => {
+  const year = { id: '1', name: '2025-2026', startDate: '2025-06-02', endDate: '2026-05-31', status: 'ACTIVE', createdAt: '2025-01-01T10:22:45Z', updatedAt: '2025-02-03T12:30:00Z' }
+  const menu = harness({ filename: 'academic-years', rows: [year], columns: yearColumns })
+  await menu.csv.props.onClick()
+  assert.equal(menu.downloads[0].csv, '\uFEFF"Academic Year","Start Date","End Date","Status"\r\n"2025-2026","2025-06-02","2026-05-31","ACTIVE"')
+  assert.doesNotMatch(menu.downloads[0].csv, /createdAt|updatedAt|2025-01-01T10:22:45Z|2025-02-03T12:30:00Z/i)
+})
+
 test('blocked print preview reports an error without success', async () => {
-  const menu = harness({ filename: 'colleges', rows: records }, records, new Error('Allow pop-ups to open the print preview.'))
+  const menu = harness({ filename: 'colleges', rows: records }, new Error('Allow pop-ups to open the print preview.'))
   await menu.pdf.props.onClick()
   assert.deepEqual(menu.errors, ['Allow pop-ups to open the print preview.'])
   assert.deepEqual(menu.successes, [])

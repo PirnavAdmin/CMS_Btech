@@ -32,15 +32,15 @@
   box-shadow: none !important;
 }
 
-.filter-disclosure__search :is(label, .course-search, .branch-search, .semester-search, .section-search, .faculty-search, .sm-search-wrap, .sa-search, .em-search) {
+.filter-disclosure__search :is(label, .search-control, .module-search, .course-search, .branch-search, .semester-search, .section-search, .faculty-search, .sm-search-wrap, .sa-search, .em-search) {
   display: flex !important;
   align-items: center !important;
   gap: 8px !important;
   width: 100% !important;
-  max-width: 520px !important;
-  height: 38px !important;
-  min-height: 38px !important;
-  padding: 0 12px !important;
+  max-width: 480px !important;
+  height: 34px !important;
+  min-height: 34px !important;
+  padding: 0 9px !important;
   box-sizing: border-box !important;
   background: #FFFFFF !important;
   border: 1px solid #CFDEEF !important;
@@ -50,18 +50,20 @@
   margin: 0 !important;
 }
 
-.filter-disclosure__search :is(label, .course-search, .branch-search, .semester-search, .section-search, .faculty-search, .sm-search-wrap, .sa-search, .em-search) svg {
+.filter-disclosure__search :is(label, .search-control, .module-search, .course-search, .branch-search, .semester-search, .section-search, .faculty-search, .sm-search-wrap, .sa-search, .em-search) svg {
   flex-shrink: 0 !important;
+  width: 15px !important;
+  height: 15px !important;
   color: #426A95 !important;
-  font-size: 15px !important;
+  font-size: 14px !important;
 }
 
-.filter-disclosure__search :is(label, .course-search, .branch-search, .semester-search, .section-search, .faculty-search, .sm-search-wrap, .sa-search, .em-search) input {
+.filter-disclosure__search :is(label, .search-control, .module-search, .course-search, .branch-search, .semester-search, .section-search, .faculty-search, .sm-search-wrap, .sa-search, .em-search) input {
   width: 100% !important;
   border: none !important;
   background: transparent !important;
   outline: none !important;
-  font-size: 13px !important;
+  font-size: 12px !important;
   color: #102A4C !important;
   padding: 0 !important;
   margin: 0 !important;
@@ -283,4 +285,37 @@
     width: 100% !important;
     margin: 4px 0 0 0 !important;
   }
+}
+
+:root #root .page-content .filter-disclosure .filter-disclosure__bar {
+  min-height: 44px !important;
+  padding: 5px 10px !important;
+}
+
+:root #root .page-content .filter-disclosure .filter-disclosure__bar .filter-disclosure__search :is(label, div):has(> input) {
+  width: min(100%, 480px) !important;
+  max-width: 480px !important;
+  height: 34px !important;
+  min-height: 34px !important;
+  padding: 0 9px !important;
+  box-sizing: border-box !important;
+}
+
+:root #root .page-content .filter-disclosure .filter-disclosure__bar .filter-disclosure__search :is(label, div):has(> input) > svg {
+  width: 15px !important;
+  height: 15px !important;
+  flex: 0 0 15px !important;
+}
+
+:root #root .page-content .filter-disclosure .filter-disclosure__bar .filter-disclosure__search :is(label, div):has(> input) > input {
+  height: 30px !important;
+  min-height: 0 !important;
+  font-size: 12px !important;
+}
+
+:root #root .page-content .filter-disclosure .filter-disclosure__bar > :is(.filter-disclosure__toggle, .filter-disclosure__clear) {
+  height: 34px !important;
+  min-height: 34px !important;
+  padding: 0 10px !important;
+  font-size: 12px !important;
 }

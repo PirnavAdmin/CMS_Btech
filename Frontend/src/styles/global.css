@@ -1152,7 +1152,7 @@ label > b,
 }
 
 /* Normalize screen-level alerts across modules; compact field errors are excluded. */
-#root :is(div, section, aside, p)[role="alert"]:not(.cm-field-error):not(.field-error):not(.field-error-text):not(.validation-error):not(.sp-form-error):not(.fm-lop-confirm):not(.fm-reset-confirm) {
+#root :is(div, section, aside, p)[role="alert"]:not(.cm-field-error):not(.field-error):not(.field-error-text):not(.validation-error):not(.sp-form-error):not(.fm-lop-confirm):not(.fm-reset-confirm):not(.workspace-context-select__sidebar-error) {
   box-sizing: border-box;
   border: 1px solid var(--screen-error-border) !important;
   border-left: 4px solid var(--screen-error-text) !important;
@@ -1163,7 +1163,7 @@ label > b,
   overflow-wrap: anywhere;
 }
 
-#root :is(div, section, aside, p)[role="alert"]:not(.cm-field-error):not(.field-error):not(.field-error-text):not(.validation-error):not(.sp-form-error):not(.fm-lop-confirm):not(.fm-reset-confirm):not(.page-error-notice) > button {
+#root :is(div, section, aside, p)[role="alert"]:not(.cm-field-error):not(.field-error):not(.field-error-text):not(.validation-error):not(.sp-form-error):not(.fm-lop-confirm):not(.fm-reset-confirm):not(.page-error-notice):not(.workspace-context-select__sidebar-error) > button {
   box-sizing: border-box;
   min-height: 36px;
   padding: 7px 14px;
@@ -1228,65 +1228,57 @@ label > b,
   overflow-wrap: anywhere;
 }
 
-/* Sidebar retry is a plain text link, separate from full-page error alerts. */
-#root .sidebar-brand .workspace-context-select__error {
+/* Sidebar college recovery uses a compact control, outside shared alert-card styling. */
+#root .sidebar-brand .workspace-context-select__sidebar-error {
   display: flex !important;
   width: max-content !important;
   min-height: 0 !important;
-  margin: 5px 0 0 !important;
+  margin: 3px 0 0 !important;
   padding: 0 !important;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 6px;
   border: 0 !important;
   border-radius: 0 !important;
   background: transparent !important;
-  color: #A9D3F7 !important;
+  color: #ffe0a3 !important;
   box-shadow: none !important;
   line-height: 1.2 !important;
 }
 
-#root .sidebar-brand .workspace-context-select__error > button {
-  display: inline !important;
-  width: auto !important;
-  min-width: 0 !important;
-  min-height: 0 !important;
-  height: auto !important;
-  margin: 0 !important;
-  padding: 0 !important;
-  border: 0 !important;
-  border-radius: 0 !important;
-  background: transparent !important;
-  color: #A9D3F7 !important;
-  box-shadow: none !important;
-  font: 600 11px/1.2 inherit !important;
-  text-decoration: none !important;
-  appearance: none !important;
-}
 #root .sidebar-brand .workspace-context-select__retry,
 #root .sidebar-brand .workspace-context-select__retry:hover,
 #root .sidebar-brand .workspace-context-select__retry:active,
 #root .sidebar-brand .workspace-context-select__retry:focus {
   all: unset !important;
-  display: inline !important;
-  color: #A9D3F7 !important;
-  background: transparent !important;
+  box-sizing: border-box !important;
+  display: inline-grid !important;
+  width: 20px !important;
+  min-width: 20px !important;
+  min-height: 20px !important;
+  height: 20px !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  place-items: center;
   border: 0 !important;
   border-radius: 0 !important;
-  box-shadow: none !important;
-  padding: 0 !important;
-  margin: 0 !important;
-  font: 600 11px/1.2 Arial, sans-serif !important;
-  cursor: pointer !important;
-}
-#root .sidebar-brand .workspace-context-select__retry:hover {
-  color: #FFFFFF !important;
-  text-decoration: underline !important;
-  text-underline-offset: 2px;
-}
-#root .sidebar-brand .workspace-context-select__error > button:hover:not(:disabled) {
   background: transparent !important;
-  color: #FFFFFF !important;
-  text-decoration: underline !important;
-  text-underline-offset: 2px;
+  color: #ff5b63 !important;
+  box-shadow: none !important;
+  font: 0/0 Arial, sans-serif !important;
+  text-decoration: none !important;
+  cursor: pointer !important;
+  transition: color .16s ease, transform .16s ease;
 }
+
+#root .sidebar-brand .workspace-context-select__retry:hover:not(:disabled) {
+  transform: rotate(-35deg);
+  color: #ff9a9f !important;
+}
+
+#root .sidebar-brand .workspace-context-select__retry:focus-visible { outline: 2px solid #fff !important; outline-offset: 2px; }
+#root .sidebar-brand .workspace-context-select__retry:disabled { opacity: .65; cursor: wait !important; }
+#root .sidebar-brand .workspace-context-select__retry svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
 
 #root .course-empty--error {
   display: flex;
@@ -1472,13 +1464,13 @@ label > b,
   .search-control, .module-search, .course-search, .branch-search,
   .department-search, .semester-search, .section-search, .sa-search,
   .searchable-select__trigger, select, textarea,
-  input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="range"]):not([type="color"])
+  input:not(.sm-search-input):not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="range"]):not([type="color"])
 ):not([aria-invalid="true"]) {
   background: var(--input-background) !important;
   border-color: var(--border) !important;
   color: var(--text-primary);
 }
-:root:not([data-theme="dark"]) #root :is(.page-content, .dashboard-header) :is(input, select, textarea, .searchable-select__trigger):focus-visible {
+:root:not([data-theme="dark"]) #root :is(.page-content, .dashboard-header) :is(input:not(.sm-search-input), select, textarea, .searchable-select__trigger):focus-visible {
   border-color: #4C91D4 !important;
   box-shadow: var(--focus-ring) !important;
 }
@@ -1559,4 +1551,107 @@ label > b,
   background: #EAF3FF !important;
   color: #1769C2 !important;
   border-color: #CFDEEF !important;
+}
+
+/* One compact search size across route-level and filter-panel search controls. */
+:root[data-theme] #root .page-content .filter-disclosure .filter-disclosure__bar {
+  min-height: 44px !important;
+  padding: 5px 10px !important;
+}
+:root[data-theme] #root .page-content .filter-disclosure .filter-disclosure__bar .filter-disclosure__search :is(
+  label, .search-control, .module-search, .course-search, .branch-search,
+  .department-search, .semester-search, .section-search, .faculty-search,
+  .sm-search-wrap, .sa-search, .em-search, .sp-search, .fs-search,
+  .fp-search, .flm-search, .fm-search
+) {
+  width: min(100%, 480px) !important;
+  max-width: 480px !important;
+  height: 34px !important;
+  min-height: 34px !important;
+  box-sizing: border-box !important;
+  padding-right: 9px !important;
+  padding-left: 9px !important;
+}
+:root[data-theme] #root .page-content .filter-disclosure .filter-disclosure__bar .filter-disclosure__search :is(
+  label, .search-control, .module-search, .course-search, .branch-search,
+  .department-search, .semester-search, .section-search, .faculty-search,
+  .sm-search-wrap, .sa-search, .em-search, .sp-search, .fs-search,
+  .fp-search, .flm-search, .fm-search
+) > svg {
+  width: 15px !important;
+  height: 15px !important;
+  flex-basis: 15px !important;
+}
+:root[data-theme] #root .page-content .filter-disclosure .filter-disclosure__bar .filter-disclosure__search :is(
+  label, .search-control, .module-search, .course-search, .branch-search,
+  .department-search, .semester-search, .section-search, .faculty-search,
+  .sm-search-wrap, .sa-search, .em-search, .sp-search, .fs-search,
+  .fp-search, .flm-search, .fm-search
+) > input {
+  height: 30px !important;
+  min-height: 0 !important;
+  font-size: 12px !important;
+}
+:root[data-theme] #root .page-content :is(
+  .search-control, .module-search, .cm-search, .course-search, .branch-search,
+  .department-search, .semester-search, .section-search, .sa-search, .sp-search,
+  .fs-search, .sm-search-wrap, .em-search, .rooms-search,
+  .attendance-search-control, .fm-attendance-search, .fp-search, .flm-search,
+  .fm-search, .section-student-search, .cm-subject-search
+) {
+  width: min(100%, 480px) !important;
+  max-width: 480px !important;
+  height: 34px !important;
+  min-height: 34px !important;
+  box-sizing: border-box !important;
+  padding-right: 9px !important;
+  padding-left: 9px !important;
+}
+:root[data-theme] #root .page-content :is(
+  .search-control, .module-search, .cm-search, .course-search, .branch-search,
+  .department-search, .semester-search, .section-search, .sa-search, .sp-search,
+  .fs-search, .sm-search-wrap, .em-search, .rooms-search,
+  .attendance-search-control, .fm-attendance-search, .fp-search, .flm-search,
+  .fm-search, .section-student-search, .cm-subject-search
+) > svg {
+  width: 15px !important;
+  height: 15px !important;
+  flex-basis: 15px !important;
+}
+:root[data-theme] #root .page-content :is(
+  .search-control, .module-search, .cm-search, .course-search, .branch-search,
+  .department-search, .semester-search, .section-search, .sa-search, .sp-search,
+  .fs-search, .sm-search-wrap, .em-search, .rooms-search,
+  .attendance-search-control, .fm-attendance-search, .fp-search, .flm-search,
+  .fm-search, .section-student-search, .cm-subject-search
+) > input {
+  height: 30px !important;
+  min-height: 0 !important;
+  font-size: 12px !important;
+}
+:root[data-theme] #root .page-content :is(
+  .cm-filters .cm-field:first-child > input,
+  .ay .tools > input
+) {
+  width: min(100%, 480px) !important;
+  max-width: 480px !important;
+  height: 34px !important;
+  min-height: 34px !important;
+  box-sizing: border-box !important;
+  font-size: 12px !important;
+}
+:root[data-theme] #root .dashboard-header .global-search {
+  height: 34px !important;
+  min-height: 34px !important;
+  padding-right: 9px !important;
+  padding-left: 9px !important;
+}
+:root[data-theme] #root .dashboard-header .global-search > svg {
+  width: 15px !important;
+  height: 15px !important;
+  flex-basis: 15px !important;
+}
+:root[data-theme] #root .dashboard-header .global-search > input {
+  height: 30px !important;
+  font-size: 12px !important;
 }

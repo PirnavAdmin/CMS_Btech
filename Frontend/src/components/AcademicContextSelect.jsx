@@ -51,8 +51,18 @@ export default function AcademicContextSelect({ kind, compact = false }) {
         {items.map(item => <option key={idOf(item)} value={idOf(item)}>{nameOf(item)}</option>)}
       </select>
     </label>}
-    {(error || context.error) && <div className="workspace-context-select__error" role="alert">
-      <button className="workspace-context-select__retry" type="button" disabled={context.loading} onClick={() => { setError(''); context.refreshHierarchy() }}>Retry</button>
+    {(error || context.error) && <div className={isCollege ? 'workspace-context-select__sidebar-error' : 'workspace-context-select__error'} role="alert">
+      {!isCollege && <span>{context.error ? 'Academic years unavailable' : `Unable to update ${label.toLowerCase()}`}</span>}
+      <button
+        className="workspace-context-select__retry"
+        type="button"
+        aria-label={context.loading ? `Loading ${label.toLowerCase()} options` : `Retry loading ${label.toLowerCase()} options`}
+        title={context.loading ? `Loading ${label.toLowerCase()} options` : `${label} options unavailable · Retry`}
+        disabled={context.loading}
+        onClick={() => { setError(''); context.refreshHierarchy() }}
+      >
+        <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M16.5 8a6.7 6.7 0 0 0-12.2-2L2.8 7.5M2.8 3.7v3.8h3.8M3.5 12a6.7 6.7 0 0 0 12.2 2l1.5-1.5M17.2 16.3v-3.8h-3.8" /></svg>
+      </button>
     </div>}
     {!context.loading && !context.error && !items.length && <small>No {isCollege ? 'colleges' : 'academic years'} available.</small>}
     {applying && <small role="status">Updating...</small>}

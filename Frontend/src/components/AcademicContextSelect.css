@@ -7,60 +7,6 @@
 .workspace-context-select__error { margin-top: 6px; color: var(--ui-danger); font-size: 11px; }
 .workspace-context-select__error button { padding: 3px 6px; margin-left: 4px; border: 0; background: transparent; color: inherit; text-decoration: underline; cursor: pointer; }
 
-/* The brand header needs an inline error, without the full-page alert card. */
-#root .sidebar-brand .workspace-context-select__error {
-  display: flex !important;
-  width: max-content;
-  margin: 5px 0 0 !important;
-  align-items: center;
-  justify-content: flex-start;
-  padding: 0 !important;
-  border: 0 !important;
-  border-radius: 0 !important;
-  background: transparent !important;
-  color: #FFFFFF !important;
-  font-size: 10px;
-  line-height: 1.2;
-}
-
-#root .sidebar-brand .workspace-context-select__error > button {
-  display: inline-flex !important;
-  min-height: 0 !important;
-  width: auto !important;
-  height: auto !important;
-  margin: 0;
-  padding: 0 !important;
-  appearance: none !important;
-  border: 0 !important;
-  border-radius: 0 !important;
-  background: transparent !important;
-  color: #A9D3F7 !important;
-  font-size: 11px !important;
-  font-weight: 600 !important;
-  line-height: 1.2 !important;
-  text-decoration: none !important;
-  box-shadow: none !important;
-  outline: 0;
-  cursor: pointer;
-}
-
-#root .sidebar-brand .workspace-context-select__error > button:hover:not(:disabled) {
-  background: transparent !important;
-  color: #FFFFFF !important;
-  text-decoration: underline !important;
-  text-underline-offset: 2px;
-}
-
-#root .sidebar-brand .workspace-context-select__error > button:focus-visible {
-  outline: 2px solid currentColor;
-  outline-offset: 2px;
-}
-
-#root .sidebar-brand .workspace-context-select__error > button:disabled {
-  opacity: .6;
-  cursor: wait;
-}
-
 #root .sidebar-context { display: none; padding: 8px 0; border-bottom: 1px solid var(--ui-border); flex-shrink: 0; }
 #root .sidebar.is-collapsed .sidebar-context { display: block; }
 #root .sidebar-context-expand { display: none; }

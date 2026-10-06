@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import { FiAlertTriangle, FiPlus, FiRotateCcw, FiSearch, FiX, FiArrowLeft, FiBookOpen } from 'react-icons/fi'
 import DashboardLayout from '../../layouts/DashboardLayout'
@@ -33,8 +33,6 @@ export default function SubjectManagement() {
   const navigate = useNavigate()
   const { scopeRecords, selectedCollegeId, selectedAcademicYearId, selectedAcademicYear } = useAcademic()
   const [subjects, setSubjects] = useState([]), [loading, setLoading] = useState(true), [loadError, setLoadError] = useState('')
-  const tableWrapRef = useRef(null)
-  const [tableScroll, setTableScroll] = useState({ max: 0, value: 0, thumb: 44 })
   const [page, setPage] = useState(1)
   const [allMasters, setMasters] = useState({ years: [], courses: [], branches: [], semesters: [] })
   const masters = { ...allMasters, ...Object.fromEntries(['courses', 'branches', 'semesters'].map(type => [type, scopeRecords(allMasters[type])])) }
@@ -69,26 +67,6 @@ export default function SubjectManagement() {
   const totalPages = Math.max(1, Math.ceil(records.length / PAGE_SIZE))
   const currentPage = Math.min(page, totalPages)
   const paginatedRecords = records.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE)
-  useEffect(() => {
-    const wrapper = tableWrapRef.current
-    if (!wrapper) return undefined
-    const update = () => {
-      const max = Math.max(0, wrapper.scrollWidth - wrapper.clientWidth)
-      const next = { max, value: wrapper.scrollLeft, thumb: Math.max(44, wrapper.clientWidth * wrapper.clientWidth / Math.max(wrapper.scrollWidth, 1)) }
-      setTableScroll(current => current.max === next.max && current.value === next.value && current.thumb === next.thumb ? current : next)
-    }
-    update()
-    wrapper.addEventListener('scroll', update, { passive: true })
-    const observer = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(update)
-    observer?.observe(wrapper)
-    if (wrapper.firstElementChild) observer?.observe(wrapper.firstElementChild)
-    window.addEventListener('resize', update)
-    return () => {
-      wrapper.removeEventListener('scroll', update)
-      observer?.disconnect()
-      window.removeEventListener('resize', update)
-    }
-  }, [loading, loadError, records.length, currentPage])
   const kpis = useMemo(() => ({ total: records.length, active: records.filter(s => String(s.status).toLowerCase() === 'active').length, theory: records.filter(s => /theory/i.test(s.subjectType)).length, lab: records.filter(s => /lab|practical/i.test(s.subjectType)).length, credits: records.reduce((n, s) => n + Number(s.credits || 0), 0) }), [records])
   const changeFilter = (field, value) => setFilters(old => field === 'courseId' ? { ...old, courseId: value, branchId: '', level: '', semesterId: '' } : field === 'branchId' ? { ...old, branchId: value, level: '', semesterId: '' } : field === 'level' ? { ...old, level: value, semesterId: '' } : { ...old, [field]: value })
   const changeForm = (field, value) => setForm(old => field === 'courseId' ? { ...old, courseId: value, branchId: '', semesterId: '' } : field === 'branchId' ? { ...old, branchId: value, semesterId: '' } : { ...old, [field]: value })
@@ -203,10 +181,10 @@ export default function SubjectManagement() {
             className="sm-filter-panel"
           >
             <div className="sm-filter-grid">
-              <label className="sm-search-wrap">
+              <div className="sm-search-wrap">
                 <FiSearch aria-hidden="true" />
-                <input aria-label="Search subjects" value={filters.search} onChange={e => changeFilter('search', e.target.value)} placeholder="Search subject code or name" />
-              </label>
+                <input className="sm-search-input" aria-label="Search subjects" value={filters.search} onChange={e => changeFilter('search', e.target.value)} placeholder="Search subject code or name" />
+              </div>
               <Select label="Academic Year" value={filters.academicYearId} options={masters.years} onChange={v => changeFilter('academicYearId', v)} />
               <Select label="Course" value={filters.courseId} options={scopedCourses} onChange={v => changeFilter('courseId', v)} />
               <Select label="Branch" value={filters.branchId} options={branches(filters.courseId)} onChange={v => changeFilter('branchId', v)} disabled={!filters.courseId} />
@@ -216,7 +194,7 @@ export default function SubjectManagement() {
               <Select label="Status" value={filters.status} options={['Active', 'Inactive']} onChange={v => changeFilter('status', v)} />
             </div>
           </FilterPanel>
-          <div className="sm-table-wrap" ref={tableWrapRef}>
+          <div className="sm-table-wrap">
             {loading ? (
               <div className="sm-loading">Loading subject directory...</div>
             ) : loadError ? (
@@ -293,16 +271,6 @@ export default function SubjectManagement() {
               </table>
             )}
           </div>
-          {!loading && !loadError && tableScroll.max > 0 && <input
-            className="sm-table-scroll-control"
-            type="range"
-            min="0"
-            max={tableScroll.max}
-            value={Math.min(tableScroll.value, tableScroll.max)}
-            aria-label="Scroll subject table horizontally"
-            style={{ '--sm-scroll-thumb': `${tableScroll.thumb}px` }}
-            onChange={event => { if (tableWrapRef.current) tableWrapRef.current.scrollLeft = Number(event.target.value) }}
-          />}
           {!loading && !loadError && records.length > 0 && <TablePagination currentPage={currentPage} totalPages={totalPages} onPageChange={setPage} />}
         </section>
         {confirmingSubject && <StatusConfirmation subject={confirmingSubject} saving={statusSaving} close={() => setConfirmingSubject(null)} confirm={() => persistStatus(confirmingSubject, 'Inactive')} />}
