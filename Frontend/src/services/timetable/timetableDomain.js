@@ -30,7 +30,7 @@ export function decorateEntries(raw, sources) {
   return raw.map(row => ({ ...normalizeEntry(row, sources.sections), subjectName: name('subjects', row.subjectId), facultyName: name('faculty', row.facultyId), sectionName: name('sections', row.sectionId), subjectCode: sources.subjects.find(subject => same(subject.id, row.subjectId))?.subjectCode || '' }))
 }
 export function tableEntries(tables) {
-  return tables.flatMap(table => table.entries.map(row => ({ ...row, ...Object.fromEntries(['academicYearId', 'departmentId', 'courseId', 'branchId', 'semesterId', 'sectionId'].map(field => [field, table[field]])), timetableId: table.id, publicationStatus: table.publicationStatus, origin: 'local' })))
+  return tables.flatMap(table => table.entries.map(row => ({ ...row, ...Object.fromEntries(['academicYearId', 'departmentId', 'courseId', 'branchId', 'semesterId', 'sectionId'].map(field => [field, table[field]])), timetableId: table.id, publicationStatus: table.publicationStatus, calendar: table.planning?.calendar, origin: 'local' })))
 }
 export function validateTable(table, sources, occupied) {
   const issues = planningErrors(table.planning, sources, table, occupied).map(reason => ({ reason }))
@@ -52,7 +52,7 @@ export function availableSlots(form, table, sources, occupied, limit = 5) {
   if (!room || !suitableRoom(requirement.subject, room)) return []
   const result = []
   for (const dayOfWeek of table.planning.calendar.workingDays) for (const block of periodSessions(table.planning.periods, requirement.blockSize)) {
-    const candidate = { ...form, sectionId: table.sectionId, dayOfWeek, timetableSlotId: block[0].id, startTime: block[0].startTime, endTime: block.at(-1).endTime }
+    const candidate = { ...form, calendar: table.planning.calendar, sectionId: table.sectionId, dayOfWeek, timetableSlotId: block[0].id, startTime: block[0].startTime, endTime: block.at(-1).endTime }
     if (!conflictsFor(candidate, occupied).length && !entryPlanningErrors(candidate, table.planning, sources, table, occupied).length) result.push(candidate)
     if (result.length === limit) return result
   }

@@ -3,6 +3,7 @@ import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import vm from 'node:vm'
 import * as utils from '../utils/timetableUtils.js'
+import { timetableDateErrors } from '../utils/timetableSemester.js'
 import * as periods from '../utils/timetablePeriods.js'
 
 const source = readFileSync(new URL('./backendTimetableService.js', import.meta.url), 'utf8').replace(/^import .*$/gm, '').replaceAll('export ', '')
@@ -26,7 +27,7 @@ function setup(failPath = '') {
     return {}
   }]))
   const lifecycle = Object.fromEntries([['generate', 'generate'], ['generateMissing', 'generate-missing'], ['regenerate', 'regenerate']].map(([name, suffix]) => [name, ({ timetableId }, payload) => api.post(`/timetables/${timetableId}/${suffix}`, payload)]))
-  const context = vm.createContext({ ...utils, ...periods, api, lifecycle, timetableService: {} })
+  const context = vm.createContext({ ...utils, ...periods, timetableDateErrors, api, lifecycle, timetableService: {} })
   vm.runInContext(`${source}\nthis.service = backendTimetableService; this.normalize = normalizeTimetable`, context)
   return { ...context, calls }
 }
@@ -75,7 +76,21 @@ test('generation preserves endpoint semantics and validation displays server rea
 })
 test('backend failures propagate and stop the workflow instead of local success', async () => {
   const { service, calls } = setup('/periods')
-  await assert.rejects(service.setup(scope, 'CSE A', {}), /Backend failure/)
+  await assert.rejects(service.setup(scope, 'CSE A', { calendar: { startDate: '2026-09-01', endDate: '2026-12-31' } }), /Backend failure/)
   assert.equal(calls.length, 1)
   await assert.rejects(service.detail('local-uuid'), /valid backend/)
+})
+
+test('absent master validity remains absent rather than borrowing academic dates', () => {
+  const { normalize } = setup()
+  const table = normalize({ ...detail, timetable: { ...detail.timetable, effectiveFrom: null, effectiveTo: null } }, [], { academicYearStartDate: '2026-01-01', academicYearEndDate: '2026-12-31' }, [])
+  assert.equal(table.planning.calendar.startDate, '')
+  assert.equal(table.planning.calendar.endDate, '')
+})
+test('invalid timetable validity fails before any API mutations', async () => {
+  for (const dates of [{}, { startDate: '2026-10-06', endDate: '2026-10-06' }, { startDate: '2026-11-06', endDate: '2026-10-06' }]) {
+    const { service, calls } = setup()
+    await assert.rejects(service.setup(scope, 'CSE A', { calendar: dates }), /[Tt]imetable/)
+    assert.equal(calls.length, 0)
+  }
 })

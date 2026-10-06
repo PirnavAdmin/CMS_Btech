@@ -384,7 +384,7 @@ const request = async (url, options = {}, retried = false, bypassDedupe = false,
     }
     if (response.status >= 500) {
       if (!suppressApiFailureNotice) notifyApiUnavailable({ status: response.status })
-      const error = new Error(GENERIC_ERROR_MESSAGE)
+      const error = new Error(url.includes('/api/v1/timetable-management') ? validationMessage(body) || GENERIC_ERROR_MESSAGE : GENERIC_ERROR_MESSAGE)
       error.status = response.status
       error.backendMessage = validationMessage(body)
       error.correlationId = typeof body?.correlationId === 'string' ? body.correlationId : undefined
@@ -399,7 +399,8 @@ const request = async (url, options = {}, retried = false, bypassDedupe = false,
       422: 'Some submitted values are invalid.',
       500: GENERIC_ERROR_MESSAGE,
     }[response.status] || 'The request could not be completed.'
-    const error = new Error(userErrorMessage(validationMessage(body) || fallback, response.status))
+    const backendMessage = validationMessage(body) || fallback
+    const error = new Error(url.includes('/api/v1/timetable-management') ? backendMessage : userErrorMessage(backendMessage, response.status))
     error.status = response.status
     throw error
   }

@@ -1,6 +1,6 @@
 import { DAYS, key, same, active, matchesScope, eligibleSubjects, eligibleFaculty, validTime, timeMinutes, overlaps, conflictsFor, roomKey } from './timetableUtils.js'
 import { isTeachingPeriod, teachingPeriods, periodSetupErrors, periodSessions } from './timetablePeriods.js'
-import { semesterPeriod, semesterPlanning } from './timetableSemester.js'
+import { semesterPeriod, timetableDateErrors } from './timetableSemester.js'
 
 export const WEEKDAYS = [...DAYS, 'SUNDAY']
 export const dateKey = value => key(value).slice(0, 10)
@@ -13,11 +13,11 @@ export function calendarBounds(sources, scope) {
   return { startDate, endDate }
 }
 
-// Explicit local exceptions are used until the backend supplies a calendar.
+// Calendar exceptions filter occurrences without changing the weekly schedule.
 export function workingDate(date, calendar) {
   if (!validDate(date)) return { working: false, reason: 'Invalid date' }
   if (!calendar?.reviewed || !validDate(calendar.startDate) || !validDate(calendar.endDate)) return { working: false, reason: 'Calendar has not been configured and reviewed' }
-  if (date < calendar.startDate || date > calendar.endDate) return { working: false, reason: 'Outside academic / semester dates' }
+  if (date < calendar.startDate || date > calendar.endDate) return { working: false, reason: 'Outside timetable validity period' }
   if ((calendar.holidays || []).includes(date)) return { working: false, reason: 'Holiday / non-working date' }
   if (!(calendar.workingDays || []).includes(weekday(date))) return { working: false, reason: 'Non-working weekday' }
   return { working: true, reason: '' }
@@ -73,12 +73,13 @@ export function subjectRequirements(sources, scope, overrides = {}) {
 }
 
 export function planningErrors(config, sources, scope, entries = []) {
-  config = semesterPlanning(config, sources, scope)
   const errors = [], calendar = config?.calendar, periods = config?.periods || []
   const period = semesterPeriod(sources, scope)
   errors.push(...period.errors)
   if (!calendar?.reviewed) errors.push('Review the working calendar and confirm holidays before generation or publication.')
-  if (period.valid) {
+  const dateErrors = timetableDateErrors(calendar)
+  errors.push(...dateErrors)
+  if (!dateErrors.length) {
     if (!calendarDays(calendar).length) errors.push('No working dates exist in the reviewed calendar (maximum range: two years).')
   }
   if (!calendar?.workingDays?.length || calendar.workingDays.some(day => !WEEKDAYS.includes(day))) errors.push('Select valid working weekdays.')
@@ -91,9 +92,8 @@ export function planningErrors(config, sources, scope, entries = []) {
 
 export function entryPlanningErrors(row, config, sources, scope, allEntries = []) {
   if (!config) return [] // Legacy manual drafts are still readable; publish requires a reviewed plan.
-  config = semesterPlanning(config, sources, scope)
-  const errors = [], days = new Set(calendarDays(config.calendar).map(weekday))
-  if (!days.has(row.dayOfWeek)) errors.push('This day has no working dates in the selected calendar.')
+  const errors = [], days = new Set(config.calendar?.workingDays || [])
+  if (!days.has(row.dayOfWeek)) errors.push('This day is not selected in the timetable working weekdays.')
   const periods = teachingPeriods(config.periods).filter(period => timeMinutes(period.startTime) >= timeMinutes(row.startTime) && timeMinutes(period.endTime) <= timeMinutes(row.endTime)).sort((a, b) => timeMinutes(a.startTime) - timeMinutes(b.startTime))
   if ((config.periods || []).some(period => !isTeachingPeriod(period) && overlaps(period, row))) errors.push('Classes cannot overlap Break or Lunch.')
   if (!periods.length || timeMinutes(periods[0].startTime) !== timeMinutes(row.startTime) || timeMinutes(periods.at(-1).endTime) !== timeMinutes(row.endTime) || periods.some((period, index) => index && timeMinutes(periods[index - 1].endTime) !== timeMinutes(period.startTime))) errors.push('Class times must match one period or consecutive configured periods.')
@@ -127,11 +127,10 @@ export function schedulingIssues(sources, scope, config, scheduled) {
 // Deterministic constrained-first placement, preserving every existing manual row.
 // Exhaustion is reported, never interpreted as proof that no solution can exist.
 export function generateTimetable({ scope, sources, config, existing = [], occupied = [], references = occupied, makeId = () => crypto.randomUUID() }) {
-  config = semesterPlanning(config, sources, scope, true)
   const errors = planningErrors(config, sources, scope, references)
   if (errors.length) return { entries: existing, added: 0, issues: errors.map(reason => ({ subjectId: '', subjectName: 'Planning settings', reason })) }
   const entries = [...existing], rooms = roomOptions(sources, references).filter(row => config.rooms.includes(row.value))
-  const days = [...new Set(calendarDays(config.calendar).map(weekday))].sort((a, b) => WEEKDAYS.indexOf(a) - WEEKDAYS.indexOf(b))
+  const days = [...new Set(config.calendar.workingDays)].sort((a, b) => WEEKDAYS.indexOf(a) - WEEKDAYS.indexOf(b))
   const requirements = subjectRequirements(sources, scope, config.requirements).sort((a, b) => a.faculty.length - b.faculty.length || b.blockSize - a.blockSize || key(a.subject.id).localeCompare(key(b.subject.id)))
   for (const item of requirements) {
     if (!Number.isInteger(item.periodsPerWeek) || item.periodsPerWeek < 1 || !Number.isInteger(item.blockSize) || item.blockSize < 1 || item.periodsPerWeek % item.blockSize || !item.faculty.length) continue
@@ -146,7 +145,7 @@ export function generateTimetable({ scope, sources, config, existing = [], occup
           for (const faculty of item.faculty) {
             for (const room of rooms) {
               if (!suitableRoom(item.subject, room)) continue
-              const candidate = { subjectId: key(item.subject.id), facultyId: key(faculty.id), sectionId: scope.sectionId, dayOfWeek, startTime: block[0].startTime, endTime: block.at(-1).endTime, timetableSlotId: block[0].id, periodIds: block.map(row => row.id), classroom: room.classroom, ...(room.roomId ? { roomId: room.roomId } : {}), entryType: item.subject.subjectType || '', generated: true }
+              const candidate = { calendar: config.calendar, subjectId: key(item.subject.id), facultyId: key(faculty.id), sectionId: scope.sectionId, dayOfWeek, startTime: block[0].startTime, endTime: block.at(-1).endTime, timetableSlotId: block[0].id, periodIds: block.map(row => row.id), classroom: room.classroom, ...(room.roomId ? { roomId: room.roomId } : {}), entryType: item.subject.subjectType || '', generated: true }
               if (!conflictsFor(candidate, [...occupied, ...entries.map(row => ({ ...row, sectionId: scope.sectionId }))]).length) { chosen = candidate; break }
             }
             if (chosen) break

@@ -43,3 +43,11 @@ test('conflicts retain the real HTTP status and backend reason', async () => {
     await assert.rejects(api.post('/timetables/8/publish'), error => error.status === 409 && error.message.includes('Faculty overlaps'))
   } finally { globalThis.fetch = previous }
 })
+
+for (const status of [400, 500]) test(`timetable API preserves actual ${status} response without fallback`, async () => {
+  const previous = globalThis.fetch
+  try {
+    globalThis.fetch = async () => Response.json({ success: false, message: 'Backend timetable operation rejected.' }, { status })
+    await assert.rejects(api.post('/timetables/8/generate'), error => error.status === status && error.message === 'Backend timetable operation rejected.')
+  } finally { globalThis.fetch = previous }
+})
