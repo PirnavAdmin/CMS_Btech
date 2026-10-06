@@ -39,6 +39,29 @@ import TimetableManagement from './pages/timetable/TimetableManagement'
 import ElectiveManagement from './pages/elective-management/ElectiveManagement'
 import { AcademicProvider } from './context/AcademicContext'
 import './styles/erp-theme.css'
+import ExaminationSetup from './pages/examinations/examination-setup/ExaminationSetup'
+import ExaminationList from './pages/examinations/examination-setup/ExaminationList'
+import CreateExamination from './pages/examinations/examination-setup/CreateExamination'
+import ExamType from './pages/examinations/examination-setup/ExamType'
+import ExamSchedule from './pages/examinations/examination-setup/ExamSchedule'
+import ExamRules from './pages/examinations/examination-setup/ExamRules'
+import ExamTimetable from './pages/examinations/exam-timetable/ExamTimetable'
+import CreateExamTimetable from './pages/examinations/exam-timetable/CreateExamTimetable'
+import ExamScheduleList from './pages/examinations/exam-timetable/ExamScheduleList'
+import DepartmentExamSchedule from './pages/examinations/exam-timetable/DepartmentExamSchedule'
+import StudentExamSchedule from './pages/examinations/exam-timetable/StudentExamSchedule'
+import HallAllocation from './pages/examinations/exam-timetable/HallAllocation'
+import MarksManagement from './pages/examinations/marks-management/MarksManagement'
+import MarksEntry from './pages/examinations/marks-management/MarksEntry'
+import BulkMarksUpload from './pages/examinations/marks-management/BulkMarksUpload'
+import EditMarks from './pages/examinations/marks-management/EditMarks'
+import StudentMarks from './pages/examinations/marks-management/StudentMarks'
+import SubjectMarksReport from './pages/examinations/marks-management/SubjectMarksReport'
+import MarksApproval from './pages/examinations/marks-management/MarksApproval'
+import GradeResultManagement from './pages/examinations/grade-result-management/GradeResultManagement'
+import GradeConfiguration from './pages/examinations/grade-result-management/GradeConfiguration'
+import ResultGeneration from './pages/examinations/grade-result-management/ResultGeneration'
+import StudentResult from './pages/examinations/grade-result-management/StudentResult'
 import './App.css'
 import './styles/details-layout.css'
 import './styles/view-cards.css'
@@ -194,6 +217,32 @@ export default function App() {
               <Route path="/attendance/*" element={<Navigate to="/student-management/attendance" replace />} />
               <Route path="/marks/*" element={<Marks />} />
               <Route path="/results/*" element={<Results />} />
+
+              <Route element={<ProtectedRoute allowedRoles={[ROLES.ADMIN]} />}>
+              <Route path="/examination-setup/*" element={<ExaminationSetup />} />
+              <Route path="/examination-setup/examination-list" element={<ExaminationList />} />
+              <Route path="/examination-setup/create-examination" element={<CreateExamination />} />
+              <Route path="/examination-setup/exam-type" element={<ExamType />} />
+              <Route path="/examination-setup/exam-schedule" element={<ExamSchedule />} />
+              <Route path="/examination-setup/exam-rules" element={<ExamRules />} />
+              <Route path="/exam-timetable/*" element={<ExamTimetable />} />
+              <Route path="/exam-timetable/create-exam-timetable" element={<CreateExamTimetable />} />
+              <Route path="/exam-timetable/exam-schedule-list" element={<ExamScheduleList />} />
+              <Route path="/exam-timetable/department-exam-schedule" element={<DepartmentExamSchedule />} />
+              <Route path="/exam-timetable/student-exam-schedule" element={<StudentExamSchedule />} />
+              <Route path="/exam-timetable/hall-allocation" element={<HallAllocation />} />
+              <Route path="/marks-management/*" element={<MarksManagement />} />
+              <Route path="/marks-management/marks-entry" element={<MarksEntry />} />
+              <Route path="/marks-management/bulk-marks-upload" element={<BulkMarksUpload />} />
+              <Route path="/marks-management/edit-marks" element={<EditMarks />} />
+              <Route path="/marks-management/student-marks" element={<StudentMarks />} />
+              <Route path="/marks-management/subject-marks-report" element={<SubjectMarksReport />} />
+              <Route path="/marks-management/marks-approval" element={<MarksApproval />} />
+              <Route path="/grade-result-management/*" element={<GradeResultManagement />} />
+              <Route path="/grade-result-management/grade-configuration" element={<GradeConfiguration />} />
+              <Route path="/grade-result-management/result-generation" element={<ResultGeneration />} />
+              <Route path="/grade-result-management/student-result" element={<StudentResult />} />
+              </Route>
 
               {/* Administration - Admin Only */}
               <Route path="/college-institution-management" element={<CollegeInstitutionManagement />} />

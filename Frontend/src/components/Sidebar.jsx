@@ -165,6 +165,11 @@ export default function Sidebar({ open = false, onClose = () => {}, collapsed = 
           <Item to="/faculty/payroll" icon={FiCreditCard} tone="gold" onNavigate={onClose}>Faculty Payroll</Item>
           <p className="sidebar-section-label">Curriculum & Subjects</p>
           {curriculumLinks.map(link => <Item {...link} key={link.to} onNavigate={onClose}>{link.label}</Item>)}
+          <p className="sidebar-section-label">Examinations & Results</p>
+          <Item to="/examination-setup" icon={FiFileText} tone="blue" onNavigate={onClose} activeWhen={pathname => pathname.startsWith('/examination-setup')}>Examination Setup</Item>
+          <Item to="/exam-timetable" icon={FiCalendar} tone="orange" onNavigate={onClose} activeWhen={pathname => pathname.startsWith('/exam-timetable')}>Exam Timetable</Item>
+          <Item to="/marks-management" icon={FiEdit3} tone="green" onNavigate={onClose} activeWhen={pathname => pathname.startsWith('/marks-management')}>Marks Management</Item>
+          <Item to="/grade-result-management" icon={FiAward} tone="purple" onNavigate={onClose} activeWhen={pathname => pathname.startsWith('/grade-result-management')}>Grade System & Result Management</Item>
           <p className="sidebar-section-label">Campus Operations</p>
           <Item to="/marks" icon={FiEdit3} tone="orange" onNavigate={onClose}>Marks</Item>
           <Item to="/results" icon={FiBarChart2} tone="purple" onNavigate={onClose}>Results</Item>

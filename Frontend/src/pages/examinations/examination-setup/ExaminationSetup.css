@@ -1,0 +1,5 @@
+.examination-setup-page { display: grid; gap: 24px; min-width: 0; }
+.examination-setup-page__screens { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; }
+.examination-setup-page__screen { display: block; padding: 24px; border: 1px solid var(--border); border-radius: 12px; background: var(--surface); color: var(--text-primary); text-decoration: none; font-weight: 600; }
+.examination-setup-page__screen:hover { border-color: var(--brand); background: var(--surface-soft); }
+.examination-setup-page__screen:focus-visible { outline: 2px solid var(--brand); outline-offset: 3px; }
