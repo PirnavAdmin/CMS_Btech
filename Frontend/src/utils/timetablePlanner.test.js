@@ -9,7 +9,7 @@ const sources = { years: [{ id: '1', startDate: '2026-01-01', endDate: '2026-12-
 const config = { calendar: { startDate: '2026-09-01', endDate: '2026-12-15', workingDays: ['MONDAY', 'TUESDAY'], holidays: ['2026-09-07'], reviewed: true }, periods: [{ id: 'p1', startTime: '09:00', endTime: '10:00' }, { id: 'p2', startTime: '10:00', endTime: '11:00' }], rooms: ['text:room 1'], requirements: {} }
 const generate = (options = {}) => { let n = 0; return generateTimetable({ scope, sources, config, makeId: () => `entry-${++n}`, ...options }) }
 
-test('calendar uses intersection of year and semester and excludes holidays / weekends', () => {
+test('semester reference dates are informational; timetable calendar excludes holidays / weekends', () => {
   assert.deepEqual(calendarBounds(sources, scope), { startDate: '2026-09-01', endDate: '2026-12-15' })
   assert.equal(workingDate('2026-09-07', config.calendar).working, false)
   assert.equal(workingDate('2026-09-06', config.calendar).working, false)
@@ -60,16 +60,17 @@ test('consecutive lab sessions respect period adjacency and room types', () => {
 })
 test('all-holiday weekdays have no occurrences and invalid plans block generation', () => {
   const calendar = { ...config.calendar, startDate: '2026-09-07', endDate: '2026-09-08', holidays: ['2026-09-07'], workingDays: ['MONDAY', 'TUESDAY'] }
-  assert.ok(generate({ config: { ...config, calendar } }).entries.every(row => row.dayOfWeek === 'TUESDAY'))
+  assert.ok(generate({ config: { ...config, calendar } }).entries.some(row => row.dayOfWeek === 'MONDAY'))
+  assert.equal(classesOnDate(generate({ config: { ...config, calendar } }).entries, '2026-09-07', () => calendar).length, 0)
   const invalid = { ...config, periods: [config.periods[0], { id: 'bad', startTime: '09:30', endTime: '10:30' }] }
   assert.match(planningErrors(invalid, sources, scope).join(), /overlap/)
   assert.equal(generate({ config: invalid }).added, 0)
-  assert.match(planningErrors({ ...config, calendar: { ...config.calendar, endDate: '2027-01-01' } }, sources, scope).join(), /within/)
+  assert.deepEqual(planningErrors({ ...config, calendar: { ...config.calendar, endDate: '2027-02-01' } }, sources, scope), [])
 })
 test('manual edits outside periods, rooms or working weekdays are blocked', () => {
   const row = generate().entries[0]
   assert.equal(entryPlanningErrors(row, config, sources, scope).length, 0)
-  assert.match(entryPlanningErrors({ ...row, dayOfWeek: 'SUNDAY' }, config, sources, scope).join(), /no working/)
+  assert.match(entryPlanningErrors({ ...row, dayOfWeek: 'SUNDAY' }, config, sources, scope).join(), /not selected/)
   assert.match(entryPlanningErrors({ ...row, endTime: '10:15' }, config, sources, scope).join(), /Class times/)
   assert.match(entryPlanningErrors({ ...row, classroom: 'Invented' }, config, sources, scope).join(), /room/)
   assert.ok(schedulingIssues(sources, scope, config, [row]).length)
@@ -103,4 +104,24 @@ test('known classroom types distinguish theory rooms from laboratories', () => {
   const result = generate({ sources: classroom })
   assert.equal(result.added, 2)
   assert.match(entryPlanningErrors(result.entries[0], config, theory, scope).join(), /suitable classroom or lab/)
+})
+
+for (const dates of [{}, { startDate: null, endDate: null }, { startDate: 'invalid', endDate: '2026-02-30' }, { startDate: '2027-01-01', endDate: '2027-02-01' }]) {
+  test(`semester dates never overwrite timetable validity: ${JSON.stringify(dates)}`, () => {
+    const changed = { ...sources, semesters: [{ id: '4', academicYearId: '1', ...dates }], years: [{ id: '1' }] }
+    assert.deepEqual(planningErrors(config, changed, scope), [])
+    assert.equal(generate({ sources: changed }).added, 2)
+    assert.equal(config.calendar.startDate, '2026-09-01')
+    assert.equal(config.calendar.endDate, '2026-12-15')
+  })
+}
+for (const calendar of [{ startDate: '', endDate: '' }, { startDate: '2026-02-30', endDate: '2026-03-10' }, { startDate: '2026-10-10', endDate: '2026-10-10' }, { startDate: '2026-10-11', endDate: '2026-10-10' }]) {
+  test(`invalid timetable validity blocks generation: ${JSON.stringify(calendar)}`, () => {
+    const invalid = { ...config, calendar: { ...config.calendar, ...calendar } }
+    assert.match(planningErrors(invalid, sources, scope).join(), /[Tt]imetable/)
+    assert.equal(generate({ config: invalid }).added, 0)
+  })
+}
+test('stale semester academic year remains a context error', () => {
+  assert.match(planningErrors(config, { ...sources, semesters: [{ id: '4', academicYearId: '99' }] }, scope).join(), /does not belong/)
 })

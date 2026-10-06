@@ -43,3 +43,10 @@ test('backend payload contains only Swagger fields and refuses temporary IDs', (
   assert.deepEqual(Object.keys(payload).sort(), ['timetableId', 'timetableSlotId', 'facultyId', 'subjectId', 'sectionId', 'dayOfWeek', 'classroom', 'entryType', 'status'].sort())
   assert.throws(() => entryPayload({ ...base, timetableId: 'local-uuid' }), /valid/)
 })
+
+test('weekly resource conflicts respect independently dated timetable versions', () => {
+  const base = { id: 'a', facultyId: '7', sectionId: '5', classroom: 'A', dayOfWeek: 'MONDAY', startTime: '09:00', endTime: '10:00', effectiveFrom: '2026-10-06', effectiveTo: '2026-10-30' }
+  assert.equal(conflictsFor({ ...base, id: 'b', effectiveFrom: '2026-11-02', effectiveTo: '2026-11-20' }, [base]).length, 0)
+  assert.equal(conflictsFor({ ...base, id: 'b', effectiveFrom: '2026-10-20', effectiveTo: '2026-11-20' }, [base]).length, 1)
+  assert.equal(conflictsFor({ ...base, id: 'b', effectiveFrom: null, effectiveTo: null }, [base]).length, 1)
+})

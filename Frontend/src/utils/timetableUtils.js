@@ -21,10 +21,22 @@ export function normalizeEntry(row, sections = []) {
   return { ...row, ...Object.fromEntries(academicFields.map(field => [field, row[field] ?? section?.[field] ?? ''])), id: row.timetableEntryId ?? row.id, dayOfWeek: key(row.dayOfWeek).toUpperCase(), startTime: row.startTime ?? row.timetableSlot?.startTime ?? '', endTime: row.endTime ?? row.timetableSlot?.endTime ?? '', classroom: key(row.classroom) }
 }
 
+// Missing legacy validity is conservative; known disjoint periods cannot conflict.
+export function validityOverlaps(a, b) {
+  const range = row => {
+    const start = key(row.effectiveFrom || row.calendar?.startDate || row.planning?.calendar?.startDate).slice(0, 10)
+    const end = key(row.effectiveTo || row.calendar?.endDate || row.planning?.calendar?.endDate).slice(0, 10)
+    const valid = value => /^\d{4}-\d{2}-\d{2}$/.test(value) && !Number.isNaN(Date.parse(`${value}T12:00:00Z`)) && new Date(`${value}T12:00:00Z`).toISOString().slice(0, 10) === value
+    return valid(start) && valid(end) && start < end ? { start, end } : null
+  }
+  const left = range(a), right = range(b)
+  return !left || !right || left.start <= right.end && right.start <= left.end
+}
+
 export function conflictsFor(candidate, entries) {
   const conflicts = []
   for (const row of entries) {
-    if (!active(row) || same(row.id, candidate.id) || key(row.dayOfWeek).toUpperCase() !== key(candidate.dayOfWeek).toUpperCase()) continue
+    if (!active(row) || !validityOverlaps(candidate, row) || same(row.id, candidate.id) || key(row.dayOfWeek).toUpperCase() !== key(candidate.dayOfWeek).toUpperCase()) continue
     const resources = []
     if (same(row.facultyId, candidate.facultyId)) resources.push('Faculty')
     if (same(row.sectionId, candidate.sectionId)) resources.push('Section')

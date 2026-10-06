@@ -2,6 +2,7 @@ import { timetableManagementApi as api } from '../api/apiEndpoints'
 import { timetableLifecycleApi as lifecycle } from '../api/timetableLifecycleApi'
 import { timetableService } from './timetableService'
 import { same, normalizeEntry, timeMinutes } from '../utils/timetableUtils'
+import { timetableDateErrors } from '../utils/timetableSemester'
 import { periodType, isTeachingPeriod } from '../utils/timetablePeriods'
 
 const id = value => {
@@ -35,7 +36,7 @@ export function normalizeTimetable(detail, periods, calendar, classrooms) {
       roomId: row.classroomId, classroom: row.classroomName || row.classroom, status: row.active,
       publicationStatus: String(table.status).toLowerCase(), origin: 'backend' })),
     planning: { periodMode: 'manual', periods: planningPeriods, rooms: classrooms.filter(row => row.active !== false).map(row => `id:${row.classroomId}`),
-      calendar: { startDate: date(table.effectiveFrom || calendar.academicYearStartDate), endDate: date(table.effectiveTo || calendar.academicYearEndDate),
+      calendar: { startDate: date(table.effectiveFrom), endDate: date(table.effectiveTo),
         workingDays: (calendar.workingDays || []).map(day => day.toUpperCase()), holidays: (calendar.holidays || []).map(row => date(row.date)), reviewed: calendar.reviewed === true },
       requirements: Object.fromEntries((detail.requirements || []).filter(row => row.periodsPerWeek > 0).map(row => [row.subjectId, { periodsPerWeek: row.periodsPerWeek, blockSize: row.blockSize }])) },
   }
@@ -66,21 +67,35 @@ export const backendTimetableService = {
     return Promise.all(rows(tables).map(table => this.detail(table.timetableId, rows(classrooms))))
   },
   async setup(scope, name, config, options = {}) {
+    const dateErrors = timetableDateErrors(config?.calendar)
+    if (dateErrors.length) throw new Error(dateErrors.join('\n'))
+    if (options.tableId && (await this.detail(options.tableId)).publicationStatus !== 'draft') throw new Error('Only draft timetable settings can be changed.')
     const academicYearId = id(scope.academicYearId)
     const existing = rows(await api.get('/periods', { academicYearId }))
-    // Periods and calendar are shared by the academic year; retain real period IDs.
-    const saved = []
-    for (const [index, row] of config.periods.entries()) {
-      const current = existing.find(item => same(item.periodId, row.periodId) || (!row.periodId && item.startTime?.slice(0, 5) === row.startTime.slice(0, 5) && item.endTime?.slice(0, 5) === row.endTime.slice(0, 5)))
-      const payload = { academicYearId, periodNumber: isTeachingPeriod(row) ? config.periods.slice(0, index + 1).filter(isTeachingPeriod).length : null,
-        periodName: row.name, startTime: row.startTime.slice(0, 5), endTime: row.endTime.slice(0, 5), periodType: periodType(row).toUpperCase(), displayOrder: index + 1, active: true }
-      const result = current ? await api.put(`/periods/${id(current.periodId)}`, payload) : await api.post('/periods', payload)
-      saved.push(id(result?.periodId ?? current?.periodId))
+    const masters = rows(await api.get('/timetables', { academicYearId }))
+    const published = masters.some(row => String(row.status).toUpperCase() === 'PUBLISHED')
+    if (published) {
+      const calendar = await api.get('/calendar', { academicYearId })
+      const activePeriods = existing.filter(row => row.active !== false).sort((a, b) => a.displayOrder - b.displayOrder)
+      const samePeriods = activePeriods.length === config.periods.length && activePeriods.every((row, index) => row.startTime?.slice(0, 5) === config.periods[index].startTime.slice(0, 5) && row.endTime?.slice(0, 5) === config.periods[index].endTime.slice(0, 5) && String(row.periodType || 'CLASS').toUpperCase() === periodType(config.periods[index]).toUpperCase())
+      const sorted = values => JSON.stringify([...values].sort())
+      const sameCalendar = calendar.reviewed === config.calendar.reviewed && sorted((calendar.workingDays || []).map(day => day.toUpperCase())) === sorted(config.calendar.workingDays) && sorted((calendar.holidays || []).map(row => date(row.date))) === sorted(config.calendar.holidays.filter(Boolean))
+      if (!samePeriods || !sameCalendar) throw new Error('Periods and calendar are shared by Academic Year. Changing them would affect published history. Backend version-specific period/calendar support is required.')
+    } else {
+      // Periods and calendar are shared by the academic year; retain real period IDs.
+      const saved = []
+      for (const [index, row] of config.periods.entries()) {
+        const current = existing.find(item => same(item.periodId, row.periodId) || (!row.periodId && item.startTime?.slice(0, 5) === row.startTime.slice(0, 5) && item.endTime?.slice(0, 5) === row.endTime.slice(0, 5)))
+        const payload = { academicYearId, periodNumber: isTeachingPeriod(row) ? config.periods.slice(0, index + 1).filter(isTeachingPeriod).length : null,
+          periodName: row.name, startTime: row.startTime.slice(0, 5), endTime: row.endTime.slice(0, 5), periodType: periodType(row).toUpperCase(), displayOrder: index + 1, active: true }
+        const result = current ? await api.put(`/periods/${id(current.periodId)}`, payload) : await api.post('/periods', payload)
+        saved.push(id(result?.periodId ?? current?.periodId))
+      }
+      for (const row of existing.filter(row => row.active !== false && !saved.includes(Number(row.periodId)))) await api.remove(`/periods/${id(row.periodId)}`)
+      await api.put('/periods/reorder', { academicYearId, periodIds: saved })
+      await api.put('/calendar', { academicYearId, reviewed: config.calendar.reviewed, workingDays: config.calendar.workingDays,
+        holidays: config.calendar.holidays.filter(Boolean).map(value => ({ date: timestamp(value), type: 'HOLIDAY', description: 'Non-working date' })) })
     }
-    for (const row of existing.filter(row => row.active !== false && !saved.includes(Number(row.periodId)))) await api.remove(`/periods/${id(row.periodId)}`)
-    await api.put('/periods/reorder', { academicYearId, periodIds: saved })
-    await api.put('/calendar', { academicYearId, reviewed: config.calendar.reviewed, workingDays: config.calendar.workingDays,
-      holidays: config.calendar.holidays.filter(Boolean).map(value => ({ date: timestamp(value), type: 'HOLIDAY', description: 'Non-working date' })) })
     const payload = { timetableName: name, effectiveFrom: timestamp(config.calendar.startDate), effectiveTo: timestamp(config.calendar.endDate) }
     let tableId = options.tableId
     if (tableId) await api.put(path(tableId), payload)

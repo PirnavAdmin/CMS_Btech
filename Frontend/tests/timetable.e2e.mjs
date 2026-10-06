@@ -6,7 +6,7 @@ import { join } from 'node:path'
 import { tmpdir } from 'node:os'
 import { createServer } from 'vite'
 import { fileURLToPath } from 'node:url'
-const server = process.env.TIMETABLE_TEST_URL ? null : await createServer({ root: fileURLToPath(new URL('../', import.meta.url)), define: { 'import.meta.env.VITE_TIMETABLE_DRAFT_ADAPTER': JSON.stringify('true') }, server: { host: '127.0.0.1', port: 5183, strictPort: true } })
+const server = process.env.TIMETABLE_TEST_URL ? null : await createServer({ root: fileURLToPath(new URL('../', import.meta.url)), define: { 'import.meta.env.VITE_TIMETABLE_DRAFT_ADAPTER': JSON.stringify('true') }, server: { host: '127.0.0.1', port: 5185, strictPort: true } })
 await server?.listen()
 const browser = await chromium.launch({ channel: 'msedge', headless: true })
 const context = await browser.newContext({ viewport: { width: 1440, height: 1000 } })
@@ -44,7 +44,7 @@ const button = name => page.getByRole('button', { name, exact: true })
 const choose = async (label, value) => { await button(label).click(); await page.getByRole('option', { name: value, exact: true }).click() }
 const stored = () => page.evaluate(() => JSON.parse(localStorage.getItem('pirnav-timetable-workflow-v2') || '[]'))
 try {
- await page.goto(process.env.TIMETABLE_TEST_URL || 'http://127.0.0.1:5183/timetable')
+ await page.goto(process.env.TIMETABLE_TEST_URL || 'http://127.0.0.1:5185/timetable')
  await expect(page.locator('.tt-dashboard-stats > div')).toHaveCount(4)
  await page.locator('.tt-command-search input').focus(); await expect(page.locator('.tt-command-search input')).toBeFocused()
  await page.locator('.tt-command-search input').fill('DBMS'); await page.locator('.tt-command-results button').filter({ hasText: 'DBMS' }).first().click()
@@ -59,7 +59,7 @@ try {
  // Live preview was intentionally removed from Daily Setup; timings are generated when saved.
  await expect(page.getByText('Holidays / Non-working Dates')).toHaveCount(0)
  await page.getByLabel('Timetable Start Date').fill('2026-09-01'); await page.getByLabel('Timetable End Date').fill('2026-12-15')
- await button('Continue to Subjects').click()
+ await expect(page.getByText('Semester dates are not configured.', { exact: false })).toBeVisible(); await button('Continue to Subjects').click()
  await page.getByLabel('Optional Seminar', { exact: true }).uncheck()
  await button('GENERATE ALL SELECTED SECTIONS').click()
  await expect(page.locator('.tt-section-tabs button')).toHaveCount(2)
@@ -101,7 +101,7 @@ try {
  await page.reload(); await expect(page.getByRole('heading', { name: 'Dr. Ravi' })).toBeVisible(); await expect(button('Timetable Builder')).toHaveCount(0)
  await button('Week').click(); await expect(page.locator('.tt-grid-scroll .tt-class')).toHaveCount(4)
  // Existing real timetable records use only the actual entry CRUD routes and IDs.
- backendEntries = [{ ...scope, sectionId: 6, timetableId: 800, timetableName: 'Backend timetable', timetableEntryId: 600, timetableSlotId: 900, subjectId: 8, facultyId: 10, classroom: 'Room 6', dayOfWeek: 'WEDNESDAY', startTime: '14:20', endTime: '15:10', status: true }]
+ backendEntries = [{ ...scope, sectionId: 6, timetableId: 800, timetableName: 'Backend timetable', effectiveFrom: '2026-09-01', effectiveTo: '2026-12-31', timetableEntryId: 600, timetableSlotId: 900, subjectId: 8, facultyId: 10, classroom: 'Room 6', dayOfWeek: 'WEDNESDAY', startTime: '14:20', endTime: '15:10', status: true }]
  await page.evaluate(() => localStorage.setItem('btech-user-role', 'admin')); await page.reload()
  await page.getByRole('button', { name: /Backend timetable/ }).click()
  await page.locator('.tt-grid-scroll .tt-class-details').first().click(); await choose('Day', 'THURSDAY'); await button('Save Draft Entry').click(); await expect(page.getByRole('dialog')).toHaveCount(0)
@@ -122,5 +122,5 @@ try {
  assert.deepEqual(errors, [])
  assert(!calls.some(call => call.path.includes('timetable-management')))
  console.log('PASS: cascade, dates/live periods, coordinated drafts, subjects, faculty drawer, manual move, Generate Missing, regeneration confirmation, validation, publish, faculty mapping, mobile/tablet/dark theme, persistence, API error, student exclusion.')
-} catch (error) { console.error((await page.locator('body').innerText()).slice(-5500)); throw error }
-finally { await browser.close(); await server?.close() }
+} catch (error) { console.error((await page.locator('body').innerText()).slice(-5500)); console.error(error); process.exitCode = 1 }
+finally { await Promise.race([browser.close(), new Promise(resolve => setTimeout(resolve, 3000))]); server?.httpServer?.closeAllConnections(); void server?.close(); process.exit(process.exitCode || 0) }
