@@ -177,6 +177,76 @@
   color: #ffffff !important;
 }
 
+/* Semester workflow surfaces and step labels use fixed light-theme colours. */
+:root[data-theme="dark"] #root .semester-management :is(.semester-stepper-wrap, .semester-schedule-header) {
+  border-color: #334155 !important;
+  background: #1e293b !important;
+}
+
+:root[data-theme="dark"] #root .semester-management .semester-stepper-wrap :is(.stepper-step-lbl, .stepper-title) {
+  color: #cbd5e1 !important;
+}
+
+:root[data-theme="dark"] #root .semester-management .semester-stepper-wrap .stepper-step-lbl { color: #94a3b8 !important; }
+:root[data-theme="dark"] #root .semester-management .semester-stepper-wrap .stepper-node.is-active .stepper-step-lbl,
+:root[data-theme="dark"] #root .semester-management .semester-stepper-wrap .stepper-node.is-active .stepper-title { color: #bfdbfe !important; }
+:root[data-theme="dark"] #root .semester-management .semester-stepper-wrap .stepper-node:hover:not(:disabled) { background: #26364b !important; }
+:root[data-theme="dark"] #root .semester-management .semester-stepper-wrap .stepper-line { background: #334155 !important; }
+:root[data-theme="dark"] #root .semester-management .semester-stepper-wrap .stepper-line.is-active { background: #1769c2 !important; }
+
+:root[data-theme="dark"] #root .semester-management .semester-schedule-table-wrap {
+  border-color: #334155 !important;
+  background: #141e2e !important;
+}
+
+:root[data-theme="dark"] #root .semester-management .semester-schedule-header {
+  border-bottom-color: #334155 !important;
+  color: #cbd5e1 !important;
+}
+
+:root[data-theme="dark"] #root .semester-management .semester-schedule-row {
+  border-bottom-color: #273549 !important;
+  background: transparent !important;
+}
+
+:root[data-theme="dark"] #root .semester-management .semester-schedule-row:hover { background: #1e293b !important; }
+:root[data-theme="dark"] #root .semester-management .semester-schedule-row .sem-name { color: #f1f5f9 !important; }
+:root[data-theme="dark"] #root .semester-management .semester-schedule-row .sem-year { color: #94a3b8 !important; }
+
+:root[data-theme="dark"] #root .semester-management .semester-date-input {
+  border-color: #475569 !important;
+  background: #1e293b !important;
+  color: #f1f5f9 !important;
+  color-scheme: dark;
+}
+
+:root[data-theme="dark"] #root .semester-management .timeline-table {
+  border-color: #334155 !important;
+  background: #141e2e !important;
+}
+
+:root[data-theme="dark"] #root .semester-management .timeline-table-head {
+  border-bottom-color: #334155 !important;
+  background: #1e293b !important;
+  color: #cbd5e1 !important;
+}
+
+:root[data-theme="dark"] #root .semester-management .timeline-row {
+  border-bottom-color: #273549 !important;
+  background: transparent !important;
+}
+
+:root[data-theme="dark"] #root .semester-management .timeline-cell-sem .sem-text-col strong,
+:root[data-theme="dark"] #root .semester-management .timeline-cell-dates .date-badge { color: #f1f5f9 !important; }
+:root[data-theme="dark"] #root .semester-management .timeline-cell-sem .sem-text-col small,
+:root[data-theme="dark"] #root .semester-management .timeline-cell-dates .date-pending { color: #94a3b8 !important; }
+
+:root[data-theme="dark"] #root .semester-management .timeline-count-tag {
+  border: 1px solid #36516c !important;
+  background: #19344d !important;
+  color: #bfdbfe !important;
+}
+
 /* Portalled dialogs and dropdowns are outside .page-content. */
 :root[data-theme="dark"] :is([role="dialog"], .searchable-select__menu) {
   background: var(--surface-raised) !important;
