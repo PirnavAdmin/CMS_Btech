@@ -1,5 +1,40 @@
 .marks-management-student-marks { display: grid; gap: 24px; min-width: 0; }
-.marks-management-student-marks__content { padding: 24px; border: 1px solid var(--border); border-radius: 12px; background: var(--surface); color: var(--text-primary); }
-.marks-management-student-marks__content h2 { margin: 0 0 12px; font-size: 18px; }
-.marks-management-student-marks__content p { color: var(--text-secondary); margin: 0 0 20px; }
-.marks-management-student-marks__content a { color: var(--brand); }
+.student-marks-card { min-width: 0; overflow: visible; }
+.student-marks-card__header { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding-bottom: 14px; }
+.student-marks-count { flex: 0 0 auto; padding: 7px 11px; border-radius: 999px; background: var(--brand-soft, #eaf3ff); color: var(--brand); font-size: 12px; font-weight: 700; }
+.student-marks-student-picker { display: grid; grid-template-columns: 42px minmax(220px, 1fr); align-items: center; gap: 12px; margin: 0 20px 14px; padding: 14px; border: 1px solid var(--border); border-radius: 10px; background: var(--surface-soft, #f7faff); }
+.student-marks-student-picker > svg { width: 42px; height: 42px; padding: 11px; box-sizing: border-box; border-radius: 9px; background: var(--brand-soft, #eaf3ff); color: var(--brand); }
+.student-marks-student-picker label { display: grid; gap: 6px; max-width: 620px; color: var(--text-secondary); font-size: 12px; font-weight: 650; }
+.student-marks-student-picker select { width: 100%; min-height: 42px; box-sizing: border-box; padding: 8px 11px; border: 1px solid var(--border); border-radius: 8px; background: var(--surface); color: var(--text-primary); font: inherit; font-size: 14px; }
+.student-marks-profile { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; margin: 0 20px 16px; }
+.student-marks-profile > div { display: grid; align-content: center; gap: 5px; min-width: 0; padding: 11px 12px; border: 1px solid var(--border); border-radius: 8px; background: var(--surface); }
+.student-marks-profile small { color: var(--text-secondary); font-size: 10px; font-weight: 700; text-transform: uppercase; }
+.student-marks-profile strong { overflow-wrap: anywhere; color: var(--text-primary); font-size: 13px; }
+.student-marks-error { margin: 0 20px 12px; color: var(--danger, #c62828); font-size: 13px; }
+.student-marks-filters { margin: 0 20px 16px; }
+.marks-management-student-marks .filter-disclosure.student-marks-filters { position: relative; z-index: 4; overflow: visible; }
+.student-marks-filters .export-control { z-index: 5; }
+.student-marks-filters .filter-disclosure__bar { justify-content: space-between; }
+.student-marks-filters .filter-disclosure__search { flex: 1 1 320px; justify-content: flex-start; }
+.student-marks-search-wrap { width: 100%; }
+.student-marks-search { display: flex; align-items: center; gap: 8px; width: min(100%, 460px); min-height: 40px; box-sizing: border-box; padding: 8px 11px; border: 1px solid var(--border); border-radius: 8px; background: var(--surface); color: var(--text-secondary); }
+.student-marks-search svg { flex: 0 0 auto; }
+.student-marks-search input { width: 100%; min-width: 0; border: 0; outline: 0; background: transparent; color: var(--text-primary); font: inherit; }
+.student-marks-filter { display: grid; gap: 5px; min-width: 170px; color: var(--text-secondary); font-size: 12px; font-weight: 600; }
+.student-marks-filter select { min-height: 38px; box-sizing: border-box; padding: 7px 10px; border: 1px solid var(--border); border-radius: 7px; background: var(--surface); color: var(--text-primary); font: inherit; }
+.student-marks-table-wrap { width: 100%; overflow-x: auto; }
+.student-marks-table { min-width: 2200px; }
+.student-marks-table th { white-space: nowrap; }
+.student-marks-table td { white-space: nowrap; }
+.student-marks-loading { margin: 0 20px 20px; color: var(--text-secondary); }
+@media (max-width: 900px) {
+  .student-marks-profile { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 600px) {
+  .student-marks-student-picker { grid-template-columns: 36px minmax(0, 1fr); margin-inline: 12px; padding: 11px; }
+  .student-marks-student-picker > svg { width: 36px; height: 36px; padding: 9px; }
+  .student-marks-profile { grid-template-columns: minmax(0, 1fr); margin-inline: 12px; }
+  .student-marks-filters { margin-inline: 12px; }
+  .student-marks-card__header { align-items: flex-start; flex-direction: column; }
+  .student-marks-filter { min-width: 140px; flex: 1 1 140px; }
+}
