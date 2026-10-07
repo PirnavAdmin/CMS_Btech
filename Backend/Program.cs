@@ -441,6 +441,14 @@ builder.Services.AddScoped<
     StudentProfileMainRepository>();
 
 
+builder.Services.AddScoped<
+    IMarksService,
+    MarksService>();
+
+builder.Services.AddScoped<
+    IMarksRepository,
+    MarksRepository>();
+
 // ============================================================
 // SERVICES
 // ============================================================
