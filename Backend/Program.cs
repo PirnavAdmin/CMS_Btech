@@ -449,6 +449,15 @@ builder.Services.AddScoped<
     IMarksRepository,
     MarksRepository>();
 
+builder.Services.AddScoped<
+    IFeeCollectionService,
+    FeeCollectionService>();
+
+builder.Services.AddScoped<
+    IFeeCollectionRepository,
+    FeeCollectionRepository>();
+
+
 // ============================================================
 // SERVICES
 // ============================================================
