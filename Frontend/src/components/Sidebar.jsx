@@ -1,11 +1,12 @@
 import { useEffect, useRef, useState } from 'react'
-import { NavLink, useLocation } from 'react-router-dom'
-import { FiAward, FiBarChart2, FiBook, FiBookOpen, FiBriefcase, FiCalendar, FiCheckCircle, FiCheckSquare, FiChevronDown, FiChevronLeft, FiChevronRight, FiCreditCard, FiEdit3, FiFileText, FiGitBranch, FiGrid, FiHome, FiLayers, FiShield, FiTrendingUp, FiUser, FiUserPlus, FiUsers, FiX } from 'react-icons/fi'
+import { Link, NavLink, useLocation } from 'react-router-dom'
+import { FiAward, FiBook, FiBookOpen, FiBriefcase, FiCalendar, FiCheckCircle, FiCheckSquare, FiChevronDown, FiChevronLeft, FiChevronRight, FiCreditCard, FiEdit3, FiFileText, FiGitBranch, FiGrid, FiHome, FiLayers, FiShield, FiTrendingUp, FiUser, FiUserPlus, FiUsers, FiX } from 'react-icons/fi'
 import { getUserRole } from '../auth/auth'
 import { ROLES } from '../auth/roles'
 import { useAcademic } from '../context/AcademicContext'
 import AcademicContextSelect from './AcademicContextSelect'
 import './Sidebar.css'
+import { feeNavigation, feeNavigationItem, isFeeRoute } from '../pages/fees/feeNavigation'
 import { collegeLogoValue } from '../utils/collegeLogo'
 import { cacheCollegeLogo, fetchCollegeLogo, getCollegeById, getCollegeLogoUrl, getColleges, isBackendCollegeLogo, readCachedCollegeLogo, unwrapCollegeRecord } from '../auth/collegeApi'
 
@@ -50,6 +51,13 @@ export default function Sidebar({ open = false, onClose = () => {}, collapsed = 
   const [collegeLogo, setCollegeLogo] = useState('')
   const examRoutesActive = pathname.startsWith('/examination-setup') || pathname.startsWith('/exam-timetable')
   const [examManagementOpen, setExamManagementOpen] = useState(examRoutesActive)
+  const feeRoutesActive = isFeeRoute(pathname)
+  const activeFeeItem = feeNavigationItem(pathname)
+  const [feeExpansion, setFeeExpansion] = useState(() => ({ pathname, open: feeRoutesActive }))
+  const feeManagementOpen = (feeRoutesActive && feeExpansion.pathname !== pathname) || feeExpansion.open
+  if (feeExpansion.pathname !== pathname) {
+    setFeeExpansion({ pathname, open: feeManagementOpen })
+  }
 
   useEffect(() => {
     if (examRoutesActive) setExamManagementOpen(true)
@@ -181,15 +189,17 @@ export default function Sidebar({ open = false, onClose = () => {}, collapsed = 
           </div>}
           <Item to="/marks-management" icon={FiEdit3} tone="green" onNavigate={onClose} activeWhen={pathname => pathname.startsWith('/marks-management')}>Marks Management</Item>
           <Item to="/grade-result-management" icon={FiAward} tone="purple" onNavigate={onClose} activeWhen={pathname => pathname.startsWith('/grade-result-management')}>Grade System & Result Management</Item>
-          <p className="sidebar-section-label">Campus Operations</p>
-          <Item to="/marks" icon={FiEdit3} tone="orange" onNavigate={onClose}>Marks</Item>
-          <Item to="/results" icon={FiBarChart2} tone="purple" onNavigate={onClose}>Results</Item>
           <p className="sidebar-section-label">Finance</p>
-          <Item to="/fees" icon={FiCreditCard} tone="gold" onNavigate={onClose}>Fee Structure</Item>
+          <button type="button" className={`sidebar-link sidebar-link--gold sidebar-disclosure sidebar-fee-parent ${feeRoutesActive ? 'is-module-active' : ''}`} title="Fee Management" aria-label="Fee Management" onClick={() => { if (collapsed) onToggleCollapse(); setFeeExpansion({ pathname, open: collapsed || !feeManagementOpen }) }} aria-expanded={!collapsed && feeManagementOpen} aria-controls="fee-management-links">
+            <FiCreditCard aria-hidden="true" /><span>Fee Management</span><FiChevronDown className="sidebar-disclosure__chevron" aria-hidden="true" />
+          </button>
+          {!collapsed && feeManagementOpen && <div className="sidebar-submenu sidebar-fee-submenu" id="fee-management-links">
+            {feeNavigation.map(item => <Link key={item.to} to={item.to} className={`sidebar-link ${activeFeeItem === item ? 'active' : ''}`} aria-current={activeFeeItem === item ? 'page' : undefined} onClick={onClose}><span>{item.label}</span></Link>)}
+          </div>}
           <p className="sidebar-section-label">Settings & Access</p>
           <Item to="/roles-designations" icon={FiShield} tone="purple" onNavigate={onClose}>Roles & Designations</Item>
         </>}
-        {[ROLES.FACULTY, ROLES.STUDENT].includes(userRole) && <><p className="sidebar-section-label">Academics</p><Item to="/my-subjects" icon={FiBookOpen} tone="blue" onNavigate={onClose}>My Subjects</Item>{userRole===ROLES.FACULTY&&<><Item to="/timetable" icon={FiCalendar} tone="orange" onNavigate={onClose}>My Timetable</Item><Item to="/student-management/attendance/take" icon={FiCheckSquare} tone="green" onNavigate={onClose}>Record Attendance</Item><Item to="/marks/entry" icon={FiEdit3} tone="orange" onNavigate={onClose}>Enter Marks</Item></>}</>}
+        {[ROLES.FACULTY, ROLES.STUDENT].includes(userRole) && <><p className="sidebar-section-label">Academics</p><Item to="/my-subjects" icon={FiBookOpen} tone="blue" onNavigate={onClose}>My Subjects</Item>{userRole===ROLES.FACULTY&&<><Item to="/timetable" icon={FiCalendar} tone="orange" onNavigate={onClose}>My Timetable</Item><Item to="/student-management/attendance/take" icon={FiCheckSquare} tone="green" onNavigate={onClose}>Record Attendance</Item></>}</>}
       </nav>
     </aside>
   </>
