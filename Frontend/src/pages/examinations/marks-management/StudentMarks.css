@@ -38,3 +38,17 @@
   .student-marks-card__header { align-items: flex-start; flex-direction: column; }
   .student-marks-filter { min-width: 140px; flex: 1 1 140px; }
 }
+
+.student-marks-student-field { position: relative; display: grid; gap: 6px; width: 100%; max-width: 620px; color: var(--text-secondary); font-size: 12px; font-weight: 650; }
+.student-marks-student-searchbox { display: flex; align-items: center; gap: 9px; min-height: 42px; box-sizing: border-box; padding: 0 11px; border: 1px solid var(--border); border-radius: 8px; background: var(--surface); color: var(--text-secondary); }
+.student-marks-student-searchbox:focus-within { border-color: var(--brand); box-shadow: var(--focus-ring); }
+.student-marks-student-searchbox svg { flex: 0 0 auto; }
+.student-marks-student-searchbox input { all: unset; display: block; box-sizing: border-box; width: 100%; min-width: 0; color: var(--text-primary); font: inherit; font-size: 14px; line-height: 1.35; }
+.student-marks-student-searchbox input::placeholder { color: var(--text-secondary); opacity: .75; }
+.student-marks-student-searchbox input:focus-visible { outline: 0; box-shadow: none; }
+.student-marks-student-caret { color: var(--text-secondary); font-size: 18px; }
+.student-marks-student-options { position: absolute; z-index: 20; top: calc(100% + 1px); left: 0; right: 0; max-height: 280px; overflow-y: auto; margin: 0; padding: 0; list-style: none; border: 1px solid #8b8b8b; background: #fff; box-shadow: 0 4px 10px rgba(15, 35, 65, .12); }
+.student-marks-student-options li button { display: flex; align-items: center; gap: 10px; width: 100%; min-height: 36px; padding: 7px 12px; border: 0; border-radius: 0; background: transparent; color: #12345b; font: inherit; font-size: 14px; font-weight: 400; text-align: left; cursor: pointer; }
+.student-marks-student-options li button strong { color: inherit; font-weight: 400; }
+.student-marks-student-options li button:hover, .student-marks-student-options li button:focus-visible { outline: 0; background: #1b66c9; color: #fff; }
+.student-marks-student-empty { padding: 10px 12px; color: var(--text-secondary); font-size: 13px; font-weight: 400; }
