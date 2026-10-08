@@ -51,6 +51,7 @@ import ExamScheduleList from './pages/examinations/exam-timetable/ExamScheduleLi
 import DepartmentExamSchedule from './pages/examinations/exam-timetable/DepartmentExamSchedule'
 import StudentExamSchedule from './pages/examinations/exam-timetable/StudentExamSchedule'
 import HallAllocation from './pages/examinations/exam-timetable/HallAllocation'
+import ExamConfiguration from './pages/examinations/exam-timetable/ExamConfiguration'
 import MarksManagement from './pages/examinations/marks-management/MarksManagement'
 import MarksEntry from './pages/examinations/marks-management/MarksEntry'
 import BulkMarksUpload from './pages/examinations/marks-management/BulkMarksUpload'
@@ -218,7 +219,17 @@ export default function App() {
               <Route path="/marks/*" element={<Marks />} />
               <Route path="/results/*" element={<Results />} />
 
+              <Route element={<ProtectedRoute allowedRoles={[ROLES.ADMIN, ROLES.STUDENT]} />}>
+                <Route path="/exam/student-schedule" element={<StudentExamSchedule />} />
+              </Route>
+
               <Route element={<ProtectedRoute allowedRoles={[ROLES.ADMIN]} />}>
+              <Route path="/exam/create" element={<CreateExamTimetable />} />
+              <Route path="/exam/department-schedule" element={<DepartmentExamSchedule />} />
+              <Route path="/exam/schedules" element={<ExamScheduleList />} />
+              <Route path="/exam/timetable" element={<ExamTimetable />} />
+              <Route path="/exam/hall-allocation" element={<HallAllocation />} />
+              <Route path="/exam/configuration" element={<ExamConfiguration />} />
               <Route path="/examination-setup/*" element={<ExaminationSetup />} />
               <Route path="/examination-setup/examination-list" element={<ExaminationList />} />
               <Route path="/examination-setup/create-examination" element={<CreateExamination />} />
