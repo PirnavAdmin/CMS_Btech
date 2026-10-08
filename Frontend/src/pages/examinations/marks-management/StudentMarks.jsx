@@ -8,6 +8,8 @@ import ExportMenu from '../../../components/ExportMenu'
 import TablePagination from '../../../components/TablePagination'
 import EmptyState from '../../../components/EmptyState'
 import resultsService from '../../../services/resultsService'
+import academicService from '../../../services/academicService'
+import { getExamTypes } from '../../../services/examService'
 import studentService from '../../../services/studentService'
 import './StudentMarks.css'
 
@@ -94,6 +96,9 @@ export default function StudentMarks() {
   const [semester, setSemester] = useState('')
   const [examType, setExamType] = useState('')
   const [page, setPage] = useState(1)
+  const [studentSearch, setStudentSearch] = useState('')
+  const [studentDropdownOpen, setStudentDropdownOpen] = useState(false)
+  const [lookupOptions, setLookupOptions] = useState({ academicYears: [], courses: [], branches: [], examTypes: [] })
 
   useEffect(() => {
     let active = true
@@ -108,8 +113,28 @@ export default function StudentMarks() {
     return () => { active = false }
   }, [])
 
+  useEffect(() => {
+    let active = true
+    Promise.allSettled([
+      academicService.getAcademicYears(false),
+      academicService.getCourses({}, false),
+      academicService.getBranches(null, false),
+      Promise.resolve(getExamTypes()),
+    ]).then(([years, courses, branches, exams]) => {
+      if (!active) return
+      setLookupOptions({
+        academicYears: years.status === 'fulfilled' && Array.isArray(years.value) ? years.value : [],
+        courses: courses.status === 'fulfilled' && Array.isArray(courses.value) ? courses.value : [],
+        branches: branches.status === 'fulfilled' && Array.isArray(branches.value) ? branches.value : [],
+        examTypes: exams.status === 'fulfilled' && Array.isArray(exams.value) ? exams.value : [],
+      })
+    })
+    return () => { active = false }
+  }, [])
+
   const studentOptions = useMemo(() => [...students].sort((left, right) => getStudentName(left).localeCompare(getStudentName(right))), [students])
   const selectedStudent = studentOptions.find(student => getStudentId(student) === selectedStudentId)
+  const matchingStudents = studentOptions.filter(student => (getStudentName(student) + ' ' + getRegistrationNumber(student)).toLowerCase().includes(studentSearch.trim().toLowerCase()))
   const studentRows = useMemo(() => {
     if (!selectedStudent) return []
     return resultSheets.flatMap((sheet, index) => (Array.isArray(sheet.records) ? sheet.records : [])
@@ -117,7 +142,34 @@ export default function StudentMarks() {
       .map(record => resultRow(sheet, record, selectedStudent, index)))
   }, [resultSheets, selectedStudent])
 
-  const optionsFor = key => [...new Set(studentRows.map(row => clean(row[key])).filter(Boolean))].sort((left, right) => left.localeCompare(right))
+  const optionsFor = key => {
+    if (key === 'semester') return Array.from({ length: 8 }, (_, index) => 'Semester ' + (index + 1))
+    const values = studentRows.map(row => row[key])
+    const add = value => { const label = clean(displayValue(value)); if (label) values.push(label) }
+    if (key === 'academicYear') {
+      lookupOptions.academicYears.forEach(item => add(firstValue(item.name, item.academicYearName, item.label)))
+      students.forEach(student => add(firstValue(student.academic?.academicYear, student.academicYear)))
+      resultSheets.forEach(sheet => add(firstValue(sheet.academicYear, sheet.academicYearName)))
+    }
+    if (key === 'course') {
+      lookupOptions.courses.forEach(item => add(firstValue(item.name, item.courseName, item.label)))
+      students.forEach(student => add(firstValue(student.academic?.course, student.academic?.courseName, student.course)))
+      resultSheets.forEach(sheet => add(firstValue(sheet.course, sheet.courseName)))
+    }
+    if (key === 'branch') {
+      lookupOptions.branches.forEach(item => add(firstValue(item.name, item.branchName, item.label)))
+      students.forEach(student => add(firstValue(student.academic?.branch, student.academic?.branchName, student.branch)))
+      resultSheets.forEach(sheet => add(firstValue(sheet.branch, sheet.branchName)))
+    }
+    if (key === 'examType') {
+      lookupOptions.examTypes.forEach(item => add(firstValue(item.name, item.examType, item.examTypeName, item.label, item)))
+      resultSheets.forEach(sheet => {
+      add(firstValue(sheet.examType, sheet.examName, sheet.examinationName))
+      ;(Array.isArray(sheet.records) ? sheet.records : []).forEach(record => add(firstValue(record.examType, record.assessmentType)))
+      })
+    }
+    return [...new Set(values.map(value => clean(displayValue(value))).filter(Boolean))].sort((left, right) => left.localeCompare(right))
+  }
   const filteredRows = useMemo(() => studentRows.filter(row => {
     const search = query.trim().toLowerCase()
     const matchesSearch = !search || `${row.subjectCode} ${row.subjectName} ${row.examType} ${row.assessmentType}`.toLowerCase().includes(search)
@@ -125,7 +177,7 @@ export default function StudentMarks() {
       && (!academicYear || row.academicYear === academicYear)
       && (!course || row.course === course)
       && (!branch || row.branch === branch)
-      && (!semester || row.semester === semester)
+      && (!semester || clean(row.semester).toLowerCase().replace(/^semester\s*/, '') === semester.toLowerCase().replace(/^semester\s*/, ''))
       && (!examType || row.examType === examType)
   }), [studentRows, query, academicYear, course, branch, semester, examType])
   const visibleRows = filteredRows.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)
@@ -165,7 +217,7 @@ export default function StudentMarks() {
 
           {!selectedStudent && <div className="student-marks-student-picker">
             <FiUser aria-hidden="true" />
-            <label><span>Student Name</span><select value={selectedStudentId} onChange={event => selectStudent(event.target.value)} disabled={loading || !studentOptions.length}><option value="">{loading ? 'Loading studentsâ€¦' : 'Select a student'}</option>{studentOptions.map(student => <option key={getStudentId(student)} value={getStudentId(student)}>{getStudentName(student)}{getRegistrationNumber(student) ? ` Â· ${getRegistrationNumber(student)}` : ''}</option>)}</select></label>
+            <div className="student-marks-student-field"><label htmlFor="student-marks-student-search">Student Name</label><div className="student-marks-student-searchbox"><FiSearch aria-hidden="true" /><input id="student-marks-student-search" type="text" role="combobox" aria-autocomplete="list" aria-expanded={studentDropdownOpen} aria-controls="student-marks-student-options" placeholder={loading ? 'Loading students…' : 'Search or select a student'} value={studentDropdownOpen ? studentSearch : selectedStudent ? (getStudentName(selectedStudent) + (getRegistrationNumber(selectedStudent) ? ' · ' + getRegistrationNumber(selectedStudent) : '')) : studentSearch} disabled={loading || !studentOptions.length} onFocus={() => { setStudentSearch(''); setStudentDropdownOpen(true) }} onClick={() => { if (!studentDropdownOpen) { setStudentSearch(''); setStudentDropdownOpen(true) } }} onChange={event => { setStudentSearch(event.target.value); setStudentDropdownOpen(true) }} onKeyDown={event => { if (event.key === 'Escape') setStudentDropdownOpen(false); if (event.key === 'Enter' && matchingStudents.length) { event.preventDefault(); selectStudent(getStudentId(matchingStudents[0])); setStudentDropdownOpen(false) } }} /><span className="student-marks-student-caret" aria-hidden="true">⌄</span></div>{studentDropdownOpen && <ul className="student-marks-student-options" id="student-marks-student-options" role="listbox" aria-label="Students">{matchingStudents.length ? matchingStudents.map(student => <li key={getStudentId(student)} role="option" aria-selected={getStudentId(student) === selectedStudentId}><button type="button" onClick={() => { selectStudent(getStudentId(student)); setStudentDropdownOpen(false); setStudentSearch('') }}><strong>{getStudentName(student)}</strong>{getRegistrationNumber(student) && <span>{getRegistrationNumber(student)}</span>}</button></li>) : <li className="student-marks-student-empty">No students match this search.</li>}</ul>}</div>
           </div>}
 
           {selectedStudent && <div className="student-marks-profile">
