@@ -60,6 +60,10 @@ import MarksApproval from './pages/examinations/marks-management/MarksApproval'
 import GradeResultManagement from './pages/examinations/grade-result-management/GradeResultManagement'
 import GradeConfiguration from './pages/examinations/grade-result-management/GradeConfiguration'
 import ResultGeneration from './pages/examinations/grade-result-management/ResultGeneration'
+import SemesterResult from './pages/examinations/grade-result-management/SemesterResult'
+import DepartmentResult from './pages/examinations/grade-result-management/DepartmentResult'
+import ConsolidatedMarksMemo from './pages/examinations/grade-result-management/ConsolidatedMarksMemo'
+import BacklogReport from './pages/examinations/grade-result-management/BacklogReport'
 import StudentResult from './pages/examinations/grade-result-management/StudentResult'
 import './App.css'
 import './styles/details-layout.css'
@@ -248,6 +252,10 @@ export default function App() {
               <Route path="/grade-result-management/*" element={<GradeResultManagement />} />
               <Route path="/grade-result-management/grade-configuration" element={<GradeConfiguration />} />
               <Route path="/grade-result-management/result-generation" element={<ResultGeneration />} />
+              <Route path="/grade-result-management/semester-result" element={<SemesterResult />} />
+              <Route path="/grade-result-management/department-result" element={<DepartmentResult />} />
+              <Route path="/grade-result-management/consolidated-marks-memo" element={<ConsolidatedMarksMemo />} />
+              <Route path="/grade-result-management/backlog-report" element={<BacklogReport />} />
               <Route path="/grade-result-management/student-result" element={<StudentResult />} />
               </Route>
 
