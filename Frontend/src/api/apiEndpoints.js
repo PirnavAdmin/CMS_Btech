@@ -1182,6 +1182,19 @@ export const studentFeeApi = {
   getSummary: async (id) => normalizeRecord(await request(API_ENDPOINTS.studentAdmissions.feeSummary(requiredId(id, 'Admission ID')))),
   getStructure: async (id) => normalizeRecord(await request(API_ENDPOINTS.studentAdmissions.feeStructure(requiredId(id, 'Admission ID')))),
 }
+
+// Contracts: Backend/DTOs/Fees/FeeCollectionDtos.cs. Reuse authentication,
+// refresh, error handling and request deduplication from the shared client.
+export const feeCollectionApi = {
+  dashboard: async params => (await request(withQuery(endpoint('/api/v1/fee-collection/dashboard'), params)))?.data,
+  pending: async params => (await request(withQuery(endpoint('/api/v1/fee-collection/pending'), params)))?.data,
+  history: async params => (await request(withQuery(endpoint('/api/v1/fee-collection/history'), params)))?.data,
+  fines: async params => (await request(withQuery(endpoint('/api/v1/fee-collection/fines'), params)))?.data,
+  collect: async payload => (await request(endpoint('/api/v1/fee-collection/payments'), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) }))?.data,
+  receipt: async id => (await request(endpoint(`/api/v1/fee-collection/receipts/${requiredId(id, 'Receipt ID')}`)))?.data,
+  createFine: async payload => (await request(endpoint('/api/v1/fee-collection/fines'), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) }))?.data,
+  waiveFine: async (id, payload) => (await request(endpoint(`/api/v1/fee-collection/fines/${requiredId(id, 'Fine ID')}/waive`), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) }))?.data,
+}
 export const studentApi = {
   getAll: async (params) => listData(await request(withQuery(API_ENDPOINTS.students.list, params))), search: async (params) => listData(await request(withQuery(API_ENDPOINTS.students.search, params))),
   getById: async (id) => normalizeStudent(await request(API_ENDPOINTS.students.detail(requiredId(id, 'Student ID')))),

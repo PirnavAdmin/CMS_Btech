@@ -25,11 +25,9 @@ import Settings from './pages/profile/Settings'
 import StudentAdmission from './pages/student-management/StudentAdmission/StudentAdmission'
 import StudentProfile from './pages/student-management/StudentProfile/StudentProfile'
 import StudentPromotion from './pages/student-management/StudentPromotion/StudentPromotion'
-import Fees from './pages/fees/FeeStructure'
+import Fees from './pages/fees/FeeManagement'
 import Attendance from './pages/attendance/Attendance'
 import AttendanceSessionDetails from './pages/attendance/AttendanceSessionDetails'
-import Marks from './pages/marks/Marks'
-import Results from './pages/results/Results'
 import FacultyManagement from './pages/faculty/FacultyManagement'
 import FacultyLeaveManagement from './pages/faculty/FacultyLeaveManagement'
 import Payroll from './pages/faculty/Payroll'
@@ -216,8 +214,6 @@ export default function App() {
               {/* Faculty / Operations backed modules */}
               {/* Retain the former URL as a safe bookmark redirect. */}
               <Route path="/attendance/*" element={<Navigate to="/student-management/attendance" replace />} />
-              <Route path="/marks/*" element={<Marks />} />
-              <Route path="/results/*" element={<Results />} />
 
               <Route element={<ProtectedRoute allowedRoles={[ROLES.ADMIN, ROLES.STUDENT]} />}>
                 <Route path="/exam/student-schedule" element={<StudentExamSchedule />} />
