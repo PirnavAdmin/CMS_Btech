@@ -46,7 +46,9 @@ Hostel, and Transport Fee Structures tabs. `/fees/legacy` redirects there for
 existing bookmarks; no legacy terminology or intermediate generic list is shown.
 The primary action creates the selected structure type. Academic creation opens
 the dedicated Add-screen wizard; Hostel and Transport retain their existing
-service-specific editors. Fee Components is a secondary Academic-tab action.
+service-specific editors. The configuration header shows only the contextual
+Create action; the Fee Component Master route remains available without a header
+shortcut. New wizard structures use a single Total Fee instead of master selection.
 Search and Export stay in each list header, and Filter reveals type-specific
 controls. The Academic list presents existing academic plans and wizard-created
 structures together without migrating either storage format or altering financial
@@ -84,9 +86,14 @@ The UI redesign does not change financial APIs or business workflows.
 
 Creating a fee structure opens `/fees/structures/create` inside the existing ERP
 layout, not a modal. Unassigned drafts use `/fees/structures/:structureId/edit`;
-duplicates and revisions use the same page-based editor. Its four-step workflow
-has inline academic validation, a compact component table with a focused component
-dialog, exact installment-allocation feedback, and a complete live preview derived
+duplicates and revisions use the same page-based editor. Its three-step workflow
+is Academic Setup (including Total Fee), Payment Plan, and Review & Publish.
+There is no Fee Components step or component-selection dialog. The single total
+uses the existing component-backed financial storage so allocation, collections,
+approval and assignment calculations remain unchanged. Existing detailed structures
+retain their original charges and refund rules; their total is read-only in this
+single-fee editor. The workflow has inline academic validation,
+exact installment-allocation feedback, and a complete live preview derived
 from the current form. The editor reuses Add College's card, natural-width scrolling
 tabs, form controls, footer actions, and Live Preview header. Tabs sit inside the left
 card above its fixed step header; only Back appears beside the page title, while
@@ -94,8 +101,8 @@ Save Draft remains a secondary footer action. Save & Next advances validated ste
 without persisting; Save Draft and Submit for Approval retain their existing behavior.
 On desktop, the form and preview stretch to identical heights within the available ERP
 viewport. Their bodies scroll independently; card headers and the form action
-footer remain visible. Preview sections cover academic applicability, component
-options, structure concessions, payment schedules, late-fee rules, totals, and
+footer remain visible. Preview sections cover academic applicability, total fee,
+structure concessions, payment schedules, late-fee rules, totals, and
 validation-derived readiness without changing the saved workflow status. Small
 screens stack equal-height cards with internal scrolling and normal page access.
 Save Draft returns to the structure list; Submit for Approval
