@@ -3,6 +3,7 @@ import { newestFirst } from '../../utils/newestFirst'
 import { showError } from '../../utils/toast'
 import useToastState from '../../hooks/useToastState'
 import React, { useState, useEffect, useMemo, useCallback } from 'react'
+import { useLocation } from 'react-router-dom'
 import {
   FiAward,
   FiBookOpen,
@@ -45,6 +46,7 @@ const RESULTS_COLUMNS = [
 ]
 
 export default function Results() {
+  const location = useLocation()
   const {
     activeAcademicYears,
     activeDepartments,
@@ -54,7 +56,7 @@ export default function Results() {
     getSectionsForScope,
   } = useAcademic()
 
-  const [activeTab, setActiveTab] = useState('directory') // 'directory' | 'entry' | 'transcripts'
+  const [activeTab, setActiveTab] = useState(() => location.state?.openMarksEntry ? 'entry' : 'directory') // 'directory' | 'entry' | 'transcripts'
   const [resultSheets, setResultSheets] = useCollegeState([])
   const [loading, setLoading] = useState(false)
   const [, setToast] = useToastState('', 'success')

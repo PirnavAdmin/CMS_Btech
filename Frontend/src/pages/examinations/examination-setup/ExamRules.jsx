@@ -1,19 +1,38 @@
-import { Link } from 'react-router-dom'
+import { useMemo, useState } from 'react'
+import { Link, useLocation } from 'react-router-dom'
+import { FiEdit2, FiFilter, FiPlus, FiPower, FiSearch, FiTrash2 } from 'react-icons/fi'
 import DashboardLayout from '../../../layouts/DashboardLayout'
-import PageHeader from '../../../components/PageHeader'
-import './ExamRules.css'
+import './ExaminationSetup.css'
+
+const tabs = [['Examination List', '/examination-setup/examination-list'], ['Create Examination', '/examination-setup/create-examination'], ['Exam Type', '/examination-setup/exam-type'], ['Exam Schedule', '/examination-setup/exam-schedule'], ['Exam Rules', '/examination-setup/exam-rules']]
+const key = 'cms-examination-setup-demo-v1'
+const seeds = [{ id: 'rule-1', name: 'Standard Written Exam', description: 'Standard rules for written examinations.', examType: 'End Semester', passingMarks: '40', attendance: '75', attempts: '3', status: 'Active' }, { id: 'rule-2', name: 'Practical Assessment Rule', description: 'Practical assessment and viva requirements.', examType: 'Practical', passingMarks: '50', attendance: '80', attempts: '2', status: 'Active' }]
+const load = () => { try { return JSON.parse(localStorage.getItem(key)) || {} } catch { return {} } }
 
 export default function ExamRules() {
-  return (
-    <DashboardLayout>
-      <section className="examination-setup-exam-rules">
-        <PageHeader title="Exam Rules" breadcrumb={[{ label: "Examination Setup", link: '/examination-setup' }, "Exam Rules"]} />
-        <div className="examination-setup-exam-rules__content">
-          <h2>Exam Rules</h2>
-          <p>This screen is ready for implementation.</p>
-          <Link to="/examination-setup">Back to Examination Setup</Link>
-        </div>
-      </section>
-    </DashboardLayout>
-  )
+  const location = useLocation()
+  const [rows, setRows] = useState(() => load().rules || seeds)
+  const [types] = useState(() => load().types || [{ id: 'type-mid', name: 'Mid Semester' }, { id: 'type-end', name: 'End Semester' }, { id: 'type-practical', name: 'Practical' }])
+  const [query, setQuery] = useState('')
+  const [statusFilter, setStatusFilter] = useState('')
+  const [typeFilter, setTypeFilter] = useState('')
+  const [showFilters, setShowFilters] = useState(false)
+  const [showForm, setShowForm] = useState(false)
+  const [editing, setEditing] = useState(null)
+  const [error, setError] = useState('')
+  const blank = { name: '', description: '', examType: '', passingMarks: '', attendance: '', attempts: '', status: 'Active' }
+  const [form, setForm] = useState(blank)
+  const visible = useMemo(() => rows.filter(row => `${row.name} ${row.description} ${row.examType}`.toLowerCase().includes(query.toLowerCase()) && (!statusFilter || row.status === statusFilter) && (!typeFilter || row.examType === typeFilter)), [rows, query, statusFilter, typeFilter])
+  const persist = next => { setRows(next); try { localStorage.setItem(key, JSON.stringify({ ...load(), rules: next })) } catch { /* Keep the edited rows for this session. */ } }
+  const save = event => { event.preventDefault(); const missing = ['name', 'description', 'examType', 'passingMarks', 'attendance', 'attempts'].some(name => !String(form[name] || '').trim()); if (missing) { setError('Complete all required rule fields.'); return } if (Number(form.passingMarks) < 0 || Number(form.attendance) < 0 || Number(form.attendance) > 100 || Number(form.attempts) < 1) { setError('Enter valid marks, attendance (0–100), and at least one attempt.'); return } const row = { ...form, id: editing || `rule-${Date.now()}` }; persist(editing ? rows.map(item => item.id === editing ? row : item) : [row, ...rows]); setForm(blank); setShowForm(false); setEditing(null); setError('') }
+  const edit = row => { setForm({ ...row }); setEditing(row.id); setShowForm(true); setError('') }
+
+  return <DashboardLayout><main className="examination-setup"><header className="examination-setup__header"><div><h1>Examination Setup</h1><p>Define the assessment requirements and eligibility rules.</p></div></header><section className="examination-setup__card">
+    <header className="examination-setup__card-header"><div><p>EXAM RULES</p><h2>Search and manage examination rules.</h2></div><div className="examination-setup__header-actions"><button type="button" className="examination-setup__filter-button" aria-expanded={showFilters} onClick={() => setShowFilters(value => !value)}><FiFilter /> Filters</button><button type="button" className="examination-setup__primary" onClick={() => { setForm(blank); setEditing(null); setShowForm(value => !value); setError('') }}><FiPlus /> Add Rule</button></div></header>
+    <nav className="examination-setup__tabs" aria-label="Examination setup sections">{tabs.map(([label, path]) => <Link key={path} to={path} className={path === location.pathname ? 'active' : ''}>{label}</Link>)}</nav>
+    <div className="examination-setup__toolbar"><label className="examination-setup__search"><FiSearch /><input aria-label="Search exam rules" placeholder="Search rule or exam type..." value={query} onChange={event => setQuery(event.target.value)} /></label></div>
+    {showFilters && <div className="examination-setup__filters"><label>Exam Type<select value={typeFilter} onChange={event => setTypeFilter(event.target.value)}><option value="">All Exam Types</option>{types.map(row => <option key={row.id}>{row.name}</option>)}</select></label><label>Status<select value={statusFilter} onChange={event => setStatusFilter(event.target.value)}><option value="">All Statuses</option><option>Active</option><option>Inactive</option></select></label><button type="button" onClick={() => { setQuery(''); setTypeFilter(''); setStatusFilter('') }}>Clear Filters</button></div>}
+    <p className="examination-setup__count">Showing {visible.length} rule{visible.length === 1 ? '' : 's'}</p><div className="examination-setup__table-wrap"><table><thead><tr><th>Rule Name</th><th>Description</th><th>Exam Type</th><th>Passing Marks</th><th>Minimum Attendance</th><th>Attempts</th><th>Status</th><th>Actions</th></tr></thead><tbody>{visible.length ? visible.map(row => <tr key={row.id}><td><strong>{row.name}</strong></td><td>{row.description}</td><td>{row.examType}</td><td>{row.passingMarks}</td><td>{row.attendance}%</td><td>{row.attempts}</td><td><span className={`examination-setup__status ${row.status.toLowerCase()}`}>{row.status}</span></td><td><div className="examination-setup__actions"><button type="button" aria-label="Edit rule" title="Edit rule" onClick={() => edit(row)}><FiEdit2 /></button><button type="button" aria-label="Toggle rule status" title="Toggle status" onClick={() => persist(rows.map(item => item.id === row.id ? { ...item, status: item.status === 'Active' ? 'Inactive' : 'Active' } : item))}><FiPower /></button><button type="button" aria-label="Delete rule" title="Delete rule" onClick={() => persist(rows.filter(item => item.id !== row.id))}><FiTrash2 /></button></div></td></tr>) : <tr><td colSpan="8" className="examination-setup__empty">No rules match your search and filters.</td></tr>}</tbody></table></div>
+    {showForm && <div className="examination-setup__inline-form"><h3>{editing ? 'Edit Exam Rule' : 'Add Exam Rule'}</h3><form className="examination-setup__form" onSubmit={save} noValidate><label><span>Rule Name <b>*</b></span><input value={form.name} onChange={event => setForm(current => ({ ...current, name: event.target.value }))} /></label><label><span>Exam Type <b>*</b></span><select value={form.examType} onChange={event => setForm(current => ({ ...current, examType: event.target.value }))}><option value="">Select exam type</option>{types.map(row => <option key={row.id}>{row.name}</option>)}</select></label><label className="wide"><span>Description <b>*</b></span><textarea rows="3" value={form.description} onChange={event => setForm(current => ({ ...current, description: event.target.value }))} /></label><label><span>Passing Marks <b>*</b></span><input type="number" min="0" value={form.passingMarks} onChange={event => setForm(current => ({ ...current, passingMarks: event.target.value }))} /></label><label><span>Minimum Attendance (%) <b>*</b></span><input type="number" min="0" max="100" value={form.attendance} onChange={event => setForm(current => ({ ...current, attendance: event.target.value }))} /></label><label><span>Attempts <b>*</b></span><input type="number" min="1" value={form.attempts} onChange={event => setForm(current => ({ ...current, attempts: event.target.value }))} /></label><label><span>Status</span><select value={form.status} onChange={event => setForm(current => ({ ...current, status: event.target.value }))}><option>Active</option><option>Inactive</option></select></label>{error && <p className="examination-setup__error wide" role="alert">{error}</p>}<footer><button type="button" className="examination-setup__secondary" onClick={() => { setShowForm(false); setEditing(null); setError('') }}>Cancel</button><button type="submit" className="examination-setup__primary">{editing ? 'Save Changes' : 'Add Rule'}</button></footer></form></div>}
+  </section></main></DashboardLayout>
 }

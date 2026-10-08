@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { NavLink, useLocation } from 'react-router-dom'
-import { FiAward, FiBarChart2, FiBook, FiBookOpen, FiBriefcase, FiCalendar, FiCheckCircle, FiCheckSquare, FiChevronLeft, FiChevronRight, FiCreditCard, FiEdit3, FiFileText, FiGitBranch, FiGrid, FiHome, FiLayers, FiShield, FiTrendingUp, FiUser, FiUserPlus, FiUsers, FiX } from 'react-icons/fi'
+import { FiAward, FiBarChart2, FiBook, FiBookOpen, FiBriefcase, FiCalendar, FiCheckCircle, FiCheckSquare, FiChevronDown, FiChevronLeft, FiChevronRight, FiCreditCard, FiEdit3, FiFileText, FiGitBranch, FiGrid, FiHome, FiLayers, FiShield, FiTrendingUp, FiUser, FiUserPlus, FiUsers, FiX } from 'react-icons/fi'
 import { getUserRole } from '../auth/auth'
 import { ROLES } from '../auth/roles'
 import { useAcademic } from '../context/AcademicContext'
@@ -48,6 +48,12 @@ export default function Sidebar({ open = false, onClose = () => {}, collapsed = 
   const activeCollege = selectedCollegeHasId ? selectedCollege : (matchingCollege || selectedCollege)
   const collegeId = activeCollege?.id ?? activeCollege?.collegeId ?? activeCollege?.CollegeId ?? selectedCollegeId
   const [collegeLogo, setCollegeLogo] = useState('')
+  const examRoutesActive = pathname.startsWith('/examination-setup') || pathname.startsWith('/exam-timetable')
+  const [examManagementOpen, setExamManagementOpen] = useState(examRoutesActive)
+
+  useEffect(() => {
+    if (examRoutesActive) setExamManagementOpen(true)
+  }, [examRoutesActive])
 
   useEffect(() => {
     let active = true
@@ -166,8 +172,13 @@ export default function Sidebar({ open = false, onClose = () => {}, collapsed = 
           <p className="sidebar-section-label">Curriculum & Subjects</p>
           {curriculumLinks.map(link => <Item {...link} key={link.to} onNavigate={onClose}>{link.label}</Item>)}
           <p className="sidebar-section-label">Examinations & Results</p>
-          <Item to="/examination-setup" icon={FiFileText} tone="blue" onNavigate={onClose} activeWhen={pathname => pathname.startsWith('/examination-setup')}>Examination Setup</Item>
-          <Item to="/exam-timetable" icon={FiCalendar} tone="orange" onNavigate={onClose} activeWhen={pathname => pathname.startsWith('/exam-timetable')}>Exam Timetable</Item>
+          <button type="button" className={`sidebar-link sidebar-link--blue sidebar-disclosure ${examRoutesActive ? 'active' : ''}`} onClick={() => setExamManagementOpen(open => !open)} aria-expanded={examManagementOpen} aria-controls="exam-management-links">
+            <FiFileText aria-hidden="true" /><span>Exam Management</span><FiChevronDown className="sidebar-disclosure__chevron" aria-hidden="true" />
+          </button>
+          {examManagementOpen && <div className="sidebar-submenu" id="exam-management-links">
+            <Item to="/examination-setup" icon={FiFileText} tone="blue" onNavigate={onClose} activeWhen={pathname => pathname.startsWith('/examination-setup')}>Examination Setup</Item>
+            <Item to="/exam-timetable" icon={FiCalendar} tone="orange" onNavigate={onClose} activeWhen={pathname => pathname.startsWith('/exam-timetable')}>Exam Timetable</Item>
+          </div>}
           <Item to="/marks-management" icon={FiEdit3} tone="green" onNavigate={onClose} activeWhen={pathname => pathname.startsWith('/marks-management')}>Marks Management</Item>
           <Item to="/grade-result-management" icon={FiAward} tone="purple" onNavigate={onClose} activeWhen={pathname => pathname.startsWith('/grade-result-management')}>Grade System & Result Management</Item>
           <p className="sidebar-section-label">Campus Operations</p>
