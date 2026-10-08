@@ -17,7 +17,7 @@ const columnsFromSections = (rows, sectionsForRecord) => {
   }))
 }
 
-export default function ExportMenu({ rows = [], columns, filename, title, loading = false, scope = 'Current filtered results', unavailable = '', mode = 'list', recordSections, reportType = '', onDownload }) {
+export default function ExportMenu({ rows = [], columns, filename, title, loading = false, scope = 'Current filtered results', unavailable = '', mode = 'list', recordSections, reportType = '', onDownload, allowEmpty = false, printLabel = 'Print / Save as PDF' }) {
   const [open, setOpen] = useState(false)
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
@@ -29,7 +29,7 @@ export default function ExportMenu({ rows = [], columns, filename, title, loadin
   const hasListDownload = Boolean(onDownload || hasMappedRows)
   const reportLabel = reportType ? `${reportType[0].toUpperCase()}${reportType.slice(1)} Sheet` : ''
   const root = useRef(null), trigger = useRef(null), id = useId()
-  const disabled = busy || loading || (!single && !hasListDownload) || Boolean(unavailable)
+  const disabled = busy || loading || (!single && !hasListDownload && !allowEmpty) || Boolean(unavailable)
   useEffect(() => {
     if (!open) return undefined
     const close = event => { if (!root.current?.contains(event.target)) setOpen(false) }
@@ -43,7 +43,7 @@ export default function ExportMenu({ rows = [], columns, filename, title, loadin
   const csvLabel = reportLabel || 'CSV'
   return <div className="export-control" ref={root} data-no-print onKeyDown={event => { if (event.key === 'Escape') { setOpen(false); trigger.current?.focus() } }}>
     <button className="export-button" type="button" ref={trigger} disabled={disabled} aria-expanded={open && !disabled} aria-controls={id} aria-label={`Export ${title}`} title={unavailable || (loading ? 'Loading records...' : rows.length ? scope : 'No records available to export.')} onClick={() => setOpen(value => !value)}><FiDownload aria-hidden="true" /> Export <FiChevronDown aria-hidden="true" /></button>
-    {open && !disabled && <div className="export-options" id={id}><small>{single ? 'Current record only' : `${scope} (${rows.length})`}</small><button type="button" disabled={!single && !onDownload && !hasMappedRows} onClick={() => run(single ? downloadRecord : onDownload || exportToCsv, single ? 'Record downloaded successfully' : `${csvLabel} downloaded successfully`)}><FiDownload aria-hidden="true" /> {reportLabel ? `Download ${reportLabel}` : 'Download CSV'}</button><button type="button" disabled={!single && (!rows.length || !exportColumns?.length)} onClick={() => run(single ? printRecord : printResults, 'Print preview opened. Choose Print or Save as PDF in your browser.')}><FiPrinter aria-hidden="true" /> Print / Save as PDF</button></div>}
+    {open && !disabled && <div className="export-options" id={id}><small>{single ? 'Current record only' : `${scope} (${rows.length})`}</small><button type="button" disabled={!single && !onDownload && !hasMappedRows} onClick={() => run(single ? downloadRecord : onDownload || exportToCsv, single ? 'Record downloaded successfully' : `${csvLabel} downloaded successfully`)}><FiDownload aria-hidden="true" /> {reportLabel ? `Download ${reportLabel}` : 'Download CSV'}</button><button type="button" disabled={!single && (!rows.length || !exportColumns?.length)} onClick={() => run(single ? printRecord : printResults, 'Print preview opened. Choose Print or Save as PDF in your browser.')}><FiPrinter aria-hidden="true" /> {printLabel}</button></div>}
     {busy && <span role="status">Preparing download...</span>}
     {error && <span className="export-error" role="alert">{error}</span>}
   </div>

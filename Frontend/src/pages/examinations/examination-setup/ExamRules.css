@@ -1,5 +1,0 @@
-.examination-setup-exam-rules { display: grid; gap: 24px; min-width: 0; }
-.examination-setup-exam-rules__content { padding: 24px; border: 1px solid var(--border); border-radius: 12px; background: var(--surface); color: var(--text-primary); }
-.examination-setup-exam-rules__content h2 { margin: 0 0 12px; font-size: 18px; }
-.examination-setup-exam-rules__content p { color: var(--text-secondary); margin: 0 0 20px; }
-.examination-setup-exam-rules__content a { color: var(--brand); }

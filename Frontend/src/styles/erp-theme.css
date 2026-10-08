@@ -831,6 +831,10 @@ html,body,#root{max-width:100%;overflow-x:hidden}
   background: var(--brand-soft, #EAF3FF);
   color: var(--brand, #195A99);
 }
+.export-options button:disabled {
+  opacity: .45;
+  cursor: not-allowed;
+}
 .export-options button svg {
   width: 15px;
   height: 15px;
