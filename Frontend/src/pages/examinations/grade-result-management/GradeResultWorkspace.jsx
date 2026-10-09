@@ -1,6 +1,6 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { NavLink } from 'react-router-dom'
-import { FiChevronDown, FiDatabase, FiPlus, FiRotateCcw, FiSearch, FiTrash2 } from 'react-icons/fi'
+import { FiAlertCircle, FiAward, FiChevronDown, FiCpu, FiDatabase, FiFileText, FiPercent, FiPlus, FiRotateCcw, FiSearch, FiTrash2 } from 'react-icons/fi'
 import DashboardLayout from '../../../layouts/DashboardLayout'
 import PageHeader from '../../../components/PageHeader'
 import FilterPanel from '../../../components/FilterPanel'
@@ -46,6 +46,48 @@ function Workspace({ screen, academic, scope }) {
   const [preview, setPreview] = useState(false)
   const [sort, setSort] = useState('default')
   const [pageSize, setPageSize] = useState(10)
+  const [dropdownOpen, setDropdownOpen] = useState(false)
+  const dropdownRef = useRef(null)
+  const dropdownButtonRef = useRef(null)
+  const dropdownMenuRef = useRef(null)
+
+  useEffect(() => {
+    const handleOutsideClick = (e) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
+        setDropdownOpen(false)
+      }
+    }
+    if (dropdownOpen) {
+      document.addEventListener('mousedown', handleOutsideClick)
+    }
+    return () => document.removeEventListener('mousedown', handleOutsideClick)
+  }, [dropdownOpen])
+
+  const handleResultsMenuKeyDown = event => {
+    if (event.key === 'Escape') {
+      setDropdownOpen(false)
+      dropdownButtonRef.current?.focus()
+      return
+    }
+    const links = [...(dropdownMenuRef.current?.querySelectorAll('a') || [])]
+    if (!links.length) return
+    const currentIndex = links.indexOf(document.activeElement)
+    if (event.key === 'ArrowDown') {
+      event.preventDefault()
+      if (!dropdownOpen) setDropdownOpen(true)
+      requestAnimationFrame(() => links[Math.min(currentIndex + 1, links.length - 1)]?.focus())
+    } else if (event.key === 'ArrowUp') {
+      event.preventDefault()
+      links[Math.max(currentIndex < 0 ? links.length - 1 : currentIndex - 1, 0)]?.focus()
+    } else if (event.key === 'Home') {
+      event.preventDefault()
+      links[0]?.focus()
+    } else if (event.key === 'End') {
+      event.preventDefault()
+      links[links.length - 1]?.focus()
+    }
+  }
+
   const { selectedCollegeId, selectedAcademicYearId, scopeRecords } = academic
   const configuration = screen === 'grade-configuration'
 
@@ -137,22 +179,59 @@ function Workspace({ screen, academic, scope }) {
     />
 
     {configuration && <nav className="grm-nav grm-nav--grade" aria-label="Grade management tools">
-      <NavLink to="/grade-result-management/grade-configuration" end>Grade Management</NavLink>
-      <NavLink to="/grade-result-management/cgpa-calculator">CGPA Calculator</NavLink>
+      <NavLink to="/grade-result-management/grade-configuration" end>
+        <FiAward aria-hidden="true" />
+        <span>Grade Management</span>
+      </NavLink>
+      <NavLink to="/grade-result-management/cgpa-calculator">
+        <FiPercent aria-hidden="true" />
+        <span>CGPA Calculator</span>
+      </NavLink>
     </nav>}
 
     {!configuration && <nav className="grm-nav grm-nav--compact" aria-label="Official results screens">
-      {gradeScreens.filter(item => item.slug === 'result-generation').map(item => <NavLink key={item.slug} to="/results" end>{item.label}</NavLink>)}
-      <details className={'grm-results-dropdown' + (resultSelected ? ' is-active' : '')}>
-        <summary aria-label="Choose a results view">
-          <span>{resultSelected ? (definition?.label || 'Results') : 'Results'}</span>
-          <FiChevronDown aria-hidden="true" />
-        </summary>
-        <div className="grm-results-dropdown__menu" aria-label="Result views">
-          {resultScreens.map(item => <NavLink key={item.slug} to={'/results/' + item.slug} onClick={event => { event.currentTarget.closest('details').open = false }}>{item.label}</NavLink>)}
-        </div>
-      </details>
-      {gradeScreens.filter(item => ['consolidated-marks-memo', 'backlog-report'].includes(item.slug)).map(item => <NavLink key={item.slug} to={'/results/' + item.slug}>{item.label}</NavLink>)}
+      {gradeScreens.filter(item => item.slug === 'result-generation').map(item => (
+        <NavLink key={item.slug} to="/results" end>
+          <FiCpu aria-hidden="true" />
+          <span>{item.label}</span>
+        </NavLink>
+      ))}
+      <div className={`grm-results-dropdown${resultSelected ? ' is-active' : ''}`} ref={dropdownRef} onKeyDown={handleResultsMenuKeyDown}>
+        <button
+          type="button"
+          ref={dropdownButtonRef}
+          className={`grm-dropdown-btn${resultSelected ? ' is-active' : ''}`}
+          onClick={() => setDropdownOpen(prev => !prev)}
+          aria-expanded={dropdownOpen}
+          aria-haspopup="true"
+          aria-controls="official-results-views"
+          aria-label="Choose a results view"
+        >
+          <span>Results</span>
+          <FiChevronDown className={`grm-results-dropdown__arrow${dropdownOpen ? ' is-open' : ''}`} aria-hidden="true" />
+        </button>
+        {dropdownOpen && (
+          <div className="grm-results-dropdown__menu" id="official-results-views" ref={dropdownMenuRef} role="menu" aria-label="Result views">
+            {resultScreens.map(item => (
+              <NavLink
+                key={item.slug}
+                to={'/results/' + item.slug}
+                role="menuitem"
+                className={({ isActive }) => (isActive ? 'active' : '')}
+                onClick={() => setDropdownOpen(false)}
+              >
+                {item.label}
+              </NavLink>
+            ))}
+          </div>
+        )}
+      </div>
+      {gradeScreens.filter(item => ['consolidated-marks-memo', 'backlog-report'].includes(item.slug)).map(item => (
+        <NavLink key={item.slug} to={'/results/' + item.slug}>
+          {item.slug === 'consolidated-marks-memo' ? <FiFileText aria-hidden="true" /> : <FiAlertCircle aria-hidden="true" />}
+          <span>{item.label}</span>
+        </NavLink>
+      ))}
     </nav>}
 
     {!selectedCollegeId && <p className="grm-notice">Select a college in the sidebar to continue.</p>}

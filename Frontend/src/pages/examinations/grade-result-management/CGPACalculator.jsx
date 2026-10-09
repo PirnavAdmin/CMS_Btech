@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from 'react'
-import { FiAward, FiCheck, FiDownload, FiPercent, FiPlus, FiRotateCcw, FiTarget, FiTrash2, FiUserCheck } from 'react-icons/fi'
+import { FiAward, FiCheck, FiPercent, FiPlus, FiRotateCcw, FiTarget, FiTrash2, FiUserCheck } from 'react-icons/fi'
 import { academicDivision, cgpaToPercentage } from './gradeResultModel'
 import resultsService from '../../../services/resultsService'
+import ExportMenu from '../../../components/ExportMenu'
 import './CGPACalculator.css'
 
 const newSemester = number => ({
@@ -180,30 +181,37 @@ export default function CGPACalculator({ storageKey }) {
     }
   }
 
-  const exportCsv = () => {
-    const headers = ['Semester', 'SGPA', 'Credits', 'Weighted Points']
-    const dataRows = rows.map(r => {
-      const sgpa = Number(r.sgpa) || 0
-      const cr = Number(r.credits) || 0
-      return [r.semester, r.sgpa, r.credits, (sgpa * cr).toFixed(2)]
-    })
-    const summaryRow = ['OVERALL CGPA', cgpa !== null ? cgpa.toFixed(2) : 'N/A', totalCredits.toFixed(2), weightedPoints.toFixed(2)]
-    const csvContent = [
-      headers.join(','),
-      ...dataRows.map(r => r.map(c => `"${String(c).replace(/"/g, '""')}"`).join(',')),
-      summaryRow.map(c => `"${String(c).replace(/"/g, '""')}"`).join(','),
-    ].join('\n')
-
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
-    const url = URL.createObjectURL(blob)
-    const link = document.createElement('a')
-    link.href = url
-    link.setAttribute('download', `CGPA_Calculation_${new Date().toISOString().slice(0, 10)}.csv`)
-    document.body.appendChild(link)
-    link.click()
-    document.body.removeChild(link)
-    URL.revokeObjectURL(url)
-  }
+  let runningCredits = 0
+  let runningPoints = 0
+  const exportRows = rows.filter(row => row.semester.trim() && row.sgpa !== '' && row.credits !== '' && Number.isFinite(Number(row.sgpa)) && Number(row.sgpa) >= 0 && Number(row.sgpa) <= 10 && Number.isFinite(Number(row.credits)) && Number(row.credits) > 0).map(row => {
+    const semesterCredits = Number(row.credits)
+    const semesterPoints = Number(row.sgpa) * semesterCredits
+    runningCredits += semesterCredits
+    runningPoints += semesterPoints
+    return {
+      semester: row.semester,
+      sgpa: Number(row.sgpa).toFixed(2),
+      credits: semesterCredits,
+      weightedPoints: semesterPoints.toFixed(2),
+      cumulativeCgpa: (runningPoints / runningCredits).toFixed(2),
+      percentage: formulaType === 'aicte' ? cgpaToPercentage(runningPoints / runningCredits, 'aicte') : cgpaToPercentage(runningPoints / runningCredits, 'cbse'),
+      division: academicDivision(runningPoints / runningCredits)?.division || '',
+    }
+  })
+  const exportColumns = [
+    { key: 'semester', label: 'Semester' },
+    { key: 'sgpa', label: 'SGPA' },
+    { key: 'credits', label: 'Credits Earned' },
+    { key: 'weightedPoints', label: 'SGPA × Credits' },
+    { key: 'cumulativeCgpa', label: 'Cumulative CGPA' },
+    { key: 'percentage', label: `${formulaType.toUpperCase()} Equivalent %` },
+    { key: 'division', label: 'Division' },
+  ]
+  const exportSummary = cgpa === null ? [] : [{
+    semester: 'OVERALL CGPA', sgpa: cgpa.toFixed(2), credits: totalCredits,
+    weightedPoints: weightedPoints.toFixed(2), cumulativeCgpa: cgpa.toFixed(2),
+    percentage: activePercentage?.toFixed(2) || '', division: divisionInfo?.division || '',
+  }]
 
   return <section className="grm-cgpa" aria-labelledby="grm-cgpa-title">
     <header className="grm-cgpa__header">
@@ -214,11 +222,7 @@ export default function CGPACalculator({ storageKey }) {
       </div>
       <div className="grm-cgpa__header-right">
         {savedAt && <span className="grm-cgpa__save-state" role="status">Saved on this device · {savedAt}</span>}
-        <div className="grm-cgpa__header-btns">
-          <button type="button" className="grm-cgpa__tool-btn" onClick={exportCsv} title="Export calculation to CSV">
-            <FiDownload aria-hidden="true" /> Export CSV
-          </button>
-        </div>
+        <div className="grm-cgpa__header-btns"><ExportMenu rows={[...exportRows, ...exportSummary]} columns={exportColumns} filename="cgpa-calculation.csv" title="CGPA Calculation" scope="Semester breakdown" /></div>
       </div>
     </header>
 

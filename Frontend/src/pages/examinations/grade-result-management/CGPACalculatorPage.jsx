@@ -1,6 +1,7 @@
 import DashboardLayout from '../../../layouts/DashboardLayout'
 import PageHeader from '../../../components/PageHeader'
 import { NavLink } from 'react-router-dom'
+import { FiAward, FiPercent } from 'react-icons/fi'
 import { useAcademic } from '../../../context/AcademicContext'
 import CGPACalculator from './CGPACalculator'
 
@@ -10,8 +11,14 @@ export default function CGPACalculatorPage() {
   return <DashboardLayout><div className="grm grm--cgpa-page">
     <PageHeader title="CGPA Calculator" subtitle="Calculate a credit-weighted cumulative GPA across completed semesters." breadcrumb={[{ label: 'Grades System and Results', link: '/grade-result-management/grade-configuration' }, 'CGPA Calculator']} />
     <nav className="grm-nav grm-nav--grade" aria-label="Grade management tools">
-      <NavLink to="/grade-result-management/grade-configuration">Grade Management</NavLink>
-      <NavLink to="/grade-result-management/cgpa-calculator" end>CGPA Calculator</NavLink>
+      <NavLink to="/grade-result-management/grade-configuration">
+        <FiAward aria-hidden="true" />
+        <span>Grade Management</span>
+      </NavLink>
+      <NavLink to="/grade-result-management/cgpa-calculator" end>
+        <FiPercent aria-hidden="true" />
+        <span>CGPA Calculator</span>
+      </NavLink>
     </nav>
     <CGPACalculator key={scope} storageKey={`cms-cgpa:${scope}`} />
   </div></DashboardLayout>
