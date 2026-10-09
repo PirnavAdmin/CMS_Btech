@@ -808,7 +808,7 @@ export default function MeetingsEventsWorkspace() {
                         <div className="mew-card-actions">
                           <button
                             type="button"
-                            className="mew-btn-icon"
+                            className="mew-btn-icon mew-btn-icon--edit action-edit"
                             onClick={() => openEditModal(meet, 'meeting')}
                             title="Edit Meeting Details"
                           >
@@ -816,7 +816,7 @@ export default function MeetingsEventsWorkspace() {
                           </button>
                           <button
                             type="button"
-                            className="mew-btn-icon mew-btn-icon--danger"
+                            className="mew-btn-icon mew-btn-icon--danger action-delete"
                             onClick={() => requestDelete(meet.id, 'meeting', meet.title)}
                             title="Remove Meeting"
                           >
@@ -880,15 +880,17 @@ export default function MeetingsEventsWorkspace() {
                           <div className="mew-table-actions" style={{ justifyContent: 'flex-end' }}>
                             <button
                               type="button"
-                              className="mew-btn-icon"
+                              className="mew-btn-icon mew-btn-icon--edit action-edit"
                               onClick={() => openEditModal(meet, 'meeting')}
+                              title="Edit Meeting"
                             >
                               <FiEdit2 />
                             </button>
                             <button
                               type="button"
-                              className="mew-btn-icon mew-btn-icon--danger"
+                              className="mew-btn-icon mew-btn-icon--danger action-delete"
                               onClick={() => requestDelete(meet.id, 'meeting', meet.title)}
+                              title="Remove Meeting"
                             >
                               <FiTrash2 />
                             </button>
@@ -981,7 +983,7 @@ export default function MeetingsEventsWorkspace() {
                         <div className="mew-card-actions">
                           <button
                             type="button"
-                            className="mew-btn-icon"
+                            className="mew-btn-icon mew-btn-icon--edit action-edit"
                             onClick={() => openEditModal(ev, 'event')}
                             title="Edit Event"
                           >
@@ -989,7 +991,7 @@ export default function MeetingsEventsWorkspace() {
                           </button>
                           <button
                             type="button"
-                            className="mew-btn-icon mew-btn-icon--danger"
+                            className="mew-btn-icon mew-btn-icon--danger action-delete"
                             onClick={() => requestDelete(ev.id, 'event', ev.title)}
                             title="Remove Event"
                           >
@@ -1055,15 +1057,17 @@ export default function MeetingsEventsWorkspace() {
                           <div className="mew-table-actions" style={{ justifyContent: 'flex-end' }}>
                             <button
                               type="button"
-                              className="mew-btn-icon"
+                              className="mew-btn-icon mew-btn-icon--edit action-edit"
                               onClick={() => openEditModal(ev, 'event')}
+                              title="Edit Event"
                             >
                               <FiEdit2 />
                             </button>
                             <button
                               type="button"
-                              className="mew-btn-icon mew-btn-icon--danger"
+                              className="mew-btn-icon mew-btn-icon--danger action-delete"
                               onClick={() => requestDelete(ev.id, 'event', ev.title)}
+                              title="Remove Event"
                             >
                               <FiTrash2 />
                             </button>
@@ -1127,15 +1131,17 @@ export default function MeetingsEventsWorkspace() {
                         <div className="mew-table-actions" style={{ justifyContent: 'flex-end' }}>
                           <button
                             type="button"
-                            className="mew-btn-icon"
+                            className="mew-btn-icon mew-btn-icon--edit action-edit"
                             onClick={() => openEditModal(reg, 'registration')}
+                            title="Edit Registration"
                           >
                             <FiEdit2 />
                           </button>
                           <button
                             type="button"
-                            className="mew-btn-icon mew-btn-icon--danger"
+                            className="mew-btn-icon mew-btn-icon--danger action-delete"
                             onClick={() => requestDelete(reg.id, 'registration', `${reg.studentName} (${reg.eventTitle})`)}
+                            title="Remove Registration"
                           >
                             <FiTrash2 />
                           </button>
@@ -1216,7 +1222,7 @@ export default function MeetingsEventsWorkspace() {
                         <div className="mew-table-actions" style={{ justifyContent: 'flex-end' }}>
                           <button
                             type="button"
-                            className="mew-btn-icon mew-btn-icon--danger"
+                            className="mew-btn-icon mew-btn-icon--danger action-delete"
                             onClick={() => requestDelete(att.id, 'attendance', `${att.participantName} - ${att.activityTitle}`)}
                             title="Remove Record"
                           >
@@ -1307,15 +1313,17 @@ export default function MeetingsEventsWorkspace() {
                         <div className="mew-table-actions" style={{ justifyContent: 'flex-end' }}>
                           <button
                             type="button"
-                            className="mew-btn-icon"
+                            className="mew-btn-icon mew-btn-icon--edit action-edit"
                             onClick={() => openEditModal(min, 'minute')}
+                            title="Edit Action Item"
                           >
                             <FiEdit2 />
                           </button>
                           <button
                             type="button"
-                            className="mew-btn-icon mew-btn-icon--danger"
+                            className="mew-btn-icon mew-btn-icon--danger action-delete"
                             onClick={() => requestDelete(min.id, 'minute', min.actionItem)}
+                            title="Remove Action Item"
                           >
                             <FiTrash2 />
                           </button>
