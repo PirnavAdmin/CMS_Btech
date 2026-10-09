@@ -1,5 +1,2 @@
-.grade-result-management-grade-configuration { display: grid; gap: 24px; min-width: 0; }
-.grade-result-management-grade-configuration__content { padding: 24px; border: 1px solid var(--border); border-radius: 12px; background: var(--surface); color: var(--text-primary); }
-.grade-result-management-grade-configuration__content h2 { margin: 0 0 12px; font-size: 18px; }
-.grade-result-management-grade-configuration__content p { color: var(--text-secondary); margin: 0 0 20px; }
-.grade-result-management-grade-configuration__content a { color: var(--brand); }
+/* Styles dedicated to the GradeConfiguration screen. Shared layout is imported by JSX. */
+.grm--grade-configuration { min-width: 0; }

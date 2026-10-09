@@ -1,7 +1,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { readFile } from 'node:fs/promises'
-import { workflowAcademicRow, componentTotals, allocatePaise, assignFeeStructure, cents, collectWorkspacePayment, emptyFeeWorkspace, feeLedger, feeToday, feeTotal, newFeeStructure, readFeeWorkspace, saveFeeAdjustment, saveFeeComponent, saveWorkflowStructure, transitionFeeAdjustment, transitionFeeStructure, validateFeeStructure, writeFeeWorkspace } from './feeStructureService.js'
+import { hasSingleStructureFee, structureTotalFeeComponents, workflowAcademicRow, componentTotals, allocatePaise, assignFeeStructure, cents, collectWorkspacePayment, emptyFeeWorkspace, feeLedger, feeToday, feeTotal, newFeeStructure, readFeeWorkspace, saveFeeAdjustment, saveFeeComponent, saveWorkflowStructure, transitionFeeAdjustment, transitionFeeStructure, validateFeeStructure, writeFeeWorkspace } from './feeStructureService.js'
 import { feeNavigation, feeNavigationItem, feeBreadcrumbs, isFeeRoute, studentAccountOperations } from './feeNavigation.js'
 
 test('fee sidebar maps existing routes and contextual screens to one owning section', () => {
@@ -51,6 +51,29 @@ test('configuration presentation preserves workflow records, component totals an
   assert.deepEqual(componentTotals(row.feeComponents), { total: 1000, mandatory: 700, refundable: 200, optional: 100 })
   assert.equal(workflowAcademicRow({ ...structure, cycle: 'Semester-wise' }).feePeriod, 'Per Semester')
   assert.equal(feeBreadcrumbs('/fees/legacy').at(-1).label, 'Fee Structures')
+})
+
+test('single total fee preserves approval, installment allocation and student balances without a master', () => {
+  const draft = { ...newFeeStructure('2026'), name: 'Single fee', courseId: '1', branchId: '2', batch: '2026-2030', plan: 'Installment Plan', installments: [{ id: 'one', dueDate: '2026-01-01', amount: 500 }, { id: 'two', dueDate: '2026-06-01', amount: 500.01 }] }
+  draft.components = structureTotalFeeComponents(draft, '1000.01')
+  assert.equal(hasSingleStructureFee(draft), true)
+  assert.equal(validateFeeStructure(draft), '')
+  assert.equal(feeTotal(draft), 1000.01)
+  for (const amount of ['', '0', '-1', '10.001', 'not a number']) {
+    assert.notEqual(validateFeeStructure({ ...draft, components: structureTotalFeeComponents(draft, amount) }, 1), '')
+  }
+  assert.notEqual(validateFeeStructure({ ...draft, installments: [{ id: 'one', dueDate: '2026-01-01', amount: 1000 }] }), '')
+  let state = saveWorkflowStructure(emptyFeeWorkspace(), draft, 'Pending Approval', 'Admin')
+  const id = state.structures[0].id
+  state = transitionFeeStructure(state, id, 'Approved', 'Approver')
+  state = transitionFeeStructure(state, id, 'Published', 'Admin')
+  state = assignFeeStructure(state, id, [{ id: 'one', academicYearId: '2026', courseId: '1', branchId: '2', batch: '2026-2030' }])
+  state = collectWorkspacePayment(state, { assignmentId: state.assignments[0].id, amount: 100, mode: 'Cash', date: feeToday() }, 'Cashier')
+  assert.equal(feeLedger(state, state.assignments[0]).outstanding, 90001)
+  const existing = { ...draft, components: [{ masterId: 'deposit', name: 'Deposit', amount: 1000.01, refundable: true }] }
+  assert.equal(hasSingleStructureFee(existing), false)
+  assert.throws(() => structureTotalFeeComponents(existing, 2000), /refund rules/)
+  assert.equal(existing.components[0].refundable, true)
 })
 
 const student = { id: '1', name: 'Test Student', academicYearId: '2026', courseId: '1', branchId: '2', batch: '2026-2030', category: 'Regular', semesterId: '1' }
