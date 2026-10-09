@@ -482,38 +482,38 @@
   background: rgba(255,255,255,.38);
 }
 
-/* Keep each navigation icon's assigned tone visible on the navy sidebar. */
-:root #root .sidebar .sidebar-navigation > a.sidebar-link--blue:is(.active, :hover, :not(.active)) svg {
+/* Keep assigned icon tones visible for parent buttons and nested links in every state. */
+:root #root .sidebar .sidebar-navigation .sidebar-link--blue:is(.active, :hover, :not(.active)) > svg:first-child {
   color: #60A5FA !important;
   filter: drop-shadow(0 0 5px rgba(96, 165, 250, .48));
 }
-:root #root .sidebar .sidebar-navigation > a.sidebar-link--cyan:is(.active, :hover, :not(.active)) svg {
+:root #root .sidebar .sidebar-navigation .sidebar-link--cyan:is(.active, :hover, :not(.active)) > svg:first-child {
   color: #22D3EE !important;
   filter: drop-shadow(0 0 5px rgba(34, 211, 238, .45));
 }
-:root #root .sidebar .sidebar-navigation > a.sidebar-link--green:is(.active, :hover, :not(.active)) svg {
+:root #root .sidebar .sidebar-navigation .sidebar-link--green:is(.active, :hover, :not(.active)) > svg:first-child {
   color: #4ADE80 !important;
   filter: drop-shadow(0 0 5px rgba(74, 222, 128, .45));
 }
-:root #root .sidebar .sidebar-navigation > a.sidebar-link--purple:is(.active, :hover, :not(.active)) svg {
+:root #root .sidebar .sidebar-navigation .sidebar-link--purple:is(.active, :hover, :not(.active)) > svg:first-child {
   color: #C4B5FD !important;
   filter: drop-shadow(0 0 5px rgba(196, 181, 253, .45));
 }
-:root #root .sidebar .sidebar-navigation > a.sidebar-link--orange:is(.active, :hover, :not(.active)) svg {
+:root #root .sidebar .sidebar-navigation .sidebar-link--orange:is(.active, :hover, :not(.active)) > svg:first-child {
   color: #FDBA74 !important;
   filter: drop-shadow(0 0 5px rgba(253, 186, 116, .45));
 }
-:root #root .sidebar .sidebar-navigation > a.sidebar-link--pink:is(.active, :hover, :not(.active)) svg {
+:root #root .sidebar .sidebar-navigation .sidebar-link--pink:is(.active, :hover, :not(.active)) > svg:first-child {
   color: #F9A8D4 !important;
   filter: drop-shadow(0 0 5px rgba(249, 168, 212, .45));
 }
-:root #root .sidebar .sidebar-navigation > a.sidebar-link--gold:is(.active, :hover, :not(.active)) svg {
+:root #root .sidebar .sidebar-navigation .sidebar-link--gold:is(.active, :hover, :not(.active)) > svg:first-child {
   color: #FACC15 !important;
   filter: drop-shadow(0 0 5px rgba(250, 204, 21, .45));
 }
-:root #root .sidebar .sidebar-navigation > a svg {
+:root #root .sidebar .sidebar-navigation .sidebar-link > svg:first-child {
   transition: color .15s ease, filter .15s ease;
 }
-:root #root .sidebar .sidebar-navigation > a:hover svg {
+:root #root .sidebar .sidebar-navigation .sidebar-link:hover > svg:first-child {
   filter: brightness(1.18) drop-shadow(0 0 7px currentColor);
 }
