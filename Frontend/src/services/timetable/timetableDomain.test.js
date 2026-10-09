@@ -25,7 +25,7 @@ test('daily count computes the requested end time and rejects invalid counts, pl
 test('hierarchy defaults all valid active sections and clears descendants by IDs', () => {
   assert.equal(scopeSections(sources, scope).length, 2)
   assert.equal(scopeSections(sources, { ...scope, departmentId: 'wrong' }).length, 0)
-  assert.deepEqual(changeContext(scope, 'courseId', '33'), { academicYearId: '1', departmentId: '2', courseId: '33', branchId: '', level: '', semesterId: '' })
+  assert.deepEqual(changeContext(scope, 'courseId', '33'), { academicYearId: '1', courseId: '33', departmentId: '', branchId: '', level: '', semesterId: '' })
 })
 test('coordinated generation excludes deselected subjects, spreads theory, and checks other departments', () => {
   const backend = [{ id: 'external', sectionId: '100', facultyId: '10', dayOfWeek: 'MONDAY', startTime: '09:20', endTime: '10:10', classroom: 'Elsewhere' }]

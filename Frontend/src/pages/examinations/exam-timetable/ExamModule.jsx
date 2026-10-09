@@ -10,7 +10,7 @@ import studentService from '../../../services/studentService'
 import facultyService from '../../../services/facultyService'
 import academicService from '../../../services/academicService'
 import { subjectService } from '../../../services/subjectService'
-import { createExam, createHallAllocation, deleteExam, deleteHallAllocation, examMaster, getAvailableHalls, getExams, getExamSessions, getExamTypes, getHallAllocations, getHalls, getInvigilationRules, getInvigilations, getStudents, getSubjects, replaceHalls, saveExamSessions, saveExamTypes, saveInvigilationRules, saveInvigilations, upsertStudents, updateExam, validateExam } from '../../../services/examService'
+import { createExam, createHallAllocation, deleteExam, deleteHallAllocation, examMaster, getAvailableHalls, getExams, getExamSessions, getExamTypes, getHallAllocations, getHalls, getInvigilationRules, getInvigilations, getStudents, getSubjects, replaceHalls, saveExamSessions, saveExamTypes, saveInvigilationRules, saveInvigilations, updateExam, updateHallAllocation, upsertStudents, validateExam } from '../../../services/examService'
 import './ExamModule.css'
 
 const routeInfo = {
@@ -38,6 +38,40 @@ const semesterOptions = (rows) => {
 }
 const optionName = (row, keys) => { if(typeof row==='string'||typeof row==='number')return String(row);for(const key of keys){if(row?.[key]!=null&&String(row[key]).trim())return String(row[key]).trim()}return '' }
 function getBranchesForDepartment(branch) { return ({CSE:'Computer Science',ECE:'Electronics & Communication',EEE:'Electrical Engineering',Mechanical:'Mechanical Engineering',Civil:'Civil Engineering'})[branch] || '' }
+function getAssignedInvigilator(exam, hallId = exam?.hallId) {
+  const matchesHall = (item) => !hallId || !item.hallId || String(item.hallId) === String(hallId)
+  const generatedNames = getInvigilations().filter((item)=>item.examId===exam?.id&&matchesHall(item)).map((item)=>item.facultyName||item.name||item.faculty).filter(Boolean)
+  if (generatedNames.length) return [...new Set(generatedNames)].join(', ')
+  const allocatedNames = getHallAllocations().filter((item)=>item.examId===exam?.id&&matchesHall(item)).map((item)=>item.invigilator).filter(Boolean)
+  if (allocatedNames.length) return [...new Set(allocatedNames)].join(', ')
+  return (!hallId||String(hallId)===String(exam?.hallId))?exam?.invigilator||'Unassigned':'Unassigned'
+}
+function getHallRollRange(exam, allocation, scheduled) {
+  if (allocation?.studentFrom && allocation?.studentTo) return `${allocation.studentFrom} – ${allocation.studentTo}`
+  if (scheduled && exam?.rollNoFrom && exam?.rollNoTo) return `${exam.rollNoFrom} – ${exam.rollNoTo}`
+  return '—'
+}
+function parseRollNumberRange(from, to) {
+  const first=String(from||'').trim().match(/^(.*?)(\d+)$/)
+  const last=String(to||'').trim().match(/^(.*?)(\d+)$/)
+  if(!first||!last||normalizeText(first[1])!==normalizeText(last[1]))return null
+  const start=Number(first[2]),end=Number(last[2])
+  if(!Number.isSafeInteger(start)||!Number.isSafeInteger(end)||end<start)return null
+  const width=Math.max(first[2].length,last[2].length)
+  return{prefix:first[1],start,end,width,count:end-start+1,format:(number)=>`${first[1]}${String(number).padStart(width,'0')}`}
+}
+function getAllocatedRangePositions(allocations, range) {
+  const positions=new Set()
+  if(!range)return positions
+  for(const allocation of allocations){
+    const first=String(allocation.studentFrom||'').match(/^(.*?)(\d+)$/)
+    const last=String(allocation.studentTo||'').match(/^(.*?)(\d+)$/)
+    if(!first||!last||normalizeText(first[1])!==normalizeText(range.prefix)||normalizeText(last[1])!==normalizeText(range.prefix))continue
+    const low=Math.max(range.start,Number(first[2])),high=Math.min(range.end,Number(last[2]))
+    for(let number=low;number<=high;number++)positions.add(number-range.start+1)
+  }
+  return positions
+}
 
 function Status({ value }) { return <span className={`exm-status exm-status--${String(value).toLowerCase().replaceAll(' ', '-')}`}>{value}</span> }
 function Field({ label, children, required }) { return <label className="exm-field"><span>{label}{required && <b> *</b>}</span>{children}</label> }
@@ -79,7 +113,6 @@ function LocalExamModule({ screen }) {
   const [confirm, setConfirm] = useState(null)
   const [details, setDetails] = useState(null)
   const [view, setView] = useState('table')
-  const [generatorOpen, setGeneratorOpen] = useState(false)
   const [selectedExam, setSelectedExam] = useState('')
   const [selectedHall, setSelectedHall] = useState('')
   const [invigilator, setInvigilator] = useState('')
@@ -170,15 +203,14 @@ function LocalExamModule({ screen }) {
     <PageHeader title={routeInfo[screen][0]} subtitle={routeInfo[screen][1]} breadcrumb={['Examinations & Results', routeInfo[screen][0]]}>
       <div className="exm-header-actions"><button className="exm-button" onClick={goBack}><ArrowLeft size={16}/> Back</button>{['list','department','timetable'].includes(screen) && <button className="exm-button exm-button--primary" onClick={() => navigate('/exam/create')}><Plus size={16}/> Create Exam</button>}</div>
     </PageHeader>
-    <nav className="exm-nav" aria-label="Exam management">{screen!=='student'&&<><Link className={screen==='timetable'?'active':''} to="/exam/timetable">Timetable</Link><Link className={screen==='list'?'active':''} to="/exam/schedules">Schedule list</Link><Link className={screen==='department'?'active':''} to="/exam/department-schedule">Department schedule</Link><Link className={screen==='halls'?'active':''} to="/exam/hall-allocation">Hall allocation</Link></>}<Link className={screen==='student'?'active':''} to="/exam/student-schedule">Exam Schedule</Link></nav>
+    <nav className="exm-nav" aria-label="Exam management">{screen!=='student'&&<><Link className={screen==='timetable'?'active':''} to="/exam/timetable">Timetable</Link><Link className={screen==='list'?'active':''} to="/exam/schedules">Schedule list</Link><Link className={screen==='halls'?'active':''} to="/exam/hall-allocation">Hall allocation</Link></>}<Link className={screen==='student'?'active':''} to="/exam/student-schedule">Exam Schedule</Link></nav>
     {notice && <Notice onClose={() => setNotice('')}>{notice}</Notice>}{error && <div className="exm-error" role="alert"><AlertTriangle size={18}/>{error}<button onClick={() => setError('')}><X size={15}/></button></div>}
     {screen === 'create' && <CreateForm key={editingExam?.id || duplicateTemplate?.id || 'new'} exam={editingExam || duplicateTemplate} isEdit={!!editingExam} masterOptions={masterOptions} onSaved={(message) => { reload(); setNotice(message); setError(''); if (!editingExam) navigate('/exam/schedules', { state: { notice: message } }) }} onError={setError} onCancel={() => navigate('/exam/schedules')} />}
     {['list','department','timetable','student'].includes(screen) && <>
       {screen === 'student' && <ExamNoticeBoardHeader exams={scopedExams.filter((e) => e.status !== 'Draft')} student={student} adminReview={adminReview} />}
       {screen !== 'timetable' && screen !== 'student' && <Summary metrics={metrics} />}
       <FilterPanel filters={draftFilters} activeFilters={filters} masterOptions={masterOptions} open={filtersOpen} onToggle={() => setFiltersOpen((open) => !open)} onChange={selectFilter} onApply={() => { setFilters({ ...draftFilters }); setFiltersOpen(false) }} onReset={() => { resetFilters(); setFiltersOpen(false) }} search={search} onSearch={setSearch} showSearch={screen === 'list' || screen === 'student'} />
-      {screen === 'timetable' && <div className="exm-toolbar"><div className="exm-view-toggle">{[['table','Table'],['calendar','Day-wise'],['semester','Semester-wise'],['department','Department-wise'],['batch','Batch-wise']].map(([key,label])=><button key={key} className={view===key?'active':''} onClick={()=>setView(key)}>{label}</button>)}</div><div className="exm-toolbar__actions"><button className="exm-button" onClick={()=>setGeneratorOpen((open)=>!open)}><Plus size={15}/>Generate timetable</button><button className="exm-button" onClick={()=>window.print()}><Printer size={15}/>Print timetable</button><button className="exm-button" onClick={()=>exportTimetable(sorted)}><ClipboardList size={15}/>Export timetable</button></div></div>}
-      {screen === 'timetable' && generatorOpen && <TimetableGenerator exams={exams} masterOptions={masterOptions} onClose={()=>setGeneratorOpen(false)} onError={setError} onSaved={(message)=>{reload();setNotice(message);setGeneratorOpen(false)}} />}
+      {screen === 'timetable' && <div className="exm-toolbar"><div className="exm-view-toggle">{[['table','Table'],['calendar','Day-wise'],['semester','Semester-wise'],['department','Department-wise'],['batch','Batch-wise']].map(([key,label])=><button key={key} className={view===key?'active':''} onClick={()=>setView(key)}>{label}</button>)}</div><div className="exm-toolbar__actions"><button className="exm-button" onClick={()=>window.print()}><Printer size={15}/>Print timetable</button><button className="exm-button" onClick={()=>exportTimetable(sorted)}><ClipboardList size={15}/>Export timetable</button></div></div>}
       {screen === 'list' && <div className="exm-toolbar"><span>{filtered.length} schedules</span></div>}
       {screen === 'student' && <StudentSchedule exams={filtered} halls={halls} allocations={allocations} student={student} adminReview={adminReview} />}
       {screen === 'timetable' && view !== 'table' ? <DateGroups exams={filtered} groupBy={view} /> : screen !== 'student' && <ExamTable rows={pageRows} sortable={screen === 'list'} sort={sort} onSort={(key) => setSort((s) => ({ key, direction: s.key === key && s.direction === 'asc' ? 'desc' : 'asc' }))} onView={setDetails} onEdit={(id) => navigate(`/exam/create?edit=${id}`)} onDelete={(e) => setConfirm(e)} onStatus={updateStatus} mode={screen} halls={halls} />}
@@ -258,13 +290,13 @@ function FilterPanel({ filters, activeFilters, masterOptions, open, onToggle, on
 }
 function ExamTable({ rows, sortable, sort, onSort, onView, onEdit, onDelete, onStatus, mode, halls }) {
   const headers = mode === 'timetable' ? [['examDate','Date'],['day','Day'],['session','Session'],['time','Time'],['subjectCode','Subject Code'],['subjectName','Subject Name'],['subjectType','Type'],['credits','Credits'],['examType','Exam Type'],['hallId','Hall'],['invigilator','Invigilator'],['status','Status']] : mode === 'department' ? [['id','Exam ID'],['examDate','Exam Date'],['day','Day'],['session','Session'],['subjectCode','Subject Code'],['subjectName','Subject'],['course','Course'],['branch','Branch'],['batch','Batch'],['semester','Semester'],['section','Section'],['invigilator','Invigilator'],['examType','Exam Type'],['status','Status']] : [['index','#'],['id','Exam ID'],['examName','Exam Name'],['examType','Exam Type'],['department','Department'],['course','Course'],['branch','Branch'],['batch','Batch'],['semester','Sem'],['subjectCode','Subject Code'],['subjectName','Subject'],['examDate','Exam Date'],['session','Session'],['startTime','Start'],['endTime','End'],['hallId','Hall'],['status','Status']]
-  const val = (e, k, i) => k === 'index' ? i + 1 : k === 'day' ? dayLabel(e.examDate) : k === 'time' ? `${timeLabel(e.startTime)} - ${timeLabel(e.endTime)}` : k === 'examDate' ? dateLabel(e.examDate) : k === 'startTime' || k === 'endTime' ? timeLabel(e[k]) : k === 'hallId' ? halls.find((h) => h.id === e.hallId)?.name || e.hallId || '—' : k === 'invigilator' ? getInvigilations().find((item)=>item.examId===e.id)?.facultyName || 'Unassigned' : k === 'status' ? <Status value={getStatus(e)}/> : e[k] || '—'
-  return <div className="exm-panel exm-table-wrap"><table className="exm-table"><thead><tr>{headers.map(([key,label]) => <th key={key} onClick={() => sortable && onSort(key)} className={sortable ? 'is-sortable' : ''}>{label}{sortable && sort.key === key ? (sort.direction === 'asc' ? ' ↑' : ' ↓') : ''}</th>)}{mode !== 'timetable' && <th>Actions</th>}</tr></thead><tbody>{rows.map((e,i) => <tr key={e.id}>{headers.map(([k]) => <td key={k}>{val(e,k,i)}</td>)}{mode !== 'timetable' && <td><div className="exm-row-actions"><button title="View" onClick={() => onView(e)}>View</button><button title="Edit" onClick={() => onEdit(e.id)}>Edit</button><button title="Duplicate" onClick={() => window.location.assign(`/exam/create?duplicate=${e.id}`)}>Duplicate</button>{e.status !== 'Published' && e.status !== 'Cancelled' ? <button onClick={() => onStatus(e,'Published')}>Publish</button> : <button onClick={() => onStatus(e,'Cancelled')}>Cancel</button>}<button className="danger" onClick={() => onDelete(e)}>Delete</button></div></td>}</tr>)}</tbody></table>{!rows.length && <Empty />}</div>
+  const val = (e, k, i) => k === 'index' ? i + 1 : k === 'day' ? dayLabel(e.examDate) : k === 'time' ? `${timeLabel(e.startTime)} - ${timeLabel(e.endTime)}` : k === 'examDate' ? dateLabel(e.examDate) : k === 'startTime' || k === 'endTime' ? timeLabel(e[k]) : k === 'hallId' ? halls.find((h) => h.id === e.hallId)?.name || e.hallId || '—' : k === 'invigilator' ? getAssignedInvigilator(e) : k === 'status' ? <Status value={getStatus(e)}/> : e[k] || '—'
+  return <div className="exm-panel exm-table-wrap"><table className="exm-table"><thead><tr>{headers.map(([key,label]) => <th key={key} onClick={() => sortable && onSort(key)} className={sortable ? 'is-sortable' : ''}>{label}{sortable && sort.key === key ? (sort.direction === 'asc' ? ' ↑' : ' ↓') : ''}</th>)}{mode !== 'timetable' && <th>Actions</th>}</tr></thead><tbody>{rows.map((e,i) => <tr key={e.id}>{headers.map(([k]) => <td key={k}>{val(e,k,i)}</td>)}{mode !== 'timetable' && <td><div className="exm-row-actions"><button title="View" onClick={() => onView(e)}>View</button><button title="Edit" onClick={() => onEdit(e.id)}>Edit</button>{e.status !== 'Published' && e.status !== 'Cancelled' ? <button onClick={() => onStatus(e,'Published')}>Publish</button> : <button onClick={() => onStatus(e,'Cancelled')}>Cancel</button>}<button className="danger" onClick={() => onDelete(e)}>Delete</button></div></td>}</tr>)}</tbody></table>{!rows.length && <Empty />}</div>
 }
 function DateGroups({ exams, groupBy='calendar' }) { const keyFor=(exam)=>groupBy==='calendar'?exam.examDate:exam[groupBy]||'Unassigned';const groups=exams.reduce((result,exam)=>((result[keyFor(exam)]||=[]).push(exam),result),{});return <div className="exm-date-groups">{Object.keys(groups).sort().map((key)=><section className="exm-panel exm-date-group" key={key}><div className="exm-date-group__title"><CalendarDays size={18}/><div><strong>{groupBy==='calendar'?dayLabel(key):key}</strong><span>{groupBy==='calendar'?dateLabel(key):`${groups[key].length} scheduled examinations`}</span></div></div>{groups[key].map((exam)=><article key={exam.id}><time>{dateLabel(exam.examDate)} · {timeLabel(exam.startTime)} – {timeLabel(exam.endTime)}</time><div><strong>{exam.subjectCode} · {exam.subjectName}</strong><span>{exam.examType} · {exam.session} · {exam.hallId||'Hall pending'}</span></div><Status value={getStatus(exam)}/></article>)}</section>)}{!exams.length&&<Empty/>}</div> }
 
 function CreateForm({ exam, isEdit, masterOptions, onSaved, onError, onCancel }) {
-  const [form, setForm] = useState(() => ({ academicYear:'2026-2027', examType:'End Semester', examName:'', examCode:'', department:'', course:'B.Tech', branch:'', batch:'', semester:'', section:'', subjectCode:'', subjectName:'', subjectType:'Theory', credits:'', faculty:'', maxMarks:100, hallRequired:true, invigilatorRequired:true, examinerRequired:false, examDate:'', startTime:'09:00', endTime:'12:00', session:'FN', hallId:'', rollNoFrom:'', rollNoTo:'', status:'Scheduled', ...(exam ? { ...exam, ...(isEdit ? {} : { id:undefined, examDate:'', hallId:'', status:'Scheduled' }) } : {}) }))
+  const [form, setForm] = useState(() => ({ academicYear:'2026-2027', examType:'End Semester', examName:'', examCode:'', department:'', course:'B.Tech', branch:'', batch:'', semester:'', section:'', subjectCode:'', subjectName:'', subjectType:'Theory', credits:'', faculty:'', invigilator:'', maxMarks:100, hallRequired:true, invigilatorRequired:true, examinerRequired:false, examDate:'', startTime:'09:00', endTime:'12:00', session:'FN', hallId:'', rollNoFrom:'', rollNoTo:'', status:'Scheduled', ...(exam ? { ...exam, ...(isEdit ? {} : { id:undefined, examDate:'', hallId:'', status:'Scheduled' }) } : {}) }))
   const [saved, setSaved] = useState(false)
   const set = (key, value) => setForm((prev) => {
     const next={...prev,[key]:value,...(key==='branch'||key==='semester'?{subjectCode:'',subjectName:'',credits:''}:{})}
@@ -284,7 +316,32 @@ function CreateForm({ exam, isEdit, masterOptions, onSaved, onError, onCancel })
   const available = getAvailableHalls(form.examDate, form.session, exam?.id)
   const selectedHall = getHalls().find((h) => h.id === form.hallId)
   const duration = form.startTime && form.endTime ? Math.max(0, (new Date(`2000-01-01T${form.endTime}`)-new Date(`2000-01-01T${form.startTime}`))/60000) : 0
-  const handleSubmit = (e, status) => { e.preventDefault(); onError(''); if (!!form.rollNoFrom !== !!form.rollNoTo) { onError('Enter both the first and last roll number, or leave both blank.'); return } if (form.rollNoFrom && form.rollNoFrom.localeCompare(form.rollNoTo, undefined, { numeric:true }) > 0) { onError('The first roll number must come before the last roll number.'); return } try { const payload = { ...form, credits:Number(form.credits)||0, maxMarks:Number(form.maxMarks)||0, status }; if (isEdit) updateExam(exam.id,payload); else createExam(payload); setSaved(true); onSaved(isEdit ? 'Exam timetable updated successfully.' : status === 'Draft' ? 'Exam timetable saved as draft.' : 'Exam timetable created successfully.') } catch (err) { onError(err.message) } }
+  const handleSubmit = (e, status) => {
+    e.preventDefault(); onError('')
+    if (!!form.rollNoFrom !== !!form.rollNoTo) { onError('Enter both the first and last roll number, or leave both blank.'); return }
+    const rollRange=form.rollNoFrom&&form.rollNoTo?parseRollNumberRange(form.rollNoFrom,form.rollNoTo):null
+    if (form.rollNoFrom && !rollRange) { onError('Use a roll number range with the same prefix and numeric endings, such as 23CS001 to 23CS060.'); return }
+    const selectedHallRecord=getHalls().find((hall)=>hall.id===form.hallId)
+    if (form.hallId && !selectedHallRecord) { onError('Select a valid examination hall.'); return }
+    if (form.hallId && !getAvailableHalls(form.examDate,form.session,exam?.id).some((hall)=>hall.id===form.hallId)) { onError('The selected hall is already assigned during this date and session. Choose another hall.'); return }
+    if (rollRange && form.hallId && rollRange.count > Number(selectedHallRecord?.capacity||0)) { onError(`${selectedHallRecord.name} has ${selectedHallRecord.capacity} seats. Reduce the roll number range or use Hall Allocation to distribute students across halls.`); return }
+    try {
+      const payload={...form,credits:Number(form.credits)||0,maxMarks:Number(form.maxMarks)||0,status}
+      const existingAllocations=isEdit?getHallAllocations().filter((allocation)=>allocation.examId===exam.id):[]
+      const rosterAllocations=existingAllocations.filter((allocation)=>(allocation.studentIds||[]).length>0)
+      if (isEdit && rosterAllocations.length && form.hallId!==exam.hallId) { onError('This exam already has student allocations. Update or remove those allocations from Hall Allocation before changing its scheduled hall.'); return }
+      const savedExam=isEdit?updateExam(exam.id,payload):createExam(payload)
+      const rangeAllocation=existingAllocations.find((allocation)=>allocation.hallId===form.hallId&&!(allocation.studentIds||[]).length)
+      if (rollRange && form.hallId && !rosterAllocations.length) {
+        const allocationData={examId:savedExam.id,examDate:form.examDate,session:form.session,hallId:form.hallId,studentCount:rollRange.count,studentIds:[],studentFrom:form.rollNoFrom,studentTo:form.rollNoTo,invigilator:form.invigilator||''}
+        if (rangeAllocation) updateHallAllocation(rangeAllocation.id,allocationData)
+        else { existingAllocations.filter((allocation)=>(allocation.studentIds||[]).length===0).forEach((allocation)=>deleteHallAllocation(allocation.id));createHallAllocation(allocationData) }
+      } else if (!rollRange) existingAllocations.filter((allocation)=>(allocation.studentIds||[]).length===0).forEach((allocation)=>deleteHallAllocation(allocation.id))
+      if (isEdit && rosterAllocations.length && form.invigilator!==exam.invigilator) rosterAllocations.forEach((allocation)=>updateHallAllocation(allocation.id,{invigilator:form.invigilator||''}))
+      setSaved(true)
+      onSaved(isEdit ? 'Exam timetable and hall allocation updated successfully.' : status === 'Draft' ? 'Exam timetable and hall allocation saved as draft.' : 'Exam timetable and hall allocation created successfully.')
+    } catch (err) { onError(err.message) }
+  }
   return <form className="exm-panel exm-form" onSubmit={(e) => handleSubmit(e, 'Scheduled')}>
     <div className="exm-form__heading"><div><h2>{isEdit ? `Edit ${exam.id}` : 'Examination details'}</h2><p>Fields marked with * are required. Conflicts are checked before saving.</p></div><Status value={form.status}/></div>
     <fieldset><legend>Examination details</legend><div className="exm-form-grid">
@@ -322,6 +379,7 @@ function CreateForm({ exam, isEdit, masterOptions, onSaved, onError, onCancel })
     </div></fieldset>
     <fieldset><legend>Examination hall</legend><div className="exm-form-grid">
       <Field label="Hall" required={!!examTypeConfig?.hallRequired}><select required={!!examTypeConfig?.hallRequired} value={form.hallId} onChange={(e)=>set('hallId',e.target.value)}><option value="">Select available hall</option>{available.map(h=><option key={h.id} value={h.id}>{h.name} · {h.building}</option>)}</select></Field>
+      <Field label="Invigilator"><select value={form.invigilator||''} onChange={(e)=>set('invigilator',e.target.value)}><option value="">Select invigilator</option>{masterOptions.faculty.map(name=><option key={name}>{name}</option>)}</select></Field>
       <Field label="Building"><input readOnly value={selectedHall?.building||''}/></Field><Field label="Floor"><input readOnly value={selectedHall?.floor||''}/></Field><Field label="Capacity"><input readOnly value={selectedHall?.capacity||''}/></Field>
     </div>{form.examDate && form.session && !available.length && <p className="exm-inline-warning"><AlertTriangle size={16}/> No halls are available for this date and session.</p>}</fieldset>
     <div className="exm-form__actions"><button type="button" className="exm-button" onClick={()=>setForm({academicYear:'2026-2027',examType:'End Semester',examName:'',examCode:'',department:'',course:'B.Tech',branch:'',batch:'',semester:'',section:'',subjectCode:'',subjectName:'',subjectType:'Theory',credits:'',faculty:'',maxMarks:100,hallRequired:true,invigilatorRequired:true,examinerRequired:false,examDate:'',startTime:'09:00',endTime:'12:00',session:'FN',hallId:'',rollNoFrom:'',rollNoTo:'',status:'Scheduled'})}>Reset</button><button type="button" className="exm-button" onClick={onCancel}>Cancel</button><button type="button" className="exm-button" onClick={(e)=>handleSubmit(e,'Draft')}>Save Draft</button><button type="submit" className="exm-button exm-button--primary" disabled={saved}>{isEdit?'Update Schedule':'Create Schedule'}</button></div>
@@ -354,27 +412,32 @@ function StudentSchedule({ exams, halls, allocations, student, adminReview }) {
     const allocationRows = matches.length ? matches : [null]
     return allocationRows.map((allocation) => {
       const hall = halls.find((h) => h.id === (allocation?.hallId || exam.hallId))
-      const invigilation = getInvigilations().find((item)=>item.examId===exam.id&&item.hallId===(allocation?.hallId||exam.hallId))
       const studentIndex = allocation && !adminReview ? (allocation.studentIds || []).indexOf(student.id) : -1
       const ownSeat = studentIndex >= 0 ? studentIndex + 1 : null
-      return { exam, allocation, hall, ownSeat, invigilation }
+      return { exam, allocation, hall, ownSeat }
     })
   })
   useEffect(() => setPage(1), [status, entries.length])
   const pages = Math.max(1, Math.ceil(entries.length / pageSize))
   const pageEntries = entries.slice((page - 1) * pageSize, page * pageSize)
-  return <section className="exm-notice-board exm-panel"><div className="exm-student-toolbar"><div>{['All','Upcoming','Completed','Cancelled'].map((s)=><button key={s} className={status===s?'active':''} onClick={()=>{setStatus(s);setPage(1)}}>{s}</button>)}</div><span>{entries.length} timetable {entries.length===1?'entry':'entries'}</span></div><div className="exm-notice-table-wrap"><table className="exm-notice-table"><thead><tr>{['Date & Day','Session / Time','Subject','Section','Hall','Building / Floor','Seats','Roll No. / Range','Invigilator','Status'].map((x)=><th key={x}>{x}</th>)}</tr></thead><tbody>{pageEntries.map(({exam,allocation,hall,ownSeat,invigilation},i)=><tr key={`${exam.id}-${allocation?.id||i}`}><td><strong>{dateLabel(exam.examDate)}</strong><span>{dayLabel(exam.examDate)}</span></td><td><strong>{exam.session}</strong><span>{timeLabel(exam.startTime)} – {timeLabel(exam.endTime)}</span></td><td><strong>{exam.subjectCode}</strong><span>{exam.subjectName}</span><small>{exam.examType}</small></td><td>{exam.section || '—'}</td><td><strong>{hall?.name || 'To be assigned'}</strong><span>{exam.hallId && hall ? `Hall ${hall.name}` : 'Hall allocation pending'}</span></td><td><strong>{hall?.building || '—'}</strong><span>{hall ? `Block / Floor ${hall.floor}` : '—'}</span></td><td><strong>{allocation ? `${allocation.studentCount} / ${hall?.capacity || '—'}` : `— / ${hall?.capacity || '—'}`}</strong><span>{allocation ? 'Students / capacity' : 'Allocated / capacity'}</span></td><RollNumberCell exam={exam} allocation={allocation} adminReview={adminReview} student={student} ownSeat={ownSeat}/><td>{invigilation?.facultyName || allocation?.invigilator || exam.faculty || '—'}</td><td><Status value={getStatus(exam)}/></td></tr>)}</tbody></table>{!entries.length&&<Empty>No published examination schedules match this selection.</Empty>}</div>{entries.length>0&&<div className="exm-pagination"><span>Showing {(page-1)*pageSize+1}–{Math.min(page*pageSize,entries.length)} of {entries.length}</span><label>Rows <select value={pageSize} onChange={(e)=>{setPageSize(Number(e.target.value));setPage(1)}}><option>10</option><option>25</option><option>50</option></select></label><button disabled={page<=1} onClick={()=>setPage(page-1)}>Previous</button><b>{page} / {pages}</b><button disabled={page>=pages} onClick={()=>setPage(page+1)}>Next</button></div>}</section>
+  return <section className="exm-notice-board exm-panel"><div className="exm-student-toolbar"><div>{['All','Upcoming','Completed','Cancelled'].map((s)=><button key={s} className={status===s?'active':''} onClick={()=>{setStatus(s);setPage(1)}}>{s}</button>)}</div><span>{entries.length} timetable {entries.length===1?'entry':'entries'}</span></div><div className="exm-notice-table-wrap"><table className="exm-notice-table"><thead><tr>{['Date & Day','Session / Time','Subject','Section','Hall','Building / Floor','Seats','Roll No. / Range','Invigilator','Status'].map((x)=><th key={x}>{x}</th>)}</tr></thead><tbody>{pageEntries.map(({exam,allocation,hall,ownSeat},i)=><tr key={`${exam.id}-${allocation?.id||i}`}><td><strong>{dateLabel(exam.examDate)}</strong><span>{dayLabel(exam.examDate)}</span></td><td><strong>{exam.session}</strong><span>{timeLabel(exam.startTime)} – {timeLabel(exam.endTime)}</span></td><td><strong>{exam.subjectCode}</strong><span>{exam.subjectName}</span><small>{exam.examType}</small></td><td>{exam.section || '—'}</td><td><strong>{hall?.name || 'To be assigned'}</strong><span>{exam.hallId && hall ? `Hall ${hall.name}` : 'Hall allocation pending'}</span></td><td><strong>{hall?.building || '—'}</strong><span>{hall ? `Block / Floor ${hall.floor}` : '—'}</span></td><td><strong>{allocation ? `${allocation.studentCount} / ${hall?.capacity || '—'}` : `— / ${hall?.capacity || '—'}`}</strong><span>{allocation ? 'Students / capacity' : 'Allocated / capacity'}</span></td><RollNumberCell exam={exam} allocation={allocation} adminReview={adminReview} student={student} ownSeat={ownSeat}/><td>{getAssignedInvigilator(exam, allocation?.hallId || hall?.id)}</td><td><Status value={getStatus(exam)}/></td></tr>)}</tbody></table>{!entries.length&&<Empty>No published examination schedules match this selection.</Empty>}</div>{entries.length>0&&<div className="exm-pagination"><span>Showing {(page-1)*pageSize+1}–{Math.min(page*pageSize,entries.length)} of {entries.length}</span><label>Rows <select value={pageSize} onChange={(e)=>{setPageSize(Number(e.target.value));setPage(1)}}><option>10</option><option>25</option><option>50</option></select></label><button disabled={page<=1} onClick={()=>setPage(page-1)}>Previous</button><b>{page} / {pages}</b><button disabled={page>=pages} onClick={()=>setPage(page+1)}>Next</button></div>}</section>
 }
 function HallManager({ exams, halls, allocations, students, faculty, facultyDirectory, dataLoading, selectedExam, setSelectedExam, selectedHall, setSelectedHall, invigilator, setInvigilator, studentRange, setStudentRange, onError, onNotice, onReload, onRefreshMasterData }) {
   const [hallPage, setHallPage] = useState(1)
   const [hallPageSize, setHallPageSize] = useState(10)
+  const [activeHall, setActiveHall] = useState(null)
+  const [pendingHallDelete, setPendingHallDelete] = useState(null)
+  const [hallDialogMode, setHallDialogMode] = useState('view')
+  const [hallForm, setHallForm] = useState({ studentFrom:'', studentTo:'', invigilator:'' })
   const [remoteStudents, setRemoteStudents] = useState(null)
   const [rosterLoading, setRosterLoading] = useState(false)
   const [rosterRefresh, setRosterRefresh] = useState(0)
   const [generatedInvigilations, setGeneratedInvigilations] = useState(() => getInvigilations().filter((item)=>item.examId===selectedExam))
   const exam = exams.find((e)=>e.id===selectedExam)
+  const rollRange = parseRollNumberRange(exam?.rollNoFrom,exam?.rollNoTo)
   const fallbackStudents = exam ? students.filter((s)=>s.department===exam.department&&s.course===exam.course&&s.branch===exam.branch&&s.batch===exam.batch&&s.semester===exam.semester&&s.section===exam.section) : []
   const examStudents = remoteStudents || fallbackStudents
+  const studentLimit = examStudents.length || rollRange?.count || 0
   useEffect(() => {
     if (!exam) { setRemoteStudents(null); setRosterLoading(false); return undefined }
     let active = true
@@ -393,18 +456,46 @@ function HallManager({ exams, halls, allocations, students, faculty, facultyDire
     }).catch(() => {}).finally(() => { if (active) setRosterLoading(false) })
     return () => { active = false }
   }, [exam?.id, rosterRefresh])
-  useEffect(() => { if (exam) setStudentRange((range) => ({ ...range, to:Math.min(Number(range.to) || 40, examStudents.length || 40) })) }, [exam?.id, examStudents.length])
+  useEffect(() => { if (exam) setStudentRange((range) => { const limit=examStudents.length||rollRange?.count||40;const from=Math.min(limit,Math.max(1,Number(range.from)||1));return{from,to:Math.min(limit,Math.max(from,Number(range.to)||Math.min(40,limit)))}}) }, [exam?.id, examStudents.length, rollRange?.count])
   useEffect(() => setGeneratedInvigilations(getInvigilations().filter((item)=>item.examId===selectedExam)), [selectedExam, allocations.length])
   const current = allocations.filter((a)=>a.examId===selectedExam)
   const allocated = current.reduce((n,a)=>n+Number(a.studentCount||0),0)
   const occupied = [...allocations.filter((a)=>a.examId!==selectedExam&&a.examDate===exam?.examDate&&a.session===exam?.session).map((a)=>a.hallId), ...exams.filter((e)=>e.id!==selectedExam&&e.examDate===exam?.examDate&&e.session===exam?.session&&e.status!=='Cancelled').map((e)=>e.hallId)].filter(Boolean)
-  const assignments = halls.map((hall)=>({hall, allocation:current.find((a)=>a.hallId===hall.id)}))
+  // The table is an allocation list, so keep unallocated master halls out of it.
+  // A hall selected while creating the exam is still included until a student
+  // allocation is added for it.
+  const allocationHallIds = new Set([...current.map((allocation)=>allocation.hallId), exam?.hallId].filter(Boolean))
+  const assignments = halls.filter((hall)=>allocationHallIds.has(hall.id)).map((hall)=>({hall, allocation:current.find((a)=>a.hallId===hall.id), scheduled:hall.id===exam?.hallId}))
   const availableSeats = Math.max(0, halls.filter((h)=>!occupied.includes(h.id)).reduce((n,h)=>n+h.capacity,0)-allocated)
-  const availableHalls = halls.filter((h)=>!occupied.includes(h.id)&&h.capacity>Number(current.find((a)=>a.hallId===h.id)?.studentCount||0))
+  const availableHalls = halls.filter((h)=>!occupied.includes(h.id)&&h.capacity>Number(current.find((a)=>a.hallId===h.id)?.studentCount||0)).sort((a,b)=>Number(b.id===exam?.hallId)-Number(a.id===exam?.hallId))
   const assignedIds = new Set(current.flatMap((a)=>a.studentIds||[]))
   const remainingStudents = examStudents.filter((s)=>!assignedIds.has(s.id))
   const allocate = (rows) => { let offset=0; for (const hall of availableHalls) { if (offset>=rows.length) break; const existing=current.find((a)=>a.hallId===hall.id);const capacityLeft=hall.capacity-Number(existing?.studentCount||0);const chunk=rows.slice(offset,offset+capacityLeft);if(!chunk.length)continue;createHallAllocation({examId:exam.id,examDate:exam.examDate,session:exam.session,hallId:hall.id,studentCount:chunk.length,studentIds:chunk.map((s)=>s.id),studentFrom:chunk[0]?.registerNumber,studentTo:chunk.at(-1)?.registerNumber,invigilator:existing?.invigilator||''});offset+=chunk.length } return rows.length-offset }
-  const auto = () => { if (!exam) {onError('Select an examination first.');return} if (!examStudents.length) {onError('No students match this examination’s department, branch, batch, semester and section.');return} if (!remainingStudents.length) {onError('');onNotice(`All ${examStudents.length} eligible students have already been allocated.`);return} try { const remaining=allocate(remainingStudents); onNotice(remaining?`Allocation completed. ${remaining} students remain because available hall capacity is insufficient.`:'All eligible students were allocated successfully.');onError('');onReload() } catch(e){onError(e.message)} }
+  const auto = () => {
+    if (!exam) { onError('Select an examination first.'); return }
+    if (!examStudents.length) {
+      if (!rollRange) { onError('No matching student roster is available. Add a valid roll number range to this exam or refresh the student data.'); return }
+      const alreadyAssigned=getAllocatedRangePositions(current,rollRange)
+      const pending=Array.from({length:rollRange.count},(_,index)=>index+1).filter((position)=>!alreadyAssigned.has(position))
+      if (!pending.length) { onError(''); onNotice('All roll numbers in this examination range have already been allocated.'); return }
+      try {
+        let offset=0
+        for (const hall of availableHalls) {
+          const capacity=hall.capacity-Number(current.find((allocation)=>allocation.hallId===hall.id)?.studentCount||0)
+          const chunk=pending.slice(offset,offset+capacity)
+          if (!chunk.length) continue
+          createHallAllocation({examId:exam.id,examDate:exam.examDate,session:exam.session,hallId:hall.id,studentCount:chunk.length,studentIds:[],studentFrom:rollRange.format(rollRange.start+chunk[0]-1),studentTo:rollRange.format(rollRange.start+chunk.at(-1)-1),invigilator:current.find((allocation)=>allocation.hallId===hall.id)?.invigilator||''})
+          offset+=chunk.length
+        }
+        const remaining=pending.length-offset
+        onNotice(remaining?`Allocation completed. ${remaining} roll numbers remain because available hall capacity is insufficient.`:'All roll numbers were allocated successfully.')
+        onError(''); onReload()
+      } catch(error) { onError(error.message) }
+      return
+    }
+    if (!remainingStudents.length) { onError(''); onNotice(`All ${examStudents.length} eligible students have already been allocated.`); return }
+    try { const remaining=allocate(remainingStudents); onNotice(remaining?`Allocation completed. ${remaining} students remain because available hall capacity is insufficient.`:'All eligible students were allocated successfully.');onError('');onReload() } catch(error){onError(error.message)}
+  }
   const manual = () => {
     if (!exam || !selectedHall) { onError('Select an examination and an available hall.'); return }
     const hall = halls.find((h) => h.id === selectedHall)
@@ -412,21 +503,25 @@ function HallManager({ exams, halls, allocations, students, faculty, facultyDire
     const end = Number(studentRange.to)
     const count = end - start + 1
     if (!hall) { onError('The selected hall is no longer available. Refresh the hall list and choose another.'); return }
-    if (!Number.isInteger(start) || !Number.isInteger(end) || start < 1 || end > examStudents.length || count < 1) { onError(`Choose a valid student range from 1 to ${examStudents.length}.`); return }
+    if (occupied.includes(hall.id)) { onError(`${hall.name} is already assigned to another exam during this session.`); return }
+    const limit=examStudents.length||rollRange?.count||0
+    if (!Number.isInteger(start) || !Number.isInteger(end) || !limit || start < 1 || end > limit || count < 1) { onError(rollRange?`Choose a valid student range from 1 to ${limit}.`:'No matching student roster or valid exam roll number range is available. Add a roll number range in Create Exam or refresh student data.'); return }
     const existingCount = Number(current.find((a) => a.hallId === hall.id)?.studentCount || 0)
     if (count > hall.capacity - existingCount) { onError(`${hall.name} has ${hall.capacity - existingCount} seats available. Reduce the selected student range.`); return }
-    const chunk = examStudents.slice(start - 1, end)
+    const chunk = examStudents.length?examStudents.slice(start-1,end):[]
+    const assignedPositions=getAllocatedRangePositions(current,rollRange)
+    if (!examStudents.length && Array.from({length:count},(_,index)=>start+index).some((position)=>assignedPositions.has(position))) { onError('Part of this roll number range has already been assigned. Choose an unallocated range.'); return }
+    if (chunk.some((student)=>assignedIds.has(student.id))) { onError('Part of this student range has already been assigned. Choose an unallocated range.'); return }
+    const studentFrom=examStudents.length?chunk[0]?.registerNumber:rollRange.format(rollRange.start+start-1)
+    const studentTo=examStudents.length?chunk.at(-1)?.registerNumber:rollRange.format(rollRange.start+end-1)
     try {
-      createHallAllocation({ examId:exam.id, examDate:exam.examDate, session:exam.session, hallId:hall.id, studentCount:count, studentIds:chunk.map((s)=>s.id), studentFrom:chunk[0].registerNumber, studentTo:chunk.at(-1).registerNumber, invigilator })
+      createHallAllocation({ examId:exam.id, examDate:exam.examDate, session:exam.session, hallId:hall.id, studentCount:count, studentIds:chunk.map((s)=>s.id), studentFrom, studentTo, invigilator })
       const nextAssigned = new Set([...assignedIds, ...chunk.map((s)=>s.id)])
-      const nextIndex = examStudents.findIndex((student) => !nextAssigned.has(student.id))
-      setSelectedHall('')
-      if (nextIndex >= 0) {
-        let nextEnd = nextIndex
-        while (nextEnd < examStudents.length && nextEnd-nextIndex < hall.capacity && !nextAssigned.has(examStudents[nextEnd].id)) nextEnd += 1
-        setStudentRange({ from:nextIndex+1, to:nextEnd })
-      }
-      onNotice(nextIndex < 0 ? 'All eligible students have been allocated successfully.' : `Students ${chunk[0].registerNumber}–${chunk.at(-1).registerNumber} allocated to ${hall.name}.`)
+      const nextPosition=examStudents.length?examStudents.findIndex((student)=>!nextAssigned.has(student.id))+1:Array.from({length:limit},(_,index)=>index+1).find((position)=>!assignedPositions.has(position)&&!(position>=start&&position<=end))||0
+      const remainingCapacity=hall.capacity-existingCount-count
+      setSelectedHall(remainingCapacity>0?hall.id:'')
+      if (nextPosition>0) setStudentRange({from:nextPosition,to:Math.min(limit,nextPosition+Math.max(1,remainingCapacity)-1)})
+      onNotice(`${studentFrom}–${studentTo} allocated to ${hall.name}.`)
       onError('')
       onReload()
     } catch (e) { onError(e.message) }
@@ -435,7 +530,7 @@ function HallManager({ exams, halls, allocations, students, faculty, facultyDire
     if (!exam) { onError('Select an examination first.'); return }
     const rule=getInvigilationRules().find((item)=>item.examDepartment===exam.department&&item.enabled)
     if (!rule?.allowedDepartments?.length) { onError(`Unable to automatically allocate invigilators. Configure an enabled department mapping for ${exam.department}.`); return }
-    const hallIds=[...new Set([...current.map((item)=>item.hallId),exam.hallId].filter(Boolean))]
+    const hallIds=[...new Set([...current.map((item)=>item.hallId),exam.hallId,selectedHall].filter(Boolean))]
     if (!hallIds.length) { onError('Allocate students to at least one hall before generating invigilation.'); return }
     const existing=getInvigilations().filter((item)=>item.examId!==exam.id)
     const eligible=facultyDirectory.filter((person)=>person.active!==false&&person.eligible!==false&&!person.onLeave&&rule.allowedDepartments.includes(person.department))
@@ -457,17 +552,55 @@ function HallManager({ exams, halls, allocations, students, faculty, facultyDire
     const next=generatedInvigilations.map((item)=>item.hallId===hallId?{...item,facultyId:person?.id||'',facultyName:person?.name||'',department:person?.department||'',status:'Reviewed'}:item)
     try { const all=getInvigilations().filter((item)=>item.examId!==exam?.id);saveInvigilations([...all,...next]);setGeneratedInvigilations(next);onNotice('Invigilation assignment updated.') } catch(error) { onError(error.message) }
   }
+  const unassignScheduledHall = (hallId) => {
+    if(!exam)return
+    try { updateExam(exam.id,{hallId:exam.hallId===hallId?'':exam.hallId});setSelectedHall((currentHall)=>currentHall===hallId?'':currentHall);onError('');onNotice('Scheduled examination hall unassigned.');onReload() } catch(error) { onError(error.message) }
+  }
+  const removeHallAllocation = (allocation) => {
+    try { deleteHallAllocation(allocation.id);const nextInvigilations=getInvigilations().filter((item)=>item.examId!==allocation.examId||item.hallId!==allocation.hallId);saveInvigilations(nextInvigilations);setGeneratedInvigilations(nextInvigilations.filter((item)=>item.examId===selectedExam));onError('');onNotice('Student allocation and hall invigilation assignment removed.');onReload() } catch(error) { onError(error.message) }
+  }
+  const openHallDialog = (hall, allocation, mode) => {
+    setActiveHall({ hall, allocation })
+    setHallDialogMode(mode)
+    setHallForm({ studentFrom:allocation?.studentFrom||(hall.id===exam?.hallId?exam?.rollNoFrom:'')||'', studentTo:allocation?.studentTo||(hall.id===exam?.hallId?exam?.rollNoTo:'')||'', invigilator:allocation?.invigilator||getAssignedInvigilator(exam,hall.id)||'' })
+    onError('')
+  }
+  const saveHallDetails = () => {
+    if (!exam||!activeHall) return
+    const { hall, allocation }=activeHall
+    const range=hallForm.studentFrom||hallForm.studentTo?parseRollNumberRange(hallForm.studentFrom,hallForm.studentTo):null
+    if (!!hallForm.studentFrom!==!!hallForm.studentTo||((hallForm.studentFrom||hallForm.studentTo)&&!range)) { onError('Enter a valid roll number range with matching prefix and numeric endings.');return }
+    const existingCount=Number(allocation?.studentCount||0)
+    if (range&&range.count>hall.capacity) { onError(`${hall.name} has ${hall.capacity} seats. Reduce the roll number range.`);return }
+    const assignedToOtherHall=current.filter((item)=>item.hallId!==hall.id)
+    if (range&&getAllocatedRangePositions(assignedToOtherHall,range).size) { onError('This roll number range overlaps with students already assigned to another hall.');return }
+    if (allocation?.studentIds?.length&&range&&range.count!==existingCount) { onError('The student roster allocation controls the count and range. You can still update the invigilator here.');return }
+    try {
+      if (allocation) {
+        if (!allocation.studentIds?.length) {
+          if (range) updateHallAllocation(allocation.id,{studentCount:range.count,studentFrom:hallForm.studentFrom,studentTo:hallForm.studentTo,invigilator:hallForm.invigilator||''})
+          else deleteHallAllocation(allocation.id)
+        } else updateHallAllocation(allocation.id,{invigilator:hallForm.invigilator||''})
+      } else if (range) {
+        createHallAllocation({examId:exam.id,examDate:exam.examDate,session:exam.session,hallId:hall.id,studentCount:range.count,studentIds:[],studentFrom:hallForm.studentFrom,studentTo:hallForm.studentTo,invigilator:hallForm.invigilator||''})
+      }
+      if (hall.id===exam.hallId) updateExam(exam.id,{rollNoFrom:hallForm.studentFrom,rollNoTo:hallForm.studentTo,invigilator:hallForm.invigilator||''})
+      onError('');onNotice('Hall allocation details updated.');setActiveHall(null);onReload()
+    } catch(error) { onError(error.message) }
+  }
   const assignedCapacity = current.reduce((n,a)=>n+(halls.find((h)=>h.id===a.hallId)?.capacity||0),0)
-  const summary=[['Total Students',examStudents.length],['Total Halls',halls.length],['Allocated Students',allocated],['Remaining Students',Math.max(0,examStudents.length-allocated)],['Available Seats',availableSeats],['Capacity Utilization',assignedCapacity?`${Math.min(100,Math.round(allocated/assignedCapacity*100))}%`:'0%']]
+  const totalStudents=examStudents.length||rollRange?.count||0
+  const remainingCount=examStudents.length?remainingStudents.length:rollRange?Math.max(0,rollRange.count-getAllocatedRangePositions(current,rollRange).size):0
+  const summary=[['Total Students',totalStudents],['Total Halls',halls.length],['Allocated Students',allocated],['Remaining Students',remainingCount],['Available Seats',availableSeats],['Capacity Utilization',assignedCapacity?`${Math.min(100,Math.round(allocated/assignedCapacity*100))}%`:'0%']]
   const hallPages=Math.max(1,Math.ceil(assignments.length/hallPageSize))
   const visibleHalls=assignments.slice((hallPage-1)*hallPageSize,hallPage*hallPageSize)
   return <>
-    <section className="exm-panel exm-selection"><div className="exm-form-grid"><Field label="Examination"><select value={selectedExam} onChange={(e)=>{setSelectedExam(e.target.value);setHallPage(1);setSelectedHall('');setStudentRange({from:1,to:40});onError('')}}><option value="">Select examination</option>{exams.filter((e)=>e.status!=='Cancelled').map((e)=><option key={e.id} value={e.id}>{e.id} · {e.subjectCode} · {e.subjectName} · {dateLabel(e.examDate)}</option>)}</select></Field>{exam&&<><Field label="Subject"><input readOnly value={`${exam.subjectCode} · ${exam.subjectName}`}/></Field><Field label="Date & Time"><input readOnly value={`${dateLabel(exam.examDate)} · ${timeLabel(exam.startTime)}–${timeLabel(exam.endTime)}`}/></Field><Field label="Session"><input readOnly value={exam.session}/></Field></>}</div></section>
+    <section className="exm-panel exm-selection"><div className="exm-form-grid"><Field label="Examination"><select value={selectedExam} onChange={(e)=>{const nextExam=exams.find((item)=>item.id===e.target.value);const nextLimit=students.filter((s)=>s.department===nextExam?.department&&s.course===nextExam?.course&&s.branch===nextExam?.branch&&s.batch===nextExam?.batch&&s.semester===nextExam?.semester&&s.section===nextExam?.section).length||parseRollNumberRange(nextExam?.rollNoFrom,nextExam?.rollNoTo)?.count||40;setSelectedExam(e.target.value);setHallPage(1);setSelectedHall(nextExam?.hallId||'');setStudentRange({from:1,to:Math.min(40,nextLimit)});onError('')}}><option value="">Select examination</option>{exams.filter((e)=>e.status!=='Cancelled').map((e)=><option key={e.id} value={e.id}>{e.id} · {e.subjectCode} · {e.subjectName} · {dateLabel(e.examDate)}</option>)}</select></Field>{exam&&<><Field label="Subject"><input readOnly value={`${exam.subjectCode} · ${exam.subjectName}`}/></Field><Field label="Date & Time"><input readOnly value={`${dateLabel(exam.examDate)} · ${timeLabel(exam.startTime)}–${timeLabel(exam.endTime)}`}/></Field><Field label="Session"><input readOnly value={exam.session}/></Field></>}</div></section>
     {exam&&<><div className="exm-summary exm-summary--allocation">{summary.map(([t,v])=><article className="exm-summary__card" key={t}><span><Users size={18}/></span><div><small>{t}</small><strong>{v}</strong></div></article>)}</div>
-    <section className="exm-panel exm-manual"><div className="exm-allocation-heading"><div><h2>Allocate students</h2><p>{rosterLoading ? 'Loading the current student roster…' : !examStudents.length ? 'No students match this examination scope. Refresh or review the selected batch, semester and section.' : `${examStudents.length} eligible students · ${availableHalls.length} halls with seats available`}</p></div><button type="button" className="exm-button" onClick={()=>{onRefreshMasterData();setRosterRefresh((value)=>value+1)}} disabled={dataLoading||rosterLoading}><RefreshCw size={15}/>{dataLoading||rosterLoading?'Refreshing…':'Refresh data'}</button></div><div className="exm-manual-grid"><Field label="Hall"><select value={selectedHall} onChange={(e)=>setSelectedHall(e.target.value)}><option value="">Choose available hall</option>{availableHalls.map(h=><option key={h.id} value={h.id}>{h.name} · {h.capacity-Number(current.find((a)=>a.hallId===h.id)?.studentCount||0)} seats available</option>)}</select></Field><Field label="Student From (roster #)"><input type="number" min="1" max={examStudents.length} value={studentRange.from} onChange={(e)=>setStudentRange({...studentRange,from:e.target.value})}/></Field><Field label="Student To (roster #)"><input type="number" min="1" max={examStudents.length} value={studentRange.to} onChange={(e)=>setStudentRange({...studentRange,to:e.target.value})}/></Field><Field label="Invigilator"><select value={invigilator} onChange={(e)=>setInvigilator(e.target.value)}><option value="">Choose invigilator</option>{faculty.map(x=><option key={x}>{x}</option>)}</select></Field></div><div className="exm-toolbar__actions"><button type="button" className="exm-button" onClick={manual}>Manual allocation</button><button type="button" className="exm-button exm-button--primary" onClick={auto}>Auto Allocate</button><button type="button" className="exm-button" onClick={generateInvigilation}>Generate invigilation</button></div></section>
-    {generatedInvigilations.length>0&&<section className="exm-panel exm-invigilation-panel"><div className="exm-form__heading"><div><h2>Invigilation review</h2><p>Review generated assignments and change the assigned faculty before finalizing.</p></div><button type="button" className="exm-button" onClick={()=>window.print()}><Printer size={15}/>Print</button></div><div className="exm-config-table-wrap"><table className="exm-table"><thead><tr><th>Hall</th><th>Invigilator</th><th>Department</th><th>Date &amp; Time</th><th>Status</th></tr></thead><tbody>{generatedInvigilations.map((item)=><tr key={item.hallId}><td>{halls.find((hall)=>hall.id===item.hallId)?.name||item.hallId}</td><td><select value={item.facultyId} onChange={(event)=>updateInvigilator(item.hallId,event.target.value)}><option value="">Select eligible faculty</option>{facultyDirectory.filter((person)=>person.department===item.department&&person.active!==false&&person.eligible!==false&&!person.onLeave).map((person)=><option key={person.id} value={person.id}>{person.name}</option>)}</select></td><td>{item.department}</td><td>{dateLabel(item.examDate)}  -  {timeLabel(item.startTime)} - {timeLabel(item.endTime)}</td><td><Status value={item.status}/></td></tr>)}</tbody></table></div></section>}
-    <section className="exm-panel exm-table-wrap"><table className="exm-table"><thead><tr>{['Hall No','Building','Floor','Capacity','Allocated Students','Available Seats','Invigilator','Status','Actions'].map(x=><th key={x}>{x}</th>)}</tr></thead><tbody>{visibleHalls.map(({hall,allocation})=>{const conflict=occupied.includes(hall.id);const count=Number(allocation?.studentCount||0);const state=conflict?'Conflict':count>=hall.capacity?'Full':count?'Partially Filled':'Available';return <tr key={hall.id}><td>{hall.name}</td><td>{hall.building}</td><td>{hall.floor}</td><td>{hall.capacity}</td><td>{count}</td><td>{conflict?0:hall.capacity-count}</td><td>{allocation?.invigilator||'—'}</td><td><Status value={state}/></td><td>{allocation&&<button className="exm-link-danger" onClick={()=>{deleteHallAllocation(allocation.id);onNotice('Hall allocation removed.');onReload()}}>Remove</button>}</td></tr>})}</tbody></table><div className="exm-pagination"><span>Showing {assignments.length?(hallPage-1)*hallPageSize+1:0}–{Math.min(hallPage*hallPageSize,assignments.length)} of {assignments.length} halls</span><label>Rows <select value={hallPageSize} onChange={(e)=>{setHallPageSize(Number(e.target.value));setHallPage(1)}}><option>10</option><option>25</option><option>50</option></select></label><button disabled={hallPage<=1} onClick={()=>setHallPage(hallPage-1)}>Previous</button><b>{hallPage} / {hallPages}</b><button disabled={hallPage>=hallPages} onClick={()=>setHallPage(hallPage+1)}>Next</button></div></section></>}
+    <section className="exm-panel exm-table-wrap"><table className="exm-table"><thead><tr>{['Hall No','Building','Floor','Capacity','Allocated Students','Available Seats','Roll No. Range','Invigilator','Status','Actions'].map(x=><th key={x}>{x}</th>)}</tr></thead><tbody>{visibleHalls.map(({hall,allocation,scheduled})=>{const conflict=occupied.includes(hall.id);const count=Number(allocation?.studentCount??(scheduled?rollRange?.count:0)??0);const state=conflict?'Conflict':count>=hall.capacity&&count>0?'Full':scheduled||allocation?'Assigned':'Available';const assignedInvigilator=getAssignedInvigilator(exam,hall.id);return <tr key={hall.id}><td>{hall.name}{scheduled&&<small className="exm-hall-linked-exam">{exam.id} · {exam.subjectCode}</small>}</td><td>{hall.building||'—'}</td><td>{hall.floor||'—'}</td><td>{hall.capacity}</td><td>{count}</td><td>{conflict?0:Math.max(0,hall.capacity-count)}</td><td>{getHallRollRange(exam,allocation,scheduled)}</td><td>{assignedInvigilator==='Unassigned'?'—':assignedInvigilator}</td><td><Status value={state}/></td><td><div className="exm-row-actions"><button onClick={()=>openHallDialog(hall,allocation,'view')}>View</button><button onClick={()=>openHallDialog(hall,allocation,'edit')}>Edit</button><button className="danger" disabled={!allocation&&!scheduled} title={!allocation&&!scheduled?'No assignment to delete':'Delete hall assignment'} onClick={()=>setPendingHallDelete({hall,allocation})}>Delete</button></div></td></tr>})}{!visibleHalls.length&&<tr><td colSpan="10"><Empty>No hall allocation yet. Hall details from Create Exam will appear here, or allocate students to a hall.</Empty></td></tr>}</tbody></table><div className="exm-pagination"><span>Showing {assignments.length?(hallPage-1)*hallPageSize+1:0}–{Math.min(hallPage*hallPageSize,assignments.length)} of {assignments.length} halls</span><label>Rows <select value={hallPageSize} onChange={(e)=>{setHallPageSize(Number(e.target.value));setHallPage(1)}}><option>10</option><option>25</option><option>50</option></select></label><button disabled={hallPage<=1} onClick={()=>setHallPage(hallPage-1)}>Previous</button><b>{hallPage} / {hallPages}</b><button disabled={hallPage>=hallPages} onClick={()=>setHallPage(hallPage+1)}>Next</button></div></section></>}
     {!exam&&<Empty>Select an examination to view students and hall availability</Empty>}
+    {pendingHallDelete&&<div className="exm-overlay" role="presentation"><div className="exm-dialog" role="dialog" aria-modal="true" aria-labelledby="hall-delete-title"><h3 id="hall-delete-title">Remove hall assignment?</h3><p>{pendingHallDelete.allocation?`Remove the student allocation and invigilation assignment for ${pendingHallDelete.hall.name}?`:`Unassign ${pendingHallDelete.hall.name} from this examination?`}</p><div><button className="exm-button" onClick={()=>setPendingHallDelete(null)}>Cancel</button><button className="exm-button exm-button--danger" onClick={()=>{if(pendingHallDelete.allocation)removeHallAllocation(pendingHallDelete.allocation);else unassignScheduledHall(pendingHallDelete.hall.id);setPendingHallDelete(null)}}>Delete</button></div></div></div>}
+    {activeHall&&exam&&<div className="exm-overlay" role="presentation" onMouseDown={(event)=>{if(event.target===event.currentTarget){setActiveHall(null);onError('')}}}><div className="exm-dialog exm-detail-dialog" role="dialog" aria-modal="true" aria-labelledby="hall-allocation-dialog-title"><div className="exm-detail-heading"><div><small>{exam.id} · {activeHall.hall.name}</small><h3 id="hall-allocation-dialog-title">{hallDialogMode==='view'?'Hall allocation details':'Edit hall allocation'}</h3></div><button className="exm-button" onClick={()=>setActiveHall(null)} aria-label="Close details"><X size={16}/></button></div>{hallDialogMode==='view'?<div className="exm-detail-grid">{[['Exam',exam.subjectName],['Building / Floor',`${activeHall.hall.building||'—'} · ${activeHall.hall.floor||'—'}`],['Allocated Students',Number(activeHall.allocation?.studentCount??(activeHall.hall.id===exam.hallId?rollRange?.count:0)??0)],['Available Seats',Math.max(0,activeHall.hall.capacity-Number(activeHall.allocation?.studentCount??(activeHall.hall.id===exam.hallId?rollRange?.count:0)??0))],['Roll No. Range',getHallRollRange(exam,activeHall.allocation,activeHall.hall.id===exam.hallId)],['Invigilator',getAssignedInvigilator(exam,activeHall.hall.id)],['Status',activeHall.allocation||activeHall.hall.id===exam.hallId?'Assigned':'Available']].map(([label,value])=><div key={label}><small>{label}</small><strong>{value||'—'}</strong></div>)}</div>:<div className="exm-detail-grid exm-hall-edit-grid"><Field label="Roll No. From"><input value={hallForm.studentFrom} disabled={!!activeHall.allocation?.studentIds?.length} onChange={(event)=>setHallForm({...hallForm,studentFrom:event.target.value.trim()})} placeholder="e.g. 23CS001"/></Field><Field label="Roll No. To"><input value={hallForm.studentTo} disabled={!!activeHall.allocation?.studentIds?.length} onChange={(event)=>setHallForm({...hallForm,studentTo:event.target.value.trim()})} placeholder="e.g. 23CS060"/></Field><Field label="Invigilator"><select value={hallForm.invigilator} onChange={(event)=>setHallForm({...hallForm,invigilator:event.target.value})}><option value="">Select invigilator</option>{faculty.map((name)=><option key={name} value={name}>{name}</option>)}{hallForm.invigilator&&!faculty.includes(hallForm.invigilator)&&<option value={hallForm.invigilator}>{hallForm.invigilator}</option>}</select></Field></div>}<div className="exm-dialog__footer">{hallDialogMode==='view'?<button className="exm-button" onClick={()=>setHallDialogMode('edit')}>Edit</button>:<><button className="exm-button" onClick={()=>setActiveHall(null)}>Cancel</button><button className="exm-button exm-button--primary" onClick={saveHallDetails}>Save changes</button></>}</div></div></div>}
   </>
 }
 
