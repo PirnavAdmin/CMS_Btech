@@ -132,7 +132,7 @@ function StructureEditorRoute({ state, commit, actor, masters, filter, collegeId
   const value = structureId ? state.structures.find(s => s.id === structureId) : (routeState?.collegeId === collegeId && routeState.initialStructure) || { ...newFeeStructure(filter.academicYearId), academicYearName: masters.years.find(y => y.id === String(filter.academicYearId))?.name || '' }
   if (!value) return <p className="fm-error" role="alert">Fee structure not found. <Link to="/fees/structures">Back to Fee Structures</Link></p>
   if (value.id && (value.status !== 'Draft' || structureDraftAssigned(state, value.id))) return <p className="fm-error" role="alert">Only unassigned drafts can be edited. Create a revision from <Link to="/fees/structures">Fee Structures</Link>.</p>
-  return <FeeStructureWizard key={`${collegeId}:${key}`} value={value} masters={masters} components={state.components} close={() => navigate('/fees/structures')} save={(form, status) => { commit(saveWorkflowStructure(state, form, status, actor)); navigate('/fees/structures') }} />
+  return <FeeStructureWizard key={`${collegeId}:${key}`} value={value} masters={masters} close={() => navigate('/fees/structures')} save={(form, status) => { commit(saveWorkflowStructure(state, form, status, actor)); navigate('/fees/structures') }} />
 }
 function StorageNotice() { return <details className="fm-data-note"><summary>About saved configurations</summary><p>Fee configurations and assignments are saved on this device for the selected college. They do not post charges or payments to the institution's accounts.</p></details> }
 function FinancialSource({ server, workspace }) {

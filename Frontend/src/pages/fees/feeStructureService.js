@@ -93,6 +93,14 @@ export function writeFeeWorkspace(state, collegeId) {
   return next
 }
 export const newFeeStructure = (yearId = '') => ({ id: '', name: '', version: 1, status: 'Draft', academicYearId: yearId, courseId: '', branchId: '', batch: '', category: '', applicableTo: 'All Students', cycle: 'Yearly', semesterId: '', components: [], discount: 0, plan: 'Full Payment', dueDate: '', installments: [], grace: 0, penaltyType: 'None', penaltyValue: 0, maximumPenalty: '', audit: [] })
+export const hasSingleStructureFee = structure => !structure.components.length || (structure.components.length === 1 && structure.components[0].masterId === 'structure-total-fee')
+export function structureTotalFeeComponents(structure, amount) {
+  if (!hasSingleStructureFee(structure)) throw new Error('Existing fee breakdown and refund rules must be preserved.')
+  return [{ masterId: 'structure-total-fee', name: 'Total Fee', category: 'Academic', amount, mandatory: true, refundable: false, recurring: true, frequency: structure.cycle }]
+}
+const structureComponentsActive = (state, structure) => structure.components.every(component =>
+  (hasSingleStructureFee(structure) && component.masterId === 'structure-total-fee' && component.name === 'Total Fee' && component.category === 'Academic' && component.mandatory === true && component.refundable === false) ||
+  state.components.some(master => master.id === component.masterId && master.status === 'Active'))
 export const feeTotal = structure => rupees(structure.components.reduce((sum, row) => sum + cents(row.amount), 0) - cents(structure.discount))
 const fail = message => { throw new Error(message) }
 const validAmount = (value, zero = false) => Number.isFinite(Number(value)) && (zero ? Number(value) >= 0 : Number(value) > 0) && Number(value) <= 100000000 && Math.abs(Number(value) * 100 - cents(value)) < 0.00001
@@ -126,7 +134,7 @@ export function saveWorkflowStructure(state, value, status, actor) {
   if (status !== 'Draft') {
     const error = validateFeeStructure(value)
     if (error) fail(error)
-    if (value.components.some(c => !state.components.some(m => m.id === c.masterId && m.status === 'Active'))) fail('All selected fee components must be active in the master.')
+    if (!structureComponentsActive(state, value)) fail('All selected fee components must be active in the master.')
   }
   const saved = { ...structuredClone(value), id: value.id || uid('FS'), status, audit: [...(previous?.audit || []), { status, actor, at: new Date().toISOString() }] }
   return { ...state, structures: [saved, ...state.structures.filter(s => s.id !== saved.id)] }
@@ -137,7 +145,7 @@ export function transitionFeeStructure(state, id, status, actor) {
   if (status !== 'Draft' && status !== 'Archived') {
     const error = validateFeeStructure(s)
     if (error) fail(error)
-    if (s.components.some(c => !state.components.some(m => m.id === c.masterId && m.status === 'Active'))) fail('A component is inactive or missing. Return the structure to draft.')
+    if (!structureComponentsActive(state, s)) fail('A component is inactive or missing. Return the structure to draft.')
   }
   return { ...state, structures: state.structures.map(row => row.id === id ? { ...row, status, audit: [...row.audit, { status, actor, at: new Date().toISOString() }] } : row) }
 }
