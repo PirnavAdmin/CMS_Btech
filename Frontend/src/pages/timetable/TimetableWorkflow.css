@@ -83,3 +83,114 @@
   .tt-live-summary { grid-template-columns: 1fr; }
   .tt-readiness-details { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
+
+/* Weekly row labels are body content, not the ERP's sticky white table headings. */
+#root .tt-page .tt-grid-container .tt-week {
+  min-width: calc(152px + var(--tt-day-count, 6) * 168px);
+  table-layout: fixed;
+}
+#root .tt-page .tt-grid-container .tt-week thead th {
+  text-align: center !important;
+  font-size: 12px !important;
+  white-space: normal !important;
+}
+#root .tt-page .tt-grid-container .tt-week th:first-child {
+  width: 152px;
+  box-sizing: border-box;
+}
+#root .tt-page .tt-grid-container .tt-week tbody th {
+  position: sticky;
+  top: auto;
+  left: 0;
+  z-index: 1;
+  height: auto !important;
+  padding: 16px 14px !important;
+  background: var(--surface-soft) !important;
+  color: var(--text-primary) !important;
+  border: 1px solid var(--border) !important;
+  font-size: 13px !important;
+  font-weight: 700 !important;
+  line-height: 1.5 !important;
+  letter-spacing: normal !important;
+  text-transform: none !important;
+  text-align: left !important;
+  vertical-align: top !important;
+  white-space: normal !important;
+  overflow-wrap: anywhere;
+}
+#root .tt-page .tt-grid-container .tt-week tbody th small {
+  display: block;
+  margin-top: 6px;
+  color: var(--text-secondary) !important;
+  background: transparent !important;
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1.5;
+  opacity: 1;
+}
+#root .tt-page .tt-grid-container .tt-week tbody td {
+  height: 112px !important;
+  padding: 10px !important;
+  text-align: left !important;
+  vertical-align: top !important;
+  white-space: normal !important;
+}
+#root .tt-page .tt-class {
+  box-sizing: border-box;
+  min-width: 0;
+  max-width: 100%;
+  gap: 8px;
+  margin: 0 0 8px;
+  padding: 11px 12px;
+  color: var(--text-primary);
+  white-space: normal;
+  line-height: 1.5;
+}
+#root .tt-page .tt-class:last-child { margin-bottom: 0; }
+#root .tt-page .tt-class-details {
+  box-sizing: border-box;
+  min-width: 0;
+  height: auto;
+  gap: 5px;
+  text-align: left !important;
+  align-items: stretch;
+  font: inherit;
+  line-height: 1.5;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+#root .tt-page .tt-class-details strong {
+  color: var(--text-primary);
+  font-size: 13px;
+  font-weight: 700;
+  text-align: left !important;
+  line-height: 1.5;
+}
+#root .tt-page .tt-class-details span,
+#root .tt-page .tt-class small,
+#root .tt-page .tt-faculty-link {
+  display: block;
+  max-width: 100%;
+  color: var(--text-secondary);
+  font-size: 12px;
+  font-weight: 500 !important;
+  text-align: left !important;
+  line-height: 1.5;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+#root .tt-page .tt-faculty-link { color: var(--brand); }
+#root .tt-page .tt-empty-slot {
+  display: block;
+  padding: 14px 4px;
+  color: var(--text-muted);
+  font-size: 12px;
+  line-height: 1.5;
+}
+#root .tt-page .tt-break-row td {
+  background: var(--surface-soft) !important;
+  color: var(--text-secondary) !important;
+  height: 60px !important;
+  vertical-align: middle !important;
+}
+#root .tt-page .tt-grid-empty-note { margin: 0 0 12px; }

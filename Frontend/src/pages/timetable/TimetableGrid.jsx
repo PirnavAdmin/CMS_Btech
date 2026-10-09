@@ -4,10 +4,10 @@ import EmptyState from '../../components/EmptyState'
 import { DAYS, overlaps, timeMinutes } from '../../utils/timetableUtils'
 import { isTeachingPeriod, periodLabel, periodType } from '../../utils/timetablePeriods'
 
-function TimetableCell({ row, inspect, occupancy, faculty, highlight }) {
+function TimetableCell({ row, inspect, faculty, highlight }) {
   return <article data-entry-id={row.id} className={`tt-class ${highlight === row.id ? 'tt-highlight' : ''}`}>
-    <button className="tt-class-details" onClick={() => inspect?.(row)}><strong>{row.subjectCode || row.subjectName || 'Subject unavailable'}</strong><span>{row.subjectName}</span><small>{row.startTime?.slice(0, 5)} - {row.endTime?.slice(0, 5)}</small><small>{row.classroom || 'Room not assigned'}</small>{occupancy && <small>{row.sectionName}</small>}</button>
-    {faculty ? <button className="tt-faculty-link" onClick={() => faculty(row.facultyId)}>{row.facultyName}</button> : <small>{row.facultyName}</small>}
+    <button className="tt-class-details" onClick={() => inspect?.(row)}><strong>{row.subjectCode || row.subjectName || 'Subject unavailable'}</strong>{row.subjectCode && row.subjectName && row.subjectName !== row.subjectCode && <span>{row.subjectName}</span>}<small>{row.startTime?.slice(0, 5)} - {row.endTime?.slice(0, 5)}</small><small>{row.classroom || 'Room not assigned'}</small>{row.sectionName && <small>{row.sectionName}</small>}</button>
+    {faculty ? <button className="tt-faculty-link" onClick={() => faculty(row.facultyId)}>{row.facultyName}</button> : <small>{row.facultyName || 'Faculty not assigned'}</small>}
   </article>
 }
 
@@ -33,11 +33,12 @@ export default function TimetableGrid({ rows, periods: configured = [], workingD
     ...slots.filter(slot => !isTeachingPeriod(slot) || (editable && !rows.some(row => row.dayOfWeek === day && overlaps(row, slot)))).map(slot => ({ startTime: slot.startTime, id: `period-${slot.id || slot.startTime}-${periodType(slot)}`, content: isTeachingPeriod(slot) ? <div className="tt-agenda-slot"><small>{slot.name} · {slot.startTime.slice(0, 5)}–{slot.endTime.slice(0, 5)}</small>{empty(slot, day)}</div> : <div className="tt-agenda-break"><strong>{slot.name}</strong><span>{slot.startTime.slice(0, 5)}–{slot.endTime.slice(0, 5)}</span></div> })),
   ].sort((a, b) => timeMinutes(a.startTime) - timeMinutes(b.startTime))
   return <div ref={root} className="tt-grid-container">
-    <div className="tt-grid-scroll"><table className="tt-week"><caption>Weekly timetable</caption><thead><tr><th>Period</th>{days.map(day => <th key={day}>{day.slice(0, 1) + day.slice(1).toLowerCase()}</th>)}</tr></thead><tbody>{slots.map(slot => <tr key={`${slot.startTime}-${slot.endTime}-${periodType(slot)}`} className={!isTeachingPeriod(slot) ? 'tt-break-row' : ''} data-period-type={periodType(slot)}>
-      <th>{slot.name}<small>{slot.startTime.slice(0, 5)}–{slot.endTime.slice(0, 5)}</small></th>
+    {!rows.length && <p className="tt-notice tt-grid-empty-note" role="status">{editable ? 'No classes have been scheduled yet. Add a class or use Generate Missing to fill this draft.' : 'No scheduled classes were returned for this timetable.'}</p>}
+    <div className="tt-grid-scroll"><table className="tt-week" style={{ '--tt-day-count': days.length }}><caption>Weekly timetable</caption><thead><tr><th scope="col">Period</th>{days.map(day => <th scope="col" key={day}>{day.slice(0, 1) + day.slice(1).toLowerCase()}</th>)}</tr></thead><tbody>{slots.map(slot => <tr key={`${slot.startTime}-${slot.endTime}-${periodType(slot)}`} className={!isTeachingPeriod(slot) ? 'tt-break-row' : ''} data-period-type={periodType(slot)}>
+      <th scope="row">{slot.name}<small>{slot.startTime.slice(0, 5)}–{slot.endTime.slice(0, 5)}</small></th>
       {!isTeachingPeriod(slot) ? <td colSpan={days.length}>{slot.name} · No teaching</td> : days.map(day => {
         const matching = rows.filter(row => row.dayOfWeek === day && (overlaps(row, slot) || (!row.startTime && !slot.startTime)))
-        return <td key={day}>{matching.map(card)}{!matching.length && (editable ? empty(slot, day) : occupancy ? <span className="tt-available">No published booking</span> : null)}</td>
+        return <td key={day}>{matching.map(card)}{!matching.length && (editable ? empty(slot, day) : <span className="tt-empty-slot">{occupancy ? 'No published booking' : 'No class scheduled'}</span>)}</td>
       })}
     </tr>)}</tbody></table></div>
     <div className="tt-day-view"><div className="tt-day-tabs" role="group" aria-label="Schedule Day">{days.map(value => <button key={value} className={value === day ? 'active' : ''} aria-pressed={value === day} onClick={() => { setSelectedDay(value); clearHighlight?.() }}>{value.slice(0, 3)}</button>)}</div>{agenda.map(item => <div key={item.id}>{item.content}</div>)}{!rows.some(row => row.dayOfWeek === day) && <p>No classes for this day.</p>}</div>

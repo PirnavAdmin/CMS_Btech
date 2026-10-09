@@ -25,11 +25,9 @@ import Settings from './pages/profile/Settings'
 import StudentAdmission from './pages/student-management/StudentAdmission/StudentAdmission'
 import StudentProfile from './pages/student-management/StudentProfile/StudentProfile'
 import StudentPromotion from './pages/student-management/StudentPromotion/StudentPromotion'
-import Fees from './pages/fees/FeeStructure'
+import Fees from './pages/fees/FeeManagement'
 import Attendance from './pages/attendance/Attendance'
 import AttendanceSessionDetails from './pages/attendance/AttendanceSessionDetails'
-import Marks from './pages/marks/Marks'
-import Results from './pages/results/Results'
 import FacultyManagement from './pages/faculty/FacultyManagement'
 import FacultyLeaveManagement from './pages/faculty/FacultyLeaveManagement'
 import Payroll from './pages/faculty/Payroll'
@@ -62,6 +60,10 @@ import MarksApproval from './pages/examinations/marks-management/MarksApproval'
 import GradeResultManagement from './pages/examinations/grade-result-management/GradeResultManagement'
 import GradeConfiguration from './pages/examinations/grade-result-management/GradeConfiguration'
 import ResultGeneration from './pages/examinations/grade-result-management/ResultGeneration'
+import SemesterResult from './pages/examinations/grade-result-management/SemesterResult'
+import DepartmentResult from './pages/examinations/grade-result-management/DepartmentResult'
+import ConsolidatedMarksMemo from './pages/examinations/grade-result-management/ConsolidatedMarksMemo'
+import BacklogReport from './pages/examinations/grade-result-management/BacklogReport'
 import StudentResult from './pages/examinations/grade-result-management/StudentResult'
 import './App.css'
 import './styles/details-layout.css'
@@ -216,8 +218,6 @@ export default function App() {
               {/* Faculty / Operations backed modules */}
               {/* Retain the former URL as a safe bookmark redirect. */}
               <Route path="/attendance/*" element={<Navigate to="/student-management/attendance" replace />} />
-              <Route path="/marks/*" element={<Marks />} />
-              <Route path="/results/*" element={<Results />} />
 
               <Route element={<ProtectedRoute allowedRoles={[ROLES.ADMIN, ROLES.STUDENT]} />}>
                 <Route path="/exam/student-schedule" element={<StudentExamSchedule />} />
@@ -252,6 +252,10 @@ export default function App() {
               <Route path="/grade-result-management/*" element={<GradeResultManagement />} />
               <Route path="/grade-result-management/grade-configuration" element={<GradeConfiguration />} />
               <Route path="/grade-result-management/result-generation" element={<ResultGeneration />} />
+              <Route path="/grade-result-management/semester-result" element={<SemesterResult />} />
+              <Route path="/grade-result-management/department-result" element={<DepartmentResult />} />
+              <Route path="/grade-result-management/consolidated-marks-memo" element={<ConsolidatedMarksMemo />} />
+              <Route path="/grade-result-management/backlog-report" element={<BacklogReport />} />
               <Route path="/grade-result-management/student-result" element={<StudentResult />} />
               </Route>
 

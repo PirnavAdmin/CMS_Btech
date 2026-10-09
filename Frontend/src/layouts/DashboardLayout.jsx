@@ -5,6 +5,7 @@ import { FiAlertCircle, FiLock, FiLogOut, FiMenu, FiMoon, FiSearch, FiSun, FiUse
 import { getUserRole, signOut } from '../auth/auth'
 import { changePassword, profileApi } from '../api/apiEndpoints'
 import Sidebar from '../components/Sidebar'
+import { feeBreadcrumbs } from '../pages/fees/feeNavigation'
 import HeaderAcademicYear from '../components/HeaderAcademicYear'
 import DeactivationBlockedDialog from '../components/DeactivationBlockedDialog'
 import { API_FAILURE_EVENT } from '../api/apiFailureNotice'
@@ -121,6 +122,7 @@ export default function DashboardLayout({ children }) {
     '/student-management/profiles': 'Student Profiles', '/student-management/promotions': 'Student Promotions',
   })[pathname] || (pathname.startsWith('/semester-management') ? 'Semesters' : pathname.startsWith('/section-management') ? 'Sections' : pathname.startsWith('/student-management/admissions') ? 'Student Admissions' : pathname.startsWith('/student-management/profiles') ? 'Student Profiles' : pathname.startsWith('/student-management/promotions') ? 'Student Promotions' : pathname.startsWith('/faculty/') ? pathname.startsWith('/faculty/attendance') ? 'Faculty Attendance' : 'Faculty Management' : pathname.startsWith('/courses') ? 'Courses' : pathname.startsWith('/branches') ? 'Branches' : 'Digital Campus')
   const breadcrumbSection = ['My Profile', 'Settings'].includes(pageName) ? 'Account' : pageName === 'Dashboard' ? 'Digital Campus' : pageName.startsWith('Student ') ? 'Student Management' : pageName.startsWith('Faculty ') ? 'Faculty' : 'Academic Configuration'
+  const financeBreadcrumbs = feeBreadcrumbs(pathname)
 
   // Logout confirmation state
   const [showLogoutConfirmation, setShowLogoutConfirmation] = useState(false)
@@ -383,7 +385,7 @@ export default function DashboardLayout({ children }) {
           </div>
         </header>
 
-        <section className="page-content"><PageErrorNotices pathname={pathname} />{!(pathname === '/faculty' || pathname.startsWith('/faculty/')) && <nav className="app-breadcrumb" aria-label="Breadcrumb"><Link to="/dashboard">Home</Link><span aria-hidden="true">/</span><span>{breadcrumbSection}</span>{pageName !== breadcrumbSection && <><span aria-hidden="true">/</span><strong>{pageName}</strong></>}</nav>}{children}</section>
+        <section className="page-content"><PageErrorNotices pathname={pathname} />{!(pathname === '/faculty' || pathname.startsWith('/faculty/')) && <nav className="app-breadcrumb" aria-label="Breadcrumb"><Link to="/dashboard">Home</Link>{financeBreadcrumbs ? financeBreadcrumbs.map((crumb, index) => <span className="app-breadcrumb__item" key={`${crumb.label}:${index}`}><span aria-hidden="true">/</span>{index === financeBreadcrumbs.length - 1 ? <strong>{crumb.label}</strong> : crumb.to ? <Link to={crumb.to}>{crumb.label}</Link> : <span>{crumb.label}</span>}</span>) : <><span aria-hidden="true">/</span><span>{breadcrumbSection}</span>{pageName !== breadcrumbSection && <><span aria-hidden="true">/</span><strong>{pageName}</strong></>}</>}</nav>}{children}</section>
         <DeactivationBlockedDialog />
 
         {/* Logout Confirmation Modal */}
@@ -544,4 +546,3 @@ export default function DashboardLayout({ children }) {
     </div>
   )
 }
-

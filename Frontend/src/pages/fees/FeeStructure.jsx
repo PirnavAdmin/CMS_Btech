@@ -14,6 +14,7 @@ import { blankAcademic, componentTotals, feeComponent, findConflict, money, pers
 import { useAcademic } from '../../context/AcademicContext'
 import SearchableSelect from '../../components/SearchableSelect'
 import TablePagination from '../../components/TablePagination'
+import { workflowAcademicRow, feeTransitions } from './feeStructureService'
 import './FeeStructure.css'
 const PERIODS=['Per Semester','Per Academic Year'], YEARS=['1st Year','2nd Year','3rd Year','4th Year'], ADMISSIONS=['Regular','Lateral Entry','Transfer'], QUOTAS=['Convener','Management','NRI','Sports','Other'], CATEGORIES=['Academic','University','Examination','Laboratory','Administrative','Student Service','Deposit','Miscellaneous'], FREQUENCIES=['One Time','Per Academic Year','Per Semester','Monthly','Custom'], STATUSES=['Draft','Active','Inactive','Archived']
 const isJunkName = (name) => {
@@ -54,12 +55,13 @@ const responseList=response=>{let current=response;for(let depth=0;depth<5&&curr
 const normSemesters=response=>responseList(response).map(x=>{const number=Number(x.semesterNumber??x.semester?.semesterNumber??x.number);return{...x,id:x.semesterId??x.courseStructureId??x.structureId??x.semester?.semesterId??x.semester?.id??x.id,name:x.semesterName??x.semester?.semesterName??x.semester?.name??x.name??(number?`Semester ${number}`:''),courseId:x.courseId??x.course?.courseId??x.course?.id??'',branchId:x.branchId??x.branch?.branchId??x.branch?.id??'',academicYearId:x.academicYearId??x.academicYear?.academicYearId??x.academicYear?.id??x.yearId??'',semesterNumber:number,status:Number(x.status)===0||x.status==='Inactive'?'Inactive':'Active'}}).filter(x=>x.id&&x.name&&x.status!=='Inactive')
 const payable=f=>{const t=componentTotals(f.feeComponents);return t.mandatory+(f.paymentPlan.includeRefundable?t.refundable:0)}
 
-export default function FeeStructure(){
+export default function FeeStructure({ embedded = false, workflow }){
  const { scopeRecords, selectedAcademicYearId, selectedAcademicYear } = useAcademic()
  const[domain,setDomain]=useState('academic'),[rows,setRows]=useState(readStructures),[hostels,setHostels]=useState(readHostelStructures),[transports,setTransports]=useState(readTransportStructures),[allMasters,setMasters]=useState({years:[],departments:[],courses:[],branches:[],semesters:[]}),[loading,setLoading]=useState(true),[loadError, setLoadError] = useToastState('', 'error'),[form,setForm]=useState(null),[details,setDetails]=useState(null),[facilityForm,setFacilityForm]=useState(null),[facilityDetails,setFacilityDetails]=useState(null),[query,setQuery]=useState(''),[filters,setFilters]=useState({}),[showFilters,setShowFilters]=useState(false),[, setToast] = useToastState('', 'success')
  const masters = { ...allMasters, ...Object.fromEntries(['departments','courses','branches','semesters'].map(type => [type, scopeRecords(allMasters[type])])) }
  useEffect(()=>{Promise.all([academicYearApi.getAll(),departmentApi.getAll(),courseApi.getAll(),branchApi.getAll(),getSemesters()]).then(([y,d,c,b,s])=>setMasters({years:getOperationalAcademicYearOptions(y),departments:norm(d,['departmentId','id'],['departmentName','name']),courses:norm(c,['courseId','id'],['courseName','name']),branches:norm(b,['branchId','id'],['branchName','name']),semesters:normSemesters(s)})).catch(e=>setLoadError(e.message||'Unable to load academic masters.')).finally(()=>setLoading(false))},[setLoadError])
- const notify=m=>setToast(m), normYear = (y) => String(y || '').replace(/[^0-9]/g, ''), filtered=useMemo(()=>rows.filter(x=>{
+ const academicRows = useMemo(() => [...rows, ...(workflow?.rows || []).map(workflowAcademicRow)], [rows, workflow?.rows])
+ const notify=m=>setToast(m), normYear = (y) => String(y || '').replace(/[^0-9]/g, ''), filtered=useMemo(()=>academicRows.filter(x=>{
    const textMatch = `${x.code} ${x.name}`.toLowerCase().includes(query.toLowerCase())
    const filterMatch = Object.entries(filters).every(([k,v])=>!v||same(k==='level'?(x.semesterId||x.yearOfStudy):x[k],v))
    let yearMatch = true
@@ -72,18 +74,32 @@ export default function FeeStructure(){
      yearMatch = Boolean(matchById || matchByName)
    }
    return textMatch && filterMatch && yearMatch
- }),[rows,query,filters,selectedAcademicYearId,selectedAcademicYear])
+ }),[academicRows,query,filters,selectedAcademicYearId,selectedAcademicYear])
  const save=(data,newVersion=false)=>{try{const result=saveAcademic(rows,data,newVersion);if(result.error)return result.error;setRows(result.rows);setForm(null);notify(newVersion?'New version created.':'Academic fee structure saved.');return''}catch(error){return error.message || 'Unable to save fee structure.'}}
- const create=()=>domain==='academic'?setForm(blankAcademic()):setFacilityForm({type:domain,value:domain==='hostel'?blankHostel():blankTransport()})
+ const create=()=>domain==='academic'?(workflow ? workflow.create() : setForm(blankAcademic())):setFacilityForm({type:domain,value:domain==='hostel'?blankHostel():blankTransport()})
  const saveFacility=(type,value)=>{try{const source=type==='hostel'?hostels:transports,next=[value,...source.filter(x=>x.id!==value.id)];if(type==='hostel'){setHostels(next);persistHostelStructures(next)}else{setTransports(next);persistTransportStructures(next)}setFacilityForm(null);notify(`${type==='hostel'?'Hostel':'Transportation'} fee structure saved.`)}catch(error){showError(error.message || 'Unable to save fee structure.')}}
- return <DashboardLayout><main className="fs-page"><header className="fs-head"><div><p>Dashboard / Fee Management</p><h1>Fee Structure Configuration</h1><span>Independent academic, hostel and transport financial models.</span></div><button className="primary" onClick={create}><FiPlus/> Create {domain==='academic'?'Academic Structure':domain==='hostel'?'Hostel Plan':'Transport Route'}</button></header><nav className="fs-domain-tabs">{[['academic','Academic Fee Structures'],['hostel','Hostel Fee Structures'],['transport','Transport Fee Structures']].map(([k,v])=><button className={domain===k?'active':''} onClick={()=>setDomain(k)} key={k}>{v}</button>)}</nav>
-  {domain==='academic'&&<><div className="fs-filter-actions"><button className={showFilters?'active':''} onClick={()=>setShowFilters(value=>!value)}><FiFilter/> Filter</button>{Boolean(query || Object.values(filters).some(Boolean))&&<button onClick={()=>{setFilters({});setQuery('')}}>Clear Filters</button>}</div>{showFilters&&<Filters masters={masters} value={filters} change={setFilters}/>} {loading?<Empty text="Loading academic masters..."/>:loadError?<Empty text={loadError} isError/>:<List create={create} rows={filtered} query={query} setQuery={setQuery} view={setDetails} edit={setForm} loading={loading}/>}</>}
-  {domain==='hostel'&&<Facility create={create} type="hostel" rows={hostels} edit={value=>setFacilityForm({type:'hostel',value})} view={value=>setFacilityDetails({type:'hostel',value})} persist={x=>{setHostels(x);persistHostelStructures(x)}}/>}{domain==='transport'&&<Facility create={create} type="transport" rows={transports} edit={value=>setFacilityForm({type:'transport',value})} view={value=>setFacilityDetails({type:'transport',value})} persist={x=>{setTransports(x);persistTransportStructures(x)}}/>}
-  {form&&<Editor value={structuredClone(form)} masters={masters} rows={rows} close={()=>setForm(null)} save={save}/>} {details&&<Details row={details} close={()=>setDetails(null)} edit={()=>{setForm(details);setDetails(null)}}/>}{facilityForm&&<FacilityEditor type={facilityForm.type} value={structuredClone(facilityForm.value)} masters={masters} close={()=>setFacilityForm(null)} save={saveFacility}/>} {facilityDetails&&<FacilityDetails type={facilityDetails.type} value={facilityDetails.value} close={()=>setFacilityDetails(null)} edit={()=>{setFacilityForm(facilityDetails);setFacilityDetails(null)}}/>}</main></DashboardLayout>
+ const content = <><header className="fs-head"><div><h1>Fee Structure Configuration</h1><span>Manage academic, hostel and transport fee structures.</span></div><div className="fs-head-actions"><button className="primary" onClick={create}><FiPlus/> Create {domain==='academic'?'Academic Structure':domain==='hostel'?'Hostel Structure':'Transport Structure'}</button></div></header><nav className="fs-domain-tabs">{[['academic','Academic Fee Structures'],['hostel','Hostel Fee Structures'],['transport','Transport Fee Structures']].map(([k,v])=><button className={domain===k?'active':''} onClick={()=>{setDomain(k);setShowFilters(false)}} key={k}>{v}</button>)}</nav>
+  {domain==='academic'&&<><div className="fs-filter-actions"><button className={showFilters?'active':''} onClick={()=>setShowFilters(value=>!value)}><FiFilter/> Filter</button>{Boolean(query || Object.values(filters).some(Boolean))&&<button onClick={()=>{setFilters({});setQuery('')}}>Clear Filters</button>}</div>{showFilters&&<Filters masters={masters} value={filters} change={setFilters} workflow={workflow} rows={academicRows}/>} {loading?<Empty text="Loading academic masters..."/>:loadError?<Empty text={loadError} isError/>:<List create={create} rows={filtered} query={query} setQuery={setQuery} view={setDetails} edit={setForm} loading={loading} workflow={workflow}/>}</>}
+  {domain==='hostel'&&<Facility key="hostel" create={create} type="hostel" rows={hostels} edit={value=>setFacilityForm({type:'hostel',value})} view={value=>setFacilityDetails({type:'hostel',value})} persist={x=>{setHostels(x);persistHostelStructures(x)}}/>}{domain==='transport'&&<Facility key="transport" create={create} type="transport" rows={transports} edit={value=>setFacilityForm({type:'transport',value})} view={value=>setFacilityDetails({type:'transport',value})} persist={x=>{setTransports(x);persistTransportStructures(x)}}/>}
+  {form&&<Editor value={structuredClone(form)} masters={masters} rows={rows} close={()=>setForm(null)} save={save}/>} {details&&<Details row={details} close={()=>setDetails(null)} edit={()=>{setForm(details);setDetails(null)}}/>}{facilityForm&&<FacilityEditor type={facilityForm.type} value={structuredClone(facilityForm.value)} masters={masters} close={()=>setFacilityForm(null)} save={saveFacility}/>} {facilityDetails&&<FacilityDetails type={facilityDetails.type} value={facilityDetails.value} close={()=>setFacilityDetails(null)} edit={()=>{setFacilityForm(facilityDetails);setFacilityDetails(null)}}/>}</>
+ return embedded ? content : <DashboardLayout><main className="fs-page fm-page">{content}</main></DashboardLayout>
 }
 
-function Filters({masters,value,change}){const courses=masters.courses.filter(x=>!value.departmentId||same(x.departmentId??x.department?.id,value.departmentId)),branches=masters.branches.filter(x=>!value.courseId||same(x.courseId??x.course?.id,value.courseId));return <section className="fs-filters"><div><MasterSelect label="Academic Year" rows={masters.years} value={value.academicYearId} change={academicYearId=>change({...value,academicYearId})}/><MasterSelect label="Department" rows={masters.departments} value={value.departmentId} change={departmentId=>change({...value,departmentId,courseId:'',branchId:''})}/><MasterSelect label="Course" rows={courses} value={value.courseId} change={courseId=>change({...value,courseId,branchId:''})}/><MasterSelect label="Branch" rows={branches} value={value.branchId} change={branchId=>change({...value,branchId})}/><SimpleSelect label="Fee Period" values={PERIODS} value={value.feePeriod} change={feePeriod=>change({...value,feePeriod})}/><SimpleSelect label="Admission Type" values={ADMISSIONS} value={value.admissionType} change={admissionType=>change({...value,admissionType})}/><SimpleSelect label="Quota" values={QUOTAS} value={value.quota} change={quota=>change({...value,quota})}/><SimpleSelect label="Status" values={STATUSES} value={value.status} change={status=>change({...value,status})}/></div></section>}
-function List({rows,query,setQuery,view,edit,loading,create}){
+function Filters({masters,value,change,workflow,rows}){
+ const courses=masters.courses.filter(x=>!value.departmentId||same(x.departmentId??x.department?.id,value.departmentId)),branches=masters.branches.filter(x=>!value.courseId||same(x.courseId??x.course?.id,value.courseId))
+ return <section className="fs-filters"><div>
+  <MasterSelect label="Academic Year" rows={masters.years} value={value.academicYearId} change={academicYearId=>change({...value,academicYearId})}/>
+  <MasterSelect label="Department" rows={masters.departments} value={value.departmentId} change={departmentId=>change({...value,departmentId,courseId:'',branchId:''})}/>
+  <MasterSelect label="Course" rows={courses} value={value.courseId} change={courseId=>change({...value,courseId,branchId:''})}/>
+  <MasterSelect label="Branch" rows={branches} value={value.branchId} change={branchId=>change({...value,branchId})}/>
+  {workflow && <SimpleSelect label="Batch" values={[...new Set(rows.map(row=>row.batch).filter(Boolean))]} value={value.batch} change={batch=>change({...value,batch})}/>}
+  <SimpleSelect label="Fee Period" values={PERIODS} value={value.feePeriod} change={feePeriod=>change({...value,feePeriod})}/>
+  <SimpleSelect label="Admission Type" values={ADMISSIONS} value={value.admissionType} change={admissionType=>change({...value,admissionType})}/>
+  <SimpleSelect label="Quota" values={QUOTAS} value={value.quota} change={quota=>change({...value,quota})}/>
+  <SimpleSelect label="Status" values={[...new Set([...STATUSES,...(workflow?Object.keys(feeTransitions):[])])]} value={value.status} change={status=>change({...value,status})}/>
+ </div></section>
+}
+function List({rows,query,setQuery,view,edit,loading,create,workflow}){
   const [currentPage, setCurrentPage] = useState(1)
   const [pageSize, setPageSize] = useState(5)
   useEffect(() => { setCurrentPage(1) }, [query, rows.length])
@@ -126,7 +142,7 @@ function List({rows,query,setQuery,view,edit,loading,create}){
                 {paginatedRows.map(x=>{
                   const t=componentTotals(x.feeComponents);
                   return (
-                    <tr key={x.id}>
+                    <tr key={`${x.workflowStructure ? 'workflow' : 'academic'}:${x.id}`}>
                       <td><strong>{x.code}</strong><small>Version {x.version}</small></td>
                       <td>{x.name}</td>
                       <td>{x.departmentName}<small>{x.courseName} / {x.branchName}</small></td>
@@ -138,11 +154,11 @@ function List({rows,query,setQuery,view,edit,loading,create}){
                       <td>{x.effectiveFrom}<small>{x.effectiveTo||'Open ended'}</small></td>
                       <td><Badge value={x.status}/></td>
                       <td className="table-center">
-                        <div className="table-actions-group">
+                        {x.workflowStructure ? <div className="table-actions-group"><button type="button" className="table-action-btn action-view" title="View Details" onClick={()=>workflow.view(x.workflowStructure)}><FiEye /></button>{workflow.rowActions(x.workflowStructure)}</div> : <div className="table-actions-group">
                           <button type="button" className="table-action-btn action-view" title="View Details" onClick={()=>view(x)}><FiEye /></button>
                           <button type="button" className="table-action-btn action-edit" title="Edit" onClick={()=>edit(x)}><FiEdit2 /></button>
                           <button type="button" className="table-action-btn action-assign" title="Duplicate Draft" onClick={()=>edit({...structuredClone(x),id:'',version:1,status:'Draft'})}><FiCopy /></button>
-                        </div>
+                        </div>}
                       </td>
                     </tr>
                   )
@@ -181,26 +197,32 @@ function Preview({f}){const t=componentTotals(f.feeComponents);return <><StepTit
 function Details({row,close,edit}){const[tab,setTab]=useState('Overview'),tabs=['Overview','Fee Components','Payment Schedule','Fine Rules','Versions','Students Assigned'];return <div className="fs-overlay"><section className="fs-editor details shared-view-dialog" data-export-record style={{ maxWidth: '920px' }}><header className="shared-view-dialog__header"><div className="shared-view-dialog__heading"><div className="shared-view-dialog__icon-badge"><FiSettings /></div><div><h2 className="shared-view-dialog__title">{row.name}</h2><p className="shared-view-dialog__subtitle">{row.code} | Version {row.version} | {row.academicYearName}</p></div></div><div className="shared-view-dialog__actions"><ExportMenu mode="single" title={row.name} filename={`fee_${row.code}_v${row.version}`} recordSections={sectionsFromColumns("Fee Structure",row,feeStructureColumns)} /><button type="button" className="shared-view-dialog__close-btn" onClick={close} aria-label="Close details" title="Close"><FiX size={18} /></button></div></header><nav className="fs-details-nav">{tabs.map(x=><button className={tab===x?'active':''} onClick={()=>setTab(x)} key={x}>{x}</button>)}</nav><div className="shared-view-dialog__body fs-editor-body">{tab==='Overview'&&<Preview f={row}/>} {tab==='Fee Components'&&<FeeTable rows={row.feeComponents}/>} {tab==='Payment Schedule'&&<pre className="fs-json">{JSON.stringify(row.paymentPlan,null,2)}</pre>} {tab==='Fine Rules'&&<pre className="fs-json">{JSON.stringify({fineRules:row.fineRules,concessionPolicy:row.concessionPolicy},null,2)}</pre>} {tab==='Versions'&&<Empty text={`Current version ${row.version}; every version has its own immutable ID.`}/>} {tab==='Students Assigned'&&<Empty text={row.assignedCount?`${row.assignedCount} student(s) assigned.`:'No assignment data available.'}/>}</div><footer className="shared-view-dialog__footer"><button type="button" className="erp-btn erp-btn--secondary" onClick={close}>Close</button><button type="button" className="erp-btn erp-btn--primary" onClick={edit}><FiEdit2 className="module-action-icon module-action-icon--edit" /> Edit Fee Structure</button></footer></section></div>}
 
 const blankHostel=()=>({id:uid('HF'),academicYearId:'',academicYearName:'',hostelName:'',hostelType:'',roomType:'',acType:'',messPlan:'',componentsText:'',fee:'',effectiveFrom:'',effectiveTo:'',status:''}), blankTransport=()=>({id:uid('TF'),academicYearId:'',academicYearName:'',route:'',routeCode:'',pickupPoint:'',distance:'',fee:'',frequency:'',effectiveFrom:'',effectiveTo:'',status:''})
-function Facility({type,rows,edit,view,persist,create}){
+function Facility({type,rows: records,edit,view,persist,create}){
   const hostel=type==='hostel'
+  const [query,setQuery]=useState(''),[filters,setFilters]=useState({}),[showFilters,setShowFilters]=useState(false)
+  const rows=records.filter(row=>[row.hostelName,row.hostelType,row.roomType,row.route,row.routeCode,row.pickupPoint].filter(Boolean).join(' ').toLowerCase().includes(query.toLowerCase()) && Object.entries(filters).every(([key,value])=>!value||same(row[key],value)))
+  const values=key=>[...new Set(records.map(row=>row[key]).filter(Boolean))]
   const [currentPage, setCurrentPage] = useState(1)
   const [pageSize, setPageSize] = useState(5)
-  useEffect(() => { setCurrentPage(1) }, [rows.length, type])
+  useEffect(() => { setCurrentPage(1) }, [rows.length, type, query])
   const paginatedRows = rows.slice((currentPage - 1) * pageSize, currentPage * pageSize)
 
   return (
+    <><div className="fs-filter-actions"><button className={showFilters?'active':''} onClick={()=>setShowFilters(value=>!value)}><FiFilter/> Filter</button>{Boolean(query||Object.values(filters).some(Boolean))&&<button onClick={()=>{setQuery('');setFilters({})}}>Clear Filters</button>}</div>
+    {showFilters&&<section className="fs-filters"><div><SimpleSelect label="Academic Year" values={values('academicYearName')} value={filters.academicYearName} change={academicYearName=>setFilters({...filters,academicYearName})}/><SimpleSelect label={hostel?'Room Type':'Frequency'} values={values(hostel?'roomType':'frequency')} value={filters[hostel?'roomType':'frequency']} change={value=>setFilters({...filters,[hostel?'roomType':'frequency']:value})}/><SimpleSelect label="Status" values={STATUSES} value={filters.status} change={status=>setFilters({...filters,status})}/></div></section>}
     <section className="fs-card">
       <header className="fs-list-head">
         <div>
-          <h2>{hostel?'Hostel Fee Structures':'Transportation Fee Structures'}</h2>
+          <h2>{hostel?'Hostel Fee Structures':'Transport Fee Structures'}</h2>
           <span>{rows.length} records | independent from course and branch</span>
         </div>
         <div className="directory-export-actions">
           <ExportMenu rows={rows} columns={hostel?hostelFeeColumns:transportFeeColumns} title={hostel?'Hostel Fee Structures':'Transportation Fee Structures'} filename={hostel?'fee-structures-hostel':'fee-structures-transport'} />
+          <label><FiSearch/><input aria-label={`Search ${hostel?'hostel':'transport'} structures`} value={query} onChange={e=>setQuery(e.target.value)} placeholder="Search structures..."/></label>
         </div>
       </header>
       {!rows.length ? (
-        <DirectoryEmptyState title={`No ${hostel?'hostel plans':'transport routes'} found.`} actionLabel={hostel?'Create Hostel Plan':'Create Transport Route'} onAction={create} />
+        <DirectoryEmptyState title={`No ${hostel?'hostel':'transport'} fee structures found.`} actionLabel={hostel?'Create Hostel Structure':'Create Transport Structure'} onAction={create} />
       ) : (
         <>
           <div className="fs-table">
@@ -231,7 +253,7 @@ function Facility({type,rows,edit,view,persist,create}){
                       <div className="table-actions-group">
                         <button type="button" className="table-action-btn action-view" onClick={()=>view(x)} title="View"><FiEye /></button>
                         <button type="button" className="table-action-btn action-edit" onClick={()=>edit(x)} title="Edit"><FiEdit2 /></button>
-                        <button type="button" className="table-action-btn action-deactivate" onClick={()=>persist(rows.filter(r=>r.id!==x.id))} title="Delete"><FiTrash2 /></button>
+                        <button type="button" className="table-action-btn action-deactivate" onClick={()=>persist(records.filter(r=>r.id!==x.id))} title="Delete"><FiTrash2 /></button>
                       </div>
                     </td>
                   </tr>
@@ -249,7 +271,7 @@ function Facility({type,rows,edit,view,persist,create}){
           />
         </>
       )}
-    </section>
+    </section></>
   )
 }
 
