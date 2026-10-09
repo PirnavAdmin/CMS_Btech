@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { FiEdit2, FiPlus, FiSearch, FiTrash2 } from 'react-icons/fi'
+import { FiEdit2, FiPlus, FiSearch, FiTrash2, FiX } from 'react-icons/fi'
 import DashboardLayout from '../../../layouts/DashboardLayout'
 import PageHeader from '../../../components/PageHeader'
 import MarksModuleNav from './MarksModuleNav'
@@ -77,6 +77,7 @@ export default function MarksEntry() {
   const [page, setPage] = useState(1)
   const [showAddForm, setShowAddForm] = useState(false)
   const [editingId, setEditingId] = useState('')
+  const [deletingRow, setDeletingRow] = useState(null)
   const [assessment, setAssessment] = useState(initialAssessment)
 
   useEffect(() => { try { localStorage.removeItem(LEGACY_DRAFTS_KEY) } catch { /* ignore unavailable storage */ } }, [])
@@ -195,9 +196,13 @@ export default function MarksEntry() {
     setShowAddForm(true)
   }
   const deleteAssessment = row => {
-    const label = row.subjectName || row.subject || row.subjectCode || 'this marks record'
-    if (!window.confirm(`Delete ${label}?`)) return
-    setDraftRows(current => current.filter(item => item.id !== row.id))
+    setDeletingRow(row)
+  }
+  const confirmDeleteAssessment = () => {
+    if (!deletingRow) return
+    const deletedId = deletingRow.id
+    setDraftRows(current => current.filter(item => item.id !== deletedId))
+    setDeletingRow(null)
     setPage(1)
   }
 
@@ -231,6 +236,55 @@ export default function MarksEntry() {
               </label>
             ))}
           </FilterPanel>
+          {deletingRow && createPortal(
+            <div className="marks-entry-delete-backdrop" onMouseDown={() => setDeletingRow(null)}>
+              <section
+                className="marks-entry-delete-modal"
+                role="alertdialog"
+                aria-modal="true"
+                aria-labelledby="marks-entry-delete-title"
+                aria-describedby="marks-entry-delete-description"
+                onMouseDown={event => event.stopPropagation()}
+              >
+                <header className="marks-entry-delete-modal__header">
+                  <span className="marks-entry-delete-modal__icon"><FiTrash2 aria-hidden="true" /></span>
+                  <div>
+                    <h2 id="marks-entry-delete-title">Delete Marks Confirmation</h2>
+                    <p>Marks record deletion confirmation.</p>
+                  </div>
+                  <button type="button" className="marks-entry-delete-modal__close" onClick={() => setDeletingRow(null)} aria-label="Close confirmation">
+                    <FiX aria-hidden="true" />
+                  </button>
+                </header>
+                <div className="marks-entry-delete-modal__body">
+                  <div className="marks-entry-delete-record">
+                    <span className="marks-entry-delete-record__badge">MARKS</span>
+                    <div>
+                      <strong>{deletingRow.studentName || deletingRow.registrationNumber || 'Student marks'}</strong>
+                      <p>{[
+                        deletingRow.subjectName || deletingRow.subject,
+                        deletingRow.subjectCode,
+                        deletingRow.examType,
+                        deletingRow.course,
+                        deletingRow.branch,
+                        deletingRow.section,
+                      ].filter(Boolean).join(' | ') || 'Marks entry record'}</p>
+                    </div>
+                  </div>
+                  <p id="marks-entry-delete-description" className="marks-entry-delete-modal__message">
+                    Are you sure you want to permanently delete this marks record? This action cannot be undone.
+                  </p>
+                </div>
+                <footer className="marks-entry-delete-modal__footer">
+                  <button type="button" className="marks-entry-delete-modal__cancel" onClick={() => setDeletingRow(null)}>Cancel</button>
+                  <button type="button" className="marks-entry-delete-modal__confirm" onClick={confirmDeleteAssessment}>
+                    <FiTrash2 aria-hidden="true" /> Confirm &amp; Delete Marks
+                  </button>
+                </footer>
+              </section>
+            </div>,
+            document.body,
+          )}
           {showAddForm && createPortal(<div className={`marks-entry-modal${localStorage.getItem('pirnav-sidebar-collapsed') === 'true' ? ' sidebar-collapsed' : ''}`} onMouseDown={() => setShowAddForm(false)}>
             <form className="marks-entry-form" role="dialog" aria-modal="true" aria-labelledby="marks-entry-form-title" onMouseDown={event => event.stopPropagation()} onSubmit={submitAssessment}>
             <div className="marks-entry-form__heading"><div><h3 id="marks-entry-form-title">{editingId ? 'Edit Marks Assessment' : 'Add Marks Assessment'}</h3><p>Enter the assessment details. Existing values are available as suggestions.</p></div><button type="button" className="marks-entry-form__close" onClick={() => { setShowAddForm(false); setEditingId('') }} aria-label="Close form">&times;</button></div>
