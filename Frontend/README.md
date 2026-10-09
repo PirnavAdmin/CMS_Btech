@@ -120,3 +120,13 @@ The React Compiler is not enabled on this template because of its impact on dev 
 ## Expanding the Oxlint configuration
 
 If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and Oxlint's TypeScript related rules in your project.
+
+## Remaining-module integration status
+
+See [REMAINING_MODULES_AUDIT.md](REMAINING_MODULES_AUDIT.md) for the module-by-module audit, implemented repairs, missing backend dependencies and validation limits.
+
+Marks Entry/Edit, XLSX upload, Approval/history and Student/Subject reports now use the existing `/api/v1/marks` endpoints. Existing numeric backend examination IDs are required until an examination catalog API is provided. UI access remains under the existing administrator routes; assigned-faculty authorization is not claimed complete.
+
+Production examination setup/timetable and official result screens explicitly identify unavailable integrations. Their previous local designs remain opt-in development previews, not official schedules or results. Cashier access is restricted to the currently provisioned administrative roles on both frontend and backend. Student document access is college-administrator scoped; faculty document actions permit same-college administrators and owning faculty. Student self-service document access requires a reliable user/student mapping.
+
+No Library, Meetings/Events or Placement success flows are fabricated. These modules still require their domain APIs, policies and authenticated integration fixtures. Browser visual verification and full database end-to-end validation remain outstanding.

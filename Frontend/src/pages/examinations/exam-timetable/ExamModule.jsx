@@ -1,3 +1,4 @@
+import ModuleAvailability from '../../../components/ModuleAvailability'
 ﻿import { useEffect, useMemo, useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { ArrowLeft, CalendarDays, ClipboardList, Plus, Printer, RefreshCw, Search, Users, Building2, Clock3, CheckCircle2, AlertTriangle, X, Filter as FilterIcon, ChevronDown } from 'lucide-react'
@@ -43,7 +44,7 @@ function Field({ label, children, required }) { return <label className="exm-fie
 function Empty({ children = 'No examination schedules found.' }) { return <div className="exm-empty"><ClipboardList size={28}/><strong>{children}</strong><span>Try changing your filters or create a new schedule.</span></div> }
 function Notice({ children, onClose }) { return <div className="exm-notice" role="status"><CheckCircle2 size={18}/><span>{children}</span>{onClose && <button onClick={onClose} aria-label="Close"><X size={16}/></button>}</div> }
 
-export default function ExamModule({ screen }) {
+function LocalExamModule({ screen }) {
   const location = useLocation()
   const navigate = useNavigate()
   const [exams, setExams] = useState(getExams)
@@ -469,3 +470,5 @@ function HallManager({ exams, halls, allocations, students, faculty, facultyDire
     {!exam&&<Empty>Select an examination to view students and hall availability</Empty>}
   </>
 }
+
+export default function ExamModule(props) { return <ModuleAvailability title="Exam Timetable" dependency="Institutional exam schedules, hall allocation, cohort eligibility and invigilator conflict validation require backend integration."><LocalExamModule {...props} /></ModuleAvailability> }

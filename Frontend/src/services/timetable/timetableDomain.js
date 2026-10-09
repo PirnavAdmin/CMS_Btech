@@ -2,15 +2,16 @@ import { active, same, key, matchesScope, eligibleSubjects, conflictsFor, normal
 import { planningErrors, entryPlanningErrors, schedulingIssues, subjectRequirements, roomOptions, suitableRoom, generateTimetable, classesOnDate } from '../../utils/timetablePlanner.js'
 import { periodSessions } from '../../utils/timetablePeriods.js'
 
-export const hierarchy = ['academicYearId', 'departmentId', 'courseId', 'branchId', 'level', 'semesterId']
+export const hierarchy = ['academicYearId', 'courseId', 'departmentId', 'branchId', 'level', 'semesterId']
 export const academicLevel = row => key(row.academicLevel ?? row.yearOfStudy ?? row.studyYear ?? row.yearNumber ?? (Number(row.semesterNumber) > 0 ? Math.ceil(Number(row.semesterNumber) / 2) : ''))
 const related = (row, scope, fields) => fields.every(field => !row[field] || same(row[field], scope[field]))
 export function contextOptions(sources, scope) {
   const branches = sources.branches.filter(row => active(row) && same(row.courseId, scope.courseId) && same(row.departmentId ?? sources.courses.find(course => same(course.id, row.courseId))?.departmentId, scope.departmentId))
   const semesters = sources.semesters.filter(row => active(row) && related(row, scope, ['academicYearId', 'courseId', 'branchId']))
   return {
-    academicYearId: sources.years.filter(active), departmentId: sources.departments.filter(active),
-    courseId: sources.courses.filter(row => active(row) && (row.departmentId ? same(row.departmentId, scope.departmentId) : sources.branches.some(branch => active(branch) && same(branch.courseId, row.id) && same(branch.departmentId, scope.departmentId)))),
+    academicYearId: sources.years.filter(active),
+    courseId: sources.courses.filter(active),
+    departmentId: sources.departments.filter(row => active(row) && (sources.courses.some(course => active(course) && same(course.id, scope.courseId) && same(course.departmentId, row.id)) || sources.branches.some(branch => active(branch) && same(branch.courseId, scope.courseId) && same(branch.departmentId, row.id)))),
     branchId: branches,
     level: [...new Set(semesters.map(academicLevel).filter(Boolean))].sort().map(id => ({ id, name: /^\d+$/.test(id) ? `Year ${id}` : id })),
     semesterId: semesters.filter(row => academicLevel(row) === scope.level),

@@ -3,14 +3,14 @@ import { createPortal } from 'react-dom'
 import { FiEdit2, FiPlus, FiSearch, FiTrash2, FiX } from 'react-icons/fi'
 import DashboardLayout from '../../../layouts/DashboardLayout'
 import PageHeader from '../../../components/PageHeader'
-import MarksModuleNav from './MarksModuleNav'
-import FilterPanel from '../../../components/FilterPanel'
-import ExportMenu from '../../../components/ExportMenu'
-import TablePagination from '../../../components/TablePagination'
 import EmptyState from '../../../components/EmptyState'
+import ExportMenu from '../../../components/ExportMenu'
+import FilterPanel from '../../../components/FilterPanel'
+import TablePagination from '../../../components/TablePagination'
+import MarksModuleNav from './MarksModuleNav'
 import { useAcademic } from '../../../context/AcademicContext'
-import subjectService from '../../../services/subjectService'
 import studentService from '../../../services/studentService'
+import subjectService from '../../../services/subjectService'
 import { collegeStorageKey } from '../../../utils/collegeScope'
 import './MarksEntry.css'
 
@@ -215,27 +215,6 @@ export default function MarksEntry() {
           <header className="erp-card-header marks-entry-card__header">
             <div><h2 className="erp-card-title">Marks Records</h2><p className="erp-card-subtitle">Review submitted marks by subject, exam and class.</p></div>
           </header>
-          <FilterPanel active={hasFilters} onClear={clearFilters} className="marks-entry-filters" actions={<div className="marks-entry-card__actions"><ExportMenu rows={filtered} columns={columns} title="Marks Entry Records" filename="marks-entry-records" scope="All matching marks" allowEmpty printLabel="Save as PDF" /><button type="button" className="erp-btn erp-btn--primary" onClick={() => { setEditingId(''); setAssessment(initialAssessment); setShowAddForm(true) }}><FiPlus /> Add Marks</button></div>}>
-            <div className="marks-entry-search-wrap"><label className="marks-entry-search"><FiSearch aria-hidden="true" /><input aria-label="Search marks records" placeholder="Search subject, exam, course or section" value={query} onChange={event => { setQuery(event.target.value); setPage(1) }} /></label></div>
-            {[
-              ['academicYear', 'Academic Year', 'All academic years'],
-              ['course', 'Course', 'All courses'],
-              ['branch', 'Branch', 'All branches'],
-              ['semester', 'Semester', 'All semesters'],
-              ['section', 'Section', 'All sections'],
-              ['subject', 'Subject', 'All subjects'],
-              ['examType', 'Exam Type', 'All exam types'],
-              ['assessmentType', 'Assessment Type', 'All assessment types'],
-            ].map(([key, label, placeholder]) => (
-              <label className="marks-entry-filter" key={key}>
-                <span>{label}</span>
-                <select aria-label={`Filter by ${label}`} value={filters[key]} onChange={event => setFilter(key, event.target.value)}>
-                  <option value="">{placeholder}</option>
-                  {filterOptions[key].map(value => <option key={value} value={value}>{value}</option>)}
-                </select>
-              </label>
-            ))}
-          </FilterPanel>
           {deletingRow && createPortal(
             <div className="marks-entry-delete-backdrop" onMouseDown={() => setDeletingRow(null)}>
               <section
@@ -285,6 +264,27 @@ export default function MarksEntry() {
             </div>,
             document.body,
           )}
+          <FilterPanel active={hasFilters} onClear={clearFilters} className="marks-entry-filters" actions={<div className="marks-entry-card__actions"><ExportMenu rows={filtered} columns={columns} title="Marks Entry Records" filename="marks-entry-records" scope="All matching marks" allowEmpty printLabel="Save as PDF" /><button type="button" className="erp-btn erp-btn--primary" onClick={() => { setEditingId(''); setAssessment(initialAssessment); setShowAddForm(true) }}><FiPlus /> Add Marks</button></div>}>
+            <div className="marks-entry-search-wrap"><label className="marks-entry-search"><FiSearch aria-hidden="true" /><input aria-label="Search marks records" placeholder="Search subject, exam, course or section" value={query} onChange={event => { setQuery(event.target.value); setPage(1) }} /></label></div>
+            {[
+              ['academicYear', 'Academic Year', 'All academic years'],
+              ['course', 'Course', 'All courses'],
+              ['branch', 'Branch', 'All branches'],
+              ['semester', 'Semester', 'All semesters'],
+              ['section', 'Section', 'All sections'],
+              ['subject', 'Subject', 'All subjects'],
+              ['examType', 'Exam Type', 'All exam types'],
+              ['assessmentType', 'Assessment Type', 'All assessment types'],
+            ].map(([key, label, placeholder]) => (
+              <label className="marks-entry-filter" key={key}>
+                <span>{label}</span>
+                <select aria-label={`Filter by ${label}`} value={filters[key]} onChange={event => setFilter(key, event.target.value)}>
+                  <option value="">{placeholder}</option>
+                  {filterOptions[key].map(value => <option key={value} value={value}>{value}</option>)}
+                </select>
+              </label>
+            ))}
+          </FilterPanel>
           {showAddForm && createPortal(<div className={`marks-entry-modal${localStorage.getItem('pirnav-sidebar-collapsed') === 'true' ? ' sidebar-collapsed' : ''}`} onMouseDown={() => setShowAddForm(false)}>
             <form className="marks-entry-form" role="dialog" aria-modal="true" aria-labelledby="marks-entry-form-title" onMouseDown={event => event.stopPropagation()} onSubmit={submitAssessment}>
             <div className="marks-entry-form__heading"><div><h3 id="marks-entry-form-title">{editingId ? 'Edit Marks Assessment' : 'Add Marks Assessment'}</h3><p>Enter the assessment details. Existing values are available as suggestions.</p></div><button type="button" className="marks-entry-form__close" onClick={() => { setShowAddForm(false); setEditingId('') }} aria-label="Close form">&times;</button></div>

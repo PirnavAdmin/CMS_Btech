@@ -685,6 +685,14 @@ builder.Services.AddScoped<
     IEmailService,
     EmailService>();
 
+builder.Services.AddScoped<
+    IMeetingEventValidationRepository,
+    MeetingEventValidationRepository>();
+
+builder.Services.AddScoped<
+    IMeetingEventValidationService,
+    MeetingEventValidationService>();
+
 
 // ============================================================
 // SWAGGER
