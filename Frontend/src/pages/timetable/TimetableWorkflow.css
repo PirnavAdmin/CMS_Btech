@@ -7,13 +7,24 @@
 .tt-clean-step .tt-form-grid { margin-bottom: 18px; }
 .tt-clean-builder .tt-stepper { overflow-x: auto; flex-shrink: 0; }
 .tt-clean-builder .tt-stepper button { white-space: nowrap; }
-.tt-dashboard-stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+.tt-dashboard-stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; }
 .tt-dashboard-stats .tt-card { padding: 16px; display: flex; gap: 8px; flex-direction: column; }
 .tt-dashboard-stats strong { font-size: 1.5rem; }
-.tt-readiness-details { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 8px; }
-.tt-readiness-details article { min-width: 0; display: flex; flex-direction: column; gap: 4px; padding: 10px 12px; border: 1px solid var(--border); border-radius: 8px; background: var(--surface); }
-.tt-readiness-details article strong { font-size: 1.1rem; overflow-wrap: anywhere; }
-.tt-readiness-details article span { font-size: .74rem; color: var(--text-muted); }
+.tt-validation-panel { padding: 12px 16px; }
+.tt-validation-panel > header { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 6px; }
+.tt-validation-panel h2 { margin: 0; font-size: .88rem; }
+.tt-validation-panel > header > span { color: var(--text-muted); font-size: .72rem; }
+.tt-readiness-details { display: flex; flex-wrap: wrap; gap: 8px 20px; margin: 12px 0 0; }
+.tt-validation-status { display: flex; align-items: center; gap: 6px; min-width: 0; flex: 1 1 270px; font-size: .75rem; line-height: 1.5; }
+.tt-validation-status > svg { flex-shrink: 0; width: 15px; height: 15px; color: var(--brand); }
+.tt-validation-status dt { color: var(--text-secondary); }
+.tt-validation-status dd { margin: 0 0 0 auto; font-weight: 750; color: var(--text-primary); white-space: nowrap; }
+.tt-validation-status--success > svg { color: #16a34a; }
+.tt-validation-status--warning > svg { color: #d97706; }
+.tt-attention-card { font: inherit; color: var(--text-primary); background: var(--surface); text-align: left; cursor: pointer; }
+.tt-attention-card:is(:hover, [aria-expanded=true]) { border-color: var(--brand); }
+.tt-attention-card:focus-visible { outline: 2px solid var(--brand); outline-offset: 3px; }
+.tt-dashboard-stats small { color: var(--text-muted); font-size: .7rem; line-height: 1.4; }
 .tt-adapter-note { font-size: .8rem; color: var(--text-muted); margin: 0; }
 .tt-recent-tables { display: grid; gap: 8px; }
 .tt-structure-explorer { display: grid; gap: 8px; }
@@ -67,21 +78,44 @@
 .tt-projection-results { display: grid; gap: 8px; margin-top: 12px; max-height: 340px; overflow: auto; }
 .tt-projection-results > span, .tt-projection-results article, .tt-live-row { display: flex; flex-direction: column; gap: 3px; padding: 9px 11px; border: 1px solid var(--border); border-radius: 8px; background: var(--surface); }
 .tt-projection-results article span, .tt-projection-results article small, .tt-live-row span { color: var(--text-secondary); }
-.tt-live-summary { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+.tt-live-summary { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin-top: 16px; }
 .tt-live-summary article { min-width: 0; display: flex; flex-direction: column; gap: 4px; padding: 12px; border: 1px solid var(--border); border-radius: 9px; background: var(--surface); }
 .tt-live-summary article strong { overflow-wrap: anywhere; }
 .tt-live-summary article span { color: var(--text-muted); font-size: .8rem; }
 .tt-live-row { margin: 7px 0; }
-@media (max-width: 900px) { .tt-clean-step .tt-period-layout { grid-template-columns: 1fr; } .tt-readiness-details { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+.tt-page .tt-dashboard-panel { display: grid; gap: 12px; min-width: 0; }
+.tt-page .tt-dashboard-panel .tt-card { margin-bottom: 0; }
+.tt-page .tt-dashboard-panel .tt-clean-step { padding: 16px; }
+.tt-page .tt-dashboard-panel .tt-card-heading { padding: 0 0 12px; gap: 10px; }
+.tt-page .tt-dashboard-panel .tt-card-heading h2 { display: flex; align-items: center; gap: 8px; margin: 0; font-size: 1rem; }
+.tt-page .tt-dashboard-panel .tt-card-heading p { margin: 5px 0 0; }
+.tt-page .tt-dashboard-panel .tt-live-summary { margin-top: 12px; gap: 10px; }
+.tt-page .tt-dashboard-panel .tt-dashboard-stats { gap: 10px; }
+.tt-page .tt-dashboard-panel .tt-dashboard-stats .tt-card { padding: 12px 14px; gap: 5px; }
+.tt-page .tt-dashboard-panel :is(.tt-live-summary, .tt-dashboard-stats) strong { display: flex; align-items: flex-start; gap: 9px; line-height: 1.4; }
+.tt-page .tt-dashboard-panel :is(.tt-live-summary, .tt-dashboard-stats) strong svg { flex: 0 0 auto; width: 18px; height: 18px; padding: 6px; box-sizing: content-box; border-radius: 7px; color: var(--brand); background: var(--brand-soft); }
+.tt-page .tt-dashboard-panel .tt-card-heading h2 svg { flex-shrink: 0; color: var(--brand); }
+.tt-page .tt-dashboard-panel .tt-live-summary article:nth-child(2) strong svg,
+.tt-page .tt-dashboard-panel .tt-dashboard-stats .tt-card:nth-child(2) strong svg { color: #16a34a; background: rgba(22, 163, 74, .12); }
+.tt-page .tt-dashboard-panel .tt-live-summary article:nth-child(3) strong svg,
+.tt-page .tt-dashboard-panel .tt-dashboard-stats .tt-card:nth-child(3) strong svg { color: #d97706; background: rgba(217, 119, 6, .12); }
+.tt-page .tt-dashboard-panel .tt-dashboard-stats .tt-card:nth-child(4) strong svg { color: #9333ea; background: rgba(147, 51, 234, .12); }
+.tt-page .tt-dashboard-panel .tt-clean-step:has(.tt-structure-explorer) .tt-card-heading h2 svg { color: #9333ea; }
+.tt-page .tt-dashboard-panel .tt-clean-step:last-child .tt-card-heading h2 svg { color: #0891b2; }
+.tt-page .tt-dashboard-panel .tt-recent-table { padding: 11px 12px; gap: 4px; }
+@media (max-width: 600px) {
+  .tt-page .tt-dashboard-panel .tt-clean-step { padding: 12px; }
+  .tt-page .tt-dashboard-panel { gap: 10px; }
+}
+@media (max-width: 900px) { .tt-clean-step .tt-period-layout { grid-template-columns: 1fr; } .tt-dashboard-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 @media (max-width: 600px) {
   .tt-clean-step, .tt-clean-workspace { padding: 12px; }
-  .tt-dashboard-stats { grid-template-columns: repeat(2, 1fr); }
   .tt-clean-workspace .tt-actions { gap: 6px; }
   .tt-clean-workspace .tt-actions .tt-button { font-size: .75rem; padding: 7px; }
   .tt-review-actions { align-items: stretch; flex-direction: column; }
   .tt-review-actions .tt-actions { width: 100%; }
   .tt-live-summary { grid-template-columns: 1fr; }
-  .tt-readiness-details { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .tt-validation-panel { padding: 12px; }
 }
 
 /* Weekly row labels are body content, not the ERP's sticky white table headings. */
