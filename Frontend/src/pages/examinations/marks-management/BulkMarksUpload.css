@@ -45,3 +45,6 @@
   .bulk-marks-preview-filters { margin-inline: 12px; }
   .bulk-marks-filter { min-width: 140px; flex: 1 1 140px; }
 }
+
+/* Align Clear Filters with the filter controls instead of their labels. */
+.bulk-marks-preview-filters .filter-disclosure__clear-btn { align-self: flex-end !important; margin-bottom: 0 !important; }
