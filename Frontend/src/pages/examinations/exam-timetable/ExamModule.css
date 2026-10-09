@@ -16,3 +16,4 @@
 .exm-generator{padding:18px}.exm-generator .exm-form-grid{margin:14px 0}.exm-generator>.exm-toolbar__actions,.exm-generator-actions{display:flex;justify-content:flex-end;gap:8px;padding:12px 0}.exm-generator-summary{padding:12px;background:#eff7ff;color:#285f96;border-radius:8px;margin:10px 0}.exm-generator-summary span{color:#9b6500}.exm-generator-actions{border-top:1px solid #e0e8f2;margin-top:8px}@media print{.exm-generator{display:none!important}}
 
 .exm-form .exm-field input[type=checkbox]{width:18px;height:18px;align-self:flex-start;accent-color:#1769c2}.exm-toolbar .exm-view-toggle{overflow-x:auto;max-width:100%;flex:none}.exm-toolbar .exm-view-toggle button{white-space:nowrap}.exm-status--published{background:#e8f6ee;color:#247346}@media print{.exam-module .exm-pagination{display:none!important}}
+.exm-status--assigned{background:#e9f2ff;color:#2863a3}.exm-hall-linked-exam{display:block;margin-top:3px;color:#71839b;font-size:10px;font-weight:600}
