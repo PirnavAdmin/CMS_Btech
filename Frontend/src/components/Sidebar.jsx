@@ -51,6 +51,8 @@ export default function Sidebar({ open = false, onClose = () => {}, collapsed = 
   const [collegeLogo, setCollegeLogo] = useState('')
   const examRoutesActive = pathname.startsWith('/examination-setup') || pathname.startsWith('/exam-timetable')
   const [examManagementOpen, setExamManagementOpen] = useState(examRoutesActive)
+  const gradeResultsActive = pathname.startsWith('/grade-result-management') || pathname.startsWith('/results')
+  const [gradeResultsOpen, setGradeResultsOpen] = useState(gradeResultsActive)
   const feeRoutesActive = isFeeRoute(pathname)
   const activeFeeItem = feeNavigationItem(pathname)
   const [feeExpansion, setFeeExpansion] = useState(() => ({ pathname, open: feeRoutesActive }))
@@ -62,6 +64,10 @@ export default function Sidebar({ open = false, onClose = () => {}, collapsed = 
   useEffect(() => {
     if (examRoutesActive) setExamManagementOpen(true)
   }, [examRoutesActive])
+
+  useEffect(() => {
+    if (gradeResultsActive) setGradeResultsOpen(true)
+  }, [gradeResultsActive])
 
   useEffect(() => {
     let active = true
@@ -180,15 +186,21 @@ export default function Sidebar({ open = false, onClose = () => {}, collapsed = 
           <p className="sidebar-section-label">Curriculum & Subjects</p>
           {curriculumLinks.map(link => <Item {...link} key={link.to} onNavigate={onClose}>{link.label}</Item>)}
           <p className="sidebar-section-label">Examinations & Results</p>
-          <button type="button" className={`sidebar-link sidebar-link--blue sidebar-disclosure ${examRoutesActive ? 'active' : ''}`} onClick={() => setExamManagementOpen(open => !open)} aria-expanded={examManagementOpen} aria-controls="exam-management-links">
+          <button type="button" className={`sidebar-link sidebar-link--blue sidebar-disclosure sidebar-exam-parent ${examRoutesActive ? 'is-module-active' : ''}`} onClick={() => setExamManagementOpen(open => !open)} aria-expanded={examManagementOpen} aria-controls="exam-management-links">
             <FiFileText aria-hidden="true" /><span>Exam Management</span><FiChevronDown className="sidebar-disclosure__chevron" aria-hidden="true" />
           </button>
-          {examManagementOpen && <div className="sidebar-submenu" id="exam-management-links">
+          {examManagementOpen && <div className="sidebar-submenu sidebar-exam-submenu" id="exam-management-links">
             <Item to="/examination-setup" icon={FiFileText} tone="blue" onNavigate={onClose} activeWhen={pathname => pathname.startsWith('/examination-setup')}>Examination Setup</Item>
             <Item to="/exam-timetable" icon={FiCalendar} tone="orange" onNavigate={onClose} activeWhen={pathname => pathname.startsWith('/exam-timetable')}>Exam Timetable</Item>
           </div>}
           <Item to="/marks-management" icon={FiEdit3} tone="green" onNavigate={onClose} activeWhen={pathname => pathname.startsWith('/marks-management')}>Marks Management</Item>
-          <Item to="/grade-result-management" icon={FiAward} tone="purple" onNavigate={onClose} activeWhen={pathname => pathname.startsWith('/grade-result-management')}>Grade System & Result Management</Item>
+          <button type="button" className={`sidebar-link sidebar-link--purple sidebar-disclosure sidebar-grade-parent ${gradeResultsActive ? 'is-module-active' : ''}`} onClick={() => setGradeResultsOpen(open => !open)} aria-expanded={gradeResultsOpen} aria-controls="grade-results-links">
+            <FiAward aria-hidden="true" /><span>Grades System and Results</span><FiChevronDown className="sidebar-disclosure__chevron" aria-hidden="true" />
+          </button>
+          {gradeResultsOpen && <div className="sidebar-submenu sidebar-grade-submenu" id="grade-results-links">
+            <Item to="/grade-result-management/grade-configuration" icon={FiAward} tone="purple" onNavigate={onClose} activeWhen={pathname => pathname.startsWith('/grade-result-management')}>Grade Management</Item>
+            <Item to="/results" icon={FiFileText} tone="blue" onNavigate={onClose} activeWhen={pathname => pathname.startsWith('/results')}>Official Results</Item>
+          </div>}
           <p className="sidebar-section-label">Finance</p>
           <button type="button" className={`sidebar-link sidebar-link--gold sidebar-disclosure sidebar-fee-parent ${feeRoutesActive ? 'is-module-active' : ''}`} title="Fee Management" aria-label="Fee Management" onClick={() => { if (collapsed) onToggleCollapse(); setFeeExpansion({ pathname, open: collapsed || !feeManagementOpen }) }} aria-expanded={!collapsed && feeManagementOpen} aria-controls="fee-management-links">
             <FiCreditCard aria-hidden="true" /><span>Fee Management</span><FiChevronDown className="sidebar-disclosure__chevron" aria-hidden="true" />
@@ -202,7 +214,6 @@ export default function Sidebar({ open = false, onClose = () => {}, collapsed = 
         <Item to="/library" icon={FiBookOpen} tone="blue" onNavigate={onClose}>Library</Item>
         <Item to="/meetings-events" icon={FiCalendar} tone="orange" onNavigate={onClose}>Meetings/Events</Item>
         <Item to="/placement" icon={FiBriefcase} tone="green" onNavigate={onClose}>Placement</Item>
-        <Item to="/results" icon={FiAward} tone="purple" onNavigate={onClose}>Official Results</Item>
         {userRole === ROLES.ADMIN && <>
           <p className="sidebar-section-label">Settings & Access</p>
           <Item to="/roles-designations" icon={FiShield} tone="purple" onNavigate={onClose}>Roles & Designations</Item>
