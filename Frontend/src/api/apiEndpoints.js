@@ -1206,7 +1206,7 @@ export const studentParentApi = { get: async (id) => normalizeParent(await reque
 export const studentDocumentApi = {
   getAll: async (id) => listData(await request(API_ENDPOINTS.students.documents(requiredId(id, 'Student ID')))),
   upload: async (id, file, metadata = {}) => { if (!(file instanceof File)) throw new Error('Choose a document to upload.'); const form = new FormData(); form.append('file', file); Object.entries(metadata).filter(([, value]) => value !== undefined && value !== null && value !== '').forEach(([key, value]) => form.append(key, String(value))); return normalizeDocument(await request(API_ENDPOINTS.students.documents(requiredId(id, 'Student ID')), { method: 'POST', body: form })) },
-  get: async (studentId, documentId) => blobRequest(API_ENDPOINTS.students.document(requiredId(studentId, 'Student ID'), requiredId(documentId, 'Document ID'))),
+  get: async (studentId, documentId) => normalizeDocument(await request(API_ENDPOINTS.students.document(requiredId(studentId, 'Student ID'), requiredId(documentId, 'Document ID')))),
   remove: async (studentId, documentId) => request(API_ENDPOINTS.students.document(requiredId(studentId, 'Student ID'), requiredId(documentId, 'Document ID')), { method: 'DELETE' }),
   download: async (studentId, documentId) => blobRequest(API_ENDPOINTS.students.downloadDocument(requiredId(studentId, 'Student ID'), requiredId(documentId, 'Document ID'))),
 }
@@ -1477,3 +1477,25 @@ export const roomApi = {
 }
 export const roomsApi = roomApi
 
+// MarksController / DTOs/Marks/MarksManagementDtos.cs. No local success fallback.
+export const marksApi = {
+  list: async params => listData(await request(withQuery(endpoint('/api/v1/marks'), params))),
+  create: async payload => { const data = dataResponse(await jsonRequest(endpoint('/api/v1/marks'), 'POST', payload)); return data?.mark ?? data },
+  update: async (id, payload) => dataResponse(await jsonRequest(endpoint(`/api/v1/marks/${requiredId(id, 'Mark ID')}`), 'PUT', payload)),
+  workflow: async (action, payload) => {
+    if (!['submit', 'approve', 'reject'].includes(action)) throw new Error('Invalid marks workflow action.')
+    return dataResponse(await jsonRequest(endpoint(`/api/v1/marks/workflow/${action}`), 'POST', payload))
+  },
+  approvalHistory: async id => listData(await request(endpoint(`/api/v1/marks/${requiredId(id, 'Mark ID')}/approval-history`))),
+  studentReport: async params => dataResponse(await request(withQuery(endpoint('/api/v1/marks/reports/student'), params))),
+  subjectReport: async params => listData(await request(withQuery(endpoint('/api/v1/marks/reports/subjects'), params))),
+  upload: async (file, scope, preview = true) => {
+    if (!(file instanceof File) || !/\.xlsx$/i.test(file.name)) throw new Error('Choose an XLSX workbook.')
+    if (!file.size || file.size > 10 * 1024 * 1024) throw new Error('Workbook must be nonempty and at most 10 MB.')
+    const form = new FormData()
+    form.append('file', file); form.append('examId', String(scope.examId))
+    if (scope.sectionId) form.append('sectionId', String(scope.sectionId))
+    if (!preview) form.append('upsertDrafts', 'false')
+    return dataResponse(await multipartRequest(endpoint(`/api/v1/marks/bulk/${preview ? 'file-preview' : 'upload'}`), form))
+  },
+}

@@ -1,3 +1,4 @@
+import ModuleAvailability from '../../../components/ModuleAvailability'
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { FiEdit2, FiFilter, FiPlus, FiPower, FiSearch, FiTrash2 } from 'react-icons/fi'
@@ -31,7 +32,7 @@ const statusClass = status => String(status || '').toLowerCase().replace(/\s+/g,
 const dateText = value => value ? new Date(`${value}T00:00:00`).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : '—'
 const initialForm = { name: '', academicYear: '', examType: '', term: '', startDate: '', endDate: '', description: '', status: 'Draft' }
 
-export default function ExaminationSetup() {
+function LocalExaminationSetup() {
   const { pathname, state: routeState } = useLocation()
   const navigate = useNavigate()
   const activePath = tabs.some(([, path]) => path === pathname) ? pathname : tabs[0][1]
@@ -128,3 +129,5 @@ export default function ExaminationSetup() {
 function DataTable({ headers, rows, columns, actions, collection }) {
   return <><p className="examination-setup__count">Showing {rows.length} record{rows.length === 1 ? '' : 's'}</p><div className="examination-setup__table-wrap"><table><thead><tr>{headers.map(header => <th key={header}>{header}</th>)}</tr></thead><tbody>{rows.length ? rows.map(row => <tr key={row.id}>{columns.map(key => <td key={key}>{key === 'date' ? dateText(row[key]) : key === 'status' ? <span className={`examination-setup__status ${statusClass(row[key])}`}>{row[key]}</span> : row[key] || '—'}</td>)}<td>{actions(row, collection)}</td></tr>) : <tr><td className="examination-setup__empty" colSpan={headers.length}>No records found.</td></tr>}</tbody></table></div></>
 }
+
+export default function ExaminationSetup(props) { return <ModuleAvailability title="Examination Management" dependency="Exam configuration, academic scope and lifecycle APIs are required before examinations can be created or published."><LocalExaminationSetup {...props} /></ModuleAvailability> }

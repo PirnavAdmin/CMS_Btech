@@ -1,3 +1,4 @@
+import ModuleAvailability from '../../../components/ModuleAvailability'
 ﻿import { useEffect, useMemo, useState } from 'react'
 import { NavLink } from 'react-router-dom'
 import { FiPlus, FiRefreshCw, FiSearch, FiTrash2 } from 'react-icons/fi'
@@ -18,7 +19,7 @@ import './GradeResultWorkspace.css'
 const resultColumns = [['studentName', 'Student'], ['registrationNumber', 'Registration No.'], ['semester', 'Semester'], ['department', 'Department'], ['subjectCode', 'Subject Code'], ['subjectName', 'Subject'], ['examType', 'Examination'], ['totalMarks', 'Marks'], ['maximumMarks', 'Maximum'], ['percentage', 'Score %'], ['grade', 'Grade'], ['gradePoint', 'Points'], ['status', 'Result']].map(([key, label]) => ({ key, label }))
 const summaryColumns = [['group', 'Group'], ['students', 'Students'], ['subjects', 'Assessments'], ['passed', 'Passed'], ['failed', 'Failed'], ['pending', 'Pending'], ['passRate', 'Assessment Pass Rate']].map(([key, label]) => ({ key, label }))
 const readBands = key => { try { const saved = JSON.parse(localStorage.getItem(key) || 'null'); return Array.isArray(saved) && !validateBands(saved) ? saved : defaultBands.map(band => ({ ...band })) } catch { return defaultBands.map(band => ({ ...band })) } }
-export default function GradeResultWorkspace({ screen }) {
+function LocalGradeResultWorkspace({ screen }) {
   const academic = useAcademic()
   const scope = `${academic.selectedCollegeId || 'none'}:${academic.selectedAcademicYearId || 'none'}`
   return <DashboardLayout><Workspace key={`${scope}:${screen}`} screen={screen} academic={academic} scope={scope} /></DashboardLayout>
@@ -112,3 +113,5 @@ function Workspace({ screen, academic, scope }) {
     </article>}
   </section>
 }
+
+export default function GradeResultWorkspace(props) { return <ModuleAvailability title="Results" dependency="Official result processing, approved grading policies, transcripts and publication APIs are unavailable. Local grade previews are not official results."><LocalGradeResultWorkspace {...props} /></ModuleAvailability> }

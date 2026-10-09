@@ -1,6 +1,7 @@
 import { Component, useEffect } from 'react'
 import { Navigate, Route, Routes } from 'react-router-dom'
 import ProtectedRoute from './components/ProtectedRoute'
+import CampusWorkspace from './pages/campus/CampusWorkspace'
 import { ROLES } from './auth/roles'
 
 import Dashboard from './pages/Dashboard'
@@ -206,6 +207,10 @@ export default function App() {
             }
           >
               <Route path="/dashboard" element={<Dashboard />} />
+              <Route path="/library" element={<CampusWorkspace module="library" />} />
+              <Route path="/meetings-events" element={<CampusWorkspace module="meetings-events" />} />
+              <Route path="/placement" element={<CampusWorkspace module="placement" />} />
+              <Route path="/results" element={<CampusWorkspace module="results" />} />
               <Route path="/my-profile" element={<MyProfile />} />
               <Route path="/settings" element={<Settings />} />
               <Route path="/settings/academic-context" element={<Settings />} />
@@ -306,7 +311,7 @@ export default function App() {
               <Route path="/student-management/attendance/sessions/:sessionId" element={<AttendanceSessionDetails />} />
               <Route path="/student-management/attendance/*" element={<Attendance />} />
               <Route path="/student-management/promotions" element={<StudentPromotion />} />
-              <Route path="/fees/*" element={<Fees />} />
+              <Route element={<ProtectedRoute allowedRoles={[ROLES.ADMIN]} />}><Route path="/fees/*" element={<Fees />} /></Route>
               <Route path="/roles-designations" element={<RolesAndDesignations />} />
               <Route path="/roles-permissions" element={<RolesAndDesignations />} />
           </Route>
