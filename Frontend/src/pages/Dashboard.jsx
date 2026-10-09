@@ -31,6 +31,7 @@ import {
 import { getUserRole } from '../auth/auth'
 import { ROLES } from '../auth/roles'
 import DashboardLayout from '../layouts/DashboardLayout'
+import { buildTrend } from './dashboardData'
 import { studentAdmissionApi, studentProfilesApi, profileApi } from '../api/apiEndpoints'
 import subjectService from '../services/subjectService'
 import facultyService from '../services/facultyService'
@@ -339,18 +340,14 @@ export default function Dashboard() {
       }
     }
 
-    // Month View (Jan - Jul)
-    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul']
-    const counts = [0, 0, 0, 0, 0, 0, 0]
-
-    scopedAdmissions.forEach((adm, idx) => {
-      counts[idx % 7] += 1
-    })
-
+    // Month view uses actual admission dates in a rolling 12-month window.
+    // Distributing undated records across months made the chart look flat and
+    // implied a monthly history that was not present in the source records.
+    const trend = buildTrend(scopedAdmissions, 'Month')
     return {
-      labels: months,
-      points: counts,
-      subtext: `${approvedAdmissions.length} Approved | ${pendingAdmissions.length} In Review`,
+      labels: trend.buckets.map((bucket) => bucket.label),
+      points: trend.buckets.map((bucket) => bucket.value),
+      subtext: `${approvedAdmissions.length} Approved | ${pendingAdmissions.length} In Review${trend.undated ? ` | ${trend.undated} without dates` : ''}`,
     }
   }, [inflowTimeframe, scopedAdmissions, approvedAdmissions.length, pendingAdmissions.length])
 
