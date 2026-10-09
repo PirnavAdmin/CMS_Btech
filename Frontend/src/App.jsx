@@ -253,12 +253,14 @@ export default function App() {
               <Route path="/exam-timetable/department-exam-schedule" element={<DepartmentExamSchedule />} />
               <Route path="/exam-timetable/student-exam-schedule" element={<StudentExamSchedule />} />
               <Route path="/exam-timetable/hall-allocation" element={<HallAllocation />} />
+              <Route path="/marks-management" element={<Navigate to="/marks-management/marks-entry" replace />} />
               <Route path="/marks-management/*" element={<MarksManagement />} />
               <Route path="/marks-management/marks-entry" element={<MarksEntry />} />
               <Route path="/marks-management/bulk-marks-upload" element={<BulkMarksUpload />} />
               <Route path="/marks-management/edit-marks" element={<EditMarks />} />
               <Route path="/marks-management/student-marks" element={<StudentMarks />} />
               <Route path="/marks-management/subject-marks-report" element={<SubjectMarksReport />} />
+              <Route path="/marks-management/marks-approval" element={<MarksApproval />} />
               <Route path="/grade-result-management" element={<GradeResultManagement />} />
               <Route path="/grade-result-management/grade-configuration" element={<GradeConfiguration />} />
               <Route path="/grade-result-management/cgpa-calculator" element={<CGPACalculatorPage />} />

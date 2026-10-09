@@ -12,6 +12,23 @@ Currently, two official plugins are available:
 The standalone Campus Operations Marks and Results pages have been removed.
 Examination Marks Management and Grade System & Result Management remain available
 through their existing routes and sidebar entries.
+The latest examination UI includes the Grades System and Results sidebar group,
+Grade Management with its CGPA Calculator, and Official Results under `/results`.
+Previous `/grade-result-management` result URLs redirect to their matching
+result pages. The existing Marks Approval URL remains available.
+Marks Management screens use Appalanaidu's `ce48615` snapshot, and Exam Timetable
+screens use Suresh's `73b00f2` snapshot. The restored Marks screens retain their
+original browser-local entry/upload and approval workflow; they do not replace
+or remove backend marks APIs. Grades/Results and Fee Management remain on their
+separately recovered UI versions.
+
+Exam Timetable and Examination Management open their existing local
+design screens directly during Vite development. A persistent notice identifies
+local records, approvals, and publication as unofficial. Close preview returns
+to the integration notice, where the design can be reopened. Production builds
+continue to show the integration-required screen until institutional APIs exist.
+The Results workspace uses its existing optional results integration setting and
+explicitly labelled local previews when that integration is unavailable.
 
 ## Fee Management UI
 
@@ -45,10 +62,12 @@ workflows remain accessible through Collections.
 Hostel, and Transport Fee Structures tabs. `/fees/legacy` redirects there for
 existing bookmarks; no legacy terminology or intermediate generic list is shown.
 The primary action creates the selected structure type. Academic creation opens
-the dedicated Add-screen wizard; Hostel and Transport retain their existing
-service-specific editors. The configuration header shows only the contextual
+the dedicated Add-screen wizard; Hostel and Transport use the same page-based
+Add-screen layout and live-preview styling with their existing service-specific
+fields. The configuration header shows only the contextual
 Create action; the Fee Component Master route remains available without a header
-shortcut. New wizard structures use a single Total Fee instead of master selection.
+shortcut. The Academic wizard selects charges from the existing device-local
+component master; no backend component-management API exists.
 Search and Export stay in each list header, and Filter reveals type-specific
 controls. The Academic list presents existing academic plans and wizard-created
 structures together without migrating either storage format or altering financial
@@ -87,12 +106,18 @@ The UI redesign does not change financial APIs or business workflows.
 Creating a fee structure opens `/fees/structures/create` inside the existing ERP
 layout, not a modal. Unassigned drafts use `/fees/structures/:structureId/edit`;
 duplicates and revisions use the same page-based editor. Its three-step workflow
-is Academic Setup (including Total Fee), Payment Plan, and Review & Publish.
-There is no Fee Components step or component-selection dialog. The single total
-uses the existing component-backed financial storage so allocation, collections,
-approval and assignment calculations remain unchanged. Existing detailed structures
-retain their original charges and refund rules; their total is read-only in this
-single-fee editor. The workflow has inline academic validation,
+is Fee Applicability, Fee Details, and Payment Schedule. The persistent Live Preview
+replaces a separate review page. Payment Schedule has the fixed Previous,
+Save Draft and Submit for Approval footer; complete validation still runs on submission
+and returns the user to the relevant step on errors. Internal component models
+and approval statuses are unchanged.
+Courses and dependent branches use Academic Management data. Amounts, mandatory
+and refundable flags use the existing component-backed storage and validation.
+Batch suggestions use matching academic year/course/branch records where available;
+semester options remain scoped to the selected academic mapping.
+Existing detailed structures and previously saved single-total charges remain
+intact; replacing a charge requires explicitly removing it. Hostel/Transport
+components are excluded from academic selection and submission. The workflow has inline academic validation,
 exact installment-allocation feedback, and a complete live preview derived
 from the current form. The editor reuses Add College's card, natural-width scrolling
 tabs, form controls, footer actions, and Live Preview header. Tabs sit inside the left
@@ -101,13 +126,66 @@ Save Draft remains a secondary footer action. Save & Next advances validated ste
 without persisting; Save Draft and Submit for Approval retain their existing behavior.
 On desktop, the form and preview stretch to identical heights within the available ERP
 viewport. Their bodies scroll independently; card headers and the form action
-footer remain visible. Preview sections cover academic applicability, total fee,
+footer remain visible. Preview sections cover academic applicability, fee components, total fee,
 structure concessions, payment schedules, late-fee rules, totals, and
 validation-derived readiness without changing the saved workflow status. Small
 screens stack equal-height cards with internal scrolling and normal page access.
 Save Draft returns to the structure list; Submit for Approval
 preserves the existing separate approval and publication stages. Configurations
 remain device-local and college-scoped.
+
+Hostel and Transport creation opens `/fees/structures/hostel/create` and
+`/fees/structures/transport/create`; editing uses
+`/fees/structures/:type/:facilityId/edit`. These are dedicated ERP screens,
+not modal overlays. Both reuse the Academic wizard's left configuration card,
+right Live Preview, controls, tabs, scrolling bodies and footer styling.
+Their steps remain Hostel Setup / Transport Setup, Accommodation & Fee / Route & Fee,
+and Review & Activate. Existing Draft / Active saving and college-scoped
+storage formats remain unchanged. Cancel, Back and successful saves return
+to the corresponding Hostel or Transport list tab. Direct edit URLs reload
+the saved record; missing records show an explicit error.
+
+### Fee domain support and backend dependencies
+
+There is one configuration landing screen with three domain tabs. Academic
+filters are Academic Year, Course, Branch, Batch and Status. Hostel filters
+are Academic Year, Hostel, Room Type and Status. Transport filters are Academic
+Year, Route, Boarding Stop and Status. Facility filter options derive only from
+saved plans, not invented master data. Manual facility fields retain existing
+records and offer previously configured values; they are explicitly not verified
+master selections or student allocations.
+
+All structure, component, approval and assignment workspace data is **device-local**.
+Saving/publishing it does not populate backend fee masters or post institutional
+student charges. The UI states this limitation. Facility plans still store one fee
+and charge-description text: they do not support component allocations, installment
+schedules, or approval/publication. No fake fields, actions or allocations are added.
+
+Existing backend support is limited to collection/receipt/dues/report APIs and
+`POST /api/v1/student-admissions/:admissionId/resolve-fees`. The latter uses configured
+SQL academic/hostel/transport fee masters, adds hostel only with `hostelRequired`
+and room type, and transport only with `transportationRequired` and route identity.
+Admission preferences are not authoritative facility allocations. Export endpoints
+for fee masters do not provide master listing/editing contracts.
+
+Production integration still requires:
+
+- College-scoped structure/component read/create/update APIs, domain classification,
+  academic batch mapping, effective periods, approval/versioning and assignment counts.
+- Hostel/room/occupancy master APIs with stable IDs, hostel allocation records and
+  eligibility validation; the current resolver exposes hostel type/room type only.
+- Route/boarding-stop/fee-slab master APIs with stable IDs, route-stop relationships,
+  student opt-in/allocation records and validation; the current resolver exposes
+  route identity but no stop-level contract.
+- Facility component and payment-schedule persistence and status-transition APIs.
+- Transactional multi-source student-account assignments combining academic,
+  allocated hostel and opted-in transport charges, with duplicate protection,
+  concessions and ledger reconciliation. Local academic matching must never stand
+  in for hostel/transport eligibility.
+
+The existing academic preview assignment checks year, course, branch, batch,
+semester/category where applicable, and rejects facility domains. Facility plans
+remain outside academic assignments until these backend dependencies are supplied.
 
 Development-only financial previews are hidden from normal navigation. For
 development diagnostics, append `?feeDebug=true` to a financial page URL when

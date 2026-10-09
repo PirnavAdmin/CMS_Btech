@@ -7,7 +7,6 @@ import FilterPanel from '../../components/FilterPanel'
 import SearchableSelect from '../../components/SearchableSelect'
 import ExportMenu from '../../components/ExportMenu'
 import CompactSummary from '../../components/CompactSummary'
-import { FiRotateCcw } from 'react-icons/fi'
 import { useAcademic } from '../../context/AcademicContext'
 import { creditManagementApi, studentApi } from '../../api/apiEndpoints'
 import subjectService from '../../services/subjectService'
@@ -698,8 +697,15 @@ function CreditsManagement() {
     years: masterYears, departments: masterDepartments,
   })), [subjects, masterCourses, masterBranches, masterSemesters, masterYears, masterDepartments])
   const contextSubjects = useMemo(() => subjectContexts.filter(subject =>
-    Object.entries(subjectFilters).every(([key, value]) => !value || String(subject[key] ?? '') === String(value))
-  ), [subjectContexts, subjectFilters])
+    Object.entries(subjectFilters).every(([key, value]) => {
+      if (!value) return true
+      if (key === 'semesterId' && value.startsWith('semester:')) {
+        const semester = masterSemesters.find(row => String(row.semesterId ?? row.id) === String(subject.semesterId))
+        return getSemesterNumber(semester || subject) === Number(value.slice(9))
+      }
+      return String(subject[key] ?? '') === String(value)
+    })
+  ), [subjectContexts, subjectFilters, masterSemesters])
   const subjectFiltersReady = Boolean(subjectFilters.academicYearId && subjectFilters.courseId && subjectFilters.branchId && subjectFilters.semesterId)
   const filteredSubjects = useMemo(() => {
     if (!subjectFiltersReady) return []
@@ -742,7 +748,11 @@ function CreditsManagement() {
       }))
     }
     if (field === 'semesterId') {
+      if (!subjectFilters.level) return []
       let filtered = masterSemesters
+      if (subjectFilters.academicYearId) {
+        filtered = filtered.filter(s => !s.academicYearId || String(s.academicYearId) === String(subjectFilters.academicYearId))
+      }
       if (subjectFilters.courseId) {
         filtered = filtered.filter(s => !s.courseId || String(s.courseId) === String(subjectFilters.courseId))
       }
@@ -752,23 +762,17 @@ function CreditsManagement() {
       if (subjectFilters.level) {
         filtered = filtered.filter(semester => getStudentYear(String(getSemesterNumber(semester))) === subjectFilters.level)
       }
-      return filtered.map(semester => {
-        const number = getSemesterNumber(semester)
-        const name = semester.semesterName || semester.name
-        const label = name && !/^\s*\d{4}\s*[-/]\s*\d{2,4}\s*$/.test(name)
-          ? name
-          : (number > 0 ? `Semester ${number}` : 'Semester')
-        return {
-          value: String(semester.semesterId || semester.id),
-          label,
-        }
-      })
+      // Display each semester number once, while matching every backend ID
+      // for that number within the selected academic context.
+      return [...new Set(filtered.map(getSemesterNumber).filter(number => number > 0))]
+        .sort((a, b) => a - b)
+        .map(number => ({ value: `semester:${number}`, label: `Semester ${number}` }))
     }
     return []
   }
   const updateSubjectFilter = (field, value) => {
     const childFields = {
-      academicYearId: [],
+      academicYearId: ['semesterId'],
       courseId: ['branchId', 'semesterId'],
       branchId: ['semesterId'],
       level: ['semesterId'],
@@ -2051,6 +2055,7 @@ function CreditsManagement() {
               onClear={() => setSubjectFilters({ academicYearId: '', courseId: '', branchId: '', level: '', semesterId: '' })}
               hideClear
               actions={(
+                <>
                 <ExportMenu
                   rows={filteredSubjects}
                   columns={subjectCreditExportColumns}
@@ -2059,6 +2064,8 @@ function CreditsManagement() {
                   scope="Matching subject credits"
                   loading={creditLoading || Boolean(subjectApiError) || !subjectFiltersReady}
                 />
+                {Object.values(subjectFilters).some(Boolean) && <button type="button" className="filter-disclosure__clear-btn cm-subject-clear-btn" onClick={() => setSubjectFilters({ academicYearId: '', courseId: '', branchId: '', level: '', semesterId: '' })}>Clear Filters</button>}
+                </>
               )}
             >
               <div className="cm-subject-search">
@@ -2076,6 +2083,7 @@ function CreditsManagement() {
                       <span>{label}</span>
                       <SearchableSelect
                         label={`Select ${label}`}
+                        disabled={field === 'semesterId' && !subjectFilters.level}
                         value={subjectFilters[field]}
                         options={[{ value: '', label: `Select ${label}` }, ...subjectFilterOptions(field)]}
                         onChange={value => updateSubjectFilter(field, value)}
@@ -2085,15 +2093,7 @@ function CreditsManagement() {
                       />
                     </label>
                   ))}
-                  {Object.values(subjectFilters).some(Boolean) && (
-                    <button
-                      type="button"
-                      className="filter-disclosure__clear-btn cm-subject-clear-btn"
-                      onClick={() => setSubjectFilters({ academicYearId: '', courseId: '', branchId: '', level: '', semesterId: '' })}
-                    >
-                      <FiRotateCcw aria-hidden="true" /> Clear Filters
-                    </button>
-                  )}
+
               </div>
             </FilterPanel>
 
