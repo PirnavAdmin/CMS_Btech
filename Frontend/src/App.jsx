@@ -60,6 +60,7 @@ import SubjectMarksReport from './pages/examinations/marks-management/SubjectMar
 import MarksApproval from './pages/examinations/marks-management/MarksApproval'
 import GradeResultManagement from './pages/examinations/grade-result-management/GradeResultManagement'
 import GradeConfiguration from './pages/examinations/grade-result-management/GradeConfiguration'
+import CGPACalculatorPage from './pages/examinations/grade-result-management/CGPACalculatorPage'
 import ResultGeneration from './pages/examinations/grade-result-management/ResultGeneration'
 import SemesterResult from './pages/examinations/grade-result-management/SemesterResult'
 import DepartmentResult from './pages/examinations/grade-result-management/DepartmentResult'
@@ -210,7 +211,12 @@ export default function App() {
               <Route path="/library" element={<CampusWorkspace module="library" />} />
               <Route path="/meetings-events" element={<CampusWorkspace module="meetings-events" />} />
               <Route path="/placement" element={<CampusWorkspace module="placement" />} />
-              <Route path="/results" element={<CampusWorkspace module="results" />} />
+              <Route path="/results" element={<ResultGeneration />} />
+              <Route path="/results/semester-result" element={<SemesterResult />} />
+              <Route path="/results/department-result" element={<DepartmentResult />} />
+              <Route path="/results/consolidated-marks-memo" element={<ConsolidatedMarksMemo />} />
+              <Route path="/results/backlog-report" element={<BacklogReport />} />
+              <Route path="/results/student-result" element={<StudentResult />} />
               <Route path="/my-profile" element={<MyProfile />} />
               <Route path="/settings" element={<Settings />} />
               <Route path="/settings/academic-context" element={<Settings />} />
@@ -253,15 +259,16 @@ export default function App() {
               <Route path="/marks-management/edit-marks" element={<EditMarks />} />
               <Route path="/marks-management/student-marks" element={<StudentMarks />} />
               <Route path="/marks-management/subject-marks-report" element={<SubjectMarksReport />} />
-              <Route path="/marks-management/marks-approval" element={<MarksApproval />} />
-              <Route path="/grade-result-management/*" element={<GradeResultManagement />} />
+              <Route path="/grade-result-management" element={<GradeResultManagement />} />
               <Route path="/grade-result-management/grade-configuration" element={<GradeConfiguration />} />
-              <Route path="/grade-result-management/result-generation" element={<ResultGeneration />} />
-              <Route path="/grade-result-management/semester-result" element={<SemesterResult />} />
-              <Route path="/grade-result-management/department-result" element={<DepartmentResult />} />
-              <Route path="/grade-result-management/consolidated-marks-memo" element={<ConsolidatedMarksMemo />} />
-              <Route path="/grade-result-management/backlog-report" element={<BacklogReport />} />
-              <Route path="/grade-result-management/student-result" element={<StudentResult />} />
+              <Route path="/grade-result-management/cgpa-calculator" element={<CGPACalculatorPage />} />
+              <Route path="/grade-result-management/result-generation" element={<Navigate to="/results" replace />} />
+              <Route path="/grade-result-management/semester-result" element={<Navigate to="/results/semester-result" replace />} />
+              <Route path="/grade-result-management/department-result" element={<Navigate to="/results/department-result" replace />} />
+              <Route path="/grade-result-management/consolidated-marks-memo" element={<Navigate to="/results/consolidated-marks-memo" replace />} />
+              <Route path="/grade-result-management/backlog-report" element={<Navigate to="/results/backlog-report" replace />} />
+              <Route path="/grade-result-management/student-result" element={<Navigate to="/results/student-result" replace />} />
+              <Route path="/grade-result-management/*" element={<GradeResultManagement />} />
               </Route>
 
               {/* Administration - Admin Only */}
