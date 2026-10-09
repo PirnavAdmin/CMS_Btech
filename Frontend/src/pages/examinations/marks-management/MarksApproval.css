@@ -99,3 +99,9 @@
 
 .marks-approval-filter-panel .marks-approval-filter-actions { align-self:end; }
 .marks-approval-filter-panel .marks-approval-filter-actions .erp-btn { padding-inline:8px; font-size:11px; white-space:nowrap; }
+
+.marks-approval-filter-panel .filter-disclosure__bar { gap: 8px; }
+.marks-approval-filter-panel .marks-module-nav { flex: 0 1 700px; width: auto; min-width: 0; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 3px; padding: 3px; border-radius: 8px; }
+.marks-approval-filter-panel .marks-module-nav__link { min-height: 32px; padding: 4px 6px; border-radius: 6px; font-size: 11px; }
+.marks-approval-filter-panel .filter-disclosure__search { flex: 1 1 220px; min-width: 160px; }
+@media (max-width: 1100px) { .marks-approval-filter-panel .filter-disclosure__bar { flex-wrap: wrap; } .marks-approval-filter-panel .marks-module-nav { flex: 1 1 100%; } .marks-approval-filter-panel .filter-disclosure__search { flex: 1 1 240px; } }

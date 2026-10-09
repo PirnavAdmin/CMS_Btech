@@ -52,3 +52,6 @@
 .student-marks-student-options li button strong { color: inherit; font-weight: 400; }
 .student-marks-student-options li button:hover, .student-marks-student-options li button:focus-visible { outline: 0; background: #1b66c9; color: #fff; }
 .student-marks-student-empty { padding: 10px 12px; color: var(--text-secondary); font-size: 13px; font-weight: 400; }
+
+#student-marks-student-search { all: unset !important; display: block !important; box-sizing: border-box !important; width: 100% !important; min-width: 0 !important; height: auto !important; margin: 0 !important; padding: 0 !important; border: 0 !important; border-radius: 0 !important; outline: 0 !important; box-shadow: none !important; background: transparent !important; appearance: none !important; -webkit-appearance: none !important; color: var(--text-primary) !important; font: inherit !important; font-size: 14px !important; line-height: 1.35 !important; }
+#student-marks-student-search:focus, #student-marks-student-search:focus-visible { border: 0 !important; outline: 0 !important; box-shadow: none !important; }

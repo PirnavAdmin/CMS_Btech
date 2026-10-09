@@ -22,6 +22,8 @@ const columns = [
   { key: 'subjectCode', label: 'Subject Code' }, { key: 'examType', label: 'Exam Type' },
   { key: 'assessmentType', label: 'Assessment Type' }, { key: 'examDate', label: 'Exam Date' },
   { key: 'maximumMarks', label: 'Maximum Marks' }, { key: 'passingMarks', label: 'Passing Marks' },
+  { key: 'studentMarks', label: 'Student Marks' }, { key: 'examStatus', label: 'Exam Status' },
+  { key: 'percentage', label: 'Percentage' },
 ]
 const PAGE_SIZE = 10
 const initialAssessment = {
@@ -44,6 +46,20 @@ const uniqueValues = values => {
   })
   return [...unique.values()]
 }
+const getMarksSummary = ({ studentMarks, maximumMarks, passingMarks }) => {
+  const marks = studentMarks === '' || studentMarks == null ? NaN : Number(studentMarks)
+  const maximum = maximumMarks === '' || maximumMarks == null ? NaN : Number(maximumMarks)
+  const passing = passingMarks === '' || passingMarks == null ? NaN : Number(passingMarks)
+  const percentage = Number.isFinite(marks) && Number.isFinite(maximum) && maximum > 0
+    ? `${((marks / maximum) * 100).toFixed(2)}%`
+    : ''
+  const examStatus = Number.isFinite(marks) && Number.isFinite(maximum) && maximum > 0
+    && Number.isFinite(passing) && marks >= 0 && marks <= maximum && passing >= 0 && passing <= maximum
+    ? marks >= passing ? 'Pass' : 'Fail'
+    : ''
+
+  return { percentage, examStatus }
+}
 const LEGACY_DRAFTS_KEY = collegeStorageKey('marks-entry-assessment-drafts-v1')
 const DRAFTS_KEY = collegeStorageKey('marks-entry-assessment-drafts-v2')
 const readDrafts = () => { try { const value = JSON.parse(localStorage.getItem(DRAFTS_KEY) || '[]'); return Array.isArray(value) ? value : [] } catch { return [] } }
@@ -55,8 +71,9 @@ export default function MarksEntry() {
   const [students, setStudents] = useState([])
   const [activeSuggestion, setActiveSuggestion] = useState('')
   const [query, setQuery] = useState('')
-  const [examType, setExamType] = useState('')
-  const [course, setCourse] = useState('')
+  const [filters, setFilters] = useState({
+    academicYear: '', course: '', branch: '', semester: '', section: '', subject: '', examType: '', assessmentType: '',
+  })
   const [page, setPage] = useState(1)
   const [showAddForm, setShowAddForm] = useState(false)
   const [editingId, setEditingId] = useState('')
@@ -68,15 +85,6 @@ export default function MarksEntry() {
   useEffect(() => { try { localStorage.setItem(DRAFTS_KEY, JSON.stringify(draftRows)) } catch { /* keep current session drafts if storage is unavailable */ } }, [draftRows])
 
   const allRows = draftRows
-  const examTypes = useMemo(() => [...new Set(allRows.map(row => row.examType).filter(Boolean))].sort(), [allRows])
-  const courseFilterOptions = useMemo(() => [...new Set(allRows.map(row => row.course).filter(Boolean))].sort(), [allRows])
-  const filtered = useMemo(() => allRows.filter(row => {
-    const searchText = `${row.subjectCode || ''} ${row.subjectName || ''} ${row.examType || ''} ${row.course || ''} ${row.branch || ''} ${row.section || ''}`.toLowerCase()
-    return (!query || searchText.includes(query.toLowerCase())) && (!examType || row.examType === examType) && (!course || row.course === course)
-  }), [allRows, query, examType, course])
-  const visible = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)
-  const clearFilters = () => { setQuery(''); setExamType(''); setCourse(''); setPage(1) }
-  const hasFilters = Boolean(query || examType || course)
   const academicOptions = useMemo(() => ({
     academicYear: academicYears.map(item => entityLabel(item, ['academicYearName', 'name', 'academicYear', 'yearName'])).filter(Boolean),
     course: academicCourses.map(item => entityLabel(item, ['courseName', 'name', 'course', 'programName', 'title'])).filter(Boolean),
@@ -93,6 +101,42 @@ export default function MarksEntry() {
     maximumMarks: subjects.flatMap(item => [item.internalMarks, item.externalMarks, item.maximumMarks, item.maxMarks]).filter(value => value !== '' && value != null),
     passingMarks: subjects.flatMap(item => [item.passingMarks, item.internalPassingMarks, item.externalPassingMarks, item.minimumPassingMarks, item.minPassingMarks]).filter(value => value !== '' && value != null),
   }), [academicYears, academicCourses, branches, semesters, sections, subjects, students])
+  const filterOptions = useMemo(() => ({
+    academicYear: uniqueValues([...academicOptions.academicYear, ...allRows.map(row => row.academicYear)]),
+    course: uniqueValues([...academicOptions.course, ...allRows.map(row => row.course)]),
+    branch: uniqueValues([...academicOptions.branch, ...allRows.map(row => row.branch)]),
+    semester: uniqueValues([...academicOptions.semester, ...allRows.map(row => row.semester)]),
+    section: uniqueValues([...academicOptions.section, ...allRows.map(row => row.section)]),
+    subject: uniqueValues([...subjects.map(item => entityLabel(item, ['subjectName', 'name'])), ...allRows.map(row => row.subjectName || row.subject)]),
+    examType: uniqueValues([...fieldOptions.examType, ...subjects.map(item => item.examType), ...allRows.map(row => row.examType)]),
+    assessmentType: uniqueValues([...fieldOptions.assessmentType, ...subjects.map(item => item.assessmentType), ...allRows.map(row => row.assessmentType)]),
+  }), [academicOptions, allRows, subjects])
+  const filtered = useMemo(() => allRows.filter(row => {
+    const searchText = `${row.subjectCode || ''} ${row.subjectName || row.subject || ''} ${row.examType || ''} ${row.course || ''} ${row.branch || ''} ${row.section || ''}`.toLowerCase()
+    const rowValues = {
+      academicYear: row.academicYear,
+      course: row.course,
+      branch: row.branch,
+      semester: row.semester,
+      section: row.section,
+      subject: row.subjectName || row.subject,
+      examType: row.examType,
+      assessmentType: row.assessmentType,
+    }
+    return (!query || searchText.includes(query.toLowerCase()))
+      && Object.entries(filters).every(([key, value]) => !value || normalized(rowValues[key]) === normalized(value))
+  }), [allRows, query, filters])
+  const visible = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)
+  const setFilter = (key, value) => {
+    setFilters(current => ({ ...current, [key]: value }))
+    setPage(1)
+  }
+  const clearFilters = () => {
+    setQuery('')
+    setFilters({ academicYear: '', course: '', branch: '', semester: '', section: '', subject: '', examType: '', assessmentType: '' })
+    setPage(1)
+  }
+  const hasFilters = Boolean(query || Object.values(filters).some(Boolean))
   const eligibleSubjects = useMemo(() => subjects.filter(subject => {
     const selectedBranch = branches.find(item => normalized(entityLabel(item, ['name', 'branchName', 'branch'])) === normalized(assessment.branch) || normalized(item.id) === normalized(assessment.branch))
     const selectedSemester = semesters.find(item => normalized(entityLabel(item, ['semesterName', 'name', 'semesterNumber'])) === normalized(assessment.semester) || normalized(item.id) === normalized(assessment.semester) || semesterNumber(entityLabel(item, ['semesterName', 'name', 'semesterNumber'])) === semesterNumber(assessment.semester))
@@ -124,10 +168,13 @@ export default function MarksEntry() {
   }
   const submitAssessment = event => {
     event.preventDefault()
+    const { percentage, examStatus } = getMarksSummary(assessment)
     const record = {
       ...assessment,
       id: editingId || `draft-${Date.now()}`,
       subjectName: assessment.subject,
+      percentage,
+      examStatus,
       totalStudents: 0,
       passedCount: 0,
       failedCount: 0,
@@ -165,8 +212,24 @@ export default function MarksEntry() {
           </header>
           <FilterPanel active={hasFilters} onClear={clearFilters} className="marks-entry-filters" actions={<div className="marks-entry-card__actions"><ExportMenu rows={filtered} columns={columns} title="Marks Entry Records" filename="marks-entry-records" scope="All matching marks" allowEmpty printLabel="Save as PDF" /><button type="button" className="erp-btn erp-btn--primary" onClick={() => { setEditingId(''); setAssessment(initialAssessment); setShowAddForm(true) }}><FiPlus /> Add Marks</button></div>}>
             <div className="marks-entry-search-wrap"><label className="marks-entry-search"><FiSearch aria-hidden="true" /><input aria-label="Search marks records" placeholder="Search subject, exam, course or section" value={query} onChange={event => { setQuery(event.target.value); setPage(1) }} /></label></div>
-            <label className="marks-entry-filter"><span>Exam Type</span><select value={examType} onChange={event => { setExamType(event.target.value); setPage(1) }}><option value="">All exam types</option>{examTypes.map(value => <option key={value}>{value}</option>)}</select></label>
-            <label className="marks-entry-filter"><span>Course</span><select value={course} onChange={event => { setCourse(event.target.value); setPage(1) }}><option value="">All courses</option>{courseFilterOptions.map(value => <option key={value}>{value}</option>)}</select></label>
+            {[
+              ['academicYear', 'Academic Year', 'All academic years'],
+              ['course', 'Course', 'All courses'],
+              ['branch', 'Branch', 'All branches'],
+              ['semester', 'Semester', 'All semesters'],
+              ['section', 'Section', 'All sections'],
+              ['subject', 'Subject', 'All subjects'],
+              ['examType', 'Exam Type', 'All exam types'],
+              ['assessmentType', 'Assessment Type', 'All assessment types'],
+            ].map(([key, label, placeholder]) => (
+              <label className="marks-entry-filter" key={key}>
+                <span>{label}</span>
+                <select aria-label={`Filter by ${label}`} value={filters[key]} onChange={event => setFilter(key, event.target.value)}>
+                  <option value="">{placeholder}</option>
+                  {filterOptions[key].map(value => <option key={value} value={value}>{value}</option>)}
+                </select>
+              </label>
+            ))}
           </FilterPanel>
           {showAddForm && createPortal(<div className={`marks-entry-modal${localStorage.getItem('pirnav-sidebar-collapsed') === 'true' ? ' sidebar-collapsed' : ''}`} onMouseDown={() => setShowAddForm(false)}>
             <form className="marks-entry-form" role="dialog" aria-modal="true" aria-labelledby="marks-entry-form-title" onMouseDown={event => event.stopPropagation()} onSubmit={submitAssessment}>
@@ -176,14 +239,34 @@ export default function MarksEntry() {
                 ['academicYear', 'Academic Year'], ['course', 'Course'], ['branch', 'Branch'], ['semester', 'Semester'], ['section', 'Section'], ['registrationNumber', 'Registration Number'], ['studentName', 'Student Name'],
                 ['subject', 'Subject'], ['subjectCode', 'Subject Code'], ['examType', 'Exam Type'], ['assessmentType', 'Assessment Type'],
                 ['examDate', 'Exam Date'], ['maximumMarks', 'Maximum Marks'], ['passingMarks', 'Passing Marks'],
+                ['studentMarks', 'Student Marks'], ['examStatus', 'Exam Status'], ['percentage', 'Percentage'],
               ].map(([key, label]) => {
                 const suggestions = uniqueValues([...(fieldOptions[key] || []), ...(suggestionOptions[key] || [])])
                 const matches = suggestions.filter(value => !assessment[key] || normalized(value).includes(normalized(assessment[key])))
+                const summary = getMarksSummary(assessment)
+                const isDerived = key === 'examStatus' || key === 'percentage'
+                const fieldValue = key === 'examStatus' ? summary.examStatus : key === 'percentage' ? summary.percentage : assessment[key]
                 return <label className="marks-entry-form__field" key={key}>
                   <span>{label}</span>
                   <div className={`marks-entry-input-combo${key === 'examDate' ? ' marks-entry-input-combo--datetime' : ''}`}>
-                    <input type={key === 'maximumMarks' || key === 'passingMarks' ? 'number' : key === 'examDate' ? 'datetime-local' : 'text'} value={assessment[key]} min={key === 'maximumMarks' || key === 'passingMarks' ? 0 : undefined} required autoComplete="off" role="combobox" aria-autocomplete="list" aria-expanded={activeSuggestion === key && matches.length > 0} onFocus={() => setActiveSuggestion(key)} onClick={() => setActiveSuggestion(key)} onBlur={() => window.setTimeout(() => setActiveSuggestion(current => current === key ? '' : current), 120)} onChange={event => { updateAssessment(key, event.target.value); setActiveSuggestion(key) }} />
-                    {activeSuggestion === key && matches.length > 0 && <div className="marks-entry-suggestions" role="listbox">{matches.map(value => <button type="button" role="option" key={value} onMouseDown={event => event.preventDefault()} onClick={() => { updateAssessment(key, String(value)); setActiveSuggestion('') }}>{value}</button>)}</div>}
+                    <input
+                      type={['maximumMarks', 'passingMarks', 'studentMarks'].includes(key) ? 'number' : key === 'examDate' ? 'datetime-local' : 'text'}
+                      value={fieldValue ?? ''}
+                      min={key === 'maximumMarks' ? 1 : ['passingMarks', 'studentMarks'].includes(key) ? 0 : undefined}
+                      max={key === 'passingMarks' || key === 'studentMarks' ? assessment.maximumMarks || undefined : undefined}
+                      step={['maximumMarks', 'passingMarks', 'studentMarks'].includes(key) ? 'any' : undefined}
+                      readOnly={isDerived}
+                      required={!isDerived}
+                      autoComplete="off"
+                      role={isDerived ? undefined : 'combobox'}
+                      aria-autocomplete={isDerived ? undefined : 'list'}
+                      aria-expanded={!isDerived && activeSuggestion === key && matches.length > 0}
+                      onFocus={() => !isDerived && setActiveSuggestion(key)}
+                      onClick={() => !isDerived && setActiveSuggestion(key)}
+                      onBlur={() => window.setTimeout(() => setActiveSuggestion(current => current === key ? '' : current), 120)}
+                      onChange={event => { updateAssessment(key, event.target.value); setActiveSuggestion(key) }}
+                    />
+                    {!isDerived && activeSuggestion === key && matches.length > 0 && <div className="marks-entry-suggestions" role="listbox">{matches.map(value => <button type="button" role="option" key={value} onMouseDown={event => event.preventDefault()} onClick={() => { updateAssessment(key, String(value)); setActiveSuggestion('') }}>{value}</button>)}</div>}
                   </div>
                 </label>
               })}
@@ -193,14 +276,16 @@ export default function MarksEntry() {
           </div>, document.body)}
           <div className="marks-entry-table-wrap">
             <table className="erp-table">
-              <thead><tr>{['Academic Year', 'Course', 'Branch', 'Semester', 'Section', 'Registration Number', 'Student Name', 'Subject', 'Subject Code', 'Exam Type', 'Assessment Type', 'Exam Date', 'Max Marks', 'Pass Marks'].map(label => <th key={label}>{label}</th>)}<th>Actions</th></tr></thead>
+              <thead><tr>{['Academic Year', 'Course', 'Branch', 'Semester', 'Section', 'Registration Number', 'Student Name', 'Subject', 'Subject Code', 'Exam Type', 'Assessment Type', 'Exam Date', 'Max Marks', 'Pass Marks', 'Student Marks', 'Exam Status', 'Percentage'].map(label => <th key={label}>{label}</th>)}<th>Actions</th></tr></thead>
               <tbody>
                 {visible.map((row, index) => {
+                  const summary = getMarksSummary(row)
                   return <tr key={row.id || `${row.subjectCode}-${row.examType}-${index}`}>
                     <td>{row.academicYear || '—'}</td><td>{row.course || '—'}</td><td>{row.branch || '—'}</td>
                     <td>{row.semester || '—'}</td><td>{row.section || '—'}</td><td>{row.registrationNumber || '—'}</td><td>{row.studentName || '—'}</td><td>{row.subjectName || row.subject || '—'}</td>
                     <td>{row.subjectCode || '—'}</td><td>{row.examType || '—'}</td><td>{row.assessmentType || '—'}</td>
                     <td>{row.examDate || '—'}</td><td>{row.maximumMarks || row.maxExternal || '—'}</td><td>{row.passingMarks || '—'}</td>
+                    <td>{row.studentMarks !== '' && row.studentMarks != null ? row.studentMarks : '—'}</td><td>{row.examStatus || summary.examStatus || '—'}</td><td>{row.percentage || summary.percentage || '—'}</td>
                     <td><div className="marks-entry-row-actions"><button type="button" className="marks-entry-row-action marks-entry-row-action--edit" title="Edit marks" aria-label={`Edit marks for ${row.subjectName || row.subject || row.subjectCode || 'record'}`} onClick={() => editAssessment(row)}><FiEdit2 /></button><button type="button" className="marks-entry-row-action marks-entry-row-action--delete" title="Delete marks" aria-label={`Delete marks for ${row.subjectName || row.subject || row.subjectCode || 'record'}`} onClick={() => deleteAssessment(row)}><FiTrash2 /></button></div></td>
                   </tr>
                 })}
