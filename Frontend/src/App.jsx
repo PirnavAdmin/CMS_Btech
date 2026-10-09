@@ -1,9 +1,12 @@
 import { Component, useEffect } from 'react'
 import { Navigate, Route, Routes } from 'react-router-dom'
 import ProtectedRoute from './components/ProtectedRoute'
-import CampusWorkspace from './pages/campus/CampusWorkspace'
 import MeetingsEventsWorkspace from './pages/campus/MeetingsEventsWorkspace'
+
 import LibraryWorkspace from './pages/campus/LibraryWorkspace'
+
+import PlacementWorkspace from './pages/campus/PlacementWorkspace'
+
 import { ROLES } from './auth/roles'
 
 import Dashboard from './pages/Dashboard'
@@ -212,7 +215,7 @@ export default function App() {
               <Route path="/dashboard" element={<Dashboard />} />
               <Route path="/library" element={<LibraryWorkspace />} />
               <Route path="/meetings-events" element={<MeetingsEventsWorkspace />} />
-              <Route path="/placement" element={<CampusWorkspace module="placement" />} />
+              <Route path="/placement" element={<PlacementWorkspace />} />
               <Route path="/results" element={<ResultGeneration />} />
               <Route path="/results/semester-result" element={<SemesterResult />} />
               <Route path="/results/department-result" element={<DepartmentResult />} />
