@@ -196,10 +196,17 @@ export default function Sidebar({ open = false, onClose = () => {}, collapsed = 
           {!collapsed && feeManagementOpen && <div className="sidebar-submenu sidebar-fee-submenu" id="fee-management-links">
             {feeNavigation.map(item => <Link key={item.to} to={item.to} className={`sidebar-link ${activeFeeItem === item ? 'active' : ''}`} aria-current={activeFeeItem === item ? 'page' : undefined} onClick={onClose}><span>{item.label}</span></Link>)}
           </div>}
+        </>}
+        {[ROLES.FACULTY, ROLES.STUDENT].includes(userRole) && <><p className="sidebar-section-label">Academics</p><Item to="/my-subjects" icon={FiBookOpen} tone="blue" onNavigate={onClose}>My Subjects</Item>{userRole===ROLES.FACULTY&&<><Item to="/timetable" icon={FiCalendar} tone="orange" onNavigate={onClose}>My Timetable</Item><Item to="/student-management/attendance/take" icon={FiCheckSquare} tone="green" onNavigate={onClose}>Record Attendance</Item></>}</>}
+        <p className="sidebar-section-label">Campus Services</p>
+        <Item to="/library" icon={FiBookOpen} tone="blue" onNavigate={onClose}>Library</Item>
+        <Item to="/meetings-events" icon={FiCalendar} tone="orange" onNavigate={onClose}>Meetings/Events</Item>
+        <Item to="/placement" icon={FiBriefcase} tone="green" onNavigate={onClose}>Placement</Item>
+        <Item to="/results" icon={FiAward} tone="purple" onNavigate={onClose}>Official Results</Item>
+        {userRole === ROLES.ADMIN && <>
           <p className="sidebar-section-label">Settings & Access</p>
           <Item to="/roles-designations" icon={FiShield} tone="purple" onNavigate={onClose}>Roles & Designations</Item>
         </>}
-        {[ROLES.FACULTY, ROLES.STUDENT].includes(userRole) && <><p className="sidebar-section-label">Academics</p><Item to="/my-subjects" icon={FiBookOpen} tone="blue" onNavigate={onClose}>My Subjects</Item>{userRole===ROLES.FACULTY&&<><Item to="/timetable" icon={FiCalendar} tone="orange" onNavigate={onClose}>My Timetable</Item><Item to="/student-management/attendance/take" icon={FiCheckSquare} tone="green" onNavigate={onClose}>Record Attendance</Item></>}</>}
       </nav>
     </aside>
   </>

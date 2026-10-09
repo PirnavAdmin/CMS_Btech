@@ -145,9 +145,9 @@ export function validateExam(record, exams = getExams(), ignoreId = '') {
   if (record.startTime && record.endTime && record.endTime <= record.startTime) errors.push('End time must be later than start time.')
   const peers = exams.filter((e) => e.id !== ignoreId && e.status !== 'Cancelled')
   if (peers.some((e) => e.subjectCode === record.subjectCode && e.batch === record.batch && e.semester === record.semester && e.academicYear === record.academicYear && e.examType === record.examType)) errors.push('This subject already has a schedule for this batch, semester, academic year and exam type.')
-  if (peers.some((e) => e.batch === record.batch && e.semester === record.semester && e.section === record.section && e.examDate === record.examDate && e.session === record.session && e.startTime < record.endTime && e.endTime > record.startTime)) errors.push('Students in this batch, semester and section already have an examination at that time.')
-  if (record.hallId && peers.some((e) => e.hallId === record.hallId && e.examDate === record.examDate && e.session === record.session)) errors.push('This hall is already allocated for that date and session.')
-  if (record.faculty && peers.some((e) => e.faculty === record.faculty && e.examDate === record.examDate && e.session === record.session)) errors.push('This faculty member has another examination in that session.')
+  if (peers.some((e) => e.course === record.course && e.branch === record.branch && e.batch === record.batch && e.semester === record.semester && e.section === record.section && e.examDate === record.examDate && e.startTime < record.endTime && e.endTime > record.startTime)) errors.push('Students in this batch, semester and section already have an examination at that time.')
+  if (record.hallId && peers.some((e) => e.hallId === record.hallId && e.examDate === record.examDate && e.startTime < record.endTime && e.endTime > record.startTime)) errors.push('This hall is already allocated during that time.')
+  if (record.faculty && peers.some((e) => e.faculty === record.faculty && e.examDate === record.examDate && e.startTime < record.endTime && e.endTime > record.startTime)) errors.push('This faculty member has another examination during that time.')
   return errors
 }
 export function deleteExam(id) { write('exams', getExams().filter((e) => e.id !== id)); write('allocations', getHallAllocations().filter((a) => a.examId !== id)) }
