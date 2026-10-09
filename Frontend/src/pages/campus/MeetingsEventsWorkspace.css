@@ -492,24 +492,69 @@
   justify-content: center;
   width: 32px;
   height: 32px;
-  border: 1px solid var(--border);
   border-radius: 6px;
-  background: var(--surface);
-  color: var(--text-secondary);
   cursor: pointer;
   transition: all 0.15s ease;
+  box-sizing: border-box;
+  font-size: 14px;
 }
 
-.mew-btn-icon:hover {
-  background: var(--surface-soft);
-  color: var(--brand);
-  border-color: var(--brand);
+/* Edit action icon - Ice Blue theme from ERP standard */
+.mew-btn-icon--edit,
+.mew-btn-icon.action-edit,
+.mew-btn-icon:not(.mew-btn-icon--danger):not(.action-delete) {
+  color: #1769C2 !important;
+  background: #EAF3FF !important;
+  border: 1px solid #D8E4F2 !important;
 }
 
-.mew-btn-icon--danger:hover {
-  color: #dc2626;
-  border-color: #dc2626;
-  background: #fef2f2;
+.mew-btn-icon--edit:hover,
+.mew-btn-icon.action-edit:hover,
+.mew-btn-icon:not(.mew-btn-icon--danger):not(.action-delete):hover {
+  background: #D8E4F2 !important;
+  border-color: #1769C2 !important;
+  color: #125AA8 !important;
+}
+
+.mew-btn-icon--edit svg,
+.mew-btn-icon.action-edit svg,
+.mew-btn-icon:not(.mew-btn-icon--danger):not(.action-delete) svg {
+  color: #1769C2 !important;
+  stroke: #1769C2 !important;
+}
+
+.mew-btn-icon--edit:hover svg,
+.mew-btn-icon.action-edit:hover svg,
+.mew-btn-icon:not(.mew-btn-icon--danger):not(.action-delete):hover svg {
+  color: #125AA8 !important;
+  stroke: #125AA8 !important;
+}
+
+/* Delete / Danger action icon - Soft Coral / Red theme from ERP standard */
+.mew-btn-icon--danger,
+.mew-btn-icon.action-delete {
+  color: #B91C1C !important;
+  background: #FEE2E2 !important;
+  border: 1px solid #FECACA !important;
+}
+
+.mew-btn-icon--danger:hover,
+.mew-btn-icon.action-delete:hover {
+  background: #FECACA !important;
+  border-color: #EF4444 !important;
+  color: #991B1B !important;
+}
+
+.mew-btn-icon--danger svg,
+.mew-btn-icon.action-delete svg {
+  color: #B91C1C !important;
+  stroke: #B91C1C !important;
+}
+
+.mew-btn-icon--danger:hover svg,
+.mew-btn-icon.action-delete:hover svg {
+  color: #991B1B !important;
+  stroke: #991B1B !important;
 }
 
 /* Modals */
