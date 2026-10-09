@@ -98,19 +98,22 @@ export function structureTotalFeeComponents(structure, amount) {
   if (!hasSingleStructureFee(structure)) throw new Error('Existing fee breakdown and refund rules must be preserved.')
   return [{ masterId: 'structure-total-fee', name: 'Total Fee', category: 'Academic', amount, mandatory: true, refundable: false, recurring: true, frequency: structure.cycle }]
 }
+export const academicFeeComponent = component => !['Hostel', 'Transport'].includes(component.domain || component.category)
 const structureComponentsActive = (state, structure) => structure.components.every(component =>
-  (hasSingleStructureFee(structure) && component.masterId === 'structure-total-fee' && component.name === 'Total Fee' && component.category === 'Academic' && component.mandatory === true && component.refundable === false) ||
-  state.components.some(master => master.id === component.masterId && master.status === 'Active'))
+  (component.masterId === 'structure-total-fee' && component.name === 'Total Fee' && component.category === 'Academic' && component.mandatory === true && component.refundable === false) ||
+  (academicFeeComponent(component) && state.components.some(master => master.id === component.masterId && master.status === 'Active' && academicFeeComponent(master))))
 export const feeTotal = structure => rupees(structure.components.reduce((sum, row) => sum + cents(row.amount), 0) - cents(structure.discount))
 const fail = message => { throw new Error(message) }
 const validAmount = (value, zero = false) => Number.isFinite(Number(value)) && (zero ? Number(value) >= 0 : Number(value) > 0) && Number(value) <= 100000000 && Math.abs(Number(value) * 100 - cents(value)) < 0.00001
 const validDate = value => /^\d{4}-\d{2}-\d{2}$/.test(value || '') && !Number.isNaN(Date.parse(value))
 export function validateFeeStructure(s, step = 3) {
+  if (s.domain && s.domain !== 'Academic') return 'Use the service-specific fee workflow; facility allocation is not available in academic assignment.'
   if (!s.name.trim() || !s.academicYearId || !s.courseId || !s.branchId || !s.batch.trim()) return 'Complete the structure name, academic year, course, branch and batch.'
   if (s.applicableTo === 'Selected Category' && !s.category) return 'Select an admission category / quota.'
   if (s.cycle === 'Semester-wise' && !s.semesterId) return 'Select an applicable semester.'
   if (step < 1) return ''
   if (!s.components.length || s.components.some(c => !c.masterId || !validAmount(c.amount))) return 'Select fee components and enter positive amounts with at most two decimal places.'
+  if (s.components.some(c => !academicFeeComponent(c))) return 'Hostel and Transport components cannot be included in an academic structure.'
   if (new Set(s.components.map(c => c.masterId)).size !== s.components.length) return 'A fee component can only be added once.'
   if (!validAmount(s.discount, true) || feeTotal(s) <= 0) return 'Concession must be non-negative and less than the subtotal.'
   if (step < 2) return ''
@@ -125,12 +128,50 @@ export function validateFeeStructure(s, step = 3) {
   if (s.maximumPenalty !== '' && !validAmount(s.maximumPenalty, true)) return 'Maximum penalty must be a non-negative amount.'
   return ''
 }
+export const DEFAULT_FEE_HEADS = [
+  { id: 'fh-tuition', name: 'Tuition Fee', code: 'TUI', category: 'Academic', frequency: 'Yearly', mandatory: true, refundable: false, status: 'Active' },
+  { id: 'fh-university', name: 'University Fee', code: 'UNI', category: 'University', frequency: 'Yearly', mandatory: true, refundable: false, status: 'Active' },
+  { id: 'fh-lab', name: 'Laboratory Fee', code: 'LAB', category: 'Academic', frequency: 'Yearly', mandatory: true, refundable: false, status: 'Active' },
+  { id: 'fh-library', name: 'Library Fee', code: 'LIB', category: 'Academic', frequency: 'Yearly', mandatory: true, refundable: false, status: 'Active' },
+  { id: 'fh-exam', name: 'Examination Fee', code: 'EXAM', category: 'Examination', frequency: 'Semester-wise', mandatory: true, refundable: false, status: 'Active' },
+  { id: 'fh-development', name: 'Development Fee', code: 'DEV', category: 'Academic', frequency: 'Yearly', mandatory: true, refundable: false, status: 'Active' },
+  { id: 'fh-admission', name: 'Admission Fee', code: 'ADM', category: 'Admission', frequency: 'One Time', mandatory: true, refundable: false, status: 'Active' },
+  { id: 'fh-caution', name: 'Caution Deposit', code: 'CAU', category: 'Deposit', frequency: 'One Time', mandatory: false, refundable: true, status: 'Active' },
+]
+
+export function checkDuplicateStructure(existingStructures = [], candidate) {
+  if (!candidate || !candidate.academicYearId || !candidate.courseId || !candidate.branchId || !candidate.batch?.trim()) {
+    return null
+  }
+  return existingStructures.find(s =>
+    s.id !== candidate.id &&
+    s.status !== 'Archived' &&
+    String(s.academicYearId) === String(candidate.academicYearId) &&
+    String(s.courseId) === String(candidate.courseId) &&
+    String(s.branchId) === String(candidate.branchId) &&
+    String(s.batch || '').trim().toLowerCase() === String(candidate.batch || '').trim().toLowerCase() &&
+    (s.cycle || 'Yearly') === (candidate.cycle || 'Yearly') &&
+    (candidate.cycle !== 'Semester-wise' || String(s.semesterId || '') === String(candidate.semesterId || '')) &&
+    (candidate.applicableTo === 'All Students' || s.applicableTo === 'All Students' || String(s.category || '') === String(candidate.category || ''))
+  ) || null
+}
+
 export const feeTransitions = { Draft: ['Pending Approval'], 'Pending Approval': ['Approved', 'Draft'], Approved: ['Published', 'Draft'], Published: ['Archived'], Archived: [] }
 export function saveWorkflowStructure(state, value, status, actor) {
   const previous = state.structures.find(s => s.id === value.id)
   if (previous && (previous.status !== 'Draft' || state.assignments.some(a => a.structureId === previous.id))) fail('Only unassigned drafts can be edited. Create a revision instead.')
   if (!value.name.trim()) fail('Structure name is required to save a draft.')
   if (!['Draft', 'Pending Approval'].includes(status)) fail('Submit the draft for approval before publishing.')
+  const missingStandard = (value.components || [])
+    .filter(c => c.masterId !== 'structure-total-fee')
+    .map(c => DEFAULT_FEE_HEADS.find(df => df.id === c.masterId || df.name.toLowerCase() === (c.name || '').toLowerCase()))
+    .filter(Boolean)
+  if (missingStandard.length > 0) {
+    state = {
+      ...state,
+      components: [...state.components, ...missingStandard.filter(m => !state.components.some(sc => sc.id === m.id || sc.code === m.code))]
+    }
+  }
   if (status !== 'Draft') {
     const error = validateFeeStructure(value)
     if (error) fail(error)
@@ -155,7 +196,7 @@ export function saveFeeComponent(state, component) {
   const row = { ...component, id: component.id || uid('FC'), name: component.name.trim(), code: component.code.trim().toUpperCase() }
   return { ...state, components: [row, ...state.components.filter(c => c.id !== row.id)] }
 }
-export const studentMatchesFee = (student, s) => ['academicYearId', 'courseId', 'branchId', 'batch'].every(k => String(student[k] || '') === String(s[k] || '')) && (s.cycle !== 'Semester-wise' || String(student.semesterId) === String(s.semesterId)) && (s.applicableTo !== 'Selected Category' || student.category === s.category)
+export const studentMatchesFee = (student, s) => (!s.domain || s.domain === 'Academic') && ['academicYearId', 'courseId', 'branchId', 'batch'].every(k => Boolean(s[k]) && String(student[k] || '') === String(s[k])) && (s.cycle !== 'Semester-wise' || (Boolean(s.semesterId) && String(student.semesterId) === String(s.semesterId))) && (s.applicableTo !== 'Selected Category' || (Boolean(s.category) && student.category === s.category))
 export function assignFeeStructure(state, structureId, students) {
   const s = state.structures.find(row => row.id === structureId)
   if (!s || s.status !== 'Published') fail('Only published structures can be assigned.')

@@ -115,10 +115,17 @@ function CollectionDailySummary({ collegeId, refresh }) {
   return error ? <p className="fm-error" role="alert">{error}</p> : !result ? <FinanceSkeleton /> : <div className="fm-transaction-summary"><div><span>Today's Collection</span><strong>{feeMoney(result.totalCollected)}</strong></div><div><span>Transactions Today</span><strong>{result.paymentsCount}</strong></div><div><span>Receipts Today</span><strong>{result.receiptsCount}</strong></div><small>All academic years · Posted payments only</small></div>
 }
 const reportTypes = [
-  { id: 'summary', name: 'Collection Summary' }, { id: 'outstanding', name: 'Outstanding Analysis' },
-  { id: 'overdue', name: 'Overdue Analysis' }, { id: 'category', name: 'Fee Category Analysis' },
-  { id: 'mode', name: 'Payment Mode Analysis' }, { id: 'concessions', name: 'Scholarship & Concession (device-local)' },
-  { id: 'refunds', name: 'Refund Analysis (device-local)' }, { id: 'ledger', name: 'Student Ledger (device-local)' },
+  { id: 'summary', name: 'Collection Summary (Monthly)' },
+  { id: 'daily', name: 'Daily Collection' },
+  { id: 'outstanding', name: 'Outstanding / Dues Report' },
+  { id: 'overdue', name: 'Overdue Report' },
+  { id: 'category', name: 'Head-wise Collection (Fee Category)' },
+  { id: 'mode', name: 'Mode-wise Collection' },
+  { id: 'course', name: 'Course-wise Collection' },
+  { id: 'branch', name: 'Branch-wise Collection' },
+  { id: 'concessions', name: 'Concession & Scholarship Report' },
+  { id: 'refunds', name: 'Refund Analysis (device-local)' },
+  { id: 'ledger', name: 'Student Ledger (device-local)' },
 ]
 const reportDefaults = academicYearId => ({ type: 'summary', academicYearId: academicYearId || '', courseId: '', branchId: '', semesterId: '', fromDate: '', toDate: '', status: '', search: '', sort: 'name' })
 function FeeReports({ academic, configuration, reportHeaderSlot }) {
@@ -132,15 +139,17 @@ function FeeReports({ academic, configuration, reportHeaderSlot }) {
   useEffect(() => {
     let active = true
     setLoading(true); setError(''); setResult(null)
-    const f = JSON.parse(key), local = ['concessions', 'refunds', 'ledger'].includes(f.type), pending = ['outstanding', 'overdue'].includes(f.type)
+    const f = JSON.parse(key), local = ['concessions', 'refunds', 'ledger'].includes(f.type), pending = ['outstanding', 'overdue'].includes(f.type), academicGroup = ['course', 'branch'].includes(f.type)
     const scope = { academicYearId: f.academicYearId, courseId: f.courseId, branchId: f.branchId, semesterId: f.semesterId }
     const request = local ? Promise.resolve({ local: true }) : pending
       ? feeCollectionApi.pending({ ...scope, dueFrom: f.fromDate, dueTo: f.toDate, overdueOnly: f.type === 'overdue', search: f.search, page, pageSize: 10 })
-      : feeCollectionApi.dashboard({ ...scope, fromDate: f.fromDate, toDate: f.toDate })
+      : academicGroup
+        ? feeCollectionApi.pending({ ...scope, dueFrom: f.fromDate, dueTo: f.toDate, page: 1, pageSize: 200 })
+        : feeCollectionApi.dashboard({ ...scope, fromDate: f.fromDate, toDate: f.toDate })
     request.then(data => { if (!data) throw new Error('No report data was returned.'); if (active) setResult(data) }).catch(e => { if (active) setError(e.message) }).finally(() => { if (active) setLoading(false) })
     return () => { active = false }
   }, [key, page, retry, collegeId])
-  const pending = ['outstanding', 'overdue'].includes(applied.type), local = ['concessions', 'refunds', 'ledger'].includes(applied.type)
+  const pending = ['outstanding', 'overdue'].includes(applied.type), local = ['concessions', 'refunds', 'ledger'].includes(applied.type), academicBreakdown = ['course', 'branch'].includes(applied.type)
   const draftLocal = ['concessions', 'refunds'].includes(draft.type), draftPending = ['outstanding', 'overdue'].includes(draft.type)
   const update = values => setDraft(f => ({ ...f, ...values }))
   const title = reportTypes.find(r => r.id === applied.type)?.name
@@ -172,6 +181,55 @@ function FeeReports({ academic, configuration, reportHeaderSlot }) {
     columns = [{ label: 'Payment Mode', key: 'name' }, { label: 'Transactions', key: 'paymentCount' }, amountColumn('Collected', 'amount')]
     exportColumns = [{ label: 'Payment Mode', value: 'name' }, { label: 'Transactions', value: 'paymentCount' }, { label: 'Collected', value: 'amount' }]
     chart = rows.map(r => ({ name: r.name, amount: r.amount }))
+  } else if (result && applied.type === 'daily') {
+    const dailyMap = new Map()
+    for (const r of result.collectionTrend || []) {
+      const d = date(r.date)
+      const prev = dailyMap.get(d) || { amount: 0, paymentCount: 0 }
+      dailyMap.set(d, { amount: prev.amount + Number(r.amount), paymentCount: prev.paymentCount + Number(r.paymentCount) })
+    }
+    rows = [...dailyMap.entries()].sort(([a], [b]) => b.localeCompare(a)).map(([d, totals]) => ({ id: d, name: d, ...totals }))
+    columns = [{ label: 'Date', key: 'name' }, { label: 'Transactions', key: 'paymentCount' }, amountColumn('Collected', 'amount')]
+    exportColumns = [{ label: 'Date', value: 'name' }, { label: 'Transactions', value: 'paymentCount' }, { label: 'Collected', value: 'amount' }]
+    chart = rows.slice(0, 15).reverse().map(r => ({ name: r.name, amount: r.amount }))
+  } else if (result && academicBreakdown) {
+    const isCourse = applied.type === 'course'
+    const groupMap = new Map()
+    for (const item of result.items || []) {
+      const gName = (isCourse ? item.courseName : item.branchName) || 'General'
+      const prev = groupMap.get(gName) || { assigned: 0, collected: 0, pending: 0, count: 0 }
+      prev.assigned += Number(item.payableAmount || item.assignedAmount || 0)
+      prev.collected += Number(item.paidAmount || 0)
+      prev.pending += Number(item.balanceAmount || 0)
+      prev.count += 1
+      groupMap.set(gName, prev)
+    }
+    rows = [...groupMap.entries()].map(([gName, d]) => ({
+      id: gName,
+      name: gName,
+      assigned: d.assigned,
+      collected: d.collected,
+      pending: d.pending,
+      count: d.count,
+      rate: d.assigned > 0 ? `${(d.collected / d.assigned * 100).toFixed(1)}%` : '0.0%'
+    }))
+    columns = [
+      { label: isCourse ? 'Course / Program' : 'Branch', key: 'name' },
+      { label: 'Fee Records', key: 'count' },
+      amountColumn('Assigned', 'assigned'),
+      amountColumn('Collected', 'collected'),
+      amountColumn('Outstanding', 'pending'),
+      { label: 'Collection Rate', key: 'rate' }
+    ]
+    exportColumns = [
+      { label: isCourse ? 'Course / Program' : 'Branch', value: 'name' },
+      { label: 'Fee Records', value: 'count' },
+      { label: 'Assigned', value: 'assigned' },
+      { label: 'Collected', value: 'collected' },
+      { label: 'Outstanding', value: 'pending' },
+      { label: 'Collection Rate', value: 'rate' }
+    ]
+    chart = rows.map(r => ({ name: r.name, amount: r.collected }))
   } else if (result) {
     rows = (result.byCategory || []).map(r => ({ ...r, id: r.feeCategoryId, name: r.categoryName }))
     columns = [{ label: 'Fee Category', key: 'name' }, amountColumn('Assigned', 'assigned'), amountColumn('Collected', 'collected'), amountColumn('Outstanding', 'pending')]
@@ -211,8 +269,8 @@ function FeeReports({ academic, configuration, reportHeaderSlot }) {
       <div className="fm-filter-actions"><button disabled={loading} className="primary" onClick={apply}>Apply Filters</button><button onClick={() => { const f = reportDefaults(academic.selectedAcademicYearId); setDraft(f); setApplied(f); setPage(1); setSearch(''); setSort('name'); setRetry(n => n + 1) }}>Reset</button></div>
     </div></section>
     {loading ? <FinanceSkeleton /> : error ? <p className="fm-error" role="alert">{error}<button onClick={() => setRetry(n => n + 1)}>Retry</button></p> : result && <><div className="fm-report-result-header"><div><h2>{title}</h2><p>{applied.fromDate || 'All dates'} – {applied.toDate || 'Present'} · {masterOptions(academic.academicYears, 'academicYear').find(r => r.id === applied.academicYearId)?.name || 'All years'} · {masterOptions(academic.courses, 'course').find(r => r.id === applied.courseId)?.name || 'All programs'} · {masterOptions(academic.branches, 'branch').find(r => r.id === applied.branchId)?.name || 'All branches'}</p></div>{!reportHeaderSlot && exportControl}</div>
-      {local ? <p className="fm-notice">Device-local records only. These figures are not combined with posted institutional accounts.</p> : pending ? <p className="fm-muted">{result.totalCount} matching dues · Paginated results · Search and sort below apply to the current page.</p> : <div className="fm-analytics-metrics">{(applied.type === 'summary' ? [['Gross Receivable', result.totalAssigned], ['Concessions', result.totalConcession], ['Net Receivable', result.totalPayable], ['Collected', result.totalCollected], ['Outstanding', result.totalPending], ['Collection Rate', result.totalPayable > 0 ? `${(result.totalCollected / result.totalPayable * 100).toFixed(1)}%` : '0.0%']] : applied.type === 'mode' ? [['Payment Modes', String(rows.length)], ['Transactions', String(rows.reduce((n, r) => n + Number(r.paymentCount), 0))], ['Collected', rows.reduce((n, r) => n + Number(r.amount), 0)]] : [['Fee Categories', String(rows.length)], ['Assigned', rows.reduce((n, r) => n + Number(r.assigned), 0)], ['Collected', rows.reduce((n, r) => n + Number(r.collected), 0)], ['Outstanding', rows.reduce((n, r) => n + Number(r.pending), 0)]]).map(([label, amount]) => <div key={label}><span>{label}</span><strong>{typeof amount === 'string' ? amount : feeMoney(amount)}</strong></div>)}<p className="fm-muted">{applied.type === 'category' ? 'Institution-wide category totals across all dates and academic periods.' : applied.type === 'mode' ? 'Payment modes across all academic periods, filtered by payment dates.' : 'Academic filters apply to headline receivables. Monthly collections are institution-wide. Payment dates filter collections; receivables and outstanding are current balances.'}</p></div>}
-      {!!chart.length && <section className="fm-panel"><header><h2>{applied.type === 'summary' ? 'Collection by Month' : applied.type === 'mode' ? 'Collection by Payment Mode' : 'Collection by Fee Category'}</h2><span>Institution-wide</span></header><div className="fm-report-bars">{chart.map((r, i) => <div key={i}><span>{r.name}</span><progress aria-label={`${r.name}: ${feeMoney(r.amount)}`} max={Math.max(1, ...chart.map(r => r.amount))} value={Math.max(0, r.amount)} /><strong>{feeMoney(r.amount)}</strong></div>)}</div></section>}
+      {local ? <p className="fm-notice">Device-local records only. These figures are not combined with posted institutional accounts.</p> : pending ? <p className="fm-muted">{result.totalCount} matching dues · Paginated results · Search and sort below apply to the current page.</p> : <div className="fm-analytics-metrics">{(applied.type === 'summary' ? [['Gross Receivable', result.totalAssigned], ['Concessions', result.totalConcession], ['Net Receivable', result.totalPayable], ['Collected', result.totalCollected], ['Outstanding', result.totalPending], ['Collection Rate', result.totalPayable > 0 ? `${(result.totalCollected / result.totalPayable * 100).toFixed(1)}%` : '0.0%']] : applied.type === 'mode' ? [['Payment Modes', String(rows.length)], ['Transactions', String(rows.reduce((n, r) => n + Number(r.paymentCount), 0))], ['Collected', rows.reduce((n, r) => n + Number(r.amount), 0)]] : applied.type === 'daily' ? [['Days Recorded', String(rows.length)], ['Transactions', String(rows.reduce((n, r) => n + Number(r.paymentCount), 0))], ['Total Collected', rows.reduce((n, r) => n + Number(r.amount), 0)]] : academicBreakdown ? [[isCourse ? 'Programs' : 'Branches', String(rows.length)], ['Total Assigned', rows.reduce((n, r) => n + Number(r.assigned), 0)], ['Total Collected', rows.reduce((n, r) => n + Number(r.collected), 0)], ['Total Outstanding', rows.reduce((n, r) => n + Number(r.pending), 0)]] : [['Fee Categories', String(rows.length)], ['Assigned', rows.reduce((n, r) => n + Number(r.assigned), 0)], ['Collected', rows.reduce((n, r) => n + Number(r.collected), 0)], ['Outstanding', rows.reduce((n, r) => n + Number(r.pending), 0)]]).map(([label, amount]) => <div key={label}><span>{label}</span><strong>{typeof amount === 'string' ? amount : feeMoney(amount)}</strong></div>)}<p className="fm-muted">{applied.type === 'category' ? 'Institution-wide category totals across all dates and academic periods.' : applied.type === 'mode' ? 'Payment modes across all academic periods, filtered by payment dates.' : applied.type === 'daily' ? 'Daily collections based on institutional transaction history.' : academicBreakdown ? 'Academic breakdown based on active student fee records.' : 'Academic filters apply to headline receivables. Monthly collections are institution-wide. Payment dates filter collections; receivables and outstanding are current balances.'}</p></div>}
+      {!!chart.length && <section className="fm-panel"><header><h2>{applied.type === 'summary' ? 'Collection by Month' : applied.type === 'daily' ? 'Daily Collections' : applied.type === 'mode' ? 'Collection by Payment Mode' : academicBreakdown ? `Collection by ${applied.type === 'course' ? 'Program' : 'Branch'}` : 'Collection by Fee Category'}</h2><span>Institution-wide</span></header><div className="fm-report-bars">{chart.map((r, i) => <div key={i}><span>{r.name}</span><progress aria-label={`${r.name}: ${feeMoney(r.amount)}`} max={Math.max(1, ...chart.map(r => r.amount))} value={Math.max(0, r.amount)} /><strong>{feeMoney(r.amount)}</strong></div>)}</div></section>}
       <section className="fm-panel"><header><h2>Detailed Results</h2><span>{visible.length} rows shown</span></header><div className="fm-toolbar fm-pad"><FeeInput label={pending ? 'Search current page' : 'Search results'} value={search} onChange={setSearch} placeholder="Student, category or mode" /><FeeSelect label="Sort" value={sort} options={[{ id: 'name', name: 'Name (A–Z)' }, { id: 'amount', name: 'Amount (highest first)' }]} onChange={setSort} /></div><FeeTable rows={visible} columns={columns} pageSize={10} empty={search ? 'No matching search results.' : 'No data for the selected report filters.'} />{pending && <TablePagination currentPage={page} totalPages={result.totalPages || 0} onPageChange={setPage} />}</section>
     </>}
   </div>

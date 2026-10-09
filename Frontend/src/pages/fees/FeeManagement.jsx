@@ -77,7 +77,7 @@ function FeeWorkspace() {
   }, [academic.selectedCollegeId, academic.scopeRecords, retry])
   const scopeRecords = academic.scopeRecords
   const normalizedStudents = useMemo(() => scopeRecords(students).map(studentRecord).filter(s => s.id !== 'undefined'), [students, scopeRecords])
-  const masters = { years: options(academic.academicYears, 'academicYear'), courses: options(academic.courses, 'course'), branches: options(academic.branches, 'branch'), semesters: options(academic.semesters, 'semester'), batches: unique([...normalizedStudents.map(s => s.batch), ...state.structures.map(s => s.batch)]), categories: unique(normalizedStudents.map(s => s.category)) }
+  const masters = { years: options(academic.academicYears, 'academicYear'), courses: options(academic.courses, 'course'), branches: options(academic.branches, 'branch'), semesters: options(academic.semesters, 'semester'), batches: unique([...normalizedStudents.map(s => s.batch), ...state.structures.map(s => s.batch)]), batchScopes: [...normalizedStudents, ...state.structures].map(({ academicYearId, courseId, branchId, batch }) => ({ academicYearId, courseId, branchId, batch })), categories: unique(normalizedStudents.map(s => s.category)) }
   const enrichedStudents = normalizedStudents.map(s => {
     const semesterMatches = masters.semesters.filter(m => Number(m.semesterNumber) === Number(s.semesterNumber) && (!m.courseId || String(m.courseId) === s.courseId) && (!m.branchId || String(m.branchId) === s.branchId) && (!m.academicYearId || String(m.academicYearId) === s.academicYearId))
     return { ...s, semesterId: s.semesterId || (semesterMatches.length === 1 ? semesterMatches[0].id : ''), courseName: s.courseName || masters.courses.find(c => c.id === s.courseId)?.name || '', branchName: s.branchName || masters.branches.find(b => b.id === s.branchId)?.name || '' }
@@ -98,6 +98,7 @@ function FeeWorkspace() {
   const accountSection = primarySection === 'students'
   return <DashboardLayout><main className={`fs-page fm-page${accountSection ? ' fm-student-pages' : ''}${currentSection === 'structures' && !editingStructure ? ' fm-structures-page' : ''}`}>
     {studentAccountOperations.some(operation => operation.to === `/fees/${currentSection}`) && <Link className="fm-account-back" to="/fees/students">&#8592; Student Accounts</Link>}
+    {['collection', 'refunds'].includes(currentSection) && <Link className="fm-account-back" to="/fees/receipts">&#8592; Collections</Link>}
     {!editingStructure && !['structures', 'students', 'assignments', 'concessions'].includes(currentSection) && <PageHeader title={title} subtitle={subtitle}>
       {currentSection === 'reports' && <div ref={setReportActions} />}
       {currentSection === 'overview' && <FeeSelect label="Academic Year" value={filter.academicYearId} options={[{ id: '', name: 'All years' }, ...masters.years]} onChange={academicYearId => setFilter(f => ({ ...f, academicYearId }))} />}
@@ -111,8 +112,12 @@ function FeeWorkspace() {
       <Route path="overview" element={<FinancialSource server={<ServerFeeCollection page="reports" academic={academic} overview academicYearId={filter.academicYearId} configuration={state} />} workspace={<><Filters {...shared} /><Overview {...shared} openLedger={id => navigate(`/fees/ledger/${id}`)} /></>} />} />
       <Route path="components" element={<><ComponentMaster {...shared} /></>} />
       <Route path="structures" element={storageError ? null : workspaceCollege !== academic.selectedCollegeId ? <p role="status">Loading fee configuration…</p> : <AcademicStructureWorkspace key={academic.selectedCollegeId} {...shared} create={createStructure} setForm={setStructureForm} />} />
-      <Route path="structures/create" element={<StructureEditorRoute {...shared} collegeId={academic.selectedCollegeId} />} />
-      <Route path="structures/:structureId/edit" element={<StructureEditorRoute {...shared} collegeId={academic.selectedCollegeId} />} />
+      <Route path="structures/create" element={<StructureEditorRoute {...shared} collegeId={academic.selectedCollegeId} enrichedStudents={enrichedStudents} />} />
+      {['hostel', 'transport'].map(type => <Route key={type} path={`structures/${type}`}>
+        <Route path="create" element={<FeeStructureConfiguration key={`${academic.selectedCollegeId}:${type}:create`} embedded facilityType={type} />} />
+        <Route path=":facilityId/edit" element={<FeeStructureConfiguration key={`${academic.selectedCollegeId}:${type}:edit`} embedded facilityType={type} />} />
+      </Route>)}
+      <Route path="structures/:structureId/edit" element={<StructureEditorRoute {...shared} collegeId={academic.selectedCollegeId} enrichedStudents={enrichedStudents} />} />
       <Route path="students" element={<><StudentAccounts {...shared} /></>} />
       <Route path="assignments" element={<Assignments {...shared} students={enrichedStudents.filter(matches)} loading={loading} error={studentError} retry={() => setRetry(n => n + 1)} />} />
       <Route path="collection" element={<FinancialSource server={<ServerFeeCollection page="collection" academic={academic} />} workspace={<><Filters {...shared} /><Collection {...shared} /></>} />} />
@@ -127,12 +132,12 @@ function FeeWorkspace() {
     {!editingStructure && ['components', 'students', 'assignments', 'concessions', 'refunds', 'ledger'].includes(currentSection) && <StorageNotice />}
   </main></DashboardLayout>
 }
-function StructureEditorRoute({ state, commit, actor, masters, filter, collegeId }) {
+function StructureEditorRoute({ state, commit, actor, masters, filter, collegeId, enrichedStudents = [] }) {
   const { structureId } = useParams(), { state: routeState, key } = useLocation(), navigate = useNavigate()
   const value = structureId ? state.structures.find(s => s.id === structureId) : (routeState?.collegeId === collegeId && routeState.initialStructure) || { ...newFeeStructure(filter.academicYearId), academicYearName: masters.years.find(y => y.id === String(filter.academicYearId))?.name || '' }
   if (!value) return <p className="fm-error" role="alert">Fee structure not found. <Link to="/fees/structures">Back to Fee Structures</Link></p>
   if (value.id && (value.status !== 'Draft' || structureDraftAssigned(state, value.id))) return <p className="fm-error" role="alert">Only unassigned drafts can be edited. Create a revision from <Link to="/fees/structures">Fee Structures</Link>.</p>
-  return <FeeStructureWizard key={`${collegeId}:${key}`} value={value} masters={masters} close={() => navigate('/fees/structures')} save={(form, status) => { commit(saveWorkflowStructure(state, form, status, actor)); navigate('/fees/structures') }} />
+  return <FeeStructureWizard key={`${collegeId}:${key}`} value={value} masters={masters} components={state.components} close={() => navigate('/fees/structures')} save={(form, status) => { commit(saveWorkflowStructure(state, form, status, actor)); navigate('/fees/structures') }} students={enrichedStudents} existingStructures={state.structures} />
 }
 function StorageNotice() { return <details className="fm-data-note"><summary>About saved configurations</summary><p>Fee configurations and assignments are saved on this device for the selected college. They do not post charges or payments to the institution's accounts.</p></details> }
 function FinancialSource({ server, workspace }) {
@@ -179,7 +184,7 @@ function AcademicStructureWorkspace({ state, commit, action, actor, setForm, cre
       ...(s.status === 'Published' ? [{ label: 'Archive', run: () => setPending({ s, next: 'Archived' }) }] : []),
       ...(s.status === 'Draft' && !structureDraftDeleteBlocked(state, s.id) ? [{ label: 'Delete', icon: FiTrash2, danger: true, run: () => setPending({ s, next: 'Delete' }) }] : []),
     ]} />
-  return <><FeeStructureConfiguration embedded workflow={{ rows: state.structures, create, view: open, rowActions }} />
+  return <><FeeStructureConfiguration embedded workflow={{ rows: state.structures, assignments: state.assignments, create, view: open, rowActions }} />
     {currentView && <FeeDialog wide title={currentView.name} close={() => setView(null)} footer={<><FeeBadge value={currentView.status} /><span />{feeTransitions[currentView.status].map(next => <button key={next} className={next === 'Published' || next === 'Approved' || next === 'Pending Approval' ? 'primary' : ''} onClick={() => setPending({ s: currentView, next })}>{structureTransitionLabel(next)}</button>)}</>}><FinanceTabs value={detailTab} onChange={setDetailTab} items={[['overview', 'Overview'], ['components', 'Fee Components'], ['schedule', 'Payment Schedule'], ['assignments', 'Student Assignment'], ['history', 'Revision History']]} /><div className="fs-editor-body">
       {['overview', 'components', 'schedule'].includes(detailTab) && <FeeReview value={currentView} section={detailTab} />}
       {detailTab === 'assignments' && <FeeTable rows={state.assignments.filter(a => a.structure.id === currentView.id)} columns={[{ label: 'Student', render: a => <Link to={`/fees/ledger/${a.id}`}>{a.student.name}</Link> }, { label: 'Roll No.', render: a => a.student.roll }, { label: 'Assigned Version', render: a => a.structure.version }]} />}
