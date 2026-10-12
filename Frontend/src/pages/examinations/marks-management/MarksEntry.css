@@ -25,14 +25,15 @@
 .marks-entry-filter { display: grid; gap: 6px; min-width: 190px; color: var(--text-secondary); font-size: 13px; }
 .marks-entry-filter select { min-height: 40px; padding: 8px 10px; border: 1px solid var(--border); border-radius: 8px; background: var(--surface); color: var(--text-primary); font: inherit; }
 .marks-entry-table-wrap { width: 100%; overflow-x: auto; }
-.marks-entry-table-wrap .marks-entry-records-table { min-width: 1120px; table-layout: fixed; }
-.marks-entry-records-table .marks-entry-col-student { width: 20%; }
-.marks-entry-records-table .marks-entry-col-academic { width: 22%; }
-.marks-entry-records-table .marks-entry-col-subject { width: 16%; }
-.marks-entry-records-table .marks-entry-col-exam { width: 16%; }
-.marks-entry-records-table .marks-entry-col-score { width: 9%; }
-.marks-entry-records-table .marks-entry-col-result { width: 9%; }
-.marks-entry-records-table .marks-entry-col-actions { width: 8%; }
+.marks-entry-table-wrap .marks-entry-records-table { min-width: 1240px; table-layout: fixed; }
+.marks-entry-records-table .marks-entry-col-student { width: 18%; }
+.marks-entry-records-table .marks-entry-col-academic { width: 20%; }
+.marks-entry-records-table .marks-entry-col-subject { width: 14%; }
+.marks-entry-records-table .marks-entry-col-faculty { width: 11%; }
+.marks-entry-records-table .marks-entry-col-exam { width: 15%; }
+.marks-entry-records-table .marks-entry-col-score { width: 8%; }
+.marks-entry-records-table .marks-entry-col-result { width: 8%; }
+.marks-entry-records-table .marks-entry-col-actions { width: 6%; }
 .marks-management-marks-entry .marks-entry-records-table thead th { height: 58px; padding: 12px 10px; background: #174c80; color: #fff; font-size: 11px; letter-spacing: .035em; text-align: center; }
 .marks-management-marks-entry .marks-entry-records-table tbody td { height: 88px; padding: 12px 10px; color: #102b4d; font-size: 13px; text-align: left; }
 .marks-management-marks-entry .marks-entry-records-table tbody tr:nth-child(even) td { background: #edf5ff; }
@@ -44,6 +45,7 @@
 .marks-entry-records-table .marks-entry-student-copy > small, .marks-entry-records-table .marks-entry-academic-copy > span, .marks-entry-records-table .marks-entry-exam-copy > small, .marks-entry-records-table .marks-entry-score-copy > small { display: block; max-width: 100%; overflow: hidden; color: #71839d; font-size: 11px; text-overflow: ellipsis; white-space: nowrap; }
 .marks-entry-records-table .marks-entry-academic-copy > span { white-space: normal; line-height: 1.45; }
 .marks-entry-records-table .marks-entry-subject-copy > span { display: inline-flex; max-width: 100%; padding: 3px 7px; overflow: hidden; border-radius: 5px; background: #e3f5ff; color: #0783bd; font-size: 11px; font-weight: 700; text-overflow: ellipsis; white-space: nowrap; }
+.marks-entry-records-table .marks-entry-faculty-cell > strong { display: block; max-width: 100%; overflow: hidden; color: #102b4d; font-size: 13px; font-weight: 700; text-overflow: ellipsis; white-space: nowrap; }
 .marks-entry-records-table .marks-entry-exam-copy { gap: 5px; }
 .marks-entry-exam-pill, .marks-entry-assessment-pill { display: inline-block; max-width: 100%; padding: 4px 9px; overflow: hidden; border-radius: 14px; color: #143454; font-size: 11px; line-height: 1.2; text-overflow: ellipsis; white-space: nowrap; }
 .marks-entry-exam-pill { background: #f1f6fb; }
@@ -70,6 +72,10 @@
 .marks-entry-student-layout { justify-content: center; }
 .marks-entry-student-copy, .marks-entry-academic-copy, .marks-entry-subject-copy, .marks-entry-exam-copy { align-items: center; width: 100%; text-align: center; }
 .marks-entry-student-copy { width: auto; }
+.marks-entry-records-table .marks-entry-academic-cell { height: 112px; }
+.marks-entry-records-table .marks-entry-academic-copy > strong, .marks-entry-records-table .marks-entry-academic-copy > span { display: none; }
+.marks-entry-academic-lines { display: flex; flex-direction: column; align-items: center; gap: 2px; width: 100%; min-width: 0; }
+.marks-entry-academic-lines > span { display: block; width: 100%; max-width: 100%; overflow: hidden; color: #71839d; font-size: 12px; line-height: 1.25; text-overflow: ellipsis; white-space: nowrap; }
 .marks-entry-row-action--edit { color: #d07a0b !important; }
 .marks-entry-row-action--delete { color: #d8323d !important; }
 .marks-entry-row-action--edit:hover { background: #fff4df; }
