@@ -1,5 +1,6 @@
 import { useState, useMemo, useEffect } from 'react'
 import {
+  FiChevronDown,
   FiBriefcase,
   FiCalendar,
   FiClock,
@@ -28,6 +29,7 @@ import {
 import DashboardLayout from '../../layouts/DashboardLayout'
 import PageHeader from '../../components/PageHeader'
 import ExportMenu from '../../components/ExportMenu'
+import CompanyLogo from '../../components/CompanyLogo'
 import FilterPanel from '../../components/FilterPanel'
 import TablePagination from '../../components/TablePagination'
 import {
@@ -114,6 +116,12 @@ const offerExportColumns = [
   { label: 'Offer Status', value: 'status' },
 ]
 
+function PlacementSelect({ children, ...props }) {
+  return <span className="placement-select-wrap">
+    <select {...props}>{children}</select>
+    <FiChevronDown className="placement-select-arrow" aria-hidden="true" />
+  </span>
+}
 export default function PlacementWorkspace() {
   const [activeTab, setActiveTab] = useState('drives') // drives | companies | applications | interviews | offers | reports
   const [viewMode, setViewMode] = useState('grid') // grid | table (for drives)
@@ -283,21 +291,21 @@ export default function PlacementWorkspace() {
         id: `DRV-${Date.now().toString().slice(-4)}`,
         title: '',
         company: '',
-        tier: 'Super Dream',
+        tier: '',
         role: '',
-        ctc: '₹ 12.0 LPA',
-        ctcNum: 12.0,
-        driveDate: new Date().toISOString().slice(0, 10),
-        deadline: new Date(Date.now() + 7 * 86400000).toISOString().slice(0, 10),
-        venue: 'Campus Auditorium & Virtual',
-        eligibility: 'B.Tech CSE, IT, ECE · Min 7.5 CGPA',
-        rounds: 'Online Coding Test, Technical Interview, HR Round',
-        status: 'Upcoming',
-        eligibleBranches: ['CSE', 'IT'],
+        ctc: '',
+        ctcNum: '',
+        driveDate: '',
+        deadline: '',
+        venue: '',
+        eligibility: '',
+        rounds: '',
+        status: '',
+        eligibleBranches: [],
         applicantsCount: 0,
         shortlistedCount: 0,
         selectedCount: 0,
-        minCgpa: 7.5,
+        minCgpa: '',
         description: '',
       })
     } else if (type === 'company') {
@@ -356,16 +364,16 @@ export default function PlacementWorkspace() {
         id: `OFR-${Date.now().toString().slice(-4)}`,
         studentName: '',
         rollNo: '',
-        branch: 'CSE',
-        company: data.companies[0]?.name || 'Amazon',
-        role: 'Software Development Engineer',
-        ctc: '₹ 14.0 LPA',
-        ctcNum: 14.0,
-        offerDate: new Date().toISOString().slice(0, 10),
-        deadline: new Date(Date.now() + 14 * 86400000).toISOString().slice(0, 10),
-        offerLetterRef: `OFF-${Date.now().toString().slice(-6)}`,
-        status: 'Pending',
-        location: 'Hyderabad',
+        branch: '',
+        company: '',
+        role: '',
+        ctc: '',
+        ctcNum: '',
+        offerDate: '',
+        deadline: '',
+        offerLetterRef: '',
+        status: '',
+        location: '',
       })
     }
   }
@@ -602,7 +610,7 @@ export default function PlacementWorkspace() {
             {activeTab === 'drives' && (
               <button
                 type="button"
-                className="grm-button grm-button--primary"
+                className="placement-button placement-button--primary"
                 onClick={() => openCreateModal('drive')}
               >
                 <FiPlus /> Schedule Recruitment Drive
@@ -612,7 +620,7 @@ export default function PlacementWorkspace() {
             {activeTab === 'companies' && (
               <button
                 type="button"
-                className="grm-button grm-button--primary"
+                className="placement-button placement-button--primary"
                 onClick={() => openCreateModal('company')}
               >
                 <FiPlus /> Add Partner Company
@@ -622,7 +630,7 @@ export default function PlacementWorkspace() {
             {activeTab === 'applications' && (
               <button
                 type="button"
-                className="grm-button grm-button--primary"
+                className="placement-button placement-button--primary"
                 onClick={() => openCreateModal('application')}
               >
                 <FiPlus /> New Student Application
@@ -633,7 +641,7 @@ export default function PlacementWorkspace() {
               <>
                 <button
                   type="button"
-                  className="grm-button grm-button--secondary"
+                  className="placement-button placement-button--secondary"
                   onClick={() => markAllInterviews('Cleared')}
                   title="Mark all participants as Cleared"
                 >
@@ -641,7 +649,7 @@ export default function PlacementWorkspace() {
                 </button>
                 <button
                   type="button"
-                  className="grm-button grm-button--primary"
+                  className="placement-button placement-button--primary"
                   onClick={() => openCreateModal('interview')}
                 >
                   <FiPlus /> Schedule Interview
@@ -653,7 +661,7 @@ export default function PlacementWorkspace() {
               <>
                 <button
                   type="button"
-                  className="grm-button grm-button--secondary"
+                  className="placement-button placement-button--secondary"
                   onClick={() => markAllOffers('Accepted')}
                   title="Mark all candidates as Accepted"
                 >
@@ -661,7 +669,7 @@ export default function PlacementWorkspace() {
                 </button>
                 <button
                   type="button"
-                  className="grm-button grm-button--primary"
+                  className="placement-button placement-button--primary"
                   onClick={() => openCreateModal('offer')}
                 >
                   <FiPlus /> Record Job Offer
@@ -714,7 +722,7 @@ export default function PlacementWorkspace() {
 
                 <label style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '12px', color: 'var(--text-secondary)' }}>
                   Rows:
-                  <select
+                  <PlacementSelect
                     className="plw-filter-select"
                     style={{ minWidth: '60px', height: '34px', padding: '0 6px' }}
                     value={pageSize}
@@ -723,7 +731,7 @@ export default function PlacementWorkspace() {
                     <option value={5}>5</option>
                     <option value={10}>10</option>
                     <option value={20}>20</option>
-                  </select>
+                  </PlacementSelect>
                 </label>
 
                 <span style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>
@@ -756,7 +764,7 @@ export default function PlacementWorkspace() {
               </label>
 
               {/* Status Filter */}
-              <select
+              <PlacementSelect
                 className="plw-filter-select"
                 aria-label="Filter by Status"
                 value={statusFilter}
@@ -802,11 +810,11 @@ export default function PlacementWorkspace() {
                     <option value="Declined">Declined</option>
                   </>
                 )}
-              </select>
+              </PlacementSelect>
 
               {/* Tier Filter for Drives and Companies */}
               {(activeTab === 'drives' || activeTab === 'companies') && (
-                <select
+                <PlacementSelect
                   className="plw-filter-select"
                   aria-label="Filter by Tier"
                   value={tierFilter}
@@ -819,12 +827,12 @@ export default function PlacementWorkspace() {
                   <option value="Super Dream">Super Dream (&gt; 15 LPA)</option>
                   <option value="Dream">Dream (8 - 15 LPA)</option>
                   <option value="Core">Core / Standard (4 - 8 LPA)</option>
-                </select>
+                </PlacementSelect>
               )}
 
               {/* Branch Filter for Applications, Interviews, Offers */}
               {(activeTab === 'applications' || activeTab === 'interviews' || activeTab === 'offers') && (
-                <select
+                <PlacementSelect
                   className="plw-filter-select"
                   aria-label="Filter by Branch"
                   value={branchFilter}
@@ -840,7 +848,7 @@ export default function PlacementWorkspace() {
                   <option value="MECH">MECH</option>
                   <option value="CIVIL">CIVIL</option>
                   <option value="EEE">EEE</option>
-                </select>
+                </PlacementSelect>
               )}
             </div>
           </FilterPanel>
@@ -855,9 +863,7 @@ export default function PlacementWorkspace() {
                   <div key={drive.id} className="plw-card">
                     <div className="plw-card-header">
                       <div className="plw-card-company-group">
-                        <div className="plw-company-avatar">
-                          {drive.company.slice(0, 2).toUpperCase()}
-                        </div>
+                        <CompanyLogo name={drive.company} website={drive.website || data.companies.find(company => company.name?.trim().toLowerCase() === drive.company?.trim().toLowerCase())?.website} />
                         <div className="plw-card-title-group">
                           <h4 className="plw-card-title">{drive.company}</h4>
                           <p className="plw-card-role">{drive.role}</p>
@@ -1547,14 +1553,15 @@ export default function PlacementWorkspace() {
                         </label>
                         <label className="plw-form-field">
                           Hiring Tier *
-                          <select
+                          <PlacementSelect required
                             value={activeItem.tier}
                             onChange={e => setActiveItem({ ...activeItem, tier: e.target.value })}
                           >
+                            <option value="" disabled>Select hiring tier</option>
                             <option value="Super Dream">Super Dream (&gt; 15 LPA)</option>
                             <option value="Dream">Dream (8 - 15 LPA)</option>
                             <option value="Core">Core (4 - 8 LPA)</option>
-                          </select>
+                          </PlacementSelect>
                         </label>
                       </div>
 
@@ -1592,14 +1599,15 @@ export default function PlacementWorkspace() {
                         </label>
                         <label className="plw-form-field">
                           Drive Status *
-                          <select
+                          <PlacementSelect required
                             value={activeItem.status}
                             onChange={e => setActiveItem({ ...activeItem, status: e.target.value })}
                           >
+                            <option value="" disabled>Select drive status</option>
                             <option value="Upcoming">Upcoming</option>
                             <option value="Active">Active</option>
                             <option value="Completed">Completed</option>
-                          </select>
+                          </PlacementSelect>
                         </label>
                       </div>
 
@@ -1654,14 +1662,14 @@ export default function PlacementWorkspace() {
                       <div className="plw-form-row">
                         <label className="plw-form-field">
                           Tier *
-                          <select
+                          <PlacementSelect
                             value={activeItem.tier}
                             onChange={e => setActiveItem({ ...activeItem, tier: e.target.value })}
                           >
                             <option value="Super Dream">Super Dream</option>
                             <option value="Dream">Dream</option>
                             <option value="Core">Core</option>
-                          </select>
+                          </PlacementSelect>
                         </label>
                         <label className="plw-form-field">
                           Average Package (LPA)
@@ -1734,7 +1742,7 @@ export default function PlacementWorkspace() {
                       <div className="plw-form-row">
                         <label className="plw-form-field">
                           Branch *
-                          <select
+                          <PlacementSelect
                             value={activeItem.branch}
                             onChange={e => setActiveItem({ ...activeItem, branch: e.target.value })}
                           >
@@ -1744,7 +1752,7 @@ export default function PlacementWorkspace() {
                             <option value="MECH">MECH</option>
                             <option value="CIVIL">CIVIL</option>
                             <option value="EEE">EEE</option>
-                          </select>
+                          </PlacementSelect>
                         </label>
                         <label className="plw-form-field">
                           CGPA *
@@ -1772,7 +1780,7 @@ export default function PlacementWorkspace() {
                         </label>
                         <label className="plw-form-field">
                           Status *
-                          <select
+                          <PlacementSelect
                             value={activeItem.status}
                             onChange={e => setActiveItem({ ...activeItem, status: e.target.value })}
                           >
@@ -1781,7 +1789,7 @@ export default function PlacementWorkspace() {
                             <option value="Interviewing">Interviewing</option>
                             <option value="Selected">Selected</option>
                             <option value="Rejected">Rejected</option>
-                          </select>
+                          </PlacementSelect>
                         </label>
                       </div>
                     </>
@@ -1823,7 +1831,7 @@ export default function PlacementWorkspace() {
                         </label>
                         <label className="plw-form-field">
                           Round Type *
-                          <select
+                          <PlacementSelect
                             value={activeItem.roundType}
                             onChange={e => setActiveItem({ ...activeItem, roundType: e.target.value })}
                           >
@@ -1833,7 +1841,7 @@ export default function PlacementWorkspace() {
                             <option value="System Design Round">System Design Round</option>
                             <option value="Managerial Round">Managerial Round</option>
                             <option value="HR & Leadership">HR & Leadership</option>
-                          </select>
+                          </PlacementSelect>
                         </label>
                       </div>
 
@@ -1937,14 +1945,15 @@ export default function PlacementWorkspace() {
                         </label>
                         <label className="plw-form-field">
                           Offer Status *
-                          <select
+                          <PlacementSelect
                             value={activeItem.status}
                             onChange={e => setActiveItem({ ...activeItem, status: e.target.value })}
                           >
+                            <option value="" disabled>Select offer status</option>
                             <option value="Accepted">Accepted</option>
                             <option value="Pending">Pending</option>
                             <option value="Declined">Declined</option>
-                          </select>
+                          </PlacementSelect>
                         </label>
                       </div>
 
@@ -1975,14 +1984,14 @@ export default function PlacementWorkspace() {
                 <div className="plw-modal-footer">
                   <button
                     type="button"
-                    className="grm-button grm-button--secondary"
+                    className="placement-button placement-button--secondary"
                     onClick={() => setModalMode(null)}
                   >
                     Cancel
                   </button>
                   <button
                     type="submit"
-                    className="grm-button grm-button--primary"
+                    className="placement-button placement-button--primary"
                   >
                     Save Changes
                   </button>
@@ -2024,14 +2033,14 @@ export default function PlacementWorkspace() {
               <div className="plw-modal-footer">
                 <button
                   type="button"
-                  className="grm-button grm-button--secondary"
+                  className="placement-button placement-button--secondary"
                   onClick={() => setDeleteTarget(null)}
                 >
                   Cancel
                 </button>
                 <button
                   type="button"
-                  className="grm-button"
+                  className="placement-button"
                   style={{ background: '#dc2626', color: '#ffffff', borderColor: '#dc2626' }}
                   onClick={confirmDelete}
                 >

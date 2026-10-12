@@ -1655,3 +1655,19 @@ label > b,
   height: 30px !important;
   font-size: 12px !important;
 }
+/* Search inputs share their container border and focus indicator. */
+:root:is([data-theme], :not([data-theme])) #root :is(.page-content, .dashboard-header) :is(.filter-disclosure__search, .global-search, .course-search, .branch-search, .department-search, .semester-search, .section-search, .sa-search, .sp-search, .fs-search, .grm-search, .rooms-search, .search-control, .module-search) input,
+:root:is([data-theme], :not([data-theme])) #root :is(.page-content, .dashboard-header) :is(.filter-disclosure__search, .global-search, .course-search, .branch-search, .department-search, .semester-search, .section-search, .sa-search, .sp-search, .fs-search, .grm-search, .rooms-search, .search-control, .module-search) input:is(:hover, :focus, :focus-visible) {
+  border: 0 !important;
+  outline: 0 !important;
+  box-shadow: none !important;
+  background: transparent !important;
+  border-radius: 0 !important;
+  min-width: 0;
+  flex: 1;
+  padding: 0 !important;
+}
+:root:is([data-theme], :not([data-theme])) #root :is(.page-content, .dashboard-header) :is(.global-search, .course-search, .branch-search, .department-search, .semester-search, .section-search, .sa-search, .sp-search, .fs-search, .grm-search, .rooms-search, .search-control, .module-search):focus-within {
+  border-color: var(--brand, #1769c2) !important;
+  box-shadow: 0 0 0 2px rgba(23, 105, 194, .12) !important;
+}
