@@ -16,14 +16,30 @@ import {
   FiCheckSquare,
   FiX
 } from 'react-icons/fi'
-import DashboardLayout from '../../layouts/DashboardLayout'
-import PageHeader from '../../components/PageHeader'
-import ExportMenu from '../../components/ExportMenu'
-import FilterPanel from '../../components/FilterPanel'
-import TablePagination from '../../components/TablePagination'
-import { useAcademic } from '../../context/AcademicContext'
-import academicService from '../../services/academicService'
-import roomService from '../../services/roomService'
+import { DashboardLayoutModule as consolidatedDependency7 } from "../../components/components.jsx";
+const { default: DashboardLayout,  } = consolidatedDependency7;
+
+import { PageHeaderModule as consolidatedDependency8 } from "../../components/components.jsx";
+const { default: PageHeader,  } = consolidatedDependency8;
+
+import { ExportMenuModule as consolidatedDependency9 } from "../../components/components.jsx";
+const { default: ExportMenu,  } = consolidatedDependency9;
+
+import { FilterPanelModule as consolidatedDependency10 } from "../../components/components.jsx";
+const { default: FilterPanel,  } = consolidatedDependency10;
+
+import { TablePaginationModule as consolidatedDependency11 } from "../../components/components.jsx";
+const { default: TablePagination,  } = consolidatedDependency11;
+
+import { AcademicContextModule as consolidatedDependency12 } from "../../components/components.jsx";
+const {  useAcademic  } = consolidatedDependency12;
+
+import { academicServiceModule as consolidatedDependency13 } from "../../API/apiendpoints.jsx";
+const { default: academicService,  } = consolidatedDependency13;
+
+import { roomServiceModule as consolidatedDependency14 } from "../../API/apiendpoints.jsx";
+const { default: roomService,  } = consolidatedDependency14;
+
 import {
   defaultMeetings,
   defaultEvents,

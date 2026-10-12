@@ -1,6 +1,8 @@
 import { useMemo, useState } from 'react'
 import { FiCalendar, FiChevronDown, FiChevronLeft, FiChevronRight, FiClock, FiMapPin, FiPlus, FiUsers } from 'react-icons/fi'
-import FilterPanel from '../../components/FilterPanel'
+import { FilterPanelModule as consolidatedDependency6 } from "../../components/components.jsx";
+const { default: FilterPanel,  } = consolidatedDependency6;
+
 import './MeetingsEventsCalendar.css'
 
 function CalendarFilterSelect({ children, ...props }) {

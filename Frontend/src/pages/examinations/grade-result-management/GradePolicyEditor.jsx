@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react'
 import { FiEdit2, FiPlus, FiTrash2, FiX } from 'react-icons/fi'
-import { validateBands } from './gradeResultModel'
+import { gradeResultModelModule as consolidatedDependency21 } from "../../../components/components.jsx";
+const {  validateBands  } = consolidatedDependency21;
+
 import './GradePolicyEditor.css'
 
 const empty = { grade: '', min: '', max: '', points: '', pass: true }

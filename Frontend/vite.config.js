@@ -6,7 +6,45 @@ export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '')
   const baseUrl = (env.VITE_API_BASE_URL || 'https://clarity-math-delouse.ngrok-free.dev/').trim().replace(/\/+$/, '')
   return {
-  plugins: [react()],
+  plugins: [
+    {
+      name: 'consolidated-source-jsx',
+      handleHotUpdate({ file, server }) {
+        if (!/[/\\]src[/\\].*\.jsx$/.test(file)) return
+        server.ws.send({ type: 'full-reload' })
+        return []
+      },
+    },
+    react(),
+  ],
+  css: {
+    postcss: {
+      plugins: [{
+        postcssPlugin: 'module-stylesheet-cascade',
+        Once(root) {
+          const orderNode = root.nodes.find(node => node.type === 'comment' && node.text.startsWith('Source cascade:'))
+          if (!orderNode) return
+          const order = JSON.parse(orderNode.text.slice('Source cascade:'.length))
+          const ranks = new Map(order.map((id, index) => [id, index]))
+          orderNode.remove()
+          const prefix = []
+          const sections = []
+          let current
+          for (const node of root.nodes) {
+            if (node.type === 'comment' && node.text.startsWith('Source styles:')) {
+              current = { id: node.text.slice('Source styles:'.length).trim(), nodes: [] }
+              sections.push(current)
+            }
+            ;(current ? current.nodes : prefix).push(node)
+          }
+          // Folder grouping must not change the original cross-module CSS cascade.
+          sections.sort((left, right) => (ranks.get(left.id) ?? order.length) - (ranks.get(right.id) ?? order.length))
+          root.removeAll()
+          root.append(...prefix, ...sections.flatMap(section => section.nodes))
+        },
+      }],
+    },
+  },
   resolve: {
     dedupe: ['react', 'react-dom'],
   },
