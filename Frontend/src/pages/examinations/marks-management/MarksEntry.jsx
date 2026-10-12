@@ -19,6 +19,7 @@ import FilterPanel from '../../../components/FilterPanel'
 import TablePagination from '../../../components/TablePagination'
 import MarksModuleNav from './MarksModuleNav'
 import { useAcademic } from '../../../context/AcademicContext'
+import facultyService from '../../../services/facultyService'
 import studentService from '../../../services/studentService'
 import subjectService from '../../../services/subjectService'
 import { collegeStorageKey } from '../../../utils/collegeScope'
@@ -33,6 +34,7 @@ const columns = [
   { key: 'registrationNumber', label: 'Registration Number' },
   { key: 'studentName', label: 'Student Name' },
   { key: 'subjectName', label: 'Subject' },
+  { key: 'facultyName', label: 'Faculty Name' },
   { key: 'subjectCode', label: 'Subject Code' },
   { key: 'examType', label: 'Exam Type' },
   { key: 'assessmentType', label: 'Assessment Type' },
@@ -55,6 +57,7 @@ const initialAssessment = {
   registrationNumber: '',
   studentName: '',
   subject: '',
+  facultyName: '',
   subjectCode: '',
   examType: '',
   assessmentType: '',
@@ -183,6 +186,7 @@ export default function MarksEntry() {
   const [draftRows, setDraftRows] = useState(readDrafts)
   const [subjects, setSubjects] = useState([])
   const [students, setStudents] = useState([])
+  const [facultyMembers, setFacultyMembers] = useState([])
   const [activeSuggestion, setActiveSuggestion] = useState('')
   const [query, setQuery] = useState('')
 
@@ -228,6 +232,15 @@ export default function MarksEntry() {
         setStudents(Array.isArray(data) ? data : [])
       )
       .catch(() => setStudents([]))
+  }, [])
+
+  useEffect(() => {
+    facultyService
+      .list()
+      .then(data =>
+        setFacultyMembers(Array.isArray(data) ? data : [])
+      )
+      .catch(() => setFacultyMembers([]))
   }, [])
 
   useEffect(() => {
@@ -385,6 +398,16 @@ export default function MarksEntry() {
         )
         .filter(Boolean),
 
+      facultyName: facultyMembers
+        .map(item =>
+          entityLabel(item, [
+            'fullName',
+            'facultyName',
+            'name',
+          ])
+        )
+        .filter(Boolean),
+
       subject: [],
 
       subjectCode: [],
@@ -446,6 +469,7 @@ export default function MarksEntry() {
       sections,
       subjects,
       students,
+      facultyMembers,
     ]
   )
 
@@ -525,6 +549,7 @@ export default function MarksEntry() {
           row.registrationNumber,
           row.subjectCode,
           row.subjectName || row.subject,
+          row.facultyName || row.faculty?.fullName || row.faculty?.facultyName || row.faculty?.name || row.faculty,
           row.examType,
           row.course,
           row.branch,
@@ -768,6 +793,7 @@ export default function MarksEntry() {
     registrationNumber: allRows.map(row => row.registrationNumber),
     studentName: allRows.map(row => row.studentName),
     subject: allRows.map(row => row.subjectName || row.subject),
+    facultyName: allRows.map(row => row.facultyName || row.faculty?.fullName || row.faculty?.facultyName || row.faculty?.name || row.faculty),
     subjectCode: allRows.map(row => row.subjectCode),
     examType: allRows.map(row => row.examType),
     assessmentType: allRows.map(row => row.assessmentType),
@@ -1361,6 +1387,10 @@ export default function MarksEntry() {
                           'Subject',
                         ],
                         [
+                          'facultyName',
+                          'Faculty Name',
+                        ],
+                        [
                           'subjectCode',
                           'Subject Code',
                         ],
@@ -1670,6 +1700,10 @@ export default function MarksEntry() {
                             assessment.studentName,
                           ],
                           [
+                            'Faculty Name',
+                            assessment.facultyName,
+                          ],
+                          [
                             'Subject Code',
                             assessment.subjectCode,
                           ],
@@ -1724,6 +1758,7 @@ export default function MarksEntry() {
                 <col className="marks-entry-col-student" />
                 <col className="marks-entry-col-academic" />
                 <col className="marks-entry-col-subject" />
+                <col className="marks-entry-col-faculty" />
                 <col className="marks-entry-col-exam" />
                 <col className="marks-entry-col-score" />
                 <col className="marks-entry-col-result" />
@@ -1735,6 +1770,7 @@ export default function MarksEntry() {
                     'Student Details',
                     'Class & Academic',
                     'Subject',
+                    'Faculty Name',
                     'Exam & Assessment',
                     'Marks Scored',
                     'Result & %',
@@ -1781,7 +1817,19 @@ export default function MarksEntry() {
                         </div>
                       </td>
 
-                      <td className="marks-entry-academic-cell">
+                      <td
+                        className="marks-entry-academic-cell"
+                        title={[
+                          ['Course', row.course],
+                          ['Branch', row.branch],
+                          ['Semester', row.semester],
+                          ['Section', row.section],
+                          ['Academic Year', row.academicYear],
+                        ]
+                          .filter(([, value]) => value)
+                          .map(([label, value]) => `${label}: ${value}`)
+                          .join('\n') || 'Academic details unavailable'}
+                      >
                         <div className="marks-entry-academic-copy">
                           <strong>{[row.course, row.branch].filter(Boolean).join(' · ') || '—'}</strong>
                           <span>
@@ -1789,6 +1837,20 @@ export default function MarksEntry() {
                             {[row.semester, row.section].some(Boolean) && row.academicYear ? '  ' : ''}
                             {row.academicYear}
                           </span>
+                          <div className="marks-entry-academic-lines">
+                            {[
+                              ['Course', row.course],
+                              ['Branch', row.branch],
+                              [
+                                'Academic details',
+                                [row.semester, row.section, row.academicYear]
+                                  .filter(Boolean)
+                                  .join(' · '),
+                              ],
+                            ].map(([label, value]) => (
+                            <span key={label}>{value || '—'}</span>
+                            ))}
+                          </div>
                         </div>
                       </td>
 
@@ -1797,6 +1859,10 @@ export default function MarksEntry() {
                           <strong>{row.subjectName || row.subject || '—'}</strong>
                           {row.subjectCode && <span>{row.subjectCode}</span>}
                         </div>
+                      </td>
+
+                      <td className="marks-entry-faculty-cell">
+                        <strong>{row.facultyName || row.faculty?.fullName || row.faculty?.facultyName || row.faculty?.name || row.faculty || '—'}</strong>
                       </td>
 
                       <td className="marks-entry-exam-cell">

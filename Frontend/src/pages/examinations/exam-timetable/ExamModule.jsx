@@ -224,8 +224,15 @@ function LocalExamModule({ screen }) {
     return () => { active = false }
   }, [screen, location.pathname, reload])
 
-  return <DashboardLayout><main className={`exam-module ${screen === 'timetable' ? 'exam-module--timetable' : ''}`}>
-    <PageHeader title={screen === 'completed' && routeExamId ? 'Completed Exam Details' : routeInfo[screen][0]} subtitle={routeExamId && screen === 'completed' ? 'Complete information for this completed examination.' : routeInfo[screen][1]} breadcrumb={screen === 'completed' && routeExamId ? ['Examinations & Results', { label: 'Completed Exams', link: '/examination/completed-exams' }, 'Exam Details'] : ['Examinations & Results', routeInfo[screen][0]]}>
+  return <DashboardLayout><main className={`exam-module ${screen === 'timetable' ? 'exam-module--timetable' : ''} ${screen === 'list' ? 'exam-module--schedule-list' : ''}`}>
+    <PageHeader title={screen === 'completed' && routeExamId ? 'Completed Exam Details' : routeInfo[screen][0]} subtitle={routeExamId && screen === 'completed' ? 'Complete information for this completed examination.' : routeInfo[screen][1]} breadcrumb={screen === 'completed' && routeExamId ? ['Examinations & Results', { label: 'Completed Exams', link: '/examination/completed-exams' }, 'Exam Details'] : ['Examinations & Results', routeInfo[screen][0]]} compactSummary={screen === 'list' ? [
+      { label: 'Total Exams', value: metrics.total },
+      { label: 'Upcoming Exams', value: metrics.upcoming },
+      { label: 'Completed Exams', value: metrics.completed, tone: 'completed' },
+      { label: 'Pending Exams', value: metrics.pending, tone: 'warning' },
+      { label: 'Theory Exams', value: metrics.theory },
+      { label: 'Practical Exams', value: metrics.practical },
+    ] : undefined}>
       <div className="exm-header-actions">{screen === 'department' && <button className="exm-button exm-button--primary" onClick={() => navigate('/exam/create')}><Plus size={16}/> Create Exam</button>}</div>
     </PageHeader>
     <nav className="exm-nav" aria-label="Exam management">
@@ -244,7 +251,7 @@ function LocalExamModule({ screen }) {
     {screen === 'completed' && routeExamId && (completedLoading ? <div className="exm-empty" role="status">Loading completed exam details…</div> : completedError ? <div className="exm-error" role="alert"><AlertTriangle size={18}/>{completedError}</div> : completedExam ? <CompletedExamDetails exam={completedExam} halls={halls}/> : <div className="exm-empty" role="alert">Completed exam not found.</div>)}
     {['list','department','timetable','student'].includes(screen) && <>
       {screen === 'student' && <ExamNoticeBoardHeader exams={scopedExams.filter((e) => e.status !== 'Draft')} student={student} adminReview={adminReview} />}
-      {screen !== 'timetable' && screen !== 'student' && <Summary metrics={metrics} />}
+      {screen !== 'timetable' && screen !== 'student' && screen !== 'list' && <Summary metrics={metrics} />}
       <FilterPanel filters={draftFilters} activeFilters={filters} masterOptions={masterOptions} open={filtersOpen} onToggle={() => setFiltersOpen((open) => !open)} onChange={selectFilter} onApply={() => { setFilters({ ...draftFilters }); setFiltersOpen(false) }} onReset={() => { resetFilters(); setFiltersOpen(false) }} search={search} onSearch={setSearch} showSearch={screen === 'list' || screen === 'student'} showCreateExam={screen === 'timetable'} onCreateExam={() => navigate('/exam/create')} leadingContent={screen === 'timetable' && <div className="exm-view-toggle">{[['table','Table'],['calendar','Day-wise'],['semester','Semester-wise'],['department','Department-wise'],['batch','Batch-wise']].map(([key,label])=><button key={key} className={view===key?'active':''} onClick={()=>setView(key)}>{label}</button>)}</div>} />
       {screen === 'list' && <div className="exm-toolbar"><span>{filtered.length} schedules</span></div>}
       {screen === 'student' && <StudentSchedule exams={filtered} halls={halls} allocations={allocations} student={student} adminReview={adminReview} />}
