@@ -34,6 +34,19 @@ import {
 import MeetingsEventsCalendar from './MeetingsEventsCalendar'
 import './MeetingsEventsWorkspace.css'
 
+const fallbackDepartmentOptions = [
+  'Computer Science and Engineering',
+  'Information Technology',
+  'Electronics and Communication Engineering',
+  'Electrical and Electronics Engineering',
+  'Mechanical Engineering',
+  'Civil Engineering',
+  'Sports',
+  'Training and Placement',
+  'Administration',
+  'Student Affairs',
+]
+
 // Export column definitions matching ERP export standard
 const meetingExportColumns = [
   { label: 'Meeting Title', value: 'title' },
@@ -119,11 +132,14 @@ export default function MeetingsEventsWorkspace() {
 
   useEffect(() => {
     let active = true
-    Promise.all([academicService.getDepartments(true), roomService.getRooms()]).then(([departments, rooms]) => {
+    Promise.allSettled([academicService.getDepartments(true), roomService.getRooms()]).then(([departmentResult, roomResult]) => {
       if (!active) return
-      setDepartmentOptions([...new Set((Array.isArray(departments) ? departments : []).filter(item => item.status !== 'Inactive').map(item => item.name || item.departmentName).filter(Boolean))])
+      const departments = departmentResult.status === 'fulfilled' ? departmentResult.value : []
+      const rooms = roomResult.status === 'fulfilled' ? roomResult.value : []
+      const names = [...new Set((Array.isArray(departments) ? departments : []).filter(item => item.status !== 'Inactive').map(item => item.name || item.departmentName).filter(Boolean))]
+      setDepartmentOptions(names.length ? names : fallbackDepartmentOptions)
       setRoomOptions((Array.isArray(rooms) ? rooms : []).filter(item => item.status !== 'Inactive').map(room => ({ value: room.roomNumber ? `${room.roomName} (${room.roomNumber})` : room.roomName, label: `${room.roomName || room.roomNumber}${room.roomNumber && room.roomName ? ` · ${room.roomNumber}` : ''} — ${room.buildingBlock || room.building || 'Campus'} · ${room.floor || 'Floor not set'}` })).filter(room => room.value))
-    }).catch(() => { if (active) { setDepartmentOptions([]); setRoomOptions([]) } })
+    })
     return () => { active = false }
   }, [scope])
 
