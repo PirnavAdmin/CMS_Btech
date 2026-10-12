@@ -1,9 +1,6 @@
 import * as mergeDependency9 from "react-icons/fi";
 import { gradeResultModelModule as mergeDependency10 } from "../../../components/components.jsx";
 import { SearchableSelectModule as mergeDependency11 } from "../../../components/components.jsx";
-import * as mergeDependency12 from "./GradePolicyEditor";
-import * as mergeDependency13 from "./GradeToolsNav";
-import * as mergeDependency8 from "./GradeToolsNav";
 import * as mergeDependency7 from "react-icons/fi";
 // Pages and helpers in this module retain their own isolated scopes.
 import * as external0 from "react";
@@ -13,6 +10,74 @@ import { gradeResultModelModule, gradeScreensModule } from "../../../components/
 import { DashboardLayoutModule, PageHeaderModule, FilterPanelModule, ExportMenuModule, TablePaginationModule, AcademicContextModule } from "../../../components/components.jsx";
 import { resultsServiceModule } from "../../../API/apiendpoints.jsx";
 
+const GradePolicyEditorModule = (() => {
+const { useEffect, useState } = external0; const { FiEdit2, FiPlus, FiTrash2, FiX } = external3;
+const { validateBands } = gradeResultModelModule;
+
+
+const empty = { grade: '', min: '', max: '', points: '', pass: true }
+function GradePolicyEditor({ bands, onSave }) {
+  const [open, setOpen] = useState(false)
+  const [draft, setDraft] = useState([])
+  const [form, setForm] = useState(null)
+  const [editing, setEditing] = useState(null)
+  const [error, setError] = useState('')
+  useEffect(() => {
+    if (!open) return
+    const escape = event => { if (event.key === 'Escape') setOpen(false) }
+    document.addEventListener('keydown', escape)
+    return () => document.removeEventListener('keydown', escape)
+  }, [open])
+  const submit = event => {
+    event.preventDefault()
+    const row = { ...form, grade: form.grade.trim().toUpperCase(), min: Number(form.min), max: Number(form.max), points: Number(form.points) }
+    if (!row.grade || row.min < 0 || row.max > 100 || row.min >= row.max || row.points < 0 || row.points > 10 || draft.some((item, index) => index !== editing && item.grade.toUpperCase() === row.grade)) {
+      setError('Enter a unique grade, a valid 0–100 range and 0–10 points.'); return
+    }
+    setDraft(current => editing === null ? [...current, row] : current.map((item, index) => index === editing ? row : item))
+    setForm(null); setEditing(null); setError('')
+  }
+  const save = () => {
+    const issue = validateBands(draft)
+    if (issue) { setError(issue); return }
+    try { onSave(draft); setOpen(false) } catch (reason) { setError(reason.message || 'Unable to save policy.') }
+  }
+  return <>
+    <div className="grade-editor-launch"><button type="button" onClick={() => { setDraft(bands.map(row => ({ ...row }))); setForm(null); setError(''); setOpen(true) }}><FiPlus aria-hidden="true" /> Manage Grades</button></div>
+    {open && <div className="grade-editor-backdrop" onClick={() => setOpen(false)}>
+      <section className="grade-editor-dialog" role="dialog" aria-modal="true" aria-labelledby="grade-editor-title" onClick={event => event.stopPropagation()}>
+        <header><div><h3 id="grade-editor-title">Grade scale configuration</h3><p>Add, edit or remove grade bands, then save the policy.</p></div><button type="button" aria-label="Close grade editor" onClick={() => setOpen(false)}><FiX /></button></header>
+        <div className="grade-editor-body">
+          <div className="grade-editor-toolbar"><strong>{draft.length} grade bands</strong><button type="button" onClick={() => { setEditing(null); setForm({ ...empty }); setError('') }}><FiPlus /> Add Grade</button></div>
+          {error && <p className="grade-editor-error" role="alert">{error}</p>}
+          {form && <form className="grade-editor-form" onSubmit={submit}>
+            { [['grade', 'Grade'], ['min', 'Minimum %'], ['max', 'Maximum %'], ['points', 'Grade points']].map(([key, label]) => <label key={key}>{label}<input required type={key === 'grade' ? 'text' : 'number'} min="0" max={key === 'points' ? '10' : '100'} step="any" value={form[key]} onChange={event => setForm({ ...form, [key]: event.target.value })} /></label>)}
+            <label>Result<select value={String(form.pass)} onChange={event => setForm({ ...form, pass: event.target.value === 'true' })}><option value="true">Pass</option><option value="false">Fail</option></select></label>
+            <div><button type="submit">{editing === null ? 'Add Grade' : 'Update Grade'}</button><button type="button" onClick={() => setForm(null)}>Cancel</button></div>
+          </form>}
+          <div className="grade-editor-table"><table><thead><tr><th>Grade</th><th>Minimum %</th><th>Maximum %</th><th>Points</th><th>Result</th><th>Actions</th></tr></thead><tbody>
+            {draft.map((row, index) => <tr key={index}><td><strong>{row.grade}</strong></td><td>{row.min}</td><td>{row.max}</td><td>{row.points}</td><td>{row.pass ? 'Pass' : 'Fail'}</td><td><button type="button" aria-label={`Edit grade ${row.grade}`} title="Edit grade" onClick={() => { setEditing(index); setForm({ ...row }); setError('') }}><FiEdit2 /></button><button type="button" aria-label={`Delete grade ${row.grade}`} title="Delete grade" onClick={() => { setDraft(draft.filter((_, i) => i !== index)); setForm(null); setError('') }}><FiTrash2 /></button></td></tr>)}
+          </tbody></table></div>
+          <p>Ranges must cover 0–100% without gaps or overlaps. Maximum is excluded except at 100%.</p>
+        </div>
+        <footer><button type="button" onClick={() => setOpen(false)}>Cancel</button><button type="button" disabled={Boolean(form)} onClick={save}>Save Policy</button></footer>
+      </section>
+    </div>}
+  </>
+}
+
+return { default: GradePolicyEditor }; })();
+const GradeToolsNavModule = (() => {
+const { NavLink } = external1; const { FiAward, FiPercent } = external3;
+
+function GradeToolsNav() {
+  return <nav className="grade-tools-nav" aria-label="Grade management tools">
+    <NavLink to="/grade-result-management/grade-configuration" end><FiAward aria-hidden="true" /><span>Grade Scale Configuration</span></NavLink>
+    <NavLink to="/grade-result-management/cgpa-calculator" end><FiPercent aria-hidden="true" /><span>CGPA Calculator</span></NavLink>
+  </nav>
+}
+
+return { default: GradeToolsNav }; })();
 export const GradeResultManagementModule = (() => {
 const { Navigate } = external1;
 /* Imports for isolated regression tests:
@@ -136,8 +201,8 @@ const { FiEye: FiEye } = mergeDependency9;
 const { FiAlertTriangle: FiAlertTriangle } = mergeDependency9;
 const { matchesResultSearch: matchesResultSearch } = mergeDependency10;
 const { default: SearchableSelect } = mergeDependency11;
-const { default: GradePolicyEditor } = mergeDependency12;
-const { default: GradeToolsNav } = mergeDependency13;
+const { default: GradePolicyEditor } = GradePolicyEditorModule;
+const { default: GradeToolsNav } = GradeToolsNavModule;
 const { useEffect } = external0;
 const { useMemo } = external0;
 const { useRef } = external0;
@@ -3171,7 +3236,7 @@ return {
 })();
 
 export const CGPACalculatorPageModule = (() => {
-const { default: GradeToolsNav } = mergeDependency8;
+const { default: GradeToolsNav } = GradeToolsNavModule;
 const { default: DashboardLayout } = DashboardLayoutModule;
 const { default: PageHeader } = PageHeaderModule;
 const { NavLink } = external1;
