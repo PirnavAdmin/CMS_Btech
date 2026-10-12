@@ -22,6 +22,8 @@ import ExportMenu from '../../components/ExportMenu'
 import FilterPanel from '../../components/FilterPanel'
 import TablePagination from '../../components/TablePagination'
 import { useAcademic } from '../../context/AcademicContext'
+import academicService from '../../services/academicService'
+import roomService from '../../services/roomService'
 import {
   defaultMeetings,
   defaultEvents,
@@ -29,6 +31,7 @@ import {
   defaultAttendance,
   defaultMinutes,
 } from './sampleMeetingsEvents'
+import MeetingsEventsCalendar from './MeetingsEventsCalendar'
 import './MeetingsEventsWorkspace.css'
 
 // Export column definitions matching ERP export standard
@@ -111,6 +114,18 @@ export default function MeetingsEventsWorkspace() {
       minutes: defaultMinutes,
     }
   })
+  const [departmentOptions, setDepartmentOptions] = useState([])
+  const [roomOptions, setRoomOptions] = useState([])
+
+  useEffect(() => {
+    let active = true
+    Promise.all([academicService.getDepartments(true), roomService.getRooms()]).then(([departments, rooms]) => {
+      if (!active) return
+      setDepartmentOptions([...new Set((Array.isArray(departments) ? departments : []).filter(item => item.status !== 'Inactive').map(item => item.name || item.departmentName).filter(Boolean))])
+      setRoomOptions((Array.isArray(rooms) ? rooms : []).filter(item => item.status !== 'Inactive').map(room => ({ value: room.roomNumber ? `${room.roomName} (${room.roomNumber})` : room.roomName, label: `${room.roomName || room.roomNumber}${room.roomNumber && room.roomName ? ` · ${room.roomNumber}` : ''} — ${room.buildingBlock || room.building || 'Campus'} · ${room.floor || 'Floor not set'}` })).filter(room => room.value))
+    }).catch(() => { if (active) { setDepartmentOptions([]); setRoomOptions([]) } })
+    return () => { active = false }
+  }, [scope])
 
   useEffect(() => {
     try {
@@ -121,7 +136,7 @@ export default function MeetingsEventsWorkspace() {
   }, [data, storageKey])
 
   // Active tab: 'meetings' | 'events' | 'registrations' | 'attendance' | 'minutes'
-  const [activeTab, setActiveTab] = useState('meetings')
+  const [activeTab, setActiveTab] = useState('calendar')
   const [viewMode, setViewMode] = useState('grid') // 'grid' | 'table'
   const [searchQuery, setSearchQuery] = useState('')
   const [statusFilter, setStatusFilter] = useState('ALL')
@@ -139,6 +154,7 @@ export default function MeetingsEventsWorkspace() {
 
   // Modal State for Create / Edit
   const [modalOpen, setModalOpen] = useState(false)
+  const [modalError, setModalError] = useState('')
   const [modalType, setModalType] = useState('meeting')
   const [editingItem, setEditingItem] = useState(null)
   const [formData, setFormData] = useState({})
@@ -229,12 +245,14 @@ export default function MeetingsEventsWorkspace() {
 
   // Open modal for Create or Edit
   const openCreateModal = (type) => {
+    setModalError('')
     setModalType(type)
     setEditingItem(null)
     if (type === 'meeting') {
       setFormData({
         title: '',
         category: 'Academic Council',
+        department: '',
         start: new Date().toISOString().slice(0, 16),
         end: new Date(Date.now() + 7200000).toISOString().slice(0, 16),
         venue: '',
@@ -247,10 +265,11 @@ export default function MeetingsEventsWorkspace() {
       setFormData({
         title: '',
         category: 'Technical',
+        department: '',
+        organizer: '',
         start: new Date().toISOString().slice(0, 16),
         end: new Date(Date.now() + 86400000).toISOString().slice(0, 16),
         venue: '',
-        organizer: '',
         capacity: 100,
         registeredCount: 0,
         deadline: new Date(Date.now() + 43200000).toISOString().slice(0, 16),
@@ -284,6 +303,7 @@ export default function MeetingsEventsWorkspace() {
   }
 
   const openEditModal = (item, type) => {
+    setModalError('')
     setModalType(type)
     setEditingItem(item)
     setFormData({ ...item })
@@ -292,6 +312,34 @@ export default function MeetingsEventsWorkspace() {
 
   const handleSaveModal = (e) => {
     e.preventDefault()
+    if (modalType === 'meeting' || modalType === 'event') {
+      const start = new Date(formData.start)
+      const end = new Date(formData.end)
+      if (!formData.title?.trim() || Number.isNaN(start.getTime()) || Number.isNaN(end.getTime()) || end <= start) {
+        setModalError('Enter a title and a valid end time later than the start time.')
+        return
+      }
+      const venue = String(formData.venue || '').trim().toLowerCase()
+      const hasVenue = venue && !/^https?:\/\//.test(venue)
+      if (hasVenue) {
+        const scheduled = [
+          ...data.meetings.filter(item => item.status !== 'Cancelled').map(item => ({ ...item, kind: 'meeting' })),
+          ...data.events.filter(item => item.status !== 'Cancelled').map(item => ({ ...item, kind: 'event' })),
+        ]
+        const conflict = scheduled.find(item => {
+          if (editingItem?.id === item.id && modalType === item.kind) return false
+          if (String(item.venue || '').trim().toLowerCase() !== venue) return false
+          const existingStart = new Date(item.start)
+          const existingEnd = new Date(item.end)
+          return !Number.isNaN(existingStart.getTime()) && !Number.isNaN(existingEnd.getTime()) && start < existingEnd && end > existingStart
+        })
+        if (conflict) {
+          setModalError(`Venue conflict: “${conflict.title}” already uses ${formData.venue} from ${new Date(conflict.start).toLocaleString()} to ${new Date(conflict.end).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}.`)
+          return
+        }
+      }
+    }
+    setModalError('')
     if (modalType === 'meeting') {
       const itemToSave = {
         ...formData,
@@ -485,6 +533,14 @@ export default function MeetingsEventsWorkspace() {
           <nav className="mew-nav" aria-label="Workspace views">
             <button
               type="button"
+              className={activeTab === 'calendar' ? 'active' : ''}
+              onClick={() => handleSwitchTab('calendar')}
+            >
+              <FiCalendar />
+              <span>Calendar</span>
+            </button>
+            <button
+              type="button"
               className={activeTab === 'meetings' ? 'active' : ''}
               onClick={() => handleSwitchTab('meetings')}
             >
@@ -538,7 +594,7 @@ export default function MeetingsEventsWorkspace() {
             {activeTab === 'meetings' && (
               <button
                 type="button"
-                className="grm-button grm-button--primary"
+                className="grm-button grm-button--primary mew-action-meeting"
                 onClick={() => openCreateModal('meeting')}
               >
                 <FiPlus /> Schedule Meeting
@@ -548,7 +604,7 @@ export default function MeetingsEventsWorkspace() {
             {activeTab === 'events' && (
               <button
                 type="button"
-                className="grm-button grm-button--primary"
+                className="grm-button grm-button--primary mew-action-event"
                 onClick={() => openCreateModal('event')}
               >
                 <FiPlus /> Create Event
@@ -597,17 +653,17 @@ export default function MeetingsEventsWorkspace() {
             )}
 
             {/* Standard ERP ExportMenu component with CSV and Print / PDF options */}
-            <ExportMenu
+            {activeTab !== 'calendar' && <ExportMenu
               rows={filteredList}
               columns={currentExportColumns}
               filename={`meetings_events_${activeTab}`}
               title={`Meetings & Events - ${activeTab.toUpperCase()}`}
-            />
+            />}
           </div>
         </div>
 
         {/* Standard ERP Collapsible Filter Panel with 'Filters' button */}
-        <FilterPanel
+        {activeTab !== 'calendar' && <FilterPanel
           active={hasActiveFilters}
           onClear={handleClearFilters}
           className="mew-filter-panel"
@@ -757,7 +813,18 @@ export default function MeetingsEventsWorkspace() {
               </select>
             )}
           </div>
-        </FilterPanel>
+        </FilterPanel>}
+
+        {activeTab === 'calendar' && (
+          <MeetingsEventsCalendar
+            meetings={data.meetings}
+            events={data.events}
+            onCreateMeeting={() => openCreateModal('meeting')}
+            onCreateEvent={() => openCreateModal('event')}
+            onEditMeeting={meeting => openEditModal(meeting, 'meeting')}
+            onEditEvent={event => openEditModal(event, 'event')}
+          />
+        )}
 
         {/* Tab 1: Meetings View */}
         {activeTab === 'meetings' && (
@@ -1379,11 +1446,13 @@ export default function MeetingsEventsWorkspace() {
                         <input
                           type="text"
                           required
+                          list="mew-meeting-title-options"
                           value={formData.title || ''}
                           onChange={e => setFormData({ ...formData, title: e.target.value })}
                           placeholder="e.g. Department Faculty Council Meeting"
                         />
                       </label>
+                      <datalist id="mew-meeting-title-options">{[...new Set(data.meetings.map(item => item.title).filter(Boolean))].map(title => <option key={title} value={title} />)}</datalist>
 
                       <div className="mew-form-row">
                         <label className="mew-form-field">
@@ -1413,6 +1482,15 @@ export default function MeetingsEventsWorkspace() {
                         </label>
                       </div>
 
+                      <label className="mew-form-field">
+                        Responsible Department *
+                        <select required value={formData.department || ''} onChange={e => setFormData({ ...formData, department: e.target.value })}>
+                          <option value="">Select responsible department</option>
+                          {formData.department && !departmentOptions.includes(formData.department) && <option value={formData.department}>{formData.department}</option>}
+                          {departmentOptions.map(name => <option key={name} value={name}>{name}</option>)}
+                        </select>
+                      </label>
+
                       <div className="mew-form-row">
                         <label className="mew-form-field">
                           Starts At *
@@ -1438,13 +1516,11 @@ export default function MeetingsEventsWorkspace() {
                       <div className="mew-form-row">
                         <label className="mew-form-field">
                           Venue / Room *
-                          <input
-                            type="text"
-                            required
-                            value={formData.venue || ''}
-                            onChange={e => setFormData({ ...formData, venue: e.target.value })}
-                            placeholder="e.g. Seminar Hall 1, CSE Block"
-                          />
+                          <select required value={formData.venue || ''} onChange={e => setFormData({ ...formData, venue: e.target.value })}>
+                            <option value="">Select venue / room</option>
+                            {formData.venue && !roomOptions.some(room => room.value === formData.venue) && <option value={formData.venue}>{formData.venue} (current venue)</option>}
+                            {roomOptions.map(room => <option key={room.value} value={room.value}>{room.label}</option>)}
+                          </select>
                         </label>
 
                         <label className="mew-form-field">
@@ -1479,11 +1555,18 @@ export default function MeetingsEventsWorkspace() {
                         <input
                           type="text"
                           required
+                          list="mew-event-title-options"
                           value={formData.title || ''}
                           onChange={e => setFormData({ ...formData, title: e.target.value })}
                           placeholder="e.g. TechNovation 2026: 36-Hr Hackathon"
                         />
                       </label>
+                      <datalist id="mew-event-title-options">{[...new Set(data.events.map(item => item.title).filter(Boolean))].map(title => <option key={title} value={title} />)}</datalist>
+
+                      <div className="mew-form-row">
+                        <label className="mew-form-field">Responsible Department *<select required value={formData.department || ''} onChange={e => setFormData({ ...formData, department: e.target.value })}><option value="">Select responsible department</option>{formData.department && !departmentOptions.includes(formData.department) && <option value={formData.department}>{formData.department}</option>}{departmentOptions.map(name => <option key={name} value={name}>{name}</option>)}</select></label>
+                        <label className="mew-form-field">Organizer<input value={formData.organizer || ''} onChange={e => setFormData({ ...formData, organizer: e.target.value })} placeholder="Organizer or coordinating unit" /></label>
+                      </div>
 
                       <div className="mew-form-row">
                         <label className="mew-form-field">
@@ -1537,13 +1620,11 @@ export default function MeetingsEventsWorkspace() {
                       <div className="mew-form-row">
                         <label className="mew-form-field">
                           Venue *
-                          <input
-                            type="text"
-                            required
-                            value={formData.venue || ''}
-                            onChange={e => setFormData({ ...formData, venue: e.target.value })}
-                            placeholder="e.g. Main Auditorium"
-                          />
+                          <select required value={formData.venue || ''} onChange={e => setFormData({ ...formData, venue: e.target.value })}>
+                            <option value="">Select venue / room</option>
+                            {formData.venue && !roomOptions.some(room => room.value === formData.venue) && <option value={formData.venue}>{formData.venue} (current venue)</option>}
+                            {roomOptions.map(room => <option key={room.value} value={room.value}>{room.label}</option>)}
+                          </select>
                         </label>
 
                         <label className="mew-form-field">
@@ -1726,6 +1807,7 @@ export default function MeetingsEventsWorkspace() {
                 </div>
 
                 <div className="mew-modal-footer">
+                  {modalError && <p className="mew-form-error" role="alert">{modalError}</p>}
                   <button
                     type="button"
                     className="grm-button"

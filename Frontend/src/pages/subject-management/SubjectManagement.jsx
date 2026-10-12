@@ -347,6 +347,15 @@ function Editor({ form, editing, masters, branches, semesters, levels, typeOptio
     if (activeTab === 'mapping' && tabId !== 'mapping' && !validateMapping()) return;
     setActiveTab(tabId);
   };
+  const handleSubmit = event => {
+    event.preventDefault();
+    if (saving) return;
+    if (activeTab !== 'config') {
+      goToTab(tabs[stepIndex + 1].id);
+      return;
+    }
+    save(event);
+  };
 
   return (
     <div className="erp-two-column-layout sm-editor-layout">
@@ -364,7 +373,7 @@ function Editor({ form, editing, masters, branches, semesters, levels, typeOptio
           ))}
         </div>
 
-        <form className="erp-form-scroll-body" onSubmit={save}>
+        <form className="erp-form-scroll-body" onSubmit={handleSubmit}>
           {activeTab === 'mapping' && (
             <section>
               <h3 style={{ margin: '0 0 16px', fontSize: '1.05rem', color: 'var(--erp-text-main, #0f172a)' }}>Academic Mapping</h3>
@@ -455,6 +464,7 @@ function Editor({ form, editing, masters, branches, semesters, levels, typeOptio
             <div style={{ display: 'flex', gap: '8px' }}>
               {stepIndex < tabs.length - 1 ? (
                 <button
+                  key="continue"
                   type="button"
                   className="cm-button erp-btn erp-btn--primary"
                   onClick={() => goToTab(tabs[stepIndex + 1].id)}
@@ -463,6 +473,7 @@ function Editor({ form, editing, masters, branches, semesters, levels, typeOptio
                 </button>
               ) : (
                 <button
+                  key="save"
                   type="submit"
                   disabled={saving}
                   className="cm-button erp-btn erp-btn--primary"
