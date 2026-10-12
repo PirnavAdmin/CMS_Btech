@@ -1,3 +1,8 @@
+import MeetingsEventsWorkspace from '../pages/campus/MeetingsEventsWorkspace.jsx';
+import LibraryWorkspace from '../pages/campus/LibraryWorkspace.jsx';
+import PlacementWorkspace from '../pages/campus/PlacementWorkspace.jsx';
+import CompletedExams from '../pages/examinations/exam-timetable/CompletedExams.jsx';
+import '../styles/dropdowns.css';
 // Application routes and bootstrap. Sidebar modules live in pages/.
 import * as external0 from "react";
 import * as external1 from "react-router-dom";
@@ -104,7 +109,12 @@ const { default: StudentResult } = StudentResultModule;
 import { Component, useEffect } from 'react'
 import { Navigate, Route, Routes } from 'react-router-dom'
 import ProtectedRoute from './components/ProtectedRoute'
-import CampusWorkspace from './pages/campus/CampusWorkspace'
+import MeetingsEventsWorkspace from './pages/campus/MeetingsEventsWorkspace'
+
+import LibraryWorkspace from './pages/campus/LibraryWorkspace'
+
+import PlacementWorkspace from './pages/campus/PlacementWorkspace'
+
 import { ROLES } from './auth/roles'
 import Dashboard from './pages/Dashboard'
 import LandingPage from './pages/LandingPage'
@@ -143,9 +153,6 @@ import './styles/erp-theme.css'
 import ExaminationSetup from './pages/examinations/examination-setup/ExaminationSetup'
 import ExaminationList from './pages/examinations/examination-setup/ExaminationList'
 import CreateExamination from './pages/examinations/examination-setup/CreateExamination'
-import ExamType from './pages/examinations/examination-setup/ExamType'
-import ExamSchedule from './pages/examinations/examination-setup/ExamSchedule'
-import ExamRules from './pages/examinations/examination-setup/ExamRules'
 import ExamTimetable from './pages/examinations/exam-timetable/ExamTimetable'
 import CreateExamTimetable from './pages/examinations/exam-timetable/CreateExamTimetable'
 import ExamScheduleList from './pages/examinations/exam-timetable/ExamScheduleList'
@@ -153,6 +160,7 @@ import DepartmentExamSchedule from './pages/examinations/exam-timetable/Departme
 import StudentExamSchedule from './pages/examinations/exam-timetable/StudentExamSchedule'
 import HallAllocation from './pages/examinations/exam-timetable/HallAllocation'
 import ExamConfiguration from './pages/examinations/exam-timetable/ExamConfiguration'
+import CompletedExams from './pages/examinations/exam-timetable/CompletedExams'
 import MarksManagement from './pages/examinations/marks-management/MarksManagement'
 import MarksEntry from './pages/examinations/marks-management/MarksEntry'
 import BulkMarksUpload from './pages/examinations/marks-management/BulkMarksUpload'
@@ -311,9 +319,9 @@ function FormValidationGuard() {
             }
           >
               <Route path="/dashboard" element={<Dashboard />} />
-              <Route path="/library" element={<CampusWorkspace module="library" />} />
-              <Route path="/meetings-events" element={<CampusWorkspace module="meetings-events" />} />
-              <Route path="/placement" element={<CampusWorkspace module="placement" />} />
+              <Route path="/library" element={<LibraryWorkspace />} />
+              <Route path="/meetings-events" element={<MeetingsEventsWorkspace />} />
+              <Route path="/placement" element={<PlacementWorkspace />} />
               <Route path="/results" element={<ResultGeneration />} />
               <Route path="/results/semester-result" element={<SemesterResult />} />
               <Route path="/results/department-result" element={<DepartmentResult />} />
@@ -344,12 +352,14 @@ function FormValidationGuard() {
               <Route path="/exam/timetable" element={<ExamTimetable />} />
               <Route path="/exam/hall-allocation" element={<HallAllocation />} />
               <Route path="/exam/configuration" element={<ExamConfiguration />} />
+              <Route path="/examination/completed-exams" element={<CompletedExams />} />
+              <Route path="/examination/completed-exams/:examId" element={<CompletedExams />} />
               <Route path="/examination-setup/*" element={<ExaminationSetup />} />
               <Route path="/examination-setup/examination-list" element={<ExaminationList />} />
               <Route path="/examination-setup/create-examination" element={<CreateExamination />} />
-              <Route path="/examination-setup/exam-type" element={<ExamType />} />
-              <Route path="/examination-setup/exam-schedule" element={<ExamSchedule />} />
-              <Route path="/examination-setup/exam-rules" element={<ExamRules />} />
+              <Route path="/examination-setup/exam-type" element={<Navigate to="/examination-setup/examination-list" replace />} />
+              <Route path="/examination-setup/exam-schedule" element={<Navigate to="/examination-setup/examination-list" replace />} />
+              <Route path="/examination-setup/exam-rules" element={<Navigate to="/examination-setup/examination-list" replace />} />
               <Route path="/exam-timetable/*" element={<ExamTimetable />} />
               <Route path="/exam-timetable/create-exam-timetable" element={<CreateExamTimetable />} />
               <Route path="/exam-timetable/exam-schedule-list" element={<ExamScheduleList />} />

@@ -7,12 +7,12 @@ import { authModule, roomServiceModule, studentServiceModule, facultyServiceModu
 
 export const ExamModuleModule = (() => {
 const { default: ModuleAvailability } = ModuleAvailabilityModule;
-const { useEffect } = external0;
+const { useEffect, useCallback } = external0;
 const { useMemo } = external0;
 const { useState } = external0;
 const { Link } = external1;
 const { useLocation } = external1;
-const { useNavigate } = external1;
+const { useNavigate, useParams } = external1;
 const { ArrowLeft } = external4;
 const { CalendarDays } = external4;
 const { ClipboardList } = external4;
@@ -86,14 +86,14 @@ const routeInfo = {
   halls: ['Hall Allocation', 'Assign examination halls and students for scheduled examinations.'],
   configuration: ['Exam Configuration', 'Manage examination types and department invigilation rules.'],
   student: ['Exam Schedule', 'View your upcoming and completed examination schedules.'],
+  completed: ['Completed Exams', 'View and manage examination schedules that have already been completed.'],
 }
 const dateLabel = (value) => value ? new Date(`${value}T00:00:00`).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '—'
 const dayLabel = (value) => value ? new Date(`${value}T00:00:00`).toLocaleDateString('en-IN', { weekday: 'long' }) : ''
 const timeLabel = (value) => value ? new Date(`2000-01-01T${value}`).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }) : '—'
 const addMinutesToTime = (value,minutes) => { const [hours,mins]=String(value||'09:00').split(':').map(Number);const total=(hours*60+mins+Number(minutes||0))%1440;return `${String(Math.floor(total/60)).padStart(2,'0')}:${String(total%60).padStart(2,'0')}` }
 const today = () => { const now = new Date(); return `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}` }
-const getStatus = (exam) => exam.status === 'Cancelled' ? 'Cancelled' : exam.status === 'Draft' ? 'Draft' : exam.status === 'Published' && exam.examDate > today() ? 'Published' : !exam.examDate ? 'Scheduled' : exam.examDate < today() ? 'Completed' : exam.examDate === today() ? 'Ongoing' : 'Upcoming'
-const exportTimetable = (rows) => { const columns=['examDate','session','startTime','endTime','subjectCode','subjectName','examType','department','branch','batch','semester','section','hallId','status'];const csv=[columns.join(','),...rows.map((row)=>columns.map((key)=>`"${String(row[key]??'').replaceAll('"','""')}"`).join(','))].join('\r\n');const link=document.createElement('a');link.href=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'}));link.download='exam-timetable.csv';link.click();URL.revokeObjectURL(link.href) }
+const getStatus = (exam) => exam.status === 'Cancelled' ? 'Cancelled' : exam.status === 'Completed' ? 'Completed' : exam.status === 'Draft' ? 'Draft' : exam.status === 'Published' && exam.examDate > today() ? 'Published' : !exam.examDate ? 'Scheduled' : exam.examDate < today() ? 'Completed' : exam.examDate === today() ? 'Ongoing' : 'Upcoming'
 const initialFilters = { academicYear: '', examType: '', department: '', course: '', branch: '', batch: '', semester: '', section: '', session: '', status: '', from: '', to: '' }
 const normalizeText = (value) => String(value ?? '').trim().toLowerCase().replace(/[^a-z0-9]/g, '')
 const semesterOptions = (rows) => {
@@ -146,6 +146,7 @@ function Notice({ children, onClose }) { return <div className="exm-notice" role
 function LocalExamModule({ screen }) {
   const location = useLocation()
   const navigate = useNavigate()
+  const { examId: routeExamId } = useParams()
   const [exams, setExams] = useState(getExams)
   const [halls, setHalls] = useState(getHalls)
   const [allocations, setAllocations] = useState(getHallAllocations)
@@ -168,6 +169,8 @@ function LocalExamModule({ screen }) {
   const [masterDataLoading, setMasterDataLoading] = useState(false)
   const [notice, setNotice] = useState(() => location.state?.notice || '')
   const [error, setError] = useState('')
+  const [completedLoading, setCompletedLoading] = useState(screen === 'completed')
+  const [completedError, setCompletedError] = useState('')
   const [search, setSearch] = useState('')
   const [filters, setFilters] = useState(initialFilters)
   const [draftFilters, setDraftFilters] = useState(initialFilters)
@@ -186,8 +189,17 @@ function LocalExamModule({ screen }) {
   const editingExam = query.get('edit') ? exams.find((e) => e.id === query.get('edit')) : null
   const duplicateTemplate = query.get('duplicate') ? exams.find((e) => e.id === query.get('duplicate')) : null
 
-  const reload = () => { setExams(getExams()); setHalls(getHalls()); setAllocations(getHallAllocations()); setStudents(getStudents()) }
-  useEffect(() => { const handler = () => reload(); window.addEventListener('exam-data-updated', handler); return () => window.removeEventListener('exam-data-updated', handler) }, [])
+  const reload = useCallback(() => { setExams(getExams()); setHalls(getHalls()); setAllocations(getHallAllocations()); setStudents(getStudents()) }, [])
+  useEffect(() => {
+    const handler = () => reload()
+    window.addEventListener('exam-data-updated', handler)
+    window.addEventListener('storage', handler)
+    return () => {
+      window.removeEventListener('exam-data-updated', handler)
+      window.removeEventListener('storage', handler)
+    }
+  }, [reload])
+  useEffect(() => { reload() }, [location.pathname, reload])
   useEffect(() => {
     let active=true
     const tasks=[academicService.getAcademicYears(),academicService.getDepartments(),academicService.getCourses(),academicService.getBranches(),academicService.getSemesters(),academicService.getSections(),subjectService.getSubjects({liveOnly:true}),studentService.getAllProfiles({forceRefresh:true}),facultyService.list()]
@@ -240,11 +252,11 @@ function LocalExamModule({ screen }) {
   useEffect(() => { setPage(1) }, [search, filters])
   const student = screen === 'student' ? resolveStudent(students) : null
   const adminReview = screen === 'student' && getUserRole() === 'admin'
-  const scopedExams = screen === 'student' ? (adminReview ? exams.filter((e) => e.status !== 'Draft') : exams.filter((e) => e.status === 'Published' && student && e.department === student.department && e.course === student.course && e.branch === student.branch && e.batch === student.batch && e.semester === student.semester && e.section === student.section)) : exams
+  const scopedExams = screen === 'completed' ? exams.filter((exam) => getStatus(exam) === 'Completed') : screen === 'student' ? (adminReview ? exams.filter((e) => e.status !== 'Draft') : exams.filter((e) => e.status === 'Published' && student && e.department === student.department && e.course === student.course && e.branch === student.branch && e.batch === student.batch && e.semester === student.semester && e.section === student.section)) : exams
   const filtered = useMemo(() => {
     const term = search.toLowerCase().trim()
     return scopedExams.filter((e) => {
-      const values = [e.id, e.examCode, e.subjectCode, e.subjectName, e.department, e.branch, e.batch, e.faculty]
+      const values = screen === 'completed' ? [e.subjectCode, e.subjectName] : [e.id, e.examCode, e.subjectCode, e.subjectName, e.department, e.branch, e.batch, e.faculty]
       return (!term || values.some((v) => String(v || '').toLowerCase().includes(term)))
         && (!filters.academicYear || e.academicYear === filters.academicYear) && (!filters.examType || e.examType === filters.examType)
         && (!filters.department || e.department === filters.department) && (!filters.course || e.course === filters.course) && (!filters.branch || e.branch === filters.branch)
@@ -253,29 +265,58 @@ function LocalExamModule({ screen }) {
         && (!filters.status || getStatus(e) === filters.status || e.status === filters.status)
         && (!filters.from || e.examDate >= filters.from) && (!filters.to || e.examDate <= filters.to)
     })
-  }, [scopedExams, search, filters])
+  }, [scopedExams, search, filters, screen])
   const sorted = [...filtered].sort((a, b) => String(a[sort.key] || '').localeCompare(String(b[sort.key] || '')) * (sort.direction === 'asc' ? 1 : -1))
   const pages = Math.max(1, Math.ceil(sorted.length / pageSize))
   const pageRows = sorted.slice((page - 1) * pageSize, page * pageSize)
   const metrics = { total: filtered.length, upcoming: filtered.filter((e) => ['Upcoming', 'Scheduled','Published'].includes(getStatus(e))).length, completed: filtered.filter((e) => getStatus(e) === 'Completed').length, pending: filtered.filter((e) => e.status === 'Draft').length, theory: filtered.filter((e) => e.subjectType === 'Theory').length, practical: filtered.filter((e) => e.subjectType === 'Practical').length }
   const selectFilter = (key, value) => setDraftFilters((prev) => ({ ...prev, [key]: value, ...(key === 'department' ? { course: '', branch: '' } : {}), ...(key === 'course' ? { branch: '' } : {}), ...(key === 'batch' ? { semester: '' } : {}) }))
   const resetFilters = () => { setDraftFilters(initialFilters); setFilters(initialFilters) }
-  const goBack = () => { if (window.history.length > 1) navigate(-1); else navigate('/exam/timetable') }
   const doDelete = (id) => { deleteExam(id); setConfirm(null); setNotice('Examination schedule deleted.'); reload() }
   const updateStatus = (exam, status) => { try { updateExam(exam.id, { status }); setNotice(`Exam ${status.toLowerCase()}.`); setError(''); reload() } catch (e) { setError(e.message) } }
+  const completedExam = routeExamId ? exams.find((exam) => exam.id === routeExamId && getStatus(exam) === 'Completed') : null
+  useEffect(() => {
+    if (screen !== 'completed') return
+    setCompletedLoading(true)
+    let active = true
+    Promise.resolve().then(() => {
+      if (!active) return
+      try { reload(); setCompletedError('') }
+      catch { setCompletedError('Completed exam data could not be loaded.') }
+      finally { setCompletedLoading(false) }
+    })
+    return () => { active = false }
+  }, [screen, location.pathname, reload])
 
-  return <DashboardLayout><main className="exam-module">
-    <PageHeader title={routeInfo[screen][0]} subtitle={routeInfo[screen][1]} breadcrumb={['Examinations & Results', routeInfo[screen][0]]}>
-      <div className="exm-header-actions"><button className="exm-button" onClick={goBack}><ArrowLeft size={16}/> Back</button>{['list','department','timetable'].includes(screen) && <button className="exm-button exm-button--primary" onClick={() => navigate('/exam/create')}><Plus size={16}/> Create Exam</button>}</div>
+  return <DashboardLayout><main className={`exam-module ${screen === 'timetable' ? 'exam-module--timetable' : ''} ${screen === 'list' ? 'exam-module--schedule-list' : ''}`}>
+    <PageHeader title={screen === 'completed' && routeExamId ? 'Completed Exam Details' : routeInfo[screen][0]} subtitle={routeExamId && screen === 'completed' ? 'Complete information for this completed examination.' : routeInfo[screen][1]} breadcrumb={screen === 'completed' && routeExamId ? ['Examinations & Results', { label: 'Completed Exams', link: '/examination/completed-exams' }, 'Exam Details'] : ['Examinations & Results', routeInfo[screen][0]]} compactSummary={screen === 'list' ? [
+      { label: 'Total Exams', value: metrics.total },
+      { label: 'Upcoming Exams', value: metrics.upcoming },
+      { label: 'Completed Exams', value: metrics.completed, tone: 'completed' },
+      { label: 'Pending Exams', value: metrics.pending, tone: 'warning' },
+      { label: 'Theory Exams', value: metrics.theory },
+      { label: 'Practical Exams', value: metrics.practical },
+    ] : undefined}>
+      <div className="exm-header-actions">{screen === 'department' && <button className="exm-button exm-button--primary" onClick={() => navigate('/exam/create')}><Plus size={16}/> Create Exam</button>}</div>
     </PageHeader>
-    <nav className="exm-nav" aria-label="Exam management">{screen!=='student'&&<><Link className={screen==='timetable'?'active':''} to="/exam/timetable">Timetable</Link><Link className={screen==='list'?'active':''} to="/exam/schedules">Schedule list</Link><Link className={screen==='halls'?'active':''} to="/exam/hall-allocation">Hall allocation</Link></>}<Link className={screen==='student'?'active':''} to="/exam/student-schedule">Exam Schedule</Link></nav>
+    <nav className="exm-nav" aria-label="Exam management">
+      <Link className={screen === 'timetable' ? 'active' : ''} to="/exam/timetable" aria-current={screen === 'timetable' ? 'page' : undefined}>Timetable</Link>
+      <Link className={screen === 'list' ? 'active' : ''} to="/exam/schedules" aria-current={screen === 'list' ? 'page' : undefined}>Schedule list</Link>
+      <Link className={screen === 'halls' ? 'active' : ''} to="/exam/hall-allocation" aria-current={screen === 'halls' ? 'page' : undefined}>Hall allocation</Link>
+      <Link className={screen === 'student' ? 'active' : ''} to="/exam/student-schedule" aria-current={screen === 'student' ? 'page' : undefined}>Exam Schedule</Link>
+      {screen !== 'student' && <Link className={screen === 'completed' ? 'active' : ''} to="/examination/completed-exams" aria-current={screen === 'completed' ? 'page' : undefined}>Completed Exams</Link>}
+    </nav>
     {notice && <Notice onClose={() => setNotice('')}>{notice}</Notice>}{error && <div className="exm-error" role="alert"><AlertTriangle size={18}/>{error}<button onClick={() => setError('')}><X size={15}/></button></div>}
     {screen === 'create' && <CreateForm key={editingExam?.id || duplicateTemplate?.id || 'new'} exam={editingExam || duplicateTemplate} isEdit={!!editingExam} masterOptions={masterOptions} onSaved={(message) => { reload(); setNotice(message); setError(''); if (!editingExam) navigate('/exam/schedules', { state: { notice: message } }) }} onError={setError} onCancel={() => navigate('/exam/schedules')} />}
+    {screen === 'completed' && !routeExamId && <>
+      <FilterPanel filters={draftFilters} activeFilters={filters} masterOptions={masterOptions} open={filtersOpen} onToggle={() => setFiltersOpen((open) => !open)} onChange={selectFilter} onApply={() => { setFilters({ ...draftFilters }); setFiltersOpen(false) }} onReset={() => { resetFilters(); setFiltersOpen(false) }} search={search} onSearch={setSearch} searchPlaceholder="Search by subject code or subject name" showSearch />
+      {completedLoading ? <div className="exm-empty" role="status">Loading completed exams…</div> : completedError ? <div className="exm-error" role="alert"><AlertTriangle size={18}/>{completedError}</div> : <CompletedExamsTable rows={pageRows} halls={halls} onView={(exam) => navigate(`/examination/completed-exams/${exam.id}`)} page={page} pageSize={pageSize} total={sorted.length} onPageChange={setPage} onPageSizeChange={(size) => { setPageSize(size); setPage(1) }} />}
+    </>}
+    {screen === 'completed' && routeExamId && (completedLoading ? <div className="exm-empty" role="status">Loading completed exam details…</div> : completedError ? <div className="exm-error" role="alert"><AlertTriangle size={18}/>{completedError}</div> : completedExam ? <CompletedExamDetails exam={completedExam} halls={halls}/> : <div className="exm-empty" role="alert">Completed exam not found.</div>)}
     {['list','department','timetable','student'].includes(screen) && <>
       {screen === 'student' && <ExamNoticeBoardHeader exams={scopedExams.filter((e) => e.status !== 'Draft')} student={student} adminReview={adminReview} />}
-      {screen !== 'timetable' && screen !== 'student' && <Summary metrics={metrics} />}
-      <FilterPanel filters={draftFilters} activeFilters={filters} masterOptions={masterOptions} open={filtersOpen} onToggle={() => setFiltersOpen((open) => !open)} onChange={selectFilter} onApply={() => { setFilters({ ...draftFilters }); setFiltersOpen(false) }} onReset={() => { resetFilters(); setFiltersOpen(false) }} search={search} onSearch={setSearch} showSearch={screen === 'list' || screen === 'student'} />
-      {screen === 'timetable' && <div className="exm-toolbar"><div className="exm-view-toggle">{[['table','Table'],['calendar','Day-wise'],['semester','Semester-wise'],['department','Department-wise'],['batch','Batch-wise']].map(([key,label])=><button key={key} className={view===key?'active':''} onClick={()=>setView(key)}>{label}</button>)}</div><div className="exm-toolbar__actions"><button className="exm-button" onClick={()=>window.print()}><Printer size={15}/>Print timetable</button><button className="exm-button" onClick={()=>exportTimetable(sorted)}><ClipboardList size={15}/>Export timetable</button></div></div>}
+      {screen !== 'timetable' && screen !== 'student' && screen !== 'list' && <Summary metrics={metrics} />}
+      <FilterPanel filters={draftFilters} activeFilters={filters} masterOptions={masterOptions} open={filtersOpen} onToggle={() => setFiltersOpen((open) => !open)} onChange={selectFilter} onApply={() => { setFilters({ ...draftFilters }); setFiltersOpen(false) }} onReset={() => { resetFilters(); setFiltersOpen(false) }} search={search} onSearch={setSearch} showSearch={screen === 'list' || screen === 'student'} showCreateExam={screen === 'timetable'} onCreateExam={() => navigate('/exam/create')} leadingContent={screen === 'timetable' && <div className="exm-view-toggle">{[['table','Table'],['calendar','Day-wise'],['semester','Semester-wise'],['department','Department-wise'],['batch','Batch-wise']].map(([key,label])=><button key={key} className={view===key?'active':''} onClick={()=>setView(key)}>{label}</button>)}</div>} />
       {screen === 'list' && <div className="exm-toolbar"><span>{filtered.length} schedules</span></div>}
       {screen === 'student' && <StudentSchedule exams={filtered} halls={halls} allocations={allocations} student={student} adminReview={adminReview} />}
       {screen === 'timetable' && view !== 'table' ? <DateGroups exams={filtered} groupBy={view} /> : screen !== 'student' && <ExamTable rows={pageRows} sortable={screen === 'list'} sort={sort} onSort={(key) => setSort((s) => ({ key, direction: s.key === key && s.direction === 'asc' ? 'desc' : 'asc' }))} onView={setDetails} onEdit={(id) => navigate(`/exam/create?edit=${id}`)} onDelete={(e) => setConfirm(e)} onStatus={updateStatus} mode={screen} halls={halls} />}
@@ -336,9 +377,29 @@ function TimetableGenerator({ exams, masterOptions, onClose, onError, onSaved })
   const branches=masterOptions.branches.filter((item)=>!scope.department||!item.department||normalizeText(item.department)===normalizeText(scope.department)).map((item)=>item.value)
   return <section className="exm-panel exm-generator"><div className="exm-form__heading"><div><h2>Generate timetable</h2><p>Creates weekday schedules as drafts. Review the generated dates before publishing.</p></div><button className="exm-button" onClick={onClose} aria-label="Close timetable generator">Close</button></div><div className="exm-form-grid"><Field label="Academic Year"><select value={scope.academicYear} onChange={(e)=>choose('academicYear',e.target.value)}>{masterOptions.academicYears.map((year)=><option key={year}>{year}</option>)}</select></Field><Field label="Exam Type"><select value={scope.examType} onChange={(e)=>choose('examType',e.target.value)}>{getExamTypes().filter((type)=>type.enabled).map((type)=><option key={type.name}>{type.name}</option>)}</select></Field><Field label="Department"><select value={scope.department} onChange={(e)=>choose('department',e.target.value)}><option value="">Select department</option>{masterOptions.departments.map((name)=><option key={name}>{name}</option>)}</select></Field><Field label="Branch"><select value={scope.branch} onChange={(e)=>choose('branch',e.target.value)}><option value="">Select branch</option>{branches.map((branch)=><option key={branch}>{branch}</option>)}</select></Field><Field label="Batch"><select value={scope.batch} onChange={(e)=>choose('batch',e.target.value)}><option value="">Select batch</option>{masterOptions.batches.map((batch)=><option key={batch}>{batch}</option>)}</select></Field><Field label="Semester"><select value={scope.semester} onChange={(e)=>choose('semester',e.target.value)}><option value="">Select semester</option>{masterOptions.semesters.filter((semester)=>!examType?.applicableSemesters?.length||examType.applicableSemesters.includes(semester)).map((semester)=><option key={semester}>{semester}</option>)}</select></Field><Field label="Section"><select value={scope.section} onChange={(e)=>choose('section',e.target.value)}><option value="">Select section</option>{masterOptions.sections.map((section)=><option key={section}>{section}</option>)}</select></Field><Field label="Start date"><input type="date" min={today()} value={scope.startDate} onChange={(e)=>choose('startDate',e.target.value)}/></Field><Field label="Session"><select value={scope.session} onChange={(e)=>choose('session',e.target.value)}>{masterOptions.sessions.map((item)=><option key={item.code} value={item.code}>{item.code} - {item.label}</option>)}</select></Field></div><div className="exm-toolbar__actions"><button className="exm-button exm-button--primary" onClick={generate}>Generate timetable</button></div>{rows.length>0&&<><div className="exm-generator-summary">{rows.length} schedules ready for review {skipped>0&&<span> · {skipped} subjects skipped</span>}</div><div className="exm-config-table-wrap"><table className="exm-table"><thead><tr>{['Date','Day','Session','Subject','Type','Hall','Status'].map((label)=><th key={label}>{label}</th>)}</tr></thead><tbody>{rows.map((row)=><tr key={`${row.subjectCode}-${row.examDate}`}><td>{dateLabel(row.examDate)}</td><td>{dayLabel(row.examDate)}</td><td>{row.session} · {timeLabel(row.startTime)} - {timeLabel(row.endTime)}</td><td>{row.subjectCode} · {row.subjectName}</td><td>{row.subjectType}</td><td>{getHalls().find((hall)=>hall.id===row.hallId)?.name||'Not required'}</td><td><Status value="Draft"/></td></tr>)}</tbody></table></div><div className="exm-generator-actions"><button className="exm-button" onClick={()=>commit('Draft')}>Save as drafts</button><button className="exm-button exm-button--primary" onClick={()=>commit('Published')}>Approve &amp; publish</button></div></>}</section>
 }
-function FilterPanel({ filters, activeFilters, masterOptions, open, onToggle, onChange, onApply, onReset, search, onSearch, showSearch }) {
+function CompletedExamsTable({ rows, halls, onView, page, pageSize, total, onPageChange, onPageSizeChange }) {
+  const headers = ['Date', 'Exam Type', 'Subject Code', 'Subject', 'Department', 'Batch', 'Semester', 'Time', 'Hall', 'Invigilator', 'Status', 'Actions']
+  const pages = Math.max(1, Math.ceil(total / pageSize))
+  return <>
+    <div className="exm-panel exm-table-wrap exm-completed-table-wrap"><table className="exm-table exm-completed-table"><thead><tr>{headers.map((header) => <th key={header}>{header}</th>)}</tr></thead><tbody>{rows.map((exam) => <tr key={exam.id}>
+      <td><strong>{dateLabel(exam.examDate)}</strong><small>{dayLabel(exam.examDate)}</small></td><td>{exam.examType || '—'}</td><td>{exam.subjectCode || '—'}</td><td>{exam.subjectName || '—'}</td><td>{exam.department || exam.branch || '—'}</td><td>{exam.batch || '—'}</td><td>{exam.semester || '—'}</td><td>{timeLabel(exam.startTime)} – {timeLabel(exam.endTime)}</td><td>{halls.find((hall) => String(hall.id) === String(exam.hallId))?.name || exam.hallId || '—'}</td><td>{getAssignedInvigilator(exam)}</td><td><Status value="Completed" /></td><td><button className="exm-completed-view" onClick={() => onView(exam)}>View Details</button></td>
+    </tr>)}</tbody></table>{!rows.length && <div className="exm-empty"><ClipboardList size={28}/><strong>No completed exams found.</strong></div>}</div>
+    {total > 0 && <div className="exm-pagination"><span>Showing {(page - 1) * pageSize + 1}–{Math.min(page * pageSize, total)} of {total}</span><label>Rows <select value={pageSize} onChange={(event) => onPageSizeChange(Number(event.target.value))}><option value={10}>10</option><option value={25}>25</option><option value={50}>50</option></select></label><button disabled={page <= 1} onClick={() => onPageChange(page - 1)}>Previous</button><b>{page} / {pages}</b><button disabled={page >= pages} onClick={() => onPageChange(page + 1)}>Next</button></div>}
+  </>
+}
+function CompletedExamDetails({ exam, halls }) {
+  const values = [
+    ['Exam Type', exam.examType], ['Subject Code', exam.subjectCode], ['Subject Name', exam.subjectName], ['Department', exam.department || exam.branch],
+    ['Batch', exam.batch], ['Semester', exam.semester], ['Academic Year', exam.academicYear], ['Exam Date', dateLabel(exam.examDate)],
+    ['Day', dayLabel(exam.examDate)], ['Start Time', timeLabel(exam.startTime)], ['End Time', timeLabel(exam.endTime)],
+    ['Hall / Room', halls.find((hall) => String(hall.id) === String(exam.hallId))?.name || exam.hallId || 'Unassigned'],
+    ['Invigilator', getAssignedInvigilator(exam)], ['Status', 'Completed'],
+  ]
+  return <section className="exm-panel exm-completed-details"><h2>Exam Details</h2><div className="exm-detail-grid">{values.map(([label, value]) => <div key={label}><small>{label}</small>{label === 'Status' ? <Status value="Completed"/> : <strong>{value || '—'}</strong>}</div>)}</div></section>
+}
+function FilterPanel({ filters, activeFilters, masterOptions, open, onToggle, onChange, onApply, onReset, search, onSearch, showSearch, showCreateExam, onCreateExam, leadingContent, searchPlaceholder = 'Search ID, subject, department, branch, batch or faculty' }) {
   const activeCount = Object.values(activeFilters).filter(Boolean).length
-  return <div className="exm-filter-control"><div className="exm-filter-toolbar">{showSearch && <label className="exm-search"><Search size={18}/><input value={search} onChange={(e) => onSearch(e.target.value)} placeholder="Search ID, subject, department, branch, batch or faculty" /></label>}<div className="exm-filter-toolbar__actions"><button className={`exm-button exm-filter-trigger ${open ? 'is-open' : ''}`} aria-expanded={open} onClick={onToggle}><FilterIcon size={18}/> Filters{activeCount > 0 && <span className="exm-filter-count">{activeCount}</span>}<ChevronDown size={17}/></button></div></div>{open && <section className="exm-panel exm-filters"><div className="exm-filter-grid">
+  return <div className="exm-filter-control"><div className={`exm-filter-toolbar ${showCreateExam ? 'has-create-exam' : ''}`}>{leadingContent}{showSearch && <label className="exm-search"><Search size={18}/><input value={search} onChange={(e) => onSearch(e.target.value)} placeholder={searchPlaceholder} /></label>}<div className="exm-filter-toolbar__actions"><button className={`exm-button exm-filter-trigger ${open ? 'is-open' : ''}`} aria-expanded={open} onClick={onToggle}><FilterIcon size={18}/> Filters{activeCount > 0 && <span className="exm-filter-count">{activeCount}</span>}<ChevronDown size={17}/></button>{showCreateExam && <button className="exm-button exm-button--primary" onClick={onCreateExam}><Plus size={16}/> Create Exam</button>}</div></div>{open && <section className="exm-panel exm-filters"><div className="exm-filter-grid">
     <Field label="Academic Year"><select value={filters.academicYear} onChange={(e) => onChange('academicYear', e.target.value)}><option value="">All academic years</option>{masterOptions.academicYears.map((x) => <option key={x}>{x}</option>)}</select></Field>
     <Field label="Exam Type"><select value={filters.examType} onChange={(e) => onChange('examType', e.target.value)}><option value="">All exam types</option>{getExamTypes().filter((type) => type.enabled).map((type) => <option key={type.name}>{type.name}</option>)}</select></Field>
     <Field label="Department"><select value={filters.department} onChange={(e) => onChange('department', e.target.value)}><option value="">All departments</option>{masterOptions.departments.map((x) => <option key={x}>{x}</option>)}</select></Field>
