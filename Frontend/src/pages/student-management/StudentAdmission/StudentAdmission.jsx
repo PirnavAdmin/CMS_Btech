@@ -1,3 +1,100 @@
+// Pages and helpers in this module retain their own isolated scopes.
+import * as external0 from "react";
+import * as external1 from "react-router-dom";
+import * as external3 from "react-icons/fi";
+import { useCollegeStateModule, useToastStateModule, ExportMenuModule, DashboardLayoutModule, FilterPanelModule, TablePaginationModule, CompactSummaryModule, StatusBadgeModule, AcademicContextModule } from "../../../components/components.jsx";
+import { admissionPreviewModule, recordDetailSectionsModule, exportColumnsModule, academicYearUtilsModule } from "../../../components/components.jsx";
+import { newestFirstModule, exportProvenanceModule, apiEndpointsModule, collegeApiModule, eventBusModule, studentCanonicalModelModule } from "../../../API/apiendpoints.jsx";
+
+export const StudentAdmissionModule = (() => {
+const { default: useCollegeState } = useCollegeStateModule;
+const { admissionPreview } = admissionPreviewModule;
+const { newestFirst } = newestFirstModule;
+const { rememberCreated } = newestFirstModule;
+const { admissionDetailSections } = recordDetailSectionsModule;
+const { default: useToastState } = useToastStateModule;
+const { isApiResult } = exportProvenanceModule;
+const { default: ExportMenu } = ExportMenuModule;
+const { PrintDetailsButton } = ExportMenuModule;
+const { admissionColumns } = exportColumnsModule;
+const { useCallback } = external0;
+const { useEffect } = external0;
+const { useMemo } = external0;
+const { useRef } = external0;
+const { useState } = external0;
+const { FiAlertCircle } = external3;
+const { FiArrowLeft } = external3;
+const { FiArrowRight } = external3;
+const { FiBookOpen } = external3;
+const { FiCamera } = external3;
+const { FiCheck } = external3;
+const { FiCheckCircle } = external3;
+const { FiChevronRight } = external3;
+const { FiClock } = external3;
+const { FiCreditCard } = external3;
+const { FiEdit2 } = external3;
+const { FiFileText } = external3;
+const { FiGrid } = external3;
+const { FiHome } = external3;
+const { FiInbox } = external3;
+const { FiPhone } = external3;
+const { FiPlus } = external3;
+const { FiSave } = external3;
+const { FiSearch } = external3;
+const { FiShield } = external3;
+const { FiTrash2 } = external3;
+const { FiUploadCloud } = external3;
+const { FiUser } = external3;
+const { FiUsers } = external3;
+const { FiX } = external3;
+const { useLocation } = external1;
+const { useNavigate } = external1;
+const { useParams } = external1;
+const { default: DashboardLayout } = DashboardLayoutModule;
+const { default: FilterPanel } = FilterPanelModule;
+const { default: TablePagination } = TablePaginationModule;
+const { PAGE_SIZE } = TablePaginationModule;
+const { default: CompactSummary } = CompactSummaryModule;
+const { default: StatusBadge } = StatusBadgeModule;
+const { academicYearApi } = apiEndpointsModule;
+const { branchApi } = apiEndpointsModule;
+const { courseApi } = apiEndpointsModule;
+const { lookupIndianPincode } = apiEndpointsModule;
+const { studentAdmissionApi } = apiEndpointsModule;
+const { studentAcademicDetailsApi } = apiEndpointsModule;
+const { studentAdmissionStatusApi } = apiEndpointsModule;
+const { studentDocumentApi } = apiEndpointsModule;
+const { studentFeeApi } = apiEndpointsModule;
+const { studentParentApi } = apiEndpointsModule;
+const { studentPreviousEducationApi } = apiEndpointsModule;
+const { getOperationalAcademicYearOptions } = academicYearUtilsModule;
+const { resolveAcademicYearId } = academicYearUtilsModule;
+const { getColleges } = collegeApiModule;
+const { getSemesters } = collegeApiModule;
+const { default: eventBus } = eventBusModule;
+const { ERP_EVENTS } = eventBusModule;
+const { apiAssetUrl } = studentCanonicalModelModule;
+const { blankAddress } = studentCanonicalModelModule;
+const { createEmptyCanonicalStudent } = studentCanonicalModelModule;
+const { dateInputValue } = studentCanonicalModelModule;
+const { DOCUMENTS_CONFIG } = studentCanonicalModelModule;
+const { formatAddress } = studentCanonicalModelModule;
+const { formatDateTime } = studentCanonicalModelModule;
+const { formatDisplay } = studentCanonicalModelModule;
+const { formatMoney } = studentCanonicalModelModule;
+const { HOSTEL_FEES_DEFAULT } = studentCanonicalModelModule;
+const { normalizeAddressObj } = studentCanonicalModelModule;
+const { normalizeAdmissionStatus } = studentCanonicalModelModule;
+const { normalizeCanonicalStudent } = studentCanonicalModelModule;
+const { readAdmissionPhoto } = studentCanonicalModelModule;
+const { REQUIRED_FIELDS } = studentCanonicalModelModule;
+const { saveAdmissionPhoto } = studentCanonicalModelModule;
+const { studentFullName } = studentCanonicalModelModule;
+const { studentInitials } = studentCanonicalModelModule;
+const { studentQuotaDisplay } = studentCanonicalModelModule;
+const { tenDigitMobile } = studentCanonicalModelModule;
+const { useAcademic } = AcademicContextModule;
+/* Imports for isolated regression tests:
 import useCollegeState from '../../../hooks/useCollegeState'
 import { admissionPreview } from '../../../utils/admissionPreview'
 import { newestFirst, rememberCreated } from '../../../utils/newestFirst'
@@ -49,7 +146,8 @@ import { useAcademic } from '../../../context/AcademicContext'
 import './StudentAdmission.css'
 import './AdmissionFixes.css'
 import './DocumentPreviewFixes.css'
-
+*/
+// #region pages/student-management/StudentAdmission/StudentAdmission.jsx
 const STEPS = ['Basic Information', 'Contact & Address', 'Parent / Guardian', 'Academic Information', 'Previous Education', 'Admission Details', 'Fees', 'Documents Upload']
 const STEP_ICONS = [FiUser, FiPhone, FiUsers, FiBookOpen, FiFileText, FiHome, FiInbox, FiUploadCloud]
 const STATUS = { DRAFT: 'Draft', PENDING: 'Pending', SUBMITTED: 'Submitted', APPLICATION_SUBMITTED: 'Submitted', UNDER_REVIEW: 'Under Review', VERIFIED: 'Verified', APPROVED: 'Approved', CORRECTION_REQUIRED: 'Correction Required', REJECTED: 'Rejected' }
@@ -2698,7 +2796,7 @@ function AdmissionDetails({ approval = false }) {
   );
 }
 
-export default function StudentAdmission() {
+/* export default */ function StudentAdmission() {
   const { pathname } = useLocation()
   let screen = <AdmissionList />
   if (pathname.endsWith('/new') || pathname.endsWith('/edit')) screen = <AdmissionForm />
@@ -2706,3 +2804,10 @@ export default function StudentAdmission() {
   else if (/\/admissions\/[^/]+$/.test(pathname)) screen = <AdmissionDetails />
   return <DashboardLayout><main className="student-admission">{screen}</main></DashboardLayout>
 }
+// #endregion pages/student-management/StudentAdmission/StudentAdmission.jsx
+return {
+  get default() { return StudentAdmission; }
+};
+})();
+
+export const StudentAdmission = StudentAdmissionModule.default;

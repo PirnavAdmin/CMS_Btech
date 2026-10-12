@@ -1,2 +1,0 @@
-import DashboardLayout from '../layouts/DashboardLayout'
-export default function MySubjects() { return <DashboardLayout><div className="erp-page"><header className="erp-page-heading"><div><p className="erp-eyebrow">Academic workspace</p><h1>My Subjects</h1><p>Access your assigned or enrolled subjects.</p></div></header><section className="erp-empty-state"><span aria-hidden="true">SUB</span><h2>No subjects assigned</h2><p>Your subjects will appear here.</p></section></div></DashboardLayout> }
