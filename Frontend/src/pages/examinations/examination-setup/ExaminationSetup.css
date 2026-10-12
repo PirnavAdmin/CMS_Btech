@@ -16,7 +16,7 @@
 .examination-setup__filter-button,.examination-setup__filters button{display:inline-flex;min-height:40px;align-items:center;justify-content:center;gap:8px;padding:8px 14px;border:1px solid var(--es-line);border-radius:8px;background:var(--surface);color:var(--text-secondary);font:inherit;font-weight:600;cursor:pointer}
 .examination-setup__header-actions{display:flex;flex:0 0 auto!important;flex-wrap:wrap;align-items:center;justify-content:flex-end;gap:10px;margin-left:auto}
 .examination-setup__filter-button[aria-expanded=true]{border-color:var(--brand);background:var(--brand-soft);color:var(--brand)}
-.examination-setup__tabs{display:flex;gap:0;overflow-x:auto;border-bottom:1px solid var(--es-line)}
+.examination-setup__tabs{display:flex;gap:0;overflow:hidden;border-bottom:1px solid var(--es-line)}
 .examination-setup__tabs a{position:relative;flex-shrink:0;padding:14px 17px;color:var(--text-secondary);font-size:12px;font-weight:600;text-decoration:none;white-space:nowrap}
 .examination-setup__tabs a:hover,.examination-setup__tabs a.active{color:var(--brand)}
 .examination-setup__tabs a.active:after{position:absolute;right:14px;bottom:-1px;left:14px;height:2px;background:var(--brand);content:""}
@@ -31,6 +31,13 @@
 .examination-setup__filters{display:flex;flex-wrap:wrap;align-items:flex-end;gap:14px;margin:16px 20px 0;padding:16px;border:1px solid var(--es-line);border-radius:10px;background:var(--es-soft)}
 .examination-setup__filters label{display:grid;min-width:180px;gap:6px;color:var(--text-secondary);font-size:12px;font-weight:600}
 .examination-setup__filters select,.examination-setup__form input,.examination-setup__form textarea,.examination-setup__form select{width:100%;min-width:0;min-height:40px;padding:9px 12px;border:1px solid var(--es-line);border-radius:8px;background:var(--surface);color:var(--text-primary);font:inherit}
+.examination-setup__toolbar-actions{display:flex;flex:0 0 auto;align-items:center;justify-content:flex-end;gap:10px}
+.examination-setup__toolbar-actions>.examination-setup__filter-button,.examination-setup__toolbar-actions>.examination-setup__primary{display:inline-flex;min-height:36px;align-items:center;justify-content:center;gap:8px;padding:6px 12px;white-space:nowrap}
+.examination-setup__toolbar-actions>.examination-setup__filter-button svg{width:15px;height:15px}
+.examination-setup__filters--list{display:grid;grid-template-columns:repeat(6,minmax(110px,1fr));align-items:end;gap:10px;margin:0 8px;padding:14px 12px;border-top:0;border-radius:0 0 10px 10px;background:#edf5ff}
+.examination-setup__filters--list label{min-width:0;gap:6px;font-size:11px}
+.examination-setup__filters--list select{min-height:36px;padding:7px 10px;font-size:12px}
+.examination-setup__filters--list>button{grid-column:1/-1;justify-self:end;min-height:32px;padding:5px 10px}
 .examination-setup__count{margin:0;padding:12px 20px;color:var(--text-muted);font-size:12px}
 .examination-setup__table-wrap{width:100%;overflow-x:auto}
 .examination-setup__table-wrap table{width:100%;border-collapse:collapse;text-align:left}
@@ -81,5 +88,7 @@
 .examination-setup__success{margin:14px 20px;padding:10px 14px;border:1px solid #b7e4cb;border-radius:8px;background:#effaf3;color:#167447;font-size:12px}
 .examination-setup__error{margin:16px 0 0;padding:10px 14px;border:1px solid #fecaca;border-radius:8px;background:#fef2f2;color:#b91c1c;font-size:12px}
 @media(max-width:760px){.examination-setup__header{grid-template-columns:1fr}.examination-setup__summary{max-width:380px}}
+@media(max-width:900px){.examination-setup__filters--list{grid-template-columns:repeat(3,minmax(0,1fr))}}
 @media(max-width:600px){.examination-setup__header h1{font-size:24px}.examination-setup__card-header{padding:16px}.examination-setup__header-actions{width:100%;justify-content:flex-start}.examination-setup__tabs a{padding:13px 12px}.examination-setup__toolbar{padding:16px 16px 0}.examination-setup__search{flex-basis:100%}.examination-setup__form-wrap{padding:18px 16px}.examination-setup__form{grid-template-columns:1fr}.examination-setup__form label.wide,.examination-setup__form footer{grid-column:1}.examination-setup__inline-form{margin:16px;padding:15px}}
+@media(max-width:600px){.examination-setup__toolbar--list{margin:0 8px;padding:8px}.examination-setup__toolbar-actions{width:100%;flex-wrap:wrap;justify-content:flex-start}.examination-setup__toolbar-actions>*{flex:1 1 auto}.examination-setup__filters--list{grid-template-columns:repeat(2,minmax(0,1fr));margin:0 8px;padding:12px}.examination-setup__filters--list>button{grid-column:1/-1}}
 @media(max-width:600px){.examination-setup__modal-backdrop{padding:10px}.examination-setup__modal{max-height:calc(100dvh - 20px);padding:18px}.examination-setup__modal .examination-setup__form{grid-template-columns:1fr}.examination-setup__modal .examination-setup__form .wide,.examination-setup__modal .examination-setup__form footer{grid-column:1}}

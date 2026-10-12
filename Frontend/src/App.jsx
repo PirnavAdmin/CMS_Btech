@@ -46,9 +46,6 @@ import './styles/erp-theme.css'
 import ExaminationSetup from './pages/examinations/examination-setup/ExaminationSetup'
 import ExaminationList from './pages/examinations/examination-setup/ExaminationList'
 import CreateExamination from './pages/examinations/examination-setup/CreateExamination'
-import ExamType from './pages/examinations/examination-setup/ExamType'
-import ExamSchedule from './pages/examinations/examination-setup/ExamSchedule'
-import ExamRules from './pages/examinations/examination-setup/ExamRules'
 import ExamTimetable from './pages/examinations/exam-timetable/ExamTimetable'
 import CreateExamTimetable from './pages/examinations/exam-timetable/CreateExamTimetable'
 import ExamScheduleList from './pages/examinations/exam-timetable/ExamScheduleList'
@@ -252,9 +249,9 @@ export default function App() {
               <Route path="/examination-setup/*" element={<ExaminationSetup />} />
               <Route path="/examination-setup/examination-list" element={<ExaminationList />} />
               <Route path="/examination-setup/create-examination" element={<CreateExamination />} />
-              <Route path="/examination-setup/exam-type" element={<ExamType />} />
-              <Route path="/examination-setup/exam-schedule" element={<ExamSchedule />} />
-              <Route path="/examination-setup/exam-rules" element={<ExamRules />} />
+              <Route path="/examination-setup/exam-type" element={<Navigate to="/examination-setup/examination-list" replace />} />
+              <Route path="/examination-setup/exam-schedule" element={<Navigate to="/examination-setup/examination-list" replace />} />
+              <Route path="/examination-setup/exam-rules" element={<Navigate to="/examination-setup/examination-list" replace />} />
               <Route path="/exam-timetable/*" element={<ExamTimetable />} />
               <Route path="/exam-timetable/create-exam-timetable" element={<CreateExamTimetable />} />
               <Route path="/exam-timetable/exam-schedule-list" element={<ExamScheduleList />} />
@@ -356,3 +353,6 @@ export default function App() {
     </AppErrorBoundary>
   )
 }
+
+
+
