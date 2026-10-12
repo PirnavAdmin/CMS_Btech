@@ -227,8 +227,8 @@ function StructureRowActions({ name, actions }) {
   }, [position])
   const toggle = () => {
     if (position) { setPosition(null); return }
-    const rect = trigger.current.getBoundingClientRect(), height = actions.length * 36 + 10
-    setPosition({ top: rect.bottom + height > window.innerHeight ? Math.max(8, rect.top - height - 4) : rect.bottom + 4, left: Math.max(8, Math.min(rect.right - 190, window.innerWidth - 198)) })
+    const rect = trigger.current.getBoundingClientRect()
+    setPosition({ top: rect.bottom + 4, maxHeight: Math.max(0, window.innerHeight - rect.bottom - 12), overflowY: 'auto', left: Math.max(8, Math.min(rect.right - 190, window.innerWidth - 198)) })
   }
   return <><button ref={trigger} className="fm-structure-more" aria-label={`Actions for ${name}`} aria-expanded={Boolean(position)} aria-controls={position ? id : undefined} onClick={toggle}><FiMoreVertical /></button>{position && createPortal(<div ref={menu} id={id} className="fm-structure-action-popover" role="group" aria-label={`Actions for ${name}`} style={position}>{actions.map(({ label, icon: Icon, run, danger }) => <button key={label} className={danger ? 'fm-delete-action' : ''} onClick={() => { setPosition(null); trigger.current?.focus(); run() }}>{Icon && <Icon />}{label}</button>)}</div>, document.body)}</>
 }
