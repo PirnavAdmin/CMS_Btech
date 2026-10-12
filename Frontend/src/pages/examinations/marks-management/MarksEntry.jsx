@@ -1,6 +1,16 @@
 import { useEffect, useMemo, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { FiEdit2, FiPlus, FiSearch, FiTrash2, FiX } from 'react-icons/fi'
+import {
+  FiAward,
+  FiBookOpen,
+  FiCheckCircle,
+  FiEdit2,
+  FiPlus,
+  FiSearch,
+  FiTrash2,
+  FiX,
+  FiXCircle,
+} from 'react-icons/fi'
 import DashboardLayout from '../../../layouts/DashboardLayout'
 import PageHeader from '../../../components/PageHeader'
 import EmptyState from '../../../components/EmptyState'
@@ -233,6 +243,69 @@ export default function MarksEntry() {
 
   const allRows = draftRows
 
+  const summaryStats = useMemo(() => {
+    const results = allRows.map(row => {
+      const summary = getMarksSummary(row)
+      const percentage = Number.parseFloat(
+        row.percentage || summary.percentage
+      )
+
+      return {
+        status: row.examStatus || summary.examStatus,
+        percentage,
+      }
+    })
+    const scoredRows = results.filter(row =>
+      Number.isFinite(row.percentage)
+    )
+    const passedCount = results.filter(
+      row => row.status === 'Pass'
+    ).length
+    const failedCount = results.filter(
+      row => row.status === 'Fail'
+    ).length
+    const passRate = allRows.length
+      ? ((passedCount / allRows.length) * 100).toFixed(1)
+      : '0.0'
+    const average = scoredRows.length
+      ? scoredRows.reduce(
+        (total, row) => total + row.percentage,
+        0
+      ) / scoredRows.length
+      : 0
+
+    return [
+      {
+        label: 'Total Records',
+        value: allRows.length,
+        detail: 'Submitted marks',
+        icon: FiBookOpen,
+        tone: 'blue',
+      },
+      {
+        label: 'Passed Students',
+        value: passedCount,
+        detail: `${passRate}% pass rate`,
+        icon: FiCheckCircle,
+        tone: 'green',
+      },
+      {
+        label: 'Failed Students',
+        value: failedCount,
+        detail: 'Needs attention',
+        icon: FiXCircle,
+        tone: 'red',
+      },
+      {
+        label: 'Average Score',
+        value: `${average.toFixed(1)}%`,
+        detail: 'Across scored records',
+        icon: FiAward,
+        tone: 'purple',
+      },
+    ]
+  }, [allRows])
+
   const academicOptions = useMemo(
     () => ({
       academicYear: academicYears
@@ -447,13 +520,21 @@ export default function MarksEntry() {
   const filtered = useMemo(
     () =>
       allRows.filter(row => {
-        const searchText =
-          `${row.subjectCode || ''} ${row.subjectName ||
-            row.subject ||
-            ''
-            } ${row.examType || ''} ${row.course || ''
-            } ${row.branch || ''} ${row.section || ''
-            }`.toLowerCase()
+        const searchText = [
+          row.studentName,
+          row.registrationNumber,
+          row.subjectCode,
+          row.subjectName || row.subject,
+          row.examType,
+          row.course,
+          row.branch,
+          row.semester,
+          row.section,
+          row.academicYear,
+        ]
+          .filter(Boolean)
+          .join(' ')
+          .toLowerCase()
 
         const rowValues = {
           academicYear:
@@ -678,6 +759,24 @@ export default function MarksEntry() {
       .filter(Boolean),
   }
 
+  const savedAssessmentOptions = useMemo(() => ({
+    academicYear: allRows.map(row => row.academicYear),
+    course: allRows.map(row => row.course),
+    branch: allRows.map(row => row.branch),
+    semester: allRows.map(row => row.semester),
+    section: allRows.map(row => row.section),
+    registrationNumber: allRows.map(row => row.registrationNumber),
+    studentName: allRows.map(row => row.studentName),
+    subject: allRows.map(row => row.subjectName || row.subject),
+    subjectCode: allRows.map(row => row.subjectCode),
+    examType: allRows.map(row => row.examType),
+    assessmentType: allRows.map(row => row.assessmentType),
+    examDate: allRows.map(row => row.examDate),
+    maximumMarks: allRows.flatMap(row => [row.maximumMarks, row.maxExternal]),
+    passingMarks: allRows.map(row => row.passingMarks),
+    studentMarks: allRows.map(row => row.studentMarks),
+  }), [allRows])
+
   const updateAssessment = (
     key,
     value
@@ -692,6 +791,24 @@ export default function MarksEntry() {
             ) ===
             normalized(value)
         )
+        : null
+
+    const matchedSavedSubject =
+      key === 'subject'
+        ? allRows.find(row => {
+          const sameSubject = normalized(
+            row.subjectName || row.subject
+          ) === normalized(value)
+          const sameBranch =
+            !assessment.branch ||
+            normalized(row.branch) === normalized(assessment.branch)
+          const sameSemester =
+            !assessment.semester ||
+            semesterNumber(row.semester) ===
+              semesterNumber(assessment.semester)
+
+          return sameSubject && sameBranch && sameSemester
+        })
         : null
 
     const matchedStudent = [
@@ -721,6 +838,7 @@ export default function MarksEntry() {
         ? {
           subjectCode:
             matchedSubject?.subjectCode ||
+            matchedSavedSubject?.subjectCode ||
             '',
         }
         : {}),
@@ -869,6 +987,29 @@ export default function MarksEntry() {
 
         <MarksModuleNav />
 
+        <section
+          className="marks-entry-summary"
+          aria-label="Marks summary"
+        >
+          {summaryStats.map(
+            ({ label, value, detail, icon: Icon, tone }) => (
+              <article
+                className={`marks-entry-summary__card marks-entry-summary__card--${tone}`}
+                key={label}
+              >
+                <span className="marks-entry-summary__icon">
+                  <Icon aria-hidden="true" />
+                </span>
+                <div className="marks-entry-summary__content">
+                  <span>{label}</span>
+                  <strong>{value}</strong>
+                  <small>{detail}</small>
+                </div>
+              </article>
+            )
+          )}
+        </section>
+
         <article className="erp-card marks-entry-card">
           <header className="erp-card-header marks-entry-card__header">
             <div>
@@ -877,8 +1018,7 @@ export default function MarksEntry() {
               </h2>
 
               <p className="erp-card-subtitle">
-                Review submitted marks by
-                subject, exam and class.
+                Review and manage submitted marks with compact, high-density records.
               </p>
             </div>
           </header>
@@ -1036,7 +1176,7 @@ export default function MarksEntry() {
 
                 <input
                   aria-label="Search marks records"
-                  placeholder="Search subject, exam, course or section"
+                  placeholder="Search student, reg number, subject, exam or class"
                   value={query}
                   onChange={event => {
                     setQuery(
@@ -1264,6 +1404,9 @@ export default function MarksEntry() {
                                 key
                               ] || []),
                               ...(suggestionOptions[
+                                key
+                              ] || []),
+                              ...(savedAssessmentOptions[
                                 key
                               ] || []),
                             ])
@@ -1576,179 +1719,141 @@ export default function MarksEntry() {
             )}
 
           <div className="marks-entry-table-wrap">
-            <table className="erp-table">
+            <table className="erp-table marks-entry-records-table">
+              <colgroup>
+                <col className="marks-entry-col-student" />
+                <col className="marks-entry-col-academic" />
+                <col className="marks-entry-col-subject" />
+                <col className="marks-entry-col-exam" />
+                <col className="marks-entry-col-score" />
+                <col className="marks-entry-col-result" />
+                <col className="marks-entry-col-actions" />
+              </colgroup>
               <thead>
                 <tr>
                   {[
-                    'Academic Year',
-                    'Course',
-                    'Branch',
-                    'Semester',
-                    'Section',
-                    'Registration Number',
-                    'Student Name',
+                    'Student Details',
+                    'Class & Academic',
                     'Subject',
-                    'Subject Code',
-                    'Exam Type',
-                    'Assessment Type',
-                    'Exam Date',
-                    'Max Marks',
-                    'Pass Marks',
-                    'Student Marks',
-                    'Exam Status',
-                    'Percentage',
+                    'Exam & Assessment',
+                    'Marks Scored',
+                    'Result & %',
+                    'Actions',
                   ].map(label => (
                     <th key={label}>
                       {label}
                     </th>
                   ))}
 
-                  <th>Actions</th>
                 </tr>
               </thead>
 
               <tbody>
-                {visible.map(
-                  (row, index) => {
-                    const summary =
-                      getMarksSummary(row)
+                {visible.map((row, index) => {
+                  const summary = getMarksSummary(row)
+                  const result = row.examStatus || summary.examStatus
+                  const resultClass = result === 'Pass'
+                    ? 'is-pass'
+                    : result === 'Fail'
+                      ? 'is-fail'
+                      : 'is-pending'
+                  const percentage = row.percentage || summary.percentage
+                  const studentName = row.studentName || row.registrationNumber || 'Student'
+                  const score = row.studentMarks !== '' && row.studentMarks != null
+                    ? row.studentMarks
+                    : '—'
+                  const maximum = row.maximumMarks || row.maxExternal || '—'
+                  const examDate = row.examDate
+                    ? String(row.examDate).replace('T', ' ').slice(0, 16)
+                    : ''
 
-                    return (
-                      <tr
-                        key={
-                          row.id ||
-                          `${row.subjectCode}-${row.examType}-${index}`
-                        }
-                      >
-                        <td>
-                          {row.academicYear ||
-                            '—'}
-                        </td>
+                  return (
+                    <tr key={row.id || row.registrationNumber || index}>
+                      <td className="marks-entry-student-cell">
+                        <div className="marks-entry-student-layout">
+                          <span className="marks-entry-student-avatar" aria-hidden="true">
+                            {studentName.trim().charAt(0).toUpperCase()}
+                          </span>
+                          <span className="marks-entry-student-copy">
+                            <strong>{studentName}</strong>
+                            <small>{row.registrationNumber || '—'}</small>
+                          </span>
+                        </div>
+                      </td>
 
-                        <td>
-                          {row.course || '—'}
-                        </td>
+                      <td className="marks-entry-academic-cell">
+                        <div className="marks-entry-academic-copy">
+                          <strong>{[row.course, row.branch].filter(Boolean).join(' · ') || '—'}</strong>
+                          <span>
+                            {[row.semester, row.section].filter(Boolean).join(' · ')}
+                            {[row.semester, row.section].some(Boolean) && row.academicYear ? '  ' : ''}
+                            {row.academicYear}
+                          </span>
+                        </div>
+                      </td>
 
-                        <td>
-                          {row.branch || '—'}
-                        </td>
+                      <td className="marks-entry-subject-cell">
+                        <div className="marks-entry-subject-copy">
+                          <strong>{row.subjectName || row.subject || '—'}</strong>
+                          {row.subjectCode && <span>{row.subjectCode}</span>}
+                        </div>
+                      </td>
 
-                        <td>
-                          {row.semester || '—'}
-                        </td>
+                      <td className="marks-entry-exam-cell">
+                        <div className="marks-entry-exam-copy">
+                          <span className="marks-entry-exam-pill">{row.examType || 'Exam not set'}</span>
+                          {row.assessmentType && (
+                            <span className="marks-entry-assessment-pill">{row.assessmentType}</span>
+                          )}
+                          {examDate && <small>{examDate}</small>}
+                        </div>
+                      </td>
 
-                        <td>
-                          {row.section || '—'}
-                        </td>
+                      <td className="marks-entry-score-cell">
+                        <div className="marks-entry-score-copy">
+                          <strong>{score}</strong>
+                          <span>/ {maximum}</span>
+                          {row.passingMarks != null && row.passingMarks !== '' && (
+                            <small>Min: {row.passingMarks}</small>
+                          )}
+                        </div>
+                      </td>
 
-                        <td>
-                          {row.registrationNumber ||
-                            '—'}
-                        </td>
+                      <td className="marks-entry-result-cell">
+                        <div className="marks-entry-result-copy">
+                          <span className={'marks-entry-result-pill ' + resultClass}>
+                            <i aria-hidden="true" />
+                            {result || 'Pending'}
+                          </span>
+                          {percentage && <strong>{percentage}</strong>}
+                        </div>
+                      </td>
 
-                        <td>
-                          {row.studentName ||
-                            '—'}
-                        </td>
-
-                        <td>
-                          {row.subjectName ||
-                            row.subject ||
-                            '—'}
-                        </td>
-
-                        <td>
-                          {row.subjectCode ||
-                            '—'}
-                        </td>
-
-                        <td>
-                          {row.examType || '—'}
-                        </td>
-
-                        <td>
-                          {row.assessmentType ||
-                            '—'}
-                        </td>
-
-                        <td>
-                          {row.examDate || '—'}
-                        </td>
-
-                        <td>
-                          {row.maximumMarks ||
-                            row.maxExternal ||
-                            '—'}
-                        </td>
-
-                        <td>
-                          {row.passingMarks ||
-                            '—'}
-                        </td>
-
-                        <td>
-                          {row.studentMarks !==
-                            '' &&
-                            row.studentMarks != null
-                            ? row.studentMarks
-                            : '—'}
-                        </td>
-
-                        <td>
-                          {row.examStatus ||
-                            summary.examStatus ||
-                            '—'}
-                        </td>
-
-                        <td>
-                          {row.percentage ||
-                            summary.percentage ||
-                            '—'}
-                        </td>
-
-                        <td>
-                          <div className="marks-entry-row-actions">
-                            <button
-                              type="button"
-                              className="marks-entry-row-action marks-entry-row-action--edit"
-                              title="Edit marks"
-                              aria-label={`Edit marks for ${row.subjectName ||
-                                row.subject ||
-                                row.subjectCode ||
-                                'record'
-                                }`}
-                              onClick={() =>
-                                editAssessment(
-                                  row
-                                )
-                              }
-                            >
-                              <FiEdit2 />
-                            </button>
-
-                            <button
-                              type="button"
-                              className="marks-entry-row-action marks-entry-row-action--delete"
-                              title="Delete marks"
-                              aria-label={`Delete marks for ${row.subjectName ||
-                                row.subject ||
-                                row.subjectCode ||
-                                'record'
-                                }`}
-                              onClick={() =>
-                                deleteAssessment(
-                                  row
-                                )
-                              }
-                            >
-                              <FiTrash2 />
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    )
-                  }
-                )}
+                      <td className="marks-entry-actions-cell">
+                        <div className="marks-entry-row-actions">
+                          <button
+                            type="button"
+                            className="table-action-btn marks-entry-row-action marks-entry-row-action--edit"
+                            title="Edit marks"
+                            aria-label={'Edit marks for ' + studentName}
+                            onClick={() => editAssessment(row)}
+                          >
+                            <FiEdit2 />
+                          </button>
+                          <button
+                            type="button"
+                            className="table-action-btn marks-entry-row-action marks-entry-row-action--delete"
+                            title="Delete marks"
+                            aria-label={'Delete marks for ' + studentName}
+                            onClick={() => deleteAssessment(row)}
+                          >
+                            <FiTrash2 />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  )
+                })}
               </tbody>
             </table>
 

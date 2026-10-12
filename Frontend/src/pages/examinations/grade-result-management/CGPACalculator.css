@@ -474,6 +474,19 @@
 }
 
 /* Period panel */
+.grm-cgpa__action-notice {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  padding: 10px 14px;
+  border: 1px solid var(--border, #e2e8f0);
+  border-radius: 8px;
+  background: var(--surface-soft, #f8fafc);
+  color: var(--text-primary, #0f172a);
+  font-size: 13px;
+}
+.grm-cgpa__action-notice svg { color: #16a34a; flex-shrink: 0; }
 .grm-cgpa__period-panel {
   display: grid;
   gap: 14px;

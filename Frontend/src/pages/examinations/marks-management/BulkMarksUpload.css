@@ -48,3 +48,40 @@
 
 /* Align Clear Filters with the filter controls instead of their labels. */
 .bulk-marks-preview-filters .filter-disclosure__clear-btn { align-self: flex-end !important; margin-bottom: 0 !important; }
+
+/* Keep the uploaded-data filter fields together and centered on one row. */
+.bulk-marks-preview-filters .filter-disclosure__content-inner {
+  display: grid !important;
+  grid-auto-flow: column;
+  grid-auto-columns: 165px;
+  align-items: end !important;
+  justify-content: safe center !important;
+  gap: 12px !important;
+  width: 100% !important;
+  overflow-x: auto !important;
+  scrollbar-width: thin;
+}
+.bulk-marks-preview-filters .filter-disclosure__content-inner > .bulk-marks-filter {
+  flex: none !important;
+  width: 165px !important;
+  min-width: 165px !important;
+  max-width: 165px !important;
+}
+.bulk-marks-preview-filters .filter-disclosure__content-inner > .bulk-marks-filter > span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.bulk-marks-preview-filters .filter-disclosure__content .bulk-marks-filter :is(select, input) {
+  width: 100% !important;
+  min-width: 0 !important;
+  max-width: 100% !important;
+  flex: 1 1 auto !important;
+}
+.bulk-marks-preview-filters .filter-disclosure__clear-btn { justify-self: center; }
+
+@media (max-width: 640px) {
+  .bulk-marks-preview-filters .filter-disclosure__content-inner {
+    justify-content: start !important;
+  }
+}

@@ -82,11 +82,45 @@ export function gradeFor(percentage, bands) {
 }
 const text = value => typeof value === 'object' && value ? String(value.name || value.label || '') : String(value ?? '')
 const number = value => value === '' || value === null || value === undefined || !Number.isFinite(Number(value)) ? null : Number(value)
+export function matchesResultSearch(row, query) {
+  const normalize = value => String(value ?? '').trim().toLowerCase().replace(/\s+/g, ' ')
+  const terms = normalize(query).split(' ').filter(Boolean)
+  const fields = ['studentName', 'registrationNumber', 'rollNumber', 'studentId', 'idNumber', 'department', 'departmentCode', 'branch', 'branchCode', 'subjectName', 'subjectCode', 'semester', 'examType']
+  const values = fields.map(key => normalize(row[key])).filter(Boolean)
+  return terms.every(term => values.some(value => value.includes(term)))
+}
 export function flattenResults(sheets) {
   return sheets.flatMap((sheet, sheetIndex) => (Array.isArray(sheet.records) ? sheet.records : [sheet]).map((record, index) => {
     const max = number(record.maximumMarks ?? sheet.maximumMarks ?? sheet.maxMarks) ?? ((number(sheet.maxInternal) !== null && number(sheet.maxExternal) !== null) ? Number(sheet.maxInternal) + Number(sheet.maxExternal) : null)
     const total = number(record.totalMarks ?? record.marksObtained) ?? ((number(record.internalMarks) !== null && number(record.externalMarks) !== null) ? Number(record.internalMarks) + Number(record.externalMarks) : null)
-    return { id: `${sheet.id || sheetIndex}:${record.studentId || index}:${index}`, collegeId: record.collegeId ?? sheet.collegeId, academicYearId: record.academicYearId ?? sheet.academicYearId, studentId: text(record.studentId ?? record.id), studentName: text(record.studentName ?? record.name), registrationNumber: text(record.registrationNumber ?? record.rollNumber), department: text(record.departmentName ?? sheet.departmentName ?? sheet.department ?? sheet.branchName ?? sheet.branch), semester: text(record.semesterName ?? sheet.semesterName ?? sheet.semester), subjectCode: text(record.subjectCode ?? sheet.subjectCode), subjectName: text(record.subjectName ?? sheet.subjectName), examType: text(record.examType ?? sheet.examType), totalMarks: total, maximumMarks: max, percentage: max > 0 && total !== null ? total / max * 100 : null, credits: number(record.credits ?? sheet.credits), grade: text(record.grade), gradePoint: number(record.gradePoint), status: text(record.status ?? record.resultStatus ?? 'Pending'), examDate: text(record.examDate ?? sheet.examDate ?? sheet.updatedAt ?? sheet.createdAt) }
+    return {
+      id: `${sheet.id || sheetIndex}:${record.studentId || index}:${index}`,
+      collegeId: record.collegeId ?? sheet.collegeId,
+      academicYearId: record.academicYearId ?? sheet.academicYearId,
+      studentId: text(record.studentId ?? record.studentIdNumber ?? record.idNumber ?? record.id),
+      studentName: text(record.studentName ?? record.fullName ?? record.name),
+      registrationNumber: text(record.registrationNumber ?? record.rollNumber),
+      rollNumber: text(record.rollNumber ?? record.registrationNumber),
+      idNumber: text(record.idNumber ?? record.studentIdNumber ?? record.studentId),
+      branch: text(record.branchName ?? record.branch ?? sheet.branchName ?? sheet.branch),
+      branchCode: text(record.branchCode ?? sheet.branchCode),
+      departmentCode: text(record.departmentCode ?? sheet.departmentCode),
+      department: text(record.departmentName ?? record.department ?? sheet.departmentName ?? sheet.department ?? sheet.branchName ?? sheet.branch),
+      semester: text(record.semesterName ?? sheet.semesterName ?? sheet.semester),
+      subjectCode: text(record.subjectCode ?? sheet.subjectCode),
+      subjectName: text(record.subjectName ?? sheet.subjectName),
+      examType: text(record.examType ?? sheet.examType),
+      internalMarks: number(record.internalMarks),
+      externalMarks: number(record.externalMarks),
+      totalMarks: total,
+      maximumMarks: max,
+      percentage: max > 0 && total !== null ? total / max * 100 : null,
+      credits: number(record.credits ?? sheet.credits),
+      grade: text(record.grade),
+      gradePoint: number(record.gradePoint),
+      status: text(record.status ?? record.resultStatus ?? 'Pending'),
+      examDate: text(record.examDate ?? sheet.examDate ?? sheet.updatedAt ?? sheet.createdAt)
+    }
   }))
 }
 export function summarize(rows, key) {

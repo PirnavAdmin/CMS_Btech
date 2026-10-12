@@ -89,20 +89,32 @@ export default function BulkMarksUpload() {
   const [fileError, setFileError] = useState('')
   const [reading, setReading] = useState(false)
   const [query, setQuery] = useState('')
-  const [filterColumn, setFilterColumn] = useState('')
-  const [filterValue, setFilterValue] = useState('')
+  const [columnFilters, setColumnFilters] = useState({})
   const [page, setPage] = useState(1)
+
+  const columnOptions = useMemo(() => Object.fromEntries(
+    columns.map(column => {
+      const values = new Map()
+      rows.forEach(row => {
+        const value = String(row[column.key] ?? '').trim()
+        const key = normalized(value)
+        if (key && !values.has(key)) values.set(key, value)
+      })
+      return [column.key, [...values.values()]]
+    })
+  ), [columns, rows])
 
   const filteredRows = useMemo(() => rows.filter(row => {
     const searchText = query.trim().toLowerCase()
     const searchMatches = !searchText || columns.some(column => normalized(row[column.key]).includes(searchText))
-    const valueText = filterValue.trim().toLowerCase()
-    const filterColumns = filterColumn ? columns.filter(column => column.key === filterColumn) : columns
-    const valueMatches = !valueText || filterColumns.some(column => normalized(row[column.key]).includes(valueText))
+    const selectedFilters = columns.filter(column => columnFilters[column.key])
+    const valueMatches = selectedFilters.every(column =>
+      normalized(row[column.key]) === normalized(columnFilters[column.key])
+    )
     return searchMatches && valueMatches
-  }), [rows, columns, query, filterColumn, filterValue])
+  }), [rows, columns, query, columnFilters])
   const visibleRows = filteredRows.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)
-  const hasFilters = Boolean(query || filterColumn || filterValue)
+  const hasFilters = Boolean(query || Object.values(columnFilters).some(Boolean))
 
   const uploadFile = async event => {
     const file = event.target.files?.[0]
@@ -118,8 +130,7 @@ export default function BulkMarksUpload() {
       setRows(parsed.rows)
       setFileName(file.name)
       setQuery('')
-      setFilterColumn('')
-      setFilterValue('')
+      setColumnFilters({})
       setPage(1)
     } catch (error) {
       setFileError(error.message || 'Could not read this file. Check that it is a valid CSV or TSV.')
@@ -133,15 +144,13 @@ export default function BulkMarksUpload() {
     setColumns([])
     setRows([])
     setQuery('')
-    setFilterColumn('')
-    setFilterValue('')
+    setColumnFilters({})
     setPage(1)
     setFileError('')
   }
   const clearFilters = () => {
     setQuery('')
-    setFilterColumn('')
-    setFilterValue('')
+    setColumnFilters({})
     setPage(1)
   }
 
@@ -182,8 +191,27 @@ export default function BulkMarksUpload() {
             actions={<ExportMenu rows={filteredRows} columns={columns} title="Bulk Marks Upload" filename="bulk-marks-upload" scope="All matching rows" allowEmpty />}
           >
             <div className="bulk-marks-search-wrap"><label className="bulk-marks-search"><FiSearch aria-hidden="true" /><input type="search" aria-label="Search uploaded marks" placeholder="Search uploaded data" value={query} onChange={event => { setQuery(event.target.value); setPage(1) }} /></label></div>
-            <label className="bulk-marks-filter"><span>Column</span><select value={filterColumn} onChange={event => { setFilterColumn(event.target.value); setPage(1) }}><option value="">All columns</option>{columns.map(column => <option key={column.key} value={column.key}>{column.label}</option>)}</select></label>
-            <label className="bulk-marks-filter"><span>Value contains</span><input type="search" placeholder="Enter a value" value={filterValue} onChange={event => { setFilterValue(event.target.value); setPage(1) }} /></label>
+            {columns.map((column, index) => (
+              <label className="bulk-marks-filter" key={column.key}>
+                <span title={column.label}>{column.label}</span>
+                <select
+                  aria-label={`Filter by ${column.label}, column ${index + 1}`}
+                  value={columnFilters[column.key] || ''}
+                  onChange={event => {
+                    setColumnFilters(current => ({
+                      ...current,
+                      [column.key]: event.target.value,
+                    }))
+                    setPage(1)
+                  }}
+                >
+                  <option value="">All {column.label}</option>
+                  {(columnOptions[column.key] || []).map(value => (
+                    <option key={`${column.key}-${value}`} value={value}>{value}</option>
+                  ))}
+                </select>
+              </label>
+            ))}
           </FilterPanel>
 
           {columns.length > 0 && (

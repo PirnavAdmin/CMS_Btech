@@ -594,7 +594,7 @@ export default function MeetingsEventsWorkspace() {
             {activeTab === 'meetings' && (
               <button
                 type="button"
-                className="grm-button grm-button--primary mew-action-meeting"
+                className="mew-button mew-button--primary mew-action-meeting"
                 onClick={() => openCreateModal('meeting')}
               >
                 <FiPlus /> Schedule Meeting
@@ -604,7 +604,7 @@ export default function MeetingsEventsWorkspace() {
             {activeTab === 'events' && (
               <button
                 type="button"
-                className="grm-button grm-button--primary mew-action-event"
+                className="mew-button mew-button--primary mew-action-event"
                 onClick={() => openCreateModal('event')}
               >
                 <FiPlus /> Create Event
@@ -614,7 +614,7 @@ export default function MeetingsEventsWorkspace() {
             {activeTab === 'registrations' && (
               <button
                 type="button"
-                className="grm-button grm-button--primary"
+                className="mew-button mew-button--primary"
                 onClick={() => openCreateModal('registration')}
               >
                 <FiPlus /> Register Participant
@@ -624,7 +624,7 @@ export default function MeetingsEventsWorkspace() {
             {activeTab === 'minutes' && (
               <button
                 type="button"
-                className="grm-button grm-button--primary"
+                className="mew-button mew-button--primary"
                 onClick={() => openCreateModal('minute')}
               >
                 <FiPlus /> Add Action Item
@@ -635,7 +635,7 @@ export default function MeetingsEventsWorkspace() {
               <>
                 <button
                   type="button"
-                  className="grm-button grm-button--secondary"
+                  className="mew-button mew-button--secondary"
                   onClick={() => markAllAttendance('Present')}
                   title="Mark all participants as Present"
                 >
@@ -643,7 +643,7 @@ export default function MeetingsEventsWorkspace() {
                 </button>
                 <button
                   type="button"
-                  className="grm-button grm-button--secondary"
+                  className="mew-button mew-button--secondary"
                   onClick={() => markAllAttendance('Absent')}
                   title="Mark all participants as Absent"
                 >
@@ -1810,14 +1810,14 @@ export default function MeetingsEventsWorkspace() {
                   {modalError && <p className="mew-form-error" role="alert">{modalError}</p>}
                   <button
                     type="button"
-                    className="grm-button"
+                    className="mew-button"
                     onClick={() => setModalOpen(false)}
                   >
                     Cancel
                   </button>
                   <button
                     type="submit"
-                    className="grm-button grm-button--primary"
+                    className="mew-button mew-button--primary"
                   >
                     Save Changes
                   </button>
@@ -1848,14 +1848,14 @@ export default function MeetingsEventsWorkspace() {
               <div className="mew-delete-actions">
                 <button
                   type="button"
-                  className="grm-button"
+                  className="mew-button"
                   onClick={() => setDeleteTarget(null)}
                 >
                   Cancel
                 </button>
                 <button
                   type="button"
-                  className="grm-button mew-btn-delete-confirm"
+                  className="mew-button mew-btn-delete-confirm"
                   onClick={confirmDelete}
                   autoFocus
                 >
