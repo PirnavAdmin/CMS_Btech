@@ -56,6 +56,7 @@ import DepartmentExamSchedule from './pages/examinations/exam-timetable/Departme
 import StudentExamSchedule from './pages/examinations/exam-timetable/StudentExamSchedule'
 import HallAllocation from './pages/examinations/exam-timetable/HallAllocation'
 import ExamConfiguration from './pages/examinations/exam-timetable/ExamConfiguration'
+import CompletedExams from './pages/examinations/exam-timetable/CompletedExams'
 import MarksManagement from './pages/examinations/marks-management/MarksManagement'
 import MarksEntry from './pages/examinations/marks-management/MarksEntry'
 import BulkMarksUpload from './pages/examinations/marks-management/BulkMarksUpload'
@@ -246,6 +247,8 @@ export default function App() {
               <Route path="/exam/timetable" element={<ExamTimetable />} />
               <Route path="/exam/hall-allocation" element={<HallAllocation />} />
               <Route path="/exam/configuration" element={<ExamConfiguration />} />
+              <Route path="/examination/completed-exams" element={<CompletedExams />} />
+              <Route path="/examination/completed-exams/:examId" element={<CompletedExams />} />
               <Route path="/examination-setup/*" element={<ExaminationSetup />} />
               <Route path="/examination-setup/examination-list" element={<ExaminationList />} />
               <Route path="/examination-setup/create-examination" element={<CreateExamination />} />
