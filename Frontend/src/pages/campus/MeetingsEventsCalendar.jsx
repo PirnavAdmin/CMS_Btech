@@ -1,8 +1,11 @@
 import { useMemo, useState } from 'react'
-import { FiCalendar, FiChevronLeft, FiChevronRight, FiClock, FiMapPin, FiPlus, FiUsers } from 'react-icons/fi'
+import { FiCalendar, FiChevronDown, FiChevronLeft, FiChevronRight, FiClock, FiMapPin, FiPlus, FiUsers } from 'react-icons/fi'
 import FilterPanel from '../../components/FilterPanel'
 import './MeetingsEventsCalendar.css'
 
+function CalendarFilterSelect({ children, ...props }) {
+  return <span className="mew-calendar-select"><select {...props}>{children}</select><FiChevronDown aria-hidden="true" /></span>
+}
 const asDate = value => {
   const date = new Date(value)
   return Number.isNaN(date.getTime()) ? null : date
@@ -88,10 +91,10 @@ export default function MeetingsEventsCalendar({ meetings, events, onCreateMeeti
     <FilterPanel className="mew-calendar__filters" toggleClassName="mew-calendar__filter-toggle" active={activeFilters} onClear={clearFilters}>
       <div className="mew-calendar__filter-label">Calendar filters</div>
       <label className="mew-calendar__date">Jump to date <input type="date" value={localDateInput(selectedDate)} onChange={event => setDate(event.target.value)} /></label>
-      <label className="mew-calendar__date">Type <select value={kind} onChange={event => setKind(event.target.value)}><option value="all">Meetings & events</option><option value="meeting">Meetings</option><option value="event">Events</option></select></label>
-      <label className="mew-calendar__date">Department <select value={department} onChange={event => setDepartment(event.target.value)}><option value="all">All departments</option>{departments.map(name => <option key={name}>{name}</option>)}</select></label>
-      <label className="mew-calendar__date">Category <select value={category} onChange={event => setCategory(event.target.value)}><option value="all">All categories</option>{categories.map(name => <option key={name}>{name}</option>)}</select></label>
-      <label className="mew-calendar__date">Status <select value={status} onChange={event => setStatus(event.target.value)}><option value="all">All statuses</option>{statuses.map(name => <option key={name}>{name}</option>)}</select></label>
+      <label className="mew-calendar__date">Type <CalendarFilterSelect value={kind} onChange={event => setKind(event.target.value)}><option value="all">Meetings & events</option><option value="meeting">Meetings</option><option value="event">Events</option></CalendarFilterSelect></label>
+      <label className="mew-calendar__date">Department <CalendarFilterSelect value={department} onChange={event => setDepartment(event.target.value)}><option value="all">All departments</option>{departments.map(name => <option key={name}>{name}</option>)}</CalendarFilterSelect></label>
+      <label className="mew-calendar__date">Category <CalendarFilterSelect value={category} onChange={event => setCategory(event.target.value)}><option value="all">All categories</option>{categories.map(name => <option key={name}>{name}</option>)}</CalendarFilterSelect></label>
+      <label className="mew-calendar__date">Status <CalendarFilterSelect value={status} onChange={event => setStatus(event.target.value)}><option value="all">All statuses</option>{statuses.map(name => <option key={name}>{name}</option>)}</CalendarFilterSelect></label>
     </FilterPanel>
     <div className="mew-calendar__quick-actions"><span><i className="mew-calendar__legend-dot meeting" /> Meeting <i className="mew-calendar__legend-dot event" /> Event</span><div className="mew-calendar__views" role="group" aria-label="Calendar view">{['month', 'week', 'day', 'agenda'].map(option => <button key={option} type="button" className={view === option ? 'active' : ''} onClick={() => setView(option)}>{option[0].toUpperCase() + option.slice(1)}</button>)}</div><div className="mew-calendar__quick-actions-right"><div className="mew-calendar__create-actions"><button type="button" className="mew-action-meeting" onClick={onCreateMeeting}><FiPlus /> Create meeting</button><button type="button" className="mew-action-event" onClick={onCreateEvent}><FiPlus /> Create event</button></div></div></div>
     <div className="mew-calendar__layout">
