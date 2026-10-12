@@ -1,0 +1,418 @@
+/* Source styles: pages/examinations/marks-management/MarksModuleNav.css */
+.marks-module-nav { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); align-items: stretch; gap: 6px; width: 100%; min-width: 0; padding: 6px; border: 1px solid var(--border); border-radius: 12px; background: var(--surface); }
+.marks-module-nav__link { display: flex; align-items: center; justify-content: center; min-width: 0; min-height: 42px; padding: 6px 10px; border-radius: 8px; color: var(--text-secondary); font-size: 14px; font-weight: 600; line-height: 1.25; text-align: center; text-decoration: none; white-space: normal; overflow-wrap: anywhere; transition: background .16s ease, color .16s ease; }
+.marks-module-nav__link:hover { background: var(--surface-soft); color: var(--text-primary); }
+.marks-module-nav__link.active { background: var(--brand); color: #fff; }
+.marks-module-nav__link:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
+@media (max-width: 1000px) { .marks-module-nav { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+@media (max-width: 560px) { .marks-module-nav { grid-template-columns: repeat(2, minmax(0, 1fr)); } .marks-module-nav__link { font-size: 13px; } }
+
+
+/* Source styles: pages/examinations/marks-management/MarksEntry.css */
+.marks-management-marks-entry { display: grid; gap: 24px; min-width: 0; }
+.marks-entry-card { min-width: 0; overflow: visible; }
+.marks-entry-card__header { padding-bottom: 16px; }
+.marks-entry-card__actions { display: flex; align-items: center; justify-content: flex-end; gap: 10px; }
+.marks-entry-card__actions > a { display: inline-flex; align-items: center; gap: 8px; white-space: nowrap; text-decoration: none; }
+.marks-entry-filters { margin: 0 20px 16px; }
+.marks-management-marks-entry .filter-disclosure.marks-entry-filters { position: relative; z-index: 4; overflow: visible; }
+.marks-entry-filters .export-control { z-index: 5; }
+.marks-entry-filters .filter-disclosure__bar { justify-content: space-between; }
+.marks-entry-filters .filter-disclosure__search { flex: 1 1 360px; justify-content: flex-start; }
+.marks-entry-search-wrap { width: 100%; }
+.marks-entry-search { display: flex; align-items: center; gap: 9px; min-width: min(100%, 360px); padding: 10px 12px; border: 1px solid var(--border); border-radius: 8px; background: var(--surface); color: var(--text-secondary); }
+.marks-entry-search input { width: 100%; border: 0; outline: 0; background: transparent; color: var(--text-primary); font: inherit; }
+.marks-entry-filter { display: grid; gap: 6px; min-width: 190px; color: var(--text-secondary); font-size: 13px; }
+.marks-entry-filter select { min-height: 40px; padding: 8px 10px; border: 1px solid var(--border); border-radius: 8px; background: var(--surface); color: var(--text-primary); font: inherit; }
+.marks-entry-table-wrap { width: 100%; overflow-x: auto; }
+.marks-entry-table-wrap .erp-table { min-width: 1540px; }
+.marks-entry-row-actions { display: flex; align-items: center; gap: 7px; }
+.marks-entry-row-action { display: inline-grid; place-items: center; width: 34px; height: 34px; padding: 0; border: 1px solid var(--border); border-radius: 7px; background: var(--surface); cursor: pointer; }
+.marks-entry-row-action svg { width: 16px; height: 16px; }
+.marks-entry-row-action--edit { color: var(--brand); }
+.marks-entry-row-action--delete { color: var(--danger, #d14343); }
+.marks-entry-row-action:hover { background: var(--surface-soft); }
+.marks-entry-row-action:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
+.marks-entry-loading { padding: 18px 22px; color: var(--text-secondary); }
+.marks-entry-modal { position: fixed; inset: 0; z-index: 1200; display: grid; place-items: center; box-sizing: border-box; padding: 24px 24px 24px 284px; overflow-y: auto; background: rgb(12 24 40 / 52%); }
+.marks-entry-modal.sidebar-collapsed { padding-left: 96px; }
+.marks-entry-form { width: min(100%, 1120px); max-height: min(90vh, 920px); overflow-y: auto; padding: 24px; border: 1px solid var(--border); border-radius: 14px; background: var(--surface); box-shadow: 0 24px 70px rgb(10 25 45 / 24%); }
+.marks-entry-form__heading { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; margin-bottom: 20px; }
+.marks-entry-form__heading h3 { margin: 0 0 5px; color: var(--text-primary); font-size: 18px; }
+.marks-entry-form__heading p { margin: 0; color: var(--text-secondary); font-size: 13px; }
+.marks-entry-form__close { border: 0; background: transparent; color: var(--text-secondary); cursor: pointer; font-size: 24px; line-height: 1; }
+.marks-entry-form__body { display: grid; grid-template-columns: minmax(0, 1.7fr) minmax(250px, .8fr); align-items: start; gap: 22px; }
+.marks-entry-form__grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+.marks-entry-form__field { display: grid; gap: 7px; min-width: 0; color: var(--text-secondary); font-size: 13px; font-weight: 600; }
+.marks-entry-form__field input { width: 100%; min-height: 42px; box-sizing: border-box; padding: 9px 11px; border: 1px solid var(--border); border-radius: 8px; outline-color: var(--brand); background: var(--surface); color: var(--text-primary); font: inherit; font-weight: 400; }
+.marks-entry-input-combo { position: relative; min-width: 0; }
+.marks-entry-input-combo input { display: block; }
+.marks-entry-suggestions { position: absolute; z-index: 5; top: calc(100% + 4px); left: 0; right: 0; max-height: 190px; overflow-y: auto; padding: 5px; border: 1px solid var(--border); border-radius: 8px; background: var(--surface); box-shadow: 0 10px 26px rgb(15 35 60 / 16%); }
+.marks-entry-suggestions button { display: block; width: 100%; padding: 9px 10px; border: 0; border-radius: 5px; background: transparent; color: var(--text-primary); cursor: pointer; font: inherit; text-align: left; }
+.marks-entry-suggestions button:hover, .marks-entry-suggestions button:focus-visible { outline: 0; background: var(--surface-soft); }
+.marks-entry-form__confirmation { margin: 18px 0 0; color: var(--text-secondary); font-size: 14px; }
+.marks-entry-form__confirmation a { color: var(--brand); font-weight: 600; }
+.marks-entry-form__footer { display: flex; justify-content: flex-end; margin-top: 22px; }
+.marks-entry-form__footer button { min-width: 112px; justify-content: center; }
+.marks-entry-form__preview { position: sticky; top: 0; padding: 16px; border: 1px solid var(--border); border-radius: 10px; background: var(--surface-soft); }
+.marks-entry-form__preview-head { display: flex; align-items: center; gap: 7px; color: var(--brand); font-size: 12px; font-weight: 700; text-transform: uppercase; }
+.marks-entry-form__preview-head small { margin-left: auto; color: var(--text-secondary); font-size: 10px; font-weight: 500; text-transform: none; }
+.marks-entry-live-dot { width: 8px; height: 8px; border-radius: 50%; background: #27bd83; box-shadow: 0 0 0 3px rgb(39 189 131 / 14%); }
+.marks-entry-form__preview h4 { margin: 16px 0; color: var(--text-primary); font-size: 18px; }
+.marks-entry-form__preview dl { display: grid; gap: 9px; margin: 0; }
+.marks-entry-form__preview dl > div { padding: 9px 10px; border: 1px solid var(--border); border-radius: 7px; background: var(--surface); }
+.marks-entry-form__preview dt { color: var(--text-secondary); font-size: 10px; font-weight: 700; text-transform: uppercase; }
+.marks-entry-form__preview dd { margin: 3px 0 0; overflow-wrap: anywhere; color: var(--text-primary); font-size: 13px; font-weight: 600; }
+@media (max-width: 700px) {
+  .marks-entry-card__header { align-items: flex-start; }
+  .marks-entry-card__actions { flex-wrap: wrap; }
+  .marks-entry-filters { margin-inline: 12px; }
+  .marks-entry-form { padding: 16px; }
+  .marks-entry-form__body { grid-template-columns: minmax(0, 1fr); }
+  .marks-entry-form__grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+}
+@media (max-width: 900px) { .marks-entry-modal, .marks-entry-modal.sidebar-collapsed { padding: 14px; } }
+@media (max-width: 440px) { .marks-entry-form__grid { grid-template-columns: minmax(0, 1fr); } }
+
+
+/* Source styles: pages/examinations/marks-management/BulkMarksUpload.css */
+.marks-management-bulk-marks-upload { display: grid; gap: 24px; min-width: 0; }
+.bulk-marks-upload-card,
+.bulk-marks-preview-card { min-width: 0; overflow: visible; }
+.bulk-marks-upload-card__header,
+.bulk-marks-preview-card__header { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding-bottom: 16px; }
+.bulk-marks-upload-clear { flex: 0 0 auto; }
+.bulk-marks-upload-dropzone { position: relative; display: flex; align-items: center; gap: 14px; min-height: 92px; margin: 0 20px 16px; padding: 16px 18px; border: 1px dashed var(--border-strong, #b8cbe0); border-radius: 11px; background: var(--surface-soft, #f7faff); color: var(--text-primary); cursor: pointer; transition: border-color .15s ease, background .15s ease; }
+.bulk-marks-upload-dropzone:hover,
+.bulk-marks-upload-dropzone:focus-within { border-color: var(--brand); background: var(--brand-soft, #edf5ff); }
+.bulk-marks-upload-dropzone input { position: absolute; inset: 0; z-index: 1; width: 100%; height: 100%; opacity: 0; cursor: pointer; }
+.bulk-marks-upload-dropzone__icon { display: grid; flex: 0 0 44px; place-items: center; width: 44px; height: 44px; border-radius: 10px; background: var(--brand-soft, #eaf3ff); color: var(--brand); font-size: 21px; }
+.bulk-marks-upload-dropzone__text { display: grid; min-width: 0; gap: 4px; }
+.bulk-marks-upload-dropzone__text strong { overflow: hidden; color: var(--text-primary); text-overflow: ellipsis; white-space: nowrap; }
+.bulk-marks-upload-dropzone__text small { color: var(--text-secondary); font-size: 12px; }
+.bulk-marks-upload-browse { z-index: 0; display: inline-flex; align-items: center; justify-content: center; margin-left: auto; white-space: nowrap; }
+.bulk-marks-upload-status,
+.bulk-marks-upload-error { display: flex; align-items: center; gap: 7px; margin: 0 20px 18px; font-size: 13px; }
+.bulk-marks-upload-status { color: var(--text-secondary); }
+.bulk-marks-upload-status svg { color: var(--brand); }
+.bulk-marks-upload-error { color: var(--danger, #c62828); }
+.bulk-marks-preview-card__header { padding: 20px 20px 4px; }
+.bulk-marks-preview-filters { margin: 12px 20px 16px; }
+.marks-management-bulk-marks-upload .filter-disclosure.bulk-marks-preview-filters { position: relative; z-index: 4; overflow: visible; }
+.bulk-marks-preview-filters .export-control { z-index: 5; }
+.bulk-marks-preview-filters .filter-disclosure__search { flex: 1 1 320px; justify-content: flex-start; }
+.bulk-marks-search-wrap { width: 100%; }
+.bulk-marks-search { display: flex; align-items: center; gap: 8px; width: min(100%, 460px); min-height: 40px; box-sizing: border-box; padding: 8px 11px; border: 1px solid var(--border); border-radius: 8px; background: var(--surface); color: var(--text-secondary); }
+.bulk-marks-search svg { flex: 0 0 auto; }
+.bulk-marks-search input { width: 100%; min-width: 0; border: 0; outline: 0; background: transparent; color: var(--text-primary); font: inherit; }
+.bulk-marks-filter { display: grid; gap: 5px; min-width: 180px; color: var(--text-secondary); font-size: 12px; font-weight: 600; }
+.bulk-marks-filter select,
+.bulk-marks-filter input { min-height: 38px; box-sizing: border-box; padding: 7px 10px; border: 1px solid var(--border); border-radius: 7px; background: var(--surface); color: var(--text-primary); font: inherit; }
+.bulk-marks-table-wrap { width: 100%; overflow-x: auto; }
+.bulk-marks-table { min-width: 900px; }
+.bulk-marks-table th { white-space: nowrap; }
+.bulk-marks-table td { max-width: 360px; overflow-wrap: anywhere; }
+@media (max-width: 700px) {
+  .bulk-marks-upload-card__header,
+  .bulk-marks-preview-card__header { align-items: flex-start; flex-direction: column; }
+  .bulk-marks-upload-dropzone { align-items: flex-start; flex-wrap: wrap; margin-inline: 12px; padding: 14px; }
+  .bulk-marks-upload-browse { margin-left: 58px; }
+  .bulk-marks-upload-status,
+  .bulk-marks-upload-error { margin-inline: 12px; }
+  .bulk-marks-preview-card__header { padding-inline: 14px; }
+  .bulk-marks-preview-filters { margin-inline: 12px; }
+  .bulk-marks-filter { min-width: 140px; flex: 1 1 140px; }
+}
+
+/* Align Clear Filters with the filter controls instead of their labels. */
+.bulk-marks-preview-filters .filter-disclosure__clear-btn { align-self: flex-end !important; margin-bottom: 0 !important; }
+
+
+/* Source styles: pages/examinations/marks-management/EditMarks.css */
+.marks-management-edit-marks { display: grid; gap: 24px; min-width: 0; }
+.marks-management-edit-marks__content { padding: 24px; border: 1px solid var(--border); border-radius: 12px; background: var(--surface); color: var(--text-primary); }
+.marks-management-edit-marks__content h2 { margin: 0 0 12px; font-size: 18px; }
+.marks-management-edit-marks__content p { color: var(--text-secondary); margin: 0 0 20px; }
+.marks-management-edit-marks__content a { color: var(--brand); }
+
+
+/* Source styles: pages/examinations/marks-management/StudentMarks.css */
+.marks-management-student-marks { display: grid; gap: 24px; min-width: 0; }
+.student-marks-card { min-width: 0; overflow: visible; }
+.student-marks-card__header { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding-bottom: 14px; }
+.student-marks-count { flex: 0 0 auto; padding: 7px 11px; border-radius: 999px; background: var(--brand-soft, #eaf3ff); color: var(--brand); font-size: 12px; font-weight: 700; }
+.student-marks-student-picker { display: grid; grid-template-columns: 42px minmax(220px, 1fr); align-items: center; gap: 12px; margin: 0 20px 14px; padding: 14px; border: 1px solid var(--border); border-radius: 10px; background: var(--surface-soft, #f7faff); }
+.student-marks-student-picker > svg { width: 42px; height: 42px; padding: 11px; box-sizing: border-box; border-radius: 9px; background: var(--brand-soft, #eaf3ff); color: var(--brand); }
+.student-marks-student-picker label { display: grid; gap: 6px; max-width: 620px; color: var(--text-secondary); font-size: 12px; font-weight: 650; }
+.student-marks-student-picker select { width: 100%; min-height: 42px; box-sizing: border-box; padding: 8px 11px; border: 1px solid var(--border); border-radius: 8px; background: var(--surface); color: var(--text-primary); font: inherit; font-size: 14px; }
+.student-marks-profile { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; margin: 0 20px 16px; }
+.student-marks-profile > div { display: grid; align-content: center; gap: 5px; min-width: 0; padding: 11px 12px; border: 1px solid var(--border); border-radius: 8px; background: var(--surface); }
+.student-marks-profile small { color: var(--text-secondary); font-size: 10px; font-weight: 700; text-transform: uppercase; }
+.student-marks-profile strong { overflow-wrap: anywhere; color: var(--text-primary); font-size: 13px; }
+.student-marks-error { margin: 0 20px 12px; color: var(--danger, #c62828); font-size: 13px; }
+.student-marks-filters { margin: 0 20px 16px; }
+.marks-management-student-marks .filter-disclosure.student-marks-filters { position: relative; z-index: 4; overflow: visible; }
+.student-marks-filters .export-control { z-index: 5; }
+.student-marks-filters .filter-disclosure__bar { justify-content: space-between; }
+.student-marks-filters .filter-disclosure__search { flex: 1 1 320px; justify-content: flex-start; }
+.student-marks-search-wrap { width: 100%; }
+.student-marks-search { display: flex; align-items: center; gap: 8px; width: min(100%, 460px); min-height: 40px; box-sizing: border-box; padding: 8px 11px; border: 1px solid var(--border); border-radius: 8px; background: var(--surface); color: var(--text-secondary); }
+.student-marks-search svg { flex: 0 0 auto; }
+.student-marks-search input { width: 100%; min-width: 0; border: 0; outline: 0; background: transparent; color: var(--text-primary); font: inherit; }
+.student-marks-filter { display: grid; gap: 5px; min-width: 170px; color: var(--text-secondary); font-size: 12px; font-weight: 600; }
+.student-marks-filter select { min-height: 38px; box-sizing: border-box; padding: 7px 10px; border: 1px solid var(--border); border-radius: 7px; background: var(--surface); color: var(--text-primary); font: inherit; }
+.student-marks-table-wrap { width: 100%; overflow-x: auto; }
+.student-marks-table { min-width: 2200px; }
+.student-marks-table th { white-space: nowrap; }
+.student-marks-table td { white-space: nowrap; }
+.student-marks-loading { margin: 0 20px 20px; color: var(--text-secondary); }
+@media (max-width: 900px) {
+  .student-marks-profile { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 600px) {
+  .student-marks-student-picker { grid-template-columns: 36px minmax(0, 1fr); margin-inline: 12px; padding: 11px; }
+  .student-marks-student-picker > svg { width: 36px; height: 36px; padding: 9px; }
+  .student-marks-profile { grid-template-columns: minmax(0, 1fr); margin-inline: 12px; }
+  .student-marks-filters { margin-inline: 12px; }
+  .student-marks-card__header { align-items: flex-start; flex-direction: column; }
+  .student-marks-filter { min-width: 140px; flex: 1 1 140px; }
+}
+
+.student-marks-student-field { position: relative; display: grid; gap: 6px; width: 100%; max-width: 620px; color: var(--text-secondary); font-size: 12px; font-weight: 650; }
+.student-marks-student-searchbox { display: flex; align-items: center; gap: 9px; min-height: 42px; box-sizing: border-box; padding: 0 11px; border: 1px solid var(--border); border-radius: 8px; background: var(--surface); color: var(--text-secondary); }
+.student-marks-student-searchbox:focus-within { border-color: var(--brand); box-shadow: var(--focus-ring); }
+.student-marks-student-searchbox svg { flex: 0 0 auto; }
+.student-marks-student-searchbox input { all: unset; display: block; box-sizing: border-box; width: 100%; min-width: 0; color: var(--text-primary); font: inherit; font-size: 14px; line-height: 1.35; }
+.student-marks-student-searchbox input::placeholder { color: var(--text-secondary); opacity: .75; }
+.student-marks-student-searchbox input:focus-visible { outline: 0; box-shadow: none; }
+.student-marks-student-caret { color: var(--text-secondary); font-size: 18px; }
+.student-marks-student-options { position: absolute; z-index: 20; top: calc(100% + 1px); left: 0; right: 0; max-height: 280px; overflow-y: auto; margin: 0; padding: 0; list-style: none; border: 1px solid #8b8b8b; background: #fff; box-shadow: 0 4px 10px rgba(15, 35, 65, .12); }
+.student-marks-student-options li button { display: flex; align-items: center; gap: 10px; width: 100%; min-height: 36px; padding: 7px 12px; border: 0; border-radius: 0; background: transparent; color: #12345b; font: inherit; font-size: 14px; font-weight: 400; text-align: left; cursor: pointer; }
+.student-marks-student-options li button strong { color: inherit; font-weight: 400; }
+.student-marks-student-options li button:hover, .student-marks-student-options li button:focus-visible { outline: 0; background: #1b66c9; color: #fff; }
+.student-marks-student-empty { padding: 10px 12px; color: var(--text-secondary); font-size: 13px; font-weight: 400; }
+
+#student-marks-student-search { all: unset !important; display: block !important; box-sizing: border-box !important; width: 100% !important; min-width: 0 !important; height: auto !important; margin: 0 !important; padding: 0 !important; border: 0 !important; border-radius: 0 !important; outline: 0 !important; box-shadow: none !important; background: transparent !important; appearance: none !important; -webkit-appearance: none !important; color: var(--text-primary) !important; font: inherit !important; font-size: 14px !important; line-height: 1.35 !important; }
+#student-marks-student-search:focus, #student-marks-student-search:focus-visible { border: 0 !important; outline: 0 !important; box-shadow: none !important; }
+
+
+/* Source styles: pages/examinations/marks-management/SubjectMarksReport.css */
+.marks-management-subject-marks-report { display:grid; gap:24px; min-width:0; }
+.subject-marks-report-card { min-width:0; overflow:visible; }
+.subject-marks-report-card__header { display:flex; align-items:center; justify-content:space-between; gap:16px; padding-bottom:14px; }
+.subject-marks-report-count { flex:0 0 auto; padding:7px 11px; border-radius:999px; background:var(--brand-soft,#eaf3ff); color:var(--brand); font-size:12px; font-weight:700; }
+.subject-marks-report-picker { display:grid; grid-template-columns:42px minmax(220px,1fr); align-items:center; gap:12px; margin:0 20px 14px; padding:14px; border:1px solid var(--border); border-radius:10px; background:var(--surface-soft,#f7faff); }
+.subject-marks-report-picker>svg { width:42px; height:42px; padding:11px; box-sizing:border-box; border-radius:9px; background:var(--brand-soft,#eaf3ff); color:var(--brand); }
+.subject-marks-report-subject-field { position:relative; display:grid; gap:6px; width:100%; max-width:620px; color:var(--text-secondary); font-size:12px; font-weight:650; }
+.subject-marks-report-subject-search { display:flex; align-items:center; gap:9px; min-height:42px; box-sizing:border-box; padding:0 11px; border:1px solid var(--border); border-radius:8px; background:var(--surface); color:var(--text-secondary); }
+.subject-marks-report-subject-search input { width:100%; min-width:0; padding:9px 0; border:0; outline:0; background:transparent; color:var(--text-primary); font:inherit; font-size:14px; }
+.subject-marks-report-subject-search input::-webkit-search-cancel-button { cursor:pointer; }
+.subject-marks-report-subject-caret { color:var(--text-secondary); font-size:18px; }
+.subject-marks-report-subject-options { position:absolute; z-index:20; top:calc(100% + 4px); left:0; right:0; max-height:280px; overflow-y:auto; margin:0; padding:5px; list-style:none; border:1px solid var(--border); border-radius:9px; background:var(--surface); box-shadow:0 10px 28px rgba(15,35,65,.16); }
+.subject-marks-report-subject-options li button { display:flex; align-items:center; gap:10px; width:100%; padding:10px; border:0; border-radius:6px; background:transparent; color:var(--text-primary); font:inherit; font-size:13px; text-align:left; cursor:pointer; }
+.subject-marks-report-subject-options li button:hover,.subject-marks-report-subject-options li button:focus-visible { outline:0; background:var(--surface-soft,#f2f6fc); }
+.subject-marks-report-subject-options li button strong { flex:0 0 auto; color:var(--brand); }
+.subject-marks-report-no-subjects { padding:12px 10px; color:var(--text-secondary); font-size:13px; font-weight:400; }
+.subject-marks-report-summary { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:10px; margin:0 20px 16px; }
+.subject-marks-report-summary>div { display:grid; align-content:center; gap:5px; min-width:0; padding:11px 12px; border:1px solid var(--border); border-radius:8px; background:var(--surface); }
+.subject-marks-report-summary small { color:var(--text-secondary); font-size:10px; font-weight:700; text-transform:uppercase; }
+.subject-marks-report-summary strong { overflow-wrap:anywhere; color:var(--text-primary); font-size:14px; }
+.subject-marks-report-filters { margin:0 20px 16px; }
+.marks-management-subject-marks-report .filter-disclosure.subject-marks-report-filters { position:relative; z-index:4; overflow:visible; }
+.subject-marks-report-filters .export-control { z-index:5; }
+.subject-marks-report-filters .filter-disclosure__bar { justify-content:space-between; }
+.subject-marks-report-filters .filter-disclosure__search { flex:1 1 320px; justify-content:flex-start; }
+.subject-marks-report-search-wrap { width:100%; }
+.subject-marks-report-search { display:flex; align-items:center; gap:8px; width:min(100%,460px); min-height:40px; box-sizing:border-box; padding:8px 11px; border:1px solid var(--border); border-radius:8px; background:var(--surface); color:var(--text-secondary); }
+.subject-marks-report-search svg { flex:0 0 auto; }
+.subject-marks-report-search input { width:100%; min-width:0; border:0; outline:0; background:transparent; color:var(--text-primary); font:inherit; }
+.subject-marks-report-filter { display:grid; gap:5px; min-width:170px; color:var(--text-secondary); font-size:12px; font-weight:600; }
+.subject-marks-report-filter select { min-height:38px; box-sizing:border-box; padding:7px 10px; border:1px solid var(--border); border-radius:7px; background:var(--surface); color:var(--text-primary); font:inherit; }
+.subject-marks-report-table-wrap { width:100%; overflow-x:auto; }
+.subject-marks-report-table { min-width:2200px; }
+.subject-marks-report-table th,.subject-marks-report-table td { white-space:nowrap; }
+.subject-marks-report-error { margin:0 20px 12px; color:var(--danger,#c62828); font-size:13px; }
+.subject-marks-report-loading { margin:0 20px 20px; color:var(--text-secondary); }
+@media(max-width:900px) { .subject-marks-report-summary { grid-template-columns:repeat(2,minmax(0,1fr)); } }
+@media(max-width:600px) { .subject-marks-report-picker { grid-template-columns:36px minmax(0,1fr); margin-inline:12px; padding:11px; } .subject-marks-report-picker>svg { width:36px; height:36px; padding:9px; } .subject-marks-report-summary { grid-template-columns:minmax(0,1fr); margin-inline:12px; } .subject-marks-report-filters { margin-inline:12px; } .subject-marks-report-card__header { align-items:flex-start; flex-direction:column; } .subject-marks-report-filter { min-width:140px; flex:1 1 140px; } }
+
+#subject-marks-subject-search { display:block; width:100% !important; min-width:0 !important; height:auto !important; min-height:0 !important; box-sizing:border-box !important; margin:0 !important; padding:0 !important; border:0 !important; border-radius:0 !important; outline:0 !important; box-shadow:none !important; background:transparent !important; appearance:none; color:var(--text-primary) !important; }
+#subject-marks-subject-search:focus { border:0 !important; outline:0 !important; box-shadow:none !important; }
+
+/* Keep the subject picker as one search control; global input styles otherwise add an inner border. */
+.subject-marks-report-subject-search:focus-within {
+  border-color: var(--brand);
+  box-shadow: var(--focus-ring);
+}
+#subject-marks-subject-search {
+  all: unset !important;
+  display: block !important;
+  box-sizing: border-box !important;
+  width: 100% !important;
+  min-width: 0 !important;
+  height: auto !important;
+  color: var(--text-primary) !important;
+  font: inherit !important;
+  font-size: 14px !important;
+  line-height: 1.35 !important;
+  caret-color: var(--brand) !important;
+}
+#subject-marks-subject-search:focus,
+#subject-marks-subject-search:focus-visible {
+  outline: 0 !important;
+  box-shadow: none !important;
+}
+
+#subject-marks-subject-search {
+  border: 0 !important;
+  border-radius: 0 !important;
+  outline: 0 !important;
+  box-shadow: none !important;
+  background: transparent !important;
+  appearance: none !important;
+  -webkit-appearance: none !important;
+}
+
+/* Match the simple option text used by the Student Marks selector. */
+.subject-marks-report-subject-options {
+  top: calc(100% + 1px);
+  padding: 0;
+  border: 1px solid #8b8b8b;
+  border-radius: 0;
+  background: #fff;
+  box-shadow: 0 4px 10px rgba(15, 35, 65, .12);
+}
+.subject-marks-report-subject-options li button {
+  min-height: 36px;
+  padding: 7px 12px;
+  border-radius: 0;
+  color: #12345b;
+  font-size: 14px;
+  font-weight: 400;
+}
+.subject-marks-report-subject-options li button strong {
+  color: inherit;
+  font-weight: 400;
+}
+.subject-marks-report-subject-options li button:hover,
+.subject-marks-report-subject-options li button:focus-visible {
+  background: #1b66c9;
+  color: #fff;
+}
+
+
+/* Source styles: pages/examinations/marks-management/MarksApproval.css */
+.marks-management-marks-approval { display:grid; gap:20px; min-width:0; }
+.marks-approval-intro { margin-top:-4px; }
+.marks-approval-intro h2 { margin:0 0 5px; color:var(--text-primary); font-size:26px; font-weight:750; }
+.marks-approval-intro p { margin:0; color:var(--text-secondary); font-size:14px; }
+.marks-approval-filter-card,.marks-approval-table-card { min-width:0; overflow:visible; }
+.marks-approval-filter-card>.erp-card-header,.marks-approval-table-card>.erp-card-header { padding-bottom:14px; }
+.marks-approval-filter-grid { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); align-items:end; gap:14px; padding:0 20px 20px; }
+.marks-approval-filter { display:grid; gap:6px; min-width:0; color:var(--text-secondary); font-size:12px; font-weight:650; }
+.marks-approval-filter>.searchable-select { width:100%; min-width:0; }
+.marks-approval-filter>.searchable-select .searchable-select__trigger { width:100%; min-height:40px; }
+.marks-approval-filter select { width:100%; min-height:40px; box-sizing:border-box; padding:8px 10px; border:1px solid var(--border); border-radius:8px; background:var(--surface); color:var(--text-primary); font:inherit; }
+.marks-approval-status-filter>span:first-child,.marks-approval-search-filter>span:first-child { color:var(--text-secondary); }
+.marks-approval-search { display:flex; align-items:center; gap:8px; min-height:40px; box-sizing:border-box; padding:0 10px; border:1px solid var(--border); border-radius:8px; background:var(--surface); color:var(--text-secondary); }
+.marks-approval-search input { width:100%; min-width:0; border:0; outline:0; background:transparent; color:var(--text-primary); font:inherit; font-size:13px; }
+.marks-approval-filter-actions { display:flex; flex-wrap:wrap; align-items:center; gap:8px; grid-column:span 2; }
+.marks-approval-filter-actions .erp-btn { min-height:40px; }
+.marks-approval-summary { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:14px; }
+.marks-approval-stat { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:16px 18px; border-left:4px solid var(--brand); }
+.marks-approval-stat span { color:var(--text-secondary); font-size:13px; font-weight:650; }
+.marks-approval-stat strong { color:var(--text-primary); font-size:25px; line-height:1; }
+.marks-approval-stat--pending { border-left-color:#d99016; }
+.marks-approval-stat--approved { border-left-color:#16804a; }
+.marks-approval-stat--rejected { border-left-color:#c64242; }
+.marks-approval-table-card>.erp-card-header { display:flex; align-items:center; justify-content:space-between; gap:12px; }
+.marks-approval-refresh { white-space:nowrap; }
+.marks-approval-table-wrap,.marks-approval-students-wrap { width:100%; overflow-x:auto; }
+.marks-approval-table,.marks-approval-students { width:100%; min-width:1080px; }
+.marks-approval-table th,.marks-approval-table td,.marks-approval-students th,.marks-approval-students td { white-space:nowrap; }
+.marks-approval-view-btn { display:inline-flex; align-items:center; gap:6px; padding:6px 9px; border:1px solid var(--border); border-radius:7px; background:var(--surface); color:var(--brand); font:inherit; font-size:12px; font-weight:700; cursor:pointer; }
+.marks-approval-view-btn:hover { background:var(--brand-soft,#eaf3ff); }
+.marks-approval-loading { margin:0 20px 20px; color:var(--text-secondary); }
+.marks-approval-error { display:flex; align-items:center; justify-content:space-between; gap:12px; margin:0 20px 16px; padding:12px; border:1px solid color-mix(in srgb,var(--danger,#c62828) 32%,transparent); border-radius:8px; background:color-mix(in srgb,var(--danger,#c62828) 6%,var(--surface)); color:var(--danger,#c62828); font-size:13px; }
+.marks-approval-forbidden { padding:18px; }
+.marks-approval-details-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:10px; margin:0 0 18px; }
+.marks-approval-details-grid>div { min-width:0; padding:10px 12px; border:1px solid var(--border); border-radius:8px; background:var(--surface-soft,#f7faff); }
+.marks-approval-details-grid dt { margin-bottom:4px; color:var(--text-secondary); font-size:10px; font-weight:750; text-transform:uppercase; }
+.marks-approval-details-grid dd { margin:0; color:var(--text-primary); font-size:13px; font-weight:650; overflow-wrap:anywhere; }
+.marks-approval-detail-summary { display:grid; grid-template-columns:repeat(6,minmax(0,1fr)); gap:9px; margin-bottom:20px; }
+.marks-approval-detail-summary>div { display:grid; gap:6px; padding:11px; border:1px solid var(--border); border-radius:8px; }
+.marks-approval-detail-summary small { color:var(--text-secondary); font-size:10px; font-weight:700; text-transform:uppercase; }
+.marks-approval-detail-summary strong { color:var(--text-primary); font-size:18px; }
+.marks-approval-section-title { margin:20px 0 10px; color:var(--text-primary); font-size:16px; }
+.marks-approval-rejection-note { padding:12px 14px; border:1px solid color-mix(in srgb,#c64242 35%,var(--border)); border-radius:8px; background:color-mix(in srgb,#c64242 7%,var(--surface)); color:var(--text-primary); font-size:13px; line-height:1.5; }
+.marks-approval-history { display:grid; gap:0; margin:0; padding:0; list-style:none; }
+.marks-approval-history li { position:relative; display:grid; grid-template-columns:18px 1fr; gap:10px; padding:0 0 15px; }
+.marks-approval-history li:not(:last-child)::before { position:absolute; top:12px; bottom:0; left:6px; width:1px; background:var(--border); content:''; }
+.marks-approval-history__dot { z-index:1; width:13px; height:13px; margin-top:3px; border:3px solid var(--brand); border-radius:50%; background:var(--surface); }
+.marks-approval-history__head { display:flex; align-items:center; justify-content:space-between; gap:12px; color:var(--text-primary); font-size:13px; }
+.marks-approval-history__head time { color:var(--text-secondary); font-size:12px; }
+.marks-approval-history li p { margin:4px 0 0; color:var(--text-secondary); font-size:12px; }
+.marks-approval-workflow { display:flex; align-items:center; justify-content:center; flex-wrap:wrap; gap:9px; margin-top:16px; padding:12px; border-radius:8px; background:var(--surface-soft,#f7faff); color:var(--text-secondary); font-size:11px; font-weight:700; }
+.marks-approval-workflow i { color:var(--border-strong,var(--text-secondary)); font-style:normal; }
+.marks-approval-workflow .is-current { color:var(--brand); }
+.marks-approval-dialog-backdrop { position:fixed; z-index:3000; inset:0; display:grid; place-items:center; overflow-y:auto; padding:20px; background:rgba(11,25,45,.52); }
+.marks-approval-decision { position:relative; width:min(100%,520px); max-height:calc(100vh - 40px); overflow-y:auto; padding:25px; border:1px solid var(--border); border-radius:14px; background:var(--surface); color:var(--text-primary); box-shadow:0 22px 70px rgba(8,25,50,.28); }
+.marks-approval-decision__close { position:absolute; top:13px; right:13px; display:grid; place-items:center; width:34px; height:34px; border:0; border-radius:8px; background:transparent; color:var(--text-secondary); cursor:pointer; }
+.marks-approval-decision__close:hover { background:var(--surface-soft); }
+.marks-approval-decision__icon { display:grid; place-items:center; width:42px; height:42px; margin-bottom:12px; border-radius:12px; background:var(--brand-soft,#eaf3ff); color:var(--brand); font-size:21px; }
+.marks-approval-decision__icon.is-reject { background:#fff0f0; color:#c64242; }
+.marks-approval-decision h2 { margin:0 0 6px; font-size:20px; }
+.marks-approval-decision>p { margin:0 0 15px; color:var(--text-secondary); font-size:13px; }
+.marks-approval-decision dl { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px; margin:0 0 16px; }
+.marks-approval-decision dl div { padding:9px 10px; border:1px solid var(--border); border-radius:7px; }
+.marks-approval-decision dt { color:var(--text-secondary); font-size:10px; font-weight:700; text-transform:uppercase; }
+.marks-approval-decision dd { margin:3px 0 0; color:var(--text-primary); font-size:13px; font-weight:650; }
+.marks-approval-decision form label { display:grid; gap:6px; color:var(--text-primary); font-size:12px; font-weight:700; }
+.marks-approval-decision textarea { width:100%; box-sizing:border-box; padding:10px; resize:vertical; border:1px solid var(--border); border-radius:8px; background:var(--surface); color:var(--text-primary); font:inherit; font-size:13px; }
+.marks-approval-decision form footer { display:flex; justify-content:flex-end; flex-wrap:wrap; gap:9px; margin-top:17px; }
+.erp-btn--danger { border:1px solid #bd3434; background:#c64242; color:#fff; }
+.erp-btn--danger:hover { background:#ac3333; }
+@media(max-width:1100px) { .marks-approval-filter-grid { grid-template-columns:repeat(3,minmax(0,1fr)); } .marks-approval-table,.marks-approval-students { min-width:1000px; } .marks-approval-detail-summary { grid-template-columns:repeat(3,minmax(0,1fr)); } }
+@media(max-width:760px) { .marks-approval-filter-grid { grid-template-columns:repeat(2,minmax(0,1fr)); padding-inline:14px; } .marks-approval-summary { grid-template-columns:repeat(2,minmax(0,1fr)); } .marks-approval-details-grid { grid-template-columns:repeat(2,minmax(0,1fr)); } .marks-approval-table th:nth-child(4),.marks-approval-table td:nth-child(4),.marks-approval-table th:nth-child(7),.marks-approval-table td:nth-child(7),.marks-approval-table th:nth-child(10),.marks-approval-table td:nth-child(10),.marks-approval-table th:nth-child(11),.marks-approval-table td:nth-child(11) { display:none; } .marks-approval-table,.marks-approval-students { min-width:780px; } }
+@media(max-width:520px) { .marks-approval-filter-grid { grid-template-columns:minmax(0,1fr); } .marks-approval-filter-actions { grid-column:auto; } .marks-approval-summary { gap:9px; } .marks-approval-stat { padding:13px; } .marks-approval-stat strong { font-size:21px; } .marks-approval-details-grid { grid-template-columns:minmax(0,1fr); } .marks-approval-detail-summary { grid-template-columns:repeat(2,minmax(0,1fr)); } .marks-approval-decision { padding:21px 17px; } .marks-approval-workflow { gap:6px; font-size:10px; } }
+
+/* Marks Approval toolbar: search stays visible; only the filter fields collapse. */
+.marks-approval-filter-card { padding:0; }
+.marks-approval-filter-panel.filter-disclosure { margin:0; overflow:visible; border:0 !important; border-radius:0 !important; background:transparent !important; box-shadow:none !important; }
+.marks-approval-filter-panel .filter-disclosure__bar { display:flex; flex-wrap:nowrap; align-items:center; gap:10px; min-height:58px; padding:10px 16px; background:transparent !important; }
+.marks-approval-filter-panel .filter-disclosure__search { flex:1 1 auto; min-width:240px; }
+.marks-approval-filter-panel .filter-disclosure__search label { display:flex; align-items:center; gap:9px; width:min(100%,520px) !important; max-width:520px !important; height:40px !important; min-height:40px !important; padding:0 11px !important; border:1px solid var(--border) !important; border-radius:8px !important; background:var(--surface) !important; color:var(--text-secondary) !important; }
+.marks-approval-filter-panel .filter-disclosure__search label input { width:100% !important; height:auto !important; min-height:0 !important; padding:0 !important; border:0 !important; background:transparent !important; color:var(--text-primary) !important; font-size:13px !important; }
+.marks-approval-filter-panel .filter-disclosure__search label svg { flex:0 0 auto; }
+.marks-approval-filter-panel .filter-disclosure__bar .export-control { order:0; flex:0 0 auto; }
+.marks-approval-filter-panel .filter-disclosure__toggle { order:1; flex:0 0 auto; width:auto; min-height:40px; height:40px; }
+.marks-approval-filter-panel .filter-disclosure__content { padding:12px 16px 16px; border-top:1px solid var(--border); background:var(--surface-soft,#f7faff) !important; }
+.marks-approval-filter-panel .filter-disclosure__content-inner { display:block !important; width:100% !important; }
+.marks-approval-dropdown-grid { display:grid; grid-template-columns:repeat(8,minmax(90px,1fr)) minmax(185px,auto); align-items:end; gap:9px; }
+.marks-approval-filter-panel .marks-approval-filter { display:grid !important; grid-template-rows:auto 40px; gap:6px !important; width:auto !important; min-width:0 !important; max-width:none !important; margin:0 !important; padding:0 !important; background:transparent !important; border:0 !important; box-shadow:none !important; }
+.marks-approval-filter-label,.marks-approval-filter-panel .marks-approval-filter>span:first-child { color:var(--text-secondary); font-size:11px; font-weight:700; white-space:nowrap; }
+.marks-approval-filter-panel .marks-approval-filter .searchable-select { width:100% !important; min-width:0 !important; max-width:none !important; }
+.marks-approval-filter-panel .marks-approval-filter .searchable-select__trigger,.marks-approval-filter-panel .marks-approval-filter select { width:100% !important; min-width:0 !important; max-width:none !important; height:40px !important; min-height:40px !important; padding:0 9px !important; border:1px solid var(--border) !important; border-radius:8px !important; background:var(--surface) !important; color:var(--text-primary) !important; font-size:12px !important; }
+.marks-approval-filter-panel .marks-approval-filter-actions { display:flex; grid-column:auto; align-items:end; gap:7px; min-width:0; }
+.marks-approval-filter-panel .marks-approval-filter-actions .erp-btn { min-width:0; min-height:40px; padding-inline:9px; white-space:nowrap; font-size:11px; }
+@media(max-width:1450px) { .marks-approval-filter-panel .filter-disclosure__content { overflow-x:auto; } .marks-approval-dropdown-grid { min-width:980px; grid-template-columns:repeat(8,minmax(90px,1fr)) 185px; } }
+@media(max-width:760px) { .marks-approval-filter-panel .filter-disclosure__content { overflow:visible; } .marks-approval-dropdown-grid { min-width:0; grid-template-columns:repeat(2,minmax(0,1fr)); } }
+@media(max-width:640px) { .marks-approval-filter-panel .filter-disclosure__bar { flex-wrap:wrap; } .marks-approval-filter-panel .filter-disclosure__search { flex:1 0 100%; min-width:0; } .marks-approval-filter-panel .filter-disclosure__toggle { width:auto !important; } .marks-approval-dropdown-grid { grid-template-columns:repeat(2,minmax(0,1fr)); } .marks-approval-filter-panel .marks-approval-filter-actions { grid-column:span 2; } }
+@media(max-width:420px) { .marks-approval-dropdown-grid { grid-template-columns:minmax(0,1fr); } .marks-approval-filter-panel .marks-approval-filter-actions { grid-column:auto; } }
+
+
+.marks-approval-filter-panel .marks-approval-filter-actions { align-self:end; }
+.marks-approval-filter-panel .marks-approval-filter-actions .erp-btn { padding-inline:8px; font-size:11px; white-space:nowrap; }
+
+.marks-approval-filter-panel .filter-disclosure__bar { gap: 8px; }
+.marks-approval-filter-panel .marks-module-nav { flex: 0 1 700px; width: auto; min-width: 0; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 3px; padding: 3px; border-radius: 8px; }
+.marks-approval-filter-panel .marks-module-nav__link { min-height: 32px; padding: 4px 6px; border-radius: 6px; font-size: 11px; }
+.marks-approval-filter-panel .filter-disclosure__search { flex: 1 1 220px; min-width: 160px; }
+@media (max-width: 1100px) { .marks-approval-filter-panel .filter-disclosure__bar { flex-wrap: wrap; } .marks-approval-filter-panel .marks-module-nav { flex: 1 1 100%; } .marks-approval-filter-panel .filter-disclosure__search { flex: 1 1 240px; } }
+
+
+/* Source styles: pages/examinations/marks-management/MarksManagement.css */
+@media not all {
+.marks-management-page { display: grid; gap: 24px; min-width: 0; }
+
+}
