@@ -16,11 +16,14 @@ export default function FilterPanel({
   const nodes = Children.toArray(children)
   const primary = nodes[0]
   const primaryChildren = isValidElement(primary) ? Children.toArray(primary.props.children) : []
-  const search = isValidElement(primary) && primaryChildren.length
+  // A search label owns both its icon and input. Split only toolbar
+  // containers, otherwise the input is incorrectly moved into Filters.
+  const splitPrimary = isValidElement(primary) && primary.type !== 'label' && primaryChildren.length > 0
+  const search = splitPrimary
     ? cloneElement(primary, {}, primaryChildren[0])
     : primary
   const filterNodes = [
-    ...(isValidElement(primary) && primaryChildren.length > 1
+    ...(splitPrimary && primaryChildren.length > 1
       ? [cloneElement(primary, {}, primaryChildren.slice(1))]
       : []),
     ...nodes.slice(1),

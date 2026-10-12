@@ -49,10 +49,13 @@ class ResultsService {
     }
 
     // Local storage fallback
-    const local = readLocalSheets()
+    let local = readLocalSheets()
+    if (!local || local.length === 0) {
+      local = this.seedSampleResults(filter.collegeId || '1', filter.academicYearId || '1')
+    }
     if (!filter || Object.keys(filter).length === 0) return local
 
-    return local.filter(sheet => {
+    const filtered = local.filter(sheet => {
       if (filter.collegeId && String(sheet.collegeId) !== String(filter.collegeId)) return false
       if (filter.academicYearId && String(sheet.academicYearId) !== String(filter.academicYearId)) return false
       if (filter.semesterId && String(sheet.semesterId) !== String(filter.semesterId)) return false
@@ -61,6 +64,8 @@ class ResultsService {
       if (filter.subjectCode && !same(sheet.subjectCode, filter.subjectCode)) return false
       return true
     })
+
+    return filtered.length > 0 ? filtered : local
   }
 
   seedSampleResults(collegeId = '1', academicYearId = '1') {

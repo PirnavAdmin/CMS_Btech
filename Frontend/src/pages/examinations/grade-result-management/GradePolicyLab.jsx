@@ -1,9 +1,9 @@
-﻿import { useState } from 'react'
+import { useState } from 'react'
 import { FiCheckCircle, FiInfo, FiTrendingUp } from 'react-icons/fi'
 import { gradeFor, validateBands } from './gradeResultModel'
 import './GradePolicyLab.css'
 const format = value => Number(value.toFixed(2)).toString()
-export default function GradePolicyLab({ bands, savedBands }) {
+export default function GradePolicyLab({ bands, savedBands, actions }) {
   const [score, setScore] = useState('75')
   const [maximum, setMaximum] = useState('100')
   const issue = validateBands(bands)
@@ -16,7 +16,7 @@ export default function GradePolicyLab({ bands, savedBands }) {
   const savedGrade = valid && !validateBands(savedBands) ? gradeFor(percentage, savedBands) : null
   const unsaved = JSON.stringify(bands) !== JSON.stringify(savedBands)
   return <section className="grm-policy-lab">
-    <div className="grm-lab-header"><div><small>POLICY PREVIEW</small><h3>Grade policy lab</h3><p>Test a score and understand exactly how your grading rules apply.</p></div><span className="grm-lab-state"><FiCheckCircle />{unsaved ? 'Editor changes pending' : 'Saved policy in sync'}</span></div>
+    <div className="grm-lab-header"><div><small>POLICY PREVIEW</small><h3>Grade policy lab</h3><p>Test a score and understand exactly how your grading rules apply.</p></div><div className="grm-lab-header-actions"><span className="grm-lab-state"><FiCheckCircle />{unsaved ? 'Editor changes pending' : 'Saved policy in sync'}</span>{actions}</div></div>
     <div className="grm-policy-layout"><section className="grm-lab-section"><div className="grm-lab-heading"><span>01</span><div><h4>Test student marks</h4><p>Percentage = obtained marks / maximum marks x 100</p></div></div>
       <div className="grm-simulator-inputs"><label>Marks obtained<input type="number" min="0" max={Number(maximum) > 0 ? maximum : undefined} step="any" value={score} onChange={event => setScore(event.target.value)} /></label><label>Maximum marks<input type="number" min="0.01" step="any" value={maximum} onChange={event => setMaximum(event.target.value)} /></label></div>
       <div className="grm-lab-examples"><span>Try a score:</span>{[40, 75, 90, 100].map(value => <button key={value} type="button" disabled={!(Number(maximum) > 0)} onClick={() => setScore(String(Number(maximum) * value / 100))}>{value}%</button>)}</div>

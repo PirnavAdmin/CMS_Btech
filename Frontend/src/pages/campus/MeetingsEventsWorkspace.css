@@ -1,4 +1,32 @@
 /* Meetings & Events Enterprise Workspace Styles */
+.mew-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 38px;
+  padding: 9px 14px;
+  border: 1px solid var(--border, #cfdeef);
+  border-radius: 8px;
+  background: var(--surface, #fff);
+  color: var(--text-primary, #102a4c);
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.4;
+  cursor: pointer;
+  transition: background-color .15s ease, border-color .15s ease;
+}
+.mew-button svg { width: 17px; height: 17px; flex-shrink: 0; }
+.mew-button--primary {
+  background: var(--brand, #1769c2);
+  border-color: var(--brand, #1769c2);
+  color: #fff;
+}
+.mew-button--primary:hover:not(:disabled) { background: var(--brand-hover, #125aa8); border-color: var(--brand-hover, #125aa8); }
+.mew-button:not(.mew-button--primary):not(.mew-btn-delete-confirm):hover:not(:disabled) { background: var(--surface-soft, #eaf3ff); border-color: var(--brand, #1769c2); }
+.mew-button:focus-visible { outline: 2px solid var(--brand, #1769c2); outline-offset: 3px; }
+.mew-button:disabled { opacity: .55; cursor: not-allowed; }
 .mew-workspace {
   display: grid;
   gap: 20px;
