@@ -33,7 +33,7 @@ export default function CreateExamination() {
   return <DashboardLayout><main className="examination-setup">
     <header className="examination-setup__header"><div><h1>Examination Setup</h1><p>Create and manage examination cycles.</p></div></header>
     <section className="examination-setup__card"><header className="examination-setup__card-header"><div><p>CREATE EXAMINATION</p><h2>Enter examination details and academic period.</h2></div></header>
-      <nav className="examination-setup__tabs" aria-label="Examination setup sections">{tabs.map(([label, path]) => <Link key={path} to={path} className={path === location.pathname ? 'active' : ''}>{label}</Link>)}</nav>
+      <nav className="examination-setup__tabs" aria-label="Examination setup sections">{tabs.filter(([, path]) => path !== '/examination-setup/create-examination').map(([label, path]) => <Link key={path} to={path} className={path === location.pathname ? 'active' : ''}>{label}</Link>)}</nav>
       <div className="examination-setup__form-wrap"><form className="examination-setup__form" onSubmit={submit} noValidate>
         <label><span>Examination Name <b>*</b></span><input value={form.name} aria-invalid={Boolean(errors.name)} onChange={event => change('name', event.target.value)} />{errors.name && <small className="examination-setup__field-error">{errors.name}</small>}</label>
         <label><span>Academic Year <b>*</b></span><select value={form.academicYear} aria-invalid={Boolean(errors.academicYear)} onChange={event => change('academicYear', event.target.value)}><option value="">Select academic year</option>{['2025-26', '2026-27', '2027-28'].map(year => <option key={year}>{year}</option>)}</select>{errors.academicYear && <small className="examination-setup__field-error">{errors.academicYear}</small>}</label>
@@ -49,3 +49,4 @@ export default function CreateExamination() {
     </section>
   </main></DashboardLayout>
 }
+

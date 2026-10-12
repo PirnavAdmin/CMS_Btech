@@ -27,6 +27,7 @@
 .mew-button:not(.mew-button--primary):not(.mew-btn-delete-confirm):hover:not(:disabled) { background: var(--surface-soft, #eaf3ff); border-color: var(--brand, #1769c2); }
 .mew-button:focus-visible { outline: 2px solid var(--brand, #1769c2); outline-offset: 3px; }
 .mew-button:disabled { opacity: .55; cursor: not-allowed; }
+.mew-form-error{flex:1;flex-basis:100%;margin:0;color:#b42318;font-size:12px;line-height:1.5}
 .mew-workspace {
   display: grid;
   gap: 20px;

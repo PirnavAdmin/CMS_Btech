@@ -8,6 +8,7 @@ export default function FilterPanel({
   onClear,
   showClearWhenOpen = false,
   className = '',
+  toggleClassName = '',
   actions = null,
   leadingActions = null,
   hideClear = false
@@ -38,7 +39,7 @@ export default function FilterPanel({
         {hasFilterFields && (
           <button
             type="button"
-            className="filter-disclosure__toggle"
+            className={`filter-disclosure__toggle ${toggleClassName}`.trim()}
             onClick={() => setOpen((value) => !value)}
             aria-expanded={open}
           >
