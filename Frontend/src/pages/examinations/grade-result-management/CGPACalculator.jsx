@@ -63,7 +63,13 @@ const newSemester = (number, customCredits = '') => ({
 function readRows(storageKey) {
   try {
     const saved = JSON.parse(localStorage.getItem(storageKey) || 'null')
-    if (Array.isArray(saved) && saved.length && saved.every(row => row && typeof row === 'object')) return saved
+    if (Array.isArray(saved) && saved.length && saved.every(row => row && typeof row === 'object')) return saved.map((row, index) => ({
+      ...row,
+      id: row.id || newSemester(index + 1).id,
+      semester: String(row.semester || `Semester ${index + 1}`),
+      sgpa: row.sgpa == null ? '' : String(row.sgpa),
+      credits: row.credits == null ? '' : String(row.credits),
+    }))
   } catch { /* Start fresh if corrupted */ }
   return [newSemester(1, 20)]
 }
@@ -81,11 +87,12 @@ export default function CGPACalculator({ storageKey }) {
   // Advanced Goal Planner State
   const [targetCgpa, setTargetCgpa] = useState('8.50')
   const [targetRemainingSemesters, setTargetRemainingSemesters] = useState(4)
-  const [creditsPerUpcomingSem, setCreditsPerUpcomingSem] = useState(20)
+  const [creditsPerUpcomingSem, setCreditsPerUpcomingSem] = useState(() => AUTONOMOUS_CREDITS.slice(-4).reduce((sum, credits) => sum + credits, 0) / 4)
 
   // Quick Period & Student Import
   const [periodType, setPeriodType] = useState('semester')
   const [periodNumber, setPeriodNumber] = useState('1')
+  const [actionNotice, setActionNotice] = useState('')
   const [availableStudents, setAvailableStudents] = useState([])
   const [selectedStudentId, setSelectedStudentId] = useState('')
 
@@ -249,6 +256,8 @@ export default function CGPACalculator({ storageKey }) {
       return [...current, newSemester(nextNum, defaultCr)]
     })
     setResetConfirm(false)
+    setSelectedStudentId('')
+    setActionNotice('Next semester added. Enter its SGPA and earned credits below.')
     touchSaveState()
   }
 
@@ -274,6 +283,11 @@ export default function CGPACalculator({ storageKey }) {
       sgpa: '',
       credits: String(credits),
     })))
+    setPeriodType('course')
+    setPeriodNumber('8')
+    setSelectedStudentId('')
+    setResetConfirm(false)
+    setActionNotice('Calculator reset to 8 semesters. Previous SGPA values have been cleared.')
     touchSaveState()
   }
 
@@ -331,7 +345,14 @@ export default function CGPACalculator({ storageKey }) {
     }))
     setSelectedStudentId('')
     setResetConfirm(false)
+    setActionNotice(count === 1 ? `Semester ${start} loaded in the calculator.` : `Semesters ${start}–${start + count - 1} loaded in the calculator.`)
     touchSaveState()
+  }
+
+  const choosePeriod = (type, number) => {
+    setPeriodType(type)
+    setPeriodNumber(String(number))
+    applyTemplate(type === 'semester' ? 1 : type === 'year' ? 2 : Number(number), type === 'semester' ? Number(number) : type === 'year' ? Number(number) * 2 - 1 : 1)
   }
 
   const handleStudentImport = async (studentId) => {
@@ -729,7 +750,7 @@ export default function CGPACalculator({ storageKey }) {
                   type="button"
                   className={`grm-cgpa__period-mode ${periodType === value ? 'is-selected' : ''}`}
                   aria-pressed={periodType === value}
-                  onClick={() => { setPeriodType(value); setPeriodNumber(value === 'course' ? '8' : '1') }}
+                  onClick={() => choosePeriod(value, value === periodType ? periodNumber : value === 'course' ? '8' : '1')}
                 >
                   <Icon aria-hidden="true" />
                   <span>
@@ -744,7 +765,7 @@ export default function CGPACalculator({ storageKey }) {
             <div className="grm-cgpa__period-controls">
               <label className="grm-cgpa__period-field">
                 <span>{periodType === 'semester' ? 'Select semester' : periodType === 'year' ? 'Select academic year' : 'Select course duration'}</span>
-                <select value={periodNumber} onChange={event => setPeriodNumber(event.target.value)}>
+                <select aria-label="Select calculation period" value={periodNumber} onChange={event => choosePeriod(periodType, event.target.value)}>
                   {periodType === 'course' ? (
                     <>
                       <option value="4">2 years / 4 semesters</option>
@@ -776,6 +797,8 @@ export default function CGPACalculator({ storageKey }) {
               </button>
             </div>
           </div>
+
+          {actionNotice && <p className="grm-cgpa__action-notice" role="status"><FiCheckCircle aria-hidden="true" /> {actionNotice}</p>}
 
           {/* Interactive Semesters Table */}
           <div className="grm-cgpa__table-section">
@@ -1240,7 +1263,7 @@ export default function CGPACalculator({ storageKey }) {
                   <FiTarget aria-hidden="true" /> Graduation Target Goal Simulator (What-If Analysis)
                 </h4>
                 <p className="grm-cgpa__planner-desc">
-                  Calculate the exact average SGPA required in upcoming semesters to achieve your target graduation CGPA.
+                  Calculate the exact average SGPA required in remaining semesters to achieve your target graduation CGPA.
                 </p>
               </div>
               <span className="grm-cgpa__planner-badge">Interactive Simulator</span>
@@ -1265,11 +1288,16 @@ export default function CGPACalculator({ storageKey }) {
                   <span>Remaining Semesters:</span>
                   <select
                     value={targetRemainingSemesters}
-                    onChange={e => setTargetRemainingSemesters(Number(e.target.value))}
+                    onChange={e => {
+                      const count = Number(e.target.value)
+                      const credits = AUTONOMOUS_CREDITS.slice(-count)
+                      setTargetRemainingSemesters(count)
+                      setCreditsPerUpcomingSem(credits.reduce((sum, value) => sum + value, 0) / count)
+                    }}
                   >
                     {[1, 2, 3, 4, 5, 6, 7].map(n => (
                       <option key={n} value={n}>
-                        {n} {n === 1 ? 'Upcoming Semester' : 'Upcoming Semesters'}
+                        {n} {n === 1 ? 'Semester' : 'Semesters'}
                       </option>
                     ))}
                   </select>
@@ -1282,7 +1310,7 @@ export default function CGPACalculator({ storageKey }) {
                     min="10"
                     max="30"
                     step="0.5"
-                    value={creditsPerUpcomingSem}
+                    value={Number(Number(creditsPerUpcomingSem).toFixed(2))}
                     onChange={e => setCreditsPerUpcomingSem(Number(e.target.value))}
                     placeholder="e.g. 20"
                   />
@@ -1290,6 +1318,7 @@ export default function CGPACalculator({ storageKey }) {
               </div>
 
               <div className="grm-cgpa__planner-result">
+                <p className="grm-cgpa__planner-note">{targetRemainingSemesters} {Number(targetRemainingSemesters) === 1 ? 'semester' : 'semesters'} × {Number(Number(creditsPerUpcomingSem).toFixed(2))} average credits = <strong>{Number((Number(targetRemainingSemesters) * Number(creditsPerUpcomingSem)).toFixed(2))} remaining credits</strong>. Average defaults to the final {targetRemainingSemesters} semesters of the calculator credit preset; adjust it for your course.</p>
                 {cgpa === null ? (
                   <p className="grm-cgpa__planner-note">Complete current semester rows with valid SGPAs and credits to simulate your graduation goal.</p>
                 ) : !goalAnalysis ? (
