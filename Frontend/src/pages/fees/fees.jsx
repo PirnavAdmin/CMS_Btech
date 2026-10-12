@@ -412,6 +412,8 @@ export const FeeStructureWizardModule = (() => {
             const height = external0.Children.toArray(children).length * 34 + 12;
             setPosition({
               left: Math.max(8, Math.min(rect.right - 180, window.innerWidth - 188)),
+              maxHeight: Math.max(0, window.innerHeight - 16),
+              overflowY: "auto",
               top: rect.bottom + height < window.innerHeight - 8 ? rect.bottom + 4 : Math.max(8, rect.top - height - 4),
             });
           }}

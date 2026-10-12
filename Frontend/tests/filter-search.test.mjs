@@ -6,7 +6,8 @@ import { fileURLToPath } from 'node:url'
 
 const server = await createServer({ root: fileURLToPath(new URL('../', import.meta.url)), server: { middlewareMode: true } })
 try {
-  const { default: FilterPanel } = await server.ssrLoadModule('/src/components/FilterPanel.jsx')
+  const { FilterPanelModule } = await server.ssrLoadModule('/src/components/components.jsx')
+  const { default: FilterPanel } = FilterPanelModule
   const search = React.createElement('label', { className: 'grm-search' },
     React.createElement('span', null, 'Search icon'),
     React.createElement('input', { placeholder: 'Search student name', defaultValue: 'Sai CSE' }))

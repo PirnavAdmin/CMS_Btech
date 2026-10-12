@@ -1,3 +1,4 @@
+import { gradeResultModelModule as mergeDependency0 } from "../../components/components.jsx";
 // Pages and helpers in this module retain their own isolated scopes.
 import * as external0 from "react";
 import * as external1 from "react-router-dom";
@@ -7,6 +8,7 @@ import { authModule, rolesModule, apiEndpointsModule, subjectServiceModule, facu
 import { toastModule } from "../../components/components.jsx";
 
 export const DashboardModule = (() => {
+const { buildTrend: buildTrend } = mergeDependency0;
 const { default: useCollegeState } = useCollegeStateModule;
 const { useEffect } = external0;
 const { useState } = external0;
@@ -390,18 +392,14 @@ import './Dashboard.css'
       }
     }
 
-    // Month View (Jan - Jul)
-    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul']
-    const counts = [0, 0, 0, 0, 0, 0, 0]
-
-    scopedAdmissions.forEach((adm, idx) => {
-      counts[idx % 7] += 1
-    })
-
+    // Month view uses actual admission dates in a rolling 12-month window.
+    // Distributing undated records across months made the chart look flat and
+    // implied a monthly history that was not present in the source records.
+    const trend = buildTrend(scopedAdmissions, 'Month')
     return {
-      labels: months,
-      points: counts,
-      subtext: `${approvedAdmissions.length} Approved | ${pendingAdmissions.length} In Review`,
+      labels: trend.buckets.map((bucket) => bucket.label),
+      points: trend.buckets.map((bucket) => bucket.value),
+      subtext: `${approvedAdmissions.length} Approved | ${pendingAdmissions.length} In Review${trend.undated ? ` | ${trend.undated} without dates` : ''}`,
     }
   }, [inflowTimeframe, scopedAdmissions, approvedAdmissions.length, pendingAdmissions.length])
 
@@ -1321,6 +1319,7 @@ function InteractiveDonutRing({ total, segments, activeSegment, onSelect }) {
     </div>
   )
 }
+
 // #endregion pages/Dashboard.jsx
 return {
   get default() { return Dashboard; }

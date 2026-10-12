@@ -1509,11 +1509,45 @@ export const gradeResultModelModule = (() => {
 }
 const text = value => typeof value === 'object' && value ? String(value.name || value.label || '') : String(value ?? '')
 const number = value => value === '' || value === null || value === undefined || !Number.isFinite(Number(value)) ? null : Number(value)
+/* export */ function matchesResultSearch(row, query) {
+  const normalize = value => String(value ?? '').trim().toLowerCase().replace(/\s+/g, ' ')
+  const terms = normalize(query).split(' ').filter(Boolean)
+  const fields = ['studentName', 'registrationNumber', 'rollNumber', 'studentId', 'idNumber', 'department', 'departmentCode', 'branch', 'branchCode', 'subjectName', 'subjectCode', 'semester', 'examType']
+  const values = fields.map(key => normalize(row[key])).filter(Boolean)
+  return terms.every(term => values.some(value => value.includes(term)))
+}
 /* export */ function flattenResults(sheets) {
   return sheets.flatMap((sheet, sheetIndex) => (Array.isArray(sheet.records) ? sheet.records : [sheet]).map((record, index) => {
     const max = number(record.maximumMarks ?? sheet.maximumMarks ?? sheet.maxMarks) ?? ((number(sheet.maxInternal) !== null && number(sheet.maxExternal) !== null) ? Number(sheet.maxInternal) + Number(sheet.maxExternal) : null)
     const total = number(record.totalMarks ?? record.marksObtained) ?? ((number(record.internalMarks) !== null && number(record.externalMarks) !== null) ? Number(record.internalMarks) + Number(record.externalMarks) : null)
-    return { id: `${sheet.id || sheetIndex}:${record.studentId || index}:${index}`, collegeId: record.collegeId ?? sheet.collegeId, academicYearId: record.academicYearId ?? sheet.academicYearId, studentId: text(record.studentId ?? record.id), studentName: text(record.studentName ?? record.name), registrationNumber: text(record.registrationNumber ?? record.rollNumber), department: text(record.departmentName ?? sheet.departmentName ?? sheet.department ?? sheet.branchName ?? sheet.branch), semester: text(record.semesterName ?? sheet.semesterName ?? sheet.semester), subjectCode: text(record.subjectCode ?? sheet.subjectCode), subjectName: text(record.subjectName ?? sheet.subjectName), examType: text(record.examType ?? sheet.examType), totalMarks: total, maximumMarks: max, percentage: max > 0 && total !== null ? total / max * 100 : null, credits: number(record.credits ?? sheet.credits), grade: text(record.grade), gradePoint: number(record.gradePoint), status: text(record.status ?? record.resultStatus ?? 'Pending'), examDate: text(record.examDate ?? sheet.examDate ?? sheet.updatedAt ?? sheet.createdAt) }
+    return {
+      id: `${sheet.id || sheetIndex}:${record.studentId || index}:${index}`,
+      collegeId: record.collegeId ?? sheet.collegeId,
+      academicYearId: record.academicYearId ?? sheet.academicYearId,
+      studentId: text(record.studentId ?? record.studentIdNumber ?? record.idNumber ?? record.id),
+      studentName: text(record.studentName ?? record.fullName ?? record.name),
+      registrationNumber: text(record.registrationNumber ?? record.rollNumber),
+      rollNumber: text(record.rollNumber ?? record.registrationNumber),
+      idNumber: text(record.idNumber ?? record.studentIdNumber ?? record.studentId),
+      branch: text(record.branchName ?? record.branch ?? sheet.branchName ?? sheet.branch),
+      branchCode: text(record.branchCode ?? sheet.branchCode),
+      departmentCode: text(record.departmentCode ?? sheet.departmentCode),
+      department: text(record.departmentName ?? record.department ?? sheet.departmentName ?? sheet.department ?? sheet.branchName ?? sheet.branch),
+      semester: text(record.semesterName ?? sheet.semesterName ?? sheet.semester),
+      subjectCode: text(record.subjectCode ?? sheet.subjectCode),
+      subjectName: text(record.subjectName ?? sheet.subjectName),
+      examType: text(record.examType ?? sheet.examType),
+      internalMarks: number(record.internalMarks),
+      externalMarks: number(record.externalMarks),
+      totalMarks: total,
+      maximumMarks: max,
+      percentage: max > 0 && total !== null ? total / max * 100 : null,
+      credits: number(record.credits ?? sheet.credits),
+      grade: text(record.grade),
+      gradePoint: number(record.gradePoint),
+      status: text(record.status ?? record.resultStatus ?? 'Pending'),
+      examDate: text(record.examDate ?? sheet.examDate ?? sheet.updatedAt ?? sheet.createdAt)
+    }
   }))
 }
 /* export */ function summarize(rows, key) {
@@ -1571,6 +1605,7 @@ const number = value => value === '' || value === null || value === undefined ||
     return 0
   })
 }
+
 // #endregion pages/examinations/grade-result-management/gradeResultModel.js
 return {
   get defaultBands() { return defaultBands; },
@@ -1585,7 +1620,8 @@ return {
   get backlogRows() { return backlogRows; },
   get resultIssues() { return resultIssues; },
   get resultAnalytics() { return resultAnalytics; },
-  get sortResultRows() { return sortResultRows; }
+  get sortResultRows() { return sortResultRows; },
+  get matchesResultSearch() { return matchesResultSearch; },
 };
 })();
 
@@ -2279,7 +2315,6 @@ const normalize = (option, getOptionLabel, getOptionValue) => {
   placeholder = 'Select an option',
   searchPlaceholder = 'Search...',
   hideSearch = false,
-  placement = 'auto',
   disabled = false,
   loading = false,
   error = false,
@@ -2329,13 +2364,11 @@ const normalize = (option, getOptionLabel, getOptionValue) => {
       const viewportWidth = viewport?.width || window.innerWidth
       const padding = 8, gap = 4;
       const below = Math.max(0, viewportTop + viewportHeight - rect.bottom - padding - gap);
-      const above = Math.max(0, rect.top - viewportTop - padding - gap);
-      const flip = placement === 'top' || (placement !== 'bottom' && below < 130 && above > below);
-      const maxHeight = Math.min(240, flip ? above : below);
+      // Keep every shared dropdown below its trigger, including near the viewport edge.
+      const maxHeight = Math.min(240, below);
       const width = Math.min(Math.max(rect.width, 280), viewportWidth - padding * 2);
       setMenuStyle({
-        top: flip ? undefined : Math.round(rect.bottom + gap),
-        bottom: flip ? Math.round(window.innerHeight - rect.top + gap) : undefined,
+        top: Math.round(rect.bottom + gap),
         left: Math.max(viewportLeft + padding, Math.min(rect.left, viewportLeft + viewportWidth - width - padding)),
         width,
         maxHeight,
@@ -2355,7 +2388,7 @@ const normalize = (option, getOptionLabel, getOptionValue) => {
       window.visualViewport?.removeEventListener('resize', position)
       window.visualViewport?.removeEventListener('scroll', position)
     }
-  }, [open, options, query, loading, placement])
+  }, [open, options, query, loading])
 
   useEffect(() => {
     if (!open) return undefined
@@ -2503,6 +2536,7 @@ const normalize = (option, getOptionLabel, getOptionValue) => {
     </div>
   )
 }
+
 // #endregion components/SearchableSelect.jsx
 return {
   get default() { return SearchableSelect; }
@@ -2690,7 +2724,7 @@ function Item({ to, icon: Icon, children, onNavigate, tone = 'blue', activeWhen 
   const activeCollege = selectedCollegeHasId ? selectedCollege : (matchingCollege || selectedCollege)
   const collegeId = activeCollege?.id ?? activeCollege?.collegeId ?? activeCollege?.CollegeId ?? selectedCollegeId
   const [collegeLogo, setCollegeLogo] = useState('')
-  const examRoutesActive = pathname.startsWith('/examination-setup') || pathname.startsWith('/exam-timetable')
+  const examRoutesActive = pathname.startsWith('/examination-setup') || pathname.startsWith('/exam-timetable') || pathname.startsWith('/examination/completed-exams')
   const [examManagementOpen, setExamManagementOpen] = useState(examRoutesActive)
   const gradeResultsActive = pathname.startsWith('/grade-result-management') || pathname.startsWith('/results')
   const [gradeResultsOpen, setGradeResultsOpen] = useState(gradeResultsActive)
@@ -2833,6 +2867,7 @@ function Item({ to, icon: Icon, children, onNavigate, tone = 'blue', activeWhen 
           {examManagementOpen && <div className="sidebar-submenu sidebar-exam-submenu" id="exam-management-links">
             <Item to="/examination-setup" icon={FiFileText} tone="blue" onNavigate={onClose} activeWhen={pathname => pathname.startsWith('/examination-setup')}>Examination Setup</Item>
             <Item to="/exam-timetable" icon={FiCalendar} tone="orange" onNavigate={onClose} activeWhen={pathname => pathname.startsWith('/exam-timetable')}>Exam Timetable</Item>
+            <Item to="/examination/completed-exams" icon={FiFileText} tone="blue" onNavigate={onClose} activeWhen={pathname => pathname.startsWith('/examination/completed-exams')}>Completed Exams</Item>
           </div>}
           <Item to="/marks-management/marks-entry" icon={FiEdit3} tone="green" onNavigate={onClose} activeWhen={pathname => pathname.startsWith('/marks-management')}>Marks Management</Item>
           <button type="button" className={`sidebar-link sidebar-link--purple sidebar-disclosure sidebar-grade-parent ${gradeResultsActive ? 'is-module-active' : ''}`} onClick={() => setGradeResultsOpen(open => !open)} aria-expanded={gradeResultsOpen} aria-controls="grade-results-links">
@@ -2863,6 +2898,7 @@ function Item({ to, icon: Icon, children, onNavigate, tone = 'blue', activeWhen 
     </aside>
   </>
 }
+
 // #endregion components/Sidebar.jsx
 return {
   get default() { return Sidebar; }
@@ -4099,6 +4135,7 @@ import './FilterPanel.css'
   onClear,
   showClearWhenOpen = false,
   className = '',
+  toggleClassName = '',
   actions = null,
   leadingActions = null,
   hideClear = false
@@ -4107,11 +4144,14 @@ import './FilterPanel.css'
   const nodes = Children.toArray(children)
   const primary = nodes[0]
   const primaryChildren = isValidElement(primary) ? Children.toArray(primary.props.children) : []
-  const search = isValidElement(primary) && primaryChildren.length
+  // A search label owns both its icon and input. Split only toolbar
+  // containers, otherwise the input is incorrectly moved into Filters.
+  const splitPrimary = isValidElement(primary) && primary.type !== 'label' && primaryChildren.length > 0
+  const search = splitPrimary
     ? cloneElement(primary, {}, primaryChildren[0])
     : primary
   const filterNodes = [
-    ...(isValidElement(primary) && primaryChildren.length > 1
+    ...(splitPrimary && primaryChildren.length > 1
       ? [cloneElement(primary, {}, primaryChildren.slice(1))]
       : []),
     ...nodes.slice(1),
@@ -4126,7 +4166,7 @@ import './FilterPanel.css'
         {hasFilterFields && (
           <button
             type="button"
-            className="filter-disclosure__toggle"
+            className={`filter-disclosure__toggle ${toggleClassName}`.trim()}
             onClick={() => setOpen((value) => !value)}
             aria-expanded={open}
           >
@@ -4156,6 +4196,7 @@ import './FilterPanel.css'
     </section>
   )
 }
+
 // #endregion components/FilterPanel.jsx
 return {
   get default() { return FilterPanel; }

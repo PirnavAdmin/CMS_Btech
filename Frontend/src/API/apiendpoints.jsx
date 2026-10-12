@@ -266,7 +266,7 @@ import { createApiUnavailableError, notifyApiUnavailable } from '../api/apiFailu
 */
 // #region auth/collegeApi.js
 const cleanUrl = (url) => (url || "").replace(/\/+$/, "");
-const DEFAULT_API_BASE_URL = "https://abreast-curling-tutor.ngrok-free.dev";
+const DEFAULT_API_BASE_URL = "https://clarity-math-delouse.ngrok-free.dev";
 
 const friendlyValidationMessage = (errors) => {
   if (!errors || typeof errors !== "object") return "";
@@ -849,6 +849,7 @@ const setDatesMap = (map) => {
 /* export */ const getCollegeSettingsByCollegeId = (collegeId) => {
   return SETTINGS_API.get(`/college-settings/college/${collegeId}`);
 };
+
 // #endregion auth/collegeApi.js
 return {
   get WEBSITE_VALIDATION_MESSAGE() { return WEBSITE_VALIDATION_MESSAGE; },
@@ -1247,7 +1248,7 @@ if (typeof window !== 'undefined' && window.localStorage) {
 }
 
 const normalizeBaseUrl = (value = '') => value.trim().replace(/\/+$/, '')
-const DEFAULT_API_BASE_URL = 'https://abreast-curling-tutor.ngrok-free.dev'
+const DEFAULT_API_BASE_URL = 'https://clarity-math-delouse.ngrok-free.dev'
 
 // Results endpoints are optional until the institution's result service is integrated.
 /* export */ const RESULTS_API_ENABLED = String(import.meta.env.VITE_RESULTS_API_ENABLED || '').toLowerCase() === 'true'
@@ -2787,6 +2788,7 @@ const rolePayload = (role) => {
     return dataResponse(await multipartRequest(endpoint(`/api/v1/marks/bulk/${preview ? 'file-preview' : 'upload'}`), form))
   },
 }
+
 // #endregion api/apiEndpoints.js
 return {
   get RESULTS_API_ENABLED() { return RESULTS_API_ENABLED; },
@@ -6188,7 +6190,7 @@ const fetchWithApiNotice = async (...args) => {
   }
 }
 
-const DEFAULT_API_BASE_URL = 'https://abreast-curling-tutor.ngrok-free.dev'
+const DEFAULT_API_BASE_URL = 'https://clarity-math-delouse.ngrok-free.dev'
 const authEndpoint = import.meta.env.VITE_AUTH_API_URL || (import.meta.env.DEV ? '/api/v1/auth/login' : `${DEFAULT_API_BASE_URL}/api/v1/auth/login`)
 const registrationBaseUrl = String(import.meta.env.DEV ? '' : (import.meta.env.VITE_API_BASE_URL || DEFAULT_API_BASE_URL)).replace(/\/+$/, '')
 const registrationEndpoint = import.meta.env.VITE_REGISTRATION_API_URL || (registrationBaseUrl ? `${registrationBaseUrl}/api/v1/access-requests` : import.meta.env.DEV ? '/api/v1/access-requests' : '')
@@ -6445,6 +6447,7 @@ const accessRequestAdminCall = async (path, method = 'GET') => {
 /* export */ const getPendingAccessRequests = () => accessRequestAdminCall('/pending')
 /* export */ const approveAccessRequest = (requestId) => accessRequestAdminCall(`/${encodeURIComponent(requestId)}/approve`, 'POST')
 /* export */ const rejectAccessRequest = (requestId) => accessRequestAdminCall(`/${encodeURIComponent(requestId)}/reject`, 'POST')
+
 // #endregion auth/authApi.js
 return {
   get AuthRequestError() { return AuthRequestError; },
@@ -10526,14 +10529,20 @@ export const sampleBTechResultsModule = (() => {
 /**
  * High-fidelity sample B.Tech results data for demonstrations and offline testing.
  * Includes complete assessment records across CSE, ECE, ME, multiple semesters,
- * credit weightings, passing students, and backlogs.
+ * credit weightings, passing students, and authentic backlogs.
  */
 /* export */ function getSampleBTechSheets(collegeId = '1', academicYearId = '1') {
+  const cid = String(collegeId || '1')
+  const ayid = String(academicYearId || '1')
+
   return [
+    // -------------------------------------------------------------
+    // CSE Semester 5 - Complete Semester Course Load
+    // -------------------------------------------------------------
     {
       id: 'sheet-cs501',
-      collegeId: String(collegeId),
-      academicYearId: String(academicYearId),
+      collegeId: cid,
+      academicYearId: ayid,
       semester: 'Semester 5',
       department: 'Computer Science & Engineering',
       examType: 'End Semester Regular',
@@ -10543,16 +10552,16 @@ export const sampleBTechResultsModule = (() => {
       credits: 4,
       examDate: '2026-05-12',
       records: [
-        { studentId: 'stu-101', studentName: 'Rahul Sharma', registrationNumber: '21B01A0501', internalMarks: 28, externalMarks: 62, totalMarks: 90, grade: 'O', gradePoint: 10, status: 'Passed' },
+        { studentId: 'stu-101', studentName: 'Rahul Sharma', registrationNumber: '21B01A0501', internalMarks: 28, externalMarks: 64, totalMarks: 92, grade: 'O', gradePoint: 10, status: 'Passed' },
         { studentId: 'stu-102', studentName: 'Sneha Reddy', registrationNumber: '21B01A0502', internalMarks: 25, externalMarks: 58, totalMarks: 83, grade: 'A+', gradePoint: 9, status: 'Passed' },
         { studentId: 'stu-103', studentName: 'Ananya Rao', registrationNumber: '21B01A0503', internalMarks: 22, externalMarks: 48, totalMarks: 70, grade: 'A', gradePoint: 8, status: 'Passed' },
-        { studentId: 'stu-104', studentName: 'Vikramaditya Varma', registrationNumber: '21B01A0504', internalMarks: 12, externalMarks: 22, totalMarks: 34, grade: 'F', gradePoint: 0, status: 'Failed' },
+        { studentId: 'stu-104', studentName: 'Vikramaditya Varma', registrationNumber: '21B01A0504', internalMarks: 11, externalMarks: 23, totalMarks: 34, grade: 'F', gradePoint: 0, status: 'Failed' },
       ],
     },
     {
       id: 'sheet-cs502',
-      collegeId: String(collegeId),
-      academicYearId: String(academicYearId),
+      collegeId: cid,
+      academicYearId: ayid,
       semester: 'Semester 5',
       department: 'Computer Science & Engineering',
       examType: 'End Semester Regular',
@@ -10562,69 +10571,172 @@ export const sampleBTechResultsModule = (() => {
       credits: 4,
       examDate: '2026-05-15',
       records: [
-        { studentId: 'stu-101', studentName: 'Rahul Sharma', registrationNumber: '21B01A0501', internalMarks: 27, externalMarks: 65, totalMarks: 92, grade: 'O', gradePoint: 10, status: 'Passed' },
-        { studentId: 'stu-102', studentName: 'Sneha Reddy', registrationNumber: '21B01A0502', internalMarks: 24, externalMarks: 52, totalMarks: 76, grade: 'A', gradePoint: 8, status: 'Passed' },
-        { studentId: 'stu-103', studentName: 'Ananya Rao', registrationNumber: '21B01A0503', internalMarks: 20, externalMarks: 45, totalMarks: 65, grade: 'B+', gradePoint: 7, status: 'Passed' },
-        { studentId: 'stu-104', studentName: 'Vikramaditya Varma', registrationNumber: '21B01A0504', internalMarks: 18, externalMarks: 35, totalMarks: 53, grade: 'B', gradePoint: 6, status: 'Passed' },
+        { studentId: 'stu-101', studentName: 'Rahul Sharma', registrationNumber: '21B01A0501', internalMarks: 29, externalMarks: 65, totalMarks: 94, grade: 'O', gradePoint: 10, status: 'Passed' },
+        { studentId: 'stu-102', studentName: 'Sneha Reddy', registrationNumber: '21B01A0502', internalMarks: 26, externalMarks: 59, totalMarks: 85, grade: 'A+', gradePoint: 9, status: 'Passed' },
+        { studentId: 'stu-103', studentName: 'Ananya Rao', registrationNumber: '21B01A0503', internalMarks: 21, externalMarks: 51, totalMarks: 72, grade: 'A', gradePoint: 8, status: 'Passed' },
+        { studentId: 'stu-104', studentName: 'Vikramaditya Varma', registrationNumber: '21B01A0504', internalMarks: 18, externalMarks: 36, totalMarks: 54, grade: 'B', gradePoint: 6, status: 'Passed' },
       ],
     },
     {
       id: 'sheet-cs503',
-      collegeId: String(collegeId),
-      academicYearId: String(academicYearId),
+      collegeId: cid,
+      academicYearId: ayid,
       semester: 'Semester 5',
       department: 'Computer Science & Engineering',
       examType: 'End Semester Regular',
       subjectCode: 'CS503',
-      subjectName: 'Computer Networks',
+      subjectName: 'Computer Networks & Security',
       maximumMarks: 100,
       credits: 3,
       examDate: '2026-05-18',
       records: [
-        { studentId: 'stu-101', studentName: 'Rahul Sharma', registrationNumber: '21B01A0501', internalMarks: 26, externalMarks: 60, totalMarks: 86, grade: 'A+', gradePoint: 9, status: 'Passed' },
-        { studentId: 'stu-102', studentName: 'Sneha Reddy', registrationNumber: '21B01A0502', internalMarks: 26, externalMarks: 63, totalMarks: 89, grade: 'A+', gradePoint: 9, status: 'Passed' },
-        { studentId: 'stu-103', studentName: 'Ananya Rao', registrationNumber: '21B01A0503', internalMarks: 19, externalMarks: 41, totalMarks: 60, grade: 'B+', gradePoint: 7, status: 'Passed' },
-        { studentId: 'stu-104', studentName: 'Vikramaditya Varma', registrationNumber: '21B01A0504', internalMarks: 15, externalMarks: 40, totalMarks: 55, grade: 'B', gradePoint: 6, status: 'Passed' },
+        { studentId: 'stu-101', studentName: 'Rahul Sharma', registrationNumber: '21B01A0501', internalMarks: 27, externalMarks: 61, totalMarks: 88, grade: 'A+', gradePoint: 9, status: 'Passed' },
+        { studentId: 'stu-102', studentName: 'Sneha Reddy', registrationNumber: '21B01A0502', internalMarks: 27, externalMarks: 63, totalMarks: 90, grade: 'O', gradePoint: 10, status: 'Passed' },
+        { studentId: 'stu-103', studentName: 'Ananya Rao', registrationNumber: '21B01A0503', internalMarks: 20, externalMarks: 44, totalMarks: 64, grade: 'B+', gradePoint: 7, status: 'Passed' },
+        { studentId: 'stu-104', studentName: 'Vikramaditya Varma', registrationNumber: '21B01A0504', internalMarks: 16, externalMarks: 38, totalMarks: 54, grade: 'B', gradePoint: 6, status: 'Passed' },
       ],
     },
     {
+      id: 'sheet-cs504',
+      collegeId: cid,
+      academicYearId: ayid,
+      semester: 'Semester 5',
+      department: 'Computer Science & Engineering',
+      examType: 'End Semester Regular',
+      subjectCode: 'CS504',
+      subjectName: 'Theory of Computation & Automata',
+      maximumMarks: 100,
+      credits: 3,
+      examDate: '2026-05-21',
+      records: [
+        { studentId: 'stu-101', studentName: 'Rahul Sharma', registrationNumber: '21B01A0501', internalMarks: 28, externalMarks: 63, totalMarks: 91, grade: 'O', gradePoint: 10, status: 'Passed' },
+        { studentId: 'stu-102', studentName: 'Sneha Reddy', registrationNumber: '21B01A0502', internalMarks: 24, externalMarks: 54, totalMarks: 78, grade: 'A', gradePoint: 8, status: 'Passed' },
+        { studentId: 'stu-103', studentName: 'Ananya Rao', registrationNumber: '21B01A0503', internalMarks: 23, externalMarks: 49, totalMarks: 72, grade: 'A', gradePoint: 8, status: 'Passed' },
+        { studentId: 'stu-104', studentName: 'Vikramaditya Varma', registrationNumber: '21B01A0504', internalMarks: 19, externalMarks: 41, totalMarks: 60, grade: 'B+', gradePoint: 7, status: 'Passed' },
+      ],
+    },
+    {
+      id: 'sheet-cs505p',
+      collegeId: cid,
+      academicYearId: ayid,
+      semester: 'Semester 5',
+      department: 'Computer Science & Engineering',
+      examType: 'End Semester Regular',
+      subjectCode: 'CS505P',
+      subjectName: 'Database Management Systems Laboratory',
+      maximumMarks: 100,
+      credits: 1.5,
+      examDate: '2026-05-25',
+      records: [
+        { studentId: 'stu-101', studentName: 'Rahul Sharma', registrationNumber: '21B01A0501', internalMarks: 29, externalMarks: 68, totalMarks: 97, grade: 'O', gradePoint: 10, status: 'Passed' },
+        { studentId: 'stu-102', studentName: 'Sneha Reddy', registrationNumber: '21B01A0502', internalMarks: 28, externalMarks: 67, totalMarks: 95, grade: 'O', gradePoint: 10, status: 'Passed' },
+        { studentId: 'stu-103', studentName: 'Ananya Rao', registrationNumber: '21B01A0503', internalMarks: 25, externalMarks: 59, totalMarks: 84, grade: 'A+', gradePoint: 9, status: 'Passed' },
+        { studentId: 'stu-104', studentName: 'Vikramaditya Varma', registrationNumber: '21B01A0504', internalMarks: 22, externalMarks: 53, totalMarks: 75, grade: 'A', gradePoint: 8, status: 'Passed' },
+      ],
+    },
+    {
+      id: 'sheet-cs506p',
+      collegeId: cid,
+      academicYearId: ayid,
+      semester: 'Semester 5',
+      department: 'Computer Science & Engineering',
+      examType: 'End Semester Regular',
+      subjectCode: 'CS506P',
+      subjectName: 'Algorithms & Advanced Coding Laboratory',
+      maximumMarks: 100,
+      credits: 1.5,
+      examDate: '2026-05-27',
+      records: [
+        { studentId: 'stu-101', studentName: 'Rahul Sharma', registrationNumber: '21B01A0501', internalMarks: 30, externalMarks: 68, totalMarks: 98, grade: 'O', gradePoint: 10, status: 'Passed' },
+        { studentId: 'stu-102', studentName: 'Sneha Reddy', registrationNumber: '21B01A0502', internalMarks: 29, externalMarks: 65, totalMarks: 94, grade: 'O', gradePoint: 10, status: 'Passed' },
+        { studentId: 'stu-103', studentName: 'Ananya Rao', registrationNumber: '21B01A0503', internalMarks: 26, externalMarks: 60, totalMarks: 86, grade: 'A+', gradePoint: 9, status: 'Passed' },
+        { studentId: 'stu-104', studentName: 'Vikramaditya Varma', registrationNumber: '21B01A0504', internalMarks: 24, externalMarks: 54, totalMarks: 78, grade: 'A', gradePoint: 8, status: 'Passed' },
+      ],
+    },
+
+    // -------------------------------------------------------------
+    // ECE Semester 3 - Complete Semester Course Load
+    // -------------------------------------------------------------
+    {
       id: 'sheet-ec301',
-      collegeId: String(collegeId),
-      academicYearId: String(academicYearId),
+      collegeId: cid,
+      academicYearId: ayid,
       semester: 'Semester 3',
       department: 'Electronics & Communication Engineering',
       examType: 'End Semester Regular',
       subjectCode: 'EC301',
-      subjectName: 'Digital Electronic Circuits',
+      subjectName: 'Digital Electronic Circuits & HDL',
       maximumMarks: 100,
       credits: 4,
       examDate: '2026-05-14',
       records: [
         { studentId: 'stu-201', studentName: 'Pooja Hegde', registrationNumber: '22B01A0401', internalMarks: 29, externalMarks: 64, totalMarks: 93, grade: 'O', gradePoint: 10, status: 'Passed' },
-        { studentId: 'stu-202', studentName: 'Karthik Naidu', registrationNumber: '22B01A0402', internalMarks: 23, externalMarks: 54, totalMarks: 77, grade: 'A', gradePoint: 8, status: 'Passed' },
+        { studentId: 'stu-202', studentName: 'Karthik Naidu', registrationNumber: '22B01A0402', internalMarks: 24, externalMarks: 53, totalMarks: 77, grade: 'A', gradePoint: 8, status: 'Passed' },
+        { studentId: 'stu-203', studentName: 'Divya Spandana', registrationNumber: '22B01A0403', internalMarks: 27, externalMarks: 59, totalMarks: 86, grade: 'A+', gradePoint: 9, status: 'Passed' },
       ],
     },
     {
       id: 'sheet-ec302',
-      collegeId: String(collegeId),
-      academicYearId: String(academicYearId),
+      collegeId: cid,
+      academicYearId: ayid,
       semester: 'Semester 3',
       department: 'Electronics & Communication Engineering',
       examType: 'End Semester Regular',
       subjectCode: 'EC302',
-      subjectName: 'Signals & Systems',
+      subjectName: 'Signals & Systems Analysis',
       maximumMarks: 100,
-      credits: 3,
+      credits: 4,
       examDate: '2026-05-17',
       records: [
-        { studentId: 'stu-201', studentName: 'Pooja Hegde', registrationNumber: '22B01A0401', internalMarks: 26, externalMarks: 58, totalMarks: 84, grade: 'A+', gradePoint: 9, status: 'Passed' },
+        { studentId: 'stu-201', studentName: 'Pooja Hegde', registrationNumber: '22B01A0401', internalMarks: 28, externalMarks: 60, totalMarks: 88, grade: 'A+', gradePoint: 9, status: 'Passed' },
         { studentId: 'stu-202', studentName: 'Karthik Naidu', registrationNumber: '22B01A0402', internalMarks: 20, externalMarks: 42, totalMarks: 62, grade: 'B+', gradePoint: 7, status: 'Passed' },
+        { studentId: 'stu-203', studentName: 'Divya Spandana', registrationNumber: '22B01A0403', internalMarks: 25, externalMarks: 55, totalMarks: 80, grade: 'A+', gradePoint: 9, status: 'Passed' },
       ],
     },
     {
+      id: 'sheet-ec303',
+      collegeId: cid,
+      academicYearId: ayid,
+      semester: 'Semester 3',
+      department: 'Electronics & Communication Engineering',
+      examType: 'End Semester Regular',
+      subjectCode: 'EC303',
+      subjectName: 'Analog Electronic Circuits',
+      maximumMarks: 100,
+      credits: 3,
+      examDate: '2026-05-20',
+      records: [
+        { studentId: 'stu-201', studentName: 'Pooja Hegde', registrationNumber: '22B01A0401', internalMarks: 29, externalMarks: 63, totalMarks: 92, grade: 'O', gradePoint: 10, status: 'Passed' },
+        { studentId: 'stu-202', studentName: 'Karthik Naidu', registrationNumber: '22B01A0402', internalMarks: 21, externalMarks: 46, totalMarks: 67, grade: 'B+', gradePoint: 7, status: 'Passed' },
+        { studentId: 'stu-203', studentName: 'Divya Spandana', registrationNumber: '22B01A0403', internalMarks: 26, externalMarks: 57, totalMarks: 83, grade: 'A+', gradePoint: 9, status: 'Passed' },
+      ],
+    },
+    {
+      id: 'sheet-ec304p',
+      collegeId: cid,
+      academicYearId: ayid,
+      semester: 'Semester 3',
+      department: 'Electronics & Communication Engineering',
+      examType: 'End Semester Regular',
+      subjectCode: 'EC304P',
+      subjectName: 'Digital Circuits Laboratory',
+      maximumMarks: 100,
+      credits: 1.5,
+      examDate: '2026-05-24',
+      records: [
+        { studentId: 'stu-201', studentName: 'Pooja Hegde', registrationNumber: '22B01A0401', internalMarks: 30, externalMarks: 66, totalMarks: 96, grade: 'O', gradePoint: 10, status: 'Passed' },
+        { studentId: 'stu-202', studentName: 'Karthik Naidu', registrationNumber: '22B01A0402', internalMarks: 26, externalMarks: 58, totalMarks: 84, grade: 'A+', gradePoint: 9, status: 'Passed' },
+        { studentId: 'stu-203', studentName: 'Divya Spandana', registrationNumber: '22B01A0403', internalMarks: 28, externalMarks: 64, totalMarks: 92, grade: 'O', gradePoint: 10, status: 'Passed' },
+      ],
+    },
+
+    // -------------------------------------------------------------
+    // Mechanical Engineering Semester 1 - Complete Semester Course Load
+    // -------------------------------------------------------------
+    {
       id: 'sheet-me101',
-      collegeId: String(collegeId),
-      academicYearId: String(academicYearId),
+      collegeId: cid,
+      academicYearId: ayid,
       semester: 'Semester 1',
       department: 'Mechanical Engineering',
       examType: 'End Semester Regular',
@@ -10636,27 +10748,66 @@ export const sampleBTechResultsModule = (() => {
       records: [
         { studentId: 'stu-301', studentName: 'Sai Teja', registrationNumber: '23B01A0301', internalMarks: 10, externalMarks: 18, totalMarks: 28, grade: 'F', gradePoint: 0, status: 'Failed' },
         { studentId: 'stu-302', studentName: 'Tarun Kumar', registrationNumber: '23B01A0302', internalMarks: 24, externalMarks: 51, totalMarks: 75, grade: 'A', gradePoint: 8, status: 'Passed' },
+        { studentId: 'stu-303', studentName: 'Vamsi Krishna', registrationNumber: '23B01A0303', internalMarks: 26, externalMarks: 56, totalMarks: 82, grade: 'A+', gradePoint: 9, status: 'Passed' },
       ],
     },
     {
       id: 'sheet-me102',
-      collegeId: String(collegeId),
-      academicYearId: String(academicYearId),
+      collegeId: cid,
+      academicYearId: ayid,
       semester: 'Semester 1',
       department: 'Mechanical Engineering',
       examType: 'End Semester Regular',
       subjectCode: 'ME102',
-      subjectName: 'Engineering Graphics',
+      subjectName: 'Engineering Graphics & CAD Modeling',
       maximumMarks: 100,
       credits: 3,
       examDate: '2026-05-13',
       records: [
         { studentId: 'stu-301', studentName: 'Sai Teja', registrationNumber: '23B01A0301', internalMarks: 22, externalMarks: 45, totalMarks: 67, grade: 'B+', gradePoint: 7, status: 'Passed' },
         { studentId: 'stu-302', studentName: 'Tarun Kumar', registrationNumber: '23B01A0302', internalMarks: 25, externalMarks: 57, totalMarks: 82, grade: 'A+', gradePoint: 9, status: 'Passed' },
+        { studentId: 'stu-303', studentName: 'Vamsi Krishna', registrationNumber: '23B01A0303', internalMarks: 27, externalMarks: 60, totalMarks: 87, grade: 'A+', gradePoint: 9, status: 'Passed' },
+      ],
+    },
+    {
+      id: 'sheet-me103',
+      collegeId: cid,
+      academicYearId: ayid,
+      semester: 'Semester 1',
+      department: 'Mechanical Engineering',
+      examType: 'End Semester Regular',
+      subjectCode: 'MA101',
+      subjectName: 'Linear Algebra & Advanced Calculus',
+      maximumMarks: 100,
+      credits: 4,
+      examDate: '2026-05-16',
+      records: [
+        { studentId: 'stu-301', studentName: 'Sai Teja', registrationNumber: '23B01A0301', internalMarks: 12, externalMarks: 20, totalMarks: 32, grade: 'F', gradePoint: 0, status: 'Failed' },
+        { studentId: 'stu-302', studentName: 'Tarun Kumar', registrationNumber: '23B01A0302', internalMarks: 23, externalMarks: 48, totalMarks: 71, grade: 'A', gradePoint: 8, status: 'Passed' },
+        { studentId: 'stu-303', studentName: 'Vamsi Krishna', registrationNumber: '23B01A0303', internalMarks: 28, externalMarks: 62, totalMarks: 90, grade: 'O', gradePoint: 10, status: 'Passed' },
+      ],
+    },
+    {
+      id: 'sheet-me104p',
+      collegeId: cid,
+      academicYearId: ayid,
+      semester: 'Semester 1',
+      department: 'Mechanical Engineering',
+      examType: 'End Semester Regular',
+      subjectCode: 'ME104P',
+      subjectName: 'Manufacturing Processes & Workshop Practice',
+      maximumMarks: 100,
+      credits: 1.5,
+      examDate: '2026-05-19',
+      records: [
+        { studentId: 'stu-301', studentName: 'Sai Teja', registrationNumber: '23B01A0301', internalMarks: 25, externalMarks: 55, totalMarks: 80, grade: 'A+', gradePoint: 9, status: 'Passed' },
+        { studentId: 'stu-302', studentName: 'Tarun Kumar', registrationNumber: '23B01A0302', internalMarks: 27, externalMarks: 60, totalMarks: 87, grade: 'A+', gradePoint: 9, status: 'Passed' },
+        { studentId: 'stu-303', studentName: 'Vamsi Krishna', registrationNumber: '23B01A0303', internalMarks: 29, externalMarks: 65, totalMarks: 94, grade: 'O', gradePoint: 10, status: 'Passed' },
       ],
     },
   ]
 }
+
 // #endregion pages/examinations/grade-result-management/sampleBTechResults.js
 return {
   get getSampleBTechSheets() { return getSampleBTechSheets; }
@@ -10723,10 +10874,13 @@ class ResultsService {
     }
 
     // Local storage fallback
-    const local = readLocalSheets()
+    let local = readLocalSheets()
+    if (!local || local.length === 0) {
+      local = this.seedSampleResults(filter.collegeId || '1', filter.academicYearId || '1')
+    }
     if (!filter || Object.keys(filter).length === 0) return local
 
-    return local.filter(sheet => {
+    const filtered = local.filter(sheet => {
       if (filter.collegeId && String(sheet.collegeId) !== String(filter.collegeId)) return false
       if (filter.academicYearId && String(sheet.academicYearId) !== String(filter.academicYearId)) return false
       if (filter.semesterId && String(sheet.semesterId) !== String(filter.semesterId)) return false
@@ -10735,6 +10889,8 @@ class ResultsService {
       if (filter.subjectCode && !same(sheet.subjectCode, filter.subjectCode)) return false
       return true
     })
+
+    return filtered.length > 0 ? filtered : local
   }
 
   seedSampleResults(collegeId = '1', academicYearId = '1') {
@@ -10824,6 +10980,7 @@ class ResultsService {
 
 /* export */ const resultsService = new ResultsService()
 /* export default resultsService */
+
 // #endregion services/resultsService.js
 return {
   get calculateGrade() { return calculateGrade; },

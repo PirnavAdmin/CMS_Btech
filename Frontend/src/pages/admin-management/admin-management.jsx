@@ -1,3 +1,4 @@
+import { FilterPanelModule as mergeDependency1 } from "../../components/components.jsx";
 // Pages and helpers in this module retain their own isolated scopes.
 import * as external0 from "react";
 import * as external1 from "react-router-dom";
@@ -7184,6 +7185,7 @@ return {
 })();
 
 export const RoomsManagementModule = (() => {
+const { default: FilterPanel } = mergeDependency1;
 const { default: useCollegeState } = useCollegeStateModule;
 const { useState } = external0;
 const { useEffect } = external0;
@@ -8587,25 +8589,28 @@ function InfoCard({ icon: Icon, title, rows, children }) {
           </div>
 
           {/* Controls Toolbar */}
+          <FilterPanel active={Boolean(query || typeFilter || blockFilter || statusFilter)} onClear={clearFilters}>
           <div className="course-toolbar rooms-toolbar">
-            <div className="rooms-search">
+            <label className="rooms-search">
               <FiSearch aria-hidden="true" />
               <input
                 type="search"
+                aria-label="Search rooms and classrooms"
                 placeholder="Search room number, name, block, floor, section, branch, course..."
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
               />
               {query && (
-                <button type="button" className="rooms-clear-search" onClick={() => setQuery('')}>
+                <button type="button" className="rooms-clear-search" aria-label="Clear room search" onClick={() => setQuery('')}>
                   <FiX />
                 </button>
               )}
-            </div>
+            </label>
 
             <div className="rooms-filters-group">
               <select
                 className="rooms-filter"
+                aria-label="Filter by room type"
                 value={typeFilter}
                 onChange={(e) => setTypeFilter(e.target.value)}
               >
@@ -8617,6 +8622,7 @@ function InfoCard({ icon: Icon, title, rows, children }) {
 
               <select
                 className="rooms-filter"
+                aria-label="Filter by building block"
                 value={blockFilter}
                 onChange={(e) => setBlockFilter(e.target.value)}
               >
@@ -8628,6 +8634,7 @@ function InfoCard({ icon: Icon, title, rows, children }) {
 
               <select
                 className="rooms-filter"
+                aria-label="Filter by room status"
                 value={statusFilter}
                 onChange={(e) => setStatusFilter(e.target.value)}
               >
@@ -8638,13 +8645,9 @@ function InfoCard({ icon: Icon, title, rows, children }) {
                 <option value="Inactive">Inactive</option>
               </select>
 
-              {(query || typeFilter || blockFilter || statusFilter) && (
-                <button type="button" className="rooms-clear-btn" onClick={clearFilters}>
-                  <FiFilter /> Clear
-                </button>
-              )}
             </div>
           </div>
+          </FilterPanel>
 
           {/* Rooms Data Table */}
           <div className="rooms-table-wrap">
@@ -9095,6 +9098,7 @@ function InfoCard({ icon: Icon, title, rows, children }) {
     </DashboardLayout>
   )
 }
+
 // #endregion pages/admin-management/RoomsManagement.jsx
 return {
   get default() { return RoomsManagement; }

@@ -26,12 +26,22 @@ import {
   FiDollarSign,
   FiAlertTriangle
 } from 'react-icons/fi'
-import DashboardLayout from '../../layouts/DashboardLayout'
-import PageHeader from '../../components/PageHeader'
-import ExportMenu from '../../components/ExportMenu'
+import { DashboardLayoutModule as consolidatedDependency15 } from "../../components/components.jsx";
+const { default: DashboardLayout,  } = consolidatedDependency15;
+
+import { PageHeaderModule as consolidatedDependency16 } from "../../components/components.jsx";
+const { default: PageHeader,  } = consolidatedDependency16;
+
+import { ExportMenuModule as consolidatedDependency17 } from "../../components/components.jsx";
+const { default: ExportMenu,  } = consolidatedDependency17;
+
 import CompanyLogo from '../../components/CompanyLogo'
-import FilterPanel from '../../components/FilterPanel'
-import TablePagination from '../../components/TablePagination'
+import { FilterPanelModule as consolidatedDependency18 } from "../../components/components.jsx";
+const { default: FilterPanel,  } = consolidatedDependency18;
+
+import { TablePaginationModule as consolidatedDependency19 } from "../../components/components.jsx";
+const { default: TablePagination,  } = consolidatedDependency19;
+
 import {
   defaultDrives,
   defaultCompanies,
