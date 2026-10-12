@@ -1,7 +1,7 @@
 export const gradeScreens = [
   {
     "name": "GradeConfiguration",
-    "label": "Grade Configuration",
+    "label": "Grade Management",
     "slug": "grade-configuration"
   },
   {

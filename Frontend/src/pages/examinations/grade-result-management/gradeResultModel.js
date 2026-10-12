@@ -1,4 +1,4 @@
-﻿export const defaultBands = [
+export const defaultBands = [
   { grade: 'O', min: 90, max: 100, points: 10, pass: true },
   { grade: 'A+', min: 80, max: 90, points: 9, pass: true },
   { grade: 'A', min: 70, max: 80, points: 8, pass: true },
@@ -7,6 +7,62 @@
   { grade: 'C', min: 40, max: 50, points: 5, pass: true },
   { grade: 'F', min: 0, max: 40, points: 0, pass: false },
 ]
+
+export const gradingPresets = [
+  {
+    id: 'ugc10',
+    label: 'UGC / AICTE 10-Point',
+    description: 'Standard 10-point letter grading system used across Indian universities.',
+    bands: defaultBands,
+  },
+  {
+    id: 'autonomous7',
+    label: 'Autonomous 7-Point',
+    description: 'Traditional 7-grade scale for autonomous colleges and state universities.',
+    bands: [
+      { grade: 'A', min: 85, max: 100, points: 10, pass: true },
+      { grade: 'B', min: 75, max: 85, points: 8, pass: true },
+      { grade: 'C', min: 65, max: 75, points: 7, pass: true },
+      { grade: 'D', min: 55, max: 65, points: 6, pass: true },
+      { grade: 'E', min: 50, max: 55, points: 5, pass: true },
+      { grade: 'P', min: 40, max: 50, points: 4, pass: true },
+      { grade: 'F', min: 0, max: 40, points: 0, pass: false },
+    ],
+  },
+  {
+    id: 'gpa4',
+    label: 'International 4.0 Scale',
+    description: '4.0 GPA scale standard for global transcripts and exchange programs.',
+    bands: [
+      { grade: 'A', min: 90, max: 100, points: 4, pass: true },
+      { grade: 'B', min: 80, max: 90, points: 3, pass: true },
+      { grade: 'C', min: 70, max: 80, points: 2, pass: true },
+      { grade: 'D', min: 60, max: 70, points: 1, pass: true },
+      { grade: 'F', min: 0, max: 60, points: 0, pass: false },
+    ],
+  },
+]
+
+export function cgpaToPercentage(cgpa, formula = 'aicte') {
+  const val = Number(cgpa)
+  if (!Number.isFinite(val) || val <= 0) return null
+  if (formula === 'aicte') {
+    return Math.max(0, Math.min(100, Number(((val - 0.75) * 10).toFixed(2))))
+  }
+  // Standard 9.5x formula
+  return Math.max(0, Math.min(100, Number((val * 9.5).toFixed(2))))
+}
+
+export function academicDivision(cgpa) {
+  const val = Number(cgpa)
+  if (!Number.isFinite(val) || val <= 0) return null
+  if (val >= 7.5) return { division: 'First Class with Distinction', badge: 'distinction', color: '#166534', bg: '#dcfce7' }
+  if (val >= 6.5) return { division: 'First Class', badge: 'first', color: '#1e40af', bg: '#dbeafe' }
+  if (val >= 5.5) return { division: 'Second Class', badge: 'second', color: '#6b21a8', bg: '#f3e8ff' }
+  if (val >= 5.0) return { division: 'Pass Class', badge: 'pass', color: '#92400e', bg: '#fef3c7' }
+  return { division: 'Needs Improvement / Fail', badge: 'fail', color: '#991b1b', bg: '#fee2e2' }
+}
+
 export function validateBands(bands) {
   if (!bands.length) return 'Add at least one grade band.'
   const sorted = [...bands].sort((a, b) => Number(a.min) - Number(b.min))

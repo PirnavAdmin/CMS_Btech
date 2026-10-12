@@ -1,8 +1,23 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { readFile } from 'node:fs/promises'
-import { hasSingleStructureFee, structureTotalFeeComponents, workflowAcademicRow, componentTotals, allocatePaise, assignFeeStructure, cents, collectWorkspacePayment, emptyFeeWorkspace, feeLedger, feeToday, feeTotal, newFeeStructure, readFeeWorkspace, saveFeeAdjustment, saveFeeComponent, saveWorkflowStructure, transitionFeeAdjustment, transitionFeeStructure, validateFeeStructure, writeFeeWorkspace } from './feeStructureService.js'
+import { academicFeeComponent, checkDuplicateStructure, DEFAULT_FEE_HEADS, studentMatchesFee, hasSingleStructureFee, structureTotalFeeComponents, workflowAcademicRow, componentTotals, allocatePaise, assignFeeStructure, cents, collectWorkspacePayment, emptyFeeWorkspace, feeLedger, feeToday, feeTotal, newFeeStructure, readFeeWorkspace, saveFeeAdjustment, saveFeeComponent, saveWorkflowStructure, transitionFeeAdjustment, transitionFeeStructure, validateFeeStructure, writeFeeWorkspace } from './feeStructureService.js'
 import { feeNavigation, feeNavigationItem, feeBreadcrumbs, isFeeRoute, studentAccountOperations } from './feeNavigation.js'
+
+test('academic fee configuration uses a single workspace with three sections and persistent live summary', async () => {
+  const source = await readFile(new URL('./FeeStructureWizard.jsx', import.meta.url), 'utf8')
+  assert.doesNotMatch(source, /Review & Publish|Academic Mapping/)
+  assert.doesNotMatch(source, /const steps =/)
+  assert.doesNotMatch(source, /step === 3|setStep\(|Save & Next/)
+  assert.match(source, /Basic Details/)
+  assert.match(source, /Fee Heads/)
+  assert.match(source, /Payment Schedule/)
+  assert.match(source, /fw-form-scrollable/)
+  assert.match(source, /fw-live-preview/)
+  assert.match(source, /checkDuplicateStructure/)
+  assert.match(source, /eligibleStudentsCount/)
+  assert.match(source, /const issue = status === 'Draft'[\s\S]*validateFeeStructure\(s\)/)
+})
 
 test('fee sidebar maps existing routes and contextual screens to one owning section', () => {
   assert.deepEqual(feeNavigation.map(item => item.label), ['Overview', 'Fee Structures', 'Student Accounts', 'Collections', 'Reports'])
@@ -22,6 +37,13 @@ test('fee sidebar maps existing routes and contextual screens to one owning sect
   }
   assert.equal(feeBreadcrumbs('/fees/structures/create').at(-1).label, 'Create Fee Structure')
   assert.equal(feeBreadcrumbs('/fees/structures/draft/edit').at(-1).label, 'Edit Fee Structure')
+  for (const [type, label] of [['hostel', 'Hostel'], ['transport', 'Transport']]) {
+    for (const [suffix, action] of [['create', 'Create'], ['saved-plan/edit', 'Edit']]) {
+      const path = `/fees/structures/${type}/${suffix}`
+      assert.equal(feeNavigationItem(path)?.label, 'Fee Structures')
+      assert.equal(feeBreadcrumbs(path).at(-1).label, `${action} ${label} Fee Structure`)
+    }
+  }
   assert.equal(feeBreadcrumbs('/fees/ledger/account').at(-1).label, 'Student Financial Profile')
   assert.equal(feeNavigation.some(item => item.to === '/fees/components' || item.to === '/fees/refunds'), false)
   assert.equal(feeNavigationItem('/fees/accounts')?.label, 'Student Accounts')
@@ -77,6 +99,30 @@ test('single total fee preserves approval, installment allocation and student ba
 })
 
 const student = { id: '1', name: 'Test Student', academicYearId: '2026', courseId: '1', branchId: '2', batch: '2026-2030', category: 'Regular', semesterId: '1' }
+test('academic eligibility is branch-specific and never substitutes for facility allocation', () => {
+  const scope = { ...newFeeStructure('2026'), courseId: '1', branchId: '2', batch: '2026-2030', cycle: 'Semester-wise', semesterId: '1', applicableTo: 'Selected Category', category: 'Regular' }
+  assert.equal(studentMatchesFee(student, scope), true)
+  for (const change of [{ branchId: '3' }, { courseId: '2' }, { batch: '2025-2029' }, { semesterId: '2' }, { category: 'Management' }, { academicYearId: '2025' }]) {
+    assert.equal(studentMatchesFee({ ...student, ...change }, scope), false)
+  }
+  assert.equal(studentMatchesFee({ ...student, branchId: '' }, { ...scope, branchId: '' }), false)
+  for (const domain of ['Hostel', 'Transport']) {
+    assert.equal(studentMatchesFee(student, { ...scope, domain }), false)
+    assert.notEqual(validateFeeStructure({ ...scope, domain }, 0), '')
+    assert.equal(academicFeeComponent({ category: domain }), false)
+    const state = saveFeeComponent(emptyFeeWorkspace(), { id: 'facility', name: 'Facility charge', code: 'FAC', category: domain, status: 'Active' })
+    const value = { ...scope, name: 'Wrong domain', dueDate: '2026-10-01', components: [{ masterId: 'facility', name: 'Facility charge', category: domain, amount: 100 }] }
+    assert.throws(() => saveWorkflowStructure(state, value, 'Pending Approval', 'Admin'), /Hostel and Transport/)
+  }
+})
+test('restored component workflow preserves previously saved single-fee charges', () => {
+  const value = { ...newFeeStructure('2026'), name: 'Existing total plus charge', courseId: '1', branchId: '2', batch: '2026-2030', dueDate: '2026-10-01' }
+  value.components = [...structureTotalFeeComponents(value, 1000), { masterId: 'tuition', name: 'Tuition', category: 'Academic', amount: 200 }]
+  const state = saveFeeComponent(emptyFeeWorkspace(), { id: 'tuition', name: 'Tuition', code: 'TUI', category: 'Academic', status: 'Active' })
+  const saved = saveWorkflowStructure(state, value, 'Pending Approval', 'Admin')
+  assert.equal(feeTotal(saved.structures[0]), 1200)
+  assert.equal(saved.structures[0].components[0].refundable, false)
+})
 function configured() {
   let state = emptyFeeWorkspace()
   state = saveFeeComponent(state, { id: 'tuition', name: 'Tuition', code: 'TUI', category: 'Academic', status: 'Active' })
@@ -286,4 +332,74 @@ test('server fee adapter uses existing routes, auth, filters and response envelo
     }
     assert.equal((await feeCollectionApi.collect({ studentFeeId: 9, feeAmount: 100, fineAmount: 0, paymentMode: 'CASH' })).receiptNumber, 'R-5')
   } finally { globalThis.fetch = original }
+})
+
+test('checkDuplicateStructure validates uniqueness across academic applicability and cycle', () => {
+  const existing = [
+    { id: 'struct-1', name: 'B.Tech CSE Regular 2026-30', academicYearId: '2026', courseId: 'c1', branchId: 'b1', batch: '2026-2030', applicableTo: 'Selected Category', category: 'Regular', cycle: 'Annual' },
+    { id: 'struct-2', name: 'B.Tech ECE Regular 2026-30', academicYearId: '2026', courseId: 'c1', branchId: 'b2', batch: '2026-2030', applicableTo: 'All Students', cycle: 'Annual' },
+  ]
+  // Exact duplicate candidate
+  const duplicate = { id: '', academicYearId: '2026', courseId: 'c1', branchId: 'b1', batch: '2026-2030', applicableTo: 'Selected Category', category: 'Regular', cycle: 'Annual' }
+  const conflict = checkDuplicateStructure(existing, duplicate)
+  assert.ok(conflict)
+  assert.equal(conflict.id, 'struct-1')
+
+  // Different branch is not a duplicate
+  const diffBranch = { id: '', academicYearId: '2026', courseId: 'c1', branchId: 'b3', batch: '2026-2030', applicableTo: 'Selected Category', category: 'Regular', cycle: 'Annual' }
+  assert.equal(checkDuplicateStructure(existing, diffBranch), null)
+
+  // Different batch is not a duplicate
+  const diffBatch = { id: '', academicYearId: '2026', courseId: 'c1', branchId: 'b1', batch: '2027-2031', applicableTo: 'Selected Category', category: 'Regular', cycle: 'Annual' }
+  assert.equal(checkDuplicateStructure(existing, diffBatch), null)
+
+  // Same structure when editing does not conflict with itself
+  const editingSelf = { id: 'struct-1', academicYearId: '2026', courseId: 'c1', branchId: 'b1', batch: '2026-2030', applicableTo: 'Selected Category', category: 'Regular', cycle: 'Annual' }
+  assert.equal(checkDuplicateStructure(existing, editingSelf), null)
+})
+
+test('DEFAULT_FEE_HEADS includes standard B.Tech heads and auto-registers on save without prior master', () => {
+  assert.ok(DEFAULT_FEE_HEADS.length >= 7)
+  const tuitionHead = DEFAULT_FEE_HEADS.find(h => h.name === 'Tuition Fee')
+  assert.ok(tuitionHead)
+  assert.equal(tuitionHead.category, 'Academic')
+  assert.equal(tuitionHead.mandatory, true)
+
+  const emptyState = emptyFeeWorkspace()
+  assert.equal(emptyState.components.length, 0)
+  const draft = {
+    ...newFeeStructure('2026'),
+    name: 'B.Tech Standard Fees',
+    courseId: 'c1',
+    branchId: 'b1',
+    batch: '2026-2030',
+    dueDate: '2026-10-01',
+    components: [
+      { masterId: 'fh-tuition', name: 'Tuition Fee', category: 'Academic', frequency: 'Yearly', mandatory: true, refundable: false, recurring: true, amount: '85000' }
+    ]
+  }
+  const savedState = saveWorkflowStructure(emptyState, draft, 'Draft', 'Admin')
+  assert.equal(savedState.structures.length, 1)
+  assert.ok(savedState.components.some(c => c.name === 'Tuition Fee'))
+})
+
+test('hostel and transport fee structures operate independently from academic branches in FacilityEditor', async () => {
+  const source = await readFile(new URL('./FeeStructure.jsx', import.meta.url), 'utf8')
+  assert.match(source, /export function FacilityEditor/)
+  assert.doesNotMatch(source, /facility-step-panel/)
+  assert.match(source, /fw-form-scrollable/)
+  assert.match(source, /Basic Details/)
+  assert.match(source, /Charges/)
+  assert.match(source, /Effective Period/)
+  // Facility editor should not ask for course or branch
+  const editorFn = source.slice(source.indexOf('export function FacilityEditor'), source.indexOf('function FacilityPreview'))
+  assert.doesNotMatch(editorFn, /masters\.courses|masters\.branches/)
+})
+
+test('FeeReports supports Course-wise, Branch-wise, Daily, and Head-wise collection reports', async () => {
+  const source = await readFile(new URL('./ServerFeeCollection.jsx', import.meta.url), 'utf8')
+  assert.match(source, /id: 'course', name: 'Course-wise Collection'/)
+  assert.match(source, /id: 'branch', name: 'Branch-wise Collection'/)
+  assert.match(source, /id: 'daily', name: 'Daily Collection'/)
+  assert.match(source, /id: 'category', name: 'Head-wise Collection \(Fee Category\)'/)
 })
