@@ -7,7 +7,6 @@ import {
   FiEdit2,
   FiTrash2,
   FiSearch,
-  FiFilter,
   FiX,
   FiEye,
   FiCheck,
@@ -29,6 +28,7 @@ import {
 import DashboardLayout from '../../layouts/DashboardLayout'
 import PageHeader from '../../components/PageHeader'
 import ExportMenu from '../../components/ExportMenu'
+import FilterPanel from '../../components/FilterPanel'
 import StatusBadge from '../../components/StatusBadge'
 import EmptyState from '../../components/EmptyState'
 import TablePagination, { PAGE_SIZE } from '../../components/TablePagination'
@@ -1352,25 +1352,28 @@ export default function RoomsManagement({ formMode = false, viewMode = false }) 
           </div>
 
           {/* Controls Toolbar */}
+          <FilterPanel active={Boolean(query || typeFilter || blockFilter || statusFilter)} onClear={clearFilters}>
           <div className="course-toolbar rooms-toolbar">
-            <div className="rooms-search">
+            <label className="rooms-search">
               <FiSearch aria-hidden="true" />
               <input
                 type="search"
+                aria-label="Search rooms and classrooms"
                 placeholder="Search room number, name, block, floor, section, branch, course..."
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
               />
               {query && (
-                <button type="button" className="rooms-clear-search" onClick={() => setQuery('')}>
+                <button type="button" className="rooms-clear-search" aria-label="Clear room search" onClick={() => setQuery('')}>
                   <FiX />
                 </button>
               )}
-            </div>
+            </label>
 
             <div className="rooms-filters-group">
               <select
                 className="rooms-filter"
+                aria-label="Filter by room type"
                 value={typeFilter}
                 onChange={(e) => setTypeFilter(e.target.value)}
               >
@@ -1382,6 +1385,7 @@ export default function RoomsManagement({ formMode = false, viewMode = false }) 
 
               <select
                 className="rooms-filter"
+                aria-label="Filter by building block"
                 value={blockFilter}
                 onChange={(e) => setBlockFilter(e.target.value)}
               >
@@ -1393,6 +1397,7 @@ export default function RoomsManagement({ formMode = false, viewMode = false }) 
 
               <select
                 className="rooms-filter"
+                aria-label="Filter by room status"
                 value={statusFilter}
                 onChange={(e) => setStatusFilter(e.target.value)}
               >
@@ -1403,13 +1408,9 @@ export default function RoomsManagement({ formMode = false, viewMode = false }) 
                 <option value="Inactive">Inactive</option>
               </select>
 
-              {(query || typeFilter || blockFilter || statusFilter) && (
-                <button type="button" className="rooms-clear-btn" onClick={clearFilters}>
-                  <FiFilter /> Clear
-                </button>
-              )}
             </div>
           </div>
+          </FilterPanel>
 
           {/* Rooms Data Table */}
           <div className="rooms-table-wrap">
