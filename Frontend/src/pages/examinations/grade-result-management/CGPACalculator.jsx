@@ -944,9 +944,6 @@ export default function CGPACalculator({ storageKey }) {
 
             <div className="grm-cgpa__table-footer">
               <div className="grm-cgpa__actions-left">
-                <button className="grm-cgpa__secondary" type="button" onClick={() => add()}>
-                  <FiPlus aria-hidden="true" /> Add Semester
-                </button>
                 <button className="grm-cgpa__secondary" type="button" onClick={loadAutonomousPreset}>
                   <FiLayers aria-hidden="true" /> Fill 8 Semesters
                 </button>
