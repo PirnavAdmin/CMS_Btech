@@ -34,7 +34,6 @@ export default function SearchableSelect({
   placeholder = 'Select an option',
   searchPlaceholder = 'Search...',
   hideSearch = false,
-  placement = 'auto',
   disabled = false,
   loading = false,
   error = false,
@@ -84,13 +83,11 @@ export default function SearchableSelect({
       const viewportWidth = viewport?.width || window.innerWidth
       const padding = 8, gap = 4;
       const below = Math.max(0, viewportTop + viewportHeight - rect.bottom - padding - gap);
-      const above = Math.max(0, rect.top - viewportTop - padding - gap);
-      const flip = placement === 'top' || (placement !== 'bottom' && below < 130 && above > below);
-      const maxHeight = Math.min(240, flip ? above : below);
+      // Keep every shared dropdown below its trigger, including near the viewport edge.
+      const maxHeight = Math.min(240, below);
       const width = Math.min(Math.max(rect.width, 280), viewportWidth - padding * 2);
       setMenuStyle({
-        top: flip ? undefined : Math.round(rect.bottom + gap),
-        bottom: flip ? Math.round(window.innerHeight - rect.top + gap) : undefined,
+        top: Math.round(rect.bottom + gap),
         left: Math.max(viewportLeft + padding, Math.min(rect.left, viewportLeft + viewportWidth - width - padding)),
         width,
         maxHeight,
@@ -110,7 +107,7 @@ export default function SearchableSelect({
       window.visualViewport?.removeEventListener('resize', position)
       window.visualViewport?.removeEventListener('scroll', position)
     }
-  }, [open, options, query, loading, placement])
+  }, [open, options, query, loading])
 
   useEffect(() => {
     if (!open) return undefined
