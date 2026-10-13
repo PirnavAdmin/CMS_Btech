@@ -1,15 +1,11 @@
 import { useEffect, useMemo, useState } from 'react'
 import { createPortal } from 'react-dom'
 import {
-  FiAward,
-  FiBookOpen,
-  FiCheckCircle,
   FiEdit2,
   FiPlus,
   FiSearch,
   FiTrash2,
   FiX,
-  FiXCircle,
 } from 'react-icons/fi'
 import DashboardLayout from '../../../layouts/DashboardLayout'
 import PageHeader from '../../../components/PageHeader'
@@ -277,9 +273,6 @@ export default function MarksEntry() {
     const failedCount = results.filter(
       row => row.status === 'Fail'
     ).length
-    const passRate = allRows.length
-      ? ((passedCount / allRows.length) * 100).toFixed(1)
-      : '0.0'
     const average = scoredRows.length
       ? scoredRows.reduce(
         (total, row) => total + row.percentage,
@@ -291,30 +284,22 @@ export default function MarksEntry() {
       {
         label: 'Total Records',
         value: allRows.length,
-        detail: 'Submitted marks',
-        icon: FiBookOpen,
-        tone: 'blue',
+        tone: 'warning',
       },
       {
         label: 'Passed Students',
         value: passedCount,
-        detail: `${passRate}% pass rate`,
-        icon: FiCheckCircle,
-        tone: 'green',
+        tone: 'active',
       },
       {
         label: 'Failed Students',
         value: failedCount,
-        detail: 'Needs attention',
-        icon: FiXCircle,
-        tone: 'red',
+        tone: 'inactive',
       },
       {
         label: 'Average Score',
         value: `${average.toFixed(1)}%`,
-        detail: 'Across scored records',
-        icon: FiAward,
-        tone: 'purple',
+        tone: 'completed',
       },
     ]
   }, [allRows])
@@ -1001,7 +986,9 @@ export default function MarksEntry() {
     <DashboardLayout>
       <section className="marks-management-marks-entry">
         <PageHeader
+          className="marks-module-page-header marks-entry-page-header"
           title="Marks Entry"
+          subtitle="Enter and review student marks across exams and assessments."
           breadcrumb={[
             {
               label: 'Marks Management',
@@ -1009,32 +996,10 @@ export default function MarksEntry() {
             },
             'Marks Entry',
           ]}
+          compactSummary={summaryStats}
         />
 
         <MarksModuleNav />
-
-        <section
-          className="marks-entry-summary"
-          aria-label="Marks summary"
-        >
-          {summaryStats.map(
-            ({ label, value, detail, icon: Icon, tone }) => (
-              <article
-                className={`marks-entry-summary__card marks-entry-summary__card--${tone}`}
-                key={label}
-              >
-                <span className="marks-entry-summary__icon">
-                  <Icon aria-hidden="true" />
-                </span>
-                <div className="marks-entry-summary__content">
-                  <span>{label}</span>
-                  <strong>{value}</strong>
-                  <small>{detail}</small>
-                </div>
-              </article>
-            )
-          )}
-        </section>
 
         <article className="erp-card marks-entry-card">
           <header className="erp-card-header marks-entry-card__header">

@@ -115,6 +115,7 @@ export default function BulkMarksUpload() {
   }), [rows, columns, query, columnFilters])
   const visibleRows = filteredRows.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)
   const hasFilters = Boolean(query || Object.values(columnFilters).some(Boolean))
+  const activeFilterCount = Object.values(columnFilters).filter(Boolean).length + Number(Boolean(query.trim()))
 
   const uploadFile = async event => {
     const file = event.target.files?.[0]
@@ -157,7 +158,18 @@ export default function BulkMarksUpload() {
   return (
     <DashboardLayout>
       <section className="marks-management-bulk-marks-upload">
-        <PageHeader title="Bulk Marks Upload" breadcrumb={[{ label: 'Marks Management', link: '/marks-management' }, 'Bulk Marks Upload']} />
+        <PageHeader
+          className="marks-module-page-header"
+          title="Bulk Marks Upload"
+          subtitle="Inspect an uploaded marks file, review its structure, and prepare the rows you need."
+          breadcrumb={[{ label: 'Marks Management', link: '/marks-management' }, 'Bulk Marks Upload']}
+          compactSummary={[
+            { label: 'Uploaded Rows', value: rows.length, tone: 'warning' },
+            { label: 'File Columns', value: columns.length },
+            { label: 'Matching Rows', value: filteredRows.length, tone: 'completed' },
+            { label: 'Active Filters', value: activeFilterCount, tone: activeFilterCount ? 'active' : 'default' },
+          ]}
+        />
         <MarksModuleNav />
 
         <article className="erp-card bulk-marks-upload-card">

@@ -1,19 +1,17 @@
 .marks-management-marks-entry { display: grid; gap: 24px; min-width: 0; }
+.marks-management-marks-entry .marks-entry-page-header { align-items: center; margin-bottom: 0; }
+.marks-management-marks-entry .marks-entry-page-header .erp-page-header__left { flex-basis: 340px; }
+.marks-management-marks-entry .marks-entry-page-header .erp-page-header__right { flex: 0 1 486px; }
+.marks-management-marks-entry .marks-entry-page-header .compact-summary { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); width: 100%; border: 1px solid #d8e4f2; border-radius: 12px !important; background: var(--surface, #fff); box-shadow: 0 3px 12px rgb(24 63 106 / 5%) !important; }
+.marks-management-marks-entry .marks-entry-page-header .compact-summary__item { display: flex; min-width: 0 !important; min-height: 68px !important; align-items: center; padding: 8px 10px !important; border-color: #d8e4f2; }
+.marks-management-marks-entry .marks-entry-page-header .compact-summary__item strong { color: #1769c2; font-size: 20px !important; line-height: 1.1 !important; }
+.marks-management-marks-entry .marks-entry-page-header .compact-summary__item--active strong { color: #00a978 !important; }
+.marks-management-marks-entry .marks-entry-page-header .compact-summary__item--inactive strong { color: #d8323d !important; }
+.marks-management-marks-entry .marks-entry-page-header .compact-summary__item small { max-width: 110px; color: #5f7592; font-size: 9px !important; line-height: 1.25 !important; }
 .marks-entry-card { min-width: 0; overflow: visible; }
 .marks-entry-card__header { padding-bottom: 16px; }
 .marks-entry-card__actions { display: flex; align-items: center; justify-content: flex-end; gap: 10px; }
 .marks-entry-card__actions > a { display: inline-flex; align-items: center; gap: 8px; white-space: nowrap; text-decoration: none; }
-.marks-entry-summary { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; min-width: 0; }
-.marks-entry-summary__card { display: flex; align-items: center; gap: 16px; min-width: 0; min-height: 88px; padding: 16px 20px; border: 1px solid #d8e4f2; border-radius: 14px; background: var(--surface, #fff); box-shadow: 0 3px 12px rgb(24 63 106 / 5%); }
-.marks-entry-summary__icon { display: grid; flex: 0 0 54px; width: 54px; height: 54px; place-items: center; border-radius: 14px; font-size: 23px; }
-.marks-entry-summary__content { display: grid; gap: 2px; min-width: 0; }
-.marks-entry-summary__content > span { color: #71839d; font-size: 12px; font-weight: 650; }
-.marks-entry-summary__content strong { color: #102b4d; font-size: 23px; line-height: 1.2; }
-.marks-entry-summary__content small { color: #8494a9; font-size: 11px; }
-.marks-entry-summary__card--blue .marks-entry-summary__icon { color: #1769c2; background: #e5effa; }
-.marks-entry-summary__card--green .marks-entry-summary__icon { color: #00a978; background: #e3f7f1; }
-.marks-entry-summary__card--red .marks-entry-summary__icon { color: #f0444c; background: #fdebed; }
-.marks-entry-summary__card--purple .marks-entry-summary__icon { color: #8d5cf6; background: #f0eaff; }
 .marks-entry-filters { margin: 0 20px 16px; }
 .marks-management-marks-entry .filter-disclosure.marks-entry-filters { position: relative; z-index: 4; overflow: visible; }
 .marks-entry-filters .export-control { z-index: 5; }
@@ -136,10 +134,6 @@
 .marks-entry-form__preview dt { color: var(--text-secondary); font-size: 10px; font-weight: 700; text-transform: uppercase; }
 .marks-entry-form__preview dd { margin: 3px 0 0; overflow-wrap: anywhere; color: var(--text-primary); font-size: 13px; font-weight: 600; }
 @media (max-width: 700px) {
-  .marks-entry-summary { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
-  .marks-entry-summary__card { gap: 10px; padding: 12px; }
-  .marks-entry-summary__icon { flex-basis: 42px; width: 42px; height: 42px; }
-  .marks-entry-summary__content strong { font-size: 19px; }
   .marks-entry-card__header { align-items: flex-start; }
   .marks-entry-card__actions { flex-wrap: wrap; }
   .marks-entry-filters { margin-inline: 12px; }
@@ -148,5 +142,15 @@
   .marks-entry-form__grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
 }
 @media (max-width: 900px) { .marks-entry-modal, .marks-entry-modal.sidebar-collapsed { padding: 14px; } }
-@media (max-width: 480px) { .marks-entry-summary { grid-template-columns: minmax(0, 1fr); } .marks-entry-delete-modal__header, .marks-entry-delete-modal__body { padding-inline: 16px; } .marks-entry-delete-modal__footer { flex-wrap: wrap; padding-inline: 16px; } .marks-entry-delete-modal__footer button { flex: 1 1 auto; } }
+@media (max-width: 768px) {
+  .marks-management-marks-entry .marks-entry-page-header .erp-page-header__left { flex-basis: auto; }
+  .marks-management-marks-entry .marks-entry-page-header .erp-page-header__right { flex-basis: auto; }
+}
+@media (max-width: 620px) {
+  .marks-management-marks-entry .marks-entry-page-header .compact-summary { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .marks-management-marks-entry .marks-entry-page-header .compact-summary__item:nth-child(2) { border-right: 0; }
+  .marks-management-marks-entry .marks-entry-page-header .compact-summary__item:nth-child(-n+2) { border-bottom: 1px solid #d8e4f2; }
+  .marks-management-marks-entry .marks-entry-page-header .compact-summary__item:nth-child(n+3) { border-bottom: 0; }
+}
+@media (max-width: 480px) { .marks-entry-delete-modal__header, .marks-entry-delete-modal__body { padding-inline: 16px; } .marks-entry-delete-modal__footer { flex-wrap: wrap; padding-inline: 16px; } .marks-entry-delete-modal__footer button { flex: 1 1 auto; } }
 @media (max-width: 440px) { .marks-entry-form__grid { grid-template-columns: minmax(0, 1fr); } }

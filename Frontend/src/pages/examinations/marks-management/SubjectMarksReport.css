@@ -14,10 +14,6 @@
 .subject-marks-report-subject-options li button:hover,.subject-marks-report-subject-options li button:focus-visible { outline:0; background:var(--surface-soft,#f2f6fc); }
 .subject-marks-report-subject-options li button strong { flex:0 0 auto; color:var(--brand); }
 .subject-marks-report-no-subjects { padding:12px 10px; color:var(--text-secondary); font-size:13px; font-weight:400; }
-.subject-marks-report-summary { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:10px; margin:0 20px 16px; }
-.subject-marks-report-summary>div { display:grid; align-content:center; gap:5px; min-width:0; padding:11px 12px; border:1px solid var(--border); border-radius:8px; background:var(--surface); }
-.subject-marks-report-summary small { color:var(--text-secondary); font-size:10px; font-weight:700; text-transform:uppercase; }
-.subject-marks-report-summary strong { overflow-wrap:anywhere; color:var(--text-primary); font-size:14px; }
 .subject-marks-report-filters { margin:0 20px 16px; }
 .marks-management-subject-marks-report .filter-disclosure.subject-marks-report-filters { position:relative; z-index:4; overflow:visible; }
 .subject-marks-report-filters .export-control { z-index:5; }
@@ -34,8 +30,7 @@
 .subject-marks-report-table th,.subject-marks-report-table td { white-space:nowrap; }
 .subject-marks-report-error { margin:0 20px 12px; color:var(--danger,#c62828); font-size:13px; }
 .subject-marks-report-loading { margin:0 20px 20px; color:var(--text-secondary); }
-@media(max-width:900px) { .subject-marks-report-summary { grid-template-columns:repeat(2,minmax(0,1fr)); } }
-@media(max-width:600px) { .subject-marks-report-picker { grid-template-columns:36px minmax(0,1fr); margin-inline:12px; padding:11px; } .subject-marks-report-picker>svg { width:36px; height:36px; padding:9px; } .subject-marks-report-summary { grid-template-columns:minmax(0,1fr); margin-inline:12px; } .subject-marks-report-filters { margin-inline:12px; } .subject-marks-report-card__header { align-items:flex-start; flex-direction:column; } .subject-marks-report-filter { min-width:140px; flex:1 1 140px; } }
+@media(max-width:600px) { .subject-marks-report-picker { grid-template-columns:36px minmax(0,1fr); margin-inline:12px; padding:11px; } .subject-marks-report-picker>svg { width:36px; height:36px; padding:9px; } .subject-marks-report-filters { margin-inline:12px; } .subject-marks-report-card__header { align-items:flex-start; flex-direction:column; } .subject-marks-report-filter { min-width:140px; flex:1 1 140px; } }
 
 #subject-marks-subject-search { display:block; width:100% !important; min-width:0 !important; height:auto !important; min-height:0 !important; box-sizing:border-box !important; margin:0 !important; padding:0 !important; border:0 !important; border-radius:0 !important; outline:0 !important; box-shadow:none !important; background:transparent !important; appearance:none; color:var(--text-primary) !important; }
 #subject-marks-subject-search:focus { border:0 !important; outline:0 !important; box-shadow:none !important; }

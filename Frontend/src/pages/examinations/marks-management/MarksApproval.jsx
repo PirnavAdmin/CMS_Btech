@@ -442,12 +442,10 @@ export default function MarksApproval() {
   const [loading, setLoading] = useState(true)
   const [loadError, setLoadError] = useState('')
   const [search, setSearch] = useState('')
-  const [statusFilter, setStatusFilter] = useState('Pending')
-  const [appliedStatus, setAppliedStatus] = useState('Pending')
+  const [statusFilter, setStatusFilter] = useState('All')
   const [filters, setFilters] = useState({
     academicYear: '', course: '', branch: '', semester: '', section: '', subject: '', exam: '', faculty: '',
   })
-  const [appliedFilters, setAppliedFilters] = useState(null)
   const [page, setPage] = useState(1)
   const [selected, setSelected] = useState(null)
   const [decision, setDecision] = useState('')
@@ -516,24 +514,20 @@ export default function MarksApproval() {
   }), [academic.academicYears, academic.courses, academic.branches, academic.semesters, academic.sections, subjects, faculty, batches])
 
   const scopedRows = useMemo(() => {
-    let result = batches
-    if (appliedFilters) {
-      result = result.filter(batch => FILTER_KEYS.every(key => {
-        const value = appliedFilters[key]
-        if (!value) return true
-        const fieldKey = key === 'exam' ? 'examId' : key === 'academicYear' ? 'academicYearId' : key + 'Id'
-        const actual = batch[fieldKey] || batch[key]
-        return toId(actual) === toId(value)
-      }))
-    }
-    return result
-  }, [batches, appliedFilters])
+    return batches.filter(batch => FILTER_KEYS.every(key => {
+      const value = filters[key]
+      if (!value) return true
+      const fieldKey = key === 'exam' ? 'examId' : key === 'academicYear' ? 'academicYearId' : key + 'Id'
+      const actual = batch[fieldKey] || batch[key]
+      return toId(actual) === toId(value)
+    }))
+  }, [batches, filters])
 
   const rows = useMemo(() => scopedRows.filter(batch => {
-    const statusMatches = appliedStatus === 'All' || batch.status === appliedStatus
+    const statusMatches = statusFilter === 'All' || batch.status === statusFilter
     const query = norm(search)
     return statusMatches && (!query || batch.searchText.includes(query))
-  }), [scopedRows, appliedStatus, search])
+  }), [scopedRows, statusFilter, search])
 
   const counts = useMemo(() => ({
     total: scopedRows.length,
@@ -546,19 +540,8 @@ export default function MarksApproval() {
   const activePage = Math.min(page, pageCount)
   const visibleRows = rows.slice((activePage - 1) * PAGE_SIZE, activePage * PAGE_SIZE)
 
-  const setField = (key, value) => setFilters(current => ({ ...current, [key]: value }))
-  const applyFilters = event => {
-    event.preventDefault()
-    setAppliedFilters({ ...filters })
-    setAppliedStatus(statusFilter)
-    setPage(1)
-  }
-  const resetFilters = () => {
-    setFilters({ academicYear: '', course: '', branch: '', semester: '', section: '', subject: '', exam: '', faculty: '' })
-    setAppliedFilters(null)
-    setSearch('')
-    setStatusFilter('Pending')
-    setAppliedStatus('Pending')
+  const setField = (key, value) => {
+    setFilters(current => ({ ...current, [key]: value }))
     setPage(1)
   }
 
@@ -699,12 +682,19 @@ export default function MarksApproval() {
   return (
     <DashboardLayout>
       <section className="marks-management-marks-approval">
-        <PageHeader title="Marks Approval" breadcrumb={[{ label: 'Marks Management', link: '/marks-management' }, 'Marks Approval']} />
+        <PageHeader
+          className="marks-module-page-header"
+          title="Marks Approval"
+          subtitle="Review, verify, and resolve submitted marks with a complete approval history."
+          breadcrumb={[{ label: 'Marks Management', link: '/marks-management' }, 'Marks Approval']}
+          compactSummary={!forbidden ? [
+            { label: 'Submissions', value: counts.total, tone: 'warning' },
+            { label: 'Pending', value: counts.pending, tone: 'upcoming' },
+            { label: 'Approved', value: counts.approved, tone: 'active' },
+            { label: 'Rejected', value: counts.rejected, tone: 'danger' },
+          ] : undefined}
+        />
         <MarksModuleNav />
-        <header className="marks-approval-intro">
-          <h2>Marks Approval</h2>
-          <p>Review, verify and approve submitted student marks.</p>
-        </header>
 
         {forbidden ? (
           <article className="erp-card marks-approval-forbidden">
@@ -712,26 +702,11 @@ export default function MarksApproval() {
           </article>
         ) : (
           <>
-            <section className="marks-approval-summary" aria-label="Submission summary">
-              {[
-                ['Total Submissions', counts.total, 'total'],
-                ['Pending', counts.pending, 'pending'],
-                ['Approved', counts.approved, 'approved'],
-                ['Rejected', counts.rejected, 'rejected'],
-              ].map(([title, value, tone]) => (
-                <article className={'erp-card marks-approval-stat marks-approval-stat--' + tone} key={title}>
-                  <span>{title}</span>
-                  <strong>{value}</strong>
-                </article>
-              ))}
-            </section>
-
             <article className="erp-card marks-approval-filter-card">
-              <form onSubmit={applyFilters}>
+              <div>
                 <FilterPanel
                   className="marks-approval-filter-panel"
-                  active={Boolean((appliedFilters && Object.values(appliedFilters).some(Boolean)) || appliedStatus !== 'All')}
-                  onClear={resetFilters}
+                  active={Boolean(Object.values(filters).some(Boolean) || statusFilter !== 'All' || search)}
                   hideClear
                   leadingActions={
                     <ExportMenu
@@ -759,21 +734,17 @@ export default function MarksApproval() {
                       {filterFields}
                       <label className="marks-approval-filter marks-approval-status-filter">
                         <span className="marks-approval-filter-label">Approval Status</span>
-                        <select value={statusFilter} onChange={event => setStatusFilter(event.target.value)}>
+                        <select value={statusFilter} onChange={event => { setStatusFilter(event.target.value); setPage(1) }}>
                           <option>All</option>
                           <option>Pending</option>
                           <option>Approved</option>
                           <option>Rejected</option>
                         </select>
                       </label>
-                      <div className="marks-approval-filter-actions">
-                        <button className="erp-btn erp-btn--primary" type="submit">Apply Filters</button>
-                        <button className="erp-btn erp-btn--secondary" type="button" onClick={resetFilters}>Reset</button>
-                      </div>
                     </div>
                   </div>
                 </FilterPanel>
-              </form>
+              </div>
             </article>
 
             <article className="erp-card marks-approval-table-card">
@@ -798,7 +769,7 @@ export default function MarksApproval() {
                 <p className="marks-approval-loading" role="status">Loading submitted marks…</p>
               ) : !rows.length ? (
                 <EmptyState
-                  title={appliedStatus === 'Pending' ? 'No pending marks submissions found.' : 'No marks submissions found.'}
+                  title={statusFilter === 'Pending' ? 'No pending marks submissions found.' : 'No marks submissions found.'}
                   description="Try changing the filters or search terms."
                 />
               ) : (

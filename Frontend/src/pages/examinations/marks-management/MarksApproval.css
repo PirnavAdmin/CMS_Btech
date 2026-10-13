@@ -3,14 +3,6 @@
   gap: 20px;
   min-width: 0;
 }
-.marks-approval-intro { margin-top: -4px; }
-.marks-approval-intro h2 {
-  margin: 0 0 5px;
-  color: var(--text-primary);
-  font-size: 26px;
-  font-weight: 750;
-}
-.marks-approval-intro p { margin: 0; color: var(--text-secondary); font-size: 14px; }
 .marks-approval-filter-card,
 .marks-approval-table-card { min-width: 0; overflow: visible; }
 .marks-approval-filter-card { padding: 0; }
@@ -22,24 +14,6 @@
   padding-bottom: 14px;
 }
 .marks-approval-refresh { white-space: nowrap; }
-.marks-approval-summary {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 14px;
-}
-.marks-approval-stat {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  padding: 16px 18px;
-  border-left: 4px solid var(--brand);
-}
-.marks-approval-stat span { color: var(--text-secondary); font-size: 13px; font-weight: 650; }
-.marks-approval-stat strong { color: var(--text-primary); font-size: 25px; line-height: 1; }
-.marks-approval-stat--pending { border-left-color: #d99016; }
-.marks-approval-stat--approved { border-left-color: #16804a; }
-.marks-approval-stat--rejected { border-left-color: #c64242; }
 
 .marks-approval-filter-panel.filter-disclosure {
   margin: 0;
@@ -98,6 +72,7 @@
   order: 0;
 }
 .marks-approval-filter-panel .filter-disclosure__content {
+  overflow-x: auto;
   padding: 14px 16px 16px;
   border-top: 1px solid var(--border);
   background: var(--surface-soft, #f7faff) !important;
@@ -109,9 +84,14 @@
 .marks-approval-filter-layout { display: contents; }
 .marks-approval-dropdown-grid {
   display: grid;
-  grid-template-columns: repeat(5, minmax(130px, 1fr));
+  grid-template-columns: repeat(9, minmax(115px, 1fr));
   align-items: end;
-  gap: 12px;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  max-width: 1440px;
+  min-width: 1100px;
+  margin-inline: auto;
 }
 .marks-approval-filter {
   display: grid;
@@ -137,14 +117,6 @@
   font: inherit;
   font-size: 12px;
 }
-.marks-approval-filter-actions {
-  display: flex;
-  align-items: end;
-  gap: 8px;
-  min-width: 0;
-}
-.marks-approval-filter-actions .erp-btn { min-height: 40px; white-space: nowrap; }
-
 .marks-approval-table-wrap,
 .marks-approval-students-wrap { width: 100%; overflow-x: auto; }
 .marks-approval-table,
@@ -364,24 +336,15 @@
 .marks-management-marks-approval .erp-btn--danger:hover { background: #ac3333; }
 
 @media (max-width: 1280px) {
-  .marks-approval-dropdown-grid { grid-template-columns: repeat(4, minmax(130px, 1fr)); }
   .marks-approval-detail-summary { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 }
 @media (max-width: 900px) {
-  .marks-approval-summary { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .marks-approval-details-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .marks-approval-filter-panel .filter-disclosure__content { overflow-x: auto; }
-  .marks-approval-dropdown-grid { min-width: 780px; grid-template-columns: repeat(3, minmax(130px, 1fr)); }
 }
 @media (max-width: 640px) {
   .marks-approval-filter-panel .filter-disclosure__bar { flex-wrap: wrap; }
   .marks-approval-filter-panel .filter-disclosure__search { flex: 1 0 100%; min-width: 0; }
-  .marks-approval-filter-panel .filter-disclosure__content { overflow: visible; padding-inline: 12px; }
-  .marks-approval-dropdown-grid { min-width: 0; grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .marks-approval-filter-actions { grid-column: span 2; }
-  .marks-approval-summary { gap: 9px; }
-  .marks-approval-stat { padding: 13px; }
-  .marks-approval-stat strong { font-size: 21px; }
+  .marks-approval-filter-panel .filter-disclosure__content { overflow-x: auto; padding-inline: 12px; }
   .marks-approval-details-grid,
   .marks-approval-detail-summary { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .marks-approval-pagination { align-items: flex-start; flex-direction: column; padding-inline: 14px; }
@@ -390,9 +353,7 @@
   .marks-approval-decision { padding: 21px 17px; }
 }
 @media (max-width: 420px) {
-  .marks-approval-dropdown-grid,
   .marks-approval-details-grid { grid-template-columns: minmax(0, 1fr); }
-  .marks-approval-filter-actions { grid-column: auto; }
   .marks-approval-detail-summary { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .marks-approval-decision dl { grid-template-columns: minmax(0, 1fr); }
 }

@@ -206,7 +206,18 @@ export default function StudentMarks() {
   return (
     <DashboardLayout>
       <section className="marks-management-student-marks">
-        <PageHeader title="Student Marks" breadcrumb={[{ label: 'Marks Management', link: '/marks-management' }, 'Student Marks']} />
+        <PageHeader
+          className="marks-module-page-header"
+          title="Student Marks"
+          subtitle="Look up a student to review their examination history across subjects."
+          breadcrumb={[{ label: 'Marks Management', link: '/marks-management' }, 'Student Marks']}
+          compactSummary={[
+            { label: 'Students', value: studentOptions.length, tone: 'warning' },
+            { label: 'Result Sheets', value: resultSheets.length },
+            { label: 'Student Records', value: selectedStudent ? studentRows.length : '—', tone: 'completed' },
+            { label: 'Matching Records', value: selectedStudent ? filteredRows.length : '—', tone: 'active' },
+          ]}
+        />
         <MarksModuleNav />
 
         <article className="erp-card student-marks-card">

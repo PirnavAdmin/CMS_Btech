@@ -82,6 +82,6 @@
 
 @media (max-width: 640px) {
   .bulk-marks-preview-filters .filter-disclosure__content-inner {
-    justify-content: start !important;
+    justify-content: safe center !important;
   }
 }
