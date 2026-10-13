@@ -13,8 +13,6 @@
   gap: 12px;
   padding-bottom: 14px;
 }
-.marks-approval-refresh { white-space: nowrap; }
-
 .marks-approval-filter-panel.filter-disclosure {
   margin: 0;
   overflow: visible;
@@ -102,6 +100,7 @@
   font-weight: 650;
 }
 .marks-approval-filter-label { color: var(--text-secondary); font-size: 11px; font-weight: 700; }
+.marks-approval-status-filter .marks-approval-filter-label { text-align: left; }
 .marks-approval-filter > .searchable-select { width: 100%; min-width: 0; }
 .marks-approval-filter > .searchable-select .searchable-select__trigger,
 .marks-approval-filter select {
@@ -116,6 +115,10 @@
   color: var(--text-primary);
   font: inherit;
   font-size: 12px;
+}
+.marks-approval-status-filter select {
+  text-align: left;
+  text-align-last: left;
 }
 .marks-approval-table-wrap,
 .marks-approval-students-wrap { width: 100%; overflow-x: auto; }

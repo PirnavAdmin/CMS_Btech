@@ -753,9 +753,6 @@ export default function MarksApproval() {
                   <h2 className="erp-card-title">Submitted Marks</h2>
                   <p className="erp-card-subtitle">{rows.length} submission{rows.length === 1 ? '' : 's'} match the current filters.</p>
                 </div>
-                <button type="button" className="erp-btn erp-btn--secondary marks-approval-refresh" onClick={load} disabled={loading}>
-                  Refresh
-                </button>
               </header>
 
               {loadError && (
