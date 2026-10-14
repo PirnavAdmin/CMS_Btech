@@ -1,0 +1,114 @@
+.p-scope {
+  margin-bottom: 18px;
+  padding: 16px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+}
+
+/* Keep the promotion scope selectors in one straight row on desktop. */
+.p-scope .erp-form-grid {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 14px;
+  width: 100%;
+}
+
+.p-scope .erp-form-group { min-width: 0; }
+
+.p-scope .erp-form-group label {
+  display: block;
+  margin-bottom: 6px;
+  white-space: nowrap;
+}
+
+.p-scope label {
+  display: grid;
+  gap: 6px;
+}
+
+.p-scope label > span {
+  color: var(--text-secondary);
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.p-scope .p-required { color: #c9322a; }
+
+.p-scope select {
+  box-sizing: border-box;
+  width: 100%;
+  height: 40px;
+  padding: 0 12px;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  background: var(--surface);
+  color: var(--text-primary);
+}
+
+.p-scope select:focus {
+  border-color: var(--brand);
+  outline: 2px solid var(--brand-soft);
+}
+
+.p-empty {
+  padding: 48px 20px;
+  text-align: center;
+}
+
+.p-empty > svg {
+  color: var(--brand);
+  font-size: 25px;
+}
+
+.p-empty h2 { margin: 10px 0 4px; }
+.p-empty p { margin: 0; color: var(--text-muted); }
+
+.p-history-table {
+  table-layout: fixed;
+  width: 100% !important;
+}
+
+.p-history-wrap {
+  width: 100%;
+  overflow-x: hidden;
+}
+
+.p-history-table th,
+.p-history-table td {
+  padding-right: 18px;
+  padding-left: 18px;
+}
+
+.p-history-table th:first-child,
+.p-history-table td:first-child { width: 26%; }
+
+.p-history-table th,
+.p-history-table td { text-align: center !important; vertical-align: middle !important; }
+
+.student-promotion.p-module .p-history-table thead th,
+.student-promotion.p-module .p-history-table tbody td { text-align: center !important; vertical-align: middle !important; }
+
+.p-history-table th:not(:first-child),
+.p-history-table td:not(:first-child) {
+  text-align: center;
+  vertical-align: middle;
+}
+
+.p-history-table th:nth-child(2) { width: 16%; }
+.p-history-table th:nth-child(3) { width: 15%; }
+.p-history-table th:nth-child(4) { width: 26%; }
+.p-history-table th:nth-child(5) { width: 17%; }
+
+@media (max-width: 1200px) {
+  .p-scope .erp-form-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+
+@media (max-width: 760px) {
+  .p-scope .erp-form-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+@media (max-width: 650px) {
+  .p-scope .erp-form-grid { grid-template-columns: 1fr; }
+}

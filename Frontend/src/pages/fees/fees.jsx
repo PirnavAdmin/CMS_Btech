@@ -3,30 +3,26 @@ import * as external0 from "react";
 import * as external1 from "react-router-dom";
 import * as external2 from "react-dom";
 import * as external3 from "react-icons/fi";
-import {
-  PageHeaderModule,
-  FilterPanelModule,
-  SearchableSelectModule,
-  TablePaginationModule,
-  EmptyStateModule,
-  DirectoryEmptyStateModule,
-  useToastStateModule,
-  ExportMenuModule,
-  DashboardLayoutModule,
-  AcademicContextModule,
-  feeStructureServiceModule,
-  recordDetailSectionsModule,
-  toastModule,
-  exportColumnsModule,
-  academicYearUtilsModule,
-  exportUtilsModule,
-} from "../../components/components.jsx";
-import {
-  apiEndpointsModule,
-  collegeApiModule,
-  authModule,
-  collegeScopeModule,
-} from "../../API/apiendpoints.jsx";
+import * as PageHeaderModule from '../../components/PageHeader';
+import * as FilterPanelModule from '../../components/FilterPanel';
+import * as SearchableSelectModule from '../../components/SearchableSelect';
+import * as TablePaginationModule from '../../components/TablePagination';
+import * as EmptyStateModule from '../../components/EmptyState';
+import * as DirectoryEmptyStateModule from '../../components/DirectoryEmptyState';
+import * as useToastStateModule from '../../hooks/useToastState';
+import * as ExportMenuModule from '../../components/ExportMenu';
+import * as DashboardLayoutModule from '../../layouts/DashboardLayout';
+import * as AcademicContextModule from '../../context/AcademicContext';
+import * as feeStructureServiceModule from './feeStructureService';
+import * as recordDetailSectionsModule from '../../utils/recordDetailSections';
+import * as toastModule from '../../utils/toast';
+import * as exportColumnsModule from '../../utils/exportColumns';
+import * as academicYearUtilsModule from '../../utils/academicYearUtils';
+import * as exportUtilsModule from '../../utils/exportUtils';
+import * as apiEndpointsModule from '../../api/apiEndpoints';
+import * as collegeApiModule from '../../auth/collegeApi';
+import * as authModule from '../../auth/auth';
+import * as collegeScopeModule from '../../utils/collegeScope';
 
 function FeeRequestState({ loading, error, children }) {
   if (loading) return <div className="fm-request-state" role="status">Loading fee records...</div>;

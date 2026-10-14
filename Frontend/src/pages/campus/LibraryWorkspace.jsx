@@ -25,24 +25,12 @@ import {
   FiTrendingUp,
   FiDollarSign,
 } from 'react-icons/fi'
-import { DashboardLayoutModule as consolidatedDependency0 } from "../../components/components.jsx";
-const { default: DashboardLayout,  } = consolidatedDependency0;
-
-import { PageHeaderModule as consolidatedDependency1 } from "../../components/components.jsx";
-const { default: PageHeader,  } = consolidatedDependency1;
-
-import { TablePaginationModule as consolidatedDependency2 } from "../../components/components.jsx";
-const { default: TablePagination,  } = consolidatedDependency2;
-
-import { AcademicContextModule as consolidatedDependency3 } from "../../components/components.jsx";
-const {  useAcademic  } = consolidatedDependency3;
-
-import { authModule as consolidatedDependency4 } from "../../API/apiendpoints.jsx";
-const {  getUserRole  } = consolidatedDependency4;
-
-import { rolesModule as consolidatedDependency5 } from "../../API/apiendpoints.jsx";
-const {  ROLES  } = consolidatedDependency5;
-
+import DashboardLayout from '../../layouts/DashboardLayout'
+import PageHeader from '../../components/PageHeader'
+import TablePagination from '../../components/TablePagination'
+import { useAcademic } from '../../context/AcademicContext'
+import { getUserRole } from '../../auth/auth'
+import { ROLES } from '../../auth/roles'
 import {
   defaultBooks,
   defaultCopies,

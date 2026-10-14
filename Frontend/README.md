@@ -1,48 +1,5 @@
 # React + Vite
 
-## Consolidated frontend source
-
-Sidebar modules remain separate under `src/pages`. Each module folder contains
-exactly two source files: one `.jsx` containing all its pages and page components,
-and one `.css` containing its styles. Parent folders only organize these modules.
-For example:
-
-- `pages/faculty/faculty.jsx` and `faculty.css`: faculty pages.
-- `pages/fees/fees.jsx` and `fees.css`: fee management pages.
-- `pages/timetable/timetable.jsx` and `timetable.css`: timetable pages.
-- Examination and student-management child modules each retain their own pair.
-
-Common source is maintained separately:
-
-- `components/components.jsx` and `components.css`: shared components, sidebar,
-  layout, contexts, hooks, and shared presentation helpers.
-- `global/global.jsx`: application routes and bootstrap only, importing the module pages.
-- `global/global.css`: module stylesheet imports and application-wide theme overrides.
-  Shared/base styles are maintained here too; there is no separate shared folder.
-  Vite preserves the original cross-module CSS order using the `Source cascade`
-  and `Source styles` comments; retain these markers when editing styles.
-  New style sections without a cascade entry are appended after existing ones.
-  Previously unimported styles remain inside `@media not all`.
-- `API/apiendpoints.jsx`: endpoint definitions, HTTP requests, authentication,
-  API services, and their shared dependencies. Pages do not call `fetch` directly.
-
-Each section has its own scope to preserve existing names without collisions.
-Public-declaration comments and import metadata record the original module
-boundaries. Sections that were
-not previously imported remain uninitialized functions rather than introducing
-new startup side effects.
-
-Static images are in `public/assets`; timetable documentation is in `docs`.
-The frontend test folder and test command have been removed. Historical test
-results in `docs` describe checks performed before that removal.
-
-Run `npm run dev`, `npm run build`, and `npm run lint` from the
-frontend directory. Module `.jsx` files may contain JSX, handled natively by Vite.
-Changes to application JS files trigger a full browser reload instead of
-component-level Fast Refresh, avoiding duplicate application roots and stale
-cross-section state. Stylesheet changes still update in place.
-The normal HTML root uses `data-cms-app` to mount the app.
-
 This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
 
 Currently, two official plugins are available:
@@ -76,23 +33,18 @@ explicitly labelled local previews when that integration is unavailable.
 ## Fee Management UI
 
 Fee Management uses the existing expandable Finance sidebar module with Overview,
-Fee Plans, Student Fees, Payments, and Reports (five children).
-Fee Plans keeps Academic Fee, Hostel Fee, and Transport Fee tabs within one
-bordered workspace. Manage Charges is a contextual action, not a primary tab.
-Tabs, the compact search/filter row, the table, and pagination share the same
-surface. Student Fees, Payments, Reports, and student-detail lists use the same
-connected workspace and visible row separators.
+Fee Structures, Student Accounts, Collections, and Reports (five children).
+Student Accounts provides compact Account Operations shortcuts to Fee Assignment,
+Scholarships & Concessions, and Dues & Penalties, plus an Assign Fees header action.
+These operations keep their existing routes, highlight Student Accounts in the
+sidebar, and provide a contextual back link instead of tabs or a tools dropdown.
 Fee routes automatically open the module
 and nested screens highlight their owning section. Content-level primary and
-Student Fees secondary navigation stays contextual. Breadcrumbs follow Home / Finance /
+Student Accounts secondary tabs are removed. Breadcrumbs follow Home / Finance /
 Fee Management / Section / Operation when applicable. Existing URLs and role-based visibility remain unchanged.
 Each subsection has its own heading and compact filters.
-Institutional reads follow the authenticated account's college permissions.
-The header college selector scopes saved planning data, not super-admin financial
-queries; it must not be treated as an institutional authorization boundary.
-Saved Planning Accounts uses a compact desktop filter row with search, academic
+Student Accounts uses a single compact desktop filter row with search, academic
 mapping, status, and a tertiary clear action; smaller screens use balanced columns.
-Institutional accounts use the supported academic filters and student search.
 Assignment starts with a
 published structure and displays only eligible students; concession lists preserve
 the existing Draft, Submitted, Approved, and Rejected workflow. Approval dates are
@@ -103,23 +55,21 @@ is retained because the pending-fees API does not return roll numbers. Batch fil
 remain available on device-local accounts and assignments; server dues use the
 existing supported semester filter.
 
-Manage Charges stays contextual to Fee Plans; collection, receipt, and refund
-workflows remain accessible through Payments.
+Fee Components stays contextual to Fee Structures; collection, receipt, and refund
+workflows remain accessible through Collections.
 
-`/fees/structures` opens Fee Plans directly, with Academic Fee,
-Hostel Fee, and Transport Fee tabs. `/fees/legacy` redirects there for
+`/fees/structures` opens Fee Structure Configuration directly, with Academic,
+Hostel, and Transport Fee Structures tabs. `/fees/legacy` redirects there for
 existing bookmarks; no legacy terminology or intermediate generic list is shown.
 The primary action creates the selected structure type. Academic creation opens
 the dedicated Add-screen wizard; Hostel and Transport use the same page-based
 Add-screen layout and live-preview styling with their existing service-specific
-fields. The configuration header shows the contextual Create action.
-Manage Charges uses the existing `/fees/components` URL. Academic creation selects
-only user-configured, active academic fee heads. New plans have no seeded heads,
-amounts or due dates, and saving never creates master records automatically.
-No backend component-management API exists.
-Search and type-specific filters occupy a compact row directly below the tabs.
-Academic filters include year, course, branch, batch, and status; Clear is tertiary.
-The Academic list presents existing academic plans and wizard-created
+fields. The configuration header shows only the contextual
+Create action; the Fee Component Master route remains available without a header
+shortcut. The Academic wizard selects charges from the existing device-local
+component master; no backend component-management API exists.
+Search and Export stay in each list header, and Filter reveals type-specific
+controls. The Academic list presents existing academic plans and wizard-created
 structures together without migrating either storage format or altering financial
 rules. Each record retains its own edit/details workflow and status vocabulary.
 Wizard-created structures retain status-appropriate row overflow actions;
@@ -128,24 +78,16 @@ Delete requires confirmation and is available only for unassigned drafts that ar
 not referenced by revisions. The deletion guard is rechecked before saving through
 the existing college-scoped workspace persistence.
 
-Overview shows four compact backend KPIs, real 7/30-day and academic-year date-window
-trends, attention items, matching dues, and the latest five confirmed payments.
-It has no report builder or export toolbar. The current dashboard procedure mixes
-scoped fee balances with permission-wide fines, and `totalOverdue` describes
-assessed fines, not all overdue fees. The UI labels these limitations and does
-not infer a collection percentage or fabricate a mutually exclusive status chart.
-Academic-year trend windows use configured start/end dates; payment trends include
-all fee years within that date window.
+Overview is an operational command center: academic-year headline balances,
+collection progress, a 7/30-day daily trend, attention items, upcoming/overdue
+dues, and the latest five payments. It has no report builder or export toolbar.
 
 Reports is a separate analytics workspace with an explicit Apply/Reset workflow,
 report-specific filters, monthly/category/payment-mode analysis, searchable and
 sortable results, CSV export, and Print/Save as PDF. Outstanding and overdue
 reports are server-paginated; their table search, sort, and export cover the current
 page only. Student-ledger, concession, and refund reports are explicitly
-saved planning records and are never merged with confirmed financial records.
-Monthly/daily/mode reports expose payment dates only; category totals are all-date.
-Unsupported course/branch collection groupings have been removed rather than
-aggregating an incomplete page of unpaid installments.
+device-local and are never merged with posted financial records.
 
 Existing financial APIs do not provide Batch filtering, program/branch grouped
 totals, verification/reversal statuses, or a complete student-status distribution.
@@ -156,34 +98,19 @@ academic-year results. Payment date ranges apply to collections, while
 receivables/outstanding remain current balances.
 
 Fee structure details have Overview, Components, Payment Schedule, Assignment,
-and Revision History sections. Student profiles have Account Summary, Ledger,
-Installments, Concessions and Receipts. Student Accounts defaults to institutional
-unpaid installments; saved planning accounts are a clearly labelled separate tab.
-`/fees/accounts/:studentId` reads all pages of real pending installments and payment
-history. The connected service does not provide settled installments or a complete
-charge/reversal ledger, so no institutional running balance is inferred.
-Concession amounts on pending rows belong to assignments and may repeat; they
-are not summed as individual approvals. Saved planning ledger running balances
-use immutable payment/adjustment allocations and paise arithmetic.
+and Revision History sections. Student profiles have Ledger, Installments,
+Payments, Concessions, and Refunds sections. Device-local ledger running balances
+use the existing immutable payment/adjustment allocations and paise arithmetic.
 The UI redesign does not change financial APIs or business workflows.
 
-Creating a fee plan opens `/fees/structures/create` inside the existing ERP
-layout, not a modal. The visual layout preserves existing routes and save actions.
-Academic, Hostel, and Transport create forms use a roughly 65/35 form/Live Preview
-split with equal-height bordered panels on desktop. Both bodies scroll internally;
-the action footer belongs only to the left form, never the sidebar or preview.
-Validation alerts stay inside the form panel without pushing its footer off screen.
-Academic sections remain "Who should pay this fee?", "What should they pay?",
-and "When should they pay?". Live Preview reads the current form state, including
-charges, totals and schedules. Facility previews show configured service details,
-rates, billing frequency and effective dates; they do not invent a payment schedule.
-Preview values include the defaults currently displayed by service selectors.
-On narrow screens the panels stack with independently accessible scroll areas.
-The density target is 16px/20px page spacing after the ERP topbar, 12px major
-gaps, 36px controls, 38px table headers, and compact separated rows.
-Advanced grace/penalty rules start collapsed. Student-specific concessions are not
-entered in the structure form; existing structure reductions are preserved.
-The footer is contained within the form panel and retains its existing save actions.
+Creating a fee structure opens `/fees/structures/create` inside the existing ERP
+layout, not a modal. Unassigned drafts use `/fees/structures/:structureId/edit`;
+duplicates and revisions use the same page-based editor. Its three-step workflow
+is Fee Applicability, Fee Details, and Payment Schedule. The persistent Live Preview
+replaces a separate review page. Payment Schedule has the fixed Previous,
+Save Draft and Submit for Approval footer; complete validation still runs on submission
+and returns the user to the relevant step on errors. Internal component models
+and approval statuses are unchanged.
 Courses and dependent branches use Academic Management data. Amounts, mandatory
 and refundable flags use the existing component-backed storage and validation.
 Batch suggestions use matching academic year/course/branch records where available;
@@ -192,16 +119,17 @@ Existing detailed structures and previously saved single-total charges remain
 intact; replacing a charge requires explicitly removing it. Hostel/Transport
 components are excluded from academic selection and submission. The workflow has inline academic validation,
 exact installment-allocation feedback, and a complete live preview derived
-from the current form. The editor reuses Add College's cards, form controls, footer actions and live
-summary styling. Only Back appears beside the page title; Save Draft remains
-a secondary footer action. Equal splits allocate exact paise without inventing
-due dates; installment dates must be entered explicitly.
+from the current form. The editor reuses Add College's card, natural-width scrolling
+tabs, form controls, footer actions, and Live Preview header. Tabs sit inside the left
+card above its fixed step header; only Back appears beside the page title, while
+Save Draft remains a secondary footer action. Save & Next advances validated steps
+without persisting; Save Draft and Submit for Approval retain their existing behavior.
 On desktop, the form and preview stretch to identical heights within the available ERP
 viewport. Their bodies scroll independently; card headers and the form action
 footer remain visible. Preview sections cover academic applicability, fee components, total fee,
 structure concessions, payment schedules, late-fee rules, totals, and
 validation-derived readiness without changing the saved workflow status. Small
-screens stack the panels with internal scrolling and normal page access.
+screens stack equal-height cards with internal scrolling and normal page access.
 Save Draft returns to the structure list; Submit for Approval
 preserves the existing separate approval and publication stages. Configurations
 remain device-local and college-scoped.
@@ -211,14 +139,15 @@ Hostel and Transport creation opens `/fees/structures/hostel/create` and
 `/fees/structures/:type/:facilityId/edit`. These are dedicated ERP screens,
 not modal overlays. Both reuse the Academic wizard's left configuration card,
 right Live Preview, controls, tabs, scrolling bodies and footer styling.
-Each uses a single configuration screen. Existing Draft / Active saving and college-scoped
+Their steps remain Hostel Setup / Transport Setup, Accommodation & Fee / Route & Fee,
+and Review & Activate. Existing Draft / Active saving and college-scoped
 storage formats remain unchanged. Cancel, Back and successful saves return
 to the corresponding Hostel or Transport list tab. Direct edit URLs reload
 the saved record; missing records show an explicit error.
 
 ### Fee domain support and backend dependencies
 
-There is one configuration landing screen with four contextual tabs. Academic
+There is one configuration landing screen with three domain tabs. Academic
 filters are Academic Year, Course, Branch, Batch and Status. Hostel filters
 are Academic Year, Hostel, Room Type and Status. Transport filters are Academic
 Year, Route, Boarding Stop and Status. Facility filter options derive only from
@@ -258,15 +187,9 @@ The existing academic preview assignment checks year, course, branch, batch,
 semester/category where applicable, and rejects facility domains. Facility plans
 remain outside academic assignments until these backend dependencies are supplied.
 
-Development-tools and duplicate financial-preview panels have been removed.
-Existing saved planning histories remain available, with prominent warnings
-that they do not post institutional charges, approvals or refunds.
-Local refund drafts require an eligible original payment and are limited to its
-remaining refundable balance. Concessions cannot exceed unpaid fees.
-Historical academic/service plans are revised instead of overwritten; only drafts
-can be deleted. Actual payment success requires matching backend payment/receipt
-identifiers and exact amounts. Ambiguous failures close the payment dialog and
-direct the operator to check Receipts before attempting another collection.
+Development-only financial previews are hidden from normal navigation. For
+development diagnostics, append `?feeDebug=true` to a financial page URL when
+running Vite in development mode. They are not included in production UI.
 
 ## React Compiler
 

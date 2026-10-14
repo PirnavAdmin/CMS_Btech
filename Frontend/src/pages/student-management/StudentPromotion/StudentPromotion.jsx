@@ -1,51 +1,3 @@
-// Pages and helpers in this module retain their own isolated scopes.
-import * as external0 from "react";
-import * as external3 from "react-icons/fi";
-import { useCollegeStateModule, useToastStateModule, InfoCardModule, DashboardLayoutModule, PageHeaderModule, StatusBadgeModule, EmptyStateModule, TablePaginationModule, ExportMenuModule, FilterPanelModule, AcademicContextModule } from "../../../components/components.jsx";
-import { newestFirstModule, authModule, rolesModule, apiEndpointsModule, promotionServiceModule, studentServiceModule, eventBusModule } from "../../../API/apiendpoints.jsx";
-import { recordDetailSectionsModule, toastModule, exportColumnsModule } from "../../../components/components.jsx";
-
-export const StudentPromotionModule = (() => {
-const { default: useCollegeState } = useCollegeStateModule;
-const { newestFirst } = newestFirstModule;
-const { promotionDetailSections } = recordDetailSectionsModule;
-const { showError } = toastModule;
-const { default: useToastState } = useToastStateModule;
-const { default: React } = external0;
-const { useState } = external0;
-const { useEffect } = external0;
-const { useCallback } = external0;
-const { useMemo } = external0;
-const { default: InfoCard } = InfoCardModule;
-const { FiClock } = external3;
-const { FiEye } = external3;
-const { FiInfo } = external3;
-const { FiSearch } = external3;
-const { FiTrendingUp } = external3;
-const { FiUsers } = external3;
-const { FiX } = external3;
-const { FiAward } = external3;
-const { FiBookOpen } = external3;
-const { FiUser } = external3;
-const { default: DashboardLayout } = DashboardLayoutModule;
-const { default: PageHeader } = PageHeaderModule;
-const { default: StatusBadge } = StatusBadgeModule;
-const { default: EmptyState } = EmptyStateModule;
-const { default: TablePagination } = TablePaginationModule;
-const { default: ExportMenu } = ExportMenuModule;
-const { PrintDetailsButton } = ExportMenuModule;
-const { default: FilterPanel } = FilterPanelModule;
-const { promotionColumns } = exportColumnsModule;
-const { promotionHistoryColumns } = exportColumnsModule;
-const { hasRole } = authModule;
-const { ROLES } = rolesModule;
-const { useAcademic } = AcademicContextModule;
-const { apiAssetUrl } = apiEndpointsModule;
-const { default: promotionService } = promotionServiceModule;
-const { default: studentService } = studentServiceModule;
-const { default: eventBus } = eventBusModule;
-const { ERP_EVENTS } = eventBusModule;
-/* Imports for isolated regression tests:
 import useCollegeState from '../../../hooks/useCollegeState'
 import { newestFirst } from '../../../utils/newestFirst'
 import { promotionDetailSections } from '../../../utils/recordDetailSections'
@@ -84,8 +36,7 @@ import './StudentPromotion.css'
 import './StudentPromotionHeader.css'
 import './StudentPromotionSearch.css'
 import './StudentPromotionScope.css'
-*/
-// #region pages/student-management/StudentPromotion/StudentPromotion.jsx
+
 const formatSemesterLabel = (val) => {
   if (val === undefined || val === null || val === '') return '-'
   const str = String(val).trim()
@@ -334,7 +285,7 @@ function ReviewDrawer({ student, onClose, onStatus, canEdit }) {
   )
 }
 
-/* export default */ function StudentPromotion() {
+export default function StudentPromotion() {
   const canPromote = hasRole([ROLES.ADMIN])
   const {
     activeAcademicYears,
@@ -1064,10 +1015,3 @@ function ReviewDrawer({ student, onClose, onStatus, canEdit }) {
     </DashboardLayout>
   )
 }
-// #endregion pages/student-management/StudentPromotion/StudentPromotion.jsx
-return {
-  get default() { return StudentPromotion; }
-};
-})();
-
-export const StudentPromotion = StudentPromotionModule.default;

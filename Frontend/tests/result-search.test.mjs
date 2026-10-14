@@ -1,11 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { readFileSync } from 'node:fs'
-
-const source = readFileSync(new URL('../src/components/components.jsx', import.meta.url), 'utf8')
-const start = source.indexOf('// #region pages/examinations/grade-result-management/gradeResultModel.js')
-const end = source.indexOf('// #endregion pages/examinations/grade-result-management/gradeResultModel.js', start)
-const { flattenResults, matchesResultSearch } = new Function(source.slice(start, end) + '\nreturn { flattenResults, matchesResultSearch };')()
+import { flattenResults, matchesResultSearch } from '../src/pages/examinations/grade-result-management/gradeResultModel.js'
 
 test('result search preserves student identifiers and separate department and branch fields', () => {
   const [row] = flattenResults([{ departmentName: 'Engineering', branchName: 'Computer Science', branchCode: 'CSE', records: [{ studentId: 'STU-102', idNumber: 'ID-701', studentName: 'Sai Reddy', registrationNumber: 'REG-205', rollNumber: 'ROLL-301', totalMarks: 85, maximumMarks: 100 }] }])

@@ -1,56 +1,3 @@
-// Pages and helpers in this module retain their own isolated scopes.
-import * as external0 from "react";
-import * as external1 from "react-router-dom";
-import * as external3 from "react-icons/fi";
-import { useCollegeStateModule, useToastStateModule, DashboardLayoutModule, PageHeaderModule, CompactSummaryModule, StatusBadgeModule, EmptyStateModule, InfoCardModule, TablePaginationModule, ExportMenuModule, ViewDialogModule, AcademicContextModule } from "../../components/components.jsx";
-import { newestFirstModule, apiEndpointsModule, attendanceServiceModule, studentServiceModule, facultyServiceModule, subjectServiceModule } from "../../API/apiendpoints.jsx";
-import { toastModule } from "../../components/components.jsx";
-
-export const AttendanceModule = (() => {
-const { default: useCollegeState } = useCollegeStateModule;
-const { newestFirst } = newestFirstModule;
-const { showError } = toastModule;
-const { default: useToastState } = useToastStateModule;
-const { default: React } = external0;
-const { useState } = external0;
-const { useEffect } = external0;
-const { useMemo } = external0;
-const { useCallback } = external0;
-const { useLocation } = external1;
-const { useNavigate } = external1;
-const { FiCalendar } = external3;
-const { FiCheckCircle } = external3;
-const { FiClock } = external3;
-const { FiEye } = external3;
-const { FiLayers } = external3;
-const { FiPlus } = external3;
-const { FiSearch } = external3;
-const { FiUsers } = external3;
-const { FiUserCheck } = external3;
-const { FiUserX } = external3;
-const { FiAlertTriangle } = external3;
-const { FiBarChart2 } = external3;
-const { FiBell } = external3;
-const { FiSave } = external3;
-const { FiFilter } = external3;
-const { FiChevronDown } = external3;
-const { FiChevronUp } = external3;
-const { default: DashboardLayout } = DashboardLayoutModule;
-const { default: PageHeader } = PageHeaderModule;
-const { default: CompactSummary } = CompactSummaryModule;
-const { default: StatusBadge } = StatusBadgeModule;
-const { default: EmptyState } = EmptyStateModule;
-const { default: InfoCard } = InfoCardModule;
-const { default: TablePagination } = TablePaginationModule;
-const { default: ExportMenu } = ExportMenuModule;
-const { default: ViewDialog } = ViewDialogModule;
-const { useAcademic } = AcademicContextModule;
-const { facultyMasterApi } = apiEndpointsModule;
-const { default: attendanceService } = attendanceServiceModule;
-const { default: studentService } = studentServiceModule;
-const { default: facultyService } = facultyServiceModule;
-const { default: subjectService } = subjectServiceModule;
-/* Imports for isolated regression tests:
 import useCollegeState from '../../hooks/useCollegeState'
 import { newestFirst } from '../../utils/newestFirst'
 import { showError } from '../../utils/toast'
@@ -92,8 +39,7 @@ import studentService from '../../services/studentService'
 import facultyService from '../../services/facultyService'
 import subjectService from '../../services/subjectService'
 import './Attendance.css'
-*/
-// #region pages/attendance/Attendance.jsx
+
 const ATTENDANCE_COLUMNS = [
   { key: 'date', label: 'Date' },
   { key: 'subject', label: 'Subject' },
@@ -108,7 +54,7 @@ const ATTENDANCE_COLUMNS = [
   { key: 'faculty', label: 'Faculty' },
 ]
 
-/* export default */ function Attendance() {
+export default function Attendance() {
   const { pathname } = useLocation()
   const navigate = useNavigate()
   const {
@@ -1478,88 +1424,3 @@ function AttendanceRateBadge({ rate, criticalThreshold = null }) {
 function ReportTable({ rows, columns, empty }) {
   return <div className="erp-table-responsive"><table className="erp-table attendance-report-table"><thead><tr>{columns.map(([label]) => <th key={label}>{label}</th>)}</tr></thead><tbody>{rows.length ? rows.map((row, index) => <tr key={row.id || row.subject || row.month || index}>{columns.map(([label, render]) => <td key={label}>{render(row)}</td>)}</tr>) : <tr><td colSpan={columns.length} className="attendance-report-empty">{empty}</td></tr>}</tbody></table></div>
 }
-// #endregion pages/attendance/Attendance.jsx
-return {
-  get default() { return Attendance; }
-};
-})();
-
-export const AttendanceSessionDetailsModule = (() => {
-const { useAcademic } = AcademicContextModule;
-const { useEffect } = external0;
-const { useState } = external0;
-const { Link } = external1;
-const { useParams } = external1;
-const { default: DashboardLayout } = DashboardLayoutModule;
-const { default: InfoCard } = InfoCardModule;
-const { default: StatusBadge } = StatusBadgeModule;
-const { default: attendanceService } = attendanceServiceModule;
-const { FiCalendar } = external3;
-const { FiArrowLeft } = external3;
-/* Imports for isolated regression tests:
-import { useAcademic } from '../../context/AcademicContext'
-import { useEffect, useState } from 'react'
-import { Link, useParams } from 'react-router-dom'
-import DashboardLayout from '../../layouts/DashboardLayout'
-import InfoCard from '../../components/InfoCard'
-import StatusBadge from '../../components/StatusBadge'
-import attendanceService from '../../services/attendanceService'
-import { FiCalendar, FiArrowLeft } from 'react-icons/fi'
-import './Attendance.css'
-*/
-// #region pages/attendance/AttendanceSessionDetails.jsx
-/* export default */ function AttendanceSessionDetails() {
-  const { sessionId } = useParams()
-  const { scopeRecords } = useAcademic()
-  const [session, setSession] = useState(null)
-  const [records, setRecords] = useState([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState('')
-  const [retry, setRetry] = useState(0)
-  useEffect(() => {
-    let active = true
-    setLoading(true)
-    setError('')
-    Promise.all([attendanceService.getSessions(), attendanceService.getSessionStudents(sessionId)])
-      .then(([sessions, students]) => {
-        const found = scopeRecords(sessions).find(item => String(item.id) === sessionId)
-        if (!found) throw new Error('Attendance session not found.')
-        if (active) { setSession(found); setRecords(students) }
-      })
-      .catch(cause => { if (active) setError(cause.message || 'Unable to load session details.') })
-      .finally(() => { if (active) setLoading(false) })
-    return () => { active = false }
-  }, [sessionId, retry, scopeRecords])
-
-  return <DashboardLayout>
-    <section className="attendance-content">
-      <header className="attendance-session-details-header">
-        <h1>Session Details</h1>
-        <Link className="erp-btn erp-btn--secondary attendance-session-back" to="/student-management/attendance"><FiArrowLeft aria-hidden="true" />Back</Link>
-      </header>
-      {loading ? <p role="status">Loading session details...</p> : error ? <div role="alert"><p>{error}</p><button type="button" className="erp-btn erp-btn--secondary" onClick={() => setRetry(value => value + 1)}>Retry</button></div> : session && <>
-        <InfoCard icon={FiCalendar} title={session.subject || 'Attendance session'} items={[
-          { label: 'Date', value: session.date }, { label: 'Faculty', value: session.faculty },
-          { label: 'Academic Year', value: session.academicYear }, { label: 'Course', value: session.course },
-          { label: 'Semester', value: session.semester }, { label: 'Section', value: session.section },
-        ]} />
-        <h2>Student Attendance ({records.length})</h2>
-        <div className="erp-table-responsive"><table className="erp-table">
-          <thead><tr><th>#</th><th>Roll No</th><th>Student Name</th><th>Status</th></tr></thead>
-          <tbody>{records.length ? records.map((record, index) => <tr key={record.studentId || index}>
-            <td>{index + 1}</td><td>{record.rollNumber || record.studentId}</td><td>{record.name}</td>
-            <td><StatusBadge status={record.status === 'Present' ? 'Active' : record.status === 'Late' ? 'Warning' : 'Danger'} label={record.status} /></td>
-          </tr>) : <tr><td colSpan={4}>No student attendance records are available for this session.</td></tr>}</tbody>
-        </table></div>
-      </>}
-    </section>
-  </DashboardLayout>
-}
-// #endregion pages/attendance/AttendanceSessionDetails.jsx
-return {
-  get default() { return AttendanceSessionDetails; }
-};
-})();
-
-export const Attendance = AttendanceModule.default;
-export const AttendanceSessionDetails = AttendanceSessionDetailsModule.default;

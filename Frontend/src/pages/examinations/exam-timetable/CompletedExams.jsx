@@ -1,5 +1,4 @@
-import { ExamModuleModule as consolidatedDependency20 } from "./exam-timetable.jsx";
-const { default: ExamModule,  } = consolidatedDependency20;
+import ExamModule from './ExamModule'
 
 export default function CompletedExams() {
   return <ExamModule screen="completed" />

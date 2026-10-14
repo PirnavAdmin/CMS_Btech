@@ -1,0 +1,321 @@
+.filter-disclosure {
+  margin: 12px 0;
+  border: 1px solid #D4E3F3 !important;
+  border-radius: var(--radius-md, 10px) !important;
+  background: #EEF5FD !important;
+  box-shadow: 0 1px 3px rgba(16,42,76,.035) !important;
+  overflow: hidden;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.filter-disclosure__bar {
+  display: flex;
+  min-height: 56px;
+  box-sizing: border-box;
+  padding: 8px 12px;
+  align-items: center;
+  gap: 10px;
+  background: #EEF5FD !important;
+}
+
+.filter-disclosure__search {
+  flex: 1;
+  min-width: 0;
+}
+
+.filter-disclosure__search > :is(div, section, .course-toolbar, .branch-filter-toolbar, .semester-filters, .dept-filter-toolbar, .ay-filter-bar, .em-toolbar, .sa-toolbar, .sp-toolbar, .faculty-filters) {
+  display: contents !important;
+  background: transparent !important;
+  border: none !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  box-shadow: none !important;
+}
+
+.filter-disclosure__search :is(label, .search-control, .module-search, .course-search, .branch-search, .semester-search, .section-search, .faculty-search, .sm-search-wrap, .sa-search, .em-search) {
+  display: flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+  width: 100% !important;
+  max-width: 480px !important;
+  height: 34px !important;
+  min-height: 34px !important;
+  padding: 0 9px !important;
+  box-sizing: border-box !important;
+  background: #FFFFFF !important;
+  border: 1px solid #CFDEEF !important;
+  border-radius: 8px !important;
+  color: #526A86 !important;
+  box-shadow: none !important;
+  margin: 0 !important;
+}
+
+.filter-disclosure__search :is(label, .search-control, .module-search, .course-search, .branch-search, .semester-search, .section-search, .faculty-search, .sm-search-wrap, .sa-search, .em-search) svg {
+  flex-shrink: 0 !important;
+  width: 15px !important;
+  height: 15px !important;
+  color: #426A95 !important;
+  font-size: 14px !important;
+}
+
+.filter-disclosure__search :is(label, .search-control, .module-search, .course-search, .branch-search, .semester-search, .section-search, .faculty-search, .sm-search-wrap, .sa-search, .em-search) input {
+  width: 100% !important;
+  border: none !important;
+  background: transparent !important;
+  outline: none !important;
+  font-size: 12px !important;
+  color: #102A4C !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  box-shadow: none !important;
+}
+
+.filter-disclosure__toggle,
+.filter-disclosure__clear {
+  display: inline-flex;
+  flex: 0 0 auto;
+  min-height: 38px;
+  height: 38px;
+  padding: 0 14px;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid #CFDEEF;
+  border-radius: 8px;
+  color: #17375E;
+  background: #FFFFFF !important;
+  font: inherit;
+  font-size: 0.8rem;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+  box-sizing: border-box;
+  align-self: center;
+  transition: all 0.18s ease;
+}
+
+.filter-disclosure__toggle {
+  gap: 7px;
+}
+
+.filter-disclosure__clear {
+  gap: 6px;
+  color: var(--text-secondary, #475569);
+}
+
+.filter-disclosure__toggle:hover,
+.filter-disclosure__clear:hover {
+  border-color: #AFCBE7;
+  color: #1769C2;
+  background: #EFF6FD !important;
+}
+
+.filter-disclosure__toggle i {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #ef8b17;
+}
+
+.filter-disclosure__chevron {
+  margin-left: 2px;
+  transition: transform 0.2s ease;
+}
+
+.filter-disclosure.open .filter-disclosure__chevron {
+  transform: rotate(180deg);
+}
+
+.filter-disclosure__content {
+  padding: 10px 12px;
+  border-top: 1px solid #D4E3F3;
+  background: #EEF5FD !important;
+}
+
+.filter-disclosure__content-inner {
+  display: flex !important;
+  flex-wrap: wrap !important;
+  align-items: center !important;
+  justify-content: flex-start !important;
+  gap: 8px !important;
+  width: 100% !important;
+}
+
+.filter-disclosure__content :is(
+  .section-filter-bar,
+  .course-filter-toolbar,
+  .course-toolbar,
+  .branch-filter-toolbar,
+  .semester-filters,
+  .dept-filter-toolbar,
+  .ay-filter-bar,
+  .em-filters,
+  .em-toolbar,
+  .fm-filters,
+  .faculty-filters,
+  .sm-filter-bar,
+  .sm-filter-grid,
+  .sp-filters,
+  .sp-toolbar,
+  .sa-filter-grid,
+  .sa-toolbar,
+  .cm-panel
+) {
+  display: contents !important;
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  padding: 0 !important;
+  margin: 0 !important;
+}
+
+.filter-disclosure__content .sp-toolbar > svg,
+.filter-disclosure__content .semester-clear,
+.filter-disclosure__content .section-clear,
+.filter-disclosure__content .course-clear,
+.filter-disclosure__content .branch-clear {
+  display: none !important;
+}
+
+/* Form inputs & Selects inside disclosure panel */
+.filter-disclosure__content :is(label:not(.filter-disclosure__search *), .searchable-select) {
+  min-width: 100px !important;
+  max-width: 165px !important;
+  width: auto !important;
+  flex: 1 1 115px !important;
+  margin: 0 !important;
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  padding: 0 !important;
+}
+
+.filter-disclosure__content :is(input:not([type="checkbox"]):not([type="radio"]), select, .searchable-select__trigger) {
+  width: 100% !important;
+  min-width: 100px !important;
+  max-width: 165px !important;
+  flex: 1 1 115px !important;
+  height: 36px !important;
+  min-height: 36px !important;
+  padding: 0 8px !important;
+  box-sizing: border-box !important;
+  font-size: 12.5px !important;
+  font-weight: 500 !important;
+  border: 1px solid var(--border-strong, #CBD5E1) !important;
+  border-radius: 7px !important;
+  background: #FFFFFF !important;
+  color: var(--text-primary, #0F172A) !important;
+  outline: none !important;
+  margin: 0 !important;
+  text-overflow: ellipsis !important;
+  overflow: hidden !important;
+  white-space: nowrap !important;
+  transition: border-color 0.18s, box-shadow 0.18s !important;
+}
+
+.filter-disclosure__content :is(input:not([type="checkbox"]):not([type="radio"]), select, .searchable-select__trigger):focus {
+  border-color: #4C91D4 !important;
+  box-shadow: 0 0 0 3px rgba(43,120,197,.08) !important;
+}
+
+/* Clear button placed next to filter fields */
+.filter-disclosure__clear-btn,
+.filter-disclosure__content :is(.course-clear, .branch-clear, .cm-clear-btn) {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 5px !important;
+  height: 36px !important;
+  min-height: 36px !important;
+  padding: 0 11px !important;
+  border: 1px solid var(--border-strong, #CBD5E1) !important;
+  border-radius: 7px !important;
+  color: #475569 !important;
+  background: var(--surface, #FFFFFF) !important;
+  font: inherit !important;
+  font-size: 0.78rem !important;
+  font-weight: 700 !important;
+  cursor: pointer !important;
+  white-space: nowrap !important;
+  box-sizing: border-box !important;
+  flex: 0 0 auto !important;
+  margin: 0 !important;
+  transition: all 0.18s ease !important;
+}
+
+.filter-disclosure__clear-btn svg,
+.filter-disclosure__content :is(.course-clear, .branch-clear, .cm-clear-btn) svg {
+  font-size: 0.85rem;
+}
+
+.filter-disclosure__clear-btn:hover,
+.filter-disclosure__content :is(.course-clear, .branch-clear, .cm-clear-btn):hover {
+  border-color: #AFCBE7 !important;
+  color: #1769C2 !important;
+  background: var(--brand-soft, #EAF3FF) !important;
+}
+
+@media (max-width: 640px) {
+  .filter-disclosure__bar {
+    align-items: stretch;
+    flex-wrap: wrap;
+    padding: 10px;
+  }
+  .filter-disclosure__search {
+    flex-basis: 100%;
+  }
+  .filter-disclosure__search :is(label, div) {
+    max-width: none;
+  }
+  .filter-disclosure__toggle {
+    width: 100%;
+  }
+  .filter-disclosure__content {
+    padding: 10px;
+  }
+  .filter-disclosure__content-inner {
+    gap: 8px !important;
+  }
+  .filter-disclosure__content :is(label, .searchable-select, input:not([type="checkbox"]):not([type="radio"]), select, .searchable-select__trigger) {
+    min-width: 100% !important;
+    max-width: 100% !important;
+    width: 100% !important;
+    flex: 1 1 100% !important;
+  }
+  .filter-disclosure__clear-btn {
+    width: 100% !important;
+    margin: 4px 0 0 0 !important;
+  }
+}
+
+:root #root .page-content .filter-disclosure .filter-disclosure__bar {
+  min-height: 44px !important;
+  padding: 5px 10px !important;
+}
+
+:root #root .page-content .filter-disclosure .filter-disclosure__bar .filter-disclosure__search :is(label, div):has(> input) {
+  width: min(100%, 480px) !important;
+  max-width: 480px !important;
+  height: 34px !important;
+  min-height: 34px !important;
+  padding: 0 9px !important;
+  box-sizing: border-box !important;
+}
+
+:root #root .page-content .filter-disclosure .filter-disclosure__bar .filter-disclosure__search :is(label, div):has(> input) > svg {
+  width: 15px !important;
+  height: 15px !important;
+  flex: 0 0 15px !important;
+}
+
+:root #root .page-content .filter-disclosure .filter-disclosure__bar .filter-disclosure__search :is(label, div):has(> input) > input {
+  height: 30px !important;
+  min-height: 0 !important;
+  font-size: 12px !important;
+}
+
+:root #root .page-content .filter-disclosure .filter-disclosure__bar > :is(.filter-disclosure__toggle, .filter-disclosure__clear) {
+  height: 34px !important;
+  min-height: 34px !important;
+  padding: 0 10px !important;
+  font-size: 12px !important;
+}

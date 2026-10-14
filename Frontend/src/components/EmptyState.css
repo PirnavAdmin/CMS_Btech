@@ -1,0 +1,46 @@
+.erp-empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 200px;
+  padding: 36px 20px;
+  text-align: center;
+  box-sizing: border-box;
+}
+
+.erp-empty-state__icon {
+  display: grid;
+  place-items: center;
+  width: 48px;
+  height: 48px;
+  margin-bottom: 12px;
+  border-radius: var(--radius-md, 11px);
+  background: var(--surface-soft, #f7fafc);
+  border: 1px solid var(--border, #dbe4eb);
+  color: var(--text-muted, #6d8294);
+}
+
+.erp-empty-state__icon svg {
+  width: 24px;
+  height: 24px;
+}
+
+.erp-empty-state__title {
+  margin: 0 0 6px;
+  color: var(--text-primary, #132a3e);
+  font-size: 0.98rem;
+  font-weight: 750;
+}
+
+.erp-empty-state__message {
+  max-width: 440px;
+  margin: 0 0 16px;
+  color: var(--text-muted, #6d8294);
+  font-size: 0.82rem;
+  line-height: 1.45;
+}
+
+.erp-empty-state__action {
+  margin-top: 4px;
+}

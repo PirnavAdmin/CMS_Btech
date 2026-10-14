@@ -1,0 +1,588 @@
+import { GENERIC_ERROR_MESSAGE, userErrorMessage } from '../utils/userError.js'
+import { resolveCollegeLogo } from '../utils/collegeLogo'
+import { getAccessToken } from './auth'
+import { createApiUnavailableError, notifyApiUnavailable } from '../api/apiFailureNotice'
+const cleanUrl = (url) => (url || "").replace(/\/+$/, "");
+const DEFAULT_API_BASE_URL = "https://clarity-math-delouse.ngrok-free.dev";
+
+const friendlyValidationMessage = (errors) => {
+  if (!errors || typeof errors !== "object") return "";
+  const fields = Object.keys(errors);
+  if (fields.some((field) => field.toLowerCase() === "principalemail")) return "Please enter a valid principal email address.";
+  if (fields.some((field) => ["email", "collegeemail"].includes(field.toLowerCase()))) return "Please enter a valid official email address.";
+  if (fields.some((field) => /contact|phone|mobile/i.test(field))) return "Please enter a valid contact number.";
+  return fields.length ? "Please check the entered college details and try again." : "";
+};
+
+const getErrorMessage = (data, status) => {
+  if (status >= 500) return GENERIC_ERROR_MESSAGE;
+  if (typeof data === "string") {
+    const message = data.trim();
+    try {
+      const parsed = JSON.parse(message);
+      const validationMessage = friendlyValidationMessage(parsed?.errors);
+      if (validationMessage) return validationMessage;
+    } catch { /* The response is plain text, so continue with normal handling. */ }
+    const isTechnicalPage = /<!doctype|<html|<head|<body|<script|ngrok|err_ngrok|data-payload|https?:\/\//i.test(message);
+    if (message && !isTechnicalPage && message.length <= 500) return message;
+  }
+  if (data && typeof data === "object") {
+    if (data.errors && typeof data.errors === "object") {
+      const validationMessage = friendlyValidationMessage(data.errors);
+      if (validationMessage) return validationMessage;
+    }
+    const directMessage = data.message || data.detail;
+    if (directMessage && !/<!doctype|<html|ngrok|err_ngrok|https?:\/\//i.test(String(directMessage))) return directMessage;
+    if (data.title && data.title !== "One or more validation errors occurred.") return data.title;
+  }
+  return {
+    400: "Please check the required college details and try again.",
+    401: "Your session has expired. Please sign in again.",
+    403: "You do not have permission to manage colleges.",
+    404: "College information is temporarily unavailable. Please try again later.",
+    409: "A college with these details already exists.",
+  }[status] || "We couldn’t complete your request. Please try again.";
+};
+
+const commonBaseUrl = cleanUrl(import.meta.env.DEV ? "" : (import.meta.env.VITE_API_BASE_URL || DEFAULT_API_BASE_URL));
+const collegesBaseUrl = cleanUrl(import.meta.env.VITE_API_BASE_URL_COLLEGES) || commonBaseUrl;
+const academicBaseUrl = cleanUrl(import.meta.env.VITE_API_BASE_URL_ACADEMIC) || commonBaseUrl;
+const settingsBaseUrl = cleanUrl(import.meta.env.VITE_API_BASE_URL_SETTINGS) || commonBaseUrl;
+
+const createClient = (baseUrl, prefix) => {
+  const request = async (path, options = {}) => {
+    const token = localStorage.getItem("btech-access-token") || sessionStorage.getItem("btech-access-token");
+    let response;
+    try {
+      response = await fetch(`${baseUrl}${prefix}${path}`, {
+        ...options,
+        headers: {
+          ...(options.body instanceof FormData ? {} : { "Content-Type": "application/json" }),
+          "ngrok-skip-browser-warning": "true",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          ...options.headers,
+        },
+      });
+    } catch {
+      throw createApiUnavailableError();
+    }
+    const contentType = response.headers.get("content-type") || "";
+    const data = contentType.includes("application/json") ? await response.json() : await response.text();
+    if (!response.ok) {
+      if (response.status >= 500) notifyApiUnavailable({ status: response.status });
+      const error = new Error(userErrorMessage(getErrorMessage(data, response.status), response.status));
+      error.response = { data: response.status >= 500 ? { message: GENERIC_ERROR_MESSAGE } : data, status: response.status };
+      throw error;
+    }
+    return { data, status: response.status, headers: response.headers };
+  };
+  return {
+    get: (path, config = {}) => {
+      const query = config.params ? `?${new URLSearchParams(config.params)}` : "";
+      return request(`${path}${query}`);
+    },
+    post: (path, data) => request(path, { method: "POST", body: JSON.stringify(data) }),
+    postForm: (path, data) => request(path, { method: "POST", body: data }),
+    put: (path, data) => request(path, { method: "PUT", body: JSON.stringify(data) }),
+    patch: (path, data) => request(path, { method: "PATCH", body: JSON.stringify(data) }),
+    delete: (path) => request(path, { method: "DELETE" }),
+  };
+};
+
+const API = createClient(collegesBaseUrl, "/api/v1");
+const COLLEGE_LOGO_API = createClient(collegesBaseUrl, "/api/College");
+const ACADEMIC_API = createClient(academicBaseUrl, "/api/v1");
+const SETTINGS_API = createClient(settingsBaseUrl, "/api");
+const SEMESTER_API = createClient(academicBaseUrl, "/api");
+
+const COLLEGE_EXTENDED_PREFIX = "CMS_EXTENDED_V1:";
+
+export const WEBSITE_VALIDATION_MESSAGE = "Please enter a valid website URL, e.g. https://example.com";
+
+export const normalizeWebsite = (value) => {
+  const website = String(value ?? "").trim();
+  if (!website || /^(https?|ftp):\/\//i.test(website)) return website;
+  return `https://${website}`;
+};
+
+export const isValidWebsite = (value) => {
+  if (!value || /[\\\s]/.test(value)) return false;
+  try {
+    const url = new URL(value);
+    return ["http:", "https:", "ftp:"].includes(url.protocol) && url.hostname.includes(".");
+  } catch {
+    return false;
+  }
+};
+
+export const readCollegeExtendedDetails = (record = {}) => {
+  const raw = typeof record.accreditation === "string"
+    ? record.accreditation
+    : typeof record.accreditationDetails === "string" ? record.accreditationDetails : "";
+  if (!raw.startsWith(COLLEGE_EXTENDED_PREFIX)) return { accreditationSummary: raw };
+  try {
+    return JSON.parse(raw.slice(COLLEGE_EXTENDED_PREFIX.length));
+  } catch {
+    return { accreditationSummary: raw };
+  }
+};
+
+
+// -------------------------
+// COLLEGE APIs
+// -------------------------
+
+export const getColleges = () => {
+  return API.get("/colleges");
+};
+
+export const getCollegeById = (id) => {
+  return API.get(`/colleges/${id}`);
+};
+
+export const unwrapCollegeRecord = (response) => {
+  let current = response;
+  for (let depth = 0; depth < 5 && current && typeof current === "object"; depth += 1) {
+    if (current.college && typeof current.college === "object") return current.college;
+    if (current.item && typeof current.item === "object") return current.item;
+    if (current.result && typeof current.result === "object") return current.result;
+    if (current.record && typeof current.record === "object") return current.record;
+    if (current.data && typeof current.data === "object") { current = current.data; continue; }
+    break;
+  }
+  return current && typeof current === "object" ? current : {};
+};
+
+export const searchColleges = (searchTerm) => {
+  return API.get("/colleges/search", {
+    params: {
+      Query: searchTerm,
+    },
+  });
+};
+
+export const uploadCollegeLogo = (collegeId, logoFile) => {
+  const formData = new FormData();
+  formData.append("CollegeId", String(collegeId));
+  formData.append("Logo", logoFile);
+  return COLLEGE_LOGO_API.postForm("/logo", formData);
+};
+
+// Persistent logo storage helper across IDs, codes, and college names
+const collegeLogoCacheKey = (key) => `pirnav-college-logo-${String(key || '').trim().toLowerCase().replace(/\s+/g, '-')}`;
+const LOGOS_MAP_KEY = 'pirnav_college_logos_map';
+
+const getLogosMap = () => {
+  try {
+    const raw = localStorage.getItem(LOGOS_MAP_KEY);
+    return raw ? JSON.parse(raw) : {};
+  } catch {
+    return {};
+  }
+};
+
+const setLogosMap = (map) => {
+  try {
+    localStorage.setItem(LOGOS_MAP_KEY, JSON.stringify(map));
+  } catch {}
+};
+
+export const readCachedCollegeLogo = (identifier) => {
+  try {
+    if (!identifier) return "";
+    const key = String(identifier).trim();
+    const cleanKey = key.toLowerCase().replace(/\s+/g, '-');
+    const direct = localStorage.getItem(collegeLogoCacheKey(key)) ||
+      localStorage.getItem(`pirnav-college-logo-${key}`) ||
+      localStorage.getItem(`college-logo-${key}`) ||
+      localStorage.getItem(`pirnav-college-logo-${cleanKey}`);
+    if (direct) return direct;
+
+    const map = getLogosMap();
+    return map[key] || map[cleanKey] || map[key.toLowerCase()] || map[key.toUpperCase()] || "";
+  } catch {
+    return "";
+  }
+};
+
+export const cacheCollegeLogo = (identifier, logo, extraKeys = []) => {
+  try {
+    if (!identifier && !extraKeys.length) return;
+    const allKeys = [identifier, ...extraKeys]
+      .filter(k => k != null && String(k).trim() !== '')
+      .map(k => String(k).trim());
+
+    const map = getLogosMap();
+    allKeys.forEach((key) => {
+      const cleanKey = key.toLowerCase().replace(/\s+/g, '-');
+      if (logo) {
+        localStorage.setItem(collegeLogoCacheKey(key), logo);
+        localStorage.setItem(collegeLogoCacheKey(cleanKey), logo);
+        map[key] = logo;
+        map[cleanKey] = logo;
+        map[key.toLowerCase()] = logo;
+      } else {
+        localStorage.removeItem(collegeLogoCacheKey(key));
+        localStorage.removeItem(collegeLogoCacheKey(cleanKey));
+        localStorage.removeItem(`pirnav-college-logo-${key}`);
+        localStorage.removeItem(`college-logo-${key}`);
+        delete map[key];
+        delete map[cleanKey];
+        delete map[key.toLowerCase()];
+      }
+    });
+    setLogosMap(map);
+  } catch { /* storage fallback */ }
+};
+
+// Persistent college dates helper across IDs, codes, and college names
+const collegeDatesCacheKey = (key) => `pirnav-college-dates-${String(key || '').trim().toLowerCase().replace(/\s+/g, '-')}`;
+const DATES_MAP_KEY = 'pirnav_college_dates_map';
+
+const getDatesMap = () => {
+  try {
+    const raw = localStorage.getItem(DATES_MAP_KEY);
+    return raw ? JSON.parse(raw) : {};
+  } catch {
+    return {};
+  }
+};
+
+const setDatesMap = (map) => {
+  try {
+    localStorage.setItem(DATES_MAP_KEY, JSON.stringify(map));
+  } catch {}
+};
+
+export const readCachedCollegeDates = (identifier) => {
+  try {
+    if (!identifier) return null;
+    const key = String(identifier).trim();
+    const cleanKey = key.toLowerCase().replace(/\s+/g, '-');
+    const direct = localStorage.getItem(collegeDatesCacheKey(key)) ||
+      localStorage.getItem(`pirnav-college-dates-${key}`) ||
+      localStorage.getItem(`pirnav-college-dates-${cleanKey}`);
+    if (direct) {
+      try {
+        const parsed = JSON.parse(direct);
+        if (parsed && typeof parsed === 'object') return parsed;
+      } catch {}
+    }
+
+    const map = getDatesMap();
+    const mapVal = map[key] || map[cleanKey] || map[key.toLowerCase()] || map[key.toUpperCase()];
+    if (mapVal && typeof mapVal === 'object') return mapVal;
+    return null;
+  } catch {
+    return null;
+  }
+};
+
+export const cacheCollegeDates = (identifier, dates = {}, extraKeys = []) => {
+  try {
+    if (!identifier && !extraKeys.length) return;
+    const allKeys = [identifier, ...extraKeys]
+      .filter(k => k != null && String(k).trim() !== '')
+      .map(k => String(k).trim());
+
+    const map = getDatesMap();
+    const dateObj = {
+      startDate: dates?.startDate ? String(dates.startDate).slice(0, 10) : '',
+      endDate: dates?.endDate ? String(dates.endDate).slice(0, 10) : '',
+    };
+    const hasAny = Boolean(dateObj.startDate || dateObj.endDate);
+
+    allKeys.forEach((key) => {
+      const cleanKey = key.toLowerCase().replace(/\s+/g, '-');
+      if (hasAny) {
+        localStorage.setItem(collegeDatesCacheKey(key), JSON.stringify(dateObj));
+        localStorage.setItem(collegeDatesCacheKey(cleanKey), JSON.stringify(dateObj));
+        map[key] = dateObj;
+        map[cleanKey] = dateObj;
+        map[key.toLowerCase()] = dateObj;
+      } else {
+        localStorage.removeItem(collegeDatesCacheKey(key));
+        localStorage.removeItem(collegeDatesCacheKey(cleanKey));
+        localStorage.removeItem(`pirnav-college-dates-${key}`);
+        delete map[key];
+        delete map[cleanKey];
+        delete map[key.toLowerCase()];
+      }
+    });
+    setDatesMap(map);
+  } catch { /* storage fallback */ }
+};
+
+export const getCollegeLogoEndpoint = collegeId => collegeId == null || collegeId === '' ? '' : `${collegesBaseUrl}/api/College/logo/${encodeURIComponent(collegeId)}`;
+
+export const getCollegeLogoUrl = (collegeId, logoValue, extraKeys = []) => {
+  const cached = (collegeId ? readCachedCollegeLogo(collegeId) : "") ||
+    extraKeys.map(k => readCachedCollegeLogo(k)).find(Boolean) || "";
+  const source = String(logoValue || cached || '').trim().replace(/\\/g, '/');
+  // CollegeController stores uploads as a filename (for example
+  // "a1b2...png") in LogoPath. That file is deliberately not exposed as a
+  // public static asset; it must be read through /api/College/logo/{id}.
+  // Treating it as /a1b2...png was why the sidebar retained its placeholder.
+  const isStoredFileName = source &&
+    !/^(data:image\/|blob:|https?:\/\/|\/)/i.test(source) &&
+    !source.includes('/');
+  if (isStoredFileName && collegeId) return getCollegeLogoEndpoint(collegeId);
+
+  return resolveCollegeLogo(source, collegesBaseUrl) || (collegeId ? getCollegeLogoEndpoint(collegeId) : '');
+};
+
+export const isBackendCollegeLogo = value => {
+  const url = new URL(value, window.location.origin);
+  const backend = new URL(collegesBaseUrl || window.location.origin, window.location.origin);
+  return url.origin === backend.origin && /^\/(api|uploads|images)\//i.test(url.pathname);
+};
+
+// The logo endpoint is protected by the same bearer token as the College API.
+// An <img> tag cannot attach that header, so fetch the image first and let the
+// caller render its blob URL.
+export const fetchCollegeLogo = async (logoUrl) => {
+  const token = getAccessToken();
+  const response = await fetch(logoUrl, {
+    cache: "no-store",
+    headers: {
+      "ngrok-skip-browser-warning": "true",
+      ...(token && isBackendCollegeLogo(logoUrl) ? { Authorization: `Bearer ${token}` } : {}),
+    },
+  });
+  if (!response.ok) throw new Error("Unable to load college logo.");
+  const image = await response.blob();
+  if (image.type && !image.type.startsWith("image/") && image.type !== "application/octet-stream") throw new Error("The college logo response is not an image.");
+  return image;
+};
+
+// The college service has used both the short field names (name/contact/principal)
+// and the descriptive DTO names (collegeName/contactNumber/principalName).  Send
+// both forms so none of the wizard fields are silently ignored by either API
+// version. Unknown JSON properties are ignored by the ASP.NET service.
+export const buildCollegePayload = (college = {}) => {
+  const value = (key, fallback = "") => String(college[key] ?? fallback).trim();
+  const name = value("collegeName", college.name);
+  const code = value("collegeCode", college.code).toUpperCase();
+  const type = value("collegeType", college.type);
+  const university = value("universityName", college.university);
+  const contactNumber = value("contactNumber", college.contact);
+  const alternateContactNumber = value("alternateContactNumber", college.alternateContact);
+  const principalName = value("principalName", college.principal);
+  const principalEmail = value("principalEmail");
+  const principalContact = value("principalContact");
+  const startDate = value("startDate", college.StartDate || college.start_date);
+  const endDate = value("endDate", college.EndDate || college.end_date);
+  const logo = college.logo ?? college.logoUrl ?? "";
+  const website = normalizeWebsite(college.website ?? college.Website);
+  const accreditationSummary = value("accreditation", college.accreditationDetails);
+  // Keep the database accreditation column within its intended scope. Older
+  // code packed every optional wizard field into this string as JSON, which
+  // can exceed the backend column limit and surface as a database 500 error.
+  // Supported optional fields are sent independently below.
+  const accreditation = accreditationSummary.slice(0, 200);
+
+  return {
+    name, collegeName: name,
+    code, collegeCode: code,
+    type, collegeType: type, institutionType: type,
+    university, universityName: university,
+    address: value("address"),
+    addressLine1: value("addressLine1"),
+    addressLine2: value("addressLine2"),
+    area: value("area"),
+    district: value("district"),
+    city: value("city"),
+    state: value("state"),
+    pincode: value("pincode"),
+    country: value("country", "India"),
+    contact: contactNumber,
+    contactNumber,
+    phoneNumber: contactNumber,
+    alternateContact: alternateContactNumber,
+    alternateContactNumber,
+    email: value("email", college.collegeEmail),
+    collegeEmail: value("email", college.collegeEmail),
+    // Website is optional. Omit it when empty so the backend URL validator
+    // receives either a valid fully-qualified URL or no Website value at all.
+    ...(website ? { Website: website } : {}),
+    ...(startDate ? { startDate, StartDate: startDate, start_date: startDate } : {}),
+    ...(endDate ? { endDate, EndDate: endDate, end_date: endDate } : {}),
+    ...(college.clearLogo ? { logo: null, logoPath: null } : { logo }),
+    logoName: value("logoName"),
+    principal: principalName,
+    principalName,
+    // Optional validated fields must be omitted when blank. Sending an empty
+    // string causes some ASP.NET DTO versions to run EmailAddress validation.
+    ...(principalEmail ? { principalEmail, PrincipalEmail: principalEmail } : {}),
+    ...(principalContact ? { principalContact, principalPhone: principalContact } : {}),
+    accreditation,
+    accreditationDetails: accreditation,
+    accreditationStatus: value("accreditationStatus"),
+    accreditationBody: value("accreditationBody"),
+    accreditationGrade: value("accreditationGrade"),
+    accreditationNumber: value("accreditationNumber"),
+    validFrom: value("validFrom") || null,
+    validUntil: value("validUntil") || null,
+    accreditationValidFrom: value("validFrom") || null,
+    accreditationValidUntil: value("validUntil") || null,
+  };
+};
+
+export const createCollege = (collegeData) => {
+  return API.post("/colleges", buildCollegePayload(collegeData));
+};
+
+export const updateCollege = (id, collegeData) => {
+  return API.put(`/colleges/${id}`, buildCollegePayload(collegeData));
+};
+
+export const updateCollegeStatus = (id, status) => {
+  return API.patch(`/colleges/${id}/status`, { status });
+};
+export const getCollegeDeactivationImpact = (id) => API.get(`/colleges/${id}/deactivation-impact`);
+
+// -------------------------
+// DEPARTMENT APIs
+// -------------------------
+
+export const getDepartments = () => {
+  return ACADEMIC_API.get("/departments");
+};
+
+export const searchDepartments = (search) => ACADEMIC_API.get("/departments/search", { params: { search } });
+export const getDepartmentsPaginated = (page = 1, pageSize = 5) => ACADEMIC_API.get("/departments/paginated", { params: { page, pageSize } });
+
+export const getDepartmentById = (id) => {
+  return ACADEMIC_API.get(`/departments/${id}`);
+};
+
+export const createDepartment = (departmentData) => {
+  return ACADEMIC_API.post("/departments", departmentData);
+};
+
+export const updateDepartment = (id, departmentData) => {
+  return ACADEMIC_API.put(`/departments/${id}`, departmentData);
+};
+
+export const updateDepartmentStatus = (id, status) => {
+  return ACADEMIC_API.patch(`/departments/${id}/status`, { status });
+};
+
+export const deleteDepartment = (id) => ACADEMIC_API.delete(`/departments/${id}`);
+
+// Semester management APIs (/api/semester)
+export const getSemesters = () => SEMESTER_API.get('/semester');
+export const searchSemesters = (params = {}) => SEMESTER_API.get('/semester/search', { params });
+export const getSemesterById = (id) => SEMESTER_API.get(`/semester/${id}`);
+export const getSemesterSummary = () => SEMESTER_API.get('/semester/summary');
+export const createSemester = (data) => SEMESTER_API.post('/semester', data);
+export const updateSemester = (id, data) => SEMESTER_API.put(`/semester/${id}`, data);
+
+// -------------------------
+// COURSE APIs
+// -------------------------
+
+export const getCourses = () => {
+  return ACADEMIC_API.get("/courses");
+};
+
+export const getCourseById = (id) => {
+  return ACADEMIC_API.get(`/courses/${id}`);
+};
+
+export const createCourse = (courseData) => {
+  return ACADEMIC_API.post("/courses", courseData);
+};
+
+export const updateCourse = (id, courseData) => {
+  return ACADEMIC_API.put(`/courses/${id}`, courseData);
+};
+
+export const updateCourseStatus = (id, status) => {
+  return ACADEMIC_API.patch(`/courses/${id}/status`, { status });
+};
+
+// -------------------------
+// COURSE / SEMESTER MAPPING APIs
+// -------------------------
+
+export const getCourseSemesterMappings = () => {
+  return ACADEMIC_API.get("/course-semester-mappings");
+};
+
+export const getCourseSemesterMappingById = (id) => {
+  return ACADEMIC_API.get(`/course-semester-mappings/${id}`);
+};
+
+export const createCourseSemesterMapping = (mappingData) => {
+  return ACADEMIC_API.post("/course-semester-mappings", mappingData);
+};
+
+export const updateCourseSemesterMapping = (id, mappingData) => {
+  return ACADEMIC_API.put(`/course-semester-mappings/${id}`, mappingData);
+};
+
+export const updateCourseSemesterMappingStatus = (id, status) => {
+  return ACADEMIC_API.patch(`/course-semester-mappings/${id}/status`, { status });
+};
+
+// -------------------------
+// ACADEMIC YEAR APIs
+// -------------------------
+
+export const getAcademicYearsDashboard = () => {
+  return ACADEMIC_API.get("/academic-years/dashboard");
+};
+
+export const getAcademicYears = () => {
+  return ACADEMIC_API.get("/academic-years");
+};
+
+export const getAcademicYearById = (id) => {
+  return ACADEMIC_API.get(`/academic-years/${id}`);
+};
+
+export const createAcademicYear = (academicYearData) => {
+  return ACADEMIC_API.post("/academic-years", academicYearData);
+};
+
+export const generateNextAcademicYear = (generateData) => {
+  return ACADEMIC_API.post("/academic-years/generate-next-year", generateData);
+};
+
+export const updateAcademicYear = (id, academicYearData) => {
+  return ACADEMIC_API.put(`/academic-years/${id}`, academicYearData);
+};
+
+export const activateAcademicYear = (id) => {
+  return ACADEMIC_API.patch(`/academic-years/${id}/activate`);
+};
+
+export const deactivateAcademicYear = (id) => {
+  return ACADEMIC_API.patch(`/academic-years/${id}/deactivate`);
+};
+
+
+// -------------------------
+// COLLEGE SETTINGS APIs
+// -------------------------
+
+export const getCollegeSettings = () => {
+  return SETTINGS_API.get("/college-settings");
+};
+
+export const createCollegeSettings = (settingsData) => {
+  return SETTINGS_API.post("/college-settings", settingsData);
+};
+
+export const updateCollegeSettings = (id, settingsData) => {
+  return SETTINGS_API.put(`/college-settings/${id}`, settingsData);
+};
+
+export const getCollegeSettingsById = (id) => {
+  return SETTINGS_API.get(`/college-settings/${id}`);
+};
+
+export const getCollegeSettingsByCollegeId = (collegeId) => {
+  return SETTINGS_API.get(`/college-settings/college/${collegeId}`);
+};

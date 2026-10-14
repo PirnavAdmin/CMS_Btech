@@ -1,0 +1,75 @@
+/* Consistent Active / Inactive colors for status badges across module views. */
+#root :is(
+  .erp-status-badge,
+  .cm-status-badge,
+  .cm-status,
+  .semester-badge.status,
+  .section-status,
+  .status-pill,
+  .status-badge,
+  .details-status-badge,
+  .department-detail-status,
+  .sa-status-badge,
+  .sa-badge,
+  .sp-badge,
+  .pr-badge-status,
+  .fm-status-pill,
+  .flm-status,
+  .fp-status,
+  .view-modal-badge-status,
+  .ay .badge
+):is(.active, .ACTIVE, .erp-status-badge--active, .erp-status-badge--working, .working) {
+  color: #15803d !important;
+  background-color: #dcfce7 !important;
+  border-color: #86efac !important;
+}
+
+#root :is(
+  .erp-status-badge,
+  .cm-status-badge,
+  .cm-status,
+  .semester-badge.status,
+  .section-status,
+  .status-pill,
+  .status-badge,
+  .details-status-badge,
+  .department-detail-status,
+  .sa-status-badge,
+  .sa-badge,
+  .sp-badge,
+  .pr-badge-status,
+  .fm-status-pill,
+  .flm-status,
+  .fp-status,
+  .view-modal-badge-status,
+  .ay .badge
+):is(.inactive, .INACTIVE, .deactive, .DEACTIVE, .erp-status-badge--inactive) {
+  color: #b91c1c !important;
+  background-color: #fee2e2 !important;
+  border-color: #fca5a5 !important;
+}
+
+#root :is(
+  .erp-status-badge,
+  .cm-status-badge,
+  .cm-status,
+  .semester-badge.status,
+  .section-status,
+  .status-pill,
+  .status-badge,
+  .details-status-badge,
+  .department-detail-status,
+  .sa-status-badge,
+  .sa-badge,
+  .sp-badge,
+  .pr-badge-status,
+  .fm-status-pill,
+  .flm-status,
+  .fp-status,
+  .view-modal-badge-status,
+  .ay .badge
+):is(.upcoming, .UPCOMING, .erp-status-badge--upcoming) {
+  color: #92400e !important;
+  background-color: #fef3c7 !important;
+  border-color: #fcd34d !important;
+}

@@ -31,18 +31,4 @@
   select option:hover {
     background: var(--brand-soft, #eff6ff);
   }
-
-  /* Customizable selects need explicit centering; native text alignment
-     does not apply after appearance: base-select is enabled. */
-  :root body select:not([multiple]):not([size]):not(.placement-select-wrap select, .mew-calendar-select select, .plw-form-field select, .plw-filter-panel select),
-  :root body select:not([multiple])[size="1"]:not(.placement-select-wrap select, .mew-calendar-select select, .plw-form-field select, .plw-filter-panel select) {
-    display: inline-flex !important;
-    align-items: center !important;
-    justify-content: space-between !important;
-    gap: 8px;
-    box-sizing: border-box;
-    padding-block: 0 !important;
-    line-height: 1.4 !important;
-  }
-  select::picker-icon { align-self: center; flex-shrink: 0; }
 }

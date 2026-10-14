@@ -1,0 +1,50 @@
+.student-promotion.p-module .p-header {
+  display: flex !important;
+  min-height: 66px;
+  margin: 0 0 20px;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 20px;
+}
+
+.student-promotion.p-module .p-header > div {
+  min-width: 0;
+}
+
+.student-promotion.p-module .p-header > .p-secondary {
+  display: inline-flex !important;
+  flex: 0 0 auto;
+}
+
+.student-promotion.p-module .p-header span {
+  display: block;
+  color: var(--brand);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.student-promotion.p-module .p-header h1 {
+  margin: 5px 0 6px;
+  color: var(--text-primary);
+  font-size: clamp(1.7rem, 2.6vw, 2.25rem);
+  line-height: 1.15;
+}
+
+.student-promotion.p-module .p-header p {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 14px;
+  line-height: 1.45;
+}
+
+@media (max-width: 620px) {
+  .student-promotion.p-module .p-header {
+    flex-direction: column;
+  }
+
+  .student-promotion.p-module .p-header > .p-secondary {
+    width: 100%;
+  }
+}

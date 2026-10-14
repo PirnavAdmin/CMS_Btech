@@ -1,0 +1,221 @@
+.erp-status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 24px;
+  padding: 0 9px;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 750;
+  line-height: 1;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+  border: 1px solid transparent;
+}
+
+.erp-status-badge i {
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+  flex-shrink: 0;
+}
+
+/* Active / Available / Success / Admitted / Working / Paid */
+.erp-status-badge--active,
+.erp-status-badge--available,
+.erp-status-badge--paid,
+.erp-status-badge--working {
+  background: #dcfce7;
+  color: #15803d;
+  border-color: #86efac;
+}
+.erp-status-badge--active i,
+.erp-status-badge--available i,
+.erp-status-badge--paid i,
+.erp-status-badge--working i {
+  background: #16a34a;
+}
+
+/* Inactive / Archived / Deactive / Relieved / Resigned / Unavailable */
+.erp-status-badge--inactive,
+.erp-status-badge--unavailable,
+.erp-status-badge--resigned,
+.erp-status-badge--relieved {
+  background: #fee2e2;
+  color: #b91c1c;
+  border-color: #fca5a5;
+}
+.erp-status-badge--inactive i,
+.erp-status-badge--unavailable i,
+.erp-status-badge--resigned i,
+.erp-status-badge--relieved i {
+  background: #dc2626;
+}
+
+/* Warning / Upcoming / Attention / Probation / Hold */
+.erp-status-badge--warning,
+.erp-status-badge--upcoming,
+.erp-status-badge--hold,
+.erp-status-badge--probation {
+  background: #fef3c7;
+  color: #b45309;
+  border-color: #fcd34d;
+}
+.erp-status-badge--warning i,
+.erp-status-badge--upcoming i,
+.erp-status-badge--hold i,
+.erp-status-badge--probation i {
+  background: #d97706;
+}
+
+/* Completed / Processed / Information */
+.erp-status-badge--completed,
+.erp-status-badge--processed {
+  background: #e0f2fe;
+  color: #0369a1;
+  border-color: #7dd3fc;
+}
+.erp-status-badge--completed i,
+.erp-status-badge--processed i {
+  background: #0284c7;
+}
+
+/* On Leave */
+.erp-status-badge--on-leave,
+.erp-status-badge--leave {
+  background: #e0f2fe;
+  color: #0369a1;
+  border-color: #7dd3fc;
+}
+.erp-status-badge--on-leave i,
+.erp-status-badge--leave i {
+  background: #0284c7;
+}
+
+/* Pending / Review */
+.erp-status-badge--pending {
+  background: #fefce8;
+  color: #a16207;
+  border-color: #fef08a;
+}
+.erp-status-badge--pending i {
+  background: #ca8a04;
+}
+
+/* Approved / Verified */
+.erp-status-badge--approved {
+  background: #dcfce7;
+  color: #15803d;
+  border-color: #86efac;
+}
+.erp-status-badge--approved i {
+  background: #16a34a;
+}
+
+/* Rejected / Danger / Failed */
+.erp-status-badge--rejected {
+  background: #fee2e2;
+  color: #b91c1c;
+  border-color: #fca5a5;
+}
+.erp-status-badge--rejected i {
+  background: #dc2626;
+}
+
+/* Draft */
+.erp-status-badge--draft {
+  background: #f1f5f9;
+  color: #475569;
+  border-color: #cbd5e1;
+}
+.erp-status-badge--draft i {
+  background: #64748b;
+}
+
+/* Correction Required */
+.erp-status-badge--correction-required {
+  background: #fef2f2;
+  color: #b91c1c;
+  border-color: #fecaca;
+}
+.erp-status-badge--correction-required i {
+  background: #ef4444;
+}
+
+/* Dark Mode */
+:root[data-theme="dark"] :is(.erp-status-badge--active, .erp-status-badge--paid, .erp-status-badge--working) {
+  background: rgba(43, 120, 197, 0.20);
+  color: #A9D3F7;
+  border-color: rgba(43, 120, 197, 0.42);
+}
+:root[data-theme="dark"] :is(.erp-status-badge--active, .erp-status-badge--paid, .erp-status-badge--working) i {
+  background: #A9D3F7;
+}
+
+:root[data-theme="dark"] .erp-status-badge--inactive {
+  background: rgba(71, 85, 105, 0.25);
+  color: #94a3b8;
+  border-color: rgba(148, 163, 184, 0.25);
+}
+:root[data-theme="dark"] .erp-status-badge--inactive i {
+  background: #94a3b8;
+}
+
+:root[data-theme="dark"] :is(.erp-status-badge--warning, .erp-status-badge--upcoming, .erp-status-badge--probation, .erp-status-badge--hold) {
+  background: rgba(180, 109, 10, 0.2);
+  color: #1769C2;
+  border-color: rgba(245, 158, 11, 0.35);
+}
+:root[data-theme="dark"] :is(.erp-status-badge--warning, .erp-status-badge--upcoming, .erp-status-badge--probation, .erp-status-badge--hold) i {
+  background: #1769C2;
+}
+
+:root[data-theme="dark"] .erp-status-badge--completed {
+  background: rgba(43, 120, 197, 0.2);
+  color: #1769C2;
+  border-color: rgba(96, 165, 250, 0.35);
+}
+:root[data-theme="dark"] .erp-status-badge--completed i {
+  background: #1769C2;
+}
+
+:root[data-theme="dark"] .erp-status-badge--pending {
+  background: rgba(161, 98, 7, 0.2);
+  color: #A9D3F7;
+  border-color: rgba(251, 191, 36, 0.35);
+}
+:root[data-theme="dark"] .erp-status-badge--pending i {
+  background: #A9D3F7;
+}
+
+:root[data-theme="dark"] .erp-status-badge--approved {
+  background: rgba(43, 120, 197, 0.20);
+  color: #A9D3F7;
+  border-color: rgba(43, 120, 197, 0.42);
+}
+:root[data-theme="dark"] .erp-status-badge--approved i {
+  background: #A9D3F7;
+}
+
+:root[data-theme="dark"] .erp-status-badge--rejected {
+  background: rgba(185, 28, 28, 0.2);
+  color: #f87171;
+  border-color: rgba(248, 113, 113, 0.35);
+}
+:root[data-theme="dark"] .erp-status-badge--rejected i {
+  background: #f87171;
+}
+
+:root[data-theme="dark"] .erp-status-badge--draft,
+:root[data-theme="dark"] .erp-status-badge--correction-required {
+  background: rgba(109, 40, 217, 0.2);
+  color: #a78bfa;
+  border-color: rgba(167, 139, 250, 0.35);
+}
+:root[data-theme="dark"] .erp-status-badge--draft i,
+:root[data-theme="dark"] .erp-status-badge--correction-required i {
+  background: #a78bfa;
+}
+
