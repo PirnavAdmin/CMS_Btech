@@ -205,6 +205,12 @@ class AppErrorBoundary extends Component {
             <h1 style={{ margin: '0 0 12px', color: '#0f172a' }}>Something went wrong</h1>
             <p style={{ margin: '0 0 12px', color: '#475569' }}>The app hit an unexpected error. Please reload the page or return home.</p>
             <p style={{ margin: '0 0 20px', color: '#64748b', fontSize: '13px' }}>Please retry. If the problem continues, contact your administrator. Technical details were saved for support.</p>
+            {this.state.error && (
+              <details open style={{ textAlign: 'left', margin: '0 0 20px', background: '#fef2f2', padding: '12px', borderRadius: '8px', border: '1px solid #fecaca', fontSize: '12px' }}>
+                <summary style={{ cursor: 'pointer', fontWeight: 700, color: '#b91c1c' }}>Error: {String(this.state.error?.message || this.state.error)}</summary>
+                <pre style={{ marginTop: '8px', whiteSpace: 'pre-wrap', wordBreak: 'break-all', color: '#7f1d1d', maxHeight: '200px', overflowY: 'auto' }}>{String(this.state.error?.stack || '')}{'\n'}{String(this.state.info?.componentStack || '')}</pre>
+              </details>
+            )}
             <button type="button" onClick={() => window.location.reload()} style={{ border: 'none', background: '#1769C2', color: '#fff', borderRadius: '10px', padding: '10px 16px', cursor: 'pointer', fontWeight: 700, marginRight: '8px' }}>
               Try again
             </button>

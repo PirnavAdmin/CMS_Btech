@@ -1,9 +1,9 @@
 /* Source styles: pages/settings/AcademicContextSettings.css */
-@media not all {
 .academic-context-settings {
   display: flex;
   flex-direction: column;
   gap: 16px;
+  color: var(--text-primary, #102A4C);
 }
 
 .acs-form {
@@ -15,9 +15,9 @@
 .acs-card {
   padding: 20px 22px;
   background: var(--surface, #ffffff);
-  border: 1px solid var(--border, #e2e8f0);
+  border: 1px solid var(--border, #DCE5F2);
   border-radius: 12px;
-  box-shadow: var(--shadow-sm, 0 1px 2px rgba(0,0,0,0.05));
+  box-shadow: 0 1px 3px rgba(16, 42, 76, 0.05);
 }
 
 .acs-card-header {
@@ -26,23 +26,24 @@
   justify-content: space-between;
   margin-bottom: 16px;
   padding-bottom: 10px;
-  border-bottom: 1px solid var(--border, #e2e8f0);
+  border-bottom: 1px solid var(--border, #DCE5F2);
 }
 
 .acs-card-header h3 {
   margin: 0;
   font-size: 15px;
   font-weight: 700;
-  color: var(--text-primary, #0f172a);
+  color: var(--text-primary, #102A4C);
 }
 
 .acs-badge {
   font-size: 11px;
   font-weight: 600;
   padding: 3px 8px;
-  border-radius: 6px;
-  background: var(--brand-subtle, rgba(37, 99, 235, 0.1));
-  color: var(--brand, #1769C2);
+  border-radius: 5px;
+  background: var(--brand-soft, #EFF6FF);
+  color: var(--brand, #2563EB);
+  border: 1px solid #BFDBFE;
   text-transform: uppercase;
   letter-spacing: 0.5px;
 }
@@ -66,27 +67,27 @@
   gap: 8px;
   font-size: 13px;
   font-weight: 600;
-  color: var(--text-primary, #0f172a);
+  color: var(--text-primary, #102A4C);
 }
 
 .acs-label svg {
-  color: var(--brand, #1769C2);
+  color: var(--brand, #2563EB);
 }
 
 .acs-req {
-  color: var(--danger, #ef4444);
+  color: var(--danger, #EF4444);
 }
 
 .acs-hint {
   font-size: 11px;
-  color: var(--text-muted, #64748b);
+  color: var(--text-muted, #526A86);
   margin-top: 2px;
 }
 
 .acs-preview-box {
   padding: 16px 20px;
-  background: var(--surface-alt, #f8fafc);
-  border: 1px dashed var(--border, #cbd5e1);
+  background: var(--surface-soft, #F3F6FC);
+  border: 1px dashed var(--border-strong, #CBD8E3);
   border-radius: 10px;
   margin-bottom: 24px;
 }
@@ -95,11 +96,11 @@
   display: flex;
   align-items: center;
   gap: 6px;
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--text-muted, #64748b);
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-muted, #526A86);
   text-transform: uppercase;
-  letter-spacing: 0.5px;
+  letter-spacing: 0.05em;
   margin-bottom: 12px;
 }
 
@@ -118,17 +119,18 @@
 
 .acs-preview-entity small {
   font-size: 11px;
-  color: var(--text-muted, #64748b);
+  color: var(--text-muted, #526A86);
 }
 
 .acs-preview-entity strong {
   font-size: 14px;
-  color: var(--text-primary, #0f172a);
+  color: var(--text-primary, #102A4C);
+  font-weight: 700;
 }
 
 .acs-preview-divider {
   font-size: 20px;
-  color: var(--text-muted, #94a3b8);
+  color: var(--border-strong, #CBD8E3);
 }
 
 .acs-tag {
@@ -138,8 +140,8 @@
   font-weight: 600;
   border-radius: 4px;
   background: var(--surface, #ffffff);
-  border: 1px solid var(--border, #e2e8f0);
-  color: var(--text-secondary, #475569);
+  border: 1px solid var(--border, #DCE5F2);
+  color: var(--text-secondary, #526A86);
   width: fit-content;
 }
 
@@ -153,19 +155,21 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  padding: 10px 24px;
-  font-size: 14px;
+  height: 36px;
+  padding: 0 20px;
+  font-size: 13px;
   font-weight: 600;
   color: #ffffff;
-  background: var(--brand, #1769C2);
+  background: var(--primary, #174C88);
   border: none;
-  border-radius: 8px;
+  border-radius: 7px;
   cursor: pointer;
+  box-shadow: 0 2px 6px rgba(23, 76, 136, 0.25);
   transition: background 0.15s ease, transform 0.1s ease;
 }
 
 .acs-apply-btn:hover:not(:disabled) {
-  background: var(--brand-hover, #1769C2);
+  background: #1e3a8a;
   transform: translateY(-1px);
 }
 
@@ -180,14 +184,15 @@
   gap: 6px;
   font-size: 13px;
   font-weight: 500;
-  color: var(--success, #1769C2);
+  color: var(--success, #10B981);
 }
 
 .acs-active-summary-card {
   padding: 20px 24px;
   background: var(--surface, #ffffff);
-  border: 1px solid var(--border, #e2e8f0);
+  border: 1px solid var(--border, #DCE5F2);
   border-radius: 12px;
+  box-shadow: 0 1px 3px rgba(16, 42, 76, 0.05);
 }
 
 .acs-summary-header {
@@ -201,7 +206,7 @@
   margin: 0;
   font-size: 14px;
   font-weight: 700;
-  color: var(--text-primary, #0f172a);
+  color: var(--text-primary, #102A4C);
 }
 
 .acs-active-indicator {
@@ -210,10 +215,11 @@
   gap: 4px;
   font-size: 11px;
   font-weight: 700;
-  padding: 2px 8px;
-  border-radius: 99px;
-  background: rgba(22, 163, 74, 0.1);
-  color: #1769C2;
+  padding: 3px 8px;
+  border-radius: 5px;
+  background: #ECFDF5;
+  color: #047857;
+  border: 1px solid #A7F3D0;
   text-transform: uppercase;
 }
 
@@ -226,8 +232,8 @@
 
 .acs-summary-dl dt {
   font-size: 11px;
-  font-weight: 600;
-  color: var(--text-muted, #64748b);
+  font-weight: 700;
+  color: var(--text-muted, #526A86);
   text-transform: uppercase;
   margin-bottom: 4px;
 }
@@ -236,11 +242,9 @@
   margin: 0;
   font-size: 13px;
   font-weight: 600;
-  color: var(--text-primary, #0f172a);
+  color: var(--text-primary, #102A4C);
 }
 
-/* This page uses the legacy --surface-alt token for its preview.  Define the
-   complete dark treatment locally so no white panel leaks into Settings. */
 :root[data-theme="dark"] .academic-context-settings :is(.acs-card, .acs-active-summary-card) {
   background: var(--surface) !important;
   border-color: var(--border) !important;
@@ -266,6 +270,4 @@
 :root[data-theme="dark"] .academic-context-settings .acs-active-indicator {
   color: #A9D3F7 !important;
   background: rgba(43, 120, 197, .20) !important;
-}
-
 }

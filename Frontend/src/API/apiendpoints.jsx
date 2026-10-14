@@ -7286,15 +7286,15 @@ export const studentCanonicalModelModule = (() => {
 /* export */ const defaultFeeSummary = (data = {}) => {
   const fees = data.fees || {}
   const admission = data.admission || {}
-  const tuition = Number(fees.tuitionFee) > 0 ? Number(fees.tuitionFee) : 50000
-  const admissionFee = Number(fees.admissionFee !== undefined && fees.admissionFee !== '' ? fees.admissionFee : 4000)
+  const tuition = Number(fees.tuitionFee) > 0 ? Number(fees.tuitionFee) : 0
+  const admissionFee = Number(fees.admissionFee !== undefined && fees.admissionFee !== '' ? fees.admissionFee : 0)
   const hostelFee = admission.hostel === 'Yes' ? Number(HOSTEL_FEES[admission.hostelRoomType] || fees.hostelFee || 0) : 0
   const transportFee = admission.transport === 'Yes' ? Number(TRANSPORT_FEES[admission.transportRoute] || fees.transportFee || 0) : 0
   const scholarshipAmount = Number(fees.scholarshipAmount || 0)
   const total = Math.max(0, tuition + admissionFee + hostelFee + transportFee - scholarshipAmount)
   return {
-    structureId: fees.structureId || fees.feeStructureId || 'FS-STANDARD',
-    feeStructureId: fees.feeStructureId || fees.structureId || 'FS-STANDARD',
+    structureId: fees.structureId || fees.feeStructureId || '',
+    feeStructureId: fees.feeStructureId || fees.structureId || '',
     tuitionFee: tuition,
     admissionFee: admissionFee,
     hostelFee,
@@ -7313,9 +7313,9 @@ export const studentCanonicalModelModule = (() => {
   if (hasFeeSummary(backend)) {
     return {
       ...backend,
-      admissionFee: Number(backend.admissionFee) > 0 ? backend.admissionFee : (data.fees?.admissionFee || 4000),
-      tuitionFee: Number(backend.tuitionFee) > 0 ? backend.tuitionFee : (data.fees?.tuitionFee || 50000),
-      totalFee: Number(backend.totalFee) > 0 ? backend.totalFee : (Number(backend.tuitionFee || 50000) + Number(backend.admissionFee || 4000)),
+      admissionFee: Number(backend.admissionFee) > 0 ? backend.admissionFee : Number(data.fees?.admissionFee || 0),
+      tuitionFee: Number(backend.tuitionFee) > 0 ? backend.tuitionFee : Number(data.fees?.tuitionFee || 0),
+      totalFee: Number(backend.totalFee) > 0 ? backend.totalFee : (Number(backend.tuitionFee || 0) + Number(backend.admissionFee || 0)),
       paymentPlan: data.fees?.paymentPlan || backend.paymentPlan || 'Full Payment',
       paymentStatus: data.fees?.paymentStatus || backend.paymentStatus || 'Pending',
       source: 'backend',
@@ -7827,14 +7827,14 @@ export const studentCanonicalModelModule = (() => {
         raw.feeStructure
       );
       return {
-        structureId: resolved.structureId || feeStructureId || 'FS-STANDARD',
-        feeStructureId: resolved.feeStructureId || feeStructureId || 'FS-STANDARD',
-        tuitionFee: String(resolved.tuitionFee || '50000'),
-        admissionFee: String(resolved.admissionFee || '4000'),
+        structureId: resolved.structureId || (feeStructureId !== 'FS-STANDARD' ? feeStructureId : ''),
+        feeStructureId: resolved.feeStructureId || (feeStructureId !== 'FS-STANDARD' ? feeStructureId : ''),
+        tuitionFee: String(resolved.tuitionFee || ''),
+        admissionFee: String(resolved.admissionFee || ''),
         scholarshipAmount: String(resolved.scholarshipAmount || ''),
         hostelFee: String(resolved.hostelFee || ''),
         transportFee: String(resolved.transportFee || ''),
-        totalFee: String(resolved.totalFee || '54000'),
+        totalFee: String(resolved.totalFee || ''),
         paymentPlan: resolved.paymentPlan || 'Full Payment',
         paymentStatus: resolved.paymentStatus || 'Pending',
         components: Array.isArray(resolved.components) ? resolved.components : [],

@@ -2,7 +2,7 @@
 import * as external0 from "react";
 import * as external1 from "react-router-dom";
 import * as external3 from "react-icons/fi";
-import { useCollegeStateModule, useToastStateModule, ExportMenuModule, DashboardLayoutModule, FilterPanelModule, TablePaginationModule, CompactSummaryModule, StatusBadgeModule, AcademicContextModule } from "../../../components/components.jsx";
+import { useCollegeStateModule, useToastStateModule, ExportMenuModule, DashboardLayoutModule, FilterPanelModule, TablePaginationModule, CompactSummaryModule, StatusBadgeModule, AcademicContextModule, feeStructureServiceModule } from "../../../components/components.jsx";
 import { admissionPreviewModule, recordDetailSectionsModule, exportColumnsModule, academicYearUtilsModule } from "../../../components/components.jsx";
 import { newestFirstModule, exportProvenanceModule, apiEndpointsModule, collegeApiModule, eventBusModule, studentCanonicalModelModule } from "../../../API/apiendpoints.jsx";
 
@@ -94,6 +94,7 @@ const { studentInitials } = studentCanonicalModelModule;
 const { studentQuotaDisplay } = studentCanonicalModelModule;
 const { tenDigitMobile } = studentCanonicalModelModule;
 const { useAcademic } = AcademicContextModule;
+const { readFeeWorkspace, readStructures, feeTotal, feeMoney } = feeStructureServiceModule;
 /* Imports for isolated regression tests:
 import useCollegeState from '../../../hooks/useCollegeState'
 import { admissionPreview } from '../../../utils/admissionPreview'
@@ -232,25 +233,87 @@ const display = value => formatDisplay(value)
 const money = value => formatMoney(value)
 const dateTime = value => formatDateTime(value)
 const quota = student => studentQuotaDisplay(student)
+const findMatchingFeeStructure = (academic = {}, admission = {}) => {
+  const collegeId = admission.collegeId || academic.collegeId;
+  let candidates = [];
+  try {
+    if (collegeId) {
+      const ws = readFeeWorkspace(collegeId);
+      if (ws && Array.isArray(ws.structures)) {
+        candidates = [...ws.structures];
+      }
+    }
+  } catch {}
+  try {
+    const legacy = readStructures();
+    if (Array.isArray(legacy)) {
+      candidates = [...candidates, ...legacy];
+    }
+  } catch {}
+
+  const activePlans = candidates.filter(s =>
+    ['Published', 'Active', 'Approved'].includes(s.status)
+  );
+  if (!activePlans.length) return null;
+
+  const same = (a, b) => {
+    if (!a || !b) return false;
+    const sa = String(a).trim().toLowerCase();
+    const sb = String(b).trim().toLowerCase();
+    return sa === sb || sa.includes(sb) || sb.includes(sa);
+  };
+
+  return activePlans.find(s => {
+    const sCourse = s.courseId || s.courseName;
+    const aCourse = academic.course;
+    if (sCourse && aCourse && !same(sCourse, aCourse)) return false;
+
+    const sBranch = s.branchId || s.branchName;
+    const aBranch = academic.branch;
+    if (sBranch && aBranch && !same(sBranch, aBranch)) return false;
+
+    const sYear = s.academicYearId || s.academicYearName;
+    const aYear = academic.academicYear;
+    if (sYear && aYear) {
+      const matchYear = same(sYear, aYear) || String(sYear).slice(0, 4) === String(aYear).slice(0, 4);
+      if (!matchYear) return false;
+    }
+
+    if (s.batch && admission.batch && !same(s.batch, admission.batch)) {
+      return false;
+    }
+
+    if (s.applicableTo === 'Selected Category' && s.category && academic.quota && !same(s.category, academic.quota)) {
+      return false;
+    }
+
+    return true;
+  }) || null;
+};
+
 const normalizeFeeSummary = response => {
   if (!response || typeof response !== 'object') return {}
   const nested = response.feeSummary ?? response.summary ?? response.feeDetails ?? response.feeStructure ?? {}
   const summary = { ...(typeof nested === 'object' ? nested : {}), ...response }
   const componentSource = summary.components ?? summary.feeComponents ?? summary.feeHeads ?? summary.feeHeadDetails ?? summary.feeStructureDetails ?? summary.feeBreakdown ?? summary.breakdown ?? summary.feeItems ?? summary.items ?? summary.fees ?? []
-  const components = (Array.isArray(componentSource) ? componentSource : []).map(item => ({ ...item, name: item.name ?? item.feeHeadName ?? item.feeName ?? item.componentName ?? item.description, amount: item.amount ?? item.feeAmount ?? item.amountPayable ?? item.totalAmount ?? item.value ?? item.fee }))
+  const components = (Array.isArray(componentSource) ? componentSource : []).map(item => ({ ...item, name: item.name ?? item.feeHeadName ?? item.feeName ?? item.componentName ?? item.description, amount: Number(item.amount ?? item.feeAmount ?? item.amountPayable ?? item.totalAmount ?? item.value ?? item.fee ?? 0) }))
   const componentAmount = pattern => components.filter(item => pattern.test(String(item.name || ''))).reduce((total,item) => total + Number(item.amount || 0),0)
   const componentsTotal = components.reduce((total,item) => total + Number(item.amount || 0),0)
-  const tuition = Number(summary.tuitionFee ?? summary.tuitionAmount ?? summary.academicFee) > 0 ? Number(summary.tuitionFee ?? summary.tuitionAmount ?? summary.academicFee) : (componentAmount(/tuition|academic/i) || 50000)
-  const admission = Number(summary.admissionFee ?? summary.admissionAmount ?? summary.registrationFee ?? summary.oneTimeFee) > 0 ? Number(summary.admissionFee ?? summary.admissionAmount ?? summary.registrationFee ?? summary.oneTimeFee) : (componentAmount(/admission|registration/i) || 4000)
+  const tuition = Number(summary.tuitionFee ?? summary.tuitionAmount ?? summary.academicFee) > 0 ? Number(summary.tuitionFee ?? summary.tuitionAmount ?? summary.academicFee) : (componentAmount(/tuition|academic/i) || componentsTotal)
+  const admission = Number(summary.admissionFee ?? summary.admissionAmount ?? summary.registrationFee ?? summary.oneTimeFee) > 0 ? Number(summary.admissionFee ?? summary.admissionAmount ?? summary.registrationFee ?? summary.oneTimeFee) : componentAmount(/admission|registration/i)
   const hostel = Number((summary.hostelFee ?? summary.hostelAmount) || 0)
   const transport = Number((summary.transportFee ?? summary.transportationFee ?? summary.transportAmount) || 0)
   const scholarship = Number((summary.scholarshipAmount ?? summary.discountAmount ?? summary.concessionAmount) || 0)
   const computedTotal = Math.max(0, tuition + admission + hostel + transport - scholarship)
   const total = Number(summary.firstYearTotal ?? summary.totalFee ?? summary.totalAmount ?? summary.grandTotal ?? summary.netPayable ?? summary.totalPayable ?? summary.netAmount ?? summary.payableAmount) > 0 ? Number(summary.firstYearTotal ?? summary.totalFee ?? summary.totalAmount ?? summary.grandTotal ?? summary.netPayable ?? summary.totalPayable ?? summary.netAmount ?? summary.payableAmount) : (componentsTotal > 0 ? componentsTotal : computedTotal)
+  const hasConfig = components.length > 0 || tuition > 0 || total > 0;
   return {
     ...summary,
-    feeStructureId: summary.feeStructureId ?? summary.structureId ?? summary.feeStructure?.feeStructureId ?? summary.feeStructure?.id ?? 'FS-STANDARD',
-    structureId: summary.structureId ?? summary.feeStructureId ?? summary.feeStructure?.id ?? 'FS-STANDARD',
+    feeStructureId: summary.feeStructureId ?? summary.structureId ?? summary.feeStructure?.feeStructureId ?? summary.feeStructure?.id ?? '',
+    structureId: summary.structureId ?? summary.feeStructureId ?? summary.feeStructure?.id ?? '',
+    structureName: summary.structureName ?? summary.name ?? summary.feePlanName ?? '',
+    planName: summary.planName ?? summary.structureName ?? summary.name ?? '',
+    configured: hasConfig,
     components: Array.isArray(components) ? components : [],
     tuitionFee: tuition,
     admissionFee: admission,
@@ -275,29 +338,93 @@ const mergeFeeResponses = (summaryResponse, structureResponse) => {
   return normalizeFeeSummary({ ...structure, ...summary, components: structure.components.length ? structure.components : summary.components, feeComponents: structure.feeComponents?.length ? structure.feeComponents : summary.feeComponents,tuitionFee:amount(summary.tuitionFee,structure.tuitionFee),admissionFee:amount(summary.admissionFee,structure.admissionFee),hostelFee:amount(summary.hostelFee,structure.hostelFee),transportFee:amount(summary.transportFee,structure.transportFee),scholarshipAmount:amount(summary.scholarshipAmount,structure.scholarshipAmount),totalFee:amount(summary.totalFee,structure.totalFee) })
 }
 const defaultFeeSummary = data => {
-  const tuition = Number(data.fees?.tuitionFee) > 0 ? Number(data.fees.tuitionFee) : 50000
-  const admission = Number(data.fees?.admissionFee !== undefined && data.fees?.admissionFee !== '' ? data.fees.admissionFee : 4000)
+  const matchedPlan = findMatchingFeeStructure(data.academic, data.admission);
   const hostelFee = data.admission?.hostel === 'Yes' ? Number(HOSTEL_FEES[data.admission?.hostelRoomType] || data.fees?.hostelFee || 0) : 0
   const transportFee = data.admission?.transport === 'Yes' ? Number(TRANSPORT_FEES[data.admission?.transportRoute] || data.fees?.transportFee || 0) : 0
   const scholarshipAmount = Number(data.fees?.scholarshipAmount || 0)
-  const total = Math.max(0, tuition + admission + hostelFee + transportFee - scholarshipAmount)
+
+  if (matchedPlan) {
+    const rawComps = Array.isArray(matchedPlan.components) ? matchedPlan.components : Array.isArray(matchedPlan.feeComponents) ? matchedPlan.feeComponents : [];
+    const components = rawComps.map(item => ({
+      ...item,
+      name: item.name ?? item.feeHeadName ?? item.componentName ?? 'Fee Component',
+      amount: Number(item.amount ?? item.feeAmount ?? 0)
+    }));
+    const tuition = components.filter(c => !/admission|registration/i.test(c.name)).reduce((sum, c) => sum + Number(c.amount || 0), 0) || Number(matchedPlan.amount || 0);
+    const admissionComp = components.find(c => /admission|registration/i.test(c.name));
+    const admissionFee = admissionComp ? Number(admissionComp.amount || 0) : Number(data.fees?.admissionFee || 0);
+    const total = Math.max(0, tuition + admissionFee + hostelFee + transportFee - scholarshipAmount);
+
+    return {
+      configured: true,
+      structureId: matchedPlan.id,
+      structureName: matchedPlan.name,
+      planName: matchedPlan.name,
+      tuitionFee: tuition,
+      admissionFee,
+      hostelFee,
+      transportFee,
+      scholarshipAmount,
+      totalFee: total,
+      components,
+      installments: matchedPlan.installments || matchedPlan.paymentPlan?.installments || [],
+      paymentStatus: data.fees?.paymentStatus || 'Pending',
+      paymentPlan: matchedPlan.plan || matchedPlan.paymentPlan?.mode || data.fees?.paymentPlan || 'Full Payment',
+      source: 'matchedPlan'
+    };
+  }
+
+  if (data.fees?.components?.length || Number(data.fees?.tuitionFee) > 0) {
+    const tuition = Number(data.fees?.tuitionFee || 0);
+    const admissionFee = Number(data.fees?.admissionFee || 0);
+    const total = Math.max(0, tuition + admissionFee + hostelFee + transportFee - scholarshipAmount);
+    return {
+      configured: true,
+      structureId: data.fees?.structureId || '',
+      structureName: data.fees?.structureName || 'Academic Fee Plan',
+      planName: data.fees?.structureName || 'Academic Fee Plan',
+      tuitionFee: tuition,
+      admissionFee,
+      hostelFee,
+      transportFee,
+      scholarshipAmount,
+      totalFee: total,
+      components: data.fees.components || [],
+      installments: data.fees.installments || [],
+      paymentStatus: data.fees?.paymentStatus || 'Pending',
+      paymentPlan: data.fees?.paymentPlan || 'Full Payment',
+      source: 'existing'
+    };
+  }
+
   return {
-    structureId: data.fees?.structureId || 'FS-STANDARD',
-    feeStructureId: data.fees?.feeStructureId || data.fees?.structureId || 'FS-STANDARD',
-    tuitionFee: tuition,
-    admissionFee: admission,
+    configured: false,
+    structureId: '',
+    structureName: '',
+    planName: '',
+    tuitionFee: 0,
+    admissionFee: 0,
     hostelFee,
     transportFee,
     scholarshipAmount,
-    totalFee: total,
+    totalFee: Math.max(0, hostelFee + transportFee - scholarshipAmount),
+    components: [],
+    installments: [],
     paymentStatus: data.fees?.paymentStatus || 'Pending',
-    paymentPlan: data.fees?.paymentPlan || 'Full Payment',
-    source: 'standard'
-  }
+    paymentPlan: 'Full Payment',
+    source: 'unconfigured'
+  };
 }
 const resolveFeeSummary = (data, summaryResponse, structureResponse) => {
   const backend = mergeFeeResponses(summaryResponse, structureResponse)
-  if (hasFeeSummary(backend)) return { ...backend, admissionFee: Number(backend.admissionFee)>0?backend.admissionFee:(data.fees?.admissionFee || 4000), source: 'backend' }
+  if (hasFeeSummary(backend)) {
+    return {
+      ...backend,
+      configured: true,
+      admissionFee: Number(backend.admissionFee) >= 0 ? backend.admissionFee : (data.fees?.admissionFee || 0),
+      source: 'backend'
+    }
+  }
   return defaultFeeSummary(data)
 }
 const normalizeEmail = value => text(value).toLowerCase()
@@ -833,14 +960,16 @@ function WizardStepper({ step, setStep }) {
   )
 }
 function FeeSummary({ data }) {
-  const tuition = Number(data.fees?.tuitionFee) > 0 ? Number(data.fees.tuitionFee) : 50000
-  const admission = Number(data.fees?.admissionFee !== undefined && data.fees?.admissionFee !== '' ? data.fees.admissionFee : 4000)
-  const hostel = data.admission?.hostel === 'Yes' ? Number(data.fees?.hostelFee || (data.admission?.hostelRoomType ? HOSTEL_FEES[data.admission?.hostelRoomType] : 0) || 0) : 0
-  const transport = data.admission?.transport === 'Yes' ? Number(data.fees?.transportFee || (data.admission?.transportRoute ? TRANSPORT_FEES[data.admission?.transportRoute] : 0) || 0) : 0
-  const scholarship = data.admission?.scholarship === 'Yes' ? Number(data.fees?.scholarshipAmount || 0) : 0
+  const fees = data.fees || {}
+  const components = Array.isArray(fees.components) ? fees.components : Array.isArray(fees.feeComponents) ? fees.feeComponents : []
+  const tuition = Number(fees.tuitionFee) > 0 ? Number(fees.tuitionFee) : (components.filter(c => !/admission|registration/i.test(c.name || '')).reduce((sum, c) => sum + Number(c.amount || 0), 0))
+  const admission = Number(fees.admissionFee !== undefined && fees.admissionFee !== '' ? fees.admissionFee : 0)
+  const hostel = data.admission?.hostel === 'Yes' ? Number(fees.hostelFee || (data.admission?.hostelRoomType ? HOSTEL_FEES[data.admission?.hostelRoomType] : 0) || 0) : 0
+  const transport = data.admission?.transport === 'Yes' ? Number(fees.transportFee || (data.admission?.transportRoute ? TRANSPORT_FEES[data.admission?.transportRoute] : 0) || 0) : 0
+  const scholarship = data.admission?.scholarship === 'Yes' ? Number(fees.scholarshipAmount || 0) : 0
+  const isConfigured = fees.configured !== false && (components.length > 0 || tuition > 0 || admission > 0)
   const rows = [
-    ['Tuition Fee (per year)', tuition],
-    ['Admission Fee (one-time)', admission],
+    ...(isConfigured ? [['Tuition Fee (per year)', tuition], ['Admission Fee (one-time)', admission]] : []),
     ...(data.admission?.hostel === 'Yes' ? [['Hostel Fee (per year)', hostel]] : []),
     ...(data.admission?.transport === 'Yes' ? [['Transportation Fee (per year)', transport]] : [])
   ]
@@ -852,45 +981,114 @@ function FeeSummary({ data }) {
         <span><FiInbox /></span>
         <div>
           <h3>Fee Summary</h3>
-          <p>Live fee calculation</p>
+          <p>{isConfigured ? (fees.structureName || fees.planName || 'Configured Fee Plan') : 'Fee Structure Not Configured'}</p>
         </div>
       </header>
-      <dl>
-        {rows.map(([label, value]) => (
-          <div key={label}>
-            <dt>{label}</dt>
-            <dd>{money(value)}</dd>
-          </div>
-        ))}
-        <div className="subtotal">
-          <dt>Gross Fee</dt>
-          <dd>{money(gross)}</dd>
+      {isConfigured || hostel > 0 || transport > 0 ? (
+        <>
+          <dl>
+            {rows.map(([label, value]) => (
+              <div key={label}>
+                <dt>{label}</dt>
+                <dd>{money(value)}</dd>
+              </div>
+            ))}
+            <div className="subtotal">
+              <dt>Gross Fee</dt>
+              <dd>{money(gross)}</dd>
+            </div>
+            {scholarship > 0 && (
+              <div className="deduction">
+                <dt>Scholarship Deduction</dt>
+                <dd>− {money(scholarship)}</dd>
+              </div>
+            )}
+          </dl>
+          <footer>
+            <span>
+              Net Payable
+              <small>After applicable deductions</small>
+            </span>
+            <strong>{money(data.fees?.totalFee || net)}</strong>
+          </footer>
+        </>
+      ) : (
+        <div style={{ padding: '16px', color: 'var(--text-muted)', fontSize: '12px' }}>
+          No active fee plan configured for the selected academic program.
         </div>
-        {scholarship > 0 && (
-          <div className="deduction">
-            <dt>Scholarship Deduction</dt>
-            <dd>− {money(scholarship)}</dd>
-          </div>
-        )}
-      </dl>
-      <footer>
-        <span>
-          Net Payable
-          <small>After applicable deductions</small>
-        </span>
-        <strong>{money(data.fees?.totalFee || net)}</strong>
-      </footer>
+      )}
     </aside>
   )
 }
 /* oxlint-disable-next-line react-hooks/exhaustive-deps -- update is intentionally triggered only when academic matching inputs change */
 function ApplicantFeeStructure({ data, update, error }) {
-  const fees = data.fees || {}, components = Array.isArray(fees.components) ? fees.components : Array.isArray(fees.feeComponents) ? fees.feeComponents : []
+  const fees = data.fees || {}
+  const matchedPlan = findMatchingFeeStructure(data.academic, data.admission)
+
+  // Sync matched plan to form state if needed
+  useEffect(() => {
+    if (matchedPlan && (!fees.configured || fees.structureId !== matchedPlan.id)) {
+      const rawComps = Array.isArray(matchedPlan.components) ? matchedPlan.components : Array.isArray(matchedPlan.feeComponents) ? matchedPlan.feeComponents : []
+      const components = rawComps.map(item => ({
+        ...item,
+        name: item.name ?? item.feeHeadName ?? item.componentName ?? 'Fee Component',
+        amount: Number(item.amount ?? item.feeAmount ?? 0)
+      }))
+      const tuition = components.filter(c => !/admission|registration/i.test(c.name)).reduce((sum, c) => sum + Number(c.amount || 0), 0) || Number(matchedPlan.amount || 0)
+      const admissionComp = components.find(c => /admission|registration/i.test(c.name))
+      const admissionFee = admissionComp ? Number(admissionComp.amount || 0) : Number(fees.admissionFee || 0)
+      const hostel = data.admission?.hostel === 'Yes' ? Number(HOSTEL_FEES[data.admission.hostelRoomType] || fees.hostelFee || 0) : 0
+      const transport = data.admission?.transport === 'Yes' ? Number(TRANSPORT_FEES[data.admission.transportRoute] || fees.transportFee || 0) : 0
+      const scholarship = Number(fees.scholarshipAmount ?? fees.discountAmount ?? 0)
+      const total = Math.max(0, tuition + admissionFee + hostel + transport - scholarship)
+
+      update('fees', {
+        ...fees,
+        configured: true,
+        structureId: matchedPlan.id,
+        structureName: matchedPlan.name,
+        planName: matchedPlan.name,
+        tuitionFee: String(tuition),
+        admissionFee: String(admissionFee),
+        totalFee: String(total),
+        components,
+        installments: matchedPlan.installments || matchedPlan.paymentPlan?.installments || [],
+        paymentPlan: matchedPlan.plan || matchedPlan.paymentPlan?.mode || fees.paymentPlan || 'Full Payment',
+      })
+    } else if (!matchedPlan && !fees.components?.length && Number(fees.tuitionFee) === 0 && fees.configured !== false) {
+      update('fees.configured', false)
+    }
+  }, [data.academic.academicYear, data.academic.course, data.academic.branch, data.admission.batch, data.academic.quota])
+
+  const components = Array.isArray(fees.components) ? fees.components : Array.isArray(fees.feeComponents) ? fees.feeComponents : []
   const componentName = item => item.name ?? item.feeHeadName ?? item.componentName ?? item.description ?? 'Fee Component'
+  const isConfigured = Boolean(matchedPlan || fees.configured || (components.length > 0 && Number(fees.tuitionFee || 0) > 0))
+
+  if (!isConfigured) {
+    return (
+      <div className="sa-fee-structure-view">
+        <div className="sa-fee-unconfigured-card">
+          <div className="sa-fee-unconfigured-icon">
+            <FiAlertCircle />
+          </div>
+          <div className="sa-fee-unconfigured-body">
+            <h3>Fee Structure Not Configured</h3>
+            <p>
+              No active fee plan matches the selected Academic Year ({display(data.academic.academicYear)}), Course ({display(data.academic.course)}), and Branch ({display(data.academic.branch)}).
+            </p>
+            <div className="sa-fee-unconfigured-hint">
+              Please configure and publish an academic fee structure under <strong>Fee Management &gt; Fee Plans</strong> to establish tuition, fee heads, and payment schedules for this batch.
+            </div>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
   const admissionComponents = components.filter(item => /admission|registration/i.test(componentName(item)))
   const shownComponents = components.filter(item => !/admission|hostel|transport|scholarship|discount/i.test(componentName(item)) && Number(item.amount ?? item.feeAmount ?? 0) > 0)
-  const tuition = Number(fees.tuitionFee ?? fees.academicFee ?? 0) > 0 ? Number(fees.tuitionFee ?? fees.academicFee) : (shownComponents.length ? shownComponents.reduce((sum, c) => sum + Number(c.amount ?? 0), 0) : 50000)
-  const admission = Number(fees.admissionFee !== undefined && fees.admissionFee !== '' ? fees.admissionFee : 4000)
+  const tuition = Number(fees.tuitionFee ?? fees.academicFee ?? 0) > 0 ? Number(fees.tuitionFee ?? fees.academicFee) : (shownComponents.length ? shownComponents.reduce((sum, c) => sum + Number(c.amount ?? 0), 0) : 0)
+  const admission = Number(fees.admissionFee !== undefined && fees.admissionFee !== '' ? fees.admissionFee : 0)
   const hostel = data.admission?.hostel === 'Yes' ? Number(HOSTEL_FEES[data.admission.hostelRoomType] || fees.hostelFee || 0) : 0
   const transport = data.admission?.transport === 'Yes' ? Number(TRANSPORT_FEES[data.admission.transportRoute] || fees.transportFee || 0) : 0
   const scholarship = Number(fees.scholarshipAmount ?? fees.discountAmount ?? 0)
@@ -902,14 +1100,23 @@ function ApplicantFeeStructure({ data, update, error }) {
   const secondTerm = Math.max(0, firstYear - firstTerm)
   const futureTerm = Math.ceil(Math.max(0, tuition + hostel + transport) / 2)
   const setPlan = value => update('fees.paymentPlan', value)
+  const installments = fees.installments || matchedPlan?.installments || matchedPlan?.paymentPlan?.installments || []
+
   return (
     <div className="sa-fee-structure-view">
       <section className="sa-applicant-fees">
         <header>
           <FiInbox />
           <div>
-            <h2>Fee Structure</h2>
-            <p>Applicable fee structure for the selected academic details.</p>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+              <h2>Fee Structure</h2>
+              {(fees.structureName || matchedPlan?.name) && (
+                <span className="fm-badge fm-badge--published" style={{ fontSize: '11px', fontWeight: 700 }}>
+                  {fees.structureName || matchedPlan?.name}
+                </span>
+              )}
+            </div>
+            <p>Applicable fee heads and collection schedule for the selected academic program.</p>
           </div>
         </header>
         <dl>
@@ -930,27 +1137,29 @@ function ApplicantFeeStructure({ data, update, error }) {
               <dd>{money(tuition)}</dd>
             </div>
           )}
-          <div className={`sa-admission-fee ${error ? 'invalid' : ''}`}>
-            <dt>
-              <label htmlFor="sa-admission-fee">
-                {componentName(admissionComponents[0] || { name: 'Admission Fee (one-time)' })}
-                <small>One-time charge</small>
-              </label>
-            </dt>
-            <dd>
-              <span>₹</span>
-              <input
-                id="sa-admission-fee"
-                type="number"
-                min="0"
-                step="1"
-                value={fees.admissionFee ?? '4000'}
-                onChange={event => update('fees.admissionFee', event.target.value)}
-                placeholder="Enter amount"
-              />
-            </dd>
-            {error && <small role="alert">{error}</small>}
-          </div>
+          {admissionComponents.length > 0 || admission > 0 ? (
+            <div className={`sa-admission-fee ${error ? 'invalid' : ''}`}>
+              <dt>
+                <label htmlFor="sa-admission-fee">
+                  {componentName(admissionComponents[0] || { name: 'Admission Fee (one-time)' })}
+                  <small>One-time charge</small>
+                </label>
+              </dt>
+              <dd>
+                <span>₹</span>
+                <input
+                  id="sa-admission-fee"
+                  type="number"
+                  min="0"
+                  step="1"
+                  value={fees.admissionFee ?? admission}
+                  onChange={event => update('fees.admissionFee', event.target.value)}
+                  placeholder="Enter amount"
+                />
+              </dd>
+              {error && <small role="alert">{error}</small>}
+            </div>
+          ) : null}
           {hostel > 0 && (
             <div>
               <dt>Hostel Fee (per year){data.admission.hostelRoomType ? ` | ${data.admission.hostelRoomType}` : ''}</dt>
@@ -982,6 +1191,8 @@ function ApplicantFeeStructure({ data, update, error }) {
           <small>Tuition, hostel and transportation are annual charges. Admission fee is charged only once.</small>
         </div>
       </section>
+
+      {/* Payment Preference & Installment Schedule */}
       <section className={`sa-payment-plan ${error ? 'invalid' : ''}`}>
         <h3>Payment Preference <b>*</b></h3>
         <p>Select how you prefer to pay the estimated fee.</p>
@@ -990,35 +1201,61 @@ function ApplicantFeeStructure({ data, update, error }) {
             <input type="radio" name="paymentPlan" checked={!termWise} onChange={() => setPlan('Full Payment')} />
             <span>
               <strong>Full Payment</strong>
-              <small>Pay the complete first-year amount</small>
+              <small>Pay the complete annual fee in a single payment</small>
             </span>
           </label>
           <label className={termWise ? 'selected' : ''}>
             <input type="radio" name="paymentPlan" checked={termWise} onChange={() => setPlan('Term-wise Payment')} />
             <span>
-              <strong>Term-wise Payment</strong>
-              <small>Pay the first-year amount in two terms</small>
+              <strong>Term-wise / Installments</strong>
+              <small>Pay according to the scheduled installment schedule</small>
             </span>
           </label>
         </div>
+
         {termWise && (
           <section className="sa-term-breakdown">
             <header>
-              <strong>Term-wise Estimate</strong>
-              <span>Two terms per academic year</span>
+              <strong>Payment Schedule Breakdown</strong>
+              <span>{installments.length ? `${installments.length} Scheduled Installments` : 'Two terms per academic year'}</span>
             </header>
-            <dl>
-              <div>
-                <dt>First Term</dt>
-                <dd>{money(firstTerm)}</dd>
-                <small>Includes half of annual charges and the one-time admission fee share.</small>
+            {installments.length > 0 ? (
+              <div className="fm-table-wrap" style={{ margin: 0 }}>
+                <table className="fm-table" style={{ width: '100%', fontSize: '12px' }}>
+                  <thead>
+                    <tr>
+                      <th style={{ padding: '8px 12px' }}>Installment</th>
+                      <th style={{ padding: '8px 12px' }}>Due Date</th>
+                      <th style={{ padding: '8px 12px', textAlign: 'right' }}>Amount</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {installments.map((inst, idx) => (
+                      <tr key={inst.id || idx}>
+                        <td style={{ padding: '8px 12px', fontWeight: 600 }}>Installment {idx + 1}</td>
+                        <td style={{ padding: '8px 12px' }}>{inst.dueDate || '—'}</td>
+                        <td style={{ padding: '8px 12px', textAlign: 'right', fontWeight: 700, color: 'var(--brand)' }}>
+                          {money(inst.amount || Math.ceil(firstYear / installments.length))}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               </div>
-              <div>
-                <dt>Second Term</dt>
-                <dd>{money(secondTerm)}</dd>
-                <small>Remaining first-year estimated amount.</small>
-              </div>
-            </dl>
+            ) : (
+              <dl>
+                <div>
+                  <dt>First Term</dt>
+                  <dd>{money(firstTerm)}</dd>
+                  <small>Includes half of annual charges and the one-time admission fee share.</small>
+                </div>
+                <div>
+                  <dt>Second Term</dt>
+                  <dd>{money(secondTerm)}</dd>
+                  <small>Remaining first-year estimated amount.</small>
+                </div>
+              </dl>
+            )}
             <p>From the second year onward, each term is approximately {money(futureTerm)} at the current fee structure.</p>
           </section>
         )}
@@ -1394,9 +1631,9 @@ function AdmissionForm() {
             fees: {
               ...current.fees,
               ...summary,
-              structureId: summary.feeStructureId ?? summary.structureId ?? current.fees.structureId ?? 'FS-STANDARD',
-              tuitionFee: String(summary.tuitionFee || current.fees.tuitionFee || 50000),
-              admissionFee: String(summary.admissionFee || current.fees.admissionFee || 4000),
+              structureId: summary.feeStructureId ?? summary.structureId ?? current.fees.structureId ?? '',
+              tuitionFee: String(summary.tuitionFee ?? current.fees.tuitionFee ?? 0),
+              admissionFee: String(summary.admissionFee ?? current.fees.admissionFee ?? 0),
               paymentPlan: current.fees.paymentPlan || summary.paymentPlan || 'Full Payment',
             }
           }))
@@ -1511,8 +1748,9 @@ function AdmissionForm() {
       if (path === 'admission.transportRoute') {
         next.fees.transportFee = String(TRANSPORT_FEES[value] || '');
       }
-      const tuition = Number(next.fees.tuitionFee) > 0 ? Number(next.fees.tuitionFee) : 50000;
-      const admission = Number(next.fees.admissionFee !== undefined && next.fees.admissionFee !== '' ? next.fees.admissionFee : 4000);
+      const matched = findMatchingFeeStructure(next.academic, next.admission);
+      const tuition = Number(next.fees.tuitionFee) > 0 ? Number(next.fees.tuitionFee) : (matched ? Number(matched.amount || 0) : 0);
+      const admission = Number(next.fees.admissionFee !== undefined && next.fees.admissionFee !== '' ? next.fees.admissionFee : 0);
       const hostel = next.admission.hostel === 'Yes' ? Number(next.fees.hostelFee || (next.admission.hostelRoomType ? HOSTEL_FEES[next.admission.hostelRoomType] : 0) || 0) : 0;
       const transport = next.admission.transport === 'Yes' ? Number(next.fees.transportFee || (next.admission.transportRoute ? TRANSPORT_FEES[next.admission.transportRoute] : 0) || 0) : 0;
       const scholarship = Number(next.fees.scholarshipAmount || 0);
@@ -2009,8 +2247,8 @@ function AdmissionForm() {
                 }
                 return feeComponentTotal(componentPattern) || fallback
               }
-              const previewTuition = feeValue(['tuitionFee', 'tuitionAmount', 'academicFee'], /tuition|academic/i, 50000)
-              const previewAdmission = feeValue(['admissionFee', 'admissionAmount', 'registrationFee', 'oneTimeFee'], /admission|registration/i, 4000)
+              const previewTuition = feeValue(['tuitionFee', 'tuitionAmount', 'academicFee'], /tuition|academic/i, 0)
+              const previewAdmission = feeValue(['admissionFee', 'admissionAmount', 'registrationFee', 'oneTimeFee'], /admission|registration/i, 0)
               const previewHostel = data.admission?.hostel === 'Yes'
                 ? feeValue(['hostelFee', 'hostelAmount'], /hostel/i, HOSTEL_FEES[data.admission?.hostelRoomType] || 0)
                 : 0
@@ -2529,26 +2767,96 @@ function DetailContent({ data, tab }) {
     )
   }
   if (tab === 'fees') {
+    const isConfigured = Boolean(data.fees?.configured || (data.fees?.components?.length > 0 && Number(data.fees?.tuitionFee || 0) > 0) || Number(data.fees?.totalFee || 0) > 0)
+    if (!isConfigured) {
+      return (
+        <div className="sa-fee-unconfigured-card" style={{ margin: '16px 0' }}>
+          <div className="sa-fee-unconfigured-icon">
+            <FiAlertCircle />
+          </div>
+          <div className="sa-fee-unconfigured-body">
+            <h3>Fee Structure Not Configured</h3>
+            <p>
+              No active fee plan has been configured for {studentFullName(data)} ({display(data.academic?.course)} - {display(data.academic?.branch)}).
+            </p>
+            <div className="sa-fee-unconfigured-hint">
+              Academic fee structures can be configured and published from <strong>Fee Management &gt; Fee Plans</strong>.
+            </div>
+          </div>
+        </div>
+      )
+    }
+    const totalFee = Number(data.fees?.totalFee || 0)
+    const paidAmount = Number(data.fees?.paidAmount || (data.fees?.paymentStatus === 'Paid' ? totalFee : 0))
+    const balance = Math.max(0, totalFee - paidAmount)
+    const isOverdue = data.fees?.paymentStatus === 'Overdue'
+    const statusLabel = isOverdue ? 'Overdue' : balance === 0 && totalFee > 0 ? 'Paid' : paidAmount > 0 ? 'Partially Paid' : 'Pending'
+    const statusSlug = statusLabel.toLowerCase().replace(/\s+/g, '-')
+
     return (
-      <div className="sa-detail-grid-layout">
-        <InfoGrid
-          title="Fee Structure"
-          icon={FiCreditCard}
-          items={[
-            ['Tuition Fee (per year)', money(data.fees?.tuitionFee)],
-            ['Admission Fee (one-time)', money(data.fees?.admissionFee)],
-            ['Scholarship Deduction', data.fees?.scholarshipAmount ? `- ${money(data.fees?.scholarshipAmount)}` : 'None'],
-            ['Hostel Room Type', data.admission?.hostelRoomType],
-            ['Hostel Fee (per year)', data.admission?.hostel === 'Yes' ? money(data.fees?.hostelFee) : 'Not selected'],
-            ['Transportation Fee (per year)', data.admission?.transport === 'Yes' ? money(data.fees?.transportFee) : 'Not selected'],
-            ['Estimated First-Year Total', money(data.fees?.totalFee)],
-            ['Estimated Entire 4-Year Total', money((Number(data.fees?.tuitionFee || 0) + Number(data.fees?.hostelFee || 0) + Number(data.fees?.transportFee || 0)) * 4 + Number(data.fees?.admissionFee || 0))],
-            ['Payment Preference', data.fees?.paymentPlan],
-            ['First Term Estimate', data.fees?.paymentPlan === 'Term-wise Payment' ? money(Math.ceil(Number(data.fees?.totalFee || 0) / 2)) : 'Not applicable'],
-            ['Second Term Estimate', data.fees?.paymentPlan === 'Term-wise Payment' ? money(Math.floor(Number(data.fees?.totalFee || 0) / 2)) : 'Not applicable'],
-          ]}
-        />
-        <FeeSummary data={data} />
+      <div className="sa-fees-detail-container">
+        {/* Colorful Financial Summary KPI Cards */}
+        <div className="fm-summary-cards-grid" style={{ marginBottom: '16px' }}>
+          <div className="fm-summary-card fm-summary-card--blue">
+            <div className="fm-summary-card__header">
+              <span className="fm-summary-card__label">Total Fee</span>
+              <span className="fm-summary-card__icon-box"><FiCreditCard /></span>
+            </div>
+            <strong className="fm-summary-card__value">{money(totalFee)}</strong>
+            <span className="fm-summary-card__meta">{data.fees?.structureName || 'Applicable Fee Plan'}</span>
+          </div>
+
+          <div className="fm-summary-card fm-summary-card--green">
+            <div className="fm-summary-card__header">
+              <span className="fm-summary-card__label">Paid Amount</span>
+              <span className="fm-summary-card__icon-box"><FiCheckCircle /></span>
+            </div>
+            <strong className="fm-summary-card__value">{money(paidAmount)}</strong>
+            <span className="fm-summary-card__meta">Payments recorded</span>
+          </div>
+
+          <div className="fm-summary-card fm-summary-card--amber">
+            <div className="fm-summary-card__header">
+              <span className="fm-summary-card__label">Pending Balance</span>
+              <span className="fm-summary-card__icon-box"><FiClock /></span>
+            </div>
+            <strong className="fm-summary-card__value">{money(balance)}</strong>
+            <span className="fm-summary-card__meta">Outstanding balance</span>
+          </div>
+
+          <div className={`fm-summary-card ${isOverdue ? 'fm-summary-card--red' : 'fm-summary-card--blue'}`}>
+            <div className="fm-summary-card__header">
+              <span className="fm-summary-card__label">Fee Status</span>
+              <span className="fm-summary-card__icon-box"><FiShield /></span>
+            </div>
+            <strong className="fm-summary-card__value" style={{ fontSize: '18px' }}>
+              <span className={`fm-badge fm-badge--${statusSlug}`}>{statusLabel}</span>
+            </strong>
+            <span className="fm-summary-card__meta">Payment preference: {data.fees?.paymentPlan || 'Full Payment'}</span>
+          </div>
+        </div>
+
+        <div className="sa-detail-grid-layout">
+          <InfoGrid
+            title="Fee Plan & Charges"
+            icon={FiCreditCard}
+            items={[
+              ['Plan Name', data.fees?.structureName || data.fees?.planName || 'Academic Fee Structure'],
+              ['Tuition Fee (per year)', money(data.fees?.tuitionFee)],
+              ['Admission Fee (one-time)', money(data.fees?.admissionFee)],
+              ['Scholarship Deduction', data.fees?.scholarshipAmount ? `- ${money(data.fees?.scholarshipAmount)}` : 'None'],
+              ['Hostel Room Type', data.admission?.hostelRoomType || 'Not selected'],
+              ['Hostel Fee (per year)', data.admission?.hostel === 'Yes' ? money(data.fees?.hostelFee) : 'Not selected'],
+              ['Transportation Fee (per year)', data.admission?.transport === 'Yes' ? money(data.fees?.transportFee) : 'Not selected'],
+              ['Estimated First-Year Total', money(totalFee)],
+              ['Estimated Entire 4-Year Total', money((Number(data.fees?.tuitionFee || 0) + Number(data.fees?.hostelFee || 0) + Number(data.fees?.transportFee || 0)) * 4 + Number(data.fees?.admissionFee || 0))],
+              ['Payment Preference', data.fees?.paymentPlan || 'Full Payment'],
+              ['First Term Estimate', data.fees?.paymentPlan === 'Term-wise Payment' ? money(Math.ceil(totalFee / 2)) : 'Not applicable'],
+              ['Second Term Estimate', data.fees?.paymentPlan === 'Term-wise Payment' ? money(Math.floor(totalFee / 2)) : 'Not applicable'],
+            ]}
+          />
+          <FeeSummary data={data} />
+        </div>
       </div>
     )
   }

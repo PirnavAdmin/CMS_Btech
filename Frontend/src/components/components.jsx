@@ -163,11 +163,9 @@ export const feeNavigationModule = (() => {
 */
 // #region pages/fees/feeNavigation.js
 /* export */ const feeNavigation = [
-  { label: 'Overview', to: '/fees/overview', sections: ['overview'] },
+  { label: 'Overview', to: '/fees/overview', sections: ['overview', 'reports'] },
   { label: 'Fee Plans', to: '/fees/structures', sections: ['structures', 'components', 'legacy', 'plans'] },
-  { label: 'Student Fees', to: '/fees/students', sections: ['students', 'accounts', 'ledger', 'assignments', 'concessions', 'dues'] },
-  { label: 'Payments', to: '/fees/receipts', sections: ['receipts', 'collection', 'refunds', 'payments'] },
-  { label: 'Reports', to: '/fees/reports', sections: ['reports'] },
+  { label: 'Student Fees', to: '/fees/students', sections: ['students', 'accounts', 'ledger', 'assignments', 'concessions', 'dues', 'receipts', 'collection', 'refunds', 'payments'] },
 ]
 
 /* export */ const studentAccountOperations = [
@@ -1647,7 +1645,7 @@ return {
 };
 }
 
-export function dashboardDataModule() {
+export const dashboardDataModule = (() => {
 
 /* Imports for isolated regression tests:
 
@@ -1764,7 +1762,7 @@ return {
   get branchDistribution() { return branchDistribution; },
   get departmentMetrics() { return departmentMetrics; }
 };
-}
+})();
 
 export function marksWorkflowModule() {
 
@@ -2018,7 +2016,7 @@ const saveStoredContext = (collegeId, academicYearId) => {
     currentAcademicYear &&
     selectedAcademicYear &&
     String(selectedAcademicYear.id ?? selectedAcademicYear.academicYearId) !== String(currentAcademicYear.id ?? currentAcademicYear.academicYearId) &&
-    (selectedAcademicYear.name || '').replace(/\s+/g, '') !== (currentAcademicYear.name || '').replace(/\s+/g, '')
+    String(selectedAcademicYear.name || '').replace(/\s+/g, '') !== String(currentAcademicYear.name || '').replace(/\s+/g, '')
   )
 
   const isContextReady = Boolean(selectedCollege && selectedAcademicYear)
@@ -2956,7 +2954,7 @@ import './HeaderAcademicYear.css'
   const year = selectedAcademicYear || currentAcademicYear || academicYears[0] || null
   const label = year ? (year.academicYearName || year.name || 'Unnamed academic year') : (loading ? 'Loading...' : 'Not Configured')
   const progress = year ? calculateAcademicYearProgress(year.startDate, year.endDate, now) : null
-  const shortLabel = label.replace(/(\d{4})\s*[--]\s*\d{2}(\d{2})/, '$1-$2')
+  const shortLabel = String(label).replace(/(\d{4})\s*[--]\s*\d{2}(\d{2})/, '$1-$2')
   const dateLabel = (value) => (value ? String(value).slice(0, 10) : '-')
 
   return (

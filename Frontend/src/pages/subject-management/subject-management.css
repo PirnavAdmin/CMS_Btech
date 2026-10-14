@@ -251,28 +251,34 @@
   table-layout: fixed;
   border-collapse: collapse;
   text-align: left;
-  font-size: 0.9rem;
+  font-size: 12px;
 }
 
 .sm-table th {
-  background: #1769C2;
-  padding: 12px 16px;
-  color: #FFFFFF;
-  font-weight: 800;
-  text-transform: uppercase;
-  border-bottom: 2px solid #125AA8;
+  background: var(--table-head, #174C88) !important;
+  height: 40px !important;
+  padding: 9px 12px !important;
+  color: #FFFFFF !important;
+  font-size: 10px !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.035em !important;
+  text-transform: uppercase !important;
+  border: 0 !important;
   white-space: nowrap;
+  vertical-align: middle !important;
 }
 
 .sm-table td {
-  padding: 14px 16px;
-  border-bottom: 1px solid #EAF3FF;
-  color: #0F172A;
-  vertical-align: middle;
+  height: 46px !important;
+  padding: 9px 12px !important;
+  border-bottom: 1px solid var(--border, #DCE5F2) !important;
+  color: var(--text-primary, #102A4C) !important;
+  font-size: 12px !important;
+  vertical-align: middle !important;
 }
 
 .sm-table tr:hover td {
-  background: #f8fafc;
+  background: var(--surface-soft, #F3F6FC) !important;
 }
 
 .sm-code-badge {

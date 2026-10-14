@@ -1,12 +1,12 @@
 /* Source styles: pages/semester-management/SemesterManagement.css */
 .semester-management {
-  --sem-navy: var(--brand-navy, #102A4C);
-  --sem-blue: #1769C2;
-  --sem-blue-hover: #125AA8;
+  --sem-navy: var(--brand-navy, #174C88);
+  --sem-blue: var(--brand, #2563EB);
+  --sem-blue-hover: var(--brand-hover, #1D4ED8);
   --sem-text: var(--text-primary, #102A4C);
-  --sem-muted: var(--text-muted, #71849A);
-  --sem-line: var(--border, #D8E4F2);
-  --sem-soft: var(--surface-soft, #F7FAFE);
+  --sem-muted: var(--text-muted, #526A86);
+  --sem-line: var(--border, #DCE5F2);
+  --sem-soft: var(--surface-soft, #F3F6FC);
   display: grid;
   width: 100%;
   gap: 10px;

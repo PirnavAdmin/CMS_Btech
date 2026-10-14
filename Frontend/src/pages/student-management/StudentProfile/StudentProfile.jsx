@@ -2,7 +2,7 @@
 import * as external0 from "react";
 import * as external3 from "react-icons/fi";
 import { toastModule, academicYearUtilsModule, exportColumnsModule } from "../../../components/components.jsx";
-import { useToastStateModule, DirectoryEmptyStateModule, useCollegeStateModule, ExportMenuModule, InfoCardModule, StatusBadgeModule, DashboardLayoutModule, FilterPanelModule, CompactSummaryModule, AcademicContextModule } from "../../../components/components.jsx";
+import { useToastStateModule, DirectoryEmptyStateModule, useCollegeStateModule, ExportMenuModule, InfoCardModule, StatusBadgeModule, DashboardLayoutModule, FilterPanelModule, CompactSummaryModule, AcademicContextModule, feeStructureServiceModule } from "../../../components/components.jsx";
 import { apiEndpointsModule, collegeApiModule, studentCanonicalModelModule, newestFirstModule, exportProvenanceModule, approvedStudentProfilesModule } from "../../../API/apiendpoints.jsx";
 
 export const StudentProfileEditModule = (() => {
@@ -1675,12 +1675,16 @@ const { FiBookOpen } = external3;
 const { FiCheckCircle } = external3;
 const { FiChevronLeft } = external3;
 const { FiChevronRight } = external3;
+const { FiClock } = external3;
+const { FiCreditCard } = external3;
 const { FiEdit2 } = external3;
 const { FiFileText } = external3;
 const { FiFilter } = external3;
+const { FiPrinter } = external3;
 const { FiRefreshCw } = external3;
 const { FiSave } = external3;
 const { FiSearch } = external3;
+const { FiShield } = external3;
 const { FiUser } = external3;
 const { FiUsers } = external3;
 const { FiX } = external3;
@@ -1696,6 +1700,8 @@ const { studentParentApi } = apiEndpointsModule;
 const { studentPreviousEducationApi } = apiEndpointsModule;
 const { studentProfilesApi } = apiEndpointsModule;
 const { studentAdmissionApi } = apiEndpointsModule;
+const { feeCollectionApi } = apiEndpointsModule;
+const { readFeeWorkspace, feeLedger, feeMoney } = feeStructureServiceModule;
 const { createEmptyCanonicalStudent } = studentCanonicalModelModule;
 const { normalizeCanonicalStudent } = studentCanonicalModelModule;
 const { studentFullName } = studentCanonicalModelModule;
@@ -1958,7 +1964,7 @@ const hydrateProfile = async (source) => {
       // The profile summary can still be shown if admission-ID resolution fails.
     }
   }
-  const [admission, academic, education, parent, feeSummary, feeStructure, documents] =
+  const [admission, academic, education, parent, feeSummary, feeStructure, documents, feePending, feeHistory] =
     await Promise.allSettled([
       admissionId ? studentAdmissionApi.getById(admissionId) : Promise.resolve(null),
       admissionId ? studentAcademicDetailsApi.get(admissionId) : Promise.resolve(null),
@@ -1967,6 +1973,8 @@ const hydrateProfile = async (source) => {
       admissionId ? studentFeeApi.getSummary(admissionId) : Promise.resolve(null),
       admissionId ? studentFeeApi.getStructure(admissionId) : Promise.resolve(null),
       studentId ? studentDocumentApi.getAll(studentId) : Promise.resolve([]),
+      studentId ? feeCollectionApi.allPending({ studentId }).catch(() => []) : Promise.resolve([]),
+      studentId ? feeCollectionApi.allHistory({ studentId }).catch(() => []) : Promise.resolve([]),
     ]);
   const read = (result, fallback = null) =>
     result.status === "fulfilled" ? result.value : fallback;
@@ -1976,6 +1984,101 @@ const hydrateProfile = async (source) => {
   const rawSummary = read(feeSummary);
   const rawStructure = read(feeStructure);
   const resolvedFees = resolveFeeSummary(combinedSource, rawSummary, rawStructure);
+  const pendingItems = Array.isArray(read(feePending)) ? read(feePending) : [];
+  const historyItems = Array.isArray(read(feeHistory)) ? read(feeHistory) : [];
+
+  // Workspace assignment ledger fallback
+  let wsAssignment = null;
+  let wsLedger = null;
+  try {
+    const collegeId = combinedSource.admission?.collegeId || combinedSource.academic?.collegeId;
+    if (collegeId) {
+      const ws = readFeeWorkspace(collegeId);
+      if (ws && Array.isArray(ws.assignments)) {
+        wsAssignment = ws.assignments.find(a => String(a.student?.id) === String(studentId) || String(a.student?.studentId) === String(studentId));
+        if (wsAssignment) {
+          wsLedger = feeLedger(ws, wsAssignment);
+        }
+      }
+    }
+  } catch {}
+
+  let totalPayable = 0;
+  let paidAmount = 0;
+  let balanceAmount = 0;
+  let isOverdue = false;
+  let paymentStatus = 'Pending';
+  let installments = [];
+  let isConfigured = false;
+
+  if (pendingItems.length > 0) {
+    isConfigured = true;
+    totalPayable = pendingItems.reduce((sum, r) => sum + Number(r.payableAmount || 0), 0);
+    paidAmount = pendingItems.reduce((sum, r) => sum + Number(r.paidAmount || 0), 0);
+    balanceAmount = pendingItems.reduce((sum, r) => sum + Number(r.balanceAmount || 0), 0);
+    isOverdue = pendingItems.some(r => r.overdue || (r.dueDate && new Date(r.dueDate) < new Date() && Number(r.balanceAmount || 0) > 0));
+    paymentStatus = isOverdue
+      ? 'Overdue'
+      : balanceAmount <= 0 && totalPayable > 0
+      ? 'Paid'
+      : paidAmount > 0
+      ? 'Partially Paid'
+      : 'Pending';
+    installments = pendingItems.map((item, idx) => ({
+      id: item.studentFeeId || idx,
+      name: item.feePlanName || item.feeCategory || `Installment ${idx + 1}`,
+      dueDate: item.dueDate,
+      payable: Number(item.payableAmount || 0),
+      paid: Number(item.paidAmount || 0),
+      balance: Number(item.balanceAmount || 0),
+      status: item.overdue ? 'Overdue' : Number(item.balanceAmount || 0) === 0 ? 'Paid' : Number(item.paidAmount || 0) > 0 ? 'Partially Paid' : 'Pending',
+    }));
+  } else if (wsLedger) {
+    isConfigured = true;
+    totalPayable = Number(wsLedger.total || 0) / 100;
+    paidAmount = Number(wsLedger.paid || 0) / 100;
+    balanceAmount = Number(wsLedger.outstanding || 0) / 100;
+    isOverdue = Boolean(wsLedger.overdue);
+    paymentStatus = isOverdue
+      ? 'Overdue'
+      : balanceAmount <= 0 && totalPayable > 0
+      ? 'Paid'
+      : paidAmount > 0
+      ? 'Partially Paid'
+      : 'Pending';
+  } else {
+    const tuition = Number(resolvedFees.tuitionFee) > 0 ? Number(resolvedFees.tuitionFee) : Number(combinedSource.fees?.tuitionFee) > 0 ? Number(combinedSource.fees.tuitionFee) : 0;
+    const admissionFee = Number(resolvedFees.admissionFee) > 0 ? Number(resolvedFees.admissionFee) : Number(combinedSource.fees?.admissionFee) > 0 ? Number(combinedSource.fees.admissionFee) : 0;
+    const hostel = Number(resolvedFees.hostelFee || combinedSource.fees?.hostelFee || 0);
+    const transport = Number(resolvedFees.transportFee || combinedSource.fees?.transportFee || 0);
+    const scholarship = Number(resolvedFees.scholarshipAmount || combinedSource.fees?.scholarshipAmount || 0);
+    totalPayable = Number(resolvedFees.totalFee || combinedSource.fees?.totalFee || 0) || Math.max(0, tuition + admissionFee + hostel + transport - scholarship);
+    paidAmount = Number(combinedSource.fees?.paidAmount || 0);
+    if (historyItems.length > 0) {
+      paidAmount = historyItems.reduce((sum, h) => sum + Number(h.totalAmount || h.feeAmount || 0), 0);
+    }
+    if (historyItems.length > 0 && pendingItems.length === 0) {
+      totalPayable = Math.max(totalPayable, paidAmount);
+      balanceAmount = 0;
+      paymentStatus = 'Paid';
+      isConfigured = true;
+    } else {
+      balanceAmount = Math.max(0, totalPayable - paidAmount);
+      isConfigured = resolvedFees.configured || Boolean(combinedSource.fees?.configured) || totalPayable > 0 || (resolvedFees.components && resolvedFees.components.length > 0);
+      paymentStatus = isConfigured
+        ? (balanceAmount <= 0 && totalPayable > 0 ? 'Paid' : paidAmount > 0 ? 'Partially Paid' : 'Pending')
+        : 'Fee Not Assigned';
+    }
+  }
+
+  if (historyItems.length > 0 && pendingItems.length === 0) {
+    paidAmount = historyItems.reduce((sum, h) => sum + Number(h.totalAmount || h.feeAmount || 0), 0);
+    totalPayable = Math.max(totalPayable, paidAmount);
+    balanceAmount = 0;
+    paymentStatus = 'Paid';
+    isConfigured = true;
+  }
+
   return profileFromApi({
     ...combinedSource,
     id: studentId ?? admissionData.studentId ?? admissionData.id,
@@ -1990,11 +2093,20 @@ const hydrateProfile = async (source) => {
       ...(combinedSource.fees || {}),
       ...(rawStructure || {}),
       ...(rawSummary || {}),
-      tuitionFee: Number(resolvedFees.tuitionFee) > 0 ? resolvedFees.tuitionFee : Number(combinedSource.fees?.tuitionFee) > 0 ? combinedSource.fees.tuitionFee : 50000,
-      admissionFee: Number(resolvedFees.admissionFee) > 0 ? resolvedFees.admissionFee : Number(combinedSource.fees?.admissionFee) > 0 ? combinedSource.fees.admissionFee : 4000,
-      totalFee: Number(resolvedFees.totalFee) > 0 ? resolvedFees.totalFee : Number(combinedSource.fees?.totalFee) > 0 ? combinedSource.fees.totalFee : 54000,
+      configured: isConfigured,
+      planName: rawStructure?.name || rawStructure?.planName || rawSummary?.planName || resolvedFees.planName || (isConfigured ? 'Academic Fee Structure' : ''),
+      tuitionFee: Number(resolvedFees.tuitionFee || combinedSource.fees?.tuitionFee || 0),
+      admissionFee: Number(resolvedFees.admissionFee || combinedSource.fees?.admissionFee || 0),
+      totalFee: totalPayable,
+      payableAmount: totalPayable,
+      paidAmount,
+      balanceAmount,
+      balance: balanceAmount,
+      overdue: isOverdue,
       paymentPlan: combinedSource.fees?.paymentPlan || rawSummary?.paymentPlan || rawStructure?.paymentPlan || resolvedFees.paymentPlan || 'Full Payment',
-      paymentStatus: combinedSource.fees?.paymentStatus || rawSummary?.paymentStatus || rawStructure?.paymentStatus || resolvedFees.paymentStatus || 'Pending',
+      paymentStatus,
+      installments: installments.length > 0 ? installments : (rawStructure?.installments || resolvedFees.installments || []),
+      paymentHistory: historyItems,
     },
     documents: documents.status === "fulfilled" && documents.value
       ? mergeFilledProfileData(combinedSource.documents, documentsFromApi(documents.value))
@@ -2880,7 +2992,362 @@ function ProfileCard({ title, icon: Icon, rows = [] }) {
   );
 }
 
+function StudentProfileReceiptModal({ receipt, student, onClose }) {
+  const collegeName = student.admission?.college || student.academic?.collegeName || "Academic ERP Institute";
+  const amountVal = Number(receipt?.totalAmount || receipt?.feeAmount || 0);
+  const balanceVal = Number(receipt?.balanceAmount ?? student.fees?.balanceAmount ?? 0);
+  const receiptNum = receipt?.receiptNumber || `REC-${receipt?.receiptId || receipt?.paymentId || '001'}`;
+  const dateStr = receipt?.paymentDate || receipt?.issuedAt || new Date().toISOString().slice(0, 10);
+
+  const handlePrint = () => {
+    window.print();
+  };
+
+  return (
+    <div className="sa-overlay" onClick={onClose} role="dialog" aria-modal="true">
+      <div className="sa-dialog" style={{ width: 'min(100%, 650px)' }} onClick={e => e.stopPropagation()}>
+        <button type="button" className="sa-dialog-close" onClick={onClose} aria-label="Close">
+          <FiX />
+        </button>
+        <div style={{ display: 'flex', justifyContent: 'space-between', paddingBottom: '14px', borderBottom: '1px solid var(--border)' }}>
+          <div>
+            <h2 style={{ fontSize: '18px', margin: '0 0 4px' }}>{collegeName}</h2>
+            <p style={{ margin: 0, fontSize: '12px', color: 'var(--text-muted)' }}>Official Fee Receipt</p>
+          </div>
+          <div style={{ textAlign: 'right' }}>
+            <span className="fm-badge fm-badge--confirmed" style={{ fontSize: '11px', fontWeight: 800 }}>FEE RECEIPT</span>
+            <div style={{ fontSize: '13px', fontWeight: 800, marginTop: '4px' }}>#{receiptNum}</div>
+            <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Date: {dateStr}</div>
+          </div>
+        </div>
+
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '12px', margin: '16px 0', padding: '12px', background: 'var(--surface-soft)', borderRadius: '8px' }}>
+          <div>
+            <span style={{ fontSize: '10px', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 800 }}>Student Name</span>
+            <div style={{ fontWeight: 700, fontSize: '13px' }}>{receipt?.studentName || studentFullName(student)}</div>
+          </div>
+          <div>
+            <span style={{ fontSize: '10px', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 800 }}>Admission No.</span>
+            <div style={{ fontWeight: 700, fontSize: '13px' }}>{receipt?.studentCode || student.application?.admissionNumber || student.roll || '—'}</div>
+          </div>
+          <div>
+            <span style={{ fontSize: '10px', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 800 }}>Payment Method</span>
+            <div style={{ fontWeight: 700, fontSize: '13px' }}>{receipt?.paymentMode || 'CASH'}</div>
+          </div>
+          <div>
+            <span style={{ fontSize: '10px', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 800 }}>Transaction Ref</span>
+            <div style={{ fontWeight: 700, fontSize: '13px' }}>{receipt?.transactionReference || '—'}</div>
+          </div>
+        </div>
+
+        <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: '16px', fontSize: '13px' }}>
+          <thead>
+            <tr style={{ background: 'var(--surface-soft)', borderBottom: '1px solid var(--border)' }}>
+              <th style={{ textAlign: 'left', padding: '8px 10px' }}>Description</th>
+              <th style={{ textAlign: 'right', padding: '8px 10px' }}>Amount</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr style={{ borderBottom: '1px solid var(--border)' }}>
+              <td style={{ padding: '10px' }}>Fee Payment ({receipt?.feeCategory || student.fees?.planName || 'Academic Fee'})</td>
+              <td style={{ textAlign: 'right', padding: '10px', fontWeight: 700 }}>{formatMoney(amountVal)}</td>
+            </tr>
+            <tr style={{ background: 'var(--surface-soft)', fontWeight: 800 }}>
+              <td style={{ padding: '10px' }}>Total Amount Paid</td>
+              <td style={{ textAlign: 'right', padding: '10px', color: '#059669' }}>{formatMoney(amountVal)}</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '12px', color: 'var(--text-muted)', marginBottom: '16px' }}>
+          <span>Outstanding Balance: <strong>{formatMoney(balanceVal)}</strong></span>
+          <span>Status: <strong style={{ color: '#059669' }}>Payment Confirmed</strong></span>
+        </div>
+
+        <footer style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', borderTop: '1px solid var(--border)', paddingTop: '14px' }}>
+          <button type="button" className="cm-button secondary erp-btn erp-btn--secondary" onClick={onClose}>
+            Close
+          </button>
+          <button type="button" className="cm-button erp-btn erp-btn--primary" onClick={handlePrint}>
+            <FiPrinter /> Print Receipt
+          </button>
+        </footer>
+      </div>
+    </div>
+  );
+}
+
+function StudentProfileFeesView({ student, onOpenReceipt }) {
+  const fees = student.fees || {};
+  const isConfigured = Boolean(fees.configured || Number(fees.totalFee || 0) > 0 || (fees.components && fees.components.length > 0));
+  const totalFee = Number(fees.totalFee || 0);
+  const paidAmount = Number(fees.paidAmount || (fees.paymentStatus === 'Paid' ? totalFee : 0));
+  const balance = Math.max(0, totalFee - paidAmount);
+  const isOverdue = fees.paymentStatus === 'Overdue';
+  const statusLabel = isOverdue ? 'Overdue' : balance === 0 && totalFee > 0 ? 'Paid' : paidAmount > 0 ? 'Partially Paid' : 'Pending';
+  const statusSlug = statusLabel.toLowerCase().replace(/\s+/g, '-');
+  const payments = Array.isArray(fees.paymentHistory) ? fees.paymentHistory : [];
+  const installments = Array.isArray(fees.installments) ? fees.installments : [];
+
+  return (
+    <div className="sp-fees-container" style={{ display: 'flex', flexDirection: 'column', gap: '16px', padding: '16px 0' }}>
+      {/* 4 Colorful ERP KPI cards */}
+      <div className="fm-summary-cards-grid">
+        <div className="fm-summary-card fm-summary-card--blue">
+          <div className="fm-summary-card__header">
+            <span className="fm-summary-card__label">Total Fee Demand</span>
+            <span className="fm-summary-card__icon-box"><FiCreditCard /></span>
+          </div>
+          <strong className="fm-summary-card__value">{formatMoney(totalFee)}</strong>
+          <span className="fm-summary-card__meta">{fees.planName || 'Applicable Fee Plan'}</span>
+        </div>
+
+        <div className="fm-summary-card fm-summary-card--green">
+          <div className="fm-summary-card__header">
+            <span className="fm-summary-card__label">Total Collected</span>
+            <span className="fm-summary-card__icon-box"><FiCheckCircle /></span>
+          </div>
+          <strong className="fm-summary-card__value">{formatMoney(paidAmount)}</strong>
+          <span className="fm-summary-card__meta">Confirmed collections</span>
+        </div>
+
+        <div className="fm-summary-card fm-summary-card--amber">
+          <div className="fm-summary-card__header">
+            <span className="fm-summary-card__label">Outstanding Balance</span>
+            <span className="fm-summary-card__icon-box"><FiClock /></span>
+          </div>
+          <strong className="fm-summary-card__value">{formatMoney(balance)}</strong>
+          <span className="fm-summary-card__meta">Remaining student balance</span>
+        </div>
+
+        <div className={`fm-summary-card ${isOverdue ? 'fm-summary-card--red' : 'fm-summary-card--blue'}`}>
+          <div className="fm-summary-card__header">
+            <span className="fm-summary-card__label">Payment Status</span>
+            <span className="fm-summary-card__icon-box"><FiShield /></span>
+          </div>
+          <strong className="fm-summary-card__value" style={{ fontSize: '18px' }}>
+            <span className={`fm-badge fm-badge--${statusSlug}`}>{statusLabel}</span>
+          </strong>
+          <span className="fm-summary-card__meta">Payment plan: {fees.paymentPlan || 'Full Payment'}</span>
+        </div>
+      </div>
+
+      {!isConfigured ? (
+        <div className="sa-fee-unconfigured-card">
+          <div className="sa-fee-unconfigured-icon">
+            <FiAlertCircle />
+          </div>
+          <div className="sa-fee-unconfigured-body">
+            <h3>Fee Structure Not Configured</h3>
+            <p>
+              No active fee plan is configured for {studentFullName(student)} ({formatDisplay(student.academic?.course)} - {formatDisplay(student.academic?.branch)}).
+            </p>
+            <div className="sa-fee-unconfigured-hint">
+              Configure and publish academic fee plans in <strong>Fee Management &gt; Fee Plans</strong> to assign fee heads and installment schedules.
+            </div>
+          </div>
+        </div>
+      ) : (
+        <>
+          {/* Fee Structure Breakdown Card */}
+          <section className="sp-panel" style={{ padding: '16px' }}>
+            <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
+              <div>
+                <h3 style={{ margin: 0, fontSize: '15px' }}>Fee Plan & Components</h3>
+                <p style={{ margin: '2px 0 0', fontSize: '12px', color: 'var(--text-muted)' }}>
+                  Breakdown of all applicable fee heads for this student
+                </p>
+              </div>
+              <span className="fm-badge fm-badge--published" style={{ fontSize: '11px', fontWeight: 700 }}>
+                {fees.planName || 'Academic Fee Structure'}
+              </span>
+            </header>
+            <div className="fm-table-wrap">
+              <table className="fm-table" style={{ width: '100%', fontSize: '12px' }}>
+                <thead>
+                  <tr>
+                    <th>Fee Component / Head</th>
+                    <th>Category</th>
+                    <th style={{ textAlign: 'right' }}>Amount</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {Number(fees.tuitionFee) > 0 && (
+                    <tr>
+                      <td><strong>Tuition Fee</strong></td>
+                      <td>Academic</td>
+                      <td style={{ textAlign: 'right' }}>{formatMoney(fees.tuitionFee)}</td>
+                    </tr>
+                  )}
+                  {Number(fees.admissionFee) > 0 && (
+                    <tr>
+                      <td><strong>Admission Fee</strong></td>
+                      <td>One-time</td>
+                      <td style={{ textAlign: 'right' }}>{formatMoney(fees.admissionFee)}</td>
+                    </tr>
+                  )}
+                  {(fees.components || [])
+                    .filter(c => {
+                      const n = String(c.name || '').toLowerCase();
+                      return !n.includes('tuition') && !n.includes('admission') && Number(c.amount || 0) > 0;
+                    })
+                    .map((c, i) => (
+                      <tr key={c.id || i}>
+                        <td><strong>{c.name || `Fee Component ${i + 1}`}</strong></td>
+                        <td>{c.category || 'Academic'}</td>
+                        <td style={{ textAlign: 'right' }}>{formatMoney(c.amount)}</td>
+                      </tr>
+                    ))}
+                  {student.admission?.hostel === 'Yes' && Number(fees.hostelFee) > 0 && (
+                    <tr>
+                      <td><strong>Hostel Fee ({student.admission?.hostelRoomType || 'Standard'})</strong></td>
+                      <td>Facility</td>
+                      <td style={{ textAlign: 'right' }}>{formatMoney(fees.hostelFee)}</td>
+                    </tr>
+                  )}
+                  {student.admission?.transport === 'Yes' && Number(fees.transportFee) > 0 && (
+                    <tr>
+                      <td><strong>Transportation Fee ({student.admission?.transportRoute || 'Campus'})</strong></td>
+                      <td>Facility</td>
+                      <td style={{ textAlign: 'right' }}>{formatMoney(fees.transportFee)}</td>
+                    </tr>
+                  )}
+                  {Number(fees.scholarshipAmount) > 0 && (
+                    <tr>
+                      <td><strong style={{ color: 'var(--success)' }}>Scholarship / Concession</strong></td>
+                      <td>Deduction</td>
+                      <td style={{ textAlign: 'right', color: 'var(--success)' }}>− {formatMoney(fees.scholarshipAmount)}</td>
+                    </tr>
+                  )}
+                </tbody>
+                <tfoot>
+                  <tr style={{ borderTop: '2px solid var(--border)', fontWeight: 800, background: 'var(--surface-soft)' }}>
+                    <td colSpan={2}>Net Payable Demand</td>
+                    <td style={{ textAlign: 'right', color: 'var(--brand)', fontSize: '13px' }}>{formatMoney(totalFee)}</td>
+                  </tr>
+                </tfoot>
+              </table>
+            </div>
+          </section>
+
+          {/* Scheduled Installments (if any) */}
+          {installments.length > 0 && (
+            <section className="sp-panel" style={{ padding: '16px' }}>
+              <header style={{ marginBottom: '14px' }}>
+                <h3 style={{ margin: 0, fontSize: '15px' }}>Installment Schedule</h3>
+                <p style={{ margin: '2px 0 0', fontSize: '12px', color: 'var(--text-muted)' }}>
+                  Tranche due dates and collection progress
+                </p>
+              </header>
+              <div className="fm-table-wrap">
+                <table className="fm-table" style={{ width: '100%', fontSize: '12px' }}>
+                  <thead>
+                    <tr>
+                      <th>Installment</th>
+                      <th>Due Date</th>
+                      <th style={{ textAlign: 'right' }}>Payable</th>
+                      <th style={{ textAlign: 'right' }}>Paid</th>
+                      <th style={{ textAlign: 'right' }}>Balance</th>
+                      <th>Status</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {installments.map((inst, i) => (
+                      <tr key={inst.id || i}>
+                        <td><strong>{inst.name || `Installment ${i + 1}`}</strong></td>
+                        <td>{inst.dueDate || '—'}</td>
+                        <td style={{ textAlign: 'right' }}>{formatMoney(inst.payable || inst.amount)}</td>
+                        <td style={{ textAlign: 'right', color: '#059669' }}>{formatMoney(inst.paid || 0)}</td>
+                        <td style={{ textAlign: 'right', fontWeight: 700 }}>{formatMoney(inst.balance ?? inst.payable ?? inst.amount)}</td>
+                        <td>
+                          <span className={`fm-badge fm-badge--${String(inst.status || 'pending').toLowerCase().replace(/\s+/g, '-')}`}>
+                            {inst.status || 'Pending'}
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </section>
+          )}
+
+          {/* Payment & Receipt History */}
+          <section className="sp-panel" style={{ padding: '16px' }}>
+            <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
+              <div>
+                <h3 style={{ margin: 0, fontSize: '15px' }}>Payment & Receipt History</h3>
+                <p style={{ margin: '2px 0 0', fontSize: '12px', color: 'var(--text-muted)' }}>
+                  Confirmed transactions and official receipts
+                </p>
+              </div>
+              <span className="fm-count-chip">{payments.length} Payments</span>
+            </header>
+            {payments.length > 0 ? (
+              <div className="fm-table-wrap">
+                <table className="fm-table" style={{ width: '100%', fontSize: '12px' }}>
+                  <thead>
+                    <tr>
+                      <th>Receipt #</th>
+                      <th>Date</th>
+                      <th>Payment Mode</th>
+                      <th>Transaction Ref</th>
+                      <th style={{ textAlign: 'right' }}>Amount Paid</th>
+                      <th>Status</th>
+                      <th style={{ textAlign: 'center' }}>Receipt</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {payments.map((p, i) => (
+                      <tr key={p.paymentId || p.receiptId || i}>
+                        <td>
+                          <button
+                            type="button"
+                            className="fm-text-link"
+                            style={{ background: 'transparent', border: 0, color: 'var(--brand)', fontWeight: 700, cursor: 'pointer', padding: 0 }}
+                            onClick={() => onOpenReceipt(p)}
+                          >
+                            {p.receiptNumber || `REC-${p.receiptId || p.paymentId || i + 1}`}
+                          </button>
+                        </td>
+                        <td>{p.paymentDate || p.date || p.issuedAt || '—'}</td>
+                        <td><span style={{ fontWeight: 600 }}>{p.paymentMode || p.mode || 'CASH'}</span></td>
+                        <td>{p.transactionReference || p.reference || '—'}</td>
+                        <td style={{ textAlign: 'right', color: '#059669', fontWeight: 700 }}>
+                          {formatMoney(p.totalAmount || p.feeAmount || p.amount)}
+                        </td>
+                        <td>
+                          <span className="fm-badge fm-badge--confirmed">Confirmed</span>
+                        </td>
+                        <td style={{ textAlign: 'center' }}>
+                          <button
+                            type="button"
+                            className="cm-button secondary erp-btn erp-btn--secondary"
+                            style={{ minHeight: '28px', padding: '0 8px', fontSize: '11px' }}
+                            onClick={() => onOpenReceipt(p)}
+                          >
+                            <FiPrinter /> View Receipt
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ) : (
+              <div style={{ padding: '24px', textAlign: 'center', color: 'var(--text-muted)', fontSize: '13px' }}>
+                No payment transactions recorded yet for this student.
+              </div>
+            )}
+          </section>
+        </>
+      )}
+    </div>
+  );
+}
+
 function Profile({ student, tab, setTab, back, edit, canEdit }) {
+  const [receiptModal, setReceiptModal] = useState(null);
   const a = student.academic || {},
     app = student.application || {},
     p = student.personal || {},
@@ -3053,14 +3520,14 @@ function Profile({ student, tab, setTab, back, edit, canEdit }) {
         title: "Fee Structure & Summary",
         icon: FiFileText,
         rows: [
-          ["Tuition Fee (per year)", formatMoney(fees.tuitionFee || 50000)],
-          ["Admission Fee (one-time)", formatMoney(fees.admissionFee || 4000)],
+          ["Tuition Fee (per year)", formatMoney(fees.tuitionFee || 0)],
+          ["Admission Fee (one-time)", formatMoney(fees.admissionFee || 0)],
           ["Scholarship Deduction", Number(fees.scholarshipAmount) > 0 ? `- ${formatMoney(fees.scholarshipAmount)}` : "None"],
           ["Hostel Room Type", admission.hostel === "Yes" ? (admission.hostelRoomType || "Standard Room") : "Not selected"],
           ["Hostel Fee (per year)", admission.hostel === "Yes" ? formatMoney(fees.hostelFee) : "Not selected"],
           ["Transportation Fee (per year)", admission.transport === "Yes" ? formatMoney(fees.transportFee) : "Not selected"],
-          ["First-Year Total", formatMoney(fees.totalFee || 54000)],
-          ["Estimated Entire 4-Year Total", formatMoney((Number(fees.tuitionFee || 50000) + Number(fees.hostelFee || 0) + Number(fees.transportFee || 0)) * 4 + Number(fees.admissionFee || 4000))],
+          ["First-Year Total", formatMoney(fees.totalFee || 0)],
+          ["Estimated Entire 4-Year Total", formatMoney((Number(fees.tuitionFee || 0) + Number(fees.hostelFee || 0) + Number(fees.transportFee || 0)) * 4 + Number(fees.admissionFee || 0))],
           ["Payment Preference", fees.paymentPlan || "Full Payment"],
           ["Payment Status", fees.paymentStatus || "Pending"],
           ...(fees.components || [])
@@ -3190,6 +3657,8 @@ function Profile({ student, tab, setTab, back, edit, canEdit }) {
             ))}
           </div>
         </section>
+      ) : tab === "fees" ? (
+        <StudentProfileFeesView student={student} onOpenReceipt={setReceiptModal} />
       ) : sectionsByTab[tab] ? (
         <div className="sp-profile-cards-container">
           {sectionsByTab[tab].map((section, idx) => (
@@ -3207,6 +3676,14 @@ function Profile({ student, tab, setTab, back, edit, canEdit }) {
         </Empty>
       )}
       </div>
+
+      {receiptModal && (
+        <StudentProfileReceiptModal
+          receipt={receiptModal}
+          student={student}
+          onClose={() => setReceiptModal(null)}
+        />
+      )}
     </div>
   );
 }

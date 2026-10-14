@@ -1,4 +1,4 @@
-import { gradeResultModelModule as mergeDependency0 } from "../../components/components.jsx";
+import { dashboardDataModule as mergeDependency0 } from "../../components/components.jsx";
 // Pages and helpers in this module retain their own isolated scopes.
 import * as external0 from "react";
 import * as external1 from "react-router-dom";
@@ -190,7 +190,7 @@ import './Dashboard.css'
           (yrId && String(yrId) === String(selectedAcademicYearId)) ||
           (selectedAcademicYear?.name &&
             yrName &&
-            yrName.trim().toLowerCase() === selectedAcademicYear.name.trim().toLowerCase())
+            String(yrName).trim().toLowerCase() === String(selectedAcademicYear.name).trim().toLowerCase())
       }
       return colMatch && yrMatch
     })
@@ -203,7 +203,7 @@ import './Dashboard.css'
     const matchesCollege = !selectedCollegeId || !collegeId || String(collegeId) === String(selectedCollegeId)
     const matchesYear = !selectedAcademicYearId || (!yearId && !yearName) ||
       (yearId && String(yearId) === String(selectedAcademicYearId)) ||
-      (selectedAcademicYear?.name && yearName && yearName.trim().toLowerCase() === selectedAcademicYear.name.trim().toLowerCase())
+      (selectedAcademicYear?.name && yearName && String(yearName).trim().toLowerCase() === String(selectedAcademicYear.name).trim().toLowerCase())
     return matchesCollege && matchesYear
   }), [students, selectedCollegeId, selectedAcademicYearId, selectedAcademicYear])
 
@@ -266,7 +266,7 @@ import './Dashboard.css'
           'CSE'
         // Match or find closest branch code
         const matched = Object.keys(branchMap).find(
-          (k) => bName.toLowerCase().includes(k.toLowerCase()) || k.toLowerCase().includes(bName.toLowerCase())
+          (k) => String(bName).toLowerCase().includes(k.toLowerCase()) || k.toLowerCase().includes(String(bName).toLowerCase())
         ) || bName
         branchMap[matched] = (branchMap[matched] || 0) + 1
       })
@@ -395,11 +395,11 @@ import './Dashboard.css'
     // Month view uses actual admission dates in a rolling 12-month window.
     // Distributing undated records across months made the chart look flat and
     // implied a monthly history that was not present in the source records.
-    const trend = buildTrend(scopedAdmissions, 'Month')
+    const trend = typeof buildTrend === 'function' ? buildTrend(scopedAdmissions, 'Month') : { buckets: [], undated: 0 }
     return {
-      labels: trend.buckets.map((bucket) => bucket.label),
-      points: trend.buckets.map((bucket) => bucket.value),
-      subtext: `${approvedAdmissions.length} Approved | ${pendingAdmissions.length} In Review${trend.undated ? ` | ${trend.undated} without dates` : ''}`,
+      labels: (trend?.buckets || []).map((bucket) => bucket.label),
+      points: (trend?.buckets || []).map((bucket) => bucket.value),
+      subtext: `${approvedAdmissions.length} Approved | ${pendingAdmissions.length} In Review${trend?.undated ? ` | ${trend.undated} without dates` : ''}`,
     }
   }, [inflowTimeframe, scopedAdmissions, approvedAdmissions.length, pendingAdmissions.length])
 
@@ -546,11 +546,12 @@ import './Dashboard.css'
         ]
 
     if (!searchQuery) return list.slice(0, 5)
+    const q = String(searchQuery || '').toLowerCase();
     return list.filter(
       (item) =>
-        item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        item.branch.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        item.appNo.toLowerCase().includes(searchQuery.toLowerCase())
+        String(item.name || '').toLowerCase().includes(q) ||
+        String(item.branch || '').toLowerCase().includes(q) ||
+        String(item.appNo || '').toLowerCase().includes(q)
     ).slice(0, 5)
   }, [scopedAdmissions, searchQuery])
 
@@ -582,19 +583,20 @@ import './Dashboard.css'
         ]
 
     if (!searchQuery) return list.slice(0, 4)
+    const q = String(searchQuery || '').toLowerCase();
     return list.filter(
       (d) =>
-        d.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        d.code.toLowerCase().includes(searchQuery.toLowerCase())
+        String(d.name || '').toLowerCase().includes(q) ||
+        String(d.code || '').toLowerCase().includes(q)
     ).slice(0, 4)
   }, [departments, courses, branches, searchQuery])
 
-  const yearName = selectedAcademicYear?.academicYearName || selectedAcademicYear?.name || 'Active Session 2026-27'
+  const yearName = String(selectedAcademicYear?.academicYearName || selectedAcademicYear?.name || 'Active Session 2026-27')
   const roleName = role ? `${role.charAt(0).toUpperCase()}${role.slice(1)}` : 'Administrator'
 
   // End-to-End Connected Academic Setup Workflow Pipeline
   const setupFlowSteps = [
-    { title: 'Academic Year', count: selectedAcademicYear ? `${yearName.split(' ')[0]}` : 'Configure', route: '/academic-year-management', icon: FiCalendar, isConfigured: Boolean(selectedAcademicYear), color: '#1769C2' },
+    { title: 'Academic Year', count: selectedAcademicYear ? `${String(yearName).split(' ')[0]}` : 'Configure', route: '/academic-year-management', icon: FiCalendar, isConfigured: Boolean(selectedAcademicYear), color: '#1769C2' },
     { title: 'Courses', count: `${scopedCourses.length} Programs`, route: '/courses', icon: FiLayers, isConfigured: scopedCourses.length > 0, color: '#0D9488' },
     { title: 'Departments', count: `${departments.length} Units`, route: '/department-management', icon: FiGrid, isConfigured: departments.length > 0, color: '#0284C7' },
     { title: 'Branches', count: `${scopedBranches.length} Streams`, route: '/branches', icon: FiBriefcase, isConfigured: scopedBranches.length > 0, color: '#F59E0B' },

@@ -16,11 +16,11 @@
     max-block-size: 240px;
     overflow-y: auto;
     overscroll-behavior: contain;
-    border: 1px solid var(--border, #cbd5e1);
+    border: 1px solid var(--border, #dce5f2);
     border-radius: 8px;
-    background: var(--surface, #fff);
-    color: var(--text-primary, #0f172a);
-    box-shadow: 0 12px 30px rgb(15 23 42 / 12%);
+    background: var(--surface, #ffffff);
+    color: var(--text-primary, #102a4c);
+    box-shadow: 0 12px 30px rgb(16 42 76 / 10%);
   }
 
   select option {
@@ -29,7 +29,7 @@
 
   select option:checked,
   select option:hover {
-    background: var(--brand-soft, #eaf3ff);
+    background: var(--brand-soft, #eff6ff);
   }
 
   /* Customizable selects need explicit centering; native text alignment

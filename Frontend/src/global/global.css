@@ -4568,13 +4568,66 @@ label > b,
   border-color: var(--border) !important;
 }
 :root:not([data-theme="dark"]) #root .page-content :is(
-  .erp-summary, .compact-summary, .department-heading-summary, .course-header-summary,
-  .semester-stat-card, .section-stat-card, .department-heading-stat, .ay .kpis article,
-  .module-stat, .stat-card, .kpi-card
+  .erp-summary, .compact-summary, .department-heading-summary, .course-header-summary
 ) {
-  background: rgba(255, 255, 255, .62) !important;
-  border-color: var(--border) !important;
+  background: var(--surface, #FFFFFF) !important;
+  border: 1px solid var(--border, #DCE5F2) !important;
+  border-radius: 10px !important;
   box-shadow: var(--shadow-sm) !important;
+}
+:root:not([data-theme="dark"]) #root .page-content :is(
+  .semester-stat-card, .section-stat-card, .department-heading-stat, .ay .kpis article,
+  .module-stat, .stat-card, .kpi-card, .dashboard-kpi, .summary-card
+) {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 8px;
+  min-height: 105px;
+  padding: 14px 16px !important;
+  border-radius: var(--radius-md, 12px) !important;
+  background: var(--surface, #FFFFFF) !important;
+  border: 1px solid var(--border, #DCE5F2) !important;
+  box-shadow: 0 2px 8px rgba(16, 42, 76, 0.04) !important;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+:root:not([data-theme="dark"]) #root .page-content :is(.semester-stat-card, .section-stat-card, .department-heading-stat, .ay .kpis article, .module-stat, .stat-card, .kpi-card, .dashboard-kpi, .summary-card):hover {
+  box-shadow: 0 4px 14px rgba(16, 42, 76, 0.08) !important;
+}
+:root:not([data-theme="dark"]) #root .page-content :is(.semester-stats, .section-stats, .module-stats, .dashboard-kpis, .ay .kpis, .summary-cards-grid, .kpi-grid, .stats-grid) {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px;
+  width: 100%;
+}
+:root:not([data-theme="dark"]) #root .page-content :is(.semester-stats, .section-stats, .module-stats, .dashboard-kpis, .ay .kpis, .summary-cards-grid, .kpi-grid, .stats-grid) > :nth-child(4n + 1) {
+  border-color: #bfdbfe !important;
+  background: linear-gradient(135deg, #eff6ff 0%, var(--surface, #ffffff) 65%) !important;
+}
+:root:not([data-theme="dark"]) #root .page-content :is(.semester-stats, .section-stats, .module-stats, .dashboard-kpis, .ay .kpis, .summary-cards-grid, .kpi-grid, .stats-grid) > :nth-child(4n + 1) strong {
+  color: #1d4ed8 !important;
+}
+:root:not([data-theme="dark"]) #root .page-content :is(.semester-stats, .section-stats, .module-stats, .dashboard-kpis, .ay .kpis, .summary-cards-grid, .kpi-grid, .stats-grid) > :nth-child(4n + 2) {
+  border-color: #a7f3d0 !important;
+  background: linear-gradient(135deg, #ecfdf5 0%, var(--surface, #ffffff) 65%) !important;
+}
+:root:not([data-theme="dark"]) #root .page-content :is(.semester-stats, .section-stats, .module-stats, .dashboard-kpis, .ay .kpis, .summary-cards-grid, .kpi-grid, .stats-grid) > :nth-child(4n + 2) strong {
+  color: #047857 !important;
+}
+:root:not([data-theme="dark"]) #root .page-content :is(.semester-stats, .section-stats, .module-stats, .dashboard-kpis, .ay .kpis, .summary-cards-grid, .kpi-grid, .stats-grid) > :nth-child(4n + 3) {
+  border-color: #fde68a !important;
+  background: linear-gradient(135deg, #fffbeb 0%, var(--surface, #ffffff) 65%) !important;
+}
+:root:not([data-theme="dark"]) #root .page-content :is(.semester-stats, .section-stats, .module-stats, .dashboard-kpis, .ay .kpis, .summary-cards-grid, .kpi-grid, .stats-grid) > :nth-child(4n + 3) strong {
+  color: #b45309 !important;
+}
+:root:not([data-theme="dark"]) #root .page-content :is(.semester-stats, .section-stats, .module-stats, .dashboard-kpis, .ay .kpis, .summary-cards-grid, .kpi-grid, .stats-grid) > :nth-child(4n + 4) {
+  border-color: #fecaca !important;
+  background: linear-gradient(135deg, #fef2f2 0%, var(--surface, #ffffff) 65%) !important;
+}
+:root:not([data-theme="dark"]) #root .page-content :is(.semester-stats, .section-stats, .module-stats, .dashboard-kpis, .ay .kpis, .summary-cards-grid, .kpi-grid, .stats-grid) > :nth-child(4n + 4) strong {
+  color: #b91c1c !important;
 }
 :root:not([data-theme="dark"]) #root .page-content :is(
   .filter-bar, .filter-panel, .filter-disclosure, .cm-toolbar, .cm-filters,
@@ -4918,39 +4971,42 @@ body .page-content .semester-search > input {
 /* Source styles: styles/erp-theme.css */
 :root {
   color-scheme: light;
-  --app-bg: #F3F7FC;
+  --app-bg: #F3F6FC;
   --surface: #FFFFFF;
-  --surface-soft: #F7FAFE;
+  --surface-soft: #F3F6FC;
   --surface-raised: #FFFFFF;
-  --surface-alt: #EEF5FD;
+  --surface-alt: #EFF6FF;
   --text-primary: #102A4C;
   --text-secondary: #526A86;
-  --text-muted: #71849A;
-  --border: #D8E4F2;
-  --border-strong: #CFDEEF;
-  --brand: #1769C2;
-  --brand-hover: #125AA8;
-  --brand-soft: #EAF3FF;
-  --brand-dark: #0F172A;
-  --brand-dark-hover: #020617;
+  --text-muted: #526A86;
+  --border: #DCE5F2;
+  --border-strong: #CBD8E3;
+  --brand: #2563EB;
+  --brand-hover: #1D4ED8;
+  --brand-soft: #EFF6FF;
+  --brand-dark: #102A4C;
+  --brand-dark-hover: #071D38;
+  --brand-navy: #174C88;
+  --teal: #0D9488;
+  --lavender: #8B7AD8;
   --success: #10B981;
   --warning: #F59E0B;
   --danger: #EF4444;
-  --info: #3B82F6;
-  --shadow-sm: 0 1px 3px rgba(15, 23, 42, 0.05);
-  --shadow-md: 0 4px 16px rgba(15, 23, 42, 0.08);
+  --info: #2563EB;
+  --shadow-sm: 0 2px 8px rgba(16, 42, 76, 0.04);
+  --shadow-md: 0 4px 16px rgba(16, 42, 76, 0.08);
   --radius-sm: 8px;
   --radius-md: 12px;
-  --radius-lg: 16px;
+  --radius-lg: 14px;
   --scrollbar-track: transparent;
   --scrollbar-thumb: #CBD5E1;
   --scrollbar-thumb-hover: #94A3B8;
-  --page-gradient: linear-gradient(135deg, #F7FAFE 0%, #F1F6FC 55%, #EDF4FC 100%);
+  --page-gradient: linear-gradient(135deg, #F3F6FC 0%, #EFF6FF 55%, #F3F6FC 100%);
   --table-bg: #FFFFFF;
   --table-row: #FFFFFF;
-  --table-row-alt: #F7FAFE;
-  --table-row-hover: #EDF5FF;
-  --table-head: linear-gradient(90deg, #195A99 0%, #164D87 50%, #123F73 100%);
+  --table-row-alt: #FFFFFF;
+  --table-row-hover: #F3F6FC;
+  --table-head: #174C88;
   --sidebar-background: linear-gradient(180deg, #174F88 0%, #123F73 45%, #0F3A6A 100%);
 }
 html,body,#root{max-width:100%;overflow-x:hidden}
@@ -5606,8 +5662,10 @@ html,body,#root{max-width:100%;overflow-x:hidden}
 .dashboard-layout.sidebar-collapsed .dashboard-header{left:72px}
 @media(max-width:900px){.sidebar.is-collapsed{width:248px;padding-inline:12px}.sidebar.is-collapsed .sidebar-brand{display:flex;justify-items:initial;margin-inline:2px;padding-inline:4px}.sidebar.is-collapsed .sidebar-brand__copy,.sidebar.is-collapsed .sidebar-section-label,.sidebar.is-collapsed nav>a span{display:initial}.sidebar.is-collapsed nav>a{justify-content:initial;padding-inline:10px}.sidebar.is-collapsed .sidebar-collapse{display:none}.dashboard-layout.sidebar-collapsed>main{width:100%;max-width:100vw;margin-left:0}.dashboard-layout.sidebar-collapsed .dashboard-header{inset-inline:0}}
 
-/* Management directories: align every value directly beneath its column heading. */
-.college-management .cm-table :is(th,td),.ay table :is(th,td),.course-management :is(.course-advanced-table,.cm-table) :is(th,td),.branch-management .branch-table :is(th,td),.department-management .department-table-wrap :is(th,td),.semester-management .semester-table :is(th,td),.section-management .section-table :is(th,td){text-align:center}
+/* Management directories: Fee-standard semantic table alignment */
+.college-management .cm-table :is(th,td),.ay table :is(th,td),.course-management :is(.course-advanced-table,.cm-table) :is(th,td),.branch-management .branch-table :is(th,td),.department-management .department-table-wrap :is(th,td),.semester-management .semester-table :is(th,td),.section-management .section-table :is(th,td){text-align:left;vertical-align:middle}
+:is(.cm-table,.course-advanced-table,.branch-table,.department-table-wrap table,.semester-table,.section-table,.ay table) :is(.text-right,.align-right,.numeric-col,th[align="right"],td[align="right"]){text-align:right!important;font-variant-numeric:tabular-nums}
+:is(.cm-table,.course-advanced-table,.branch-table,.department-table-wrap table,.semester-table,.section-table,.ay table) :is(.text-center,.align-center,.status-col,.actions-col,th[align="center"],td[align="center"]){text-align:center!important}
 .course-management :is(.course-actions,.cm-row-actions),.branch-management .branch-actions,.department-management .row-actions,.semester-management .semester-row-actions,.section-management .section-actions{justify-content:center}
 .section-management .section-breadcrumb,.semester-management .semester-breadcrumb{display:none}
 
@@ -5615,8 +5673,8 @@ html,body,#root{max-width:100%;overflow-x:hidden}
    shares one visual language without changing its data flow or interactions. */
 :root{
   --primary:var(--brand);--primary-hover:var(--brand-hover);--primary-soft:var(--brand-soft);
-  --navy:#0F172A;--background:var(--app-bg);--card:var(--surface);
-  --control-height:40px;--button-height:38px;--page-gap:20px;--card-padding:18px;
+  --navy:#174C88;--background:var(--app-bg);--card:var(--surface);
+  --control-height:36px;--button-height:36px;--page-gap:16px;--card-padding:16px;
   --focus-ring:0 0 0 3px color-mix(in srgb,var(--brand) 16%,transparent);
 }
 .app-breadcrumb a{color:var(--text-muted);text-decoration:none}.app-breadcrumb a:hover{color:var(--brand)}.app-breadcrumb span:not([aria-hidden]){color:var(--text-muted)}.app-breadcrumb strong{color:var(--text-primary)}
@@ -5627,31 +5685,31 @@ html,body,#root{max-width:100%;overflow-x:hidden}
 .page-content :is(.erp-page-heading,.module-heading,.fs-header,.p-header,.sp-heading,.profile-heading,.management-page__heading,.cm-header,.semester-page-header,.section-page-header,.ay>header) h1{margin:2px 0 5px;color:var(--text-primary);font-size:clamp(1.65rem,2.4vw,2rem);font-weight:800;line-height:1.18;letter-spacing:-.025em}
 .page-content :is(.erp-page-heading,.module-heading,.fs-header,.p-header,.sp-heading,.profile-heading,.management-page__heading,.cm-header,.semester-page-header,.section-page-header,.ay>header) p{margin:0;color:var(--text-muted);font-size:.84rem;line-height:1.5}
 .page-content :is(.erp-panel,.module-panel,.fs-card,.p-panel,.sp-directory,.sp-panel,.profile-content-card,.settings-card,.management-card,.cm-panel,.semester-directory-card,.section-table-card,.ay .panel){border:1px solid var(--border);border-radius:var(--radius-md);background:var(--surface);box-shadow:var(--shadow-sm)}
-.page-content :is(button,.cm-button,.primary-button,.secondary-button,.module-primary-action,.p-primary,.p-secondary,.settings-button){min-height:var(--button-height);box-sizing:border-box;border-radius:var(--radius-sm);font-family:inherit;font-weight:750;transition:border-color .16s ease,background-color .16s ease,color .16s ease,box-shadow .16s ease}
-.page-content :is(.cm-button,.primary-button,.module-primary-action,.p-primary,.settings-button,.semester-primary,.section-primary){border-color:var(--brand);color:#fff;background:var(--brand)}
-.page-content :is(.cm-button,.primary-button,.module-primary-action,.p-primary,.settings-button,.semester-primary,.section-primary):hover:not(:disabled){border-color:var(--brand-hover);color:#fff;background:var(--brand-hover)}
-.page-content :is(.secondary-button,.p-secondary,.profile-button.secondary,.cm-secondary-btn){border:1px solid var(--border);color:var(--text-primary);background:var(--surface)}
-.page-content :is(.secondary-button,.p-secondary,.profile-button.secondary,.cm-secondary-btn):hover:not(:disabled){border-color:var(--brand);color:var(--brand);background:var(--brand-soft)}
+.page-content :is(button,.cm-button,.primary-button,.secondary-button,.module-primary-action,.p-primary,.p-secondary,.settings-button){min-height:var(--button-height);height:var(--button-height);padding:0 13px;box-sizing:border-box;border-radius:7px;font-family:inherit;font-size:12px;font-weight:700;transition:border-color .16s ease,background-color .16s ease,color .16s ease,box-shadow .16s ease}
+.page-content :is(.cm-button,.primary-button,.module-primary-action,.p-primary,.settings-button,.semester-primary,.section-primary,.erp-btn--primary){border:1px solid var(--brand-navy,#174C88);color:#fff;background:var(--brand-navy,#174C88)}
+.page-content :is(.cm-button,.primary-button,.module-primary-action,.p-primary,.settings-button,.semester-primary,.section-primary,.erp-btn--primary):hover:not(:disabled){border-color:#195A99;color:#fff;background:#195A99}
+.page-content :is(.secondary-button,.p-secondary,.profile-button.secondary,.cm-secondary-btn,.erp-btn--secondary){border:1px solid var(--border);color:var(--text-primary);background:var(--surface)}
+.page-content :is(.secondary-button,.p-secondary,.profile-button.secondary,.cm-secondary-btn,.erp-btn--secondary):hover:not(:disabled){border-color:var(--brand);color:var(--brand);background:var(--brand-soft)}
 .page-content button:disabled{cursor:not-allowed;opacity:.48}
-.page-content :is(input:not([type=checkbox]):not([type=radio]),select,textarea){box-sizing:border-box;min-height:var(--control-height);border:1px solid var(--border-strong);border-radius:var(--radius-sm);color:var(--text-primary);background:var(--surface);font:500 13px/1.35 inherit}
-.page-content :is(input:not([type=checkbox]):not([type=radio]),select){padding:0 11px}.page-content textarea{padding:10px 11px;resize:vertical}
-.page-content :is(input,select,textarea):focus-visible{border-color:var(--brand)!important;outline:0!important;box-shadow:var(--focus-ring)!important}
+.page-content :is(input:not([type=checkbox]):not([type=radio]),select,textarea){box-sizing:border-box;min-height:var(--control-height);height:var(--control-height);border:1px solid var(--border);border-radius:7px;color:var(--text-primary);background:var(--surface);font:500 12px/1.35 inherit}
+.page-content :is(input:not([type=checkbox]):not([type=radio]),select){padding:0 10px}.page-content textarea{padding:9px 10px;height:auto;resize:vertical}
+.page-content :is(input,select,textarea):focus-visible{border-color:var(--brand)!important;outline:2px solid color-mix(in srgb,var(--brand) 15%,transparent)!important;box-shadow:none!important}
 .page-content label{color:var(--text-secondary)}.page-content label>span,.page-content fieldset>legend{font-weight:700}
 .page-content :is(.module-table,.fs-table,.p-table,.sp-table-wrap,.sa-table-wrap,.course-table-scroll,.branch-table-scroll,.semester-table-wrapper,.section-table-wrap,.department-table-wrap,.cm-table-wrap,.ay .table){max-width:100%;overflow-x:auto;overscroll-behavior-inline:contain}
 .page-content :is(.module-table,.fs-table,.p-table,.sp-table-wrap,.sa-table-wrap) table{width:100%;min-width:720px;border-collapse:collapse;background:var(--surface)}
-.page-content :is(.module-table,.fs-table,.p-table,.sp-table-wrap,.sa-table-wrap,.course-table-scroll,.branch-table-scroll,.semester-table-wrapper,.section-table-wrap,.department-table-wrap,.cm-table-wrap) th{position:sticky;top:0;z-index:2;height:42px;padding:10px 12px;border-bottom:1px solid var(--border);color:var(--text-secondary);background:var(--surface-soft);font-size:11px;font-weight:800;letter-spacing:.045em;text-align:left;text-transform:uppercase;white-space:nowrap}
-.page-content :is(.module-table,.fs-table,.p-table,.sp-table-wrap,.sa-table-wrap) td{padding:11px 12px;border-bottom:1px solid var(--border);color:var(--text-secondary);background:var(--surface);font-size:13px;vertical-align:middle}.page-content :is(.module-table,.fs-table,.p-table,.sp-table-wrap,.sa-table-wrap) tr:hover td{background:var(--surface-soft)}
-.page-content :is([class*="badge"],[class*="status"]){font-weight:750}
+.page-content :is(.module-table,.fs-table,.p-table,.sp-table-wrap,.sa-table-wrap,.course-table-scroll,.branch-table-scroll,.semester-table-wrapper,.section-table-wrap,.department-table-wrap,.cm-table-wrap) th{position:sticky;top:0;z-index:2;height:40px;padding:9px 12px;border:0;color:#FFFFFF;background:#174C88;font-size:10px;font-weight:700;letter-spacing:.035em;text-align:left;text-transform:uppercase;white-space:nowrap;vertical-align:middle}
+.page-content :is(.module-table,.fs-table,.p-table,.sp-table-wrap,.sa-table-wrap) td{height:46px;padding:9px 12px;border-bottom:1px solid var(--border);color:var(--text-primary);background:var(--surface);font-size:12px;vertical-align:middle;text-align:left}.page-content :is(.module-table,.fs-table,.p-table,.sp-table-wrap,.sa-table-wrap) tr:hover td{background:var(--surface-soft)}
+.page-content :is([class*="badge"],[class*="status"]){font-weight:700}
 .page-content :is(.module-dialog,.fs-editor,.fs-dialog,.p-confirm,.p-review,.profile-edit-dialog,.semester-form-panel,.semester-details-panel,.section-form-panel,.section-details-panel,.cm-modal-card,.ac-dialog){border:1px solid var(--border);border-radius:var(--radius-lg);color:var(--text-primary);background:var(--surface-raised);box-shadow:var(--shadow-md)}
-.page-content :is(.module-overlay,.fs-overlay,.p-overlay,.profile-modal,.semester-overlay,.section-overlay,.cm-modal-overlay){background:rgba(3,18,31,.58)}
+.page-content :is(.module-overlay,.fs-overlay,.p-overlay,.profile-modal,.semester-overlay,.section-overlay,.cm-modal-overlay){background:#071d38a6;backdrop-filter:blur(3px)}
 .page-content :is(.sa-toast,.semester-toast,.section-toast,.branch-toast,.p-notice,[class*="toast"]){border:1px solid color-mix(in srgb,var(--success) 32%,var(--border));border-radius:8px;background:var(--surface-raised);box-shadow:var(--shadow-md)}
 .page-content :is(.erp-empty-state,.module-empty,.fs-empty,.p-empty,.sp-empty,.course-empty,.branch-empty,.semester-empty-state,.section-empty,.department-no-results,.cm-empty){min-height:180px;box-sizing:border-box;padding:28px;color:var(--text-muted);text-align:center}
 @media(max-width:900px){.page-content{--page-gap:16px;--card-padding:15px}.page-content :is(.dashboard-kpis,.module-stats,.p-stats,.semester-stats,.section-stats,.branch-summary,.course-summary){grid-template-columns:repeat(2,minmax(0,1fr))}.page-content :is(.module-form,.fs-grid,.profile-edit-grid,.semester-form-grid,.section-form-grid){grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:620px){.page-content :is(.dashboard-kpis,.module-stats,.p-stats,.semester-stats,.section-stats,.branch-summary,.course-summary){grid-template-columns:1fr}.page-content :is(.module-form,.fs-grid,.profile-edit-grid,.semester-form-grid,.section-form-grid){grid-template-columns:1fr}.page-content :is(.erp-page-heading,.module-heading,.fs-header,.p-header,.sp-heading,.profile-heading,.management-page__heading,.cm-header,.semester-page-header,.section-page-header,.ay>header){align-items:stretch;flex-direction:column}.page-content :is(.erp-page-heading,.module-heading,.fs-header,.p-header,.sp-heading,.profile-heading,.management-page__heading,.cm-header,.semester-page-header,.section-page-header,.ay>header)>button{width:100%}}
 @media(prefers-reduced-motion:reduce){.page-content *{scroll-behavior:auto!important;transition-duration:.01ms!important;animation-duration:.01ms!important;animation-iteration-count:1!important}}
 
-/* Component styles load after the theme, so enforce directory alignment consistently. */
-.college-management .cm-table :is(th,td),.ay table :is(th,td),.course-management :is(.course-advanced-table,.cm-table) :is(th,td),.branch-management .branch-table :is(th,td),.department-management .department-table-wrap :is(th,td),.semester-management .semester-table :is(th,td),.section-management .section-table :is(th,td){text-align:center!important;vertical-align:middle!important}
+/* Component styles load after the theme: preserve Fee semantic alignment */
+.college-management .cm-table :is(th,td),.ay table :is(th,td),.course-management :is(.course-advanced-table,.cm-table) :is(th,td),.branch-management .branch-table :is(th,td),.department-management .department-table-wrap :is(th,td),.semester-management .semester-table :is(th,td),.section-management .section-table :is(th,td){vertical-align:middle!important}
 
 /* Project-wide required-field indicator. */
 /* Keep filter content on one surface across all management modules. */
@@ -6328,7 +6386,7 @@ html,body,#root{max-width:100%;overflow-x:hidden}
 
 /* Shared continuous management table header; no per-column dividers. */
 :root:not([data-theme="dark"]) .page-content :is(.cm-table,.course-advanced-table,.branch-table,.department-table-wrap table,.semester-table,.section-table,.erp-table,.sa-table-wrap table,.sp-directory-table,.academic-table,.promotion-table,.sm-table,.em-table,.rooms-table,.faculty-table,.marks-table,.attendance-table,.payroll-table,.fees-table,.rbac-data-table) thead {
-  background: linear-gradient(90deg,#195A99 0%,#164D87 50%,#123F73 100%) !important;
+  background: var(--table-head, #174C88) !important;
   border-bottom: 1px solid rgba(16,42,76,.12) !important;
 }
 :root:not([data-theme="dark"]) .page-content :is(.cm-table,.course-advanced-table,.branch-table,.department-table-wrap table,.semester-table,.section-table,.erp-table,.sa-table-wrap table,.sp-directory-table,.academic-table,.promotion-table,.sm-table,.em-table,.rooms-table,.faculty-table,.marks-table,.attendance-table,.payroll-table,.fees-table,.rbac-data-table) thead th {
@@ -6339,16 +6397,20 @@ html,body,#root{max-width:100%;overflow-x:hidden}
   color: #FFFFFF !important;
 }
 :root:not([data-theme="dark"]) .page-content :is(.cm-table,.course-advanced-table,.branch-table,.department-table-wrap table,.semester-table,.section-table,.erp-table,.sa-table-wrap table,.sp-directory-table,.academic-table,.promotion-table,.sm-table,.em-table,.rooms-table,.faculty-table,.marks-table,.attendance-table,.payroll-table,.fees-table,.rbac-data-table) thead th:first-child {
-  border-radius: 12px 0 0 0 !important;
+  border-radius: 10px 0 0 0 !important;
 }
 :root:not([data-theme="dark"]) .page-content :is(.cm-table,.course-advanced-table,.branch-table,.department-table-wrap table,.semester-table,.section-table,.erp-table,.sa-table-wrap table,.sp-directory-table,.academic-table,.promotion-table,.sm-table,.em-table,.rooms-table,.faculty-table,.marks-table,.attendance-table,.payroll-table,.fees-table,.rbac-data-table) thead th:last-child {
-  border-radius: 0 12px 0 0 !important;
+  border-radius: 0 10px 0 0 !important;
 }
 :root:not([data-theme="dark"]) .page-content :is(.cm-table,.course-advanced-table,.branch-table,.department-table-wrap table,.semester-table,.section-table,.erp-table,.sa-table-wrap table,.sp-directory-table,.academic-table,.promotion-table,.sm-table,.em-table,.rooms-table,.faculty-table,.marks-table,.attendance-table,.payroll-table,.fees-table,.rbac-data-table) tbody td {
   border-left: 0 !important;
   border-right: 0 !important;
   border-inline: 0 !important;
-  border-bottom: 1px solid #E1EAF4 !important;
+  border-bottom: 1px solid var(--border, #DCE5F2) !important;
+  height: 46px !important;
+  padding: 9px 12px !important;
+  font-size: 12px !important;
+  vertical-align: middle !important;
 }
 
 /* Keep Academic Year table labels on a single line. */
@@ -6358,10 +6420,10 @@ html,body,#root{max-width:100%;overflow-x:hidden}
 
 /* Shared management list surfaces: keep row fills on the cells after base table rules. */
 :root:not([data-theme="dark"]) .page-content :is(.course-directory,.branch-directory-card,.department-list,.semester-directory-card,.section-table-card,.sa-directory,.sp-directory,.p-panel,.fs-card) {
-  border: 1px solid #D8E4F2 !important;
-  border-radius: 16px !important;
-  background: rgba(255,255,255,.94) !important;
-  box-shadow: 0 4px 18px rgba(20,58,100,.04) !important;
+  border: 1px solid var(--border, #DCE5F2) !important;
+  border-radius: 12px !important;
+  background: var(--surface, #FFFFFF) !important;
+  box-shadow: 0 2px 8px rgba(16, 42, 76, 0.04) !important;
 }
 :root:not([data-theme="dark"]) .page-content :is(.course-directory-heading,.branch-directory-heading,.department-list__top,.semester-directory-heading,.section-directory-heading,.fs-list-head,.module-directory-head) {
   border-bottom-color: rgba(16,42,76,.12) !important;
@@ -9339,7 +9401,6 @@ td.col-actions,
 
 
 /* Source styles: styles/dark-mode-fixes.css */
-@media not all {
 :root[data-theme="dark"] {
   --text-primary: #F8FAFC !important;
   --text-secondary: #CBD5E1 !important;
@@ -9399,9 +9460,9 @@ td.col-actions,
 :root[data-theme="dark"] .page-content thead th,
 :root[data-theme="dark"] table thead th,
 :root[data-theme="dark"] table th {
-  background: #1769C2 !important;
+  background: #174C88 !important;
   color: #FFFFFF !important;
-  border-bottom: 2px solid #125AA8 !important;
+  border-bottom: 1px solid #334155 !important;
 }
 
 :root[data-theme="dark"] input,
@@ -9429,5 +9490,3 @@ td.col-actions,
   border-color: #475569 !important;
 }
 /* Inherit cell text without overriding semantic badge and action colours. */
-
-}

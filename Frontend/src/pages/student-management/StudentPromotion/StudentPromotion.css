@@ -13,30 +13,34 @@
 }
 
 .student-promotion .erp-table thead th {
-  height: 44px !important;
+  height: 40px !important;
   vertical-align: middle !important;
-  text-align: center !important;
-  padding: 11px 16px !important;
-  background: #1769C2 !important;
+  text-align: left;
+  padding: 8px 14px !important;
+  background: var(--table-head, #174C88) !important;
   color: #FFFFFF !important;
-  font-size: 11px !important;
-  font-weight: 800 !important;
-  letter-spacing: 0.055em;
+  font-size: 10px !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.05em;
   text-transform: uppercase;
-  border-bottom: 2px solid #125AA8 !important;
+  border-bottom: 1px solid #0f3661 !important;
   box-sizing: border-box;
 }
 
 .student-promotion .erp-table tbody td {
-  height: 52px !important;
+  height: 46px !important;
   vertical-align: middle !important;
-  text-align: center !important;
-  padding: 11px 16px !important;
-  border-bottom: 1px solid var(--border);
-  color: var(--text-primary);
-  background: var(--surface);
-  font-size: 13px !important;
+  text-align: left;
+  padding: 8px 14px !important;
+  border-bottom: 1px solid var(--border, #DCE5F2);
+  color: var(--text-primary, #102A4C);
+  background: var(--surface, #FFFFFF);
+  font-size: 12px !important;
   box-sizing: border-box;
+}
+
+.student-promotion .erp-table tbody tr:hover td {
+  background: var(--table-row-hover, #F3F6FC) !important;
 }
 
 .student-promotion .erp-table th.table-center,
@@ -56,33 +60,33 @@
   gap: 8px;
   padding: 8px 16px;
   border: 0;
-  border-bottom: 1px solid var(--border);
+  border-bottom: 1px solid var(--border, #DCE5F2);
   border-radius: 0;
-  background: var(--surface);
+  background: var(--surface, #FFFFFF);
   margin-bottom: 18px;
 }
 
 .p-tabs button {
-  padding: 12px 24px;
+  padding: 8px 18px;
   border: 0;
   border-radius: 7px;
   background: transparent;
-  color: var(--text-muted);
-  font-weight: 700;
-  font-size: 14px;
+  color: var(--text-muted, #526A86);
+  font-weight: 600;
+  font-size: 13px;
   cursor: pointer;
   transition: all 0.15s ease;
 }
 
 .p-tabs button:hover {
-  background: var(--surface-soft, #f5f8fc);
-  color: var(--brand, #1769C2);
+  background: var(--surface-soft, #F3F6FC);
+  color: var(--brand, #2563EB);
 }
 
 .p-tabs button.active {
-  background: var(--brand, #1769C2);
+  background: var(--primary, #174C88);
   color: #FFFFFF;
-  box-shadow: 0 4px 10px rgba(23, 105, 194, 0.28);
+  box-shadow: 0 2px 6px rgba(23, 76, 136, 0.25);
 }
 
 .p-panel {
@@ -269,55 +273,55 @@
   box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.08);
 }
 
-/* Light-mode review view follows the College detail-view visual language. */
+/* Light-mode review view follows the Fee Management visual language. */
 :root:not([data-theme="dark"]) .p-drawer.promotion-review-drawer {
-  border-color: #DCD8F2 !important;
+  border-color: #DCE5F2 !important;
   background: #FFFFFF !important;
-  box-shadow: 0 18px 46px rgba(48, 38, 79, .18) !important;
+  box-shadow: 0 16px 40px rgba(16, 42, 76, 0.14) !important;
 }
 :root:not([data-theme="dark"]) .promotion-review-drawer :is(.pr-modal-header, .pr-modal-footer) {
   background: #FFFFFF !important;
-  border-color: #D8E4F2 !important;
+  border-color: #DCE5F2 !important;
 }
 :root:not([data-theme="dark"]) .promotion-review-drawer .pr-modal-body {
-  background: #EAF3FF !important;
+  background: #F3F6FC !important;
 }
 :root:not([data-theme="dark"]) .promotion-review-drawer .pr-banner {
-  border: 1px solid #D8E4F2 !important;
-  background: linear-gradient(115deg, #EAF3FF 0%, #D8E4F2 100%) !important;
-  color: #282342 !important;
+  border: 1px solid #DCE5F2 !important;
+  background: linear-gradient(135deg, #174C88 0%, #1e3a8a 100%) !important;
+  color: #FFFFFF !important;
   box-shadow: none !important;
 }
 :root:not([data-theme="dark"]) .promotion-review-drawer :is(.pr-title, .pr-subtitle) {
-  color: #282342 !important;
+  color: #FFFFFF !important;
 }
 :root:not([data-theme="dark"]) .promotion-review-drawer .pr-avatar {
-  border-color: #AAA4D6 !important;
-  background: #EAF3FF !important;
-  color: #125AA8 !important;
+  border-color: #DCE5F2 !important;
+  background: #EFF6FF !important;
+  color: #174C88 !important;
 }
 :root:not([data-theme="dark"]) .promotion-review-drawer .pr-badge {
-  border: 1px solid #D8E4F2 !important;
+  border: 1px solid #DCE5F2 !important;
   background: #FFFFFF !important;
-  color: #125AA8 !important;
+  color: #174C88 !important;
 }
 :root:not([data-theme="dark"]) .promotion-review-drawer .pr-card {
-  border-color: #D8E4F2 !important;
+  border-color: #DCE5F2 !important;
   background: #FFFFFF !important;
-  box-shadow: 0 3px 10px rgba(48, 38, 79, .06) !important;
+  box-shadow: 0 1px 3px rgba(16, 42, 76, 0.05) !important;
 }
 :root:not([data-theme="dark"]) .promotion-review-drawer .pr-card-header {
-  border-color: #D8E4F2 !important;
-  color: #1769C2 !important;
+  border-color: #DCE5F2 !important;
+  color: #174C88 !important;
 }
 :root:not([data-theme="dark"]) .promotion-review-drawer .pr-card-header h3 {
-  color: #125AA8 !important;
+  color: #102A4C !important;
 }
 :root:not([data-theme="dark"]) .promotion-review-drawer .pr-label {
-  color: #125AA8 !important;
+  color: #526A86 !important;
 }
 :root:not([data-theme="dark"]) .promotion-review-drawer .pr-value {
-  color: #282342 !important;
+  color: #102A4C !important;
 }
 
 .promotion-review-drawer .pr-avatar {
