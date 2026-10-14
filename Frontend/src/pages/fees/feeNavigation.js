@@ -2,8 +2,6 @@ export const feeNavigation = [
   { label: 'Overview', to: '/fees/overview', sections: ['overview'] },
   { label: 'Fee Structures', to: '/fees/structures', sections: ['structures', 'components', 'legacy'] },
   { label: 'Student Accounts', to: '/fees/students', sections: ['students', 'accounts', 'ledger', 'assignments', 'concessions', 'dues'] },
-  { label: 'Collections', to: '/fees/receipts', sections: ['receipts', 'collection', 'refunds'] },
-  { label: 'Reports', to: '/fees/reports', sections: ['reports'] },
 ]
 
 export const studentAccountOperations = [
