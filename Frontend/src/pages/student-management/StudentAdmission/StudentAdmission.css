@@ -1880,6 +1880,152 @@
   gap: 16px;
   width: 100%;
 }
+.sa-fees-detail-container .fm-summary-cards-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px;
+}
+.sa-fees-detail-container .fm-summary-card {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 16px 18px;
+  border-radius: 10px;
+  border: 1px solid var(--border, #e2e8f0);
+  background: var(--surface, #ffffff);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+.sa-fees-detail-container .fm-summary-card:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.07);
+}
+.sa-fees-detail-container .fm-summary-card__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.sa-fees-detail-container .fm-summary-card__label {
+  font-size: 11px;
+  font-weight: 750;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-muted, #64748b);
+}
+.sa-fees-detail-container .fm-summary-card__icon-box {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  font-size: 16px;
+}
+.sa-fees-detail-container .fm-summary-card__value {
+  font-size: 22px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  line-height: 1.1;
+  color: var(--text-primary, #0f172a);
+}
+.sa-fees-detail-container .fm-summary-card__meta {
+  font-size: 11px;
+  color: var(--text-muted, #64748b);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sa-fees-detail-container .fm-summary-card--blue {
+  background: linear-gradient(180deg, #f0f7ff 0%, #ffffff 100%);
+  border-color: #bfdbfe;
+}
+.sa-fees-detail-container .fm-summary-card--blue .fm-summary-card__icon-box {
+  background: #dbeafe;
+  color: #1d4ed8;
+}
+.sa-fees-detail-container .fm-summary-card--blue .fm-summary-card__value {
+  color: #1e40af;
+}
+
+.sa-fees-detail-container .fm-summary-card--green {
+  background: linear-gradient(180deg, #f0fdf4 0%, #ffffff 100%);
+  border-color: #bbf7d0;
+}
+.sa-fees-detail-container .fm-summary-card--green .fm-summary-card__icon-box {
+  background: #dcfce7;
+  color: #15803d;
+}
+.sa-fees-detail-container .fm-summary-card--green .fm-summary-card__value {
+  color: #166534;
+}
+
+.sa-fees-detail-container .fm-summary-card--amber {
+  background: linear-gradient(180deg, #fffbeb 0%, #ffffff 100%);
+  border-color: #fde68a;
+}
+.sa-fees-detail-container .fm-summary-card--amber .fm-summary-card__icon-box {
+  background: #fef3c7;
+  color: #b45309;
+}
+.sa-fees-detail-container .fm-summary-card--amber .fm-summary-card__value {
+  color: #92400e;
+}
+
+.sa-fees-detail-container .fm-summary-card--red {
+  background: linear-gradient(180deg, #fef2f2 0%, #ffffff 100%);
+  border-color: #fecaca;
+}
+.sa-fees-detail-container .fm-summary-card--red .fm-summary-card__icon-box {
+  background: #fee2e2;
+  color: #b91c1c;
+}
+.sa-fees-detail-container .fm-summary-card--red .fm-summary-card__value {
+  color: #991b1b;
+}
+
+.student-admission .fm-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 9px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 750;
+  text-transform: capitalize;
+}
+.student-admission .fm-badge--pending {
+  background: #fef3c7;
+  color: #b45309;
+  border: 1px solid #fde68a;
+}
+.student-admission .fm-badge--paid {
+  background: #dcfce7;
+  color: #15803d;
+  border: 1px solid #bbf7d0;
+}
+.student-admission .fm-badge--partially-paid {
+  background: #dbeafe;
+  color: #1d4ed8;
+  border: 1px solid #bfdbfe;
+}
+.student-admission .fm-badge--overdue {
+  background: #fee2e2;
+  color: #b91c1c;
+  border: 1px solid #fecaca;
+}
+
+@media (max-width: 1024px) {
+  .sa-fees-detail-container .fm-summary-cards-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+@media (max-width: 640px) {
+  .sa-fees-detail-container .fm-summary-cards-grid {
+    grid-template-columns: 1fr;
+  }
+}
 
 /* Consolidated AdmissionFixes.css */
 .sa-aadhaar-verification{display:flex;grid-column:1/-1;min-height:62px;padding:11px 13px;align-items:center;gap:11px;border:1px solid var(--border);border-radius:8px;color:var(--text-secondary);background:var(--surface-soft)}.sa-aadhaar-verification>svg{width:22px;height:22px;flex:0 0 22px;color:var(--warning)}.sa-aadhaar-verification>span{display:grid;gap:2px;flex:1}.sa-aadhaar-verification strong{color:var(--text-primary);font-size:11px}.sa-aadhaar-verification small{color:var(--text-muted);font-size:10px;font-weight:500}.sa-aadhaar-verification small.error{color:var(--danger)}.sa-aadhaar-verification.verified{border-color:color-mix(in srgb,var(--success) 35%,var(--border));background:color-mix(in srgb,var(--success) 7%,var(--surface))}.sa-aadhaar-verification.verified>svg{color:var(--success)}.sa-aadhaar-verification.invalid{border-color:color-mix(in srgb,var(--danger) 40%,var(--border))}.sa-fee-selector{margin-bottom:14px;overflow:hidden;border:1px solid var(--border);border-radius:var(--radius-md);background:var(--surface);box-shadow:var(--shadow-sm)}.sa-fee-selector>header{display:flex;padding:13px 16px;align-items:center;gap:10px;border-bottom:1px solid var(--border);background:var(--surface-soft)}.sa-fee-selector>header>svg{color:var(--brand)}.sa-fee-selector h2,.sa-fee-selector p{margin:0}.sa-fee-selector h2{font-size:15px}.sa-fee-selector p{margin-top:3px;color:var(--text-muted);font-size:10px}.sa-fee-selector>label{margin:14px 16px}:root[data-theme=dark] .sa-fee-selector{border-color:var(--border);background:var(--surface)}@media(max-width:650px){.sa-aadhaar-verification{align-items:stretch;flex-wrap:wrap}.sa-aadhaar-verification button{width:100%}}

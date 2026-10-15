@@ -101,18 +101,21 @@ function feeHeadsError(rows) {
 }
 function FeeBreakdownEditor({ category, rows, onChange, total, frequency = "Yearly", suggestions = [] }) {
   const listId = external0.useId();
+  const transport = category === 'Transport';
+  const itemLabel = transport ? 'Transport charge' : 'Fee head';
+  const addLabel = transport ? 'Add Transport Charge' : 'Add Fee Head';
   const update = (index, change) => onChange(rows.map((row, rowIndex) => rowIndex === index ? { ...row, ...change } : row));
   return <div className="fm-breakdown-container">
     <datalist id={listId}>{suggestions.map(head => <option key={head.id} value={head.name} />)}</datalist>
-    {!rows.length ? <div className="fm-breakdown-empty">No fee heads yet. Select Add Fee Head to build the breakdown.</div> : <div className="fm-breakdown-list">
-      <div className="fm-breakdown-head"><span>Fee Head Name</span><span className="fm-text-right">Amount (&#8377;)</span><span /></div>
+    {!rows.length ? <div className="fm-breakdown-empty">{transport ? 'No transport charges yet. Select Add Transport Charge to get started.' : 'No fee heads yet. Select Add Fee Head to build the breakdown.'}</div> : <div className="fm-breakdown-list">
+      <div className="fm-breakdown-head"><span>{transport ? 'Transport Charge' : 'Fee Head Name'}</span><span className="fm-text-right">Amount (&#8377;)</span><span /></div>
       {rows.map((row, index) => <div key={index} className="fm-breakdown-row">
-        <input className="fm-fee-head-input" aria-label={"Fee head " + (index + 1) + " name"} placeholder="Enter fee head name" value={row.name} list={listId} onChange={event => update(index, { name: event.target.value })} />
-        <div className="fm-amount-input-wrap"><span className="fm-currency-symbol" aria-hidden="true">&#8377;</span><input type="number" min="0.01" max="100000000" step="0.01" placeholder="0.00" aria-label={"Fee head " + (index + 1) + " amount"} value={row.amount} onChange={event => update(index, { amount: event.target.value })} /></div>
-        <button type="button" className="fm-remove-btn" aria-label={"Remove fee head " + (index + 1)} onClick={() => onChange(rows.filter((_, rowIndex) => rowIndex !== index))}><external3.FiTrash2 /></button>
+        <input className="fm-fee-head-input" aria-label={itemLabel + " " + (index + 1) + " name"} placeholder={transport ? 'e.g. Transport Fee or Bus Pass Fee' : 'Enter fee head name'} value={row.name} list={listId} onChange={event => update(index, { name: event.target.value })} />
+        <div className="fm-amount-input-wrap"><span className="fm-currency-symbol" aria-hidden="true">&#8377;</span><input type="number" min="0.01" max="100000000" step="0.01" placeholder="0.00" aria-label={itemLabel + " " + (index + 1) + " amount"} value={row.amount} onChange={event => update(index, { amount: event.target.value })} /></div>
+        <button type="button" className="fm-remove-btn" aria-label={"Remove " + itemLabel.toLowerCase() + " " + (index + 1)} onClick={() => onChange(rows.filter((_, rowIndex) => rowIndex !== index))}><external3.FiTrash2 /></button>
       </div>)}
     </div>}
-    <button type="button" className="erp-btn erp-btn--secondary fm-add-charge-btn" onClick={() => onChange([...rows, { masterId: "", name: "", category, frequency, amount: "", mandatory: true, refundable: false, recurring: true }])}><external3.FiPlus /> Add Fee Head</button>
+    <button type="button" className="erp-btn erp-btn--secondary fm-add-charge-btn" onClick={() => onChange([...rows, { masterId: "", name: "", category, frequency, amount: "", mandatory: true, refundable: false, recurring: true }])}><external3.FiPlus /> {addLabel}</button>
     <div className="fm-total-fee-row"><span className="fm-total-label">Total {category} Fee</span><strong className="fm-total-value">{feeStructureServiceModule.feeMoney(total)}</strong></div>
   </div>;
 }
@@ -161,7 +164,7 @@ function hostelPriceLabel(plan) {
   const money = feeStructureServiceModule.feeMoney;
   return min === max ? money(min) : money(min) + " - " + money(max);
 }
-function hostelPricingError(form, status) {
+function hostelPricingError(form, status, checkSchedule = true) {
   if (!form.roomPricing?.length) return "Add at least one room category.";
   const keys = new Set();
   for (const room of form.roomPricing) {
@@ -171,7 +174,7 @@ function hostelPricingError(form, status) {
     keys.add(key);
     const error = feeHeadsError(room.components || []);
     if (error || !room.components?.length) return error || "Add fee heads for each room category.";
-    if (status !== "Draft" || room.dueDate || room.installments?.length) {
+    if (checkSchedule && (status !== "Draft" || room.dueDate || room.installments?.length)) {
       const scheduleError = facilityScheduleError({ ...room, fee: hostelRoomTotal(room) });
       if (scheduleError) return room.roomType + ": " + scheduleError;
     }
@@ -186,18 +189,22 @@ function normalizeFacilityPlan(value, type) {
   const roomPricing = type === "hostel" ? Array.isArray(saved.roomPricing) ? saved.roomPricing : saved.id ? [{ roomType: saved.roomType || "", occupancy: saved.occupancy || "", acType: saved.acType || "", components, plan: saved.plan || "Full Payment", dueDate: saved.dueDate || "", installments: saved.installments || [] }] : [] : undefined;
   return { ...saved, ...(type === "hostel" ? { roomPricing } : {}), components, plan: saved.plan === "Installments" ? "Installment Plan" : saved.plan || (saved.id ? "Full Payment" : ""), dueDate: saved.dueDate || "", installments: saved.installments || [] };
 }
-function validateFacilityPlan(form, type, years, status) {
+function validateFacilityPlan(form, type, years, status, step = "schedule") {
   if (!years.some(year => String(year.id) === String(form.academicYearId))) return { tab: "details", message: "Select an active academic year." };
   if (type === "hostel" ? !form.hostelName?.trim() : !form.route?.trim() || !form.pickupPoint?.trim()) return { tab: "details", message: type === "hostel" ? "Enter hostel name and room type." : "Enter route name and boarding stop." };
+  if (type === "hostel" && !["Boys Hostel", "Girls Hostel", "Co-ed Residence"].includes(form.hostelType)) return { tab: "details", message: "Select a hostel type." };
+  if (!["Annual", "Per Semester", "Monthly"].includes(form.frequency)) return { tab: "details", message: "Select a fee cycle." };
+  if (step === "details") return null;
   if (type === "hostel") {
-    if (!form.frequency) return { tab: "details", message: "Select a fee cycle." };
-    const message = hostelPricingError(form, status);
+    const message = hostelPricingError(form, status, step === "schedule");
     if (message) return { tab: /payment|installment|due date|chronological/i.test(message) ? "schedule" : "breakdown", message };
+    if (step === "breakdown") return null;
     if (form.effectiveFrom && form.effectiveTo && form.effectiveTo < form.effectiveFrom) return { tab: "schedule", message: "Effective To cannot precede Effective From." };
     return null;
   }
   const error = feeHeadsError(form.components);
-  if (error || !form.components.length) return { tab: "breakdown", message: error || "Add at least one fee head." };
+  if (error || !form.components.length) return { tab: "breakdown", message: error ? error.replace(/fee heads?/gi, "transport charge") : "Add at least one transport charge." };
+  if (step === "breakdown") return null;
   if (status !== "Draft" || form.dueDate || form.installments.length || form.effectiveFrom || form.effectiveTo) {
     const total = feeStructureServiceModule.rupees(form.components.reduce((sum, row) => sum + feeStructureServiceModule.cents(row.amount), 0));
     const message = facilityScheduleError({ ...form, fee: total });
@@ -1274,6 +1281,13 @@ export const FeeStructureModule = (() => {
     const [form, setForm] = useState(() => normalizeFacilityPlan(value, type));
     const [roomIndex, setRoomIndex] = useState(0);
     const activeRoom = form.roomPricing?.[roomIndex];
+    const roomCategories = ['Single Sharing', 'Double Sharing', 'Triple Sharing', 'Four Sharing'];
+    const [manualRoomIndexes, setManualRoomIndexes] = useState([]);
+    const manualRoomCategory = manualRoomIndexes.includes(roomIndex) || Boolean(activeRoom?.roomType && !roomCategories.includes(activeRoom.roomType));
+    const selectRoomCategory = roomType => {
+      setManualRoomIndexes(indexes => roomType === 'Others' ? [...new Set([...indexes, roomIndex])] : indexes.filter(index => index !== roomIndex));
+      updateRoom({ roomType: roomType === 'Others' ? '' : roomType, occupancy: roomCategories.includes(roomType) ? String(roomCategories.indexOf(roomType) + 1) : '' });
+    };
     const total = hostel ? activeRoom ? hostelRoomTotal(activeRoom) : 0 : feeStructureServiceModule.rupees(form.components.reduce((sum, row) => sum + feeStructureServiceModule.cents(row.amount), 0));
     const [error, setError] = useState("");
     const [previewStarted, setPreviewStarted] = useState(Boolean(value.id));
@@ -1288,6 +1302,12 @@ export const FeeStructureModule = (() => {
     const addRoom = () => {
       setRoomIndex(form.roomPricing.length);
       patch({ roomPricing: [...form.roomPricing, { roomType: "", occupancy: "", acType: "", plan: "", dueDate: "", installments: [], components: ["Room Rent", "Mess Fee", "Maintenance"].map(name => ({ name, amount: "", category: "Hostel", mandatory: true, refundable: false })) }] });
+    };
+    const nextStep = () => {
+      const issue = validateFacilityPlan(form, type, masters.years, 'Active', formTab);
+      if (issue) { setError(issue.message); setFormTab(issue.tab); return; }
+      setError('');
+      setFormTab(formTab === 'details' ? 'breakdown' : 'schedule');
     };
     const submit = (status = "Active") => {
       const err = validateFacilityPlan(form, type, masters.years, status);
@@ -1321,20 +1341,15 @@ export const FeeStructureModule = (() => {
 
         <div className="fm-create-layout">
         <div className="fm-create-form-panel">
-        {error && (
-          <div className="fm-error-banner" role="alert">
-            <FiX />
-            <span>{error}</span>
-          </div>
-        )}
-        <div className="fm-tabs-bar fm-plan-form-tabs" role="tablist" aria-label={category + " fee plan configuration"}>{tabs.map(([key, label], index) => <button key={key} type="button" role="tab" id={tabId + "-tab-" + key} aria-controls={tabId + "-panel-" + key} aria-selected={formTab === key} tabIndex={formTab === key ? 0 : -1} className={"fm-tab-btn " + (formTab === key ? "active" : "")} onClick={() => setFormTab(key)} onKeyDown={event => {
+
+        <div className="fm-tabs-bar fm-plan-form-tabs" role="tablist" aria-label={category + " fee plan configuration"}>{tabs.map(([key, label], index) => <button key={key} type="button" role="tab" id={tabId + "-tab-" + key} aria-controls={tabId + "-panel-" + key} aria-selected={formTab === key} tabIndex={formTab === key ? 0 : -1} className={"fm-tab-btn " + (formTab === key ? "active" : "")} onClick={() => { setError(""); setFormTab(key); }} onKeyDown={event => {
           let next;
           if (event.key === "ArrowRight") next = (index + 1) % tabs.length;
           else if (event.key === "ArrowLeft") next = (index + tabs.length - 1) % tabs.length;
           else if (event.key === "Home") next = 0;
           else if (event.key === "End") next = tabs.length - 1;
           else return;
-          event.preventDefault(); setFormTab(tabs[next][0]); event.currentTarget.parentElement.querySelectorAll('[role="tab"]')[next].focus();
+          event.preventDefault(); setError(""); setFormTab(tabs[next][0]); event.currentTarget.parentElement.querySelectorAll('[role="tab"]')[next].focus();
         }}><span className="fm-form-tab-number" aria-hidden="true">{index + 1}</span>{label}</button>)}</div>
         <div className="fm-create-form-body">
           {/* Section 1 */}
@@ -1360,7 +1375,8 @@ export const FeeStructureModule = (() => {
                     onChange={(hostelName) => patch({ hostelName })}
                   />
                   <FeeSelect
-                    label="Hostel Type"
+                    label="Hostel Type *"
+                    required
                     value={form.hostelType || ""}
                     options={[
                       { id: "", name: "Select Hostel Type" },
@@ -1407,16 +1423,17 @@ export const FeeStructureModule = (() => {
                   />
                 </>
               )}
-              <FeeSelect label="Fee Cycle" value={form.frequency || ""} options={[{ id: "", name: "Select Fee Cycle" },{ id: "Annual", name: "Annual / Per Academic Year" }, { id: "Per Semester", name: "Per Semester" }, { id: "Monthly", name: "Monthly" }]} onChange={frequency => patch({ frequency })} />
+              <FeeSelect label="Fee Cycle *" required value={form.frequency || ""} options={[{ id: "", name: "Select Fee Cycle" },{ id: "Annual", name: "Annual / Per Academic Year" }, { id: "Per Semester", name: "Per Semester" }, { id: "Monthly", name: "Monthly" }]} onChange={frequency => patch({ frequency })} />
             </div>
           </section>
 
           <section className="fm-form-section" hidden={formTab !== "breakdown"} role="tabpanel" id={tabId + "-panel-breakdown"} aria-labelledby={tabId + "-tab-breakdown"} tabIndex={0}>
-            <FeeSectionHeading number="02" title={category + " Fee Breakdown"} description="Add or edit category-specific fee heads and amounts." />
+            <FeeSectionHeading number="02" title={hostel ? 'Hostel Fee Breakdown' : 'Transport Charges'} description={hostel ? 'Add or edit category-specific fee heads and amounts.' : 'Add transport charges and amounts for this route.'} />
             {hostel ? <div className="fm-hostel-pricing">
               <div className="fm-workspace-heading"><p>Configure each room category separately. Prices are alternatives, not added together.</p><button type="button" className="erp-btn erp-btn--secondary" onClick={addRoom}><FiPlus /> Add Room Category</button></div>
               {form.roomPricing.length > 0 && <div className="fm-room-summary">{form.roomPricing.map((room, index) => <button type="button" key={index} className={"fm-room-price " + (index === roomIndex ? "active" : "")} onClick={() => setRoomIndex(index)}><strong>{room.roomType || "Room Category " + (index + 1)}</strong><span>{[room.occupancy ? room.occupancy + " sharing" : "", room.acType].filter(Boolean).join(" / ")}</span><b>{money(hostelRoomTotal(room))}</b></button>)}</div>}
-              {activeRoom && <><div className="fm-form-grid"><FeeInput label="Room Category *" value={activeRoom.roomType} onChange={roomType => updateRoom({roomType})} /><FeeInput label="Occupancy *" type="number" min="1" step="1" value={activeRoom.occupancy} onChange={occupancy => updateRoom({occupancy})} /><FeeSelect label="AC Category *" value={activeRoom.acType} options={[{id:"",name:"Select AC Category"},{id:"AC Room",name:"AC Room"},{id:"Non-AC",name:"Non-AC"}]} onChange={acType => updateRoom({acType})} /><button type="button" className="erp-btn erp-btn--secondary" onClick={() => {patch({roomPricing:form.roomPricing.filter((_,index) => index !== roomIndex)});setRoomIndex(0);}}>Remove Room Category</button></div><FeeBreakdownEditor category="Hostel" frequency={form.frequency} rows={activeRoom.components} onChange={components => updateRoom({components})} total={total} /></>}
+              {activeRoom && <><div className="fm-form-grid"><FeeSelect label="Room Category *" required value={manualRoomCategory ? 'Others' : activeRoom.roomType || ''} options={[{ id: '', name: 'Select Room Category' }, ...roomCategories.map(name => ({ id: name, name })), { id: 'Others', name: 'Others' }]} onChange={selectRoomCategory} />
+                {manualRoomCategory && <FeeInput label="Other Room Category *" required placeholder="Enter room category" value={activeRoom.roomType || ''} onChange={roomType => updateRoom({ roomType })} />}<FeeInput label="Occupancy *" type="number" min="1" step="1" value={activeRoom.occupancy} onChange={occupancy => updateRoom({occupancy})} /><FeeSelect label="AC Category *" value={activeRoom.acType} options={[{id:"",name:"Select AC Category"},{id:"AC Room",name:"AC Room"},{id:"Non-AC",name:"Non-AC"}]} onChange={acType => updateRoom({acType})} /><button type="button" className="erp-btn erp-btn--secondary" onClick={() => {patch({roomPricing:form.roomPricing.filter((_,index) => index !== roomIndex)});setManualRoomIndexes(indexes => indexes.filter(index => index !== roomIndex).map(index => index > roomIndex ? index - 1 : index));setRoomIndex(0);}}>Remove Room Category</button></div><FeeBreakdownEditor category="Hostel" frequency={form.frequency} rows={activeRoom.components} onChange={components => updateRoom({components})} total={total} /></>}
             </div> : <FeeBreakdownEditor category={category} frequency={form.frequency || (hostel ? "Annual" : "Per Semester")} rows={form.components} onChange={components => patch({ components })} total={total} />}
             {hostel && <FeeInput label="Fee Inclusions Description" value={form.componentsText || ""} onChange={componentsText => patch({ componentsText })} />}
           </section>
@@ -1427,12 +1444,15 @@ export const FeeStructureModule = (() => {
           </section>
         </div>
 
+        {error && <p className="fm-error-banner" role="alert">{error}</p>}
         {/* Sticky Footer */}
         <footer className="fm-sticky-footer">
           <button type="button" className="erp-btn erp-btn--secondary" onClick={close}>
             Cancel
           </button>
           <div className="fm-footer-right">
+            {formTab !== 'details' && <button type="button" className="erp-btn erp-btn--secondary" onClick={() => { setError(''); setFormTab(formTab === 'schedule' ? 'breakdown' : 'details'); }}>Previous</button>}
+            {formTab !== 'schedule' ? <button type="button" className="erp-btn erp-btn--primary" onClick={nextStep}>Next</button> : <>
             <button
               type="button"
               className="erp-btn erp-btn--secondary"
@@ -1447,6 +1467,7 @@ export const FeeStructureModule = (() => {
             >
               Activate Fee Plan
             </button>
+            </>}
           </div>
         </footer>
         </div>
@@ -1625,7 +1646,17 @@ export const FeeStructureModule = (() => {
     const { scopeRecords, academicYears, selectedCollegeId, selectedAcademicYearId, selectedAcademicYear } =
       useAcademic();
 
-    const [tab, setTab] = useState("academic");
+    const categoryFromUrl = () => {
+      const category = new URLSearchParams(location.search).get('category');
+      return ['hostel', 'transport'].includes(category) ? category : 'academic';
+    };
+    const [tab, setTab] = useState(categoryFromUrl);
+    useEffect(() => { if (!facilityType) setTab(categoryFromUrl()); }, [location.search, facilityType]);
+    const backToPlans = (category = facilityType || tab) => navigate('/fees/structures' + (category === 'academic' ? '' : '?category=' + category));
+    const changeTab = category => {
+      setTab(category);
+      navigate('/fees/structures' + (category === 'academic' ? '' : '?category=' + category), { replace: true });
+    };
     const [rows, setRows] = useState(readStructures);
     const [hostels, setHostels] = useState(readHostelStructures);
     const [transports, setTransports] = useState(readTransportStructures);
@@ -1860,7 +1891,7 @@ export const FeeStructureModule = (() => {
     };
 
     const switchTab = (nextTab) => {
-      setTab(nextTab);
+      changeTab(nextTab);
       setQuery("");
     };
 
@@ -1918,15 +1949,15 @@ export const FeeStructureModule = (() => {
         setTransports(next);
       }
       setToast(`${type === "hostel" ? "Hostel" : "Transport"} fee plan saved.`);
-      navigate("/fees/structures");
+      backToPlans(type);
     };
 
     if (viewPlan) {
       const category = facilityType === "hostel" ? "Hostel" : facilityType === "transport" ? "Transport" : "Academic";
       const row = facilityType ? (facilityType === "hostel" ? hostels : transports).find(item => String(item.id) === String(facilityId)) : (workflow?.rows || []).find(item => String(item.id) === String(structureId)) || rows.find(item => String(item.id) === String(structureId));
-      if (!row) return <div className="fm-page-container"><FeePageHeading title="Fee Plan Not Found" description="This fee plan is unavailable in the selected college." /><button type="button" className="erp-btn erp-btn--secondary" onClick={() => navigate("/fees/structures")}>Back to Fee Plans</button></div>;
+      if (!row) return <div className="fm-page-container"><FeePageHeading title="Fee Plan Not Found" description="This fee plan is unavailable in the selected college." /><button type="button" className="erp-btn erp-btn--secondary" onClick={() => backToPlans()}>Back to Fee Plans</button></div>;
       const canEdit = facilityType ? true : row.status === "Draft" && !(workflow?.assignments || []).some(item => item.structureId === row.id);
-      return <FeePlanDetailsPage row={row} category={category} masters={masters} close={() => navigate("/fees/structures")} canEdit={canEdit} edit={() => navigate(facilityType ? "/fees/structures/" + facilityType + "/" + row.id + "/edit" : "/fees/structures/" + row.id + "/edit", {state: {initialStructure: row}})} />;
+      return <FeePlanDetailsPage row={row} category={category} masters={masters} close={() => backToPlans()} canEdit={canEdit} edit={() => navigate(facilityType ? "/fees/structures/" + facilityType + "/" + row.id + "/edit" : "/fees/structures/" + row.id + "/edit", {state: {initialStructure: row}})} />;
     }
 
     // If on facility editor sub-route
@@ -1949,7 +1980,7 @@ export const FeeStructureModule = (() => {
           type={facilityType}
           value={initial}
           masters={masters}
-          close={() => navigate("/fees/structures")}
+          close={() => backToPlans()}
           save={saveFacility}
           existingHostels={hostels}
         />
