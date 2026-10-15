@@ -1,11 +1,13 @@
 import assert from 'node:assert/strict'
-import React from 'react'
-import { renderToStaticMarkup } from 'react-dom/server'
+import { realpathSync } from 'node:fs'
 import { createServer } from 'vite'
-import { fileURLToPath } from 'node:url'
+import { fileURLToPath, pathToFileURL } from 'node:url'
 
-const server = await createServer({ root: fileURLToPath(new URL('../', import.meta.url)), server: { middlewareMode: true } })
+const root = realpathSync.native(fileURLToPath(new URL('../', import.meta.url)))
+const server = await createServer({ root, server: { middlewareMode: true } })
 try {
+  const React = (await import(pathToFileURL(`${root}/node_modules/react/index.js`).href)).default
+  const { renderToStaticMarkup } = await import(pathToFileURL(`${root}/node_modules/react-dom/server.node.js`).href)
   const { default: FilterPanel } = await server.ssrLoadModule('/src/components/FilterPanel.jsx')
   const search = React.createElement('label', { className: 'grm-search' },
     React.createElement('span', null, 'Search icon'),

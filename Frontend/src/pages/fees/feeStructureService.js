@@ -18,6 +18,16 @@ const write = (key, rows, event) => { localStorage.setItem(collegeStorageKey(key
 const number = value => Number(value) || 0
 export const money = value => new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', minimumFractionDigits: 0, maximumFractionDigits: 2 }).format(number(value))
 export const uid = prefix => `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`
+export const DEFAULT_FEE_HEADS = [
+  { id: 'fh-tuition', name: 'Tuition Fee', category: 'Academic', frequency: 'Yearly', mandatory: true, refundable: false, recurring: true, status: 'Active' },
+  { id: 'fh-admission', name: 'Admission Fee', category: 'Academic', frequency: 'One-time', mandatory: true, refundable: false, recurring: false, status: 'Active' },
+  { id: 'fh-library', name: 'Library Fee', category: 'Academic', frequency: 'Yearly', mandatory: true, refundable: false, recurring: true, status: 'Active' },
+  { id: 'fh-lab', name: 'Laboratory Fee', category: 'Academic', frequency: 'Yearly', mandatory: true, refundable: false, recurring: true, status: 'Active' },
+  { id: 'fh-exam', name: 'Examination Fee', category: 'Academic', frequency: 'Semester-wise', mandatory: true, refundable: false, recurring: true, status: 'Active' },
+  { id: 'fh-dev', name: 'Development Fee', category: 'Academic', frequency: 'Yearly', mandatory: true, refundable: false, recurring: true, status: 'Active' },
+  { id: 'fh-caution', name: 'Caution Deposit', category: 'Academic', frequency: 'One-time', mandatory: false, refundable: true, recurring: false, status: 'Active' },
+  { id: 'fh-sports', name: 'Sports & Cultural Fee', category: 'Academic', frequency: 'Yearly', mandatory: false, refundable: false, recurring: true, status: 'Active' },
+]
 export const feeComponent = () => ({ id: uid('FC'), feeHeadId: '', name: '', category: 'Academic', amount: '', frequency: 'Per Semester', requirement: 'Mandatory', refundable: 'Non-refundable', concessionAllowed: false, fineApplicable: false, dueRule: '', status: 'Active' })
 export const componentTotals = items => (items || []).reduce((totals, component) => {
   const amount = cents(component.amount)
@@ -186,8 +196,24 @@ export function saveWorkflowStructure(state, value, status, actor) {
     if (!structureComponentsActive(state, value)) fail('All selected fee components must be active in the master.')
     if (checkDuplicateStructure(state.structures, value)) fail('An overlapping fee structure already exists. Revise or archive it before submitting another.')
   }
+  const autoComponents = [...(state.components || [])]
+  for (const c of value.components || []) {
+    if (!autoComponents.some(existing => (c.masterId && existing.id === c.masterId) || (c.name && existing.name && existing.name.toLowerCase() === c.name.toLowerCase()))) {
+      autoComponents.push({
+        id: c.masterId || uid('FC'),
+        name: c.name,
+        code: (c.name || 'FC').slice(0, 4).toUpperCase(),
+        category: c.category || 'Academic',
+        frequency: c.frequency || 'Yearly',
+        mandatory: c.mandatory ?? true,
+        refundable: c.refundable ?? false,
+        recurring: c.recurring ?? true,
+        status: 'Active'
+      })
+    }
+  }
   const saved = { ...structuredClone(value), id: value.id || uid('FS'), status, audit: [...(previous?.audit || []), { status, actor, at: new Date().toISOString() }] }
-  return { ...state, structures: [saved, ...state.structures.filter(s => s.id !== saved.id)] }
+  return { ...state, components: autoComponents, structures: [saved, ...state.structures.filter(s => s.id !== saved.id)] }
 }
 export function transitionFeeStructure(state, id, status, actor) {
   const s = state.structures.find(row => row.id === id)
@@ -276,11 +302,11 @@ export function saveFeeAdjustment(state, kind, input) {
   if (!assignment || !input.reason?.trim() || !validAmount(input.value)) fail('Select a student, enter a positive value and provide a reason.')
   if (input.unit === 'Percentage' && Number(input.value) > 100) fail('Percentage cannot exceed 100.')
   if (kind === 'refunds' && !state.payments.some(p => p.id === input.paymentId && p.assignmentId === input.assignmentId)) fail('Select the original payment.')
-  if (kind === 'refunds' && cents(input.value) > refundablePaymentAmount(state, assignment, input.paymentId)) fail('Refund cannot exceed the remaining refundable amount of the original payment.')
+  if (kind === 'refunds' && cents(input.value) > refundablePaymentAmount(state, assignment, input.paymentId)) fail('Refund exceeds the remaining refundable amount of the original payment.')
   if (kind === 'concessions') {
     const ledger = feeLedger(state, assignment)
     const amount = input.unit === 'Percentage' ? Math.round(ledger.total * Number(input.value) / 100) : cents(input.value)
-    if (amount <= 0 || amount > ledger.outstanding) fail('Concession must be positive and cannot exceed the remaining unpaid fee balance.')
+    if (amount <= 0 || amount > ledger.outstanding) fail('Concession amount exceeds the remaining unpaid fee balance.')
   }
   const row = { ...input, id: uid(kind === 'refunds' ? 'RF' : 'SC'), status: 'Draft', at: new Date().toISOString() }
   return { ...state, [kind]: [row, ...state[kind]] }
@@ -301,7 +327,7 @@ export function transitionFeeAdjustment(state, kind, id, status, actor) {
     const assignment = state.assignments.find(a => a.id === row.assignmentId), ledger = feeLedger(state, assignment)
     if (kind === 'concessions') {
       amount = row.unit === 'Percentage' ? Math.round(ledger.total * Number(row.value) / 100) : cents(row.value)
-      if (amount <= 0 || amount > ledger.outstanding) fail('Concession must be positive and cannot exceed the remaining unpaid fee balance.')
+      if (amount <= 0 || amount > ledger.outstanding) fail('Concession amount exceeds the remaining unpaid fee balance.')
       allocations = waterfall(ledger.cells, amount)
     } else {
       const payment = state.payments.find(p => p.id === row.paymentId)

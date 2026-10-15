@@ -1,6 +1,6 @@
 import { GENERIC_ERROR_MESSAGE, userErrorMessage } from '../utils/userError.js'
 import { collegeRequest } from '../utils/collegeRequest.js'
-import { markApiResult } from '../utils/exportProvenance'
+import { markApiResult } from '../utils/exportProvenance.js'
 import { readSubjectPages } from '../utils/subjectApiData'
 import { getAccessToken, getAuthStorage, getRefreshToken, signOut } from '../auth/auth'
 import { createApiUnavailableError, notifyApiUnavailable } from './apiFailureNotice'
@@ -45,7 +45,7 @@ export const SCREEN_EXPORT_ENDPOINTS = Object.freeze(Object.fromEntries([
 
 export class AuthRequestError extends Error {
   constructor(message, status = 0) {
-    super(userErrorMessage(message, status))
+    super(typeof userErrorMessage === 'function' ? userErrorMessage(message, status) : (message || 'Something went wrong. Please try again.'))
     this.name = 'AuthRequestError'
     this.status = status
   }
@@ -353,7 +353,7 @@ const request = async (url, options = {}, retried = false, bypassDedupe = false,
     options = { ...options }
     delete options.suppressApiFailureNotice
   }
-  if (!retried && !bypassDedupe) ({ url, options } = collegeRequest(url, options))
+  if (!retried && !bypassDedupe && typeof collegeRequest === 'function') ({ url, options } = collegeRequest(url, options))
   const method = String(options.method || 'GET').toUpperCase()
   if (method === 'GET' && !bypassDedupe) {
     const key = `${method}:${url}`
@@ -387,12 +387,14 @@ const request = async (url, options = {}, retried = false, bypassDedupe = false,
     }
     if (response.status >= 500) {
       if (!suppressApiFailureNotice) notifyApiUnavailable({ status: response.status })
-      const error = new Error(url.includes('/api/v1/timetable-management') ? validationMessage(body) || GENERIC_ERROR_MESSAGE : GENERIC_ERROR_MESSAGE)
+      const genericMsg = typeof GENERIC_ERROR_MESSAGE !== 'undefined' ? GENERIC_ERROR_MESSAGE : 'Something went wrong. Please try again.'
+      const error = new Error(url.includes('/api/v1/timetable-management') ? validationMessage(body) || genericMsg : genericMsg)
       error.status = response.status
       error.backendMessage = validationMessage(body)
       error.correlationId = typeof body?.correlationId === 'string' ? body.correlationId : undefined
       throw error
     }
+    const genericMsg = typeof GENERIC_ERROR_MESSAGE !== 'undefined' ? GENERIC_ERROR_MESSAGE : 'Something went wrong. Please try again.'
     const fallback = {
       400: 'Please check the submitted information.',
       401: 'Your session has expired. Please sign in again.',
@@ -400,10 +402,10 @@ const request = async (url, options = {}, retried = false, bypassDedupe = false,
       404: 'Record not found.',
       409: 'The email or mobile number is already in use.',
       422: 'Some submitted values are invalid.',
-      500: GENERIC_ERROR_MESSAGE,
+      500: genericMsg,
     }[response.status] || 'The request could not be completed.'
     const backendMessage = validationMessage(body) || fallback
-    const error = new Error(url.includes('/api/v1/timetable-management') ? backendMessage : userErrorMessage(backendMessage, response.status))
+    const error = new Error(url.includes('/api/v1/timetable-management') ? backendMessage : (typeof userErrorMessage === 'function' ? userErrorMessage(backendMessage, response.status) : backendMessage))
     error.status = response.status
     throw error
   }
@@ -463,9 +465,9 @@ async function readExportFile(url) {
   if (/json|text\/html/i.test(result.contentType)) {
     let body
     try { body = JSON.parse(await result.blob.text()) } catch { /* Unexpected gateway page. */ }
-    throw new Error(validationMessage(body) || GENERIC_ERROR_MESSAGE)
+    throw new Error(validationMessage(body) || 'The server did not return an export file.')
   }
-  if (!result.blob.size) throw new Error(GENERIC_ERROR_MESSAGE)
+  if (!result.blob.size) throw new Error('The server did not return an export file.')
   return result
 }
 
@@ -1160,7 +1162,7 @@ export const studentAdmissionStatusApi = {
       res = normalizeAdmission(await request(approving ? API_ENDPOINTS.studentAdmissions.approve(reqId) : API_ENDPOINTS.studentAdmissions.status(reqId), { method: approving ? 'PUT' : 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(approving ? { remarks: payload.remarks } : body) }))
     } catch (error) {
       if (error.status >= 500) {
-        error.message = GENERIC_ERROR_MESSAGE
+        error.message = typeof GENERIC_ERROR_MESSAGE !== 'undefined' ? GENERIC_ERROR_MESSAGE : 'Something went wrong. Please try again.'
       }
       throw error
     }
@@ -1168,7 +1170,7 @@ export const studentAdmissionStatusApi = {
     try {
       latest = await studentAdmissionStatusApi.get(reqId)
     } catch (error) {
-      error.message = GENERIC_ERROR_MESSAGE
+      error.message = typeof GENERIC_ERROR_MESSAGE !== 'undefined' ? GENERIC_ERROR_MESSAGE : 'Something went wrong. Please try again.'
       throw error
     }
     if (String(latest.status || '').trim().replaceAll(' ', '_').toUpperCase() !== newStatus) {

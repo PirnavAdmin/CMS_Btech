@@ -34,17 +34,14 @@ export function employeeLeaveBalances(rows, employee, policy) {
 }
 
 export function leaveBalanceRules(balance, policy) {
-  const configuredTypes = new Set((policy?.entitlements ?? [])
-    .map(row => id(row.typeId ?? row.leaveTypeId))
-    .filter(Boolean))
   const rules = new Map()
   for (const row of policy?.entitlements ?? []) {
     const typeId = id(row.typeId ?? row.leaveTypeId)
     if (typeId) rules.set(typeId, { ...rules.get(typeId), ...row, typeId })
   }
-  for (const row of balance.details ?? []) {
+  for (const row of balance?.details ?? []) {
     const typeId = id(row.typeId ?? row.leaveTypeId)
-    if (configuredTypes.has(typeId)) rules.set(typeId, { ...rules.get(typeId), ...row, typeId })
+    if (typeId) rules.set(typeId, { ...rules.get(typeId), ...row, typeId })
   }
   return [...rules.values()]
 }

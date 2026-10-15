@@ -5,6 +5,7 @@ import { API_BASE_URL, facultyApi, facultyAttendanceApi, facultyDocumentApi, fac
 
 const first = (source, keys, fallback = '') => keys.map(key => source?.[key]).find(value => value !== undefined && value !== null && String(value).trim() !== '') ?? fallback
 const list = value => Array.isArray(value) ? value : []
+const toCollegeKey = key => { try { return typeof collegeStorageKey === 'function' ? collegeStorageKey(key) : key } catch { return key } }
 export const mergeFacultyData = (...records) => Object.assign({}, ...records.map(record => Object.fromEntries(Object.entries(record || {}).filter(([, value]) => value !== undefined && value !== null && value !== ''))))
 export const resolveFacultyPhoto = value => {
   if (typeof value !== 'string' || !value.trim()) return ''
@@ -32,17 +33,21 @@ export const normalizeFaculty = (source = {}) => {
 
   const isHexUUID = str => !str || /^[0-9a-f]{8}-?[0-9a-f]{4}-?[0-9a-f]{4}-?[0-9a-f]{4}-?[0-9a-f]{12}$/i.test(String(str).trim()) || /^[0-9a-f]{32}$/i.test(String(str).trim())
 
-  const rawEmpId = first(source, ['employeeId', 'employeeCode', 'EmployeeId', 'EmployeeCode'])
-  const validEmployeeId = (rawEmpId && !isHexUUID(rawEmpId))
-    ? rawEmpId
-    : (id && !isHexUUID(id) && String(id).match(/^\d+$/) ? `FAC-${String(id).padStart(3, '0')}` : facultyEmployeeCode(id))
+  const rawEmpId = first(source, ['employeeId', 'employeeCode', 'employee_code', 'EmployeeId', 'EmployeeCode'])
+  const rawCode = first(source, ['facultyCode', 'faculty_code', 'FacultyCode'])
+  const legacyIsFac = !isHexUUID(rawEmpId) && /^FAC/i.test(rawEmpId || '')
+  const facultyCode = (!isHexUUID(rawCode) && rawCode) ? rawCode : (legacyIsFac ? rawEmpId : '')
+  const isNumericId = /^[1-9]\d*$/.test(String(facultyId || id || '').trim())
+  const validEmployeeId = isNumericId
+    ? facultyEmployeeCode(facultyId || id)
+    : (isHexUUID(rawEmpId) || legacyIsFac ? '' : (rawEmpId || ''))
 
   return {
     ...source,
     id,
     facultyId,
     collegeId: first(source, ['collegeId', 'college_id', 'CollegeId', 'collId', 'CollId'], ''),
-    facultyCode: isHexUUID(source.facultyCode) ? '' : (source.facultyCode || ''),
+    facultyCode,
     employeeId: validEmployeeId,
     fullName: first(source, ['fullName', 'facultyName', 'name', 'FullName', 'FacultyName', 'userName', 'username'], [source.firstName, source.lastName].filter(Boolean).join(' ')),
     email: first(source, ['email', 'officialEmail', 'workEmail', 'Email', 'OfficialEmail'], ''),
@@ -132,7 +137,8 @@ const getAttendanceDate = row => {
 
 const getLocalAttendance = () => {
   try {
-    return JSON.parse(localStorage.getItem(collegeStorageKey(LOCAL_ATTENDANCE_KEY))) || []
+    const raw = localStorage.getItem(toCollegeKey(LOCAL_ATTENDANCE_KEY)) || localStorage.getItem(LOCAL_ATTENDANCE_KEY)
+    return JSON.parse(raw) || []
   } catch {
     return []
   }
@@ -162,26 +168,31 @@ export const saveLocalAttendanceRecord = (record) => {
     } else {
       list.push(normalized)
     }
-    localStorage.setItem(collegeStorageKey(LOCAL_ATTENDANCE_KEY), JSON.stringify(list))
+    const json = JSON.stringify(list)
+    localStorage.setItem(toCollegeKey(LOCAL_ATTENDANCE_KEY), json)
+    localStorage.setItem(LOCAL_ATTENDANCE_KEY, json)
     return normalized
   } catch {
     return record
   }
 }
 
-// Faculty codes are only unique within a college. Legacy caches stored them
-// in employeeId; normalize before comparing and never match unscoped codes.
 const sameFaculty = (left, right) => {
   const a = normalizeFaculty(left); const b = normalizeFaculty(right)
+  if (a.id && b.id && /^\d+$/.test(String(a.id)) && /^\d+$/.test(String(b.id))) {
+    return String(a.id) === String(b.id)
+  }
   if (a.id && b.id && String(a.id) === String(b.id)) return true
+  if (a.collegeId && b.collegeId && String(a.collegeId) !== String(b.collegeId)) return false
+  if (!a.collegeId || !b.collegeId) return false
   if (a.employeeId && b.employeeId && String(a.employeeId).toLowerCase() === String(b.employeeId).toLowerCase()) return true
-  return Boolean(a.collegeId && b.collegeId && String(a.collegeId) === String(b.collegeId)
-    && a.facultyCode && a.facultyCode === b.facultyCode)
+  return Boolean(a.facultyCode && b.facultyCode && String(a.facultyCode).toLowerCase() === String(b.facultyCode).toLowerCase())
 }
 
 const getLocalFaculty = () => {
   try {
-    const list = JSON.parse(localStorage.getItem(collegeStorageKey(LOCAL_FACULTY_KEY))) || []
+    const raw = localStorage.getItem(toCollegeKey(LOCAL_FACULTY_KEY)) || localStorage.getItem(LOCAL_FACULTY_KEY)
+    const list = JSON.parse(raw) || []
     return list.map(item => {
       if (String(item.id).startsWith('FAC-LOC-')) {
         const num = String(item.employeeId || '10').replace(/\D/g, '') || '10'
@@ -207,13 +218,16 @@ const saveLocalFaculty = (record) => {
     } else {
       list.unshift(record)
     }
-    localStorage.setItem(collegeStorageKey(LOCAL_FACULTY_KEY), JSON.stringify(list))
+    const json = JSON.stringify(list)
+    localStorage.setItem(toCollegeKey(LOCAL_FACULTY_KEY), json)
+    localStorage.setItem(LOCAL_FACULTY_KEY, json)
   } catch { /* ignore */ }
 }
 
 const getLocalProfile = (id) => {
   try {
-    const profiles = JSON.parse(localStorage.getItem(collegeStorageKey(LOCAL_PROFILE_KEY))) || {}
+    const raw = localStorage.getItem(toCollegeKey(LOCAL_PROFILE_KEY)) || localStorage.getItem(LOCAL_PROFILE_KEY)
+    const profiles = JSON.parse(raw) || {}
     return profiles[String(id)] || profiles[id] || null
   } catch {
     return null
@@ -222,9 +236,12 @@ const getLocalProfile = (id) => {
 
 const saveLocalProfile = (id, profile) => {
   try {
-    const profiles = JSON.parse(localStorage.getItem(collegeStorageKey(LOCAL_PROFILE_KEY))) || {}
+    const raw = localStorage.getItem(toCollegeKey(LOCAL_PROFILE_KEY)) || localStorage.getItem(LOCAL_PROFILE_KEY)
+    const profiles = JSON.parse(raw) || {}
     profiles[String(id)] = { ...(profiles[String(id)] || {}), ...profile }
-    localStorage.setItem(collegeStorageKey(LOCAL_PROFILE_KEY), JSON.stringify(profiles))
+    const json = JSON.stringify(profiles)
+    localStorage.setItem(toCollegeKey(LOCAL_PROFILE_KEY), json)
+    localStorage.setItem(LOCAL_PROFILE_KEY, json)
   } catch { /* ignore */ }
 }
 
@@ -245,7 +262,7 @@ const withFacultyPhoto = async (row, requestOptions) => {
 
 const getLocalAllocations = () => {
   try {
-    return JSON.parse(localStorage.getItem(collegeStorageKey(LOCAL_ALLOCATIONS_KEY))) || []
+    return JSON.parse(localStorage.getItem(toCollegeKey(LOCAL_ALLOCATIONS_KEY))) || []
   } catch {
     return []
   }
@@ -260,14 +277,14 @@ const saveLocalAllocation = (allocation) => {
     } else {
       list.push(allocation)
     }
-    localStorage.setItem(collegeStorageKey(LOCAL_ALLOCATIONS_KEY), JSON.stringify(list))
+    localStorage.setItem(toCollegeKey(LOCAL_ALLOCATIONS_KEY), JSON.stringify(list))
   } catch { /* ignore */ }
 }
 
 const removeLocalAllocation = (id) => {
   try {
     const list = getLocalAllocations().filter(item => String(item.id) !== String(id))
-    localStorage.setItem(collegeStorageKey(LOCAL_ALLOCATIONS_KEY), JSON.stringify(list))
+    localStorage.setItem(toCollegeKey(LOCAL_ALLOCATIONS_KEY), JSON.stringify(list))
   } catch { /* ignore */ }
 }
 
@@ -298,6 +315,8 @@ const listFaculty = async (params, search = false, requestOptions) => {
             ...row,
             id: String(row.facultyId ?? row.id),
             facultyId: row.facultyId ?? row.id,
+            collegeId: row.collegeId,
+            facultyCode: row.facultyCode,
             employeeId: row.employeeId,
             fullName: row.facultyName || row.fullName || row.name,
             designation: row.designation,
@@ -359,13 +378,12 @@ const listFaculty = async (params, search = false, requestOptions) => {
   for (const item of local) {
     if (item && (item.id || item.facultyId || item.fullName)) {
       const idx = records.findIndex(r =>
-        sameFaculty(r, item) ||
-        (item.id && String(r.facultyId ?? r.id) === String(item.id)) ||
-        (item.facultyId && String(r.facultyId ?? r.id) === String(item.facultyId)) ||
-        (item.employeeId && r.employeeId && String(r.employeeId).toLowerCase() === String(item.employeeId).toLowerCase())
+        (item.id && /^\d+$/.test(String(item.id)) && String(r.facultyId ?? r.id) === String(item.id)) ||
+        (item.facultyId && /^\d+$/.test(String(item.facultyId)) && String(r.facultyId ?? r.id) === String(item.facultyId)) ||
+        sameFaculty(r, item)
       )
       if (idx >= 0) {
-        records[idx] = normalizeFaculty(mergeFacultyData(records[idx], item))
+        records[idx] = normalizeFaculty(mergeFacultyData(item, records[idx]))
       } else {
         records.unshift(normalizeFaculty(item))
       }
@@ -383,15 +401,15 @@ const listFaculty = async (params, search = false, requestOptions) => {
 
 export const clearFacultyLocalStorage = () => {
   try {
-    localStorage.removeItem(collegeStorageKey(LOCAL_FACULTY_KEY))
-    localStorage.removeItem(collegeStorageKey(LOCAL_PROFILE_KEY))
-    localStorage.removeItem(collegeStorageKey(LOCAL_ALLOCATIONS_KEY))
-    localStorage.removeItem(collegeStorageKey(LOCAL_ATTENDANCE_KEY))
-    localStorage.removeItem(collegeStorageKey('pirnav-faculty-local-payroll-status-v1'))
-    localStorage.removeItem(collegeStorageKey('pirnav-faculty-local-salary-structures-v1'))
-    localStorage.removeItem(collegeStorageKey('pirnav-faculty-local-leave-decisions-v1'))
-    localStorage.removeItem(collegeStorageKey('pirnav-faculty-local-leave-policies-v1'))
-    localStorage.removeItem(collegeStorageKey('pirnav-faculty-local-leave-types-v1'))
+    localStorage.removeItem(toCollegeKey(LOCAL_FACULTY_KEY))
+    localStorage.removeItem(toCollegeKey(LOCAL_PROFILE_KEY))
+    localStorage.removeItem(toCollegeKey(LOCAL_ALLOCATIONS_KEY))
+    localStorage.removeItem(toCollegeKey(LOCAL_ATTENDANCE_KEY))
+    localStorage.removeItem(toCollegeKey('pirnav-faculty-local-payroll-status-v1'))
+    localStorage.removeItem(toCollegeKey('pirnav-faculty-local-salary-structures-v1'))
+    localStorage.removeItem(toCollegeKey('pirnav-faculty-local-leave-decisions-v1'))
+    localStorage.removeItem(toCollegeKey('pirnav-faculty-local-leave-policies-v1'))
+    localStorage.removeItem(toCollegeKey('pirnav-faculty-local-leave-types-v1'))
   } catch { /* ignore */ }
 }
 
@@ -417,15 +435,13 @@ export const facultyService = {
     const createData = { ...payload, collegeId: createCollegeId }
     const created = await facultyApi.create(facultyCreatePayload(createData), createCollegeId)
     if (!created?.id && !created?.facultyId) throw new Error('The server did not return the saved faculty record.')
-    const isHexUUID = str => !str || /^[0-9a-f]{8}-?[0-9a-f]{4}-?[0-9a-f]{4}-?[0-9a-f]{4}-?[0-9a-f]{12}$/i.test(String(str).trim()) || /^[0-9a-f]{32}$/i.test(String(str).trim())
-    const empId = payload.employeeId && !isHexUUID(payload.employeeId) ? payload.employeeId : (created.employeeId && !isHexUUID(created.employeeId) ? created.employeeId : '')
     const result = normalizeFaculty({
-      ...mergeFacultyData(payload, created),
       ...payload,
+      ...created,
       id: String(created.id || created.facultyId),
       facultyId: String(created.id || created.facultyId),
-      employeeId: empId,
-      employeeCategory: payload.employeeCategory || 'Teaching',
+      facultyCode: created.facultyCode ?? '',
+      employeeCategory: created.employeeCategory || payload.employeeCategory || 'Teaching',
     })
     saveLocalFaculty(result)
     return result
@@ -598,25 +614,22 @@ export const facultyService = {
   },
   getAttendanceById: facultyAttendanceApi.getById,
   createAttendance: async payload => {
-    let result = null
     const numFacultyId = Number(payload.facultyId)
     const validFacultyId = Number.isSafeInteger(numFacultyId) && numFacultyId > 0 ? numFacultyId : payload.facultyId
+    let result = null
     try {
       result = await facultyAttendanceApi.create({ ...payload, facultyId: validFacultyId })
     } catch (err) {
       const targetDate = String(payload.attendanceDate || '').slice(0, 10)
       if (validFacultyId && targetDate) {
-        try {
-          result = await facultyAttendanceApi.bulk({
-            facultyIds: [validFacultyId],
-            attendanceDate: targetDate,
-            status: payload.status,
-            remarks: payload.remarks || null,
-          })
-        } catch { /* ignore fallback */ }
-      }
-      if (!result) {
-        console.warn('Backend createAttendance error, saving locally:', err)
+        result = await facultyAttendanceApi.bulk({
+          facultyIds: [validFacultyId],
+          attendanceDate: targetDate,
+          status: payload.status,
+          remarks: payload.remarks || null,
+        })
+      } else {
+        throw err
       }
     }
     const local = saveLocalAttendanceRecord({
@@ -630,32 +643,22 @@ export const facultyService = {
     return result || local
   },
   updateAttendance: async (id, payload) => {
-    let result = null
     const numId = Number(id)
     const isBackendId = Number.isSafeInteger(numId) && numId > 0 && !String(id).startsWith('ATT-')
     const numFacultyId = Number(payload.facultyId)
     const validFacultyId = Number.isSafeInteger(numFacultyId) && numFacultyId > 0 ? numFacultyId : payload.facultyId
     const targetDate = String(payload.attendanceDate || payload.date || '').slice(0, 10)
 
-    if (validFacultyId && targetDate) {
-      try {
-        await facultyAttendanceApi.bulk({
-          facultyIds: [validFacultyId],
-          attendanceDate: targetDate,
-          status: payload.status,
-          remarks: payload.remarks || null,
-        })
-      } catch (bulkErr) {
-        console.warn('Bulk upsert during updateAttendance fallback:', bulkErr)
-      }
-    }
-
+    let result = null
     if (isBackendId) {
-      try {
-        result = await facultyAttendanceApi.update(numId, payload)
-      } catch (updateErr) {
-        console.warn('Backend updateAttendance fallback:', updateErr)
-      }
+      result = await facultyAttendanceApi.update(numId, payload)
+    } else if (validFacultyId && targetDate) {
+      result = await facultyAttendanceApi.bulk({
+        facultyIds: [validFacultyId],
+        attendanceDate: targetDate,
+        status: payload.status,
+        remarks: payload.remarks || null,
+      })
     }
     saveLocalAttendanceRecord({
       ...payload,
@@ -675,7 +678,7 @@ export const facultyService = {
     const item = list.find(r => String(r.id) === String(id) || String(r.attendanceId) === String(id))
     if (item) {
       item.checkIn = timeVal
-      localStorage.setItem(collegeStorageKey(LOCAL_ATTENDANCE_KEY), JSON.stringify(list))
+      localStorage.setItem(toCollegeKey(LOCAL_ATTENDANCE_KEY), JSON.stringify(list))
     }
     return result || { success: true }
   },
@@ -689,7 +692,7 @@ export const facultyService = {
     const item = list.find(r => String(r.id) === String(id) || String(r.attendanceId) === String(id))
     if (item) {
       item.checkOut = timeVal
-      localStorage.setItem(collegeStorageKey(LOCAL_ATTENDANCE_KEY), JSON.stringify(list))
+      localStorage.setItem(toCollegeKey(LOCAL_ATTENDANCE_KEY), JSON.stringify(list))
     }
     return result || { success: true }
   },
@@ -712,6 +715,7 @@ export const facultyService = {
           ...list[matchIndex],
           ...item,
           status: item.status && item.status !== 'Not Marked' ? item.status : (list[matchIndex].status || list[matchIndex].Status || 'Not Marked'),
+          statusName: item.status && item.status !== 'Not Marked' ? item.status : (list[matchIndex].statusName || list[matchIndex].StatusName || 'Not Marked'),
           attendanceId: list[matchIndex].attendanceId || list[matchIndex].AttendanceId || item.attendanceId || item.id,
           checkIn: item.checkIn || list[matchIndex].checkIn || list[matchIndex].CheckIn || '',
           checkOut: item.checkOut || list[matchIndex].checkOut || list[matchIndex].CheckOut || '',

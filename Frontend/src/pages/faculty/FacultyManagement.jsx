@@ -607,10 +607,10 @@ function validateFaculty(data, rows) {
 }
 
 function Avatar({ faculty, large = false }) {
+  const [failedSrc, setFailedSrc] = useState('')
   if (!faculty) return <span className={'fm-avatar ' + (large ? 'fm-avatar-large' : '')}>FM</span>
   const rawPhoto = faculty.photo || faculty.profilePhotoUrl || faculty.photoUrl || faculty.profile_photo_url || faculty.profilePhoto || faculty.profile_photo || faculty.avatar || faculty.avatarUrl || faculty.image || faculty.imageUrl || faculty.Photo || faculty.PhotoUrl || faculty.ProfilePhoto || ''
   const photoSrc = resolveFacultyPhoto(rawPhoto)
-  const [failedSrc, setFailedSrc] = useState('')
   const name = faculty.fullName || faculty.name || faculty.facultyName || ''
   const initials = name.replace(/^(dr|prof|mr|mrs|ms)\.?\s+/i, '').split(/\s+/).filter(Boolean).map(part => part[0]).filter((_, i, all) => i === 0 || i === all.length - 1).join('').slice(0, 2).toUpperCase() || 'FM'
 
