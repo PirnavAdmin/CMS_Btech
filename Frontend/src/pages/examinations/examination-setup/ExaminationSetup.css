@@ -1,3 +1,4 @@
+/* ExaminationSetup.css */
 
 /* Source styles: pages/examinations/examination-setup/ExaminationSetup.css */
 .examination-setup{--es-line:var(--border,#DCE5F2);--es-soft:var(--surface-soft,#F3F6FC);display:grid;gap:18px;width:100%;min-width:0;color:var(--text-primary)}

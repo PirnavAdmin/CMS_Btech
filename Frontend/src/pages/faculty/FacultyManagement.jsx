@@ -1,36 +1,1594 @@
-import { useAcademic } from '../../context/AcademicContext'
-import useCollegeState from '../../hooks/useCollegeState'
-﻿import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom'
-import { FiAlertCircle, FiArrowLeft, FiArrowRight, FiBriefcase, FiCheckCircle, FiChevronDown, FiChevronUp, FiEdit2, FiEye, FiFilter, FiPlus, FiSearch, FiUser, FiUsers, FiClock, FiBookOpen, FiMapPin, FiX, FiTrash2, FiFileText, FiShield, FiLock } from 'react-icons/fi'
-import DashboardLayout from '../../layouts/DashboardLayout'
-import ExportMenu from '../../components/ExportMenu'
-import FilterPanel from '../../components/FilterPanel'
-import StatusBadge from '../../components/StatusBadge'
-import TablePagination from '../../components/TablePagination'
-import SearchableSelect from '../../components/SearchableSelect'
-import CompactSummary from '../../components/CompactSummary'
-import InfoCard from '../../components/InfoCard'
-import { academicYearApi, branchApi, courseApi, departmentApi, facultyMasterApi, sectionApi } from '../../api/apiEndpoints'
-import { attendancePayload, requiredNumber } from '../../services/facultyContracts'
-import { downloadServerExport } from '../../utils/exportUtils'
-import { getDefaultAcademicYear } from '../../utils/academicYearUtils'
-import facultyService, { normalizeFaculty, mergeFacultyData, resolveFacultyPhoto, clearFacultyLocalStorage, saveLocalAttendanceRecord } from '../../services/facultyService'
-import subjectService from '../../services/subjectService'
+import * as pageDependency0 from '../../components/SearchableSelect'
+import * as pageDependency1 from 'react'
+import * as pageDependency2 from '../../services/facultyService'
+import * as pageDependency3 from '../../api/apiEndpoints'
+import * as pageDependency4 from 'react-icons/fi'
+import * as pageDependency5 from '../../components/DirectoryEmptyState'
+import * as pageDependency6 from '../../utils/collegeScope.js'
+import * as pageDependency7 from '../../hooks/useCollegeState'
+import * as pageDependency8 from '../../layouts/DashboardLayout'
+import * as pageDependency9 from '../../components/ExportMenu'
+import * as pageDependency10 from '../../components/ViewDialog'
+import * as pageDependency11 from '../../components/TablePagination'
+import * as pageDependency12 from '../../services/facultyContracts'
+import * as pageDependency13 from '../../utils/newestFirst'
+import * as pageDependency14 from '../../utils/facultyLeaveBalances'
+import * as pageDependency15 from '../../utils/toast'
+import * as pageDependency16 from '../../services/eventBus'
+import * as pageDependency17 from '../../context/AcademicContext'
+import * as pageDependency18 from 'react-router-dom'
+import * as pageDependency19 from '../../components/FilterPanel'
+import * as pageDependency20 from '../../components/StatusBadge'
+import * as pageDependency21 from '../../components/CompactSummary'
+import * as pageDependency22 from '../../components/InfoCard'
+import * as pageDependency23 from '../../utils/exportUtils'
+import * as pageDependency24 from '../../utils/academicYearUtils'
+import * as pageDependency25 from '../../services/subjectService'
+import * as pageDependency26 from '../../utils/facultyAttendance'
 import './FacultyManagement.css'
-import './FacultyAttendance.css'
-import { localAttendanceDate, loadDailyAttendancePeriod, attendanceStatusLabel, normalizeAttendanceRow, combineAttendance, attendanceFacultyMap } from '../../utils/facultyAttendance'
-import { showSuccess, showError, showWarning, showInfo } from '../../utils/toast'
+
+// FacultyApiPanels screen and private helpers.
+const FacultyApiPanelsScreen = (() => {
+const { ProjectSelect } = pageDependency0
+const { useEffect, useState } = pageDependency1
+const facultyService = pageDependency2.default
+const { academicYearApi, branchApi, courseApi, sectionApi, facultyMasterApi } = pageDependency3
+const { FiFileText, FiUploadCloud, FiTrash2, FiClock, FiActivity, FiBriefcase, FiX, FiCheck, FiPlus, FiAlertCircle } = pageDependency4
+
+function FacultyDocuments({ facultyId }) {
+  const [documents, setDocuments] = useState([])
+  const [error, setError] = useState('')
+  const [busy, setBusy] = useState(false)
+  const [file, setFile] = useState(null)
+  const [name, setName] = useState('')
+  const [type, setType] = useState('Certificate')
+  const [pending, setPending] = useState(null)
+
+  const load = async () => {
+    try {
+      const data = await facultyService.getDocuments(facultyId)
+      setDocuments(Array.isArray(data) ? data : [])
+    } catch (reason) {
+      setError(reason.message)
+    }
+  }
+
+  useEffect(() => {
+    load()
+  }, [facultyId])
+
+  const upload = async event => {
+    event.preventDefault()
+    if (busy || !file) return
+    setBusy(true)
+    setError('')
+    try {
+      await facultyService.uploadDocument(facultyId, file, { DocumentName: name || file.name, DocumentType: type })
+      setFile(null)
+      setName('')
+      await load()
+      event.target.reset()
+    } catch (reason) {
+      setError(reason.message)
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  const remove = async id => {
+    setBusy(true)
+    setError('')
+    try {
+      await facultyService.deleteDocument(id)
+      setPending(null)
+      await load()
+    } catch (reason) {
+      setError(reason.message)
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  return (
+    <section className="fm-panel fm-docs-panel">
+      <div className="fm-section-bar">
+        <h2><FiFileText /> Uploaded Documents <span className="fm-muted">({documents.length})</span></h2>
+      </div>
+      {error && <p role="alert" className="fm-error">{error}</p>}
+      <form className="fm-form-grid fm-doc-upload-grid" onSubmit={upload}>
+        <label>
+          <span>Document Title</span>
+          <input required placeholder="e.g. Master's Degree Certificate" value={name} onChange={e => setName(e.target.value)} />
+        </label>
+        <label>
+          <span>Document Type</span>
+          <ProjectSelect value={type} onChange={e => setType(e.target.value)}>
+            {['Certificate', 'Degree', 'Experience', 'ID Proof', 'Resume', 'Joining Letter', 'Other'].map(opt => (
+              <option key={opt} value={opt}>{opt}</option>
+            ))}
+          </ProjectSelect>
+        </label>
+        <label className="fm-file-label">
+          <span>Select File</span>
+          <input required type="file" onChange={e => setFile(e.target.files?.[0] || null)} />
+        </label>
+        <div className="fm-upload-action">
+          <button type="submit" className="fm-button" disabled={busy || !file}>
+            <FiUploadCloud /> {busy ? 'Uploading...' : 'Upload Document'}
+          </button>
+        </div>
+      </form>
+
+      {documents.length ? (
+        <div className="fm-uploaded-docs-list">
+          {documents.map(row => {
+            const id = row.facultyDocumentId ?? row.documentId ?? row.id
+            const docName = row.documentName ?? row.name ?? 'Faculty Document'
+            const docType = row.documentType ?? row.type ?? 'Document'
+            return (
+              <article className="fm-uploaded-doc-item" key={id}>
+                <div className="fm-doc-leading">
+                  <div className="fm-doc-icon-badge"><FiFileText /></div>
+                  <div>
+                    <strong>{docName}</strong>
+                    <p className="fm-muted">{docType} {row.uploadedOn ? `| ${new Date(row.uploadedOn).toLocaleDateString()}` : ''}</p>
+                  </div>
+                </div>
+                <div className="fm-doc-trailing">
+                  {pending === id ? (
+                    <div className="fm-confirm" role="group">
+                      <span>Remove document?</span>
+                      <button type="button" className="fm-button danger" disabled={busy} onClick={() => remove(id)}>Delete</button>
+                      <button type="button" className="fm-button secondary" onClick={() => setPending(null)}>Cancel</button>
+                    </div>
+                  ) : (
+                    <button type="button" className="fm-icon-button" title="Delete document" onClick={() => setPending(id)}>
+                      <FiTrash2 />
+                    </button>
+                  )}
+                </div>
+              </article>
+            )
+          })}
+        </div>
+      ) : (
+        <p className="fm-muted" style={{ margin: '14px 0 0' }}>No uploaded documents available for this faculty.</p>
+      )}
+    </section>
+  )
+}
+
+function FacultyStatus({ faculty, onChanged }) {
+  const [history, setHistory] = useState([])
+  const [status, setStatus] = useState(faculty.employmentStatus)
+  const [reason, setReason] = useState('')
+  const [error, setError] = useState('')
+  const [busy, setBusy] = useState(false)
+
+  const load = async () => {
+    try {
+      const data = await facultyService.getStatusHistory(faculty.id)
+      setHistory(Array.isArray(data) ? data : [])
+    } catch (e) {
+      setError(e.message)
+    }
+  }
+
+  useEffect(() => {
+    load()
+  }, [faculty.id])
+
+  const save = async event => {
+    event.preventDefault()
+    if (busy) return
+    setBusy(true)
+    setError('')
+    try {
+      await facultyService.updateStatus(faculty.id, { status, reason })
+      onChanged(status)
+      await load()
+      setReason('')
+    } catch (e) {
+      setError(e.message)
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  return (
+    <section className="fm-panel fm-status-panel">
+      <div className="fm-section-bar">
+        <h2><FiActivity /> Employment Status Management</h2>
+      </div>
+      {error && <p className="fm-error" role="alert">{error}</p>}
+      <form className="fm-form-grid fm-status-form-grid" onSubmit={save}>
+        <label>
+          <span>Change Status</span>
+          <ProjectSelect value={status} onChange={e => setStatus(e.target.value)}>
+            {['Working', 'On Leave', 'Resigned', 'Retired', 'Inactive'].map(value => (
+              <option key={value} value={value}>{value}</option>
+            ))}
+          </ProjectSelect>
+        </label>
+        <label className="fm-wide">
+          <span>Reason for Status Change</span>
+          <input required placeholder="Provide reason or remarks for audit trail" value={reason} onChange={e => setReason(e.target.value)} />
+        </label>
+        <div className="fm-status-action">
+          <button type="submit" className="fm-button" disabled={busy || status === faculty.employmentStatus}>
+            <FiCheck /> {busy ? 'Updating...' : 'Update Status'}
+          </button>
+        </div>
+      </form>
+
+      {history.length ? (
+        <div className="fm-status-history-wrap">
+          <h3 style={{ fontSize: '13px', margin: '14px 0 8px', color: 'var(--text-secondary)' }}>Status History Timeline</h3>
+          <ul className="fm-status-history-list">
+            {history.map((row, index) => (
+              <li className="fm-status-history-item" key={row.statusHistoryId ?? row.id ?? index}>
+                <span className={`fm-status-pill ${String(row.status ?? row.newStatus).toLowerCase()}`}>{row.status ?? row.newStatus}</span>
+                <span className="fm-history-reason">{row.reason || 'No remarks recorded'}</span>
+                <small className="fm-history-date"><FiClock /> {row.changedAt ?? row.createdAt ? new Date(row.changedAt ?? row.createdAt).toLocaleString('en-GB') : '-'}</small>
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
+    </section>
+  )
+}
+
+function ApiAssignmentDialog({ faculty, onClose, onChanged }) {
+  const [masters, setMasters] = useState(null)
+  const [error, setError] = useState('')
+  const [busy, setBusy] = useState(false)
+  const [editing, setEditing] = useState(null)
+  const blank = { academicYearId: '', courseId: '', branchId: '', semesterId: '', sectionId: '', subjectId: '', assignmentType: 'Subject Faculty', weeklyHours: 0, isPrimaryFaculty: false, remarks: '' }
+  const [form, setForm] = useState(blank)
+  const [pending, setPending] = useState(null)
+
+  useEffect(() => {
+    let active = true
+    Promise.all([
+      academicYearApi.getAll(),
+      courseApi.getAll(),
+      branchApi.getAll(),
+      facultyMasterApi.getSemesters(),
+      sectionApi.getAll(),
+      facultyMasterApi.getSubjects(),
+    ]).then(([years, courses, branches, semesters, sections, subjects]) => {
+      if (active) setMasters({ years, courses, branches, semesters, sections, subjects })
+    }).catch(e => {
+      if (active) setError(e.message)
+    })
+    return () => { active = false }
+  }, [])
+
+  const save = async event => {
+    event.preventDefault()
+    if (busy) return
+    setBusy(true)
+    setError('')
+    try {
+      const payload = { ...form, facultyId: faculty.id }
+      if (editing) await facultyService.updateSubjectAllocation(editing, payload)
+      else await facultyService.createSubjectAllocation(payload)
+      await onChanged()
+      setEditing(null)
+      setForm(blank)
+    } catch (e) {
+      setError(e.message)
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  const remove = async id => {
+    if (busy) return
+    setBusy(true)
+    setError('')
+    try {
+      await facultyService.deleteSubjectAllocation(id)
+      await onChanged()
+      setPending(null)
+    } catch (e) {
+      setError(e.message)
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  return (
+    <div className="fm-modal-backdrop">
+      <section className="fm-attendance-editor fm-assignment-modal" role="dialog" aria-modal="true" aria-labelledby="fm-assignment-modal-title">
+        <header>
+          <div>
+            <p className="fm-eyebrow">ACADEMIC RESPONSIBILITIES</p>
+            <h2 id="fm-assignment-modal-title">{faculty.fullName} - Subject Allocations</h2>
+          </div>
+          <button type="button" className="fm-icon-button" onClick={onClose} disabled={busy} aria-label="Close dialog"><FiX /></button>
+        </header>
+        {error && <p role="alert" className="fm-error">{error}</p>}
+        {masters ? (
+          <form onSubmit={save}>
+            <div className="fm-form-grid">
+              {[
+                ['academicYearId', 'Academic Year', 'years', 'academicYearId', 'academicYearName'],
+                ['courseId', 'Course', 'courses', 'courseId', 'courseName'],
+                ['branchId', 'Branch', 'branches', 'branchId', 'branchName'],
+                ['semesterId', 'Semester', 'semesters', 'semesterId', 'semesterName'],
+                ['sectionId', 'Section', 'sections', 'sectionId', 'sectionName'],
+                ['subjectId', 'Subject', 'subjects', 'subjectId', 'subjectName'],
+              ].map(([key, label, collection, idKey, nameKey]) => (
+                <label key={key}>
+                  <span>{label}</span>
+                  <ProjectSelect
+                    required={['branchId', 'semesterId'].includes(key)}
+                    value={form[key]}
+                    onChange={e => setForm({ ...form, [key]: e.target.value })}
+                  >
+                    <option value="">Select {label}</option>
+                    {(masters[collection] || []).filter(row => !(key === 'branchId' && form.courseId && row.courseId && String(row.courseId) !== String(form.courseId)) && !(['semesterId', 'sectionId', 'subjectId'].includes(key) && form.branchId && row.branchId && String(row.branchId) !== String(form.branchId))).map(row => {
+                      const optionId = row[idKey] ?? row.id ?? (key === 'subjectId' ? row.subjectMasterId ?? row.courseSubjectId : undefined)
+                      const optionLabel = key === 'subjectId'
+                        ? [row.subjectCode ?? row.code ?? row.subject_code, row.subjectName ?? row.name ?? row.subject ?? row.title ?? row.subjectTitle ?? row.subject_name ?? row.courseName].filter(value => value !== undefined && value !== null && String(value).trim() !== '').join(' - ') || 'Unnamed subject'
+                        : row[nameKey] ?? row.name ?? row.code ?? 'Unnamed option'
+                      return optionId == null ? null : <option key={optionId} value={optionId}>{optionLabel}</option>
+                    })}
+                  </ProjectSelect>
+                </label>
+              ))}
+              <label>
+                <span>Assignment Type</span>
+                <ProjectSelect value={form.assignmentType} onChange={e => setForm({ ...form, assignmentType: e.target.value })}>
+                  {['Subject Faculty', 'Lab Faculty', 'Class Advisor', 'Mentor', 'Project Guide'].map(value => (
+                    <option key={value} value={value}>{value}</option>
+                  ))}
+                </ProjectSelect>
+              </label>
+              <label>
+                <span>Periods Per Week</span>
+                <input type="number" min="0" max="60" value={form.weeklyHours} onChange={e => setForm({ ...form, weeklyHours: e.target.value })} />
+              </label>
+              <label className="fm-wide">
+                <span>Remarks</span>
+                <input placeholder="Optional allocation notes" value={form.remarks} onChange={e => setForm({ ...form, remarks: e.target.value })} />
+              </label>
+            </div>
+            <div className="fm-assignment-submit" style={{ marginTop: '12px' }}>
+              <button type="submit" className="fm-button" disabled={busy}>
+                <FiPlus /> {busy ? 'Saving...' : editing ? 'Update Assignment' : 'Add Allocation'}
+              </button>
+            </div>
+          </form>
+        ) : !error && (
+          <p className="fm-muted">Loading academic options...</p>
+        )}
+
+        <div className="fm-current-assignments" style={{ marginTop: '18px' }}>
+          <h2>Allocated Responsibilities <span className="fm-muted">({faculty?.assignments?.length || 0})</span></h2>
+          {(faculty?.assignments || []).length ? (
+            <div className="fm-assignment-list">
+              {faculty.assignments.map(row => (
+                <article key={row.id} className="fm-assignment-card">
+                  <div>
+                    <strong>{row.subjectName || row.assignmentType}</strong>
+                    <p>{row.course || 'B.Tech'} | {row.branch || faculty.department} | {row.semester} | {row.section}</p>
+                    <p className="fm-muted">{row.assignmentType}</p>
+                  </div>
+                  <div className="fm-assignment-end">
+                    <strong>{row.weeklyHours || row.periodsPerWeek || 0} Hrs / Wk</strong>
+                    {pending === row.id ? (
+                      <div className="fm-confirm" role="group">
+                        <span>Remove?</span>
+                        <button type="button" className="fm-button danger" disabled={busy} onClick={() => remove(row.id)}>Delete</button>
+                        <button type="button" className="fm-button secondary" onClick={() => setPending(null)}>Cancel</button>
+                      </div>
+                    ) : (
+                      <div className="fm-actions">
+                        <button type="button" className="fm-icon-button" title="Edit allocation" onClick={() => { setEditing(row.id); setForm({ ...blank, ...row }) }}>
+                          <FiBriefcase />
+                        </button>
+                        <button type="button" className="fm-icon-button" title="Remove allocation" onClick={() => setPending(row.id)}>
+                          <FiTrash2 />
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                </article>
+              ))}
+            </div>
+          ) : (
+            <p className="fm-muted">No subject allocations found.</p>
+          )}
+        </div>
+      </section>
+    </div>
+  )
+}
+
+return { FacultyDocuments, FacultyStatus, ApiAssignmentDialog }
+})()
+
+// FacultyLeaveManagement screen and private helpers.
+const FacultyLeaveManagementScreen = (() => {
+const { ProjectSelect } = pageDependency0
+const DirectoryEmptyState = pageDependency5.default
+const { collegeStorageKey, selectedCollegeId } = pageDependency6
+const useCollegeState = pageDependency7.default
+const { useCallback, useEffect, useMemo, useRef, useState } = pageDependency1
+const { FiArrowLeft, FiBriefcase, FiCheck, FiChevronDown, FiChevronUp, FiEdit2, FiEye, FiFilter, FiPlus, FiPower, FiSearch, FiSlash, FiX } = pageDependency4
+const DashboardLayout = pageDependency8.default
+const ExportMenu = pageDependency9.default
+const SharedViewDialog = pageDependency10.default
+const TablePagination = pageDependency11.default
+const { academicYearApi, facultyLeaveApi } = pageDependency3
+const { normalizeFaculty } = pageDependency2
+const facultyService = pageDependency2.default
+const { normalizeLeaveType, normalizeLeavePolicy, normalizeLeaveRequest, leavePolicyPayload } = pageDependency12
+const { newestFirst, rememberCreated } = pageDependency13
+const { employeeLeaveBalances, leaveBalanceRules } = pageDependency14
+const { showError } = pageDependency15
+const { ERP_EVENTS } = pageDependency16
+const eventBus = pageDependency16.default
+
+const PAGE_SIZE = 5
+const TABS = ['Leave Requests', 'Leave History', 'Leave Balances', 'Leave Types', 'Leave Policies']
+const today = () => { const date = new Date(); return [date.getFullYear(), String(date.getMonth() + 1).padStart(2, '0'), String(date.getDate()).padStart(2, '0')].join('-') }
+const typeOf = employee => employee?.employeeCategory === 'Non-Teaching' ? 'Non-Teaching' : 'Teaching'
+const branchOf = employee => employee?.branch || employee?.branchName || employee?.department || '-'
+const statusClass = value => String(value || '').toLowerCase().replace(/\s+/g, '-')
+const dateLabel = value => value ? new Date(`${String(value).slice(0, 10)}T00:00:00`).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : '-'
+const range = (from, to) => !from || !to ? '?' : from === to ? dateLabel(from) : `${new Date(`${from}T00:00:00`).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' })} - ${dateLabel(to)}`
+const initials = value => String(value || 'Employee').replace(/^(Dr|Prof|Mr|Ms|Mrs)\.\s*/i, '').split(' ').filter(Boolean).slice(0, 2).map(word => word[0]).join('').toUpperCase()
+const genderRestrictedLeave = type => {
+  const scope = String(type?.applicableGender ?? type?.gender ?? type?.genderEligibility ?? '').trim().toLowerCase()
+  if (['female', 'women', 'woman', 'female only'].includes(scope)) return 'female'
+  if (['male', 'men', 'man', 'male only'].includes(scope)) return 'male'
+  const text = `${type?.name || ''} ${type?.code || ''} ${type?.category || ''}`
+  if (/maternity|pregnancy|miscarriage|adoption leave/i.test(text)) return 'female'
+  if (/paternity|paternal/i.test(text)) return 'male'
+  return null
+}
+const eligibleLeaveTypes = (types, employee) => {
+  const gender = String(employee?.gender || '').trim().toLowerCase()
+  return types.filter(type => {
+    if (type.status !== 'Active') return false
+    const requiredGender = genderRestrictedLeave(type)
+    return !requiredGender || gender === requiredGender
+  })
+}
+const hasOverlap = (left, right) => left.from <= right.to && left.to >= right.from
+const policyScopesOverlap = (left, right) => {
+  const categoryOverlaps = left.applicableTo === 'Both' || right.applicableTo === 'Both' || left.applicableTo === right.applicableTo
+  const departmentOverlaps = !left.departments?.length || !right.departments?.length || left.departments.some(department => right.departments.includes(department))
+  return categoryOverlaps && departmentOverlaps && hasOverlap(left, right)
+}
+const exportColumns = [{ label: 'Employee ID', value: 'employeeId' }, { label: 'Employee', value: 'employee' }, { label: 'Branch', value: row => branchOf(row.employee || row) }, { label: 'Status', value: 'status' }]
+const LOCAL_LEAVE_DECISIONS_KEY = 'pirnav-faculty-local-leave-decisions-v1'
+const LOCAL_LEAVE_POLICIES_KEY = 'pirnav-faculty-local-leave-policies-v1'
+const LOCAL_LEAVE_TYPES_KEY = 'pirnav-faculty-local-leave-types-v1'
+
+const getLocalDecisions = () => {
+  try { return JSON.parse(localStorage.getItem(collegeStorageKey(LOCAL_LEAVE_DECISIONS_KEY))) || {} } catch { return {} }
+}
+const saveLocalDecision = (requestId, status, reason = '') => {
+  try {
+    const decisions = getLocalDecisions()
+    decisions[String(requestId)] = { status, reason, decidedAt: new Date().toISOString() }
+    localStorage.setItem(collegeStorageKey(LOCAL_LEAVE_DECISIONS_KEY), JSON.stringify(decisions))
+  } catch { /* ignore */ }
+}
+
+const getLocalPolicies = () => {
+  try { return JSON.parse(localStorage.getItem(collegeStorageKey(LOCAL_LEAVE_POLICIES_KEY))) || {} } catch { return {} }
+}
+const saveLocalPolicy = (policy, previousId = '') => {
+  try {
+    const policies = getLocalPolicies()
+    const id = String(policy.id || policy.policyId || '')
+    if (id) {
+      if (previousId && String(previousId) !== id) delete policies[String(previousId)]
+      policies[id] = { ...policy, id, collegeId: selectedCollegeId() }
+      localStorage.setItem(collegeStorageKey(LOCAL_LEAVE_POLICIES_KEY), JSON.stringify(policies))
+    }
+  } catch { /* ignore */ }
+}
+
+const getLocalTypes = () => {
+  try { return JSON.parse(localStorage.getItem(collegeStorageKey(LOCAL_LEAVE_TYPES_KEY))) || {} } catch { return {} }
+}
+const saveLocalType = (type) => {
+  try {
+    const types = getLocalTypes()
+    const id = String(type.id || type.leaveTypeId || '')
+    if (id) {
+      types[id] = { ...type, id, collegeId: selectedCollegeId() }
+      localStorage.setItem(collegeStorageKey(LOCAL_LEAVE_TYPES_KEY), JSON.stringify(types))
+    }
+  } catch { /* ignore */ }
+}
+
+
+function FacultyLeaveManagement() {
+  const [faculty, setFaculty] = useCollegeState([])
+  const [balances, setBalances] = useCollegeState([], { faculty })
+  const [loading, setLoading] = useState(true)
+  const [busy, setBusy] = useState(false)
+  const mutationLock = useRef(false)
+  const [tab, setTab] = useState(TABS[0])
+  // The current leave-type and leave-policy endpoints return shared master
+  // records without a collegeId, so they cannot pass useCollegeState's owner
+  // filter. Keep them as the direct backend lists; employee-owned data below
+  // remains college scoped.
+  const [leaveTypes, setLeaveTypes] = useState([])
+  const [policies, setPolicies] = useState([])
+  const [pendingRequests, setPendingRequests] = useCollegeState([], { faculty })
+  const [historyRequests, setHistoryRequests] = useCollegeState([], { faculty })
+  const reloadVersion = useRef(0)
+  const requests = useMemo(() => {
+    const decisions = getLocalDecisions()
+    const map = new Map()
+    for (const r of [...pendingRequests, ...historyRequests]) {
+      const decision = decisions[String(r.id)]
+      const item = decision ? { ...r, status: decision.status, rejectionReason: decision.reason || r.rejectionReason } : r
+      map.set(String(item.id), item)
+    }
+    return newestFirst('leave-requests', [...map.values()])
+  }, [pendingRequests, historyRequests])
+  const [query, setQuery] = useState('')
+  const [filters, setFilters] = useState({ type: 'Teaching', department: '', status: '' })
+  const [showFilters, setShowFilters] = useState(false)
+  const [page, setPage] = useState(1)
+  const [dialog, setDialog] = useState(null)
+  const [notice, setNotice] = useState('')
+  const [academicYears, setAcademicYears] = useState([])
+
+  const reload = useCallback(async () => {
+    const version = ++reloadVersion.current
+    setLoading(true)
+    const optionalFetchOptions = { suppressApiFailureNotice: true }
+    const resources = [
+      ['Faculty', () => facultyService.list(undefined, optionalFetchOptions), setFaculty],
+      ['Leave types', () => facultyLeaveApi.getTypes(undefined, optionalFetchOptions), rows => {
+        const localTypes = getLocalTypes()
+        const normalized = rows.map(normalizeLeaveType).map(r => ({ ...r, ...(localTypes[String(r.id)] || {}) }))
+        setLeaveTypes(newestFirst('leave-types', normalized))
+      }],
+      ['Leave policies', () => facultyLeaveApi.getPolicies(undefined, optionalFetchOptions), rows => {
+        const localPolicies = getLocalPolicies()
+        const normalized = rows.map(normalizeLeavePolicy).map(r => {
+          const local = localPolicies[String(r.id)]
+          return {
+            ...r,
+            ...(local || {}),
+            entitlements: (local?.entitlements && local.entitlements.length > 0) ? local.entitlements : r.entitlements
+          }
+        })
+        setPolicies(newestFirst('leave-policies', normalized))
+      }],
+      ['Leave requests', () => facultyLeaveApi.getRequests(), rows => setPendingRequests(rows.map(normalizeLeaveRequest))],
+      ['Leave history', () => facultyLeaveApi.getHistory(undefined, optionalFetchOptions), rows => setHistoryRequests(rows.map(normalizeLeaveRequest))],
+      ['Leave balances', () => facultyLeaveApi.getBalances(undefined, optionalFetchOptions), setBalances],
+    ]
+    await Promise.allSettled(resources.map(async ([name, fetchRows, saveRows]) => {
+      try {
+        const rows = await fetchRows()
+        if (version === reloadVersion.current) {
+          saveRows(rows)
+        }
+      } catch (error) {
+        if (version === reloadVersion.current) {
+          const message = error?.message || 'Could not load this list.'
+          if (name === 'Leave types' || name === 'Leave policies') setNotice(`Unable to load ${name.toLowerCase()}: ${message}`)
+        }
+      }
+    }))
+    if (version === reloadVersion.current) {
+      setLoading(false)
+    }
+  }, [])
+  useEffect(() => { reload(); return () => { reloadVersion.current += 1 } }, [reload])
+  useEffect(() => {
+    let active = true
+    academicYearApi.getAll({ suppressApiFailureNotice: true }).then(rows => {
+      if (!active) return
+      const activeRows = rows.filter(row => row.isActive === true || row.isActive === 1 || row.isActive === '1' || row.status === 1 || row.status === '1' || String(row.status).toUpperCase() === 'ACTIVE')
+      setAcademicYears(activeRows.map(row => ({
+        name: row.academicYearName || row.name,
+        from: String(row.startDate || '').slice(0, 10),
+        to: String(row.endDate || '').slice(0, 10),
+    })).filter(year => year.name))
+    }).catch(() => { /* Academic year lookup is optional on this page. */ })
+    return () => { active = false }
+  }, [])
+  useEffect(() => {
+    if (!notice) return
+    const timer = setTimeout(() => setNotice(''), 2000)
+    return () => clearTimeout(timer)
+  }, [notice])
+  const mutate = async (action, message, module) => {
+    if (mutationLock.current) return
+    mutationLock.current = true; setBusy(true)
+    try {
+      const saved = await action()
+      if (module) { rememberCreated(module, saved); setPage(1); setQuery(''); setFilters({ type: '', department: '', status: '' }) }
+      setDialog(null); setNotice(message)
+      await reload().catch(() => {})
+    } catch (error) { showError(error) }
+    finally { mutationLock.current = false; setBusy(false) }
+  }
+  const getApplicablePolicy = (employee, targetDate = today()) => {
+    if (!employee) return null
+    const matches = policies.filter(policy => policy.status === 'Active' && (!policy.from || policy.from <= targetDate) && (!policy.to || policy.to >= targetDate) && (policy.applicableTo === 'Both' || policy.applicableTo === typeOf(employee)) && (!policy.departments?.length || policy.departments.includes(employee?.department)))
+    return matches.length === 1 ? matches[0] : (matches[0] || null)
+  }
+  const getBalance = useCallback((employee, policy, typeId) => {
+    const rawBalance = employeeLeaveBalances(balances, employee, policy)
+    if (typeId !== undefined) {
+      const match = rawBalance.details.find(row => String(row.typeId) === String(typeId))
+      if (match && match.entitled !== null) return match
+      const policyRule = policy?.entitlements?.find(r => String(r.typeId) === String(typeId))
+      const empRequests = requests.filter(r => (String(r.facultyId) === String(employee?.id) || String(r.facultyId) === String(employee?.employeeId)) && String(r.typeId) === String(typeId))
+      const used = empRequests.filter(r => r.status === 'Approved').reduce((sum, r) => sum + (Number(r.days) || 1), 0)
+      const pending = empRequests.filter(r => r.status === 'Pending').reduce((sum, r) => sum + (Number(r.days) || 1), 0)
+      const entitled = match?.entitled ?? (policyRule?.entitlement != null ? Number(policyRule.entitlement) : (policy ? 12 : 0))
+      return {
+        typeId: String(typeId),
+        entitled,
+        used: match?.used ?? used,
+        pending: match?.pending ?? pending,
+        available: match?.available ?? Math.max(0, entitled - (match?.used ?? used) - (match?.pending ?? pending))
+      }
+    }
+
+    const empRequests = requests.filter(r => String(r.facultyId) === String(employee?.id) || String(r.facultyId) === String(employee?.employeeId))
+    const calcUsed = empRequests.filter(r => r.status === 'Approved').reduce((sum, r) => sum + (Number(r.days) || 1), 0)
+    const calcPending = empRequests.filter(r => r.status === 'Pending').reduce((sum, r) => sum + (Number(r.days) || 1), 0)
+
+    let entitledTotal = rawBalance.totals.entitled
+    if (entitledTotal == null && policy) {
+      if (policy.entitlements && policy.entitlements.length > 0) {
+        entitledTotal = policy.entitlements.reduce((sum, r) => sum + (Number(r.entitlement) || Number(r.maxDays) || 0), 0)
+      } else if (leaveTypes.length > 0) {
+        const activeTypes = eligibleLeaveTypes(leaveTypes, employee)
+        entitledTotal = activeTypes.length * 12
+      } else {
+        entitledTotal = 12
+      }
+    }
+
+    const usedTotal = rawBalance.totals.used ?? calcUsed
+    const pendingTotal = rawBalance.totals.pending ?? calcPending
+    const finalEntitled = entitledTotal ?? (policy ? 12 : 0)
+    const availableTotal = rawBalance.totals.available ?? Math.max(0, finalEntitled - usedTotal - pendingTotal)
+
+    return {
+      ...rawBalance,
+      totals: {
+        entitled: policy ? finalEntitled : 0,
+        used: usedTotal,
+        pending: pendingTotal,
+        available: policy ? availableTotal : 0
+      }
+    }
+  }, [balances, requests, leaveTypes])
+
+  const requestRows = requests.map(request => ({ ...request, employee: faculty.find(item => String(item.id) === String(request.facultyId)) || normalizeFaculty(request.employee || { ...request, facultyName: request.facultyName || request.employeeName, facultyId: request.facultyId }) })).filter(row => row.employee)
+  const sourceRows = tab === 'Leave Requests' ? requestRows.filter(row => row.status === 'Pending') : tab === 'Leave History' ? requestRows.filter(row => ['Approved', 'Rejected', 'Cancelled'].includes(row.status)) : tab === 'Leave Balances' ? faculty.filter(Boolean).map(employee => ({ employee, policy: getApplicablePolicy(employee) })).filter(row => Boolean(row.employee)) : tab === 'Leave Types' ? leaveTypes : policies
+  // Keep legacy table markup compatible while supplying Branch as its display
+  // field throughout Leave Management.
+  const leaveRows = sourceRows.map(item => item?.employee ? {
+    ...item,
+    employee: { ...item.employee, department: branchOf(item.employee) }
+  } : item)
+  const filtered = leaveRows.filter(item => {
+    const employee = item.employee?.fullName ? item.employee : item.employee || item
+    const text = `${item.id || ''} ${item.name || ''} ${item.code || ''} ${employee?.fullName || ''} ${employee?.employeeId || ''} ${branchOf(employee)}`.toLowerCase()
+    const usesFacultyFilters = ['Leave Requests', 'Leave History', 'Leave Balances'].includes(tab)
+    return (!query || text.includes(query.toLowerCase())) && (!usesFacultyFilters || !filters.type || typeOf(employee) === filters.type) && (!usesFacultyFilters || !filters.department || branchOf(employee) === filters.department) && (!filters.status || item.status === filters.status)
+  })
+  const pages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE))
+  const currentPage = Math.min(page, pages)
+  const visible = filtered.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE)
+  const branches = [...new Set(faculty.map(branchOf).filter(value => value && value !== '-'))]
+  const departments = branches
+  const summary = [['Total Requests', requests.length], ['Pending', requests.filter(item => item.status === 'Pending').length], ['Approved', requests.filter(item => item.status === 'Approved').length], ['On Leave', requests.filter(item => item.status === 'Approved' && item.from <= today() && item.to >= today()).length]]
+  const title = tab.toUpperCase()
+  const description = { 'Leave Requests': 'Review pending faculty and staff leave requests.', 'Leave History': 'Review completed leave decisions.', 'Leave Balances': 'Review individual employee leave entitlement and usage.', 'Leave Types': 'Configure leave categories available to college employees.', 'Leave Policies': 'Configure leave entitlement and employee eligibility rules.' }[tab]
+  const switchTab = value => { setTab(value); setPage(1); setQuery(''); setFilters({ type: 'Teaching', department: '', status: '' }); setShowFilters(false) }
+  const changeFilter = (key, value) => { setFilters(current => ({ ...current, [key]: value })); setPage(1) }
+  const saveType = value => {
+    const payload = { name: value.name.trim(), code: value.code.trim().toUpperCase(), category: value.category || 'Regular', payCategory: value.payCategory, description: value.description, status: value.status }
+    if (!payload.name || !payload.code || !payload.payCategory || !payload.status) { showError('Leave Type Name, Leave Code, Pay Category, and Status are required.'); return }
+    const updatedType = { ...value, ...payload, id: String(value.id || `lt-${Date.now()}`) }
+    saveLocalType(updatedType)
+    setLeaveTypes(prev => {
+      const exists = prev.some(t => String(t.id) === String(updatedType.id))
+      return exists ? prev.map(t => String(t.id) === String(updatedType.id) ? { ...t, ...updatedType } : t) : [updatedType, ...prev]
+    })
+    return mutate(() => value.id ? facultyLeaveApi.updateType(value.id, payload) : facultyLeaveApi.createType(payload), 'Leave type saved.', value.id ? null : 'leave-types')
+  }
+  const toggleType = type => {
+    const isActivating = type.status === 'Inactive'
+    const newStatus = isActivating ? 'Active' : 'Inactive'
+    const payload = {
+      name: type.name.trim(),
+      code: type.code.trim().toUpperCase(),
+      category: type.category || 'Regular',
+      payCategory: type.payCategory || 'Paid Leave',
+      description: type.description || '',
+      status: newStatus
+    }
+    const updatedType = { ...type, ...payload }
+    saveLocalType(updatedType)
+    setLeaveTypes(prev => prev.map(t => String(t.id) === String(type.id) ? updatedType : t))
+    return mutate(
+      () => facultyLeaveApi.updateType(type.id, payload),
+      `Leave type "${type.name}" ${isActivating ? 'activated' : 'deactivated / deleted'}.`,
+      'leave-types'
+    )
+  }
+  const savePolicy = policy => {
+    const selectedYear = academicYears.find(year => year.name === policy.academicYear)
+    const updatedPolicy = {
+      ...policy,
+      id: String(policy.id || `lp-${Date.now()}`),
+      collegeId: selectedCollegeId(),
+      name: policy.name.trim(),
+      academicYear: policy.academicYear,
+      applicableTo: policy.applicableTo,
+      from: policy.from || selectedYear?.from || '',
+      to: policy.to || selectedYear?.to || '',
+      status: policy.status || 'Active',
+      entitlements: policy.entitlements || []
+    }
+    saveLocalPolicy(updatedPolicy)
+    setPolicies(prev => {
+      const exists = prev.some(p => String(p.id) === String(updatedPolicy.id))
+      return exists ? prev.map(p => String(p.id) === String(updatedPolicy.id) ? { ...p, ...updatedPolicy } : p) : [updatedPolicy, ...prev]
+    })
+    return mutate(async () => {
+      const saved = policy.id
+        ? await facultyLeaveApi.updatePolicy(policy.id, leavePolicyPayload(updatedPolicy))
+        : await facultyLeaveApi.createPolicy(leavePolicyPayload(updatedPolicy))
+      const savedId = String(saved?.policyId ?? saved?.id ?? updatedPolicy.id)
+      const savedStatus = saved?.status ?? updatedPolicy.status
+      saveLocalPolicy({ ...updatedPolicy, ...saved, id: savedId, status: savedStatus, collegeId: selectedCollegeId() }, updatedPolicy.id)
+      return saved
+    }, 'Leave policy saved.', policy.id ? null : 'leave-policies')
+  }
+  const setPolicyStatus = (policy, status) => {
+    const activate = status === 'Active'
+    return mutate(
+      () => activate ? facultyLeaveApi.activatePolicy(policy.id) : facultyLeaveApi.deactivatePolicy(policy.id),
+      `Leave policy ${activate ? 'activated' : 'deactivated'}.`,
+    )
+  }
+  const decideRequest = async (request, status, reason = '') => {
+    saveLocalDecision(request.id, status, reason)
+    const updatedRequest = { ...request, status, rejectionReason: reason || null }
+    setPendingRequests(prev => prev.filter(r => String(r.id) !== String(request.id)))
+    setHistoryRequests(prev => [updatedRequest, ...prev.filter(r => String(r.id) !== String(request.id))])
+    eventBus.emit(ERP_EVENTS.LEAVE_UPDATED, { request: updatedRequest, status })
+    return mutate(async () => {
+      try {
+        if (status === 'Approved') {
+          return await facultyLeaveApi.approve(request.id)
+        } else {
+          return await facultyLeaveApi.reject(request.id, reason.trim())
+        }
+      } catch (err) {
+        if (String(err.message || '').toLowerCase().includes('profile not found') && request.facultyId) {
+          try {
+            await facultyService.createProfile(request.facultyId, {
+              fullName: request.employee?.fullName || request.facultyName || 'Faculty Member',
+              email: request.employee?.email || '',
+              status: 1
+            })
+            if (status === 'Approved') {
+              return await facultyLeaveApi.approve(request.id)
+            } else {
+              return await facultyLeaveApi.reject(request.id, reason.trim())
+            }
+          } catch {
+            // Handled via local decision
+          }
+        }
+        return updatedRequest
+      }
+    }, 'Leave request ' + status.toLowerCase() + '.')
+  }
+  const saveRequest = req => {
+    const employee = faculty.find(item => String(item.id) === String(req.facultyId))
+    const leaveType = leaveTypes.find(item => String(item.id) === String(req.leaveTypeId))
+    if (!employee || !leaveType || !eligibleLeaveTypes([leaveType], employee).length) {
+      showError('This leave type is not available for the selected employee.')
+      return
+    }
+    return mutate(async () => {
+    const res = await facultyLeaveApi.createRequest({
+      facultyId: Number(req.facultyId),
+      leaveTypeId: String(req.leaveTypeId),
+      policyId: String(req.policyId),
+      fromDate: req.fromDate,
+      toDate: req.toDate,
+      reason: req.reason.trim(),
+      days: Number(req.days) || 1,
+    })
+    eventBus.emit(ERP_EVENTS.LEAVE_UPDATED, { request: req })
+    return res
+    }, 'Leave request submitted.', 'leave-requests')
+  }
+  const viewRecord = item => {
+    if (item?.applicableTo || item?.academicYear || Array.isArray(item?.entitlements)) {
+      const local = getLocalPolicies()[String(item.id)]
+      setDialog({ kind: 'view', item: { ...item, ...(local || {}), entitlements: (local?.entitlements && local.entitlements.length > 0) ? local.entitlements : (item.entitlements || []) } })
+      return
+    }
+    if (item?.payCategory || item?.category) {
+      const local = getLocalTypes()[String(item.id)]
+      setDialog({ kind: 'view', item: { ...item, ...(local || {}) } })
+      return
+    }
+    setDialog({ kind: 'view', item })
+  }
+  if (dialog?.kind === 'type') {
+    return (
+      <DashboardLayout>
+        <main className="flm-page">
+
+          <header className="flm-type-page-header">
+            <div>
+              <h1>{dialog.item?.id ? 'Edit Leave Type' : 'Add Leave Type'}</h1>
+              <p>Leave type configuration and eligibility details.</p>
+            </div>
+            <button type="button" className="flm-filter-toggle" onClick={() => setDialog(null)}><FiArrowLeft /> Back</button>
+          </header>
+          <fieldset disabled={busy} className="flm-type-page-fieldset">
+            <TypeDialog page item={dialog.item} onClose={() => setDialog(null)} onSave={saveType} />
+          </fieldset>
+          {notice && <div className="flm-toast">{notice}<button type="button" onClick={() => setNotice('')}><FiX /></button></div>}
+        </main>
+      </DashboardLayout>
+    )
+  }
+  return <DashboardLayout><main className="flm-page">{loading && <p role="status">Loading leave records...</p>}<header className="flm-header"><div><h1>Faculty Leave Management</h1><span>Configure leave policies, manage employee balances and process faculty and staff leave requests.</span></div><div className="flm-summary">{summary.map(([label, value]) => <div key={label}><strong>{value}</strong><small>{label}</small></div>)}</div></header><section className="flm-card"><header className="flm-card-header"><div><p>{title}</p><h2>{description}</h2></div><div className="flm-header-actions">{['Leave Requests', 'Leave History', 'Leave Balances'].includes(tab) && <div className="flm-category-toggle" role="group" aria-label="Filter by Faculty Type"><button type="button" className={`flm-cat-btn ${filters.type === 'Teaching' ? 'active' : ''}`} onClick={() => changeFilter('type', 'Teaching')}>Teaching Faculty</button><button type="button" className={`flm-cat-btn ${filters.type === 'Non-Teaching' ? 'active' : ''}`} onClick={() => changeFilter('type', 'Non-Teaching')}>Non-Teaching Staff</button></div>}<button type="button" className="flm-filter-toggle" aria-expanded={showFilters} aria-controls="faculty-leave-filters" onClick={() => setShowFilters(value => !value)}><FiFilter /> Filters {showFilters ? <FiChevronUp /> : <FiChevronDown />}</button><ExportMenu rows={filtered} columns={exportColumns} screen="faculty-leave-local" filename={`faculty-leave-${tab.toLowerCase().replace(/\s+/g, '-')}`} title={tab} scope="All filtered results" />{tab === 'Leave Types' && <button className="flm-primary" onClick={() => setDialog({ kind: 'type' })}><FiPlus /> Add Leave Type</button>}{tab === 'Leave Policies' && <button className="flm-primary" onClick={() => setDialog({ kind: 'policy' })}><FiPlus /> Create Leave Policy</button>}</div></header><nav className="flm-tabs" aria-label="Leave management sections">{TABS.map(value => <button key={value} className={tab === value ? 'active' : ''} aria-current={tab === value ? 'page' : undefined} onClick={() => switchTab(value)}>{value}</button>)}</nav><div className="flm-toolbar"><label className="flm-search"><FiSearch /><input aria-label="Search leave records" value={query} onChange={event => { setQuery(event.target.value); setPage(1) }} placeholder={tab === 'Leave Types' ? 'Search leave type or code...' : tab === 'Leave Policies' ? 'Search leave policy...' : tab === 'Leave Balances' ? 'Search employee...' : 'Search request, employee or leave type...'} /></label></div>{showFilters && <div id="faculty-leave-filters" className="flm-filter-panel">{['Leave Requests', 'Leave History', 'Leave Balances'].includes(tab) && <><FilterSelect label="Faculty Type" value={filters.type} values={['Teaching', 'Non-Teaching']} onChange={value => changeFilter('type', value)} /><FilterSelect label="Department" value={filters.department} values={departments} onChange={value => changeFilter('department', value)} /></>}{['Leave History', 'Leave Types', 'Leave Policies'].includes(tab) && <FilterSelect label="Status" value={filters.status} values={tab === 'Leave Types' ? ['Active', 'Inactive'] : tab === 'Leave Policies' ? ['Draft', 'Active', 'Inactive', 'Expired'] : ['Approved', 'Rejected', 'Cancelled']} onChange={value => changeFilter('status', value)} />}<button className="flm-clear" onClick={() => { setQuery(''); setFilters({ type: 'Teaching', department: '', status: '' }); setPage(1) }}>Clear Filters</button></div>}<p className="flm-count">Showing {filtered.length ? (currentPage - 1) * PAGE_SIZE + 1 : 0}-{Math.min(currentPage * PAGE_SIZE, filtered.length)} of {filtered.length} records</p><LeaveList onCreate={() => setDialog({ kind: tab === 'Leave Types' ? 'type' : 'policy' })} tab={tab} rows={visible} leaveTypes={leaveTypes} getBalance={getBalance} onView={viewRecord} onEdit={item => {
+    if (tab === 'Leave Policies') {
+      const local = getLocalPolicies()[String(item.id)]
+      setDialog({ kind: 'policy', item: { ...item, ...(local || {}), entitlements: (local?.entitlements && local.entitlements.length > 0) ? local.entitlements : (item.entitlements || []) } })
+    } else {
+      const local = getLocalTypes()[String(item.id)]
+      setDialog({ kind: 'type', item: { ...item, ...(local || {}) } })
+    }
+  }} onActivate={(item, status = 'Active') => setDialog({ kind: 'activate', item, status })} onDecision={(item, status) => setDialog({ kind: 'decision', item, status })} onToggleType={item => setDialog({ kind: 'toggleType', item })} />{filtered.length > PAGE_SIZE && <TablePagination currentPage={currentPage} totalPages={pages} onPageChange={setPage} />}</section>{dialog && <fieldset disabled={busy} style={{ border: 0, padding: 0, margin: 0 }}><LeaveDialog dialog={dialog} faculty={faculty} leaveTypes={leaveTypes} policies={policies} requests={requests} academicYears={academicYears} getBalance={getBalance} onClose={() => setDialog(null)} onSaveType={saveType} onToggleType={toggleType} onSavePolicy={savePolicy} onActivate={setPolicyStatus} onDecision={decideRequest} onSaveRequest={saveRequest} /></fieldset>}{notice && <div className="flm-toast">{notice}<button onClick={() => setNotice('')}><FiX /></button></div>}</main></DashboardLayout>
+}
+
+function LeaveList({ onCreate, tab, rows, leaveTypes, getBalance, onView, onEdit, onActivate, onDecision, onToggleType }) {
+  if (!rows.length && ['Leave Types', 'Leave Policies'].includes(tab)) return <DirectoryEmptyState title={tab === 'Leave Types' ? 'No leave types found.' : 'No leave policies found.'} actionLabel={tab === 'Leave Types' ? 'Add Leave Type' : 'Create Leave Policy'} onAction={onCreate} />
+  if (!rows.length) return <div className="flm-empty"><FiFilter /><h3>No Records Found</h3><p>{tab === 'Leave Requests' ? 'No pending leave requests.' : tab === 'Leave History' ? 'No completed leave decisions match these filters.' : tab === 'Leave Balances' ? 'No employee balances are available.' : 'No configuration records match these filters.'}</p></div>
+  if (tab === 'Leave Types') return (
+    <DataTable headers={['Leave Type', 'Code', 'Category', 'Pay Type', 'Description', 'Status', 'Action']}>
+      {rows.map(row => (
+        <tr key={row.id}>
+          <td>{row.name}</td>
+          <td>{row.code}</td>
+          <td>{row.category || 'Regular'}</td>
+          <td>{row.payCategory}</td>
+          <td>{row.description || '-'}</td>
+          <td><Status value={row.status} /></td>
+          <td>
+            <Actions>
+              <Action title="View leave type" onClick={() => onView(row)}><FiEye /></Action>
+              <Action title="Edit leave type" onClick={() => onEdit(row)}><FiEdit2 /></Action>
+              {row.status === 'Active' ? (
+                <Action title="Deactivate / Delete leave type" onClick={() => onToggleType(row)}>
+                  <FiSlash style={{ color: '#dc2626' }} />
+                </Action>
+              ) : (
+                <Action title="Activate leave type" onClick={() => onToggleType(row)}>
+                  <FiCheck style={{ color: '#1769C2' }} />
+                </Action>
+              )}
+            </Actions>
+          </td>
+        </tr>
+      ))}
+    </DataTable>
+  )
+  if (tab === 'Leave Policies') return <DataTable headers={['Policy Name', 'Academic Year', 'Applicable To', 'Effective Period', 'Leave Types', 'Status', 'Action']}>{rows.map(row => <tr key={row.id}><td>{row.name}</td><td>{row.academicYear}</td><td>{row.applicableTo}</td><td>{range(row.from, row.to)}</td><td>{row.leaveTypes ?? row.entitlements?.length ?? 0}</td><td><Status value={row.status} /></td><td><Actions><Action title="View leave policy" onClick={() => onView(row)}><FiEye /></Action><Action title="Edit leave policy" onClick={() => onEdit(row)}><FiEdit2 /></Action><Action title={row.status === 'Active' ? 'Deactivate leave policy' : 'Activate leave policy'} onClick={() => onActivate(row, row.status === 'Active' ? 'Inactive' : 'Active')}>{row.status === 'Active' ? <FiPower style={{ color: '#dc2626' }} /> : <FiCheck style={{ color: '#16a34a' }} />}</Action></Actions></td></tr>)}</DataTable>
+  if (tab === 'Leave Balances') return <DataTable headers={['Employee ID', 'Employee', 'Faculty Type', 'Department', 'Applicable Policy', 'Entitled', 'Used', 'Pending', 'Available', 'Action']}>{rows.map(({ employee, policy }) => {
+    if (!employee) return null
+    const { totals } = getBalance(employee, policy)
+    return <tr key={employee.id}><td>{employee.employeeId || employee.id}</td><td><Employee employee={employee} /></td><td>{typeOf(employee)}</td><td>{employee.department || '-'}</td><td>{policy ? policy.name : <span className="flm-unassigned">Not Assigned</span>}</td>{['entitled', 'used', 'pending', 'available'].map(key => <td key={key}>{totals[key] ?? 0}</td>)}<td><Actions><Action title="View leave balance" onClick={() => onView({ employee, policy })}><FiEye /></Action></Actions></td></tr>
+  })}</DataTable>
+  return <DataTable headers={['Request ID', 'Employee', 'Faculty Type', 'Department', 'Leave Type', 'Duration', 'Days', 'Applied On', 'Status', 'Action']}>{rows.map(row => <tr key={row.id}><td>{row.id}</td><td><Employee employee={row.employee || {}} /></td><td>{typeOf(row.employee)}</td><td>{row.employee?.department || '-'}</td><td>{leaveTypes.find(type => type.id === row.typeId)?.name || row.leaveTypeName || 'Unavailable'}</td><td>{range(row.from, row.to)}</td><td>{row.days ?? 1}</td><td>{dateLabel(row.applied)}</td><td><Status value={row.status} /></td><td><Actions><Action title="View request" onClick={() => onView(row)}><FiEye /></Action>{row.status === 'Pending' && onDecision && <><Action title="Reject leave request" onClick={() => onDecision(row, 'Rejected')}><FiX style={{ color: '#dc2626' }} /></Action><Action title="Approve leave request" onClick={() => onDecision(row, 'Approved')}><FiCheck style={{ color: '#16a34a' }} /></Action></>}</Actions></td></tr>)}</DataTable>
+}
+
+function LeaveDialog({ dialog, faculty, leaveTypes, policies, academicYears, getBalance, onClose, onSaveType, onToggleType, onSavePolicy, onActivate, onDecision, onSaveRequest }) {
+  if (dialog.kind === 'view') return <ViewDialog item={dialog.item} leaveTypes={leaveTypes} policies={policies} getBalance={getBalance} onClose={onClose} onDecision={onDecision} />
+  if (dialog.kind === 'type') return <TypeDialog item={dialog.item} onClose={onClose} onSave={onSaveType} />
+  if (dialog.kind === 'toggleType') return <ToggleTypeDialog item={dialog.item} onClose={onClose} onConfirm={onToggleType} />
+  if (dialog.kind === 'policy') return <PolicyDialog item={dialog.item} leaveTypes={leaveTypes} academicYears={academicYears} onClose={onClose} onSave={onSavePolicy} />
+  if (dialog.kind === 'activate') return <ActivationDialog policy={dialog.item} status={dialog.status} onClose={onClose} onActivate={onActivate} />
+  if (dialog.kind === 'request') return <RequestLeaveDialog faculty={faculty} leaveTypes={leaveTypes} policies={policies} onClose={onClose} onSave={onSaveRequest} />
+  return <DecisionDialog request={dialog.item} status={dialog.status} onClose={onClose} onSave={onDecision} />
+}
+
+function ViewDialog({ item, leaveTypes, policies, getBalance, onClose, onDecision }) {
+  const isBalance = item.employee && Object.hasOwn(item, 'policy')
+  const isPolicy = Array.isArray(item.entitlements) || item.leaveTypes !== undefined || Object.hasOwn(item, 'applicableTo')
+  const isType = Object.hasOwn(item, 'payCategory')
+  const employee = item.employee
+  const policyEntitlements = item.entitlements || []
+
+  return (
+    <View title={isBalance ? 'Leave Balance Details' : isPolicy ? 'Leave Policy Details' : isType ? 'Leave Type Details' : 'Leave Request Details'} onClose={onClose}>
+      {employee && <Identity employee={employee} status={item.status} />}
+      {isBalance ? (
+        <>
+          {item.policy ? (
+            <>
+              <Info title="Applicable Policy" rows={[['Policy', item.policy.name], ['Academic Year', item.policy.academicYear], ['Effective Period', range(item.policy.from, item.policy.to)]]} />
+              <BalanceTable employee={employee} policy={item.policy} leaveTypes={leaveTypes} getBalance={getBalance} />
+            </>
+          ) : (
+            <><Info title="Applicable Policy" rows={[['Not Assigned', 'No active leave policy is applicable to this employee.']]} /><BalanceTable employee={employee} policy={null} leaveTypes={leaveTypes} getBalance={getBalance} /></>
+          )}
+        </>
+      ) : isPolicy ? (
+        <>
+          <h2>{item.name} <Status value={item.status} /></h2>
+          <Info title="Policy Information" rows={[['Academic Year', item.academicYear], ['Applicable To', item.applicableTo], ['Branch Scope', item.departments?.length ? item.departments.join(', ') : 'All Branches'], ['Effective Period', range(item.from, item.to)]]} />
+          <section className="flm-view-section">
+            <h3>Leave Entitlements</h3>
+            <table className="flm-dialog-table">
+              <thead>
+                <tr>
+                  <th>Leave Type</th>
+                  <th>Code</th>
+                  <th>Pay Type</th>
+                  <th>Entitled</th>
+                  <th>Max / Request</th>
+                  <th>Carry Forward</th>
+                  <th>Document</th>
+                </tr>
+              </thead>
+              <tbody>
+                {(() => {
+                  const displayRules = policyEntitlements.length > 0
+                    ? policyEntitlements
+                    : leaveTypes.filter(type => type.status === 'Active').map(type => ({
+                        typeId: type.id,
+                        name: type.name,
+                        code: type.code,
+                        payCategory: type.payCategory,
+                        entitlement: 12,
+                        maxDays: '—',
+                        carryForward: false,
+                        documentRequired: false
+                      }))
+                  if (!displayRules.length) {
+                    return <tr><td colSpan={7}>No leave entitlements are configured for this policy.</td></tr>
+                  }
+                  return displayRules.map(rule => {
+                    const leaveType = leaveTypes.find(type => String(type.id) === String(rule.typeId))
+                    return (
+                      <tr key={rule.typeId || rule.name}>
+                        <td>{leaveType?.name || rule.name || 'Unavailable'}</td>
+                        <td>{leaveType?.code || rule.code || '—'}</td>
+                        <td>{leaveType?.payCategory || rule.payCategory || 'Paid Leave'}</td>
+                        <td>{rule.entitlement ?? 12}</td>
+                        <td>{rule.maxDays != null && rule.maxDays !== '' ? rule.maxDays : '—'}</td>
+                        <td>{rule.carryForward ? 'Yes' : 'No'}</td>
+                        <td>{rule.documentRequired ? 'Yes' : 'No'}</td>
+                      </tr>
+                    )
+                  })
+                })()}
+              </tbody>
+            </table>
+          </section>
+        </>
+      ) : isType ? (
+        <>
+          <h2>{item.name} <Status value={item.status} /></h2>
+          <Info title="General Information" rows={[['Leave Type', item.name], ['Leave Code', item.code], ['Category', item.category || 'Regular'], ['Pay Category', item.payCategory], ['Status', item.status], ['Description', item.description || 'No description provided.']]} />
+        </>
+      ) : (
+        <>
+                    <LeaveInfo title="REQUEST INFORMATION" rows={[['Request ID', item.id], ['Leave Type', leaveTypes.find(type => type.id === item.typeId)?.name || item.leaveTypeName || 'Unavailable'], ['Applied On', dateLabel(item.applied)], ['Policy', policies.find(policy => policy.id === item.policyId)?.name || 'Not Assigned']]} />
+          <LeaveInfo title="LEAVE PERIOD" columns={3} rows={[['From', dateLabel(item.from)], ['To', dateLabel(item.to)], ['Duration', `${item.days} Days`]]} />
+          <div className="preview-section-group">
+            <span className="preview-section-title">REMARKS</span>
+            <p className="fm-view-reason" style={{ margin: 0, padding: '10px 12px', background: 'var(--surface-soft, #F8FAFC)', border: '1px solid var(--border, #E2E8F0)', borderRadius: '8px', fontSize: '14px', color: 'var(--text-primary, #334155)' }}>{item.reason}</p>
+          </div>
+          {item.decisionDate && <LeaveInfo title="DECISION DETAILS" columns={2} rows={[['Decision Date', dateLabel(item.decisionDate)], ...(item.rejectionReason ? [['Rejection Reason', item.rejectionReason]] : [])]} />}
+          {item.status === 'Pending' && onDecision && (
+            <footer className="flm-view-actions">
+              <button type="button" className="reject-action" onClick={() => { onClose(); onDecision(item, 'Rejected'); }}>Reject Request</button>
+              <button type="button" className="approve-action" onClick={() => { onClose(); onDecision(item, 'Approved'); }}>Approve Request</button>
+            </footer>
+          )}
+        </>
+      )}
+    </View>
+  )
+}
+
+function TypeDialog({ item = {}, onClose, onSave, page = false }) {
+  const [data, setData] = useState({ name: item.name || '', code: item.code || '', payCategory: item.payCategory || '', description: item.description || '', status: item.status || '' });
+  const [error, setError] = useState('');
+  const save = async () => {
+    setError('')
+    if (!data.name.trim() || !data.code.trim() || !data.payCategory || !data.status) {
+      setError('Complete all required fields before saving.')
+      return
+    }
+    await onSave({ ...item, ...data })
+  };
+  return (
+    <Modal title={item.id ? 'Edit Leave Type' : 'Add Leave Type'} onClose={onClose} page={page}>
+      <div className={page ? 'flm-type-layout' : 'flm-type-modal-layout'}>
+        <Form className={page ? 'flm-config-form flm-type-form-card' : undefined}>
+          <Input label="Leave Type Name *" value={data.name} onChange={value => setData({ ...data, name: value })} />
+          <Input label="Leave Code *" value={data.code} onChange={value => setData({ ...data, code: value })} />
+          <Select label="Pay Category *" value={data.payCategory} values={['Paid Leave', 'Unpaid Leave']} placeholder="Select pay category" onChange={value => setData({ ...data, payCategory: value })} />
+          <Select label="Status *" value={data.status} values={['Active', 'Inactive']} placeholder="Select status" onChange={value => setData({ ...data, status: value })} />
+          <label>Description<textarea value={data.description} onChange={event => setData({ ...data, description: event.target.value })} /></label>
+          <Footer>
+            <button type="button" onClick={onClose}>Cancel</button>
+            <button type="button" className="approve-action" onClick={save}>Save Leave Type</button>
+          </Footer>
+        </Form>
+        <aside className="sm-preview" aria-label="Leave Type Live Preview" style={{ marginTop: '12px' }}>
+          <header className="preview-top-bar" style={{ marginBottom: '8px' }}>
+            <span className="preview-live-tag"><span className="live-dot" /> LIVE PREVIEW</span>
+            <span className="preview-sync-hint">Real-time sync</span>
+          </header>
+          {(() => {
+            const sections = [
+              {
+                title: 'Leave Type Summary',
+                fields: [
+                  ['Leave Type', data.name],
+                  ['Code', data.code],
+                  ['Pay Category', data.payCategory],
+                  ['Status', data.status],
+                  ['Description', data.description],
+                ],
+              },
+            ].map(sec => ({
+              ...sec,
+              fields: sec.fields.filter(([, val]) => val !== null && val !== undefined && String(val).trim() !== '' && String(val).trim() !== '-'),
+            })).filter(sec => sec.fields.length > 0)
+
+            if (sections.length === 0) {
+              return (
+                <div className="preview-empty-hint">
+                  <span>Enter details in the form to preview here in real time.</span>
+                </div>
+              )
+            }
+
+            return sections.map(sec => (
+              <div key={sec.title} className="preview-section-group">
+                <span className="preview-section-title">{sec.title}</span>
+                <div className="preview-kv-grid">
+                  {sec.fields.map(([label, text]) => (
+                    <div key={label} className="preview-kv-item" style={label === 'Description' ? { gridColumn: 'span 2' } : {}}>
+                      <span className="kv-label">{label}</span>
+                      <strong className="kv-val" title={String(text).trim()}>{String(text).trim()}</strong>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))
+          })()}
+        </aside>
+      </div>
+      {error && <p className="flm-error">{error}</p>}
+    </Modal>
+  );
+}
+
+function ToggleTypeDialog({ item, onClose, onConfirm }) {
+  const isDeactivating = item.status === 'Active'
+  return (
+    <Modal title={isDeactivating ? 'Deactivate / Delete Leave Type' : 'Activate Leave Type'} onClose={onClose}>
+      <p style={{ margin: '14px 0', fontSize: '13px', lineHeight: 1.5 }}>
+        {isDeactivating ? (
+          <>Are you sure you want to deactivate/delete <strong>{item.name} ({item.code})</strong>? It will no longer be available for faculty leave requests.</>
+        ) : (
+          <>Activate <strong>{item.name} ({item.code})</strong> for faculty leave policies and requests?</>
+        )}
+      </p>
+      <Footer>
+        <button onClick={onClose}>Cancel</button>
+        <button className={isDeactivating ? 'reject-action' : 'approve-action'} onClick={() => onConfirm(item)}>
+          {isDeactivating ? 'Deactivate / Delete' : 'Activate'}
+        </button>
+      </Footer>
+    </Modal>
+  )
+}
+
+function PolicyDialog({ item = {}, leaveTypes, academicYears, onClose, onSave }) {
+  const activeYear = academicYears.find(year => year.name === item.academicYear) || academicYears[0]
+  const initialEntitlements = (item.entitlements || []).map(e => ({ ...e, typeId: String(e.typeId || e.leaveTypeId || '') }))
+  const [data, setData] = useState({
+    name: item.name || '',
+    academicYear: activeYear?.name || '',
+    applicableTo: item.applicableTo || '',
+    from: item.from || activeYear?.from || '',
+    to: item.to || activeYear?.to || '',
+    departments: item.departments || [],
+    entitlements: initialEntitlements
+  })
+  useEffect(() => {
+    if (!academicYears.length) return
+    const selectedYear = academicYears.find(year => year.name === data.academicYear) || academicYears[0]
+    if (!selectedYear) return
+    setData(current => ({
+      ...current,
+      academicYear: selectedYear.name,
+      from: selectedYear.from || current.from,
+      to: selectedYear.to || current.to,
+    }))
+  }, [academicYears, data.academicYear])
+  const toggle = type => setData(current => ({
+    ...current,
+    entitlements: current.entitlements.some(rule => String(rule.typeId) === String(type.id))
+      ? current.entitlements.filter(rule => String(rule.typeId) !== String(type.id))
+      : [...current.entitlements, { typeId: String(type.id), entitlement: '', maxDays: '', carryForward: false, maxCarryForward: '', documentRequired: false }]
+  }))
+  return (
+    <Modal title={item.id ? 'Edit Leave Policy' : 'Create Leave Policy'} onClose={onClose}>
+      <Form>
+        <Input label="Policy Name *" value={data.name} onChange={value => setData({ ...data, name: value })} />
+        <label>
+          <span>Academic Year <b className="required-mark">*</b></span>
+          <ProjectSelect value={data.academicYear} onChange={event => {
+            const year = academicYears.find(option => option.name === event.target.value)
+            setData({ ...data, academicYear: event.target.value, from: year?.from || '', to: year?.to || '' })
+          }}>
+            {!data.academicYear && <option value="">{academicYears.length ? 'Select active academic year' : 'No active academic year available'}</option>}
+            {academicYears.map(year => <option key={year.name} value={year.name}>{year.name}</option>)}
+          </ProjectSelect>
+        </label>
+        <Select label="Applicable To" value={data.applicableTo} placeholder="Select applicable to" values={['Teaching', 'Non-Teaching', 'Both']} onChange={value => setData({ ...data, applicableTo: value })} />
+      </Form>
+      <h3>Leave Entitlements</h3>
+      <div className="flm-table-wrap" style={{ margin: '10px 0 15px', border: '1px solid var(--flm-line)', borderRadius: '8px', overflow: 'hidden' }}>
+        <table className="flm-dialog-table" style={{ width: '100%' }}>
+          <thead>
+            <tr>
+              <th style={{ width: '45px', textAlign: 'center' }}>Enable</th>
+              <th>Leave Type</th>
+              <th style={{ width: '120px' }}>Entitled (Days)</th>
+              <th style={{ width: '120px' }}>Max / Request</th>
+              <th style={{ width: '100px' }}>Carry Forward</th>
+              <th style={{ width: '110px' }}>Document</th>
+            </tr>
+          </thead>
+          <tbody>
+            {leaveTypes.filter(type => type.status === 'Active').map(type => {
+              const rule = data.entitlements.find(value => String(value.typeId) === String(type.id))
+              const isEnabled = Boolean(rule)
+              return (
+                <tr key={type.id} style={{ background: isEnabled ? 'transparent' : 'var(--flm-soft)' }}>
+                  <td style={{ textAlign: 'center' }}>
+                    <input type="checkbox" checked={isEnabled} onChange={() => toggle(type)} />
+                  </td>
+                  <td>
+                    <strong>{type.name}</strong> <small style={{ color: 'var(--text-muted)' }}>({type.code || type.payCategory})</small>
+                  </td>
+                  <td>
+                    {isEnabled ? (
+                      <input
+                        type="number"
+                        min="0"
+                        placeholder="e.g. 12"
+                        value={rule.entitlement ?? ''}
+                        style={{ width: '100%', height: '32px', padding: '0 8px', border: '1px solid var(--border-strong)', borderRadius: '5px' }}
+                        onChange={event => setData({
+                          ...data,
+                          entitlements: data.entitlements.map(value => String(value.typeId) === String(type.id) ? { ...value, entitlement: event.target.value === '' ? '' : Number(event.target.value) } : value)
+                        })}
+                      />
+                    ) : <span style={{ color: 'var(--text-muted)' }}>—</span>}
+                  </td>
+                  <td>
+                    {isEnabled ? (
+                      <input
+                        type="number"
+                        min="0"
+                        placeholder="Max days"
+                        value={rule.maxDays ?? ''}
+                        style={{ width: '100%', height: '32px', padding: '0 8px', border: '1px solid var(--border-strong)', borderRadius: '5px' }}
+                        onChange={event => setData({
+                          ...data,
+                          entitlements: data.entitlements.map(value => String(value.typeId) === String(type.id) ? { ...value, maxDays: event.target.value === '' ? '' : Number(event.target.value) } : value)
+                        })}
+                      />
+                    ) : <span style={{ color: 'var(--text-muted)' }}>-</span>}
+                  </td>
+                  <td>
+                    {isEnabled ? (
+                      <label style={{ display: 'flex', alignItems: 'center', gap: '5px', cursor: 'pointer', fontSize: '11px', margin: 0 }}>
+                        <input
+                          type="checkbox"
+                          checked={Boolean(rule.carryForward)}
+                          onChange={event => setData({
+                            ...data,
+                            entitlements: data.entitlements.map(value => String(value.typeId) === String(type.id) ? { ...value, carryForward: event.target.checked } : value)
+                          })}
+                        />
+                        <span>Yes</span>
+                      </label>
+                    ) : <span style={{ color: 'var(--text-muted)' }}>No</span>}
+                  </td>
+                  <td>
+                    {isEnabled ? (
+                      <label style={{ display: 'flex', alignItems: 'center', gap: '5px', cursor: 'pointer', fontSize: '11px', margin: 0 }}>
+                        <input
+                          type="checkbox"
+                          checked={Boolean(rule.documentRequired)}
+                          onChange={event => setData({
+                            ...data,
+                            entitlements: data.entitlements.map(value => String(value.typeId) === String(type.id) ? { ...value, documentRequired: event.target.checked } : value)
+                          })}
+                        />
+                        <span>Required</span>
+                      </label>
+                    ) : <span style={{ color: 'var(--text-muted)' }}>No</span>}
+                  </td>
+                </tr>
+              )
+            })}
+          </tbody>
+        </table>
+      </div>
+      <Footer>
+        <button onClick={onClose}>Cancel</button>
+        <button className="approve-action" disabled={!data.name || !data.academicYear || !data.applicableTo || !data.entitlements.length} onClick={() => onSave({ ...item, ...data })}>
+          {item.id ? 'Save Changes' : 'Create Policy'}
+        </button>
+      </Footer>
+    </Modal>
+  )
+}
+function RequestLeaveDialog({ faculty, leaveTypes, policies, onClose, onSave }) {
+  const [data, setData] = useState({
+    facultyId: '',
+    leaveTypeId: '',
+    policyId: '',
+    fromDate: '',
+    toDate: '',
+    days: '',
+    reason: ''
+  })
+  const [error, setError] = useState('')
+  const selectedFaculty = faculty.find(f => String(f.id) === String(data.facultyId))
+  const availableLeaveTypes = selectedFaculty ? eligibleLeaveTypes(leaveTypes, selectedFaculty) : []
+
+  useEffect(() => {
+    if (!data.leaveTypeId) return
+    if (availableLeaveTypes.some(type => String(type.id) === String(data.leaveTypeId))) return
+    setData(current => ({ ...current, leaveTypeId: '' }))
+  }, [data.facultyId, data.leaveTypeId, availableLeaveTypes])
+
+  const handleDateChange = (key, val) => {
+    setData(prev => {
+      const updated = { ...prev, [key]: val }
+      if (updated.fromDate && updated.toDate && updated.toDate >= updated.fromDate) {
+        const d1 = new Date(`${updated.fromDate}T00:00:00`)
+        const d2 = new Date(`${updated.toDate}T00:00:00`)
+        const diff = Math.max(1, Math.round((d2 - d1) / (1000 * 60 * 60 * 24)) + 1)
+        updated.days = diff
+      }
+      return updated
+    })
+  }
+
+  const handleFacultyChange = (id) => {
+    const selected = faculty.find(f => String(f.id) === String(id))
+    const applicablePolicy = selected ? policies.find(p => p.status === 'Active' && (p.applicableTo === 'Both' || p.applicableTo === (selected.employeeCategory === 'Non-Teaching' ? 'Non-Teaching' : 'Teaching'))) : null
+    setData(prev => ({
+      ...prev,
+      facultyId: id,
+      policyId: applicablePolicy?.id || prev.policyId || policies[0]?.id || ''
+    }))
+  }
+
+  const handleSubmit = async () => {
+    if (!data.facultyId) { setError('Please select a faculty member.'); return }
+    if (!data.leaveTypeId) { setError('Please select a leave type.'); return }
+    if (!data.fromDate || !data.toDate) { setError('Please enter valid dates.'); return }
+    if (data.fromDate > data.toDate) { setError('From date must be before or equal to To date.'); return }
+    if (!data.reason.trim()) { setError('Please enter a reason for leave.'); return }
+    setError('')
+    await onSave(data)
+  }
+
+  return (
+    <Modal title="Apply for Leave" onClose={onClose}>
+      <Form>
+        <label>
+          <span>Faculty Member <b className="required-mark">*</b></span>
+          <ProjectSelect value={data.facultyId} onChange={e => handleFacultyChange(e.target.value)}>
+            <option value="">Select Faculty</option>
+            {faculty.map(f => (
+              <option key={f.id} value={f.id}>
+                {f.fullName || f.name} ({f.employeeId || f.code || f.id})
+              </option>
+            ))}
+          </ProjectSelect>
+        </label>
+        <label>
+          <span>Leave Type <b className="required-mark">*</b></span>
+          <ProjectSelect value={data.leaveTypeId} onChange={e => setData({ ...data, leaveTypeId: e.target.value })}>
+            <option value="">Select Leave Type</option>
+            {availableLeaveTypes.map(t => (
+              <option key={t.id} value={t.id}>
+                {t.name} ({t.code || t.category || t.payCategory})
+              </option>
+            ))}
+          </ProjectSelect>
+        </label>
+        <label>
+          <span>Policy</span>
+          <ProjectSelect value={data.policyId} onChange={e => setData({ ...data, policyId: e.target.value })}>
+            <option value="">Select Policy</option>
+            {policies.map(p => (
+              <option key={p.id} value={p.id}>
+                {p.name} ({p.academicYear || p.status})
+              </option>
+            ))}
+          </ProjectSelect>
+        </label>
+        <Input label="From Date *" type="date" value={data.fromDate} onChange={v => handleDateChange('fromDate', v)} />
+        <Input label="To Date *" type="date" value={data.toDate} onChange={v => handleDateChange('toDate', v)} />
+        <Input label="Total Days *" type="number" value={data.days} onChange={v => setData({ ...data, days: Number(v) || 1 })} />
+        <label>
+          <span>Reason <b className="required-mark">*</b></span>
+          <textarea value={data.reason} onChange={e => setData({ ...data, reason: e.target.value })} placeholder="Reason for leave request..." />
+        </label>
+        <aside className="sm-preview" aria-label="Leave Request Live Preview" style={{ marginTop: '12px' }}>
+          <header className="preview-top-bar" style={{ marginBottom: '8px' }}>
+            <span className="preview-live-tag"><span className="live-dot" /> LIVE PREVIEW</span>
+            <span className="preview-sync-hint">Real-time sync</span>
+          </header>
+          {(() => {
+            const facultyName = selectedFaculty?.fullName || selectedFaculty?.name
+            const typeName = leaveTypes.find(t => String(t.id) === String(data.leaveTypeId))?.name
+            const policyName = policies.find(p => String(p.id) === String(data.policyId))?.name
+            const period = [data.fromDate, data.toDate].filter(Boolean).join(' to ')
+
+            const sections = [
+              {
+                title: 'Leave Request Summary',
+                fields: [
+                  ['Faculty Member', facultyName],
+                  ['Leave Type', typeName],
+                  ['Policy', policyName],
+                  ['Leave Period', period],
+                  ['Total Days', data.days ? `${data.days} Days` : ''],
+                  ['Reason', data.reason],
+                ],
+              },
+            ].map(sec => ({
+              ...sec,
+              fields: sec.fields.filter(([, val]) => val !== null && val !== undefined && String(val).trim() !== '' && String(val).trim() !== '-'),
+            })).filter(sec => sec.fields.length > 0)
+
+            if (sections.length === 0) {
+              return (
+                <div className="preview-empty-hint">
+                  <span>Enter details in the form to preview here in real time.</span>
+                </div>
+              )
+            }
+
+            return sections.map(sec => (
+              <div key={sec.title} className="preview-section-group">
+                <span className="preview-section-title">{sec.title}</span>
+                <div className="preview-kv-grid">
+                  {sec.fields.map(([label, text]) => (
+                    <div key={label} className="preview-kv-item" style={label === 'Reason' ? { gridColumn: 'span 2' } : {}}>
+                      <span className="kv-label">{label}</span>
+                      <strong className="kv-val" title={String(text).trim()}>{String(text).trim()}</strong>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))
+          })()}
+        </aside>
+      </Form>
+      {error && <p className="flm-error">{error}</p>}
+      <Footer>
+        <button onClick={onClose}>Cancel</button>
+        <button className="approve-action" onClick={handleSubmit}>Submit Request</button>
+      </Footer>
+    </Modal>
+  )
+}
+
+function ActivationDialog({ policy, status = 'Active', onClose, onActivate }) { const activating = status === 'Active'; return <Modal title={`${activating ? 'Activate' : 'Deactivate'} Leave Policy`} onClose={onClose}><p>{activating ? 'Activate' : 'Deactivate'} <strong>{policy.name}</strong> for {policy.applicableTo} employees?</p><Footer><button onClick={onClose}>Cancel</button><button className={activating ? 'approve-action' : 'reject-action'} onClick={() => onActivate(policy, status)}>{activating ? 'Activate Policy' : 'Deactivate Policy'}</button></Footer></Modal> }
+function DecisionDialog({ request, status, onClose, onSave }) { const [reason, setReason] = useState(''); const reject = status === 'Rejected'; return <Modal title={reject ? 'Reject Leave Request' : 'Approve Leave Request?'} onClose={onClose}>{reject && <label><span>Reason for Rejection <b className="required-mark">*</b></span><textarea value={reason} onChange={event => setReason(event.target.value)} /></label>}<Footer><button onClick={onClose}>Cancel</button><button className={reject ? 'reject-action' : 'approve-action'} disabled={reject && reason.trim().length < 3} onClick={() => onSave(request, status, reason)}>Confirm</button></Footer></Modal> }
+function BalanceTable({ employee, policy, leaveTypes, getBalance }) {
+  const balance = getBalance(employee, policy)
+  const rules = leaveBalanceRules(balance, policy).filter(rule => {
+    const leaveType = leaveTypes.find(type => String(type.id) === String(rule.typeId)) || rule
+    return !genderRestrictedLeave(leaveType) || String(employee?.gender || '').trim().toLowerCase() === genderRestrictedLeave(leaveType)
+  })
+
+  return (
+    <section className="flm-view-section">
+      <Info title="Balance Totals" rows={['entitled', 'used', 'pending', 'available'].map(key => [key[0].toUpperCase() + key.slice(1), balance.totals[key] ?? 'Not provided'])} />
+      <h3>Leave Type Balances</h3>
+      {!balance.details.length && <p>The API has not provided a breakdown by leave type.</p>}
+      <table className="flm-dialog-table">
+        <thead>
+          <tr>
+            <th>Leave Type</th>
+            <th>Entitled</th>
+            <th>Used</th>
+            <th>Pending</th>
+            <th>Available</th>
+          </tr>
+        </thead>
+        <tbody>
+          {rules.map(rule => {
+            const totals = getBalance(employee, policy, rule.typeId)
+            const typeInfo = leaveTypes.find(type => String(type.id) === String(rule.typeId))
+            const typeName = typeInfo?.name || rule.leaveTypeName || rule.name || rule.typeId
+            // A missing type-level balance means no usage was supplied by the
+            // API. Render a consistent zero balance instead of ambiguous ?.
+            const entitled = totals?.entitled ?? rule.entitlement ?? 0
+            const used = totals?.used ?? 0
+            const pending = totals?.pending ?? 0
+            const available = totals?.available ?? Math.max(0, Number(entitled) - Number(used) - Number(pending))
+            return (
+              <tr key={rule.typeId}>
+                <td>{typeName} ({typeInfo?.code || '-'})</td>
+                <td>{entitled}</td>
+                <td>{used}</td>
+                <td>{pending}</td>
+                <td>{available}</td>
+              </tr>
+            )
+          })}
+        </tbody>
+      </table>
+    </section>
+  )
+}
+function View({ title, children, onClose }) {
+  return (
+    <div className="flm-overlay" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
+      <section className="fm-attendance-detail flm-config-dialog" role="dialog" aria-modal="true" style={{ maxWidth: '860px', width: '100%', overflowY: 'auto', maxHeight: 'calc(100dvh - 48px)', padding: '24px', borderRadius: '16px', background: 'var(--surface, #fff)' }} onClick={e => e.stopPropagation()}>
+        <div className="fm-attendance-detail-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', borderBottom: '1px solid #E2E8F0', paddingBottom: '12px', marginBottom: '16px' }}>
+          <div>
+            <p className="flm-eyebrow" style={{ margin: '0 0 2px 0', color: '#125AA8', fontSize: '11px', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.1em' }}>LEAVE DETAILS</p>
+            <h2 style={{ margin: 0, fontSize: '18px', fontWeight: 700, color: 'var(--text-primary)' }}>{title}</h2>
+          </div>
+          <button className="flm-close" style={{ position: 'static', margin: 0, right: 'auto', top: 'auto', display: 'flex', alignItems: 'center', justifyContent: 'center' }} aria-label="Close" onClick={onClose}><FiX size={18} /></button>
+        </div>
+        <div className="flm-view-body" style={{ display: 'flex', flexDirection: 'column' }}>
+          {children}
+        </div>
+      </section>
+    </div>
+  )
+}
+
+function Identity({ employee, status }) {
+  return (
+    <div className="cm-profile-banner fm-attendance-identity-hero">
+      <div className="cm-profile-avatar-wrap">
+        <div className="fm-avatar fm-avatar-large">
+          {initials(employee?.fullName)}
+        </div>
+      </div>
+      <div className="cm-profile-header-info">
+        <div className="cm-profile-badges">
+          {employee?.employeeId && <span className="cm-badge">{employee.employeeId}</span>}
+          {typeOf(employee) && <span className="cm-badge">{typeOf(employee)}</span>}
+        </div>
+        <h2 className="cm-profile-title">{employee?.fullName}</h2>
+        <p className="cm-profile-subtitle">{employee?.designation || 'Faculty'} | {branchOf(employee)}</p>
+      </div>
+      <div className="fm-attendance-detail-status">
+        <span className={`flm-status ${statusClass(status)}`} style={{ background: '#fff', color: status === 'Approved' ? '#16a34a' : status === 'Pending' ? '#d97706' : '#dc2626', display: 'flex', alignItems: 'center', gap: '6px', padding: '6px 12px', borderRadius: '99px', fontWeight: 'bold' }}>
+          <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: 'currentColor' }}></span>
+          {status}
+        </span>
+      </div>
+    </div>
+  )
+}
+function Info({ title, rows, columns = 2 }) { return <section className="flm-view-section"><h3>{title}</h3><div className={`flm-info-grid flm-info-grid--${columns}`}>{rows.map(([label, value]) => <div key={label}><small>{label}</small><strong>{value}</strong></div>)}</div></section> }
+function DataTable({ headers, children }) { return <div className="flm-table-wrap"><table className="flm-table"><thead><tr>{headers.map(header => { const label = header === 'Department' ? 'Branch' : header; return <th key={label}>{label}</th> })}</tr></thead><tbody>{children}</tbody></table></div> }
+function Employee({ employee }) { return <div className="flm-employee"><span>{initials(employee.fullName)}</span><div><strong>{employee.fullName}</strong><small>{employee.employeeId}</small></div></div> }
+function Actions({ children }) { return <div className="flm-actions">{children}</div> }
+function Action({ title, children, onClick }) { return <button type="button" title={title} aria-label={title} onClick={onClick}>{children}</button> }
+function Status({ value }) { return <span className={`flm-status ${statusClass(value)}`}>{value}</span> }
+const renderFlmLabel = label => {
+  if (typeof label === 'string' && label.endsWith(' *')) {
+    return <>{label.slice(0, -2)} <b className="required-mark" aria-hidden="true">*</b></>
+  }
+  if (typeof label === 'string' && label.endsWith('*')) {
+    return <>{label.slice(0, -1).trim()} <b className="required-mark" aria-hidden="true">*</b></>
+  }
+  return label
+}
+function FilterSelect({ label, value, values, onChange }) { const displayLabel = label === 'Department' ? 'Branch' : label; const plural = displayLabel === 'Branch' ? 'Branches' : `${displayLabel}s`; return <label className="flm-filter-field"><span>{displayLabel}</span><ProjectSelect value={value} onChange={event => onChange(event.target.value)}><option value="">All {plural}</option>{values.map(item => <option key={item}>{item}</option>)}</ProjectSelect></label> }
+function Select({ label, value, values, onChange, placeholder }) { return <label><span>{renderFlmLabel(label)}</span><ProjectSelect value={value} onChange={event => onChange(event.target.value)}>{placeholder && <option value="">{placeholder}</option>}{values.map(item => <option key={item}>{item}</option>)}</ProjectSelect></label> }
+function Modal({ title, children, onClose, page = false }) {
+  if (page) return <div className="flm-type-page-content">{children}</div>
+  return <div className="flm-overlay"><section className="flm-decision-dialog flm-config-dialog" role="dialog" aria-modal="true"><button className="flm-close" aria-label="Close" onClick={onClose}><FiX /></button><p className="flm-eyebrow">FACULTY LEAVE</p><h2>{title}</h2>{children}</section></div>
+}
+function Form({ children, className }) { return <div className={className || 'flm-config-form'}>{children}</div> }
+function Input({ label, type = 'text', value, onChange }) { return <label><span>{renderFlmLabel(label)}</span><input type={type} value={value} onChange={event => onChange(event.target.value)} /></label> }
+function Footer({ children }) { return <footer>{children}</footer> }
+function LeaveInfo({ title, columns = 4, rows }) {
+  return (
+    <div className="preview-section-group">
+      <span className="preview-section-title">{title}</span>
+      <div className="preview-kv-grid" style={{ gridTemplateColumns: "repeat(" + columns + ", minmax(0, 1fr))" }}>
+
+        {rows.map(([label, value]) => (
+          <div className="preview-kv-item" key={label}>
+            <span className="kv-label">{label}</span>
+            <strong className="kv-val">{value}</strong>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+return { default: FacultyLeaveManagement }
+})()
+
+// FacultyManagement screen and private helpers.
+const FacultyManagementScreen = (() => {
+const { ProjectSelect } = pageDependency0
+const { useAcademic } = pageDependency17
+const useCollegeState = pageDependency7.default
+const { useCallback, useEffect, useMemo, useRef, useState } = pageDependency1
+const { Link, Navigate, useLocation, useNavigate } = pageDependency18
+const { FiAlertCircle, FiArrowLeft, FiArrowRight, FiBriefcase, FiCheckCircle, FiChevronDown, FiChevronUp, FiEdit2, FiEye, FiFilter, FiPlus, FiSearch, FiUser, FiUsers, FiClock, FiBookOpen, FiMapPin, FiX, FiTrash2, FiFileText, FiShield, FiLock } = pageDependency4
+const DashboardLayout = pageDependency8.default
+const ExportMenu = pageDependency9.default
+const FilterPanel = pageDependency19.default
+const StatusBadge = pageDependency20.default
+const TablePagination = pageDependency11.default
+const SearchableSelect = pageDependency0.default
+const CompactSummary = pageDependency21.default
+const InfoCard = pageDependency22.default
+const { academicYearApi, branchApi, courseApi, departmentApi, facultyMasterApi, sectionApi } = pageDependency3
+const { attendancePayload, requiredNumber } = pageDependency12
+const { downloadServerExport } = pageDependency23
+const { getDefaultAcademicYear } = pageDependency24
+const { normalizeFaculty, mergeFacultyData, resolveFacultyPhoto, clearFacultyLocalStorage, saveLocalAttendanceRecord } = pageDependency2
+const facultyService = pageDependency2.default
+const subjectService = pageDependency25.default
+const { localAttendanceDate, loadDailyAttendancePeriod, attendanceStatusLabel, normalizeAttendanceRow, combineAttendance, attendanceFacultyMap } = pageDependency26
+const { showSuccess, showError, showWarning, showInfo } = pageDependency15
 
 const PAGE_SIZE = 5
 const WORKLOAD_LIMITS = { under: 12, normal: 20 }
 const statuses = ['Working', 'On Leave', 'Resigned', 'Retired']
-export const teachingDesignations = ['Professor', 'Associate Professor', 'Assistant Professor', 'Senior Lecturer', 'Lecturer', 'Visiting Faculty', 'Guest Faculty', 'HOD', 'Dean']
-export const nonTeachingDesignations = ['Librarian', 'Assistant Librarian', 'Lab Assistant', 'Lab Technician', 'System Administrator', 'Network Administrator', 'Accountant', 'Administrative Officer', 'Office Assistant', 'Junior Assistant', 'Store Keeper', 'Technical Assistant', 'Clerk', 'Attender']
+const teachingDesignations = ['Professor', 'Associate Professor', 'Assistant Professor', 'Senior Lecturer', 'Lecturer', 'Visiting Faculty', 'Guest Faculty', 'HOD', 'Dean']
+const nonTeachingDesignations = ['Librarian', 'Assistant Librarian', 'Lab Assistant', 'Lab Technician', 'System Administrator', 'Network Administrator', 'Accountant', 'Administrative Officer', 'Office Assistant', 'Junior Assistant', 'Store Keeper', 'Technical Assistant', 'Clerk', 'Attender']
 const designations = [...teachingDesignations, ...nonTeachingDesignations]
 const employmentTypes = ['Permanent', 'Contract', 'Visiting', 'Guest']
 
-export const getStoredDesignations = () => {
+const getStoredDesignations = () => {
   try {
     const saved = localStorage.getItem('pirnav_erp_rbac_designations_clean_v1')
     if (saved) {
@@ -43,7 +1601,7 @@ export const getStoredDesignations = () => {
   return []
 }
 
-export const getDesignationOptions = (category) => {
+const getDesignationOptions = (category) => {
   const stored = getStoredDesignations()
   const customTeaching = stored
     .filter(d => d.status !== 'Inactive' && (d.category === 'Teaching' || d.category === 'Academic' || !d.category))
@@ -100,7 +1658,7 @@ const formatMinutes = minutes => {
   if (!mins) return `${hours}h`
   return `${hours}h ${mins}m`
 }
-export const formatTimeView = value => {
+const formatTimeView = value => {
   if (!value || value === '—' || value === '') return '—'
   const str = String(value).trim()
   if (/^(1[0-2]|0?[1-9]):[0-5][0-9]\s*(AM|PM)$/i.test(str)) return str
@@ -651,7 +2209,7 @@ function AttendanceTimeField({ label, value, disabled, onChange }) {
     if (nextPeriod === 'PM') numericHour += 12
     onChange(`${String(numericHour).padStart(2, '0')}:${nextMinute}`)
   }
-  return <div className="fm-attendance-time-field"><span>{label}</span><span className="fm-attendance-time-controls">{disabled ? <span className="fm-attendance-disabled-value">—</span> : <><select aria-label={`${label} hour`} value={parts.hour} onChange={event => update('hour', event.target.value)}><option value="">HH</option>{Array.from({ length: 12 }, (_, index) => { const item = String(index + 1).padStart(2, '0'); return <option key={item} value={item}>{item}</option> })}</select><span>:</span><select aria-label={`${label} minute`} value={parts.minute} onChange={event => update('minute', event.target.value)}><option value="">MM</option>{Array.from({ length: 60 }, (_, index) => { const item = String(index).padStart(2, '0'); return <option key={item} value={item}>{item}</option> })}</select><select aria-label={`${label} period`} value={parts.period} onChange={event => update('period', event.target.value)}><option value="">AM/PM</option><option value="AM">AM</option><option value="PM">PM</option></select></>}</span></div>
+  return <div className="fm-attendance-time-field"><span>{label}</span><span className="fm-attendance-time-controls">{disabled ? <span className="fm-attendance-disabled-value">—</span> : <><ProjectSelect aria-label={`${label} hour`} value={parts.hour} onChange={event => update('hour', event.target.value)}><option value="">HH</option>{Array.from({ length: 12 }, (_, index) => { const item = String(index + 1).padStart(2, '0'); return <option key={item} value={item}>{item}</option> })}</ProjectSelect><span>:</span><ProjectSelect aria-label={`${label} minute`} value={parts.minute} onChange={event => update('minute', event.target.value)}><option value="">MM</option>{Array.from({ length: 60 }, (_, index) => { const item = String(index).padStart(2, '0'); return <option key={item} value={item}>{item}</option> })}</ProjectSelect><ProjectSelect aria-label={`${label} period`} value={parts.period} onChange={event => update('period', event.target.value)}><option value="">AM/PM</option><option value="AM">AM</option><option value="PM">PM</option></ProjectSelect></>}</span></div>
 }
 function AttendanceEditor({ record, collegeOptions = [], departmentOptions = [], allFaculty = [], onClose, onSave, onReset }) {
   const initialStatus = record.status === 'Not Marked' ? 'Present' : record.status
@@ -697,7 +2255,7 @@ function AttendanceEditor({ record, collegeOptions = [], departmentOptions = [],
       date: record.date,
     })
   }
-  return <div className="fm-modal-backdrop"><form className="fm-attendance-editor" onSubmit={save}><header><div><p className="fm-eyebrow">{record.status === 'Not Marked' ? 'MARK ATTENDANCE' : 'EDIT ATTENDANCE'}</p><h2>{record.faculty.fullName}</h2><p>{displayCode} | {departmentName}</p></div><button className="fm-icon-button" type="button" aria-label="Close attendance editor" onClick={onClose}><FiX /></button></header><div className="fm-form-grid"><label>Status<select value={data.status} onChange={event => {
+  return <div className="fm-modal-backdrop"><form className="fm-attendance-editor" onSubmit={save}><header><div><p className="fm-eyebrow">{record.status === 'Not Marked' ? 'MARK ATTENDANCE' : 'EDIT ATTENDANCE'}</p><h2>{record.faculty.fullName}</h2><p>{displayCode} | {departmentName}</p></div><button className="fm-icon-button" type="button" aria-label="Close attendance editor" onClick={onClose}><FiX /></button></header><div className="fm-form-grid"><label>Status<ProjectSelect value={data.status} onChange={event => {
     const status = event.target.value
     const isWorking = ['Present', 'Late', 'Half Day'].includes(status)
     const defIn = status === 'Late' ? '09:30' : '09:00'
@@ -710,7 +2268,7 @@ function AttendanceEditor({ record, collegeOptions = [], departmentOptions = [],
     })
     setError('')
     setConfirmLop(false)
-  }}>{['Present', 'Absent', 'Late', 'Half Day', 'On Leave'].map(value => <option key={value}>{value}</option>)}<option value="LOP">Loss of Pay</option></select></label><AttendanceTimeField label="Check In" value={data.checkIn} disabled={isNonWorkingStatus} onChange={value => { setData({ ...data, checkIn: value }); setError('') }} /><AttendanceTimeField label="Check Out" value={data.checkOut} disabled={isNonWorkingStatus} onChange={value => { setData({ ...data, checkOut: value }); setError('') }} /><label className="fm-wide">Remarks<textarea rows="2" value={data.remarks} onChange={event => setData({ ...data, remarks: event.target.value })} /></label></div>{error && <p className="fm-error" role="alert">{error}</p>}{confirmLop && <div className="fm-lop-confirm" role="alert"><div><strong>Confirm attendance status?</strong><p>You are marking {record.faculty.fullName} ({displayCode}) as {attendanceStatusLabel(data.status)} for {new Date(record.date + 'T00:00:00').toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}.</p></div><div><button className="fm-button secondary" type="button" onClick={() => setConfirmLop(false)}>Cancel</button><button className="fm-button" type="button" onClick={() => { setConfirmLop(false); onSave({ ...record, ...data, status: data.status, checkIn: isNonWorkingStatus ? '' : data.checkIn, checkOut: isNonWorkingStatus ? '' : data.checkOut, remarks: data.remarks || '', facultyId: record.faculty.id, date: record.date }) }}>{data.status === 'LOP' ? 'Mark Loss of Pay' : 'Mark On Leave'}</button></div></div>}{confirmReset && <div className="fm-reset-confirm" role="alert"><div><strong>Reset this attendance record?</strong><p>The current status, time, and remarks will be cleared.</p></div><div><button className="fm-button secondary" type="button" onClick={() => setConfirmReset(false)}>Keep Editing</button><button className="fm-button danger" type="button" onClick={() => onReset(record)}>Reset Record</button></div></div>}<footer>{record.status !== 'Not Marked' && !confirmReset && <button className="fm-button danger" type="button" onClick={() => setConfirmReset(true)}>Reset to Not Marked</button>}<button className="fm-button secondary" type="button" onClick={onClose}>Cancel</button><button className="fm-button" type="submit">Save Attendance</button></footer></form></div>
+  }}>{['Present', 'Absent', 'Late', 'Half Day', 'On Leave'].map(value => <option key={value}>{value}</option>)}<option value="LOP">Loss of Pay</option></ProjectSelect></label><AttendanceTimeField label="Check In" value={data.checkIn} disabled={isNonWorkingStatus} onChange={value => { setData({ ...data, checkIn: value }); setError('') }} /><AttendanceTimeField label="Check Out" value={data.checkOut} disabled={isNonWorkingStatus} onChange={value => { setData({ ...data, checkOut: value }); setError('') }} /><label className="fm-wide">Remarks<textarea rows="2" value={data.remarks} onChange={event => setData({ ...data, remarks: event.target.value })} /></label></div>{error && <p className="fm-error" role="alert">{error}</p>}{confirmLop && <div className="fm-lop-confirm" role="alert"><div><strong>Confirm attendance status?</strong><p>You are marking {record.faculty.fullName} ({displayCode}) as {attendanceStatusLabel(data.status)} for {new Date(record.date + 'T00:00:00').toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}.</p></div><div><button className="fm-button secondary" type="button" onClick={() => setConfirmLop(false)}>Cancel</button><button className="fm-button" type="button" onClick={() => { setConfirmLop(false); onSave({ ...record, ...data, status: data.status, checkIn: isNonWorkingStatus ? '' : data.checkIn, checkOut: isNonWorkingStatus ? '' : data.checkOut, remarks: data.remarks || '', facultyId: record.faculty.id, date: record.date }) }}>{data.status === 'LOP' ? 'Mark Loss of Pay' : 'Mark On Leave'}</button></div></div>}{confirmReset && <div className="fm-reset-confirm" role="alert"><div><strong>Reset this attendance record?</strong><p>The current status, time, and remarks will be cleared.</p></div><div><button className="fm-button secondary" type="button" onClick={() => setConfirmReset(false)}>Keep Editing</button><button className="fm-button danger" type="button" onClick={() => onReset(record)}>Reset Record</button></div></div>}<footer>{record.status !== 'Not Marked' && !confirmReset && <button className="fm-button danger" type="button" onClick={() => setConfirmReset(true)}>Reset to Not Marked</button>}<button className="fm-button secondary" type="button" onClick={onClose}>Cancel</button><button className="fm-button" type="submit">Save Attendance</button></footer></form></div>
 }
 function FacultyAttendanceScreen({ faculty, collegeOptions = [], departmentOptions = [], onNotify }) {
   const [tab, setTab] = useState('daily')
@@ -1572,7 +3130,7 @@ function FacultyDocumentsForm({ documents = {}, onChange }) {
                 </span>
               </div>
               <div className="fm-document-actions">
-                <select
+                <ProjectSelect
                   aria-label={`${label} submission status`}
                   value={status}
                   onChange={e => onChange(key, { ...(typeof doc === 'object' ? doc : {}), status: e.target.value })}
@@ -1580,7 +3138,7 @@ function FacultyDocumentsForm({ documents = {}, onChange }) {
                   <option value="Not Submitted">Not Submitted</option>
                   <option value="Submitted">Submitted</option>
                   <option value="Pending">Pending</option>
-                </select>
+                </ProjectSelect>
               </div>
             </article>
           )
@@ -1636,7 +3194,7 @@ function Field({ field, data, errors, update, native = false, collegeOptions = [
       <div className={'fm-field ' + (type === 'textarea' ? 'fm-wide' : '') + (key === 'gender' ? ' fm-gender' : '')}><label htmlFor={Array.isArray(type) && !native ? undefined : id}>{displayLabel}{required && <span className="fm-required" aria-hidden="true"> *</span>}</label>
         {type === 'college' || type === 'department' ? <SearchableSelect placement="bottom" label={displayLabel} value={data[key] || ''} options={type === 'college' ? collegeOptions : departmentOptions} onChange={value => update(key, value)} required={required} error={Boolean(errors[key])} placeholder={'Select ' + displayLabel.toLowerCase()} /> : Array.isArray(type) ? (() => {
           const effectiveOptions = key === 'designation' ? getDesignationOptions(data.employeeCategory) : type
-          return native ? <select {...props}><option value="">Select {displayLabel.toLowerCase()}</option>{effectiveOptions.map(value => <option key={value}>{value}</option>)}</select> : <SearchableSelect placement="bottom" label={displayLabel} value={data[key] || ''} options={effectiveOptions} onChange={value => update(key, value)} required={required} error={Boolean(errors[key])} placeholder={'Select ' + displayLabel.toLowerCase()} hideSearch={key === 'gender'} />
+          return native ? <ProjectSelect {...props}><option value="">Select {displayLabel.toLowerCase()}</option>{effectiveOptions.map(value => <option key={value}>{value}</option>)}</ProjectSelect> : <SearchableSelect placement="bottom" label={displayLabel} value={data[key] || ''} options={effectiveOptions} onChange={value => update(key, value)} required={required} error={Boolean(errors[key])} placeholder={'Select ' + displayLabel.toLowerCase()} hideSearch={key === 'gender'} />
         })() : type === 'textarea' ? <textarea {...props} rows={2} /> : <input {...props} type={type === 'readonly' ? 'text' : type} readOnly={type === 'readonly'} max={type === 'date' ? today() : key === 'passingYear' ? new Date().getFullYear() : key === 'weeklyHours' ? 60 : type === 'number' ? 80 : undefined} min={key === 'passingYear' ? 1950 : type === 'number' ? 0 : undefined} step={key === 'passingYear' ? 1 : type === 'number' ? 0.5 : undefined} inputMode={type === 'tel' || key === 'pincode' ? 'numeric' : undefined} />}
         {errors[key] && <small id={id + '-error'} className="fm-error">{errors[key]}</small>}
       </div>
@@ -1701,7 +3259,7 @@ const getCollegePrefix = (collegeId, collegeOptions = [], isNonTeaching = false)
   return `${collegeCode}-${roleCode}-`
 }
 
-export const formatFacultyDisplayCode = (item, collegeOptions = [], allFaculty = []) => {
+const formatFacultyDisplayCode = (item, collegeOptions = [], allFaculty = []) => {
   if (!item) return '—'
 
   const isNonTeaching = employeeCategoryOf(item) === 'Non-Teaching'
@@ -2462,7 +4020,7 @@ function AssignmentDialog({ faculty, onClose, onAdd, onRemove, toast }) {
               {/* Semester Dropdown */}
               <div className="fm-field">
                 <label htmlFor="fm-assign-semester">Semester <span className="fm-required">*</span></label>
-                <select
+                <ProjectSelect
                   id="fm-assign-semester"
                   value={data.semesterId || data.semester}
                   onChange={e => {
@@ -2475,14 +4033,14 @@ function AssignmentDialog({ faculty, onClose, onAdd, onRemove, toast }) {
                 >
                   <option value="">Select Semester</option>
                   {semesterOptions.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
-                </select>
+                </ProjectSelect>
                 {errors.semester && <small className="fm-error">{errors.semester}</small>}
               </div>
 
               {/* Section Dropdown */}
               <div className="fm-field">
                 <label htmlFor="fm-assign-section">Section <span className="fm-required">*</span></label>
-                <select
+                <ProjectSelect
                   id="fm-assign-section"
                   value={data.sectionId || data.section}
                   onChange={e => {
@@ -2495,14 +4053,14 @@ function AssignmentDialog({ faculty, onClose, onAdd, onRemove, toast }) {
                 >
                   <option value="">Select Section</option>
                   {sectionOptions.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
-                </select>
+                </ProjectSelect>
                 {errors.section && <small className="fm-error">{errors.section}</small>}
               </div>
 
               {/* Assignment Type Dropdown */}
               <div className="fm-field">
                 <label htmlFor="fm-assign-type">Assignment Type <span className="fm-required">*</span></label>
-                <select
+                <ProjectSelect
                   id="fm-assign-type"
                   value={data.assignmentType}
                   onChange={e => {
@@ -2513,13 +4071,13 @@ function AssignmentDialog({ faculty, onClose, onAdd, onRemove, toast }) {
                 >
                   <option value="">Select Assignment Type</option>
                   {assignmentTypeOptions.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
-                </select>
+                </ProjectSelect>
               </div>
 
               {/* 1. Subject Name Dropdown from Subject Management */}
               <div className="fm-field">
                 <label htmlFor="fm-assign-subjectName">Subject Name {subjectRequired && <span className="fm-required">*</span>}</label>
-                <select
+                <ProjectSelect
                   id="fm-assign-subjectName"
                   value={data.subjectId || data.subjectName}
                   onChange={e => {
@@ -2548,7 +4106,7 @@ function AssignmentDialog({ faculty, onClose, onAdd, onRemove, toast }) {
                   {subjectOptions.map(opt => (
                     <option key={opt.value} value={opt.value}>{opt.label}</option>
                   ))}
-                </select>
+                </ProjectSelect>
                 {errors.subjectName && <small className="fm-error">{errors.subjectName}</small>}
               </div>
 
@@ -2608,7 +4166,7 @@ function ProfileCard({ title, icon: Icon, rows = [] }) {
   return <InfoCard title={title} icon={Icon} rows={rows} />
 }
 
-export default function FacultyManagement() {
+function FacultyManagement() {
   const { scopeRecords, selectedCollegeId } = useAcademic()
   const location = useLocation()
   const navigate = useNavigate()
@@ -3387,3 +4945,1514 @@ export default function FacultyManagement() {
     </DashboardLayout>
   )
 }
+
+return { teachingDesignations, nonTeachingDesignations, getStoredDesignations, getDesignationOptions, formatTimeView, formatFacultyDisplayCode, default: FacultyManagement }
+})()
+
+// Payroll screen and private helpers.
+const PayrollScreen = (() => {
+const DirectoryEmptyState = pageDependency5.default
+const { collegeStorageKey } = pageDependency6
+const useCollegeState = pageDependency7.default
+const FilterPanel = pageDependency19.default
+const SearchableSelect = pageDependency0.default
+const { useCallback, useEffect, useMemo, useRef, useState } = pageDependency1
+const { FiCheck, FiPlus, FiDownload, FiEdit2, FiEye, FiFileText, FiPrinter, FiSearch, FiSlash, FiX } = pageDependency4
+const DashboardLayout = pageDependency8.default
+const TablePagination = pageDependency11.default
+const ExportMenu = pageDependency9.default
+const { facultyPayrollApi, facultyAttendanceApi, facultyLeaveApi } = pageDependency3
+const facultyService = pageDependency2.default
+const { normalizePayroll } = pageDependency12
+const { newestFirst, rememberCreated } = pageDependency13
+const { ERP_EVENTS } = pageDependency16
+const eventBus = pageDependency16.default
+const StatusBadge = pageDependency20.default
+const { useAcademic } = pageDependency17
+
+const LOCAL_PAYROLL_STATUS_KEY = 'pirnav-faculty-local-payroll-status-v1'
+const LOCAL_SALARY_STRUCTURE_KEY = 'pirnav-faculty-local-salary-structures-v1'
+const LOCAL_ATTENDANCE_KEY = 'pirnav-faculty-local-attendance-v1'
+const LOCAL_LEAVE_DECISIONS_KEY = 'pirnav-faculty-local-leave-decisions-v1'
+const LOCAL_LEAVE_TYPES_KEY = 'pirnav-faculty-local-leave-types-v1'
+
+const getLocalPayrollStatuses = () => {
+  try { return JSON.parse(localStorage.getItem(collegeStorageKey(LOCAL_PAYROLL_STATUS_KEY))) || {} } catch { return {} }
+}
+
+const getLocalAttendanceList = () => {
+  try { return JSON.parse(localStorage.getItem(collegeStorageKey(LOCAL_ATTENDANCE_KEY))) || [] } catch { return [] }
+}
+
+const getLocalLeaveDecisions = () => {
+  try { return JSON.parse(localStorage.getItem(collegeStorageKey(LOCAL_LEAVE_DECISIONS_KEY))) || {} } catch { return {} }
+}
+
+const getLocalLeaveTypes = () => {
+  try { return JSON.parse(localStorage.getItem(collegeStorageKey(LOCAL_LEAVE_TYPES_KEY))) || {} } catch { return {} }
+}
+
+const saveLocalPayrollStatus = (item, status, reason = '', currentMonth = '') => {
+  try {
+    const data = getLocalPayrollStatuses()
+    const id = String(item.id || item.payrollId || '')
+    const facId = String(item.facultyId || '')
+    const empId = String(item.employeeId || '')
+    const m = currentMonth || item.month || item.payrollMonth || new Date().toISOString().slice(0, 7)
+    
+    const entry = { status, reason, updatedAt: new Date().toISOString(), month: m }
+    if (id) data[id] = entry
+    if (facId) {
+      data[facId] = entry
+      data[`${m}_${facId}`] = entry
+    }
+    if (empId) {
+      data[empId] = entry
+      data[`${m}_${empId}`] = entry
+    }
+    localStorage.setItem(collegeStorageKey(LOCAL_PAYROLL_STATUS_KEY), JSON.stringify(data))
+  } catch {}
+}
+
+const getLocalSalaryStructures = () => {
+  try {
+    const scoped = JSON.parse(localStorage.getItem(collegeStorageKey(LOCAL_SALARY_STRUCTURE_KEY)))
+    if (scoped && typeof scoped === 'object' && Object.keys(scoped).length > 0) return scoped
+    const unscoped = JSON.parse(localStorage.getItem(LOCAL_SALARY_STRUCTURE_KEY))
+    if (unscoped && typeof unscoped === 'object') return unscoped
+    return {}
+  } catch { return {} }
+}
+const getSavedSalaryStructure = (structures, faculty = {}, payrollRow = {}) => {
+  if (!structures || typeof structures !== 'object') return null
+  const facId = String(payrollRow?.facultyId || faculty?.facultyId || faculty?.id || '')
+  const empId = String(payrollRow?.employeeId || faculty?.employeeId || faculty?.facultyCode || '')
+  const name = String(payrollRow?.fullName || faculty?.fullName || faculty?.name || '').toLowerCase().trim()
+  if (facId && structures[facId]) return structures[facId]
+  if (empId && structures[empId]) return structures[empId]
+  if (faculty?.id && structures[String(faculty.id)]) return structures[String(faculty.id)]
+  if (name) {
+    const found = Object.values(structures).find(s => String(s.fullName || s.name || '').toLowerCase().trim() === name)
+    if (found) return found
+  }
+  return null
+}
+
+const saveLocalSalaryStructure = (item, salaryData) => {
+  try {
+    const data = getLocalSalaryStructures()
+    const facId = String(item.facultyId || item.id || '')
+    const empId = String(item.employeeId || item.facultyCode || (facId ? `EMP${String(facId).padStart(6, '0')}` : ''))
+    const entry = {
+      ...salaryData,
+      facultyId: facId,
+      employeeId: empId,
+      fullName: item.fullName || item.name,
+      department: item.department || 'General',
+      designation: item.designation || 'Faculty',
+      type: item.employeeCategory || item.type || (item.employeeCategory === 'Non-Teaching' ? 'Non-Teaching' : 'Teaching'),
+      updatedAt: new Date().toISOString()
+    }
+    if (facId) data[facId] = entry
+    if (empId) data[empId] = entry
+    if (item.id) data[String(item.id)] = entry
+    localStorage.setItem(collegeStorageKey(LOCAL_SALARY_STRUCTURE_KEY), JSON.stringify(data))
+    localStorage.setItem(LOCAL_SALARY_STRUCTURE_KEY, JSON.stringify(data))
+  } catch {}
+}
+
+const calculateDefaultSalaryBreakdown = (designation = '', employeeCategory = '') => {
+  const d = String(designation || '').toLowerCase()
+  const c = String(employeeCategory || '').toLowerCase()
+  let basic = 45000
+  if (d.includes('professor') && !d.includes('assistant') && !d.includes('associate')) basic = 85000
+  else if (d.includes('associate')) basic = 65000
+  else if (d.includes('assistant')) basic = 50000
+  else if (d.includes('senior lecturer')) basic = 42000
+  else if (d.includes('lecturer')) basic = 35000
+  else if (d.includes('lab') || d.includes('instructor')) basic = 28000
+  else if (c.includes('non-teaching')) basic = 24000
+
+  const hra = Math.round(basic * 0.20)
+  const da = Math.round(basic * 0.15)
+  const allowances = Math.round(basic * 0.10)
+  const grossSalary = basic + hra + da + allowances
+  const pf = Math.round(basic * 0.12)
+  const tax = basic > 50000 ? 2500 : 1200
+  const deductions = pf + tax
+  const netSalary = Math.max(0, grossSalary - deductions)
+
+  return { basicSalary: basic, hra, da, allowances, grossSalary, pf, tax, deductions, netSalary }
+}
+
+const calculateEmployeeAttendanceAndLeaves = (fac, m, allAttendance = [], allRequests = [], allDecisions = {}, allTypes = []) => {
+  const facId = String(fac.id || fac.facultyId || '')
+  const empId = String(fac.employeeId || '')
+  const facName = String(fac.fullName || fac.name || '').toLowerCase().trim()
+
+  // 1. Calculate working days in the month (excluding Sundays)
+  let workingDays = 26
+  if (m && /^\d{4}-\d{2}$/.test(m)) {
+    const [y, mon] = m.split('-').map(Number)
+    const daysInMonth = new Date(y, mon, 0).getDate()
+    let sundays = 0
+    for (let d = 1; d <= daysInMonth; d++) {
+      if (new Date(y, mon - 1, d).getDay() === 0) sundays++
+    }
+    workingDays = daysInMonth - sundays
+  }
+
+  // 2. Attendance records for this employee in month m
+  const empAttendance = allAttendance.filter(att => {
+    const attFacId = String(att.facultyId ?? att.faculty?.id ?? att.id ?? '')
+    const attDate = String(att.date || att.attendanceDate || '').slice(0, 7)
+    const attName = String(att.fullName || att.facultyName || att.name || '').toLowerCase().trim()
+    const matchesEmp = (facId && attFacId === facId) || (empId && (attFacId === empId || String(att.employeeId) === empId)) || (facName && attName === facName)
+    return matchesEmp && attDate === m
+  })
+
+  let presentDays = 0
+  let lateDays = 0
+  let halfDays = 0
+  let absentDays = 0
+  let explicitLopDays = 0
+
+  empAttendance.forEach(att => {
+    const st = String(att.status || att.attendanceStatus || '').toLowerCase().replace(/[\s_-]/g, '')
+    if (st === 'present' || st === 'p') {
+      presentDays += 1
+    } else if (st === 'late' || st === 'l') {
+      presentDays += 1
+      lateDays += 1
+    } else if (st === 'halfday' || st === 'hd') {
+      presentDays += 0.5
+      halfDays += 1
+    } else if (st === 'absent' || st === 'a') {
+      absentDays += 1
+    } else if (st === 'lop' || st === 'lossofpay') {
+      explicitLopDays += 1
+    }
+  })
+
+  // 3. Approved leave requests for this employee in month m
+  const approvedLeaves = allRequests.filter(req => {
+    const reqFacId = String(req.facultyId ?? req.employee?.id ?? '')
+    const reqEmpId = String(req.employeeId ?? req.employee?.employeeId ?? '')
+    const reqName = String(req.fullName || req.facultyName || req.employeeName || req.employee?.fullName || '').toLowerCase().trim()
+    const matchesEmp = (facId && reqFacId === facId) || (empId && reqEmpId === empId) || (facName && reqName === facName)
+    if (!matchesEmp) return false
+
+    const decision = allDecisions[String(req.id)]
+    const finalStatus = decision ? decision.status : req.status
+    return finalStatus === 'Approved'
+  })
+
+  let paidLeaveDays = 0
+  let unpaidLeaveDays = 0
+
+  approvedLeaves.forEach(req => {
+    const fromStr = String(req.fromDate || req.from || '').slice(0, 10)
+    const toStr = String(req.toDate || req.to || '').slice(0, 10)
+    
+    if (!fromStr || !toStr) return
+    const [y, mon] = m.split('-').map(Number)
+    const monthStart = `${m}-01`
+    const monthEnd = `${m}-${String(new Date(y, mon, 0).getDate()).padStart(2, '0')}`
+
+    const start = fromStr > monthStart ? fromStr : monthStart
+    const end = toStr < monthEnd ? toStr : monthEnd
+
+    if (start <= end) {
+      const d1 = new Date(start)
+      const d2 = new Date(end)
+      let daysCount = Math.round((d2 - d1) / (1000 * 60 * 60 * 24)) + 1
+      if (req.days && Number(req.days) > 0 && daysCount > Number(req.days)) {
+        daysCount = Number(req.days)
+      }
+
+      const typeObj = Array.isArray(allTypes)
+        ? allTypes.find(t => String(t.id) === String(req.leaveTypeId) || String(t.code).toUpperCase() === String(req.leaveTypeCode || '').toUpperCase())
+        : allTypes[String(req.leaveTypeId)]
+      const isUnpaid = typeObj?.payCategory === 'Unpaid Leave' || typeObj?.payCategory === 'Loss of Pay' || /unpaid|lop|without pay/i.test(`${typeObj?.name || ''} ${req.leaveTypeName || ''}`)
+      
+      if (isUnpaid) {
+        unpaidLeaveDays += daysCount
+      } else {
+        paidLeaveDays += daysCount
+      }
+    }
+  })
+
+  let finalLop = absentDays + explicitLopDays + unpaidLeaveDays
+  let finalPresent = presentDays
+
+  if (empAttendance.length === 0) {
+    finalPresent = Math.max(0, workingDays - paidLeaveDays - finalLop)
+  } else {
+    const totalMarked = presentDays + paidLeaveDays + finalLop
+    if (totalMarked < workingDays && (absentDays > 0 || explicitLopDays > 0)) {
+      finalLop = Math.max(finalLop, workingDays - presentDays - paidLeaveDays)
+    }
+  }
+
+  return {
+    working: workingDays,
+    present: Math.min(workingDays, finalPresent),
+    late: lateDays,
+    halfDay: halfDays,
+    paidLeave: paidLeaveDays,
+    lop: Math.min(workingDays, finalLop)
+  }
+}
+
+const calculateEmployeePayrollFigures = (salaryStructure, workingDays = 26, lopDays = 0) => {
+  const basic = Number(salaryStructure?.basicSalary) || 0
+  const hra = Number(salaryStructure?.hra) || 0
+  const da = Number(salaryStructure?.da) || 0
+  const allowances = Number(salaryStructure?.allowances) || 0
+  const pf = Number(salaryStructure?.pf) || Math.round(basic * 0.12)
+  const tax = Number(salaryStructure?.tax) || (basic > 50000 ? 2500 : 1000)
+
+  const grossSalary = basic + hra + da + allowances
+  const working = Number(workingDays) || 26
+  const lop = Number(lopDays) || 0
+  const perDayRate = working > 0 ? Math.round(grossSalary / working) : 0
+  const lopAmount = (lop > 0 && working > 0) ? Math.round(perDayRate * lop) : 0
+  const totalDeductions = pf + tax + lopAmount
+  const netSalary = Math.max(0, grossSalary - totalDeductions)
+
+  return {
+    basicSalary: basic,
+    hra,
+    da,
+    allowances,
+    pf,
+    tax,
+    perDayRate,
+    lopAmount,
+    grossSalary,
+    deductions: totalDeductions,
+    netSalary
+  }
+}
+
+
+
+const printSalarySlip = (item, month) => {
+  const basic = Number(item.basicSalary) || 0
+  const hra = Number(item.hra) || 0
+  const da = Number(item.da) || 0
+  const allowances = Number(item.allowances) || 0
+  const pf = Number(item.pf) || 0
+  const tax = Number(item.tax) || 0
+  const working = Number(item.working) || 26
+  const lop = Number(item.lop) || 0
+  const gross = basic + hra + da + allowances
+  const perDayRate = working > 0 ? Math.round(gross / working) : 0
+  const lopAmount = (lop > 0 && working > 0) ? Math.round(perDayRate * lop) : 0
+  const totalDeductions = pf + tax + lopAmount
+  const netPay = Math.max(0, gross - totalDeductions)
+  const mLabel = monthLabel(month)
+
+  const html = `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Salary Slip - ${item.fullName} - ${mLabel}</title>
+  <style>
+    @page { size: A4 portrait; margin: 12mm; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #0f172a; margin: 0; padding: 12px; background: #fff; }
+    .payslip-wrapper { border: 2px solid #1769C2; border-radius: 8px; padding: 24px; max-width: 800px; margin: 0 auto; box-sizing: border-box; }
+    .header { text-align: center; border-bottom: 2px solid #1769C2; padding-bottom: 12px; margin-bottom: 16px; }
+    .college-title { font-size: 22px; font-weight: 800; color: #1769C2; margin: 0 0 4px; letter-spacing: 0.5px; }
+    .college-sub { font-size: 11px; color: #475569; margin: 0 0 8px; }
+    .slip-badge { display: inline-block; padding: 4px 16px; background: #EAF3FF; border: 1px solid #D8E4F2; border-radius: 20px; font-size: 12px; font-weight: 800; color: #125AA8; text-transform: uppercase; }
+    
+    .info-table { width: 100%; border-collapse: collapse; margin-bottom: 16px; font-size: 12px; }
+    .info-table td { padding: 6px 10px; border: 1px solid #cbd5e1; }
+    .info-table .lbl { font-weight: 700; color: #475569; background: #f8fafc; width: 22%; }
+    .info-table .val { font-weight: 600; color: #0f172a; width: 28%; }
+    
+    .salary-table { width: 100%; border-collapse: collapse; margin-bottom: 16px; font-size: 12px; }
+    .salary-table th { background: #1769C2; color: #ffffff; padding: 8px 12px; text-align: left; font-weight: 700; border: 1px solid #1769C2; }
+    .salary-table th.num { text-align: right; }
+    .salary-table td { padding: 7px 12px; border: 1px solid #cbd5e1; }
+    .salary-table td.num { text-align: right; font-weight: 600; }
+    .salary-table .deduct-val { color: #b91c1c; }
+    .salary-table .total-row { background: #f8fafc; font-weight: 800; }
+    .salary-table .total-row td { border-top: 2px solid #1769C2; border-bottom: 2px solid #1769C2; padding: 9px 12px; }
+    
+    .net-box { display: flex; justify-content: space-between; align-items: center; background: #EAF3FF; border: 2px solid #1769C2; border-radius: 8px; padding: 14px 18px; margin-bottom: 24px; }
+    .net-title { font-size: 12px; font-weight: 800; color: #554F75; text-transform: uppercase; margin-bottom: 4px; }
+    .net-words { font-size: 13px; color: #125AA8; font-weight: 600; }
+    .net-amount { font-size: 24px; font-weight: 900; color: #125AA8; }
+    
+    .signatures { display: flex; justify-content: space-between; margin-top: 50px; font-size: 12px; color: #475569; }
+    .sig-block { text-align: center; width: 28%; }
+    .sig-line { border-top: 1px dashed #64748b; padding-top: 6px; font-weight: 600; }
+    
+    .note { margin-top: 24px; font-size: 10px; color: #94a3b8; text-align: center; }
+  </style>
+</head>
+<body>
+  <div class="payslip-wrapper">
+    <div class="header">
+      <div class="college-title">PIRNAV ENGINEERING COLLEGE</div>
+      <div class="college-sub">Approved by AICTE, Affiliated to JNTUH | Hyderabad, Telangana - 500075</div>
+      <div class="slip-badge">MONTHLY SALARY SLIP - ${mLabel.toUpperCase()}</div>
+    </div>
+    
+    <table class="info-table">
+      <tr>
+        <td class="lbl">Employee Name</td>
+        <td class="val"><strong>${item.fullName}</strong></td>
+        <td class="lbl">Employee ID</td>
+        <td class="val"><strong>${item.employeeId}</strong></td>
+      </tr>
+      <tr>
+        <td class="lbl">Designation</td>
+        <td class="val">${item.designation || 'Faculty'}</td>
+        <td class="lbl">Department</td>
+        <td class="val">${item.department || 'General'}</td>
+      </tr>
+      <tr>
+        <td class="lbl">Faculty Category</td>
+        <td class="val">${item.type || 'Teaching'}</td>
+        <td class="lbl">Pay Period</td>
+        <td class="val">${mLabel}</td>
+      </tr>
+      <tr>
+        <td class="lbl">Working / Paid Days</td>
+        <td class="val">${working} Days / ${item.present != null ? item.present + (item.paidLeave || 0) : working} Days</td>
+        <td class="lbl">LOP Days / Daily Rate</td>
+        <td class="val">${lop} Day${lop === 1 ? '' : 's'} (${money(perDayRate)}/day)</td>
+      </tr>
+    </table>
+    
+    <table class="salary-table">
+      <thead>
+        <tr>
+          <th style="width:35%;">EARNINGS</th>
+          <th class="num" style="width:15%;">AMOUNT (₹)</th>
+          <th style="width:35%;">DEDUCTIONS</th>
+          <th class="num" style="width:15%;">AMOUNT (₹)</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Basic Salary</td>
+          <td class="num">${money(basic)}</td>
+          <td>Provident Fund (PF)</td>
+          <td class="num deduct-val">${money(pf)}</td>
+        </tr>
+        <tr>
+          <td>House Rent Allowance (HRA)</td>
+          <td class="num">${money(hra)}</td>
+          <td>Professional Tax / TDS</td>
+          <td class="num deduct-val">${money(tax)}</td>
+        </tr>
+        <tr>
+          <td>Dearness Allowance (DA)</td>
+          <td class="num">${money(da)}</td>
+          <td>Loss of Pay (${lop} Day${lop === 1 ? '' : 's'} @ ${money(perDayRate)}/day)</td>
+          <td class="num deduct-val">${money(lopAmount)}</td>
+        </tr>
+        <tr>
+          <td>Special Allowances</td>
+          <td class="num">${money(allowances)}</td>
+          <td>-</td>
+          <td class="num" style="color:#94a3b8;">-</td>
+        </tr>
+        <tr class="total-row">
+          <td style="color:#1769C2;">TOTAL GROSS EARNINGS</td>
+          <td class="num" style="color:#1769C2;">${money(gross)}</td>
+          <td style="color:#b91c1c;">TOTAL DEDUCTIONS</td>
+          <td class="num" style="color:#b91c1c;">- ${money(totalDeductions)}</td>
+        </tr>
+      </tbody>
+    </table>
+    
+    <div class="net-box">
+      <div>
+        <div class="net-title">NET SALARY PAYABLE</div>
+        <div class="net-words">Amount in Words: ${numberToWordsIndian(netPay)}</div>
+      </div>
+      <div class="net-amount">${money(netPay)}</div>
+    </div>
+    
+    <div class="signatures">
+      <div class="sig-block">
+        <div class="sig-line">Employee Signature</div>
+      </div>
+      <div class="sig-block">
+        <div class="sig-line">Accounts / HR Officer</div>
+      </div>
+      <div class="sig-block">
+        <div class="sig-line">Principal / Director</div>
+      </div>
+    </div>
+    
+    <div class="note">This is a system-generated salary slip and is valid without physical seal if digitally approved.</div>
+  </div>
+</body>
+</html>`;
+
+  const target = window.open('', '_blank');
+  if (!target) {
+    alert('Please allow pop-ups to print or download the salary slip.');
+    return;
+  }
+  target.document.open();
+  target.document.write(html);
+  target.document.close();
+  const ready = () => { target.focus(); target.print(); };
+  if (target.document.readyState === 'complete') ready();
+  else target.addEventListener('load', ready, { once: true });
+};
+
+const numberToWordsIndian = (num) => {
+  if (!num || isNaN(num) || num <= 0) return 'Zero Rupees Only'
+  const a = ['', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine', 'Ten', 'Eleven', 'Twelve', 'Thirteen', 'Fourteen', 'Fifteen', 'Sixteen', 'Seventeen', 'Eighteen', 'Nineteen']
+  const b = ['', '', 'Twenty', 'Thirty', 'Forty', 'Fifty', 'Sixty', 'Seventy', 'Eighty', 'Ninety']
+
+  const inWords = (n) => {
+    if (n < 20) return a[n]
+    if (n < 100) return b[Math.floor(n / 10)] + (n % 10 ? ' ' + a[n % 10] : '')
+    if (n < 1000) return a[Math.floor(n / 100)] + ' Hundred' + (n % 100 ? ' ' + inWords(n % 100) : '')
+    if (n < 100000) return inWords(Math.floor(n / 1000)) + ' Thousand' + (n % 1000 ? ' ' + inWords(n % 1000) : '')
+    if (n < 10000000) return inWords(Math.floor(n / 100000)) + ' Lakh' + (n % 100000 ? ' ' + inWords(n % 100000) : '')
+    return inWords(Math.floor(n / 10000000)) + ' Crore' + (n % 10000000 ? ' ' + inWords(n % 10000000) : '')
+  }
+
+  return inWords(Math.floor(num)).trim() + ' Rupees Only'
+}
+
+const PAGE_SIZE = 5
+const getDefaultPayrollMonth = () => {
+  const now = new Date()
+  const lastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1)
+  const y = lastMonth.getFullYear()
+  const m = String(lastMonth.getMonth() + 1).padStart(2, '0')
+  return `${y}-${m}`
+}
+const monthLabel = value => value ? new Date(`${value}-01T00:00:00`).toLocaleDateString('en-GB', { month: 'long', year: 'numeric' }) : 'Select payroll month'
+const money = value => (value == null || isNaN(Number(value))) ? '-' : new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(Number(value))
+const statusClass = value => String(value || 'Draft').toLowerCase().replace(/\s+/g, '-')
+function Payroll() {
+  const { scopeRecords } = useAcademic()
+  const [tab, setTab] = useState('Payroll Processing'), [month, setMonth] = useState(getDefaultPayrollMonth), [selectedIds, setSelectedIds] = useState([]), [query, setQuery] = useState(''), [filters, setFilters] = useState({ type: 'Teaching', department: '', status: '' }), [page, setPage] = useState(1), [selected, setSelected] = useState(null), [hold, setHold] = useState(false), [holdReason, setHoldReason] = useState(''), [editingSalary, setEditingSalary] = useState(null), [payslipItem, setPayslipItem] = useState(null)
+  const [facultyList, setFacultyList] = useCollegeState([]), [payroll, setPayroll] = useCollegeState([], { faculty: facultyList }), [loading, setLoading] = useState(true), [error, setError] = useState(''), [busy, setBusy] = useState(false), [notice, setNotice] = useState('')
+  const requestVersion = useRef(0), holdLock = useRef(false)
+  const load = useCallback(async () => {
+    const version = ++requestVersion.current
+    setLoading(true); setError('')
+    try {
+      const fetchRows = tab === 'Salary Records' ? facultyPayrollApi.getSalaryRecords : tab === 'Payslips' ? facultyPayrollApi.getPayslips : facultyPayrollApi.getAll
+      const [payrollRes, facultyRes, attendanceRes, leaveRequestsRes, leaveHistoryRes, leaveTypesRes] = await Promise.allSettled([
+        fetchRows({ month }),
+        facultyService.list(),
+        facultyAttendanceApi.getAll({ month }).catch(() => facultyService.getAttendance({ month })).catch(() => []),
+        facultyLeaveApi.getRequests().catch(() => []),
+        facultyLeaveApi.getHistory().catch(() => []),
+        facultyLeaveApi.getTypes().catch(() => [])
+      ])
+      const data = payrollRes.status === 'fulfilled' && Array.isArray(payrollRes.value) ? payrollRes.value : []
+      const facultyRows = facultyRes.status === 'fulfilled' && Array.isArray(facultyRes.value) ? facultyRes.value : []
+      const remoteAttendance = attendanceRes.status === 'fulfilled' && Array.isArray(attendanceRes.value) ? attendanceRes.value : []
+      const remotePending = leaveRequestsRes.status === 'fulfilled' && Array.isArray(leaveRequestsRes.value) ? leaveRequestsRes.value : []
+      const remoteHistory = leaveHistoryRes.status === 'fulfilled' && Array.isArray(leaveHistoryRes.value) ? leaveHistoryRes.value : []
+      const remoteTypes = leaveTypesRes.status === 'fulfilled' && Array.isArray(leaveTypesRes.value) ? leaveTypesRes.value : []
+
+      const scopedFaculty = scopeRecords(facultyRows)
+      const faculty = scopedFaculty.length > 0 ? scopedFaculty : facultyRows
+      setFacultyList(facultyRows)
+
+      const localStatuses = getLocalPayrollStatuses()
+      const localSalaries = getLocalSalaryStructures()
+      const localAttendance = getLocalAttendanceList()
+      const localDecisions = getLocalLeaveDecisions()
+      const localTypes = getLocalLeaveTypes()
+
+      // Merge attendance records
+      const allAttendance = [...remoteAttendance]
+      for (const att of localAttendance) {
+        if (!allAttendance.some(a => String(a.id || a.attendanceId) === String(att.id || att.attendanceId))) {
+          allAttendance.push(att)
+        }
+      }
+
+      // Merge leave requests & history
+      const allRequests = [...remotePending, ...remoteHistory]
+
+      // Merge leave types
+      const allTypes = [...remoteTypes]
+      Object.values(localTypes).forEach(lt => {
+        if (!allTypes.some(t => String(t.id) === String(lt.id))) {
+          allTypes.push(lt)
+        }
+      })
+
+      let combined = []
+      if (data.length > 0) {
+        combined = data.map((row) => {
+          const fac = faculty.find(f => 
+            (row.facultyId && (String(f.id) === String(row.facultyId) || String(f.facultyId) === String(row.facultyId))) ||
+            (row.employeeId && String(f.employeeId || f.facultyCode || '').toLowerCase().trim() === String(row.employeeId).toLowerCase().trim()) ||
+            (row.fullName && (String(f.fullName || f.name).toLowerCase().trim() === String(row.fullName).toLowerCase().trim())) ||
+            (row.facultyName && (String(f.fullName || f.name).toLowerCase().trim() === String(row.facultyName).toLowerCase().trim())) ||
+            (tab === 'Payroll Processing' && row.id && (String(f.id) === String(row.id) || String(f.facultyId) === String(row.id)))
+          ) || row
+
+          const resolvedFacultyId = row.facultyId || fac.facultyId || fac.id || row.id
+          const resolvedEmpId = row.employeeId || fac.employeeId || fac.facultyCode || (resolvedFacultyId ? `EMP${String(resolvedFacultyId).padStart(6, '0')}` : '') || (fac.id ? `EMP${String(fac.id).padStart(6, '0')}` : '')
+          const statusOverride = localStatuses[`${month}_${resolvedFacultyId}`]?.status ||
+            localStatuses[`${month}_${resolvedEmpId}`]?.status ||
+            localStatuses[String(row.id)]?.status ||
+            localStatuses[String(resolvedFacultyId)]?.status
+          
+          const attMetrics = calculateEmployeeAttendanceAndLeaves(
+            { id: resolvedFacultyId, employeeId: resolvedEmpId, fullName: row.fullName || fac.fullName || fac.name },
+            month,
+            allAttendance,
+            allRequests,
+            localDecisions,
+            allTypes
+          )
+
+          const defaultBreakdown = calculateDefaultSalaryBreakdown(fac.designation || row.designation, fac.employeeCategory || row.type)
+          const savedSalary = getSavedSalaryStructure(localSalaries, fac, row) || {
+            basicSalary: row.basicSalary ?? defaultBreakdown.basicSalary,
+            hra: row.hra ?? defaultBreakdown.hra,
+            da: row.da ?? defaultBreakdown.da,
+            allowances: row.allowances ?? defaultBreakdown.allowances,
+            pf: row.pf ?? defaultBreakdown.pf,
+            tax: row.tax ?? defaultBreakdown.tax,
+            grossSalary: row.grossSalary ?? defaultBreakdown.grossSalary,
+            deductions: row.deductions ?? defaultBreakdown.deductions,
+            netSalary: row.netSalary ?? defaultBreakdown.netSalary
+          }
+
+          const workingDays = row.workingDays || row.working || attMetrics.working
+          const lopDays = (row.lopDays != null && row.lopDays !== 0) ? row.lopDays : attMetrics.lop
+          const presentDays = (row.presentDays != null) ? row.presentDays : attMetrics.present
+          const paidLeaveDays = (row.paidLeaveDays != null && row.paidLeaveDays !== 0) ? row.paidLeaveDays : attMetrics.paidLeave
+
+          const figures = calculateEmployeePayrollFigures(savedSalary, workingDays, lopDays)
+          const memberType = (fac.employeeCategory === 'Non-Teaching' || String(fac.type || row.type).toLowerCase().includes('non') || String(fac.employmentType).toLowerCase().includes('non')) ? 'Non-Teaching' : 'Teaching'
+
+          return normalizePayroll({
+            ...row,
+            id: row.id || `pr-${resolvedFacultyId}-${month}`,
+            payrollId: row.payrollId || row.id || resolvedFacultyId,
+            facultyId: resolvedFacultyId,
+            employeeId: resolvedEmpId,
+            fullName: row.fullName || fac.fullName || fac.name || row.facultyName,
+            designation: row.designation || fac.designation || 'Faculty',
+            department: row.department || fac.department || 'General',
+            type: memberType,
+            workingDays,
+            presentDays,
+            lateDays: attMetrics.late,
+            halfDays: attMetrics.halfDay,
+            paidLeaveDays,
+            lopDays,
+            status: statusOverride || row.status || (tab === 'Salary Records' ? 'Paid' : 'Draft'),
+            basicSalary: figures.basicSalary,
+            hra: figures.hra,
+            da: figures.da,
+            allowances: figures.allowances,
+            pf: figures.pf,
+            tax: figures.tax,
+            grossSalary: figures.grossSalary,
+            deductions: figures.deductions,
+            netSalary: figures.netSalary
+          })
+        }).filter(Boolean)
+      } else if (faculty.length > 0) {
+        combined = faculty.map(fac => {
+          const defaultBreakdown = calculateDefaultSalaryBreakdown(fac.designation, fac.employeeCategory)
+          const savedSalary = getSavedSalaryStructure(localSalaries, fac) || defaultBreakdown
+          const statusOverride = localStatuses[`${month}_${fac.id}`]?.status ||
+            localStatuses[`pr-${fac.id}-${month}`]?.status ||
+            localStatuses[String(fac.id)]?.status
+
+          const attMetrics = calculateEmployeeAttendanceAndLeaves(
+            fac,
+            month,
+            allAttendance,
+            allRequests,
+            localDecisions,
+            allTypes
+          )
+
+          const figures = calculateEmployeePayrollFigures(savedSalary, attMetrics.working, attMetrics.lop)
+          const memberType = (fac.employeeCategory === 'Non-Teaching' || String(fac.type).toLowerCase().includes('non') || String(fac.employmentType).toLowerCase().includes('non')) ? 'Non-Teaching' : 'Teaching'
+
+          return normalizePayroll({
+            id: `pr-${fac.id}-${month}`,
+            payrollId: fac.id,
+            facultyId: fac.id,
+            employeeId: fac.employeeId || fac.facultyCode || `EMP${String(fac.id).padStart(6, '0')}`,
+            fullName: fac.fullName || fac.name,
+            designation: fac.designation || 'Faculty',
+            department: fac.department || 'General',
+            type: memberType,
+            workingDays: attMetrics.working,
+            presentDays: attMetrics.present,
+            lateDays: attMetrics.late,
+            halfDays: attMetrics.halfDay,
+            paidLeaveDays: attMetrics.paidLeave,
+            lopDays: attMetrics.lop,
+            status: statusOverride || (tab === 'Salary Records' ? 'Paid' : 'Draft'),
+            payrollMonth: month,
+            basicSalary: figures.basicSalary,
+            hra: figures.hra,
+            da: figures.da,
+            allowances: figures.allowances,
+            pf: figures.pf,
+            tax: figures.tax,
+            grossSalary: figures.grossSalary,
+            deductions: figures.deductions,
+            netSalary: figures.netSalary
+          })
+        }).filter(Boolean)
+      }
+
+      // Also merge any configured local salary structures that might not be in the initial combined list
+      if (tab === 'Salary Records' || tab === 'Payroll Processing') {
+        const localStructValues = Object.values(localSalaries)
+        localStructValues.forEach(struct => {
+          const structFacId = String(struct.facultyId || '')
+          const structEmpId = String(struct.employeeId || '')
+          const alreadyInList = combined.some(item => 
+            (structFacId && String(item.facultyId) === structFacId) ||
+            (structEmpId && String(item.employeeId) === structEmpId) ||
+            (struct.fullName && String(item.fullName).toLowerCase().trim() === String(struct.fullName).toLowerCase().trim())
+          )
+          if (!alreadyInList && (struct.fullName || struct.employeeId || struct.facultyId)) {
+            const figures = calculateEmployeePayrollFigures(struct, 26, 0)
+            const fallbackMemberType = (struct.type === 'Non-Teaching' || struct.employeeCategory === 'Non-Teaching') ? 'Non-Teaching' : 'Teaching'
+            combined.push(normalizePayroll({
+              id: structFacId ? `pr-${structFacId}-${month}` : `pr-${Date.now()}-${month}`,
+              payrollId: structFacId || struct.id,
+              facultyId: structFacId,
+              employeeId: structEmpId || (structFacId ? `EMP${String(structFacId).padStart(6, '0')}` : ''),
+              fullName: struct.fullName || struct.name || 'Faculty Member',
+              designation: struct.designation || 'Faculty',
+              department: struct.department || 'General',
+              type: fallbackMemberType,
+              workingDays: 26,
+              presentDays: 26,
+              paidLeaveDays: 0,
+              lopDays: 0,
+              status: 'Paid',
+              payrollMonth: month,
+              basicSalary: figures.basicSalary,
+              hra: figures.hra,
+              da: figures.da,
+              allowances: figures.allowances,
+              pf: figures.pf,
+              tax: figures.tax,
+              grossSalary: figures.grossSalary,
+              deductions: figures.deductions,
+              netSalary: figures.netSalary
+            }))
+          }
+        })
+      }
+
+      if (version === requestVersion.current) setPayroll(newestFirst('payroll', combined))
+    } catch (reason) { if (version === requestVersion.current) { setPayroll([]); setError(reason.message) } }
+    finally { if (version === requestVersion.current) setLoading(false) }
+  }, [month, tab, scopeRecords, setFacultyList, setPayroll])
+  useEffect(() => { load(); return () => { requestVersion.current++ } }, [load])
+  useEffect(() => {
+    const unsubLeave = eventBus.subscribe(ERP_EVENTS.LEAVE_UPDATED, () => {
+      load()
+    })
+    const unsubAtt = eventBus.subscribe(ERP_EVENTS.ATTENDANCE_RECORDED, () => {
+      load()
+    })
+    return () => {
+      unsubLeave()
+      unsubAtt()
+    }
+  }, [load])
+  useEffect(() => {
+    if (!notice) return
+    const timer = setTimeout(() => setNotice(''), 2000)
+    return () => clearTimeout(timer)
+  }, [notice])
+  const departments = [...new Set(payroll.map(item => item.department).filter(Boolean))]
+  const rows = useMemo(() => payroll.filter(row => (!query || (row.employeeId + ' ' + row.fullName + ' ' + row.department).toLowerCase().includes(query.toLowerCase())) && (!filters.type || row.type === filters.type) && (!filters.department || row.department === filters.department) && (!filters.status || row.status === filters.status)), [payroll, query, filters])
+  const view = async row => {
+    // A new faculty member can have a draft processing row before a separate
+    // payroll detail record exists. The row itself is enough for View.
+    setError('')
+    setSelected(normalizePayroll(row))
+    setHoldReason('')
+    try {
+      const detail = await facultyPayrollApi.getById(row.id)
+      setSelected(normalizePayroll({ ...row, ...detail }))
+    } catch {
+      // Keep the list row open when the optional detail record is unavailable.
+    }
+  }
+  
+  const getFullBreakdownForRow = (row) => {
+    const facBreakdown = calculateDefaultSalaryBreakdown(row.designation, row.type)
+    const savedBreakdown = getLocalSalaryStructures()[String(row.facultyId || row.id)] ||
+      getLocalSalaryStructures()[String(row.employeeId)] || {}
+    const salaryStruct = {
+      basicSalary: row.basicSalary ?? savedBreakdown.basicSalary ?? facBreakdown.basicSalary,
+      hra: row.hra ?? savedBreakdown.hra ?? facBreakdown.hra,
+      da: row.da ?? savedBreakdown.da ?? facBreakdown.da,
+      allowances: row.allowances ?? savedBreakdown.allowances ?? facBreakdown.allowances,
+      pf: row.pf ?? savedBreakdown.pf ?? Math.round((Number(row.basicSalary || savedBreakdown.basicSalary || facBreakdown.basicSalary) || 0) * 0.12),
+      tax: row.tax ?? savedBreakdown.tax ?? (Number(row.basicSalary || savedBreakdown.basicSalary || facBreakdown.basicSalary) > 50000 ? 2500 : 1000),
+    }
+    const working = Number(row.working || row.workingDays) || 26
+    const lop = Number(row.lop || row.lopDays) || 0
+    const figures = calculateEmployeePayrollFigures(salaryStruct, working, lop)
+    return { ...row, ...figures, working, lop }
+  }
+
+  const handleOpenPayslip = (row) => {
+    const fullRow = getFullBreakdownForRow(row)
+    setPayslipItem(fullRow)
+  }
+
+  const handlePrintPayslipDirect = (row) => {
+    handleOpenPayslip(row)
+  }
+
+  const handleSaveSalaryStructure = (facultyItem, salaryData) => {
+    saveLocalSalaryStructure(facultyItem, salaryData)
+    load()
+    setPage(1)
+    setEditingSalary(null)
+    setNotice(`Salary structure configured for ${facultyItem.fullName || facultyItem.name}.`)
+  }
+
+  const handleApprove = async (row) => {
+    saveLocalPayrollStatus(row, 'Processed', '', month)
+    setPayroll(prev => prev.map(item => (String(item.id) === String(row.id) || (row.facultyId && String(item.facultyId) === String(row.facultyId))) ? { ...item, status: 'Processed' } : item))
+    if (selected && (String(selected.id) === String(row.id) || String(selected.facultyId) === String(row.facultyId))) {
+      setSelected(prev => ({ ...prev, status: 'Processed' }))
+    }
+    setNotice(`Payroll for ${row.fullName} processed successfully.`)
+  }
+
+
+  const toggleSelectRow = (id) => {
+    setSelectedIds(prev => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return Array.from(next)
+    })
+  }
+
+  const toggleSelectAll = () => {
+    const visibleIds = visible.map(r => String(r.id))
+    const allSelected = visibleIds.length > 0 && visibleIds.every(id => selectedIds.includes(id))
+    if (allSelected) {
+      setSelectedIds(prev => prev.filter(id => !visibleIds.includes(id)))
+    } else {
+      setSelectedIds(prev => Array.from(new Set([...prev, ...visibleIds])))
+    }
+  }
+
+  const handleBulkApprove = async (targetRows = null) => {
+    let rowsToApprove = targetRows
+    if (!rowsToApprove) {
+      if (selectedIds.length > 0) {
+        rowsToApprove = rows.filter(r => selectedIds.includes(String(r.id)) && (r.status === 'Draft' || r.status === 'Hold'))
+      } else {
+        rowsToApprove = rows.filter(r => r.status === 'Draft' || r.status === 'Hold')
+      }
+    }
+    if (!rowsToApprove || !rowsToApprove.length) {
+      setNotice('No pending (Draft / Hold) payroll records to approve.')
+      return
+    }
+    setBusy(true)
+    rowsToApprove.forEach(row => {
+      saveLocalPayrollStatus(row, 'Processed', '', month)
+    })
+    const idsToUpdate = new Set(rowsToApprove.map(r => String(r.id)))
+    const facIdsToUpdate = new Set(rowsToApprove.map(r => String(r.facultyId)).filter(Boolean))
+    setPayroll(prev => prev.map(item => {
+      if (idsToUpdate.has(String(item.id)) || (item.facultyId && facIdsToUpdate.has(String(item.facultyId)))) {
+        return { ...item, status: 'Processed' }
+      }
+      return item
+    }))
+    setSelectedIds([])
+    setBusy(false)
+    setNotice(`Successfully approved payroll for ${rowsToApprove.length} employee(s).`)
+  }
+
+  const handleBulkMarkPaid = async () => {
+    const rowsToPay = rows.filter(r => selectedIds.includes(String(r.id)) && r.status === 'Processed')
+    if (!rowsToPay.length) {
+      setNotice('No Processed payroll records selected to mark as Paid.')
+      return
+    }
+    setBusy(true)
+    rowsToPay.forEach(row => {
+      saveLocalPayrollStatus(row, 'Paid', '', month)
+    })
+    const idsToUpdate = new Set(rowsToPay.map(r => String(r.id)))
+    const facIdsToUpdate = new Set(rowsToPay.map(r => String(r.facultyId)).filter(Boolean))
+    setPayroll(prev => prev.map(item => {
+      if (idsToUpdate.has(String(item.id)) || (item.facultyId && facIdsToUpdate.has(String(item.facultyId)))) {
+        return { ...item, status: 'Paid' }
+      }
+      return item
+    }))
+    setSelectedIds([])
+    setBusy(false)
+    setNotice(`Marked ${rowsToPay.length} payroll record(s) as Paid.`)
+  }
+
+  const handleMarkPaid = async (row) => {
+    saveLocalPayrollStatus(row, 'Paid', '', month)
+    setPayroll(prev => prev.map(item => (String(item.id) === String(row.id) || (row.facultyId && String(item.facultyId) === String(row.facultyId))) ? { ...item, status: 'Paid' } : item))
+    if (selected && (String(selected.id) === String(row.id) || String(selected.facultyId) === String(row.facultyId))) {
+      setSelected(prev => ({ ...prev, status: 'Paid' }))
+    }
+    setNotice(`Payroll for ${row.fullName} marked as Paid.`)
+  }
+
+  const handleOpenHold = (row) => {
+    setSelected(row)
+    setHoldReason(row.holdReason || '')
+    setHold(true)
+  }
+
+  const placeHold = async event => {
+    event.preventDefault(); if (!holdReason.trim() || holdLock.current) return
+    holdLock.current = true; setBusy(true); setError('')
+    saveLocalPayrollStatus(selected, 'Hold', holdReason.trim(), month)
+    setPayroll(prev => prev.map(item => (String(item.id) === String(selected.id) || (selected.facultyId && String(item.facultyId) === String(selected.facultyId))) ? { ...item, status: 'Hold', holdReason: holdReason.trim() } : item))
+    try {
+      await facultyPayrollApi.hold(selected.id, holdReason.trim())
+    } catch {}
+    finally {
+      holdLock.current = false
+      setBusy(false)
+      setHold(false)
+      setSelected(null)
+      setNotice(`Payroll for ${selected.fullName} placed on hold.`)
+    }
+  }
+  const totalPages = Math.max(1, Math.ceil(rows.length / PAGE_SIZE)), currentPage = Math.min(page, totalPages), visible = rows.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE)
+  const updateFilter = (key, value) => { setFilters(current => ({ ...current, [key]: value })); setPage(1) }
+  const clear = () => { setQuery(''); setFilters({ type: 'Teaching', department: '', status: '' }); setPage(1) }
+  const columns = [['employeeId', 'Employee ID'], ['fullName', 'Employee'], ['type', 'Type'], ['department', 'Department'], ['working', 'Working Days'], ['present', 'Present'], ['paidLeave', 'Paid Leave'], ['lop', 'LOP'], ['status', 'Status']].map(([value, label]) => ({ label, value }))
+  const exportColumns = tab === 'Payroll Processing'
+    ? [...columns, { label: 'Gross Salary', value: 'grossSalary' }, { label: 'Deductions', value: 'deductions' }, { label: 'Net Salary', value: 'netSalary' }]
+    : tab === 'Salary Records'
+      ? [['employeeId', 'Employee ID'], ['fullName', 'Employee'], ['type', 'Type'], ['department', 'Department'], ['basicSalary', 'Basic Salary'], ['grossSalary', 'Gross Salary'], ['deductions', 'Deductions'], ['netSalary', 'Net Salary']].map(([value, label]) => ({ label, value }))
+      : [['month', 'Payroll Month'], ['employeeId', 'Employee ID'], ['fullName', 'Employee'], ['type', 'Type'], ['department', 'Department'], ['grossSalary', 'Gross Salary'], ['deductions', 'Deductions'], ['netSalary', 'Net Salary'], ['status', 'Status']].map(([value, label]) => ({ label, value }))
+  const processed = rows.filter(row => row.status === 'Processed').length, onHold = rows.filter(row => row.status === 'Hold').length, lop = rows.reduce((sum, row) => sum + row.lop, 0)
+  const title = tab === 'Payroll Processing' ? 'Payroll Processing' : tab
+  const emptyText = tab === 'Payroll Processing' ? `No payroll records found for ${monthLabel(month)}.` : tab === 'Salary Records' ? 'No salary records found.' : 'No payslips found for the selected filters.'
+  return <DashboardLayout><main className="faculty-payroll">{error && <p className="flm-error" role="alert">{error} <button onClick={load}>Retry</button></p>}<header className="fp-header"><div><p>HOME / FACULTY / PAYROLL</p><h1>Faculty Payroll</h1><span>Process faculty salaries using attendance, leave and payroll data.</span></div><div className="fp-summary">{[['Total Employees', rows.length], ['Processed', processed], ['On Hold', onHold], ['LOP Days', lop]].map(([label, value]) => <div key={label}><strong>{value}</strong><small>{label}</small></div>)}</div></header><section className="fp-card"><header><div><p>{title.toUpperCase()}</p><h2>{tab === 'Payroll Processing' ? monthLabel(month) : title}</h2></div><div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+          <div className="fp-category-choice" role="group" aria-label="Faculty type">
+            <div>
+              <button type="button" className={filters.type === 'Teaching' ? 'active' : ''} onClick={() => updateFilter('type', 'Teaching')}>Teaching Faculty</button>
+              <button type="button" className={filters.type === 'Non-Teaching' ? 'active' : ''} onClick={() => updateFilter('type', 'Non-Teaching')}>Non-Teaching Staff</button>
+            </div>
+          </div>
+          {tab === 'Payroll Processing' && (
+            <label className="fp-payroll-period">
+              <span>Payroll Period</span>
+              <input type="month" value={month} onChange={event => { setMonth(event.target.value); setPage(1) }} aria-label="Payroll Period" />
+            </label>
+          )}
+          {tab === 'Salary Records' && (
+            <button
+              type="button"
+              className="fp-add-salary-btn"
+              onClick={() => setEditingSalary({ isNew: true })}
+              title="Add / Define Salary Structure for an Employee"
+            >
+              <FiPlus /> Add Salary Structure
+            </button>
+          )}
+        </div></header><nav>{['Payroll Processing', 'Salary Records', 'Payslips'].map(item => <button type="button" className={tab === item ? 'active' : ''} onClick={() => { setTab(item); setPage(1); setSelectedIds([]) }} key={item}>{item}</button>)}</nav><FilterPanel className="fp-filter-panel" active={Boolean(query || filters.department || filters.status)} onClear={clear} hideClear actions={<ExportMenu rows={rows} columns={exportColumns} title={title} filename={`faculty-payroll-${month}`} loading={loading || Boolean(error)} scope="All filtered results" />}>
+          <div className="fp-filter-fields">
+            <label className="fp-search"><FiSearch aria-hidden="true" /><input value={query} onChange={event => { setQuery(event.target.value); setPage(1) }} aria-label="Search payroll employees" placeholder="Search employee..." /></label>
+            <div className="fp-filter-field"><span>Department</span><SearchableSelect label="Department" value={filters.department} options={[{ value: '', label: 'All Departments' }, ...departments]} placeholder="All Departments" onChange={value => updateFilter('department', value)} /></div>
+            {tab !== 'Payslips' && <div className="fp-filter-field"><span>Payroll Status</span><SearchableSelect label="Payroll Status" value={filters.status} options={[{ value: '', label: 'All Statuses' }, 'Draft', 'Processed', 'Paid', 'Hold']} placeholder="All Statuses" onChange={value => updateFilter('status', value)} hideSearch /></div>}
+          </div>
+        </FilterPanel>
+      {tab === 'Payroll Processing' && selectedIds.length > 0 && (
+        <div className="fp-bulkbar">
+          <strong>{selectedIds.length} employee(s) selected</strong>
+          <button
+            type="button"
+            className="fp-bulkbar-btn primary"
+            onClick={() => handleBulkApprove()}
+          >
+            <FiCheck /> Approve Selected ({selectedIds.length})
+          </button>
+          <button
+            type="button"
+            className="fp-bulkbar-btn pay"
+            onClick={handleBulkMarkPaid}
+          >
+            <FiCheck /> Mark Selected as Paid
+          </button>
+          <button
+            type="button"
+            className="fp-bulkbar-btn secondary"
+            onClick={() => setSelectedIds([])}
+          >
+            Clear Selection
+          </button>
+        </div>
+      )}
+<div className="fp-table">{loading ? (
+  <div className="fp-empty" role="status" style={{ padding: '36px 16px', textAlign: 'center' }}>
+    <div style={{ display: 'inline-block', width: '24px', height: '24px', border: '3px solid #1769C2', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.8s linear infinite', marginBottom: '8px' }} />
+    <p style={{ margin: 0, color: 'var(--text-muted)', fontSize: '13px' }}>Loading payroll records...</p>
+  </div>
+) : rows.length ? <table><thead><tr>{tab === 'Payroll Processing' && (
+      <th style={{ width: '40px', textAlign: 'center' }}>
+        <input
+          type="checkbox"
+          aria-label="Select all employees"
+          checked={visible.length > 0 && visible.every(r => selectedIds.includes(String(r.id)))}
+          onChange={toggleSelectAll}
+        />
+      </th>
+    )}{(tab === 'Payroll Processing' ? ['Employee ID', 'Employee', 'Type', 'Department', 'Working Days', 'Present', 'Paid Leave', 'LOP', 'Gross Salary', 'Deductions', 'Net Salary', 'Status', 'Action'] : tab === 'Salary Records' ? ['Employee ID', 'Employee', 'Type', 'Department', 'Basic Salary', 'Gross Salary', 'Deductions', 'Net Salary', 'Action'] : ['Payroll Month', 'Employee ID', 'Employee', 'Type', 'Department', 'Gross Salary', 'Deductions', 'Net Salary', 'Status', 'Action']).map(item => <th key={item}>{item}</th>)}</tr></thead><tbody>{visible.map(row => <tr key={row.id}>
+      {tab === 'Payroll Processing' && (
+        <td style={{ textAlign: 'center' }}>
+          <input
+            type="checkbox"
+            aria-label={`Select ${row.fullName}`}
+            checked={selectedIds.includes(String(row.id))}
+            onChange={() => toggleSelectRow(String(row.id))}
+          />
+        </td>
+      )}
+      {tab === 'Payslips' && <td>{monthLabel(month)}</td>}
+      <td>{row.employeeId}</td>
+      <td><strong>{row.fullName}</strong><small>{row.designation}</small></td>
+      <td>{row.type}</td>
+      <td>{row.department}</td>
+      {tab === 'Payroll Processing' && (
+        <>
+          <td>{row.working}</td>
+          <td>{row.present}</td>
+          <td>{row.paidLeave}</td>
+          <td><span className={row.lop ? 'fp-lop' : ''}>{row.lop}</span></td>
+        </>
+      )}
+      {tab === 'Salary Records' && <td>{money(row.basicSalary)}</td>}
+      <td>{money(row.grossSalary)}</td>
+      <td>{money(row.deductions)}</td>
+      <td>{money(row.netSalary)}</td>
+      {tab !== 'Salary Records' && <td><StatusBadge value={row.status} /></td>}
+      <td>
+  <div className="fp-actions">
+    {tab !== 'Payslips' && (
+      <button type="button" title="View details" aria-label={`View details for ${row.fullName}`} onClick={() => view(row)}>
+        <FiEye />
+      </button>
+    )}
+    {tab === 'Payroll Processing' && (
+      <>
+        {row.status === 'Hold' && (
+          <button type="button" className="fp-approve-btn" title="Approve / Release Hold" aria-label={`Approve payroll for ${row.fullName}`} onClick={() => handleApprove(row)}>
+            <FiCheck />
+          </button>
+        )}
+        {row.status === 'Draft' && (
+          <>
+            <button type="button" className="fp-approve-btn" title="Process Payroll" aria-label={`Process payroll for ${row.fullName}`} onClick={() => handleApprove(row)}>
+              <FiCheck />
+            </button>
+            <button type="button" className="fp-hold-btn" title="Place on Hold" aria-label={`Place payroll on hold for ${row.fullName}`} onClick={() => handleOpenHold(row)}>
+              <FiSlash />
+            </button>
+          </>
+        )}
+        {row.status === 'Processed' && (
+          <>
+            <button type="button" className="fp-pay-btn" title="Mark as Paid" aria-label={`Mark as paid for ${row.fullName}`} onClick={() => handleMarkPaid(row)}>
+              <FiCheck />
+            </button>
+            <button type="button" className="fp-hold-btn" title="Place on Hold" aria-label={`Place payroll on hold for ${row.fullName}`} onClick={() => handleOpenHold(row)}>
+              <FiSlash />
+            </button>
+          </>
+        )}
+      </>
+    )}
+    {tab === 'Salary Records' && (
+      <button type="button" className="fp-edit-btn" title="Configure / Edit Salary" aria-label={`Configure salary for ${row.fullName}`} onClick={() => setEditingSalary(row)}>
+        <FiEdit2 />
+      </button>
+    )}
+    {tab === 'Payslips' && (
+      <>
+        <button
+          type="button"
+          className="fp-print-payslip-btn"
+          title="Print / View Salary Slip"
+          aria-label={`Print salary slip for ${row.fullName}`}
+          onClick={() => handleOpenPayslip(row)}
+        >
+          <FiPrinter />
+        </button>
+      </>
+    )}
+  </div>
+</td></tr>)}</tbody></table> : tab === 'Salary Records' && !loading && !error ? <DirectoryEmptyState title="No salary records found." actionLabel="Add Salary Structure" onAction={() => setEditingSalary({ isNew: true })} /> : <p className="fp-empty">{emptyText}</p>}</div>{rows.length > PAGE_SIZE && <TablePagination currentPage={currentPage} totalPages={totalPages} onPageChange={setPage} />}</section>{selected && (() => {
+  const full = getFullBreakdownForRow(selected)
+  const basic = full.basicSalary
+  const hra = full.hra
+  const da = full.da
+  const allowances = full.allowances
+  const pf = full.pf
+  const tax = full.tax
+  const lopAmount = full.lopAmount || 0
+  const gross = full.grossSalary
+  const deductions = full.deductions
+  const net = full.netSalary
+
+  return (
+    <div className="fp-overlay">
+      <section className="fp-dialog fp-view-dialog" role="dialog" aria-modal="true" aria-label="Payroll details" style={{ maxWidth: '640px' }}>
+        <button className="fp-close" type="button" aria-label="Close payroll details" onClick={() => setSelected(null)}><FiX /></button>
+        <p>{tab === 'Salary Records' ? 'SALARY STRUCTURE DETAILS' : 'PAYROLL DETAILS'}</p>
+        <h2>{selected.fullName}</h2>
+        <span>{selected.employeeId} | {selected.designation} | {selected.department} | {selected.type}</span>
+        {tab !== 'Salary Records' && <b className={`fp-status ${statusClass(selected.status)}`}>{selected.status}</b>}
+
+        {tab !== 'Salary Records' && (
+          <>
+            <h3 style={{ marginTop: '16px' }}>Payroll Period</h3>
+            <dl>
+              <div><dt>Payroll Month</dt><dd>{monthLabel(month)}</dd></div>
+              <div><dt>Working Days</dt><dd>{selected.working}</dd></div>
+            </dl>
+
+            <h3>Attendance Summary</h3>
+            <dl className="fp-attendance-summary">
+              {[['Present', selected.present, 'present'], ['Late', selected.late, 'late'], ['Half Day', selected.halfDay, 'half-day'], ['Paid Leave', selected.paidLeave, 'leave'], ['LOP Days', selected.lop, 'lop']].map(([label, value, tone]) => (
+                <div className={tone} key={label}><dt>{label}</dt><dd>{value}</dd></div>
+              ))}
+            </dl>
+          </>
+        )}
+
+        <h3 style={{ marginTop: '18px' }}>Salary Breakdown & Structure</h3>
+        <div className="fp-salary-breakdown-card">
+          <h4 style={{ margin: '0 0 8px', fontSize: '11px', fontWeight: '800', color: 'var(--brand, #1769C2)', textTransform: 'uppercase' }}>Earnings & Allowances</h4>
+          <dl className="fp-breakdown-grid">
+            <div><dt>Basic Salary</dt><dd>{money(basic)}</dd></div>
+            <div><dt>HRA (House Rent)</dt><dd>{money(hra)}</dd></div>
+            <div><dt>DA (Dearness Allowance)</dt><dd>{money(da)}</dd></div>
+            <div><dt>Special Allowances</dt><dd>{money(allowances)}</dd></div>
+          </dl>
+
+          <h4 style={{ margin: '14px 0 8px', fontSize: '11px', fontWeight: '800', color: 'var(--danger, #b42318)', textTransform: 'uppercase' }}>Deductions & Adjustments</h4>
+          <dl className="fp-breakdown-grid">
+            <div><dt>Provident Fund (PF)</dt><dd>{money(pf)}</dd></div>
+            <div><dt>Professional Tax / TDS</dt><dd>{money(tax)}</dd></div>
+            <div>
+              <dt>Daily Pay Rate</dt>
+              <dd>{money(full.perDayRate || Math.round(gross / (selected.working || 26)))} / day</dd>
+            </div>
+            {selected.lop > 0 ? (
+              <div>
+                <dt>Loss of Pay ({selected.lop} Day{selected.lop === 1 ? '' : 's'} @ {money(full.perDayRate || Math.round(gross / (selected.working || 26)))}/day)</dt>
+                <dd style={{ color: '#b91c1c', fontWeight: '700' }}>- {money(lopAmount)}</dd>
+              </div>
+            ) : (
+              <div>
+                <dt>Loss of Pay (0 LOP Days)</dt>
+                <dd style={{ color: '#64748b' }}>₹0</dd>
+              </div>
+            )}
+          </dl>
+
+          <div className="fp-breakdown-summary">
+            <div className="item">
+              <span>Gross Salary:</span>
+              <strong>{money(gross)}</strong>
+            </div>
+            <div className="item deductions">
+              <span>Total Deductions:</span>
+              <strong>- {money(deductions)}</strong>
+            </div>
+            <div className="item net">
+              <span>Net Take-Home Pay:</span>
+              <strong>{money(net)}</strong>
+            </div>
+          </div>
+        </div>
+
+        <footer>
+          <button type="button" onClick={() => setSelected(null)}>Close</button>
+        </footer>
+      </section>
+    </div>
+  )
+})()}{notice && <div className="flm-toast">{notice}<button onClick={() => setNotice('')}><FiX /></button></div>}
+{payslipItem && <SalarySlipModal item={payslipItem} month={month} onClose={() => setPayslipItem(null)} />}
+{editingSalary && <SalaryConfigModal key={editingSalary.isNew ? 'new-salary-structure' : `salary-${editingSalary.id || editingSalary.facultyId}`} item={editingSalary} facultyList={facultyList} activeCategory={filters.type || 'Teaching'} onClose={() => setEditingSalary(null)} onSave={handleSaveSalaryStructure} />}
+{hold && selected && <div className="fp-overlay"><form className="fp-dialog fp-hold" onSubmit={placeHold}><h2>Place Payroll on Hold</h2><p>{selected.fullName} | {monthLabel(month)}</p><label><span>Reason <b className="required-mark">*</b></span><textarea value={holdReason} onChange={event => setHoldReason(event.target.value)} required /></label><footer><button type="button" onClick={() => setHold(false)}>Cancel</button><button className="primary" type="submit" disabled={busy}>{busy ? 'Saving...' : 'Place on Hold'}</button></footer></form></div>}</main></DashboardLayout>
+}
+
+
+function SalaryConfigModal({ item, facultyList = [], activeCategory = 'Teaching', onClose, onSave }) {
+  const isNew = Boolean(item?.isNew)
+  const [selectedFacultyId, setSelectedFacultyId] = useState(isNew ? '' : (item?.facultyId || item?.id || ''))
+  const [activeFaculty, setActiveFaculty] = useState(isNew ? null : item)
+
+  const [basic, setBasic] = useState(isNew ? '' : (item?.basicSalary ?? ''))
+  const [hra, setHra] = useState(isNew ? '' : (item?.hra ?? ''))
+  const [da, setDa] = useState(isNew ? '' : (item?.da ?? ''))
+  const [allowances, setAllowances] = useState(isNew ? '' : (item?.allowances ?? ''))
+  const [pf, setPf] = useState(isNew ? '' : (item?.pf ?? ''))
+  const [tax, setTax] = useState(isNew ? '' : (item?.tax ?? ''))
+
+  useEffect(() => {
+    if (!isNew) return
+    setSelectedFacultyId('')
+    setActiveFaculty(null)
+    setBasic('')
+    setHra('')
+    setDa('')
+    setAllowances('')
+    setPf('')
+    setTax('')
+  }, [isNew])
+
+  const getMemberCategory = (f) => {
+    const cat = String(f?.employeeCategory || f?.type || f?.category || f?.employmentType || '').trim().toLowerCase()
+    if (cat.includes('non')) return 'Non-Teaching'
+    const desig = String(f?.designation || '').toLowerCase()
+    if (desig.includes('lab') || (desig.includes('assistant') && (desig.includes('admin') || desig.includes('librarian') || desig.includes('clerk')))) {
+      return 'Non-Teaching'
+    }
+    return 'Teaching'
+  }
+
+  const filteredFacultyList = useMemo(() => {
+    const list = facultyList.filter(f => getMemberCategory(f) === activeCategory)
+    return list.length > 0 ? list : facultyList
+  }, [facultyList, activeCategory])
+
+  const employeeOptions = useMemo(() => {
+    return filteredFacultyList.map(f => {
+      const code = f.employeeId || f.facultyCode || (f.id ? `EMP${String(f.id).padStart(6, '0')}` : '')
+      const name = f.fullName || f.name || 'Unknown'
+      const dept = f.department || 'General'
+      const desig = f.designation || 'Faculty'
+      return {
+        value: String(f.id || f.facultyId || code),
+        label: `${code} - ${name} (${dept}) - ${desig}`
+      }
+    })
+  }, [filteredFacultyList])
+
+  const handleSelectFaculty = (facId) => {
+    setSelectedFacultyId(facId)
+    const found = facultyList.find(f => String(f.id || f.facultyId || f.employeeId || f.facultyCode) === String(facId)) || null
+    setActiveFaculty(found)
+    if (found) {
+      const defaultBreakdown = calculateDefaultSalaryBreakdown(found.designation, found.employeeCategory || activeCategory)
+      const existing = getSavedSalaryStructure(getLocalSalaryStructures(), found) || {}
+      setBasic(existing.basicSalary ?? defaultBreakdown.basicSalary)
+      setHra(existing.hra ?? defaultBreakdown.hra)
+      setDa(existing.da ?? defaultBreakdown.da)
+      setAllowances(existing.allowances ?? defaultBreakdown.allowances)
+      setPf(existing.pf ?? defaultBreakdown.pf)
+      setTax(existing.tax ?? defaultBreakdown.tax)
+    }
+  }
+
+  const numBasic = Number(basic) || 0
+  const numHra = Number(hra) || 0
+  const numDa = Number(da) || 0
+  const numAllowances = Number(allowances) || 0
+  const numPf = Number(pf) || 0
+  const numTax = Number(tax) || 0
+
+  const gross = numBasic + numHra + numDa + numAllowances
+  const deductions = numPf + numTax
+  const net = Math.max(0, gross - deductions)
+
+  const handleBasicChange = val => {
+    setBasic(val === '' ? '' : Number(val))
+  }
+
+  const handleSubmit = e => {
+    e.preventDefault()
+    const targetEmployee = activeFaculty || item
+    if (!targetEmployee || (!targetEmployee.id && !targetEmployee.fullName && !targetEmployee.name)) {
+      alert('Please select an employee.')
+      return
+    }
+    onSave(targetEmployee, {
+      basicSalary: numBasic,
+      hra: numHra,
+      da: numDa,
+      allowances: numAllowances,
+      grossSalary: gross,
+      pf: numPf,
+      tax: numTax,
+      deductions: deductions,
+      netSalary: net
+    })
+  }
+
+  const displayName = activeFaculty?.fullName || activeFaculty?.name || item?.fullName || 'New Employee'
+  const displayEmpId = activeFaculty?.employeeId || (activeFaculty?.id ? `EMP${String(activeFaculty.id).padStart(6, '0')}` : '') || item?.employeeId || ''
+  const displayDesignation = activeFaculty?.designation || item?.designation || (activeCategory === 'Non-Teaching' ? 'Staff' : 'Faculty')
+  const displayDept = activeFaculty?.department || item?.department || 'General'
+  const displayType = activeFaculty?.employeeCategory || activeFaculty?.type || item?.type || activeCategory
+
+  return (
+    <div className="fp-overlay">
+      <div className="fp-dialog fp-salary-modal" style={{ maxWidth: '640px' }}>
+        <button className="fp-close" type="button" aria-label="Close" onClick={onClose}><FiX /></button>
+        <p>{isNew ? 'DEFINE EMPLOYEE SALARY STRUCTURE' : 'FACULTY SALARY CONFIGURATION'}</p>
+        <h2>{displayName}</h2>
+        {Boolean(displayEmpId || displayDesignation) && (
+          <span>{displayEmpId} | {displayDesignation} | {displayDept} ({displayType})</span>
+        )}
+
+        <form onSubmit={handleSubmit} autoComplete="off" style={{ marginTop: '16px' }}>
+          {isNew && (
+            <div style={{ marginBottom: '16px' }}>
+              <div className="fp-field" style={{ display: 'grid', gap: '6px' }}>
+                <span style={{ fontSize: '13px', fontWeight: '700', color: 'var(--text-secondary)' }}>
+                  Select {activeCategory === 'Non-Teaching' ? 'Non-Teaching Staff' : 'Teaching Faculty'} <b className="required-mark" style={{ color: '#ef4444' }}>*</b>
+                </span>
+                <SearchableSelect
+                  label="Select Employee"
+                  value={selectedFacultyId}
+                  options={employeeOptions}
+                  placeholder={`-- Choose ${activeCategory === 'Non-Teaching' ? 'Staff Member' : 'Teaching Faculty'} --`}
+                  searchPlaceholder="Search by name, EMP ID, or department..."
+                  onChange={val => handleSelectFaculty(val)}
+                  required
+                />
+              </div>
+            </div>
+          )}
+
+          <h3 style={{ margin: '14px 0 8px', fontSize: '12px', fontWeight: '800', color: 'var(--brand, #1769C2)', textTransform: 'uppercase' }}>Earnings / Allowances</h3>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+            <label className="fp-field">
+              <span>Basic Salary (₹) <b className="required-mark">*</b></span>
+              <input type="number" min="0" autoComplete="new-password" value={basic} onChange={e => handleBasicChange(e.target.value)} required />
+            </label>
+            <label className="fp-field">
+              <span>HRA (House Rent) (₹)</span>
+              <input type="number" min="0" autoComplete="new-password" value={hra} onChange={e => setHra(e.target.value === '' ? '' : Number(e.target.value))} />
+            </label>
+            <label className="fp-field">
+              <span>DA (Dearness Allowance) (₹)</span>
+              <input type="number" min="0" autoComplete="new-password" value={da} onChange={e => setDa(e.target.value === '' ? '' : Number(e.target.value))} />
+            </label>
+            <label className="fp-field">
+              <span>Special / Other Allowances (₹)</span>
+              <input type="number" min="0" autoComplete="new-password" value={allowances} onChange={e => setAllowances(e.target.value === '' ? '' : Number(e.target.value))} />
+            </label>
+          </div>
+
+          <h3 style={{ margin: '18px 0 8px', fontSize: '12px', fontWeight: '800', color: 'var(--danger, #b42318)', textTransform: 'uppercase' }}>Statutory Deductions</h3>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+            <label className="fp-field">
+              <span>Provident Fund (PF) (₹)</span>
+              <input type="number" min="0" autoComplete="new-password" value={pf} onChange={e => setPf(e.target.value === '' ? '' : Number(e.target.value))} />
+            </label>
+            <label className="fp-field">
+              <span>Professional Tax / TDS (₹)</span>
+              <input type="number" min="0" autoComplete="new-password" value={tax} onChange={e => setTax(e.target.value === '' ? '' : Number(e.target.value))} />
+            </label>
+          </div>
+
+          <div style={{ marginTop: '16px', padding: '14px', borderRadius: '8px', background: 'var(--surface-soft, #f8fafc)', border: '1px solid var(--border)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px', fontSize: '13px' }}>
+              <span>Gross Salary:</span>
+              <strong>{new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(gross)}</strong>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px', fontSize: '12px', color: 'var(--text-secondary, #475569)' }}>
+              <span>Daily Pay Rate (Per Day):</span>
+              <strong>{new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(Math.round(gross / 26))} / day <small style={{ fontWeight: 'normal', color: 'var(--text-muted)' }}>(Basis for Loss of Pay / LOP)</small></strong>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px', fontSize: '13px', color: 'var(--danger, #b42318)' }}>
+              <span>Standard Deductions (PF + Tax):</span>
+              <strong>- {new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(deductions)}</strong>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', paddingTop: '8px', borderTop: '1px dashed var(--border)', fontSize: '14px', fontWeight: '700', color: 'var(--brand, #1769C2)' }}>
+              <span>Base Net Take-Home:</span>
+              <span>{new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(net)}</span>
+            </div>
+          </div>
+
+          <footer style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', marginTop: '20px' }}>
+            <button type="button" onClick={onClose}>Cancel</button>
+            <button className="primary" type="submit" disabled={isNew && !selectedFacultyId}>
+              {isNew ? 'Save Salary Structure' : 'Update Salary Structure'}
+            </button>
+          </footer>
+        </form>
+      </div>
+    </div>
+  )
+}
+
+function SalarySlipModal({ item, month, onClose }) {
+  const handlePrint = () => {
+    printSalarySlip(item, month)
+  }
+
+  const basic = Number(item.basicSalary) || 0
+  const hra = Number(item.hra) || 0
+  const da = Number(item.da) || 0
+  const allowances = Number(item.allowances) || 0
+  const pf = Number(item.pf) || 0
+  const tax = Number(item.tax) || 0
+  const working = Number(item.working) || 26
+  const lop = Number(item.lop) || 0
+  const gross = basic + hra + da + allowances
+  const perDayRate = working > 0 ? Math.round(gross / working) : 0
+  const lopAmount = (lop > 0 && working > 0) ? Math.round(perDayRate * lop) : 0
+  const totalDeductions = pf + tax + lopAmount
+  const netPay = Math.max(0, gross - totalDeductions)
+
+  return (
+    <div className="fp-overlay">
+      <div className="fp-dialog fp-payslip-modal-container" style={{ maxWidth: '860px', width: 'min(860px, 96vw)', padding: '20px 24px' }}>
+        <button className="fp-close" type="button" aria-label="Close" onClick={onClose}><FiX /></button>
+
+        <div className="fp-payslip-document" data-print-scope style={{ background: '#ffffff', padding: '20px 24px', border: '1px solid #cbd5e1', borderRadius: '8px', color: '#0f172a', boxSizing: 'border-box' }}>
+          {/* Header */}
+          <div style={{ textAlign: 'center', borderBottom: '2px solid #1769C2', paddingBottom: '12px', marginBottom: '14px' }}>
+            <h1 style={{ margin: '0 0 3px', fontSize: '20px', fontWeight: '800', color: '#1769C2', letterSpacing: '0.04em' }}>PIRNAV ENGINEERING COLLEGE</h1>
+            <p style={{ margin: '0 0 4px', fontSize: '11px', color: '#475569' }}>Approved by AICTE, Affiliated to JNTUH | Hyderabad, Telangana - 500075</p>
+            <div style={{ display: 'inline-block', marginTop: '4px', padding: '3px 14px', background: '#EAF3FF', border: '1px solid #D8E4F2', borderRadius: '20px', fontSize: '11px', fontWeight: '800', color: '#125AA8', textTransform: 'uppercase' }}>
+              SALARY SLIP - {monthLabel(month).toUpperCase()}
+            </div>
+          </div>
+
+          {/* Employee & Pay Details Grid */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '8px 20px', background: '#f8fafc', padding: '10px 14px', border: '1px solid #e2e8f0', borderRadius: '6px', marginBottom: '14px', fontSize: '12px', boxSizing: 'border-box' }}>
+            <div><span style={{ color: '#64748b', fontWeight: '600' }}>Employee Name:</span> <strong style={{ color: '#0f172a' }}>{item.fullName}</strong></div>
+            <div><span style={{ color: '#64748b', fontWeight: '600' }}>Employee ID:</span> <strong style={{ color: '#0f172a' }}>{item.employeeId}</strong></div>
+            <div><span style={{ color: '#64748b', fontWeight: '600' }}>Designation:</span> <span style={{ color: '#0f172a', fontWeight: '600' }}>{item.designation}</span></div>
+            <div><span style={{ color: '#64748b', fontWeight: '600' }}>Department:</span> <span style={{ color: '#0f172a', fontWeight: '600' }}>{item.department}</span></div>
+            <div><span style={{ color: '#64748b', fontWeight: '600' }}>Faculty Category:</span> <span style={{ color: '#0f172a', fontWeight: '600' }}>{item.type}</span></div>
+            <div><span style={{ color: '#64748b', fontWeight: '600' }}>Pay Month / Year:</span> <span style={{ color: '#0f172a', fontWeight: '600' }}>{monthLabel(month)}</span></div>
+            <div><span style={{ color: '#64748b', fontWeight: '600' }}>Working / Paid Days:</span> <strong style={{ color: '#0f172a' }}>{working} Days</strong> / <strong style={{ color: '#125AA8' }}>{item.present != null ? item.present + (item.paidLeave || 0) : working} Days</strong></div>
+            <div><span style={{ color: '#64748b', fontWeight: '600' }}>LOP Days / Daily Rate:</span> <strong style={{ color: lop > 0 ? '#b91c1c' : '#64748b' }}>{lop} Day{lop === 1 ? '' : 's'}</strong> ({money(perDayRate)}/day)</div>
+          </div>
+
+          {/* Side-by-side Earnings and Deductions Table */}
+          <table style={{ width: '100%', tableLayout: 'fixed', borderCollapse: 'collapse', marginBottom: '14px', fontSize: '12px' }}>
+            <thead>
+              <tr style={{ background: '#1769C2', color: '#ffffff', textAlign: 'left' }}>
+                <th style={{ padding: '8px 10px', width: '32%' }}>EARNINGS</th>
+                <th style={{ padding: '8px 10px', width: '18%', textAlign: 'right' }}>AMOUNT (₹)</th>
+                <th style={{ padding: '8px 10px', width: '32%', borderLeft: '1px solid #14b8a6' }}>DEDUCTIONS</th>
+                <th style={{ padding: '8px 10px', width: '18%', textAlign: 'right' }}>AMOUNT (₹)</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr style={{ borderBottom: '1px solid #EAF3FF' }}>
+                <td style={{ padding: '7px 10px' }}>Basic Salary</td>
+                <td style={{ padding: '7px 10px', textAlign: 'right', fontWeight: '600' }}>{money(basic)}</td>
+                <td style={{ padding: '7px 10px', borderLeft: '1px solid #e2e8f0' }}>Provident Fund (PF)</td>
+                <td style={{ padding: '7px 10px', textAlign: 'right', fontWeight: '600', color: '#b91c1c' }}>{money(pf)}</td>
+              </tr>
+              <tr style={{ borderBottom: '1px solid #EAF3FF' }}>
+                <td style={{ padding: '7px 10px' }}>House Rent Allowance (HRA)</td>
+                <td style={{ padding: '7px 10px', textAlign: 'right', fontWeight: '600' }}>{money(hra)}</td>
+                <td style={{ padding: '7px 10px', borderLeft: '1px solid #e2e8f0' }}>Professional Tax / TDS</td>
+                <td style={{ padding: '7px 10px', textAlign: 'right', fontWeight: '600', color: '#b91c1c' }}>{money(tax)}</td>
+              </tr>
+              <tr style={{ borderBottom: '1px solid #EAF3FF' }}>
+                <td style={{ padding: '7px 10px' }}>Dearness Allowance (DA)</td>
+                <td style={{ padding: '7px 10px', textAlign: 'right', fontWeight: '600' }}>{money(da)}</td>
+                <td style={{ padding: '7px 10px', borderLeft: '1px solid #e2e8f0' }}>Loss of Pay ({lop} Day{lop === 1 ? '' : 's'} @ {money(perDayRate)}/day)</td>
+                <td style={{ padding: '7px 10px', textAlign: 'right', fontWeight: '600', color: lopAmount > 0 ? '#b91c1c' : '#64748b' }}>{money(lopAmount)}</td>
+              </tr>
+              <tr style={{ borderBottom: '1px solid #cbd5e1' }}>
+                <td style={{ padding: '7px 10px' }}>Special / Other Allowances</td>
+                <td style={{ padding: '7px 10px', textAlign: 'right', fontWeight: '600' }}>{money(allowances)}</td>
+                <td style={{ padding: '7px 10px', borderLeft: '1px solid #e2e8f0' }}>-</td>
+                <td style={{ padding: '7px 10px', textAlign: 'right', color: '#64748b' }}>-</td>
+              </tr>
+              <tr style={{ background: '#f8fafc', fontWeight: '800', borderBottom: '2px solid #cbd5e1' }}>
+                <td style={{ padding: '8px 10px', color: '#1769C2' }}>TOTAL GROSS EARNINGS</td>
+                <td style={{ padding: '8px 10px', textAlign: 'right', color: '#1769C2' }}>{money(gross)}</td>
+                <td style={{ padding: '8px 10px', color: '#b91c1c', borderLeft: '1px solid #e2e8f0' }}>TOTAL DEDUCTIONS</td>
+                <td style={{ padding: '8px 10px', textAlign: 'right', color: '#b91c1c' }}>- {money(totalDeductions)}</td>
+              </tr>
+            </tbody>
+          </table>
+
+          {/* Net Pay Box */}
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#EAF3FF', padding: '12px 16px', border: '1px solid #a7f3d0', borderRadius: '8px', marginBottom: '16px' }}>
+            <div>
+              <span style={{ display: 'block', fontSize: '11px', fontWeight: '700', color: '#554F75', textTransform: 'uppercase', letterSpacing: '0.05em' }}>NET SALARY PAYABLE</span>
+              <strong style={{ fontSize: '11px', color: '#125AA8' }}>Amount in Words: {numberToWordsIndian(netPay)}</strong>
+            </div>
+            <div style={{ textAlign: 'right' }}>
+              <span style={{ fontSize: '22px', fontWeight: '900', color: '#125AA8' }}>{money(netPay)}</span>
+            </div>
+          </div>
+
+          {/* Signatures */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px', marginTop: '28px', textAlign: 'center', fontSize: '11px', color: '#64748b' }}>
+            <div>
+              <div style={{ borderTop: '1px dashed #94a3b8', paddingTop: '5px', margin: '0 12px' }}>Employee Signature</div>
+            </div>
+            <div>
+              <div style={{ borderTop: '1px dashed #94a3b8', paddingTop: '5px', margin: '0 12px' }}>Accounts / HR Officer</div>
+            </div>
+            <div>
+              <div style={{ borderTop: '1px dashed #94a3b8', paddingTop: '5px', margin: '0 12px' }}>Principal / Director</div>
+            </div>
+          </div>
+        </div>
+
+        <footer style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '14px' }}>
+          <button type="button" onClick={onClose}>Close</button>
+          <button type="button" className="primary" onClick={handlePrint} style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', background: '#1769C2', color: '#fff' }}>
+            <FiPrinter /> Print / Save as PDF
+          </button>
+        </footer>
+      </div>
+    </div>
+  )
+}
+
+return { default: Payroll }
+})()
+
+export const FacultyDocuments = FacultyApiPanelsScreen.FacultyDocuments
+export const FacultyStatus = FacultyApiPanelsScreen.FacultyStatus
+export const ApiAssignmentDialog = FacultyApiPanelsScreen.ApiAssignmentDialog
+export const FacultyLeaveManagement = FacultyLeaveManagementScreen.default
+export const FacultyManagement = FacultyManagementScreen.default
+export const teachingDesignations = FacultyManagementScreen.teachingDesignations
+export const nonTeachingDesignations = FacultyManagementScreen.nonTeachingDesignations
+export const getStoredDesignations = FacultyManagementScreen.getStoredDesignations
+export const getDesignationOptions = FacultyManagementScreen.getDesignationOptions
+export const formatTimeView = FacultyManagementScreen.formatTimeView
+export const formatFacultyDisplayCode = FacultyManagementScreen.formatFacultyDisplayCode
+export const Payroll = PayrollScreen.default
+export default FacultyManagement

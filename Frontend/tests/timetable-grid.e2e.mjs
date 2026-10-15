@@ -12,9 +12,9 @@ const artifacts = join(tmpdir(), 'cms-timetable-grid-check')
 const html = `<!doctype html><html data-theme="light"><head><meta name="viewport" content="width=device-width, initial-scale=1"></head><body><div id="root"></div><script type="module">
 import React from 'react';
 import { createRoot } from 'react-dom/client';
-import TimetableGrid from '/src/pages/timetable/TimetableGrid.jsx';
+import { TimetableGrid } from '/src/pages/timetable/TimetableManagement.jsx';
 import '/src/index.css'; import '/src/App.css'; import '/src/styles/global.css';
-import '/src/pages/timetable/TimetableManagement.css'; import '/src/pages/timetable/TimetableWorkflow.css';
+import '/src/pages/timetable/TimetableManagement.css';
 import '/src/styles/dark-mode.css'; import '/src/styles/dark-mode-contrast.css';
 const periods = [{ id:'1',name:'Period 1',type:'class',startTime:'09:00',endTime:'10:00' }, { id:'2',name:'Period 2',type:'class',startTime:'10:00',endTime:'11:00' }, {id:'3',name:'Short Break',type:'break',startTime:'11:00',endTime:'11:15'}];
 const rows = [{id:1,subjectCode:'CS301',subjectName:'Database Management Systems and Application Development',facultyName:'Dr. Faculty With A Longer Name',classroom:'Computer Science Laboratory 101',sectionName:'CSE Section A',dayOfWeek:'MONDAY',startTime:'09:00',endTime:'10:00'}, {id:2,subjectCode:'CS302',subjectName:'Operating Systems',facultyName:'Dr. Ravi',classroom:'Room 102',sectionName:'CSE Section B',dayOfWeek:'TUESDAY',startTime:'10:00',endTime:'11:00'}];

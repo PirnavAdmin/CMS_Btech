@@ -1,7 +1,7 @@
 import { RESULTS_API_ENABLED, resultsApi } from '../api/apiEndpoints'
 import studentService from './studentService'
 import eventBus, { ERP_EVENTS } from './eventBus'
-import { getSampleBTechSheets } from '../pages/examinations/grade-result-management/sampleBTechResults'
+import { getSampleBTechSheets } from './sampleBTechResults'
 
 export const calculateGrade = (totalMarks) => {
   const marks = Number(totalMarks) || 0

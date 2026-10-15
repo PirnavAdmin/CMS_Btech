@@ -1,3 +1,5 @@
+import { ProjectSelect } from '../../../components/SearchableSelect'
+import { Link } from 'react-router-dom'
 
 import useCollegeState from '../../../hooks/useCollegeState'
 import { admissionPreview } from '../../../utils/admissionPreview'
@@ -47,10 +49,8 @@ import {
   tenDigitMobile,
 } from '../../../utils/studentCanonicalModel'
 import { useAcademic } from '../../../context/AcademicContext'
-import { readFeeWorkspace, readStructures, feeTotal, feeMoney } from '../../fees/feeStructureService'
+import { readFeeWorkspace, readStructures, feeTotal, feeMoney } from '../../../services/feeStructureService'
 import './StudentAdmission.css'
-import './AdmissionFixes.css'
-import './DocumentPreviewFixes.css'
 
 
 const STEPS = ['Basic Information', 'Contact & Address', 'Parent / Guardian', 'Academic Information', 'Previous Education', 'Admission Details', 'Fees', 'Documents Upload']
@@ -137,11 +137,11 @@ const display = value => formatDisplay(value)
 const money = value => formatMoney(value)
 const dateTime = value => formatDateTime(value)
 const quota = student => studentQuotaDisplay(student)
-const findMatchingFeeStructure = (academic = {}, admission = {}) => {
+const matchingFeeStructures = (academic = {}, admission = {}) => {
   const collegeId = admission.collegeId || academic.collegeId;
   let candidates = [];
   try {
-    if (collegeId) {
+    {
       const ws = readFeeWorkspace(collegeId);
       if (ws && Array.isArray(ws.structures)) {
         candidates = [...ws.structures];
@@ -155,10 +155,10 @@ const findMatchingFeeStructure = (academic = {}, admission = {}) => {
     }
   } catch {}
 
-  const activePlans = candidates.filter(s =>
+  const activePlans = [...new Map(candidates.map(plan => [String(plan.id), plan])).values()].filter(s =>
     ['Published', 'Active', 'Approved'].includes(s.status)
   );
-  if (!activePlans.length) return null;
+  if (!activePlans.length) return [];
 
   const same = (a, b) => {
     if (!a || !b) return false;
@@ -167,17 +167,17 @@ const findMatchingFeeStructure = (academic = {}, admission = {}) => {
     return sa === sb || sa.includes(sb) || sb.includes(sa);
   };
 
-  return activePlans.find(s => {
+  return activePlans.filter(s => {
     const sCourse = s.courseId || s.courseName;
-    const aCourse = academic.course;
+    const aCourse = academic.courseId || academic.course;
     if (sCourse && aCourse && !same(sCourse, aCourse)) return false;
 
     const sBranch = s.branchId || s.branchName;
-    const aBranch = academic.branch;
+    const aBranch = academic.branchId || academic.branch;
     if (sBranch && aBranch && !same(sBranch, aBranch)) return false;
 
     const sYear = s.academicYearId || s.academicYearName;
-    const aYear = academic.academicYear;
+    const aYear = academic.academicYearId || academic.academicYear;
     if (sYear && aYear) {
       const matchYear = same(sYear, aYear) || String(sYear).slice(0, 4) === String(aYear).slice(0, 4);
       if (!matchYear) return false;
@@ -192,7 +192,11 @@ const findMatchingFeeStructure = (academic = {}, admission = {}) => {
     }
 
     return true;
-  }) || null;
+  });
+};
+const findMatchingFeeStructure = (academic, admission, selectedId) => {
+  const plans = matchingFeeStructures(academic, admission);
+  return plans.find(plan => String(plan.id) === String(selectedId)) || plans[0] || null;
 };
 
 const normalizeFeeSummary = response => {
@@ -242,7 +246,7 @@ const mergeFeeResponses = (summaryResponse, structureResponse) => {
   return normalizeFeeSummary({ ...structure, ...summary, components: structure.components.length ? structure.components : summary.components, feeComponents: structure.feeComponents?.length ? structure.feeComponents : summary.feeComponents,tuitionFee:amount(summary.tuitionFee,structure.tuitionFee),admissionFee:amount(summary.admissionFee,structure.admissionFee),hostelFee:amount(summary.hostelFee,structure.hostelFee),transportFee:amount(summary.transportFee,structure.transportFee),scholarshipAmount:amount(summary.scholarshipAmount,structure.scholarshipAmount),totalFee:amount(summary.totalFee,structure.totalFee) })
 }
 const defaultFeeSummary = data => {
-  const matchedPlan = findMatchingFeeStructure(data.academic, data.admission);
+  const matchedPlan = findMatchingFeeStructure(data.academic, data.admission, data.fees?.structureId);
   const hostelFee = data.admission?.hostel === 'Yes' ? Number(HOSTEL_FEES[data.admission?.hostelRoomType] || data.fees?.hostelFee || 0) : 0
   const transportFee = data.admission?.transport === 'Yes' ? Number(TRANSPORT_FEES[data.admission?.transportRoute] || data.fees?.transportFee || 0) : 0
   const scholarshipAmount = Number(data.fees?.scholarshipAmount || 0)
@@ -510,10 +514,10 @@ function Field({ data, path, label, update, options, type = 'text', readOnly = f
     <label className={`sa-field ${error ? 'invalid' : ''}`} htmlFor={id}>
       <span>{shownLabel}{isRequired && <b> *</b>}</span>
       {options ? (
-        <select id={id} value={value} disabled={disabled || readOnly} onChange={change} onBlur={blur} aria-invalid={Boolean(error)} aria-describedby={error ? `${id}-error` : undefined}>
+        <ProjectSelect id={id} value={value} disabled={disabled || readOnly} onChange={change} onBlur={blur} aria-invalid={Boolean(error)} aria-describedby={error ? `${id}-error` : undefined}>
           <option value="">{placeholder || `Select ${shownLabel}`}</option>
           {options.map(option => <option key={option}>{option}</option>)}
-        </select>
+        </ProjectSelect>
       ) : (
         <input id={id} type={type} value={value} readOnly={readOnly || path === 'admission.batch'} disabled={disabled} inputMode={numeric ? 'numeric' : type === 'number' ? 'decimal' : undefined} min={type === 'number' ? 0 : undefined} maxLength={maxLength} placeholder={placeholder} onChange={change} onBlur={blur} aria-invalid={Boolean(error)} aria-describedby={error ? `${id}-error` : undefined} />
       )}
@@ -528,7 +532,7 @@ function AdmissionFilters({ rows, query, setQuery, filters, setFilters }) {
   const options = key => [...new Set(rows.map(item => key === 'status' ? item.status : key === 'feeStatus' ? (item.fees?.paymentStatus || 'Pending') : key === 'quota' ? quota(item) : item.academic?.[key]).filter(Boolean))].sort()
   const active = Object.entries(filters).filter(([,value]) => value)
   const clear = () => { setQuery(''); setFilters(Object.fromEntries(FILTERS.map(([key]) => [key, '']))) }
-  return <FilterPanel active={Boolean(query || active.length)} onClear={clear} className="sa-filter-panel"><div className="sa-toolbar"><label className="sa-search"><FiSearch /><input value={query} onChange={event => setQuery(event.target.value)} title="Search name, registration, admission, mobile or email" placeholder="Search name, registration, admission, mobile or email" /></label></div><div className="sa-filter-grid">{FILTERS.map(([key,label]) => <label key={key}><span>{label}</span><select value={filters[key]} onChange={event => setFilters(current => ({ ...current, [key]: event.target.value }))}><option value="">All {label}</option>{options(key).map(value => <option value={value} key={value}>{key === 'status' ? (STATUS[value] || value) : value}</option>)}</select></label>)}</div>{active.length > 0 && <div className="sa-filter-chips">{active.map(([key,value]) => <button key={key} onClick={() => setFilters(current => ({ ...current, [key]: '' }))}>{FILTERS.find(item => item[0] === key)?.[1]}: {key === 'status' ? (STATUS[value] || value) : value} <FiX /></button>)}</div>}</FilterPanel>
+  return <FilterPanel active={Boolean(query || active.length)} onClear={clear} className="sa-filter-panel"><div className="sa-toolbar"><label className="sa-search"><FiSearch /><input value={query} onChange={event => setQuery(event.target.value)} title="Search name, registration, admission, mobile or email" placeholder="Search name, registration, admission, mobile or email" /></label></div><div className="sa-filter-grid">{FILTERS.map(([key,label]) => <label key={key}><span>{label}</span><ProjectSelect value={filters[key]} onChange={event => setFilters(current => ({ ...current, [key]: event.target.value }))}><option value="">All {label}</option>{options(key).map(value => <option value={value} key={value}>{key === 'status' ? (STATUS[value] || value) : value}</option>)}</ProjectSelect></label>)}</div>{active.length > 0 && <div className="sa-filter-chips">{active.map(([key,value]) => <button key={key} onClick={() => setFilters(current => ({ ...current, [key]: '' }))}>{FILTERS.find(item => item[0] === key)?.[1]}: {key === 'status' ? (STATUS[value] || value) : value} <FiX /></button>)}</div>}</FilterPanel>
 }
 function EmptyState({ onCreate }) {
   return <div className="sa-empty"><span><FiInbox /></span><h3>No admission applications found</h3><p>Create a new admission application to begin student enrollment.</p><Button primary onClick={onCreate}><FiPlus /> New Admission</Button></div>
@@ -812,7 +816,7 @@ function DocumentsUpload({ data, update }) {
                 </span>
               </div>
               <div className="sa-document-actions">
-                <select
+                <ProjectSelect
                   aria-label={`${label} status`}
                   value={value}
                   onChange={event => update(`documents.${key}`, event.target.value ? { status: event.target.value } : null)}
@@ -820,7 +824,7 @@ function DocumentsUpload({ data, update }) {
                   <option value="">Select status</option>
                   <option value="Submitted">Submitted</option>
                   <option value="Pending">Pending</option>
-                </select>
+                </ProjectSelect>
               </div>
             </article>
           )
@@ -832,13 +836,27 @@ function DocumentsUpload({ data, update }) {
 function WizardStepper({ step, setStep }) {
   const navRef = useRef(null), activeRef = useRef(null)
   useEffect(() => {
-    const frame = window.requestAnimationFrame(() => {
-      const nav = navRef.current, active = activeRef.current
-      if (!nav || !active) return
-      const left = active.offsetLeft - (nav.clientWidth - active.offsetWidth) / 2
-      nav.scrollTo({ left: Math.max(0, left), behavior: 'smooth' })
-    })
-    return () => window.cancelAnimationFrame(frame)
+    const nav = navRef.current
+    if (!nav) return
+    const revealActiveStep = () => {
+      const active = activeRef.current
+      if (!active) return
+      const navBounds = nav.getBoundingClientRect()
+      const activeBounds = active.getBoundingClientRect()
+      const left = nav.scrollLeft + activeBounds.left - navBounds.left
+        - (nav.clientWidth - activeBounds.width) / 2
+      nav.scrollTo({
+        left: Math.max(0, Math.min(left, nav.scrollWidth - nav.clientWidth)),
+        behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'instant' : 'smooth',
+      })
+    }
+    const frame = window.requestAnimationFrame(revealActiveStep)
+    const observer = new ResizeObserver(revealActiveStep)
+    observer.observe(nav)
+    return () => {
+      window.cancelAnimationFrame(frame)
+      observer.disconnect()
+    }
   }, [step])
   return (
     <nav ref={navRef} className="erp-tabs-bar ac-tabs" aria-label="Admission form steps">
@@ -927,7 +945,18 @@ function FeeSummary({ data }) {
 /* oxlint-disable-next-line react-hooks/exhaustive-deps -- update is intentionally triggered only when academic matching inputs change */
 function ApplicantFeeStructure({ data, update, error }) {
   const fees = data.fees || {}
-  const matchedPlan = findMatchingFeeStructure(data.academic, data.admission)
+  const matchingPlans = matchingFeeStructures(data.academic, data.admission)
+  const matchedPlan = matchingPlans.find(plan => String(plan.id) === String(fees.structureId)) || matchingPlans[0]
+  const planSelector = (
+    <label className="sa-field">
+      <span>Assign Fee Plan</span>
+      <ProjectSelect aria-label="Assign admission fee plan" value={matchedPlan?.id || ""} onChange={event => update("fees", { ...fees, configured: false, structureId: event.target.value })} disabled={!matchingPlans.length}>
+        {!matchingPlans.length && <option value="">No matching active fee plans</option>}
+        {matchingPlans.map(plan => <option key={plan.id} value={plan.id}>{plan.name || plan.planName} ? {feeMoney(feeTotal(plan))}</option>)}
+      </ProjectSelect>
+      <small>Select a plan matching this admission?s academic details. <Link to="/fees/structures" target="_blank" rel="noopener noreferrer">Manage fee plans</Link></small>
+    </label>
+  )
 
   // Sync matched plan to form state if needed
   useEffect(() => {
@@ -962,7 +991,7 @@ function ApplicantFeeStructure({ data, update, error }) {
     } else if (!matchedPlan && !fees.components?.length && Number(fees.tuitionFee) === 0 && fees.configured !== false) {
       update('fees.configured', false)
     }
-  }, [data.academic.academicYear, data.academic.course, data.academic.branch, data.admission.batch, data.academic.quota])
+  }, [data.academic.academicYear, data.academic.course, data.academic.branch, data.admission.batch, data.academic.quota, matchedPlan?.id, fees.structureId, fees.configured])
 
   const components = Array.isArray(fees.components) ? fees.components : Array.isArray(fees.feeComponents) ? fees.feeComponents : []
   const componentName = item => item.name ?? item.feeHeadName ?? item.componentName ?? item.description ?? 'Fee Component'
@@ -971,6 +1000,7 @@ function ApplicantFeeStructure({ data, update, error }) {
   if (!isConfigured) {
     return (
       <div className="sa-fee-structure-view">
+        {planSelector}
         <div className="sa-fee-unconfigured-card">
           <div className="sa-fee-unconfigured-icon">
             <FiAlertCircle />
@@ -1008,6 +1038,7 @@ function ApplicantFeeStructure({ data, update, error }) {
 
   return (
     <div className="sa-fee-structure-view">
+        {planSelector}
       <section className="sa-applicant-fees">
         <header>
           <FiInbox />
@@ -1652,7 +1683,7 @@ function AdmissionForm() {
       if (path === 'admission.transportRoute') {
         next.fees.transportFee = String(TRANSPORT_FEES[value] || '');
       }
-      const matched = findMatchingFeeStructure(next.academic, next.admission);
+      const matched = findMatchingFeeStructure(next.academic, next.admission, next.fees?.structureId);
       const tuition = Number(next.fees.tuitionFee) > 0 ? Number(next.fees.tuitionFee) : (matched ? Number(matched.amount || 0) : 0);
       const admission = Number(next.fees.admissionFee !== undefined && next.fees.admissionFee !== '' ? next.fees.admissionFee : 0);
       const hostel = next.admission.hostel === 'Yes' ? Number(next.fees.hostelFee || (next.admission.hostelRoomType ? HOSTEL_FEES[next.admission.hostelRoomType] : 0) || 0) : 0;
@@ -1811,7 +1842,7 @@ function AdmissionForm() {
   const masterField=(namePath,idPath,label,options,disabled=false,resets=[])=>{
     const id=`sa-${idPath.replaceAll('.','-')}`;
     const masterError = errors[namePath] || ((touched[namePath] || touched[idPath] || read(data, idPath)) ? allErrors[namePath] : '');
-    return <label className={`sa-field ${masterError?'invalid':''}`} htmlFor={id}><span>{label}<b> *</b></span><select id={id} value={read(data,idPath)||''} disabled={disabled} onChange={event=>{markTouched(namePath);markTouched(idPath);const option=options.find(item=>same(item.id,event.target.value));setData(current=>{let next=setPath(current,idPath,event.target.value);if(current.previewEditedFields)next.previewEditedFields={...current.previewEditedFields,[idPath]:true,[namePath]:true};next=setPath(next,namePath,option?.name||'');if(idPath==='academic.courseId')next=setPath(next,'academic.courseCode',option?.code||courseCodeFallback(option?.name));if(idPath==='academic.branchId')next=setPath(next,'academic.branchCode',option?.code||branchCodeFallback(option?.name));resets.forEach(([resetId,resetName])=>{next=setPath(next,resetId,'');next=setPath(next,resetName,'')});return next});setErrors(current=>({...current,[namePath]:''}))}} onBlur={() => { markTouched(namePath); markTouched(idPath) }}><option value="">{disabled?'Select Course first':`Select ${label}`}</option>{options.map(option=><option key={option.id} value={option.id}>{option.name}</option>)}</select>{masterError&&<small role="alert">{masterError}</small>}</label>
+    return <label className={`sa-field ${masterError?'invalid':''}`} htmlFor={id}><span>{label}<b> *</b></span><ProjectSelect id={id} value={read(data,idPath)||''} disabled={disabled} onChange={event=>{markTouched(namePath);markTouched(idPath);const option=options.find(item=>same(item.id,event.target.value));setData(current=>{let next=setPath(current,idPath,event.target.value);if(current.previewEditedFields)next.previewEditedFields={...current.previewEditedFields,[idPath]:true,[namePath]:true};next=setPath(next,namePath,option?.name||'');if(idPath==='academic.courseId')next=setPath(next,'academic.courseCode',option?.code||courseCodeFallback(option?.name));if(idPath==='academic.branchId')next=setPath(next,'academic.branchCode',option?.code||branchCodeFallback(option?.name));resets.forEach(([resetId,resetName])=>{next=setPath(next,resetId,'');next=setPath(next,resetName,'')});return next});setErrors(current=>({...current,[namePath]:''}))}} onBlur={() => { markTouched(namePath); markTouched(idPath) }}><option value="">{disabled?'Select Course first':`Select ${label}`}</option>{options.map(option=><option key={option.id} value={option.id}>{option.name}</option>)}</ProjectSelect>{masterError&&<small role="alert">{masterError}</small>}</label>
   }
   const screens = [
     <Section key="identity" title="Student Identity" icon={FiUser} hint="Core identity and government identification details"><PhotoUpload data={data} update={update} notify={notify} />{field('personal.firstName','First Name')}{field('personal.middleName','Middle Name')}{field('personal.lastName','Last Name')}{field('personal.gender','Gender',['Female','Male','Non-binary'])}{field('personal.dob','Date of Birth',null,'date')}{field('personal.bloodGroup','Blood Group',['A+','A-','B+','B-','AB+','AB-','O+','O-'])}{field('personal.nationality','Nationality')}{field('personal.aadhaar','Aadhaar Number')}</Section>,

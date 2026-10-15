@@ -1655,3 +1655,69 @@ label > b,
   height: 30px !important;
   font-size: 12px !important;
 }
+
+/* Shared dropdown layout and picker behavior. */
+/* Native single selects use an anchored picker where supported. Keep listboxes
+   (multiple / size > 1) in their existing inline form. Older browsers retain
+   their native select UI because they do not support customizable pickers. */
+
+/* Module padding must not push the selected value to the top of a fixed-height
+   control. Preserve each module's height and horizontal spacing. */
+#root select:not([multiple]):not([size]),
+#root select:not([multiple])[size="1"] {
+  box-sizing: border-box;
+  padding-block: 0 !important;
+  line-height: normal !important;
+}
+
+@supports (appearance: base-select) and selector(select::picker(select)) {
+  select:not([multiple]):not([size]),
+  select:not([multiple])[size="1"],
+  select:not([multiple]):not([size])::picker(select),
+  select:not([multiple])[size="1"]::picker(select) {
+    appearance: base-select;
+  }
+
+  /* Customizable selects use CSS layout, so center their value and picker icon
+     explicitly rather than relying on the platform's native centering. */
+  #root select:not([multiple]):not([size]),
+  #root select:not([multiple])[size="1"] {
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: 8px;
+  }
+
+  #root select:not([multiple]):not([size])::picker-icon,
+  #root select:not([multiple])[size="1"]::picker-icon {
+    align-self: center;
+    margin-inline-start: auto;
+  }
+
+  select::picker(select) {
+    position-area: block-end span-inline-end;
+    position-try-fallbacks: flip-block;
+    margin-block: 4px 8px;
+    max-block-size: 240px;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    border: 1px solid var(--border, #dce5f2);
+    border-radius: 8px;
+    background: var(--surface, #ffffff);
+    color: var(--text-primary, #102a4c);
+    box-shadow: 0 12px 30px rgb(16 42 76 / 10%);
+  }
+
+  select option {
+    padding: 8px 12px;
+  }
+
+  select option:checked,
+  select option:hover {
+    background: var(--brand-soft, #eff6ff);
+  }
+}
+
+.project-select { position: relative; width: 100%; min-width: 0; }
+.project-select > .searchable-select { width: 100%; }
+#root .project-select .searchable-select__trigger { min-height: var(--control-height, 40px); align-items: center; text-align: left; }
+.searchable-select__option:disabled { opacity: .5; cursor: not-allowed; }

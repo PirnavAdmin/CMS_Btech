@@ -1,3 +1,4 @@
+import { ProjectSelect } from '../../components/SearchableSelect'
 import { collegeStorageKey } from '../../utils/collegeScope.js'
 import useCollegeState from '../../hooks/useCollegeState'
 import { useEffect, useMemo, useRef, useState } from 'react'
@@ -190,13 +191,13 @@ function FilterSelect({
       <label>{label}</label>
 
       <div className="cm-filter-select-wrap">
-        <select value={value} onChange={(e) => onChange(e.target.value)}>
+        <ProjectSelect value={value} onChange={(e) => onChange(e.target.value)}>
           {options.map((option) => (
             <option key={option} value={option}>
               {option}
             </option>
           ))}
-        </select>
+        </ProjectSelect>
 
         <span className="cm-filter-select-caret" aria-hidden="true">
           ▾
@@ -1652,7 +1653,7 @@ function CreditsManagement() {
                 <div className="cm-search-field cm-student-select">
                   <label>Select Student</label>
 
-                  <select
+                  <ProjectSelect
                     value={selectedStudentId}
                     onChange={(e) =>
                       setSelectedStudentId(e.target.value)
@@ -1670,7 +1671,7 @@ function CreditsManagement() {
                         {student.name} - {student.rollNo}
                       </option>
                     ))}
-                  </select>
+                  </ProjectSelect>
                 </div>
               </div>
             </div>
@@ -2791,7 +2792,7 @@ function CreditsManagement() {
                   <div className="cm-form-field cm-field-full">
                     <label>Student *</label>
 
-                    <select
+                    <ProjectSelect
                       value={creditForm.studentId}
                       onChange={(e) =>
                         setCreditForm((previous) => ({
@@ -2814,13 +2815,13 @@ function CreditsManagement() {
                           {student.branch}
                         </option>
                       ))}
-                    </select>
+                    </ProjectSelect>
                   </div>
 
                   <div className="cm-form-field cm-field-full">
                     <label>Subject *</label>
 
-                    <select
+                    <ProjectSelect
                       value={creditForm.subjectId}
                       onChange={(e) =>
                         setCreditForm((previous) => ({
@@ -2843,13 +2844,13 @@ function CreditsManagement() {
                           {subject.credits} Credits
                         </option>
                       ))}
-                    </select>
+                    </ProjectSelect>
                   </div>
 
                   <div className="cm-form-field">
                     <label>Grade *</label>
 
-                    <select
+                    <ProjectSelect
                       value={creditForm.grade}
                       onChange={(e) =>
                         setCreditForm((previous) => ({
@@ -2866,7 +2867,7 @@ function CreditsManagement() {
                           {grade.grade} - {grade.point} Point
                         </option>
                       ))}
-                    </select>
+                    </ProjectSelect>
                   </div>
 
                   <div className="cm-form-field">
@@ -3003,7 +3004,7 @@ function CreditsManagement() {
 
                   <div className="cm-form-field">
                     <label>Course *</label>
-                    <select
+                    <ProjectSelect
                       value={subjectForm.course}
                       onChange={(e) =>
                         setSubjectForm((previous) => ({
@@ -3015,12 +3016,12 @@ function CreditsManagement() {
                       {COURSES.map((course) => (
                         <option key={course}>{course}</option>
                       ))}
-                    </select>
+                    </ProjectSelect>
                   </div>
 
                   <div className="cm-form-field">
                     <label>Branch *</label>
-                    <select
+                    <ProjectSelect
                       value={subjectForm.branch}
                       onChange={(e) =>
                         setSubjectForm((previous) => ({
@@ -3032,12 +3033,12 @@ function CreditsManagement() {
                       {BRANCHES.map((branch) => (
                         <option key={branch}>{branch}</option>
                       ))}
-                    </select>
+                    </ProjectSelect>
                   </div>
 
                   <div className="cm-form-field">
                     <label>Regulation *</label>
-                    <select
+                    <ProjectSelect
                       value={subjectForm.regulation}
                       onChange={(e) =>
                         setSubjectForm((previous) => ({
@@ -3049,12 +3050,12 @@ function CreditsManagement() {
                       {REGULATIONS.map((regulation) => (
                         <option key={regulation}>{regulation}</option>
                       ))}
-                    </select>
+                    </ProjectSelect>
                   </div>
 
                   <div className="cm-form-field">
                     <label>Semester *</label>
-                    <select
+                    <ProjectSelect
                       value={subjectForm.semester}
                       onChange={(e) =>
                         setSubjectForm((previous) => ({
@@ -3066,12 +3067,12 @@ function CreditsManagement() {
                       {SEMESTERS.map((semester) => (
                         <option key={semester}>{semester}</option>
                       ))}
-                    </select>
+                    </ProjectSelect>
                   </div>
 
                   <div className="cm-form-field">
                     <label>Academic Year *</label>
-                    <select
+                    <ProjectSelect
                       value={subjectForm.academicYear}
                       onChange={(e) =>
                         setSubjectForm((previous) => ({
@@ -3083,12 +3084,12 @@ function CreditsManagement() {
                       {ACADEMIC_YEARS.map((year) => (
                         <option key={year}>{year}</option>
                       ))}
-                    </select>
+                    </ProjectSelect>
                   </div>
 
                   <div className="cm-form-field">
                     <label>Subject Type *</label>
-                    <select
+                    <ProjectSelect
                       value={subjectForm.type}
                       onChange={(e) =>
                         setSubjectForm((previous) => ({
@@ -3100,7 +3101,7 @@ function CreditsManagement() {
                       {SUBJECT_TYPES.map((type) => (
                         <option key={type}>{type}</option>
                       ))}
-                    </select>
+                    </ProjectSelect>
                   </div>
 
                   <div className="cm-form-field">
@@ -3226,7 +3227,7 @@ function CreditsManagement() {
 
                   <div className="cm-form-field">
                     <label>Subject Status *</label>
-                    <select
+                    <ProjectSelect
                       value={subjectForm.status}
                       onChange={(e) =>
                         setSubjectForm((previous) => ({
@@ -3238,7 +3239,7 @@ function CreditsManagement() {
                       {SUBJECT_STATUSES.map((status) => (
                         <option key={status}>{status}</option>
                       ))}
-                    </select>
+                    </ProjectSelect>
                   </div>
                 </div>
 

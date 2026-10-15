@@ -1,4 +1,4 @@
-import { useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import { Children, Fragment, isValidElement, useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { FiSearch } from 'react-icons/fi'
 import './SearchableSelect.css'
@@ -40,6 +40,7 @@ export default function SearchableSelect({
   required = false,
   className = '',
   menuClassName = '',
+  triggerProps = {},
   noOptionsMessage = 'No matching options found.',
   getOptionLabel = (option) => typeof option === 'string' || typeof option === 'number' ? String(option) : option?.label || option?.name || option?.title || '',
   getOptionValue = (option) => typeof option === 'string' || typeof option === 'number' ? String(option) : option?.value ?? option?.id ?? option?.code ?? option?.name ?? option?.label ?? '',
@@ -81,17 +82,9 @@ export default function SearchableSelect({
       const viewportLeft = viewport?.offsetLeft || 0
       const viewportHeight = viewport?.height || window.innerHeight
       const viewportWidth = viewport?.width || window.innerWidth
-      const padding = 8, gap = 4;
-      const below = Math.max(0, viewportTop + viewportHeight - rect.bottom - padding - gap);
-      // Keep every shared dropdown below its trigger, including near the viewport edge.
-      const maxHeight = Math.min(240, below);
-      const width = Math.min(Math.max(rect.width, 280), viewportWidth - padding * 2);
-      setMenuStyle({
-        top: Math.round(rect.bottom + gap),
-        left: Math.max(viewportLeft + padding, Math.min(rect.left, viewportLeft + viewportWidth - width - padding)),
-        width,
-        maxHeight,
-      });
+      setMenuStyle(selectPlacement(rect, {
+        top: viewportTop, left: viewportLeft, height: viewportHeight, width: viewportWidth,
+      }, window.innerHeight))
     }
     const onScroll = event => {
       if (!menuRef.current?.contains(event.target)) position()
@@ -180,7 +173,7 @@ export default function SearchableSelect({
       if (!['ArrowDown', 'ArrowUp', 'Home', 'End'].includes(event.key)) return
       if (event.target === inputRef.current && ['Home', 'End'].includes(event.key)) return
       event.preventDefault()
-      const buttons = Array.from(menuRef.current.querySelectorAll('[role=option]'))
+      const buttons = Array.from(menuRef.current.querySelectorAll('[role=option]:not(:disabled)'))
       const current = buttons.indexOf(document.activeElement)
       const index = event.key === 'Home' ? 0 : event.key === 'End' ? buttons.length - 1 : event.key === 'ArrowDown' ? (current + 1) % buttons.length : (current <= 0 ? buttons.length - 1 : current - 1)
       buttons[index]?.focus({ preventScroll: true })
@@ -210,6 +203,7 @@ export default function SearchableSelect({
                 className={`searchable-select__option ${active ? 'is-active' : ''}`}
                 role="option"
                 aria-selected={active}
+                disabled={Boolean(option.raw?.disabled)}
                 tabIndex={-1}
                 onClick={() => handleSelect(option)}
               >
@@ -254,4 +248,85 @@ export default function SearchableSelect({
       {required && !selectedOption && !placeholder && <span className="searchable-select__required">Required</span>}
     </div>
   )
+}
+
+function selectPlacement(rect, viewport, windowHeight) {
+  const padding = 8, gap = 4
+  const below = Math.max(0, viewport.top + viewport.height - rect.bottom - padding - gap)
+  const above = Math.max(0, rect.top - viewport.top - padding - gap)
+  const opensAbove = below < 140 && above > below
+  const width = Math.min(rect.width, Math.max(0, viewport.width - padding * 2))
+  return {
+    top: opensAbove ? undefined : Math.round(rect.bottom + gap),
+    bottom: opensAbove ? Math.round(windowHeight - rect.top + gap) : undefined,
+    left: Math.max(viewport.left + padding, Math.min(rect.left, viewport.left + viewport.width - width - padding)),
+    width,
+    maxHeight: Math.min(200, opensAbove ? above : below),
+  }
+}
+
+
+const optionText = children => Children.toArray(children).map(child =>
+  isValidElement(child) ? optionText(child.props.children) : String(child ?? ''),
+).join('')
+
+export function selectOptions(children, inheritedDisabled = false) {
+  return Children.toArray(children).flatMap(child => {
+    if (!isValidElement(child)) return []
+    if (child.type === Fragment || child.type === 'optgroup') {
+      return selectOptions(child.props.children, inheritedDisabled || Boolean(child.props.disabled))
+    }
+    if (child.type !== 'option') return []
+    const label = child.props.label ?? optionText(child.props.children)
+    return [{ value: String(child.props.value ?? label), label,
+      disabled: inheritedDisabled || Boolean(child.props.disabled) }]
+  })
+}
+
+// Retain the native control for form submission and existing React event handlers.
+// Small lists and multi-select listboxes keep their existing native behavior.
+export function ProjectSelect({ children, ...props }) {
+  const nativeRef = useRef(null)
+  const wrapperRef = useRef(null)
+  const [uncontrolledValue, setUncontrolledValue] = useState(props.defaultValue ?? '')
+  const options = selectOptions(children)
+  const searchable = !props.multiple && (!props.size || Number(props.size) === 1)
+    && options.filter(option => option.value !== '').length >= 8
+  const selectedValue = props.value ?? uncontrolledValue
+  useEffect(() => {
+    const native = nativeRef.current
+    if (!native || props.value !== undefined) return
+    setUncontrolledValue(native.value)
+    const reset = () => queueMicrotask(() => setUncontrolledValue(native.value))
+    native.form?.addEventListener('reset', reset)
+    return () => native.form?.removeEventListener('reset', reset)
+  }, [searchable, props.value, children])
+
+  if (!searchable) return <select {...props}>{children}</select>
+  const focusTrigger = () => wrapperRef.current?.querySelector('.searchable-select__trigger')?.focus()
+  return <div ref={wrapperRef} className={`project-select ${props.className || ''}`} style={props.style}>
+    <SearchableSelect
+      label={props['aria-label'] || props.name || options.find(option => !option.value)?.label || 'Select an option'}
+      value={selectedValue} options={options} disabled={props.disabled} required={props.required}
+      error={props['aria-invalid'] === true || props['aria-invalid'] === 'true'}
+      placeholder={options.find(option => !option.value)?.label || 'Select an option'}
+      triggerProps={{ id: props.id, name: props.name, 'aria-labelledby': props['aria-labelledby'], 'aria-describedby': props['aria-describedby'], onBlur: props.onBlur }}
+      onChange={value => {
+        const native = nativeRef.current
+        if (!native) return
+        native.value = value
+        native.dispatchEvent(new Event('change', { bubbles: true }))
+      }}
+    />
+    <select {...props} id={undefined} ref={node => {
+      nativeRef.current = node
+      if (typeof props.ref === 'function') props.ref(node)
+      else if (props.ref) props.ref.current = node
+    }} className="project-select__native" style={{ position: 'absolute', opacity: 0, width: 1, height: 1, pointerEvents: 'none' }}
+      tabIndex={-1} aria-hidden="true" onFocus={focusTrigger}
+      onInvalid={event => { props.onInvalid?.(event); focusTrigger() }}
+      onChange={event => { setUncontrolledValue(event.target.value); props.onChange?.(event) }}>
+      {children}
+    </select>
+  </div>
 }

@@ -1,3 +1,4 @@
+import { ProjectSelect } from './SearchableSelect'
 import React, { useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { FiHome, FiCalendar, FiCheckCircle, FiArrowRight, FiPlusCircle } from 'react-icons/fi'
@@ -94,7 +95,7 @@ export default function ContextGuard({ children }) {
               <FiHome aria-hidden="true" /> College / Institution
             </span>
             {hasColleges ? (
-              <select
+              <ProjectSelect
                 value={tempCollegeId || selectedCollegeId || (colleges[0] ? String(colleges[0].id ?? colleges[0].collegeId) : '')}
                 onChange={(e) => setTempCollegeId(e.target.value)}
                 required
@@ -107,7 +108,7 @@ export default function ContextGuard({ children }) {
                     </option>
                   )
                 })}
-              </select>
+              </ProjectSelect>
             ) : (
               <div className="context-guard-empty-box">
                 <span>No colleges found.</span>
@@ -123,7 +124,7 @@ export default function ContextGuard({ children }) {
               <FiCalendar aria-hidden="true" /> Academic Year
             </span>
             {hasYears ? (
-              <select
+              <ProjectSelect
                 value={tempYearId || selectedAcademicYearId || (academicYears[0] ? String(academicYears[0].id ?? academicYears[0].academicYearId) : '')}
                 onChange={(e) => setTempYearId(e.target.value)}
                 required
@@ -136,7 +137,7 @@ export default function ContextGuard({ children }) {
                     </option>
                   )
                 })}
-              </select>
+              </ProjectSelect>
             ) : (
               <div className="context-guard-empty-box">
                 <span>No academic years found.</span>

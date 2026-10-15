@@ -308,3 +308,38 @@
 :root[data-theme="dark"] .searchable-select__option-sub {
   color: #94A3B8;
 }
+
+.searchable-select__options { min-height: 0; overscroll-behavior: contain; }
+.searchable-select__search { flex-shrink: 0; }
+
+/* Compact anchored menu: match the control and avoid covering the whole form. */
+body .searchable-select__menu { border-radius: 8px; }
+body .searchable-select__menu .searchable-select__search {
+  min-height: 38px;
+  padding: 6px 10px;
+  gap: 8px;
+}
+body .searchable-select__menu .searchable-select__search input {
+  box-sizing: border-box;
+  height: 26px;
+  min-height: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+  background: transparent;
+  font-size: 13px;
+  line-height: 1.4;
+}
+body .searchable-select__menu .searchable-select__option {
+  min-height: 32px;
+  padding: 7px 10px;
+  line-height: 1.35;
+}
+body .searchable-select__menu .searchable-select__option-label {
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1.35;
+}
+body .searchable-select__menu .searchable-select__search > svg { width: 16px; height: 16px; flex-shrink: 0; }

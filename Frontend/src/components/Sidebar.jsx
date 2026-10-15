@@ -6,7 +6,7 @@ import { ROLES } from '../auth/roles'
 import { useAcademic } from '../context/AcademicContext'
 import AcademicContextSelect from './AcademicContextSelect'
 import './Sidebar.css'
-import { feeNavigation, feeNavigationItem, isFeeRoute } from '../pages/fees/feeNavigation'
+import { feeNavigation, feeNavigationItem, isFeeRoute } from '../utils/feeNavigation'
 import { collegeLogoValue } from '../utils/collegeLogo'
 import { cacheCollegeLogo, fetchCollegeLogo, getCollegeById, getCollegeLogoUrl, getColleges, isBackendCollegeLogo, readCachedCollegeLogo, unwrapCollegeRecord } from '../auth/collegeApi'
 

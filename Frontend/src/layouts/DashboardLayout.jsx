@@ -5,7 +5,7 @@ import { FiAlertCircle, FiLock, FiLogOut, FiMenu, FiMoon, FiSearch, FiSun, FiUse
 import { getUserRole, signOut } from '../auth/auth'
 import { changePassword, profileApi } from '../api/apiEndpoints'
 import Sidebar from '../components/Sidebar'
-import { feeBreadcrumbs } from '../pages/fees/feeNavigation'
+import { feeBreadcrumbs } from '../utils/feeNavigation'
 import HeaderAcademicYear from '../components/HeaderAcademicYear'
 import DeactivationBlockedDialog from '../components/DeactivationBlockedDialog'
 import { API_FAILURE_EVENT } from '../api/apiFailureNotice'

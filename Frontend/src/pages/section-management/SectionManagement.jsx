@@ -1,3 +1,4 @@
+import { ProjectSelect } from '../../components/SearchableSelect'
 import { newestFirst, rememberCreated } from '../../utils/newestFirst'
 import { showError, showSuccess, showWarning } from '../../utils/toast'
 import useToastState from '../../hooks/useToastState'
@@ -502,11 +503,11 @@ function SectionForm({ editMode = false }) {
                     <SearchableSelect label="Faculty Advisor" value={form.facultyAdvisorEmployeeProfileId} options={teacherCandidates.map((item) => ({ id: item.employeeProfileId, value: item.employeeProfileId, name: item.fullName, code: [item.employeeCode, item.designation].filter(clean).join(' / ') }))} onChange={(value) => { const teacher = teacherCandidates.find((item) => String(item.employeeProfileId) === String(value)); setForm((current) => ({ ...current, facultyAdvisorEmployeeProfileId: value, advisor: teacher?.fullName || '' })) }} placeholder="Select Faculty Advisor" searchPlaceholder="Search faculty..." noOptionsMessage="No faculty candidates found." />
                   </Field>
                   <Field label="Status *" error={errors.status}>
-                    <select value={form.status} onChange={(event) => setField('status', event.target.value)}>
+                    <ProjectSelect value={form.status} onChange={(event) => setField('status', event.target.value)}>
                       <option value="" disabled>Select Status</option>
                       <option value="Active">Active</option>
                       <option value="Inactive">Inactive</option>
-                    </select>
+                    </ProjectSelect>
                   </Field>
                 </div>
               </section>

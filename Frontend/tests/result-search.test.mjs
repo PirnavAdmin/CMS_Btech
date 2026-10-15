@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { flattenResults, matchesResultSearch } from '../src/pages/examinations/grade-result-management/gradeResultModel.js'
+import { flattenResults, matchesResultSearch } from '../src/utils/gradeResultModel.js'
 
 test('result search preserves student identifiers and separate department and branch fields', () => {
   const [row] = flattenResults([{ departmentName: 'Engineering', branchName: 'Computer Science', branchCode: 'CSE', records: [{ studentId: 'STU-102', idNumber: 'ID-701', studentName: 'Sai Reddy', registrationNumber: 'REG-205', rollNumber: 'ROLL-301', totalMarks: 85, maximumMarks: 100 }] }])

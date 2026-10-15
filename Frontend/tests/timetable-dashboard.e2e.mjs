@@ -2,10 +2,10 @@ import { chromium } from 'playwright'
 import { createServer } from 'vite'
 import { readFile } from 'node:fs/promises'
 import assert from 'node:assert/strict'
-const testSource=await readFile('src/pages/timetable/TimetableDashboard.test.js','utf8')
+const testSource=await readFile('tests/timetable-dashboard.test.js','utf8')
 const fixture=testSource.slice(testSource.indexOf('const scope ='),testSource.indexOf("test('readiness"))
 const html=`<!doctype html><html><head><meta name="viewport" content="width=device-width, initial-scale=1"></head><body><div id="root"></div><script type="module">
-import React from 'react'; import { createRoot } from 'react-dom/client'; import Dashboard from '/src/pages/timetable/TimetableDashboard.jsx'; import '/src/index.css'; import '/src/styles/global.css'; import '/src/pages/timetable/TimetableManagement.css'; import '/src/pages/timetable/TimetableWorkflow.css';
+import React from 'react'; import { createRoot } from 'react-dom/client'; import { TimetableDashboard as Dashboard } from '/src/pages/timetable/TimetableManagement.jsx'; import '/src/index.css'; import '/src/styles/global.css'; import '/src/pages/timetable/TimetableManagement.css';
 ${fixture}
 const tables=[{...scope,id:'1',name:'Section A timetable',publicationStatus:'draft',updatedAt:'2026-10-01',entries:[],planning:table.planning}];
 const root=createRoot(document.getElementById('root')); window.loadedSources={...sources,allocations:[]}; const render=()=>root.render(React.createElement('main',{className:'tt-page'},React.createElement(Dashboard,{sources:window.loadedSources,tables,entries:[],today:[],open:()=>{window.openedSection=true}})));window.restoreCoverage=()=>{window.loadedSources=sources;render()};render();
