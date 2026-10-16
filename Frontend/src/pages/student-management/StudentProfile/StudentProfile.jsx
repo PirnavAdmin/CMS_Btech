@@ -411,8 +411,8 @@ const hydrateProfile = async (source) => {
     const resolvedT = resolveProfileTransportFee(combinedSource.admission, combinedSource.fees, combinedSource.academic);
     const hostel = Number(resolvedFees.hostelFee || combinedSource.fees?.hostelFee || resolvedH || 0);
     const transport = Number(resolvedFees.transportFee || combinedSource.fees?.transportFee || resolvedT || 0);
-    const scholarship = Number(resolvedFees.scholarshipAmount || combinedSource.fees?.scholarshipAmount || 0);
-    totalPayable = Number(resolvedFees.totalFee || combinedSource.fees?.totalFee || 0) || Math.max(0, tuition + admissionFee + hostel + transport - scholarship);
+    const calcPayable = Math.max(0, tuition + admissionFee + hostel + transport - scholarship);
+    totalPayable = calcPayable > 0 ? calcPayable : Number(resolvedFees.totalFee || combinedSource.fees?.totalFee || 0);
     paidAmount = Number(combinedSource.fees?.paidAmount || 0);
     if (historyItems.length > 0) {
       paidAmount = historyItems.reduce((sum, h) => sum + Number(h.totalAmount || h.feeAmount || 0), 0);

@@ -58,6 +58,13 @@ const STEP_ICONS = [FiUser, FiPhone, FiUsers, FiBookOpen, FiFileText, FiHome, Fi
 const STATUS = { DRAFT: 'Draft', PENDING: 'Pending', SUBMITTED: 'Submitted', APPLICATION_SUBMITTED: 'Submitted', UNDER_REVIEW: 'Under Review', VERIFIED: 'Verified', APPROVED: 'Approved', CORRECTION_REQUIRED: 'Correction Required', REJECTED: 'Rejected' }
 const normalizeStatus = raw => normalizeAdmissionStatus(raw)
 const formatFeeStatus = value => String(value || 'Pending').trim().toLowerCase().replace(/[_-]+/g, ' ').replace(/\b\w/g, character => character.toUpperCase())
+const formatPaymentPreference = value => {
+  if (!value) return 'Full Payment'
+  const val = String(value).trim().toUpperCase()
+  if (val === 'ONE_TIME' || val === 'FULL_PAYMENT' || val === 'ANNUAL') return 'Full Payment'
+  if (val === 'TERM_WISE' || val === 'INSTALLMENT' || val === 'SEMESTER_WISE' || val === 'TERM-WISE PAYMENT') return 'Term-wise Payment'
+  return String(value).replace(/[_-]+/g, ' ').toLowerCase().replace(/\b\w/g, character => character.toUpperCase())
+}
 // Activation is owned by the backend. Only surface an email confirmation when
 // the approval response explicitly supplies one; never infer delivery.
 const approvalNotice = result => {
@@ -319,7 +326,11 @@ const normalizeFeeSummary = response => {
   const transport = Number((summary.transportFee ?? summary.transportationFee ?? summary.transportAmount) || 0)
   const scholarship = Number((summary.scholarshipAmount ?? summary.discountAmount ?? summary.concessionAmount) || 0)
   const computedTotal = Math.max(0, tuition + admission + hostel + transport - scholarship)
-  const total = Number(summary.firstYearTotal ?? summary.totalFee ?? summary.totalAmount ?? summary.grandTotal ?? summary.netPayable ?? summary.totalPayable ?? summary.netAmount ?? summary.payableAmount) > 0 ? Number(summary.firstYearTotal ?? summary.totalFee ?? summary.totalAmount ?? summary.grandTotal ?? summary.netPayable ?? summary.totalPayable ?? summary.netAmount ?? summary.payableAmount) : (componentsTotal > 0 ? componentsTotal : computedTotal)
+  const total = (tuition > 0 || componentsTotal > 0) && computedTotal > 0
+    ? computedTotal
+    : Number(summary.firstYearTotal ?? summary.totalFee ?? summary.totalAmount ?? summary.grandTotal ?? summary.netPayable ?? summary.totalPayable ?? summary.netAmount ?? summary.payableAmount) > 0
+      ? Number(summary.firstYearTotal ?? summary.totalFee ?? summary.totalAmount ?? summary.grandTotal ?? summary.netPayable ?? summary.totalPayable ?? summary.netAmount ?? summary.payableAmount)
+      : computedTotal
   const hasConfig = components.length > 0 || tuition > 0 || total > 0;
   return {
     ...summary,
@@ -437,11 +448,8 @@ const resolveFeeSummary = (data, summaryResponse, structureResponse) => {
     const tuitionFee = Number(backend.tuitionFee) || 0
     const admissionFee = Number(backend.admissionFee) >= 0 && backend.admissionFee !== '' ? Number(backend.admissionFee) : Number(data.fees?.admissionFee || 0)
     const scholarshipAmount = Number(backend.scholarshipAmount || data.fees?.scholarshipAmount || 0)
-    const totalFee = Number(backend.totalFee) > 0
-      ? (Number(backend.hostelFee) > 0 || hostelFee === 0) && (Number(backend.transportFee) > 0 || transportFee === 0)
-        ? Number(backend.totalFee)
-        : Math.max(0, tuitionFee + admissionFee + hostelFee + transportFee - scholarshipAmount)
-      : Math.max(0, tuitionFee + admissionFee + hostelFee + transportFee - scholarshipAmount)
+    const calculatedTotal = Math.max(0, tuitionFee + admissionFee + hostelFee + transportFee - scholarshipAmount)
+    const totalFee = calculatedTotal > 0 ? calculatedTotal : Number(backend.totalFee || 0)
     return {
       ...backend,
       configured: true,
@@ -1050,7 +1058,7 @@ function FeeSummary({ data }) {
               Net Payable
               <small>After applicable deductions</small>
             </span>
-            <strong>{money(data.fees?.totalFee || net)}</strong>
+            <strong>{money(net > 0 ? net : (Number(data.fees?.totalFee) || 0))}</strong>
           </footer>
         </>
       ) : (
@@ -1425,24 +1433,37 @@ function CoreReview({ data, edit }) {
             ['Emergency Contact', data.parents?.emergencyMobile, true],
           ]}
         />
-        <ReviewSection
-          title="Fee Summary"
-          icon={FiCreditCard}
-          step={6}
-          edit={edit}
-          items={[
-            ['Tuition Fee (per year)', money(data.fees?.tuitionFee)],
-            ['Admission Fee (one-time)', money(data.fees?.admissionFee)],
-            ['Scholarship Deduction', data.fees?.scholarshipAmount ? `- ${money(data.fees?.scholarshipAmount)}` : '', true],
-            ['Hostel Room Type', data.admission?.hostelRoomType, true],
-            ['Hostel Fee (per year)', money(data.fees?.hostelFee), data.admission?.hostel !== 'Yes'],
-            ['Transportation Fee (per year)', money(data.fees?.transportFee), data.admission?.transport !== 'Yes'],
-            ['Estimated First-Year Total', money(data.fees?.totalFee)],
-            ['Estimated Entire 4-Year Total', money((Number(data.fees?.tuitionFee || 0) + Number(data.fees?.hostelFee || 0) + Number(data.fees?.transportFee || 0)) * 4 + Number(data.fees?.admissionFee || 0))],
-            ['Payment Preference', data.fees?.paymentPlan],
-            ['Estimated Amount per Term', data.fees?.paymentPlan === 'Term-wise Payment' ? money(Math.ceil(Number(data.fees?.totalFee || 0) / 2)) : '', true],
-          ]}
-        />
+        {(() => {
+          const rHostel = data.admission?.hostel === 'Yes' ? getResolvedHostelFee(data.admission, data.fees, data.academic) : 0
+          const rTransport = data.admission?.transport === 'Yes' ? getResolvedTransportFee(data.admission, data.fees, data.academic) : 0
+          const rTuition = Number(data.fees?.tuitionFee || 0)
+          const rAdmission = Number(data.fees?.admissionFee || 0)
+          const rScholarship = Number(data.fees?.scholarshipAmount || 0)
+          const rCalc = Math.max(0, rTuition + rAdmission + rHostel + rTransport - rScholarship)
+          const rTotal = rCalc > 0 ? rCalc : Number(data.fees?.totalFee || 0)
+          const rPlan = formatPaymentPreference(data.fees?.paymentPlan)
+          const isTerm = /term|installment|semester/i.test(String(data.fees?.paymentPlan || ''))
+          return (
+            <ReviewSection
+              title="Fee Summary"
+              icon={FiCreditCard}
+              step={6}
+              edit={edit}
+              items={[
+                ['Tuition Fee (per year)', money(rTuition)],
+                ['Admission Fee (one-time)', money(rAdmission)],
+                ['Scholarship Deduction', rScholarship ? `- ${money(rScholarship)}` : '', true],
+                ['Hostel Room Type', data.admission?.hostelRoomType, true],
+                ['Hostel Fee (per year)', money(rHostel), data.admission?.hostel !== 'Yes'],
+                ['Transportation Fee (per year)', money(rTransport), data.admission?.transport !== 'Yes'],
+                ['Estimated First-Year Total', money(rTotal)],
+                ['Estimated Entire 4-Year Total', money(Math.max(0, (rTuition + rHostel + rTransport) * 4 + rAdmission - rScholarship))],
+                ['Payment Preference', rPlan],
+                ['Estimated Amount per Term', isTerm ? money(Math.ceil(rTotal / 2)) : '', true],
+              ]}
+            />
+          )
+        })()}
       </div>
       <div className="sa-review-col">
         <ReviewSection
@@ -2881,12 +2902,15 @@ function DetailContent({ data, tab }) {
     const tuition = Number(data.fees?.tuitionFee || 0)
     const admissionFee = Number(data.fees?.admissionFee || 0)
     const scholarship = Number(data.fees?.scholarshipAmount || 0)
-    const totalFee = Number(data.fees?.totalFee || 0) || Math.max(0, tuition + admissionFee + resolvedH + resolvedT - scholarship)
+    const calculatedTotal = Math.max(0, tuition + admissionFee + resolvedH + resolvedT - scholarship)
+    const totalFee = calculatedTotal > 0 ? calculatedTotal : Number(data.fees?.totalFee || 0)
     const paidAmount = Number(data.fees?.paidAmount || (data.fees?.paymentStatus === 'Paid' ? totalFee : 0))
     const balance = Math.max(0, totalFee - paidAmount)
     const isOverdue = data.fees?.paymentStatus === 'Overdue'
     const statusLabel = isOverdue ? 'Overdue' : balance === 0 && totalFee > 0 ? 'Paid' : paidAmount > 0 ? 'Partially Paid' : 'Pending'
     const statusSlug = statusLabel.toLowerCase().replace(/\s+/g, '-')
+    const formattedPaymentPlan = formatPaymentPreference(data.fees?.paymentPlan)
+    const isTermWise = /term|installment|semester/i.test(String(data.fees?.paymentPlan || ''))
 
     return (
       <div className="sa-fees-detail-container">
@@ -2927,7 +2951,7 @@ function DetailContent({ data, tab }) {
             <strong className="fm-summary-card__value" style={{ fontSize: '18px' }}>
               <span className={`fm-badge fm-badge--${statusSlug}`}>{statusLabel}</span>
             </strong>
-            <span className="fm-summary-card__meta">Payment preference: {data.fees?.paymentPlan || 'Full Payment'}</span>
+            <span className="fm-summary-card__meta">Payment preference: {formattedPaymentPlan}</span>
           </div>
         </div>
 
@@ -2945,9 +2969,9 @@ function DetailContent({ data, tab }) {
               ['Transportation Fee (per year)', data.admission?.transport === 'Yes' ? money(resolvedT) : 'Not selected'],
               ['Estimated First-Year Total', money(totalFee)],
               ['Estimated Entire 4-Year Total', money(Math.max(0, (tuition + resolvedH + resolvedT) * 4 + admissionFee - scholarship))],
-              ['Payment Preference', data.fees?.paymentPlan || 'Full Payment'],
-              ['First Term Estimate', data.fees?.paymentPlan === 'Term-wise Payment' ? money(Math.ceil(totalFee / 2)) : 'Not applicable'],
-              ['Second Term Estimate', data.fees?.paymentPlan === 'Term-wise Payment' ? money(Math.floor(totalFee / 2)) : 'Not applicable'],
+              ['Payment Preference', formattedPaymentPlan],
+              ['First Term Estimate', isTermWise ? money(Math.ceil(totalFee / 2)) : 'Not applicable'],
+              ['Second Term Estimate', isTermWise ? money(Math.floor(totalFee / 2)) : 'Not applicable'],
             ]}
           />
           <FeeSummary data={data} />
