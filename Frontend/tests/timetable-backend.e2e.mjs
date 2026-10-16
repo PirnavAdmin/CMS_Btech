@@ -15,14 +15,22 @@ const masters = [{ ...scope, sectionId: 6, timetableId: 800, timetableName: 'Pub
 const history = JSON.stringify(masters[0])
 const periods = [{ periodId: 21, periodName: 'P1', periodType: 'CLASS', startTime: '09:00:00', endTime: '10:00:00', displayOrder: 1, active: true }]
 const calendar = { reviewed: true, workingDays: ['MONDAY'], holidays: [{ date: '2027-01-11', type: 'HOLIDAY' }] }
-const allocations = [6, 7].map((sectionId, index) => ({ ...scope, allocationId: index + 1, sectionId, subjectId: 8, facultyId: 10, periodsPerWeek: 2, status: true }))
+const allocations = [6, 7].map((sectionId, index) => ({ ...scope, allocationId: index + 1, sectionId, subjectId: 8, facultyId: 10, periodsPerWeek: 1, status: true }))
 await context.route(url => url.pathname.startsWith('/api/'), async route => {
  const req = route.request(), path = new URL(req.url()).pathname
  calls.push({ path, method: req.method() })
  let data = []
  if (path.includes('timetable-management')) {
    const suffix = path.split('/timetable-management')[1], method = req.method()
-   if (suffix === '/timetables' && method === 'GET') {
+   if (suffix.startsWith('/views/')) data = backendEntries.map(row => ({ ...row, timetableId: 801, publicationStatus: masters.find(table => table.timetableId === 801)?.status.toLowerCase(), subjectName: 'DBMS', facultyName: 'Dr. Ravi' }))
+   else if (suffix === '/publication-batches' && method === 'POST') {
+     const body = req.postDataJSON()
+     assert.deepEqual(Object.keys(body), ['items'])
+     for (const item of body.items) assert.equal(masters.find(row => row.timetableId === item.timetableId).revision, item.expectedRevision)
+     body.items.forEach(item => { const current = masters.find(row => row.timetableId === item.timetableId); current.status = 'PUBLISHED'; current.revision++ })
+     data = {}
+   }
+   else if (suffix === '/timetables' && method === 'GET') {
      if (fail) return route.fulfill({ status: 500, json: { success: false, message: 'Actual timetable API failure' } })
      data = masters
    } else if (suffix === '/periods') data = periods
@@ -33,11 +41,17 @@ await context.route(url => url.pathname.startsWith('/api/'), async route => {
      masters.push({ ...body, timetableId: 801, revision: 1, status: 'DRAFT' }); data = { timetableId: 801 }
    } else {
      const id = Number(suffix.split('/')[2]), table = masters.find(row => row.timetableId === id)
-     if (suffix.endsWith('/generate')) { backendEntries = [{ timetableEntryId: 901, timetableSlotId: 21, subjectId: 8, facultyId: 10, classroomId: 31, classroomName: 'Room A', active: true, dayOfWeek: 'MONDAY', startTime: '09:00:00', endTime: '10:00:00' }]; table.revision++; data = { added: 1 } }
+     if (suffix.endsWith('/generate') || suffix.endsWith('/generate-missing')) { backendEntries = [{ timetableEntryId: 901, timetableSlotId: 21, subjectId: 8, facultyId: 10, classroomId: 31, classroomName: 'Room A', active: true, dayOfWeek: 'MONDAY', startTime: '09:00:00', endTime: '10:00:00' }]; table.revision++; data = { added: 1 } }
+     else if (suffix.endsWith('/validate-global')) data = { valid: true, conflicts: [] }
      else if (suffix.endsWith('/validate')) data = { valid: true, warnings: [], conflicts: [], unscheduled: [] }
+     else if (suffix.endsWith('/revisions')) {
+       const body = req.postDataJSON(); assert.deepEqual(body, { expectedRevision: table.revision, reason: 'Correct room assignment' })
+       const created = { ...table, timetableId: 802, sourceTimetableId: table.timetableId, revision: 1, status: 'DRAFT', timetableName: 'Section A revision' }
+       masters.push(created); data = { timetableId: 802 }
+     }
      else if (suffix.endsWith('/publish')) { table.status = 'PUBLISHED'; table.revision++; data = {} }
      else if (suffix.endsWith('/requirements') || suffix.endsWith('/sync-periods')) data = {}
-     else data = { timetable: table, slots: [{ timetableSlotId: 21, slotName: 'P1', startTime: '09:00:00', endTime: '10:00:00' }], requirements: [{ subjectId: 8, periodsPerWeek: 2, blockSize: 1 }], entries: id === 801 ? backendEntries : [] }
+     else data = { timetable: table, slots: [{ timetableSlotId: 21, slotName: 'P1', startTime: '09:00:00', endTime: '10:00:00' }], requirements: [{ subjectId: 8, periodsPerWeek: 1, blockSize: 1 }], entries: id === 801 ? backendEntries : id === 802 ? backendEntries.map(row => ({ ...row, timetableEntryId: row.timetableEntryId + 100 })) : [] }
    }
    return route.fulfill({ status: 200, json: { success: true, data } })
  }
@@ -55,7 +69,7 @@ await context.route(url => url.pathname.startsWith('/api/'), async route => {
  else if (path.includes('/timetable-entries/') && req.method() === 'DELETE') backendEntries = backendEntries.filter(row => String(row.timetableEntryId) !== path.split('/').at(-1))
  else if (path.endsWith('/timetable-entries') && req.method() === 'POST') { data = { ...backendEntries[0], ...req.postDataJSON(), timetableEntryId: 601 }; backendEntries.push(data) }
  else if (path.endsWith('/timetable-entries')) { if (fail) return route.fulfill({ status: 500, json: { message: 'Timetable API unavailable' } }); data = backendEntries }
- else if (path.endsWith('/profile')) data = { userId: 99, fullName: 'Dr. Ravi', role: 'faculty' }
+ else if (path.endsWith('/profile')) data = { userId: 99, fullName: 'Dr. Ravi', role: 'faculty', facultyId: 10, studentId: 12 }
  return route.fulfill({ status: 200, json: { success: true, data } })
 })
 await context.addInitScript(() => {
@@ -67,25 +81,40 @@ const choose = async (label, value) => { await button(label).click(); await page
 try {
  await page.goto('http://127.0.0.1:5186/timetable')
  await button('Timetable Builder').click()
- for (const [label, value] of [['Academic Year', '2026-2027'], ['Department', 'CSE'], ['Course', 'B.Tech'], ['Branch', 'Computer Science'], ['Academic Level', 'Year 2'], ['Semester', 'Semester 3']]) await choose(label, value)
+ for (const [label, value] of [['Academic Year', '2026-2027'], ['Course', 'B.Tech'], ['Department', 'CSE'], ['Branch', 'Computer Science'], ['Academic Level', 'Year 2'], ['Semester', 'Semester 3']]) await choose(label, value)
  await page.getByLabel('Section B', { exact: true }).uncheck()
  await button('Continue').click()
- await expect(page.getByText('Semester dates are not configured.', { exact: false })).toBeVisible()
  await expect(button('Continue to Subjects')).toBeDisabled()
  await page.getByLabel('Timetable Start Date').fill('2027-01-04'); await page.getByLabel('Timetable End Date').fill('2027-01-04')
  await expect(page.locator('.tt-clean-step [role=alert]')).toContainText('Timetable end date must be after')
  await page.getByLabel('Timetable End Date').fill('2027-02-01')
  assert.equal(await page.getByLabel('Timetable End Date').getAttribute('max'), null)
- await button('Continue to Subjects').click(); await button('GENERATE ALL SELECTED SECTIONS').click()
+ await button('Continue to Subjects').click(); await button('Save Draft').click(); await expect(page.locator('.tt-grid-scroll .tt-class')).toHaveCount(0); await expect(button('Publish')).toBeDisabled(); await page.reload(); await page.getByRole('button', { name: /Section A draft/ }).last().click(); await button('Generate Missing').click()
  await expect(page.locator('.tt-grid-scroll .tt-class')).toHaveCount(1)
  await button('Validate').click(); await expect(page.getByRole('dialog')).toContainText('READY TO PUBLISH'); await button('Close Validation result').click()
- await button('Publish').click(); await button('Confirm Publish Timetable').click(); await expect(page.getByRole('dialog')).toHaveCount(0)
+ await expect(button('Publish')).toBeDisabled(); await button('Review').click(); await button('Confirm Review').click(); await button('Publish').click(); await button('Confirm Publish Timetable').click(); await expect(page.getByRole('dialog')).toHaveCount(0)
  await expect(page.locator('.tt-clean-workspace .tt-status')).toHaveText('PUBLISHED')
  assert.equal(JSON.stringify(masters[0]), history); assert.equal(masters.length, 2)
  assert(!calls.some(call => call.method !== 'GET' && call.path.includes('/timetables/800')))
  assert.equal(await page.evaluate(() => localStorage.getItem('pirnav-timetable-workflow-v2')), null)
+ await page.locator('.tt-grid-scroll .tt-class-details').first().click(); await expect(button('Save Draft Entry')).toHaveCount(0); await button('Close Schedule details').click()
+ const publishedBeforeRevision = JSON.stringify(masters[1])
+ await button('Create Revision Draft').click()
+ await page.getByLabel('Reason for revision (optional)').fill('Correct room assignment')
+ await button('Confirm Create Revision Draft').click()
+ await expect(page.getByRole('heading', { name: 'Section A revision', exact: true })).toBeVisible()
+ await expect(page.locator('.tt-clean-workspace .tt-status')).toContainText('DRAFT')
+ assert.equal(JSON.stringify(masters[1]), publishedBeforeRevision)
+ assert.equal(masters[2].status, 'DRAFT')
+ assert.equal(await page.evaluate(() => localStorage.getItem('pirnav-timetable-revision-demo-v1')), null)
+ await button('Validate').click(); await expect(page.getByRole('dialog', { name: 'Validation result', exact: true })).toContainText('READY TO PUBLISH'); await button('Close Validation result').click()
+ assert.equal(calls.filter(call => call.path.endsWith('/publication-batches')).length, 1)
+ assert(!calls.some(call => /\/timetables\/\d+\/publish$/.test(call.path)))
+ await button('Faculty My Timetable').click(); await choose('Faculty', 'Dr. Ravi'); await page.getByLabel('Schedule date').fill('2027-01-04'); await expect(page.locator('.tt-faculty-agenda .tt-class')).toHaveCount(1)
+ await page.evaluate(() => localStorage.setItem('btech-user-role', 'student')); await page.reload(); await expect(page.getByRole('heading', { name: 'My Timetable', exact: true })).toBeVisible(); await page.getByLabel('Schedule date').fill('2027-01-04'); await expect(page.locator('.tt-grid-scroll .tt-class')).toHaveCount(1); await expect(button('Save Draft')).toHaveCount(0)
+ await page.evaluate(() => localStorage.setItem('btech-user-role', 'admin'))
  fail = true; await page.reload(); await expect(page.locator('.tt-page [role=alert]')).toHaveText('Actual timetable API failure')
  assert.deepEqual(errors, [])
- console.log('PASS: real adapter, missing semester dates, extended independent validity, equal-date rejection, creation/generation/validation/publish, retained published history, no local drafts, actual API error.')
+ console.log('PASS: real adapter draft save/reopen, validation/review/publish, read-only official history, real versioned revision and revision-aware batch publication, faculty/student views and API error handling.')
 } catch (error) { console.error((await page.locator('body').innerText()).slice(-4500)); console.error(error); process.exitCode = 1 }
 finally { await Promise.race([browser.close(), new Promise(resolve => setTimeout(resolve, 3000))]); server?.httpServer?.closeAllConnections(); void server?.close(); process.exit(process.exitCode || 0) }

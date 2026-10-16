@@ -20,9 +20,27 @@ export function formatSemesterPeriod(period) {
   return period.referenceAvailable ? `Semester Reference Period: ${period.startDate} ? ${period.endDate}` : 'Semester dates are not configured. Timetable validity is controlled by the selected timetable date range.'
 }
 
+export function minimumTimetableEndDate(calendar) {
+  if (!validSemesterDate(calendar?.startDate)) return ''
+  const days = ['SUNDAY', 'MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY', 'SATURDAY']
+  const remaining = new Set((calendar.workingDays || []).filter(day => days.includes(day)))
+  const holidays = new Set(calendar.holidays || [])
+  const date = new Date(`${calendar.startDate}T12:00:00Z`)
+  for (let offset = 0; offset <= 732; offset++) {
+    const key = date.toISOString().slice(0, 10)
+    if (!holidays.has(key)) remaining.delete(days[date.getUTCDay()])
+    // Existing validity rules require the end date to follow the start date.
+    if (offset > 0 && !remaining.size) return key
+    date.setUTCDate(date.getUTCDate() + 1)
+  }
+  return ''
+}
+
 export function timetableDateErrors(calendar) {
   if (!calendar?.startDate || !calendar?.endDate) return ['Timetable start date and end date are required.']
   if (!validSemesterDate(calendar.startDate) || !validSemesterDate(calendar.endDate)) return ['Enter valid timetable dates in YYYY-MM-DD format.']
   if (calendar.startDate >= calendar.endDate) return ['Timetable end date must be after the start date.']
+  const minimum = minimumTimetableEndDate(calendar)
+  if (minimum && calendar.endDate < minimum) return [`The date range must include every selected working weekday at least once. Choose an end date on or after ${minimum}.`]
   return []
 }

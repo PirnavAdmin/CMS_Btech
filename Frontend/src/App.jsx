@@ -321,7 +321,7 @@ export default function App() {
               <Route path="/subject-management" element={<SubjectManagement />} />
               <Route path="/subject-management/:id" element={<SubjectDetailsPage />} />
               <Route path="/credits-management" element={<CreditsManagement />} />
-              <Route element={<ProtectedRoute allowedRoles={[ROLES.ADMIN, ROLES.FACULTY]} />}><Route path="/timetable" element={<TimetableManagement />} /></Route>
+              <Route element={<ProtectedRoute allowedRoles={[ROLES.ADMIN, ROLES.FACULTY, ROLES.STUDENT]} />}><Route path="/timetable" element={<TimetableManagement />} /></Route>
               <Route path="/elective-management" element={<ElectiveManagement />} />
               <Route path="/student-management/admissions" element={<StudentAdmission />} />
               <Route path="/student-management/admissions/new" element={<StudentAdmission />} />

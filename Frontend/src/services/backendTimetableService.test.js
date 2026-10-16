@@ -27,10 +27,30 @@ function setup(failPath = '') {
     return {}
   }]))
   const lifecycle = Object.fromEntries([['generate', 'generate'], ['generateMissing', 'generate-missing'], ['regenerate', 'regenerate']].map(([name, suffix]) => [name, ({ timetableId }, payload) => api.post(`/timetables/${timetableId}/${suffix}`, payload)]))
+  lifecycle.createRevision = ({ timetableId }, payload) => api.post(`/timetables/${timetableId}/revisions`, payload)
+  lifecycle.publishBatch = (_, payload) => api.post('/publication-batches', payload)
   const context = vm.createContext({ ...utils, ...periods, timetableDateErrors, api, lifecycle, timetableService: {} })
   vm.runInContext(`${source}\nthis.service = backendTimetableService; this.normalize = normalizeTimetable`, context)
   return { ...context, calls }
 }
+
+test('revision and publication batch send the current Swagger DTO fields and no invented payload', async () => {
+  const { service, calls } = setup()
+  await service.createRevision('8', 3, ' Correct room assignments ')
+  assert.deepEqual(JSON.parse(JSON.stringify(calls.at(-1))), { method: 'post', path: '/timetables/8/revisions', payload: { expectedRevision: 3, reason: 'Correct room assignments' } })
+  await service.publishBatch([{ id: '8', revision: 3 }, { id: '9', revision: 0 }])
+  assert.deepEqual(JSON.parse(JSON.stringify(calls.at(-1))), { method: 'post', path: '/publication-batches', payload: { items: [{ timetableId: 8, expectedRevision: 3 }, { timetableId: 9, expectedRevision: 0 }] } })
+})
+
+test('missing revision metadata never sends revision or batch requests', () => {
+  const { service, calls } = setup()
+  for (const revision of [undefined, null, '', -1, 1.5, 'bad']) {
+    assert.throws(() => service.createRevision(8, revision, ''), /revision number/)
+    assert.throws(() => service.publishBatch([{ id: 8, revision }]), /revision number/)
+  }
+  assert.throws(() => service.publishBatch([{ id: 8, revision: 1 }, { id: '8', revision: 1 }]), /distinct/)
+  assert.equal(calls.length, 0)
+})
 test('backend details map real IDs, publication, room and calendar without browser storage', async () => {
   const { service, calls } = setup()
   const [table] = await service.list()
@@ -47,6 +67,22 @@ test('setup sends documented numeric IDs, calendar and period payloads before sy
   assert.equal(calls.find(row => row.path === '/periods' && row.method === 'post').payload.periodType, 'CLASS')
   assert.equal(calls.find(row => row.path === '/calendar' && row.method === 'put').payload.holidays[0].date, '2026-10-02T00:00:00')
   assert(calls.some(row => row.path === '/timetables/8/sync-periods'))
+})
+
+test('applying unchanged periods preserves occupied slots without calling sync-periods', async () => {
+  const { service, calls } = setup('/timetables/8/sync-periods')
+  const config = { periods: [{ name: 'P1', type: 'class', startTime: '09:00', endTime: '10:00' }], calendar: { reviewed: true, workingDays: ['MONDAY'], holidays: [], startDate: '2026-09-01', endDate: '2026-12-31' }, requirements: {} }
+  await service.setup(scope, 'Updated name', config, { tableId: 8 })
+  assert(!calls.some(call => call.path.endsWith('/sync-periods')))
+  assert(calls.some(call => call.path === '/timetables/8' && call.method === 'put'))
+  assert(calls.some(call => call.path === '/timetables/8/requirements' && call.method === 'put'))
+})
+
+test('occupied slot changes are rejected before any backend mutations', async () => {
+  const { service, calls } = setup()
+  const config = { periods: [{ name: 'P1', type: 'class', startTime: '10:00', endTime: '11:00' }], calendar: { reviewed: true, workingDays: ['MONDAY'], holidays: [], startDate: '2026-09-01', endDate: '2026-12-31' }, requirements: {} }
+  await assert.rejects(service.setup(scope, 'CSE A', config, { tableId: 8 }), /slots used by existing classes/)
+  assert(calls.every(call => call.method === 'get'))
 })
 test('manual entry uses slot and classroom IDs; updates and deletes target the selected timetable', async () => {
   const { service, calls } = setup()

@@ -1,5 +1,7 @@
 # Timetable implementation report
 
+Current Draft -> Validate -> Review -> Publish implementation: see [TIMETABLE_WORKFLOW_IMPLEMENTATION.md](../../../TIMETABLE_WORKFLOW_IMPLEMENTATION.md) and [TIMETABLE_MISSING_APIS.md](../../../TIMETABLE_MISSING_APIS.md). These supersede the historical lifecycle/API availability and student-access notes below.
+
 Current integration status: see `Frontend/TIMETABLE_INTEGRATION_STATUS.md`. Mock mode now requires **both** development mode and explicit `VITE_TIMETABLE_DRAFT_ADAPTER=true`; the historical enablement description below is superseded.
 
 The active `/timetable` route uses real academic records and section-specific faculty allocations. The former hardcoded demo page is disconnected. No database, schema or migration changes were made.

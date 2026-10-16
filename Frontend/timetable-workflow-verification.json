@@ -1,0 +1,28 @@
+{
+  "date": "2026-10-16",
+  "scope": "Class timetable only",
+  "unitTests": {
+    "passed": 92,
+    "failed": 0,
+    "mode": "serial"
+  },
+  "build": "passed",
+  "lint": {
+    "exitCode": 0,
+    "errors": 0,
+    "warnings": 0
+  },
+  "browser": {
+    "backendAdapterFixtures": "passed: real revision, batch publication, student/faculty views",
+    "demoWorkflowFixtures": "passed"
+  },
+  "liveSwagger": {
+    "status": 200,
+    "livePublicationVerified": false
+  },
+  "examinationTimetableFilesModified": false,
+  "integratedNewEndpoints": [
+    "POST /api/v1/timetable-management/timetables/{timetableId}/revisions",
+    "POST /api/v1/timetable-management/publication-batches"
+  ]
+}

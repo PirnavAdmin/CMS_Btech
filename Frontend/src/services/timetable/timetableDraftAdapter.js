@@ -27,6 +27,19 @@ export function createDraftAdapter({ storage, loadLive, authorize, locks, makeId
   const selectedTables = (tables, expected) => tables.filter(table => expected.some(item => same(item.id, table.id)))
   return {
     list: async () => read(),
+    saveDraft: ({ scope, selected, config, expected = [] }) => transaction(expected, (tables, { sources }) => {
+      const sections = scopeSections(sources, scope)
+      if (!selected.length || selected.some(id => !sections.some(section => same(section.id, id)))) throw new Error('Select valid active sections.')
+      let next = [...tables]
+      for (const sectionId of selected) {
+        const previous = expected.find(row => same(row.sectionId, sectionId))
+        if (previous && previous.publicationStatus !== 'draft') throw new Error('Only draft settings can be changed.')
+        const current = previous ? next.find(row => same(row.id, previous.id)) : null
+        const table = { ...(current || { ...scope, sectionId, id: makeId(), name: `${sections.find(row => same(row.id, sectionId)).name} draft`, entries: [], publicationStatus: 'draft' }), planning: config, revision: (current?.revision || 0) + 1, updatedAt: new Date().toISOString(), origin: 'local' }
+        next = current ? next.map(row => same(row.id, current.id) ? table : row) : [...next, table]
+      }
+      return next
+    }),
     saveSetup: (expected, config) => transaction(expected, (tables, { sources, backend }) => {
       const occupied = decorateEntries([...backend, ...tableEntries(tables)], sources)
       for (const table of selectedTables(tables, expected)) {

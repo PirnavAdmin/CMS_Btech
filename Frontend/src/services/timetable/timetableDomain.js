@@ -1,4 +1,4 @@
-import { active, same, key, matchesScope, eligibleSubjects, conflictsFor, normalizeEntry, publicationState } from '../../utils/timetableUtils.js'
+import { active, same, key, validityOverlaps, matchesScope, eligibleSubjects, conflictsFor, normalizeEntry, publicationState } from '../../utils/timetableUtils.js'
 import { planningErrors, entryPlanningErrors, schedulingIssues, subjectRequirements, roomOptions, suitableRoom, generateTimetable, classesOnDate } from '../../utils/timetablePlanner.js'
 import { periodSessions } from '../../utils/timetablePeriods.js'
 
@@ -34,6 +34,7 @@ export function tableEntries(tables) {
   return tables.flatMap(table => table.entries.map(row => ({ ...row, ...Object.fromEntries(['academicYearId', 'departmentId', 'courseId', 'branchId', 'semesterId', 'sectionId'].map(field => [field, table[field]])), timetableId: table.id, publicationStatus: table.publicationStatus, calendar: table.planning?.calendar, origin: 'local' })))
 }
 export function validateTable(table, sources, occupied) {
+  if (!table.planning?.calendar || !Array.isArray(table.planning?.periods) || ['years', 'departments', 'courses', 'branches', 'semesters', 'sections', 'subjects', 'faculty', 'allocations'].some(key => !Array.isArray(sources[key]))) return [{ tableId: table.id, sectionId: table.sectionId, reason: 'Required timetable planning or academic source data is unavailable.', category: 'Missing Required Data' }]
   const issues = planningErrors(table.planning, sources, table, occupied).map(reason => ({ reason }))
   if (!scopeSections(sources, table).some(row => same(row.id, table.sectionId))) issues.push({ reason: 'Academic relationships changed. Review this section.' })
   if (!table.entries.length) issues.push({ reason: 'No classes have been scheduled.' })
@@ -41,10 +42,32 @@ export function validateTable(table, sources, occupied) {
     const requirement = subjectRequirements(sources, table, table.planning?.requirements).find(item => same(item.subject.id, row.subjectId))
     const errors = [...entryPlanningErrors(row, table.planning, sources, table, occupied), ...conflictsFor({ ...row, sectionId: table.sectionId }, occupied).map(item => item.message)]
     if (!requirement?.faculty.some(faculty => same(faculty.id, row.facultyId))) errors.push('Faculty allocation is missing or inactive for this section and subject.')
-    for (const reason of errors) issues.push({ reason, entryId: row.id, dayOfWeek: row.dayOfWeek, startTime: row.startTime, subjectId: row.subjectId })
+    if (!row.facultyId) errors.push('Missing faculty assignment.')
+    if (!row.subjectId) errors.push('Missing subject mapping.')
+    for (const reason of errors) issues.push({ reason, entryId: row.id, dayOfWeek: row.dayOfWeek, startTime: row.startTime, endTime: row.endTime, timetableSlotId: row.timetableSlotId, subjectId: row.subjectId, facultyId: row.facultyId, roomId: row.roomId, classroom: row.classroom })
   }
-  issues.push(...schedulingIssues(sources, table, table.planning, table.entries))
+  issues.push(...schedulingIssues(sources, table, table.planning, table.entries).map(issue => issue.code === 'frequency'
+    ? { ...issue, blocking: true, category: 'Missing Required Data', reason: 'Required weekly periods are missing or ambiguous. Configure the subject requirement before publication.' }
+    : issue))
+  for (const item of subjectRequirements(sources, table, table.planning.requirements)) {
+    if (/lab|practical/i.test(item.subject.subjectType || '') && !Number.isInteger(Number(table.planning.requirements?.[item.subject.id]?.blockSize))) issues.push({ subjectId: item.subject.id, reason: 'Missing explicit lab continuous-period requirement.', category: 'Missing Required Data' })
+  }
+  // Only enforce an explicit configured workload; never infer a limit from credits.
+  const limits = sources.faculty.filter(faculty => faculty.maxPeriodsPerWeek != null)
+  for (const faculty of limits) {
+    const limit = Number(faculty.maxPeriodsPerWeek)
+    if (!Number.isInteger(limit) || limit < 1) { issues.push({ reason: `Faculty ${faculty.name}: configured weekly workload limit is invalid.`, facultyId: faculty.id }); continue }
+    const rows = occupied.filter(row => same(row.facultyId, faculty.id) && validityOverlaps(table, row))
+    const unique = [...new Map(rows.map(row => [`${row.timetableId}:${row.id}`, row])).values()]
+    const count = unique.reduce((total, row) => total + table.planning.periods.filter(period => !['break', 'lunch'].includes(period.type) && period.startTime >= row.startTime?.slice(0, 5) && period.endTime <= row.endTime?.slice(0, 5)).length, 0)
+    if (count > limit) issues.push({ reason: `Faculty ${faculty.name}: ${count} scheduled periods exceed the configured weekly limit of ${limit}.`, facultyId: faculty.id })
+  }
   return issues.map(issue => ({ ...issue, sectionId: table.sectionId, tableId: table.id }))
+}
+export function validationCategory(issue) {
+  if (issue.blocking === false) return 'Warnings'
+  if (issue.category === 'Missing Required Data' || /missing|unavailable|not configured|no classes|no active|not supplied|incomplete|ambiguous/i.test(issue.reason || '')) return 'Missing Required Data'
+  return 'Blocking Conflicts'
 }
 export function availableSlots(form, table, sources, occupied, limit = 5) {
   const requirement = subjectRequirements(sources, table, table.planning.requirements).find(item => same(item.subject.id, form.subjectId))

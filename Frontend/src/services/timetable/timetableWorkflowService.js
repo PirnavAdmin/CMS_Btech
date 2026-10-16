@@ -17,6 +17,7 @@ export async function resolveMyFaculty(sources) {
   return matches[0].id
 }
 export async function updateWeeklyRequirement(allocation, periodsPerWeek) {
+  if (draftCapabilityEnabled) throw new Error('Demo Mode cannot update backend faculty allocations.')
   if (getUserRole() !== 'admin') throw new Error('Administrator access is required.')
   if (!Number.isInteger(Number(periodsPerWeek)) || Number(periodsPerWeek) < 1) throw new Error('Weekly periods must be a positive whole number.')
   const payload = Object.fromEntries(['facultyId', 'courseId', 'branchId', 'semesterId', 'sectionId', 'subjectId', 'academicYearId', 'allocationType', 'isPrimaryFaculty', 'status', 'remarks'].map(field => [field, allocation[field] ?? (field === 'isPrimaryFaculty' || field === 'status' ? true : field === 'allocationType' ? 'TEACHING' : null)]))

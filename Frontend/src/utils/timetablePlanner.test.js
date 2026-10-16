@@ -60,8 +60,11 @@ test('consecutive lab sessions respect period adjacency and room types', () => {
 })
 test('all-holiday weekdays have no occurrences and invalid plans block generation', () => {
   const calendar = { ...config.calendar, startDate: '2026-09-07', endDate: '2026-09-08', holidays: ['2026-09-07'], workingDays: ['MONDAY', 'TUESDAY'] }
-  assert.ok(generate({ config: { ...config, calendar } }).entries.some(row => row.dayOfWeek === 'MONDAY'))
-  assert.equal(classesOnDate(generate({ config: { ...config, calendar } }).entries, '2026-09-07', () => calendar).length, 0)
+  assert.equal(generate({ config: { ...config, calendar } }).added, 0)
+  assert.match(planningErrors({ ...config, calendar }, sources, scope).join(), /every selected working weekday/)
+  const covered = { ...calendar, endDate: '2026-09-14' }
+  assert.ok(generate({ config: { ...config, calendar: covered } }).entries.some(row => row.dayOfWeek === 'MONDAY'))
+  assert.equal(classesOnDate(generate({ config: { ...config, calendar: covered } }).entries, '2026-09-07', () => covered).length, 0)
   const invalid = { ...config, periods: [config.periods[0], { id: 'bad', startTime: '09:30', endTime: '10:30' }] }
   assert.match(planningErrors(invalid, sources, scope).join(), /overlap/)
   assert.equal(generate({ config: invalid }).added, 0)

@@ -6,7 +6,7 @@ import { userErrorMessage, GENERIC_ERROR_MESSAGE } from '../utils/userError.js'
 const source = (await readFile(new URL('./apiEndpoints.js', import.meta.url), 'utf8')).replace(/^import .*$/gm, '').replaceAll('import.meta.env', '({ DEV: false, VITE_API_BASE_URL: "https://example.test" })')
 // Isolate the API boundary while retaining its real HTTP/error implementation.
 const dependencies = `const getAccessToken = () => 'test-token';
-const collegeRequest = (url, options) => ({ url, options });
+const collegeRequest = (url, options) => { if (url.includes('/timetable-management/') && !url.includes('/classrooms')) throw new Error('Undocumented college scope injection'); return { url, options }; };
 const GENERIC_ERROR_MESSAGE = ${JSON.stringify(GENERIC_ERROR_MESSAGE)};
 const userErrorMessage = ${userErrorMessage.toString()};
 const notifyApiUnavailable = () => {};

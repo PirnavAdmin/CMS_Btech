@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom'
 import { FiX } from 'react-icons/fi'
 
 // Shared focus handling for timetable drawers and compact confirmations.
-export default function WorkspaceDrawer({ title, subtitle, close, busy = false, modal = false, children, footer }) {
+export default function WorkspaceDrawer({ title, subtitle, close, busy = false, modal = false, children, footer, className = '' }) {
   const root = useRef(null)
   useEffect(() => {
     const previous = document.activeElement
@@ -13,7 +13,7 @@ export default function WorkspaceDrawer({ title, subtitle, close, busy = false, 
     return () => { document.body.style.overflow = overflow; if (previous?.isConnected) previous.focus() }
   }, [])
   return createPortal(<div className={`tt-overlay ${modal ? 'tt-confirm-overlay' : 'tt-drawer-overlay'}`} onMouseDown={event => { if (event.target === event.currentTarget && !busy) close() }}>
-    <section ref={root} tabIndex={-1} className={`tt-dialog ${modal ? 'tt-confirm-dialog' : 'tt-drawer'}`} role="dialog" aria-modal="true" aria-label={title} onKeyDown={event => {
+    <section ref={root} tabIndex={-1} className={`tt-dialog ${modal ? 'tt-confirm-dialog' : 'tt-drawer'} ${className}`} role="dialog" aria-modal="true" aria-label={title} onKeyDown={event => {
       if (event.key === 'Escape' && !busy && !document.querySelector('.searchable-select__menu')) { event.stopPropagation(); close() }
       if (event.key !== 'Tab' || document.querySelector('.searchable-select__menu')) return
       const elements = [...root.current.querySelectorAll('button:not(:disabled),input:not(:disabled),select:not(:disabled),textarea:not(:disabled),[tabindex="0"]')].filter(element => element.getClientRects().length)
