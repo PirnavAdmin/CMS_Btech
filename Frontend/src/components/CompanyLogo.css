@@ -1,0 +1,29 @@
+.company-logo {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  width: 44px;
+  height: 44px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, #1769c2, #3b82f6);
+  color: white;
+  font-size: 16px;
+  font-weight: 800;
+  overflow: hidden;
+}
+.company-logo.company-logo--brand {
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 2px 6px rgba(15, 23, 42, .08);
+}
+.company-logo > svg, .company-logo > img {
+  display: block;
+  width: 30px;
+  height: 30px;
+  object-fit: contain;
+}
+.company-logo.company-logo--compact { width: 32px; height: 32px; border-radius: 7px; font-size: 11px; }
+.company-logo--compact > svg, .company-logo--compact > img { width: 22px; height: 22px; }
+.plw-company-identity { display: flex; align-items: center; gap: 10px; }
+.plw-company-identity > div { min-width: 0; }
