@@ -15,7 +15,7 @@ export default function HeaderAcademicYear() {
   } = useAcademic()
 
   const [now, setNow] = useState(() => new Date())
-  const root = useRef(null)
+  const root = useRef(null) 
 
   useEffect(() => {
     const timer = window.setInterval(() => {

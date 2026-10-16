@@ -192,7 +192,6 @@ export default function Sidebar({ open = false, onClose = () => {}, collapsed = 
           {examManagementOpen && <div className="sidebar-submenu sidebar-exam-submenu" id="exam-management-links">
             <Item to="/examination-setup" icon={FiFileText} tone="blue" onNavigate={onClose} activeWhen={pathname => pathname.startsWith('/examination-setup')}>Examination Setup</Item>
             <Item to="/exam-timetable" icon={FiCalendar} tone="orange" onNavigate={onClose} activeWhen={pathname => pathname.startsWith('/exam-timetable')}>Exam Timetable</Item>
-            <Item to="/examination/completed-exams" icon={FiFileText} tone="blue" onNavigate={onClose} activeWhen={pathname => pathname.startsWith('/examination/completed-exams')}>Completed Exams</Item>
           </div>}
           <Item to="/marks-management/marks-entry" icon={FiEdit3} tone="green" onNavigate={onClose} activeWhen={pathname => pathname.startsWith('/marks-management')}>Marks Management</Item>
           <button type="button" className={`sidebar-link sidebar-link--purple sidebar-disclosure sidebar-grade-parent ${gradeResultsActive ? 'is-module-active' : ''}`} onClick={() => setGradeResultsOpen(open => !open)} aria-expanded={gradeResultsOpen} aria-controls="grade-results-links">
