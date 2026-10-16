@@ -3546,3 +3546,19 @@ feels part of the table card rather than a second, dashed card. */
 .plw-radio-chip--pending.is-selected .plw-radio-circle::after {
   background: #f59e0b;
 }
+/* Keep weekly slots aligned regardless of event title length. */
+.mew-calendar__main:has(.mew-calendar__time-grid){overflow:auto;max-height:680px;isolation:isolate}
+.mew-calendar__main .mew-calendar__time-grid{grid-template-columns:repeat(7,minmax(180px,1fr));min-width:1260px}
+.mew-calendar__main .mew-calendar__time-grid.day{grid-template-columns:minmax(280px,1fr);min-width:280px}
+.mew-calendar__time-grid .mew-calendar__time-day>button{position:sticky;top:0;z-index:2;height:44px;box-sizing:border-box;background:var(--surface-soft,#f8fafc)}
+.mew-calendar__time-grid .mew-calendar__time-day>button.selected{background:var(--brand,#1769c2);color:#fff}
+.mew-calendar__time-grid .mew-calendar__hour{height:104px;min-height:104px;box-sizing:border-box;grid-template-columns:42px minmax(0,1fr);overflow:hidden}
+.mew-calendar__time-grid .mew-calendar__hour>div{min-width:0;overflow:auto;padding:5px;display:flex;flex-direction:column;gap:4px}
+.mew-calendar__time-grid .mew-calendar__timed-event{flex-shrink:0;min-width:0;padding:7px;line-height:1.4;overflow:hidden}
+.mew-calendar__time-grid .mew-calendar__timed-event strong{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden;font-size:11px;overflow-wrap:anywhere}
+.mew-calendar__time-grid .mew-calendar__timed-event span{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden;font-size:10px;overflow-wrap:anywhere}
+.mew-calendar__time-grid button:focus-visible{outline:2px solid var(--brand,#1769c2);outline-offset:-2px}
+.mew-calendar__daily .mew-calendar__agenda-item{flex-wrap:wrap}
+.mew-calendar__daily .mew-calendar__agenda-content{flex-basis:150px}
+.mew-calendar__daily .mew-calendar__agenda-content p,.mew-calendar__daily .mew-calendar__agenda-content small{display:block;line-height:1.6;overflow-wrap:anywhere}
+.mew-calendar__daily .mew-calendar__agenda-item>button{margin-left:auto}

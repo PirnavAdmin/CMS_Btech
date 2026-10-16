@@ -4695,12 +4695,11 @@ function MeetingsEventsCalendar({ meetings, events, onCreateMeeting, onCreateEve
     : view === 'week'
       ? `${formatDate(monthDays.find(date => dayKey(date) === dayKey(selectedDate)) || selectedDate)} · Week`
       : formatDate(selectedDate)
-  const daysToShow = view === 'week' ? monthDays.filter(date => {
-    const start = new Date(selectedDate)
-    start.setDate(start.getDate() - start.getDay())
-    const end = new Date(start)
-    end.setDate(start.getDate() + 6)
-    return date >= start && date <= end
+  const daysToShow = view === 'week' ? Array.from({ length: 7 }, (_, index) => {
+    const date = new Date(selectedDate)
+    date.setHours(0, 0, 0, 0)
+    date.setDate(date.getDate() - date.getDay() + index)
+    return date
   }) : [selectedDate]
   const openItem = item => setDetails(item)
   const activeFilters = kind !== 'all' || department !== 'all' || category !== 'all' || status !== 'all' || dayKey(selectedDate) !== dayKey(today)
