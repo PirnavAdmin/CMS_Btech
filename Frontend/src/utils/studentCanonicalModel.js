@@ -265,7 +265,11 @@ export const normalizeFeeSummary = (response) => {
   const transport = Number((summary.transportFee ?? summary.transportationFee ?? summary.transportAmount) || 0)
   const scholarship = Number((summary.scholarshipAmount ?? summary.discountAmount ?? summary.concessionAmount) || 0)
   const computedTotal = Math.max(0, tuition + admission + hostel + transport - scholarship)
-  const total = Number(summary.firstYearTotal ?? summary.totalFee ?? summary.totalAmount ?? summary.grandTotal ?? summary.netPayable ?? summary.totalPayable ?? summary.netAmount ?? summary.payableAmount) > 0 ? Number(summary.firstYearTotal ?? summary.totalFee ?? summary.totalAmount ?? summary.grandTotal ?? summary.netPayable ?? summary.totalPayable ?? summary.netAmount ?? summary.payableAmount) : (componentsTotal > 0 ? componentsTotal : computedTotal)
+  const total = (tuition > 0 || componentsTotal > 0) && computedTotal > 0
+    ? computedTotal
+    : Number(summary.firstYearTotal ?? summary.totalFee ?? summary.totalAmount ?? summary.grandTotal ?? summary.netPayable ?? summary.totalPayable ?? summary.netAmount ?? summary.payableAmount) > 0
+      ? Number(summary.firstYearTotal ?? summary.totalFee ?? summary.totalAmount ?? summary.grandTotal ?? summary.netPayable ?? summary.totalPayable ?? summary.netAmount ?? summary.payableAmount)
+      : (componentsTotal > 0 ? componentsTotal : computedTotal)
   return {
     ...summary,
     feeStructureId: summary.feeStructureId ?? summary.structureId ?? summary.feeStructure?.feeStructureId ?? summary.feeStructure?.id ?? 'FS-STANDARD',
@@ -315,8 +319,8 @@ export const defaultFeeSummary = (data = {}) => {
   const admission = data.admission || {}
   const tuition = Number(fees.tuitionFee) > 0 ? Number(fees.tuitionFee) : 50000
   const admissionFee = Number(fees.admissionFee !== undefined && fees.admissionFee !== '' ? fees.admissionFee : 4000)
-  const hostelFee = admission.hostel === 'Yes' ? Number(HOSTEL_FEES[admission.hostelRoomType] || fees.hostelFee || 0) : 0
-  const transportFee = admission.transport === 'Yes' ? Number(TRANSPORT_FEES[admission.transportRoute] || fees.transportFee || 0) : 0
+  const hostelFee = admission.hostel === 'Yes' ? (Number(fees.hostelFee) > 0 ? Number(fees.hostelFee) : Number(HOSTEL_FEES[admission.hostelRoomType] || 0)) : 0
+  const transportFee = admission.transport === 'Yes' ? (Number(fees.transportFee) > 0 ? Number(fees.transportFee) : Number(TRANSPORT_FEES[admission.transportRoute] || 0)) : 0
   const scholarshipAmount = Number(fees.scholarshipAmount || 0)
   const total = Math.max(0, tuition + admissionFee + hostelFee + transportFee - scholarshipAmount)
   return {
@@ -338,13 +342,25 @@ export const defaultFeeSummary = (data = {}) => {
 export const resolveFeeSummary = (data = {}, summaryResponse = null, structureResponse = null) => {
   const backend = mergeFeeResponses(summaryResponse, structureResponse)
   if (hasFeeSummary(backend)) {
+    const fees = data.fees || {}
+    const admission = data.admission || {}
+    const tuitionFee = Number(backend.tuitionFee) > 0 ? Number(backend.tuitionFee) : (Number(fees.tuitionFee) || 50000)
+    const admissionFee = Number(backend.admissionFee) >= 0 && backend.admissionFee !== '' ? Number(backend.admissionFee) : (Number(fees.admissionFee) || 4000)
+    const hostelFee = admission.hostel === 'Yes' ? (Number(backend.hostelFee) > 0 ? Number(backend.hostelFee) : Number(fees.hostelFee) > 0 ? Number(fees.hostelFee) : Number(HOSTEL_FEES[admission.hostelRoomType] || 0)) : 0
+    const transportFee = admission.transport === 'Yes' ? (Number(backend.transportFee) > 0 ? Number(backend.transportFee) : Number(fees.transportFee) > 0 ? Number(fees.transportFee) : Number(TRANSPORT_FEES[admission.transportRoute] || 0)) : 0
+    const scholarshipAmount = Number(backend.scholarshipAmount || fees.scholarshipAmount || 0)
+    const calculatedTotal = Math.max(0, tuitionFee + admissionFee + hostelFee + transportFee - scholarshipAmount)
+    const totalFee = calculatedTotal > 0 ? calculatedTotal : (Number(backend.totalFee) || 0)
     return {
       ...backend,
-      admissionFee: Number(backend.admissionFee) > 0 ? backend.admissionFee : (data.fees?.admissionFee || 4000),
-      tuitionFee: Number(backend.tuitionFee) > 0 ? backend.tuitionFee : (data.fees?.tuitionFee || 50000),
-      totalFee: Number(backend.totalFee) > 0 ? backend.totalFee : (Number(backend.tuitionFee || 50000) + Number(backend.admissionFee || 4000)),
-      paymentPlan: data.fees?.paymentPlan || backend.paymentPlan || 'Full Payment',
-      paymentStatus: data.fees?.paymentStatus || backend.paymentStatus || 'Pending',
+      admissionFee,
+      tuitionFee,
+      hostelFee,
+      transportFee,
+      scholarshipAmount,
+      totalFee,
+      paymentPlan: fees.paymentPlan || backend.paymentPlan || 'Full Payment',
+      paymentStatus: fees.paymentStatus || backend.paymentStatus || 'Pending',
       source: 'backend',
     }
   }

@@ -1,3 +1,4 @@
+/* MyProfile.css */
 
 /* Source styles: pages/profile/MyProfile.css */
 .profile-page{--navy:#174C88;--blue:#2563EB;--gold:#F59E0B;--ink:#102A4C;--muted:#526A86;--line:#DCE5F2;display:grid;width:100%;gap:18px;color:var(--ink)}
@@ -8,7 +9,7 @@
 .profile-facts{position:relative;z-index:1;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));margin:0;padding:15px 8px;border:1px solid rgba(255,255,255,.18);border-radius:10px;background:rgba(8,47,82,.68);backdrop-filter:blur(4px)}.profile-facts div{min-width:0;padding:0 18px;border-left:1px solid rgba(255,255,255,.18)}.profile-facts div:first-child{border-left:0}.profile-facts dt{margin-bottom:6px;color:rgba(235,240,255,.75);font-size:.65rem;font-weight:750;letter-spacing:.04em;text-transform:uppercase}.profile-facts dd{margin:0;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#fff;font-size:.84rem;font-weight:750}.profile-status{display:inline-flex;align-items:center;gap:7px;color:#C7DFFF;background:#174C88;border:1px solid rgba(169,211,247,.4);border-radius:999px;padding:3px 10px;font-size:.76rem;font-weight:800}.profile-status i{width:7px;height:7px;border-radius:50%;background:#10B981;box-shadow:0 0 0 3px rgba(16,185,129,.25)}
 .profile-content-card{overflow:hidden;border:1px solid var(--line);border-radius:12px;background:var(--surface, #fff);box-shadow:0 7px 20px rgba(8,52,89,.055)}.profile-section-heading{display:flex;padding:18px 22px;align-items:center;gap:13px;border-bottom:1px solid var(--line);background:#fbfcfe}.profile-section-heading h2,.profile-section-heading p{margin:0}.profile-section-heading h2{color:var(--navy);font-size:1.02rem}.profile-section-heading p{margin-top:3px;color:var(--muted);font-size:.8rem}.profile-section-icon{display:grid;width:39px;height:39px;place-items:center;border-radius:8px;color:var(--navy);background:#fff3ce;box-shadow:inset 0 0 0 1px #f3d786}.profile-section-icon .profile-icon{width:19px;height:19px}
 .profile-tabs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));padding:0 22px;border-bottom:1px solid var(--line);background:var(--surface, #fff)}.profile-tabs button{position:relative;display:flex;min-height:68px;padding:12px 14px;align-items:center;justify-content:center;gap:10px;border:0;border-bottom:3px solid transparent;color:#6d8295;background:transparent;text-align:left;cursor:pointer;transition:.16s ease}.profile-tabs button:hover{color:var(--navy);background:#f7fafc}.profile-tabs button.active{border-bottom-color:var(--gold);color:var(--navy);background:#f8fbfd}.profile-tabs button.active::after{position:absolute;right:0;bottom:-1px;left:0;height:2px;background:var(--navy);content:""}.profile-tabs button>.profile-icon{width:20px;height:20px;color:#7890a5}.profile-tabs button.active>.profile-icon{color:var(--blue)}.profile-tabs span{display:grid;gap:2px}.profile-tabs b{font-size:.82rem}.profile-tabs small{color:#8a9aaa;font-size:.67rem;font-weight:500}.profile-panel{min-height:260px}.profile-panel-title{padding:20px 23px 0}.profile-panel-title h3,.profile-panel-title p{margin:0}.profile-panel-title h3{color:var(--navy);font-size:.96rem}.profile-panel-title p{margin-top:4px;color:var(--muted);font-size:.76rem}
-.profile-fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px 24px;padding:23px}.profile-field{display:grid;gap:7px;color:#294b69;font-size:.8rem;font-weight:750}.profile-field>span b{color:#c9322a}.profile-input{display:flex;min-height:44px;align-items:center;border:1px solid #c8d7e4;border-radius:7px;background:var(--surface, #fff);transition:.16s ease}.profile-input>.profile-icon{width:17px;height:17px;margin-left:12px;color:#65839d}.profile-input:focus-within{border-color:var(--blue);box-shadow:0 0 0 3px rgba(13,96,153,.1)}.profile-input input{width:100%;min-width:0;height:42px;padding:0 11px;border:0;outline:0;color:var(--ink);background:transparent;font:inherit;font-weight:550}.profile-input:has(input:disabled){border-color:#dce5ed;background:#f5f7f9}.profile-input input:disabled{color:#62788c;cursor:default}.profile-input:has([aria-invalid=true]){border-color:#d74840;box-shadow:0 0 0 3px rgba(215,72,64,.08)}.profile-field small{color:#b52d25;font-size:.73rem;font-weight:650}.profile-field em{color:#8091a1;font-size:.7rem;font-style:normal;font-weight:500}
+.profile-fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px 24px;padding:23px}.profile-field{display:grid;gap:7px;color:#294b69;font-size:.8rem;font-weight:750}.profile-field>span b{color:#c9322a}.profile-input{display:flex;min-height:44px;align-items:center;border:1px solid #c8d7e4;border-radius:7px;background:var(--surface, #fff);transition:.16s ease}.profile-input>.profile-icon{width:17px;height:17px;margin-left:12px;color:#65839d}.profile-input input{width:100%;min-width:0;height:42px;padding:0 11px;border:0;outline:0;color:var(--ink);background:transparent;font:inherit;font-weight:550}.profile-input:has(input:disabled){border-color:#dce5ed;background:#f5f7f9}.profile-input input:disabled{color:#62788c;cursor:default}.profile-input:has([aria-invalid=true]){border-color:#d74840;box-shadow:0 0 0 3px rgba(215,72,64,.08)}.profile-field small{color:#b52d25;font-size:.73rem;font-weight:650}.profile-field em{color:#8091a1;font-size:.7rem;font-style:normal;font-weight:500}
 .profile-field.wide{grid-column:1/-1}.profile-input select,.profile-input textarea{width:100%;border:0;outline:0;color:var(--ink);background:transparent;font:inherit;font-weight:550}.profile-input select{height:42px;padding:0 11px}.profile-input.textarea{align-items:stretch}.profile-input textarea{min-height:78px;padding:11px;resize:vertical}.profile-input select:disabled,.profile-input textarea:disabled{color:#62788c;cursor:default}.profile-subsection{display:flex;padding:16px 23px;align-items:center;border-top:1px solid var(--line);border-bottom:1px solid #edf2f6;background:#f8fafc}.profile-subsection h3,.profile-subsection p{margin:0}.profile-subsection h3{color:var(--navy);font-size:.91rem}.profile-subsection p{margin-top:3px;color:var(--muted);font-size:.75rem}.profile-lookup{color:var(--blue)!important}
 .profile-actions{display:flex;min-height:69px;padding:13px 22px;align-items:center;justify-content:space-between;gap:20px;border-top:1px solid var(--line);background:#f8fafc}.profile-actions>p{display:flex;margin:0;align-items:center;gap:7px;color:#6f8295;font-size:.76rem}.profile-actions>p .profile-icon{width:16px;height:16px;color:var(--blue)}.profile-actions>div{display:flex;gap:9px}
 .profile-state{display:grid;min-height:360px;padding:32px;place-items:center;align-content:center;text-align:center;color:#637c94}.profile-state h2{margin:16px 0 4px;color:var(--navy)}.profile-state p{margin:0 0 18px}.profile-state.error>.profile-icon{width:34px;height:34px;color:#c83a30}.profile-spinner,.profile-button-spinner{display:inline-block;border:2px solid #c5ddec;border-top-color:var(--blue);border-radius:50%;animation:profile-spin .8s linear infinite}.profile-spinner{width:34px;height:34px}.profile-button-spinner{width:15px;height:15px;border-color:rgba(255,255,255,.4);border-top-color:#fff}@keyframes profile-spin{to{transform:rotate(360deg)}}
@@ -22,7 +23,7 @@
 /* Restore the comfortable profile form rhythm after the compact desktop overrides. */
 .profile-page{gap:16px;padding:4px 0 24px}.profile-heading{min-height:54px;padding:2px 4px 6px}.profile-heading h1{font-size:1.8rem}.profile-heading p{margin-top:6px;font-size:.86rem}.profile-overview{min-height:118px;padding:21px 24px}.profile-content-card{border-color:var(--line);background:var(--surface, #fff)}.profile-section-heading{padding:17px 22px}.profile-tabs{padding:0 22px}.profile-tabs button{min-height:64px;padding:11px 14px}.profile-panel{min-height:250px}.profile-panel-title{width:auto;padding:19px 23px 0}.profile-fields{width:auto;padding:22px 23px;column-gap:24px;row-gap:17px}.profile-field{gap:7px;font-size:.8rem}.profile-field>span{height:auto;line-height:1.35}.profile-input{height:44px;min-height:44px;border-color:#c8d7e4;border-radius:7px;background:var(--surface, #fff)}.profile-input input,.profile-input select{height:42px;padding:0 11px;font-size:.82rem}.profile-input textarea{min-height:78px;padding:11px;font-size:.82rem}.profile-input>.profile-icon{width:17px;height:17px;margin-left:12px}.profile-actions{min-height:70px;padding:13px 22px;gap:20px}.profile-button{min-height:42px;padding:0 17px;font-size:.86rem}
 .profile-heading,.profile-overview,.profile-content-card{width:min(100%,1120px);box-sizing:border-box;margin-right:auto;margin-left:auto}.profile-field>span b{margin-left:3px}.profile-content-card{overflow:visible}.profile-actions{border-radius:0 0 12px 12px}
-:root[data-theme="dark"] .profile-content-card{border-color:var(--border);background:var(--surface-raised)}:root[data-theme="dark"] .profile-section-heading,:root[data-theme="dark"] .profile-tabs,:root[data-theme="dark"] .profile-actions{border-color:var(--border);background:var(--surface)}:root[data-theme="dark"] .profile-input{border-color:var(--border-strong);background:var(--surface-soft)}:root[data-theme="dark"] .profile-input input,:root[data-theme="dark"] .profile-input select,:root[data-theme="dark"] .profile-input textarea{color:var(--text-primary)}
+:root[data-theme="dark"] .profile-content-card{border-color:var(--border);background:var(--surface-raised)}:root[data-theme="dark"] .profile-section-heading,:root[data-theme="dark"] .profile-tabs,:root[data-theme="dark"] .profile-actions{border-color:var(--border);background:var(--surface)}:root[data-theme="dark"] .profile-input input,:root[data-theme="dark"] .profile-input select,:root[data-theme="dark"] .profile-input textarea{color:var(--text-primary)}
 @media(max-width:650px){.profile-page{gap:13px;padding:2px 0 18px}.profile-heading{min-height:0;padding:0 2px}.profile-heading h1{font-size:1.65rem}.profile-overview{padding:19px}.profile-section-heading{padding:14px 18px}.profile-tabs{padding:8px 14px}.profile-panel-title{padding:16px 18px 0}.profile-fields{padding:19px 18px;row-gap:14px}.profile-input{height:42px;min-height:42px}.profile-input input,.profile-input select{height:40px}.profile-actions{padding:11px 18px}}
 
 .profile-input{overflow:hidden;gap:0;transition:border-color .18s ease,box-shadow .18s ease,background-color .18s ease}.profile-input>.profile-icon{display:block;width:18px;height:18px;flex:0 0 44px;margin:0;padding:0 13px;box-sizing:border-box;color:#6687a2}.profile-input input,.profile-input select{flex:1;min-width:0;border-left:1px solid #e2eaf0!important;border-radius:0!important;background:var(--surface, #fff)!important}.profile-input textarea{flex:1;min-width:0;border-left:1px solid #e2eaf0!important;background:var(--surface, #fff)!important}.profile-input:focus-within{border-color:var(--blue);box-shadow:0 0 0 3px rgba(13,96,153,.12)}.profile-input:has(input:disabled),.profile-input:has(select:disabled),.profile-input:has(textarea:disabled){background:#f4f7fa}.profile-input input:disabled,.profile-input select:disabled,.profile-input textarea:disabled{background:#f4f7fa!important}.profile-field>span{letter-spacing:.01em}
@@ -283,137 +284,7 @@
 .profile-edit-grid textarea[name="permanentAddress"] { height: 42px; min-height: 42px; padding-top: 11px; resize: none; overflow: hidden; white-space: nowrap; }
 .profile-edit-grid label.profile-edit-wide:has(textarea[name="address"]),
 .profile-edit-grid label.profile-edit-wide:has(textarea[name="permanentAddress"]) { grid-column: auto; }
-.profile-edit-grid label:has(input[name="permanentHouseNumber"]) > span::after { content: " *"; color: #c9322a; font-weight: 850; }
-.profile-edit-grid label:has(textarea[name="permanentAddress"])::before,
-.profile-edit-grid label:has(input[name="permanentPincode"])::before,
-.profile-edit-grid label:has(input[name="permanentCity"])::before,
-.profile-edit-grid label:has(input[name="permanentDistrict"])::before,
-.profile-edit-grid label:has(input[name="permanentState"])::before { color: var(--pf-text, #294b69); font-size: .78rem; font-weight: 750; }
-.profile-edit-grid label:has(textarea[name="permanentAddress"])::before { content: "Address"; }
-.profile-edit-grid label:has(input[name="permanentPincode"])::before { content: "PIN Code"; }
-.profile-edit-grid label:has(input[name="permanentCity"])::before { content: "City / Block"; }
-.profile-edit-grid label:has(input[name="permanentDistrict"])::before { content: "District"; }
-.profile-edit-grid label:has(input[name="permanentState"])::before { content: "State"; }
-.profile-edit-grid label:has(textarea[name="permanentAddress"])::before { content: "Address *"; }
-.profile-edit-grid label:has(input[name="permanentPincode"])::before { content: "PIN Code *"; }
-.profile-edit-grid label:has(input[name="permanentCity"])::before { content: "City / Block *"; }
-.profile-edit-grid label:has(input[name="permanentDistrict"])::before { content: "District *"; }
-.profile-edit-grid label:has(input[name="permanentState"])::before { content: "State *"; }
-.profile-edit-grid label:has(textarea[name="permanentAddress"]),
-.profile-edit-grid label:has(input[name="permanentPincode"]),
-.profile-edit-grid label:has(input[name="permanentCity"]),
-.profile-edit-grid label:has(input[name="permanentDistrict"]),
-.profile-edit-grid label:has(input[name="permanentState"]) { font-size: 0; }
-.profile-edit-grid label:has(textarea[name="permanentAddress"])::before { content: "Address"; }
-.profile-edit-grid label:has(input[name="permanentPincode"])::before { content: "PIN Code"; }
-.profile-edit-grid label:has(input[name="permanentCity"])::before { content: "City / Block"; }
-.profile-edit-grid label:has(input[name="permanentDistrict"])::before { content: "District"; }
-.profile-edit-grid label:has(input[name="permanentState"])::before { content: "State"; }
-.profile-edit-grid label:has(textarea[name="permanentAddress"])::after,
-.profile-edit-grid label:has(input[name="permanentPincode"])::after,
-.profile-edit-grid label:has(input[name="permanentCity"])::after,
-.profile-edit-grid label:has(input[name="permanentDistrict"])::after,
-.profile-edit-grid label:has(input[name="permanentState"])::after { content: "*"; margin-left: 3px; color: #c9322a; font-size: .78rem; font-weight: 850; }
-.profile-edit-grid label:has(textarea[name="permanentAddress"]) input,
-.profile-edit-grid label:has(textarea[name="permanentAddress"]) textarea,
-.profile-edit-grid label:has(input[name="permanentPincode"]) input,
-.profile-edit-grid label:has(input[name="permanentCity"]) input,
-.profile-edit-grid label:has(input[name="permanentDistrict"]) input,
-.profile-edit-grid label:has(input[name="permanentState"]) input { font-size: .78rem; }
-
-/* Keep address labels single and avoid duplicate pseudo-label text. */
-.profile-edit-grid label:has(textarea[name="address"]),
-.profile-edit-grid label:has(input[name="pincode"]),
-.profile-edit-grid label:has(input[name="city"]),
-.profile-edit-grid label:has(input[name="district"]),
-.profile-edit-grid label:has(input[name="state"]),
-.profile-edit-grid label:has(textarea[name="permanentAddress"]),
-.profile-edit-grid label:has(input[name="permanentPincode"]),
-.profile-edit-grid label:has(input[name="permanentCity"]),
-.profile-edit-grid label:has(input[name="permanentDistrict"]),
-.profile-edit-grid label:has(input[name="permanentState"]) { display: block; color: transparent !important; font-size: 0; }
-.profile-edit-grid label:has(textarea[name="address"])::before { content: "Address"; }
-.profile-edit-grid label:has(input[name="pincode"])::before { content: "PIN Code"; }
-.profile-edit-grid label:has(input[name="city"])::before { content: "City / Block"; }
-.profile-edit-grid label:has(input[name="district"])::before { content: "District"; }
-.profile-edit-grid label:has(input[name="state"])::before { content: "State"; }
-.profile-edit-grid label:has(textarea[name="permanentAddress"])::before { content: "Address"; }
-.profile-edit-grid label:has(input[name="permanentPincode"])::before { content: "PIN Code"; }
-.profile-edit-grid label:has(input[name="permanentCity"])::before { content: "City / Block"; }
-.profile-edit-grid label:has(input[name="permanentDistrict"])::before { content: "District"; }
-.profile-edit-grid label:has(input[name="permanentState"])::before { content: "State"; }
-.profile-edit-grid label:has(textarea[name="address"])::before,
-.profile-edit-grid label:has(input[name="pincode"])::before,
-.profile-edit-grid label:has(input[name="city"])::before,
-.profile-edit-grid label:has(input[name="district"])::before,
-.profile-edit-grid label:has(input[name="state"])::before,
-.profile-edit-grid label:has(textarea[name="permanentAddress"])::before,
-.profile-edit-grid label:has(input[name="permanentPincode"])::before,
-.profile-edit-grid label:has(input[name="permanentCity"])::before,
-.profile-edit-grid label:has(input[name="permanentDistrict"])::before,
- .profile-edit-grid label:has(input[name="permanentState"])::before { display: inline-block; color: var(--pf-text, #294b69); font-size: .78rem; font-weight: 750; }
-.profile-edit-grid label:has(textarea[name="address"]) > textarea,
-.profile-edit-grid label:has(input[name="pincode"]) > input,
-.profile-edit-grid label:has(input[name="city"]) > input,
-.profile-edit-grid label:has(input[name="district"]) > input,
-.profile-edit-grid label:has(input[name="state"]) > input,
-.profile-edit-grid label:has(textarea[name="permanentAddress"]) > textarea,
-.profile-edit-grid label:has(input[name="permanentPincode"]) > input,
-.profile-edit-grid label:has(input[name="permanentCity"]) > input,
-.profile-edit-grid label:has(input[name="permanentDistrict"]) > input,
-.profile-edit-grid label:has(input[name="permanentState"]) > input { display: block; margin-top: 6px; color: var(--pf-text, #173b5c); font-size: .78rem; }
-
-/* The required star is already included in the inline pseudo-label. */
-.profile-edit-grid label:has(textarea[name="address"])::after,
-.profile-edit-grid label:has(input[name="pincode"])::after,
-.profile-edit-grid label:has(input[name="city"])::after,
-.profile-edit-grid label:has(input[name="district"])::after,
-.profile-edit-grid label:has(input[name="state"])::after,
-.profile-edit-grid label:has(textarea[name="permanentAddress"])::after,
-.profile-edit-grid label:has(input[name="permanentPincode"])::after,
-.profile-edit-grid label:has(input[name="permanentCity"])::after,
-.profile-edit-grid label:has(input[name="permanentDistrict"])::after,
-.profile-edit-grid label:has(input[name="permanentState"])::after { content: none !important; display: none !important; }
-
-/* Required markers use the error color while staying on the label line. */
-.profile-edit-grid label:has(textarea[name="address"]),
-.profile-edit-grid label:has(input[name="pincode"]),
-.profile-edit-grid label:has(input[name="city"]),
-.profile-edit-grid label:has(input[name="district"]),
-.profile-edit-grid label:has(input[name="state"]),
-.profile-edit-grid label:has(textarea[name="permanentAddress"]),
-.profile-edit-grid label:has(input[name="permanentPincode"]),
-.profile-edit-grid label:has(input[name="permanentCity"]),
-.profile-edit-grid label:has(input[name="permanentDistrict"]),
-.profile-edit-grid label:has(input[name="permanentState"]) { position: relative; }
-.profile-edit-grid label:has(textarea[name="address"])::after,
-.profile-edit-grid label:has(input[name="pincode"])::after,
-.profile-edit-grid label:has(input[name="city"])::after,
-.profile-edit-grid label:has(input[name="district"])::after,
-.profile-edit-grid label:has(input[name="state"])::after,
-.profile-edit-grid label:has(textarea[name="permanentAddress"])::after,
-.profile-edit-grid label:has(input[name="permanentPincode"])::after,
-.profile-edit-grid label:has(input[name="permanentCity"])::after,
-.profile-edit-grid label:has(input[name="permanentDistrict"])::after,
-.profile-edit-grid label:has(input[name="permanentState"])::after { content: "*" !important; display: inline-block !important; position: absolute; top: 0; left: var(--required-left, 45px); margin: 0; color: #c9322a !important; font-size: .78rem; font-weight: 850; }
-.profile-edit-grid label:has(textarea[name="address"])::after,
-.profile-edit-grid label:has(textarea[name="permanentAddress"])::after { left: 45px; }
-.profile-edit-grid label:has(input[name="pincode"]),
-.profile-edit-grid label:has(input[name="permanentPincode"]) { --required-left: 54px; }
-.profile-edit-grid label:has(input[name="city"]),
-.profile-edit-grid label:has(input[name="permanentCity"]) { --required-left: 76px; }
-.profile-edit-grid label:has(input[name="district"]),
-.profile-edit-grid label:has(input[name="permanentDistrict"]) { --required-left: 47px; }
-.profile-edit-grid label:has(input[name="state"]),
-.profile-edit-grid label:has(input[name="permanentState"]) { --required-left: 31px; }
-.profile-edit-grid label:has(input[name="pincode"])::after,
-.profile-edit-grid label:has(input[name="city"])::after,
-.profile-edit-grid label:has(input[name="district"])::after,
-.profile-edit-grid label:has(input[name="state"])::after,
-.profile-edit-grid label:has(input[name="permanentPincode"])::after,
-.profile-edit-grid label:has(input[name="permanentCity"])::after,
-.profile-edit-grid label:has(input[name="permanentDistrict"])::after,
-.profile-edit-grid label:has(input[name="permanentState"])::after { left: var(--required-left); }
+.profile-edit-grid label > span { display: block; }
 .profile-edit-grid input:focus, .profile-edit-grid select:focus, .profile-edit-grid textarea:focus { border-color: var(--blue); box-shadow: 0 0 0 3px rgba(13,96,153,.12); }
 .profile-edit-wide { grid-column: 1 / -1; }
 .profile-address-heading{margin-top:3px;padding:7px 0 2px;border-bottom:1px solid var(--pf-border,#d5e1ea);color:var(--navy);font-size:.76rem;font-weight:850;letter-spacing:.06em;text-transform:uppercase}.profile-pin-status{color:var(--blue)!important;font-weight:650!important}
@@ -500,4 +371,14 @@
   color: #C7DFFF !important;
   background: #123F73 !important;
   border: 1px solid rgba(169, 211, 247, .4);
+}
+
+/* Keep required markers distinct from dark dialog label colors. */
+#root .profile-edit-dialog .profile-edit-grid label > span > .profile-required {
+  display: inline;
+  margin-left: 2px;
+  color: #dc2626 !important;
+}
+:root[data-theme="dark"] #root .profile-edit-dialog .profile-edit-grid label > span > .profile-required {
+  color: #f87171 !important;
 }

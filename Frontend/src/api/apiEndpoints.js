@@ -1190,15 +1190,67 @@ export const studentFeeApi = {
 
 // Contracts: Backend/DTOs/Fees/FeeCollectionDtos.cs. Reuse authentication,
 // refresh, error handling and request deduplication from the shared client.
+function financialData(response, amounts = [], lists = []) {
+  const data = response?.data
+  if (!data || typeof data !== 'object' || amounts.some(key => typeof data[key] !== 'number' || !Number.isFinite(data[key])) || lists.some(key => !Array.isArray(data[key]))) {
+    throw new Error('Financial response is incomplete. Refresh before using these balances.')
+  }
+  return data
+}
+function financialPage(response, amounts) {
+  const data = financialData(response, ['totalCount', 'totalPages', 'page', 'pageSize'], ['items'])
+  const expectedItems = Math.max(0, Math.min(data.pageSize, data.totalCount - (data.page - 1) * data.pageSize))
+  if (['totalCount', 'totalPages', 'page', 'pageSize'].some(key => !Number.isSafeInteger(data[key])) || data.totalCount < 0 || data.page < 1 || data.pageSize < 1 || data.totalPages !== Math.ceil(data.totalCount / data.pageSize) || data.items.length !== expectedItems || data.items.some(row => !row || amounts.some(key => typeof row[key] !== 'number' || !Number.isFinite(row[key]) || (key.endsWith('Id') && (!Number.isSafeInteger(row[key]) || row[key] <= 0))))) {
+    throw new Error('Financial records are incomplete. Refresh before using these balances.')
+  }
+  return data
+}
+async function allFinancialPages(load, params, idKey) {
+  const rows = []
+  const seen = new Set()
+  let expectedCount
+  for (let page = 1; ; page += 1) {
+    const result = await load({ ...params, page, pageSize: 100 })
+    if (!result || !Array.isArray(result.items) || result.page !== page || result.pageSize !== 100 || !Number.isInteger(result.totalCount) || !Number.isInteger(result.totalPages)) {
+      throw new Error('Financial response is incomplete. Refresh before using these balances.')
+    }
+    if (expectedCount !== undefined && expectedCount !== result.totalCount) throw new Error('Financial records changed while loading. Refresh to get a consistent view.')
+    expectedCount = result.totalCount
+    for (const row of result.items) {
+      if (seen.has(row[idKey])) throw new Error('Financial records repeated while loading. Refresh to get a consistent view.')
+      seen.add(row[idKey])
+    }
+    rows.push(...result.items)
+    if (page >= result.totalPages) {
+      if (rows.length !== expectedCount) throw new Error('Not all financial records were returned. Refresh before using these balances.')
+      return rows
+    }
+    if (!result.items.length) throw new Error('Financial pagination is incomplete. Refresh to retry.')
+  }
+}
 export const feeCollectionApi = {
-  dashboard: async params => (await request(withQuery(endpoint('/api/v1/fee-collection/dashboard'), params)))?.data,
-  pending: async params => (await request(withQuery(endpoint('/api/v1/fee-collection/pending'), params)))?.data,
-  history: async params => (await request(withQuery(endpoint('/api/v1/fee-collection/history'), params)))?.data,
-  fines: async params => (await request(withQuery(endpoint('/api/v1/fee-collection/fines'), params)))?.data,
+  dashboard: async params => {
+    const data = financialData(await request(withQuery(endpoint('/api/v1/fee-collection/dashboard'), params)), ['totalAssigned', 'totalConcession', 'totalPayable', 'totalCollected', 'totalPending', 'totalOverdue', 'totalFineAssessed', 'totalFineCollected', 'totalFinePending', 'studentsWithPending', 'studentsOverdue', 'paymentsCount', 'receiptsCount'], ['collectionTrend', 'byCategory', 'byPaymentMode'])
+    for (const [key, amounts] of [['collectionTrend', ['amount', 'paymentCount']], ['byCategory', ['assigned', 'collected', 'pending']], ['byPaymentMode', ['amount', 'paymentCount']]]) {
+      data[key].forEach(row => financialData({ data: row }, amounts))
+    }
+    if (data.collectionTrend.some(row => typeof row.date !== 'string' || Number.isNaN(Date.parse(row.date))) || data.byCategory.some(row => typeof row.categoryName !== 'string' || !row.categoryName.trim()) || data.byPaymentMode.some(row => typeof row.paymentMode !== 'string' || !row.paymentMode.trim())) throw new Error('Financial summary labels or dates are incomplete. Refresh before using this report.')
+    return data
+  },
+  pending: async params => financialPage(await request(withQuery(endpoint('/api/v1/fee-collection/pending'), params)), ['studentFeeId', 'studentId', 'payableAmount', 'paidAmount', 'balanceAmount', 'finePending', 'concessionAmount']),
+  history: async params => financialPage(await request(withQuery(endpoint('/api/v1/fee-collection/history'), params)), ['paymentId', 'studentId', 'receiptId', 'feeAmount', 'fineAmount', 'totalAmount']),
+  fines: async params => financialPage(await request(withQuery(endpoint('/api/v1/fee-collection/fines'), params)), ['fineId', 'amount', 'waivedAmount', 'pendingAmount']),
   collect: async payload => (await request(endpoint('/api/v1/fee-collection/payments'), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) }))?.data,
-  receipt: async id => (await request(endpoint(`/api/v1/fee-collection/receipts/${requiredId(id, 'Receipt ID')}`)))?.data,
+  receipt: async id => {
+    const data = financialData(await request(endpoint(`/api/v1/fee-collection/receipts/${requiredId(id, 'Receipt ID')}`)), ['receiptId', 'paymentId', 'studentId', 'feeAmount', 'fineAmount', 'totalAmount'])
+    if (['receiptId', 'paymentId', 'studentId'].some(key => !Number.isSafeInteger(data[key]) || data[key] <= 0) || String(data.receiptId) !== String(id) || typeof data.receiptNumber !== 'string' || !data.receiptNumber.trim() || ['feeAmount', 'fineAmount', 'totalAmount'].some(key => data[key] < 0 || !Number.isSafeInteger(Math.round(data[key] * 100)) || data[key] !== Math.round(data[key] * 100) / 100) || Math.round(data.totalAmount * 100) !== Math.round(data.feeAmount * 100) + Math.round(data.fineAmount * 100)) throw new Error('Receipt is incomplete or inconsistent. Check confirmed payments before printing.')
+    return data
+  },
   createFine: async payload => (await request(endpoint('/api/v1/fee-collection/fines'), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) }))?.data,
   waiveFine: async (id, payload) => (await request(endpoint(`/api/v1/fee-collection/fines/${requiredId(id, 'Fine ID')}/waive`), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) }))?.data,
+  allPending: params => allFinancialPages(feeCollectionApi.pending, params, 'studentFeeId'),
+  allHistory: params => allFinancialPages(feeCollectionApi.history, params, 'paymentId'),
+  allFines: params => allFinancialPages(feeCollectionApi.fines, params, 'fineId'),
 }
 export const studentApi = {
   getAll: async (params) => listData(await request(withQuery(API_ENDPOINTS.students.list, params))), search: async (params) => listData(await request(withQuery(API_ENDPOINTS.students.search, params))),

@@ -1,44 +1,74 @@
-import useCollegeState from '../../hooks/useCollegeState'
-import { newestFirst } from '../../utils/newestFirst'
-import { showError } from '../../utils/toast'
-import useToastState from '../../hooks/useToastState'
-import React, { useState, useEffect, useMemo, useCallback } from 'react'
-import { useLocation, useNavigate } from 'react-router-dom'
-import {
-  FiCalendar,
-  FiCheckCircle,
-  FiClock,
-  FiEye,
-  FiLayers,
-  FiPlus,
-  FiSearch,
-  FiUsers,
-  FiUserCheck,
-  FiUserX,
-  FiAlertTriangle,
-  FiBarChart2,
-  FiBell,
-  FiSave,
-  FiFilter,
-  FiChevronDown,
-  FiChevronUp,
-} from 'react-icons/fi'
-import DashboardLayout from '../../layouts/DashboardLayout'
-import PageHeader from '../../components/PageHeader'
-import CompactSummary from '../../components/CompactSummary'
-import StatusBadge from '../../components/StatusBadge'
-import EmptyState from '../../components/EmptyState'
-import InfoCard from '../../components/InfoCard'
-import TablePagination from '../../components/TablePagination'
-import ExportMenu from '../../components/ExportMenu'
-import ViewDialog from '../../components/ViewDialog'
-import { useAcademic } from '../../context/AcademicContext'
-import { facultyMasterApi } from '../../api/apiEndpoints'
-import attendanceService from '../../services/attendanceService'
-import studentService from '../../services/studentService'
-import facultyService from '../../services/facultyService'
-import subjectService from '../../services/subjectService'
+import { ProjectSelect as SearchableSelectImports_ProjectSelect } from '../../components/SearchableSelect'
+import useCollegeStateImports_default from '../../hooks/useCollegeState'
+import { newestFirst as newestFirstImports_newestFirst } from '../../utils/newestFirst'
+import { showError as toastImports_showError } from '../../utils/toast'
+import useToastStateImports_default from '../../hooks/useToastState'
+import reactImports_default, { useState as reactImports_useState, useEffect as reactImports_useEffect, useMemo as reactImports_useMemo, useCallback as reactImports_useCallback } from 'react'
+import { useLocation as react_router_domImports_useLocation, useNavigate as react_router_domImports_useNavigate, Link as react_router_domImports_Link, useParams as react_router_domImports_useParams } from 'react-router-dom'
+import { FiCalendar as fiImports_FiCalendar, FiCheckCircle as fiImports_FiCheckCircle, FiClock as fiImports_FiClock, FiEye as fiImports_FiEye, FiLayers as fiImports_FiLayers, FiPlus as fiImports_FiPlus, FiSearch as fiImports_FiSearch, FiUsers as fiImports_FiUsers, FiUserCheck as fiImports_FiUserCheck, FiUserX as fiImports_FiUserX, FiAlertTriangle as fiImports_FiAlertTriangle, FiBarChart2 as fiImports_FiBarChart2, FiBell as fiImports_FiBell, FiSave as fiImports_FiSave, FiFilter as fiImports_FiFilter, FiChevronDown as fiImports_FiChevronDown, FiChevronUp as fiImports_FiChevronUp, FiArrowLeft as fiImports_FiArrowLeft } from 'react-icons/fi'
+import DashboardLayoutImports_default from '../../layouts/DashboardLayout'
+import PageHeaderImports_default from '../../components/PageHeader'
+import CompactSummaryImports_default from '../../components/CompactSummary'
+import StatusBadgeImports_default from '../../components/StatusBadge'
+import EmptyStateImports_default from '../../components/EmptyState'
+import InfoCardImports_default from '../../components/InfoCard'
+import TablePaginationImports_default from '../../components/TablePagination'
+import ExportMenuImports_default from '../../components/ExportMenu'
+import ViewDialogImports_default from '../../components/ViewDialog'
+import { useAcademic as AcademicContextImports_useAcademic } from '../../context/AcademicContext'
+import { facultyMasterApi as apiEndpointsImports_facultyMasterApi } from '../../api/apiEndpoints'
+import attendanceServiceImports_default from '../../services/attendanceService'
+import studentServiceImports_default from '../../services/studentService'
+import facultyServiceImports_default from '../../services/facultyService'
+import subjectServiceImports_default from '../../services/subjectService'
 import './Attendance.css'
+
+// Attendance screen and private helpers.
+const AttendanceScreen = (() => {
+const ProjectSelect = SearchableSelectImports_ProjectSelect
+const useCollegeState = useCollegeStateImports_default
+const newestFirst = newestFirstImports_newestFirst
+const showError = toastImports_showError
+const useToastState = useToastStateImports_default
+const useState = reactImports_useState
+const useEffect = reactImports_useEffect
+const useMemo = reactImports_useMemo
+const useCallback = reactImports_useCallback
+const React = reactImports_default
+const useLocation = react_router_domImports_useLocation
+const useNavigate = react_router_domImports_useNavigate
+const FiCalendar = fiImports_FiCalendar
+const FiCheckCircle = fiImports_FiCheckCircle
+const FiClock = fiImports_FiClock
+const FiEye = fiImports_FiEye
+const FiLayers = fiImports_FiLayers
+const FiPlus = fiImports_FiPlus
+const FiSearch = fiImports_FiSearch
+const FiUsers = fiImports_FiUsers
+const FiUserCheck = fiImports_FiUserCheck
+const FiUserX = fiImports_FiUserX
+const FiAlertTriangle = fiImports_FiAlertTriangle
+const FiBarChart2 = fiImports_FiBarChart2
+const FiBell = fiImports_FiBell
+const FiSave = fiImports_FiSave
+const FiFilter = fiImports_FiFilter
+const FiChevronDown = fiImports_FiChevronDown
+const FiChevronUp = fiImports_FiChevronUp
+const DashboardLayout = DashboardLayoutImports_default
+const PageHeader = PageHeaderImports_default
+const CompactSummary = CompactSummaryImports_default
+const StatusBadge = StatusBadgeImports_default
+const EmptyState = EmptyStateImports_default
+const InfoCard = InfoCardImports_default
+const TablePagination = TablePaginationImports_default
+const ExportMenu = ExportMenuImports_default
+const ViewDialog = ViewDialogImports_default
+const useAcademic = AcademicContextImports_useAcademic
+const facultyMasterApi = apiEndpointsImports_facultyMasterApi
+const attendanceService = attendanceServiceImports_default
+const studentService = studentServiceImports_default
+const facultyService = facultyServiceImports_default
+const subjectService = subjectServiceImports_default
 
 const ATTENDANCE_COLUMNS = [
   { key: 'date', label: 'Date' },
@@ -54,7 +84,7 @@ const ATTENDANCE_COLUMNS = [
   { key: 'faculty', label: 'Faculty' },
 ]
 
-export default function Attendance() {
+function Attendance() {
   const { pathname } = useLocation()
   const navigate = useNavigate()
   const {
@@ -830,24 +860,24 @@ export default function Attendance() {
               {showRegisterFilters && <div id="attendance-register-filters" className="attendance-register-filters">
                 <div className="erp-form-group">
                   <label>Course</label>
-                  <select className="erp-select" value={filterCourseId} onChange={(e) => {
+                  <ProjectSelect className="erp-select" value={filterCourseId} onChange={(e) => {
                     setFilterCourseId(e.target.value)
                     setFilterBranchId('')
                     setCurrentPage(1)
                   }}>
                     <option value="">All Courses</option>
                     {activeCourses.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
-                  </select>
+                  </ProjectSelect>
                 </div>
                 <div className="erp-form-group">
                   <label>Branch</label>
-                  <select className="erp-select" value={filterBranchId} disabled={!filterCourseId} onChange={(e) => {
+                  <ProjectSelect className="erp-select" value={filterBranchId} disabled={!filterCourseId} onChange={(e) => {
                     setFilterBranchId(e.target.value)
                     setCurrentPage(1)
                   }}>
                     <option value="">All Branches</option>
                     {filterBranches.map((branch) => <option key={branch.id} value={branch.id}>{branch.name}</option>)}
-                  </select>
+                  </ProjectSelect>
                 </div>
                 <div className="erp-form-group">
                   <label>Date</label>
@@ -1021,7 +1051,7 @@ export default function Attendance() {
 
                 <div className="erp-form-group">
                   <label>Course <span className="attendance-required-mark">*</span></label>
-                  <select
+                  <ProjectSelect
                     className="erp-select"
                     value={takeScope.courseId}
                     onChange={(e) => setTakeScope(prev => ({ ...prev, courseId: e.target.value, branchId: '', semesterId: '', sectionId: '', subjectId: '', subject: '', subjectCode: '', facultyId: '', faculty: '' }))}
@@ -1030,7 +1060,7 @@ export default function Attendance() {
                     {activeCourses.map(c => (
                       <option key={c.id} value={c.id}>{c.name}</option>
                     ))}
-                  </select>
+                  </ProjectSelect>
                 </div>
 
                 <div className="erp-form-group">
@@ -1046,7 +1076,7 @@ export default function Attendance() {
 
                 <div className="erp-form-group">
                   <label>Branch <span className="attendance-required-mark">*</span></label>
-                  <select
+                  <ProjectSelect
                     className="erp-select"
                     value={takeScope.branchId}
                     disabled={!takeScope.courseId}
@@ -1056,7 +1086,7 @@ export default function Attendance() {
                     {takeBranches.map(b => (
                       <option key={b.id} value={b.id}>{b.name}</option>
                     ))}
-                  </select>
+                  </ProjectSelect>
                 </div>
 
                 <div className="erp-form-group">
@@ -1072,7 +1102,7 @@ export default function Attendance() {
 
                 <div className="erp-form-group">
                   <label>Semester <span className="attendance-required-mark">*</span></label>
-                  <select
+                  <ProjectSelect
                     className="erp-select"
                     value={takeScope.semesterId}
                     disabled={!takeScope.courseId}
@@ -1082,12 +1112,12 @@ export default function Attendance() {
                     {takeSemesters.map(s => (
                       <option key={s.id} value={s.id}>{s.semesterName}</option>
                     ))}
-                  </select>
+                  </ProjectSelect>
                 </div>
 
                 <div className="erp-form-group">
                   <label>Section <span className="attendance-required-mark">*</span></label>
-                  <select
+                  <ProjectSelect
                     className="erp-select"
                     value={takeScope.sectionId}
                     onChange={(e) => setTakeScope(prev => ({ ...prev, sectionId: e.target.value }))}
@@ -1096,7 +1126,7 @@ export default function Attendance() {
                     {takeSections.map(sec => (
                       <option key={sec.id} value={sec.id}>{sec.name}</option>
                     ))}
-                  </select>
+                  </ProjectSelect>
                 </div>
 
                 <div className="erp-form-group">
@@ -1111,7 +1141,7 @@ export default function Attendance() {
 
                 <div className="erp-form-group">
                   <label>Subject / Course Module <span className="attendance-required-mark">*</span></label>
-                  <select
+                  <ProjectSelect
                     className="erp-select"
                     value={takeScope.subjectId || ''}
                     disabled={loadingSubjects || !takeScope.branchId}
@@ -1172,7 +1202,7 @@ export default function Attendance() {
                         </option>
                       )
                     })}
-                  </select>
+                  </ProjectSelect>
                   {!loadingSubjects && takeScope.branchId && availableSubjects.length === 0 && (
                     <small className="attendance-field-help">No subjects configured in Subject Management for this branch.</small>
                   )}
@@ -1191,7 +1221,7 @@ export default function Attendance() {
 
                 <div className="erp-form-group">
                   <label>Faculty In-Charge <span className="attendance-required-mark">*</span></label>
-                  <select
+                  <ProjectSelect
                     className="erp-select"
                     value={takeScope.facultyId || ''}
                     disabled={loadingFaculty || !takeScope.branchId}
@@ -1206,7 +1236,7 @@ export default function Attendance() {
                         {[member.fullName, member.employeeId || member.facultyCode, member.designation].filter(Boolean).join(' - ')}
                       </option>
                     ))}
-                  </select>
+                  </ProjectSelect>
                   {!loadingFaculty && takeScope.branchId && branchFaculty.length === 0 && <small className="attendance-field-help">No active faculty assignment is available for the selected branch.</small>}
                 </div>
               </div>
@@ -1424,3 +1454,75 @@ function AttendanceRateBadge({ rate, criticalThreshold = null }) {
 function ReportTable({ rows, columns, empty }) {
   return <div className="erp-table-responsive"><table className="erp-table attendance-report-table"><thead><tr>{columns.map(([label]) => <th key={label}>{label}</th>)}</tr></thead><tbody>{rows.length ? rows.map((row, index) => <tr key={row.id || row.subject || row.month || index}>{columns.map(([label, render]) => <td key={label}>{render(row)}</td>)}</tr>) : <tr><td colSpan={columns.length} className="attendance-report-empty">{empty}</td></tr>}</tbody></table></div>
 }
+
+return { default: Attendance }
+})()
+
+// AttendanceSessionDetails screen and private helpers.
+const AttendanceSessionDetailsScreen = (() => {
+const useAcademic = AcademicContextImports_useAcademic
+const useEffect = reactImports_useEffect
+const useState = reactImports_useState
+const Link = react_router_domImports_Link
+const useParams = react_router_domImports_useParams
+const DashboardLayout = DashboardLayoutImports_default
+const InfoCard = InfoCardImports_default
+const StatusBadge = StatusBadgeImports_default
+const attendanceService = attendanceServiceImports_default
+const FiCalendar = fiImports_FiCalendar
+const FiArrowLeft = fiImports_FiArrowLeft
+
+function AttendanceSessionDetails() {
+  const { sessionId } = useParams()
+  const { scopeRecords } = useAcademic()
+  const [session, setSession] = useState(null)
+  const [records, setRecords] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
+  const [retry, setRetry] = useState(0)
+  useEffect(() => {
+    let active = true
+    setLoading(true)
+    setError('')
+    Promise.all([attendanceService.getSessions(), attendanceService.getSessionStudents(sessionId)])
+      .then(([sessions, students]) => {
+        const found = scopeRecords(sessions).find(item => String(item.id) === sessionId)
+        if (!found) throw new Error('Attendance session not found.')
+        if (active) { setSession(found); setRecords(students) }
+      })
+      .catch(cause => { if (active) setError(cause.message || 'Unable to load session details.') })
+      .finally(() => { if (active) setLoading(false) })
+    return () => { active = false }
+  }, [sessionId, retry, scopeRecords])
+
+  return <DashboardLayout>
+    <section className="attendance-content">
+      <header className="attendance-session-details-header">
+        <h1>Session Details</h1>
+        <Link className="erp-btn erp-btn--secondary attendance-session-back" to="/student-management/attendance"><FiArrowLeft aria-hidden="true" />Back</Link>
+      </header>
+      {loading ? <p role="status">Loading session details...</p> : error ? <div role="alert"><p>{error}</p><button type="button" className="erp-btn erp-btn--secondary" onClick={() => setRetry(value => value + 1)}>Retry</button></div> : session && <>
+        <InfoCard icon={FiCalendar} title={session.subject || 'Attendance session'} items={[
+          { label: 'Date', value: session.date }, { label: 'Faculty', value: session.faculty },
+          { label: 'Academic Year', value: session.academicYear }, { label: 'Course', value: session.course },
+          { label: 'Semester', value: session.semester }, { label: 'Section', value: session.section },
+        ]} />
+        <h2>Student Attendance ({records.length})</h2>
+        <div className="erp-table-responsive"><table className="erp-table">
+          <thead><tr><th>#</th><th>Roll No</th><th>Student Name</th><th>Status</th></tr></thead>
+          <tbody>{records.length ? records.map((record, index) => <tr key={record.studentId || index}>
+            <td>{index + 1}</td><td>{record.rollNumber || record.studentId}</td><td>{record.name}</td>
+            <td><StatusBadge status={record.status === 'Present' ? 'Active' : record.status === 'Late' ? 'Warning' : 'Danger'} label={record.status} /></td>
+          </tr>) : <tr><td colSpan={4}>No student attendance records are available for this session.</td></tr>}</tbody>
+        </table></div>
+      </>}
+    </section>
+  </DashboardLayout>
+}
+
+return { default: AttendanceSessionDetails }
+})()
+
+export const Attendance = AttendanceScreen.default
+export const AttendanceSessionDetails = AttendanceSessionDetailsScreen.default
+export default Attendance

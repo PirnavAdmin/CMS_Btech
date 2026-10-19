@@ -1,3 +1,4 @@
+import { ProjectSelect } from './SearchableSelect'
 import { useState } from 'react'
 import SearchableSelect from './SearchableSelect'
 import { useAcademic } from '../context/AcademicContext'
@@ -46,10 +47,10 @@ export default function AcademicContextSelect({ kind, compact = false }) {
       menuClassName={`workspace-context-menu workspace-context-menu--${kind}`}
     /> : <label>
       <span>{label}</span>
-      <select title={selectedLabel} aria-label={`Change ${label.toLowerCase()}`} value={value || ''} onChange={change} disabled={disabled}>
+      <ProjectSelect title={selectedLabel} aria-label={`Change ${label.toLowerCase()}`} value={value || ''} onChange={change} disabled={disabled}>
         <option value="" disabled>{context.loading ? 'Loading...' : `Select ${label.toLowerCase()}`}</option>
         {items.map(item => <option key={idOf(item)} value={idOf(item)}>{nameOf(item)}</option>)}
-      </select>
+      </ProjectSelect>
     </label>}
     {(error || context.error) && <div className={isCollege ? 'workspace-context-select__sidebar-error' : 'workspace-context-select__error'} role="alert">
       {!isCollege && <span>{context.error ? 'Academic years unavailable' : `Unable to update ${label.toLowerCase()}`}</span>}

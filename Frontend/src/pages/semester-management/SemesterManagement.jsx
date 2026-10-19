@@ -1,3 +1,4 @@
+import { ProjectSelect } from '../../components/SearchableSelect'
 import DirectoryEmptyState from '../../components/DirectoryEmptyState'
 import { newestFirst, rememberCreated } from '../../utils/newestFirst'
 import useToastState from '../../hooks/useToastState'
@@ -327,22 +328,22 @@ function SemesterList() {
             <FiSearch />
             <input aria-label="Search semesters" value={query} onChange={(event) => { setQuery(event.target.value); setPage(1) }} placeholder="Search semester, course, code or branch..." />
           </label>
-          <select aria-label="Filter by course" value={filters.courseId} onChange={(event) => changeFilter('courseId', event.target.value)}>
+          <ProjectSelect aria-label="Filter by course" value={filters.courseId} onChange={(event) => changeFilter('courseId', event.target.value)}>
             <option value="">Select Course</option>
             {courses.map((item) => <option key={item.id} value={item.id}>{item.name}{item.code ? ` - ${item.code}` : ''}</option>)}
-          </select>
-          <select aria-label="Filter by branch" value={filters.branchId} onChange={(event) => changeFilter('branchId', event.target.value)}>
+          </ProjectSelect>
+          <ProjectSelect aria-label="Filter by branch" value={filters.branchId} onChange={(event) => changeFilter('branchId', event.target.value)}>
             <option value="">Select Branch</option>
             {filteredBranches.map((item) => <option key={item.id} value={item.id}>{item.code ? `${item.code} - ` : ''}{item.name}</option>)}
-          </select>
-          <select aria-label="Filter by academic year" value={filters.academicYearId} onChange={(event) => changeFilter('academicYearId', event.target.value)}>
+          </ProjectSelect>
+          <ProjectSelect aria-label="Filter by academic year" value={filters.academicYearId} onChange={(event) => changeFilter('academicYearId', event.target.value)}>
             <option value="">Select Academic Year</option>
             {years.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}
-          </select>
-          <select aria-label="Filter by status" value={filters.status} onChange={(event) => changeFilter('status', event.target.value)}>
+          </ProjectSelect>
+          <ProjectSelect aria-label="Filter by status" value={filters.status} onChange={(event) => changeFilter('status', event.target.value)}>
             <option value="">Select Status</option>
             {['Active', 'Upcoming', 'Completed'].map((item) => <option key={item} value={item}>{item}</option>)}
-          </select>
+          </ProjectSelect>
         </div>
       </FilterPanel>
       {loading ? <Empty icon={FiClock} title="Loading semesters..." /> : error ? <Empty icon={FiLayers} title={error} action={<button className="semester-primary" onClick={load}>Retry</button>} isError /> : visible.length ? (

@@ -1,3 +1,4 @@
+import { ProjectSelect } from './SearchableSelect'
 import { showSuccess, showError, showWarning } from '../utils/toast'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { FiBookOpen, FiCheckCircle, FiShield, FiTrendingUp, FiX } from 'react-icons/fi'
@@ -31,10 +32,10 @@ export default function RequestDemo({ onClose }) {
       <label className="rd-field" key={name} htmlFor={`rd-${name}`}>
         <span>{label}{required && <b> *</b>}</span>
         {options ? (
-          <select id={`rd-${name}`} name={name} value={values[name]} onBlur={() => markTouched(name)} onChange={e => { update(e); markTouched(name); }} required={required} aria-invalid={Boolean(err)} aria-describedby={err ? `rd-${name}-error` : undefined}>
+          <ProjectSelect id={`rd-${name}`} name={name} value={values[name]} onBlur={() => markTouched(name)} onChange={e => { update(e); markTouched(name); }} required={required} aria-invalid={Boolean(err)} aria-describedby={err ? `rd-${name}-error` : undefined}>
             <option value="">Select {label.toLowerCase()}</option>
             {options.map(x => <option key={x}>{x}</option>)}
-          </select>
+          </ProjectSelect>
         ) : (
           <input id={`rd-${name}`} name={name} value={values[name]} onBlur={() => markTouched(name)} onChange={e => { update(e); markTouched(name); }} required={required} maxLength={120} aria-invalid={Boolean(err)} aria-describedby={err ? `rd-${name}-error` : undefined} {...props} />
         )}

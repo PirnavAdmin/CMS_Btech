@@ -1,3 +1,4 @@
+import { ProjectSelect } from '../../../components/SearchableSelect'
 import useCollegeState from '../../../hooks/useCollegeState'
 import { newestFirst } from '../../../utils/newestFirst'
 import { promotionDetailSections } from '../../../utils/recordDetailSections'
@@ -33,9 +34,6 @@ import promotionService from '../../../services/promotionService'
 import studentService from '../../../services/studentService'
 import eventBus, { ERP_EVENTS } from '../../../services/eventBus'
 import './StudentPromotion.css'
-import './StudentPromotionHeader.css'
-import './StudentPromotionSearch.css'
-import './StudentPromotionScope.css'
 
 const formatSemesterLabel = (val) => {
   if (val === undefined || val === null || val === '') return '-'
@@ -602,7 +600,7 @@ export default function StudentPromotion() {
           <div className="erp-form-grid">
             <div className="erp-form-group">
               <label>Course <span className="text-danger" style={{ color: '#dc2626' }}>*</span></label>
-              <select
+              <ProjectSelect
                 className="erp-select"
                 value={courseId}
                 onChange={(e) => {
@@ -618,12 +616,12 @@ export default function StudentPromotion() {
                     {c.name} ({c.code})
                   </option>
                 ))}
-              </select>
+              </ProjectSelect>
             </div>
 
             <div className="erp-form-group">
               <label>Branch <span className="text-danger" style={{ color: '#dc2626' }}>*</span></label>
-              <select
+              <ProjectSelect
                 className="erp-select"
                 value={selectedBranchId}
                 disabled={!courseId}
@@ -639,12 +637,12 @@ export default function StudentPromotion() {
                     {b.name} ({b.code})
                   </option>
                 ))}
-              </select>
+              </ProjectSelect>
             </div>
 
             <div className="erp-form-group">
               <label>Current Academic Year <span className="text-danger" style={{ color: '#dc2626' }}>*</span></label>
-              <select
+              <ProjectSelect
                 className="erp-select"
                 value={selectedAcademicYearId}
                 onChange={(e) => {
@@ -658,12 +656,12 @@ export default function StudentPromotion() {
                     {y.name}
                   </option>
                 ))}
-              </select>
+              </ProjectSelect>
             </div>
 
             <div className="erp-form-group">
               <label>Current Semester <span className="text-danger" style={{ color: '#dc2626' }}>*</span></label>
-              <select
+              <ProjectSelect
                 className="erp-select"
                 value={selectedSemesterNumber}
                 disabled={!selectedBranchId}
@@ -678,7 +676,7 @@ export default function StudentPromotion() {
                     {s.semesterName || `Semester ${s.semesterNumber || s.id}`}
                   </option>
                 ))}
-              </select>
+              </ProjectSelect>
             </div>
           </div>
         </section>

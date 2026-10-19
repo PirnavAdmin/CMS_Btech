@@ -1,3 +1,4 @@
+import { ProjectSelect } from '../../components/SearchableSelect'
 import { GENERIC_ERROR_MESSAGE } from '../../utils/userError.js'
 import DirectoryEmptyState from '../../components/DirectoryEmptyState'
 import { collegeStorageKey } from '../../utils/collegeScope.js'
@@ -80,7 +81,7 @@ function Toolbar({ search, setSearch, filters, setFilters, options, values, plac
   const active = options.some(key => filters[key] !== 'All')
   const clear = () => setFilters({ ...filters, ...Object.fromEntries(options.map(key => [key, 'All'])) })
   const filterOptions = options.filter(key => !quickFilterKeys.includes(key))
-  const content = <div className="em-toolbar"><div className="em-search"><FiSearch /><input value={search} onChange={event => setSearch(event.target.value)} placeholder={placeholder} aria-label={placeholder} /></div>{showFilters && <div className="em-filters">{filterOptions.map(key => <select key={key} value={filters[key]} onChange={event => setFilters({ ...filters, [key]: event.target.value })}><option value="All">All {key.replace(/([A-Z])/g, ' $1')}</option>{values(key).map(value => <option key={value}>{value}</option>)}</select>)}</div>}</div>
+  const content = <div className="em-toolbar"><div className="em-search"><FiSearch /><input value={search} onChange={event => setSearch(event.target.value)} placeholder={placeholder} aria-label={placeholder} /></div>{showFilters && <div className="em-filters">{filterOptions.map(key => <ProjectSelect key={key} value={filters[key]} onChange={event => setFilters({ ...filters, [key]: event.target.value })}><option value="All">All {key.replace(/([A-Z])/g, ' $1')}</option>{values(key).map(value => <option key={value}>{value}</option>)}</ProjectSelect>)}</div>}</div>
   return showFilters ? <FilterPanel active={active} onClear={clear} leadingActions={leadingActions} className="em-filter-panel">{content}</FilterPanel> : content
 }
 function SelectionTable({ rows, approval = false, onApproval, emptyTitle = 'No elective selections found', search = '', className = '' }) { if (!rows.length) return <EmptyState title={approval ? 'No pending approvals' : emptyTitle} description={search ? 'Try a different search or filter.' : 'Records will appear here when they are available.'} />; return <div className={`sm-table-wrap ${className}`}><table className="em-table"><thead><tr><th>Student</th><th>Group</th><th>Subject</th><th>Credits</th><th>Selection Date</th><th>Approval</th><th>Allocation</th>{approval && <th>Actions</th>}</tr></thead><tbody>{rows.map(row => <tr key={rowId(row)}><td><strong>{text(row.studentName || row.fullName, row.rollNumber || row.studentId)}</strong><span className="em-cell-subtitle">{text(row.studentCode || row.studentId || row.rollNumber)}</span></td><td>{text(row.groupCode || row.electiveGroupCode)}<span className="em-cell-subtitle">{text(row.groupName || row.electiveGroupName)}</span></td><td><strong>{text(row.subjectCode)}</strong><span className="em-cell-subtitle">{text(row.subjectName)}</span></td><td>{text(row.credits, '-')}</td><td>{text(row.selectionDate || row.createdAt, '-')}</td><td><StatusBadge value={displayApprovalStatus(row)} /></td><td><StatusBadge value={allocationStatus(row)} /></td>{approval && <td><div className="em-row-actions"><button type="button" className="sm-btn sm-btn--primary em-compact-btn" onClick={() => onApproval(row, 'Approved')}>Approve</button><button type="button" className="sm-btn sm-btn--danger em-compact-btn" onClick={() => onApproval(row, 'Rejected')}>Reject</button></div></td>}</tr>)}</tbody></table></div> }
@@ -548,13 +549,13 @@ export default function ElectiveManagement() {
                     <label className="sm-field" key={key}>
                       <span>{label}<b className="em-required-star">*</b></span>
                       {key === 'academicYear' ? (
-                        <select value={groupForm.academicYear} onChange={event => setGroupForm({ ...groupForm, academicYear: event.target.value })} required>
+                        <ProjectSelect value={groupForm.academicYear} onChange={event => setGroupForm({ ...groupForm, academicYear: event.target.value })} required>
                           <option value="">Select academic year</option>
                           {academicYears.map(year => {
                             const name = year.academicYearName || year.name
                             return name ? <option key={year.academicYearId || year.id || name} value={name}>{name}</option> : null
                           })}
-                        </select>
+                        </ProjectSelect>
                       ) : (
                         <input
                           type={key.includes('Date') ? 'date' : key === 'credits' ? 'number' : 'text'}
@@ -595,18 +596,18 @@ export default function ElectiveManagement() {
                   </label>
                   <label className="sm-field">
                     <span>Semester</span>
-                    <select value={groupForm.semester} onChange={event => setGroupForm({ ...groupForm, semester: event.target.value })} required>
+                    <ProjectSelect value={groupForm.semester} onChange={event => setGroupForm({ ...groupForm, semester: event.target.value })} required>
                       <option value="">Select semester</option>
                       {Array.from({ length: 8 }, (_, index) => `Semester ${index + 1}`).map(semester => <option key={semester} value={semester}>{semester}</option>)}
-                    </select>
+                    </ProjectSelect>
                   </label>
                   <label className="sm-field">
                     <span>Elective Type</span>
-                    <select value={groupForm.electiveType} onChange={event => setGroupForm({ ...groupForm, electiveType: event.target.value })} required>
+                    <ProjectSelect value={groupForm.electiveType} onChange={event => setGroupForm({ ...groupForm, electiveType: event.target.value })} required>
                       <option value="">Select</option>
                       <option value="Elective">Elective</option>
                       <option value="Non-Elective">Non-Elective</option>
-                    </select>
+                    </ProjectSelect>
                   </label>
                   <label className="sm-field">
                     <span>Minimum Selection</span>
@@ -835,23 +836,23 @@ export default function ElectiveManagement() {
                     </div>
                     <label className="sm-field">
                       Elective Group
-                      <select value={selectedGroupId} onChange={event => { setSelectedGroupId(event.target.value); setSelectedSubjectId('') }} required>
+                      <ProjectSelect value={selectedGroupId} onChange={event => { setSelectedGroupId(event.target.value); setSelectedSubjectId('') }} required>
                         <option value="">Select group</option>
                         {groups.filter(group => ['open', 'active'].includes(String(group.status).toLowerCase())).map(group => (
                           <option key={group.id || group.groupId} value={group.id || group.groupId}>{group.groupCode} - {group.groupName}</option>
                         ))}
-                      </select>
+                      </ProjectSelect>
                     </label>
                     <label className="sm-field">
                       Available Subject
-                      <select value={selectedSubjectId} onChange={event => setSelectedSubjectId(event.target.value)} disabled={!selectedGroup} required>
+                      <ProjectSelect value={selectedSubjectId} onChange={event => setSelectedSubjectId(event.target.value)} disabled={!selectedGroup} required>
                         <option value="">Select subject</option>
                         {eligibleSubjects.map(subject => (
                           <option key={subject.id || subject.subjectId || subject.code} value={subject.id || subject.subjectId || subject.code}>
                             {subject.subjectCode || subject.code} - {subject.subjectName || subject.name}
                           </option>
                         ))}
-                      </select>
+                      </ProjectSelect>
                     </label>
                     <button type="submit" className="sm-btn sm-btn--primary" disabled={actionLoading}><FiCheck /> Submit Selection</button>
                   </form>
@@ -964,8 +965,8 @@ export default function ElectiveManagement() {
                     <label>Subject Name<input required value={subjectEditForm.subjectName} onChange={event => setSubjectEditForm({ ...subjectEditForm, subjectName: event.target.value })} /></label>
                     <label>Credits<input type="number" min="0" step="0.5" value={subjectEditForm.credits} onChange={event => setSubjectEditForm({ ...subjectEditForm, credits: event.target.value })} /></label>
                     <label>Subject Type<input value={subjectEditForm.subjectType} onChange={event => setSubjectEditForm({ ...subjectEditForm, subjectType: event.target.value })} /></label>
-                    <label>Elective Type<select value={subjectEditForm.electiveType} onChange={event => setSubjectEditForm({ ...subjectEditForm, electiveType: event.target.value })}><option value="Elective">Elective</option><option value="Non-Elective">Non-Elective</option></select></label>
-                    <label>Status<select value={subjectEditForm.status} onChange={event => setSubjectEditForm({ ...subjectEditForm, status: event.target.value })}><option value="Active">Active</option><option value="Inactive">Inactive</option></select></label>
+                    <label>Elective Type<ProjectSelect value={subjectEditForm.electiveType} onChange={event => setSubjectEditForm({ ...subjectEditForm, electiveType: event.target.value })}><option value="Elective">Elective</option><option value="Non-Elective">Non-Elective</option></ProjectSelect></label>
+                    <label>Status<ProjectSelect value={subjectEditForm.status} onChange={event => setSubjectEditForm({ ...subjectEditForm, status: event.target.value })}><option value="Active">Active</option><option value="Inactive">Inactive</option></ProjectSelect></label>
                     <label className="em-subject-edit-description">Description<textarea rows="3" value={subjectEditForm.description} onChange={event => setSubjectEditForm({ ...subjectEditForm, description: event.target.value })} /></label>
                   </div>
                 </div>
