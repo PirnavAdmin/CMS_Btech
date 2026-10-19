@@ -33,8 +33,6 @@ export const timetableOperations = {
   moveEntry: ['put', '/timetables/{timetableId}/entries/{entryId}/move', 'MoveTimetableEntryRequest'],
   validate: ['post', '/timetables/{timetableId}/validate'],
   validateGlobal: ['post', '/timetables/{timetableId}/validate-global'],
-  createRevision: ['post', '/timetables/{timetableId}/revisions', 'CreateTimetableRevisionRequest'],
-  publishBatch: ['post', '/publication-batches', 'PublishTimetableBatchRequest'],
   publish: ['post', '/timetables/{timetableId}/publish'],
   reopen: ['post', '/timetables/{timetableId}/reopen'],
   faculty: ['get', '/views/faculty/{facultyId}', ['academicYearId', 'date']],

@@ -1,11 +1,11 @@
-import StudentTimetable from './StudentTimetable'
-import { useEffect, useState } from 'react'
+﻿import { useEffect, useState } from 'react'
 import { Navigate } from 'react-router-dom'
 import DashboardLayout from '../../layouts/DashboardLayout'
 import { getUserRole } from '../../auth/auth'
 import { showToast } from '../../utils/toast'
 import { backendWorkflow, loadBackendWorkflow } from '../../services/timetable/timetableBackendWorkflow'
-import { loadLive, resolveMyFaculty, workflowAdapter, draftCapabilityEnabled } from '../../services/timetable/timetableWorkflowService'
+import { timetableService } from '../../services/timetableService'
+import { loadLive, resolveMyFaculty, workflowAdapter, draftCapabilityEnabled, saveBackendEntry } from '../../services/timetable/timetableWorkflowService'
 import { academicLevel, decorateEntries, tableEntries } from '../../services/timetable/timetableDomain'
 import { same, publicationState, existingSlots, DAYS } from '../../utils/timetableUtils'
 import { roomOptions, localDate, classesOnDate } from '../../utils/timetablePlanner'
@@ -34,10 +34,6 @@ function backendTables(backend, sources) {
 }
 
 export default function TimetableManagement() {
-  return getUserRole() === 'student' ? <StudentTimetable /> : <TimetableAdminManagement />
-}
-
-function TimetableAdminManagement() {
   const role = getUserRole(), admin = role === 'admin'
   const [tab, setTab] = useState(admin ? 'dashboard' : 'faculty'), [data, setData] = useState(null)
   const [loading, setLoading] = useState(true), [busy, setBusy] = useState(false), [error, setError] = useState('')
@@ -85,11 +81,11 @@ function TimetableAdminManagement() {
     {admin && <nav className="tt-actions" aria-label="Timetable navigation">{[['dashboard', 'Timetable Dashboard'], ['builder', 'Timetable Builder'], ['faculty', 'Faculty My Timetable']].map(([value, label]) => <button className={`tt-button ${tab === value ? 'tt-primary' : ''}`} key={value} aria-pressed={tab === value} onClick={() => setTab(value)}>{label}</button>)}</nav>}
     {error && <p className="tt-error" role="alert">{error}</p>}
     {loading ? <p role="status">Loading academic data and timetables...</p> : data && <>
-      {admin && draftCapabilityEnabled && <p className="tt-adapter-note"><strong>Demo Mode:</strong> timetable drafts and publication state are stored only in this browser. Academic records and allocations use the backend; this is not institution-wide publication.</p>}
+      {admin && draftCapabilityEnabled && <p className="tt-adapter-note"><strong>Mock Mode:</strong> timetable drafts and publication state are stored only in this browser. Academic records and allocations use the backend; this is not institution-wide publication.</p>}
       {admin && tab === 'dashboard' && <TimetableDashboard tables={tables} sources={sources} entries={entries} today={today} open={open} />}
-      {admin && tab === 'builder' && <><button className="tt-button" disabled={busy} onClick={() => open(null)}>Create New Timetable Period</button><TimetableBuilder mockMode={draftCapabilityEnabled} key={builderKey} sources={sources} entries={entries} tables={tables} initial={initial} busy={busy} enabled={true} refresh={refresh} createRevision={async (table, reason) => { const created = await mutate(() => backendWorkflow.createRevision(table, reason), 'Revision draft created. The published timetable was preserved.'); open(created); return true }} saveDraft={args => run(() => adapter().saveDraft(args), draftCapabilityEnabled ? 'Demo Mode: draft saved in this browser.' : 'Draft saved to the backend.')}  faculty={setFacultyDrawer} generate={args => run(() => adapter().generate(args))} saveSetup={(tables, config) => run(() => adapter().saveSetup(tables, config))} save={(table, form) => mutate(() => draftCapabilityEnabled ? table.origin === 'backend' ? Promise.reject(new Error('Demo Mode cannot modify backend records.')) : workflowAdapter().saveEntry(table, form) : backendWorkflow.saveEntry(table, form))} remove={(table, id) => mutate(() => draftCapabilityEnabled ? table.origin === 'backend' ? Promise.reject(new Error('Demo Mode cannot modify backend records.')) : workflowAdapter().removeEntry(table, id) : backendWorkflow.removeEntry(table, id))} validate={validate} publish={expected => run(() => adapter().publish(expected), draftCapabilityEnabled ? 'Demo Mode: preview publication saved in this browser only.' : 'Timetable published.')} reopen={table => run(() => adapter().reopen(table))} /></>}
-      {tab === 'faculty' && <section className="tt-card">{admin && <div className="tt-clean-step"><TimetableSelect label="Faculty" value={facultyId} options={sources.faculty} onChange={setFacultyId} /></div>}{facultyError && <p className="tt-error" role="alert">{facultyError}</p>}{facultyId ? <FacultyTimetable backendMode={!draftCapabilityEnabled} key={facultyId} facultyId={facultyId} sources={sources} entries={entries} tables={tables} /> : !facultyError && <p className="tt-clean-step">Select a faculty member to view published classes.</p>}</section>}
-      {facultyDrawer && <WorkspaceDrawer title="Faculty schedule" close={() => setFacultyDrawer('')}><FacultyTimetable backendMode={!draftCapabilityEnabled} facultyId={facultyDrawer} sources={sources} entries={entries} tables={tables} /></WorkspaceDrawer>}
+      {admin && tab === 'builder' && <><button className="tt-button" disabled={busy} onClick={() => open(null)}>Create New Timetable Period</button><TimetableBuilder mockMode={draftCapabilityEnabled} key={builderKey} sources={sources} entries={entries} tables={tables} initial={initial} busy={busy} enabled={true} refresh={refresh} faculty={setFacultyDrawer} generate={args => run(() => adapter().generate(args))} saveSetup={(tables, config) => run(() => adapter().saveSetup(tables, config))} save={(table, form) => mutate(() => draftCapabilityEnabled ? table.origin === 'backend' ? saveBackendEntry(table, form) : workflowAdapter().saveEntry(table, form) : backendWorkflow.saveEntry(table, form))} remove={(table, id) => mutate(() => draftCapabilityEnabled ? table.origin === 'backend' ? timetableService.remove(id) : workflowAdapter().removeEntry(table, id) : backendWorkflow.removeEntry(table, id))} validate={validate} publish={expected => run(() => adapter().publish(expected), draftCapabilityEnabled ? 'Mock Mode: timetable published in this browser only.' : 'Timetable published.')} reopen={table => run(() => adapter().reopen(table))} /></>}
+      {tab === 'faculty' && <section className="tt-card">{admin && <div className="tt-clean-step"><TimetableSelect label="Faculty" value={facultyId} options={sources.faculty} onChange={setFacultyId} /></div>}{facultyError && <p className="tt-error" role="alert">{facultyError}</p>}{facultyId ? <FacultyTimetable key={facultyId} facultyId={facultyId} sources={sources} entries={entries} tables={tables} /> : !facultyError && <p className="tt-clean-step">Select a faculty member to view published classes.</p>}</section>}
+      {facultyDrawer && <WorkspaceDrawer title="Faculty schedule" close={() => setFacultyDrawer('')}><FacultyTimetable facultyId={facultyDrawer} sources={sources} entries={entries} tables={tables} /></WorkspaceDrawer>}
     </>}
   </main></DashboardLayout>
 }

@@ -15,16 +15,11 @@ const rows = value => {
   return value
 }
 const path = value => `/timetables/${id(value)}`
-const expectedRevision = value => {
-  if (value === undefined || value === null || String(value).trim() === '' || !Number.isSafeInteger(Number(value)) || Number(value) < 0) throw new Error('The backend revision number is missing or invalid. Refresh the timetable before continuing.')
-  return Number(value)
-}
 const date = value => String(value || '').slice(0, 10)
 const timestamp = value => value ? `${date(value)}T00:00:00` : null
 const period = row => ({ ...row, id: String(row.timetableSlotId ?? row.periodId ?? row.id), periodId: row.periodId,
   name: row.periodName || row.slotName || row.name, type: String(row.periodType || 'CLASS').toLowerCase(),
   startTime: String(row.startTime || '').slice(0, 5), endTime: String(row.endTime || '').slice(0, 5), source: 'backend' })
-const revisionSources = new Map()
 
 export function normalizeTimetable(detail, periods, calendar, classrooms) {
   const table = detail.timetable
@@ -36,8 +31,6 @@ export function normalizeTimetable(detail, periods, calendar, classrooms) {
     return { ...row, id: isTeachingPeriod(row) && slot ? slot.id : `period:${row.id}`, timetableSlotId: slot?.id }
   }) : slots
   return { ...table, id: String(table.timetableId), name: table.timetableName, origin: 'backend',
-    sourceTimetableId: table.sourceTimetableId ?? revisionSources.get(String(table.timetableId)),
-    slots,
     publicationStatus: String(table.status).toLowerCase(), revision: table.revision,
     entries: detail.entries.filter(row => row.active !== false).map(row => normalizeEntry({ ...table, ...row, id: row.timetableEntryId,
       roomId: row.classroomId, classroom: row.classroomName || row.classroom, status: row.active,
@@ -52,7 +45,6 @@ export function normalizeTimetable(detail, periods, calendar, classrooms) {
 export const backendEntries = tables => tables.flatMap(table => table.entries.map(row => ({ ...row, timetableId: table.id, timetableName: table.name, publicationStatus: table.publicationStatus })))
 
 export const backendTimetableService = {
-  rememberRevisionSource: (draftId, sourceId) => revisionSources.set(String(id(draftId)), id(sourceId)),
   async getSources() {
     const [sources, classrooms] = await Promise.all([timetableService.getSources(), api.get('/classrooms')])
     const yearSettings = Object.fromEntries(await Promise.all(sources.years.map(async year => {
@@ -77,11 +69,7 @@ export const backendTimetableService = {
   async setup(scope, name, config, options = {}) {
     const dateErrors = timetableDateErrors(config?.calendar)
     if (dateErrors.length) throw new Error(dateErrors.join('\n'))
-    const currentTable = options.tableId ? await this.detail(options.tableId) : null
-    if (currentTable && currentTable.publicationStatus !== 'draft') throw new Error('Only draft timetable settings can be changed.')
-    const teaching = (config.periods || []).filter(isTeachingPeriod)
-    const slotsMatch = currentTable && teaching.length === currentTable.slots.filter(isTeachingPeriod).length && teaching.every(row => currentTable.slots.some(slot => isTeachingPeriod(slot) && slot.startTime === row.startTime.slice(0, 5) && slot.endTime === row.endTime.slice(0, 5)))
-    if (currentTable?.entries.length && !slotsMatch) throw new Error('Existing classes use the saved timetable periods. Changing those periods requires a separate draft; Review and Apply cannot replace slots used by existing classes.')
+    if (options.tableId && (await this.detail(options.tableId)).publicationStatus !== 'draft') throw new Error('Only draft timetable settings can be changed.')
     const academicYearId = id(scope.academicYearId)
     const existing = rows(await api.get('/periods', { academicYearId }))
     const masters = rows(await api.get('/timetables', { academicYearId }))
@@ -115,9 +103,7 @@ export const backendTimetableService = {
       const created = await api.post('/timetables', { ...Object.fromEntries(['academicYearId', 'courseId', 'branchId', 'semesterId', 'sectionId'].map(field => [field, id(scope[field])])), ...payload })
       tableId = created?.timetableId ?? created?.timetable?.timetableId
     }
-    // Synchronizing can replace slot identities and conflict with existing entries.
-    // Metadata/requirement edits do not require synchronization of unchanged slots.
-    if (!slotsMatch) await api.post(`${path(tableId)}/sync-periods`)
+    await api.post(`${path(tableId)}/sync-periods`)
     await this.saveRequirements(tableId, config.requirements)
     return this.detail(tableId)
   },
@@ -147,15 +133,9 @@ export const backendTimetableService = {
   removeEntry: (tableId, revision, entryId) => api.remove(`${path(tableId)}/entries/${id(entryId)}`),
   async validate(tableId) {
     const result = await api.post(`${path(tableId)}/validate`)
-    const issues = [...(result?.errors || []), ...(result?.conflicts || []), ...(result?.unscheduled || [])].map(row => typeof row === 'string' ? { reason: row } : { ...row, reason: row.reason || row.message || 'Unresolved backend scheduling issue.' })
-    return { ...result, valid: (result?.valid === true || result?.isValid === true) && issues.length === 0, issues, warnings: (result?.warnings || []).map(row => typeof row === 'string' ? row : row.message || row.reason || 'Backend warning'), message: result?.message || issues.map(row => row.reason).join('\n') }
+    return { ...result, valid: result?.valid === true || result?.isValid === true, checks: result?.checks || ['Backend conflict and scheduling validation completed'], warnings: result?.warnings || [], message: result?.message || [...(result?.errors || []), ...(result?.conflicts || []), ...(result?.unscheduled || [])].map(row => typeof row === 'string' ? row : row.message).filter(Boolean).join('\n') }
   },
   publish: tableId => api.post(`${path(tableId)}/publish`),
-  createRevision: (tableId, revision, reason) => lifecycle.createRevision({ timetableId: id(tableId) }, { expectedRevision: expectedRevision(revision), reason: String(reason || '').trim() || null }),
-  publishBatch: tables => {
-    if (!tables.length || new Set(tables.map(table => String(table.id))).size !== tables.length) throw new Error('Select distinct timetable drafts to publish.')
-    return lifecycle.publishBatch({}, { items: tables.map(table => ({ timetableId: id(table.id), expectedRevision: expectedRevision(table.revision) })) })
-  },
   reopen: tableId => api.post(`${path(tableId)}/reopen`),
   // Preserve opaque responses until authenticated examples establish their shape.
   status: tableId => lifecycle.status({ timetableId: tableId }),

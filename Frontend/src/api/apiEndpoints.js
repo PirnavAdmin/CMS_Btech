@@ -540,7 +540,7 @@ const normalizeProfile = (source) => {
   const application = data.application && typeof data.application === 'object' ? data.application : {}
   const lastLoginAt = data.lastLoginAt ?? data.last_login_at ?? data.LastLoginAt ?? data.lastLogin ?? data.last_login ?? ''
   return {
-    id: data.userId ?? data.studentId ?? '', facultyId: data.facultyId ?? '', studentId: data.studentId ?? '', identifier: data.employeeUserId ?? data.studentCode ?? data.studentId ?? '', fullName: data.fullName ?? data.studentName ?? '',
+    id: data.userId ?? data.studentId ?? '', facultyId: data.facultyId ?? '', identifier: data.employeeUserId ?? data.studentCode ?? data.studentId ?? '', fullName: data.fullName ?? data.studentName ?? '',
     email: data.email ?? '', mobile: data.mobile ?? '', role: Array.isArray(data.roles) ? data.roles.join(', ') : String(data.role ?? ''),
     dateOfBirth: data.dateOfBirth ?? '', gender: data.gender ?? '', department: data.department ?? data.departmentName ?? '', departmentId: data.departmentId ?? '',
     designation: data.designation ?? '', houseNumber: data.houseNumber ?? data.currentHouseNumber ?? '', address: data.address ?? data.currentAddress ?? '', permanentHouseNumber: data.permanentHouseNumber ?? '', permanentAddress: data.permanentAddress ?? '', postalCode: data.postalCode ?? '',
@@ -1411,11 +1411,10 @@ export const timetableEntryApi = {
 // Phase 5 API: all calls use the shared bearer-token, refresh and error handling.
 const timetableManagementUrl = (path = '') => endpoint(`/api/v1/timetable-management${path}`)
 export const timetableManagementApi = {
-  // Only the classroom directory documents collegeId as a query parameter.
-  get: async (path, query) => dataResponse(await request(withQuery(timetableManagementUrl(path), query), {}, false, path !== '/classrooms')),
-  post: async (path, payload) => dataResponse(await request(timetableManagementUrl(path), { method: 'POST', ...(payload === undefined ? {} : { headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) }) }, false, true)),
-  put: async (path, payload) => dataResponse(await request(timetableManagementUrl(path), { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) }, false, true)),
-  remove: async path => dataResponse(await request(timetableManagementUrl(path), { method: 'DELETE' }, false, true)),
+  get: async (path, query) => dataResponse(await request(withQuery(timetableManagementUrl(path), query))),
+  post: async (path, payload) => dataResponse(await jsonRequest(timetableManagementUrl(path), 'POST', payload)),
+  put: async (path, payload) => dataResponse(await jsonRequest(timetableManagementUrl(path), 'PUT', payload)),
+  remove: async path => dataResponse(await request(timetableManagementUrl(path), { method: 'DELETE' })),
 }
 
 const isNumericId = (val) => Number.isInteger(Number(val)) && Number(val) > 0

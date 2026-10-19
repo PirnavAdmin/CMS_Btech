@@ -1,4 +1,4 @@
-import { FiChevronDown, FiClock, FiUsers, FiCheckCircle, FiAlertTriangle, FiLayers, FiBookOpen, FiClipboard, FiUserCheck, FiHome, FiGrid } from 'react-icons/fi'
+import { FiClock, FiUsers, FiCheckCircle, FiAlertTriangle, FiLayers, FiBookOpen, FiClipboard, FiUserCheck, FiHome, FiGrid } from 'react-icons/fi'
 import { useMemo, useState } from 'react'
 import { schedulingIssues, subjectRequirements, roomOptions, planningErrors, suitableRoom } from '../../utils/timetablePlanner'
 import { active, conflictsFor, conflictPairs, same } from '../../utils/timetableUtils'
@@ -39,7 +39,6 @@ function readiness(section, sources, entries, table) {
 }
 
 export default function TimetableDashboard({ tables, sources, entries, today, open }) {
-  const [statusFilter, setStatusFilter] = useState('all')
   const [attentionOpen, setAttentionOpen] = useState(false)
   const activeSections = useMemo(() => sources.sections.filter(active), [sources.sections])
   const departments = useMemo(() => sources.departments.filter(active), [sources.departments])
@@ -73,12 +72,11 @@ export default function TimetableDashboard({ tables, sources, entries, today, op
     const state = row.result
     return <button className="tt-recent-table" key={section.id} onClick={() => open(table || scope)}>
       <strong>{section.name || `Section ${section.id}`}</strong>
-      <span>{table ? `${table.entries.length} ${table.entries.length === 1 ? 'class' : 'classes'} | ${table.publicationStatus === 'unavailable' ? 'Lifecycle status unavailable' : table.publicationStatus}` : `${state.ready ? 'Ready to configure' : 'Needs attention'} | No timetable yet`}</span>
+      <span>{table ? `${table.entries.length} classes Ã‚Â· ${table.publicationStatus === 'unavailable' ? 'Lifecycle status unavailable' : table.publicationStatus}` : `${state.ready ? 'Ready to configure' : 'Needs attention'} Ã‚Â· No timetable yet`}</span>
       {!state.ready && <small>{state.issues.join(' ')}</small>}
     </button>
   }
 
-  const filteredTables = tables.filter(table => statusFilter === 'all' || table.publicationStatus === statusFilter)
   return <div className="tt-dashboard-panel">
     <div className="tt-dashboard-stats" aria-label="Timetable summary">
       {[
@@ -122,8 +120,8 @@ export default function TimetableDashboard({ tables, sources, entries, today, op
       })}</div>}
     </section>
     <section className="tt-card tt-clean-step">
-      <header className="tt-card-heading"><h2><FiClock aria-hidden="true" />Recent timetables</h2><label className="tt-field tt-status-filter"><span>Timetable status</span><div className="tt-status-select"><select value={statusFilter} onChange={event => setStatusFilter(event.target.value)}><option value="all">All</option><option value="draft">Draft</option><option value="published">Published</option></select><FiChevronDown className="tt-status-chevron" aria-hidden="true" /></div></label><span>{today.length} published classes today</span></header>
-      {!filteredTables.length ? <p>No timetables match this status. Select a section above to configure a draft.</p> : <div className="tt-recent-tables">{filteredTables.sort((a, b) => (b.updatedAt || '').localeCompare(a.updatedAt || '')).map(table => <button className="tt-recent-table" key={`${table.origin}-${table.id}`} onClick={() => open(table)}><strong>{table.name}</strong><span>{name(sources.years, table.academicYearId)} | {name(sources.departments, table.departmentId)} | {name(sources.courses, table.courseId)}</span><small>{table.publicationStatus === 'unavailable' ? 'STATUS UNAVAILABLE' : table.publicationStatus.toUpperCase()} | {table.entries.length} {table.entries.length === 1 ? 'class' : 'classes'}{attention && ' | Review attention items'}</small></button>)}</div>}
+      <header className="tt-card-heading"><h2><FiClock aria-hidden="true" />Recent timetables</h2><span>{today.length} published classes today</span></header>
+      {!tables.length ? <p>No timetable records yet. Select a section above to configure one.</p> : <div className="tt-recent-tables">{[...tables].sort((a, b) => (b.updatedAt || '').localeCompare(a.updatedAt || '')).map(table => <button className="tt-recent-table" key={`${table.origin}-${table.id}`} onClick={() => open(table)}><strong>{table.name}</strong><span>{name(sources.years, table.academicYearId)} Ã‚Â· {name(sources.departments, table.departmentId)} Ã‚Â· {name(sources.courses, table.courseId)}</span><small>{table.publicationStatus === 'unavailable' ? 'STATUS UNAVAILABLE' : table.publicationStatus.toUpperCase()} Ã‚Â· {table.entries.length} classes{attention && ' Ã‚Â· Review attention items'}</small></button>)}</div>}
     </section>
 
   </div>

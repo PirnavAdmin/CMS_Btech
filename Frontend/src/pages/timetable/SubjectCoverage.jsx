@@ -13,7 +13,7 @@ function WeeklyRequirement({ allocation, refresh, disabled }) {
     finally { setBusy(false) }
   }}><input aria-label={`Weekly periods for ${allocation.facultyName || allocation.facultyId}, section ${allocation.sectionId}`} type="number" min="1" step="1" value={value} disabled={busy || disabled} onChange={event => setValue(event.target.value)} /><span>/ week</span><button className="tt-button" disabled={busy || disabled || Number(value) === Number(allocation.periodsPerWeek)}>Save</button></form>
 }
-export default function SubjectCoverage({ demoMode = false, sources, scope, selected, config, setConfig, refresh, faculty, disabled }) {
+export default function SubjectCoverage({ sources, scope, selected, config, setConfig, refresh, faculty, disabled }) {
   const subjects = eligibleSubjects(sources.subjects, scope)
   const sections = sources.sections.filter(row => selected.some(id => same(id, row.id)))
   const change = (id, field, value) => setConfig(old => ({ ...old, requirements: { ...old.requirements, [id]: { ...old.requirements[id], [field]: value } } }))
@@ -25,9 +25,9 @@ export default function SubjectCoverage({ demoMode = false, sources, scope, sele
         const sectionScope = { ...scope, sectionId: section.id }
         const requirement = subjectRequirements(sources, sectionScope, {}) .find(item => same(item.subject.id, subject.id))
         const allocations = sources.allocations.filter(row => same(row.sectionId, section.id) && same(row.subjectId, subject.id) && (!row.academicYearId || same(row.academicYearId, scope.academicYearId)) && same(row.branchId, scope.branchId) && same(row.semesterId, scope.semesterId))
-        return <td key={section.id}>{!requirement?.faculty.length ? <span className="tt-error">Faculty not assigned</span> : allocations.map(allocation => <div key={allocation.allocationId ?? allocation.id ?? allocation.facultyId}><button className="tt-text-button" onClick={() => faculty(allocation.facultyId)}>{sources.faculty.find(row => same(row.id, allocation.facultyId))?.name || 'Inactive faculty'}</button><WeeklyRequirement allocation={allocation} refresh={refresh} disabled={disabled || demoMode} /></div>)}{requirement?.source === 'Not configured' && requirement?.faculty.length > 0 && <small>Set a consistent weekly requirement for this section.</small>}</td>
+        return <td key={section.id}>{!requirement?.faculty.length ? <span className="tt-error">Faculty not assigned</span> : allocations.map(allocation => <div key={allocation.allocationId ?? allocation.id ?? allocation.facultyId}><button className="tt-text-button" onClick={() => faculty(allocation.facultyId)}>{sources.faculty.find(row => same(row.id, allocation.facultyId))?.name || 'Inactive faculty'}</button><WeeklyRequirement allocation={allocation} refresh={refresh} disabled={disabled} /></div>)}{requirement?.source === 'Not configured' && requirement?.faculty.length > 0 && <small>Set a consistent weekly requirement for this section.</small>}</td>
       })}
     </tr>)}</tbody></table></div>}
-    <p className="tt-hint">{demoMode && 'Demo Mode: backend allocation editing is disabled. '}Consecutive periods apply only when explicitly configured here; a session cannot cross Break or Lunch.</p>
+    <p className="tt-hint">Consecutive periods apply only when explicitly configured here; a session cannot cross Break or Lunch.</p>
   </section>
 }

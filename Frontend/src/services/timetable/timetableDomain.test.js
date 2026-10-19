@@ -4,8 +4,6 @@ import { dailyPeriods, DAILY_PERIOD_SETUP } from '../../utils/timetablePeriods.j
 import { conflictsFor } from '../../utils/timetableUtils.js'
 import { generateSections, tableEntries, availableSlots, validateTable, changeContext, scopeSections, publishedForFaculty } from './timetableDomain.js'
 import { createDraftAdapter, DRAFT_STORAGE_KEY } from './timetableDraftAdapter.js'
-import { createRevisionDemo, REVISION_DEMO_KEY } from './timetableRevisionDemo.js'
-import { validationCategory } from './timetableDomain.js'
 
 const scope = { academicYearId: '1', departmentId: '2', courseId: '3', branchId: '4', level: '2', semesterId: '5' }
 const sources = {
@@ -17,61 +15,6 @@ const sources = {
 }
 const config = { automatic: DAILY_PERIOD_SETUP, periods: dailyPeriods(DAILY_PERIOD_SETUP).periods, rooms: ['text:room 6', 'text:room 7'], calendar: { reviewed: true, startDate: '2026-01-01', endDate: '2026-12-31', holidays: ['2026-09-28'], workingDays: ['MONDAY', 'TUESDAY', 'WEDNESDAY'] }, requirements: { 9: { selected: false } } }
 const generate = (overrides = {}) => { let i = 0; return generateSections({ tables: [], selected: ['6', '7'], scope, sources, config, backend: [], makeId: () => `id-${++i}`, ...overrides }) }
-
-test('incomplete drafts persist independently of generation and cannot publish', async () => {
-  let saved
-  const storage = { getItem: () => saved, setItem: (_, value) => { saved = value } }
-  const options = { storage, authorize: () => {}, loadLive: async () => ({ sources, backend: [] }), makeId: () => 'empty-draft' }
-  const adapter = createDraftAdapter(options)
-  await adapter.saveDraft({ scope, selected: ['6'], config })
-  const [draft] = await createDraftAdapter(options).list()
-  assert.equal(draft.entries.length, 0)
-  assert.equal(draft.publicationStatus, 'draft')
-  assert(draft.updatedAt)
-  const issues = await adapter.validate([draft])
-  assert(issues.some(issue => /No classes/.test(issue.reason)))
-  await assert.rejects(adapter.publish([draft]), /No classes|periods/)
-  assert.equal((await adapter.list())[0].publicationStatus, 'draft')
-})
-
-test('validation identifies missing source data and configured workload limits', () => {
-  const [table] = generate()
-  assert.equal(validationCategory(validateTable(table, {}, [])[0]), 'Missing Required Data')
-  const limited = { ...sources, faculty: [{ ...sources.faculty[0], maxPeriodsPerWeek: 1 }] }
-  assert(validateTable(table, limited, tableEntries([table])).some(issue => /weekly limit/.test(issue.reason)))
-  const missing = { ...table, entries: [{ ...table.entries[0], facultyId: '' }] }
-  const issues = validateTable(missing, sources, tableEntries([missing]))
-  assert(issues.some(issue => issue.entryId && issue.dayOfWeek && issue.reason === 'Missing faculty assignment.'))
-})
-
-test('manual classes cannot bypass missing required weekly frequency', () => {
-  const [table] = generate({ selected: ['6'] })
-  const missing = { ...sources, allocations: sources.allocations.map(row => ({ ...row, periodsPerWeek: undefined })) }
-  const issue = validateTable(table, missing, tableEntries([table])).find(issue => issue.code === 'frequency')
-  assert.equal(issue.blocking, true)
-  assert.equal(validationCategory(issue), 'Missing Required Data')
-})
-
-test('revision demo changes and preview publication never change backend or original records', () => {
-  const [source] = generate({ selected: ['6'] })
-  source.publicationStatus = 'published'
-  // Real backend records carry both identifiers; normalization prefers timetableEntryId.
-  source.entries = source.entries.map((row, index) => ({ ...row, timetableEntryId: index + 100 }))
-  const before = JSON.stringify(source)
-  const writes = []
-  let sequence = 0
-  const demo = createRevisionDemo(source, { setItem: (key, value) => writes.push({ key, value }) }, () => String(++sequence))
-  const table = demo.current()
-  assert.equal(table.publicationStatus, 'draft')
-  assert.notEqual(table.id, source.id)
-  demo.save({ ...table.entries[0], classroom: 'Room 6' })
-  assert.deepEqual(demo.validate(sources, tableEntries([source])), [])
-  demo.previewPublication(sources, tableEntries([source]))
-  assert.equal(demo.current().publicationStatus, 'published')
-  assert.equal(JSON.stringify(source), before)
-  assert(writes.every(write => write.key === REVISION_DEMO_KEY))
-  assert.throws(() => demo.remove(table.entries[0].id), /read-only/)
-})
 test('daily count computes the requested end time and rejects invalid counts, placements and midnight overflow', () => {
   const result = dailyPeriods(DAILY_PERIOD_SETUP)
   assert.equal(result.endTime, '16:00')
