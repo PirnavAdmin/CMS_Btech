@@ -628,6 +628,12 @@
   --header-surface: #fff;
   --header-soft: #f7f9fd;
   --header-hover: #f0edff;
+  font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 1.4;
+  letter-spacing: 0;
+  -webkit-font-smoothing: antialiased;
   display: flex;
   align-items: center;
   justify-content: flex-start;
@@ -663,22 +669,48 @@
 #root .dashboard-header .global-search > svg { width: 16px; height: 16px; flex-basis: 16px; color: var(--header-muted); }
 #root .dashboard-header .global-search:focus-within { border-color: var(--header-accent); box-shadow: 0 0 0 2px rgb(23 105 194 / 10%); }
 #root .dashboard-header__college {
+  position: relative;
   display: flex; flex-direction: column; justify-content: center; gap: 1px;
   flex: 0 1 190px; width: 190px; min-width: 135px; height: 38px;
   box-sizing: border-box; padding: 3px 9px;
   border: 1px solid var(--header-border); border-radius: 7px; background: var(--header-surface);
 }
-#root .dashboard-header__college-label { color: var(--header-muted); font-size: 10px; font-weight: 500; line-height: 12px; white-space: nowrap; }
+#root .dashboard-header__college-label { flex-shrink: 0; color: var(--header-muted); font-size: 10px; font-weight: 400; line-height: 12px; white-space: nowrap; }
 #root .dashboard-header__college .workspace-context-select { width: 100%; min-width: 0; }
-#root .dashboard-header__college .searchable-select__trigger { height: 18px; min-height: 18px; padding: 0; gap: 6px; border: 0; border-radius: 3px; background: transparent; box-shadow: none; font-family: inherit; font-size: 12px; font-weight: 600; line-height: 18px; color: var(--header-text); }
-#root .dashboard-header__college .searchable-select__trigger-text { font-size: 12px; font-weight: 600; line-height: 18px; color: inherit; }
+#root .dashboard-header__college .workspace-context-select__sidebar-error {
+  position: absolute;
+  right: 28px;
+  top: 9px;
+  margin: 0;
+  line-height: 1;
+}
+#root .dashboard-header__college .workspace-context-select:has(.workspace-context-select__sidebar-error) .searchable-select__trigger-text { padding-right: 24px; }
+#root .dashboard-header__college .workspace-context-select__retry {
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  min-height: 0;
+  margin: 0;
+  padding: 3px;
+  border: 0;
+  border-radius: 4px;
+  background: var(--header-soft);
+  color: var(--header-accent);
+  cursor: pointer;
+}
+#root .dashboard-header__college .workspace-context-select__retry:hover { background: var(--header-hover); }
+#root .dashboard-header__college .workspace-context-select__retry svg { display: block; width: 15px; height: 15px; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+#root .dashboard-header__college .workspace-context-select > small { display: none; }
+#root .dashboard-header__college .searchable-select__trigger { height: 18px; min-height: 18px; padding: 0; gap: 6px; border: 0; border-radius: 3px; background: transparent; box-shadow: none; font-family: inherit; font-size: 12px; font-weight: 500; line-height: 18px; color: var(--header-text); }
+#root .dashboard-header__college .searchable-select__trigger-text { font-size: 12px; font-weight: 500; line-height: 18px; color: inherit; }
 #root .dashboard-header__college .searchable-select__caret { flex: 0 0 16px; color: var(--header-accent); font-size: 11px; text-align: center; }
 #root .dashboard-header__college:focus-within { border-color: var(--header-accent); }
 #root .dashboard-header .header-academic-year > summary { height: 38px; box-sizing: border-box; padding: 4px 9px; gap: 7px; border: 1px solid var(--header-border); border-radius: 7px; background: var(--header-surface); color: var(--header-text); }
 #root .dashboard-header .header-academic-year__content { min-width: 125px; gap: 3px; }
 #root .dashboard-header .header-academic-year__heading { flex-direction: row; align-items: center; gap: 8px; }
-#root .dashboard-header .header-academic-year__heading small { color: var(--header-muted); font-size: 10px; font-weight: 500; white-space: nowrap; }
-#root .dashboard-header .header-academic-year__heading strong { color: var(--header-text); font-size: 12px; font-weight: 600; white-space: nowrap; }
+#root .dashboard-header .header-academic-year__heading small { color: var(--header-muted); font-size: 11px; font-weight: 400; white-space: nowrap; }
+#root .dashboard-header .header-academic-year__heading strong { color: var(--header-text); font-size: 12px; font-weight: 500; white-space: nowrap; }
 #root .dashboard-header .header-academic-year > summary > svg { width: 16px; height: 16px; color: var(--header-accent); }
 #root .dashboard-header .header-academic-year > summary > svg:last-child { padding: 1px; background: transparent; }
 #root .dashboard-header .header-academic-year > summary:hover { background: var(--header-hover); }
@@ -691,8 +723,8 @@
 #root .dashboard-header .account-menu > summary:hover { background: var(--header-hover); }
 #root .dashboard-header .account-avatar { display: grid; place-items: center; width: 28px; height: 28px; flex: 0 0 28px; border: 0; background: #eaf3ff; color: var(--header-accent); box-shadow: none; }
 #root .dashboard-header .account-menu summary > span:not(.account-avatar) { display: flex; flex-direction: column; min-width: 0; }
-#root .dashboard-header .account-menu summary strong { max-width: 100px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; font-weight: 600; line-height: 15px; color: var(--header-text); }
-#root .dashboard-header .account-menu summary small { margin: 0; font-size: 10px; line-height: 12px; font-weight: 500; color: var(--header-muted); }
+#root .dashboard-header .account-menu summary strong { max-width: 100px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; font-weight: 500; line-height: 15px; color: var(--header-text); }
+#root .dashboard-header .account-menu summary small { margin: 0; font-size: 11px; line-height: 13px; font-weight: 400; color: var(--header-muted); }
 #root .dashboard-header .account-menu__chevron { border-color: var(--header-accent); }
 :root[data-theme="dark"] #root .dashboard-header {
   --header-text: #e2e8f0; --header-muted: #94a3b8; --header-accent: #7bb4f5;

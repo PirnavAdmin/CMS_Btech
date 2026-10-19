@@ -173,9 +173,11 @@ export const AcademicProvider = ({ children }) => {
   // Atomically apply a new Global Academic Context
   const applyAcademicContext = useCallback(async (newCollegeId, newAcademicYearId) => {
     const colId = String(newCollegeId ?? '')
-    const yrId = String(newAcademicYearId ?? '')
+    const collegeChanged = colId !== String(readStoredContext().collegeId || '')
+    const yrId = collegeChanged ? '' : String(newAcademicYearId ?? '')
 
     setSelectedCollegeId(colId)
+    if (collegeChanged) setAcademicYears([])
     setSelectedAcademicYearId(yrId)
     saveStoredContext(colId, yrId)
 

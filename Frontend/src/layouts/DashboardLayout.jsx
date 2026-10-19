@@ -1,7 +1,7 @@
 import useToastState from '../hooks/useToastState'
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
-import { FiAlertCircle, FiLock, FiLogOut, FiMenu, FiMoon, FiSearch, FiSun, FiUser, FiX } from 'react-icons/fi'
+import { FiAlertCircle, FiLock, FiLogOut, FiMoon, FiSearch, FiSun, FiUser, FiX } from 'react-icons/fi'
 import { getUserRole, signOut } from '../auth/auth'
 import { changePassword, profileApi } from '../api/apiEndpoints'
 import Sidebar from '../components/Sidebar'
@@ -331,10 +331,6 @@ export default function DashboardLayout({ children }) {
 
       <main>
         <header className="dashboard-header">
-          <div className="dashboard-header__context"><button className="header-sidebar-toggle" onClick={() => {
-            if (window.matchMedia('(max-width: 900px)').matches) setSidebarOpen(true)
-            else setSidebarCollapsed(value => { const next = !value; localStorage.setItem('pirnav-sidebar-collapsed', String(next)); return next })
-          }} aria-label="Toggle navigation" aria-expanded={sidebarOpen || !sidebarCollapsed}><FiMenu /></button></div>
 
           <div className="global-search"><FiSearch aria-hidden="true" /><input aria-label="Search modules" value={globalQuery} onChange={(event) => setGlobalQuery(event.target.value)} placeholder="Search" />{globalResults.length > 0 && <div className="global-search-results">{globalResults.map(([label, to]) => <Link to={to} key={to} onClick={() => setGlobalQuery('')}>{label}</Link>)}</div>}</div>
 

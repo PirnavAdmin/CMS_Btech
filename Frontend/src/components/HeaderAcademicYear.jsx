@@ -4,12 +4,16 @@ import AcademicContextSelect from './AcademicContextSelect'
 import { calculateAcademicYearProgress } from '../utils/headerAcademicYear'
 import { useAcademic } from '../context/AcademicContext'
 import './HeaderAcademicYear.css'
+import { Link } from 'react-router-dom'
+import { getUserRole } from '../auth/auth'
+import { ROLES } from '../auth/roles'
 
 export default function HeaderAcademicYear() {
   const {
     selectedAcademicYear,
     currentAcademicYear,
     academicYears = [],
+    selectedCollegeId,
     isHistoricalYear,
     loading,
   } = useAcademic()
@@ -90,9 +94,13 @@ export default function HeaderAcademicYear() {
             <dd>{progress === null ? 'Unavailable - check year dates' : `${progress}%`}</dd>
           </dl>
         ) : (
-          <p>{loading ? 'Loading academic years...' : 'Select an academic year above.'}</p>
+          <p>{loading ? 'Loading academic years...' : 'No academic year configured for this college.'}</p>
         )}
-
+        {getUserRole() === ROLES.ADMIN && selectedCollegeId && (
+          <div className="header-academic-year__footer">
+            <Link to="/academic-year-management" onClick={() => { if (root.current) root.current.open = false }}>Add / Manage Academic Years</Link>
+          </div>
+        )}
       </div>
     </details>
   )

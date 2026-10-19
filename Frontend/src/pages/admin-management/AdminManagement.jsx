@@ -33,6 +33,7 @@ import EmptyStateImports_default from '../../components/EmptyState'
 import roomServiceImports_default, { ROOM_TYPES as roomServiceImports_ROOM_TYPES, BUILDING_BLOCKS as roomServiceImports_BUILDING_BLOCKS, FLOORS as roomServiceImports_FLOORS, ROOM_FACILITIES as roomServiceImports_ROOM_FACILITIES } from '../../services/roomService'
 import '../../styles/directory-search.css'
 import './AdminManagement.css'
+import AcademicContextSelect from '../../components/AcademicContextSelect'
 
 // AcademicYearManagement screen and private helpers.
 const AcademicYearManagementScreen = (() => {
@@ -211,7 +212,7 @@ const mapYear = (x) => {
 };
 
 function AcademicYear() {
-  const { selectedCollegeId } = AcademicContextImports_useAcademic();
+  const { selectedCollegeId, selectedCollege, loading: contextLoading } = AcademicContextImports_useAcademic();
   const [years, setYears] = useState([]);
   const [search, setSearch] = useState('');
   const [filter, setFilter] = useState('ALL');
@@ -239,6 +240,11 @@ function AcademicYear() {
   };
 
   const loadYears = async () => {
+    if (!selectedCollegeId) {
+      setYears([]);
+      setExportLoading(false);
+      return;
+    }
     setExportLoading(true);
     try {
       const data = await academicYearApi.getAll();
@@ -283,6 +289,10 @@ function AcademicYear() {
   useEffect(() => setPage(1), [search, filter]);
 
   const openAdd = () => {
+    if (!selectedCollegeId || contextLoading) {
+      showWarning('Select a college before adding an academic year.');
+      return;
+    }
     setSelected(null);
     setForm(blank);
     setErrors({});
@@ -309,6 +319,7 @@ function AcademicYear() {
   function validate() {
     let e = {},
       others = years.filter((x) => x.id !== selected?.id);
+    if (!selectedCollegeId) e.form = 'Select a college before adding an academic year.';
     if (!form.name.trim()) e.name = 'Academic year title is required.';
     if (!form.startDate) e.startDate = 'Start date is required.';
     if (!form.endDate) e.endDate = 'End date is required.';
@@ -445,11 +456,14 @@ function AcademicYear() {
       <main className="ay">
         {modal !== 'view' && <PageHeader
           title="Academic Year"
-          subtitle="Manage academic cycles, lifecycle status, and rollover transitions."
+          subtitle="Add and manage academic years separately for each college."
         />}
-
-
-
+        {modal !== 'view' && <section className="ay-college-context" aria-label="Academic year college">
+          <AcademicContextSelect kind="college" />
+          <p>{selectedCollegeId
+            ? `Academic years belong to ${selectedCollege?.name || selectedCollege?.collegeName || 'the selected college'}. The same year can be added to other colleges separately.`
+            : 'Select a college to add and manage its academic years.'}</p>
+        </section>}
         {modal === 'view' && selected ? (
           <div className="cm-profile-view ay-details-view" data-export-record>
             <div className="cm-profile-top-bar">
@@ -551,10 +565,10 @@ function AcademicYear() {
                     filename="academic-years"
                     loading={exportLoading || noticeTone === 'error'}
                   />
-                  <button type="button" className="cm-button secondary" onClick={() => setModal('generate')}>
+                  <button type="button" className="cm-button secondary" disabled={!selectedCollegeId || contextLoading || !generationBase} onClick={() => setModal('generate')}>
                     Generate Next Year
                   </button>
-                  <button type="button" className="cm-button" onClick={openAdd}>
+                  <button type="button" className="cm-button" disabled={!selectedCollegeId || contextLoading} onClick={openAdd}>
                     <FiPlus /> Add Academic Year
                   </button>
                 </div>
@@ -692,6 +706,7 @@ function AcademicYear() {
               </button>
               <h2 id="form-title">{modal === 'add' ? 'Add Academic Year' : 'Edit Academic Year'}</h2>
               <form onSubmit={save} noValidate>
+                <p>College: <strong>{selectedCollege?.name || selectedCollege?.collegeName || 'Selected college'}</strong></p>
                 <label>
                   <span>Academic Year Title <b className="required-mark">*</b></span>
                   <input
