@@ -163,6 +163,10 @@ export default function SearchableSelect({
       setOpen((current) => !current)
     }
     if (event.key === 'Escape') {
+      if (open) {
+        event.preventDefault()
+        event.stopPropagation()
+      }
       setOpen(false)
       setQuery('')
     }
@@ -170,6 +174,14 @@ export default function SearchableSelect({
 
   const menu = open && !disabled ? createPortal(
     <div ref={menuRef} id={id} className={`searchable-select__menu ${menuClassName}`} onKeyDown={(event) => {
+      if (event.key === 'Escape') {
+        event.preventDefault()
+        event.stopPropagation()
+        setOpen(false)
+        setQuery('')
+        triggerRef.current?.focus({ preventScroll: true })
+        return
+      }
       if (!['ArrowDown', 'ArrowUp', 'Home', 'End'].includes(event.key)) return
       if (event.target === inputRef.current && ['Home', 'End'].includes(event.key)) return
       event.preventDefault()
@@ -222,12 +234,15 @@ export default function SearchableSelect({
         )}
       </div>
     </div>,
-    document.body,
+    // A modal dialog makes body portals inert and paints above them.
+    // Keep the menu in the trigger's dialog so it stays visible and interactive.
+    wrapperRef.current?.closest('dialog[open]') || document.body,
   ) : null
 
   return (
     <div ref={wrapperRef} className={`searchable-select ${className} ${error ? 'has-error' : ''} ${disabled ? 'is-disabled' : ''}`} data-required={required ? 'true' : undefined} data-empty={!selectedOption ? 'true' : undefined}>
       <button
+        {...triggerProps}
         ref={triggerRef}
         type="button"
         className="searchable-select__trigger"

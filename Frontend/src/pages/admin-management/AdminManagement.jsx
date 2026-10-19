@@ -1,4 +1,5 @@
 import DirectoryEmptyStateImports_default from '../../components/DirectoryEmptyState'
+import { facultyForCollege } from '../../utils/departmentFaculty.js'
 import { newestFirst as newestFirstImports_newestFirst, rememberCreated as newestFirstImports_rememberCreated } from '../../utils/newestFirst'
 import { showWarning as toastImports_showWarning, showSuccess as toastImports_showSuccess, showError as toastImports_showError } from '../../utils/toast'
 import useToastStateImports_default from '../../hooks/useToastState'
@@ -210,6 +211,7 @@ const mapYear = (x) => {
 };
 
 function AcademicYear() {
+  const { selectedCollegeId } = AcademicContextImports_useAcademic();
   const [years, setYears] = useState([]);
   const [search, setSearch] = useState('');
   const [filter, setFilter] = useState('ALL');
@@ -250,8 +252,10 @@ function AcademicYear() {
   };
 
   useEffect(() => {
+    setYears([]);
+    close();
     loadYears();
-  }, []);
+  }, [selectedCollegeId]);
 
   const active = years.find((x) => x.status === 'ACTIVE' || isPresentYear(x));
   const next = years
@@ -3401,10 +3405,13 @@ function DepartmentManagement() {
   useEffect(() => {
     let active = true;
     setFaculty([]);
+    setScreen('list');
+    setSelected(null);
+    setForm({ ...empty, collegeId: selectedCollegeId || '', collegeNumericId: selectedCollegeId || '' });
     facultyService.list({ collegeId: selectedCollegeId })
       .then((records) => {
         if (!active) return;
-        const normalized = records.map(normalizeFaculty);
+        const normalized = facultyForCollege(records.map(normalizeFaculty), selectedCollegeId, allDepartments);
         setFaculty(normalized);
         setItems((current) => current.map((item) => mapDepartment(item, normalized)));
         setAllDepartments((current) => current.map((item) => mapDepartment(item, normalized)));
@@ -3423,8 +3430,9 @@ function DepartmentManagement() {
       const response = await getDepartmentById(item.id);
       let currentFaculty = faculty;
       if (nextScreen === 'assign-hod' || !currentFaculty.length) {
-        const records = await facultyService.list();
-        currentFaculty = records.map(normalizeFaculty);
+        const collegeId = item.collegeNumericId ?? item.collegeId ?? selectedCollegeId;
+        const records = await facultyService.list({ collegeId });
+        currentFaculty = facultyForCollege(records.map(normalizeFaculty), collegeId, allDepartments);
         setFaculty(currentFaculty);
       }
       const detail = mapDepartment(recordFrom(response), currentFaculty);
@@ -3447,30 +3455,10 @@ function DepartmentManagement() {
     const targetCollegeId = String(form.collegeNumericId ?? form.collegeId ?? selectedCollegeId ?? selectedCollege?.collegeId ?? selectedCollege?.id ?? '').trim();
     if (!targetCollegeId) return [];
 
-    const collegeDepartments = scopedAllDepartments.filter((department) =>
-      String(department.collegeNumericId ?? department.collegeId ?? '') === targetCollegeId
-    );
-    const collegeDepartmentIds = new Set(collegeDepartments.map((department) =>
-      String(department.id ?? department.departmentId ?? '').trim()
-    ).filter(Boolean));
-    const collegeDepartmentNames = collegeDepartments.map((department) =>
-      String(department.name ?? department.departmentName ?? '').trim().toLowerCase()
-    ).filter(Boolean);
-
-    const activeFaculty = faculty.filter((member) => {
+    const activeFaculty = facultyForCollege(faculty, targetCollegeId, allDepartments).filter((member) => {
       const status = String(member.employmentStatus || member.status || '').trim().toLowerCase();
-      if (['inactive', 'resigned', 'retired', 'terminated'].includes(status)) return false;
-
-      const memberCollegeId = String(member.collegeNumericId ?? member.collegeId ?? member.college?.collegeId ?? member.college?.id ?? '').trim();
-      if (memberCollegeId) return memberCollegeId === targetCollegeId;
-
-      const memberDeptId = String(member.departmentId ?? member.department?.departmentId ?? member.department?.id ?? '').trim();
-      if (memberDeptId) return collegeDepartmentIds.has(memberDeptId);
-
-      const memberDeptName = String(member.departmentName ?? member.department?.departmentName ?? member.department?.name ?? member.department ?? '').trim().toLowerCase();
-      return Boolean(memberDeptName && collegeDepartmentNames.some((name) => name === memberDeptName || memberDeptName.includes(name) || name.includes(memberDeptName)));
+      return !['inactive', 'resigned', 'retired', 'terminated'].includes(status);
     });
-
     const targetDeptId = form.id !== undefined && form.id !== null ? String(form.id).trim() : '';
     const targetDeptName = String(form.name ?? '').trim().toLowerCase();
     const targetDeptCode = String(form.code ?? '').trim().toLowerCase();
@@ -3501,7 +3489,7 @@ function DepartmentManagement() {
         hodId: member.userId ?? member.employeeProfileId ?? member.facultyId ?? member.id,
       }))
       .filter((member) => member.hodId !== undefined && member.hodId !== null && member.hodId !== '');
-  }, [faculty, form.id, form.name, form.code, form.collegeNumericId, form.collegeId, selectedCollegeId, selectedCollege, scopedAllDepartments]);
+  }, [faculty, form.id, form.name, form.code, form.collegeNumericId, form.collegeId, selectedCollegeId, selectedCollege, allDepartments]);
 
   const toggleStatus = async (item) => {
     setError('');
@@ -3516,8 +3504,9 @@ function DepartmentManagement() {
         let currentFaculty = faculty;
         if (!currentFaculty || !currentFaculty.length) {
           try {
-            const facultyRecords = await facultyService.list();
-            currentFaculty = facultyRecords.map(normalizeFaculty);
+            const collegeId = item.collegeNumericId ?? item.collegeId ?? selectedCollegeId;
+            const facultyRecords = await facultyService.list({ collegeId });
+            currentFaculty = facultyForCollege(facultyRecords.map(normalizeFaculty), collegeId, allDepartments);
             setFaculty(currentFaculty);
           } catch {
             currentFaculty = [];
@@ -8470,8 +8459,6 @@ function RoomsManagement({ formMode = false, viewMode = false }) {
                         icon={FiGrid}
                         title="No rooms found"
                         description="Add a room or classroom to get started."
-                        action="Add Room / Classroom"
-                        onAction={handleOpenCreate}
                       />
                     </td>
                   </tr>
