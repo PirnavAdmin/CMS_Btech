@@ -79,8 +79,8 @@ public sealed class TimetableManagementController : ControllerBase
     }
 
     [HttpGet("timetables")]
-    public async Task<IActionResult> ListTimetables([FromQuery] long? academicYearId=null,[FromQuery] long? courseId=null,[FromQuery] long? branchId=null,[FromQuery] long? semesterId=null,[FromQuery] long? sectionId=null,[FromQuery] string? status=null)
-        => await Execute(()=>_service.ListTimetablesAsync(academicYearId,courseId,branchId,semesterId,sectionId,status,CollegeId(),IsSuperAdmin()),"Timetables retrieved successfully.");
+    public async Task<IActionResult> ListTimetables([FromQuery] long? academicYearId=null,[FromQuery] long? courseId=null,[FromQuery] long? branchId=null,[FromQuery] long? semesterId=null,[FromQuery] long? sectionId=null,[FromQuery] string? status=null,[FromQuery] long? collegeId=null)
+        => await Execute(()=>_service.ListTimetablesAsync(academicYearId,courseId,branchId,semesterId,sectionId,status,IsSuperAdmin()?collegeId:CollegeId(),IsSuperAdmin()),"Timetables retrieved successfully.");
 
     [HttpGet("timetables/{timetableId:long}")]
     public async Task<IActionResult> GetTimetable(long timetableId)

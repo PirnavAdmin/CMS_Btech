@@ -1305,8 +1305,10 @@ function AddCollege() {
         collegeId = created.id ?? created.collegeId ?? response?.data?.id ?? response?.data?.collegeId
         if (!collegeId) throw new Error('College was created, but its identifier was not returned for logo upload.')
         setPendingLogoCollegeId(collegeId)
+        eventBus.emit(ERP_EVENTS.ACADEMIC_UPDATED)
       } else if (editId) {
         await updateCollege(editId, college)
+        eventBus.emit(ERP_EVENTS.ACADEMIC_UPDATED)
       }
       if (values.startDate || values.endDate) {
         cacheCollegeDates(collegeId, { startDate: values.startDate, endDate: values.endDate }, [values.collegeCode, values.collegeName, college?.code, college?.name])
