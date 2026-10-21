@@ -629,10 +629,41 @@ const academicYearPayload = (year) => {
   }
 }
 
+const normalizeAcademicYearRecord = (year = {}) => {
+  const id = year.academicYearId ?? year.AcademicYearId ?? year.id ?? year.Id ?? ''
+  const name = year.academicYearName ?? year.AcademicYearName ?? year.name ?? year.Name ?? year.academicYear ?? ''
+  const startDate = year.startDate ?? year.StartDate ?? year.start_date ?? year.fromDate ?? year.FromDate ?? ''
+  const endDate = year.endDate ?? year.EndDate ?? year.end_date ?? year.toDate ?? year.ToDate ?? ''
+  const rawStatus = year.status ?? year.Status ?? year.academicYearStatus ?? year.AcademicYearStatus ?? ''
+  const status = String(rawStatus).trim().toLowerCase()
+  const rawActive = year.isActive ?? year.IsActive ?? year.is_active
+  const rawCurrent = year.isCurrent ?? year.IsCurrent
+  const activeFlag = rawActive === true || Number(rawActive) === 1 || ['true', 'active', 'current'].includes(String(rawActive ?? '').trim().toLowerCase())
+  const currentFlag = rawCurrent === true || Number(rawCurrent) === 1 || String(rawCurrent ?? '').trim().toLowerCase() === 'true'
+  const today = new Date()
+  const todayKey = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`
+  const dateCurrent = Boolean(startDate && endDate && todayKey >= String(startDate).slice(0, 10) && todayKey <= String(endDate).slice(0, 10))
+  const hasActiveValue = rawActive !== undefined && rawActive !== null && rawActive !== ''
+  const isInactive = rawActive === false || String(rawActive ?? '').trim().toLowerCase() === 'false' || (hasActiveValue && Number(rawActive) === 0) || ['inactive', 'deactive', 'deactivated', 'disabled', 'archived'].includes(status)
+  const isCurrent = activeFlag || currentFlag || ['active', 'current', '1'].includes(status) || (!isInactive && dateCurrent)
+  return {
+    ...year,
+    id: id === null || id === undefined ? '' : String(id),
+    academicYearId: id,
+    name: String(name ?? '').trim(),
+    academicYearName: String(name ?? '').trim(),
+    startDate,
+    endDate,
+    status: isCurrent ? 'Active' : isInactive ? 'Inactive' : rawStatus,
+    isActive: isCurrent ? true : isInactive ? false : rawActive,
+    isCurrent,
+  }
+}
+
 export const academicYearApi = {
   getAll: async (options = {}) => {
     const response = await request(API_ENDPOINTS.academicYears.list, options)
-    return listResponse(response)
+    return listResponse(response).map(normalizeAcademicYearRecord)
   },
   getById: async (id) => {
     const response = await request(API_ENDPOINTS.academicYears.detail(id))

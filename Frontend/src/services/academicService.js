@@ -139,20 +139,27 @@ class AcademicService {
       try {
         const list = await academicYearApi.getAll()
         const mapped = (Array.isArray(list) ? list : []).map(y => {
-          const status = String(y.status ?? '').trim().toLowerCase()
-          const start = y.startDate ? new Date(y.startDate) : null
-          const end = y.endDate ? new Date(y.endDate) : null
+          const rawStatus = y.status ?? y.Status ?? y.academicYearStatus ?? y.AcademicYearStatus ?? ''
+          const status = String(rawStatus).trim().toLowerCase()
+          const rawActive = y.isActive ?? y.IsActive ?? y.is_active
+          const activeFlag = rawActive === true || Number(rawActive) === 1 || ['true', 'active', 'current'].includes(String(rawActive ?? '').trim().toLowerCase())
+          const rawCurrent = y.isCurrent ?? y.IsCurrent
+          const currentFlag = rawCurrent === true || Number(rawCurrent) === 1 || String(rawCurrent ?? '').trim().toLowerCase() === 'true'
+          const startDate = y.startDate ?? y.StartDate ?? y.start_date ?? y.fromDate ?? y.FromDate
+          const endDate = y.endDate ?? y.EndDate ?? y.end_date ?? y.toDate ?? y.ToDate
+          const start = startDate ? new Date(startDate) : null
+          const end = endDate ? new Date(endDate) : null
           const today = new Date()
           const dateCurrent = start && end && !Number.isNaN(start.getTime()) && !Number.isNaN(end.getTime()) && today >= start && today <= end
-          const isCurrent = Boolean(y.isCurrent || y.isActive === true || Number(y.isActive) === 1 || status === 'active' || status === 'current' || Number(y.status) === 1 || dateCurrent)
+          const isCurrent = Boolean(currentFlag || activeFlag || status === 'active' || status === 'current' || Number(rawStatus) === 1 || dateCurrent)
           return {
             ...y,
-            id: String(y.academicYearId ?? y.id),
-            academicYearId: String(y.academicYearId ?? y.id),
-            name: y.academicYearName ?? y.name ?? '',
-            academicYearName: y.academicYearName ?? y.name ?? '',
-            startDate: y.startDate,
-            endDate: y.endDate,
+            id: String(y.academicYearId ?? y.AcademicYearId ?? y.id ?? y.Id),
+            academicYearId: String(y.academicYearId ?? y.AcademicYearId ?? y.id ?? y.Id),
+            name: y.academicYearName ?? y.AcademicYearName ?? y.name ?? y.Name ?? '',
+            academicYearName: y.academicYearName ?? y.AcademicYearName ?? y.name ?? y.Name ?? '',
+            startDate,
+            endDate,
             status: isCurrent ? 'Active' : (y.status ?? 'Archived'),
             isCurrent,
           }

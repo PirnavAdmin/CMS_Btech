@@ -5,6 +5,7 @@ import DashboardLayoutImports_default from '../../../layouts/DashboardLayout'
 import ModuleAvailabilityImports_default from '../../../components/ModuleAvailability'
 import { FiEdit2 as fiImports_FiEdit2, FiFilter as fiImports_FiFilter, FiPlus as fiImports_FiPlus, FiPower as fiImports_FiPower, FiSearch as fiImports_FiSearch, FiTrash2 as fiImports_FiTrash2, FiChevronDown as fiImports_FiChevronDown, FiChevronUp as fiImports_FiChevronUp, FiX as fiImports_FiX } from 'react-icons/fi'
 import ExportMenuImports_default from '../../../components/ExportMenu'
+import { useAcademic as useAcademicImports_useAcademic } from '../../../context/AcademicContext'
 import './ExaminationSetup.css'
 
 // CreateExamination screen and private helpers.
@@ -16,6 +17,7 @@ const Link = react_router_domImports_Link
 const useLocation = react_router_domImports_useLocation
 const useNavigate = react_router_domImports_useNavigate
 const DashboardLayout = DashboardLayoutImports_default
+const useAcademic = useAcademicImports_useAcademic
 
 const tabs = [['Examination List', '/examination-setup/examination-list'], ['Create Examination', '/examination-setup/create-examination'], ['Exam Type', '/examination-setup/exam-type'], ['Exam Schedule', '/examination-setup/exam-schedule'], ['Exam Rules', '/examination-setup/exam-rules']]
 const key = 'cms-examination-setup-demo-v1'
@@ -23,13 +25,15 @@ const blank = { name: '', academicYear: '', examType: '', term: '', startDate: '
 const load = () => { try { return JSON.parse(localStorage.getItem(key)) || {} } catch { return {} } }
 
 function CreateExamination() {
+  const { academicYears = [], selectedAcademicYear } = useAcademic()
+  const yearOptions = [...new Set(academicYears.map(year => year.name || year.academicYearName).filter(Boolean))]
   const location = useLocation()
   const navigate = useNavigate()
   const existing = location.state?.exam
-  const [form, setForm] = useState(() => ({ ...blank, ...(existing || {}) }))
+  const [form, setForm] = useState(() => ({ ...blank, academicYear: selectedAcademicYear?.name || selectedAcademicYear?.academicYearName || '', ...(existing || {}) }))
   const [errors, setErrors] = useState({})
   const [saved, setSaved] = useState(false)
-  useEffect(() => { setForm({ ...blank, ...(location.state?.exam || {}) }); setErrors({}); setSaved(false) }, [location.state])
+  useEffect(() => { setForm({ ...blank, academicYear: selectedAcademicYear?.name || selectedAcademicYear?.academicYearName || '', ...(location.state?.exam || {}) }); setErrors({}); setSaved(false) }, [location.state, selectedAcademicYear])
   const change = (name, value) => { setForm(current => ({ ...current, [name]: value })); setErrors(current => ({ ...current, [name]: '' })); setSaved(false) }
   const submit = event => {
     event.preventDefault()
@@ -50,7 +54,7 @@ function CreateExamination() {
       <nav className="examination-setup__tabs" aria-label="Examination setup sections">{tabs.filter(([, path]) => path !== '/examination-setup/create-examination').map(([label, path]) => <Link key={path} to={path} className={path === location.pathname ? 'active' : ''}>{label}</Link>)}</nav>
       <div className="examination-setup__form-wrap"><form className="examination-setup__form" onSubmit={submit} noValidate>
         <label><span>Examination Name <b>*</b></span><input value={form.name} aria-invalid={Boolean(errors.name)} onChange={event => change('name', event.target.value)} />{errors.name && <small className="examination-setup__field-error">{errors.name}</small>}</label>
-        <label><span>Academic Year <b>*</b></span><ProjectSelect value={form.academicYear} aria-invalid={Boolean(errors.academicYear)} onChange={event => change('academicYear', event.target.value)}><option value="">Select academic year</option>{['2025-26', '2026-27', '2027-28'].map(year => <option key={year}>{year}</option>)}</ProjectSelect>{errors.academicYear && <small className="examination-setup__field-error">{errors.academicYear}</small>}</label>
+        <label><span>Academic Year <b>*</b></span><ProjectSelect value={form.academicYear} aria-invalid={Boolean(errors.academicYear)} onChange={event => change('academicYear', event.target.value)}><option value="">Select academic year</option>{yearOptions.map(year => <option key={year}>{year}</option>)}</ProjectSelect>{errors.academicYear && <small className="examination-setup__field-error">{errors.academicYear}</small>}</label>
         <label><span>Exam Type <b>*</b></span><ProjectSelect value={form.examType} aria-invalid={Boolean(errors.examType)} onChange={event => change('examType', event.target.value)}><option value="">Select exam type</option>{(load().types || [{ id: 'type-mid', name: 'Mid Semester', status: 'Active' }, { id: 'type-end', name: 'End Semester', status: 'Active' }, { id: 'type-practical', name: 'Practical', status: 'Active' }]).filter(type => type.status === 'Active').map(type => <option key={type.id}>{type.name}</option>)}</ProjectSelect>{errors.examType && <small className="examination-setup__field-error">{errors.examType}</small>}</label>
         <label><span>Semester / Term <b>*</b></span><ProjectSelect value={form.term} aria-invalid={Boolean(errors.term)} onChange={event => change('term', event.target.value)}><option value="">Select semester / term</option>{['Semester 1', 'Semester 2', 'Semester 3', 'Semester 4', 'Semester 5', 'Semester 6', 'Semester 7', 'Semester 8', 'Annual'].map(term => <option key={term}>{term}</option>)}</ProjectSelect>{errors.term && <small className="examination-setup__field-error">{errors.term}</small>}</label>
         <label><span>Start Date <b>*</b></span><input type="date" value={form.startDate} aria-invalid={Boolean(errors.startDate)} onChange={event => change('startDate', event.target.value)} />{errors.startDate && <small className="examination-setup__field-error">{errors.startDate}</small>}</label>
@@ -114,6 +118,9 @@ const dateText = value => value ? new Date(`${value}T00:00:00`).toLocaleDateStri
 const initialForm = { name: '', academicYear: '', examType: '', term: '', startDate: '', endDate: '', description: '', status: 'Draft' }
 
 function LocalExaminationSetup() {
+  const { academicYears = [], selectedAcademicYear } = useAcademic()
+  const yearOptions = [...new Set([...academicYears.map(year => year.name || year.academicYearName), ...readData().examinations.map(row => row.academicYear)].filter(Boolean))]
+  const blankExam = { ...initialForm, academicYear: selectedAcademicYear?.name || selectedAcademicYear?.academicYearName || '' }
   const { pathname, state: routeState } = useLocation()
   const navigate = useNavigate()
   const activePath = tabs.some(([, path]) => path === pathname) ? pathname : tabs[0][1]
@@ -122,7 +129,7 @@ function LocalExaminationSetup() {
   const [query, setQuery] = useState('')
   const [showFilters, setShowFilters] = useState(false)
   const [filters, setFilters] = useState({ status: '', year: '', examination: '', examType: '' })
-  const [form, setForm] = useState(initialForm)
+  const [form, setForm] = useState(blankExam)
   const [editing, setEditing] = useState(null)
   const [showEntryForm, setShowEntryForm] = useState(false)
   const [errors, setErrors] = useState({})
@@ -131,10 +138,10 @@ function LocalExaminationSetup() {
   useEffect(() => { try { localStorage.setItem(storageKey, JSON.stringify(data)) } catch { /* Demo data remains available for this session. */ } }, [data])
   useEffect(() => {
     setQuery(''); setShowFilters(false); setShowEntryForm(false)
-    if (activePath === tabs[1][1] && routeState?.exam) { setEditing(routeState.exam.id); setForm({ ...initialForm, ...routeState.exam }); setErrors({}) }
-    else if (activePath === tabs[1][1]) { setEditing(null); setForm(initialForm); setErrors({}); setMessage('') }
+    if (activePath === tabs[1][1] && routeState?.exam) { setEditing(routeState.exam.id); setForm({ ...blankExam, ...routeState.exam }); setErrors({}) }
+    else if (activePath === tabs[1][1]) { setEditing(null); setForm(blankExam); setErrors({}); setMessage('') }
     if ([tabs[2][1], tabs[3][1], tabs[4][1]].includes(activePath)) { setEditing(null); setForm({}); setErrors({}); setMessage('') }
-  }, [activePath, routeState])
+  }, [activePath, routeState, selectedAcademicYear])
 
   const change = (key, value) => { setForm(current => ({ ...current, [key]: value })); setErrors(current => ({ ...current, [key]: '' })); setMessage('') }
   const save = (event, collection, required, kind) => {
@@ -150,7 +157,7 @@ function LocalExaminationSetup() {
     const item = { ...form, status: form.status || (kind === 'examination' ? 'Draft' : 'Active'), id: editing || `${kind}-${Date.now()}` }
     setData(current => ({ ...current, [collection]: editing ? current[collection].map(row => row.id === editing ? item : row) : [item, ...current[collection]] }))
     setMessage(`${kind === 'examination' ? 'Examination' : kind === 'type' ? 'Exam type' : kind === 'schedule' ? 'Schedule' : 'Rule'} ${editing ? 'updated' : 'added'} successfully.`)
-    setForm(kind === 'examination' ? initialForm : {})
+    setForm(kind === 'examination' ? blankExam : {})
     setEditing(null)
     setShowEntryForm(false)
   }
@@ -158,7 +165,7 @@ function LocalExaminationSetup() {
   const remove = (collection, id) => setData(current => ({ ...current, [collection]: current[collection].filter(row => row.id !== id) }))
   const toggleStatus = (collection, id) => setData(current => ({ ...current, [collection]: current[collection].map(row => row.id === id ? { ...row, status: row.status === 'Inactive' ? 'Active' : 'Inactive' } : row) }))
   const types = data.types.filter(row => row.status === 'Active')
-  const years = [...new Set(data.examinations.map(row => row.academicYear))]
+  const years = yearOptions
   const filteredExams = useMemo(() => data.examinations.filter(row => `${row.name} ${row.academicYear} ${row.examType} ${row.term}`.toLowerCase().includes(query.toLowerCase()) && (!filters.status || row.status === filters.status) && (!filters.year || row.academicYear === filters.year)), [data.examinations, query, filters])
   const examinationColumns = [{ label: 'Examination Name', value: row => row.name }, { label: 'Academic Year', value: row => row.academicYear }, { label: 'Exam Type', value: row => row.examType }, { label: 'Semester / Term', value: row => row.term }, { label: 'Start Date', value: row => row.startDate }, { label: 'End Date', value: row => row.endDate }, { label: 'Status', value: row => row.status }]
   const filteredTypes = data.types.filter(row => `${row.name} ${row.code} ${row.description}`.toLowerCase().includes(query.toLowerCase()))
@@ -175,12 +182,12 @@ function LocalExaminationSetup() {
   return <DashboardLayout><main className="examination-setup">
     <header className="examination-setup__header"><div><h1>Examination Setup</h1><p>Configure examinations, types, schedules and rules.</p></div><div className="examination-setup__summary">{[['Examinations', data.examinations.length], ['Exam Types', data.types.length], ['Schedules', data.schedules.length]].map(([label, value]) => <div key={label}><strong>{value}</strong><small>{label}</small></div>)}</div></header>
     <section className="examination-setup__card">
-      <header className="examination-setup__card-header"><div><p>{activeTab.toUpperCase()}</p><h2>{activeTab === 'Examination List' ? 'Search and manage examination cycles.' : activeTab === 'Create Examination' ? 'Enter examination details and academic period.' : `Manage ${activeTab.toLowerCase()} records.`}</h2></div>{activePath !== tabs[1][1] && <div className="examination-setup__header-actions">{activePath === tabs[0][1] && <><ExportMenu rows={filteredExams} columns={examinationColumns} title="Examination List" filename="examinations" scope="All matching examinations" allowEmpty /><button type="button" className="examination-setup__filter-button" aria-expanded={showFilters} onClick={() => setShowFilters(value => !value)}><FiFilter /> Filters</button><button type="button" className="examination-setup__primary" onClick={() => { setForm(initialForm); setEditing(null); setErrors({}); setShowEntryForm(true); setMessage('') }}><FiPlus /> Create Examination</button></>}{activePath !== tabs[0][1] && <><button type="button" className="examination-setup__filter-button" aria-expanded={showFilters} onClick={() => setShowFilters(value => !value)}><FiFilter /> Filters</button><button type="button" className="examination-setup__primary" onClick={() => { setForm({}); setEditing(null); setShowEntryForm(true); setMessage('') }}><FiPlus /> Add {activeTab === 'Exam Type' ? 'Exam Type' : activeTab === 'Exam Schedule' ? 'Schedule' : 'Rule'}</button></>}</div>}</header>
+      <header className="examination-setup__card-header"><div><p>{activeTab.toUpperCase()}</p><h2>{activeTab === 'Examination List' ? 'Search and manage examination cycles.' : activeTab === 'Create Examination' ? 'Enter examination details and academic period.' : `Manage ${activeTab.toLowerCase()} records.`}</h2></div>{activePath !== tabs[1][1] && <div className="examination-setup__header-actions">{activePath === tabs[0][1] && <><ExportMenu rows={filteredExams} columns={examinationColumns} title="Examination List" filename="examinations" scope="All matching examinations" allowEmpty /><button type="button" className="examination-setup__filter-button" aria-expanded={showFilters} onClick={() => setShowFilters(value => !value)}><FiFilter /> Filters</button><button type="button" className="examination-setup__primary" onClick={() => { setForm(blankExam); setEditing(null); setErrors({}); setShowEntryForm(true); setMessage('') }}><FiPlus /> Create Examination</button></>}{activePath !== tabs[0][1] && <><button type="button" className="examination-setup__filter-button" aria-expanded={showFilters} onClick={() => setShowFilters(value => !value)}><FiFilter /> Filters</button><button type="button" className="examination-setup__primary" onClick={() => { setForm({}); setEditing(null); setShowEntryForm(true); setMessage('') }}><FiPlus /> Add {activeTab === 'Exam Type' ? 'Exam Type' : activeTab === 'Exam Schedule' ? 'Schedule' : 'Rule'}</button></>}</div>}</header>
       <nav className="examination-setup__tabs" aria-label="Examination setup sections">{tabs.filter(([, path]) => path !== tabs[1][1]).map(([label, path]) => <Link key={path} to={path} className={activePath === path ? 'active' : ''} aria-current={activePath === path ? 'page' : undefined}>{label}</Link>)}</nav>
 
       {activePath === tabs[1][1] ? <div className="examination-setup__form-wrap"><form className="examination-setup__form" onSubmit={event => save(event, 'examinations', ['name', 'academicYear', 'examType', 'term', 'startDate', 'endDate'], 'examination')} noValidate>
         <label><span>Examination Name <b>*</b></span><input value={form.name} aria-invalid={Boolean(errors.name)} onChange={event => change('name', event.target.value)} />{errors.name && <small className="examination-setup__field-error">{errors.name}</small>}</label>
-        <label><span>Academic Year <b>*</b></span><ProjectSelect value={form.academicYear} onChange={event => change('academicYear', event.target.value)}><option value="">Select academic year</option>{['2025-26', '2026-27', '2027-28'].map(year => <option key={year}>{year}</option>)}</ProjectSelect>{errors.academicYear && <small className="examination-setup__field-error">{errors.academicYear}</small>}</label>
+      <label><span>Academic Year <b>*</b></span><ProjectSelect value={form.academicYear} onChange={event => change('academicYear', event.target.value)}><option value="">Select academic year</option>{yearOptions.map(year => <option key={year}>{year}</option>)}</ProjectSelect>{errors.academicYear && <small className="examination-setup__field-error">{errors.academicYear}</small>}</label>
         <label><span>Exam Type <b>*</b></span><ProjectSelect value={form.examType} onChange={event => change('examType', event.target.value)}><option value="">Select exam type</option>{types.map(row => <option key={row.id}>{row.name}</option>)}</ProjectSelect>{errors.examType && <small className="examination-setup__field-error">{errors.examType}</small>}</label>
         <label><span>Semester / Term <b>*</b></span><ProjectSelect value={form.term} onChange={event => change('term', event.target.value)}><option value="">Select semester / term</option>{['Semester 1', 'Semester 2', 'Semester 3', 'Semester 4', 'Semester 5', 'Semester 6', 'Semester 7', 'Semester 8', 'Annual'].map(term => <option key={term}>{term}</option>)}</ProjectSelect>{errors.term && <small className="examination-setup__field-error">{errors.term}</small>}</label>
         <label><span>Start Date <b>*</b></span><input type="date" value={form.startDate} aria-invalid={Boolean(errors.startDate)} onChange={event => change('startDate', event.target.value)} />{errors.startDate && <small className="examination-setup__field-error">{errors.startDate}</small>}</label>
@@ -203,7 +210,7 @@ function LocalExaminationSetup() {
         {activePath === tabs[4][1] && <DataTable headers={['Rule Name', 'Description', 'Exam Type', 'Passing Marks', 'Min. Attendance', 'Attempts', 'Status', 'Actions']} rows={filteredRules} columns={['name', 'description', 'examType', 'passingMarks', 'attendance', 'attempts', 'status']} actions={actions} collection="rules" />}
         {activePath === tabs[0][1] && showEntryForm && <div className="examination-setup__modal-backdrop" onMouseDown={event => { if (event.target === event.currentTarget) { setShowEntryForm(false); setErrors({}) } }}><section className="examination-setup__modal" role="dialog" aria-modal="true" aria-labelledby="examination-create-title"><header><div><h2 id="examination-create-title">Create Examination</h2><p>Enter examination details and academic period.</p></div><button type="button" aria-label="Close" onClick={() => { setShowEntryForm(false); setErrors({}) }}>×</button></header><form className="examination-setup__form" onSubmit={event => save(event, 'examinations', ['name', 'academicYear', 'examType', 'term', 'startDate', 'endDate'], 'examination')} noValidate>
           <label><span>Examination Name <b>*</b></span><input value={form.name || ''} aria-invalid={Boolean(errors.name)} onChange={event => change('name', event.target.value)} />{errors.name && <small className="examination-setup__field-error">{errors.name}</small>}</label>
-          <label><span>Academic Year <b>*</b></span><ProjectSelect value={form.academicYear || ''} onChange={event => change('academicYear', event.target.value)}><option value="">Select academic year</option>{['2025-26', '2026-27', '2027-28'].map(year => <option key={year}>{year}</option>)}</ProjectSelect>{errors.academicYear && <small className="examination-setup__field-error">{errors.academicYear}</small>}</label>
+          <label><span>Academic Year <b>*</b></span><ProjectSelect value={form.academicYear || ''} onChange={event => change('academicYear', event.target.value)}><option value="">Select academic year</option>{yearOptions.map(year => <option key={year}>{year}</option>)}</ProjectSelect>{errors.academicYear && <small className="examination-setup__field-error">{errors.academicYear}</small>}</label>
           <label><span>Exam Type <b>*</b></span><ProjectSelect value={form.examType || ''} onChange={event => change('examType', event.target.value)}><option value="">Select exam type</option>{types.map(row => <option key={row.id}>{row.name}</option>)}</ProjectSelect>{errors.examType && <small className="examination-setup__field-error">{errors.examType}</small>}</label>
           <label><span>Semester / Term <b>*</b></span><ProjectSelect value={form.term || ''} onChange={event => change('term', event.target.value)}><option value="">Select semester / term</option>{['Semester 1', 'Semester 2', 'Semester 3', 'Semester 4', 'Semester 5', 'Semester 6', 'Semester 7', 'Semester 8', 'Annual'].map(term => <option key={term}>{term}</option>)}</ProjectSelect>{errors.term && <small className="examination-setup__field-error">{errors.term}</small>}</label>
           <label><span>Start Date <b>*</b></span><input type="date" value={form.startDate || ''} aria-invalid={Boolean(errors.startDate)} onChange={event => change('startDate', event.target.value)} />{errors.startDate && <small className="examination-setup__field-error">{errors.startDate}</small>}</label>

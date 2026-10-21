@@ -27,7 +27,7 @@ import CompactSummaryImports_default from '../../components/CompactSummary'
 import facultyServiceImports_default, { normalizeFaculty as facultyServiceImports_normalizeFaculty } from '../../services/facultyService'
 import { useAcademic as AcademicContextImports_useAcademic } from '../../context/AcademicContext'
 import useCollegeStateImports_default from '../../hooks/useCollegeState'
-import { collegeStorageKey as collegeScopeImports_collegeStorageKey, createCollegeScope } from '../../utils/collegeScope.js'
+import { collegeStorageKey as collegeScopeImports_collegeStorageKey } from '../../utils/collegeScope.js'
 import academicServiceImports_default from '../../services/academicService'
 import EmptyStateImports_default from '../../components/EmptyState'
 import roomServiceImports_default, { ROOM_TYPES as roomServiceImports_ROOM_TYPES, BUILDING_BLOCKS as roomServiceImports_BUILDING_BLOCKS, FLOORS as roomServiceImports_FLOORS, ROOM_FACILITIES as roomServiceImports_ROOM_FACILITIES } from '../../services/roomService'
@@ -204,7 +204,9 @@ const mapYear = (x) => {
     startDate,
     endDate,
     status:
-      x.isActive || x.IsActive || Number(x.status ?? x.Status) === 1
+      x.isActive === true || x.IsActive === true || Number(x.isActive ?? x.IsActive) === 1 ||
+      x.isCurrent === true || x.IsCurrent === true ||
+      ['active', 'current', '1', 'true'].includes(String(x.status ?? x.Status ?? x.academicYearStatus ?? '').trim().toLowerCase())
         ? 'ACTIVE'
         : autoStatus(startDate, endDate),
     autoActivate: Boolean(x.autoActivate ?? x.AutoActivate ?? false),
@@ -248,7 +250,9 @@ function AcademicYear() {
     setExportLoading(true);
     try {
       const data = await academicYearApi.getAll();
-      setYears(newestFirst('academic-years', createCollegeScope(selectedCollegeId)(data)).map(mapYear));
+      // Academic-year endpoints can return rows without CollegeId. Keep the API
+      // response intact so those rows (including the active year) remain visible.
+      setYears(newestFirst('academic-years', data).map(mapYear));
       eventBus.emit(ERP_EVENTS.ACADEMIC_UPDATED);
     } catch (error) {
       setNotice(error.message || 'Unable to load academic years.', 'error');

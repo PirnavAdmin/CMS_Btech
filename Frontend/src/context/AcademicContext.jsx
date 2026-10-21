@@ -107,7 +107,11 @@ export const AcademicProvider = ({ children }) => {
         resolvedColId = defaultCol ? String(defaultCol.id ?? defaultCol.collegeId) : ''
       }
       setSelectedCollegeId(resolvedColId)
-      safeYears = createCollegeScope(resolvedColId)(years || [])
+      // The academic-years endpoint may omit CollegeId from its DTO. Filtering
+      // by inferred ownership drops every year in that response, leaving the
+      // header selector at “Not Configured”. The API is already scoped by the
+      // selected college context, so preserve its rows here.
+      safeYears = years || []
       setAcademicYears(safeYears)
 
       // Validate or resolve default Academic Year

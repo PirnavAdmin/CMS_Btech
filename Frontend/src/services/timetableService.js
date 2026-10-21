@@ -6,7 +6,14 @@ import { active, same, completeScope, matchesScope, normalizeEntry, eligibleSubj
 import { generateTimetable, planningErrors, entryPlanningErrors, schedulingIssues } from '../utils/timetablePlanner'
 import { isTeachingPeriod } from '../utils/timetablePeriods'
 
-const master = (rows, kind) => rows.map(row => ({ ...row, id: row[`${kind}Id`] ?? row.id, name: row[`${kind}Name`] ?? row.name ?? row.fullName ?? '' }))
+const master = (rows, kind) => {
+  const pascal = `${kind[0].toUpperCase()}${kind.slice(1)}`
+  return rows.map(row => ({
+    ...row,
+    id: row[`${kind}Id`] ?? row[`${pascal}Id`] ?? row.id ?? row.Id,
+    name: row[`${kind}Name`] ?? row[`${pascal}Name`] ?? row.name ?? row.Name ?? row.fullName ?? row.FullName ?? '',
+  }))
+}
 export const timetableCapabilities = Object.freeze({ entries: true, createTimetable: false, createSlot: false, draft: false, publish: false, roomIds: false, calendar: false, facultyAvailability: false, storage: 'backend' })
 
 export const timetableService = {

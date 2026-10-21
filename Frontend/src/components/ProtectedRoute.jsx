@@ -1,10 +1,8 @@
 import { Navigate, Outlet, useLocation } from 'react-router-dom'
 import { getUserRole, isAuthenticated } from '../auth/auth'
-import { useAcademic } from '../context/AcademicContext'
 
 export default function ProtectedRoute({ allowedRoles = [] }) {
   const location = useLocation()
-  const { selectedCollegeId } = useAcademic()
 
   if (!isAuthenticated()) {
     return (
@@ -25,5 +23,5 @@ export default function ProtectedRoute({ allowedRoles = [] }) {
     return <Navigate to="/unauthorized" replace />
   }
 
-  return <Outlet key={selectedCollegeId} />
+  return <Outlet />
 }
