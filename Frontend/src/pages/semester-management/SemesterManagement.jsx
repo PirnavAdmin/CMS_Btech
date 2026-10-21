@@ -412,7 +412,9 @@ function SemesterList() {
 }
 
 function SemesterForm({ editMode = false }) {
-  const { scopeRecords, selectedCollegeId, selectedAcademicYearId } = useAcademic()
+  const { scopeRecords, selectedCollegeId, selectedAcademicYearId, activeAcademicYears: contextActiveYears = [], currentAcademicYear } = useAcademic()
+  const activeContextYear = contextActiveYears.find((item) => String(item.status || '').toUpperCase() === 'ACTIVE' || item.isCurrent) || currentAcademicYear
+  const activeContextYearId = String(activeContextYear?.id ?? activeContextYear?.academicYearId ?? '')
   useLifecycleClock()
   const { id } = useParams()
   const navigate = useNavigate()
@@ -423,7 +425,7 @@ function SemesterForm({ editMode = false }) {
   const [colleges, setColleges] = useState([])
   const [academicYears, setAcademicYears] = useState([])
   const [existingRows, setExistingRows] = useState([])
-  const [form, setForm] = useState(() => ({ ...emptyForm, collegeId: selectedCollegeId || '', academicYearId: selectedAcademicYearId || '' }))
+  const [form, setForm] = useState(() => ({ ...emptyForm, collegeId: selectedCollegeId || '', academicYearId: activeContextYearId || selectedAcademicYearId || '' }))
   const [dates, setDates] = useState({})
   const [step, setStep] = useState(1)
   const [loading, setLoading] = useState(true)
@@ -441,11 +443,19 @@ function SemesterForm({ editMode = false }) {
   const course = availableCourses.find((item) => String(item.id || item.courseId) === String(form.courseId)) || courses.find((item) => String(item.id || item.courseId) === String(form.courseId))
   const availableBranches = branches.filter((item) => String(item.courseId) === String(form.courseId) && item.status !== 'Inactive' && item.status !== 0 && item.status !== false && item.isActive !== false)
   const branch = availableBranches.find((item) => String(item.id || item.branchId) === String(form.branchId))
-  const activeYears = useMemo(() => getActiveAcademicYears(academicYears), [academicYears])
-  const activeYear = editMode ? academicYears.find((item) => String(item.id) === String(form.academicYearId)) : activeYears[0]
+  const effectiveAcademicYears = useMemo(() => {
+    const normalized = academicYears.map(normalizeAcademicYear).filter((item) => item.id && item.name)
+    if (!activeContextYearId) return normalized
+    const contextYear = normalizeAcademicYear({ ...activeContextYear, id: activeContextYearId, status: 'ACTIVE', isActive: true, isCurrent: true })
+    const index = normalized.findIndex((item) => String(item.id) === activeContextYearId)
+    if (index < 0) return [contextYear, ...normalized]
+    return normalized.map((item, itemIndex) => itemIndex === index ? { ...item, ...contextYear, status: 'ACTIVE', isActive: true, isCurrent: true } : item)
+  }, [academicYears, activeContextYear, activeContextYearId])
+  const activeYears = useMemo(() => getActiveAcademicYears(effectiveAcademicYears), [effectiveAcademicYears])
+  const activeYear = editMode ? effectiveAcademicYears.find((item) => String(item.id) === String(form.academicYearId)) : activeYears.find((item) => String(item.id) === activeContextYearId) || activeYears[0]
   const startYear = editMode && editingSemester ? cohortStart(editingSemester) : parseAcademicYearStart(activeYear)
   const coursePeriod = periodLabel(startYear, course?.durationYears)
-  const plan = createPlan({ course, branch, activeYear, academicYears, dates, editingSemester })
+  const plan = createPlan({ course, branch, activeYear, academicYears: effectiveAcademicYears, dates, editingSemester })
   const selectedPlanRow = plan.find((item) => Number(item.semesterNumber) === Number(form.semesterNumber))
   const unsupportedPattern = course && !isSemesterPattern(course.academicPattern)
   const noActiveYear = !editMode && activeYears.length === 0
@@ -476,7 +486,7 @@ function SemesterForm({ editMode = false }) {
         setForm((current) => ({
           ...current,
           collegeId: current.collegeId || selectedCollegeId || (sources.colleges[0]?.id ? String(sources.colleges[0].id) : ''),
-          academicYearId: current.academicYearId || selectedAcademicYearId || (active.length ? String(active[0].id) : ''),
+          academicYearId: activeContextYearId || current.academicYearId || selectedAcademicYearId || (active.length ? String(active[0].id) : ''),
         }))
       }
     } catch (requestError) {
