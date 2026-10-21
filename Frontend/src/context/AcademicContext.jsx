@@ -3,7 +3,7 @@ import academicService, { filterActiveOnly } from '../services/academicService'
 import eventBus, { ERP_EVENTS } from '../services/eventBus'
 import { getActiveAcademicYears } from '../utils/academicYearUtils'
 import { createCollegeScope } from '../utils/collegeScope'
-import { getUserCollegeId } from '../auth/auth'
+import { getUserCollegeId, getUserRole } from '../auth/auth'
 
 const CONTEXT_STORAGE_KEY = 'pirnav_academic_context'
 
@@ -11,13 +11,14 @@ const AcademicContext = createContext(null)
 
 const readStoredContext = () => {
   try {
+    const assignedCollege = getUserRole() === 'admin' ? '' : getUserCollegeId()
     const raw = localStorage.getItem(CONTEXT_STORAGE_KEY)
     if (raw) {
       const parsed = JSON.parse(raw)
       if (parsed && typeof parsed === 'object') {
         return {
-          collegeId: getUserCollegeId() || (parsed.collegeId ? String(parsed.collegeId) : ''),
-          academicYearId: getUserCollegeId() && String(parsed.collegeId) !== getUserCollegeId() ? '' : (parsed.academicYearId ? String(parsed.academicYearId) : ''),
+          collegeId: assignedCollege || (parsed.collegeId ? String(parsed.collegeId) : ''),
+          academicYearId: assignedCollege && String(parsed.collegeId) !== assignedCollege ? '' : (parsed.academicYearId ? String(parsed.academicYearId) : ''),
         }
       }
     }
@@ -25,7 +26,7 @@ const readStoredContext = () => {
     const legacyYear = localStorage.getItem('pirnav-selected-academic-year-id')
     const legacyCollege = localStorage.getItem('selected_college_id') || localStorage.getItem('pirnav-selected-college-id')
     return {
-      collegeId: getUserCollegeId() || (legacyCollege ? String(legacyCollege) : ''),
+      collegeId: assignedCollege || (legacyCollege ? String(legacyCollege) : ''),
       academicYearId: legacyYear ? String(legacyYear) : '',
     }
   } catch {
@@ -85,7 +86,8 @@ export const AcademicProvider = ({ children }) => {
       if ([cols, years, depts, crss, brns, sems, secs].some(list => list?.loadError)) {
         throw new Error('Academic configuration could not be loaded. Please retry.')
       }
-      const assignedCollege = getUserCollegeId()
+      const isAdmin = getUserRole() === 'admin'
+      const assignedCollege = isAdmin ? '' : getUserCollegeId()
       const safeColleges = (cols || []).filter(row => !assignedCollege || String(row.id ?? row.collegeId) === assignedCollege)
       let safeYears = []
 
@@ -103,7 +105,8 @@ export const AcademicProvider = ({ children }) => {
       if (stored.collegeId && availableColleges.some(c => String(c.id ?? c.collegeId) === String(stored.collegeId))) {
         resolvedColId = String(stored.collegeId)
       } else {
-        const defaultCol = availableColleges[0]
+        const preferredCollege = availableColleges.find(c => String(c.id ?? c.collegeId) === String(getUserCollegeId()))
+        const defaultCol = preferredCollege || availableColleges[0]
         resolvedColId = defaultCol ? String(defaultCol.id ?? defaultCol.collegeId) : ''
       }
       setSelectedCollegeId(resolvedColId)
@@ -185,7 +188,9 @@ export const AcademicProvider = ({ children }) => {
 
   // Atomically apply a new Global Academic Context
   const applyAcademicContext = useCallback(async (newCollegeId, newAcademicYearId) => {
-    if (getUserCollegeId() && String(newCollegeId) !== getUserCollegeId()) throw new Error('Select the college assigned to your account.')
+    const isAdmin = getUserRole() === 'admin'
+    const assignedCollege = isAdmin ? '' : getUserCollegeId()
+    if (assignedCollege && String(newCollegeId) !== assignedCollege) throw new Error('Select the college assigned to your account.')
     const colId = String(newCollegeId ?? '')
     const collegeChanged = colId !== String(readStoredContext().collegeId || '')
     const yrId = collegeChanged ? '' : String(newAcademicYearId ?? '')

@@ -250,9 +250,9 @@ function AcademicYear() {
     setExportLoading(true);
     try {
       const data = await academicYearApi.getAll();
-      // Academic-year endpoints can return rows without CollegeId. Keep the API
-      // response intact so those rows (including the active year) remain visible.
-      setYears(newestFirst('academic-years', data).map(mapYear));
+      const list = Array.isArray(data) ? data : data?.records || data?.items || [];
+      const scoped = list.filter((row) => !row.collegeId || String(row.collegeId) === String(selectedCollegeId));
+      setYears(newestFirst('academic-years', scoped).map(mapYear));
       eventBus.emit(ERP_EVENTS.ACADEMIC_UPDATED);
     } catch (error) {
       setNotice(error.message || 'Unable to load academic years.', 'error');
@@ -1309,10 +1309,24 @@ function AddCollege() {
         collegeId = created.id ?? created.collegeId ?? response?.data?.id ?? response?.data?.collegeId
         if (!collegeId) throw new Error('College was created, but its identifier was not returned for logo upload.')
         setPendingLogoCollegeId(collegeId)
-        eventBus.emit(ERP_EVENTS.ACADEMIC_UPDATED)
+        rememberCreated('colleges', collegeId)
+        academicServiceImports_default?.registerNewCollege?.({
+          ...college,
+          ...created,
+          id: collegeId,
+          collegeId,
+          name: values.collegeName.trim(),
+          collegeName: values.collegeName.trim(),
+          code: values.collegeCode,
+          collegeCode: values.collegeCode,
+          status: 'Active',
+        })
+        academicServiceImports_default?.clearCache?.()
+        eventBus.emit(ERP_EVENTS.ACADEMIC_UPDATED, { collegeId, college: created })
       } else if (editId) {
         await updateCollege(editId, college)
-        eventBus.emit(ERP_EVENTS.ACADEMIC_UPDATED)
+        academicServiceImports_default?.clearCache?.()
+        eventBus.emit(ERP_EVENTS.ACADEMIC_UPDATED, { collegeId: editId })
       }
       if (values.startDate || values.endDate) {
         cacheCollegeDates(collegeId, { startDate: values.startDate, endDate: values.endDate }, [values.collegeCode, values.collegeName, college?.code, college?.name])
@@ -2286,6 +2300,7 @@ function CollegeInstitutionManagement({ initialView = 'list' }) {
       const updated = mapCollege((response.data?.data ?? response.data) || { ...formValues, id: activeId })
       setColleges((current) => current.map((college) => (college.id === activeId ? updated : college)))
       backToList()
+      eventBus.emit(ERP_EVENTS.ACADEMIC_UPDATED, { collegeId: activeId })
       showSuccess('College updated successfully.'); await Promise.all([loadColleges(searchTerm), refreshCollegeSummary()])
     } catch (error) {
       setCollegeError(getApiErrorMessage(error, 'Unable to update this college. Please try again.'))
