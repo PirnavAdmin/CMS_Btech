@@ -1,6 +1,6 @@
-import { Component, useEffect } from 'react'
+import { Component, Suspense, lazy, useEffect } from 'react'
 import { MeetingsEventsWorkspace, LibraryWorkspace, PlacementWorkspace } from './pages/campus/CampusWorkspace'
-import { Dashboard, LandingPage, Login, ActivateAccount, Register, MySubjects, Unauthorized } from './pages/Pages'
+import { Dashboard, LandingPage, Login, ActivateAccount, Register, Unauthorized } from './pages/Pages'
 import { Course, CourseStructure, Branch } from './pages/courseManagement/Course'
 import { CollegeInstitutionManagement, AddCollege, AcademicYearManagement, DepartmentManagement, RolesAndDesignations, RoomsManagement } from './pages/admin-management/AdminManagement'
 import { MyProfile, Settings } from './pages/profile/MyProfile'
@@ -11,6 +11,10 @@ import { ExamTimetable, CreateExamTimetable, ExamScheduleList, DepartmentExamSch
 import { MarksManagement, MarksEntry, BulkMarksUpload, EditMarks, StudentMarks, SubjectMarksReport, MarksApproval } from './pages/examinations/marks-management/MarksManagement'
 import { Navigate, Route, Routes } from 'react-router-dom'
 import ProtectedRoute from './components/ProtectedRoute'
+import PortalRoute, { RoleDashboard, RoleAlias } from './components/portals/PortalRoute.jsx'
+const AcademicPortal = lazy(() => import('./pages/portals/AcademicPortal.jsx'))
+const UserAccessManagement = lazy(() => import('./pages/admin-management/UserAccessManagement.jsx'))
+const PortalPreview = lazy(() => import('./pages/portals/PortalPreview.jsx'))
 
 
 
@@ -164,6 +168,7 @@ export default function App() {
     <AppErrorBoundary>
       <TableOverflowTitles />
       <FormValidationGuard />
+      <Suspense fallback={<p role="status">Loading workspace...</p>}>
       <Routes>
           {/* Public */}
           <Route path="/" element={<LandingPage />} />
@@ -171,21 +176,30 @@ export default function App() {
           <Route path="/activate-account" element={<ActivateAccount />} />
           <Route path="/register" element={<Register />} />
 
-          {/* Dashboard - All Roles */}
+          <Route path="/portal-preview" element={<PortalPreview />} />
+          <Route path="/dashboard" element={<RoleDashboard><AcademicProvider><Dashboard /></AcademicProvider></RoleDashboard>} />
+          <Route element={<PortalRoute roles={[ROLES.FACULTY]} />}>
+            <Route path="/faculty-portal/:screen?" element={<AcademicPortal role="faculty" />} />
+          </Route>
+          <Route element={<PortalRoute roles={[ROLES.STUDENT]} />}>
+            <Route path="/student-portal/:screen?" element={<AcademicPortal role="student" />} />
+          </Route>
+          <Route element={<PortalRoute roles={[ROLES.ADMIN]} />}>
+            <Route path="/user-access" element={<UserAccessManagement />} />
+          </Route>
+          {/* Existing administrator screens retain their URLs and components. */}
+          <Route element={<PortalRoute roles={[ROLES.ADMIN]} />}>
           <Route
             element={
               <AcademicProvider>
                 <ProtectedRoute
                   allowedRoles={[
                     ROLES.ADMIN,
-                    ROLES.FACULTY,
-                    ROLES.STUDENT,
                   ]}
                 />
               </AcademicProvider>
             }
           >
-              <Route path="/dashboard" element={<Dashboard />} />
               <Route path="/library" element={<LibraryWorkspace />} />
               <Route path="/meetings-events" element={<MeetingsEventsWorkspace />} />
               <Route path="/placement" element={<PlacementWorkspace />} />
@@ -304,19 +318,10 @@ export default function App() {
               <Route path="/roles-designations" element={<RolesAndDesignations />} />
               <Route path="/roles-permissions" element={<RolesAndDesignations />} />
           </Route>
+          </Route>
 
-          {/* Faculty & Student */}
-          <Route
-            element={
-              <ProtectedRoute
-                allowedRoles={[
-                  ROLES.FACULTY,
-                  ROLES.STUDENT,
-                ]}
-              />
-            }
-          >
-            <Route path="/my-subjects" element={<MySubjects />} />
+          <Route element={<PortalRoute roles={[ROLES.FACULTY, ROLES.STUDENT]} />}>
+            <Route path="/my-subjects" element={<RoleAlias screen="subjects" />} />
           </Route>
 
           {/* Unauthorized */}
@@ -325,6 +330,7 @@ export default function App() {
           {/* Unknown route */}
           <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
+      </Suspense>
     </AppErrorBoundary>
   )
 }

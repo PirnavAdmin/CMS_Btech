@@ -1748,7 +1748,7 @@ function Login() {
       localStorage.setItem('btech-remember-me', String(rememberMe))
       if (rememberMe) localStorage.setItem('btech-remembered-identifier', values.identifier.trim())
       else localStorage.removeItem('btech-remembered-identifier')
-      signIn(session.roles, session.accessToken, session.refreshToken, rememberMe, session.user); showSuccess('Logged in successfully.')
+      signIn(session.roles?.length ? session.roles : session.user.role, session.accessToken, session.refreshToken, rememberMe, session.user); showSuccess('Logged in successfully.')
       navigate('/dashboard')
     } catch (error) {
       setSubmitError(error instanceof AuthRequestError ? error.message : 'Unable to sign in right now. Please try again.')

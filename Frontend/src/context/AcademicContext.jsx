@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react'
+import React, { createContext, useContext, useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import academicService, { filterActiveOnly } from '../services/academicService'
 import eventBus, { ERP_EVENTS } from '../services/eventBus'
 import { getActiveAcademicYears } from '../utils/academicYearUtils'
@@ -46,6 +46,7 @@ const saveStoredContext = (collegeId, academicYearId) => {
       localStorage.removeItem('selected_college_id')
     }
     if (academicYearId) localStorage.setItem('pirnav-selected-academic-year-id', String(academicYearId))
+    else localStorage.removeItem('pirnav-selected-academic-year-id')
   } catch {}
 }
 
@@ -59,12 +60,14 @@ export const AcademicProvider = ({ children }) => {
   const [sections, setSections] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
+  const hierarchyRequest = useRef(0)
 
   // Stored working context IDs
   const [selectedCollegeId, setSelectedCollegeId] = useState(() => readStoredContext().collegeId)
   const [selectedAcademicYearId, setSelectedAcademicYearId] = useState(() => readStoredContext().academicYearId)
 
   const loadHierarchy = useCallback(async () => {
+    const requestId = ++hierarchyRequest.current
     try {
       setLoading(true)
       setError(null)
@@ -77,6 +80,7 @@ export const AcademicProvider = ({ children }) => {
         academicService.getSemesters(null, false),
         academicService.getSections({}, false),
       ])
+      if (requestId !== hierarchyRequest.current) return
 
       if ([cols, years, depts, crss, brns, sems, secs].some(list => list?.loadError)) {
         throw new Error('Academic configuration could not be loaded. Please retry.')
@@ -119,10 +123,11 @@ export const AcademicProvider = ({ children }) => {
       // Persist validated context
       saveStoredContext(resolvedColId, resolvedYearId)
     } catch (err) {
+      if (requestId !== hierarchyRequest.current) return
       setError('Academic configuration could not be loaded. Please retry.')
       console.warn('Error loading academic hierarchy context:', err)
     } finally {
-      setLoading(false)
+      if (requestId === hierarchyRequest.current) setLoading(false)
     }
   }, [])
 

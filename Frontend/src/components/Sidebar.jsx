@@ -212,6 +212,7 @@ export default function Sidebar({ open = false, onClose = () => {}, collapsed = 
         <Item to="/placement" icon={FiBriefcase} tone="green" onNavigate={onClose}>Placement</Item>
         {userRole === ROLES.ADMIN && <>
           <p className="sidebar-section-label">Settings & Access</p>
+          <Item to="/user-access" icon={FiUsers} tone="blue" onNavigate={onClose}>User Access Management</Item>
           <Item to="/roles-designations" icon={FiShield} tone="purple" onNavigate={onClose}>Roles & Designations</Item>
         </>}
       </nav>

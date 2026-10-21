@@ -108,7 +108,7 @@ export function signIn(role, accessToken, refreshToken, rememberMe = false, user
 export function signOut() {
   const localStore = safeStorage('localStorage')
   const sessionStore = safeStorage('sessionStorage')
-  ;['pirnav_academic_context', 'pirnav-selected-college-id', 'selected_college_id', 'pirnav-selected-academic-year-id', 'btech-user-college-id'].forEach(key => {
+  ;['pirnav_academic_context', 'pirnav-selected-college-id', 'selected_college_id', 'pirnav-selected-academic-year-id', 'btech-user-college-id', 'cms-portal-preview'].forEach(key => {
     localStore?.removeItem(key)
     sessionStore?.removeItem(key)
   })
