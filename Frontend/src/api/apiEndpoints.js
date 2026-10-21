@@ -245,6 +245,22 @@ export const API_ENDPOINTS = Object.freeze({
     create: endpoint('/api/v1/results'),
     transcript: (studentId) => endpoint(`/api/v1/results/students/${studentId}/transcript`),
   }),
+  marks: Object.freeze({
+    list: endpoint('/api/v1/marks'),
+    detail: id => endpoint(`/api/v1/marks/${id}`),
+    bulkPreview: endpoint('/api/v1/marks/bulk/preview'),
+    bulkUpload: endpoint('/api/v1/marks/bulk/upload'),
+    bulkFilePreview: endpoint('/api/v1/marks/bulk/file-preview'),
+    summaryReport: endpoint('/api/v1/marks/reports/summary'),
+    studentReport: endpoint('/api/v1/marks/reports/student'),
+    subjectReport: endpoint('/api/v1/marks/reports/subjects'),
+    pendingApprovals: endpoint('/api/v1/marks/approvals/pending'),
+    updateApproval: id => endpoint(`/api/v1/marks/approvals/${id}`),
+    workflow: action => endpoint(`/api/v1/marks/workflow/${action}`),
+    approvalHistory: id => endpoint(`/api/v1/marks/${id}/approval-history`),
+    download: endpoint('/api/v1/marks/download'),
+    export: endpoint('/api/v1/marks/export'),
+  }),
   promotions: Object.freeze({
     dashboard: endpoint('/api/v1/promotions/dashboard'), directory: endpoint('/api/v1/promotions/directory'), history: endpoint('/api/v1/promotions/history'),
     eligibleStudents: endpoint('/api/v1/promotions/eligible-students'), eligibility: (id) => endpoint(`/api/v1/promotions/student-eligibility/${id}`), eligibilityStatus: (id) => endpoint(`/api/v1/promotions/eligibility-status/${id}`),
@@ -1536,23 +1552,41 @@ export const roomsApi = roomApi
 
 // MarksController / DTOs/Marks/MarksManagementDtos.cs. No local success fallback.
 export const marksApi = {
-  list: async params => listData(await request(withQuery(endpoint('/api/v1/marks'), params))),
-  create: async payload => { const data = dataResponse(await jsonRequest(endpoint('/api/v1/marks'), 'POST', payload)); return data?.mark ?? data },
-  update: async (id, payload) => dataResponse(await jsonRequest(endpoint(`/api/v1/marks/${requiredId(id, 'Mark ID')}`), 'PUT', payload)),
+  list: async params => listData(await request(withQuery(API_ENDPOINTS.marks.list, params))),
+  get: async id => dataResponse(await request(API_ENDPOINTS.marks.detail(requiredId(id, 'Mark ID')))),
+  create: async payload => { const data = dataResponse(await jsonRequest(API_ENDPOINTS.marks.list, 'POST', payload)); return data?.mark ?? data },
+  update: async (id, payload) => dataResponse(await jsonRequest(API_ENDPOINTS.marks.detail(requiredId(id, 'Mark ID')), 'PUT', payload)),
+  bulkPreview: async payload => dataResponse(await jsonRequest(API_ENDPOINTS.marks.bulkPreview, 'POST', payload)),
+  bulkFilePreview: async (file, scope) => {
+    const form = new FormData()
+    form.append('file', file)
+    form.append('examId', String(scope.examId))
+    if (scope.sectionId) form.append('sectionId', String(scope.sectionId))
+    return dataResponse(await multipartRequest(API_ENDPOINTS.marks.bulkFilePreview, form))
+  },
+  bulkUpload: async (file, scope) => {
+    const form = new FormData()
+    form.append('file', file)
+    form.append('examId', String(scope.examId))
+    if (scope.sectionId) form.append('sectionId', String(scope.sectionId))
+    form.append('upsertDrafts', String(Boolean(scope.upsertDrafts)))
+    return dataResponse(await multipartRequest(API_ENDPOINTS.marks.bulkUpload, form))
+  },
+  summaryReport: async params => dataResponse(await request(withQuery(API_ENDPOINTS.marks.summaryReport, params))),
+  pendingApprovals: async params => listData(await request(withQuery(API_ENDPOINTS.marks.pendingApprovals, params))),
   workflow: async (action, payload) => {
     if (!['submit', 'approve', 'reject'].includes(action)) throw new Error('Invalid marks workflow action.')
-    return dataResponse(await jsonRequest(endpoint(`/api/v1/marks/workflow/${action}`), 'POST', payload))
+    return dataResponse(await jsonRequest(API_ENDPOINTS.marks.workflow(action), 'POST', payload))
   },
-  approvalHistory: async id => listData(await request(endpoint(`/api/v1/marks/${requiredId(id, 'Mark ID')}/approval-history`))),
-  studentReport: async params => dataResponse(await request(withQuery(endpoint('/api/v1/marks/reports/student'), params))),
-  subjectReport: async params => listData(await request(withQuery(endpoint('/api/v1/marks/reports/subjects'), params))),
+  updateApproval: async (id, payload) => dataResponse(await jsonRequest(API_ENDPOINTS.marks.updateApproval(requiredId(id, 'Approval ID')), 'PATCH', payload)),
+  approvalHistory: async id => listData(await request(API_ENDPOINTS.marks.approvalHistory(requiredId(id, 'Mark ID')))),
+  studentReport: async params => dataResponse(await request(withQuery(API_ENDPOINTS.marks.studentReport, params))),
+  subjectReport: async params => listData(await request(withQuery(API_ENDPOINTS.marks.subjectReport, params))),
+  download: async params => readExportFile(withQuery(API_ENDPOINTS.marks.download, params)),
+  export: async params => readExportFile(withQuery(API_ENDPOINTS.marks.export, params)),
   upload: async (file, scope, preview = true) => {
     if (!(file instanceof File) || !/\.xlsx$/i.test(file.name)) throw new Error('Choose an XLSX workbook.')
     if (!file.size || file.size > 10 * 1024 * 1024) throw new Error('Workbook must be nonempty and at most 10 MB.')
-    const form = new FormData()
-    form.append('file', file); form.append('examId', String(scope.examId))
-    if (scope.sectionId) form.append('sectionId', String(scope.sectionId))
-    if (!preview) form.append('upsertDrafts', 'false')
-    return dataResponse(await multipartRequest(endpoint(`/api/v1/marks/bulk/${preview ? 'file-preview' : 'upload'}`), form))
+    return preview ? marksApi.bulkFilePreview(file, scope) : marksApi.bulkUpload(file, scope)
   },
 }

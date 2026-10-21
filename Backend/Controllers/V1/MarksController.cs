@@ -1,5 +1,6 @@
 using System.Globalization;
 using System.Security.Claims;
+using System.Text;
 using BTech.DTOs.MarksManagement;
 using BTech.Services.Interfaces;
 using ClosedXML.Excel;
@@ -41,6 +42,14 @@ public sealed class MarksController : ControllerBase
     public async Task<IActionResult> Get(long markId)
         => await Execute(() => _service.GetAsync(markId, CollegeId(), IsSuperAdmin()),
             "Mark retrieved successfully.");
+
+    [HttpGet("download")]
+    public Task<IActionResult> Download([FromQuery] MarkListFilter filter)
+        => ExportCsv(filter, "marks-download.csv");
+
+    [HttpGet("export")]
+    public Task<IActionResult> Export([FromQuery] MarkListFilter filter)
+        => ExportCsv(filter, "marks-export.csv");
 
     [HttpPost("bulk/preview")]
     [Authorize(Roles = EntryRoles)]
@@ -128,6 +137,35 @@ public sealed class MarksController : ControllerBase
         => await Execute(() => _service.PendingApprovalsAsync(
                 examId, sectionId, subjectId, CollegeId(), IsSuperAdmin()),
             "Pending marks approvals retrieved successfully.");
+
+    [HttpPatch("approvals/{id:long}")]
+    [Authorize(Roles = ApprovalRoles)]
+    public async Task<IActionResult> UpdateApproval(long id, [FromBody] MarksApprovalUpdateRequest request)
+        => await Execute(async () =>
+        {
+            if (id <= 0) throw new ArgumentException("Approval ID must be greater than zero.");
+            if (request is null) throw new ArgumentException("Approval update is required.");
+
+            var pending = await _service.PendingApprovalsAsync(
+                request.ExamId, request.SectionId, request.SubjectId, CollegeId(), IsSuperAdmin());
+            var approval = pending.SingleOrDefault(item => item.ApprovalId == id && item.MarkId == request.MarkId);
+            if (approval is null) throw new KeyNotFoundException("Pending marks approval not found.");
+
+            var workflow = new MarksWorkflowRequest
+            {
+                ExamId = request.ExamId,
+                MarkIds = [approval.MarkId],
+                SectionId = request.SectionId,
+                SubjectId = request.SubjectId,
+                Remarks = request.Remarks
+            };
+            return request.ApprovalStatus.Trim().ToUpperInvariant() switch
+            {
+                "APPROVED" => await _service.ApproveAsync(workflow, UserId(), CollegeId(), IsSuperAdmin()),
+                "REJECTED" => await _service.RejectAsync(workflow, UserId(), CollegeId(), IsSuperAdmin()),
+                _ => throw new ArgumentException("ApprovalStatus must be APPROVED or REJECTED.")
+            };
+        }, "Marks approval updated successfully.");
 
     [HttpPost("workflow/submit")]
     [Authorize(Roles = EntryRoles)]
@@ -241,6 +279,41 @@ public sealed class MarksController : ControllerBase
             });
         }
         catch (Exception ex) { return Error(ex); }
+    }
+
+    private async Task<IActionResult> ExportCsv(MarkListFilter filter, string fileName)
+    {
+        try
+        {
+            var rows = await _service.ListAsync(filter, CollegeId(), IsSuperAdmin());
+            var lines = new List<string>
+            {
+                "MarkId,ExamId,ExamCode,ExamName,StudentId,StudentCode,StudentName,SubjectId,SubjectCode,SubjectName,SectionId,SectionName,MarksObtained,MaxMarks,Percentage,Grade,Remarks,WorkflowStatus,VersionNo,EnteredAt"
+            };
+            lines.AddRange(rows.Select(row => string.Join(",", new object?[]
+            {
+                row.MarkId, row.ExamId, row.ExamCode, row.ExamName, row.StudentId,
+                row.StudentCode, row.StudentName, row.SubjectId, row.SubjectCode,
+                row.SubjectName, row.SectionId, row.SectionName, row.MarksObtained,
+                row.MaxMarks, row.Percentage, row.Grade, row.Remarks,
+                row.WorkflowStatus, row.VersionNo, row.EnteredAt
+            }.Select(CsvValue))));
+            return File(Encoding.UTF8.GetBytes(string.Join("\r\n", lines)), "text/csv; charset=utf-8", fileName);
+        }
+        catch (Exception ex) { return Error(ex); }
+    }
+
+    private static string CsvValue(object? value)
+    {
+        var text = Convert.ToString(value, CultureInfo.InvariantCulture) ?? string.Empty;
+        if (value is string)
+        {
+            var firstContent = text.TrimStart(' ', '\t', '\r', '\n');
+            if (firstContent.StartsWith('=') || firstContent.StartsWith('+')
+                || firstContent.StartsWith('-') || firstContent.StartsWith('@'))
+                text = "'" + text;
+        }
+        return "\"" + text.Replace("\"", "\"\"") + "\"";
     }
 
     private IActionResult Error(Exception ex)

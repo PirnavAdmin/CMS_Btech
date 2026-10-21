@@ -193,6 +193,16 @@ public sealed class MarksApprovalDto
     public string? Remarks { get; set; }
 }
 
+public sealed class MarksApprovalUpdateRequest
+{
+    public string ApprovalStatus { get; set; } = string.Empty;
+    public long ExamId { get; set; }
+    public long MarkId { get; set; }
+    public long? SectionId { get; set; }
+    public long? SubjectId { get; set; }
+    public string? Remarks { get; set; }
+}
+
 public sealed class MarksApprovalHistoryDto
 {
     public long HistoryId { get; set; }
