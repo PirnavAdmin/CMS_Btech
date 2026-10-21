@@ -16,6 +16,7 @@ import {
 import eventBus, { ERP_EVENTS } from './eventBus'
 import { getAccessToken } from '../auth/auth.js'
 import { selectedCollegeId } from '../utils/collegeScope.js'
+import { newestFirst } from '../utils/newestFirst'
 
 /**
  * Academic Service
@@ -61,12 +62,31 @@ export const filterActiveOnly = (list) => {
 class AcademicService {
   constructor() {
     this._cache = new Map()
+    this._registeredColleges = new Map()
     this._ttl = 30000 // 30 seconds
 
     // Invalidate cache on academic updates
     eventBus.subscribe(ERP_EVENTS.ACADEMIC_UPDATED, () => {
       this.clearCache()
     })
+  }
+
+  registerNewCollege(college) {
+    if (!college) return
+    const unwrapped = unwrapCollegeRecord(college)
+    const id = String(unwrapped.collegeId ?? unwrapped.id ?? college.id ?? college.collegeId ?? '')
+    if (id) {
+      this._registeredColleges.set(id, {
+        ...unwrapped,
+        id,
+        collegeId: id,
+        name: unwrapped.collegeName ?? unwrapped.name ?? '',
+        collegeName: unwrapped.collegeName ?? unwrapped.name ?? '',
+        code: unwrapped.collegeCode ?? unwrapped.code ?? '',
+        status: unwrapped.status ?? unwrapped.isActive ?? 'Active',
+      })
+    }
+    this.clearCache()
   }
 
   clearCache() {
@@ -124,7 +144,28 @@ class AcademicService {
           }
         }).filter(c => Boolean(c.name))
 
-        return mapped
+        // Ensure any newly created colleges are included immediately
+        for (const [id, created] of this._registeredColleges.entries()) {
+          const match = mapped.find(c => String(c.id ?? c.collegeId) === String(id))
+          if (match) {
+            this._registeredColleges.delete(id)
+          } else {
+            const unwrapped = unwrapCollegeRecord(created)
+            const name = unwrapped.collegeName ?? unwrapped.name ?? ''
+            if (name) {
+              mapped.push({
+                ...unwrapped,
+                id,
+                collegeId: id,
+                name,
+                code: unwrapped.collegeCode ?? unwrapped.code ?? '',
+                status: unwrapped.status ?? unwrapped.isActive ?? 'Active',
+              })
+            }
+          }
+        }
+
+        return newestFirst('colleges', mapped)
       } catch (err) {
         console.warn('Fallback loading colleges:', err)
         return Object.assign([], { loadError: true })

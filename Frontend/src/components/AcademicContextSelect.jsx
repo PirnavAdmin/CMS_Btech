@@ -1,5 +1,5 @@
 import { ProjectSelect } from './SearchableSelect'
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import SearchableSelect from './SearchableSelect'
 import { useAcademic } from '../context/AcademicContext'
 import './AcademicContextSelect.css'
@@ -10,10 +10,21 @@ export default function AcademicContextSelect({ kind, compact = false }) {
   const [error, setError] = useState('')
   const isCollege = kind === 'college'
   const label = isCollege ? 'College' : 'Academic year'
-  const items = isCollege ? (context.activeColleges || []) : (context.academicYears || [])
-  const value = isCollege ? context.selectedCollegeId : context.selectedAcademicYearId
+  const rawItems = isCollege ? (context.activeColleges || []) : (context.academicYears || [])
   const idOf = item => String(item.id ?? (isCollege ? item.collegeId : item.academicYearId))
   const nameOf = item => item.name || item.collegeName || item.academicYearName || label
+
+  const items = useMemo(() => {
+    const seen = new Set()
+    return (rawItems || []).filter(item => {
+      const id = idOf(item)
+      if (!id || seen.has(id)) return false
+      seen.add(id)
+      return true
+    })
+  }, [rawItems, isCollege])
+
+  const value = isCollege ? context.selectedCollegeId : context.selectedAcademicYearId
   const selected = items.find(item => idOf(item) === String(value))
   const disabled = context.loading || applying || !items.length
   const selectedLabel = selected ? nameOf(selected) : context.loading ? 'Loading...' : `Select ${label.toLowerCase()}`

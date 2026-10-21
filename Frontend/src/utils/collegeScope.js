@@ -1,4 +1,4 @@
-import { getUserCollegeId } from '../auth/auth.js'
+import { getUserCollegeId, getUserRole } from '../auth/auth.js'
 
 const id = value => value == null ? '' : String(value).trim()
 const present = value => id(value) !== '' && id(value) !== '0'
@@ -51,11 +51,13 @@ export const createCollegeScope = (collegeId, hierarchy = {}) => {
   return rows => (Array.isArray(rows) ? rows : []).filter(row => target && owner(row) === target)
 }
 export const selectedCollegeId = () => {
-  const assigned = getUserCollegeId()
+  const assigned = (getUserRole() !== 'admin' && getUserRole() !== null) ? getUserCollegeId() : ''
   if (assigned) return assigned
   try {
     const context = JSON.parse(localStorage.getItem('pirnav_academic_context') || 'null')
-    return context ? id(context.collegeId) : id(localStorage.getItem('pirnav-selected-college-id') || localStorage.getItem('selected_college_id'))
-  } catch { return '' }
+    const stored = context ? id(context.collegeId) : id(localStorage.getItem('pirnav-selected-college-id') || localStorage.getItem('selected_college_id'))
+    if (stored) return stored
+  } catch {}
+  return getUserCollegeId()
 }
 export const collegeStorageKey = (key, collegeId = selectedCollegeId()) => key + ':college:' + encodeURIComponent(id(collegeId) || 'unselected')
