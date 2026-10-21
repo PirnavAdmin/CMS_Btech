@@ -1,5 +1,5 @@
 import { selectedCollegeId } from './collegeScope.js'
-const resources = /\/api\/(?:v1\/)?(?:departments|courses|branches|semester|semesters|sections|section-assignments|course-structures|students|student-[\w-]+|faculty(?:-[\w-]+)?|subjects|credits|credit-[\w-]+|elective[\w-]*|results|attendance[\w-]*|promotions|rooms|classrooms|timetable[\w-]*|fee-structures|hostel-fees|transport-fees)(?:\/|\?|$)/i
+const resources = /\/api\/(?:v1\/)?(?:academic-years|departments|courses|branches|semester|semesters|sections|section-assignments|course-structures|students|student-[\w-]+|faculty(?:-[\w-]+)?|subjects|credits|credit-[\w-]+|elective[\w-]*|results|attendance[\w-]*|promotions|rooms|classrooms|timetable[\w-]*|fee-structures|hostel-fees|transport-fees)(?:\/|\?|$)/i
 export function collegeRequest(url, options = {}, collegeId = selectedCollegeId()) {
   if (!collegeId || !resources.test(url)) return { url, options }
   const [path, query = ''] = url.split('?'), params = new URLSearchParams(query)

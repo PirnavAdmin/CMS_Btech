@@ -233,9 +233,12 @@
   .fm-payment-method svg { color: var(--fm-primary); width: 14px; height: 14px; }
   .fm-amount-pending { color: var(--fm-amber); }
   .fm-amount-paid { color: var(--fm-green); }
-  .fm-row-action-menu { margin: 0; padding: 5px; min-width: 180px; border: 1px solid var(--fm-border); border-radius: 9px; background: var(--fm-surface); color: var(--fm-text); box-shadow: 0 8px 30px #102a4c26; }
-  .fm-row-action-menu button { display: flex; align-items: center; gap: 8px; width: 100%; padding: 9px; border: 0; border-radius: 5px; background: transparent; color: inherit; font-size: 12px; text-align: left; }
-  .fm-row-action-menu button:hover { background: var(--fm-primary-light); color: var(--fm-primary); }
+  .fm-row-action-menu[popover] { position: fixed; inset: auto; box-sizing: border-box; margin: 0; padding: 5px; width: 180px; min-width: 0; max-width: calc(100vw - 16px); height: auto; border: 1px solid var(--fm-border, var(--border)); border-radius: 10px; background: var(--fm-surface, var(--surface)); color: var(--fm-text, var(--text-primary)); box-shadow: 0 6px 20px #102a4c1f; }
+  .fm-row-action-menu[popover] button { display: flex; align-items: center; justify-content: flex-start; gap: 10px; box-sizing: border-box; width: 100%; height: 34px; min-height: 0; margin: 0; padding: 7px 10px; border: 0; border-radius: 6px; background: transparent; color: inherit; font: inherit; font-size: 13px; font-weight: 500; line-height: 20px; text-align: left; white-space: nowrap; box-shadow: none; cursor: pointer; }
+  .fm-row-action-menu[popover] button svg { width: 16px; height: 16px; flex: 0 0 16px; }
+  .fm-row-action-menu[popover] button span { flex: 1; text-align: left; }
+  .fm-row-action-menu[popover] button:hover, .fm-row-action-menu[popover] button:focus-visible { background: var(--fm-primary-light, var(--brand-soft)); color: var(--fm-primary, var(--brand)); }
+  .fm-row-action-menu[popover] button:focus-visible { outline: 2px solid var(--fm-primary, var(--brand)); outline-offset: -2px; }
   .fm-row-action-menu .fm-row-action--danger { color: var(--fm-red); }
   .fm-badge { display: inline-flex; align-items: center; gap: 5px; padding: 4px 7px; border-radius: 5px; border: 1px solid var(--fm-border); background: var(--fm-soft); color: var(--fm-muted); font-size: 10px; font-weight: 700; line-height: 1.2; white-space: nowrap; }
   .fm-badge::before { content: ''; width: 4px; height: 4px; border-radius: 50%; background: currentColor; }

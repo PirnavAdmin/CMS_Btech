@@ -1,5 +1,7 @@
 import { Navigate } from 'react-router-dom'
 import DashboardLayout from '../../layouts/DashboardLayout'
+import { useAcademic } from '../../context/AcademicContext'
+import { selectedCollegeId as currentCollegeId } from '../../utils/collegeScope'
 import { getUserRole } from '../../auth/auth'
 import { showToast } from '../../utils/toast'
 import { backendWorkflow, loadBackendWorkflow } from '../../services/timetable/timetableBackendWorkflow'
@@ -36,19 +38,24 @@ function backendTables(backend, sources) {
 }
 
 export default function TimetableManagement() {
+  const { selectedCollegeId, selectedAcademicYearId, loading: contextLoading } = useAcademic()
   const role = getUserRole(), admin = role === 'admin'
   const [tab, setTab] = useState(admin ? 'dashboard' : 'faculty'), [data, setData] = useState(null)
   const [loading, setLoading] = useState(true), [busy, setBusy] = useState(false), [error, setError] = useState('')
   const [initial, setInitial] = useState(null), [builderKey, setBuilderKey] = useState(0), [facultyId, setFacultyId] = useState(''), [facultyDrawer, setFacultyDrawer] = useState(''), [facultyError, setFacultyError] = useState('')
   const adapter = () => draftCapabilityEnabled ? workflowAdapter() : backendWorkflow
   const refresh = async () => {
-    if (!draftCapabilityEnabled) { const live = await loadBackendWorkflow(); setData(live); return live }
+    const collegeId = currentCollegeId()
+    if (!draftCapabilityEnabled) { const live = await loadBackendWorkflow(); if (collegeId === currentCollegeId()) setData(live); return live }
     const live = await loadLive()
     const tables = draftCapabilityEnabled ? await workflowAdapter().list() : []
-    setData({ ...live, tables })
+    if (collegeId === currentCollegeId()) setData({ ...live, tables })
     return live
   }
   useEffect(() => {
+    setData(null); setError(''); setLoading(true)
+    setInitial(null); setBuilderKey(value => value + 1); setFacultyId(''); setFacultyDrawer('')
+    if (contextLoading) return
     if (!['admin', 'faculty'].includes(role)) return
     let cancelled = false
     Promise.resolve().then(refresh).then(async live => {
@@ -58,7 +65,7 @@ export default function TimetableManagement() {
       }
     }).catch(reason => { if (!cancelled) { setError(reason.message); showToast(reason.message, 'error') } }).finally(() => { if (!cancelled) setLoading(false) })
     return () => { cancelled = true }
-  }, [role])
+  }, [role, selectedCollegeId, selectedAcademicYearId, contextLoading])
   const mutate = async (action, successMessage = 'Timetable saved.') => {
     setBusy(true); setError('')
     try { const result = await action(); await refresh(); showToast(successMessage, 'success'); return result || true }

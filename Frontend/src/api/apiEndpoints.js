@@ -372,7 +372,7 @@ const request = async (url, options = {}, retried = false, bypassDedupe = false,
   if (!retried && !bypassDedupe && typeof collegeRequest === 'function') ({ url, options } = collegeRequest(url, options))
   const method = String(options.method || 'GET').toUpperCase()
   if (method === 'GET' && !bypassDedupe) {
-    const key = `${method}:${url}`
+    const key = `${getAccessToken()}:${method}:${url}`
     if (pendingGetRequests.has(key)) return pendingGetRequests.get(key)
     const pending = request(url, options, retried, true, suppressApiFailureNotice).finally(() => pendingGetRequests.delete(key))
     pendingGetRequests.set(key, pending)

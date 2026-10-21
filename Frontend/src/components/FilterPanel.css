@@ -319,3 +319,35 @@
   padding: 0 10px !important;
   font-size: 12px !important;
 }
+
+/* Composite search controls use one focus ring around the whole field. */
+:root #root .page-content .filter-disclosure .filter-disclosure__bar .filter-disclosure__search :is(label, div):has(> input) {
+  min-width: 0 !important;
+  gap: 8px !important;
+  transition: border-color .15s ease, box-shadow .15s ease;
+}
+
+:root #root .page-content .filter-disclosure .filter-disclosure__bar .filter-disclosure__search :is(label, div):has(> input):focus-within {
+  border-color: var(--brand, #1769c2) !important;
+  outline: none !important;
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--brand, #1769c2) 16%, transparent) !important;
+}
+
+:root #root .page-content .filter-disclosure .filter-disclosure__bar .filter-disclosure__search :is(label, div):has(> input) > input,
+:root #root .page-content .filter-disclosure .filter-disclosure__bar .filter-disclosure__search :is(label, div):has(> input) > input:is(:focus, :focus-visible) {
+  flex: 1 1 0% !important;
+  min-width: 0 !important;
+  width: 100% !important;
+  max-width: 100% !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  outline: none !important;
+  box-shadow: none !important;
+  background: transparent !important;
+  font-family: inherit !important;
+  font-weight: 400 !important;
+  line-height: normal !important;
+  text-indent: 0 !important;
+}

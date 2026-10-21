@@ -24,6 +24,17 @@ test('faculty records resolve through employee identities', () => {
   assert.deepEqual(scope([{ employeeProfileId: 5 }, { employeeProfileId: 6 }]), [{ employeeProfileId: 5 }])
 })
 
+test('academic year operations use the selected college', () => {
+  for (const path of ['/api/v1/academic-years', '/api/v1/academic-years/7/activate']) {
+    assert.equal(collegeRequest(path, {}, '2').url, `${path}?collegeId=2`)
+    assert.equal(collegeRequest(path, {}, '3').url, `${path}?collegeId=3`)
+  }
+  const created = collegeRequest('/api/v1/academic-years', {
+    method: 'POST', body: JSON.stringify({ academicYearName: '2026-2027' }),
+  }, '2')
+  assert.equal(JSON.parse(created.options.body).collegeId, '2')
+})
+
 test('college impact includes faculty and rejects invalid verification responses', async () => {
   assert.equal(normalizeCollegeImpact({ studentCount: 2 }, 3).totalCount, 5)
   assert.throws(() => normalizeCollegeImpact(null))

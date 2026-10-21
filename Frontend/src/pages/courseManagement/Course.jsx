@@ -1318,7 +1318,7 @@ function CourseList() {
       </FilterPanel>
       {isLoading ? <div className="course-empty"><strong>Loading courses...</strong></div>
         : error ? <div className="course-empty course-empty--error" role="alert"><strong>{error}</strong><button className="cm-button" onClick={load}>Retry</button></div>
-        : !courses.length ? <div className="course-empty"><strong>No courses have been added yet.</strong><Link className="cm-button" to="/courses/add">+ Add Course</Link></div>
+        : !courses.length ? <div className="course-empty"><strong>No courses have been added yet.</strong></div>
         : rows.length ? (
           <>
             <div className="course-results">Showing <strong>{rows.length}</strong> of <strong>{courses.length}</strong> courses</div>

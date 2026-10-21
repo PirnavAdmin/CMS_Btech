@@ -19,6 +19,7 @@ import * as reactImports from 'react'
 import * as fiImports from 'react-icons/fi'
 import * as FilterPanelImports from '../../components/FilterPanel'
 import './CampusWorkspace.css'
+import CompanyLogo from '../../components/CompanyLogo'
 
 // CampusWorkspace screen and private helpers.
 const CampusWorkspaceScreen = (() => {
@@ -4694,12 +4695,11 @@ function MeetingsEventsCalendar({ meetings, events, onCreateMeeting, onCreateEve
     : view === 'week'
       ? `${formatDate(monthDays.find(date => dayKey(date) === dayKey(selectedDate)) || selectedDate)} · Week`
       : formatDate(selectedDate)
-  const daysToShow = view === 'week' ? monthDays.filter(date => {
-    const start = new Date(selectedDate)
-    start.setDate(start.getDate() - start.getDay())
-    const end = new Date(start)
-    end.setDate(start.getDate() + 6)
-    return date >= start && date <= end
+  const daysToShow = view === 'week' ? Array.from({ length: 7 }, (_, index) => {
+    const date = new Date(selectedDate)
+    date.setHours(0, 0, 0, 0)
+    date.setDate(date.getDate() - date.getDay() + index)
+    return date
   }) : [selectedDate]
   const openItem = item => setDetails(item)
   const activeFilters = kind !== 'all' || department !== 'all' || category !== 'all' || status !== 'all' || dayKey(selectedDate) !== dayKey(today)
@@ -5951,9 +5951,7 @@ function PlacementWorkspace() {
                   <div key={drive.id} className="plw-card">
                     <div className="plw-card-header">
                       <div className="plw-card-company-group">
-                        <div className="plw-company-avatar">
-                          {drive.company.slice(0, 2).toUpperCase()}
-                        </div>
+                        <CompanyLogo name={drive.company} className="plw-company-avatar" />
                         <div className="plw-card-title-group">
                           <h4 className="plw-card-title">{drive.company}</h4>
                           <p className="plw-card-role">{drive.role}</p>
@@ -6061,8 +6059,12 @@ function PlacementWorkspace() {
                     {paginatedList.map(drive => (
                       <tr key={drive.id}>
                         <td>
-                          <strong>{drive.company}</strong>
-                          <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{drive.title}</div>
+                          <div className="plw-company-identity">
+                            <CompanyLogo name={drive.company} compact />
+                            <div><strong>{drive.company}</strong>
+                              <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{drive.title}</div>
+                            </div>
+                          </div>
                         </td>
                         <td>
                           <div><strong>{drive.role}</strong></div>
@@ -6152,7 +6154,10 @@ function PlacementWorkspace() {
                   {paginatedList.map(comp => (
                     <tr key={comp.id}>
                       <td>
-                        <strong>{comp.name}</strong>
+                        <div className="plw-company-identity">
+                          <CompanyLogo name={comp.name} compact />
+                          <strong>{comp.name}</strong>
+                        </div>
                         {comp.website && (
                           <div style={{ fontSize: '11px' }}>
                             <a href={comp.website} target="_blank" rel="noreferrer" style={{ color: 'var(--brand)', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '3px' }}>

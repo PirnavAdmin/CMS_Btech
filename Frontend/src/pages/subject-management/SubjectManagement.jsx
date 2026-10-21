@@ -206,8 +206,6 @@ export default function SubjectManagement() {
               <EmptyState
                 title="No subjects found."
                 description="Add a subject to get started."
-                action="Add Subject"
-                onAction={openAdd}
               />
             ) : (
               <table className="sm-table">

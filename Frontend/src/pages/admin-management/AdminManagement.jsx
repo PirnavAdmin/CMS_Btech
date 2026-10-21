@@ -1,4 +1,5 @@
 import DirectoryEmptyStateImports_default from '../../components/DirectoryEmptyState'
+import { facultyForCollege } from '../../utils/departmentFaculty.js'
 import { newestFirst as newestFirstImports_newestFirst, rememberCreated as newestFirstImports_rememberCreated } from '../../utils/newestFirst'
 import { showWarning as toastImports_showWarning, showSuccess as toastImports_showSuccess, showError as toastImports_showError } from '../../utils/toast'
 import useToastStateImports_default from '../../hooks/useToastState'
@@ -26,12 +27,13 @@ import CompactSummaryImports_default from '../../components/CompactSummary'
 import facultyServiceImports_default, { normalizeFaculty as facultyServiceImports_normalizeFaculty } from '../../services/facultyService'
 import { useAcademic as AcademicContextImports_useAcademic } from '../../context/AcademicContext'
 import useCollegeStateImports_default from '../../hooks/useCollegeState'
-import { collegeStorageKey as collegeScopeImports_collegeStorageKey } from '../../utils/collegeScope.js'
+import { collegeStorageKey as collegeScopeImports_collegeStorageKey, createCollegeScope } from '../../utils/collegeScope.js'
 import academicServiceImports_default from '../../services/academicService'
 import EmptyStateImports_default from '../../components/EmptyState'
 import roomServiceImports_default, { ROOM_TYPES as roomServiceImports_ROOM_TYPES, BUILDING_BLOCKS as roomServiceImports_BUILDING_BLOCKS, FLOORS as roomServiceImports_FLOORS, ROOM_FACILITIES as roomServiceImports_ROOM_FACILITIES } from '../../services/roomService'
 import '../../styles/directory-search.css'
 import './AdminManagement.css'
+import AcademicContextSelect from '../../components/AcademicContextSelect'
 
 // AcademicYearManagement screen and private helpers.
 const AcademicYearManagementScreen = (() => {
@@ -210,6 +212,7 @@ const mapYear = (x) => {
 };
 
 function AcademicYear() {
+  const { selectedCollegeId, selectedCollege, loading: contextLoading } = AcademicContextImports_useAcademic();
   const [years, setYears] = useState([]);
   const [search, setSearch] = useState('');
   const [filter, setFilter] = useState('ALL');
@@ -237,10 +240,15 @@ function AcademicYear() {
   };
 
   const loadYears = async () => {
+    if (!selectedCollegeId) {
+      setYears([]);
+      setExportLoading(false);
+      return;
+    }
     setExportLoading(true);
     try {
       const data = await academicYearApi.getAll();
-      setYears(newestFirst('academic-years', data).map(mapYear));
+      setYears(newestFirst('academic-years', createCollegeScope(selectedCollegeId)(data)).map(mapYear));
       eventBus.emit(ERP_EVENTS.ACADEMIC_UPDATED);
     } catch (error) {
       setNotice(error.message || 'Unable to load academic years.', 'error');
@@ -250,8 +258,10 @@ function AcademicYear() {
   };
 
   useEffect(() => {
+    setYears([]);
+    close();
     loadYears();
-  }, []);
+  }, [selectedCollegeId]);
 
   const active = years.find((x) => x.status === 'ACTIVE' || isPresentYear(x));
   const next = years
@@ -279,6 +289,10 @@ function AcademicYear() {
   useEffect(() => setPage(1), [search, filter]);
 
   const openAdd = () => {
+    if (!selectedCollegeId || contextLoading) {
+      showWarning('Select a college before adding an academic year.');
+      return;
+    }
     setSelected(null);
     setForm(blank);
     setErrors({});
@@ -305,6 +319,7 @@ function AcademicYear() {
   function validate() {
     let e = {},
       others = years.filter((x) => x.id !== selected?.id);
+    if (!selectedCollegeId) e.form = 'Select a college before adding an academic year.';
     if (!form.name.trim()) e.name = 'Academic year title is required.';
     if (!form.startDate) e.startDate = 'Start date is required.';
     if (!form.endDate) e.endDate = 'End date is required.';
@@ -441,11 +456,14 @@ function AcademicYear() {
       <main className="ay">
         {modal !== 'view' && <PageHeader
           title="Academic Year"
-          subtitle="Manage academic cycles, lifecycle status, and rollover transitions."
+          subtitle="Add and manage academic years separately for each college."
         />}
-
-
-
+        {modal !== 'view' && <section className="ay-college-context" aria-label="Academic year college">
+          <AcademicContextSelect kind="college" />
+          <p>{selectedCollegeId
+            ? `Academic years belong to ${selectedCollege?.name || selectedCollege?.collegeName || 'the selected college'}. The same year can be added to other colleges separately.`
+            : 'Select a college to add and manage its academic years.'}</p>
+        </section>}
         {modal === 'view' && selected ? (
           <div className="cm-profile-view ay-details-view" data-export-record>
             <div className="cm-profile-top-bar">
@@ -547,10 +565,10 @@ function AcademicYear() {
                     filename="academic-years"
                     loading={exportLoading || noticeTone === 'error'}
                   />
-                  <button type="button" className="cm-button secondary" onClick={() => setModal('generate')}>
+                  <button type="button" className="cm-button secondary" disabled={!selectedCollegeId || contextLoading || !generationBase} onClick={() => setModal('generate')}>
                     Generate Next Year
                   </button>
-                  <button type="button" className="cm-button" onClick={openAdd}>
+                  <button type="button" className="cm-button" disabled={!selectedCollegeId || contextLoading} onClick={openAdd}>
                     <FiPlus /> Add Academic Year
                   </button>
                 </div>
@@ -688,6 +706,7 @@ function AcademicYear() {
               </button>
               <h2 id="form-title">{modal === 'add' ? 'Add Academic Year' : 'Edit Academic Year'}</h2>
               <form onSubmit={save} noValidate>
+                <p>College: <strong>{selectedCollege?.name || selectedCollege?.collegeName || 'Selected college'}</strong></p>
                 <label>
                   <span>Academic Year Title <b className="required-mark">*</b></span>
                   <input
@@ -1286,8 +1305,10 @@ function AddCollege() {
         collegeId = created.id ?? created.collegeId ?? response?.data?.id ?? response?.data?.collegeId
         if (!collegeId) throw new Error('College was created, but its identifier was not returned for logo upload.')
         setPendingLogoCollegeId(collegeId)
+        eventBus.emit(ERP_EVENTS.ACADEMIC_UPDATED)
       } else if (editId) {
         await updateCollege(editId, college)
+        eventBus.emit(ERP_EVENTS.ACADEMIC_UPDATED)
       }
       if (values.startDate || values.endDate) {
         cacheCollegeDates(collegeId, { startDate: values.startDate, endDate: values.endDate }, [values.collegeCode, values.collegeName, college?.code, college?.name])
@@ -3401,10 +3422,13 @@ function DepartmentManagement() {
   useEffect(() => {
     let active = true;
     setFaculty([]);
+    setScreen('list');
+    setSelected(null);
+    setForm({ ...empty, collegeId: selectedCollegeId || '', collegeNumericId: selectedCollegeId || '' });
     facultyService.list({ collegeId: selectedCollegeId })
       .then((records) => {
         if (!active) return;
-        const normalized = records.map(normalizeFaculty);
+        const normalized = facultyForCollege(records.map(normalizeFaculty), selectedCollegeId, allDepartments);
         setFaculty(normalized);
         setItems((current) => current.map((item) => mapDepartment(item, normalized)));
         setAllDepartments((current) => current.map((item) => mapDepartment(item, normalized)));
@@ -3423,8 +3447,9 @@ function DepartmentManagement() {
       const response = await getDepartmentById(item.id);
       let currentFaculty = faculty;
       if (nextScreen === 'assign-hod' || !currentFaculty.length) {
-        const records = await facultyService.list();
-        currentFaculty = records.map(normalizeFaculty);
+        const collegeId = item.collegeNumericId ?? item.collegeId ?? selectedCollegeId;
+        const records = await facultyService.list({ collegeId });
+        currentFaculty = facultyForCollege(records.map(normalizeFaculty), collegeId, allDepartments);
         setFaculty(currentFaculty);
       }
       const detail = mapDepartment(recordFrom(response), currentFaculty);
@@ -3447,30 +3472,10 @@ function DepartmentManagement() {
     const targetCollegeId = String(form.collegeNumericId ?? form.collegeId ?? selectedCollegeId ?? selectedCollege?.collegeId ?? selectedCollege?.id ?? '').trim();
     if (!targetCollegeId) return [];
 
-    const collegeDepartments = scopedAllDepartments.filter((department) =>
-      String(department.collegeNumericId ?? department.collegeId ?? '') === targetCollegeId
-    );
-    const collegeDepartmentIds = new Set(collegeDepartments.map((department) =>
-      String(department.id ?? department.departmentId ?? '').trim()
-    ).filter(Boolean));
-    const collegeDepartmentNames = collegeDepartments.map((department) =>
-      String(department.name ?? department.departmentName ?? '').trim().toLowerCase()
-    ).filter(Boolean);
-
-    const activeFaculty = faculty.filter((member) => {
+    const activeFaculty = facultyForCollege(faculty, targetCollegeId, allDepartments).filter((member) => {
       const status = String(member.employmentStatus || member.status || '').trim().toLowerCase();
-      if (['inactive', 'resigned', 'retired', 'terminated'].includes(status)) return false;
-
-      const memberCollegeId = String(member.collegeNumericId ?? member.collegeId ?? member.college?.collegeId ?? member.college?.id ?? '').trim();
-      if (memberCollegeId) return memberCollegeId === targetCollegeId;
-
-      const memberDeptId = String(member.departmentId ?? member.department?.departmentId ?? member.department?.id ?? '').trim();
-      if (memberDeptId) return collegeDepartmentIds.has(memberDeptId);
-
-      const memberDeptName = String(member.departmentName ?? member.department?.departmentName ?? member.department?.name ?? member.department ?? '').trim().toLowerCase();
-      return Boolean(memberDeptName && collegeDepartmentNames.some((name) => name === memberDeptName || memberDeptName.includes(name) || name.includes(memberDeptName)));
+      return !['inactive', 'resigned', 'retired', 'terminated'].includes(status);
     });
-
     const targetDeptId = form.id !== undefined && form.id !== null ? String(form.id).trim() : '';
     const targetDeptName = String(form.name ?? '').trim().toLowerCase();
     const targetDeptCode = String(form.code ?? '').trim().toLowerCase();
@@ -3501,7 +3506,7 @@ function DepartmentManagement() {
         hodId: member.userId ?? member.employeeProfileId ?? member.facultyId ?? member.id,
       }))
       .filter((member) => member.hodId !== undefined && member.hodId !== null && member.hodId !== '');
-  }, [faculty, form.id, form.name, form.code, form.collegeNumericId, form.collegeId, selectedCollegeId, selectedCollege, scopedAllDepartments]);
+  }, [faculty, form.id, form.name, form.code, form.collegeNumericId, form.collegeId, selectedCollegeId, selectedCollege, allDepartments]);
 
   const toggleStatus = async (item) => {
     setError('');
@@ -3516,8 +3521,9 @@ function DepartmentManagement() {
         let currentFaculty = faculty;
         if (!currentFaculty || !currentFaculty.length) {
           try {
-            const facultyRecords = await facultyService.list();
-            currentFaculty = facultyRecords.map(normalizeFaculty);
+            const collegeId = item.collegeNumericId ?? item.collegeId ?? selectedCollegeId;
+            const facultyRecords = await facultyService.list({ collegeId });
+            currentFaculty = facultyForCollege(facultyRecords.map(normalizeFaculty), collegeId, allDepartments);
             setFaculty(currentFaculty);
           } catch {
             currentFaculty = [];
@@ -8470,8 +8476,6 @@ function RoomsManagement({ formMode = false, viewMode = false }) {
                         icon={FiGrid}
                         title="No rooms found"
                         description="Add a room or classroom to get started."
-                        action="Add Room / Classroom"
-                        onAction={handleOpenCreate}
                       />
                     </td>
                   </tr>

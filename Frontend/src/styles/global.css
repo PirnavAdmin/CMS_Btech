@@ -1408,14 +1408,6 @@ label > b,
   background: var(--page-background);
 }
 :root:not([data-theme="dark"]) #root .page-content { background: transparent !important; }
-:root:not([data-theme="dark"]) #root .dashboard-header {
-  background: rgba(255, 255, 255, .92) !important;
-  border-color: var(--border);
-}
-:root:not([data-theme="dark"]) #root .dashboard-header :is(.global-search, .header-academic-year, .account-menu summary, .notification-btn) {
-  background: var(--surface) !important;
-  border-color: var(--border) !important;
-}
 :root:not([data-theme="dark"]) #root .page-content :is(.management-page__heading, .erp-page-heading, .erp-page-header, .cm-header, .semester-page-header, .section-page-header) h1 {
   color: var(--text-primary) !important;
 }
@@ -1460,7 +1452,7 @@ label > b,
   background: var(--toolbar-background) !important;
   border-color: var(--border) !important;
 }
-:root:not([data-theme="dark"]) #root :is(.page-content, .dashboard-header) :is(
+:root:not([data-theme="dark"]) #root .page-content :is(
   .search-control, .module-search, .course-search, .branch-search,
   .department-search, .semester-search, .section-search, .sa-search,
   .searchable-select__trigger, select, textarea,
@@ -1470,7 +1462,7 @@ label > b,
   border-color: var(--border) !important;
   color: var(--text-primary);
 }
-:root:not([data-theme="dark"]) #root :is(.page-content, .dashboard-header) :is(input:not(.sm-search-input), select, textarea, .searchable-select__trigger):focus-visible {
+:root:not([data-theme="dark"]) #root .page-content :is(input:not(.sm-search-input), select, textarea, .searchable-select__trigger):focus-visible {
   border-color: #4C91D4 !important;
   box-shadow: var(--focus-ring) !important;
 }
@@ -1640,22 +1632,6 @@ label > b,
   box-sizing: border-box !important;
   font-size: 12px !important;
 }
-:root[data-theme] #root .dashboard-header .global-search {
-  height: 34px !important;
-  min-height: 34px !important;
-  padding-right: 9px !important;
-  padding-left: 9px !important;
-}
-:root[data-theme] #root .dashboard-header .global-search > svg {
-  width: 15px !important;
-  height: 15px !important;
-  flex-basis: 15px !important;
-}
-:root[data-theme] #root .dashboard-header .global-search > input {
-  height: 30px !important;
-  font-size: 12px !important;
-}
-
 /* Shared dropdown layout and picker behavior. */
 /* Native single selects use an anchored picker where supported. Keep listboxes
    (multiple / size > 1) in their existing inline form. Older browsers retain

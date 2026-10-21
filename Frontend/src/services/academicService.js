@@ -14,6 +14,8 @@ import {
   sectionApi,
 } from '../api/apiEndpoints'
 import eventBus, { ERP_EVENTS } from './eventBus'
+import { getAccessToken } from '../auth/auth.js'
+import { selectedCollegeId } from '../utils/collegeScope.js'
 
 /**
  * Academic Service
@@ -72,6 +74,7 @@ class AcademicService {
   }
 
   async _fetchCached(key, fetcher) {
+    key = `${getAccessToken()}:${selectedCollegeId()}:${key}`
     const cached = this._cache.get(key)
     const now = Date.now()
     if (cached && now - cached.timestamp < this._ttl) {

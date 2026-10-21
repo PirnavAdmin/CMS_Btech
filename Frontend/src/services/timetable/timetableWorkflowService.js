@@ -4,11 +4,15 @@ import { getUserRole } from '../../auth/auth'
 import { same, active, conflictsFor, existingSlots } from '../../utils/timetableUtils'
 import { createDraftAdapter, DRAFT_STORAGE_KEY } from './timetableDraftAdapter'
 import { decorateEntries, tableEntries } from './timetableDomain'
+import { selectedCollegeId } from '../../utils/collegeScope.js'
+import { scopeTimetableData } from './timetableCollegeScope.js'
 
 export const draftCapabilityEnabled = import.meta.env.DEV && import.meta.env.VITE_TIMETABLE_DRAFT_ADAPTER === 'true'
 export async function loadLive() {
+  const collegeId = selectedCollegeId()
   const [sources, departments, backend, subjects] = await Promise.all([timetableService.getSources(), departmentApi.getAll(), timetableService.list(), subjectApi.list()])
-  return { sources: { ...sources, subjects: subjects.map(row => ({ ...row, id: row.subjectId ?? row.id, name: row.subjectName ?? row.name })), departments: departments.map(row => ({ ...row, id: row.departmentId ?? row.id, name: row.departmentName ?? row.name })), allocations: sources.allocations.filter(row => active(row) && row.sectionId && (!row.allocationType || row.allocationType.toUpperCase() === 'TEACHING')) }, backend }
+  const scoped = scopeTimetableData({ ...sources, subjects: subjects.map(row => ({ ...row, id: row.subjectId ?? row.id, name: row.subjectName ?? row.name })), departments: departments.map(row => ({ ...row, id: row.departmentId ?? row.id, name: row.departmentName ?? row.name })), allocations: sources.allocations.filter(row => active(row) && row.sectionId && (!row.allocationType || row.allocationType.toUpperCase() === 'TEACHING')) }, backend, collegeId)
+  return { sources: scoped.sources, backend: scoped.tables }
 }
 export async function resolveMyFaculty(sources) {
   const profile = await profileApi.getProfile()

@@ -217,6 +217,7 @@ namespace BTech.Services.Implementations
         {
             return new AcademicYearResponseDto
             {
+                CollegeId = x.CollegeId,
                 AcademicYearId =
                     x.AcademicYearId,
 

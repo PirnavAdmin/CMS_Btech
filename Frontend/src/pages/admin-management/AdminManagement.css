@@ -6456,3 +6456,16 @@
     grid-template-columns: 1fr;
   }
 }
+.ay-college-context {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px 20px;
+  margin-bottom: 16px;
+  padding: 16px;
+  border: 1px solid var(--border, #dce5f2);
+  border-radius: 10px;
+  background: var(--surface, #fff);
+}
+.ay-college-context > .workspace-context-select { flex: 0 1 320px; min-width: 0; width: 100%; }
+.ay-college-context > p { flex: 1 1 260px; margin: 0; color: var(--text-secondary); font-size: 13px; line-height: 1.6; }

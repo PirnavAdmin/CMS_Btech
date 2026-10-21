@@ -1,8 +1,9 @@
-import React, { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react'
+import React, { createContext, useContext, useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import academicService, { filterActiveOnly } from '../services/academicService'
 import eventBus, { ERP_EVENTS } from '../services/eventBus'
 import { getActiveAcademicYears } from '../utils/academicYearUtils'
 import { createCollegeScope } from '../utils/collegeScope'
+import { getUserCollegeId } from '../auth/auth'
 
 const CONTEXT_STORAGE_KEY = 'pirnav_academic_context'
 
@@ -15,8 +16,8 @@ const readStoredContext = () => {
       const parsed = JSON.parse(raw)
       if (parsed && typeof parsed === 'object') {
         return {
-          collegeId: parsed.collegeId ? String(parsed.collegeId) : '',
-          academicYearId: parsed.academicYearId ? String(parsed.academicYearId) : '',
+          collegeId: getUserCollegeId() || (parsed.collegeId ? String(parsed.collegeId) : ''),
+          academicYearId: getUserCollegeId() && String(parsed.collegeId) !== getUserCollegeId() ? '' : (parsed.academicYearId ? String(parsed.academicYearId) : ''),
         }
       }
     }
@@ -24,7 +25,7 @@ const readStoredContext = () => {
     const legacyYear = localStorage.getItem('pirnav-selected-academic-year-id')
     const legacyCollege = localStorage.getItem('selected_college_id') || localStorage.getItem('pirnav-selected-college-id')
     return {
-      collegeId: legacyCollege ? String(legacyCollege) : '',
+      collegeId: getUserCollegeId() || (legacyCollege ? String(legacyCollege) : ''),
       academicYearId: legacyYear ? String(legacyYear) : '',
     }
   } catch {
@@ -45,6 +46,7 @@ const saveStoredContext = (collegeId, academicYearId) => {
       localStorage.removeItem('selected_college_id')
     }
     if (academicYearId) localStorage.setItem('pirnav-selected-academic-year-id', String(academicYearId))
+    else localStorage.removeItem('pirnav-selected-academic-year-id')
   } catch {}
 }
 
@@ -58,12 +60,14 @@ export const AcademicProvider = ({ children }) => {
   const [sections, setSections] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
+  const hierarchyRequest = useRef(0)
 
   // Stored working context IDs
   const [selectedCollegeId, setSelectedCollegeId] = useState(() => readStoredContext().collegeId)
   const [selectedAcademicYearId, setSelectedAcademicYearId] = useState(() => readStoredContext().academicYearId)
 
   const loadHierarchy = useCallback(async () => {
+    const requestId = ++hierarchyRequest.current
     try {
       setLoading(true)
       setError(null)
@@ -76,15 +80,16 @@ export const AcademicProvider = ({ children }) => {
         academicService.getSemesters(null, false),
         academicService.getSections({}, false),
       ])
+      if (requestId !== hierarchyRequest.current) return
 
       if ([cols, years, depts, crss, brns, sems, secs].some(list => list?.loadError)) {
         throw new Error('Academic configuration could not be loaded. Please retry.')
       }
-      const safeColleges = cols || []
-      const safeYears = years || []
+      const assignedCollege = getUserCollegeId()
+      const safeColleges = (cols || []).filter(row => !assignedCollege || String(row.id ?? row.collegeId) === assignedCollege)
+      let safeYears = []
 
       setColleges(safeColleges)
-      setAcademicYears(safeYears)
       setDepartments(depts || [])
       setCourses(crss || [])
       setBranches(brns || [])
@@ -102,6 +107,8 @@ export const AcademicProvider = ({ children }) => {
         resolvedColId = defaultCol ? String(defaultCol.id ?? defaultCol.collegeId) : ''
       }
       setSelectedCollegeId(resolvedColId)
+      safeYears = createCollegeScope(resolvedColId)(years || [])
+      setAcademicYears(safeYears)
 
       // Validate or resolve default Academic Year
       let resolvedYearId = ''
@@ -116,16 +123,18 @@ export const AcademicProvider = ({ children }) => {
       // Persist validated context
       saveStoredContext(resolvedColId, resolvedYearId)
     } catch (err) {
+      if (requestId !== hierarchyRequest.current) return
       setError('Academic configuration could not be loaded. Please retry.')
       console.warn('Error loading academic hierarchy context:', err)
     } finally {
-      setLoading(false)
+      if (requestId === hierarchyRequest.current) setLoading(false)
     }
   }, [])
 
   useEffect(() => {
     loadHierarchy()
     const unsubscribe = eventBus.subscribe(ERP_EVENTS.ACADEMIC_UPDATED, () => {
+      academicService.clearCache()
       loadHierarchy()
     })
     return () => unsubscribe()
@@ -172,10 +181,13 @@ export const AcademicProvider = ({ children }) => {
 
   // Atomically apply a new Global Academic Context
   const applyAcademicContext = useCallback(async (newCollegeId, newAcademicYearId) => {
+    if (getUserCollegeId() && String(newCollegeId) !== getUserCollegeId()) throw new Error('Select the college assigned to your account.')
     const colId = String(newCollegeId ?? '')
-    const yrId = String(newAcademicYearId ?? '')
+    const collegeChanged = colId !== String(readStoredContext().collegeId || '')
+    const yrId = collegeChanged ? '' : String(newAcademicYearId ?? '')
 
     setSelectedCollegeId(colId)
+    if (collegeChanged) setAcademicYears([])
     setSelectedAcademicYearId(yrId)
     saveStoredContext(colId, yrId)
 

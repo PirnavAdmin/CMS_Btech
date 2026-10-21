@@ -6,13 +6,83 @@ import { getOperationalAcademicYearOptions } from '../../../utils/academicYearUt
 import { REQUIRED_FIELDS, HOSTEL_FEES, TRANSPORT_FEES } from '../../../utils/studentCanonicalModel'
 import { ProjectSelect } from '../../../components/SearchableSelect'
 import { Link } from 'react-router-dom'
-import { readFeeWorkspace, feeLedger, feeMoney } from '../../../services/feeStructureService'
+import { readFeeWorkspace, feeLedger, feeMoney, readHostelStructures, readTransportStructures } from '../../../services/feeStructureService'
 import { FiClock, FiCreditCard, FiShield, FiPrinter } from 'react-icons/fi'
 import { feeCollectionApi } from '../../../api/apiEndpoints'
 
 import DirectoryEmptyState from '../../../components/DirectoryEmptyState'
 import useCollegeState from '../../../hooks/useCollegeState'
 import { newestFirst, rememberCreated } from '../../../utils/newestFirst'
+
+const resolveProfileHostelFee = (admission = {}, fees = {}, academic = {}) => {
+  if (admission?.hostel !== 'Yes') return 0;
+  const collegeId = admission.collegeId || academic?.collegeId;
+  const roomType = String(admission?.hostelRoomType || '').trim().toLowerCase();
+  const gender = String(admission?.gender || '').trim().toLowerCase();
+  const preference = String(admission?.hostelPreference || '').trim().toLowerCase();
+
+  try {
+    const hostelPlans = readHostelStructures(collegeId);
+    if (Array.isArray(hostelPlans) && hostelPlans.length > 0) {
+      const activePlans = hostelPlans.filter(p => !p.status || ['Active', 'Published', 'Approved'].includes(p.status));
+      const candidates = activePlans.length ? activePlans : hostelPlans;
+      const matchedPlan = candidates.find(p => {
+        if (preference && String(p.hostelType || p.hostelName || '').toLowerCase().includes(preference)) return true;
+        if (gender === 'male' && /boys/i.test(String(p.hostelType || p.hostelName || ''))) return true;
+        if (gender === 'female' && /girls/i.test(String(p.hostelType || p.hostelName || ''))) return true;
+        return false;
+      }) || candidates[0];
+
+      if (matchedPlan) {
+        if (Array.isArray(matchedPlan.roomPricing) && matchedPlan.roomPricing.length > 0) {
+          const matchedRoom = matchedPlan.roomPricing.find(r => {
+            const rType = String(r.roomType || '').trim().toLowerCase();
+            return roomType && (rType === roomType || rType.includes(roomType) || roomType.includes(rType));
+          }) || matchedPlan.roomPricing[0];
+          if (matchedRoom) {
+            const roomComps = Array.isArray(matchedRoom.components) ? matchedRoom.components : [];
+            const roomTotal = roomComps.reduce((sum, c) => sum + Number(c.amount || 0), 0);
+            if (roomTotal > 0) return roomTotal;
+            if (Number(matchedRoom.fee || matchedRoom.amount || 0) > 0) return Number(matchedRoom.fee || matchedRoom.amount);
+          }
+        }
+        const planComps = Array.isArray(matchedPlan.components) ? matchedPlan.components : [];
+        const planTotal = planComps.reduce((sum, c) => sum + Number(c.amount || 0), 0);
+        if (planTotal > 0) return planTotal;
+        if (Number(matchedPlan.fee || matchedPlan.amount || 0) > 0) return Number(matchedPlan.fee || matchedPlan.amount);
+      }
+    }
+  } catch {}
+  if (Number(fees?.hostelFee || 0) > 0) return Number(fees.hostelFee);
+  return Number(HOSTEL_FEES[admission?.hostelRoomType] || 0);
+};
+
+const resolveProfileTransportFee = (admission = {}, fees = {}, academic = {}) => {
+  if (admission?.transport !== 'Yes') return 0;
+  const collegeId = admission.collegeId || academic?.collegeId;
+  const route = String(admission?.transportRoute || '').trim().toLowerCase();
+
+  try {
+    const transportPlans = readTransportStructures(collegeId);
+    if (Array.isArray(transportPlans) && transportPlans.length > 0) {
+      const activePlans = transportPlans.filter(p => !p.status || ['Active', 'Published', 'Approved'].includes(p.status));
+      const candidates = activePlans.length ? activePlans : transportPlans;
+      const matchedPlan = candidates.find(p => {
+        const pRoute = String(p.route || p.routeCode || p.name || '').trim().toLowerCase();
+        return route && (pRoute === route || pRoute.includes(route) || route.includes(pRoute));
+      }) || candidates[0];
+
+      if (matchedPlan) {
+        const planComps = Array.isArray(matchedPlan.components) ? matchedPlan.components : [];
+        const planTotal = planComps.reduce((sum, c) => sum + Number(c.amount || 0), 0);
+        if (planTotal > 0) return planTotal;
+        if (Number(matchedPlan.fee || matchedPlan.amount || 0) > 0) return Number(matchedPlan.fee || matchedPlan.amount);
+      }
+    }
+  } catch {}
+  if (Number(fees?.transportFee || 0) > 0) return Number(fees.transportFee);
+  return Number(TRANSPORT_FEES[admission?.transportRoute] || 0);
+};
 import useToastState from '../../../hooks/useToastState'
 import { isApiResult } from '../../../utils/exportProvenance'
 import { approvedStudentProfiles, isApprovedAdmission } from '../../../utils/approvedStudentProfiles'
@@ -337,10 +407,12 @@ const hydrateProfile = async (source) => {
   } else {
     const tuition = Number(resolvedFees.tuitionFee) > 0 ? Number(resolvedFees.tuitionFee) : Number(combinedSource.fees?.tuitionFee) > 0 ? Number(combinedSource.fees.tuitionFee) : 0;
     const admissionFee = Number(resolvedFees.admissionFee) > 0 ? Number(resolvedFees.admissionFee) : Number(combinedSource.fees?.admissionFee) > 0 ? Number(combinedSource.fees.admissionFee) : 0;
-    const hostel = Number(resolvedFees.hostelFee || combinedSource.fees?.hostelFee || 0);
-    const transport = Number(resolvedFees.transportFee || combinedSource.fees?.transportFee || 0);
-    const scholarship = Number(resolvedFees.scholarshipAmount || combinedSource.fees?.scholarshipAmount || 0);
-    totalPayable = Number(resolvedFees.totalFee || combinedSource.fees?.totalFee || 0) || Math.max(0, tuition + admissionFee + hostel + transport - scholarship);
+    const resolvedH = resolveProfileHostelFee(combinedSource.admission, combinedSource.fees, combinedSource.academic);
+    const resolvedT = resolveProfileTransportFee(combinedSource.admission, combinedSource.fees, combinedSource.academic);
+    const hostel = Number(resolvedFees.hostelFee || combinedSource.fees?.hostelFee || resolvedH || 0);
+    const transport = Number(resolvedFees.transportFee || combinedSource.fees?.transportFee || resolvedT || 0);
+    const calcPayable = Math.max(0, tuition + admissionFee + hostel + transport - scholarship);
+    totalPayable = calcPayable > 0 ? calcPayable : Number(resolvedFees.totalFee || combinedSource.fees?.totalFee || 0);
     paidAmount = Number(combinedSource.fees?.paidAmount || 0);
     if (historyItems.length > 0) {
       paidAmount = historyItems.reduce((sum, h) => sum + Number(h.totalAmount || h.feeAmount || 0), 0);
@@ -2243,6 +2315,40 @@ function StudentProfileEdit({ student, onCancel, onSave }) {
       );
   }, [branches, effectiveCourseId]);
 
+  const roomTypeOptions = useMemo(() => {
+    const list = [];
+    try {
+      const hostelPlans = readHostelStructures(effectiveCollegeId);
+      if (Array.isArray(hostelPlans)) {
+        hostelPlans.forEach(p => {
+          if (Array.isArray(p.roomPricing)) {
+            p.roomPricing.forEach(r => {
+              const name = String(r.roomType || '').trim();
+              if (name && !list.includes(name)) list.push(name);
+            });
+          }
+          const pRoom = String(p.roomType || '').trim();
+          if (pRoom && !list.includes(pRoom)) list.push(pRoom);
+        });
+      }
+    } catch {}
+    return [...new Set([...list, ...Object.keys(HOSTEL_FEES)])];
+  }, [effectiveCollegeId]);
+
+  const transportRouteOptions = useMemo(() => {
+    const list = [];
+    try {
+      const transportPlans = readTransportStructures(effectiveCollegeId);
+      if (Array.isArray(transportPlans)) {
+        transportPlans.forEach(p => {
+          const rName = String(p.route || p.routeCode || p.name || '').trim();
+          if (rName && !list.includes(rName)) list.push(rName);
+        });
+      }
+    } catch {}
+    return [...new Set([...list, ...Object.keys(TRANSPORT_FEES)])];
+  }, [effectiveCollegeId]);
+
   // Auto-fill courseCode / branchCode if missing but course / branch is selected
   useEffect(() => {
     if (!courses.length && !branches.length) return;
@@ -2339,28 +2445,28 @@ function StudentProfileEdit({ student, onCancel, onSave }) {
                   ? "Girls Hostel"
                   : "Boys Hostel";
             if (next.admission?.hostelRoomType) {
-              next.fees.hostelFee = HOSTEL_FEES[next.admission.hostelRoomType] || 0;
+              next.fees.hostelFee = resolveProfileHostelFee(next.admission, next.fees, next.academic);
             }
           }
         }
-        if (path === "admission.hostelRoomType") {
-          next.fees.hostelFee = HOSTEL_FEES[value] || 0;
+        if (path === "admission.hostelRoomType" || path === "admission.hostelPreference") {
+          next.fees.hostelFee = resolveProfileHostelFee(next.admission, next.fees, next.academic);
         }
         if (path === "admission.transport") {
           if (value === "No") {
             next.admission.transportRoute = "";
             next.fees.transportFee = 0;
           } else if (next.admission?.transportRoute) {
-            next.fees.transportFee = TRANSPORT_FEES[next.admission.transportRoute] || 0;
+            next.fees.transportFee = resolveProfileTransportFee(next.admission, next.fees, next.academic);
           }
         }
         if (path === "admission.transportRoute") {
-          next.fees.transportFee = TRANSPORT_FEES[value] || 0;
+          next.fees.transportFee = resolveProfileTransportFee(next.admission, next.fees, next.academic);
         }
         const tuition = Number(next.fees?.tuitionFee) > 0 ? Number(next.fees.tuitionFee) : 50000;
         const admission = Number(next.fees?.admissionFee !== undefined && next.fees?.admissionFee !== "" ? next.fees.admissionFee : 4000);
-        const hostel = next.admission?.hostel === "Yes" ? Number(next.fees?.hostelFee || (next.admission?.hostelRoomType ? HOSTEL_FEES[next.admission.hostelRoomType] : 0) || 0) : 0;
-        const transport = next.admission?.transport === "Yes" ? Number(next.fees?.transportFee || (next.admission?.transportRoute ? TRANSPORT_FEES[next.admission.transportRoute] : 0) || 0) : 0;
+        const hostel = next.admission?.hostel === "Yes" ? Number(next.fees?.hostelFee || resolveProfileHostelFee(next.admission, next.fees, next.academic) || 0) : 0;
+        const transport = next.admission?.transport === "Yes" ? Number(next.fees?.transportFee || resolveProfileTransportFee(next.admission, next.fees, next.academic) || 0) : 0;
         const scholarship = Number(next.fees?.scholarshipAmount || 0);
         const total = Math.max(0, tuition + admission + hostel + transport - scholarship);
         if (!next.fees) next.fees = {};
@@ -3134,7 +3240,7 @@ function StudentProfileEdit({ student, onCancel, onSave }) {
                         [
                           "admission.hostelRoomType",
                           "Room type / Beds",
-                          { options: Object.keys(HOSTEL_FEES), required: true },
+                          { options: roomTypeOptions, required: true },
                         ],
                       ]
                     : []),
@@ -3148,7 +3254,7 @@ function StudentProfileEdit({ student, onCancel, onSave }) {
                         [
                           "admission.transportRoute",
                           "Transport route",
-                          { options: Object.keys(TRANSPORT_FEES), required: true },
+                          { options: transportRouteOptions, required: true },
                         ],
                       ]
                     : []),

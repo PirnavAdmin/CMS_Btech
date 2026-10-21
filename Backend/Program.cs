@@ -25,6 +25,7 @@ var builder = WebApplication.CreateBuilder(args);
 // CONTROLLERS
 // ============================================================
 
+builder.Services.AddHttpContextAccessor();
 builder.Services.AddControllers(options =>
 {
     options.Filters.AddService<ApiErrorSanitizationFilter>();

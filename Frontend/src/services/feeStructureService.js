@@ -7,14 +7,14 @@ const LEGACY_KEY = 'pirnav-fee-structures-v2'
 const HOSTEL_KEY = 'pirnav-hostel-fee-structures-v1'
 const TRANSPORT_KEY = 'pirnav-transport-fee-structures-v1'
 
-const parse = key => {
-  const raw = localStorage.getItem(collegeStorageKey(key))
+const parse = (key, collegeId = selectedCollegeId()) => {
+  const raw = localStorage.getItem(collegeStorageKey(key, collegeId))
   if (!raw) return []
   const rows = JSON.parse(raw)
   if (!Array.isArray(rows)) throw new Error('Saved fee configuration is invalid. Restore the saved data before making changes.')
   return rows
 }
-const write = (key, rows, event) => { localStorage.setItem(collegeStorageKey(key), JSON.stringify(rows.map(row => ({ ...row, collegeId: selectedCollegeId() })))); window.dispatchEvent(new Event(event)); return rows }
+const write = (key, rows, event, collegeId = selectedCollegeId()) => { localStorage.setItem(collegeStorageKey(key, collegeId), JSON.stringify(rows.map(row => ({ ...row, collegeId })))); window.dispatchEvent(new Event(event)); return rows }
 const number = value => Number(value) || 0
 export const money = value => new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', minimumFractionDigits: 0, maximumFractionDigits: 2 }).format(number(value))
 export const uid = prefix => `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`
@@ -68,11 +68,11 @@ export const normalizeAcademic = row => {
   normalized.name = normalized.name || structureName(normalized); normalized.code = normalized.code || structureCode(normalized)
   return normalized
 }
-export const readStructures = () => {
-  const current = parse(ACADEMIC_KEY)
+export const readStructures = (collegeId = selectedCollegeId()) => {
+  const current = parse(ACADEMIC_KEY, collegeId)
   if (current.length) return current.map(normalizeAcademic)
-  const legacy = parse(LEGACY_KEY).map(normalizeAcademic)
-  if (legacy.length) write(ACADEMIC_KEY, legacy, 'fee-structures-updated')
+  const legacy = parse(LEGACY_KEY, collegeId).map(normalizeAcademic)
+  if (legacy.length) write(ACADEMIC_KEY, legacy, 'fee-structures-updated', collegeId)
   return legacy
 }
 export const persistStructures = rows => write(ACADEMIC_KEY, rows.map(normalizeAcademic), 'fee-structures-updated')
@@ -103,9 +103,9 @@ export const saveAcademic = (rows, value, createVersion = false) => {
   const next = [nextValue, ...rows.filter(x => x.id !== nextValue.id)]
   persistStructures(next); return { rows: next, value: nextValue }
 }
-export const readHostelStructures = () => parse(HOSTEL_KEY)
+export const readHostelStructures = (collegeId = selectedCollegeId()) => parse(HOSTEL_KEY, collegeId)
 export const persistHostelStructures = rows => write(HOSTEL_KEY, rows, 'hostel-fees-updated')
-export const readTransportStructures = () => parse(TRANSPORT_KEY)
+export const readTransportStructures = (collegeId = selectedCollegeId()) => parse(TRANSPORT_KEY, collegeId)
 export const persistTransportStructures = rows => write(TRANSPORT_KEY, rows, 'transport-fees-updated')
 
 // The new workflow is a separate, explicitly local workspace until matching
@@ -116,6 +116,7 @@ export const rupees = value => value / 100
 export const feeMoney = value => new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', minimumFractionDigits: 2 }).format(Number(value || 0))
 export const feeToday = () => new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Kolkata', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date())
 export const emptyFeeWorkspace = () => ({ revision: 0, components: [], structures: [], assignments: [], payments: [], concessions: [], refunds: [] })
+export const FEE_WORKSPACE_CHANGED = 'fee-workspace-updated'
 export function readFeeWorkspace(collegeId) {
   const raw = localStorage.getItem(collegeStorageKey(WORKSPACE_KEY, collegeId))
   if (!raw) return emptyFeeWorkspace()
@@ -129,7 +130,36 @@ export function writeFeeWorkspace(state, collegeId) {
   if (current.revision !== state.revision) throw new Error('Fees changed in another tab. Reload before saving.')
   const next = { ...state, revision: state.revision + 1 }
   localStorage.setItem(collegeStorageKey(WORKSPACE_KEY, collegeId), JSON.stringify(next))
+  if (typeof window !== 'undefined') window.dispatchEvent(new Event(FEE_WORKSPACE_CHANGED))
   return next
+}
+
+// Prefer exact IDs; older admissions may carry display names instead of IDs.
+export function matchingAdmissionFeeStructures(plans, academic = {}, admission = {}) {
+  const normalized = value => String(value ?? '').trim().toLowerCase().replace(/\s+/g, ' ')
+  const matches = (plan, field, label = field, alternateLabel = label) => {
+    const planId = normalized(plan[field + 'Id']), admissionId = normalized(academic[field + 'Id'])
+    if (planId && admissionId) return planId === admissionId
+    const planName = normalized(plan[field + 'Name'])
+    const admissionName = normalized(academic[label] || academic[alternateLabel])
+    if (!planId && !planName) return true
+    return Boolean(planName && admissionName && planName === admissionName)
+  }
+  return plans.filter(plan => {
+    if (['hostel', 'transport'].includes(normalized(plan.domain || plan.category))) return false
+    if ((plan.components || plan.feeComponents || []).some(component => ['hostel', 'transport'].includes(normalized(component.domain || component.category)))) return false
+    if (!['Published', 'Active', 'Approved'].includes(plan.status)) return false
+    if (plan.collegeId && admission.collegeId && String(plan.collegeId) !== String(admission.collegeId)) return false
+    if (!matches(plan, 'course') || !matches(plan, 'branch') || !matches(plan, 'academicYear')) return false
+    if (plan.batch && normalized(plan.batch) !== normalized(admission.batch)) return false
+    if ((plan.cycle === 'Semester-wise' || plan.feePeriod === 'Per Semester') && !matches(plan, 'semester')) return false
+    if (plan.applicableTo === 'Selected Category' && normalized(plan.category) !== normalized(academic.quota)) return false
+    return true
+  }).map(plan => ({
+    ...plan,
+    components: (Array.isArray(plan.components) ? plan.components : plan.feeComponents || []).map(component => ({ ...component, name: component.name || component.feeHeadName || component.componentName || 'Fee Component', amount: Number(component.amount ?? component.feeAmount ?? 0) })),
+    discount: plan.discount ?? 0,
+  }))
 }
 export const newFeeStructure = (yearId = '') => ({ id: '', name: '', version: 1, status: 'Draft', academicYearId: yearId, courseId: '', branchId: '', batch: '', category: '', applicableTo: 'All Students', cycle: 'Yearly', semesterId: '', components: [], discount: 0, plan: 'Full Payment', dueDate: '', installments: [], grace: 0, penaltyType: 'None', penaltyValue: 0, maximumPenalty: '', audit: [] })
 export const hasSingleStructureFee = structure => !structure.components.length || (structure.components.length === 1 && structure.components[0].masterId === 'structure-total-fee')

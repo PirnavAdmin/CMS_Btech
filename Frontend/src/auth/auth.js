@@ -21,7 +21,7 @@ function normalizeStoredRole(role) {
   const rawRole = Array.isArray(role) ? role[0] : role
   const normalizedRole = String(rawRole || '').trim().toLowerCase().replace(/[\s-]+/g, '_')
 
-  if (['admin', 'college_admin', 'super_admin'].includes(normalizedRole)) return 'admin'
+  if (['admin', 'college_admin', 'collegeadmin', 'super_admin', 'superadmin'].includes(normalizedRole)) return 'admin'
   return normalizedRole
 }
 
@@ -60,6 +60,19 @@ export function getRefreshToken() {
     || ''
 }
 
+// The signed-in college owns the context; a previous browser selection must not override it.
+export function getUserCollegeId() {
+  try {
+    const token = getAccessToken()
+    const payload = token.split('.')[1]?.replace(/-/g, '+').replace(/_/g, '/')
+    const claims = payload ? JSON.parse(atob(payload)) : {}
+    const roles = [claims.role, claims.roles, claims['http://schemas.microsoft.com/ws/2008/06/identity/claims/role']].flat().filter(Boolean)
+    if (roles.some(role => String(role).replace(/[\s_-]/g, '').toLowerCase() === 'superadmin')) return ''
+    const value = claims.collegeId ?? claims.college_id ?? getAuthStorage()?.getItem('btech-user-college-id')
+    return value && String(value) !== '0' ? String(value) : ''
+  } catch { return getAuthStorage()?.getItem('btech-user-college-id') || '' }
+}
+
 export function setAccessToken(token, rememberMe = false) {
   const storage = rememberMe ? localStorage : sessionStorage
   if (token) storage.setItem('btech-access-token', token)
@@ -89,11 +102,16 @@ export function signIn(role, accessToken, refreshToken, rememberMe = false, user
   storage.setItem('btech-refresh-token', refreshToken)
   storage.setItem('btech-user-name', String(user.name || '').trim())
   storage.setItem('btech-user-id', String(user.id || '').trim())
+  storage.setItem('btech-user-college-id', String(user.collegeId ?? user.college?.collegeId ?? user.college?.id ?? '').trim())
 }
 
 export function signOut() {
   const localStore = safeStorage('localStorage')
   const sessionStore = safeStorage('sessionStorage')
+  ;['pirnav_academic_context', 'pirnav-selected-college-id', 'selected_college_id', 'pirnav-selected-academic-year-id', 'btech-user-college-id', 'cms-portal-preview'].forEach(key => {
+    localStore?.removeItem(key)
+    sessionStore?.removeItem(key)
+  })
 
   if (localStore) {
     localStore.removeItem(AUTH_STORAGE_KEY)
