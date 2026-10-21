@@ -1591,15 +1591,15 @@ export const marksApi = {
   bulkFilePreview: async (file, scope) => {
     const form = new FormData()
     form.append('file', file)
-    form.append('examId', String(scope.examId))
-    if (scope.sectionId) form.append('sectionId', String(scope.sectionId))
+    if (scope?.examId) form.append('examId', String(scope.examId))
+    if (scope?.sectionId) form.append('sectionId', String(scope.sectionId))
     return dataResponse(await multipartRequest(API_ENDPOINTS.marks.bulkFilePreview, form))
   },
   bulkUpload: async (file, scope) => {
     const form = new FormData()
     form.append('file', file)
-    form.append('examId', String(scope.examId))
-    if (scope.sectionId) form.append('sectionId', String(scope.sectionId))
+    if (scope?.examId) form.append('examId', String(scope.examId))
+    if (scope?.sectionId) form.append('sectionId', String(scope.sectionId))
     form.append('upsertDrafts', String(Boolean(scope.upsertDrafts)))
     return dataResponse(await multipartRequest(API_ENDPOINTS.marks.bulkUpload, form))
   },

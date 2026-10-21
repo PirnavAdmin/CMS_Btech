@@ -22,6 +22,8 @@ public sealed class MarkEditRequest
 
 public sealed class MarkBulkRow
 {
+    public long? ExamId { get; set; }
+    public long? SectionId { get; set; }
     public string StudentCode { get; set; } = string.Empty;
     public string SubjectCode { get; set; } = string.Empty;
     public decimal MarksObtained { get; set; }
@@ -47,6 +49,8 @@ public sealed class BulkUploadPreviewRequest
 
 public sealed class BulkMarksResultDto
 {
+    public long? ExamId { get; set; }
+    public long? SectionId { get; set; }
     public long? UploadId { get; set; }
     public int TotalRows { get; set; }
     public int ValidRows { get; set; }

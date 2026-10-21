@@ -61,7 +61,7 @@ public sealed class MarksController : ControllerBase
     [Authorize(Roles = EntryRoles)]
     [Consumes("multipart/form-data")]
     public async Task<IActionResult> BulkUpload(
-        [FromForm] long examId,
+        [FromForm] long? examId,
         [FromForm] long? sectionId,
         [FromForm] bool upsertDrafts = false,
         IFormFile? file = null)
@@ -72,18 +72,22 @@ public sealed class MarksController : ControllerBase
         try
         {
             var rows = await ReadExcelAsync(file);
+            var scope = ResolveBulkScope(rows, examId, sectionId);
             var request = new BulkMarksRequest
             {
-                ExamId = examId,
-                SectionId = sectionId,
+                ExamId = scope.ExamId,
+                SectionId = scope.SectionId,
                 UpsertDrafts = upsertDrafts,
                 Rows = rows
             };
+            var result = await _service.BulkUploadAsync(request, UserId(), CollegeId(), IsSuperAdmin());
+            result.ExamId = scope.ExamId;
+            result.SectionId = scope.SectionId;
             return Ok(new
             {
                 success = true,
                 message = "Bulk marks upload completed.",
-                data = await _service.BulkUploadAsync(request, UserId(), CollegeId(), IsSuperAdmin())
+                data = result
             });
         }
         catch (Exception ex) { return Error(ex); }
@@ -93,7 +97,7 @@ public sealed class MarksController : ControllerBase
     [Authorize(Roles = EntryRoles)]
     [Consumes("multipart/form-data")]
     public async Task<IActionResult> BulkFilePreview(
-        [FromForm] long examId,
+        [FromForm] long? examId,
         [FromForm] long? sectionId,
         IFormFile? file = null)
     {
@@ -103,13 +107,17 @@ public sealed class MarksController : ControllerBase
         try
         {
             var rows = await ReadExcelAsync(file);
+            var scope = ResolveBulkScope(rows, examId, sectionId);
+            var result = await _service.BulkPreviewAsync(
+                new BulkUploadPreviewRequest { ExamId = scope.ExamId, SectionId = scope.SectionId, Rows = rows },
+                CollegeId(), IsSuperAdmin());
+            result.ExamId = scope.ExamId;
+            result.SectionId = scope.SectionId;
             return Ok(new
             {
                 success = true,
                 message = "Bulk marks file validation completed.",
-                data = await _service.BulkPreviewAsync(
-                    new BulkUploadPreviewRequest { ExamId = examId, SectionId = sectionId, Rows = rows },
-                    CollegeId(), IsSuperAdmin())
+                data = result
             });
         }
         catch (Exception ex) { return Error(ex); }
@@ -211,7 +219,7 @@ public sealed class MarksController : ControllerBase
 
         foreach (var cell in firstRow.CellsUsed())
         {
-            var name = cell.GetString().Trim();
+            var name = NormalizeHeader(cell.GetString());
             if (!string.IsNullOrWhiteSpace(name))
                 headerMap[name] = cell.Address.ColumnNumber;
         }
@@ -249,8 +257,22 @@ public sealed class MarksController : ControllerBase
                     ? row.Cell(col).GetString().Trim() is { Length: > 0 } value ? value : null
                     : null;
 
+            long? OptionalId(params string[] keys)
+            {
+                var column = keys.Select(key => headerMap.TryGetValue(key, out var index) ? index : 0)
+                    .FirstOrDefault(index => index > 0);
+                if (column == 0) return null;
+                var text = row.Cell(column).GetString().Trim();
+                if (string.IsNullOrWhiteSpace(text)) return null;
+                if (!long.TryParse(text, NumberStyles.Integer, CultureInfo.InvariantCulture, out var value) || value <= 0)
+                    throw new ArgumentException($"Excel row {row.RowNumber()}: {keys[0]} must be a positive number.");
+                return value;
+            }
+
             rows.Add(new MarkBulkRow
             {
+                ExamId = OptionalId("ExamId", "ExaminationId"),
+                SectionId = OptionalId("SectionId"),
                 StudentCode = row.Cell(headerMap["StudentCode"]).GetString().Trim(),
                 SubjectCode = row.Cell(headerMap["SubjectCode"]).GetString().Trim(),
                 MarksObtained = marks,
@@ -262,6 +284,30 @@ public sealed class MarksController : ControllerBase
 
         if (rows.Count == 0) throw new ArgumentException("Excel file contains no data rows.");
         return rows;
+    }
+
+    private static string NormalizeHeader(string value)
+        => new(value.Where(char.IsLetterOrDigit).ToArray());
+
+    private static (long ExamId, long? SectionId) ResolveBulkScope(
+        IReadOnlyCollection<MarkBulkRow> rows, long? requestedExamId, long? requestedSectionId)
+    {
+        var hasExamIds = rows.Any(row => row.ExamId.HasValue);
+        if (hasExamIds && rows.Any(row => !row.ExamId.HasValue))
+            throw new ArgumentException("Every row must include an ExamId.");
+
+        var examIds = rows.Where(row => row.ExamId.HasValue).Select(row => row.ExamId!.Value).Distinct().ToArray();
+        if (examIds.Length > 1 || requestedExamId.HasValue && examIds.Length == 1 && requestedExamId != examIds[0])
+            throw new ArgumentException("Each upload file must contain rows for one examination.");
+        var examId = examIds.SingleOrDefault(requestedExamId ?? 0);
+        if (examId <= 0)
+            throw new ArgumentException("Include a positive ExamId value in every file row.");
+
+        var sectionIds = rows.Where(row => row.SectionId.HasValue).Select(row => row.SectionId!.Value).Distinct().ToArray();
+        if (sectionIds.Length > 1 || requestedSectionId.HasValue && sectionIds.Length == 1 && requestedSectionId != sectionIds[0])
+            throw new ArgumentException("Each upload file must contain rows for one section.");
+
+        return (examId, sectionIds.Length == 1 ? sectionIds[0] : requestedSectionId);
     }
 
     private async Task<IActionResult> Execute<T>(

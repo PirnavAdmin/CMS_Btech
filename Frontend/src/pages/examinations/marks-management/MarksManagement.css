@@ -209,9 +209,6 @@
 .bulk-marks-upload-card__header,
 .bulk-marks-preview-card__header { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding-bottom: 16px; }
 .bulk-marks-upload-clear { flex: 0 0 auto; }
-.bulk-marks-upload-scope { display: grid; grid-template-columns: repeat(2, minmax(180px, 1fr)); gap: 12px; margin: 0 20px 16px; }
-.bulk-marks-upload-scope label { display: grid; gap: 5px; color: var(--text-secondary); font-size: 12px; font-weight: 600; }
-.bulk-marks-upload-scope input { min-width: 0; min-height: 38px; padding: 7px 10px; border: 1px solid var(--border); border-radius: 7px; background: var(--surface); color: var(--text-primary); font: inherit; }
 .bulk-marks-upload-dropzone { position: relative; display: flex; align-items: center; gap: 14px; min-height: 92px; margin: 0 20px 16px; padding: 16px 18px; border: 1px dashed var(--border-strong, #b8cbe0); border-radius: 11px; background: var(--surface-soft, #f7faff); color: var(--text-primary); cursor: pointer; transition: border-color .15s ease, background .15s ease; }
 .bulk-marks-upload-dropzone:hover,
 .bulk-marks-upload-dropzone:focus-within { border-color: var(--brand); background: var(--brand-soft, #edf5ff); }
@@ -246,7 +243,6 @@
   .bulk-marks-upload-card__header,
   .bulk-marks-preview-card__header { align-items: flex-start; flex-direction: column; }
   .bulk-marks-upload-dropzone { align-items: flex-start; flex-wrap: wrap; margin-inline: 12px; padding: 14px; }
-  .bulk-marks-upload-scope { grid-template-columns: 1fr; margin-inline: 12px; }
   .bulk-marks-upload-browse { margin-left: 58px; }
   .bulk-marks-upload-status,
   .bulk-marks-upload-error { margin-inline: 12px; }

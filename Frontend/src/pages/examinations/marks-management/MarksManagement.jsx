@@ -174,8 +174,8 @@ const parseDelimitedFile = (text, filename) => {
 }
 
 function BulkMarksUpload() {
-  const [scope, setScope] = useState({ examId: '', sectionId: '' })
   const [selectedFile, setSelectedFile] = useState(null)
+  const [uploadScope, setUploadScope] = useState(null)
   const [fileName, setFileName] = useState('')
   const [columns, setColumns] = useState([])
   const [rows, setRows] = useState([])
@@ -217,53 +217,73 @@ function BulkMarksUpload() {
     event.target.value = ''
     if (!file) return
     setFileError('')
+    setUploadScope(null)
     setReading(true)
     try {
-      const examId = Number(scope.examId)
-      if (!Number.isSafeInteger(examId) || examId <= 0) throw new Error('Enter a valid examination ID before previewing the workbook.')
       const isWorkbook = /\.xlsx$/i.test(file.name)
-      const preview = isWorkbook
-        ? await marksApi.upload(file, { examId, sectionId: scope.sectionId || undefined }, true)
-        : await (async () => {
-          const parsed = parseDelimitedFile(await file.text(), file.name)
-          setColumns(parsed.columns)
-          setRows(parsed.rows)
-          const columnFor = (...names) => parsed.columns.find(column =>
-            names.includes(column.label.toLowerCase().replace(/[^a-z0-9]/g, '')),
-          )
-          const studentColumn = columnFor('studentcode', 'studentid', 'registrationnumber', 'rollnumber')
-          const subjectColumn = columnFor('subjectcode', 'subjectid')
-          const marksColumn = columnFor('marksobtained', 'marks', 'studentmarks')
-          const maximumColumn = columnFor('maxmarks', 'maximummarks')
-          const gradeColumn = columnFor('grade')
-          const remarksColumn = columnFor('remarks')
-          if (!studentColumn || !subjectColumn || !marksColumn) {
-            throw new Error('CSV headings must include StudentCode, SubjectCode, and MarksObtained.')
-          }
-          const requestRows = parsed.rows.map((row, index) => {
-            const marksValue = row[marksColumn.key]
-            const maximumValue = maximumColumn ? row[maximumColumn.key] : ''
-            const marksObtained = Number(marksValue)
-            const maxMarks = Number(maximumValue)
-            if (!String(marksValue || '').trim() || !Number.isFinite(marksObtained)) throw new Error(`Row ${index + 2}: MarksObtained must be numeric.`)
-            if (String(maximumValue || '').trim() && !Number.isFinite(maxMarks)) throw new Error(`Row ${index + 2}: MaxMarks must be numeric.`)
-            return {
-              studentCode: row[studentColumn.key],
-              subjectCode: row[subjectColumn.key],
-              marksObtained,
-              ...(String(maximumValue || '').trim() ? { maxMarks } : {}),
-              ...(gradeColumn ? { grade: row[gradeColumn.key] } : {}),
-              ...(remarksColumn ? { remarks: row[remarksColumn.key] } : {}),
-            }
-          })
-          const result = await marksApi.bulkPreview({
-            examId,
-            sectionId: scope.sectionId ? Number(scope.sectionId) : undefined,
-            rows: requestRows,
-          })
-          setSelectedFile(null)
+      const preview = await (async () => {
+        if (isWorkbook) {
+          const result = await marksApi.upload(file, {}, true)
+          if (!result?.examId) throw new Error('Workbook preview did not return an examination ID from the file.')
+          setUploadScope({ examId: result.examId, sectionId: result.sectionId || undefined })
           return result
-        })()
+        }
+        const parsed = parseDelimitedFile(await file.text(), file.name)
+        setColumns(parsed.columns)
+        setRows(parsed.rows)
+        const columnFor = (...names) => parsed.columns.find(column =>
+          names.includes(column.label.toLowerCase().replace(/[^a-z0-9]/g, '')),
+        )
+        const studentColumn = columnFor('studentcode', 'studentid', 'registrationnumber', 'rollnumber')
+        const subjectColumn = columnFor('subjectcode', 'subjectid')
+        const marksColumn = columnFor('marksobtained', 'marks', 'studentmarks')
+        const examColumn = columnFor('examid', 'examinationid')
+        const sectionColumn = columnFor('sectionid')
+        const maximumColumn = columnFor('maxmarks', 'maximummarks')
+        const gradeColumn = columnFor('grade')
+        const remarksColumn = columnFor('remarks')
+        if (!studentColumn || !subjectColumn || !marksColumn || !examColumn) {
+          throw new Error('File headings must include ExamId, StudentCode, SubjectCode, and MarksObtained.')
+        }
+        const scopeByRow = parsed.rows.map((row, index) => {
+          const examId = Number(row[examColumn.key])
+          const sectionValue = sectionColumn ? String(row[sectionColumn.key] || '').trim() : ''
+          const sectionId = sectionValue ? Number(sectionValue) : undefined
+          if (!Number.isSafeInteger(examId) || examId <= 0) throw new Error(`Row ${index + 2}: ExamId must be a positive number.`)
+          if (sectionValue && (!Number.isSafeInteger(sectionId) || sectionId <= 0)) throw new Error(`Row ${index + 2}: SectionId must be a positive number.`)
+          return { examId, sectionId }
+        })
+        const examIds = [...new Set(scopeByRow.map(scopeRow => scopeRow.examId))]
+        const sectionIds = [...new Set(scopeByRow.map(scopeRow => scopeRow.sectionId).filter(Boolean))]
+        if (examIds.length !== 1 || sectionIds.length > 1) {
+          throw new Error('Each upload file must contain rows for one examination and one section.')
+        }
+        const scope = { examId: examIds[0], sectionId: sectionIds[0] }
+        setUploadScope(scope)
+        const requestRows = parsed.rows.map((row, index) => {
+          const marksValue = row[marksColumn.key]
+          const maximumValue = maximumColumn ? row[maximumColumn.key] : ''
+          const marksObtained = Number(marksValue)
+          const maxMarks = Number(maximumValue)
+          if (!String(marksValue || '').trim() || !Number.isFinite(marksObtained)) throw new Error(`Row ${index + 2}: MarksObtained must be numeric.`)
+          if (String(maximumValue || '').trim() && !Number.isFinite(maxMarks)) throw new Error(`Row ${index + 2}: MaxMarks must be numeric.`)
+          return {
+            studentCode: row[studentColumn.key],
+            subjectCode: row[subjectColumn.key],
+            marksObtained,
+            ...(String(maximumValue || '').trim() ? { maxMarks } : {}),
+            ...(gradeColumn ? { grade: row[gradeColumn.key] } : {}),
+            ...(remarksColumn ? { remarks: row[remarksColumn.key] } : {}),
+          }
+        })
+        const result = await marksApi.bulkPreview({
+          examId: scope.examId,
+          sectionId: scope.sectionId,
+          rows: requestRows,
+        })
+        setSelectedFile(null)
+        return result
+      })()
       const previewErrors = Array.isArray(preview?.errors) ? preview.errors : []
       setColumns([
         { key: 'rowNumber', label: 'Row' },
@@ -289,6 +309,7 @@ function BulkMarksUpload() {
     } catch (error) {
       setFileError(error.message || 'Could not preview this workbook.')
       setSelectedFile(null)
+      setUploadScope(null)
       setUploadPreview(null)
       showError(error)
     } finally {
@@ -302,13 +323,13 @@ function BulkMarksUpload() {
     setFileError('')
     try {
       const result = await marksApi.upload(selectedFile, {
-        examId: Number(scope.examId),
-        sectionId: scope.sectionId || undefined,
+        ...uploadScope,
         upsertDrafts: true,
       }, false)
       showSuccess(`Marks upload completed: ${result.insertedRows || 0} inserted, ${result.updatedRows || 0} updated, ${result.rejectedRows || 0} rejected.`)
       setUploadPreview(result)
       setSelectedFile(null)
+      setUploadScope(null)
       setRows(Array.isArray(result.errors) ? result.errors.map((row, index) => ({
         __bulkRowId: `upload-error-${index}`,
         rowNumber: row.rowNumber,
@@ -327,6 +348,7 @@ function BulkMarksUpload() {
 
   const clearPreview = () => {
     setSelectedFile(null)
+    setUploadScope(null)
     setFileName('')
     setColumns([])
     setRows([])
@@ -368,14 +390,10 @@ function BulkMarksUpload() {
             {fileName && <button type="button" className="erp-btn erp-btn--secondary bulk-marks-upload-clear" onClick={clearPreview}><FiX /> Clear file</button>}
           </header>
 
-          <div className="bulk-marks-upload-scope">
-            <label>Examination ID<input type="number" min="1" value={scope.examId} onChange={event => setScope(current => ({ ...current, examId: event.target.value }))} /></label>
-            <label>Section ID (optional)<input type="number" min="1" value={scope.sectionId} onChange={event => setScope(current => ({ ...current, sectionId: event.target.value }))} /></label>
-          </div>
           <label className={`bulk-marks-upload-dropzone${reading ? ' is-reading' : ''}`}>
             <input type="file" accept=".xlsx,.csv,.tsv,.txt,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,text/csv,text/tab-separated-values,text/plain" onChange={uploadFile} disabled={reading || uploading} />
             <span className="bulk-marks-upload-dropzone__icon"><FiUploadCloud /></span>
-            <span className="bulk-marks-upload-dropzone__text"><strong>{reading ? 'Validating file…' : fileName || 'Choose a marks file'}</strong><small>{reading ? 'Checking rows with the marks API' : 'XLSX uploads, or CSV / TSV / TXT previews · Required: StudentCode, SubjectCode, MarksObtained'}</small></span>
+            <span className="bulk-marks-upload-dropzone__text"><strong>{reading ? 'Validating file…' : fileName || 'Choose a marks file'}</strong><small>{reading ? 'Checking rows with the marks API' : 'XLSX uploads, or CSV / TSV / TXT previews · Required: ExamId, StudentCode, SubjectCode, MarksObtained'}</small></span>
             <span className="erp-btn erp-btn--primary bulk-marks-upload-browse">Browse files</span>
           </label>
           {uploadPreview && <div className="bulk-marks-upload-status" role="status">
@@ -2676,9 +2694,6 @@ function MarksEntry() {
                   allowEmpty
                   printLabel="Save as PDF"
                 />
-                <button type="button" className="erp-btn erp-btn--secondary" onClick={() => exportMarksFile('download')}>Download CSV</button>
-                <button type="button" className="erp-btn erp-btn--secondary" onClick={() => exportMarksFile('export')}>Export CSV</button>
-
                 <button
                   type="button"
                   className="erp-btn erp-btn--primary"
@@ -3785,7 +3800,7 @@ function StudentMarks() {
             active={hasFilters}
             onClear={clearFilters}
             className="student-marks-filters"
-            actions={<div className="student-marks-header-actions"><ExportMenu rows={filteredRows} columns={columns} title="Student Marks" filename={`student-marks-${getRegistrationNumber(selectedStudent) || 'records'}`} scope="All matching marks" allowEmpty /><button type="button" className="erp-btn erp-btn--secondary" onClick={() => exportMarksFile('download', { studentId: Number(selectedStudentId) })}>Download CSV</button><button type="button" className="erp-btn erp-btn--secondary" onClick={() => exportMarksFile('export', { studentId: Number(selectedStudentId) })}>Export CSV</button></div>}
+            actions={<div className="student-marks-header-actions"><ExportMenu rows={filteredRows} columns={columns} title="Student Marks" filename={`student-marks-${getRegistrationNumber(selectedStudent) || 'records'}`} scope="All matching marks" allowEmpty /></div>}
           >
             <div className="student-marks-search-wrap"><label className="student-marks-search"><FiSearch aria-hidden="true" /><input type="search" aria-label="Search student marks" placeholder="Search subject or exam" value={query} onChange={event => { setQuery(event.target.value); setPage(1) }} /></label></div>
             <label className="student-marks-filter"><span>Academic Year</span><ProjectSelect value={academicYear} onChange={event => { setAcademicYear(event.target.value); setPage(1) }}><option value="">All academic years</option>{optionsFor('academicYear').map(value => <option key={value}>{value}</option>)}</ProjectSelect></label>
@@ -3996,7 +4011,7 @@ function SubjectMarksReport() {
 /><MarksModuleNav/><article className="erp-card subject-marks-report-card"><header className="erp-card-header subject-marks-report-card__header"><div><h2 className="erp-card-title">Subject Marks Report</h2><p className="erp-card-subtitle">Review and export student performance for a subject across examinations.</p></div>{selected&&<span className="subject-marks-report-count">{filtered.length} {filtered.length===1?'record':'records'}{subjectSummaries.length ? ` · ${subjectSummaries.length} exam summaries loaded` : ''}</span>}</header>
   <div className="subject-marks-report-picker" ref={subjectPicker}><FiBookOpen aria-hidden="true"/><div className="subject-marks-report-subject-field"><label htmlFor="subject-marks-subject-search">Subject</label><div className="subject-marks-report-subject-search"><FiSearch aria-hidden="true"/><input id="subject-marks-subject-search" type="text" role="combobox" aria-autocomplete="list" aria-expanded={subjectOpen} aria-controls="subject-marks-subject-options" placeholder={loading?'Loading subjects…':'Search or select a subject'} value={subjectOpen?subjectQuery:(selected?subjectLabel(selected):subjectQuery)} disabled={loading||!subjects.length} onFocus={()=>{setSubjectQuery('');setSubjectOpen(true)}} onClick={()=>{if(!subjectOpen){setSubjectQuery('');setSubjectOpen(true)}}} onChange={e=>{setSubjectQuery(e.target.value);setSubjectOpen(true)}} onKeyDown={e=>{if(e.key==='Escape')setSubjectOpen(false);if(e.key==='Enter'&&visibleSubjects.length){e.preventDefault();const choice=visibleSubjects[0];setSubject(choice.key);setSubjectQuery(subjectLabel(choice));setSubjectOpen(false);clear()}}}/></div>{subjectOpen&&<ul className="subject-marks-report-subject-options" id="subject-marks-subject-options" role="listbox" aria-label="Subjects">{visibleSubjects.length?visibleSubjects.map(s=><li key={s.key} role="option" aria-selected={s.key===subject}><button type="button" onClick={()=>{setSubject(s.key);setSubjectQuery(subjectLabel(s));setSubjectOpen(false);clear()}}>{s.code&&<strong>{s.code}</strong>}<span>{s.name||s.code}</span></button></li>):<li className="subject-marks-report-no-subjects">No subjects match this search.</li>}</ul>}</div></div>
   {selected&&<>
-  <FilterPanel active={active} onClear={clear} className="subject-marks-report-filters" actions={<div className="student-marks-header-actions"><ExportMenu rows={filtered} columns={columns} title="Subject Marks Report" filename={'subject-marks-'+(selected.code||selected.name||'report')} scope="All matching marks" allowEmpty/><button type="button" className="erp-btn erp-btn--secondary" onClick={() => exportMarksFile('download', { subjectId: Number(selected.id) })}>Download CSV</button><button type="button" className="erp-btn erp-btn--secondary" onClick={() => exportMarksFile('export', { subjectId: Number(selected.id) })}>Export CSV</button></div>}><div className="subject-marks-report-search-wrap"><label className="subject-marks-report-search"><FiSearch aria-hidden="true"/><input type="search" aria-label="Search subject marks" placeholder="Search student or exam" value={query} onChange={e=>{setQuery(e.target.value);setPage(1)}}/></label></div>
+  <FilterPanel active={active} onClear={clear} className="subject-marks-report-filters" actions={<div className="student-marks-header-actions"><ExportMenu rows={filtered} columns={columns} title="Subject Marks Report" filename={'subject-marks-'+(selected.code||selected.name||'report')} scope="All matching marks" allowEmpty/></div>}><div className="subject-marks-report-search-wrap"><label className="subject-marks-report-search"><FiSearch aria-hidden="true"/><input type="search" aria-label="Search subject marks" placeholder="Search student or exam" value={query} onChange={e=>{setQuery(e.target.value);setPage(1)}}/></label></div>
   <label className="subject-marks-report-filter"><span>Academic Year</span><ProjectSelect value={year} onChange={e=>{setYear(e.target.value);setPage(1)}}><option value="">All academic years</option>{optionsFor('academicYear').map(v=><option key={v}>{v}</option>)}</ProjectSelect></label><label className="subject-marks-report-filter"><span>Course</span><ProjectSelect value={course} onChange={e=>{setCourse(e.target.value);setPage(1)}}><option value="">All courses</option>{optionsFor('course').map(v=><option key={v}>{v}</option>)}</ProjectSelect></label><label className="subject-marks-report-filter"><span>Branch</span><ProjectSelect value={branch} onChange={e=>{setBranch(e.target.value);setPage(1)}}><option value="">All branches</option>{optionsFor('branch').map(v=><option key={v}>{v}</option>)}</ProjectSelect></label><label className="subject-marks-report-filter"><span>Semester</span><ProjectSelect value={semester} onChange={e=>{setSemester(e.target.value);setPage(1)}}><option value="">All semesters</option>{optionsFor('semester').map(v=><option key={v}>{v}</option>)}</ProjectSelect></label><label className="subject-marks-report-filter"><span>Exam Type</span><ProjectSelect value={exam} onChange={e=>{setExam(e.target.value);setPage(1)}}><option value="">All exam types</option>{optionsFor('examType').map(v=><option key={v}>{v}</option>)}</ProjectSelect></label></FilterPanel></>}
   {loadError&&<p className="subject-marks-report-error" role="alert">{loadError}</p>}{loading&&<p className="subject-marks-report-loading" role="status">Loading subjects and examination records...</p>}{!loading&&!selected&&!subjects.length&&<EmptyState title="No subject marks found" description="Published result sheets will appear here once they are available."/>}{selected&&!loading&&!filtered.length&&<EmptyState title={active?'No matching marks':'No examination marks found'} description={active?'Adjust or clear the filters to see more records.':'There are no published marks records for this subject yet.'}/>}
   {selected&&!loading&&filtered.length>0&&<div className="subject-marks-report-table-wrap"><table className="erp-table subject-marks-report-table"><thead><tr>{columns.map(c=><th key={c.key}>{c.label}</th>)}</tr></thead><tbody>{visible.map(row=><tr key={row.id}>{columns.map(c=><td key={c.key}>{clean(row[c.key])||'—'}</td>)}</tr>)}</tbody></table></div>}{selected&&filtered.length>PAGE_SIZE&&<TablePagination currentPage={page} totalPages={Math.ceil(filtered.length/PAGE_SIZE)} onPageChange={setPage}/>}</article></section></DashboardLayout>
