@@ -1,5 +1,14 @@
 import { collegeField, createCollegeScope } from '../../utils/collegeScope.js'
 
+function preferredAcademicYearId() {
+  try {
+    const context = JSON.parse(localStorage.getItem('pirnav_academic_context') || '{}')
+    return String(context.academicYearId || localStorage.getItem('pirnav-selected-academic-year-id') || '')
+  } catch {
+    return ''
+  }
+}
+
 // API collections may contain multiple colleges, especially for SuperAdmin.
 // Resolve ownership through the complete hierarchy before exposing any records.
 export function scopeTimetableData(sources, tables, collegeId) {
@@ -12,8 +21,12 @@ export function scopeTimetableData(sources, tables, collegeId) {
   // context, but some API versions omit CollegeId on each year DTO. Keep those
   // rows so the active year remains available to the timetable builder.
   if (Array.isArray(sources.years)) {
+    const preferredYearId = preferredAcademicYearId()
     const scopedYearIds = new Set((scoped.years || []).map(row => String(row.id ?? row.academicYearId)))
-    scoped.years = sources.years.filter(row => scopedYearIds.has(String(row.id ?? row.academicYearId)) || !collegeField(row, 'college'))
+    scoped.years = sources.years.filter(row => {
+      const yearId = String(row.id ?? row.academicYearId ?? '')
+      return scopedYearIds.has(yearId) || yearId === preferredYearId || !collegeField(row, 'college')
+    })
   }
   const yearIds = new Set((scoped.years || []).map(row => String(row.id ?? row.academicYearId)))
   scoped.yearSettings = Object.fromEntries(Object.entries(sources.yearSettings || {}).filter(([year]) => yearIds.has(year)))
