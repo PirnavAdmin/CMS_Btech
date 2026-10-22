@@ -16,6 +16,7 @@ export default function HeaderAcademicYear() {
     selectedCollegeId,
     isHistoricalYear,
     loading,
+    error,
   } = useAcademic()
 
   const [now, setNow] = useState(() => new Date())
@@ -40,7 +41,8 @@ export default function HeaderAcademicYear() {
   }, [])
 
   const year = selectedAcademicYear || currentAcademicYear || academicYears[0] || null
-  const label = year ? (year.academicYearName || year.name || 'Unnamed academic year') : (loading ? 'Loading...' : 'Not Configured')
+  const yearLoadFailed = Boolean(error && /academic years|academic configuration/i.test(error))
+  const label = year ? (year.academicYearName || year.name || 'Unnamed academic year') : (loading ? 'Loading...' : yearLoadFailed ? 'Unavailable' : 'Not Configured')
   const progress = year ? calculateAcademicYearProgress(year.startDate, year.endDate, now) : null
   const shortLabel = label.replace(/(\d{4})\s*[--]\s*\d{2}(\d{2})/, '$1-$2')
   const dateLabel = (value) => (value ? String(value).slice(0, 10) : '-')
