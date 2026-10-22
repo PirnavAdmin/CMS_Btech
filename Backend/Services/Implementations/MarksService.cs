@@ -68,18 +68,40 @@ public sealed class MarksService : IMarksService
         => Workflow(r, actorId, collegeId, superAdmin, _repository.ApproveAsync);
 
     public Task<MarksApprovalResultDto> RejectAsync(MarksWorkflowRequest r, long? actorId, long? collegeId, bool superAdmin)
-        => Workflow(r, actorId, collegeId, superAdmin, _repository.RejectAsync);
-
-    public Task<IReadOnlyList<MarksApprovalDto>> PendingApprovalsAsync(long examId, long? sectionId, long? subjectId, long? collegeId, bool superAdmin)
     {
-        RequirePositive(examId, nameof(examId));
-        return _repository.PendingApprovalsAsync(examId, sectionId, subjectId, collegeId, superAdmin);
+        ValidateRemarks(r?.Remarks, rejection: true);
+        return Workflow(r!, actorId, collegeId, superAdmin, _repository.RejectAsync);
     }
 
-    public Task<IReadOnlyList<MarksApprovalHistoryDto>> ApprovalHistoryAsync(long markId, long? collegeId, bool superAdmin)
+    public Task<MarksApprovalResultDto> DecideAsync(long approvalId, MarksApprovalDecisionRequest r, long? actorId, long? collegeId, bool superAdmin)
+    {
+        RequirePositive(approvalId, nameof(approvalId));
+        if (r is null) throw new ArgumentException("Approval decision is required.");
+        ValidateActor(actorId, collegeId, superAdmin);
+        r.Status = r.Status?.Trim().ToUpperInvariant() ?? string.Empty;
+        if (r.Status is not ("APPROVED" or "REJECTED"))
+            throw new ArgumentException("Status must be APPROVED or REJECTED.");
+        if (r.ExpectedVersion.HasValue && r.ExpectedVersion.Value <= 0)
+            throw new ArgumentException("ExpectedVersion must be greater than zero.");
+        ValidateRemarks(r.Remarks, r.Status == "REJECTED");
+        r.Remarks = r.Remarks?.Trim();
+        return _repository.DecideAsync(approvalId, r, actorId, collegeId, superAdmin);
+    }
+
+    public Task<IReadOnlyList<MarksApprovalDto>> PendingApprovalsAsync(long examId, long? sectionId, long? subjectId, long? collegeId, bool superAdmin, long? actorId = null)
+    {
+        RequirePositive(examId, nameof(examId));
+        ValidateActor(actorId, collegeId, superAdmin);
+        if (sectionId.HasValue) RequirePositive(sectionId.Value, nameof(sectionId));
+        if (subjectId.HasValue) RequirePositive(subjectId.Value, nameof(subjectId));
+        return _repository.PendingApprovalsAsync(examId, sectionId, subjectId, collegeId, superAdmin, actorId);
+    }
+
+    public Task<IReadOnlyList<MarksApprovalHistoryDto>> ApprovalHistoryAsync(long markId, long? collegeId, bool superAdmin, long? actorId = null)
     {
         RequirePositive(markId, nameof(markId));
-        return _repository.ApprovalHistoryAsync(markId, collegeId, superAdmin);
+        ValidateActor(actorId, collegeId, superAdmin);
+        return _repository.ApprovalHistoryAsync(markId, collegeId, superAdmin, actorId);
     }
 
     private static Task<MarksApprovalResultDto> Workflow(
@@ -92,8 +114,30 @@ public sealed class MarksService : IMarksService
             throw new ArgumentException("At least one MarkId is required.");
         if (r.MarkIds.Any(x => x <= 0))
             throw new ArgumentException("MarkIds must contain only positive values.");
-        r.MarkIds = r.MarkIds.Distinct().ToList();
+        if (r.MarkIds.Count > 1000) throw new ArgumentException("A maximum of 1000 MarkIds is allowed per request.");
+        if (r.MarkIds.Distinct().Count() != r.MarkIds.Count)
+            throw new ArgumentException("MarkIds must not contain duplicates.");
+        if (r.SectionId.HasValue) RequirePositive(r.SectionId.Value, nameof(r.SectionId));
+        if (r.SubjectId.HasValue) RequirePositive(r.SubjectId.Value, nameof(r.SubjectId));
+        ValidateActor(actorId, collegeId, superAdmin);
+        ValidateRemarks(r.Remarks, rejection: false);
+        r.Remarks = r.Remarks?.Trim();
         return action(r, actorId, collegeId, superAdmin);
+    }
+
+    private static void ValidateActor(long? actorId, long? collegeId, bool superAdmin)
+    {
+        if (!actorId.HasValue || actorId.Value <= 0)
+            throw new UnauthorizedAccessException("An authenticated user ID is required.");
+        if (!superAdmin && (!collegeId.HasValue || collegeId.Value <= 0))
+            throw new UnauthorizedAccessException("College information is missing from the token.");
+    }
+
+    private static void ValidateRemarks(string? remarks, bool rejection)
+    {
+        if (rejection && string.IsNullOrWhiteSpace(remarks))
+            throw new ArgumentException("Rejection remarks are required.");
+        if (remarks?.Length > 500) throw new ArgumentException("Remarks cannot exceed 500 characters.");
     }
 
     private static void ValidateBulk(long examId, List<MarkBulkRow> rows)

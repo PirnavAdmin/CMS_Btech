@@ -9,6 +9,19 @@ namespace BTech.Repositories.Implementations;
 
 public sealed class MarksRepository : IMarksRepository
 {
+    // Scope mapping to marks DTOs. Other modules' Dapper behavior remains unchanged.
+    static MarksRepository()
+    {
+        Type[] types = [typeof(MarkDto), typeof(BulkMarksResultDto), typeof(BulkMarkErrorDto),
+            typeof(MarksSummaryReportDto), typeof(StudentMarksReportDto), typeof(StudentSubjectMarkDto),
+            typeof(SubjectMarksReportDto), typeof(MarksApprovalDto), typeof(MarksApprovalHistoryDto),
+            typeof(MarksApprovalResultDto)];
+        foreach (var type in types)
+            SqlMapper.SetTypeMap(type, new CustomPropertyTypeMap(type, (t, column) =>
+                t.GetProperties().FirstOrDefault(p => string.Equals(p.Name,
+                    column.Replace("_", string.Empty), StringComparison.OrdinalIgnoreCase))!));
+    }
+
     private readonly IConfiguration _configuration;
     private readonly ILogger<MarksRepository> _logger;
 
@@ -176,26 +189,45 @@ public sealed class MarksRepository : IMarksRepository
         var result = await multi.ReadSingleAsync<MarksApprovalResultDto>();
         result.ProcessedMarkIds = (await multi.ReadAsync<long>()).ToList();
         result.Errors = (await multi.ReadAsync<BulkMarkErrorDto>()).ToList();
+        _logger.LogInformation("Marks workflow committed. Procedure={Procedure}, ActorId={ActorId}, CollegeId={CollegeId}, ExamId={ExamId}, ProcessedCount={ProcessedCount}",
+            procedure, actorId, collegeId, r.ExamId, result.ProcessedCount);
         return result;
     }
 
-    public async Task<IReadOnlyList<MarksApprovalDto>> PendingApprovalsAsync(long examId, long? sectionId, long? subjectId, long? collegeId, bool superAdmin)
+    public async Task<MarksApprovalResultDto> DecideAsync(long approvalId, MarksApprovalDecisionRequest r, long? actorId, long? collegeId, bool superAdmin)
     {
         await using var c = CreateConnection();
-        var rows = await c.QueryAsync<MarksApprovalDto>(Cmd("sp_marks_approval_pending", new
+        using var multi = await c.QueryMultipleAsync(Cmd("sp_marks_approval_decide", new
         {
-            p_exam_id = examId, p_section_id = sectionId, p_subject_id = subjectId,
+            p_approval_id = approvalId, p_decision = r.Status, p_remarks = r.Remarks,
+            p_expected_version = r.ExpectedVersion, p_actor_id = actorId,
+            p_college_id = collegeId, p_is_super_admin = Scope(collegeId, superAdmin)
+        }));
+        var result = await multi.ReadSingleAsync<MarksApprovalResultDto>();
+        result.ProcessedMarkIds = (await multi.ReadAsync<long>()).ToList();
+        result.Errors = (await multi.ReadAsync<BulkMarkErrorDto>()).ToList();
+        _logger.LogInformation("Marks decision committed. ApprovalId={ApprovalId}, Decision={Decision}, ActorId={ActorId}, CollegeId={CollegeId}",
+            approvalId, r.Status, actorId, collegeId);
+        return result;
+    }
+
+    public async Task<IReadOnlyList<MarksApprovalDto>> PendingApprovalsAsync(long examId, long? sectionId, long? subjectId, long? collegeId, bool superAdmin, long? actorId = null)
+    {
+        await using var c = CreateConnection();
+        var rows = await c.QueryAsync<MarksApprovalDto>(Cmd("sp_marks_approval_pending_for_actor", new
+        {
+            p_exam_id = examId, p_section_id = sectionId, p_subject_id = subjectId, p_actor_id = actorId,
             p_college_id = collegeId, p_is_super_admin = Scope(collegeId, superAdmin)
         }));
         return rows.AsList();
     }
 
-    public async Task<IReadOnlyList<MarksApprovalHistoryDto>> ApprovalHistoryAsync(long markId, long? collegeId, bool superAdmin)
+    public async Task<IReadOnlyList<MarksApprovalHistoryDto>> ApprovalHistoryAsync(long markId, long? collegeId, bool superAdmin, long? actorId = null)
     {
         await using var c = CreateConnection();
-        var rows = await c.QueryAsync<MarksApprovalHistoryDto>(Cmd("sp_marks_approval_history", new
+        var rows = await c.QueryAsync<MarksApprovalHistoryDto>(Cmd("sp_marks_approval_history_for_actor", new
         {
-            p_mark_id = markId, p_college_id = collegeId, p_is_super_admin = Scope(collegeId, superAdmin)
+            p_mark_id = markId, p_actor_id = actorId, p_college_id = collegeId, p_is_super_admin = Scope(collegeId, superAdmin)
         }));
         return rows.AsList();
     }
