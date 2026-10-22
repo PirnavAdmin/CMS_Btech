@@ -1,5 +1,6 @@
 using System.Globalization;
 using System.Security.Claims;
+using System.Text;
 using BTech.DTOs.MarksManagement;
 using BTech.Services.Interfaces;
 using ClosedXML.Excel;
@@ -42,6 +43,14 @@ public sealed class MarksController : ControllerBase
         => await Execute(() => _service.GetAsync(markId, CollegeId(), IsSuperAdmin()),
             "Mark retrieved successfully.");
 
+    [HttpGet("download")]
+    public Task<IActionResult> Download([FromQuery] MarkListFilter filter)
+        => ExportCsv(filter, "marks-download.csv");
+
+    [HttpGet("export")]
+    public Task<IActionResult> Export([FromQuery] MarkListFilter filter)
+        => ExportCsv(filter, "marks-export.csv");
+
     [HttpPost("bulk/preview")]
     [Authorize(Roles = EntryRoles)]
     public async Task<IActionResult> BulkPreview([FromBody] BulkUploadPreviewRequest request)
@@ -52,7 +61,7 @@ public sealed class MarksController : ControllerBase
     [Authorize(Roles = EntryRoles)]
     [Consumes("multipart/form-data")]
     public async Task<IActionResult> BulkUpload(
-        [FromForm] long examId,
+        [FromForm] long? examId,
         [FromForm] long? sectionId,
         [FromForm] bool upsertDrafts = false,
         IFormFile? file = null)
@@ -63,18 +72,22 @@ public sealed class MarksController : ControllerBase
         try
         {
             var rows = await ReadExcelAsync(file);
+            var scope = ResolveBulkScope(rows, examId, sectionId);
             var request = new BulkMarksRequest
             {
-                ExamId = examId,
-                SectionId = sectionId,
+                ExamId = scope.ExamId,
+                SectionId = scope.SectionId,
                 UpsertDrafts = upsertDrafts,
                 Rows = rows
             };
+            var result = await _service.BulkUploadAsync(request, UserId(), CollegeId(), IsSuperAdmin());
+            result.ExamId = scope.ExamId;
+            result.SectionId = scope.SectionId;
             return Ok(new
             {
                 success = true,
                 message = "Bulk marks upload completed.",
-                data = await _service.BulkUploadAsync(request, UserId(), CollegeId(), IsSuperAdmin())
+                data = result
             });
         }
         catch (Exception ex) { return Error(ex); }
@@ -84,7 +97,7 @@ public sealed class MarksController : ControllerBase
     [Authorize(Roles = EntryRoles)]
     [Consumes("multipart/form-data")]
     public async Task<IActionResult> BulkFilePreview(
-        [FromForm] long examId,
+        [FromForm] long? examId,
         [FromForm] long? sectionId,
         IFormFile? file = null)
     {
@@ -94,13 +107,17 @@ public sealed class MarksController : ControllerBase
         try
         {
             var rows = await ReadExcelAsync(file);
+            var scope = ResolveBulkScope(rows, examId, sectionId);
+            var result = await _service.BulkPreviewAsync(
+                new BulkUploadPreviewRequest { ExamId = scope.ExamId, SectionId = scope.SectionId, Rows = rows },
+                CollegeId(), IsSuperAdmin());
+            result.ExamId = scope.ExamId;
+            result.SectionId = scope.SectionId;
             return Ok(new
             {
                 success = true,
                 message = "Bulk marks file validation completed.",
-                data = await _service.BulkPreviewAsync(
-                    new BulkUploadPreviewRequest { ExamId = examId, SectionId = sectionId, Rows = rows },
-                    CollegeId(), IsSuperAdmin())
+                data = result
             });
         }
         catch (Exception ex) { return Error(ex); }
@@ -128,6 +145,35 @@ public sealed class MarksController : ControllerBase
         => await Execute(() => _service.PendingApprovalsAsync(
                 examId, sectionId, subjectId, CollegeId(), IsSuperAdmin()),
             "Pending marks approvals retrieved successfully.");
+
+    [HttpPatch("approvals/{id:long}")]
+    [Authorize(Roles = ApprovalRoles)]
+    public async Task<IActionResult> UpdateApproval(long id, [FromBody] MarksApprovalUpdateRequest request)
+        => await Execute(async () =>
+        {
+            if (id <= 0) throw new ArgumentException("Approval ID must be greater than zero.");
+            if (request is null) throw new ArgumentException("Approval update is required.");
+
+            var pending = await _service.PendingApprovalsAsync(
+                request.ExamId, request.SectionId, request.SubjectId, CollegeId(), IsSuperAdmin());
+            var approval = pending.SingleOrDefault(item => item.ApprovalId == id && item.MarkId == request.MarkId);
+            if (approval is null) throw new KeyNotFoundException("Pending marks approval not found.");
+
+            var workflow = new MarksWorkflowRequest
+            {
+                ExamId = request.ExamId,
+                MarkIds = [approval.MarkId],
+                SectionId = request.SectionId,
+                SubjectId = request.SubjectId,
+                Remarks = request.Remarks
+            };
+            return request.ApprovalStatus.Trim().ToUpperInvariant() switch
+            {
+                "APPROVED" => await _service.ApproveAsync(workflow, UserId(), CollegeId(), IsSuperAdmin()),
+                "REJECTED" => await _service.RejectAsync(workflow, UserId(), CollegeId(), IsSuperAdmin()),
+                _ => throw new ArgumentException("ApprovalStatus must be APPROVED or REJECTED.")
+            };
+        }, "Marks approval updated successfully.");
 
     [HttpPost("workflow/submit")]
     [Authorize(Roles = EntryRoles)]
@@ -173,7 +219,7 @@ public sealed class MarksController : ControllerBase
 
         foreach (var cell in firstRow.CellsUsed())
         {
-            var name = cell.GetString().Trim();
+            var name = NormalizeHeader(cell.GetString());
             if (!string.IsNullOrWhiteSpace(name))
                 headerMap[name] = cell.Address.ColumnNumber;
         }
@@ -211,8 +257,22 @@ public sealed class MarksController : ControllerBase
                     ? row.Cell(col).GetString().Trim() is { Length: > 0 } value ? value : null
                     : null;
 
+            long? OptionalId(params string[] keys)
+            {
+                var column = keys.Select(key => headerMap.TryGetValue(key, out var index) ? index : 0)
+                    .FirstOrDefault(index => index > 0);
+                if (column == 0) return null;
+                var text = row.Cell(column).GetString().Trim();
+                if (string.IsNullOrWhiteSpace(text)) return null;
+                if (!long.TryParse(text, NumberStyles.Integer, CultureInfo.InvariantCulture, out var value) || value <= 0)
+                    throw new ArgumentException($"Excel row {row.RowNumber()}: {keys[0]} must be a positive number.");
+                return value;
+            }
+
             rows.Add(new MarkBulkRow
             {
+                ExamId = OptionalId("ExamId", "ExaminationId"),
+                SectionId = OptionalId("SectionId"),
                 StudentCode = row.Cell(headerMap["StudentCode"]).GetString().Trim(),
                 SubjectCode = row.Cell(headerMap["SubjectCode"]).GetString().Trim(),
                 MarksObtained = marks,
@@ -224,6 +284,30 @@ public sealed class MarksController : ControllerBase
 
         if (rows.Count == 0) throw new ArgumentException("Excel file contains no data rows.");
         return rows;
+    }
+
+    private static string NormalizeHeader(string value)
+        => new(value.Where(char.IsLetterOrDigit).ToArray());
+
+    private static (long ExamId, long? SectionId) ResolveBulkScope(
+        IReadOnlyCollection<MarkBulkRow> rows, long? requestedExamId, long? requestedSectionId)
+    {
+        var hasExamIds = rows.Any(row => row.ExamId.HasValue);
+        if (hasExamIds && rows.Any(row => !row.ExamId.HasValue))
+            throw new ArgumentException("Every row must include an ExamId.");
+
+        var examIds = rows.Where(row => row.ExamId.HasValue).Select(row => row.ExamId!.Value).Distinct().ToArray();
+        if (examIds.Length > 1 || requestedExamId.HasValue && examIds.Length == 1 && requestedExamId != examIds[0])
+            throw new ArgumentException("Each upload file must contain rows for one examination.");
+        var examId = examIds.SingleOrDefault(requestedExamId ?? 0);
+        if (examId <= 0)
+            throw new ArgumentException("Include a positive ExamId value in every file row.");
+
+        var sectionIds = rows.Where(row => row.SectionId.HasValue).Select(row => row.SectionId!.Value).Distinct().ToArray();
+        if (sectionIds.Length > 1 || requestedSectionId.HasValue && sectionIds.Length == 1 && requestedSectionId != sectionIds[0])
+            throw new ArgumentException("Each upload file must contain rows for one section.");
+
+        return (examId, sectionIds.Length == 1 ? sectionIds[0] : requestedSectionId);
     }
 
     private async Task<IActionResult> Execute<T>(
@@ -241,6 +325,41 @@ public sealed class MarksController : ControllerBase
             });
         }
         catch (Exception ex) { return Error(ex); }
+    }
+
+    private async Task<IActionResult> ExportCsv(MarkListFilter filter, string fileName)
+    {
+        try
+        {
+            var rows = await _service.ListAsync(filter, CollegeId(), IsSuperAdmin());
+            var lines = new List<string>
+            {
+                "MarkId,ExamId,ExamCode,ExamName,StudentId,StudentCode,StudentName,SubjectId,SubjectCode,SubjectName,SectionId,SectionName,MarksObtained,MaxMarks,Percentage,Grade,Remarks,WorkflowStatus,VersionNo,EnteredAt"
+            };
+            lines.AddRange(rows.Select(row => string.Join(",", new object?[]
+            {
+                row.MarkId, row.ExamId, row.ExamCode, row.ExamName, row.StudentId,
+                row.StudentCode, row.StudentName, row.SubjectId, row.SubjectCode,
+                row.SubjectName, row.SectionId, row.SectionName, row.MarksObtained,
+                row.MaxMarks, row.Percentage, row.Grade, row.Remarks,
+                row.WorkflowStatus, row.VersionNo, row.EnteredAt
+            }.Select(CsvValue))));
+            return File(Encoding.UTF8.GetBytes(string.Join("\r\n", lines)), "text/csv; charset=utf-8", fileName);
+        }
+        catch (Exception ex) { return Error(ex); }
+    }
+
+    private static string CsvValue(object? value)
+    {
+        var text = Convert.ToString(value, CultureInfo.InvariantCulture) ?? string.Empty;
+        if (value is string)
+        {
+            var firstContent = text.TrimStart(' ', '\t', '\r', '\n');
+            if (firstContent.StartsWith('=') || firstContent.StartsWith('+')
+                || firstContent.StartsWith('-') || firstContent.StartsWith('@'))
+                text = "'" + text;
+        }
+        return "\"" + text.Replace("\"", "\"\"") + "\"";
     }
 
     private IActionResult Error(Exception ex)

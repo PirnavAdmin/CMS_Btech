@@ -8,10 +8,27 @@ namespace BTech.Repositories.Implementations;
 public class AcademicYearRepository : IAcademicYearRepository
 {
     private readonly ApplicationDbContext _context;
+    private readonly IHttpContextAccessor _http;
 
-    public AcademicYearRepository(ApplicationDbContext context)
+    private long CollegeId
+    {
+        get
+        {
+            var request = _http.HttpContext;
+            var claim = request?.User.FindFirst("collegeId")?.Value;
+            if (request?.User.IsInRole("SUPER_ADMIN") != true && long.TryParse(claim, out var own) && own > 0)
+                return own;
+            if (request?.User.IsInRole("SUPER_ADMIN") != true) return 0;
+            return long.TryParse(request?.Request.Query["collegeId"].ToString(), out var selected) && selected > 0 ? selected : 0;
+        }
+    }
+
+    private IQueryable<AcademicYear> Years => _context.AcademicYears.Where(x => x.CollegeId == CollegeId);
+
+    public AcademicYearRepository(ApplicationDbContext context, IHttpContextAccessor http)
     {
         _context = context;
+        _http = http;
     }
 
     // =========================================================
@@ -24,8 +41,12 @@ public class AcademicYearRepository : IAcademicYearRepository
         DateTime endDate,
         long? createdBy)
     {
+        if (CollegeId <= 0) throw new ArgumentException("Select a college before creating an academic year.");
+        if (await Years.AnyAsync(x => x.DeletedAt == null && x.AcademicYearName == academicYearName))
+            throw new ArgumentException("This academic year already exists for the selected college.");
         var entity = new AcademicYear
         {
+            CollegeId = CollegeId,
             AcademicYearName = academicYearName,
             StartDate = startDate,
             EndDate = endDate,
@@ -50,7 +71,7 @@ public class AcademicYearRepository : IAcademicYearRepository
 
     public async Task<IEnumerable<AcademicYear>> GetAllAsync()
     {
-        return await _context.AcademicYears
+        return await Years
             .AsNoTracking()
             .Where(x => x.DeletedAt == null)
             .OrderByDescending(x => x.StartDate)
@@ -65,7 +86,7 @@ public class AcademicYearRepository : IAcademicYearRepository
     public async Task<BTech.DTOs.AcademicYear.AcademicYearDashboardDto>
         GetDashboardAsync(string? search, string? filter)
     {
-        var query = _context.AcademicYears
+        var query = Years
             .AsNoTracking()
             .Where(x => x.DeletedAt == null);
 
@@ -105,7 +126,7 @@ public class AcademicYearRepository : IAcademicYearRepository
             .ThenByDescending(x => x.AcademicYearId)
             .ToListAsync();
 
-        var allNonDeleted = _context.AcademicYears
+        var allNonDeleted = Years
             .AsNoTracking()
             .Where(x => x.DeletedAt == null);
 
@@ -125,6 +146,7 @@ public class AcademicYearRepository : IAcademicYearRepository
         {
             return new BTech.DTOs.AcademicYear.AcademicYearResponseDto
             {
+                CollegeId = x.CollegeId,
                 AcademicYearId = x.AcademicYearId,
                 AcademicYearName = x.AcademicYearName,
                 StartDate = x.StartDate,
@@ -157,7 +179,7 @@ public class AcademicYearRepository : IAcademicYearRepository
         bool activateImmediately,
         long? createdBy)
     {
-        var lastYear = await _context.AcademicYears
+        var lastYear = await Years
             .Where(x => x.DeletedAt == null)
             .OrderByDescending(x => x.EndDate)
             .ThenByDescending(x => x.AcademicYearId)
@@ -174,7 +196,7 @@ public class AcademicYearRepository : IAcademicYearRepository
         var academicYearName =
             $"{startDate.Year}-{(endDate.Year % 100):00}";
 
-        var exists = await _context.AcademicYears
+        var exists = await Years
             .AnyAsync(x =>
                 x.DeletedAt == null &&
                 x.AcademicYearName == academicYearName);
@@ -193,7 +215,7 @@ public class AcademicYearRepository : IAcademicYearRepository
         {
             if (activateImmediately)
             {
-                var activeYears = await _context.AcademicYears
+                var activeYears = await Years
                     .Where(x =>
                         x.Status == 1 &&
                         x.IsArchived == 0 &&
@@ -214,6 +236,7 @@ public class AcademicYearRepository : IAcademicYearRepository
 
             var entity = new AcademicYear
             {
+                CollegeId = CollegeId,
                 AcademicYearName = academicYearName,
                 StartDate = startDate,
                 EndDate = endDate,
@@ -243,7 +266,7 @@ public class AcademicYearRepository : IAcademicYearRepository
     public async Task<AcademicYear?> GetByIdAsync(
         long academicYearId)
     {
-        return await _context.AcademicYears
+        return await Years
             .AsNoTracking()
             .FirstOrDefaultAsync(x =>
                 x.AcademicYearId == academicYearId &&
@@ -261,7 +284,7 @@ public class AcademicYearRepository : IAcademicYearRepository
         DateTime endDate,
         long? updatedBy)
     {
-        var entity = await _context.AcademicYears
+        var entity = await Years
             .FirstOrDefaultAsync(x =>
                 x.AcademicYearId == academicYearId &&
                 x.DeletedAt == null);
@@ -294,7 +317,7 @@ public class AcademicYearRepository : IAcademicYearRepository
             await _context.Database.BeginTransactionAsync(
                 System.Data.IsolationLevel.Serializable);
 
-        var entity = await _context.AcademicYears
+        var entity = await Years
             .FirstOrDefaultAsync(x =>
                 x.AcademicYearId == academicYearId &&
                 x.DeletedAt == null);
@@ -305,7 +328,7 @@ public class AcademicYearRepository : IAcademicYearRepository
             return false;
         }
 
-        var previouslyActive = await _context.AcademicYears
+        var previouslyActive = await Years
             .Where(x =>
                 x.AcademicYearId != academicYearId &&
                 x.Status == 1 &&
@@ -346,7 +369,7 @@ public class AcademicYearRepository : IAcademicYearRepository
         long academicYearId,
         long? updatedBy)
     {
-        var entity = await _context.AcademicYears
+        var entity = await Years
             .FirstOrDefaultAsync(x =>
                 x.AcademicYearId == academicYearId &&
                 x.DeletedAt == null);
@@ -374,7 +397,7 @@ public class AcademicYearRepository : IAcademicYearRepository
         long academicYearId,
         long? updatedBy)
     {
-        var entity = await _context.AcademicYears
+        var entity = await Years
             .FirstOrDefaultAsync(x =>
                 x.AcademicYearId == academicYearId &&
                 x.DeletedAt == null &&

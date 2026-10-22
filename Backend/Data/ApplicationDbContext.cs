@@ -169,7 +169,8 @@ namespace BTech.Data
                 entity.Property(x => x.DeletedBy)
                     .HasColumnName("deleted_by");
 
-                entity.HasIndex(x => x.AcademicYearName)
+                entity.Property(x => x.CollegeId).HasColumnName("college_id");
+                entity.HasIndex(x => new { x.CollegeId, x.AcademicYearName })
                     .IsUnique();
             });
 

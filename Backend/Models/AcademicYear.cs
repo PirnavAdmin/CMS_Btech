@@ -3,6 +3,7 @@ namespace BTech.Models
     public class AcademicYear
     {
         public long AcademicYearId { get; set; }
+        public long? CollegeId { get; set; }
         public string AcademicYearName { get; set; } = string.Empty;
         public DateTime StartDate { get; set; }
         public DateTime EndDate { get; set; }

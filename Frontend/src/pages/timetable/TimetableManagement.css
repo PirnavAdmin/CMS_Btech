@@ -227,6 +227,7 @@
 .tt-clean-step p { margin: 10px 0; }
 .tt-clean-step footer { margin-top: 20px; }
 .tt-clean-step .tt-form-grid { margin-bottom: 18px; }
+.tt-readonly-value { box-sizing: border-box; display: flex; align-items: center; min-height: 36px; padding: 8px 12px; border: 1px solid var(--border, #DCE5F2); border-radius: 7px; background: var(--surface-soft, #F3F6FC); color: var(--text-primary, #102A4C); font-size: 13px; font-weight: 650; }
 .tt-clean-builder .tt-stepper { overflow-x: auto; flex-shrink: 0; }
 .tt-clean-builder .tt-stepper button { white-space: nowrap; }
 .tt-dashboard-stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; }
@@ -450,3 +451,121 @@
   vertical-align: middle !important;
 }
 #root .tt-page .tt-grid-empty-note { margin: 0 0 12px; }
+
+/* Timetable workspace theme. Keep semantic colors inherited from the app. */
+#root .tt-page {
+  --tt-accent: var(--brand, #1769c2);
+  --tt-tint: color-mix(in srgb, var(--tt-accent) 7%, var(--surface, #fff));
+  --tt-line: var(--border, #dce5f2);
+  --tt-radius: 10px;
+  font-size: 13px;
+  line-height: 1.5;
+}
+#root .tt-page .tt-page-header {
+  box-sizing: border-box;
+  align-items: center;
+  margin-bottom: 8px;
+  gap: 14px;
+  padding: 16px 20px;
+  border: 1px solid color-mix(in srgb, var(--tt-accent) 18%, var(--surface));
+  border-left: 4px solid var(--tt-accent);
+  border-radius: 10px;
+  background: linear-gradient(110deg, var(--tt-tint), var(--surface));
+}
+#root .tt-page .tt-page-header > div { min-width: 0; }
+#root .tt-page .tt-page-header h1 {
+  margin: 0;
+  color: var(--text-primary);
+  font-size: 21px;
+  font-weight: 650;
+  line-height: 1.35;
+  letter-spacing: -.35px;
+}
+#root .tt-page .tt-page-header p {
+  margin: 5px 0 0;
+  color: var(--text-secondary);
+  font-size: 12px;
+  line-height: 1.5;
+}
+#root .tt-page p { font-size: 12px; line-height: 1.6; }
+#root .tt-page :is(.tt-card, .tt-builder, .tt-workspace, .tt-clean-step, .tt-demo-card) {
+  border-color: var(--tt-line);
+  border-radius: var(--tt-radius);
+  background: var(--surface, #fff);
+  box-shadow: 0 2px 8px rgb(16 42 76 / 3%);
+}
+#root .tt-page :is(.tt-card h2, .tt-clean-step h2, .tt-clean-workspace h2) {
+  font-size: 15px;
+  font-weight: 650;
+  line-height: 1.4;
+  letter-spacing: -.15px;
+}
+#root .tt-page .tt-tabs {
+  width: fit-content;
+  max-width: 100%;
+  box-sizing: border-box;
+  gap: 4px;
+  padding: 4px;
+  margin: 0 0 18px;
+  border: 1px solid var(--tt-line);
+  border-radius: 9px;
+  background: var(--surface-soft, #f3f6fc);
+}
+#root .tt-page .tt-tabs button {
+  border: 0;
+  border-radius: 6px;
+  padding: 8px 14px;
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1.4;
+  transition: background-color .15s, color .15s;
+}
+#root .tt-page .tt-tabs button.active {
+  background: var(--surface, #fff);
+  color: var(--tt-accent);
+  font-weight: 650;
+  box-shadow: 0 1px 4px rgb(16 42 76 / 9%);
+}
+#root .tt-page .tt-button {
+  min-height: 34px;
+  padding: 7px 12px;
+  border-radius: 7px;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.4;
+  transition: background-color .15s, border-color .15s;
+}
+#root .tt-page .tt-button:hover:not(:disabled) { border-color: var(--tt-accent); filter: none; background: var(--tt-tint); }
+#root .tt-page .tt-button.tt-primary { background: var(--tt-accent); border-color: var(--tt-accent); color: #fff; }
+#root .tt-page .tt-button.tt-primary:hover:not(:disabled) { background: color-mix(in srgb, var(--tt-accent) 88%, #000); }
+#root .tt-page .tt-field { gap: 6px; font-size: 12px; }
+#root .tt-page .tt-field > span { font-weight: 600; color: var(--text-secondary); }
+#root .tt-page .tt-field :is(input, select, .searchable-select__trigger) { min-height: 36px; border-radius: 7px; font-size: 12px; }
+#root .tt-page :is(.tt-card-heading, .tt-period-step-heading) { border-color: var(--tt-line); }
+#root .tt-page .tt-stepper { background: var(--surface-soft); }
+#root .tt-page .tt-stepper button { font-size: 12px; font-weight: 600; padding-block: 12px; }
+#root .tt-page .tt-stepper button.active { background: var(--tt-tint); }
+#root .tt-page :is(.tt-dashboard-stats .tt-card, .tt-live-summary article) { padding: 16px; gap: 8px; }
+#root .tt-page .tt-dashboard-stats strong { font-size: 24px; font-weight: 650; letter-spacing: -.5px; }
+#root .tt-page :is(.tt-dashboard-stats small, .tt-live-summary article span) { font-size: 11px; font-weight: 500; }
+#root .tt-page :is(.tt-recent-table, .tt-issue, .tt-structure-department) { border-color: var(--tt-line); border-radius: 8px; box-shadow: none; }
+#root .tt-page .tt-recent-table:hover { background: var(--tt-tint); }
+#root .tt-page .tt-grid-container .tt-week thead th {
+  background: var(--table-head, #174c88);
+  color: #fff;
+  font-weight: 600;
+  letter-spacing: .03em;
+  padding: 12px 10px;
+}
+#root .tt-page .tt-grid-container .tt-week tbody td { background: var(--surface); }
+#root .tt-page .tt-grid-container .tt-week tbody tr:not(.tt-break-row):hover td { background: var(--tt-tint); }
+#root .tt-page .tt-class { border: 1px solid var(--tt-line); border-left: 3px solid var(--tt-accent); background: var(--tt-tint); border-radius: 7px; box-shadow: none; }
+#root .tt-page .tt-class-details strong { font-size: 12px; font-weight: 650; }
+#root .tt-page .tt-workspace-status .tt-status { border: 1px solid color-mix(in srgb, var(--tt-accent) 18%, transparent); background: var(--tt-tint); font-weight: 600; }
+@media (max-width: 600px) {
+  #root .tt-page .tt-page-header { padding: 13px 14px; border-radius: 8px; }
+  #root .tt-page .tt-page-header h1 { font-size: 19px; }
+  #root .tt-page .tt-tabs { width: 100%; flex-wrap: nowrap; overflow-x: auto; }
+  #root .tt-page .tt-tabs button { flex: 0 0 auto; padding: 8px 10px; font-size: 11px; }
+  #root .tt-page .tt-stepper button { font-size: 11px; }
+}

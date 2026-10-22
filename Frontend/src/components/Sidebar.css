@@ -359,7 +359,6 @@
     max-width: calc(100vw - var(--sidebar-width));
     margin-left: var(--sidebar-width);
   }
-  #root .dashboard-layout:not(.sidebar-collapsed) .dashboard-header { left: var(--sidebar-width); }
   #root .sidebar.is-collapsed .sidebar-brand__mark {
     flex-basis: 32px;
     width: 32px;

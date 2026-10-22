@@ -4,7 +4,6 @@ import { FiAward, FiBook, FiBookOpen, FiBriefcase, FiCalendar, FiCheckCircle, Fi
 import { getUserRole } from '../auth/auth'
 import { ROLES } from '../auth/roles'
 import { useAcademic } from '../context/AcademicContext'
-import AcademicContextSelect from './AcademicContextSelect'
 import './Sidebar.css'
 import { feeNavigation, feeNavigationItem, isFeeRoute } from '../utils/feeNavigation'
 import { collegeLogoValue } from '../utils/collegeLogo'
@@ -158,14 +157,11 @@ export default function Sidebar({ open = false, onClose = () => {}, collapsed = 
           {collegeLogo ? <img src={collegeLogo} alt="" onError={() => setCollegeLogo('')} /> : <svg viewBox="0 0 32 32"><path d="M4 12 16 5l12 7H4Z"/><path d="M7 14v10M12 14v10M20 14v10M25 14v10"/><path d="M4 25h24M2.5 28h27"/></svg>}
         </span>
         <div className="sidebar-brand__copy">
-          <AcademicContextSelect kind="college" compact />
+          <strong title={collegeDisplayName}>{collegeDisplayName}</strong>
           <span className="sidebar-brand__subtitle">Digital Campus</span>
         </div>
         <button className="sidebar-collapse" onClick={onToggleCollapse} aria-label={collapsed ? 'Expand navigation' : 'Collapse navigation'} title={collapsed ? 'Expand navigation' : 'Collapse navigation'}>{collapsed ? <FiChevronRight /> : <FiChevronLeft />}</button>
         <button className="sidebar-close" onClick={onClose} aria-label="Close navigation"><FiX /></button>
-      </div>
-      <div className="sidebar-context">
-        <button type="button" className="sidebar-context-expand" onClick={onToggleCollapse} aria-label="Expand navigation to change college" title="Change college"><FiHome /></button>
       </div>
       <nav ref={navigationRef} onScroll={rememberScrollPosition} className="sidebar-navigation">
         <p className="sidebar-section-label">Overview</p>
@@ -216,6 +212,7 @@ export default function Sidebar({ open = false, onClose = () => {}, collapsed = 
         <Item to="/placement" icon={FiBriefcase} tone="green" onNavigate={onClose}>Placement</Item>
         {userRole === ROLES.ADMIN && <>
           <p className="sidebar-section-label">Settings & Access</p>
+          <Item to="/user-access" icon={FiUsers} tone="blue" onNavigate={onClose}>User Access Management</Item>
           <Item to="/roles-designations" icon={FiShield} tone="purple" onNavigate={onClose}>Roles & Designations</Item>
         </>}
       </nav>

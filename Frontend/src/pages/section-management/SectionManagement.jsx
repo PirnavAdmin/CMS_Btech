@@ -316,7 +316,7 @@ function SectionList() {
           <Pagination page={currentPage} pageCount={pageCount} setPage={setPage} />
         </>
       ) : (
-        <Empty icon={FiUsers} title="No sections configured" action={<Link className="cm-button" to="/section-management/add">Add Section</Link>} />
+        <Empty icon={FiUsers} title="No sections configured" />
       )}
     </section>
     {assigning && <AssignStudents section={assigning} faculty={faculty} assignments={assignments.filter((item) => String(item.sectionId) === String(assigning.id))} allAssignments={assignments} sections={sections} assignMany={assignStudents} assignTeacher={assignTeacher} remove={removeAssignment} close={() => setAssigning(null)} />}

@@ -20,11 +20,25 @@ import { createPortal as react_domImports_createPortal } from 'react-dom'
 import facultyServiceImports_default from '../../../services/facultyService'
 import studentServiceImports_default from '../../../services/studentService'
 import subjectServiceImports_default from '../../../services/subjectService'
-import { collegeStorageKey as collegeScopeImports_collegeStorageKey } from '../../../utils/collegeScope'
-import resultsServiceImports_default from '../../../services/resultsService'
 import academicServiceImports_default from '../../../services/academicService'
 import { getExamTypes as examServiceImports_getExamTypes } from '../../../services/examService'
 import './MarksManagement.css'
+
+const exportMarksFile = async (action, params = {}) => {
+  try {
+    const result = await apiEndpointsImports_marksApi[action](params)
+    const url = URL.createObjectURL(result.blob)
+    const link = document.createElement('a')
+    link.href = url
+    link.download = `marks-${action}-${new Date().toISOString().slice(0, 10)}.csv`
+    document.body.appendChild(link)
+    link.click()
+    link.remove()
+    URL.revokeObjectURL(url)
+  } catch (error) {
+    toastImports_showError(error)
+  }
+}
 
 // MarksModuleNav screen and private helpers.
 const MarksModuleNavScreen = (() => {
@@ -82,6 +96,9 @@ const FilterPanel = FilterPanelImports_default
 const ExportMenu = ExportMenuImports_default
 const TablePagination = TablePaginationImports_default
 const EmptyState = EmptyStateImports_default
+const marksApi = apiEndpointsImports_marksApi
+const showError = toastImports_showError
+const showSuccess = toastImports_showSuccess
 
 const PAGE_SIZE = 10
 const normalized = value => String(value ?? '').trim().toLowerCase()
@@ -157,11 +174,15 @@ const parseDelimitedFile = (text, filename) => {
 }
 
 function BulkMarksUpload() {
+  const [selectedFile, setSelectedFile] = useState(null)
+  const [uploadScope, setUploadScope] = useState(null)
   const [fileName, setFileName] = useState('')
   const [columns, setColumns] = useState([])
   const [rows, setRows] = useState([])
+  const [uploadPreview, setUploadPreview] = useState(null)
   const [fileError, setFileError] = useState('')
   const [reading, setReading] = useState(false)
+  const [uploading, setUploading] = useState(false)
   const [query, setQuery] = useState('')
   const [columnFilters, setColumnFilters] = useState({})
   const [page, setPage] = useState(1)
@@ -196,28 +217,142 @@ function BulkMarksUpload() {
     event.target.value = ''
     if (!file) return
     setFileError('')
+    setUploadScope(null)
     setReading(true)
     try {
-      const extension = file.name.split('.').pop()?.toLowerCase()
-      if (!['csv', 'tsv', 'txt'].includes(extension)) throw new Error('Choose a CSV, TSV, or TXT file. Excel workbooks are not supported yet; save the sheet as CSV first.')
-      const parsed = parseDelimitedFile(await file.text(), file.name)
-      setColumns(parsed.columns)
-      setRows(parsed.rows)
+      const isWorkbook = /\.xlsx$/i.test(file.name)
+      const preview = await (async () => {
+        if (isWorkbook) {
+          const result = await marksApi.upload(file, {}, true)
+          if (!result?.examId) throw new Error('Workbook preview did not return an examination ID from the file.')
+          setUploadScope({ examId: result.examId, sectionId: result.sectionId || undefined })
+          return result
+        }
+        const parsed = parseDelimitedFile(await file.text(), file.name)
+        setColumns(parsed.columns)
+        setRows(parsed.rows)
+        const columnFor = (...names) => parsed.columns.find(column =>
+          names.includes(column.label.toLowerCase().replace(/[^a-z0-9]/g, '')),
+        )
+        const studentColumn = columnFor('studentcode', 'studentid', 'registrationnumber', 'rollnumber')
+        const subjectColumn = columnFor('subjectcode', 'subjectid')
+        const marksColumn = columnFor('marksobtained', 'marks', 'studentmarks')
+        const examColumn = columnFor('examid', 'examinationid')
+        const sectionColumn = columnFor('sectionid')
+        const maximumColumn = columnFor('maxmarks', 'maximummarks')
+        const gradeColumn = columnFor('grade')
+        const remarksColumn = columnFor('remarks')
+        if (!studentColumn || !subjectColumn || !marksColumn || !examColumn) {
+          throw new Error('File headings must include ExamId, StudentCode, SubjectCode, and MarksObtained.')
+        }
+        const scopeByRow = parsed.rows.map((row, index) => {
+          const examId = Number(row[examColumn.key])
+          const sectionValue = sectionColumn ? String(row[sectionColumn.key] || '').trim() : ''
+          const sectionId = sectionValue ? Number(sectionValue) : undefined
+          if (!Number.isSafeInteger(examId) || examId <= 0) throw new Error(`Row ${index + 2}: ExamId must be a positive number.`)
+          if (sectionValue && (!Number.isSafeInteger(sectionId) || sectionId <= 0)) throw new Error(`Row ${index + 2}: SectionId must be a positive number.`)
+          return { examId, sectionId }
+        })
+        const examIds = [...new Set(scopeByRow.map(scopeRow => scopeRow.examId))]
+        const sectionIds = [...new Set(scopeByRow.map(scopeRow => scopeRow.sectionId).filter(Boolean))]
+        if (examIds.length !== 1 || sectionIds.length > 1) {
+          throw new Error('Each upload file must contain rows for one examination and one section.')
+        }
+        const scope = { examId: examIds[0], sectionId: sectionIds[0] }
+        setUploadScope(scope)
+        const requestRows = parsed.rows.map((row, index) => {
+          const marksValue = row[marksColumn.key]
+          const maximumValue = maximumColumn ? row[maximumColumn.key] : ''
+          const marksObtained = Number(marksValue)
+          const maxMarks = Number(maximumValue)
+          if (!String(marksValue || '').trim() || !Number.isFinite(marksObtained)) throw new Error(`Row ${index + 2}: MarksObtained must be numeric.`)
+          if (String(maximumValue || '').trim() && !Number.isFinite(maxMarks)) throw new Error(`Row ${index + 2}: MaxMarks must be numeric.`)
+          return {
+            studentCode: row[studentColumn.key],
+            subjectCode: row[subjectColumn.key],
+            marksObtained,
+            ...(String(maximumValue || '').trim() ? { maxMarks } : {}),
+            ...(gradeColumn ? { grade: row[gradeColumn.key] } : {}),
+            ...(remarksColumn ? { remarks: row[remarksColumn.key] } : {}),
+          }
+        })
+        const result = await marksApi.bulkPreview({
+          examId: scope.examId,
+          sectionId: scope.sectionId,
+          rows: requestRows,
+        })
+        setSelectedFile(null)
+        return result
+      })()
+      const previewErrors = Array.isArray(preview?.errors) ? preview.errors : []
+      setColumns([
+        { key: 'rowNumber', label: 'Row' },
+        { key: 'studentCode', label: 'Student Code' },
+        { key: 'subjectCode', label: 'Subject Code' },
+        { key: 'errorCode', label: 'Error Code' },
+        { key: 'message', label: 'Message' },
+      ])
+      setRows(previewErrors.map((row, index) => ({
+        __bulkRowId: `upload-error-${index}`,
+        rowNumber: row.rowNumber,
+        studentCode: row.studentCode,
+        subjectCode: row.subjectCode,
+        errorCode: row.errorCode,
+        message: row.message,
+      })))
+      setSelectedFile(isWorkbook ? file : null)
+      setUploadPreview(preview)
       setFileName(file.name)
       setQuery('')
       setColumnFilters({})
       setPage(1)
     } catch (error) {
-      setFileError(error.message || 'Could not read this file. Check that it is a valid CSV or TSV.')
+      setFileError(error.message || 'Could not preview this workbook.')
+      setSelectedFile(null)
+      setUploadScope(null)
+      setUploadPreview(null)
+      showError(error)
     } finally {
       setReading(false)
     }
   }
 
+  const confirmUpload = async () => {
+    if (!selectedFile || !uploadPreview || Number(uploadPreview.validRows) < 1) return
+    setUploading(true)
+    setFileError('')
+    try {
+      const result = await marksApi.upload(selectedFile, {
+        ...uploadScope,
+        upsertDrafts: true,
+      }, false)
+      showSuccess(`Marks upload completed: ${result.insertedRows || 0} inserted, ${result.updatedRows || 0} updated, ${result.rejectedRows || 0} rejected.`)
+      setUploadPreview(result)
+      setSelectedFile(null)
+      setUploadScope(null)
+      setRows(Array.isArray(result.errors) ? result.errors.map((row, index) => ({
+        __bulkRowId: `upload-error-${index}`,
+        rowNumber: row.rowNumber,
+        studentCode: row.studentCode,
+        subjectCode: row.subjectCode,
+        errorCode: row.errorCode,
+        message: row.message,
+      })) : [])
+    } catch (error) {
+      setFileError(error.message || 'The workbook could not be uploaded.')
+      showError(error)
+    } finally {
+      setUploading(false)
+    }
+  }
+
   const clearPreview = () => {
+    setSelectedFile(null)
+    setUploadScope(null)
     setFileName('')
     setColumns([])
     setRows([])
+    setUploadPreview(null)
     setQuery('')
     setColumnFilters({})
     setPage(1)
@@ -256,13 +391,17 @@ function BulkMarksUpload() {
           </header>
 
           <label className={`bulk-marks-upload-dropzone${reading ? ' is-reading' : ''}`}>
-            <input type="file" accept=".csv,.tsv,.txt,text/csv,text/tab-separated-values,text/plain" onChange={uploadFile} disabled={reading} />
+            <input type="file" accept=".xlsx,.csv,.tsv,.txt,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,text/csv,text/tab-separated-values,text/plain" onChange={uploadFile} disabled={reading || uploading} />
             <span className="bulk-marks-upload-dropzone__icon"><FiUploadCloud /></span>
-            <span className="bulk-marks-upload-dropzone__text"><strong>{reading ? 'Reading file…' : fileName || 'Choose a marks file'}</strong><small>{reading ? 'Parsing rows and columns' : 'CSV / TSV / TXT · First row should contain column headings'}</small></span>
+            <span className="bulk-marks-upload-dropzone__text"><strong>{reading ? 'Validating file…' : fileName || 'Choose a marks file'}</strong><small>{reading ? 'Checking rows with the marks API' : 'XLSX uploads, or CSV / TSV / TXT previews · Required: ExamId, StudentCode, SubjectCode, MarksObtained'}</small></span>
             <span className="erp-btn erp-btn--primary bulk-marks-upload-browse">Browse files</span>
           </label>
+          {uploadPreview && <div className="bulk-marks-upload-status" role="status">
+            <p>{uploadPreview.totalRows} total · {uploadPreview.validRows} valid · {uploadPreview.rejectedRows} rejected</p>
+            {selectedFile && uploadPreview.validRows > 0 && <button type="button" className="erp-btn erp-btn--primary" onClick={confirmUpload} disabled={uploading}>{uploading ? 'Uploading…' : 'Upload valid marks'}</button>}
+          </div>}
           {fileError && <p className="bulk-marks-upload-error" role="alert">{fileError}</p>}
-          {fileName && !fileError && <p className="bulk-marks-upload-status" role="status"><FiFileText /> Loaded {rows.length} data {rows.length === 1 ? 'row' : 'rows'} and {columns.length} columns from {fileName}.</p>}
+          {fileName && !fileError && <p className="bulk-marks-upload-status"><FiFileText /> Validated {uploadPreview?.totalRows || 0} rows from {fileName}.</p>}
         </article>
 
         <article className="erp-card bulk-marks-preview-card">
@@ -832,7 +971,28 @@ function MarksApproval() {
       setMarkRows([])
       showError(error)
     } else {
-      setMarkRows(Array.isArray(marksResponse.value) ? marksResponse.value : [])
+      const rows = Array.isArray(marksResponse.value) ? marksResponse.value : []
+      const examIds = [...new Set(rows
+        .filter(row => normalizeStatus(pick(row, 'workflowStatus', 'status')) === 'Pending')
+        .map(row => Number(pick(row, 'examId')))
+        .filter(id => Number.isSafeInteger(id) && id > 0))]
+      const pendingResponses = await Promise.allSettled(
+        examIds.map(examId => marksApi.pendingApprovals({ examId })),
+      )
+      const approvals = new Map(pendingResponses.flatMap(response =>
+        response.status === 'fulfilled'
+          ? response.value.map(approval => [toId(pick(approval, 'markId')), approval])
+          : [],
+      ))
+      setMarkRows(rows.map(row => {
+        const approval = approvals.get(toId(pick(row, 'markId')))
+        return approval ? { ...row, approvalId: pick(approval, 'approvalId') } : row
+      }))
+      const failedPendingRequest = pendingResponses.find(response => response.status === 'rejected')
+      if (failedPendingRequest) {
+        setLoadError(failedPendingRequest.reason?.message || 'Pending approvals could not be loaded.')
+        showError(failedPendingRequest.reason)
+      }
       if (subjectsResponse.status === 'fulfilled') setSubjects(Array.isArray(subjectsResponse.value) ? subjectsResponse.value : [])
       if (allocationResponse.status === 'fulfilled') setAllocations(Array.isArray(allocationResponse.value) ? allocationResponse.value : [])
       if (facultyResponse.status === 'fulfilled') setFaculty(Array.isArray(facultyResponse.value) ? facultyResponse.value : [])
@@ -917,13 +1077,21 @@ function MarksApproval() {
     setSelected({ ...batch, history: [], historyLoading: canDecide, historyError: '' })
     if (!canDecide || !batch.rawMarks.length) return
 
-    const responses = await Promise.allSettled(
-      batch.rawMarks.map(mark => marksApi.approvalHistory(pick(mark, 'markId'))),
-    )
+    const responses = await Promise.allSettled(batch.rawMarks.map(async mark => {
+      const [detail, history] = await Promise.all([
+        marksApi.get(pick(mark, 'markId')),
+        marksApi.approvalHistory(pick(mark, 'markId')),
+      ])
+      return { detail, history, approvalId: mark.approvalId }
+    }))
     if (requestId !== historyRequest.current) return
+    const detailedMarks = responses.flatMap(response => {
+      if (response.status !== 'fulfilled') return []
+      return [{ ...response.value.detail, approvalId: response.value.approvalId }]
+    })
     const events = responses.flatMap((response, index) => {
-      if (response.status !== 'fulfilled' || !Array.isArray(response.value)) return []
-      return response.value.map(entry => ({ ...entry, __sourceMarkId: pick(batch.rawMarks[index], 'markId') }))
+      if (response.status !== 'fulfilled' || !Array.isArray(response.value.history)) return []
+      return response.value.history.map(entry => ({ ...entry, __sourceMarkId: pick(batch.rawMarks[index], 'markId') }))
     })
     const grouped = new Map()
     events.forEach(entry => {
@@ -938,8 +1106,18 @@ function MarksApproval() {
     })
     const history = [...grouped.values()].sort((left, right) => new Date(pick(left, 'actionAt')) - new Date(pick(right, 'actionAt')))
     const anyFailed = responses.some(response => response.status === 'rejected')
+    const refreshedBatch = detailedMarks.length
+      ? groupMarkRows(detailedMarks, academicCatalog, subjects, allocations, faculty).find(item => item.id === batch.id)
+      : null
     setSelected(current => current?.id === batch.id
-      ? { ...current, history, historyLoading: false, historyError: anyFailed && !history.length ? 'Approval history is unavailable.' : '' }
+      ? {
+        ...current,
+        rawMarks: detailedMarks.length ? detailedMarks : current.rawMarks,
+        students: refreshedBatch?.students || current.students,
+        history,
+        historyLoading: false,
+        historyError: anyFailed && !history.length ? 'Mark details or approval history could not be loaded.' : '',
+      }
       : current)
   }
 
@@ -954,7 +1132,34 @@ function MarksApproval() {
       if (Number.isSafeInteger(sectionId) && sectionId > 0) payload.sectionId = sectionId
       if (Number.isSafeInteger(subjectId) && subjectId > 0) payload.subjectId = subjectId
 
-      const response = await marksApi.workflow(action, payload)
+      const approvalId = selected.rawMarks.length === 1 && Number(selected.rawMarks[0].approvalId)
+      let response
+      let patchedApproval = false
+      if (approvalId) {
+        try {
+          response = await marksApi.updateApproval(approvalId, {
+            approvalStatus: action === 'approve' ? 'APPROVED' : 'REJECTED',
+            examId: payload.examId,
+            markId: payload.markIds[0],
+            sectionId: payload.sectionId,
+            subjectId: payload.subjectId,
+            remarks: payload.remarks,
+          })
+          patchedApproval = true
+        } catch (error) {
+          if (![404, 405].includes(error.status)) throw error
+          response = await marksApi.workflow(action, payload)
+        }
+      } else {
+        response = await marksApi.workflow(action, payload)
+      }
+      if (patchedApproval) {
+        showSuccess(action === 'approve' ? 'Marks approved successfully.' : 'Marks rejected successfully.')
+        setDecision('')
+        closeDetails()
+        await load()
+        return
+      }
       const completed = decisionResultCount(response, action)
       if (completed !== payload.markIds.length) {
         const details = Array.isArray(response?.errors)
@@ -1299,6 +1504,7 @@ const createPortal = react_domImports_createPortal
 const FiEdit2 = fiImports_FiEdit2
 const FiPlus = fiImports_FiPlus
 const FiSearch = fiImports_FiSearch
+const FiCheck = fiImports_FiCheck
 const FiTrash2 = fiImports_FiTrash2
 const FiX = fiImports_FiX
 const DashboardLayout = DashboardLayoutImports_default
@@ -1309,10 +1515,13 @@ const FilterPanel = FilterPanelImports_default
 const TablePagination = TablePaginationImports_default
 const MarksModuleNav = MarksModuleNavScreen.default
 const useAcademic = AcademicContextImports_useAcademic
+const marksApi = apiEndpointsImports_marksApi
+const showError = toastImports_showError
+const showSuccess = toastImports_showSuccess
+const marksWorkflowPayload = marksWorkflowImports_marksWorkflowPayload
 const facultyService = facultyServiceImports_default
 const studentService = studentServiceImports_default
 const subjectService = subjectServiceImports_default
-const collegeStorageKey = collegeScopeImports_collegeStorageKey
 
 const columns = [
   { key: 'academicYear', label: 'Academic Year' },
@@ -1338,6 +1547,7 @@ const columns = [
 const PAGE_SIZE = 10
 
 const initialAssessment = {
+  examId: '',
   academicYear: '',
   course: '',
   branch: '',
@@ -1443,26 +1653,6 @@ const getMarksSummary = ({
   }
 }
 
-const LEGACY_DRAFTS_KEY = collegeStorageKey(
-  'marks-entry-assessment-drafts-v1'
-)
-
-const DRAFTS_KEY = collegeStorageKey(
-  'marks-entry-assessment-drafts-v2'
-)
-
-const readDrafts = () => {
-  try {
-    const value = JSON.parse(
-      localStorage.getItem(DRAFTS_KEY) || '[]'
-    )
-
-    return Array.isArray(value) ? value : []
-  } catch {
-    return []
-  }
-}
-
 function MarksEntry() {
   const {
     academicYears = [],
@@ -1472,7 +1662,11 @@ function MarksEntry() {
     sections = [],
   } = useAcademic()
 
-  const [draftRows, setDraftRows] = useState(readDrafts)
+  const [draftRows, setDraftRows] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [loadError, setLoadError] = useState('')
+  const [saving, setSaving] = useState(false)
+  const [summaryReport, setSummaryReport] = useState(null)
   const [subjects, setSubjects] = useState([])
   const [students, setStudents] = useState([])
   const [facultyMembers, setFacultyMembers] = useState([])
@@ -1497,13 +1691,44 @@ function MarksEntry() {
   const [assessment, setAssessment] =
     useState(initialAssessment)
 
-  useEffect(() => {
+  const toEntryRow = mark => ({
+    ...mark,
+    id: String(mark.markId),
+    registrationNumber: mark.studentCode,
+    subject: mark.subjectName,
+    subjectName: mark.subjectName,
+    examType: mark.examName || mark.examCode,
+    maximumMarks: mark.maxMarks,
+    studentMarks: mark.marksObtained,
+    examStatus: mark.workflowStatus,
+    percentage: mark.percentage,
+    status: mark.workflowStatus,
+  })
+
+  const loadMarks = async () => {
+    setLoading(true)
+    setLoadError('')
     try {
-      localStorage.removeItem(LEGACY_DRAFTS_KEY)
-    } catch {
-      // Ignore unavailable storage
+      const records = await marksApi.list()
+      const rows = records.map(toEntryRow)
+      setDraftRows(rows)
+      if (rows.length) {
+        const examId = Number(rows[0].examId)
+        if (Number.isSafeInteger(examId) && examId > 0) {
+          setSummaryReport(await marksApi.summaryReport({ examId }))
+        }
+      } else {
+        setSummaryReport(null)
+      }
+    } catch (error) {
+      setLoadError(error.message || 'Marks could not be loaded.')
+      showError(error)
+    } finally {
+      setLoading(false)
     }
-  }, [])
+  }
+
+  useEffect(() => { loadMarks() }, [])
 
   useEffect(() => {
     subjectService
@@ -1531,17 +1756,6 @@ function MarksEntry() {
       )
       .catch(() => setFacultyMembers([]))
   }, [])
-
-  useEffect(() => {
-    try {
-      localStorage.setItem(
-        DRAFTS_KEY,
-        JSON.stringify(draftRows)
-      )
-    } catch {
-      // Keep current session drafts if storage is unavailable
-    }
-  }, [draftRows])
 
   const allRows = draftRows
 
@@ -1596,6 +1810,13 @@ function MarksEntry() {
       },
     ]
   }, [allRows])
+
+  const pageSummary = summaryReport ? [
+    { label: 'Total Students', value: summaryReport.totalStudents, tone: 'warning' },
+    { label: 'Entered Marks', value: summaryReport.enteredEntries, tone: 'active' },
+    { label: 'Pending Marks', value: summaryReport.pendingEntries, tone: 'inactive' },
+    { label: 'Average %', value: `${Number(summaryReport.averagePercentage || 0).toFixed(1)}%`, tone: 'completed' },
+  ] : summaryStats
 
   const academicOptions = useMemo(
     () => ({
@@ -2144,6 +2365,7 @@ function MarksEntry() {
             matchedSubject?.subjectCode ||
             matchedSavedSubject?.subjectCode ||
             '',
+          subjectId: matchedSubject?.subjectId || matchedSubject?.id || matchedSavedSubject?.subjectId || '',
         }
         : {}),
 
@@ -2158,6 +2380,7 @@ function MarksEntry() {
             matchedStudent.name ||
             matchedStudent.studentName ||
             '',
+          studentId: matchedStudent.studentId || matchedStudent.id || '',
         }
         : {}),
 
@@ -2175,6 +2398,16 @@ function MarksEntry() {
             matchedStudent.academic
               ?.rollNumber ||
             '',
+          studentId: matchedStudent.studentId || matchedStudent.id || '',
+        }
+        : {}),
+      ...(key === 'section'
+        ? {
+          sectionId: sections.find(item =>
+            normalized(item.sectionName || item.name || item.label) === normalized(value),
+          )?.sectionId || sections.find(item =>
+            normalized(item.sectionName || item.name || item.label) === normalized(value),
+          )?.id || '',
         }
         : {}),
 
@@ -2189,90 +2422,113 @@ function MarksEntry() {
     }))
   }
 
-  const submitAssessment = event => {
+  const submitAssessment = async event => {
     event.preventDefault()
+    setSaving(true)
+    try {
+      const student = students.find(item =>
+        normalized(item.registrationNumber || item.application?.registrationNumber || item.academic?.registrationNumber) === normalized(assessment.registrationNumber)
+        || normalized(item.fullName || item.personal?.fullName || item.name || item.studentName) === normalized(assessment.studentName),
+      )
+      const subject = subjects.find(item =>
+        normalized(item.subjectCode || item.code) === normalized(assessment.subjectCode)
+        || normalized(item.subjectName || item.name || item.subject) === normalized(assessment.subject || assessment.subjectName),
+      )
+      const section = sections.find(item =>
+        normalized(item.sectionName || item.name || item.label) === normalized(assessment.section),
+      )
+      const studentId = Number(assessment.studentId || student?.studentId || student?.id)
+      const subjectId = Number(assessment.subjectId || subject?.subjectId || subject?.id)
+      const sectionId = Number(assessment.sectionId || section?.sectionId || section?.id)
+      const examId = Number(assessment.examId)
+      const marksObtained = Number(assessment.studentMarks)
+      const maxMarks = Number(assessment.maximumMarks)
+      if (!Number.isSafeInteger(examId) || examId <= 0) throw new Error('Enter a valid examination ID.')
+      if (!Number.isSafeInteger(studentId) || studentId <= 0) throw new Error('Select a student with a valid student ID.')
+      if (!Number.isSafeInteger(subjectId) || subjectId <= 0) throw new Error('Select a subject with a valid subject ID.')
+      if (!Number.isFinite(marksObtained) || marksObtained < 0) throw new Error('Enter a valid non-negative marks value.')
+      if (!Number.isFinite(maxMarks) || maxMarks <= 0 || marksObtained > maxMarks) throw new Error('Marks must not exceed a positive maximum.')
 
-    const {
-      percentage,
-      examStatus,
-    } = getMarksSummary(assessment)
-
-    const record = {
-      ...assessment,
-
-      id:
-        editingId ||
-        `draft-${Date.now()}`,
-
-      subjectName:
-        assessment.subject,
-
-      percentage,
-
-      examStatus,
-
-      totalStudents: 0,
-
-      passedCount: 0,
-
-      failedCount: 0,
-
-      status: 'Draft',
+      const payload = {
+        marksObtained,
+        maxMarks,
+        grade: assessment.grade || null,
+        remarks: assessment.remarks || null,
+      }
+      const saved = editingId
+        ? await marksApi.update(editingId, payload)
+        : await marksApi.create({
+          examId,
+          studentId,
+          subjectId,
+          sectionId: Number.isSafeInteger(sectionId) && sectionId > 0 ? sectionId : null,
+          ...payload,
+        })
+      const record = toEntryRow(saved)
+      setDraftRows(current => editingId
+        ? current.map(row => row.id === editingId ? record : row)
+        : [record, ...current])
+      showSuccess(editingId ? 'Marks updated successfully.' : 'Marks entered successfully.')
+      setShowAddForm(false)
+      setEditingId('')
+      setAssessment(initialAssessment)
+      setPage(1)
+      await loadMarks()
+    } catch (error) {
+      showError(error)
+    } finally {
+      setSaving(false)
     }
-
-    setDraftRows(current =>
-      editingId
-        ? current.map(row =>
-          row.id === editingId
-            ? {
-              ...row,
-              ...record,
-            }
-            : row
-        )
-        : [record, ...current]
-    )
-
-    setShowAddForm(false)
-    setEditingId('')
-    setAssessment(initialAssessment)
-    setPage(1)
   }
 
-  const editAssessment = row => {
+  const editAssessment = async row => {
+    try {
+      const detail = await marksApi.get(row.markId || row.id)
+      const record = toEntryRow(detail)
     setEditingId(row.id)
-
     setAssessment({
       ...initialAssessment,
-      ...row,
+      ...record,
+      examId: String(record.examId || ''),
+      studentId: record.studentId,
+      subjectId: record.subjectId,
+      sectionId: record.sectionId,
+      registrationNumber: record.studentCode || record.registrationNumber || '',
+      studentName: record.studentName || '',
       subject:
-        row.subject ||
-        row.subjectName ||
+        record.subject ||
+        record.subjectName ||
         '',
+      subjectCode: record.subjectCode || '',
+      maximumMarks: record.maxMarks ?? record.maximumMarks ?? '',
+      studentMarks: record.marksObtained ?? record.studentMarks ?? '',
     })
-
     setActiveSuggestion('')
     setShowAddForm(true)
+    } catch (error) {
+      showError(error)
+    }
   }
 
   const deleteAssessment = row => {
-    setDeletingRow(row)
+    showError(`Marks record ${row.markId || row.id} cannot be deleted because the marks API does not provide a delete endpoint.`)
   }
 
   const confirmDeleteAssessment = () => {
     if (!deletingRow) return
-
-    const deletedId =
-      deletingRow.id
-
-    setDraftRows(current =>
-      current.filter(
-        item => item.id !== deletedId
-      )
-    )
-
     setDeletingRow(null)
-    setPage(1)
+  }
+
+  const submitMark = async row => {
+    try {
+      const payload = marksWorkflowPayload('submit', [row])
+      const result = await marksApi.workflow('submit', payload)
+      if (Number(result?.processedCount) !== 1) throw new Error('The server did not confirm that this mark was submitted.')
+      showSuccess('Marks submitted for approval.')
+      await loadMarks()
+    } catch (error) {
+      showError(error)
+    }
   }
 
   return (
@@ -2289,7 +2545,7 @@ function MarksEntry() {
             },
             'Marks Entry',
           ]}
-          compactSummary={summaryStats}
+          compactSummary={pageSummary}
         />
 
         <MarksModuleNav />
@@ -2306,6 +2562,8 @@ function MarksEntry() {
               </p>
             </div>
           </header>
+          {loadError && <div className="marks-approval-error" role="alert"><span>{loadError}</span><button type="button" className="erp-btn erp-btn--secondary" onClick={loadMarks} disabled={loading}>Retry</button></div>}
+          {loading && <p className="marks-approval-loading" role="status">Loading marks from the server…</p>}
 
           {deletingRow &&
             createPortal(
@@ -2436,7 +2694,6 @@ function MarksEntry() {
                   allowEmpty
                   printLabel="Save as PDF"
                 />
-
                 <button
                   type="button"
                   className="erp-btn erp-btn--primary"
@@ -2613,6 +2870,10 @@ function MarksEntry() {
                     <div className="marks-entry-form__grid">
                       {[
                         [
+                          'examId',
+                          'Examination ID',
+                        ],
+                        [
                           'academicYear',
                           'Academic Year',
                         ],
@@ -2757,6 +3018,7 @@ function MarksEntry() {
                                 <input
                                   type={
                                     [
+                                      'examId',
                                       'maximumMarks',
                                       'passingMarks',
                                       'studentMarks',
@@ -2797,6 +3059,7 @@ function MarksEntry() {
                                   }
                                   step={
                                     [
+                                      'examId',
                                       'maximumMarks',
                                       'passingMarks',
                                       'studentMarks',
@@ -2999,8 +3262,9 @@ function MarksEntry() {
                     <button
                       type="submit"
                       className="erp-btn erp-btn--primary"
+                      disabled={saving}
                     >
-                      {editingId
+                      {saving ? 'Saving…' : editingId
                         ? 'Save Changes'
                         : 'Confirm'}
                     </button>
@@ -3155,6 +3419,7 @@ function MarksEntry() {
 
                       <td className="marks-entry-actions-cell">
                         <div className="marks-entry-row-actions">
+                          {['DRAFT', 'REJECTED'].includes(String(row.workflowStatus || '').toUpperCase()) && <button type="button" className="table-action-btn marks-entry-row-action" title="Submit for approval" aria-label={'Submit marks for approval for ' + studentName} onClick={() => submitMark(row)}><FiCheck /></button>}
                           <button
                             type="button"
                             className="table-action-btn marks-entry-row-action marks-entry-row-action--edit"
@@ -3241,10 +3506,11 @@ const FilterPanel = FilterPanelImports_default
 const ExportMenu = ExportMenuImports_default
 const TablePagination = TablePaginationImports_default
 const EmptyState = EmptyStateImports_default
-const resultsService = resultsServiceImports_default
 const academicService = academicServiceImports_default
 const getExamTypes = examServiceImports_getExamTypes
 const studentService = studentServiceImports_default
+const marksApi = apiEndpointsImports_marksApi
+const showError = toastImports_showError
 
 const PAGE_SIZE = 10
 const clean = value => String(value ?? '').trim()
@@ -3335,12 +3601,14 @@ function StudentMarks() {
 
   useEffect(() => {
     let active = true
-    Promise.allSettled([studentService.getAllProfiles(), resultsService.getResults()]).then(([studentsResult, sheetsResult]) => {
+    studentService.getAllProfiles().then(students => {
       if (!active) return
-      if (studentsResult.status === 'fulfilled') setStudents(Array.isArray(studentsResult.value) ? studentsResult.value : [])
-      if (sheetsResult.status === 'fulfilled') setResultSheets(Array.isArray(sheetsResult.value) ? sheetsResult.value : [])
-      const errors = [studentsResult, sheetsResult].filter(result => result.status === 'rejected')
-      if (errors.length) setLoadError(errors.map(result => result.reason?.message).filter(Boolean).join(' ') || 'Some marks data could not be loaded.')
+      setStudents(Array.isArray(students) ? students : [])
+      setLoading(false)
+    }).catch(error => {
+      if (!active) return
+      setLoadError(error.message || 'Students could not be loaded.')
+      showError(error)
       setLoading(false)
     })
     return () => { active = false }
@@ -3367,6 +3635,61 @@ function StudentMarks() {
 
   const studentOptions = useMemo(() => [...students].sort((left, right) => getStudentName(left).localeCompare(getStudentName(right))), [students])
   const selectedStudent = studentOptions.find(student => getStudentId(student) === selectedStudentId)
+  useEffect(() => {
+    if (!selectedStudentId) {
+      setResultSheets([])
+      return undefined
+    }
+    let active = true
+    const loadStudentReport = async () => {
+      setLoading(true)
+      setLoadError('')
+      try {
+        const studentId = Number(selectedStudentId)
+        if (!Number.isSafeInteger(studentId) || studentId <= 0) throw new Error('The selected student has an invalid ID.')
+        const marks = await marksApi.list({ studentId })
+        const examIds = [...new Set(marks.map(mark => Number(mark.examId)).filter(id => Number.isSafeInteger(id) && id > 0))]
+        const responses = await Promise.allSettled(examIds.map(examId => marksApi.studentReport({ examId, studentId })))
+        if (!active) return
+        const reports = responses.flatMap(response => response.status === 'fulfilled' && response.value ? [response.value] : [])
+        setResultSheets(reports.map(report => ({
+          examId: report.examId,
+          examCode: report.examCode,
+          examName: report.examName,
+          examType: report.examName || report.examCode,
+          records: (Array.isArray(report.subjects) ? report.subjects : []).map(subject => ({
+            studentId: report.studentId,
+            studentName: report.studentName,
+            registrationNumber: report.studentCode,
+            studentCode: report.studentCode,
+            subjectId: subject.subjectId,
+            subjectCode: subject.subjectCode,
+            subjectName: subject.subjectName,
+            marksObtained: subject.marksObtained,
+            totalMarks: subject.marksObtained,
+            maxMarks: subject.maxMarks,
+            maximumMarks: subject.maxMarks,
+            grade: subject.grade,
+            status: subject.workflowStatus,
+          })),
+        })))
+        const failed = responses.find(response => response.status === 'rejected')
+        if (failed) {
+          setLoadError(failed.reason?.message || 'Some examination marks reports could not be loaded.')
+          showError(failed.reason)
+        }
+      } catch (error) {
+        if (!active) return
+        setResultSheets([])
+        setLoadError(error.message || 'Student marks report could not be loaded.')
+        showError(error)
+      } finally {
+        if (active) setLoading(false)
+      }
+    }
+    loadStudentReport()
+    return () => { active = false }
+  }, [selectedStudentId])
   const matchingStudents = studentOptions.filter(student => (getStudentName(student) + ' ' + getRegistrationNumber(student)).toLowerCase().includes(studentSearch.trim().toLowerCase()))
   const studentRows = useMemo(() => {
     if (!selectedStudent) return []
@@ -3477,7 +3800,7 @@ function StudentMarks() {
             active={hasFilters}
             onClear={clearFilters}
             className="student-marks-filters"
-            actions={<ExportMenu rows={filteredRows} columns={columns} title="Student Marks" filename={`student-marks-${getRegistrationNumber(selectedStudent) || 'records'}`} scope="All matching marks" allowEmpty />}
+            actions={<div className="student-marks-header-actions"><ExportMenu rows={filteredRows} columns={columns} title="Student Marks" filename={`student-marks-${getRegistrationNumber(selectedStudent) || 'records'}`} scope="All matching marks" allowEmpty /></div>}
           >
             <div className="student-marks-search-wrap"><label className="student-marks-search"><FiSearch aria-hidden="true" /><input type="search" aria-label="Search student marks" placeholder="Search subject or exam" value={query} onChange={event => { setQuery(event.target.value); setPage(1) }} /></label></div>
             <label className="student-marks-filter"><span>Academic Year</span><ProjectSelect value={academicYear} onChange={event => { setAcademicYear(event.target.value); setPage(1) }}><option value="">All academic years</option>{optionsFor('academicYear').map(value => <option key={value}>{value}</option>)}</ProjectSelect></label>
@@ -3523,11 +3846,12 @@ const FilterPanel = FilterPanelImports_default
 const ExportMenu = ExportMenuImports_default
 const TablePagination = TablePaginationImports_default
 const EmptyState = EmptyStateImports_default
-const resultsService = resultsServiceImports_default
 const academicService = academicServiceImports_default
 const getExamTypes = examServiceImports_getExamTypes
 const studentService = studentServiceImports_default
 const subjectService = subjectServiceImports_default
+const marksApi = apiEndpointsImports_marksApi
+const showError = toastImports_showError
 
 const PAGE_SIZE = 10
 const clean = value => String(value ?? '').trim()
@@ -3542,8 +3866,55 @@ const columns = [['studentName','Student Name'],['registrationNumber','Registrat
 
 function SubjectMarksReport() {
   const [students,setStudents] = useState([]), [sheets,setSheets] = useState([]), [subjectCatalog,setSubjectCatalog] = useState([]), [lookupOptions,setLookupOptions] = useState({ academicYears: [], courses: [], branches: [], examTypes: [] }), [loading,setLoading] = useState(true), [loadError,setLoadError] = useState('')
+  const [subjectSummaries,setSubjectSummaries] = useState([])
   const [subject,setSubject] = useState(''), [subjectQuery,setSubjectQuery] = useState(''), [subjectOpen,setSubjectOpen] = useState(false), [query,setQuery] = useState(''), [year,setYear] = useState(''), [course,setCourse] = useState(''), [branch,setBranch] = useState(''), [semester,setSemester] = useState(''), [exam,setExam] = useState(''), [page,setPage] = useState(1)
-  useEffect(() => { let active=true; Promise.allSettled([studentService.getAllProfiles(),resultsService.getResults(),subjectService.getSubjects({liveOnly:true}),subjectService.getSubjects()]).then(([studentsResult,sheetsResult,liveSubjects,localSubjects]) => { if(!active)return; if(studentsResult.status==='fulfilled')setStudents(Array.isArray(studentsResult.value)?studentsResult.value:[]); if(sheetsResult.status==='fulfilled')setSheets(Array.isArray(sheetsResult.value)?sheetsResult.value:[]); const catalogs=[liveSubjects,localSubjects].filter(item=>item.status==='fulfilled').flatMap(item=>Array.isArray(item.value)?item.value:[]); setSubjectCatalog(catalogs); const errors=[studentsResult,sheetsResult].filter(item=>item.status==='rejected'&&!/record not found/i.test(item.reason?.message||'')); if(errors.length)setLoadError(errors.map(item=>item.reason?.message).filter(Boolean).join(' ')||'Some marks data could not be loaded.'); setLoading(false) }); return()=>{active=false} },[])
+  useEffect(() => {
+    let active = true
+    Promise.allSettled([
+      studentService.getAllProfiles(),
+      marksApi.list(),
+      subjectService.getSubjects({ liveOnly: true }),
+      subjectService.getSubjects(),
+    ]).then(([studentsResult, marksResult, liveSubjects, localSubjects]) => {
+      if (!active) return
+      if (studentsResult.status === 'fulfilled') setStudents(Array.isArray(studentsResult.value) ? studentsResult.value : [])
+      if (marksResult.status === 'fulfilled') {
+        const grouped = new Map()
+        marksResult.value.forEach(mark => {
+          const key = `${mark.examId}|${mark.subjectId}`
+          if (!grouped.has(key)) grouped.set(key, {
+            id: key,
+            examId: mark.examId,
+            examCode: mark.examCode,
+            examName: mark.examName,
+            examType: mark.examName || mark.examCode,
+            subjectId: mark.subjectId,
+            subjectCode: mark.subjectCode,
+            subjectName: mark.subjectName,
+            records: [],
+          })
+          grouped.get(key).records.push({
+            ...mark,
+            totalMarks: mark.marksObtained,
+            maximumMarks: mark.maxMarks,
+            status: mark.workflowStatus,
+          })
+        })
+        setSheets([...grouped.values()])
+      }
+      const catalogs = [liveSubjects, localSubjects]
+        .filter(item => item.status === 'fulfilled')
+        .flatMap(item => Array.isArray(item.value) ? item.value : [])
+      setSubjectCatalog(catalogs)
+      const errors = [studentsResult, marksResult].filter(item => item.status === 'rejected')
+      if (errors.length) {
+        setLoadError(errors.map(item => item.reason?.message).filter(Boolean).join(' ') || 'Marks data could not be loaded.')
+        errors.forEach(item => showError(item.reason))
+      }
+      setLoading(false)
+    })
+    return () => { active = false }
+  }, [])
   useEffect(() => {
     let active = true
     Promise.allSettled([
@@ -3563,8 +3934,32 @@ function SubjectMarksReport() {
     return () => { active = false }
   }, [])
   const studentMap = useMemo(() => { const map=new Map(); students.forEach(s=>[getId(s),getReg(s)].filter(Boolean).forEach(id=>map.set(norm(id),s))); return map },[students])
-  const subjects = useMemo(() => { const map=new Map(); [...subjectCatalog,...sheets].forEach(s=>{const code=clean(first(s.subjectCode,s.code,'')), name=clean(first(s.subjectName,s.subject,s.name,s.label,'')), key=keyFor(code,name); if(key!=='unknown'&&!map.has(key))map.set(key,{key,code,name})}); return [...map.values()].sort((a,b)=>(a.name||a.code).localeCompare(b.name||b.code)) },[subjectCatalog,sheets])
+  const subjects = useMemo(() => { const map=new Map(); [...subjectCatalog,...sheets].forEach(s=>{const code=clean(first(s.subjectCode,s.code,'')), name=clean(first(s.subjectName,s.subject,s.name,s.label,'')), key=keyFor(code,name); if(key!=='unknown'&&!map.has(key))map.set(key,{key,code,name,id:first(s.subjectId,s.id,'')})}); return [...map.values()].sort((a,b)=>(a.name||a.code).localeCompare(b.name||b.code)) },[subjectCatalog,sheets])
   const selected=subjects.find(s=>s.key===subject)
+  useEffect(() => {
+    if (!selected || !Number.isSafeInteger(Number(selected.id)) || Number(selected.id) <= 0) {
+      setSubjectSummaries([])
+      return undefined
+    }
+    let active = true
+    const examIds = [...new Set(sheets
+      .filter(sheet => keyFor(sheet.subjectCode, sheet.subjectName) === selected.key)
+      .map(sheet => Number(sheet.examId))
+      .filter(id => Number.isSafeInteger(id) && id > 0))]
+    Promise.allSettled(examIds.map(examId => marksApi.subjectReport({
+      examId,
+      subjectId: Number(selected.id),
+    }))).then(responses => {
+      if (!active) return
+      setSubjectSummaries(responses.flatMap(response => response.status === 'fulfilled' ? response.value : []))
+      const failed = responses.find(response => response.status === 'rejected')
+      if (failed) {
+        setLoadError(failed.reason?.message || 'Subject marks summaries could not be loaded.')
+        showError(failed.reason)
+      }
+    })
+    return () => { active = false }
+  }, [selected, sheets])
   const subjectPicker=useRef(null)
   const subjectLabel=s=>[s.code,s.name].filter(Boolean).join(' · ')
   const visibleSubjects=subjects.filter(s=>!subjectQuery.trim()||subjectLabel(s).toLowerCase().includes(subjectQuery.trim().toLowerCase()))
@@ -3613,10 +4008,10 @@ function SubjectMarksReport() {
     { label: 'Pass Rate', value: selected ? passRate : '—', tone: 'active' },
     { label: 'Available Subjects', value: subjects.length },
   ]}
-/><MarksModuleNav/><article className="erp-card subject-marks-report-card"><header className="erp-card-header subject-marks-report-card__header"><div><h2 className="erp-card-title">Subject Marks Report</h2><p className="erp-card-subtitle">Review and export student performance for a subject across examinations.</p></div>{selected&&<span className="subject-marks-report-count">{filtered.length} {filtered.length===1?'record':'records'}</span>}</header>
+/><MarksModuleNav/><article className="erp-card subject-marks-report-card"><header className="erp-card-header subject-marks-report-card__header"><div><h2 className="erp-card-title">Subject Marks Report</h2><p className="erp-card-subtitle">Review and export student performance for a subject across examinations.</p></div>{selected&&<span className="subject-marks-report-count">{filtered.length} {filtered.length===1?'record':'records'}{subjectSummaries.length ? ` · ${subjectSummaries.length} exam summaries loaded` : ''}</span>}</header>
   <div className="subject-marks-report-picker" ref={subjectPicker}><FiBookOpen aria-hidden="true"/><div className="subject-marks-report-subject-field"><label htmlFor="subject-marks-subject-search">Subject</label><div className="subject-marks-report-subject-search"><FiSearch aria-hidden="true"/><input id="subject-marks-subject-search" type="text" role="combobox" aria-autocomplete="list" aria-expanded={subjectOpen} aria-controls="subject-marks-subject-options" placeholder={loading?'Loading subjects…':'Search or select a subject'} value={subjectOpen?subjectQuery:(selected?subjectLabel(selected):subjectQuery)} disabled={loading||!subjects.length} onFocus={()=>{setSubjectQuery('');setSubjectOpen(true)}} onClick={()=>{if(!subjectOpen){setSubjectQuery('');setSubjectOpen(true)}}} onChange={e=>{setSubjectQuery(e.target.value);setSubjectOpen(true)}} onKeyDown={e=>{if(e.key==='Escape')setSubjectOpen(false);if(e.key==='Enter'&&visibleSubjects.length){e.preventDefault();const choice=visibleSubjects[0];setSubject(choice.key);setSubjectQuery(subjectLabel(choice));setSubjectOpen(false);clear()}}}/></div>{subjectOpen&&<ul className="subject-marks-report-subject-options" id="subject-marks-subject-options" role="listbox" aria-label="Subjects">{visibleSubjects.length?visibleSubjects.map(s=><li key={s.key} role="option" aria-selected={s.key===subject}><button type="button" onClick={()=>{setSubject(s.key);setSubjectQuery(subjectLabel(s));setSubjectOpen(false);clear()}}>{s.code&&<strong>{s.code}</strong>}<span>{s.name||s.code}</span></button></li>):<li className="subject-marks-report-no-subjects">No subjects match this search.</li>}</ul>}</div></div>
   {selected&&<>
-  <FilterPanel active={active} onClear={clear} className="subject-marks-report-filters" actions={<ExportMenu rows={filtered} columns={columns} title="Subject Marks Report" filename={'subject-marks-'+(selected.code||selected.name||'report')} scope="All matching marks" allowEmpty/>}><div className="subject-marks-report-search-wrap"><label className="subject-marks-report-search"><FiSearch aria-hidden="true"/><input type="search" aria-label="Search subject marks" placeholder="Search student or exam" value={query} onChange={e=>{setQuery(e.target.value);setPage(1)}}/></label></div>
+  <FilterPanel active={active} onClear={clear} className="subject-marks-report-filters" actions={<div className="student-marks-header-actions"><ExportMenu rows={filtered} columns={columns} title="Subject Marks Report" filename={'subject-marks-'+(selected.code||selected.name||'report')} scope="All matching marks" allowEmpty/></div>}><div className="subject-marks-report-search-wrap"><label className="subject-marks-report-search"><FiSearch aria-hidden="true"/><input type="search" aria-label="Search subject marks" placeholder="Search student or exam" value={query} onChange={e=>{setQuery(e.target.value);setPage(1)}}/></label></div>
   <label className="subject-marks-report-filter"><span>Academic Year</span><ProjectSelect value={year} onChange={e=>{setYear(e.target.value);setPage(1)}}><option value="">All academic years</option>{optionsFor('academicYear').map(v=><option key={v}>{v}</option>)}</ProjectSelect></label><label className="subject-marks-report-filter"><span>Course</span><ProjectSelect value={course} onChange={e=>{setCourse(e.target.value);setPage(1)}}><option value="">All courses</option>{optionsFor('course').map(v=><option key={v}>{v}</option>)}</ProjectSelect></label><label className="subject-marks-report-filter"><span>Branch</span><ProjectSelect value={branch} onChange={e=>{setBranch(e.target.value);setPage(1)}}><option value="">All branches</option>{optionsFor('branch').map(v=><option key={v}>{v}</option>)}</ProjectSelect></label><label className="subject-marks-report-filter"><span>Semester</span><ProjectSelect value={semester} onChange={e=>{setSemester(e.target.value);setPage(1)}}><option value="">All semesters</option>{optionsFor('semester').map(v=><option key={v}>{v}</option>)}</ProjectSelect></label><label className="subject-marks-report-filter"><span>Exam Type</span><ProjectSelect value={exam} onChange={e=>{setExam(e.target.value);setPage(1)}}><option value="">All exam types</option>{optionsFor('examType').map(v=><option key={v}>{v}</option>)}</ProjectSelect></label></FilterPanel></>}
   {loadError&&<p className="subject-marks-report-error" role="alert">{loadError}</p>}{loading&&<p className="subject-marks-report-loading" role="status">Loading subjects and examination records...</p>}{!loading&&!selected&&!subjects.length&&<EmptyState title="No subject marks found" description="Published result sheets will appear here once they are available."/>}{selected&&!loading&&!filtered.length&&<EmptyState title={active?'No matching marks':'No examination marks found'} description={active?'Adjust or clear the filters to see more records.':'There are no published marks records for this subject yet.'}/>}
   {selected&&!loading&&filtered.length>0&&<div className="subject-marks-report-table-wrap"><table className="erp-table subject-marks-report-table"><thead><tr>{columns.map(c=><th key={c.key}>{c.label}</th>)}</tr></thead><tbody>{visible.map(row=><tr key={row.id}>{columns.map(c=><td key={c.key}>{clean(row[c.key])||'—'}</td>)}</tr>)}</tbody></table></div>}{selected&&filtered.length>PAGE_SIZE&&<TablePagination currentPage={page} totalPages={Math.ceil(filtered.length/PAGE_SIZE)} onPageChange={setPage}/>}</article></section></DashboardLayout>

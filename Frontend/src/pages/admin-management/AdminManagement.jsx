@@ -1,4 +1,5 @@
 import DirectoryEmptyStateImports_default from '../../components/DirectoryEmptyState'
+import { facultyForCollege } from '../../utils/departmentFaculty.js'
 import { newestFirst as newestFirstImports_newestFirst, rememberCreated as newestFirstImports_rememberCreated } from '../../utils/newestFirst'
 import { showWarning as toastImports_showWarning, showSuccess as toastImports_showSuccess, showError as toastImports_showError } from '../../utils/toast'
 import useToastStateImports_default from '../../hooks/useToastState'
@@ -32,6 +33,7 @@ import EmptyStateImports_default from '../../components/EmptyState'
 import roomServiceImports_default, { ROOM_TYPES as roomServiceImports_ROOM_TYPES, BUILDING_BLOCKS as roomServiceImports_BUILDING_BLOCKS, FLOORS as roomServiceImports_FLOORS, ROOM_FACILITIES as roomServiceImports_ROOM_FACILITIES } from '../../services/roomService'
 import '../../styles/directory-search.css'
 import './AdminManagement.css'
+import { selectedCollegeId as readSelectedCollegeId, createCollegeScope } from '../../utils/collegeScope.js'
 
 // AcademicYearManagement screen and private helpers.
 const AcademicYearManagementScreen = (() => {
@@ -202,7 +204,9 @@ const mapYear = (x) => {
     startDate,
     endDate,
     status:
-      x.isActive || x.IsActive || Number(x.status ?? x.Status) === 1
+      x.isActive === true || x.IsActive === true || Number(x.isActive ?? x.IsActive) === 1 ||
+      x.isCurrent === true || x.IsCurrent === true ||
+      ['active', 'current', '1', 'true'].includes(String(x.status ?? x.Status ?? x.academicYearStatus ?? '').trim().toLowerCase())
         ? 'ACTIVE'
         : autoStatus(startDate, endDate),
     autoActivate: Boolean(x.autoActivate ?? x.AutoActivate ?? false),
@@ -210,6 +214,7 @@ const mapYear = (x) => {
 };
 
 function AcademicYear() {
+  const { selectedCollegeId, selectedCollege, loading: contextLoading } = AcademicContextImports_useAcademic();
   const [years, setYears] = useState([]);
   const [search, setSearch] = useState('');
   const [filter, setFilter] = useState('ALL');
@@ -222,6 +227,10 @@ function AcademicYear() {
   const [noticeTone, setNoticeTone] = useState('info');
   const [exportLoading, setExportLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [firstYearStart, setFirstYearStart] = useState(() => {
+    const today = new Date();
+    return `${today.getFullYear() - (today.getMonth() < 5 ? 1 : 0)}-06-01`;
+  });
   const [page, setPage] = useState(1);
 
   const close = () => {
@@ -237,10 +246,18 @@ function AcademicYear() {
   };
 
   const loadYears = async () => {
+    if (!selectedCollegeId) {
+      setYears([]);
+      setExportLoading(false);
+      return;
+    }
     setExportLoading(true);
     try {
       const data = await academicYearApi.getAll();
-      setYears(newestFirst('academic-years', data).map(mapYear));
+      if (String(selectedCollegeId) !== readSelectedCollegeId()) return;
+      const list = Array.isArray(data) ? data : data?.records || data?.items || [];
+      const scoped = createCollegeScope(selectedCollegeId)(list);
+      setYears(newestFirst('academic-years', scoped).map(mapYear));
       eventBus.emit(ERP_EVENTS.ACADEMIC_UPDATED);
     } catch (error) {
       setNotice(error.message || 'Unable to load academic years.', 'error');
@@ -250,8 +267,10 @@ function AcademicYear() {
   };
 
   useEffect(() => {
+    setYears([]);
+    close();
     loadYears();
-  }, []);
+  }, [selectedCollegeId]);
 
   const active = years.find((x) => x.status === 'ACTIVE' || isPresentYear(x));
   const next = years
@@ -261,7 +280,16 @@ function AcademicYear() {
     (latest, year) => (!latest || year.endDate > latest.endDate ? year : latest),
     null
   );
-  const generatedCycle = nextCycle(generationBase);
+  const generatedCycle = generationBase ? nextCycle(generationBase) : (() => {
+    if (!firstYearStart) return null;
+    const start = d(firstYearStart);
+    if (isNaN(start.getTime())) return null;
+    const end = new Date(start);
+    end.setFullYear(end.getFullYear() + 1);
+    end.setDate(end.getDate() - 1);
+    const localDate = (value) => `${value.getFullYear()}-${String(value.getMonth() + 1).padStart(2, '0')}-${String(value.getDate()).padStart(2, '0')}`;
+    return { name: `${start.getFullYear()} - ${end.getFullYear()}`, startDate: firstYearStart, endDate: localDate(end), autoActivate: false };
+  })();
 
   const shown = useMemo(
     () =>
@@ -279,6 +307,10 @@ function AcademicYear() {
   useEffect(() => setPage(1), [search, filter]);
 
   const openAdd = () => {
+    if (!selectedCollegeId || contextLoading) {
+      showWarning('Select a college before adding an academic year.');
+      return;
+    }
     setSelected(null);
     setForm(blank);
     setErrors({});
@@ -305,6 +337,7 @@ function AcademicYear() {
   function validate() {
     let e = {},
       others = years.filter((x) => x.id !== selected?.id);
+    if (!selectedCollegeId) e.form = 'Select a college before adding an academic year.';
     if (!form.name.trim()) e.name = 'Academic year title is required.';
     if (!form.startDate) e.startDate = 'Start date is required.';
     if (!form.endDate) e.endDate = 'End date is required.';
@@ -403,7 +436,7 @@ function AcademicYear() {
   }
 
   async function generate() {
-    if (!generatedCycle || saving) return;
+    if (!selectedCollegeId || contextLoading || !generatedCycle || saving) return;
     const item = generatedCycle;
     if (years.some((x) => x.name === item.name)) {
       setNotice(`${item.name} already exists, so no duplicate was created.`, 'info');
@@ -441,11 +474,8 @@ function AcademicYear() {
       <main className="ay">
         {modal !== 'view' && <PageHeader
           title="Academic Year"
-          subtitle="Manage academic cycles, lifecycle status, and rollover transitions."
+          subtitle="Add and manage academic years separately for each college."
         />}
-
-
-
         {modal === 'view' && selected ? (
           <div className="cm-profile-view ay-details-view" data-export-record>
             <div className="cm-profile-top-bar">
@@ -547,10 +577,10 @@ function AcademicYear() {
                     filename="academic-years"
                     loading={exportLoading || noticeTone === 'error'}
                   />
-                  <button type="button" className="cm-button secondary" onClick={() => setModal('generate')}>
-                    Generate Next Year
+                  <button type="button" className="cm-button secondary" disabled={!selectedCollegeId || contextLoading || exportLoading} onClick={() => setModal('generate')}>
+                    {generationBase ? 'Generate Next Year' : 'Generate Academic Year'}
                   </button>
-                  <button type="button" className="cm-button" onClick={openAdd}>
+                  <button type="button" className="cm-button" disabled={!selectedCollegeId || contextLoading} onClick={openAdd}>
                     <FiPlus /> Add Academic Year
                   </button>
                 </div>
@@ -688,6 +718,7 @@ function AcademicYear() {
               </button>
               <h2 id="form-title">{modal === 'add' ? 'Add Academic Year' : 'Edit Academic Year'}</h2>
               <form onSubmit={save} noValidate>
+                <p>College: <strong>{selectedCollege?.name || selectedCollege?.collegeName || 'Selected college'}</strong></p>
                 <label>
                   <span>Academic Year Title <b className="required-mark">*</b></span>
                   <input
@@ -771,16 +802,21 @@ function AcademicYear() {
               <button type="button" className="x" aria-label="Close dialog" onClick={close}>
                 <FiX aria-hidden="true" />
               </button>
-              <h2 id="gen-title">Generate Next Academic Year</h2>
+              <h2 id="gen-title">{generationBase ? 'Generate Next Academic Year' : 'Generate First Academic Year'}</h2>
+              <p>College: <strong>{selectedCollege?.name || selectedCollege?.collegeName || 'Selected college'}</strong></p>
+              {!generationBase && <label className="field">
+                <span>Academic year start date</span>
+                <input type="date" value={firstYearStart} onChange={(event) => setFirstYearStart(event.target.value)} required />
+              </label>}
               <p style={{ marginTop: '12px', color: 'var(--text-secondary)' }}>
-                This will automatically compute and prepare the next consecutive annual academic cycle following{' '}
-                <strong>{generationBase?.name || 'the latest available cycle'}</strong>: <strong>{generatedCycle?.name || 'the next cycle'}</strong>.
+                {generationBase ? `Generate the next annual cycle after ${generationBase.name}.` : 'Generate a new annual academic cycle for this college.'}
+                {generatedCycle && <> <strong>{generatedCycle.name}</strong> ({formatDate(generatedCycle.startDate)} – {formatDate(generatedCycle.endDate)}).</>}
               </p>
               <footer>
                 <button type="button" className="erp-btn erp-btn--secondary" onClick={close}>
                   Cancel
                 </button>
-                <button type="button" className="erp-btn erp-btn--primary" onClick={generate} disabled={saving}>
+                <button type="button" className="erp-btn erp-btn--primary" onClick={generate} disabled={saving || !generatedCycle || !selectedCollegeId || contextLoading}>
                   {saving ? 'Generating...' : 'Generate Cycle'}
                 </button>
               </footer>
@@ -852,11 +888,11 @@ const dateInputValue = (value) => value ? String(value).slice(0, 10) : ''
 const TYPES = ['Engineering College', 'University', 'Autonomous College', 'Affiliated College', 'Deemed University', 'Other']
 const ACCREDITATION_STATUSES = ['Accredited', 'Not Accredited', 'Under Review', 'Expired']
 const FORM_TABS = [
-  { id: 'college', label: 'College Information' },
-  { id: 'address', label: 'Address' },
-  { id: 'contact', label: 'Contact Information' },
-  { id: 'administration', label: 'Administration' },
-  { id: 'accreditation', label: 'Accreditation Details' },
+  { id: 'college', label: 'College Information', shortLabel: 'College' },
+  { id: 'address', label: 'Address', shortLabel: 'Address' },
+  { id: 'contact', label: 'Contact Information', shortLabel: 'Contact' },
+  { id: 'administration', label: 'Administration', shortLabel: 'Admin' },
+  { id: 'accreditation', label: 'Accreditation Details', shortLabel: 'Accreditation' },
 ]
 const TAB_FIELDS = {
   college: ['collegeName', 'collegeCode', 'collegeType', 'collegeTypeOther', 'universityName', 'startDate', 'endDate'],
@@ -1286,8 +1322,24 @@ function AddCollege() {
         collegeId = created.id ?? created.collegeId ?? response?.data?.id ?? response?.data?.collegeId
         if (!collegeId) throw new Error('College was created, but its identifier was not returned for logo upload.')
         setPendingLogoCollegeId(collegeId)
+        rememberCreated('colleges', collegeId)
+        academicServiceImports_default?.registerNewCollege?.({
+          ...college,
+          ...created,
+          id: collegeId,
+          collegeId,
+          name: values.collegeName.trim(),
+          collegeName: values.collegeName.trim(),
+          code: values.collegeCode,
+          collegeCode: values.collegeCode,
+          status: 'Active',
+        })
+        academicServiceImports_default?.clearCache?.()
+        eventBus.emit(ERP_EVENTS.ACADEMIC_UPDATED, { collegeId, college: created })
       } else if (editId) {
         await updateCollege(editId, college)
+        academicServiceImports_default?.clearCache?.()
+        eventBus.emit(ERP_EVENTS.ACADEMIC_UPDATED, { collegeId: editId })
       }
       if (values.startDate || values.endDate) {
         cacheCollegeDates(collegeId, { startDate: values.startDate, endDate: values.endDate }, [values.collegeCode, values.collegeName, college?.code, college?.name])
@@ -1361,13 +1413,15 @@ function AddCollege() {
                 type="button"
                 role="tab"
                 aria-selected={isActive}
+                aria-label={tab.label}
+                title={tab.label}
                 aria-disabled={index > highestUnlockedTab}
                 disabled={index > highestUnlockedTab}
                 className={isActive ? 'active' : isCompleted ? 'completed' : ''}
                 onClick={() => showTab(tab.id)}
               >
                 <span>{isCompleted ? <FiCheck /> : index + 1}</span>
-                {tab.label}
+                {tab.shortLabel || tab.label}
               </button>
             )
           })}
@@ -1476,10 +1530,10 @@ function AddCollege() {
               </div>
             )}
             <div className="preview-hero-details">
-              {values.collegeName.trim() && <h3 className="preview-course-title">{values.collegeName.trim()}</h3>}
+              <h3 className="preview-course-title">{values.collegeName.trim() || 'College name preview'}</h3>
               {([values.collegeCode, values.collegeType === 'Other' ? values.collegeTypeOther : values.collegeType, values.universityName].some((value) => String(value || '').trim())) && (
                 <p className="preview-course-meta">{[values.collegeCode, values.collegeType === 'Other' ? values.collegeTypeOther : values.collegeType, values.universityName].filter((value) => String(value || '').trim()).join(' - ')}</p>
-              )}
+              ) || <p className="preview-course-meta">College code, type, and university will appear here.</p>}
             </div>
           </div>
 
@@ -1544,7 +1598,7 @@ function AddCollege() {
               fields: sec.fields.filter(([, val]) => val !== null && val !== undefined && String(val).trim() !== ''),
             })).filter((sec) => sec.fields.length > 0)
 
-            if (sections.length === 0) return null
+            if (sections.length === 0) return <div className="preview-empty-hint">Start entering college details. Your live preview updates as you fill in the form.</div>
 
             return sections.map((sec) => (
               <div key={sec.title} className="preview-section-group">
@@ -2259,6 +2313,7 @@ function CollegeInstitutionManagement({ initialView = 'list' }) {
       const updated = mapCollege((response.data?.data ?? response.data) || { ...formValues, id: activeId })
       setColleges((current) => current.map((college) => (college.id === activeId ? updated : college)))
       backToList()
+      eventBus.emit(ERP_EVENTS.ACADEMIC_UPDATED, { collegeId: activeId })
       showSuccess('College updated successfully.'); await Promise.all([loadColleges(searchTerm), refreshCollegeSummary()])
     } catch (error) {
       setCollegeError(getApiErrorMessage(error, 'Unable to update this college. Please try again.'))
@@ -3401,10 +3456,13 @@ function DepartmentManagement() {
   useEffect(() => {
     let active = true;
     setFaculty([]);
+    setScreen('list');
+    setSelected(null);
+    setForm({ ...empty, collegeId: selectedCollegeId || '', collegeNumericId: selectedCollegeId || '' });
     facultyService.list({ collegeId: selectedCollegeId })
       .then((records) => {
         if (!active) return;
-        const normalized = records.map(normalizeFaculty);
+        const normalized = facultyForCollege(records.map(normalizeFaculty), selectedCollegeId, allDepartments);
         setFaculty(normalized);
         setItems((current) => current.map((item) => mapDepartment(item, normalized)));
         setAllDepartments((current) => current.map((item) => mapDepartment(item, normalized)));
@@ -3423,8 +3481,9 @@ function DepartmentManagement() {
       const response = await getDepartmentById(item.id);
       let currentFaculty = faculty;
       if (nextScreen === 'assign-hod' || !currentFaculty.length) {
-        const records = await facultyService.list();
-        currentFaculty = records.map(normalizeFaculty);
+        const collegeId = item.collegeNumericId ?? item.collegeId ?? selectedCollegeId;
+        const records = await facultyService.list({ collegeId });
+        currentFaculty = facultyForCollege(records.map(normalizeFaculty), collegeId, allDepartments);
         setFaculty(currentFaculty);
       }
       const detail = mapDepartment(recordFrom(response), currentFaculty);
@@ -3447,30 +3506,10 @@ function DepartmentManagement() {
     const targetCollegeId = String(form.collegeNumericId ?? form.collegeId ?? selectedCollegeId ?? selectedCollege?.collegeId ?? selectedCollege?.id ?? '').trim();
     if (!targetCollegeId) return [];
 
-    const collegeDepartments = scopedAllDepartments.filter((department) =>
-      String(department.collegeNumericId ?? department.collegeId ?? '') === targetCollegeId
-    );
-    const collegeDepartmentIds = new Set(collegeDepartments.map((department) =>
-      String(department.id ?? department.departmentId ?? '').trim()
-    ).filter(Boolean));
-    const collegeDepartmentNames = collegeDepartments.map((department) =>
-      String(department.name ?? department.departmentName ?? '').trim().toLowerCase()
-    ).filter(Boolean);
-
-    const activeFaculty = faculty.filter((member) => {
+    const activeFaculty = facultyForCollege(faculty, targetCollegeId, allDepartments).filter((member) => {
       const status = String(member.employmentStatus || member.status || '').trim().toLowerCase();
-      if (['inactive', 'resigned', 'retired', 'terminated'].includes(status)) return false;
-
-      const memberCollegeId = String(member.collegeNumericId ?? member.collegeId ?? member.college?.collegeId ?? member.college?.id ?? '').trim();
-      if (memberCollegeId) return memberCollegeId === targetCollegeId;
-
-      const memberDeptId = String(member.departmentId ?? member.department?.departmentId ?? member.department?.id ?? '').trim();
-      if (memberDeptId) return collegeDepartmentIds.has(memberDeptId);
-
-      const memberDeptName = String(member.departmentName ?? member.department?.departmentName ?? member.department?.name ?? member.department ?? '').trim().toLowerCase();
-      return Boolean(memberDeptName && collegeDepartmentNames.some((name) => name === memberDeptName || memberDeptName.includes(name) || name.includes(memberDeptName)));
+      return !['inactive', 'resigned', 'retired', 'terminated'].includes(status);
     });
-
     const targetDeptId = form.id !== undefined && form.id !== null ? String(form.id).trim() : '';
     const targetDeptName = String(form.name ?? '').trim().toLowerCase();
     const targetDeptCode = String(form.code ?? '').trim().toLowerCase();
@@ -3501,7 +3540,7 @@ function DepartmentManagement() {
         hodId: member.userId ?? member.employeeProfileId ?? member.facultyId ?? member.id,
       }))
       .filter((member) => member.hodId !== undefined && member.hodId !== null && member.hodId !== '');
-  }, [faculty, form.id, form.name, form.code, form.collegeNumericId, form.collegeId, selectedCollegeId, selectedCollege, scopedAllDepartments]);
+  }, [faculty, form.id, form.name, form.code, form.collegeNumericId, form.collegeId, selectedCollegeId, selectedCollege, allDepartments]);
 
   const toggleStatus = async (item) => {
     setError('');
@@ -3516,8 +3555,9 @@ function DepartmentManagement() {
         let currentFaculty = faculty;
         if (!currentFaculty || !currentFaculty.length) {
           try {
-            const facultyRecords = await facultyService.list();
-            currentFaculty = facultyRecords.map(normalizeFaculty);
+            const collegeId = item.collegeNumericId ?? item.collegeId ?? selectedCollegeId;
+            const facultyRecords = await facultyService.list({ collegeId });
+            currentFaculty = facultyForCollege(facultyRecords.map(normalizeFaculty), collegeId, allDepartments);
             setFaculty(currentFaculty);
           } catch {
             currentFaculty = [];
@@ -8470,8 +8510,6 @@ function RoomsManagement({ formMode = false, viewMode = false }) {
                         icon={FiGrid}
                         title="No rooms found"
                         description="Add a room or classroom to get started."
-                        action="Add Room / Classroom"
-                        onAction={handleOpenCreate}
                       />
                     </td>
                   </tr>

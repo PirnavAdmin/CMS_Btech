@@ -930,8 +930,6 @@ function Attendance() {
                   icon={FiCalendar}
                   title="No Attendance Sessions Found"
                   subtitle="Start by recording daily class attendance using the attendance workspace."
-                  actionLabel="Record Attendance"
-                  onAction={() => setTakeModalOpen(true)}
                 />
               ) : (
                 <>
