@@ -31,6 +31,7 @@
 .examination-setup__toolbar .examination-setup__filter-button{min-height:36px;padding:6px 12px;gap:8px;border-color:var(--es-line);background:#fff;color:var(--text-primary,#102A4C)}
 .examination-setup__toolbar .examination-setup__filter-button svg{width:15px;height:15px}
 .page-content .examination-setup__search input{width:100%;min-width:0;height:34px;min-height:0;margin:0;padding:0;border:0;border-radius:0;outline:none;box-shadow:none;background:transparent;font:inherit}
+#root .page-content .examination-setup .examination-setup__search>input,#root .page-content .examination-setup .examination-setup__search>input:focus,#root .page-content .examination-setup .examination-setup__search>input:focus-visible{width:100%;min-width:0;height:100%;min-height:0;margin:0;padding:0;border:0!important;border-radius:0;outline:0!important;box-shadow:none!important;background:transparent!important;font:inherit}
 .examination-setup__filters{display:flex;flex-wrap:wrap;align-items:flex-end;gap:14px;margin:16px 20px 0;padding:16px;border:1px solid var(--es-line);border-radius:10px;background:var(--es-soft)}
 .examination-setup__filters label{display:grid;min-width:180px;gap:6px;color:var(--text-secondary,#526A86);font-size:12px;font-weight:600}
 .examination-setup__filters select,.examination-setup__form input,.examination-setup__form textarea,.examination-setup__form select{width:100%;min-width:0;min-height:36px;height:36px;padding:8px 12px;border:1px solid var(--es-line);border-radius:7px;background:var(--surface);color:var(--text-primary,#102A4C);font:inherit}

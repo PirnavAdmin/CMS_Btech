@@ -1,12 +1,57 @@
 import { ProjectSelect as SearchableSelectImports_ProjectSelect } from '../../../components/SearchableSelect'
-import { useEffect as reactImports_useEffect, useState as reactImports_useState, useMemo as reactImports_useMemo, useRef as reactImports_useRef } from 'react'
+import { useEffect as reactImports_useEffect, useState as reactImports_useState, useMemo as reactImports_useMemo, useRef as reactImports_useRef, useCallback as reactImports_useCallback } from 'react'
 import { Link as react_router_domImports_Link, useLocation as react_router_domImports_useLocation, useNavigate as react_router_domImports_useNavigate } from 'react-router-dom'
 import DashboardLayoutImports_default from '../../../layouts/DashboardLayout'
 import ModuleAvailabilityImports_default from '../../../components/ModuleAvailability'
 import { FiEdit2 as fiImports_FiEdit2, FiFilter as fiImports_FiFilter, FiPlus as fiImports_FiPlus, FiPower as fiImports_FiPower, FiSearch as fiImports_FiSearch, FiTrash2 as fiImports_FiTrash2, FiChevronDown as fiImports_FiChevronDown, FiChevronUp as fiImports_FiChevronUp, FiX as fiImports_FiX } from 'react-icons/fi'
 import ExportMenuImports_default from '../../../components/ExportMenu'
+import { fetchExams as collegeApiImports_fetchExams, hasExamSetup as collegeApiImports_hasExamSetup, fetchScheduleRows as collegeApiImports_fetchScheduleRows, deleteScheduleApi as collegeApiImports_deleteScheduleApi } from '../../../auth/collegeApi'
 import { useAcademic as useAcademicImports_useAcademic } from '../../../context/AcademicContext'
 import './ExaminationSetup.css'
+
+const fetchExams = collegeApiImports_fetchExams
+const hasExamSetup = collegeApiImports_hasExamSetup
+const fetchScheduleRows = collegeApiImports_fetchScheduleRows
+
+// Keep guessed API field names centralized for easy backend mapping changes.
+function normalize(schedule, index = 0) {
+  const scheduleId = schedule.scheduleId ?? schedule.id ?? index
+  return { ...schedule, id: scheduleId, scheduleId,
+    examId: schedule.examId ?? schedule.examinationId,
+    examination: schedule.examName ?? schedule.examinationName ?? schedule.examination ?? '',
+    examSession: schedule.examSession ?? schedule.sessionType ?? schedule.regularSupply ?? 'Regular',
+    subject: schedule.subjectName ?? schedule.subject ?? '',
+    date: schedule.examDate ?? schedule.scheduleDate ?? schedule.date ?? '',
+    startTime: schedule.startTime ?? '', endTime: schedule.endTime ?? '',
+    room: schedule.roomName ?? schedule.hallName ?? schedule.room ?? schedule.venue ?? '',
+    status: schedule.statusName ?? schedule.status ?? 'Scheduled',
+  }
+}
+
+function ExaminationSummary({ types = [], examCount, scheduleCount }) {
+  const [apiCounts, setApiCounts] = reactImports_useState({ totalCount: null, scheduleRows: null, loading: true, error: '' })
+  reactImports_useEffect(() => {
+    let active = true
+    Promise.all([
+      fetchExams({ Page: 1, PageSize: 1 }),
+      hasExamSetup(),
+      scheduleCount === undefined ? fetchScheduleRows() : Promise.resolve(null),
+    ]).then(([examResult, setupExists, rows]) => {
+      if (active) setApiCounts({ totalCount: setupExists ? examResult.totalCount : 0, scheduleRows: rows, loading: false, error: '' })
+    }).catch(error => {
+      if (active) setApiCounts(current => ({ ...current, loading: false, error: error?.message || 'Unable to load examination totals.' }))
+    })
+    return () => { active = false }
+  }, [scheduleCount === undefined])
+
+  const examinationTotal = examCount ?? (apiCounts.loading ? '…' : apiCounts.error ? '—' : apiCounts.totalCount)
+  const scheduleTotal = scheduleCount ?? (apiCounts.loading ? '…' : apiCounts.error ? '—' : apiCounts.scheduleRows?.length ?? 0)
+  return <div className="examination-setup__summary" aria-label="Examination setup totals">
+    <div title={apiCounts.error}><strong>{examinationTotal}</strong><small>Examinations</small></div>
+    <div><strong>{types.length}</strong><small>Exam Types</small></div>
+    <div title={apiCounts.error}><strong>{scheduleTotal}</strong><small>Schedules</small></div>
+  </div>
+}
 
 // CreateExamination screen and private helpers.
 const CreateExaminationScreen = (() => {
@@ -29,6 +74,7 @@ function CreateExamination() {
   const activeYearName = currentAcademicYear?.name || currentAcademicYear?.academicYearName || ''
   const location = useLocation()
   const navigate = useNavigate()
+  const summaryData = load()
   const existing = location.state?.exam
   const [form, setForm] = useState(() => ({ ...blank, academicYear: activeYearName, ...(existing || {}) }))
   const [errors, setErrors] = useState({})
@@ -49,7 +95,7 @@ function CreateExamination() {
   }
 
   return <DashboardLayout><main className="examination-setup">
-    <header className="examination-setup__header"><div><h1>Examination Setup</h1><p>Create and manage examination cycles.</p></div></header>
+    <header className="examination-setup__header"><div><h1>Examination Setup</h1><p>Create and manage examination cycles.</p></div><ExaminationSummary types={summaryData.types || []} /></header>
     <section className="examination-setup__card"><header className="examination-setup__card-header"><div><p>CREATE EXAMINATION</p><h2>Enter examination details and academic period.</h2></div></header>
       <nav className="examination-setup__tabs" aria-label="Examination setup sections">{tabs.filter(([, path]) => path !== '/examination-setup/create-examination').map(([label, path]) => <Link key={path} to={path} className={path === location.pathname ? 'active' : ''}>{label}</Link>)}</nav>
       <div className="examination-setup__form-wrap"><form className="examination-setup__form" onSubmit={submit} noValidate>
@@ -116,13 +162,13 @@ const seeds = {
 const readData = () => { try { const value = JSON.parse(localStorage.getItem(storageKey)); return value ? { ...seeds, ...value } : seeds } catch { return seeds } }
 const statusClass = status => String(status || '').toLowerCase().replace(/\s+/g, '-')
 const dateText = value => value ? new Date(`${value}T00:00:00`).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : '—'
-const initialForm = { name: '', academicYear: '', examType: '', term: '', startDate: '', endDate: '', description: '', status: 'Draft' }
+const initialForm = { name: '', academicYear: '', examType: '', examSession: 'Regular', term: '', startDate: '', endDate: '', description: '', status: 'Draft' }
 
 function LocalExaminationSetup() {
   const { academicYears = [], currentAcademicYear } = useAcademic()
   const activeYearName = currentAcademicYear?.name || currentAcademicYear?.academicYearName || ''
   const yearOptions = [...new Set([...academicYears.map(year => year.name || year.academicYearName), ...readData().examinations.map(row => row.academicYear)].filter(Boolean))]
-  const blankExam = { ...initialForm, academicYear: activeYearName }
+  const blankExam = useMemo(() => ({ ...initialForm, academicYear: activeYearName }), [activeYearName])
   const { pathname, state: routeState } = useLocation()
   const navigate = useNavigate()
   const activePath = tabs.some(([, path]) => path === pathname) ? pathname : tabs[0][1]
@@ -143,7 +189,7 @@ function LocalExaminationSetup() {
     if (activePath === tabs[1][1] && routeState?.exam) { setEditing(routeState.exam.id); setForm({ ...blankExam, ...routeState.exam }); setErrors({}) }
     else if (activePath === tabs[1][1]) { setEditing(null); setForm(blankExam); setErrors({}); setMessage('') }
     if ([tabs[2][1], tabs[3][1], tabs[4][1]].includes(activePath)) { setEditing(null); setForm({}); setErrors({}); setMessage('') }
-  }, [activePath, routeState, activeYearName])
+  }, [activePath, routeState, blankExam])
 
   const change = (key, value) => { setForm(current => ({ ...current, [key]: value })); setErrors(current => ({ ...current, [key]: '' })); setMessage('') }
   const save = (event, collection, required, kind) => {
@@ -167,8 +213,10 @@ function LocalExaminationSetup() {
   const remove = (collection, id) => setData(current => ({ ...current, [collection]: current[collection].filter(row => row.id !== id) }))
   const toggleStatus = (collection, id) => setData(current => ({ ...current, [collection]: current[collection].map(row => row.id === id ? { ...row, status: row.status === 'Inactive' ? 'Active' : 'Inactive' } : row) }))
   const types = data.types.filter(row => row.status === 'Active')
+
   const years = yearOptions
-  const filteredExams = useMemo(() => data.examinations.filter(row => `${row.name} ${row.academicYear} ${row.examType} ${row.term}`.toLowerCase().includes(query.toLowerCase()) && (!filters.status || row.status === filters.status) && (!filters.year || row.academicYear === filters.year)), [data.examinations, query, filters])
+  const filteredExams = useMemo(() => data.examinations.filter(row => `${row.name} ${row.academicYear} ${row.examType} ${row.examSession || 'Regular'} ${row.term}`.toLowerCase().includes(query.toLowerCase()) && (!filters.status || row.status === filters.status) && (!filters.year || row.academicYear === filters.year)), [data.examinations, query, filters])
+
   const examinationColumns = [{ label: 'Examination Name', value: row => row.name }, { label: 'Academic Year', value: row => row.academicYear }, { label: 'Exam Type', value: row => row.examType }, { label: 'Semester / Term', value: row => row.term }, { label: 'Start Date', value: row => row.startDate }, { label: 'End Date', value: row => row.endDate }, { label: 'Status', value: row => row.status }]
   const filteredTypes = data.types.filter(row => `${row.name} ${row.code} ${row.description}`.toLowerCase().includes(query.toLowerCase()))
   const filteredSchedules = data.schedules.filter(row => `${row.examination} ${row.subject} ${row.room}`.toLowerCase().includes(query.toLowerCase()) && (!filters.status || row.status === filters.status) && (!filters.examination || row.examination === filters.examination))
@@ -182,7 +230,7 @@ function LocalExaminationSetup() {
   const actions = (row, collection) => <div className="examination-setup__actions"><button type="button" title="Edit" aria-label="Edit" onClick={() => { setForm({ ...row }); setEditing(row.id); setShowEntryForm(true); setMessage('') }}><FiEdit2 /></button><button type="button" title={row.status === 'Inactive' ? 'Activate' : 'Deactivate'} aria-label={row.status === 'Inactive' ? 'Activate' : 'Deactivate'} onClick={() => toggleStatus(collection, row.id)}><FiPower /></button><button type="button" title="Delete" aria-label="Delete" onClick={() => remove(collection, row.id)}><FiTrash2 /></button></div>
 
   return <DashboardLayout><main className="examination-setup">
-    <header className="examination-setup__header"><div><h1>Examination Setup</h1><p>Configure examinations, types, schedules and rules.</p></div><div className="examination-setup__summary">{[['Examinations', data.examinations.length], ['Exam Types', data.types.length], ['Schedules', data.schedules.length]].map(([label, value]) => <div key={label}><strong>{value}</strong><small>{label}</small></div>)}</div></header>
+    <header className="examination-setup__header"><div><h1>Examination Setup</h1><p>Configure and manage examination cycles.</p></div><ExaminationSummary types={data.types} /></header>
     <section className="examination-setup__card">
       <header className="examination-setup__card-header"><div><p>{activeTab.toUpperCase()}</p><h2>{activeTab === 'Examination List' ? 'Search and manage examination cycles.' : activeTab === 'Create Examination' ? 'Enter examination details and academic period.' : `Manage ${activeTab.toLowerCase()} records.`}</h2></div>{activePath !== tabs[1][1] && <div className="examination-setup__header-actions">{activePath === tabs[0][1] && <><ExportMenu rows={filteredExams} columns={examinationColumns} title="Examination List" filename="examinations" scope="All matching examinations" allowEmpty /><button type="button" className="examination-setup__filter-button" aria-expanded={showFilters} onClick={() => setShowFilters(value => !value)}><FiFilter /> Filters</button><button type="button" className="examination-setup__primary" onClick={() => { setForm(blankExam); setEditing(null); setErrors({}); setShowEntryForm(true); setMessage('') }}><FiPlus /> Create Examination</button></>}{activePath !== tabs[0][1] && <><button type="button" className="examination-setup__filter-button" aria-expanded={showFilters} onClick={() => setShowFilters(value => !value)}><FiFilter /> Filters</button><button type="button" className="examination-setup__primary" onClick={() => { setForm({}); setEditing(null); setShowEntryForm(true); setMessage('') }}><FiPlus /> Add {activeTab === 'Exam Type' ? 'Exam Type' : activeTab === 'Exam Schedule' ? 'Schedule' : 'Rule'}</button></>}</div>}</header>
       <nav className="examination-setup__tabs" aria-label="Examination setup sections">{tabs.filter(([, path]) => path !== tabs[1][1]).map(([label, path]) => <Link key={path} to={path} className={activePath === path ? 'active' : ''} aria-current={activePath === path ? 'page' : undefined}>{label}</Link>)}</nav>
@@ -206,7 +254,7 @@ function LocalExaminationSetup() {
           {activePath === tabs[4][1] && <><label>Exam Type<ProjectSelect value={filters.examType} onChange={event => setFilters(current => ({ ...current, examType: event.target.value }))}><option value="">All Exam Types</option>{data.types.map(row => <option key={row.id}>{row.name}</option>)}</ProjectSelect></label><label>Status<ProjectSelect value={filters.status} onChange={event => setFilters(current => ({ ...current, status: event.target.value }))}><option value="">All Statuses</option><option>Active</option><option>Inactive</option></ProjectSelect></label></>}
           <button type="button" onClick={() => { setQuery(''); setFilters({ status: '', year: '', examination: '', examType: '' }) }}>Clear Filters</button>
         </div>}
-        {activePath === tabs[0][1] && <><p className="examination-setup__count">Showing {filteredExams.length} examination{filteredExams.length === 1 ? '' : 's'}</p><div className="examination-setup__table-wrap"><table><thead><tr><th>Examination Name</th><th>Academic Year</th><th>Exam Type</th><th>Start Date</th><th>End Date</th><th>Status</th><th>Actions</th></tr></thead><tbody>{filteredExams.length ? filteredExams.map(row => <tr key={row.id}><td><strong>{row.name}</strong><small className="examination-setup__subtext">{row.term}</small></td><td>{row.academicYear}</td><td>{row.examType}</td><td>{dateText(row.startDate)}</td><td>{dateText(row.endDate)}</td><td><span className={`examination-setup__status ${statusClass(row.status)}`}>{row.status}</span></td><td><div className="examination-setup__actions"><button title="Edit examination" aria-label="Edit examination" onClick={() => editExam(row)}><FiEdit2 /></button><button title="Delete examination" aria-label="Delete examination" onClick={() => remove('examinations', row.id)}><FiTrash2 /></button></div></td></tr>) : <tr><td colSpan="7" className="examination-setup__empty">No examinations match your search and filters.</td></tr>}</tbody></table></div></>}
+        {activePath === tabs[0][1] && <><p className="examination-setup__count">Showing {filteredExams.length} examination{filteredExams.length === 1 ? '' : 's'}</p><div className="examination-setup__table-wrap"><table><thead><tr><th>Examination Name</th><th>Academic Year</th><th>Regular / Supply</th><th>Exam Type</th><th>Start Date</th><th>End Date</th><th>Status</th><th>Actions</th></tr></thead><tbody>{filteredExams.length ? filteredExams.map(row => <tr key={row.id}><td><strong>{row.name}</strong><small className="examination-setup__subtext">{row.term}</small></td><td>{row.academicYear}</td><td>{row.examSession || 'Regular'}</td><td>{row.examType}</td><td>{dateText(row.startDate)}</td><td>{dateText(row.endDate)}</td><td><span className={`examination-setup__status ${statusClass(row.status)}`}>{row.status}</span></td><td><div className="examination-setup__actions"><button title="Edit examination" aria-label="Edit examination" onClick={() => editExam(row)}><FiEdit2 /></button><button title="Delete examination" aria-label="Delete examination" onClick={() => remove('examinations', row.id)}><FiTrash2 /></button></div></td></tr>) : <tr><td colSpan="8" className="examination-setup__empty">No examinations match your search and filters.</td></tr>}</tbody></table></div></>}
         {activePath === tabs[2][1] && <DataTable headers={['Exam Type', 'Code', 'Description', 'Status', 'Actions']} rows={filteredTypes.filter(row => !filters.status || row.status === filters.status)} columns={['name', 'code', 'description']} actions={actions} collection="types" />}
         {activePath === tabs[3][1] && <DataTable headers={['Examination', 'Subject', 'Date', 'Start Time', 'End Time', 'Room / Hall', 'Status', 'Actions']} rows={filteredSchedules} columns={['examination', 'subject', 'date', 'startTime', 'endTime', 'room', 'status']} actions={actions} collection="schedules" />}
         {activePath === tabs[4][1] && <DataTable headers={['Rule Name', 'Description', 'Exam Type', 'Passing Marks', 'Min. Attendance', 'Attempts', 'Status', 'Actions']} rows={filteredRules} columns={['name', 'description', 'examType', 'passingMarks', 'attendance', 'attempts', 'status']} actions={actions} collection="rules" />}
@@ -214,6 +262,7 @@ function LocalExaminationSetup() {
           <label><span>Examination Name <b>*</b></span><input value={form.name || ''} aria-invalid={Boolean(errors.name)} onChange={event => change('name', event.target.value)} />{errors.name && <small className="examination-setup__field-error">{errors.name}</small>}</label>
           <label><span>Active Academic Year</span><input value={form.academicYear || activeYearName || 'No active academic year configured'} readOnly aria-label="Active academic year" />{!activeYearName && <small className="examination-setup__field-error">Configure an active academic year before creating examinations.</small>}</label>
           <label><span>Exam Type <b>*</b></span><ProjectSelect value={form.examType || ''} onChange={event => change('examType', event.target.value)}><option value="">Select exam type</option>{types.map(row => <option key={row.id}>{row.name}</option>)}</ProjectSelect>{errors.examType && <small className="examination-setup__field-error">{errors.examType}</small>}</label>
+          <label><span>Exam Category <b>*</b></span><ProjectSelect value={form.examSession || 'Regular'} onChange={event => change('examSession', event.target.value)}><option value="Regular">Regular Exam</option><option value="Supply">Supply Exam</option></ProjectSelect></label>
           <label><span>Semester / Term <b>*</b></span><ProjectSelect value={form.term || ''} onChange={event => change('term', event.target.value)}><option value="">Select semester / term</option>{['Semester 1', 'Semester 2', 'Semester 3', 'Semester 4', 'Semester 5', 'Semester 6', 'Semester 7', 'Semester 8', 'Annual'].map(term => <option key={term}>{term}</option>)}</ProjectSelect>{errors.term && <small className="examination-setup__field-error">{errors.term}</small>}</label>
           <label><span>Start Date <b>*</b></span><input type="date" value={form.startDate || ''} aria-invalid={Boolean(errors.startDate)} onChange={event => change('startDate', event.target.value)} />{errors.startDate && <small className="examination-setup__field-error">{errors.startDate}</small>}</label>
           <label><span>End Date <b>*</b></span><input type="date" value={form.endDate || ''} aria-invalid={Boolean(errors.endDate)} onChange={event => change('endDate', event.target.value)} />{errors.endDate && <small className="examination-setup__field-error">{errors.endDate}</small>}</label>
@@ -261,7 +310,7 @@ const FiSearch = fiImports_FiSearch
 const FiTrash2 = fiImports_FiTrash2
 const DashboardLayout = DashboardLayoutImports_default
 
-const tabs = [['Examination List', '/examination-setup/examination-list'], ['Create Examination', '/examination-setup/create-examination'], ['Exam Type', '/examination-setup/exam-type'], ['Exam Schedule', '/examination-setup/exam-schedule'], ['Exam Rules', '/examination-setup/exam-rules']]
+const tabs = [['Examination List', '/examination-setup/examination-list'], ['Create Examination', '/examination-setup/create-examination']]
 const key = 'cms-examination-setup-demo-v1'
 const seeds = [{ id: 'rule-1', name: 'Standard Written Exam', description: 'Standard rules for written examinations.', examType: 'End Semester', passingMarks: '40', attendance: '75', attempts: '3', status: 'Active' }, { id: 'rule-2', name: 'Practical Assessment Rule', description: 'Practical assessment and viva requirements.', examType: 'Practical', passingMarks: '50', attendance: '80', attempts: '2', status: 'Active' }]
 const load = () => { try { return JSON.parse(localStorage.getItem(key)) || {} } catch { return {} } }
@@ -284,7 +333,7 @@ function ExamRules() {
   const save = event => { event.preventDefault(); const missing = ['name', 'description', 'examType', 'passingMarks', 'attendance', 'attempts', 'status'].some(name => !String(form[name] || '').trim()); if (missing) { setError('Complete all required rule fields.'); return } if (Number(form.passingMarks) < 0 || Number(form.attendance) < 0 || Number(form.attendance) > 100 || Number(form.attempts) < 1) { setError('Enter valid marks, attendance (0–100), and at least one attempt.'); return } const row = { ...form, id: editing || `rule-${Date.now()}` }; persist(editing ? rows.map(item => item.id === editing ? row : item) : [row, ...rows]); setForm(blank); setShowForm(false); setEditing(null); setError('') }
   const edit = row => { setForm({ ...row }); setEditing(row.id); setShowForm(true); setError('') }
 
-  return <DashboardLayout><main className="examination-setup"><header className="examination-setup__header"><div><h1>Examination Setup</h1><p>Define the assessment requirements and eligibility rules.</p></div></header><section className="examination-setup__card">
+  return <DashboardLayout><main className="examination-setup"><header className="examination-setup__header"><div><h1>Examination Setup</h1><p>Define the assessment requirements and eligibility rules.</p></div><ExaminationSummary types={types} /></header><section className="examination-setup__card">
     <header className="examination-setup__card-header"><div><p>EXAM RULES</p><h2>Search and manage examination rules.</h2></div><div className="examination-setup__header-actions"><button type="button" className="examination-setup__filter-button" aria-expanded={showFilters} onClick={() => setShowFilters(value => !value)}><FiFilter /> Filters</button><button type="button" className="examination-setup__primary" onClick={() => { setForm(blank); setEditing(null); setShowForm(value => !value); setError('') }}><FiPlus /> Add Rule</button></div></header>
     <nav className="examination-setup__tabs" aria-label="Examination setup sections">{tabs.filter(([, path]) => path !== '/examination-setup/create-examination').map(([label, path]) => <Link key={path} to={path} className={path === location.pathname ? 'active' : ''}>{label}</Link>)}</nav>
     <div className="examination-setup__toolbar"><label className="examination-setup__search"><FiSearch /><input aria-label="Search exam rules" placeholder="Search rule or exam type..." value={query} onChange={event => setQuery(event.target.value)} /></label></div>
@@ -304,6 +353,10 @@ const useEffect = reactImports_useEffect
 const useMemo = reactImports_useMemo
 const useRef = reactImports_useRef
 const useState = reactImports_useState
+const fetchExams = collegeApiImports_fetchExams
+const hasExamSetup = collegeApiImports_hasExamSetup
+const fetchScheduleRows = collegeApiImports_fetchScheduleRows
+const deleteScheduleApi = collegeApiImports_deleteScheduleApi
 const Link = react_router_domImports_Link
 const useLocation = react_router_domImports_useLocation
 const FiChevronDown = fiImports_FiChevronDown
@@ -317,16 +370,20 @@ const FiTrash2 = fiImports_FiTrash2
 const FiX = fiImports_FiX
 const DashboardLayout = DashboardLayoutImports_default
 
-const tabs = [['Examination List', '/examination-setup/examination-list'], ['Create Examination', '/examination-setup/create-examination'], ['Exam Type', '/examination-setup/exam-type'], ['Exam Schedule', '/examination-setup/exam-schedule'], ['Exam Rules', '/examination-setup/exam-rules']]
+const tabs = [['Examination List', '/examination-setup/examination-list'], ['Create Examination', '/examination-setup/create-examination']]
 const key = 'cms-examination-setup-demo-v1'
-const seeds = [{ id: 'sch-1', examination: 'Mid Semester Examination', subject: 'Data Structures', date: '2026-10-19', startTime: '09:30', endTime: '12:30', room: 'Exam Hall A', status: 'Scheduled' }, { id: 'sch-2', examination: 'Mid Semester Examination', subject: 'Database Systems', date: '2026-10-21', startTime: '13:30', endTime: '16:30', room: 'Block B · 204', status: 'Scheduled' }]
 const load = () => { try { return JSON.parse(localStorage.getItem(key)) || {} } catch { return {} } }
 const dateText = value => value ? new Date(`${value}T00:00:00`).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : '—'
 
 function ExamSchedule() {
   const location = useLocation()
-  const [rows, setRows] = useState(() => load().schedules || seeds)
-  const [exams] = useState(() => load().examinations || [{ id: 1, name: 'Mid Semester Examination' }, { id: 2, name: 'Practical Assessment' }, { id: 3, name: 'End Semester Examination' }])
+  const [rows, setRows] = useState([])
+  const [exams, setExams] = useState([])
+  const [examCount, setExamCount] = useState(null)
+  const [setupExists, setSetupExists] = useState(null)
+  const [loading, setLoading] = useState(true)
+  const [loadError, setLoadError] = useState('')
+  const [types] = useState(() => load().types || [{ id: 'type-mid', name: 'Mid Semester' }, { id: 'type-end', name: 'End Semester' }, { id: 'type-practical', name: 'Practical' }])
   const [query, setQuery] = useState('')
   const [statusFilter, setStatusFilter] = useState('')
   const [examFilter, setExamFilter] = useState('')
@@ -335,10 +392,36 @@ function ExamSchedule() {
   const [editing, setEditing] = useState(null)
   const [error, setError] = useState('')
   const formRef = useRef(null)
-  const blank = { examination: '', subject: '', date: '', startTime: '', endTime: '', room: '', status: 'Scheduled' }
+  const blank = { examination: '', subject: '', date: '', startTime: '', endTime: '', room: '', examSession: 'Regular', status: 'Scheduled' }
   const [form, setForm] = useState(blank)
+  const reload = reactImports_useCallback(async () => {
+    setLoading(true)
+    setLoadError('')
+    try {
+      const [examResult, exists, schedules] = await Promise.all([
+        fetchExams({ Page: 1, PageSize: 1000 }),
+        hasExamSetup(),
+        fetchScheduleRows(),
+      ])
+      setExams(Array.isArray(examResult?.items) ? examResult.items : [])
+      setExamCount(exists ? (examResult?.totalCount ?? 0) : 0)
+      setSetupExists(exists)
+      setRows((Array.isArray(schedules) ? schedules : []).map(normalize))
+    } catch (requestError) {
+      setLoadError(requestError?.message || 'Unable to load examination schedules.')
+    } finally {
+      setLoading(false)
+    }
+  }, [])
+  useEffect(() => { void reload() }, [reload])
   const visible = useMemo(() => rows.filter(row => `${row.examination} ${row.subject} ${row.room}`.toLowerCase().includes(query.toLowerCase()) && (!statusFilter || row.status === statusFilter) && (!examFilter || row.examination === examFilter)), [rows, query, statusFilter, examFilter])
   const persist = next => { setRows(next); try { localStorage.setItem(key, JSON.stringify({ ...load(), schedules: next })) } catch { /* Keep the edited rows for this session. */ } }
+  const removeSchedule = async row => {
+    if (row.examId == null || row.scheduleId == null) { setLoadError('This schedule is missing its examination or schedule ID, so it could not be deleted.'); return }
+    setLoadError('')
+    try { await deleteScheduleApi(row.examId, row.scheduleId); await reload() }
+    catch (requestError) { setLoadError(requestError?.message || 'Unable to delete this schedule.') }
+  }
   const save = event => { event.preventDefault(); const required = ['examination', 'subject', 'date', 'startTime', 'endTime', 'room']; const missing = required.find(name => !String(form[name] || '').trim()); if (missing) { setError('Complete all required schedule fields.'); return } if (form.endTime <= form.startTime) { setError('End time must be later than start time.'); return } const row = { ...form, id: editing || `sch-${Date.now()}` }; persist(editing ? rows.map(item => item.id === editing ? row : item) : [row, ...rows]); setForm(blank); setEditing(null); setShowForm(false); setError('') }
   const edit = row => { setForm({ ...row }); setEditing(row.id); setShowForm(true); setError('') }
   const openAddForm = () => { setForm(blank); setEditing(null); setError(''); setShowForm(true) }
@@ -351,13 +434,14 @@ function ExamSchedule() {
     return () => window.removeEventListener('keydown', onKeyDown)
   }, [showForm])
 
-  return <DashboardLayout><main className="examination-setup"><header className="examination-setup__header"><div><h1>Examination Setup</h1><p>Plan examination dates, sessions and venues.</p></div></header><section className="examination-setup__card">
+  return <DashboardLayout><main className="examination-setup"><header className="examination-setup__header"><div><h1>Examination Setup</h1><p>Plan examination dates, sessions and venues.</p></div><ExaminationSummary types={types} examCount={examCount ?? undefined} scheduleCount={loading ? undefined : rows.length} /></header><section className="examination-setup__card">
     <header className="examination-setup__card-header"><div><p>EXAM SCHEDULE</p><h2>Search and manage examination schedules.</h2></div><div className="examination-setup__header-actions"><button type="button" className="examination-setup__primary" onClick={openAddForm}><FiPlus /> Add Schedule</button></div></header>
     <nav className="examination-setup__tabs" aria-label="Examination setup sections">{tabs.filter(([, path]) => path !== '/examination-setup/create-examination').map(([label, path]) => <Link key={path} to={path} className={path === location.pathname ? 'active' : ''}>{label}</Link>)}</nav>
     <div className="examination-setup__toolbar"><label className="examination-setup__search"><FiSearch /><input aria-label="Search schedules" placeholder="Search exam, subject or room..." value={query} onChange={event => setQuery(event.target.value)} /></label><button type="button" className="examination-setup__filter-button" aria-expanded={showFilters} onClick={() => setShowFilters(value => !value)}><FiFilter /> Filters {showFilters ? <FiChevronUp /> : <FiChevronDown />}</button></div>
-    {showFilters && <div className="examination-setup__filters"><label>Examination<ProjectSelect value={examFilter} onChange={event => setExamFilter(event.target.value)}><option value="">All Examinations</option>{exams.map(row => <option key={row.id}>{row.name}</option>)}</ProjectSelect></label><label>Status<ProjectSelect value={statusFilter} onChange={event => setStatusFilter(event.target.value)}><option value="">All Statuses</option><option>Scheduled</option><option>Completed</option><option>Cancelled</option></ProjectSelect></label><button type="button" onClick={() => { setQuery(''); setExamFilter(''); setStatusFilter('') }}>Clear Filters</button></div>}
-    <p className="examination-setup__count">Showing {visible.length} schedule{visible.length === 1 ? '' : 's'}</p><div className="examination-setup__table-wrap"><table><thead><tr><th>Examination</th><th>Subject</th><th>Date</th><th>Start Time</th><th>End Time</th><th>Room / Hall</th><th>Status</th><th>Actions</th></tr></thead><tbody>{visible.length ? visible.map(row => <tr key={row.id}><td>{row.examination}</td><td><strong>{row.subject}</strong></td><td>{dateText(row.date)}</td><td>{row.startTime}</td><td>{row.endTime}</td><td>{row.room}</td><td><span className={`examination-setup__status ${row.status.toLowerCase()}`}>{row.status}</span></td><td><div className="examination-setup__actions"><button type="button" aria-label="Edit schedule" title="Edit schedule" onClick={() => edit(row)}><FiEdit2 /></button><button type="button" aria-label="Toggle schedule status" title="Toggle status" onClick={() => persist(rows.map(item => item.id === row.id ? { ...item, status: item.status === 'Cancelled' ? 'Scheduled' : 'Cancelled' } : item))}><FiPower /></button><button type="button" aria-label="Delete schedule" title="Delete schedule" onClick={() => persist(rows.filter(item => item.id !== row.id))}><FiTrash2 /></button></div></td></tr>) : <tr><td colSpan="8" className="examination-setup__empty">No schedules match your search and filters.</td></tr>}</tbody></table></div>
-    {showForm && <div className="examination-setup__modal-backdrop" onMouseDown={event => { if (event.target === event.currentTarget) closeForm() }}><section className="examination-setup__modal" role="dialog" aria-modal="true" aria-labelledby="examination-setup-schedule-modal-title" tabIndex={-1} ref={formRef}><header><div><h2 id="examination-setup-schedule-modal-title">{editing ? 'Edit Schedule' : 'Add Schedule'}</h2><p>Enter examination session and venue details.</p></div><button type="button" aria-label="Close" onClick={closeForm}><FiX /></button></header><form className="examination-setup__form" onSubmit={save} noValidate><label><span>Examination <b>*</b></span><ProjectSelect value={form.examination} onChange={event => setForm(current => ({ ...current, examination: event.target.value }))}><option value="">Select examination</option>{exams.map(row => <option key={row.id}>{row.name}</option>)}</ProjectSelect></label><label><span>Subject <b>*</b></span><input value={form.subject} onChange={event => setForm(current => ({ ...current, subject: event.target.value }))} /></label><label><span>Date <b>*</b></span><input type="date" value={form.date} onChange={event => setForm(current => ({ ...current, date: event.target.value }))} /></label><label><span>Start Time <b>*</b></span><input type="time" value={form.startTime} onChange={event => setForm(current => ({ ...current, startTime: event.target.value }))} /></label><label><span>End Time <b>*</b></span><input type="time" value={form.endTime} onChange={event => setForm(current => ({ ...current, endTime: event.target.value }))} /></label><label><span>Room / Hall <b>*</b></span><input value={form.room} onChange={event => setForm(current => ({ ...current, room: event.target.value }))} /></label><label><span>Status</span><ProjectSelect value={form.status} onChange={event => setForm(current => ({ ...current, status: event.target.value }))}><option>Scheduled</option><option>Completed</option><option>Cancelled</option></ProjectSelect></label>{error && <p className="examination-setup__error wide" role="alert">{error}</p>}<footer><button type="button" className="examination-setup__secondary" onClick={closeForm}>Cancel</button><button type="submit" className="examination-setup__primary">{editing ? 'Save Changes' : 'Add Schedule'}</button></footer></form></section></div>}
+    {showFilters && <div className="examination-setup__filters"><label>Examination<ProjectSelect value={examFilter} onChange={event => setExamFilter(event.target.value)}><option value="">All Examinations</option>{exams.map(row => { const examId = row.examId ?? row.id; const examName = row.examName ?? row.name; return <option key={examId} value={examName}>{examName}</option> })}</ProjectSelect></label><label>Status<ProjectSelect value={statusFilter} onChange={event => setStatusFilter(event.target.value)}><option value="">All Statuses</option><option>Scheduled</option><option>Completed</option><option>Cancelled</option></ProjectSelect></label><button type="button" onClick={() => { setQuery(''); setExamFilter(''); setStatusFilter('') }}>Clear Filters</button></div>}
+    {loadError && <p className="examination-setup__error" role="alert">{loadError} <button type="button" onClick={() => void reload()}>Retry</button></p>}
+    <p className="examination-setup__count">{loading ? 'Loading schedules…' : `Showing ${visible.length} schedule${visible.length === 1 ? '' : 's'}`}</p><div className="examination-setup__table-wrap"><table><thead><tr><th>Examination</th><th>Regular / Supply</th><th>Subject</th><th>Date</th><th>Start Time</th><th>End Time</th><th>Room / Hall</th><th>Status</th><th>Actions</th></tr></thead><tbody>{loading ? <tr><td colSpan="9" className="examination-setup__empty">Loading schedules…</td></tr> : visible.length ? visible.map(row => <tr key={row.id}><td>{row.examination}</td><td>{row.examSession || 'Regular'}</td><td><strong>{row.subject}</strong></td><td>{dateText(row.date)}</td><td>{row.startTime}</td><td>{row.endTime}</td><td>{row.room}</td><td><span className={`examination-setup__status ${String(row.status).toLowerCase()}`}>{row.status}</span></td><td><div className="examination-setup__actions"><button type="button" aria-label="Edit schedule" title="Edit schedule" onClick={() => edit(row)}><FiEdit2 /></button><button type="button" aria-label="Toggle schedule status" title="Toggle status" onClick={() => persist(rows.map(item => item.id === row.id ? { ...item, status: item.status === 'Cancelled' ? 'Scheduled' : 'Cancelled' } : item))}><FiPower /></button><button type="button" aria-label="Delete schedule" title="Delete schedule" onClick={() => void removeSchedule(row)}><FiTrash2 /></button></div></td></tr>) : <tr><td colSpan="9" className="examination-setup__empty">{setupExists === false ? 'No examination setup found.' : 'No schedules match your search and filters.'}</td></tr>}</tbody></table></div>
+    {showForm && <div className="examination-setup__modal-backdrop" onMouseDown={event => { if (event.target === event.currentTarget) closeForm() }}><section className="examination-setup__modal" role="dialog" aria-modal="true" aria-labelledby="examination-setup-schedule-modal-title" tabIndex={-1} ref={formRef}><header><div><h2 id="examination-setup-schedule-modal-title">{editing ? 'Edit Schedule' : 'Add Schedule'}</h2><p>Enter examination session and venue details.</p></div><button type="button" aria-label="Close" onClick={closeForm}><FiX /></button></header><form className="examination-setup__form" onSubmit={save} noValidate><label><span>Examination <b>*</b></span><ProjectSelect value={form.examination} onChange={event => setForm(current => ({ ...current, examination: event.target.value }))}><option value="">Select examination</option>{exams.map(row => { const examId = row.examId ?? row.id; const examName = row.examName ?? row.name; return <option key={examId}>{examName}</option> })}</ProjectSelect></label><label><span>Regular / Supply <b>*</b></span><ProjectSelect value={form.examSession || 'Regular'} onChange={event => setForm(current => ({ ...current, examSession: event.target.value }))}><option>Regular</option><option>Supply</option></ProjectSelect></label><label><span>Subject <b>*</b></span><input value={form.subject} onChange={event => setForm(current => ({ ...current, subject: event.target.value }))} /></label><label><span>Date <b>*</b></span><input type="date" value={form.date} onChange={event => setForm(current => ({ ...current, date: event.target.value }))} /></label><label><span>Start Time <b>*</b></span><input type="time" value={form.startTime} onChange={event => setForm(current => ({ ...current, startTime: event.target.value }))} /></label><label><span>End Time <b>*</b></span><input type="time" value={form.endTime} onChange={event => setForm(current => ({ ...current, endTime: event.target.value }))} /></label><label><span>Room / Hall <b>*</b></span><input value={form.room} onChange={event => setForm(current => ({ ...current, room: event.target.value }))} /></label><label><span>Status</span><ProjectSelect value={form.status} onChange={event => setForm(current => ({ ...current, status: event.target.value }))}><option>Scheduled</option><option>Completed</option><option>Cancelled</option></ProjectSelect></label>{error && <p className="examination-setup__error wide" role="alert">{error}</p>}<footer><button type="button" className="examination-setup__secondary" onClick={closeForm}>Cancel</button><button type="submit" className="examination-setup__primary">{editing ? 'Save Changes' : 'Add Schedule'}</button></footer></form></section></div>}
   </section></main></DashboardLayout>
 }
 
@@ -400,7 +484,7 @@ function ExamType() {
   const save = event => { event.preventDefault(); if (!form.name.trim() || !form.code.trim() || !form.status) { setError('Complete the exam type name, type code, and status.'); return } const row = { ...form, name: form.name.trim(), code: form.code.trim().toUpperCase(), id: editing || `type-${Date.now()}` }; persist(editing ? rows.map(item => item.id === editing ? row : item) : [row, ...rows]); setShowForm(false); setEditing(null); setForm({ name: '', code: '', description: '', status: '' }); setError('') }
   const toggle = id => persist(rows.map(row => row.id === id ? { ...row, status: row.status === 'Active' ? 'Inactive' : 'Active' } : row))
 
-  return <DashboardLayout><main className="examination-setup"><header className="examination-setup__header"><div><h1>Examination Setup</h1><p>Configure examination types used by examinations and schedules.</p></div></header><section className="examination-setup__card">
+  return <DashboardLayout><main className="examination-setup"><header className="examination-setup__header"><div><h1>Examination Setup</h1><p>Configure examination types used by examinations and schedules.</p></div><ExaminationSummary types={rows} /></header><section className="examination-setup__card">
     <header className="examination-setup__card-header"><div><p>EXAM TYPE</p><h2>Search and manage examination types.</h2></div><div className="examination-setup__header-actions"><button type="button" className="erp-btn erp-btn--secondary examination-setup__filter-button" aria-expanded={showFilters} onClick={() => setShowFilters(value => !value)}><FiFilter /> Filters</button><button type="button" className="erp-btn erp-btn--primary examination-setup__primary" onClick={() => { setForm({ name: '', code: '', description: '', status: '' }); setEditing(null); setShowForm(true); setError('') }}><FiPlus /> Add Exam Type</button></div></header>
     <nav className="examination-setup__tabs" aria-label="Examination setup sections">{tabs.filter(([, path]) => path !== '/examination-setup/create-examination').map(([label, path]) => <Link key={path} to={path} className={path === location.pathname ? 'active' : ''}>{label}</Link>)}</nav>
     <div className="examination-setup__toolbar"><label className="examination-setup__search"><FiSearch /><input aria-label="Search exam types" placeholder="Search exam type or code..." value={query} onChange={event => setQuery(event.target.value)} /></label></div>
