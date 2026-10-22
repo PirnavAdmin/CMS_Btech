@@ -14,7 +14,9 @@ import {
   sectionApi,
 } from '../api/apiEndpoints'
 import eventBus, { ERP_EVENTS } from './eventBus'
+import { getAccessToken } from '../auth/auth.js'
 import { selectedCollegeId } from '../utils/collegeScope.js'
+import { newestFirst } from '../utils/newestFirst'
 
 /**
  * Academic Service
@@ -60,6 +62,7 @@ export const filterActiveOnly = (list) => {
 class AcademicService {
   constructor() {
     this._cache = new Map()
+    this._registeredColleges = new Map()
     this._ttl = 30000 // 30 seconds
 
     // Invalidate cache on academic updates
@@ -68,11 +71,30 @@ class AcademicService {
     })
   }
 
+  registerNewCollege(college) {
+    if (!college) return
+    const unwrapped = unwrapCollegeRecord(college)
+    const id = String(unwrapped.collegeId ?? unwrapped.id ?? college.id ?? college.collegeId ?? '')
+    if (id) {
+      this._registeredColleges.set(id, {
+        ...unwrapped,
+        id,
+        collegeId: id,
+        name: unwrapped.collegeName ?? unwrapped.name ?? '',
+        collegeName: unwrapped.collegeName ?? unwrapped.name ?? '',
+        code: unwrapped.collegeCode ?? unwrapped.code ?? '',
+        status: unwrapped.status ?? unwrapped.isActive ?? 'Active',
+      })
+    }
+    this.clearCache()
+  }
+
   clearCache() {
     this._cache.clear()
   }
 
   async _fetchCached(key, fetcher) {
+    key = `${getAccessToken()}:${selectedCollegeId()}:${key}`
     const cached = this._cache.get(key)
     const now = Date.now()
     if (cached && now - cached.timestamp < this._ttl) {
@@ -122,7 +144,28 @@ class AcademicService {
           }
         }).filter(c => Boolean(c.name))
 
-        return mapped
+        // Ensure any newly created colleges are included immediately
+        for (const [id, created] of this._registeredColleges.entries()) {
+          const match = mapped.find(c => String(c.id ?? c.collegeId) === String(id))
+          if (match) {
+            this._registeredColleges.delete(id)
+          } else {
+            const unwrapped = unwrapCollegeRecord(created)
+            const name = unwrapped.collegeName ?? unwrapped.name ?? ''
+            if (name) {
+              mapped.push({
+                ...unwrapped,
+                id,
+                collegeId: id,
+                name,
+                code: unwrapped.collegeCode ?? unwrapped.code ?? '',
+                status: unwrapped.status ?? unwrapped.isActive ?? 'Active',
+              })
+            }
+          }
+        }
+
+        return newestFirst('colleges', mapped)
       } catch (err) {
         console.warn('Fallback loading colleges:', err)
         return Object.assign([], { loadError: true })
@@ -139,20 +182,27 @@ class AcademicService {
       try {
         const list = await academicYearApi.getAll()
         const mapped = (Array.isArray(list) ? list : []).map(y => {
-          const status = String(y.status ?? '').trim().toLowerCase()
-          const start = y.startDate ? new Date(y.startDate) : null
-          const end = y.endDate ? new Date(y.endDate) : null
+          const rawStatus = y.status ?? y.Status ?? y.academicYearStatus ?? y.AcademicYearStatus ?? ''
+          const status = String(rawStatus).trim().toLowerCase()
+          const rawActive = y.isActive ?? y.IsActive ?? y.is_active
+          const activeFlag = rawActive === true || Number(rawActive) === 1 || ['true', 'active', 'current'].includes(String(rawActive ?? '').trim().toLowerCase())
+          const rawCurrent = y.isCurrent ?? y.IsCurrent
+          const currentFlag = rawCurrent === true || Number(rawCurrent) === 1 || String(rawCurrent ?? '').trim().toLowerCase() === 'true'
+          const startDate = y.startDate ?? y.StartDate ?? y.start_date ?? y.fromDate ?? y.FromDate
+          const endDate = y.endDate ?? y.EndDate ?? y.end_date ?? y.toDate ?? y.ToDate
+          const start = startDate ? new Date(startDate) : null
+          const end = endDate ? new Date(endDate) : null
           const today = new Date()
           const dateCurrent = start && end && !Number.isNaN(start.getTime()) && !Number.isNaN(end.getTime()) && today >= start && today <= end
-          const isCurrent = Boolean(y.isCurrent || y.isActive === true || Number(y.isActive) === 1 || status === 'active' || status === 'current' || Number(y.status) === 1 || dateCurrent)
+          const isCurrent = Boolean(currentFlag || activeFlag || status === 'active' || status === 'current' || Number(rawStatus) === 1 || dateCurrent)
           return {
             ...y,
-            id: String(y.academicYearId ?? y.id),
-            academicYearId: String(y.academicYearId ?? y.id),
-            name: y.academicYearName ?? y.name ?? '',
-            academicYearName: y.academicYearName ?? y.name ?? '',
-            startDate: y.startDate,
-            endDate: y.endDate,
+            id: String(y.academicYearId ?? y.AcademicYearId ?? y.id ?? y.Id),
+            academicYearId: String(y.academicYearId ?? y.AcademicYearId ?? y.id ?? y.Id),
+            name: y.academicYearName ?? y.AcademicYearName ?? y.name ?? y.Name ?? '',
+            academicYearName: y.academicYearName ?? y.AcademicYearName ?? y.name ?? y.Name ?? '',
+            startDate,
+            endDate,
             status: isCurrent ? 'Active' : (y.status ?? 'Archived'),
             isCurrent,
           }

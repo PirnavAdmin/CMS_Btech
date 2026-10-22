@@ -1,7 +1,9 @@
+import { getUserCollegeId, getUserRole } from '../auth/auth.js'
+
 const id = value => value == null ? '' : String(value).trim()
 const present = value => id(value) !== '' && id(value) !== '0'
 const containers = ['academic', 'academicDetails', 'academicInformation', 'admission', 'employment', 'profile', 'personalInformation']
-const collections = { department: 'departments', course: 'courses', branch: 'branches', semester: 'semesters', section: 'sections', subject: 'subjects', student: 'students', faculty: 'faculty', group: 'groups' }
+const collections = { academicYear: 'years', department: 'departments', course: 'courses', branch: 'branches', semester: 'semesters', section: 'sections', subject: 'subjects', student: 'students', faculty: 'faculty', group: 'groups' }
 const aliases = { faculty: ['employeeProfileId', 'facultyProfileId', 'employeeId'], student: ['studentProfileId', 'admissionId'], group: ['electiveGroupId'] }
 export const collegeField = (row, name) => {
   if (!row || typeof row !== 'object') return undefined
@@ -35,7 +37,7 @@ export const createCollegeScope = (collegeId, hierarchy = {}) => {
     const direct = row.collegeNumericId || collegeField(row, 'college')
     if (present(direct)) return id(direct)
     const next = new Set(seen).add(row), owners = new Set()
-    for (const type of ['section', 'semester', 'branch', 'course', 'department', 'subject', 'student', 'faculty', 'group']) {
+    for (const type of ['section', 'semester', 'branch', 'course', 'department', 'subject', 'student', 'faculty', 'group', 'academicYear']) {
       const parent = indexes[type].get(id(collegeField(row, type)))
       const resolved = parent && parent !== row ? owner(parent, next) : undefined
       if (resolved) owners.add(resolved)
@@ -49,9 +51,13 @@ export const createCollegeScope = (collegeId, hierarchy = {}) => {
   return rows => (Array.isArray(rows) ? rows : []).filter(row => target && owner(row) === target)
 }
 export const selectedCollegeId = () => {
+  const assigned = (getUserRole() !== 'admin' && getUserRole() !== null) ? getUserCollegeId() : ''
+  if (assigned) return assigned
   try {
     const context = JSON.parse(localStorage.getItem('pirnav_academic_context') || 'null')
-    return context ? id(context.collegeId) : id(localStorage.getItem('pirnav-selected-college-id') || localStorage.getItem('selected_college_id'))
-  } catch { return '' }
+    const stored = context ? id(context.collegeId) : id(localStorage.getItem('pirnav-selected-college-id') || localStorage.getItem('selected_college_id'))
+    if (stored) return stored
+  } catch {}
+  return getUserCollegeId()
 }
 export const collegeStorageKey = (key, collegeId = selectedCollegeId()) => key + ':college:' + encodeURIComponent(id(collegeId) || 'unselected')

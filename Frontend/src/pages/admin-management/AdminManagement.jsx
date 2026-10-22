@@ -33,7 +33,7 @@ import EmptyStateImports_default from '../../components/EmptyState'
 import roomServiceImports_default, { ROOM_TYPES as roomServiceImports_ROOM_TYPES, BUILDING_BLOCKS as roomServiceImports_BUILDING_BLOCKS, FLOORS as roomServiceImports_FLOORS, ROOM_FACILITIES as roomServiceImports_ROOM_FACILITIES } from '../../services/roomService'
 import '../../styles/directory-search.css'
 import './AdminManagement.css'
-import { selectedCollegeId as readSelectedCollegeId } from '../../utils/collegeScope.js'
+import { selectedCollegeId as readSelectedCollegeId, createCollegeScope } from '../../utils/collegeScope.js'
 
 // AcademicYearManagement screen and private helpers.
 const AcademicYearManagementScreen = (() => {
@@ -204,7 +204,9 @@ const mapYear = (x) => {
     startDate,
     endDate,
     status:
-      x.isActive || x.IsActive || Number(x.status ?? x.Status) === 1
+      x.isActive === true || x.IsActive === true || Number(x.isActive ?? x.IsActive) === 1 ||
+      x.isCurrent === true || x.IsCurrent === true ||
+      ['active', 'current', '1', 'true'].includes(String(x.status ?? x.Status ?? x.academicYearStatus ?? '').trim().toLowerCase())
         ? 'ACTIVE'
         : autoStatus(startDate, endDate),
     autoActivate: Boolean(x.autoActivate ?? x.AutoActivate ?? false),
@@ -253,7 +255,9 @@ function AcademicYear() {
     try {
       const data = await academicYearApi.getAll();
       if (String(selectedCollegeId) !== readSelectedCollegeId()) return;
-      setYears(newestFirst('academic-years', data).map(mapYear));
+      const list = Array.isArray(data) ? data : data?.records || data?.items || [];
+      const scoped = createCollegeScope(selectedCollegeId)(list);
+      setYears(newestFirst('academic-years', scoped).map(mapYear));
       eventBus.emit(ERP_EVENTS.ACADEMIC_UPDATED);
     } catch (error) {
       setNotice(error.message || 'Unable to load academic years.', 'error');
@@ -884,11 +888,11 @@ const dateInputValue = (value) => value ? String(value).slice(0, 10) : ''
 const TYPES = ['Engineering College', 'University', 'Autonomous College', 'Affiliated College', 'Deemed University', 'Other']
 const ACCREDITATION_STATUSES = ['Accredited', 'Not Accredited', 'Under Review', 'Expired']
 const FORM_TABS = [
-  { id: 'college', label: 'College Information' },
-  { id: 'address', label: 'Address' },
-  { id: 'contact', label: 'Contact Information' },
-  { id: 'administration', label: 'Administration' },
-  { id: 'accreditation', label: 'Accreditation Details' },
+  { id: 'college', label: 'College Information', shortLabel: 'College' },
+  { id: 'address', label: 'Address', shortLabel: 'Address' },
+  { id: 'contact', label: 'Contact Information', shortLabel: 'Contact' },
+  { id: 'administration', label: 'Administration', shortLabel: 'Admin' },
+  { id: 'accreditation', label: 'Accreditation Details', shortLabel: 'Accreditation' },
 ]
 const TAB_FIELDS = {
   college: ['collegeName', 'collegeCode', 'collegeType', 'collegeTypeOther', 'universityName', 'startDate', 'endDate'],
@@ -1318,8 +1322,24 @@ function AddCollege() {
         collegeId = created.id ?? created.collegeId ?? response?.data?.id ?? response?.data?.collegeId
         if (!collegeId) throw new Error('College was created, but its identifier was not returned for logo upload.')
         setPendingLogoCollegeId(collegeId)
+        rememberCreated('colleges', collegeId)
+        academicServiceImports_default?.registerNewCollege?.({
+          ...college,
+          ...created,
+          id: collegeId,
+          collegeId,
+          name: values.collegeName.trim(),
+          collegeName: values.collegeName.trim(),
+          code: values.collegeCode,
+          collegeCode: values.collegeCode,
+          status: 'Active',
+        })
+        academicServiceImports_default?.clearCache?.()
+        eventBus.emit(ERP_EVENTS.ACADEMIC_UPDATED, { collegeId, college: created })
       } else if (editId) {
         await updateCollege(editId, college)
+        academicServiceImports_default?.clearCache?.()
+        eventBus.emit(ERP_EVENTS.ACADEMIC_UPDATED, { collegeId: editId })
       }
       if (values.startDate || values.endDate) {
         cacheCollegeDates(collegeId, { startDate: values.startDate, endDate: values.endDate }, [values.collegeCode, values.collegeName, college?.code, college?.name])
@@ -1393,13 +1413,15 @@ function AddCollege() {
                 type="button"
                 role="tab"
                 aria-selected={isActive}
+                aria-label={tab.label}
+                title={tab.label}
                 aria-disabled={index > highestUnlockedTab}
                 disabled={index > highestUnlockedTab}
                 className={isActive ? 'active' : isCompleted ? 'completed' : ''}
                 onClick={() => showTab(tab.id)}
               >
                 <span>{isCompleted ? <FiCheck /> : index + 1}</span>
-                {tab.label}
+                {tab.shortLabel || tab.label}
               </button>
             )
           })}
@@ -1508,10 +1530,10 @@ function AddCollege() {
               </div>
             )}
             <div className="preview-hero-details">
-              {values.collegeName.trim() && <h3 className="preview-course-title">{values.collegeName.trim()}</h3>}
+              <h3 className="preview-course-title">{values.collegeName.trim() || 'College name preview'}</h3>
               {([values.collegeCode, values.collegeType === 'Other' ? values.collegeTypeOther : values.collegeType, values.universityName].some((value) => String(value || '').trim())) && (
                 <p className="preview-course-meta">{[values.collegeCode, values.collegeType === 'Other' ? values.collegeTypeOther : values.collegeType, values.universityName].filter((value) => String(value || '').trim()).join(' - ')}</p>
-              )}
+              ) || <p className="preview-course-meta">College code, type, and university will appear here.</p>}
             </div>
           </div>
 
@@ -1576,7 +1598,7 @@ function AddCollege() {
               fields: sec.fields.filter(([, val]) => val !== null && val !== undefined && String(val).trim() !== ''),
             })).filter((sec) => sec.fields.length > 0)
 
-            if (sections.length === 0) return null
+            if (sections.length === 0) return <div className="preview-empty-hint">Start entering college details. Your live preview updates as you fill in the form.</div>
 
             return sections.map((sec) => (
               <div key={sec.title} className="preview-section-group">
@@ -2291,6 +2313,7 @@ function CollegeInstitutionManagement({ initialView = 'list' }) {
       const updated = mapCollege((response.data?.data ?? response.data) || { ...formValues, id: activeId })
       setColleges((current) => current.map((college) => (college.id === activeId ? updated : college)))
       backToList()
+      eventBus.emit(ERP_EVENTS.ACADEMIC_UPDATED, { collegeId: activeId })
       showSuccess('College updated successfully.'); await Promise.all([loadColleges(searchTerm), refreshCollegeSummary()])
     } catch (error) {
       setCollegeError(getApiErrorMessage(error, 'Unable to update this college. Please try again.'))

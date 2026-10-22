@@ -196,7 +196,8 @@ public sealed class TimetableRepository : ITimetableRepository
             p_academic_year_id = ay, p_course_id = course, p_branch_id = branch, p_semester_id = sem,
             p_section_id = section, p_status = status, p_college_id = college, p_is_super_admin = superAdmin ? 1 : 0
         }));
-        return rows.AsList();
+        // SuperAdmin may select one college while retaining cross-college permissions.
+        return college.HasValue ? rows.Where(row => row.CollegeId == college.Value).ToList() : rows.AsList();
     }
 
     public async Task<TimetableDetailDto?> GetTimetableAsync(long id, long? college, bool superAdmin)

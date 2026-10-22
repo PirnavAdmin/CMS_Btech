@@ -279,3 +279,197 @@
   background: #29324b !important;
   color: #ede9fe !important;
 }
+
+/* The app shell has a light-theme gradient image that survives background-color overrides. */
+:root[data-theme="dark"] body,
+:root[data-theme="dark"] #root {
+  min-height: 100vh;
+  background: var(--app-bg, #0b0f17) !important;
+  color: var(--text-primary, #f8fafc);
+}
+:root[data-theme="dark"] #root .dashboard-layout {
+  min-height: 100vh;
+  background: var(--app-bg, #0b0f17) !important;
+  color: var(--text-primary, #f8fafc);
+}
+
+/* Electives uses several fixed light surfaces and foregrounds outside shared card styles. */
+:root[data-theme="dark"] #root .page-content .em-screen {
+  color: var(--text-primary) !important;
+}
+:root[data-theme="dark"] #root .page-content :is(
+  .em-kpi-card, .sm-card, .em-student-card, .em-form-body,
+  .em-readonly-student, .em-report-summary span, .em-pagination button,
+  .em-context, .em-report-heading
+) {
+  background: var(--surface) !important;
+  border-color: var(--border) !important;
+  color: var(--text-primary) !important;
+}
+:root[data-theme="dark"] #root .page-content :is(
+  .em-kpi-content small, .em-student-identity p, .em-student-card dt,
+  .em-readonly-student span, .em-pagination, .em-pagination-count,
+  .em-report-summary span, .em-report-summary small, .em-report-summary em,
+  .em-report-heading p, .em-cell-subtitle, .em-tabs .em-tab-btn
+) {
+  color: var(--text-secondary) !important;
+}
+:root[data-theme="dark"] #root .page-content :is(
+  .em-student-card dd, .em-report-summary strong, .em-report-heading h2,
+  .em-report-eyebrow, .em-context strong, .em-kpi-content strong,
+  .em-table td, .em-table td strong
+) {
+  color: var(--text-primary) !important;
+}
+:root[data-theme="dark"] #root .page-content :is(
+  .em-screen input, .em-screen select, .em-screen textarea,
+  .em-search input, .em-filters select
+) {
+  border-color: var(--border-strong) !important;
+  background: var(--surface-soft) !important;
+  color: var(--text-primary) !important;
+  color-scheme: dark;
+}
+:root[data-theme="dark"] #root .page-content .em-table :is(th, td) {
+  border-color: var(--border) !important;
+}
+:root[data-theme="dark"] #root .page-content .em-table tbody tr,
+:root[data-theme="dark"] #root .page-content .em-table tbody tr:nth-child(even) {
+  background: var(--surface) !important;
+  color: var(--text-secondary) !important;
+}
+:root[data-theme="dark"] #root .page-content .em-table tbody tr:hover {
+  background: var(--surface-raised) !important;
+}
+:root[data-theme="dark"] #root .page-content .em-report-table .em-table th {
+  background: #1d3552 !important;
+  color: #e5efff !important;
+}
+:root[data-theme="dark"] #root .page-content .em-screen .sm-btn--danger {
+  border-color: #71343c !important;
+  background: #482630 !important;
+  color: #fda4af !important;
+}
+
+/* Marks workflow cards used a pale selected link and assessment badge that
+   become unreadable against the dark workspace. */
+:root[data-theme="dark"] #root .page-content .marks-module-nav {
+  border-color: var(--border-strong) !important;
+  background: var(--surface) !important;
+}
+:root[data-theme="dark"] #root .page-content .marks-module-nav__link {
+  color: var(--text-secondary) !important;
+}
+:root[data-theme="dark"] #root .page-content .marks-module-nav__link:hover,
+:root[data-theme="dark"] #root .page-content .marks-module-nav__link.active {
+  border-color: #3c5f88 !important;
+  background: #1d3552 !important;
+  color: #f8fafc !important;
+}
+:root[data-theme="dark"] #root .page-content .marks-module-nav__link.active .marks-module-nav__copy small {
+  color: #c5d8ed !important;
+}
+:root[data-theme="dark"] #root .page-content .marks-module-nav__icon,
+:root[data-theme="dark"] #root .page-content .marks-module-nav__link.active .marks-module-nav__icon {
+  border-color: #3c5f88 !important;
+  background: #263f5e !important;
+  color: #bfdbfe !important;
+}
+:root[data-theme="dark"] #root .page-content .marks-entry-search {
+  border-color: var(--border-strong) !important;
+  background: var(--surface-soft) !important;
+  color: var(--text-secondary) !important;
+}
+:root[data-theme="dark"] #root .page-content .marks-entry-search input {
+  background: transparent !important;
+  color: var(--text-primary) !important;
+  -webkit-text-fill-color: var(--text-primary);
+}
+:root[data-theme="dark"] #root .page-content .marks-management-marks-entry .marks-entry-records-table tbody td,
+:root[data-theme="dark"] #root .page-content .marks-management-marks-entry .marks-entry-records-table tbody tr:nth-child(even) td {
+  background: var(--surface) !important;
+  color: var(--text-secondary) !important;
+}
+:root[data-theme="dark"] #root .page-content .marks-entry-records-table :is(
+  .marks-entry-student-copy > strong, .marks-entry-academic-copy > strong,
+  .marks-entry-subject-copy > strong, .marks-entry-faculty-cell > strong,
+  .marks-entry-score-copy > strong
+) {
+  color: var(--text-primary) !important;
+}
+:root[data-theme="dark"] #root .page-content .marks-entry-records-table :is(
+  .marks-entry-student-copy > small, .marks-entry-academic-copy > span,
+  .marks-entry-exam-copy > small, .marks-entry-score-copy > span,
+  .marks-entry-score-copy > small, .marks-entry-academic-lines > span
+) {
+  color: var(--text-muted) !important;
+}
+:root[data-theme="dark"] #root .page-content :is(.marks-entry-exam-pill, .marks-entry-assessment-pill) {
+  border: 1px solid #3c4b63 !important;
+  background: #202c3d !important;
+  color: #dbeafe !important;
+}
+:root[data-theme="dark"] #root .page-content .marks-entry-assessment-pill {
+  border-color: #57427b !important;
+  background: #33264a !important;
+  color: #e9d5ff !important;
+}
+:root[data-theme="dark"] #root .page-content .marks-entry-result-copy > strong {
+  background: #202c3d !important;
+  color: #dbeafe !important;
+}
+
+/* Official results score badges need dark surfaces with distinct foregrounds. */
+:root[data-theme="dark"] #root .page-content .res-card {
+  border-color: var(--border) !important;
+  background: var(--surface) !important;
+  color: var(--text-primary) !important;
+}
+:root[data-theme="dark"] #root .page-content .res-search-input,
+:root[data-theme="dark"] #root .page-content .res-filter-label select,
+:root[data-theme="dark"] #root .page-content .res-rows-selector select {
+  border-color: var(--border-strong) !important;
+  background: var(--surface-soft) !important;
+  color: var(--text-primary) !important;
+  color-scheme: dark;
+}
+:root[data-theme="dark"] #root .page-content .res-search-input input {
+  background: transparent !important;
+  color: var(--text-primary) !important;
+  -webkit-text-fill-color: var(--text-primary);
+}
+:root[data-theme="dark"] #root .page-content .res-search-input input::placeholder {
+  color: var(--text-muted) !important;
+  opacity: 1;
+}
+:root[data-theme="dark"] #root .page-content .res-table td {
+  border-color: var(--border) !important;
+  background: var(--surface) !important;
+  color: var(--text-secondary) !important;
+}
+:root[data-theme="dark"] #root .page-content .res-table tr:hover td {
+  background: var(--surface-raised) !important;
+}
+:root[data-theme="dark"] #root .page-content .res-roll-badge {
+  border-color: #475569 !important;
+  background: #263449 !important;
+  color: #e2e8f0 !important;
+}
+:root[data-theme="dark"] #root .page-content .res-gpa-badge {
+  border-color: #385a82 !important;
+  background: #1d3552 !important;
+  color: #bfdbfe !important;
+}
+:root[data-theme="dark"] #root .page-content .res-status-badge--pass {
+  border-color: #27644b !important;
+  background: #173d32 !important;
+  color: #86efac !important;
+}
+:root[data-theme="dark"] #root .page-content .res-status-badge--fail {
+  border-color: #71343c !important;
+  background: #482630 !important;
+  color: #fda4af !important;
+}
+:root[data-theme="dark"] #root .page-content .res-table td :is(strong, .res-division-text) {
+  color: var(--text-primary) !important;
+}

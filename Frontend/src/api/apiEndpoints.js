@@ -246,6 +246,22 @@ export const API_ENDPOINTS = Object.freeze({
     create: endpoint('/api/v1/results'),
     transcript: (studentId) => endpoint(`/api/v1/results/students/${studentId}/transcript`),
   }),
+  marks: Object.freeze({
+    list: endpoint('/api/v1/marks'),
+    detail: id => endpoint(`/api/v1/marks/${id}`),
+    bulkPreview: endpoint('/api/v1/marks/bulk/preview'),
+    bulkUpload: endpoint('/api/v1/marks/bulk/upload'),
+    bulkFilePreview: endpoint('/api/v1/marks/bulk/file-preview'),
+    summaryReport: endpoint('/api/v1/marks/reports/summary'),
+    studentReport: endpoint('/api/v1/marks/reports/student'),
+    subjectReport: endpoint('/api/v1/marks/reports/subjects'),
+    pendingApprovals: endpoint('/api/v1/marks/approvals/pending'),
+    updateApproval: id => endpoint(`/api/v1/marks/approvals/${id}`),
+    workflow: action => endpoint(`/api/v1/marks/workflow/${action}`),
+    approvalHistory: id => endpoint(`/api/v1/marks/${id}/approval-history`),
+    download: endpoint('/api/v1/marks/download'),
+    export: endpoint('/api/v1/marks/export'),
+  }),
   promotions: Object.freeze({
     dashboard: endpoint('/api/v1/promotions/dashboard'), directory: endpoint('/api/v1/promotions/directory'), history: endpoint('/api/v1/promotions/history'),
     eligibleStudents: endpoint('/api/v1/promotions/eligible-students'), eligibility: (id) => endpoint(`/api/v1/promotions/student-eligibility/${id}`), eligibilityStatus: (id) => endpoint(`/api/v1/promotions/eligibility-status/${id}`),
@@ -357,7 +373,7 @@ const request = async (url, options = {}, retried = false, bypassDedupe = false,
   if (!retried && !bypassDedupe && typeof collegeRequest === 'function') ({ url, options } = collegeRequest(url, options))
   const method = String(options.method || 'GET').toUpperCase()
   if (method === 'GET' && !bypassDedupe) {
-    const key = `${method}:${url}`
+    const key = `${getAccessToken()}:${method}:${url}`
     if (pendingGetRequests.has(key)) return pendingGetRequests.get(key)
     const pending = request(url, options, retried, true, suppressApiFailureNotice).finally(() => pendingGetRequests.delete(key))
     pendingGetRequests.set(key, pending)
@@ -614,13 +630,44 @@ const academicYearPayload = (year) => {
   }
 }
 
+const normalizeAcademicYearRecord = (year = {}) => {
+  const id = year.academicYearId ?? year.AcademicYearId ?? year.id ?? year.Id ?? ''
+  const name = year.academicYearName ?? year.AcademicYearName ?? year.name ?? year.Name ?? year.academicYear ?? ''
+  const startDate = year.startDate ?? year.StartDate ?? year.start_date ?? year.fromDate ?? year.FromDate ?? ''
+  const endDate = year.endDate ?? year.EndDate ?? year.end_date ?? year.toDate ?? year.ToDate ?? ''
+  const rawStatus = year.status ?? year.Status ?? year.academicYearStatus ?? year.AcademicYearStatus ?? ''
+  const status = String(rawStatus).trim().toLowerCase()
+  const rawActive = year.isActive ?? year.IsActive ?? year.is_active
+  const rawCurrent = year.isCurrent ?? year.IsCurrent
+  const activeFlag = rawActive === true || Number(rawActive) === 1 || ['true', 'active', 'current'].includes(String(rawActive ?? '').trim().toLowerCase())
+  const currentFlag = rawCurrent === true || Number(rawCurrent) === 1 || String(rawCurrent ?? '').trim().toLowerCase() === 'true'
+  const today = new Date()
+  const todayKey = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`
+  const dateCurrent = Boolean(startDate && endDate && todayKey >= String(startDate).slice(0, 10) && todayKey <= String(endDate).slice(0, 10))
+  const hasActiveValue = rawActive !== undefined && rawActive !== null && rawActive !== ''
+  const isInactive = rawActive === false || String(rawActive ?? '').trim().toLowerCase() === 'false' || (hasActiveValue && Number(rawActive) === 0) || ['inactive', 'deactive', 'deactivated', 'disabled', 'archived'].includes(status)
+  const isCurrent = activeFlag || currentFlag || ['active', 'current', '1'].includes(status) || (!isInactive && dateCurrent)
+  return {
+    ...year,
+    id: id === null || id === undefined ? '' : String(id),
+    academicYearId: id,
+    name: String(name ?? '').trim(),
+    academicYearName: String(name ?? '').trim(),
+    startDate,
+    endDate,
+    status: isCurrent ? 'Active' : isInactive ? 'Inactive' : rawStatus,
+    isActive: isCurrent ? true : isInactive ? false : rawActive,
+    isCurrent,
+  }
+}
+
 export const academicYearApi = {
   getAll: async (options = {}) => {
     const collegeId = selectedCollegeId()
     if (!collegeId) return []
     const response = await request(API_ENDPOINTS.academicYears.list, options)
     if (selectedCollegeId() !== collegeId) return []
-    const years = listResponse(response)
+    const years = listResponse(response).map(normalizeAcademicYearRecord)
     if (years.some(year => !collegeField(year, 'college'))) {
       throw new Error('Existing academic years have no college mapping. Apply the college academic-year database migration and update the backend before generating another year.')
     }
@@ -1544,23 +1591,41 @@ export const roomsApi = roomApi
 
 // MarksController / DTOs/Marks/MarksManagementDtos.cs. No local success fallback.
 export const marksApi = {
-  list: async params => listData(await request(withQuery(endpoint('/api/v1/marks'), params))),
-  create: async payload => { const data = dataResponse(await jsonRequest(endpoint('/api/v1/marks'), 'POST', payload)); return data?.mark ?? data },
-  update: async (id, payload) => dataResponse(await jsonRequest(endpoint(`/api/v1/marks/${requiredId(id, 'Mark ID')}`), 'PUT', payload)),
+  list: async params => listData(await request(withQuery(API_ENDPOINTS.marks.list, params))),
+  get: async id => dataResponse(await request(API_ENDPOINTS.marks.detail(requiredId(id, 'Mark ID')))),
+  create: async payload => { const data = dataResponse(await jsonRequest(API_ENDPOINTS.marks.list, 'POST', payload)); return data?.mark ?? data },
+  update: async (id, payload) => dataResponse(await jsonRequest(API_ENDPOINTS.marks.detail(requiredId(id, 'Mark ID')), 'PUT', payload)),
+  bulkPreview: async payload => dataResponse(await jsonRequest(API_ENDPOINTS.marks.bulkPreview, 'POST', payload)),
+  bulkFilePreview: async (file, scope) => {
+    const form = new FormData()
+    form.append('file', file)
+    if (scope?.examId) form.append('examId', String(scope.examId))
+    if (scope?.sectionId) form.append('sectionId', String(scope.sectionId))
+    return dataResponse(await multipartRequest(API_ENDPOINTS.marks.bulkFilePreview, form))
+  },
+  bulkUpload: async (file, scope) => {
+    const form = new FormData()
+    form.append('file', file)
+    if (scope?.examId) form.append('examId', String(scope.examId))
+    if (scope?.sectionId) form.append('sectionId', String(scope.sectionId))
+    form.append('upsertDrafts', String(Boolean(scope.upsertDrafts)))
+    return dataResponse(await multipartRequest(API_ENDPOINTS.marks.bulkUpload, form))
+  },
+  summaryReport: async params => dataResponse(await request(withQuery(API_ENDPOINTS.marks.summaryReport, params))),
+  pendingApprovals: async params => listData(await request(withQuery(API_ENDPOINTS.marks.pendingApprovals, params))),
   workflow: async (action, payload) => {
     if (!['submit', 'approve', 'reject'].includes(action)) throw new Error('Invalid marks workflow action.')
-    return dataResponse(await jsonRequest(endpoint(`/api/v1/marks/workflow/${action}`), 'POST', payload))
+    return dataResponse(await jsonRequest(API_ENDPOINTS.marks.workflow(action), 'POST', payload))
   },
-  approvalHistory: async id => listData(await request(endpoint(`/api/v1/marks/${requiredId(id, 'Mark ID')}/approval-history`))),
-  studentReport: async params => dataResponse(await request(withQuery(endpoint('/api/v1/marks/reports/student'), params))),
-  subjectReport: async params => listData(await request(withQuery(endpoint('/api/v1/marks/reports/subjects'), params))),
+  updateApproval: async (id, payload) => dataResponse(await jsonRequest(API_ENDPOINTS.marks.updateApproval(requiredId(id, 'Approval ID')), 'PATCH', payload)),
+  approvalHistory: async id => listData(await request(API_ENDPOINTS.marks.approvalHistory(requiredId(id, 'Mark ID')))),
+  studentReport: async params => dataResponse(await request(withQuery(API_ENDPOINTS.marks.studentReport, params))),
+  subjectReport: async params => listData(await request(withQuery(API_ENDPOINTS.marks.subjectReport, params))),
+  download: async params => readExportFile(withQuery(API_ENDPOINTS.marks.download, params)),
+  export: async params => readExportFile(withQuery(API_ENDPOINTS.marks.export, params)),
   upload: async (file, scope, preview = true) => {
     if (!(file instanceof File) || !/\.xlsx$/i.test(file.name)) throw new Error('Choose an XLSX workbook.')
     if (!file.size || file.size > 10 * 1024 * 1024) throw new Error('Workbook must be nonempty and at most 10 MB.')
-    const form = new FormData()
-    form.append('file', file); form.append('examId', String(scope.examId))
-    if (scope.sectionId) form.append('sectionId', String(scope.sectionId))
-    if (!preview) form.append('upsertDrafts', 'false')
-    return dataResponse(await multipartRequest(endpoint(`/api/v1/marks/bulk/${preview ? 'file-preview' : 'upload'}`), form))
+    return preview ? marksApi.bulkFilePreview(file, scope) : marksApi.bulkUpload(file, scope)
   },
 }

@@ -227,6 +227,7 @@
 .tt-clean-step p { margin: 10px 0; }
 .tt-clean-step footer { margin-top: 20px; }
 .tt-clean-step .tt-form-grid { margin-bottom: 18px; }
+.tt-readonly-value { box-sizing: border-box; display: flex; align-items: center; min-height: 36px; padding: 8px 12px; border: 1px solid var(--border, #DCE5F2); border-radius: 7px; background: var(--surface-soft, #F3F6FC); color: var(--text-primary, #102A4C); font-size: 13px; font-weight: 650; }
 .tt-clean-builder .tt-stepper { overflow-x: auto; flex-shrink: 0; }
 .tt-clean-builder .tt-stepper button { white-space: nowrap; }
 .tt-dashboard-stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; }

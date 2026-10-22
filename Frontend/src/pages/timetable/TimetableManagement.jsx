@@ -1,5 +1,7 @@
 import { Navigate } from 'react-router-dom'
 import DashboardLayout from '../../layouts/DashboardLayout'
+import { useAcademic } from '../../context/AcademicContext'
+import { selectedCollegeId as currentCollegeId } from '../../utils/collegeScope'
 import { getUserRole } from '../../auth/auth'
 import { showToast } from '../../utils/toast'
 import { backendWorkflow, loadBackendWorkflow } from '../../services/timetable/timetableBackendWorkflow'
@@ -36,19 +38,25 @@ function backendTables(backend, sources) {
 }
 
 export default function TimetableManagement() {
+  const { selectedCollegeId, selectedAcademicYearId, currentAcademicYear, loading: contextLoading } = useAcademic()
+  const activeAcademicYearId = currentAcademicYear?.id ?? currentAcademicYear?.academicYearId ?? selectedAcademicYearId
   const role = getUserRole(), admin = role === 'admin'
   const [tab, setTab] = useState(admin ? 'dashboard' : 'faculty'), [data, setData] = useState(null)
   const [loading, setLoading] = useState(true), [busy, setBusy] = useState(false), [error, setError] = useState('')
   const [initial, setInitial] = useState(null), [builderKey, setBuilderKey] = useState(0), [facultyId, setFacultyId] = useState(''), [facultyDrawer, setFacultyDrawer] = useState(''), [facultyError, setFacultyError] = useState('')
   const adapter = () => draftCapabilityEnabled ? workflowAdapter() : backendWorkflow
   const refresh = async () => {
-    if (!draftCapabilityEnabled) { const live = await loadBackendWorkflow(); setData(live); return live }
+    const collegeId = currentCollegeId()
+    if (!draftCapabilityEnabled) { const live = await loadBackendWorkflow(); if (collegeId === currentCollegeId()) setData(live); return live }
     const live = await loadLive()
     const tables = draftCapabilityEnabled ? await workflowAdapter().list() : []
-    setData({ ...live, tables })
+    if (collegeId === currentCollegeId()) setData({ ...live, tables })
     return live
   }
   useEffect(() => {
+    setData(null); setError(''); setLoading(true)
+    setInitial(null); setBuilderKey(value => value + 1); setFacultyId(''); setFacultyDrawer('')
+    if (contextLoading) return
     if (!['admin', 'faculty'].includes(role)) return
     let cancelled = false
     Promise.resolve().then(refresh).then(async live => {
@@ -58,7 +66,7 @@ export default function TimetableManagement() {
       }
     }).catch(reason => { if (!cancelled) { setError(reason.message); showToast(reason.message, 'error') } }).finally(() => { if (!cancelled) setLoading(false) })
     return () => { cancelled = true }
-  }, [role])
+  }, [role, selectedCollegeId, selectedAcademicYearId, contextLoading])
   const mutate = async (action, successMessage = 'Timetable saved.') => {
     setBusy(true); setError('')
     try { const result = await action(); await refresh(); showToast(successMessage, 'success'); return result || true }
@@ -85,7 +93,7 @@ export default function TimetableManagement() {
     {loading ? <p role="status">Loading academic data and timetables...</p> : data && <>
       {admin && draftCapabilityEnabled && <p className="tt-adapter-note"><strong>Mock Mode:</strong> timetable drafts and publication state are stored only in this browser. Academic records and allocations use the backend; this is not institution-wide publication.</p>}
       {admin && tab === 'dashboard' && <TimetableDashboard tables={tables} sources={sources} entries={entries} today={today} open={open} />}
-      {admin && tab === 'builder' && <><button className="tt-button" disabled={busy} onClick={() => open(null)}>Create New Timetable Period</button><TimetableBuilder mockMode={draftCapabilityEnabled} key={builderKey} sources={sources} entries={entries} tables={tables} initial={initial} busy={busy} enabled={true} refresh={refresh} faculty={setFacultyDrawer} generate={args => run(() => adapter().generate(args))} saveSetup={(tables, config) => run(() => adapter().saveSetup(tables, config))} save={(table, form) => mutate(() => draftCapabilityEnabled ? table.origin === 'backend' ? saveBackendEntry(table, form) : workflowAdapter().saveEntry(table, form) : backendWorkflow.saveEntry(table, form))} remove={(table, id) => mutate(() => draftCapabilityEnabled ? table.origin === 'backend' ? timetableService.remove(id) : workflowAdapter().removeEntry(table, id) : backendWorkflow.removeEntry(table, id))} validate={validate} publish={expected => run(() => adapter().publish(expected), draftCapabilityEnabled ? 'Mock Mode: timetable published in this browser only.' : 'Timetable published.')} reopen={table => run(() => adapter().reopen(table))} /></>}
+      {admin && tab === 'builder' && <><button className="tt-button" disabled={busy} onClick={() => open(null)}>Create New Timetable Period</button><TimetableBuilder mockMode={draftCapabilityEnabled} key={builderKey} defaultAcademicYearId={activeAcademicYearId} sources={sources} entries={entries} tables={tables} initial={initial} busy={busy} enabled={true} refresh={refresh} faculty={setFacultyDrawer} generate={args => run(() => adapter().generate(args))} saveSetup={(tables, config) => run(() => adapter().saveSetup(tables, config))} save={(table, form) => mutate(() => draftCapabilityEnabled ? table.origin === 'backend' ? saveBackendEntry(table, form) : workflowAdapter().saveEntry(table, form) : backendWorkflow.saveEntry(table, form))} remove={(table, id) => mutate(() => draftCapabilityEnabled ? table.origin === 'backend' ? timetableService.remove(id) : workflowAdapter().removeEntry(table, id) : backendWorkflow.removeEntry(table, id))} validate={validate} publish={expected => run(() => adapter().publish(expected), draftCapabilityEnabled ? 'Mock Mode: timetable published in this browser only.' : 'Timetable published.')} reopen={table => run(() => adapter().reopen(table))} /></>}
       {tab === 'faculty' && <section className="tt-card">{admin && <div className="tt-clean-step"><TimetableSelect label="Faculty" value={facultyId} options={sources.faculty} onChange={setFacultyId} /></div>}{facultyError && <p className="tt-error" role="alert">{facultyError}</p>}{facultyId ? <FacultyTimetable key={facultyId} facultyId={facultyId} sources={sources} entries={entries} tables={tables} /> : !facultyError && <p className="tt-clean-step">Select a faculty member to view published classes.</p>}</section>}
       {facultyDrawer && <WorkspaceDrawer title="Faculty schedule" close={() => setFacultyDrawer('')}><FacultyTimetable facultyId={facultyDrawer} sources={sources} entries={entries} tables={tables} /></WorkspaceDrawer>}
     </>}
@@ -160,7 +168,7 @@ export function TimetableDashboard({ tables, sources, entries, today, open }) {
     const state = row.result
     return <button className="tt-recent-table" key={section.id} onClick={() => open(table || scope)}>
       <strong>{section.name || `Section ${section.id}`}</strong>
-      <span>{table ? `${table.entries.length} classes Ã‚Â· ${table.publicationStatus === 'unavailable' ? 'Lifecycle status unavailable' : table.publicationStatus}` : `${state.ready ? 'Ready to configure' : 'Needs attention'} Ã‚Â· No timetable yet`}</span>
+      <span>{table ? `${table.entries.length} classes | ${table.publicationStatus === 'unavailable' ? 'Lifecycle status unavailable' : table.publicationStatus}` : `${state.ready ? 'Ready to configure' : 'Needs attention'} | No timetable yet`}</span>
       {!state.ready && <small>{state.issues.join(' ')}</small>}
     </button>
   }
@@ -209,7 +217,7 @@ export function TimetableDashboard({ tables, sources, entries, today, open }) {
     </section>
     <section className="tt-card tt-clean-step">
       <header className="tt-card-heading"><h2><FiClock aria-hidden="true" />Recent timetables</h2><span>{today.length} published classes today</span></header>
-      {!tables.length ? <p>No timetable records yet. Select a section above to configure one.</p> : <div className="tt-recent-tables">{[...tables].sort((a, b) => (b.updatedAt || '').localeCompare(a.updatedAt || '')).map(table => <button className="tt-recent-table" key={`${table.origin}-${table.id}`} onClick={() => open(table)}><strong>{table.name}</strong><span>{name(sources.years, table.academicYearId)} Ã‚Â· {name(sources.departments, table.departmentId)} Ã‚Â· {name(sources.courses, table.courseId)}</span><small>{table.publicationStatus === 'unavailable' ? 'STATUS UNAVAILABLE' : table.publicationStatus.toUpperCase()} Ã‚Â· {table.entries.length} classes{attention && ' Ã‚Â· Review attention items'}</small></button>)}</div>}
+      {!tables.length ? <p>No timetable records yet. Select a section above to configure one.</p> : <div className="tt-recent-tables">{[...tables].sort((a, b) => (b.updatedAt || '').localeCompare(a.updatedAt || '')).map(table => <button className="tt-recent-table" key={`${table.origin}-${table.id}`} onClick={() => open(table)}><strong>{table.name}</strong><span>{name(sources.years, table.academicYearId)} | {name(sources.departments, table.departmentId)} | {name(sources.courses, table.courseId)}</span><small>{table.publicationStatus === 'unavailable' ? 'STATUS UNAVAILABLE' : table.publicationStatus.toUpperCase()} | {table.entries.length} classes{attention && ' | Review attention items'}</small></button>)}</div>}
     </section>
 
   </div>
@@ -230,8 +238,8 @@ const editablePlanning = planning => {
   const endDate = String(planning.calendar.endDate || '').slice(0, 10)
   return { ...planning, calendar: { ...planning.calendar, startDate, endDate } }
 }
-function TimetableBuilder({ mockMode = false, sources, entries, tables, initial, busy, enabled, refresh, faculty, generate, saveSetup, save, remove, validate, publish, reopen }) {
-  const [scope, setScope] = useState(initial || Object.fromEntries(hierarchy.map(field => [field, ''])))
+function TimetableBuilder({ mockMode = false, defaultAcademicYearId = '', sources, entries, tables, initial, busy, enabled, refresh, faculty, generate, saveSetup, save, remove, validate, publish, reopen }) {
+  const [scope, setScope] = useState(initial || { ...Object.fromEntries(hierarchy.map(field => [field, ''])), academicYearId: defaultAcademicYearId || '' })
   const [origin, setOrigin] = useState(initial?.origin || (mockMode ? 'local' : 'backend'))
   const [step, setStep] = useState(initial?.id ? 4 : 1)
   const [selected, setSelected] = useState(initial?.sectionId ? [String(initial.sectionId)] : [])
@@ -266,11 +274,11 @@ function TimetableBuilder({ mockMode = false, sources, entries, tables, initial,
   const savedEntries = currentTables.flatMap(row => row.entries)
   return <section className="tt-clean-builder" aria-label="Timetable Builder">
     <nav className="tt-stepper" aria-label="Builder steps">{['Academic Setup', 'Daily Schedule', 'Subjects & Faculty', 'Review & Publish'].map((label, index) => <button key={label} aria-current={step === index + 1 ? 'step' : undefined} className={step === index + 1 ? 'active' : ''} disabled={busy || (index > 0 && !config) || (index === 3 && !currentTables.length) || (currentTables.some(row => row.publicationStatus === 'published') && [1, 2].includes(index))} onClick={() => setStep(index + 1)}><span>{index + 1}</span>{label}</button>)}</nav>
-    {step === 1 && <section className="tt-card tt-clean-step"><h2>Academic setup</h2><div className="tt-form-grid">{hierarchy.map((field, index) => <TimetableSelect key={field} label={labels[index]} value={scope[field]} options={options[field]} disabled={busy || Boolean(index && !scope[hierarchy[index - 1]])} onChange={value => change(field, value)} />)}</div>
+    {step === 1 && <section className="tt-card tt-clean-step"><h2>Academic setup</h2><div className="tt-form-grid"><div className="tt-field"><span>Academic Year</span><div className="tt-readonly-value">{sources.years.find(row => same(row.id, scope.academicYearId))?.name || 'Active academic year unavailable'}</div></div>{hierarchy.slice(1).map((field, index) => <TimetableSelect key={field} label={labels[index + 1]} value={scope[field]} options={options[field]} disabled={busy || Boolean(index && !scope[hierarchy[index]])} onChange={value => change(field, value)} />)}</div>
       {scope.semesterId && <><h3>Sections ({sections.length})</h3><div className="tt-checks">{sections.map(section => <label key={section.id}><input type="checkbox" checked={selected.some(id => same(id, section.id))} onChange={event => setSelected(old => event.target.checked ? [...old, String(section.id)] : old.filter(id => !same(id, section.id)))} />{section.name}</label>)}</div>{!sections.length && <p>No active sections match this academic context.</p>}</>}
       <button className="tt-button tt-primary" disabled={!selected.length || busy} onClick={setup}>Continue</button></section>}
     {step === 2 && config && <PeriodSetupStep config={config} setConfig={setConfig} sources={sources} scope={scope} entries={entries} busy={busy} errors={errors} back={() => setStep(1)} continueSetup={() => setStep(3)} />}
-    {step === 3 && config && <><SubjectCoverage sources={sources} scope={scope} selected={selected} config={config} setConfig={setConfig} refresh={refresh} faculty={faculty} disabled={busy} /><div className="tt-actions"><button className="tt-button" onClick={() => setStep(2)}>Back</button><button className="tt-button tt-primary" disabled={busy || !enabled || errors.length > 0} onClick={async () => { if (currentTables.length) { if (setupChanged && savedEntries.length) setImpactOpen(true); else await applySetup() } else await runGeneration(false) }}>{currentTables.length ? 'Save Settings' : busy ? 'Generating Timetablesâ€¦' : 'GENERATE ALL SELECTED SECTIONS'}</button></div>{busy && !currentTables.length && <p role="status">Generating coordinated section drafts and checking campus-wide conflictsâ€¦</p>}</>}
+    {step === 3 && config && <><SubjectCoverage sources={sources} scope={scope} selected={selected} config={config} setConfig={setConfig} refresh={refresh} faculty={faculty} disabled={busy} /><div className="tt-actions"><button className="tt-button" onClick={() => setStep(2)}>Back</button><button className="tt-button tt-primary" disabled={busy || !enabled || errors.length > 0} onClick={async () => { if (currentTables.length) { if (setupChanged && savedEntries.length) setImpactOpen(true); else await applySetup() } else await runGeneration(false) }}>{currentTables.length ? 'Save Settings' : busy ? 'Generating timetables...' : 'GENERATE ALL SELECTED SECTIONS'}</button></div>{busy && !currentTables.length && <p role="status">Generating coordinated section drafts and checking campus-wide conflicts...</p>}</>}
     {step === 4 && table && <TimetableWorkspace mockMode={mockMode} table={table} tables={currentTables} sources={sources} entries={entries} busy={busy} section={setActiveSection} faculty={faculty} generate={() => runGeneration(false)} regenerate={() => runGeneration(true)} save={save} remove={remove} validate={validate} publish={publish} reopen={reopen} />}
     {impactOpen && <WorkspaceDrawer modal title="Configuration change impact" busy={busy} close={() => setImpactOpen(false)}><div className="tt-clean-step"><p>Review the existing draft data before applying shared timing changes.</p><div className="tt-live-summary"><article><strong>{currentTables.length}</strong><span>affected sections</span></article><article><strong>{savedEntries.length}</strong><span>existing classes</span></article><article><strong>{new Set(savedEntries.map(row => String(row.facultyId)).filter(Boolean)).size}</strong><span>assigned faculty</span></article><article><strong>{new Set(savedEntries.map(row => row.roomId || row.classroom).filter(Boolean)).size}</strong><span>used rooms</span></article></div><p>Settings will be saved only if every existing class remains valid. No class will be regenerated or removed.</p><div className="tt-actions"><button className="tt-button" disabled={busy} onClick={() => setImpactOpen(false)}>Cancel</button><button className="tt-button tt-primary" disabled={busy} onClick={applySetup}>Review and Apply</button></div></div></WorkspaceDrawer>}
   </section>
