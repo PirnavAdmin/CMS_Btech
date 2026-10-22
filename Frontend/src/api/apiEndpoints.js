@@ -1,5 +1,6 @@
 import { GENERIC_ERROR_MESSAGE, userErrorMessage } from '../utils/userError.js'
 import { collegeRequest } from '../utils/collegeRequest.js'
+import { selectedCollegeId, createCollegeScope, collegeField } from '../utils/collegeScope.js'
 import { markApiResult } from '../utils/exportProvenance.js'
 import { readSubjectPages } from '../utils/subjectApiData'
 import { getAccessToken, getAuthStorage, getRefreshToken, signOut } from '../auth/auth'
@@ -615,8 +616,15 @@ const academicYearPayload = (year) => {
 
 export const academicYearApi = {
   getAll: async (options = {}) => {
+    const collegeId = selectedCollegeId()
+    if (!collegeId) return []
     const response = await request(API_ENDPOINTS.academicYears.list, options)
-    return listResponse(response)
+    if (selectedCollegeId() !== collegeId) return []
+    const years = listResponse(response)
+    if (years.some(year => !collegeField(year, 'college'))) {
+      throw new Error('Existing academic years have no college mapping. Apply the college academic-year database migration and update the backend before generating another year.')
+    }
+    return createCollegeScope(collegeId)(years)
   },
   getById: async (id) => {
     const response = await request(API_ENDPOINTS.academicYears.detail(id))

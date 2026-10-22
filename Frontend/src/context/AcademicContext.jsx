@@ -2,7 +2,7 @@ import React, { createContext, useContext, useState, useEffect, useCallback, use
 import academicService, { filterActiveOnly } from '../services/academicService'
 import eventBus, { ERP_EVENTS } from '../services/eventBus'
 import { getActiveAcademicYears } from '../utils/academicYearUtils'
-import { createCollegeScope } from '../utils/collegeScope'
+import { createCollegeScope, selectedCollegeId as storedCollegeId } from '../utils/collegeScope'
 
 const CONTEXT_STORAGE_KEY = 'pirnav_academic_context'
 
@@ -45,6 +45,7 @@ const saveStoredContext = (collegeId, academicYearId) => {
       localStorage.removeItem('selected_college_id')
     }
     if (academicYearId) localStorage.setItem('pirnav-selected-academic-year-id', String(academicYearId))
+    else localStorage.removeItem('pirnav-selected-academic-year-id')
   } catch {}
 }
 
@@ -64,6 +65,8 @@ export const AcademicProvider = ({ children }) => {
   const [selectedAcademicYearId, setSelectedAcademicYearId] = useState(() => readStoredContext().academicYearId)
 
   const loadHierarchy = useCallback(async () => {
+    const requestedCollegeId = storedCollegeId()
+    let completedCollegeId = requestedCollegeId
     try {
       setLoading(true)
       setError(null)
@@ -77,11 +80,13 @@ export const AcademicProvider = ({ children }) => {
         academicService.getSections({}, false),
       ])
 
+      if (storedCollegeId() !== requestedCollegeId) return
+
       if ([cols, years, depts, crss, brns, sems, secs].some(list => list?.loadError)) {
         throw new Error('Academic configuration could not be loaded. Please retry.')
       }
       const safeColleges = cols || []
-      const safeYears = years || []
+      const safeYears = createCollegeScope(requestedCollegeId)(years || [])
 
       setColleges(safeColleges)
       setAcademicYears(safeYears)
@@ -114,12 +119,14 @@ export const AcademicProvider = ({ children }) => {
       setSelectedAcademicYearId(resolvedYearId)
 
       // Persist validated context
+      completedCollegeId = resolvedColId
       saveStoredContext(resolvedColId, resolvedYearId)
     } catch (err) {
+      if (storedCollegeId() !== requestedCollegeId) return
       setError('Academic configuration could not be loaded. Please retry.')
       console.warn('Error loading academic hierarchy context:', err)
     } finally {
-      setLoading(false)
+      if (storedCollegeId() === completedCollegeId) setLoading(false)
     }
   }, [])
 

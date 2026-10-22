@@ -14,6 +14,7 @@ import {
   sectionApi,
 } from '../api/apiEndpoints'
 import eventBus, { ERP_EVENTS } from './eventBus'
+import { selectedCollegeId } from '../utils/collegeScope.js'
 
 /**
  * Academic Service
@@ -132,7 +133,9 @@ class AcademicService {
 
   // Academic Years
   async getAcademicYears(activeOnly = true) {
-    const data = await this._fetchCached('academicYears', async () => {
+    const collegeId = selectedCollegeId()
+    if (!collegeId) return []
+    const data = await this._fetchCached(`academicYears:college:${collegeId}`, async () => {
       try {
         const list = await academicYearApi.getAll()
         const mapped = (Array.isArray(list) ? list : []).map(y => {

@@ -33,7 +33,7 @@ import EmptyStateImports_default from '../../components/EmptyState'
 import roomServiceImports_default, { ROOM_TYPES as roomServiceImports_ROOM_TYPES, BUILDING_BLOCKS as roomServiceImports_BUILDING_BLOCKS, FLOORS as roomServiceImports_FLOORS, ROOM_FACILITIES as roomServiceImports_ROOM_FACILITIES } from '../../services/roomService'
 import '../../styles/directory-search.css'
 import './AdminManagement.css'
-import AcademicContextSelect from '../../components/AcademicContextSelect'
+import { selectedCollegeId as readSelectedCollegeId } from '../../utils/collegeScope.js'
 
 // AcademicYearManagement screen and private helpers.
 const AcademicYearManagementScreen = (() => {
@@ -225,6 +225,10 @@ function AcademicYear() {
   const [noticeTone, setNoticeTone] = useState('info');
   const [exportLoading, setExportLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [firstYearStart, setFirstYearStart] = useState(() => {
+    const today = new Date();
+    return `${today.getFullYear() - (today.getMonth() < 5 ? 1 : 0)}-06-01`;
+  });
   const [page, setPage] = useState(1);
 
   const close = () => {
@@ -248,6 +252,7 @@ function AcademicYear() {
     setExportLoading(true);
     try {
       const data = await academicYearApi.getAll();
+      if (String(selectedCollegeId) !== readSelectedCollegeId()) return;
       setYears(newestFirst('academic-years', data).map(mapYear));
       eventBus.emit(ERP_EVENTS.ACADEMIC_UPDATED);
     } catch (error) {
@@ -271,7 +276,16 @@ function AcademicYear() {
     (latest, year) => (!latest || year.endDate > latest.endDate ? year : latest),
     null
   );
-  const generatedCycle = nextCycle(generationBase);
+  const generatedCycle = generationBase ? nextCycle(generationBase) : (() => {
+    if (!firstYearStart) return null;
+    const start = d(firstYearStart);
+    if (isNaN(start.getTime())) return null;
+    const end = new Date(start);
+    end.setFullYear(end.getFullYear() + 1);
+    end.setDate(end.getDate() - 1);
+    const localDate = (value) => `${value.getFullYear()}-${String(value.getMonth() + 1).padStart(2, '0')}-${String(value.getDate()).padStart(2, '0')}`;
+    return { name: `${start.getFullYear()} - ${end.getFullYear()}`, startDate: firstYearStart, endDate: localDate(end), autoActivate: false };
+  })();
 
   const shown = useMemo(
     () =>
@@ -418,7 +432,7 @@ function AcademicYear() {
   }
 
   async function generate() {
-    if (!generatedCycle || saving) return;
+    if (!selectedCollegeId || contextLoading || !generatedCycle || saving) return;
     const item = generatedCycle;
     if (years.some((x) => x.name === item.name)) {
       setNotice(`${item.name} already exists, so no duplicate was created.`, 'info');
@@ -458,12 +472,6 @@ function AcademicYear() {
           title="Academic Year"
           subtitle="Add and manage academic years separately for each college."
         />}
-        {modal !== 'view' && <section className="ay-college-context" aria-label="Academic year college">
-          <AcademicContextSelect kind="college" />
-          <p>{selectedCollegeId
-            ? `Academic years belong to ${selectedCollege?.name || selectedCollege?.collegeName || 'the selected college'}. The same year can be added to other colleges separately.`
-            : 'Select a college to add and manage its academic years.'}</p>
-        </section>}
         {modal === 'view' && selected ? (
           <div className="cm-profile-view ay-details-view" data-export-record>
             <div className="cm-profile-top-bar">
@@ -565,8 +573,8 @@ function AcademicYear() {
                     filename="academic-years"
                     loading={exportLoading || noticeTone === 'error'}
                   />
-                  <button type="button" className="cm-button secondary" disabled={!selectedCollegeId || contextLoading || !generationBase} onClick={() => setModal('generate')}>
-                    Generate Next Year
+                  <button type="button" className="cm-button secondary" disabled={!selectedCollegeId || contextLoading || exportLoading} onClick={() => setModal('generate')}>
+                    {generationBase ? 'Generate Next Year' : 'Generate Academic Year'}
                   </button>
                   <button type="button" className="cm-button" disabled={!selectedCollegeId || contextLoading} onClick={openAdd}>
                     <FiPlus /> Add Academic Year
@@ -790,16 +798,21 @@ function AcademicYear() {
               <button type="button" className="x" aria-label="Close dialog" onClick={close}>
                 <FiX aria-hidden="true" />
               </button>
-              <h2 id="gen-title">Generate Next Academic Year</h2>
+              <h2 id="gen-title">{generationBase ? 'Generate Next Academic Year' : 'Generate First Academic Year'}</h2>
+              <p>College: <strong>{selectedCollege?.name || selectedCollege?.collegeName || 'Selected college'}</strong></p>
+              {!generationBase && <label className="field">
+                <span>Academic year start date</span>
+                <input type="date" value={firstYearStart} onChange={(event) => setFirstYearStart(event.target.value)} required />
+              </label>}
               <p style={{ marginTop: '12px', color: 'var(--text-secondary)' }}>
-                This will automatically compute and prepare the next consecutive annual academic cycle following{' '}
-                <strong>{generationBase?.name || 'the latest available cycle'}</strong>: <strong>{generatedCycle?.name || 'the next cycle'}</strong>.
+                {generationBase ? `Generate the next annual cycle after ${generationBase.name}.` : 'Generate a new annual academic cycle for this college.'}
+                {generatedCycle && <> <strong>{generatedCycle.name}</strong> ({formatDate(generatedCycle.startDate)} – {formatDate(generatedCycle.endDate)}).</>}
               </p>
               <footer>
                 <button type="button" className="erp-btn erp-btn--secondary" onClick={close}>
                   Cancel
                 </button>
-                <button type="button" className="erp-btn erp-btn--primary" onClick={generate} disabled={saving}>
+                <button type="button" className="erp-btn erp-btn--primary" onClick={generate} disabled={saving || !generatedCycle || !selectedCollegeId || contextLoading}>
                   {saving ? 'Generating...' : 'Generate Cycle'}
                 </button>
               </footer>
