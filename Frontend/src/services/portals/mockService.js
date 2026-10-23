@@ -79,6 +79,20 @@ export function createMockPortalService({ storage, actor, collegeId, preview = f
         return user
       })
     },
+    async updateUser(userId, input) {
+      authorize('admin')
+      return write(data => {
+        const user = data.users.find(row => row.id === userId)
+        required(user && user.role !== 'admin' && user.id !== actor.id, 'Administrator accounts cannot be modified here.')
+        const name = clean(input.name), email = clean(input.email).toLowerCase(), phone = clean(input.phone)
+        required(name.length >= 2 && name.length <= 100, 'Name must contain 2–100 characters.')
+        required(/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email), 'Enter a valid email address.')
+        required(!data.users.some(row => row.id !== userId && row.email.toLowerCase() === email), 'An account with this email already exists.')
+        required(!phone || /^[6-9]\d{9}$/.test(phone), 'Enter a valid 10-digit Indian mobile number.')
+        Object.assign(user, { name, email, phone })
+        return user
+      })
+    },
     async assignRole(userId, role, sectionId = '') {
       authorize('admin')
       return write(data => {

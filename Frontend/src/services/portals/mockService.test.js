@@ -76,6 +76,17 @@ test('admin validates accounts, role mapping, resets and active account enforcem
   await assert.rejects(admin.updateUserStatus('admin-1', 'inactive'), /Administrator/)
   await assert.rejects(faculty.createUser({}), /role/)
 })
+test('mock account detail edits validate names, unique email and mobile without editing administrators', async () => {
+  const { admin } = fixture()
+  await assert.rejects(admin.updateUser('faculty-1', { name: 'A', email: 'ananya@preview.invalid', phone: '' }), /Name/)
+  await assert.rejects(admin.updateUser('faculty-1', { name: 'Updated Faculty', email: 'aarav@preview.invalid', phone: '' }), /already exists/)
+  await assert.rejects(admin.updateUser('faculty-1', { name: 'Updated Faculty', email: 'updated@preview.invalid', phone: '123' }), /mobile/)
+  await assert.rejects(admin.updateUser('admin-1', { name: 'Changed Admin', email: 'admin@preview.invalid', phone: '' }), /Administrator/)
+  const updated = await admin.updateUser('faculty-1', { name: 'Updated Faculty', email: 'updated@preview.invalid', phone: '9876543212' })
+  assert.equal(updated.name, 'Updated Faculty')
+  assert.equal(updated.email, 'updated@preview.invalid')
+  assert.equal(updated.phone, '9876543212')
+})
 test('teaching assignments reject wrong departments, duplicates and removal of academic history', async () => {
   const { admin } = fixture()
   await assert.rejects(admin.assignFaculty({ facultyId: 'faculty-1', subjectId: 'circuits', sectionId: 'ece-a' }), /department/)

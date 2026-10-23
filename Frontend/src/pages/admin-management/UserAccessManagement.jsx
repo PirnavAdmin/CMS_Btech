@@ -1,61 +1,163 @@
-import { usePortalData } from '../../hooks/usePortalData.js'
-import { useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
+import { FiDownload, FiEye, FiPlus, FiRefreshCw, FiSearch, FiShield, FiUsers, FiX } from 'react-icons/fi'
 import DashboardLayout from '../../layouts/DashboardLayout.jsx'
-import PortalLayout from '../../layouts/PortalLayout.jsx'
-import { AcademicProvider, useAcademic } from '../../context/AcademicContext.jsx'
-import { isPortalPreview } from '../../auth/portalPreview.js'
-import { adminService } from '../../services/portals/adminService.js'
-import { DataTable, Field, Feedback, MockNotice, PortalDialog, Stats, Status } from '../../components/portals/PortalUI.jsx'
-import '../../styles/portals.css'
+import { AcademicProvider } from '../../context/AcademicContext.jsx'
+import { userDirectoryApi } from '../../api/apiEndpoints.js'
+import UserAccessMockWorkspace from './UserAccessMockWorkspace.jsx'
+import './UserAccessManagement.css'
 
-function UserAccessContent() {
-  const state = usePortalData(adminService), { data, act, busy } = state
-  const [search, setSearch] = useState(''), [role, setRole] = useState(''), [status, setStatus] = useState(''), [department, setDepartment] = useState(''), [page, setPage] = useState(1)
-  const [dialog, setDialog] = useState(null), [form, setForm] = useState({}), [formError, setFormError] = useState('')
-  const open = (kind, user = {}) => { setDialog({ kind, user }); setForm({ role: user.role || 'student', sectionId: user.sectionId || '', ...data?.sections.find(row => row.id === user.sectionId), facultyId: user.role === 'faculty' ? user.id : '', ...(['add'].includes(kind) ? {} : { departmentId: user.departmentId }) }); setFormError('') }
-  const field = name => ({ value: form[name] || '', onChange: event => setForm(previous => ({ ...previous, [name]: event.target.value, ...(name === 'departmentId' ? { courseId: '', branchId: '', academicLevelId: '', sectionId: '' } : {}), ...(name === 'courseId' ? { branchId: '', academicLevelId: '', sectionId: '' } : {}), ...(['branchId', 'academicLevelId', 'role'].includes(name) ? { sectionId: '' } : {}), ...(name === 'facultyId' ? { subjectId: '', sectionId: '' } : {}) })) })
-  const close = () => { if (!busy) setDialog(null) }
-  const submit = async event => {
-    event.preventDefault(); setFormError('')
-    const { kind, user } = dialog
-    const action = kind === 'add' ? () => adminService.createUser(form) : kind === 'role' ? () => adminService.assignRole(user.id, form.role, form.sectionId) : kind === 'assign' ? () => adminService.assignFaculty(form) : kind === 'status' ? () => adminService.updateUserStatus(user.id, user.status === 'active' ? 'inactive' : 'active') : kind === 'reset' ? () => adminService.resetPassword(user.id) : kind === 'remove' ? () => adminService.removeAssignment(user.id) : () => adminService.loadSamples()
-    const message = kind === 'reset' ? 'Mock reset recorded. No password changed and no email was sent.' : kind === 'add' ? 'Mock account created. No live login credentials were issued.' : 'Mock workspace updated successfully.'
-    let failure = ''
-    const done = await act(async () => { try { await action() } catch (reason) { failure = reason.message; throw reason } }, message)
-    if (done) setDialog(null)
-    else setFormError(failure || 'Unable to save. Please try again.')
+const PAGE_SIZE = 10
+const accountId = user => user.userId ?? user.UserId ?? user.user_id ?? user.id ?? ''
+const value = (user, ...keys) => keys.map(key => user?.[key]).find(item => item !== undefined && item !== null && item !== '')
+const isActive = user => [1, true, '1', 'active', 'Active'].includes(value(user, 'status', 'Status'))
+const statusLabel = user => isActive(user) ? 'Active' : 'Inactive'
+const display = item => item === undefined || item === null || item === '' ? '—' : String(item)
+const formatDate = item => {
+  if (!item) return '—'
+  const date = new Date(item)
+  return Number.isNaN(date.getTime()) ? String(item) : new Intl.DateTimeFormat(undefined, { day: '2-digit', month: 'short', year: 'numeric' }).format(date)
+}
+
+function UserDetailsDialog({ user, onClose }) {
+  if (!user) return null
+  const fields = [
+    ['Account ID', accountId(user)], ['Employee User ID', value(user, 'employeeUserId', 'EmployeeUserId')],
+    ['Full name', value(user, 'fullName', 'FullName')], ['Email', value(user, 'email', 'Email')],
+    ['Phone', value(user, 'mobile', 'Mobile')], ['College ID', value(user, 'collegeId', 'CollegeId')],
+    ['Account status', statusLabel(user)], ['Created', formatDate(value(user, 'createdAt', 'CreatedAt'))],
+    ['Updated', formatDate(value(user, 'updatedAt', 'UpdatedAt'))],
+  ]
+  return <div className="user-directory__backdrop" onMouseDown={event => { if (event.target === event.currentTarget) onClose() }}>
+    <section className="user-directory__dialog" role="dialog" aria-modal="true" aria-labelledby="user-detail-title">
+      <header><div><span className="user-directory__eyebrow">Account details</span><h2 id="user-detail-title">{display(value(user, 'fullName', 'FullName'))}</h2></div><button className="user-directory__icon-button" type="button" onClick={onClose} aria-label="Close details"><FiX /></button></header>
+      <dl>{fields.map(([label, fieldValue]) => <div key={label}><dt>{label}</dt><dd>{display(fieldValue)}</dd></div>)}</dl>
+      <p className="user-directory__hint"><FiShield aria-hidden="true" /> Roles, permissions, and department are not included in the backend user account response.</p>
+      <footer><button type="button" className="user-directory__button user-directory__button--primary" onClick={onClose}>Close</button></footer>
+    </section>
+  </div>
+}
+
+function UserDirectory() {
+  const [users, setUsers] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
+  const [search, setSearch] = useState('')
+  const [statusFilter, setStatusFilter] = useState('all')
+  const [page, setPage] = useState(1)
+  const [selectedUser, setSelectedUser] = useState(null)
+  const [notice, setNotice] = useState('')
+
+  const loadUsers = useCallback(async () => {
+    setLoading(true)
+    setError('')
+    try {
+      setUsers(await userDirectoryApi.getAll())
+    } catch (reason) {
+      setError(reason?.message || 'Users could not be loaded. Please try again.')
+    } finally {
+      setLoading(false)
+    }
+  }, [])
+
+  useEffect(() => {
+    let active = true
+    userDirectoryApi.getAll()
+      .then(rows => { if (active) setUsers(rows) })
+      .catch(reason => { if (active) setError(reason?.message || 'Users could not be loaded. Please try again.') })
+      .finally(() => { if (active) setLoading(false) })
+    return () => { active = false }
+  }, [])
+
+  const filteredUsers = useMemo(() => {
+    const query = search.trim().toLowerCase()
+    return users.filter(user => {
+      const matchesSearch = !query || [accountId(user), value(user, 'employeeUserId', 'EmployeeUserId'), value(user, 'fullName', 'FullName'), value(user, 'email', 'Email'), value(user, 'collegeId', 'CollegeId')].some(item => String(item ?? '').toLowerCase().includes(query))
+      const matchesStatus = statusFilter === 'all' || (statusFilter === 'active' ? isActive(user) : !isActive(user))
+      return matchesSearch && matchesStatus
+    })
+  }, [users, search, statusFilter])
+
+  const pageCount = Math.max(1, Math.ceil(filteredUsers.length / PAGE_SIZE))
+  const currentPage = Math.min(page, pageCount)
+  const shownUsers = filteredUsers.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE)
+  const activeCount = users.filter(isActive).length
+
+  const exportUsers = async () => {
+    setNotice('')
+    try {
+      const result = await userDirectoryApi.exportCsv({ Search: search, Status: statusFilter === 'all' ? '' : statusFilter })
+      const url = URL.createObjectURL(result.blob)
+      const link = document.createElement('a')
+      link.href = url
+      link.download = result.contentDisposition.match(/filename\*?=(?:UTF-8''|")?([^;"]+)/i)?.[1] || 'users.csv'
+      document.body.append(link)
+      link.click()
+      link.remove()
+      URL.revokeObjectURL(url)
+      setNotice('User export downloaded.')
+    } catch (reason) {
+      setError(reason?.message || 'The user export could not be downloaded.')
+    }
   }
-  const name = (list, id) => list?.find(row => row.id === id)?.name || '—'
-  if (!data) return <main className="portal-page"><h1>User Access Management</h1><MockNotice /><Feedback {...state} />{!state.error && <p role="status">Loading user access workspace…</p>}</main>
-  const users = data.users.filter(user => (!role || user.role === role) && (!status || user.status === status) && (!department || user.departmentId === department) && `${user.id} ${user.name} ${user.email}`.toLowerCase().includes(search.toLowerCase()))
-  const pages = Math.max(1, Math.ceil(users.length / 10)), currentPage = Math.min(page, pages)
-  const facultyDepartment = data.users.find(row => row.id === form.facultyId)?.departmentId
-  return <main className="portal-page"><header className="portal-page-heading"><div><p className="portal-eyebrow">Administration / Access</p><h1>User Access Management</h1><p>Manage faculty and student accounts, roles and teaching assignments.</p></div><div className="portal-actions"><button onClick={() => { open('add'); setForm({ role: 'student' }) }}>Add Student Account</button><button className="primary" onClick={() => { open('add'); setForm({ role: 'faculty' }) }}>Add Faculty Account</button></div></header>
-    <MockNotice /><Feedback {...state} /><Stats items={[["All users", data.users.length], ['Active accounts', data.users.filter(row => row.status === 'active').length], ['Faculty', data.users.filter(row => row.role === 'faculty').length], ['Students', data.users.filter(row => row.role === 'student').length]]} />
-    {!data.departments.length && <section className="portal-card"><h2>Start a mock workspace</h2><p>No mock accounts or academic references exist for this college. Sample records are kept separately from live college data.</p><button onClick={() => open('samples')}>Load sample workspace</button></section>}
-    <section className="portal-card"><h2>All users</h2><div className="portal-filters"><Field label="Search users"><input type="search" placeholder="Name, email or user ID" value={search} onChange={event => { setSearch(event.target.value); setPage(1) }} /></Field><Field label="Role"><select value={role} onChange={event => { setRole(event.target.value); setPage(1) }}><option value="">All roles</option>{['admin', 'faculty', 'student'].map(value => <option key={value}>{value}</option>)}</select></Field><Field label="Account status"><select value={status} onChange={event => { setStatus(event.target.value); setPage(1) }}><option value="">All statuses</option><option>active</option><option>inactive</option></select></Field><Field label="Department"><select value={department} onChange={event => { setDepartment(event.target.value); setPage(1) }}><option value="">All departments</option>{data.departments.map(row => <option key={row.id} value={row.id}>{row.name}</option>)}</select></Field></div>
-      <DataTable caption="Faculty and student account access" rows={users.slice((currentPage - 1) * 10, currentPage * 10)} columns={[
-        ['id', 'User ID'], ['name', 'Name'], ['email', 'Email'], ['department', 'Department', row => name(data.departments, row.departmentId)], ['course', 'Course', row => name(data.courses, row.courseId || data.sections.find(section => section.id === row.sectionId)?.courseId)], ['branch', 'Branch', row => name(data.branches, row.branchId || data.sections.find(section => section.id === row.sectionId)?.branchId)], ['level', 'Academic Level', row => name(data.academicLevels, row.academicLevelId || data.sections.find(section => section.id === row.sectionId)?.academicLevelId)], ['role', 'Role', row => <Status>{row.role}</Status>], ['status', 'Status', row => <Status>{row.status}</Status>], ['actions', 'Actions', row => row.role === 'admin' ? 'Administrator' : <div className="portal-row-actions"><button onClick={() => open('role', row)}>Assign role</button><button onClick={() => open('status', row)}>{row.status === 'active' ? 'Deactivate' : 'Activate'}</button><button onClick={() => open('reset', row)}>Reset password</button>{row.role === 'faculty' && <button onClick={() => open('assign', row)}>Assign subjects</button>}</div>],
-      ]} /><div className="portal-pagination"><span>{users.length} users · Page {currentPage} of {pages}</span><button disabled={currentPage <= 1} onClick={() => setPage(currentPage - 1)}>Previous</button><button disabled={currentPage >= pages} onClick={() => setPage(currentPage + 1)}>Next</button></div></section>
-    <section className="portal-card"><header className="portal-section-heading"><h2>Teaching assignments</h2><button onClick={() => open('assign')}>Assign Faculty</button></header><DataTable caption="Assigned subjects and sections" rows={data.assignments} columns={[
-      ['facultyId', 'Faculty', row => name(data.users, row.facultyId)], ['subjectId', 'Subject', row => name(data.subjects, row.subjectId)], ['sectionId', 'Section', row => name(data.sections, row.sectionId)], ['actions', 'Actions', row => <button onClick={() => open('remove', row)}>Remove assignment</button>],
-    ]} /></section>
-    {dialog && <PortalDialog title={({ add: `Add ${form.role === 'faculty' ? 'Faculty' : 'Student'} Account`, role: 'Assign Role', assign: 'Assign Faculty to Subject & Section', status: `${dialog.user.status === 'active' ? 'Deactivate' : 'Activate'} Account`, reset: 'Reset Password', samples: 'Load sample workspace?', remove: 'Remove teaching assignment?' })[dialog.kind]} onClose={close}><form onSubmit={submit}><Feedback error={formError} />
-      {dialog.kind === 'add' && <><Field label="Full name"><input autoFocus required minLength={2} maxLength={100} {...field('name')} /></Field><Field label="Email"><input required type="email" maxLength={180} {...field('email')} /></Field><Field label="Department"><select required {...field('departmentId')}><option value="">Select department</option>{data.departments.map(row => <option key={row.id} value={row.id}>{row.name}</option>)}</select></Field></>}
-      {['add', 'role'].includes(dialog.kind) && <><Field label="Role"><select required {...field('role')}><option value="faculty">Faculty</option><option value="student">Student</option></select></Field>{form.role === 'student' && <><Field label="Course"><select required {...field('courseId')}><option value="">Select course</option>{data.courses.filter(row => data.branches.some(branch => branch.courseId === row.id && branch.departmentId === form.departmentId)).map(row => <option key={row.id} value={row.id}>{row.name}</option>)}</select></Field><Field label="Branch"><select required disabled={!form.courseId} {...field('branchId')}><option value="">Select branch</option>{data.branches.filter(row => row.courseId === form.courseId && row.departmentId === form.departmentId).map(row => <option key={row.id} value={row.id}>{row.name}</option>)}</select></Field><Field label="Academic Level"><select required disabled={!form.courseId} {...field('academicLevelId')}><option value="">Select academic level</option>{data.academicLevels.filter(row => row.courseId === form.courseId).map(row => <option key={row.id} value={row.id}>{row.name}</option>)}</select></Field><Field label="Student section"><select required disabled={!form.branchId || !form.academicLevelId} {...field('sectionId')}><option value="">Select section</option>{data.sections.filter(row => row.departmentId === form.departmentId && row.courseId === form.courseId && row.branchId === form.branchId && row.academicLevelId === form.academicLevelId).map(row => <option key={row.id} value={row.id}>{row.name}</option>)}</select></Field></>}</>}
-      {dialog.kind === 'assign' && <><Field label="Faculty"><select required {...field('facultyId')}><option value="">Select faculty</option>{data.users.filter(row => row.role === 'faculty' && row.status === 'active').map(row => <option key={row.id} value={row.id}>{row.name}</option>)}</select></Field><Field label="Subject"><select required {...field('subjectId')}><option value="">Select subject</option>{data.subjects.filter(row => row.departmentId === facultyDepartment).map(row => <option key={row.id} value={row.id}>{row.name}</option>)}</select></Field><Field label="Section"><select required {...field('sectionId')}><option value="">Select section</option>{data.sections.filter(row => row.departmentId === facultyDepartment).map(row => <option key={row.id} value={row.id}>{row.name}</option>)}</select></Field></>}
-      {dialog.kind === 'status' && <p>Confirm changing access for <strong>{dialog.user.name}</strong> in this mock workspace?</p>}{dialog.kind === 'reset' && <p>Record a simulated password reset for <strong>{dialog.user.email}</strong>? No password will change and no reset email will be delivered.</p>}{dialog.kind === 'samples' && <p>Create a separate set of sample users, subjects and records for this mock college workspace? Live college data will remain unchanged.</p>}{dialog.kind === 'remove' && <p>Remove this assignment? Assignments with academic records cannot be removed.</p>}
-      <div className="portal-actions"><button type="button" disabled={busy} onClick={close}>Cancel</button><button className="primary" disabled={busy}>{busy ? 'Saving…' : ['status', 'reset', 'samples', 'remove'].includes(dialog.kind) ? 'Confirm' : 'Save'}</button></div>
-    </form></PortalDialog>}
+
+  return <main className="user-directory">
+    <header className="user-directory__header">
+      <div><span className="user-directory__eyebrow">Administration / Access</span><h1>User Access Management</h1><p>View system login accounts and their college access details.</p></div>
+      <div className="user-directory__header-actions">
+        <button type="button" className="user-directory__button" onClick={exportUsers} disabled={loading || Boolean(error)}><FiDownload /> Export CSV</button>
+        <button type="button" className="user-directory__button user-directory__button--primary" onClick={() => setNotice('Account creation is not available: the backend has no administrator user-creation endpoint. New login accounts currently come from the access-request approval workflow.') }><FiPlus /> Add User</button>
+      </div>
+    </header>
+
+    {notice && <div className="user-directory__notice" role="status"><span>{notice}</span><button type="button" onClick={() => setNotice('')} aria-label="Dismiss notice"><FiX /></button></div>}
+    <section className="user-directory__capability" aria-label="Available account management features">
+      <FiShield aria-hidden="true" />
+      <p><strong>Account management capabilities are limited by the current backend.</strong> The live API supports account listing and export only. Editing, activation, deactivation, password reset, unlock, role assignment, and department links are not exposed for this screen.</p>
+    </section>
+
+    <section className="user-directory__stats" aria-label="User totals">
+      <article><span className="user-directory__stat-icon"><FiUsers /></span><div><span>Total accounts</span><strong>{loading ? '—' : users.length}</strong></div></article>
+      <article><span className="user-directory__stat-icon user-directory__stat-icon--green">●</span><div><span>Active</span><strong>{loading ? '—' : activeCount}</strong></div></article>
+      <article><span className="user-directory__stat-icon user-directory__stat-icon--gray">●</span><div><span>Inactive</span><strong>{loading ? '—' : users.length - activeCount}</strong></div></article>
+    </section>
+
+    <section className="user-directory__panel">
+      <div className="user-directory__panel-heading"><div><h2>All accounts</h2><p>Search by account ID, employee ID, name, email, or college.</p></div><button type="button" className="user-directory__icon-button" onClick={loadUsers} disabled={loading} aria-label="Refresh users"><FiRefreshCw className={loading ? 'is-spinning' : ''} /></button></div>
+      <div className="user-directory__filters">
+        <label className="user-directory__search"><FiSearch aria-hidden="true" /><span className="sr-only">Search users</span><input type="search" value={search} placeholder="Search users…" onChange={event => { setSearch(event.target.value); setPage(1) }} /></label>
+        <label><span>Account status</span><select value={statusFilter} onChange={event => { setStatusFilter(event.target.value); setPage(1) }}><option value="all">All statuses</option><option value="active">Active</option><option value="inactive">Inactive</option></select></label>
+      </div>
+
+      {error && <div className="user-directory__error" role="alert"><strong>Unable to load users</strong><span>{error}</span><button type="button" className="user-directory__button" onClick={loadUsers}>Try again</button></div>}
+      {!error && loading && <div className="user-directory__loading" role="status"><span className="user-directory__spinner" />Loading accounts…</div>}
+      {!error && !loading && users.length === 0 && <div className="user-directory__empty"><span className="user-directory__empty-icon"><FiUsers /></span><h3>No user accounts found</h3><p>The backend returned no accounts for this college.</p></div>}
+      {!error && !loading && users.length > 0 && filteredUsers.length === 0 && <div className="user-directory__empty"><h3>No matching accounts</h3><p>Try changing your search or status filter.</p><button type="button" className="user-directory__button" onClick={() => { setSearch(''); setStatusFilter('all') }}>Clear filters</button></div>}
+
+      {!error && !loading && shownUsers.length > 0 && <>
+        <div className="user-directory__table-wrap"><table><thead><tr><th scope="col">Account ID</th><th scope="col">Employee ID</th><th scope="col">Name</th><th scope="col">Email</th><th scope="col">Mobile</th><th scope="col">College ID</th><th scope="col">Created</th><th scope="col">Updated</th><th scope="col">Status</th><th scope="col">Actions</th></tr></thead><tbody>
+          {shownUsers.map((user, index) => <tr key={accountId(user) || index}>
+            <td data-label="Account ID"><strong>{display(accountId(user))}</strong></td>
+            <td data-label="Employee ID"><strong>{display(value(user, 'employeeUserId', 'EmployeeUserId'))}</strong></td>
+            <td data-label="Name">{display(value(user, 'fullName', 'FullName'))}</td>
+            <td data-label="Email">{display(value(user, 'email', 'Email'))}</td>
+            <td data-label="Mobile">{display(value(user, 'mobile', 'Mobile'))}</td>
+            <td data-label="College ID">{display(value(user, 'collegeId', 'CollegeId'))}</td>
+            <td data-label="Created">{formatDate(value(user, 'createdAt', 'CreatedAt'))}</td>
+            <td data-label="Updated">{formatDate(value(user, 'updatedAt', 'UpdatedAt'))}</td>
+            <td data-label="Status"><span className={`user-directory__status ${isActive(user) ? 'is-active' : 'is-inactive'}`}><i />{statusLabel(user)}</span></td>
+            <td data-label="Actions"><button type="button" className="user-directory__view" onClick={() => setSelectedUser(user)}><FiEye /> View</button></td>
+          </tr>)}
+        </tbody></table></div>
+        <footer className="user-directory__pagination"><span>Showing {Math.min((currentPage - 1) * PAGE_SIZE + 1, filteredUsers.length)}–{Math.min(currentPage * PAGE_SIZE, filteredUsers.length)} of {filteredUsers.length} accounts</span><div><button type="button" onClick={() => setPage(currentPage - 1)} disabled={currentPage <= 1}>Previous</button><span>Page {currentPage} of {pageCount}</span><button type="button" onClick={() => setPage(currentPage + 1)} disabled={currentPage >= pageCount}>Next</button></div></footer>
+      </>}
+    </section>
+    <section className="user-directory__mock-panel" aria-label="Separate mock workspace">
+      <UserAccessMockWorkspace />
+    </section>
+    <UserDetailsDialog user={selectedUser} onClose={() => setSelectedUser(null)} />
   </main>
 }
 
 export default function UserAccessManagement() {
-  if (isPortalPreview()) return <PortalLayout title="User Access Management"><UserAccessContent /></PortalLayout>
-  return <AcademicProvider><AdminUserAccessWorkspace /></AcademicProvider>
-}
-
-function AdminUserAccessWorkspace() {
-  const { selectedCollegeId, loading } = useAcademic()
-  return <DashboardLayout>{loading ? <p role="status">Loading college workspace…</p> : <UserAccessContent key={selectedCollegeId} />}</DashboardLayout>
+  return <AcademicProvider><DashboardLayout><UserDirectory /></DashboardLayout></AcademicProvider>
 }

@@ -7,6 +7,7 @@ import { facultyService } from '../../services/portals/facultyService.js'
 import { studentService } from '../../services/portals/studentService.js'
 import { facultyNavigation, studentNavigation } from '../../components/portals/portalNavigation.js'
 import { DataTable, Field, Feedback, MockNotice, PortalDialog, Stats, Status } from '../../components/portals/PortalUI.jsx'
+import StudentDashboard from './StudentDashboard.jsx'
 
 const today = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}` }
 const money = value => new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(value)
@@ -23,10 +24,14 @@ export default function AcademicPortal({ role }) {
 function PortalScreen({ role, screen, title }) {
   const service = role === 'faculty' ? facultyService : studentService
   const state = usePortalData(service), { data, act, busy } = state
-  return <main className="portal-page"><header className="portal-page-heading"><div><p className="portal-eyebrow">{role} Portal / My Workspace</p><h1>{title}</h1><p>{screen === 'dashboard' ? `Welcome back${data?.me.name ? `, ${data.me.name}` : ''}. Here's your academic overview.` : 'Your college workspace, organized around you.'}</p></div><span className="portal-term">Academic Year 2026–2027 · Mock</span></header>
+  const retryWorkspace = async () => {
+    try { await state.refresh() }
+    catch (reason) { console.error('Could not reload the portal workspace:', reason) }
+  }
+  return <main className="portal-page"><header className="portal-page-heading"><div><p className="portal-eyebrow">{role} Portal / My Workspace</p><h1>{title}</h1><p>{screen === 'dashboard' ? `Welcome back${data?.me.name ? `, ${data.me.name}` : ''}. Here's your academic overview.` : 'Your college workspace, organized around you.'}</p></div><span className="portal-term">{role === 'student' && screen === 'dashboard' ? 'Mock workspace' : 'Academic Year 2026–2027 · Mock'}</span></header>
     <MockNotice /><Feedback {...state} />
-    {!data ? !state.error && <p role="status">Loading your workspace…</p> : <>
-      {screen === 'dashboard' && <Dashboard data={data} role={role} />}
+    {!data ? !state.error ? <p role="status">Loading your workspace…</p> : screen === 'dashboard' && <button type="button" onClick={retryWorkspace} className="portal-retry">Retry loading workspace</button> : <>
+      {screen === 'dashboard' && (role === 'student' ? <StudentDashboard data={data} role={role} onRetry={retryWorkspace} loading={state.busy} error={state.error} /> : <Dashboard data={data} role={role} />)}
       {screen === 'students' && <Students data={data} />}
       {screen === 'subjects' && <Subjects data={data} />}
       {screen === 'attendance' && (role === 'faculty' ? <AttendanceEntry data={data} act={act} busy={busy} /> : <StudentAttendance data={data} />)}

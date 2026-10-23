@@ -471,6 +471,18 @@ export const screenExportsApi = {
   },
 }
 
+// The backend exposes user account data through its authorized screen export
+// contract. It does not currently expose a user CRUD API.
+export const userDirectoryApi = {
+  getAll: async (params = {}) => {
+    const response = await request(withQuery(API_ENDPOINTS.exports.screen('users'), { Format: 'json', ...params }))
+    const rows = response?.data ?? response?.users ?? response
+    if (!Array.isArray(rows)) throw new Error('The user directory returned an unexpected response.')
+    return rows
+  },
+  exportCsv: params => screenExportsApi.download('users', { Format: 'csv', ...params }),
+}
+
 async function requestScreenFile(screen, action, params) {
   const routes = SCREEN_EXPORT_ENDPOINTS[screen]
   if (!routes) throw new Error('This screen does not support server exports.')
