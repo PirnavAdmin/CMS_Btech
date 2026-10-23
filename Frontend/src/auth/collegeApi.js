@@ -3,7 +3,7 @@ import { resolveCollegeLogo } from '../utils/collegeLogo'
 import { getAccessToken } from './auth'
 import { createApiUnavailableError, notifyApiUnavailable } from '../api/apiFailureNotice'
 const cleanUrl = (url) => (url || "").replace(/\/+$/, "");
-const DEFAULT_API_BASE_URL = "https://clarity-math-delouse.ngrok-free.dev";
+const DEFAULT_API_BASE_URL = "https://abreast-curling-tutor.ngrok-free.dev";
 
 const friendlyValidationMessage = (errors) => {
   if (!errors || typeof errors !== "object") return "";
@@ -586,3 +586,50 @@ export const getCollegeSettingsById = (id) => {
 export const getCollegeSettingsByCollegeId = (collegeId) => {
   return SETTINGS_API.get(`/college-settings/college/${collegeId}`);
 };
+
+// ---- EXAM APIs ----
+
+const cleanParams = (params = {}) =>
+  Object.fromEntries(Object.entries(params).filter(([, v]) => v !== undefined && v !== null && v !== ''));
+
+export const fetchExams = async (params = {}) => {
+  const body = (await ACADEMIC_API.get('/exams', { params: cleanParams(params) })).data;
+  return { items: body?.data ?? [], totalCount: body?.totalCount ?? 0 };
+};
+
+export const hasExamSetup = async (params = {}) => {
+  const { totalCount } = await fetchExams({ ...params, Page: 1, PageSize: 1 });
+  return totalCount > 0;
+};
+
+export const fetchExamById = async (examId) => (await ACADEMIC_API.get(`/exams/${examId}`)).data?.data;
+export const createExamApi = async (payload) => (await ACADEMIC_API.post('/exams', payload)).data?.data;
+export const updateExamApi = async (examId, payload) => (await ACADEMIC_API.put(`/exams/${examId}`, payload)).data?.data;
+export const deleteExamApi = (examId) => ACADEMIC_API.delete(`/exams/${examId}`);
+export const fetchExamLookups = async () => (await ACADEMIC_API.get('/exams/lookups')).data?.data;
+
+export const fetchSchedules = async (examId) => (await ACADEMIC_API.get(`/exams/${examId}/schedules`)).data?.data ?? [];
+export const createScheduleApi = async (examId, payload) => (await ACADEMIC_API.post(`/exams/${examId}/schedules`, payload)).data?.data;
+export const updateScheduleApi = async (examId, scheduleId, payload) => (await ACADEMIC_API.put(`/exams/${examId}/schedules/${scheduleId}`, payload)).data?.data;
+export const deleteScheduleApi = (examId, scheduleId) => ACADEMIC_API.delete(`/exams/${examId}/schedules/${scheduleId}`);
+
+export const fetchScheduleRows = async (params = {}) => {
+  const { items: exams } = await fetchExams(params);
+  const lists = await Promise.all(
+    exams.filter((e) => e.scheduleCount > 0).map(async (exam) => {
+      const schedules = await fetchSchedules(exam.examId);
+      return schedules.map((s) => ({
+        ...s,
+        examId: exam.examId,
+        examName: exam.examName,
+        examTypeName: exam.examTypeName,
+      }));
+    })
+  );
+  return lists.flat();
+};
+
+export const fetchRules = async (examId) => (await ACADEMIC_API.get(`/exams/${examId}/rules`)).data?.data ?? [];
+export const createRuleApi = async (examId, payload) => (await ACADEMIC_API.post(`/exams/${examId}/rules`, payload)).data?.data;
+export const updateRuleApi = async (examId, ruleId, payload) => (await ACADEMIC_API.put(`/exams/${examId}/rules/${ruleId}`, payload)).data?.data;
+export const deleteRuleApi = (examId, ruleId) => ACADEMIC_API.delete(`/exams/${examId}/rules/${ruleId}`);

@@ -68,14 +68,34 @@ export const AcademicProvider = ({ children }) => {
   const [selectedAcademicYearId, setSelectedAcademicYearId] = useState(() => readStoredContext().academicYearId)
 
   const loadHierarchy = useCallback(async () => {
-    const requestedCollegeId = storedCollegeId()
+    let requestedCollegeId = storedCollegeId()
     let completedCollegeId = requestedCollegeId
     const requestId = ++hierarchyRequest.current
     try {
       setLoading(true)
       setError(null)
-      const [cols, years, depts, crss, brns, sems, secs] = await Promise.all([
-        academicService.getColleges(false),
+      // Resolve the college before requesting any college-scoped resources.
+      const cols = await academicService.getColleges(false)
+      if (requestId !== hierarchyRequest.current || storedCollegeId() !== requestedCollegeId) return
+      if (cols?.loadError) throw new Error('College details could not be loaded. Please retry.')
+      const isAdmin = getUserRole() === 'admin'
+      const assignedCollege = isAdmin ? '' : getUserCollegeId()
+      const safeColleges = (cols || []).filter(row => !assignedCollege || String(row.id ?? row.collegeId) === assignedCollege)
+      setColleges(safeColleges)
+      const available = filterActiveOnly(safeColleges)
+      const college = available.find(row => String(row.id ?? row.collegeId) === requestedCollegeId)
+        || available.find(row => String(row.id ?? row.collegeId) === String(getUserCollegeId()))
+        || available[0]
+      const initialCollegeId = college ? String(college.id ?? college.collegeId) : ''
+      if (initialCollegeId !== requestedCollegeId) {
+        saveStoredContext(initialCollegeId, '')
+        requestedCollegeId = initialCollegeId
+        completedCollegeId = initialCollegeId
+        setAcademicYears([])
+        setSelectedAcademicYearId('')
+      }
+      setSelectedCollegeId(initialCollegeId)
+      const results = await Promise.allSettled([
         academicService.getAcademicYears(false),
         academicService.getDepartments(false),
         academicService.getCourses({}, false),
@@ -83,16 +103,15 @@ export const AcademicProvider = ({ children }) => {
         academicService.getSemesters(null, false),
         academicService.getSections({}, false),
       ])
+      const [years, depts, crss, brns, sems, secs] = results.map(result =>
+        result.status === 'fulfilled' ? result.value : Object.assign([], { loadError: true }))
       if (requestId !== hierarchyRequest.current) return
 
       if (storedCollegeId() !== requestedCollegeId) return
 
-      if ([cols, years, depts, crss, brns, sems, secs].some(list => list?.loadError)) {
-        throw new Error('Academic configuration could not be loaded. Please retry.')
-      }
-      const isAdmin = getUserRole() === 'admin'
-      const assignedCollege = isAdmin ? '' : getUserCollegeId()
-      const safeColleges = (cols || []).filter(row => !assignedCollege || String(row.id ?? row.collegeId) === assignedCollege)
+      const failed = ['Academic years', 'Departments', 'Courses', 'Branches', 'Semesters', 'Sections']
+        .filter((_, index) => results[index].status === 'rejected' || results[index].value?.loadError)
+      if (failed.length) setError(`${failed.join(', ')} could not be loaded. Please retry.`)
 
       setColleges(safeColleges)
       setDepartments(depts || [])

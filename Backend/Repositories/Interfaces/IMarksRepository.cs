@@ -16,6 +16,7 @@ public interface IMarksRepository
     Task<MarksApprovalResultDto> SubmitAsync(MarksWorkflowRequest request, long? actorId, long? collegeId, bool isSuperAdmin);
     Task<MarksApprovalResultDto> ApproveAsync(MarksWorkflowRequest request, long? actorId, long? collegeId, bool isSuperAdmin);
     Task<MarksApprovalResultDto> RejectAsync(MarksWorkflowRequest request, long? actorId, long? collegeId, bool isSuperAdmin);
-    Task<IReadOnlyList<MarksApprovalDto>> PendingApprovalsAsync(long examId, long? sectionId, long? subjectId, long? collegeId, bool isSuperAdmin);
-    Task<IReadOnlyList<MarksApprovalHistoryDto>> ApprovalHistoryAsync(long markId, long? collegeId, bool isSuperAdmin);
+    Task<IReadOnlyList<MarksApprovalDto>> PendingApprovalsAsync(long examId, long? sectionId, long? subjectId, long? collegeId, bool isSuperAdmin, long? actorId = null);
+    Task<IReadOnlyList<MarksApprovalHistoryDto>> ApprovalHistoryAsync(long markId, long? collegeId, bool isSuperAdmin, long? actorId = null);
+    Task<MarksApprovalResultDto> DecideAsync(long approvalId, MarksApprovalDecisionRequest request, long? actorId, long? collegeId, bool isSuperAdmin);
 }

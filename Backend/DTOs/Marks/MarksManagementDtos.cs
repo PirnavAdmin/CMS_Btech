@@ -22,8 +22,6 @@ public sealed class MarkEditRequest
 
 public sealed class MarkBulkRow
 {
-    public long? ExamId { get; set; }
-    public long? SectionId { get; set; }
     public string StudentCode { get; set; } = string.Empty;
     public string SubjectCode { get; set; } = string.Empty;
     public decimal MarksObtained { get; set; }
@@ -49,8 +47,6 @@ public sealed class BulkUploadPreviewRequest
 
 public sealed class BulkMarksResultDto
 {
-    public long? ExamId { get; set; }
-    public long? SectionId { get; set; }
     public long? UploadId { get; set; }
     public int TotalRows { get; set; }
     public int ValidRows { get; set; }
@@ -195,16 +191,26 @@ public sealed class MarksApprovalDto
     public long? ApprovedBy { get; set; }
     public DateTime? ApprovedAt { get; set; }
     public string? Remarks { get; set; }
+    public long ExamId { get; set; }
+    public long SubjectId { get; set; }
+    public long? SectionId { get; set; }
+    public long StudentId { get; set; }
+    public string StudentCode { get; set; } = string.Empty;
+    public string StudentName { get; set; } = string.Empty;
+    public string SubjectName { get; set; } = string.Empty;
+    public string? SectionName { get; set; }
+    public string? SubmittedByName { get; set; }
+    public decimal MarksObtained { get; set; }
+    public decimal MaxMarks { get; set; }
+    public int VersionNo { get; set; }
 }
 
-public sealed class MarksApprovalUpdateRequest
+/// <summary>The route ID is marks_approvals.approval_id, not student_marks.mark_id.</summary>
+public sealed class MarksApprovalDecisionRequest
 {
-    public string ApprovalStatus { get; set; } = string.Empty;
-    public long ExamId { get; set; }
-    public long MarkId { get; set; }
-    public long? SectionId { get; set; }
-    public long? SubjectId { get; set; }
+    public string Status { get; set; } = string.Empty;
     public string? Remarks { get; set; }
+    public int? ExpectedVersion { get; set; }
 }
 
 public sealed class MarksApprovalHistoryDto
