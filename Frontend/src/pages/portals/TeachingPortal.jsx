@@ -13,6 +13,7 @@ import TeachingDashboard from './TeachingDashboard.jsx'
 import FacultyAttendance from './FacultyAttendance.jsx'
 import FacultySelfAttendance from './FacultySelfAttendance.jsx'
 import TeachingMarks from './TeachingMarks.jsx'
+import TeachingLeave from './TeachingLeave.jsx'
 
 const same = (a, b) => String(a) === String(b)
 const today = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}` }
@@ -46,7 +47,7 @@ export default function TeachingPortal({ screen, title }) {
       {screen === 'my-attendance' && <FacultySelfAttendance data={data} />}
       {screen === 'marks' && <TeachingMarks data={data} />}
       {screen === 'timetable' && <Timetable data={data} />}
-      {screen === 'leave' && <Leave />}
+      {screen === 'leave' && <TeachingLeave data={data} />}
       {screen === 'profile' && <Profile data={data} />}
       {['materials', 'notifications'].includes(screen) && <Unavailable screen={screen} data={data} />}
     </>}
@@ -72,7 +73,7 @@ function Timetable({ data }) {
   if (data.timetableError) return <section className="portal-card"><h2>Published teaching timetable</h2><p className="portal-feedback error">{data.timetableError}</p><p>Please try again when the college service is available.</p></section>
   return <section className="portal-card"><header className="portal-section-heading"><h2>Published teaching timetable</h2><div className="tf-row-actions"><button aria-pressed={view === 'week'} onClick={() => setView('week')}>Week</button><button aria-pressed={view === 'list'} onClick={() => setView('list')}>List</button></div></header>{data.timetableError && <p className="portal-feedback error">{data.timetableError}</p>}{view === 'week' ? <div className="tf-week-scroll"><div className="tf-week">{days.map(day => <section key={day}><h3>{day.slice(0, 3)}</h3>{filtered.filter(r => String(r.dayOfWeek).toUpperCase() === day).map((r, i) => <article key={r.timetableEntryId || i}><span>{time(r.startTime)} – {time(r.endTime)}</span><strong>{r.subjectName}</strong><p>{r.sectionName} · {r.classroomName || 'Room not assigned'}</p><small>{r.semesterName}</small></article>)}{!filtered.some(r => String(r.dayOfWeek).toUpperCase() === day) && <p className="tf-no-class">No classes</p>}</section>)}</div></div> : <><Field label="Day"><select value={day} onChange={e => setDay(e.target.value)}><option value="">All days</option>{days.map(d => <option key={d}>{d}</option>)}</select></Field><Table records={filtered} columns={[["dayOfWeek", 'Day'], ['time', 'Time', r => `${time(r.startTime)} – ${time(r.endTime)}`], ['subjectName', 'Subject'], ['sectionName', 'Section'], ['semesterName', 'Semester'], ['classroomName', 'Room']]} /></>}</section>
 }
-function Leave() {
+function _DeprecatedLeave() {
   const [options, setOptions] = useState({ types: [], policies: [] }), [error, setError] = useState(''), [notice, setNotice] = useState(''), [loading, setLoading] = useState(true), [busy, setBusy] = useState(false), [confirm, setConfirm] = useState(false), [form, setForm] = useState({ typeId: '', policyId: '', from: today(), to: today(), reason: '' })
   const load = () => { setLoading(true); setError(''); return service.leaveOptions().then(setOptions).catch(e => setError(e.message)).finally(() => setLoading(false)) }
   useEffect(() => { let active = true; service.leaveOptions().then(result => { if (active) setOptions(result) }).catch(e => { if (active) setError(e.message) }).finally(() => { if (active) setLoading(false) }); return () => { active = false } }, [])
