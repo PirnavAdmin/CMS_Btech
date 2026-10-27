@@ -1,5 +1,5 @@
 import { Navigate, Outlet, useLocation } from 'react-router-dom'
-import { getUserRole, isAuthenticated } from '../auth/auth'
+import { getUserRole, isAuthenticated, mustChangePassword } from '../auth/auth'
 
 export default function ProtectedRoute({ allowedRoles = [] }) {
   const location = useLocation()
@@ -14,6 +14,7 @@ export default function ProtectedRoute({ allowedRoles = [] }) {
     )
   }
 
+  if (mustChangePassword()) return <Navigate to="/change-password" replace />
   const userRole = getUserRole()
 
   if (

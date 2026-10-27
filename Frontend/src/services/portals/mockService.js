@@ -36,7 +36,7 @@ export function createMockPortalService({ storage, actor, collegeId, preview = f
     storage.setItem(key, JSON.stringify(data))
     return copy(result)
   }
-  const self = data => data.users.find(user => user.id === actor.id) || { ...actor, status: 'active', departmentId: '', phone: '' }
+  const self = data => data.users.find(user => user.id === actor.id) || { status: 'active', departmentId: '', phone: '', ...actor }
   const assignmentsFor = data => actor.role === 'faculty' ? data.assignments.filter(row => row.facultyId === actor.id) : data.assignments.filter(row => row.sectionId === self(data).sectionId)
   const assignmentForFaculty = (data, id) => {
     const assignment = data.assignments.find(row => row.id === id && row.facultyId === actor.id)

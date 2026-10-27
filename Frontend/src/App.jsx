@@ -11,6 +11,7 @@ import { ExamTimetable, CreateExamTimetable, ExamScheduleList, DepartmentExamSch
 import { MarksManagement, MarksEntry, BulkMarksUpload, EditMarks, StudentMarks, SubjectMarksReport, MarksApproval } from './pages/examinations/marks-management/MarksManagement'
 import { Navigate, Route, Routes } from 'react-router-dom'
 import ProtectedRoute from './components/ProtectedRoute'
+import FirstLoginPassword from './pages/auth/FirstLoginPassword.jsx'
 import PortalRoute, { RoleDashboard, RoleAlias } from './components/portals/PortalRoute.jsx'
 const AcademicPortal = lazy(() => import('./pages/portals/AcademicPortal.jsx'))
 const UserAccessManagement = lazy(() => import('./pages/admin-management/UserAccessManagement.jsx'))
@@ -173,6 +174,7 @@ export default function App() {
           {/* Public */}
           <Route path="/" element={<LandingPage />} />
           <Route path="/login" element={<Login />} />
+          <Route path="/change-password" element={<FirstLoginPassword />} />
           <Route path="/activate-account" element={<ActivateAccount />} />
           <Route path="/register" element={<Register />} />
 
