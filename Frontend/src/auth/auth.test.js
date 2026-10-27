@@ -141,6 +141,11 @@ test('isNonTeachingStaff distinguishes non-teaching roles from teaching faculty 
     assert.equal(isNonTeachingStaff(), false)
     signOut()
 
+    signIn('Teaching Staff', 'opaque-token', 'refresh')
+    assert.equal(getUserRole(), 'faculty')
+    assert.equal(isNonTeachingStaff(), false)
+    signOut()
+
     signIn('HOD', 'opaque-token', 'refresh')
     assert.equal(isNonTeachingStaff(), false)
     signOut()

@@ -30,7 +30,11 @@ export function isNonTeachingRole(role, user = {}) {
     user?.facultyType,
   ].flat().filter(Boolean)
 
-  return values.some(val => NON_TEACHING_ROLE_REGEX.test(String(val).trim()))
+  return values.some(val => {
+    const value = String(val).trim()
+    if (/^teaching[\s_-]+(staff|faculty)$/i.test(value)) return false
+    return NON_TEACHING_ROLE_REGEX.test(value)
+  })
 }
 
 function normalizeStoredRole(role) {
