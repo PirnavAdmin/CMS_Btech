@@ -1,6 +1,7 @@
 import { GENERIC_ERROR_MESSAGE, userErrorMessage } from '../utils/userError.js'
 import { getAccessToken } from './auth'
 import { ROLES } from './roles'
+import { normalizeLoginSession } from './loginSession.js'
 import { notifyApiUnavailable } from '../api/apiFailureNotice'
 
 const fetchWithApiNotice = async (...args) => {
@@ -128,9 +129,7 @@ export async function login({ identifier, password }, fallbackRole = ROLES.ADMIN
   }
 
   try {
-    const session = await response.json()
-    if (!session?.user?.role) throw new Error('Malformed authentication response')
-    return session
+    return normalizeLoginSession(await response.json())
   } catch {
     throw new AuthRequestError(GENERIC_ERROR_MESSAGE)
   }

@@ -1,24 +1,31 @@
-.portal-topbar .faculty-navbar-actions{display:flex;align-items:center;gap:12px;min-width:0}
-.portal-topbar .faculty-navbar-icon{display:inline-flex;align-items:center;justify-content:center;width:42px;height:42px;padding:0;box-sizing:border-box;flex-shrink:0;border:1px solid var(--border);border-radius:10px;background:var(--surface);color:var(--text-secondary);text-decoration:none;cursor:pointer}
-.portal-topbar .faculty-navbar-icon svg{width:19px;height:19px}
-.portal-topbar .faculty-navbar-icon:hover,.portal-topbar .faculty-navbar-icon.is-active{background:var(--brand-soft);color:var(--brand);border-color:var(--brand)}
-.faculty-account-menu{position:relative;min-width:0}
-.faculty-account-menu>summary{list-style:none;display:flex;align-items:center;gap:10px;padding:6px 12px 6px 7px;border:1px solid var(--border);border-radius:32px;background:var(--surface);cursor:pointer;box-shadow:var(--shadow-sm);color:var(--text-primary)}
-.faculty-account-menu>summary::-webkit-details-marker{display:none}
-.faculty-account-avatar{display:grid;place-items:center;width:36px;height:36px;flex-shrink:0;background:var(--brand-soft);border:1px solid var(--border);border-radius:50%;color:var(--brand)}
-.faculty-account-avatar svg{width:19px;height:19px}
-.faculty-account-identity{display:grid;gap:3px;min-width:0;max-width:210px}
-.faculty-account-identity strong{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:14px;line-height:1.3}
-.faculty-account-identity small{font-size:11px;color:var(--text-secondary);line-height:1.3}
-.faculty-account-chevron{width:16px;height:16px;flex-shrink:0;color:var(--text-secondary);margin-left:7px;transition:transform .15s}
-.faculty-account-menu[open] .faculty-account-chevron{transform:rotate(180deg)}
-.faculty-account-menu[open]>summary{border-color:var(--brand)}
-.faculty-account-panel{position:absolute;right:0;top:calc(100% + 10px);z-index:150;width:250px;max-width:calc(100vw - 28px);padding:6px;box-sizing:border-box;background:var(--surface);border:1px solid var(--border);border-radius:12px;box-shadow:0 14px 35px #0f2a4c26}
-.faculty-account-panel-heading{display:grid;gap:4px;padding:12px 10px;margin-bottom:5px;border-bottom:1px solid var(--border)}
-.faculty-account-panel-heading strong{font-size:13px;overflow-wrap:anywhere;color:var(--text-primary)}
-.faculty-account-panel-heading small{font-size:11px;color:var(--text-secondary)}
-.portal-topbar .faculty-account-panel>a,.portal-topbar .faculty-account-panel>button{display:flex;align-items:center;gap:10px;width:100%;box-sizing:border-box;padding:11px 12px;border:0;border-radius:7px;background:transparent;color:var(--text-primary);text-align:left;text-decoration:none;font:inherit;font-size:13px;font-weight:500;cursor:pointer}
-.portal-topbar .faculty-account-panel :is(a,button):hover{background:var(--brand-soft);color:var(--brand)}
-.faculty-account-panel :is(a,button) svg{width:17px;height:17px;flex-shrink:0}
-.portal-topbar .faculty-account-panel>.faculty-account-signout{border-top:1px solid var(--border);border-radius:0 0 7px 7px;margin-top:4px;color:var(--danger,#b42318)}
-@media(max-width:650px){.portal-topbar:has(.faculty-navbar-actions){gap:10px;padding:12px 14px;flex-wrap:wrap}.portal-topbar:has(.faculty-navbar-actions)>span{font-size:12px;flex:1;min-width:0}.portal-topbar:has(.faculty-navbar-actions)>.portal-topbar-actions{margin-left:auto;gap:0}.portal-topbar .faculty-navbar-actions{gap:8px}.faculty-account-identity{display:none}.faculty-account-menu>summary{gap:4px;padding:4px 7px 4px 4px}.faculty-account-chevron{margin-left:0}.portal-topbar .faculty-navbar-icon{height:38px;width:38px}}
+/* Match the shared admin account controls without inheriting header text styles. */
+#root .portal-shell .faculty-navbar-actions { display: flex; align-items: center; gap: 10px; min-width: 0; }
+#root .portal-shell .faculty-navbar-icon { display: grid; place-items: center; width: 36px; height: 36px; padding: 0; box-sizing: border-box; flex: 0 0 36px; border: 1px solid var(--header-border, var(--border)); border-radius: 7px; background: var(--header-soft, var(--surface-soft)); color: var(--text-secondary); text-decoration: none; cursor: pointer; }
+#root .portal-shell .faculty-navbar-icon svg { width: 17px; height: 17px; }
+#root .portal-shell .faculty-navbar-icon:hover,
+#root .portal-shell .faculty-navbar-icon.is-active { background: var(--brand-soft); color: var(--brand); border-color: var(--brand); }
+#root .portal-shell .faculty-account-menu { position: relative; min-width: 0; }
+#root .portal-shell .faculty-account-menu > summary { display: flex; align-items: center; gap: 8px; height: 38px; padding: 4px 9px 4px 5px; border: 1px solid var(--border); border-radius: 7px; background: var(--surface); box-shadow: none; cursor: pointer; list-style: none; }
+#root .portal-shell .faculty-account-menu > summary::-webkit-details-marker { display: none; }
+#root .portal-shell .faculty-account-menu > summary:hover { background: var(--surface-soft); }
+#root .portal-shell .faculty-account-menu[open] > summary { border-color: var(--border-strong); }
+#root .portal-shell .faculty-account-avatar { display: grid; place-items: center; width: 28px; height: 28px; flex: 0 0 28px; padding: 0; border: 0; border-radius: 50%; background: var(--brand-soft); color: var(--brand); }
+#root .portal-shell .faculty-account-avatar svg { width: 16px; height: 16px; }
+#root .portal-shell .faculty-account-identity { display: flex; flex-direction: column; gap: 1px; min-width: 0; max-width: 160px; }
+#root .portal-shell .faculty-account-identity strong { max-width: 160px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text-primary); font-size: 12px; font-weight: 600; line-height: 15px; }
+#root .portal-shell .faculty-account-identity small { margin: 0; color: var(--text-muted); font-size: 10px; font-weight: 400; line-height: 13px; }
+#root .portal-shell .faculty-account-chevron { width: 14px; height: 14px; margin-left: 4px; flex-shrink: 0; color: var(--text-muted); transition: transform .15s; }
+#root .portal-shell .faculty-account-menu[open] .faculty-account-chevron { transform: rotate(180deg); }
+#root .portal-shell .faculty-account-panel { position: absolute; right: 0; top: calc(100% + 8px); z-index: 150; display: flex; flex-direction: column; gap: 2px; width: 210px; max-width: calc(100vw - 28px); padding: 6px; box-sizing: border-box; border: 1px solid var(--border); border-radius: 9px; background: var(--surface); box-shadow: var(--shadow-md); }
+#root .portal-shell .faculty-account-panel > :is(a, button) { display: flex; align-items: center; justify-content: flex-start; gap: 10px; width: 100%; min-height: 38px; box-sizing: border-box; margin: 0; padding: 10px; border: 0; border-radius: 6px; background: transparent; color: var(--text-primary); box-shadow: none; font-family: inherit; font-size: 12px; font-weight: 500; line-height: 18px; text-align: left; text-decoration: none; cursor: pointer; }
+#root .portal-shell .faculty-account-panel > :is(a, button):hover { background: var(--brand-soft); color: var(--brand); }
+#root .portal-shell .faculty-account-panel > :is(a, button) svg { width: 16px; height: 16px; flex-shrink: 0; padding: 0; border: 0; border-radius: 0; background: transparent; color: currentColor; box-shadow: none; }
+#root .portal-shell .faculty-account-panel > .faculty-account-signout { margin-top: 4px; border-top: 1px solid var(--border); border-radius: 0 0 6px 6px; color: var(--danger); }
+#root .portal-shell .faculty-account-panel > .faculty-account-signout:hover { background: color-mix(in srgb, var(--danger) 8%, var(--surface)); color: var(--danger); }
+@media (max-width: 650px) {
+  #root .portal-shell .faculty-navbar-actions { gap: 7px; }
+  #root .portal-shell .faculty-account-identity { display: none; }
+  #root .portal-shell .faculty-account-menu > summary { gap: 4px; padding: 4px 6px; }
+  #root .portal-shell .faculty-account-chevron { margin-left: 0; }
+}
+@media (prefers-reduced-motion: reduce) { #root .portal-shell .faculty-account-chevron { transition: none; } }

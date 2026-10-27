@@ -551,6 +551,8 @@ export async function login({ identifier, password, rememberMe = false }) {
       id: data.userId,
       name: data.fullName,
       role: normalizeFrontendRole(roleValue),
+      collegeId: data.collegeId,
+      mustChangePassword: data.mustChangePassword,
     },
   }
 }
@@ -1654,6 +1656,12 @@ export const roleApi = {
   },
 }
 export const rolesApi = roleApi
+
+export const userRoleMappingApi = {
+  getAll: async () => listData(await request(endpoint('/api/UserRoleMapping'))),
+  create: payload => jsonRequest(endpoint('/api/UserRoleMapping'), 'POST', payload),
+  update: (id, payload) => jsonRequest(endpoint(`/api/UserRoleMapping/${requiredId(id, 'User role mapping ID')}`), 'PUT', payload),
+}
 
 export const roomApi = {
   getAll: async (params) => listData(await request(withQuery(API_ENDPOINTS.rooms.list, params))),

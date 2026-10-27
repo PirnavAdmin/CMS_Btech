@@ -1,4 +1,5 @@
-import { Link } from 'react-router-dom'
+import Link from '../../components/portals/PermissionLink.jsx'
+
 import { FiArrowRight, FiBookOpen, FiCalendar, FiCheckSquare, FiClock, FiEdit3, FiLayers, FiUsers } from 'react-icons/fi'
 import './teaching-dashboard.css'
 

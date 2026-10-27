@@ -1,6 +1,7 @@
+import Link from '../../components/portals/PermissionLink.jsx'
 /* eslint-disable react/set-state-in-effect -- Reset dependent registers before synchronizing them with the selected backend class. */
 import { useEffect, useState } from 'react'
-import { Link, useSearchParams } from 'react-router-dom'
+import { useSearchParams } from 'react-router-dom'
 import { FiAlertCircle, FiBookOpen, FiDownload, FiFileText, FiSearch, FiX } from 'react-icons/fi'
 import PortalLayout from '../../layouts/PortalLayout.jsx'
 import FilterPanel from '../../components/FilterPanel.jsx'
