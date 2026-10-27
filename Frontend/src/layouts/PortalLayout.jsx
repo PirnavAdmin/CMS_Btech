@@ -9,6 +9,7 @@ import '../components/Sidebar.css'
 import '../styles/portals.css'
 import FacultyNavbarActions from '../components/portals/FacultyNavbarActions.jsx'
 import FacultySignOutDialog from '../components/portals/FacultySignOutDialog.jsx'
+import './PortalLayout.css'
 
 const teachingIcons = { dashboard: FiGrid, students: FiUsers, subjects: FiBookOpen, attendance: FiCheckSquare, marks: FiEdit3, timetable: FiCalendar, materials: FiFileText, leave: FiCalendar, exams: FiFileText, electives: FiCheckSquare, documents: FiFileText, meetings: FiCalendar, profile: FiUser }
 function NavigationIcon({ role, screen }) { const Icon = role === 'faculty' ? teachingIcons[screen] || FiGrid : FiGrid; return <Icon aria-hidden="true" /> }
