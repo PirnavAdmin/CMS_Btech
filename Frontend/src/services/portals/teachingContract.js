@@ -10,6 +10,19 @@ const id = value => String(value ?? '')
 const same = (a, b) => id(a) === id(b)
 const positive = value => Number.isSafeInteger(Number(value)) && Number(value) > 0
 const enabled = value => ![false, 0, '0', 'Inactive', 'inactive', 'false'].includes(value)
+export function assessmentOptions(response, assignment) {
+  return rows(response).map(row => ({
+    ...row,
+    examId: row.examId ?? row.ExamId ?? row.exam_id ?? row.id,
+    examName: row.examName ?? row.ExamName ?? row.exam_name ?? row.examinationName ?? row.name ?? row.title,
+    academicYearId: row.academicYearId ?? row.AcademicYearId ?? row.academic_year_id,
+    semesterId: row.semesterId ?? row.SemesterId ?? row.semester_id,
+    branchId: row.branchId ?? row.BranchId ?? row.branch_id,
+    subjectId: row.subjectId ?? row.SubjectId ?? row.subject_id,
+    sectionId: row.sectionId ?? row.SectionId ?? row.section_id,
+  })).filter(row => positive(row.examId) && ['academicYearId', 'semesterId', 'branchId', 'subjectId', 'sectionId'].every(key => !row[key] || !assignment[key] || same(row[key], assignment[key])))
+    .map(row => ({ ...row, examName: row.examName || `Examination ${row.examId}` }))
+}
 export function createTeachingService({ request, getProfile, collegeId, getIdentity = () => '' }) {
   let workspace, revision = 0
   const scoped = (path, params = {}) => {
@@ -117,7 +130,7 @@ export function createTeachingService({ request, getProfile, collegeId, getIdent
       if (!positive(sessionId)) throw new Error('The backend did not return a valid attendance session ID.')
       return send(`/api/v1/student-attendance/sessions/${sessionId}/mark`, 'PUT', { students: records, markUnlistedAsAbsent: false, completeSession: true })
     },
-    async getExams(allocationId) { const a = assignment(allocationId); return rows(await get('/api/v1/exams', { academicYearId: a.academicYearId, semesterId: a.semesterId, branchId: a.branchId })).filter(r => ['academicYearId', 'semesterId', 'branchId'].every(key => !r[key] || !a[key] || same(r[key], a[key]))) },
+    async getExams(allocationId) { const a = assignment(allocationId); return assessmentOptions(await get('/api/v1/exams', { academicYearId: a.academicYearId, semesterId: a.semesterId, branchId: a.branchId }), a) },
     async getMarks(allocationId, examId) { const a = assignment(allocationId); if (!positive(examId)) return []; return rows(await get('/api/v1/marks', { examId, sectionId: a.sectionId, subjectId: a.subjectId })).filter(r => same(r.subjectId, a.subjectId) && (!r.sectionId || same(r.sectionId, a.sectionId)) && roster(a).some(s => same(s.id, r.studentId))) },
     async saveMark({ allocationId, examId, studentId, marksObtained, maxMarks }) {
       const a = assignment(allocationId)

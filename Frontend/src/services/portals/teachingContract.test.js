@@ -1,6 +1,18 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { createTeachingService, rows } from './teachingContract.js'
+import { createTeachingService, rows, assessmentOptions } from './teachingContract.js'
+
+test('assessment options normalize exam identifiers and retain only matching scope', () => {
+  const result = assessmentOptions({ data: { exams: [
+    { ExamId: 2, ExamName: 'Mid Semester', AcademicYearId: 4, SemesterId: 2 },
+    { exam_id: 3, exam_name: 'Practical', subject_id: 8 },
+    { id: 4, name: 'Another year', academicYearId: 99 },
+    { id: 5, name: 'Another subject', subjectId: 99 },
+    { name: 'Missing identifier' },
+  ] } }, allocation)
+  assert.deepEqual(result.map(row => [row.examId, row.examName]), [[2, 'Mid Semester'], [3, 'Practical']])
+  assert.deepEqual(assessmentOptions({ data: [] }, allocation), [])
+})
 
 const allocation = { allocationId: 20, facultyId: 7, sectionId: 3, subjectId: 8, semesterId: 2, academicYearId: 4, status: true, sectionName: 'CSE A' }
 function setup({ profile = { facultyId: 7, fullName: 'Faculty' }, failRoster = false, sessions = [] } = {}) {
