@@ -1,0 +1,1122 @@
+/* Faculty Self Attendance Styles - Modern Premium UI */
+
+.fsa-container {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  min-width: 0;
+}
+
+/* ==========================================================================
+   Header & Compact Summary Cards
+   ========================================================================== */
+
+.fsa-page > .tf-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  flex-wrap: wrap;
+}
+
+.fsa-page > .tf-heading > div:first-child {
+  flex: 1;
+  min-width: 240px;
+}
+
+.fsa-summary-anchor {
+  flex: 0 1 540px;
+  width: 100%;
+  min-width: 0;
+  margin-left: auto;
+}
+
+.fsa-compact-summary {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface);
+  box-shadow: var(--shadow-sm);
+}
+
+.fsa-summary-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  padding: 4px 6px;
+  border-right: 1px solid var(--border);
+}
+
+.fsa-summary-item:last-child {
+  border-right: 0;
+}
+
+.fsa-summary-icon {
+  width: 34px;
+  height: 34px;
+  border-radius: 8px;
+  display: grid;
+  place-items: center;
+  font-size: 16px;
+  flex-shrink: 0;
+}
+
+.fsa-summary-icon.tone-green {
+  background: rgba(22, 128, 78, 0.12);
+  color: #16804e;
+}
+
+.fsa-summary-icon.tone-blue {
+  background: rgba(37, 99, 235, 0.12);
+  color: #2563eb;
+}
+
+.fsa-summary-icon.tone-amber {
+  background: rgba(217, 119, 6, 0.12);
+  color: #d97706;
+}
+
+.fsa-summary-icon.tone-purple {
+  background: rgba(121, 80, 183, 0.12);
+  color: #7950b7;
+}
+
+.fsa-summary-content {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.fsa-summary-content strong {
+  font-size: 15px;
+  font-weight: 800;
+  color: var(--text-primary);
+  line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.fsa-summary-content small {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-secondary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.fsa-summary-present {
+  color: #16804e !important;
+}
+
+:root[data-theme="dark"] .fsa-summary-present {
+  color: #4ade80 !important;
+}
+
+@media (max-width: 1024px) {
+  .fsa-summary-anchor {
+    flex-basis: 100%;
+    max-width: 100%;
+  }
+}
+
+@media (max-width: 680px) {
+  .fsa-compact-summary {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .fsa-summary-item:nth-child(2) {
+    border-right: 0;
+  }
+}
+
+/* ==========================================================================
+   Hero Daily Punch & Shift Card
+   ========================================================================== */
+
+.fsa-punch-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 24px;
+  box-shadow: var(--shadow-sm);
+  display: grid;
+  grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr);
+  gap: 24px;
+  align-items: stretch;
+}
+
+@media (max-width: 980px) {
+  .fsa-punch-card {
+    grid-template-columns: 1fr;
+    gap: 20px;
+    padding: 18px;
+  }
+}
+
+.fsa-punch-main {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  justify-content: space-between;
+}
+
+/* Faculty Profile Banner inside hero */
+.fsa-faculty-strip {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid var(--border);
+}
+
+.fsa-faculty-avatar {
+  width: 46px;
+  height: 46px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #174c88, #2563eb);
+  color: #ffffff;
+  display: grid;
+  place-items: center;
+  font-size: 16px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  flex-shrink: 0;
+  box-shadow: 0 2px 8px rgba(37, 99, 235, 0.25);
+}
+
+.fsa-faculty-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
+.fsa-faculty-name-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.fsa-faculty-name {
+  font-size: 17px;
+  font-weight: 800;
+  color: var(--text-primary);
+  margin: 0;
+}
+
+.fsa-faculty-badge {
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 12px;
+  background: rgba(22, 128, 78, 0.12);
+  color: #16804e;
+  letter-spacing: 0.02em;
+}
+
+.fsa-faculty-role {
+  font-size: 12px;
+  color: var(--text-secondary);
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.fsa-empid {
+  font-family: monospace;
+  font-weight: 700;
+  font-size: 11px;
+  color: var(--brand);
+}
+
+.fsa-dot-sep {
+  color: var(--border);
+}
+
+/* Live System Clock Display Box */
+.fsa-clock-display-box {
+  background: var(--surface-soft);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 16px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.fsa-clock-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.fsa-clock-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: var(--brand);
+}
+
+.fsa-client-tag {
+  font-size: 9px;
+  font-weight: 600;
+  padding: 1px 6px;
+  border-radius: 4px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  color: var(--text-secondary);
+}
+
+.fsa-clock-status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.fsa-clock-time-val {
+  font-family: 'SF Mono', Monaco, Menlo, Consolas, monospace;
+  font-size: 32px;
+  font-weight: 900;
+  letter-spacing: 0.02em;
+  color: var(--text-primary);
+  line-height: 1.1;
+}
+
+.fsa-clock-date-line {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--text-secondary);
+  font-weight: 600;
+  flex-wrap: wrap;
+}
+
+.fsa-clock-today-date {
+  color: var(--text-primary);
+  font-weight: 700;
+}
+
+.fsa-shift-window {
+  color: var(--text-secondary);
+}
+
+/* Status Pills */
+.fsa-status-pill {
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  line-height: 1.2;
+}
+
+.fsa-status-pill.status-present,
+.fsa-status-pill.status-checked-out {
+  background: rgba(22, 128, 78, 0.12);
+  color: #16804e;
+  border: 1px solid rgba(22, 128, 78, 0.25);
+}
+
+.fsa-status-pill.status-checked-in {
+  background: rgba(37, 99, 235, 0.12);
+  color: #2563eb;
+  border: 1px solid rgba(37, 99, 235, 0.25);
+}
+
+.fsa-status-pill.status-late {
+  background: rgba(217, 119, 6, 0.12);
+  color: #d97706;
+  border: 1px solid rgba(217, 119, 6, 0.25);
+}
+
+.fsa-status-pill.status-half-day {
+  background: rgba(230, 119, 0, 0.12);
+  color: #d97706;
+  border: 1px solid rgba(230, 119, 0, 0.25);
+}
+
+.fsa-status-pill.status-on-leave,
+.fsa-status-pill.status-leave {
+  background: rgba(121, 80, 183, 0.12);
+  color: #7950b7;
+  border: 1px solid rgba(121, 80, 183, 0.25);
+}
+
+.fsa-status-pill.status-not-marked {
+  background: var(--surface);
+  color: var(--text-secondary);
+  border: 1px solid var(--border);
+}
+
+.fsa-status-pill.status-weekend,
+.fsa-status-pill.status-scheduled {
+  background: var(--surface);
+  color: var(--text-muted);
+  border: 1px solid var(--border);
+}
+
+/* Pulsing beacon */
+.fsa-pulse-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: #16804e;
+  box-shadow: 0 0 0 0 rgba(22, 128, 78, 0.7);
+  animation: fsa-pulse 1.8s infinite;
+  display: inline-block;
+}
+
+@keyframes fsa-pulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(22, 128, 78, 0.6);
+  }
+  70% {
+    box-shadow: 0 0 0 8px rgba(22, 128, 78, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(22, 128, 78, 0);
+  }
+}
+
+/* Punch Action Buttons */
+.fsa-punch-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.fsa-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  height: 42px;
+  padding: 0 18px;
+  border-radius: 9px;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text-primary);
+  user-select: none;
+}
+
+.fsa-btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  box-shadow: none !important;
+}
+
+.fsa-btn-checkin {
+  background: linear-gradient(135deg, #16804e, #10b981);
+  color: #ffffff;
+  border-color: #16804e;
+  box-shadow: 0 2px 8px rgba(22, 128, 78, 0.25);
+}
+
+.fsa-btn-checkin:hover:not(:disabled) {
+  background: linear-gradient(135deg, #136f43, #059669);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(22, 128, 78, 0.35);
+}
+
+.fsa-btn-checkout {
+  background: linear-gradient(135deg, #dc2626, #ef4444);
+  color: #ffffff;
+  border-color: #dc2626;
+  box-shadow: 0 2px 8px rgba(220, 38, 38, 0.25);
+}
+
+.fsa-btn-checkout:hover:not(:disabled) {
+  background: linear-gradient(135deg, #b91c1c, #dc2626);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(220, 38, 38, 0.35);
+}
+
+.fsa-btn-outline {
+  border-color: var(--border);
+  background: var(--surface);
+  color: var(--text-secondary);
+}
+
+.fsa-btn-outline:hover:not(:disabled) {
+  background: var(--surface-soft);
+  color: var(--text-primary);
+  border-color: var(--brand);
+}
+
+.fsa-btn-reset:hover:not(:disabled) {
+  color: #d97706;
+  border-color: #d97706;
+}
+
+/* ==========================================================================
+   Hero Right Side: Analytics & Progress Gauge
+   ========================================================================== */
+
+.fsa-punch-analytics {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  background: var(--surface-soft);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 18px;
+  justify-content: space-between;
+}
+
+.fsa-analytics-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 10px;
+}
+
+.fsa-analytics-heading h4 {
+  font-size: 13px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-primary);
+  margin: 0;
+}
+
+.fsa-node-tag {
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 6px;
+  background: rgba(37, 99, 235, 0.1);
+  color: #2563eb;
+  font-family: monospace;
+}
+
+.fsa-metrics-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.fsa-metric-tile {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 12px;
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  transition: all 0.15s ease;
+}
+
+.fsa-metric-tile.highlight {
+  border-color: rgba(37, 99, 235, 0.4);
+  background: rgba(37, 99, 235, 0.03);
+}
+
+.fsa-metric-tile-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  display: grid;
+  place-items: center;
+  font-size: 15px;
+  flex-shrink: 0;
+}
+
+.fsa-metric-tile-icon.tone-green {
+  background: rgba(22, 128, 78, 0.12);
+  color: #16804e;
+}
+
+.fsa-metric-tile-icon.tone-amber {
+  background: rgba(217, 119, 6, 0.12);
+  color: #d97706;
+}
+
+.fsa-metric-tile-icon.tone-blue {
+  background: rgba(37, 99, 235, 0.12);
+  color: #2563eb;
+}
+
+.fsa-metric-tile-icon.tone-purple {
+  background: rgba(121, 80, 183, 0.12);
+  color: #7950b7;
+}
+
+.fsa-metric-tile-body {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.fsa-metric-tile-body small {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-muted);
+}
+
+.fsa-metric-tile-body strong {
+  font-size: 15px;
+  font-weight: 800;
+  color: var(--text-primary);
+  line-height: 1.2;
+}
+
+.fsa-metric-sub {
+  font-size: 10px;
+  color: var(--text-secondary);
+}
+
+/* Shift Progress Bar Card */
+.fsa-shift-progress-card {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 12px 14px;
+}
+
+.fsa-shift-progress-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-secondary);
+}
+
+.fsa-shift-progress-header strong {
+  color: var(--text-primary);
+  font-size: 12px;
+}
+
+.fsa-progress-bar-bg {
+  width: 100%;
+  height: 8px;
+  border-radius: 6px;
+  background: var(--surface-soft);
+  border: 1px solid var(--border);
+  overflow: hidden;
+}
+
+.fsa-progress-bar-fill {
+  height: 100%;
+  border-radius: 6px;
+  transition: width 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.fsa-progress-bar-footer {
+  display: flex;
+  justify-content: space-between;
+  font-size: 10px;
+  color: var(--text-muted);
+  font-weight: 600;
+}
+
+/* ==========================================================================
+   Navigation Card (Tabs, Toolbar, Table)
+   ========================================================================== */
+
+.fsa-nav-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 20px;
+  box-shadow: var(--shadow-sm);
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.fsa-tabs-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  flex-wrap: wrap;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 14px;
+}
+
+.fsa-tabs {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.fsa-tab-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  border-radius: 9px;
+  font-size: 13px;
+  font-weight: 700;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.fsa-tab-btn:hover {
+  background: var(--surface-soft);
+  color: var(--text-primary);
+}
+
+.fsa-tab-btn.is-active {
+  background: var(--brand, #174c88);
+  color: #ffffff;
+  box-shadow: 0 2px 6px rgba(23, 76, 136, 0.25);
+}
+
+.fsa-tab-badge {
+  padding: 2px 7px;
+  border-radius: 12px;
+  font-size: 10px;
+  font-weight: 700;
+  background: rgba(255, 255, 255, 0.22);
+  color: inherit;
+}
+
+.fsa-tab-btn:not(.is-active) .fsa-tab-badge {
+  background: var(--surface-soft);
+  color: var(--text-secondary);
+  border: 1px solid var(--border);
+}
+
+.fsa-tab-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.fa-button-primary {
+  background: var(--brand, #174c88) !important;
+  color: #ffffff !important;
+  border-color: var(--brand, #174c88) !important;
+}
+
+.fa-button-primary:hover {
+  filter: brightness(1.1);
+}
+
+/* Weekly 7-Day Ribbon Cards */
+.fsa-week-grid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 10px;
+  margin-bottom: 6px;
+}
+
+@media (max-width: 1024px) {
+  .fsa-week-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 620px) {
+  .fsa-week-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+.fsa-week-day-card {
+  background: var(--surface-soft);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  transition: all 0.18s ease;
+}
+
+.fsa-week-day-card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-sm);
+  border-color: rgba(37, 99, 235, 0.3);
+}
+
+.fsa-week-day-card.is-today {
+  border-color: var(--brand, #174c88);
+  background: var(--surface);
+  box-shadow: 0 0 0 2px rgba(23, 76, 136, 0.18), var(--shadow-sm);
+}
+
+.fsa-week-day-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 6px;
+}
+
+.fsa-week-day-name {
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+}
+
+.fsa-week-day-num {
+  font-size: 15px;
+  font-weight: 800;
+  color: var(--text-primary);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.fsa-week-today-tag {
+  display: inline-block;
+  padding: 1px 5px;
+  border-radius: 4px;
+  font-size: 9px;
+  font-weight: 800;
+  background: var(--brand, #174c88);
+  color: #ffffff;
+}
+
+.fsa-week-day-times {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 11px;
+  color: var(--text-secondary);
+}
+
+.fsa-week-day-times div {
+  display: flex;
+  justify-content: space-between;
+}
+
+.fsa-week-day-times strong {
+  font-family: monospace;
+  font-size: 11px;
+  color: var(--text-primary);
+}
+
+.fsa-week-day-footer {
+  margin-top: auto;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+/* Toolbar & Filters */
+.fsa-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.fsa-search-filter {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 1;
+  min-width: 260px;
+}
+
+.fsa-search-input-wrap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--surface-soft);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 0 12px;
+  height: 38px;
+  flex: 1;
+  max-width: 320px;
+}
+
+.fsa-search-input-wrap input {
+  border: 0;
+  outline: 0;
+  background: transparent;
+  font-size: 12px;
+  color: var(--text-primary);
+  width: 100%;
+}
+
+.fsa-filter-select {
+  height: 38px;
+  padding: 0 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface-soft);
+  color: var(--text-primary);
+  font-size: 12px;
+  font-weight: 600;
+  outline: none;
+  cursor: pointer;
+}
+
+.fsa-quick-filter-chips {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.fsa-chip-btn {
+  padding: 5px 11px;
+  border-radius: 16px;
+  font-size: 11px;
+  font-weight: 700;
+  border: 1px solid var(--border);
+  background: var(--surface-soft);
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.fsa-chip-btn:hover {
+  background: var(--surface);
+  color: var(--text-primary);
+}
+
+.fsa-chip-btn.is-active {
+  background: var(--text-primary);
+  color: var(--surface);
+  border-color: var(--text-primary);
+}
+
+.fsa-records-count {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+/* ==========================================================================
+   Table Styles
+   ========================================================================== */
+
+.fsa-table-wrap {
+  overflow-x: auto;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface);
+}
+
+.fsa-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+  min-width: 740px;
+}
+
+.fsa-table th {
+  padding: 12px 14px;
+  text-align: left;
+  font-size: 10px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #ffffff;
+  background: var(--table-head, #174c88);
+  white-space: nowrap;
+}
+
+.fsa-table td {
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--border);
+  color: var(--text-secondary);
+  vertical-align: middle;
+}
+
+.fsa-table tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+.fsa-table tbody tr:nth-child(even) {
+  background: var(--surface-soft);
+}
+
+.fsa-table tbody tr.is-today-row {
+  background: rgba(37, 99, 235, 0.06) !important;
+  border-left: 4px solid var(--brand, #174c88);
+}
+
+.fsa-table tbody tr.is-today-row td {
+  color: var(--text-primary);
+}
+
+.fsa-date-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.fsa-date-cell strong {
+  color: var(--text-primary);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.fsa-date-cell small {
+  color: var(--text-muted);
+  font-size: 11px;
+}
+
+.fsa-tag-today {
+  display: inline-block;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 9px;
+  font-weight: 800;
+  background: var(--brand, #174c88);
+  color: #ffffff;
+  margin-left: 6px;
+  vertical-align: middle;
+}
+
+.fsa-time-val {
+  font-family: monospace;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.fsa-duration-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 9px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 700;
+  background: var(--surface-soft);
+  color: var(--text-primary);
+  border: 1px solid var(--border);
+}
+
+.fsa-duration-badge.is-full {
+  background: rgba(22, 128, 78, 0.1);
+  color: #16804e;
+  border-color: rgba(22, 128, 78, 0.25);
+}
+
+.fsa-duration-badge.is-short {
+  background: rgba(217, 119, 6, 0.1);
+  color: #d97706;
+  border-color: rgba(217, 119, 6, 0.25);
+}
+
+.fsa-empty {
+  text-align: center;
+  padding: 36px 20px;
+  color: var(--text-muted);
+  font-size: 13px;
+}
+
+/* ==========================================================================
+   Edit Modal Form Styles
+   ========================================================================== */
+
+.fsa-edit-form {
+  display: grid;
+  gap: 14px;
+  padding-top: 10px;
+}
+
+.fsa-form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.fsa-form-group label {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-secondary);
+}
+
+.fsa-form-group input,
+.fsa-form-group select,
+.fsa-form-group textarea {
+  height: 38px;
+  padding: 0 10px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--surface);
+  color: var(--text-primary);
+  font: inherit;
+  font-size: 12px;
+  outline: none;
+}
+
+.fsa-form-group input:focus,
+.fsa-form-group select:focus,
+.fsa-form-group textarea:focus {
+  border-color: var(--brand, #174c88);
+}
+
+.fsa-form-group textarea {
+  height: 70px;
+  padding: 8px 10px;
+  resize: vertical;
+}
+
+.fsa-calc-preview {
+  background: var(--surface-soft);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 12px;
+  font-size: 12px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  color: var(--text-secondary);
+}
+
+.fsa-calc-preview strong {
+  color: var(--brand, #174c88);
+  font-size: 14px;
+}
+#root .portal-shell .fsa-pagination{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:14px;padding:14px 0 0;margin-top:12px;border-top:1px solid var(--border);color:var(--text-secondary);font-size:12px}
+#root .portal-shell .fsa-pagination-info{display:flex;align-items:center;gap:16px;flex-wrap:wrap}
+#root .portal-shell .fsa-pagination label{display:flex;align-items:center;gap:8px;font-size:12px}
+#root .portal-shell .fsa-pagination select{width:65px;min-height:32px;padding:5px 8px;border:1px solid var(--border);border-radius:6px;background:var(--surface);color:var(--text-primary);font-size:12px}
+#root .portal-shell .fsa-pagination nav{display:flex;gap:5px;flex-wrap:wrap}
+#root .portal-shell .fsa-pagination button{min-width:32px;min-height:32px;padding:6px 10px;font-size:12px;border:1px solid var(--border);border-radius:6px;background:var(--surface);color:var(--text-primary)}
+#root .portal-shell .fsa-pagination button[aria-current=page]{background:var(--brand);border-color:var(--brand);color:#fff}
+#root .portal-shell .fsa-pagination button:disabled{opacity:.45;cursor:not-allowed}
