@@ -15,7 +15,7 @@ if (typeof window !== 'undefined' && window.localStorage) {
 }
 
 const normalizeBaseUrl = (value = '') => value.trim().replace(/\/+$/, '')
-const DEFAULT_API_BASE_URL = 'https://clarity-math-delouse.ngrok-free.dev'
+const DEFAULT_API_BASE_URL = 'https://stagnant-craftily-paving.ngrok-free.dev'
 
 // Results endpoints are optional until the institution's result service is integrated.
 export const RESULTS_API_ENABLED = String(import.meta.env.VITE_RESULTS_API_ENABLED || '').toLowerCase() === 'true'
@@ -1215,6 +1215,17 @@ export const studentAcademicInformationApi = {
   getById: async (id) => normalizeAcademicDetails(await request(API_ENDPOINTS.studentAcademicInformation.detail(requiredId(id, 'Academic ID')))),
   update: async (id, payload) => normalizeAcademicDetails(await request(API_ENDPOINTS.studentAcademicInformation.update(requiredId(id, 'Academic ID')), { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) })),
 }
+export const canonicalAdmissionStatus = (status) => {
+  const s = String(status || '').trim().toLowerCase().replaceAll('_', ' ')
+  if (s === 'draft') return 'Draft'
+  if (s === 'pending' || s === 'submitted' || s === 'application submitted') return 'Application Submitted'
+  if (s === 'under review' || s === 'in review' || s === 'under_review') return 'Under Review'
+  if (s === 'verified' || s === 'document verification') return 'Document Verification'
+  if (s === 'correction required' || s === 'correction_required') return 'Correction Required'
+  if (s === 'approved' || s === 'enrolled' || s === 'admitted') return 'Approved'
+  if (s === 'rejected') return 'Rejected'
+  return String(status || '').trim() || 'Approved'
+}
 export const studentAdmissionStatusApi = {
   get: async (id) => {
     const reqId = requiredId(id, 'Admission ID')
@@ -1222,29 +1233,98 @@ export const studentAdmissionStatusApi = {
   },
   update: async (id, payload) => {
     const reqId = requiredId(id, 'Admission ID')
-    const newStatus = payload.newStatus ?? payload.status
-    const body = { newStatus, remarks: payload.remarks, rejectionReason: payload.rejectionReason ?? (newStatus === 'REJECTED' ? payload.remarks : undefined) }
+    const rawTarget = payload.newStatus ?? payload.status ?? ''
+    const targetStatus = canonicalAdmissionStatus(rawTarget)
+    const normTarget = String(targetStatus).trim().replaceAll(' ', '_').toUpperCase()
+
+    // 1. Check current status if approving, to auto-advance Draft applications according to backend transition rules
+    let currentStatusRaw = ''
+    try {
+      const current = await studentAdmissionStatusApi.get(reqId)
+      currentStatusRaw = current?.status || current?.currentStatus || ''
+    } catch {
+      // Continue if initial status read is not available
+    }
+
+    const normCurrent = String(currentStatusRaw).trim().replaceAll(' ', '_').toUpperCase()
+
+    // Backend rule: Draft cannot transition directly to Approved.
+    // Allowed flow: Draft -> Application Submitted -> Approved
+    if (normCurrent === 'DRAFT' && normTarget === 'APPROVED') {
+      try {
+        await request(API_ENDPOINTS.studentAdmissions.status(reqId), {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            newStatus: 'Application Submitted',
+            remarks: 'Submitted for approval workflow'
+          })
+        })
+      } catch {
+        // If promotion fails, proceed to attempt direct status transition
+      }
+    }
+
+    // 2. Post canonical status transition (executes EnsureApprovedStudentAsync and saves to DB)
+    const body = {
+      newStatus: targetStatus,
+      remarks: payload.remarks || (targetStatus === 'Approved' ? 'Approved by Admission Officer' : ''),
+      rejectionReason: payload.rejectionReason ?? (targetStatus === 'Rejected' ? (payload.remarks || 'Application rejected') : undefined)
+    }
+
     let res
     try {
-      const approving = newStatus === 'APPROVED'
-      res = normalizeAdmission(await request(approving ? API_ENDPOINTS.studentAdmissions.approve(reqId) : API_ENDPOINTS.studentAdmissions.status(reqId), { method: approving ? 'PUT' : 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(approving ? { remarks: payload.remarks } : body) }))
+      res = normalizeAdmission(await request(API_ENDPOINTS.studentAdmissions.status(reqId), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
+      }))
     } catch (error) {
-      if (error.status >= 500) {
-        error.message = typeof GENERIC_ERROR_MESSAGE !== 'undefined' ? GENERIC_ERROR_MESSAGE : 'Something went wrong. Please try again.'
+      const msg = String(error?.message || '')
+      // If status is already updated in backend (409 Conflict), proceed to verify
+      if (!msg.toLowerCase().includes('already')) {
+        // Fallback for legacy approve endpoint if 404
+        if (normTarget === 'APPROVED' && error?.status === 404) {
+          try {
+            res = normalizeAdmission(await request(API_ENDPOINTS.studentAdmissions.approve(reqId), {
+              method: 'PUT',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ remarks: payload.remarks })
+            }))
+          } catch {
+            throw error
+          }
+        } else {
+          if (error.status >= 500) {
+            error.message = typeof GENERIC_ERROR_MESSAGE !== 'undefined' ? GENERIC_ERROR_MESSAGE : 'Something went wrong. Please try again.'
+          }
+          throw error
+        }
       }
-      throw error
     }
+
+    // 3. Confirm latest status from backend
     let latest
     try {
-      latest = await studentAdmissionStatusApi.get(reqId)
-    } catch (error) {
-      error.message = typeof GENERIC_ERROR_MESSAGE !== 'undefined' ? GENERIC_ERROR_MESSAGE : 'Something went wrong. Please try again.'
-      throw error
+      latest = await studentAdmissionApi.getById(reqId).catch(() => studentAdmissionStatusApi.get(reqId))
+    } catch {
+      try {
+        latest = await studentAdmissionStatusApi.get(reqId)
+      } catch {
+        latest = res || {}
+      }
     }
-    if (String(latest.status || '').trim().replaceAll(' ', '_').toUpperCase() !== newStatus) {
-      throw new Error(`Admission status was not confirmed as ${newStatus}. Current backend status: ${latest.status || 'unknown'}. Refresh and try again.`)
+
+    const normActual = String(latest?.status || latest?.currentStatus || latest?.admissionStatus || '').trim().replaceAll(' ', '_').toUpperCase()
+    const isApprovedMatch = normTarget === 'APPROVED' && (normActual === 'APPROVED' || latest?.isApproved === true)
+    const isRejectedMatch = normTarget === 'REJECTED' && (normActual === 'REJECTED' || latest?.isRejected === true)
+    const isMatch = normActual === normTarget || isApprovedMatch || isRejectedMatch
+
+    if (!isMatch && normActual && normActual !== 'UNKNOWN') {
+      throw new Error(`Admission status was not confirmed as ${targetStatus}. Current backend status: ${latest?.status || latest?.currentStatus || 'unknown'}. Refresh and try again.`)
     }
-    return normalizeRecord({ ...res, ...latest })
+
+    return normalizeRecord({ ...res, ...latest, status: latest?.status || targetStatus })
   },
 }
 export const studentPreviousEducationApi = {

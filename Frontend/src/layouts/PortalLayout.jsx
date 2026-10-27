@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link, NavLink, useNavigate } from 'react-router-dom'
-import { FiBell, FiBookOpen, FiCalendar, FiCheckSquare, FiEdit3, FiFileText, FiGrid, FiLogOut, FiMenu, FiMoon, FiSun, FiUser, FiUsers, FiX } from 'react-icons/fi'
+import { FiBell, FiBookOpen, FiCalendar, FiCheckSquare, FiClock, FiEdit3, FiFileText, FiGrid, FiLogOut, FiMenu, FiMoon, FiSun, FiUser, FiUsers, FiX } from 'react-icons/fi'
 import { getAuthStorage, getUserRole, signOut } from '../auth/auth.js'
 import { facultyNavigation, studentNavigation } from '../components/portals/portalNavigation.js'
 import { isPortalPreview } from '../auth/portalPreview.js'
@@ -10,7 +10,7 @@ import '../styles/portals.css'
 import FacultyNavbarActions from '../components/portals/FacultyNavbarActions.jsx'
 import FacultySignOutDialog from '../components/portals/FacultySignOutDialog.jsx'
 
-const teachingIcons = { dashboard: FiGrid, students: FiUsers, subjects: FiBookOpen, attendance: FiCheckSquare, marks: FiEdit3, timetable: FiCalendar, materials: FiFileText, leave: FiCalendar, notifications: FiBell, profile: FiUser }
+const teachingIcons = { dashboard: FiGrid, students: FiUsers, subjects: FiBookOpen, attendance: FiCheckSquare, 'my-attendance': FiClock, marks: FiEdit3, timetable: FiCalendar, materials: FiFileText, leave: FiCalendar, notifications: FiBell, profile: FiUser }
 function NavigationIcon({ role, screen }) { const Icon = role === 'faculty' ? teachingIcons[screen] || FiGrid : FiGrid; return <Icon aria-hidden="true" /> }
 
 export default function PortalLayout({ children, title }) {

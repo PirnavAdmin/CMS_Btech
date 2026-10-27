@@ -113,3 +113,26 @@ test('parses and standardizes 10-digit mobile and date formats', () => {
   assert.equal(dateInputValue('2024-08-15T10:30:00Z'), '2024-08-15')
   assert.equal(dateInputValue('15/08/2024'), '2024-08-15')
 })
+
+test('correctly normalizes PascalCase database columns from stored procedures', () => {
+  const dbRow = {
+    AdmissionId: 40,
+    StudentId: 105,
+    RegistrationNo: 'REG-2026-511920',
+    FirstName: 'Rakesh',
+    LastName: 'Sharma',
+    AdmissionStatus: 'Application Submitted',
+    AadhaarNumber: '123456789012',
+    MobileNumber: '9876543210',
+  }
+  const normalized = normalizeCanonicalStudent(dbRow)
+  assert.equal(normalized.admissionId, '40')
+  assert.equal(normalized.id, '105')
+  assert.equal(normalized.studentId, '105')
+  assert.equal(normalized.application.number, 'REG-2026-511920')
+  assert.equal(normalized.personal.fullName, 'Rakesh Sharma')
+  assert.equal(normalized.personal.aadhaar, '123456789012')
+  assert.equal(normalized.contact.mobile, '9876543210')
+  assert.equal(normalized.status, 'SUBMITTED')
+})
+
