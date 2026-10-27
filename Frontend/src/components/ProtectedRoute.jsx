@@ -1,8 +1,10 @@
+import { useScreenAccess } from '../auth/ScreenAccess.jsx'
 import { Navigate, Outlet, useLocation } from 'react-router-dom'
-import { getUserRole, isAuthenticated, mustChangePassword } from '../auth/auth'
+import { isAuthenticated, mustChangePassword } from '../auth/auth'
 
-export default function ProtectedRoute({ allowedRoles = [] }) {
+export default function ProtectedRoute() {
   const location = useLocation()
+  const { loading, canView } = useScreenAccess()
 
   if (!isAuthenticated()) {
     return (
@@ -15,14 +17,8 @@ export default function ProtectedRoute({ allowedRoles = [] }) {
   }
 
   if (mustChangePassword()) return <Navigate to="/change-password" replace />
-  const userRole = getUserRole()
-
-  if (
-    allowedRoles.length > 0 &&
-    !allowedRoles.includes(userRole)
-  ) {
-    return <Navigate to="/unauthorized" replace />
-  }
+  if (loading) return <p role="status">Loading access permissions...</p>
+  if (!canView(location.pathname)) return <Navigate to="/unauthorized" replace />
 
   return <Outlet />
 }

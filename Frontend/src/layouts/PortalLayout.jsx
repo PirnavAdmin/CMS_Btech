@@ -1,5 +1,8 @@
+import Link from '../components/portals/PermissionLink.jsx'
+import { useScreenAccess } from '../auth/ScreenAccess.jsx'
+import { additionalScreens } from '../auth/screenPermissions.js'
 import { useEffect, useState } from 'react'
-import { Link, NavLink, useNavigate } from 'react-router-dom'
+import { NavLink, useNavigate } from 'react-router-dom'
 import { FiBell, FiBook, FiBookOpen, FiCalendar, FiCheckSquare, FiChevronLeft, FiChevronRight, FiCreditCard, FiEdit3, FiFileText, FiGrid, FiLogOut, FiMenu, FiMoon, FiSearch, FiShield, FiSun, FiUser, FiUsers, FiX } from 'react-icons/fi'
 import { getAuthStorage, getUserRole, signOut } from '../auth/auth.js'
 import { facultyNavigation, studentNavigation } from '../components/portals/portalNavigation.js'
@@ -22,17 +25,19 @@ const navigationIcons = {
 
 export default function PortalLayout({ children, title }) {
   const role = getUserRole(), navigate = useNavigate()
+  const { canView } = useScreenAccess()
   const [open, setOpen] = useState(false), [logout, setLogout] = useState(false)
   const [collapsed, setCollapsed] = useState(() => localStorage.getItem('pirnav-sidebar-collapsed') === 'true')
   const [query, setQuery] = useState('')
   const [theme, setTheme] = useState(() => localStorage.getItem('pirnav-theme') || 'light')
-  const nav = role === 'faculty' ? facultyNavigation : role === 'student' ? studentNavigation : [['users', 'User Access Management']]
-  const sidebarNav = nav.filter(([key]) => !['notifications', 'profile'].includes(key))
-  const base = role === 'admin' ? '/user-access' : `/${role}-portal`
+  const allNav = role === 'faculty' ? facultyNavigation : role === 'student' ? studentNavigation : role === 'staff' ? [['dashboard', 'Dashboard'], ['profile', 'My Profile']] : [['users', 'Roles & Designations']]
+  const nav = [...allNav.filter(([key]) => canView(`/${role}-portal/${key}`)), ...(['faculty', 'staff'].includes(role) ? additionalScreens.filter(([path]) => canView(path)) : [])]
+  const sidebarNav = nav.filter(([key]) => key !== 'notifications')
+  const base = role === 'admin' ? '/roles-designations' : `/${role}-portal`
   const storage = getAuthStorage()
   const name = storage?.getItem('btech-user-name') || role
   const profileUrl = role === 'admin' ? base : `${base}/profile`
-  const destination = key => role === 'admin' ? base : `${base}/${key}`
+  const destination = key => key.startsWith('/') ? key : role === 'admin' ? base : `${base}/${key}`
   const results = query.trim() ? nav.filter(([, label]) => label.toLowerCase().includes(query.trim().toLowerCase())) : []
   useEffect(() => { document.documentElement.dataset.theme = theme; localStorage.setItem('pirnav-theme', theme) }, [theme])
   const toggleCollapse = () => setCollapsed(value => { localStorage.setItem('pirnav-sidebar-collapsed', String(!value)); return !value })
@@ -49,7 +54,7 @@ export default function PortalLayout({ children, title }) {
     <div className="portal-content"><header className="dashboard-header">
       <button className="header-sidebar-toggle portal-menu" aria-label="Open navigation" onClick={() => setOpen(true)}><FiMenu /></button>
       <div className="global-search"><FiSearch aria-hidden="true" /><input aria-label="Search workspace" placeholder="Search modules" value={query} onChange={event => setQuery(event.target.value)} />{query.trim() && <div className="global-search-results">{results.length ? results.map(([key, label]) => <Link key={key} to={destination(key)} onClick={() => setQuery('')}>{label}</Link>) : <p>No matching modules</p>}</div>}</div>
-      <div className="dashboard-header__actions">{role === 'faculty' ? <FacultyNavbarActions name={name} theme={theme} onToggleTheme={() => setTheme(theme === 'dark' ? 'light' : 'dark')} onSignOut={() => setLogout(true)} /> : <>{role !== 'admin' && <Link className="portal-notification-link" to={destination('notifications')} aria-label="Notifications"><FiBell aria-hidden="true" /></Link>}<button className="theme-toggle" onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')} aria-label="Toggle theme">{theme === 'dark' ? <FiSun /> : <FiMoon />}</button><details className="account-menu"><summary aria-label="Open account menu"><span className="account-avatar"><FiUser aria-hidden="true" /></span><span><strong>{name}</strong><small>{role}</small></span><i className="account-menu__chevron" aria-hidden="true" /></summary><div className="account-menu__panel"><button onClick={event => { event.currentTarget.closest('details').removeAttribute('open'); navigate(profileUrl) }}><FiUser />My Profile</button><button className="account-menu__signout" onClick={event => { event.currentTarget.closest('details').removeAttribute('open'); setLogout(true) }}><FiLogOut />Sign out</button></div></details></>}</div>
+      <div className="dashboard-header__actions">{role === 'faculty' ? <FacultyNavbarActions name={name} theme={theme} onToggleTheme={() => setTheme(theme === 'dark' ? 'light' : 'dark')} onSignOut={() => setLogout(true)} /> : <>{['faculty', 'student'].includes(role) && canView(destination('notifications')) && <Link className="portal-notification-link" to={destination('notifications')} aria-label="Notifications"><FiBell aria-hidden="true" /></Link>}<button className="theme-toggle" onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')} aria-label="Toggle theme">{theme === 'dark' ? <FiSun /> : <FiMoon />}</button><details className="account-menu"><summary aria-label="Open account menu"><span className="account-avatar"><FiUser aria-hidden="true" /></span><span><strong>{name}</strong><small>{role}</small></span><i className="account-menu__chevron" aria-hidden="true" /></summary><div className="account-menu__panel">{canView(profileUrl) && <button onClick={event => { event.currentTarget.closest('details').removeAttribute('open'); navigate(profileUrl) }}><FiUser />My Profile</button>}<button className="account-menu__signout" onClick={event => { event.currentTarget.closest('details').removeAttribute('open'); setLogout(true) }}><FiLogOut />Sign out</button></div></details></>}</div>
     </header>
       <div className="page-content portal-workspace"><nav className="app-breadcrumb" aria-label="Breadcrumb"><Link to={destination('dashboard')}>Home</Link><span aria-hidden="true">/</span><span>{role} Portal</span><span aria-hidden="true">/</span><strong>{title}</strong></nav>{children}</div>
     </div>

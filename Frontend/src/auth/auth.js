@@ -20,10 +20,11 @@ const readStorageValue = (storage, key) => {
 function normalizeStoredRole(role) {
   const roles = (Array.isArray(role) ? role : [role]).map(value => {
     const normalized = String(value || '').trim().toLowerCase().replace(/[\s-]+/g, '_')
-    if (['teaching', 'teaching_faculty', 'teaching_staff', 'non_teaching', 'non_teaching_faculty', 'non_teaching_staff', 'hod', 'principal'].includes(normalized)) return 'faculty'
+    if (normalized === 'student_access') return 'student'
+    if (['faculty_access', 'hod_role', 'hod_access', 'teaching', 'teaching_faculty', 'teaching_staff', 'non_teaching', 'non_teaching_faculty', 'non_teaching_staff', 'hod', 'principal'].includes(normalized)) return 'faculty'
     return ['admin', 'college_admin', 'collegeadmin', 'super_admin', 'superadmin'].includes(normalized) ? 'admin' : normalized
   })
-  return roles.find(value => ['admin', 'faculty', 'student'].includes(value)) || roles[0] || ''
+  return ['admin', 'faculty', 'student'].find(value => roles.includes(value)) || (roles.some(Boolean) ? 'staff' : '')
 }
 
 export function getAuthStorage() {
@@ -99,6 +100,7 @@ export function signIn(role, accessToken, refreshToken, rememberMe = false, user
 
   storage.setItem(AUTH_STORAGE_KEY, 'true')
   storage.setItem(ROLE_STORAGE_KEY, normalizeStoredRole(role))
+  storage.setItem('btech-assigned-roles', JSON.stringify((Array.isArray(role) ? role : [role]).filter(Boolean)))
   storage.setItem('btech-access-token', accessToken)
   storage.setItem('btech-refresh-token', refreshToken)
   storage.setItem('btech-user-name', String(user.name || '').trim())
@@ -126,7 +128,7 @@ export function signOut() {
     sessionStore.removeItem(AUTH_STORAGE_KEY)
     sessionStore.removeItem(ROLE_STORAGE_KEY)
   }
-  ;['btech-access-token', 'btech-refresh-token', 'btech-user-name', 'btech-user-id', 'btech-user-email', 'btech-user-mobile', 'btech-user-employee-id', 'btech-must-change-password', 'btech-jwt', 'btech-session', 'accessToken', 'refreshToken', 'jwt', 'token'].forEach((key) => {
+  ;['btech-access-token', 'btech-refresh-token', 'btech-user-name', 'btech-user-id', 'btech-user-email', 'btech-user-mobile', 'btech-user-employee-id', 'btech-assigned-roles', 'btech-must-change-password', 'btech-jwt', 'btech-session', 'accessToken', 'refreshToken', 'jwt', 'token'].forEach((key) => {
     localStore?.removeItem(key)
     sessionStore?.removeItem(key)
   })

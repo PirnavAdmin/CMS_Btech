@@ -1,5 +1,6 @@
+import Link from './PermissionLink.jsx'
 import { useEffect, useRef, useState } from 'react'
-import { Link, useLocation } from 'react-router-dom'
+import { useLocation } from 'react-router-dom'
 import { FiBell, FiChevronDown, FiLogOut, FiLock, FiMoon, FiSun, FiUser } from 'react-icons/fi'
 import './FacultyNavbarActions.css'
 import FacultyChangePassword from './FacultyChangePassword.jsx'

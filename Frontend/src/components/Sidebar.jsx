@@ -1,3 +1,4 @@
+import { useScreenAccess } from '../auth/ScreenAccess.jsx'
 import { useEffect, useRef, useState } from 'react'
 import { Link, NavLink, useLocation } from 'react-router-dom'
 import { FiAward, FiBook, FiBookOpen, FiBriefcase, FiCalendar, FiCheckCircle, FiCheckSquare, FiChevronDown, FiChevronLeft, FiChevronRight, FiCreditCard, FiEdit3, FiFileText, FiGitBranch, FiGrid, FiHome, FiLayers, FiShield, FiTrendingUp, FiUser, FiUserPlus, FiUsers, FiX } from 'react-icons/fi'
@@ -29,11 +30,14 @@ const curriculumLinks = [
 
 function Item({ to, icon: Icon, children, onNavigate, tone = 'blue', activeWhen }) {
   const location = useLocation()
+  const { canView } = useScreenAccess()
+  if (!canView(to)) return null
   return <NavLink to={to} onClick={onNavigate} className={({ isActive }) => `sidebar-link sidebar-link--${tone} ${(activeWhen ? activeWhen(location.pathname) : isActive) ? 'active' : ''}`}><Icon aria-hidden="true" /><span>{children}</span></NavLink>
 }
 
 export default function Sidebar({ open = false, onClose = () => {}, collapsed = false, onToggleCollapse = () => {} }) {
   const userRole = getUserRole()
+  const { canView } = useScreenAccess()
   const { pathname } = useLocation()
   const navigationRef = useRef(null)
   const { selectedCollege, selectedCollegeId, colleges = [] } = useAcademic()
@@ -166,7 +170,7 @@ export default function Sidebar({ open = false, onClose = () => {}, collapsed = 
       <nav ref={navigationRef} onScroll={rememberScrollPosition} className="sidebar-navigation">
         <p className="sidebar-section-label">Overview</p>
         <Item to="/dashboard" icon={FiHome} tone="blue" onNavigate={onClose}>Dashboard</Item>
-        {userRole === ROLES.ADMIN && <>
+        {userRole !== ROLES.STUDENT && <>
           <p className="sidebar-section-label">Academic Management</p>
           {academicLinks.map(link => <Item {...link} key={link.to} onNavigate={onClose}>{link.label}</Item>)}
           <p className="sidebar-section-label">Student Management</p>
@@ -182,27 +186,27 @@ export default function Sidebar({ open = false, onClose = () => {}, collapsed = 
           <p className="sidebar-section-label">Curriculum & Subjects</p>
           {curriculumLinks.map(link => <Item {...link} key={link.to} onNavigate={onClose}>{link.label}</Item>)}
           <p className="sidebar-section-label">Examinations & Results</p>
-          <button type="button" className={`sidebar-link sidebar-link--blue sidebar-disclosure sidebar-exam-parent ${examRoutesActive ? 'is-module-active' : ''}`} onClick={() => setExamManagementOpen(open => !open)} aria-expanded={examManagementOpen} aria-controls="exam-management-links">
+          {canView("/examination-setup") && <button type="button" className={`sidebar-link sidebar-link--blue sidebar-disclosure sidebar-exam-parent ${examRoutesActive ? 'is-module-active' : ''}`} onClick={() => setExamManagementOpen(open => !open)} aria-expanded={examManagementOpen} aria-controls="exam-management-links">
             <FiFileText aria-hidden="true" /><span>Exam Management</span><FiChevronDown className="sidebar-disclosure__chevron" aria-hidden="true" />
-          </button>
+          </button>}
           {examManagementOpen && <div className="sidebar-submenu sidebar-exam-submenu" id="exam-management-links">
             <Item to="/examination-setup" icon={FiFileText} tone="blue" onNavigate={onClose} activeWhen={pathname => pathname.startsWith('/examination-setup')}>Examination Setup</Item>
             <Item to="/exam-timetable" icon={FiCalendar} tone="orange" onNavigate={onClose} activeWhen={pathname => pathname.startsWith('/exam-timetable')}>Exam Timetable</Item>
           </div>}
           <Item to="/marks-management/marks-entry" icon={FiEdit3} tone="green" onNavigate={onClose} activeWhen={pathname => pathname.startsWith('/marks-management')}>Marks Management</Item>
-          <button type="button" className={`sidebar-link sidebar-link--purple sidebar-disclosure sidebar-grade-parent ${gradeResultsActive ? 'is-module-active' : ''}`} onClick={() => setGradeResultsOpen(open => !open)} aria-expanded={gradeResultsOpen} aria-controls="grade-results-links">
+          {canView('/results') && <button type="button" className={`sidebar-link sidebar-link--purple sidebar-disclosure sidebar-grade-parent ${gradeResultsActive ? 'is-module-active' : ''}`} onClick={() => setGradeResultsOpen(open => !open)} aria-expanded={gradeResultsOpen} aria-controls="grade-results-links">
             <FiAward aria-hidden="true" /><span>Grades System and Results</span><FiChevronDown className="sidebar-disclosure__chevron" aria-hidden="true" />
-          </button>
+          </button>}
           {gradeResultsOpen && <div className="sidebar-submenu sidebar-grade-submenu" id="grade-results-links">
             <Item to="/grade-result-management/grade-configuration" icon={FiAward} tone="purple" onNavigate={onClose} activeWhen={pathname => pathname.startsWith('/grade-result-management')}>Grade Management</Item>
             <Item to="/results" icon={FiFileText} tone="blue" onNavigate={onClose} activeWhen={pathname => pathname.startsWith('/results')}>Official Results</Item>
           </div>}
           <p className="sidebar-section-label">Finance</p>
-          <button type="button" className={`sidebar-link sidebar-link--gold sidebar-disclosure sidebar-fee-parent ${feeRoutesActive ? 'is-module-active' : ''}`} title="Fee Management" aria-label="Fee Management" onClick={() => { if (collapsed) onToggleCollapse(); setFeeExpansion({ pathname, open: collapsed || !feeManagementOpen }) }} aria-expanded={!collapsed && feeManagementOpen} aria-controls="fee-management-links">
+          {canView('/fees') && <button type="button" className={`sidebar-link sidebar-link--gold sidebar-disclosure sidebar-fee-parent ${feeRoutesActive ? 'is-module-active' : ''}`} title="Fee Management" aria-label="Fee Management" onClick={() => { if (collapsed) onToggleCollapse(); setFeeExpansion({ pathname, open: collapsed || !feeManagementOpen }) }} aria-expanded={!collapsed && feeManagementOpen} aria-controls="fee-management-links">
             <FiCreditCard aria-hidden="true" /><span>Fee Management</span><FiChevronDown className="sidebar-disclosure__chevron" aria-hidden="true" />
-          </button>
+          </button>}
           {!collapsed && feeManagementOpen && <div className="sidebar-submenu sidebar-fee-submenu" id="fee-management-links">
-            {feeNavigation.map(item => <Link key={item.to} to={item.to} className={`sidebar-link ${activeFeeItem === item ? 'active' : ''}`} aria-current={activeFeeItem === item ? 'page' : undefined} onClick={onClose}><span>{item.label}</span></Link>)}
+            {feeNavigation.filter(item => canView(item.to)).map(item => <Link key={item.to} to={item.to} className={`sidebar-link ${activeFeeItem === item ? 'active' : ''}`} aria-current={activeFeeItem === item ? 'page' : undefined} onClick={onClose}><span>{item.label}</span></Link>)}
           </div>}
         </>}
         {[ROLES.FACULTY, ROLES.STUDENT].includes(userRole) && <><p className="sidebar-section-label">Academics</p><Item to="/my-subjects" icon={FiBookOpen} tone="blue" onNavigate={onClose}>My Subjects</Item>{userRole===ROLES.FACULTY&&<><Item to="/timetable" icon={FiCalendar} tone="orange" onNavigate={onClose}>My Timetable</Item><Item to="/student-management/attendance/take" icon={FiCheckSquare} tone="green" onNavigate={onClose}>Record Attendance</Item></>}</>}
@@ -210,9 +214,8 @@ export default function Sidebar({ open = false, onClose = () => {}, collapsed = 
         <Item to="/library" icon={FiBookOpen} tone="blue" onNavigate={onClose}>Library</Item>
         <Item to="/meetings-events" icon={FiCalendar} tone="orange" onNavigate={onClose}>Meetings/Events</Item>
         <Item to="/placement" icon={FiBriefcase} tone="green" onNavigate={onClose}>Placement</Item>
-        {userRole === ROLES.ADMIN && <>
+        {userRole !== ROLES.STUDENT && <>
           <p className="sidebar-section-label">Settings & Access</p>
-          <Item to="/user-access" icon={FiUsers} tone="blue" onNavigate={onClose}>User Access Management</Item>
           <Item to="/roles-designations" icon={FiShield} tone="purple" onNavigate={onClose}>Roles & Designations</Item>
         </>}
       </nav>

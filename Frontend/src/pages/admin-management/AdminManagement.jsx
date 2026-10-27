@@ -1,4 +1,6 @@
 import DirectoryEmptyStateImports_default from '../../components/DirectoryEmptyState'
+import { userDirectoryApi, userRoleMappingApi } from '../../api/apiEndpoints'
+import { resolveStaffAccount, planRoleAssignment } from '../../utils/staffRoleAssignment.js'
 import { facultyForCollege } from '../../utils/departmentFaculty.js'
 import { newestFirst as newestFirstImports_newestFirst, rememberCreated as newestFirstImports_rememberCreated } from '../../utils/newestFirst'
 import { showWarning as toastImports_showWarning, showSuccess as toastImports_showSuccess, showError as toastImports_showError } from '../../utils/toast'
@@ -4426,6 +4428,9 @@ const FiRotateCcw = fiImports_FiRotateCcw
 // SYSTEM MODULES & PERMISSION SCHEMAS
 // ==========================================
 const SYSTEM_MODULES = [
+  { id: 'dashboard', name: 'Dashboard', description: 'Faculty, student and staff dashboard screens', category: 'Portal Screens' },
+  { id: 'my_profile', name: 'My Profile', description: 'Signed-in user profile screen', category: 'Portal Screens' },
+  { id: 'notifications', name: 'Notifications', description: 'Faculty and student notification screens', category: 'Portal Screens' },
   { id: 'colleges', name: 'Colleges & Institutions', description: 'Manage campus details, leadership & accreditation', category: 'Administration' },
   { id: 'departments', name: 'Departments & Leadership', description: 'Department HODs, academic streams & allocations', category: 'Administration' },
   { id: 'academic_years', name: 'Academic Years', description: 'Configure academic batches, terms & calendars', category: 'Administration' },
@@ -4448,6 +4453,12 @@ const SYSTEM_MODULES = [
   { id: 'marks', name: 'Marks & Internal Assessment', description: 'Mid exam marks, lab internals & assignment grading', category: 'Exams & Results' },
   { id: 'results', name: 'Semester Results & Grading', description: 'Final SGPA/CGPA generation, grade cards & publishing', category: 'Exams & Results' },
   { id: 'fees', name: 'Fee Structures & Collections', description: 'Tuition fees, dues, challans & payment receipts', category: 'Finance' },
+  { id: 'rooms', name: 'Rooms & Classrooms', description: 'Rooms & Classrooms screen access', category: 'Additional Screens' },
+  { id: 'examinations', name: 'Exam Management', description: 'Exam Management screen access', category: 'Additional Screens' },
+  { id: 'materials', name: 'Study Materials', description: 'Study Materials screen access', category: 'Additional Screens' },
+  { id: 'library', name: 'Library', description: 'Library screen access', category: 'Additional Screens' },
+  { id: 'meetings_events', name: 'Meetings / Events', description: 'Meetings / Events screen access', category: 'Additional Screens' },
+  { id: 'placement', name: 'Placement', description: 'Placement screen access', category: 'Additional Screens' },
   { id: 'roles_permissions', name: 'Roles & Access Control', description: 'Manage RBAC permissions matrix and security policies', category: 'System Settings' },
   { id: 'academic_settings', name: 'Academic Context Settings', description: 'Active academic year, college selection & global rules', category: 'System Settings' },
 ]
@@ -4931,6 +4942,7 @@ function RolesAndDesignations() {
   const [departments, setDepartments] = useCollegeState([])
   const [isLoadingFaculty, setIsLoadingFaculty] = useState(false)
   const [rolesLoadError, setRolesLoadError] = useState('')
+  const [assignmentsLoadError, setAssignmentsLoadError] = useState('')
 
   // Modals state
   const [isRoleModalOpen, setIsRoleModalOpen] = useState(false)
@@ -4951,6 +4963,7 @@ function RolesAndDesignations() {
   const [permsModalError, setPermsModalError] = useState('')
 
   const [isAssignModalOpen, setIsAssignModalOpen] = useState(false)
+  const [isSavingAssignment, setIsSavingAssignment] = useState(false)
   const [assigningStaff, setAssigningStaff] = useState(null)
   const [selectedStaffRole, setSelectedStaffRole] = useState('')
   const [selectedStaffDesignation, setSelectedStaffDesignation] = useState('')
@@ -4984,7 +4997,7 @@ function RolesAndDesignations() {
       const apiRoles = await roleApi.getAll()
       if (Array.isArray(apiRoles) && apiRoles.length > 0) {
         const normalized = apiRoles.map((r) => {
-          const id = String(r.roleId ?? r.RoleId ?? r.id ?? r.Id ?? '')
+          const id = String(r.roleId ?? r.RoleId ?? r.role_id ?? r.Role_id ?? r.id ?? r.Id ?? '')
           const name = r.roleName ?? r.RoleName ?? r.name ?? r.Name ?? ''
           const code = r.roleCode ?? r.RoleCode ?? r.code ?? r.Code ?? (name ? name.toUpperCase().replace(/\s+/g, '_') : '')
           let permissions = r.permissions ?? r.Permissions
@@ -4992,7 +5005,7 @@ function RolesAndDesignations() {
             try { permissions = JSON.parse(permissions) } catch { permissions = null }
           }
           if (!permissions || typeof permissions !== 'object') {
-            permissions = readOnlyPermissions()
+            permissions = {}
           }
           return {
             id: id || `ROLE-${name.toUpperCase().replace(/\s+/g, '_')}`,
@@ -5042,6 +5055,29 @@ function RolesAndDesignations() {
       })
       .catch(() => {})
   }, [])
+
+  // Login access comes from the server; local records retain designation/scope presentation.
+  useEffect(() => {
+    if (!facultyList.length) return
+    let active = true
+    Promise.all([userDirectoryApi.getAll(), userRoleMappingApi.getAll()]).then(([users, mappings]) => {
+      if (!active) return
+      setAssignmentsLoadError('')
+      setAssignments(previous => {
+        const next = { ...previous }
+        for (const staff of facultyList) {
+          let targetUserId
+          try { targetUserId = resolveStaffAccount(staff, users, readSelectedCollegeId()) } catch { continue }
+          const assignedRoles = mappings.filter(row => String(row.userId ?? row.UserId) === String(targetUserId) && Number(row.status ?? row.Status) === 1)
+          const saved = previous[staff.id] || {}
+          const selected = assignedRoles.find(row => String(row.roleId ?? row.RoleId) === String(saved.roleId)) || assignedRoles[0]
+          next[staff.id] = { ...saved, roleId: selected ? String(selected.roleId ?? selected.RoleId) : '' }
+        }
+        return next
+      })
+    }).catch(error => { if (active) setAssignmentsLoadError(error.message || 'Unable to load saved login access.') })
+    return () => { active = false }
+  }, [facultyList])
 
   // Reset pagination on tab / search / filter change
   useEffect(() => {
@@ -5397,6 +5433,7 @@ function RolesAndDesignations() {
 
       // API Succeeded -> Update state, notify, close modal
       setRoles((current) => current.map((r) => (r.id === editingPermissionsRole.id ? editingPermissionsRole : r)))
+      window.dispatchEvent(new Event('btech-permissions-updated'))
       showSuccess(`Access permissions updated for role "${editingPermissionsRole.name}".`)
       setIsPermModalOpen(false)
     } catch (err) {
@@ -5581,8 +5618,9 @@ function RolesAndDesignations() {
     }
   }
 
-  const handleSaveStaffAssignment = (e) => {
+  const handleSaveStaffAssignment = async (e) => {
     e.preventDefault()
+    if (isSavingAssignment) return
     if (!assigningStaff) return
     if (!selectedStaffDesignation) return showError('Please select an official designation.')
     if (!selectedStaffRole) return showError('Please select a system access role.')
@@ -5595,6 +5633,18 @@ function RolesAndDesignations() {
       const deptName = selectedDeptObj?.name || selectedStaffScopeDept || assigningStaff.department || 'Department'
       formattedScope = `Department: ${deptName}`
     }
+
+    setIsSavingAssignment(true)
+    try {
+      const [users, mappings] = await Promise.all([userDirectoryApi.getAll(), userRoleMappingApi.getAll()])
+      const targetUserId = resolveStaffAccount(assigningStaff, users, readSelectedCollegeId())
+      const plan = planRoleAssignment(mappings, targetUserId, selectedStaffRole)
+      if (plan.method === 'POST') await userRoleMappingApi.create(plan.payload)
+      if (plan.method === 'PUT') await userRoleMappingApi.update(plan.id, plan.payload)
+    } catch (error) {
+      showError(error.message || 'Unable to save login access. Please try again.')
+      return
+    } finally { setIsSavingAssignment(false) }
 
     setAssignments((prev) => ({
       ...prev,
@@ -5645,7 +5695,7 @@ function RolesAndDesignations() {
         currentRole,
         currentDesignation,
         scope: assigned?.scope || 'Department-scoped',
-        isExplicitlyAssigned: Boolean(assigned),
+        isExplicitlyAssigned: Boolean(assigned?.roleId),
       }
     }).filter((s) => {
       const matchesQuery = `${s.fullName} ${s.employeeId} ${s.department} ${s.currentRole?.name || ''} ${s.currentDesignation?.title || ''}`.toLowerCase().includes(query.toLowerCase())
@@ -5736,6 +5786,7 @@ function RolesAndDesignations() {
           compactSummary={compactSummaryItems}
         />
 
+        {activeTab === 'assignments' && assignmentsLoadError && <p className="rbac-load-error-strip" role="alert">{assignmentsLoadError}</p>}
         {rolesLoadError && (
           <div className="rbac-load-error-strip" role="alert">
             <span>
@@ -6909,8 +6960,8 @@ function RolesAndDesignations() {
                   <button type="button" className="sa-secondary" onClick={() => setIsAssignModalOpen(false)}>
                     Cancel
                   </button>
-                  <button type="submit" className="sa-primary" disabled={roles.length === 0 || designations.length === 0}>
-                    <FiCheck /> Save Assignment
+                  <button type="submit" className="sa-primary" disabled={isSavingAssignment || roles.length === 0 || designations.length === 0}>
+                    <FiCheck /> {isSavingAssignment ? 'Saving...' : 'Save Assignment'}
                   </button>
                 </footer>
               </form>

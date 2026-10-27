@@ -18,6 +18,27 @@ test('teaching and non-teaching role variants use the faculty workspace', () => 
   } finally { delete globalThis.window }
 })
 
+test('assigned role templates open the correct workspace without administrative escalation', () => {
+  globalThis.window = { localStorage: storage(), sessionStorage: storage() }
+  try {
+    for (const role of ['ACADEMIC_DEAN', 'ACADEMIC_ADMIN', 'EXAM_CONTROLLER', 'FINANCE_OFFICER', 'ADMISSIONS_OFFICER', 'TPO_OFFICER', 'LIBRARIAN', 'CUSTOM_STAFF']) {
+      signIn(role, 'opaque-token', 'refresh')
+      assert.equal(getUserRole(), 'staff')
+      assert.deepEqual(JSON.parse(window.sessionStorage.getItem('btech-assigned-roles')), [role])
+    }
+    for (const role of ['FACULTY_ACCESS', 'HOD_ACCESS', 'HOD_ROLE']) {
+      signIn(role, 'opaque-token', 'refresh')
+      assert.equal(getUserRole(), 'faculty')
+    }
+    signIn('STUDENT_ACCESS', 'opaque-token', 'refresh')
+    assert.equal(getUserRole(), 'student')
+    signIn(['HOD_ROLE', 'COLLEGE_ADMIN'], 'opaque-token', 'refresh')
+    assert.equal(getUserRole(), 'admin')
+    signOut()
+    assert.equal(window.sessionStorage.getItem('btech-assigned-roles'), null)
+  } finally { delete globalThis.window }
+})
+
 test('faculty role is recognized even when another assigned role comes first', () => {
   globalThis.window = { localStorage: storage(), sessionStorage: storage() }
   try {
@@ -25,7 +46,7 @@ test('faculty role is recognized even when another assigned role comes first', (
     assert.equal(getUserRole(), 'faculty')
     signOut()
     signIn(['UNKNOWN'], 'opaque-token', 'refresh')
-    assert.equal(getUserRole(), 'unknown')
+    assert.equal(getUserRole(), 'staff')
   } finally { delete globalThis.window }
 })
 
