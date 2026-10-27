@@ -11,6 +11,8 @@ import { DataTable, Field, Feedback, MockNotice, PortalDialog, Stats, Status } f
 import StudentDashboard from './StudentDashboard.jsx'
 import TeachingPortal from './TeachingPortal.jsx'
 import FacultyProfile from './FacultyProfile.jsx'
+import { FacultyAttendancePage } from './FacultyAttendance.jsx'
+import { FacultySelfAttendancePage } from './FacultySelfAttendance.jsx'
 
 const today = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}` }
 const money = value => new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(value)
@@ -21,6 +23,8 @@ export default function AcademicPortal({ role }) {
   const nav = role === 'faculty' ? facultyNavigation : studentNavigation
   const title = nav.find(([key]) => key === screen)?.[1]
   if (!title) return <Navigate to={`/${role}-portal/dashboard`} replace />
+  if (role === 'faculty' && screen === 'attendance') return <FacultyAttendancePage />
+  if (role === 'faculty' && screen === 'my-attendance') return <FacultySelfAttendancePage />
   if (role === 'faculty' && screen === 'profile') return <PortalLayout title={title}><FacultyProfile /></PortalLayout>
   if (role === 'faculty') return <TeachingPortal key={screen} screen={screen} title={title} />
   return <PortalLayout title={title}><PortalScreen key={`${role}:${screen}`} role={role} screen={screen} title={title} /></PortalLayout>

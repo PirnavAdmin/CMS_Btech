@@ -3,7 +3,7 @@ import { useScreenAccess } from '../auth/ScreenAccess.jsx'
 import { additionalScreens } from '../auth/screenPermissions.js'
 import { useEffect, useState } from 'react'
 import { NavLink, useNavigate } from 'react-router-dom'
-import { FiBell, FiBook, FiBookOpen, FiCalendar, FiCheckSquare, FiChevronLeft, FiChevronRight, FiCreditCard, FiEdit3, FiFileText, FiGrid, FiLogOut, FiMenu, FiMoon, FiSearch, FiShield, FiSun, FiUser, FiUsers, FiX } from 'react-icons/fi'
+import { FiBell, FiBook, FiBookOpen, FiCalendar, FiCheckSquare, FiClock, FiChevronLeft, FiChevronRight, FiCreditCard, FiEdit3, FiFileText, FiGrid, FiLogOut, FiMenu, FiMoon, FiSearch, FiShield, FiSun, FiUser, FiUsers, FiX } from 'react-icons/fi'
 import { getAuthStorage, getUserRole, signOut } from '../auth/auth.js'
 import { facultyNavigation, studentNavigation } from '../components/portals/portalNavigation.js'
 import { isPortalPreview } from '../auth/portalPreview.js'
@@ -15,10 +15,11 @@ import './AccountMenu.css'
 import '../components/Sidebar.css'
 import '../styles/portals.css'
 import '../styles/portalAdmin.css'
+import './PortalLayout.css'
 
 const navigationIcons = {
   dashboard: [FiGrid, 'blue'], students: [FiUsers, 'cyan'], subjects: [FiBook, 'purple'],
-  attendance: [FiCheckSquare, 'green'], marks: [FiEdit3, 'gold'], results: [FiFileText, 'gold'],
+  attendance: [FiCheckSquare, 'green'], 'my-attendance': [FiClock, 'blue'], marks: [FiEdit3, 'gold'], results: [FiFileText, 'gold'],
   timetable: [FiCalendar, 'orange'], materials: [FiBookOpen, 'cyan'], leave: [FiCalendar, 'pink'],
   notifications: [FiBell, 'orange'], profile: [FiUser, 'purple'], fees: [FiCreditCard, 'green'], users: [FiShield, 'blue'],
 }
@@ -32,7 +33,7 @@ export default function PortalLayout({ children, title }) {
   const [theme, setTheme] = useState(() => localStorage.getItem('pirnav-theme') || 'light')
   const allNav = role === 'faculty' ? facultyNavigation : role === 'student' ? studentNavigation : role === 'staff' ? [['dashboard', 'Dashboard'], ['profile', 'My Profile']] : [['users', 'Roles & Designations']]
   const nav = [...allNav.filter(([key]) => canView(`/${role}-portal/${key}`)), ...(['faculty', 'staff'].includes(role) ? additionalScreens.filter(([path]) => canView(path)) : [])]
-  const sidebarNav = nav.filter(([key]) => key !== 'notifications')
+  const sidebarNav = nav.filter(([key]) => key !== 'notifications' && !(role === 'faculty' && key === 'profile'))
   const base = role === 'admin' ? '/roles-designations' : `/${role}-portal`
   const storage = getAuthStorage()
   const name = storage?.getItem('btech-user-name') || role
@@ -45,7 +46,7 @@ export default function PortalLayout({ children, title }) {
   return <div className={`dashboard-layout portal-shell ${collapsed ? 'sidebar-collapsed' : ''}`}>
     <button className={`sidebar-scrim ${open ? 'is-visible' : ''}`} onClick={() => setOpen(false)} aria-label="Close navigation" tabIndex={open ? 0 : -1} />
     <aside className={`sidebar ${open ? 'is-open' : ''} ${collapsed ? 'is-collapsed' : ''}`} aria-label="Portal navigation">
-      <div className="sidebar-brand"><span className="sidebar-brand__mark" aria-hidden="true"><FiBookOpen /></span><div className="sidebar-brand__copy"><strong>{isPortalPreview() ? 'Campus Preview' : 'Digital Campus'}</strong><span className="sidebar-brand__subtitle">{role} Portal</span></div><button className="sidebar-collapse" onClick={toggleCollapse} aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}>{collapsed ? <FiChevronRight /> : <FiChevronLeft />}</button><button className="sidebar-close" onClick={() => setOpen(false)} aria-label="Close navigation"><FiX /></button></div>
+      <div className="sidebar-brand"><span className="sidebar-brand__mark" aria-hidden="true"><FiBookOpen /></span><div className="sidebar-brand__copy"><strong>{isPortalPreview() ? 'Campus Preview' : 'Digital Campus'}</strong><span className="sidebar-brand__subtitle">{role === 'faculty' ? 'Teaching Faculty' : role} Portal</span></div><button className="sidebar-collapse" onClick={toggleCollapse} aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}>{collapsed ? <FiChevronRight /> : <FiChevronLeft />}</button><button className="sidebar-close" onClick={() => setOpen(false)} aria-label="Close navigation"><FiX /></button></div>
       <nav className="sidebar-navigation"><p className="sidebar-section-label">My workspace</p>{sidebarNav.map(([key, label]) => {
         const [Icon, tone] = navigationIcons[key] || [FiGrid, 'blue']
         return <NavLink key={key} to={destination(key)} onClick={() => { setOpen(false); setQuery('') }} title={collapsed ? label : undefined} className={({ isActive }) => `sidebar-link sidebar-link--${tone} ${isActive ? 'active' : ''}`}><Icon aria-hidden="true" /><span>{label}</span></NavLink>

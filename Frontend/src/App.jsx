@@ -12,9 +12,9 @@ import { MarksManagement, MarksEntry, BulkMarksUpload, EditMarks, StudentMarks, 
 import { Navigate, Route, Routes } from 'react-router-dom'
 import ProtectedRoute from './components/ProtectedRoute'
 import FirstLoginPassword from './pages/auth/FirstLoginPassword.jsx'
+import StaffPortal from './pages/staff-portal/StaffPortal.jsx'
 import PortalRoute, { RoleDashboard, RoleAlias } from './components/portals/PortalRoute.jsx'
 const AcademicPortal = lazy(() => import('./pages/portals/AcademicPortal.jsx'))
-const StaffPortal = lazy(() => import('./pages/portals/StaffPortal.jsx'))
 const PortalPreview = lazy(() => import('./pages/portals/PortalPreview.jsx'))
 
 

@@ -17,6 +17,26 @@ const readStorageValue = (storage, key) => {
   }
 }
 
+const NON_TEACHING_ROLE_REGEX = /\b(non[-\s_]?teaching|staff|lab[-\s_]?assistant|technical[-\s_]?assistant)\b/i
+
+export function isNonTeachingRole(role, user = {}) {
+  const values = [
+    ...(Array.isArray(role) ? role : [role]),
+    user?.role,
+    user?.roles,
+    user?.employeeCategory,
+    user?.category,
+    user?.designation,
+    user?.facultyType,
+  ].flat().filter(Boolean)
+
+  return values.some(val => {
+    const value = String(val).trim()
+    if (/^teaching[\s_-]+(staff|faculty)$/i.test(value)) return false
+    return NON_TEACHING_ROLE_REGEX.test(value)
+  })
+}
+
 function normalizeStoredRole(role) {
   const roles = (Array.isArray(role) ? role : [role]).map(value => {
     const normalized = String(value || '').trim().toLowerCase().replace(/[\s-]+/g, '_')
@@ -26,6 +46,7 @@ function normalizeStoredRole(role) {
   })
   return ['admin', 'faculty', 'student'].find(value => roles.includes(value)) || (roles.some(Boolean) ? 'staff' : '')
 }
+
 
 export function getAuthStorage() {
   const localStore = safeStorage('localStorage')
@@ -98,8 +119,17 @@ export function signIn(role, accessToken, refreshToken, rememberMe = false, user
   const storage = rememberMe ? safeStorage('localStorage') : safeStorage('sessionStorage')
   if (!storage) return
 
+  const nonTeaching = isNonTeachingRole(role, user)
+
   storage.setItem(AUTH_STORAGE_KEY, 'true')
   storage.setItem(ROLE_STORAGE_KEY, normalizeStoredRole(role))
+  storage.setItem('btech-is-non-teaching', String(nonTeaching))
+  if (nonTeaching) {
+    storage.setItem('btech-user-type', 'non_teaching')
+  } else if (normalizeStoredRole(role) === 'faculty') {
+    storage.setItem('btech-user-type', 'teaching')
+  }
+  storage.setItem('btech-user-raw-role', Array.isArray(role) ? role.join(',') : String(role || ''))
   storage.setItem('btech-assigned-roles', JSON.stringify((Array.isArray(role) ? role : [role]).filter(Boolean)))
   storage.setItem('btech-access-token', accessToken)
   storage.setItem('btech-refresh-token', refreshToken)
@@ -128,10 +158,47 @@ export function signOut() {
     sessionStore.removeItem(AUTH_STORAGE_KEY)
     sessionStore.removeItem(ROLE_STORAGE_KEY)
   }
-  ;['btech-access-token', 'btech-refresh-token', 'btech-user-name', 'btech-user-id', 'btech-user-email', 'btech-user-mobile', 'btech-user-employee-id', 'btech-assigned-roles', 'btech-must-change-password', 'btech-jwt', 'btech-session', 'accessToken', 'refreshToken', 'jwt', 'token'].forEach((key) => {
+  ;['btech-access-token', 'btech-refresh-token', 'btech-user-name', 'btech-user-id', 'btech-user-email', 'btech-user-mobile', 'btech-user-employee-id', 'btech-must-change-password', 'btech-jwt', 'btech-session', 'accessToken', 'refreshToken', 'jwt', 'token', 'btech-is-non-teaching', 'btech-user-type', 'btech-user-raw-role', 'btech-assigned-roles'].forEach((key) => {
     localStore?.removeItem(key)
     sessionStore?.removeItem(key)
   })
+}
+
+export function isNonTeachingStaff() {
+  const storage = getAuthStorage()
+  if (!isAuthenticated()) return false
+  const userRole = getUserRole()
+  if (userRole !== 'faculty') return false
+
+  const flag = readStorageValue(storage, 'btech-is-non-teaching')
+  if (flag === 'true') return true
+  if (flag === 'false') return false
+
+  const userType = readStorageValue(storage, 'btech-user-type')
+  if (userType === 'non_teaching') return true
+  if (userType === 'teaching') return false
+
+  const rawRole = readStorageValue(storage, 'btech-user-raw-role')
+  if (rawRole && NON_TEACHING_ROLE_REGEX.test(rawRole)) return true
+
+  try {
+    const token = getAccessToken()
+    const payload = token.split('.')[1]?.replace(/-/g, '+').replace(/_/g, '/')
+    if (payload) {
+      const claims = JSON.parse(atob(payload))
+      const allRoles = [
+        claims.role,
+        claims.roles,
+        claims['http://schemas.microsoft.com/ws/2008/06/identity/claims/role'],
+        claims.employeeCategory,
+        claims.category,
+        claims.designation,
+      ].flat().filter(Boolean)
+      if (allRoles.some(r => NON_TEACHING_ROLE_REGEX.test(String(r)))) return true
+    }
+  } catch {}
+
+  return false
 }
 
 export function mustChangePassword() {

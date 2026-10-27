@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { signIn, signOut, getUserCollegeId, getUserRole, mustChangePassword } from './auth.js'
+import { signIn, signOut, getUserCollegeId, getUserRole, mustChangePassword, isNonTeachingStaff } from './auth.js'
 import { selectedCollegeId } from '../utils/collegeScope.js'
 
 const storage = () => {
@@ -125,3 +125,34 @@ test('SuperAdmin can select colleges despite a college in the login response', (
     assert.equal(selectedCollegeId(), '8')
   } finally { delete globalThis.window; delete globalThis.localStorage }
 })
+
+test('isNonTeachingStaff distinguishes non-teaching roles from teaching faculty and students', () => {
+  globalThis.window = { localStorage: storage(), sessionStorage: storage() }
+  try {
+    signIn('NON_TEACHING', 'opaque-token', 'refresh')
+    assert.equal(isNonTeachingStaff(), true)
+    signOut()
+
+    signIn('Non-Teaching Staff', 'opaque-token', 'refresh')
+    assert.equal(isNonTeachingStaff(), true)
+    signOut()
+
+    signIn('Teaching Faculty', 'opaque-token', 'refresh')
+    assert.equal(isNonTeachingStaff(), false)
+    signOut()
+
+    signIn('Teaching Staff', 'opaque-token', 'refresh')
+    assert.equal(getUserRole(), 'faculty')
+    assert.equal(isNonTeachingStaff(), false)
+    signOut()
+
+    signIn('HOD', 'opaque-token', 'refresh')
+    assert.equal(isNonTeachingStaff(), false)
+    signOut()
+
+    signIn('student', 'opaque-token', 'refresh')
+    assert.equal(isNonTeachingStaff(), false)
+    signOut()
+  } finally { delete globalThis.window }
+})
+

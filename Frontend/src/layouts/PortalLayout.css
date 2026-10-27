@@ -1,0 +1,73 @@
+/* Keep the portal brand, title and sidebar controls in separate flex columns. */
+#root .portal-shell .sidebar:not(.is-collapsed) .sidebar-brand {
+  display: grid;
+  grid-template-columns: 56px minmax(0, 1fr) 28px;
+  align-items: center;
+  gap: 8px;
+  min-height: 78px;
+  padding: 10px 8px;
+  box-sizing: border-box;
+}
+
+#root .portal-shell .sidebar:not(.is-collapsed) .sidebar-brand__mark {
+  grid-column: 1;
+  grid-row: 1;
+  width: 56px;
+  height: 56px;
+  flex: none;
+}
+
+#root .portal-shell .sidebar:not(.is-collapsed) .sidebar-brand__copy {
+  grid-column: 2;
+  grid-row: 1;
+  min-width: 0;
+  width: auto;
+  overflow: hidden;
+  gap: 4px;
+}
+
+#root .portal-shell .sidebar:not(.is-collapsed) .sidebar-brand__copy strong {
+  display: block;
+  min-width: 0;
+  font-size: 15px;
+  line-height: 1.15;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+#root .portal-shell .sidebar:not(.is-collapsed) .sidebar-brand__subtitle {
+  display: block;
+  min-width: 0;
+  font-size: 11px;
+  line-height: 1.3;
+  letter-spacing: 1px;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+#root .portal-shell .sidebar:not(.is-collapsed) .sidebar-brand .sidebar-collapse,
+#root .portal-shell .sidebar:not(.is-collapsed) .sidebar-brand .sidebar-close {
+  grid-column: 3;
+  grid-row: 1;
+  justify-self: end;
+  align-self: center;
+  position: static;
+  flex: none;
+  width: 28px;
+  height: 30px;
+  margin: 0;
+  transform: none;
+}
+
+@media (max-width: 900px) {
+  #root .portal-shell .sidebar:not(.is-collapsed) .sidebar-brand {
+    grid-template-columns: 56px minmax(0, 1fr) 32px;
+    gap: 10px;
+    padding: 12px;
+  }
+
+  #root .portal-shell .sidebar:not(.is-collapsed) .sidebar-brand .sidebar-close {
+    width: 32px;
+    height: 32px;
+  }
+}
