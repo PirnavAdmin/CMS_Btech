@@ -15,6 +15,7 @@ import './AccountMenu.css'
 import '../components/Sidebar.css'
 import '../styles/portals.css'
 import '../styles/portalAdmin.css'
+import './PortalLayout.css'
 
 const navigationIcons = {
   dashboard: [FiGrid, 'blue'], students: [FiUsers, 'cyan'], subjects: [FiBook, 'purple'],
