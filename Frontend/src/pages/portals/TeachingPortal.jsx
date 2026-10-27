@@ -1,7 +1,6 @@
 import Link from '../../components/portals/PermissionLink.jsx'
 /* eslint-disable react/set-state-in-effect -- Reset dependent registers before synchronizing them with the selected backend class. */
 import { useEffect, useState } from 'react'
-import { useSearchParams } from 'react-router-dom'
 import { FiAlertCircle, FiBookOpen, FiDownload, FiFileText, FiSearch, FiX } from 'react-icons/fi'
 import PortalLayout from '../../layouts/PortalLayout.jsx'
 import FilterPanel from '../../components/FilterPanel.jsx'
@@ -12,6 +11,7 @@ import './teaching-portal.css'
 import TeachingDashboard from './TeachingDashboard.jsx'
 import FacultyAttendance from './FacultyAttendance.jsx'
 import FacultySelfAttendance from './FacultySelfAttendance.jsx'
+import TeachingMarks from './TeachingMarks.jsx'
 
 const same = (a, b) => String(a) === String(b)
 const today = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}` }
@@ -42,7 +42,7 @@ export default function TeachingPortal({ screen, title }) {
       {screen === 'subjects' && <SubjectDirectory data={data} />}
       {screen === 'attendance' && <FacultyAttendance data={data} />}
       {screen === 'my-attendance' && <FacultySelfAttendance data={data} />}
-      {screen === 'marks' && <Marks data={data} />}
+      {screen === 'marks' && <TeachingMarks data={data} />}
       {screen === 'timetable' && <Timetable data={data} />}
       {screen === 'leave' && <Leave />}
       {screen === 'profile' && <Profile data={data} />}
@@ -62,46 +62,6 @@ function SubjectDirectory({ data }) {
   const [search, setSearch] = useState('')
   const filtered = data.assignments.filter(r => `${r.subjectName} ${r.subjectCode || ''} ${r.courseName || ''} ${r.branchName || ''} ${r.sectionName || ''} ${r.semesterName || ''} ${r.academicYearName || ''}`.toLowerCase().includes(search.trim().toLowerCase()))
   return <><Stats items={[["My subjects", new Set(data.assignments.map(r => r.subjectId)).size], ['Teaching allocations', data.assignments.length], ['Weekly periods', data.assignments.reduce((sum, r) => sum + Number(r.periodsPerWeek || 0), 0)]]} /><section className="portal-card"><header className="portal-section-heading"><div><h2>My teaching allocations</h2><p>Only subjects and sections assigned to your faculty account are shown.</p></div></header><label className="tf-search"><FiSearch /><input type="search" placeholder="Search subject, code, program or section..." value={search} onChange={e => setSearch(e.target.value)} /></label><Table records={filtered} empty={data.assignments.length ? 'No assigned subjects match this search' : 'No teaching subjects assigned'} columns={[["subjectName", 'Subject', r => <><strong>{r.subjectName}</strong><small>{r.subjectCode || 'Subject code not configured'}</small></>], ['courseName', 'Program'], ['branchName', 'Department / branch'], ['semesterName', 'Semester', r => r.semesterName || `Semester ${r.semesterNumber || r.semesterId}`], ['sectionName', 'Assigned section'], ['academicYearName', 'Academic year'], ['periodsPerWeek', 'Periods / week'], ['actions', 'Actions', r => <div className="tf-row-actions"><Link to={`/faculty-portal/attendance?assignment=${r.id}`}>Attendance</Link><Link to={`/faculty-portal/marks?assignment=${r.id}`}>Marks</Link></div>]]} /></section></>
-}
-function Marks({ data }) {
-  const [params] = useSearchParams()
-  const initialAllocation = data.assignments.find(row => same(row.id, params.get('assignment')))
-  const [filters, setFilters] = useState(() => ({
-    year: initialAllocation ? String(initialAllocation.academicYearId ?? initialAllocation.academicYearName ?? '') : '',
-    branch: initialAllocation ? String(initialAllocation.branchId ?? initialAllocation.branchName ?? '') : '',
-    semester: initialAllocation ? String(initialAllocation.semesterNumber ?? initialAllocation.semesterId ?? '') : '',
-    subject: initialAllocation ? String(initialAllocation.subjectId ?? '') : '',
-    section: initialAllocation ? String(initialAllocation.sectionId ?? '') : '',
-  }))
-  const [examId, setExam] = useState(''), [exams, setExams] = useState([]), [marks, setMarks] = useState([]), [form, setForm] = useState({ studentId: '', marksObtained: '', maxMarks: '' }), [error, setError] = useState(''), [notice, setNotice] = useState(''), [busy, setBusy] = useState(false), [loading, setLoading] = useState(false), [confirm, setConfirm] = useState(false)
-  const assignments = data.assignments
-  const yearKey = row => String(row.academicYearId ?? row.academicYearName ?? '')
-  const branchKey = row => String(row.branchId ?? row.branchName ?? '')
-  const semesterKey = row => String(row.semesterNumber ?? row.semesterId ?? '')
-  const unique = (list, key) => [...new Map(list.filter(row => key(row)).map(row => [key(row), row])).values()]
-  const byYear = assignments.filter(row => !filters.year || yearKey(row) === filters.year)
-  const byBranch = byYear.filter(row => !filters.branch || branchKey(row) === filters.branch)
-  const semesterOptions = Array.from({ length: 8 }, (_, i) => String(i + 1))
-  const bySemester = byBranch.filter(row => !filters.semester || semesterKey(row) === filters.semester)
-  const subjectOptions = unique(bySemester, row => String(row.subjectId ?? ''))
-  const bySubject = bySemester.filter(row => !filters.subject || String(row.subjectId) === filters.subject)
-  const sectionOptions = unique(bySubject, row => String(row.sectionId ?? ''))
-  const a = assignments.find(row => filters.year && filters.branch && filters.semester && filters.subject && filters.section && yearKey(row) === filters.year && branchKey(row) === filters.branch && semesterKey(row) === filters.semester && String(row.subjectId) === filters.subject && String(row.sectionId) === filters.section)
-  const allocationId = a?.id || '', students = data.students.filter(row => a && same(row.sectionId, a.sectionId))
-  const selectedExam = exams.find(row => same(row.examId ?? row.id, examId))
-  const configuredMaximum = selectedExam?.maxMarks ?? selectedExam?.maximumMarks ?? selectedExam?.totalMaxMarks ?? selectedExam?.totalMarks
-  const setFilter = (key, value) => {
-    const next = { ...filters, [key]: value }
-    if (key === 'year') Object.assign(next, { branch: '', semester: '', subject: '', section: '' })
-    if (key === 'branch') Object.assign(next, { semester: '', subject: '', section: '' })
-    if (key === 'semester') Object.assign(next, { subject: '', section: '' })
-    if (key === 'subject') next.section = ''
-    setFilters(next); setExam(''); setError(''); setNotice('')
-  }
-  useEffect(() => { let active = true; setExam(''); setExams([]); setMarks([]); setForm({ studentId: '', marksObtained: '', maxMarks: '' }); setError(''); setLoading(false); if (!allocationId) return; setLoading(true); service.getExams(allocationId).then(rows => { if (active) setExams(rows) }).catch(e => { if (active) setError(e.message) }).finally(() => { if (active) setLoading(false) }); return () => { active = false } }, [allocationId])
-  useEffect(() => { let active = true; setMarks([]); if (!examId || !allocationId) return; setLoading(true); service.getMarks(allocationId, examId).then(rows => { if (active) setMarks(rows) }).catch(e => { if (active) setError(e.message) }).finally(() => { if (active) setLoading(false) }); return () => { active = false } }, [allocationId, examId])
-  const input = key => ({ value: form[key], onChange: e => setForm({ ...form, [key]: e.target.value }) })
-  return <><section className="portal-card"><h2>Assessment marks entry</h2><Feedback error={error} notice={notice} />{!assignments.length && <p className="tf-info">No teaching allocations are configured for your faculty account. Contact your academic coordinator to verify your assignments.</p>}<form onSubmit={e => { e.preventDefault(); setConfirm(true) }}><fieldset disabled={busy || loading}><div className="portal-filters"><Field label="Academic year"><select value={filters.year} onChange={e => setFilter('year', e.target.value)}><option value="">Select academic year</option>{unique(assignments, yearKey).map(row => <option key={yearKey(row)} value={yearKey(row)}>{row.academicYearName || yearKey(row)}</option>)}</select></Field><Field label="Branch"><select disabled={!filters.year} value={filters.branch} onChange={e => setFilter('branch', e.target.value)}><option value="">Select assigned branch</option>{unique(byYear, branchKey).map(row => <option key={branchKey(row)} value={branchKey(row)}>{row.branchName || branchKey(row)}</option>)}</select></Field><Field label="Semester"><select disabled={!filters.branch} value={filters.semester} onChange={e => setFilter('semester', e.target.value)}><option value="">Select semester</option>{semesterOptions.map(value => <option key={value} value={value} disabled={!byBranch.some(row => semesterKey(row) === value)}>Semester {value}</option>)}</select></Field><Field label="Subject"><select disabled={!filters.semester} value={filters.subject} onChange={e => setFilter('subject', e.target.value)}><option value="">Select assigned subject</option>{subjectOptions.map(row => <option key={row.subjectId} value={row.subjectId}>{row.subjectName}{row.subjectCode ? ` (${row.subjectCode})` : ''}</option>)}</select></Field><Field label="Section"><select disabled={!filters.subject} value={filters.section} onChange={e => setFilter('section', e.target.value)}><option value="">Select assigned section</option>{sectionOptions.map(row => <option key={row.sectionId} value={row.sectionId}>{row.sectionName}</option>)}</select></Field><Field label="Examination / assessment"><select disabled={!a} required value={examId} onChange={e => { const value = e.target.value, selected = exams.find(row => same(row.examId ?? row.id, value)), maximum = selected?.maxMarks ?? selected?.maximumMarks ?? selected?.totalMaxMarks ?? selected?.totalMarks; setExam(value); setError(''); if (maximum != null) setForm(previous => ({ ...previous, maxMarks: String(maximum) })) }}><option value="">Select examination</option>{exams.map(row => <option key={row.examId ?? row.id} value={row.examId ?? row.id}>{row.examName || row.examinationName || row.name || row.title}</option>)}</select></Field><Field label="Student"><select disabled={!a} required {...input('studentId')}><option value="">Select student</option>{students.map(row => <option key={row.id} value={row.id}>{row.rollNumber} · {row.name}</option>)}</select></Field><Field label="Maximum marks"><input required type="number" min="0.01" step="0.01" readOnly={configuredMaximum != null} {...input('maxMarks')} /></Field><Field label="Marks obtained"><input required type="number" min="0" max={form.maxMarks || undefined} step="0.01" {...input('marksObtained')} /></Field></div><p className="tf-info">The selectors use your active academic allocations. Subjects and sections are limited to your assigned branch. Maximum marks load from the examination when provided by the API.</p><div className="portal-actions"><button className="primary" disabled={!a || !examId || !form.studentId}>Review marks</button></div></fieldset></form>{loading && <p role="status">Loading assessment records...</p>}</section><section className="portal-card"><h2>Recorded marks</h2><Table records={a && examId ? marks : []} empty={a && examId ? 'No marks recorded for this subject and examination' : 'Choose an assigned class and examination to view marks'} columns={[["studentName", 'Student'], ['studentCode', 'Roll number'], ['marksObtained', 'Marks obtained'], ['maxMarks', 'Maximum'], ['workflowStatus', 'Status', row => <Status>{row.workflowStatus || row.status || 'Recorded'}</Status>]]} /></section>{confirm && <PortalDialog title="Save assessment marks?" onClose={() => { if (!busy) setConfirm(false) }}><p>Save {form.marksObtained} / {form.maxMarks} for {students.find(student => same(student.id, form.studentId))?.name} in {a.subjectName}?</p><Feedback error={error} /><div className="portal-actions"><button disabled={busy} onClick={() => setConfirm(false)}>Go back</button><button className="primary" disabled={busy} onClick={async () => { setBusy(true); setError(''); try { await service.saveMark({ allocationId, examId, ...form }); setConfirm(false); setNotice('Marks saved to the college system.'); setMarks(await service.getMarks(allocationId, examId)); setForm({ ...form, studentId: '', marksObtained: '' }) } catch (e) { setError(e.message) } finally { setBusy(false) } }}>{busy ? 'Saving...' : 'Confirm & save'}</button></div></PortalDialog>}</>
 }
 function Timetable({ data }) {
   const [day, setDay] = useState(''), [view, setView] = useState('week')
