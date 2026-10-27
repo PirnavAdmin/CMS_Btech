@@ -1,7 +1,6 @@
 import Link from '../../components/portals/PermissionLink.jsx'
 /* eslint-disable react/set-state-in-effect -- Reset dependent registers before synchronizing them with the selected backend class. */
 import { useEffect, useState } from 'react'
-import { useSearchParams } from 'react-router-dom'
 import { FiAlertCircle, FiBookOpen, FiDownload, FiFileText, FiSearch, FiX } from 'react-icons/fi'
 import PortalLayout from '../../layouts/PortalLayout.jsx'
 import FilterPanel from '../../components/FilterPanel.jsx'
@@ -19,7 +18,6 @@ const same = (a, b) => String(a) === String(b)
 const today = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}` }
 const time = value => String(value || '').slice(0, 5) || '—'
 const formatDate = value => value ? String(value).slice(0, 10) : '—'
-const allocationLabel = row => `${row.subjectName} · ${row.sectionName} · ${row.semesterName || 'Semester ' + row.semesterId}`
 const descriptions = { dashboard: 'Your teaching schedule, assigned classes, and daily academic work.', students: 'View students enrolled in the sections assigned to you.', subjects: 'Your teaching allocations, sections, and weekly workload.', attendance: 'Record and review attendance for your assigned classes.', 'my-attendance': 'Track your daily check-in, check-out times, working hours, and review weekly and monthly attendance records.', marks: 'Enter assessment marks for students in your assigned subjects.', timetable: 'Your published teaching schedule, organised by weekday.', materials: 'Learning resources for your assigned subjects.', leave: 'Apply for leave using your college’s active policies.', notifications: 'College announcements and updates for your account.', profile: 'Your faculty identity and employment information.' }
 
 function Table({ columns, records, empty = 'No records found', detail = 'Try another filter or contact your academic coordinator to verify the assignments.' }) {
@@ -63,8 +61,8 @@ function StudentDirectory({ data }) {
 }
 function SubjectDirectory({ data }) {
   const [search, setSearch] = useState('')
-  const filtered = data.assignments.filter(r => `${r.subjectName} ${r.subjectCode} ${r.sectionName}`.toLowerCase().includes(search.toLowerCase()))
-  return <><Stats items={[["My subjects", new Set(data.assignments.map(r => r.subjectId)).size], ['Teaching allocations', data.assignments.length], ['Weekly periods', data.assignments.reduce((sum, r) => sum + Number(r.periodsPerWeek || 0), 0)]]} /><section className="portal-card"><header className="portal-section-heading"><h2>My teaching allocations</h2></header><label className="tf-search"><FiSearch /><input type="search" placeholder="Search subject, code or section..." value={search} onChange={e => setSearch(e.target.value)} /></label><Table records={filtered} columns={[["subjectName", 'Subject', r => <><strong>{r.subjectName}</strong><small>{r.subjectCode}</small></>], ['branchName', 'Branch'], ['sectionName', 'Section'], ['semesterName', 'Semester'], ['academicYearName', 'Academic year'], ['periodsPerWeek', 'Periods / week'], ['actions', 'Actions', r => <div className="tf-row-actions"><Link to={`/faculty-portal/attendance?assignment=${r.id}`}>Attendance</Link><Link to={`/faculty-portal/marks?assignment=${r.id}`}>Marks</Link></div>]]} /></section></>
+  const filtered = data.assignments.filter(r => `${r.subjectName} ${r.subjectCode || ''} ${r.courseName || ''} ${r.branchName || ''} ${r.sectionName || ''} ${r.semesterName || ''} ${r.academicYearName || ''}`.toLowerCase().includes(search.trim().toLowerCase()))
+  return <><Stats items={[["My subjects", new Set(data.assignments.map(r => r.subjectId)).size], ['Teaching allocations', data.assignments.length], ['Weekly periods', data.assignments.reduce((sum, r) => sum + Number(r.periodsPerWeek || 0), 0)]]} /><section className="portal-card"><header className="portal-section-heading"><div><h2>My teaching allocations</h2><p>Only subjects and sections assigned to your faculty account are shown.</p></div></header><label className="tf-search"><FiSearch /><input type="search" placeholder="Search subject, code, program or section..." value={search} onChange={e => setSearch(e.target.value)} /></label><Table records={filtered} empty={data.assignments.length ? 'No assigned subjects match this search' : 'No teaching subjects assigned'} columns={[["subjectName", 'Subject', r => <><strong>{r.subjectName}</strong><small>{r.subjectCode || 'Subject code not configured'}</small></>], ['courseName', 'Program'], ['branchName', 'Department / branch'], ['semesterName', 'Semester', r => r.semesterName || `Semester ${r.semesterNumber || r.semesterId}`], ['sectionName', 'Assigned section'], ['academicYearName', 'Academic year'], ['periodsPerWeek', 'Periods / week'], ['actions', 'Actions', r => <div className="tf-row-actions"><Link to={`/faculty-portal/attendance?assignment=${r.id}`}>Attendance</Link><Link to={`/faculty-portal/marks?assignment=${r.id}`}>Marks</Link></div>]]} /></section></>
 }
 function Timetable({ data }) {
   const [day, setDay] = useState(''), [view, setView] = useState('week')

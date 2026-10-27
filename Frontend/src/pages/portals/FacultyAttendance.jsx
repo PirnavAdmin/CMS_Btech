@@ -4,7 +4,6 @@ import { createPortal } from 'react-dom'
 import PortalLayout from '../../layouts/PortalLayout.jsx'
 import {
   FiAlertCircle,
-  FiBookOpen,
   FiCalendar,
   FiCheck,
   FiCheckCircle,
@@ -14,7 +13,6 @@ import {
   FiRefreshCw,
   FiSearch,
   FiTrash2,
-  FiUserCheck,
   FiUsers,
   FiUserX,
   FiZap
@@ -22,6 +20,7 @@ import {
 import { teachingService as liveService } from '../../services/portals/teachingService.js'
 import { PortalDialog } from '../../components/portals/PortalUI.jsx'
 import './faculty-attendance.css'
+import './faculty-attendance-selectors.css'
 import { createAttendanceDemo } from '../../services/portals/attendanceDemo.js'
 
 const statuses = [
@@ -31,9 +30,7 @@ const statuses = [
   ['LEAVE', 'On leave']
 ]
 const same = (a, b) => String(a) === String(b)
-const keyDate = d =>
-  `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
-const label = a => `${a.subjectName} · ${a.sectionName} · ${a.semesterName || `Semester ${a.semesterId}`}`
+const keyDate = d => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
 const statusLabel = value => statuses.find(([key]) => key === value)?.[1] || 'Unmarked'
 
 function Notice({ children, error = false }) {
@@ -101,11 +98,8 @@ export function FacultyAttendancePage() {
 }
 
 export default function FacultyAttendance({ data, summaryTarget }) {
-  const [demo, setDemo] = useState(() => createAttendanceDemo(keyDate(new Date())))
-  const [liveData, setLiveData] = useState(data || null)
-  const [liveError, setLiveError] = useState('')
-  const [attempt, setAttempt] = useState(0)
-
+  const [demo, setDemo] = useState(() => data ? null : createAttendanceDemo(keyDate(new Date())))
+  const [liveData, setLiveData] = useState(data || null), [liveError, setLiveError] = useState(''), [attempt, setAttempt] = useState(0)
   useEffect(() => {
     if (demo || data) return
     let active = true
@@ -169,161 +163,15 @@ function AttendanceWorkspace({ data, service, demo, onToggleDemo, summaryTarget 
   const [busy, setBusy] = useState(false)
 
   const a = data.assignments.find(row => same(row.id, allocationId))
-  const guard = action => {
-    if (dirty) setPending(() => action)
-    else action()
-  }
-
-  const setTodayDate = () => {
-    guard(() => setDate(keyDate(new Date())))
-  }
-
-  return (
-    <div className="fa-workspace" data-demo={demo}>
-      <div className={`fa-demo-bar ${demo ? 'is-demo' : 'is-live'}`}>
-        <div>
-          <span className="fa-mode-tag">{demo ? 'DEMO REGISTER' : 'COLLEGE ATTENDANCE'}</span>
-          <span>
-            {demo
-              ? 'Practice marking and attendance submission with 8 sample students.'
-              : 'Official attendance register connected to university records.'}
-          </span>
-        </div>
-        <button
-          type="button"
-          className="fa-button fa-btn-mode"
-          disabled={busy}
-          onClick={() => guard(onToggleDemo)}
-        >
-          {demo ? 'Use college records' : 'Use mock students'}
-        </button>
-      </div>
-
-      {/* Classroom Selection Card */}
-      <section className="fa-card fa-context">
-        <div className="fa-context-header">
-          <div className="fa-context-icon">
-            <FiBookOpen />
-          </div>
-          <div>
-            <span className="fa-eyebrow">CLASSROOM SELECTION</span>
-            <h2>Select Class &amp; Date</h2>
-          </div>
-        </div>
-
-        <div className="fa-context-fields">
-          <label>
-            <span>Assigned Subject &amp; Section</span>
-            <select
-              disabled={busy}
-              value={a ? allocationId : ''}
-              onChange={e => {
-                const value = e.target.value
-                guard(() => setAllocation(value))
-              }}
-            >
-              <option value="">Select an assigned class</option>
-              {data.assignments.map(row => (
-                <option key={row.id} value={row.id}>
-                  {label(row)}
-                </option>
-              ))}
-            </select>
-          </label>
-
-          <label>
-            <div className="fa-label-with-action">
-              <span>Attendance Date</span>
-              <button type="button" className="fa-text-btn" onClick={setTodayDate}>
-                Today
-              </button>
-            </div>
-            <input
-              disabled={busy}
-              type="date"
-              max={keyDate(new Date())}
-              value={date}
-              onChange={e => {
-                const value = e.target.value
-                if (value) guard(() => setDate(value))
-              }}
-            />
-          </label>
-        </div>
-
-        {a && (
-          <div className="fa-context-tags">
-            <span className="fa-tag-subject">{a.subjectCode || a.subjectName}</span>
-            <span className="fa-tag-section">{a.sectionName}</span>
-            <span className="fa-tag-year">{a.academicYearName || '2026-2027'}</span>
-            <span className="fa-tag-sem">{a.semesterName || 'Semester 1'}</span>
-          </div>
-        )}
-      </section>
-
-      {!a ? (
-        <section className="fa-card fa-start">
-          <div className="fa-start-icon-wrap">
-            <FiCheckSquare />
-          </div>
-          <h2>Ready to Take Attendance?</h2>
-          <p>
-            Please select your assigned subject and section above to open the interactive student attendance
-            register.
-          </p>
-          <div className="fa-start-features">
-            <span>
-              <FiUsers /> Assigned Students Roster
-            </span>
-            <span>
-              <FiCheckCircle /> 1-Click Batch Marking
-            </span>
-            <span>
-              <FiClock /> Verified Session Logs
-            </span>
-          </div>
-          {!data.assignments.length && (
-            <Notice>
-              No teaching allocations found. Contact your academic coordinator to assign a subject and section.
-            </Notice>
-          )}
-        </section>
-      ) : (
-        <ClassRegister
-          key={`${a.id}:${date}`}
-          service={service}
-          demo={demo}
-          summaryTarget={summaryTarget}
-          a={a}
-          data={data}
-          date={date}
-          guard={guard}
-          onDirty={setDirty}
-          onBusy={setBusy}
-        />
-      )}
-
-      {pending && (
-        <PortalDialog title="Discard unsaved attendance?" onClose={() => setPending(null)}>
-          <p>Your current register has unsaved changes. Discard them and open the selected class or date?</p>
-          <div className="portal-actions">
-            <button onClick={() => setPending(null)}>Keep editing</button>
-            <button
-              className="primary"
-              onClick={() => {
-                const action = pending
-                setPending(null)
-                setDirty(false)
-                action()
-              }}
-            >
-              Discard changes
-            </button>
-          </div>
-        </PortalDialog>
-      )}
-    </div>
-  )
+  const subjectOptions = [...new Map(data.assignments.map(row => [String(row.subjectId), row])).values()]
+  const semesterOptions = [...new Map(data.assignments.filter(row => !a || same(row.subjectId, a.subjectId)).map(row => [String(row.semesterId ?? row.semesterName), row])).values()]
+  const sectionOptions = [...new Map(data.assignments.filter(row => a && same(row.subjectId, a.subjectId) && same(row.semesterId ?? row.semesterName, a.semesterId ?? a.semesterName)).map(row => [String(row.sectionId), row])).values()]
+  const guard = action => { if (dirty) setPending(() => action); else action() }
+  const chooseClass = predicate => { const selected = data.assignments.find(predicate); guard(() => setAllocation(selected?.id || '')) }
+  return <div className="fa-workspace" data-demo={demo}><div className="fa-demo-bar"><div><strong>{demo ? 'Mock attendance · 8 sample students loaded' : 'Class attendance'}</strong><span>{demo ? 'Practice marking and submission. Records stay in this demo session only.' : 'Use sample students to test marking, filters and submission.'}</span></div><button type="button" className="fa-button" disabled={busy} onClick={() => guard(onToggleDemo)}>{demo ? 'Use college records' : 'Use mock students'}</button></div><section className="fa-card fa-context"><header><div><span className="fa-eyebrow">CLASSROOM ATTENDANCE</span><h2>Choose your class</h2><p>Select the assigned subject, semester, and section to open its register.</p></div><span className="fa-context-icon"><FiCalendar /></span></header><div className="fa-context-fields"><label>Subject<select disabled={busy || !subjectOptions.length} value={a?.subjectId || ''} onChange={e => chooseClass(row => same(row.subjectId, e.target.value))}><option value="">Select subject</option>{subjectOptions.map(row => <option key={row.subjectId} value={row.subjectId}>{row.subjectName}{row.subjectCode ? ` (${row.subjectCode})` : ''}</option>)}</select></label><label>Semester<select disabled={busy || !a} value={a ? String(a.semesterId ?? a.semesterName) : ''} onChange={e => chooseClass(row => same(row.subjectId, a?.subjectId) && same(row.semesterId ?? row.semesterName, e.target.value))}><option value="">Select semester</option>{semesterOptions.map(row => <option key={row.semesterId ?? row.semesterName} value={row.semesterId ?? row.semesterName}>{row.semesterName || `Semester ${row.semesterId}`}</option>)}</select></label><label>Section<select disabled={busy || !a} value={a?.sectionId || ''} onChange={e => chooseClass(row => same(row.subjectId, a?.subjectId) && same(row.semesterId ?? row.semesterName, a?.semesterId ?? a?.semesterName) && same(row.sectionId, e.target.value))}><option value="">Select section</option>{sectionOptions.map(row => <option key={row.sectionId} value={row.sectionId}>{row.sectionName}</option>)}</select></label><label>Attendance date<input disabled={busy} type="date" max={keyDate(new Date())} value={date} onChange={e => { const value = e.target.value; if (value) guard(() => setDate(value)) }} /></label></div>{a && <div className="fa-context-tags"><span>{a.subjectCode || a.subjectName}</span><span>{a.semesterName || `Semester ${a.semesterId}`}</span><span>{a.sectionName}</span><span>{a.academicYearName || 'Academic year not configured'}</span></div>}</section>
+    {!a ? <section className="fa-card fa-start"><FiCheckSquare /><h2>Your class register, ready when you are</h2><p>Select an assigned class above to mark attendance, review saved sessions, and view your recent attendance history.</p><div><span><FiUsers />Assigned students only</span><span><FiCheckCircle />Review before submitting</span><span><FiClock />Recent session history</span></div>{!data.assignments.length && <Notice>No teaching allocations found. Contact your academic coordinator to assign a subject and section.</Notice>}</section> : <ClassRegister key={`${a.id}:${date}`} service={service} demo={demo} summaryTarget={summaryTarget} a={a} data={data} date={date} guard={guard} onDirty={setDirty} onBusy={setBusy} />}
+    {pending && <PortalDialog title="Discard unsaved attendance?" onClose={() => setPending(null)}><p>Your current register has unsaved changes. Discard them and open the selected class or date?</p><div className="portal-actions"><button onClick={() => setPending(null)}>Keep editing</button><button className="primary" onClick={() => { const action = pending; setPending(null); setDirty(false); action() }}>Discard changes</button></div></PortalDialog>}
+  </div>
 }
 
 function ClassRegister({ a, data, date, guard, onDirty, onBusy, service, demo, summaryTarget }) {
@@ -532,7 +380,6 @@ function RegisterSheet({
   const [loading, setLoading] = useState(!!session)
   const [busy, setBusy] = useState(false)
   const [saved, setSaved] = useState(false)
-  const [retry, setRetry] = useState(0)
 
   useEffect(() => {
     if (!session) return
@@ -568,7 +415,7 @@ function RegisterSheet({
     return () => {
       active = false
     }
-  }, [a.id, date, session, retry, service])
+  }, [a.id, date, session, service])
 
   const locked = saved || (!!session && session.sessionStatus !== 'OPEN')
   const blocked = busy || loading || !!loadError || (!session && rosterUnavailable)
