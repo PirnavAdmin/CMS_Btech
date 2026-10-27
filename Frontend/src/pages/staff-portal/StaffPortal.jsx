@@ -3,6 +3,7 @@ import StaffPortalLayout, { STAFF_NAVIGATION } from './StaffPortalLayout.jsx'
 import StaffDashboard from './StaffDashboard.jsx'
 import StaffProfile from './StaffProfile.jsx'
 import StaffAttendance from './StaffAttendance.jsx'
+import StaffLeave from './StaffLeave.jsx'
 
 export default function StaffPortal() {
   const { screen = 'dashboard' } = useParams()
@@ -28,7 +29,8 @@ export default function StaffPortal() {
       {currentNav.key === 'dashboard' && <StaffDashboard />}
       {currentNav.key === 'my-profile' && <StaffProfile />}
       {currentNav.key === 'my-attendance' && <StaffAttendance />}
-      {!['dashboard', 'my-profile', 'my-attendance'].includes(currentNav.key) && (
+      {currentNav.key === 'leave' && <StaffLeave />}
+      {!['dashboard', 'my-profile', 'my-attendance', 'leave'].includes(currentNav.key) && (
         <div className="sp-card" style={{ textAlign: 'center', padding: '60px 20px' }}>
           <h2 style={{ fontSize: '20px', marginBottom: '8px' }}>
             {currentNav.label}

@@ -16,7 +16,6 @@ import PortalRoute, { RoleDashboard, RoleAlias } from './components/portals/Port
 const AcademicPortal = lazy(() => import('./pages/portals/AcademicPortal.jsx'))
 const StaffPortal = lazy(() => import('./pages/portals/StaffPortal.jsx'))
 const PortalPreview = lazy(() => import('./pages/portals/PortalPreview.jsx'))
-const StaffPortal = lazy(() => import('./pages/staff-portal/StaffPortal.jsx'))
 
 
 
@@ -193,7 +192,6 @@ export default function App() {
           <Route element={<PortalRoute roles={[ROLES.STAFF]} />}>
             <Route path="/staff-portal/:screen?" element={<StaffPortal />} />
           </Route>
-          <Route path="/staff-portal/:screen?" element={<StaffPortal />} />
           {/* Existing administrator screens retain their URLs and components. */}
           <Route element={<PortalRoute roles={[ROLES.ADMIN]} />}>
           <Route
