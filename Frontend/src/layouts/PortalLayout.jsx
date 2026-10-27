@@ -23,6 +23,7 @@ const navigationIcons = {
   timetable: [FiCalendar, 'orange'], materials: [FiBookOpen, 'cyan'], leave: [FiCalendar, 'pink'],
   events: [FiCalendar, 'orange'], placements: [FiBriefcase, 'green'], notifications: [FiBell, 'orange'], profile: [FiUser, 'purple'], fees: [FiCreditCard, 'green'], users: [FiShield, 'blue'],
 }
+const facultySidebarKeys = new Set(['dashboard', 'students', 'subjects', 'attendance', 'my-attendance', 'marks', 'timetable', 'materials', 'leave'])
 
 export default function PortalLayout({ children, title }) {
   const role = getUserRole(), navigate = useNavigate()
@@ -33,7 +34,7 @@ export default function PortalLayout({ children, title }) {
   const [theme, setTheme] = useState(() => localStorage.getItem('pirnav-theme') || 'light')
   const allNav = role === 'faculty' ? facultyNavigation : role === 'student' ? studentNavigation : role === 'staff' ? [['dashboard', 'Dashboard'], ['profile', 'My Profile']] : [['users', 'Roles & Designations']]
   const nav = [...allNav.filter(([key]) => canView(`/${role}-portal/${key}`)), ...(['faculty', 'staff'].includes(role) ? additionalScreens.filter(([path]) => canView(path)) : [])]
-  const sidebarNav = nav.filter(([key]) => key !== 'notifications' && !(role === 'faculty' && key === 'profile'))
+  const sidebarNav = nav.filter(([key]) => role === 'faculty' ? facultySidebarKeys.has(key) : key !== 'notifications')
   const base = role === 'admin' ? '/roles-designations' : `/${role}-portal`
   const storage = getAuthStorage()
   const name = storage?.getItem('btech-user-name') || role
