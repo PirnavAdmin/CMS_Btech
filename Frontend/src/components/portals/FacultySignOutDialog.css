@@ -1,0 +1,15 @@
+.faculty-signout-dialog{width:min(520px,calc(100vw - 32px));max-height:calc(100dvh - 32px);box-sizing:border-box;padding:32px;border:0;border-radius:20px;background:var(--surface,#fff);color:var(--text-primary,#0f172a);box-shadow:0 24px 70px rgba(16,42,76,.28);overflow:auto}
+.faculty-signout-dialog::backdrop{background:rgba(16,42,76,.42);backdrop-filter:blur(4px)}
+.faculty-signout-icon{display:grid;place-items:center;width:48px;height:48px;margin-bottom:20px;border-radius:12px;background:#fee2e2;color:#dc2626}
+.faculty-signout-icon svg{width:24px;height:24px;stroke-width:2}
+.faculty-signout-dialog .faculty-signout-eyebrow{margin:0 0 6px;color:#dc2626;text-transform:uppercase;font-size:.75rem;font-weight:800;letter-spacing:.08em}
+.faculty-signout-dialog h2{margin:0 0 8px;color:var(--text-primary,#0f172a);font-size:1.55rem;font-weight:700;line-height:1.25}
+.faculty-signout-dialog>p:not(.faculty-signout-eyebrow){margin:0 0 28px;color:var(--text-secondary,#64748b);font-size:.95rem;line-height:1.45}
+.faculty-signout-actions{display:flex;justify-content:flex-end;gap:12px}
+.faculty-signout-actions button{height:40px;padding:0 18px;border-radius:8px;font-family:inherit;font-size:.88rem;font-weight:700;cursor:pointer;transition:background .15s,border-color .15s}
+.faculty-signout-cancel{border:1px solid var(--border,#cbd5e1);background:var(--surface,#fff);color:var(--text-secondary,#334155)}
+.faculty-signout-cancel:hover{background:var(--surface-soft,#f8fafc);border-color:#94a3b8;color:var(--text-primary,#0f172a)}
+.faculty-signout-confirm{border:1px solid #dc2626;background:#dc2626;color:#fff;box-shadow:0 2px 8px rgba(220,38,38,.25)}
+.faculty-signout-confirm:hover{background:#b91c1c;border-color:#b91c1c}
+.faculty-signout-actions button:focus-visible{outline:2px solid var(--brand,#1769c2);outline-offset:3px}
+@media(max-width:480px){.faculty-signout-dialog{padding:24px}.faculty-signout-actions{flex-direction:column}.faculty-signout-actions button{width:100%;height:42px}}
