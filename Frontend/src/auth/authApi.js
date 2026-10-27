@@ -23,10 +23,8 @@ export class AuthRequestError extends Error {
   }
 }
 
-const DEFAULT_API_BASE_URL = 'https://clarity-math-delouse.ngrok-free.dev'
-const authEndpoint = import.meta.env.DEV
-  ? '/api/v1/auth/login'
-  : (import.meta.env.VITE_AUTH_API_URL || `${String(import.meta.env.VITE_API_BASE_URL || DEFAULT_API_BASE_URL).replace(/\/+$/, '')}/api/v1/auth/login`)
+const DEFAULT_API_BASE_URL = 'https://stagnant-craftily-paving.ngrok-free.dev'
+const authEndpoint = import.meta.env.VITE_AUTH_API_URL || (import.meta.env.DEV ? '/api/v1/auth/login' : `${DEFAULT_API_BASE_URL}/api/v1/auth/login`)
 const registrationBaseUrl = String(import.meta.env.DEV ? '' : (import.meta.env.VITE_API_BASE_URL || DEFAULT_API_BASE_URL)).replace(/\/+$/, '')
 const registrationEndpoint = import.meta.env.VITE_REGISTRATION_API_URL || (registrationBaseUrl ? `${registrationBaseUrl}/api/v1/access-requests` : import.meta.env.DEV ? '/api/v1/access-requests' : '')
 const otpApiBaseUrl = (import.meta.env.DEV ? '' : (import.meta.env.VITE_OTP_API_URL || import.meta.env.VITE_API_BASE_URL || DEFAULT_API_BASE_URL)).replace(/\/+$/, '')

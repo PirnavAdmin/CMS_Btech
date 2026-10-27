@@ -14,7 +14,7 @@ import ProtectedRoute from './components/ProtectedRoute'
 import FirstLoginPassword from './pages/auth/FirstLoginPassword.jsx'
 import PortalRoute, { RoleDashboard, RoleAlias } from './components/portals/PortalRoute.jsx'
 const AcademicPortal = lazy(() => import('./pages/portals/AcademicPortal.jsx'))
-const UserAccessManagement = lazy(() => import('./pages/admin-management/UserAccessManagement.jsx'))
+const StaffPortal = lazy(() => import('./pages/portals/StaffPortal.jsx'))
 const PortalPreview = lazy(() => import('./pages/portals/PortalPreview.jsx'))
 const StaffPortal = lazy(() => import('./pages/staff-portal/StaffPortal.jsx'))
 
@@ -188,7 +188,10 @@ export default function App() {
             <Route path="/student-portal/:screen?" element={<AcademicPortal role="student" />} />
           </Route>
           <Route element={<PortalRoute roles={[ROLES.ADMIN]} />}>
-            <Route path="/user-access" element={<UserAccessManagement />} />
+            <Route path="/user-access" element={<Navigate to="/roles-designations" replace />} />
+          </Route>
+          <Route element={<PortalRoute roles={[ROLES.STAFF]} />}>
+            <Route path="/staff-portal/:screen?" element={<StaffPortal />} />
           </Route>
           <Route path="/staff-portal/:screen?" element={<StaffPortal />} />
           {/* Existing administrator screens retain their URLs and components. */}

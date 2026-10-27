@@ -532,16 +532,16 @@ export const normalizeCanonicalStudent = (source = {}) => {
   const admissionRaw = { ...(formDataObj.admission || {}), ...(raw.admissionDetails ?? raw.admission ?? {}) }
   const feeRaw = { ...(formDataObj.fees || {}), ...(raw.feeSummary ?? raw.feeDetails ?? raw.fees ?? {}) }
 
-  const admissionId = String(firstFilled(raw.admissionId, raw.studentAdmissionId, raw.application?.admissionId, admissionRaw.admissionId, raw.id, base.id))
-  const studentId = String(firstFilled(raw.studentId, raw.student?.studentId, raw.student?.id, header.studentId, personalRaw.studentId, ''))
-  const status = normalizeAdmissionStatus(firstFilled(raw.status, raw.admissionStatus, raw.applicationStatus, raw.currentStatus, header.status, summary.studentStatus, 'DRAFT'))
+  const admissionId = String(firstFilled(raw.admissionId, raw.AdmissionId, raw.studentAdmissionId, raw.StudentAdmissionId, raw.application?.admissionId, admissionRaw.admissionId, raw.id, base.id))
+  const studentId = String(firstFilled(raw.studentId, raw.StudentId, raw.student?.studentId, raw.student?.id, header.studentId, personalRaw.studentId, ''))
+  const status = normalizeAdmissionStatus(firstFilled(raw.status, raw.AdmissionStatus, raw.admissionStatus, raw.applicationStatus, raw.currentStatus, header.status, summary.studentStatus, 'DRAFT'))
 
   // Names
-  const parsedName = splitFullName(firstFilled(raw.studentName, raw.fullName, personalRaw.fullName, header.studentName, ''))
-  const firstName = firstFilled(personalRaw.firstName, raw.firstName, parsedName.firstName) ?? ''
-  const middleName = firstFilled(personalRaw.middleName, raw.middleName, parsedName.middleName) ?? ''
-  const lastName = firstFilled(personalRaw.lastName, raw.lastName, parsedName.lastName) ?? ''
-  const fullName = [firstName, middleName, lastName].filter(Boolean).join(' ') || firstFilled(personalRaw.fullName, raw.fullName, raw.studentName, '')
+  const parsedName = splitFullName(firstFilled(raw.studentName, raw.StudentName, raw.fullName, raw.FullName, personalRaw.fullName, header.studentName, ''))
+  const firstName = firstFilled(personalRaw.firstName, raw.firstName, raw.FirstName, parsedName.firstName) ?? ''
+  const middleName = firstFilled(personalRaw.middleName, raw.middleName, raw.MiddleName, parsedName.middleName) ?? ''
+  const lastName = firstFilled(personalRaw.lastName, raw.lastName, raw.LastName, parsedName.lastName) ?? ''
+  const fullName = [firstName, middleName, lastName].filter(Boolean).join(' ') || firstFilled(personalRaw.fullName, raw.fullName, raw.FullName, raw.studentName, raw.StudentName, '')
 
   // Photo resolution
   const photo = firstPhoto(
@@ -598,15 +598,18 @@ export const normalizeCanonicalStudent = (source = {}) => {
   const sameAddress = contactRaw.sameAddress !== undefined ? Boolean(contactRaw.sameAddress) : raw.sameAddress !== undefined ? Boolean(raw.sameAddress) : !hasPerm
 
   // Dates & Registration Numbers
-  const regNumber = firstFilled(raw.registrationNumber, raw.application?.registrationNumber, raw.application?.number, summary.registrationNumber, academicRaw.registrationNumber, raw.number, base.application.number)
+  const regNumber = firstFilled(raw.registrationNumber, raw.RegistrationNumber, raw.RegistrationNo, raw.registrationNo, raw.application?.registrationNumber, raw.application?.number, summary.registrationNumber, academicRaw.registrationNumber, raw.number, base.application.number)
   // Profile and admission endpoints use different DTOs for this value.  Read
   // all supported aliases so the directory never loses an admission number
   // that is already stored on the approved admission.
   const admNumber = firstFilled(
     raw.admissionNumber,
+    raw.AdmissionNumber,
+    raw.AdmissionNo,
     raw.admissionNo,
     raw.studentAdmissionNumber,
     raw.applicationNumber,
+    raw.ApplicationNo,
     raw.application?.admissionNumber,
     raw.application?.admissionNo,
     raw.application?.applicationNumber,
@@ -744,12 +747,12 @@ export const normalizeCanonicalStudent = (source = {}) => {
       dob: dateInputValue(firstFilled(personalRaw.dob, personalRaw.dateOfBirth, raw.dob, raw.dateOfBirth, '')),
       bloodGroup: firstFilled(personalRaw.bloodGroup, raw.bloodGroup, '') ?? '',
       nationality: firstFilled(personalRaw.nationality, raw.nationality, 'Indian') ?? 'Indian',
-      aadhaar: firstFilled(personalRaw.aadhaar, personalRaw.aadhaarNumber, raw.aadhaar, raw.aadhaarNumber, '') ?? '',
+      aadhaar: firstFilled(personalRaw.aadhaar, personalRaw.aadhaarNumber, raw.aadhaar, raw.aadhaarNumber, raw.AadhaarNumber, '') ?? '',
       photo,
       photoUrl: photo,
     },
     contact: {
-      mobile: tenDigitMobile(firstFilled(contactRaw.mobile, contactRaw.studentMobile, raw.mobile, raw.mobileNumber, raw.studentMobile, personalRaw.mobile, personalRaw.studentMobile, '')),
+      mobile: tenDigitMobile(firstFilled(contactRaw.mobile, contactRaw.studentMobile, raw.mobile, raw.mobileNumber, raw.MobileNumber, raw.studentMobile, personalRaw.mobile, personalRaw.studentMobile, '')),
       alternateMobile: tenDigitMobile(firstFilled(contactRaw.alternateMobile, raw.alternateMobile, '')),
       email: firstFilled(contactRaw.email, contactRaw.studentEmail, raw.email, raw.studentEmail, personalRaw.email, personalRaw.studentEmail, '') ?? '',
       alternateEmail: firstFilled(contactRaw.alternateEmail, raw.alternateEmail, '') ?? '',

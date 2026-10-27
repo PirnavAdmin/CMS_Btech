@@ -20,6 +20,13 @@ the API base URL, environment, and auth integration are preserved.
   permission errors never trigger this fallback.
 - Attendance: GET/POST `/api/v1/student-attendance/sessions`, followed by
   PUT `/api/v1/student-attendance/sessions/{sessionId}/mark`.
+  `FacultyAttendance.jsx` loads saved registers from the session `/students`
+  endpoint after verifying faculty, subject, section and date ownership. Completed
+  and cancelled sessions are read-only. History requests cover the last 30 days.
+  Bulk marking is explicit, selected students are confirmed before overwrite,
+  and submission always includes the full assigned roster regardless of filters.
+  A retry can resume a single open session after session creation succeeded but
+  marking failed; completed sessions are never overwritten through this flow.
 - Examinations and marks: GET `/api/v1/exams`; GET/POST `/api/v1/marks`.
 - Leave application: active types/policies from `/api/v1/faculty-leave`, POST
   `/api/v1/faculty-leave/requests` with the authenticated faculty ID.
