@@ -8,6 +8,7 @@ import { Feedback, Field, PortalDialog, Stats, Status } from '../../components/p
 import { teachingService as service } from '../../services/portals/teachingService.js'
 import { usePortalData } from '../../hooks/usePortalData.js'
 import './teaching-portal.css'
+import './teaching-portal-enhanced.css'
 import TeachingDashboard from './TeachingDashboard.jsx'
 
 const same = (a, b) => String(a) === String(b)
@@ -31,9 +32,9 @@ export default function TeachingPortal({ screen, title }) {
   const [refreshing, setRefreshing] = useState(false)
   const [dismissedData, setDismissedData] = useState(null)
   const refresh = async () => { setRefreshing(true); try { await state.refresh() } catch { /* Feedback displays the error. */ } finally { setRefreshing(false) } }
-  return <PortalLayout title={title}><main className="portal-page tf-page"><header className="tf-heading"><div><p className="portal-eyebrow">DIGITAL CAMPUS / TEACHING FACULTY</p><h1>{title}</h1><p>{descriptions[screen]}</p></div><div className="tf-heading-actions"><span className="tf-live">College records</span></div></header>
+  return <PortalLayout title={title}><main className="portal-page tf-page"><header className="tf-heading"><div><p className="portal-eyebrow">DIGITAL CAMPUS / TEACHING FACULTY</p><h1>{title}</h1><p>{descriptions[screen]}</p></div><div className="tf-heading-actions"><span className={`tf-live${state.error ? ' is-error' : ''}`} role="status">{state.error ? 'Workspace unavailable' : 'College records'}</span></div></header>
     <Feedback error={state.error} notice={state.notice} />
-    {!data ? <section className="portal-card tf-loading">{state.error ? <><h2>Unable to load your teaching workspace</h2><p>Verify your faculty account mapping and backend availability, then retry.</p><button onClick={refresh} disabled={refreshing}>Retry loading</button></> : <p role="status">Loading your faculty profile and teaching assignments...</p>}</section> : <>
+    {!data ? <section className={`portal-card tf-loading${state.error ? ' has-error' : ''}`} aria-labelledby={state.error ? 'tf-load-title' : undefined}>{state.error ? <><span className="tf-load-icon"><FiAlertCircle aria-hidden="true" /></span><div className="tf-load-copy"><p className="portal-eyebrow">TEACHING WORKSPACE</p><h2 id="tf-load-title">Your faculty workspace is unavailable</h2><p>We couldn’t load your assignments and teaching records. Check your faculty access or connection, then try again.</p><button type="button" className="tf-retry-button" onClick={refresh} disabled={refreshing}>{refreshing ? 'Retrying…' : 'Retry loading'}</button></div><aside className="tf-load-help"><strong>What to check</strong><span>Confirm your faculty account is mapped and has permission to access the teaching portal.</span></aside></> : <div className="tf-loading-progress" role="status"><span className="tf-loading-spinner" aria-hidden="true" /><div><strong>Preparing your workspace</strong><p>Loading your faculty profile and teaching assignments…</p></div></div>}</section> : <>
       {!!data.warnings.length && dismissedData !== data && <div className="tf-data-notice" role="status"><span><FiAlertCircle aria-hidden="true" />Some information is temporarily unavailable. Your other teaching records are ready to use.</span><div><button type="button" disabled={refreshing} onClick={refresh}>Retry</button><button type="button" className="tf-notice-close" aria-label="Dismiss data availability notice" onClick={() => setDismissedData(data)}><FiX /></button></div></div>}
       {screen === 'dashboard' && <TeachingDashboard data={data} onRetry={refresh} />}
       {screen === 'students' && <StudentDirectory data={data} />}

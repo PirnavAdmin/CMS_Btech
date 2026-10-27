@@ -12,9 +12,14 @@ import { MarksManagement, MarksEntry, BulkMarksUpload, EditMarks, StudentMarks, 
 import { Navigate, Route, Routes } from 'react-router-dom'
 import ProtectedRoute from './components/ProtectedRoute'
 import PortalRoute, { RoleDashboard, RoleAlias } from './components/portals/PortalRoute.jsx'
+import { facultyRouteByPath } from './features/faculty/routeConfig.js'
 const AcademicPortal = lazy(() => import('./pages/portals/AcademicPortal.jsx'))
 const UserAccessManagement = lazy(() => import('./pages/admin-management/UserAccessManagement.jsx'))
 const PortalPreview = lazy(() => import('./pages/portals/PortalPreview.jsx'))
+const FacultyDashboardPage = lazy(() => import('./features/faculty/dashboard/pages/FacultyDashboardPage.jsx'))
+const FacultyWorkspacePage = lazy(() => import('./features/faculty/FacultyWorkspacePage.jsx'))
+const FacultyRouteErrorBoundary = lazy(() => import('./features/faculty/FacultyRouteErrorBoundary.jsx'))
+const FacultySessionExpiredPage = lazy(() => import('./features/faculty/FacultySessionExpiredPage.jsx'))
 
 
 
@@ -178,8 +183,11 @@ export default function App() {
 
           <Route path="/portal-preview" element={<PortalPreview />} />
           <Route path="/dashboard" element={<RoleDashboard><AcademicProvider><Dashboard /></AcademicProvider></RoleDashboard>} />
+          <Route path="/faculty-portal/session-expired" element={<FacultyRouteErrorBoundary><FacultySessionExpiredPage /></FacultyRouteErrorBoundary>} />
           <Route element={<PortalRoute roles={[ROLES.FACULTY]} />}>
-            <Route path="/faculty-portal/:screen?" element={<AcademicPortal role="faculty" />} />
+            <Route path="/faculty-portal" element={<Navigate to="/faculty-portal/dashboard" replace />} />
+            <Route path={facultyRouteByPath['/faculty-portal/dashboard'].path} element={<FacultyRouteErrorBoundary><FacultyDashboardPage /></FacultyRouteErrorBoundary>} />
+            <Route path="/faculty-portal/:screen?" element={<FacultyRouteErrorBoundary><FacultyWorkspacePage /></FacultyRouteErrorBoundary>} />
           </Route>
           <Route element={<PortalRoute roles={[ROLES.STUDENT]} />}>
             <Route path="/student-portal/:screen?" element={<AcademicPortal role="student" />} />

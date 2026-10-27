@@ -10,17 +10,17 @@ import '../styles/portals.css'
 import FacultyNavbarActions from '../components/portals/FacultyNavbarActions.jsx'
 import FacultySignOutDialog from '../components/portals/FacultySignOutDialog.jsx'
 
-const teachingIcons = { dashboard: FiGrid, students: FiUsers, subjects: FiBookOpen, attendance: FiCheckSquare, marks: FiEdit3, timetable: FiCalendar, materials: FiFileText, leave: FiCalendar, notifications: FiBell, profile: FiUser }
+const teachingIcons = { dashboard: FiGrid, students: FiUsers, subjects: FiBookOpen, attendance: FiCheckSquare, marks: FiEdit3, timetable: FiCalendar, materials: FiFileText, leave: FiCalendar, exams: FiFileText, electives: FiCheckSquare, documents: FiFileText, meetings: FiCalendar, profile: FiUser }
 function NavigationIcon({ role, screen }) { const Icon = role === 'faculty' ? teachingIcons[screen] || FiGrid : FiGrid; return <Icon aria-hidden="true" /> }
 
 export default function PortalLayout({ children, title }) {
   const role = getUserRole(), navigate = useNavigate()
   const [open, setOpen] = useState(false), [logout, setLogout] = useState(false)
   const [theme, setTheme] = useState(() => localStorage.getItem('pirnav-theme') || 'light')
-  const nav = role === 'faculty' ? facultyNavigation.filter(([key]) => !['profile', 'notifications'].includes(key)) : role === 'student' ? studentNavigation : [['users', 'User Access Management']]
+  const nav = role === 'faculty' ? facultyNavigation : role === 'student' ? studentNavigation : [['users', 'User Access Management']]
   const base = role === 'admin' ? '/user-access' : `/${role}-portal`
   useEffect(() => { document.documentElement.dataset.theme = theme; localStorage.setItem('pirnav-theme', theme) }, [theme])
-  return <div className="portal-shell">
+  return <div className={`portal-shell portal-shell--${role}`}>
     <button className={`sidebar-scrim ${open ? 'is-visible' : ''}`} onClick={() => setOpen(false)} aria-label="Close navigation" tabIndex={open ? 0 : -1} />
     <aside className={`sidebar ${open ? 'is-open' : ''}`} aria-label="Portal navigation">
       <div className="sidebar-brand"><span className="sidebar-brand__mark"><FiBookOpen /></span><div className="sidebar-brand__copy"><strong>{isPortalPreview() ? 'Campus Preview' : 'Digital Campus'}</strong><span className="sidebar-brand__subtitle">{role === 'faculty' ? 'Teaching Faculty' : role} Portal</span></div><button className="sidebar-close" onClick={() => setOpen(false)} aria-label="Close navigation"><FiX /></button></div>

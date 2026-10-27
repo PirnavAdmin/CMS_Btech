@@ -1,0 +1,38 @@
+export const dashboardPendingActions = [
+  {
+    id: 'act-1',
+    type: 'attendance',
+    title: 'Attendance not marked',
+    description: 'DBMS Lab (Batch 1) is waiting for attendance',
+    priority: 'High',
+    actionLabel: 'Mark attendance',
+    actionUrl: '/faculty-portal/attendance?assignment=alloc-3',
+  },
+  {
+    id: 'act-2',
+    type: 'marks-draft',
+    title: 'Marks in draft',
+    description: 'Mid-Term Examination 1 · CS301 · Section A',
+    priority: 'Medium',
+    actionLabel: 'Review marks',
+    actionUrl: '/faculty-portal/marks?evalId=eval-1',
+  },
+  {
+    id: 'act-3',
+    type: 'marks-rejected',
+    title: 'Marks need an update',
+    description: 'Quiz 1 · CS303 · Please review the examiner remark',
+    priority: 'High',
+    actionLabel: 'Edit marks',
+    actionUrl: '/faculty-portal/marks?evalId=eval-3',
+  },
+  {
+    id: 'act-4',
+    type: 'elective',
+    title: 'Elective approvals waiting',
+    description: 'Student elective selections need review',
+    priority: 'Medium',
+    actionLabel: 'Review selections',
+    actionUrl: '/faculty-portal/electives',
+  },
+]
