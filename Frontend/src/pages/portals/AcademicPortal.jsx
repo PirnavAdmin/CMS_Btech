@@ -1,7 +1,8 @@
+import Link from '../../components/portals/PermissionLink.jsx'
 import { downloadMaterial } from '../../services/portals/downloadMaterial.js'
 import { usePortalData } from '../../hooks/usePortalData.js'
 import { useState } from 'react'
-import { Link, Navigate, useParams } from 'react-router-dom'
+import { Navigate, useParams } from 'react-router-dom'
 import PortalLayout from '../../layouts/PortalLayout.jsx'
 import { facultyService } from '../../services/portals/facultyService.js'
 import { studentService } from '../../services/portals/studentService.js'
@@ -9,7 +10,10 @@ import { facultyNavigation, studentNavigation } from '../../components/portals/p
 import { DataTable, Field, Feedback, MockNotice, PortalDialog, Stats, Status } from '../../components/portals/PortalUI.jsx'
 import StudentDashboard from './StudentDashboard.jsx'
 import TeachingPortal from './TeachingPortal.jsx'
+import FacultyCampusPage from './FacultyCampusPage.jsx'
 import FacultyProfile from './FacultyProfile.jsx'
+import { FacultyAttendancePage } from './FacultyAttendance.jsx'
+import { FacultySelfAttendancePage } from './FacultySelfAttendance.jsx'
 
 const today = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}` }
 const money = value => new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(value)
@@ -20,6 +24,9 @@ export default function AcademicPortal({ role }) {
   const nav = role === 'faculty' ? facultyNavigation : studentNavigation
   const title = nav.find(([key]) => key === screen)?.[1]
   if (!title) return <Navigate to={`/${role}-portal/dashboard`} replace />
+  if (role === 'faculty' && ['events', 'placements', 'materials'].includes(screen)) return <FacultyCampusPage key={screen} screen={screen} />
+  if (role === 'faculty' && screen === 'attendance') return <FacultyAttendancePage />
+  if (role === 'faculty' && screen === 'my-attendance') return <FacultySelfAttendancePage />
   if (role === 'faculty' && screen === 'profile') return <PortalLayout title={title}><FacultyProfile /></PortalLayout>
   if (role === 'faculty') return <TeachingPortal key={screen} screen={screen} title={title} />
   return <PortalLayout title={title}><PortalScreen key={`${role}:${screen}`} role={role} screen={screen} title={title} /></PortalLayout>
@@ -168,7 +175,14 @@ function Notifications({ data, service, act, busy }) {
 
 function Profile({ data, service, act, busy }) {
   const [phone, setPhone] = useState(data.me.phone || '')
-  return <section className="portal-card"><h2>My profile</h2><p>Identity and academic information are read-only. Contact your administrator to request changes.</p><dl className="portal-profile">{[['User ID', data.me.id], ['Name', data.me.name], ['Email', data.me.email || 'Not configured'], ['Role', data.me.role], ['Department', data.departments.find(row => row.id === data.me.departmentId)?.name || 'Not configured'], ['Section', data.sections.find(row => row.id === data.me.sectionId)?.name || '—'], ['Account status', data.me.status]].map(([name, value]) => <div key={name}><dt>{name}</dt><dd>{value}</dd></div>)}</dl><form onSubmit={event => { event.preventDefault(); act(() => service.updateProfile({ phone }), 'Contact details saved in the mock workspace.') }}><Field label="Mobile number"><input type="tel" pattern="[6-9][0-9]{9}" maxLength={10} value={phone} onChange={event => setPhone(event.target.value)} placeholder="10-digit Indian mobile number" /></Field><button className="primary" disabled={busy}>Save contact details</button></form></section>
+  const initials = (data.me.name || 'Faculty').trim().split(/\s+/).map(part => part[0]).slice(0, 2).join('').toUpperCase()
+  const department = data.departments.find(row => row.id === data.me.departmentId)?.name || 'Not configured'
+  const fields = [['User ID', data.me.id], ['Employee ID', data.me.employeeUserId || 'Not configured'], ['Full name', data.me.name], ['Email address', data.me.email || 'Not configured'], ['Role', data.me.role], ['Department', department], ['Section', data.sections.find(row => row.id === data.me.sectionId)?.name || 'Not assigned'], ['Account status', data.me.status]]
+  return <>
+    <section className="portal-card portal-profile-overview"><div className="portal-profile-identity"><span className="portal-profile-avatar" aria-hidden="true">{initials}</span><div><h2>{data.me.name || 'My profile'}</h2><p>{data.me.email || 'Email not configured'}</p><span className="portal-status">{data.me.role}</span></div></div><dl className="portal-profile-facts"><div><dt>Employee ID</dt><dd>{data.me.employeeUserId || data.me.id}</dd></div><div><dt>Department</dt><dd>{department}</dd></div><div><dt>Account status</dt><dd><Status>{data.me.status}</Status></dd></div></dl></section>
+    <div className="portal-profile-columns"><section className="portal-card"><header className="portal-card-heading"><span className="portal-section-mark" aria-hidden="true">01</span><div><h2>Personal & account information</h2><p>Your saved identity and academic details.</p></div></header><dl className="portal-profile">{fields.map(([name, value]) => <div key={name}><dt>{name}</dt><dd>{value}</dd></div>)}</dl><p className="portal-profile-help">Contact your administrator to update identity or academic information.</p></section>
+    <section className="portal-card portal-contact-card"><header className="portal-card-heading"><span className="portal-section-mark" aria-hidden="true">02</span><div><h2>Contact details</h2><p>Keep your mobile number up to date.</p></div></header><form onSubmit={event => { event.preventDefault(); act(() => service.updateProfile({ phone }), 'Contact details saved in the mock workspace.') }}><Field label="Mobile number"><input type="tel" pattern="[6-9][0-9]{9}" maxLength={10} value={phone} onChange={event => setPhone(event.target.value)} placeholder="10-digit Indian mobile number" /></Field><div className="portal-actions"><button className="primary" disabled={busy}>{busy ? 'Saving...' : 'Save contact details'}</button></div></form></section></div>
+  </>
 }
 
 function Fees({ data }) {

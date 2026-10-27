@@ -437,6 +437,7 @@ function AcademicYear() {
 
   async function generate() {
     if (!selectedCollegeId || contextLoading || !generatedCycle || saving) return;
+    setErrors({});
     const item = generatedCycle;
     if (years.some((x) => x.name === item.name)) {
       setNotice(`${item.name} already exists, so no duplicate was created.`, 'info');
@@ -450,7 +451,10 @@ function AcademicYear() {
         setNotice(`${item.name} was generated successfully.`, 'success');
         await loadYears();
       } catch (error) {
-        setNotice(error.message || 'Unable to generate next academic year.', 'error');
+        setErrors({ form: error.status === 403
+          ? `Access denied for ${selectedCollege?.name || selectedCollege?.collegeName || 'the selected college'} (ID: ${selectedCollegeId}). An administrator must verify your college assignment and access on the server.`
+          : error.message || 'Unable to generate the academic year. Please try again.' });
+        return;
       } finally {
         setSaving(false);
       }
@@ -804,6 +808,7 @@ function AcademicYear() {
               </button>
               <h2 id="gen-title">{generationBase ? 'Generate Next Academic Year' : 'Generate First Academic Year'}</h2>
               <p>College: <strong>{selectedCollege?.name || selectedCollege?.collegeName || 'Selected college'}</strong></p>
+              {errors.form && <p className="field-error" role="alert">{errors.form}</p>}
               {!generationBase && <label className="field">
                 <span>Academic year start date</span>
                 <input type="date" value={firstYearStart} onChange={(event) => setFirstYearStart(event.target.value)} required />
@@ -850,6 +855,8 @@ return { default: AcademicYear }
 
 // AddCollege screen and private helpers.
 const AddCollegeScreen = (() => {
+const eventBus = eventBusImports_default
+const ERP_EVENTS = eventBusImports_ERP_EVENTS
 const ProjectSelect = SearchableSelectImports_ProjectSelect
 const GENERIC_ERROR_MESSAGE = userErrorImports_GENERIC_ERROR_MESSAGE
 const collegeLogoValue = collegeLogoImports_collegeLogoValue

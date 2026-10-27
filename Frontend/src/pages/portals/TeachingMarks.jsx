@@ -1,21 +1,14 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import {
-  FiAlertCircle,
   FiAward,
   FiBookOpen,
   FiCheck,
   FiCheckCircle,
-  FiClock,
-  FiDownload,
   FiEdit3,
-  FiFilter,
-  FiHelpCircle,
-  FiLayers,
   FiRefreshCw,
   FiSearch,
   FiTrendingUp,
-  FiUserCheck,
   FiUsers,
   FiZap
 } from 'react-icons/fi'
@@ -115,7 +108,7 @@ const initialEntries = exam =>
   )
 
 export default function TeachingMarks({ data }) {
-  const [demo, setDemo] = useState(true)
+  const [demo, setDemo] = useState(false)
 
   return (
     <div className="tm-wrapper">
@@ -442,7 +435,7 @@ function MarksWorkspace({ data, demo }) {
             </label>
 
             <label className="tm-field">
-              <span className="tm-field-label">Department / Program</span>
+                <span className="tm-field-label">Branch</span>
               <select value={program} onChange={reset(setProgram)}>
                 <option value="">All assigned programs</option>
                 {options('branchId', 'branchName').map(row => (

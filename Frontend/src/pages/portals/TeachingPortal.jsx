@@ -13,12 +13,12 @@ import TeachingDashboard from './TeachingDashboard.jsx'
 import FacultyAttendance from './FacultyAttendance.jsx'
 import FacultySelfAttendance from './FacultySelfAttendance.jsx'
 import TeachingMarks from './TeachingMarks.jsx'
+import TeachingLeave from './TeachingLeave.jsx'
 
 const same = (a, b) => String(a) === String(b)
 const today = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}` }
 const time = value => String(value || '').slice(0, 5) || '—'
 const formatDate = value => value ? String(value).slice(0, 10) : '—'
-const allocationLabel = row => `${row.subjectName} · ${row.sectionName} · ${row.semesterName || 'Semester ' + row.semesterId}`
 const descriptions = { dashboard: 'Your teaching schedule, assigned classes, and daily academic work.', students: 'View students enrolled in the sections assigned to you.', subjects: 'Your teaching allocations, sections, and weekly workload.', attendance: 'Record and review attendance for your assigned classes.', 'my-attendance': 'Track your daily check-in, check-out times, working hours, and review weekly and monthly attendance records.', marks: 'Enter assessment marks for students in your assigned subjects.', timetable: 'Your published teaching schedule, organised by weekday.', materials: 'Learning resources for your assigned subjects.', leave: 'Apply for leave using your college’s active policies.', notifications: 'College announcements and updates for your account.', profile: 'Your faculty identity and employment information.' }
 
 function Table({ columns, records, empty = 'No records found', detail = 'Try another filter or contact your academic coordinator to verify the assignments.' }) {
@@ -34,8 +34,9 @@ export default function TeachingPortal({ screen, title }) {
   const state = usePortalData(service), { data } = state
   const [refreshing, setRefreshing] = useState(false)
   const [dismissedData, setDismissedData] = useState(null)
+  const [leaveSummaryTarget, setLeaveSummaryTarget] = useState(null)
   const refresh = async () => { setRefreshing(true); try { await state.refresh() } catch { /* Feedback displays the error. */ } finally { setRefreshing(false) } }
-  return <PortalLayout title={title}><main className="portal-page tf-page"><header className="tf-heading"><div><p className="portal-eyebrow">DIGITAL CAMPUS / TEACHING FACULTY</p><h1>{title}</h1><p>{descriptions[screen]}</p></div><div className="tf-heading-actions"><span className={`tf-live${state.error ? ' is-error' : ''}`} role="status">{state.error ? 'Workspace unavailable' : 'College records'}</span></div></header>
+  return <PortalLayout title={title}><main className={`portal-page tf-page${screen === 'leave' ? ' tl-page' : ''}`}><header className="tf-heading"><div><p className="portal-eyebrow">DIGITAL CAMPUS / TEACHING FACULTY</p><h1>{title}</h1><p>{descriptions[screen]}</p></div>{screen === 'leave' ? <div className="tl-summary-anchor" ref={setLeaveSummaryTarget} /> : <div className="tf-heading-actions"><span className={`tf-live${state.error ? ' is-error' : ''}`} role="status">{state.error ? 'Workspace unavailable' : 'College records'}</span></div>}</header>
     <Feedback error={state.error} notice={state.notice} />
     {!data ? <section className={`portal-card tf-loading${state.error ? ' has-error' : ''}`} aria-labelledby={state.error ? 'tf-load-title' : undefined}>
       {state.error ? <>
@@ -60,7 +61,7 @@ export default function TeachingPortal({ screen, title }) {
       {screen === 'my-attendance' && <FacultySelfAttendance data={data} />}
       {screen === 'marks' && <TeachingMarks data={data} />}
       {screen === 'timetable' && <Timetable data={data} />}
-      {screen === 'leave' && <Leave />}
+      {screen === 'leave' && <TeachingLeave data={data} summaryTarget={leaveSummaryTarget} />}
       {screen === 'profile' && <Profile data={data} />}
       {['materials', 'notifications'].includes(screen) && <Unavailable screen={screen} data={data} />}
     </>}
@@ -76,8 +77,8 @@ function StudentDirectory({ data }) {
 }
 function SubjectDirectory({ data }) {
   const [search, setSearch] = useState('')
-  const filtered = data.assignments.filter(r => `${r.subjectName} ${r.subjectCode} ${r.sectionName}`.toLowerCase().includes(search.toLowerCase()))
-  return <><Stats items={[["My subjects", new Set(data.assignments.map(r => r.subjectId)).size], ['Teaching allocations', data.assignments.length], ['Weekly periods', data.assignments.reduce((sum, r) => sum + Number(r.periodsPerWeek || 0), 0)]]} /><section className="portal-card"><header className="portal-section-heading"><h2>My teaching allocations</h2></header><label className="tf-search"><FiSearch /><input type="search" placeholder="Search subject, code or section..." value={search} onChange={e => setSearch(e.target.value)} /></label><Table records={filtered} columns={[["subjectName", 'Subject', r => <><strong>{r.subjectName}</strong><small>{r.subjectCode}</small></>], ['branchName', 'Branch'], ['sectionName', 'Section'], ['semesterName', 'Semester'], ['academicYearName', 'Academic year'], ['periodsPerWeek', 'Periods / week'], ['actions', 'Actions', r => <div className="tf-row-actions"><Link to={`/faculty-portal/attendance?assignment=${r.id}`}>Attendance</Link><Link to={`/faculty-portal/marks?assignment=${r.id}`}>Marks</Link></div>]]} /></section></>
+  const filtered = data.assignments.filter(r => `${r.subjectName} ${r.subjectCode || ''} ${r.courseName || ''} ${r.branchName || ''} ${r.sectionName || ''} ${r.semesterName || ''} ${r.academicYearName || ''}`.toLowerCase().includes(search.trim().toLowerCase()))
+  return <><Stats items={[["My subjects", new Set(data.assignments.map(r => r.subjectId)).size], ['Teaching allocations', data.assignments.length], ['Weekly periods', data.assignments.reduce((sum, r) => sum + Number(r.periodsPerWeek || 0), 0)]]} /><section className="portal-card"><header className="portal-section-heading"><div><h2>My teaching allocations</h2><p>Only subjects and sections assigned to your faculty account are shown.</p></div></header><label className="tf-search"><FiSearch /><input type="search" placeholder="Search subject, code, program or section..." value={search} onChange={e => setSearch(e.target.value)} /></label><Table records={filtered} empty={data.assignments.length ? 'No assigned subjects match this search' : 'No teaching subjects assigned'} columns={[["subjectName", 'Subject', r => <><strong>{r.subjectName}</strong><small>{r.subjectCode || 'Subject code not configured'}</small></>], ['courseName', 'Program'], ['branchName', 'Department / branch'], ['semesterName', 'Semester', r => r.semesterName || `Semester ${r.semesterNumber || r.semesterId}`], ['sectionName', 'Assigned section'], ['academicYearName', 'Academic year'], ['periodsPerWeek', 'Periods / week'], ['actions', 'Actions', r => <div className="tf-row-actions"><Link to={`/faculty-portal/attendance?assignment=${r.id}`}>Attendance</Link><Link to={`/faculty-portal/marks?assignment=${r.id}`}>Marks</Link></div>]]} /></section></>
 }
 function Timetable({ data }) {
   const [day, setDay] = useState(''), [view, setView] = useState('week')
@@ -86,7 +87,7 @@ function Timetable({ data }) {
   if (data.timetableError) return <section className="portal-card"><h2>Published teaching timetable</h2><p className="portal-feedback error">{data.timetableError}</p><p>Please try again when the college service is available.</p></section>
   return <section className="portal-card"><header className="portal-section-heading"><h2>Published teaching timetable</h2><div className="tf-row-actions"><button aria-pressed={view === 'week'} onClick={() => setView('week')}>Week</button><button aria-pressed={view === 'list'} onClick={() => setView('list')}>List</button></div></header>{data.timetableError && <p className="portal-feedback error">{data.timetableError}</p>}{view === 'week' ? <div className="tf-week-scroll"><div className="tf-week">{days.map(day => <section key={day}><h3>{day.slice(0, 3)}</h3>{filtered.filter(r => String(r.dayOfWeek).toUpperCase() === day).map((r, i) => <article key={r.timetableEntryId || i}><span>{time(r.startTime)} – {time(r.endTime)}</span><strong>{r.subjectName}</strong><p>{r.sectionName} · {r.classroomName || 'Room not assigned'}</p><small>{r.semesterName}</small></article>)}{!filtered.some(r => String(r.dayOfWeek).toUpperCase() === day) && <p className="tf-no-class">No classes</p>}</section>)}</div></div> : <><Field label="Day"><select value={day} onChange={e => setDay(e.target.value)}><option value="">All days</option>{days.map(d => <option key={d}>{d}</option>)}</select></Field><Table records={filtered} columns={[["dayOfWeek", 'Day'], ['time', 'Time', r => `${time(r.startTime)} – ${time(r.endTime)}`], ['subjectName', 'Subject'], ['sectionName', 'Section'], ['semesterName', 'Semester'], ['classroomName', 'Room']]} /></>}</section>
 }
-function Leave() {
+function _DeprecatedLeave() {
   const [options, setOptions] = useState({ types: [], policies: [] }), [error, setError] = useState(''), [notice, setNotice] = useState(''), [loading, setLoading] = useState(true), [busy, setBusy] = useState(false), [confirm, setConfirm] = useState(false), [form, setForm] = useState({ typeId: '', policyId: '', from: today(), to: today(), reason: '' })
   const load = () => { setLoading(true); setError(''); return service.leaveOptions().then(setOptions).catch(e => setError(e.message)).finally(() => setLoading(false)) }
   useEffect(() => { let active = true; service.leaveOptions().then(result => { if (active) setOptions(result) }).catch(e => { if (active) setError(e.message) }).finally(() => { if (active) setLoading(false) }); return () => { active = false } }, [])

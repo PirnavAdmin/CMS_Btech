@@ -1,6 +1,7 @@
 import { GENERIC_ERROR_MESSAGE, userErrorMessage } from '../utils/userError.js'
 import { getAccessToken } from './auth'
 import { ROLES } from './roles'
+import { normalizeLoginSession } from './loginSession.js'
 import { notifyApiUnavailable } from '../api/apiFailureNotice'
 
 const fetchWithApiNotice = async (...args) => {
@@ -22,8 +23,10 @@ export class AuthRequestError extends Error {
   }
 }
 
-const DEFAULT_API_BASE_URL = 'https://clarity-math-delouse.ngrok-free.dev'
-const authEndpoint = import.meta.env.VITE_AUTH_API_URL || (import.meta.env.DEV ? '/api/v1/auth/login' : `${DEFAULT_API_BASE_URL}/api/v1/auth/login`)
+const DEFAULT_API_BASE_URL = 'https://abreast-curling-tutor.ngrok-free.dev'
+const authEndpoint = import.meta.env.DEV
+  ? '/api/v1/auth/login'
+  : (import.meta.env.VITE_AUTH_API_URL || `${String(import.meta.env.VITE_API_BASE_URL || DEFAULT_API_BASE_URL).replace(/\/+$/, '')}/api/v1/auth/login`)
 const registrationBaseUrl = String(import.meta.env.DEV ? '' : (import.meta.env.VITE_API_BASE_URL || DEFAULT_API_BASE_URL)).replace(/\/+$/, '')
 const registrationEndpoint = import.meta.env.VITE_REGISTRATION_API_URL || (registrationBaseUrl ? `${registrationBaseUrl}/api/v1/access-requests` : import.meta.env.DEV ? '/api/v1/access-requests' : '')
 const otpApiBaseUrl = (import.meta.env.DEV ? '' : (import.meta.env.VITE_OTP_API_URL || import.meta.env.VITE_API_BASE_URL || DEFAULT_API_BASE_URL)).replace(/\/+$/, '')
@@ -128,9 +131,7 @@ export async function login({ identifier, password }, fallbackRole = ROLES.ADMIN
   }
 
   try {
-    const session = await response.json()
-    if (!session?.user?.role) throw new Error('Malformed authentication response')
-    return session
+    return normalizeLoginSession(await response.json())
   } catch {
     throw new AuthRequestError(GENERIC_ERROR_MESSAGE)
   }
