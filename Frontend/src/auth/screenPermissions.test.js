@@ -3,7 +3,7 @@ import assert from 'node:assert/strict'
 import { assignedPermissions, canViewScreen, requireAssignedPermissions } from './screenPermissions.js'
 
 test('employees can open only their own known workspace screens without admin permissions', () => {
-  for (const screen of ['dashboard', 'students', 'subjects', 'attendance', 'my-attendance', 'marks', 'timetable', 'materials', 'leave', 'profile', 'notifications']) {
+  for (const screen of ['dashboard', 'students', 'subjects', 'attendance', 'my-attendance', 'marks', 'timetable', 'materials', 'leave', 'events', 'placements', 'profile', 'notifications']) {
     assert.equal(canViewScreen(`/faculty-portal/${screen}`, 'faculty', {}), true)
     assert.equal(canViewScreen(`/faculty-portal/${screen}`, 'staff', {}), false)
   }

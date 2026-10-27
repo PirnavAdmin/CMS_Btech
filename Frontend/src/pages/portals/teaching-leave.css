@@ -1306,3 +1306,19 @@
   font-size: 12px !important;
   color: var(--text-secondary) !important;
 }
+/* Match the compact summaries used throughout the faculty workspace. */
+#root .portal-shell .tl-summary-card { padding:18px; }
+#root .portal-shell .tl-kpi-grid { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:0; width:100%; max-width:510px; margin:14px 0 0 auto; padding:10px 4px; border:1px solid var(--border); border-radius:9px; background:var(--surface); box-shadow:var(--shadow-sm); }
+#root .portal-shell .tl-kpi-grid .tl-kpi-box { display:block; min-width:0; min-height:0; margin:0; padding:0 10px; border:0; border-right:1px solid var(--border); border-radius:0; background:transparent; box-shadow:none; }
+#root .portal-shell .tl-kpi-grid .tl-kpi-box:last-child { border-right:0; }
+#root .portal-shell .tl-kpi-grid .tl-kpi-icon { display:none; }
+#root .portal-shell .tl-kpi-grid .tl-kpi-info { display:flex; flex-direction:column-reverse; align-items:center; gap:5px; text-align:center; }
+#root .portal-shell .tl-kpi-grid .tl-kpi-info strong { font-size:20px; line-height:1.2; white-space:nowrap; }
+#root .portal-shell .tl-kpi-grid .tl-kpi-info small { font-size:8px; line-height:1.4; letter-spacing:0; white-space:nowrap; }
+#root .portal-shell .tl-kpi-grid .tl-kpi-info > span { display:none; }
+@media(max-width:550px){ #root .portal-shell .tl-kpi-grid .tl-kpi-box { padding:0 4px; } #root .portal-shell .tl-kpi-grid .tl-kpi-info small { font-size:7px; } #root .portal-shell .tl-kpi-grid .tl-kpi-info strong { font-size:17px; } }
+#root .portal-shell .tl-page > .tf-heading { display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:20px; }
+#root .portal-shell .tl-page > .tf-heading > div:first-child { flex:1 1 260px; min-width:0; }
+#root .portal-shell .tl-summary-anchor { flex:0 1 460px; width:100%; max-width:460px; margin-left:auto; min-width:0; }
+#root .portal-shell .tl-summary-anchor .tl-kpi-grid { width:100%; max-width:none; margin:0; }
+@media(max-width:800px){ #root .portal-shell .tl-summary-anchor { flex-basis:100%; } }

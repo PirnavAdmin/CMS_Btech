@@ -33,8 +33,9 @@ export default function TeachingPortal({ screen, title }) {
   const state = usePortalData(service), { data } = state
   const [refreshing, setRefreshing] = useState(false)
   const [dismissedData, setDismissedData] = useState(null)
+  const [leaveSummaryTarget, setLeaveSummaryTarget] = useState(null)
   const refresh = async () => { setRefreshing(true); try { await state.refresh() } catch { /* Feedback displays the error. */ } finally { setRefreshing(false) } }
-  return <PortalLayout title={title}><main className="portal-page tf-page"><header className="tf-heading"><div><p className="portal-eyebrow">DIGITAL CAMPUS / TEACHING FACULTY</p><h1>{title}</h1><p>{descriptions[screen]}</p></div><div className="tf-heading-actions"><span className="tf-live">College records</span></div></header>
+  return <PortalLayout title={title}><main className={`portal-page tf-page${screen === 'leave' ? ' tl-page' : ''}`}><header className="tf-heading"><div><p className="portal-eyebrow">DIGITAL CAMPUS / TEACHING FACULTY</p><h1>{title}</h1><p>{descriptions[screen]}</p></div>{screen === 'leave' ? <div className="tl-summary-anchor" ref={setLeaveSummaryTarget} /> : <div className="tf-heading-actions"><span className="tf-live">College records</span></div>}</header>
     <Feedback error={state.error} notice={state.notice} />
     {!data ? <section className="portal-card tf-loading">{state.error ? <><h2>Unable to load your teaching workspace</h2><p>Verify your faculty account mapping and backend availability, then retry.</p><button onClick={refresh} disabled={refreshing}>Retry loading</button></> : <p role="status">Loading your faculty profile and teaching assignments...</p>}</section> : <>
       {!!data.warnings.length && dismissedData !== data && <div className="tf-data-notice" role="status"><span><FiAlertCircle aria-hidden="true" />Some information is temporarily unavailable. Your other teaching records are ready to use.</span><div><button type="button" disabled={refreshing} onClick={refresh}>Retry</button><button type="button" className="tf-notice-close" aria-label="Dismiss data availability notice" onClick={() => setDismissedData(data)}><FiX /></button></div></div>}
@@ -45,7 +46,7 @@ export default function TeachingPortal({ screen, title }) {
       {screen === 'my-attendance' && <FacultySelfAttendance data={data} />}
       {screen === 'marks' && <TeachingMarks data={data} />}
       {screen === 'timetable' && <Timetable data={data} />}
-      {screen === 'leave' && <TeachingLeave data={data} />}
+      {screen === 'leave' && <TeachingLeave data={data} summaryTarget={leaveSummaryTarget} />}
       {screen === 'profile' && <Profile data={data} />}
       {['materials', 'notifications'].includes(screen) && <Unavailable screen={screen} data={data} />}
     </>}

@@ -3,7 +3,7 @@ import { useScreenAccess } from '../auth/ScreenAccess.jsx'
 import { additionalScreens } from '../auth/screenPermissions.js'
 import { useEffect, useState } from 'react'
 import { NavLink, useNavigate } from 'react-router-dom'
-import { FiBell, FiBook, FiBookOpen, FiCalendar, FiCheckSquare, FiClock, FiChevronLeft, FiChevronRight, FiCreditCard, FiEdit3, FiFileText, FiGrid, FiLogOut, FiMenu, FiMoon, FiSearch, FiShield, FiSun, FiUser, FiUsers, FiX } from 'react-icons/fi'
+import { FiBell, FiBriefcase, FiBook, FiBookOpen, FiCalendar, FiCheckSquare, FiClock, FiChevronLeft, FiChevronRight, FiCreditCard, FiEdit3, FiFileText, FiGrid, FiLogOut, FiMenu, FiMoon, FiSearch, FiShield, FiSun, FiUser, FiUsers, FiX } from 'react-icons/fi'
 import { getAuthStorage, getUserRole, signOut } from '../auth/auth.js'
 import { facultyNavigation, studentNavigation } from '../components/portals/portalNavigation.js'
 import { isPortalPreview } from '../auth/portalPreview.js'
@@ -21,7 +21,7 @@ const navigationIcons = {
   dashboard: [FiGrid, 'blue'], students: [FiUsers, 'cyan'], subjects: [FiBook, 'purple'],
   attendance: [FiCheckSquare, 'green'], 'my-attendance': [FiClock, 'blue'], marks: [FiEdit3, 'gold'], results: [FiFileText, 'gold'],
   timetable: [FiCalendar, 'orange'], materials: [FiBookOpen, 'cyan'], leave: [FiCalendar, 'pink'],
-  notifications: [FiBell, 'orange'], profile: [FiUser, 'purple'], fees: [FiCreditCard, 'green'], users: [FiShield, 'blue'],
+  events: [FiCalendar, 'orange'], placements: [FiBriefcase, 'green'], notifications: [FiBell, 'orange'], profile: [FiUser, 'purple'], fees: [FiCreditCard, 'green'], users: [FiShield, 'blue'],
 }
 
 export default function PortalLayout({ children, title }) {

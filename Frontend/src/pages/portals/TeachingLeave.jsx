@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { createPortal } from 'react-dom'
 import {
   FiAlertCircle,
   FiCalendar,
@@ -217,7 +218,7 @@ const calculateWorkingDays = (fromStr, toStr, isHalfDay) => {
   return workingDays
 }
 
-export default function TeachingLeave({ data }) {
+export default function TeachingLeave({ data, summaryTarget }) {
   const [requests, setRequests] = useState(loadStoredRequests)
   const [leaveTypes, setLeaveTypes] = useState(DEFAULT_LEAVE_TYPES)
   const [policies, setPolicies] = useState([DEFAULT_ACTIVE_POLICY])
@@ -486,8 +487,58 @@ export default function TeachingLeave({ data }) {
     showToastMsg('Leave statement CSV exported.')
   }
 
+  const summary = (
+        <div className="tl-kpi-grid">
+          <div className="tl-kpi-box">
+            <div className="tl-kpi-icon tone-blue">
+              <FiCalendar aria-hidden="true" />
+            </div>
+            <div className="tl-kpi-info">
+              <small>Annual quota (days)</small>
+              <strong>{summaryMetrics.totalEntitled}</strong>
+              <span>Standard faculty allotment</span>
+            </div>
+          </div>
+
+          <div className="tl-kpi-box highlight-green">
+            <div className="tl-kpi-icon tone-green">
+              <FiCheckCircle aria-hidden="true" />
+            </div>
+            <div className="tl-kpi-info">
+              <small>Available (days)</small>
+              <strong className="text-green">{summaryMetrics.totalAvailable}</strong>
+              <span>Ready to avail</span>
+            </div>
+          </div>
+
+          <div className="tl-kpi-box">
+            <div className="tl-kpi-icon tone-purple">
+              <FiClock aria-hidden="true" />
+            </div>
+            <div className="tl-kpi-info">
+              <small>Used (days)</small>
+              <strong>{summaryMetrics.totalUsed}</strong>
+              <span>Sanctioned this session</span>
+            </div>
+          </div>
+
+          <div className="tl-kpi-box">
+            <div className="tl-kpi-icon tone-amber">
+              <FiAlertCircle aria-hidden="true" />
+            </div>
+            <div className="tl-kpi-info">
+              <small>Pending requests</small>
+              <strong className="text-amber">{summaryMetrics.pendingCount}</strong>
+              <span>Awaiting HOD decision</span>
+            </div>
+          </div>
+        </div>
+
+  )
+
   return (
     <div className="tl-container">
+      {summaryTarget && createPortal(summary, summaryTarget)}
       {/* Toast Notification */}
       {toast && (
         <div className="tl-toast" role="status">
@@ -533,52 +584,7 @@ export default function TeachingLeave({ data }) {
           </div>
         </div>
 
-        {/* 4 Metric Stats Cards */}
-        <div className="tl-kpi-grid">
-          <div className="tl-kpi-box">
-            <div className="tl-kpi-icon tone-blue">
-              <FiCalendar aria-hidden="true" />
-            </div>
-            <div className="tl-kpi-info">
-              <small>Annual Quota</small>
-              <strong>{summaryMetrics.totalEntitled} Days</strong>
-              <span>Standard faculty allotment</span>
-            </div>
-          </div>
-
-          <div className="tl-kpi-box highlight-green">
-            <div className="tl-kpi-icon tone-green">
-              <FiCheckCircle aria-hidden="true" />
-            </div>
-            <div className="tl-kpi-info">
-              <small>Available Balance</small>
-              <strong className="text-green">{summaryMetrics.totalAvailable} Days Left</strong>
-              <span>Ready to avail</span>
-            </div>
-          </div>
-
-          <div className="tl-kpi-box">
-            <div className="tl-kpi-icon tone-purple">
-              <FiClock aria-hidden="true" />
-            </div>
-            <div className="tl-kpi-info">
-              <small>Approved / Used</small>
-              <strong>{summaryMetrics.totalUsed} Days</strong>
-              <span>Sanctioned this session</span>
-            </div>
-          </div>
-
-          <div className="tl-kpi-box">
-            <div className="tl-kpi-icon tone-amber">
-              <FiAlertCircle aria-hidden="true" />
-            </div>
-            <div className="tl-kpi-info">
-              <small>Pending Approvals</small>
-              <strong className="text-amber">{summaryMetrics.pendingCount} Request(s)</strong>
-              <span>Awaiting HOD decision</span>
-            </div>
-          </div>
-        </div>
+        {!summaryTarget && summary}
       </section>
 
       {/* Quota Category Cards (Casual, Sick, Earned, On-Duty) */}
