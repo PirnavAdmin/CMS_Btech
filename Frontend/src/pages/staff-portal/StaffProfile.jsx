@@ -15,7 +15,6 @@ import {
   FiMail,
   FiMapPin,
   FiPhone,
-  FiRefreshCw,
   FiShield,
   FiUser,
   FiUsers,
@@ -25,9 +24,6 @@ import { STAFF_PROFILE } from './staffSampleData.js'
 import './staff-portal.css'
 
 export default function StaffProfile() {
-  // State switcher for review: 'normal' | 'loading' | 'empty' | 'error'
-  const [viewState, setViewState] = useState('normal')
-
   // Contact Information Form Local State
   const [contact, setContact] = useState({
     mobile: STAFF_PROFILE.mobile,
@@ -200,7 +196,7 @@ export default function StaffProfile() {
 
   return (
     <div className="sp-page">
-      {/* Page Header with Small Label and State Switcher */}
+      {/* Page Header */}
       <header className="sp-heading">
         <div>
           <p className="sp-eyebrow">DIGITAL CAMPUS / NON-TEACHING STAFF</p>
@@ -211,96 +207,34 @@ export default function StaffProfile() {
           </p>
         </div>
 
-        {/* State Switcher Bar for Reviewer */}
-        <div className="sp-state-bar" role="toolbar" aria-label="Review state toggle">
-          <span className="sp-state-label">Preview State:</span>
-          {['normal', 'loading', 'empty', 'error'].map(s => (
-            <button
-              key={s}
-              type="button"
-              className={`sp-state-btn ${viewState === s ? 'is-active' : ''}`}
-              onClick={() => {
-                setViewState(s)
-                if (s === 'normal') {
-                  setDraft({ ...contact })
-                  setIsEditing(false)
-                }
-              }}
-            >
-              {s.charAt(0).toUpperCase() + s.slice(1)}
-            </button>
-          ))}
-        </div>
       </header>
 
-      {/* Error State Banner */}
-      {viewState === 'error' && (
-        <div className="sp-error-banner" role="alert">
-          <div className="sp-error-content">
-            <FiAlertTriangle aria-hidden="true" />
-            <div>
-              <p className="sp-error-title">Unable to synchronize staff profile records</p>
-              <p className="sp-error-desc">
-                Could not establish secure connection to the HR record database. Displaying cached profile information.
-              </p>
-            </div>
-          </div>
-          <button
-            type="button"
-            className="sp-retry-btn"
-            onClick={() => {
-              setViewState('normal')
-              showToast('Refreshed profile data successfully.')
-            }}
-          >
-            <FiRefreshCw /> Retry Connection
-          </button>
-        </div>
-      )}
-
-      {/* LOADING SKELETON STATE */}
-      {viewState === 'loading' && (
-        <div className="sp-dashboard" aria-busy="true" aria-label="Loading profile...">
-          {/* Top Card Skeleton */}
-          <div className="sp-skeleton" style={{ height: '116px', borderRadius: '14px', marginBottom: '20px' }} />
-
-          {/* Grid Skeleton */}
-          <div className="sp-profile-grid">
-            <div className="sp-skeleton sp-skeleton-card" style={{ minHeight: '340px' }} />
-            <div className="sp-skeleton sp-skeleton-card" style={{ minHeight: '340px' }} />
-            <div className="sp-profile-full sp-skeleton sp-skeleton-card" style={{ minHeight: '180px' }} />
-          </div>
-        </div>
-      )}
-
-      {/* NORMAL & EMPTY STATES */}
-      {viewState !== 'loading' && (
-        <div className="sp-dashboard">
+      <div className="sp-dashboard">
           {/* 1. Top Card: Avatar, Name, Lab Assistant chip, Chemistry Lab · Morning shift, Active status */}
           <section className="sp-profile-top-card">
             <div className="sp-profile-hero-left">
               <div className="sp-profile-avatar" aria-hidden="true">
-                {viewState === 'empty' ? '—' : (STAFF_PROFILE.name || 'sirisha').trim().charAt(0).toUpperCase()}
+                {(STAFF_PROFILE.name || 'sirisha').trim().charAt(0).toUpperCase()}
               </div>
 
               <div className="sp-profile-hero-info">
                 <div className="sp-profile-name-row">
-                  <h2>{viewState === 'empty' ? 'Staff Member' : STAFF_PROFILE.name}</h2>
+                  <h2>{STAFF_PROFILE.name}</h2>
                   <span className="sp-chip-role">
-                    {viewState === 'empty' ? 'Unassigned' : STAFF_PROFILE.designation}
+                    {STAFF_PROFILE.designation}
                   </span>
                   <span className="sp-badge-active">
-                    {viewState === 'empty' ? 'Inactive' : STAFF_PROFILE.status}
+                    {STAFF_PROFILE.status}
                   </span>
                 </div>
 
                 <div className="sp-profile-subline">
                   <span>
-                    <FiMapPin /> {viewState === 'empty' ? 'Department not assigned' : STAFF_PROFILE.department}
+                    <FiMapPin /> {STAFF_PROFILE.department}
                   </span>
                   <span>·</span>
                   <span>
-                    <FiClock /> {viewState === 'empty' ? 'No shift scheduled' : 'Morning shift (08:30 AM – 04:30 PM)'}
+                    <FiClock /> Morning shift (08:30 AM – 04:30 PM)
                   </span>
                 </div>
               </div>
@@ -308,10 +242,10 @@ export default function StaffProfile() {
 
             <div className="sp-profile-hero-right">
               <span className="sp-profile-id-chip">
-                <strong>ID:</strong> {viewState === 'empty' ? '—' : STAFF_PROFILE.employeeId}
+                <strong>ID:</strong> {STAFF_PROFILE.employeeId}
               </span>
               <span className="sp-profile-id-chip">
-                <strong>Joined:</strong> {viewState === 'empty' ? '—' : STAFF_PROFILE.joiningDate}
+                <strong>Joined:</strong> {STAFF_PROFILE.joiningDate}
               </span>
             </div>
           </section>
@@ -330,14 +264,6 @@ export default function StaffProfile() {
                 <span className="sp-profile-id-chip">Institutional Record</span>
               </header>
 
-              {viewState === 'empty' ? (
-                <div className="sp-empty-box">
-                  <FiBriefcase />
-                  <h4>No Employment Details Found</h4>
-                  <p>Institutional record mapping has not been assigned to this account.</p>
-                </div>
-              ) : (
-                <>
                   <div className="sp-kv-grid">
                     <div className="sp-kv-item">
                       <span className="sp-kv-label">Employee ID</span>
@@ -387,8 +313,6 @@ export default function StaffProfile() {
                       authoritative and can only be altered by the HR & Registrar Office.
                     </span>
                   </div>
-                </>
-              )}
             </section>
 
             {/* 3. Editable Section: Contact Information */}
@@ -401,7 +325,7 @@ export default function StaffProfile() {
                   <p>Personal communication details & emergency contacts</p>
                 </div>
 
-                {!isEditing && viewState !== 'empty' && (
+                {!isEditing && (
                   <button
                     type="button"
                     className="sp-btn-secondary"
@@ -413,13 +337,7 @@ export default function StaffProfile() {
                 )}
               </header>
 
-              {viewState === 'empty' ? (
-                <div className="sp-empty-box">
-                  <FiPhone />
-                  <h4>No Contact Information</h4>
-                  <p>No address or contact details saved for this staff member.</p>
-                </div>
-              ) : isEditing ? (
+              {isEditing ? (
                 /* EDIT FORM */
                 <form className="sp-contact-form" onSubmit={handleSaveContact} noValidate>
                   <div className="sp-form-grid">
@@ -630,13 +548,6 @@ export default function StaffProfile() {
                 </span>
               </header>
 
-              {viewState === 'empty' ? (
-                <div className="sp-empty-box">
-                  <FiFileText />
-                  <h4>No Uploaded Documents</h4>
-                  <p>No certificates or institutional proof documents have been registered.</p>
-                </div>
-              ) : (
                 <div className="sp-doc-grid">
                   {documents.map(doc => (
                     <article key={doc.id} className="sp-doc-card">
@@ -684,11 +595,9 @@ export default function StaffProfile() {
                     </article>
                   ))}
                 </div>
-              )}
             </section>
           </div>
-        </div>
-      )}
+      </div>
 
       {/* Document Preview Modal */}
       {previewDoc && (

@@ -1,7 +1,6 @@
 import { useMemo, useState } from 'react'
 import {
   FiAlertCircle,
-  FiAlertTriangle,
   FiArrowRight,
   FiCalendar,
   FiCheck,
@@ -16,7 +15,6 @@ import {
   FiLogIn,
   FiLogOut,
   FiMapPin,
-  FiRefreshCw,
   FiUserCheck,
   FiX,
 } from 'react-icons/fi'
@@ -28,9 +26,6 @@ import {
 import './staff-portal.css'
 
 export default function StaffAttendance() {
-  // State switcher for review: 'normal' | 'loading' | 'empty' | 'error'
-  const [viewState, setViewState] = useState('normal')
-
   // Selected Month: '2026-10' | '2026-09'
   const [selectedMonthKey, setSelectedMonthKey] = useState('2026-10')
 
@@ -165,7 +160,7 @@ export default function StaffAttendance() {
 
   return (
     <div className="sp-page">
-      {/* Page Header with Small Label and State Switcher */}
+      {/* Page Header */}
       <header className="sp-heading">
         <div>
           <p className="sp-eyebrow">DIGITAL CAMPUS / NON-TEACHING STAFF</p>
@@ -176,71 +171,9 @@ export default function StaffAttendance() {
           </p>
         </div>
 
-        {/* State Switcher Bar for Reviewer */}
-        <div className="sp-state-bar" role="toolbar" aria-label="Review state toggle">
-          <span className="sp-state-label">Preview State:</span>
-          {['normal', 'loading', 'empty', 'error'].map(s => (
-            <button
-              key={s}
-              type="button"
-              className={`sp-state-btn ${viewState === s ? 'is-active' : ''}`}
-              onClick={() => setViewState(s)}
-            >
-              {s.charAt(0).toUpperCase() + s.slice(1)}
-            </button>
-          ))}
-        </div>
       </header>
 
-      {/* Error State Banner */}
-      {viewState === 'error' && (
-        <div className="sp-error-banner" role="alert">
-          <div className="sp-error-content">
-            <FiAlertTriangle aria-hidden="true" />
-            <div>
-              <p className="sp-error-title">Unable to synchronize biometric attendance logs</p>
-              <p className="sp-error-desc">
-                The institutional biometric terminal gateway could not be reached. Showing offline attendance cache.
-              </p>
-            </div>
-          </div>
-          <button
-            type="button"
-            className="sp-retry-btn"
-            onClick={() => {
-              setViewState('normal')
-              showToast('Attendance records refreshed.')
-            }}
-          >
-            <FiRefreshCw /> Retry Connection
-          </button>
-        </div>
-      )}
-
-      {/* LOADING SKELETON STATE */}
-      {viewState === 'loading' && (
-        <div className="sp-dashboard" aria-busy="true" aria-label="Loading attendance...">
-          {/* Today Card Skeleton */}
-          <div className="sp-skeleton" style={{ height: '110px', borderRadius: '14px', marginBottom: '20px' }} />
-
-          {/* 4 Summary Cards Skeleton */}
-          <div className="sp-att-summary-grid">
-            {[1, 2, 3, 4].map(n => (
-              <div key={n} className="sp-skeleton" style={{ height: '90px', borderRadius: '12px' }} />
-            ))}
-          </div>
-
-          {/* Calendar Box Skeleton */}
-          <div className="sp-skeleton sp-skeleton-card" style={{ minHeight: '360px', marginBottom: '20px' }} />
-
-          {/* Table Skeleton */}
-          <div className="sp-skeleton sp-skeleton-card" style={{ minHeight: '260px' }} />
-        </div>
-      )}
-
-      {/* NORMAL & EMPTY STATES */}
-      {viewState !== 'loading' && (
-        <div className="sp-dashboard">
+      <div className="sp-dashboard">
           {/* 1. Today Card */}
           <section className="sp-today-card">
             <div className="sp-today-left">
@@ -345,7 +278,7 @@ export default function StaffAttendance() {
             <div className="sp-month-pct-chip">
               <FiUserCheck />
               <span>{currentMonthData.monthLabel} Attendance:</span>
-              <strong>{viewState === 'empty' ? '0.0%' : summaryStats.percentage}</strong>
+              <strong>{summaryStats.percentage}</strong>
             </div>
           </div>
 
@@ -359,7 +292,7 @@ export default function StaffAttendance() {
               <div className="sp-att-card-body">
                 <span className="sp-att-card-label">Present</span>
                 <strong className="sp-att-card-value">
-                  {viewState === 'empty' ? '0' : currentMonthData.counts.present}
+                  {currentMonthData.counts.present}
                 </strong>
                 <span className="sp-att-card-sub">Regular working days</span>
               </div>
@@ -373,7 +306,7 @@ export default function StaffAttendance() {
               <div className="sp-att-card-body">
                 <span className="sp-att-card-label">Late Arrival</span>
                 <strong className="sp-att-card-value">
-                  {viewState === 'empty' ? '0' : currentMonthData.counts.late}
+                  {currentMonthData.counts.late}
                 </strong>
                 <span className="sp-att-card-sub">Recorded after 08:40 AM</span>
               </div>
@@ -387,7 +320,7 @@ export default function StaffAttendance() {
               <div className="sp-att-card-body">
                 <span className="sp-att-card-label">Absent</span>
                 <strong className="sp-att-card-value">
-                  {viewState === 'empty' ? '0' : currentMonthData.counts.absent}
+                  {currentMonthData.counts.absent}
                 </strong>
                 <span className="sp-att-card-sub">Unrecorded absences</span>
               </div>
@@ -401,7 +334,7 @@ export default function StaffAttendance() {
               <div className="sp-att-card-body">
                 <span className="sp-att-card-label">Approved Leave</span>
                 <strong className="sp-att-card-value">
-                  {viewState === 'empty' ? '0' : currentMonthData.counts.leave}
+                  {currentMonthData.counts.leave}
                 </strong>
                 <span className="sp-att-card-sub">Casual / Sick / Earned</span>
               </div>
@@ -424,14 +357,6 @@ export default function StaffAttendance() {
               </span>
             </header>
 
-            {viewState === 'empty' ? (
-              <div className="sp-empty-box">
-                <FiCalendar />
-                <h4>No Attendance Logged</h4>
-                <p>No biometric punches or attendance sessions found for this month.</p>
-              </div>
-            ) : (
-              <>
                 {/* Weekday Labels (Mon - Sun) */}
                 <div className="sp-calendar-header-row">
                   {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map(day => (
@@ -496,8 +421,6 @@ export default function StaffAttendance() {
                     <span>Weekly Off</span>
                   </div>
                 </div>
-              </>
-            )}
           </section>
 
           {/* 5. Daily Records Table with Status Filter */}
@@ -531,7 +454,7 @@ export default function StaffAttendance() {
             </div>
 
             {/* Table */}
-            {viewState === 'empty' || filteredRecords.length === 0 ? (
+            {filteredRecords.length === 0 ? (
               <div className="sp-empty-box">
                 <FiClock />
                 <h4>No Records Found</h4>
@@ -587,8 +510,7 @@ export default function StaffAttendance() {
               </div>
             )}
           </section>
-        </div>
-      )}
+      </div>
 
       {/* Day Attendance Detail Dialog Modal */}
       {selectedDayRecord && (

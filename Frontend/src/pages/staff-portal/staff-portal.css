@@ -46,50 +46,6 @@
   margin: 0 0 6px;
 }
 
-/* State Switcher Bar (For review: Normal, Loading, Empty, Error) */
-.sp-state-bar {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  padding: 4px;
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 9px;
-  box-shadow: var(--shadow-sm);
-}
-
-.sp-state-label {
-  font-size: 10px;
-  font-weight: 700;
-  color: var(--text-muted);
-  text-transform: uppercase;
-  letter-spacing: 0.8px;
-  padding: 0 6px;
-}
-
-.sp-state-btn {
-  border: 0;
-  background: transparent;
-  color: var(--text-secondary);
-  font-size: 11px;
-  font-weight: 600;
-  padding: 5px 9px;
-  border-radius: 6px;
-  cursor: pointer;
-  transition: all 0.15s ease;
-}
-
-.sp-state-btn:hover {
-  background: var(--surface-soft);
-  color: var(--text-primary);
-}
-
-.sp-state-btn.is-active {
-  background: var(--brand);
-  color: #ffffff;
-  box-shadow: 0 1px 4px rgba(23, 105, 194, 0.25);
-}
-
 /* Dashboard Grid */
 .sp-dashboard {
   display: grid;
@@ -738,48 +694,6 @@
   color: var(--text-secondary);
 }
 
-/* ==========================================================================
-   States: Loading Skeletons, Empty States, Error States
-   ========================================================================== */
-
-/* Shimmer Animation */
-@keyframes sp-shimmer {
-  0% {
-    background-position: -200% 0;
-  }
-  100% {
-    background-position: 200% 0;
-  }
-}
-
-.sp-skeleton {
-  background: linear-gradient(
-    90deg,
-    var(--surface-soft) 25%,
-    var(--border) 37%,
-    var(--surface-soft) 63%
-  );
-  background-size: 400% 100%;
-  animation: sp-shimmer 1.5s ease infinite;
-  border-radius: 6px;
-}
-
-.sp-skeleton-welcome {
-  height: 160px;
-  border-radius: 14px;
-  margin-bottom: 20px;
-}
-
-.sp-skeleton-tile {
-  height: 96px;
-  border-radius: 12px;
-}
-
-.sp-skeleton-card {
-  min-height: 240px;
-  border-radius: 12px;
-}
-
 /* Empty States */
 .sp-empty-box {
   display: flex;
@@ -815,69 +729,6 @@
   max-width: 320px;
   margin: 0;
   line-height: 1.5;
-}
-
-/* Error State */
-.sp-error-banner {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-  padding: 16px 20px;
-  border-radius: 10px;
-  background: #fef2f2;
-  border: 1px solid #fecaca;
-  color: #991b1b;
-  margin-bottom: 20px;
-}
-
-:root[data-theme="dark"] .sp-error-banner {
-  background: rgba(239, 68, 68, 0.15);
-  border-color: rgba(239, 68, 68, 0.3);
-  color: #fca5a5;
-}
-
-.sp-error-content {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.sp-error-content svg {
-  width: 24px;
-  height: 24px;
-  flex-shrink: 0;
-}
-
-.sp-error-title {
-  font-size: 13px;
-  font-weight: 700;
-  margin: 0 0 2px;
-}
-
-.sp-error-desc {
-  font-size: 12px;
-  margin: 0;
-  opacity: 0.9;
-}
-
-.sp-retry-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 8px 14px;
-  border-radius: 7px;
-  background: #b91c1c;
-  color: #ffffff;
-  border: 0;
-  font-size: 12px;
-  font-weight: 600;
-  cursor: pointer;
-  white-space: nowrap;
-}
-
-.sp-retry-btn:hover {
-  background: #991b1b;
 }
 
 /* Toast Message */
@@ -2050,10 +1901,6 @@
   .sp-heading {
     flex-direction: column;
     align-items: flex-start;
-  }
-  .sp-state-bar {
-    width: 100%;
-    justify-content: space-between;
   }
   .sp-duty-item {
     flex-direction: column;

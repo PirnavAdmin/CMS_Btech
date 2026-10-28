@@ -14,6 +14,7 @@ import ProtectedRoute from './components/ProtectedRoute'
 import FirstLoginPassword from './pages/auth/FirstLoginPassword.jsx'
 import PortalRoute, { RoleDashboard, RoleAlias } from './components/portals/PortalRoute.jsx'
 const AcademicPortal = lazy(() => import('./pages/portals/AcademicPortal.jsx'))
+const StaffPortal = lazy(() => import('./pages/staff-portal/StaffPortal.jsx'))
 const PortalPreview = lazy(() => import('./pages/portals/PortalPreview.jsx'))
 
 

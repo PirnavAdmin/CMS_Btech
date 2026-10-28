@@ -2,7 +2,6 @@ import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import {
   FiAlertCircle,
-  FiAlertTriangle,
   FiArrowRight,
   FiBell,
   FiCalendar,
@@ -12,7 +11,6 @@ import {
   FiFileText,
   FiInbox,
   FiMapPin,
-  FiRefreshCw,
   FiUser,
   FiUserCheck,
   FiUsers,
@@ -29,9 +27,6 @@ import './staff-portal.css'
 
 export default function StaffDashboard() {
   const navigate = useNavigate()
-
-  // State switcher for review: 'normal' | 'loading' | 'empty' | 'error'
-  const [viewState, setViewState] = useState('normal')
 
   // Interactive local states
   const [attendanceMarked, setAttendanceMarked] = useState(false)
@@ -56,7 +51,7 @@ export default function StaffDashboard() {
 
   return (
     <div className="sp-page">
-      {/* Page Header with Small Label and State Switcher */}
+      {/* Page Header */}
       <header className="sp-heading">
         <div>
           <p className="sp-eyebrow">DIGITAL CAMPUS / NON-TEACHING STAFF</p>
@@ -66,73 +61,9 @@ export default function StaffDashboard() {
             operations, circulars and campus meetings.
           </p>
         </div>
-
-        {/* State Switcher Bar for Reviewer */}
-        <div className="sp-state-bar" role="toolbar" aria-label="Review state toggle">
-          <span className="sp-state-label">Preview State:</span>
-          {['normal', 'loading', 'empty', 'error'].map(s => (
-            <button
-              key={s}
-              type="button"
-              className={`sp-state-btn ${viewState === s ? 'is-active' : ''}`}
-              onClick={() => setViewState(s)}
-            >
-              {s.charAt(0).toUpperCase() + s.slice(1)}
-            </button>
-          ))}
-        </div>
       </header>
 
-      {/* Error State Banner */}
-      {viewState === 'error' && (
-        <div className="sp-error-banner" role="alert">
-          <div className="sp-error-content">
-            <FiAlertTriangle aria-hidden="true" />
-            <div>
-              <p className="sp-error-title">Unable to synchronize staff dashboard records</p>
-              <p className="sp-error-desc">
-                The staff operational feed could not be reached. Displaying cached local workspace data.
-              </p>
-            </div>
-          </div>
-          <button
-            type="button"
-            className="sp-retry-btn"
-            onClick={() => {
-              setViewState('normal')
-              showToast('Refreshed staff dashboard data.')
-            }}
-          >
-            <FiRefreshCw /> Retry Connection
-          </button>
-        </div>
-      )}
-
-      {/* LOADING SKELETON STATE */}
-      {viewState === 'loading' && (
-        <div className="sp-dashboard" aria-busy="true" aria-label="Loading dashboard...">
-          {/* Welcome skeleton */}
-          <div className="sp-skeleton sp-skeleton-welcome" />
-
-          {/* 4 Tiles skeleton */}
-          <div className="sp-tiles">
-            {[1, 2, 3, 4].map(n => (
-              <div key={n} className="sp-skeleton sp-skeleton-tile" />
-            ))}
-          </div>
-
-          {/* Lists skeleton */}
-          <div className="sp-lists-grid">
-            <div className="sp-skeleton sp-skeleton-card" />
-            <div className="sp-skeleton sp-skeleton-card" />
-            <div className="sp-full-card sp-skeleton sp-skeleton-card" />
-          </div>
-        </div>
-      )}
-
-      {/* NORMAL & EMPTY STATES */}
-      {viewState !== 'loading' && (
-        <div className="sp-dashboard">
+      <div className="sp-dashboard">
           {/* Welcome Card */}
           <section className="sp-welcome-card">
             <div className="sp-welcome-content">
@@ -191,12 +122,6 @@ export default function StaffDashboard() {
                   ? FiCalendar
                   : FiUserCheck
 
-              const displayValue = viewState === 'empty' ? '0' : tile.value
-              const displaySubtext =
-                viewState === 'empty'
-                  ? 'No active items recorded'
-                  : tile.subtext
-
               return (
                 <Link
                   key={tile.key}
@@ -209,11 +134,11 @@ export default function StaffDashboard() {
                   <div className="sp-tile-body">
                     <span className="sp-tile-title">{tile.title}</span>
                     <div className="sp-tile-value">
-                      <strong>{displayValue}</strong>
-                      {viewState !== 'empty' && tile.unit && <span>{tile.unit}</span>}
+                      <strong>{tile.value}</strong>
+                      {tile.unit && <span>{tile.unit}</span>}
                     </div>
-                    <span className="sp-tile-subtext" title={displaySubtext}>
-                      {displaySubtext}
+                    <span className="sp-tile-subtext" title={tile.subtext}>
+                      {tile.subtext}
                     </span>
                   </div>
                   <FiArrowRight className="sp-tile-arrow" aria-hidden="true" />
@@ -238,13 +163,6 @@ export default function StaffDashboard() {
                 </Link>
               </header>
 
-              {viewState === 'empty' ? (
-                <div className="sp-empty-box">
-                  <FiClock />
-                  <h4>No Duties Scheduled Today</h4>
-                  <p>You have no lab sessions or inventory audits assigned for today.</p>
-                </div>
-              ) : (
                 <div className="sp-duty-list">
                   {TODAY_DUTIES.map(duty => (
                     <article key={duty.id} className="sp-duty-item">
@@ -275,7 +193,6 @@ export default function StaffDashboard() {
                     </article>
                   ))}
                 </div>
-              )}
             </section>
 
             {/* List 2: Recent Notices */}
@@ -292,13 +209,6 @@ export default function StaffDashboard() {
                 </Link>
               </header>
 
-              {viewState === 'empty' ? (
-                <div className="sp-empty-box">
-                  <FiInbox />
-                  <h4>No Recent Notices</h4>
-                  <p>There are no unread department circulars or campus announcements.</p>
-                </div>
-              ) : (
                 <div className="sp-notice-list">
                   {RECENT_NOTICES.map(notice => (
                     <article
@@ -324,7 +234,6 @@ export default function StaffDashboard() {
                     </article>
                   ))}
                 </div>
-              )}
             </section>
 
             {/* List 3: Upcoming Meetings and Events */}
@@ -341,13 +250,6 @@ export default function StaffDashboard() {
                 </Link>
               </header>
 
-              {viewState === 'empty' ? (
-                <div className="sp-empty-box">
-                  <FiCalendar />
-                  <h4>No Upcoming Meetings or Events</h4>
-                  <p>No staff meetings or safety events are scheduled this week.</p>
-                </div>
-              ) : (
                 <div className="sp-event-list">
                   {UPCOMING_MEETINGS.map(evt => (
                     <article
@@ -381,11 +283,9 @@ export default function StaffDashboard() {
                     </article>
                   ))}
                 </div>
-              )}
             </section>
           </div>
-        </div>
-      )}
+      </div>
 
       {/* Quick Apply Leave Dialog */}
       {quickLeaveOpen && (

@@ -4,10 +4,6 @@
 .sl-eyebrow{font-size:12px;letter-spacing:.12em;font-weight:700;color:var(--sl-muted);margin:0}
 .sl-head h1{font-size:34px;margin:4px 0}
 .sl-sub,.sl-muted{color:var(--sl-muted);font-size:13px;margin:0}
-.sl-states{display:flex;align-items:center;gap:6px;background:var(--sl-card);border:1px solid var(--sl-line);border-radius:12px;padding:8px 10px;height:fit-content}
-.sl-states span{font-size:11px;font-weight:700;color:var(--sl-accent);margin-right:4px}
-.sl-states button{border:0;background:transparent;color:var(--sl-text);padding:6px 12px;border-radius:8px;cursor:pointer}
-.sl-states button.on{background:var(--sl-accent);color:#fff}
 .sl-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:16px}
 .sl-card{background:var(--sl-card);border:1px solid var(--sl-line);border-radius:16px;padding:18px;box-shadow:0 4px 18px rgba(15,42,74,.06)}
 .sl-bal-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
@@ -31,10 +27,6 @@
 .sl-chip.rejected{background:#fee2e2;color:#991b1b}.sl-chip.cancelled{background:#e5e7eb;color:#374151}
 .sl-link{background:none;border:0;color:#dc2626;cursor:pointer;font-weight:600}
 .sl-empty{text-align:center;color:var(--sl-muted);padding:32px}
-.sl-error{display:flex;gap:10px;align-items:center;background:#fee2e2;color:#991b1b;border-left:4px solid #dc2626;padding:12px 16px;border-radius:10px;margin-bottom:16px}
-.sl-error button{margin-left:auto}
-.sl-skel{background:linear-gradient(90deg,var(--sl-line) 25%,transparent 50%,var(--sl-line) 75%);background-size:200% 100%;animation:sl-shim 1.4s infinite}
-@keyframes sl-shim{to{background-position:-200% 0}}
 .sl-overlay{position:fixed;inset:0;background:rgba(8,20,40,.55);display:grid;place-items:center;z-index:1000;padding:16px}
 .sl-dialog{background:var(--sl-card);color:var(--sl-text);border-radius:16px;padding:22px;width:min(520px,100%);max-height:92vh;overflow:auto;display:flex;flex-direction:column;gap:12px}
 .sl-small{width:min(380px,100%)}
