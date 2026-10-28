@@ -25,8 +25,6 @@ import StatusBadge from '../../../components/StatusBadge'
 import { academicYearApi, branchApi, courseApi, lookupIndianPincode, studentAdmissionApi, studentAcademicDetailsApi, studentAdmissionStatusApi, studentDocumentApi, studentFeeApi, studentParentApi, studentPreviousEducationApi } from '../../../api/apiEndpoints'
 import { getOperationalAcademicYearOptions, resolveAcademicYearId } from '../../../utils/academicYearUtils'
 import { getColleges, getSemesters } from '../../../auth/collegeApi'
-import academicService from '../../../services/academicService'
-import { selectedCollegeId as getStoredCollegeId } from '../../../utils/collegeScope'
 import eventBus, { ERP_EVENTS } from '../../../services/eventBus'
 import {
   apiAssetUrl,
@@ -527,37 +525,18 @@ const validate = data => {
 
 const duplicateAdmissionMessage = (rows, candidate, currentAdmissionId = '') => {
   const digits = value => String(value || '').replace(/\D/g, '')
-  const candidateId = String(currentAdmissionId || candidate.admissionId || candidate.studentAdmissionId || candidate.id || '').trim()
-  const candidateReg = String(candidate.application?.registrationNumber || candidate.application?.number || candidate.registrationNumber || candidate.registrationNo || '').trim().toLowerCase()
-  const candidateAadhaar = digits(candidate.personal?.aadhaar || candidate.aadhaar || candidate.aadhaarNumber)
-  const candidateMobile = digits(candidate.contact?.mobile || candidate.mobile || candidate.mobileNumber)
-
-  const match = (rows || []).find((rawRow) => {
-    const row = admissionFromApi(rawRow)
-    // Check all possible ID representations to prevent a record from matching itself
-    const rowIds = [
-      rawRow.admissionId, rawRow.AdmissionId, rawRow.studentAdmissionId, rawRow.StudentAdmissionId, rawRow.id,
-      row.admissionId, row.studentAdmissionId, row.id
-    ].map(v => String(v || '').trim()).filter(Boolean)
-
-    if (candidateId && rowIds.includes(candidateId)) return false
-
-    const rowReg = String(row.application?.registrationNumber || row.application?.number || rawRow.registrationNumber || rawRow.RegistrationNo || rawRow.registrationNo || '').trim().toLowerCase()
-    if (candidateReg && rowReg && candidateReg === rowReg) return false
-
-    const rowAadhaar = digits(row.personal?.aadhaar || rawRow.aadhaar || rawRow.aadhaarNumber || rawRow.AadhaarNumber)
-    const rowMobile = digits(row.contact?.mobile || rawRow.mobile || rawRow.mobileNumber || rawRow.MobileNumber)
-
-    return (candidateAadhaar.length === 12 && rowAadhaar === candidateAadhaar)
-      || (candidateMobile.length === 10 && rowMobile === candidateMobile)
+  const candidateId = String(currentAdmissionId || candidate.admissionId || candidate.studentAdmissionId || '')
+  const match = rows.map(admissionFromApi).find((row) => {
+    // Normalized admissions use `id` for the student profile when one exists;
+    // compare the admission-specific ID first so editing this same record does
+    // not report its Aadhaar/mobile as a duplicate of itself.
+    const rowAdmissionId = String(row.admissionId ?? row.studentAdmissionId ?? row.id ?? '')
+    if (candidateId && rowAdmissionId === candidateId) return false
+    return (digits(candidate.personal?.aadhaar).length === 12 && digits(row.personal?.aadhaar) === digits(candidate.personal?.aadhaar))
+      || (digits(candidate.contact?.mobile).length === 10 && digits(row.contact?.mobile) === digits(candidate.contact?.mobile))
   })
-
   if (!match) return ''
-  const matchedRow = admissionFromApi(match)
-  const matchAadhaar = digits(matchedRow.personal?.aadhaar || match.aadhaar || match.aadhaarNumber || match.AadhaarNumber)
-  if (candidateAadhaar.length === 12 && matchAadhaar === candidateAadhaar) {
-    return 'An admission with this Aadhaar number already exists.'
-  }
+  if (digits(candidate.personal?.aadhaar).length === 12 && digits(match.personal?.aadhaar) === digits(candidate.personal?.aadhaar)) return 'An admission with this Aadhaar number already exists.'
   return 'An admission with this student mobile number already exists.'
 }
 
@@ -1653,57 +1632,34 @@ function AdmissionForm() {
     ? Math.max(0, Math.min(resume.step, STEPS.length - 1)) : 0
   const locallySavedAdmission = useRef(null)
   const [saveError, setSaveError] = useState('')
-  const {
-    selectedCollegeId: globalCollegeId,
-    selectedCollege: globalCollege,
-    selectedAcademicYearId: globalAcademicYearId,
-    selectedAcademicYear: globalAcademicYear,
-    courses: contextCourses = [],
-    branches: contextBranches = [],
-    colleges: contextColleges = [],
-    academicYears: contextAcademicYears = [],
-  } = useAcademic();
+  const { selectedCollegeId: globalCollegeId, selectedCollege: globalCollege, selectedAcademicYearId: globalAcademicYearId, selectedAcademicYear: globalAcademicYear } = useAcademic();
   const [data, setData] = useState(() => {
     const init = empty();
-    const resolvedCollegeId = globalCollegeId || getStoredCollegeId() || '';
-    const resolvedAcademicYearId = globalAcademicYearId || '';
     if (!validId) {
       init.previewEditedFields = {};
-      if (resolvedCollegeId) {
-        init.admission.collegeId = resolvedCollegeId;
+      if (globalCollegeId) {
+        init.admission.collegeId = globalCollegeId;
         init.admission.college = globalCollege?.name || globalCollege?.collegeName || '';
       }
-      if (resolvedAcademicYearId) {
-        init.academic.academicYearId = resolvedAcademicYearId;
+      if (globalAcademicYearId) {
+        init.academic.academicYearId = globalAcademicYearId;
         init.academic.academicYear = globalAcademicYear?.name || globalAcademicYear?.academicYearName || '';
       }
     }
     return init;
   });
   const [recordIds, setRecordIds] = useState({ admissionId: validId, studentId: null, academicId: null })
-  const [step, setStep] = useState(initialStep); const [errors, setErrors] = useToastState({}, 'error'); const [touched, setTouched] = useState({}); const [declared, setDeclared] = useState(false); const [toast, setToast] = useToastState(null, 'success'); const [pinStatus, setPinStatus] = useState({}); const [confirmSubmit, setConfirmSubmit] = useState(false); const [confirmCancel, setConfirmCancel] = useState(false); const [submitting, setSubmitting] = useState(false); const [savingDraft, setSavingDraft] = useState(false); const [savingStep, setSavingStep] = useState(false); const [feeState, setFeeState] = useState({ loading: false, loaded: false, error: '' })
+  const [step, setStep] = useState(initialStep); const [errors, setErrors] = useToastState({}, 'error'); const [touched, setTouched] = useState({}); const [declared, setDeclared] = useState(false); const [, setToast] = useToastState(null, 'success'); const [pinStatus, setPinStatus] = useState({}); const [confirmSubmit, setConfirmSubmit] = useState(false); const [confirmCancel, setConfirmCancel] = useState(false); const [submitting, setSubmitting] = useState(false); const [savingDraft, setSavingDraft] = useState(false); const [savingStep, setSavingStep] = useState(false); const [feeState, setFeeState] = useState({ loading: false, loaded: false, error: '' })
   const markTouched = (path) => setTouched(current => ({ ...current, [path]: true }))
   const [masters,setMasters]=useState({years:[],courses:[],branches:[],colleges:[],semesters:[]})
-  const isItemActive = (item) => {
-    if (!item) return false
-    if (item.status !== undefined && item.status !== null) {
-      if (typeof item.status === 'boolean') return item.status
-      if (typeof item.status === 'number') return item.status === 1
-      const s = String(item.status).trim().toLowerCase()
-      return s === 'active' || s === '1' || s === 'true' || s === 'current'
-    }
-    if (item.isActive !== undefined && item.isActive !== null) return Boolean(item.isActive)
-    return true
-  }
   const dataRef = useRef(data)
   useEffect(() => { dataRef.current = data }, [data])
   useEffect(() => { if (!data.application.date) setData(current => ({ ...current, application: { ...current.application, date: new Date().toISOString().slice(0, 10) } })) }, [data.application.date])
   useEffect(() => {
     setData(current => {
       let next = current;
-      const resolvedCollegeId = globalCollegeId || getStoredCollegeId() || '';
-      if (!next.admission?.collegeId && resolvedCollegeId) {
-        next = setPath(next, 'admission.collegeId', resolvedCollegeId);
+      if (!next.admission?.collegeId && globalCollegeId) {
+        next = setPath(next, 'admission.collegeId', globalCollegeId);
         next = setPath(next, 'admission.college', globalCollege?.name || globalCollege?.collegeName || next.admission?.college || '');
       }
       if (!next.academic?.academicYearId && globalAcademicYearId) {
@@ -1715,107 +1671,24 @@ function AdmissionForm() {
   }, [validId, globalCollegeId, globalCollege, globalAcademicYearId, globalAcademicYear, data.admission.collegeId, data.academic.academicYearId]);
   useEffect(() => {
     if (!masters.colleges.length) return;
-    let college = masters.colleges.find(item =>
+    const college = masters.colleges.find(item =>
       (data.admission.collegeId && same(item.collegeId ?? item.id, data.admission.collegeId)) ||
       (data.admission.college && String(item.collegeName ?? item.name ?? item.institutionName ?? '').trim().toLowerCase() === String(data.admission.college).trim().toLowerCase())
     );
-    if (!college && !data.admission.collegeId && !data.admission.college) {
-      const activeColleges = masters.colleges.filter(isItemActive);
-      college = (globalCollegeId && activeColleges.find(item => same(item.collegeId ?? item.id, globalCollegeId)))
-        || activeColleges[0]
-        || masters.colleges[0];
-    }
     if (!college) return;
     const collegeId = college.collegeId ?? college.id;
     const collegeName = college.collegeName ?? college.name ?? college.institutionName ?? '';
     if ((!data.admission.collegeId && collegeId) || (!data.admission.college && collegeName)) {
       setData(current => ({ ...current, admission: { ...current.admission, collegeId: current.admission.collegeId || collegeId, college: current.admission.college || collegeName } }));
     }
-  }, [masters.colleges, data.admission.collegeId, data.admission.college, globalCollegeId]);
+  }, [masters.colleges, data.admission.collegeId, data.admission.college]);
   useEffect(() => {
     if (data.admission.hostel !== 'Yes') return
     const preference = data.personal.gender === 'Male' ? 'Boys Hostel' : data.personal.gender === 'Female' ? 'Girls Hostel' : ''
     if (preference && data.admission.hostelPreference !== preference) setData(current => ({ ...current, admission: { ...current.admission, hostelPreference: preference } }))
   }, [data.admission.hostel, data.admission.hostelPreference, data.personal.gender])
   const notify = (message, tone = 'success') => setToast({ message, tone })
-  useEffect(() => {
-    let active = true
-    const list = response => {
-      let value = response
-      for (let depth = 0; depth < 5 && value && typeof value === 'object'; depth += 1) {
-        if (Array.isArray(value)) return value
-        const rows = value.items ?? value.content ?? value.results ?? value.records ?? value.data
-        if (Array.isArray(rows)) return rows
-        value = value.data
-      }
-      return Array.isArray(value) ? value : []
-    }
-
-    const loadMasters = async () => {
-      try {
-        const results = await Promise.allSettled([
-          academicYearApi.getAll().catch(() => academicService.getAcademicYears(false)),
-          courseApi.getAll().catch(() => academicService.getCourses({}, false)),
-          branchApi.getAll().catch(() => academicService.getBranches(null, false)),
-          getColleges().catch(() => academicService.getColleges(false)),
-          getSemesters().catch(() => academicService.getSemesters(null, false)),
-        ])
-        if (!active) return
-
-        let years = results[0].status === 'fulfilled' ? list(results[0].value) : []
-        let courses = results[1].status === 'fulfilled' ? list(results[1].value) : []
-        let branches = results[2].status === 'fulfilled' ? list(results[2].value) : []
-        let colleges = results[3].status === 'fulfilled' ? list(results[3].value) : []
-        let semesters = results[4].status === 'fulfilled' ? list(results[4].value) : []
-
-        if (!courses.length) {
-          try {
-            const fallbackCourses = await academicService.getCourses({}, false)
-            courses = list(fallbackCourses)
-          } catch {}
-        }
-        if (!courses.length && contextCourses?.length) {
-          courses = list(contextCourses)
-        }
-
-        if (!branches.length) {
-          try {
-            const fallbackBranches = await academicService.getBranches(null, false)
-            branches = list(fallbackBranches)
-          } catch {}
-        }
-        if (!branches.length && contextBranches?.length) {
-          branches = list(contextBranches)
-        }
-
-        if (!colleges.length) {
-          try {
-            const fallbackColleges = await academicService.getColleges(false)
-            colleges = list(fallbackColleges)
-          } catch {}
-        }
-        if (!colleges.length && contextColleges?.length) {
-          colleges = list(contextColleges)
-        }
-
-        const rawYears = years.length ? years : (contextAcademicYears || [])
-        const operationalYears = getOperationalAcademicYearOptions(rawYears)
-
-        setMasters(current => ({
-          years: operationalYears.length ? operationalYears : current.years,
-          courses: courses.length ? courses : current.courses,
-          branches: branches.length ? branches : current.branches,
-          colleges: colleges.length ? colleges : current.colleges,
-          semesters: semesters.length ? semesters : current.semesters,
-        }))
-      } catch (error) {
-        if (active) notify(error.message || 'Unable to load admission selections.', 'error')
-      }
-    }
-
-    loadMasters()
-    return () => { active = false }
-  }, [contextCourses, contextBranches, contextColleges, contextAcademicYears])
+  useEffect(()=>{let active=true;Promise.all([academicYearApi.getAll(),courseApi.getAll(),branchApi.getAll(),getColleges(),getSemesters()]).then(([years,courses,branches,collegeResponse,semesterResponse])=>{if(!active)return;const list=response=>{let value=response;for(let depth=0;depth<5&&value&&typeof value==='object';depth+=1){if(Array.isArray(value))return value;const rows=value.items??value.content??value.results??value.records;if(Array.isArray(rows))return rows;value=value.data}return[]};const operationalYears = getOperationalAcademicYearOptions(years);setMasters({years: operationalYears, courses, branches, colleges:list(collegeResponse), semesters:list(semesterResponse)})}).catch(error=>notify(error.message||'Unable to load admission selections.','error'));return()=>{active=false}},[])
   useEffect(() => {
     if (step !== 6) return
     let active = true
@@ -2060,53 +1933,33 @@ function AdmissionForm() {
     return clean.split(/\s+/).filter(w => !['and', '&', 'of', 'in'].includes(w.toLowerCase())).map(w => w[0]).join('').toUpperCase()
   }
 
+  const isItemActive = (item) => {
+    if (!item) return false
+    if (item.status !== undefined) {
+      if (typeof item.status === 'boolean') return item.status
+      if (typeof item.status === 'number') return item.status === 1
+      const s = String(item.status).trim().toLowerCase()
+      return s === 'active' || s === '1' || s === 'true' || s === 'current'
+    }
+    if (item.isActive !== undefined) return Boolean(item.isActive)
+    return true
+  }
+
   const academicOption=(item,idKeys,nameKeys)=>({id:idKeys.map(key=>read(item,key)).find(value=>value!=null&&value!==''),name:nameKeys.map(key=>read(item,key)).find(Boolean)||''})
-  const yearOptions=(masters.years.length?masters.years:(contextAcademicYears||[])).filter(isItemActive).map(item=>academicOption(item,['academicYearId','id','AcademicYearId'],['academicYearName','name','AcademicYearName','yearName','label'])).filter(item=>item.id)
-  const selectedCollegeId = data.admission.collegeId || globalCollegeId || getStoredCollegeId() || ''
-  const availableCourses = (masters.courses?.length ? masters.courses : (contextCourses?.length ? contextCourses : []))
-  const activeCourseItems = availableCourses.filter(isItemActive)
-  const mappedCourses = (activeCourseItems.length ? activeCourseItems : availableCourses).map(item => {
-    const opt = academicOption(item, ['courseId', 'id', 'CourseId', 'value'], ['courseName', 'name', 'CourseName', 'courseTitle', 'title', 'label'])
-    const code = item.courseCode || item.code || item.CourseCode || item.shortName || item.courseShortName || item.ShortName || courseCodeFallback(opt.name)
-    const collegeId = item.collegeId ?? item.CollegeId ?? item.collegeNumericId ?? item.college?.collegeId ?? item.college?.id
-    return { ...opt, code, collegeId }
-  }).filter(item => item.id && item.name)
-
-  const collegeSpecificCourses = selectedCollegeId
-    ? mappedCourses.filter(item => !item.collegeId || same(item.collegeId, selectedCollegeId))
-    : mappedCourses
-
-  const courseOptions = collegeSpecificCourses.length > 0 ? collegeSpecificCourses : mappedCourses
+  const yearOptions=masters.years.filter(isItemActive).map(item=>academicOption(item,['academicYearId','id'],['academicYearName','name'])).filter(item=>item.id)
+  const selectedCollegeId = data.admission.collegeId
+  const courseOptions=masters.courses.filter(isItemActive).map(item=>{
+    const opt = academicOption(item,['courseId','id'],['courseName','name'])
+    const code = item.courseCode || item.code || item.shortName || item.courseShortName || courseCodeFallback(opt.name)
+    return { ...opt, code, collegeId:item.collegeId??item.college?.collegeId??item.college?.id }
+  }).filter(item=>item.id&&(!selectedCollegeId||!item.collegeId||same(item.collegeId,selectedCollegeId)))
   const collegeCourseIds = new Set(courseOptions.map(item => String(item.id)))
-
-  const availableBranches = (masters.branches?.length ? masters.branches : (contextBranches?.length ? contextBranches : []))
-  const activeBranchItems = availableBranches.filter(isItemActive)
-  const mappedBranches = (activeBranchItems.length ? activeBranchItems : availableBranches).map(item => {
-    const opt = academicOption(item, ['branchId', 'id', 'BranchId', 'value'], ['branchName', 'name', 'BranchName', 'branchShortName', 'shortName', 'label'])
-    const code = item.branchCode || item.code || item.BranchCode || item.shortName || item.branchShortName || branchCodeFallback(opt.name)
-    const courseId = item.courseId ?? item.CourseId ?? item.course?.courseId ?? item.course?.id
-    const collegeId = item.collegeId ?? item.CollegeId ?? item.collegeNumericId ?? item.college?.collegeId ?? item.college?.id
-    return { ...opt, code, courseId, collegeId }
-  }).filter(item => item.id && item.name)
-
-  const branchOptions = mappedBranches.filter(item => {
-    if (!item.id) return false
-    const collegeMatches = !selectedCollegeId || !item.collegeId || same(item.collegeId, selectedCollegeId) || (item.courseId && collegeCourseIds.has(String(item.courseId)))
-    const courseMatches = !data.academic.courseId || !item.courseId || same(item.courseId, data.academic.courseId)
-    return collegeMatches && courseMatches
-  })
-
-  const effectiveBranchOptions = branchOptions.length > 0
-    ? branchOptions
-    : (data.academic.courseId
-        ? mappedBranches.filter(item => !item.courseId || same(item.courseId, data.academic.courseId))
-        : mappedBranches)
-
-  const availableColleges = (masters.colleges?.length ? masters.colleges : (contextColleges?.length ? contextColleges : []))
-  const collegeOptions = availableColleges.filter(isItemActive).map(item => ({
-    id: item.collegeId ?? item.id ?? item.CollegeId,
-    name: item.collegeName ?? item.name ?? item.institutionName ?? item.CollegeName ?? ''
-  })).filter(item => item.id && item.name)
+  const branchOptions=masters.branches.filter(isItemActive).map(item=>{
+    const opt = academicOption(item,['branchId','id'],['branchName','name','branchShortName','shortName'])
+    const code = item.branchCode || item.code || item.shortName || item.branchShortName || branchCodeFallback(opt.name)
+    return { ...opt, code, courseId:item.courseId??item.course?.courseId??item.course?.id, collegeId:item.collegeId??item.college?.collegeId??item.college?.id }
+  }).filter(item=>item.id&&(!selectedCollegeId||same(item.collegeId,selectedCollegeId)||collegeCourseIds.has(String(item.courseId)))&&(!data.academic.courseId||!item.courseId||same(item.courseId,data.academic.courseId)))
+  const collegeOptions=masters.colleges.filter(isItemActive).map(item=>({id:item.collegeId??item.id,name:item.collegeName??item.name??item.institutionName??''})).filter(item=>item.id&&item.name)
 
   const roomTypeOptions = useMemo(() => {
     const list = []
@@ -2145,91 +1998,33 @@ function AdmissionForm() {
   useEffect(() => {
     const targetCourse = courseOptions.find(c => same(c.id, data.academic.courseId) || same(c.name, data.academic.course))
     const expectedCourseCode = targetCourse?.code || courseCodeFallback(data.academic.course)
-    const targetBranch = effectiveBranchOptions.find(b => same(b.id, data.academic.branchId) || same(b.name, data.academic.branch))
+    const targetBranch = branchOptions.find(b => same(b.id, data.academic.branchId) || same(b.name, data.academic.branch))
     const expectedBranchCode = targetBranch?.code || branchCodeFallback(data.academic.branch)
 
-    let courseIdUpdate = null
-    let courseNameUpdate = null
-    if (targetCourse) {
-      if (!data.academic.courseId && targetCourse.id) courseIdUpdate = targetCourse.id
-      if (!data.academic.course && targetCourse.name) courseNameUpdate = targetCourse.name
-    }
-
-    let branchIdUpdate = null
-    let branchNameUpdate = null
-    if (targetBranch) {
-      if (!data.academic.branchId && targetBranch.id) branchIdUpdate = targetBranch.id
-      if (!data.academic.branch && targetBranch.name) branchNameUpdate = targetBranch.name
-    }
-
-    const needCourseCode = data.academic.course && expectedCourseCode && (!data.academic.courseCode || data.academic.courseCode !== expectedCourseCode)
-    const needBranchCode = data.academic.branch && expectedBranchCode && (!data.academic.branchCode || data.academic.branchCode !== expectedBranchCode)
-
-    if (courseIdUpdate || courseNameUpdate || branchIdUpdate || branchNameUpdate || needCourseCode || needBranchCode) {
+    if (data.academic.course && expectedCourseCode && (!data.academic.courseCode || data.academic.courseCode !== expectedCourseCode)) {
       setData(current => ({
         ...current,
-        academic: {
-          ...current.academic,
-          ...(courseIdUpdate ? { courseId: courseIdUpdate } : {}),
-          ...(courseNameUpdate ? { course: courseNameUpdate } : {}),
-          ...(branchIdUpdate ? { branchId: branchIdUpdate } : {}),
-          ...(branchNameUpdate ? { branch: branchNameUpdate } : {}),
-          ...(needCourseCode ? { courseCode: expectedCourseCode } : {}),
-          ...(needBranchCode ? { branchCode: expectedBranchCode } : {})
-        }
+        academic: { ...current.academic, courseCode: expectedCourseCode }
       }))
     }
-  }, [data.academic.courseId, data.academic.course, data.academic.branchId, data.academic.branch, courseOptions, effectiveBranchOptions])
+    if (data.academic.branch && expectedBranchCode && (!data.academic.branchCode || data.academic.branchCode !== expectedBranchCode)) {
+      setData(current => ({
+        ...current,
+        academic: { ...current.academic, branchCode: expectedBranchCode }
+      }))
+    }
+  }, [data.academic.courseId, data.academic.course, data.academic.branchId, data.academic.branch, courseOptions, branchOptions])
 
   const masterField=(namePath,idPath,label,options,disabled=false,resets=[])=>{
     const id=`sa-${idPath.replaceAll('.','-')}`;
     const masterError = errors[namePath] || ((touched[namePath] || touched[idPath] || read(data, idPath)) ? allErrors[namePath] : '');
-    const placeholder = disabled
-      ? (idPath.includes('branch') ? 'Select Course first' : `Select ${label}`)
-      : (options.length === 0 ? `Loading ${label.toLowerCase()}s...` : `Select ${label}`);
-    return (
-      <label className={`sa-field ${masterError?'invalid':''}`} htmlFor={id}>
-        <span>{label}<b> *</b></span>
-        <ProjectSelect
-          id={id}
-          value={read(data,idPath)||''}
-          disabled={disabled}
-          onChange={event=>{
-            markTouched(namePath);
-            markTouched(idPath);
-            const option=options.find(item=>same(item.id,event.target.value));
-            setData(current=>{
-              let next=setPath(current,idPath,event.target.value);
-              if(current.previewEditedFields)next.previewEditedFields={...current.previewEditedFields,[idPath]:true,[namePath]:true};
-              next=setPath(next,namePath,option?.name||'');
-              if(idPath==='academic.courseId'){
-                next=setPath(next,'academic.courseCode',option?.code||courseCodeFallback(option?.name));
-                if(option?.collegeId && !read(next, 'admission.collegeId')) {
-                  next=setPath(next, 'admission.collegeId', option.collegeId);
-                  const colName = masters.colleges.find(c => same(c.collegeId ?? c.id, option.collegeId))?.collegeName || '';
-                  if(colName) next=setPath(next, 'admission.college', colName);
-                }
-              }
-              if(idPath==='academic.branchId')next=setPath(next,'academic.branchCode',option?.code||branchCodeFallback(option?.name));
-              resets.forEach(([resetId,resetName])=>{next=setPath(next,resetId,'');next=setPath(next,resetName,'')});
-              return next;
-            });
-            setErrors(current=>({...current,[namePath]:''}))
-          }}
-          onBlur={() => { markTouched(namePath); markTouched(idPath) }}
-        >
-          <option value="">{placeholder}</option>
-          {options.map(option=><option key={option.id} value={option.id}>{option.name}</option>)}
-        </ProjectSelect>
-        {masterError&&<small role="alert">{masterError}</small>}
-      </label>
-    );
+    return <label className={`sa-field ${masterError?'invalid':''}`} htmlFor={id}><span>{label}<b> *</b></span><ProjectSelect id={id} value={read(data,idPath)||''} disabled={disabled} onChange={event=>{markTouched(namePath);markTouched(idPath);const option=options.find(item=>same(item.id,event.target.value));setData(current=>{let next=setPath(current,idPath,event.target.value);if(current.previewEditedFields)next.previewEditedFields={...current.previewEditedFields,[idPath]:true,[namePath]:true};next=setPath(next,namePath,option?.name||'');if(idPath==='academic.courseId')next=setPath(next,'academic.courseCode',option?.code||courseCodeFallback(option?.name));if(idPath==='academic.branchId')next=setPath(next,'academic.branchCode',option?.code||branchCodeFallback(option?.name));resets.forEach(([resetId,resetName])=>{next=setPath(next,resetId,'');next=setPath(next,resetName,'')});return next});setErrors(current=>({...current,[namePath]:''}))}} onBlur={() => { markTouched(namePath); markTouched(idPath) }}><option value="">{disabled?'Select Course first':`Select ${label}`}</option>{options.map(option=><option key={option.id} value={option.id}>{option.name}</option>)}</ProjectSelect>{masterError&&<small role="alert">{masterError}</small>}</label>
   }
   const screens = [
     <Section key="identity" title="Student Identity" icon={FiUser} hint="Core identity and government identification details"><PhotoUpload data={data} update={update} notify={notify} />{field('personal.firstName','First Name')}{field('personal.middleName','Middle Name')}{field('personal.lastName','Last Name')}{field('personal.gender','Gender',['Female','Male','Non-binary'])}{field('personal.dob','Date of Birth',null,'date')}{field('personal.bloodGroup','Blood Group',['A+','A-','B+','B-','AB+','AB-','O+','O-'])}{field('personal.nationality','Nationality')}{field('personal.aadhaar','Aadhaar Number')}</Section>,
     <><Section title="Contact Information" icon={FiPhone}>{field('contact.mobile','Student Mobile')}{field('contact.alternateMobile','Alternate Mobile')}{field('contact.email','Student Email',null,'email')}{field('contact.alternateEmail','Alternate Email',null,'email')}</Section><Section title="Current Address" icon={FiHome}><AddressFields data={data} prefix="contact.currentAddress" update={update} errors={effectiveAddressErrors} markTouched={markTouched} />{pinStatus.current && <p className={`sa-pincode-status ${pinStatus.current.includes('filled') ? 'success' : ''}`}>{pinStatus.current}</p>}</Section><Section title="Permanent Address" icon={FiHome} action={<label className="sa-same-addr-check" style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', cursor: 'pointer', fontSize: '0.78rem', fontWeight: 650, color: 'var(--brand, #125AA8)' }}><input type="checkbox" checked={Boolean(data.contact.sameAddress)} onChange={event => update('contact.sameAddress', event.target.checked)} style={{ width: '15px', height: '15px', accentColor: 'var(--brand, #125AA8)', cursor: 'pointer' }} /><span>Same as current address</span></label>}>{!data.contact.sameAddress && <><AddressFields data={data} prefix="contact.permanentAddress" update={update} errors={effectiveAddressErrors} markTouched={markTouched} />{pinStatus.permanent && <p className={`sa-pincode-status ${pinStatus.permanent.includes('filled') ? 'success' : ''}`}>{pinStatus.permanent}</p>}</>}</Section></>,
     <><Section title="Father Details" icon={FiUsers} hint="Optional parent or guardian contact information.">{field('parents.father.name','Father Name')}{field('parents.father.mobile','Father Mobile')}{field('parents.father.email','Father Email',null,'email')}{field('parents.father.occupation','Father Occupation')}{field('parents.father.qualification','Father Qualification')}{field('parents.father.income','Father Annual Income',null,'number')}</Section><Section title="Mother Details" icon={FiUsers}>{field('parents.mother.name','Mother Name')}{field('parents.mother.mobile','Mother Mobile')}{field('parents.mother.email','Mother Email',null,'email')}{field('parents.mother.occupation','Mother Occupation')}{field('parents.mother.qualification','Mother Qualification')}{field('parents.mother.income','Mother Annual Income',null,'number')}</Section><Section title="Guardian Details" icon={FiUsers}>{field('parents.guardian.name','Guardian Name')}{field('parents.guardian.relationship','Relationship',['Father','Mother','Guardian','Other'])}{data.parents.guardian.relationship === 'Other' && field('parents.guardian.relationshipOther','Specify Relationship')}{field('parents.guardian.mobile','Guardian Mobile')}{field('parents.guardian.email','Guardian Email',null,'email')}{field('parents.guardian.occupation','Guardian Occupation')}{field('parents.guardian.qualification','Guardian Qualification')}{field('parents.guardian.income','Guardian Annual Income',null,'number')}{field('parents.primaryContact','Primary Contact',['Father','Mother','Guardian'])}{field('parents.emergencyMobile','Emergency Contact Mobile')}</Section></>,
-    <Section key="academic" title="Academic Enrollment" icon={FiBookOpen} hint="Review college and academic year, then select the available course and branch.">{field('academic.academicYear','Academic Year',null,'text',true)}{field('admission.college','Joining College',null,'text',true)}{field('academic.admissionType','Admission Type',ADMISSION_TYPES)}{data.academic.admissionType === 'Lateral Entry' && <>{field('academic.quota','Admission Quota',ADMISSION_QUOTAS)}{data.academic.quota === 'Other' && field('academic.quotaOther','Specify Admission Quota')}</>}{masterField('academic.course','academic.courseId','Course',courseOptions,courseOptions.length === 0,[['academic.branchId','academic.branch']])}{field('academic.courseCode','Course Code',null,'text',true)}{masterField('academic.branch','academic.branchId','Branch',effectiveBranchOptions,!data.academic.courseId)}{field('academic.branchCode','Branch Code',null,'text',true)}{field('academic.studentCategory','Student Category',['General','SC','ST','BC','EWS','Other'])}{field('academic.regulation','Regulation')}</Section>,
+    <Section key="academic" title="Academic Enrollment" icon={FiBookOpen} hint="Review college and academic year, then select the available course and branch.">{field('academic.academicYear','Academic Year',null,'text',true)}{field('admission.college','Joining College',null,'text',true)}{field('academic.admissionType','Admission Type',ADMISSION_TYPES)}{data.academic.admissionType === 'Lateral Entry' && <>{field('academic.quota','Admission Quota',ADMISSION_QUOTAS)}{data.academic.quota === 'Other' && field('academic.quotaOther','Specify Admission Quota')}</>}{masterField('academic.course','academic.courseId','Course',courseOptions,!selectedCollegeId,[['academic.branchId','academic.branch']])}{field('academic.courseCode','Course Code',null,'text',true)}{masterField('academic.branch','academic.branchId','Branch',branchOptions,!data.academic.courseId)}{field('academic.branchCode','Branch Code',null,'text',true)}{field('academic.studentCategory','Student Category',['General','SC','ST','BC','EWS','Other'])}{field('academic.regulation','Regulation')}</Section>,
     <><Section title="10th / SSC" icon={FiBookOpen} hint="Enter only the essential school details.">{field('previousEducation.tenth.board','Board')}{field('previousEducation.tenth.institution','School Name')}{field('previousEducation.tenth.passingYear','Year of Passing')}{field('previousEducation.tenth.score','Percentage (0-100)',null,'number')}</Section><Section title="Intermediate / Diploma" icon={FiBookOpen} hint="Enter only the essential qualifying-education details.">{field('previousEducation.intermediate.board','Board / University')}{field('previousEducation.intermediate.institution','College Name')}{field('previousEducation.intermediate.passingYear','Year of Passing')}{field('previousEducation.intermediate.stream','Stream',['MPC','Other'])}{data.previousEducation.intermediate.stream === 'Other' && field('previousEducation.intermediate.streamOther','Specify Stream')}{field('previousEducation.intermediate.score','Percentage (0-100)',null,'number')}</Section></>,
     <><Section title="Application Information" icon={FiFileText} hint="Registration details.">{field('application.number','Registration Number',null,'text',true)}{field('application.date','Registration Date',null,'date',false)}{field('admission.batch','Batch')}</Section><Section title="Student Services" icon={FiHome}>{field('admission.hostel','Hostel Required',['No','Yes'])}{data.admission.hostel === 'Yes' && <>{field('admission.hostelPreference','Hostel Preference',data.personal.gender === 'Male' ? ['Boys Hostel'] : data.personal.gender === 'Female' ? ['Girls Hostel'] : ['Boys Hostel','Girls Hostel'],undefined,data.personal.gender === 'Male' || data.personal.gender === 'Female')}{field('admission.hostelRoomType','Room Type / Beds',roomTypeOptions)}</>}{field('admission.transport','Transportation Required',['No','Yes'])}{data.admission.transport === 'Yes' && field('admission.transportRoute','Transport Route',transportRouteOptions)}</Section></>,
     <div key="fees"><ApplicantFeeStructure data={data} update={update} error={errors['fees.paymentPlan']} /></div>,
@@ -2339,7 +2134,6 @@ function AdmissionForm() {
       return
     }
     if (!declared) { notify('Confirm the declaration before submitting.', 'error'); return }
-    setToast(null)
     setConfirmSubmit(true)
   }
   const skipCurrentStep = () => {
@@ -2362,12 +2156,7 @@ function AdmissionForm() {
     if (submitting) return;
     setSubmitting(true);
     try {
-      const targetAdmissionId = recordIds?.admissionId || validId || data.admissionId || data.id || null;
-      let ids = {
-        ...recordIds,
-        admissionId: targetAdmissionId,
-      };
-
+      let ids = recordIds;
       if (!ids.admissionId) {
         const duplicate = duplicateAdmissionMessage(await studentAdmissionApi.getAll(), data);
         if (duplicate) throw new Error(duplicate);
@@ -2377,55 +2166,21 @@ function AdmissionForm() {
         if (!ids.admissionId) throw new Error('The admission was created but no admission ID was returned.');
         setRecordIds(ids);
       } else {
-        const duplicate = duplicateAdmissionMessage(await studentAdmissionApi.getAll(), data, ids.admissionId);
-        if (duplicate) throw new Error(duplicate);
         await studentAdmissionApi.update(ids.admissionId, data);
-        if (data.academic && (data.academic.course || data.academic.courseId)) {
-          try { await studentAcademicDetailsApi.update(ids.admissionId, data); } catch { /* non-blocking */ }
-        }
-        if (ids.studentId && (data.parents?.father?.name || data.parents?.mother?.name || data.parents?.guardian?.name)) {
-          try { await studentParentApi.update(ids.studentId, data); } catch { /* non-blocking */ }
-        }
-        if (data.previousEducation && (data.previousEducation?.tenth?.board || data.previousEducation?.tenth?.institution || data.previousEducation?.intermediate?.board)) {
-          try { await studentPreviousEducationApi.update(ids.admissionId, data); } catch { /* non-blocking */ }
-        }
       }
-
-      let submitted = null;
-      try {
-        submitted = await studentAdmissionApi.submit(ids.admissionId);
-      } catch (submitErr) {
-        const errMsg = String(submitErr?.message || '').toLowerCase();
-        if (
-          errMsg.includes('only a draft') ||
-          errMsg.includes('already') ||
-          errMsg.includes('cannot be submitted') ||
-          errMsg.includes('not in draft')
-        ) {
-          submitted = { admissionId: ids.admissionId };
-        } else {
-          throw submitErr;
-        }
-      }
-
+      const duplicate = duplicateAdmissionMessage(await studentAdmissionApi.getAll(), data, ids.admissionId);
+      if (duplicate) throw new Error(duplicate);
+      const submitted = await studentAdmissionApi.submit(ids.admissionId);
       const submittedIds = idsFromApi(submitted, ids.admissionId);
       const studentId = submittedIds.studentId ?? ids.studentId;
       rememberCreated('admissions', ids.admissionId);
       if (studentId) rememberCreated('student-profiles', studentId);
-      const pending = [...DOCUMENTS.map(([key, label]) => ({ key, label, document: data.documents?.[key] })), ...(data.documents?.otherCertificates || []).map(document => ({ key: 'otherCertificate', label: 'Other Certificate', document }))].filter(item => item.document?.file);
-      if (studentId && pending.length) {
-        for (const item of pending) {
-          try {
-            await studentDocumentApi.upload(studentId, item.document.file, { documentType: item.key, documentName: item.label });
-          } catch { /* ignore individual upload failure */ }
-        }
+      const pending = [...DOCUMENTS.map(([key, label]) => ({ key, label, document: data.documents[key] })), ...(data.documents?.otherCertificates || []).map(document => ({ key: 'otherCertificate', label: 'Other Certificate', document }))].filter(item => item.document?.file);
+      if (studentId) {
+        for (const item of pending) await studentDocumentApi.upload(studentId, item.document.file, { documentType: item.key, documentName: item.label });
       }
-      try {
-        const latest = await studentAdmissionStatusApi.get(ids.admissionId);
-        setData(current => ({ ...current, status: latest?.status ?? 'SUBMITTED' }));
-      } catch {
-        setData(current => ({ ...current, status: current.status || 'SUBMITTED' }));
-      }
+      const latest = await studentAdmissionStatusApi.get(ids.admissionId);
+      setData(current => ({ ...current, status: latest?.status ?? 'SUBMITTED' }));
       setRecordIds(current => ({ ...current, studentId: studentId ?? current.studentId }));
       setConfirmSubmit(false);
       try { localStorage.removeItem(`pirnav-draft-admission-${ids.admissionId}`) } catch { /* ignore */ }
@@ -2823,22 +2578,11 @@ function AdmissionForm() {
       </div>
 
       {confirmSubmit && (
-        <ConfirmDialog
-          icon={FiCheckCircle}
-          title="Confirm Registration Submission"
-          confirmLabel="Confirm & Submit"
-          busy={submitting}
-          error={toast?.tone === 'error' ? toast.message : null}
-          onCancel={() => {
-            setConfirmSubmit(false);
-            if (toast?.tone === 'error') setToast(null);
-          }}
-          onConfirm={submit}
-        >
+        <ConfirmDialog icon={FiCheckCircle} title="Confirm Registration Submission" confirmLabel="Confirm & Submit" onCancel={() => setConfirmSubmit(false)} onConfirm={submit}>
           <p>Please verify the student details below. Once submitted, the registration will be sent to the admissions team for review.</p>
           <dl>
-            <div><dt>Student</dt><dd>{studentName(data) || '-'}</dd></div>
-            <div><dt>Registration Number</dt><dd>{data.application?.number || data.application?.registrationNumber || '-'}</dd></div>
+            <div><dt>Student</dt><dd>{studentName(data)}</dd></div>
+            <div><dt>Registration Number</dt><dd>{data.application.number}</dd></div>
           </dl>
         </ConfirmDialog>
       )}
@@ -3289,7 +3033,7 @@ function StudentHeader({ data }) {
 }
 
 function AdmissionDetails({ approval = false }) {
-  const { id } = useParams(); const navigate = useNavigate(); const validId = (id && id !== 'undefined' && id !== 'null') ? id : null; const [data, setData] = useState(null); const [loadingDetail, setLoadingDetail] = useState(Boolean(validId)); const [tab, setTab] = useState(approval ? 'decision' : 'overview'); const [remarks, setRemarks] = useState(''); const [toast, setToast] = useToastState(null, 'success'); const [confirmApproval, setConfirmApproval] = useState(false); const [reviewed, setReviewed] = useState(false); const [savingStatus, setSavingStatus] = useState(false)
+  const { id } = useParams(); const navigate = useNavigate(); const validId = (id && id !== 'undefined' && id !== 'null') ? id : null; const [data, setData] = useState(null); const [loadingDetail, setLoadingDetail] = useState(Boolean(validId)); const [tab, setTab] = useState('overview'); const [remarks, setRemarks] = useState(''); const [toast, setToast] = useToastState(null, 'success'); const [confirmApproval, setConfirmApproval] = useState(false); const [reviewed, setReviewed] = useState(false); const [savingStatus, setSavingStatus] = useState(false)
   useEffect(() => {
     if (!validId) { setLoadingDetail(false); return }
     let active = true
@@ -3320,41 +3064,7 @@ function AdmissionDetails({ approval = false }) {
     }).catch(error => setToast({ message: error.message || 'Unable to load admission.', tone: 'error' })).finally(() => { if (active) setLoadingDetail(false) }); return () => { active = false } }, [validId, setToast])
   if (loadingDetail) return <section className="sa-empty"><FiClock /><h2>Loading admission...</h2></section>
   if (!data) return <section className="sa-empty"><FiAlertCircle /><h2>Admission not found</h2><Button onClick={() => navigate('/student-management/admissions')}>Back</Button></section>
-  const transition = async status => {
-    if (savingStatus) return;
-    if (['CORRECTION_REQUIRED','REJECTED'].includes(status) && !text(remarks)) {
-      setToast({ message: 'Admission officer remarks are required for this decision.', tone: 'error' });
-      return;
-    }
-    setSavingStatus(true);
-    try {
-      const result = await studentAdmissionStatusApi.update(id, { status, remarks });
-      const generatedAdmNo = result?.admissionNo || result?.admissionNumber || result?.application?.admissionNumber;
-      setData(current => ({
-        ...current,
-        status: normalizeStatus(result?.status || status),
-        remarks,
-        application: {
-          ...current?.application,
-          admissionNumber: generatedAdmNo || current?.application?.admissionNumber,
-        }
-      }));
-      setRemarks('');
-      eventBus.emit(ERP_EVENTS.STUDENT_UPDATED, { admissionId: id, status });
-      setToast({
-        message: status === 'APPROVED' ? approvalNotice(result) : `${STATUS[status] || status} saved successfully`,
-        tone: 'success'
-      });
-      setConfirmApproval(false);
-      if (status === 'APPROVED') {
-        window.setTimeout(() => navigate('/student-management/admissions'), 1200);
-      }
-    } catch (error) {
-      setToast({ message: error.message || 'Unable to update admission status.', tone: 'error' });
-    } finally {
-      setSavingStatus(false);
-    }
-  }
+  const transition = async status => { if (savingStatus) return; if (['CORRECTION_REQUIRED','REJECTED'].includes(status) && !text(remarks)) { setToast({ message: 'Admission officer remarks are required for this decision.', tone: 'error' }); return } setSavingStatus(true); try { const result = await studentAdmissionStatusApi.update(id, { status, remarks }); setData(current => ({ ...current, status: normalizeStatus(result.status), remarks })); setRemarks(''); eventBus.emit(ERP_EVENTS.STUDENT_UPDATED, { admissionId: id, status }); setToast({ message: status === 'APPROVED' ? approvalNotice(result) : `${STATUS[status] || status} saved successfully`, tone: 'success' }); setConfirmApproval(false); if (status === 'APPROVED') { window.setTimeout(() => navigate('/student-management/admissions'), 1200) } } catch (error) { setToast({ message: error.message || 'Unable to update admission status.', tone: 'error' }) } finally { setSavingStatus(false) } }
   if (approval) {
     const markedDocs = DOCUMENTS.filter(([key]) => {
       const doc = data.documents?.[key]
@@ -3420,19 +3130,19 @@ function AdmissionDetails({ approval = false }) {
                     <small>{remarks.length}/500</small>
                   </label>
                   <footer>
-                    {['SUBMITTED', 'PENDING', 'UNDER_REVIEW', 'VERIFIED', 'DRAFT'].includes(data.status) && (
+                    {['SUBMITTED', 'PENDING', 'UNDER_REVIEW', 'VERIFIED'].includes(data.status) && (
                       <Button danger disabled={!reviewed || savingStatus || !remarks.trim()} onClick={() => transition('REJECTED')}>
                         Reject
                       </Button>
                     )}
-                    {['SUBMITTED', 'PENDING', 'UNDER_REVIEW', 'VERIFIED', 'DRAFT'].includes(data.status) && (
+                    {['SUBMITTED', 'PENDING', 'UNDER_REVIEW', 'VERIFIED'].includes(data.status) && (
                       <Button primary disabled={!reviewed || savingStatus} onClick={() => { setToast(null); setConfirmApproval(true) }}>
                         Approve Admission
                       </Button>
                     )}
                     {data.status === 'APPROVED' && (
                       <span className="sa-approved-note">
-                        <FiCheckCircle /> Admission approved as {data.application?.admissionNumber || data.application?.number || 'Approved'}
+                        <FiCheckCircle /> Admission approved as {data.application.admissionNumber}
                       </span>
                     )}
                   </footer>

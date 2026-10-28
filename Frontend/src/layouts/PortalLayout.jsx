@@ -3,7 +3,7 @@ import { useScreenAccess } from '../auth/ScreenAccess.jsx'
 import { additionalScreens } from '../auth/screenPermissions.js'
 import { useEffect, useState } from 'react'
 import { NavLink, useNavigate } from 'react-router-dom'
-import { FiBell, FiBook, FiBookOpen, FiCalendar, FiCheckSquare, FiClock, FiChevronLeft, FiChevronRight, FiCreditCard, FiEdit3, FiFileText, FiGrid, FiLogOut, FiMenu, FiMoon, FiSearch, FiShield, FiSun, FiUser, FiUsers, FiX } from 'react-icons/fi'
+import { FiBell, FiBriefcase, FiBook, FiBookOpen, FiCalendar, FiCheckSquare, FiClock, FiChevronLeft, FiChevronRight, FiCreditCard, FiEdit3, FiFileText, FiGrid, FiLogOut, FiMenu, FiMoon, FiSearch, FiShield, FiSun, FiUser, FiUsers, FiX } from 'react-icons/fi'
 import { getAuthStorage, getUserRole, signOut } from '../auth/auth.js'
 import { facultyNavigation, studentNavigation } from '../components/portals/portalNavigation.js'
 import { isPortalPreview } from '../auth/portalPreview.js'
@@ -15,13 +15,15 @@ import './AccountMenu.css'
 import '../components/Sidebar.css'
 import '../styles/portals.css'
 import '../styles/portalAdmin.css'
+import './PortalLayout.css'
 
 const navigationIcons = {
   dashboard: [FiGrid, 'blue'], students: [FiUsers, 'cyan'], subjects: [FiBook, 'purple'],
   attendance: [FiCheckSquare, 'green'], 'my-attendance': [FiClock, 'blue'], marks: [FiEdit3, 'gold'], results: [FiFileText, 'gold'],
   timetable: [FiCalendar, 'orange'], materials: [FiBookOpen, 'cyan'], leave: [FiCalendar, 'pink'],
-  notifications: [FiBell, 'orange'], profile: [FiUser, 'purple'], fees: [FiCreditCard, 'green'], users: [FiShield, 'blue'],
+  events: [FiCalendar, 'orange'], placements: [FiBriefcase, 'green'], notifications: [FiBell, 'orange'], profile: [FiUser, 'purple'], fees: [FiCreditCard, 'green'], users: [FiShield, 'blue'],
 }
+const facultySidebarKeys = new Set(['dashboard', 'students', 'subjects', 'attendance', 'my-attendance', 'marks', 'timetable', 'materials', 'leave'])
 
 export default function PortalLayout({ children, title }) {
   const role = getUserRole(), navigate = useNavigate()
@@ -32,7 +34,7 @@ export default function PortalLayout({ children, title }) {
   const [theme, setTheme] = useState(() => localStorage.getItem('pirnav-theme') || 'light')
   const allNav = role === 'faculty' ? facultyNavigation : role === 'student' ? studentNavigation : role === 'staff' ? [['dashboard', 'Dashboard'], ['profile', 'My Profile']] : [['users', 'Roles & Designations']]
   const nav = [...allNav.filter(([key]) => canView(`/${role}-portal/${key}`)), ...(['faculty', 'staff'].includes(role) ? additionalScreens.filter(([path]) => canView(path)) : [])]
-  const sidebarNav = nav.filter(([key]) => key !== 'notifications' && !(role === 'faculty' && key === 'profile'))
+  const sidebarNav = nav.filter(([key]) => role === 'faculty' ? facultySidebarKeys.has(key) : key !== 'notifications')
   const base = role === 'admin' ? '/roles-designations' : `/${role}-portal`
   const storage = getAuthStorage()
   const name = storage?.getItem('btech-user-name') || role

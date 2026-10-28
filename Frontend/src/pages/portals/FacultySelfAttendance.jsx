@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
+import { createPortal } from 'react-dom'
 import {
+  FiAlertCircle,
   FiCalendar,
   FiCheckCircle,
   FiClock,
@@ -7,6 +9,7 @@ import {
   FiEdit2,
   FiLogIn,
   FiLogOut,
+  FiPrinter,
   FiRefreshCw,
   FiSearch,
   FiTrendingUp,
@@ -142,32 +145,33 @@ const saveStoredAttendance = records => {
 }
 
 export function FacultySelfAttendancePage() {
+  const [summaryTarget, setSummaryTarget] = useState(null)
   useEffect(() => { window.scrollTo(0, 0) }, [])
   return (
     <PortalLayout title="My Attendance">
-      <main className="portal-page tf-page">
+      <main className="portal-page tf-page fsa-page">
         <header className="tf-heading">
           <div>
             <p className="portal-eyebrow">DIGITAL CAMPUS / TEACHING FACULTY</p>
             <h1>My Attendance</h1>
             <p>Track your daily check-in, check-out times, working hours, and review weekly and monthly attendance records.</p>
           </div>
-          <div className="tf-heading-actions">
-            <span className="tf-live">Faculty Self Service</span>
-          </div>
+          <div className="fsa-summary-anchor" ref={setSummaryTarget} />
         </header>
-        <FacultySelfAttendance />
+        <FacultySelfAttendance summaryTarget={summaryTarget} />
       </main>
     </PortalLayout>
   )
 }
 
-export default function FacultySelfAttendance({ data }) {
+export default function FacultySelfAttendance({ data, summaryTarget }) {
   const [records, setRecords] = useState(loadStoredAttendance)
   const [currentDate] = useState(() => new Date('2026-10-27T10:25:00'))
   const [activeTab, setActiveTab] = useState('weekly') // 'weekly' | 'month' | 'prev-month'
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState('ALL')
+  const [page, setPage] = useState(1)
+  const [pageSize, setPageSize] = useState(5)
   const [selectedRecord, setSelectedRecord] = useState(null)
   const [notice, setNotice] = useState('')
 
@@ -355,6 +359,11 @@ export default function FacultySelfAttendance({ data }) {
       return true
     })
   }, [activeRows, statusFilter, search])
+  const pageCount = Math.max(1, Math.ceil(displayedRows.length / pageSize))
+  const currentPage = Math.min(page, pageCount)
+  const pageStart = (currentPage - 1) * pageSize
+  const pagedRows = displayedRows.slice(pageStart, pageStart + pageSize)
+
 
   // Summary Metrics calculations for active view
   const summaryMetrics = useMemo(() => {
@@ -432,9 +441,64 @@ export default function FacultySelfAttendance({ data }) {
   const facultyName = data?.me?.fullName || getAuthStorage()?.getItem('btech-user-name') || 'Dr. Kavya Sharma'
   const facultyDesignation = data?.me?.designation || 'Teaching Faculty'
   const facultyDept = data?.me?.department || 'Electrical & Electronics Engineering'
+  const facultyEmpId = data?.me?.employeeId || (data?.me?.id ? `EMP-2026-${String(data.me.id).padStart(4, '0')}` : 'EMP-2024-8842')
+
+  const getInitials = name => {
+    if (!name) return 'KS'
+    const parts = name.replace(/^(Dr\.|Prof\.|Mr\.|Mrs\.|Ms\.)\s*/i, '').trim().split(/\s+/)
+    if (parts.length >= 2) return `${parts[0][0]}${parts[1][0]}`.toUpperCase()
+    return parts[0].slice(0, 2).toUpperCase()
+  }
+
+  const summary = (
+    <section className="fsa-compact-summary" aria-label="Attendance summary">
+      <div className="fsa-summary-item" title={`${summaryMetrics.attendancePercent}% attendance rate`}>
+        <div className="fsa-summary-icon tone-green">
+          <FiCheckCircle aria-hidden="true" />
+        </div>
+        <div className="fsa-summary-content">
+          <strong className="fsa-summary-present">
+            {summaryMetrics.presentDays + summaryMetrics.lateDays} / {summaryMetrics.workingDays}
+          </strong>
+          <small>Days Present ({summaryMetrics.attendancePercent}%)</small>
+        </div>
+      </div>
+
+      <div className="fsa-summary-item" title="Total calculated working time">
+        <div className="fsa-summary-icon tone-blue">
+          <FiClock aria-hidden="true" />
+        </div>
+        <div className="fsa-summary-content">
+          <strong>{summaryMetrics.totalDurationFormatted}</strong>
+          <small>Hours Worked</small>
+        </div>
+      </div>
+
+      <div className="fsa-summary-item" title="Target: 8 hours per day">
+        <div className="fsa-summary-icon tone-amber">
+          <FiTrendingUp aria-hidden="true" />
+        </div>
+        <div className="fsa-summary-content">
+          <strong>{summaryMetrics.avgDailyFormatted}</strong>
+          <small>Daily Average</small>
+        </div>
+      </div>
+
+      <div className="fsa-summary-item" title="Late days and approved leaves">
+        <div className="fsa-summary-icon tone-purple">
+          <FiCalendar aria-hidden="true" />
+        </div>
+        <div className="fsa-summary-content">
+          <strong>{summaryMetrics.lateDays} Late · {summaryMetrics.leaveDays} Leaves</strong>
+          <small>Exceptions / Leave</small>
+        </div>
+      </div>
+    </section>
+  )
 
   return (
     <div className="fsa-container">
+      {summaryTarget ? createPortal(summary, summaryTarget) : summary}
       {notice && (
         <div className="fa-notice" role="status">
           <FiCheckCircle aria-hidden="true" /> {notice}
@@ -443,28 +507,52 @@ export default function FacultySelfAttendance({ data }) {
 
       {/* Hero Today Punch & Real-time Calculation Card */}
       <section className="fsa-punch-card">
+        {/* Left Section: Faculty Details, Status and Actions */}
         <div className="fsa-punch-main">
-          <div className="fsa-clock-badge">
-            <FiClock aria-hidden="true" />
-            <span>FACULTY DAILY PUNCH</span>
+          {/* Faculty Profile Banner */}
+          <div className="fsa-faculty-strip">
+            <div className="fsa-faculty-avatar" aria-hidden="true">
+              {getInitials(facultyName)}
+            </div>
+            <div className="fsa-faculty-meta">
+              <div className="fsa-faculty-name-row">
+                <h3 className="fsa-faculty-name">{facultyName}</h3>
+                <span className="fsa-faculty-badge">Faculty Verified</span>
+              </div>
+              <p className="fsa-faculty-role">
+                <span>{facultyDesignation}</span>
+                <span className="fsa-dot-sep">·</span>
+                <span>{facultyDept}</span>
+                <span className="fsa-dot-sep">·</span>
+                <span className="fsa-empid">{facultyEmpId}</span>
+              </p>
+            </div>
           </div>
 
-          <div className="fsa-date-display">
-            <h2>Tuesday, 27 October 2026</h2>
-            <small>· Standard Shift: 09:00 AM – 05:00 PM</small>
+          {/* Attendance date and punch status */}
+          <div className="fsa-clock-display-box">
+            <div className="fsa-clock-top">
+              <div className="fsa-clock-status">
+                {todayRecord.status === 'Checked In' && <span className="fsa-pulse-dot" />}
+                <span className={`fsa-status-pill status-${todayRecord.status.toLowerCase().replace(/\s+/g, '-')}`}>
+                  <FiUserCheck aria-hidden="true" />
+                  {todayRecord.status === 'Checked In'
+                    ? 'Checked In · Shift Active'
+                    : todayRecord.status === 'Present'
+                    ? 'Shift Completed'
+                    : todayRecord.status}
+                </span>
+              </div>
+            </div>
+
+            <div className="fsa-clock-date-line">
+              <span className="fsa-clock-today-date">Tuesday, 27 October 2026</span>
+              <span className="fsa-dot-sep">·</span>
+              <span className="fsa-shift-window">Standard Shift: 09:00 AM – 05:00 PM (8h)</span>
+            </div>
           </div>
 
-          <div className="fsa-punch-status-wrap">
-            {todayRecord.status === 'Checked In' && <span className="fsa-pulse-dot" />}
-            <span className={`fsa-status-pill status-${todayRecord.status.toLowerCase().replace(/\s+/g, '-')}`}>
-              <FiUserCheck aria-hidden="true" />
-              {todayRecord.status === 'Checked In' ? 'Checked In · On Duty' : todayRecord.status}
-            </span>
-            <span style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>
-              {facultyName} ({facultyDesignation})
-            </span>
-          </div>
-
+          {/* Punch Actions */}
           <div className="fsa-punch-actions">
             <button
               type="button"
@@ -473,7 +561,7 @@ export default function FacultySelfAttendance({ data }) {
               onClick={handleCheckIn}
             >
               <FiLogIn aria-hidden="true" />
-              {todayRecord.checkIn ? `Checked In at ${formatTime12(todayRecord.checkIn)}` : 'Check In Now'}
+              {todayRecord.checkIn ? `Checked In (${formatTime12(todayRecord.checkIn)})` : 'Check In Now'}
             </button>
 
             <button
@@ -483,7 +571,7 @@ export default function FacultySelfAttendance({ data }) {
               onClick={handleCheckOut}
             >
               <FiLogOut aria-hidden="true" />
-              {todayRecord.checkOut ? `Checked Out at ${formatTime12(todayRecord.checkOut)}` : 'Check Out Now'}
+              {todayRecord.checkOut ? `Checked Out (${formatTime12(todayRecord.checkOut)})` : 'Check Out Now'}
             </button>
 
             <button
@@ -499,9 +587,9 @@ export default function FacultySelfAttendance({ data }) {
             {todayRecord.checkIn && (
               <button
                 type="button"
-                className="fsa-btn fsa-btn-outline"
+                className="fsa-btn fsa-btn-outline fsa-btn-reset"
                 onClick={handleResetToday}
-                title="Reset today's punch"
+                title="Reset today's punch for testing"
               >
                 <FiRefreshCw aria-hidden="true" />
                 Reset
@@ -510,91 +598,88 @@ export default function FacultySelfAttendance({ data }) {
           </div>
         </div>
 
-        {/* Time calculations breakdown for Today */}
-        <div className="fsa-punch-metrics">
-          <div className="fsa-metric-box">
-            <small>Check In Time</small>
-            <strong>{formatTime12(todayRecord.checkIn)}</strong>
+        {/* Right Section: Today's Shift Metrics & Progress */}
+        <div className="fsa-punch-analytics">
+          <div className="fsa-analytics-heading">
+            <h4>Today's Shift Tracking</h4>
+            <span className="fsa-node-tag">Biometric Node #04 · Online</span>
           </div>
 
-          <div className="fsa-metric-box">
-            <small>Check Out Time</small>
-            <strong>{todayRecord.checkOut ? formatTime12(todayRecord.checkOut) : todayRecord.checkIn ? 'In Progress' : '—'}</strong>
+          <div className="fsa-metrics-grid">
+            <div className="fsa-metric-tile">
+              <div className="fsa-metric-tile-icon tone-green">
+                <FiLogIn aria-hidden="true" />
+              </div>
+              <div className="fsa-metric-tile-body">
+                <small>Check In Time</small>
+                <strong>{formatTime12(todayRecord.checkIn)}</strong>
+                <span className="fsa-metric-sub">{todayRecord.checkIn ? 'Terminal Punch' : 'Awaiting Check-in'}</span>
+              </div>
+            </div>
+
+            <div className="fsa-metric-tile">
+              <div className="fsa-metric-tile-icon tone-amber">
+                <FiLogOut aria-hidden="true" />
+              </div>
+              <div className="fsa-metric-tile-body">
+                <small>Check Out Time</small>
+                <strong>{todayRecord.checkOut ? formatTime12(todayRecord.checkOut) : todayRecord.checkIn ? 'In Progress' : '—'}</strong>
+                <span className="fsa-metric-sub">{todayRecord.checkOut ? 'Punch Completed' : todayRecord.checkIn ? 'Shift Active' : 'Pending'}</span>
+              </div>
+            </div>
+
+            <div className="fsa-metric-tile highlight">
+              <div className="fsa-metric-tile-icon tone-blue">
+                <FiClock aria-hidden="true" />
+              </div>
+              <div className="fsa-metric-tile-body">
+                <small>Calculated Work Time</small>
+                <strong>{todayDuration ? todayDuration.formatted : isShiftInProgress ? 'Shift In Progress' : '0h 00m'}</strong>
+                <span className="fsa-metric-sub">{todayDuration ? todayDuration.verbose : isShiftInProgress ? 'Check out to finalize' : '0 mins logged'}</span>
+              </div>
+            </div>
+
+            <div className="fsa-metric-tile">
+              <div className="fsa-metric-tile-icon tone-purple">
+                <FiTrendingUp aria-hidden="true" />
+              </div>
+              <div className="fsa-metric-tile-body">
+                <small>Daily Shift Goal</small>
+                <strong>8 hrs 00 mins</strong>
+                <span className="fsa-metric-sub">Standard Faculty Shift</span>
+              </div>
+            </div>
           </div>
 
-          <div className="fsa-metric-box highlight">
-            <small>Total Working Time</small>
-            <strong>{todayDuration ? todayDuration.formatted : isShiftInProgress ? 'Shift In Progress' : '0h 00m'}</strong>
-          </div>
-
-          <div className="fsa-metric-box">
-            <small>Target Shift</small>
-            <strong>8 hrs 00 mins</strong>
-          </div>
-
-          <div className="fsa-shift-progress">
+          {/* Daily Shift Target Completion */}
+          <div className="fsa-shift-progress-card">
             <div className="fsa-shift-progress-header">
-              <span>Daily Target Completion</span>
-              <span>
+              <span>Shift Target Progress</span>
+              <strong>
                 {todayDuration
                   ? `${workedMinutes}m / 480m (${shiftProgress}%)`
                   : isShiftInProgress
-                  ? 'Shift in progress (Check out to calculate duration)'
+                  ? 'Shift In Progress · Live Active'
                   : '0m / 480m (0%)'}
-              </span>
+              </strong>
             </div>
             <div className="fsa-progress-bar-bg">
-              <div className="fsa-progress-bar-fill" style={{ width: `${shiftProgress}%` }} />
+              <div
+                className="fsa-progress-bar-fill"
+                style={{
+                  width: `${shiftProgress}%`,
+                  background: shiftProgress >= 100
+                    ? 'linear-gradient(90deg, #16804e, #10b981)'
+                    : 'linear-gradient(90deg, #174c88, #2563eb)'
+                }}
+              />
+            </div>
+            <div className="fsa-progress-bar-footer">
+              <span>Standard Shift: 09:00 AM – 05:00 PM</span>
+              <span>{shiftProgress >= 100 ? 'Full Shift Completed ✓' : `${Math.max(0, 480 - workedMinutes)}m remaining to target`}</span>
             </div>
           </div>
         </div>
-      </section>
-
-      {/* Summary KPI Stats for Active View */}
-      <section className="fsa-kpis">
-        <article className="fsa-kpi-card">
-          <div className="fsa-kpi-icon tone-green">
-            <FiCheckCircle aria-hidden="true" />
-          </div>
-          <div className="fsa-kpi-info">
-            <small>Days Present</small>
-            <strong>{summaryMetrics.presentDays + summaryMetrics.lateDays} / {summaryMetrics.workingDays}</strong>
-            <span>{summaryMetrics.attendancePercent}% attendance rate</span>
-          </div>
-        </article>
-
-        <article className="fsa-kpi-card">
-          <div className="fsa-kpi-icon">
-            <FiClock aria-hidden="true" />
-          </div>
-          <div className="fsa-kpi-info">
-            <small>Total Hours Worked</small>
-            <strong>{summaryMetrics.totalDurationFormatted}</strong>
-            <span>Calculated working time</span>
-          </div>
-        </article>
-
-        <article className="fsa-kpi-card">
-          <div className="fsa-kpi-icon tone-amber">
-            <FiTrendingUp aria-hidden="true" />
-          </div>
-          <div className="fsa-kpi-info">
-            <small>Daily Average</small>
-            <strong>{summaryMetrics.avgDailyFormatted}</strong>
-            <span>Target: 8h 00m / day</span>
-          </div>
-        </article>
-
-        <article className="fsa-kpi-card">
-          <div className="fsa-kpi-icon tone-purple">
-            <FiCalendar aria-hidden="true" />
-          </div>
-          <div className="fsa-kpi-info">
-            <small>Late / On Leave</small>
-            <strong>{summaryMetrics.lateDays} Late · {summaryMetrics.leaveDays} Leave</strong>
-            <span>Policy compliance</span>
-          </div>
-        </article>
       </section>
 
       {/* Navigation Card with Tabs: Weekly, Month, Previous Month */}
@@ -606,7 +691,7 @@ export default function FacultySelfAttendance({ data }) {
               role="tab"
               aria-selected={activeTab === 'weekly'}
               className={`fsa-tab-btn ${activeTab === 'weekly' ? 'is-active' : ''}`}
-              onClick={() => { setActiveTab('weekly'); setSearch(''); setStatusFilter('ALL') }}
+              onClick={() => { setPage(1); setActiveTab('weekly'); setSearch(''); setStatusFilter('ALL') }}
             >
               <FiCalendar aria-hidden="true" />
               <span>This Week</span>
@@ -618,7 +703,7 @@ export default function FacultySelfAttendance({ data }) {
               role="tab"
               aria-selected={activeTab === 'month'}
               className={`fsa-tab-btn ${activeTab === 'month' ? 'is-active' : ''}`}
-              onClick={() => { setActiveTab('month'); setSearch(''); setStatusFilter('ALL') }}
+              onClick={() => { setPage(1); setActiveTab('month'); setSearch(''); setStatusFilter('ALL') }}
             >
               <FiClock aria-hidden="true" />
               <span>This Month</span>
@@ -630,7 +715,7 @@ export default function FacultySelfAttendance({ data }) {
               role="tab"
               aria-selected={activeTab === 'prev-month'}
               className={`fsa-tab-btn ${activeTab === 'prev-month' ? 'is-active' : ''}`}
-              onClick={() => { setActiveTab('prev-month'); setSearch(''); setStatusFilter('ALL') }}
+              onClick={() => { setPage(1); setActiveTab('prev-month'); setSearch(''); setStatusFilter('ALL') }}
             >
               <FiCalendar aria-hidden="true" />
               <span>Previous Month</span>
@@ -642,6 +727,15 @@ export default function FacultySelfAttendance({ data }) {
             <button
               type="button"
               className="tf-button fa-button"
+              onClick={() => window.print()}
+              title="Print attendance report"
+            >
+              <FiPrinter aria-hidden="true" />
+              Print
+            </button>
+            <button
+              type="button"
+              className="tf-button fa-button fa-button-primary"
               onClick={handleExportCsv}
               title="Download CSV report of current attendance records"
             >
@@ -666,7 +760,7 @@ export default function FacultySelfAttendance({ data }) {
                   <div className="fsa-week-day-header">
                     <span className="fsa-week-day-name">{dayName}</span>
                     <span className="fsa-week-day-num">
-                      {d.getDate()} {isToday && <small style={{ color: 'var(--brand)', fontSize: '10px' }}>(Today)</small>}
+                      {d.getDate()} {isToday && <span className="fsa-week-today-tag">TODAY</span>}
                     </span>
                   </div>
 
@@ -704,7 +798,7 @@ export default function FacultySelfAttendance({ data }) {
                 type="search"
                 placeholder="Search date, status or remarks..."
                 value={search}
-                onChange={e => setSearch(e.target.value)}
+                onChange={e => { setSearch(e.target.value); setPage(1) }}
                 aria-label="Search records"
               />
             </div>
@@ -712,7 +806,7 @@ export default function FacultySelfAttendance({ data }) {
             <select
               className="fsa-filter-select"
               value={statusFilter}
-              onChange={e => setStatusFilter(e.target.value)}
+              onChange={e => { setStatusFilter(e.target.value); setPage(1) }}
               aria-label="Filter by status"
             >
               <option value="ALL">All Statuses</option>
@@ -725,8 +819,21 @@ export default function FacultySelfAttendance({ data }) {
             </select>
           </div>
 
-          <span style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>
-            Showing {displayedRows.length} {displayedRows.length === 1 ? 'record' : 'records'}
+          <div className="fsa-quick-filter-chips">
+            {['ALL', 'Present', 'Late', 'On Leave'].map(st => (
+              <button
+                key={st}
+                type="button"
+                className={`fsa-chip-btn ${statusFilter === st ? 'is-active' : ''}`}
+                onClick={() => { setStatusFilter(st); setPage(1) }}
+              >
+                {st === 'ALL' ? 'All Records' : st}
+              </button>
+            ))}
+          </div>
+
+          <span className="fsa-records-count">
+            {displayedRows.length} matching records
           </span>
         </div>
 
@@ -746,7 +853,7 @@ export default function FacultySelfAttendance({ data }) {
             </thead>
             <tbody>
               {displayedRows.length > 0 ? (
-                displayedRows.map(row => {
+                pagedRows.map(row => {
                   const d = new Date(`${row.date}T00:00:00`)
                   const dayName = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'][d.getDay()]
                   const isToday = row.date === todayKey
@@ -819,6 +926,10 @@ export default function FacultySelfAttendance({ data }) {
             </tbody>
           </table>
         </div>
+        <footer className="fsa-pagination">
+          <div className="fsa-pagination-info"><label>Rows per page<select aria-label="Attendance rows per page" value={pageSize} onChange={e => { setPageSize(Number(e.target.value)); setPage(1) }}>{[5, 10, 20, 50].map(size => <option key={size} value={size}>{size}</option>)}</select></label><span role="status">{displayedRows.length ? pageStart + 1 : 0}?{Math.min(pageStart + pageSize, displayedRows.length)} of {displayedRows.length} records</span></div>
+          <nav aria-label="Attendance table pages"><button type="button" disabled={currentPage === 1} onClick={() => setPage(currentPage - 1)}>Previous</button>{Array.from({ length: pageCount }, (_, index) => index + 1).map(number => <button type="button" key={number} aria-label={'Page ' + number} aria-current={currentPage === number ? 'page' : undefined} onClick={() => setPage(number)}>{number}</button>)}<button type="button" disabled={currentPage === pageCount} onClick={() => setPage(currentPage + 1)}>Next</button></nav>
+        </footer>
       </section>
 
       {/* Manual Entry / Adjustment Dialog */}

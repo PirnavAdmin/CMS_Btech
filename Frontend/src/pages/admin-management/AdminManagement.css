@@ -3861,32 +3861,19 @@
   border: 1.5px solid #CBD5E1;
   border-radius: 10px;
   background: #FFFFFF;
-  isolation: isolate;
 }
 
 .rbac-matrix-grid-table {
   width: 100%;
   min-width: 860px;
   table-layout: fixed;
-  border-collapse: separate;
-  border-spacing: 0;
-}
-
-.rbac-matrix-dialog .rbac-matrix-grid-table > thead {
-  position: sticky;
-  top: 0;
-  z-index: 20;
-  background: #0F172A !important;
-}
-
-#root .rbac-matrix-dialog .rbac-matrix-grid-table > thead > tr > th {
-  position: static;
-  background: #0F172A !important;
-  background-image: none !important;
-  color: #EEF6FC !important;
+  border-collapse: collapse;
 }
 
 .rbac-matrix-grid-table th {
+  position: sticky;
+  top: 0;
+  z-index: 20;
   background: #0F172A !important;
   color: #EEF6FC !important;
   padding: 11px 8px;

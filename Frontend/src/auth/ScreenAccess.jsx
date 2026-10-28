@@ -1,45 +1,79 @@
-import { createContext, useContext, useEffect, useState } from 'react'
-import { Navigate, useLocation, useNavigate } from 'react-router-dom'
-import { getAccessToken, getAuthStorage, getUserRole, isAuthenticated, isNonTeachingStaff, mustChangePassword, signOut } from './auth.js'
+import { useCallback, useEffect, useState } from 'react'
 import { roleApi } from '../api/apiEndpoints.js'
-import { requireAssignedPermissions, canViewScreen, isPersonalWorkspace } from './screenPermissions.js'
-import './ScreenAccess.css'
+import { getAuthStorage, getUserRole } from './auth.js'
+import { isPortalPreview } from './portalPreview.js'
+import { canViewScreen, requireAssignedPermissions } from './screenPermissions.js'
 
-const AccessContext = createContext({ loading: true, canView: () => false })
-export const useScreenAccess = () => useContext(AccessContext)
+const roleAliases = {
+  faculty: ['faculty', 'teaching_faculty'],
+  staff: ['staff', 'non_teaching', 'non_teaching_staff'],
+  student: ['student'],
+  admin: ['admin', 'college_admin', 'super_admin'],
+}
 
-export default function ScreenAccess({ children }) {
-  const { pathname } = useLocation()
-  const navigate = useNavigate()
-  const [attempt, setAttempt] = useState(0)
-  const role = isNonTeachingStaff() ? 'staff' : getUserRole()
-  const identity = `${getAccessToken()}:${getAuthStorage()?.getItem('btech-assigned-roles') || ''}`
-  const [state, setState] = useState({ identity: '', permissions: {}, loading: true })
+const permissionRequests = new Map()
+
+function roleNames(role) {
+  const normalized = String(role || '').trim().toLowerCase().replace(/[\s-]+/g, '_')
+  return [...new Set([normalized, ...(roleAliases[normalized] || [])].filter(Boolean))]
+}
+
+function identityKey(role) {
+  const storage = getAuthStorage()
+  let userId = '', collegeId = ''
+  try {
+    userId = storage?.getItem('btech-user-id') || ''
+    collegeId = storage?.getItem('btech-user-college-id') || ''
+  } catch { /* Storage can be unavailable in restricted browser contexts. */ }
+  return `${role}:${userId}:${collegeId}`
+}
+
+function loadPermissions(role, key) {
+  let request = permissionRequests.get(key)
+  if (!request) {
+    request = roleApi.getAll().then(rows => requireAssignedPermissions(rows, roleNames(role)))
+    permissionRequests.set(key, request)
+    request.catch(() => permissionRequests.delete(key))
+  }
+  return request
+}
+
+export function useScreenAccess() {
+  const role = getUserRole()
+  const key = identityKey(role)
+  const preview = isPortalPreview()
+  const [permissions, setPermissions] = useState({})
+  const [loading, setLoading] = useState(Boolean(role && role !== 'admin' && !preview))
+  const [error, setError] = useState(null)
+
   useEffect(() => {
     let active = true
-    const load = async () => {
-      if (!isAuthenticated() || role === 'admin' || isPersonalWorkspace(pathname, role) || (['faculty', 'staff'].includes(role) && ['/dashboard', '/unauthorized'].includes(pathname))) {
-        setState({ identity, permissions: {}, loading: false }); return
-      }
-      if (active) setState({ identity, permissions: {}, loading: true, error: '' })
-      try {
-        const rows = await roleApi.getAll()
-        let roles = []
-        try { roles = JSON.parse(getAuthStorage()?.getItem('btech-assigned-roles') || '[]') } catch { /* Deny missing assignments. */ }
-        const permissions = requireAssignedPermissions(rows, roles)
-        if (active) setState({ identity, permissions, loading: false, error: '' })
-      } catch (error) {
-        if (active) setState({ identity, permissions: {}, loading: false, error: error.message || 'Screen permissions could not be loaded. Please retry.' })
-      }
+    if (!role || role === 'admin' || preview) {
+      setPermissions({})
+      setError(null)
+      setLoading(false)
+      return () => { active = false }
     }
-    load()
-    window.addEventListener('focus', load)
-    window.addEventListener('btech-permissions-updated', load)
-    return () => { active = false; window.removeEventListener('focus', load); window.removeEventListener('btech-permissions-updated', load) }
-  }, [identity, role, pathname, attempt])
-  const loading = role !== 'admin' && (state.identity !== identity || state.loading)
-  const publicPage = ['/', '/login', '/register', '/activate-account', '/change-password', '/portal-preview'].includes(pathname)
-  if (pathname === '/unauthorized' && isAuthenticated() && !mustChangePassword() && ['faculty', 'staff'].includes(role)) return <Navigate to={`/${role}-portal/dashboard`} replace />
-  if (!publicPage && role !== 'admin' && isAuthenticated() && !mustChangePassword() && state.identity === identity && !loading && state.error) return <main className="access-configuration"><section role="alert"><h1>Access configuration unavailable</h1><p>Your session is signed in, but your assigned screen permissions could not be verified.</p><p className="access-configuration-reason">{state.error}</p><div><button type="button" onClick={() => setAttempt(value => value + 1)}>Retry permissions</button><button type="button" onClick={() => { signOut(); navigate('/login', { replace: true }) }}>Back to sign in</button></div></section></main>
-  return <AccessContext.Provider value={{ loading, canView: path => !loading && canViewScreen(path, role, state.permissions) }}>{children}</AccessContext.Provider>
+
+    setLoading(true)
+    loadPermissions(role, key)
+      .then(next => {
+        if (active) {
+          setPermissions(next)
+          setError(null)
+        }
+      })
+      .catch(reason => {
+        if (active) {
+          setPermissions({})
+          setError(reason instanceof Error ? reason : new Error(String(reason)))
+        }
+      })
+      .finally(() => { if (active) setLoading(false) })
+
+    return () => { active = false }
+  }, [key, preview, role])
+
+  const canView = useCallback(path => canViewScreen(String(path || ''), role, permissions), [permissions, role])
+  return { canView, permissions, loading, error }
 }

@@ -1,4 +1,3 @@
-import ScreenAccess from './auth/ScreenAccess.jsx'
 ﻿import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import { BrowserRouter } from 'react-router-dom'
@@ -14,7 +13,7 @@ import './styles/view-status-colors.css'
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>
-    <ToastProvider><BrowserRouter><ScreenAccess><App /></ScreenAccess></BrowserRouter></ToastProvider>
+    <ToastProvider><BrowserRouter><App /></BrowserRouter></ToastProvider>
   </StrictMode>,
 )
 

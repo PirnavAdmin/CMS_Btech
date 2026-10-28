@@ -11,6 +11,6 @@ export function portalService() {
     storage: localStorage,
     collegeId: getUserCollegeId() || selectedCollegeId(),
     preview: isPortalPreview(),
-    actor: { id: storage?.getItem('btech-user-id') || '', name: storage?.getItem('btech-user-name') || '', email: storage?.getItem('btech-user-email') || '', phone: storage?.getItem('btech-user-mobile') || '', employeeUserId: storage?.getItem('btech-user-employee-id') || '', role: getUserRole() },
+    actor: { id: storage?.getItem('btech-user-id') || '', name: storage?.getItem('btech-user-name') || '', email: '', role: getUserRole() },
   })
 }

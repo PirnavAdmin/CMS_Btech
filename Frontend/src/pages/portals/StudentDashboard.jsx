@@ -1,6 +1,5 @@
-import Link from '../../components/portals/PermissionLink.jsx'
 import { useState } from 'react'
-
+import { Link } from 'react-router-dom'
 import { FiArrowLeft, FiArrowRight, FiBookOpen, FiCalendar, FiCheckCircle, FiClock, FiFileText, FiStar, FiTrendingUp } from 'react-icons/fi'
 import './student-dashboard.css'
 

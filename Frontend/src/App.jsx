@@ -11,11 +11,16 @@ import { ExamTimetable, CreateExamTimetable, ExamScheduleList, DepartmentExamSch
 import { MarksManagement, MarksEntry, BulkMarksUpload, EditMarks, StudentMarks, SubjectMarksReport, MarksApproval } from './pages/examinations/marks-management/MarksManagement'
 import { Navigate, Route, Routes } from 'react-router-dom'
 import ProtectedRoute from './components/ProtectedRoute'
-import FirstLoginPassword from './pages/auth/FirstLoginPassword.jsx'
 import PortalRoute, { RoleDashboard, RoleAlias } from './components/portals/PortalRoute.jsx'
+import { facultyRouteByPath } from './features/faculty/routeConfig.js'
 const AcademicPortal = lazy(() => import('./pages/portals/AcademicPortal.jsx'))
 const StaffPortal = lazy(() => import('./pages/staff-portal/StaffPortal.jsx'))
+const UserAccessManagement = lazy(() => import('./pages/admin-management/UserAccessManagement.jsx'))
 const PortalPreview = lazy(() => import('./pages/portals/PortalPreview.jsx'))
+const FacultyDashboardPage = lazy(() => import('./features/faculty/dashboard/pages/FacultyDashboardPage.jsx'))
+const FacultyWorkspacePage = lazy(() => import('./features/faculty/FacultyWorkspacePage.jsx'))
+const FacultyRouteErrorBoundary = lazy(() => import('./features/faculty/FacultyRouteErrorBoundary.jsx'))
+const FacultySessionExpiredPage = lazy(() => import('./features/faculty/FacultySessionExpiredPage.jsx'))
 
 
 
@@ -174,23 +179,25 @@ export default function App() {
           {/* Public */}
           <Route path="/" element={<LandingPage />} />
           <Route path="/login" element={<Login />} />
-          <Route path="/change-password" element={<FirstLoginPassword />} />
           <Route path="/activate-account" element={<ActivateAccount />} />
           <Route path="/register" element={<Register />} />
 
           <Route path="/portal-preview" element={<PortalPreview />} />
           <Route path="/dashboard" element={<RoleDashboard><AcademicProvider><Dashboard /></AcademicProvider></RoleDashboard>} />
+          <Route path="/faculty-portal/session-expired" element={<FacultyRouteErrorBoundary><FacultySessionExpiredPage /></FacultyRouteErrorBoundary>} />
           <Route element={<PortalRoute roles={[ROLES.FACULTY]} />}>
-            <Route path="/faculty-portal/:screen?" element={<AcademicPortal role="faculty" />} />
+            <Route path="/faculty-portal" element={<Navigate to="/faculty-portal/dashboard" replace />} />
+            <Route path={facultyRouteByPath['/faculty-portal/dashboard'].path} element={<FacultyRouteErrorBoundary><FacultyDashboardPage /></FacultyRouteErrorBoundary>} />
+            <Route path="/faculty-portal/:screen?" element={<FacultyRouteErrorBoundary><FacultyWorkspacePage /></FacultyRouteErrorBoundary>} />
           </Route>
           <Route element={<PortalRoute roles={[ROLES.STUDENT]} />}>
             <Route path="/student-portal/:screen?" element={<AcademicPortal role="student" />} />
           </Route>
-          <Route element={<PortalRoute roles={[ROLES.ADMIN]} />}>
-            <Route path="/user-access" element={<Navigate to="/roles-designations" replace />} />
-          </Route>
           <Route element={<PortalRoute roles={[ROLES.STAFF]} />}>
             <Route path="/staff-portal/:screen?" element={<StaffPortal />} />
+          </Route>
+          <Route element={<PortalRoute roles={[ROLES.ADMIN]} />}>
+            <Route path="/user-access" element={<UserAccessManagement />} />
           </Route>
           {/* Existing administrator screens retain their URLs and components. */}
           <Route element={<PortalRoute roles={[ROLES.ADMIN]} />}>

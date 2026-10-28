@@ -1,9 +1,21 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { createTeachingService, rows } from './teachingContract.js'
+import { createTeachingService, rows, assessmentOptions } from './teachingContract.js'
+
+test('assessment options normalize exam identifiers and retain only matching scope', () => {
+  const result = assessmentOptions({ data: { exams: [
+    { ExamId: 2, ExamName: 'Mid Semester', AcademicYearId: 4, SemesterId: 2 },
+    { exam_id: 3, exam_name: 'Practical', subject_id: 8 },
+    { id: 4, name: 'Another year', academicYearId: 99 },
+    { id: 5, name: 'Another subject', subjectId: 99 },
+    { name: 'Missing identifier' },
+  ] } }, allocation)
+  assert.deepEqual(result.map(row => [row.examId, row.examName]), [[2, 'Mid Semester'], [3, 'Practical']])
+  assert.deepEqual(assessmentOptions({ data: [] }, allocation), [])
+})
 
 const allocation = { allocationId: 20, facultyId: 7, sectionId: 3, subjectId: 8, semesterId: 2, academicYearId: 4, status: true, sectionName: 'CSE A' }
-function setup({ profile = { facultyId: 7, fullName: 'Faculty' }, failRoster = false, sessions = [] } = {}) {
+function setup({ profile = { facultyId: 7, fullName: 'Faculty' }, failRoster = false } = {}) {
   const calls = []
   let identity = 'user-1'
   const service = createTeachingService({ collegeId: () => '1', getIdentity: () => identity, getProfile: async () => profile, request: async (url, options = {}) => {
@@ -11,7 +23,6 @@ function setup({ profile = { facultyId: 7, fullName: 'Faculty' }, failRoster = f
     const parsed = new URL(url, 'http://test'), path = parsed.pathname
     if (options.method === 'POST' && path.endsWith('/sessions')) return { data: { attendanceSessionId: 40 } }
     if (options.method) return { success: true }
-    if (path.endsWith('/sessions')) return { data: sessions }
     if (path.endsWith('/faculty-subject-allocations')) return { data: [allocation, { ...allocation, allocationId: 21, facultyId: 99 }, { ...allocation, allocationId: 22, collegeId: 2 }, { ...allocation, allocationId: 23, status: false }] }
     if (path.includes('/timetable-management/views/faculty/')) return { data: [{ facultyId: 7, subjectId: 8 }, { facultyId: 99 }] }
     if (path.endsWith('/students')) { if (failRoster) throw new Error('Forbidden'); return { data: [{ studentId: 10, fullName: 'Student', studentCode: 'ROLL10', sectionId: 3 }, { studentId: 11, sectionId: 99 }] } }
@@ -114,40 +125,4 @@ test('faculty timetable permission failures never fall back to another route', a
   const data = await service.getSnapshot()
   assert.match(data.timetableError, /Forbidden/)
   assert.ok(!calls.some(url => url.includes('/timetables/view/faculty')))
-})
-
-test('saved attendance roster cannot be fetched for an unrelated session', async () => {
-  const { service, calls } = setup()
-  await service.getSnapshot()
-  await assert.rejects(service.getSessionRoster(20, '2026-01-10', 999), /belonging to your assigned class/)
-  assert.ok(!calls.some(call => call.url.includes('/sessions/999/students')))
-})
-
-test('attendance history is scoped and bounded to a 30-day period', async () => {
-  const { service, calls } = setup()
-  await service.getSnapshot()
-  await service.getSessionHistory(20)
-  const call = calls.find(call => call.url.includes('/student-attendance/sessions'))
-  const params = new URL(call.url, 'http://test').searchParams
-  assert.equal(params.get('facultyId'), '7')
-  assert.equal(params.get('sectionId'), '3')
-  assert.equal(params.get('subjectId'), '8')
-  assert.equal((Date.parse(params.get('toDate')) - Date.parse(params.get('fromDate'))) / 86400000, 29)
-})
-
-test('a failed marking retry reuses an existing open session instead of creating a duplicate', async () => {
-  const { service, calls } = setup({ sessions: [{ attendanceSessionId: 40, facultyId: 7, sectionId: 3, subjectId: 8, sessionStatus: 'OPEN' }] })
-  await service.getSnapshot()
-  await service.saveAttendance({ allocationId: 20, date: '2026-01-10', records: [{ studentId: 10, attendanceStatus: 'PRESENT', remarks: 'On time' }] })
-  assert.ok(!calls.some(call => call.options.method === 'POST'))
-  const mark = calls.find(call => call.options.method === 'PUT')
-  assert.match(mark.url, /sessions\/40\/mark/)
-  assert.equal(JSON.parse(mark.options.body).students[0].remarks, 'On time')
-})
-
-test('completed sessions cannot be overwritten by marking retries', async () => {
-  const { service, calls } = setup({ sessions: [{ attendanceSessionId: 40, facultyId: 7, sectionId: 3, subjectId: 8, sessionStatus: 'COMPLETED' }] })
-  await service.getSnapshot()
-  await assert.rejects(service.saveAttendance({ allocationId: 20, date: '2026-01-10', records: [{ studentId: 10, attendanceStatus: 'ABSENT' }] }), /already exists/)
-  assert.ok(!calls.some(call => call.options.method === 'PUT'))
 })

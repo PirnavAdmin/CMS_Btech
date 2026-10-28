@@ -10,6 +10,7 @@ import { facultyNavigation, studentNavigation } from '../../components/portals/p
 import { DataTable, Field, Feedback, MockNotice, PortalDialog, Stats, Status } from '../../components/portals/PortalUI.jsx'
 import StudentDashboard from './StudentDashboard.jsx'
 import TeachingPortal from './TeachingPortal.jsx'
+import FacultyCampusPage from './FacultyCampusPage.jsx'
 import FacultyProfile from './FacultyProfile.jsx'
 import { FacultyAttendancePage } from './FacultyAttendance.jsx'
 import { FacultySelfAttendancePage } from './FacultySelfAttendance.jsx'
@@ -23,6 +24,7 @@ export default function AcademicPortal({ role }) {
   const nav = role === 'faculty' ? facultyNavigation : studentNavigation
   const title = nav.find(([key]) => key === screen)?.[1]
   if (!title) return <Navigate to={`/${role}-portal/dashboard`} replace />
+  if (role === 'faculty' && ['events', 'placements', 'materials'].includes(screen)) return <FacultyCampusPage key={screen} screen={screen} />
   if (role === 'faculty' && screen === 'attendance') return <FacultyAttendancePage />
   if (role === 'faculty' && screen === 'my-attendance') return <FacultySelfAttendancePage />
   if (role === 'faculty' && screen === 'profile') return <PortalLayout title={title}><FacultyProfile /></PortalLayout>
