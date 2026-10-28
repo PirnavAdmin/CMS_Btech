@@ -1652,6 +1652,9 @@ function AdmissionForm() {
   const [step, setStep] = useState(initialStep); const [errors, setErrors] = useToastState({}, 'error'); const [touched, setTouched] = useState({}); const [declared, setDeclared] = useState(false); const [, setToast] = useToastState(null, 'success'); const [pinStatus, setPinStatus] = useState({}); const [confirmSubmit, setConfirmSubmit] = useState(false); const [confirmCancel, setConfirmCancel] = useState(false); const [submitting, setSubmitting] = useState(false); const [savingDraft, setSavingDraft] = useState(false); const [savingStep, setSavingStep] = useState(false); const [feeState, setFeeState] = useState({ loading: false, loaded: false, error: '' })
   const markTouched = (path) => setTouched(current => ({ ...current, [path]: true }))
   const [masters,setMasters]=useState({years:[],courses:[],branches:[],colleges:[],semesters:[]})
+  const [courseBranches, setCourseBranches] = useState([])
+  const [branchLoading, setBranchLoading] = useState(false)
+  const [branchLoadError, setBranchLoadError] = useState('')
   const dataRef = useRef(data)
   useEffect(() => { dataRef.current = data }, [data])
   useEffect(() => { if (!data.application.date) setData(current => ({ ...current, application: { ...current.application, date: new Date().toISOString().slice(0, 10) } })) }, [data.application.date])
@@ -1689,6 +1692,30 @@ function AdmissionForm() {
   }, [data.admission.hostel, data.admission.hostelPreference, data.personal.gender])
   const notify = (message, tone = 'success') => setToast({ message, tone })
   useEffect(()=>{let active=true;Promise.all([academicYearApi.getAll(),courseApi.getAll(),branchApi.getAll(),getColleges(),getSemesters()]).then(([years,courses,branches,collegeResponse,semesterResponse])=>{if(!active)return;const list=response=>{let value=response;for(let depth=0;depth<5&&value&&typeof value==='object';depth+=1){if(Array.isArray(value))return value;const rows=value.items??value.content??value.results??value.records;if(Array.isArray(rows))return rows;value=value.data}return[]};const operationalYears = getOperationalAcademicYearOptions(years);setMasters({years: operationalYears, courses, branches, colleges:list(collegeResponse), semesters:list(semesterResponse)})}).catch(error=>notify(error.message||'Unable to load admission selections.','error'));return()=>{active=false}},[])
+  useEffect(() => {
+    const courseId = data.academic.courseId
+    let active = true
+    setCourseBranches([])
+    setBranchLoadError('')
+    if (!courseId) {
+      setBranchLoading(false)
+      return () => { active = false }
+    }
+
+    setBranchLoading(true)
+    branchApi.getByCourse(courseId)
+      .then(rows => {
+        if (active) setCourseBranches(Array.isArray(rows) ? rows : [])
+      })
+      .catch(error => {
+        if (active) setBranchLoadError(error.message || 'Unable to load branches for this course.')
+      })
+      .finally(() => {
+        if (active) setBranchLoading(false)
+      })
+
+    return () => { active = false }
+  }, [data.academic.courseId])
   useEffect(() => {
     if (step !== 6) return
     let active = true
@@ -1954,7 +1981,9 @@ function AdmissionForm() {
     return { ...opt, code, collegeId:item.collegeId??item.college?.collegeId??item.college?.id }
   }).filter(item=>item.id&&(!selectedCollegeId||!item.collegeId||same(item.collegeId,selectedCollegeId)))
   const collegeCourseIds = new Set(courseOptions.map(item => String(item.id)))
-  const branchOptions=masters.branches.filter(isItemActive).map(item=>{
+  const courseMasterBranches = masters.branches.filter(item => !data.academic.courseId || !item.courseId || same(item.courseId, data.academic.courseId))
+  const branchSource = courseBranches.length ? courseBranches : courseMasterBranches
+  const branchOptions=branchSource.filter(isItemActive).map(item=>{
     const opt = academicOption(item,['branchId','id'],['branchName','name','branchShortName','shortName'])
     const code = item.branchCode || item.code || item.shortName || item.branchShortName || branchCodeFallback(opt.name)
     return { ...opt, code, courseId:item.courseId??item.course?.courseId??item.course?.id, collegeId:item.collegeId??item.college?.collegeId??item.college?.id }
@@ -2018,7 +2047,9 @@ function AdmissionForm() {
   const masterField=(namePath,idPath,label,options,disabled=false,resets=[])=>{
     const id=`sa-${idPath.replaceAll('.','-')}`;
     const masterError = errors[namePath] || ((touched[namePath] || touched[idPath] || read(data, idPath)) ? allErrors[namePath] : '');
-    return <label className={`sa-field ${masterError?'invalid':''}`} htmlFor={id}><span>{label}<b> *</b></span><ProjectSelect id={id} value={read(data,idPath)||''} disabled={disabled} onChange={event=>{markTouched(namePath);markTouched(idPath);const option=options.find(item=>same(item.id,event.target.value));setData(current=>{let next=setPath(current,idPath,event.target.value);if(current.previewEditedFields)next.previewEditedFields={...current.previewEditedFields,[idPath]:true,[namePath]:true};next=setPath(next,namePath,option?.name||'');if(idPath==='academic.courseId')next=setPath(next,'academic.courseCode',option?.code||courseCodeFallback(option?.name));if(idPath==='academic.branchId')next=setPath(next,'academic.branchCode',option?.code||branchCodeFallback(option?.name));resets.forEach(([resetId,resetName])=>{next=setPath(next,resetId,'');next=setPath(next,resetName,'')});return next});setErrors(current=>({...current,[namePath]:''}))}} onBlur={() => { markTouched(namePath); markTouched(idPath) }}><option value="">{disabled?'Select Course first':`Select ${label}`}</option>{options.map(option=><option key={option.id} value={option.id}>{option.name}</option>)}</ProjectSelect>{masterError&&<small role="alert">{masterError}</small>}</label>
+    const branchField = idPath === 'academic.branchId'
+    const placeholder = disabled ? 'Select Course first' : branchField && branchLoading ? 'Loading branches...' : branchField && !options.length ? branchLoadError ? 'Branches unavailable' : 'No branches configured' : `Select ${label}`
+    return <label className={`sa-field ${masterError?'invalid':''}`} htmlFor={id}><span>{label}<b> *</b></span><ProjectSelect id={id} value={read(data,idPath)||''} disabled={disabled || (branchField && branchLoading)} onChange={event=>{markTouched(namePath);markTouched(idPath);const option=options.find(item=>same(item.id,event.target.value));setData(current=>{let next=setPath(current,idPath,event.target.value);if(current.previewEditedFields)next.previewEditedFields={...current.previewEditedFields,[idPath]:true,[namePath]:true};next=setPath(next,namePath,option?.name||'');if(idPath==='academic.courseId')next=setPath(next,'academic.courseCode',option?.code||courseCodeFallback(option?.name));if(idPath==='academic.branchId')next=setPath(next,'academic.branchCode',option?.code||branchCodeFallback(option?.name));resets.forEach(([resetId,resetName])=>{next=setPath(next,resetId,'');next=setPath(next,resetName,'')});return next});setErrors(current=>({...current,[namePath]:''}))}} onBlur={() => { markTouched(namePath); markTouched(idPath) }}><option value="">{placeholder}</option>{options.map(option=><option key={option.id} value={option.id}>{option.name}{option.code ? ` (${option.code})` : ''}</option>)}</ProjectSelect>{branchField && !branchLoading && !options.length && <small role={branchLoadError?'alert':'status'}>{branchLoadError || 'Ask an administrator to add an active branch under this course.'}</small>}{masterError&&<small role="alert">{masterError}</small>}</label>
   }
   const screens = [
     <Section key="identity" title="Student Identity" icon={FiUser} hint="Core identity and government identification details"><PhotoUpload data={data} update={update} notify={notify} />{field('personal.firstName','First Name')}{field('personal.middleName','Middle Name')}{field('personal.lastName','Last Name')}{field('personal.gender','Gender',['Female','Male','Non-binary'])}{field('personal.dob','Date of Birth',null,'date')}{field('personal.bloodGroup','Blood Group',['A+','A-','B+','B-','AB+','AB-','O+','O-'])}{field('personal.nationality','Nationality')}{field('personal.aadhaar','Aadhaar Number')}</Section>,
