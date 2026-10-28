@@ -45,3 +45,16 @@ test('SuperAdmin can select colleges despite a college in the login response', (
     assert.equal(selectedCollegeId(), '8')
   } finally { delete globalThis.window; delete globalThis.localStorage }
 })
+
+test('non-teaching role aliases open the canonical staff workspace', () => {
+  globalThis.window = { localStorage: storage(), sessionStorage: storage() }
+  try {
+    for (const role of ['staff', 'Non-Teaching', 'Non-Teaching Staff', 'NonTeachingStaff']) {
+      signIn(role, 'opaque-token', '')
+      assert.equal(getUserRole(), 'staff')
+    }
+
+    window.sessionStorage.setItem('btech-user-role', 'non_teaching_staff')
+    assert.equal(getUserRole(), 'staff')
+  } finally { delete globalThis.window }
+})
