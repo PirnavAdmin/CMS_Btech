@@ -2,7 +2,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useParams, useSearchParams } from 'react-router-dom'
 import {
   FiAlertCircle, FiArrowDown, FiArrowRight, FiCheck, FiCheckCircle, FiDownload,
-  FiEdit2, FiFileText, FiGrid, FiSearch, FiTrash2, FiUpload, FiX,
+  FiBookOpen, FiBriefcase, FiCalendar, FiChevronLeft, FiChevronRight, FiClock, FiEdit2, FiFileText, FiFilter, FiGrid,
+  FiLogIn, FiLogOut, FiMapPin, FiSearch, FiSend, FiTrash2, FiUpload, FiUsers, FiX,
 } from 'react-icons/fi'
 import PortalLayout from '../../layouts/PortalLayout.jsx'
 import { PortalDialog, Status } from '../../components/portals/PortalUI.jsx'
@@ -18,6 +19,23 @@ const safeText = value => String(value ?? '')
 const studentPageSize = 5
 const routes = Object.values(facultyRouteByPath)
 const titleFor = screen => routes.find(route => route.screen === screen)?.title || 'Faculty workspace'
+
+function calculateWorkedDuration(checkInTime, checkOutTime) {
+  const toMinutes = value => {
+    const match = String(value || '').match(/^(\d{1,2}):(\d{2})\s*(AM|PM)$/i)
+    if (!match) return null
+    const [, hourText, minuteText, meridiem] = match
+    const hour = Number(hourText) % 12 + (meridiem.toUpperCase() === 'PM' ? 12 : 0)
+    return hour * 60 + Number(minuteText)
+  }
+
+  const start = toMinutes(checkInTime)
+  const end = toMinutes(checkOutTime)
+  if (start === null || end === null) return ''
+
+  const elapsedMinutes = (end - start + 24 * 60) % (24 * 60)
+  return `${Math.floor(elapsedMinutes / 60)}h ${elapsedMinutes % 60}m`
+}
 
 function downloadFixtureDetails(record) {
   const contents = [
@@ -198,15 +216,17 @@ function StudentsScreen({ data, searchParams, setSearchParams }) {
     { key: 'status', label: 'Status', render: row => <Status>{row.status}</Status> },
   ]
   return <>
-    <FeatureHeading eyebrow="CLASS DIRECTORY" title="My Students" subtitle="Browse and support students in your teaching sections." />
-    <section className="fw-student-overview" aria-label="Student overview">
-      {[
-        ['Students found', filtered.length, 'Matching current filters', 'is-primary'],
-        ['Active enrollment', activeStudents, 'Currently active students', ''],
-        ['Attendance watch', attendanceWatch, 'Below 75% attendance', attendanceWatch ? 'is-warning' : ''],
-        ['Average CGPA', averageCgpa, 'Across matched students', ''],
-      ].map(([label, value, detail, tone]) => <article key={label} className={tone}><span>{label}</span><strong>{value}</strong><small>{detail}</small></article>)}
-    </section>
+    <div className="fw-student-topbar">
+      <FeatureHeading eyebrow="CLASS DIRECTORY" title="My Students" subtitle="Browse and support students in your teaching sections." />
+      <section className="fw-student-overview" aria-label="Student overview">
+        {[
+          ['Students found', filtered.length, 'Matching current filters', 'is-primary'],
+          ['Active enrollment', activeStudents, 'Currently active students', ''],
+          ['Attendance watch', attendanceWatch, 'Below 75% attendance', attendanceWatch ? 'is-warning' : ''],
+          ['Average CGPA', averageCgpa, 'Across matched students', ''],
+        ].map(([label, value, detail, tone]) => <article key={label} className={tone}><span>{label}</span><strong>{value}</strong><small>{detail}</small></article>)}
+      </section>
+    </div>
     <section className="fw-card fw-student-directory-card">
       <div className="fw-student-directory-heading"><div><h2>Student directory</h2><p>Filter the roster or open a student profile for more details.</p></div><span>{filtered.length} of {data.students.length} students</span></div>
       <div className="fw-student-directory-toolbar">
@@ -278,50 +298,91 @@ function SubjectsScreen({ data }) {
 function TimetableScreen({ data }) {
   const [mode, setMode] = useState('Week')
   const [day, setDay] = useState(new Intl.DateTimeFormat('en-US', { weekday: 'long' }).format(new Date()))
+  const [search, setSearch] = useState('')
   const weekdays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
-  const entries = mode === 'Day' ? data.weekly.filter(row => row.day === day) : data.weekly
+  const todayName = new Intl.DateTimeFormat('en-US', { weekday: 'long' }).format(new Date())
+  const dayEntries = mode === 'Day' ? data.weekly.filter(row => row.day === day) : data.weekly
+  const normalizedSearch = search.trim().toLowerCase()
+  const entries = dayEntries.filter(row => !normalizedSearch || [row.day, row.startTime, row.endTime, row.subjectCode, row.subjectName, row.sectionName, row.room, row.type].some(value => String(value || '').toLowerCase().includes(normalizedSearch)))
   const todayRows = data.today
   const teachingDays = new Set(data.weekly.map(row => row.day)).size
   const assignedSections = new Set(data.weekly.map(row => row.sectionId || row.sectionName).filter(Boolean)).size
-  return <>
-    <FeatureHeading eyebrow="TEACHING SCHEDULE" title="My Timetable" subtitle="Plan your week and jump directly into attendance." actions={<button className="fw-button" onClick={() => window.print()}><FiFileText /> Print timetable</button>} />
-    <section className="fw-timetable-overview" aria-label="Weekly schedule overview">
-      {[
-        ['Classes this week', data.weekly.length, 'Across your teaching schedule'],
-        ['Teaching days', teachingDays, 'Days with scheduled classes'],
-        ["Today's classes", todayRows.length, 'Classes scheduled for today'],
-        ['Assigned sections', assignedSections, 'Sections on your timetable'],
-      ].map(([label, value, detail], index) => <article key={label} className={index === 0 ? 'is-primary' : ''}><span>{label}</span><strong>{value}</strong><small>{detail}</small></article>)}
-    </section>
-    <section className="fw-card">
-      <div className="fw-card-heading"><div><h2>Class schedule</h2><p>Rooms and sections are shown on each class.</p></div><Tabs items={['Week', 'Day', 'Agenda']} value={mode} onChange={setMode} /></div>
-      {mode === 'Day' && <div className="fw-day-picker">{weekdays.map(name => <button key={name} className={day === name ? 'is-active' : ''} onClick={() => setDay(name)}>{name.slice(0, 3)}</button>)}</div>}
-      {mode === 'Week' ? <div className="fw-week-grid">{weekdays.map(weekday => {
-        const dayEntries = data.weekly.filter(row => row.day === weekday)
-        return <section key={weekday} className={dayEntries.length ? '' : 'is-empty'}>
-          <header className="fw-weekday-heading"><h3>{weekday}</h3><span>{dayEntries.length} {dayEntries.length === 1 ? 'class' : 'classes'}</span></header>
-          {dayEntries.length ? <div className="fw-weekday-classes">{dayEntries.map(row => <TimetableCard key={row.id} row={row} />)}</div> : <p className="fw-weekday-empty">No classes scheduled</p>}
-        </section>
-      })}</div>
-        : <div className="fw-agenda">{entries.length ? entries.map(row => <TimetableCard key={row.id} row={row} />) : <FacultyEmptyState title={`No classes on ${day}`} />}</div>}
-    </section>
-    {todayRows.length > 0 && <section className="fw-card"><div className="fw-card-heading"><div><p className="fw-eyebrow">TODAY AT A GLANCE</p><h2>Today's teaching blocks</h2></div></div><div className="fw-agenda">{todayRows.map(row => <TimetableCard key={row.id} row={row} />)}</div></section>}
-  </>
-}
 
-function TimetableCard({ row }) {
-  const subjectKey = row.subjectId || row.subjectCode || ''
-  const colorIndex = [...subjectKey].reduce((total, character) => total + character.charCodeAt(0), 0) % 4
-  return <article className={`fw-timetable-item subject-color-${colorIndex}${row.isNow ? ' is-now' : ''}${row.isNext ? ' is-next' : ''}`}>
-    <div className="fw-timetable-item__time"><span className="fw-timetable-time">{row.slotTime || `${row.startTime}–${row.endTime}`}</span>{row.isNow && <span className="fw-timetable-state">In progress</span>}{row.isNext && <span className="fw-timetable-state">Up next</span>}</div>
-    <div className="fw-timetable-item__details"><strong>{row.subjectName}</strong><small><span>{row.sectionName}</span><span>{row.room || 'Room to be confirmed'}</span></small><span className="fw-subject-code">{row.subjectCode} · {row.type}</span></div>
-    <Link to="/faculty-portal/attendance" aria-label={`Mark attendance for ${row.subjectName}`}><FiCheckCircle /><span>Attendance</span><FiArrowRight aria-hidden="true" /></Link>
-  </article>
+  return <>
+    <div className="fw-timetable-topbar">
+      <FeatureHeading eyebrow="TEACHING SCHEDULE" title="My Timetable" subtitle="Plan your week and jump directly into attendance." />
+      <section className="fw-timetable-overview" aria-label="Weekly schedule overview">
+        {[
+          ['Classes this week', data.weekly.length, 'Across your teaching schedule'],
+          ['Teaching days', teachingDays, 'Days with scheduled classes'],
+          ["Today's classes", todayRows.length, 'Classes scheduled for today'],
+          ['Assigned sections', assignedSections, 'Sections on your timetable'],
+        ].map(([label, value, detail], index) => <article key={label} className={index === 0 ? 'is-primary' : ''}><span>{label}</span><strong>{value}</strong><small>{detail}</small></article>)}
+      </section>
+    </div>
+    <section className="fw-card">
+      <div className="fw-card-heading fw-timetable-schedule-heading">
+        <div>
+          <p className="fw-eyebrow">CLASS PLANNER</p>
+          <h2>Class schedule</h2>
+          <p>Rooms and sections are shown on each class.</p>
+        </div>
+        <div className="fw-timetable-schedule-actions">
+          <button type="button" className="fw-button" onClick={() => window.print()}><FiFileText /> Print timetable</button>
+          <Tabs items={['Week', 'Day']} value={mode} onChange={setMode} />
+        </div>
+      </div>
+      <div className="fw-timetable-filterbar">
+        <label className="fw-search fw-timetable-search"><FiSearch /><input aria-label="Search classes" value={search} onChange={event => setSearch(event.target.value)} placeholder="Search subject, section or room" /></label>
+        <span className="fw-timetable-results">{entries.length} {entries.length === 1 ? 'class' : 'classes'}</span>
+      </div>
+      {mode === 'Day' && <div className="fw-day-picker">{weekdays.map(name => <button key={name} className={day === name ? 'is-active' : ''} onClick={() => setDay(name)}>{name.slice(0, 3)}</button>)}</div>}
+      {entries.length ? (
+        <div className="fw-timetable-table-scroll">
+          <table className={`fw-timetable-table${mode === 'Day' ? ' is-day-mode' : ''}`}>
+            <caption>Faculty classes with schedule, subject, section, room, and attendance links</caption>
+            <thead>
+              <tr>
+                {mode !== 'Day' && <th scope="col">Day</th>}
+                <th scope="col">Time</th>
+                <th scope="col">Subject</th>
+                <th scope="col">Section</th>
+                <th scope="col">Room</th>
+                <th scope="col">Class type</th>
+                <th scope="col">Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              {entries.map(row => {
+                const subjectKey = row.subjectId || row.subjectCode || ''
+                const colorIndex = [...subjectKey].reduce((total, character) => total + character.charCodeAt(0), 0) % 4
+                return <tr key={row.id} className={`subject-color-${colorIndex}${row.isNow ? ' is-now' : ''}${row.isNext ? ' is-next' : ''}`}>
+                  {mode !== 'Day' && <td><span className={`fw-schedule-day${row.day === todayName ? ' is-today' : ''}`}>{row.day}{row.day === todayName && <small>Today</small>}</span></td>}
+                  <td><div className="fw-schedule-time-cell"><span className="fw-schedule-time">{row.slotTime || `${row.startTime}–${row.endTime}`}</span>{(row.isNow || row.isNext) && <span className={`fw-schedule-state${row.isNow ? ' is-current' : ''}`}>{row.isNow ? 'In progress' : 'Up next'}</span>}</div></td>
+                  <td><div className="fw-schedule-subject"><strong>{row.subjectName}</strong><small>{row.subjectCode}</small></div></td>
+                  <td><span className="fw-schedule-metadata"><FiUsers aria-hidden="true" /><span>{row.sectionName}</span></span></td>
+                  <td><span className="fw-schedule-metadata"><FiMapPin aria-hidden="true" /><span>{row.room || 'Room to be confirmed'}</span></span></td>
+                  <td><span className="fw-schedule-type">{row.type}</span></td>
+                  <td><Link className="fw-schedule-attendance" to="/faculty-portal/attendance" aria-label={`Mark attendance for ${row.subjectName}`}><FiCheckCircle aria-hidden="true" /><span>Attendance</span><FiArrowRight aria-hidden="true" /></Link></td>
+                </tr>
+              })}
+            </tbody>
+          </table>
+        </div>
+      ) : <FacultyEmptyState
+        title={normalizedSearch ? 'No matching classes' : mode === 'Day' ? `No classes on ${day}` : 'No classes scheduled this week'}
+        description={normalizedSearch ? `No classes match "${search.trim()}". Try another subject, section or room.` : 'There are no scheduled teaching sessions for this view.'}
+        actionLabel={normalizedSearch ? 'Clear search' : undefined}
+        onAction={normalizedSearch ? () => setSearch('') : undefined}
+      />}
+    </section>
+  </>
 }
 
 function MyAttendanceSummary({ data }) {
   const attendance = data.myAttendance
   const dailyLog = attendance.dailyLog || []
+  const latestLog = dailyLog[dailyLog.length - 1]
   const [monthName, yearText] = String(attendance.currentMonth).split(' ')
   const monthIndex = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'].indexOf(monthName)
   const calendarYear = Number(yearText) || new Date().getFullYear()
@@ -330,31 +391,80 @@ function MyAttendanceSummary({ data }) {
   const daysInMonth = new Date(calendarYear, calendarMonth + 1, 0).getDate()
   const entriesByDay = new Map(dailyLog.map(row => [Number(row.date.slice(-2)), row]))
   const attendancePercentage = Math.min(100, Math.max(0, Number(attendance.attendancePercentage) || 0))
-  const metrics = [
-    ['Working days', attendance.workingDays, 'Scheduled this month'],
-    ['Present', attendance.presentDays, 'Days attended'],
-    ['On leave', attendance.onLeaveDays, 'Approved leave days'],
-    ['Late arrivals', attendance.lateArrivals, 'Recorded check-ins'],
+  const latestDate = latestLog?.date ? new Date(`${latestLog.date}T12:00:00`) : null
+  const shiftDateLabel = latestDate && !Number.isNaN(latestDate.getTime())
+    ? new Intl.DateTimeFormat('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }).format(latestDate)
+    : 'No attendance recorded'
+  const hasCheckIn = Boolean(latestLog?.inTime && !['—', '-'].includes(latestLog.inTime))
+  const hasCheckOut = Boolean(latestLog?.outTime && !['—', '-'].includes(latestLog.outTime))
+  const [checkedIn, setCheckedIn] = useState(hasCheckIn)
+  const [checkedOut, setCheckedOut] = useState(hasCheckOut)
+  const [checkInTime, setCheckInTime] = useState(hasCheckIn ? latestLog.inTime : '')
+  const [checkOutTime, setCheckOutTime] = useState(hasCheckOut ? latestLog.outTime : '')
+  const [workedDuration, setWorkedDuration] = useState(() => hasCheckOut ? calculateWorkedDuration(latestLog.inTime, latestLog.outTime) : '')
+  const formatPunchTime = () => new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true })
+  const checkOut = () => {
+    const time = formatPunchTime()
+    setCheckOutTime(time)
+    setWorkedDuration(calculateWorkedDuration(checkInTime, time))
+    setCheckedOut(true)
+  }
+  const summaryCards = [
+    { label: 'Present', value: attendance.presentDays ?? 0, detail: 'Regular working days', tone: 'present', Icon: FiCheckCircle },
+    { label: 'Late arrival', value: attendance.lateArrivals ?? 0, detail: 'Recorded late check-ins', tone: 'late', Icon: FiClock },
+    { label: 'Absent', value: Math.max(0, Number(attendance.workingDays || 0) - Number(attendance.presentDays || 0) - Number(attendance.onLeaveDays || 0)), detail: 'Unrecorded absences', tone: 'absent', Icon: FiAlertCircle },
+    { label: 'Approved leave', value: attendance.onLeaveDays ?? 0, detail: 'Approved leave days', tone: 'leave', Icon: FiCalendar },
   ]
   const calendarDays = Array.from({ length: daysInMonth }, (_, index) => index + 1)
 
   return <>
-    <section className="fw-card fw-attendance-summary">
-      <div className="fw-card-heading">
-        <div><p className="fw-eyebrow">MONTHLY OVERVIEW</p><h2>{attendance.currentMonth}</h2><p>Your attendance at a glance</p></div>
-        <span className="fw-attendance-record-count">{dailyLog.length} daily records</span>
-      </div>
-      <div className="fw-attendance-overview">
-        <div><span>Attendance rate</span><strong>{attendancePercentage.toFixed(1)}<small>%</small></strong><p>{attendance.presentDays} of {attendance.workingDays} working days attended</p></div>
-        <div className="fw-attendance-progress" role="progressbar" aria-label="Monthly attendance rate" aria-valuemin="0" aria-valuemax="100" aria-valuenow={attendancePercentage}>
-          <span style={{ width: `${attendancePercentage}%` }} />
+    <div className="fw-my-attendance-summary">
+      <div className="fw-attendance-page-topbar">
+        <FeatureHeading eyebrow="PERSONAL ATTENDANCE" title="My Attendance" subtitle="Review your punch-in records, track work hours, inspect the monthly calendar, and monitor attendance percentages." />
+        <div className="fw-personal-attendance-stats" aria-label={`${attendance.currentMonth} attendance summary`}>
+          {summaryCards.map(({ label, value, detail, tone, Icon }) => <article key={label} className={`is-${tone}`}>
+            <span className="fw-personal-attendance-stat-icon"><Icon aria-hidden="true" /></span>
+            <span className="fw-personal-attendance-stat-copy"><span>{label}</span><strong>{value}</strong><small>{detail}</small></span>
+          </article>)}
         </div>
       </div>
-      <div className="fw-leave-balance-grid fw-attendance-metrics">{metrics.map(([label, value, detail]) => <article key={label}><span>{label}</span><strong>{value ?? '—'}</strong><small>{detail}</small></article>)}</div>
-    </section>
+      <section className="fw-card fw-attendance-today" aria-label="Recent shift attendance">
+        <div className="fw-attendance-today__main">
+          <span className="fw-attendance-today__badge"><FiClock aria-hidden="true" /> Today's shift</span>
+          <h2>{shiftDateLabel}</h2>
+          <p><FiMapPin aria-hidden="true" /> Faculty attendance record{latestLog?.remark ? ` · ${latestLog.remark}` : ''}</p>
+        </div>
+        <div className="fw-attendance-today__right">
+          <div className="fw-punch-status-box">
+            <span>Check-in status</span>
+            <strong>{checkedIn ? `Checked In · ${checkInTime}` : 'Not checked in'}</strong>
+            {checkedOut && <small>Checked Out · {checkOutTime}</small>}
+          </div>
+          {checkedOut && workedDuration && <span className="fw-worked-hours-pill" aria-live="polite"><FiClock aria-hidden="true" /> Worked: {workedDuration}</span>}
+          <div className="fw-attendance-punch-actions">
+            <button className="fw-punch-check-in" type="button" disabled={checkedIn} onClick={() => { setCheckedIn(true); setCheckInTime(formatPunchTime()) }}>
+              <FiLogIn aria-hidden="true" /> {checkedIn ? 'Checked In' : 'Check In'}
+            </button>
+            <button className="fw-punch-check-out" type="button" disabled={!checkedIn || checkedOut} onClick={checkOut}>
+              <FiLogOut aria-hidden="true" /> {checkedOut ? 'Checked Out' : 'Check Out'}
+            </button>
+          </div>
+        </div>
+      </section>
+      <div className="fw-attendance-month-toolbar">
+        <div className="fw-attendance-month-controls">
+          <button type="button" aria-label="Previous month" disabled><FiChevronLeft aria-hidden="true" /></button>
+          <select value={attendance.currentMonth} aria-label="Selected attendance month" disabled>
+            <option value={attendance.currentMonth}>{attendance.currentMonth}</option>
+          </select>
+          <button type="button" aria-label="Next month" disabled><FiChevronRight aria-hidden="true" /></button>
+        </div>
+        <div className="fw-attendance-month-rate"><FiUsers aria-hidden="true" /><span>{attendance.currentMonth} attendance:</span><strong>{attendancePercentage.toFixed(1)}%</strong></div>
+      </div>
+    </div>
 
     <section className="fw-card fw-attendance-calendar-card">
-      <div className="fw-card-heading"><div><h2>Attendance calendar</h2><p>Daily status for {attendance.currentMonth}</p></div>
+      <div className="fw-card-heading"><div><h2>Monthly attendance calendar</h2><p>Color-coded daily status for {attendance.currentMonth}</p></div>
         <div className="fw-attendance-legend" aria-label="Calendar legend"><span><i className="is-present" />Present</span><span><i className="is-leave" />Leave</span><span><i className="is-holiday" />Holiday</span></div>
       </div>
       <div className="fw-calendar-grid" role="group" aria-label={`${attendance.currentMonth} attendance calendar`}>
@@ -378,10 +488,7 @@ function MyAttendanceSummary({ data }) {
 }
 
 function MyAttendanceScreen({ data }) {
-  return <>
-    <FeatureHeading eyebrow="PERSONAL ATTENDANCE" title="My Attendance" subtitle="Review your faculty attendance summary and daily records." />
-    <MyAttendanceSummary data={data} />
-  </>
+  return <MyAttendanceSummary data={data} />
 }
 
 export function AttendanceScreen({ data, action }) {
@@ -580,7 +687,8 @@ function MarksScreen({ data, action }) {
     setTimeout(() => URL.revokeObjectURL(url), 1000)
   }
   return <>
-    <FeatureHeading eyebrow="ASSESSMENT WORKSPACE" title="Marks Entry" subtitle="Enter, review and report assessment marks for your assigned classes." actions={<><button className="fw-button" onClick={() => setBulkOpen(!bulkOpen)}><FiUpload /> Bulk upload</button><button className="fw-button" onClick={() => setReport(!report)}><FiGrid /> {report ? 'Hide report' : 'Subject report'}</button></>} />
+    <div className="fw-marks-topbar">
+    <FeatureHeading eyebrow="ASSESSMENT WORKSPACE" title="Marks Entry" subtitle="Enter, review and report assessment marks for your assigned classes." />
     <section className="fw-marks-overview" aria-label="Assessment overview">
       {[
         ['Assessment', assessment?.name || 'No assessment selected', `${assessment?.subjectCode || '—'} · ${assessment?.sectionName || '—'}`, 'is-primary'],
@@ -589,8 +697,10 @@ function MarksScreen({ data, action }) {
         ['Class average', average, assessment ? `Out of ${assessment.maxMarks}` : 'No maximum marks set', ''],
       ].map(([label, value, detail, tone]) => <article key={label} className={tone}><span>{label}</span><strong>{value}</strong><small>{detail}</small></article>)}
     </section>
+    </div>
     <section className="fw-card">
       <div className="fw-toolbar"><label className="fw-field"><span>Exam / assessment</span><select value={assessmentId} onChange={event => { setAssessmentId(event.target.value); setValues({}); setAbsent({}) }}>{data.assessments.map(row => <option key={row.id} value={row.id}>{row.name}</option>)}</select></label>{assessment && <div className="fw-assessment-meta"><span>{assessment.subjectCode} · {assessment.sectionName}</span><span>Max marks: {assessment.maxMarks}</span><Status>{assessment.status}</Status></div>}</div>
+      <div className="fw-marks-actions"><button className="fw-button" onClick={() => setBulkOpen(!bulkOpen)}><FiUpload /> Bulk upload</button><button className="fw-button" onClick={() => setReport(!report)}><FiGrid /> {report ? 'Hide report' : 'Subject report'}</button></div>
       {assessment?.status === 'Rejected' && <p className="fw-remark-banner"><FiAlertCircle /> {assessment.remarks}</p>}
       <div className="fw-footer-actions"><span>{locked ? 'Approved marks are locked' : `Enter a score from 0 to ${assessment?.maxMarks}. Tab/Enter advances the grid.`}</span><button className="fw-button" disabled={locked} onClick={() => setEditModal(true)}><FiEdit2 /> Request edit</button></div>
       <div className="fw-table-scroll"><table className="fw-table fw-marks-table"><thead><tr><th>Roll number</th><th>Student</th><th>Marks / {assessment?.maxMarks}</th><th>Absent</th></tr></thead><tbody>{marks.map(({ student, value }) => <tr key={student.id}><td>{student.rollNumber}</td><td>{student.name}</td><td><input aria-label={`Marks for ${student.name}`} type="number" min="0" max={assessment?.maxMarks} value={value} disabled={locked || isAbsent(student.id)} className={value !== '' && !validateMarks(value, assessment?.maxMarks) ? 'has-error' : ''} onKeyDown={event => { if (event.key === 'Enter') { event.preventDefault(); event.currentTarget.closest('tr')?.nextElementSibling?.querySelector('input[type="number"]')?.focus() } }} onChange={event => setValues(current => ({ ...current, [student.id]: event.target.value }))} /></td><td><input type="checkbox" aria-label={`${student.name} absent`} checked={isAbsent(student.id)} disabled={locked} onChange={event => setAbsent(current => ({ ...current, [student.id]: event.target.checked }))} /></td></tr>)}</tbody></table></div>
@@ -649,6 +759,7 @@ function MaterialsScreen({ data, action }) {
   const [search, setSearch] = useState('')
   const [subject, setSubject] = useState('')
   const [type, setType] = useState('')
+  const [filtersOpen, setFiltersOpen] = useState(false)
   const [uploadOpen, setUploadOpen] = useState(false)
   const [title, setTitle] = useState('')
   const [file, setFile] = useState(null)
@@ -668,6 +779,30 @@ function MaterialsScreen({ data, action }) {
   const materialSubjects = new Set(filtered.map(row => row.subjectId)).size
   const materialSections = new Set(filtered.flatMap(row => row.visibleSections || [])).size
   const materialDownloads = filtered.reduce((total, row) => total + (Number(row.downloadsCount) || 0), 0)
+  const activeFilterCount = Number(!!subject) + Number(!!type)
+  const exportMaterials = () => {
+    const values = [
+      ['Material', 'File', 'Subject', 'Unit', 'Type', 'Visible to', 'Downloads'],
+      ...filtered.map(row => [
+        row.title,
+        row.fileName,
+        row.subjectName,
+        row.unitTitle || (row.unit ? 'Unit ' + row.unit : 'Course resource'),
+        row.type,
+        (row.visibleSections || []).map(id => data.allocations.find(item => item.sectionId === id)?.sectionName || id).join('; '),
+        Number(row.downloadsCount) || 0,
+      ]),
+    ]
+    const csv = values.map(columns => columns.map(value => '"' + String(value ?? '').replaceAll('"', '""') + '"').join(',')).join('\r\n')
+    const url = URL.createObjectURL(new Blob(['\uFEFF', csv], { type: 'text/csv;charset=utf-8' }))
+    const anchor = document.createElement('a')
+    anchor.href = url
+    anchor.download = 'faculty-study-materials.csv'
+    document.body.appendChild(anchor)
+    anchor.click()
+    anchor.remove()
+    window.setTimeout(() => URL.revokeObjectURL(url), 1000)
+  }
   const selectUploadFile = candidate => {
     setFile(candidate || null)
     setFileError(candidate && !allowedFile(candidate) ? 'Choose a supported file smaller than 10 MB.' : '')
@@ -721,17 +856,53 @@ function MaterialsScreen({ data, action }) {
       setEditError('The material could not be updated. Retry the save.')
     }
   }
-  return <><FeatureHeading eyebrow="LEARNING RESOURCES" title="Study Materials" subtitle="Organize and share teaching resources with your assigned classes." actions={<button className="fw-button fw-button-primary" onClick={() => setUploadOpen(true)}><FiUpload /> Upload material</button>} />
+  return <><div className="fw-material-topbar">
+    <FeatureHeading eyebrow="LEARNING RESOURCES" title="Study Materials" subtitle="Organize and share teaching resources with your assigned classes." />
     <section className="fw-material-overview" aria-label="Study material overview">
       {[
-        ['Resources shown', filtered.length, 'Matches the current filters'],
-        ['Subjects covered', materialSubjects, 'With shared learning resources'],
-        ['Sections reached', materialSections, 'Assigned class sections'],
-        ['Total downloads', materialDownloads, 'Across the displayed resources'],
-      ].map(([label, value, detail], index) => <article key={label} className={index === 0 ? 'is-primary' : ''}><span>{label}</span><strong>{value}</strong><small>{detail}</small></article>)}
+        ['Resources shown', filtered.length, 'Matches the current filters', FiFileText],
+        ['Subjects covered', materialSubjects, 'With shared learning resources', FiBookOpen],
+        ['Sections reached', materialSections, 'Assigned class sections', FiGrid],
+        ['Total downloads', materialDownloads, 'Across the displayed resources', FiDownload],
+      ].map(([label, value, detail, Icon], index) => <article key={label} className={index === 0 ? 'is-primary' : ''}><span className="fw-material-stat-label"><Icon aria-hidden="true" /><span>{label}</span></span><strong>{value}</strong><small>{detail}</small></article>)}
     </section>
-    <section className="fw-card"><div className="fw-toolbar"><label className="fw-search"><FiSearch /><input value={search} onChange={event => setSearch(event.target.value)} placeholder="Search material, unit or subject" /></label><label className="fw-field"><span>Subject</span><select value={subject} onChange={event => setSubject(event.target.value)}><option value="">All subjects</option>{data.allocations.map(row => <option key={row.id} value={row.subjectId}>{row.subjectCode} · {row.subjectName}</option>)}</select></label><label className="fw-field"><span>Type</span><select value={type} onChange={event => setType(event.target.value)}><option value="">All types</option>{[...new Set(rows.map(row => row.type))].map(item => <option key={item}>{item}</option>)}</select></label></div>
-      <FeatureTable columns={[{ key: 'title', label: 'Material' }, { key: 'subjectName', label: 'Subject' }, { key: 'unitTitle', label: 'Unit' }, { key: 'type', label: 'Type' }, { key: 'visibleSections', label: 'Visible to', render: row => row.visibleSections.map(id => data.allocations.find(item => item.sectionId === id)?.sectionName || id).join(', ') }, { key: 'downloadsCount', label: 'Downloads' }, { key: 'actions', label: 'Actions', render: row => <div className="fw-inline-actions"><button className="fw-icon-button" aria-label={`View ${row.title}`} onClick={() => setViewMaterial(row)}><FiFileText /></button><button className="fw-icon-button" aria-label={`Edit ${row.title}`} onClick={() => beginEdit(row)}><FiEdit2 /></button><button className="fw-icon-button" aria-label={`Delete ${row.title}`} onClick={async () => { if (!window.confirm(`Delete ${row.title}?`)) return; const ok = await action(() => facultyService.deleteStudyMaterial(row.id), 'Material removed.'); if (ok) setRows(current => current.filter(item => item.id !== row.id)) }}><FiTrash2 /></button></div> }]} rows={filtered} empty="No materials match your search" />
+  </div>
+    <section className="fw-card fw-material-library-card">
+      <header className="fw-material-library-heading">
+        <div><p className="fw-eyebrow">RESOURCE LIBRARY</p><h2>Your teaching resources</h2><p>Find a file, check its class visibility, and manage sharing from one place.</p></div>
+        <div className="fw-material-library-actions">
+          <button type="button" className="fw-button fw-material-filter-button" aria-expanded={filtersOpen} aria-controls="study-material-filters" onClick={() => setFiltersOpen(open => !open)}><FiFilter /> Filters{activeFilterCount > 0 && <span className="fw-material-filter-count">{activeFilterCount}</span>}</button>
+          <button type="button" className="fw-button fw-material-export-button" onClick={exportMaterials} disabled={!filtered.length}><FiDownload /> Export CSV</button>
+          <button type="button" className="fw-button fw-button-primary fw-material-upload-button" onClick={() => setUploadOpen(true)}><FiUpload /> Upload material</button>
+        </div>
+      </header>
+      <div className="fw-toolbar fw-material-toolbar">
+        <label className="fw-search"><FiSearch /><input aria-label="Search study materials" value={search} onChange={event => setSearch(event.target.value)} placeholder="Search material, unit or subject" /></label>
+        <div className="fw-material-filter-controls" id="study-material-filters" hidden={!filtersOpen}>
+          <label className="fw-field"><span>Subject</span><select value={subject} onChange={event => setSubject(event.target.value)}><option value="">All subjects</option>{[...new Map(data.allocations.map(row => [row.subjectId, row])).values()].map(row => <option key={row.subjectId} value={row.subjectId}>{row.subjectCode} · {row.subjectName}</option>)}</select></label>
+          <label className="fw-field"><span>Type</span><select value={type} onChange={event => setType(event.target.value)}><option value="">All types</option>{[...new Set(rows.map(row => row.type))].map(item => <option key={item}>{item}</option>)}</select></label>
+        </div>
+      </div>
+      {(search || subject || type) && <div className="fw-material-filter-status"><span>{Number(!!search) + Number(!!subject) + Number(!!type)} active filter{Number(!!search) + Number(!!subject) + Number(!!type) === 1 ? "" : "s"}</span><button type="button" onClick={() => { setSearch(""); setSubject(""); setType("") }}>Clear all filters</button></div>}
+      <div className="fw-material-table-scroll">
+        {filtered.length ? <table className="fw-material-table">
+          <caption>Study materials shared with assigned class sections</caption>
+          <thead><tr><th scope="col">Material</th><th scope="col">Subject and unit</th><th scope="col">Shared with</th><th scope="col">Actions</th></tr></thead>
+          <tbody>{filtered.map(row => {
+            const sectionNames = (row.visibleSections || []).map(id => data.allocations.find(item => item.sectionId === id)?.sectionName || id)
+            return <tr key={row.id}>
+              <td><div className="fw-material-table-file"><span className="fw-material-file-icon" aria-hidden="true"><FiFileText /></span><div className="fw-material-table-file-content"><strong title={row.title}>{row.title}</strong><div className="fw-material-file-meta"><span className="fw-material-type">{row.type || 'File'}</span><span title={row.fileName}>{row.fileName || 'Material file'}</span>{row.fileSize && <span>{row.fileSize}</span>}</div></div></div></td>
+              <td><div className="fw-material-table-subject"><strong>{row.subjectCode || row.subjectName}</strong><span>{row.subjectCode ? row.subjectName : ''}</span><small>{row.unitTitle || (row.unit ? 'Unit ' + row.unit : 'Course resource')}</small></div></td>
+              <td><div className="fw-material-sections fw-material-table-sections">{sectionNames.length ? <div>{sectionNames.slice(0, 3).map((name, index) => <span key={row.id + '-section-' + index}>{name}</span>)}{sectionNames.length > 3 && <span>+{sectionNames.length - 3} more</span>}</div> : <small>No sections assigned</small>}</div></td>
+              <td><div className="fw-material-actions" aria-label={'Actions for ' + row.title}>
+                <button type="button" className="fw-icon-button" aria-label={'View ' + row.title} title="View details" onClick={() => setViewMaterial(row)}><FiFileText /></button>
+                <button type="button" className="fw-icon-button" aria-label={'Edit ' + row.title} title="Edit resource" onClick={() => beginEdit(row)}><FiEdit2 /></button>
+                <button type="button" className="fw-icon-button" aria-label={'Delete ' + row.title} title="Delete resource" onClick={async () => { if (!window.confirm('Delete ' + row.title + '?')) return; const ok = await action(() => facultyService.deleteStudyMaterial(row.id), 'Material removed.'); if (ok) setRows(current => current.filter(item => item.id !== row.id)) }}><FiTrash2 /></button>
+              </div></td>
+            </tr>
+          })}</tbody>
+        </table> : <FacultyEmptyState title="No materials found" description={search || subject || type ? 'Try another search or clear one of the filters.' : 'Upload your first teaching resource to share it with your assigned classes.'} />}
+      </div>
     </section>
     {uploadOpen && <PortalDialog title="Upload study material" onClose={() => setUploadOpen(false)}><form className="fw-form" onSubmit={upload}><label className="fw-field"><span>Material title</span><input required value={title} onChange={event => setTitle(event.target.value)} /></label><label className="fw-field"><span>Subject</span><select value={uploadSubject} onChange={event => { setUploadSubject(event.target.value); setVisibleSections(data.allocations.filter(row => row.subjectId === event.target.value).map(row => row.sectionId)) }}>{[...new Map(data.allocations.map(row => [row.subjectId, row])).values()].map(row => <option key={row.subjectId} value={row.subjectId}>{row.subjectCode} · {row.subjectName}</option>)}</select></label><label className="fw-file-drop"><FiUpload /><span>{file?.name || 'Choose a PDF, office document or ZIP (max 10 MB)'}</span><input type="file" accept=".pdf,.ppt,.pptx,.doc,.docx,.xls,.xlsx,.zip" onChange={event => selectUploadFile(event.target.files?.[0])} /></label>{fileError && <p className="fw-risk-text" role="alert">{fileError}</p>}<label className="fw-field"><span>Visible sections</span><select multiple value={visibleSections} onChange={event => setVisibleSections([...event.target.selectedOptions].map(option => option.value))}>{uploadAllocations.map(row => <option key={row.sectionId} value={row.sectionId}>{row.sectionName}</option>)}</select></label>{uploadProgress > 0 && <label className="fw-field"><span>Reading file locally · {uploadProgress}%</span><progress max="100" value={uploadProgress} /></label>}<p className="fw-muted">The selected file is read locally for preview; only fixture metadata is saved.</p><div className="fw-dialog-actions"><button className="fw-button fw-button-primary" disabled={!file || !!fileError || !visibleSections.length || !title.trim()}>Upload</button></div></form></PortalDialog>}
     {viewMaterial && <PortalDialog title={viewMaterial.title} onClose={() => setViewMaterial(null)}><DetailPairs rows={[['Subject', viewMaterial.subjectName], ['Unit', viewMaterial.unitTitle], ['Type', viewMaterial.type], ['File', viewMaterial.fileName], ['File size', viewMaterial.fileSize], ['Downloads', viewMaterial.downloadsCount], ['Sections', viewMaterial.visibleSections.map(id => data.allocations.find(item => item.sectionId === id)?.sectionName || id).join(', ') || 'None']]} /><p className="fw-muted">Original file content is not included in local fixture data. Download a metadata preview instead.</p><button className="fw-button" onClick={() => downloadFixtureDetails(viewMaterial)}><FiDownload /> Download fixture details</button></PortalDialog>}
@@ -743,6 +914,7 @@ function LeaveScreen({ data, action }) {
   const [form, setForm] = useState({ leaveType: 'Casual Leave (CL)', fromDate: '', toDate: '', reason: '', isHalfDay: false, attachmentName: '' })
   const [attachmentError, setAttachmentError] = useState('')
   const [history, setHistory] = useState(data.history)
+  const [historyStatus, setHistoryStatus] = useState('All')
   const overlap = hasLeaveOverlap(form.fromDate, form.toDate, history)
   const days = calculateLeaveDays(form.fromDate, form.toDate, form.isHalfDay)
   const balance = data.balances.find(row => row.type === form.leaveType)
@@ -750,30 +922,102 @@ function LeaveScreen({ data, action }) {
   const pendingRequests = history.filter(row => row.status === 'Pending').length
   const approvedRequests = history.filter(row => row.status === 'Approved')
   const approvedDays = approvedRequests.reduce((total, row) => total + (Number(row.daysCount) || 0), 0)
+  const visibleHistory = historyStatus === 'All' ? history : history.filter(row => row.status === historyStatus)
+  const knownHistoryStatuses = ['Pending', 'Approved', 'Rejected', 'Cancelled']
+  const historyStatuses = ['All', ...knownHistoryStatuses, ...new Set(history.map(row => row.status).filter(status => !knownHistoryStatuses.includes(status)))]
+  const displayDate = value => value ? new Date(`${value}T00:00:00`).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' }) : ''
   const submit = async event => {
     event.preventDefault()
     if (!days || overlap || exceedsBalance || attachmentError) return
     const created = await action(() => facultyService.applyLeave({ ...form, daysCount: days }), 'Leave request submitted to local preview.')
     if (created) {
       setHistory(current => [created, ...current])
+      setHistoryStatus('All')
       setForm(current => ({ ...current, fromDate: '', toDate: '', reason: '' }))
     }
   }
-  return <><FeatureHeading eyebrow="TIME OFF" title="Leave Management" subtitle="Review your balance and manage leave requests." />
+  const metrics = [
+    ['Leave categories', data.balances.length, 'Balances available to you', FiBriefcase],
+    ['Pending requests', pendingRequests, 'Awaiting a decision', FiClock],
+    ['Approved days', approvedDays, 'Across approved requests', FiCheckCircle],
+    ['Request history', history.length, 'Submitted leave requests', FiFileText],
+  ]
+  return <><div className="fw-leave-topbar">
+    <FeatureHeading eyebrow="TIME OFF" title="Leave Management" subtitle="Review your balance and manage leave requests." />
     <section className="fw-leave-overview" aria-label="Leave request overview">
-      {[
-        ['Leave categories', data.balances.length, 'Balances available to you'],
-        ['Pending requests', pendingRequests, 'Awaiting a decision'],
-        ['Approved days', approvedDays, 'Across approved requests'],
-        ['Request history', history.length, 'Submitted leave requests'],
-      ].map(([label, value, detail], index) => <article key={label} className={index === 1 && pendingRequests ? 'is-warning' : index === 0 ? 'is-primary' : ''}><span>{label}</span><strong>{value}</strong><small>{detail}</small></article>)}
+      {metrics.map(([label, value, detail, Icon], index) => <article key={label} className={index === 1 && pendingRequests ? 'is-warning' : index === 0 ? 'is-primary' : ''}><span className="fw-leave-stat-label"><Icon aria-hidden="true" />{label}</span><strong>{value}</strong><small>{detail}</small></article>)}
     </section>
-    <section className="fw-leave-balance-grid">{data.balances.map(row => <article key={row.code}><span>{row.code} · {row.type}</span><strong>{row.available}<small> / {row.totalAllocated} available</small></strong><progress max={row.totalAllocated} value={row.available} /></article>)}</section>
-    <div className="fw-two-column"><section className="fw-card"><div className="fw-card-heading"><h2>Apply for leave</h2></div><form className="fw-form" onSubmit={submit}><label className="fw-field"><span>Leave type</span><select value={form.leaveType} onChange={event => setForm({ ...form, leaveType: event.target.value })}>{data.balances.map(row => <option key={row.code}>{row.type}</option>)}</select></label><div className="fw-form-row"><label className="fw-field"><span>From</span><input required type="date" value={form.fromDate} onChange={event => setForm({ ...form, fromDate: event.target.value })} /></label><label className="fw-field"><span>To</span><input required type="date" value={form.toDate} min={form.fromDate} onChange={event => setForm({ ...form, toDate: event.target.value })} /></label></div><label className="fw-checkbox"><input type="checkbox" checked={form.isHalfDay} onChange={event => setForm({ ...form, isHalfDay: event.target.checked })} /> Half-day</label><p className="fw-muted">Calculated duration: {days || '—'} working day(s)</p>{form.isHalfDay && form.fromDate !== form.toDate && form.toDate && <p className="fw-risk-text" role="alert">Half-day leave must be for a single date.</p>}{overlap && <p className="fw-risk-text" role="alert">Dates overlap with an existing leave request.</p>}{exceedsBalance && <p className="fw-risk-text" role="alert">Requested duration exceeds your {balance?.code} balance of {balance?.available} day(s).</p>}<label className="fw-field"><span>Reason</span><textarea required minLength="10" rows="3" value={form.reason} onChange={event => setForm({ ...form, reason: event.target.value })} /></label><label className="fw-field"><span>Supporting document (optional)</span><input type="file" accept=".pdf,.jpg,.jpeg,.png" onChange={event => { const file = event.target.files?.[0]; const valid = !file || (file.size <= 10 * 1024 * 1024 && /\.(pdf|jpe?g|png)$/i.test(file.name)); setAttachmentError(valid ? '' : 'Choose a PDF or image smaller than 10 MB.'); if (valid) setForm({ ...form, attachmentName: file?.name || '' }) }} /></label>{attachmentError && <p className="fw-risk-text" role="alert">{attachmentError}</p>}{form.attachmentName && <small className="fw-muted">{form.attachmentName} · local preview only</small>}<button className="fw-button fw-button-primary" disabled={overlap || exceedsBalance || !days || !!attachmentError}>Submit request</button></form></section>
-      <section className="fw-card"><div className="fw-card-heading"><h2>Request history</h2></div><div className="fw-timeline">{history.map(row => <article key={row.id}><i /><div><strong>{row.leaveType} · {row.daysCount} day(s)</strong><small>{row.fromDate} — {row.toDate} · Applied {row.appliedOn}</small><Status>{row.status}</Status>{row.approvalRemarks && <p>{row.approvalRemarks}</p>}</div>{row.status === 'Pending' && <button className="fw-icon-button" aria-label="Cancel pending leave" onClick={async () => { if (!window.confirm('Cancel this pending leave request?')) return; const ok = await action(() => facultyService.cancelLeave(row.id), 'Pending leave cancelled.'); if (ok) setHistory(current => current.filter(item => item.id !== row.id)) }}><FiX /></button>}</article>)}</div></section></div>
+  </div>
+
+    <section className="fw-leave-balances" aria-label="Available leave balances">
+      <header className="fw-leave-section-heading"><div><p className="fw-eyebrow">YOUR ALLOWANCE</p><h2>Leave balance</h2><p>Track the days available in each leave category.</p></div><span>{data.balances.length} categories</span></header>
+      <div className="fw-leave-balance-cards">
+        {data.balances.map(row => {
+          const total = Number(row.totalAllocated) || 0
+          const available = Number(row.available) || 0
+          const used = Math.max(0, total - available)
+          const remainingPercent = total > 0 ? Math.max(0, Math.min(100, Math.round(available / total * 100))) : 0
+          return <article className="fw-leave-balance-card" key={row.code}>
+            <div className="fw-leave-balance-card-heading"><span className="fw-leave-category-icon"><FiBriefcase aria-hidden="true" /></span><span className="fw-leave-category-code">{row.code}</span></div>
+            <p className="fw-leave-category-name">{row.type}</p>
+            <div className="fw-leave-balance-amount"><strong>{available}</strong><span><b>days available</b><small>of {total} allocated</small></span></div>
+            <div className="fw-leave-balance-progress" role="progressbar" aria-label={`${row.type} days remaining`} aria-valuemin="0" aria-valuemax={total} aria-valuenow={available}><span style={{ width: `${remainingPercent}%` }} /></div>
+            <footer><span>{used} used</span><span>{remainingPercent}% remaining</span></footer>
+          </article>
+        })}
+      </div>
+    </section>
+
+    <div className="fw-leave-workspace fw-two-column">
+      <section className="fw-card fw-leave-application">
+        <header className="fw-leave-panel-heading"><span className="fw-leave-panel-icon"><FiCalendar aria-hidden="true" /></span><div><p className="fw-eyebrow">NEW REQUEST</p><h2>Apply for leave</h2><p>Choose dates and share a short reason for your request.</p></div></header>
+        <form className="fw-form" onSubmit={submit}>
+          <label className="fw-field"><span>Leave category</span><select value={form.leaveType} onChange={event => setForm(current => ({ ...current, leaveType: event.target.value }))}>{data.balances.map(row => <option key={row.code}>{row.type}</option>)}</select></label>
+          <div className="fw-form-row fw-leave-date-fields">
+            <label className="fw-field"><span>Start date</span><input required type="date" value={form.fromDate} onChange={event => setForm(current => ({ ...current, fromDate: event.target.value }))} /></label>
+            <label className="fw-field"><span>End date</span><input required type="date" value={form.toDate} min={form.fromDate || undefined} onChange={event => setForm(current => ({ ...current, toDate: event.target.value }))} /></label>
+          </div>
+          <label className="fw-checkbox fw-leave-half-day"><input type="checkbox" checked={form.isHalfDay} onChange={event => setForm(current => ({ ...current, isHalfDay: event.target.checked }))} /><span><strong>Half-day leave</strong><small>Use this for a single date only.</small></span></label>
+
+          <div className="fw-leave-request-summary" aria-live="polite">
+            <span className="fw-leave-request-summary-icon"><FiClock aria-hidden="true" /></span>
+            <div><span>Estimated duration</span><strong>{days || '—'} <small>working day{days === 1 ? '' : 's'}</small></strong><p>{form.fromDate && form.toDate ? `${displayDate(form.fromDate)} – ${displayDate(form.toDate)}` : 'Select a date range to calculate your request.'}</p></div>
+            <div className="fw-leave-request-summary-balance"><span>Selected balance</span><strong>{balance?.available ?? 0} <small>days left</small></strong><p>{balance?.code || 'Leave'} balance</p></div>
+          </div>
+
+          {form.isHalfDay && form.fromDate !== form.toDate && form.toDate && <p className="fw-risk-text" role="alert">Half-day leave must be for a single date.</p>}
+          {overlap && <p className="fw-risk-text" role="alert">Dates overlap with an existing leave request.</p>}
+          {exceedsBalance && <p className="fw-risk-text" role="alert">Requested duration exceeds your {balance?.code} balance of {balance?.available} day(s).</p>}
+
+          <label className="fw-field"><span>Reason for leave</span><textarea required minLength="10" rows="3" value={form.reason} onChange={event => setForm(current => ({ ...current, reason: event.target.value }))} placeholder="Share any details that will help your request be reviewed." /></label>
+          <label className="fw-field fw-leave-attachment-field"><span>Supporting document <small>Optional · PDF or image up to 10 MB</small></span><span className="fw-leave-attachment-control"><FiFileText aria-hidden="true" /><span>{form.attachmentName || 'Choose a file to attach'}</span><input type="file" accept=".pdf,.jpg,.jpeg,.png" aria-label="Supporting document" onChange={event => { const file = event.target.files?.[0]; const valid = !file || (file.size <= 10 * 1024 * 1024 && /\.(pdf|jpe?g|png)$/i.test(file.name)); setAttachmentError(valid ? '' : 'Choose a PDF or image smaller than 10 MB.'); if (valid) setForm(current => ({ ...current, attachmentName: file?.name || '' })) }} /></span></label>
+          {attachmentError && <p className="fw-risk-text" role="alert">{attachmentError}</p>}
+          {form.attachmentName && <small className="fw-muted">{form.attachmentName} · local preview only</small>}
+          <div className="fw-leave-form-footer"><span>Requests are checked against your balance and existing leave dates.</span><button className="fw-button fw-button-primary" disabled={overlap || exceedsBalance || !days || form.reason.trim().length < 10 || !!attachmentError}><FiSend aria-hidden="true" /> Submit request</button></div>
+        </form>
+      </section>
+
+      <section className="fw-card fw-leave-history">
+        <header className="fw-leave-panel-heading fw-leave-history-heading"><span className="fw-leave-panel-icon"><FiFileText aria-hidden="true" /></span><div><p className="fw-eyebrow">YOUR ACTIVITY</p><h2>Request history</h2><p>Review the status and details of your leave requests.</p></div></header>
+        <div className="fw-leave-history-filters" role="group" aria-label="Filter leave requests by status">
+          {historyStatuses.map(status => {
+            const count = status === 'All' ? history.length : history.filter(row => row.status === status).length
+            return <button type="button" key={status} className={historyStatus === status ? 'is-active' : ''} aria-pressed={historyStatus === status} onClick={() => setHistoryStatus(status)}>{status}<span>{count}</span></button>
+          })}
+        </div>
+        <div className="fw-leave-request-list">
+          {visibleHistory.length ? visibleHistory.map(row => <article className="fw-leave-request-row" key={row.id}>
+            <div className="fw-leave-request-topline"><div><span className="fw-leave-request-type-icon"><FiCalendar aria-hidden="true" /></span><div><h3>{row.leaveType}</h3><p>{row.daysCount} day{Number(row.daysCount) === 1 ? '' : 's'} requested</p></div></div><Status>{row.status}</Status></div>
+            <p className="fw-leave-request-dates">{displayDate(row.fromDate)} <span>to</span> {displayDate(row.toDate)}</p>
+            <small className="fw-leave-request-applied">Submitted {displayDate(row.appliedOn)}</small>
+            {row.approvalRemarks && <p className="fw-leave-request-remarks">{row.approvalRemarks}</p>}
+            {row.status === 'Pending' && <button type="button" className="fw-leave-cancel-button" aria-label={`Cancel pending leave request for ${row.fromDate} to ${row.toDate}`} onClick={async () => { if (!window.confirm('Cancel this pending leave request?')) return; const ok = await action(() => facultyService.cancelLeave(row.id), 'Pending leave cancelled.'); if (ok) setHistory(current => current.filter(item => item.id !== row.id)) }}><FiX aria-hidden="true" /> Cancel request</button>}
+          </article>) : <FacultyEmptyState title={`No ${historyStatus.toLowerCase()} requests`} description={historyStatus === 'All' ? 'Your submitted leave requests will appear here.' : `There are no ${historyStatus.toLowerCase()} leave requests to show.`} />}
+        </div>
+      </section>
+    </div>
   </>
 }
-
 function DocumentsScreen({ data, action }) {
   const [rows, setRows] = useState(data)
   const [fileError, setFileError] = useState('')
