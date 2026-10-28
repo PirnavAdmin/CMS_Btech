@@ -9,7 +9,6 @@ import {
   FiUsers,
 } from 'react-icons/fi'
 import PortalLayout from '../../../../layouts/PortalLayout.jsx'
-import FacultyBreadcrumbs from '../../components/FacultyBreadcrumbs.jsx'
 import FacultyCardSkeleton from '../../components/FacultyCardSkeleton.jsx'
 import FacultyEmptyState from '../../components/FacultyEmptyState.jsx'
 import { facultyService } from '../../services/facultyService.js'
@@ -140,7 +139,6 @@ export default function FacultyDashboardPage() {
   const { snapshot, loading, error, retry } = useFacultyDashboard(facultyService)
   return <PortalLayout title="Dashboard">
     <main className="portal-page faculty-dashboard-page">
-      <FacultyBreadcrumbs crumbs={[{ label: 'Dashboard' }]} />
       <header className="faculty-dashboard-heading">
         <div><p className="portal-eyebrow">DIGITAL CAMPUS / TEACHING FACULTY</p><h1>Dashboard</h1><p>Your teaching schedule, assigned classes and daily academic work.</p></div>
         <span className="faculty-dashboard-live"><i />Mock college records</span>

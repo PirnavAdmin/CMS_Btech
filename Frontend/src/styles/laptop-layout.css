@@ -1,0 +1,328 @@
+﻿/* Shared laptop sizing for administration and role portal screens. */
+@media (min-width: 901px) and (max-width: 1440px) {
+  #root .dashboard-layout:not(.portal-shell) {
+    --sidebar-width: clamp(216px, 18vw, 248px);
+  }
+
+  #root .dashboard-layout:not(.portal-shell) .sidebar:not(.is-collapsed) {
+    width: var(--sidebar-width);
+  }
+
+  #root .dashboard-layout:not(.portal-shell) > main {
+    width: calc(100% - var(--sidebar-width));
+    max-width: calc(100vw - var(--sidebar-width));
+    margin-left: var(--sidebar-width);
+    box-sizing: border-box;
+  }
+
+  #root .dashboard-layout.sidebar-collapsed:not(.portal-shell) > main {
+    width: calc(100% - 72px);
+    max-width: calc(100vw - 72px);
+    margin-left: 72px;
+  }
+
+  #root .dashboard-layout:not(.portal-shell) .dashboard-header {
+    left: var(--sidebar-width);
+    padding-inline: clamp(14px, 1.8vw, 26px);
+  }
+
+  #root .dashboard-layout.sidebar-collapsed:not(.portal-shell) .dashboard-header {
+    left: 72px;
+  }
+
+  #root .dashboard-layout:not(.portal-shell) .sidebar-brand {
+    gap: 8px;
+    padding-inline: 8px;
+  }
+
+  #root .dashboard-layout:not(.portal-shell) .sidebar nav > a,
+  #root .dashboard-layout:not(.portal-shell) .sidebar .sidebar-group summary {
+    min-height: 40px;
+    gap: 9px;
+    padding: 8px 10px;
+    font-size: 12px;
+  }
+
+  #root .dashboard-layout:not(.portal-shell) .page-content {
+    min-width: 0;
+    padding: 16px clamp(14px, 1.6vw, 24px) 28px;
+  }
+
+  #root .dashboard-layout:not(.portal-shell) .page-content > *,
+  #root .dashboard-layout:not(.portal-shell) .page-content :is(
+    .erp-page, .college-management, .department-management, .semester-management,
+    .section-management, .student-admission, .student-profile, .student-promotion,
+    .profile-page, .settings-page, .cm-page
+  ) {
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  #root .portal-shell {
+    --sidebar-width: clamp(248px, 19.4vw, 300px);
+  }
+
+  #root .portal-shell .sidebar:not(.is-collapsed),
+  #root .portal-shell .portal-content {
+    width: auto;
+  }
+
+  #root .portal-shell .sidebar:not(.is-collapsed) {
+    width: var(--sidebar-width);
+  }
+
+  #root .portal-shell .portal-content {
+    margin-left: var(--sidebar-width);
+  }
+
+  #root .portal-shell .dashboard-header {
+    left: var(--sidebar-width);
+  }
+
+  #root .portal-shell.sidebar-collapsed .portal-content {
+    margin-left: 76px;
+  }
+
+  #root .portal-shell.sidebar-collapsed .dashboard-header {
+    left: 76px;
+  }
+
+  #root .portal-shell .portal-workspace {
+    padding-inline: clamp(24px, 2.5vw, 36px);
+  }
+
+  #root .portal-shell .sidebar:not(.is-collapsed) .sidebar-brand {
+    min-height: 82px;
+    grid-template-columns: 56px minmax(0, 1fr) 32px;
+    gap: 8px;
+    padding: 10px;
+  }
+
+  #root .portal-shell .sidebar:not(.is-collapsed) .sidebar-brand__mark {
+    width: 56px;
+    height: 56px;
+  }
+
+  #root .portal-shell .sidebar:not(.is-collapsed) .sidebar-brand__copy strong {
+    font-size: 14px;
+  }
+
+  #root .portal-shell .sidebar:not(.is-collapsed) .sidebar-brand__subtitle {
+    font-size: 10px;
+    letter-spacing: .06em;
+  }
+
+  #root .portal-shell .sidebar-navigation {
+    padding: 10px 12px 20px;
+  }
+
+  #root .portal-shell .sidebar-link {
+    min-height: 46px;
+    margin-bottom: 5px;
+    padding: 10px 12px;
+    font-size: 14px;
+  }
+
+  #root .portal-shell .sidebar-link svg {
+    width: 21px;
+    height: 21px;
+  }
+
+  #root .portal-shell .dashboard-header > .global-search {
+    flex: 1 1 180px;
+    min-width: 140px;
+    max-width: 500px;
+  }
+
+  #root .page-content :is(
+    .table-container, .table-wrapper, .table-scroll, .table-wrap,
+    .cm-table-wrap, .department-table-wrap, .semester-table-wrapper,
+    .section-table-wrap, .section-table-wrapper, .course-table-scroll,
+    .branch-table-scroll, .sa-table-wrap, .sp-table-wrap, .erp-table-wrap,
+    .sm-table-wrap, .rooms-table-wrap, [class*="table-scroll"],
+    [class*="table-wrapper"], [class*="table-wrap"]
+  ) {
+    min-width: 0;
+    max-width: 100%;
+    overflow-x: auto;
+    overscroll-behavior-inline: contain;
+  }
+
+  #root .page-content :is(
+    .erp-page-header, .erp-page-heading, .module-heading, .fs-header,
+    .p-header, .sp-heading, .profile-heading, .management-page__heading,
+    .cm-header, .semester-page-header, .section-page-header, .ay > header,
+    .page-heading, .page-header, .faculty-page-header
+  ) {
+    min-width: 0;
+    flex-wrap: wrap;
+    gap: 12px 18px;
+  }
+
+  #root .page-content :is(
+    .erp-page-actions, .header-actions, .cm-header-actions, .toolbar-actions,
+    .page-actions, .management-actions, .section-header-actions,
+    .filter-bar, .filter-panel, .filter-toolbar, .directory-toolbar,
+    .table-toolbar, .management-toolbar, .module-toolbar
+  ) {
+    min-width: 0;
+    flex-wrap: wrap;
+    gap: 8px 10px;
+  }
+
+  #root .page-content :is(
+    .dashboard-kpis, .module-stats, .p-stats, .semester-stats,
+    .section-stats, .branch-summary, .course-summary, .faculty-summary-grid,
+    .student-summary-grid, .metrics-grid, .stats-grid, .kpi-grid
+  ) {
+    grid-template-columns: repeat(auto-fit, minmax(min(210px, 100%), 1fr));
+  }
+
+  #root .page-content :is(
+    .form-grid, .module-form, .fs-grid, .profile-edit-grid,
+    .semester-form-grid, .section-form-grid, .course-form-grid,
+    .branch-form-grid, .academic-form-grid, .student-admission-grid,
+    .fee-form-grid, .edit-form-grid
+  ) {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+  }
+
+  #root .page-content :is(input, select, textarea, button) {
+    max-width: 100%;
+  }
+
+  #root .page-content :is(
+    .table-actions, .action-group, .table-actions-group, .cm-actions,
+    .row-actions, .course-actions, .branch-actions, .semester-row-actions,
+    .section-actions, .sa-icon-actions
+  ) {
+    flex-wrap: wrap;
+    white-space: normal;
+  }
+
+  #root .page-content :is(
+    .modal, .modal-content, .dialog, .dialog-content, .cm-modal-card,
+    .ac-dialog, .portal-dialog, .fw-drawer
+  ) {
+    max-height: min(88dvh, 760px);
+    overflow: auto;
+  }
+}
+
+@media (min-width: 901px) and (max-width: 1180px) {
+  #root .dashboard-layout:not(.portal-shell) .dashboard-header {
+    gap: 8px;
+  }
+
+  #root .dashboard-layout:not(.portal-shell) .dashboard-header > .global-search {
+    flex: 1 1 150px;
+    min-width: 130px;
+    max-width: 240px;
+  }
+
+  #root .dashboard-layout:not(.portal-shell) .dashboard-header__context {
+    min-width: 0;
+    flex: 0 1 170px;
+  }
+
+  #root .dashboard-layout:not(.portal-shell) .dashboard-header__actions {
+    gap: 6px;
+  }
+
+  #root .portal-shell .dashboard-header > .global-search {
+    flex-basis: 150px;
+    min-width: 120px;
+  }
+
+  #root .portal-shell .faculty-dashboard-metrics {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  #root .portal-shell .faculty-dashboard-lower,
+  #root .page-content :is(
+    .profile-columns, .profile-content-grid, .details-layout,
+    .dashboard-content-grid, .management-content-grid, .module-content-grid
+  ) {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  #root .page-content :is(.page-actions, .erp-page-actions, .header-actions, .cm-header-actions) {
+    justify-content: flex-start;
+  }
+}
+
+@media (min-width: 901px) and (max-height: 820px) {
+  #root .dashboard-layout:not(.portal-shell) > main {
+    padding-top: 60px;
+  }
+
+  #root .dashboard-layout:not(.portal-shell) .dashboard-header {
+    height: 60px;
+    min-height: 60px;
+  }
+
+  #root .dashboard-layout:not(.portal-shell) .page-content {
+    padding-top: 12px;
+    padding-bottom: 20px;
+  }
+
+  #root .page-content :is(
+    .erp-page, .college-management, .department-management, .semester-management,
+    .section-management, .student-admission, .student-profile, .student-promotion,
+    .profile-page, .settings-page
+  ) {
+    gap: 12px;
+  }
+
+  #root .portal-shell .portal-workspace {
+    padding-top: 18px;
+    padding-bottom: 28px;
+  }
+
+  #root .portal-shell .portal-workspace > .app-breadcrumb {
+    margin-bottom: 16px;
+  }
+
+  #root .portal-shell .faculty-dashboard {
+    gap: 16px;
+  }
+
+  #root .portal-shell .faculty-dashboard-welcome {
+    min-height: 210px;
+    padding: 28px;
+  }
+
+  #root .portal-shell .faculty-dashboard-metric {
+    min-height: 136px;
+  }
+
+  #root .portal-shell .fw-page {
+    gap: 17px;
+  }
+}
+
+@media (min-width: 901px) and (max-width: 1100px) and (max-height: 820px) {
+  #root .dashboard-layout:not(.portal-shell) .sidebar nav > a,
+  #root .dashboard-layout:not(.portal-shell) .sidebar .sidebar-group summary {
+    min-height: 37px;
+    padding-block: 7px;
+    font-size: 11px;
+  }
+
+  #root .page-content :is(
+    .dashboard-kpis, .module-stats, .p-stats, .semester-stats,
+    .section-stats, .branch-summary, .course-summary, .faculty-summary-grid,
+    .student-summary-grid, .metrics-grid, .stats-grid, .kpi-grid
+  ) {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #root .dashboard-layout:not(.portal-shell) *,
+  #root .portal-shell * {
+    scroll-behavior: auto !important;
+    transition-duration: .01ms !important;
+  }
+}

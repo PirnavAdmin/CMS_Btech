@@ -1320,3 +1320,1353 @@
     transition-duration: 0.01ms !important;
   }
 }
+
+/* Clearer hierarchy and roomier controls across faculty workspace screens. */
+#root .portal-shell .fw-page {
+  gap: 24px;
+}
+
+#root .portal-shell .fw-page > .faculty-breadcrumbs {
+  margin: 0 0 4px;
+  font-size: 14px;
+}
+
+#root .portal-shell .fw-heading {
+  align-items: flex-end;
+  gap: 24px;
+  margin: 0 0 2px;
+}
+
+#root .portal-shell .fw-heading h1 {
+  margin: 7px 0 8px;
+  font-size: clamp(34px, 2.4vw, 46px);
+  line-height: 1.1;
+  letter-spacing: -.045em;
+}
+
+#root .portal-shell .fw-heading > div:first-child > p:last-child {
+  max-width: 760px;
+  color: var(--text-secondary);
+  font-size: 15px;
+  line-height: 1.55;
+}
+
+#root .portal-shell .fw-page .portal-eyebrow,
+#root .portal-shell .fw-eyebrow {
+  font-size: 11px !important;
+  letter-spacing: .12em;
+}
+
+#root .portal-shell .fw-card,
+#root .portal-shell .fw-workload-card,
+#root .portal-shell .fw-profile-hero,
+#root .portal-shell .fw-leave-balance-grid article {
+  padding: 24px;
+  border-color: color-mix(in srgb, var(--border) 82%, var(--brand));
+  border-radius: 18px;
+  box-shadow: 0 8px 26px rgb(22 50 83 / 6%);
+}
+
+#root .portal-shell .fw-card h2 {
+  font-size: 18px;
+}
+
+#root .portal-shell .fw-card-heading {
+  margin-bottom: 18px;
+}
+
+#root .portal-shell .fw-card-heading > div > p,
+#root .portal-shell .fw-card-heading > p {
+  font-size: 13px;
+}
+
+#root .portal-shell .fw-toolbar {
+  align-items: end;
+  gap: 12px;
+  margin-bottom: 18px;
+}
+
+#root .portal-shell .fw-search,
+#root .portal-shell .fw-field :is(input, select, textarea) {
+  min-height: 52px;
+  border-color: var(--border);
+  border-radius: 10px;
+  background: var(--surface);
+  color: var(--text-primary);
+  font-size: 14px;
+}
+
+#root .portal-shell .fw-search {
+  padding-inline: 13px;
+}
+
+#root .portal-shell .fw-search input {
+  font-size: 14px;
+}
+
+#root .portal-shell .fw-field {
+  gap: 7px;
+  color: var(--text-secondary);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+#root .portal-shell .fw-button,
+#root .portal-shell .fw-pager button {
+  min-height: 46px;
+  padding-inline: 17px;
+  border-radius: 11px;
+  font-size: 14px;
+  transition: transform .16s ease, box-shadow .16s ease, background-color .16s ease;
+}
+
+#root .portal-shell .fw-button:hover:not(:disabled),
+#root .portal-shell .fw-pager button:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 5px 14px rgb(18 64 110 / 12%);
+}
+
+#root .portal-shell .fw-button-primary {
+  box-shadow: 0 7px 16px color-mix(in srgb, var(--brand) 20%, transparent);
+}
+
+#root .portal-shell .fw-table-scroll {
+  overflow: auto;
+  border: 1px solid var(--border);
+  border-radius: 13px;
+  background: var(--surface);
+}
+
+#root .portal-shell .fw-table {
+  min-width: 720px;
+  font-size: 15px;
+}
+
+#root .portal-shell .fw-table th {
+  height: 64px;
+  padding: 16px 18px;
+  background: linear-gradient(100deg, #174f83, #123d6b);
+  color: #fff;
+  font-size: 13px;
+  letter-spacing: .07em;
+}
+
+#root .portal-shell .fw-table td {
+  padding: 16px 18px;
+  color: var(--text-secondary);
+  font-size: 15px;
+  line-height: 1.5;
+}
+
+#root .portal-shell .fw-table tbody tr:nth-child(even) {
+  background: color-mix(in srgb, var(--surface-soft) 70%, var(--surface));
+}
+
+#root .portal-shell .fw-table tbody tr:hover {
+  background: var(--brand-soft);
+}
+
+#root .portal-shell .fw-sort {
+  color: #fff;
+  font-size: 11px;
+}
+
+#root .portal-shell .fw-link-button {
+  color: var(--brand);
+  font-size: 13px;
+  font-weight: 750;
+}
+
+#root .portal-shell .fw-summary-line,
+#root .portal-shell .fw-pager {
+  gap: 12px;
+  color: var(--text-muted);
+  font-size: 13px;
+}
+
+#root .portal-shell .fw-chip {
+  min-height: 30px;
+  padding: 5px 10px;
+  border-color: color-mix(in srgb, var(--brand) 18%, var(--border));
+  border-radius: 999px;
+  background: var(--brand-soft);
+  font-size: 12px;
+}
+
+#root .portal-shell .fw-tabs {
+  gap: 5px;
+  padding: 5px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface-soft);
+}
+
+#root .portal-shell .fw-tabs button {
+  min-height: 36px;
+  padding-inline: 13px;
+  border-radius: 9px;
+  font-size: 12px;
+}
+
+#root .portal-shell .fw-tabs button.is-active {
+  background: var(--surface);
+  color: var(--brand);
+  box-shadow: 0 2px 8px rgb(19 49 79 / 10%);
+}
+
+#root .portal-shell .fw-subject-card {
+  padding: 20px;
+  border-radius: 14px;
+  transition: transform .18s ease, border-color .18s ease, box-shadow .18s ease;
+}
+
+#root .portal-shell .fw-subject-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 26px rgb(22 50 83 / 9%);
+}
+
+#root .portal-shell .fw-drawer {
+  width: min(720px, 94vw);
+  padding: clamp(18px, 3vw, 30px);
+  box-shadow: -18px 0 48px rgb(8 26 48 / 18%);
+}
+
+#root .portal-shell .fw-drawer > header h2 {
+  font-size: 24px;
+  letter-spacing: -.03em;
+}
+
+#root .portal-shell .fw-detail-pairs > div {
+  padding: 14px;
+  border-radius: 11px;
+}
+
+@media (max-width: 900px) {
+  #root .portal-shell .fw-heading {
+    align-items: flex-start;
+  }
+
+  #root .portal-shell .fw-toolbar {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  #root .portal-shell .fw-search {
+    grid-column: 1 / -1;
+    width: 100%;
+  }
+}
+
+@media (max-width: 640px) {
+  #root .portal-shell .fw-page {
+    gap: 17px;
+  }
+
+  #root .portal-shell .fw-heading {
+    gap: 12px;
+  }
+
+  #root .portal-shell .fw-heading h1 {
+    font-size: 31px;
+  }
+
+  #root .portal-shell .fw-heading > div:first-child > p:last-child {
+    font-size: 14px;
+  }
+
+  #root .portal-shell .fw-heading-actions,
+  #root .portal-shell .fw-heading-actions > * {
+    width: 100%;
+  }
+
+  #root .portal-shell .fw-card,
+  #root .portal-shell .fw-workload-card,
+  #root .portal-shell .fw-profile-hero,
+  #root .portal-shell .fw-leave-balance-grid article {
+    padding: 16px;
+    border-radius: 14px;
+  }
+
+  #root .portal-shell .fw-toolbar {
+    grid-template-columns: 1fr;
+  }
+
+  #root .portal-shell .fw-search {
+    grid-column: auto;
+  }
+
+  #root .portal-shell .fw-table-scroll {
+    overflow: visible;
+    border: 0;
+    background: transparent;
+  }
+
+  #root .portal-shell .fw-table {
+    min-width: 0;
+  }
+
+  #root .portal-shell .fw-table-scroll:has(.fw-marks-table) {
+    overflow-x: auto;
+    border: 1px solid var(--border);
+    background: var(--surface);
+  }
+
+  #root .portal-shell .fw-table-scroll:has(.fw-marks-table) .fw-table {
+    min-width: 520px;
+  }
+
+  #root .portal-shell .fw-tabs {
+    max-width: 100%;
+    overflow-x: auto;
+  }
+
+  #root .portal-shell .fw-drawer-backdrop {
+    align-items: end;
+  }
+
+  #root .portal-shell .fw-drawer {
+    width: 100%;
+    height: min(92dvh, 920px);
+    border-radius: 20px 20px 0 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #root .portal-shell .fw-button,
+  #root .portal-shell .fw-pager button,
+  #root .portal-shell .fw-subject-card {
+    transition: none;
+  }
+}
+
+/* Keep the faculty timetable readable at every screen width. */
+#root .portal-shell .fw-week-grid {
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  align-items: start;
+  gap: 12px;
+  overflow: visible;
+}
+
+#root .portal-shell .fw-week-grid > section {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 0;
+  min-height: 220px;
+  padding: 12px;
+  border-color: color-mix(in srgb, var(--border) 78%, var(--brand));
+  border-radius: 15px;
+  background: linear-gradient(180deg, var(--surface-soft), var(--surface));
+}
+
+#root .portal-shell .fw-weekday-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+#root .portal-shell .fw-weekday-heading h3 {
+  margin: 0;
+  color: var(--text-primary);
+  font-size: 13px;
+  font-weight: 750;
+}
+
+#root .portal-shell .fw-weekday-heading > span {
+  flex: 0 0 auto;
+  padding: 4px 7px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--text-muted);
+  font-size: 10px;
+  font-weight: 700;
+}
+
+#root .portal-shell .fw-weekday-classes {
+  display: grid;
+  gap: 10px;
+}
+
+#root .portal-shell .fw-weekday-empty {
+  display: grid;
+  flex: 1 1 auto;
+  place-items: center;
+  min-height: 86px;
+  margin: 0;
+  padding: 12px;
+  border: 1px dashed var(--border);
+  border-radius: 12px;
+  color: var(--text-muted);
+  font-size: 12px;
+  text-align: center;
+}
+
+#root .portal-shell .fw-timetable-item__time {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-width: 0;
+}
+
+#root .portal-shell .fw-timetable-time {
+  width: fit-content;
+  padding: 6px 8px;
+  border-radius: 8px;
+  background: var(--brand-soft);
+  font-size: 11px;
+  line-height: 1.25;
+  white-space: nowrap;
+}
+
+#root .portal-shell .fw-timetable-state {
+  color: var(--success, var(--brand));
+  font-size: 10px;
+  font-weight: 750;
+  text-align: right;
+}
+
+#root .portal-shell .fw-timetable-item__details {
+  display: grid;
+  gap: 7px;
+  min-width: 0;
+}
+
+#root .portal-shell .fw-timetable-item__details > strong {
+  color: var(--text-primary);
+  font-size: 14px;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+
+#root .portal-shell .fw-timetable-item__details > small {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 8px;
+  color: var(--text-secondary);
+  font-size: 11px;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+
+#root .portal-shell .fw-timetable-item__details .fw-subject-code {
+  width: fit-content;
+  max-width: 100%;
+  box-sizing: border-box;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+
+#root .portal-shell .fw-week-grid .fw-timetable-item {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 12px;
+  min-width: 0;
+  padding: 13px;
+  border-radius: 13px;
+  box-shadow: 0 4px 14px rgb(18 44 77 / 6%);
+  transition: transform .16s ease, box-shadow .16s ease;
+}
+
+#root .portal-shell .fw-week-grid .fw-timetable-item:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 9px 20px rgb(18 44 77 / 10%);
+}
+
+#root .portal-shell .fw-week-grid .fw-timetable-item.is-now {
+  background: var(--brand-soft);
+}
+
+#root .portal-shell .fw-week-grid .fw-timetable-item.is-next {
+  box-shadow: inset 0 0 0 1px var(--subject-accent, var(--brand)), 0 4px 14px rgb(18 44 77 / 6%);
+}
+
+#root .portal-shell .fw-week-grid .fw-timetable-item > a {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  min-height: 36px;
+  padding: 7px 9px;
+  border-radius: 9px;
+  background: var(--brand-soft);
+  color: var(--brand);
+  font-size: 11px;
+  text-decoration: none;
+}
+
+#root .portal-shell .fw-week-grid .fw-timetable-item > a:hover {
+  background: var(--brand);
+  color: var(--surface);
+}
+
+@media (max-width: 1500px) {
+  #root .portal-shell .fw-week-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 900px) {
+  #root .portal-shell .fw-week-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 640px) {
+  #root .portal-shell .fw-week-grid {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 10px;
+  }
+
+  #root .portal-shell .fw-week-grid > section {
+    min-height: 0;
+  }
+
+  #root .portal-shell .fw-card-heading .fw-tabs {
+    width: 100%;
+    box-sizing: border-box;
+  }
+
+  #root .portal-shell .fw-card-heading .fw-tabs button {
+    flex: 1 1 0;
+  }
+}
+
+/* Clear personal attendance summary, calendar, and records. */
+#root .portal-shell .fw-attendance-summary,
+#root .portal-shell .fw-attendance-calendar-card,
+#root .portal-shell .fw-attendance-records {
+  display: grid;
+  gap: 18px;
+}
+
+#root .portal-shell .fw-attendance-summary .fw-card-heading,
+#root .portal-shell .fw-attendance-calendar-card .fw-card-heading,
+#root .portal-shell .fw-attendance-records .fw-card-heading {
+  margin: 0;
+}
+
+#root .portal-shell .fw-attendance-summary .fw-card-heading > div > p:last-child,
+#root .portal-shell .fw-attendance-calendar-card .fw-card-heading > div > p:last-child,
+#root .portal-shell .fw-attendance-records .fw-card-heading > div > p:last-child {
+  margin-bottom: 0;
+}
+
+#root .portal-shell .fw-attendance-record-count {
+  display: inline-flex;
+  align-items: center;
+  min-height: 30px;
+  padding: 5px 11px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface-soft);
+  color: var(--text-secondary);
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+#root .portal-shell .fw-attendance-overview {
+  display: grid;
+  grid-template-columns: minmax(180px, .8fr) minmax(0, 1.2fr);
+  align-items: center;
+  gap: 20px;
+  padding: 20px;
+  border: 1px solid color-mix(in srgb, var(--brand) 18%, var(--border));
+  border-radius: 15px;
+  background: linear-gradient(110deg, var(--brand-soft), var(--surface-soft));
+}
+
+#root .portal-shell .fw-attendance-overview > div:first-child {
+  display: grid;
+  gap: 5px;
+}
+
+#root .portal-shell .fw-attendance-overview > div:first-child > span {
+  color: var(--text-secondary);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+#root .portal-shell .fw-attendance-overview strong {
+  color: var(--text-primary);
+  font-size: clamp(30px, 3vw, 42px);
+  letter-spacing: -.04em;
+  line-height: 1;
+}
+
+#root .portal-shell .fw-attendance-overview strong small {
+  margin-left: 2px;
+  color: var(--brand);
+  font-size: .58em;
+}
+
+#root .portal-shell .fw-attendance-overview p {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
+#root .portal-shell .fw-attendance-progress {
+  height: 12px;
+  overflow: hidden;
+  border: 1px solid color-mix(in srgb, var(--brand) 12%, var(--border));
+  border-radius: 999px;
+  background: var(--surface);
+}
+
+#root .portal-shell .fw-attendance-progress > span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, var(--brand), color-mix(in srgb, var(--brand) 68%, var(--success, #16a36a)));
+  transition: width .3s ease;
+}
+
+#root .portal-shell .fw-attendance-metrics {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+#root .portal-shell .fw-attendance-metrics article {
+  gap: 6px;
+  min-width: 0;
+  padding: 16px;
+  border: 1px solid var(--border);
+  border-radius: 13px;
+  background: var(--surface);
+}
+
+#root .portal-shell .fw-attendance-metrics article > span {
+  color: var(--text-secondary);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+#root .portal-shell .fw-attendance-metrics article > strong {
+  color: var(--text-primary);
+  font-size: 26px;
+  line-height: 1.1;
+}
+
+#root .portal-shell .fw-attendance-metrics article > small {
+  color: var(--text-muted);
+  font-size: 11px;
+}
+
+#root .portal-shell .fw-attendance-legend {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px 14px;
+}
+
+#root .portal-shell .fw-attendance-legend > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--text-secondary);
+  font-size: 11px;
+}
+
+#root .portal-shell .fw-attendance-legend i {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--border);
+}
+
+#root .portal-shell .fw-attendance-legend i.is-present {
+  background: var(--success, #16a36a);
+}
+
+#root .portal-shell .fw-attendance-legend i.is-leave {
+  background: var(--warning, #d68a12);
+}
+
+#root .portal-shell .fw-attendance-legend i.is-holiday {
+  background: var(--brand);
+}
+
+#root .portal-shell .fw-calendar-grid {
+  grid-template-columns: repeat(7, minmax(30px, 1fr));
+  gap: 8px;
+  width: 100%;
+  max-width: none;
+  margin: 0;
+}
+
+#root .portal-shell .fw-calendar-grid > span {
+  box-sizing: border-box;
+  min-height: 54px;
+  border-radius: 11px;
+  background: var(--surface-soft);
+  font-size: 13px;
+  font-weight: 650;
+}
+
+#root .portal-shell .fw-calendar-grid > span.is-weekday {
+  min-height: 28px;
+  border: 0;
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 10px;
+  font-weight: 750;
+  text-transform: uppercase;
+}
+
+#root .portal-shell .fw-calendar-grid > span.is-placeholder {
+  min-height: 0;
+  border: 0;
+  background: transparent;
+}
+
+#root .portal-shell .fw-calendar-grid > span:not(.is-weekday):not(.is-placeholder) {
+  grid-template-rows: 1fr 5px;
+  gap: 2px;
+  padding: 7px 4px 5px;
+}
+
+#root .portal-shell .fw-calendar-grid > span:not(.is-weekday):not(.is-placeholder)::after {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: transparent;
+  content: '';
+}
+
+#root .portal-shell .fw-calendar-grid > span.is-present {
+  border-color: color-mix(in srgb, var(--success, #16a36a) 36%, var(--border));
+  background: color-mix(in srgb, var(--success, #16a36a) 11%, var(--surface));
+}
+
+#root .portal-shell .fw-calendar-grid > span.is-present::after {
+  background: var(--success, #16a36a) !important;
+}
+
+#root .portal-shell .fw-calendar-grid > span.is-leave {
+  border-color: color-mix(in srgb, var(--warning, #d68a12) 38%, var(--border));
+  background: color-mix(in srgb, var(--warning, #d68a12) 11%, var(--surface));
+}
+
+#root .portal-shell .fw-calendar-grid > span.is-leave::after {
+  background: var(--warning, #d68a12);
+}
+
+#root .portal-shell .fw-calendar-grid > span.is-holiday {
+  border-color: color-mix(in srgb, var(--brand) 35%, var(--border));
+  background: var(--brand-soft);
+}
+
+#root .portal-shell .fw-calendar-grid > span.is-holiday::after {
+  background: var(--brand);
+}
+
+@media (max-width: 900px) {
+  #root .portal-shell .fw-attendance-metrics {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 640px) {
+  #root .portal-shell .fw-attendance-overview {
+    grid-template-columns: 1fr;
+    gap: 14px;
+    padding: 16px;
+  }
+
+  #root .portal-shell .fw-attendance-summary,
+  #root .portal-shell .fw-attendance-calendar-card,
+  #root .portal-shell .fw-attendance-records {
+    gap: 14px;
+  }
+
+  #root .portal-shell .fw-attendance-calendar-card .fw-card-heading {
+    align-items: flex-start;
+  }
+
+  #root .portal-shell .fw-attendance-legend {
+    gap: 6px 10px;
+  }
+
+  #root .portal-shell .fw-calendar-grid {
+    gap: 5px;
+  }
+
+  #root .portal-shell .fw-calendar-grid > span {
+    min-height: 44px;
+    border-radius: 9px;
+    font-size: 12px;
+  }
+}
+
+/* Faculty student directory dashboard and responsive filter toolbar. */
+#root .portal-shell .fw-student-overview {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px;
+}
+
+#root .portal-shell .fw-student-overview > article {
+  display: grid;
+  gap: 7px;
+  min-width: 0;
+  padding: 17px 18px;
+  border: 1px solid var(--border);
+  border-radius: 15px;
+  background: var(--surface);
+  box-shadow: 0 6px 18px rgb(18 44 77 / 5%);
+}
+
+#root .portal-shell .fw-student-overview > article.is-primary {
+  border-color: color-mix(in srgb, var(--brand) 28%, var(--border));
+  background: linear-gradient(120deg, var(--brand-soft), var(--surface));
+}
+
+#root .portal-shell .fw-student-overview > article.is-warning {
+  border-color: color-mix(in srgb, var(--warning, #d68a12) 34%, var(--border));
+}
+
+#root .portal-shell .fw-student-overview > article > span {
+  color: var(--text-secondary);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+#root .portal-shell .fw-student-overview > article > strong {
+  color: var(--text-primary);
+  font-size: clamp(24px, 2vw, 31px);
+  letter-spacing: -.035em;
+  line-height: 1;
+}
+
+#root .portal-shell .fw-student-overview > article.is-primary > strong {
+  color: var(--brand);
+}
+
+#root .portal-shell .fw-student-overview > article.is-warning > strong {
+  color: var(--warning, #b87509);
+}
+
+#root .portal-shell .fw-student-overview > article > small {
+  color: var(--text-muted);
+  font-size: 11px;
+}
+
+#root .portal-shell .fw-student-directory-card {
+  gap: 18px;
+}
+
+#root .portal-shell .fw-student-directory-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+}
+
+#root .portal-shell .fw-student-directory-heading h2,
+#root .portal-shell .fw-student-filter-heading h3 {
+  margin: 0;
+  color: var(--text-primary);
+  font-size: 17px;
+}
+
+#root .portal-shell .fw-student-directory-heading p,
+#root .portal-shell .fw-student-filter-heading p {
+  margin: 5px 0 0;
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
+#root .portal-shell .fw-student-directory-heading > span {
+  flex: 0 0 auto;
+  padding: 7px 10px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface-soft);
+  color: var(--text-secondary);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+#root .portal-shell .fw-student-directory-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+#root .portal-shell .fw-student-directory-toolbar .fw-search {
+  flex: 1 1 auto;
+  min-width: 200px;
+  min-height: 48px;
+  border-radius: 11px;
+}
+
+#root .portal-shell .fw-student-directory-toolbar .fw-student-export {
+  flex: 0 0 auto;
+  min-width: 142px;
+  border-color: color-mix(in srgb, var(--brand) 22%, var(--border));
+  color: var(--brand);
+}
+
+#root .portal-shell .fw-student-filters {
+  display: grid;
+  gap: 14px;
+  padding: 16px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--surface-soft);
+}
+
+#root .portal-shell .fw-student-filter-heading h3 {
+  font-size: 14px;
+}
+
+#root .portal-shell .fw-student-filter-heading p {
+  font-size: 11px;
+}
+
+#root .portal-shell .fw-student-filter-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  align-items: end;
+  gap: 12px;
+}
+
+#root .portal-shell .fw-student-filter-grid .fw-field > select {
+  min-height: 44px;
+  border-radius: 10px;
+}
+
+#root .portal-shell .fw-student-results {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 10px;
+  min-height: 32px;
+}
+
+#root .portal-shell .fw-student-results > div:first-child {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 6px;
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
+#root .portal-shell .fw-student-results > div:first-child strong {
+  color: var(--text-primary);
+  font-size: 15px;
+}
+
+#root .portal-shell .fw-student-results .fw-chip-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+
+#root .portal-shell .fw-student-results .fw-chip {
+  min-height: 32px;
+  font-size: 11px;
+}
+
+#root .portal-shell .fw-student-table .fw-table-scroll {
+  margin: 0;
+  border-radius: 14px;
+}
+
+#root .portal-shell .fw-student-table .fw-table {
+  min-width: 920px;
+  table-layout: auto;
+}
+
+#root .portal-shell .fw-student-table .fw-table th {
+  height: 58px;
+  padding: 12px 16px;
+}
+
+#root .portal-shell .fw-student-table .fw-table th .fw-sort {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 34px;
+  padding: 7px 10px;
+  border: 1px solid rgb(255 255 255 / 22%);
+  border-radius: 9px;
+  background: rgb(255 255 255 / 10%);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 750;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+#root .portal-shell .fw-student-table .fw-table th .fw-sort:hover,
+#root .portal-shell .fw-student-table .fw-table th .fw-sort.is-active {
+  border-color: rgb(255 255 255 / 38%);
+  background: rgb(255 255 255 / 18%);
+}
+
+#root .portal-shell .fw-student-table .fw-table th .fw-sort:focus-visible {
+  outline: 2px solid #fff;
+  outline-offset: 2px;
+}
+
+#root .portal-shell .fw-student-table .fw-table th .fw-sort svg {
+  width: 14px;
+  height: 14px;
+  transition: transform .15s ease;
+}
+
+#root .portal-shell .fw-student-table .fw-table th .fw-sort svg.is-ascending {
+  transform: rotate(180deg);
+}
+
+#root .portal-shell .fw-student-table .fw-table td {
+  padding: 12px 16px;
+}
+
+#root .portal-shell .fw-student-roll {
+  display: inline-flex;
+  padding: 6px 9px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface-soft);
+  color: var(--text-secondary);
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+#root .portal-shell .fw-student-identity-button {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  min-width: 0;
+  padding: 4px;
+  border-radius: 10px;
+  text-align: left;
+  transition: background-color .15s ease;
+}
+
+#root .portal-shell .fw-student-identity-button:hover {
+  background: var(--surface-soft);
+}
+
+#root .portal-shell .fw-student-avatar {
+  display: grid;
+  flex: 0 0 36px;
+  width: 36px;
+  height: 36px;
+  place-items: center;
+  border: 1px solid color-mix(in srgb, var(--brand) 20%, var(--border));
+  border-radius: 11px;
+  background: var(--brand-soft);
+  color: var(--brand);
+  font-size: 11px;
+  font-weight: 800;
+}
+
+#root .portal-shell .fw-student-identity {
+  display: grid;
+  flex: 1 1 auto;
+  gap: 3px;
+  min-width: 0;
+}
+
+#root .portal-shell .fw-student-identity strong {
+  overflow: hidden;
+  color: var(--brand);
+  font-size: 13px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+#root .portal-shell .fw-student-identity small {
+  overflow: hidden;
+  color: var(--text-muted);
+  font-size: 10px;
+  font-weight: 500;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+#root .portal-shell .fw-student-identity-button > svg {
+  flex: 0 0 15px;
+  width: 15px;
+  height: 15px;
+  color: var(--text-muted);
+}
+
+#root .portal-shell .fw-student-attendance {
+  display: grid;
+  gap: 6px;
+  min-width: 110px;
+}
+
+#root .portal-shell .fw-student-attendance > div {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+#root .portal-shell .fw-student-attendance strong {
+  color: var(--text-primary);
+  font-size: 13px;
+}
+
+#root .portal-shell .fw-student-attendance small {
+  color: var(--success, #138a5b);
+  font-size: 10px;
+  white-space: nowrap;
+}
+
+#root .portal-shell .fw-student-attendance.is-at-risk strong,
+#root .portal-shell .fw-student-attendance.is-at-risk small {
+  color: var(--danger, #c23a3a);
+}
+
+#root .portal-shell .fw-student-attendance__track {
+  display: block;
+  height: 5px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: var(--surface-soft);
+}
+
+#root .portal-shell .fw-student-attendance__track i {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--success, #138a5b);
+}
+
+#root .portal-shell .fw-student-attendance.is-at-risk .fw-student-attendance__track i {
+  background: var(--danger, #c23a3a);
+}
+
+@media (max-width: 1100px) {
+  #root .portal-shell .fw-student-overview {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  #root .portal-shell .fw-student-filter-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 640px) {
+  #root .portal-shell .fw-student-directory-heading {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  #root .portal-shell .fw-student-table .fw-table-scroll {
+    overflow: visible;
+    border: 0;
+    background: transparent;
+  }
+
+  #root .portal-shell .fw-student-table .fw-table {
+    min-width: 0;
+  }
+
+  #root .portal-shell .fw-student-directory-toolbar {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  #root .portal-shell .fw-student-directory-toolbar .fw-search,
+  #root .portal-shell .fw-student-directory-toolbar .fw-student-export {
+    width: 100%;
+    min-width: 0;
+  }
+
+  #root .portal-shell .fw-student-filter-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  #root .portal-shell .fw-student-results {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}
+
+/* Structured overview panels for the faculty class and resource workspaces. */
+#root .portal-shell .fw-timetable-overview,
+#root .portal-shell .fw-marks-overview,
+#root .portal-shell .fw-material-overview,
+#root .portal-shell .fw-leave-overview {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px;
+}
+
+#root .portal-shell .fw-timetable-overview > article,
+#root .portal-shell .fw-marks-overview > article,
+#root .portal-shell .fw-material-overview > article,
+#root .portal-shell .fw-leave-overview > article {
+  display: grid;
+  align-content: start;
+  gap: 7px;
+  min-width: 0;
+  padding: 16px 17px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--surface);
+  box-shadow: 0 6px 18px rgb(18 44 77 / 5%);
+}
+
+#root .portal-shell .fw-timetable-overview > article.is-primary,
+#root .portal-shell .fw-marks-overview > article.is-primary,
+#root .portal-shell .fw-material-overview > article.is-primary,
+#root .portal-shell .fw-leave-overview > article.is-primary {
+  border-color: color-mix(in srgb, var(--brand) 28%, var(--border));
+  background: linear-gradient(120deg, var(--brand-soft), var(--surface));
+}
+
+#root .portal-shell .fw-leave-overview > article.is-warning {
+  border-color: color-mix(in srgb, var(--warning, #d68a12) 34%, var(--border));
+}
+
+#root .portal-shell .fw-timetable-overview > article > span,
+#root .portal-shell .fw-marks-overview > article > span,
+#root .portal-shell .fw-material-overview > article > span,
+#root .portal-shell .fw-leave-overview > article > span {
+  color: var(--text-secondary);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+#root .portal-shell .fw-timetable-overview > article > strong,
+#root .portal-shell .fw-marks-overview > article > strong,
+#root .portal-shell .fw-material-overview > article > strong,
+#root .portal-shell .fw-leave-overview > article > strong {
+  overflow: hidden;
+  color: var(--text-primary);
+  font-size: clamp(22px, 1.8vw, 29px);
+  letter-spacing: -.035em;
+  line-height: 1.08;
+  text-overflow: ellipsis;
+}
+
+#root .portal-shell .fw-timetable-overview > article.is-primary > strong,
+#root .portal-shell .fw-marks-overview > article.is-primary > strong,
+#root .portal-shell .fw-material-overview > article.is-primary > strong,
+#root .portal-shell .fw-leave-overview > article.is-primary > strong {
+  color: var(--brand);
+}
+
+#root .portal-shell .fw-leave-overview > article.is-warning > strong {
+  color: var(--warning, #b87509);
+}
+
+#root .portal-shell .fw-timetable-overview > article > small,
+#root .portal-shell .fw-marks-overview > article > small,
+#root .portal-shell .fw-material-overview > article > small,
+#root .portal-shell .fw-leave-overview > article > small {
+  overflow: hidden;
+  color: var(--text-muted);
+  font-size: 11px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+#root .portal-shell .fw-marks-overview > article:first-child > strong {
+  font-size: clamp(16px, 1.35vw, 20px);
+  line-height: 1.25;
+}
+
+#root .portal-shell .fw-attendance-class-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  margin-bottom: 14px;
+  padding: 16px 18px;
+  border: 1px solid color-mix(in srgb, var(--brand) 22%, var(--border));
+  border-radius: 13px;
+  background: linear-gradient(110deg, var(--brand-soft), var(--surface));
+}
+
+#root .portal-shell .fw-attendance-class-heading h2 {
+  margin: 0;
+  color: var(--text-primary);
+  font-size: 19px;
+}
+
+#root .portal-shell .fw-attendance-class-heading > div > p:last-child {
+  margin: 5px 0 0;
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+
+#root .portal-shell .fw-attendance-class-heading > span {
+  flex: 0 0 auto;
+  padding: 7px 11px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--text-secondary);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+#root .portal-shell .fw-attendance-class-metrics {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+#root .portal-shell .fw-attendance-class-metrics > article {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  min-width: 0;
+  padding: 11px 13px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface-soft);
+}
+
+#root .portal-shell .fw-attendance-class-metrics > article > span {
+  color: var(--text-secondary);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+#root .portal-shell .fw-attendance-class-metrics > article > strong {
+  color: var(--text-primary);
+  font-size: 17px;
+}
+
+#root .portal-shell .fw-attendance-class-metrics > article.is-present > strong { color: var(--success, #138a5b); }
+#root .portal-shell .fw-attendance-class-metrics > article.is-absent > strong { color: var(--danger, #c23a3a); }
+#root .portal-shell .fw-attendance-class-metrics > article.is-late > strong { color: var(--warning, #b87509); }
+
+@media (max-width: 1050px) {
+  #root .portal-shell .fw-timetable-overview,
+  #root .portal-shell .fw-marks-overview,
+  #root .portal-shell .fw-material-overview,
+  #root .portal-shell .fw-leave-overview {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 640px) {
+  #root .portal-shell .fw-attendance-class-heading {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  #root .portal-shell .fw-attendance-class-metrics {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}

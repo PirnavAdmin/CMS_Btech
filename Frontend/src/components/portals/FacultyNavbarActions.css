@@ -1,20 +1,20 @@
 /* Match the shared admin account controls without inheriting header text styles. */
-#root .portal-shell .faculty-navbar-actions { display: flex; align-items: center; gap: 10px; min-width: 0; }
-#root .portal-shell .faculty-navbar-icon { display: grid; place-items: center; width: 36px; height: 36px; padding: 0; box-sizing: border-box; flex: 0 0 36px; border: 1px solid var(--header-border, var(--border)); border-radius: 7px; background: var(--header-soft, var(--surface-soft)); color: var(--text-secondary); text-decoration: none; cursor: pointer; }
-#root .portal-shell .faculty-navbar-icon svg { width: 17px; height: 17px; }
+#root .portal-shell .faculty-navbar-actions { display: flex; align-items: center; gap: 12px; min-width: 0; }
+#root .portal-shell .faculty-navbar-icon { display: grid; place-items: center; width: 48px; height: 48px; padding: 0; box-sizing: border-box; flex: 0 0 48px; border: 1px solid var(--header-border, var(--border)); border-radius: 13px; background: var(--header-soft, var(--surface-soft)); color: var(--text-secondary); text-decoration: none; cursor: pointer; }
+#root .portal-shell .faculty-navbar-icon svg { width: 20px; height: 20px; }
 #root .portal-shell .faculty-navbar-icon:hover,
 #root .portal-shell .faculty-navbar-icon.is-active { background: var(--brand-soft); color: var(--brand); border-color: var(--brand); }
 #root .portal-shell .faculty-account-menu { position: relative; min-width: 0; }
-#root .portal-shell .faculty-account-menu > summary { display: flex; align-items: center; gap: 8px; height: 38px; padding: 4px 9px 4px 5px; border: 1px solid var(--border); border-radius: 7px; background: var(--surface); box-shadow: none; cursor: pointer; list-style: none; }
+#root .portal-shell .faculty-account-menu > summary { display: flex; align-items: center; gap: 10px; height: 52px; padding: 5px 12px 5px 7px; border: 1px solid var(--border); border-radius: 13px; background: var(--surface); box-shadow: none; cursor: pointer; list-style: none; }
 #root .portal-shell .faculty-account-menu > summary::-webkit-details-marker { display: none; }
 #root .portal-shell .faculty-account-menu > summary:hover { background: var(--surface-soft); }
 #root .portal-shell .faculty-account-menu[open] > summary { border-color: var(--border-strong); }
-#root .portal-shell .faculty-account-avatar { display: grid; place-items: center; width: 28px; height: 28px; flex: 0 0 28px; padding: 0; border: 0; border-radius: 50%; background: var(--brand-soft); color: var(--brand); }
-#root .portal-shell .faculty-account-avatar svg { width: 16px; height: 16px; }
-#root .portal-shell .faculty-account-identity { display: flex; flex-direction: column; gap: 1px; min-width: 0; max-width: 160px; }
-#root .portal-shell .faculty-account-identity strong { max-width: 160px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text-primary); font-size: 12px; font-weight: 600; line-height: 15px; }
-#root .portal-shell .faculty-account-identity small { margin: 0; color: var(--text-muted); font-size: 10px; font-weight: 400; line-height: 13px; }
-#root .portal-shell .faculty-account-chevron { width: 14px; height: 14px; margin-left: 4px; flex-shrink: 0; color: var(--text-muted); transition: transform .15s; }
+#root .portal-shell .faculty-account-avatar { display: grid; place-items: center; width: 40px; height: 40px; flex: 0 0 40px; padding: 0; border: 0; border-radius: 50%; background: var(--brand-soft); color: var(--brand); }
+#root .portal-shell .faculty-account-avatar svg { width: 20px; height: 20px; }
+#root .portal-shell .faculty-account-identity { display: flex; flex-direction: column; gap: 1px; min-width: 0; max-width: 180px; }
+#root .portal-shell .faculty-account-identity strong { max-width: 180px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text-primary); font-size: 14px; font-weight: 600; line-height: 18px; }
+#root .portal-shell .faculty-account-identity small { margin: 0; color: var(--text-muted); font-size: 12px; font-weight: 400; line-height: 16px; }
+#root .portal-shell .faculty-account-chevron { width: 16px; height: 16px; margin-left: 4px; flex-shrink: 0; color: var(--text-muted); transition: transform .15s; }
 #root .portal-shell .faculty-account-menu[open] .faculty-account-chevron { transform: rotate(180deg); }
 #root .portal-shell .faculty-account-panel { position: absolute; right: 0; top: calc(100% + 8px); z-index: 150; display: flex; flex-direction: column; gap: 2px; width: 210px; max-width: calc(100vw - 28px); padding: 6px; box-sizing: border-box; border: 1px solid var(--border); border-radius: 9px; background: var(--surface); box-shadow: var(--shadow-md); }
 #root .portal-shell .faculty-account-panel > :is(a, button) { display: flex; align-items: center; justify-content: flex-start; gap: 10px; width: 100%; min-height: 38px; box-sizing: border-box; margin: 0; padding: 10px; border: 0; border-radius: 6px; background: transparent; color: var(--text-primary); box-shadow: none; font-family: inherit; font-size: 12px; font-weight: 500; line-height: 18px; text-align: left; text-decoration: none; cursor: pointer; }
@@ -27,6 +27,14 @@
   #root .portal-shell .faculty-account-identity { display: none; }
   #root .portal-shell .faculty-account-menu > summary { gap: 4px; padding: 4px 6px; }
   #root .portal-shell .faculty-account-chevron { margin-left: 0; }
+}
+@media (min-width: 901px) and (max-width: 1440px) {
+  #root .portal-shell .faculty-navbar-actions { gap: 8px; }
+  #root .portal-shell .faculty-navbar-icon { width: 42px; height: 42px; flex-basis: 42px; }
+  #root .portal-shell .faculty-account-menu > summary { height: 46px; gap: 7px; padding-inline: 7px 9px; }
+  #root .portal-shell .faculty-account-avatar { width: 34px; height: 34px; flex-basis: 34px; }
+  #root .portal-shell .faculty-account-identity strong { font-size: 13px; line-height: 16px; }
+  #root .portal-shell .faculty-account-identity small { font-size: 11px; line-height: 14px; }
 }
 @media (prefers-reduced-motion: reduce) { #root .portal-shell .faculty-account-chevron { transition: none; } }
 #root .portal-shell .faculty-notifications { position:relative; }

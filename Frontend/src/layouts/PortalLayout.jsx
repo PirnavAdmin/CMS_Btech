@@ -10,6 +10,7 @@ import { isPortalPreview } from '../auth/portalPreview.js'
 import { PortalDialog } from '../components/portals/PortalUI.jsx'
 import FacultyNavbarActions from '../components/portals/FacultyNavbarActions.jsx'
 import FacultySignOutDialog from '../components/portals/FacultySignOutDialog.jsx'
+import FacultyBreadcrumbs from '../features/faculty/components/FacultyBreadcrumbs.jsx'
 import './DashboardLayout.css'
 import './AccountMenu.css'
 import '../components/Sidebar.css'
@@ -58,7 +59,19 @@ export default function PortalLayout({ children, title }) {
       <div className="global-search"><FiSearch aria-hidden="true" /><input aria-label="Search workspace" placeholder="Search modules" value={query} onChange={event => setQuery(event.target.value)} />{query.trim() && <div className="global-search-results">{results.length ? results.map(([key, label]) => <Link key={key} to={destination(key)} onClick={() => setQuery('')}>{label}</Link>) : <p>No matching modules</p>}</div>}</div>
       <div className="dashboard-header__actions">{role === 'faculty' ? <FacultyNavbarActions name={name} theme={theme} onToggleTheme={() => setTheme(theme === 'dark' ? 'light' : 'dark')} onSignOut={() => setLogout(true)} /> : <>{['faculty', 'student'].includes(role) && canView(destination('notifications')) && <Link className="portal-notification-link" to={destination('notifications')} aria-label="Notifications"><FiBell aria-hidden="true" /></Link>}<button className="theme-toggle" onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')} aria-label="Toggle theme">{theme === 'dark' ? <FiSun /> : <FiMoon />}</button><details className="account-menu"><summary aria-label="Open account menu"><span className="account-avatar"><FiUser aria-hidden="true" /></span><span><strong>{name}</strong><small>{role}</small></span><i className="account-menu__chevron" aria-hidden="true" /></summary><div className="account-menu__panel">{canView(profileUrl) && <button onClick={event => { event.currentTarget.closest('details').removeAttribute('open'); navigate(profileUrl) }}><FiUser />My Profile</button>}<button className="account-menu__signout" onClick={event => { event.currentTarget.closest('details').removeAttribute('open'); setLogout(true) }}><FiLogOut />Sign out</button></div></details></>}</div>
     </header>
-      <div className="page-content portal-workspace"><nav className="app-breadcrumb" aria-label="Breadcrumb"><Link to={destination('dashboard')}>Home</Link><span aria-hidden="true">/</span><span>{role} Portal</span><span aria-hidden="true">/</span><strong>{title}</strong></nav>{children}</div>
+      <div className="page-content portal-workspace">
+        {role === 'faculty' ? (
+          <div className="faculty-page-container">
+            <FacultyBreadcrumbs crumbs={[{ label: title }]} />
+            <div className="faculty-page-container__content">{children}</div>
+          </div>
+        ) : (
+          <>
+            <nav className="app-breadcrumb" aria-label="Breadcrumb"><Link to={destination('dashboard')}>Home</Link><span aria-hidden="true">/</span><span>{role} Portal</span><span aria-hidden="true">/</span><strong>{title}</strong></nav>
+            {children}
+          </>
+        )}
+      </div>
     </div>
     {logout && role === 'faculty' && <FacultySignOutDialog onClose={() => setLogout(false)} onConfirm={() => { signOut(); sessionStorage.setItem('btech-logout-message', 'You have been signed out successfully.'); navigate('/login', { replace: true }) }} />}
     {logout && role !== 'faculty' && <PortalDialog title="Sign out?" onClose={() => setLogout(false)}><p>You can sign in again to return to your workspace.</p><div className="portal-actions"><button onClick={() => setLogout(false)}>Cancel</button><button className="primary" onClick={() => { signOut(); navigate('/login', { replace: true }) }}>Sign out</button></div></PortalDialog>}

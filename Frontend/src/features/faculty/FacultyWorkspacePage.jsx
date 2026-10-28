@@ -6,7 +6,6 @@ import {
 } from 'react-icons/fi'
 import PortalLayout from '../../layouts/PortalLayout.jsx'
 import { PortalDialog, Status } from '../../components/portals/PortalUI.jsx'
-import FacultyBreadcrumbs from './components/FacultyBreadcrumbs.jsx'
 import FacultyCardSkeleton from './components/FacultyCardSkeleton.jsx'
 import FacultyEmptyState from './components/FacultyEmptyState.jsx'
 import { facultyRouteByPath } from './routeConfig.js'
@@ -16,7 +15,7 @@ import './workspace.css'
 
 const today = () => new Date().toISOString().slice(0, 10)
 const safeText = value => String(value ?? '')
-const pageSize = 12
+const studentPageSize = 5
 const routes = Object.values(facultyRouteByPath)
 const titleFor = screen => routes.find(route => route.screen === screen)?.title || 'Faculty workspace'
 
@@ -52,6 +51,7 @@ async function loadScreen(screen) {
       ])
       return { ...subjectData, students: students.items }
     }
+    case 'my-attendance': return { myAttendance: await facultyService.getMyAttendance() }
     case 'timetable': return facultyService.getTimetable()
     case 'attendance': {
       const [sessions, students, sections, assignments, myAttendance, shortageAlerts] = await Promise.all([
@@ -124,8 +124,12 @@ function StudentsScreen({ data, searchParams, setSearchParams }) {
     && (!semesterId || String(row.semester) === semesterId || String(sections.find(section => section.id === row.sectionId)?.semesterId) === semesterId)
     && `${row.name} ${row.rollNumber} ${row.email}`.toLowerCase().includes(search.toLowerCase()))
     .sort((a, b) => safeText(a[sort]).localeCompare(safeText(b[sort])) * (ascending ? 1 : -1)), [data.students, sections, sectionId, courseId, branchId, semesterId, search, sort, ascending])
-  const pages = Math.max(1, Math.ceil(filtered.length / pageSize))
-  const rows = filtered.slice((page - 1) * pageSize, page * pageSize)
+  const pages = Math.max(1, Math.ceil(filtered.length / studentPageSize))
+  const rows = filtered.slice((page - 1) * studentPageSize, page * studentPageSize)
+  const activeStudents = filtered.filter(row => String(row.status).toLowerCase() === 'active').length
+  const attendanceWatch = filtered.filter(row => Number(row.overallAttendance) < 75).length
+  const cgpaValues = filtered.map(row => Number(row.cgpa)).filter(Number.isFinite)
+  const averageCgpa = cgpaValues.length ? (cgpaValues.reduce((total, value) => total + value, 0) / cgpaValues.length).toFixed(2) : '—'
   const setFilter = (key, value) => {
     const next = new URLSearchParams(searchParams)
     if (value) next.set(key, value)
@@ -186,27 +190,41 @@ function StudentsScreen({ data, searchParams, setSearchParams }) {
     setTimeout(() => URL.revokeObjectURL(url), 1000)
   }
   const columns = [
-    { key: 'rollNumber', label: <button className="fw-sort" onClick={() => changeSort('rollNumber')}>Roll number <FiArrowDown /></button> },
-    { key: 'name', label: <button className="fw-sort" onClick={() => changeSort('name')}>Student <FiArrowDown /></button>, render: row => <button className="fw-link-button" onClick={() => { setStudent(row); setTab('Overview') }}>{row.name}</button> },
+    { key: 'rollNumber', label: <button type="button" className={`fw-sort${sort === 'rollNumber' ? ' is-active' : ''}`} aria-label={`Sort by roll number${sort === 'rollNumber' ? ascending ? ', ascending' : ', descending' : ''}`} aria-pressed={sort === 'rollNumber'} onClick={() => changeSort('rollNumber')}>Roll number <FiArrowDown className={sort === 'rollNumber' && ascending ? 'is-ascending' : ''} /></button>, render: row => <span className="fw-student-roll">{row.rollNumber}</span> },
+    { key: 'name', label: <button type="button" className={`fw-sort${sort === 'name' ? ' is-active' : ''}`} aria-label={`Sort by student${sort === 'name' ? ascending ? ', ascending' : ', descending' : ''}`} aria-pressed={sort === 'name'} onClick={() => changeSort('name')}>Student <FiArrowDown className={sort === 'name' && ascending ? 'is-ascending' : ''} /></button>, render: row => <button type="button" className="fw-link-button fw-student-identity-button" aria-label={`Open details for ${row.name}`} onClick={() => { setStudent(row); setTab('Overview') }}><span className="fw-student-avatar" aria-hidden="true">{safeText(row.name).trim().split(/\s+/).slice(0, 2).map(part => part[0] || '').join('').toUpperCase()}</span><span className="fw-student-identity"><strong>{row.name}</strong><small>{row.email}</small></span><FiArrowRight aria-hidden="true" /></button> },
     { key: 'sectionName', label: 'Section' },
-    { key: 'overallAttendance', label: 'Attendance', render: row => <span className={row.overallAttendance < 75 ? 'fw-risk-text' : ''}>{row.overallAttendance}%</span> },
+    { key: 'overallAttendance', label: 'Attendance', render: row => { const attendance = Math.min(100, Math.max(0, Number(row.overallAttendance) || 0)); return <div className={`fw-student-attendance${attendance < 75 ? ' is-at-risk' : ''}`}><div><strong>{attendance}%</strong><small>{attendance < 75 ? 'Needs attention' : 'On track'}</small></div><span className="fw-student-attendance__track" role="progressbar" aria-label={`${row.name} attendance`} aria-valuemin="0" aria-valuemax="100" aria-valuenow={attendance}><i style={{ width: `${attendance}%` }} /></span></div> } },
     { key: 'cgpa', label: 'CGPA' },
     { key: 'status', label: 'Status', render: row => <Status>{row.status}</Status> },
   ]
   return <>
     <FeatureHeading eyebrow="CLASS DIRECTORY" title="My Students" subtitle="Browse and support students in your teaching sections." />
-    <section className="fw-card">
-      <div className="fw-toolbar">
+    <section className="fw-student-overview" aria-label="Student overview">
+      {[
+        ['Students found', filtered.length, 'Matching current filters', 'is-primary'],
+        ['Active enrollment', activeStudents, 'Currently active students', ''],
+        ['Attendance watch', attendanceWatch, 'Below 75% attendance', attendanceWatch ? 'is-warning' : ''],
+        ['Average CGPA', averageCgpa, 'Across matched students', ''],
+      ].map(([label, value, detail, tone]) => <article key={label} className={tone}><span>{label}</span><strong>{value}</strong><small>{detail}</small></article>)}
+    </section>
+    <section className="fw-card fw-student-directory-card">
+      <div className="fw-student-directory-heading"><div><h2>Student directory</h2><p>Filter the roster or open a student profile for more details.</p></div><span>{filtered.length} of {data.students.length} students</span></div>
+      <div className="fw-student-directory-toolbar">
         <label className="fw-search"><FiSearch aria-hidden="true" /><input value={query} onChange={event => changeQuery(event.target.value)} placeholder="Search name, roll number or email" aria-label="Search students" /></label>
+        <button type="button" className="fw-button fw-student-export" onClick={exportRows}><FiDownload /> Export CSV</button>
+      </div>
+      <div className="fw-student-filters">
+        <div className="fw-student-filter-heading"><div><h3>Refine directory</h3><p>Choose a course, branch, semester, or section.</p></div></div>
+        <div className="fw-student-filter-grid">
         <label className="fw-field"><span>Course</span><select value={courseId} onChange={event => setFilter('course', event.target.value)}><option value="">All courses</option>{unique('courseId').map(row => <option key={row.value} value={row.value}>{row.label}</option>)}</select></label>
         <label className="fw-field"><span>Branch</span><select value={branchId} onChange={event => setFilter('branch', event.target.value)}><option value="">All branches</option>{unique('branchId').map(row => <option key={row.value} value={row.value}>{row.label}</option>)}</select></label>
         <label className="fw-field"><span>Semester</span><select value={semesterId} onChange={event => setFilter('semester', event.target.value)}><option value="">All semesters</option>{unique('semesterId').map(row => <option key={row.value} value={row.value}>{row.label}</option>)}</select></label>
         <SectionSelect sections={sections.filter(row => (!courseId || row.courseId === courseId) && (!branchId || row.branchId === branchId) && (!semesterId || String(row.semesterId) === semesterId))} value={sectionId} onChange={value => setFilter('section', value)} />
-        <button type="button" className="fw-button" onClick={exportRows}><FiDownload /> Export CSV</button>
+        </div>
       </div>
-      <div className="fw-summary-line"><span>{filtered.length} students</span><div className="fw-chip-list">{[['course', courseId, 'Course'], ['branch', branchId, 'Branch'], ['semester', semesterId, 'Semester'], ['section', sectionId, 'Section']].filter(([, value]) => value).map(([key, value, label]) => <button key={key} className="fw-chip" onClick={() => setFilter(key, '')}>{key === 'section' ? sections.find(row => row.id === value)?.shortName || label : unique(`${key}Id`).find(row => String(row.value) === value)?.label || `${label} ${value}`} <FiX /></button>)}</div></div>
-      <FeatureTable columns={columns} rows={rows} empty="No students match these filters" />
-      <Pager page={Math.min(page, pages)} pages={pages} total={filtered.length} onChange={next => { const params = new URLSearchParams(searchParams); params.set('page', String(next)); setSearchParams(params, { replace: true }) }} />
+      <div className="fw-student-results"><div><strong>{filtered.length}</strong><span>students found</span></div><div className="fw-chip-list">{[['course', courseId, 'Course'], ['branch', branchId, 'Branch'], ['semester', semesterId, 'Semester'], ['section', sectionId, 'Section']].filter(([, value]) => value).map(([key, value, label]) => <button type="button" key={key} className="fw-chip" aria-label={`Remove ${label} filter`} onClick={() => setFilter(key, '')}>{key === 'section' ? sections.find(row => row.id === value)?.shortName || label : unique(`${key}Id`).find(row => String(row.value) === value)?.label || `${label} ${value}`} <FiX /></button>)}</div></div>
+      <div className="fw-student-table"><FeatureTable columns={columns} rows={rows} empty="No students match these filters" /></div>
+      <Pager page={Math.min(page, pages)} pages={pages} total={filtered.length} pageSize={studentPageSize} onChange={next => { const params = new URLSearchParams(searchParams); params.set('page', String(next)); setSearchParams(params, { replace: true }) }} />
     </section>
     {student && <div className="fw-drawer-backdrop" onMouseDown={event => { if (event.target === event.currentTarget) setStudent(null) }}><aside className="fw-drawer" role="dialog" aria-modal="true" aria-label={`Student details for ${student.name}`}>
       <header><div><small>{student.rollNumber}</small><h2>{student.name}</h2></div><button className="fw-icon-button" onClick={() => setStudent(null)} aria-label="Close student details"><FiX /></button></header>
@@ -263,12 +281,28 @@ function TimetableScreen({ data }) {
   const weekdays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
   const entries = mode === 'Day' ? data.weekly.filter(row => row.day === day) : data.weekly
   const todayRows = data.today
+  const teachingDays = new Set(data.weekly.map(row => row.day)).size
+  const assignedSections = new Set(data.weekly.map(row => row.sectionId || row.sectionName).filter(Boolean)).size
   return <>
     <FeatureHeading eyebrow="TEACHING SCHEDULE" title="My Timetable" subtitle="Plan your week and jump directly into attendance." actions={<button className="fw-button" onClick={() => window.print()}><FiFileText /> Print timetable</button>} />
+    <section className="fw-timetable-overview" aria-label="Weekly schedule overview">
+      {[
+        ['Classes this week', data.weekly.length, 'Across your teaching schedule'],
+        ['Teaching days', teachingDays, 'Days with scheduled classes'],
+        ["Today's classes", todayRows.length, 'Classes scheduled for today'],
+        ['Assigned sections', assignedSections, 'Sections on your timetable'],
+      ].map(([label, value, detail], index) => <article key={label} className={index === 0 ? 'is-primary' : ''}><span>{label}</span><strong>{value}</strong><small>{detail}</small></article>)}
+    </section>
     <section className="fw-card">
       <div className="fw-card-heading"><div><h2>Class schedule</h2><p>Rooms and sections are shown on each class.</p></div><Tabs items={['Week', 'Day', 'Agenda']} value={mode} onChange={setMode} /></div>
       {mode === 'Day' && <div className="fw-day-picker">{weekdays.map(name => <button key={name} className={day === name ? 'is-active' : ''} onClick={() => setDay(name)}>{name.slice(0, 3)}</button>)}</div>}
-      {mode === 'Week' ? <div className="fw-week-grid">{weekdays.map(weekday => <section key={weekday}><h3>{weekday}</h3>{data.weekly.filter(row => row.day === weekday).map(row => <TimetableCard key={row.id} row={row} />)}{!data.weekly.some(row => row.day === weekday) && <small className="fw-muted">No classes</small>}</section>)}</div>
+      {mode === 'Week' ? <div className="fw-week-grid">{weekdays.map(weekday => {
+        const dayEntries = data.weekly.filter(row => row.day === weekday)
+        return <section key={weekday} className={dayEntries.length ? '' : 'is-empty'}>
+          <header className="fw-weekday-heading"><h3>{weekday}</h3><span>{dayEntries.length} {dayEntries.length === 1 ? 'class' : 'classes'}</span></header>
+          {dayEntries.length ? <div className="fw-weekday-classes">{dayEntries.map(row => <TimetableCard key={row.id} row={row} />)}</div> : <p className="fw-weekday-empty">No classes scheduled</p>}
+        </section>
+      })}</div>
         : <div className="fw-agenda">{entries.length ? entries.map(row => <TimetableCard key={row.id} row={row} />) : <FacultyEmptyState title={`No classes on ${day}`} />}</div>}
     </section>
     {todayRows.length > 0 && <section className="fw-card"><div className="fw-card-heading"><div><p className="fw-eyebrow">TODAY AT A GLANCE</p><h2>Today's teaching blocks</h2></div></div><div className="fw-agenda">{todayRows.map(row => <TimetableCard key={row.id} row={row} />)}</div></section>}
@@ -278,12 +312,82 @@ function TimetableScreen({ data }) {
 function TimetableCard({ row }) {
   const subjectKey = row.subjectId || row.subjectCode || ''
   const colorIndex = [...subjectKey].reduce((total, character) => total + character.charCodeAt(0), 0) % 4
-  return <article className={`fw-timetable-item subject-color-${colorIndex}${row.isNow ? ' is-now' : ''}${row.isNext ? ' is-next' : ''}`}><span className="fw-timetable-time">{row.slotTime || `${row.startTime}–${row.endTime}`}</span><div><strong>{row.subjectName}</strong><small>{row.sectionName} · {row.room || 'Room to be confirmed'}</small><span className="fw-subject-code">{row.subjectCode} · {row.type}</span></div><Link to="/faculty-portal/attendance" aria-label={`Mark attendance for ${row.subjectName}`}><FiCheckCircle /> Attendance</Link></article>
+  return <article className={`fw-timetable-item subject-color-${colorIndex}${row.isNow ? ' is-now' : ''}${row.isNext ? ' is-next' : ''}`}>
+    <div className="fw-timetable-item__time"><span className="fw-timetable-time">{row.slotTime || `${row.startTime}–${row.endTime}`}</span>{row.isNow && <span className="fw-timetable-state">In progress</span>}{row.isNext && <span className="fw-timetable-state">Up next</span>}</div>
+    <div className="fw-timetable-item__details"><strong>{row.subjectName}</strong><small><span>{row.sectionName}</span><span>{row.room || 'Room to be confirmed'}</span></small><span className="fw-subject-code">{row.subjectCode} · {row.type}</span></div>
+    <Link to="/faculty-portal/attendance" aria-label={`Mark attendance for ${row.subjectName}`}><FiCheckCircle /><span>Attendance</span><FiArrowRight aria-hidden="true" /></Link>
+  </article>
+}
+
+function MyAttendanceSummary({ data }) {
+  const attendance = data.myAttendance
+  const dailyLog = attendance.dailyLog || []
+  const [monthName, yearText] = String(attendance.currentMonth).split(' ')
+  const monthIndex = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'].indexOf(monthName)
+  const calendarYear = Number(yearText) || new Date().getFullYear()
+  const calendarMonth = monthIndex >= 0 ? monthIndex : new Date().getMonth()
+  const firstWeekday = new Date(calendarYear, calendarMonth, 1).getDay()
+  const daysInMonth = new Date(calendarYear, calendarMonth + 1, 0).getDate()
+  const entriesByDay = new Map(dailyLog.map(row => [Number(row.date.slice(-2)), row]))
+  const attendancePercentage = Math.min(100, Math.max(0, Number(attendance.attendancePercentage) || 0))
+  const metrics = [
+    ['Working days', attendance.workingDays, 'Scheduled this month'],
+    ['Present', attendance.presentDays, 'Days attended'],
+    ['On leave', attendance.onLeaveDays, 'Approved leave days'],
+    ['Late arrivals', attendance.lateArrivals, 'Recorded check-ins'],
+  ]
+  const calendarDays = Array.from({ length: daysInMonth }, (_, index) => index + 1)
+
+  return <>
+    <section className="fw-card fw-attendance-summary">
+      <div className="fw-card-heading">
+        <div><p className="fw-eyebrow">MONTHLY OVERVIEW</p><h2>{attendance.currentMonth}</h2><p>Your attendance at a glance</p></div>
+        <span className="fw-attendance-record-count">{dailyLog.length} daily records</span>
+      </div>
+      <div className="fw-attendance-overview">
+        <div><span>Attendance rate</span><strong>{attendancePercentage.toFixed(1)}<small>%</small></strong><p>{attendance.presentDays} of {attendance.workingDays} working days attended</p></div>
+        <div className="fw-attendance-progress" role="progressbar" aria-label="Monthly attendance rate" aria-valuemin="0" aria-valuemax="100" aria-valuenow={attendancePercentage}>
+          <span style={{ width: `${attendancePercentage}%` }} />
+        </div>
+      </div>
+      <div className="fw-leave-balance-grid fw-attendance-metrics">{metrics.map(([label, value, detail]) => <article key={label}><span>{label}</span><strong>{value ?? '—'}</strong><small>{detail}</small></article>)}</div>
+    </section>
+
+    <section className="fw-card fw-attendance-calendar-card">
+      <div className="fw-card-heading"><div><h2>Attendance calendar</h2><p>Daily status for {attendance.currentMonth}</p></div>
+        <div className="fw-attendance-legend" aria-label="Calendar legend"><span><i className="is-present" />Present</span><span><i className="is-leave" />Leave</span><span><i className="is-holiday" />Holiday</span></div>
+      </div>
+      <div className="fw-calendar-grid" role="group" aria-label={`${attendance.currentMonth} attendance calendar`}>
+        {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => <span key={day} className="is-weekday" aria-hidden="true">{day}</span>)}
+        {Array.from({ length: firstWeekday }, (_, index) => <span key={`spacer-${index}`} className="is-placeholder" aria-hidden="true" />)}
+        {calendarDays.map(day => {
+          const log = entriesByDay.get(day)
+          const statusClass = log?.status === 'Present' ? 'is-present' : /leave/i.test(log?.status || '') ? 'is-leave' : log?.status === 'Holiday' ? 'is-holiday' : ''
+          const date = `${calendarYear}-${String(calendarMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`
+          const details = log ? [log.status, log.inTime && `In ${log.inTime}`, log.outTime && `Out ${log.outTime}`, log.remark].filter(Boolean).join(' · ') : 'No attendance entry'
+          return <span key={day} className={statusClass} title={`${date}: ${details}`} aria-label={`${date}: ${details}`}>{day}</span>
+        })}
+      </div>
+    </section>
+
+    <section className="fw-card fw-attendance-records">
+      <div className="fw-card-heading"><div><h2>Daily records</h2><p>Check-in, check-out, and status details</p></div><span className="fw-attendance-record-count">{dailyLog.length} records</span></div>
+      <FeatureTable columns={[{ key: 'date', label: 'Date' }, { key: 'status', label: 'Status', render: row => <Status>{row.status}</Status> }, { key: 'inTime', label: 'In time' }, { key: 'outTime', label: 'Out time' }, { key: 'remark', label: 'Notes', render: row => row.remark || (row.late ? 'Late check-in' : '—') }]} rows={dailyLog} empty="No attendance records for this month" />
+    </section>
+  </>
+}
+
+function MyAttendanceScreen({ data }) {
+  return <>
+    <FeatureHeading eyebrow="PERSONAL ATTENDANCE" title="My Attendance" subtitle="Review your faculty attendance summary and daily records." />
+    <MyAttendanceSummary data={data} />
+  </>
 }
 
 export function AttendanceScreen({ data, action }) {
   const [tab, setTab] = useState('Mark Attendance')
   const [sectionId, setSectionId] = useState(data.sections[0]?.id || '')
+  const [attendancePage, setAttendancePage] = useState(1)
   const [assignmentId, setAssignmentId] = useState(data.assignments.find(row => row.sectionId === data.sections[0]?.id)?.id || '')
   const [date, setDate] = useState(today())
   const [statuses, setStatuses] = useState({})
@@ -296,6 +400,14 @@ export function AttendanceScreen({ data, action }) {
   const sectionAssignments = data.assignments.filter(row => row.sectionId === sectionId)
   const assignment = sectionAssignments.find(row => row.id === assignmentId) || sectionAssignments[0]
   const roster = data.students.filter(row => row.sectionId === sectionId)
+  const attendancePageSize = 5
+  const attendancePages = Math.max(1, Math.ceil(roster.length / attendancePageSize))
+  const currentAttendancePage = Math.min(attendancePage, attendancePages)
+  const visibleRoster = roster.slice((currentAttendancePage - 1) * attendancePageSize, currentAttendancePage * attendancePageSize)
+  useEffect(() => {
+    setAttendancePage(1)
+    setSelected(0)
+  }, [sectionId])
   const existingSession = data.sessions.find(row => row.sectionId === sectionId && row.subjectId === assignment?.subjectId && row.date === date)
   const attendanceCounts = getAttendanceCounts(statuses, roster.length)
   useEffect(() => {
@@ -311,12 +423,19 @@ export function AttendanceScreen({ data, action }) {
       if (status && roster[selected]) {
         event.preventDefault()
         setStatuses(current => ({ ...current, [roster[selected].id]: status }))
-      } else if (event.key === 'ArrowDown') setSelected(index => Math.min(index + 1, roster.length - 1))
-      else if (event.key === 'ArrowUp') setSelected(index => Math.max(index - 1, 0))
+      } else if (event.key === 'ArrowDown') {
+        const next = Math.min(selected + 1, roster.length - 1)
+        setSelected(next)
+        setAttendancePage(Math.floor(next / attendancePageSize) + 1)
+      } else if (event.key === 'ArrowUp') {
+        const next = Math.max(selected - 1, 0)
+        setSelected(next)
+        setAttendancePage(Math.floor(next / attendancePageSize) + 1)
+      }
     }
     window.addEventListener('keydown', keydown)
     return () => window.removeEventListener('keydown', keydown)
-  }, [tab, roster, selected])
+  }, [tab, roster, selected, attendancePageSize])
   const loadExistingSession = () => {
     if (!existingSession) return
     let remainingPresent = existingSession.presentCount
@@ -354,18 +473,28 @@ export function AttendanceScreen({ data, action }) {
     <FeatureHeading eyebrow="CLASS REGISTER" title="Attendance Management" subtitle="Record, review and monitor attendance for your assigned classes." />
     <Tabs items={['Mark Attendance', 'Daily View', 'Class Summary', 'Shortage & Notifications', 'My Attendance']} value={tab} onChange={value => { if (Object.keys(statuses).length && !window.confirm('Discard unsaved attendance changes?')) return; setStatuses({}); setEditingSessionId(''); setTab(value) }} />
     {tab === 'Mark Attendance' && <section className="fw-card">
+      <div className="fw-attendance-class-heading"><div><p className="fw-eyebrow">LIVE CLASS REGISTER</p><h2>{section?.shortName || section?.name || 'Choose a section'}</h2><p>{assignment ? `${assignment.subjectCode} · ${assignment.subjectName}` : 'Select a subject to begin taking attendance'} · {date}</p></div><span>{roster.length} students on roster</span></div>
+      <div className="fw-attendance-class-metrics" aria-label="Current attendance totals">
+        {[
+          ['Present', attendanceCounts.present, 'is-present'],
+          ['Absent', attendanceCounts.absent, 'is-absent'],
+          ['Late', attendanceCounts.late, 'is-late'],
+          ['Not marked', Math.max(0, roster.length - attendanceCounts.marked), ''],
+        ].map(([label, value, tone]) => <article key={label} className={tone}><span>{label}</span><strong>{value}</strong></article>)}
+      </div>
       <div className="fw-toolbar"><SectionSelect sections={data.sections} value={sectionId} onChange={value => { if (!Object.keys(statuses).length || window.confirm('Change section and discard unsaved changes?')) { setSectionId(value); setAssignmentId(data.assignments.find(row => row.sectionId === value)?.id || ''); setStatuses({}); setEditingSessionId('') } }} /><label className="fw-field"><span>Subject</span><select value={assignment?.id || ''} onChange={event => { if (!Object.keys(statuses).length || window.confirm('Change subject and discard unsaved changes?')) { setAssignmentId(event.target.value); setStatuses({}); setEditingSessionId('') } }}>{sectionAssignments.map(row => <option key={row.id} value={row.id}>{row.subjectCode} · {row.subjectName}</option>)}</select></label><label className="fw-field"><span>Class date</span><input type="date" value={date} onChange={event => { if (!Object.keys(statuses).length || window.confirm('Change date and discard unsaved changes?')) { setDate(event.target.value); setStatuses({}); setEditingSessionId('') } }} /></label>{existingSession && <button className="fw-button" onClick={loadExistingSession}><FiEdit2 /> {editingSessionId ? 'Editing existing session' : 'Edit existing session'}</button>}<button className="fw-button" onClick={() => setStatuses(Object.fromEntries(roster.map(row => [row.id, 'PRESENT'])))}><FiCheck /> Mark all present</button></div>
-      <div className="fw-counter-row"><span>Present <b>{attendanceCounts.present}</b></span><span>Absent <b>{attendanceCounts.absent}</b></span><span>Late <b>{attendanceCounts.late}</b></span><small>Keyboard: P present · A absent · L late · ↑/↓ move</small></div>
+      <div className="fw-counter-row"><small>Keyboard: P present · A absent · L late · ↑/↓ move</small></div>
       <FeatureTable columns={[
         { key: 'rollNumber', label: 'Roll number', render: row => <button className="fw-link-button" aria-current={selected === row.index ? 'true' : undefined} onClick={() => setSelected(row.index)}>{row.rollNumber}</button> }, { key: 'name', label: 'Student' },
         { key: 'attendance', label: 'Mark status', render: row => <div className="fw-status-toggle">{[['PRESENT', 'P'], ['ABSENT', 'A'], ['LATE', 'L']].map(([value, short]) => <button key={value} type="button" className={statuses[row.id] === value ? `is-${value.toLowerCase()}` : ''} onClick={() => setStatuses(current => ({ ...current, [row.id]: value }))} aria-label={`${row.name}: ${value.toLowerCase()}`} aria-pressed={statuses[row.id] === value}>{short}</button>)}</div> },
-      ]} rows={roster.map((row, index) => ({ ...row, index }))} empty="Select an assigned section to load its roster" />
+      ]} rows={visibleRoster.map((row, index) => ({ ...row, index: (currentAttendancePage - 1) * attendancePageSize + index }))} empty="Select an assigned section to load its roster" />
+      {roster.length > 0 && <Pager page={currentAttendancePage} pages={attendancePages} total={roster.length} pageSize={attendancePageSize} onChange={next => { setAttendancePage(next); setSelected((next - 1) * attendancePageSize) }} />}
       <div className="fw-footer-actions"><span>{attendanceCounts.marked} of {roster.length} students marked{!attendanceCounts.complete ? ' · mark every student before submitting' : ''}</span><button className="fw-button fw-button-primary" onClick={save} disabled={!roster.length || !attendanceCounts.complete}><FiCheckCircle /> Submit attendance</button></div>
     </section>}
     {tab === 'Daily View' && <section className="fw-card"><label className="fw-field fw-inline-field"><span>Class date</span><input type="date" value={date} onChange={event => setDate(event.target.value)} /></label><FeatureTable columns={[{ key: 'subjectName', label: 'Subject' }, { key: 'sectionName', label: 'Section' }, { key: 'date', label: 'Date' }, { key: 'presentCount', label: 'Present' }, { key: 'absentCount', label: 'Absent' }, { key: 'lateCount', label: 'Late' }, { key: 'status', label: 'Status', render: row => <Status>{row.status}</Status> }]} rows={data.sessions.filter(row => row.date === date)} empty="No class attendance sessions for this date" /></section>}
     {tab === 'Class Summary' && <section className="fw-card"><div className="fw-card-heading"><h2>Attendance by student</h2><SectionSelect sections={data.sections} value={sectionId} onChange={setSectionId} /></div>{(() => { const bands = [{ label: 'Below 75%', min: 0, max: 74 }, { label: '75–84%', min: 75, max: 84 }, { label: '85–94%', min: 85, max: 94 }, { label: '95–100%', min: 95, max: 100 }].map(band => ({ ...band, count: roster.filter(row => row.overallAttendance >= band.min && row.overallAttendance <= band.max).length })); const maxCount = Math.max(1, ...bands.map(row => row.count)); return <><h3>Attendance distribution</h3><div className="fw-histogram" role="img" aria-label={`Attendance distribution: ${bands.map(row => `${row.label}, ${row.count}`).join('; ')}`}>{bands.map(row => <span key={row.label} style={{ '--bar-height': `${Math.max(4, row.count / maxCount * 100)}%` }} title={`${row.label}: ${row.count} students`} />)}</div><div className="fw-chart-labels">{bands.map(row => <span key={row.label}>{row.label} · {row.count}</span>)}</div></> })()}<div className="fw-progress-list">{roster.slice(0, 40).map(row => <div key={row.id}><span>{row.rollNumber} · {row.name}</span><progress max="100" value={row.overallAttendance} /><b className={row.overallAttendance < 75 ? 'fw-risk-text' : ''}>{row.overallAttendance}%</b></div>)}</div><p className="fw-muted">Students below 75% are highlighted. Showing up to 40 students per view.</p></section>}
     {tab === 'Shortage & Notifications' && <section className="fw-card"><FeatureTable columns={[{ key: 'select', label: '', render: row => <input aria-label={`Select ${row.name}`} type="checkbox" checked={selectedAlerts.includes(row.id)} onChange={() => toggleAlert(row.id)} /> }, { key: 'rollNumber', label: 'Roll number' }, { key: 'name', label: 'Student' }, { key: 'sectionName', label: 'Section' }, { key: 'subjectName', label: 'Subject' }, { key: 'attendancePct', label: 'Attendance', render: row => <b className="fw-risk-text">{row.attendancePct}%</b> }]} rows={data.shortageAlerts} empty="No students are below the attendance threshold" /><div className="fw-footer-actions"><span>{selectedAlerts.length} selected</span><button className="fw-button fw-button-primary" onClick={() => setNotificationOpen(true)} disabled={!selectedAlerts.length}>Send notification</button></div></section>}
-    {tab === 'My Attendance' && <section className="fw-card"><div className="fw-card-heading"><div><h2>{data.myAttendance.currentMonth}</h2><p>Faculty attendance summary · {data.myAttendance.attendancePercentage}% present</p></div></div><div className="fw-leave-balance-grid">{[['Working days', data.myAttendance.workingDays], ['Present', data.myAttendance.presentDays], ['On leave', data.myAttendance.onLeaveDays], ['Late arrivals', data.myAttendance.lateArrivals]].map(([label, count]) => <article key={label}><span>{label}</span><strong>{count}</strong></article>)}</div><div className="fw-calendar-grid">{Array.from({ length: 31 }, (_, index) => { const log = data.myAttendance.dailyLog.find(row => Number(row.date.slice(-2)) === index + 1); return <span key={index} className={log?.status.includes('Leave') ? 'is-leave' : log?.status === 'Present' ? 'is-present' : ''} title={log ? `${log.date}: ${log.status}` : `${index + 1}: no entry`}>{index + 1}</span> })}</div><FeatureTable columns={[{ key: 'date', label: 'Date' }, { key: 'status', label: 'Status', render: row => <Status>{row.status}</Status> }, { key: 'inTime', label: 'In time' }, { key: 'outTime', label: 'Out time' }]} rows={data.myAttendance.dailyLog} empty="No attendance records for this month" /></section>}
+    {tab === 'My Attendance' && <MyAttendanceSummary data={data} />}
     {notificationOpen && <PortalDialog title="Send attendance notification" onClose={() => setNotificationOpen(false)}><p>Preview: A reminder has been sent to selected students regarding attendance below the required level.</p><label className="fw-field"><span>Message</span><textarea rows="4" value={message} onChange={event => setMessage(event.target.value)} placeholder="Write a reminder for the selected students" /></label><div className="fw-dialog-actions"><button className="fw-button fw-button-primary" onClick={async () => { await action(() => facultyService.sendAttendanceNotification(selectedAlerts, message), 'Notification sent to selected students.'); setNotificationOpen(false); setMessage('') }}>Send notification</button></div></PortalDialog>}
   </>
 }
@@ -452,6 +581,14 @@ function MarksScreen({ data, action }) {
   }
   return <>
     <FeatureHeading eyebrow="ASSESSMENT WORKSPACE" title="Marks Entry" subtitle="Enter, review and report assessment marks for your assigned classes." actions={<><button className="fw-button" onClick={() => setBulkOpen(!bulkOpen)}><FiUpload /> Bulk upload</button><button className="fw-button" onClick={() => setReport(!report)}><FiGrid /> {report ? 'Hide report' : 'Subject report'}</button></>} />
+    <section className="fw-marks-overview" aria-label="Assessment overview">
+      {[
+        ['Assessment', assessment?.name || 'No assessment selected', `${assessment?.subjectCode || '—'} · ${assessment?.sectionName || '—'}`, 'is-primary'],
+        ['Class roster', roster.length, 'Students in this assessment', ''],
+        ['Scores entered', scores.length, `${Math.max(0, roster.length - scores.length - marks.filter(row => isAbsent(row.student.id)).length)} remaining`, ''],
+        ['Class average', average, assessment ? `Out of ${assessment.maxMarks}` : 'No maximum marks set', ''],
+      ].map(([label, value, detail, tone]) => <article key={label} className={tone}><span>{label}</span><strong>{value}</strong><small>{detail}</small></article>)}
+    </section>
     <section className="fw-card">
       <div className="fw-toolbar"><label className="fw-field"><span>Exam / assessment</span><select value={assessmentId} onChange={event => { setAssessmentId(event.target.value); setValues({}); setAbsent({}) }}>{data.assessments.map(row => <option key={row.id} value={row.id}>{row.name}</option>)}</select></label>{assessment && <div className="fw-assessment-meta"><span>{assessment.subjectCode} · {assessment.sectionName}</span><span>Max marks: {assessment.maxMarks}</span><Status>{assessment.status}</Status></div>}</div>
       {assessment?.status === 'Rejected' && <p className="fw-remark-banner"><FiAlertCircle /> {assessment.remarks}</p>}
@@ -528,6 +665,9 @@ function MaterialsScreen({ data, action }) {
   const allowedFile = candidate => candidate.size <= 10 * 1024 * 1024 && /\.(pdf|pptx?|docx?|xlsx?|zip)$/i.test(candidate.name)
   const uploadAllocations = data.allocations.filter(row => row.subjectId === uploadSubject)
   const filtered = rows.filter(row => (!subject || row.subjectId === subject) && (!type || row.type === type) && `${row.title} ${row.subjectName} ${row.unitTitle}`.toLowerCase().includes(search.toLowerCase()))
+  const materialSubjects = new Set(filtered.map(row => row.subjectId)).size
+  const materialSections = new Set(filtered.flatMap(row => row.visibleSections || [])).size
+  const materialDownloads = filtered.reduce((total, row) => total + (Number(row.downloadsCount) || 0), 0)
   const selectUploadFile = candidate => {
     setFile(candidate || null)
     setFileError(candidate && !allowedFile(candidate) ? 'Choose a supported file smaller than 10 MB.' : '')
@@ -582,6 +722,14 @@ function MaterialsScreen({ data, action }) {
     }
   }
   return <><FeatureHeading eyebrow="LEARNING RESOURCES" title="Study Materials" subtitle="Organize and share teaching resources with your assigned classes." actions={<button className="fw-button fw-button-primary" onClick={() => setUploadOpen(true)}><FiUpload /> Upload material</button>} />
+    <section className="fw-material-overview" aria-label="Study material overview">
+      {[
+        ['Resources shown', filtered.length, 'Matches the current filters'],
+        ['Subjects covered', materialSubjects, 'With shared learning resources'],
+        ['Sections reached', materialSections, 'Assigned class sections'],
+        ['Total downloads', materialDownloads, 'Across the displayed resources'],
+      ].map(([label, value, detail], index) => <article key={label} className={index === 0 ? 'is-primary' : ''}><span>{label}</span><strong>{value}</strong><small>{detail}</small></article>)}
+    </section>
     <section className="fw-card"><div className="fw-toolbar"><label className="fw-search"><FiSearch /><input value={search} onChange={event => setSearch(event.target.value)} placeholder="Search material, unit or subject" /></label><label className="fw-field"><span>Subject</span><select value={subject} onChange={event => setSubject(event.target.value)}><option value="">All subjects</option>{data.allocations.map(row => <option key={row.id} value={row.subjectId}>{row.subjectCode} · {row.subjectName}</option>)}</select></label><label className="fw-field"><span>Type</span><select value={type} onChange={event => setType(event.target.value)}><option value="">All types</option>{[...new Set(rows.map(row => row.type))].map(item => <option key={item}>{item}</option>)}</select></label></div>
       <FeatureTable columns={[{ key: 'title', label: 'Material' }, { key: 'subjectName', label: 'Subject' }, { key: 'unitTitle', label: 'Unit' }, { key: 'type', label: 'Type' }, { key: 'visibleSections', label: 'Visible to', render: row => row.visibleSections.map(id => data.allocations.find(item => item.sectionId === id)?.sectionName || id).join(', ') }, { key: 'downloadsCount', label: 'Downloads' }, { key: 'actions', label: 'Actions', render: row => <div className="fw-inline-actions"><button className="fw-icon-button" aria-label={`View ${row.title}`} onClick={() => setViewMaterial(row)}><FiFileText /></button><button className="fw-icon-button" aria-label={`Edit ${row.title}`} onClick={() => beginEdit(row)}><FiEdit2 /></button><button className="fw-icon-button" aria-label={`Delete ${row.title}`} onClick={async () => { if (!window.confirm(`Delete ${row.title}?`)) return; const ok = await action(() => facultyService.deleteStudyMaterial(row.id), 'Material removed.'); if (ok) setRows(current => current.filter(item => item.id !== row.id)) }}><FiTrash2 /></button></div> }]} rows={filtered} empty="No materials match your search" />
     </section>
@@ -599,6 +747,9 @@ function LeaveScreen({ data, action }) {
   const days = calculateLeaveDays(form.fromDate, form.toDate, form.isHalfDay)
   const balance = data.balances.find(row => row.type === form.leaveType)
   const exceedsBalance = days > (balance?.available || 0)
+  const pendingRequests = history.filter(row => row.status === 'Pending').length
+  const approvedRequests = history.filter(row => row.status === 'Approved')
+  const approvedDays = approvedRequests.reduce((total, row) => total + (Number(row.daysCount) || 0), 0)
   const submit = async event => {
     event.preventDefault()
     if (!days || overlap || exceedsBalance || attachmentError) return
@@ -609,6 +760,14 @@ function LeaveScreen({ data, action }) {
     }
   }
   return <><FeatureHeading eyebrow="TIME OFF" title="Leave Management" subtitle="Review your balance and manage leave requests." />
+    <section className="fw-leave-overview" aria-label="Leave request overview">
+      {[
+        ['Leave categories', data.balances.length, 'Balances available to you'],
+        ['Pending requests', pendingRequests, 'Awaiting a decision'],
+        ['Approved days', approvedDays, 'Across approved requests'],
+        ['Request history', history.length, 'Submitted leave requests'],
+      ].map(([label, value, detail], index) => <article key={label} className={index === 1 && pendingRequests ? 'is-warning' : index === 0 ? 'is-primary' : ''}><span>{label}</span><strong>{value}</strong><small>{detail}</small></article>)}
+    </section>
     <section className="fw-leave-balance-grid">{data.balances.map(row => <article key={row.code}><span>{row.code} · {row.type}</span><strong>{row.available}<small> / {row.totalAllocated} available</small></strong><progress max={row.totalAllocated} value={row.available} /></article>)}</section>
     <div className="fw-two-column"><section className="fw-card"><div className="fw-card-heading"><h2>Apply for leave</h2></div><form className="fw-form" onSubmit={submit}><label className="fw-field"><span>Leave type</span><select value={form.leaveType} onChange={event => setForm({ ...form, leaveType: event.target.value })}>{data.balances.map(row => <option key={row.code}>{row.type}</option>)}</select></label><div className="fw-form-row"><label className="fw-field"><span>From</span><input required type="date" value={form.fromDate} onChange={event => setForm({ ...form, fromDate: event.target.value })} /></label><label className="fw-field"><span>To</span><input required type="date" value={form.toDate} min={form.fromDate} onChange={event => setForm({ ...form, toDate: event.target.value })} /></label></div><label className="fw-checkbox"><input type="checkbox" checked={form.isHalfDay} onChange={event => setForm({ ...form, isHalfDay: event.target.checked })} /> Half-day</label><p className="fw-muted">Calculated duration: {days || '—'} working day(s)</p>{form.isHalfDay && form.fromDate !== form.toDate && form.toDate && <p className="fw-risk-text" role="alert">Half-day leave must be for a single date.</p>}{overlap && <p className="fw-risk-text" role="alert">Dates overlap with an existing leave request.</p>}{exceedsBalance && <p className="fw-risk-text" role="alert">Requested duration exceeds your {balance?.code} balance of {balance?.available} day(s).</p>}<label className="fw-field"><span>Reason</span><textarea required minLength="10" rows="3" value={form.reason} onChange={event => setForm({ ...form, reason: event.target.value })} /></label><label className="fw-field"><span>Supporting document (optional)</span><input type="file" accept=".pdf,.jpg,.jpeg,.png" onChange={event => { const file = event.target.files?.[0]; const valid = !file || (file.size <= 10 * 1024 * 1024 && /\.(pdf|jpe?g|png)$/i.test(file.name)); setAttachmentError(valid ? '' : 'Choose a PDF or image smaller than 10 MB.'); if (valid) setForm({ ...form, attachmentName: file?.name || '' }) }} /></label>{attachmentError && <p className="fw-risk-text" role="alert">{attachmentError}</p>}{form.attachmentName && <small className="fw-muted">{form.attachmentName} · local preview only</small>}<button className="fw-button fw-button-primary" disabled={overlap || exceedsBalance || !days || !!attachmentError}>Submit request</button></form></section>
       <section className="fw-card"><div className="fw-card-heading"><h2>Request history</h2></div><div className="fw-timeline">{history.map(row => <article key={row.id}><i /><div><strong>{row.leaveType} · {row.daysCount} day(s)</strong><small>{row.fromDate} — {row.toDate} · Applied {row.appliedOn}</small><Status>{row.status}</Status>{row.approvalRemarks && <p>{row.approvalRemarks}</p>}</div>{row.status === 'Pending' && <button className="fw-icon-button" aria-label="Cancel pending leave" onClick={async () => { if (!window.confirm('Cancel this pending leave request?')) return; const ok = await action(() => facultyService.cancelLeave(row.id), 'Pending leave cancelled.'); if (ok) setHistory(current => current.filter(item => item.id !== row.id)) }}><FiX /></button>}</article>)}</div></section></div>
@@ -744,8 +903,10 @@ function DetailPairs({ rows }) {
   return <dl className="fw-detail-pairs">{rows.map(([label, value]) => <div key={label}><dt>{label}</dt><dd>{value || '—'}</dd></div>)}</dl>
 }
 
-function Pager({ page, pages, total, onChange }) {
-  return <footer className="fw-pager"><span>{total ? `Page ${page} of ${pages} · ${total} records` : '0 records'}</span><div><button disabled={page <= 1} onClick={() => onChange(page - 1)}>Previous</button><button disabled={page >= pages} onClick={() => onChange(page + 1)}>Next</button></div></footer>
+function Pager({ page, pages, total, pageSize: pageLimit, onChange }) {
+  const first = total ? (page - 1) * (pageLimit || Math.ceil(total / pages)) + 1 : 0
+  const last = total ? Math.min(total, page * (pageLimit || Math.ceil(total / pages))) : 0
+  return <footer className="fw-pager"><span>{total ? `Page ${page} of ${pages} · showing ${first}-${last} of ${total} records${pageLimit ? ` (${pageLimit} per page)` : ''}` : '0 records'}</span><div><button disabled={page <= 1} onClick={() => onChange(page - 1)}>Previous</button><button disabled={page >= pages} onClick={() => onChange(page + 1)}>Next</button></div></footer>
 }
 
 function UnavailableScreen({ screen }) {
@@ -793,10 +954,9 @@ export default function FacultyWorkspacePage() {
     }
   }
   const title = titleFor(screen)
-  if (['403', '404', 'session-expired'].includes(screen)) return <PortalLayout title={title}><main className="portal-page fw-page"><FacultyBreadcrumbs crumbs={[{ label: title }]} /><UnavailableScreen screen={screen} /></main></PortalLayout>
-  if (!routes.some(route => route.screen === screen) || screen === 'dashboard') return <PortalLayout title="Page not found"><main className="portal-page fw-page"><FacultyBreadcrumbs crumbs={[{ label: 'Not found' }]} /><UnavailableScreen screen="404" /></main></PortalLayout>
+  if (['403', '404', 'session-expired'].includes(screen)) return <PortalLayout title={title}><main className="portal-page fw-page"><UnavailableScreen screen={screen} /></main></PortalLayout>
+  if (!routes.some(route => route.screen === screen) || screen === 'dashboard') return <PortalLayout title="Page not found"><main className="portal-page fw-page"><UnavailableScreen screen="404" /></main></PortalLayout>
   return <PortalLayout title={title}><main className="portal-page fw-page">
-    <FacultyBreadcrumbs crumbs={[{ label: title }]} />
     {loading && !data ? <section className="fw-card" aria-busy="true"><FacultyCardSkeleton count={4} height="110px" /></section> : error && !data ? <section className="fw-error-card" role="alert"><FiAlertCircle /><div><h2>Could not load {title.toLowerCase()}</h2><p>{error}</p><button className="fw-button fw-button-primary" onClick={reload}>Retry</button></div></section> : <>
       {error && <p className="fw-inline-error" role="alert">{error}</p>}
       {notice && <p className="fw-inline-success" role="status"><FiCheckCircle />{notice}</p>}
@@ -804,6 +964,7 @@ export default function FacultyWorkspacePage() {
       {screen === 'subjects' && <SubjectsScreen data={data} />}
       {screen === 'timetable' && <TimetableScreen data={data} />}
       {screen === 'attendance' && <AttendanceScreen data={data} action={runAction} />}
+      {screen === 'my-attendance' && <MyAttendanceScreen data={data} />}
       {screen === 'marks' && <MarksScreen data={data} action={runAction} />}
       {screen === 'exams' && <ExamsScreen data={data} />}
       {screen === 'electives' && <ElectivesScreen data={data} action={runAction} />}
