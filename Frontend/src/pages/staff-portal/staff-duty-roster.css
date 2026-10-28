@@ -1,0 +1,45 @@
+.dr-root{--dr-card:var(--card-bg,#fff);--dr-text:var(--text-primary,#0f2a4a);--dr-muted:var(--text-secondary,#5b6b82);--dr-line:var(--border-color,#e3e9f2);--dr-accent:#1565c0;color:var(--dr-text);padding:4px 0 32px}
+[data-theme='dark'] .dr-root{--dr-card:#14213a;--dr-text:#e8eefc;--dr-muted:#9fb0cc;--dr-line:#25344f;--dr-accent:#5aa2ff}
+.dr-head{display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:16px}
+.dr-eyebrow{font-size:12px;letter-spacing:.12em;font-weight:700;color:var(--dr-muted);margin:0}
+.dr-head h1{font-size:34px;margin:4px 0}
+.dr-sub,.dr-muted{color:var(--dr-muted);font-size:13px;margin:0}
+.dr-toolbar{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:16px}
+.dr-week{display:flex;align-items:center;gap:10px}
+.dr-week>button,.dr-toggle button{background:var(--dr-card);border:1px solid var(--dr-line);color:var(--dr-text);border-radius:10px;padding:8px 10px;cursor:pointer;display:inline-flex;align-items:center;gap:6px}
+.dr-today{font-weight:600;color:var(--dr-accent)!important}
+.dr-toggle{display:flex;gap:6px}
+.dr-toggle button.on{background:var(--dr-accent);color:#fff;border-color:var(--dr-accent)}
+.dr-stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin-bottom:16px}
+.dr-card{background:var(--dr-card);border:1px solid var(--dr-line);border-radius:14px;padding:14px 16px;display:flex;flex-direction:column;gap:4px;box-shadow:0 4px 18px rgba(15,42,74,.06)}
+.dr-card span{font-size:12px;color:var(--dr-muted)}.dr-card strong{font-size:24px}
+.dr-days.grid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:10px}
+.dr-days.list{display:flex;flex-direction:column;gap:12px}
+.dr-day{background:var(--dr-card);border:1px solid var(--dr-line);border-radius:14px;padding:12px;display:flex;flex-direction:column;gap:8px;min-height:120px}
+.dr-day.today{border-color:var(--dr-accent);box-shadow:0 0 0 2px rgba(21,101,192,.18)}
+.dr-day header{display:flex;align-items:baseline;gap:6px;border-bottom:1px solid var(--dr-line);padding-bottom:6px}
+.dr-day header span{font-size:12px;color:var(--dr-muted)}
+.dr-day header em{margin-left:auto;font-size:11px;font-style:normal;font-weight:700;color:var(--dr-accent)}
+.dr-off{margin:auto 0;text-align:center;font-size:13px;color:var(--dr-muted)}
+.dr-off.leave{color:#7c3aed;font-weight:600}.dr-off.holiday{color:#2563eb;font-weight:600}
+.dr-duty{text-align:left;background:transparent;border:1px solid var(--dr-line);border-left:4px solid #94a3b8;border-radius:10px;padding:8px;cursor:pointer;color:var(--dr-text);display:flex;flex-direction:column;gap:3px;font:inherit}
+.dr-duty small{font-size:11px;color:var(--dr-muted)}.dr-duty b{font-size:13px}
+.dr-duty span{font-size:11px;color:var(--dr-muted);display:flex;align-items:center;gap:4px}
+.dr-duty i{font-size:11px;font-style:normal;font-weight:700}
+.dr-duty.completed{border-left-color:#10b981}.dr-duty.completed i{color:#059669}
+.dr-duty.inprogress{border-left-color:#f59e0b}.dr-duty.inprogress i{color:#d97706}
+.dr-duty.upcoming{border-left-color:#3b82f6}.dr-duty.upcoming i{color:#2563eb}
+.dr-duty:hover{background:rgba(21,101,192,.06)}
+.dr-chip{padding:3px 10px;border-radius:999px;font-size:12px;font-weight:600}
+.dr-chip.completed{background:#d1fae5;color:#065f46}.dr-chip.inprogress{background:#fef3c7;color:#92400e}.dr-chip.upcoming{background:#dbeafe;color:#1e40af}
+.dr-overlay{position:fixed;inset:0;background:rgba(8,20,40,.55);display:grid;place-items:center;z-index:1000;padding:16px}
+.dr-dialog{background:var(--dr-card);color:var(--dr-text);border-radius:16px;padding:22px;width:min(440px,100%);display:flex;flex-direction:column;gap:10px}
+.dr-dlg-head{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.dr-dlg-head h2{font-size:18px;margin:0}
+.dr-dlg-head button{background:none;border:0;color:var(--dr-text);font-size:20px;cursor:pointer}
+.dr-dialog p{margin:0;display:flex;align-items:center;gap:6px}
+.dr-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:6px}
+.dr-actions button{background:transparent;border:1px solid var(--dr-line);color:var(--dr-text);border-radius:10px;padding:9px 14px;cursor:pointer}
+.dr-actions .dr-primary{background:var(--dr-accent);color:#fff;border:0;font-weight:600}
+.dr-toast{position:fixed;bottom:24px;right:24px;background:#065f46;color:#fff;padding:12px 18px;border-radius:10px;z-index:1100}
+@media(max-width:960px){.dr-days.grid{grid-template-columns:1fr}.dr-head h1{font-size:26px}}

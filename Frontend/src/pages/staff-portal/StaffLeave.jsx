@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { FiPlus, FiX, FiSearch, FiPaperclip, FiAlertTriangle } from 'react-icons/fi';
+import { FiPlus, FiX, FiSearch, FiPaperclip } from 'react-icons/fi';
 import './staff-leave.css';
 
 // ---------- static sample data (frontend only) ----------
@@ -41,7 +41,6 @@ function countDays(from, to, half) {
 const EMPTY_FORM = { type: 'Casual', from: '', to: '', half: false, reason: '', file: '' };
 
 export default function StaffLeave() {
-  const [view, setView] = useState('normal'); // normal | loading | empty | error
   const [requests, setRequests] = useState(INITIAL_REQUESTS);
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState(EMPTY_FORM);
@@ -65,7 +64,6 @@ export default function StaffLeave() {
   const days = countDays(form.from, form.to, form.half);
 
   const visible = requests
-    .filter((r) => (view === 'empty' ? false : true))
     .filter((r) => fStatus === 'All' || r.status === fStatus)
     .filter((r) => r.from.startsWith(fYear))
     .filter((r) => r.reason.toLowerCase().includes(q.toLowerCase()))
@@ -119,30 +117,8 @@ export default function StaffLeave() {
           <h1>Leave Management</h1>
           <p className="sl-sub">Check your leave balance, apply for leave and track your requests.</p>
         </div>
-        <div className="sl-states" role="group" aria-label="Preview state">
-          <span>PREVIEW STATE:</span>
-          {['normal', 'loading', 'empty', 'error'].map((s) => (
-            <button key={s} className={view === s ? 'on' : ''} onClick={() => setView(s)}>{s[0].toUpperCase() + s.slice(1)}</button>
-          ))}
-        </div>
       </div>
 
-      {view === 'error' && (
-        <div className="sl-error" role="alert">
-          <FiAlertTriangle /> Unable to load leave data.
-          <button onClick={() => setView('normal')}>Retry</button>
-        </div>
-      )}
-
-      {view === 'loading' && (
-        <>
-          <div className="sl-grid">{[1, 2, 3].map((i) => <div key={i} className="sl-card sl-skel" style={{ height: 120 }} />)}</div>
-          <div className="sl-card sl-skel" style={{ height: 300, marginTop: 16 }} />
-        </>
-      )}
-
-      {(view === 'normal' || view === 'empty') && (
-        <>
           <div className="sl-grid">
             {balances.map((b) => (
               <div className="sl-card" key={b.type}>
@@ -193,9 +169,6 @@ export default function StaffLeave() {
               </div>
             )}
           </div>
-        </>
-      )}
-
       {showForm && (
         <div className="sl-overlay" onClick={() => setShowForm(false)}>
           <form className="sl-dialog" role="dialog" aria-modal="true" aria-label="Apply leave" onClick={(e) => e.stopPropagation()} onSubmit={submit} noValidate>

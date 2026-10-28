@@ -13,7 +13,7 @@ export function RoleDashboard({ children }) {
   const role = getUserRole()
   if (!isAuthenticated()) return <Navigate to="/login" replace />
   if (role === 'admin') return isPortalPreview() ? <Navigate to="/user-access" replace /> : children
-  if (!['faculty', 'student'].includes(role)) return <Navigate to="/unauthorized" replace />
+  if (!['faculty', 'student', 'staff'].includes(role)) return <Navigate to="/unauthorized" replace />
   return <Navigate to={portalHome(role)} replace />
 }
 export function RoleAlias({ screen }) {

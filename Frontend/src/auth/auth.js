@@ -22,6 +22,7 @@ function normalizeStoredRole(role) {
   const normalizedRole = String(rawRole || '').trim().toLowerCase().replace(/[\s-]+/g, '_')
 
   if (['admin', 'college_admin', 'collegeadmin', 'super_admin', 'superadmin'].includes(normalizedRole)) return 'admin'
+  if (['staff', 'non_teaching', 'non_teaching_staff', 'nonteaching', 'nonteaching_staff', 'nonteachingstaff'].includes(normalizedRole)) return 'staff'
   return normalizedRole
 }
 
