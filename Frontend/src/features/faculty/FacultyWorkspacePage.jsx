@@ -771,9 +771,13 @@ function MaterialsScreen({ data, action }) {
   const [fileError, setFileError] = useState('')
   const [viewMaterial, setViewMaterial] = useState(null)
   const [editMaterial, setEditMaterial] = useState(null)
+  const [deleteMaterial, setDeleteMaterial] = useState(null)
+  const [deletePending, setDeletePending] = useState(false)
+  const [deleteError, setDeleteError] = useState('')
   const [editTitle, setEditTitle] = useState('')
   const [editSections, setEditSections] = useState([])
   const [editError, setEditError] = useState('')
+  const [editSaving, setEditSaving] = useState(false)
   const allowedFile = candidate => candidate.size <= 10 * 1024 * 1024 && /\.(pdf|pptx?|docx?|xlsx?|zip)$/i.test(candidate.name)
   const uploadAllocations = data.allocations.filter(row => row.subjectId === uploadSubject)
   const filtered = rows.filter(row => (!subject || row.subjectId === subject) && (!type || row.type === type) && `${row.title} ${row.subjectName} ${row.unitTitle}`.toLowerCase().includes(search.toLowerCase()))
@@ -846,15 +850,39 @@ function MaterialsScreen({ data, action }) {
     setEditSections(row.visibleSections)
     setEditError('')
   }
+  const closeEditDialog = () => {
+    if (editSaving) return
+    setEditMaterial(null)
+  }
   const saveEdit = async event => {
     event.preventDefault()
-    if (!editMaterial || !editTitle.trim() || !editSections.length) return
+    if (!editMaterial || !editTitle.trim() || !editSections.length || editSaving) return
+    setEditSaving(true)
     const updated = await action(() => facultyService.updateStudyMaterial(editMaterial.id, { title: editTitle.trim(), visibleSections: editSections }), 'Study material updated.')
+    setEditSaving(false)
     if (updated) {
       setRows(current => current.map(row => row.id === updated.id ? updated : row))
       setEditMaterial(null)
     } else {
       setEditError('The material could not be updated. Retry the save.')
+    }
+  }
+  const closeDeleteDialog = () => {
+    if (deletePending) return
+    setDeleteMaterial(null)
+    setDeleteError('')
+  }
+  const confirmDelete = async () => {
+    if (!deleteMaterial || deletePending) return
+    setDeletePending(true)
+    setDeleteError('')
+    const ok = await action(() => facultyService.deleteStudyMaterial(deleteMaterial.id), 'Material removed.')
+    setDeletePending(false)
+    if (ok) {
+      setRows(current => current.filter(item => item.id !== deleteMaterial.id))
+      setDeleteMaterial(null)
+    } else {
+      setDeleteError('The material could not be deleted. Please try again.')
     }
   }
   return <><div className="fw-material-topbar">
@@ -898,7 +926,7 @@ function MaterialsScreen({ data, action }) {
               <td><div className="fw-material-actions" aria-label={'Actions for ' + row.title}>
                 <button type="button" className="fw-icon-button" aria-label={'View ' + row.title} title="View details" onClick={() => setViewMaterial(row)}><FiFileText /></button>
                 <button type="button" className="fw-icon-button" aria-label={'Edit ' + row.title} title="Edit resource" onClick={() => beginEdit(row)}><FiEdit2 /></button>
-                <button type="button" className="fw-icon-button" aria-label={'Delete ' + row.title} title="Delete resource" onClick={async () => { if (!window.confirm('Delete ' + row.title + '?')) return; const ok = await action(() => facultyService.deleteStudyMaterial(row.id), 'Material removed.'); if (ok) setRows(current => current.filter(item => item.id !== row.id)) }}><FiTrash2 /></button>
+                <button type="button" className="fw-icon-button" aria-label={'Delete ' + row.title} title="Delete resource" onClick={() => { setDeleteError(''); setDeleteMaterial(row) }}><FiTrash2 /></button>
               </div></td>
             </tr>
           })}</tbody>
@@ -906,20 +934,51 @@ function MaterialsScreen({ data, action }) {
       </div>
     </section>
     {uploadOpen && <PortalDialog title="Upload study material" onClose={() => setUploadOpen(false)}><form className="fw-form" onSubmit={upload}><label className="fw-field"><span>Material title</span><input required value={title} onChange={event => setTitle(event.target.value)} /></label><label className="fw-field"><span>Subject</span><select value={uploadSubject} onChange={event => { setUploadSubject(event.target.value); setVisibleSections(data.allocations.filter(row => row.subjectId === event.target.value).map(row => row.sectionId)) }}>{[...new Map(data.allocations.map(row => [row.subjectId, row])).values()].map(row => <option key={row.subjectId} value={row.subjectId}>{row.subjectCode} · {row.subjectName}</option>)}</select></label><label className="fw-file-drop"><FiUpload /><span>{file?.name || 'Choose a PDF, office document or ZIP (max 10 MB)'}</span><input type="file" accept=".pdf,.ppt,.pptx,.doc,.docx,.xls,.xlsx,.zip" onChange={event => selectUploadFile(event.target.files?.[0])} /></label>{fileError && <p className="fw-risk-text" role="alert">{fileError}</p>}<label className="fw-field"><span>Visible sections</span><select multiple value={visibleSections} onChange={event => setVisibleSections([...event.target.selectedOptions].map(option => option.value))}>{uploadAllocations.map(row => <option key={row.sectionId} value={row.sectionId}>{row.sectionName}</option>)}</select></label>{uploadProgress > 0 && <label className="fw-field"><span>Reading file locally · {uploadProgress}%</span><progress max="100" value={uploadProgress} /></label>}<p className="fw-muted">The selected file is read locally for preview; only fixture metadata is saved.</p><div className="fw-dialog-actions"><button className="fw-button fw-button-primary" disabled={!file || !!fileError || !visibleSections.length || !title.trim()}>Upload</button></div></form></PortalDialog>}
-    {viewMaterial && <PortalDialog title={viewMaterial.title} onClose={() => setViewMaterial(null)}><DetailPairs rows={[['Subject', viewMaterial.subjectName], ['Unit', viewMaterial.unitTitle], ['Type', viewMaterial.type], ['File', viewMaterial.fileName], ['File size', viewMaterial.fileSize], ['Downloads', viewMaterial.downloadsCount], ['Sections', viewMaterial.visibleSections.map(id => data.allocations.find(item => item.sectionId === id)?.sectionName || id).join(', ') || 'None']]} /><p className="fw-muted">Original file content is not included in local fixture data. Download a metadata preview instead.</p><button className="fw-button" onClick={() => downloadFixtureDetails(viewMaterial)}><FiDownload /> Download fixture details</button></PortalDialog>}
-    {editMaterial && <PortalDialog title="Edit study material" onClose={() => setEditMaterial(null)}><form className="fw-form" onSubmit={saveEdit}><label className="fw-field"><span>Title</span><input required value={editTitle} onChange={event => setEditTitle(event.target.value)} /></label><label className="fw-field"><span>Visible sections</span><select multiple value={editSections} onChange={event => setEditSections([...event.target.selectedOptions].map(option => option.value))}>{data.allocations.filter(row => row.subjectId === editMaterial.subjectId).map(row => <option key={row.sectionId} value={row.sectionId}>{row.sectionName}</option>)}</select></label>{editError && <p className="fw-risk-text" role="alert">{editError}</p>}<div className="fw-dialog-actions"><button className="fw-button" type="button" onClick={() => setEditMaterial(null)}>Cancel</button><button className="fw-button fw-button-primary" disabled={!editTitle.trim() || !editSections.length}>Save changes</button></div></form></PortalDialog>}
+    {viewMaterial && <PortalDialog title={<><span className="fw-material-modal-heading-icon is-view"><FiFileText aria-hidden="true" /></span><span>{viewMaterial.title}</span></>} onClose={() => setViewMaterial(null)}><div className="fw-material-view-dialog"><MaterialDetailPairs rows={[
+      [FiBookOpen, 'Subject', viewMaterial.subjectName, 'blue'],
+      [FiGrid, 'Unit', viewMaterial.unitTitle, 'violet'],
+      [FiFileText, 'Type', viewMaterial.type, 'teal'],
+      [FiFileText, 'File', viewMaterial.fileName, 'amber'],
+      [FiFileText, 'File size', viewMaterial.fileSize, 'green'],
+      [FiDownload, 'Downloads', viewMaterial.downloadsCount, 'blue'],
+      [FiUsers, 'Sections', viewMaterial.visibleSections.map(id => data.allocations.find(item => item.sectionId === id)?.sectionName || id).join(', ') || 'None', 'violet'],
+    ]} /><div className="fw-material-view-note"><FiAlertCircle aria-hidden="true" /><p>Original file content is not included in local fixture data. Download a metadata preview instead.</p></div><div className="fw-dialog-actions"><button type="button" className="fw-button fw-material-download-button" onClick={() => downloadFixtureDetails(viewMaterial)}><FiDownload aria-hidden="true" /> Download fixture details</button></div></div></PortalDialog>}
+    {editMaterial && <PortalDialog title={<><span className="fw-material-modal-heading-icon is-edit"><FiEdit2 aria-hidden="true" /></span><span>Edit study material</span></>} onClose={closeEditDialog}><form className="fw-form fw-material-edit-dialog" onSubmit={saveEdit} aria-busy={editSaving}>
+      <div className="fw-material-edit-intro"><span aria-hidden="true"><FiFileText /></span><div><strong>Update resource details</strong><p>Keep the title clear and choose which class sections can access this material.</p></div></div>
+      <label className="fw-field"><span className="fw-material-edit-label"><FiEdit2 aria-hidden="true" />Resource title</span><input required value={editTitle} disabled={editSaving} onChange={event => setEditTitle(event.target.value)} /></label>
+      <fieldset className="fw-material-section-fieldset" disabled={editSaving}><legend><FiUsers aria-hidden="true" />Visible to sections</legend><p>Choose every section that should have access.</p><div className="fw-material-section-options">{data.allocations.filter(row => row.subjectId === editMaterial.subjectId).map(section => {
+        const selected = editSections.includes(section.sectionId)
+        return <label className={`fw-material-section-option${selected ? ' is-selected' : ''}`} key={section.sectionId}><input type="checkbox" checked={selected} onChange={() => setEditSections(current => current.includes(section.sectionId) ? current.filter(id => id !== section.sectionId) : [...current, section.sectionId])} /><span className="fw-material-section-option-check" aria-hidden="true"><FiCheck /></span><span className="fw-material-section-option-copy"><strong>{section.sectionName}</strong><small>Student access</small></span></label>
+      })}</div></fieldset>
+      {editError && <p className="fw-material-edit-error" role="alert">{editError}</p>}
+      <div className="fw-material-edit-actions"><button className="fw-material-cancel-button" type="button" disabled={editSaving} onClick={closeEditDialog}>Cancel</button><button className="fw-material-save-button" type="submit" disabled={!editTitle.trim() || !editSections.length || editSaving}>{editSaving ? <><span className="fw-material-save-spinner" aria-hidden="true" />Saving changes…</> : <><FiCheckCircle aria-hidden="true" />Save changes</>}</button></div>
+    </form></PortalDialog>}
+    {deleteMaterial && <PortalDialog title="Delete study material?" onClose={closeDeleteDialog} descriptionId="fw-material-delete-description"><div className="fw-material-delete-dialog">
+      <div className="fw-material-delete-warning"><span aria-hidden="true"><FiAlertCircle /></span><p id="fw-material-delete-description">This will remove the resource from your library and the class sections it is shared with.</p></div>
+      <div className="fw-material-delete-preview"><span className="fw-material-delete-file-icon" aria-hidden="true"><FiFileText /></span><div><strong title={deleteMaterial.title}>{deleteMaterial.title}</strong><span>{deleteMaterial.fileName || 'Material file'}</span><small>{[deleteMaterial.type || 'File', deleteMaterial.fileSize].filter(Boolean).join(' · ')}</small></div></div>
+      <dl className="fw-material-delete-details"><div><dt>Subject</dt><dd>{deleteMaterial.subjectCode ? `${deleteMaterial.subjectCode} · ` : ''}{deleteMaterial.subjectName || 'Course resource'}</dd></div><div><dt>Shared with</dt><dd>{(deleteMaterial.visibleSections || []).map(id => data.allocations.find(item => item.sectionId === id)?.sectionName || id).join(', ') || 'No sections assigned'}</dd></div></dl>
+      {deleteError && <p className="fw-material-delete-error" role="alert">{deleteError}</p>}
+      <div className="fw-material-delete-actions"><button type="button" disabled={deletePending} onClick={closeDeleteDialog}>Cancel</button><button type="button" className="fw-material-delete-confirm" disabled={deletePending} onClick={confirmDelete}>{deletePending ? <><span className="fw-material-delete-spinner" aria-hidden="true" />Deleting…</> : <><FiTrash2 aria-hidden="true" />Delete material</>}</button></div>
+    </div></PortalDialog>}
   </>
 }
 
 function LeaveScreen({ data, action }) {
   const [form, setForm] = useState({ leaveType: 'Casual Leave (CL)', fromDate: '', toDate: '', reason: '', isHalfDay: false, attachmentName: '' })
   const [attachmentError, setAttachmentError] = useState('')
+  const [submitting, setSubmitting] = useState(false)
   const [history, setHistory] = useState(data.history)
   const [historyStatus, setHistoryStatus] = useState('All')
+  const [cancelTarget, setCancelTarget] = useState(null)
+  const [cancelPending, setCancelPending] = useState(false)
+  const [cancelError, setCancelError] = useState('')
   const overlap = hasLeaveOverlap(form.fromDate, form.toDate, history)
   const days = calculateLeaveDays(form.fromDate, form.toDate, form.isHalfDay)
   const balance = data.balances.find(row => row.type === form.leaveType)
   const exceedsBalance = days > (balance?.available || 0)
+  const datesReady = Boolean(form.fromDate && form.toDate && !overlap && !exceedsBalance && (!form.isHalfDay || form.fromDate === form.toDate))
+  const detailsReady = Boolean(datesReady && form.reason.trim().length >= 10 && !attachmentError)
+  const requestStage = detailsReady ? 3 : datesReady ? 2 : 1
   const pendingRequests = history.filter(row => row.status === 'Pending').length
   const approvedRequests = history.filter(row => row.status === 'Approved')
   const approvedDays = approvedRequests.reduce((total, row) => total + (Number(row.daysCount) || 0), 0)
@@ -927,10 +986,30 @@ function LeaveScreen({ data, action }) {
   const knownHistoryStatuses = ['Pending', 'Approved', 'Rejected', 'Cancelled']
   const historyStatuses = ['All', ...knownHistoryStatuses, ...new Set(history.map(row => row.status).filter(status => !knownHistoryStatuses.includes(status)))]
   const displayDate = value => value ? new Date(`${value}T00:00:00`).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' }) : ''
+  const closeCancelDialog = () => {
+    if (cancelPending) return
+    setCancelTarget(null)
+    setCancelError('')
+  }
+  const confirmCancelLeave = async () => {
+    if (!cancelTarget || cancelPending) return
+    setCancelPending(true)
+    setCancelError('')
+    const ok = await action(() => facultyService.cancelLeave(cancelTarget.id), 'Pending leave cancelled.')
+    setCancelPending(false)
+    if (ok) {
+      setHistory(current => current.filter(item => item.id !== cancelTarget.id))
+      setCancelTarget(null)
+    } else {
+      setCancelError('The request could not be cancelled. Please try again.')
+    }
+  }
   const submit = async event => {
     event.preventDefault()
-    if (!days || overlap || exceedsBalance || attachmentError) return
+    if (!days || overlap || exceedsBalance || attachmentError || form.reason.trim().length < 10 || submitting) return
+    setSubmitting(true)
     const created = await action(() => facultyService.applyLeave({ ...form, daysCount: days }), 'Leave request submitted to local preview.')
+    setSubmitting(false)
     if (created) {
       setHistory(current => [created, ...current])
       setHistoryStatus('All')
@@ -972,7 +1051,8 @@ function LeaveScreen({ data, action }) {
     <div className="fw-leave-workspace fw-two-column">
       <section className="fw-card fw-leave-application">
         <header className="fw-leave-panel-heading"><span className="fw-leave-panel-icon"><FiCalendar aria-hidden="true" /></span><div><p className="fw-eyebrow">NEW REQUEST</p><h2>Apply for leave</h2><p>Choose dates and share a short reason for your request.</p></div></header>
-        <form className="fw-form" onSubmit={submit}>
+        <ol className="fw-leave-request-steps" aria-label="Leave request progress">{[['Dates', 1], ['Details', 2], ['Submit', 3]].map(([label, step]) => <li key={label} className={`${requestStage === step ? 'is-current' : ''}${requestStage > step ? ' is-complete' : ''}`} aria-current={requestStage === step ? 'step' : undefined}><span>{requestStage > step ? <FiCheck aria-hidden="true" /> : step}</span><small>{label}</small></li>)}</ol>
+        <form className="fw-form fw-leave-application-form" onSubmit={submit} aria-busy={submitting}>
           <label className="fw-field"><span>Leave category</span><select value={form.leaveType} onChange={event => setForm(current => ({ ...current, leaveType: event.target.value }))}>{data.balances.map(row => <option key={row.code}>{row.type}</option>)}</select></label>
           <div className="fw-form-row fw-leave-date-fields">
             <label className="fw-field"><span>Start date</span><input required type="date" value={form.fromDate} onChange={event => setForm(current => ({ ...current, fromDate: event.target.value }))} /></label>
@@ -994,7 +1074,7 @@ function LeaveScreen({ data, action }) {
           <label className="fw-field fw-leave-attachment-field"><span>Supporting document <small>Optional · PDF or image up to 10 MB</small></span><span className="fw-leave-attachment-control"><FiFileText aria-hidden="true" /><span>{form.attachmentName || 'Choose a file to attach'}</span><input type="file" accept=".pdf,.jpg,.jpeg,.png" aria-label="Supporting document" onChange={event => { const file = event.target.files?.[0]; const valid = !file || (file.size <= 10 * 1024 * 1024 && /\.(pdf|jpe?g|png)$/i.test(file.name)); setAttachmentError(valid ? '' : 'Choose a PDF or image smaller than 10 MB.'); if (valid) setForm(current => ({ ...current, attachmentName: file?.name || '' })) }} /></span></label>
           {attachmentError && <p className="fw-risk-text" role="alert">{attachmentError}</p>}
           {form.attachmentName && <small className="fw-muted">{form.attachmentName} · local preview only</small>}
-          <div className="fw-leave-form-footer"><span>Requests are checked against your balance and existing leave dates.</span><button className="fw-button fw-button-primary" disabled={overlap || exceedsBalance || !days || form.reason.trim().length < 10 || !!attachmentError}><FiSend aria-hidden="true" /> Submit request</button></div>
+          <div className="fw-leave-form-footer"><span>Requests are checked against your balance and existing leave dates.</span><button className="fw-button fw-button-primary" disabled={overlap || exceedsBalance || !days || form.reason.trim().length < 10 || !!attachmentError || submitting}>{submitting ? <><span className="fw-leave-submit-spinner" aria-hidden="true" />Submitting…</> : <><FiSend aria-hidden="true" /> Submit request</>}</button></div>
         </form>
       </section>
 
@@ -1007,16 +1087,23 @@ function LeaveScreen({ data, action }) {
           })}
         </div>
         <div className="fw-leave-request-list">
-          {visibleHistory.length ? visibleHistory.map(row => <article className="fw-leave-request-row" key={row.id}>
+          {visibleHistory.length ? visibleHistory.map(row => <article className={`fw-leave-request-row is-${String(row.status).toLowerCase()}`} key={row.id}>
             <div className="fw-leave-request-topline"><div><span className="fw-leave-request-type-icon"><FiCalendar aria-hidden="true" /></span><div><h3>{row.leaveType}</h3><p>{row.daysCount} day{Number(row.daysCount) === 1 ? '' : 's'} requested</p></div></div><Status>{row.status}</Status></div>
-            <p className="fw-leave-request-dates">{displayDate(row.fromDate)} <span>to</span> {displayDate(row.toDate)}</p>
-            <small className="fw-leave-request-applied">Submitted {displayDate(row.appliedOn)}</small>
+            <div className="fw-leave-request-date-line"><FiCalendar aria-hidden="true" /><p className="fw-leave-request-dates">{displayDate(row.fromDate)} <span>to</span> {displayDate(row.toDate)}</p></div>
+            <small className="fw-leave-request-applied"><FiClock aria-hidden="true" />Submitted {displayDate(row.appliedOn)}</small>
             {row.approvalRemarks && <p className="fw-leave-request-remarks">{row.approvalRemarks}</p>}
-            {row.status === 'Pending' && <button type="button" className="fw-leave-cancel-button" aria-label={`Cancel pending leave request for ${row.fromDate} to ${row.toDate}`} onClick={async () => { if (!window.confirm('Cancel this pending leave request?')) return; const ok = await action(() => facultyService.cancelLeave(row.id), 'Pending leave cancelled.'); if (ok) setHistory(current => current.filter(item => item.id !== row.id)) }}><FiX aria-hidden="true" /> Cancel request</button>}
+            {row.status === 'Pending' && <button type="button" className="fw-leave-cancel-button" aria-label={`Cancel pending leave request for ${row.fromDate} to ${row.toDate}`} onClick={() => { setCancelError(''); setCancelTarget(row) }}><FiX aria-hidden="true" /> Cancel request</button>}
           </article>) : <FacultyEmptyState title={`No ${historyStatus.toLowerCase()} requests`} description={historyStatus === 'All' ? 'Your submitted leave requests will appear here.' : `There are no ${historyStatus.toLowerCase()} leave requests to show.`} />}
         </div>
       </section>
     </div>
+    {cancelTarget && <PortalDialog title={<><span className="fw-leave-cancel-dialog-heading-icon"><FiX aria-hidden="true" /></span><span>Cancel leave request?</span></>} onClose={closeCancelDialog} descriptionId="fw-leave-cancel-description"><div className="fw-leave-cancel-dialog">
+      <div className="fw-leave-cancel-warning"><span aria-hidden="true"><FiAlertCircle /></span><p id="fw-leave-cancel-description">This will cancel your pending request. You can submit a new request later if your plans change.</p></div>
+      <div className="fw-leave-cancel-summary"><span className="fw-leave-cancel-calendar" aria-hidden="true"><FiCalendar /></span><div className="fw-leave-cancel-summary-main"><strong>{cancelTarget.leaveType}</strong><span>{displayDate(cancelTarget.fromDate)} – {displayDate(cancelTarget.toDate)}</span></div><span className="fw-leave-cancel-status">Pending</span></div>
+      <div className="fw-leave-cancel-facts"><div><small>Duration</small><strong>{cancelTarget.daysCount} day{Number(cancelTarget.daysCount) === 1 ? '' : 's'}</strong></div><div><small>Submitted</small><strong>{displayDate(cancelTarget.appliedOn) || '—'}</strong></div></div>
+      {cancelError && <p className="fw-leave-cancel-error" role="alert">{cancelError}</p>}
+      <div className="fw-leave-cancel-actions"><button type="button" disabled={cancelPending} onClick={closeCancelDialog}>Keep request</button><button type="button" className="fw-leave-cancel-confirm" disabled={cancelPending} onClick={confirmCancelLeave}>{cancelPending ? <><span className="fw-leave-cancel-spinner" aria-hidden="true" />Cancelling…</> : <><FiX aria-hidden="true" />Cancel request</>}</button></div>
+    </div></PortalDialog>}
   </>
 }
 function DocumentsScreen({ data, action }) {
@@ -1146,6 +1233,10 @@ function FeatureHeading({ eyebrow, title, subtitle, actions }) {
 
 function DetailPairs({ rows }) {
   return <dl className="fw-detail-pairs">{rows.map(([label, value]) => <div key={label}><dt>{label}</dt><dd>{value || '—'}</dd></div>)}</dl>
+}
+
+function MaterialDetailPairs({ rows }) {
+  return <dl className="fw-material-view-details">{rows.map(([Icon, label, value, tone]) => <div key={label}><dt><span className={`fw-material-detail-icon is-${tone}`}><Icon aria-hidden="true" /></span>{label}</dt><dd>{value || '—'}</dd></div>)}</dl>
 }
 
 function Pager({ page, pages, total, pageSize: pageLimit, onChange }) {
