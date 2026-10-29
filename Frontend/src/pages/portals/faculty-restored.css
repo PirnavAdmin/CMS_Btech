@@ -1,0 +1,30 @@
+﻿/* Shared density for the restored teaching workflows; admin pages are unaffected. */
+#root .portal-shell .faculty-page-container:has(.restored-faculty-page,.fa-attendance-page,.fsa-page,.fc-page) { gap:12px; }
+#root .portal-shell :is(.restored-faculty-page,.fa-attendance-page,.fsa-page,.fc-page) { margin:0; padding:0; min-width:0; }
+#root .portal-shell :is(.restored-faculty-page,.fa-attendance-page,.fsa-page) > .tf-heading { margin:0 0 14px; gap:16px; align-items:center; }
+#root .portal-shell :is(.restored-faculty-page,.fa-attendance-page,.fsa-page,.fc-page) h1 { font-size:26px; line-height:1.25; margin:4px 0 7px; }
+#root .portal-shell :is(.restored-faculty-page,.fa-attendance-page,.fsa-page,.fc-page) .portal-eyebrow { font-size:9px; margin:0 0 5px; letter-spacing:1px; }
+#root .portal-shell :is(.restored-faculty-page,.fa-attendance-page,.fsa-page) > .tf-heading > div > p:last-child { margin:0; font-size:12px; line-height:1.5; }
+#root .portal-shell :is(.restored-faculty-page,.fa-attendance-page,.fsa-page,.fc-page) :is(input:not([type=checkbox]):not([type=radio]),select) { min-height:34px; font-size:12px; }
+#root .portal-shell .fa-workspace { gap:12px; }
+#root .portal-shell .fa-card { padding:14px; border-radius:10px; }
+#root .portal-shell .fa-demo-bar { padding:8px 12px; margin:0; }
+#root .portal-shell .fa-card > header { margin-bottom:12px; }
+#root .portal-shell .fa-register .fa-table td { padding:6px 10px; }
+#root .portal-shell .fa-register .fa-toggle-btn { min-height:26px; height:26px; }
+#root .portal-shell .fsa-container { gap:14px; }
+#root .portal-shell .fsa-punch-card { padding:16px; gap:18px; }
+#root .portal-shell .fsa-faculty-strip { margin-bottom:12px; padding-bottom:12px; }
+#root .portal-shell .fsa-clock-display-box { padding:10px 12px; margin-bottom:12px; }
+#root .portal-shell .fsa-punch-actions { gap:8px; margin-top:10px; }
+#root .portal-shell .fsa-punch-actions button { min-height:34px; padding:8px 12px; font-size:11px; }
+#root .portal-shell .fsa-nav-card { padding:16px; }
+#root .portal-shell .fsa-table td { padding:9px 12px; font-size:12px; }
+#root .portal-shell .fsa-table th { padding:11px 12px; font-size:10px; }
+#root .portal-shell .fsa-table button { min-height:30px; padding:6px 10px; font-size:11px; }
+#root .portal-shell .tl-container { gap:14px; }
+#root .portal-shell .tl-summary-card { padding:14px; }
+#root .portal-shell .tl-quotas-section { padding:14px; }
+#root .portal-shell .tm-statistics article { padding:10px 14px; }
+#root .portal-shell .tm-register .tm-table-scroll { max-height:none; }
+@media(max-width:650px){ #root .portal-shell :is(.restored-faculty-page,.fa-attendance-page,.fsa-page,.fc-page) h1 { font-size:22px; } }

@@ -1,4 +1,6 @@
 export const facultyRoutes = [
+  { path: '/faculty-portal/events', screen: 'events', title: 'Campus Events', phase: 'D' },
+  { path: '/faculty-portal/placements', screen: 'placements', title: 'Placement Coordination', phase: 'D' },
   { path: '/faculty-portal/dashboard', screen: 'dashboard', title: 'Dashboard', phase: 'A' },
   { path: '/faculty-portal/students', screen: 'students', title: 'My Students', phase: 'B' },
   { path: '/faculty-portal/subjects', screen: 'subjects', title: 'My Subjects', phase: 'B' },
@@ -19,3 +21,6 @@ export const facultyRoutes = [
 export const facultyRouteByPath = Object.fromEntries(
   facultyRoutes.map(route => [route.path, route]),
 )
+
+// Keep the established teaching workflows active when the generic workspace evolves.
+export const restoredFacultyScreens = ['attendance', 'my-attendance', 'marks', 'leave', 'events', 'meetings', 'placements']
