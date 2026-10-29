@@ -4,7 +4,7 @@ const granted = value => value === true || value === 1 || value === 'true' || va
 // Personal workspaces use the authenticated employee role. The role matrix
 // controls access to shared administrative modules, not the workspace shell.
 const workspaceScreens = {
-  faculty: ['dashboard', 'students', 'subjects', 'attendance', 'my-attendance', 'marks', 'timetable', 'materials', 'leave', 'events', 'placements', 'notifications', 'profile'],
+  faculty: ['dashboard', 'students', 'subjects', 'attendance', 'my-attendance', 'marks', 'timetable', 'materials', 'leave', 'events', 'meetings', 'placements', 'notifications', 'profile'],
   staff: ['dashboard', 'profile', 'my-profile', 'attendance', 'my-attendance', 'leave', 'duty-roster', 'tasks', 'notices', 'notifications', 'meetings-events', 'documents'],
 }
 

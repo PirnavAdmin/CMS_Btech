@@ -5,7 +5,7 @@ import { useEffect, useState } from 'react'
 import { NavLink, useNavigate } from 'react-router-dom'
 import { FiBell, FiBriefcase, FiBook, FiBookOpen, FiCalendar, FiCheckSquare, FiClock, FiChevronLeft, FiChevronRight, FiCreditCard, FiEdit3, FiFileText, FiGrid, FiLogOut, FiMenu, FiMoon, FiSearch, FiShield, FiSun, FiUser, FiUsers, FiX } from 'react-icons/fi'
 import { getAuthStorage, getUserRole, signOut } from '../auth/auth.js'
-import { facultyNavigation, studentNavigation } from '../components/portals/portalNavigation.js'
+import { facultyNavigation, studentNavigation, facultySidebarKeys } from '../components/portals/portalNavigation.js'
 import { isPortalPreview } from '../auth/portalPreview.js'
 import { PortalDialog } from '../components/portals/PortalUI.jsx'
 import FacultyNavbarActions from '../components/portals/FacultyNavbarActions.jsx'
@@ -22,9 +22,8 @@ const navigationIcons = {
   dashboard: [FiGrid, 'blue'], students: [FiUsers, 'cyan'], subjects: [FiBook, 'purple'],
   attendance: [FiCheckSquare, 'green'], 'my-attendance': [FiClock, 'blue'], marks: [FiEdit3, 'gold'], results: [FiFileText, 'gold'],
   timetable: [FiCalendar, 'orange'], materials: [FiBookOpen, 'cyan'], leave: [FiCalendar, 'pink'],
-  events: [FiCalendar, 'orange'], placements: [FiBriefcase, 'green'], notifications: [FiBell, 'orange'], profile: [FiUser, 'purple'], fees: [FiCreditCard, 'green'], users: [FiShield, 'blue'],
+  events: [FiCalendar, 'orange'], meetings: [FiCalendar, 'orange'], placements: [FiBriefcase, 'green'], notifications: [FiBell, 'orange'], profile: [FiUser, 'purple'], fees: [FiCreditCard, 'green'], users: [FiShield, 'blue'],
 }
-const facultySidebarKeys = new Set(['dashboard', 'students', 'subjects', 'attendance', 'my-attendance', 'marks', 'timetable', 'materials', 'leave'])
 
 export default function PortalLayout({ children, title }) {
   const role = getUserRole(), navigate = useNavigate()
