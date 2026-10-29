@@ -4,3 +4,8 @@
 #root .portal-shell .fc-summary-anchor { flex:0 1 460px; width:100%; max-width:460px; min-width:0; margin-left:auto; }
 #root .portal-shell .fc-summary-anchor .fc-summary { width:100%; max-width:none; margin:0; box-sizing:border-box; }
 @media(max-width:800px){ #root .portal-shell .fc-heading { flex-direction:row; } #root .portal-shell .fc-summary-anchor { flex-basis:100%; } }
+#root .portal-shell .fc-card .fc-toolbar { padding:10px; border:1px solid var(--border); border-radius:8px; background:var(--surface-soft); gap:10px; }
+#root .portal-shell .fc-event-list article { padding:12px 14px; gap:14px; }
+#root .portal-shell .fc-card h2 { font-size:15px; }
+#root .portal-shell .fc-event-body p { line-height:1.5; }
+#root .portal-shell .fc-table-wrap td { padding:10px 12px; }

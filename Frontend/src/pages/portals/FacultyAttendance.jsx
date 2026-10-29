@@ -371,7 +371,7 @@ function RegisterSheet({
   const [search, setSearch] = useState('')
   const [filter, setFilter] = useState('ALL')
   const [page, setPage] = useState(1)
-  const [pageSize, setPageSize] = useState(10)
+  const [pageSize, setPageSize] = useState(5)
   const [bulk, setBulk] = useState('PRESENT')
   const [dialog, setDialog] = useState(null)
   const [error, setError] = useState('')

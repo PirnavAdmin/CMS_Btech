@@ -5,10 +5,11 @@ import {
   FiEdit2, FiFileText, FiGrid, FiSearch, FiTrash2, FiUpload, FiX,
 } from 'react-icons/fi'
 import PortalLayout from '../../layouts/PortalLayout.jsx'
+import FacultyRestoredScreen from '../../pages/portals/FacultyRestoredScreen.jsx'
 import { PortalDialog, Status } from '../../components/portals/PortalUI.jsx'
 import FacultyCardSkeleton from './components/FacultyCardSkeleton.jsx'
 import FacultyEmptyState from './components/FacultyEmptyState.jsx'
-import { facultyRouteByPath } from './routeConfig.js'
+import { facultyRouteByPath, restoredFacultyScreens } from './routeConfig.js'
 import { facultyService } from './services/facultyService.js'
 import { buildAttendanceRecords, calculateLeaveDays, getAttendanceCounts, hasLeaveOverlap, validateMarks } from './domain/validation.js'
 import './workspace.css'
@@ -916,6 +917,11 @@ function UnavailableScreen({ screen }) {
 }
 
 export default function FacultyWorkspacePage() {
+  const { screen = 'dashboard' } = useParams()
+  if (restoredFacultyScreens.includes(screen)) return <FacultyRestoredScreen key={screen} screen={screen} />
+  return <FacultyCurrentWorkspacePage />
+}
+function FacultyCurrentWorkspacePage() {
   const { screen = 'dashboard' } = useParams()
   const [searchParams, setSearchParams] = useSearchParams()
   const [loadResult, setLoadResult] = useState({ key: '', data: null, error: '' })
