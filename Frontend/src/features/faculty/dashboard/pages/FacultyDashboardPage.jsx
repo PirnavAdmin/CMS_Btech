@@ -1,14 +1,17 @@
+import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import {
   FiAlertTriangle,
   FiArrowRight,
   FiBookOpen,
   FiCalendar,
+  FiCheckCircle,
   FiClock,
   FiLayers,
   FiUsers,
 } from 'react-icons/fi'
 import PortalLayout from '../../../../layouts/PortalLayout.jsx'
+import { getAuthStorage } from '../../../../auth/auth.js'
 import FacultyCardSkeleton from '../../components/FacultyCardSkeleton.jsx'
 import FacultyEmptyState from '../../components/FacultyEmptyState.jsx'
 import { facultyService } from '../../services/facultyService.js'
@@ -22,40 +25,39 @@ const metrics = [
   { key: 'todaysClasses', label: "Today's Classes", description: 'On your teaching schedule', path: 'timetable', Icon: FiCalendar },
 ]
 
-function DashboardContent({ snapshot }) {
+function DashboardContent({ snapshot, facultyName }) {
   const kpis = snapshot.kpis
   const hasRecords = Object.values(kpis).some(count => count > 0)
+  const displayName = facultyName || snapshot.faculty.fullName || 'Faculty'
   return <div className="faculty-dashboard">
     <section className="faculty-dashboard-welcome">
-      <div>
+      <div className="faculty-dashboard-welcome-copy">
         <p className="faculty-dashboard-eyebrow">YOUR ACADEMIC WORKSPACE</p>
-        <h1>Welcome back, {snapshot.faculty.fullName}</h1>
+        <div className="faculty-dashboard-greeting">
+          <h1>Welcome back, {displayName}</h1>
+          <span className="faculty-dashboard-role">{snapshot.faculty.designation || 'Teaching Faculty'}</span>
+        </div>
         <p>Keep track of your classes, students and daily academic work.</p>
         <div className="faculty-dashboard-tags">
-          <span>{snapshot.faculty.designation}</span>
           <span>{snapshot.faculty.department}</span>
           {snapshot.academicYear && <span>Academic year {snapshot.academicYear}</span>}
         </div>
+        <nav className="faculty-dashboard-quick-actions" aria-label="Faculty quick actions">
+          <Link to="/faculty-portal/attendance" className="faculty-dashboard-primary">
+            <FiCheckCircle aria-hidden="true" /> Mark attendance
+          </Link>
+          <Link to="/faculty-portal/leave" className="faculty-dashboard-secondary">
+            <FiCalendar aria-hidden="true" /> Apply leave
+          </Link>
+          <Link to="/faculty-portal/timetable" className="faculty-dashboard-text-link">
+            View my timetable <FiArrowRight aria-hidden="true" />
+          </Link>
+        </nav>
       </div>
-      <Link to="/faculty-portal/timetable" className="faculty-dashboard-primary">
-        View my timetable <FiArrowRight aria-hidden="true" />
-      </Link>
+      <img className="faculty-dashboard-welcome-art" src="/university-campus.svg" alt="" aria-hidden="true" />
     </section>
 
-    {hasRecords ? <section className="faculty-dashboard-metrics" aria-label="Teaching summary">
-      {metrics.map(({ key, label, description, path, Icon }) => {
-        const value = kpis[key]
-        return <Link className="faculty-dashboard-metric" to={`/faculty-portal/${path}`} key={key}>
-          <span className="faculty-dashboard-metric-icon"><Icon aria-hidden="true" /></span>
-          <span className="faculty-dashboard-metric-copy">
-            <span className="faculty-dashboard-metric-label">{label}</span>
-            <strong>{value > 0 ? value : '—'}</strong>
-            <small>{value > 0 ? description : `No ${label.toLowerCase()} data available`}</small>
-          </span>
-          <FiArrowRight className="faculty-dashboard-metric-arrow" aria-hidden="true" />
-        </Link>
-      })}
-    </section> : <section className="faculty-dashboard-empty-card">
+    {!hasRecords && <section className="faculty-dashboard-empty-card">
       <FacultyEmptyState
         icon={FiBookOpen}
         title="No teaching assignments yet"
@@ -118,6 +120,27 @@ function DashboardContent({ snapshot }) {
   </div>
 }
 
+function DashboardMetrics({ snapshot }) {
+  const kpis = snapshot.kpis
+  const hasRecords = Object.values(kpis).some(count => count > 0)
+  if (!hasRecords) return null
+
+  return <section className="faculty-dashboard-metrics faculty-dashboard-metrics-top" aria-label="Teaching summary">
+    {metrics.map(({ key, label, description, path, Icon }) => {
+      const value = kpis[key]
+      return <Link className="faculty-dashboard-metric" to={`/faculty-portal/${path}`} key={key}>
+        <span className="faculty-dashboard-metric-icon"><Icon aria-hidden="true" /></span>
+        <span className="faculty-dashboard-metric-copy">
+          <span className="faculty-dashboard-metric-label">{label}</span>
+          <strong>{value > 0 ? value : '—'}</strong>
+          <small>{value > 0 ? description : `No ${label.toLowerCase()} data available`}</small>
+        </span>
+        <FiArrowRight className="faculty-dashboard-metric-arrow" aria-hidden="true" />
+      </Link>
+    })}
+  </section>
+}
+
 function LoadingDashboard() {
   return <div className="faculty-dashboard" aria-label="Loading faculty dashboard" aria-busy="true">
     <div className="faculty-dashboard-welcome-skeleton"><span /><span /><span /></div>
@@ -137,13 +160,27 @@ function DashboardError({ message, retry, loading }) {
 
 export default function FacultyDashboardPage() {
   const { snapshot, loading, error, retry } = useFacultyDashboard(facultyService)
+  const [facultyName, setFacultyName] = useState(() => getAuthStorage()?.getItem('btech-user-name')?.trim() || '')
+  useEffect(() => {
+    const syncFacultyName = event => {
+      setFacultyName(event.detail?.fullName?.trim() || getAuthStorage()?.getItem('btech-user-name')?.trim() || '')
+    }
+    window.addEventListener('btech-profile-updated', syncFacultyName)
+    window.addEventListener('storage', syncFacultyName)
+    return () => {
+      window.removeEventListener('btech-profile-updated', syncFacultyName)
+      window.removeEventListener('storage', syncFacultyName)
+    }
+  }, [])
   return <PortalLayout title="Dashboard">
     <main className="portal-page faculty-dashboard-page">
       <header className="faculty-dashboard-heading">
-        <div><p className="portal-eyebrow">DIGITAL CAMPUS / TEACHING FACULTY</p><h1>Dashboard</h1><p>Your teaching schedule, assigned classes and daily academic work.</p></div>
-        <span className="faculty-dashboard-live"><i />Mock college records</span>
+        <div><p className="portal-eyebrow">DIGITAL CAMPUS / TEACHING FACULTY</p><h1>Dashboard</h1><p>Welcome back, {facultyName || snapshot?.faculty?.fullName || 'Faculty'}. Review your classes, pending actions and academic schedule.</p></div>
+        <div className="faculty-dashboard-heading-aside">
+          {snapshot && <DashboardMetrics snapshot={snapshot} />}
+        </div>
       </header>
-      {loading && !snapshot ? <LoadingDashboard /> : error && !snapshot ? <DashboardError message={error} retry={retry} loading={loading} /> : snapshot ? <>{error && <DashboardError message={error} retry={retry} loading={loading} />}<DashboardContent snapshot={snapshot} /></> : null}
+      {loading && !snapshot ? <LoadingDashboard /> : error && !snapshot ? <DashboardError message={error} retry={retry} loading={loading} /> : snapshot ? <>{error && <DashboardError message={error} retry={retry} loading={loading} />}<DashboardContent snapshot={snapshot} facultyName={facultyName} /></> : null}
     </main>
   </PortalLayout>
 }
