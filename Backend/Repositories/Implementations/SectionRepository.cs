@@ -220,9 +220,9 @@ namespace BTech.Repositories.Implementations
             try
             {
                 _logger.LogInformation(
-                    "Creating section. SectionName: {SectionName}, SectionCode: {SectionCode}",
+                    "Creating section. SectionName: {SectionName}, SectionCode: {SectionCode}, CollegeId: {CollegeId}, AcademicYearId: {AcademicYearId}, SemesterId: {SemesterId}",
                     section.SectionName,
-                    section.SectionCode);
+                    section.SectionCode, section.CollegeId, section.AcademicYearId, section.SemesterId);
 
                 await using var connection =
                     CreateConnection();

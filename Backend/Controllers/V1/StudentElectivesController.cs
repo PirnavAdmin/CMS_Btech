@@ -1,8 +1,7 @@
-﻿using BTech.DTOs.Electives;
+using BTech.DTOs.Electives;
 using BTech.Models;
 
 using System.Security.Claims;
-using BTech.DTOs.Electives;
 using BTech.Services.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;

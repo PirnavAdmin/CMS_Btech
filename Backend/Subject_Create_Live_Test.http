@@ -1,0 +1,35 @@
+@baseUrl = http://localhost:5084
+@token = REPLACE_WITH_JWT_TOKEN
+
+### Swagger JSON - verify POST exists
+GET {{baseUrl}}/swagger/v1/swagger.json
+
+### List subjects
+GET {{baseUrl}}/api/v1/subjects
+Authorization: Bearer {{token}}
+Accept: application/json
+
+### Create subject - change subjectCode if repeated
+POST {{baseUrl}}/api/v1/subjects
+Authorization: Bearer {{token}}
+Content-Type: application/json
+Accept: application/json
+
+{
+  "subjectCode": "CS927A",
+  "subjectName": "Subject API Create Test",
+  "courseId": 1,
+  "branchId": 1,
+  "semesterId": 2,
+  "academicYearId": 2,
+  "credits": 3,
+  "subjectType": "Theory",
+  "description": "Live POST deployment verification",
+  "electiveType": "Non-Elective",
+  "status": "Active",
+  "lectureHours": 3,
+  "tutorialHours": 0,
+  "practicalHours": 0,
+  "internalMarks": 40,
+  "externalMarks": 60
+}

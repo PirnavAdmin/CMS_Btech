@@ -13,13 +13,16 @@ namespace BTech.Controllers
     {
         private readonly IAuthService _authService;
         private readonly IChangePasswordService _changePasswordService;
+        private readonly IAccountSetupService _accountSetupService;
 
         public AuthController(
             IAuthService authService,
-            IChangePasswordService changePasswordService)
+            IChangePasswordService changePasswordService,
+            IAccountSetupService accountSetupService)
         {
             _authService = authService;
             _changePasswordService = changePasswordService;
+            _accountSetupService = accountSetupService;
         }
 
         [HttpPost("login")]
@@ -150,6 +153,49 @@ namespace BTech.Controllers
                     });
                 }
 
+                return BadRequest(new
+                {
+                    success = false,
+                    message = result.Message
+                });
+            }
+
+            return Ok(new
+            {
+                success = true,
+                message = result.Message
+            });
+        }
+
+
+        // =========================================================
+        // COMPLETE FIRST-TIME ACCOUNT SETUP
+        // POST: api/v1/auth/complete-account-setup
+        // This endpoint is intentionally anonymous: the single-use email token
+        // is the proof of control of the registered email address.
+        // =========================================================
+        [AllowAnonymous]
+        [HttpPost("complete-account-setup")]
+        public async Task<IActionResult> CompleteAccountSetup(
+            [FromBody] CompleteAccountSetupRequestDto request)
+        {
+            if (!ModelState.IsValid)
+            {
+                return BadRequest(new
+                {
+                    success = false,
+                    message = "Login ID, valid setup token, and matching password fields are required. Password must be at least 12 characters."
+                });
+            }
+
+            var result = await _accountSetupService.CompleteSetupAsync(
+                request.LoginId,
+                request.Token,
+                request.NewPassword,
+                request.ConfirmNewPassword);
+
+            if (!result.Success)
+            {
                 return BadRequest(new
                 {
                     success = false,

@@ -1,0 +1,27 @@
+{
+  "input": "CMS_BTech_Placement_Eligibility_Engine.zip + Dump2026oct09th(02).sql",
+  "original_source_files_checked": 776,
+  "missing_source_files": [],
+  "changed_original_files": [
+    "Repositories/Implementations/PlacementRepository.cs",
+    "Services/Implementations/PlacementService.cs",
+    "Services/Implementations/PlacementWorkflowRules.cs"
+  ],
+  "controllers_interfaces_DTOs_Program_unchanged": true,
+  "schema_write_statements_checked": 19,
+  "repository_selects_executed_on_SQLite_dump_fixture": 37,
+  "dump_case_checks_passed": 5,
+  "database_access_fixture_checks_passed": 13,
+  "readonly_audit_result_row_counts": [
+    3,
+    0,
+    0,
+    0,
+    0,
+    0,
+    14
+  ],
+  "dotnet_build_and_CSharp_tests": "NOT RUN: .NET SDK unavailable",
+  "live_MySQL_HTTP_tests": "NOT RUN: MySQL server and backend runtime unavailable",
+  "scope": "SQLite fixture validates query shapes and seed IDs; it does not validate MySQL transactions, locks, constraints or ASP.NET authorization middleware."
+}

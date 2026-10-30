@@ -1,524 +1,220 @@
-using System.Data;
+using System.Globalization;
 using System.Security.Claims;
+using System.Text;
+using System.Text.RegularExpressions;
 using BTech.DTOs.Subjects;
-using Dapper;
+using BTech.Repositories.Implementations;
+using ClosedXML.Excel;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.Filters;
 using MySqlConnector;
 
 namespace BTech.Controllers.V1.FacultyManagement;
 
 [ApiController]
 [Route("api/v1/subjects")]
+[Route("api/v1/subject-management/subjects")]
 [Authorize]
+[TypeFilter(typeof(SubjectValidationFilter), Order = -3000)]
 public class SubjectsController : ControllerBase
 {
-    private readonly IConfiguration _configuration;
-    public SubjectsController(IConfiguration configuration) => _configuration = configuration;
+    private readonly SubjectManagementRepository _repository;
+    private readonly ILogger<SubjectsController> _logger;
+    public SubjectsController(SubjectManagementRepository repository, ILogger<SubjectsController> logger)
+    { _repository = repository; _logger = logger; }
+    private CancellationToken Cancellation => HttpContext.RequestAborted;
+    private long? Actor => long.TryParse(User.FindFirstValue(ClaimTypes.NameIdentifier) ?? User.FindFirstValue("sub")
+        ?? User.FindFirstValue("user_id"), out var id) ? id : null;
 
-    private MySqlConnection Connection() => new(_configuration.GetConnectionString("DefaultConnection"));
-
-    // GET: api/v1/subjects
+    // The original route retains numeric status and snake_case keys for existing consumers.
+    // The additional screen route returns status as Active/Inactive; both contain camelCase aliases.
+    private Dictionary<string, object?> Present(Dictionary<string, object?> row)
+    {
+        if (Request.Path.StartsWithSegments("/api/v1/subject-management")) row["status"] = row["statusName"];
+        return row;
+    }
     [HttpGet]
-    public Task<IActionResult> GetAll([FromQuery] long? semesterId, [FromQuery] byte? status)
-        => QuerySubjects(null, semesterId, status);
-
-    // GET: api/v1/subjects/{subjectId}
-    [HttpGet("{subjectId:long}")]
-    public async Task<IActionResult> GetById(long subjectId)
-    {
-        if (subjectId <= 0) return BadRequest(new { success = false, message = "Invalid subject ID." });
-        await using var connection = Connection();
-        await connection.OpenAsync();
-        var row = await GetSubjectWithAcademicContextAsync(connection, subjectId);
-        return row == null
-            ? NotFound(new { success = false, message = "Subject not found." })
-            : Ok(new { success = true, message = "Subject retrieved successfully.", data = row });
-    }
-
-    // GET: api/v1/subjects/search?search=math
     [HttpGet("search")]
-    public Task<IActionResult> Search([FromQuery] SubjectSearchRequest request)
-        => QuerySubjects(request.Search, request.SemesterId, request.Status);
-
-    // =========================================================
-    // TICKET 133 - CREATE SUBJECT
-    // POST: api/v1/subjects
-    // =========================================================
-    [HttpPost]
-    public async Task<IActionResult> Create([FromBody] CreateSubjectRequest request)
+    public Task<IActionResult> GetAll([FromQuery] SubjectSearchRequest request) => Execute(async () =>
     {
-        if (string.IsNullOrWhiteSpace(request.SubjectCode))
-            return BadRequest(new { success = false, message = "Subject code is required." });
+        var all = await _repository.ListAsync(request, null, Validate(request), Cancellation);
+        var total = all.Count;
+        var page = request.Page ?? 1;
+        var size = request.PageSize ?? (request.Page.HasValue ? 25 : Math.Max(total, 1));
+        var rows = all.Skip((int)Math.Min((long)(page - 1) * size, total)).Take(size).Select(Present).ToList();
+        return Ok(new { success = true, message = "Subjects retrieved successfully.", data = rows,
+            count = rows.Count, totalCount = total, page, pageSize = size, totalPages = (int)Math.Ceiling((double)total / size) });
+    });
 
-        if (string.IsNullOrWhiteSpace(request.SubjectName))
-            return BadRequest(new { success = false, message = "Subject name is required." });
+    [HttpGet("{subjectId:long}")]
+    public Task<IActionResult> GetById(long subjectId) => Execute(async () =>
+        Ok(new { success = true, message = "Subject retrieved successfully.", data = Present(await Find(subjectId)) }));
 
-        await using var connection = Connection();
-        await connection.OpenAsync();
-        await using var transaction = await connection.BeginTransactionAsync();
+    // Explicit empty template keeps the create operation on the collection route:
+    // POST /api/v1/subjects (and the existing subject-management alias).
+    [HttpPost("")]
+    public Task<IActionResult> Create([FromBody] CreateSubjectRequest request) => Execute(async () =>
+    {
+        _logger.LogInformation(
+            "Creating subject {SubjectCode}; CourseId={CourseId}; BranchId={BranchId}; SemesterId={SemesterId}; Actor={Actor}; CorrelationId={CorrelationId}",
+            request.SubjectCode?.Trim(), request.CourseId, request.BranchId, request.SemesterId, Actor, HttpContext.TraceIdentifier);
 
-        try
-        {
-            var duplicateCode = await connection.ExecuteScalarAsync<int>(
-                @"SELECT COUNT(1)
-                  FROM subjects
-                  WHERE subject_code = @subjectCode;",
-                new { subjectCode = request.NormalizedSubjectCode },
-                transaction);
+        var id = await _repository.SaveAsync(0, request, Actor, Cancellation);
+        var row = Present(await Find(id));
+        Response.Headers.Location = $"{Request.Path.ToString().TrimEnd('/')}/{id}";
+        return StatusCode(201, new { success = true, message = "Subject created successfully.", subjectId = id, data = row });
+    });
 
-            if (duplicateCode > 0)
-            {
-                await transaction.RollbackAsync();
-                return Conflict(new
-                {
-                    success = false,
-                    message = "Subject code already exists."
-                });
-            }
-
-            if (!await AcademicContextExistsAsync(
-                    connection,
-                    transaction,
-                    request.CourseId,
-                    request.BranchId,
-                    request.SemesterId))
-            {
-                await transaction.RollbackAsync();
-                return BadRequest(new
-                {
-                    success = false,
-                    message = "Invalid Course/Branch/Semester combination. The semester must belong to the selected course and branch."
-                });
-            }
-
-            var userId = GetCurrentUserId();
-
-            await connection.ExecuteAsync(
-                @"INSERT INTO subjects
-                    (subject_code, subject_name, status,
-                     created_at, created_by, updated_at, updated_by,
-                     credits, subject_type, elective_type, description)
-                  VALUES
-                    (@subjectCode, @subjectName, @status,
-                     CURRENT_TIMESTAMP, @userId, CURRENT_TIMESTAMP, @userId,
-                     @credits, @subjectType, @electiveType, @description);",
-                new
-                {
-                    subjectCode = request.NormalizedSubjectCode,
-                    subjectName = request.NormalizedSubjectName,
-                    status = request.Status,
-                    userId,
-                    credits = request.Credits,
-                    subjectType = request.NormalizedSubjectType,
-                    electiveType = request.ElectiveType?.Trim(),
-                    description = request.NormalizedDescription
-                },
-                transaction);
-
-            var subjectId = await connection.ExecuteScalarAsync<long>(
-                "SELECT LAST_INSERT_ID();",
-                transaction: transaction);
-
-            await InsertMappingsAsync(
-                connection,
-                transaction,
-                subjectId,
-                request.CourseId,
-                request.BranchId,
-                request.SemesterId,
-                request.Status,
-                userId);
-
-            await transaction.CommitAsync();
-
-            var data = await GetSubjectWithAcademicContextAsync(connection, subjectId);
-
-            return CreatedAtAction(
-                nameof(GetById),
-                new { subjectId },
-                new
-                {
-                    success = true,
-                    message = "Subject created successfully.",
-                    data
-                });
-        }
-        catch (MySqlException ex)
-        {
-            await transaction.RollbackAsync();
-
-            if (ex.Number == 1062)
-            {
-                return Conflict(new
-                {
-                    success = false,
-                    message = "Subject code or subject academic mapping already exists."
-                });
-            }
-
-            return StatusCode(StatusCodes.Status500InternalServerError, new
-            {
-                success = false,
-                message = "Unable to create subject."
-            });
-        }
-    }
-
-    // =========================================================
-    // TICKET 133 - UPDATE SUBJECT
-    // PUT: api/v1/subjects/{subjectId}
-    // =========================================================
     [HttpPut("{subjectId:long}")]
-    public async Task<IActionResult> Update(
-        long subjectId,
-        [FromBody] UpdateSubjectRequest request)
+    public Task<IActionResult> Update(long subjectId, [FromBody] UpdateSubjectRequest request) => Execute(async () =>
     {
-        if (subjectId <= 0)
-            return BadRequest(new { success = false, message = "Invalid subject ID." });
+        RequireId(subjectId);
+        await _repository.SaveAsync(subjectId, request, Actor, Cancellation);
+        return Ok(new { success = true, message = "Subject updated successfully.", data = Present(await Find(subjectId)) });
+    });
 
-        if (string.IsNullOrWhiteSpace(request.SubjectCode))
-            return BadRequest(new { success = false, message = "Subject code is required." });
+    [HttpPatch("{subjectId:long}/status")]
+    [HttpPut("{subjectId:long}/status")]
+    public Task<IActionResult> Status(long subjectId, [FromBody] SubjectStatusRequest request) => Execute(async () =>
+    {
+        RequireId(subjectId);
+        await _repository.StatusAsync(subjectId, request.Status!.Value, false, Actor, Cancellation);
+        return Ok(new { success = true, message = "Subject status updated successfully.", data = Present(await Find(subjectId)) });
+    });
 
-        if (string.IsNullOrWhiteSpace(request.SubjectName))
-            return BadRequest(new { success = false, message = "Subject name is required." });
+    [HttpDelete("{subjectId:long}")]
+    public Task<IActionResult> Delete(long subjectId) => Execute(async () =>
+    {
+        RequireId(subjectId);
+        await _repository.StatusAsync(subjectId, 0, true, Actor, Cancellation);
+        return Ok(new { success = true, message = "Subject deleted successfully.", subjectId });
+    });
 
-        await using var connection = Connection();
-        await connection.OpenAsync();
-        await using var transaction = await connection.BeginTransactionAsync();
+    [HttpGet("{subjectId:long}/dependencies")]
+    public Task<IActionResult> Dependencies(long subjectId) => Execute(async () =>
+    {
+        await Find(subjectId);
+        var rows = await _repository.DependenciesAsync(subjectId, Cancellation);
+        return Ok(new { success = true, data = rows,
+            canDeactivate = rows.All(x => Convert.ToInt64(x["activeCount"]) == 0),
+            canDelete = rows.All(x => Convert.ToInt64(x["totalCount"]) == 0) });
+    });
 
-        try
+    [HttpGet("lookups")]
+    public Task<IActionResult> Lookups([FromQuery] SubjectSearchRequest request) => Execute(async () =>
+    {
+        Validate(request);
+        return Ok(new { success = true, data = await _repository.LookupsAsync(request, Cancellation) });
+    });
+
+    [HttpGet("summary")]
+    public Task<IActionResult> Summary([FromQuery] SubjectSearchRequest request) => Execute(async () =>
+    {
+        var rows = await _repository.ListAsync(request, null, Validate(request), Cancellation);
+        return Ok(new { success = true, data = new {
+            total = rows.Count, active = rows.Count(x => Convert.ToInt32(x["statusValue"]) == 1),
+            theory = rows.Count(x => Text(x,"subjectType").Contains("theory", StringComparison.OrdinalIgnoreCase)),
+            lab = rows.Count(x => Regex.IsMatch(Text(x,"subjectType"),"lab|practical",RegexOptions.IgnoreCase)),
+            credits = rows.Sum(x => Convert.ToDecimal(x["credits"] ?? 0)) } });
+    });
+
+    [HttpGet("export")]
+    [HttpGet("download")]
+    public Task<IActionResult> Export([FromQuery] SubjectSearchRequest request, [FromQuery] string format = "csv") => Execute(async () =>
+    {
+        if (!new[] { "csv", "xlsx" }.Contains(format.ToLowerInvariant()))
+            throw new ArgumentException("Supported formats are csv and xlsx.", "format");
+        var rows = await _repository.ListAsync(request, null, Validate(request), Cancellation);
+        var columns = new (string Key, string Label)[] {
+            ("subjectCode","Subject Code"),("subjectName","Subject Name"),("academicYear","Academic Year"),
+            ("course","Course"),("branch","Branch"),("academicLevel","Academic Level"),("semester","Semester"),
+            ("subjectType","Subject Type"),("electiveType","Elective Type"),("credits","Credits"),
+            ("lectureHours","Lecture Hours"),("tutorialHours","Tutorial Hours"),("practicalHours","Practical Hours"),
+            ("internalMarks","Internal Marks"),("externalMarks","External Marks"),("totalMarks","Total Marks"),("statusName","Status") };
+        if (format.Equals("xlsx", StringComparison.OrdinalIgnoreCase))
         {
-            var subjectExists = await connection.ExecuteScalarAsync<int>(
-                @"SELECT COUNT(1)
-                  FROM subjects
-                  WHERE subject_id = @subjectId;",
-                new { subjectId },
-                transaction);
-
-            if (subjectExists == 0)
-            {
-                await transaction.RollbackAsync();
-                return NotFound(new
-                {
-                    success = false,
-                    message = "Subject not found."
-                });
-            }
-
-            var duplicateCode = await connection.ExecuteScalarAsync<int>(
-                @"SELECT COUNT(1)
-                  FROM subjects
-                  WHERE subject_code = @subjectCode
-                    AND subject_id <> @subjectId;",
-                new
-                {
-                    subjectCode = request.NormalizedSubjectCode,
-                    subjectId
-                },
-                transaction);
-
-            if (duplicateCode > 0)
-            {
-                await transaction.RollbackAsync();
-                return Conflict(new
-                {
-                    success = false,
-                    message = "Subject code already exists."
-                });
-            }
-
-            if (!await AcademicContextExistsAsync(
-                    connection,
-                    transaction,
-                    request.CourseId,
-                    request.BranchId,
-                    request.SemesterId))
-            {
-                await transaction.RollbackAsync();
-                return BadRequest(new
-                {
-                    success = false,
-                    message = "Invalid Course/Branch/Semester combination. The semester must belong to the selected course and branch."
-                });
-            }
-
-            var userId = GetCurrentUserId();
-
-            await connection.ExecuteAsync(
-                @"UPDATE subjects
-                  SET subject_code = @subjectCode,
-                      subject_name = @subjectName,
-                      status = @status,
-                      credits = @credits,
-                      subject_type = @subjectType,
-                      elective_type = @electiveType,
-                      description = @description,
-                      updated_at = CURRENT_TIMESTAMP,
-                      updated_by = @userId
-                  WHERE subject_id = @subjectId;",
-                new
-                {
-                    subjectId,
-                    subjectCode = request.NormalizedSubjectCode,
-                    subjectName = request.NormalizedSubjectName,
-                    status = request.Status,
-                    credits = request.Credits,
-                    subjectType = request.NormalizedSubjectType,
-                    electiveType = request.ElectiveType?.Trim(),
-                    description = request.NormalizedDescription,
-                    userId
-                },
-                transaction);
-
-            // Keep existing APIs compatible by synchronizing both the Ticket-132
-            // subject mapping tables and subject_semester_assignments, which the
-            // existing list/search API already uses for semester filtering.
-            await connection.ExecuteAsync(
-                @"DELETE FROM subject_semesters
-                  WHERE subject_id = @subjectId;",
-                new { subjectId },
-                transaction);
-
-            await connection.ExecuteAsync(
-                @"DELETE FROM subject_course_branches
-                  WHERE subject_id = @subjectId;",
-                new { subjectId },
-                transaction);
-
-            await connection.ExecuteAsync(
-                @"DELETE FROM subject_semester_assignments
-                  WHERE subject_id = @subjectId;",
-                new { subjectId },
-                transaction);
-
-            await InsertMappingsAsync(
-                connection,
-                transaction,
-                subjectId,
-                request.CourseId,
-                request.BranchId,
-                request.SemesterId,
-                request.Status,
-                userId);
-
-            await transaction.CommitAsync();
-
-            var data = await GetSubjectWithAcademicContextAsync(connection, subjectId);
-
-            return Ok(new
-            {
-                success = true,
-                message = "Subject updated successfully.",
-                data
-            });
+            using var workbook = new XLWorkbook();
+            var sheet = workbook.AddWorksheet("Subjects");
+            for (var col = 0; col < columns.Length; col++) sheet.Cell(1, col + 1).Value = columns[col].Label;
+            for (var row = 0; row < rows.Count; row++)
+                for (var col = 0; col < columns.Length; col++) sheet.Cell(row + 2, col + 1).Value = Text(rows[row], columns[col].Key);
+            sheet.Row(1).Style.Font.Bold = true;
+            sheet.SheetView.FreezeRows(1);
+            sheet.Columns().AdjustToContents(1, Math.Min(rows.Count + 1, 200));
+            using var stream = new MemoryStream(); workbook.SaveAs(stream);
+            return File(stream.ToArray(), "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", "subject-directory.xlsx");
         }
-        catch (MySqlException ex)
+        static string Csv(string value)
         {
-            await transaction.RollbackAsync();
+            if (value.TrimStart().StartsWithAnyFormulaCharacter()) value = "'" + value;
+            return "\"" + value.Replace("\"", "\"\"") + "\"";
+        }
+        var csv = new StringBuilder();
+        csv.AppendLine(string.Join(",", columns.Select(c => Csv(c.Label))));
+        foreach (var row in rows) csv.AppendLine(string.Join(",", columns.Select(c => Csv(Text(row, c.Key)))));
+        return File(Encoding.UTF8.GetPreamble().Concat(Encoding.UTF8.GetBytes(csv.ToString())).ToArray(), "text/csv; charset=utf-8", "subject-directory.csv");
+    });
 
-            if (ex.Number == 1062)
-            {
-                return Conflict(new
-                {
-                    success = false,
-                    message = "Subject code or subject academic mapping already exists."
-                });
-            }
-
-            return StatusCode(StatusCodes.Status500InternalServerError, new
-            {
-                success = false,
-                message = "Unable to update subject."
-            });
+    private static string Text(Dictionary<string, object?> row, string key) => Convert.ToString(row.GetValueOrDefault(key), CultureInfo.InvariantCulture) ?? "";
+    private static void RequireId(long id) { if (id <= 0) throw new ArgumentException("A positive subject ID is required.", "subjectId"); }
+    private async Task<Dictionary<string, object?>> Find(long id)
+    {
+        RequireId(id);
+        return (await _repository.ListAsync(new(), id, null, Cancellation)).FirstOrDefault()
+            ?? throw new KeyNotFoundException("Subject not found.");
+    }
+    private static int? Validate(SubjectSearchRequest request)
+    {
+        if (!string.IsNullOrWhiteSpace(request.Status) && SubjectStatusConverter.Parse(request.Status) is null)
+            throw new ArgumentException("Status must be Active, Inactive, 1 or 0.", "status");
+        if (string.IsNullOrWhiteSpace(request.Level)) return null;
+        var match = Regex.Match(request.Level.Trim(), @"^(\d+)(?:(?:st|nd|rd|th)\s+Year)?$", RegexOptions.IgnoreCase);
+        if (!match.Success || !int.TryParse(match.Groups[1].Value, out var level) || level < 1 || level > 50)
+            throw new ArgumentException("Use a year number or a label such as 1st Year.", "level");
+        return level;
+    }
+    private async Task<IActionResult> Execute(Func<Task<IActionResult>> action)
+    {
+        _logger.LogInformation("Subject request {Method} {Path}; Actor={Actor}; CorrelationId={CorrelationId}", Request.Method, Request.Path, Actor, HttpContext.TraceIdentifier);
+        try { return await action(); }
+        catch (MySqlException ex) when (ex.SqlState == "45000" || ex.Number is 1062 or 1451 or 1452 or 3819)
+        {
+            _logger.LogWarning("Subject validation rejected. DatabaseCode={Code}; CorrelationId={CorrelationId}", ex.Number, HttpContext.TraceIdentifier);
+            var parts = ex.Message.Split('|', 2);
+            var field = parts.Length == 2 ? parts[0] : ex.Number == 1062 ? "subjectCode" : "subject";
+            var message = parts.Length == 2 ? parts[1] : ex.Number == 1062 ? "Subject code already exists." : "Subject data conflicts with a related record.";
+            return Failure(ex.Number == 30001 ? 404 : ex.Number is 30002 or 1062 or 1451 ? 409 : 400, field, message);
+        }
+        catch (ArgumentException ex) { _logger.LogWarning("Subject validation: {Message}", ex.Message); return Failure(400, ex.ParamName ?? "subject", ex.Message); }
+        catch (KeyNotFoundException ex) { return Failure(404, "subjectId", ex.Message); }
+        catch (OperationCanceledException) when (Cancellation.IsCancellationRequested) { throw; }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Subject request failed; CorrelationId={CorrelationId}", HttpContext.TraceIdentifier);
+            return Failure(500, "subject", "Unable to complete the subject request. Check the server log using the correlation ID.");
         }
     }
+    private ObjectResult Failure(int code, string field, string message) => StatusCode(code, new {
+        success = false, message, errors = new Dictionary<string, string[]> { [field] = new[] { message } }, correlationId = HttpContext.TraceIdentifier });
+}
 
-    private static async Task<bool> AcademicContextExistsAsync(
-        MySqlConnection connection,
-        MySqlTransaction transaction,
-        long courseId,
-        long branchId,
-        long semesterId)
+public sealed class SubjectValidationFilter : IActionFilter
+{
+    private readonly ILogger<SubjectValidationFilter> _logger;
+    public SubjectValidationFilter(ILogger<SubjectValidationFilter> logger) => _logger = logger;
+    public void OnActionExecuting(ActionExecutingContext context)
     {
-        const string sql = @"
-SELECT COUNT(1)
-FROM semesters sem
-INNER JOIN branches b
-    ON b.branch_id = sem.branch_id
-   AND b.course_id = sem.course_id
-INNER JOIN courses c
-    ON c.course_id = sem.course_id
-WHERE sem.semester_id = @semesterId
-  AND sem.course_id = @courseId
-  AND sem.branch_id = @branchId;";
-
-        var count = await connection.ExecuteScalarAsync<int>(
-            sql,
-            new { courseId, branchId, semesterId },
-            transaction);
-
-        return count > 0;
+        if (context.ModelState.IsValid) return;
+        var errors = context.ModelState.Where(x => x.Value?.Errors.Count > 0).ToDictionary(x => x.Key,
+            x => x.Value!.Errors.Select(e => string.IsNullOrWhiteSpace(e.ErrorMessage) ? "Invalid field value." : e.ErrorMessage).ToArray());
+        _logger.LogWarning("Subject field validation failed; Fields={Fields}; CorrelationId={CorrelationId}", string.Join(",", errors.Keys), context.HttpContext.TraceIdentifier);
+        context.Result = new BadRequestObjectResult(new { success = false, message = "Subject validation failed.", errors, correlationId = context.HttpContext.TraceIdentifier });
     }
+    public void OnActionExecuted(ActionExecutedContext context) { }
+}
 
-    private static async Task InsertMappingsAsync(
-        MySqlConnection connection,
-        MySqlTransaction transaction,
-        long subjectId,
-        long courseId,
-        long branchId,
-        long semesterId,
-        byte status,
-        long? userId)
-    {
-        await connection.ExecuteAsync(
-            @"INSERT INTO subject_course_branches
-                (subject_id, course_id, branch_id, status,
-                 created_at, created_by, updated_at, updated_by)
-              VALUES
-                (@subjectId, @courseId, @branchId, @status,
-                 CURRENT_TIMESTAMP, @userId, CURRENT_TIMESTAMP, @userId);",
-            new { subjectId, courseId, branchId, status, userId },
-            transaction);
-
-        await connection.ExecuteAsync(
-            @"INSERT INTO subject_semesters
-                (subject_id, course_id, branch_id, semester_id, status,
-                 created_at, created_by, updated_at, updated_by)
-              VALUES
-                (@subjectId, @courseId, @branchId, @semesterId, @status,
-                 CURRENT_TIMESTAMP, @userId, CURRENT_TIMESTAMP, @userId);",
-            new { subjectId, courseId, branchId, semesterId, status, userId },
-            transaction);
-
-        await connection.ExecuteAsync(
-            @"INSERT INTO subject_semester_assignments
-                (subject_id, semester_id, status,
-                 created_at, created_by, updated_at, updated_by)
-              VALUES
-                (@subjectId, @semesterId, @status,
-                 CURRENT_TIMESTAMP, @userId, CURRENT_TIMESTAMP, @userId);",
-            new { subjectId, semesterId, status, userId },
-            transaction);
-    }
-
-    private static Task<dynamic?> GetSubjectWithAcademicContextAsync(
-        MySqlConnection connection,
-        long subjectId)
-    {
-        const string sql = @"
-SELECT
-    s.subject_id AS subjectId,
-    s.subject_code AS subjectCode,
-    s.subject_name AS subjectName,
-    s.credits,
-    s.subject_type AS subjectType,
-    s.elective_type AS electiveType,
-    s.description,
-    s.status,
-    scb.course_id AS courseId,
-    c.course_code AS courseCode,
-    c.course_name AS courseName,
-    scb.branch_id AS branchId,
-    b.branch_code AS branchCode,
-    b.branch_name AS branchName,
-    ss.semester_id AS semesterId,
-    sem.semester_number AS semesterNumber,
-    sem.semester_name AS semesterName,
-    s.created_at AS createdAt,
-    s.created_by AS createdBy,
-    s.updated_at AS updatedAt,
-    s.updated_by AS updatedBy
-FROM subjects s
-LEFT JOIN subject_course_branches scb
-    ON scb.subject_id = s.subject_id
-LEFT JOIN courses c
-    ON c.course_id = scb.course_id
-LEFT JOIN branches b
-    ON b.branch_id = scb.branch_id
-   AND b.course_id = scb.course_id
-LEFT JOIN subject_semesters ss
-    ON ss.subject_id = scb.subject_id
-   AND ss.course_id = scb.course_id
-   AND ss.branch_id = scb.branch_id
-LEFT JOIN semesters sem
-    ON sem.semester_id = ss.semester_id
-   AND sem.course_id = ss.course_id
-   AND sem.branch_id = ss.branch_id
-WHERE s.subject_id = @subjectId
-LIMIT 1;";
-
-        return connection.QueryFirstOrDefaultAsync(sql, new { subjectId });
-    }
-
-    private long? GetCurrentUserId()
-    {
-        var value = User.FindFirstValue(ClaimTypes.NameIdentifier);
-        return long.TryParse(value, out var userId) ? userId : null;
-    }
-
-    private async Task<IActionResult> QuerySubjects(string? search, long? semesterId, byte? status)
-    {
-        if (semesterId.HasValue && semesterId <= 0)
-            return BadRequest(new { success = false, message = "Invalid semester ID." });
-
-        const string sql = @"
-SELECT DISTINCT
-    s.subject_id AS subjectId,
-    s.subject_code AS subjectCode,
-    s.subject_name AS subjectName,
-    s.credits,
-    s.subject_type AS subjectType,
-    s.elective_type AS electiveType,
-    s.description,
-    s.status,
-    scb.course_id AS courseId,
-    c.course_code AS courseCode,
-    c.course_name AS courseName,
-    scb.branch_id AS branchId,
-    b.branch_code AS branchCode,
-    b.branch_name AS branchName,
-    COALESCE(ss.semester_id, sa.semester_id) AS semesterId,
-    sem.semester_number AS semesterNumber,
-    sem.semester_name AS semesterName
-FROM subjects s
-LEFT JOIN subject_course_branches scb ON scb.subject_id = s.subject_id AND scb.status = 1
-LEFT JOIN courses c ON c.course_id = scb.course_id
-LEFT JOIN branches b ON b.branch_id = scb.branch_id AND b.course_id = scb.course_id
-LEFT JOIN subject_semesters ss
-    ON ss.subject_id = s.subject_id
-   AND ss.course_id = scb.course_id
-   AND ss.branch_id = scb.branch_id
-   AND ss.status = 1
-LEFT JOIN subject_semester_assignments sa
-    ON sa.subject_id = s.subject_id
-   AND sa.status = 1
-   AND (@semesterId IS NULL OR sa.semester_id = @semesterId)
-LEFT JOIN semesters sem
-    ON sem.semester_id = COALESCE(sa.semester_id, ss.semester_id)
-   AND (sem.course_id = scb.course_id OR scb.course_id IS NULL)
-   AND (sem.branch_id = scb.branch_id OR scb.branch_id IS NULL)
-WHERE (@search IS NULL OR @search = ''
-       OR s.subject_code LIKE CONCAT('%', @search, '%')
-       OR s.subject_name LIKE CONCAT('%', @search, '%'))
-  AND (@semesterId IS NULL OR ss.semester_id = @semesterId OR sa.semester_id = @semesterId)
-  AND (@status IS NULL OR s.status = @status)
-ORDER BY s.subject_name, s.subject_id;";
-
-        try
-        {
-            await using var connection = Connection();
-            await connection.OpenAsync();
-            var rows = (await connection.QueryAsync(sql, new { search = string.IsNullOrWhiteSpace(search) ? null : search.Trim(), semesterId, status })).ToList();
-            return Ok(new { success = true, message = "Subjects retrieved successfully.", data = rows });
-        }
-        catch (MySqlException ex)
-        {
-            return StatusCode(StatusCodes.Status500InternalServerError, new
-            {
-                success = false,
-                message = "Unable to retrieve subjects. Verify that the existing subjects table matches the project database contract."
-            });
-        }
-    }
+internal static class SubjectExportText
+{
+    public static bool StartsWithAnyFormulaCharacter(this string value) => value.Length > 0 && "=+-@\t\r\n".Contains(value[0]);
 }

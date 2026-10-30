@@ -1,4 +1,4 @@
-using BTech.Data;
+﻿using BTech.Data;
 using BTech.Middleware;
 using BTech.Logging;
 using BTech.Filters;
@@ -8,6 +8,7 @@ using BTech.Repositories.Interfaces;
 using BTech.Services;
 using BTech.Services.Implementations;
 using BTech.Services.Interfaces;
+
 using BTech.Models;
 using UserRoleManagement.API.Data;
 using BTech.Task_FacultyStatusHistory.Repositories;
@@ -25,13 +26,13 @@ var builder = WebApplication.CreateBuilder(args);
 // CONTROLLERS
 // ============================================================
 
-builder.Services.AddHttpContextAccessor();
 builder.Services.AddControllers(options =>
 {
     options.Filters.AddService<ApiErrorSanitizationFilter>();
 });
 
 builder.Services.AddScoped<ApiErrorSanitizationFilter>();
+builder.Services.AddHttpContextAccessor();
 
 builder.Services.AddScoped<IFacultyDocumentService, FacultyDocumentService>();
 builder.Services.AddScoped<IFacultyService, FacultyService>();
@@ -197,9 +198,12 @@ builder.Services
         JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
     {
+        options.MapInboundClaims = true;
         options.TokenValidationParameters =
             new TokenValidationParameters
             {
+                RoleClaimType = System.Security.Claims.ClaimTypes.Role,
+                NameClaimType = System.Security.Claims.ClaimTypes.Name,
                 ValidateIssuerSigningKey = true,
 
                 IssuerSigningKey =
@@ -261,41 +265,6 @@ builder.Services.AddScoped<
 builder.Services.AddScoped<
     IRefreshTokenRepository,
     RefreshTokenRepository>();
-
-builder.Services.AddScoped<
-    IElectiveGroupRepository,
-    ElectiveGroupRepository>();
-
-builder.Services.AddScoped<
-    IStudentElectiveSelectionRepository,
-    StudentElectiveSelectionRepository>();
-
-builder.Services.AddScoped<
-    IElectiveApprovalRepository,
-    ElectiveApprovalRepository>();
-
-builder.Services.AddScoped<
-    IElectiveAllocationRepository,
-    ElectiveAllocationRepository>();
-
-builder.Services.AddScoped<
-    IElectiveGroupService,
-    ElectiveGroupService>();
-
-builder.Services.AddScoped<
-    IStudentElectiveSelectionService,
-    StudentElectiveSelectionService>();
-
-builder.Services.AddScoped<
-    IElectiveApprovalService,
-    ElectiveApprovalService>();
-
-builder.Services.AddScoped<
-    IElectiveAllocationService,
-    ElectiveAllocationService>();
-
-
-
 
 
 // ------------------------------------------------------------
@@ -441,22 +410,20 @@ builder.Services.AddScoped<
     IStudentProfileMainRepository,
     StudentProfileMainRepository>();
 
+// Student elective selection
+builder.Services.AddScoped<
+    IStudentElectiveSelectionRepository,
+    StudentElectiveSelectionRepository>();
 
 builder.Services.AddScoped<
-    IMarksService,
-    MarksService>();
-
-builder.Services.AddScoped<
-    IMarksRepository,
-    MarksRepository>();
+    IFeeCollectionRepository,
+    FeeCollectionRepository>();
 
 builder.Services.AddScoped<
     IFeeCollectionService,
     FeeCollectionService>();
 
-builder.Services.AddScoped<
-    IFeeCollectionRepository,
-    FeeCollectionRepository>();
+
 
 
 // ============================================================
@@ -622,7 +589,13 @@ builder.Services.AddScoped<
     ISemesterService,
     SemesterService>();
 
+builder.Services.AddScoped<
+    IMeetingEventValidationRepository,
+    MeetingEventValidationRepository>();
 
+builder.Services.AddScoped<
+    IMeetingEventValidationService,
+    MeetingEventValidationService>();
 // ============================================================
 // FACULTY SERVICE
 // ============================================================
@@ -664,6 +637,11 @@ builder.Services.AddScoped<
     IStudentIntegrationService,
     StudentIntegrationService>();
 
+// Student elective selection
+builder.Services.AddScoped<
+    IStudentElectiveSelectionService,
+    StudentElectiveSelectionService>();
+
 builder.Services.AddScoped<
     IStudentAdmissionFeeResolverRepository,
     StudentAdmissionFeeResolverRepository>();
@@ -673,7 +651,36 @@ builder.Services.AddScoped<
     StudentAdmissionFeeResolverService>();
 
 
+
 // ============================================================
+// PHASE 5 - ADVANCED TIMETABLE MANAGEMENT
+// Additive registration; existing timetable APIs remain unchanged.
+// ============================================================
+
+
+// ============================================================
+// Subject Management uses the dedicated stored-procedure repository.
+builder.Services.AddScoped<SubjectManagementRepository>();
+
+// ============================================================
+// TICKETS 172 & 173 - EXAM MANAGEMENT
+// Additive registration; existing APIs and registrations remain unchanged.
+// ============================================================
+builder.Services.AddScoped<ExamManagementRepository>();
+
+// Merged timetable package registrations.
+builder.Services.AddScoped<ITimetableService, TimetableService>();
+builder.Services.AddScoped<ITimetableRepository, TimetableRepository>();
+
+builder.Services.AddScoped<IMarksRepository, MarksRepository>();
+builder.Services.AddScoped<IMarksService, MarksService>();
+builder.Services.AddScoped<IResultRepository, ResultRepository>();
+builder.Services.AddScoped<IResultService, ResultService>();
+
+// Meeting management APIs (ticket: meeting CRUD, participants, attendance, minutes, documents).
+builder.Services.AddScoped<IMeetingManagementRepository, MeetingManagementRepository>();
+builder.Services.AddScoped<IMeetingManagementService, MeetingManagementService>();
+
 // EMAIL / GMAIL SMTP
 // ============================================================
 
@@ -686,13 +693,7 @@ builder.Services.AddScoped<
     IEmailService,
     EmailService>();
 
-builder.Services.AddScoped<
-    IMeetingEventValidationRepository,
-    MeetingEventValidationRepository>();
-
-builder.Services.AddScoped<
-    IMeetingEventValidationService,
-    MeetingEventValidationService>();
+builder.Services.AddScoped<IAccountSetupService, AccountSetupService>();
 
 
 // ============================================================
@@ -756,10 +757,77 @@ builder.Services.AddSwaggerGen(options =>
         });
 });
 
+builder.Services.AddScoped<
+    IShortageNotificationService,
+    ShortageNotificationService>();
+// ============================================================
+// ELECTIVE MODULE - REPOSITORIES
+// ============================================================
+
+builder.Services.AddScoped<
+    IStudentElectiveSelectionRepository,
+    StudentElectiveSelectionRepository>();
+
+builder.Services.AddScoped<
+    IElectiveGroupRepository,
+    ElectiveGroupRepository>();
+
+builder.Services.AddScoped<
+    IElectiveApprovalRepository,
+    ElectiveApprovalRepository>();
+
+builder.Services.AddScoped<
+    IElectiveAllocationRepository,
+    ElectiveAllocationRepository>();
+
+
+// ============================================================
+// ELECTIVE MODULE - SERVICES
+// ============================================================
+
+builder.Services.AddScoped<
+    IStudentElectiveSelectionService,
+    StudentElectiveSelectionService>();
+
+builder.Services.AddScoped<
+    IElectiveGroupService,
+    ElectiveGroupService>();
+
+builder.Services.AddScoped<
+    IElectiveApprovalService,
+    ElectiveApprovalService>();
+
+builder.Services.AddScoped<
+    IElectiveAllocationService,
+    ElectiveAllocationService>();
+
+// ============================================================
+// ADMIN MANAGEMENT - ROLES / DESIGNATIONS / ROOMS
+// Additive registrations. Existing APIs remain unchanged.
+// ============================================================
+builder.Services.AddScoped<
+    IAccessGovernanceRepository,
+    AccessGovernanceRepository>();
+
+builder.Services.AddScoped<
+    IRoomManagementRepository,
+    RoomManagementRepository>();
+
+builder.Services.AddScoped<
+    IAccessGovernanceService,
+    AccessGovernanceService>();
+
+builder.Services.AddScoped<
+    IRoomManagementService,
+    RoomManagementService>();
 
 // ============================================================
 // BUILD APPLICATION
 // ============================================================
+
+// Placement drive, eligibility, application, interview and selection workflow.
+builder.Services.AddScoped<IPlacementRepository, PlacementRepository>();
+builder.Services.AddScoped<IPlacementService, PlacementService>();
 
 var app = builder.Build();
 
@@ -810,6 +878,35 @@ app.UseCors("AllowFrontend");
 
 app.UseAuthentication();
 
+// Accounts issued a temporary password may only change it or refresh their
+// token until the password has been changed. Existing APIs are otherwise untouched.
+app.Use(async (context, next) =>
+{
+    var mustChangePassword = context.User.FindFirst("mustChangePassword")?.Value;
+    var path = context.Request.Path.Value ?? string.Empty;
+    var allowedWhileChangingPassword =
+        path.Equals("/api/v1/auth/change-password", StringComparison.OrdinalIgnoreCase) ||
+        path.Equals("/api/v1/auth/refresh", StringComparison.OrdinalIgnoreCase) ||
+        path.Equals("/api/v1/auth/logout", StringComparison.OrdinalIgnoreCase);
+
+    if (context.User.Identity?.IsAuthenticated == true &&
+        string.Equals(mustChangePassword, "true", StringComparison.OrdinalIgnoreCase) &&
+        !allowedWhileChangingPassword)
+    {
+        context.Response.StatusCode = StatusCodes.Status403Forbidden;
+        context.Response.ContentType = "application/json";
+        await context.Response.WriteAsJsonAsync(new
+        {
+            success = false,
+            message = "You must change your temporary password before accessing other APIs.",
+            code = "PASSWORD_CHANGE_REQUIRED"
+        });
+        return;
+    }
+
+    await next();
+});
+
 
 // ============================================================
 // AUTHORIZATION
@@ -817,6 +914,9 @@ app.UseAuthentication();
 
 app.UseAuthorization();
 
+// Live database-backed module/action authorization. Evaluated on every request,
+// so role-permission updates affect existing JWT sessions without re-login.
+app.UseMiddleware<BTech.Middleware.ModulePermissionMiddleware>();
 
 // ============================================================
 // CONTROLLERS

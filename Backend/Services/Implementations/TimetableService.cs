@@ -156,6 +156,25 @@ public sealed class TimetableService : ITimetableService
     {
         RequirePositive(id,nameof(id)); return _repository.ValidateAsync(id,college,superAdmin);
     }
+    public Task<TimetableRevisionCreatedDto> CreateRevisionAsync(long id, CreateTimetableRevisionRequest request, long? actor, long? college, bool superAdmin)
+    {
+        RequirePositive(id, nameof(id));
+        if (request is null) throw new ArgumentException("Request body is required.");
+        if (request.ExpectedRevision <= 0) throw new ArgumentException("ExpectedRevision must be positive.");
+        if (string.IsNullOrWhiteSpace(request.Reason)) throw new ArgumentException("Reason is required.");
+        if (request.Reason.Trim().Length > 500) throw new ArgumentException("Reason cannot exceed 500 characters.");
+        return _repository.CreateRevisionAsync(id, request, actor, college, superAdmin);
+    }
+
+    public Task<PublishTimetableBatchResultDto> PublishBatchAsync(PublishTimetableBatchRequest request, long? actor, long? college, bool superAdmin)
+    {
+        if (request?.Items is null || request.Items.Count == 0) throw new ArgumentException("At least one timetable is required.");
+        if (request.Items.Count > 100) throw new ArgumentException("A publication batch cannot exceed 100 timetables.");
+        if (request.Items.Any(x => x.TimetableId <= 0 || x.ExpectedRevision <= 0)) throw new ArgumentException("Every item requires a positive TimetableId and ExpectedRevision.");
+        if (request.Items.Select(x => x.TimetableId).Distinct().Count() != request.Items.Count) throw new ArgumentException("Duplicate timetable IDs are not allowed.");
+        return _repository.PublishBatchAsync(request, actor, college, superAdmin);
+    }
+
     public Task PublishAsync(long id,long? actor,long? college,bool superAdmin) => _repository.PublishAsync(id,actor,college,superAdmin);
     public Task ReopenAsync(long id,long? actor,long? college,bool superAdmin) => _repository.ReopenAsync(id,actor,college,superAdmin);
 

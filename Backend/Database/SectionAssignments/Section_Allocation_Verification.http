@@ -1,0 +1,38 @@
+# Use a valid logged-in token and the target section from your database.
+@baseUrl = https://localhost:7174
+@token = REPLACE_WITH_LOGIN_TOKEN
+@sectionId = 3
+# Copy these values from the candidate GETs; do not use admission/faculty/user IDs.
+@employeeProfileId = REPLACE_WITH_CANDIDATE_EMPLOYEE_PROFILE_ID
+@studentId1 = REPLACE_WITH_CANDIDATE_STUDENT_ID
+@studentId2 = REPLACE_WITH_ANOTHER_CANDIDATE_STUDENT_ID
+
+### Faculty candidates
+GET {{baseUrl}}/api/v1/sections/{{sectionId}}/class-teacher-candidates
+Authorization: Bearer {{token}}
+
+### Save teacher
+PUT {{baseUrl}}/api/v1/sections/{{sectionId}}/class-teacher
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{"employeeProfileId": {{employeeProfileId}}}
+
+### Student candidates
+GET {{baseUrl}}/api/v1/sections/{{sectionId}}/student-candidates
+Authorization: Bearer {{token}}
+
+### Save a real unassigned batch
+POST {{baseUrl}}/api/v1/sections/{{sectionId}}/students/assign
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{"studentIds": [{{studentId1}}, {{studentId2}}]}
+
+### Verify persistence
+GET {{baseUrl}}/api/v1/sections/{{sectionId}}/students
+Authorization: Bearer {{token}}
+
+### Verify remaining seats
+GET {{baseUrl}}/api/v1/sections/{{sectionId}}/capacity
+Authorization: Bearer {{token}}

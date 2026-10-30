@@ -2,80 +2,71 @@ using BTech.DTOs.AcademicYear;
 using BTech.Models;
 using BTech.Repositories.Interfaces;
 using BTech.Services.Interfaces;
+using Microsoft.Extensions.Logging;
 
 namespace BTech.Services.Implementations
 {
     public class AcademicYearService : IAcademicYearService
     {
         private readonly IAcademicYearRepository _repository;
+        private readonly ILogger<AcademicYearService> _logger;
 
         public AcademicYearService(
-            IAcademicYearRepository repository)
+            IAcademicYearRepository repository,
+            ILogger<AcademicYearService> logger)
         {
             _repository = repository;
+            _logger = logger;
         }
 
-        // =========================================================
-        // ADD
-        // =========================================================
-
         public async Task<AcademicYearResponseDto> AddAsync(
+            long collegeId,
             CreateAcademicYearDto dto,
             long? userId)
         {
-            ValidateDates(
-                dto.StartDate,
-                dto.EndDate);
+            ValidateDates(dto.StartDate, dto.EndDate);
 
-            var entity =
-                await _repository.AddAsync(
-                    dto.AcademicYearName.Trim(),
-                    dto.StartDate,
-                    dto.EndDate,
-                    userId)
+            var entity = await _repository.AddAsync(
+                collegeId,
+                dto.AcademicYearName.Trim(),
+                dto.StartDate,
+                dto.EndDate,
+                userId)
                 ?? throw new InvalidOperationException(
                     "Academic year could not be created.");
+
+            _logger.LogInformation(
+                "Academic year service created a record for CollegeId={CollegeId}, ActorUserId={ActorUserId}",
+                collegeId, userId);
 
             return Map(entity);
         }
 
-        // =========================================================
-        // GET ALL
-        // =========================================================
-
-        public async Task<IEnumerable<AcademicYearResponseDto>>
-            GetAllAsync()
+        public async Task<IEnumerable<AcademicYearResponseDto>> GetAllAsync(
+            long collegeId)
         {
-            var items =
-                await _repository.GetAllAsync();
-
+            var items = await _repository.GetAllAsync(collegeId);
             return items.Select(Map);
         }
 
-
-        // =========================================================
-        // DASHBOARD
-        // =========================================================
-
-        public async Task<AcademicYearDashboardDto> GetDashboardAsync(
+        public Task<AcademicYearDashboardDto> GetDashboardAsync(
+            long collegeId,
             string? search,
             string? filter)
         {
-            var result = await _repository.GetDashboardAsync(search, filter);
-            return result;
+            return _repository.GetDashboardAsync(collegeId, search, filter);
         }
 
-        // =========================================================
-        // GENERATE NEXT ACADEMIC YEAR
-        // =========================================================
-
         public async Task<AcademicYearResponseDto> GenerateNextYearAsync(
+            long collegeId,
             GenerateNextAcademicYearDto dto,
             long? userId)
         {
             var entity = await _repository.GenerateNextYearAsync(
+                collegeId,
                 dto.ActivateImmediately,
-                userId);
+                userId,
+                dto.StartDate);
 
             if (entity == null)
             {
@@ -86,116 +77,83 @@ namespace BTech.Services.Implementations
             return Map(entity);
         }
 
-        // =========================================================
-        // GET BY ID
-        // =========================================================
-
-        public async Task<AcademicYearResponseDto?>
-            GetByIdAsync(
-                long academicYearId)
+        public async Task<AcademicYearResponseDto?> GetByIdAsync(
+            long academicYearId,
+            long collegeId)
         {
-            var entity =
-                await _repository.GetByIdAsync(
-                    academicYearId);
+            var entity = await _repository.GetByIdAsync(
+                academicYearId,
+                collegeId);
 
-            return entity == null
-                ? null
-                : Map(entity);
+            return entity == null ? null : Map(entity);
         }
 
-        // =========================================================
-        // EDIT
-        // =========================================================
-
-        public async Task<AcademicYearResponseDto?>
-            EditAsync(
-                long academicYearId,
-                UpdateAcademicYearDto dto,
-                long? userId)
+        public async Task<AcademicYearResponseDto?> EditAsync(
+            long academicYearId,
+            long collegeId,
+            UpdateAcademicYearDto dto,
+            long? userId)
         {
-            ValidateDates(
+            ValidateDates(dto.StartDate, dto.EndDate);
+
+            var entity = await _repository.EditAsync(
+                academicYearId,
+                collegeId,
+                dto.AcademicYearName.Trim(),
                 dto.StartDate,
-                dto.EndDate);
+                dto.EndDate,
+                userId);
 
-            var entity =
-                await _repository.EditAsync(
-                    academicYearId,
-                    dto.AcademicYearName.Trim(),
-                    dto.StartDate,
-                    dto.EndDate,
-                    userId);
-
-            return entity == null
-                ? null
-                : Map(entity);
+            return entity == null ? null : Map(entity);
         }
-
-        // =========================================================
-        // ACTIVATE
-        // =========================================================
 
         public Task<bool> ActivateAsync(
             long academicYearId,
+            long collegeId,
             long? userId)
         {
             return _repository.ActivateAsync(
                 academicYearId,
+                collegeId,
                 userId);
         }
 
-        // =========================================================
-        // DEACTIVATE
-        // =========================================================
-
         public Task<bool> DeactivateAsync(
             long academicYearId,
+            long collegeId,
             long? userId)
         {
             return _repository.DeactivateAsync(
                 academicYearId,
+                collegeId,
                 userId);
         }
 
-        // =========================================================
-        // ARCHIVE ACADEMIC YEAR
-        // =========================================================
-        // Today's task:
-        // Allow previous academic years to be archived
-        // without deleting historical data.
-        // =========================================================
-
         public async Task<bool> ArchiveAsync(
             long academicYearId,
+            long collegeId,
             long? userId)
         {
-            var entity =
-                await _repository.GetByIdAsync(
-                    academicYearId);
+            var entity = await _repository.GetByIdAsync(
+                academicYearId,
+                collegeId);
 
             if (entity == null)
-            {
                 return false;
-            }
 
-            // Already archived
             if (entity.IsArchived == 1)
             {
                 throw new InvalidOperationException(
                     "Academic year is already archived.");
             }
 
-            // Archive instead of deleting
-            var archived =
-                await _repository.ArchiveAsync(
-                    academicYearId,
-                    userId);
+            var archived = await _repository.ArchiveAsync(
+                academicYearId,
+                collegeId,
+                userId);
 
             return archived != null;
         }
-
-        // =========================================================
-        // DATE VALIDATION
-        // =========================================================
 
         private static void ValidateDates(
             DateTime startDate,
@@ -208,45 +166,21 @@ namespace BTech.Services.Implementations
             }
         }
 
-        // =========================================================
-        // ENTITY → DTO
-        // =========================================================
-
-        private static AcademicYearResponseDto Map(
-            AcademicYear x)
+        private static AcademicYearResponseDto Map(AcademicYear x)
         {
             return new AcademicYearResponseDto
             {
+                AcademicYearId = x.AcademicYearId,
                 CollegeId = x.CollegeId,
-                AcademicYearId =
-                    x.AcademicYearId,
-
-                AcademicYearName =
-                    x.AcademicYearName,
-
-                StartDate =
-                    x.StartDate,
-
-                EndDate =
-                    x.EndDate,
-
-                Status =
-                    x.Status,
-
-                IsArchived =
-                    x.IsArchived,
-
-                CreatedAt =
-                    x.CreatedAt,
-
-                CreatedBy =
-                    x.CreatedBy,
-
-                UpdatedAt =
-                    x.UpdatedAt,
-
-                UpdatedBy =
-                    x.UpdatedBy
+                AcademicYearName = x.AcademicYearName,
+                StartDate = x.StartDate,
+                EndDate = x.EndDate,
+                Status = x.Status,
+                IsArchived = x.IsArchived,
+                CreatedAt = x.CreatedAt,
+                CreatedBy = x.CreatedBy,
+                UpdatedAt = x.UpdatedAt,
+                UpdatedBy = x.UpdatedBy
             };
         }
     }

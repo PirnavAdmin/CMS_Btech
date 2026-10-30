@@ -2448,6 +2448,46 @@
   box-shadow: 0 0 0 2px color-mix(in srgb, var(--brand) 18%, transparent) !important;
 }
 
+/* Keep the directory search icon in the input's flex flow so it never covers text. */
+:root[data-theme] #root .page-content .faculty-management > .faculty-directory > .filter-disclosure .filter-disclosure__bar .filter-disclosure__search .faculty-search {
+  display: flex !important;
+  align-items: center !important;
+  gap: 12px !important;
+  width: 100% !important;
+  max-width: none !important;
+  min-height: 44px !important;
+  height: 44px !important;
+  padding: 0 14px !important;
+  border: 1px solid var(--border-strong) !important;
+  border-radius: 9px !important;
+  background: var(--surface) !important;
+  box-sizing: border-box !important;
+}
+:root[data-theme] #root .page-content .faculty-management > .faculty-directory > .filter-disclosure .filter-disclosure__bar .filter-disclosure__search .faculty-search > svg {
+  position: static !important;
+  flex: 0 0 18px !important;
+  width: 18px !important;
+  height: 18px !important;
+  transform: none !important;
+  pointer-events: none;
+}
+:root[data-theme] #root .page-content .faculty-management > .faculty-directory > .filter-disclosure .filter-disclosure__bar .filter-disclosure__search .faculty-search > input {
+  flex: 1 1 auto !important;
+  width: 100% !important;
+  min-width: 0 !important;
+  height: 42px !important;
+  padding: 0 !important;
+  border: 0 !important;
+  background: transparent !important;
+  font-size: 14px !important;
+  line-height: 1.4 !important;
+  box-shadow: none !important;
+}
+:root[data-theme] #root .page-content .faculty-management > .faculty-directory > .filter-disclosure .filter-disclosure__search .faculty-search:focus-within {
+  border-color: var(--brand) !important;
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--brand) 16%, transparent) !important;
+}
+
 
 
 

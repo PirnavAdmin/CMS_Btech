@@ -1,0 +1,9 @@
+# College 82 deployment verification
+
+This ZIP contains the source fix for explicit active College Admin mappings and shared live authorization scope. It also explicitly accepts a JSON string for the create request collegeId and logs denied role/college decisions without logging tokens. The role, mapping, server binary and live database are unknown in this environment. Do not call the issue fixed until authenticated GET and POST tests pass on the actual ngrok-backed process.
+
+Rebuild using .NET 8 from source and restart the ngrok upstream. The included bin and obj artifacts are old and must not be used as the fixed build. Verify upstream process, live DB and fresh login. Check sanitized role and mapping data using LIVE_PREFLIGHT.sql. A College Admin requires a primary or active Super Admin-granted mapping to college 82 plus academic_years view/create permissions. Never grant a mapping without authorized administrative approval. Existing API: POST /api/v1/super-admin/college-mappings accepts userId and collegeSettingId, not collegeId.
+
+The supplied SQL dump has global academic-year-name and global active-year uniqueness; these must be migrated to per-college indexes for acceptance tests. Review Database/Sql/AcademicYear/AcademicYearTenantScopeMigration.sql before use: it contains assumptions and data backfill, and requires backup, review, preflight for duplicates and unknown ownership, and a maintenance window. Do not run it blindly. Check SHOW CREATE TABLE in the live DB first.
+
+Run the included test_scope.py on a disposable test database, then run the exact GET/POST/GET for college 82 under the affected account on the intended deployment; also verify another college and unauthorized access. Actual tests were not run here because the deployment session, database access and .NET SDK are unavailable.

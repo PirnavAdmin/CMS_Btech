@@ -204,8 +204,6 @@ namespace BTech.Controllers.V1
             long id,
             [FromBody] UpdateCollegeStatusDto dto)
         {
-            try
-            {
             var college =
                 await _collegeService
                     .UpdateCollegeStatusAsync(
@@ -226,11 +224,6 @@ namespace BTech.Controllers.V1
                         "College status updated successfully.",
                     data = college
                 });
-            }
-            catch (CollegeDeactivationBlockedException ex)
-            {
-                return Conflict(new { success = false, message = ex.Message, impact = ex.Impact });
-            }
         }
 
         // =====================================================

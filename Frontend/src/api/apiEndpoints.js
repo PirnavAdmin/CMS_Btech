@@ -203,9 +203,9 @@ export const API_ENDPOINTS = Object.freeze({
     export: endpoint('/api/v1/faculty-payroll/export'),
   }),
   subjectManagementSubjects: Object.freeze({
-    list: endpoint('/api/v1/subject-management/subjects'),
-    search: endpoint('/api/v1/subject-management/subjects/search'),
-    detail: id => endpoint(`/api/v1/subject-management/subjects/${id}`),
+    list: endpoint('/api/v1/subjects'),
+    search: endpoint('/api/v1/subjects/search'),
+    detail: id => endpoint(`/api/v1/subjects/${id}`),
     status: id => endpoint(`/api/v1/subject-management/subjects/${id}/status`),
     dependencies: id => endpoint(`/api/v1/subject-management/subjects/${id}/dependencies`),
     lookups: endpoint('/api/v1/subject-management/subjects/lookups'),
