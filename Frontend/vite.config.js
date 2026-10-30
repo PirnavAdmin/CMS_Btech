@@ -9,7 +9,7 @@ export default defineConfig(({ mode }) => {
   plugins: [react()],
   test: {
     environment: 'jsdom',
-    include: ['src/features/faculty/**/*.vitest.test.{js,jsx}'],
+    include: ['src/features/faculty/**/*.vitest.test.{js,jsx}', 'src/pages/semester-management/**/*.vitest.test.{js,jsx}'],
   },
   resolve: {
     dedupe: ['react', 'react-dom'],
