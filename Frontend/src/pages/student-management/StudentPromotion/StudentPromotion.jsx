@@ -17,6 +17,7 @@ import {
   FiAward,
   FiBookOpen,
   FiUser,
+  FiRefreshCw,
 } from 'react-icons/fi'
 import DashboardLayout from '../../../layouts/DashboardLayout'
 import PageHeader from '../../../components/PageHeader'
@@ -289,6 +290,9 @@ export default function StudentPromotion() {
     activeAcademicYears,
     currentAcademicYear,
     activeCourses,
+    loading: academicLoading,
+    error: academicError,
+    refreshHierarchy,
     getBranchesForCourse,
     getSemestersForCourse,
     getSectionsForScope,
@@ -326,6 +330,25 @@ export default function StudentPromotion() {
   const availableSemesters = useMemo(() => {
     return getSemestersForCourse(courseId, true)
   }, [getSemestersForCourse, courseId])
+
+  useEffect(() => {
+    if (academicLoading) return
+    if (courseId && !activeCourses.some((course) => String(course.id) === String(courseId))) {
+      setCourseId('')
+      setSelectedBranchId('')
+      setSelectedSemesterNumber('')
+    }
+    if (selectedBranchId && !availableBranches.some((branch) => String(branch.id) === String(selectedBranchId))) {
+      setSelectedBranchId('')
+      setSelectedSemesterNumber('')
+    }
+    if (selectedSemesterNumber && !availableSemesters.some((semester) => String(semester.semesterNumber || semester.id) === String(selectedSemesterNumber))) {
+      setSelectedSemesterNumber('')
+    }
+    if (selectedAcademicYearId && !activeAcademicYears.some((year) => String(year.id ?? year.academicYearId) === String(selectedAcademicYearId))) {
+      setSelectedAcademicYearId('')
+    }
+  }, [academicLoading, activeCourses, availableBranches, availableSemesters, activeAcademicYears, courseId, selectedBranchId, selectedSemesterNumber, selectedAcademicYearId])
 
   const targetSections = useMemo(() => {
     return getSectionsForScope({
@@ -597,12 +620,30 @@ export default function StudentPromotion() {
 
         {/* Promotion Scope Selector Panel */}
         <section className="p-scope erp-card">
+          {(academicLoading || academicError || !activeCourses.length || !activeAcademicYears.length) && (
+            <div className={`p-scope-status ${academicError ? 'is-error' : ''}`} role={academicError ? 'alert' : 'status'}>
+              <span>
+                {academicLoading
+                  ? 'Loading courses and academic years…'
+                  : academicError || `No active ${[
+                    !activeCourses.length ? 'courses' : '',
+                    !activeAcademicYears.length ? 'academic years' : '',
+                  ].filter(Boolean).join(' or ')} are configured for this college yet.`}
+              </span>
+              {!academicLoading && (
+                <button type="button" onClick={refreshHierarchy} disabled={academicLoading}>
+                  <FiRefreshCw aria-hidden="true" /> Retry loading
+                </button>
+              )}
+            </div>
+          )}
           <div className="erp-form-grid">
             <div className="erp-form-group">
               <label>Course <span className="text-danger" style={{ color: '#dc2626' }}>*</span></label>
               <ProjectSelect
                 className="erp-select"
                 value={courseId}
+                disabled={academicLoading || !activeCourses.length}
                 onChange={(e) => {
                   setCourseId(e.target.value)
                   setSelectedBranchId('')
@@ -610,7 +651,7 @@ export default function StudentPromotion() {
                   setQuery('')
                 }}
               >
-                <option value="">Select Course</option>
+                <option value="">{academicLoading ? 'Loading courses…' : activeCourses.length ? 'Select Course' : 'No active courses available'}</option>
                 {activeCourses.map((c) => (
                   <option key={c.id} value={c.id}>
                     {c.name} ({c.code})
@@ -624,14 +665,14 @@ export default function StudentPromotion() {
               <ProjectSelect
                 className="erp-select"
                 value={selectedBranchId}
-                disabled={!courseId}
+                disabled={academicLoading || !courseId || !availableBranches.length}
                 onChange={(e) => {
                   setSelectedBranchId(e.target.value)
                   setSelectedSemesterNumber('')
                   setQuery('')
                 }}
               >
-                <option value="">Select Branch</option>
+                <option value="">{!courseId ? 'Select a course first' : availableBranches.length ? 'Select Branch' : 'No active branches for this course'}</option>
                 {availableBranches.map((b) => (
                   <option key={b.id} value={b.id}>
                     {b.name} ({b.code})
@@ -645,12 +686,13 @@ export default function StudentPromotion() {
               <ProjectSelect
                 className="erp-select"
                 value={selectedAcademicYearId}
+                disabled={academicLoading || !activeAcademicYears.length}
                 onChange={(e) => {
                   setSelectedAcademicYearId(e.target.value)
                   setQuery('')
                 }}
               >
-                <option value="">Select Academic Year</option>
+                <option value="">{academicLoading ? 'Loading academic years…' : activeAcademicYears.length ? 'Select Academic Year' : 'No active academic years available'}</option>
                 {activeAcademicYears.map((y) => (
                   <option key={y.id} value={y.id}>
                     {y.name}
@@ -664,13 +706,13 @@ export default function StudentPromotion() {
               <ProjectSelect
                 className="erp-select"
                 value={selectedSemesterNumber}
-                disabled={!selectedBranchId}
+                disabled={academicLoading || !selectedBranchId || !availableSemesters.length}
                 onChange={(e) => {
                   setSelectedSemesterNumber(e.target.value)
                   setQuery('')
                 }}
               >
-                <option value="">Select Semester</option>
+                <option value="">{!selectedBranchId ? 'Select a branch first' : availableSemesters.length ? 'Select Semester' : 'No active semesters for this course'}</option>
                 {availableSemesters.map((s) => (
                   <option key={s.id} value={s.semesterNumber || s.id}>
                     {s.semesterName || `Semester ${s.semesterNumber || s.id}`}

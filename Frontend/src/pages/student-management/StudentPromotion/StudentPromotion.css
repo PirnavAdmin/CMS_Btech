@@ -692,6 +692,44 @@
   background: var(--surface);
 }
 
+.p-scope-status {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 0 0 16px;
+  padding: 11px 14px;
+  border: 1px solid #c9def8;
+  border-radius: 10px;
+  background: #f1f7ff;
+  color: #315b89;
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.p-scope-status.is-error {
+  border-color: #f3c6c3;
+  background: #fff6f5;
+  color: #a3312b;
+}
+
+.p-scope-status button {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 7px 10px;
+  border: 1px solid currentColor;
+  border-radius: 8px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-weight: 650;
+  cursor: pointer;
+}
+
+.p-scope-status button:disabled { cursor: wait; opacity: .65; }
+
 /* Keep the promotion scope selectors in one straight row on desktop. */
 .p-scope .erp-form-grid {
   display: grid;
