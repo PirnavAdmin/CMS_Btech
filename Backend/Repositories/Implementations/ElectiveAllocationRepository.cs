@@ -19,6 +19,9 @@ namespace BTech.Repositories.Implementations
             _logger = logger;
         }
 
+        // ============================================================
+        // CREATE DATABASE CONNECTION
+        // ============================================================
         private MySqlConnection CreateConnection()
         {
             var connectionString =
@@ -33,6 +36,10 @@ namespace BTech.Repositories.Implementations
             return new MySqlConnection(connectionString);
         }
 
+        // ============================================================
+        // GET ALL ELECTIVE ALLOCATIONS
+        // GET: api/v1/elective-allocations
+        // ============================================================
         public async Task<IEnumerable<ElectiveAllocationResponseDto>> GetAllAsync(
             long collegeId,
             ElectiveAllocationListRequestDto request)
@@ -89,6 +96,10 @@ namespace BTech.Repositories.Implementations
                         : request.Search.Trim(),
                     DbType.String);
 
+                _logger.LogInformation(
+                    "Retrieving elective allocations. CollegeId={CollegeId}",
+                    collegeId);
+
                 var result =
                     await connection.QueryAsync<ElectiveAllocationResponseDto>(
                         "sp_elective_allocation_list",
@@ -97,17 +108,40 @@ namespace BTech.Repositories.Implementations
 
                 return result;
             }
+            catch (MySqlException ex)
+            {
+                _logger.LogError(
+                    ex,
+                    "MYSQL ERROR retrieving elective allocations. " +
+                    "Number={Number}, SqlState={SqlState}, Message={Message}, " +
+                    "CollegeId={CollegeId}",
+                    ex.Number,
+                    ex.SqlState,
+                    ex.Message,
+                    collegeId);
+
+                throw;
+            }
             catch (Exception ex)
             {
                 _logger.LogError(
                     ex,
-                    "Error retrieving elective allocations for CollegeId {CollegeId}",
+                    "ERROR retrieving elective allocations. " +
+                    "CollegeId={CollegeId}",
                     collegeId);
 
                 throw;
             }
         }
 
+        // ============================================================
+        // CREATE ELECTIVE ALLOCATION
+        // Existing endpoint:
+        // POST: api/v1/elective-allocations/{selectionId}
+        //
+        // Also used by the new frontend-compatible endpoint:
+        // POST: api/v1/electives/allocations
+        // ============================================================
         public async Task<ElectiveAllocationResponseDto?> CreateAsync(
             long collegeId,
             long selectionId,
@@ -118,8 +152,42 @@ namespace BTech.Repositories.Implementations
 
             try
             {
+                // ----------------------------------------------------
+                // Open MySQL connection
+                // ----------------------------------------------------
                 await connection.OpenAsync();
 
+                // ----------------------------------------------------
+                // Validate request
+                // ----------------------------------------------------
+                if (collegeId <= 0)
+                {
+                    throw new ArgumentException(
+                        "CollegeId must be greater than zero.");
+                }
+
+                if (selectionId <= 0)
+                {
+                    throw new ArgumentException(
+                        "SelectionId must be greater than zero.");
+                }
+
+                if (allocatedBy <= 0)
+                {
+                    throw new ArgumentException(
+                        "AllocatedBy must be greater than zero.");
+                }
+
+                if (request == null)
+                {
+                    throw new ArgumentNullException(
+                        nameof(request),
+                        "Allocation request is required.");
+                }
+
+                // ----------------------------------------------------
+                // Prepare parameters
+                // ----------------------------------------------------
                 var parameters = new DynamicParameters();
 
                 parameters.Add(
@@ -144,21 +212,104 @@ namespace BTech.Repositories.Implementations
                         : request.Remarks.Trim(),
                     DbType.String);
 
+                // ----------------------------------------------------
+                // Log request information
+                // ----------------------------------------------------
+                _logger.LogInformation(
+                    "Creating elective allocation. " +
+                    "CollegeId={CollegeId}, " +
+                    "SelectionId={SelectionId}, " +
+                    "AllocatedBy={AllocatedBy}, " +
+                    "Remarks={Remarks}",
+                    collegeId,
+                    selectionId,
+                    allocatedBy,
+                    request.Remarks);
+
+                // ----------------------------------------------------
+                // Execute stored procedure
+                // ----------------------------------------------------
                 var result =
                     await connection.QueryFirstOrDefaultAsync<ElectiveAllocationResponseDto>(
                         "sp_elective_allocation_create",
                         parameters,
                         commandType: CommandType.StoredProcedure);
 
+                // ----------------------------------------------------
+                // Check result
+                // ----------------------------------------------------
+                if (result == null)
+                {
+                    _logger.LogWarning(
+                        "Elective allocation stored procedure returned no result. " +
+                        "CollegeId={CollegeId}, " +
+                        "SelectionId={SelectionId}, " +
+                        "AllocatedBy={AllocatedBy}",
+                        collegeId,
+                        selectionId,
+                        allocatedBy);
+
+                    return null;
+                }
+
+                _logger.LogInformation(
+                    "Elective allocation created successfully. " +
+                    "AllocationId={AllocationId}, " +
+                    "SelectionId={SelectionId}",
+                    result.AllocationId,
+                    selectionId);
+
                 return result;
+            }
+            catch (MySqlException ex)
+            {
+                // ====================================================
+                // IMPORTANT:
+                // This captures the actual MySQL error.
+                // ====================================================
+                _logger.LogError(
+                    ex,
+                    "MYSQL ERROR creating elective allocation. " +
+                    "Number={Number}, " +
+                    "SqlState={SqlState}, " +
+                    "Message={Message}, " +
+                    "CollegeId={CollegeId}, " +
+                    "SelectionId={SelectionId}, " +
+                    "AllocatedBy={AllocatedBy}",
+                    ex.Number,
+                    ex.SqlState,
+                    ex.Message,
+                    collegeId,
+                    selectionId,
+                    allocatedBy);
+
+                throw;
+            }
+            catch (ArgumentException ex)
+            {
+                _logger.LogWarning(
+                    ex,
+                    "VALIDATION ERROR creating elective allocation. " +
+                    "CollegeId={CollegeId}, " +
+                    "SelectionId={SelectionId}, " +
+                    "AllocatedBy={AllocatedBy}",
+                    collegeId,
+                    selectionId,
+                    allocatedBy);
+
+                throw;
             }
             catch (Exception ex)
             {
                 _logger.LogError(
                     ex,
-                    "Error creating elective allocation for CollegeId {CollegeId}, SelectionId {SelectionId}",
+                    "ERROR creating elective allocation. " +
+                    "CollegeId={CollegeId}, " +
+                    "SelectionId={SelectionId}, " +
+                    "AllocatedBy={AllocatedBy}",
                     collegeId,
-                    selectionId);
+                    selectionId,
+                    allocatedBy);
 
                 throw;
             }

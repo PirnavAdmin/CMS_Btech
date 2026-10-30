@@ -1,5 +1,6 @@
 using System.Security.Claims;
 using BTech.DTOs.Course;
+using BTech.Helpers;
 using BTech.Services.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -19,10 +20,12 @@ namespace BTech.Controllers.V1
         }
 
         [HttpPost]
-        public async Task<IActionResult> Create([FromBody] CreateCourseDto dto)
+        public async Task<IActionResult> Create([FromBody] CreateCourseDto dto, [FromQuery] long? collegeId)
         {
             try
             {
+                dto.CollegeId = CollegeSelection.Resolve(collegeId, dto.CollegeId)
+                    ?? BTech.Services.CollegeRequestScope.GetCollegeId(HttpContext);
                 var course = await _courseService.AddAsync(dto, GetUserId());
                 return CreatedAtAction(
                     nameof(GetById),
@@ -51,6 +54,7 @@ namespace BTech.Controllers.V1
             [FromQuery] long? collegeId,
             [FromQuery] long? departmentId)
         {
+            collegeId ??= BTech.Services.CollegeRequestScope.GetCollegeId(HttpContext);
             var courses = await _courseService.GetAllAsync(
                 search,
                 status,
@@ -84,10 +88,13 @@ namespace BTech.Controllers.V1
         [HttpPut("{id:long}")]
         public async Task<IActionResult> Update(
             long id,
-            [FromBody] UpdateCourseDto dto)
+            [FromBody] UpdateCourseDto dto,
+            [FromQuery] long? collegeId)
         {
             try
             {
+                dto.CollegeId = CollegeSelection.Resolve(collegeId, dto.CollegeId)
+                    ?? BTech.Services.CollegeRequestScope.GetCollegeId(HttpContext);
                 var course = await _courseService.UpdateAsync(id, dto, GetUserId());
                 return course == null
                     ? NotFound(new { success = false, message = "Course not found." })

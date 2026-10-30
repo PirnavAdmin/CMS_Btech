@@ -1,0 +1,107 @@
+@baseUrl = https://localhost:7174
+@token = REPLACE_WITH_EXISTING_LOGIN_TOKEN
+@subjectId = REPLACE_WITH_CREATED_ID
+@academicYearId = 2
+@courseId = 1
+@branchId = 1
+@semesterId = 1
+
+### First: choose matching real IDs from the cascading academic lookups
+GET {{baseUrl}}/api/v1/subject-management/subjects/lookups
+Authorization: Bearer {{token}}
+
+### Screen directory
+GET {{baseUrl}}/api/v1/subject-management/subjects
+Authorization: Bearer {{token}}
+
+### Create: IDs and optional inputs match the uploaded screen's payload types
+POST {{baseUrl}}/api/v1/subject-management/subjects
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "academicYearId": "{{academicYearId}}",
+  "courseId": "{{courseId}}",
+  "branchId": "{{branchId}}",
+  "semesterId": "{{semesterId}}",
+  "subjectCode": "CSE-SM-201",
+  "subjectName": "Database Systems",
+  "subjectType": "Theory",
+  "electiveType": "Non-Elective",
+  "credits": 4,
+  "lectureHours": "3",
+  "tutorialHours": "1",
+  "practicalHours": "",
+  "internalMarks": "30",
+  "externalMarks": "70",
+  "status": "Active"
+}
+
+### Details: set subjectId to data.id from create
+GET {{baseUrl}}/api/v1/subject-management/subjects/{{subjectId}}
+Authorization: Bearer {{token}}
+
+### Edit same code: should succeed, not report duplicate
+PUT {{baseUrl}}/api/v1/subject-management/subjects/{{subjectId}}
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "academicYearId": {{academicYearId}},
+  "courseId": {{courseId}},
+  "branchId": {{branchId}},
+  "semesterId": {{semesterId}},
+  "subjectCode": "CSE-SM-201",
+  "subjectName": "Database Systems and Applications",
+  "subjectType": "Theory",
+  "electiveType": "Non-Elective",
+  "credits": 4.5,
+  "lectureHours": 3,
+  "tutorialHours": 1,
+  "practicalHours": 1,
+  "internalMarks": 40,
+  "externalMarks": 60,
+  "status": "Active"
+}
+
+### Filter and paginate
+GET {{baseUrl}}/api/v1/subject-management/subjects/search?search=Database&courseId={{courseId}}&branchId={{branchId}}&status=Active&page=1&pageSize=25
+Authorization: Bearer {{token}}
+
+### Summary
+GET {{baseUrl}}/api/v1/subject-management/subjects/summary?academicYearId={{academicYearId}}
+Authorization: Bearer {{token}}
+
+### Check related records before status/deletion
+GET {{baseUrl}}/api/v1/subject-management/subjects/{{subjectId}}/dependencies
+Authorization: Bearer {{token}}
+
+### Deactivate: 409 if active dependencies exist
+PATCH {{baseUrl}}/api/v1/subject-management/subjects/{{subjectId}}/status
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{ "status": "Inactive" }
+
+### Reactivate
+PATCH {{baseUrl}}/api/v1/subject-management/subjects/{{subjectId}}/status
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{ "status": "Active" }
+
+### Export filtered CSV
+GET {{baseUrl}}/api/v1/subject-management/subjects/export?courseId={{courseId}}&format=csv
+Authorization: Bearer {{token}}
+
+### Export filtered Excel
+GET {{baseUrl}}/api/v1/subject-management/subjects/export?courseId={{courseId}}&format=xlsx
+Authorization: Bearer {{token}}
+
+### Existing route preserved for faculty/timetable: numeric status and original fields
+GET {{baseUrl}}/api/v1/subjects?semesterId={{semesterId}}&status=1
+Authorization: Bearer {{token}}
+
+### Soft-delete only the disposable subject created above (409 when related records exist)
+DELETE {{baseUrl}}/api/v1/subject-management/subjects/{{subjectId}}
+Authorization: Bearer {{token}}

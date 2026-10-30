@@ -1,5 +1,6 @@
 ﻿using BTech.Data;
 using BTech.Repositories.Interfaces;
+using BTech.Services;
 using Microsoft.EntityFrameworkCore;
 
 namespace BTech.Repositories
@@ -21,12 +22,13 @@ namespace BTech.Repositories
                     on ur.RoleId equals r.Role_id
                 where ur.UserId == userId
                       && ur.Status == 1
+                      && ur.RemovedAt == null
                       && r.Status == 1
                       && r.DeletedAt == null
                 select r.RoleCode
             ).ToListAsync();
 
-            return roles;
+            return roles.Select(CanonicalRoleCode.Normalize).Distinct(StringComparer.OrdinalIgnoreCase).ToList();
         }
     }
 }

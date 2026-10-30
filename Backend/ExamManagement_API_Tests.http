@@ -1,0 +1,192 @@
+@baseUrl = https://localhost:7174
+@token = REPLACE_WITH_JWT
+@collegeId = 1
+@academicYearId = 2
+@courseId = 1
+@branchId = 1
+@semesterId = 2
+@subjectId = 4
+@sectionId = 2
+@classroomId = 6
+@examTypeId = 1
+@examId = 1
+@scheduleId = 1
+@ruleId = 1
+
+### Ticket 172/173 - Exam Type list
+GET {{baseUrl}}/api/v1/exam-types?collegeId={{collegeId}}
+Authorization: Bearer {{token}}
+Accept: application/json
+
+### Create exam type - save returned examTypeId
+POST {{baseUrl}}/api/v1/exam-types
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "collegeId": 1,
+  "code": "MID_SEM_API",
+  "name": "Mid Semester Examination",
+  "description": "Mid semester examination created for API verification",
+  "defaultDurationMinutes": 180,
+  "status": true
+}
+
+### Update exam type
+PUT {{baseUrl}}/api/v1/exam-types/{{examTypeId}}
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "collegeId": 1,
+  "code": "MID_SEM_API",
+  "name": "Mid Semester Examination",
+  "description": "Updated mid semester examination type",
+  "defaultDurationMinutes": 180,
+  "status": true
+}
+
+### Exam lookups for valid mappings from Dump2026OCT6th.sql
+GET {{baseUrl}}/api/v1/exams/lookups?collegeId=1&academicYearId=2&courseId=1&branchId=1&semesterId=2
+Authorization: Bearer {{token}}
+Accept: application/json
+
+### Create exam - replace examTypeId with returned type ID
+POST {{baseUrl}}/api/v1/exams
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "collegeId": 1,
+  "academicYearId": 2,
+  "courseId": 1,
+  "branchId": 1,
+  "semesterId": 2,
+  "examTypeId": {{examTypeId}},
+  "examCode": "CSE_S2_MID_API",
+  "examName": "CSE Semester 2 Mid Examination",
+  "description": "Ticket 173 API verification exam",
+  "startDate": "2026-11-10",
+  "endDate": "2026-11-20",
+  "status": true
+}
+
+### Get all exams
+GET {{baseUrl}}/api/v1/exams?collegeId=1&academicYearId=2&courseId=1&branchId=1&semesterId=2
+Authorization: Bearer {{token}}
+Accept: application/json
+
+### Get exam by ID
+GET {{baseUrl}}/api/v1/exams/{{examId}}
+Authorization: Bearer {{token}}
+Accept: application/json
+
+### Update exam without changing code
+PUT {{baseUrl}}/api/v1/exams/{{examId}}
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "collegeId": 1,
+  "academicYearId": 2,
+  "courseId": 1,
+  "branchId": 1,
+  "semesterId": 2,
+  "examTypeId": {{examTypeId}},
+  "examCode": "CSE_S2_MID_API",
+  "examName": "CSE Semester 2 Mid Examination - Updated",
+  "description": "Updated description",
+  "startDate": "2026-11-10",
+  "endDate": "2026-11-20",
+  "status": true
+}
+
+### Create schedule
+# Subject 4 is mapped to course 1 / branch 1 / semester 2 in the supplied dump.
+# Section 2 matches the same context. Classroom 6 belongs to college 1.
+POST {{baseUrl}}/api/v1/exams/{{examId}}/schedules
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "subjectId": 4,
+  "sectionId": 2,
+  "classroomId": 6,
+  "examDate": "2026-11-12",
+  "startTime": "09:30",
+  "endTime": "12:30",
+  "reportingTime": "09:00",
+  "instructions": "Students must report 30 minutes before the examination.",
+  "status": true
+}
+
+### Get schedules
+GET {{baseUrl}}/api/v1/exams/{{examId}}/schedules
+Authorization: Bearer {{token}}
+Accept: application/json
+
+### Update schedule
+PUT {{baseUrl}}/api/v1/exams/{{examId}}/schedules/{{scheduleId}}
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "subjectId": 4,
+  "sectionId": 2,
+  "classroomId": 6,
+  "examDate": "2026-11-12",
+  "startTime": "10:00",
+  "endTime": "13:00",
+  "reportingTime": "09:30",
+  "instructions": "Updated reporting and examination time.",
+  "status": true
+}
+
+### Create rule
+POST {{baseUrl}}/api/v1/exams/{{examId}}/rules
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "ruleCode": "MIN_ATTENDANCE",
+  "ruleName": "Minimum Attendance Requirement",
+  "ruleCategory": "ELIGIBILITY",
+  "ruleValue": "75",
+  "description": "Minimum attendance percentage required to appear for this exam.",
+  "status": true
+}
+
+### Get rules
+GET {{baseUrl}}/api/v1/exams/{{examId}}/rules
+Authorization: Bearer {{token}}
+Accept: application/json
+
+### Update rule
+PUT {{baseUrl}}/api/v1/exams/{{examId}}/rules/{{ruleId}}
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "ruleCode": "MIN_ATTENDANCE",
+  "ruleName": "Minimum Attendance Requirement",
+  "ruleCategory": "ELIGIBILITY",
+  "ruleValue": "75",
+  "description": "Attendance eligibility rule updated through Ticket 173 API.",
+  "status": true
+}
+
+### Delete rule (soft delete)
+DELETE {{baseUrl}}/api/v1/exams/{{examId}}/rules/{{ruleId}}
+Authorization: Bearer {{token}}
+
+### Delete schedule (soft delete)
+DELETE {{baseUrl}}/api/v1/exams/{{examId}}/schedules/{{scheduleId}}
+Authorization: Bearer {{token}}
+
+### Delete exam (soft deletes its remaining schedules/rules)
+DELETE {{baseUrl}}/api/v1/exams/{{examId}}
+Authorization: Bearer {{token}}
+
+### Delete exam type - succeeds only when no non-deleted exam uses it
+DELETE {{baseUrl}}/api/v1/exam-types/{{examTypeId}}
+Authorization: Bearer {{token}}

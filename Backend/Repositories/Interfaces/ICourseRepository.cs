@@ -14,6 +14,6 @@ namespace BTech.Repositories.Interfaces
         Task<Course> AddAsync(Course course);
         Task<Course?> UpdateAsync(Course course);
         Task<Course?> UpdateStatusAsync(long courseId, sbyte status, long? updatedBy);
-        Task<bool> ExistsCodeAsync(string courseCode, long? excludeId = null);
+        Task<bool> ExistsCodeAsync(long collegeId, string courseCode, long? excludeId = null);
     }
 }

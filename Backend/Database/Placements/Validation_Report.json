@@ -1,0 +1,22 @@
+{
+  "source_preservation": {
+    "missing_original_files": [],
+    "changed_original_files": [
+      "Program.cs"
+    ],
+    "program_change": "Two additive dependency registrations only"
+  },
+  "new_endpoints": 34,
+  "schema_alignment": "All qualified SQL references and INSERT/UPDATE columns match the dump",
+  "repository_selects_checked_on_dump_fixtures": 36,
+  "dump_sample_counts": {
+    "placement_drives": 2,
+    "placement_eligibility_rules": 2,
+    "placement_eligibility": 4,
+    "placement_applications": 3,
+    "placement_interviews": 3,
+    "placement_selections": 3
+  },
+  "dotnet_build": "Not run: .NET SDK not installed in this environment",
+  "live_mysql_http_tests": "Not run: MySQL and a running backend are not available"
+}

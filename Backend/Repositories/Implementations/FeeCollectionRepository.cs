@@ -20,7 +20,12 @@ public sealed class FeeCollectionRepository : IFeeCollectionRepository
         var close=cn.State!=ConnectionState.Open;
         if(close) await cn.OpenAsync();
         try{return await action(cn);}
-        catch(MySqlException ex) when(ex.SqlState=="45000"){throw new ArgumentException(ex.Message,ex);}
+        catch(MySqlException ex) when(ex.SqlState=="45000")
+        { _logger.LogWarning("Fee database validation rejected operation. Reason={Reason}", ex.Message); throw new ArgumentException(ex.Message,ex); }
+        catch(MySqlException ex) when(ex.Number==1062)
+        { _logger.LogWarning("Duplicate fee payment reference or receipt rejected. Code={Code}", ex.Number); throw new InvalidOperationException("Payment reference or receipt already exists. Check payment history before retrying.",ex); }
+        catch(Exception ex)
+        { _logger.LogError(ex,"Fee database operation failed."); throw; }
         finally{if(close) await cn.CloseAsync();}
     }
 
@@ -48,7 +53,7 @@ public sealed class FeeCollectionRepository : IFeeCollectionRepository
     });
 
     public Task<FeePaymentDto> CreatePaymentAsync(FeePaymentCreateRequest r,long actor,long? c,bool s)=>Db(async cn=>{
-        using var m=await cn.QueryMultipleAsync("sp_fc_payment_create",new{
+        using var m=await cn.QueryMultipleAsync("sp_fc_payment_create_validated",new{
             p_student_fee_id=r.StudentFeeId,p_fee_amount=r.FeeAmount,p_fine_amount=r.FineAmount,p_fine_id=r.FineId,
             p_payment_mode=r.PaymentMode,p_transaction_reference=r.TransactionReference,p_remarks=r.Remarks,
             p_payment_date=r.PaymentDate,p_actor_id=actor,p_college_id=c,p_super_admin=s?1:0
@@ -75,18 +80,18 @@ public sealed class FeeCollectionRepository : IFeeCollectionRepository
     });
 
     public Task<FeeFineDto> CreateFineAsync(FineCreateRequest r,long actor,long? c,bool s)=>Db(async cn=>{
-        return await cn.QueryFirstAsync<FeeFineDto>("sp_fc_fine_create",new{
+        return await cn.QueryFirstAsync<FeeFineDto>("sp_fc_fine_create_validated",new{
             p_student_fee_id=r.StudentFeeId,p_fine_type=r.FineType,p_reason=r.Reason,p_amount=r.Amount,
             p_assessed_on=r.AssessedOn,p_actor_id=actor,p_college_id=c,p_super_admin=s?1:0
         },commandType:CommandType.StoredProcedure);
     });
 
     public Task<FeeFineDto> WaiveFineAsync(long id,FineWaiveRequest r,long actor,long? c,bool s)=>Db(async cn=>{
-        return await cn.QueryFirstAsync<FeeFineDto>("sp_fc_fine_waive",new{
+        return await cn.QueryFirstAsync<FeeFineDto>("sp_fc_fine_waive_validated",new{
             p_fine_id=id,p_waived_amount=r.WaivedAmount,p_reason=r.Reason,p_actor_id=actor,p_college_id=c,p_super_admin=s?1:0
         },commandType:CommandType.StoredProcedure);
     });
 
-    public Task<FeeReceiptDto?> GetReceiptAsync(long id,long? c,bool s)=>Db(cn=>cn.QueryFirstOrDefaultAsync<FeeReceiptDto>("sp_fc_receipt_get",new{p_receipt_id=id,p_payment_id=(long?)null,p_college_id=c,p_super_admin=s?1:0},commandType:CommandType.StoredProcedure));
-    public Task<FeeReceiptDto?> GetReceiptByPaymentAsync(long id,long? c,bool s)=>Db(cn=>cn.QueryFirstOrDefaultAsync<FeeReceiptDto>("sp_fc_receipt_get",new{p_receipt_id=(long?)null,p_payment_id=id,p_college_id=c,p_super_admin=s?1:0},commandType:CommandType.StoredProcedure));
+    public Task<FeeReceiptDto?> GetReceiptAsync(long id,long? c,bool s)=>Db(cn=>cn.QueryFirstOrDefaultAsync<FeeReceiptDto>("sp_fc_receipt_get_validated",new{p_receipt_id=id,p_payment_id=(long?)null,p_college_id=c,p_super_admin=s?1:0},commandType:CommandType.StoredProcedure));
+    public Task<FeeReceiptDto?> GetReceiptByPaymentAsync(long id,long? c,bool s)=>Db(cn=>cn.QueryFirstOrDefaultAsync<FeeReceiptDto>("sp_fc_receipt_get_validated",new{p_receipt_id=(long?)null,p_payment_id=id,p_college_id=c,p_super_admin=s?1:0},commandType:CommandType.StoredProcedure));
 }

@@ -1,0 +1,40 @@
+using BTech.DTOs.Placements;
+namespace BTech.Services.Interfaces;
+public interface IPlacementService
+{
+    Task<object> Lookups(long userId,long? collegeId,CancellationToken ct);
+    Task<object> Dashboard(long userId,long? collegeId,CancellationToken ct);
+    Task<List<PlacementDriveDto>> Drives(long userId,long? collegeId,long? companyId,long? academicYearId,string? status,string? search,int page,int pageSize,CancellationToken ct);
+    Task<PlacementDriveDto> Drive(long userId,long? collegeId,long id,CancellationToken ct);
+    Task<PlacementDriveDto> CreateDrive(long userId,long? collegeId,SavePlacementDriveRequest r,CancellationToken ct);
+    Task<PlacementDriveDto> UpdateDrive(long userId,long? collegeId,long id,SavePlacementDriveRequest r,CancellationToken ct);
+    Task<PlacementDriveDto> SetDriveStatus(long userId,long? collegeId,long id,PlacementStatusRequest r,CancellationToken ct);
+    Task<object> DeleteDrive(long userId,long? collegeId,long id,CancellationToken ct);
+    Task<List<PlacementRuleDto>> Rules(long userId,long? collegeId,long driveId,CancellationToken ct);
+    Task<PlacementRuleDto> Rule(long userId,long? collegeId,long driveId,long id,CancellationToken ct);
+    Task<PlacementRuleDto> CreateRule(long userId,long? collegeId,long driveId,SavePlacementRuleRequest r,CancellationToken ct);
+    Task<PlacementRuleDto> UpdateRule(long userId,long? collegeId,long driveId,long id,SavePlacementRuleRequest r,CancellationToken ct);
+    Task<object> DeleteRule(long userId,long? collegeId,long driveId,long id,CancellationToken ct);
+    Task<List<PlacementEligibilityDto>> Eligibilities(long userId,long? collegeId,long driveId,string? status,int page,int pageSize,CancellationToken ct);
+    Task<PlacementEligibilityDto> Eligibility(long userId,long? collegeId,long driveId,long studentId,CancellationToken ct);
+    Task<PlacementEligibilityDto> Evaluate(long userId,long? collegeId,long driveId,EvaluatePlacementEligibilityRequest r,CancellationToken ct);
+    Task<BulkPlacementEligibilityResultDto> EvaluateBulk(long userId,long? collegeId,long driveId,BulkEvaluatePlacementEligibilityRequest r,CancellationToken ct);
+    Task<List<PlacementApplicationDto>> Applications(long userId,long? collegeId,long? driveId,long? studentId,string? status,int page,int pageSize,CancellationToken ct);
+    Task<PlacementApplicationDto> Application(long userId,long? collegeId,long id,CancellationToken ct);
+    Task<PlacementApplicationDto> Apply(long userId,long? collegeId,long driveId,CreatePlacementApplicationRequest r,CancellationToken ct);
+    Task<PlacementApplicationDto> UpdateApplication(long userId,long? collegeId,long id,UpdatePlacementApplicationRequest r,CancellationToken ct);
+    Task<PlacementApplicationDto> SetApplicationStatus(long userId,long? collegeId,long id,PlacementStatusRequest r,CancellationToken ct);
+    Task<List<PlacementInterviewDto>> Interviews(long userId,long? collegeId,long applicationId,CancellationToken ct);
+    Task<List<PlacementInterviewDto>> InterviewList(long userId,long? collegeId,long? driveId,string? status,DateTime? from,DateTime? to,int page,int pageSize,CancellationToken ct);
+    Task<PlacementInterviewDto> Interview(long userId,long? collegeId,long id,CancellationToken ct);
+    Task<PlacementInterviewDto> CreateInterview(long userId,long? collegeId,long applicationId,SavePlacementInterviewRequest r,CancellationToken ct);
+    Task<PlacementInterviewDto> UpdateInterview(long userId,long? collegeId,long id,SavePlacementInterviewRequest r,CancellationToken ct);
+    Task<PlacementInterviewDto> InterviewResult(long userId,long? collegeId,long id,PlacementInterviewResultRequest r,CancellationToken ct);
+    Task<PlacementInterviewDto> SetInterviewStatus(long userId,long? collegeId,long id,PlacementStatusRequest r,CancellationToken ct);
+    Task<List<PlacementSelectionDto>> Selections(long userId,long? collegeId,long? driveId,long? studentId,string? status,int page,int pageSize,CancellationToken ct);
+    Task<PlacementSelectionDto> Selection(long userId,long? collegeId,long id,CancellationToken ct);
+    Task<PlacementSelectionDto> ApplicationSelection(long userId,long? collegeId,long applicationId,CancellationToken ct);
+    Task<PlacementSelectionDto> SaveSelection(long userId,long? collegeId,long applicationId,SavePlacementSelectionRequest r,CancellationToken ct);
+    Task<PlacementSelectionDto> Offer(long userId,long? collegeId,long id,PlacementOfferRequest r,CancellationToken ct);
+    Task<PlacementSelectionDto> Join(long userId,long? collegeId,long id,CancellationToken ct);
+}

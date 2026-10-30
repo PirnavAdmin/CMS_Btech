@@ -5,6 +5,7 @@ using BTech.DTOs.College;
 using BTech.Models;
 using BTech.Repositories.Interfaces;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Storage;
 
 namespace BTech.Repositories.Implementations
 {
@@ -181,16 +182,27 @@ namespace BTech.Repositories.Implementations
         public async Task<College> AddAsync(
             College college)
         {
-            var created =
-                await ExecuteSingleAsync(
-                    "sp_College_Create",
-                    CollegeParameters(
-                        college,
-                        false));
+            await using var transaction = await _context.Database.BeginTransactionAsync();
+            try
+            {
+                var created = await ExecuteSingleAsync(
+                    "sp_College_Create", CollegeParameters(college, false))
+                    ?? throw new InvalidOperationException("College could not be created.");
 
-            return created ??
-                throw new InvalidOperationException(
-                    "College could not be created.");
+                await WithCommandAsync("sp_College_ProvisionCreatorAccess", async command =>
+                {
+                    AddParameter(command, "p_college_id", created.CollegeId);
+                    AddParameter(command, "p_user_id", college.CreatedBy);
+                    await command.ExecuteNonQueryAsync();
+                });
+                await transaction.CommitAsync();
+                return created;
+            }
+            catch
+            {
+                await transaction.RollbackAsync();
+                throw;
+            }
         }
 
         // =====================================================
@@ -374,6 +386,7 @@ namespace BTech.Repositories.Implementations
 
                 command.CommandType =
                     CommandType.StoredProcedure;
+                command.Transaction = _context.Database.CurrentTransaction?.GetDbTransaction();
 
                 await action(command);
             }

@@ -1,0 +1,25 @@
+@baseUrl = https://localhost:5001
+@studentId = 2
+@examId = 1
+
+### Calculate result
+POST {{baseUrl}}/api/v1/results/calculate
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "studentId": {{studentId}},
+  "examId": {{examId}}
+}
+
+### Get one student's result for an exam
+GET {{baseUrl}}/api/v1/results/student/{{studentId}}/exam/{{examId}}
+Authorization: Bearer {{token}}
+
+### Get all exam results for a student
+GET {{baseUrl}}/api/v1/results/student/{{studentId}}
+Authorization: Bearer {{token}}
+
+### Get student backlogs
+GET {{baseUrl}}/api/v1/results/student/{{studentId}}/backlogs
+Authorization: Bearer {{token}}

@@ -17,6 +17,8 @@
 
         public string PasswordHash { get; set; } = string.Empty;
 
+        public bool MustChangePassword { get; set; }
+
         public byte Status { get; set; }
 
         public DateTime? LastLoginAt { get; set; }

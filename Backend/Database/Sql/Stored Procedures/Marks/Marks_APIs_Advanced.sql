@@ -414,7 +414,7 @@ BEGIN
         sm.grade, sm.remarks, sm.workflow_status, sm.version_no,
         sm.entered_by, sm.entered_at, sm.updated_by, sm.updated_at
     FROM student_marks sm
-    JOIN exams e ON e.exam_id=sm.exam_id
+    JOIN exams e ON e.exam_id = sm.exam_id
     JOIN students st ON st.student_id=sm.student_id
     JOIN subjects sub ON sub.subject_id=sm.subject_id
     LEFT JOIN sections sec ON sec.section_id=sm.section_id
@@ -429,7 +429,7 @@ CREATE PROCEDURE sp_marks_get(
 )
 BEGIN
     SELECT
-        sm.mark_id, sm.college_id, sm.exam_id, e.exam_code, e.exam_name,
+        sm.mark_id, sm.college_id, sm.exam_id, e.exam_code, COALESCE(e.exam_name, sm.exam_name) AS exam_name,
         sm.student_id, st.student_code, st.full_name AS student_name,
         sm.subject_id, sub.subject_code, sub.subject_name,
         sm.section_id, sec.section_name,
@@ -438,7 +438,7 @@ BEGIN
         sm.grade, sm.remarks, sm.workflow_status, sm.version_no,
         sm.entered_by, sm.entered_at, sm.updated_by, sm.updated_at
     FROM student_marks sm
-    JOIN exams e ON e.exam_id=sm.exam_id
+    LEFT JOIN exams e ON e.exam_id=sm.exam_id
     JOIN students st ON st.student_id=sm.student_id
     JOIN subjects sub ON sub.subject_id=sm.subject_id
     LEFT JOIN sections sec ON sec.section_id=sm.section_id
@@ -453,7 +453,7 @@ CREATE PROCEDURE sp_marks_list(
 )
 BEGIN
     SELECT
-        sm.mark_id, sm.college_id, sm.exam_id, e.exam_code, e.exam_name,
+        sm.mark_id, sm.college_id, sm.exam_id, e.exam_code, COALESCE(e.exam_name, sm.exam_name) AS exam_name,
         sm.student_id, st.student_code, st.full_name AS student_name,
         sm.subject_id, sub.subject_code, sub.subject_name,
         sm.section_id, sec.section_name,
@@ -462,7 +462,7 @@ BEGIN
         sm.grade, sm.remarks, sm.workflow_status, sm.version_no,
         sm.entered_by, sm.entered_at, sm.updated_by, sm.updated_at
     FROM student_marks sm
-    JOIN exams e ON e.exam_id=sm.exam_id
+    LEFT JOIN exams e ON e.exam_id=sm.exam_id
     JOIN students st ON st.student_id=sm.student_id
     JOIN subjects sub ON sub.subject_id=sm.subject_id
     LEFT JOIN sections sec ON sec.section_id=sm.section_id

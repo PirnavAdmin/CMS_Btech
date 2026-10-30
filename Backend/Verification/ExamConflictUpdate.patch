@@ -1,0 +1,146 @@
+--- original/Repositories/Implementations/ExamManagementRepository.cs
++++ updated/Repositories/Implementations/ExamManagementRepository.cs
+@@ -252,6 +252,7 @@
+     {
+         await using var c = Connection();
+         await c.OpenAsync(ct);
++        await using var conflictLease = await ExamConflictGuard.AcquireAsync(c, _logger, ct);
+         await ValidateExamRequestAsync(c, request, null, ct);
+ 
+         const string sql = """
+@@ -291,6 +292,7 @@
+     {
+         await using var c = Connection();
+         await c.OpenAsync(ct);
++        await using var conflictLease = await ExamConflictGuard.AcquireAsync(c, _logger, ct);
+         await EnsureExamExistsAsync(c, examId, ct);
+ 
+         var current = await c.QuerySingleAsync<dynamic>(new CommandDefinition("""
+@@ -320,6 +322,29 @@
+             throw new ExamConflictException("startDate", "Existing schedules fall outside the requested exam date range.");
+ 
+         await ValidateExamRequestAsync(c, request, examId, ct);
++
++        var effectiveStatus = request.Status.HasValue ? Status(request.Status)
++            : await c.ExecuteScalarAsync<byte>(new CommandDefinition(
++                "SELECT status FROM exams WHERE exam_id=@ExamId;",
++                new { ExamId = examId }, cancellationToken: ct));
++        if (effectiveStatus == 1)
++        {
++            var schedules = await c.QueryAsync<dynamic>(new CommandDefinition("""
++                SELECT exam_schedule_id, classroom_id, section_id, exam_date, start_time, end_time
++                  FROM exam_schedules
++                 WHERE exam_id=@ExamId AND status=1 AND deleted_at IS NULL;
++                """, new { ExamId = examId }, cancellationToken: ct));
++            foreach (var schedule in schedules)
++            {
++                await ExamConflictGuard.ValidateOverlapAsync(c, examId,
++                    Convert.ToInt64(schedule.exam_schedule_id),
++                    schedule.classroom_id is null ? (long?)null : Convert.ToInt64(schedule.classroom_id),
++                    schedule.section_id is null ? (long?)null : Convert.ToInt64(schedule.section_id),
++                    Convert.ToDateTime(schedule.exam_date), (TimeSpan)schedule.start_time, (TimeSpan)schedule.end_time,
++                    request.CollegeId, request.AcademicYearId, request.CourseId, request.BranchId,
++                    request.SemesterId, _logger, ct);
++            }
++        }
+ 
+         const string sql = """
+             UPDATE exams
+@@ -365,6 +390,7 @@
+     {
+         await using var c = Connection();
+         await c.OpenAsync(ct);
++        await using var conflictLease = await ExamConflictGuard.AcquireAsync(c, _logger, ct);
+         await EnsureExamExistsAsync(c, examId, ct);
+         await using var tx = await c.BeginTransactionAsync(ct);
+ 
+@@ -439,6 +465,7 @@
+     {
+         await using var c = Connection();
+         await c.OpenAsync(ct);
++        await using var conflictLease = await ExamConflictGuard.AcquireAsync(c, _logger, ct);
+         var context = await ValidateScheduleAsync(c, examId, request, null, ct);
+ 
+         const string sql = """
+@@ -475,6 +502,7 @@
+     {
+         await using var c = Connection();
+         await c.OpenAsync(ct);
++        await using var conflictLease = await ExamConflictGuard.AcquireAsync(c, _logger, ct);
+         await EnsureScheduleExistsAsync(c, examId, scheduleId, ct);
+         var context = await ValidateScheduleAsync(c, examId, request, scheduleId, ct);
+ 
+@@ -517,6 +545,7 @@
+     {
+         await using var c = Connection();
+         await c.OpenAsync(ct);
++        await using var conflictLease = await ExamConflictGuard.AcquireAsync(c, _logger, ct);
+         await EnsureScheduleExistsAsync(c, examId, scheduleId, ct);
+         await c.ExecuteAsync(new CommandDefinition("""
+             UPDATE exam_schedules
+@@ -818,7 +847,7 @@
+ 
+     private sealed record ScheduleValidationContext(TimeSpan StartTime, TimeSpan EndTime, TimeSpan? ReportingTime);
+ 
+-    private static async Task<ScheduleValidationContext> ValidateScheduleAsync(
++    private async Task<ScheduleValidationContext> ValidateScheduleAsync(
+         MySqlConnection c, long examId, ExamScheduleWriteRequest r, long? currentScheduleId, CancellationToken ct)
+     {
+         var exam = await c.QuerySingleOrDefaultAsync<dynamic>(new CommandDefinition("""
+@@ -907,44 +936,18 @@
+         if (duplicate > 0)
+             throw new ExamConflictException("subjectId", "This subject already has a schedule for the selected section in this exam.");
+ 
+-        if (r.ClassroomId.HasValue)
+-        {
+-            var roomConflict = await c.ExecuteScalarAsync<long>(new CommandDefinition("""
+-                SELECT COUNT(*) FROM exam_schedules es
+-                 INNER JOIN exams ex ON ex.exam_id=es.exam_id AND ex.status=1 AND ex.deleted_at IS NULL
+-                 WHERE es.classroom_id=@ClassroomId AND es.exam_date=@ExamDate AND es.status=1 AND es.deleted_at IS NULL
+-                   AND es.start_time < @EndTime AND es.end_time > @StartTime
+-                   AND (@CurrentScheduleId IS NULL OR es.exam_schedule_id<>@CurrentScheduleId);
+-                """, new
+-            {
+-                r.ClassroomId,
+-                ExamDate = examDate,
+-                StartTime = startTime,
+-                EndTime = endTime,
+-                CurrentScheduleId = currentScheduleId
+-            }, cancellationToken: ct));
+-            if (roomConflict > 0)
+-                throw new ExamConflictException("classroomId", "Classroom is already booked for another exam during this time.");
+-        }
+-
+-        if (r.SectionId.HasValue)
+-        {
+-            var sectionConflict = await c.ExecuteScalarAsync<long>(new CommandDefinition("""
+-                SELECT COUNT(*) FROM exam_schedules es
+-                 INNER JOIN exams ex ON ex.exam_id=es.exam_id AND ex.status=1 AND ex.deleted_at IS NULL
+-                 WHERE es.section_id=@SectionId AND es.exam_date=@ExamDate AND es.status=1 AND es.deleted_at IS NULL
+-                   AND es.start_time < @EndTime AND es.end_time > @StartTime
+-                   AND (@CurrentScheduleId IS NULL OR es.exam_schedule_id<>@CurrentScheduleId);
+-                """, new
+-            {
+-                r.SectionId,
+-                ExamDate = examDate,
+-                StartTime = startTime,
+-                EndTime = endTime,
+-                CurrentScheduleId = currentScheduleId
+-            }, cancellationToken: ct));
+-            if (sectionConflict > 0)
+-                throw new ExamConflictException("sectionId", "Section already has another exam during this time.");
++        // Explicit inactive writes do not reserve hall/student time. Omitted status on PUT
++        // retains the stored status, matching the existing UPDATE COALESCE behavior.
++        var effectiveStatus = r.Status.HasValue ? Status(r.Status) : currentScheduleId.HasValue
++            ? await c.ExecuteScalarAsync<byte>(new CommandDefinition(
++                "SELECT status FROM exam_schedules WHERE exam_schedule_id=@ScheduleId;",
++                new { ScheduleId = currentScheduleId.Value }, cancellationToken: ct))
++            : (byte)1;
++        if (effectiveStatus == 1)
++        {
++            await ExamConflictGuard.ValidateOverlapAsync(c, examId, currentScheduleId,
++                r.ClassroomId, r.SectionId, examDate, startTime, endTime,
++                collegeId, academicYearId, courseId, branchId, semesterId, _logger, ct);
+         }
+ 
+         return new ScheduleValidationContext(startTime, endTime, reportingTime);

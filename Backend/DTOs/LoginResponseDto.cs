@@ -1,4 +1,4 @@
-﻿namespace BTech.DTOs
+namespace BTech.DTOs
 {
     public class LoginResponseDto
     {
@@ -12,6 +12,8 @@
 
         public long UserId { get; set; }
 
+        public long? CollegeId { get; set; }
+
         public string EmployeeUserId { get; set; } = string.Empty;
 
         public string FullName { get; set; } = string.Empty;
@@ -24,5 +26,7 @@
 
         // REMEMBER ME
         public bool RememberMe { get; set; }
+
+        public bool MustChangePassword { get; set; }
     }
 }

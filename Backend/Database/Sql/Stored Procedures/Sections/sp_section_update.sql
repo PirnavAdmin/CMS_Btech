@@ -1,15 +1,12 @@
-DROP PROCEDURE IF EXISTS sp_Section_Update;
-
+DROP PROCEDURE IF EXISTS sp_section_update;
 DELIMITER $$
-
-CREATE PROCEDURE sp_Section_Update
-(
+CREATE PROCEDURE sp_section_update(
     IN p_section_id BIGINT,
     IN p_course_id BIGINT,
     IN p_branch_id BIGINT,
     IN p_academic_year_id BIGINT,
-    IN p_semester INT,
-    IN p_section_name VARCHAR(50),
+    IN p_semester BIGINT,
+    IN p_section_name VARCHAR(100),
     IN p_section_code VARCHAR(20),
     IN p_capacity INT,
     IN p_class_teacher_employee_profile_id BIGINT,
@@ -20,173 +17,127 @@ CREATE PROCEDURE sp_Section_Update
     IN p_updated_by BIGINT
 )
 BEGIN
+    DECLARE v_college_id BIGINT DEFAULT NULL;
+    DECLARE v_current_strength INT DEFAULT 0;
+    DECLARE v_semester_number INT DEFAULT NULL;
 
-    DECLARE v_college_id BIGINT;
-    DECLARE v_current_students INT DEFAULT 0;
-
-    /* Check section */
-    SELECT college_id
+    SELECT s.`college_id`
     INTO v_college_id
-    FROM sections
-    WHERE section_id = p_section_id
-      AND deleted_at IS NULL
+    FROM `sections` s
+    WHERE s.`section_id` = p_section_id
+      AND s.`is_archived` = 0
+      AND s.`deleted_at` IS NULL
     LIMIT 1;
 
     IF v_college_id IS NULL THEN
-
-        SIGNAL SQLSTATE '45000'
-        SET MESSAGE_TEXT = 'Section not found.';
-
+        SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Section not found.';
     END IF;
-
-
-    /* Validate capacity */
+    IF NULLIF(TRIM((p_section_name COLLATE utf8mb4_0900_ai_ci)), '') IS NULL
+       OR NULLIF(TRIM((p_section_code COLLATE utf8mb4_0900_ai_ci)), '') IS NULL THEN
+        SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Section name and section code are required.';
+    END IF;
     IF p_capacity IS NULL OR p_capacity <= 0 THEN
-
-        SIGNAL SQLSTATE '45000'
-        SET MESSAGE_TEXT = 'Capacity must be greater than zero.';
-
+        SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Section capacity must be greater than zero.';
     END IF;
 
-
-    /* Check current student count */
-    SELECT COUNT(*)
-    INTO v_current_students
-    FROM student_section_assignments
-    WHERE section_id = p_section_id
-      AND academic_year_id = p_academic_year_id
-      AND status = 1;
-
-
-    /* Do not reduce capacity below current students */
-    IF p_capacity < v_current_students THEN
-
-        SIGNAL SQLSTATE '45000'
-        SET MESSAGE_TEXT =
-            'Capacity cannot be less than current student strength.';
-
-    END IF;
-
-
-    /* Validate section code */
-    IF EXISTS
-    (
-        SELECT 1
-        FROM sections
-        WHERE section_code = TRIM(p_section_code)
-          AND section_id <> p_section_id
-          AND deleted_at IS NULL
+    IF NOT EXISTS (
+        SELECT 1 FROM academicyears
+        WHERE academic_year_id = p_academic_year_id
+          AND college_id = v_college_id
+          AND status = 1 AND is_archived = 0 AND deleted_at IS NULL
     ) THEN
-
-        SIGNAL SQLSTATE '45000'
-        SET MESSAGE_TEXT = 'Section code already exists.';
-
+        SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Activate the selected academic year for this college before changing the section academic mapping.';
     END IF;
 
-
-    /* Validate class teacher */
-    IF p_class_teacher_employee_profile_id IS NOT NULL THEN
-
-        IF NOT EXISTS
-        (
-            SELECT 1
-            FROM employee_profiles ep
-            INNER JOIN users u
-                ON u.user_id = ep.user_id
-            WHERE ep.employee_profile_id =
-                    p_class_teacher_employee_profile_id
-              AND ep.status = 1
-              AND ep.deleted_at IS NULL
-              AND u.status = 1
-              AND u.deleted_at IS NULL
-              AND
-              (
-                  u.college_id = v_college_id
-                  OR u.college_id IS NULL
-              )
-        ) THEN
-
-            SIGNAL SQLSTATE '45000'
-            SET MESSAGE_TEXT =
-                'Invalid faculty advisor.';
-
-        END IF;
-
+    IF NOT EXISTS (
+        SELECT 1 FROM `courses` c
+        WHERE c.`course_id` = p_course_id
+          AND c.`college_id` = v_college_id
+          AND c.`status` = 1 AND c.`deleted_at` IS NULL
+    ) THEN
+        SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Course does not belong to the section college.';
     END IF;
 
+    IF NOT EXISTS (
+        SELECT 1 FROM `branches` b
+        WHERE b.`branch_id` = p_branch_id
+          AND b.`course_id` = p_course_id
+          AND b.`status` = 1 AND b.`deleted_at` IS NULL
+    ) THEN
+        SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Branch does not belong to the selected course.';
+    END IF;
 
-    /* Update */
-    UPDATE sections
-    SET
-        course_id =
-            p_course_id,
+    SELECT sem.`semester_number`
+    INTO v_semester_number
+    FROM `semesters` sem
+    WHERE sem.`semester_id` = p_semester
+      AND sem.`academic_year_id` = p_academic_year_id
+      AND sem.`course_id` = p_course_id
+      AND sem.`branch_id` = p_branch_id
+      AND sem.`status` = 1
+      AND sem.`is_archived` = 0
+    LIMIT 1;
 
-        branch_id =
-            p_branch_id,
+    IF v_semester_number IS NULL THEN
+        SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Semester does not match the selected course, branch and academic year.';
+    END IF;
 
-        academic_year_id =
-            p_academic_year_id,
+    IF p_class_teacher_employee_profile_id IS NOT NULL AND NOT EXISTS (
+        SELECT 1 FROM `employee_profiles` ep
+        INNER JOIN `users` u ON u.`user_id` = ep.`user_id`
+        WHERE ep.`employee_profile_id` = p_class_teacher_employee_profile_id
+          AND ep.`status` = 1
+          AND ep.`deleted_at` IS NULL
+          AND u.`status` = 1
+          AND u.`deleted_at` IS NULL
+          AND (u.`college_id` = v_college_id OR u.`college_id` IS NULL)
+    ) THEN
+        SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Class teacher is unavailable for this college.';
+    END IF;
 
-        semester =
-            p_semester,
+    SELECT COUNT(*) INTO v_current_strength
+    FROM `student_section_assignments` ssa
+    WHERE ssa.`section_id` = p_section_id AND ssa.`status` = 1;
 
-        section_name =
-            TRIM(p_section_name),
+    IF p_capacity < v_current_strength THEN
+        SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Capacity cannot be below the current student strength.';
+    END IF;
 
-        section_code =
-            TRIM(p_section_code),
+    IF EXISTS (
+        SELECT 1 FROM `sections` duplicate_section
+        WHERE duplicate_section.`section_id` <> p_section_id
+          AND duplicate_section.`college_id` = v_college_id
+          AND duplicate_section.`academic_year_id` = p_academic_year_id
+          AND duplicate_section.`course_id` = p_course_id
+          AND duplicate_section.`branch_id` = p_branch_id
+          AND duplicate_section.`semester_id` = p_semester
+          AND LOWER(TRIM(duplicate_section.`section_code`)) COLLATE utf8mb4_0900_ai_ci = LOWER(TRIM((p_section_code COLLATE utf8mb4_0900_ai_ci)))
+          AND duplicate_section.`is_archived` = 0
+          AND duplicate_section.`deleted_at` IS NULL
+    ) THEN
+        SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Section code already exists for the selected semester.';
+    END IF;
 
-        capacity =
-            p_capacity,
+    UPDATE `sections`
+    SET `course_id` = p_course_id,
+        `branch_id` = p_branch_id,
+        `academic_year_id` = p_academic_year_id,
+        `semester` = v_semester_number,
+        `semester_id` = p_semester,
+        `section_name` = TRIM((p_section_name COLLATE utf8mb4_0900_ai_ci)),
+        `section_code` = TRIM((p_section_code COLLATE utf8mb4_0900_ai_ci)),
+        `capacity` = p_capacity,
+        `class_teacher_employee_profile_id` = p_class_teacher_employee_profile_id,
+        `room` = NULLIF(TRIM((p_room COLLATE utf8mb4_0900_ai_ci)), ''),
+        `shift` = NULLIF(TRIM((p_shift COLLATE utf8mb4_0900_ai_ci)), ''),
+        `section_type` = NULLIF(TRIM((p_section_type COLLATE utf8mb4_0900_ai_ci)), ''),
+        `status` = IF(COALESCE(p_status, 0) = 1, 1, 0),
+        `updated_at` = UTC_TIMESTAMP(),
+        `updated_by` = p_updated_by
+    WHERE `section_id` = p_section_id
+      AND `is_archived` = 0
+      AND `deleted_at` IS NULL;
 
-        class_teacher_employee_profile_id =
-            p_class_teacher_employee_profile_id,
-
-        room =
-            NULLIF(TRIM(p_room), ''),
-
-        shift =
-            NULLIF(TRIM(p_shift), ''),
-
-        section_type =
-            NULLIF(TRIM(p_section_type), ''),
-
-        status =
-            COALESCE(p_status, status),
-
-        updated_at =
-            UTC_TIMESTAMP(),
-
-        updated_by =
-            p_updated_by
-
-    WHERE section_id = p_section_id
-      AND deleted_at IS NULL;
-
-
-    /* Return updated record */
-    SELECT
-        s.section_id AS SectionId,
-        s.college_id AS CollegeId,
-        s.academic_year_id AS AcademicYearId,
-        s.course_id AS CourseId,
-        s.branch_id AS BranchId,
-        s.semester AS Semester,
-        s.section_name AS SectionName,
-        s.section_code AS SectionCode,
-        s.capacity AS Capacity,
-        s.class_teacher_employee_profile_id
-            AS FacultyAdvisorEmployeeProfileId,
-        s.room AS Room,
-        s.shift AS Shift,
-        s.section_type AS SectionType,
-        s.status AS Status,
-        s.updated_at AS UpdatedAt,
-        s.updated_by AS UpdatedBy
-
-    FROM sections s
-    WHERE s.section_id = p_section_id;
-
+    SELECT 1 AS `AffectedRows`;
 END$$
-
 DELIMITER ;

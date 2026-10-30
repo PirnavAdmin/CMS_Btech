@@ -1,0 +1,29 @@
+{
+  "modified_files": [
+    "Controllers/AuthAccessController.cs",
+    "Controllers/RolesController.cs",
+    "Controllers/V1/AccessGovernanceController.cs",
+    "Controllers/V1/BranchController.cs",
+    "Controllers/V1/CoursesController.cs",
+    "Controllers/V1/DepartmentController.cs",
+    "DTOs/AcademicYear/GenerateNextAcademicYearDto.cs",
+    "Middleware/ModulePermissionMiddleware.cs",
+    "Program.cs",
+    "Repositories/Implementations/AcademicYearRepository.cs",
+    "Repositories/Implementations/CollegeRepository.cs",
+    "Repositories/Interfaces/IAcademicYearRepository.cs",
+    "Services/AcademicYearScopeRequest.cs",
+    "Services/Implementations/AcademicYearService.cs",
+    "Services/Semesterservice.cs"
+  ],
+  "new_files": [
+    "ADMIN_COLLEGE_SETUP_20261030.md",
+    "Services/AcademicSetupCollegeScope.cs",
+    "Services/CollegeRequestScope.cs",
+    "Database/Sql/AdminCollegeSetup/CMS_Admin_College_Setup_SQL_20261030.sql",
+    "Tests/Results/admin-college-setup-validation-20261030.json"
+  ],
+  "original_source_files_removed": [],
+  "frontend_files_modified": false,
+  "validation_checks_passed": 44
+}

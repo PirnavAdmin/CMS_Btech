@@ -1,0 +1,107 @@
+{
+  "date": "2026-10-30",
+  "mysql_version": "8.0.42",
+  "sql_assertions_passed": 21,
+  "original_failure_reproduced": true,
+  "complete_patch_applied_twice": true,
+  "csharp_compilation": {
+    "included_source_files": 520,
+    "errors": 0,
+    "method": "SDK Roslyn compiler against restored net8.0 project references",
+    "standard_msbuild": "Unavailable due to process metadata access limitation"
+  },
+  "live_api_tested": false,
+  "tests": [
+    {
+      "test": "XYZ current mapped year restored",
+      "result": "PASS"
+    },
+    {
+      "test": "XYZ future year retained as upcoming",
+      "result": "PASS"
+    },
+    {
+      "test": "SRI current year activated",
+      "result": "PASS"
+    },
+    {
+      "test": "At most one active year per college",
+      "result": "PASS"
+    },
+    {
+      "test": "Unrelated academic year states preserved",
+      "result": "PASS"
+    },
+    {
+      "test": "Semester mappings and IDs preserved",
+      "result": "PASS"
+    },
+    {
+      "test": "No business sections inserted by update script",
+      "result": "PASS"
+    },
+    {
+      "test": "Create XYZ section with null department",
+      "result": "PASS"
+    },
+    {
+      "test": "Duplicate code rejected",
+      "result": "PASS"
+    },
+    {
+      "test": "Foreign college academic year rejected",
+      "result": "PASS"
+    },
+    {
+      "test": "Upcoming year rejected",
+      "result": "PASS"
+    },
+    {
+      "test": "Archived year rejected",
+      "result": "PASS"
+    },
+    {
+      "test": "Missing year rejected",
+      "result": "PASS"
+    },
+    {
+      "test": "Foreign college course rejected",
+      "result": "PASS"
+    },
+    {
+      "test": "Wrong branch rejected",
+      "result": "PASS"
+    },
+    {
+      "test": "Wrong semester rejected",
+      "result": "PASS"
+    },
+    {
+      "test": "Invalid capacity rejected",
+      "result": "PASS"
+    },
+    {
+      "test": "Legacy mapping update works with own active year",
+      "result": "PASS"
+    },
+    {
+      "test": "Legacy update foreign year rejected",
+      "result": "PASS"
+    },
+    {
+      "test": "Existing details update preserved",
+      "result": "PASS"
+    },
+    {
+      "test": "Create SRI section with own active year",
+      "result": "PASS"
+    }
+  ],
+  "offline_fixture_omissions": [
+    "api_activity_logs data",
+    "login_audits data",
+    "refresh_tokens data",
+    "student_admission_form_data data",
+    "studentadmissions data"
+  ]
+}

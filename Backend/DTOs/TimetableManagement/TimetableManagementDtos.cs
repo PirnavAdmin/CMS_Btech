@@ -355,3 +355,37 @@ public sealed class TimetableRoomAvailabilityDto
     public long? ConflictingEntryId { get; set; }
     public string? ConflictTimetableName { get; set; }
 }
+
+
+// Additive revision/publication contracts. Existing request DTOs remain unchanged.
+public sealed class CreateTimetableRevisionRequest
+{
+    public long ExpectedRevision { get; set; }
+    public string Reason { get; set; } = string.Empty;
+}
+
+public sealed class TimetableRevisionCreatedDto
+{
+    public long SourceTimetableId { get; set; }
+    public long RevisionTimetableId { get; set; }
+    public int RevisionNumber { get; set; }
+    public string Status { get; set; } = "DRAFT";
+}
+
+public sealed class PublishTimetableBatchRequest
+{
+    public List<PublishTimetableBatchItem> Items { get; set; } = new();
+}
+
+public sealed class PublishTimetableBatchItem
+{
+    public long TimetableId { get; set; }
+    public long ExpectedRevision { get; set; }
+}
+
+public sealed class PublishTimetableBatchResultDto
+{
+    public bool Published { get; set; }
+    public int PublishedCount { get; set; }
+    public IReadOnlyList<long> TimetableIds { get; set; } = Array.Empty<long>();
+}
