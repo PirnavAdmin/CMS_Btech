@@ -2,6 +2,7 @@ import { GENERIC_ERROR_MESSAGE, userErrorMessage } from '../utils/userError.js'
 import { resolveCollegeLogo } from '../utils/collegeLogo'
 import { getAccessToken } from './auth'
 import { createApiUnavailableError, notifyApiUnavailable } from '../api/apiFailureNotice'
+import { selectedCollegeId } from '../utils/collegeScope.js'
 const cleanUrl = (url) => (url || "").replace(/\/+$/, "");
 const DEFAULT_API_BASE_URL = "https://clarity-math-delouse.ngrok-free.dev";
 
@@ -94,6 +95,10 @@ const COLLEGE_LOGO_API = createClient(collegesBaseUrl, "/api/College");
 const ACADEMIC_API = createClient(academicBaseUrl, "/api/v1");
 const SETTINGS_API = createClient(settingsBaseUrl, "/api");
 const SEMESTER_API = createClient(academicBaseUrl, "/api");
+const academicParams = params => {
+  const collegeId = selectedCollegeId()
+  return collegeId ? { ...params, collegeId } : params
+}
 
 const COLLEGE_EXTENDED_PREFIX = "CMS_EXTENDED_V1:";
 
@@ -446,11 +451,11 @@ export const getCollegeDeactivationImpact = (id) => API.get(`/colleges/${id}/dea
 // -------------------------
 
 export const getDepartments = () => {
-  return ACADEMIC_API.get("/departments");
+  return ACADEMIC_API.get("/departments", { params: academicParams({}) });
 };
 
-export const searchDepartments = (search) => ACADEMIC_API.get("/departments/search", { params: { search } });
-export const getDepartmentsPaginated = (page = 1, pageSize = 5) => ACADEMIC_API.get("/departments/paginated", { params: { page, pageSize } });
+export const searchDepartments = (search) => ACADEMIC_API.get("/departments/search", { params: academicParams({ search }) });
+export const getDepartmentsPaginated = (page = 1, pageSize = 5) => ACADEMIC_API.get("/departments/paginated", { params: academicParams({ page, pageSize }) });
 
 export const getDepartmentById = (id) => {
   return ACADEMIC_API.get(`/departments/${id}`);
