@@ -481,7 +481,7 @@ export const updateDepartmentStatus = (id, status) => {
 export const deleteDepartment = (id) => ACADEMIC_API.delete(`/departments/${id}`);
 
 // Semester management APIs (/api/semester)
-export const getSemesters = () => SEMESTER_API.get('/semester');
+export const getSemesters = (params = {}) => SEMESTER_API.get('/semester', { params: academicParams(params) });
 export const searchSemesters = (params = {}) => SEMESTER_API.get('/semester/search', { params });
 export const getSemesterById = (id) => SEMESTER_API.get(`/semester/${id}`);
 export const getSemesterSummary = () => SEMESTER_API.get('/semester/summary');
