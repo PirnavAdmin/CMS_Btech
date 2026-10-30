@@ -188,6 +188,7 @@ const normalize = (input = {}) => {
 
   return {
     id,
+    collegeId: normalizeId(b.collegeId ?? b.collegeNumericId ?? b.college?.collegeId ?? b.college?.id ?? ''),
     courseId: normalizeId(b.courseId ?? b.course?.id ?? ''),
     courseName: content(b.courseName ?? b.course?.name ?? b.course?.courseName ?? ''),
     courseCode: content(b.courseCode ?? b.course?.code ?? b.courseShortName ?? b.course?.courseCode ?? ''),
@@ -248,7 +249,7 @@ function List() {
   const [allCourses, setCourses] = useState([])
   const courses = scopeRecords(allCourses)
   const [allBranches, setBranches] = useState([])
-  const branches = scopeRecords(allBranches)
+  const branches = scopeRecords(allBranches, { courses: allCourses })
   const [loading, setLoading] = useState(true)
   const [error, setError] = useToastState('', 'error')
   const [page, setPage] = useState(1)
@@ -258,14 +259,8 @@ function List() {
     setLoading(true)
     try {
       const [branchRows, courseRows] = await Promise.all([
-        branchApi.getAll().catch((err) => {
-          console.warn('Unable to load branch rows:', err)
-          return []
-        }),
-        courseApi.getAll().catch((err) => {
-          console.warn('Unable to load course rows:', err)
-          return []
-        }),
+        branchApi.getAll(),
+        courseApi.getAll(),
       ])
       setBranches(newestFirst('branches', branchRows || []).map(normalizeBranch))
       const safeCourses = await Promise.all(
@@ -276,7 +271,7 @@ function List() {
             if (course.durationValue && course.totalSemesters) return course
             try {
               const detail = await courseApi.getById(course.id)
-              return detail ? courseMap(detail) : course
+              return detail ? { ...courseMap(detail), collegeId: courseMap(detail).collegeId || course.collegeId } : course
             } catch {
               return course
             }
@@ -295,7 +290,7 @@ function List() {
 
   const courseById = useMemo(() => new Map(courses.map((course) => [String(course.id), course])), [courses])
 
-  const scopedBranches = scopeRecords(branches)
+  const scopedBranches = branches
 
   const rows = useMemo(() => {
     const needle = filters.query.trim().toLowerCase()
@@ -475,7 +470,7 @@ function Form() {
   const courses = scopeRecords(allCourses)
   const [years, setYears] = useState([])
   const [allBranches, setBranches] = useState([])
-  const branches = scopeRecords(allBranches)
+  const branches = scopeRecords(allBranches, { courses: allCourses })
   const [errors, setErrors] = useToastState({}, 'error')
   const [touched, setTouched] = useState({})
   const [saving, setSaving] = useState(false)
@@ -648,6 +643,7 @@ function Form() {
         endDate: value.endDate ? value.endDate.slice(0, 10) : '',
       })
       if (!id) rememberCreated('branches', result)
+      eventBusImports_default.emit(eventBusImports_ERP_EVENTS.ACADEMIC_UPDATED, { branchId: result?.branchId ?? result?.id ?? id })
       showSuccess(`Branch ${id ? 'updated' : 'created'} successfully.`)
       navigate('/branches')
     } catch (requestError) {

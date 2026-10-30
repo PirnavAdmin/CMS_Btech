@@ -69,7 +69,7 @@ const createClient = (baseUrl, prefix) => {
     }
     const contentType = response.headers.get("content-type") || "";
     const data = contentType.includes("application/json") ? await response.json() : await response.text();
-    if (!response.ok) {
+    if (!response.ok || data?.success === false) {
       if (response.status >= 500) notifyApiUnavailable({ status: response.status });
       const error = new Error(userErrorMessage(getErrorMessage(data, response.status), response.status));
       error.response = { data: response.status >= 500 ? { message: GENERIC_ERROR_MESSAGE } : data, status: response.status };
