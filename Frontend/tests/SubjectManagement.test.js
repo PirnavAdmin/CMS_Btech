@@ -68,3 +68,9 @@ test('a pending save cannot submit again', () => {
   page.submit()
   assert.equal(page.saves.length, 0)
 })
+
+test('course options are requested for the selected college and limited to active records', () => {
+  assert.match(source, /academicService\.getCourses\(\{ status: 1 \}\)/)
+  assert.match(source, /scopeRecords\(masters\.courses\)\.filter\(isRecordActive\)/)
+  assert.match(source, /\}, \[selectedCollegeId\]\)/)
+})

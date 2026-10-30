@@ -492,8 +492,8 @@ export const updateSemester = (id, data) => SEMESTER_API.put(`/semester/${id}`, 
 // COURSE APIs
 // -------------------------
 
-export const getCourses = () => {
-  return ACADEMIC_API.get("/courses");
+export const getCourses = (params = {}) => {
+  return ACADEMIC_API.get("/courses", { params: academicParams(params) });
 };
 
 export const getCourseById = (id) => {

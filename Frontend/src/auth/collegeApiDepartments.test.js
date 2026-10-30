@@ -29,7 +29,7 @@ const setup = collegeId => {
   })
 
   vm.runInContext(
-    source + '\nthis.departmentMethods = { getDepartments, searchDepartments, getDepartmentsPaginated };',
+    source + '\nthis.departmentMethods = { getDepartments, searchDepartments, getDepartmentsPaginated, getCourses };',
     context,
   )
 
@@ -57,4 +57,12 @@ test('department requests remain unscoped when no college is selected', async ()
   await methods.getDepartments()
 
   assert.equal(new URL(requests[0].url, 'http://localhost').search, '')
+})
+
+test('course list requests include the selected college and active status filter', async () => {
+  const { methods, requests } = setup('42')
+  await methods.getCourses({ status: 1 })
+  const params = new URL(requests[0].url, 'http://localhost').searchParams
+  assert.equal(params.get('collegeId'), '42')
+  assert.equal(params.get('status'), '1')
 })
