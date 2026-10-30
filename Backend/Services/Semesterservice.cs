@@ -1,4 +1,4 @@
-﻿using BTech.Data;
+using BTech.Data;
 using BTech.DTOs;
 using BTech.Models;
 using BTech.Services.Interfaces;
@@ -10,13 +10,23 @@ namespace BTech.Services
     {
         private readonly ApplicationDbContext _context;
         private readonly ILogger<SemesterService> _logger;
+        private readonly IHttpContextAccessor _httpContextAccessor;
 
         public SemesterService(
             ApplicationDbContext context,
-            ILogger<SemesterService> logger)
+            ILogger<SemesterService> logger, IHttpContextAccessor httpContextAccessor)
         {
             _context = context;
             _logger = logger;
+            _httpContextAccessor = httpContextAccessor;
+        }
+
+        private IQueryable<Semester> ScopedSemesters()
+        {
+            var collegeId = CollegeRequestScope.GetCollegeId(_httpContextAccessor.HttpContext);
+            return collegeId.HasValue
+                ? _context.Semesters.Where(s => s.Course != null && s.Course.CollegeId == collegeId.Value)
+                : _context.Semesters;
         }
 
         // =====================================================
@@ -87,7 +97,7 @@ namespace BTech.Services
             }
 
             // Check Duplicate
-            var duplicate = await _context.Semesters
+            var duplicate = await ScopedSemesters()
                 .AnyAsync(x =>
                     x.BranchId == dto.BranchId &&
                     x.AcademicYearId == dto.AcademicYearId &&
@@ -148,7 +158,7 @@ namespace BTech.Services
 
         public async Task<Semester?> GetByIdAsync(long semesterId)
         {
-            return await _context.Semesters
+            return await ScopedSemesters()
                 .AsNoTracking()
                 .Include(x => x.Course)
                 .Include(x => x.Branch)
@@ -165,20 +175,20 @@ namespace BTech.Services
 
         public async Task<object> GetSummaryAsync()
         {
-            var total = await _context.Semesters
+            var total = await ScopedSemesters()
                 .CountAsync(x => x.IsArchived == 0);
 
-            var active = await _context.Semesters
+            var active = await ScopedSemesters()
                 .CountAsync(x =>
                     x.IsArchived == 0 &&
                     x.Status == 1);
 
-            var inactive = await _context.Semesters
+            var inactive = await ScopedSemesters()
                 .CountAsync(x =>
                     x.IsArchived == 0 &&
                     x.Status != 1);
 
-            var archived = await _context.Semesters
+            var archived = await ScopedSemesters()
                 .CountAsync(x => x.IsArchived == 1);
 
             return new
@@ -201,7 +211,7 @@ namespace BTech.Services
             long? academicYearId,
             byte? status)
         {
-            var query = _context.Semesters
+            var query = ScopedSemesters()
                 .AsNoTracking()
                 .Include(x => x.Course)
                 .Include(x => x.Branch)
@@ -251,7 +261,7 @@ namespace BTech.Services
 
         public async Task<List<Semester>> SearchAsync(string? search)
         {
-            var query = _context.Semesters
+            var query = ScopedSemesters()
                 .AsNoTracking()
                 .Include(x => x.Course)
                 .Include(x => x.Branch)
@@ -280,7 +290,7 @@ namespace BTech.Services
 
         public async Task<List<Semester>> GetAllAsync()
         {
-            return await _context.Semesters
+            return await ScopedSemesters()
                 .AsNoTracking()
                 .Include(x => x.Course)
                 .Include(x => x.Branch)
@@ -298,7 +308,7 @@ namespace BTech.Services
             long semesterId,
             SemesterDto dto)
         {
-            var semester = await _context.Semesters
+            var semester = await ScopedSemesters()
                 .FirstOrDefaultAsync(
                     x => x.SemesterId == semesterId);
 
@@ -368,7 +378,7 @@ namespace BTech.Services
             }
 
             // Check Duplicate
-            var duplicate = await _context.Semesters
+            var duplicate = await ScopedSemesters()
                 .AnyAsync(x =>
                     x.SemesterId != semesterId &&
                     x.BranchId == dto.BranchId &&

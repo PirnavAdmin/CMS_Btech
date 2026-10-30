@@ -1,0 +1,14 @@
+{
+  "changedFiles": [
+    "Controllers/V1/FeeCollectionController.cs",
+    "Controllers/V1/FeeConfigurationController.cs",
+    "Repositories/Implementations/FeeCollectionRepository.cs",
+    "Services/Implementations/FeeCollectionService.cs"
+  ],
+  "allApiRouteAnnotationsPreserved": true,
+  "apiSourceFilesCompared": 79,
+  "sqlPatch": "Database/FeeValidation/FeeValidation_20261008.sql",
+  "originalTablesAndProceduresPreserved": true,
+  "dotnetBuild": "Not run: SDK unavailable",
+  "mysqlIntegration": "Not run: MySQL unavailable"
+}

@@ -86,19 +86,16 @@ namespace BTech.Data
         public DbSet<Section> Sections
             => Set<Section>();
 
-
-        public DbSet<Timetable> Timetables
-    => Set<Timetable>();
-
-        public DbSet<TimetableSlot> TimetableSlots
-            => Set<TimetableSlot>();
-
-        public DbSet<TimetableEntry> TimetableEntries
-            => Set<TimetableEntry>();
         public DbSet<RegistrationRequest> RegistrationRequests
             => Set<RegistrationRequest>();
         public DbSet<StudentPromotion> StudentPromotions
     => Set<StudentPromotion>();
+
+        public DbSet<ShortageNotification> ShortageNotifications
+        {
+            get;
+            set;
+        }
 
         // =====================================================
         // STUDENT / ADMISSION / PARENT
@@ -133,6 +130,10 @@ namespace BTech.Data
                 entity.Property(x => x.AcademicYearId)
                     .HasColumnName("academic_year_id")
                     .ValueGeneratedOnAdd();
+
+                entity.Property(x => x.CollegeId)
+                    .HasColumnName("college_id")
+                    .IsRequired();
 
                 entity.Property(x => x.AcademicYearName)
                     .HasColumnName("academic_year_name")
@@ -169,9 +170,10 @@ namespace BTech.Data
                 entity.Property(x => x.DeletedBy)
                     .HasColumnName("deleted_by");
 
-                entity.Property(x => x.CollegeId).HasColumnName("college_id");
+                // Academic year names are unique within a college, not globally.
                 entity.HasIndex(x => new { x.CollegeId, x.AcademicYearName })
-                    .IsUnique();
+                    .IsUnique()
+                    .HasDatabaseName("uq_academicyears_college_name");
             });
 
 
@@ -214,6 +216,10 @@ namespace BTech.Data
                     .HasColumnName("password_hash")
                     .HasMaxLength(255)
                     .IsRequired();
+
+                entity.Property(x => x.MustChangePassword)
+                    .HasColumnName("must_change_password")
+                    .HasDefaultValue(false);
 
                 entity.Property(x => x.Status)
                     .HasColumnName("status")
@@ -1024,7 +1030,9 @@ namespace BTech.Data
 
                 entity.HasIndex(x => x.DepartmentId);
 
-                entity.HasIndex(x => x.CourseCode);
+                entity.HasIndex(x => new { x.CollegeId, x.CourseCode })
+                    .IsUnique()
+                    .HasDatabaseName("uq_courses_college_code");
 
                 entity.HasIndex(x => x.Status);
             });
@@ -1423,32 +1431,177 @@ namespace BTech.Data
             });
 
             // =====================================================
+
             // STUDENT PARENT
+
             // =====================================================
 
             modelBuilder.Entity<StudentParent>(entity =>
+
             {
+
                 entity.ToTable("student_parents");
+
                 entity.HasKey(x => x.ParentId);
 
-                entity.Property(x => x.ParentId).HasColumnName("parent_id").ValueGeneratedOnAdd();
-                entity.Property(x => x.StudentId).HasColumnName("student_id").IsRequired();
+                entity.Property(x => x.ParentId)
 
-                entity.Property(x => x.FatherName).HasColumnName("father_name").HasMaxLength(150);
-                entity.Property(x => x.FatherMobile).HasColumnName("father_mobile").HasMaxLength(20);
-                entity.Property(x => x.FatherEmail).HasColumnName("father_email").HasMaxLength(150);
-                entity.Property(x => x.FatherOccupation).HasColumnName("father_occupation").HasMaxLength(150);
+                    .HasColumnName("parent_id")
 
-                entity.Property(x => x.MotherName).HasColumnName("mother_name").HasMaxLength(150);
-                entity.Property(x => x.MotherMobile).HasColumnName("mother_mobile").HasMaxLength(20);
-                entity.Property(x => x.MotherEmail).HasColumnName("mother_email").HasMaxLength(150);
-                entity.Property(x => x.MotherOccupation).HasColumnName("mother_occupation").HasMaxLength(150);
+                    .ValueGeneratedOnAdd();
 
-                entity.Property(x => x.CreatedAt).HasColumnName("created_at");
-                entity.Property(x => x.UpdatedAt).HasColumnName("updated_at");
+                entity.Property(x => x.StudentId)
 
-                entity.HasIndex(x => x.StudentId).IsUnique();
+                    .HasColumnName("student_id")
+
+                    .IsRequired();
+
+                // Father
+
+                entity.Property(x => x.FatherName)
+
+                    .HasColumnName("father_name")
+
+                    .HasMaxLength(150);
+
+                entity.Property(x => x.FatherMobile)
+
+                    .HasColumnName("father_mobile")
+
+                    .HasMaxLength(20);
+
+                entity.Property(x => x.FatherEmail)
+
+                    .HasColumnName("father_email")
+
+                    .HasMaxLength(150);
+
+                entity.Property(x => x.FatherOccupation)
+
+                    .HasColumnName("father_occupation")
+
+                    .HasMaxLength(150);
+
+                // Mother
+
+                entity.Property(x => x.MotherName)
+
+                    .HasColumnName("mother_name")
+
+                    .HasMaxLength(150);
+
+                entity.Property(x => x.MotherMobile)
+
+                    .HasColumnName("mother_mobile")
+
+                    .HasMaxLength(20);
+
+                entity.Property(x => x.MotherEmail)
+
+                    .HasColumnName("mother_email")
+
+                    .HasMaxLength(150);
+
+                entity.Property(x => x.MotherOccupation)
+
+                    .HasColumnName("mother_occupation")
+
+                    .HasMaxLength(150);
+
+                // Guardian
+
+                entity.Property(x => x.GuardianName)
+
+                    .HasColumnName("guardian_name")
+
+                    .HasMaxLength(150);
+
+                entity.Property(x => x.GuardianMobile)
+
+                    .HasColumnName("guardian_mobile")
+
+                    .HasMaxLength(20);
+
+                entity.Property(x => x.GuardianEmail)
+
+                    .HasColumnName("guardian_email")
+
+                    .HasMaxLength(150);
+
+                // Other Parent Information
+
+                entity.Property(x => x.Occupation)
+
+                    .HasColumnName("occupation")
+
+                    .HasMaxLength(150);
+
+                entity.Property(x => x.AnnualIncome)
+
+                    .HasColumnName("annual_income")
+
+                    .HasPrecision(15, 2);
+
+                // Address
+
+                entity.Property(x => x.Address)
+
+                    .HasColumnName("address")
+
+                    .HasMaxLength(500);
+
+                entity.Property(x => x.City)
+
+                    .HasColumnName("city")
+
+                    .HasMaxLength(100);
+
+                entity.Property(x => x.District)
+
+                    .HasColumnName("district")
+
+                    .HasMaxLength(100);
+
+                entity.Property(x => x.State)
+
+                    .HasColumnName("state")
+
+                    .HasMaxLength(100);
+
+                entity.Property(x => x.Pincode)
+
+                    .HasColumnName("pincode")
+
+                    .HasMaxLength(10);
+
+                entity.Property(x => x.CurrentAddressJson)
+
+                    .HasColumnName("current_address_json")
+
+                    .HasColumnType("json");
+
+                entity.Property(x => x.PermanentAddressJson)
+
+                    .HasColumnName("permanent_address_json")
+
+                    .HasColumnType("json");
+
+                // Audit
+
+                entity.Property(x => x.CreatedAt)
+
+                    .HasColumnName("created_at");
+
+                entity.Property(x => x.UpdatedAt)
+
+                    .HasColumnName("updated_at");
+
+                entity.HasIndex(x => x.StudentId)
+
+                    .IsUnique();
+
             });
+
 
             // =====================================================
             // ADMISSION STATUS HISTORY
@@ -1493,188 +1646,6 @@ namespace BTech.Data
                     .HasForeignKey(x => x.ChangedBy)
                     .HasPrincipalKey(x => x.user_id)
                     .OnDelete(DeleteBehavior.Restrict);
-            });
-
-            // =====================================================
-            // TIMETABLE
-            // =====================================================
-
-            modelBuilder.Entity<Timetable>(entity =>
-            {
-                entity.ToTable("timetables");
-
-                entity.HasKey(x => x.TimetableId);
-
-                entity.Property(x => x.TimetableId)
-                    .HasColumnName("timetable_id")
-                    .ValueGeneratedOnAdd();
-
-                entity.Property(x => x.AcademicYearId)
-                    .HasColumnName("academic_year_id")
-                    .IsRequired();
-
-                entity.Property(x => x.SemesterId)
-                    .HasColumnName("semester_id")
-                    .IsRequired();
-
-                entity.Property(x => x.SectionId)
-                    .HasColumnName("section_id")
-                    .IsRequired();
-
-                entity.Property(x => x.TimetableName)
-                    .HasColumnName("timetable_name")
-                    .HasMaxLength(150)
-                    .IsRequired();
-
-                entity.Property(x => x.Status)
-                    .HasColumnName("status")
-                    .HasMaxLength(30)
-                    .HasDefaultValue("DRAFT")
-                    .IsRequired();
-
-                entity.Property(x => x.EffectiveFrom)
-                    .HasColumnName("effective_from");
-
-                entity.Property(x => x.EffectiveTo)
-                    .HasColumnName("effective_to");
-
-                entity.Property(x => x.PublishedAt)
-                    .HasColumnName("published_at");
-
-                entity.Property(x => x.PublishedBy)
-                    .HasColumnName("published_by");
-
-                entity.Property(x => x.CreatedAt)
-                    .HasColumnName("created_at");
-
-                entity.Property(x => x.CreatedBy)
-                    .HasColumnName("created_by");
-
-                entity.Property(x => x.UpdatedAt)
-                    .HasColumnName("updated_at");
-
-                entity.Property(x => x.UpdatedBy)
-                    .HasColumnName("updated_by");
-            });
-
-
-            // =====================================================
-            // TIMETABLE SLOT
-            // =====================================================
-
-            modelBuilder.Entity<TimetableSlot>(entity =>
-            {
-                entity.ToTable("timetable_slots");
-
-                entity.HasKey(x => x.TimetableSlotId);
-
-                entity.Property(x => x.TimetableSlotId)
-                    .HasColumnName("timetable_slot_id")
-                    .ValueGeneratedOnAdd();
-
-                entity.Property(x => x.TimetableId)
-                    .HasColumnName("timetable_id")
-                    .IsRequired();
-
-                entity.Property(x => x.SlotNumber)
-                    .HasColumnName("slot_number")
-                    .IsRequired();
-
-                entity.Property(x => x.SlotName)
-                    .HasColumnName("slot_name")
-                    .HasMaxLength(100)
-                    .IsRequired();
-
-                entity.Property(x => x.StartTime)
-                    .HasColumnName("start_time")
-                    .IsRequired();
-
-                entity.Property(x => x.EndTime)
-                    .HasColumnName("end_time")
-                    .IsRequired();
-
-                entity.Property(x => x.Status)
-                    .HasColumnName("status")
-                    .HasDefaultValue((byte)1);
-
-                entity.Property(x => x.CreatedAt)
-                    .HasColumnName("created_at");
-
-                entity.Property(x => x.CreatedBy)
-                    .HasColumnName("created_by");
-
-                entity.Property(x => x.UpdatedAt)
-                    .HasColumnName("updated_at");
-
-                entity.Property(x => x.UpdatedBy)
-                    .HasColumnName("updated_by");
-            });
-
-
-            // =====================================================
-            // TIMETABLE ENTRY
-            // =====================================================
-
-            modelBuilder.Entity<TimetableEntry>(entity =>
-            {
-                entity.ToTable("timetable_entries");
-
-                entity.HasKey(x => x.TimetableEntryId);
-
-                entity.Property(x => x.TimetableEntryId)
-                    .HasColumnName("timetable_entry_id")
-                    .ValueGeneratedOnAdd();
-
-                entity.Property(x => x.TimetableId)
-                    .HasColumnName("timetable_id")
-                    .IsRequired();
-
-                entity.Property(x => x.TimetableSlotId)
-                    .HasColumnName("timetable_slot_id")
-                    .IsRequired();
-
-                entity.Property(x => x.FacultyId)
-                    .HasColumnName("faculty_id")
-                    .IsRequired();
-
-                entity.Property(x => x.SubjectId)
-                    .HasColumnName("subject_id")
-                    .IsRequired();
-
-                entity.Property(x => x.SectionId)
-                    .HasColumnName("section_id")
-                    .IsRequired();
-
-                entity.Property(x => x.DayOfWeek)
-                    .HasColumnName("day_of_week")
-                    .HasMaxLength(20)
-                    .IsRequired();
-
-                entity.Property(x => x.Classroom)
-                    .HasColumnName("classroom")
-                    .HasMaxLength(100);
-
-                entity.Property(x => x.EntryType)
-                    .HasColumnName("entry_type")
-                    .HasMaxLength(30)
-                    .HasDefaultValue("LECTURE")
-                    .IsRequired();
-
-                entity.Property(x => x.Status)
-                    .HasColumnName("status")
-                    .HasDefaultValue((byte)1);
-
-                entity.Property(x => x.CreatedAt)
-                    .HasColumnName("created_at");
-
-                entity.Property(x => x.CreatedBy)
-                    .HasColumnName("created_by");
-
-                entity.Property(x => x.UpdatedAt)
-                    .HasColumnName("updated_at");
-
-                entity.Property(x => x.UpdatedBy)
-                    .HasColumnName("updated_by");
             });
 
         }

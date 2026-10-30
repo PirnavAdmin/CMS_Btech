@@ -1,3 +1,5 @@
+-- Historical initial setup. For the current application, apply
+-- CMS_BTech_Section_Allocation_Fix_20261001.sql AFTER all older scripts.
 USE cms_btech;
 
 /* =========================================================

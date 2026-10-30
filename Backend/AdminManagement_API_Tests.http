@@ -1,0 +1,85 @@
+@baseUrl = https://localhost:7174
+@token = REPLACE_WITH_JWT
+@collegeId = 1
+
+### Roles
+GET {{baseUrl}}/api/v1/access-governance/roles
+Authorization: Bearer {{token}}
+
+### Create role
+POST {{baseUrl}}/api/v1/access-governance/roles
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "name": "Department Academic Head",
+  "code": "DEPT_ACADEMIC_HEAD",
+  "category": "Academic",
+  "level": "Level 3 (Department Leadership)",
+  "description": "Department academic administration role",
+  "status": "Active"
+}
+
+### Designations
+GET {{baseUrl}}/api/v1/access-governance/designations?collegeId={{collegeId}}
+Authorization: Bearer {{token}}
+
+### Create designation
+POST {{baseUrl}}/api/v1/access-governance/designations
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "collegeId": 1,
+  "title": "Associate Professor",
+  "code": "ASSOC_PROF",
+  "category": "Teaching",
+  "level": "Band 3 (Faculty)",
+  "department": "All Academic Departments",
+  "defaultRoleId": 5,
+  "status": "Active"
+}
+
+### Bootstrap page
+GET {{baseUrl}}/api/v1/access-governance/bootstrap?collegeId={{collegeId}}
+Authorization: Bearer {{token}}
+
+### Rooms
+GET {{baseUrl}}/api/v1/rooms?collegeId={{collegeId}}
+Authorization: Bearer {{token}}
+
+### Room options
+GET {{baseUrl}}/api/v1/rooms/options
+
+### Create room
+POST {{baseUrl}}/api/v1/rooms
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "collegeId": 1,
+  "roomNumber": "ECE-LAB-1",
+  "roomName": "Digital Signal Processing & VLSI Lab",
+  "buildingBlock": "Science & Technology Block",
+  "floor": "2nd Floor",
+  "roomType": "Electronics Lab",
+  "capacity": 60,
+  "facilities": ["Projector & Screen", "Air Conditioned (AC)", "Power Backup / UPS"],
+  "department": "Electronics and Communication Engineering",
+  "status": "Available",
+  "assignedSectionId": null,
+  "description": "DSP and VLSI laboratory"
+}
+
+### Allocate section 2 to room 1
+PUT {{baseUrl}}/api/v1/rooms/1/allocation?collegeId={{collegeId}}
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "sectionId": 2
+}
+
+### Deallocate room 1
+DELETE {{baseUrl}}/api/v1/rooms/1/allocation?collegeId={{collegeId}}
+Authorization: Bearer {{token}}

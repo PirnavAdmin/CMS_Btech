@@ -1,0 +1,33 @@
+{
+  "success": false,
+  "code": "ACTIVE_POLICY_CONFLICT",
+  "message": "Active Policy Conflict: 'Faculty Leave Policy 2026-27' (2026-06-01 to 2027-05-31) overlaps this policy's college, academic year, employee type, organisational scope and effective dates.",
+  "conflicts": [
+    {
+      "academicYearKey": "2026-2027",
+      "effectiveDepartmentId": null,
+      "departmentName": null,
+      "branchName": null,
+      "id": "POL-2026",
+      "name": "Faculty Leave Policy 2026-27",
+      "collegeId": 1,
+      "academicYear": "2026-2027",
+      "applicableTo": "Both",
+      "departmentId": null,
+      "branchId": null,
+      "fromDate": "2026-06-01T00:00:00",
+      "toDate": "2027-05-31T00:00:00",
+      "status": "Active"
+    }
+  ],
+  "requestedScope": {
+    "collegeId": 1,
+    "academicYear": "2026-2027",
+    "applicableTo": "Both",
+    "departmentId": null,
+    "branchId": null,
+    "fromDate": "2026-06-01T00:00:00",
+    "toDate": "2027-05-31T00:00:00"
+  },
+  "correlationId": "example-request-trace"
+}

@@ -20,15 +20,19 @@ namespace BTech.Repositories
         {
             loginIdentifier = loginIdentifier.Trim();
 
-            return await _context.Users
+            var matches = await _context.Users
                 .AsNoTracking()
-                .FirstOrDefaultAsync(u =>
-                    u.DeletedAt == null &&
-                    (
-                        u.EmployeeUserId == loginIdentifier ||
-                        u.Email == loginIdentifier ||
-                        u.Mobile == loginIdentifier
-                    ));
+                .Where(u => u.DeletedAt == null &&
+                    (u.EmployeeUserId == loginIdentifier ||
+                     u.Email == loginIdentifier ||
+                     u.Mobile == loginIdentifier))
+                .Take(2)
+                .ToListAsync();
+
+            if (matches.Count > 1)
+                throw new InvalidOperationException("AMBIGUOUS_LOGIN_IDENTIFIER");
+
+            return matches.SingleOrDefault();
         }
 
         public async Task UpdateLastLoginAsync(long userId)

@@ -1,0 +1,112 @@
+# Backend-only examples. Replace ALL zero IDs with IDs from your own records.
+# Tokens must come from normal login for the corresponding active accounts.
+@baseUrl = https://localhost:7174
+@facultyToken = REPLACE_WITH_FACULTY_TOKEN
+@hodToken = REPLACE_WITH_ASSIGNED_HOD_TOKEN
+@examId = 0
+@markId = 0
+@approvalId = 0
+@versionNo = 0
+
+### Faculty: list existing entries and obtain markId (the entry must belong to this faculty)
+GET {{baseUrl}}/api/v1/marks?examId={{examId}}
+Authorization: Bearer {{facultyToken}}
+
+### Faculty: submit DRAFT / REJECTED marks. All MarkIds succeed together or nothing changes.
+POST {{baseUrl}}/api/v1/marks/workflow/submit
+Authorization: Bearer {{facultyToken}}
+Content-Type: application/json
+X-Correlation-ID: marks-task13-submit
+
+{
+  "examId": {{examId}},
+  "markIds": [{{markId}}],
+  "sectionId": null,
+  "subjectId": null,
+  "remarks": "Marks entered and checked."
+}
+
+### Assigned HOD: get review queue with approvalId, markId, versionNo and marks
+GET {{baseUrl}}/api/v1/marks/approvals/pending?examId={{examId}}
+Authorization: Bearer {{hodToken}}
+
+### Assigned HOD: spreadsheet route. Copy approvalId and versionNo from the queue.
+# {id} is approvalId. ExpectedVersion is optional, but recommended to detect stale review data.
+PATCH {{baseUrl}}/api/v1/marks/approvals/{{approvalId}}
+Authorization: Bearer {{hodToken}}
+Content-Type: application/json
+X-Correlation-ID: marks-task13-approve
+
+{
+  "status": "APPROVED",
+  "remarks": "Verified against the assessment record.",
+  "expectedVersion": {{versionNo}}
+}
+
+### Alternative HOD decision for a different SUBMITTED entry
+PATCH {{baseUrl}}/api/v1/marks/approvals/{{approvalId}}
+Authorization: Bearer {{hodToken}}
+Content-Type: application/json
+
+{
+  "status": "REJECTED",
+  "remarks": "Correct the total and resubmit.",
+  "expectedVersion": {{versionNo}}
+}
+
+### Existing batch approval route remains available
+POST {{baseUrl}}/api/v1/marks/workflow/approve
+Authorization: Bearer {{hodToken}}
+Content-Type: application/json
+
+{
+  "examId": {{examId}},
+  "markIds": [{{markId}}],
+  "remarks": "Verified."
+}
+
+### Existing batch rejection route remains available; remarks are required
+POST {{baseUrl}}/api/v1/marks/workflow/reject
+Authorization: Bearer {{hodToken}}
+Content-Type: application/json
+
+{
+  "examId": {{examId}},
+  "markIds": [{{markId}}],
+  "remarks": "Correct the total and resubmit."
+}
+
+### Faculty: correct a REJECTED entry (SUBMITTED / APPROVED entries are locked)
+PUT {{baseUrl}}/api/v1/marks/{{markId}}
+Authorization: Bearer {{facultyToken}}
+Content-Type: application/json
+
+{
+  "marksObtained": 85,
+  "maxMarks": 100,
+  "remarks": "Total corrected."
+}
+
+### Faculty: review own submission / rejection history, then run submit again
+GET {{baseUrl}}/api/v1/marks/{{markId}}/approval-history
+Authorization: Bearer {{facultyToken}}
+
+### Negative test: empty batch should return 400
+POST {{baseUrl}}/api/v1/marks/workflow/submit
+Authorization: Bearer {{facultyToken}}
+Content-Type: application/json
+
+{
+  "examId": {{examId}},
+  "markIds": []
+}
+
+### Negative test: faculty approval should return 403
+POST {{baseUrl}}/api/v1/marks/workflow/approve
+Authorization: Bearer {{facultyToken}}
+Content-Type: application/json
+
+{
+  "examId": {{examId}},
+  "markIds": [{{markId}}]
+}

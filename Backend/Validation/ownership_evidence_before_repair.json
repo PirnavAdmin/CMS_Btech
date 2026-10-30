@@ -1,0 +1,128 @@
+[
+  {
+    "table": "faculty",
+    "record": {
+      "faculty_id": "11",
+      "user_id": "17",
+      "employee_profile_id": null,
+      "college_id": "82",
+      "department_id": "5",
+      "faculty_name": "uday",
+      "designation": "Professor",
+      "employment_type": "Permanent",
+      "status": "1",
+      "created_at": "2026-09-21 09:34:57",
+      "updated_at": null,
+      "deleted_at": null
+    }
+  },
+  {
+    "table": "faculty",
+    "record": {
+      "faculty_id": "16",
+      "user_id": "21",
+      "employee_profile_id": null,
+      "college_id": "1",
+      "department_id": "29",
+      "faculty_name": "Uday Karanam",
+      "designation": "Professor",
+      "employment_type": "Permanent",
+      "status": "1",
+      "created_at": "2026-10-01 05:23:17",
+      "updated_at": null,
+      "deleted_at": null
+    }
+  },
+  {
+    "table": "faculty_attendance",
+    "record": {
+      "attendance_id": "25",
+      "faculty_id": "11",
+      "status": "PRESENT",
+      "created_at": "2026-09-21 09:43:27",
+      "updated_at": "2026-09-21 09:43:27"
+    }
+  },
+  {
+    "table": "faculty_attendance",
+    "record": {
+      "attendance_id": "39",
+      "faculty_id": "11",
+      "status": "ABSENT",
+      "created_at": "2026-09-22 03:58:19",
+      "updated_at": "2026-09-22 03:58:19"
+    }
+  },
+  {
+    "table": "faculty_attendance",
+    "record": {
+      "attendance_id": "53",
+      "faculty_id": "11",
+      "status": "PRESENT",
+      "created_at": "2026-09-25 06:52:50",
+      "updated_at": "2026-09-25 06:52:50"
+    }
+  },
+  {
+    "table": "faculty_attendance",
+    "record": {
+      "attendance_id": "65",
+      "faculty_id": "11",
+      "status": "PRESENT",
+      "created_at": "2026-09-26 20:25:05",
+      "updated_at": "2026-09-26 20:25:32"
+    }
+  },
+  {
+    "table": "faculty_profile",
+    "record": {
+      "faculty_profile_id": "10",
+      "faculty_id": "11",
+      "user_id": "17",
+      "employee_profile_id": null,
+      "status": "1",
+      "created_at": "2026-09-21 09:35:04",
+      "updated_at": "2026-09-21 09:50:21",
+      "deleted_at": null
+    }
+  },
+  {
+    "table": "faculty_profile",
+    "record": {
+      "faculty_profile_id": "15",
+      "faculty_id": "16",
+      "user_id": "21",
+      "employee_profile_id": null,
+      "status": "1",
+      "created_at": "2026-10-01 05:23:22",
+      "updated_at": "2026-10-01 05:23:23",
+      "deleted_at": null
+    }
+  },
+  {
+    "table": "users",
+    "record": {
+      "user_id": "17",
+      "college_id": "82",
+      "employee_user_id": "USR00000017",
+      "full_name": "uday",
+      "status": "1",
+      "created_at": "2026-09-21 09:34:57",
+      "updated_at": null,
+      "deleted_at": null
+    }
+  },
+  {
+    "table": "users",
+    "record": {
+      "user_id": "21",
+      "college_id": "1",
+      "employee_user_id": "USR00000021",
+      "full_name": "Uday Karanam",
+      "status": "1",
+      "created_at": "2026-10-01 05:23:17",
+      "updated_at": null,
+      "deleted_at": null
+    }
+  }
+]

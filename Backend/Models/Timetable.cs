@@ -8,11 +8,15 @@ namespace BTech.Models
         public long TimetableId { get; set; }
 
         public long AcademicYearId { get; set; }
+        public long? CourseId { get; set; }
+        public long? BranchId { get; set; }
         public long SemesterId { get; set; }
         public long SectionId { get; set; }
 
         public string TimetableName { get; set; } = string.Empty;
         public string Status { get; set; } = "DRAFT";
+        public bool IsPublished { get; set; }
+        public int Revision { get; set; } = 1;
 
         public DateTime? EffectiveFrom { get; set; }
         public DateTime? EffectiveTo { get; set; }

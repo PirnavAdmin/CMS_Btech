@@ -1,0 +1,223 @@
+{
+  "environment": "MySQL 8.0.46 restored from supplied MySQL 8.0.45 dump; isolated copy, not user live DB",
+  "checks": [
+    {
+      "check": "Migration rerun is idempotent",
+      "result": "PASS",
+      "detail": {
+        "employee_profiles": 17,
+        "students": 5,
+        "student_section_assignments": 4
+      }
+    },
+    {
+      "check": "Stored procedure faculty candidates",
+      "result": "PASS",
+      "detail": {
+        "sectionId": 3,
+        "count": 11,
+        "facultyIds": [
+          4,
+          1,
+          3,
+          15,
+          2,
+          14,
+          5,
+          10,
+          6,
+          12,
+          13
+        ]
+      }
+    },
+    {
+      "check": "Stored procedure student candidates",
+      "result": "PASS",
+      "detail": {
+        "sectionId": 3,
+        "admissionToStudent": {
+          "35": 6,
+          "34": 5
+        }
+      }
+    },
+    {
+      "check": "Assigned/different-year/inconsistent-mapping students excluded",
+      "result": "PASS",
+      "detail": {
+        "sectionId": 1,
+        "candidateCount": 0
+      }
+    },
+    {
+      "check": "Invalid recorded semester is not substituted",
+      "result": "PASS",
+      "detail": {
+        "admissionId": 1,
+        "recordedSemesterId": 42,
+        "studentCreated": false
+      }
+    },
+    {
+      "check": "Admission approval lifecycle is atomic",
+      "result": "PASS",
+      "detail": {
+        "admissionId": 30,
+        "insertVisibleInsideTransaction": true,
+        "rolledBackWithApproval": true
+      }
+    },
+    {
+      "check": "SQL JSON IDs fail closed",
+      "result": "PASS",
+      "detail": {
+        "rejectedInputs": 10,
+        "assignmentsUnchanged": true
+      }
+    },
+    {
+      "check": "HTTP faculty candidate GET",
+      "result": "PASS",
+      "detail": {
+        "http": 200,
+        "count": 11
+      }
+    },
+    {
+      "check": "HTTP faculty save uses actual employee profile ID",
+      "result": "PASS",
+      "detail": {
+        "facultyId": 4,
+        "employeeProfileId": 9
+      }
+    },
+    {
+      "check": "Cross-college faculty rejected",
+      "result": "PASS",
+      "detail": {
+        "http": 400,
+        "foreignFacultyId": 16
+      }
+    },
+    {
+      "check": "HTTP student candidate GET",
+      "result": "PASS",
+      "detail": {
+        "http": 200,
+        "studentIds": [
+          6,
+          5
+        ]
+      }
+    },
+    {
+      "check": "Candidate search with existing collation",
+      "result": "PASS",
+      "detail": {
+        "http": 200,
+        "count": 1
+      }
+    },
+    {
+      "check": "Mixed-validity batch rolls back",
+      "result": "PASS",
+      "detail": {
+        "http": 400,
+        "rowsInserted": 0
+      }
+    },
+    {
+      "check": "Capacity overflow rolls back",
+      "result": "PASS",
+      "detail": {
+        "http": 400,
+        "rowsInserted": 0
+      }
+    },
+    {
+      "check": "HTTP batch assignment commits",
+      "result": "PASS",
+      "detail": {
+        "http": 200,
+        "result": {
+          "sectionId": 3,
+          "capacity": 60,
+          "previouslyAssigned": 0,
+          "newlyAssigned": 2,
+          "totalAssigned": 2,
+          "availableSeats": 58
+        }
+      }
+    },
+    {
+      "check": "HTTP assigned-students GET shows saved batch",
+      "result": "PASS",
+      "detail": {
+        "http": 200,
+        "studentIds": [
+          6,
+          5
+        ],
+        "assignmentIds": [
+          7,
+          6
+        ]
+      }
+    },
+    {
+      "check": "Assigned students disappear from candidates",
+      "result": "PASS",
+      "detail": {
+        "count": 0
+      }
+    },
+    {
+      "check": "Already-assigned students cannot be silently moved",
+      "result": "PASS",
+      "detail": {
+        "http": 400,
+        "originalAssignmentsPreserved": 2
+      }
+    },
+    {
+      "check": "Concurrent batches targeting two sections",
+      "result": "PASS",
+      "detail": {
+        "httpStatuses": [
+          400,
+          200
+        ],
+        "activeRows": 2
+      }
+    },
+    {
+      "check": "Concurrent last-seat assignment",
+      "result": "PASS",
+      "detail": {
+        "httpStatuses": [
+          200,
+          400
+        ],
+        "activeRows": 1,
+        "capacity": 1
+      }
+    },
+    {
+      "check": "Authentication still enforced",
+      "result": "PASS",
+      "detail": {
+        "http": 401
+      }
+    }
+  ],
+  "finalPersistence": {
+    "sectionId": 3,
+    "studentIds": [
+      6,
+      5
+    ],
+    "activeAssignments": 2
+  },
+  "status": "PASS"
+}

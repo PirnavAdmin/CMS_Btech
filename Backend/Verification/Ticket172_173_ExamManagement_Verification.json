@@ -1,0 +1,42 @@
+{
+  "ticket172_173": "Exam Management",
+  "checks": {
+    "table_colleges": true,
+    "table_academicyears": true,
+    "table_courses": true,
+    "table_branches": true,
+    "table_semesters": true,
+    "table_subjects": true,
+    "table_subject_semesters": true,
+    "table_sections": true,
+    "table_classrooms": true,
+    "branch_composite_key": true,
+    "semester_composite_key": true,
+    "no_existing_exam_types": true,
+    "no_existing_exams": true,
+    "no_existing_exam_schedules": true,
+    "no_existing_exam_rules": true,
+    "sample_academic_year_2": true,
+    "sample_branch_1_cse": true,
+    "sample_semester_2": true,
+    "sample_subject_4_mapping": true,
+    "sample_section_2": true,
+    "sample_classroom_6": true,
+    "program_di_registered": true,
+    "all_new_files_present": true,
+    "existing_controller_count_unchanged": true
+  },
+  "allPassed": true,
+  "newFiles": [
+    "Controllers/V1/ExamTypesController.cs",
+    "Controllers/V1/ExamsController.cs",
+    "DTOs/Exams/ExamManagementRequests.cs",
+    "Exceptions/ExamManagementExceptions.cs",
+    "Repositories/Implementations/ExamManagementRepository.cs",
+    "Database/ExamManagement/Ticket172_Exam_Type_Schedule_Rules.sql",
+    "ExamManagement_API_Tests.http",
+    "TICKET_172_173_EXAM_MANAGEMENT.md"
+  ],
+  "programChange": "One additive DI registration only",
+  "note": "Runtime dotnet build was not available in the artifact environment; source/static and dump compatibility checks were run."
+}

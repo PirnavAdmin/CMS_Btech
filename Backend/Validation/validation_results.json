@@ -1,0 +1,634 @@
+[
+  {
+    "test": "Supplied dump imports on MySQL 8.0.46",
+    "passed": true,
+    "detail": null
+  },
+  {
+    "test": "College 87 exists in the latest supplied snapshot",
+    "passed": true,
+    "detail": null
+  },
+  {
+    "test": "SQL patch applies to supplied dump",
+    "passed": true,
+    "detail": null
+  },
+  {
+    "test": "SQL patch preserves every original row in affected tables",
+    "passed": true,
+    "detail": null
+  },
+  {
+    "test": "SQL patch can be rerun without data changes",
+    "passed": true,
+    "detail": null
+  },
+  {
+    "test": "College patch preserves supplied timetable procedure definitions",
+    "passed": true,
+    "detail": null
+  },
+  {
+    "test": "Data correction refuses unexpected live identity",
+    "passed": true,
+    "detail": null
+  },
+  {
+    "test": "Rejected data correction leaves faculty and departments unchanged",
+    "passed": true,
+    "detail": null
+  },
+  {
+    "test": "Data correction rolls back on a late failure",
+    "passed": true,
+    "detail": null
+  },
+  {
+    "test": "Rollback includes users, faculty, new department and audit",
+    "passed": true,
+    "detail": null
+  },
+  {
+    "test": "Faculty 16 and user 21 align with college 87 and department 29",
+    "passed": true,
+    "detail": null
+  },
+  {
+    "test": "Faculty 11 keeps college 82 with its own CIVIL department",
+    "passed": true,
+    "detail": null
+  },
+  {
+    "test": "No faculty/user/department college mismatches remain",
+    "passed": true,
+    "detail": null
+  },
+  {
+    "test": "Original department rows remain unchanged",
+    "passed": true,
+    "detail": null
+  },
+  {
+    "test": "Only one college-specific CIVIL department is created",
+    "passed": true,
+    "detail": null
+  },
+  {
+    "test": "Passwords, contacts, identities and faculty details are preserved",
+    "passed": true,
+    "detail": null
+  },
+  {
+    "test": "Other users and faculty rows remain byte-for-byte equivalent",
+    "passed": true,
+    "detail": null
+  },
+  {
+    "test": "All other database tables retain every original row",
+    "passed": true,
+    "detail": {
+      "tables": 87
+    }
+  },
+  {
+    "test": "Data correction rerun is idempotent",
+    "passed": true,
+    "detail": null
+  },
+  {
+    "test": "Data correction audit has one entry per changed record",
+    "passed": true,
+    "detail": null
+  },
+  {
+    "test": "Original college-scoping patch remains compatible after data correction",
+    "passed": true,
+    "detail": null
+  },
+  {
+    "test": "Complete backend starts and Swagger loads",
+    "passed": true,
+    "detail": {
+      "paths": 322
+    }
+  },
+  {
+    "test": "Corrected college 87 faculty list is retrievable",
+    "passed": true,
+    "detail": {
+      "status": 200
+    }
+  },
+  {
+    "test": "College 87 list includes existing faculty 16",
+    "passed": true,
+    "detail": null
+  },
+  {
+    "test": "Corrected faculty 16 details are retrievable",
+    "passed": true,
+    "detail": {
+      "status": 200
+    }
+  },
+  {
+    "test": "Faculty detail includes correct college and department",
+    "passed": true,
+    "detail": null
+  },
+  {
+    "test": "College 82 faculty list is retrievable",
+    "passed": true,
+    "detail": {
+      "status": 200
+    }
+  },
+  {
+    "test": "College 82 retains faculty 11 with CIVIL department",
+    "passed": true,
+    "detail": null
+  },
+  {
+    "test": "Faculty search returns actual repository records",
+    "passed": true,
+    "detail": {
+      "status": 200
+    }
+  },
+  {
+    "test": "Faculty search finds corrected existing record",
+    "passed": true,
+    "detail": null
+  },
+  {
+    "test": "Missing faculty details returns 404",
+    "passed": true,
+    "detail": {
+      "status": 404
+    }
+  },
+  {
+    "test": "Missing live college produces clear leave validation",
+    "passed": true,
+    "detail": {
+      "status": 400
+    }
+  },
+  {
+    "test": "Missing live college produces clear course validation",
+    "passed": true,
+    "detail": {
+      "status": 400
+    }
+  },
+  {
+    "test": "Leave CL creates in college 87 despite existing shared CL",
+    "passed": true,
+    "detail": {
+      "status": 200
+    }
+  },
+  {
+    "test": "Query collegeId is persisted for leave creation",
+    "passed": true,
+    "detail": null
+  },
+  {
+    "test": "Same college leave name/code duplicate is rejected",
+    "passed": true,
+    "detail": {
+      "status": 409
+    }
+  },
+  {
+    "test": "Leave name duplicate with different code is rejected",
+    "passed": true,
+    "detail": {
+      "status": 409
+    }
+  },
+  {
+    "test": "Leave code duplicate with different name is rejected",
+    "passed": true,
+    "detail": {
+      "status": 409
+    }
+  },
+  {
+    "test": "Leave code/name trim and case handling",
+    "passed": true,
+    "detail": {
+      "status": 409
+    }
+  },
+  {
+    "test": "Same leave name/code can be created in another college",
+    "passed": true,
+    "detail": {
+      "status": 200
+    }
+  },
+  {
+    "test": "Leave list accepts college filter",
+    "passed": true,
+    "detail": {
+      "status": 200
+    }
+  },
+  {
+    "test": "Leave list contains only selected college records",
+    "passed": true,
+    "detail": null
+  },
+  {
+    "test": "Leave self-update excludes current record",
+    "passed": true,
+    "detail": {
+      "status": 200
+    }
+  },
+  {
+    "test": "Leave cannot be updated through another college",
+    "passed": true,
+    "detail": {
+      "status": 404
+    }
+  },
+  {
+    "test": "Legacy shared leave cannot be silently reassigned",
+    "passed": true,
+    "detail": {
+      "status": 404
+    }
+  },
+  {
+    "test": "Leave query/body mismatch rejected",
+    "passed": true,
+    "detail": {
+      "status": 400
+    }
+  },
+  {
+    "test": "Leave invalid college rejected",
+    "passed": true,
+    "detail": {
+      "status": 400
+    }
+  },
+  {
+    "test": "Leave body-only college supported",
+    "passed": true,
+    "detail": {
+      "status": 200
+    }
+  },
+  {
+    "test": "Leave inactive status update",
+    "passed": true,
+    "detail": {
+      "status": 200
+    }
+  },
+  {
+    "test": "Inactive leave reserves name/code",
+    "passed": true,
+    "detail": {
+      "status": 409
+    }
+  },
+  {
+    "test": "Inactive leave can be reactivated",
+    "passed": true,
+    "detail": {
+      "status": 200
+    }
+  },
+  {
+    "test": "Null leave name returns validation rather than 500",
+    "passed": true,
+    "detail": {
+      "status": 400
+    }
+  },
+  {
+    "test": "Overlength leave code is rejected before database",
+    "passed": true,
+    "detail": {
+      "status": 400
+    }
+  },
+  {
+    "test": "BTECH creates in college 87 despite existing college 1 code",
+    "passed": true,
+    "detail": {
+      "status": 201
+    }
+  },
+  {
+    "test": "Query collegeId is persisted for course creation",
+    "passed": true,
+    "detail": null
+  },
+  {
+    "test": "Same college course code duplicate rejected",
+    "passed": true,
+    "detail": {
+      "status": 409
+    }
+  },
+  {
+    "test": "Same BTECH code succeeds in college 88",
+    "passed": true,
+    "detail": {
+      "status": 201
+    }
+  },
+  {
+    "test": "Existing BTECH in college 1 still rejected",
+    "passed": true,
+    "detail": {
+      "status": 409
+    }
+  },
+  {
+    "test": "Course case and whitespace duplicate rejected",
+    "passed": true,
+    "detail": {
+      "status": 409
+    }
+  },
+  {
+    "test": "Course query/body mismatch rejected",
+    "passed": true,
+    "detail": {
+      "status": 400
+    }
+  },
+  {
+    "test": "Course self-update excludes current row",
+    "passed": true,
+    "detail": {
+      "status": 200
+    }
+  },
+  {
+    "test": "Unique course in same college succeeds",
+    "passed": true,
+    "detail": {
+      "status": 201
+    }
+  },
+  {
+    "test": "Course update to another record code rejected",
+    "passed": true,
+    "detail": {
+      "status": 409
+    }
+  },
+  {
+    "test": "Course update cannot silently move colleges",
+    "passed": true,
+    "detail": {
+      "status": 400
+    }
+  },
+  {
+    "test": "Course inactive status update",
+    "passed": true,
+    "detail": {
+      "status": 200
+    }
+  },
+  {
+    "test": "Inactive course code reserved in same college",
+    "passed": true,
+    "detail": {
+      "status": 409
+    }
+  },
+  {
+    "test": "Deleted course code reserved consistently",
+    "passed": true,
+    "detail": {
+      "status": 409
+    }
+  },
+  {
+    "test": "Invalid course college rejected",
+    "passed": true,
+    "detail": {
+      "status": 400
+    }
+  },
+  {
+    "test": "Course department must belong to selected college",
+    "passed": true,
+    "detail": {
+      "status": 400
+    }
+  },
+  {
+    "test": "Existing active faculty user is still rejected",
+    "passed": true,
+    "detail": {
+      "status": 409
+    }
+  },
+  {
+    "test": "Development conflict identifies real user 9 and faculty 1",
+    "passed": true,
+    "detail": null
+  },
+  {
+    "test": "Latest dump faculty 16 mapping is reported, not duplicated",
+    "passed": true,
+    "detail": {
+      "status": 409
+    }
+  },
+  {
+    "test": "Latest conflict identifies corrected user 21, faculty 16, college 87",
+    "passed": true,
+    "detail": null
+  },
+  {
+    "test": "Global faculty mapping rule retained across colleges",
+    "passed": true,
+    "detail": {
+      "status": 409
+    }
+  },
+  {
+    "test": "Auto selection does not reuse a mobile-only match",
+    "passed": true,
+    "detail": {
+      "status": 409
+    }
+  },
+  {
+    "test": "Auto selection does not reuse an email-only match",
+    "passed": true,
+    "detail": {
+      "status": 409
+    }
+  },
+  {
+    "test": "Email and mobile from different users rejected",
+    "passed": true,
+    "detail": {
+      "status": 409
+    }
+  },
+  {
+    "test": "Faculty query/body mismatch rejected",
+    "passed": true,
+    "detail": {
+      "status": 400
+    }
+  },
+  {
+    "test": "Faculty rejects wrong-college department",
+    "passed": true,
+    "detail": {
+      "status": 400
+    }
+  },
+  {
+    "test": "New faculty and new user create successfully",
+    "passed": true,
+    "detail": {
+      "status": 201
+    }
+  },
+  {
+    "test": "New faculty mapped to its newly created user",
+    "passed": true,
+    "detail": null
+  },
+  {
+    "test": "Exact contacts of already-linked user still rejected",
+    "passed": true,
+    "detail": {
+      "status": 409
+    }
+  },
+  {
+    "test": "Inactive faculty still reserves user mapping",
+    "passed": true,
+    "detail": {
+      "status": 409
+    }
+  },
+  {
+    "test": "Deleted faculty still reserves user mapping",
+    "passed": true,
+    "detail": {
+      "status": 409
+    }
+  },
+  {
+    "test": "Invalid employee profile is rejected",
+    "passed": true,
+    "detail": {
+      "status": 400
+    }
+  },
+  {
+    "test": "Failed faculty linking rolls back newly created account",
+    "passed": true,
+    "detail": null
+  },
+  {
+    "test": "Wrong selected user identity rejected",
+    "passed": true,
+    "detail": {
+      "status": 409
+    }
+  },
+  {
+    "test": "Unlinked selected user creates faculty successfully",
+    "passed": true,
+    "detail": {
+      "status": 201
+    }
+  },
+  {
+    "test": "Concurrent leave duplicate yields one success and one 409",
+    "passed": true,
+    "detail": null
+  },
+  {
+    "test": "Concurrent course duplicate yields one success and one 409",
+    "passed": true,
+    "detail": {
+      "statuses": [
+        201,
+        409
+      ]
+    }
+  },
+  {
+    "test": "Concurrent faculty create yields one success and one 409",
+    "passed": true,
+    "detail": null
+  },
+  {
+    "test": "Database itself rejects duplicate leave name",
+    "passed": true,
+    "detail": null
+  },
+  {
+    "test": "Database itself rejects duplicate leave code",
+    "passed": true,
+    "detail": null
+  },
+  {
+    "test": "Database itself rejects duplicate course code within college",
+    "passed": true,
+    "detail": null
+  },
+  {
+    "test": "Legacy course-code procedure retained",
+    "passed": true,
+    "detail": null
+  },
+  {
+    "test": "New scoped stored procedure excludes the current record",
+    "passed": true,
+    "detail": null
+  },
+  {
+    "test": "Legacy leave requests still readable",
+    "passed": true,
+    "detail": {
+      "status": 200
+    }
+  },
+  {
+    "test": "Legacy leave policies still readable",
+    "passed": true,
+    "detail": {
+      "status": 200
+    }
+  },
+  {
+    "test": "Legacy leave balances still readable",
+    "passed": true,
+    "detail": {
+      "status": 200
+    }
+  },
+  {
+    "test": "Foreign-college leave type cannot be applied to faculty",
+    "passed": true,
+    "detail": {
+      "status": 400
+    }
+  },
+  {
+    "test": "Original faculty mapping data is not altered by the fix",
+    "passed": true,
+    "detail": null
+  }
+]

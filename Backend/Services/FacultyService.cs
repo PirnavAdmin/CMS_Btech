@@ -1,6 +1,7 @@
-﻿using BTech.Data;
+using BTech.Data;
 using BTech.DTOs.Faculty;
 using BTech.Services.Interfaces;
+using BTech.Repositories.Interfaces;
 using Microsoft.EntityFrameworkCore;
 
 namespace BTech.Services
@@ -8,10 +9,12 @@ namespace BTech.Services
     public class FacultyService : IFacultyService
     {
         private readonly ApplicationDbContext _context;
+        private readonly IFacultyRepository _facultyRepository;
 
-        public FacultyService(ApplicationDbContext context)
+        public FacultyService(ApplicationDbContext context, IFacultyRepository facultyRepository)
         {
             _context = context;
+            _facultyRepository = facultyRepository;
         }
 
         public async Task<bool> UpdateFacultyAsync(
@@ -106,7 +109,7 @@ namespace BTech.Services
             if (facultyId <= 0)
                 throw new ArgumentException("Invalid faculty ID.");
 
-            return await Task.FromResult<FacultyDetailsResponseDto?>(null);
+            return await _facultyRepository.GetFacultyDetailsAsync(facultyId);
         }
 
         public async Task<FacultyListResponseDto>
@@ -145,8 +148,7 @@ namespace BTech.Services
                     ? null
                     : request.Search.Trim();
 
-            return await Task.FromResult(
-                new FacultyListResponseDto());
+            return await _facultyRepository.GetFacultyListAsync(request);
         }
 
         public async Task<FacultyWorkloadResponseDto?>

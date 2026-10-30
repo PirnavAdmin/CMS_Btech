@@ -2,6 +2,7 @@ namespace BTech.DTOs.AcademicYear
 {
     public class AcademicYearDashboardDto
     {
+        public long CollegeId { get; set; }
         public AcademicYearResponseDto? ActiveAcademicYear { get; set; }
         public int TotalAcademicYears { get; set; }
         public int ActiveYears { get; set; }
