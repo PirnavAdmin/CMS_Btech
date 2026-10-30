@@ -341,7 +341,7 @@
 .ac-field input[aria-invalid="true"], .ac-field select[aria-invalid="true"] { border-color: #d23d32; }
 .ac-field input[readonly] { background: #f4f7fa; color: #536b82; }
 .ac-error { color: #b42318; font-size: .74rem; font-weight: 650; }
-.ac-counter { position: absolute; top: 58px; right: 8px; color: #869bad; font-size: .68rem; font-weight: 500; }
+.ac-counter { position: static; justify-self: end; margin-top: 0; padding-right: 8px; color: #869bad; font-size: .68rem; font-weight: 500; line-height: 1.2; }
 .ac-upload { min-height: 100px; padding: 14px; border: 1.5px dashed #aabdd0; border-radius: 10px; background: #EAF3FF; }
 .ac-upload-button { display: grid; place-items: center; gap: 6px; width: 100%; min-height: 70px; border: 0; background: transparent; color: var(--brand, #125AA8); cursor: pointer; }
 .ac-upload-button:hover,
@@ -439,7 +439,6 @@
 .ac-grid { gap: 11px 18px; }
 .ac-field { gap: 5px; font-size: .82rem; }
 .ac-field input, .ac-field select { height: 38px; padding: 0 11px; }
-.ac-counter { top: 58px; }
 .ac-upload { min-height: 82px; padding: 10px; }
 .ac-upload-button { min-height: 58px; gap: 4px; }
 .ac-logo-preview img { width: 62px; height: 62px; }
