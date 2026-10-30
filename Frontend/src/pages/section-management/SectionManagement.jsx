@@ -54,10 +54,36 @@ const branchName = (item = {}) => item.branchName ?? item.BranchName ?? item.nam
 const branchCode = (item = {}) => item.branchCode ?? item.BranchCode ?? item.code ?? item.Code ?? item.shortName ?? item.branchShortName ?? ''
 const yearName = (item = {}) => item.academicYearName ?? item.name ?? item.academicYear ?? item.code ?? ''
 const normalizeCourse = (item = {}) => ({ ...item, id: idOf(item, 'courseId', 'CourseId', 'course_id', 'id', 'Id'), name: courseName(item), code: courseCode(item), collegeId: idOf(item, 'collegeId', 'CollegeId', 'college_id') || item.college?.collegeId || item.college?.id || '', departmentId: idOf(item, 'departmentId', 'DepartmentId', 'department_id') || item.department?.departmentId || item.department?.id || '', departmentName: item.departmentName ?? item.DepartmentName ?? item.department_name ?? item.department?.departmentName ?? item.department?.name ?? item.department ?? '' })
-const normalizeBranch = (item = {}) => ({ ...item, id: idOf(item, 'branchId', 'BranchId', 'branch_id', 'id', 'Id'), courseId: idOf(item, 'courseId', 'CourseId', 'course_id') || item.course?.courseId || item.course?.id || '', name: branchName(item), code: branchCode(item), branchType: branchTypeLabel(item), collegeId: idOf(item, 'collegeId', 'CollegeId', 'college_id') || item.college?.collegeId || item.college?.id || '', departmentId: idOf(item, 'departmentId', 'DepartmentId', 'department_id') || item.department?.departmentId || item.department?.id || '', departmentName: item.departmentName ?? item.DepartmentName ?? item.department_name ?? item.department?.departmentName ?? item.department?.name ?? item.department ?? '' })
+const normalizeBranch = (item = {}) => ({ ...item, id: idOf(item, 'branchId', 'BranchId', 'branch_id', 'id', 'Id'), courseId: idOf(item, 'courseId', 'CourseId', 'course_id', 'programId', 'ProgramId') || item.course?.courseId || item.course?.id || '', courseCode: item.courseCode ?? item.CourseCode ?? item.course?.courseCode ?? item.course?.code ?? item.programCode ?? item.ProgramCode ?? '', courseName: item.courseName ?? item.CourseName ?? item.course?.courseName ?? item.course?.name ?? item.programName ?? item.ProgramName ?? '', name: branchName(item), code: branchCode(item), branchType: branchTypeLabel(item), collegeId: idOf(item, 'collegeId', 'CollegeId', 'college_id') || item.college?.collegeId || item.college?.id || '', departmentId: idOf(item, 'departmentId', 'DepartmentId', 'department_id') || item.department?.departmentId || item.department?.id || '', departmentName: item.departmentName ?? item.DepartmentName ?? item.department_name ?? item.department?.departmentName ?? item.department?.name ?? item.department ?? '' })
+const normalizedMappingValue = (value) => String(value ?? '').trim().toLowerCase().replace(/[^a-z0-9]/g, '')
+const branchMatchesCourse = (branch, course) => {
+  if (!course) return false
+  const courseIds = [course.id, course.courseId, course.CourseId].filter(clean).map(String)
+  const branchCourseIds = [branch.courseId, branch.course?.courseId, branch.course?.id, branch.programId, branch.ProgramId].filter(clean).map(String)
+  if (branchCourseIds.some((id) => courseIds.includes(id))) return true
+
+  const courseCodes = [course.code, course.courseCode, course.CourseCode].filter(clean).map(normalizedMappingValue)
+  const branchCourseCodes = [branch.courseCode, branch.CourseCode, branch.course?.courseCode, branch.course?.code, branch.programCode, branch.ProgramCode].filter(clean).map(normalizedMappingValue)
+  if (branchCourseCodes.some((code) => courseCodes.includes(code))) return true
+
+  const courseNames = [course.name, course.courseName, course.CourseName].filter(clean).map(normalizedMappingValue)
+  const branchCourseNames = [branch.courseName, branch.CourseName, branch.course?.courseName, branch.course?.name, branch.programName, branch.ProgramName].filter(clean).map(normalizedMappingValue)
+  return branchCourseNames.some((name) => courseNames.includes(name))
+}
+const explicitCollegeId = (record = {}) => record.collegeId ?? record.CollegeId ?? record.college_id ?? record.collegeNumericId ?? record.college?.collegeId ?? record.college?.id ?? ''
+const matchesAcademicMapping = (actualId, actualAliases, target) => {
+  const actualValues = [actualId, ...actualAliases].filter(clean)
+  if (!actualValues.length) return true
+  const targetIds = [target?.id].filter(clean).map(String)
+  if (actualValues.some((value) => targetIds.includes(String(value)))) return true
+  const targetCodes = [target?.code, target?.courseCode, target?.branchCode, target?.academicYearCode].filter(clean).map(normalizedMappingValue)
+  if (actualValues.some((value) => targetCodes.includes(normalizedMappingValue(value)))) return true
+  const targetNames = [target?.name, target?.courseName, target?.branchName, target?.academicYearName].filter(clean).map(normalizedMappingValue)
+  return actualValues.some((value) => targetNames.includes(normalizedMappingValue(value)))
+}
 const normalizeSemester = (item = {}) => {
   const number = item.semesterNumber ?? item.semester?.semesterNumber ?? item.number
-  return { ...item, id: idOf(item, 'semesterId', 'SemesterId', 'semester_id', 'courseStructureId', 'structureId', 'id') || item.semester?.semesterId || item.semester?.id || '', name: number ? `Semester ${number}` : sem(item.semesterName ?? item.semester?.semesterName ?? item.semester?.name ?? item.name ?? ''), number: Number(number || String(item.semesterName || '').match(/\d+/)?.[0] || 0), courseId: idOf(item, 'courseId', 'CourseId', 'course_id') || item.course?.courseId || item.course?.id || '', branchId: idOf(item, 'branchId', 'BranchId', 'branch_id') || item.branch?.branchId || item.branch?.id || '', academicYearId: idOf(item, 'academicYearId', 'AcademicYearId', 'academic_year_id', 'yearId') || item.academicYear?.academicYearId || item.academicYear?.id || '', academicYearName: item.academicYearName ?? item.academicYear?.academicYearName ?? item.academicYear?.name ?? item.yearName ?? '' }
+  return { ...item, id: idOf(item, 'semesterId', 'SemesterId', 'semester_id', 'courseStructureId', 'structureId', 'id') || item.semester?.semesterId || item.semester?.id || '', name: number ? `Semester ${number}` : sem(item.semesterName ?? item.semester?.semesterName ?? item.semester?.name ?? item.name ?? ''), number: Number(number || String(item.semesterName || '').match(/\d+/)?.[0] || 0), courseId: idOf(item, 'courseId', 'CourseId', 'course_id', 'programId', 'ProgramId') || item.course?.courseId || item.course?.id || '', courseCode: item.courseCode ?? item.CourseCode ?? item.course?.courseCode ?? item.course?.code ?? item.programCode ?? item.ProgramCode ?? '', courseName: item.courseName ?? item.CourseName ?? item.course?.courseName ?? item.course?.name ?? item.programName ?? item.ProgramName ?? '', branchId: idOf(item, 'branchId', 'BranchId', 'branch_id') || item.branch?.branchId || item.branch?.id || '', branchCode: item.branchCode ?? item.BranchCode ?? item.branch?.branchCode ?? item.branch?.code ?? '', branchName: item.branchName ?? item.BranchName ?? item.branch?.branchName ?? item.branch?.name ?? '', academicYearId: idOf(item, 'academicYearId', 'AcademicYearId', 'academic_year_id', 'yearId') || item.academicYear?.academicYearId || item.academicYear?.id || '', academicYearName: item.academicYearName ?? item.AcademicYearName ?? item.academicYear?.academicYearName ?? item.academicYear?.name ?? item.yearName ?? '' }
 }
 const normalizeAssignment = (item = {}) => ({ id: item.assignmentId ?? item.id ?? item.studentId, sectionId: item.sectionId ?? item.section_id ?? '', studentId: item.studentId ?? item.student_id ?? item.student?.studentId ?? item.student?.id ?? item.enrollmentNo ?? '', studentName: item.studentName ?? item.fullName ?? item.student_name ?? item.student?.fullName ?? item.student?.name ?? item.name ?? '', enrollmentNo: item.enrollmentNo ?? item.studentCode ?? item.registrationNumber ?? item.rollNumber ?? item.studentId ?? '' })
 const sameStudent = (assignment = {}, student = {}) => [assignment.studentId, assignment.enrollmentNo, assignment.studentCode, assignment.registrationNumber].filter(clean).some((value) => [student.id, student.code, student.studentCode, student.registrationNumber, student.rollNumber, student.admissionNumber].filter(clean).some((candidate) => String(candidate).split('/').map((part) => part.trim()).includes(String(value).trim())))
@@ -329,6 +355,7 @@ function SectionForm({ editMode = false }) {
   const { scopeRecords, selectedCollegeId, selectedCollege, selectedAcademicYearId, selectedAcademicYear } = useAcademic()
   const [form, setForm] = useState(emptyForm)
   const [loading, setLoading] = useState(true)
+  const [semesterLoading, setSemesterLoading] = useState(false)
   const [saving, setSaving] = useState(false)
   const [errors, setErrors] = useState({})
   const [notice, setNotice] = useState('')
@@ -338,11 +365,44 @@ function SectionForm({ editMode = false }) {
   const [formTab, setFormTab] = useState(editMode ? 'details' : 'mapping')
   const scopedCourses = useMemo(() => scopeRecords(masters.courses).filter(item => (item.status !== 'Inactive' && item.status !== 0 && item.status !== false && item.isActive !== false) || (editMode && String(item.id) === String(form.courseId))), [scopeRecords, masters.courses, editMode, form.courseId])
   const course = scopedCourses.find((item) => String(item.id) === String(form.courseId))
-  const branches = useMemo(() => scopeRecords(masters.branches).filter((item) => String(item.courseId) === String(form.courseId) && ((item.status !== 'Inactive' && item.status !== 0 && item.status !== false && item.isActive !== false) || (editMode && String(item.id) === String(form.branchId)))), [scopeRecords, masters.branches, form.courseId, editMode, form.branchId])
+  const branches = useMemo(() => {
+    const scoped = scopeRecords(masters.branches)
+    const visibleIds = new Set(scoped.map((item) => String(item.id)))
+    // Some branch DTOs omit CollegeId and return the course's code in CourseId.
+    // In that case the general hierarchy resolver cannot infer ownership from
+    // the numeric course ID. The selected course is already college-scoped, so
+    // allow only those otherwise-unowned branches that explicitly map to it.
+    const mappedToScopedCourse = masters.branches.filter((item) => (
+      !visibleIds.has(String(item.id)) &&
+      !clean(explicitCollegeId(item)) &&
+      branchMatchesCourse(item, course)
+    ))
+    return [...scoped, ...mappedToScopedCourse].filter((item) => (
+      branchMatchesCourse(item, course) &&
+      ((item.status !== 'Inactive' && item.status !== 0 && item.status !== false && item.isActive !== false) ||
+        (editMode && String(item.id) === String(form.branchId)))
+    ))
+  }, [scopeRecords, masters.branches, course, editMode, form.branchId])
   const branch = branches.find((item) => String(item.id) === String(form.branchId))
   const activeYears = useMemo(() => getActiveAcademicYears(masters.years), [masters.years])
   const activeYear = editMode ? masters.years.find((item) => String(item.id) === String(form.academicYearId)) : (masters.years.find(y => String(y.id) === String(selectedAcademicYearId)) || selectedAcademicYear || activeYears.find((item) => String(item.id) === String(form.academicYearId)) || activeYears[0])
-  const semesters = useMemo(() => scopeRecords(masters.semesters).filter((item) => (!form.courseId || (!item.courseId || String(item.courseId) === String(form.courseId))) && (!form.branchId || (!item.branchId || String(item.branchId) === String(form.branchId))) && (!form.academicYearId || !item.academicYearId || String(item.academicYearId) === String(form.academicYearId)) && ((item.status !== 'Inactive' && item.status !== 0 && item.status !== false && item.isActive !== false) || (editMode && String(item.id) === String(form.semesterId)))), [scopeRecords, masters.semesters, form.courseId, form.branchId, form.academicYearId, editMode, form.semesterId])
+  const semesters = useMemo(() => {
+    const scoped = scopeRecords(masters.semesters)
+    const visibleIds = new Set(scoped.map((item) => String(item.id)))
+    const mappedToSelectedScope = masters.semesters.filter((item) => (
+      !visibleIds.has(String(item.id)) && !clean(explicitCollegeId(item)) &&
+      matchesAcademicMapping(item.courseId, [item.courseCode, item.courseName], course) &&
+      matchesAcademicMapping(item.branchId, [item.branchCode, item.branchName], branch) &&
+      matchesAcademicMapping(item.academicYearId, [item.academicYearName], activeYear)
+    ))
+    return [...scoped, ...mappedToSelectedScope].filter((item) => (
+      matchesAcademicMapping(item.courseId, [item.courseCode, item.courseName], course) &&
+      matchesAcademicMapping(item.branchId, [item.branchCode, item.branchName], branch) &&
+      matchesAcademicMapping(item.academicYearId, [item.academicYearName], activeYear) &&
+      ((item.status !== 'Inactive' && item.status !== 0 && item.status !== false && item.isActive !== false) ||
+        (editMode && String(item.id) === String(form.semesterId)))
+    ))
+  }, [scopeRecords, masters.semesters, course, branch, activeYear, editMode, form.semesterId])
   const semester = semesters.find((item) => String(item.id) === String(form.semesterId))
   const assignedCount = Math.max(Number(form.currentStrength || 0), assignments.filter((item) => String(item.sectionId) === String(id)).length)
   const teacherCandidates = useMemo(() => teacherCandidatesForBranch(faculty, branch?.name || form.branch, branch?.code || form.branchCode, branch?.id || form.branchId), [faculty, branch, form.branch, form.branchCode, form.branchId])
@@ -350,22 +410,27 @@ function SectionForm({ editMode = false }) {
   const yearWarning = noActiveYear ? 'No active academic year is configured.' : ''
   const canOpenDetailsTab = Boolean(form.courseId && form.branchId && form.semesterId && form.academicYearId)
 
-  const fetchSemesters = useCallback(async (branchId, academicYearId, courseId) => {
+  const fetchSemesters = useCallback(async (branchId, academicYearId, courseId, selectedCourse, selectedBranch, selectedYear) => {
     const request = ++semesterRequest.current
     setMasters((current) => ({ ...current, semesters: [] }))
+    setSemesterLoading(Boolean(branchId && academicYearId))
     if (!branchId || !academicYearId) return
     try {
-      // The semester search route is returning HTTP 502 in the current API
-      // deployment. The list route is healthy, so fetch once and scope it here.
+      // Semester Management stores the branch/course/year mappings in the
+      // /api/semester resource. Request it for the active college, then match
+      // against the selected mapping before exposing options.
       const response = await getSemesters()
-      const matches = (actual, expected) => !actual || String(actual) === String(expected)
-      const scopedSemesters = responseList(response).map(normalizeSemester).filter((item) =>
-        matches(item.courseId, courseId) && matches(item.branchId, branchId) && matches(item.academicYearId, academicYearId)
+      const rows = responseList(response).map(normalizeSemester)
+      const scopedSemesters = rows.filter((item) =>
+        matchesAcademicMapping(item.courseId, [item.courseCode, item.courseName], selectedCourse) &&
+        matchesAcademicMapping(item.branchId, [item.branchCode, item.branchName], selectedBranch) &&
+        matchesAcademicMapping(item.academicYearId, [item.academicYearName], selectedYear)
       )
       if (request === semesterRequest.current) setMasters((current) => ({ ...current, semesters: scopedSemesters }))
     } catch (error) { if (request === semesterRequest.current) setErrors((current) => ({ ...current, semesterId: apiError(error, 'Unable to load semesters.') })) }
+    finally { if (request === semesterRequest.current) setSemesterLoading(false) }
   }, [setErrors])
-  const load = useCallback(async () => { setLoading(true); setErrors({}); try { const data = await loadSources(); setMasters({ courses: data.courses, branches: data.branches, years: data.years, semesters: [] }); setSections(newestFirst('sections', data.sections)); setAssignments(data.assignments); setFaculty(data.faculty); if (editMode && id) { const detail = normalizeSection({ ...(data.sections.find((item) => String(item.id) === String(id)) || {}), ...responseRecord(await sectionApi.getById(id)) }, makeLookups(data.courses, data.branches, [], data.years)); legacy.current = { sectionType: detail.sectionType ?? detail.type, shift: detail.shift }; const editable = { ...detail }; delete editable.type; delete editable.sectionType; delete editable.shift; setForm({ ...emptyForm, ...editable, courseId: String(detail.courseId || ''), branchId: String(detail.branchId || ''), semesterId: String(detail.semesterId || ''), academicYearId: String(detail.academicYearId || ''), facultyAdvisorEmployeeProfileId: detail.facultyAdvisorEmployeeProfileId || '' }); setFormTab('details'); await fetchSemesters(detail.branchId, detail.academicYearId, detail.courseId) } else { const initialYearId = selectedAcademicYearId || (getActiveAcademicYears(data.years)[0]?.id) || ''; setForm(() => ({ ...emptyForm, academicYearId: initialYearId, collegeId: selectedCollegeId || '' })); setErrors({}); setFormTab('mapping') } } catch (error) { setErrors({ form: apiError(error, 'Unable to load section form.') }) } finally { setLoading(false) } }, [id, editMode, fetchSemesters, selectedAcademicYearId, selectedCollegeId, setErrors])
+  const load = useCallback(async () => { setLoading(true); setErrors({}); try { const data = await loadSources(); setMasters({ courses: data.courses, branches: data.branches, years: data.years, semesters: [] }); setSections(newestFirst('sections', data.sections)); setAssignments(data.assignments); setFaculty(data.faculty); if (editMode && id) { const detail = normalizeSection({ ...(data.sections.find((item) => String(item.id) === String(id)) || {}), ...responseRecord(await sectionApi.getById(id)) }, makeLookups(data.courses, data.branches, [], data.years)); legacy.current = { sectionType: detail.sectionType ?? detail.type, shift: detail.shift }; const editable = { ...detail }; delete editable.type; delete editable.sectionType; delete editable.shift; setForm({ ...emptyForm, ...editable, courseId: String(detail.courseId || ''), branchId: String(detail.branchId || ''), semesterId: String(detail.semesterId || ''), academicYearId: String(detail.academicYearId || ''), facultyAdvisorEmployeeProfileId: detail.facultyAdvisorEmployeeProfileId || '' }); setFormTab('details'); await fetchSemesters(detail.branchId, detail.academicYearId, detail.courseId, data.courses.find((item) => String(item.id) === String(detail.courseId)), data.branches.find((item) => String(item.id) === String(detail.branchId)), data.years.find((item) => String(item.id) === String(detail.academicYearId))) } else { const initialYearId = selectedAcademicYearId || (getActiveAcademicYears(data.years)[0]?.id) || ''; setForm(() => ({ ...emptyForm, academicYearId: initialYearId, collegeId: selectedCollegeId || '' })); setErrors({}); setFormTab('mapping') } } catch (error) { setErrors({ form: apiError(error, 'Unable to load section form.') }) } finally { setLoading(false) } }, [id, editMode, fetchSemesters, selectedAcademicYearId, selectedCollegeId, setErrors])
   useEffect(() => { load() }, [load])
   const prevCollegeIdRef = useRef(selectedCollegeId)
   useEffect(() => {
@@ -376,13 +441,14 @@ function SectionForm({ editMode = false }) {
     // College changed — immediately wipe mapping fields so stale IDs from the
     // old college are not submitted or shown while the async load() is pending.
     semesterRequest.current += 1
+    setSemesterLoading(false)
     setForm((current) => ({ ...emptyForm, academicYearId: current.academicYearId, collegeId: selectedCollegeId || '' }))
     setMasters((current) => ({ ...current, semesters: [] }))
     setErrors({})
     setFormTab('mapping')
   }, [selectedCollegeId, editMode])
-  const setCourse = async (courseId) => { semesterRequest.current += 1; const selectedCourse = scopedCourses.find((item) => String(item.id) === String(courseId)); setForm((current) => ({ ...current, courseId, course: selectedCourse?.name || '', courseCode: selectedCourse?.code || '', branchId: '', branch: '', branchCode: '', semesterId: '', semester: '', name: '', code: '' })); setMasters((current) => ({ ...current, semesters: [] })); setErrors({}) }
-  const setBranch = async (branchId) => { const selectedBranch = masters.branches.find((item) => String(item.id) === String(branchId)); const yearId = form.academicYearId || selectedAcademicYearId || activeYear?.id; setForm((current) => ({ ...current, branchId, branch: selectedBranch?.name || '', branchCode: selectedBranch?.code || '', semesterId: '', semester: '', name: '', code: '', academicYearId: yearId })); setErrors({}); await fetchSemesters(branchId, yearId, form.courseId) }
+  const setCourse = async (courseId) => { semesterRequest.current += 1; setSemesterLoading(false); const selectedCourse = scopedCourses.find((item) => String(item.id) === String(courseId)); setForm((current) => ({ ...current, courseId, course: selectedCourse?.name || '', courseCode: selectedCourse?.code || '', branchId: '', branch: '', branchCode: '', semesterId: '', semester: '', name: '', code: '' })); setMasters((current) => ({ ...current, semesters: [] })); setErrors({}) }
+  const setBranch = async (branchId) => { const selectedBranch = branches.find((item) => String(item.id) === String(branchId)); const yearId = form.academicYearId || selectedAcademicYearId || activeYear?.id; setForm((current) => ({ ...current, branchId, branch: selectedBranch?.name || '', branchCode: selectedBranch?.code || '', semesterId: '', semester: '', name: '', code: '', academicYearId: yearId })); setErrors({}); await fetchSemesters(branchId, yearId, form.courseId, course, selectedBranch, activeYear) }
   const setSemester = (semesterId) => {
     const selectedSemester = masters.semesters.find((item) => String(item.id) === String(semesterId))
     setForm((current) => {
@@ -470,13 +536,13 @@ function SectionForm({ editMode = false }) {
                     <ReadOnly value={course?.code || form.courseCode} placeholder="Resolved from selected course" />
                   </Field>
                   <Field label="Branch *" error={errors.branchId}>
-                    <SearchableSelect label="Branch" value={form.branchId} options={branches.map((item) => ({ id: item.id, value: item.id, name: item.name, code: item.code }))} onChange={setBranch} disabled={editMode || !form.courseId} placeholder={form.courseId ? 'Select Branch' : 'Select Course first'} searchPlaceholder="Search branch name or code..." />
+                    <SearchableSelect label="Branch" value={form.branchId} options={branches.map((item) => ({ id: item.id, value: item.id, name: item.name, code: item.code }))} onChange={setBranch} disabled={editMode || !form.courseId} placeholder={form.courseId ? 'Select Branch' : 'Select Course first'} searchPlaceholder="Search branch name or code..." noOptionsMessage={form.courseId ? 'No branches are mapped to this course. Check the course assignment in Branch Management.' : 'Select a course first.'} />
                   </Field>
                   <Field label="Branch Code">
                     <ReadOnly value={branch?.code || form.branchCode} placeholder="Resolved from selected branch" />
                   </Field>
                   <Field label="Semester *" error={errors.semesterId}>
-                    <SearchableSelect label="Semester" value={form.semesterId} options={(editMode && !semesters.some((item) => String(item.id) === String(form.semesterId)) && form.semesterId ? [...semesters, { id: form.semesterId, name: form.semester }] : semesters).map((item) => ({ id: item.id, value: item.id, name: item.name, code: item.academicYearName }))} onChange={setSemester} disabled={editMode || !form.branchId} placeholder={form.branchId ? 'Select Semester' : 'Select Branch first'} searchPlaceholder="Search semester..." noOptionsMessage="No configured semesters found." />
+                    <SearchableSelect label="Semester" value={form.semesterId} options={(editMode && !semesters.some((item) => String(item.id) === String(form.semesterId)) && form.semesterId ? [...semesters, { id: form.semesterId, name: form.semester }] : semesters).map((item) => ({ id: item.id, value: item.id, name: item.name, code: item.academicYearName }))} onChange={setSemester} loading={semesterLoading} disabled={editMode || !form.branchId} placeholder={form.branchId ? 'Select Semester' : 'Select Branch first'} searchPlaceholder="Search semester..." noOptionsMessage={semesterLoading ? 'Loading configured semesters...' : errors.semesterId || (form.branchId ? 'No semesters are configured for this course, branch, and academic year.' : 'Select a branch first.')} />
                   </Field>
                   <Field label="Academic Year">
                     <ReadOnly value={activeYear?.name || form.academicYear} placeholder="Resolved from active year" />
