@@ -659,14 +659,15 @@ const normalizeAcademicYearRecord = (year = {}) => {
   const todayKey = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`
   const dateCurrent = Boolean(startDate && endDate && todayKey >= String(startDate).slice(0, 10) && todayKey <= String(endDate).slice(0, 10))
   const hasActiveValue = rawActive !== undefined && rawActive !== null && rawActive !== ''
-  const isInactive = rawActive === false || String(rawActive ?? '').trim().toLowerCase() === 'false' || (hasActiveValue && Number(rawActive) === 0) || ['inactive', 'deactive', 'deactivated', 'disabled', 'archived'].includes(status)
-  const isCurrent = activeFlag || currentFlag || ['active', 'current', '1'].includes(status) || (!isInactive && dateCurrent)
+  const isInactive = rawActive === false || String(rawActive ?? '').trim().toLowerCase() === 'false' || (hasActiveValue && Number(rawActive) === 0) || ['0', 'false', 'inactive', 'deactive', 'deactivated', 'disabled', 'archived'].includes(status) || Number(year.isArchived ?? year.IsArchived) === 1 || Boolean(year.deletedAt ?? year.DeletedAt)
+  const isCurrent = !isInactive && (activeFlag || currentFlag || ['active', 'current', '1'].includes(status) || dateCurrent)
   return {
     ...year,
     id: id === null || id === undefined ? '' : String(id),
     academicYearId: id,
     name: String(name ?? '').trim(),
     academicYearName: String(name ?? '').trim(),
+    backendStatus: rawStatus,
     startDate,
     endDate,
     status: isCurrent ? 'Active' : isInactive ? 'Inactive' : rawStatus,

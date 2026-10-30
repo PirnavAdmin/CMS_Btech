@@ -17,6 +17,7 @@ import { academicYearApi, branchApi, courseApi, sectionAllocationApi, sectionApi
 import { getSemesters } from '../../auth/collegeApi'
 import { getActiveAcademicYears, normalizeAcademicYear } from '../../utils/academicYearUtils'
 import { branchTypeLabel } from '../../utils/semesterUtils'
+import { sectionSemesterOptions, isSectionYearActive } from '../../utils/sectionMappingOptions'
 import eventBus, { ERP_EVENTS } from '../../services/eventBus'
 import facultyService, { normalizeFaculty } from '../../services/facultyService'
 import studentService from '../../services/studentService'
@@ -336,31 +337,44 @@ function SectionForm({ editMode = false }) {
   const semesterRequest = useRef(0)
   const legacy = useRef({})
   const [formTab, setFormTab] = useState(editMode ? 'details' : 'mapping')
-  const scopedCourses = useMemo(() => scopeRecords(masters.courses).filter(item => (item.status !== 'Inactive' && item.status !== 0 && item.status !== false && item.isActive !== false) || (editMode && String(item.id) === String(form.courseId))), [scopeRecords, masters.courses, editMode, form.courseId])
+  const scopedCourses = useMemo(() => scopeRecords(masters.courses).filter(item => (item.status !== 'Inactive' && item.status !== 0 && item.status !== false && item.isActive !== false) || String(item.id) === String(form.courseId)), [scopeRecords, masters.courses, form.courseId])
   const course = scopedCourses.find((item) => String(item.id) === String(form.courseId))
-  const branches = useMemo(() => scopeRecords(masters.branches).filter((item) => String(item.courseId) === String(form.courseId) && ((item.status !== 'Inactive' && item.status !== 0 && item.status !== false && item.isActive !== false) || (editMode && String(item.id) === String(form.branchId)))), [scopeRecords, masters.branches, form.courseId, editMode, form.branchId])
+  const branches = useMemo(() => scopeRecords(masters.branches, { courses: masters.courses }), [scopeRecords, masters.branches, masters.courses])
   const branch = branches.find((item) => String(item.id) === String(form.branchId))
-  const activeYears = useMemo(() => getActiveAcademicYears(masters.years), [masters.years])
-  const activeYear = editMode ? masters.years.find((item) => String(item.id) === String(form.academicYearId)) : (masters.years.find(y => String(y.id) === String(selectedAcademicYearId)) || selectedAcademicYear || activeYears.find((item) => String(item.id) === String(form.academicYearId)) || activeYears[0])
-  const semesters = useMemo(() => scopeRecords(masters.semesters).filter((item) => (!form.courseId || (!item.courseId || String(item.courseId) === String(form.courseId))) && (!form.branchId || (!item.branchId || String(item.branchId) === String(form.branchId))) && (!form.academicYearId || !item.academicYearId || String(item.academicYearId) === String(form.academicYearId)) && ((item.status !== 'Inactive' && item.status !== 0 && item.status !== false && item.isActive !== false) || (editMode && String(item.id) === String(form.semesterId)))), [scopeRecords, masters.semesters, form.courseId, form.branchId, form.academicYearId, editMode, form.semesterId])
+  const activeYears = useMemo(() => masters.years.filter(isSectionYearActive), [masters.years])
+  const academicYearOptions = useMemo(() => {
+    const options = new Map(masters.years.map(item => [String(item.id), item]))
+    const contextId = selectedAcademicYear?.id ?? selectedAcademicYear?.academicYearId
+    if (contextId && !options.has(String(contextId))) {
+      options.set(String(contextId), { ...selectedAcademicYear, id: String(contextId), name: yearName(selectedAcademicYear) })
+    }
+    if (form.academicYearId && form.academicYear && !options.has(String(form.academicYearId))) {
+      options.set(String(form.academicYearId), { id: String(form.academicYearId), name: form.academicYear })
+    }
+    return [...options.values()]
+  }, [masters.years, selectedAcademicYear, form.academicYearId, form.academicYear])
+  const activeYear = masters.years.find((item) => String(item.id) === String(form.academicYearId)) || (form.academicYear ? { id: form.academicYearId, name: form.academicYear } : null) || (!editMode ? (masters.years.find(y => String(y.id) === String(selectedAcademicYearId)) || selectedAcademicYear || activeYears[0]) : null)
+  const semesters = useMemo(() => scopeRecords(masters.semesters, { courses: masters.courses, branches: masters.branches }).filter((item) => (!form.courseId || !item.courseId || String(item.courseId) === String(form.courseId)) && (!form.branchId || !item.branchId || String(item.branchId) === String(form.branchId))), [scopeRecords, masters.semesters, masters.courses, masters.branches, form.courseId, form.branchId])
+  const semesterOptions = useMemo(() => sectionSemesterOptions(semesters, { courseId: form.courseId, branchId: form.branchId, academicYearId: form.academicYearId, selectedId: form.semesterId }), [semesters, form.courseId, form.branchId, form.academicYearId, form.semesterId])
   const semester = semesters.find((item) => String(item.id) === String(form.semesterId))
   const assignedCount = Math.max(Number(form.currentStrength || 0), assignments.filter((item) => String(item.sectionId) === String(id)).length)
   const teacherCandidates = useMemo(() => teacherCandidatesForBranch(faculty, branch?.name || form.branch, branch?.code || form.branchCode, branch?.id || form.branchId), [faculty, branch, form.branch, form.branchCode, form.branchId])
-  const noActiveYear = !editMode && !selectedAcademicYearId && activeYears.length === 0
-  const yearWarning = noActiveYear ? 'No active academic year is configured.' : ''
-  const canOpenDetailsTab = Boolean(form.courseId && form.branchId && form.semesterId && form.academicYearId)
+  const validAcademicYear = activeYears.find(item => String(item.id) === String(form.academicYearId))
+  const noActiveYear = !editMode && activeYears.length === 0
+  const yearWarning = noActiveYear ? 'No active academic year is configured. Activate an academic year before creating a section.' : !editMode && form.academicYearId && !validAcademicYear ? 'Choose an active academic year. The selected year is missing or inactive.' : ''
+  const canOpenDetailsTab = Boolean(form.courseId && form.branchId && form.semesterId && form.academicYearId && (editMode || validAcademicYear))
 
   const fetchSemesters = useCallback(async (branchId, academicYearId, courseId) => {
     const request = ++semesterRequest.current
     setMasters((current) => ({ ...current, semesters: [] }))
-    if (!branchId || !academicYearId) return
+    if (!branchId) return
     try {
       // The semester search route is returning HTTP 502 in the current API
       // deployment. The list route is healthy, so fetch once and scope it here.
       const response = await getSemesters()
       const matches = (actual, expected) => !actual || String(actual) === String(expected)
       const scopedSemesters = responseList(response).map(normalizeSemester).filter((item) =>
-        matches(item.courseId, courseId) && matches(item.branchId, branchId) && matches(item.academicYearId, academicYearId)
+        matches(item.courseId, courseId) && matches(item.branchId, branchId)
       )
       if (request === semesterRequest.current) setMasters((current) => ({ ...current, semesters: scopedSemesters }))
     } catch (error) { if (request === semesterRequest.current) setErrors((current) => ({ ...current, semesterId: apiError(error, 'Unable to load semesters.') })) }
@@ -382,7 +396,15 @@ function SectionForm({ editMode = false }) {
     setFormTab('mapping')
   }, [selectedCollegeId, editMode])
   const setCourse = async (courseId) => { semesterRequest.current += 1; const selectedCourse = scopedCourses.find((item) => String(item.id) === String(courseId)); setForm((current) => ({ ...current, courseId, course: selectedCourse?.name || '', courseCode: selectedCourse?.code || '', branchId: '', branch: '', branchCode: '', semesterId: '', semester: '', name: '', code: '' })); setMasters((current) => ({ ...current, semesters: [] })); setErrors({}) }
-  const setBranch = async (branchId) => { const selectedBranch = masters.branches.find((item) => String(item.id) === String(branchId)); const yearId = form.academicYearId || selectedAcademicYearId || activeYear?.id; setForm((current) => ({ ...current, branchId, branch: selectedBranch?.name || '', branchCode: selectedBranch?.code || '', semesterId: '', semester: '', name: '', code: '', academicYearId: yearId })); setErrors({}); await fetchSemesters(branchId, yearId, form.courseId) }
+  const setBranch = async (branchId) => {
+    const selectedBranch = branches.find((item) => String(item.id) === String(branchId))
+    const courseId = selectedBranch?.courseId || form.courseId
+    const linkedCourse = masters.courses.find((item) => String(item.id) === String(courseId))
+    const yearId = selectedAcademicYearId || activeYear?.id || form.academicYearId
+    setForm((current) => ({ ...current, courseId, course: linkedCourse?.name || '', courseCode: linkedCourse?.code || '', branchId, branch: selectedBranch?.name || '', branchCode: selectedBranch?.code || '', semesterId: '', semester: '', name: '', code: '', academicYearId: yearId, academicYear: '' }))
+    setErrors({})
+    await fetchSemesters(branchId, yearId, courseId)
+  }
   const setSemester = (semesterId) => {
     const selectedSemester = masters.semesters.find((item) => String(item.id) === String(semesterId))
     setForm((current) => {
@@ -415,7 +437,56 @@ function SectionForm({ editMode = false }) {
   }
   const setField = (key, value) => { setForm((current) => ({ ...current, [key]: key === 'code' ? value.toUpperCase() : value })); setErrors((current) => ({ ...current, [key]: '' })) }
   const validate = () => { const next = {}; ['courseId', 'branchId', 'semesterId', 'name', 'code', 'status'].forEach((key) => { if (!String(form[key] || '').trim()) next[key] = 'Required.' }); if (!form.academicYearId && !selectedAcademicYearId) next.academicYearId = yearWarning || 'An academic year is required.'; if (!editMode && !semester) next.semesterId = 'Select a configured semester.'; if (!Number.isInteger(Number(form.capacity)) || Number(form.capacity) < 1 || Number(form.capacity) > 120) next.capacity = 'Capacity must be a whole number from 1 to 120.'; if (editMode && Number(form.capacity) < assignedCount) next.capacity = `Capacity cannot be below the ${assignedCount} assigned students.`; if (!/^[A-Z0-9]+(?:-[A-Z0-9]+)*$/.test(String(form.code || '').trim().toUpperCase())) next.code = 'Use uppercase letters, numbers, and single hyphens only.'; const mapping = { ...form, academicYearId: form.academicYearId || selectedAcademicYearId || activeYear?.id }; if (sections.some((item) => String(item.id) !== String(id) && sameMapping(item, mapping) && item.name.trim().toLowerCase() === form.name.trim().toLowerCase())) next.name = 'This section already exists for this academic mapping.'; if (sections.some((item) => String(item.id) !== String(id) && sameMapping(item, mapping) && item.code.trim().toLowerCase() === form.code.trim().toLowerCase())) next.code = 'This section code already exists for this academic mapping.'; setErrors(next); if (Object.keys(next).length) showWarning('Correct the highlighted fields before saving the section.'); return !Object.keys(next).length }
-  const submit = async (event) => { event.preventDefault(); if (saving || !validate()) return; setSaving(true); try { const payload = { ...form, collegeId: branch?.collegeId || course?.collegeId || selectedCollegeId || selectedCollege?.collegeId || selectedCollege?.id || form.collegeId, departmentId: branch?.departmentId || course?.departmentId || form.departmentId || null, academicYearId: form.academicYearId || selectedAcademicYearId || activeYear?.id, academicYear: activeYear?.name || form.academicYear, ...legacy.current, capacity: Number(form.capacity) }; if (editMode) { const currentStudents = await sectionAssignmentApi.listBySection(id); if (payload.status === 'Inactive' && currentStudents.length > 0) throw new Error(`Cannot deactivate section "${payload.name}". ${currentStudents.length} student${currentStudents.length === 1 ? '' : 's'} are currently enrolled. Transfer or unassign students first.`); if (payload.capacity < currentStudents.length) throw new Error('Capacity cannot be below the current assigned student count.'); const capacityCheck = await sectionApi.validateCapacity(id, payload.capacity); if (capacityCheck === false || capacityCheck?.isValid === false) throw new Error(capacityCheck?.message || 'The requested capacity is not allowed.'); await sectionApi.update(id, payload); await sectionApi.updateStatus(id, payload.status) } else { const created = await sectionApi.create(payload); rememberCreated('sections', created); if (payload.status === 'Inactive') await sectionApi.updateStatus(created.id, payload.status) }; if (payload.room) { roomService.allocateRoom(payload.room, payload.name || 'Section') }; eventBus.emit(ERP_EVENTS.ACADEMIC_UPDATED, { form }); setNotice(`Section ${editMode ? 'updated' : 'created'} successfully.`); setTimeout(() => navigate('/section-management'), 700) } catch (error) { setErrors((current) => ({ ...current, form: apiError(error, 'Unable to save section.') })) } finally { setSaving(false) } }
+  const submit = async (event) => {
+    event.preventDefault()
+    if (saving || !validate()) return
+    setSaving(true)
+    try {
+      let verifiedYear = activeYear
+      if (!editMode) {
+        const freshYears = (await academicYearApi.getAll()).map(normalizeAcademicYear)
+        setMasters(current => ({ ...current, years: freshYears }))
+        verifiedYear = freshYears.find(item => String(item.id) === String(form.academicYearId) && isSectionYearActive(item))
+        if (!verifiedYear) {
+          setErrors(current => ({ ...current, academicYearId: 'Select an active academic year.', form: 'The selected academic year is missing or inactive. Choose an active year in Academic Mapping.' }))
+          setFormTab('mapping')
+          return
+        }
+      }
+      const payload = {
+        ...form,
+        collegeId: branch?.collegeId || course?.collegeId || selectedCollegeId || selectedCollege?.collegeId || selectedCollege?.id || form.collegeId,
+        departmentId: branch?.departmentId || course?.departmentId || form.departmentId || null,
+        academicYearId: verifiedYear?.id || form.academicYearId,
+        academicYear: verifiedYear?.name || form.academicYear,
+        ...legacy.current,
+        capacity: Number(form.capacity),
+      }
+      if (editMode) {
+        const currentStudents = await sectionAssignmentApi.listBySection(id)
+        if (payload.status === 'Inactive' && currentStudents.length > 0) throw new Error(`Cannot deactivate section "${payload.name}". ${currentStudents.length} student${currentStudents.length === 1 ? '' : 's'} are currently enrolled. Transfer or unassign students first.`)
+        if (payload.capacity < currentStudents.length) throw new Error('Capacity cannot be below the current assigned student count.')
+        const capacityCheck = await sectionApi.validateCapacity(id, payload.capacity)
+        if (capacityCheck === false || capacityCheck?.isValid === false) throw new Error(capacityCheck?.message || 'The requested capacity is not allowed.')
+        await sectionApi.update(id, payload)
+        await sectionApi.updateStatus(id, payload.status)
+      } else {
+        const created = await sectionApi.create(payload)
+        rememberCreated('sections', created)
+        if (payload.status === 'Inactive') await sectionApi.updateStatus(created.id, payload.status)
+      }
+      if (payload.room) roomService.allocateRoom(payload.room, payload.name || 'Section')
+      eventBus.emit(ERP_EVENTS.ACADEMIC_UPDATED, { form })
+      setNotice(`Section ${editMode ? 'updated' : 'created'} successfully.`)
+      setTimeout(() => navigate('/section-management'), 700)
+    } catch (error) {
+      const message = apiError(error, 'Unable to save section.')
+      setErrors(current => ({ ...current, form: message, ...(/academic year.*(?:inactive|exist)/i.test(message) ? { academicYearId: 'Choose an active academic year.' } : {}) }))
+      if (/academic year.*(?:inactive|exist)/i.test(message)) setFormTab('mapping')
+    } finally {
+      setSaving(false)
+    }
+  }
   if (loading) return <Page><Empty icon={FiClock} title="Loading section form..." /></Page>
   const selectedTeacher = teacherCandidates.find((item) => String(item.employeeProfileId) === String(form.facultyAdvisorEmployeeProfileId))
   const selectedCourseObj = scopedCourses.find((item) => String(item.id) === String(form.courseId))
@@ -470,16 +541,26 @@ function SectionForm({ editMode = false }) {
                     <ReadOnly value={course?.code || form.courseCode} placeholder="Resolved from selected course" />
                   </Field>
                   <Field label="Branch *" error={errors.branchId}>
-                    <SearchableSelect label="Branch" value={form.branchId} options={branches.map((item) => ({ id: item.id, value: item.id, name: item.name, code: item.code }))} onChange={setBranch} disabled={editMode || !form.courseId} placeholder={form.courseId ? 'Select Branch' : 'Select Course first'} searchPlaceholder="Search branch name or code..." />
+                    <SearchableSelect label="Branch" value={form.branchId} options={branches.map((item) => ({ id: item.id, value: item.id, name: item.name, code: item.code }))} onChange={setBranch} disabled={editMode} placeholder="Select Branch" searchPlaceholder="Search branch name or code..." />
                   </Field>
                   <Field label="Branch Code">
                     <ReadOnly value={branch?.code || form.branchCode} placeholder="Resolved from selected branch" />
                   </Field>
                   <Field label="Semester *" error={errors.semesterId}>
-                    <SearchableSelect label="Semester" value={form.semesterId} options={(editMode && !semesters.some((item) => String(item.id) === String(form.semesterId)) && form.semesterId ? [...semesters, { id: form.semesterId, name: form.semester }] : semesters).map((item) => ({ id: item.id, value: item.id, name: item.name, code: item.academicYearName }))} onChange={setSemester} disabled={editMode || !form.branchId} placeholder={form.branchId ? 'Select Semester' : 'Select Branch first'} searchPlaceholder="Search semester..." noOptionsMessage="No configured semesters found." />
+                    <ProjectSelect aria-label="Semester" value={form.semesterId} onChange={(event) => setSemester(event.target.value)} disabled={editMode || !form.branchId}>
+                      <option value="">{form.branchId ? 'Select Semester' : 'Select Branch first'}</option>
+                      {semesterOptions.map((item) => <option key={item.number} value={item.id || `unconfigured-${item.number}`} disabled={!item.configured}>{item.name}</option>)}
+                      {editMode && form.semesterId && !semesterOptions.some((item) => String(item.id) === String(form.semesterId)) && <option value={form.semesterId}>{form.semester}</option>}
+                    </ProjectSelect>
+                    {form.branchId && semesterOptions.some((item) => !item.configured) && <small>Configure missing semesters in Semester Management to enable them here.</small>}
                   </Field>
-                  <Field label="Academic Year">
-                    <ReadOnly value={activeYear?.name || form.academicYear} placeholder="Resolved from active year" />
+                  <Field label="Academic Year *" error={errors.academicYearId}>
+                    {editMode ? <ReadOnly value={form.academicYear || activeYear?.name} /> : <SearchableSelect label="Academic Year" value={form.academicYearId || ''} options={academicYearOptions.map(item => ({ id: item.id, name: item.name }))} onChange={(academicYearId) => {
+                      const selectedYear = academicYearOptions.find(item => String(item.id) === String(academicYearId))
+                      setForm(current => ({ ...current, academicYearId, academicYear: selectedYear?.name || '' }))
+                      setErrors(current => ({ ...current, academicYearId: '', form: '' }))
+                    }} placeholder="Select Academic Year" noOptionsMessage="No academic years found." />}
+                    {noActiveYear && <Link to="/academic-year-management">Manage Academic Years</Link>}
                   </Field>
                 </div>
               </section>

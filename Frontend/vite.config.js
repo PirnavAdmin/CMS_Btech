@@ -4,12 +4,12 @@ import react from '@vitejs/plugin-react'
 // https://vite.dev/config/
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '')
-  const baseUrl = (env.VITE_API_BASE_URL || 'https://clarity-math-delouse.ngrok-free.dev').trim().replace(/\/+$/, '')
+  const baseUrl = (env.VITE_API_BASE_URL || 'https://stagnant-craftily-paving.ngrok-free.dev').trim().replace(/\/+$/, '')
   return {
   plugins: [react()],
   test: {
     environment: 'jsdom',
-    include: ['src/features/faculty/**/*.vitest.test.{js,jsx}', 'src/pages/semester-management/**/*.vitest.test.{js,jsx}'],
+    include: ['src/features/faculty/**/*.vitest.test.{js,jsx}', 'src/pages/semester-management/**/*.vitest.test.{js,jsx}', 'src/pages/section-management/**/*.vitest.test.{js,jsx}'],
   },
   resolve: {
     dedupe: ['react', 'react-dom'],
