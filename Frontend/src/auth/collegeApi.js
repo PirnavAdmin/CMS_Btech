@@ -1,6 +1,7 @@
 import { GENERIC_ERROR_MESSAGE, userErrorMessage } from '../utils/userError.js'
 import { resolveCollegeLogo } from '../utils/collegeLogo'
 import { getAccessToken } from './auth'
+import { collegeRequest } from '../utils/collegeRequest.js'
 import { createApiUnavailableError, notifyApiUnavailable } from '../api/apiFailureNotice'
 import { selectedCollegeId } from '../utils/collegeScope.js'
 const cleanUrl = (url) => (url || "").replace(/\/+$/, "");
@@ -50,18 +51,22 @@ const collegesBaseUrl = cleanUrl(import.meta.env.VITE_API_BASE_URL_COLLEGES) || 
 const academicBaseUrl = cleanUrl(import.meta.env.VITE_API_BASE_URL_ACADEMIC) || commonBaseUrl;
 const settingsBaseUrl = cleanUrl(import.meta.env.VITE_API_BASE_URL_SETTINGS) || commonBaseUrl;
 
-const createClient = (baseUrl, prefix) => {
+const createClient = (baseUrl, prefix, scopeCollege = false) => {
   const request = async (path, options = {}) => {
     const token = localStorage.getItem("btech-access-token") || sessionStorage.getItem("btech-access-token");
+    const scoped = scopeCollege
+      ? collegeRequest(`${baseUrl}${prefix}${path}`, options)
+      : { url: `${baseUrl}${prefix}${path}`, options };
     let response;
     try {
-      response = await fetch(`${baseUrl}${prefix}${path}`, {
-        ...options,
+      response = await fetch(scoped.url, {
+        ...scoped.options,
+        ...(scopeCollege && !options.method ? { cache: 'no-store' } : {}),
         headers: {
           ...(options.body instanceof FormData ? {} : { "Content-Type": "application/json" }),
           "ngrok-skip-browser-warning": "true",
           ...(token ? { Authorization: `Bearer ${token}` } : {}),
-          ...options.headers,
+          ...scoped.options.headers,
         },
       });
     } catch {
@@ -94,7 +99,7 @@ const API = createClient(collegesBaseUrl, "/api/v1");
 const COLLEGE_LOGO_API = createClient(collegesBaseUrl, "/api/College");
 const ACADEMIC_API = createClient(academicBaseUrl, "/api/v1");
 const SETTINGS_API = createClient(settingsBaseUrl, "/api");
-const SEMESTER_API = createClient(academicBaseUrl, "/api");
+const SEMESTER_API = createClient(academicBaseUrl, "/api", true);
 const academicParams = params => {
   const collegeId = selectedCollegeId()
   return collegeId ? { ...params, collegeId } : params
