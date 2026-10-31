@@ -203,6 +203,8 @@ namespace BTech.DTOs.StudentAdmission
         public DateTime UpdatedAt { get; set; }
 
         public JsonElement? FormData { get; set; }
+        public long? FeeStructureId { get; set; }
+        public BTech.DTOs.Fees.AdmissionFeePlanSnapshot? AcademicFeePlan { get; set; }
     }
 
     public sealed class StudentAdmissionPagedResponseDto
