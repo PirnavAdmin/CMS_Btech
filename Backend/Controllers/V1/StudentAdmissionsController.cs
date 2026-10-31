@@ -12,15 +12,21 @@ namespace BTech.Controllers.V1
     public class StudentAdmissionsController : ControllerBase
     {
         private readonly IStudentAdmissionService _service;
+        private readonly BTech.Services.Fees.AdmissionFeePlanCoordinator _fees;
         private readonly ILogger<StudentAdmissionsController> _logger;
 
         public StudentAdmissionsController(
             IStudentAdmissionService service,
-            ILogger<StudentAdmissionsController> logger)
+            ILogger<StudentAdmissionsController> logger, BTech.Services.Fees.AdmissionFeePlanCoordinator fees)
         {
             _service = service;
+            _fees = fees;
             _logger = logger;
         }
+
+        [HttpGet("{admissionId:long}/fee-plan")]
+        public async Task<IActionResult> GetAssignedFeePlan(long admissionId) =>
+            Ok(new { success = true, data = await _fees.GetAuthorizedAsync(admissionId) });
 
         // GET /api/v1/student-admissions
         [HttpGet]

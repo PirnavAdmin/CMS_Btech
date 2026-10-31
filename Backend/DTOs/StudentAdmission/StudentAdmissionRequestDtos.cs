@@ -46,6 +46,11 @@ namespace BTech.DTOs.StudentAdmission
 
         // Frontend academic contract aliases / mappings.
         public string? Quota { get; set; }
+        public string? StudentCategory { get; set; }
+        [JsonNumberHandling(JsonNumberHandling.AllowReadingFromString)]
+        public long? FeeStructureId { get; set; }
+        public int? FeePlanVersion { get; set; }
+        [MaxLength(500)] public string? FeePlanChangeReason { get; set; }
         public string? QuotaOther { get; set; }
         public long? CollegeId { get; set; }
         public long? DepartmentId { get; set; }

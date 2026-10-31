@@ -49,7 +49,7 @@ import {
   tenDigitMobile,
 } from '../../../utils/studentCanonicalModel'
 import { useAcademic } from '../../../context/AcademicContext'
-import { readFeeWorkspace, readStructures, readHostelStructures, readTransportStructures, feeTotal, feeMoney } from '../../../services/feeStructureService'
+import { readFeeWorkspace, readStructures, readHostelStructures, readTransportStructures, matchingAdmissionFeeStructures, feeTotal, feeMoney } from '../../../services/feeStructureService'
 import './StudentAdmission.css'
 
 
@@ -155,56 +155,20 @@ const matchingFeeStructures = (academic = {}, admission = {}) => {
       }
     }
   } catch {}
-  try {
-    const legacy = readStructures();
-    if (Array.isArray(legacy)) {
-      candidates = [...candidates, ...legacy];
-    }
-  } catch {}
+  try { candidates = [...candidates, ...readStructures(collegeId)]; } catch {}
 
-  const activePlans = [...new Map(candidates.map(plan => [String(plan.id), plan])).values()].filter(s => {
-    if (!['Published', 'Active', 'Approved'].includes(s.status)) return false;
-    const cat = String(s.domain || s.category || s.facilityType || '').toLowerCase();
-    if (cat === 'hostel' || cat === 'transport') return false;
-    const name = String(s.name || s.planName || '').toLowerCase();
-    if ((name.includes('hostel') || name.includes('transport')) && (!s.courseId && !s.courseName && !s.branchId && !s.branchName)) return false;
-    return true;
-  });
-  if (!activePlans.length) return [];
-
-  const same = (a, b) => {
-    if (!a || !b) return false;
-    const sa = String(a).trim().toLowerCase();
-    const sb = String(b).trim().toLowerCase();
-    return sa === sb || sa.includes(sb) || sb.includes(sa);
+  // Admission uses the same exact scope matcher as fee-plan assignment. The
+  // admission wizard stores display names alongside IDs, so pass both forms.
+  const scopedAcademic = {
+    ...academic,
+    academicYear: academic.academicYear || academic.academicYearName,
+    course: academic.courseId || academic.course,
+    branch: academic.branchId || academic.branch,
+    semester: academic.semesterId || academic.semester,
+    quota: academic.quota || academic.studentCategory,
   };
-
-  return activePlans.filter(s => {
-    const sCourse = s.courseId || s.courseName;
-    const aCourse = academic.courseId || academic.course;
-    if (sCourse && aCourse && !same(sCourse, aCourse)) return false;
-
-    const sBranch = s.branchId || s.branchName;
-    const aBranch = academic.branchId || academic.branch;
-    if (sBranch && aBranch && !same(sBranch, aBranch)) return false;
-
-    const sYear = s.academicYearId || s.academicYearName;
-    const aYear = academic.academicYearId || academic.academicYear;
-    if (sYear && aYear) {
-      const matchYear = same(sYear, aYear) || String(sYear).slice(0, 4) === String(aYear).slice(0, 4);
-      if (!matchYear) return false;
-    }
-
-    if (s.batch && admission.batch && !same(s.batch, admission.batch)) {
-      return false;
-    }
-
-    if (s.applicableTo === 'Selected Category' && s.category && academic.quota && !same(s.category, academic.quota)) {
-      return false;
-    }
-
-    return true;
-  });
+  const uniquePlans = [...new Map(candidates.filter(plan => plan?.id != null).map(plan => [String(plan.id), plan])).values()];
+  return matchingAdmissionFeeStructures(uniquePlans, scopedAcademic, { ...admission, collegeId });
 };
 const findMatchingFeeStructure = (academic, admission, selectedId) => {
   const plans = matchingFeeStructures(academic, admission);

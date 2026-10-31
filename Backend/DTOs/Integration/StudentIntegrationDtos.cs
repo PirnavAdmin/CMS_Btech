@@ -58,6 +58,9 @@ namespace BTech.DTOs.Integration
 
     public sealed class AdmissionFeeStructureDetailDto
     {
+        public BTech.DTOs.Fees.AdmissionFeePlanSnapshot? AcademicFeePlan { get; set; }
+        public decimal OtherFee { get; set; }
+        public List<BTech.DTOs.Fees.AcademicFeeInstallment> PaymentSchedule { get; set; } = new();
         public long AdmissionId { get; set; }
         public long? FeeStructureId { get; set; }
         public long? AcademicYearId { get; set; }
@@ -87,6 +90,8 @@ namespace BTech.DTOs.Integration
 
     public sealed class AdmissionFeeSummaryDto
     {
+        public BTech.DTOs.Fees.AdmissionFeePlanSnapshot? AcademicFeePlan { get; set; }
+        public decimal OtherFee { get; set; }
         public long AdmissionId { get; set; }
         public decimal TuitionFee { get; set; }
         public decimal AdmissionFee { get; set; }

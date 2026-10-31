@@ -5,7 +5,7 @@ import { getUserRole } from '../auth/auth'
 import { ROLES } from '../auth/roles'
 import { useAcademic } from '../context/AcademicContext'
 import './Sidebar.css'
-import { feeNavigation, feeNavigationItem, isFeeRoute } from '../utils/feeNavigation'
+import { feeNavigationItem, isFeeRoute } from '../utils/feeNavigation'
 import { collegeLogoValue } from '../utils/collegeLogo'
 import { cacheCollegeLogo, fetchCollegeLogo, getCollegeById, getCollegeLogoUrl, getColleges, isBackendCollegeLogo, readCachedCollegeLogo, unwrapCollegeRecord } from '../auth/collegeApi'
 
@@ -202,7 +202,11 @@ export default function Sidebar({ open = false, onClose = () => {}, collapsed = 
             <FiCreditCard aria-hidden="true" /><span>Fee Management</span><FiChevronDown className="sidebar-disclosure__chevron" aria-hidden="true" />
           </button>
           {!collapsed && feeManagementOpen && <div className="sidebar-submenu sidebar-fee-submenu" id="fee-management-links">
-            {feeNavigation.map(item => <Link key={item.to} to={item.to} className={`sidebar-link ${activeFeeItem === item ? 'active' : ''}`} aria-current={activeFeeItem === item ? 'page' : undefined} onClick={onClose}><span>{item.label}</span></Link>)}
+            {[
+              { to: '/fees/overview', label: 'Overview', active: activeFeeItem?.to === '/fees/overview' },
+              { to: '/fees/structures', label: 'Fee Plans', active: activeFeeItem?.to === '/fees/structures' },
+              { to: '/fees/students', label: 'Student Fees', active: activeFeeItem?.to === '/fees/students' || ['concessions', 'refunds'].includes(pathname.split('/')[2]) },
+            ].map(item => <Link key={item.to} to={item.to} className={`sidebar-link ${item.active ? 'active' : ''}`} aria-current={item.active ? 'page' : undefined} onClick={onClose}><span>{item.label}</span></Link>)}
           </div>}
         </>}
         {[ROLES.FACULTY, ROLES.STUDENT].includes(userRole) && <><p className="sidebar-section-label">Academics</p><Item to="/my-subjects" icon={FiBookOpen} tone="blue" onNavigate={onClose}>My Subjects</Item>{userRole===ROLES.FACULTY&&<><Item to="/timetable" icon={FiCalendar} tone="orange" onNavigate={onClose}>My Timetable</Item><Item to="/student-management/attendance/take" icon={FiCheckSquare} tone="green" onNavigate={onClose}>Record Attendance</Item></>}</>}

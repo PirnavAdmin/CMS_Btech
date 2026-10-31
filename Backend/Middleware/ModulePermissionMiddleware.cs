@@ -265,6 +265,7 @@ public sealed class ModulePermissionMiddleware
     private static string? ResolveModule(string path)
     {
         var p = path.ToLowerInvariant();
+        if (p.StartsWith("/api/v1/academic-fee-plans", StringComparison.Ordinal)) return "fees";
         if (p.Contains("access-governance") || p.StartsWith("/api/roles") || p.Contains("role-permission") || p.Contains("screen-exports/role")) return "roles_permissions";
         if (p.Contains("academic-year")) return "academic_years";
         if (p.Contains("dashboard")) return "dashboard";
@@ -328,6 +329,7 @@ public sealed class ModulePermissionMiddleware
     {
         if (path.Contains("export", StringComparison.OrdinalIgnoreCase) || path.Contains("download", StringComparison.OrdinalIgnoreCase)) return "export";
         var p = path.ToLowerInvariant();
+        if (method.Equals("POST", StringComparison.OrdinalIgnoreCase) && p.StartsWith("/api/v1/academic-fee-plans/", StringComparison.Ordinal)) return "edit";
         if (method.Equals("POST", StringComparison.OrdinalIgnoreCase) &&
             (p.Contains("/search") || p.Contains("/filter") || p.Contains("/summary") || p.Contains("/query") || p.Contains("/list") || p.Contains("/preview") || p.Contains("/validate")))
             return "view";

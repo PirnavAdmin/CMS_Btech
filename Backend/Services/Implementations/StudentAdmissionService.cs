@@ -3,6 +3,9 @@ using BTech.Models;
 using BTech.Repositories.Interfaces;
 using BTech.Services.Interfaces;
 using System.Text.Json;
+using BTech.Data;
+using BTech.Services.Fees;
+using Microsoft.EntityFrameworkCore;
 
 namespace BTech.Services.Implementations
 {
@@ -10,11 +13,15 @@ namespace BTech.Services.Implementations
     {
         private readonly IStudentAdmissionRepository _repository;
         private readonly IStudentAcademicDetailsRepository _academicRepository;
+        private readonly ApplicationDbContext _db;
+        private readonly AdmissionFeePlanCoordinator _fees;
 
-        public StudentAdmissionService(IStudentAdmissionRepository repository, IStudentAcademicDetailsRepository academicRepository)
+        public StudentAdmissionService(IStudentAdmissionRepository repository, IStudentAcademicDetailsRepository academicRepository, ApplicationDbContext db, AdmissionFeePlanCoordinator fees)
         {
             _repository = repository;
             _academicRepository = academicRepository;
+            _db = db;
+            _fees = fees;
         }
 
         public async Task<StudentAdmissionResponseDto> CreateAsync(
@@ -24,6 +31,8 @@ namespace BTech.Services.Implementations
             HydrateFromFrontendForm(dto);
             Validate(dto);
 
+            await using var transaction = await _db.Database.BeginTransactionAsync();
+            await _fees.PrepareAsync(dto, null);
             var entity = BuildEntity(dto);
             entity.CreatedBy = userId;
 
@@ -33,7 +42,12 @@ namespace BTech.Services.Implementations
 
             await SaveFormDataAsync(result.AdmissionId, dto.FormData, userId);
             await PersistAcademicMappingAsync(result.AdmissionId, dto, userId);
-            return Map(await _repository.GetByIdAsync(result.AdmissionId) ?? result);
+            var snapshot = await _fees.AssignAsync(result.AdmissionId, dto, userId!.Value, null);
+            var response = Map(await _repository.GetByIdAsync(result.AdmissionId) ?? result);
+            response.AcademicFeePlan = snapshot;
+            response.FeeStructureId = snapshot?.FeeStructureId;
+            await transaction.CommitAsync();
+            return response;
         }
 
         public async Task<StudentAdmissionResponseDto?> UpdateAsync(
@@ -47,6 +61,8 @@ namespace BTech.Services.Implementations
             HydrateFromFrontendForm(dto);
             Validate(dto);
 
+            await using var transaction = await _db.Database.BeginTransactionAsync();
+            var previousStatus = await _fees.PrepareAsync(dto, admissionId);
             var entity = BuildEntity(dto);
             entity.AdmissionId = admissionId;
             entity.UpdatedBy = userId;
@@ -56,7 +72,12 @@ namespace BTech.Services.Implementations
 
             await SaveFormDataAsync(admissionId, dto.FormData, userId);
             await PersistAcademicMappingAsync(admissionId, dto, userId);
-            return Map(await _repository.GetByIdAsync(admissionId) ?? result);
+            var snapshot = await _fees.AssignAsync(admissionId, dto, userId!.Value, previousStatus);
+            var response = Map(await _repository.GetByIdAsync(admissionId) ?? result);
+            response.AcademicFeePlan = snapshot;
+            response.FeeStructureId = snapshot?.FeeStructureId;
+            await transaction.CommitAsync();
+            return response;
         }
 
         public async Task<StudentAdmissionResponseDto?> GetByIdAsync(long admissionId)
@@ -65,7 +86,11 @@ namespace BTech.Services.Implementations
                 throw new ArgumentException("Valid AdmissionId is required.");
 
             var result = await _repository.GetByIdAsync(admissionId);
-            return result == null ? null : Map(result);
+            if (result == null) return null;
+            var response = Map(result);
+            response.AcademicFeePlan = await _fees.GetAuthorizedAsync(admissionId);
+            response.FeeStructureId = response.AcademicFeePlan?.FeeStructureId;
+            return response;
         }
 
         public async Task<StudentAdmissionPagedResponseDto> GetAllAsync(
@@ -453,8 +478,9 @@ namespace BTech.Services.Implementations
                 ?? JsonText(root, "academic", "entryType");
             dto.EntryType ??= JsonText(root, "academic", "entryType");
             dto.Regulation ??= JsonText(root, "academic", "regulation");
-            dto.Batch ??= JsonText(root, "academic", "batch");
-            dto.CollegeId ??= JsonLong(root, "academic", "collegeId");
+            dto.Batch ??= JsonText(root, "academic", "batch") ?? JsonText(root, "admission", "batch");
+            dto.StudentCategory ??= JsonText(root, "academic", "studentCategory");
+            dto.CollegeId ??= JsonLong(root, "academic", "collegeId") ?? JsonLong(root, "admission", "collegeId");
             dto.DepartmentId ??= JsonLong(root, "academic", "departmentId");
             dto.CourseId ??= JsonLong(root, "academic", "courseId");
             dto.BranchId ??= JsonLong(root, "academic", "branchId");
