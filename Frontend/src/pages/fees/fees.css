@@ -7,9 +7,9 @@
   --fm-border: var(--border, #dce5f2);
   --fm-text: var(--text-primary, #102a4c);
   --fm-muted: var(--text-secondary, #526a86);
-  --fm-navy: #174c88;
-  --fm-primary: var(--brand, #2563eb);
-  --fm-primary-light: var(--brand-soft, #eff6ff);
+  --fm-navy: #172554;
+  --fm-primary: #6d5df6;
+  --fm-primary-light: #f5f3ff;
   --fm-teal: #0d9488;
   --fm-chart-fill: #0d948819;
   --fm-green: #10b981;
@@ -314,6 +314,7 @@
   .fm-breakdown-head, .fm-installments-head { font-size: 10px; font-weight: 700; color: var(--fm-muted); background: var(--fm-soft); }
   .fm-breakdown-row, .fm-installment-row { border-top: 1px solid var(--fm-border); }
   .fm-charge-name { font-size: 12px; font-weight: 600; overflow-wrap: anywhere; }
+  .fm-fee-head-choice { display: grid; gap: 8px; min-width: 0; }
   .fm-fee-head-input { width: 100%; min-width: 0; height: 36px !important; min-height: 36px !important; padding: 0 10px; border: 1px solid var(--fm-border); border-radius: 7px; color: var(--fm-text); background: var(--fm-surface); font: inherit; }
   .fm-fee-head-input:focus-visible { border-color: var(--fm-primary) !important; outline: none !important; box-shadow: 0 0 0 2px color-mix(in srgb, var(--fm-primary) 12%, transparent) !important; }
   .fm-amount-input-wrap { display: flex; align-items: center; gap: 6px; min-width: 0; height: 36px; padding: 0 10px; border: 1px solid var(--fm-border); border-radius: 7px; background: var(--fm-surface); overflow: hidden; }
@@ -1278,19 +1279,18 @@
 }
 #root .fm-page .fm-student-accounts-table :is(th, td):nth-child(1) { width: 17%; }
 #root .fm-page .fm-student-accounts-table :is(th, td):nth-child(2) { width: 14%; overflow-wrap: anywhere; }
-#root .fm-page .fm-student-accounts-table :is(th, td):nth-child(3) { width: 20%; min-width: 0; }
+#root .fm-page .fm-student-accounts-table :is(th, td):nth-child(3) { width: 18%; min-width: 0; }
 #root .fm-page .fm-student-accounts-table :is(th, td):nth-child(4),
 #root .fm-page .fm-student-accounts-table :is(th, td):nth-child(5),
 #root .fm-page .fm-student-accounts-table :is(th, td):nth-child(6) { width: 10%; text-align: right !important; font-variant-numeric: tabular-nums; }
-#root .fm-page .fm-student-accounts-table :is(th, td):nth-child(7) { width: 13%; text-align: center !important; }
+#root .fm-page .fm-student-accounts-table :is(th, td):nth-child(7) { width: 11%; text-align: center !important; }
 #root .fm-page .fm-student-accounts-table :is(th, td):last-child {
-  position: sticky;
-  right: 0;
-  width: 120px;
-  min-width: 120px;
+  position: static;
+  width: 96px;
+  min-width: 96px;
   z-index: 1;
   text-align: center !important;
-  box-shadow: -1px 0 0 var(--border, #334155);
+  box-shadow: none;
 }
 #root .fm-page .fm-student-accounts-table .fm-badge {
   max-width: 100%;
@@ -1301,11 +1301,15 @@
   white-space: normal;
 }
 #root .fm-page .fm-account-actions {
-  display: flex;
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: 30px;
   align-items: center;
   justify-content: center;
-  gap: 6px;
-  width: 100%;
+  gap: 8px;
+  width: max-content;
+  max-width: 100%;
+  margin-inline: auto;
 }
 #root .fm-page .fm-account-actions .table-action-btn {
   display: inline-flex !important;
@@ -4116,4 +4120,220 @@
   .fm-command-charts>section>header { align-items: start; }
   .fm-segmented { flex-wrap: wrap; }
   .fm-attention-list a { flex-wrap: wrap; }
+}
+/* Finance workspaces: compact lavender/navy enterprise surfaces. */
+#root .fm-page {
+  --fee-success: #059669;
+  --fee-warning: #d97706;
+  --fee-danger: #dc2626;
+  --fee-teal: #0891b2;
+  --fm-green: #059669;
+  --fm-amber: #d97706;
+  --fm-red: #dc2626;
+  --fm-soft: #f8f9fd;
+  --fm-shadow: 0 4px 20px #17255406;
+  display: flex; flex-direction: column; gap: 18px;
+  font-variant-numeric: tabular-nums;
+}
+
+
+#root .fm-page .fm-page-header { border: 0; border-radius: 0; padding: 0; margin: 0; min-height: 0; background: transparent; box-shadow: none; }
+#root .fm-page .fm-page-header h1 { margin: 0; font-size: 20px; line-height: 1.25; letter-spacing: -.025em; color: var(--fm-text); }
+#root .fm-page .fm-page-header p { margin: 3px 0 0; font-size: 12px; line-height: 1.4; max-width: 680px; }
+#root .fm-page .fm-heading-identity { gap: 10px; }
+#root .fm-page .fm-heading-icon { width: 34px; height: 34px; border-radius: 9px; background: #ede9fe; color: #6d5df6; box-shadow: none; }
+#root .fm-page .fm-eyebrow { font-size: 9px; letter-spacing: .14em; }
+#root .fm-page .fm-page-container, #root .fm-page .fm-create-plan-container { gap: 16px; }
+#root .fm-page :is(.fm-summary-cards-grid,.fm-kpis-grid,.fm-summary-strip) { display: grid; grid-template-columns: repeat(4,minmax(0,1fr)); gap: 12px; margin: 0; }
+#root .fm-page .fm-summary-card { position: relative; min-height: 132px; padding: 17px; border: 1px solid var(--fm-border); border-radius: 12px; box-shadow: var(--fm-shadow); overflow: hidden; transform: none; }
+#root .fm-page .fm-summary-card::after { content: ''; position: absolute; width: 76px; height: 76px; right: -24px; bottom: -34px; border: 12px solid currentColor; border-radius: 50%; opacity: .045; pointer-events: none; }
+#root .fm-page .fm-summary-card--blue { background: linear-gradient(135deg,#f5f3ff,#fff); color: #6d5df6; border-top: 3px solid #6d5df6; }
+#root .fm-page .fm-summary-card--green { background: linear-gradient(135deg,#ecfdf5,#fff); color: #059669; border-top: 3px solid #059669; }
+#root .fm-page .fm-summary-card--amber { background: linear-gradient(135deg,#fffbeb,#fff); color: #d97706; border-top: 3px solid #d97706; }
+#root .fm-page .fm-summary-card--red { background: linear-gradient(135deg,#fff1f2,#fff); color: #dc2626; border-top: 3px solid #dc2626; }
+#root .fm-page .fm-summary-card__label { font-size: 11px; color: var(--fm-muted); font-weight: 650; text-transform: none; letter-spacing: 0; }
+#root .fm-page .fm-summary-card__icon-box { width: 30px; height: 30px; border-radius: 8px; background: currentColor; }
+#root .fm-page .fm-summary-card__icon-box svg { color: #fff; width: 16px; height: 16px; }
+#root .fm-page .fm-summary-card__value { display: block; font-size: clamp(20px,1.8vw,29px); line-height: 1.25; color: var(--fm-text); margin: 8px 0 5px; letter-spacing: -.04em; overflow-wrap: anywhere; }
+#root .fm-page .fm-summary-card__meta { font-size: 10px; color: var(--fm-muted); line-height: 1.5; }
+#root .fm-page :is(.fm-trend-card,.fm-status-breakdown-card,.fm-progress-card,.fm-recent-payments-card,.fm-attention-card) { padding: 18px; border: 1px solid var(--fm-border); border-radius: 12px; background: var(--fm-surface); box-shadow: var(--fm-shadow); }
+#root .fm-page .fm-overview-grid { display: grid; grid-template-columns: minmax(0,1.65fr) minmax(280px,1fr); gap: 14px; margin: 0; }
+#root .fm-page .fm-card-header { margin-bottom: 14px; gap: 12px; flex-wrap: wrap; }
+#root .fm-page :is(.fm-card-header,.fm-workspace-heading,.fm-progress-label) h2 { font-size: 14px; letter-spacing: -.02em; }
+#root .fm-page .fm-chart-wrap { min-height: 180px; padding: 0; }
+#root .fm-page .fm-chart-empty { min-height: 190px; gap: 8px; background: linear-gradient(180deg,#f8f7ff,transparent); border-radius: 8px; }
+#root .fm-page .fm-progress-card { padding: 15px 18px; }
+#root .fm-page .fm-progress-card__header { flex-wrap: wrap; gap: 12px; }
+#root .fm-page .fm-progress-card__header > strong { font-size: 12px; }
+#root .fm-page .fm-progress-card__track { height: 7px; margin-top: 12px; background: #ede9fe; }
+#root .fm-page .fm-progress-card__fill { background: linear-gradient(90deg,#6d5df6,#0891b2); }
+#root .fm-page :is(.fm-workspace-tabs,.fm-fee-type-nav) { padding: 5px; gap: 5px; border: 1px solid var(--fm-border); border-radius: 11px; background: var(--fm-surface); }
+#root .fm-page :is(.fm-fee-type-tab,.fm-workspace-tab) { flex: 1; justify-content: center; min-height: 42px; border: 1px solid transparent; border-radius: 7px; font-size: 12px; background: transparent; }
+#root .fm-page .fm-fee-type-tab.active { border-color: color-mix(in srgb,var(--category-color) 25%,white); background: color-mix(in srgb,var(--category-color) 9%,white); }
+#root .fm-page .fm-workspace-tab.is-active { color: #6d5df6; border-color: #ddd6fe; background: #f5f3ff; }
+#root .fm-page .fm-workspace-header-row { margin: 0; flex-wrap: wrap; gap: 12px; }
+#root .fm-page .fm-plan-workspace { padding: 18px; gap: 16px; }
+#root .fm-page .course-toolbar { display: flex; gap: 8px; flex-wrap: wrap; padding: 0; align-items: center; }
+#root .fm-page .course-toolbar > :is(select,input,.searchable-select,.project-select) { flex: 1 1 130px; width: auto; min-width: 0; max-width: 210px; height: 36px; border-radius: 7px; font-size: 12px; }
+#root .fm-page .course-search { display: flex; align-items: center; gap: 8px; min-width: 170px; flex: 2 1 240px; height: 36px; padding: 0 10px; border: 1px solid var(--fm-border); border-radius: 7px; background: var(--fm-surface); }
+#root .fm-page .course-search input { width: 100%; min-width: 0; border: 0; outline: none; background: transparent; font-size: 12px; padding: 0; height: 32px; }
+#root .fm-page .fm-table-wrap { border: 1px solid var(--fm-border); border-radius: 9px; overflow: auto; max-width: 100%; }
+#root .fm-page .fm-table { border-collapse: separate; border-spacing: 0; min-width: 760px; width: 100%; table-layout: auto; }
+#root .fm-page .fm-table thead th { background: #f0edfc !important; color: #37306b !important; border: 0; border-bottom: 1px solid #ddd6fe; font-size: 10px; font-weight: 750; padding: 12px; letter-spacing: .035em; white-space: nowrap; }
+#root .fm-page .fm-table td { padding: 12px; font-size: 12px; border: 0; border-bottom: 1px solid var(--fm-border); background: var(--fm-surface); vertical-align: middle; }
+#root .fm-page .fm-table tbody tr:last-child td { border-bottom: 0; }
+#root .fm-page .fm-table tbody tr:hover td { background: var(--fm-primary-light); }
+#root .fm-page .fm-table :is(th,td).fm-text-right { text-align: right; white-space: nowrap; }
+#root .fm-page .fm-table-total-row td { background: var(--fm-soft); border-top: 1px solid var(--fm-border); }
+#root .fm-page .fm-table-footer { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 0 0; font-size: 11px; color: var(--fm-muted); }
+#root .fm-page .fm-avatar { background: #ede9fe; color: #6d5df6; width: 34px; height: 34px; border-radius: 10px; font-size: 11px; }
+#root .fm-page .fm-person { gap: 9px; }
+#root .fm-page .fm-person strong { font-size: 12px; color: var(--fm-text); }
+#root .fm-page .fm-cell-sub { margin-top: 3px; font-size: 10px; color: var(--fm-muted); }
+#root .fm-page .fm-account-actions { display: flex; align-items: center; justify-content: flex-end; gap: 5px; }
+#root .fm-page .fm-account-actions button { min-width: 30px; min-height: 30px; border-radius: 7px; }
+#root .fm-page .fm-badge { display: inline-flex; align-items: center; gap: 5px; border: 1px solid transparent; border-radius: 5px; padding: 4px 7px; font-size: 10px; font-weight: 700; line-height: 1.3; white-space: nowrap; }
+#root .fm-page .fm-badge--paid,#root .fm-page .fm-badge--approved,#root .fm-page .fm-badge--active,#root .fm-page .fm-badge--published { color: #047857; background: #ecfdf5; border-color: #a7f3d0; }
+#root .fm-page .fm-badge--partially-paid { color: #0369a1; background: #f0f9ff; border-color: #bae6fd; }
+#root .fm-page .fm-badge--pending,#root .fm-page .fm-badge--pending-approval,#root .fm-page .fm-badge--submitted { color: #92400e; background: #fffbeb; border-color: #fde68a; }
+#root .fm-page .fm-badge--overdue,#root .fm-page .fm-badge--rejected { color: #b91c1c; background: #fef2f2; border-color: #fecaca; }
+#root .fm-page .fm-badge--draft,#root .fm-page .fm-badge--inactive { color: #64748b; background: #f8fafc; border-color: #e2e8f0; }
+#root .fm-page .fm-create-layout { grid-template-columns: minmax(0,1fr) minmax(260px,310px); align-items: start; height: auto; gap: 16px; }
+#root .fm-page .fm-create-plan-container { gap: 12px; }
+#root .fm-page .fm-create-plan-container > .fm-page-header { padding: 0; border: 0; background: transparent; }
+#root .fm-page .fm-create-heading-copy { min-width: 0; }
+#root .fm-page .fm-create-back-btn { order: 2; margin: 0 0 0 auto; align-self: center; padding: 7px 10px; border: 1px solid var(--fm-border); border-radius: 7px; background: var(--fm-surface); white-space: nowrap; }
+#root .fm-page .fm-create-layout { gap: 12px; }
+#root .fm-page .fm-create-form-panel { min-width: 0; border: 1px solid var(--fm-border); border-radius: 12px; background: var(--fm-surface); overflow: clip; height: auto; }
+#root .fm-page .fm-create-form-body { height: auto; max-height: none; overflow: visible; }
+#root .fm-page .fm-plan-form-tabs { display: flex; padding: 6px 8px; gap: 4px; border-bottom: 1px solid var(--fm-border); background: var(--fm-soft); }
+#root .fm-page .fm-tab-btn { flex: 1; min-width: 0; display: flex; align-items: center; justify-content: center; gap: 6px; padding: 7px 8px; font-size: 11px; border-radius: 7px; color: var(--fm-muted); border: 1px solid transparent; }
+#root .fm-page .fm-tab-btn.active { color: #6d5df6; background: #fff; border-color: #ddd6fe; box-shadow: 0 2px 4px #17255405; }
+#root .fm-page .fm-form-tab-number { display: grid; place-items: center; width: 21px; height: 21px; border-radius: 6px; background: #e9e5f6; font-size: 10px; }
+#root .fm-page .fm-tab-btn.active .fm-form-tab-number { background: #6d5df6; color: #fff; }
+#root .fm-page .fm-form-section { padding: 14px 16px; border-bottom: 1px solid var(--fm-border); }
+#root .fm-page .fm-form-section[hidden] { display: none !important; }
+#root .fm-page .fm-section-header { gap: 8px; margin-bottom: 12px; }
+#root .fm-page .fm-section-header h2 { font-size: 14px; }
+#root .fm-page .fm-section-header p { font-size: 11px; }
+#root .fm-page .fm-section-number { font-size: 10px; color: #6d5df6; background: #ede9fe; border: 0; border-radius: 7px; width: 30px; height: 30px; }
+#root .fm-page .fm-hostel-pricing { gap: 12px; }
+#root .fm-page .fm-hostel-pricing > .fm-workspace-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 0; }
+#root .fm-page .fm-hostel-pricing > .fm-workspace-heading p { margin: 0; color: var(--fm-muted); font-size: 11px; line-height: 1.5; }
+#root .fm-page .fm-room-summary { grid-template-columns: repeat(auto-fit,minmax(150px,1fr)); }
+#root .fm-page .fm-room-price { cursor: pointer; }
+#root .fm-page .fm-hostel-pricing .fm-breakdown-container { gap: 8px; }
+#root .fm-page .fm-hostel-pricing .fm-breakdown-list { width: 100%; }
+#root .fm-page .fm-hostel-pricing .fm-breakdown-head { color: #526789; }
+#root .fm-page .fm-hostel-pricing .fm-fee-head-choice { grid-template-columns: minmax(0,1fr); }
+#root .fm-page .fm-hostel-pricing select.fm-fee-head-input { appearance: auto; cursor: pointer; }
+#root .fm-page .fm-hostel-inclusions { margin-top: 2px; }
+#root .fm-page .fm-hostel-inclusions .fs-field { gap: 6px; }
+#root .fm-page .fm-hostel-inclusions .fs-field > span:first-child { min-height: 0; }
+#root .fm-page .fm-form-grid { gap: 9px 12px; }
+#root .fm-page .fm-applicability-grid .fs-field > span:first-child { min-height: 15px; }
+#root .fm-page :is(.fs-field > span:first-child,.fs-field-label) { color: var(--fm-text); font-size: 11px; }
+#root .fm-page :is(.fs-field input,.fs-field select,.fs-field textarea) { border-color: var(--fm-border); border-radius: 7px; background: var(--fm-surface); min-height: 37px; }
+#root .fm-page :is(.fs-field input,.fs-field textarea):focus { border-color: #a78bfa; box-shadow: 0 0 0 3px #6d5df610; outline: none; }
+#root .fm-page .fm-live-preview { position: sticky; top: 16px; max-height: calc(100dvh - 120px); border-radius: 12px; height: auto; border: 1px solid var(--fm-border); box-shadow: var(--fm-shadow); background: var(--fm-surface); }
+#root .fm-page .fm-live-preview__header { padding: 12px 16px; border-top: 0; align-items: center; background: var(--fm-soft); }
+#root .fm-page .fm-live-preview__header h2 { font-size: 14px; color: var(--fm-text); }
+#root .fm-page .fm-live-preview__header p { margin-top: 3px; font-size: 11px; line-height: 1.4; }
+#root .fm-page .fm-live-preview__header .fm-badge { align-self: center; flex-shrink: 0; min-height: 0; height: auto; padding: 4px 8px; line-height: 1.3; }
+#root .fm-page .fm-live-preview__body { padding: 16px; display: flex; flex-direction: column; gap: 16px; overflow: auto; max-height: calc(100dvh - 220px); }
+#root .fm-page .fm-preview-section h4 { margin: 0 0 8px; color: var(--fm-text); font-size: 12px; text-transform: none; letter-spacing: 0; }
+#root .fm-page .fm-preview-section dl { gap: 0; }
+#root .fm-page .fm-preview-section dl > div { padding: 6px 0; border-bottom: 0; font-size: 12px; line-height: 1.4; }
+#root .fm-page .fm-preview-amount { background: var(--fm-navy); color: white; border-radius: 9px; padding: 15px; }
+#root .fm-page .fm-preview-amount :is(span,strong,h3) { color: white; }
+#root .fm-page .fm-preview-amount strong { font-size: 25px; }
+#root .fm-page .fm-preview-amount h3 { font-size: 11px; opacity: .75; }
+#root .fm-page .fm-sticky-footer { position: sticky; bottom: 0; z-index: 3; padding: 12px 16px; border-top: 1px solid var(--fm-border); background: var(--fm-surface); box-shadow: 0 -4px 14px #17255405; flex-wrap: wrap; gap: 10px; }
+#root .fm-page .fm-footer-right { display: flex; gap: 7px; flex-wrap: wrap; }
+#root .fm-page .erp-btn--primary,#root .fm-page .fm-btn-context-primary { background: #6d5df6; border-color: #6d5df6; color: white; }
+#root .fm-page .erp-btn--primary:hover:not(:disabled),#root .fm-page .fm-btn-context-primary:hover { background: #5848e7; border-color: #5848e7; }
+#root .fm-page .erp-btn:disabled { opacity: .5; cursor: not-allowed; }
+#root .fm-page .fm-dialog { border-radius: 14px; width: min(100%,680px); border: 1px solid var(--fm-border); }
+#root .fm-page .fm-dialog--wide { width: min(100%,960px); }
+#root .fm-page .fs-overlay { padding: 24px; background: #101b3b80; backdrop-filter: blur(4px); z-index: 1100; }
+#root .fm-page .fm-dialog__header { background: #f5f3ff; padding: 17px 20px; }
+#root .fm-page .fm-dialog__header h2 { font-size: 16px; color: #172554; }
+#root .fm-page .fm-dialog__body { padding: 20px; }
+#root .fm-page .fm-dialog__footer { padding: 12px 20px; background: var(--fm-surface); }
+#root .fm-page :is(.fm-empty-state,.fm-plan-empty-state) { padding: 32px 20px; border: 1px dashed #d8d2ef; border-radius: 10px; background: linear-gradient(180deg,#fbfaff,var(--fm-surface)); }
+#root .fm-page .fm-plan-empty-title { font-size: 15px; }
+#root .fm-page .fm-plan-empty-desc { font-size: 12px; max-width: 420px; margin-inline: auto; line-height: 1.6; }
+#root .fm-page .fm-error-banner { border: 1px solid #fecaca; border-left: 3px solid #dc2626; background: #fef2f2; color: #991b1b; padding: 12px 14px; border-radius: 8px; font-size: 12px; }
+#root .fm-page .fm-detail-banner { background: linear-gradient(115deg,#172554,#37306b); }
+#root .fm-page .fm-detail-section { border: 1px solid var(--fm-border); box-shadow: var(--fm-shadow); border-radius: 12px; }
+#root .fm-page .fm-detail-page .cm-profile-grid { gap: 14px; }
+:root[data-theme="dark"] #root .fm-page { --fm-primary-light: #292340; --fm-soft: #20283b; --fm-surface: #182235; --fm-border: #35405a; }
+:root[data-theme="dark"] #root .fm-page :is(.fm-summary-card,.fm-chart-empty,.fm-empty-state,.fm-plan-empty-state) { background: var(--fm-surface); }
+:root[data-theme="dark"] #root .fm-page :is(.fm-dialog__header,.fm-live-preview__header,.fm-table thead th,.fm-tab-btn.active) { background: #292340 !important; color: #ede9fe !important; }
+:root[data-theme="dark"] #root .fm-page .fm-fee-type-tab.active { background: #292340; border-color: #615282; }
+@media (max-width: 1200px) {
+  #root .fm-page .fm-create-layout { grid-template-columns: minmax(0,1fr) 260px; }
+  #root .fm-page .fm-summary-card { padding: 14px; }
+}
+@media (max-width: 1000px) {
+  #root .fm-page .fm-overview-grid { grid-template-columns: minmax(0,1fr); }
+  #root .fm-page .fm-create-layout { grid-template-columns: minmax(0,1fr); }
+  #root .fm-page .fm-live-preview { position: static; max-height: none; }
+  #root .fm-page .fm-live-preview__body { max-height: none; }
+}
+@media (max-width: 700px) {
+  #root .fm-page :is(.fm-summary-cards-grid,.fm-kpis-grid,.fm-summary-strip) { grid-template-columns: repeat(2,minmax(0,1fr)); }
+  #root .fm-page .fm-form-grid { grid-template-columns: minmax(0,1fr); }
+  #root .fm-page .fm-fee-type-nav { overflow-x: auto; flex-wrap: nowrap; }
+  #root .fm-page .fm-fee-type-tab { flex: 0 0 auto; }
+  #root .fm-page .fm-form-section { padding: 14px; }
+  #root .fm-page .fm-tab-btn { flex-direction: column; font-size: 10px; }
+  #root .fm-page .fs-overlay { padding: 10px; }
+  #root .fm-page .fm-dialog__body { padding: 14px; }
+}
+@media (prefers-reduced-motion: reduce) { #root .fm-page *,#root .fm-page *::before,#root .fm-page *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; } }
+#root .fm-page .fm-fee-type-nav { width: 100%; max-width: none; display: flex; }
+#root .fm-page :is(.fm-empty-state,.fm-plan-empty-state) { min-height: 130px; }
+#root .fm-page .fm-plan-empty-state { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; }
+
+/* Hostel fee editor: keep room pricing readable while each category stays independent. */
+#root .fm-page .fm-hostel-pricing { display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+#root .fm-page .fm-hostel-pricing > .fm-workspace-heading { align-items: center; flex-wrap: wrap; }
+#root .fm-page .fm-room-cards { display: grid; gap: 12px; min-width: 0; }
+#root .fm-page .fm-room-card { min-width: 0; padding: 14px; border: 1px solid var(--fm-border); border-radius: 10px; background: var(--fm-surface); box-shadow: 0 2px 9px #17255408; }
+#root .fm-page .fm-room-card-header { display: flex; align-items: center; gap: 12px; padding-bottom: 12px; border-bottom: 1px solid var(--fm-border); }
+#root .fm-page .fm-room-card-header > div:first-child { min-width: 0; flex: 1; }
+#root .fm-page .fm-room-card-index { display: block; margin-bottom: 3px; color: #6d5df6; font-size: 9px; font-weight: 750; letter-spacing: .08em; text-transform: uppercase; }
+#root .fm-page .fm-tab-btn.complete:not(.active) { color: #047857; }
+#root .fm-page .fm-tab-btn.complete:not(.active) .fm-form-tab-number { color: #047857; background: #d1fae5; }
+#root .fm-page .fm-tab-btn.complete .fm-form-tab-number svg { width: 12px; height: 12px; stroke-width: 3; }
+#root .fm-page .fm-room-card-header h3 { margin: 0; color: var(--fm-text); font-size: 13px; line-height: 1.35; }
+#root .fm-page .fm-room-card-header p { margin: 3px 0 0; color: var(--fm-muted); font-size: 10px; }
+#root .fm-page .fm-room-card-total { display: grid; gap: 2px; text-align: right; white-space: nowrap; }
+#root .fm-page .fm-room-card-total span { color: var(--fm-muted); font-size: 9px; }
+#root .fm-page .fm-room-card-total strong { color: var(--fm-text); font-size: 15px; }
+#root .fm-page .fm-room-remove { flex: 0 0 auto; }
+#root .fm-page .fm-room-fields { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 10px 12px; padding: 12px 0; }
+#root .fm-page .fm-room-category-field { display: grid; gap: 9px; min-width: 0; }
+#root .fm-page .fm-hostel-pricing .fm-breakdown-container { width: 100%; }
+#root .fm-page .fm-hostel-pricing .fm-fee-head-choice { display: grid; grid-template-columns: minmax(0,1fr); gap: 8px; min-width: 0; }
+#root .fm-page .fm-hostel-pricing .fm-fee-head-choice > .searchable-select { min-width: 0; width: 100%; }
+#root .fm-page .fm-hostel-pricing .fm-fee-head-choice .searchable-select__trigger { min-height: 37px; border-radius: 7px; }
+#root .fm-page .fm-room-empty { display: grid; justify-items: center; gap: 6px; padding: 22px 16px; border: 1px dashed #d8d2ef; border-radius: 9px; background: #fbfaff; text-align: center; }
+#root .fm-page .fm-room-empty-icon { display: grid; place-items: center; width: 32px; height: 32px; border-radius: 9px; background: #ede9fe; color: #6d5df6; }
+#root .fm-page .fm-room-empty strong { color: var(--fm-text); font-size: 12px; }
+#root .fm-page .fm-room-empty p { max-width: 340px; margin: 0; color: var(--fm-muted); font-size: 10px; line-height: 1.5; }
+#root .fm-page .fm-sticky-footer { position: static; z-index: auto; box-shadow: none; }
+#root .fm-page .fm-create-layout { grid-template-columns: minmax(0,1.8fr) minmax(290px,1fr); height: auto; }
+#root .fm-page .fm-live-preview { position: static; max-height: none; min-width: 0; }
+#root .fm-page .fm-live-preview__body { max-height: none; overflow: visible; }
+@media (max-width: 1000px) {
+  #root .fm-page .fm-create-layout { grid-template-columns: minmax(0,1fr); }
+}
+@media (max-width: 700px) {
+  #root .fm-page .fm-room-fields { grid-template-columns: minmax(0,1fr); }
+  #root .fm-page .fm-room-card { padding: 11px; }
+  #root .fm-page .fm-room-card-header { align-items: flex-start; flex-wrap: wrap; }
+  #root .fm-page .fm-room-card-total { margin-left: auto; }
+  #root .fm-page .fm-hostel-pricing > .fm-workspace-heading { align-items: flex-start; }
 }

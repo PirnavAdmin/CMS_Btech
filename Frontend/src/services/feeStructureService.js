@@ -210,7 +210,8 @@ export function checkDuplicateStructure(existingStructures = [], candidate) {
     String(s.batch || '').trim().toLowerCase() === String(candidate.batch || '').trim().toLowerCase() &&
     (s.cycle || 'Yearly') === (candidate.cycle || 'Yearly') &&
     (candidate.cycle !== 'Semester-wise' || String(s.semesterId || '') === String(candidate.semesterId || '')) &&
-    (candidate.applicableTo === 'All Students' || s.applicableTo === 'All Students' || String(s.category || '') === String(candidate.category || ''))
+    (s.applicableTo || (s.category ? 'Selected Category' : 'All Students')) === (candidate.applicableTo || (candidate.category ? 'Selected Category' : 'All Students')) &&
+    String(s.category || '').trim().toLowerCase() === String(candidate.category || '').trim().toLowerCase()
   ) || null
 }
 
@@ -218,6 +219,8 @@ export const feeTransitions = { Draft: ['Pending Approval'], 'Pending Approval':
 export function saveWorkflowStructure(state, value, status, actor) {
   const previous = state.structures.find(s => s.id === value.id)
   if (previous && (previous.status !== 'Draft' || state.assignments.some(a => a.structureId === previous.id))) fail('Only unassigned drafts can be edited. Create a revision instead.')
+  const duplicate = checkDuplicateStructure(state.structures, value)
+  if (duplicate) fail(`A fee structure already exists for this academic year, course, branch, batch, billing cycle and category (${duplicate.name || duplicate.id}).`)
   if (!value.name.trim()) fail('Structure name is required to save a draft.')
   if (!['Draft', 'Pending Approval'].includes(status)) fail('Submit the draft for approval before publishing.')
   if (status !== 'Draft') {
