@@ -23,6 +23,15 @@ public sealed class MarksService : IMarksService
         return _repository.EditAsync(id, r, actorId, collegeId, superAdmin);
     }
 
+    public async Task<MarkRemovalDto> DeleteAsync(long markId, long? actorId, long? collegeId, bool superAdmin)
+    {
+        RequirePositive(markId, nameof(markId));
+        ValidateActor(actorId, collegeId, superAdmin);
+        var result = await _repository.DeleteAsync(markId, actorId, collegeId, superAdmin);
+        result.RemovedAt = DateTime.SpecifyKind(result.RemovedAt, DateTimeKind.Utc);
+        return result;
+    }
+
     public Task<IReadOnlyList<MarkDto>> ListAsync(MarkListFilter filter, long? collegeId, bool superAdmin)
         => _repository.ListAsync(filter ?? new MarkListFilter(), collegeId, superAdmin);
 

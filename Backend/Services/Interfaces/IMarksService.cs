@@ -5,6 +5,7 @@ namespace BTech.Services.Interfaces;
 public interface IMarksService
 {
     Task<MarkDto> AddAsync(MarkEntryRequest request, long? actorId, long? collegeId, bool isSuperAdmin);
+    Task<MarkRemovalDto> DeleteAsync(long markId, long? actorId, long? collegeId, bool isSuperAdmin);
     Task<MarkDto> EditAsync(long markId, MarkEditRequest request, long? actorId, long? collegeId, bool isSuperAdmin);
     Task<IReadOnlyList<MarkDto>> ListAsync(MarkListFilter filter, long? collegeId, bool isSuperAdmin);
     Task<MarkDto> GetAsync(long markId, long? collegeId, bool isSuperAdmin);

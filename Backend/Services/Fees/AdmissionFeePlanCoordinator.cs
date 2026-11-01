@@ -165,7 +165,7 @@ public sealed class AdmissionFeePlanCoordinator(ApplicationDbContext db, FeePlan
             if (root.ValueKind != JsonValueKind.Object || !root.TryGetProperty("fees", out var f) || f.ValueKind != JsonValueKind.Object) continue;
             foreach (var key in new[] { "feeStructureId", "structureId" })
             {
-                if (!f.TryGetProperty(key, out var value) || value.ValueKind == JsonValueKind.Null || string.IsNullOrWhiteSpace(value.ToString())) continue;
+                if (!f.TryGetProperty(key, out var value) || value.ValueKind == JsonValueKind.Null || AdmissionFeeStructureIdJsonConverter.IsUnselected(value.ToString())) continue;
                 FeePlanRules.Require(long.TryParse(value.ToString(), out var id) && id > 0,
                     "Browser-local fee plan IDs are not backend IDs. Select a published plan from /api/v1/student-admissions/fee-plans.");
                 FeePlanRules.Require(!selected.HasValue || selected == id, "Conflicting feeStructureId values in the admission payload.");
