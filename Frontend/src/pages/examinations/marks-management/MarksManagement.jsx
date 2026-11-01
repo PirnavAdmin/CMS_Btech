@@ -1549,10 +1549,17 @@ const PAGE_SIZE = 10
 const initialAssessment = {
   examId: '',
   academicYear: '',
+  academicYearId: '',
   course: '',
+  courseId: '',
+  courseCode: '',
   branch: '',
+  branchId: '',
+  branchCode: '',
   semester: '',
+  semesterId: '',
   section: '',
+  sectionId: '',
   registrationNumber: '',
   studentName: '',
   subject: '',
@@ -1574,6 +1581,20 @@ const fieldOptions = {
   ],
   assessmentType: ['Internal', 'External'],
 }
+
+const selectFields = new Set([
+  'academicYear',
+  'course',
+  'branch',
+  'semester',
+  'section',
+  'registrationNumber',
+  'studentName',
+  'subject',
+  'facultyName',
+  'examType',
+  'assessmentType',
+])
 
 const entityLabel = (item, keys) =>
   keys
@@ -1656,11 +1677,17 @@ const getMarksSummary = ({
 function MarksEntry() {
   const {
     academicYears = [],
+    selectedAcademicYear = null,
     courses: academicCourses = [],
     branches = [],
     semesters = [],
     sections = [],
   } = useAcademic()
+  const createAssessmentDraft = () => ({
+    ...initialAssessment,
+    academicYear: entityLabel(selectedAcademicYear, ['academicYearName', 'name', 'academicYear', 'yearName']) || '',
+    academicYearId: selectedAcademicYear?.academicYearId || selectedAcademicYear?.id || '',
+  })
 
   const [draftRows, setDraftRows] = useState([])
   const [loading, setLoading] = useState(true)
@@ -2302,10 +2329,130 @@ function MarksEntry() {
     studentMarks: allRows.map(row => row.studentMarks),
   }), [allRows])
 
+  const formSelectOptions = useMemo(() => {
+    const option = (value, label = value) => ({ value: String(value ?? ''), label: String(label ?? value ?? '') })
+    const optionsFor = (items, nameKeys, codeKeys = [], idKeys = []) => items
+      .map(item => {
+        const name = entityLabel(item, nameKeys)
+        const code = entityLabel(item, codeKeys)
+        const id = entityLabel(item, idKeys)
+        return name ? option(id || name, code ? `${name} (${code})` : name) : null
+      })
+      .filter(Boolean)
+    const mergeOptions = (...lists) => {
+      const byValue = new Map()
+      lists.flat().forEach(item => {
+        if (item?.value && !byValue.has(normalized(item.value))) byValue.set(normalized(item.value), item)
+      })
+      return [...byValue.values()]
+    }
+    const savedOptions = key => (savedAssessmentOptions[key] || [])
+      .filter(Boolean)
+      .map(value => option(value))
+
+    const selectedCourse = academicCourses.find(item =>
+      normalized(entityLabel(item, ['courseName', 'name', 'course', 'programName', 'title'])) === normalized(assessment.course)
+      || (assessment.courseId && normalized(item.courseId ?? item.id) === normalized(assessment.courseId)),
+    )
+    const selectedBranch = branches.find(item =>
+      normalized(entityLabel(item, ['branchName', 'name', 'branch', 'title'])) === normalized(assessment.branch)
+      || (assessment.branchId && normalized(item.branchId ?? item.id) === normalized(assessment.branchId)),
+    )
+    const selectedSemester = semesters.find(item =>
+      normalized(entityLabel(item, ['semesterName', 'name', 'semesterNumber', 'semester'])) === normalized(assessment.semester)
+      || (assessment.semesterId && normalized(item.semesterId ?? item.id) === normalized(assessment.semesterId)),
+    )
+    const selectedYear = academicYears.find(item =>
+      normalized(entityLabel(item, ['academicYearName', 'name', 'academicYear', 'yearName'])) === normalized(assessment.academicYear)
+      || (assessment.academicYearId && normalized(item.academicYearId ?? item.id) === normalized(assessment.academicYearId)),
+    )
+    const inScope = (item, key, selected) => {
+      if (!selected) return true
+      const relatedId = item[`${key}Id`] ?? item[key]?.[`${key}Id`] ?? item[key]?.id
+      return relatedId == null || String(relatedId) === String(selected.id ?? selected[`${key}Id`])
+    }
+    const scopedBranches = branches.filter(item => inScope(item, 'course', selectedCourse))
+    const scopedSemesters = semesters.filter(item => inScope(item, 'course', selectedCourse))
+    const scopedSections = sections.filter(item =>
+      inScope(item, 'academicYear', selectedYear)
+      && inScope(item, 'course', selectedCourse)
+      && inScope(item, 'branch', selectedBranch)
+      && inScope(item, 'semester', selectedSemester),
+    )
+    const studentRegistration = item =>
+      item.registrationNumber || item.application?.registrationNumber || item.application?.number || item.academic?.registrationNumber || item.academic?.rollNumber || ''
+    const studentName = item => item.fullName || item.personal?.fullName || item.name || item.studentName || ''
+
+    return {
+      academicYear: mergeOptions(optionsFor(academicYears, ['academicYearName', 'name', 'academicYear', 'yearName']), savedOptions('academicYear')),
+      course: mergeOptions(optionsFor(academicCourses, ['courseName', 'name', 'course', 'programName', 'title'], ['courseCode', 'code', 'CourseCode'], ['courseId', 'CourseId', 'id', 'Id']), savedOptions('course')),
+      branch: mergeOptions(optionsFor(scopedBranches, ['branchName', 'name', 'branch', 'title'], ['branchCode', 'code', 'BranchCode'], ['branchId', 'BranchId', 'id', 'Id']), savedOptions('branch')),
+      semester: mergeOptions(optionsFor(scopedSemesters, ['semesterName', 'name', 'semesterNumber', 'semester']), savedOptions('semester')),
+      section: mergeOptions(optionsFor(scopedSections, ['sectionName', 'name', 'section', 'code']), savedOptions('section')),
+      registrationNumber: mergeOptions(
+        uniqueValues(students.map(studentRegistration)).map(value => {
+          const student = students.find(item => normalized(studentRegistration(item)) === normalized(value))
+          const name = studentName(student)
+          return option(value, name ? `${value} (${name})` : value)
+        }),
+        savedOptions('registrationNumber'),
+      ),
+      studentName: mergeOptions(
+        uniqueValues(students.map(studentName)).map(value => {
+          const student = students.find(item => normalized(studentName(item)) === normalized(value))
+          const registration = studentRegistration(student)
+          return option(value, registration ? `${value} (${registration})` : value)
+        }),
+        savedOptions('studentName'),
+      ),
+      subject: mergeOptions(optionsFor(eligibleSubjects, ['subjectName', 'name', 'subject'], ['subjectCode', 'code']), savedOptions('subject')),
+      facultyName: mergeOptions(optionsFor(facultyMembers, ['fullName', 'facultyName', 'name']), savedOptions('facultyName')),
+      examType: uniqueValues([...fieldOptions.examType, ...subjects.map(item => item.examType), ...savedAssessmentOptions.examType]).map(value => option(value)),
+      assessmentType: uniqueValues([...fieldOptions.assessmentType, ...subjects.map(item => item.assessmentType), ...savedAssessmentOptions.assessmentType]).map(value => option(value)),
+    }
+  }, [academicYears, academicCourses, branches, semesters, sections, students, eligibleSubjects, facultyMembers, subjects, assessment, savedAssessmentOptions])
+  const selectedCourse = academicCourses.find(item =>
+    normalized(entityLabel(item, ['courseName', 'name', 'course', 'programName', 'title'])) === normalized(assessment.course)
+    || (assessment.courseId && normalized(item.courseId ?? item.id) === normalized(assessment.courseId)),
+  )
+  const selectedBranch = branches.find(item =>
+    normalized(entityLabel(item, ['branchName', 'name', 'branch', 'title'])) === normalized(assessment.branch)
+    || (assessment.branchId && normalized(item.branchId ?? item.id) === normalized(assessment.branchId)),
+  )
+  const selectedCourseCode = assessment.courseCode || entityLabel(
+    selectedCourse,
+    ['courseCode', 'code', 'CourseCode'],
+  )
+  const selectedBranchCode = assessment.branchCode || entityLabel(
+    selectedBranch,
+    ['branchCode', 'code', 'BranchCode'],
+  )
+
   const updateAssessment = (
     key,
     value
   ) => {
+    const matchedYear = key === 'academicYear'
+      ? academicYears.find(item => normalized(entityLabel(item, ['academicYearName', 'name', 'academicYear', 'yearName'])) === normalized(value))
+      : null
+    const matchedCourse = key === 'course'
+      ? academicCourses.find(item =>
+        normalized(item.courseId ?? item.CourseId ?? item.id ?? item.Id) === normalized(value)
+        || normalized(entityLabel(item, ['courseName', 'name', 'course', 'programName', 'title'])) === normalized(value),
+      )
+      : null
+    const matchedBranch = key === 'branch'
+      ? branches.find(item =>
+        normalized(item.branchId ?? item.BranchId ?? item.id ?? item.Id) === normalized(value)
+        || normalized(entityLabel(item, ['branchName', 'name', 'branch', 'title'])) === normalized(value),
+      )
+      : null
+    const matchedSemester = key === 'semester'
+      ? semesters.find(item => normalized(entityLabel(item, ['semesterName', 'name', 'semesterNumber', 'semester'])) === normalized(value))
+      : null
+    const matchedSection = key === 'section'
+      ? sections.find(item => normalized(entityLabel(item, ['sectionName', 'name', 'section', 'code'])) === normalized(value))
+      : null
     const matchedSubject =
       key === 'subject'
         ? eligibleSubjects.find(
@@ -2344,7 +2491,7 @@ function MarksEntry() {
         normalized(
           key ===
             'registrationNumber'
-            ? student.registrationNumber
+            ? student.registrationNumber || student.application?.registrationNumber || student.application?.number || student.academic?.registrationNumber || student.academic?.rollNumber
             : student.fullName ||
             student.personal
               ?.fullName ||
@@ -2353,11 +2500,83 @@ function MarksEntry() {
         ) === normalized(value)
       )
       : null
+    const matchedFaculty = key === 'facultyName'
+      ? facultyMembers.find(item => normalized(entityLabel(item, ['fullName', 'facultyName', 'name'])) === normalized(value))
+      : null
 
     setAssessment(current => ({
       ...current,
 
-      [key]: value,
+      [key]: key === 'course' && matchedCourse
+        ? entityLabel(matchedCourse, ['courseName', 'name', 'course', 'programName', 'title'])
+        : key === 'branch' && matchedBranch
+          ? entityLabel(matchedBranch, ['branchName', 'name', 'branch', 'title'])
+          : value,
+
+      ...(key === 'academicYear'
+        ? {
+          academicYearId: matchedYear?.academicYearId || matchedYear?.id || '',
+          course: '',
+          courseId: '',
+          courseCode: '',
+          branch: '',
+          branchId: '',
+          branchCode: '',
+          semester: '',
+          semesterId: '',
+          section: '',
+          sectionId: '',
+          subject: '',
+          subjectCode: '',
+          subjectId: '',
+          registrationNumber: '',
+          studentName: '',
+          studentId: '',
+        }
+        : {}),
+      ...(key === 'course'
+        ? {
+          courseId: matchedCourse?.courseId || matchedCourse?.id || '',
+          courseCode: matchedCourse?.courseCode || matchedCourse?.code || '',
+          branch: '',
+          branchId: '',
+          branchCode: '',
+          semester: '',
+          semesterId: '',
+          section: '',
+          sectionId: '',
+          subject: '',
+          subjectCode: '',
+          subjectId: '',
+        }
+        : {}),
+      ...(key === 'branch'
+        ? {
+          branchId: matchedBranch?.branchId || matchedBranch?.id || '',
+          branchCode: matchedBranch?.branchCode || matchedBranch?.code || '',
+          section: '',
+          sectionId: '',
+          subject: '',
+          subjectCode: '',
+          subjectId: '',
+        }
+        : {}),
+      ...(key === 'semester'
+        ? {
+          semesterId: matchedSemester?.semesterId || matchedSemester?.id || '',
+          section: '',
+          sectionId: '',
+          subject: '',
+          subjectCode: '',
+          subjectId: '',
+        }
+        : {}),
+      ...(key === 'section'
+        ? { sectionId: matchedSection?.sectionId || matchedSection?.id || '' }
+        : {}),
+      ...(key === 'facultyName'
+        ? { facultyId: matchedFaculty?.facultyId || matchedFaculty?.id || '' }
+        : {}),
 
       ...(key === 'subject'
         ? {
@@ -2417,6 +2636,7 @@ function MarksEntry() {
         ? {
           subject: '',
           subjectCode: '',
+          subjectId: '',
         }
         : {}),
     }))
@@ -2471,7 +2691,7 @@ function MarksEntry() {
       showSuccess(editingId ? 'Marks updated successfully.' : 'Marks entered successfully.')
       setShowAddForm(false)
       setEditingId('')
-      setAssessment(initialAssessment)
+      setAssessment(createAssessmentDraft())
       setPage(1)
       await loadMarks()
     } catch (error) {
@@ -2699,9 +2919,7 @@ function MarksEntry() {
                   className="erp-btn erp-btn--primary"
                   onClick={() => {
                     setEditingId('')
-                    setAssessment(
-                      initialAssessment
-                    )
+                    setAssessment(createAssessmentDraft())
                     setShowAddForm(true)
                   }}
                 >
@@ -2882,8 +3100,16 @@ function MarksEntry() {
                           'Course',
                         ],
                         [
+                          'courseCode',
+                          'Course Code',
+                        ],
+                        [
                           'branch',
                           'Branch',
+                        ],
+                        [
+                          'branchCode',
+                          'Branch Code',
                         ],
                         [
                           'semester',
@@ -2986,7 +3212,12 @@ function MarksEntry() {
                             key ===
                             'examStatus' ||
                             key ===
-                            'percentage'
+                            'percentage' ||
+                            key ===
+                            'courseCode' ||
+                            key ===
+                            'branchCode'
+                          const isSelect = selectFields.has(key)
 
                           const fieldValue =
                             key ===
@@ -2995,6 +3226,10 @@ function MarksEntry() {
                               : key ===
                                 'percentage'
                                 ? summary.percentage
+                                : key === 'courseCode'
+                                  ? selectedCourseCode || ''
+                                  : key === 'branchCode'
+                                    ? selectedBranchCode || ''
                                 : assessment[
                                 key
                                 ]
@@ -3015,122 +3250,144 @@ function MarksEntry() {
                                     : ''
                                   }`}
                               >
-                                <input
-                                  type={
-                                    [
-                                      'examId',
-                                      'maximumMarks',
-                                      'passingMarks',
-                                      'studentMarks',
-                                    ].includes(
-                                      key
-                                    )
-                                      ? 'number'
-                                      : key ===
-                                        'examDate'
-                                        ? 'datetime-local'
-                                        : 'text'
-                                  }
-                                  value={
-                                    fieldValue ??
-                                    ''
-                                  }
-                                  min={
-                                    key ===
-                                      'maximumMarks'
-                                      ? 1
-                                      : [
+                                {isSelect ? (
+                                  <ProjectSelect
+                                    aria-label={label}
+                                    value={
+                                      key === 'course'
+                                        ? assessment.courseId || selectedCourse?.courseId || selectedCourse?.id || fieldValue || ''
+                                        : key === 'branch'
+                                          ? assessment.branchId || selectedBranch?.branchId || selectedBranch?.id || fieldValue || ''
+                                          : fieldValue ?? ''
+                                    }
+                                    onChange={event => updateAssessment(key, event.target.value)}
+                                    required
+                                  >
+                                    <option value="">Select {label.toLowerCase()}</option>
+                                    {(formSelectOptions[key] || []).map(option => (
+                                      <option key={`${key}-${option.value}`} value={option.value} label={option.label}>
+                                        {option.label}
+                                      </option>
+                                    ))}
+                                  </ProjectSelect>
+                                ) : (
+                                  <input
+                                    type={
+                                      [
+                                        'examId',
+                                        'maximumMarks',
                                         'passingMarks',
                                         'studentMarks',
                                       ].includes(
                                         key
                                       )
-                                        ? 0
-                                        : undefined
-                                  }
-                                  max={
-                                    key ===
-                                      'passingMarks' ||
+                                        ? 'number'
+                                        : key ===
+                                          'examDate'
+                                          ? 'datetime-local'
+                                          : 'text'
+                                    }
+                                    value={
+                                      fieldValue ??
+                                      ''
+                                    }
+                                    min={
                                       key ===
-                                      'studentMarks'
-                                      ? assessment.maximumMarks ||
-                                      undefined
-                                      : undefined
-                                  }
-                                  step={
-                                    [
-                                      'examId',
-                                      'maximumMarks',
-                                      'passingMarks',
-                                      'studentMarks',
-                                    ].includes(
-                                      key
-                                    )
-                                      ? 'any'
-                                      : undefined
-                                  }
-                                  readOnly={
-                                    isDerived
-                                  }
-                                  required={
-                                    !isDerived
-                                  }
-                                  autoComplete="off"
-                                  role={
-                                    isDerived
-                                      ? undefined
-                                      : 'combobox'
-                                  }
-                                  aria-autocomplete={
-                                    isDerived
-                                      ? undefined
-                                      : 'list'
-                                  }
-                                  aria-expanded={
-                                    !isDerived &&
-                                    activeSuggestion ===
-                                    key &&
-                                    matches.length >
-                                    0
-                                  }
-                                  onFocus={() =>
-                                    !isDerived &&
-                                    setActiveSuggestion(
-                                      key
-                                    )
-                                  }
-                                  onClick={() =>
-                                    !isDerived &&
-                                    setActiveSuggestion(
-                                      key
-                                    )
-                                  }
-                                  onBlur={() =>
-                                    window.setTimeout(
-                                      () =>
-                                        setActiveSuggestion(
-                                          current =>
-                                            current ===
-                                              key
-                                              ? ''
-                                              : current
-                                        ),
-                                      120
-                                    )
-                                  }
-                                  onChange={event => {
-                                    updateAssessment(
-                                      key,
-                                      event.target
-                                        .value
-                                    )
-                                    setActiveSuggestion(
-                                      key
-                                    )
-                                  }}
-                                />
+                                        'maximumMarks'
+                                        ? 1
+                                        : [
+                                          'passingMarks',
+                                          'studentMarks',
+                                        ].includes(
+                                          key
+                                        )
+                                          ? 0
+                                          : undefined
+                                    }
+                                    max={
+                                      key ===
+                                        'passingMarks' ||
+                                        key ===
+                                        'studentMarks'
+                                        ? assessment.maximumMarks ||
+                                        undefined
+                                        : undefined
+                                    }
+                                    step={
+                                      [
+                                        'examId',
+                                        'maximumMarks',
+                                        'passingMarks',
+                                        'studentMarks',
+                                      ].includes(
+                                        key
+                                      )
+                                        ? 'any'
+                                        : undefined
+                                    }
+                                    readOnly={
+                                      isDerived
+                                    }
+                                    required={
+                                      !isDerived
+                                    }
+                                    autoComplete="off"
+                                    role={
+                                      isDerived
+                                        ? undefined
+                                        : 'combobox'
+                                    }
+                                    aria-autocomplete={
+                                      isDerived
+                                        ? undefined
+                                        : 'list'
+                                    }
+                                    aria-expanded={
+                                      !isDerived &&
+                                      activeSuggestion ===
+                                      key &&
+                                      matches.length >
+                                      0
+                                    }
+                                    onFocus={() =>
+                                      !isDerived &&
+                                      setActiveSuggestion(
+                                        key
+                                      )
+                                    }
+                                    onClick={() =>
+                                      !isDerived &&
+                                      setActiveSuggestion(
+                                        key
+                                      )
+                                    }
+                                    onBlur={() =>
+                                      window.setTimeout(
+                                        () =>
+                                          setActiveSuggestion(
+                                            current =>
+                                              current ===
+                                                key
+                                                ? ''
+                                                : current
+                                          ),
+                                        120
+                                      )
+                                    }
+                                    onChange={event => {
+                                      updateAssessment(
+                                        key,
+                                        event.target
+                                          .value
+                                      )
+                                      setActiveSuggestion(
+                                        key
+                                      )
+                                    }}
+                                  />
+                                )}
 
-                                {!isDerived &&
+                                {!isSelect && !isDerived &&
                                   activeSuggestion ===
                                   key &&
                                   matches.length >
@@ -3198,8 +3455,8 @@ function MarksEntry() {
                           [
                             'Course / Branch',
                             [
-                              assessment.course,
-                              assessment.branch,
+                              assessment.course && `${assessment.course}${selectedCourseCode ? ` (${selectedCourseCode})` : ''}`,
+                              assessment.branch && `${assessment.branch}${selectedBranchCode ? ` (${selectedBranchCode})` : ''}`,
                             ]
                               .filter(Boolean)
                               .join(' / '),

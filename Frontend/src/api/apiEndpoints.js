@@ -340,7 +340,7 @@ const refreshAccessToken = async () => {
     } catch {
       throw createApiUnavailableError()
     }
-    if (response.status >= 500) notifyApiUnavailable({ status: response.status })
+    if (response.status >= 500) notifyApiUnavailable({ status: response.status, url: API_ENDPOINTS.auth.refresh, method: 'POST', response })
 
     const body = await readBody(response)
     if (!response.ok || !body?.data?.accessToken) {
@@ -403,7 +403,7 @@ const request = async (url, options = {}, retried = false, bypassDedupe = false,
       console.error('API request failed', { url, method: options.method || 'GET', status: response.status })
     }
     if (response.status >= 500) {
-      if (!suppressApiFailureNotice) notifyApiUnavailable({ status: response.status })
+      if (!suppressApiFailureNotice) notifyApiUnavailable({ status: response.status, url, method, body, response })
       const genericMsg = typeof GENERIC_ERROR_MESSAGE !== 'undefined' ? GENERIC_ERROR_MESSAGE : 'Something went wrong. Please try again.'
       const error = new Error(url.includes('/api/v1/timetable-management') ? validationMessage(body) || genericMsg : genericMsg)
       error.status = response.status
@@ -448,7 +448,7 @@ const blobRequest = async (url, options = {}, retried = false) => {
   if (response.status === 401 && !retried && url !== API_ENDPOINTS.auth.refresh) { await refreshAccessToken(); return blobRequest(url, options, true) }
   if (!response.ok) {
     const body = await readBody(response)
-    if (response.status >= 500) notifyApiUnavailable({ status: response.status })
+    if (response.status >= 500) notifyApiUnavailable({ status: response.status, url, method: options.method || 'GET', body, response })
     throw new AuthRequestError(response.status >= 500 ? GENERIC_ERROR_MESSAGE : validationMessage(body) || 'The download request could not be completed.', response.status)
   }
   return { blob: await response.blob(), contentDisposition: response.headers.get('content-disposition') || '', contentType: response.headers.get('content-type') || '' }
@@ -532,7 +532,7 @@ export async function login({ identifier, password, rememberMe = false }) {
   }
   const body = await readBody(response)
   if (!response.ok || body?.success === false) {
-    if (response.status >= 500) notifyApiUnavailable({ status: response.status })
+    if (response.status >= 500) notifyApiUnavailable({ status: response.status, url: API_ENDPOINTS.auth.login, method: 'POST', body, response })
     const message = response.status === 401
       ? 'The email, mobile number, or password is incorrect.'
       : response.status === 429
@@ -680,10 +680,12 @@ export const academicYearApi = {
   getAll: async (options = {}) => {
     const collegeId = selectedCollegeId()
     if (!collegeId) return []
-    const response = await request(API_ENDPOINTS.academicYears.list, options)
+    const response = await request(withQuery(API_ENDPOINTS.academicYears.list, { collegeId }), options)
     if (selectedCollegeId() !== collegeId) return []
     const years = listResponse(response).map(normalizeAcademicYearRecord)
     const scopedYears = createCollegeScope(collegeId)(years)
+    const allYearsUnmapped = years.length > 0 && years.every(year => !collegeField(year, 'college'))
+    if (allYearsUnmapped) return years
     if (!scopedYears.length && years.some(year => !collegeField(year, 'college'))) {
       throw new Error('Existing academic years have no college mapping. Apply the college academic-year database migration and update the backend before generating another year.')
     }

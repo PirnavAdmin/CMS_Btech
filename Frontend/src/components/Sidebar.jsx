@@ -7,7 +7,9 @@ import { useAcademic } from '../context/AcademicContext'
 import './Sidebar.css'
 import { feeNavigation, feeNavigationItem, isFeeRoute } from '../utils/feeNavigation'
 import { collegeLogoValue } from '../utils/collegeLogo'
-import { cacheCollegeLogo, fetchCollegeLogo, getCollegeById, getCollegeLogoUrl, getColleges, isBackendCollegeLogo, readCachedCollegeLogo, unwrapCollegeRecord } from '../auth/collegeApi'
+import { cacheCollegeLogo, fetchCollegeLogo, getCollegeById, getCollegeLogoEndpoint, getCollegeLogoUrl, getColleges, isBackendCollegeLogo, readCachedCollegeLogo, unwrapCollegeRecord } from '../auth/collegeApi'
+
+const failedLogoUrls = new Set()
 
 const academicLinks = [
   { label: 'Colleges', to: '/college-institution-management', icon: FiHome, tone: 'gold' },
@@ -105,14 +107,24 @@ export default function Sidebar({ open = false, onClose = () => {}, collapsed = 
           record = unwrapCollegeRecord(response?.data ?? response)
           targetCollegeId = record.id ?? record.collegeId ?? record.CollegeId ?? targetCollegeId
           logoValue = collegeLogoValue(record)
-          if (logoValue) cacheCollegeLogo(targetCollegeId, logoValue, [record.code, record.collegeCode, record.name, record.collegeName])
+          if (logoValue) {
+            cacheCollegeLogo(targetCollegeId, logoValue, [record.code, record.collegeCode, record.name, record.collegeName])
+          } else if (targetCollegeId) {
+            const endpoint = getCollegeLogoEndpoint(targetCollegeId)
+            if (endpoint) failedLogoUrls.add(endpoint)
+          }
         } catch { /* The logo endpoint below remains the fallback. */ }
       }
+      if (!logoValue) {
+        if (active) setCollegeLogo('')
+        return
+      }
+
       // Always prefer the current academic-context college and its uploaded
       // asset. A fixed institution ID would show a stale logo after an admin
       // changes the selected college or uploads a replacement.
       const logoUrl = getCollegeLogoUrl(targetCollegeId, logoValue, [record?.code, record?.collegeCode, collegeDisplayName])
-      if (!logoUrl) {
+      if (!logoUrl || failedLogoUrls.has(logoUrl)) {
         if (active) setCollegeLogo('')
         return
       }
@@ -123,13 +135,16 @@ export default function Sidebar({ open = false, onClose = () => {}, collapsed = 
       if (active) setCollegeLogo('')
       try {
         const blob = await fetchCollegeLogo(logoUrl)
-        objectUrl = URL.createObjectURL(blob)
-        if (active) setCollegeLogo(objectUrl)
+        if (blob) {
+          objectUrl = URL.createObjectURL(blob)
+          if (active) setCollegeLogo(objectUrl)
+        } else {
+          failedLogoUrls.add(logoUrl)
+          if (active) setCollegeLogo('')
+        }
       } catch {
-        // Some deployments permit the browser to render the image endpoint but
-        // reject the authenticated blob request. Keep the direct image URL as
-        // a final fallback instead of reverting to the placeholder mark.
-        if (active) setCollegeLogo(logoUrl)
+        failedLogoUrls.add(logoUrl)
+        if (active) setCollegeLogo('')
       }
     }
     loadLogo()

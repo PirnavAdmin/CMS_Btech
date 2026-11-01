@@ -13,11 +13,28 @@ const friendlyValidationMessage = (errors) => {
   if (fields.some((field) => field.toLowerCase() === "principalemail")) return "Please enter a valid principal email address.";
   if (fields.some((field) => ["email", "collegeemail"].includes(field.toLowerCase()))) return "Please enter a valid official email address.";
   if (fields.some((field) => /contact|phone|mobile/i.test(field))) return "Please enter a valid contact number.";
-  return fields.length ? "Please check the entered college details and try again." : "";
+  for (const field of fields) {
+    const val = errors[field];
+    if (Array.isArray(val) && val.length > 0 && typeof val[0] === 'string' && val[0].trim()) {
+      return val[0].trim();
+    }
+    if (typeof val === 'string' && val.trim()) {
+      return val.trim();
+    }
+  }
+  return fields.length ? "Please check the entered details and try again." : "";
 };
 
 const getErrorMessage = (data, status) => {
-  if (status >= 500) return GENERIC_ERROR_MESSAGE;
+  if (status >= 500) {
+    if (data && typeof data === "object" && data.message && typeof data.message === "string") {
+      const msg = data.message.trim();
+      if (!/<!doctype|<html|ngrok|err_ngrok|https?:\/\//i.test(msg)) {
+        return data.correlationId ? `${msg} (Correlation ID: ${data.correlationId})` : msg;
+      }
+    }
+    return GENERIC_ERROR_MESSAGE;
+  }
   if (typeof data === "string") {
     const message = data.trim();
     try {
@@ -38,11 +55,11 @@ const getErrorMessage = (data, status) => {
     if (data.title && data.title !== "One or more validation errors occurred.") return data.title;
   }
   return {
-    400: "Please check the required college details and try again.",
+    400: "Please check the required details and try again.",
     401: "Your session has expired. Please sign in again.",
-    403: "You do not have permission to manage colleges.",
-    404: "College information is temporarily unavailable. Please try again later.",
-    409: "A college with these details already exists.",
+    403: "You do not have permission to perform this action.",
+    404: "Requested information is temporarily unavailable. Please try again later.",
+    409: "A record with these details already exists.",
   }[status] || "We couldn’t complete your request. Please try again.";
 };
 
@@ -72,10 +89,19 @@ const createClient = (baseUrl, prefix, scopeCollege = false) => {
     } catch {
       throw createApiUnavailableError();
     }
-    const contentType = response.headers.get("content-type") || "";
-    const data = contentType.includes("application/json") ? await response.json() : await response.text();
+    let data;
+    if (response.status >= 500) {
+      notifyApiUnavailable({
+        status: response.status,
+        url: scoped.url,
+        method: options.method || 'GET',
+        response,
+      });
+    } else {
+      const contentType = response.headers.get("content-type") || "";
+      data = contentType.includes("application/json") ? await response.json() : await response.text();
+    }
     if (!response.ok || data?.success === false) {
-      if (response.status >= 500) notifyApiUnavailable({ status: response.status });
       const error = new Error(userErrorMessage(getErrorMessage(data, response.status), response.status));
       error.response = { data: response.status >= 500 ? { message: GENERIC_ERROR_MESSAGE } : data, status: response.status };
       throw error;
@@ -206,10 +232,21 @@ export const readCachedCollegeLogo = (identifier) => {
       localStorage.getItem(`pirnav-college-logo-${key}`) ||
       localStorage.getItem(`college-logo-${key}`) ||
       localStorage.getItem(`pirnav-college-logo-${cleanKey}`);
-    if (direct) return direct;
+    if (direct) {
+      if (/\/api\/College\/logo\//i.test(direct)) {
+        localStorage.removeItem(collegeLogoCacheKey(key));
+        localStorage.removeItem(collegeLogoCacheKey(cleanKey));
+        localStorage.removeItem(`pirnav-college-logo-${key}`);
+        localStorage.removeItem(`college-logo-${key}`);
+        return "";
+      }
+      return direct;
+    }
 
     const map = getLogosMap();
-    return map[key] || map[cleanKey] || map[key.toLowerCase()] || map[key.toUpperCase()] || "";
+    const val = map[key] || map[cleanKey] || map[key.toLowerCase()] || map[key.toUpperCase()] || "";
+    if (val && /\/api\/College\/logo\//i.test(val)) return "";
+    return val;
   } catch {
     return "";
   }
@@ -603,7 +640,11 @@ const cleanParams = (params = {}) =>
   Object.fromEntries(Object.entries(params).filter(([, v]) => v !== undefined && v !== null && v !== ''));
 
 export const fetchExams = async (params = {}) => {
-  const body = (await ACADEMIC_API.get('/exams', { params: cleanParams(params) })).data;
+  const safeParams = { ...params };
+  if (safeParams.PageSize && Number(safeParams.PageSize) > 500) {
+    safeParams.PageSize = 500;
+  }
+  const body = (await ACADEMIC_API.get('/exams', { params: cleanParams(safeParams) })).data;
   return { items: body?.data ?? [], totalCount: body?.totalCount ?? 0 };
 };
 
@@ -624,7 +665,11 @@ export const updateScheduleApi = async (examId, scheduleId, payload) => (await A
 export const deleteScheduleApi = (examId, scheduleId) => ACADEMIC_API.delete(`/exams/${examId}/schedules/${scheduleId}`);
 
 export const fetchScheduleRows = async (params = {}) => {
-  const { items: exams } = await fetchExams(params);
+  const safeParams = { Page: 1, PageSize: 500, ...params };
+  if (safeParams.PageSize && Number(safeParams.PageSize) > 500) {
+    safeParams.PageSize = 500;
+  }
+  const { items: exams } = await fetchExams(safeParams);
   const lists = await Promise.all(
     exams.filter((e) => e.scheduleCount > 0).map(async (exam) => {
       const schedules = await fetchSchedules(exam.examId);
