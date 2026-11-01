@@ -4,7 +4,7 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 
 const source = (await readFile(new URL('./apiEndpoints.js', import.meta.url), 'utf8')).replace(/^\uFEFF/, '').replace(/^import .*$/gm, '').replaceAll('import.meta.env', '({ DEV: false, VITE_API_BASE_URL: "https://example.test" })')
-const { sectionApi } = await import(`data:text/javascript;base64,${Buffer.from(`const getAccessToken = () => 'test'; const collegeRequest = (url, options) => ({ url, options });\n${source}`).toString('base64')}`)
+const { sectionApi, sectionAssignmentApi } = await import(`data:text/javascript;base64,${Buffer.from(`const getAccessToken = () => 'test'; const collegeRequest = (url, options) => ({ url, options });\n${source}`).toString('base64')}`)
 const section = { collegeId: 1, academicYearId: 2, courseId: 3, branchId: 4, semesterId: 5, name: 'Section A', code: 'CSE-A', capacity: 60 }
 
 test('section creation sends an explicit numeric department ID', async () => {
@@ -16,6 +16,18 @@ test('section creation sends an explicit numeric department ID', async () => {
       return Response.json({ data: { sectionId: 9 } })
     }
     assert.equal((await sectionApi.create({ ...section, departmentId: '7' })).id, 9)
+  } finally { globalThis.fetch = previous }
+})
+
+test('removing a section allocation targets the student ID in the DELETE route', async () => {
+  const previous = globalThis.fetch
+  try {
+    globalThis.fetch = async (url, options) => {
+      assert.equal(String(url), 'https://example.test/api/v1/sections/12/students/34')
+      assert.equal(options.method, 'DELETE')
+      return new Response(null, { status: 204 })
+    }
+    await sectionAssignmentApi.remove(12, 34)
   } finally { globalThis.fetch = previous }
 })
 

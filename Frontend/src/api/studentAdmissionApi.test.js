@@ -6,7 +6,7 @@ import { normalizeCanonicalStudent } from '../utils/studentCanonicalModel.js'
 const source = (await readFile(new URL('./apiEndpoints.js', import.meta.url), 'utf8'))
   .replace(/^\uFEFF/, '').replace(/^import .*$/gm, '')
   .replaceAll('import.meta.env', '({ DEV: false, VITE_API_BASE_URL: "https://example.test" })')
-const { studentAdmissionApi } = await import(`data:text/javascript;base64,${Buffer.from(
+const { studentAdmissionApi, studentAcademicDetailsApi } = await import(`data:text/javascript;base64,${Buffer.from(
   `const getAccessToken = () => 'test'; const collegeRequest = (url, options) => ({ url, options });\n${source}`
 ).toString('base64')}`)
 
@@ -41,5 +41,53 @@ test('existing photo URLs are retained in legacy fields', async () => {
       return Response.json({ data: { admissionId: 123 } })
     }
     await studentAdmissionApi.update(123, { personal: { photo: '/uploads/student.png' } })
+  } finally { globalThis.fetch = originalFetch }
+})
+
+test('admission saves omit semester mapping that the admission form does not manage', async () => {
+  const originalFetch = globalThis.fetch
+  try {
+    globalThis.fetch = async (url, options) => {
+      const payload = JSON.parse(options.body)
+      assert.equal(payload.academicYearId, 3)
+      assert.equal(payload.courseId, 1)
+      assert.equal(payload.branchId, 2)
+      assert.equal('semesterId' in payload, false)
+      assert.equal('semester' in payload, false)
+      assert.equal('semesterId' in payload.formData, false)
+      assert.equal('semester' in payload.formData, false)
+      assert.equal('semesterId' in payload.formData.academic, false)
+      assert.equal('semester' in payload.formData.academic, false)
+      return Response.json({ data: { admissionId: 55 } })
+    }
+
+    await studentAdmissionApi.update(55, {
+      semesterId: '999',
+      semester: 'Semester 7',
+      academic: {
+        academicYearId: '3',
+        courseId: '1',
+        branchId: '2',
+        semesterId: '999',
+        semester: 'Semester 7',
+      },
+    })
+  } finally { globalThis.fetch = originalFetch }
+})
+
+test('academic details saves omit an unmanaged semester ID', async () => {
+  const originalFetch = globalThis.fetch
+  try {
+    globalThis.fetch = async (url, options) => {
+      const payload = JSON.parse(options.body)
+      assert.equal(payload.courseId, 1)
+      assert.equal(payload.branchId, 2)
+      assert.equal('semesterId' in payload, false)
+      return Response.json({ data: { admissionId: 55 } })
+    }
+
+    await studentAcademicDetailsApi.update(55, {
+      academic: { academicYearId: '3', courseId: '1', branchId: '2', semesterId: '999' },
+    })
   } finally { globalThis.fetch = originalFetch }
 })

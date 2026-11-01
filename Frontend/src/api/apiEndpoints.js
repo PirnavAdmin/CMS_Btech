@@ -807,8 +807,8 @@ export const sectionAssignmentApi = {
   },
   assign: async (sectionId, assignment) => request(API_ENDPOINTS.sections.assignStudents(sectionId), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ studentIds: [Number(assignment.studentId)] }) }),
   assignMany: async (sectionId, studentIds) => request(API_ENDPOINTS.sections.assignStudents(sectionId), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ studentIds: [...new Set(studentIds.map(Number))] }) }),
-  remove: async (sectionId, assignmentId) => {
-    await request(API_ENDPOINTS.sections.student(sectionId, assignmentId), { method: 'DELETE' })
+  remove: async (sectionId, studentId) => {
+    await request(API_ENDPOINTS.sections.student(sectionId, studentId), { method: 'DELETE' })
   },
   listBySection: async (sectionId) => listResponse(await request(API_ENDPOINTS.sections.students(sectionId))),
   getStudentCandidates: async (sectionId, search = '') => listResponse(await request(withQuery(API_ENDPOINTS.sections.studentCandidates(sectionId), { search }))),
@@ -1015,6 +1015,15 @@ const studentAdmissionPayload = (form = {}) => {
   const fees = form.fees ?? {}
   const previous = form.previousEducation ?? {}
   const application = form.application ?? {}
+  const admissionFormData = form.formData ?? form
+  const formData = { ...admissionFormData }
+  delete formData.semester
+  delete formData.semesterId
+  if (formData.academic) {
+    formData.academic = { ...formData.academic }
+    delete formData.academic.semester
+    delete formData.academic.semesterId
+  }
   const photo = form.studentPhoto ?? form.photo ?? personal.photo ?? personal.photoUrl
   // Deployed admission procedures accept a URL (VARCHAR(500)), not base64.
   // Preserve inline uploads in formData. Send an explicit empty legacy field:
@@ -1079,7 +1088,6 @@ const studentAdmissionPayload = (form = {}) => {
     departmentId: nullableNumericId(form.departmentId ?? academic.departmentId),
     courseId: nullableNumericId(form.courseId ?? academic.courseId),
     branchId: nullableNumericId(form.branchId ?? academic.branchId),
-    semesterId: nullableNumericId(form.semesterId ?? academic.semesterId),
     sectionId: nullableNumericId(form.sectionId ?? academic.sectionId),
     quota: form.quota ?? academic.quota,
     quotaOther: form.quotaOther ?? academic.quotaOther,
@@ -1133,7 +1141,7 @@ const studentAdmissionPayload = (form = {}) => {
     paymentPlan: form.paymentPlan ?? fees.paymentPlan,
     paymentStatus: form.paymentStatus ?? fees.paymentStatus,
     documentStatuses: form.documentStatuses ?? (form.documents ? Object.fromEntries(Object.entries(form.documents).filter(([, value]) => value && !Array.isArray(value)).map(([key, value]) => [key, typeof value === 'object' ? value.status ?? '' : value])) : undefined),
-    formData: form,
+    formData,
   })
 }
 
@@ -1143,7 +1151,6 @@ const academicDetailsPayload = (form = {}) => compact({
   departmentId: nullableNumericId(form.departmentId ?? form.academic?.departmentId),
   courseId: nullableNumericId(form.courseId ?? form.academic?.courseId),
   branchId: nullableNumericId(form.branchId ?? form.academic?.branchId),
-  semesterId: nullableNumericId(form.semesterId ?? form.academic?.semesterId),
   sectionId: nullableNumericId(form.sectionId ?? form.academic?.sectionId),
   admissionType: form.admissionType ?? form.academic?.admissionType,
   quota: form.quota ?? form.academic?.quota,

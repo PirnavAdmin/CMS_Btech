@@ -1,5 +1,5 @@
 import { NavLink as react_router_domImports_NavLink, Link as react_router_domImports_Link, Navigate as react_router_domImports_Navigate } from 'react-router-dom'
-import { FiBarChart2 as fiImports_FiBarChart2, FiCheckSquare as fiImports_FiCheckSquare, FiEdit3 as fiImports_FiEdit3, FiUploadCloud as fiImports_FiUploadCloud, FiUser as fiImports_FiUser, FiFileText as fiImports_FiFileText, FiSearch as fiImports_FiSearch, FiX as fiImports_FiX, FiCheck as fiImports_FiCheck, FiEye as fiImports_FiEye, FiEdit2 as fiImports_FiEdit2, FiPlus as fiImports_FiPlus, FiTrash2 as fiImports_FiTrash2, FiBookOpen as fiImports_FiBookOpen } from 'react-icons/fi'
+import { FiBarChart2 as fiImports_FiBarChart2, FiCheckSquare as fiImports_FiCheckSquare, FiEdit3 as fiImports_FiEdit3, FiUploadCloud as fiImports_FiUploadCloud, FiUser as fiImports_FiUser, FiFileText as fiImports_FiFileText, FiSearch as fiImports_FiSearch, FiX as fiImports_FiX, FiCheck as fiImports_FiCheck, FiEye as fiImports_FiEye, FiEdit2 as fiImports_FiEdit2, FiPlus as fiImports_FiPlus, FiTrash2 as fiImports_FiTrash2, FiBookOpen as fiImports_FiBookOpen, FiAlertCircle as fiImports_FiAlertCircle } from 'react-icons/fi'
 import SearchableSelectImports_default, { ProjectSelect as SearchableSelectImports_ProjectSelect } from '../../../components/SearchableSelect'
 import { useMemo as reactImports_useMemo, useState as reactImports_useState, useCallback as reactImports_useCallback, useEffect as reactImports_useEffect, useRef as reactImports_useRef } from 'react'
 import DashboardLayoutImports_default from '../../../layouts/DashboardLayout'
@@ -8,7 +8,7 @@ import FilterPanelImports_default from '../../../components/FilterPanel'
 import ExportMenuImports_default from '../../../components/ExportMenu'
 import TablePaginationImports_default from '../../../components/TablePagination'
 import EmptyStateImports_default from '../../../components/EmptyState'
-import { marksApi as apiEndpointsImports_marksApi, facultyApi as apiEndpointsImports_facultyApi, facultySubjectAllocationApi as apiEndpointsImports_facultySubjectAllocationApi, subjectApi as apiEndpointsImports_subjectApi } from '../../../api/apiEndpoints'
+import { marksApi as apiEndpointsImports_marksApi, facultyApi as apiEndpointsImports_facultyApi, facultySubjectAllocationApi as apiEndpointsImports_facultySubjectAllocationApi, subjectApi as apiEndpointsImports_subjectApi, sectionAssignmentApi as apiEndpointsImports_sectionAssignmentApi } from '../../../api/apiEndpoints'
 import StatusBadgeImports_default from '../../../components/StatusBadge'
 import ViewDialogImports_default from '../../../components/ViewDialog'
 import { useAcademic as AcademicContextImports_useAcademic } from '../../../context/AcademicContext'
@@ -22,6 +22,7 @@ import studentServiceImports_default from '../../../services/studentService'
 import subjectServiceImports_default from '../../../services/subjectService'
 import academicServiceImports_default from '../../../services/academicService'
 import { getExamTypes as examServiceImports_getExamTypes } from '../../../services/examService'
+import { fetchExams as collegeApiImports_fetchExams } from '../../../auth/collegeApi'
 import './MarksManagement.css'
 
 const exportMarksFile = async (action, params = {}) => {
@@ -1522,6 +1523,10 @@ const marksWorkflowPayload = marksWorkflowImports_marksWorkflowPayload
 const facultyService = facultyServiceImports_default
 const studentService = studentServiceImports_default
 const subjectService = subjectServiceImports_default
+const sectionAssignmentApi = apiEndpointsImports_sectionAssignmentApi
+const useRef = reactImports_useRef
+const FiAlertCircle = fiImports_FiAlertCircle
+const fetchExams = collegeApiImports_fetchExams
 
 const columns = [
   { key: 'academicYear', label: 'Academic Year' },
@@ -1562,14 +1567,16 @@ const initialAssessment = {
   sectionId: '',
   registrationNumber: '',
   studentName: '',
+  studentId: '',
   subject: '',
+  subjectId: '',
   facultyName: '',
   subjectCode: '',
   examType: '',
-  assessmentType: '',
+  assessmentType: 'Internal',
   examDate: '',
-  maximumMarks: '',
-  passingMarks: '',
+  maximumMarks: '100',
+  passingMarks: '35',
   studentMarks: '',
 }
 
@@ -1632,32 +1639,32 @@ const getMarksSummary = ({
   maximumMarks,
   passingMarks,
 }) => {
-  const marks =
-    studentMarks === '' || studentMarks == null
+  const numericValue = value =>
+    value == null || String(value).trim() === ''
       ? NaN
-      : Number(studentMarks)
-
-  const maximum =
-    maximumMarks === '' || maximumMarks == null
-      ? NaN
-      : Number(maximumMarks)
-
-  const passing =
-    passingMarks === '' || passingMarks == null
-      ? NaN
-      : Number(passingMarks)
+      : Number(value)
+  const marks = numericValue(studentMarks)
+  const maximum = numericValue(maximumMarks)
+  const passing = numericValue(passingMarks)
+  const hasMarks = Number.isFinite(marks)
+  const hasMaximum = Number.isFinite(maximum) && maximum > 0
 
   const percentage =
-    Number.isFinite(marks) &&
-      Number.isFinite(maximum) &&
-      maximum > 0
+    hasMarks &&
+      hasMaximum &&
+      marks >= 0 &&
+      marks <= maximum
       ? `${((marks / maximum) * 100).toFixed(2)}%`
       : ''
 
+  const hasInvalidValues =
+    (hasMarks && marks < 0) ||
+    (Number.isFinite(maximum) && maximum <= 0) ||
+    (Number.isFinite(passing) && (passing < 0 || (hasMaximum && passing > maximum))) ||
+    (hasMarks && hasMaximum && marks > maximum)
   const examStatus =
-    Number.isFinite(marks) &&
-      Number.isFinite(maximum) &&
-      maximum > 0 &&
+    hasMarks &&
+      hasMaximum &&
       Number.isFinite(passing) &&
       marks >= 0 &&
       marks <= maximum &&
@@ -1668,9 +1675,14 @@ const getMarksSummary = ({
         : 'Fail'
       : ''
 
+  const examStatusMessage = examStatus
+    || (hasInvalidValues ? 'Check values' : 'Awaiting marks')
+
   return {
     percentage,
     examStatus,
+    examStatusMessage,
+    hasInvalidValues,
   }
 }
 
@@ -1696,6 +1708,11 @@ function MarksEntry() {
   const [summaryReport, setSummaryReport] = useState(null)
   const [subjects, setSubjects] = useState([])
   const [students, setStudents] = useState([])
+  const [sectionStudents, setSectionStudents] = useState([])
+  const [sectionStudentsLoadedFor, setSectionStudentsLoadedFor] = useState('')
+  const [sectionStudentsLoading, setSectionStudentsLoading] = useState(false)
+  const [sectionStudentsError, setSectionStudentsError] = useState('')
+  const [sectionStudentsRetry, setSectionStudentsRetry] = useState(0)
   const [facultyMembers, setFacultyMembers] = useState([])
   const [activeSuggestion, setActiveSuggestion] = useState('')
   const [query, setQuery] = useState('')
@@ -1715,6 +1732,11 @@ function MarksEntry() {
   const [showAddForm, setShowAddForm] = useState(false)
   const [editingId, setEditingId] = useState('')
   const [deletingRow, setDeletingRow] = useState(null)
+  const [submittingMarkId, setSubmittingMarkId] = useState('')
+  const [examsList, setExamsList] = useState([])
+  const [modalError, setModalError] = useState('')
+  const [fieldErrors, setFieldErrors] = useState({})
+  const formRef = useRef(null)
   const [assessment, setAssessment] =
     useState(initialAssessment)
 
@@ -1776,12 +1798,52 @@ function MarksEntry() {
   }, [])
 
   useEffect(() => {
+    const sectionId = Number(assessment.sectionId)
+    if (!Number.isSafeInteger(sectionId) || sectionId <= 0) {
+      setSectionStudents([])
+      setSectionStudentsLoadedFor('')
+      setSectionStudentsError('')
+      setSectionStudentsLoading(false)
+      return undefined
+    }
+
+    let active = true
+    setSectionStudents([])
+    setSectionStudentsLoadedFor('')
+    setSectionStudentsError('')
+    setSectionStudentsLoading(true)
+    sectionAssignmentApi.listBySection(sectionId)
+      .then(rows => {
+        if (active) {
+          setSectionStudents(Array.isArray(rows) ? rows : [])
+          setSectionStudentsLoadedFor(String(sectionId))
+        }
+      })
+      .catch(error => {
+        if (active) {
+          setSectionStudentsError(error?.message || 'Students assigned to this section could not be loaded.')
+        }
+      })
+      .finally(() => {
+        if (active) setSectionStudentsLoading(false)
+      })
+
+    return () => { active = false }
+  }, [assessment.sectionId, sectionStudentsRetry])
+
+  useEffect(() => {
     facultyService
       .list()
       .then(data =>
         setFacultyMembers(Array.isArray(data) ? data : [])
       )
       .catch(() => setFacultyMembers([]))
+  }, [])
+
+  useEffect(() => {
+    fetchExams({ Page: 1, PageSize: 500 })
+      .then(res => setExamsList(Array.isArray(res?.items) ? res.items : []))
+      .catch(() => setExamsList([]))
   }, [])
 
   const allRows = draftRows
@@ -2329,6 +2391,95 @@ function MarksEntry() {
     studentMarks: allRows.map(row => row.studentMarks),
   }), [allRows])
 
+  const sectionEligibleStudents = useMemo(() => {
+    if (!assessment.sectionId || sectionStudentsLoadedFor !== String(assessment.sectionId)) return []
+    return sectionStudents.map(assignment => {
+      const assignedProfile = assignment.student
+        ?? assignment.Student
+        ?? assignment.studentProfile
+        ?? assignment.profile
+        ?? {}
+      const assignedStudentId = assignment.studentId
+        ?? assignment.StudentId
+        ?? assignment.student_id
+        ?? assignment.studentProfileId
+        ?? assignment.StudentProfileId
+        ?? assignedProfile.studentId
+        ?? assignedProfile.StudentId
+        ?? assignedProfile.student_id
+        ?? assignedProfile.id
+        ?? (assignment.assignmentId == null && assignment.AssignmentId == null
+          ? assignment.id ?? assignment.Id
+          : '')
+        ?? ''
+      const assignmentRegistration = assignment.registrationNumber
+        ?? assignment.RegistrationNumber
+        ?? assignment.studentCode
+        ?? assignment.StudentCode
+        ?? assignment.rollNumber
+        ?? assignment.RollNumber
+        ?? assignment.enrollmentNo
+        ?? assignment.EnrollmentNo
+        ?? assignedProfile.registrationNumber
+        ?? assignedProfile.studentCode
+        ?? assignedProfile.rollNumber
+        ?? ''
+      const student = students.find(item => {
+        const profileId = item.studentId
+          ?? item.StudentId
+          ?? item.student_id
+          ?? item.studentProfileId
+          ?? item.id
+        const profileRegistration = item.registrationNumber
+          ?? item.application?.registrationNumber
+          ?? item.application?.number
+          ?? item.academic?.registrationNumber
+          ?? item.academic?.rollNumber
+          ?? item.studentCode
+          ?? item.rollNumber
+          ?? ''
+        return (assignedStudentId && String(profileId) === String(assignedStudentId))
+          || (assignmentRegistration && String(profileRegistration).trim().toLowerCase() === String(assignmentRegistration).trim().toLowerCase())
+      }) || assignedProfile
+      const studentId = student?.studentId
+        ?? student?.StudentId
+        ?? student?.student_id
+        ?? student?.studentProfileId
+        ?? student?.id
+        ?? assignedStudentId
+      const registrationNumber = student?.registrationNumber
+        || student?.application?.registrationNumber
+        || student?.application?.number
+        || student?.academic?.registrationNumber
+        || student?.academic?.rollNumber
+        || student?.studentCode
+        || student?.rollNumber
+        || assignmentRegistration
+        || assignment.studentCode
+        || assignment.registrationNumber
+        || ''
+      const fullName = student?.fullName
+        || student?.FullName
+        || student?.personal?.fullName
+        || student?.name
+        || student?.studentName
+        || assignment.StudentName
+        || assignment.fullName
+        || assignment.studentName
+        || assignment.student_name
+        || ''
+      return {
+        ...(student || {}),
+        id: studentId,
+        studentId,
+        registrationNumber,
+        fullName,
+        name: fullName,
+        studentName: fullName,
+      }
+    }).filter(student => student.studentId)
+  }, [assessment.sectionId, sectionStudents, sectionStudentsLoadedFor, students])
+
   const formSelectOptions = useMemo(() => {
     const option = (value, label = value) => ({ value: String(value ?? ''), label: String(label ?? value ?? '') })
     const optionsFor = (items, nameKeys, codeKeys = [], idKeys = []) => items
@@ -2390,27 +2541,28 @@ function MarksEntry() {
       semester: mergeOptions(optionsFor(scopedSemesters, ['semesterName', 'name', 'semesterNumber', 'semester']), savedOptions('semester')),
       section: mergeOptions(optionsFor(scopedSections, ['sectionName', 'name', 'section', 'code']), savedOptions('section')),
       registrationNumber: mergeOptions(
-        uniqueValues(students.map(studentRegistration)).map(value => {
-          const student = students.find(item => normalized(studentRegistration(item)) === normalized(value))
+        uniqueValues(sectionEligibleStudents.map(studentRegistration)).map(value => {
+          const student = sectionEligibleStudents.find(item => normalized(studentRegistration(item)) === normalized(value))
           const name = studentName(student)
           return option(value, name ? `${value} (${name})` : value)
         }),
-        savedOptions('registrationNumber'),
       ),
       studentName: mergeOptions(
-        uniqueValues(students.map(studentName)).map(value => {
-          const student = students.find(item => normalized(studentName(item)) === normalized(value))
+        uniqueValues(sectionEligibleStudents.map(studentName)).map(value => {
+          const student = sectionEligibleStudents.find(item => normalized(studentName(item)) === normalized(value))
           const registration = studentRegistration(student)
           return option(value, registration ? `${value} (${registration})` : value)
         }),
-        savedOptions('studentName'),
       ),
       subject: mergeOptions(optionsFor(eligibleSubjects, ['subjectName', 'name', 'subject'], ['subjectCode', 'code']), savedOptions('subject')),
       facultyName: mergeOptions(optionsFor(facultyMembers, ['fullName', 'facultyName', 'name']), savedOptions('facultyName')),
-      examType: uniqueValues([...fieldOptions.examType, ...subjects.map(item => item.examType), ...savedAssessmentOptions.examType]).map(value => option(value)),
+      examType: mergeOptions(
+        examsList.map(e => option(e.examName || e.examTypeName, `${e.examName || e.examTypeName}${e.examCode ? ` (${e.examCode})` : ''}`)),
+        uniqueValues([...fieldOptions.examType, ...subjects.map(item => item.examType), ...savedAssessmentOptions.examType]).map(value => option(value)),
+      ),
       assessmentType: uniqueValues([...fieldOptions.assessmentType, ...subjects.map(item => item.assessmentType), ...savedAssessmentOptions.assessmentType]).map(value => option(value)),
     }
-  }, [academicYears, academicCourses, branches, semesters, sections, students, eligibleSubjects, facultyMembers, subjects, assessment, savedAssessmentOptions])
+  }, [academicYears, academicCourses, branches, semesters, sections, sectionEligibleStudents, eligibleSubjects, facultyMembers, subjects, assessment, savedAssessmentOptions, examsList])
   const selectedCourse = academicCourses.find(item =>
     normalized(entityLabel(item, ['courseName', 'name', 'course', 'programName', 'title'])) === normalized(assessment.course)
     || (assessment.courseId && normalized(item.courseId ?? item.id) === normalized(assessment.courseId)),
@@ -2432,6 +2584,15 @@ function MarksEntry() {
     key,
     value
   ) => {
+    if (modalError) setModalError('')
+    if (fieldErrors[key]) {
+      setFieldErrors(current => {
+        const next = { ...current }
+        delete next[key]
+        return next
+      })
+    }
+
     const matchedYear = key === 'academicYear'
       ? academicYears.find(item => normalized(entityLabel(item, ['academicYearName', 'name', 'academicYear', 'yearName'])) === normalized(value))
       : null
@@ -2455,14 +2616,23 @@ function MarksEntry() {
       : null
     const matchedSubject =
       key === 'subject'
-        ? eligibleSubjects.find(
+        ? (eligibleSubjects.find(
           row =>
             normalized(
               row.subjectName ||
+              row.name ||
               row.subject
             ) ===
             normalized(value)
-        )
+        ) || subjects.find(
+          row =>
+            normalized(
+              row.subjectName ||
+              row.name ||
+              row.subject
+            ) ===
+            normalized(value)
+        ))
         : null
 
     const matchedSavedSubject =
@@ -2483,11 +2653,29 @@ function MarksEntry() {
         })
         : null
 
+    const matchedSubjectByCode = key === 'subjectCode'
+      ? (eligibleSubjects.find(s => normalized(s.subjectCode || s.code) === normalized(value))
+         || subjects.find(s => normalized(s.subjectCode || s.code) === normalized(value)))
+      : null
+
+    const matchedExam = (key === 'examType' || key === 'examId')
+      ? examsList.find(e =>
+          (key === 'examId' && String(e.examId) === String(value))
+          || (key === 'examType' && (normalized(e.examName) === normalized(value) || normalized(e.examTypeName) === normalized(value) || normalized(e.examCode) === normalized(value))),
+        )
+      : null
+    const matchedSavedExam = (key === 'examType' || key === 'examId')
+      ? allRows.find(r =>
+          (key === 'examId' && String(r.examId) === String(value))
+          || (key === 'examType' && (normalized(r.examType) === normalized(value) || normalized(r.examName) === normalized(value))),
+        )
+      : null
+
     const matchedStudent = [
       'registrationNumber',
       'studentName',
     ].includes(key)
-      ? students.find(student =>
+      ? sectionEligibleStudents.find(student =>
         normalized(
           key ===
             'registrationNumber'
@@ -2572,7 +2760,12 @@ function MarksEntry() {
         }
         : {}),
       ...(key === 'section'
-        ? { sectionId: matchedSection?.sectionId || matchedSection?.id || '' }
+        ? {
+          sectionId: matchedSection?.sectionId || matchedSection?.id || '',
+          registrationNumber: '',
+          studentName: '',
+          studentId: '',
+        }
         : {}),
       ...(key === 'facultyName'
         ? { facultyId: matchedFaculty?.facultyId || matchedFaculty?.id || '' }
@@ -2583,10 +2776,45 @@ function MarksEntry() {
           subjectCode:
             matchedSubject?.subjectCode ||
             matchedSavedSubject?.subjectCode ||
+            current.subjectCode ||
             '',
-          subjectId: matchedSubject?.subjectId || matchedSubject?.id || matchedSavedSubject?.subjectId || '',
+          subjectId: matchedSubject?.subjectId || matchedSubject?.id || matchedSavedSubject?.subjectId || current.subjectId || '',
         }
         : {}),
+
+      ...(key === 'subjectCode' && matchedSubjectByCode
+        ? {
+          subject: matchedSubjectByCode.subjectName || matchedSubjectByCode.name || matchedSubjectByCode.subject || current.subject,
+          subjectId: matchedSubjectByCode.subjectId || matchedSubjectByCode.id || current.subjectId,
+          subjectCode: matchedSubjectByCode.subjectCode || matchedSubjectByCode.code || value,
+        }
+        : {}),
+
+      ...(key === 'examType' && matchedExam
+        ? {
+          examId: String(matchedExam.examId),
+          examType: matchedExam.examName || matchedExam.examTypeName || value,
+          ...(matchedExam.academicYear ? { academicYear: matchedExam.academicYear, academicYearId: matchedExam.academicYearId || current.academicYearId } : {}),
+          ...(matchedExam.courseName ? { course: matchedExam.courseName, courseId: matchedExam.courseId || current.courseId } : {}),
+          ...(matchedExam.branchName ? { branch: matchedExam.branchName, branchId: matchedExam.branchId || current.branchId } : {}),
+          ...(matchedExam.semesterName ? { semester: matchedExam.semesterName, semesterId: matchedExam.semesterId || current.semesterId } : {}),
+        }
+        : key === 'examType' && matchedSavedExam
+          ? {
+            examId: String(matchedSavedExam.examId || current.examId),
+          }
+          : {}),
+
+      ...(key === 'examId' && matchedExam
+        ? {
+          examId: String(matchedExam.examId),
+          examType: matchedExam.examName || matchedExam.examTypeName || current.examType,
+        }
+        : key === 'examId' && matchedSavedExam
+          ? {
+            examType: matchedSavedExam.examType || current.examType,
+          }
+          : {}),
 
       ...(key ===
         'registrationNumber' &&
@@ -2644,35 +2872,115 @@ function MarksEntry() {
 
   const submitAssessment = async event => {
     event.preventDefault()
+    setModalError('')
+    setFieldErrors({})
+
+    let student = sectionEligibleStudents.find(item =>
+      (assessment.studentId && (String(item.studentId) === String(assessment.studentId) || String(item.id) === String(assessment.studentId)))
+      || (assessment.registrationNumber && normalized(item.registrationNumber || item.application?.registrationNumber || item.academic?.registrationNumber) === normalized(assessment.registrationNumber))
+      || (assessment.studentName && normalized(item.fullName || item.personal?.fullName || item.name || item.studentName) === normalized(assessment.studentName)),
+    )
+    let subject = subjects.find(item =>
+      (assessment.subjectId && (String(item.subjectId) === String(assessment.subjectId) || String(item.id) === String(assessment.subjectId)))
+      || (assessment.subjectCode && normalized(item.subjectCode || item.code) === normalized(assessment.subjectCode))
+      || (assessment.subject && normalized(item.subjectName || item.name || item.subject) === normalized(assessment.subject || assessment.subjectName)),
+    )
+    const section = sections.find(item =>
+      normalized(item.sectionName || item.name || item.label) === normalized(assessment.section),
+    )
+    const studentId = Number(assessment.studentId || student?.studentId || student?.id)
+    const subjectId = Number(assessment.subjectId || subject?.subjectId || subject?.id)
+    const sectionId = Number(assessment.sectionId || section?.sectionId || section?.id)
+    if (Number.isSafeInteger(sectionId) && sectionId > 0) {
+      if (sectionStudentsLoading || sectionStudentsLoadedFor !== String(sectionId)) {
+        setModalError('Please wait while students assigned to the selected section are loaded.')
+        return
+      }
+      if (sectionStudentsError) {
+        setModalError('Unable to verify section assignments. Retry loading students before saving.')
+        return
+      }
+    }
+    if (!editingId && Number.isSafeInteger(studentId) && studentId > 0
+      && Number.isSafeInteger(sectionId) && sectionId > 0
+      && !sectionStudents.some(item =>
+      String(item.studentId ?? item.student_id ?? item.student?.studentId ?? item.student?.id) === String(studentId),
+    )) {
+      setFieldErrors(current => ({ ...current, registrationNumber: true, studentName: true, section: true }))
+      setModalError('Select a student assigned to the selected section. Change the section or update its student assignments.')
+      formRef.current?.scrollTo({ top: 0 })
+      return
+    }
+
+    let examId = Number(assessment.examId)
+    if (!Number.isSafeInteger(examId) || examId <= 0) {
+      const matchedExam = examsList.find(e =>
+        normalized(e.examName) === normalized(assessment.examType)
+        || normalized(e.examTypeName) === normalized(assessment.examType)
+        || normalized(e.examCode) === normalized(assessment.examType),
+      )
+      if (matchedExam && Number.isSafeInteger(Number(matchedExam.examId)) && Number(matchedExam.examId) > 0) {
+        examId = Number(matchedExam.examId)
+      } else {
+        const matchedRow = draftRows.find(r =>
+          normalized(r.examType) === normalized(assessment.examType)
+          || normalized(r.examName) === normalized(assessment.examType),
+        )
+        if (matchedRow && Number.isSafeInteger(Number(matchedRow.examId)) && Number(matchedRow.examId) > 0) {
+          examId = Number(matchedRow.examId)
+        }
+      }
+    }
+
+    const marksObtained = Number(assessment.studentMarks)
+    const maxMarks = Number(assessment.maximumMarks)
+    const passingMarks = Number(assessment.passingMarks)
+
+    const errors = {}
+    const errorMessages = []
+
+    if (!editingId && (!Number.isSafeInteger(examId) || examId <= 0)) {
+      errors.examId = true
+      errors.examType = true
+      errorMessages.push('Please select an Exam from the list or enter a valid Examination ID.')
+    }
+    if (!editingId && (!Number.isSafeInteger(studentId) || studentId <= 0)) {
+      errors.registrationNumber = true
+      errors.studentName = true
+      errorMessages.push('Please select a valid Student.')
+    }
+    if (!editingId && (!Number.isSafeInteger(subjectId) || subjectId <= 0)) {
+      errors.subject = true
+      errors.subjectCode = true
+      errorMessages.push('Please select a valid Subject.')
+    }
+    if (assessment.studentMarks === '' || !Number.isFinite(marksObtained) || marksObtained < 0) {
+      errors.studentMarks = true
+      errorMessages.push('Enter valid Student Marks (non-negative number).')
+    }
+    if (assessment.maximumMarks === '' || !Number.isFinite(maxMarks) || maxMarks <= 0) {
+      errors.maximumMarks = true
+      errorMessages.push('Enter a positive Maximum Marks value.')
+    } else if (Number.isFinite(marksObtained) && marksObtained > maxMarks) {
+      errors.studentMarks = true
+      errorMessages.push(`Student Marks (${marksObtained}) cannot exceed Maximum Marks (${maxMarks}).`)
+    }
+
+    if (errorMessages.length > 0) {
+      setFieldErrors(errors)
+      setModalError(errorMessages.join(' '))
+      if (formRef.current) {
+        formRef.current.scrollTop = 0
+      }
+      return
+    }
+
     setSaving(true)
     try {
-      const student = students.find(item =>
-        normalized(item.registrationNumber || item.application?.registrationNumber || item.academic?.registrationNumber) === normalized(assessment.registrationNumber)
-        || normalized(item.fullName || item.personal?.fullName || item.name || item.studentName) === normalized(assessment.studentName),
-      )
-      const subject = subjects.find(item =>
-        normalized(item.subjectCode || item.code) === normalized(assessment.subjectCode)
-        || normalized(item.subjectName || item.name || item.subject) === normalized(assessment.subject || assessment.subjectName),
-      )
-      const section = sections.find(item =>
-        normalized(item.sectionName || item.name || item.label) === normalized(assessment.section),
-      )
-      const studentId = Number(assessment.studentId || student?.studentId || student?.id)
-      const subjectId = Number(assessment.subjectId || subject?.subjectId || subject?.id)
-      const sectionId = Number(assessment.sectionId || section?.sectionId || section?.id)
-      const examId = Number(assessment.examId)
-      const marksObtained = Number(assessment.studentMarks)
-      const maxMarks = Number(assessment.maximumMarks)
-      if (!Number.isSafeInteger(examId) || examId <= 0) throw new Error('Enter a valid examination ID.')
-      if (!Number.isSafeInteger(studentId) || studentId <= 0) throw new Error('Select a student with a valid student ID.')
-      if (!Number.isSafeInteger(subjectId) || subjectId <= 0) throw new Error('Select a subject with a valid subject ID.')
-      if (!Number.isFinite(marksObtained) || marksObtained < 0) throw new Error('Enter a valid non-negative marks value.')
-      if (!Number.isFinite(maxMarks) || maxMarks <= 0 || marksObtained > maxMarks) throw new Error('Marks must not exceed a positive maximum.')
-
       const payload = {
         marksObtained,
         maxMarks,
-        grade: assessment.grade || null,
+        grade: assessment.grade || (marksObtained >= passingMarks ? 'Pass' : 'Fail'),
         remarks: assessment.remarks || null,
       }
       const saved = editingId
@@ -2695,43 +3003,54 @@ function MarksEntry() {
       setPage(1)
       await loadMarks()
     } catch (error) {
+      const errorMsg = error?.backendMessage || error?.message || 'Marks entry failed.'
+      setModalError(errorMsg)
       showError(error)
+      if (formRef.current) {
+        formRef.current.scrollTop = 0
+      }
     } finally {
       setSaving(false)
     }
   }
 
   const editAssessment = async row => {
+    if (!['DRAFT', 'REJECTED'].includes(String(row.workflowStatus || '').toUpperCase())) {
+      showError('Only draft or rejected marks can be edited.')
+      return
+    }
     try {
       const detail = await marksApi.get(row.markId || row.id)
       const record = toEntryRow(detail)
-    setEditingId(row.id)
-    setAssessment({
-      ...initialAssessment,
-      ...record,
-      examId: String(record.examId || ''),
-      studentId: record.studentId,
-      subjectId: record.subjectId,
-      sectionId: record.sectionId,
-      registrationNumber: record.studentCode || record.registrationNumber || '',
-      studentName: record.studentName || '',
-      subject:
-        record.subject ||
-        record.subjectName ||
-        '',
-      subjectCode: record.subjectCode || '',
-      maximumMarks: record.maxMarks ?? record.maximumMarks ?? '',
-      studentMarks: record.marksObtained ?? record.studentMarks ?? '',
-    })
-    setActiveSuggestion('')
-    setShowAddForm(true)
+      setEditingId(row.id)
+      setModalError('')
+      setFieldErrors({})
+      setAssessment({
+        ...initialAssessment,
+        ...record,
+        examId: String(record.examId || ''),
+        studentId: record.studentId,
+        subjectId: record.subjectId,
+        sectionId: record.sectionId,
+        registrationNumber: record.studentCode || record.registrationNumber || '',
+        studentName: record.studentName || '',
+        subject:
+          record.subject ||
+          record.subjectName ||
+          '',
+        subjectCode: record.subjectCode || '',
+        maximumMarks: record.maxMarks ?? record.maximumMarks ?? '',
+        studentMarks: record.marksObtained ?? record.studentMarks ?? '',
+      })
+      setActiveSuggestion('')
+      setShowAddForm(true)
     } catch (error) {
       showError(error)
     }
   }
 
   const deleteAssessment = row => {
-    showError(`Marks record ${row.markId || row.id} cannot be deleted because the marks API does not provide a delete endpoint.`)
+    showError(`Marks record ${row.markId || row.id} cannot be removed because the backend does not expose a marks DELETE endpoint.`)
   }
 
   const confirmDeleteAssessment = () => {
@@ -2740,6 +3059,13 @@ function MarksEntry() {
   }
 
   const submitMark = async row => {
+    if (!['DRAFT', 'REJECTED'].includes(String(row.workflowStatus || '').toUpperCase())) {
+      showError('Only draft or rejected marks can be submitted for approval.')
+      return
+    }
+    const markId = String(row.markId || row.id)
+    if (submittingMarkId) return
+    setSubmittingMarkId(markId)
     try {
       const payload = marksWorkflowPayload('submit', [row])
       const result = await marksApi.workflow('submit', payload)
@@ -2748,6 +3074,8 @@ function MarksEntry() {
       await loadMarks()
     } catch (error) {
       showError(error)
+    } finally {
+      setSubmittingMarkId('')
     }
   }
 
@@ -2920,6 +3248,8 @@ function MarksEntry() {
                   onClick={() => {
                     setEditingId('')
                     setAssessment(createAssessmentDraft())
+                    setModalError('')
+                    setFieldErrors({})
                     setShowAddForm(true)
                   }}
                 >
@@ -3044,7 +3374,9 @@ function MarksEntry() {
                 }
               >
                 <form
+                  ref={formRef}
                   className="marks-entry-form"
+                  noValidate
                   role="dialog"
                   aria-modal="true"
                   aria-labelledby="marks-entry-form-title"
@@ -3077,12 +3409,36 @@ function MarksEntry() {
                       onClick={() => {
                         setShowAddForm(false)
                         setEditingId('')
+                        setModalError('')
+                        setFieldErrors({})
                       }}
                       aria-label="Close form"
                     >
                       &times;
                     </button>
                   </div>
+
+                  {modalError && (
+                    <div className="marks-modal-error-banner" role="alert">
+                      <FiAlertCircle className="marks-modal-error-icon" />
+                      <span>{modalError}</span>
+                    </div>
+                  )}
+                  {sectionStudentsError && (
+                    <div className="marks-section-student-message marks-section-student-message--error" role="alert">
+                      <FiAlertCircle aria-hidden="true" />
+                      <span>Could not load students assigned to this section: {sectionStudentsError}</span>
+                      <button type="button" onClick={() => setSectionStudentsRetry(value => value + 1)}>
+                        Retry
+                      </button>
+                    </div>
+                  )}
+                  {assessment.sectionId && (sectionStudentsLoading || sectionStudentsLoadedFor !== String(assessment.sectionId)) && !sectionStudentsError && (
+                    <p className="marks-section-student-message" role="status">Loading students assigned to the selected section…</p>
+                  )}
+                  {assessment.sectionId && sectionStudentsLoadedFor === String(assessment.sectionId) && sectionStudents.length === 0 && !sectionStudentsError && (
+                    <p className="marks-section-student-message" role="status">No students are assigned to this section. Assign students in Section Management before entering marks.</p>
+                  )}
 
                   <div className="marks-entry-form__body">
                     <div className="marks-entry-form__grid">
@@ -3234,13 +3590,30 @@ function MarksEntry() {
                                 key
                                 ]
 
+                          const requiredFields = new Set([
+                            'academicYear',
+                            'course',
+                            'branch',
+                            'semester',
+                            'registrationNumber',
+                            'studentName',
+                            'subject',
+                            'subjectCode',
+                            'examType',
+                            'maximumMarks',
+                            'studentMarks',
+                          ])
+                          const isRequired = requiredFields.has(key)
+                          const hasError = Boolean(fieldErrors[key])
+
                           return (
                             <label
-                              className="marks-entry-form__field"
+                              className={`marks-entry-form__field${hasError ? ' has-error' : ''}`}
                               key={key}
                             >
                               <span>
                                 {label}
+                                {isRequired && <span className="marks-required-indicator" aria-hidden="true">*</span>}
                               </span>
 
                               <div
@@ -3248,9 +3621,17 @@ function MarksEntry() {
                                     'examDate'
                                     ? ' marks-entry-input-combo--datetime'
                                     : ''
-                                  }`}
+                                  }${hasError ? ' has-error' : ''}`}
                               >
-                                {isSelect ? (
+                                {key === 'examStatus' ? (
+                                  <output
+                                    className="marks-entry-status-value"
+                                    data-status={summary.examStatus.toLowerCase() || (summary.hasInvalidValues ? 'invalid' : 'pending')}
+                                    aria-live="polite"
+                                  >
+                                    {summary.examStatusMessage}
+                                  </output>
+                                ) : isSelect ? (
                                   <ProjectSelect
                                     aria-label={label}
                                     value={
@@ -3261,9 +3642,27 @@ function MarksEntry() {
                                           : fieldValue ?? ''
                                     }
                                     onChange={event => updateAssessment(key, event.target.value)}
-                                    required
+                                    disabled={['registrationNumber', 'studentName'].includes(key) && (
+                                      !assessment.sectionId
+                                      || sectionStudentsLoading
+                                      || sectionStudentsLoadedFor !== String(assessment.sectionId)
+                                      || Boolean(sectionStudentsError)
+                                      || sectionEligibleStudents.length === 0
+                                    )}
                                   >
-                                    <option value="">Select {label.toLowerCase()}</option>
+                                    <option value="">
+                                      {['registrationNumber', 'studentName'].includes(key)
+                                        ? !assessment.sectionId
+                                          ? 'Select a section first'
+                                          : sectionStudentsLoading || sectionStudentsLoadedFor !== String(assessment.sectionId)
+                                            ? 'Loading assigned students…'
+                                            : sectionStudentsError
+                                              ? 'Retry loading students'
+                                              : sectionEligibleStudents.length === 0
+                                                ? 'No students assigned'
+                                                : `Select ${label.toLowerCase()}`
+                                        : `Select ${label.toLowerCase()}`}
+                                    </option>
                                     {(formSelectOptions[key] || []).map(option => (
                                       <option key={`${key}-${option.value}`} value={option.value} label={option.label}>
                                         {option.label}
@@ -3327,9 +3726,6 @@ function MarksEntry() {
                                     }
                                     readOnly={
                                       isDerived
-                                    }
-                                    required={
-                                      !isDerived
                                     }
                                     autoComplete="off"
                                     role={
@@ -3581,6 +3977,8 @@ function MarksEntry() {
                   const examDate = row.examDate
                     ? String(row.examDate).replace('T', ' ').slice(0, 16)
                     : ''
+                  const canManageMark = ['DRAFT', 'REJECTED'].includes(String(row.workflowStatus || '').toUpperCase())
+                  const rowMarkId = String(row.markId || row.id)
 
                   return (
                     <tr key={row.id || row.registrationNumber || index}>
@@ -3675,26 +4073,42 @@ function MarksEntry() {
                       </td>
 
                       <td className="marks-entry-actions-cell">
-                        <div className="marks-entry-row-actions">
-                          {['DRAFT', 'REJECTED'].includes(String(row.workflowStatus || '').toUpperCase()) && <button type="button" className="table-action-btn marks-entry-row-action" title="Submit for approval" aria-label={'Submit marks for approval for ' + studentName} onClick={() => submitMark(row)}><FiCheck /></button>}
-                          <button
-                            type="button"
-                            className="table-action-btn marks-entry-row-action marks-entry-row-action--edit"
-                            title="Edit marks"
-                            aria-label={'Edit marks for ' + studentName}
-                            onClick={() => editAssessment(row)}
-                          >
-                            <FiEdit2 />
-                          </button>
-                          <button
-                            type="button"
-                            className="table-action-btn marks-entry-row-action marks-entry-row-action--delete"
-                            title="Delete marks"
-                            aria-label={'Delete marks for ' + studentName}
-                            onClick={() => deleteAssessment(row)}
-                          >
-                            <FiTrash2 />
-                          </button>
+                        <div className="table-actions-group marks-entry-row-actions">
+                          {canManageMark && (
+                            <>
+                              <button
+                                type="button"
+                                className="table-action-btn action-activate marks-entry-row-action"
+                                title={submittingMarkId === rowMarkId ? 'Submitting marks…' : 'Submit for approval'}
+                                aria-label={'Submit marks for approval for ' + studentName}
+                                aria-busy={submittingMarkId === rowMarkId}
+                                disabled={Boolean(submittingMarkId)}
+                                onClick={() => submitMark(row)}
+                              >
+                                <FiCheck aria-hidden="true" />
+                              </button>
+                              <button
+                                type="button"
+                                className="table-action-btn action-edit marks-entry-row-action"
+                                title="Edit marks"
+                                aria-label={'Edit marks for ' + studentName}
+                                disabled={Boolean(submittingMarkId)}
+                                onClick={() => editAssessment(row)}
+                              >
+                                <FiEdit2 aria-hidden="true" />
+                              </button>
+                              <button
+                                type="button"
+                                className="table-action-btn action-deactivate marks-entry-row-action"
+                                title="Remove draft or rejected marks"
+                                aria-label={'Remove draft or rejected marks for ' + studentName}
+                                disabled={Boolean(submittingMarkId)}
+                                onClick={() => deleteAssessment(row)}
+                              >
+                                <FiTrash2 aria-hidden="true" />
+                              </button>
+                            </>
+                          )}
                         </div>
                       </td>
                     </tr>

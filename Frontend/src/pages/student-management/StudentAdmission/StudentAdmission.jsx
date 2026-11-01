@@ -1765,6 +1765,7 @@ function AdmissionForm() {
     return () => { active = false }
   }, [validId])
   const update = (path, value) => {
+    setSaveError('')
     setData(current => {
       let next = setPath(current, path, value);
       if (current.previewEditedFields) next.previewEditedFields = { ...current.previewEditedFields, [path]: true };
@@ -2013,7 +2014,7 @@ function AdmissionForm() {
     const masterError = errors[namePath] || ((touched[namePath] || touched[idPath] || read(data, idPath)) ? allErrors[namePath] : '');
     const branchField = idPath === 'academic.branchId'
     const placeholder = disabled ? 'Select Course first' : branchField && branchLoading ? 'Loading branches...' : branchField && !options.length ? branchLoadError ? 'Branches unavailable' : 'No branches configured' : `Select ${label}`
-    return <label className={`sa-field ${masterError?'invalid':''}`} htmlFor={id}><span>{label}<b> *</b></span><ProjectSelect id={id} value={read(data,idPath)||''} disabled={disabled || (branchField && branchLoading)} onChange={event=>{markTouched(namePath);markTouched(idPath);const option=options.find(item=>same(item.id,event.target.value));setData(current=>{let next=setPath(current,idPath,event.target.value);if(current.previewEditedFields)next.previewEditedFields={...current.previewEditedFields,[idPath]:true,[namePath]:true};next=setPath(next,namePath,option?.name||'');if(idPath==='academic.courseId')next=setPath(next,'academic.courseCode',option?.code||courseCodeFallback(option?.name));if(idPath==='academic.branchId')next=setPath(next,'academic.branchCode',option?.code||branchCodeFallback(option?.name));resets.forEach(([resetId,resetName])=>{next=setPath(next,resetId,'');next=setPath(next,resetName,'')});return next});setErrors(current=>({...current,[namePath]:''}))}} onBlur={() => { markTouched(namePath); markTouched(idPath) }}><option value="">{placeholder}</option>{options.map(option=><option key={option.id} value={option.id}>{option.name}{option.code ? ` (${option.code})` : ''}</option>)}</ProjectSelect>{branchField && !branchLoading && !options.length && <small role={branchLoadError?'alert':'status'}>{branchLoadError || 'Ask an administrator to add an active branch under this course.'}</small>}{masterError&&<small role="alert">{masterError}</small>}</label>
+    return <label className={`sa-field ${masterError?'invalid':''}`} htmlFor={id}><span>{label}<b> *</b></span><ProjectSelect id={id} value={read(data,idPath)||''} disabled={disabled || (branchField && branchLoading)} onChange={event=>{setSaveError('');markTouched(namePath);markTouched(idPath);const option=options.find(item=>same(item.id,event.target.value));setData(current=>{let next=setPath(current,idPath,event.target.value);if(current.previewEditedFields)next.previewEditedFields={...current.previewEditedFields,[idPath]:true,[namePath]:true};next=setPath(next,namePath,option?.name||'');if(idPath==='academic.courseId')next=setPath(next,'academic.courseCode',option?.code||courseCodeFallback(option?.name));if(idPath==='academic.branchId')next=setPath(next,'academic.branchCode',option?.code||branchCodeFallback(option?.name));resets.forEach(([resetId,resetName])=>{next=setPath(next,resetId,'');next=setPath(next,resetName,'')});return next});setErrors(current=>({...current,[namePath]:''}))}} onBlur={() => { markTouched(namePath); markTouched(idPath) }}><option value="">{placeholder}</option>{options.map(option=><option key={option.id} value={option.id}>{option.name}{option.code ? ` (${option.code})` : ''}</option>)}</ProjectSelect>{branchField && !branchLoading && !options.length && <small role={branchLoadError?'alert':'status'}>{branchLoadError || 'Ask an administrator to add an active branch under this course.'}</small>}{masterError&&<small role="alert">{masterError}</small>}</label>
   }
   const screens = [
     <Section key="identity" title="Student Identity" icon={FiUser} hint="Core identity and government identification details"><PhotoUpload data={data} update={update} notify={notify} />{field('personal.firstName','First Name')}{field('personal.middleName','Middle Name')}{field('personal.lastName','Last Name')}{field('personal.gender','Gender',['Female','Male','Non-binary'])}{field('personal.dob','Date of Birth',null,'date')}{field('personal.bloodGroup','Blood Group',['A+','A-','B+','B-','AB+','AB-','O+','O-'])}{field('personal.nationality','Nationality')}{field('personal.aadhaar','Aadhaar Number')}</Section>,
@@ -2043,6 +2044,10 @@ function AdmissionForm() {
     setSavingStep(true)
     try {
       let result, ids = recordIds
+      const courseNotSelected = !String(data.academic.courseId || '').trim()
+      const deferSaveUntilCourseSelected = Boolean(
+        ids.admissionId && courseNotSelected && [0, 1, 2, 5].includes(step) && (step !== 2 || !ids.studentId),
+      )
       if (!ids.admissionId) {
         const duplicate = duplicateAdmissionMessage(await studentAdmissionApi.getAll(), data)
         if (duplicate) throw new Error(duplicate)
@@ -2051,6 +2056,8 @@ function AdmissionForm() {
         ids = idsFromApi(result)
         if (!ids.admissionId) throw new Error('The admission was created but no admission ID was returned.')
         setRecordIds(ids)
+      } else if (deferSaveUntilCourseSelected) {
+        // The admission endpoint validates course references even for edits to unrelated steps.
       } else if ([0, 1, 5].includes(step)) result = await studentAdmissionApi.update(ids.admissionId, data)
       else if (step === 2) {
         result = ids.studentId
@@ -2098,7 +2105,14 @@ function AdmissionForm() {
         }
         setRecordIds(current => ({ admissionId: returnedIds.admissionId ?? current.admissionId, studentId: returnedIds.studentId ?? current.studentId, academicId: returnedIds.academicId ?? current.academicId }))
       }
-      notify(step === 7 && !ids.studentId ? 'Documents are ready to upload when the admission is submitted.' : 'Admission step saved successfully.', step === 7 && !ids.studentId ? 'info' : 'success')
+      notify(
+        deferSaveUntilCourseSelected
+          ? 'Changes saved as a draft. Select a course in Academic Enrollment to sync them.'
+          : step === 7 && !ids.studentId
+            ? 'Documents are ready to upload when the admission is submitted.'
+            : 'Admission step saved successfully.',
+        deferSaveUntilCourseSelected || (step === 7 && !ids.studentId) ? 'info' : 'success',
+      )
       const next = Math.min(step + 1, STEPS.length - 1)
       setStep(next)
       if (!recordIds.admissionId) {

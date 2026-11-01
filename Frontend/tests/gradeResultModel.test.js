@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { backlogRows, defaultBands, flattenResults, gradeFor, summarize, validateBands, weightedGpa } from '../src/utils/gradeResultModel.js'
+import { backlogRows, defaultBands, flattenResults, gradeFor, matchesResultSearch, summarize, validateBands, weightedGpa } from '../src/utils/gradeResultModel.js'
 
 test('grade boundaries include zero and 100 without overlap', () => {
   assert.equal(validateBands(defaultBands), '')
@@ -21,6 +21,22 @@ test('sheet normalization preserves scope and distinguishes missing marks from z
   assert.equal(rows[1].percentage, null)
   assert.equal(rows[0].academicYearId, 4)
   assert.equal(rows[0].collegeId, 1)
+})
+test('result search matches student name, roll number, and admission number', () => {
+  const [row] = flattenResults([{
+    records: [{
+      studentId: 'student-1',
+      studentName: 'Ananya Rao',
+      rollNumber: '22CS104',
+      admissionNumber: 'ADM-2022-104',
+    }],
+  }])
+  assert.equal(matchesResultSearch(row, 'ananya'), true)
+  assert.equal(matchesResultSearch(row, '22cs'), true)
+  assert.equal(matchesResultSearch(row, 'adm-2022'), true)
+  assert.equal(matchesResultSearch(row, 'not-a-student'), false)
+  const [pascalCaseRow] = flattenResults([{ records: [{ studentId: 'student-2', AdmissionNumber: 'ADM-2021-205' }] }])
+  assert.equal(matchesResultSearch(pascalCaseRow, 'adm-2021-205'), true)
 })
 test('weighted grade points require valid credits on every record', () => {
   assert.equal(weightedGpa([{ credits: 3, gradePoint: 8 }, { credits: 1, gradePoint: 4 }]), 7)
