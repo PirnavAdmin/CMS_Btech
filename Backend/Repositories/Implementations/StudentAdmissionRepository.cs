@@ -4,6 +4,7 @@ using BTech.Data;
 using BTech.Models;
 using BTech.Repositories.Interfaces;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Storage;
 using MySqlConnector;
 
 namespace BTech.Repositories.Implementations
@@ -32,6 +33,7 @@ namespace BTech.Repositories.Implementations
             try
             {
                 await using var command = connection.CreateCommand();
+                command.Transaction = _context.Database.CurrentTransaction?.GetDbTransaction();
                 command.CommandText = "sp_StudentAdmission_GetById";
                 command.CommandType = CommandType.StoredProcedure;
                 AddParameter(command, "p_admission_id", admissionId);
@@ -60,6 +62,7 @@ namespace BTech.Repositories.Implementations
             try
             {
                 await using var command = connection.CreateCommand();
+                command.Transaction = _context.Database.CurrentTransaction?.GetDbTransaction();
                 command.CommandText = "sp_student_admission_list_v2";
                 command.CommandType = CommandType.StoredProcedure;
                 AddParameter(command, "p_search", search);
@@ -101,6 +104,7 @@ namespace BTech.Repositories.Implementations
             try
             {
                 await using var command = connection.CreateCommand();
+                command.Transaction = _context.Database.CurrentTransaction?.GetDbTransaction();
                 command.CommandText = "sp_student_admission_form_data_upsert";
                 command.CommandType = CommandType.StoredProcedure;
                 AddParameter(command, "p_admission_id", admissionId);
@@ -126,6 +130,7 @@ namespace BTech.Repositories.Implementations
             try
             {
                 await using var command = connection.CreateCommand();
+                command.Transaction = _context.Database.CurrentTransaction?.GetDbTransaction();
                 command.CommandText = procedureName;
                 command.CommandType = CommandType.StoredProcedure;
 

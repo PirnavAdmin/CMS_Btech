@@ -829,6 +829,10 @@ builder.Services.AddScoped<
 builder.Services.AddScoped<IPlacementRepository, PlacementRepository>();
 builder.Services.AddScoped<IPlacementService, PlacementService>();
 
+builder.Services.AddScoped<BTech.Services.Fees.FeePlanAccess>();
+builder.Services.AddScoped<BTech.Services.Fees.AcademicFeePlanService>();
+builder.Services.AddScoped<BTech.Services.Fees.AdmissionFeePlanCoordinator>();
+
 var app = builder.Build();
 
 

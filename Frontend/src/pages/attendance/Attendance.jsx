@@ -684,7 +684,13 @@ function Attendance() {
       })
 
       notify('Attendance recorded and saved successfully!')
-      loadSessions()
+      setFilterQuery('')
+      setFilterCourseId('')
+      setFilterBranchId('')
+      setFilterDate('')
+      setCurrentPage(1)
+      setShowRegisterFilters(false)
+      await loadSessions()
       setActiveTab('register')
       setTakeModalOpen(false)
     } catch (err) {
@@ -710,6 +716,11 @@ function Attendance() {
     const start = (currentPage - 1) * pageSize
     return filteredSessions.slice(start, start + pageSize)
   }, [filteredSessions, currentPage])
+  const totalPages = Math.max(1, Math.ceil(filteredSessions.length / pageSize))
+
+  useEffect(() => {
+    if (currentPage > totalPages) setCurrentPage(totalPages)
+  }, [currentPage, totalPages])
 
   const hasRegisterFilters = Boolean(filterCourseId || filterBranchId || filterDate)
   const clearRegisterFilters = () => {
@@ -992,8 +1003,7 @@ function Attendance() {
 
                   <TablePagination
                     currentPage={currentPage}
-                    totalItems={filteredSessions.length}
-                    pageSize={pageSize}
+                    totalPages={totalPages}
                     onPageChange={setCurrentPage}
                   />
                 </>

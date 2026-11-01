@@ -1,0 +1,107 @@
+MySQL ready
+Uploaded dump restored to isolated test database
+SQL update applied twice successfully (idempotence)
+PASS: Decimal 0.10 + 0.20 equals 0.30 and full payment schedule is generated
+PASS: Component total mismatch rejected
+PASS: Fractional paisa rejected
+PASS: Negative fee rejected
+PASS: Duplicate component codes rejected case insensitively
+PASS: Installment total mismatch rejected
+PASS: Exact decimal installment totals accepted
+PASS: Due date outside effective period rejected
+PASS: Null component array returns validation error
+PASS: Null installment returns validation error
+PASS: Browser local fee ID rejected
+PASS: Conflicting admission fee IDs rejected
+PASS: Numeric server ID string alias accepted consistently
+PASS: Transition DRAFT to DRAFT rejected
+PASS: Transition DRAFT to SUBMITTED allowed
+PASS: Transition DRAFT to APPROVED rejected
+PASS: Transition DRAFT to PUBLISHED rejected
+PASS: Transition DRAFT to ARCHIVED allowed
+PASS: Transition SUBMITTED to DRAFT allowed
+PASS: Transition SUBMITTED to SUBMITTED rejected
+PASS: Transition SUBMITTED to APPROVED allowed
+PASS: Transition SUBMITTED to PUBLISHED rejected
+PASS: Transition SUBMITTED to ARCHIVED rejected
+PASS: Transition APPROVED to DRAFT allowed
+PASS: Transition APPROVED to SUBMITTED rejected
+PASS: Transition APPROVED to APPROVED rejected
+PASS: Transition APPROVED to PUBLISHED allowed
+PASS: Transition APPROVED to ARCHIVED allowed
+PASS: Transition PUBLISHED to DRAFT rejected
+PASS: Transition PUBLISHED to SUBMITTED rejected
+PASS: Transition PUBLISHED to APPROVED rejected
+PASS: Transition PUBLISHED to PUBLISHED rejected
+PASS: Transition PUBLISHED to ARCHIVED allowed
+PASS: Transition ARCHIVED to DRAFT rejected
+PASS: Transition ARCHIVED to SUBMITTED rejected
+PASS: Transition ARCHIVED to APPROVED rejected
+PASS: Transition ARCHIVED to PUBLISHED rejected
+PASS: Transition ARCHIVED to ARCHIVED rejected
+PASS: Exact scope matches
+PASS: CollegeId mismatch excluded
+PASS: AcademicYearId mismatch excluded
+PASS: CourseId mismatch excluded
+PASS: BranchId mismatch excluded
+PASS: SemesterId mismatch excluded
+PASS: Batch mismatch excluded
+PASS: Missing quota does not match quota-specific plan
+PASS: Category mismatch excluded
+PASS: Explicit unrestricted quota/category plan matches
+PASS: Draft persisted with server fee_structure_id
+PASS: Draft hidden from admission picker
+PASS: Draft publication bypass rejected in service
+PASS: Submitted hidden from admission picker
+PASS: Staff with stale Super Admin JWT claim cannot approve
+PASS: Return to draft requires reason
+PASS: Approved unpublished plan hidden from picker
+PASS: Picker returns published component breakdown and schedule
+PASS: Database picker excludes mismatched batch
+PASS: Database picker excludes mismatched quota
+PASS: Database picker excludes mismatched category
+PASS: Cross-college plan query forbidden
+PASS: Cross-college picker forbidden
+PASS: Owned-college lookup cannot return another college's record
+PASS: Published plan cannot be edited
+PASS: Legacy fee-structure routes cannot edit managed plans
+PASS: Mismatching selected plan rejects admission save
+PASS: Rejected fee assignment rolls back admission row
+PASS: Rejected save leaves no orphan form data
+PASS: Admission atomically stores selected server ID and authoritative decimal snapshot
+PASS: Client fee totals overwritten with server snapshot
+PASS: Manual fee resolver cannot overwrite snapshot-backed admission
+PASS: Separate academic endpoint cannot invalidate assigned snapshot
+PASS: Conflicting academic update rolls back
+PASS: New version gets distinct server ID
+PASS: Overlapping publication of same plan lineage rejected
+PASS: Existing admission snapshot unchanged after new plan version publication
+PASS: Repeated admission save preserves original archived-source snapshot
+PASS: Plan replacement requires explicit reason
+PASS: Explicit draft reassignment creates fresh snapshot
+PASS: Assignment and reassignment history persisted
+PASS: Admission snapshot inaccessible from another college
+PASS: Stale draft revision rejected
+PASS: Draft edit audit persisted atomically
+PASS: Live permission revocation blocks existing session
+SUCCESS: 83 tests passed, including real MySQL service/repository admission transactions.
+
+START HTTP GET /api/v1/academic-fee-plans?collegeId=97
+PASS HTTP 401: GET /api/v1/academic-fee-plans?collegeId=97
+START HTTP GET /api/v1/academic-fee-plans?collegeId=97
+PASS HTTP 200: GET /api/v1/academic-fee-plans?collegeId=97
+START HTTP GET /api/v1/academic-fee-plans?collegeId=1
+PASS HTTP 403: GET /api/v1/academic-fee-plans?collegeId=1
+START HTTP GET /api/v1/academic-fee-plans/7?collegeId=97
+PASS HTTP 200: GET /api/v1/academic-fee-plans/7?collegeId=97
+START HTTP GET /api/v1/student-admissions/fee-plans?collegeId=97&academicYearId=56&courseId=31&branchId=28&semesterId=215&batch=2026-2030&quota=Management&studentCategory=General
+PASS HTTP 200: GET /api/v1/student-admissions/fee-plans?collegeId=97&academicYearId=56&courseId=31&branchId=28&semesterId=215&batch=2026-2030&quota=Management&studentCategory=General
+START HTTP GET /api/v1/student-admissions/fee-plans?collegeId=97
+PASS HTTP 400: GET /api/v1/student-admissions/fee-plans?collegeId=97
+START HTTP POST /api/v1/student-admissions
+PASS HTTP 400: POST /api/v1/student-admissions
+START HTTP POST /api/v1/academic-fee-plans/7/publish?collegeId=97
+PASS HTTP 409: POST /api/v1/academic-fee-plans/7/publish?collegeId=97
+START HTTP PUT /api/v1/fee-structures/7
+PASS HTTP 409: PUT /api/v1/fee-structures/7
+SUCCESS: production HTTP smoke tests passed

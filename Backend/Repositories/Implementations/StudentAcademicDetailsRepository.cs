@@ -4,6 +4,7 @@ using BTech.Data;
 using BTech.Models;
 using BTech.Repositories.Interfaces;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Storage;
 using MySqlConnector;
 
 namespace BTech.Repositories.Implementations
@@ -28,6 +29,7 @@ namespace BTech.Repositories.Implementations
                     await connection.OpenAsync();
 
                 await using var command = connection.CreateCommand();
+                command.Transaction = _context.Database.CurrentTransaction?.GetDbTransaction();
                 command.CommandText = "sp_StudentAdmission_GetAcademicDetails";
                 command.CommandType = CommandType.StoredProcedure;
                 AddParameter(command, "p_admission_id", admissionId);
@@ -57,6 +59,7 @@ namespace BTech.Repositories.Implementations
                     await connection.OpenAsync();
 
                 await using var command = connection.CreateCommand();
+                command.Transaction = _context.Database.CurrentTransaction?.GetDbTransaction();
                 command.CommandText = "sp_StudentAdmission_UpdateAcademicDetails_v2";
                 command.CommandType = CommandType.StoredProcedure;
 

@@ -1,0 +1,16 @@
+Backend/BTech.csproj
+Backend/Controllers/V1/AdditionalModules/FinanceAdditionalController.cs
+Backend/Controllers/V1/FeeConfigurationController.cs
+Backend/Controllers/V1/StudentAdmissionsController.cs
+Backend/DTOs/Integration/StudentIntegrationDtos.cs
+Backend/DTOs/StudentAdmission/StudentAdmissionRequestDtos.cs
+Backend/DTOs/StudentAdmission/StudentAdmissionResponseDto.cs
+Backend/Middleware/ExceptionMiddleware.cs
+Backend/Middleware/ModulePermissionMiddleware.cs
+Backend/Program.cs
+Backend/Repositories/Implementations/StudentAcademicDetailsRepository.cs
+Backend/Repositories/Implementations/StudentAdmissionFeeResolverRepository.cs
+Backend/Repositories/Implementations/StudentAdmissionRepository.cs
+Backend/Services/Implementations/StudentAcademicDetailsService.cs
+Backend/Services/Implementations/StudentAdmissionService.cs
+Backend/Services/Implementations/StudentIntegrationService.cs

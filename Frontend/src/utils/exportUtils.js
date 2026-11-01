@@ -51,30 +51,50 @@ export function reportHtml({ title, scope, rows, columns }) {
   return `<h1>${escapeHtml(title)}</h1><p>${escapeHtml(scope)} | ${rows.length} records</p><table><thead><tr>${columns.map(c => `<th>${escapeHtml(c.label)}</th>`).join('')}</tr></thead><tbody>${reportRows(rows, columns).map(row => `<tr>${row.map(cell => `<td>${escapeHtml(cell)}</td>`).join('')}</tr>`).join('')}</tbody></table>`
 }
 
-function printDocument(title, html) {
+function printDocument(title, html, { receipt = false } = {}) {
   const target = window.open('', '_blank')
   if (!target) throw new Error('Allow pop-ups to open the print preview.')
   target.opener = null
   target.document.open()
   target.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>${escapeHtml(sanitizeFilename(title))}</title><style>
-    body{font:12px/1.5 Arial,sans-serif;color:#172b3a;margin:24px}h1{font-size:22px}h2{font-size:17px}h3{font-size:14px}table{width:100%;border-collapse:collapse;margin:16px 0}th,td{border:1px solid #bbc6ce;padding:7px;text-align:left;overflow-wrap:anywhere}th{background:#eef2f5}thead{display:table-header-group}tr{break-inside:avoid}section,article{margin:16px 0}dl>div,[class*="info-row"],[class*="detail-row"],[class*="cm-detail"]{padding:8px 0;border-bottom:1px solid #dbe3e8}dt{font-weight:bold}dd{margin:4px 0}small{display:block}svg,img,button,input,select,textarea,nav,footer,[data-no-print]{display:none!important}dialog{position:static;display:block;border:0;width:auto;max-height:none}a{color:inherit;text-decoration:none} @media print{@page{size:auto;margin:12mm}body{margin:0}h1,h2,h3{break-after:avoid}}
+    *{box-sizing:border-box}html,body{margin:0;padding:0;background:#fff;color:#172b3a;font:12px/1.5 Arial,sans-serif}body{padding:28px}h1{font-size:22px;margin:0 0 18px;color:#102a4c}h2{font-size:17px}h3{font-size:14px}table{width:100%;border-collapse:collapse;margin:16px 0}th,td{border:1px solid #bbc6ce;padding:7px;text-align:left;overflow-wrap:anywhere}th{background:#eef2f5}thead{display:table-header-group}tr{break-inside:avoid}section,article{margin:16px 0}dl>div,[class*="info-row"],[class*="detail-row"],[class*="cm-detail"]{padding:8px 0;border-bottom:1px solid #dbe3e8}dt{font-weight:bold}dd{margin:4px 0}small{display:block}svg,img,button,input,select,textarea,nav,footer,[data-no-print]{display:none!important}dialog{position:static;display:block;border:0;width:auto;max-height:none}a{color:inherit;text-decoration:none}
+    ${receipt ? `.receipt-document{max-width:720px;margin:0 auto;border:1px solid #cbd5e1;padding:30px 34px}.receipt-document h1{font-size:20px;margin:0}.receipt-document .receipt-subtitle{color:#64748b;margin:3px 0 18px}.receipt-document .receipt-heading{display:flex;justify-content:space-between;align-items:flex-start;border-bottom:2px solid #174c88;padding-bottom:16px;margin-bottom:18px}.receipt-document .receipt-number{text-align:right;color:#526a86}.receipt-document .receipt-number strong{display:block;color:#102a4c;font-size:13px}.receipt-document h2{font-size:13px;color:#174c88;margin:18px 0 8px}.receipt-document table{margin:0}.receipt-document th{width:36%;background:#f1f6fb;color:#294564;font-weight:700}.receipt-document td,.receipt-document th{padding:9px 11px;border:1px solid #d5dfeb}.receipt-document .receipt-total td{font-weight:800;background:#f7fafc}.receipt-document .receipt-note{margin-top:18px;color:#526a86;font-size:11px}` : ''}
+    @media print{@page{size:auto;margin:12mm}body{padding:0}h1,h2,h3{break-after:avoid}}
   </style></head><body>${html}</body></html>`)
   target.document.close()
   const closeAfterPrint = () => window.setTimeout(() => { if (!target.closed) target.close() }, 0)
   target.addEventListener('afterprint', closeAfterPrint, { once: true })
-  const ready = () => { target.focus(); target.print() }
+  const ready = () => {
+    if (receipt) {
+      const removeBrowserArtifacts = () => {
+        target.document.title = '\u00a0'
+        target.document.body.setAttribute('aria-label', 'Fee receipt')
+      }
+      removeBrowserArtifacts()
+      target.addEventListener('beforeprint', removeBrowserArtifacts)
+    }
+    target.focus()
+    target.print()
+  }
   if (target.document.readyState === 'complete') ready()
   else target.addEventListener('load', ready, { once: true })
 }
 
 export const printResults = options => printDocument(options.title, reportHtml(options))
 
-export function singleRecordHtml({ title, sections }) {
+export function singleRecordHtml({ title, sections, receipt = false }) {
   if (!sections?.some(section => section.rows?.length)) throw new Error('No record details available to print.')
+  const rows = sections.flatMap(section => section.rows || [])
+  if (receipt) {
+    const receiptNumber = rows.find(([label]) => /receipt number/i.test(label))?.[1]
+    const subtitle = sections.map(section => section.title).filter(Boolean).join(' · ')
+    const printableRows = rows.filter(([label, value]) => value != null && String(value).trim() && !/^(—|-|n\/a|not provided)$/i.test(String(value).trim()))
+    return `<article class="receipt-document"><header class="receipt-heading"><div><h1>${escapeHtml(title)}</h1><p class="receipt-subtitle">${escapeHtml(subtitle)}</p></div><div class="receipt-number">Receipt Number<strong>${escapeHtml(receiptNumber || '')}</strong></div></header><table><tbody>${printableRows.map(([label, value]) => `<tr${/total amount|amount paid/i.test(label) ? ' class="receipt-total"' : ''}><th scope="row">${escapeHtml(label)}</th><td>${escapeHtml(value)}</td></tr>`).join('')}</tbody></table><p class="receipt-note">This is a computer-generated fee receipt.</p></article>`
+  }
   return `<h1>${escapeHtml(title)}</h1>${sections.map(section => `<section><h2>${escapeHtml(section.title)}</h2><table><tbody>${section.rows.map(([label, value]) => `<tr><th scope="row">${escapeHtml(label)}</th><td>${escapeHtml(value)}</td></tr>`).join('')}</tbody></table></section>`).join('')}`
 }
 
-export const printSingleRecord = options => printDocument(options.title, singleRecordHtml(options))
+export const printSingleRecord = options => printDocument(options.title, singleRecordHtml(options), { receipt: options.receipt })
 
 export function printEntityDetails({ title, element }) {
   if (!element) throw new Error('Details are not available to print.')

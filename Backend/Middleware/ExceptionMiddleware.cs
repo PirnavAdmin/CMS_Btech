@@ -26,6 +26,11 @@ namespace BTech.Middleware
             {
                 await _next(context);
             }
+            catch (BTech.Services.Fees.FeePlanException ex)
+            {
+                _logger.LogWarning("Fee plan request rejected. Status={Status}, Path={Path}, Message={Message}", ex.StatusCode, context.Request.Path, ex.Message);
+                await HandleExceptionAsync(context, ex, (HttpStatusCode)ex.StatusCode);
+            }
             catch (NotFoundException ex)
             {
                 _logger.LogWarning(

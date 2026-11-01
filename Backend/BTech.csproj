@@ -23,6 +23,9 @@
   <ItemGroup>
     <!-- Replaced by the employee-profile-aware controller. -->
     <Compile Remove="Controllers/V1/Profile/**/*.cs" />
+    <Compile Remove="Tests/**/*.cs" />
+    <Content Remove="Tests/**" />
+    <None Remove="Tests/**" />
   </ItemGroup>
 
   <ItemGroup>

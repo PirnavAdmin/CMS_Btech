@@ -123,7 +123,7 @@ export default function DashboardLayout({ children }) {
     '/student-management/profiles': 'Student Profiles', '/student-management/promotions': 'Student Promotions',
   })[pathname] || (pathname.startsWith('/semester-management') ? 'Semesters' : pathname.startsWith('/section-management') ? 'Sections' : pathname.startsWith('/student-management/admissions') ? 'Student Admissions' : pathname.startsWith('/student-management/profiles') ? 'Student Profiles' : pathname.startsWith('/student-management/promotions') ? 'Student Promotions' : pathname.startsWith('/faculty/') ? pathname.startsWith('/faculty/attendance') ? 'Faculty Attendance' : 'Faculty Management' : pathname.startsWith('/courses') ? 'Courses' : pathname.startsWith('/branches') ? 'Branches' : 'Digital Campus')
   const breadcrumbSection = ['My Profile', 'Settings'].includes(pageName) ? 'Account' : pageName === 'Dashboard' ? 'Digital Campus' : pageName.startsWith('Student ') ? 'Student Management' : pageName.startsWith('Faculty ') ? 'Faculty' : 'Academic Configuration'
-  const financeBreadcrumbs = feeBreadcrumbs(pathname)
+  const financeBreadcrumbs = feeBreadcrumbs(pathname)?.map(crumb => ({ ...crumb, label: ({ 'Fee Structures': 'Fee Plans', 'Student Accounts': 'Student Fees', 'Create Fee Structure': 'Create Fee Plan', 'Edit Fee Structure': 'Edit Fee Plan', 'Structure Details': 'Fee Plan Details' })[crumb.label] || crumb.label }))
 
   // Logout confirmation state
   const [showLogoutConfirmation, setShowLogoutConfirmation] = useState(false)

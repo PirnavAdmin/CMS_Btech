@@ -104,6 +104,7 @@ public sealed class FeeConfigurationController : ControllerBase
                    OR fs.structure_name LIKE CONCAT('%', @search, '%')
                    OR fs.structure_group_code LIKE CONCAT('%', @search, '%'))
               AND fs.status = 1
+              AND NOT EXISTS(SELECT 1 FROM academic_fee_plans ap WHERE ap.fee_structure_id=fs.fee_structure_id)
             ORDER BY fs.fee_structure_id DESC;
             """;
 
@@ -338,6 +339,7 @@ public sealed class FeeConfigurationController : ControllerBase
         if (!await RequiredTablesExistAsync(connection, "students", "fee_structures", "fee_assignments"))
             return FeeTablesNotInstalled();
 
+        await BTech.Services.Fees.FeePlanLegacyGuard.EnsureLegacyStructureAsync(connection, request.FeeStructureId);
         await using var transaction = await connection.BeginTransactionAsync();
 
         try
