@@ -44,7 +44,19 @@ invalid=Valid(); invalid.PaymentMode="INSTALLMENTS"; invalid.DueDate=null; inval
 invalid=Valid(); invalid.DueDate=invalid.EffectiveTo.AddDays(1); Reject(()=>FeePlanRules.Validate(invalid),400,"Due date outside effective period rejected");
 invalid=Valid(); invalid.Components=null!; Reject(()=>FeePlanRules.Validate(invalid),400,"Null component array returns validation error");
 invalid=Valid(); invalid.PaymentMode="INSTALLMENTS"; invalid.Installments=new(){null!,null!}; Reject(()=>FeePlanRules.Validate(invalid),400,"Null installment returns validation error");
-Reject(()=>AdmissionFeePlanCoordinator.ReadSelectedId(new(){FormData=JsonSerializer.SerializeToElement(new{fees=new{feeStructureId="FS-STANDARD"}})}),400,"Browser local fee ID rejected");
+Check(AdmissionFeePlanCoordinator.ReadSelectedId(new(){FormData=JsonSerializer.SerializeToElement(new{fees=new{feeStructureId="FS-STANDARD",structureId="FS-STANDARD"}})})==null,"Admission screen placeholder means no selected plan");
+Reject(()=>AdmissionFeePlanCoordinator.ReadSelectedId(new(){FormData=JsonSerializer.SerializeToElement(new{fees=new{feeStructureId="FS-LOCAL-123"}})}),400,"Unknown browser-local fee ID rejected");
+var webJson=new JsonSerializerOptions(JsonSerializerDefaults.Web);
+foreach(var value in new[]{"\"FS-STANDARD\"","\"\"","null"})
+    Check(JsonSerializer.Deserialize<CreateStudentAdmissionDto>("{\"feeStructureId\":"+value+"}",webJson)!.FeeStructureId==null,"Placeholder/empty/null fee ID binds without a selected plan: "+value);
+Check(JsonSerializer.Deserialize<CreateStudentAdmissionDto>("{\"feeStructureId\":\"42\"}",webJson)!.FeeStructureId==42,"String server fee ID binds");
+Check(JsonSerializer.Deserialize<CreateStudentAdmissionDto>("{\"feeStructureId\":42}",webJson)!.FeeStructureId==42,"Integer server fee ID binds");
+foreach(var value in new[]{"\"FS-LOCAL\"","0","-1","1.5","true"})
+{
+    try{JsonSerializer.Deserialize<CreateStudentAdmissionDto>("{\"feeStructureId\":"+value+"}",webJson);throw new Exception("Invalid fee ID unexpectedly bound");}
+    catch(JsonException){Check(true,"Invalid fee ID is a model-binding error: "+value);}
+}
+Check(AdmissionFeePlanCoordinator.ReadSelectedId(new(){FeeStructureId=4,FormData=JsonSerializer.SerializeToElement(new{fees=new{structureId="FS-STANDARD"}})})==4,"Placeholder does not override an explicit server plan");
 Reject(()=>AdmissionFeePlanCoordinator.ReadSelectedId(new(){FeeStructureId=4,FormData=JsonSerializer.SerializeToElement(new{fees=new{structureId=5}})}),400,"Conflicting admission fee IDs rejected");
 Check(AdmissionFeePlanCoordinator.ReadSelectedId(new(){FeeStructureId=4,FormData=JsonSerializer.SerializeToElement(new{fees=new{structureId="4"}})})==4,"Numeric server ID string alias accepted consistently");
 var allowed=new HashSet<(string,string)>{("DRAFT","SUBMITTED"),("SUBMITTED","APPROVED"),("SUBMITTED","DRAFT"),("APPROVED","DRAFT"),("APPROVED","PUBLISHED"),("PUBLISHED","ARCHIVED"),("DRAFT","ARCHIVED"),("APPROVED","ARCHIVED")};
@@ -139,6 +151,11 @@ await using var db=new ApplicationDbContext(options);
 var coordinator=new AdmissionFeePlanCoordinator(db,access);
 var admissions=new StudentAdmissionService(new StudentAdmissionRepository(db),new StudentAcademicDetailsRepository(db),db,coordinator);
 CreateStudentAdmissionDto Admission(string suffix)=>new(){RegistrationNo=prefix+suffix,FirstName="Fee",LastName="Test",Gender="Other",DateOfBirth=new DateTime(2005,1,1),CollegeId=aScope.college,AcademicYearId=aScope.year,CourseId=aScope.course,BranchId=aScope.branch,SemesterId=aScope.semester,Batch=plan.Batch,AdmissionQuota=plan.Quota,StudentCategory=plan.StudentCategory,FeeStructureId=plan.FeeStructureId,FeePlanVersion=1};
+var legacyDto=JsonSerializer.Deserialize<CreateStudentAdmissionDto>("{\"firstName\":\"Screen placeholder\",\"gender\":\"Other\",\"dateOfBirth\":\"2005-01-01\",\"feeStructureId\":\"FS-STANDARD\",\"formData\":{\"fees\":{\"feeStructureId\":\"FS-STANDARD\",\"structureId\":\"FS-STANDARD\"}}}",webJson)!;
+legacyDto.RegistrationNo=prefix+"LEGACY";legacyDto.CollegeId=aScope.college;
+var legacySaved=await admissions.CreateAsync(legacyDto,admin.user);
+Check(legacySaved.AdmissionId>0&&legacySaved.FeeStructureId==null,"Screen placeholder admission saves without creating a fabricated fee snapshot");
+Check(await c.ExecuteScalarAsync<int>("SELECT COUNT(*) FROM admission_fee_plan_snapshots WHERE admission_id=@id",new{id=legacySaved.AdmissionId})==0,"Placeholder save creates no shared-plan snapshot");
 var before=await c.ExecuteScalarAsync<int>("SELECT COUNT(*) FROM studentadmissions");
 var bad=Admission("BAD");bad.Batch="wrong";
 await RejectAsync(()=>admissions.CreateAsync(bad,admin.user),400,"Mismatching selected plan rejects admission save");

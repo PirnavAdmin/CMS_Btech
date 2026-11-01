@@ -232,3 +232,14 @@ public sealed class MarksApprovalResultDto
     public List<long> ProcessedMarkIds { get; set; } = new();
     public List<BulkMarkErrorDto> Errors { get; set; } = new();
 }
+
+/// <summary>A committed soft removal. The old mark ID and its history remain available to authorized auditors.</summary>
+public sealed class MarkRemovalDto
+{
+    public long MarkId { get; set; }
+    public bool Removed { get; set; }
+    public string PreviousWorkflowStatus { get; set; } = string.Empty;
+    public long RemovedBy { get; set; }
+    public DateTime RemovedAt { get; set; }
+    public int VersionNo { get; set; }
+}

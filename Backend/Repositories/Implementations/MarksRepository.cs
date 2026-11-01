@@ -15,7 +15,7 @@ public sealed class MarksRepository : IMarksRepository
         Type[] types = [typeof(MarkDto), typeof(BulkMarksResultDto), typeof(BulkMarkErrorDto),
             typeof(MarksSummaryReportDto), typeof(StudentMarksReportDto), typeof(StudentSubjectMarkDto),
             typeof(SubjectMarksReportDto), typeof(MarksApprovalDto), typeof(MarksApprovalHistoryDto),
-            typeof(MarksApprovalResultDto)];
+            typeof(MarksApprovalResultDto), typeof(MarkRemovalDto)];
         foreach (var type in types)
             SqlMapper.SetTypeMap(type, new CustomPropertyTypeMap(type, (t, column) =>
                 t.GetProperties().FirstOrDefault(p => string.Equals(p.Name,
@@ -68,6 +68,20 @@ public sealed class MarksRepository : IMarksRepository
             p_grade = r.Grade, p_remarks = r.Remarks, p_actor_id = actorId,
             p_college_id = collegeId, p_is_super_admin = Scope(collegeId, superAdmin)
         }));
+    }
+
+    public async Task<MarkRemovalDto> DeleteAsync(long markId, long? actorId, long? collegeId, bool superAdmin)
+    {
+        await using var c = CreateConnection();
+        // The procedure owns a transaction and locks the mark before checking its workflow state.
+        var result = await c.QuerySingleAsync<MarkRemovalDto>(Cmd("sp_marks_entry_delete", new
+        {
+            p_mark_id = markId, p_actor_id = actorId, p_college_id = collegeId,
+            p_is_super_admin = Scope(collegeId, superAdmin)
+        }));
+        _logger.LogInformation("Mark removed. MarkId={MarkId}, ActorId={ActorId}, CollegeId={CollegeId}, PreviousStatus={PreviousStatus}, Version={Version}",
+            markId, actorId, collegeId, result.PreviousWorkflowStatus, result.VersionNo);
+        return result;
     }
 
     public async Task<IReadOnlyList<MarkDto>> ListAsync(MarkListFilter f, long? collegeId, bool superAdmin)
