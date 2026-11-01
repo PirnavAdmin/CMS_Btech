@@ -1015,15 +1015,24 @@ const studentAdmissionPayload = (form = {}) => {
   const fees = form.fees ?? {}
   const previous = form.previousEducation ?? {}
   const application = form.application ?? {}
-  const admissionFormData = form.formData ?? form
-  const formData = { ...admissionFormData }
-  delete formData.semester
-  delete formData.semesterId
-  if (formData.academic) {
-    formData.academic = { ...formData.academic }
-    delete formData.academic.semester
-    delete formData.academic.semesterId
+  // Canonical forms retain the original API fields alongside editable sections.
+  // The editable values must win, including an explicitly cleared selection.
+  form = { ...form }
+  for (const key of ['firstName', 'middleName', 'lastName', 'gender', 'bloodGroup', 'nationality']) {
+    if (Object.hasOwn(personal, key)) form[key] = personal[key]
   }
+  if (Object.hasOwn(personal, 'dob')) form.dateOfBirth = personal.dob
+  if (Object.hasOwn(personal, 'aadhaar')) form.aadhaarNumber = personal.aadhaar
+  for (const key of ['academicYearId', 'departmentId', 'courseId', 'branchId', 'semesterId', 'sectionId', 'admissionType', 'quota', 'quotaOther', 'courseCode', 'branchCode', 'entryType', 'regulation', 'studentCategory']) {
+    if (Object.hasOwn(academic, key)) form[key] = academic[key]
+  }
+  if (Object.hasOwn(admission, 'collegeId')) form.collegeId = admission.collegeId
+  const { formData: savedFormData, ...currentForm } = form
+  const formData = { ...(savedFormData && typeof savedFormData === 'object' ? savedFormData : {}), ...currentForm }
+  const feeStructureId = [form.feeStructureId, fees.feeStructureId, fees.structureId]
+    .map(nullableNumericId).find(value => value !== undefined)
+  formData.feeStructureId = feeStructureId
+  if (formData.fees) formData.fees = { ...formData.fees, feeStructureId, structureId: feeStructureId }
   const photo = form.studentPhoto ?? form.photo ?? personal.photo ?? personal.photoUrl
   // Deployed admission procedures accept a URL (VARCHAR(500)), not base64.
   // Preserve inline uploads in formData. Send an explicit empty legacy field:
@@ -1088,6 +1097,7 @@ const studentAdmissionPayload = (form = {}) => {
     departmentId: nullableNumericId(form.departmentId ?? academic.departmentId),
     courseId: nullableNumericId(form.courseId ?? academic.courseId),
     branchId: nullableNumericId(form.branchId ?? academic.branchId),
+    semesterId: nullableNumericId(form.semesterId ?? academic.semesterId),
     sectionId: nullableNumericId(form.sectionId ?? academic.sectionId),
     quota: form.quota ?? academic.quota,
     quotaOther: form.quotaOther ?? academic.quotaOther,
@@ -1131,7 +1141,7 @@ const studentAdmissionPayload = (form = {}) => {
     hostelRoomType: form.hostelRoomType ?? admission.hostelRoomType,
     transport: form.transport ?? admission.transport,
     transportRoute: form.transportRoute ?? admission.transportRoute,
-    feeStructureId: form.feeStructureId ?? fees.feeStructureId ?? fees.structureId,
+    feeStructureId,
     tuitionFee: form.tuitionFee ?? fees.tuitionFee,
     admissionFee: form.admissionFee ?? fees.admissionFee,
     scholarshipAmount: form.scholarshipAmount ?? fees.scholarshipAmount,
@@ -1146,15 +1156,16 @@ const studentAdmissionPayload = (form = {}) => {
 }
 
 const academicDetailsPayload = (form = {}) => compact({
-  collegeId: nullableNumericId(form.collegeId ?? form.academic?.collegeId ?? form.admission?.collegeId),
-  academicYearId: nullableNumericId(form.academicYearId ?? form.academic?.academicYearId),
-  departmentId: nullableNumericId(form.departmentId ?? form.academic?.departmentId),
-  courseId: nullableNumericId(form.courseId ?? form.academic?.courseId),
-  branchId: nullableNumericId(form.branchId ?? form.academic?.branchId),
-  sectionId: nullableNumericId(form.sectionId ?? form.academic?.sectionId),
-  admissionType: form.admissionType ?? form.academic?.admissionType,
-  quota: form.quota ?? form.academic?.quota,
-  quotaOther: form.quotaOther ?? form.academic?.quotaOther,
+  collegeId: nullableNumericId(form.admission?.collegeId ?? form.academic?.collegeId ?? form.collegeId),
+  academicYearId: nullableNumericId(form.academic?.academicYearId ?? form.academicYearId),
+  departmentId: nullableNumericId(form.academic?.departmentId ?? form.departmentId),
+  courseId: nullableNumericId(form.academic?.courseId ?? form.courseId),
+  branchId: nullableNumericId(form.academic?.branchId ?? form.branchId),
+  semesterId: nullableNumericId(form.academic?.semesterId ?? form.semesterId),
+  sectionId: nullableNumericId(form.academic?.sectionId ?? form.sectionId),
+  admissionType: form.academic?.admissionType ?? form.admissionType,
+  quota: form.academic?.quota ?? form.quota,
+  quotaOther: form.academic?.quotaOther ?? form.quotaOther,
   courseCode: form.courseCode ?? form.academic?.courseCode,
   branchCode: form.branchCode ?? form.academic?.branchCode,
   entryType: form.entryType ?? form.academic?.entryType,
@@ -1212,7 +1223,24 @@ export const studentAdmissionApi = {
   getAll: async (params) => markApiResult((listData(await request(withQuery(API_ENDPOINTS.studentAdmissions.list, params))) || []).map(normalizeAdmission)),
   getById: async (id) => normalizeAdmission(await request(API_ENDPOINTS.studentAdmissions.detail(requiredId(id, 'Admission ID')))),
   create: async (form) => normalizeAdmission(await request(API_ENDPOINTS.studentAdmissions.create, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(studentAdmissionPayload(form)) })),
-  update: async (id, form) => normalizeAdmission(await request(API_ENDPOINTS.studentAdmissions.update(requiredId(id, 'Admission ID')), { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(studentAdmissionPayload(form)) })),
+  update: async (id, form, { preserveAcademicMapping = false } = {}) => {
+    const admissionId = requiredId(id, 'Admission ID')
+    if (preserveAcademicMapping) {
+      // Personal/contact saves must not reassign enrollment from a browser draft.
+      // Read failures stop the save instead of falling back to potentially stale IDs.
+      const saved = normalizeAdmission(await request(API_ENDPOINTS.studentAdmissions.detail(admissionId)))
+      const snapshot = typeof saved.formData === 'string' ? JSON.parse(saved.formData) : saved.formData
+      const academic = { ...form.academic, ...snapshot?.academic }
+      for (const key of ['academicYearId', 'departmentId', 'courseId', 'branchId', 'semesterId', 'sectionId', 'admissionType', 'entryType', 'regulation']) {
+        if (Object.hasOwn(saved, key)) academic[key] = saved[key] ?? ''
+      }
+      for (const [label, key] of [['academicYear', 'academicYearName'], ['course', 'courseName'], ['branch', 'branchName'], ['semester', 'semesterName'], ['section', 'sectionName']]) {
+        if (Object.hasOwn(saved, key)) academic[label] = saved[key] ?? ''
+      }
+      form = { ...form, academic, admission: { ...form.admission, collegeId: saved.collegeId ?? form.admission?.collegeId } }
+    }
+    return normalizeAdmission(await request(API_ENDPOINTS.studentAdmissions.update(admissionId), { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(studentAdmissionPayload(form)) }))
+  },
   submit: async (id) => normalizeAdmission(await request(API_ENDPOINTS.studentAdmissions.submit(requiredId(id, 'Admission ID')), { method: 'POST' })),
 }
 export const studentAcademicDetailsApi = {

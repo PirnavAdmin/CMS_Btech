@@ -33,6 +33,7 @@ import { useAcademic } from '../../../context/AcademicContext'
 import { apiAssetUrl } from '../../../api/apiEndpoints'
 import promotionService from '../../../services/promotionService'
 import studentService from '../../../services/studentService'
+import attendanceService from '../../../services/attendanceService'
 import eventBus, { ERP_EVENTS } from '../../../services/eventBus'
 import './StudentPromotion.css'
 
@@ -289,6 +290,7 @@ export default function StudentPromotion() {
   const {
     activeAcademicYears,
     currentAcademicYear,
+    selectedCollegeId,
     activeCourses,
     loading: academicLoading,
     error: academicError,
@@ -363,7 +365,7 @@ export default function StudentPromotion() {
   const isDegreeReview = isSemester8
 
   // Load Promotion Scope Students & History
-  const loadPromotionData = useCallback(async () => {
+  const loadPromotionData = useCallback(async (forceRefresh = false) => {
     if (!selectedBranchId || !selectedAcademicYearId || !selectedSemesterNumber) {
       setStudents([])
       return
@@ -388,14 +390,84 @@ export default function StudentPromotion() {
         branch: selectedBranch?.name,
         branchCode: selectedBranch?.code,
         semester: selectedSemester?.semesterName,
+        forceRefresh,
+      })
+
+      const scopeSections = getSectionsForScope({
+        academicYearId: selectedAcademicYearId,
+        courseId,
+        branchId: selectedBranchId,
+        semesterId: selectedSemester?.id ?? selectedSemesterNumber,
+      }, true)
+      let sectionRosters = []
+      try {
+        sectionRosters = await Promise.all(scopeSections.map(async section => ({
+          section,
+          students: await attendanceService.getStudentsForAttendance({
+            collegeId: selectedCollegeId,
+            sectionId: section.id,
+          }),
+        })))
+      } catch (rosterError) {
+        showError(rosterError.message || 'Profiles loaded, but section-assigned students could not be loaded.')
+      }
+
+      let attendanceByStudent = new Map()
+      try {
+        attendanceByStudent = await attendanceService.getStudentAttendanceSummary({
+          collegeId: selectedCollegeId,
+          academicYearId: selectedAcademicYearId,
+          semesterId: selectedSemester?.id ?? selectedSemesterNumber,
+          sectionIds: scopeSections.map(section => section.id),
+        })
+      } catch (attendanceError) {
+        showError(attendanceError.message || 'Students loaded, but attendance details could not be loaded.')
+      }
+
+      const scopedProfiles = [...profiles]
+      const scopedProfileIds = new Set(scopedProfiles.map(profile => String(profile.studentId || profile.id)))
+      sectionRosters.forEach(({ section, students: roster }) => {
+        roster.forEach(student => {
+          const studentId = student.studentId || student.id
+          if (!studentId || scopedProfileIds.has(String(studentId))) return
+          scopedProfileIds.add(String(studentId))
+          scopedProfiles.push({
+            id: studentId,
+            studentId,
+            name: student.name,
+            fullName: student.name,
+            rollNumber: student.rollNumber,
+            registrationNumber: student.registrationNumber,
+            status: 'Active',
+            academic: {
+              course: selectedCourse?.name || '',
+              courseId,
+              branch: selectedBranch?.name || '',
+              branchId: selectedBranchId,
+              semester: selectedSemester?.semesterName || `Semester ${selectedSemesterNumber}`,
+              semesterId: selectedSemester?.id ?? selectedSemesterNumber,
+              section: section.name || section.sectionName || '',
+              sectionId: section.id,
+              academicYear: selectedYear?.name || '',
+              academicYearId: selectedAcademicYearId,
+              rollNumber: student.rollNumber,
+            },
+            personal: { fullName: student.name },
+          })
+        })
       })
 
       // Normalize into promotion directory candidate rows
-      const promotionCandidates = profiles.map((p) => {
+      const promotionCandidates = scopedProfiles.map((p) => {
         const acad = p.academic || {}
         const pers = p.personal || {}
         const semNum = Number(selectedSemesterNumber)
-        const isEligible = p.status !== 'Inactive' && (p.attendanceRate || 85) >= 75
+        const attendance = attendanceByStudent.get(String(p.studentId || p.id))
+        const profileAttendanceRate = p.attendanceRate === null || p.attendanceRate === undefined || p.attendanceRate === ''
+          ? null
+          : Number(p.attendanceRate)
+        const attendanceRate = attendance?.attendanceRate ?? (Number.isFinite(profileAttendanceRate) ? profileAttendanceRate : null)
+        const isEligible = p.status !== 'Inactive' && (attendanceRate ?? 85) >= 75
 
         const fullName =
           pers.fullName ||
@@ -420,6 +492,8 @@ export default function StudentPromotion() {
           section: acad.section || 'A',
           currentSemester: acad.semester || `Semester ${semNum}`,
           nextSemester: semNum >= 8 ? 'Graduation (Degree Conferred)' : `Semester ${semNum + 1}`,
+          attendanceRate,
+          attendanceSessions: attendance?.markedSessions ?? 0,
           creditsEarned: 24 * semNum,
           sgpa: '8.40',
           cgpa: '8.25',
@@ -511,7 +585,7 @@ export default function StudentPromotion() {
     } finally {
       setLoading((x) => ({ ...x, list: false }))
     }
-  }, [selectedBranchId, selectedAcademicYearId, selectedSemesterNumber, courseId, activeCourses, availableBranches, availableSemesters, activeAcademicYears])
+  }, [selectedBranchId, selectedAcademicYearId, selectedSemesterNumber, courseId, activeCourses, availableBranches, availableSemesters, activeAcademicYears, getSectionsForScope, selectedCollegeId])
 
   useEffect(() => {
     loadPromotionData()
@@ -519,10 +593,16 @@ export default function StudentPromotion() {
 
   // Invalidate on event
   useEffect(() => {
-    const unsub = eventBus.subscribe(ERP_EVENTS.PROMOTION_EXECUTED, () => {
+    const unsubscribePromotion = eventBus.subscribe(ERP_EVENTS.PROMOTION_EXECUTED, () => {
       loadPromotionData()
     })
-    return () => unsub()
+    const unsubscribeAttendance = eventBus.subscribe(ERP_EVENTS.ATTENDANCE_RECORDED, () => {
+      loadPromotionData(true)
+    })
+    return () => {
+      unsubscribePromotion()
+      unsubscribeAttendance()
+    }
   }, [loadPromotionData])
 
   // Directory filter & 5-row pagination
@@ -839,6 +919,7 @@ export default function StudentPromotion() {
                           <th style={{ minWidth: '170px' }}>Current → Target</th>
                           <th className="table-center" style={{ width: '90px' }}>Credits</th>
                           <th className="table-center" style={{ width: '120px' }}>SGPA / CGPA</th>
+                          <th className="table-center" style={{ width: '110px' }}>Attendance</th>
                           <th className="table-center" style={{ width: '120px' }}>Eligibility</th>
                           <th className="table-center" style={{ width: '80px' }}>Action</th>
                         </tr>
@@ -846,7 +927,7 @@ export default function StudentPromotion() {
                       <tbody>
                         {paginatedCandidates.length === 0 ? (
                           <tr>
-                            <td colSpan={9} className="text-center py-6">
+                            <td colSpan={10} className="text-center py-6">
                               <p className="text-muted">No students found matching this scope.</p>
                             </td>
                           </tr>
@@ -890,6 +971,11 @@ export default function StudentPromotion() {
                               <td className="table-center" style={{ width: '90px' }}>{x.creditsEarned}</td>
                               <td className="table-center" style={{ width: '120px', whiteSpace: 'nowrap' }}>
                                 {x.sgpa} / {x.cgpa}
+                              </td>
+                              <td className="table-center" style={{ width: '110px' }}>
+                                {x.attendanceRate == null
+                                  ? 'Not recorded'
+                                  : `${x.attendanceRate}%${x.attendanceSessions ? ` (${x.attendanceSessions} sessions)` : ''}`}
                               </td>
                               <td className="table-center" style={{ width: '120px' }}>
                                 <StatusBadge
