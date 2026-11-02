@@ -64,11 +64,9 @@ namespace BTech.Services
             if (branch.CourseId != effectiveCourseId)
                 throw new ArgumentException("The selected branch does not belong to the selected course.");
 
-            // Validate Academic Year
-            var academicYearExists = await _context.AcademicYears
-                .AnyAsync(x => x.AcademicYearId == dto.AcademicYearId);
-
-            if (!academicYearExists)
+            // Academic-year setup is optional during semester structure generation.
+            if (dto.AcademicYearId.HasValue && !await _context.AcademicYears
+                .AnyAsync(x => x.AcademicYearId == dto.AcademicYearId.Value))
             {
                 throw new ArgumentException("Academic year not found.");
             }
@@ -343,12 +341,9 @@ namespace BTech.Services
             if (branch.CourseId != effectiveCourseId)
                 throw new ArgumentException("The selected branch does not belong to the selected course.");
 
-            // Validate Academic Year
-            var academicYearExists = await _context.AcademicYears
-                .AnyAsync(x =>
-                    x.AcademicYearId == dto.AcademicYearId);
-
-            if (!academicYearExists)
+            // Academic-year setup is optional while generating semester structures.
+            if (dto.AcademicYearId.HasValue && !await _context.AcademicYears
+                .AnyAsync(x => x.AcademicYearId == dto.AcademicYearId.Value))
             {
                 throw new ArgumentException(
                     "Academic year not found.");

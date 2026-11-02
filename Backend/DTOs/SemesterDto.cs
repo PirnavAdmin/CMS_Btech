@@ -6,7 +6,7 @@
 
         public long BranchId { get; set; }
 
-        public long AcademicYearId { get; set; }
+        public long? AcademicYearId { get; set; }
 
         public string SemesterName { get; set; } = string.Empty;
 

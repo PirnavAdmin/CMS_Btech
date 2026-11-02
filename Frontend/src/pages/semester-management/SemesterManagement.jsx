@@ -214,13 +214,18 @@ const createPlan = ({ course, branch, activeYear, academicYears, dates = {}, edi
   if (editingSemester) return [{ ...editingSemester, ...dates[editingSemester.semesterNumber], status: deriveLifecycleStatus({ ...editingSemester, ...dates[editingSemester.semesterNumber] }) }]
   if (!course || !isSemesterPattern(course.academicPattern) || !Number.isInteger(course.totalSemesters) || course.totalSemesters <= 0) return []
   const startYear = parseAcademicYearStart(activeYear) || new Date().getFullYear()
+  const fallbackStart = `${startYear}-09-01`
+  const fallbackEnd = `${startYear + Number(course.durationYears || 1)}-06-30`
 
   return Array.from({ length: Number(course.totalSemesters) }, (_, index) => {
     const semesterNumber = index + 1
     const yearStart = startYear + Math.floor(index / 2)
     const academicYear = academicYearForStart(academicYears || [], yearStart)
     const dateRow = dates[semesterNumber] || {}
-    const yearSchedule = semesterDatesForYear(academicYear, activeYear, yearStart - startYear)
+    const yearSchedule = semesterDatesForYear(academicYear, activeYear, yearStart - startYear) || semesterDatesForYear(null, {
+      startDate: shiftISODateYear(fallbackStart, yearStart - startYear),
+      endDate: shiftISODateYear(fallbackEnd, yearStart - startYear),
+    })
     const defaultDates = yearSchedule?.[(semesterNumber - 1) % 2] || {}
     const startDate = Object.hasOwn(dateRow, 'startDate') ? dateRow.startDate : defaultDates.startDate || ''
     const endDate = Object.hasOwn(dateRow, 'endDate') ? dateRow.endDate : defaultDates.endDate || ''
@@ -508,8 +513,7 @@ function SemesterForm({ editMode = false }) {
   const plan = createPlan({ course, branch, activeYear, academicYears: effectiveAcademicYears, dates, editingSemester })
   const selectedPlanRow = plan.find((item) => Number(item.semesterNumber) === Number(form.semesterNumber))
   const unsupportedPattern = course && !isSemesterPattern(course.academicPattern)
-  const noActiveYear = !editMode && activeYears.length === 0
-  const yearWarning = noActiveYear ? 'No active academic year is configured.' : !editMode && activeYears.length > 1 ? 'Multiple active academic years are configured. Using the first active academic year for this semester structure.' : ''
+  const yearWarning = !editMode && activeYears.length > 1 ? 'Multiple active academic years are configured. Using the first active academic year for this semester structure.' : ''
 
   const load = async () => {
     setLoading(true)
@@ -568,7 +572,6 @@ function SemesterForm({ editMode = false }) {
     const scheduleError = validateSchedule(scheduleRows)
     if (scheduleError) return scheduleError
     if (editMode) return editingSemester?.id && form.courseId && form.branchId && form.academicYearId ? '' : 'Semester mapping could not be loaded.'
-    if (noActiveYear) return yearWarning
     if (!form.collegeId) return 'College is required.'
     if (!form.courseId) return 'Course is required.'
     if (!form.branchId || !branch) return 'Branch is required.'
@@ -576,9 +579,7 @@ function SemesterForm({ editMode = false }) {
     if (!Number.isInteger(course?.totalSemesters) || course.totalSemesters <= 0) return 'Selected course does not include total semesters.'
     if (unsupportedPattern) return `${course.academicPattern} courses are not supported for semester generation.`
     if (course.totalSemesters !== course.durationYears * 2) return 'Course duration and total semesters do not match the standard two-semester academic year.'
-    if (!coursePeriod) return 'Course period could not be calculated from academic year and course duration.'
-    const missingAcademicYear = plan.find((item) => !item.academicYearId)
-    if (missingAcademicYear) return `Configure academic year ${missingAcademicYear.academicYearName} before generating its semesters.`
+    if (!coursePeriod) return 'Course period could not be calculated from course duration.'
     return ''
   }
 
@@ -616,7 +617,7 @@ function SemesterForm({ editMode = false }) {
         const results = await Promise.allSettled(missing.map((item) => {
           const cleanStart = item.startDate ? String(item.startDate).slice(0, 10) : ''
           const cleanEnd = item.endDate ? String(item.endDate).slice(0, 10) : ''
-          return createSemester({ collegeId: Number(college?.id || item.collegeId) || undefined, courseId: Number(item.courseId), branchId: Number(item.branchId), academicYearId: Number(item.academicYearId), semesterName: item.semesterName, semesterNumber: Number(item.semesterNumber), yearNumber: Number(item.yearNumber), startDate: cleanStart || null, endDate: cleanEnd || null, StartDate: cleanStart || null, EndDate: cleanEnd || null, status: semesterPayloadStatus(item.status), createdBy: 1 })
+          return createSemester({ collegeId: Number(college?.id || item.collegeId) || undefined, courseId: Number(item.courseId), branchId: Number(item.branchId), academicYearId: Number(item.academicYearId) || null, semesterName: item.semesterName, semesterNumber: Number(item.semesterNumber), yearNumber: Number(item.yearNumber), startDate: cleanStart || null, endDate: cleanEnd || null, StartDate: cleanStart || null, EndDate: cleanEnd || null, status: semesterPayloadStatus(item.status), createdBy: 1 })
         }))
         results.filter(result => result.status === 'fulfilled').forEach(result => rememberCreated('semesters', result.value))
         const addedSemesters = results.flatMap((result, index) => {
@@ -726,8 +727,8 @@ function SemesterForm({ editMode = false }) {
               <div className="semester-config-warning">This course uses {course.academicPattern}. Semester generation is available only for Semester pattern courses.</div>
             ) : (
               <div className="semester-schedule-table-wrap">
-                {plan.some((item) => !item.academicYearId) && <p className="semester-config-warning" role="status">Later semesters have estimated dates because their academic-year records are missing. Configure those academic years before generating this structure.</p>}
-                {plan.some((item) => !item.startDate || !item.endDate) && <p className="semester-config-warning" role="status">Set start and end dates on the academic year to generate semester dates automatically.</p>}
+                {plan.some((item) => !item.academicYearId) && <p className="semester-config-warning" role="status">Academic-year links can be added later. Dates for unconfigured years are estimated from the course cohort.</p>}
+                {plan.some((item) => !item.startDate || !item.endDate) && <p className="semester-config-warning" role="status">Enter dates for any semester that does not have dates available from an academic year.</p>}
                 <div className="semester-schedule-header">
                   <span className="col-sem">Semester &amp; Academic Year</span>
                   <span className="col-date">Start Date</span>
@@ -739,7 +740,7 @@ function SemesterForm({ editMode = false }) {
                     <div key={item.semesterNumber} className="semester-schedule-row">
                       <div className="col-sem">
                         <strong className="sem-name">{item.semesterName}</strong>
-                        <span className="sem-year">{item.academicYearName}</span>
+                        <span className="sem-year">{item.academicYearName || 'Academic year not configured yet'}</span>
                       </div>
                       <div className="col-date">
                         <input
@@ -776,11 +777,11 @@ function SemesterForm({ editMode = false }) {
             {step === 1 ? 'Cancel' : '← Back to Mapping'}
           </button>
           {step === 1 ? (
-            <button type="button" className="cm-button" disabled={!form.collegeId || !form.courseId || !form.branchId || noActiveYear} onClick={() => setStep(2)}>
+            <button type="button" className="cm-button" disabled={!form.collegeId || !form.courseId || !form.branchId} onClick={() => setStep(2)}>
               Configure Schedule →
             </button>
           ) : (
-            <button type="button" className="cm-button" disabled={saving || Boolean(notice) || noActiveYear} onClick={save}>
+            <button type="button" className="cm-button" disabled={saving || Boolean(notice)} onClick={save}>
               {saving ? 'Saving...' : editMode ? 'Save Schedule' : 'Generate Structure'}
             </button>
           )}

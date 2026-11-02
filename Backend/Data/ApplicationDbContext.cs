@@ -1325,8 +1325,7 @@ namespace BTech.Data
                     .IsRequired();
 
                 semesterEntity.Property(x => x.AcademicYearId)
-                    .HasColumnName("academic_year_id")
-                    .IsRequired();
+                    .HasColumnName("academic_year_id");
 
                 semesterEntity.Property(x => x.SemesterNumber)
                     .HasColumnName("semester_number")
@@ -1380,7 +1379,8 @@ namespace BTech.Data
                 semesterEntity.HasOne(x => x.AcademicYear)
                     .WithMany()
                     .HasForeignKey(x => x.AcademicYearId)
-                    .OnDelete(DeleteBehavior.Restrict);
+                    .OnDelete(DeleteBehavior.Restrict)
+                    .IsRequired(false);
 
                 semesterEntity.HasIndex(x => x.CourseId);
                 semesterEntity.HasIndex(x => x.BranchId);

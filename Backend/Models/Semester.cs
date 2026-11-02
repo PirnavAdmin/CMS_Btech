@@ -10,7 +10,7 @@ namespace BTech.Models
 
         public long BranchId { get; set; }
 
-        public long AcademicYearId { get; set; }
+        public long? AcademicYearId { get; set; }
 
         public int SemesterNumber { get; set; }
 

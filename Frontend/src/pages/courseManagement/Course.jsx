@@ -1686,8 +1686,8 @@ function CourseDetails() {
               <p className="cm-profile-subtitle">
                 <span>Department: </span>
                 <strong>{department?.name || course.department || '-'}</strong>
-                {duration && <span> Â| {duration}</span>}
-                {course.semesters && <span> Â| {course.semesters} Semesters</span>}
+                {duration && <span> {duration}</span>}
+                {course.semesters && <span> {course.semesters} Semesters</span>}
               </p>
             </div>
           </div>
