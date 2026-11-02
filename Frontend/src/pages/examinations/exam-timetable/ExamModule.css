@@ -27,3 +27,51 @@
 .exam-module .exm-filter-grid { grid-template-columns: repeat(auto-fit, minmax(min(220px, 100%), 240px)); justify-content: center; }
 :root[data-theme="dark"] .exm-nav{border-bottom-color:var(--border,#334155)}:root[data-theme="dark"] .exm-nav a{color:var(--text-muted,#94a3b8)}:root[data-theme="dark"] .exm-nav a:hover{color:#60a5fa;background:rgba(96,165,250,.08)}:root[data-theme="dark"] .exm-nav a.active{color:#60a5fa}:root[data-theme="dark"] .exm-nav a.active::after{background:#60a5fa}:root[data-theme="dark"] .exm-view-toggle,:root[data-theme="dark"] .exm-student-toolbar>div{background:var(--surface-soft,#1e293b);border-color:var(--border,#334155)}:root[data-theme="dark"] .exm-view-toggle button,:root[data-theme="dark"] .exm-student-toolbar>div button{color:var(--text-muted,#94a3b8)}:root[data-theme="dark"] .exm-view-toggle button:hover:not(.active),:root[data-theme="dark"] .exm-student-toolbar>div button:hover:not(.active){color:#f1f5f9;background:rgba(255,255,255,.06)}:root[data-theme="dark"] .exm-view-toggle button.active,:root[data-theme="dark"] .exm-student-toolbar>div button.active{background:var(--surface,#0f172a)!important;color:#93c5fd!important;border-color:rgba(147,197,253,.3)!important;box-shadow:0 1px 4px rgba(0,0,0,.3)!important}:root[data-theme="dark"] .exm-row-actions .action-view{color:#93c5fd!important;background:rgba(43,120,197,.25)!important;border-color:rgba(96,165,250,.4)!important}:root[data-theme="dark"] .exm-row-actions .action-view:hover:not(:disabled){background:rgba(43,120,197,.45)!important;border-color:rgba(96,165,250,.6)!important;color:#d8e4f2!important}:root[data-theme="dark"] .exm-row-actions .action-edit{color:#c7d2fe!important;background:rgba(99,102,241,.25)!important;border-color:rgba(129,140,248,.4)!important}:root[data-theme="dark"] .exm-row-actions .action-edit:hover:not(:disabled){background:rgba(99,102,241,.45)!important;border-color:rgba(192,132,252,.6)!important;color:#d8e4f2!important}:root[data-theme="dark"] .exm-row-actions .action-publish{color:#a7f3d0!important;background:rgba(16,185,129,.22)!important;border-color:rgba(52,211,153,.4)!important}:root[data-theme="dark"] .exm-row-actions .action-publish:hover:not(:disabled){background:rgba(16,185,129,.4)!important;border-color:rgba(110,231,183,.6)!important;color:#d1fae5!important}:root[data-theme="dark"] .exm-row-actions .action-cancel{color:#fde68a!important;background:rgba(245,158,11,.22)!important;border-color:rgba(251,191,36,.4)!important}:root[data-theme="dark"] .exm-row-actions .action-cancel:hover:not(:disabled){background:rgba(245,158,11,.4)!important;border-color:rgba(253,230,138,.6)!important;color:#fef3c7!important}:root[data-theme="dark"] .exm-row-actions .action-delete,:root[data-theme="dark"] .exm-row-actions .danger{color:#fca5a5!important;background:rgba(239,68,68,.22)!important;border-color:rgba(248,113,113,.4)!important}:root[data-theme="dark"] .exm-row-actions .action-delete:hover:not(:disabled),:root[data-theme="dark"] .exm-row-actions .danger:hover:not(:disabled){background:rgba(239,68,68,.4)!important;border-color:rgba(252,165,165,.6)!important;color:#fee2e2!important}
 
+/* Match timetable view tabs to the Official Results segmented navigation. */
+.exam-module--timetable .filter-disclosure .filter-disclosure__search {
+  display: none;
+}
+
+.exam-module--timetable .filter-disclosure .exm-view-toggle {
+  gap: 4px;
+  padding: 4px;
+  border-color: var(--border, #dce5f2);
+  border-radius: 10px;
+  background: var(--surface, #fff);
+  box-shadow: 0 1px 3px rgb(0 0 0 / 3%);
+}
+
+.exam-module--timetable .filter-disclosure .exm-view-toggle button {
+  min-height: 38px;
+  padding: 8px 14px;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--text-secondary, #526a86);
+  font-size: 13px;
+  font-weight: 500;
+  transition: background .16s ease, color .16s ease, box-shadow .16s ease;
+}
+
+.exam-module--timetable .filter-disclosure .exm-view-toggle button:hover:not(.active) {
+  background: var(--surface-soft, #f8fafc);
+  color: var(--text-primary, #102a4c);
+}
+
+.exam-module--timetable .filter-disclosure .exm-view-toggle button.active {
+  border-color: transparent !important;
+  background: var(--brand, #1d68bd) !important;
+  color: #fff !important;
+  font-weight: 600 !important;
+  box-shadow: 0 2px 6px rgb(29 104 189 / 28%) !important;
+}
+
+.exam-module--timetable .filter-disclosure .exm-view-toggle button:focus-visible {
+  outline: 2px solid var(--brand, #1769c2);
+  outline-offset: 2px;
+}
+
+:root[data-theme="dark"] .exam-module--timetable .filter-disclosure .exm-view-toggle button.active {
+  background: var(--brand, #2563eb) !important;
+  color: #fff !important;
+}

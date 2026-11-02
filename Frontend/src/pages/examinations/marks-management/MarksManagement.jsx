@@ -60,21 +60,21 @@ const modules = [
 
 function MarksModuleNav() {
   return (
-    <nav className="marks-module-nav" aria-label="Marks management workflows">
-      {modules.map(({ label, description, to, icon: Icon }) => (
-        <NavLink
-          key={to}
-          to={to}
-          className={({ isActive }) => `marks-module-nav__link${isActive ? ' active' : ''}`}
-        >
-          <span className="marks-module-nav__icon" aria-hidden="true"><Icon /></span>
-          <span className="marks-module-nav__copy">
-            <strong>{label}</strong>
-            <small>{description}</small>
-          </span>
-        </NavLink>
-      ))}
-    </nav>
+    <div className="marks-nav-strip">
+      <nav className="marks-clean-nav" aria-label="Marks management workflows">
+        {modules.map(({ label, to, icon: Icon }) => (
+          <NavLink
+            key={to}
+            to={to}
+            end
+            className={({ isActive }) => (isActive ? 'active' : '')}
+          >
+            <Icon aria-hidden="true" />
+            <span>{label}</span>
+          </NavLink>
+        ))}
+      </nav>
+    </div>
   )
 }
 
