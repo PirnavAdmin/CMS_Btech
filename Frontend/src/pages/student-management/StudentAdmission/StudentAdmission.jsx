@@ -22,7 +22,7 @@ import FilterPanel from '../../../components/FilterPanel'
 import TablePagination, { PAGE_SIZE } from '../../../components/TablePagination'
 import CompactSummary from '../../../components/CompactSummary'
 import StatusBadge from '../../../components/StatusBadge'
-import { academicYearApi, branchApi, courseApi, lookupIndianPincode, studentAdmissionApi, studentAcademicDetailsApi, studentAdmissionStatusApi, studentDocumentApi, studentFeeApi, studentParentApi, studentPreviousEducationApi } from '../../../api/apiEndpoints'
+import { academicYearApi, admissionFeePlanApi, branchApi, courseApi, lookupIndianPincode, studentAdmissionApi, studentAcademicDetailsApi, studentAdmissionStatusApi, studentDocumentApi, studentFeeApi, studentParentApi, studentPreviousEducationApi } from '../../../api/apiEndpoints'
 import { getOperationalAcademicYearOptions } from '../../../utils/academicYearUtils'
 import { admissionSemesterOptions, admissionSemesterError, resetAdmissionAcademicDependents } from '../../../utils/admissionAcademicMapping'
 import { getColleges, getSemesters } from '../../../auth/collegeApi'
@@ -93,6 +93,18 @@ const ADMISSION_TYPES = ['Regular / Counselling','Management','Spot Admission','
 const ADMISSION_QUOTAS = ['Government / Convener','Management','NRI','NRI Sponsored','Institutional','Other']
 const HOSTEL_FEES = HOSTEL_FEES_DEFAULT
 const TRANSPORT_FEES = { 'Route 1': 18000, 'Route 2': 22000, 'Route 3': 26000, 'Route 4': 30000 }
+const normalizeHostelRoomType = value => {
+  const label = String(value ?? '').trim().replace(/\s+/g, ' ')
+  const key = label.toLowerCase()
+  if (key === 'single sharing' || key === 'single') return 'Single Sharing'
+  if (key === 'double sharing' || key === 'double') return 'Double Sharing'
+  if (key === 'triple sharing' || key === 'triple') return 'Triple Sharing'
+  if (key === 'four sharing' || key === 'quadruple sharing' || key === 'four') return 'Four Sharing'
+  if (key === 'single room') return 'Single Room'
+  if (key === 'double room') return 'Double Room'
+  if (key === 'triple room') return 'Triple Room'
+  return label
+}
 
 const empty = () => createEmptyCanonicalStudent()
 
@@ -145,18 +157,20 @@ const display = value => formatDisplay(value)
 const money = value => formatMoney(value)
 const dateTime = value => formatDateTime(value)
 const quota = student => studentQuotaDisplay(student)
-const matchingFeeStructures = (academic = {}, admission = {}) => {
+const matchingFeeStructures = (academic = {}, admission = {}, serverPlans = []) => {
   const collegeId = admission.collegeId || academic.collegeId;
   let candidates = [];
   try {
     {
       const ws = readFeeWorkspace(collegeId);
       if (ws && Array.isArray(ws.structures)) {
-        candidates = [...ws.structures];
+        candidates = [...candidates, ...ws.structures];
       }
     }
   } catch {}
   try { candidates = [...candidates, ...readStructures(collegeId)]; } catch {}
+  // Prefer authoritative backend rows if a local legacy plan reuses the same ID.
+  if (Array.isArray(serverPlans)) candidates = [...candidates, ...serverPlans];
 
   // Admission uses the same exact scope matcher as fee-plan assignment. The
   // admission wizard stores display names alongside IDs, so pass both forms.
@@ -169,7 +183,12 @@ const matchingFeeStructures = (academic = {}, admission = {}) => {
     quota: academic.quota || academic.studentCategory,
   };
   const uniquePlans = [...new Map(candidates.filter(plan => plan?.id != null).map(plan => [String(plan.id), plan])).values()];
-  return matchingAdmissionFeeStructures(uniquePlans, scopedAcademic, { ...admission, collegeId });
+  const scope = { ...admission, collegeId }
+  const exactMatches = matchingAdmissionFeeStructures(uniquePlans, scopedAcademic, scope)
+  if (exactMatches.length || !(scopedAcademic.semesterId || scopedAcademic.semester)) return exactMatches
+  // Older admission records may retain an invalid semester ID. Keep the course,
+  // branch and year filter, then let the user choose from the available semesters.
+  return matchingAdmissionFeeStructures(uniquePlans, { ...scopedAcademic, semesterId: '', semester: '' }, scope)
 };
 const findMatchingFeeStructure = (academic, admission, selectedId) => {
   const plans = matchingFeeStructures(academic, admission);
@@ -1037,22 +1056,93 @@ function FeeSummary({ data }) {
 /* oxlint-disable-next-line react-hooks/exhaustive-deps -- update is intentionally triggered only when academic matching inputs change */
 function ApplicantFeeStructure({ data, update, error }) {
   const fees = data.fees || {}
-  const matchingPlans = matchingFeeStructures(data.academic, data.admission)
-  const matchedPlan = matchingPlans.find(plan => String(plan.id) === String(fees.structureId)) || matchingPlans[0]
+  const collegeId = Number(data.admission?.collegeId || data.academic?.collegeId)
+  const academicYearId = Number(data.academic?.academicYearId)
+  const courseId = Number(data.academic?.courseId)
+  const branchId = Number(data.academic?.branchId)
+  const semesterId = Number(data.academic?.semesterId || 0)
+  const batch = String(data.admission?.batch || data.academic?.batch || '').trim()
+  const quota = String(data.academic?.quota || '').trim()
+  const studentCategory = String(data.academic?.studentCategory || '').trim()
+  const [serverPlanState, setServerPlanState] = useState({ loading: false, plans: [], error: '' })
+
+  useEffect(() => {
+    let active = true
+    const scope = { collegeId, academicYearId, courseId, branchId, semesterId, batch, quota, studentCategory }
+    if (![collegeId, academicYearId, courseId, branchId].every(value => Number.isInteger(value) && value > 0) || !Number.isInteger(semesterId) || semesterId < 0 || !batch) {
+      setServerPlanState({ loading: false, plans: [], error: '' })
+      return () => { active = false }
+    }
+    setServerPlanState(current => ({ ...current, loading: true, error: '' }))
+    admissionFeePlanApi.getMatching(scope).then(rows => {
+      if (!active) return
+      const plans = (Array.isArray(rows) ? rows : []).map(plan => {
+        const id = String(plan.feeStructureId ?? plan.id ?? '')
+        const mode = String(plan.paymentMode ?? plan.plan ?? '').toUpperCase()
+        const paymentMode = /INSTALLMENT|TERM|SEMESTER/.test(mode) ? 'Term-wise Payment' : 'Full Payment'
+        const components = (Array.isArray(plan.components) ? plan.components : []).map(item => ({
+          ...item,
+          name: item.name ?? item.feeHeadName ?? item.componentName ?? item.code ?? 'Fee Component',
+          amount: Number(item.amount ?? item.feeAmount ?? 0),
+        }))
+        return {
+          ...plan,
+          id,
+          name: plan.name ?? plan.planName ?? plan.code ?? `Fee Plan ${id}`,
+          status: String(plan.status ?? '').toUpperCase() === 'PUBLISHED' ? 'Published' : plan.status,
+          amount: Number(plan.totalAmount ?? plan.amount ?? 0),
+          components,
+          installments: Array.isArray(plan.installments) ? plan.installments : [],
+          plan: paymentMode,
+          paymentPlan: { mode: paymentMode, installments: Array.isArray(plan.installments) ? plan.installments : [] },
+        }
+      }).filter(plan => plan.id)
+      setServerPlanState({ loading: false, plans, error: '' })
+    }).catch(fetchError => {
+      if (active) setServerPlanState({ loading: false, plans: [], error: fetchError.message || 'Unable to fetch published fee plans.' })
+    })
+    return () => { active = false }
+  }, [collegeId, academicYearId, courseId, branchId, semesterId, batch, quota, studentCategory])
+
+  const matchingPlans = matchingFeeStructures(data.academic, data.admission, serverPlanState.plans)
+  const assignedComponents = Array.isArray(fees.components) ? fees.components : Array.isArray(fees.feeComponents) ? fees.feeComponents : []
+  const hasAssignedPlan = /^\d+$/.test(String(fees.structureId ?? '')) &&
+    (assignedComponents.length > 0 || Number(fees.tuitionFee || 0) > 0 || Number(fees.totalFee || 0) > 0)
+  const currentAssignedPlan = hasAssignedPlan ? {
+    id: String(fees.structureId),
+    name: fees.structureName || fees.planName || 'Currently assigned fee plan',
+    status: 'Assigned',
+    amount: Number(fees.totalFee || fees.tuitionFee || 0),
+    components: assignedComponents,
+    installments: Array.isArray(fees.installments) ? fees.installments : [],
+    plan: fees.paymentPlan || 'Full Payment',
+  } : null
+  const availablePlans = currentAssignedPlan && !matchingPlans.some(plan => String(plan.id) === currentAssignedPlan.id)
+    ? [...matchingPlans, currentAssignedPlan]
+    : matchingPlans
+  const selectedPlan = availablePlans.find(plan => String(plan.id) === String(fees.structureId))
+  const planMatchesSelectedSemester = plan => {
+    const semesterSpecific = plan.cycle === 'Semester-wise' || plan.feePeriod === 'Per Semester' || String(plan.cycle || '').toUpperCase() === 'SEMESTER'
+    if (!semesterId || !semesterSpecific) return true
+    if (plan.semesterId != null && String(plan.semesterId)) return String(plan.semesterId) === String(semesterId)
+    return String(plan.semesterName || '').trim().toLowerCase() === String(data.academic?.semester || '').trim().toLowerCase()
+  }
+  const matchedPlan = selectedPlan || (availablePlans.length === 1 && planMatchesSelectedSemester(availablePlans[0]) ? availablePlans[0] : null)
   const planSelector = (
     <label className="sa-field">
       <span>Assign Fee Plan</span>
-      <ProjectSelect aria-label="Assign admission fee plan" value={matchedPlan?.id || ""} onChange={event => update("fees", { ...fees, configured: false, structureId: event.target.value })} disabled={!matchingPlans.length}>
-        {!matchingPlans.length && <option value="">No matching active fee plans</option>}
-        {matchingPlans.map(plan => <option key={plan.id} value={plan.id}>{plan.name || plan.planName} — {feeMoney(feeTotal(plan))}</option>)}
+      <ProjectSelect aria-label="Assign admission fee plan" value={matchedPlan?.id || ""} onChange={event => update("fees", { ...fees, configured: false, structureId: event.target.value })} disabled={!availablePlans.length}>
+        {availablePlans.length > 1 && !selectedPlan && <option value="">Select a fee plan</option>}
+        {!availablePlans.length && <option value="">{serverPlanState.loading ? 'Loading matching fee plans…' : 'No matching published fee plans'}</option>}
+        {availablePlans.map(plan => <option key={plan.id} value={plan.id}>{plan.name || plan.planName} — {feeMoney(feeTotal(plan))}{plan.status === 'Assigned' ? ' (currently assigned)' : ''}</option>)}
       </ProjectSelect>
-      <small>Select a plan matching this admission's academic details. <Link to="/fees/structures" target="_blank" rel="noopener noreferrer">Manage fee plans</Link></small>
+      <small>{serverPlanState.error && !availablePlans.length ? `Could not fetch published fee plans: ${serverPlanState.error}. ` : ''}{availablePlans.length > 1 && (!semesterId || availablePlans.some(plan => !planMatchesSelectedSemester(plan))) ? 'Choose the correct semester fee plan; select a valid semester in Academic Enrollment to narrow this list. ' : ''}{!serverPlanState.loading && !availablePlans.length ? 'Check that a published plan matches the selected college, academic year, course, branch, semester and batch. ' : ''}Select a plan matching this admission's academic details. <Link to="/fees/structures" target="_blank" rel="noopener noreferrer">Manage fee plans</Link></small>
     </label>
   )
 
   // Sync matched plan to form state if needed
   useEffect(() => {
-    if (matchedPlan && (!fees.configured || fees.structureId !== matchedPlan.id)) {
+    if (matchedPlan && (!fees.configured || String(fees.structureId) !== String(matchedPlan.id))) {
       const rawComps = Array.isArray(matchedPlan.components) ? matchedPlan.components : Array.isArray(matchedPlan.feeComponents) ? matchedPlan.feeComponents : []
       const components = rawComps.map(item => ({
         ...item,
@@ -1965,23 +2055,38 @@ function AdmissionForm() {
 
   const roomTypeOptions = useMemo(() => {
     const list = []
+    const seen = new Set()
+    const addRoomType = value => {
+      const name = normalizeHostelRoomType(value)
+      const key = name.toLowerCase()
+      if (name && !seen.has(key)) {
+        seen.add(key)
+        list.push(name)
+      }
+    }
     try {
       const hostelPlans = readHostelStructures(selectedCollegeId)
       if (Array.isArray(hostelPlans)) {
         hostelPlans.forEach(p => {
           if (Array.isArray(p.roomPricing)) {
-            p.roomPricing.forEach(r => {
-              const name = String(r.roomType || '').trim()
-              if (name && !list.includes(name)) list.push(name)
-            })
+            p.roomPricing.forEach(r => addRoomType(r.roomType))
           }
-          const pRoom = String(p.roomType || '').trim()
-          if (pRoom && !list.includes(pRoom)) list.push(pRoom)
+          addRoomType(p.roomType)
         })
       }
     } catch {}
-    return [...new Set([...list, ...Object.keys(HOSTEL_FEES)])]
-  }, [selectedCollegeId])
+    Object.keys(HOSTEL_FEES).forEach(addRoomType)
+    addRoomType(data.admission.hostelRoomType)
+    return list
+  }, [selectedCollegeId, data.admission.hostelRoomType])
+
+  useEffect(() => {
+    const roomType = data.admission.hostelRoomType
+    const normalized = normalizeHostelRoomType(roomType)
+    if (roomType && normalized !== roomType) {
+      setData(current => ({ ...current, admission: { ...current.admission, hostelRoomType: normalized } }))
+    }
+  }, [data.admission.hostelRoomType])
 
   const transportRouteOptions = useMemo(() => {
     const list = []

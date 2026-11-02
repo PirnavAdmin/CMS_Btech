@@ -128,6 +128,7 @@ export const API_ENDPOINTS = Object.freeze({
     previousEducation: (id) => endpoint(`/api/v1/student-admissions/${id}/previous-education`),
     status: (id) => endpoint(`/api/v1/student-admissions/${id}/status`), submit: (id) => endpoint(`/api/v1/student-admissions/${id}/submit`),
     feeSummary: (id) => endpoint(`/api/v1/student-admissions/${id}/fee-summary`), feeStructure: (id) => endpoint(`/api/v1/student-admissions/${id}/fee-structure`),
+    matchingFeePlans: endpoint('/api/v1/student-admissions/fee-plans'),
   }),
   studentAcademicInformation: Object.freeze({ detail: (id) => endpoint(`/api/v1/student-academic-information/${id}`), update: (id) => endpoint(`/api/v1/student-academic-information/${id}`) }),
   students: Object.freeze({
@@ -1374,6 +1375,9 @@ export const studentPreviousEducationApi = {
 export const studentFeeApi = {
   getSummary: async (id) => normalizeRecord(await request(API_ENDPOINTS.studentAdmissions.feeSummary(requiredId(id, 'Admission ID')))),
   getStructure: async (id) => normalizeRecord(await request(API_ENDPOINTS.studentAdmissions.feeStructure(requiredId(id, 'Admission ID')))),
+}
+export const admissionFeePlanApi = {
+  getMatching: async scope => listData(await request(withQuery(API_ENDPOINTS.studentAdmissions.matchingFeePlans, scope))),
 }
 
 // Contracts: Backend/DTOs/Fees/FeeCollectionDtos.cs. Reuse authentication,
