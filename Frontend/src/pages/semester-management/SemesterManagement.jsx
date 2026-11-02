@@ -1,6 +1,6 @@
 import { ProjectSelect } from '../../components/SearchableSelect'
 import DirectoryEmptyState from '../../components/DirectoryEmptyState'
-import { newestFirst, rememberCreated } from '../../utils/newestFirst'
+import { rememberCreated } from '../../utils/newestFirst'
 import useToastState from '../../hooks/useToastState'
 import ExportMenu, { PrintDetailsButton } from '../../components/ExportMenu'
 import { semesterColumns } from '../../utils/exportColumns'
@@ -66,6 +66,39 @@ const parseAcademicYearStart = (year) => {
 const academicYearForStart = (years, startYear) => years.find((year) => parseAcademicYearStart(year) === startYear)
 const periodLabel = (startYear, durationYears) => startYear && durationYears ? `${startYear} - ${startYear + Number(durationYears)}` : ''
 const yearLabelFromStart = (startYear) => startYear ? `${startYear}-${startYear + 1}` : ''
+const validISODate = (value) => /^\d{4}-\d{2}-\d{2}$/.test(String(value || '').slice(0, 10))
+const shiftISODateYear = (value, amount) => {
+  if (!validISODate(value)) return ''
+  const [year, month, day] = String(value).slice(0, 10).split('-').map(Number)
+  const nextYear = year + amount
+  const lastDay = new Date(Date.UTC(nextYear, month, 0)).getUTCDate()
+  return `${nextYear}-${String(month).padStart(2, '0')}-${String(Math.min(day, lastDay)).padStart(2, '0')}`
+}
+const semesterDatesForYear = (academicYear, fallbackYear, yearOffset = 0) => {
+  const configuredStart = String(academicYear?.startDate || '').slice(0, 10)
+  const configuredEnd = String(academicYear?.endDate || '').slice(0, 10)
+  const startDate = validISODate(configuredStart) && validISODate(configuredEnd)
+    ? configuredStart
+    : shiftISODateYear(fallbackYear?.startDate, yearOffset)
+  const endDate = validISODate(configuredStart) && validISODate(configuredEnd)
+    ? configuredEnd
+    : shiftISODateYear(fallbackYear?.endDate, yearOffset)
+  if (!validISODate(startDate) || !validISODate(endDate) || startDate > endDate) return null
+
+  const [startYear, startMonth, startDay] = startDate.split('-').map(Number)
+  const [endYear, endMonth, endDay] = endDate.split('-').map(Number)
+  const startTime = Date.UTC(startYear, startMonth - 1, startDay)
+  const endTime = Date.UTC(endYear, endMonth - 1, endDay)
+  const totalDays = Math.floor((endTime - startTime) / 86400000) + 1
+  const firstSemesterDays = Math.ceil(totalDays / 2)
+  const secondStart = new Date(startTime + firstSemesterDays * 86400000)
+  const toISO = date => `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, '0')}-${String(date.getUTCDate()).padStart(2, '0')}`
+  const firstEnd = new Date(secondStart.getTime() - 86400000)
+  return [
+    { startDate, endDate: toISO(firstEnd) },
+    { startDate: toISO(secondStart), endDate },
+  ]
+}
 const displayDate = (value) => clean(value) ? new Date(`${String(value).slice(0, 10)}T12:00:00`).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : ''
 
 const normalizeCourse = (record = {}) => {
@@ -187,15 +220,19 @@ const createPlan = ({ course, branch, activeYear, academicYears, dates = {}, edi
     const yearStart = startYear + Math.floor(index / 2)
     const academicYear = academicYearForStart(academicYears || [], yearStart)
     const dateRow = dates[semesterNumber] || {}
+    const yearSchedule = semesterDatesForYear(academicYear, activeYear, yearStart - startYear)
+    const defaultDates = yearSchedule?.[(semesterNumber - 1) % 2] || {}
+    const startDate = Object.hasOwn(dateRow, 'startDate') ? dateRow.startDate : defaultDates.startDate || ''
+    const endDate = Object.hasOwn(dateRow, 'endDate') ? dateRow.endDate : defaultDates.endDate || ''
     return {
       semesterNumber,
       semesterName: `Semester ${semesterNumber}`,
       yearNumber: yearNumberForSemester(semesterNumber),
-      academicYearId: academicYear?.id ?? academicYear?.academicYearId ?? activeYear?.id ?? '',
+      academicYearId: academicYear?.id ?? academicYear?.academicYearId ?? (yearStart === startYear ? activeYear?.id : ''),
       academicYearName: yearName(academicYear) || yearLabelFromStart(yearStart),
-      startDate: dateRow.startDate || '',
-      endDate: dateRow.endDate || '',
-      status: deriveLifecycleStatus(dateRow, 'Upcoming'),
+      startDate,
+      endDate,
+      status: deriveLifecycleStatus({ startDate, endDate }, 'Upcoming'),
       courseId: course.id,
       courseName: course.name,
       courseCode: course.code,
@@ -245,7 +282,7 @@ function useLifecycleClock() {
 }
 
 function SemesterList() {
-  const { selectedCollegeId } = useAcademic()
+  const { selectedCollegeId, selectedAcademicYearId } = useAcademic()
   const assignedCollegeId = getUserCollegeId()
   const isAdmin = getUserRole() === 'admin'
   const location = useLocation()
@@ -259,7 +296,7 @@ function SemesterList() {
   const branches = scopeSemesterDirectory(allBranches, directoryScope)
   const [years, setYears] = useState([])
   const [query, setQuery] = useState('')
-  const [filters, setFilters] = useState({ courseId: '', branchId: '', academicYearId: '', status: '' })
+  const [filters, setFilters] = useState({ courseId: '', branchId: '', academicYearId: selectedAcademicYearId || '', status: '' })
   const [page, setPage] = useState(1)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useToastState('', 'error')
@@ -285,6 +322,12 @@ function SemesterList() {
     }
   }
   useEffect(() => { load() }, [selectedCollegeId])
+  useEffect(() => {
+    setFilters((current) => current.academicYearId === String(selectedAcademicYearId || '')
+      ? current
+      : { ...current, academicYearId: String(selectedAcademicYearId || '') })
+    setPage(1)
+  }, [selectedAcademicYearId])
 
   const scopedRows = useMemo(
     () => scopeSemesterDirectory(rows, { collegeId: selectedCollegeId, assignedCollegeId, isAdmin, courses: allCourses, branches: allBranches }),
@@ -293,15 +336,23 @@ function SemesterList() {
 
   const lifecycleRows = useMemo(() => scopedRows.map((item) => ({ ...item, status: deriveLifecycleStatus(item, 'Upcoming', now) })), [scopedRows, now])
   const filteredBranches = branches.filter((item) => !filters.courseId || String(item.courseId) === String(filters.courseId))
-  const filtered = useMemo(() => newestFirst('semesters', lifecycleRows.filter((item) => `${item.semesterName} ${item.courseName} ${item.courseCode} ${item.branchName} ${item.branchCode} ${item.academicYearName}`.toLowerCase().includes(query.trim().toLowerCase()) && (!filters.courseId || String(item.courseId) === String(filters.courseId)) && (!filters.branchId || String(item.branchId) === String(filters.branchId)) && (!filters.academicYearId || String(item.academicYearId) === String(filters.academicYearId)) && (!filters.status || item.status === filters.status))), [lifecycleRows, query, filters])
+  const filtered = useMemo(() => lifecycleRows
+    .filter((item) => `${item.semesterName} ${item.courseName} ${item.courseCode} ${item.branchName} ${item.branchCode} ${item.academicYearName}`.toLowerCase().includes(query.trim().toLowerCase()) && (!filters.courseId || String(item.courseId) === String(filters.courseId)) && (!filters.branchId || String(item.branchId) === String(filters.branchId)) && (!filters.academicYearId || String(item.academicYearId) === String(filters.academicYearId)) && (!filters.status || item.status === filters.status))
+    .sort((left, right) => {
+      const statusOrder = { Active: 0, Upcoming: 1, Completed: 2 }
+      return (statusOrder[left.status] ?? 3) - (statusOrder[right.status] ?? 3)
+        || Number(left.semesterNumber || 0) - Number(right.semesterNumber || 0)
+        || String(left.startDate || '').localeCompare(String(right.startDate || ''))
+        || String(left.id || '').localeCompare(String(right.id || ''))
+    }), [lifecycleRows, query, filters])
   const counts = { total: scopedRows.length, active: lifecycleRows.filter((item) => item.status === 'Active').length, upcoming: lifecycleRows.filter((item) => item.status === 'Upcoming').length, completed: lifecycleRows.filter((item) => item.status === 'Completed').length }
   const pageSize = 5
   const pageCount = Math.max(1, Math.ceil(filtered.length / pageSize))
   const currentPage = Math.min(page, pageCount)
   const visible = filtered.slice((currentPage - 1) * pageSize, currentPage * pageSize)
   const changeFilter = (name, value) => { setFilters((current) => ({ ...current, [name]: value, ...(name === 'courseId' ? { branchId: '' } : {}) })); setPage(1) }
-  const clearFilters = () => { setQuery(''); setFilters({ courseId: '', branchId: '', academicYearId: '', status: '' }); setPage(1) }
-  const hasFilters = Boolean(query || Object.values(filters).some(Boolean))
+  const clearFilters = () => { setQuery(''); setFilters({ courseId: '', branchId: '', academicYearId: String(selectedAcademicYearId || ''), status: '' }); setPage(1) }
+  const hasFilters = Boolean(query || filters.courseId || filters.branchId || filters.status || (filters.academicYearId && String(filters.academicYearId) !== String(selectedAcademicYearId || '')))
 
   return <Page>
     <Header title="Semester Management" text="Manage course-based semester structures, academic years, schedules, and lifecycle status.">
@@ -526,6 +577,8 @@ function SemesterForm({ editMode = false }) {
     if (unsupportedPattern) return `${course.academicPattern} courses are not supported for semester generation.`
     if (course.totalSemesters !== course.durationYears * 2) return 'Course duration and total semesters do not match the standard two-semester academic year.'
     if (!coursePeriod) return 'Course period could not be calculated from academic year and course duration.'
+    const missingAcademicYear = plan.find((item) => !item.academicYearId)
+    if (missingAcademicYear) return `Configure academic year ${missingAcademicYear.academicYearName} before generating its semesters.`
     return ''
   }
 
@@ -673,6 +726,8 @@ function SemesterForm({ editMode = false }) {
               <div className="semester-config-warning">This course uses {course.academicPattern}. Semester generation is available only for Semester pattern courses.</div>
             ) : (
               <div className="semester-schedule-table-wrap">
+                {plan.some((item) => !item.academicYearId) && <p className="semester-config-warning" role="status">Later semesters have estimated dates because their academic-year records are missing. Configure those academic years before generating this structure.</p>}
+                {plan.some((item) => !item.startDate || !item.endDate) && <p className="semester-config-warning" role="status">Set start and end dates on the academic year to generate semester dates automatically.</p>}
                 <div className="semester-schedule-header">
                   <span className="col-sem">Semester &amp; Academic Year</span>
                   <span className="col-date">Start Date</span>
@@ -691,7 +746,7 @@ function SemesterForm({ editMode = false }) {
                           type="date"
                           className="semester-date-input"
                           aria-label={`${item.semesterName} start date`}
-                          value={dates[item.semesterNumber]?.startDate || ''}
+                          value={dates[item.semesterNumber]?.startDate ?? item.startDate ?? ''}
                           disabled={saving || Boolean(notice)}
                           onChange={(event) => updateDate(item.semesterNumber, 'startDate', event.target.value)}
                         />
@@ -701,7 +756,7 @@ function SemesterForm({ editMode = false }) {
                           type="date"
                           className="semester-date-input"
                           aria-label={`${item.semesterName} end date`}
-                          value={dates[item.semesterNumber]?.endDate || ''}
+                          value={dates[item.semesterNumber]?.endDate ?? item.endDate ?? ''}
                           disabled={saving || Boolean(notice)}
                           onChange={(event) => updateDate(item.semesterNumber, 'endDate', event.target.value)}
                         />
@@ -820,8 +875,8 @@ function SemesterPreview({ college, course, branch, activeYear, coursePeriod, pl
                 </div>
                 <div className="timeline-table-body">
                   {plan.map((item) => {
-                    const startDate = dates[item.semesterNumber]?.startDate || item.startDate
-                    const endDate = dates[item.semesterNumber]?.endDate || item.endDate
+                    const startDate = dates[item.semesterNumber]?.startDate ?? item.startDate
+                    const endDate = dates[item.semesterNumber]?.endDate ?? item.endDate
                     const hasDates = startDate || endDate
                     return (
                       <div key={item.semesterNumber} className="timeline-row">
