@@ -152,7 +152,10 @@ export function matchingAdmissionFeeStructures(plans, academic = {}, admission =
     if (plan.collegeId && admission.collegeId && String(plan.collegeId) !== String(admission.collegeId)) return false
     if (!matches(plan, 'course') || !matches(plan, 'branch') || !matches(plan, 'academicYear')) return false
     if (plan.batch && normalized(plan.batch) !== normalized(admission.batch)) return false
-    if ((plan.cycle === 'Semester-wise' || plan.feePeriod === 'Per Semester') && !matches(plan, 'semester')) return false
+    // An unset semester should not hide semester-wise plans from the admission
+    // picker; callers can present those plans for an explicit choice.
+    if ((plan.cycle === 'Semester-wise' || plan.feePeriod === 'Per Semester') &&
+        (academic.semesterId || academic.semester) && !matches(plan, 'semester')) return false
     if (plan.applicableTo === 'Selected Category' && normalized(plan.category) !== normalized(academic.quota)) return false
     return true
   }).map(plan => ({
