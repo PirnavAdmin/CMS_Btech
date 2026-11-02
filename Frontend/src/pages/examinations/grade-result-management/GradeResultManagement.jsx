@@ -143,6 +143,56 @@ function LocalGradeResultWorkspace({ screen }) {
   )
 }
 
+const resultLabel = (value) => {
+  if (value && typeof value === 'object') return String(value.name || value.departmentName || value.semesterName || value.label || '')
+  return String(value ?? '').trim()
+}
+const resultId = (value, idKeys) => {
+  if (value && typeof value === 'object') {
+    for (const key of idKeys) if (value[key] !== undefined && value[key] !== null) return value[key]
+  }
+  return value
+}
+function resultDepartmentName(row, departments, branches) {
+  const departmentId = resultId(row.departmentId, ['departmentId', 'id'])
+  const matchingDepartment = departmentId !== undefined && departmentId !== null && departmentId !== ''
+    ? departments.find((item) => String(item.departmentId ?? item.id) === String(departmentId))
+    : null
+  if (matchingDepartment) return resultLabel(matchingDepartment.departmentName ?? matchingDepartment.name)
+
+  const branchId = resultId(row.branchId, ['branchId', 'id'])
+  const branchName = resultLabel(row.branch)
+  const branch = branches.find((item) =>
+    (branchId && String(item.branchId ?? item.id) === String(branchId)) ||
+    (branchName && resultLabel(item.branchName ?? item.name).toLowerCase() === branchName.toLowerCase())
+  )
+  if (branch) {
+    const branchDepartmentId = resultId(branch.departmentId ?? branch.department, ['departmentId', 'id'])
+    const branchDepartment = branchDepartmentId !== undefined && branchDepartmentId !== null && branchDepartmentId !== ''
+      ? departments.find((item) => String(item.departmentId ?? item.id) === String(branchDepartmentId))
+      : null
+    const name = resultLabel(branch.departmentName ?? branch.department?.departmentName ?? branch.department?.name ?? branchDepartment?.departmentName ?? branchDepartment?.name)
+    if (name) return name
+  }
+  return resultLabel(row.department) || branchName
+}
+function resultSemesterName(row, semesters) {
+  const semesterId = resultId(row.semesterId, ['semesterId', 'id'])
+  const matchingSemester = semesterId !== undefined && semesterId !== null && semesterId !== ''
+    ? semesters.find((item) => String(item.semesterId ?? item.id) === String(semesterId))
+    : null
+  return resultLabel(matchingSemester?.semesterName ?? matchingSemester?.name) || resultLabel(row.semester) || (semesterId ? `Semester ${semesterId}` : '')
+}
+const sameResultLabel = (left, right) => resultLabel(left).toLowerCase().replace(/\s+/g, ' ') === resultLabel(right).toLowerCase().replace(/\s+/g, ' ')
+const normalizedSemester = (value) => resultLabel(value).toLowerCase().replace(/^(semester|sem)\s*/, '').replace(/\s+/g, ' ')
+const sameResultSemester = (left, right) => normalizedSemester(left) === normalizedSemester(right)
+const compareResultSemesters = (left, right) => {
+  const leftNumber = Number(normalizedSemester(left))
+  const rightNumber = Number(normalizedSemester(right))
+  if (Number.isFinite(leftNumber) && Number.isFinite(rightNumber)) return leftNumber - rightNumber
+  return String(left).localeCompare(String(right))
+}
+
 function Workspace({ screen, academic, scope }) {
   const definition = gradeScreens.find((item) => item.slug === screen) || {
     label: 'Official Results',
@@ -171,6 +221,9 @@ function Workspace({ screen, academic, scope }) {
   const [activeStudentModal, setActiveStudentModal] = useState(null)
 
   const { selectedCollegeId, selectedAcademicYearId, scopeRecords } = academic
+  const departments = academic.activeDepartments || academic.departments || []
+  const branches = academic.activeBranches || academic.branches || []
+  const semesters = academic.activeSemesters || academic.semesters || []
   const configuration = screen === 'grade-configuration'
 
   useEffect(() => {
@@ -178,6 +231,8 @@ function Workspace({ screen, academic, scope }) {
     setSemesterPage(1)
     setDepartmentPage(1)
     setCmmPage(1)
+    setDepartment('')
+    setSemester('')
   }, [selectedCollegeId, selectedAcademicYearId])
 
   useEffect(() => {
@@ -224,8 +279,8 @@ function Workspace({ screen, academic, scope }) {
           studentId: row.studentId,
           studentName: row.studentName || row.studentId,
           rollNumber: row.registrationNumber || row.rollNumber || '',
-          department: row.department || row.branch || '',
-          semester: row.semester || '',
+          department: resultDepartmentName(row, departments, branches),
+          semester: resultSemesterName(row, semesters),
           records: [],
         })
       }
@@ -256,7 +311,7 @@ function Workspace({ screen, academic, scope }) {
         division: divisionObj ? divisionObj.division : '—',
       }
     })
-  }, [rows])
+  }, [rows, departments, branches, semesters])
 
   // Semester summaries
   const semesterSummaries = useMemo(() => {
@@ -303,8 +358,14 @@ function Workspace({ screen, academic, scope }) {
   }, [studentSummaries, rows, arrearRecords])
 
   // Filter options
-  const semesterOptions = [...new Set(studentSummaries.map((s) => s.semester).filter(Boolean))].sort()
-  const departmentOptions = [...new Set(studentSummaries.map((s) => s.department).filter(Boolean))].sort()
+  const semesterOptions = [...new Set([
+    ...semesters.map((item) => item.semesterName || item.name || item.label).filter(Boolean),
+    ...studentSummaries.map((student) => student.semester).filter(Boolean),
+  ])].sort(compareResultSemesters)
+  const departmentOptions = [...new Set([
+    ...departments.map((item) => item.departmentName || item.name || item.label).filter(Boolean),
+    ...studentSummaries.map((student) => student.department).filter(Boolean),
+  ])].sort((a, b) => a.localeCompare(b))
 
   // Filtered student summaries for Student Results / Gazette table
   const filteredStudents = useMemo(() => {
@@ -314,8 +375,8 @@ function Workspace({ screen, academic, scope }) {
         !q ||
         matchesResultSearch(s, q) ||
         s.records.some((record) => matchesResultSearch(record, q))
-      const matchSem = !semester || s.semester === semester
-      const matchDept = !department || s.department === department
+      const matchSem = !semester || sameResultSemester(s.semester, semester)
+      const matchDept = !department || sameResultLabel(s.department, department)
       const matchStatus = !statusFilter || s.status.toLowerCase() === statusFilter.toLowerCase()
       return matchQ && matchSem && matchDept && matchStatus
     })
@@ -331,11 +392,11 @@ function Workspace({ screen, academic, scope }) {
         (r.registrationNumber || '').toLowerCase().includes(q) ||
         (r.subjectCode || '').toLowerCase().includes(q) ||
         (r.subjectName || '').toLowerCase().includes(q)
-      const matchSem = !semester || r.semester === semester
-      const matchDept = !department || r.department === department
+      const matchSem = !semester || sameResultSemester(resultSemesterName(r, semesters), semester)
+      const matchDept = !department || sameResultLabel(resultDepartmentName(r, departments, branches), department)
       return matchQ && matchSem && matchDept
     })
-  }, [arrearRecords, query, semester, department])
+  }, [arrearRecords, query, semester, department, departments, branches, semesters])
 
   // Selected student for CMM transcript
   const [cmmStudentId, setCmmStudentId] = useState('')
@@ -547,6 +608,7 @@ function Workspace({ screen, academic, scope }) {
             </div>
 
             <FilterPanel
+              className="results-filter-panel"
               active={Boolean(query || semester || department || statusFilter)}
               onClear={handleClearFilters}
               actions={
