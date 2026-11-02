@@ -54,7 +54,7 @@ import { readFeeWorkspace, readStructures, readHostelStructures, readTransportSt
 import './StudentAdmission.css'
 
 
-const STEPS = ['Basic Information', 'Contact & Address', 'Parent / Guardian', 'Academic Information', 'Previous Education', 'Admission Details', 'Fees', 'Documents Upload']
+const STEPS = ['Basic Information', 'Academic Information', 'Parent / Guardian', 'Contact & Address', 'Previous Education', 'Admission Details', 'Fees', 'Documents Upload']
 const STEP_ICONS = [FiUser, FiPhone, FiUsers, FiBookOpen, FiFileText, FiHome, FiInbox, FiUploadCloud]
 const STATUS = { DRAFT: 'Draft', PENDING: 'Pending', SUBMITTED: 'Submitted', APPLICATION_SUBMITTED: 'Submitted', UNDER_REVIEW: 'Under Review', VERIFIED: 'Verified', APPROVED: 'Approved', CORRECTION_REQUIRED: 'Correction Required', REJECTED: 'Rejected' }
 const normalizeStatus = raw => normalizeAdmissionStatus(raw)
@@ -452,7 +452,7 @@ const validDob = value => {
 const REQUIRED = ['personal.firstName','personal.lastName','personal.gender','personal.dob','personal.aadhaar','contact.mobile','contact.email','contact.currentAddress.line1','contact.currentAddress.town','contact.currentAddress.city','contact.currentAddress.district','contact.currentAddress.state','contact.currentAddress.pincode','academic.academicYear','academic.admissionType','academic.course','academic.branch','admission.collegeId']
 const requiredPaths = new Set(REQUIRED)
 const validationStep = path => {
-  const prefixes = ['personal.','contact.','parents.','academic.','previousEducation.','admission.','fees.','documents.']
+  const prefixes = ['personal.','academic.','parents.','contact.','previousEducation.','admission.','fees.','documents.']
   const index = prefixes.findIndex(prefix => path.startsWith(prefix))
   return index < 0 ? 0 : index
 }
@@ -2034,15 +2034,16 @@ function AdmissionForm() {
     <div key="fees"><ApplicantFeeStructure data={data} update={update} error={errors['fees.paymentPlan']} /></div>,
     <DocumentsUpload key="documents" data={data} update={update} errors={errors} notify={notify} />,
   ]
+  const screenOrder = [0, 3, 2, 1, 4, 5, 6, 7]
   const focusFirst = () => window.setTimeout(() => document.querySelector('.student-admission .sa-field.invalid :is(input,select)')?.focus({ preventScroll: false }), 0)
   const nextStep = async () => {
     if (savingStep) return
     setSaveError('')
-    if (step === 3 && !masters.loaded) {
+    if (step === 1 && !masters.loaded) {
       setSaveError('Academic selections have not loaded yet. Please retry after they load.')
       return
     }
-    const prefixes = [['personal.'],['contact.'],['parents.'],['academic.'],['previousEducation.'],['application.','admission.'],['fees.'],['documents.'],[]][step]
+    const prefixes = [['personal.'],['academic.'],['parents.'],['contact.'],['previousEducation.'],['application.','admission.'],['fees.'],['documents.'],[]][step]
     const relevant = Object.fromEntries(Object.entries(allErrors).filter(([path]) => prefixes.some(prefix => path.startsWith(prefix))))
     setTouched(current => {
       const next = { ...current }
@@ -2064,12 +2065,12 @@ function AdmissionForm() {
         ids = idsFromApi(result)
         if (!ids.admissionId) throw new Error('The admission was created but no admission ID was returned.')
         setRecordIds(ids)
-      } else if ([0, 1, 5].includes(step)) result = await studentAdmissionApi.update(ids.admissionId, data, { preserveAcademicMapping: true })
+      } else if ([0, 3, 5].includes(step)) result = await studentAdmissionApi.update(ids.admissionId, data, { preserveAcademicMapping: true })
       else if (step === 2) {
         result = ids.studentId
           ? await studentParentApi.update(ids.studentId, data)
           : await studentAdmissionApi.update(ids.admissionId, data, { preserveAcademicMapping: true })
-      } else if (step === 3) result = await studentAcademicDetailsApi.update(ids.admissionId, data)
+      } else if (step === 1) result = await studentAcademicDetailsApi.update(ids.admissionId, data)
       else if (step === 4) result = await studentPreviousEducationApi.update(ids.admissionId, data)
       else if (step === 6) {
         if (!data.fees.paymentPlan) {
@@ -2315,7 +2316,7 @@ function AdmissionForm() {
           <WizardStepper step={step} setStep={setStep} />
           <form className="sa-wizard-card" onSubmit={event => event.preventDefault()} style={{ border: 'none', boxShadow: 'none', padding: 0 }}>
             <div className="erp-form-scroll-body">
-              {screens[step]}
+              {screens[screenOrder[step]]}
               {step === STEPS.length - 1 && (
                 <label className="sa-declaration">
                   <input type="checkbox" checked={declared} onChange={event => setDeclared(event.target.checked)} />
@@ -2325,7 +2326,7 @@ function AdmissionForm() {
             </div>
             <footer className="sa-wizard-actions erp-actions-bar">
               {saveError && <p role="alert" className="error">{saveError}</p>}
-              {saveError && /semester|course not found|branch.*invalid/i.test(saveError) && step !== 3 && <Button onClick={() => { setStep(3); setSaveError('') }}>Review academic details</Button>}
+              {saveError && /semester|course not found|branch.*invalid/i.test(saveError) && step !== 1 && <Button onClick={() => { setStep(1); setSaveError('') }}>Review academic details</Button>}
               <Button disabled={!step || submitting || savingStep} onClick={() => setStep(current => current - 1)}>
                 <FiArrowLeft /> Previous
               </Button>
@@ -2546,10 +2547,10 @@ function AdmissionForm() {
                   {(() => {
                     const SECTION_STEP_MAP = {
                       'Personal Information': 0,
-                      'Contact & Address': 1,
+                      'Contact & Address': 3,
                       'Parent / Guardian': 2,
-                      'Academic Details': 3,
-                      'Academic Information': 3,
+                      'Academic Details': 1,
+                      'Academic Information': 1,
                       'Previous Education': 4,
                       'Admission & Services': 5,
                       'Application Information': 5,
