@@ -247,6 +247,27 @@
   flex: 0 0 40px;
 }
 
+/* Borderless theme control for the login header. */
+.login-public-actions .public-theme-toggle {
+  border: 0 !important;
+  border-radius: 8px;
+  background: #F1F6FC !important;
+  color: #1769C2 !important;
+  box-shadow: none !important;
+  transition: background-color 0.15s ease, color 0.15s ease, transform 0.15s ease;
+}
+
+.login-public-actions .public-theme-toggle:hover {
+  background: #E5EFFA !important;
+  color: #125AA8 !important;
+  transform: translateY(-1px);
+}
+
+.login-public-actions .public-theme-toggle:focus-visible {
+  outline: 2px solid rgba(23, 105, 194, 0.35);
+  outline-offset: 2px;
+}
+
 .pirnav-login .login-form {
   width: min(100%, 480px);
   display: flex;
@@ -2855,4 +2876,120 @@ html[data-theme="dark"] body #root .lp-page.lp-public > nav.lp-nav .lp-menu-butt
   color: #EAF3FF !important;
   border-color: rgba(255,255,255,.18) !important;
   background: rgba(255,255,255,.08) !important;
+}
+
+/* Public landing page theme switch: keep the icon button borderless in both themes. */
+#root .lp-page .lp-nav .public-theme-toggle {
+  border: 0 !important;
+  outline: 0;
+  box-shadow: none !important;
+  background: #F1F6FC !important;
+  color: #1769C2 !important;
+  transition: background-color 0.15s ease, color 0.15s ease, transform 0.15s ease;
+}
+#root .lp-page .lp-nav .public-theme-toggle:hover {
+  background: #E5EFFA !important;
+  color: #125AA8 !important;
+  transform: translateY(-1px);
+}
+#root .lp-page .lp-nav .public-theme-toggle:focus-visible {
+  outline: 2px solid rgba(23, 105, 194, 0.35);
+  outline-offset: 2px;
+}
+html[data-theme="dark"] body #root .lp-page.lp-public > nav.lp-nav .public-theme-toggle {
+  border: 0 !important;
+  background: transparent !important;
+  color: #EAF3FF !important;
+}
+html[data-theme="dark"] body #root .lp-page.lp-public > nav.lp-nav .public-theme-toggle:hover {
+  border: 0 !important;
+  background: transparent !important;
+  color: #FFFFFF !important;
+  transform: none;
+}
+
+/* Keep the login page header controls independent from shared app button rules. */
+#root .pirnav-login .login-public-actions > .theme-toggle.public-theme-toggle {
+  width: 40px !important;
+  min-width: 40px !important;
+  height: 40px !important;
+  min-height: 40px !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  border: 0 !important;
+  border-radius: 10px !important;
+  background: transparent !important;
+  color: #1769C2 !important;
+  box-shadow: none !important;
+  transform: none !important;
+  transition: color 160ms ease, transform 160ms ease, filter 160ms ease !important;
+}
+#root .pirnav-login .login-public-actions > .theme-toggle.public-theme-toggle:hover {
+  border: 0 !important;
+  background: transparent !important;
+  color: #125AA8 !important;
+  box-shadow: none !important;
+  transform: translateY(-2px) !important;
+  filter: drop-shadow(0 2px 3px rgba(18, 90, 168, 0.25));
+}
+#root .pirnav-login .login-public-actions > .login-home-link {
+  min-height: 40px !important;
+  margin: 0 !important;
+  padding: 0 16px !important;
+  border: 1px solid #125AA8 !important;
+  border-radius: 9px !important;
+  background: #1769C2 !important;
+  color: #FFFFFF !important;
+  box-shadow: none !important;
+  transform: none !important;
+}
+#root .pirnav-login .login-public-actions > .login-home-link:hover {
+  border-color: #125AA8 !important;
+  background: #125AA8 !important;
+  color: #FFFFFF !important;
+  box-shadow: none !important;
+  transform: translateY(-1px) !important;
+}
+#root .pirnav-login .login-public-actions > .login-home-link:focus-visible {
+  outline: 2px solid rgba(23, 105, 194, 0.45) !important;
+  outline-offset: 2px !important;
+  box-shadow: none !important;
+}
+:root[data-theme="dark"] #root .pirnav-login .login-public-actions > .theme-toggle.public-theme-toggle {
+  border: 0 !important;
+  background: transparent !important;
+  color: #EAF3FF !important;
+}
+:root[data-theme="dark"] #root .pirnav-login .login-public-actions > .theme-toggle.public-theme-toggle:hover {
+  border: 0 !important;
+  background: transparent !important;
+  color: #FFFFFF !important;
+  transform: translateY(-2px) !important;
+  filter: drop-shadow(0 2px 4px rgba(143, 197, 244, 0.4));
+}
+:root[data-theme="dark"] #root .pirnav-login .login-public-actions > .login-home-link {
+  border-color: #1769C2 !important;
+  background: #1769C2 !important;
+  color: #FFFFFF !important;
+}
+
+/* Final login Home-link rule: override global anchor hover styles explicitly. */
+html body #root .pirnav-login .login-public-actions > a.login-home-link {
+  border: 1px solid #1769C2 !important;
+  background: #1769C2 !important;
+  color: #FFFFFF !important;
+  box-shadow: 0 3px 9px rgba(18, 90, 168, 0.22) !important;
+  transition: background-color 160ms ease, border-color 160ms ease, box-shadow 160ms ease, transform 160ms ease !important;
+}
+html body #root .pirnav-login .login-public-actions > a.login-home-link:hover {
+  border-color: #0F4F95 !important;
+  background: #0F4F95 !important;
+  color: #FFFFFF !important;
+  box-shadow: 0 6px 14px rgba(18, 90, 168, 0.3) !important;
+  transform: translateY(-2px) !important;
+}
+html body #root .pirnav-login .login-public-actions > a.login-home-link:active {
+  background: #0B3F78 !important;
+  box-shadow: 0 2px 5px rgba(18, 90, 168, 0.22) !important;
+  transform: translateY(0) !important;
 }
