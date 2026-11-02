@@ -1,0 +1,24 @@
+{
+  "changed": [
+    "Backend/Services/Implementations/MarksService.cs",
+    "Backend/Services/Fees/AdmissionFeePlanCoordinator.cs",
+    "Backend/Services/Interfaces/IMarksService.cs",
+    "Backend/Controllers/V1/MarksController.cs",
+    "Backend/DTOs/Marks/MarksManagementDtos.cs",
+    "Backend/DTOs/StudentAdmission/StudentAdmissionRequestDtos.cs",
+    "Backend/Tests/AcademicFeePlans/Program.cs",
+    "Backend/Repositories/Implementations/MarksRepository.cs",
+    "Backend/Repositories/Interfaces/IMarksRepository.cs"
+  ],
+  "added": [
+    "Backend/MARKS_DELETE_AND_ADMISSION_FIX_20261101.md",
+    "Backend/Database/Sql/Marks/Marks_Soft_Removal_20261101.sql",
+    "Backend/DTOs/StudentAdmission/AdmissionFeeStructureIdJsonConverter.cs",
+    "Backend/Tests/MarksRemoval/README.md",
+    "Backend/Tests/MarksRemoval/Program.cs",
+    "Backend/Tests/MarksRemoval/MarksRemoval.Tests.csproj",
+    "Backend/Tests/Results/fee-admission-20261101.txt",
+    "Backend/Tests/Results/marks-removal-20261101.txt"
+  ],
+  "removed": []
+}

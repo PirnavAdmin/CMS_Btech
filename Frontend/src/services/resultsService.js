@@ -1,7 +1,6 @@
 import { RESULTS_API_ENABLED, resultsApi } from '../api/apiEndpoints'
 import studentService from './studentService'
 import eventBus, { ERP_EVENTS } from './eventBus'
-import { getSampleBTechSheets } from './sampleBTechResults'
 
 export const calculateGrade = (totalMarks) => {
   const marks = Number(totalMarks) || 0
@@ -17,6 +16,11 @@ export const calculateGrade = (totalMarks) => {
 const clean = value => String(value ?? '').trim()
 const same = (left, right) => clean(left).toLowerCase() === clean(right).toLowerCase()
 const LOCAL_RESULTS_KEY = 'cms_local_results_sheets'
+const SAMPLE_RESULT_IDS = new Set([
+  'sheet-cs501', 'sheet-cs502', 'sheet-cs503', 'sheet-cs504', 'sheet-cs505p', 'sheet-cs506p',
+  'sheet-ec301', 'sheet-ec302', 'sheet-ec303', 'sheet-ec304p',
+  'sheet-me101', 'sheet-me102', 'sheet-me103', 'sheet-me104p',
+])
 
 function readLocalSheets() {
   try {
@@ -48,11 +52,7 @@ class ResultsService {
       }
     }
 
-    // Local storage fallback
-    let local = readLocalSheets()
-    if (!local || local.length === 0) {
-      local = this.seedSampleResults(filter.collegeId || '1', filter.academicYearId || '1')
-    }
+    const local = readLocalSheets().filter(sheet => !SAMPLE_RESULT_IDS.has(String(sheet.id)))
     if (!filter || Object.keys(filter).length === 0) return local
 
     const filtered = local.filter(sheet => {
@@ -66,13 +66,6 @@ class ResultsService {
     })
 
     return filtered.length > 0 ? filtered : local
-  }
-
-  seedSampleResults(collegeId = '1', academicYearId = '1') {
-    const samples = getSampleBTechSheets(collegeId, academicYearId)
-    saveLocalSheets(samples)
-    eventBus.emit(ERP_EVENTS.RESULTS_RECORDED, samples)
-    return samples
   }
 
   clearLocalResults() {

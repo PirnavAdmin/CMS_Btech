@@ -89,6 +89,7 @@ function Attendance() {
   const navigate = useNavigate()
   const {
     currentAcademicYear,
+    selectedAcademicYearId,
     selectedCollegeId,
     activeDepartments,
     activeCourses,
@@ -531,6 +532,11 @@ function Attendance() {
   }, [activeFaculty, facultyAssignments, selectedTakeBranch, takeScope.branchId, takeBranchCode])
 
   const filterBranches = useMemo(() => getBranchesForCourse(filterCourseId, true), [getBranchesForCourse, filterCourseId])
+  const registerSections = useMemo(() => getSectionsForScope({
+    academicYearId: selectedAcademicYearId,
+    courseId: filterCourseId,
+    branchId: filterBranchId,
+  }, true), [getSectionsForScope, selectedAcademicYearId, filterCourseId, filterBranchId])
 
   const takeSections = useMemo(() => {
     return getSectionsForScope({
@@ -685,11 +691,10 @@ function Attendance() {
 
       notify('Attendance recorded and saved successfully!')
       setFilterQuery('')
-      setFilterCourseId('')
-      setFilterBranchId('')
-      setFilterDate('')
+      setFilterCourseId(String(takeScope.courseId))
+      setFilterBranchId(String(takeScope.branchId))
+      setFilterDate(takeScope.date)
       setCurrentPage(1)
-      setShowRegisterFilters(false)
       await loadSessions()
       setActiveTab('register')
       setTakeModalOpen(false)
@@ -702,15 +707,16 @@ function Attendance() {
 
   // Filtered Sessions for Register Tab
   const filteredSessions = useMemo(() => {
+    const scopedSectionIds = new Set(registerSections.map(section => String(section.id)))
     return sessions.filter(s => {
       const matchQuery = !filterQuery || `${s.subject} ${s.course} ${s.branch} ${s.section} ${s.faculty}`.toLowerCase().includes(filterQuery.toLowerCase())
-      const matchCourse = !filterCourseId || String(s.courseId) === String(filterCourseId)
-      const matchBranch = !filterBranchId || String(s.branchId) === String(filterBranchId)
+      const matchScope = !filterCourseId || String(s.courseId) === String(filterCourseId) || scopedSectionIds.has(String(s.sectionId))
+      const matchBranch = !filterBranchId || String(s.branchId) === String(filterBranchId) || scopedSectionIds.has(String(s.sectionId))
       const matchSemester = !filterSemesterId || String(s.semesterId) === String(filterSemesterId)
       const matchDate = !filterDate || s.date === filterDate
-      return matchQuery && matchCourse && matchBranch && matchSemester && matchDate
+      return matchQuery && matchScope && matchBranch && matchSemester && matchDate
     })
-  }, [sessions, filterQuery, filterCourseId, filterBranchId, filterSemesterId, filterDate])
+  }, [sessions, registerSections, filterQuery, filterCourseId, filterBranchId, filterSemesterId, filterDate])
 
   const paginatedSessions = useMemo(() => {
     const start = (currentPage - 1) * pageSize

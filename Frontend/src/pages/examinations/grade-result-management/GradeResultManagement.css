@@ -1155,9 +1155,9 @@
 }
 
 .grm-cgpa__svg-chart {
-  width: 100%;
-  min-width: 600px;
-  height: 210px;
+  width: auto;
+  min-width: 720px;
+  height: 280px;
   display: block;
 }
 
@@ -1669,6 +1669,12 @@
   border-bottom: 1px solid var(--border, #e2e8f0);
 }
 
+.grm-modal__empty-row {
+  padding: 24px !important;
+  color: var(--text-secondary, #64748b);
+  text-align: center;
+}
+
 .grm-modal__table input,
 .grm-modal__table select {
   width: 100%;
@@ -1779,6 +1785,13 @@
 
 .grm-modal__btn-primary:hover {
   background: #125aa8;
+}
+
+.grm-modal__btn-primary:disabled {
+  border-color: var(--border, #cbd5e1);
+  background: var(--surface-soft, #f1f5f9);
+  color: var(--text-secondary, #64748b);
+  cursor: not-allowed;
 }
 
 /* Grade Guide Table */

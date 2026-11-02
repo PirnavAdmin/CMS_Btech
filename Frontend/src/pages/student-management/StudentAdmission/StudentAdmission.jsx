@@ -23,7 +23,8 @@ import TablePagination, { PAGE_SIZE } from '../../../components/TablePagination'
 import CompactSummary from '../../../components/CompactSummary'
 import StatusBadge from '../../../components/StatusBadge'
 import { academicYearApi, branchApi, courseApi, lookupIndianPincode, studentAdmissionApi, studentAcademicDetailsApi, studentAdmissionStatusApi, studentDocumentApi, studentFeeApi, studentParentApi, studentPreviousEducationApi } from '../../../api/apiEndpoints'
-import { getOperationalAcademicYearOptions, resolveAcademicYearId } from '../../../utils/academicYearUtils'
+import { getOperationalAcademicYearOptions } from '../../../utils/academicYearUtils'
+import { admissionSemesterOptions, admissionSemesterError, resetAdmissionAcademicDependents } from '../../../utils/admissionAcademicMapping'
 import { getColleges, getSemesters } from '../../../auth/collegeApi'
 import eventBus, { ERP_EVENTS } from '../../../services/eventBus'
 import {
@@ -1623,6 +1624,7 @@ function AdmissionForm() {
   useEffect(() => { dataRef.current = data }, [data])
   useEffect(() => { if (!data.application.date) setData(current => ({ ...current, application: { ...current.application, date: new Date().toISOString().slice(0, 10) } })) }, [data.application.date])
   useEffect(() => {
+    if (validId) return
     setData(current => {
       let next = current;
       if (!next.admission?.collegeId && globalCollegeId) {
@@ -1655,7 +1657,7 @@ function AdmissionForm() {
     if (preference && data.admission.hostelPreference !== preference) setData(current => ({ ...current, admission: { ...current.admission, hostelPreference: preference } }))
   }, [data.admission.hostel, data.admission.hostelPreference, data.personal.gender])
   const notify = (message, tone = 'success') => setToast({ message, tone })
-  useEffect(()=>{let active=true;Promise.all([academicYearApi.getAll(),courseApi.getAll(),branchApi.getAll(),getColleges(),getSemesters()]).then(([years,courses,branches,collegeResponse,semesterResponse])=>{if(!active)return;const list=response=>{let value=response;for(let depth=0;depth<5&&value&&typeof value==='object';depth+=1){if(Array.isArray(value))return value;const rows=value.items??value.content??value.results??value.records;if(Array.isArray(rows))return rows;value=value.data}return[]};const operationalYears = getOperationalAcademicYearOptions(years);setMasters({years: operationalYears, courses, branches, colleges:list(collegeResponse), semesters:list(semesterResponse)})}).catch(error=>notify(error.message||'Unable to load admission selections.','error'));return()=>{active=false}},[])
+  useEffect(()=>{let active=true;Promise.all([academicYearApi.getAll(),courseApi.getAll(),branchApi.getAll(),getColleges(),getSemesters()]).then(([years,courses,branches,collegeResponse,semesterResponse])=>{if(!active)return;const list=response=>{let value=response;for(let depth=0;depth<5&&value&&typeof value==='object';depth+=1){if(Array.isArray(value))return value;const rows=value.items??value.content??value.results??value.records;if(Array.isArray(rows))return rows;value=value.data}return[]};const operationalYears = getOperationalAcademicYearOptions(years);setMasters({loaded: true, years: operationalYears, courses, branches, colleges:list(collegeResponse), semesters:list(semesterResponse)})}).catch(error=>notify(error.message||'Unable to load admission selections.','error'));return()=>{active=false}},[])
   useEffect(() => {
     const courseId = data.academic.courseId
     let active = true
@@ -1759,14 +1761,26 @@ function AdmissionForm() {
           })
         : baseLoaded
 
-      setData({ ...finalLoaded, previewEditedFields: localDraft?.previewEditedFields ?? row.formData?.previewEditedFields })
+      // Browser drafts may predate a corrected enrollment or a changed global
+      // year. Restore the server's academic mapping as one consistent unit.
+      setData({
+        ...finalLoaded,
+        academic: baseLoaded.academic,
+        admission: { ...finalLoaded.admission, collegeId: baseLoaded.admission.collegeId, college: baseLoaded.admission.college },
+        previewEditedFields: localDraft?.previewEditedFields ?? row.formData?.previewEditedFields,
+      })
       setRecordIds(loadedIds)
     }).catch(error => notify(error.message || 'Unable to load this admission.', 'error'))
     return () => { active = false }
   }, [validId])
   const update = (path, value) => {
+    setSaveError('')
     setData(current => {
-      let next = setPath(current, path, value);
+      let next = resetAdmissionAcademicDependents(setPath(current, path, value), current, path);
+      if (path === 'academic.semesterId') {
+        const semester = masters.semesters.find(item => same(item.semesterId ?? item.id, value))
+        next.academic = { ...next.academic, semester: semester?.semesterName ?? semester?.name ?? '', sectionId: '', section: '', requiresSemesterSelection: Boolean(value || current.academic.semesterId || current.academic.requiresSemesterSelection) }
+      }
       if (current.previewEditedFields) next.previewEditedFields = { ...current.previewEditedFields, [path]: true };
       if (path === 'personal.gender') {
         if (next.admission.hostel === 'Yes') {
@@ -1830,7 +1844,7 @@ function AdmissionForm() {
       next.fees.totalFee = String(total);
       return next;
     });
-    setErrors(current => ({ ...current, [path]: '' }));
+    setErrors(current => ({ ...current, [path]: '', ...(path === 'academic.semesterId' ? { 'academic.semester': '' } : {}) }));
   }
   const currentPincode = data.contact.currentAddress.pincode, permanentPincode = data.contact.permanentAddress.pincode, sameAddress = data.contact.sameAddress
   const lastPinLookupRef = useRef({ current: '', permanent: '' })
@@ -1875,16 +1889,8 @@ function AdmissionForm() {
     }, 350)
     return () => { active = false; window.clearTimeout(timer) }
   }, [currentPincode, permanentPincode, sameAddress])
-  useEffect(() => {
-    if (!masters.years.length || !data.academic.academicYearId) return
-    const resolvedAcademicYearId = resolveAcademicYearId(masters.years, data.academic.academicYearId)
-    if (!data.academic.academicYearId || String(data.academic.academicYearId) !== String(resolvedAcademicYearId)) {
-      setData(current => ({
-        ...current,
-        academic: { ...current.academic, academicYearId: resolvedAcademicYearId, academicYear: masters.years.find(item => String(item.academicYearId ?? item.id) === String(resolvedAcademicYearId))?.academicYearName ?? masters.years.find(item => String(item.academicYearId ?? item.id) === String(resolvedAcademicYearId))?.name ?? current.academic.academicYear }
-      }))
-    }
-  }, [masters.years, data.academic.academicYearId])
+  // An existing admission keeps its enrollment year, even when that year is
+  // absent from the active-year list. Changing it would invalidate its semester.
 
   useEffect(() => {
     if (data.academic.admissionType === 'Lateral Entry') return
@@ -1892,7 +1898,10 @@ function AdmissionForm() {
     setData(current => ({ ...current, academic: { ...current.academic, quota: '', quotaOther: '' } }))
   }, [data.academic.admissionType, data.academic.quota, data.academic.quotaOther])
 
+  const semesterOptions = admissionSemesterOptions(masters.semesters, data.academic, data.admission.collegeId)
   const allErrors = validate(data)
+  const semesterError = masters.loaded ? admissionSemesterError(data.academic, semesterOptions) : ''
+  if (semesterError) allErrors['academic.semester'] = semesterError
   const getFieldError = (path) => errors[path] || (touched[path] ? allErrors[path] : (read(data, path) && allErrors[path] ? allErrors[path] : ''))
   const field = (path,label,options,type,readOnly,placeholder,disabled) => <Field {...{ data,path,label,options,type,readOnly,placeholder,disabled,update,markTouched }} error={getFieldError(path)} />
   const effectiveAddressErrors = Object.fromEntries(
@@ -2013,13 +2022,13 @@ function AdmissionForm() {
     const masterError = errors[namePath] || ((touched[namePath] || touched[idPath] || read(data, idPath)) ? allErrors[namePath] : '');
     const branchField = idPath === 'academic.branchId'
     const placeholder = disabled ? 'Select Course first' : branchField && branchLoading ? 'Loading branches...' : branchField && !options.length ? branchLoadError ? 'Branches unavailable' : 'No branches configured' : `Select ${label}`
-    return <label className={`sa-field ${masterError?'invalid':''}`} htmlFor={id}><span>{label}<b> *</b></span><ProjectSelect id={id} value={read(data,idPath)||''} disabled={disabled || (branchField && branchLoading)} onChange={event=>{markTouched(namePath);markTouched(idPath);const option=options.find(item=>same(item.id,event.target.value));setData(current=>{let next=setPath(current,idPath,event.target.value);if(current.previewEditedFields)next.previewEditedFields={...current.previewEditedFields,[idPath]:true,[namePath]:true};next=setPath(next,namePath,option?.name||'');if(idPath==='academic.courseId')next=setPath(next,'academic.courseCode',option?.code||courseCodeFallback(option?.name));if(idPath==='academic.branchId')next=setPath(next,'academic.branchCode',option?.code||branchCodeFallback(option?.name));resets.forEach(([resetId,resetName])=>{next=setPath(next,resetId,'');next=setPath(next,resetName,'')});return next});setErrors(current=>({...current,[namePath]:''}))}} onBlur={() => { markTouched(namePath); markTouched(idPath) }}><option value="">{placeholder}</option>{options.map(option=><option key={option.id} value={option.id}>{option.name}{option.code ? ` (${option.code})` : ''}</option>)}</ProjectSelect>{branchField && !branchLoading && !options.length && <small role={branchLoadError?'alert':'status'}>{branchLoadError || 'Ask an administrator to add an active branch under this course.'}</small>}{masterError&&<small role="alert">{masterError}</small>}</label>
+    return <label className={`sa-field ${masterError?'invalid':''}`} htmlFor={id}><span>{label}<b> *</b></span><ProjectSelect id={id} value={read(data,idPath)||''} disabled={disabled || (branchField && branchLoading)} onChange={event=>{setSaveError('');markTouched(namePath);markTouched(idPath);const option=options.find(item=>same(item.id,event.target.value));setData(current=>{let next=setPath(current,idPath,event.target.value);if(current.previewEditedFields)next.previewEditedFields={...current.previewEditedFields,[idPath]:true,[namePath]:true};next=setPath(next,namePath,option?.name||'');if(idPath==='academic.courseId')next=setPath(next,'academic.courseCode',option?.code||courseCodeFallback(option?.name));if(idPath==='academic.branchId')next=setPath(next,'academic.branchCode',option?.code||branchCodeFallback(option?.name));resets.forEach(([resetId,resetName])=>{next=setPath(next,resetId,'');next=setPath(next,resetName,'')});return resetAdmissionAcademicDependents(next,current,idPath)});setErrors(current=>({...current,[namePath]:''}))}} onBlur={() => { markTouched(namePath); markTouched(idPath) }}><option value="">{placeholder}</option>{options.map(option=><option key={option.id} value={option.id}>{option.name}{option.code ? ` (${option.code})` : ''}</option>)}</ProjectSelect>{branchField && !branchLoading && !options.length && <small role={branchLoadError?'alert':'status'}>{branchLoadError || 'Ask an administrator to add an active branch under this course.'}</small>}{masterError&&<small role="alert">{masterError}</small>}</label>
   }
   const screens = [
     <Section key="identity" title="Student Identity" icon={FiUser} hint="Core identity and government identification details"><PhotoUpload data={data} update={update} notify={notify} />{field('personal.firstName','First Name')}{field('personal.middleName','Middle Name')}{field('personal.lastName','Last Name')}{field('personal.gender','Gender',['Female','Male','Non-binary'])}{field('personal.dob','Date of Birth',null,'date')}{field('personal.bloodGroup','Blood Group',['A+','A-','B+','B-','AB+','AB-','O+','O-'])}{field('personal.nationality','Nationality')}{field('personal.aadhaar','Aadhaar Number')}</Section>,
     <><Section title="Contact Information" icon={FiPhone}>{field('contact.mobile','Student Mobile')}{field('contact.alternateMobile','Alternate Mobile')}{field('contact.email','Student Email',null,'email')}{field('contact.alternateEmail','Alternate Email',null,'email')}</Section><Section title="Current Address" icon={FiHome}><AddressFields data={data} prefix="contact.currentAddress" update={update} errors={effectiveAddressErrors} markTouched={markTouched} />{pinStatus.current && <p className={`sa-pincode-status ${pinStatus.current.includes('filled') ? 'success' : ''}`}>{pinStatus.current}</p>}</Section><Section title="Permanent Address" icon={FiHome} action={<label className="sa-same-addr-check" style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', cursor: 'pointer', fontSize: '0.78rem', fontWeight: 650, color: 'var(--brand, #125AA8)' }}><input type="checkbox" checked={Boolean(data.contact.sameAddress)} onChange={event => update('contact.sameAddress', event.target.checked)} style={{ width: '15px', height: '15px', accentColor: 'var(--brand, #125AA8)', cursor: 'pointer' }} /><span>Same as current address</span></label>}>{!data.contact.sameAddress && <><AddressFields data={data} prefix="contact.permanentAddress" update={update} errors={effectiveAddressErrors} markTouched={markTouched} />{pinStatus.permanent && <p className={`sa-pincode-status ${pinStatus.permanent.includes('filled') ? 'success' : ''}`}>{pinStatus.permanent}</p>}</>}</Section></>,
     <><Section title="Father Details" icon={FiUsers} hint="Optional parent or guardian contact information.">{field('parents.father.name','Father Name')}{field('parents.father.mobile','Father Mobile')}{field('parents.father.email','Father Email',null,'email')}{field('parents.father.occupation','Father Occupation')}{field('parents.father.qualification','Father Qualification')}{field('parents.father.income','Father Annual Income',null,'number')}</Section><Section title="Mother Details" icon={FiUsers}>{field('parents.mother.name','Mother Name')}{field('parents.mother.mobile','Mother Mobile')}{field('parents.mother.email','Mother Email',null,'email')}{field('parents.mother.occupation','Mother Occupation')}{field('parents.mother.qualification','Mother Qualification')}{field('parents.mother.income','Mother Annual Income',null,'number')}</Section><Section title="Guardian Details" icon={FiUsers}>{field('parents.guardian.name','Guardian Name')}{field('parents.guardian.relationship','Relationship',['Father','Mother','Guardian','Other'])}{data.parents.guardian.relationship === 'Other' && field('parents.guardian.relationshipOther','Specify Relationship')}{field('parents.guardian.mobile','Guardian Mobile')}{field('parents.guardian.email','Guardian Email',null,'email')}{field('parents.guardian.occupation','Guardian Occupation')}{field('parents.guardian.qualification','Guardian Qualification')}{field('parents.guardian.income','Guardian Annual Income',null,'number')}{field('parents.primaryContact','Primary Contact',['Father','Mother','Guardian'])}{field('parents.emergencyMobile','Emergency Contact Mobile')}</Section></>,
-    <Section key="academic" title="Academic Enrollment" icon={FiBookOpen} hint="Review college and academic year, then select the available course and branch.">{field('academic.academicYear','Academic Year',null,'text',true)}{field('admission.college','Joining College',null,'text',true)}{field('academic.admissionType','Admission Type',ADMISSION_TYPES)}{data.academic.admissionType === 'Lateral Entry' && <>{field('academic.quota','Admission Quota',ADMISSION_QUOTAS)}{data.academic.quota === 'Other' && field('academic.quotaOther','Specify Admission Quota')}</>}{masterField('academic.course','academic.courseId','Course',courseOptions,!selectedCollegeId,[['academic.branchId','academic.branch']])}{field('academic.courseCode','Course Code',null,'text',true)}{masterField('academic.branch','academic.branchId','Branch',branchOptions,!data.academic.courseId)}{field('academic.branchCode','Branch Code',null,'text',true)}{field('academic.studentCategory','Student Category',['General','SC','ST','BC','EWS','Other'])}{field('academic.regulation','Regulation')}</Section>,
+    <Section key="academic" title="Academic Enrollment" icon={FiBookOpen} hint="Review college and academic year, then select the available course and branch.">{field('academic.academicYear','Academic Year',null,'text',true)}{field('admission.college','Joining College',null,'text',true)}{field('academic.admissionType','Admission Type',ADMISSION_TYPES)}{data.academic.admissionType === 'Lateral Entry' && <>{field('academic.quota','Admission Quota',ADMISSION_QUOTAS)}{data.academic.quota === 'Other' && field('academic.quotaOther','Specify Admission Quota')}</>}{masterField('academic.course','academic.courseId','Course',courseOptions,!selectedCollegeId,[['academic.branchId','academic.branch']])}{field('academic.courseCode','Course Code',null,'text',true)}{masterField('academic.branch','academic.branchId','Branch',branchOptions,!data.academic.courseId)}{field('academic.branchCode','Branch Code',null,'text',true)}<label className={`sa-field ${getFieldError('academic.semester') ? 'invalid' : ''}`}><span>Semester{data.academic.requiresSemesterSelection && <b> *</b>}</span><ProjectSelect value={data.academic.semesterId || ''} disabled={!masters.loaded || !data.academic.courseId || !data.academic.branchId} onChange={event => update('academic.semesterId', event.target.value)}><option value="">Select Semester</option>{data.academic.semesterId && !semesterOptions.some(item => same(item.id, data.academic.semesterId)) && <option value={data.academic.semesterId} disabled>{data.academic.semester || 'Saved semester'} (unavailable)</option>}{semesterOptions.map(item => <option key={item.id} value={item.id}>{item.name}</option>)}</ProjectSelect>{getFieldError('academic.semester') && <small role="alert">{getFieldError('academic.semester')}</small>}{masters.loaded && data.academic.branchId && !semesterOptions.length && <small>No matching semesters are configured. Ask an administrator to configure a semester for this course, branch and academic year.</small>}</label>{field('academic.studentCategory','Student Category',['General','SC','ST','BC','EWS','Other'])}{field('academic.regulation','Regulation')}</Section>,
     <><Section title="10th / SSC" icon={FiBookOpen} hint="Enter only the essential school details.">{field('previousEducation.tenth.board','Board')}{field('previousEducation.tenth.institution','School Name')}{field('previousEducation.tenth.passingYear','Year of Passing')}{field('previousEducation.tenth.score','Percentage (0-100)',null,'number')}</Section><Section title="Intermediate / Diploma" icon={FiBookOpen} hint="Enter only the essential qualifying-education details.">{field('previousEducation.intermediate.board','Board / University')}{field('previousEducation.intermediate.institution','College Name')}{field('previousEducation.intermediate.passingYear','Year of Passing')}{field('previousEducation.intermediate.stream','Stream',['MPC','Other'])}{data.previousEducation.intermediate.stream === 'Other' && field('previousEducation.intermediate.streamOther','Specify Stream')}{field('previousEducation.intermediate.score','Percentage (0-100)',null,'number')}</Section></>,
     <><Section title="Application Information" icon={FiFileText} hint="Registration details.">{field('application.number','Registration Number',null,'text',true)}{field('application.date','Registration Date',null,'date',false)}{field('admission.batch','Batch')}</Section><Section title="Student Services" icon={FiHome}>{field('admission.hostel','Hostel Required',['No','Yes'])}{data.admission.hostel === 'Yes' && <>{field('admission.hostelPreference','Hostel Preference',data.personal.gender === 'Male' ? ['Boys Hostel'] : data.personal.gender === 'Female' ? ['Girls Hostel'] : ['Boys Hostel','Girls Hostel'],undefined,data.personal.gender === 'Male' || data.personal.gender === 'Female')}{field('admission.hostelRoomType','Room Type / Beds',roomTypeOptions)}</>}{field('admission.transport','Transportation Required',['No','Yes'])}{data.admission.transport === 'Yes' && field('admission.transportRoute','Transport Route',transportRouteOptions)}</Section></>,
     <div key="fees"><ApplicantFeeStructure data={data} update={update} error={errors['fees.paymentPlan']} /></div>,
@@ -2029,6 +2038,10 @@ function AdmissionForm() {
   const nextStep = async () => {
     if (savingStep) return
     setSaveError('')
+    if (step === 3 && !masters.loaded) {
+      setSaveError('Academic selections have not loaded yet. Please retry after they load.')
+      return
+    }
     const prefixes = [['personal.'],['contact.'],['parents.'],['academic.'],['previousEducation.'],['application.','admission.'],['fees.'],['documents.'],[]][step]
     const relevant = Object.fromEntries(Object.entries(allErrors).filter(([path]) => prefixes.some(prefix => path.startsWith(prefix))))
     setTouched(current => {
@@ -2051,11 +2064,11 @@ function AdmissionForm() {
         ids = idsFromApi(result)
         if (!ids.admissionId) throw new Error('The admission was created but no admission ID was returned.')
         setRecordIds(ids)
-      } else if ([0, 1, 5].includes(step)) result = await studentAdmissionApi.update(ids.admissionId, data)
+      } else if ([0, 1, 5].includes(step)) result = await studentAdmissionApi.update(ids.admissionId, data, { preserveAcademicMapping: true })
       else if (step === 2) {
         result = ids.studentId
           ? await studentParentApi.update(ids.studentId, data)
-          : await studentAdmissionApi.update(ids.admissionId, data)
+          : await studentAdmissionApi.update(ids.admissionId, data, { preserveAcademicMapping: true })
       } else if (step === 3) result = await studentAcademicDetailsApi.update(ids.admissionId, data)
       else if (step === 4) result = await studentPreviousEducationApi.update(ids.admissionId, data)
       else if (step === 6) {
@@ -2098,7 +2111,12 @@ function AdmissionForm() {
         }
         setRecordIds(current => ({ admissionId: returnedIds.admissionId ?? current.admissionId, studentId: returnedIds.studentId ?? current.studentId, academicId: returnedIds.academicId ?? current.academicId }))
       }
-      notify(step === 7 && !ids.studentId ? 'Documents are ready to upload when the admission is submitted.' : 'Admission step saved successfully.', step === 7 && !ids.studentId ? 'info' : 'success')
+      notify(
+        step === 7 && !ids.studentId
+            ? 'Documents are ready to upload when the admission is submitted.'
+            : 'Admission step saved successfully.',
+        step === 7 && !ids.studentId ? 'info' : 'success',
+      )
       const next = Math.min(step + 1, STEPS.length - 1)
       setStep(next)
       if (!recordIds.admissionId) {
@@ -2307,6 +2325,7 @@ function AdmissionForm() {
             </div>
             <footer className="sa-wizard-actions erp-actions-bar">
               {saveError && <p role="alert" className="error">{saveError}</p>}
+              {saveError && /semester|course not found|branch.*invalid/i.test(saveError) && step !== 3 && <Button onClick={() => { setStep(3); setSaveError('') }}>Review academic details</Button>}
               <Button disabled={!step || submitting || savingStep} onClick={() => setStep(current => current - 1)}>
                 <FiArrowLeft /> Previous
               </Button>

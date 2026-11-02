@@ -85,7 +85,7 @@ const number = value => value === '' || value === null || value === undefined ||
 export function matchesResultSearch(row, query) {
   const normalize = value => String(value ?? '').trim().toLowerCase().replace(/\s+/g, ' ')
   const terms = normalize(query).split(' ').filter(Boolean)
-  const fields = ['studentName', 'registrationNumber', 'rollNumber', 'studentId', 'idNumber', 'department', 'departmentCode', 'branch', 'branchCode', 'subjectName', 'subjectCode', 'semester', 'examType']
+  const fields = ['studentName', 'registrationNumber', 'rollNumber', 'admissionNumber', 'admissionNo', 'admission_number', 'studentAdmissionNumber', 'studentId', 'idNumber', 'department', 'departmentCode', 'branch', 'branchCode', 'subjectName', 'subjectCode', 'semester', 'examType']
   const values = fields.map(key => normalize(row[key])).filter(Boolean)
   return terms.every(term => values.some(value => value.includes(term)))
 }
@@ -101,6 +101,7 @@ export function flattenResults(sheets) {
       studentName: text(record.studentName ?? record.fullName ?? record.name),
       registrationNumber: text(record.registrationNumber ?? record.rollNumber),
       rollNumber: text(record.rollNumber ?? record.registrationNumber),
+      admissionNumber: text(record.admissionNumber ?? record.admissionNo ?? record.admission_number ?? record.studentAdmissionNumber ?? record.AdmissionNumber ?? record.AdmissionNo ?? record.StudentAdmissionNumber),
       idNumber: text(record.idNumber ?? record.studentIdNumber ?? record.studentId),
       branch: text(record.branchName ?? record.branch ?? sheet.branchName ?? sheet.branch),
       branchCode: text(record.branchCode ?? sheet.branchCode),

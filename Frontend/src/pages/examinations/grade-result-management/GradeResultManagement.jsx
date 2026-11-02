@@ -85,6 +85,30 @@ const {
 const SearchableSelect = pageDependency4.default
 const GradeToolsNav = GradeToolsNavScreen.default
 
+function ResultsTableFooter({ totalItems, page, pageSize, totalPages, onPageChange, onPageSizeChange }) {
+  const firstItem = totalItems > 0 ? (page - 1) * pageSize + 1 : 0
+  const lastItem = Math.min(page * pageSize, totalItems)
+  return (
+    <div className="res-table-footer">
+      <div className="res-table-footer__info">
+        <span>
+          Showing <strong>{firstItem}</strong> to <strong>{lastItem}</strong> of <strong>{totalItems}</strong> entries
+        </span>
+        <label className="res-rows-selector">
+          <span>Rows:</span>
+          <ProjectSelect value={pageSize} onChange={(event) => onPageSizeChange(Number(event.target.value))}>
+            <option value={5}>5</option>
+            <option value={8}>8</option>
+            <option value={10}>10</option>
+            <option value={20}>20</option>
+          </ProjectSelect>
+        </label>
+      </div>
+      <TablePagination page={page} totalPages={totalPages} onPageChange={onPageChange} />
+    </div>
+  )
+}
+
 const readBands = (key) => {
   try {
     const saved = JSON.parse(localStorage.getItem(key) || 'null')
@@ -138,12 +162,23 @@ function Workspace({ screen, academic, scope }) {
   const [statusFilter, setStatusFilter] = useState('')
   const [page, setPage] = useState(1)
   const [pageSize, setPageSize] = useState(5)
+  const [semesterPage, setSemesterPage] = useState(1)
+  const [departmentPage, setDepartmentPage] = useState(1)
+  const [cmmPage, setCmmPage] = useState(1)
+  const [gradeCardPage, setGradeCardPage] = useState(1)
 
   // Modal state for viewing a student's complete course marks breakdown
   const [activeStudentModal, setActiveStudentModal] = useState(null)
 
   const { selectedCollegeId, selectedAcademicYearId, scopeRecords } = academic
   const configuration = screen === 'grade-configuration'
+
+  useEffect(() => {
+    setPage(1)
+    setSemesterPage(1)
+    setDepartmentPage(1)
+    setCmmPage(1)
+  }, [selectedCollegeId, selectedAcademicYearId])
 
   useEffect(() => {
     if (configuration) return
@@ -160,7 +195,7 @@ function Workspace({ screen, academic, scope }) {
       .catch(() => {
         if (current) {
           setSheets([])
-          setError('Unable to load results. Loaded local sample records.')
+          setError('Unable to load results. Loaded local records.')
         }
       })
       .finally(() => {
@@ -277,9 +312,8 @@ function Workspace({ screen, academic, scope }) {
     return studentSummaries.filter((s) => {
       const matchQ =
         !q ||
-        s.studentName.toLowerCase().includes(q) ||
-        s.rollNumber.toLowerCase().includes(q) ||
-        s.department.toLowerCase().includes(q)
+        matchesResultSearch(s, q) ||
+        s.records.some((record) => matchesResultSearch(record, q))
       const matchSem = !semester || s.semester === semester
       const matchDept = !department || s.department === department
       const matchStatus = !statusFilter || s.status.toLowerCase() === statusFilter.toLowerCase()
@@ -319,6 +353,40 @@ function Workspace({ screen, academic, scope }) {
   const currentPage = Math.min(page, totalPages)
   const visibleStudents = filteredStudents.slice((currentPage - 1) * pageSize, currentPage * pageSize)
   const visibleArrears = filteredArrears.slice((currentPage - 1) * pageSize, currentPage * pageSize)
+  const semesterTotalPages = Math.max(1, Math.ceil(semesterSummaries.length / pageSize))
+  const currentSemesterPage = Math.min(semesterPage, semesterTotalPages)
+  const visibleSemesterSummaries = semesterSummaries.slice(
+    (currentSemesterPage - 1) * pageSize,
+    currentSemesterPage * pageSize,
+  )
+  const departmentTotalPages = Math.max(1, Math.ceil(departmentSummaries.length / pageSize))
+  const currentDepartmentPage = Math.min(departmentPage, departmentTotalPages)
+  const visibleDepartmentSummaries = departmentSummaries.slice(
+    (currentDepartmentPage - 1) * pageSize,
+    currentDepartmentPage * pageSize,
+  )
+  const cmmRecords = selectedCmmStudent?.records || []
+  const cmmTotalPages = Math.max(1, Math.ceil(cmmRecords.length / pageSize))
+  const currentCmmPage = Math.min(cmmPage, cmmTotalPages)
+  const visibleCmmRecords = cmmRecords.slice(
+    (currentCmmPage - 1) * pageSize,
+    currentCmmPage * pageSize,
+  )
+  const gradeCardRecords = activeStudentModal?.records || []
+  const gradeCardTotalPages = Math.max(1, Math.ceil(gradeCardRecords.length / pageSize))
+  const currentGradeCardPage = Math.min(gradeCardPage, gradeCardTotalPages)
+  const visibleGradeCardRecords = gradeCardRecords.slice(
+    (currentGradeCardPage - 1) * pageSize,
+    currentGradeCardPage * pageSize,
+  )
+  const handlePageSizeChange = (size) => {
+    setPageSize(size)
+    setPage(1)
+    setSemesterPage(1)
+    setDepartmentPage(1)
+    setCmmPage(1)
+    setGradeCardPage(1)
+  }
 
   const handleClearFilters = () => {
     setQuery('')
@@ -326,20 +394,6 @@ function Workspace({ screen, academic, scope }) {
     setDepartment('')
     setStatusFilter('')
     setPage(1)
-  }
-
-  const handlePublish = () => {
-    setPublished(true)
-    setNotice('Official Results Gazette successfully published to Student Portal.')
-    setTimeout(() => setNotice(''), 5000)
-  }
-
-  const handleSeed = () => {
-    setLoading(true)
-    resultsService.seedSampleResults()
-    setNotice('B.Tech results dataset loaded successfully.')
-    setLoading(false)
-    setTimeout(() => setNotice(''), 4000)
   }
 
   // Export columns
@@ -353,6 +407,12 @@ function Workspace({ screen, academic, scope }) {
     { label: 'Division', key: 'division' },
     { label: 'Result Status', key: 'status' },
   ]
+
+  const handlePublish = () => {
+    setPublished(true)
+    setNotice('Official Results Gazette successfully published to Student Portal.')
+    setTimeout(() => setNotice(''), 5000)
+  }
 
   return (
     <section className="res-workspace">
@@ -499,18 +559,19 @@ function Workspace({ screen, academic, scope }) {
                 />
               }
             >
-              <div className="res-search-input">
+              <label className="res-search-input">
                 <FiSearch />
                 <input
                   type="search"
-                  placeholder="Search roll number, student name, department..."
+                  aria-label="Search candidates by name, roll number, or admission number"
+                  placeholder="Search by student name, roll number, or admission number..."
                   value={query}
                   onChange={(e) => {
                     setQuery(e.target.value)
                     setPage(1)
                   }}
                 />
-              </div>
+              </label>
               <label className="res-filter-label">
                 Department
                 <ProjectSelect
@@ -605,17 +666,24 @@ function Workspace({ screen, academic, scope }) {
                       <td>
                         <span
                           className={`res-status-badge ${
-                            item.isPassed ? 'res-status-badge--pass' : 'res-status-badge--fail'
+                            item.status === 'Passed'
+                              ? 'res-status-badge--pass'
+                              : 'res-status-badge--fail'
                           }`}
                         >
-                          {item.isPassed ? 'PASSED' : `${item.arrearsCount} ARREAR`}
+                          {item.status === 'Passed'
+                            ? 'PASSED'
+                            : `${item.arrearsCount} ARREAR`}
                         </span>
                       </td>
                       <td style={{ textAlign: 'right' }}>
                         <button
                           type="button"
                           className="res-action-btn res-action-btn--icon"
-                          onClick={() => setActiveStudentModal(item)}
+                          onClick={() => {
+                            setActiveStudentModal(item)
+                            setGradeCardPage(1)
+                          }}
                           title="View complete course grade breakdown"
                           aria-label={`View grade card for ${item.studentName}`}
                         >
@@ -627,7 +695,7 @@ function Workspace({ screen, academic, scope }) {
                   {visibleStudents.length === 0 && (
                     <tr>
                       <td colSpan={10} className="res-empty-row">
-                        No candidate results match your criteria.
+                        No students found matching your criteria.
                       </td>
                     </tr>
                   )}
@@ -635,31 +703,14 @@ function Workspace({ screen, academic, scope }) {
               </table>
             </div>
 
-            <div className="res-table-footer">
-              <div className="res-table-footer__info">
-                <span>
-                  Showing <strong>{totalItems > 0 ? (currentPage - 1) * pageSize + 1 : 0}</strong> to{' '}
-                  <strong>{Math.min(currentPage * pageSize, totalItems)}</strong> of{' '}
-                  <strong>{totalItems}</strong> entries
-                </span>
-                <label className="res-rows-selector">
-                  <span>Rows:</span>
-                  <ProjectSelect
-                    value={pageSize}
-                    onChange={(e) => {
-                      setPageSize(Number(e.target.value))
-                      setPage(1)
-                    }}
-                  >
-                    <option value={5}>5</option>
-                    <option value={8}>8</option>
-                    <option value={10}>10</option>
-                    <option value={20}>20</option>
-                  </ProjectSelect>
-                </label>
-              </div>
-              <TablePagination page={currentPage} totalPages={totalPages} onPageChange={setPage} />
-            </div>
+            <ResultsTableFooter
+              totalItems={totalItems}
+              page={currentPage}
+              pageSize={pageSize}
+              totalPages={totalPages}
+              onPageChange={setPage}
+              onPageSizeChange={handlePageSizeChange}
+            />
           </div>
         </div>
       )}
@@ -692,18 +743,19 @@ function Workspace({ screen, academic, scope }) {
                 />
               }
             >
-              <div className="res-search-input">
+              <label className="res-search-input">
                 <FiSearch />
                 <input
                   type="search"
-                  placeholder="Search roll number, candidate name..."
+                  aria-label="Search candidates by name, roll number, or admission number"
+                  placeholder="Search by student name, roll number, or admission number..."
                   value={query}
                   onChange={(e) => {
                     setQuery(e.target.value)
                     setPage(1)
                   }}
                 />
-              </div>
+              </label>
               <label className="res-filter-label">
                 Department
                 <ProjectSelect
@@ -807,7 +859,10 @@ function Workspace({ screen, academic, scope }) {
                         <button
                           type="button"
                           className="res-action-btn res-action-btn--icon"
-                          onClick={() => setActiveStudentModal(item)}
+                          onClick={() => {
+                            setActiveStudentModal(item)
+                            setGradeCardPage(1)
+                          }}
                           title="View grade card"
                           aria-label={`View grade card for ${item.studentName}`}
                         >
@@ -827,31 +882,14 @@ function Workspace({ screen, academic, scope }) {
               </table>
             </div>
 
-            <div className="res-table-footer">
-              <div className="res-table-footer__info">
-                <span>
-                  Showing <strong>{totalItems > 0 ? (currentPage - 1) * pageSize + 1 : 0}</strong> to{' '}
-                  <strong>{Math.min(currentPage * pageSize, totalItems)}</strong> of{' '}
-                  <strong>{totalItems}</strong> entries
-                </span>
-                <label className="res-rows-selector">
-                  <span>Rows:</span>
-                  <ProjectSelect
-                    value={pageSize}
-                    onChange={(e) => {
-                      setPageSize(Number(e.target.value))
-                      setPage(1)
-                    }}
-                  >
-                    <option value={5}>5</option>
-                    <option value={8}>8</option>
-                    <option value={10}>10</option>
-                    <option value={20}>20</option>
-                  </ProjectSelect>
-                </label>
-              </div>
-              <TablePagination page={currentPage} totalPages={totalPages} onPageChange={setPage} />
-            </div>
+            <ResultsTableFooter
+              totalItems={totalItems}
+              page={currentPage}
+              pageSize={pageSize}
+              totalPages={totalPages}
+              onPageChange={setPage}
+              onPageSizeChange={handlePageSizeChange}
+            />
           </div>
         </div>
       )}
@@ -919,7 +957,7 @@ function Workspace({ screen, academic, scope }) {
                   </tr>
                 </thead>
                 <tbody>
-                  {semesterSummaries.map((item) => (
+                  {visibleSemesterSummaries.map((item) => (
                     <tr key={item.group}>
                       <td><strong>{item.group}</strong></td>
                       <td>{item.students}</td>
@@ -932,9 +970,24 @@ function Workspace({ screen, academic, scope }) {
                       <td><strong>{item.avgGpa}</strong></td>
                     </tr>
                   ))}
+                  {visibleSemesterSummaries.length === 0 && (
+                    <tr>
+                      <td colSpan={7} className="res-empty-row">
+                        No semester result records found.
+                      </td>
+                    </tr>
+                  )}
                 </tbody>
               </table>
             </div>
+            <ResultsTableFooter
+              totalItems={semesterSummaries.length}
+              page={currentSemesterPage}
+              pageSize={pageSize}
+              totalPages={semesterTotalPages}
+              onPageChange={setSemesterPage}
+              onPageSizeChange={handlePageSizeChange}
+            />
           </div>
         </div>
       )}
@@ -1002,7 +1055,7 @@ function Workspace({ screen, academic, scope }) {
                   </tr>
                 </thead>
                 <tbody>
-                  {departmentSummaries.map((item) => (
+                  {visibleDepartmentSummaries.map((item) => (
                     <tr key={item.group}>
                       <td><strong>{item.group}</strong></td>
                       <td>{item.students}</td>
@@ -1015,9 +1068,24 @@ function Workspace({ screen, academic, scope }) {
                       <td><strong>{item.avgGpa}</strong></td>
                     </tr>
                   ))}
+                  {visibleDepartmentSummaries.length === 0 && (
+                    <tr>
+                      <td colSpan={7} className="res-empty-row">
+                        No department result records found.
+                      </td>
+                    </tr>
+                  )}
                 </tbody>
               </table>
             </div>
+            <ResultsTableFooter
+              totalItems={departmentSummaries.length}
+              page={currentDepartmentPage}
+              pageSize={pageSize}
+              totalPages={departmentTotalPages}
+              onPageChange={setDepartmentPage}
+              onPageSizeChange={handlePageSizeChange}
+            />
           </div>
         </div>
       )}
@@ -1183,31 +1251,14 @@ function Workspace({ screen, academic, scope }) {
               </table>
             </div>
 
-            <div className="res-table-footer">
-              <div className="res-table-footer__info">
-                <span>
-                  Showing <strong>{totalItems > 0 ? (currentPage - 1) * pageSize + 1 : 0}</strong> to{' '}
-                  <strong>{Math.min(currentPage * pageSize, totalItems)}</strong> of{' '}
-                  <strong>{totalItems}</strong> entries
-                </span>
-                <label className="res-rows-selector">
-                  <span>Rows:</span>
-                  <ProjectSelect
-                    value={pageSize}
-                    onChange={(e) => {
-                      setPageSize(Number(e.target.value))
-                      setPage(1)
-                    }}
-                  >
-                    <option value={5}>5</option>
-                    <option value={8}>8</option>
-                    <option value={10}>10</option>
-                    <option value={20}>20</option>
-                  </ProjectSelect>
-                </label>
-              </div>
-              <TablePagination page={currentPage} totalPages={totalPages} onPageChange={setPage} />
-            </div>
+            <ResultsTableFooter
+              totalItems={totalItems}
+              page={currentPage}
+              pageSize={pageSize}
+              totalPages={totalPages}
+              onPageChange={setPage}
+              onPageSizeChange={handlePageSizeChange}
+            />
           </div>
         </div>
       )}
@@ -1223,7 +1274,10 @@ function Workspace({ screen, academic, scope }) {
               <SearchableSelect
                 label="Select Candidate for CMM Transcript"
                 value={cmmStudentId}
-                onChange={setCmmStudentId}
+                onChange={(value) => {
+                  setCmmStudentId(value)
+                  setCmmPage(1)
+                }}
                 options={studentSummaries.map(s => ({ value: s.studentId, label: `${s.studentName} (${s.rollNumber})`, subLabel: s.department }))}
                 placeholder="Choose a candidate"
                 searchPlaceholder="Search name, roll number or department..."
@@ -1281,7 +1335,7 @@ function Workspace({ screen, academic, scope }) {
                     </tr>
                   </thead>
                   <tbody>
-                    {selectedCmmStudent.records.map((rec, i) => (
+                    {visibleCmmRecords.map((rec, i) => (
                       <tr key={rec.id || i}>
                         <td><strong>{rec.subjectCode}</strong></td>
                         <td>{rec.subjectName}</td>
@@ -1304,9 +1358,24 @@ function Workspace({ screen, academic, scope }) {
                         </td>
                       </tr>
                     ))}
+                    {visibleCmmRecords.length === 0 && (
+                      <tr>
+                        <td colSpan={9} className="res-empty-row">
+                          No course results are available for this candidate.
+                        </td>
+                      </tr>
+                    )}
                   </tbody>
                 </table>
               </div>
+              <ResultsTableFooter
+                totalItems={cmmRecords.length}
+                page={currentCmmPage}
+                pageSize={pageSize}
+                totalPages={cmmTotalPages}
+                onPageChange={setCmmPage}
+                onPageSizeChange={handlePageSizeChange}
+              />
             </div>
           )}
         </div>
@@ -1397,7 +1466,7 @@ function Workspace({ screen, academic, scope }) {
                   </tr>
                 </thead>
                 <tbody>
-                  {activeStudentModal.records.map((r, i) => (
+                  {visibleGradeCardRecords.map((r, i) => (
                     <tr key={r.id || i}>
                       <td><strong>{r.subjectCode}</strong></td>
                       <td>{r.subjectName}</td>
@@ -1420,9 +1489,24 @@ function Workspace({ screen, academic, scope }) {
                       </td>
                     </tr>
                   ))}
+                  {visibleGradeCardRecords.length === 0 && (
+                    <tr>
+                      <td colSpan={9} className="res-empty-row">
+                        No course results are available for this candidate.
+                      </td>
+                    </tr>
+                  )}
                 </tbody>
               </table>
             </div>
+            <ResultsTableFooter
+              totalItems={gradeCardRecords.length}
+              page={currentGradeCardPage}
+              pageSize={pageSize}
+              totalPages={gradeCardTotalPages}
+              onPageChange={setGradeCardPage}
+              onPageSizeChange={handlePageSizeChange}
+            />
 
             <div className="res-modal-footer">
               <button
@@ -1669,17 +1753,6 @@ const UGC_GRADES = [
   { grade: 'F', points: 0, label: 'Fail / Arrear', minMarks: '< 40%' },
 ]
 
-const DEFAULT_SUBJECTS = [
-  { id: 's1', code: 'CS301', name: 'Data Structures & Algorithms', credits: 4, grade: 'A+', points: 9 },
-  { id: 's2', code: 'CS302', name: 'Computer Architecture & Org.', credits: 3, grade: 'A', points: 8 },
-  { id: 's3', code: 'MA301', name: 'Discrete Mathematical Structures', credits: 4, grade: 'O', points: 10 },
-  { id: 's4', code: 'CS303', name: 'Object Oriented Java Programming', credits: 3, grade: 'A', points: 8 },
-  { id: 's5', code: 'EC304', name: 'Digital Electronics & Logic', credits: 3, grade: 'B+', points: 7 },
-  { id: 's6', code: 'CS305P', name: 'Data Structures Laboratory', credits: 1.5, grade: 'O', points: 10 },
-  { id: 's7', code: 'CS306P', name: 'Java Programming Laboratory', credits: 1.5, grade: 'A+', points: 9 },
-  { id: 's8', code: 'HS301', name: 'Constitution & Professional Ethics', credits: 1, grade: 'A', points: 8 },
-]
-
 const newSemester = (number, customCredits = '') => ({
   id: `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
   semester: `Semester ${number}`,
@@ -1690,13 +1763,18 @@ const newSemester = (number, customCredits = '') => ({
 function readRows(storageKey) {
   try {
     const saved = JSON.parse(localStorage.getItem(storageKey) || 'null')
-    if (Array.isArray(saved) && saved.length && saved.every(row => row && typeof row === 'object')) return saved.map((row, index) => ({
-      ...row,
-      id: row.id || newSemester(index + 1).id,
-      semester: String(row.semester || `Semester ${index + 1}`),
-      sgpa: row.sgpa == null ? '' : String(row.sgpa),
-      credits: row.credits == null ? '' : String(row.credits),
-    }))
+    if (Array.isArray(saved) && saved.length && saved.every(row => row && typeof row === 'object')) {
+      const rows = saved
+        .filter(row => !/^(topper|distinction)-/i.test(String(row.id || '')))
+        .map((row, index) => ({
+          ...row,
+          id: row.id || newSemester(index + 1).id,
+          semester: String(row.semester || `Semester ${index + 1}`),
+          sgpa: row.sgpa == null ? '' : String(row.sgpa),
+          credits: row.credits == null ? '' : String(row.credits),
+        }))
+      if (rows.length) return rows
+    }
   } catch { /* Start fresh if corrupted */ }
   return [newSemester(1, 20)]
 }
@@ -1726,7 +1804,7 @@ function CGPACalculator({ storageKey }) {
   // Subject-Wise Calculator Modal State
   const [subjectModalOpen, setSubjectModalOpen] = useState(false)
   const [activeSemesterRowId, setActiveSemesterRowId] = useState(null)
-  const [modalSubjects, setModalSubjects] = useState(DEFAULT_SUBJECTS)
+  const [modalSubjects, setModalSubjects] = useState([])
 
   // Grading Scale Guide Modal State
   const [gradeScaleOpen, setGradeScaleOpen] = useState(false)
@@ -1770,9 +1848,14 @@ function CGPACalculator({ storageKey }) {
   }, [rows])
 
   const invalidRow = rows.find(row => {
+    const semester = row.semester.trim()
+    const rawSgpa = row.sgpa.trim()
+    const rawCredits = row.credits.trim()
+    if (!rawSgpa) return false
+
     const sgpa = Number(row.sgpa)
     const credits = Number(row.credits)
-    return !row.semester.trim() || row.sgpa === '' || row.credits === '' || !Number.isFinite(sgpa) || sgpa < 0 || sgpa > 10 || !Number.isFinite(credits) || credits <= 0
+    return !semester || !rawCredits || !Number.isFinite(sgpa) || sgpa < 0 || sgpa > 10 || !Number.isFinite(credits) || credits <= 0
   })
 
   // Core Calculations
@@ -1785,16 +1868,18 @@ function CGPACalculator({ storageKey }) {
   }, [rows])
 
   const totalCredits = useMemo(() => {
-    return rows.reduce((total, row) => total + (Number(row.credits) || 0), 0)
-  }, [rows])
+    return validRows.reduce((total, row) => total + Number(row.credits), 0)
+  }, [validRows])
 
   const weightedPoints = useMemo(() => {
-    return rows.reduce((total, row) => total + (Number(row.sgpa) || 0) * (Number(row.credits) || 0), 0)
-  }, [rows])
+    return validRows.reduce((total, row) => total + Number(row.sgpa) * Number(row.credits), 0)
+  }, [validRows])
 
   const cgpa = useMemo(() => {
-    return !invalidRow && !duplicateSemester && totalCredits > 0 ? weightedPoints / totalCredits : null
-  }, [invalidRow, duplicateSemester, totalCredits, weightedPoints])
+    return !invalidRow && !duplicateSemester && validRows.length > 0 && totalCredits > 0
+      ? weightedPoints / totalCredits
+      : null
+  }, [invalidRow, duplicateSemester, validRows.length, totalCredits, weightedPoints])
 
   const percentageAicte = cgpa !== null ? cgpaToPercentage(cgpa, 'aicte') : null
   const percentageCbse = cgpa !== null ? cgpaToPercentage(cgpa, 'cbse') : null
@@ -1812,7 +1897,7 @@ function CGPACalculator({ storageKey }) {
     return rows.map(row => {
       const s = Number(row.sgpa)
       const c = Number(row.credits)
-      if (Number.isFinite(s) && s >= 0 && Number.isFinite(c) && c > 0) {
+      if (row.semester.trim() && row.sgpa !== '' && Number.isFinite(s) && s >= 0 && s <= 10 && Number.isFinite(c) && c > 0) {
         accCredits += c
         accPoints += s * c
         return {
@@ -1824,6 +1909,22 @@ function CGPACalculator({ storageKey }) {
       return { runningCredits: null, runningPoints: null, runningCgpa: '—' }
     })
   }, [rows])
+
+  const trajectoryRows = useMemo(() => {
+    let cumulativeCredits = 0
+    let cumulativePoints = 0
+    return validRows.map(row => {
+      const credits = Number(row.credits)
+      const sgpa = Number(row.sgpa)
+      cumulativeCredits += credits
+      cumulativePoints += sgpa * credits
+      return {
+        ...row,
+        sgpa,
+        cumulativeCgpa: cumulativePoints / cumulativeCredits,
+      }
+    })
+  }, [validRows])
 
   // Analytics helper stats
   const analyticsStats = useMemo(() => {
@@ -1928,42 +2029,6 @@ function CGPACalculator({ storageKey }) {
     touchSaveState()
   }
 
-  const loadTopperSample = () => {
-    const sample = [
-      { sem: 'Semester 1', sgpa: '8.80', cr: '19.5' },
-      { sem: 'Semester 2', sgpa: '9.10', cr: '19.5' },
-      { sem: 'Semester 3', sgpa: '8.95', cr: '21.5' },
-      { sem: 'Semester 4', sgpa: '9.05', cr: '21.5' },
-      { sem: 'Semester 5', sgpa: '8.75', cr: '22.0' },
-      { sem: 'Semester 6', sgpa: '8.85', cr: '22.0' },
-    ]
-    setRows(sample.map((s, idx) => ({
-      id: `topper-${idx + 1}-${Date.now()}`,
-      semester: s.sem,
-      sgpa: s.sgpa,
-      credits: s.cr,
-    })))
-    touchSaveState()
-  }
-
-  const loadDistinctionSample = () => {
-    const sample = [
-      { sem: 'Semester 1', sgpa: '7.60', cr: '19.5' },
-      { sem: 'Semester 2', sgpa: '7.80', cr: '19.5' },
-      { sem: 'Semester 3', sgpa: '8.10', cr: '21.5' },
-      { sem: 'Semester 4', sgpa: '7.70', cr: '21.5' },
-      { sem: 'Semester 5', sgpa: '7.90', cr: '22.0' },
-      { sem: 'Semester 6', sgpa: '7.85', cr: '22.0' },
-    ]
-    setRows(sample.map((s, idx) => ({
-      id: `distinction-${idx + 1}-${Date.now()}`,
-      semester: s.sem,
-      sgpa: s.sgpa,
-      credits: s.cr,
-    })))
-    touchSaveState()
-  }
-
   const applyTemplate = (count, start = 1) => {
     setRows(current => Array.from({ length: count }, (_, i) => {
       const semester = `Semester ${start + i}`
@@ -2048,16 +2113,15 @@ function CGPACalculator({ storageKey }) {
   }
 
   const addModalSubject = () => {
-    const nextNum = modalSubjects.length + 1
     setModalSubjects(subs => [
       ...subs,
       {
         id: `sub-${Date.now()}`,
-        code: `CS${300 + nextNum}`,
-        name: `Course Subject ${nextNum}`,
-        credits: 3,
-        grade: 'A',
-        points: 8,
+        code: '',
+        name: '',
+        credits: '',
+        grade: '',
+        points: 0,
       },
     ])
   }
@@ -2068,14 +2132,21 @@ function CGPACalculator({ storageKey }) {
   }
 
   const computedModalStats = useMemo(() => {
-    const totalCr = modalSubjects.reduce((acc, s) => acc + (Number(s.credits) || 0), 0)
-    const totalPts = modalSubjects.reduce((acc, s) => acc + ((Number(s.credits) || 0) * (Number(s.points) || 0)), 0)
-    const sgpa = totalCr > 0 ? (totalPts / totalCr).toFixed(2) : '0.00'
-    return { totalCr, totalPts, sgpa }
+    const complete = modalSubjects.length > 0 && modalSubjects.every(s =>
+      s.code.trim()
+      && s.name.trim()
+      && Number.isFinite(Number(s.credits))
+      && Number(s.credits) > 0
+      && UGC_GRADES.some(grade => grade.grade === s.grade),
+    )
+    const totalCr = complete ? modalSubjects.reduce((acc, s) => acc + Number(s.credits), 0) : 0
+    const totalPts = complete ? modalSubjects.reduce((acc, s) => acc + (Number(s.credits) * Number(s.points)), 0) : 0
+    const sgpa = complete && totalCr > 0 ? (totalPts / totalCr).toFixed(2) : '—'
+    return { totalCr, totalPts, sgpa, complete }
   }, [modalSubjects])
 
   const applyModalSgpa = () => {
-    if (!activeSemesterRowId) return
+    if (!activeSemesterRowId || !computedModalStats.complete) return
     update(activeSemesterRowId, 'sgpa', computedModalStats.sgpa)
     update(activeSemesterRowId, 'credits', String(computedModalStats.totalCr))
     setSubjectModalOpen(false)
@@ -2318,22 +2389,6 @@ function CGPACalculator({ storageKey }) {
                 title="Populate 8 Semesters with 20 credits per semester"
               >
                 ⚡ Uniform 8 Sems (20 Cr/Sem)
-              </button>
-              <button
-                type="button"
-                className="grm-cgpa__preset-chip grm-cgpa__preset-chip--highlight"
-                onClick={loadTopperSample}
-                title="Load sample High Achiever (8.92 CGPA) profile to preview analytics"
-              >
-                ⭐ Load Topper Profile (8.92)
-              </button>
-              <button
-                type="button"
-                className="grm-cgpa__preset-chip"
-                onClick={loadDistinctionSample}
-                title="Load sample First Class with Distinction (7.82 CGPA) profile"
-              >
-                🎯 Load Distinction Profile (7.82)
               </button>
             </div>
 
@@ -2614,117 +2669,137 @@ function CGPACalculator({ storageKey }) {
               </div>
             </div>
 
-            {validRows.length === 0 ? (
+            {trajectoryRows.length === 0 ? (
               <div className="grm-cgpa__chart-empty">
                 <FiLayers aria-hidden="true" />
-                <p>No valid semester SGPAs entered yet. Go to <strong>Semesters & Calculator</strong> tab or load a preset to view trajectory.</p>
-                <button type="button" className="grm-cgpa__btn-sm" onClick={() => { loadTopperSample(); setActiveTab('trajectory'); }}>
-                  ⚡ Load Sample Data Now
-                </button>
+                <p>No semester results to display yet. Enter SGPA and earned credits under <strong>Semesters & Calculator</strong> to see your performance trajectory.</p>
               </div>
             ) : (
               <div className="grm-cgpa__chart-canvas-wrap">
-                <svg className="grm-cgpa__svg-chart" viewBox="0 0 800 240" preserveAspectRatio="none">
-                  {/* Grid Lines for 0, 2.5, 5.0, 7.5, 10.0 */}
-                  <line x1="40" y1="20" x2="780" y2="20" stroke="#e2e8f0" strokeDasharray="3 3" />
-                  <text x="32" y="24" textAnchor="end" fontSize="10" fill="#94a3b8">10.0</text>
-
-                  <line x1="40" y1="65" x2="780" y2="65" stroke="#fed7aa" strokeWidth="1.5" strokeDasharray="4 4" />
-                  <text x="32" y="69" textAnchor="end" fontSize="10" fill="#ea580c" fontWeight="600">7.5</text>
-
-                  <line x1="40" y1="110" x2="780" y2="110" stroke="#e2e8f0" strokeDasharray="3 3" />
-                  <text x="32" y="114" textAnchor="end" fontSize="10" fill="#94a3b8">5.0</text>
-
-                  <line x1="40" y1="200" x2="780" y2="200" stroke="#cbd5e1" strokeWidth="1" />
-                  <text x="32" y="204" textAnchor="end" fontSize="10" fill="#94a3b8">0.0</text>
-
-                  {/* Render Bars and Lines for valid rows */}
+                <svg
+                  className="grm-cgpa__svg-chart"
+                  style={{ width: `${Math.max(720, trajectoryRows.length * 112)}px` }}
+                  viewBox="0 0 800 280"
+                  preserveAspectRatio="xMidYMid meet"
+                  role="img"
+                  aria-label="Semester SGPA bars and credit-weighted cumulative CGPA"
+                >
                   {(() => {
-                    const count = validRows.length
-                    const step = (740) / Math.max(1, count)
-                    const barWidth = Math.min(48, Math.max(22, step * 0.45))
-
-                    // Points for Cumulative Line
-                    const linePoints = validRows.map((_, i) => {
-                      const stat = rowCumulativeStats[i]
-                      const cVal = stat && stat.runningCgpa !== '—' ? Number(stat.runningCgpa) : 0
-                      const cx = 50 + i * step + step / 2
-                      const cy = 200 - (cVal / 10) * 180
-                      return { cx, cy, cVal }
-                    })
-
-                    const polylineStr = linePoints.map(p => `${p.cx},${p.cy}`).join(' ')
+                    const plot = { left: 62, right: 784, top: 34, bottom: 232 }
+                    const height = plot.bottom - plot.top
+                    const step = (plot.right - plot.left) / trajectoryRows.length
+                    const barWidth = Math.min(54, step * 0.48)
+                    const yFor = value => plot.bottom - (value / 10) * height
+                    const linePoints = trajectoryRows.map((row, index) => ({
+                      x: plot.left + step * (index + 0.5),
+                      y: yFor(row.cumulativeCgpa),
+                      value: row.cumulativeCgpa,
+                    }))
+                    const line = linePoints.map(point => `${point.x},${point.y}`).join(' ')
 
                     return (
                       <>
-                        {/* SGPA Column Bars */}
-                        {validRows.map((row, i) => {
-                          const sVal = Number(row.sgpa) || 0
-                          const barHeight = Math.max(4, (sVal / 10) * 180)
-                          const bx = 50 + i * step + step / 2 - barWidth / 2
-                          const by = 200 - barHeight
-                          const barColor = sVal >= 8.5 ? '#4f46e5' : sVal >= 7.5 ? '#10b981' : sVal >= 6.5 ? '#0284c7' : sVal >= 5.0 ? '#f59e0b' : '#ef4444'
-
+                        {[10, 7.5, 5, 2.5, 0].map(value => {
+                          const y = yFor(value)
+                          const isCutoff = value === 7.5
                           return (
-                            <g key={row.id}>
-                              <rect
-                                x={bx}
-                                y={by}
-                                width={barWidth}
-                                height={barHeight}
-                                rx="5"
-                                fill={barColor}
-                                opacity="0.85"
+                            <g key={value}>
+                              <line
+                                x1={plot.left}
+                                y1={y}
+                                x2={plot.right}
+                                y2={y}
+                                stroke={isCutoff ? '#fb923c' : value === 0 ? '#cbd5e1' : '#e2e8f0'}
+                                strokeWidth={isCutoff || value === 0 ? 1.5 : 1}
+                                strokeDasharray={value === 0 ? undefined : isCutoff ? '5 4' : '3 4'}
                               />
                               <text
-                                x={bx + barWidth / 2}
-                                y={by - 6}
-                                textAnchor="middle"
+                                x={plot.left - 10}
+                                y={y + 4}
+                                textAnchor="end"
                                 fontSize="11"
-                                fontWeight="700"
-                                fill={barColor}
+                                fontWeight={isCutoff ? '700' : '500'}
+                                fill={isCutoff ? '#c2410c' : '#64748b'}
                               >
-                                {sVal.toFixed(2)}
-                              </text>
-                              <text
-                                x={bx + barWidth / 2}
-                                y={220}
-                                textAnchor="middle"
-                                fontSize="11"
-                                fontWeight="600"
-                                fill="#475569"
-                              >
-                                Sem {i + 1}
+                                {value.toFixed(1)}
                               </text>
                             </g>
                           )
                         })}
 
-                        {/* Polyline for Cumulative CGPA */}
+                        {trajectoryRows.map((row, index) => {
+                          const x = plot.left + step * (index + 0.5)
+                          const barHeight = (row.sgpa / 10) * height
+                          const barY = plot.bottom - barHeight
+                          const barColor = row.sgpa >= 8.5 ? '#4f46e5' : row.sgpa >= 7.5 ? '#059669' : row.sgpa >= 6.5 ? '#0284c7' : row.sgpa >= 5 ? '#d97706' : '#dc2626'
+                          const semesterLabel = row.semester.replace(/^semester\s*/i, 'Sem ')
+                          const shortLabel = semesterLabel.length > 12 ? `${semesterLabel.slice(0, 11)}…` : semesterLabel
+                          return (
+                            <g key={row.id}>
+                              <title>{`${row.semester}: ${row.sgpa.toFixed(2)} SGPA`}</title>
+                              <rect
+                                x={x - barWidth / 2}
+                                y={barY}
+                                width={barWidth}
+                                height={Math.max(1, barHeight)}
+                                rx="5"
+                                fill={barColor}
+                                opacity="0.9"
+                              />
+                              <text
+                                x={x}
+                                y={Math.min(plot.bottom - 5, barY + 18)}
+                                textAnchor="middle"
+                                fontSize="11"
+                                fontWeight="700"
+                                fill="#ffffff"
+                                paintOrder="stroke"
+                                stroke="rgba(15,23,42,.35)"
+                                strokeWidth=".6"
+                              >
+                                {row.sgpa.toFixed(2)}
+                              </text>
+                              <text
+                                x={x}
+                                y={plot.bottom + 24}
+                                textAnchor="middle"
+                                fontSize="11"
+                                fontWeight="600"
+                                fill="#475569"
+                              >
+                                {shortLabel}
+                              </text>
+                            </g>
+                          )
+                        })}
+
                         {linePoints.length > 1 && (
                           <polyline
                             fill="none"
-                            stroke="#0f172a"
+                            stroke="#111827"
                             strokeWidth="3"
                             strokeLinecap="round"
                             strokeLinejoin="round"
-                            points={polylineStr}
+                            points={line}
                           />
                         )}
 
-                        {/* Line Nodes / Dots */}
-                        {linePoints.map((pt, idx) => (
-                          <g key={idx}>
-                            <circle cx={pt.cx} cy={pt.cy} r="5" fill="#ffffff" stroke="#0f172a" strokeWidth="2.5" />
+                        {linePoints.map((point, index) => (
+                          <g key={trajectoryRows[index].id}>
+                            <title>{`${trajectoryRows[index].semester}: ${point.value.toFixed(2)} cumulative CGPA`}</title>
+                            <circle cx={point.x} cy={point.y} r="5" fill="#ffffff" stroke="#111827" strokeWidth="2.5" />
                             <text
-                              x={pt.cx}
-                              y={pt.cy - 10}
+                              x={point.x}
+                              y={Math.max(15, point.y - 11)}
                               textAnchor="middle"
-                              fontSize="10"
+                              fontSize="11"
                               fontWeight="700"
-                              fill="#0f172a"
+                              fill="#111827"
+                              stroke="var(--surface, #ffffff)"
+                              strokeWidth="3"
+                              paintOrder="stroke"
                             >
-                              {pt.cVal.toFixed(2)}
+                              {point.value.toFixed(2)}
                             </text>
                           </g>
                         ))}
@@ -3021,7 +3096,13 @@ function CGPACalculator({ storageKey }) {
                     </tr>
                   </thead>
                   <tbody>
-                    {modalSubjects.map((sub, idx) => (
+                    {modalSubjects.length === 0 ? (
+                      <tr>
+                        <td colSpan="5" className="grm-modal__empty-row">
+                          No subjects added. Select <strong>Add Subject</strong> to enter real course details.
+                        </td>
+                      </tr>
+                    ) : modalSubjects.map(sub => (
                       <tr key={sub.id}>
                         <td>
                           <input
@@ -3052,6 +3133,7 @@ function CGPACalculator({ storageKey }) {
                             value={sub.grade}
                             onChange={e => updateModalSubject(sub.id, 'grade', e.target.value)}
                           >
+                            <option value="">Select grade</option>
                             {UGC_GRADES.map(g => (
                               <option key={g.grade} value={g.grade}>
                                 {g.grade} ({g.points} pts) - {g.label}
@@ -3074,20 +3156,17 @@ function CGPACalculator({ storageKey }) {
                 <button type="button" className="grm-btn-text" onClick={addModalSubject}>
                   <FiPlus /> Add Subject
                 </button>
-                <button type="button" className="grm-btn-text" onClick={() => setModalSubjects(DEFAULT_SUBJECTS)}>
-                  <FiRotateCcw /> Load Standard Curriculum
-                </button>
               </div>
 
               {/* Computed SGPA Banner */}
               <div className="grm-modal__result-strip">
                 <div className="grm-modal__stat">
                   <span>Total Semester Credits</span>
-                  <strong>{computedModalStats.totalCr.toFixed(1)}</strong>
+                  <strong>{computedModalStats.complete ? computedModalStats.totalCr.toFixed(1) : '—'}</strong>
                 </div>
                 <div className="grm-modal__stat">
                   <span>Total Grade Points</span>
-                  <strong>{computedModalStats.totalPts.toFixed(1)}</strong>
+                  <strong>{computedModalStats.complete ? computedModalStats.totalPts.toFixed(1) : '—'}</strong>
                 </div>
                 <div className="grm-modal__stat is-highlight">
                   <span>Calculated SGPA</span>
@@ -3108,6 +3187,7 @@ function CGPACalculator({ storageKey }) {
                 type="button"
                 className="grm-modal__btn-primary"
                 onClick={applyModalSgpa}
+                disabled={!computedModalStats.complete}
               >
                 <FiCheck /> Apply SGPA to Semester
               </button>

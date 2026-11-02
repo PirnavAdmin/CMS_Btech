@@ -56,9 +56,55 @@
 .examination-setup__status.scheduled{background:#eaf3ff;color:var(--brand)}
 .examination-setup__status.draft{background:#fff7e6;color:#9a6700}
 .examination-setup__status.cancelled,.examination-setup__status.inactive{background:#fef0f0;color:#b42332}
+.erp-status-badge--scheduled{background:#eaf3ff!important;color:#1769c2!important;border-color:#bfdbfe!important}
+.erp-status-badge--scheduled i{background:#2563eb!important}
+:root[data-theme="dark"] .erp-status-badge--scheduled{background:rgba(43,120,197,0.2)!important;color:#1769c2!important;border-color:rgba(96,165,250,0.35)!important}
+:root[data-theme="dark"] .erp-status-badge--scheduled i{background:#1769c2!important}
 .examination-setup__actions{display:flex;align-items:center;justify-content:center;gap:6px}
-.examination-setup__actions button{display:inline-flex;width:32px;height:32px;align-items:center;justify-content:center;border:1px solid var(--es-line);border-radius:7px;background:var(--surface);color:var(--brand);cursor:pointer}
-.examination-setup__actions button:hover{border-color:var(--brand);background:var(--brand-soft)}
+.examination-setup__actions button,.examination-setup__actions .table-action-btn{display:inline-flex!important;width:32px!important;min-width:32px!important;height:32px!important;min-height:32px!important;padding:0!important;align-items:center!important;justify-content:center!important;border:1px solid var(--es-line)!important;border-radius:7px!important;background:var(--surface,#fff)!important;color:var(--brand,#2563EB)!important;cursor:pointer!important;transition:all .15s ease-in-out!important}
+.examination-setup__actions button svg,.examination-setup__actions .table-action-btn svg{width:17px!important;height:17px!important;color:inherit!important;stroke:currentColor!important}
+
+/* Edit action - Soft Blue */
+.examination-setup__actions button.action-edit{color:#1769C2!important;background:#EAF3FF!important;border:1px solid #D8E4F2!important}
+.examination-setup__actions button.action-edit:hover{background:#D8E4F2!important;border-color:#1769C2!important;color:#102A4C!important}
+
+/* Delete action - Soft Red */
+.examination-setup__actions button.action-delete{color:#B91C1C!important;background:#FEE2E2!important;border:1px solid #FECACA!important}
+.examination-setup__actions button.action-delete:hover{background:#FECACA!important;border-color:#EF4444!important;color:#991B1B!important}
+
+/* Active / ON toggle switch - Soft Green */
+.examination-setup__actions button.action-activate,
+.examination-setup__actions button.erp-action-btn--success,
+.examination-setup__actions button:has([data-status="active"]){color:#15803D!important;background:#DCFCE7!important;border:1px solid #86EFAC!important}
+.examination-setup__actions button.action-activate:hover,
+.examination-setup__actions button.erp-action-btn--success:hover,
+.examination-setup__actions button:has([data-status="active"]):hover{background:#BBF7D0!important;border-color:#22C55E!important;color:#166534!important}
+
+/* Inactive / OFF toggle switch - Soft Red */
+.examination-setup__actions button.action-deactivate,
+.examination-setup__actions button.erp-action-btn--danger,
+.examination-setup__actions button:has([data-status="inactive"]){color:#B91C1C!important;background:#FEE2E2!important;border:1px solid #FECACA!important}
+.examination-setup__actions button.action-deactivate:hover,
+.examination-setup__actions button.erp-action-btn--danger:hover,
+.examination-setup__actions button:has([data-status="inactive"]):hover{background:#FECACA!important;border-color:#EF4444!important;color:#991B1B!important}
+
+/* Dark mode action button colors */
+:root[data-theme="dark"] .examination-setup__actions button.action-edit{color:#818CF8!important;background:rgba(129,140,248,.15)!important;border-color:rgba(129,140,248,.35)!important}
+:root[data-theme="dark"] .examination-setup__actions button.action-edit:hover{background:rgba(129,140,248,.25)!important;border-color:rgba(129,140,248,.6)!important;color:#A5B4FC!important}
+:root[data-theme="dark"] .examination-setup__actions button.action-delete{color:#F87171!important;background:rgba(220,38,38,.15)!important;border-color:rgba(248,113,113,.3)!important}
+:root[data-theme="dark"] .examination-setup__actions button.action-delete:hover{background:rgba(220,38,38,.25)!important;border-color:rgba(248,113,113,.6)!important;color:#FCA5A5!important}
+:root[data-theme="dark"] .examination-setup__actions button.action-activate,
+:root[data-theme="dark"] .examination-setup__actions button.erp-action-btn--success,
+:root[data-theme="dark"] .examination-setup__actions button:has([data-status="active"]){color:#4ADE80!important;background:rgba(22,163,74,.15)!important;border-color:rgba(74,222,128,.3)!important}
+:root[data-theme="dark"] .examination-setup__actions button.action-activate:hover,
+:root[data-theme="dark"] .examination-setup__actions button.erp-action-btn--success:hover,
+:root[data-theme="dark"] .examination-setup__actions button:has([data-status="active"]):hover{background:rgba(22,163,74,.25)!important;border-color:rgba(74,222,128,.6)!important;color:#86EFAC!important}
+:root[data-theme="dark"] .examination-setup__actions button.action-deactivate,
+:root[data-theme="dark"] .examination-setup__actions button.erp-action-btn--danger,
+:root[data-theme="dark"] .examination-setup__actions button:has([data-status="inactive"]){color:#F87171!important;background:rgba(220,38,38,.15)!important;border-color:rgba(248,113,113,.3)!important}
+:root[data-theme="dark"] .examination-setup__actions button.action-deactivate:hover,
+:root[data-theme="dark"] .examination-setup__actions button.erp-action-btn--danger:hover,
+:root[data-theme="dark"] .examination-setup__actions button:has([data-status="inactive"]):hover{background:rgba(220,38,38,.25)!important;border-color:rgba(248,113,113,.6)!important;color:#FCA5A5!important}
 .examination-setup__empty{padding:48px 20px!important;text-align:center;color:var(--text-muted)!important}
 .examination-setup__form-wrap{padding:22px 20px}
 .examination-setup__form{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
@@ -89,7 +135,13 @@
 .examination-setup__modal>header p{margin:5px 0 0;color:var(--text-secondary);font-size:12px}
 .examination-setup__modal>header button{display:grid;width:34px;height:34px;flex:0 0 34px;place-items:center;border:1px solid var(--es-line);border-radius:8px;background:var(--surface);color:var(--text-secondary);cursor:pointer}
 .examination-setup__modal .examination-setup__form{gap:14px}
-.examination-setup__success{margin:14px 20px;padding:10px 14px;border:1px solid #b7e4cb;border-radius:8px;background:#effaf3;color:#167447;font-size:12px}
+.examination-setup__success{margin:14px 20px 0;padding:10px 14px;border:1px solid #b7e4cb;border-radius:8px;background:#effaf3;color:#167447;font-size:12px}
+.examination-setup__toast{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:14px 20px 0;padding:10px 16px;border:1px solid #b7e4cb;border-radius:8px;background:#effaf3;color:#167447;font-size:13px;font-weight:600;box-shadow:0 2px 6px rgba(22,116,71,.08);animation:slideDownToast .25s ease-out}
+.examination-setup__toast-close{display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;padding:0;border:0;border-radius:50%;background:transparent;color:#167447;font-size:18px;line-height:1;cursor:pointer;opacity:.75;transition:opacity .15s ease,background .15s ease}
+.examination-setup__toast-close:hover{opacity:1;background:rgba(22,116,71,.12)}
+:root[data-theme="dark"] .examination-setup__toast{background:rgba(22,163,74,.15);border-color:rgba(74,222,128,.3);color:#86efac}
+:root[data-theme="dark"] .examination-setup__toast-close{color:#86efac}
+@keyframes slideDownToast{from{opacity:0;transform:translateY(-8px)}to{opacity:1;transform:translateY(0)}}
 .examination-setup__error{margin:16px 0 0;padding:10px 14px;border:1px solid #fecaca;border-radius:8px;background:#fef2f2;color:#b91c1c;font-size:12px}
 @media(max-width:760px){.examination-setup__header{grid-template-columns:1fr}.examination-setup__summary{max-width:380px}}
 @media(max-width:600px){.examination-setup__header h1{font-size:24px}.examination-setup__card-header{padding:16px}.examination-setup__header-actions{width:100%;justify-content:flex-start}.examination-setup__tabs a{padding:13px 12px}.examination-setup__toolbar{padding:16px 16px 0}.examination-setup__search{flex-basis:100%}.examination-setup__form-wrap{padding:18px 16px}.examination-setup__form{grid-template-columns:1fr}.examination-setup__form label.wide,.examination-setup__form footer{grid-column:1}.examination-setup__inline-form{margin:16px;padding:15px}}

@@ -12,7 +12,7 @@ const fetchWithApiNotice = async (...args) => {
     notifyApiUnavailable()
     throw error
   }
-  if (response.status >= 500) notifyApiUnavailable({ status: response.status })
+  if (response.status >= 500) notifyApiUnavailable({ status: response.status, url: args[0], method: args[1]?.method || 'GET', response })
   return response
 }
 
@@ -124,7 +124,7 @@ export async function login({ identifier, password }, fallbackRole = ROLES.ADMIN
 
   if (!response.ok) {
     if (response.status >= 500) {
-      notifyApiUnavailable({ status: response.status })
+      notifyApiUnavailable({ status: response.status, url: authEndpoint, method: 'POST', response })
       throw new AuthRequestError(GENERIC_ERROR_MESSAGE)
     }
     throw new AuthRequestError()
