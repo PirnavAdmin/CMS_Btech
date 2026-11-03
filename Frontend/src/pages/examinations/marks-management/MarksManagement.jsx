@@ -1,5 +1,5 @@
 import { NavLink as react_router_domImports_NavLink, Link as react_router_domImports_Link, Navigate as react_router_domImports_Navigate } from 'react-router-dom'
-import { FiBarChart2 as fiImports_FiBarChart2, FiCheckSquare as fiImports_FiCheckSquare, FiEdit3 as fiImports_FiEdit3, FiUploadCloud as fiImports_FiUploadCloud, FiUser as fiImports_FiUser, FiFileText as fiImports_FiFileText, FiSearch as fiImports_FiSearch, FiX as fiImports_FiX, FiCheck as fiImports_FiCheck, FiEye as fiImports_FiEye, FiEdit2 as fiImports_FiEdit2, FiPlus as fiImports_FiPlus, FiTrash2 as fiImports_FiTrash2, FiBookOpen as fiImports_FiBookOpen, FiAlertCircle as fiImports_FiAlertCircle } from 'react-icons/fi'
+import { FiBarChart2, FiCheckSquare, FiEdit3, FiUploadCloud, FiUser, FiFileText, FiSearch, FiX, FiCheck, FiEye, FiEdit2, FiPlus, FiTrash2, FiBookOpen, FiAlertCircle } from 'react-icons/fi'
 import SearchableSelectImports_default, { ProjectSelect as SearchableSelectImports_ProjectSelect } from '../../../components/SearchableSelect'
 import { useMemo as reactImports_useMemo, useState as reactImports_useState, useCallback as reactImports_useCallback, useEffect as reactImports_useEffect, useRef as reactImports_useRef } from 'react'
 import DashboardLayoutImports_default from '../../../layouts/DashboardLayout'
@@ -44,12 +44,6 @@ const exportMarksFile = async (action, params = {}) => {
 // MarksModuleNav screen and private helpers.
 const MarksModuleNavScreen = (() => {
 const NavLink = react_router_domImports_NavLink
-const FiBarChart2 = fiImports_FiBarChart2
-const FiCheckSquare = fiImports_FiCheckSquare
-const FiEdit3 = fiImports_FiEdit3
-const FiUploadCloud = fiImports_FiUploadCloud
-const FiUser = fiImports_FiUser
-
 const modules = [
   { label: 'Marks Entry', description: 'Record assessments', to: '/marks-management/marks-entry', icon: FiEdit3 },
   { label: 'Bulk Marks Upload', description: 'Preview a marks file', to: '/marks-management/bulk-marks-upload', icon: FiUploadCloud },
@@ -86,10 +80,6 @@ const BulkMarksUploadScreen = (() => {
 const ProjectSelect = SearchableSelectImports_ProjectSelect
 const useMemo = reactImports_useMemo
 const useState = reactImports_useState
-const FiFileText = fiImports_FiFileText
-const FiSearch = fiImports_FiSearch
-const FiUploadCloud = fiImports_FiUploadCloud
-const FiX = fiImports_FiX
 const DashboardLayout = DashboardLayoutImports_default
 const PageHeader = PageHeaderImports_default
 const MarksModuleNav = MarksModuleNavScreen.default
@@ -494,10 +484,6 @@ const useEffect = reactImports_useEffect
 const useMemo = reactImports_useMemo
 const useRef = reactImports_useRef
 const useState = reactImports_useState
-const FiCheck = fiImports_FiCheck
-const FiEye = fiImports_FiEye
-const FiSearch = fiImports_FiSearch
-const FiX = fiImports_FiX
 const marksApi = apiEndpointsImports_marksApi
 const facultyApi = apiEndpointsImports_facultyApi
 const facultySubjectAllocationApi = apiEndpointsImports_facultySubjectAllocationApi
@@ -1502,12 +1488,6 @@ const useEffect = reactImports_useEffect
 const useMemo = reactImports_useMemo
 const useState = reactImports_useState
 const createPortal = react_domImports_createPortal
-const FiEdit2 = fiImports_FiEdit2
-const FiPlus = fiImports_FiPlus
-const FiSearch = fiImports_FiSearch
-const FiCheck = fiImports_FiCheck
-const FiTrash2 = fiImports_FiTrash2
-const FiX = fiImports_FiX
 const DashboardLayout = DashboardLayoutImports_default
 const PageHeader = PageHeaderImports_default
 const EmptyState = EmptyStateImports_default
@@ -1525,7 +1505,6 @@ const studentService = studentServiceImports_default
 const subjectService = subjectServiceImports_default
 const sectionAssignmentApi = apiEndpointsImports_sectionAssignmentApi
 const useRef = reactImports_useRef
-const FiAlertCircle = fiImports_FiAlertCircle
 const fetchExams = collegeApiImports_fetchExams
 
 const columns = [
@@ -4168,8 +4147,6 @@ const ProjectSelect = SearchableSelectImports_ProjectSelect
 const useEffect = reactImports_useEffect
 const useMemo = reactImports_useMemo
 const useState = reactImports_useState
-const FiSearch = fiImports_FiSearch
-const FiUser = fiImports_FiUser
 const DashboardLayout = DashboardLayoutImports_default
 const PageHeader = PageHeaderImports_default
 const MarksModuleNav = MarksModuleNavScreen.default
@@ -4508,8 +4485,6 @@ const useEffect = reactImports_useEffect
 const useMemo = reactImports_useMemo
 const useRef = reactImports_useRef
 const useState = reactImports_useState
-const FiBookOpen = fiImports_FiBookOpen
-const FiSearch = fiImports_FiSearch
 const DashboardLayout = DashboardLayoutImports_default
 const PageHeader = PageHeaderImports_default
 const MarksModuleNav = MarksModuleNavScreen.default

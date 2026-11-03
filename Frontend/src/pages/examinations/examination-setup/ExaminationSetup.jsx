@@ -4,7 +4,7 @@ import { useEffect as reactImports_useEffect, useState as reactImports_useState,
 import { Link as react_router_domImports_Link, useLocation as react_router_domImports_useLocation, useNavigate as react_router_domImports_useNavigate } from 'react-router-dom'
 import DashboardLayoutImports_default from '../../../layouts/DashboardLayout'
 import ModuleAvailabilityImports_default from '../../../components/ModuleAvailability'
-import { FiEdit2 as fiImports_FiEdit2, FiFilter as fiImports_FiFilter, FiPlus as fiImports_FiPlus, FiPower as fiImports_FiPower, FiSearch as fiImports_FiSearch, FiTrash2 as fiImports_FiTrash2, FiChevronDown as fiImports_FiChevronDown, FiChevronUp as fiImports_FiChevronUp, FiX as fiImports_FiX, FiToggleLeft as fiImports_FiToggleLeft, FiToggleRight as fiImports_FiToggleRight } from 'react-icons/fi'
+import { FiEdit2, FiFilter, FiPlus, FiPower, FiSearch, FiTrash2, FiChevronDown, FiChevronUp, FiX, FiToggleLeft, FiToggleRight } from 'react-icons/fi'
 import ExportMenuImports_default from '../../../components/ExportMenu'
 import { fetchExams as collegeApiImports_fetchExams, hasExamSetup as collegeApiImports_hasExamSetup, fetchScheduleRows as collegeApiImports_fetchScheduleRows, deleteScheduleApi as collegeApiImports_deleteScheduleApi } from '../../../auth/collegeApi'
 import { useAcademic as useAcademicImports_useAcademic } from '../../../context/AcademicContext'
@@ -147,15 +147,7 @@ const useState = reactImports_useState
 const Link = react_router_domImports_Link
 const useLocation = react_router_domImports_useLocation
 const useNavigate = react_router_domImports_useNavigate
-const FiEdit2 = fiImports_FiEdit2
-const FiFilter = fiImports_FiFilter
-const FiPlus = fiImports_FiPlus
-const FiPower = fiImports_FiPower
-const FiToggleLeft = fiImports_FiToggleLeft
-const FiToggleRight = fiImports_FiToggleRight
 const StatusBadge = StatusBadgeImports_default
-const FiSearch = fiImports_FiSearch
-const FiTrash2 = fiImports_FiTrash2
 const ExportMenu = ExportMenuImports_default
 const DashboardLayout = DashboardLayoutImports_default
 const useAcademic = useAcademicImports_useAcademic
@@ -378,15 +370,7 @@ const useMemo = reactImports_useMemo
 const useState = reactImports_useState
 const Link = react_router_domImports_Link
 const useLocation = react_router_domImports_useLocation
-const FiEdit2 = fiImports_FiEdit2
-const FiFilter = fiImports_FiFilter
-const FiPlus = fiImports_FiPlus
-const FiPower = fiImports_FiPower
-const FiToggleLeft = fiImports_FiToggleLeft
-const FiToggleRight = fiImports_FiToggleRight
 const StatusBadge = StatusBadgeImports_default
-const FiSearch = fiImports_FiSearch
-const FiTrash2 = fiImports_FiTrash2
 const DashboardLayout = DashboardLayoutImports_default
 
 const tabs = [['Examination List', '/examination-setup/examination-list'], ['Create Examination', '/examination-setup/create-examination'], ['Exam Type', '/examination-setup/exam-type'], ['Exam Schedule', '/examination-setup/exam-schedule'], ['Exam Rules', '/examination-setup/exam-rules']]
@@ -474,18 +458,7 @@ const fetchScheduleRows = collegeApiImports_fetchScheduleRows
 const deleteScheduleApi = collegeApiImports_deleteScheduleApi
 const Link = react_router_domImports_Link
 const useLocation = react_router_domImports_useLocation
-const FiChevronDown = fiImports_FiChevronDown
-const FiChevronUp = fiImports_FiChevronUp
-const FiEdit2 = fiImports_FiEdit2
-const FiFilter = fiImports_FiFilter
-const FiPlus = fiImports_FiPlus
-const FiPower = fiImports_FiPower
-const FiToggleLeft = fiImports_FiToggleLeft
-const FiToggleRight = fiImports_FiToggleRight
 const StatusBadge = StatusBadgeImports_default
-const FiSearch = fiImports_FiSearch
-const FiTrash2 = fiImports_FiTrash2
-const FiX = fiImports_FiX
 const DashboardLayout = DashboardLayoutImports_default
 
 const tabs = [['Examination List', '/examination-setup/examination-list'], ['Create Examination', '/examination-setup/create-examination'], ['Exam Type', '/examination-setup/exam-type'], ['Exam Schedule', '/examination-setup/exam-schedule'], ['Exam Rules', '/examination-setup/exam-rules']]
@@ -649,15 +622,7 @@ const useMemo = reactImports_useMemo
 const useState = reactImports_useState
 const Link = react_router_domImports_Link
 const useLocation = react_router_domImports_useLocation
-const FiEdit2 = fiImports_FiEdit2
-const FiFilter = fiImports_FiFilter
-const FiPlus = fiImports_FiPlus
-const FiPower = fiImports_FiPower
-const FiToggleLeft = fiImports_FiToggleLeft
-const FiToggleRight = fiImports_FiToggleRight
 const StatusBadge = StatusBadgeImports_default
-const FiSearch = fiImports_FiSearch
-const FiTrash2 = fiImports_FiTrash2
 const DashboardLayout = DashboardLayoutImports_default
 
 const tabs = [['Examination List', '/examination-setup/examination-list'], ['Create Examination', '/examination-setup/create-examination'], ['Exam Type', '/examination-setup/exam-type'], ['Exam Schedule', '/examination-setup/exam-schedule'], ['Exam Rules', '/examination-setup/exam-rules']]

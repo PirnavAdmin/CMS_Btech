@@ -5,7 +5,7 @@ import { showError as toastImports_showError } from '../../utils/toast'
 import useToastStateImports_default from '../../hooks/useToastState'
 import reactImports_default, { useState as reactImports_useState, useEffect as reactImports_useEffect, useMemo as reactImports_useMemo, useCallback as reactImports_useCallback } from 'react'
 import { useLocation as react_router_domImports_useLocation, useNavigate as react_router_domImports_useNavigate, Link as react_router_domImports_Link, useParams as react_router_domImports_useParams } from 'react-router-dom'
-import { FiCalendar as fiImports_FiCalendar, FiCheckCircle as fiImports_FiCheckCircle, FiClock as fiImports_FiClock, FiEye as fiImports_FiEye, FiLayers as fiImports_FiLayers, FiPlus as fiImports_FiPlus, FiSearch as fiImports_FiSearch, FiUsers as fiImports_FiUsers, FiUserCheck as fiImports_FiUserCheck, FiUserX as fiImports_FiUserX, FiAlertTriangle as fiImports_FiAlertTriangle, FiBarChart2 as fiImports_FiBarChart2, FiBell as fiImports_FiBell, FiSave as fiImports_FiSave, FiFilter as fiImports_FiFilter, FiChevronDown as fiImports_FiChevronDown, FiChevronUp as fiImports_FiChevronUp, FiArrowLeft as fiImports_FiArrowLeft } from 'react-icons/fi'
+import { FiCalendar, FiCheckCircle, FiClock, FiEye, FiLayers, FiPlus, FiSearch, FiUsers, FiUserCheck, FiUserX, FiAlertTriangle, FiBarChart2, FiBell, FiSave, FiFilter, FiChevronDown, FiChevronUp, FiArrowLeft } from 'react-icons/fi'
 import DashboardLayoutImports_default from '../../layouts/DashboardLayout'
 import PageHeaderImports_default from '../../components/PageHeader'
 import CompactSummaryImports_default from '../../components/CompactSummary'
@@ -37,23 +37,6 @@ const useCallback = reactImports_useCallback
 const React = reactImports_default
 const useLocation = react_router_domImports_useLocation
 const useNavigate = react_router_domImports_useNavigate
-const FiCalendar = fiImports_FiCalendar
-const FiCheckCircle = fiImports_FiCheckCircle
-const FiClock = fiImports_FiClock
-const FiEye = fiImports_FiEye
-const FiLayers = fiImports_FiLayers
-const FiPlus = fiImports_FiPlus
-const FiSearch = fiImports_FiSearch
-const FiUsers = fiImports_FiUsers
-const FiUserCheck = fiImports_FiUserCheck
-const FiUserX = fiImports_FiUserX
-const FiAlertTriangle = fiImports_FiAlertTriangle
-const FiBarChart2 = fiImports_FiBarChart2
-const FiBell = fiImports_FiBell
-const FiSave = fiImports_FiSave
-const FiFilter = fiImports_FiFilter
-const FiChevronDown = fiImports_FiChevronDown
-const FiChevronUp = fiImports_FiChevronUp
 const DashboardLayout = DashboardLayoutImports_default
 const PageHeader = PageHeaderImports_default
 const CompactSummary = CompactSummaryImports_default
@@ -1483,9 +1466,6 @@ const DashboardLayout = DashboardLayoutImports_default
 const InfoCard = InfoCardImports_default
 const StatusBadge = StatusBadgeImports_default
 const attendanceService = attendanceServiceImports_default
-const FiCalendar = fiImports_FiCalendar
-const FiArrowLeft = fiImports_FiArrowLeft
-
 function AttendanceSessionDetails() {
   const { sessionId } = useParams()
   const { scopeRecords } = useAcademic()

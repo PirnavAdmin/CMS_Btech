@@ -2,21 +2,7 @@ import { useEffect, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { createPortal } from 'react-dom'
 import PortalLayout from '../../layouts/PortalLayout.jsx'
-import {
-  FiAlertCircle,
-  FiCalendar,
-  FiCheck,
-  FiCheckCircle,
-  FiCheckSquare,
-  FiClock,
-  FiDownload,
-  FiRefreshCw,
-  FiSearch,
-  FiTrash2,
-  FiUsers,
-  FiUserX,
-  FiZap
-} from 'react-icons/fi'
+import { FiAlertCircle, FiCalendar, FiCheck, FiCheckCircle, FiCheckSquare, FiClock, FiDownload, FiRefreshCw, FiSearch, FiTrash2, FiUsers, FiUserX, FiZap } from 'react-icons/fi'
 import { teachingService as liveService } from '../../services/portals/teachingService.js'
 import { PortalDialog } from '../../components/portals/PortalUI.jsx'
 import './faculty-attendance.css'

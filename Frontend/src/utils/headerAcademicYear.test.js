@@ -1,4 +1,4 @@
-﻿import test from 'node:test'
+import test from 'node:test'
 import assert from 'node:assert/strict'
 import { calculateAcademicYearProgress as progress, selectHeaderAcademicYear as select } from './headerAcademicYear.js'
 test('selects only explicit active backend status', () => {

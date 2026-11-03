@@ -1,4 +1,4 @@
-﻿// Header selection must use backend status, never the date-based form fallback.
+// Header selection must use backend status, never the date-based form fallback.
 export function selectHeaderAcademicYear(years = []) {
   const active = years.filter(year => year.isActive === true || year.isActive === 1 || year.isActive === '1' || year.status === 1 || year.status === '1' || String(year.status).toUpperCase() === 'ACTIVE')
   if (active.length > 1) return { state: 'conflict', year: null }

@@ -1,4 +1,4 @@
-﻿export const documentCategories = ['Employment', 'Payroll', 'Certificates', 'Identity', 'Service records']
+export const documentCategories = ['Employment', 'Payroll', 'Certificates', 'Identity', 'Service records']
 export function validateDocument(file) {
   if (!file || file.size === 0) return 'Choose a non-empty file.'
   if (file.size > 5 * 1024 * 1024) return 'File size must be 5 MB or less.'

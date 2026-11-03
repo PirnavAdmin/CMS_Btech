@@ -14,6 +14,7 @@ import subjectService from '../../services/subjectService'
 import academicService from '../../services/academicService'
 import { enrichSubject, idOf } from '../../utils/subjectDirectory'
 import './CreditsManagement.css'
+import { FiAlertCircle, FiAlertTriangle, FiArrowDown, FiCheck, FiCheckCircle, FiLayers } from 'react-icons/fi'
 
 const STORAGE_KEYS = {
   students: 'cms-credit-students-v1',
@@ -1436,7 +1437,7 @@ function CreditsManagement() {
           .map((value) => `"${String(value).replace(/"/g, '""')}"`)
           .join(',')
       )
-      .join('\n')
+      .join('\r\n')
 
     const blob = new Blob([csv], {
       type: 'text/csv;charset=utf-8;',
@@ -1480,7 +1481,7 @@ function CreditsManagement() {
         {notice.message && (
           <div className={`cm-alert cm-alert-${notice.type}`}>
             <span>
-              {notice.type === 'success' ? '✓' : '⚠'}
+              {notice.type === 'success' ? <FiCheck aria-hidden="true" /> : <FiAlertTriangle aria-hidden="true" />}
             </span>
 
             <div>{notice.message}</div>
@@ -1714,28 +1715,28 @@ function CreditsManagement() {
                     title="Registered"
                     value={selectedStudentSummary.total}
                     subtitle="All registered credits"
-                    icon="▣"
+                    icon={<FiLayers />}
                   />
 
                   <StatCard
                     title="Completed"
                     value={selectedStudentSummary.completed}
                     subtitle="Passed credits"
-                    icon="✓"
+                    icon={<FiCheckCircle />}
                   />
 
                   <StatCard
                     title="Backlog"
                     value={selectedStudentSummary.failed}
                     subtitle="Failed credits"
-                    icon="!"
+                    icon={<FiAlertCircle />}
                   />
 
                   <StatCard
                     title="Shortage"
                     value={selectedStudentSummary.shortage}
                     subtitle="Credits remaining"
-                    icon="↗"
+                    icon={<FiArrowDown />}
                   />
                 </div>
 
@@ -2296,21 +2297,21 @@ function CreditsManagement() {
                 title="Validation Errors"
                 value={validationSummary.errors}
                 subtitle="Critical issues"
-                icon="!"
+                icon={<FiAlertCircle />}
               />
 
               <StatCard
                 title="Warnings"
                 value={validationSummary.warnings}
                 subtitle="Requires review"
-                icon="△"
+                icon={<FiAlertTriangle />}
               />
 
               <StatCard
                 title="Passed Checks"
                 value={validationSummary.success}
                 subtitle="Successful validations"
-                icon="✓"
+                icon={<FiCheckCircle />}
               />
             </div>
 

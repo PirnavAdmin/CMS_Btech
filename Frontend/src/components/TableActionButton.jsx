@@ -1,13 +1,6 @@
 import React from 'react'
 import { Link } from 'react-router-dom'
-import {
-  FiEye,
-  FiEdit2,
-  FiUserPlus,
-  FiToggleLeft,
-  FiToggleRight,
-  FiCheckCircle,
-} from 'react-icons/fi'
+import { FiEye, FiEdit2, FiUserPlus, FiToggleLeft, FiToggleRight, FiCheckCircle } from 'react-icons/fi'
 
 const DEFAULT_ICONS = {
   view: FiEye,
