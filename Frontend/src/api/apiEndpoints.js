@@ -62,10 +62,12 @@ export const API_ENDPOINTS = Object.freeze({
     refresh: endpoint('/api/v1/auth/refresh'),
     changePassword: endpoint('/api/v1/auth/change-password'),
     forgotPassword: endpoint('/api/v1/auth/forgot-password'),
+    completeAccountSetup: endpoint('/api/v1/auth/complete-account-setup'),
   }),
   profile: Object.freeze({
     get: endpoint('/api/v1/profile'),
     update: endpoint('/api/v1/profile'),
+    photo: endpoint('/api/v1/profile/photo'),
   }),
   academicYears: Object.freeze({
     create: endpoint('/api/v1/academic-years'),
@@ -298,16 +300,17 @@ const readBody = async (response) => {
   try { return await response.json() } catch { return null }
 }
 
-const listResponse = (response) => {
+const extractListResponse = (response) => {
   let current = response
   for (let depth = 0; depth < 5 && current && typeof current === 'object'; depth += 1) {
     if (Array.isArray(current)) return current
-    const list = current.items ?? current.content ?? current.results ?? current.records ?? current.academicYears ?? current.years ?? current.rows ?? current.roles ?? (Array.isArray(current.data) ? current.data : undefined)
+    const list = current.items ?? current.content ?? current.results ?? current.records ?? current.academicYears ?? current.years ?? current.rows ?? current.roles ?? current.users ?? current.userList ?? (Array.isArray(current.data) ? current.data : undefined)
     if (Array.isArray(list)) return list
-    current = current.data
+    current = current.data ?? current.result ?? current.payload
   }
-  return []
+  return null
 }
+const listResponse = (response) => extractListResponse(response) ?? []
 
 const validationMessage = (body) => {
   const errors = body?.errors || body?.data?.errors
@@ -472,16 +475,46 @@ export const screenExportsApi = {
   },
 }
 
-// The backend exposes user account data through its authorized screen export
-// contract. It does not currently expose a user CRUD API.
 export const userDirectoryApi = {
   getAll: async (params = {}) => {
-    const response = await request(withQuery(API_ENDPOINTS.exports.screen('users'), { Format: 'json', ...params }))
-    const rows = response?.data ?? response?.users ?? response
-    if (!Array.isArray(rows)) throw new Error('The user directory returned an unexpected response.')
-    return rows
+    const response = await request(withQuery(endpoint('/api/v1/admin/users'), params))
+    const rows = extractListResponse(response)
+    if (!rows) throw new Error('The user directory returned an unexpected response.')
+    return rows.map(row => {
+      const roles = row.roleNames ?? row.roles ?? row.roleCodes ?? (row.roleName ? [row.roleName] : [])
+      const accountStatus = row.accountStatus ?? row.statusLabel ?? (
+        row.deletedAt ? 'Deactivated' :
+          row.status === 1 || row.status === true || String(row.status).toLowerCase() === 'active' ? 'Active' :
+            row.mustChangePassword ? 'Pending Invitation' : 'Suspended'
+      )
+      return {
+        ...row,
+        roleId: row.roleId ?? row.roleIds?.[0] ?? '',
+        roleName: Array.isArray(roles) ? roles.join(', ') : String(roles || ''),
+        accountStatus,
+        academicYearIds: row.academicYearIds ?? [],
+        permissions: row.permissions ?? {},
+      }
+    })
   },
+  lookups: async collegeId => (await request(withQuery(endpoint('/api/v1/admin/users/lookups'), collegeId ? { collegeId } : {})))?.data,
+  onboardCollege: body => request(endpoint('/api/v1/admin/users/onboard-college'), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }),
+  getRolePermissions: async roleId => (await request(endpoint(`/api/v1/access-governance/roles/${encodeURIComponent(roleId)}/permissions`)))?.data ?? {},
+  create: body => request(endpoint('/api/v1/admin/users'), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }),
+  update: (id, body) => request(endpoint(`/api/v1/admin/users/${encodeURIComponent(id)}`), { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }),
+  setStatus: (id, status) => request(endpoint(`/api/v1/admin/users/${encodeURIComponent(id)}/status`), { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status }) }),
+  resendInvitation: id => request(endpoint(`/api/v1/admin/users/${encodeURIComponent(id)}/resend-invitation`), { method: 'POST' }),
+  resetPassword: id => request(endpoint(`/api/v1/admin/users/${encodeURIComponent(id)}/reset-password`), { method: 'POST' }),
+  activity: async id => (await request(endpoint(`/api/v1/admin/users/${encodeURIComponent(id)}/activity`)))?.data ?? [],
   exportCsv: params => screenExportsApi.download('users', { Format: 'csv', ...params }),
+}
+
+export const authAccessApi = {
+  get: async collegeId => (await request(withQuery(endpoint('/api/auth/me/access'), collegeId ? { collegeId } : {})))?.data,
+}
+
+export async function completeAccountSetup({ loginId, token, newPassword, confirmNewPassword }) {
+  return request(API_ENDPOINTS.auth.completeAccountSetup, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ loginId, token, newPassword, confirmNewPassword }) })
 }
 
 async function requestScreenFile(screen, action, params) {
@@ -502,12 +535,14 @@ async function readExportFile(url) {
 }
 
 const normalizeFrontendRole = (roleValue) => {
-  const rawRole = Array.isArray(roleValue) ? roleValue[0] : roleValue
+  const rawRole = Array.isArray(roleValue) ? roleValue.find(role => ['super_admin','superadmin','admin','college_admin','collegeadmin'].includes(String(role).trim().toLowerCase().replace(/[\s-]+/g, '_'))) || roleValue[0] : roleValue
   const normalized = String(rawRole || '').trim().toLowerCase().replace(/[\s-]+/g, '_')
 
-  if (['admin', 'college_admin', 'super_admin'].includes(normalized)) {
+  if (['admin', 'college_admin', 'super_admin', 'collegeadmin', 'superadmin'].includes(normalized)) {
     return 'admin'
   }
+
+  if (['principal','hod','accountant','librarian','non_teaching','non_teaching_staff'].includes(normalized)) return 'staff'
 
   return normalized || 'student'
 }
@@ -554,6 +589,7 @@ export async function login({ identifier, password, rememberMe = false }) {
       role: normalizeFrontendRole(roleValue),
       collegeId: data.collegeId,
       mustChangePassword: data.mustChangePassword,
+      profileCompleted: data.profileCompleted !== false,
     },
   }
 }
@@ -572,14 +608,15 @@ const normalizeProfile = (source) => {
   const application = data.application && typeof data.application === 'object' ? data.application : {}
   const lastLoginAt = data.lastLoginAt ?? data.last_login_at ?? data.LastLoginAt ?? data.lastLogin ?? data.last_login ?? ''
   return {
-    id: data.userId ?? data.studentId ?? '', facultyId: data.facultyId ?? '', identifier: data.employeeUserId ?? data.studentCode ?? data.studentId ?? '', fullName: data.fullName ?? data.studentName ?? '',
+    id: data.userId ?? data.studentId ?? '', facultyId: data.facultyId ?? '', identifier: data.employeeUserId ?? data.studentCode ?? data.studentId ?? '', fullName: data.fullName ?? data.studentName ?? '', collegeName: data.collegeName ?? '', profileImagePath: data.profileImagePath ?? '',
     email: data.email ?? '', mobile: data.mobile ?? '', role: Array.isArray(data.roles) ? data.roles.join(', ') : String(data.role ?? ''),
     dateOfBirth: data.dateOfBirth ?? '', gender: data.gender ?? '', department: data.department ?? data.departmentName ?? '', departmentId: data.departmentId ?? '',
     designation: data.designation ?? '', houseNumber: data.houseNumber ?? data.currentHouseNumber ?? '', address: data.address ?? data.currentAddress ?? '', permanentHouseNumber: data.permanentHouseNumber ?? '', permanentAddress: data.permanentAddress ?? '', postalCode: data.postalCode ?? '',
     pincode: data.pincode ?? data.postalCode ?? '', city: data.city ?? '', district: data.district ?? '', state: data.state ?? '', permanentPincode: data.permanentPincode ?? '', permanentCity: data.permanentCity ?? '', permanentDistrict: data.permanentDistrict ?? '', permanentState: data.permanentState ?? '', bio: data.bio ?? data.aboutMe ?? '',
     lastLoginAt,
     updatedAt: data.updatedAt ?? '',
-    status: data.status ?? data.accountStatus ?? 'Active',
+    status: data.status ?? (data.accountStatus === 1 || data.accountStatus === undefined ? 'Active' : 'Inactive'),
+    accountStatus: data.accountStatus ?? 1, collegeId: data.collegeId ?? '', mustChangePassword: Boolean(data.mustChangePassword), profileCompleted: data.profileCompleted !== false,
     registrationNumber: data.registrationNumber ?? application.registrationNumber ?? application.number ?? '', admissionNumber: data.admissionNumber ?? application.admissionNumber ?? '',
     rollNumber: data.rollNumber ?? academic.rollNumber ?? '', course: data.course ?? data.courseName ?? academic.course ?? '', branch: data.branch ?? data.branchName ?? academic.branch ?? '',
     academicYear: data.academicYear ?? data.academicYearName ?? academic.academicYear ?? '', semester: data.semester ?? data.semesterName ?? academic.semester ?? '', section: data.section ?? data.sectionName ?? academic.section ?? '', batch: data.batch ?? academic.batch ?? '',
@@ -602,9 +639,6 @@ export const profileApi = {
         mobile: String(profile.mobile || '').trim(),
         dateOfBirth: profile.dateOfBirth || null,
         gender: profile.gender || null,
-        departmentId: profile.departmentId ? Number(profile.departmentId) : null,
-        department: String(profile.department || '').trim() || null,
-        designation: String(profile.designation || '').trim() || null,
         houseNumber: String(profile.houseNumber || '').trim() || null,
         address: String(profile.address || '').trim() || null,
         permanentHouseNumber: String(profile.permanentHouseNumber || '').trim() || null,
@@ -613,6 +647,7 @@ export const profileApi = {
         permanentCity: String(profile.permanentCity || '').trim() || null,
         permanentDistrict: String(profile.permanentDistrict || '').trim() || null,
         permanentState: String(profile.permanentState || '').trim() || null,
+        permanentCountry: String(profile.permanentCountry || '').trim() || null,
         pincode: String(profile.pincode || profile.postalCode || '').trim() || null,
         city: String(profile.city || '').trim() || null,
         district: String(profile.district || '').trim() || null,
@@ -621,6 +656,12 @@ export const profileApi = {
       }),
     })
     return normalizeProfile(response?.data || {})
+  },
+  uploadPhoto: async file => {
+    const form = new FormData()
+    form.append('file', file)
+    const response = await request(API_ENDPOINTS.profile.photo, { method: 'POST', body: form })
+    return response?.data?.profileImagePath || ''
   },
 }
 

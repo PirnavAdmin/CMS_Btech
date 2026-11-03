@@ -1723,6 +1723,21 @@
   transform: translateY(-2px);
 }
 
+.ym-flow-item.is-setup-status-unavailable {
+  border-style: dashed;
+  cursor: help;
+}
+
+.ym-flow-item.is-setup-status-unavailable:hover {
+  border-color: var(--border, #D8E4F2);
+  box-shadow: none;
+  transform: none;
+}
+
+.ym-flow-item.is-setup-status-unavailable .ym-flow-text small {
+  color: var(--text-secondary, #64748B) !important;
+}
+
 .ym-flow-icon-circle {
   display: grid;
   place-items: center;

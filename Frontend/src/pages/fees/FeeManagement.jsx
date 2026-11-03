@@ -2046,7 +2046,7 @@ export const FeeStructureModule = (() => {
     return (
       <div className="fm-page-container">
         {/* Page Header */}
-        <FeePageHeading title="Fee Plans" description="Configure academic, accommodation and transport fees." icon={external3.FiLayers}>
+        <FeePageHeading title="Fee Structures" description="Configure academic, accommodation and transport fees." icon={external3.FiLayers}>
 
 
 
@@ -2849,6 +2849,10 @@ export const ServerFeeCollectionModule = (() => {
       name: y.academicYearName || y.name,
     }));
 
+    useEffect(() => {
+      setSelectedYear(academic.selectedAcademicYearId || "");
+    }, [academic.selectedCollegeId, academic.selectedAcademicYearId]);
+
     const fetchDashboard = () => {
       let active = true;
       setLoading(true);
@@ -3135,12 +3139,21 @@ export const ServerFeeCollectionModule = (() => {
     return (
       <div className="fm-page-container">
         {/* Page Header */}
-        <FeePageHeading
-          title="Fee Overview"
-          description="Track fee collections, pending dues and payments."
-          icon={FiPieChart}
-        >
+        <FeePageHeading title="Finance Overview" description="Track fee demand, collections, outstanding balances and receipts." icon={FiPieChart}>
+          <label className="fm-header-year-select">
+            <span>Academic year</span>
+            <select aria-label="Overview academic year" value={selectedYear} onChange={event => setSelectedYear(event.target.value)}>
+              <option value="">All academic years</option>
+              {yearOptions.map(year => <option key={year.id} value={year.id}>{year.name}</option>)}
+            </select>
+          </label>
         </FeePageHeading>
+
+        {yearOptions.length === 0 && <div className="fm-context-notice" role="status">
+          <FiAlertCircle />
+          <span>No academic years are configured for this college. Financial totals below are unscoped across academic years.</span>
+          <Link to="/academic-year-management">Configure academic years</Link>
+        </div>}
 
         <FeeRequestState loading={loading} error={error}>
           {/* Four Colorful KPI Cards */}
@@ -3352,7 +3365,7 @@ export const ServerFeeCollectionModule = (() => {
               {/* Category-wise Collections list */}
               {dashData?.byCategory?.length > 0 && (
                 <div className="fm-category-breakdown-list">
-                  <h4>Category-wise Collections</h4>
+                  <h4>Fee Category Collections</h4>
                   {dashData.byCategory.map((cat) => {
                     const catPct = cat.assigned > 0 ? Math.round((cat.collected / cat.assigned) * 100) : 0;
                     return (
@@ -3372,6 +3385,8 @@ export const ServerFeeCollectionModule = (() => {
                   })}
                 </div>
               )}
+
+              <p className="fm-report-data-note"><FiAlertCircle /> Course-wise and branch-wise totals are not included in the current dashboard response.</p>
 
               <div className="fm-overdue-note">
                 <FiAlertCircle />
@@ -3411,7 +3426,10 @@ export const ServerFeeCollectionModule = (() => {
           {/* Recent Payments Section */}
           <div className="fm-recent-payments-card">
             <div className="fm-card-header">
-              <h2>Recent Payments</h2>
+              <div>
+                <h2>Recent Payments</h2>
+                <p>Latest college-scoped transactions; payment history does not support academic-year filtering.</p>
+              </div>
               <Link to="/fees/students" state={{ tab: "transactions" }} className="fm-link-more">
                 View All Transactions in Student Fees →
               </Link>
@@ -3618,7 +3636,7 @@ export const ServerFeeCollectionModule = (() => {
     return (
       <div className="fm-page-container">
         {/* Page Header */}
-        <FeePageHeading title="Payments" description="Review collections, transaction references and student receipts." icon={external3.FiCreditCard} />
+        <FeePageHeading title="Receipts & History" description="Search confirmed transactions, open official receipts and review payment methods." icon={external3.FiCreditCard} />
 
         <div className="fm-summary-strip">
           <FeeMetric label="Collected Today" value={feeMoney(dailySummary?.totalCollected || 0)} meta="Today's collections" tone="green" icon={external3.FiDollarSign} />
@@ -4220,16 +4238,19 @@ export const ServerFeeCollectionModule = (() => {
 
   function FeeReports({ academic }) {
     const reportTypes = [
-      { id: "summary", name: "Monthly Collection Summary" },
-      { id: "daily", name: "Daily Collections" },
-      { id: "outstanding", name: "Outstanding Fees" },
-      { id: "overdue", name: "Overdue Fees" },
-      { id: "category", name: "Charge-wise Collections" },
-      { id: "mode", name: "Payment Methods" },
+      { id: "summary", name: "Monthly Collection Report" },
+      { id: "daily", name: "Daily Collection Report" },
+      { id: "outstanding", name: "Student Outstanding Dues" },
+      { id: "overdue", name: "Overdue Dues" },
+      { id: "category", name: "Fee Category Report" },
+      { id: "mode", name: "Payment Method Report" },
+      { id: "transactions", name: "Payment Transactions" },
       { id: "ledger", name: "Student Payment History" },
     ];
     const [type, setType] = useState("summary");
     const [academicYearId, setAcademicYearId] = useState(academic.selectedAcademicYearId || "");
+    const [courseId, setCourseId] = useState("");
+    const [branchId, setBranchId] = useState("");
     const [fromDate, setFromDate] = useState("");
     const [toDate, setToDate] = useState("");
     const [studentId, setStudentId] = useState("");
@@ -4238,7 +4259,14 @@ export const ServerFeeCollectionModule = (() => {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState("");
     const outstanding = type === "outstanding" || type === "overdue";
+    const transactions = type === "transactions" || type === "ledger";
     const invalidRange = fromDate && toDate && fromDate > toDate;
+
+    useEffect(() => {
+      setAcademicYearId(academic.selectedAcademicYearId || "");
+      setCourseId("");
+      setBranchId("");
+    }, [academic.selectedCollegeId, academic.selectedAcademicYearId]);
 
     useEffect(() => {
       let active = true;
@@ -4247,15 +4275,15 @@ export const ServerFeeCollectionModule = (() => {
       if (invalidRange || (type === "ledger" && !studentId.trim())) { setLoading(false); return; }
       setLoading(true);
       const request = outstanding
-        ? feeCollectionApi.allPending({ academicYearId, overdueOnly: type === "overdue", dueFrom: fromDate, dueTo: toDate })
-        : type === "ledger"
-        ? feeCollectionApi.allHistory({ studentId, fromDate, toDate })
-        : feeCollectionApi.dashboard({ academicYearId, fromDate, toDate });
+        ? feeCollectionApi.allPending({ academicYearId, courseId, branchId, overdueOnly: type === "overdue", dueFrom: fromDate, dueTo: toDate })
+        : transactions
+        ? feeCollectionApi.allHistory({ ...(type === "ledger" ? { studentId } : {}), fromDate, toDate })
+        : feeCollectionApi.dashboard({ academicYearId, courseId, branchId, fromDate, toDate });
       request.then(data => { if (active) setResult(data); })
         .catch(reason => { if (active) setError(reason.message || "Unable to load this report."); })
         .finally(() => { if (active) setLoading(false); });
       return () => { active = false; };
-    }, [type, academicYearId, fromDate, toDate, studentId, academic.selectedCollegeId, invalidRange, outstanding]);
+    }, [type, academicYearId, courseId, branchId, fromDate, toDate, studentId, academic.selectedCollegeId, invalidRange, outstanding, transactions]);
 
     const title = reportTypes.find(report => report.id === type).name;
     let rows = [], columns = [];
@@ -4281,7 +4309,7 @@ export const ServerFeeCollectionModule = (() => {
         amount("Paid", "paidAmount", "12%"),
         amount("Balance", "balanceAmount", "14%"),
       ];
-      if (rows.length > 0) {
+      if (result !== null) {
         const totalPayable = rupees(rows.reduce((sum, r) => sum + cents(r.payableAmount || 0), 0));
         const totalPaid = rupees(rows.reduce((sum, r) => sum + cents(r.paidAmount || 0), 0));
         const totalBalance = rupees(rows.reduce((sum, r) => sum + cents(r.balanceAmount || 0), 0));
@@ -4292,12 +4320,13 @@ export const ServerFeeCollectionModule = (() => {
           balanceAmount: <strong>{feeMoney(totalBalance)}</strong>,
         };
         summaryMetrics = [
+          { label: "Pending Installments", value: rows.length.toLocaleString() },
           { label: "Total Payable", value: feeMoney(totalPayable) },
           { label: "Total Paid", value: feeMoney(totalPaid) },
           { label: type === "overdue" ? "Total Overdue" : "Total Outstanding", value: feeMoney(totalBalance) },
         ];
       }
-    } else if (type === "ledger") {
+    } else if (transactions) {
       rows = Array.isArray(result) ? result : [];
       columns = [
         { label: "Receipt", value: "receiptNumber", width: "16%", align: "left" },
@@ -4307,18 +4336,18 @@ export const ServerFeeCollectionModule = (() => {
         { label: "Reference", value: "transactionReference", width: "16%", align: "left" },
         amount("Paid", "totalAmount", "16%"),
       ];
-      if (rows.length > 0) {
+      if (result !== null) {
         const totalPaid = rupees(rows.reduce((sum, r) => sum + cents(r.totalAmount || 0), 0));
         totalRow = {
           receiptNumber: <strong>Total</strong>,
           totalAmount: <strong>{feeMoney(totalPaid)}</strong>,
         };
-        if (studentId.trim()) {
-          summaryMetrics = [
-            { label: "Total Paid", value: feeMoney(totalPaid) },
-            { label: "Total Receipts", value: rows.length.toLocaleString() },
-          ];
-        }
+        summaryMetrics = [
+          { label: "Total Paid", value: feeMoney(totalPaid) },
+          { label: "Total Receipts", value: rows.length.toLocaleString() },
+          { label: "Outstanding", value: "—" },
+          { label: "Collection Rate", value: "—" },
+        ];
       }
     } else if (type === "mode") {
       rows = result?.byPaymentMode || [];
@@ -4327,7 +4356,7 @@ export const ServerFeeCollectionModule = (() => {
         { label: "Transactions", value: "paymentCount", width: "30%", align: "right", render: row => Number(row.paymentCount || 0).toLocaleString() },
         amount("Collected Amount", "amount", "30%"),
       ];
-      if (rows.length > 0) {
+      if (result !== null) {
         const totalTx = rows.reduce((sum, r) => sum + Number(r.paymentCount || 0), 0);
         const totalCollected = rupees(rows.reduce((sum, r) => sum + cents(r.amount || 0), 0));
         totalRow = {
@@ -4338,6 +4367,8 @@ export const ServerFeeCollectionModule = (() => {
         summaryMetrics = [
           { label: "Total Collected", value: feeMoney(totalCollected) },
           { label: "Total Transactions", value: totalTx.toLocaleString() },
+          { label: "Outstanding Dues", value: feeMoney(result.totalPending || 0) },
+          { label: "Collection Rate", value: result.totalPayable > 0 ? `${((result.totalCollected / result.totalPayable) * 100).toFixed(1)}%` : "—" },
         ];
       }
     } else if (type === "category") {
@@ -4348,7 +4379,7 @@ export const ServerFeeCollectionModule = (() => {
         amount("Collected", "collected", "22%"),
         amount("Pending", "pending", "22%"),
       ];
-      if (rows.length > 0) {
+      if (result !== null) {
         const totalAssigned = rupees(rows.reduce((sum, r) => sum + cents(r.assigned || 0), 0));
         const totalCollected = rupees(rows.reduce((sum, r) => sum + cents(r.collected || 0), 0));
         const totalPending = rupees(rows.reduce((sum, r) => sum + cents(r.pending || 0), 0));
@@ -4362,6 +4393,7 @@ export const ServerFeeCollectionModule = (() => {
           { label: "Total Assigned", value: feeMoney(totalAssigned) },
           { label: "Total Collected", value: feeMoney(totalCollected) },
           { label: "Total Pending", value: feeMoney(totalPending) },
+          { label: "Collection Rate", value: totalAssigned > 0 ? `${((totalCollected / totalAssigned) * 100).toFixed(1)}%` : "—" },
         ];
       }
     } else {
@@ -4392,10 +4424,9 @@ export const ServerFeeCollectionModule = (() => {
         },
         amount("Collected Amount", "amount", "30%"),
       ];
-      if (rows.length > 0) {
+      if (result !== null) {
         const totalTx = rows.reduce((sum, r) => sum + Number(r.paymentCount || 0), 0);
         const totalCollected = rupees(rows.reduce((sum, r) => sum + cents(r.amount || 0), 0));
-        const avgCollection = totalTx > 0 ? rupees(Math.round(cents(totalCollected) / totalTx)) : 0;
         totalRow = {
           period: <strong>Total</strong>,
           paymentCount: <strong>{totalTx.toLocaleString()}</strong>,
@@ -4404,7 +4435,8 @@ export const ServerFeeCollectionModule = (() => {
         summaryMetrics = [
           { label: "Total Collected", value: feeMoney(totalCollected) },
           { label: "Total Transactions", value: totalTx.toLocaleString() },
-          { label: "Average Collection per Transaction", value: feeMoney(avgCollection) },
+          { label: "Outstanding Dues", value: feeMoney(result?.totalPending || 0) },
+          { label: "Collection Rate", value: result?.totalPayable > 0 ? `${((result.totalCollected / result.totalPayable) * 100).toFixed(1)}%` : "—" },
         ];
       }
     }
@@ -4426,18 +4458,23 @@ export const ServerFeeCollectionModule = (() => {
       );
     }, [rows, reportSearch, columns]);
 
+    // Keep one totals presentation: the KPI strip above the report table.
+    totalRow = null;
+
     return (
       <div className="fm-page-container fm-reports-container">
-        <FeePageHeading title="Fee Reports" description="Review financial performance and export scoped fee records." icon={external3.FiFileText}>
+        <FeePageHeading title="Fee Reports & Analytics" description="Review collections, outstanding dues and confirmed payment activity." icon={external3.FiFileText}>
           <ExportMenu rows={filteredRows} columns={columns} filename={"fee-report-" + type} title={title} loading={loading} unavailable={rangeError} />
         </FeePageHeading>
 
         <div className="fm-workspace fm-reports-workspace">
           {/* 2. Standard report filter toolbar */}
           <FilterPanel
-            active={Boolean(academicYearId || fromDate || toDate || studentId || reportSearch)}
+            active={Boolean(academicYearId || courseId || branchId || fromDate || toDate || studentId || reportSearch)}
             onClear={() => {
-              setAcademicYearId("");
+              setAcademicYearId(academic.selectedAcademicYearId || "");
+              setCourseId("");
+              setBranchId("");
               setFromDate("");
               setToDate("");
               setStudentId("");
@@ -4477,7 +4514,10 @@ export const ServerFeeCollectionModule = (() => {
                   onChange={(e) => setStudentId(e.target.value)}
                   aria-label="Student ID"
                 />
+              ) : transactions ? (
+                <span className="fm-filter-scope-note">Transactions are limited to this college and date range.</span>
               ) : (
+                <>
                 <select
                   aria-label="Academic Year"
                   value={academicYearId}
@@ -4490,6 +4530,15 @@ export const ServerFeeCollectionModule = (() => {
                     </option>
                   ))}
                 </select>
+                <select aria-label="Filter by Course" value={courseId} onChange={event => { setCourseId(event.target.value); setBranchId(""); }}>
+                  <option value="">All courses</option>
+                  {(academic.courses || []).map(course => <option key={String(course.courseId || course.id)} value={String(course.courseId || course.id)}>{course.courseName || course.name}</option>)}
+                </select>
+                <select aria-label="Filter by Branch" value={branchId} onChange={event => setBranchId(event.target.value)}>
+                  <option value="">All branches</option>
+                  {(academic.getBranchesForCourse ? academic.getBranchesForCourse(courseId) : academic.branches || []).map(branch => <option key={String(branch.branchId || branch.id)} value={String(branch.branchId || branch.id)}>{branch.branchName || branch.name}</option>)}
+                </select>
+                </>
               )}
 
               <input
@@ -4510,8 +4559,21 @@ export const ServerFeeCollectionModule = (() => {
             </div>
           </FilterPanel>
 
+          {(type === "summary" || type === "daily" || type === "category" || type === "mode") && (
+            <div className="fm-report-data-note" role="status">
+              <FiAlertCircle /> Course and branch selections scope supported reports. The current dashboard API does not provide course-wise or branch-wise aggregate series, so those comparison charts are unavailable.
+            </div>
+          )}
+          {(academic.academicYears || []).length === 0 && !transactions && (
+            <div className="fm-context-notice" role="status">
+              <FiAlertCircle />
+              <span>No academic years are configured. “All academic years” includes the college-wide data returned by the API.</span>
+              <Link to="/academic-year-management">Configure academic years</Link>
+            </div>
+          )}
+
           {/* 3. Relevant report summary strip */}
-          {summaryMetrics && !loading && !rangeError && rows.length > 0 && (
+          {summaryMetrics && !loading && !rangeError && result !== null && (
             <div className="fm-report-summary-strip" role="region" aria-label="Report summary">
               {summaryMetrics.map((item, idx) => (
                 <FeeMetric key={item.label} label={item.label} value={item.value} tone={["blue", "green", "amber", "teal"][idx % 4]} />
@@ -4526,7 +4588,7 @@ export const ServerFeeCollectionModule = (() => {
               {filteredRows.length} {filteredRows.length === 1 ? "record" : "records"} |{" "}
               {outstanding
                 ? "Dates filter installment due dates"
-                : "Dates filter payment dates"}
+                : "Dates filter payment dates"} | KPI totals follow the API scope; search narrows the table and export.
             </span>
           </div>
 
@@ -5538,12 +5600,10 @@ export const FeeManagementModule = (() => {
           academicYearId,
           courseId,
           branchId,
+          semesterId,
           search: query,
         }),
         feeCollectionApi.allHistory({
-          academicYearId,
-          courseId,
-          branchId,
           search: query,
         }),
       ])
@@ -5571,7 +5631,7 @@ export const FeeManagementModule = (() => {
 
     useEffect(() => {
       return fetchRecords();
-    }, [academicYearId, courseId, branchId, query, academic.selectedCollegeId]);
+    }, [academicYearId, courseId, branchId, semesterId, query, academic.selectedCollegeId]);
 
     // Unified student rows merging live server fee records, payment history, student profiles, and fee plans
     const studentRows = useMemo(() => {
@@ -5594,7 +5654,8 @@ export const FeeManagementModule = (() => {
       // 2. Group confirmed server payments by studentId and studentCode
       const historyMap = new Map();
       const historyCodeMap = new Map();
-      serverHistory.forEach((h) => {
+      const scopedHistory = academicYearId || courseId || branchId || semesterId ? [] : serverHistory;
+      scopedHistory.forEach((h) => {
         const sid = String(h.studentId || "");
         if (sid) {
           if (!historyMap.has(sid)) historyMap.set(sid, []);
@@ -5918,7 +5979,7 @@ export const FeeManagementModule = (() => {
       }
 
       return rows;
-    }, [serverRows, serverHistory, students, ledgers]);
+    }, [serverRows, serverHistory, students, ledgers, academicYearId, courseId, branchId, semesterId]);
 
     const filteredStudents = useMemo(() => {
       return studentRows.filter((st) => {
@@ -7151,10 +7212,23 @@ export const FeeManagementModule = (() => {
       ledger: feeLedger(state, a),
     }));
 
+    const feeManagementTabs = [
+      { label: 'Overview', to: '/fees/overview', active: pathname === '/fees' || pathname === '/fees/overview' },
+      { label: 'Student Fees', to: '/fees/students', active: /\/fees\/(students|accounts|ledger|assignments|concessions|dues|refunds)(\/|$)/.test(pathname) },
+      { label: 'Collect Payment', to: '/fees/collection', active: pathname.startsWith('/fees/collection') },
+      { label: 'Receipts & History', to: '/fees/receipts', active: pathname.startsWith('/fees/receipts') },
+      { label: 'Reports', to: '/fees/reports', active: pathname.startsWith('/fees/reports') },
+    ];
+
     return (
       <DashboardLayout>
         <main className="fs-page fm-page">
           <FeeRequestState loading={!workspaceReady} error={storageError}>
+          {!pathname.startsWith('/fees/structures') && pathname !== '/fees/components' && (
+            <nav className="fm-workspace-tabs fm-fee-workspace-nav" role="tablist" aria-label="Fee management sections">
+              {feeManagementTabs.map(tab => <Link key={tab.to} to={tab.to} role="tab" aria-selected={tab.active} className={`fm-workspace-tab ${tab.active ? 'is-active' : ''}`}>{tab.label}</Link>)}
+            </nav>
+          )}
           <Routes>
             <Route index element={<Navigate to="/fees/overview" replace />} />
 
@@ -7299,18 +7373,18 @@ export const FeeManagementModule = (() => {
             {/* 4. PAYMENTS */}
             <Route
               path="receipts"
-              element={<Navigate to="/fees/students" replace state={{ tab: "transactions" }} />}
+              element={<ServerFeeCollection page="receipts" academic={academic} />}
             />
             <Route
               path="collection"
-              element={<Navigate to="/fees/students" replace />}
+              element={<ServerFeeCollection page="collection" academic={academic} configuration={state} />}
             />
             <Route path="refunds" element={<Navigate to="/fees/students" replace />} />
 
             {/* 5. REPORTS */}
             <Route
               path="reports"
-              element={<Navigate to="/fees/overview" replace />}
+              element={<ServerFeeCollection page="reports" academic={academic} />}
             />
 
             <Route path="*" element={<Navigate to="/fees/overview" replace />} />

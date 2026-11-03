@@ -22,7 +22,7 @@ function normalizeStoredRole(role) {
   const normalizedRole = String(rawRole || '').trim().toLowerCase().replace(/[\s-]+/g, '_')
 
   if (['admin', 'college_admin', 'collegeadmin', 'super_admin', 'superadmin'].includes(normalizedRole)) return 'admin'
-  if (['staff', 'non_teaching', 'non_teaching_staff', 'nonteaching', 'nonteaching_staff', 'nonteachingstaff'].includes(normalizedRole)) return 'staff'
+  if (['staff', 'non_teaching', 'non_teaching_staff', 'nonteaching', 'nonteaching_staff', 'nonteachingstaff', 'principal', 'hod', 'accountant', 'librarian'].includes(normalizedRole)) return 'staff'
   return normalizedRole
 }
 
@@ -104,12 +104,14 @@ export function signIn(role, accessToken, refreshToken, rememberMe = false, user
   storage.setItem('btech-user-name', String(user.name || '').trim())
   storage.setItem('btech-user-id', String(user.id || '').trim())
   storage.setItem('btech-user-college-id', String(user.collegeId ?? user.college?.collegeId ?? user.college?.id ?? '').trim())
+  storage.setItem('btech-must-change-password', String(Boolean(user.mustChangePassword)))
+  storage.setItem('btech-profile-completed', String(user.profileCompleted !== false))
 }
 
 export function signOut() {
   const localStore = safeStorage('localStorage')
   const sessionStore = safeStorage('sessionStorage')
-  ;['pirnav_academic_context', 'pirnav-selected-college-id', 'selected_college_id', 'pirnav-selected-academic-year-id', 'btech-user-college-id', 'cms-portal-preview'].forEach(key => {
+  ;['pirnav_academic_context', 'pirnav-selected-college-id', 'selected_college_id', 'pirnav-selected-academic-year-id', 'btech-user-college-id', 'btech-must-change-password', 'btech-profile-completed', 'cms-portal-preview'].forEach(key => {
     localStore?.removeItem(key)
     sessionStore?.removeItem(key)
   })

@@ -8,7 +8,7 @@ import { lookupIndianPincode as apiEndpointsImports_lookupIndianPincode, profile
 import { getDepartments as collegeApiImports_getDepartments } from '../../auth/collegeApi'
 import { getUserRole as authImports_getUserRole } from '../../auth/auth'
 import { ROLES as rolesImports_ROLES } from '../../auth/roles'
-import { Navigate as react_router_domImports_Navigate } from 'react-router-dom'
+import { Navigate as react_router_domImports_Navigate, useSearchParams as react_router_domImports_useSearchParams, useNavigate as react_router_domImports_useNavigate } from 'react-router-dom'
 import './MyProfile.css'
 
 // MyProfile screen and private helpers.
@@ -48,9 +48,6 @@ const formatDateOnly = (value) => {
   return Number.isNaN(date.getTime()) ? display(value).split('T')[0] : new Intl.DateTimeFormat('en-IN', { day: '2-digit', month: 'short', year: 'numeric', timeZone: 'Asia/Kolkata' }).format(date)
 }
 const initials = (name) => String(name || '').split(/\s+/).filter(Boolean).slice(0, 2).map((part) => part[0]).join('').toUpperCase() || 'U'
-const localProfileKey = profile => `btech-profile-extra-${profile?.identifier || profile?.id || 'current'}`
-const readLocalProfile = profile => { try { return { ...profile, ...(JSON.parse(localStorage.getItem(localProfileKey(profile))) || {}) } } catch { return profile } }
-const saveLocalProfile = (profile, form) => { const extra={ dateOfBirth:form.dateOfBirth, gender:form.gender, department:form.department, departmentId:form.departmentId, designation:form.designation, houseNumber:form.houseNumber, address:form.address, permanentHouseNumber:form.permanentHouseNumber, permanentAddress:form.permanentAddress, pincode:form.pincode, city:form.city, district:form.district, state:form.state, permanentPincode:form.permanentPincode, permanentCity:form.permanentCity, permanentDistrict:form.permanentDistrict, permanentState:form.permanentState, bio:form.bio }; localStorage.setItem(localProfileKey(profile),JSON.stringify(extra)); return {...profile,...extra} }
 const validate = (form) => {
   const errors = {}
   const name = form.fullName.trim()
@@ -72,6 +69,9 @@ function Detail({ label, value, wide = false }) { const email = label === 'Email
 function AddressCard({ title, houseNumber, address, city, district, state, pincode }) { return <article className="profile-address-card"><header><FiMapPin/><h3>{title}</h3></header><dl className="profile-address-primary"><div><dt>House No</dt><dd>{display(houseNumber)}</dd></div><div><dt>Address</dt><dd>{display(address)}</dd></div></dl><dl><div><dt>City / Block</dt><dd>{display(city)}</dd></div><div><dt>District</dt><dd>{display(district)}</dd></div><div><dt>State</dt><dd>{display(state)}</dd></div><div><dt>PIN Code</dt><dd>{display(pincode)}</dd></div></dl></article> }
 
 function MyProfile() {
+  const [queryParams] = useSearchParams()
+  const navigate = useNavigate()
+  const forceProfileSetup = queryParams.get('setup') === '1' || queryParams.get('profileSetup') === '1'
   const isStudent = getUserRole() === ROLES.STUDENT
   const [profile, setProfile] = useState(null)
   const [departments, setDepartments] = useState([])
@@ -81,40 +81,44 @@ function MyProfile() {
   const [editForm, setEditForm] = useState(emptyForm)
   const [errors, setErrors] = useState(emptyErrors)
   const [saving, setSaving] = useState(false)
+  const [photoUploading, setPhotoUploading] = useState(false)
   const [pincodeStatus, setPincodeStatus] = useState({ current: '', permanent: '' })
   const closeButtonRef = useRef(null)
 
   const loadProfile = async () => {
     setLoading(true); setFeedback(null)
-    try { setProfile(readLocalProfile(await profileApi.getProfile())) }
+    try { setProfile(await profileApi.getProfile()) }
     catch (error) { setProfile(null); setFeedback({ type: 'error', message: error.message || 'Unable to load profile information.' }) }
     finally { setLoading(false) }
   }
   useEffect(() => { loadProfile() }, [])
   useEffect(() => {
     let active = true
+    const collegeId = profile?.collegeId || localStorage.getItem('btech-user-college-id') || sessionStorage.getItem('btech-user-college-id')
     getDepartments()
       .then((response) => {
         const rows = response?.data?.data ?? response?.data ?? response
-        if (active) setDepartments(Array.isArray(rows) ? rows.filter((item) => String(item.status ?? 'Active').toLowerCase() !== 'inactive') : [])
+        if (active) setDepartments(Array.isArray(rows) ? rows.filter((item) => String(item.status ?? 'Active').toLowerCase() !== 'inactive' && (!collegeId || String(item.collegeId ?? item.college_id) === String(collegeId))) : [])
       })
       .catch(() => { if (active) setDepartments([]) })
     return () => { active = false }
-  }, [])
+  }, [profile?.collegeId])
   useEffect(() => {
     if (feedback?.type !== 'success') return undefined
     const timer = setTimeout(() => setFeedback(null), 2000)
     return () => clearTimeout(timer)
   }, [feedback, setFeedback])
 
-  const openEdit = () => { const matchingDepartment = departments.find((item) => String(item.departmentId ?? item.id) === String(profile.departmentId) || String(item.departmentName ?? item.name ?? '').trim().toLowerCase() === String(profile.department || '').trim().toLowerCase()); setEditForm({ fullName: profile.fullName || '', email: profile.email || '', mobile: profile.mobile || '', dateOfBirth: profile.dateOfBirth ? String(profile.dateOfBirth).slice(0, 10) : '', gender: profile.gender || '', department: matchingDepartment?.departmentName ?? matchingDepartment?.name ?? profile.department ?? '', departmentId: matchingDepartment?.departmentId ?? matchingDepartment?.id ?? profile.departmentId ?? '', designation: profile.designation || '', houseNumber: profile.houseNumber || '', address: profile.address || '', permanentHouseNumber: profile.permanentHouseNumber || '', permanentAddress: profile.permanentAddress || '', sameAsCurrentAddress: false, pincode: profile.pincode || profile.postalCode || '', city: profile.city || '', district: profile.district || '', state: profile.state || '', permanentPincode: profile.permanentPincode || '', permanentCity: profile.permanentCity || '', permanentDistrict: profile.permanentDistrict || '', permanentState: profile.permanentState || '', bio: profile.bio || '' }); setErrors({}); setPincodeStatus({ current: '', permanent: '' }); setFeedback(null); setEditOpen(true) }
+  const openEdit = () => { setEditForm({ fullName: profile.fullName || '', email: profile.email || '', mobile: profile.mobile || '', dateOfBirth: profile.dateOfBirth ? String(profile.dateOfBirth).slice(0, 10) : '', gender: profile.gender || '', houseNumber: profile.houseNumber || '', address: profile.address || '', permanentHouseNumber: profile.permanentHouseNumber || '', permanentAddress: profile.permanentAddress || '', sameAsCurrentAddress: false, pincode: profile.pincode || profile.postalCode || '', city: profile.city || '', district: profile.district || '', state: profile.state || '', permanentPincode: profile.permanentPincode || '', permanentCity: profile.permanentCity || '', permanentDistrict: profile.permanentDistrict || '', permanentState: profile.permanentState || '', bio: profile.bio || '' }); setErrors({}); setPincodeStatus({ current: '', permanent: '' }); setFeedback(null); setEditOpen(true) }
+  useEffect(() => { if (forceProfileSetup && profile && profile.profileCompleted === false && !editOpen) openEdit() }, [forceProfileSetup, profile, editOpen])
   const closeEdit = () => { if (!saving) { setEditOpen(false); setErrors({}); setPincodeStatus({ current: '', permanent: '' }); setEditForm(emptyForm) } }
+  const uploadProfilePhoto = async event => { const file = event.target.files?.[0]; if (!file) return; setPhotoUploading(true); setFeedback(null); try { const profileImagePath = await profileApi.uploadPhoto(file); setProfile(current => ({ ...current, profileImagePath })); setFeedback({ type: 'success', message: 'Profile photo updated.' }) } catch (error) { setFeedback({ type: 'error', message: error.message || 'Profile photo could not be uploaded.' }) } finally { setPhotoUploading(false); event.target.value = '' } }
   useEffect(() => {
     if (!editOpen) return undefined
     closeButtonRef.current?.focus()
     const onKeyDown = (event) => { if (event.key === 'Escape') closeEdit() }
     document.body.style.overflow = 'hidden'
-    document.querySelectorAll('.profile-edit-dialog input[name="fullName"], .profile-edit-dialog input[name="designation"]').forEach((input) => { input.readOnly = true; input.setAttribute('aria-readonly', 'true') })
+    document.querySelectorAll('.profile-edit-dialog input[name="fullName"]').forEach((input) => { input.readOnly = false; input.removeAttribute('aria-readonly') })
     window.addEventListener('keydown', onKeyDown)
     return () => { document.body.style.overflow = ''; window.removeEventListener('keydown', onKeyDown) }
   }, [editOpen, saving])
@@ -122,26 +126,21 @@ function MyProfile() {
   const save = async (event) => {
     event.preventDefault(); const nextErrors = validate(editForm); setErrors(nextErrors); if (saving) return; if (Object.keys(nextErrors).length) { showWarning('Correct the highlighted profile fields.'); return }
     setSaving(true); setFeedback(null)
-    const departmentMatch = departments.find((item) => String(item.departmentName ?? item.name ?? '').trim().toLowerCase() === editForm.department.trim().toLowerCase() || String(item.departmentCode ?? item.code ?? '').trim().toLowerCase() === editForm.department.trim().toLowerCase())
-    const payload = { ...editForm, departmentId: editForm.departmentId || departmentMatch?.departmentId || departmentMatch?.id || null }
+    const payload = { ...editForm }
     try {
-      let updated = null
-      try {
-        updated = await profileApi.updateProfile(payload)
-      } catch (apiErr) {
-        console.warn('Backend profile update notice:', apiErr.message)
-      }
-      const merged = saveLocalProfile({ ...profile, ...(updated || {}), ...payload }, payload)
-      setProfile(merged)
+      await profileApi.updateProfile(payload)
+      const updatedProfile = await profileApi.getProfile()
+      setProfile(updatedProfile)
       setEditOpen(false)
+      if (forceProfileSetup && updatedProfile.profileCompleted) {
+        localStorage.setItem('btech-profile-completed', 'true')
+        sessionStorage.setItem('btech-profile-completed', 'true')
+        navigate('/dashboard', { replace: true })
+      }
       setFeedback({ type: 'success', message: 'Profile updated successfully.' })
       window.setTimeout(() => setFeedback(null), 2000)
     } catch (error) {
-      const merged = saveLocalProfile(profile, payload)
-      setProfile(merged)
-      setEditOpen(false)
-      setFeedback({ type: 'success', message: 'Profile updated successfully.' })
-      window.setTimeout(() => setFeedback(null), 2000)
+      setFeedback({ type: 'error', message: error.message || 'Profile changes could not be saved.' })
     } finally { setSaving(false) }
   }
 
@@ -150,8 +149,9 @@ function MyProfile() {
 
   return <DashboardLayout><main className="profile-page" data-export-record>
     <header className="profile-heading"><div><p className="profile-eyebrow">{isStudent ? 'Student dashboard' : 'Account'}</p><h1>My Profile</h1><p>{isStudent ? 'View your personal details and current academic information.' : 'Review your saved identity and account information.'}</p></div><button type="button" className="profile-button" onClick={openEdit}><FiEdit2 className="module-action-icon module-action-icon--edit" /> Edit Profile</button></header>
+    {forceProfileSetup && <div className="profile-feedback" role="status">Complete your profile setup to continue. Your college, department, role, and permissions remain managed by your administrator.</div>}
     {feedback && <div className={`profile-feedback ${feedback.type}`} role={feedback.type === 'error' ? 'alert' : 'status'}>{feedback.message}</div>}
-    <section className="profile-overview"><div className="profile-identity"><div className="profile-avatar" aria-hidden="true">{initials(profile.fullName)}</div><div><h2 className="profile-name">{display(profile.fullName)}</h2><p className="profile-email">{display(profile.email)}</p><span className="profile-role"><FiShield /> {isStudent ? 'Student' : display(profile.role)}</span></div></div><dl className="profile-facts"><div><dt>{isStudent ? 'Admission Number' : 'Employee ID'}</dt><dd>{display(isStudent ? profile.admissionNumber || profile.identifier : profile.identifier)}</dd></div><div><dt>{isStudent ? 'Course / Branch' : 'Last Login'}</dt><dd>{display(isStudent ? [profile.course, profile.branch].filter(Boolean).join(' - ') : formatLastLogin(profile.lastLoginAt))}</dd></div><div><dt>Account Status</dt><dd className="profile-status"><i /> {display(profile.status)}</dd></div></dl></section>
+    <section className="profile-overview"><div className="profile-identity"><div className="profile-avatar" aria-hidden="true">{profile.profileImagePath ? <img src={profile.profileImagePath} alt="" /> : initials(profile.fullName)}</div><div><h2 className="profile-name">{display(profile.fullName)}</h2><p className="profile-email">{display(profile.email)}</p><span className="profile-role"><FiShield /> {isStudent ? 'Student' : display(profile.role)}</span></div></div><dl className="profile-facts"><div><dt>{isStudent ? 'Admission Number' : 'Employee ID'}</dt><dd>{display(isStudent ? profile.admissionNumber || profile.identifier : profile.identifier)}</dd></div><div><dt>{isStudent ? 'Course / Branch' : 'Last Login'}</dt><dd>{display(isStudent ? [profile.course, profile.branch].filter(Boolean).join(' - ') : formatLastLogin(profile.lastLoginAt))}</dd></div><div><dt>Account Status</dt><dd className="profile-status"><i /> {display(profile.status)}</dd></div></dl></section>
     <section className="profile-preview-section profile-details-card">
       <DetailSection icon={FiUser} title="Personal Information">
         <Detail label="Full Name" value={profile.fullName} />
@@ -169,7 +169,7 @@ function MyProfile() {
         <Detail label="About Me" value={profile.bio} wide />
       </DetailSection>
     </section>
-    {editOpen && <div className="profile-modal" onMouseDown={(event) => event.target === event.currentTarget && closeEdit()}><section data-no-export className="profile-edit-dialog" role="dialog" aria-modal="true" aria-labelledby="profile-edit-title"><header><div><p className="profile-eyebrow">Account</p><h2 id="profile-edit-title">Edit Profile</h2><span>Update your personal, institutional, contact, and address information.</span></div><button ref={closeButtonRef} type="button" className="profile-modal-close" onClick={closeEdit} aria-label="Close edit profile dialog"><FiX /></button></header><form onSubmit={save} noValidate><fieldset><legend>Personal Information</legend><div className="profile-edit-grid"><label><span>Full Name <b className="profile-required">*</b></span><input name="fullName" value={editForm.fullName} onChange={update} aria-invalid={Boolean(errors.fullName)} />{errors.fullName && <small role="alert">{errors.fullName}</small>}</label><label><span>Email Address <b className="profile-required">*</b></span><input name="email" type="email" value={editForm.email} onChange={update} aria-invalid={Boolean(errors.email)} />{errors.email && <small role="alert">{errors.email}</small>}</label><label><span>Mobile Number <b className="profile-required">*</b></span><input name="mobile" inputMode="numeric" value={editForm.mobile} onChange={update} aria-invalid={Boolean(errors.mobile)} />{errors.mobile && <small role="alert">{errors.mobile}</small>}</label><label>Gender<ProjectSelect name="gender" value={editForm.gender} onChange={update}><option value="">Select gender</option><option>Female</option><option>Male</option><option>Non-binary</option><option>Prefer not to say</option></ProjectSelect></label><label>Date of Birth<input name="dateOfBirth" type="date" value={editForm.dateOfBirth} onChange={update} aria-invalid={Boolean(errors.dateOfBirth)} />{errors.dateOfBirth && <small role="alert">{errors.dateOfBirth}</small>}</label></div></fieldset><fieldset><legend>Institutional Details</legend><div className="profile-edit-grid"><label>Department<ProjectSelect name="departmentId" value={editForm.departmentId} onChange={(event) => { const selected = departments.find((item) => String(item.departmentId ?? item.id) === event.target.value); const next = { ...editForm, departmentId: event.target.value, department: selected?.departmentName ?? selected?.name ?? '' }; setEditForm(next); setFeedback(null) }} disabled={!departments.length}><option value="">{departments.length ? 'Select department' : 'No departments available'}</option>{departments.map((item) => <option key={item.departmentId ?? item.id} value={item.departmentId ?? item.id}>{item.departmentName ?? item.name}{item.departmentCode ?? item.code ? ` (${item.departmentCode ?? item.code})` : ''}</option>)}</ProjectSelect></label><label>Designation<input name="designation" value={editForm.designation} onChange={update} placeholder="Enter designation" /></label></div></fieldset><fieldset><legend>Address &amp; Bio</legend><div className="profile-edit-grid"><div className="profile-address-heading profile-edit-wide">Current Address</div><label><span>House No <b className="profile-required">*</b></span><input name="houseNumber" value={editForm.houseNumber} onChange={update} aria-invalid={Boolean(errors.houseNumber)} placeholder="Enter house number" />{errors.houseNumber && <small role="alert">{errors.houseNumber}</small>}</label><label className="profile-edit-wide"><span>Address <b className="profile-required" aria-hidden="true">*</b></span><textarea name="address" value={editForm.address} onChange={update} placeholder="Enter street, locality and landmark" /></label><label><span>PIN Code <b className="profile-required" aria-hidden="true">*</b></span><input name="pincode" inputMode="numeric" value={editForm.pincode} onChange={update} aria-invalid={Boolean(errors.pincode)} placeholder="Enter 6-digit PIN code" />{errors.pincode && <small role="alert">{errors.pincode}</small>}{pincodeStatus.current && <small className="profile-pin-status">{pincodeStatus.current}</small>}</label><label><span>City / Block <b className="profile-required" aria-hidden="true">*</b></span><input name="city" value={editForm.city} onChange={update} placeholder="Enter city or block" /></label><label><span>District <b className="profile-required" aria-hidden="true">*</b></span><input name="district" value={editForm.district} onChange={update} placeholder="Enter district" /></label><label><span>State <b className="profile-required" aria-hidden="true">*</b></span><input name="state" value={editForm.state} onChange={update} placeholder="Enter state" /></label><div className="profile-address-heading profile-edit-wide">Permanent Address</div><label className="profile-same-address profile-edit-wide"><input type="checkbox" name="sameAsCurrentAddress" checked={editForm.sameAsCurrentAddress} onChange={update} /><span>Same as Current Address</span></label><label><span>House No <b className="profile-required" aria-hidden="true">*</b></span><input name="permanentHouseNumber" value={editForm.permanentHouseNumber} onChange={update} placeholder="Enter permanent house number" /></label><label className="profile-edit-wide"><span>Address <b className="profile-required" aria-hidden="true">*</b></span><textarea name="permanentAddress" value={editForm.permanentAddress} onChange={update} placeholder="Enter permanent address" /></label><label><span>PIN Code <b className="profile-required" aria-hidden="true">*</b></span><input name="permanentPincode" inputMode="numeric" value={editForm.permanentPincode} onChange={update} aria-invalid={Boolean(errors.permanentPincode)} placeholder="Enter 6-digit PIN code" />{errors.permanentPincode && <small role="alert">{errors.permanentPincode}</small>}{pincodeStatus.permanent && <small className="profile-pin-status">{pincodeStatus.permanent}</small>}</label><label><span>City / Block <b className="profile-required" aria-hidden="true">*</b></span><input name="permanentCity" value={editForm.permanentCity} onChange={update} placeholder="Enter city or block" /></label><label><span>District <b className="profile-required" aria-hidden="true">*</b></span><input name="permanentDistrict" value={editForm.permanentDistrict} onChange={update} placeholder="Enter district" /></label><label><span>State <b className="profile-required" aria-hidden="true">*</b></span><input name="permanentState" value={editForm.permanentState} onChange={update} placeholder="Enter state" /></label><label className="profile-edit-wide">About Me<textarea name="bio" value={editForm.bio} onChange={update} placeholder="Tell us about yourself" /></label></div></fieldset><div className="profile-readonly-note"><FiShield /> Employee ID, role, status, last login, and other system-managed details cannot be edited.</div>{feedback?.type === 'error' && <p className="profile-form-error" role="alert">{feedback.message}</p>}<footer><button type="button" className="profile-button secondary" onClick={closeEdit} disabled={saving}>Cancel</button><button type="submit" className="profile-button" disabled={saving}>{saving ? 'Saving...' : 'Save Changes'}</button></footer></form></section></div>}
+    {editOpen && <div className="profile-modal" onMouseDown={(event) => event.target === event.currentTarget && closeEdit()}><section data-no-export className="profile-edit-dialog" role="dialog" aria-modal="true" aria-labelledby="profile-edit-title"><header><div><p className="profile-eyebrow">Account</p><h2 id="profile-edit-title">Edit Profile</h2><span>Update your personal, institutional, contact, and address information.</span></div><button ref={closeButtonRef} type="button" className="profile-modal-close" onClick={closeEdit} aria-label="Close edit profile dialog"><FiX /></button></header><form onSubmit={save} noValidate><fieldset><legend>Personal Information</legend><div className="profile-edit-grid"><label className="profile-edit-wide"><span>Profile Photo</span><input type="file" accept="image/jpeg,image/png,image/webp" onChange={uploadProfilePhoto} disabled={photoUploading} />{photoUploading && <small>Uploading photo…</small>}</label><label><span>Full Name <b className="profile-required">*</b></span><input name="fullName" value={editForm.fullName} onChange={update} aria-invalid={Boolean(errors.fullName)} />{errors.fullName && <small role="alert">{errors.fullName}</small>}</label><label><span>Email Address <b className="profile-required">*</b></span><input name="email" type="email" value={editForm.email} onChange={update} aria-invalid={Boolean(errors.email)} />{errors.email && <small role="alert">{errors.email}</small>}</label><label><span>Mobile Number <b className="profile-required">*</b></span><input name="mobile" inputMode="numeric" value={editForm.mobile} onChange={update} aria-invalid={Boolean(errors.mobile)} />{errors.mobile && <small role="alert">{errors.mobile}</small>}</label><label>Gender<ProjectSelect name="gender" value={editForm.gender} onChange={update}><option value="">Select gender</option><option>Female</option><option>Male</option><option>Non-binary</option><option>Prefer not to say</option></ProjectSelect></label><label>Date of Birth<input name="dateOfBirth" type="date" value={editForm.dateOfBirth} onChange={update} aria-invalid={Boolean(errors.dateOfBirth)} />{errors.dateOfBirth && <small role="alert">{errors.dateOfBirth}</small>}</label></div></fieldset><fieldset><legend>Assigned Organization</legend><div className="profile-edit-grid"><p className="profile-readonly-note">College: {display(profile.collegeName)} · Department: {display(profile.department)} · Designation: {display(profile.designation)} · Role: {display(profile.role)}. Contact your administrator to change these assignments.</p></div></fieldset><fieldset><legend>Address &amp; Bio</legend><div className="profile-edit-grid"><div className="profile-address-heading profile-edit-wide">Current Address</div><label><span>House No <b className="profile-required">*</b></span><input name="houseNumber" value={editForm.houseNumber} onChange={update} aria-invalid={Boolean(errors.houseNumber)} placeholder="Enter house number" />{errors.houseNumber && <small role="alert">{errors.houseNumber}</small>}</label><label className="profile-edit-wide"><span>Address <b className="profile-required" aria-hidden="true">*</b></span><textarea name="address" value={editForm.address} onChange={update} placeholder="Enter street, locality and landmark" /></label><label><span>PIN Code <b className="profile-required" aria-hidden="true">*</b></span><input name="pincode" inputMode="numeric" value={editForm.pincode} onChange={update} aria-invalid={Boolean(errors.pincode)} placeholder="Enter 6-digit PIN code" />{errors.pincode && <small role="alert">{errors.pincode}</small>}{pincodeStatus.current && <small className="profile-pin-status">{pincodeStatus.current}</small>}</label><label><span>City / Block <b className="profile-required" aria-hidden="true">*</b></span><input name="city" value={editForm.city} onChange={update} placeholder="Enter city or block" /></label><label><span>District <b className="profile-required" aria-hidden="true">*</b></span><input name="district" value={editForm.district} onChange={update} placeholder="Enter district" /></label><label><span>State <b className="profile-required" aria-hidden="true">*</b></span><input name="state" value={editForm.state} onChange={update} placeholder="Enter state" /></label><div className="profile-address-heading profile-edit-wide">Permanent Address</div><label className="profile-same-address profile-edit-wide"><input type="checkbox" name="sameAsCurrentAddress" checked={editForm.sameAsCurrentAddress} onChange={update} /><span>Same as Current Address</span></label><label><span>House No <b className="profile-required" aria-hidden="true">*</b></span><input name="permanentHouseNumber" value={editForm.permanentHouseNumber} onChange={update} placeholder="Enter permanent house number" /></label><label className="profile-edit-wide"><span>Address <b className="profile-required" aria-hidden="true">*</b></span><textarea name="permanentAddress" value={editForm.permanentAddress} onChange={update} placeholder="Enter permanent address" /></label><label><span>PIN Code <b className="profile-required" aria-hidden="true">*</b></span><input name="permanentPincode" inputMode="numeric" value={editForm.permanentPincode} onChange={update} aria-invalid={Boolean(errors.permanentPincode)} placeholder="Enter 6-digit PIN code" />{errors.permanentPincode && <small role="alert">{errors.permanentPincode}</small>}{pincodeStatus.permanent && <small className="profile-pin-status">{pincodeStatus.permanent}</small>}</label><label><span>City / Block <b className="profile-required" aria-hidden="true">*</b></span><input name="permanentCity" value={editForm.permanentCity} onChange={update} placeholder="Enter city or block" /></label><label><span>District <b className="profile-required" aria-hidden="true">*</b></span><input name="permanentDistrict" value={editForm.permanentDistrict} onChange={update} placeholder="Enter district" /></label><label><span>State <b className="profile-required" aria-hidden="true">*</b></span><input name="permanentState" value={editForm.permanentState} onChange={update} placeholder="Enter state" /></label><label className="profile-edit-wide">About Me<textarea name="bio" value={editForm.bio} onChange={update} placeholder="Tell us about yourself" /></label></div></fieldset><div className="profile-readonly-note"><FiShield /> Employee ID, role, status, last login, and other system-managed details cannot be edited.</div>{feedback?.type === 'error' && <p className="profile-form-error" role="alert">{feedback.message}</p>}<footer><button type="button" className="profile-button secondary" onClick={closeEdit} disabled={saving}>Cancel</button><button type="submit" className="profile-button" disabled={saving}>{saving ? 'Saving...' : 'Save Changes'}</button></footer></form></section></div>}
   </main></DashboardLayout>
 }
 
@@ -179,6 +179,8 @@ return { default: MyProfile }
 // Settings screen and private helpers.
 const SettingsScreen = (() => {
 const Navigate = react_router_domImports_Navigate
+const useSearchParams = react_router_domImports_useSearchParams
+const useNavigate = react_router_domImports_useNavigate
 
 // Preserve existing bookmarks; workspace selection now lives in the shell.
 function Settings() {

@@ -5,6 +5,7 @@ using BTech.Models;
 using BTech.Services;
 using BTech.Services.Interfaces;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.Hosting;
 
 namespace BTech.Services.Implementations
 {
@@ -17,17 +18,20 @@ namespace BTech.Services.Implementations
         private readonly IEmailService _emailService;
         private readonly IConfiguration _configuration;
         private readonly ILogger<AccountSetupService> _logger;
+        private readonly IWebHostEnvironment _environment;
 
         public AccountSetupService(
             ApplicationDbContext context,
             IEmailService emailService,
             IConfiguration configuration,
-            ILogger<AccountSetupService> logger)
+            ILogger<AccountSetupService> logger,
+            IWebHostEnvironment environment)
         {
             _context = context;
             _emailService = emailService;
             _configuration = configuration;
             _logger = logger;
+            _environment = environment;
         }
 
         public async Task SendSetupLinkAsync(long userId, string accountType)
@@ -43,6 +47,9 @@ namespace BTech.Services.Implementations
 
             if (string.IsNullOrWhiteSpace(user.Email))
                 throw new InvalidOperationException("The account has no email address. Add a verified email before sending setup instructions.");
+
+            var configuredBaseUrl = ResolveSetupBaseUrl();
+            var setupUrlBase = configuredBaseUrl.TrimEnd('/');
 
             var now = DateTime.UtcNow;
             var previous = await _context.OtpVerifications
@@ -76,22 +83,7 @@ namespace BTech.Services.Implementations
             _context.OtpVerifications.Add(tokenRecord);
             await _context.SaveChangesAsync();
 
-            var configuredBaseUrl =
-                _configuration["PasswordSetup:BaseUrl"] ??
-                _configuration["Frontend:BaseUrl"];
-
-            if (string.IsNullOrWhiteSpace(configuredBaseUrl))
-            {
-                configuredBaseUrl = _configuration
-                    .GetSection("Cors:AllowedOrigins")
-                    .Get<string[]>()?
-                    .FirstOrDefault(x => !string.IsNullOrWhiteSpace(x));
-            }
-
-            if (string.IsNullOrWhiteSpace(configuredBaseUrl))
-                configuredBaseUrl = "http://localhost:5173";
-
-            var setupUrl = configuredBaseUrl.TrimEnd('/') +
+            var setupUrl = setupUrlBase +
                 "/activate-account?loginId=" + Uri.EscapeDataString(user.EmployeeUserId) +
                 "&token=" + Uri.EscapeDataString(token);
 
@@ -120,11 +112,45 @@ namespace BTech.Services.Implementations
             }
             catch (Exception ex)
             {
+                tokenRecord.Status = 0;
+                await _context.SaveChangesAsync();
                 _logger.LogError(ex,
                     "Account setup email delivery failed. UserId={UserId}, AccountType={AccountType}",
                     user.user_id, accountType);
                 throw;
             }
+        }
+
+        private string ResolveSetupBaseUrl()
+        {
+            var configuredBaseUrl =
+                _configuration["PasswordSetup:BaseUrl"] ??
+                _configuration["Frontend:BaseUrl"];
+
+            if (string.IsNullOrWhiteSpace(configuredBaseUrl))
+            {
+                configuredBaseUrl = _configuration
+                    .GetSection("Cors:AllowedOrigins")
+                    .Get<string[]>()?
+                    .FirstOrDefault(x => !string.IsNullOrWhiteSpace(x));
+            }
+
+            if (string.IsNullOrWhiteSpace(configuredBaseUrl))
+                throw new InvalidOperationException("Configure PasswordSetup:BaseUrl with the frontend origin before sending account setup emails.");
+
+            if (!Uri.TryCreate(configuredBaseUrl.Trim(), UriKind.Absolute, out var uri) ||
+                (uri.Scheme != Uri.UriSchemeHttp && uri.Scheme != Uri.UriSchemeHttps))
+                throw new InvalidOperationException("PasswordSetup:BaseUrl must be a valid HTTP or HTTPS frontend origin.");
+
+            var isLocalHost = uri.IsLoopback ||
+                string.Equals(uri.Host, "localhost", StringComparison.OrdinalIgnoreCase);
+            if (!_environment.IsDevelopment() && uri.Scheme != Uri.UriSchemeHttps)
+                throw new InvalidOperationException("PasswordSetup:BaseUrl must use HTTPS outside development.");
+
+            if (!_environment.IsDevelopment() && isLocalHost)
+                throw new InvalidOperationException("PasswordSetup:BaseUrl cannot point to localhost outside development.");
+
+            return uri.GetLeftPart(UriPartial.Path).TrimEnd('/');
         }
 
         public async Task<(bool Success, string Message)> CompleteSetupAsync(

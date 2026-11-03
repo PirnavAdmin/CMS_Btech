@@ -1,4 +1,4 @@
-import { Link as react_router_domImports_Link, useNavigate as react_router_domImports_useNavigate } from 'react-router-dom'
+import { Link as react_router_domImports_Link, useNavigate as react_router_domImports_useNavigate, useSearchParams as react_router_domImports_useSearchParams } from 'react-router-dom'
 import { FiBookOpen as fiImports_FiBookOpen, FiLogIn as fiImports_FiLogIn, FiArrowLeft as fiImports_FiArrowLeft, FiActivity as fiImports_FiActivity, FiArrowRight as fiImports_FiArrowRight, FiAward as fiImports_FiAward, FiBarChart2 as fiImports_FiBarChart2, FiBriefcase as fiImports_FiBriefcase, FiCalendar as fiImports_FiCalendar, FiCheckCircle as fiImports_FiCheckCircle, FiChevronRight as fiImports_FiChevronRight, FiClock as fiImports_FiClock, FiExternalLink as fiImports_FiExternalLink, FiGrid as fiImports_FiGrid, FiLayers as fiImports_FiLayers, FiPieChart as fiImports_FiPieChart, FiPlus as fiImports_FiPlus, FiRefreshCw as fiImports_FiRefreshCw, FiSearch as fiImports_FiSearch, FiSliders as fiImports_FiSliders, FiStar as fiImports_FiStar, FiTrendingUp as fiImports_FiTrendingUp, FiUser as fiImports_FiUser, FiUserCheck as fiImports_FiUserCheck, FiUserPlus as fiImports_FiUserPlus, FiUsers as fiImports_FiUsers, FiZap as fiImports_FiZap, FiEye as fiImports_FiEye, FiEyeOff as fiImports_FiEyeOff, FiCheck as fiImports_FiCheck, FiHome as fiImports_FiHome, FiMenu as fiImports_FiMenu, FiTool as fiImports_FiTool, FiX as fiImports_FiX, FiBell as fiImports_FiBell, FiFileText as fiImports_FiFileText } from 'react-icons/fi'
 import college_campus_hero_pngImports_default from '../assets/college-campus-hero.png'
 import useCollegeStateImports_default from '../hooks/useCollegeState'
@@ -7,7 +7,7 @@ import { getUserRole as authImports_getUserRole, signIn as authImports_signIn } 
 import { ROLES as rolesImports_ROLES } from '../auth/roles'
 import DashboardLayoutImports_default from '../layouts/DashboardLayout'
 import { buildTrend as dashboardDataImports_buildTrend } from '../utils/dashboardData'
-import { studentAdmissionApi as apiEndpointsImports_studentAdmissionApi, studentProfilesApi as apiEndpointsImports_studentProfilesApi, profileApi as apiEndpointsImports_profileApi, AuthRequestError as apiEndpointsImports_AuthRequestError, login as apiEndpointsImports_login } from '../api/apiEndpoints'
+import { studentAdmissionApi as apiEndpointsImports_studentAdmissionApi, studentProfilesApi as apiEndpointsImports_studentProfilesApi, profileApi as apiEndpointsImports_profileApi, AuthRequestError as apiEndpointsImports_AuthRequestError, login as apiEndpointsImports_login, completeAccountSetup as apiEndpointsImports_completeAccountSetup } from '../api/apiEndpoints'
 import subjectServiceImports_default from '../services/subjectService'
 import facultyServiceImports_default from '../services/facultyService'
 import { useAcademic as AcademicContextImports_useAcademic } from '../context/AcademicContext'
@@ -25,14 +25,31 @@ import './Pages.css'
 // ActivateAccount screen and private helpers.
 const ActivateAccountScreen = (() => {
 const Link = react_router_domImports_Link
+const useNavigate = react_router_domImports_useNavigate
+const useSearchParams = react_router_domImports_useSearchParams
 const FiBookOpen = fiImports_FiBookOpen
 const FiLogIn = fiImports_FiLogIn
 const FiArrowLeft = fiImports_FiArrowLeft
 const campusHero = college_campus_hero_pngImports_default
 
-// Deliberately does not parse or persist an activation token: the current API
-// contract has no token-validation or first-time-password endpoint.
 function ActivateAccount() {
+  const [params] = useSearchParams()
+  const navigate = useNavigate()
+  const [loginId, setLoginId] = reactImports_useState(params.get('loginId') || '')
+  const [token, setToken] = reactImports_useState(params.get('token') || '')
+  const [password, setPassword] = reactImports_useState('')
+  const [confirmPassword, setConfirmPassword] = reactImports_useState('')
+  const [error, setError] = reactImports_useState('')
+  const [busy, setBusy] = reactImports_useState(false)
+  const [complete, setComplete] = reactImports_useState(false)
+  const submit = async event => {
+    event.preventDefault()
+    if (password !== confirmPassword) { setError('Passwords do not match.'); return }
+    setBusy(true); setError('')
+    try { await apiEndpointsImports_completeAccountSetup({ loginId: loginId.trim(), token: token.trim(), newPassword: password, confirmNewPassword: confirmPassword }); setComplete(true) }
+    catch (reason) { setError(reason?.message || 'The setup link could not be verified. Request a new invitation from your administrator.') }
+    finally { setBusy(false) }
+  }
   return <main className="admin-login pirnav-login">
     <section className="login-intro pirnav-login__campus" aria-label="Pirnav Engineering College digital campus">
       <img className="pirnav-login__campus-image" src={campusHero} alt="Pirnav Engineering College campus" />
@@ -40,11 +57,16 @@ function ActivateAccount() {
       <div className="login-intro__content"><header className="brand"><span className="brand__mark"><FiBookOpen /></span><span className="brand__name"><strong>Pirnav Engineering College</strong><small>Digital Campus Management Portal</small></span></header></div>
     </section>
     <section className="login-panel">
-      <div className="login-form recovery-success" role="status">
+      <div className="login-form">
         <div className="pirnav-form-brand"><span><FiBookOpen /></span><div><strong>Pirnav Engineering College</strong><small>Digital Campus Management Portal</small></div></div>
-        <header><h2>Account activation</h2><p>Backend support for first-time account activation and password setup is required.</p></header>
-        <p className="access-note">No activation-token validation, activation OTP, or unauthenticated password-set API is currently available. Please contact the college administration.</p>
-        <Link className="sign-in-button" to="/login"><FiLogIn /> Go to Login</Link>
+        {complete ? <><header><h2>Account activated</h2><p>Your password is set and your account is ready.</p></header><button className="sign-in-button" type="button" onClick={() => navigate('/login', { state: { identifier: loginId } })}><FiLogIn /> Continue to Sign In</button></> : <><header><h2>Complete account setup</h2><p>Verify your invitation and choose a secure password.</p></header><form onSubmit={submit}>
+          {!params.get('loginId') && <label>Login ID<input autoComplete="username" value={loginId} onChange={event => setLoginId(event.target.value)} required /></label>}
+          {!params.get('token') && <label>Invitation token<input value={token} onChange={event => setToken(event.target.value)} required /></label>}
+          <label>New password<input type="password" autoComplete="new-password" minLength={12} value={password} onChange={event => setPassword(event.target.value)} required /></label>
+          <label>Confirm password<input type="password" autoComplete="new-password" minLength={12} value={confirmPassword} onChange={event => setConfirmPassword(event.target.value)} required /></label>
+          {error && <p className="access-note" role="alert">{error}</p>}
+          <button className="sign-in-button" type="submit" disabled={busy}>{busy ? 'Activating…' : 'Set Password & Activate'}</button>
+        </form></>}
         <Link className="text-button back-to-login" to="/login"><FiArrowLeft /> Back to Sign In</Link>
       </div>
     </section>
@@ -102,6 +124,7 @@ function Dashboard() {
   const navigate = useNavigate()
   const role = getUserRole()
   const {
+    scopeRecords,
     selectedCollege,
     selectedCollegeId,
     selectedAcademicYear,
@@ -113,12 +136,15 @@ function Dashboard() {
     branches,
     semesters,
     sections,
+    loading: academicLoading,
+    error: academicError,
   } = useAcademic()
 
   const [admissions, setAdmissions] = useCollegeState([])
   const [students, setStudents] = useCollegeState([])
   const [faculty, setFaculty] = useCollegeState([])
   const [subjects, setSubjects] = useCollegeState([])
+  const [setupApiAvailability, setSetupApiAvailability] = useState({ admissions: null, faculty: null })
   const [loadingStats, setLoadingStats] = useState(true)
   const [lastUpdated, setLastUpdated] = useState(null)
   const [refreshVersion, setRefreshVersion] = useState(0)
@@ -150,6 +176,10 @@ function Dashboard() {
       ])
         .then(([admRes, studentRes, facRes, subRes]) => {
           if (!active) return
+          setSetupApiAvailability({
+            admissions: admRes.status === 'fulfilled' && Array.isArray(admRes.value),
+            faculty: facRes.status === 'fulfilled' && Array.isArray(facRes.value),
+          })
           if (admRes.status === 'fulfilled' && Array.isArray(admRes.value)) setAdmissions(admRes.value)
           if (studentRes.status === 'fulfilled' && Array.isArray(studentRes.value)) setStudents(studentRes.value)
           if (facRes.status === 'fulfilled' && Array.isArray(facRes.value)) setFaculty(facRes.value)
@@ -238,6 +268,7 @@ function Dashboard() {
   const scopedBranches = branches.filter(
     (b) => !selectedCollegeId || !b.collegeId || String(b.collegeId) === String(selectedCollegeId)
   )
+  const scopedDepartments = scopeRecords(departments)
   const activeBranchesCount = scopedBranches.filter((branch) =>
     branch.isActive !== false && !['INACTIVE', 'DISABLED', 'ARCHIVED'].includes(String(branch.status || '').toUpperCase())
   ).length
@@ -600,17 +631,27 @@ function Dashboard() {
   const yearName = selectedAcademicYear?.academicYearName || selectedAcademicYear?.name || 'Active Session 2026-27'
   const roleName = role ? `${role.charAt(0).toUpperCase()}${role.slice(1)}` : 'Administrator'
 
-  // End-to-End Connected Academic Setup Workflow Pipeline
+  // Count completion only for stages backed by the existing live context/API data.
+  // Academic Levels, rooms and fee structures do not currently expose a shared
+  // setup-status source here, so they are shown as unavailable instead of guessed.
+  const academicDataUnavailable = Boolean(academicLoading || academicError)
   const setupFlowSteps = [
-    { title: 'Academic Year', count: selectedAcademicYear ? `${yearName.split(' ')[0]}` : 'Configure', route: '/academic-year-management', icon: FiCalendar, isConfigured: Boolean(selectedAcademicYear), color: '#1769C2' },
-    { title: 'Courses', count: `${scopedCourses.length} Programs`, route: '/courses', icon: FiLayers, isConfigured: scopedCourses.length > 0, color: '#0D9488' },
-    { title: 'Departments', count: `${departments.length} Units`, route: '/department-management', icon: FiGrid, isConfigured: departments.length > 0, color: '#0284C7' },
-    { title: 'Branches', count: `${scopedBranches.length} Streams`, route: '/branches', icon: FiBriefcase, isConfigured: scopedBranches.length > 0, color: '#F59E0B' },
-    { title: 'Semesters', count: `${semesters.length} Terms`, route: '/semester-management', icon: FiClock, isConfigured: semesters.length > 0, color: '#1769C2' },
-    { title: 'Sections', count: `${scopedSections.length} Batches`, route: '/section-management', icon: FiUsers, isConfigured: scopedSections.length > 0, color: '#0284C7' },
-    { title: 'Subjects', count: `${subjects.length} Syllabi`, route: '/subject-management', icon: FiBookOpen, isConfigured: subjects.length > 0, color: '#0D9488' },
-    { title: 'Admissions', count: `${scopedAdmissions.length} Enrolled`, route: '/student-management/admissions', icon: FiUserCheck, isConfigured: scopedAdmissions.length > 0, color: '#10B981' },
+    { title: 'College', count: academicDataUnavailable ? 'Status unavailable' : selectedCollege ? 'Selected' : 'Select a college', route: '/college-institution-management', icon: FiHome, isConfigured: academicDataUnavailable ? null : Boolean(selectedCollege), color: '#1769C2' },
+    { title: 'Academic Year', count: academicDataUnavailable ? 'Status unavailable' : selectedAcademicYear ? `${yearName.split(' ')[0]}` : 'Configure', route: '/academic-year-management', icon: FiCalendar, isConfigured: academicDataUnavailable ? null : Boolean(selectedAcademicYear), color: '#1769C2' },
+    { title: 'Academic Levels', count: 'Status unavailable', route: null, icon: FiLayers, isConfigured: null, color: '#64748B' },
+    { title: 'Departments', count: academicDataUnavailable ? 'Status unavailable' : `${scopedDepartments.length} Units`, route: '/department-management', icon: FiGrid, isConfigured: academicDataUnavailable ? null : scopedDepartments.length > 0, color: '#0284C7' },
+    { title: 'Courses', count: academicDataUnavailable ? 'Status unavailable' : `${scopedCourses.length} Programs`, route: '/courses', icon: FiLayers, isConfigured: academicDataUnavailable ? null : scopedCourses.length > 0, color: '#0D9488' },
+    { title: 'Branches', count: academicDataUnavailable ? 'Status unavailable' : `${scopedBranches.length} Streams`, route: '/branches', icon: FiBriefcase, isConfigured: academicDataUnavailable ? null : scopedBranches.length > 0, color: '#F59E0B' },
+    { title: 'Semesters', count: academicDataUnavailable ? 'Status unavailable' : `${semesters.length} Terms`, route: '/semester-management', icon: FiClock, isConfigured: academicDataUnavailable ? null : semesters.length > 0, color: '#1769C2' },
+    { title: 'Sections', count: academicDataUnavailable ? 'Status unavailable' : `${scopedSections.length} Batches`, route: '/section-management', icon: FiUsers, isConfigured: academicDataUnavailable ? null : scopedSections.length > 0, color: '#0284C7' },
+    { title: 'Rooms & Classrooms', count: 'Status unavailable', route: '/rooms-management', icon: FiGrid, isConfigured: null, color: '#64748B' },
+    { title: 'Fee Structure', count: 'Status unavailable', route: '/fees/structures', icon: FiLayers, isConfigured: null, color: '#64748B' },
+    { title: 'Faculty Setup', count: setupApiAvailability.faculty === null ? 'Status unavailable' : `${faculty.length} Records`, route: '/faculty', icon: FiBriefcase, isConfigured: setupApiAvailability.faculty === null ? null : faculty.length > 0, color: '#0284C7' },
+    { title: 'Student Admissions', count: setupApiAvailability.admissions === null ? 'Status unavailable' : `${scopedAdmissions.length} Records`, route: '/student-management/admissions', icon: FiUserPlus, isConfigured: setupApiAvailability.admissions === null ? null : scopedAdmissions.length > 0, color: '#10B981' },
   ]
+  const availableSetupStages = setupFlowSteps.filter(step => step.isConfigured !== null)
+  const completedSetupStages = availableSetupStages.filter(step => step.isConfigured).length
+  const unavailableSetupStages = setupFlowSteps.length - availableSetupStages.length
 
   const totalSourceCount = scopedAdmissions.length
   const totalBranchCandCount = scopedAdmissions.length || branchSegments.reduce((acc, s) => acc + s.value, 0)
@@ -984,10 +1025,10 @@ function Dashboard() {
           <section className="ym-card ym-workflow-card">
             <div className="ym-card-header">
               <div>
-                <h3 className="ym-card-title">End-to-End Academic Setup Flow</h3>
-                <span className="ym-card-subtitle">Connected institutional setup pipeline from session configuration to student admissions</span>
+                <h3 className="ym-card-title">College Setup Progress</h3>
+                <span className="ym-card-subtitle">{completedSetupStages} of {availableSetupStages.length} connected stages complete; {unavailableSetupStages} stage statuses are not available from the current APIs.</span>
               </div>
-              <Link to="/academic-year-management" className="ym-card-link">
+              <Link to="/college-institution-management" className="ym-card-link">
                 Configure Setup <FiChevronRight />
               </Link>
             </div>
@@ -995,21 +1036,29 @@ function Dashboard() {
             <div className="ym-flow-pipeline">
               {setupFlowSteps.map((step, idx) => {
                 const StepIcon = step.icon
-                return (
-                  <Link key={step.title} to={step.route} className={`ym-flow-item ${step.isConfigured ? 'is-active-step' : ''}`}>
-                    <div className="ym-flow-icon-circle" style={{ backgroundColor: `${step.color}15`, color: step.color }}>
-                      <StepIcon />
+                const content = <>
+                  <div className="ym-flow-icon-circle" style={{ backgroundColor: `${step.color}15`, color: step.color }}>
+                    <StepIcon />
+                  </div>
+                  <div className="ym-flow-text">
+                    <strong>{step.title}</strong>
+                    <small style={{ color: step.color }}>{step.count}</small>
+                  </div>
+                  {idx < setupFlowSteps.length - 1 && (
+                    <div className="ym-flow-arrow" aria-hidden="true">
+                      <FiChevronRight />
                     </div>
-                    <div className="ym-flow-text">
-                      <strong>{step.title}</strong>
-                      <small style={{ color: step.color }}>{step.count}</small>
-                    </div>
-                    {idx < setupFlowSteps.length - 1 && (
-                      <div className="ym-flow-arrow" aria-hidden="true">
-                        <FiChevronRight />
-                      </div>
-                    )}
+                  )}
+                </>
+                const className = `ym-flow-item ${step.isConfigured ? 'is-active-step' : ''}${step.isConfigured === null ? ' is-setup-status-unavailable' : ''}`
+                return step.route ? (
+                  <Link key={step.title} to={step.route} className={className} title={step.isConfigured === null ? 'Completion status is not available from current APIs.' : undefined}>
+                    {content}
                   </Link>
+                ) : (
+                  <div key={step.title} className={className} role="note" title="No academic-level setup screen is currently connected.">
+                    {content}
+                  </div>
                 )
               })}
             </div>
@@ -1748,7 +1797,10 @@ function Login() {
       localStorage.setItem('btech-remember-me', String(rememberMe))
       if (rememberMe) localStorage.setItem('btech-remembered-identifier', values.identifier.trim())
       else localStorage.removeItem('btech-remembered-identifier')
-      signIn(session.roles?.length ? session.roles : session.user.role, session.accessToken, session.refreshToken, rememberMe, session.user); showSuccess('Logged in successfully.')
+      const sessionUser = { ...session.user, mustChangePassword: session.mustChangePassword ?? session.user.mustChangePassword }
+      signIn(session.roles?.length ? session.roles : sessionUser.role, session.accessToken, session.refreshToken, rememberMe, sessionUser); showSuccess('Logged in successfully.')
+      if (sessionUser.mustChangePassword) { navigate('/my-profile?setup=1'); return }
+      if (sessionUser.profileCompleted === false) { navigate('/my-profile?profileSetup=1'); return }
       navigate('/dashboard')
     } catch (error) {
       setSubmitError(error instanceof AuthRequestError ? error.message : 'Unable to sign in right now. Please try again.')

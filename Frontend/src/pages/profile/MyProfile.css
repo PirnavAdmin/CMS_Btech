@@ -382,3 +382,4 @@
 :root[data-theme="dark"] #root .profile-edit-dialog .profile-edit-grid label > span > .profile-required {
   color: #f87171 !important;
 }
+.profile-avatar img{width:100%;height:100%;object-fit:cover;border-radius:inherit}
