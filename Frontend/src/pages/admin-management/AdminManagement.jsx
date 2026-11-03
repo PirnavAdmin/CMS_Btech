@@ -3858,7 +3858,7 @@ function DepartmentManagement() {
                         fields: [
                           ['Department Name', form.name],
                           ['Department Code', form.code],
-                          ['Status', form.name || form.code ? form.status || 'Active' : ''],
+                          ['Status', form.name || form.code ? form.status : ''],
                           ['Start Date', form.startDate],
                           ['End Date', form.endDate],
                           ['Description', form.description],

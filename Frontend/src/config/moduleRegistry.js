@@ -4,7 +4,7 @@
 const availability = Object.freeze({ status: 'existing-screen', featureKey: null, source: 'No centralized backend feature flag contract found.' })
 const entries = [
   {
-    id: "dashboard", label: "Dashboard", icon: "layout-dashboard",
+    id: "dashboard", label: "Overview", icon: "layout-dashboard",
     path: "/dashboard", section: "dashboard", order: 10,
     permission: {"module":"dashboard","action":"view","source":"existing access matrix"}, authorization: "existing-guards-and-permissions",
     roles: ["admin","faculty","student","staff"], scope: "platform-and-college", navigation: true,

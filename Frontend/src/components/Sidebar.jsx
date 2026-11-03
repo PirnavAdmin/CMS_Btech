@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useLocation } from 'react-router-dom'
 import { FiChevronLeft, FiChevronRight, FiX } from 'react-icons/fi'
-import { navigationGroups, activeSidebarEntry } from '../config/sidebarNavigation.js'
+import { navigationGroups, unavailableNavigationGroups, activeSidebarEntry } from '../config/sidebarNavigation.js'
 import SidebarNavigation from './navigation/SidebarNavigation.jsx'
 import useSidebarAccess from '../hooks/useSidebarAccess.js'
 import { getUserRole, getAccessToken } from '../auth/auth'
@@ -17,8 +17,10 @@ export default function Sidebar({ open = false, onClose = () => {}, collapsed = 
   const { pathname } = useLocation()
   const navigationRef = useRef(null)
   const { selectedCollege, selectedCollegeId, colleges = [], loading: collegeLoading = false, collegeAccess = null } = useAcademic()
-  const { status, access, retry } = useSidebarAccess({ token: getAccessToken(), collegeId: selectedCollegeId, collegeLoading, providedAccess: collegeAccess })
-  const groups = useMemo(() => navigationGroups({ role: userRole, access, selectedCollegeId }), [userRole, access, selectedCollegeId])
+  const { status, access } = useSidebarAccess({ token: getAccessToken(), collegeId: selectedCollegeId, collegeLoading, providedAccess: collegeAccess })
+  const groups = useMemo(() => status === 'error' || status === 'loading'
+    ? unavailableNavigationGroups(userRole)
+    : navigationGroups({ role: userRole, access, selectedCollegeId }), [status, userRole, access, selectedCollegeId])
   const activeId = useMemo(() => activeSidebarEntry(pathname, userRole), [pathname, userRole])
 
   const collegeDisplayName = selectedCollege?.name || selectedCollege?.collegeName || 'Pirnav Engineering College'
@@ -142,7 +144,6 @@ export default function Sidebar({ open = false, onClose = () => {}, collapsed = 
       <nav ref={navigationRef} onScroll={rememberScrollPosition} className="sidebar-navigation">
         {status === 'loading' && <p className="sidebar-access-state" role="status">Loading navigation…</p>}
         {status === 'signed-out' && <p className="sidebar-access-state" role="status">Sign in to load navigation.</p>}
-        {status === 'error' && <div className="sidebar-access-state" role="alert"><p>Navigation access could not be loaded.</p><button type="button" onClick={retry}>Retry navigation</button></div>}
         {status === 'ready' && !selectedCollegeId && <p className="sidebar-access-state" role="status">Select a college for college-specific records.</p>}
         {status === 'ready' && !groups.length && <p className="sidebar-access-state" role="status">No navigation modules are available for your current access.</p>}
         <SidebarNavigation groups={groups} activeId={activeId} pathname={pathname} collapsed={collapsed} onToggleCollapse={onToggleCollapse} onNavigate={onClose} />

@@ -292,3 +292,17 @@
 .course-management .course-advanced-table :is(th,td):nth-child(3){width:18%!important}
 .course-management .course-advanced-table :is(th,td):nth-child(4){width:15%!important}
 .course-management .course-advanced-table :is(th,td):nth-child(5){width:20%!important}
+.branch-management .branch-structure-summary--compact{grid-template-columns:repeat(3,minmax(0,1fr));margin:12px 0 18px;padding:0;box-shadow:none}
+.branch-management .branch-form-layout{height:auto;max-height:none;min-height:0;align-items:start}
+.branch-management .branch-form{height:auto;min-height:0;overflow:visible}
+.branch-management .branch-form .branch-step-content{display:block;flex:none;overflow:visible;height:auto;min-height:0}
+.branch-management .branch-structure-summary--compact{height:auto;max-height:none;min-height:min-content;flex-shrink:0;overflow:visible}
+.branch-management .branch-course-preview{height:auto;max-height:calc(100vh - 180px);align-self:start}
+.branch-management .branch-structure-summary--compact h3{padding:10px 12px;font-size:13px}
+.branch-management .branch-structure-summary--compact>div{padding:10px 12px;min-width:0}
+.branch-management .branch-structure-summary--compact strong{overflow-wrap:anywhere}
+.branch-management .branch-semester-preview{grid-column:1/-1;padding:10px 12px;border-top:1px solid var(--border);font-size:12px;color:var(--text-primary)}
+.branch-management .branch-semester-preview summary{cursor:pointer;font-weight:600}
+.branch-management .branch-semester-preview ul{margin:10px 0 0;padding-left:18px;line-height:1.7}
+.branch-management .branch-semester-preview li strong{font-size:inherit}
+@media(max-width:620px){.branch-management .branch-structure-summary--compact{grid-template-columns:repeat(2,minmax(0,1fr))}}

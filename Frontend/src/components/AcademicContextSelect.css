@@ -1,4 +1,13 @@
 .workspace-context-select { min-width: 0; width: 100%; }
+.workspace-context-select { position: relative; }
+#root .workspace-context-select.has-notice { padding-right: 30px; box-sizing: border-box; }
+#root .workspace-context-select__notice { position: absolute; right: 3px; top: 50%; transform: translateY(-50%); margin: 0; color: var(--ui-danger, #b91c1c); }
+#root .workspace-context-select__notice summary { display: grid; place-items: center; width: 20px; height: 20px; border: 1px solid currentColor; border-radius: 50%; cursor: pointer; font-size: 12px; font-weight: 700; line-height: 1; list-style: none; }
+#root .workspace-context-select__notice summary::-webkit-details-marker { display: none; }
+#root .workspace-context-select__notice summary:focus-visible { outline: 2px solid currentColor; outline-offset: 3px; }
+#root .workspace-context-select__notice > div { position: absolute; top: calc(100% + 14px); right: 0; z-index: 100; width: 300px; max-width: 80vw; padding: 14px; border: 1px solid var(--ui-border, #e2e8f0); border-radius: 8px; background: var(--ui-surface, #fff); box-shadow: 0 8px 24px #0f172a26; font-size: 12px; font-weight: 400; line-height: 1.5; overflow-wrap: anywhere; }
+#root .workspace-context-select__notice > div strong { display: block; font-size: 13px; line-height: 1.4; }
+#root .workspace-context-select__notice > div p { margin: 6px 0 0; font-size: 12px; font-weight: 400; line-height: 1.5; color: var(--ui-text, #334155); }
 .workspace-context-select label { display: grid; gap: 6px; min-width: 0; }
 .workspace-context-select label > span { color: var(--ui-muted); font-size: 11px; font-weight: 600; }
 .workspace-context-select select { width: 100%; min-width: 0; height: 38px; padding: 0 28px 0 10px; border: 1px solid var(--ui-border); border-radius: 7px; background: var(--ui-surface); color: var(--ui-text); font: inherit; font-size: 12px; text-overflow: ellipsis; cursor: pointer; }

@@ -1,8 +1,10 @@
-import { afterEach, expect, test, vi } from 'vitest'
+import { afterEach, beforeEach, expect, test, vi } from 'vitest'
 import { cleanup, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import App from '../App.jsx'
+
+beforeEach(() => { vi.stubGlobal('matchMedia', vi.fn(() => ({ matches: false }))) })
 
 afterEach(() => { cleanup(); vi.unstubAllGlobals(); localStorage.clear(); sessionStorage.clear() })
 
@@ -18,15 +20,19 @@ test.each(['/', '/login'])('%s stays accessible with a saved session and unavail
   expect(fetch).not.toHaveBeenCalled()
 })
 
-test.each([
-  ['Go to home', /Your engineering journey/i],
-  ['Go to login', /Welcome back/i],
-])('an unavailable dashboard allows navigation using %s', async (link, heading) => {
+test('an unavailable workspace preserves navigation and hides protected page data', async () => {
   localStorage.setItem('btech-authenticated', 'true')
   localStorage.setItem('btech-user-role', 'admin')
   localStorage.setItem('btech-access-token', 'offline-test-token')
   vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new TypeError('Failed to fetch')))
   render(<MemoryRouter initialEntries={['/dashboard']}><App /></MemoryRouter>)
-  await userEvent.click(await screen.findByRole('link', { name: link }))
-  expect(screen.getByRole('heading', { name: heading })).toBeTruthy()
+  await screen.findByText('Data is temporarily unavailable. Please try again.')
+  expect(await screen.findByRole('link', { name: 'Colleges' })).toBeTruthy()
+  expect(screen.getByRole('complementary', { name: 'Primary navigation' })).toBeTruthy()
+  expect(screen.queryByRole('heading', { name: /Welcome back, / })).toBeNull()
+  expect(screen.queryByText('Unable to connect to your workspace')).toBeNull()
+  await userEvent.click(screen.getByRole('link', { name: 'Departments' }))
+  expect(await screen.findByRole('heading', { name: 'Departments' })).toBeTruthy()
+  expect(screen.queryByRole('table')).toBeNull()
+  expect(screen.getByRole('button', { name: 'Retry' })).toBeTruthy()
 })

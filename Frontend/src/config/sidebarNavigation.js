@@ -38,6 +38,20 @@ export function navigationGroups({ role, access, selectedCollegeId, features, mo
   return [...sections].sort(ordered).map(section => ({ ...section, items: visible.filter(entry => entry.section === section.id) })).filter(section => section.items.length)
 }
 
+// A navigation shell for an unavailable service. These links never grant access
+// to page content; route boundaries still require current server permissions.
+export function unavailableNavigationGroups(role, modules = MODULE_REGISTRY, sections = NAVIGATION_SECTIONS) {
+  const eligible = entry => entry.roles?.includes(role) && entry.permission?.action === 'view'
+    && entry.availability?.status !== 'unavailable' && !entry.availability?.featureKey
+  const seen = new Set()
+  const items = sidebarEntries(modules).filter(eligible).sort(ordered).filter(entry => {
+    if (seen.has(entry.path)) return false
+    seen.add(entry.path)
+    return true
+  }).map(entry => ({ ...entry, children: (entry.children || []).filter(child => eligible({ ...entry, ...child })).sort(ordered) }))
+  return [...sections].sort(ordered).map(section => ({ ...section, items: items.filter(entry => entry.section === section.id) })).filter(section => section.items.length)
+}
+
 // Compare all role-eligible entries, including denied ones, to avoid selecting a
 // broad parent such as Faculty Directory for an attendance route it does not own.
 export function activeSidebarEntry(pathname, role, entries = sidebarEntries()) {
